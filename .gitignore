@@ -40,3 +40,6 @@ go.work.sum
 entitytest
 terraintest
 itemtest
+magictest
+skilltest
+genretest

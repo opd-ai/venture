@@ -31,8 +31,8 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# Built binaries
-client
-server
-venture-client
-venture-server
+# Built binaries (in project root)
+/client
+/server
+/venture-client
+/venture-server

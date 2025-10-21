@@ -11,7 +11,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
 - 🎨 Runtime-generated graphics using procedural techniques
 - 🎵 Procedural audio synthesis for music and sound effects
-- 🌐 Multiplayer co-op supporting high-latency connections (200-500ms)
+- 🌐 Multiplayer co-op supporting high-latency connections (200-5000ms, onion services)
 - 🎭 Multiple genres (fantasy, sci-fi, post-apocalyptic, horror, cyberpunk)
 - 📦 Single binary distribution - no external asset files required
 

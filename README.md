@@ -45,7 +45,15 @@ Phase 1 (Architecture & Foundation) is complete. We are now implementing Phase 2
   - [x] Comprehensive test suite (93.8% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
-- [ ] Magic/spell generation
+- [x] **Magic/Spell Generation System**
+  - [x] Spell type system (Offensive, Defensive, Healing, Buff, Debuff, Utility, Summon)
+  - [x] Element system (Fire, Ice, Lightning, Earth, Wind, Light, Dark, Arcane)
+  - [x] Target patterns (Self, Single, Area, Cone, Line, All Allies, All Enemies)
+  - [x] Fantasy and Sci-Fi spell templates
+  - [x] Deterministic generation with power scaling
+  - [x] Comprehensive test suite (91.9% coverage)
+  - [x] CLI tool for visualization
+  - [x] Complete documentation
 - [ ] Skill tree generation
 - [ ] Genre definition system
 
@@ -64,7 +72,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
   - [x] Terrain/dungeon generation (BSP, cellular automata)
   - [x] Entity generator (monsters, NPCs)
   - [x] Item generation system
-  - [ ] Magic/spell generation
+  - [x] Magic/spell generation
   - [ ] Skill tree generation
   - [ ] Genre definition system
 
@@ -140,6 +148,9 @@ go build -o entitytest ./cmd/entitytest
 
 # Build the item test tool (no graphics dependencies)
 go build -o itemtest ./cmd/itemtest
+
+# Build the magic test tool (no graphics dependencies)
+go build -o magictest ./cmd/magictest
 ```
 
 ### Testing Terrain Generation
@@ -195,6 +206,26 @@ Try out the procedural item generation:
 ```
 
 See [pkg/procgen/item/README.md](pkg/procgen/item/README.md) for more details on item generation.
+
+### Testing Magic Generation
+
+Try out the procedural spell generation:
+
+```bash
+# Generate fantasy spells
+./magictest -genre fantasy -count 20 -depth 5 -seed 12345
+
+# Generate sci-fi spells with verbose details
+./magictest -genre scifi -count 15 -depth 10 -verbose
+
+# Filter by spell type
+./magictest -type offensive -count 30 -depth 15
+
+# Save to file
+./magictest -genre fantasy -count 100 -output spells.txt
+```
+
+See [pkg/procgen/magic/README.md](pkg/procgen/magic/README.md) for more details on magic generation.
 
 ### Running
 

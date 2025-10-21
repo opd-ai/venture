@@ -37,7 +37,14 @@ Phase 1 (Architecture & Foundation) is complete. We are now implementing Phase 2
   - [x] Comprehensive test suite (87.8% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
-- [ ] Item generation system
+- [x] **Item Generation System**
+  - [x] Item type system (Weapon, Armor, Consumable, Accessory)
+  - [x] Rarity and stat generation with depth scaling
+  - [x] Fantasy and Sci-Fi item templates
+  - [x] Deterministic generation with seed support
+  - [x] Comprehensive test suite (93.8% coverage)
+  - [x] CLI tool for visualization
+  - [x] Complete documentation
 - [ ] Magic/spell generation
 - [ ] Skill tree generation
 - [ ] Genre definition system
@@ -56,7 +63,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
 - [ ] **Phase 2: Procedural Generation Core** (Weeks 3-5) 🚧
   - [x] Terrain/dungeon generation (BSP, cellular automata)
   - [x] Entity generator (monsters, NPCs)
-  - [ ] Item generation system
+  - [x] Item generation system
   - [ ] Magic/spell generation
   - [ ] Skill tree generation
   - [ ] Genre definition system
@@ -130,6 +137,9 @@ go build -o terraintest ./cmd/terraintest
 
 # Build the entity test tool (no graphics dependencies)
 go build -o entitytest ./cmd/entitytest
+
+# Build the item test tool (no graphics dependencies)
+go build -o itemtest ./cmd/itemtest
 ```
 
 ### Testing Terrain Generation
@@ -165,6 +175,26 @@ Try out the procedural entity generation:
 ```
 
 See [pkg/procgen/entity/README.md](pkg/procgen/entity/README.md) for more details on entity generation.
+
+### Testing Item Generation
+
+Try out the procedural item generation:
+
+```bash
+# Generate fantasy weapons
+./itemtest -genre fantasy -count 20 -type weapon -seed 12345
+
+# Generate sci-fi armor with verbose details
+./itemtest -genre scifi -count 15 -type armor -depth 10 -verbose
+
+# Generate mixed items at high depth
+./itemtest -genre fantasy -count 50 -depth 20
+
+# Save to file
+./itemtest -genre fantasy -count 100 -output items.txt
+```
+
+See [pkg/procgen/item/README.md](pkg/procgen/item/README.md) for more details on item generation.
 
 ### Running
 

@@ -54,7 +54,16 @@ Phase 1 (Architecture & Foundation) is complete. We are now implementing Phase 2
   - [x] Comprehensive test suite (91.9% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
-- [ ] Skill tree generation
+- [x] **Skill Tree Generation System**
+  - [x] Skill type system (Passive, Active, Ultimate, Synergy)
+  - [x] Tier-based progression (Basic, Intermediate, Advanced, Master)
+  - [x] Prerequisite and dependency system
+  - [x] Multiple skill trees per genre (Warrior, Mage, Rogue, Soldier, Engineer, Biotic)
+  - [x] Fantasy and Sci-Fi skill templates
+  - [x] Deterministic generation with level scaling
+  - [x] Comprehensive test suite (90.6% coverage)
+  - [x] CLI tool for visualization
+  - [x] Complete documentation
 - [ ] Genre definition system
 
 See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) for complete details.
@@ -73,7 +82,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
   - [x] Entity generator (monsters, NPCs)
   - [x] Item generation system
   - [x] Magic/spell generation
-  - [ ] Skill tree generation
+  - [x] Skill tree generation
   - [ ] Genre definition system
 
 - [ ] **Phase 3: Visual Rendering System** (Weeks 6-7)
@@ -151,6 +160,9 @@ go build -o itemtest ./cmd/itemtest
 
 # Build the magic test tool (no graphics dependencies)
 go build -o magictest ./cmd/magictest
+
+# Build the skill test tool (no graphics dependencies)
+go build -o skilltest ./cmd/skilltest
 ```
 
 ### Testing Terrain Generation
@@ -226,6 +238,26 @@ Try out the procedural spell generation:
 ```
 
 See [pkg/procgen/magic/README.md](pkg/procgen/magic/README.md) for more details on magic generation.
+
+### Testing Skill Tree Generation
+
+Try out the procedural skill tree generation:
+
+```bash
+# Generate fantasy skill trees
+./skilltest -genre fantasy -count 3 -depth 5 -seed 12345
+
+# Generate sci-fi skill trees with verbose details
+./skilltest -genre scifi -count 3 -depth 10 -verbose
+
+# Generate trees at high depth
+./skilltest -genre fantasy -count 3 -depth 20
+
+# Save to file
+./skilltest -genre fantasy -count 5 -output skills.txt
+```
+
+See [pkg/procgen/skills/README.md](pkg/procgen/skills/README.md) for more details on skill tree generation.
 
 ### Running
 

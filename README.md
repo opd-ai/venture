@@ -17,21 +17,37 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Current Phase:** Phase 1 - Architecture & Foundation ✅
+**Current Phase:** Phase 2 - Procedural Generation Core (In Progress) 🚧
 
-This project follows a 20-week development roadmap. See the [Architecture Documentation](docs/ARCHITECTURE.md) for detailed architectural decisions and implementation guidelines.
+Phase 1 (Architecture & Foundation) is complete. We are now implementing Phase 2 with terrain generation as the first deliverable.
+
+### Phase 2 Progress
+
+- [x] **Terrain/Dungeon Generation**
+  - [x] BSP (Binary Space Partitioning) algorithm
+  - [x] Cellular Automata algorithm
+  - [x] Comprehensive test suite (91.5% coverage)
+  - [x] CLI tool for visualization
+  - [x] Complete documentation
+- [ ] Entity generator (monsters, NPCs)
+- [ ] Item generation system
+- [ ] Magic/spell generation
+- [ ] Skill tree generation
+- [ ] Genre definition system
+
+See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) for complete details.
 
 ### Development Roadmap
 
-- [x] **Phase 1: Architecture & Foundation** (Weeks 1-2)
+- [x] **Phase 1: Architecture & Foundation** (Weeks 1-2) ✅
   - [x] Project structure and Go module setup
   - [x] Core ECS (Entity-Component-System) framework
   - [x] Base interfaces for all major systems
   - [x] Basic Ebiten game loop
   - [x] Architecture Decision Records
 
-- [ ] **Phase 2: Procedural Generation Core** (Weeks 3-5)
-  - [ ] Terrain/dungeon generation (BSP, cellular automata)
+- [ ] **Phase 2: Procedural Generation Core** (Weeks 3-5) 🚧
+  - [x] Terrain/dungeon generation (BSP, cellular automata)
   - [ ] Entity generator (monsters, NPCs)
   - [ ] Item generation system
   - [ ] Magic/spell generation
@@ -96,12 +112,32 @@ This project follows a 20-week development roadmap. See the [Architecture Docume
 git clone https://github.com/opd-ai/venture.git
 cd venture
 
-# Build the client
+# Build the client (requires X11 libraries on Linux)
 go build -o venture-client ./cmd/client
 
 # Build the server
 go build -o venture-server ./cmd/server
+
+# Build the terrain test tool (no graphics dependencies)
+go build -o terraintest ./cmd/terraintest
 ```
+
+### Testing Terrain Generation
+
+Try out the procedural terrain generation:
+
+```bash
+# Generate a BSP dungeon
+./terraintest -algorithm bsp -width 80 -height 50 -seed 12345
+
+# Generate cellular automata caves
+./terraintest -algorithm cellular -width 80 -height 50 -seed 54321
+
+# Save to file
+./terraintest -algorithm bsp -output dungeon.txt
+```
+
+See [pkg/procgen/terrain/README.md](pkg/procgen/terrain/README.md) for more details on terrain generation.
 
 ### Running
 

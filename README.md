@@ -17,9 +17,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Current Phase:** Phase 2 - Procedural Generation Core ✅ COMPLETE
+**Current Phase:** Phase 3 - Visual Rendering System 🚧 IN PROGRESS
 
-Phase 1 (Architecture & Foundation) is complete. Phase 2 has been successfully completed with all six subsystems implemented.
+Phase 1 (Architecture & Foundation) and Phase 2 (Procedural Generation Core) are complete. Phase 3 visual rendering is in progress with palette, shapes, and sprites systems implemented.
 
 ### Phase 2 Progress
 
@@ -92,13 +92,13 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
   - [x] Skill tree generation
   - [x] Genre definition system
 
-- [ ] **Phase 3: Visual Rendering System** (Weeks 6-7)
-  - [ ] Procedural shape generation
-  - [ ] Runtime sprite generation
+- [ ] **Phase 3: Visual Rendering System** (Weeks 6-7) 🚧
+  - [x] Genre-based color palettes (98.4% coverage)
+  - [x] Procedural shape generation (100% coverage)
+  - [x] Runtime sprite generation (100% coverage)
   - [ ] Tile rendering system
   - [ ] Particle effects
   - [ ] UI rendering
-  - [ ] Genre-based color palettes
 
 - [ ] **Phase 4: Audio Synthesis** (Weeks 8-9)
   - [ ] Waveform generation
@@ -173,6 +173,9 @@ go build -o skilltest ./cmd/skilltest
 
 # Build the genre test tool (no graphics dependencies)
 go build -o genretest ./cmd/genretest
+
+# Build the rendering test tool (no graphics dependencies)
+go build -o rendertest ./cmd/rendertest
 ```
 
 ### Testing Terrain Generation
@@ -288,6 +291,23 @@ Explore the genre definition system:
 ```
 
 See [pkg/procgen/genre/README.md](pkg/procgen/genre/README.md) for more details on the genre system.
+
+### Testing Rendering System
+
+Try out the procedural color palette generation:
+
+```bash
+# Generate fantasy-themed color palette
+./rendertest -genre fantasy -seed 12345
+
+# Generate sci-fi palette with verbose details
+./rendertest -genre scifi -seed 54321 -verbose
+
+# Generate and save cyberpunk palette
+./rendertest -genre cyberpunk -output palette.txt
+```
+
+See [pkg/rendering/palette/README.md](pkg/rendering/palette/README.md) for more details on the rendering system.
 
 ### Running
 

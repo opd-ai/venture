@@ -367,6 +367,45 @@ See [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md) for mor
 ./venture-server -port 8080 -max-players 4
 ```
 
+## Documentation
+
+### Root Documentation
+- **README.md** - This file, project overview and quick start guide
+- **STATUS.md** - Current project status and phase completion tracking
+- **IMPLEMENTATION_REPORT.md** - Comprehensive Phase 3 implementation report
+- **PHASE4_AUDIO_IMPLEMENTATION.md** - Phase 4 audio synthesis implementation
+- **PHASE5_MOVEMENT_COLLISION_REPORT.md** - Phase 5 movement and collision systems
+
+### Detailed Documentation (docs/)
+- **ARCHITECTURE.md** - Architecture Decision Records (ADRs)
+- **TECHNICAL_SPEC.md** - Complete technical specification
+- **ROADMAP.md** - Detailed 8-phase development roadmap
+- **DEVELOPMENT.md** - Development guide and best practices
+
+### Phase Implementation Reports (docs/)
+- **PHASE1_SUMMARY.md** - Phase 1: Architecture & Foundation
+- **PHASE2_TERRAIN_IMPLEMENTATION.md** - Terrain/dungeon generation (BSP, cellular automata)
+- **PHASE2_ENTITY_IMPLEMENTATION.md** - Monster and NPC generation
+- **PHASE2_ITEM_IMPLEMENTATION.md** - Weapons, armor, and consumables
+- **PHASE2_MAGIC_IMPLEMENTATION.md** - Spell and ability generation
+- **PHASE2_SKILLS_IMPLEMENTATION.md** - Skill tree generation
+- **PHASE2_GENRE_IMPLEMENTATION.md** - Genre definition system
+- **PHASE3_RENDERING_IMPLEMENTATION.md** - Visual rendering systems
+
+### Package-Specific Documentation
+Each package contains a README.md with detailed usage examples:
+- [pkg/procgen/terrain/README.md](pkg/procgen/terrain/README.md)
+- [pkg/procgen/entity/README.md](pkg/procgen/entity/README.md)
+- [pkg/procgen/item/README.md](pkg/procgen/item/README.md)
+- [pkg/procgen/magic/README.md](pkg/procgen/magic/README.md)
+- [pkg/procgen/skills/README.md](pkg/procgen/skills/README.md)
+- [pkg/procgen/genre/README.md](pkg/procgen/genre/README.md)
+- [pkg/rendering/palette/README.md](pkg/rendering/palette/README.md)
+- [pkg/rendering/tiles/README.md](pkg/rendering/tiles/README.md)
+- [pkg/rendering/particles/README.md](pkg/rendering/particles/README.md)
+- [pkg/audio/README.md](pkg/audio/README.md)
+- [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md)
+
 ## Project Structure
 
 ```

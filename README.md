@@ -17,9 +17,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Current Phase:** Phase 3 - Visual Rendering System 🚧 IN PROGRESS
+**Current Phase:** Phase 5 - Core Gameplay Systems 🚧 IN PROGRESS
 
-Phase 1 (Architecture & Foundation) and Phase 2 (Procedural Generation Core) are complete. Phase 3 visual rendering is in progress with palette, shapes, and sprites systems implemented.
+Phases 1-4 complete (Architecture, Procedural Generation, Visual Rendering, Audio Synthesis). Phase 5 movement and collision systems implemented with 95.4% test coverage.
 
 ### Phase 2 Progress
 
@@ -108,8 +108,8 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
   - [x] Genre-aware audio themes
   - [x] CLI testing tool (audiotest)
 
-- [ ] **Phase 5: Core Gameplay Systems** (Weeks 10-13)
-  - [ ] Movement and collision detection
+- [ ] **Phase 5: Core Gameplay Systems** (Weeks 10-13) 🚧 IN PROGRESS
+  - [x] Movement and collision detection (95.4% coverage)
   - [ ] Combat system (melee, ranged, magic)
   - [ ] Inventory and equipment
   - [ ] Character progression
@@ -181,6 +181,9 @@ go build -o rendertest ./cmd/rendertest
 
 # Build the audio test tool (no graphics dependencies)
 go build -o audiotest ./cmd/audiotest
+
+# Build the movement test tool
+go build -o movementtest ./cmd/movementtest
 ```
 
 ### Testing Terrain Generation
@@ -334,6 +337,26 @@ Try out the procedural audio generation:
 
 See [pkg/audio/README.md](pkg/audio/README.md) for more details on the audio synthesis system.
 
+### Testing Movement and Collision
+
+Try out the movement and collision systems:
+
+```bash
+# Run the interactive example (requires -tags test)
+go run -tags test ./examples/movement_collision_demo.go
+
+# Or build and run the CLI tool (requires display currently)
+./movementtest -count 50 -duration 3.0 -verbose
+
+# Options:
+#   -count N        Number of entities (default: 10)
+#   -duration N     Simulation duration in seconds (default: 5.0)
+#   -verbose        Show detailed output
+#   -seed N         Random seed
+```
+
+See [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md) for more details on movement and collision systems.
+
 ### Running
 
 ```bash
@@ -350,9 +373,16 @@ See [pkg/audio/README.md](pkg/audio/README.md) for more details on the audio syn
 venture/
 ├── cmd/
 │   ├── client/          # Client application
-│   └── server/          # Server application
+│   ├── server/          # Server application
+│   ├── movementtest/    # Movement/collision demo tool
+│   └── ... (other test tools)
 ├── pkg/
 │   ├── engine/          # Core game loop and ECS framework
+│   │   ├── ecs.go       # Entity-Component-System
+│   │   ├── components.go # Movement/collision components
+│   │   ├── movement.go  # Movement system
+│   │   ├── collision.go # Collision detection system
+│   │   └── game.go      # Ebiten integration
 │   ├── procgen/         # Procedural generation systems
 │   │   ├── terrain/     # Map/dungeon generation
 │   │   ├── entity/      # Monster/NPC generation

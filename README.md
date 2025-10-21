@@ -19,7 +19,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 **Current Phase:** Phase 5 - Core Gameplay Systems 🚧 IN PROGRESS
 
-Phases 1-4 complete (Architecture, Procedural Generation, Visual Rendering, Audio Synthesis). Phase 5 movement and collision systems implemented with 95.4% test coverage.
+Phases 1-4 complete (Architecture, Procedural Generation, Visual Rendering, Audio Synthesis). Phase 5 movement, collision, and combat systems implemented with 90%+ test coverage.
 
 ### Phase 2 Progress
 
@@ -110,7 +110,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
 
 - [ ] **Phase 5: Core Gameplay Systems** (Weeks 10-13) 🚧 IN PROGRESS
   - [x] Movement and collision detection (95.4% coverage)
-  - [ ] Combat system (melee, ranged, magic)
+  - [x] Combat system (melee, ranged, magic) (90.1% coverage)
   - [ ] Inventory and equipment
   - [ ] Character progression
   - [ ] Monster AI
@@ -357,6 +357,24 @@ go run -tags test ./examples/movement_collision_demo.go
 
 See [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md) for more details on movement and collision systems.
 
+### Testing Combat System
+
+Try out the combat system with damage calculation, status effects, and team mechanics:
+
+```bash
+# Run the interactive combat demo (requires -tags test)
+go run -tags test ./examples/combat_demo.go
+
+# Demonstrates:
+#   - Basic melee combat with stats
+#   - Magic combat with resistances
+#   - Status effects (poison over time)
+#   - Critical hit mechanics
+#   - Team-based enemy detection
+```
+
+See [pkg/engine/COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md) for more details on the combat system.
+
 ### Running
 
 ```bash
@@ -375,6 +393,7 @@ See [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md) for mor
 - **IMPLEMENTATION_REPORT.md** - Comprehensive Phase 3 implementation report
 - **PHASE4_AUDIO_IMPLEMENTATION.md** - Phase 4 audio synthesis implementation
 - **PHASE5_MOVEMENT_COLLISION_REPORT.md** - Phase 5 movement and collision systems
+- **PHASE5_COMBAT_IMPLEMENTATION.md** - Phase 5 combat system implementation
 
 ### Detailed Documentation (docs/)
 - **ARCHITECTURE.md** - Architecture Decision Records (ADRs)
@@ -405,6 +424,7 @@ Each package contains a README.md with detailed usage examples:
 - [pkg/rendering/particles/README.md](pkg/rendering/particles/README.md)
 - [pkg/audio/README.md](pkg/audio/README.md)
 - [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md)
+- [pkg/engine/COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md)
 
 ## Project Structure
 

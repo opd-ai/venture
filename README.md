@@ -29,7 +29,14 @@ Phase 1 (Architecture & Foundation) is complete. We are now implementing Phase 2
   - [x] Comprehensive test suite (91.5% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
-- [ ] Entity generator (monsters, NPCs)
+- [x] **Entity Generator (monsters, NPCs)**
+  - [x] Entity type system (Monster, Boss, Minion, NPC)
+  - [x] Stats and rarity system
+  - [x] Fantasy and Sci-Fi templates
+  - [x] Deterministic generation with level scaling
+  - [x] Comprehensive test suite (87.8% coverage)
+  - [x] CLI tool for visualization
+  - [x] Complete documentation
 - [ ] Item generation system
 - [ ] Magic/spell generation
 - [ ] Skill tree generation
@@ -48,7 +55,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
 
 - [ ] **Phase 2: Procedural Generation Core** (Weeks 3-5) 🚧
   - [x] Terrain/dungeon generation (BSP, cellular automata)
-  - [ ] Entity generator (monsters, NPCs)
+  - [x] Entity generator (monsters, NPCs)
   - [ ] Item generation system
   - [ ] Magic/spell generation
   - [ ] Skill tree generation
@@ -120,6 +127,9 @@ go build -o venture-server ./cmd/server
 
 # Build the terrain test tool (no graphics dependencies)
 go build -o terraintest ./cmd/terraintest
+
+# Build the entity test tool (no graphics dependencies)
+go build -o entitytest ./cmd/entitytest
 ```
 
 ### Testing Terrain Generation
@@ -138,6 +148,23 @@ Try out the procedural terrain generation:
 ```
 
 See [pkg/procgen/terrain/README.md](pkg/procgen/terrain/README.md) for more details on terrain generation.
+
+### Testing Entity Generation
+
+Try out the procedural entity generation:
+
+```bash
+# Generate fantasy entities
+./entitytest -genre fantasy -count 20 -depth 5 -seed 12345
+
+# Generate sci-fi entities with verbose details
+./entitytest -genre scifi -count 15 -depth 10 -verbose
+
+# Save to file
+./entitytest -genre fantasy -count 100 -output entities.txt
+```
+
+See [pkg/procgen/entity/README.md](pkg/procgen/entity/README.md) for more details on entity generation.
 
 ### Running
 

@@ -100,6 +100,90 @@ func TestRoomOverlaps(t *testing.T) {
 	}
 }
 
+func TestTileType_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		tileType TileType
+		expected string
+	}{
+		{"Wall", TileWall, "wall"},
+		{"Floor", TileFloor, "floor"},
+		{"Door", TileDoor, "door"},
+		{"Corridor", TileCorridor, "corridor"},
+		{"Unknown", TileType(99), "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.tileType.String()
+			if result != tt.expected {
+				t.Errorf("TileType.String() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBSPValidation_InvalidInput(t *testing.T) {
+	gen := NewBSPGenerator()
+
+	// Test with non-terrain input
+	err := gen.Validate("not a terrain")
+	if err == nil {
+		t.Error("Validate should fail for non-terrain input")
+	}
+
+	// Test with terrain with no rooms
+	emptyTerrain := NewTerrain(10, 10, 12345)
+	err = gen.Validate(emptyTerrain)
+	if err == nil {
+		t.Error("Validate should fail for terrain with no rooms")
+	}
+
+	// Test with valid terrain
+	emptyTerrain.Rooms = []*Room{{X: 1, Y: 1, Width: 5, Height: 5}}
+	emptyTerrain.SetTile(2, 2, TileFloor)
+	err = gen.Validate(emptyTerrain)
+	if err != nil {
+		t.Errorf("Validate should succeed for valid terrain: %v", err)
+	}
+	
+	// Test with out-of-bounds room
+	badTerrain := NewTerrain(10, 10, 12345)
+	badTerrain.Rooms = []*Room{{X: 50, Y: 50, Width: 5, Height: 5}}
+	err = gen.Validate(badTerrain)
+	if err == nil {
+		t.Error("Validate should fail for out-of-bounds room")
+	}
+}
+
+func TestCellularValidation_InvalidInput(t *testing.T) {
+	gen := NewCellularGenerator()
+
+	// Test with non-terrain input
+	err := gen.Validate("not a terrain")
+	if err == nil {
+		t.Error("Validate should fail for non-terrain input")
+	}
+
+	// Test with terrain with no walkable tiles
+	wallTerrain := NewTerrain(10, 10, 12345)
+	err = gen.Validate(wallTerrain)
+	if err == nil {
+		t.Error("Validate should fail for terrain with no walkable tiles")
+	}
+
+	// Test with valid terrain (needs at least 30% walkable tiles)
+	for x := 2; x < 8; x++ {
+		for y := 2; y < 8; y++ {
+			wallTerrain.SetTile(x, y, TileFloor)
+		}
+	}
+	err = gen.Validate(wallTerrain)
+	if err != nil {
+		t.Errorf("Validate should succeed for terrain with walkable tiles: %v", err)
+	}
+}
+
 func TestBSPGenerator(t *testing.T) {
 	gen := NewBSPGenerator()
 	params := procgen.GenerationParams{

@@ -4,7 +4,7 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten. Every aspect
 
 ## Overview
 
-Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Chrono Trigger.
+Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Chrono Cross.
 
 **Key Features:**
 - 🎮 Real-time action-RPG combat and exploration

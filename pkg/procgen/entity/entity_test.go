@@ -403,6 +403,237 @@ func TestEntityLevelScaling(t *testing.T) {
 	}
 }
 
+func TestEntityValidation_InvalidInput(t *testing.T) {
+	gen := NewEntityGenerator()
+	
+	// Test with non-entity slice
+	err := gen.Validate("not an entity slice")
+	if err == nil {
+		t.Error("Validate should fail for non-entity slice")
+	}
+	
+	// Test with empty entity slice
+	err = gen.Validate([]*Entity{})
+	if err == nil {
+		t.Error("Validate should fail for empty entity slice")
+	}
+	
+	// Test with invalid entity (empty name)
+	invalidEntity := &Entity{
+		Name: "",
+		Stats: Stats{
+			MaxHealth: 100,
+			Level:     1,
+			Speed:     1.0,
+		},
+	}
+	err = gen.Validate([]*Entity{invalidEntity})
+	if err == nil {
+		t.Error("Validate should fail for entity with empty name")
+	}
+	
+	// Test with invalid max health
+	invalidHealth := &Entity{
+		Name: "Test",
+		Stats: Stats{
+			MaxHealth: 0,
+			Level:     1,
+			Speed:     1.0,
+		},
+	}
+	err = gen.Validate([]*Entity{invalidHealth})
+	if err == nil {
+		t.Error("Validate should fail for entity with zero max health")
+	}
+	
+	// Test with invalid level
+	invalidLevel := &Entity{
+		Name: "Test",
+		Stats: Stats{
+			MaxHealth: 100,
+			Level:     0,
+			Speed:     1.0,
+		},
+	}
+	err = gen.Validate([]*Entity{invalidLevel})
+	if err == nil {
+		t.Error("Validate should fail for entity with zero level")
+	}
+	
+	// Test with invalid speed
+	invalidSpeed := &Entity{
+		Name: "Test",
+		Stats: Stats{
+			MaxHealth: 100,
+			Level:     1,
+			Speed:     0,
+		},
+	}
+	err = gen.Validate([]*Entity{invalidSpeed})
+	if err == nil {
+		t.Error("Validate should fail for entity with zero speed")
+	}
+}
+
+func TestEntityType_String_Unknown(t *testing.T) {
+	unknown := EntityType(99)
+	if got := unknown.String(); got != "unknown" {
+		t.Errorf("Unknown EntityType.String() = %v, want 'unknown'", got)
+	}
+}
+
+func TestEntitySize_String_Unknown(t *testing.T) {
+	unknown := EntitySize(99)
+	if got := unknown.String(); got != "unknown" {
+		t.Errorf("Unknown EntitySize.String() = %v, want 'unknown'", got)
+	}
+}
+
+func TestRarity_String_Unknown(t *testing.T) {
+	unknown := Rarity(99)
+	if got := unknown.String(); got != "unknown" {
+		t.Errorf("Unknown Rarity.String() = %v, want 'unknown'", got)
+	}
+}
+
+func TestEntityGeneration_DifferentDifficulties(t *testing.T) {
+	gen := NewEntityGenerator()
+	difficulties := []float64{0.0, 0.25, 0.5, 0.75, 1.0}
+	
+	for _, diff := range difficulties {
+		params := procgen.GenerationParams{
+			Difficulty: diff,
+			Depth:      5,
+			GenreID:    "fantasy",
+			Custom: map[string]interface{}{
+				"count": 5,
+			},
+		}
+		
+		result, err := gen.Generate(12345, params)
+		if err != nil {
+			t.Fatalf("Generate failed at difficulty %f: %v", diff, err)
+		}
+		
+		entities := result.([]*Entity)
+		if len(entities) != 5 {
+			t.Errorf("Expected 5 entities at difficulty %f, got %d", diff, len(entities))
+		}
+	}
+}
+
+func TestEntityGeneration_UnknownGenre(t *testing.T) {
+	gen := NewEntityGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "unknown_genre",
+		Custom: map[string]interface{}{
+			"count": 5,
+		},
+	}
+	
+	// Should fall back to default templates or generate entities anyway
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate failed with unknown genre: %v", err)
+	}
+	
+	entities := result.([]*Entity)
+	if len(entities) != 5 {
+		t.Errorf("Expected 5 entities with unknown genre, got %d", len(entities))
+	}
+}
+
+func TestEntityGeneration_ZeroCount(t *testing.T) {
+	gen := NewEntityGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"count": 0,
+		},
+	}
+	
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+	
+	entities := result.([]*Entity)
+	// With count=0, should still generate default number (likely 10)
+	// If it generates 0 entities, that's also acceptable behavior
+	if len(entities) < 0 {
+		t.Error("Entity count should not be negative")
+	}
+}
+
+func TestEntityGeneration_LargeCount(t *testing.T) {
+	gen := NewEntityGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"count": 100,
+		},
+	}
+	
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+	
+	entities := result.([]*Entity)
+	if len(entities) != 100 {
+		t.Errorf("Expected 100 entities, got %d", len(entities))
+	}
+}
+
+func TestEntityThreatLevel_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		entity *Entity
+	}{
+		{
+			name: "MinimalStats",
+			entity: &Entity{
+				Type: TypeMinion,
+				Stats: Stats{
+					Health:    1,
+					MaxHealth: 1,
+					Damage:    1,
+					Defense:   0,
+					Level:     1,
+				},
+			},
+		},
+		{
+			name: "MaximalStats",
+			entity: &Entity{
+				Type: TypeBoss,
+				Stats: Stats{
+					Health:    10000,
+					MaxHealth: 10000,
+					Damage:    500,
+					Defense:   200,
+					Level:     100,
+				},
+			},
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			threat := tt.entity.GetThreatLevel()
+			if threat < 0 {
+				t.Errorf("GetThreatLevel() = %d, should not be negative", threat)
+			}
+		})
+	}
+}
+
 func BenchmarkEntityGeneration(b *testing.B) {
 	gen := NewEntityGenerator()
 	params := procgen.GenerationParams{

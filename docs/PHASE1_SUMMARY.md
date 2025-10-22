@@ -44,7 +44,7 @@
 - **Total Go Files:** 21
 - **Total Lines of Code:** 962
 - **Packages Created:** 8
-- **Test Coverage:** 88.4% (engine), 100% (procgen)
+- **Test Coverage:** 81.0% (engine), 100% (procgen)
 
 ### File Breakdown
 ```
@@ -124,7 +124,7 @@ type World struct {
 - Deferred entity add/remove
 - Query by component type
 
-**Test Coverage:** 88.4%
+**Test Coverage:** 81.0%
 
 ### 2. Procedural Generation
 
@@ -254,7 +254,7 @@ type Map struct {
 ### Tests
 ```bash
 $ go test -tags test ./pkg/...
-ok  	github.com/opd-ai/venture/pkg/engine	0.003s	coverage: 88.4%
+ok  	github.com/opd-ai/venture/pkg/engine	0.003s	coverage: 81.0%
 ok  	github.com/opd-ai/venture/pkg/procgen	0.003s	coverage: 100.0%
 ```
 
@@ -313,7 +313,7 @@ $ go build ./cmd/server
 ```go
 module github.com/opd-ai/venture
 
-go 1.21
+go 1.24.7
 
 require github.com/hajimehoshi/ebiten/v2 v2.9.2
 ```

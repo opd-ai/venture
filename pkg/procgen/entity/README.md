@@ -285,7 +285,7 @@ go test -bench=. ./pkg/procgen/entity/...
 
 Test results:
 - ✅ 14 tests, all passing
-- ✅ 87.8% code coverage
+- ✅ 95.9% code coverage
 - ✅ Deterministic generation verified
 - ✅ ~14.5μs per 10-entity batch
 

@@ -414,7 +414,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 
 ### Medium Priority Issues
 
-#### Issue #8: Tutorial Panel Overlaps HUD Elements at Small Resolutions
+#### Issue #8: Tutorial Panel Overlaps HUD Elements at Small Resolutions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: Tutorial System (`pkg/engine/tutorial_system.go:299-305`)
 - **Description**: Tutorial panel is hard-coded to 400x150 pixels in bottom-right corner. At minimum resolution (800x600), panel overlaps XP bar and stats panel, obscuring critical HUD information during tutorial.
 - **Steps to Reproduce**:
@@ -479,6 +480,20 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verify no overlap with HUD at any resolution
   - Check readability of tutorial text at minimum panel size
 - **Accessibility**: Ensure minimum font size remains legible (7x13 basicfont = 91px min width for typical text)
+- **Resolution**:
+  - Implemented responsive panel positioning with HUD collision avoidance
+  - Panel width scales down on small screens (min 300px)
+  - Three positioning modes based on screen size:
+    * Large screens (≥800x600): bottom-right, 60px above XP bar
+    * Medium screens (<800 width, ≥400 height): center-bottom, above XP bar
+    * Small screens (<400 height): center-center overlay
+  - Verified positioning at different resolutions:
+    * 800x600: panelX=380, panelY=390 (was 430, now 40px higher - no overlap)
+    * 1280x720: panelX=860, panelY=510 (no overlap)
+    * 1920x1080: panelX=1500, panelY=870 (no overlap)
+    * 640x480: panelX=170, panelY=270 (centered, above XP bar)
+  - All HUD elements remain visible at all tested resolutions
+
 
 #### Issue #9: Border Styles Not Fully Implemented for UI Elements ✅ RESOLVED
 - **Status**: RESOLVED (2025-10-22)

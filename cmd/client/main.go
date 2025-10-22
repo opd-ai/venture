@@ -210,12 +210,12 @@ func main() {
 				currentHealth, maxHealth = health.Current, health.Max
 			}
 
-		// Get player stats
-		var attack, defense, magic float64
-		if statsComp, ok := player.GetComponent("stats"); ok {
-			stats := statsComp.(*engine.StatsComponent)
-			attack, defense, magic = stats.Attack, stats.Defense, stats.MagicPower
-		}			// Get player level and XP
+			// Get player stats
+			var attack, defense, magic float64
+			if statsComp, ok := player.GetComponent("stats"); ok {
+				stats := statsComp.(*engine.StatsComponent)
+				attack, defense, magic = stats.Attack, stats.Defense, stats.MagicPower
+			} // Get player level and XP
 			var level int
 			var currentXP int64
 			if expComp, ok := player.GetComponent("experience"); ok {
@@ -237,19 +237,19 @@ func main() {
 
 			// Create game save
 			gameSave := &saveload.GameSave{
-				Version:   saveload.SaveVersion,
+				Version: saveload.SaveVersion,
 				PlayerState: &saveload.PlayerState{
-					EntityID:      player.ID,
-					X:             posX,
-					Y:             posY,
-					CurrentHealth: currentHealth,
-					MaxHealth:     maxHealth,
-					Level:         level,
-					Experience:    int(currentXP),
-					Attack:        attack,
-					Defense:       defense,
-					MagicPower:    magic,
-					Speed:         1.0, // Default speed
+					EntityID:       player.ID,
+					X:              posX,
+					Y:              posY,
+					CurrentHealth:  currentHealth,
+					MaxHealth:      maxHealth,
+					Level:          level,
+					Experience:     int(currentXP),
+					Attack:         attack,
+					Defense:        defense,
+					MagicPower:     magic,
+					Speed:          1.0, // Default speed
 					InventoryItems: inventoryItems,
 				},
 				WorldState: &saveload.WorldState{

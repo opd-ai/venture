@@ -139,12 +139,12 @@ func (pm *PerformanceMetrics) UpdateMemoryStats(allocated, inUse uint64) {
 }
 
 // GetSnapshot returns a snapshot of current metrics (thread-safe).
-func (pm *PerformanceMetrics) GetSnapshot() PerformanceMetrics {
+func (pm *PerformanceMetrics) GetSnapshot() *PerformanceMetrics {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 
 	// Create a copy
-	snapshot := PerformanceMetrics{
+	snapshot := &PerformanceMetrics{
 		FPS:               pm.FPS,
 		FrameTime:         pm.FrameTime,
 		AverageFrameTime:  pm.AverageFrameTime,

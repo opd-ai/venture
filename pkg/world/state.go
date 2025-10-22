@@ -3,6 +3,7 @@ package world
 // TileType represents different types of terrain tiles.
 type TileType int
 
+// Tile type constants.
 const (
 	TileEmpty TileType = iota
 	TileFloor

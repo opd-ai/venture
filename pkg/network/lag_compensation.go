@@ -222,7 +222,7 @@ func (lc *LagCompensator) InterpolateEntityAt(entityID uint64, t time.Time) (*En
 	return entity, nil
 }
 
-// GetCompensationStats returns statistics about lag compensation
+// CompensationStats contains statistics about lag compensation.
 type CompensationStats struct {
 	// TotalSnapshots is the number of snapshots stored
 	TotalSnapshots int

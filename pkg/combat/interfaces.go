@@ -3,6 +3,7 @@ package combat
 // DamageType represents different types of damage.
 type DamageType int
 
+// Damage type constants.
 const (
 	DamagePhysical DamageType = iota
 	DamageMagical

@@ -3,6 +3,7 @@ package audio
 // WaveformType represents different basic waveform types.
 type WaveformType int
 
+// Waveform type constants.
 const (
 	WaveformSine WaveformType = iota
 	WaveformSquare

@@ -430,18 +430,18 @@ func (g *Generator) selectButtonBaseColor(pal *palette.Palette, rng *rand.Rand) 
 	for attempt := 0; attempt < 5; attempt++ {
 		colorIndex := rng.Intn(len(pal.Colors))
 		candidate := pal.Colors[colorIndex]
-		
+
 		// Calculate relative luminance
 		r, gr, b, _ := candidate.RGBA()
 		luminance := (0.299*float64(r) + 0.587*float64(gr) + 0.114*float64(b)) / 65535.0
-		
+
 		// Prefer colors with mid-range luminance (not too dark or too light)
 		// This ensures effective lightening and darkening for button states
 		if luminance > 0.25 && luminance < 0.75 {
 			return candidate
 		}
 	}
-	
+
 	// Fallback: use Primary color which should be well-balanced
 	return pal.Primary
 }
@@ -454,7 +454,7 @@ func (g *Generator) isTechGenre(genreID string) bool {
 	if genreID == "scifi" || genreID == "cyberpunk" {
 		return true
 	}
-	
+
 	// Check for tech-related keywords in blended genre IDs
 	// This handles cases like "sci-fi-horror", "cyber-fantasy", etc.
 	techKeywords := []string{"scifi", "sci-fi", "cyber", "tech", "digital", "future"}
@@ -463,7 +463,7 @@ func (g *Generator) isTechGenre(genreID string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

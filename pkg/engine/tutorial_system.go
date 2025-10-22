@@ -316,9 +316,9 @@ func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 	panelHeight := 150
 
 	// HUD element margins (approximate positions)
-	const hudMarginTop = 120    // Health bar + stats panel height
-	const hudMarginBottom = 60  // XP bar height
-	const hudMarginRight = 220  // Stats panel width + margin
+	const hudMarginTop = 120   // Health bar + stats panel height
+	const hudMarginBottom = 60 // XP bar height
+	const hudMarginRight = 220 // Stats panel width + margin
 
 	// Position panel to avoid HUD elements
 	var panelX, panelY int

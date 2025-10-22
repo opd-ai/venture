@@ -433,7 +433,6 @@ See [pkg/network/README.md](pkg/network/README.md) for more details on the netwo
 
 ### Root Documentation
 - **README.md** - This file, project overview and quick start guide
-- **STATUS.md** - Current project status and phase completion tracking
 
 ### Core Documentation (docs/)
 - **ARCHITECTURE.md** - Architecture Decision Records (ADRs)

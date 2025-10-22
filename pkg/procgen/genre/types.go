@@ -6,31 +6,31 @@ import "fmt"
 type Genre struct {
 	// ID is the unique identifier for this genre (lowercase, no spaces)
 	ID string
-	
+
 	// Name is the human-readable name of the genre
 	Name string
-	
+
 	// Description provides a brief description of the genre
 	Description string
-	
+
 	// Themes are keywords that describe the genre's aesthetic and content
 	Themes []string
-	
+
 	// PrimaryColor is the main color associated with this genre (RGB hex)
 	PrimaryColor string
-	
+
 	// SecondaryColor is an accent color for this genre (RGB hex)
 	SecondaryColor string
-	
+
 	// AccentColor is another accent color for variety (RGB hex)
 	AccentColor string
-	
+
 	// EntityPrefix is the prefix used for entity names in this genre
 	EntityPrefix string
-	
+
 	// ItemPrefix is the prefix used for item names in this genre
 	ItemPrefix string
-	
+
 	// LocationPrefix is the prefix used for location names in this genre
 	LocationPrefix string
 }
@@ -135,13 +135,13 @@ func (r *Registry) Count() int {
 // DefaultRegistry returns a registry pre-populated with standard genres.
 func DefaultRegistry() *Registry {
 	registry := NewRegistry()
-	
+
 	// Register all predefined genres
 	for _, g := range PredefinedGenres() {
 		// Ignore errors for predefined genres - they should always be valid
 		_ = registry.Register(g)
 	}
-	
+
 	return registry
 }
 

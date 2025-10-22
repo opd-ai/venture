@@ -11,16 +11,16 @@ func TestNewEntityGenerator(t *testing.T) {
 	if gen == nil {
 		t.Fatal("NewEntityGenerator returned nil")
 	}
-	
+
 	if gen.templates == nil {
 		t.Fatal("templates map is nil")
 	}
-	
+
 	// Check that templates are registered
 	if len(gen.templates["fantasy"]) == 0 {
 		t.Error("fantasy templates not registered")
 	}
-	
+
 	if len(gen.templates["scifi"]) == 0 {
 		t.Error("scifi templates not registered")
 	}
@@ -36,40 +36,40 @@ func TestEntityGeneration(t *testing.T) {
 			"count": 20,
 		},
 	}
-	
+
 	result, err := gen.Generate(12345, params)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-	
+
 	entities, ok := result.([]*Entity)
 	if !ok {
 		t.Fatal("result is not []*Entity")
 	}
-	
+
 	if len(entities) != 20 {
 		t.Errorf("expected 20 entities, got %d", len(entities))
 	}
-	
+
 	// Check each entity
 	for i, entity := range entities {
 		if entity == nil {
 			t.Errorf("entity %d is nil", i)
 			continue
 		}
-		
+
 		if entity.Name == "" {
 			t.Errorf("entity %d has empty name", i)
 		}
-		
+
 		if entity.Stats.MaxHealth <= 0 {
 			t.Errorf("entity %d (%s) has invalid max health: %d", i, entity.Name, entity.Stats.MaxHealth)
 		}
-		
+
 		if entity.Stats.Level <= 0 {
 			t.Errorf("entity %d (%s) has invalid level: %d", i, entity.Name, entity.Stats.Level)
 		}
-		
+
 		if entity.Stats.Speed <= 0 {
 			t.Errorf("entity %d (%s) has invalid speed: %f", i, entity.Name, entity.Stats.Speed)
 		}
@@ -86,48 +86,48 @@ func TestEntityGenerationDeterministic(t *testing.T) {
 			"count": 10,
 		},
 	}
-	
+
 	seed := int64(42)
-	
+
 	// Generate twice with same seed
 	result1, err1 := gen.Generate(seed, params)
 	if err1 != nil {
 		t.Fatalf("First generate failed: %v", err1)
 	}
-	
+
 	result2, err2 := gen.Generate(seed, params)
 	if err2 != nil {
 		t.Fatalf("Second generate failed: %v", err2)
 	}
-	
+
 	entities1 := result1.([]*Entity)
 	entities2 := result2.([]*Entity)
-	
+
 	if len(entities1) != len(entities2) {
 		t.Fatalf("entity counts differ: %d vs %d", len(entities1), len(entities2))
 	}
-	
+
 	// Check that entities are identical
 	for i := range entities1 {
 		e1 := entities1[i]
 		e2 := entities2[i]
-		
+
 		if e1.Name != e2.Name {
 			t.Errorf("entity %d name differs: %s vs %s", i, e1.Name, e2.Name)
 		}
-		
+
 		if e1.Type != e2.Type {
 			t.Errorf("entity %d type differs: %v vs %v", i, e1.Type, e2.Type)
 		}
-		
+
 		if e1.Stats.MaxHealth != e2.Stats.MaxHealth {
 			t.Errorf("entity %d (%s) max health differs: %d vs %d", i, e1.Name, e1.Stats.MaxHealth, e2.Stats.MaxHealth)
 		}
-		
+
 		if e1.Stats.Damage != e2.Stats.Damage {
 			t.Errorf("entity %d (%s) damage differs: %d vs %d", i, e1.Name, e1.Stats.Damage, e2.Stats.Damage)
 		}
-		
+
 		if e1.Stats.Level != e2.Stats.Level {
 			t.Errorf("entity %d (%s) level differs: %d vs %d", i, e1.Name, e1.Stats.Level, e2.Stats.Level)
 		}
@@ -144,17 +144,17 @@ func TestEntityGenerationSciFi(t *testing.T) {
 			"count": 10,
 		},
 	}
-	
+
 	result, err := gen.Generate(54321, params)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-	
+
 	entities := result.([]*Entity)
 	if len(entities) != 10 {
 		t.Errorf("expected 10 entities, got %d", len(entities))
 	}
-	
+
 	// All entities should be valid
 	for i, entity := range entities {
 		if entity.Name == "" {
@@ -173,12 +173,12 @@ func TestEntityValidation(t *testing.T) {
 			"count": 15,
 		},
 	}
-	
+
 	result, err := gen.Generate(99999, params)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-	
+
 	// Should pass validation
 	if err := gen.Validate(result); err != nil {
 		t.Errorf("Validation failed: %v", err)
@@ -195,7 +195,7 @@ func TestEntityTypes(t *testing.T) {
 		{TypeBoss, "boss"},
 		{TypeMinion, "minion"},
 	}
-	
+
 	for _, tt := range tests {
 		if got := tt.entityType.String(); got != tt.expected {
 			t.Errorf("EntityType.String() = %v, want %v", got, tt.expected)
@@ -214,7 +214,7 @@ func TestEntitySize(t *testing.T) {
 		{SizeLarge, "large"},
 		{SizeHuge, "huge"},
 	}
-	
+
 	for _, tt := range tests {
 		if got := tt.size.String(); got != tt.expected {
 			t.Errorf("EntitySize.String() = %v, want %v", got, tt.expected)
@@ -233,7 +233,7 @@ func TestRarity(t *testing.T) {
 		{RarityEpic, "epic"},
 		{RarityLegendary, "legendary"},
 	}
-	
+
 	for _, tt := range tests {
 		if got := tt.rarity.String(); got != tt.expected {
 			t.Errorf("Rarity.String() = %v, want %v", got, tt.expected)
@@ -251,7 +251,7 @@ func TestEntityIsHostile(t *testing.T) {
 		{TypeMinion, true},
 		{TypeNPC, false},
 	}
-	
+
 	for _, tt := range tests {
 		entity := &Entity{Type: tt.entityType}
 		if got := entity.IsHostile(); got != tt.expected {
@@ -270,7 +270,7 @@ func TestEntityIsBoss(t *testing.T) {
 		{TypeMinion, false},
 		{TypeNPC, false},
 	}
-	
+
 	for _, tt := range tests {
 		entity := &Entity{Type: tt.entityType}
 		if got := entity.IsBoss(); got != tt.expected {
@@ -290,12 +290,12 @@ func TestEntityThreatLevel(t *testing.T) {
 			Level:     5,
 		},
 	}
-	
+
 	threat := entity.GetThreatLevel()
 	if threat < 0 || threat > 100 {
 		t.Errorf("GetThreatLevel() = %d, expected 0-100", threat)
 	}
-	
+
 	// Boss should have higher threat
 	boss := &Entity{
 		Type: TypeBoss,
@@ -307,7 +307,7 @@ func TestEntityThreatLevel(t *testing.T) {
 			Level:     5,
 		},
 	}
-	
+
 	bossThreat := boss.GetThreatLevel()
 	if bossThreat <= threat {
 		t.Errorf("Boss threat (%d) should be higher than monster threat (%d)", bossThreat, threat)
@@ -319,12 +319,12 @@ func TestGetFantasyTemplates(t *testing.T) {
 	if len(templates) == 0 {
 		t.Error("GetFantasyTemplates returned empty slice")
 	}
-	
+
 	// Check that we have various types
 	hasMonster := false
 	hasBoss := false
 	hasNPC := false
-	
+
 	for _, template := range templates {
 		switch template.BaseType {
 		case TypeMonster:
@@ -335,7 +335,7 @@ func TestGetFantasyTemplates(t *testing.T) {
 			hasNPC = true
 		}
 	}
-	
+
 	if !hasMonster {
 		t.Error("Fantasy templates missing monster type")
 	}
@@ -352,7 +352,7 @@ func TestGetSciFiTemplates(t *testing.T) {
 	if len(templates) == 0 {
 		t.Error("GetSciFiTemplates returned empty slice")
 	}
-	
+
 	// All templates should have valid ranges
 	for i, template := range templates {
 		if template.HealthRange[0] > template.HealthRange[1] {
@@ -372,10 +372,10 @@ func TestGetSciFiTemplates(t *testing.T) {
 
 func TestEntityLevelScaling(t *testing.T) {
 	gen := NewEntityGenerator()
-	
+
 	// Generate entities at different depths
 	depths := []int{1, 5, 10, 20}
-	
+
 	for _, depth := range depths {
 		params := procgen.GenerationParams{
 			Difficulty: 0.5,
@@ -385,14 +385,14 @@ func TestEntityLevelScaling(t *testing.T) {
 				"count": 5,
 			},
 		}
-		
+
 		result, err := gen.Generate(int64(depth)*100, params)
 		if err != nil {
 			t.Fatalf("Generate failed at depth %d: %v", depth, err)
 		}
-		
+
 		entities := result.([]*Entity)
-		
+
 		// Check that entities have appropriate levels for depth
 		for _, entity := range entities {
 			// Level should be roughly proportional to depth
@@ -405,19 +405,19 @@ func TestEntityLevelScaling(t *testing.T) {
 
 func TestEntityValidation_InvalidInput(t *testing.T) {
 	gen := NewEntityGenerator()
-	
+
 	// Test with non-entity slice
 	err := gen.Validate("not an entity slice")
 	if err == nil {
 		t.Error("Validate should fail for non-entity slice")
 	}
-	
+
 	// Test with empty entity slice
 	err = gen.Validate([]*Entity{})
 	if err == nil {
 		t.Error("Validate should fail for empty entity slice")
 	}
-	
+
 	// Test with invalid entity (empty name)
 	invalidEntity := &Entity{
 		Name: "",
@@ -431,7 +431,7 @@ func TestEntityValidation_InvalidInput(t *testing.T) {
 	if err == nil {
 		t.Error("Validate should fail for entity with empty name")
 	}
-	
+
 	// Test with invalid max health
 	invalidHealth := &Entity{
 		Name: "Test",
@@ -445,7 +445,7 @@ func TestEntityValidation_InvalidInput(t *testing.T) {
 	if err == nil {
 		t.Error("Validate should fail for entity with zero max health")
 	}
-	
+
 	// Test with invalid level
 	invalidLevel := &Entity{
 		Name: "Test",
@@ -459,7 +459,7 @@ func TestEntityValidation_InvalidInput(t *testing.T) {
 	if err == nil {
 		t.Error("Validate should fail for entity with zero level")
 	}
-	
+
 	// Test with invalid speed
 	invalidSpeed := &Entity{
 		Name: "Test",
@@ -499,7 +499,7 @@ func TestRarity_String_Unknown(t *testing.T) {
 func TestEntityGeneration_DifferentDifficulties(t *testing.T) {
 	gen := NewEntityGenerator()
 	difficulties := []float64{0.0, 0.25, 0.5, 0.75, 1.0}
-	
+
 	for _, diff := range difficulties {
 		params := procgen.GenerationParams{
 			Difficulty: diff,
@@ -509,12 +509,12 @@ func TestEntityGeneration_DifferentDifficulties(t *testing.T) {
 				"count": 5,
 			},
 		}
-		
+
 		result, err := gen.Generate(12345, params)
 		if err != nil {
 			t.Fatalf("Generate failed at difficulty %f: %v", diff, err)
 		}
-		
+
 		entities := result.([]*Entity)
 		if len(entities) != 5 {
 			t.Errorf("Expected 5 entities at difficulty %f, got %d", diff, len(entities))
@@ -532,13 +532,13 @@ func TestEntityGeneration_UnknownGenre(t *testing.T) {
 			"count": 5,
 		},
 	}
-	
+
 	// Should fall back to default templates or generate entities anyway
 	result, err := gen.Generate(12345, params)
 	if err != nil {
 		t.Fatalf("Generate failed with unknown genre: %v", err)
 	}
-	
+
 	entities := result.([]*Entity)
 	if len(entities) != 5 {
 		t.Errorf("Expected 5 entities with unknown genre, got %d", len(entities))
@@ -555,12 +555,12 @@ func TestEntityGeneration_ZeroCount(t *testing.T) {
 			"count": 0,
 		},
 	}
-	
+
 	result, err := gen.Generate(12345, params)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-	
+
 	entities := result.([]*Entity)
 	// With count=0, should still generate default number (likely 10)
 	// If it generates 0 entities, that's also acceptable behavior
@@ -579,12 +579,12 @@ func TestEntityGeneration_LargeCount(t *testing.T) {
 			"count": 100,
 		},
 	}
-	
+
 	result, err := gen.Generate(12345, params)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-	
+
 	entities := result.([]*Entity)
 	if len(entities) != 100 {
 		t.Errorf("Expected 100 entities, got %d", len(entities))
@@ -623,7 +623,7 @@ func TestEntityThreatLevel_EdgeCases(t *testing.T) {
 			},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			threat := tt.entity.GetThreatLevel()
@@ -644,7 +644,7 @@ func BenchmarkEntityGeneration(b *testing.B) {
 			"count": 10,
 		},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := gen.Generate(int64(i), params)

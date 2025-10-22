@@ -143,7 +143,7 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 	// Generate description from template
 	descIdx := rng.Intn(len(template.DescTemplates))
 	descTemplate := template.DescTemplates[descIdx]
-	
+
 	// Generate description based on quest type
 	switch template.BaseType {
 	case TypeKill:
@@ -173,7 +173,7 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 
 	// Calculate rewards with scaling
 	rarityMultiplier := 1.0 + float64(quest.Difficulty)*0.3
-	
+
 	minXP := int(float64(template.XPRewardRange[0]) * depthScale * rarityMultiplier)
 	maxXP := int(float64(template.XPRewardRange[1]) * depthScale * rarityMultiplier)
 	quest.Reward.XP = minXP
@@ -223,14 +223,14 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 func (g *QuestGenerator) determineDifficulty(rng *rand.Rand, depth int, difficulty float64) Difficulty {
 	// Base difficulty on depth
 	baseLevel := depth / 3
-	
+
 	// Add difficulty parameter influence
 	baseLevel += int(difficulty * 2)
-	
+
 	// Add random variance (-1 to +1)
 	variance := rng.Intn(3) - 1
 	level := baseLevel + variance
-	
+
 	// Clamp to valid range
 	if level < 0 {
 		return DifficultyTrivial
@@ -238,7 +238,7 @@ func (g *QuestGenerator) determineDifficulty(rng *rand.Rand, depth int, difficul
 	if level > int(DifficultyLegendary) {
 		return DifficultyLegendary
 	}
-	
+
 	return Difficulty(level)
 }
 

@@ -6,11 +6,11 @@ import "fmt"
 // Experience is gained through combat and completing objectives.
 // When enough XP is accumulated, the entity levels up.
 type ExperienceComponent struct {
-	Level       int     // Current character level (starts at 1)
-	CurrentXP   int     // Current experience points
-	RequiredXP  int     // XP needed for next level
-	TotalXP     int     // Total XP earned across all levels
-	SkillPoints int     // Unspent skill points for skill trees
+	Level       int // Current character level (starts at 1)
+	CurrentXP   int // Current experience points
+	RequiredXP  int // XP needed for next level
+	TotalXP     int // Total XP earned across all levels
+	SkillPoints int // Unspent skill points for skill trees
 }
 
 // Type returns the component type identifier.
@@ -34,10 +34,10 @@ func (e *ExperienceComponent) AddXP(xp int) bool {
 	if xp <= 0 {
 		return false
 	}
-	
+
 	e.CurrentXP += xp
 	e.TotalXP += xp
-	
+
 	if e.CurrentXP >= e.RequiredXP {
 		return true
 	}
@@ -71,16 +71,16 @@ func (e *ExperienceComponent) String() string {
 // LevelScalingComponent defines how an entity's stats scale with level.
 // This is used to automatically increase stats when leveling up.
 type LevelScalingComponent struct {
-	HealthPerLevel      float64 // Health increase per level
-	AttackPerLevel      float64 // Attack increase per level
-	DefensePerLevel     float64 // Defense increase per level
-	MagicPowerPerLevel  float64 // Magic power increase per level
+	HealthPerLevel       float64 // Health increase per level
+	AttackPerLevel       float64 // Attack increase per level
+	DefensePerLevel      float64 // Defense increase per level
+	MagicPowerPerLevel   float64 // Magic power increase per level
 	MagicDefensePerLevel float64 // Magic defense increase per level
-	BaseHealth          float64 // Starting health at level 1
-	BaseAttack          float64 // Starting attack at level 1
-	BaseDefense         float64 // Starting defense at level 1
-	BaseMagicPower      float64 // Starting magic power at level 1
-	BaseMagicDefense    float64 // Starting magic defense at level 1
+	BaseHealth           float64 // Starting health at level 1
+	BaseAttack           float64 // Starting attack at level 1
+	BaseDefense          float64 // Starting defense at level 1
+	BaseMagicPower       float64 // Starting magic power at level 1
+	BaseMagicDefense     float64 // Starting magic defense at level 1
 }
 
 // Type returns the component type identifier.
@@ -92,16 +92,16 @@ func (l LevelScalingComponent) Type() string {
 // These values are balanced for a standard combat-focused character.
 func NewLevelScalingComponent() *LevelScalingComponent {
 	return &LevelScalingComponent{
-		HealthPerLevel:      10.0,  // +10 HP per level
-		AttackPerLevel:      2.0,   // +2 attack per level
-		DefensePerLevel:     1.5,   // +1.5 defense per level
-		MagicPowerPerLevel:  2.0,   // +2 magic power per level
-		MagicDefensePerLevel: 1.5,  // +1.5 magic defense per level
-		BaseHealth:          100.0, // Starting health
-		BaseAttack:          10.0,  // Starting attack
-		BaseDefense:         5.0,   // Starting defense
-		BaseMagicPower:      10.0,  // Starting magic power
-		BaseMagicDefense:    5.0,   // Starting magic defense
+		HealthPerLevel:       10.0,  // +10 HP per level
+		AttackPerLevel:       2.0,   // +2 attack per level
+		DefensePerLevel:      1.5,   // +1.5 defense per level
+		MagicPowerPerLevel:   2.0,   // +2 magic power per level
+		MagicDefensePerLevel: 1.5,   // +1.5 magic defense per level
+		BaseHealth:           100.0, // Starting health
+		BaseAttack:           10.0,  // Starting attack
+		BaseDefense:          5.0,   // Starting defense
+		BaseMagicPower:       10.0,  // Starting magic power
+		BaseMagicDefense:     5.0,   // Starting magic defense
 	}
 }
 

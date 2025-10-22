@@ -138,9 +138,9 @@ func TestColorScheme_Creation(t *testing.T) {
 
 func TestColorScheme_HueRange(t *testing.T) {
 	tests := []struct {
-		name    string
-		hue     float64
-		valid   bool
+		name  string
+		hue   float64
+		valid bool
 	}{
 		{"MinHue", 0.0, true},
 		{"MaxHue", 360.0, true},

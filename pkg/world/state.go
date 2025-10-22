@@ -27,13 +27,13 @@ type Map struct {
 	// Width and height in tiles
 	Width  int
 	Height int
-	
+
 	// Tiles stored in row-major order
 	Tiles []Tile
-	
+
 	// Seed used to generate this map
 	Seed int64
-	
+
 	// Genre of this map
 	Genre string
 }
@@ -52,7 +52,7 @@ func NewMap(width, height int, seed int64) *Map {
 			}
 		}
 	}
-	
+
 	return &Map{
 		Width:  width,
 		Height: height,
@@ -94,13 +94,13 @@ func (m *Map) IsWalkable(x, y int) bool {
 type WorldState struct {
 	// Current map
 	CurrentMap *Map
-	
+
 	// Global game time
 	Time float64
-	
+
 	// Player entity IDs
 	PlayerIDs []uint64
-	
+
 	// Additional state data
 	State map[string]interface{}
 }

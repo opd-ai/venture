@@ -139,7 +139,7 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 
 	// Cooldown
 	if template.CooldownRange[1] > 0 {
-		stats.Cooldown = template.CooldownRange[0] + 
+		stats.Cooldown = template.CooldownRange[0] +
 			rng.Float64()*(template.CooldownRange[1]-template.CooldownRange[0])
 		// Higher rarity has shorter cooldown
 		stats.Cooldown = stats.Cooldown / rarityScale
@@ -147,7 +147,7 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 
 	// Cast time
 	if template.CastTimeRange[1] > 0 {
-		stats.CastTime = template.CastTimeRange[0] + 
+		stats.CastTime = template.CastTimeRange[0] +
 			rng.Float64()*(template.CastTimeRange[1]-template.CastTimeRange[0])
 		// Higher rarity has faster cast time
 		stats.CastTime = stats.CastTime / (1.0 + float64(rarityScale)*0.1)
@@ -155,7 +155,7 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 
 	// Range
 	if template.RangeRange[1] > 0 {
-		stats.Range = template.RangeRange[0] + 
+		stats.Range = template.RangeRange[0] +
 			rng.Float64()*(template.RangeRange[1]-template.RangeRange[0])
 		// Higher rarity has better range
 		stats.Range = stats.Range * (1.0 + float64(rarityScale)*0.1)
@@ -163,7 +163,7 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 
 	// Area size
 	if template.AreaSizeRange[1] > 0 {
-		stats.AreaSize = template.AreaSizeRange[0] + 
+		stats.AreaSize = template.AreaSizeRange[0] +
 			rng.Float64()*(template.AreaSizeRange[1]-template.AreaSizeRange[0])
 		// Higher rarity has larger area
 		stats.AreaSize = stats.AreaSize * (1.0 + float64(rarityScale)*0.15)
@@ -171,7 +171,7 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 
 	// Duration
 	if template.DurationRange[1] > 0 {
-		stats.Duration = template.DurationRange[0] + 
+		stats.Duration = template.DurationRange[0] +
 			rng.Float64()*(template.DurationRange[1]-template.DurationRange[0])
 		// Higher rarity has longer duration
 		stats.Duration = stats.Duration * (1.0 + float64(rarityScale)*0.2)
@@ -184,11 +184,11 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 func (g *SpellGenerator) determineRarity(rng *rand.Rand, depth int, difficulty float64) Rarity {
 	// Base chance influenced by depth
 	roll := rng.Float64()
-	
+
 	// Depth increases chance of higher rarity
 	depthBonus := float64(depth) * 0.02
 	difficultyBonus := difficulty * 0.1
-	
+
 	roll += depthBonus + difficultyBonus
 
 	// Determine rarity thresholds

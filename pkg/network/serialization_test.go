@@ -10,8 +10,8 @@ func TestBinaryProtocol_EncodeStateUpdate(t *testing.T) {
 	protocol := NewBinaryProtocol()
 
 	tests := []struct {
-		name   string
-		update *StateUpdate
+		name    string
+		update  *StateUpdate
 		wantErr bool
 	}{
 		{
@@ -76,19 +76,19 @@ func TestBinaryProtocol_EncodeStateUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := protocol.EncodeStateUpdate(tt.update)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
 			}
-			
+
 			if len(data) == 0 {
 				t.Error("Expected non-empty encoded data")
 			}
@@ -155,14 +155,14 @@ func TestBinaryProtocol_DecodeStateUpdate(t *testing.T) {
 
 			// Decode
 			decoded, err := protocol.DecodeStateUpdate(encoded)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
@@ -276,19 +276,19 @@ func TestBinaryProtocol_EncodeInputCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := protocol.EncodeInputCommand(tt.cmd)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
 			}
-			
+
 			if len(data) == 0 {
 				t.Error("Expected non-empty encoded data")
 			}
@@ -339,14 +339,14 @@ func TestBinaryProtocol_DecodeInputCommand(t *testing.T) {
 
 			// Decode
 			decoded, err := protocol.DecodeInputCommand(encoded)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return

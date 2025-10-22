@@ -100,25 +100,25 @@ func (t Tier) String() string {
 
 // Skill represents a single skill/ability in the skill tree.
 type Skill struct {
-	ID          string          // Unique identifier
-	Name        string          // Display name
-	Description string          // Description of effects
-	Type        SkillType       // Passive, Active, Ultimate, Synergy
-	Category    SkillCategory   // Combat, Defense, Magic, etc.
-	Tier        Tier            // Power tier
-	Level       int             // Current level (0 = unlearned)
-	MaxLevel    int             // Maximum level
-	Requirements Requirements   // What's needed to unlock
-	Effects     []Effect        // Stat bonuses and effects
-	Tags        []string        // Searchable tags
-	Seed        int64           // Generation seed for determinism
+	ID           string        // Unique identifier
+	Name         string        // Display name
+	Description  string        // Description of effects
+	Type         SkillType     // Passive, Active, Ultimate, Synergy
+	Category     SkillCategory // Combat, Defense, Magic, etc.
+	Tier         Tier          // Power tier
+	Level        int           // Current level (0 = unlearned)
+	MaxLevel     int           // Maximum level
+	Requirements Requirements  // What's needed to unlock
+	Effects      []Effect      // Stat bonuses and effects
+	Tags         []string      // Searchable tags
+	Seed         int64         // Generation seed for determinism
 }
 
 // Requirements defines what's needed to unlock a skill.
 type Requirements struct {
-	PlayerLevel      int      // Minimum player level
-	SkillPoints      int      // Skill points needed
-	PrerequisiteIDs  []string // Skills that must be learned first
+	PlayerLevel       int            // Minimum player level
+	SkillPoints       int            // Skill points needed
+	PrerequisiteIDs   []string       // Skills that must be learned first
 	AttributeMinimums map[string]int // e.g., {"strength": 10}
 }
 
@@ -145,15 +145,15 @@ type Position struct {
 
 // SkillTree represents a complete skill progression tree.
 type SkillTree struct {
-	ID          string       // Unique tree identifier
-	Name        string       // Display name (e.g., "Warrior", "Mage")
-	Description string       // Tree description
+	ID          string        // Unique tree identifier
+	Name        string        // Display name (e.g., "Warrior", "Mage")
+	Description string        // Tree description
 	Category    SkillCategory // Primary category
-	Genre       string       // fantasy, scifi, etc.
-	Nodes       []*SkillNode // All skills in this tree
-	RootNodes   []*SkillNode // Starting skills (no prerequisites)
-	MaxPoints   int          // Maximum total skill points
-	Seed        int64        // Generation seed
+	Genre       string        // fantasy, scifi, etc.
+	Nodes       []*SkillNode  // All skills in this tree
+	RootNodes   []*SkillNode  // Starting skills (no prerequisites)
+	MaxPoints   int           // Maximum total skill points
+	Seed        int64         // Generation seed
 }
 
 // SkillTemplate defines a template for procedural skill generation.
@@ -176,26 +176,26 @@ func (s *Skill) IsUnlocked(playerLevel int, skillPoints int, learnedSkills map[s
 	if playerLevel < s.Requirements.PlayerLevel {
 		return false
 	}
-	
+
 	// Check skill points
 	if skillPoints < s.Requirements.SkillPoints {
 		return false
 	}
-	
+
 	// Check prerequisites
 	for _, prereqID := range s.Requirements.PrerequisiteIDs {
 		if !learnedSkills[prereqID] {
 			return false
 		}
 	}
-	
+
 	// Check attribute minimums
 	for attr, minValue := range s.Requirements.AttributeMinimums {
 		if attributes[attr] < minValue {
 			return false
 		}
 	}
-	
+
 	return true
 }
 

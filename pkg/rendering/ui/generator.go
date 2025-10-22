@@ -64,11 +64,11 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Select colors based on state
 	var bgColor, borderColor color.Color
-	
+
 	// Use random color from palette to add seed variation
 	colorIndex := rng.Intn(len(pal.Colors))
 	baseColor := pal.Colors[colorIndex]
-	
+
 	switch config.State {
 	case StateNormal:
 		bgColor = baseColor
@@ -186,7 +186,7 @@ func (g *Generator) generateIcon(img *image.RGBA, pal *palette.Palette, rng *ran
 		// Circular icon for others
 		centerX := config.Width / 2
 		centerY := config.Height / 2
-		radius := config.Width / 2 - 2
+		radius := config.Width/2 - 2
 		g.drawCircle(img, centerX, centerY, radius, bgColor, true)
 	}
 
@@ -271,7 +271,7 @@ func (g *Generator) drawCircle(img *image.RGBA, cx, cy, radius int, col color.Co
 			dx := x - cx
 			dy := y - cy
 			distSq := dx*dx + dy*dy
-			
+
 			if fill {
 				if distSq <= radius*radius {
 					bounds := img.Bounds()
@@ -295,18 +295,18 @@ func (g *Generator) drawCircle(img *image.RGBA, cx, cy, radius int, col color.Co
 func (g *Generator) lightenColor(col color.Color, amount float64) color.Color {
 	r, gr, b, a := col.RGBA()
 	factor := 1.0 + amount
-	
+
 	newR := uint8(min(255, float64(r>>8)*factor))
 	newG := uint8(min(255, float64(gr>>8)*factor))
 	newB := uint8(min(255, float64(b>>8)*factor))
-	
+
 	return color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)}
 }
 
 func (g *Generator) darkenColor(col color.Color, amount float64) color.Color {
 	r, gr, b, a := col.RGBA()
 	factor := 1.0 - amount
-	
+
 	return color.RGBA{
 		R: uint8(float64(r>>8) * factor),
 		G: uint8(float64(gr>>8) * factor),

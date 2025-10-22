@@ -340,8 +340,8 @@ func TestHelperFunctions_Abs(t *testing.T) {
 
 func TestHelperFunctions_Sqrt(t *testing.T) {
 	tests := []struct {
-		input    float64
-		expected float64
+		input     float64
+		expected  float64
 		tolerance float64
 	}{
 		{0.0, 0.0, 0.001},
@@ -355,7 +355,7 @@ func TestHelperFunctions_Sqrt(t *testing.T) {
 	for _, tt := range tests {
 		result := sqrt(tt.input)
 		if math.Abs(result-tt.expected) > tt.tolerance {
-			t.Errorf("sqrt(%f) = %f, expected %f (tolerance %f)", 
+			t.Errorf("sqrt(%f) = %f, expected %f (tolerance %f)",
 				tt.input, result, tt.expected, tt.tolerance)
 		}
 	}

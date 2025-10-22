@@ -111,8 +111,8 @@ func (lc *LagCompensator) RewindToPlayerTime(playerLatency time.Duration) *Rewin
 
 	now := time.Now()
 	result := &RewindResult{
-		Success:     false,
-		WasClamped:  false,
+		Success:    false,
+		WasClamped: false,
 	}
 
 	// Clamp latency to configured bounds

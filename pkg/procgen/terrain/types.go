@@ -73,7 +73,7 @@ func NewTerrain(width, height int, seed int64) *Terrain {
 			tiles[y][x] = TileWall
 		}
 	}
-	
+
 	return &Terrain{
 		Width:  width,
 		Height: height,

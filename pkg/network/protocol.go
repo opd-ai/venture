@@ -10,17 +10,17 @@ type ComponentData struct {
 type StateUpdate struct {
 	// Timestamp of when this update was created (server time)
 	Timestamp uint64
-	
+
 	// EntityID identifies which entity this update is for
 	EntityID uint64
-	
+
 	// Components contains the updated component data
 	Components []ComponentData
-	
+
 	// Priority determines update ordering (higher = more important)
 	// 0 = low priority, 255 = critical
 	Priority uint8
-	
+
 	// SequenceNumber for ordering and detecting packet loss
 	SequenceNumber uint32
 }
@@ -29,16 +29,16 @@ type StateUpdate struct {
 type InputCommand struct {
 	// PlayerID identifies which player sent this input
 	PlayerID uint64
-	
+
 	// Timestamp when the input was generated (client time)
 	Timestamp uint64
-	
+
 	// SequenceNumber for input ordering
 	SequenceNumber uint32
-	
+
 	// InputType identifies the type of input (move, attack, use item, etc.)
 	InputType string
-	
+
 	// Data contains the input-specific data (serialized)
 	Data []byte
 }
@@ -47,13 +47,13 @@ type InputCommand struct {
 type ConnectionInfo struct {
 	// PlayerID uniquely identifies the player
 	PlayerID uint64
-	
+
 	// Address is the network address (IP:port)
 	Address string
-	
+
 	// Latency is the round-trip time in milliseconds
 	Latency float64
-	
+
 	// Connected indicates if the connection is active
 	Connected bool
 }
@@ -62,13 +62,13 @@ type ConnectionInfo struct {
 type Protocol interface {
 	// EncodeStateUpdate serializes a state update for transmission
 	EncodeStateUpdate(update *StateUpdate) ([]byte, error)
-	
+
 	// DecodeStateUpdate deserializes a state update from network data
 	DecodeStateUpdate(data []byte) (*StateUpdate, error)
-	
+
 	// EncodeInputCommand serializes an input command for transmission
 	EncodeInputCommand(cmd *InputCommand) ([]byte, error)
-	
+
 	// DecodeInputCommand deserializes an input command from network data
 	DecodeInputCommand(data []byte) (*InputCommand, error)
 }

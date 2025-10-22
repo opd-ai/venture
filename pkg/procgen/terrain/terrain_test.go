@@ -146,7 +146,7 @@ func TestBSPValidation_InvalidInput(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validate should succeed for valid terrain: %v", err)
 	}
-	
+
 	// Test with out-of-bounds room
 	badTerrain := NewTerrain(10, 10, 12345)
 	badTerrain.Rooms = []*Room{{X: 50, Y: 50, Width: 5, Height: 5}}

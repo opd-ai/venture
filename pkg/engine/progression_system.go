@@ -92,10 +92,10 @@ func (ps *ProgressionSystem) AwardXP(entity *Entity, xp int) error {
 	}
 
 	exp := expComp.(*ExperienceComponent)
-	
+
 	// Add the XP
 	leveled := exp.AddXP(xp)
-	
+
 	// Process level ups
 	if leveled {
 		ps.processLevelUps(entity, exp)
@@ -111,16 +111,16 @@ func (ps *ProgressionSystem) processLevelUps(entity *Entity, exp *ExperienceComp
 		// Deduct XP for this level
 		exp.CurrentXP -= exp.RequiredXP
 		exp.Level++
-		
+
 		// Award skill point
 		exp.SkillPoints++
-		
+
 		// Calculate XP for next level
 		exp.RequiredXP = ps.xpCurve(exp.Level)
-		
+
 		// Update stats based on level scaling
 		ps.updateStatsForLevel(entity, exp.Level)
-		
+
 		// Trigger callbacks
 		for _, callback := range ps.levelUpCallbacks {
 			callback(entity, exp.Level)
@@ -167,17 +167,17 @@ func (ps *ProgressionSystem) CalculateXPReward(defeatedEntity *Entity) int {
 		// If no experience component, use a base reward
 		return 10
 	}
-	
+
 	exp := expComp.(*ExperienceComponent)
 	level := exp.Level
-	
+
 	// Base XP = 10 * level
 	// This means a level 5 enemy gives 50 XP
 	baseXP := 10 * level
-	
+
 	// Bonus for elite/boss entities (could check for boss component later)
 	// For now, just use the base calculation
-	
+
 	return baseXP
 }
 
@@ -187,12 +187,12 @@ func (ps *ProgressionSystem) GetLevel(entity *Entity) int {
 	if entity == nil {
 		return 1
 	}
-	
+
 	expComp, ok := entity.GetComponent("experience")
 	if !ok {
 		return 1
 	}
-	
+
 	return expComp.(*ExperienceComponent).Level
 }
 
@@ -201,12 +201,12 @@ func (ps *ProgressionSystem) GetXPProgress(entity *Entity) float64 {
 	if entity == nil {
 		return 0.0
 	}
-	
+
 	expComp, ok := entity.GetComponent("experience")
 	if !ok {
 		return 0.0
 	}
-	
+
 	return expComp.(*ExperienceComponent).ProgressToNextLevel()
 }
 
@@ -216,17 +216,17 @@ func (ps *ProgressionSystem) SpendSkillPoint(entity *Entity) error {
 	if entity == nil {
 		return fmt.Errorf("cannot spend skill point for nil entity")
 	}
-	
+
 	expComp, ok := entity.GetComponent("experience")
 	if !ok {
 		return fmt.Errorf("entity does not have experience component")
 	}
-	
+
 	exp := expComp.(*ExperienceComponent)
 	if exp.SkillPoints <= 0 {
 		return fmt.Errorf("entity has no skill points to spend")
 	}
-	
+
 	exp.SkillPoints--
 	return nil
 }
@@ -236,12 +236,12 @@ func (ps *ProgressionSystem) GetSkillPoints(entity *Entity) int {
 	if entity == nil {
 		return 0
 	}
-	
+
 	expComp, ok := entity.GetComponent("experience")
 	if !ok {
 		return 0
 	}
-	
+
 	return expComp.(*ExperienceComponent).SkillPoints
 }
 
@@ -269,7 +269,7 @@ func (ps *ProgressionSystem) InitializeEntityAtLevel(entity *Entity, level int) 
 	exp.Level = level
 	exp.CurrentXP = 0
 	exp.RequiredXP = ps.xpCurve(level)
-	
+
 	// Calculate total XP for this level
 	totalXP := 0
 	for i := 1; i < level; i++ {

@@ -142,7 +142,7 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 		// Determine room size (smaller than the node)
 		maxWidth := min(g.maxRoomSize, node.width-2)
 		maxHeight := min(g.maxRoomSize, node.height-2)
-		
+
 		// Ensure we have valid dimensions
 		if maxWidth < g.minRoomSize {
 			maxWidth = g.minRoomSize
@@ -150,15 +150,15 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 		if maxHeight < g.minRoomSize {
 			maxHeight = g.minRoomSize
 		}
-		
+
 		widthRange := maxWidth - g.minRoomSize + 1
 		heightRange := maxHeight - g.minRoomSize + 1
-		
+
 		roomWidth := g.minRoomSize
 		if widthRange > 0 {
 			roomWidth += rng.Intn(widthRange)
 		}
-		
+
 		roomHeight := g.minRoomSize
 		if heightRange > 0 {
 			roomHeight += rng.Intn(heightRange)
@@ -167,12 +167,12 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 		// Position room randomly within the node
 		xRange := node.width - roomWidth - 1
 		yRange := node.height - roomHeight - 1
-		
+
 		roomX := node.x + 1
 		if xRange > 0 {
 			roomX += rng.Intn(xRange)
 		}
-		
+
 		roomY := node.y + 1
 		if yRange > 0 {
 			roomY += rng.Intn(yRange)

@@ -400,12 +400,12 @@ func TestSkill_IsUnlocked(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		playerLevel    int
-		skillPoints    int
-		learnedSkills  map[string]bool
-		attributes     map[string]int
-		wantUnlocked   bool
+		name          string
+		playerLevel   int
+		skillPoints   int
+		learnedSkills map[string]bool
+		attributes    map[string]int
+		wantUnlocked  bool
 	}{
 		{
 			name:          "all requirements met",

@@ -9,12 +9,12 @@ import (
 
 // ServerConfig holds configuration for the network server.
 type ServerConfig struct {
-	Address         string        // Listen address (host:port)
-	MaxPlayers      int           // Maximum number of concurrent players
-	ReadTimeout     time.Duration // Timeout for reading from clients
-	WriteTimeout    time.Duration // Timeout for writing to clients
-	UpdateRate      int           // State updates per second
-	BufferSize      int           // Size of send/receive buffers per client
+	Address      string        // Listen address (host:port)
+	MaxPlayers   int           // Maximum number of concurrent players
+	ReadTimeout  time.Duration // Timeout for reading from clients
+	WriteTimeout time.Duration // Timeout for writing to clients
+	UpdateRate   int           // State updates per second
+	BufferSize   int           // Size of send/receive buffers per client
 }
 
 // DefaultServerConfig returns a server configuration with sensible defaults.
@@ -33,24 +33,24 @@ func DefaultServerConfig() ServerConfig {
 type Server struct {
 	config   ServerConfig
 	protocol Protocol
-	
+
 	// Network state
-	listener  net.Listener
-	running   bool
-	
+	listener net.Listener
+	running  bool
+
 	// Client management
-	clients     map[uint64]*clientConnection
-	clientsMu   sync.RWMutex
+	clients      map[uint64]*clientConnection
+	clientsMu    sync.RWMutex
 	nextPlayerID uint64
-	
+
 	// Channels for game logic
 	inputCommands chan *InputCommand
 	errors        chan error
-	
+
 	// Shutdown
 	done chan struct{}
 	wg   sync.WaitGroup
-	
+
 	// State tracking
 	stateSeq uint32
 	stateMu  sync.Mutex
@@ -63,10 +63,10 @@ type clientConnection struct {
 	address    string
 	connected  bool
 	lastActive time.Time
-	
+
 	// Channels
 	stateUpdates chan *StateUpdate
-	
+
 	// Thread safety
 	mu sync.RWMutex
 }
@@ -91,21 +91,21 @@ func (s *Server) Start() error {
 		s.clientsMu.Unlock()
 		return fmt.Errorf("server already running")
 	}
-	
+
 	listener, err := net.Listen("tcp", s.config.Address)
 	if err != nil {
 		s.clientsMu.Unlock()
 		return fmt.Errorf("failed to listen on %s: %w", s.config.Address, err)
 	}
-	
+
 	s.listener = listener
 	s.running = true
 	s.clientsMu.Unlock()
-	
+
 	// Start accept loop
 	s.wg.Add(1)
 	go s.acceptLoop()
-	
+
 	return nil
 }
 
@@ -116,24 +116,24 @@ func (s *Server) Stop() error {
 		s.clientsMu.Unlock()
 		return nil
 	}
-	
+
 	s.running = false
 	close(s.done)
-	
+
 	// Close listener
 	if s.listener != nil {
 		s.listener.Close()
 	}
-	
+
 	// Disconnect all clients
 	for _, client := range s.clients {
 		client.disconnect()
 	}
 	s.clientsMu.Unlock()
-	
+
 	// Wait for goroutines
 	s.wg.Wait()
-	
+
 	return nil
 }
 
@@ -155,7 +155,7 @@ func (s *Server) GetPlayerCount() int {
 func (s *Server) GetPlayers() []uint64 {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
-	
+
 	players := make([]uint64, 0, len(s.clients))
 	for playerID := range s.clients {
 		players = append(players, playerID)
@@ -167,13 +167,13 @@ func (s *Server) GetPlayers() []uint64 {
 func (s *Server) BroadcastStateUpdate(update *StateUpdate) {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
-	
+
 	// Assign sequence number
 	s.stateMu.Lock()
 	update.SequenceNumber = s.stateSeq
 	s.stateSeq++
 	s.stateMu.Unlock()
-	
+
 	// Send to all clients
 	for _, client := range s.clients {
 		client.sendStateUpdate(update)
@@ -185,17 +185,17 @@ func (s *Server) SendStateUpdate(playerID uint64, update *StateUpdate) error {
 	s.clientsMu.RLock()
 	client, exists := s.clients[playerID]
 	s.clientsMu.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("player %d not connected", playerID)
 	}
-	
+
 	// Assign sequence number
 	s.stateMu.Lock()
 	update.SequenceNumber = s.stateSeq
 	s.stateSeq++
 	s.stateMu.Unlock()
-	
+
 	client.sendStateUpdate(update)
 	return nil
 }
@@ -213,7 +213,7 @@ func (s *Server) ReceiveError() <-chan error {
 // acceptLoop accepts incoming client connections.
 func (s *Server) acceptLoop() {
 	defer s.wg.Done()
-	
+
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -225,23 +225,23 @@ func (s *Server) acceptLoop() {
 				continue
 			}
 		}
-		
+
 		// Check player limit
 		s.clientsMu.RLock()
 		playerCount := len(s.clients)
 		s.clientsMu.RUnlock()
-		
+
 		if playerCount >= s.config.MaxPlayers {
 			conn.Close()
 			s.errors <- fmt.Errorf("server full, rejected connection from %s", conn.RemoteAddr())
 			continue
 		}
-		
+
 		// Create client connection
 		s.clientsMu.Lock()
 		playerID := s.nextPlayerID
 		s.nextPlayerID++
-		
+
 		client := &clientConnection{
 			playerID:     playerID,
 			conn:         conn,
@@ -250,10 +250,10 @@ func (s *Server) acceptLoop() {
 			lastActive:   time.Now(),
 			stateUpdates: make(chan *StateUpdate, s.config.BufferSize),
 		}
-		
+
 		s.clients[playerID] = client
 		s.clientsMu.Unlock()
-		
+
 		// Start client handlers
 		s.wg.Add(2)
 		go s.handleClientReceive(client)
@@ -265,7 +265,7 @@ func (s *Server) acceptLoop() {
 func (s *Server) handleClientReceive(client *clientConnection) {
 	defer s.wg.Done()
 	defer s.disconnectClient(client.playerID)
-	
+
 	buf := make([]byte, 4096)
 	for {
 		select {
@@ -273,10 +273,10 @@ func (s *Server) handleClientReceive(client *clientConnection) {
 			return
 		default:
 		}
-		
+
 		// Set read deadline
 		client.conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
-		
+
 		// Read message length (4 bytes)
 		if _, err := client.conn.Read(buf[:4]); err != nil {
 			if s.IsRunning() && client.isConnected() {
@@ -284,14 +284,14 @@ func (s *Server) handleClientReceive(client *clientConnection) {
 			}
 			return
 		}
-		
+
 		// Decode length
 		msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
 		if msgLen > uint32(len(buf)) {
 			s.errors <- fmt.Errorf("player %d message too large: %d bytes", client.playerID, msgLen)
 			return
 		}
-		
+
 		// Read message data
 		if _, err := client.conn.Read(buf[:msgLen]); err != nil {
 			if s.IsRunning() && client.isConnected() {
@@ -299,19 +299,19 @@ func (s *Server) handleClientReceive(client *clientConnection) {
 			}
 			return
 		}
-		
+
 		// Update last active
 		client.mu.Lock()
 		client.lastActive = time.Now()
 		client.mu.Unlock()
-		
+
 		// Decode input command
 		cmd, err := s.protocol.DecodeInputCommand(buf[:msgLen])
 		if err != nil {
 			s.errors <- fmt.Errorf("player %d decode error: %w", client.playerID, err)
 			continue
 		}
-		
+
 		// Send to game logic (non-blocking)
 		select {
 		case s.inputCommands <- cmd:
@@ -326,12 +326,12 @@ func (s *Server) handleClientReceive(client *clientConnection) {
 // handleClientSend sends state updates to a client.
 func (s *Server) handleClientSend(client *clientConnection) {
 	defer s.wg.Done()
-	
+
 	for {
 		select {
 		case <-s.done:
 			return
-			
+
 		case update := <-client.stateUpdates:
 			// Encode state update
 			data, err := s.protocol.EncodeStateUpdate(update)
@@ -339,7 +339,7 @@ func (s *Server) handleClientSend(client *clientConnection) {
 				s.errors <- fmt.Errorf("player %d encode error: %w", client.playerID, err)
 				continue
 			}
-			
+
 			// Send length prefix
 			msgLen := uint32(len(data))
 			lenBuf := []byte{
@@ -348,10 +348,10 @@ func (s *Server) handleClientSend(client *clientConnection) {
 				byte(msgLen >> 16),
 				byte(msgLen >> 24),
 			}
-			
+
 			// Set write deadline
 			client.conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
-			
+
 			// Send length + data
 			if _, err := client.conn.Write(lenBuf); err != nil {
 				if s.IsRunning() && client.isConnected() {
@@ -391,7 +391,7 @@ func (c *clientConnection) isConnected() bool {
 func (c *clientConnection) disconnect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.connected {
 		c.connected = false
 		if c.conn != nil {
@@ -404,11 +404,11 @@ func (c *clientConnection) disconnect() {
 func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	if !c.connected {
 		return
 	}
-	
+
 	select {
 	case c.stateUpdates <- update:
 	default:

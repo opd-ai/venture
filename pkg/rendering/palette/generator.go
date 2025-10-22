@@ -43,7 +43,7 @@ func (g *Generator) getSchemeForGenre(genre *genre.Genre) ColorScheme {
 	switch genre.ID {
 	case "fantasy":
 		return ColorScheme{
-			BaseHue:             30,  // Warm earthy tones
+			BaseHue:             30, // Warm earthy tones
 			Saturation:          0.6,
 			Lightness:           0.5,
 			HueVariation:        60,

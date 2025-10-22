@@ -7,7 +7,7 @@ import (
 // TestComponentSerializer_Position verifies position serialization.
 func TestComponentSerializer_Position(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name string
 		x, y float64
@@ -18,7 +18,7 @@ func TestComponentSerializer_Position(t *testing.T) {
 		{"large", 999999.999, 888888.888},
 		{"small", 0.001, 0.002},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Serialize
@@ -26,13 +26,13 @@ func TestComponentSerializer_Position(t *testing.T) {
 			if len(data) != 16 {
 				t.Errorf("Expected 16 bytes, got %d", len(data))
 			}
-			
+
 			// Deserialize
 			x, y, err := s.DeserializePosition(data)
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
-			
+
 			// Verify
 			if x != tt.x || y != tt.y {
 				t.Errorf("Position mismatch: got (%.2f, %.2f), want (%.2f, %.2f)", x, y, tt.x, tt.y)
@@ -44,7 +44,7 @@ func TestComponentSerializer_Position(t *testing.T) {
 // TestComponentSerializer_Position_InvalidData verifies error handling.
 func TestComponentSerializer_Position_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name string
 		data []byte
@@ -53,7 +53,7 @@ func TestComponentSerializer_Position_InvalidData(t *testing.T) {
 		{"too_short", []byte{1, 2, 3}},
 		{"too_long", make([]byte, 20)},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, err := s.DeserializePosition(tt.data)
@@ -67,7 +67,7 @@ func TestComponentSerializer_Position_InvalidData(t *testing.T) {
 // TestComponentSerializer_Velocity verifies velocity serialization.
 func TestComponentSerializer_Velocity(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name   string
 		vx, vy float64
@@ -77,12 +77,12 @@ func TestComponentSerializer_Velocity(t *testing.T) {
 		{"negative", -25.0, -30.0},
 		{"mixed", 100.0, -50.0},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeVelocity(tt.vx, tt.vy)
 			vx, vy, err := s.DeserializeVelocity(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -96,7 +96,7 @@ func TestComponentSerializer_Velocity(t *testing.T) {
 // TestComponentSerializer_Velocity_InvalidData verifies error handling.
 func TestComponentSerializer_Velocity_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, _, err := s.DeserializeVelocity([]byte{1, 2, 3})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -106,9 +106,9 @@ func TestComponentSerializer_Velocity_InvalidData(t *testing.T) {
 // TestComponentSerializer_Health verifies health serialization.
 func TestComponentSerializer_Health(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
-		name        string
+		name         string
 		current, max float64
 	}{
 		{"full", 100, 100},
@@ -116,12 +116,12 @@ func TestComponentSerializer_Health(t *testing.T) {
 		{"low", 10, 100},
 		{"high", 500, 1000},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeHealth(tt.current, tt.max)
 			current, max, err := s.DeserializeHealth(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -135,7 +135,7 @@ func TestComponentSerializer_Health(t *testing.T) {
 // TestComponentSerializer_Health_InvalidData verifies error handling.
 func TestComponentSerializer_Health_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, _, err := s.DeserializeHealth([]byte{1, 2})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -145,7 +145,7 @@ func TestComponentSerializer_Health_InvalidData(t *testing.T) {
 // TestComponentSerializer_Stats verifies stats serialization.
 func TestComponentSerializer_Stats(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name                        string
 		attack, defense, magicPower float64
@@ -156,12 +156,12 @@ func TestComponentSerializer_Stats(t *testing.T) {
 		{"mage", 25, 25, 100},
 		{"tank", 50, 150, 30},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeStats(tt.attack, tt.defense, tt.magicPower)
 			attack, defense, magicPower, err := s.DeserializeStats(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -176,7 +176,7 @@ func TestComponentSerializer_Stats(t *testing.T) {
 // TestComponentSerializer_Stats_InvalidData verifies error handling.
 func TestComponentSerializer_Stats_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, _, _, err := s.DeserializeStats([]byte{1, 2, 3, 4})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -186,7 +186,7 @@ func TestComponentSerializer_Stats_InvalidData(t *testing.T) {
 // TestComponentSerializer_Team verifies team serialization.
 func TestComponentSerializer_Team(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name   string
 		teamID uint64
@@ -196,12 +196,12 @@ func TestComponentSerializer_Team(t *testing.T) {
 		{"team2", 2},
 		{"team_large", 999999},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeTeam(tt.teamID)
 			teamID, err := s.DeserializeTeam(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -215,7 +215,7 @@ func TestComponentSerializer_Team(t *testing.T) {
 // TestComponentSerializer_Team_InvalidData verifies error handling.
 func TestComponentSerializer_Team_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, err := s.DeserializeTeam([]byte{1, 2})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -225,9 +225,9 @@ func TestComponentSerializer_Team_InvalidData(t *testing.T) {
 // TestComponentSerializer_Level verifies level serialization.
 func TestComponentSerializer_Level(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
-		name     string
+		name      string
 		level, xp uint32
 	}{
 		{"level1", 1, 0},
@@ -235,12 +235,12 @@ func TestComponentSerializer_Level(t *testing.T) {
 		{"level10", 10, 5000},
 		{"max", 100, 999999},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeLevel(tt.level, tt.xp)
 			level, xp, err := s.DeserializeLevel(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -254,7 +254,7 @@ func TestComponentSerializer_Level(t *testing.T) {
 // TestComponentSerializer_Level_InvalidData verifies error handling.
 func TestComponentSerializer_Level_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, _, err := s.DeserializeLevel([]byte{1, 2})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -264,7 +264,7 @@ func TestComponentSerializer_Level_InvalidData(t *testing.T) {
 // TestComponentSerializer_Input verifies input serialization.
 func TestComponentSerializer_Input(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name   string
 		dx, dy int8
@@ -276,12 +276,12 @@ func TestComponentSerializer_Input(t *testing.T) {
 		{"down", 0, 1},
 		{"diagonal", 1, 1},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeInput(tt.dx, tt.dy)
 			dx, dy, err := s.DeserializeInput(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -295,7 +295,7 @@ func TestComponentSerializer_Input(t *testing.T) {
 // TestComponentSerializer_Input_InvalidData verifies error handling.
 func TestComponentSerializer_Input_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, _, err := s.DeserializeInput([]byte{1})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -305,7 +305,7 @@ func TestComponentSerializer_Input_InvalidData(t *testing.T) {
 // TestComponentSerializer_Attack verifies attack serialization.
 func TestComponentSerializer_Attack(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name     string
 		targetID uint64
@@ -314,12 +314,12 @@ func TestComponentSerializer_Attack(t *testing.T) {
 		{"entity100", 100},
 		{"entity_large", 999999},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeAttack(tt.targetID)
 			targetID, err := s.DeserializeAttack(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -333,7 +333,7 @@ func TestComponentSerializer_Attack(t *testing.T) {
 // TestComponentSerializer_Attack_InvalidData verifies error handling.
 func TestComponentSerializer_Attack_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, err := s.DeserializeAttack([]byte{1, 2})
 	if err == nil {
 		t.Error("Expected error for invalid data")
@@ -343,7 +343,7 @@ func TestComponentSerializer_Attack_InvalidData(t *testing.T) {
 // TestComponentSerializer_Item verifies item serialization.
 func TestComponentSerializer_Item(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	tests := []struct {
 		name   string
 		itemID uint64
@@ -352,12 +352,12 @@ func TestComponentSerializer_Item(t *testing.T) {
 		{"item50", 50},
 		{"item_large", 999999},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeItem(tt.itemID)
 			itemID, err := s.DeserializeItem(data)
-			
+
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -371,7 +371,7 @@ func TestComponentSerializer_Item(t *testing.T) {
 // TestComponentSerializer_Item_InvalidData verifies error handling.
 func TestComponentSerializer_Item_InvalidData(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	_, err := s.DeserializeItem([]byte{1, 2})
 	if err == nil {
 		t.Error("Expected error for invalid data")

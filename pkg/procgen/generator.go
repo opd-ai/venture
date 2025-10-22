@@ -4,13 +4,13 @@ package procgen
 type GenerationParams struct {
 	// Difficulty affects the challenge level of generated content (0.0-1.0)
 	Difficulty float64
-	
+
 	// Depth represents how far into the game this content appears
 	Depth int
-	
+
 	// Genre influences the style and theme of generated content
 	GenreID string
-	
+
 	// Additional custom parameters
 	Custom map[string]interface{}
 }
@@ -20,7 +20,7 @@ type GenerationParams struct {
 type Generator interface {
 	// Generate creates content based on the seed and parameters
 	Generate(seed int64, params GenerationParams) (interface{}, error)
-	
+
 	// Validate checks if the generated content is valid
 	Validate(result interface{}) error
 }

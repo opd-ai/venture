@@ -67,7 +67,7 @@ func TestGenre_Validate(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.genre.Validate()
@@ -84,7 +84,7 @@ func TestGenre_ColorPalette(t *testing.T) {
 		SecondaryColor: "#00FF00",
 		AccentColor:    "#0000FF",
 	}
-	
+
 	palette := genre.ColorPalette()
 	if len(palette) != 3 {
 		t.Errorf("Expected 3 colors, got %d", len(palette))
@@ -104,7 +104,7 @@ func TestGenre_HasTheme(t *testing.T) {
 	genre := &Genre{
 		Themes: []string{"magic", "dragons", "knights"},
 	}
-	
+
 	if !genre.HasTheme("magic") {
 		t.Error("Expected genre to have 'magic' theme")
 	}
@@ -128,26 +128,26 @@ func TestNewRegistry(t *testing.T) {
 
 func TestRegistry_Register(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	genre := &Genre{
 		ID:          "test",
 		Name:        "Test",
 		Description: "Test genre",
 		Themes:      []string{"testing"},
 	}
-	
+
 	// Register valid genre
 	err := registry.Register(genre)
 	if err != nil {
 		t.Errorf("Failed to register valid genre: %v", err)
 	}
-	
+
 	// Try to register duplicate
 	err = registry.Register(genre)
 	if err == nil {
 		t.Error("Expected error when registering duplicate genre")
 	}
-	
+
 	// Try to register invalid genre
 	invalidGenre := &Genre{
 		ID: "invalid",
@@ -161,16 +161,16 @@ func TestRegistry_Register(t *testing.T) {
 
 func TestRegistry_Get(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	genre := &Genre{
 		ID:          "test",
 		Name:        "Test",
 		Description: "Test genre",
 		Themes:      []string{"testing"},
 	}
-	
+
 	registry.Register(genre)
-	
+
 	// Get existing genre
 	retrieved, err := registry.Get("test")
 	if err != nil {
@@ -179,7 +179,7 @@ func TestRegistry_Get(t *testing.T) {
 	if retrieved.ID != genre.ID {
 		t.Errorf("Expected genre ID %s, got %s", genre.ID, retrieved.ID)
 	}
-	
+
 	// Get non-existent genre
 	_, err = registry.Get("nonexistent")
 	if err == nil {
@@ -189,16 +189,16 @@ func TestRegistry_Get(t *testing.T) {
 
 func TestRegistry_Has(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	genre := &Genre{
 		ID:          "test",
 		Name:        "Test",
 		Description: "Test genre",
 		Themes:      []string{"testing"},
 	}
-	
+
 	registry.Register(genre)
-	
+
 	if !registry.Has("test") {
 		t.Error("Expected registry to have 'test' genre")
 	}
@@ -209,7 +209,7 @@ func TestRegistry_Has(t *testing.T) {
 
 func TestRegistry_All(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	genre1 := &Genre{
 		ID:          "test1",
 		Name:        "Test 1",
@@ -222,10 +222,10 @@ func TestRegistry_All(t *testing.T) {
 		Description: "Test genre 2",
 		Themes:      []string{"testing"},
 	}
-	
+
 	registry.Register(genre1)
 	registry.Register(genre2)
-	
+
 	all := registry.All()
 	if len(all) != 2 {
 		t.Errorf("Expected 2 genres, got %d", len(all))
@@ -234,7 +234,7 @@ func TestRegistry_All(t *testing.T) {
 
 func TestRegistry_IDs(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	genre1 := &Genre{
 		ID:          "test1",
 		Name:        "Test 1",
@@ -247,15 +247,15 @@ func TestRegistry_IDs(t *testing.T) {
 		Description: "Test genre 2",
 		Themes:      []string{"testing"},
 	}
-	
+
 	registry.Register(genre1)
 	registry.Register(genre2)
-	
+
 	ids := registry.IDs()
 	if len(ids) != 2 {
 		t.Errorf("Expected 2 IDs, got %d", len(ids))
 	}
-	
+
 	// Check that both IDs are present
 	idMap := make(map[string]bool)
 	for _, id := range ids {
@@ -268,11 +268,11 @@ func TestRegistry_IDs(t *testing.T) {
 
 func TestRegistry_Count(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	if registry.Count() != 0 {
 		t.Errorf("Expected 0 genres, got %d", registry.Count())
 	}
-	
+
 	genre := &Genre{
 		ID:          "test",
 		Name:        "Test",
@@ -280,7 +280,7 @@ func TestRegistry_Count(t *testing.T) {
 		Themes:      []string{"testing"},
 	}
 	registry.Register(genre)
-	
+
 	if registry.Count() != 1 {
 		t.Errorf("Expected 1 genre, got %d", registry.Count())
 	}
@@ -288,11 +288,11 @@ func TestRegistry_Count(t *testing.T) {
 
 func TestDefaultRegistry(t *testing.T) {
 	registry := DefaultRegistry()
-	
+
 	if registry == nil {
 		t.Fatal("DefaultRegistry() returned nil")
 	}
-	
+
 	// Check that predefined genres are registered
 	if !registry.Has("fantasy") {
 		t.Error("Expected fantasy genre in default registry")
@@ -313,11 +313,11 @@ func TestDefaultRegistry(t *testing.T) {
 
 func TestPredefinedGenres(t *testing.T) {
 	genres := PredefinedGenres()
-	
+
 	if len(genres) != 5 {
 		t.Errorf("Expected 5 predefined genres, got %d", len(genres))
 	}
-	
+
 	// Check that all genres are valid
 	for _, genre := range genres {
 		if err := genre.Validate(); err != nil {
@@ -328,7 +328,7 @@ func TestPredefinedGenres(t *testing.T) {
 
 func TestFantasyGenre(t *testing.T) {
 	genre := FantasyGenre()
-	
+
 	if genre.ID != "fantasy" {
 		t.Errorf("Expected ID 'fantasy', got '%s'", genre.ID)
 	}
@@ -345,7 +345,7 @@ func TestFantasyGenre(t *testing.T) {
 
 func TestSciFiGenre(t *testing.T) {
 	genre := SciFiGenre()
-	
+
 	if genre.ID != "scifi" {
 		t.Errorf("Expected ID 'scifi', got '%s'", genre.ID)
 	}
@@ -362,7 +362,7 @@ func TestSciFiGenre(t *testing.T) {
 
 func TestHorrorGenre(t *testing.T) {
 	genre := HorrorGenre()
-	
+
 	if genre.ID != "horror" {
 		t.Errorf("Expected ID 'horror', got '%s'", genre.ID)
 	}
@@ -379,7 +379,7 @@ func TestHorrorGenre(t *testing.T) {
 
 func TestCyberpunkGenre(t *testing.T) {
 	genre := CyberpunkGenre()
-	
+
 	if genre.ID != "cyberpunk" {
 		t.Errorf("Expected ID 'cyberpunk', got '%s'", genre.ID)
 	}
@@ -396,7 +396,7 @@ func TestCyberpunkGenre(t *testing.T) {
 
 func TestPostApocalypticGenre(t *testing.T) {
 	genre := PostApocalypticGenre()
-	
+
 	if genre.ID != "postapoc" {
 		t.Errorf("Expected ID 'postapoc', got '%s'", genre.ID)
 	}
@@ -423,7 +423,7 @@ func TestGenre_ColorPaletteLength(t *testing.T) {
 
 func TestRegistry_GetOrDefault(t *testing.T) {
 	registry := DefaultRegistry()
-	
+
 	// Test getting existing genre
 	fantasy, err := registry.Get("fantasy")
 	if err != nil {
@@ -432,7 +432,7 @@ func TestRegistry_GetOrDefault(t *testing.T) {
 	if fantasy.ID != "fantasy" {
 		t.Errorf("Expected fantasy genre, got %s", fantasy.ID)
 	}
-	
+
 	// Test fallback behavior for non-existent genre
 	_, err = registry.Get("nonexistent")
 	if err == nil {

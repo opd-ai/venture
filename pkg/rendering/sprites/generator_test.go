@@ -236,7 +236,7 @@ func TestComplexityRange(t *testing.T) {
 
 			valid := config.Complexity >= 0 && config.Complexity <= 1
 			if valid != tt.valid {
-				t.Errorf("Complexity %v validity = %v, want %v", 
+				t.Errorf("Complexity %v validity = %v, want %v",
 					tt.complexity, valid, tt.valid)
 			}
 		})

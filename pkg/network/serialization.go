@@ -23,10 +23,10 @@ func NewBinaryProtocol() *BinaryProtocol {
 //   - SequenceNumber: 4 bytes (uint32)
 //   - ComponentCount: 2 bytes (uint16)
 //   - For each component:
-//     - TypeLength: 2 bytes (uint16)
-//     - Type: variable (string bytes)
-//     - DataLength: 4 bytes (uint32)
-//     - Data: variable (byte array)
+//   - TypeLength: 2 bytes (uint16)
+//   - Type: variable (string bytes)
+//   - DataLength: 4 bytes (uint32)
+//   - Data: variable (byte array)
 func (p *BinaryProtocol) EncodeStateUpdate(update *StateUpdate) ([]byte, error) {
 	if update == nil {
 		return nil, fmt.Errorf("cannot encode nil state update")
@@ -98,7 +98,7 @@ func (p *BinaryProtocol) DecodeStateUpdate(data []byte) (*StateUpdate, error) {
 		if err := binary.Read(buf, binary.LittleEndian, &typeLength); err != nil {
 			return nil, fmt.Errorf("failed to read type length for component %d: %w", i, err)
 		}
-		
+
 		typeBytes := make([]byte, typeLength)
 		if _, err := buf.Read(typeBytes); err != nil {
 			return nil, fmt.Errorf("failed to read type bytes for component %d: %w", i, err)
@@ -110,7 +110,7 @@ func (p *BinaryProtocol) DecodeStateUpdate(data []byte) (*StateUpdate, error) {
 		if err := binary.Read(buf, binary.LittleEndian, &dataLength); err != nil {
 			return nil, fmt.Errorf("failed to read data length for component %d: %w", i, err)
 		}
-		
+
 		if dataLength > 0 {
 			dataBytes := make([]byte, dataLength)
 			if _, err := buf.Read(dataBytes); err != nil {
@@ -183,7 +183,7 @@ func (p *BinaryProtocol) DecodeInputCommand(data []byte) (*InputCommand, error) 
 	if err := binary.Read(buf, binary.LittleEndian, &typeLength); err != nil {
 		return nil, fmt.Errorf("failed to read type length: %w", err)
 	}
-	
+
 	typeBytes := make([]byte, typeLength)
 	if _, err := buf.Read(typeBytes); err != nil {
 		return nil, fmt.Errorf("failed to read type bytes: %w", err)
@@ -195,7 +195,7 @@ func (p *BinaryProtocol) DecodeInputCommand(data []byte) (*InputCommand, error) 
 	if err := binary.Read(buf, binary.LittleEndian, &dataLength); err != nil {
 		return nil, fmt.Errorf("failed to read data length: %w", err)
 	}
-	
+
 	if dataLength > 0 {
 		dataBytes := make([]byte, dataLength)
 		if _, err := buf.Read(dataBytes); err != nil {

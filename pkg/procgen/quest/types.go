@@ -196,7 +196,7 @@ func (q *Quest) Progress() float64 {
 	if len(q.Objectives) == 0 {
 		return 1.0
 	}
-	
+
 	totalProgress := 0.0
 	for _, obj := range q.Objectives {
 		totalProgress += obj.Progress()
@@ -215,27 +215,27 @@ func (q *Quest) GetRewardValue() int {
 
 // QuestTemplate defines a template for generating quests.
 type QuestTemplate struct {
-	BaseType          QuestType
-	NamePrefixes      []string
-	NameSuffixes      []string
-	DescTemplates     []string
-	Tags              []string
-	TargetTypes       []string
-	RequiredRange     [2]int
-	XPRewardRange     [2]int
-	GoldRewardRange   [2]int
-	ItemRewardChance  float64
-	SkillPointChance  float64
+	BaseType         QuestType
+	NamePrefixes     []string
+	NameSuffixes     []string
+	DescTemplates    []string
+	Tags             []string
+	TargetTypes      []string
+	RequiredRange    [2]int
+	XPRewardRange    [2]int
+	GoldRewardRange  [2]int
+	ItemRewardChance float64
+	SkillPointChance float64
 }
 
 // GetFantasyKillTemplates returns kill quest templates for fantasy genre.
 func GetFantasyKillTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeKill,
-			NamePrefixes:     []string{"Slay", "Hunt", "Cull", "Exterminate", "Eliminate"},
-			NameSuffixes:     []string{"the Undead", "the Goblins", "the Bandits", "the Monsters", "the Beasts"},
-			DescTemplates:    []string{
+			BaseType:     TypeKill,
+			NamePrefixes: []string{"Slay", "Hunt", "Cull", "Exterminate", "Eliminate"},
+			NameSuffixes: []string{"the Undead", "the Goblins", "the Bandits", "the Monsters", "the Beasts"},
+			DescTemplates: []string{
 				"%s have been terrorizing the area. Defeat %d of them.",
 				"The local settlement is under attack by %s. Eliminate %d to protect the people.",
 				"A horde of %s threatens the region. Hunt down %d of these creatures.",
@@ -254,10 +254,10 @@ func GetFantasyKillTemplates() []QuestTemplate {
 func GetFantasyCollectTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeCollect,
-			NamePrefixes:     []string{"Gather", "Collect", "Retrieve", "Find", "Acquire"},
-			NameSuffixes:     []string{"Herbs", "Crystals", "Artifacts", "Resources", "Components"},
-			DescTemplates:    []string{
+			BaseType:     TypeCollect,
+			NamePrefixes: []string{"Gather", "Collect", "Retrieve", "Find", "Acquire"},
+			NameSuffixes: []string{"Herbs", "Crystals", "Artifacts", "Resources", "Components"},
+			DescTemplates: []string{
 				"I need %d %s for my research. Can you gather them?",
 				"The town needs %d %s. Search the area and bring them back.",
 				"Ancient %s are scattered throughout the region. Collect %d of them.",
@@ -276,10 +276,10 @@ func GetFantasyCollectTemplates() []QuestTemplate {
 func GetFantasyBossTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeBoss,
-			NamePrefixes:     []string{"Defeat", "Vanquish", "Slay", "Destroy", "Conquer"},
-			NameSuffixes:     []string{"the Dragon Lord", "the Lich King", "the Dark Sorcerer", "the Demon Prince", "the Ancient Wyrm"},
-			DescTemplates:    []string{
+			BaseType:     TypeBoss,
+			NamePrefixes: []string{"Defeat", "Vanquish", "Slay", "Destroy", "Conquer"},
+			NameSuffixes: []string{"the Dragon Lord", "the Lich King", "the Dark Sorcerer", "the Demon Prince", "the Ancient Wyrm"},
+			DescTemplates: []string{
 				"%s has awakened and threatens the realm. You must defeat this powerful foe.",
 				"Legends speak of %s. Only the bravest hero can face this challenge.",
 				"The kingdom's survival depends on stopping %s. This will be your greatest battle.",
@@ -299,10 +299,10 @@ func GetFantasyBossTemplates() []QuestTemplate {
 func GetFantasyExploreTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeExplore,
-			NamePrefixes:     []string{"Explore", "Discover", "Scout", "Survey", "Map"},
-			NameSuffixes:     []string{"the Ancient Ruins", "the Dark Forest", "the Forgotten Temple", "the Mountain Pass", "the Lost City"},
-			DescTemplates:    []string{
+			BaseType:     TypeExplore,
+			NamePrefixes: []string{"Explore", "Discover", "Scout", "Survey", "Map"},
+			NameSuffixes: []string{"the Ancient Ruins", "the Dark Forest", "the Forgotten Temple", "the Mountain Pass", "the Lost City"},
+			DescTemplates: []string{
 				"We need someone to explore %s. Report back what you find.",
 				"Strange reports come from %s. Investigate the area.",
 				"Ancient maps mention %s. Discover this location's secrets.",
@@ -321,10 +321,10 @@ func GetFantasyExploreTemplates() []QuestTemplate {
 func GetSciFiKillTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeKill,
-			NamePrefixes:     []string{"Terminate", "Eliminate", "Neutralize", "Destroy", "Eradicate"},
-			NameSuffixes:     []string{"the Rogue Bots", "the Alien Hostiles", "the Mutants", "the Pirates", "the Drones"},
-			DescTemplates:    []string{
+			BaseType:     TypeKill,
+			NamePrefixes: []string{"Terminate", "Eliminate", "Neutralize", "Destroy", "Eradicate"},
+			NameSuffixes: []string{"the Rogue Bots", "the Alien Hostiles", "the Mutants", "the Pirates", "the Drones"},
+			DescTemplates: []string{
 				"Hostile %s detected in sector. Eliminate %d units.",
 				"Security breach: %s are compromising the facility. Neutralize %d threats.",
 				"Combat protocol initiated. Destroy %d %s to secure the area.",
@@ -343,10 +343,10 @@ func GetSciFiKillTemplates() []QuestTemplate {
 func GetSciFiCollectTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeCollect,
-			NamePrefixes:     []string{"Salvage", "Recover", "Extract", "Retrieve", "Collect"},
-			NameSuffixes:     []string{"Data Cores", "Power Cells", "Tech Modules", "Mineral Samples", "Alien Artifacts"},
-			DescTemplates:    []string{
+			BaseType:     TypeCollect,
+			NamePrefixes: []string{"Salvage", "Recover", "Extract", "Retrieve", "Collect"},
+			NameSuffixes: []string{"Data Cores", "Power Cells", "Tech Modules", "Mineral Samples", "Alien Artifacts"},
+			DescTemplates: []string{
 				"Mission: Acquire %d %s from the field. Return to base for debriefing.",
 				"Scanning systems detected %s nearby. Collect %d units.",
 				"Research requires %d %s. Locate and extract them from the area.",
@@ -365,10 +365,10 @@ func GetSciFiCollectTemplates() []QuestTemplate {
 func GetSciFiBossTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{
-			BaseType:         TypeBoss,
-			NamePrefixes:     []string{"Eliminate", "Terminate", "Neutralize", "Destroy", "Defeat"},
-			NameSuffixes:     []string{"the Titan Mech", "the Alien Queen", "the AI Overlord", "the Warlord", "the Omega Unit"},
-			DescTemplates:    []string{
+			BaseType:     TypeBoss,
+			NamePrefixes: []string{"Eliminate", "Terminate", "Neutralize", "Destroy", "Defeat"},
+			NameSuffixes: []string{"the Titan Mech", "the Alien Queen", "the AI Overlord", "the Warlord", "the Omega Unit"},
+			DescTemplates: []string{
 				"Priority target identified: %s. Engage with extreme caution.",
 				"Threat level maximum. %s must be neutralized immediately.",
 				"All units: %s is the primary objective. Eliminate this threat.",

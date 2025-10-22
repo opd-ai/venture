@@ -329,9 +329,9 @@ func TestSpellGenerator_GenreDifferences(t *testing.T) {
 
 func TestSpell_IsOffensive(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		spellType SpellType
-		want     bool
+		want      bool
 	}{
 		{"offensive spell", TypeOffensive, true},
 		{"debuff spell", TypeDebuff, true},
@@ -352,9 +352,9 @@ func TestSpell_IsOffensive(t *testing.T) {
 
 func TestSpell_IsSupport(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		spellType SpellType
-		want     bool
+		want      bool
 	}{
 		{"healing spell", TypeHealing, true},
 		{"buff spell", TypeBuff, true},
@@ -375,8 +375,8 @@ func TestSpell_IsSupport(t *testing.T) {
 
 func TestSpell_GetPowerLevel(t *testing.T) {
 	tests := []struct {
-		name   string
-		spell  *Spell
+		name     string
+		spell    *Spell
 		minPower int
 		maxPower int
 	}{
@@ -554,7 +554,7 @@ func TestSpellGenerator_Validate(t *testing.T) {
 
 func TestSpellGenerator_ValidateWrongType(t *testing.T) {
 	gen := NewSpellGenerator()
-	
+
 	err := gen.Validate("not a spell slice")
 	if err == nil {
 		t.Error("Validate() should return error for wrong type")
@@ -564,7 +564,7 @@ func TestSpellGenerator_ValidateWrongType(t *testing.T) {
 func TestSpellType_String(t *testing.T) {
 	tests := []struct {
 		spellType SpellType
-		want     string
+		want      string
 	}{
 		{TypeOffensive, "offensive"},
 		{TypeDefensive, "defensive"},

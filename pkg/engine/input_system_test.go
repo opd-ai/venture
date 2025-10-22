@@ -164,7 +164,7 @@ func TestInputSystem_KeyBindings(t *testing.T) {
 		key      int // ebiten.Key is an int type
 		expected int
 	}{
-		{"KeyHelp should be Escape", int(inputSys.KeyHelp), 27}, // Escape key code
+		{"KeyHelp should be Escape", int(inputSys.KeyHelp), 27},        // Escape key code
 		{"KeyQuickSave should be F5", int(inputSys.KeyQuickSave), 290}, // F5 key code
 		{"KeyQuickLoad should be F9", int(inputSys.KeyQuickLoad), 294}, // F9 key code
 	}

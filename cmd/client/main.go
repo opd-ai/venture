@@ -195,7 +195,7 @@ func main() {
 		// Setup quick save callback (F5)
 		inputSystem.SetQuickSaveCallback(func() error {
 			log.Println("Quick save (F5 pressed)...")
-			
+
 			// Get player position
 			var posX, posY float64
 			if posComp, ok := player.GetComponent("position"); ok {
@@ -284,7 +284,7 @@ func main() {
 		// Setup quick load callback (F9)
 		inputSystem.SetQuickLoadCallback(func() error {
 			log.Println("Quick load (F9 pressed)...")
-			
+
 			gameSave, err := saveManager.LoadGame("quicksave")
 			if err != nil {
 				log.Printf("Failed to load game: %v", err)

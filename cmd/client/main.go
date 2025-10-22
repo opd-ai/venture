@@ -9,6 +9,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/saveload"
 )
 
 var (
@@ -42,6 +43,13 @@ func main() {
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
 
+	// Add tutorial and help systems (Phase 8.6)
+	tutorialSystem := engine.NewTutorialSystem()
+	helpSystem := engine.NewHelpSystem()
+
+	// Connect help system to input system for ESC key handling
+	inputSystem.SetHelpSystem(helpSystem)
+
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
@@ -49,6 +57,12 @@ func main() {
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
 	game.World.AddSystem(inventorySystem)
+	game.World.AddSystem(tutorialSystem)
+	game.World.AddSystem(helpSystem)
+
+	// Store references to tutorial and help systems in game for rendering
+	game.TutorialSystem = tutorialSystem
+	game.HelpSystem = helpSystem
 
 	if *verbose {
 		log.Println("Systems initialized: Input, Movement, Collision, Combat, AI, Progression, Inventory")
@@ -162,6 +176,165 @@ func main() {
 
 	if *verbose {
 		log.Printf("Player entity created (ID: %d) at position (400, 300)", player.ID)
+	}
+
+	// Initialize save/load system (Phase 8.4)
+	if *verbose {
+		log.Println("Initializing save/load system...")
+	}
+
+	saveManager, err := saveload.NewSaveManager("./saves")
+	if err != nil {
+		log.Printf("Warning: Failed to initialize save manager: %v", err)
+		log.Println("Save/load functionality will be unavailable")
+	} else {
+		if *verbose {
+			log.Println("Save/load system initialized")
+		}
+
+		// Setup quick save callback (F5)
+		inputSystem.SetQuickSaveCallback(func() error {
+			log.Println("Quick save (F5 pressed)...")
+			
+			// Get player position
+			var posX, posY float64
+			if posComp, ok := player.GetComponent("position"); ok {
+				pos := posComp.(*engine.PositionComponent)
+				posX, posY = pos.X, pos.Y
+			}
+
+			// Get player health
+			var currentHealth, maxHealth float64
+			if healthComp, ok := player.GetComponent("health"); ok {
+				health := healthComp.(*engine.HealthComponent)
+				currentHealth, maxHealth = health.Current, health.Max
+			}
+
+			// Get player stats
+			var attack, defense, magic float64
+			if statsComp, ok := player.GetComponent("stats"); ok {
+				stats := statsComp.(*engine.StatsComponent)
+				attack, defense, magic = stats.Attack, stats.Defense, stats.Magic
+			}
+
+			// Get player level and XP
+			var level int
+			var currentXP, xpToNext int64
+			if expComp, ok := player.GetComponent("experience"); ok {
+				exp := expComp.(*engine.ExperienceComponent)
+				level, currentXP, xpToNext = exp.Level, exp.CurrentXP, exp.XPToNext
+			}
+
+			// Get inventory data
+			var gold int
+			var items []saveload.ItemData
+			if invComp, ok := player.GetComponent("inventory"); ok {
+				inv := invComp.(*engine.InventoryComponent)
+				gold = inv.Gold
+				// Convert inventory items to ItemData (simplified - would need full serialization)
+				for _, item := range inv.Items {
+					items = append(items, saveload.ItemData{
+						Name:   item.Name,
+						Type:   string(item.Type),
+						Weight: item.Weight,
+					})
+				}
+			}
+
+			// Create game save
+			gameSave := &saveload.GameSave{
+				Player: saveload.PlayerState{
+					Position: saveload.Position{X: posX, Y: posY},
+					Health:   saveload.Health{Current: currentHealth, Max: maxHealth},
+					Stats: saveload.Stats{
+						Attack:  attack,
+						Defense: defense,
+						Magic:   magic,
+					},
+					Level:     level,
+					CurrentXP: currentXP,
+					XPToNext:  xpToNext,
+					Inventory: saveload.Inventory{
+						Items: items,
+						Gold:  gold,
+					},
+				},
+				World: saveload.WorldState{
+					Seed:       *seed,
+					Genre:      *genreID,
+					Width:      generatedTerrain.Width,
+					Height:     generatedTerrain.Height,
+					Difficulty: 0.5,
+				},
+				Settings: saveload.GameSettings{
+					ScreenWidth:  *width,
+					ScreenHeight: *height,
+				},
+			}
+
+			if err := saveManager.SaveGame("quicksave", gameSave); err != nil {
+				log.Printf("Failed to save game: %v", err)
+				return err
+			}
+
+			log.Println("Game saved successfully!")
+			return nil
+		})
+
+		// Setup quick load callback (F9)
+		inputSystem.SetQuickLoadCallback(func() error {
+			log.Println("Quick load (F9 pressed)...")
+			
+			gameSave, err := saveManager.LoadGame("quicksave")
+			if err != nil {
+				log.Printf("Failed to load game: %v", err)
+				return err
+			}
+
+			// Restore player position
+			if posComp, ok := player.GetComponent("position"); ok {
+				pos := posComp.(*engine.PositionComponent)
+				pos.X = gameSave.Player.Position.X
+				pos.Y = gameSave.Player.Position.Y
+			}
+
+			// Restore player health
+			if healthComp, ok := player.GetComponent("health"); ok {
+				health := healthComp.(*engine.HealthComponent)
+				health.Current = gameSave.Player.Health.Current
+				health.Max = gameSave.Player.Health.Max
+			}
+
+			// Restore player stats
+			if statsComp, ok := player.GetComponent("stats"); ok {
+				stats := statsComp.(*engine.StatsComponent)
+				stats.Attack = gameSave.Player.Stats.Attack
+				stats.Defense = gameSave.Player.Stats.Defense
+				stats.Magic = gameSave.Player.Stats.Magic
+			}
+
+			// Restore player level and XP
+			if expComp, ok := player.GetComponent("experience"); ok {
+				exp := expComp.(*engine.ExperienceComponent)
+				exp.Level = gameSave.Player.Level
+				exp.CurrentXP = gameSave.Player.CurrentXP
+				exp.XPToNext = gameSave.Player.XPToNext
+			}
+
+			// Restore inventory (simplified)
+			if invComp, ok := player.GetComponent("inventory"); ok {
+				inv := invComp.(*engine.InventoryComponent)
+				inv.Gold = gameSave.Player.Inventory.Gold
+				// Note: Full item restoration would require recreating item objects
+			}
+
+			log.Println("Game loaded successfully!")
+			return nil
+		})
+
+		if *verbose {
+			log.Println("Quick save/load callbacks registered (F5/F9)")
+		}
 	}
 
 	// Process initial entity additions

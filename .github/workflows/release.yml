@@ -85,19 +85,31 @@ jobs:
           for platform in "${platforms[@]}"; do
             IFS='/' read -r goos goarch <<< "$platform"
 
-            output_name="venture-server-${goos}-${goarch}"
+            # Build server
+            server_name="venture-server-${goos}-${goarch}"
             if [ "$goos" = "windows" ]; then
-              output_name="${output_name}.exe"
+              server_name="${server_name}.exe"
             fi
 
-            echo "Building for $goos/$goarch..."
-            GOOS=$goos GOARCH=$goarch go build -tags test -ldflags="-s -w" -o "build/${output_name}" ./cmd/server
+            echo "Building server for $goos/$goarch..."
+            GOOS=$goos GOARCH=$goarch go build -tags test -ldflags="-s -w" -o "build/${server_name}" ./cmd/server
 
-            # Create archive
+            # Build client
+            client_name="venture-client-${goos}-${goarch}"
             if [ "$goos" = "windows" ]; then
-              (cd build && zip "${output_name%.exe}.zip" "$output_name")
+              client_name="${client_name}.exe"
+            fi
+
+            echo "Building client for $goos/$goarch..."
+            GOOS=$goos GOARCH=$goarch go build -ldflags="-s -w" -o "build/${client_name}" ./cmd/client
+
+            # Create archives
+            if [ "$goos" = "windows" ]; then
+              (cd build && zip "${server_name%.exe}.zip" "$server_name")
+              (cd build && zip "${client_name%.exe}.zip" "$client_name")
             else
-              (cd build && tar czf "${output_name}.tar.gz" "$output_name")
+              (cd build && tar czf "${server_name}.tar.gz" "$server_name")
+              (cd build && tar czf "${client_name}.tar.gz" "$client_name")
             fi
           done
 

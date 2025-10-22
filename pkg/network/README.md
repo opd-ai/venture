@@ -1,12 +1,15 @@
 # Network Package
 
-The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, and state synchronization. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
+The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, state synchronization, client-side prediction, and entity interpolation. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
 
 ## Features
 
 - **Binary Protocol**: Efficient binary serialization for state updates and input commands
 - **Client Networking**: Connection management, input sending, state receiving
 - **Server Networking**: Client management, broadcasting, authoritative state
+- **Client-Side Prediction**: Immediate response to player input with server reconciliation
+- **Entity Interpolation**: Smooth remote entity movement between server snapshots
+- **Snapshot Management**: Efficient state history with delta compression
 - **Low Latency**: Optimized for real-time multiplayer (sub-millisecond serialization)
 - **High Bandwidth**: Minimal packet sizes (<100 bytes typical)
 - **Thread-Safe**: Concurrent client/server operations
@@ -37,6 +40,24 @@ The `Server` handles multiple client connections:
 - Per-client send/receive handlers
 - Broadcast and unicast state updates
 - Player limit enforcement
+
+### Prediction Layer
+
+The `ClientPredictor` implements client-side prediction:
+
+- Predicts movement immediately for responsive controls
+- Maintains history of predicted states
+- Reconciles with authoritative server state
+- Replays unacknowledged inputs after correction
+
+### Synchronization Layer
+
+The `SnapshotManager` handles state synchronization:
+
+- Maintains circular buffer of world snapshots
+- Interpolates entity positions between snapshots
+- Creates delta updates for bandwidth efficiency
+- Retrieves historical states for lag compensation
 
 ## Usage
 
@@ -98,6 +119,122 @@ defer client.Disconnect()
 
 // Set player ID (from auth response)
 client.SetPlayerID(1)
+
+// Handle state updates from server
+go func() {
+    for update := range client.ReceiveStateUpdate() {
+        // Apply update to game world
+        applyUpdate(world, update)
+    }
+}()
+
+// Send player input
+client.SendInput("move", encodeMovement(dx, dy))
+```
+
+### Client-Side Prediction
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Create predictor
+predictor := network.NewClientPredictor()
+predictor.SetInitialState(network.Position{X: 0, Y: 0}, network.Velocity{VX: 0, VY: 0})
+
+// In game loop: predict player movement immediately
+func handleInput(dx, dy float64, deltaTime float64) {
+    // Predict locally for immediate response
+    predicted := predictor.PredictInput(dx*100, dy*100, deltaTime)
+    
+    // Update local player position
+    player.Position = predicted.Position
+    
+    // Send input to server
+    client.SendInput("move", encodeMovement(dx, dy))
+}
+
+// When server update arrives: reconcile
+func onServerUpdate(update *network.StateUpdate) {
+    if update.EntityID == playerID {
+        // Extract position and velocity from server
+        serverPos := decodePosition(update.Components)
+        serverVel := decodeVelocity(update.Components)
+        
+        // Reconcile with server authority
+        corrected := predictor.ReconcileServerState(
+            update.Sequence,
+            serverPos,
+            serverVel,
+        )
+        
+        // Apply corrected position
+        player.Position = corrected.Position
+    }
+}
+```
+
+### Entity Interpolation
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Create snapshot manager
+snapshots := network.NewSnapshotManager(100) // Keep 100 snapshots
+
+// When server update arrives: store snapshot
+func onServerUpdate(update *network.StateUpdate) {
+    // Build snapshot from update
+    snapshot := network.WorldSnapshot{
+        Entities: map[uint64]network.EntitySnapshot{
+            update.EntityID: {
+                EntityID: update.EntityID,
+                Position: decodePosition(update.Components),
+                Velocity: decodeVelocity(update.Components),
+            },
+        },
+    }
+    
+    snapshots.AddSnapshot(snapshot)
+}
+
+// In render loop: interpolate remote entities
+func renderEntity(entityID uint64) {
+    // Render time is slightly in the past (interpolation delay)
+    renderTime := time.Now().Add(-100 * time.Millisecond)
+    
+    // Interpolate entity position
+    interpolated := snapshots.InterpolateEntity(entityID, renderTime)
+    
+    if interpolated != nil {
+        // Render entity at interpolated position
+        drawEntity(entityID, interpolated.Position)
+    }
+}
+```
+
+### State Synchronization with Delta Compression
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Server-side: send delta updates instead of full snapshots
+func broadcastDelta(server *network.Server, snapshots *network.SnapshotManager) {
+    currentSeq := snapshots.GetCurrentSequence()
+    previousSeq := currentSeq - 1
+    
+    // Create delta between previous and current snapshot
+    delta := snapshots.CreateDelta(previousSeq, currentSeq)
+    
+    if delta != nil {
+        // Send only the changes (much smaller than full snapshot)
+        // For added/changed entities, send full data
+        for entityID := range delta.Changed {
+            // Create and broadcast state update
+            update := createStateUpdate(entityID, delta.Changed[entityID])
+            server.BroadcastStateUpdate(update)
+        }
+    }
+}
 
 // Handle state updates
 go func() {

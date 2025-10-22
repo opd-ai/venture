@@ -65,8 +65,9 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Added +13 offset to y coordinate to account for baseline positioning
   - Verified compilation and code path analysis confirms fix works correctly
 
-#### Issue #2: Tutorial System Skip Functionality Partially Broken
-- **Component**: Tutorial System (`pkg/engine/tutorial_system.go:244-256`)
+#### Issue #2: Tutorial System Skip Functionality Partially Broken ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
+- **Component**: Tutorial System (`pkg/engine/tutorial_system.go:244-256`), Input System (`pkg/engine/input_system.go`)
 - **Description**: Tutorial system shows "Press ESC to skip tutorial" (line 340) but ESC key is bound to toggle help menu in InputSystem (line 92), not skip tutorial. No key binding exists to actually skip the tutorial.
 - **Steps to Reproduce**:
   1. Start game: `./venture-client`
@@ -107,6 +108,15 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Manual test: Press ESC/F1 during tutorial, verify step advances
   - Unit test: `TestTutorialSystem_SkipWithEscape()` - verify key handler integration
 - **Priority**: HIGH - Affects user experience for all new players
+- **Resolution**:
+  - Added `tutorialSystem *TutorialSystem` field to InputSystem struct
+  - Added `SetTutorialSystem()` method to InputSystem
+  - Modified ESC key handler to be context-aware: checks if tutorial is active first
+  - If tutorial is enabled and showing, ESC skips current tutorial step
+  - If tutorial is not active, ESC toggles help menu (original behavior preserved)
+  - Updated tutorial UI text from "Press ESC to skip tutorial" to "Press ESC to skip current step" for accuracy
+  - Connected tutorial system to input system in client main.go
+  - Verified compilation and code path analysis confirms context-aware behavior works correctly
 
 #### Issue #3: Help System Topic Switching Not Implemented
 - **Component**: Help System (`pkg/engine/help_system.go:408-412`)

@@ -49,7 +49,8 @@ type InputSystem struct {
 	KeyQuickLoad ebiten.Key // F9 key for quick load
 
 	// References to game systems for special key handling
-	helpSystem *HelpSystem
+	helpSystem     *HelpSystem
+	tutorialSystem *TutorialSystem
 
 	// Callbacks for save/load operations
 	onQuickSave func() error
@@ -75,8 +76,16 @@ func NewInputSystem() *InputSystem {
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	// Handle global keys first (help menu, save/load, etc.)
-	if inpututil.IsKeyJustPressed(s.KeyHelp) && s.helpSystem != nil {
-		s.helpSystem.Toggle()
+	// ESC key handling - context-aware: tutorial takes priority over help menu
+	if inpututil.IsKeyJustPressed(s.KeyHelp) {
+		// Check if tutorial is active and should handle the ESC key
+		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
+			// Skip current tutorial step
+			s.tutorialSystem.Skip()
+		} else if s.helpSystem != nil {
+			// Otherwise toggle help menu
+			s.helpSystem.Toggle()
+		}
 	}
 
 	// Handle quick save (F5)
@@ -166,6 +175,11 @@ func (s *InputSystem) SetKeyBindings(up, down, left, right, action, useItem ebit
 // SetHelpSystem connects the help system for ESC key toggling.
 func (s *InputSystem) SetHelpSystem(helpSystem *HelpSystem) {
 	s.helpSystem = helpSystem
+}
+
+// SetTutorialSystem connects the tutorial system for ESC key handling.
+func (s *InputSystem) SetTutorialSystem(tutorialSystem *TutorialSystem) {
+	s.tutorialSystem = tutorialSystem
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

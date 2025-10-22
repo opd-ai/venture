@@ -44,7 +44,7 @@ All visual and audio content will be generated at runtime using:
 **Status:** Accepted
 
 **Context:**
-Multiplayer support required with high-latency tolerance (200-500ms) for co-op gameplay.
+Multiplayer support required with high-latency tolerance (200-5000ms) for co-op gameplay, including support for slow connections like onion services (Tor).
 
 **Decision:**
 Implement authoritative server model with client-side prediction:
@@ -127,7 +127,7 @@ Implement genre as a modifier system that affects:
 **Status:** Accepted
 
 **Context:**
-Game should run on modest hardware (Intel i5/Ryzen 5, 8GB RAM, integrated graphics).
+Game should run on modest hardware (Intel i5/Ryzen 5, 8GB RAM, integrated graphics) to be accessible to a wide audience.
 
 **Decision:**
 Target specifications:

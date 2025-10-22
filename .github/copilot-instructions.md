@@ -107,7 +107,7 @@ Currently in Phase 3 (Visual Rendering System), the project has completed Phases
 
 ## Quality Standards
 
-- **Testing Requirements**: Maintain minimum 80% code coverage per package (current: engine 88.4%, procgen 100%, entity 95.9%, terrain 96.4%, magic 91.9%, item 93.8%, skills 90.6%, palette 98.4%). All tests must pass with `-tags test` flag. Use table-driven tests for multiple scenarios. Test both success and error paths. Verify deterministic generation by comparing outputs from same seed. Include benchmarks for generation functions. Run race detector: `go test -race ./...`. Example benchmark:
+- **Testing Requirements**: Maintain minimum 80% code coverage per package (current: engine 81.0%, procgen 100%, entity 95.9%, terrain 96.4%, magic 91.9%, item 93.8%, skills 90.6%, palette 98.4%). All tests must pass with `-tags test` flag. Use table-driven tests for multiple scenarios. Test both success and error paths. Verify deterministic generation by comparing outputs from same seed. Include benchmarks for generation functions. Run race detector: `go test -race ./...`. Example benchmark:
   ```go
   func BenchmarkGenerate(b *testing.B) {
       gen := NewGenerator()

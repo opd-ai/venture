@@ -11,8 +11,9 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/font/basicfont"
 )
 
 // HUDSystem renders the heads-up display (health bars, stats, etc).
@@ -20,9 +21,6 @@ type HUDSystem struct {
 	screen       *ebiten.Image
 	screenWidth  int
 	screenHeight int
-
-	// Font for text rendering (if available)
-	fontFace text.Face
 
 	// HUD visibility
 	Visible bool
@@ -195,11 +193,10 @@ func (h *HUDSystem) getHealthColor(healthPct float32) color.Color {
 	}
 }
 
-// drawText draws text at the specified position.
-// This is a simple fallback implementation without proper font rendering.
+// drawText draws text at the specified position using basicfont.
+// This provides readable text for HUD elements (health values, stats, XP).
 func (h *HUDSystem) drawText(str string, x, y int, col color.Color) {
-	// Note: This uses ebiten's debug text which is very basic
-	// In a real implementation, you'd use ebitengine/text with proper fonts
-	// For now, we'll skip text rendering to keep it simple
-	// The bars and visual elements are the main HUD features
+	// Use basicfont.Face7x13 for consistent text rendering across all UI systems
+	// Note: y coordinate is the baseline, not top-left, so text appears below y
+	text.Draw(h.screen, str, basicfont.Face7x13, x, y+13, col)
 }

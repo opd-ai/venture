@@ -7,7 +7,7 @@
 package sprites
 
 import (
-	"image"
+	"image/color"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -129,7 +129,7 @@ func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, 
 	numShapes := 1 + int(config.Complexity*2)
 
 	for i := 0; i < numShapes; i++ {
-		var colorChoice interface{}
+		var colorChoice color.Color
 		if i == 0 {
 			colorChoice = config.Palette.Secondary
 		} else {
@@ -242,8 +242,6 @@ func (g *Generator) generateParticle(config Config, rng *rand.Rand) (*ebiten.Ima
 
 // generateUI creates a UI element sprite.
 func (g *Generator) generateUI(config Config, rng *rand.Rand) (*ebiten.Image, error) {
-	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-
 	// UI elements are typically rectangles with borders
 	uiConfig := shapes.Config{
 		Type:      shapes.ShapeRectangle,

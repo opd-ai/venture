@@ -283,7 +283,11 @@ func (hs *HelpSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check health
 		if entity.HasComponent("health") {
-			health := entity.GetComponent("health").(*HealthComponent)
+			comp, ok := entity.GetComponent("health")
+			if !ok {
+				continue
+			}
+			health := comp.(*HealthComponent)
 			if health.Current < health.Max*0.25 && !hs.ShowQuickHint {
 				hs.ShowQuickHintFor("low_health")
 			}
@@ -291,7 +295,11 @@ func (hs *HelpSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check inventory
 		if entity.HasComponent("inventory") {
-			inv := entity.GetComponent("inventory").(*InventoryComponent)
+			comp, ok := entity.GetComponent("inventory")
+			if !ok {
+				continue
+			}
+			inv := comp.(*InventoryComponent)
 			if len(inv.Items) >= inv.MaxItems && !hs.ShowQuickHint {
 				hs.ShowQuickHintFor("inventory_full")
 			}

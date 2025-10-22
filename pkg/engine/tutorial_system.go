@@ -59,8 +59,12 @@ func createDefaultTutorialSteps() []TutorialStep {
 				// Check for any input entity (player pressed a key)
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") {
-						input := entity.GetComponent("input").(*InputComponent)
-						return input.Action
+						comp, ok := entity.GetComponent("input")
+						if !ok {
+							continue
+						}
+						input := comp.(*InputComponent)
+						return input.ActionPressed
 					}
 				}
 				return false
@@ -76,7 +80,11 @@ func createDefaultTutorialSteps() []TutorialStep {
 				// Check if player has moved sufficiently
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") && entity.HasComponent("position") {
-						pos := entity.GetComponent("position").(*PositionComponent)
+						comp, ok := entity.GetComponent("position")
+						if !ok {
+							continue
+						}
+						pos := comp.(*PositionComponent)
 						// Simple distance check from origin (400, 300 typical spawn)
 						distFromStart := (pos.X-400)*(pos.X-400) + (pos.Y-300)*(pos.Y-300)
 						return distFromStart > 2500 // ~50 units
@@ -92,12 +100,16 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Objective:   "Defeat your first enemy",
 			Completed:   false,
 			Condition: func(world *World) bool {
-				// Check if player has the "combat" component and has attacked
+				// Check if player has the "attack" component and has used it
 				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("combat") {
-						combat := entity.GetComponent("combat").(*CombatComponent)
-						// Check if any damage has been dealt
-						return combat.LastDamageDealt > 0
+					if entity.HasComponent("input") && entity.HasComponent("attack") {
+						comp, ok := entity.GetComponent("attack")
+						if !ok {
+							continue
+						}
+						attack := comp.(*AttackComponent)
+						// Check if attack cooldown is active (means they attacked)
+						return attack.CooldownTimer > 0 || attack.CooldownTimer < attack.Cooldown
 					}
 				}
 				return false
@@ -113,7 +125,11 @@ func createDefaultTutorialSteps() []TutorialStep {
 				// Check player health after taking damage
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") && entity.HasComponent("health") {
-						health := entity.GetComponent("health").(*HealthComponent)
+						comp, ok := entity.GetComponent("health")
+						if !ok {
+							continue
+						}
+						health := comp.(*HealthComponent)
 						// Complete if health is damaged but still above 50%
 						return health.Current < health.Max && health.Current > health.Max/2
 					}
@@ -131,7 +147,11 @@ func createDefaultTutorialSteps() []TutorialStep {
 				// Check if player has items in inventory
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") && entity.HasComponent("inventory") {
-						inv := entity.GetComponent("inventory").(*InventoryComponent)
+						comp, ok := entity.GetComponent("inventory")
+						if !ok {
+							continue
+						}
+						inv := comp.(*InventoryComponent)
 						return len(inv.Items) > 0
 					}
 				}
@@ -148,7 +168,11 @@ func createDefaultTutorialSteps() []TutorialStep {
 				// Check if player has leveled up
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") && entity.HasComponent("experience") {
-						exp := entity.GetComponent("experience").(*ExperienceComponent)
+						comp, ok := entity.GetComponent("experience")
+						if !ok {
+							continue
+						}
+						exp := comp.(*ExperienceComponent)
 						return exp.Level >= 2
 					}
 				}

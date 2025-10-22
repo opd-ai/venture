@@ -7,7 +7,7 @@
 package engine
 
 import (
-	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -57,7 +57,7 @@ func (t *TerrainRenderSystem) Draw(screen *ebiten.Image, camera *CameraSystem) {
 
 	// Calculate viewport bounds in tile coordinates
 	viewportMinX, viewportMinY := camera.ScreenToWorld(0, 0)
-	viewportMaxX, viewportMaxY := camera.ScreenToWorld(camera.ScreenWidth, camera.ScreenHeight)
+	viewportMaxX, viewportMaxY := camera.ScreenToWorld(float64(camera.ScreenWidth), float64(camera.ScreenHeight))
 
 	// Convert to tile coordinates
 	minTileX := int(viewportMinX / float64(t.tileWidth))
@@ -171,7 +171,7 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 	} else {
 		r, g, b = 100, 100, 100 // Light gray for floors
 	}
-	fallbackImg.Fill(image.NewRGBA(image.Rect(0, 0, 1, 1)))
+	fallbackImg.Fill(color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255})
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(screenX, screenY)

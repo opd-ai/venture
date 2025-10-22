@@ -146,12 +146,12 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 // drawRect draws a filled rectangle at the given screen position.
 func (r *RenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Convert color
-	r, g, b, a := col.RGBA()
+	red, green, blue, alpha := col.RGBA()
 	clr := color.RGBA{
-		R: uint8(r >> 8),
-		G: uint8(g >> 8),
-		B: uint8(b >> 8),
-		A: uint8(a >> 8),
+		R: uint8(red >> 8),
+		G: uint8(green >> 8),
+		B: uint8(blue >> 8),
+		A: uint8(alpha >> 8),
 	}
 
 	// Draw filled rectangle using vector

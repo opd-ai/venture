@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package main
@@ -17,7 +18,7 @@ func main() {
 
 	// Create world and systems
 	world := engine.NewWorld()
-	movementSystem := engine.NewMovementSystem(100.0) // Max speed of 100 units/s
+	movementSystem := engine.NewMovementSystem(100.0)  // Max speed of 100 units/s
 	collisionSystem := engine.NewCollisionSystem(32.0) // 32 unit cell size
 
 	world.AddSystem(movementSystem)

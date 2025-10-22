@@ -25,17 +25,17 @@ func (ai *AISystem) Update(deltaTime float64) {
 		if !ok {
 			continue
 		}
-		
+
 		aiState := aiComp.(*AIComponent)
-		
+
 		// Update timers
 		aiState.UpdateStateTimer(deltaTime)
-		
+
 		// Only make decisions at intervals
 		if !aiState.ShouldUpdateDecision(deltaTime) {
 			continue
 		}
-		
+
 		// Process AI decision-making
 		ai.processAI(entity, aiState, deltaTime)
 	}
@@ -49,38 +49,38 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 		return // Can't do AI without position
 	}
 	pos := posComp.(*PositionComponent)
-	
+
 	// Check health for flee condition
 	shouldFlee := ai.shouldFlee(entity, aiComp)
-	
+
 	// State machine logic
 	switch aiComp.State {
 	case AIStateIdle:
 		ai.processIdle(entity, aiComp, pos)
-		
+
 	case AIStatePatrol:
 		ai.processPatrol(entity, aiComp, pos)
-		
+
 	case AIStateDetect:
 		ai.processDetect(entity, aiComp, pos)
-		
+
 	case AIStateChase:
 		if shouldFlee {
 			ai.transitionToFlee(entity, aiComp, pos)
 		} else {
 			ai.processChase(entity, aiComp, pos)
 		}
-		
+
 	case AIStateAttack:
 		if shouldFlee {
 			ai.transitionToFlee(entity, aiComp, pos)
 		} else {
 			ai.processAttack(entity, aiComp, pos)
 		}
-		
+
 	case AIStateFlee:
 		ai.processFlee(entity, aiComp, pos)
-		
+
 	case AIStateReturn:
 		ai.processReturn(entity, aiComp, pos)
 	}
@@ -90,7 +90,7 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	// Look for enemies in range
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
-	
+
 	if target != nil {
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
@@ -101,12 +101,12 @@ func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *Positi
 func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	// Look for enemies in range
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
-	
+
 	if target != nil {
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
 	}
-	
+
 	// TODO: Implement actual patrol movement along a route
 }
 
@@ -118,7 +118,7 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 		aiComp.ChangeState(AIStateIdle)
 		return
 	}
-	
+
 	// Transition to chase after brief detection period
 	if aiComp.StateTimer > 0.3 {
 		aiComp.ChangeState(AIStateChase)
@@ -133,21 +133,21 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		aiComp.ChangeState(AIStateReturn)
 		return
 	}
-	
+
 	// Check if too far from spawn
 	if aiComp.ShouldReturnToSpawn(pos.X, pos.Y) {
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
 		return
 	}
-	
+
 	// Get attack component to check range
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
 		return
 	}
 	attack := attackComp.(*AttackComponent)
-	
+
 	// Check if in attack range
 	targetPos, ok := aiComp.Target.GetComponent("position")
 	if !ok {
@@ -156,14 +156,14 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		return
 	}
 	targetP := targetPos.(*PositionComponent)
-	
+
 	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
-	
+
 	if distance <= attack.Range {
 		aiComp.ChangeState(AIStateAttack)
 		return
 	}
-	
+
 	// Move towards target
 	ai.moveTowards(entity, pos, targetP.X, targetP.Y, aiComp.GetSpeedMultiplier())
 }
@@ -176,14 +176,14 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 		aiComp.ChangeState(AIStateReturn)
 		return
 	}
-	
+
 	// Get attack component
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
 		return
 	}
 	attack := attackComp.(*AttackComponent)
-	
+
 	// Check if in attack range
 	targetPos, ok := aiComp.Target.GetComponent("position")
 	if !ok {
@@ -192,15 +192,15 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 		return
 	}
 	targetP := targetPos.(*PositionComponent)
-	
+
 	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
-	
+
 	// If target moved out of range, chase again
 	if distance > attack.Range {
 		aiComp.ChangeState(AIStateChase)
 		return
 	}
-	
+
 	// Attack if cooldown is ready
 	if attack.CanAttack() {
 		// Create a combat system to perform the attack
@@ -219,10 +219,10 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 		aiComp.ChangeState(AIStateReturn)
 		return
 	}
-	
+
 	// Move away from target towards spawn
 	ai.moveTowards(entity, pos, aiComp.SpawnX, aiComp.SpawnY, aiComp.GetSpeedMultiplier())
-	
+
 	// If close to spawn, switch to return state
 	if aiComp.GetDistanceFromSpawn(pos.X, pos.Y) < 20.0 {
 		aiComp.ChangeState(AIStateReturn)
@@ -232,7 +232,7 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 // processReturn handles the return state - go back to spawn point.
 func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	distance := aiComp.GetDistanceFromSpawn(pos.X, pos.Y)
-	
+
 	// If close enough to spawn, go idle
 	if distance < 10.0 {
 		aiComp.ChangeState(AIStateIdle)
@@ -245,7 +245,7 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 		}
 		return
 	}
-	
+
 	// Move towards spawn
 	ai.moveTowards(entity, pos, aiComp.SpawnX, aiComp.SpawnY, aiComp.GetSpeedMultiplier())
 }
@@ -261,12 +261,12 @@ func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 	if !ok {
 		return false
 	}
-	
+
 	health := healthComp.(*HealthComponent)
 	if health.Max <= 0 {
 		return false
 	}
-	
+
 	healthPercent := health.Current / health.Max
 	return healthPercent < aiComp.FleeHealthThreshold
 }
@@ -278,26 +278,26 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, ran
 		return nil // No team component, can't determine enemies
 	}
 	team := teamComp.(*TeamComponent)
-	
+
 	var nearest *Entity
 	nearestDist := range_
-	
+
 	for _, other := range ai.world.entities {
 		if other == entity {
 			continue
 		}
-		
+
 		// Check if other is an enemy
 		otherTeam, ok := other.GetComponent("team")
 		if !ok {
 			continue
 		}
 		otherT := otherTeam.(*TeamComponent)
-		
+
 		if !team.IsEnemy(otherT.TeamID) {
 			continue
 		}
-		
+
 		// Check if alive
 		otherHealth, ok := other.GetComponent("health")
 		if ok {
@@ -306,21 +306,21 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, ran
 				continue
 			}
 		}
-		
+
 		// Check distance
 		otherPos, ok := other.GetComponent("position")
 		if !ok {
 			continue
 		}
 		otherP := otherPos.(*PositionComponent)
-		
+
 		dist := ai.getDistance(pos.X, pos.Y, otherP.X, otherP.Y)
 		if dist < nearestDist {
 			nearest = other
 			nearestDist = dist
 		}
 	}
-	
+
 	return nearest
 }
 
@@ -329,7 +329,7 @@ func (ai *AISystem) isValidTarget(target *Entity, entity *Entity, pos *PositionC
 	if target == nil {
 		return false
 	}
-	
+
 	// Check if target is alive
 	targetHealth, ok := target.GetComponent("health")
 	if ok {
@@ -338,14 +338,14 @@ func (ai *AISystem) isValidTarget(target *Entity, entity *Entity, pos *PositionC
 			return false
 		}
 	}
-	
+
 	// Check if target is in range
 	targetPos, ok := target.GetComponent("position")
 	if !ok {
 		return false
 	}
 	targetP := targetPos.(*PositionComponent)
-	
+
 	dist := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
 	return dist <= maxRange
 }
@@ -357,12 +357,12 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 		return // No velocity component, can't move
 	}
 	vel := velComp.(*VelocityComponent)
-	
+
 	// Calculate direction
 	dx := targetX - pos.X
 	dy := targetY - pos.Y
 	dist := math.Sqrt(dx*dx + dy*dy)
-	
+
 	if dist > 0 {
 		// Normalize and apply speed (use fixed speed since VelocityComponent doesn't have MaxSpeed)
 		speed := 100.0 * speedMultiplier // Default speed

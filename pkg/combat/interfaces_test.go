@@ -42,11 +42,11 @@ func TestDamageType_Constants(t *testing.T) {
 // TestNewDamage verifies that Damage struct can be created and initialized.
 func TestNewDamage(t *testing.T) {
 	tests := []struct {
-		name     string
-		amount   float64
+		name       string
+		amount     float64
 		damageType DamageType
-		sourceID uint64
-		targetID uint64
+		sourceID   uint64
+		targetID   uint64
 	}{
 		{"physical_damage", 50.0, DamagePhysical, 1, 2},
 		{"magical_damage", 75.5, DamageMagical, 3, 4},
@@ -200,9 +200,9 @@ func TestStats_ResistanceManagement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stats.Resistances[tt.damageType] = tt.resistance
-			
+
 			if stats.Resistances[tt.damageType] != tt.resistance {
-				t.Errorf("Expected resistance %f for %v, got %f", 
+				t.Errorf("Expected resistance %f for %v, got %f",
 					tt.resistance, tt.damageType, stats.Resistances[tt.damageType])
 			}
 		})

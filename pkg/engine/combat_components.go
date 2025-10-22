@@ -46,14 +46,14 @@ type StatsComponent struct {
 	Defense      float64
 	MagicPower   float64
 	MagicDefense float64
-	
+
 	// Critical stats
 	CritChance float64 // 0.0 to 1.0 (e.g., 0.15 = 15% chance)
 	CritDamage float64 // Multiplier (e.g., 2.0 = 200% damage)
-	
+
 	// Evasion chance
 	Evasion float64 // 0.0 to 1.0
-	
+
 	// Resistances per damage type
 	Resistances map[combat.DamageType]float64
 }
@@ -90,16 +90,16 @@ func (s *StatsComponent) GetResistance(damageType combat.DamageType) float64 {
 type AttackComponent struct {
 	// Damage amount
 	Damage float64
-	
+
 	// Damage type
 	DamageType combat.DamageType
-	
+
 	// Attack range (for melee/ranged)
 	Range float64
-	
+
 	// Attack cooldown in seconds
 	Cooldown float64
-	
+
 	// Time until next attack is ready
 	CooldownTimer float64
 }
@@ -133,16 +133,16 @@ func (a *AttackComponent) UpdateCooldown(deltaTime float64) {
 type StatusEffectComponent struct {
 	// Effect type (e.g., "poison", "stun", "speed_boost")
 	EffectType string
-	
+
 	// Duration remaining in seconds
 	Duration float64
-	
+
 	// Effect magnitude (meaning depends on effect type)
 	Magnitude float64
-	
+
 	// Tick interval for periodic effects (0 = one-time)
 	TickInterval float64
-	
+
 	// Time until next tick
 	NextTick float64
 }
@@ -160,7 +160,7 @@ func (s *StatusEffectComponent) IsExpired() bool {
 // Update updates the effect duration and tick timer.
 func (s *StatusEffectComponent) Update(deltaTime float64) bool {
 	s.Duration -= deltaTime
-	
+
 	if s.TickInterval > 0 {
 		s.NextTick -= deltaTime
 		if s.NextTick <= 0 {
@@ -168,7 +168,7 @@ func (s *StatusEffectComponent) Update(deltaTime float64) bool {
 			return true // Tick occurred
 		}
 	}
-	
+
 	return false // No tick
 }
 

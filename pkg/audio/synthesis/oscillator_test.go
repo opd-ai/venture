@@ -147,17 +147,17 @@ func TestOscillator_GenerateNote(t *testing.T) {
 
 func TestOscillator_Determinism(t *testing.T) {
 	seed := int64(54321)
-	
+
 	osc1 := NewOscillator(44100, seed)
 	sample1 := osc1.Generate(audio.WaveformNoise, 0, 0.1)
-	
+
 	osc2 := NewOscillator(44100, seed)
 	sample2 := osc2.Generate(audio.WaveformNoise, 0, 0.1)
-	
+
 	if len(sample1.Data) != len(sample2.Data) {
 		t.Fatal("samples have different lengths")
 	}
-	
+
 	for i := range sample1.Data {
 		if sample1.Data[i] != sample2.Data[i] {
 			t.Errorf("sample mismatch at index %d: %f != %f", i, sample1.Data[i], sample2.Data[i])
@@ -171,7 +171,7 @@ func TestOscillator_WaveformCharacteristics(t *testing.T) {
 
 	t.Run("sine wave is smooth", func(t *testing.T) {
 		sample := osc.Generate(audio.WaveformSine, 440.0, 0.1)
-		
+
 		// Sine wave should have no abrupt changes
 		for i := 1; i < len(sample.Data); i++ {
 			diff := math.Abs(sample.Data[i] - sample.Data[i-1])
@@ -184,7 +184,7 @@ func TestOscillator_WaveformCharacteristics(t *testing.T) {
 
 	t.Run("square wave has sharp transitions", func(t *testing.T) {
 		sample := osc.Generate(audio.WaveformSquare, 440.0, 0.01)
-		
+
 		// Square wave values should be close to -1 or 1
 		nearExtremes := 0
 		for _, v := range sample.Data {
@@ -192,7 +192,7 @@ func TestOscillator_WaveformCharacteristics(t *testing.T) {
 				nearExtremes++
 			}
 		}
-		
+
 		// Most samples should be near extremes
 		percentage := float64(nearExtremes) / float64(len(sample.Data))
 		if percentage < 0.8 {
@@ -202,7 +202,7 @@ func TestOscillator_WaveformCharacteristics(t *testing.T) {
 
 	t.Run("triangle wave is linear", func(t *testing.T) {
 		sample := osc.Generate(audio.WaveformTriangle, 440.0, 0.01)
-		
+
 		// Triangle wave should have constant slope within each ramp
 		// Just verify it oscillates
 		hasPositive := false
@@ -215,7 +215,7 @@ func TestOscillator_WaveformCharacteristics(t *testing.T) {
 				hasNegative = true
 			}
 		}
-		
+
 		if !hasPositive || !hasNegative {
 			t.Error("triangle wave doesn't oscillate properly")
 		}
@@ -259,12 +259,12 @@ func TestEnvelope_Apply(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			osc := NewOscillator(44100, 12345)
 			sample := osc.Generate(audio.WaveformSine, 440.0, tt.duration)
-			
+
 			originalData := make([]float64, len(sample.Data))
 			copy(originalData, sample.Data)
-			
+
 			tt.envelope.Apply(sample.Data, sample.SampleRate)
-			
+
 			// Check that envelope was applied (data changed)
 			changed := false
 			for i := range sample.Data {
@@ -273,16 +273,16 @@ func TestEnvelope_Apply(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if !changed {
 				t.Error("envelope did not modify the sample")
 			}
-			
+
 			// Check that first sample is close to 0 (attack starts at 0)
 			if math.Abs(sample.Data[0]) > 0.1 {
 				t.Errorf("first sample = %f, want ~0", sample.Data[0])
 			}
-			
+
 			// Check that last sample is close to 0 (release ends at 0)
 			lastIdx := len(sample.Data) - 1
 			if math.Abs(sample.Data[lastIdx]) > 0.1 {
@@ -295,14 +295,14 @@ func TestEnvelope_Apply(t *testing.T) {
 func TestEnvelope_EmptyData(t *testing.T) {
 	env := DefaultEnvelope()
 	data := []float64{}
-	
+
 	// Should not panic
 	env.Apply(data, 44100)
 }
 
 func BenchmarkOscillator_GenerateSine(b *testing.B) {
 	osc := NewOscillator(44100, 12345)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		osc.Generate(audio.WaveformSine, 440.0, 1.0)
@@ -311,7 +311,7 @@ func BenchmarkOscillator_GenerateSine(b *testing.B) {
 
 func BenchmarkOscillator_GenerateNoise(b *testing.B) {
 	osc := NewOscillator(44100, 12345)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		osc.Generate(audio.WaveformNoise, 0, 1.0)
@@ -322,7 +322,7 @@ func BenchmarkEnvelope_Apply(b *testing.B) {
 	osc := NewOscillator(44100, 12345)
 	sample := osc.Generate(audio.WaveformSine, 440.0, 1.0)
 	env := DefaultEnvelope()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		env.Apply(sample.Data, sample.SampleRate)

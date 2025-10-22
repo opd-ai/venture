@@ -25,15 +25,15 @@ func (m *MockComponent) Type() string {
 
 func TestEntityComponents(t *testing.T) {
 	entity := NewEntity(1)
-	
+
 	// Test adding component
 	comp := &MockComponent{Value: "test"}
 	entity.AddComponent(comp)
-	
+
 	if !entity.HasComponent("mock") {
 		t.Error("Expected entity to have mock component")
 	}
-	
+
 	// Test getting component
 	retrieved, ok := entity.GetComponent("mock")
 	if !ok {
@@ -42,7 +42,7 @@ func TestEntityComponents(t *testing.T) {
 	if mockComp, ok := retrieved.(*MockComponent); !ok || mockComp.Value != "test" {
 		t.Error("Retrieved component doesn't match")
 	}
-	
+
 	// Test removing component
 	entity.RemoveComponent("mock")
 	if entity.HasComponent("mock") {
@@ -52,16 +52,16 @@ func TestEntityComponents(t *testing.T) {
 
 func TestWorld(t *testing.T) {
 	world := NewWorld()
-	
+
 	// Test entity creation
 	entity := world.CreateEntity()
 	if entity.ID != 0 {
 		t.Errorf("Expected first entity ID to be 0, got %d", entity.ID)
 	}
-	
+
 	// Ensure entity is added after update
 	world.Update(0.016)
-	
+
 	retrieved, ok := world.GetEntity(entity.ID)
 	if !ok {
 		t.Error("Expected to retrieve created entity")
@@ -69,11 +69,11 @@ func TestWorld(t *testing.T) {
 	if retrieved.ID != entity.ID {
 		t.Error("Retrieved entity doesn't match")
 	}
-	
+
 	// Test entity removal
 	world.RemoveEntity(entity.ID)
 	world.Update(0.016)
-	
+
 	_, ok = world.GetEntity(entity.ID)
 	if ok {
 		t.Error("Expected entity to be removed")
@@ -91,10 +91,10 @@ func (s *MockSystem) Update(entities []*Entity, deltaTime float64) {
 func TestWorldSystems(t *testing.T) {
 	world := NewWorld()
 	system := &MockSystem{}
-	
+
 	world.AddSystem(system)
 	world.Update(0.016)
-	
+
 	if system.UpdateCount != 1 {
 		t.Errorf("Expected system to be updated once, got %d", system.UpdateCount)
 	}
@@ -102,19 +102,19 @@ func TestWorldSystems(t *testing.T) {
 
 func TestGetEntitiesWith(t *testing.T) {
 	world := NewWorld()
-	
+
 	// Create entities with different components
 	entity1 := world.CreateEntity()
 	entity1.AddComponent(&MockComponent{Value: "e1"})
-	
+
 	entity2 := world.CreateEntity()
 	entity2.AddComponent(&MockComponent{Value: "e2"})
-	
+
 	_ = world.CreateEntity()
 	// No components
-	
+
 	world.Update(0.016)
-	
+
 	// Get entities with mock component
 	entities := world.GetEntitiesWith("mock")
 	if len(entities) != 2 {
@@ -128,7 +128,7 @@ func TestGameStructure(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" && os.Getenv("CI") != "" {
 		t.Skip("Skipping Game test - no display available in CI")
 	}
-	
+
 	// This will be tested in integration tests with a virtual display
 	t.Skip("Game tests require display - skipped for unit tests")
 }

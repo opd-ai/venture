@@ -8,13 +8,13 @@ import (
 type InventoryComponent struct {
 	// Items stored in the inventory
 	Items []*item.Item
-	
+
 	// MaxItems is the maximum number of items that can be carried
 	MaxItems int
-	
+
 	// MaxWeight is the maximum weight that can be carried
 	MaxWeight float64
-	
+
 	// Gold/currency amount
 	Gold int
 }
@@ -49,12 +49,12 @@ func (i *InventoryComponent) CanAddItem(itm *item.Item) bool {
 	if len(i.Items) >= i.MaxItems {
 		return false
 	}
-	
+
 	// Check weight limit
 	if i.GetCurrentWeight()+itm.Stats.Weight > i.MaxWeight {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -64,7 +64,7 @@ func (i *InventoryComponent) AddItem(itm *item.Item) bool {
 	if !i.CanAddItem(itm) {
 		return false
 	}
-	
+
 	i.Items = append(i.Items, itm)
 	return true
 }
@@ -75,7 +75,7 @@ func (i *InventoryComponent) RemoveItem(index int) *item.Item {
 	if index < 0 || index >= len(i.Items) {
 		return nil
 	}
-	
+
 	itm := i.Items[index]
 	i.Items = append(i.Items[:index], i.Items[index+1:]...)
 	return itm
@@ -177,10 +177,10 @@ func (s EquipmentSlot) String() string {
 type EquipmentComponent struct {
 	// Slots maps equipment slots to items
 	Slots map[EquipmentSlot]*item.Item
-	
+
 	// CachedStats stores the total bonuses from all equipped items
 	CachedStats item.Stats
-	
+
 	// StatsDirty indicates if cached stats need recalculation
 	StatsDirty bool
 }
@@ -203,7 +203,7 @@ func (e *EquipmentComponent) CanEquip(itm *item.Item, slot EquipmentSlot) bool {
 	if !itm.IsEquippable() {
 		return false
 	}
-	
+
 	// Check if item type matches slot
 	switch slot {
 	case SlotMainHand, SlotOffHand:
@@ -231,14 +231,14 @@ func (e *EquipmentComponent) Equip(itm *item.Item, slot EquipmentSlot) *item.Ite
 	if !e.CanEquip(itm, slot) {
 		return nil
 	}
-	
+
 	// Get previously equipped item
 	previousItem := e.Slots[slot]
-	
+
 	// Equip new item
 	e.Slots[slot] = itm
 	e.StatsDirty = true
-	
+
 	return previousItem
 }
 
@@ -249,10 +249,10 @@ func (e *EquipmentComponent) Unequip(slot EquipmentSlot) *item.Item {
 	if !exists {
 		return nil
 	}
-	
+
 	delete(e.Slots, slot)
 	e.StatsDirty = true
-	
+
 	return itm
 }
 
@@ -277,7 +277,7 @@ func (e *EquipmentComponent) GetSlotForItem(itm *item.Item) (EquipmentSlot, bool
 	if !itm.IsEquippable() {
 		return 0, false
 	}
-	
+
 	switch itm.Type {
 	case item.TypeWeapon:
 		return SlotMainHand, true
@@ -310,7 +310,7 @@ func (e *EquipmentComponent) GetSlotForItem(itm *item.Item) (EquipmentSlot, bool
 		// All accessory slots full, return first one for swapping
 		return SlotAccessory1, true
 	}
-	
+
 	return 0, false
 }
 
@@ -318,25 +318,25 @@ func (e *EquipmentComponent) GetSlotForItem(itm *item.Item) (EquipmentSlot, bool
 func (e *EquipmentComponent) RecalculateStats() {
 	// Reset cached stats
 	e.CachedStats = item.Stats{}
-	
+
 	// Sum stats from all equipped items
 	for _, itm := range e.Slots {
 		if itm == nil {
 			continue
 		}
-		
+
 		e.CachedStats.Damage += itm.Stats.Damage
 		e.CachedStats.Defense += itm.Stats.Defense
-		
+
 		// Attack speed: use the weapon's speed, don't sum
 		if itm.Type == item.TypeWeapon && itm.Stats.AttackSpeed > 0 {
 			e.CachedStats.AttackSpeed = itm.Stats.AttackSpeed
 		}
-		
+
 		e.CachedStats.Value += itm.Stats.Value
 		e.CachedStats.Weight += itm.Stats.Weight
 	}
-	
+
 	e.StatsDirty = false
 }
 
@@ -382,9 +382,9 @@ func (e *EquipmentComponent) UnequipAll() []*item.Item {
 			items = append(items, itm)
 		}
 	}
-	
+
 	e.Slots = make(map[EquipmentSlot]*item.Item)
 	e.StatsDirty = true
-	
+
 	return items
 }

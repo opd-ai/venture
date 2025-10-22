@@ -69,44 +69,44 @@ func displayQuest(num int, q *quest.Quest) {
 	fmt.Printf("Difficulty: %s\n", q.Difficulty)
 	fmt.Printf("Status: %s\n", q.Status)
 	fmt.Printf("Required Level: %d\n", q.RequiredLevel)
-	
+
 	if q.GiverNPC != "" {
 		fmt.Printf("Quest Giver: %s\n", q.GiverNPC)
 	}
-	
+
 	if q.Location != "" {
 		fmt.Printf("Location: %s\n", q.Location)
 	}
-	
+
 	fmt.Printf("\nDescription:\n  %s\n", q.Description)
-	
+
 	fmt.Printf("\nObjectives:\n")
 	for i, obj := range q.Objectives {
 		fmt.Printf("  %d. %s\n", i+1, obj.Description)
 		fmt.Printf("     Progress: %d/%d (%.1f%%)\n", obj.Current, obj.Required, obj.Progress()*100)
 	}
-	
+
 	fmt.Printf("\nRewards:\n")
 	fmt.Printf("  XP: %d\n", q.Reward.XP)
 	fmt.Printf("  Gold: %d\n", q.Reward.Gold)
-	
+
 	if len(q.Reward.Items) > 0 {
 		fmt.Printf("  Items: %d\n", len(q.Reward.Items))
 		for _, item := range q.Reward.Items {
 			fmt.Printf("    - %s\n", item)
 		}
 	}
-	
+
 	if q.Reward.SkillPoints > 0 {
 		fmt.Printf("  Skill Points: %d\n", q.Reward.SkillPoints)
 	}
-	
+
 	fmt.Printf("  Estimated Value: %d\n", q.GetRewardValue())
-	
+
 	if len(q.Tags) > 0 {
 		fmt.Printf("\nTags: %v\n", q.Tags)
 	}
-	
+
 	fmt.Printf("Seed: %d\n", q.Seed)
 	fmt.Println()
 }
@@ -117,42 +117,42 @@ func displayStatistics(quests []*quest.Quest) {
 	for _, q := range quests {
 		typeCounts[q.Type]++
 	}
-	
+
 	fmt.Println("Quest Types:")
 	for qType, count := range typeCounts {
 		fmt.Printf("  %s: %d\n", qType, count)
 	}
-	
+
 	// Count by difficulty
 	diffCounts := make(map[quest.Difficulty]int)
 	for _, q := range quests {
 		diffCounts[q.Difficulty]++
 	}
-	
+
 	fmt.Println("\nDifficulty Distribution:")
 	for diff, count := range diffCounts {
 		fmt.Printf("  %s: %d\n", diff, count)
 	}
-	
+
 	// Average rewards
 	totalXP := 0
 	totalGold := 0
 	totalItems := 0
 	totalSkillPoints := 0
-	
+
 	for _, q := range quests {
 		totalXP += q.Reward.XP
 		totalGold += q.Reward.Gold
 		totalItems += len(q.Reward.Items)
 		totalSkillPoints += q.Reward.SkillPoints
 	}
-	
+
 	fmt.Println("\nAverage Rewards:")
 	fmt.Printf("  XP: %d\n", totalXP/len(quests))
 	fmt.Printf("  Gold: %d\n", totalGold/len(quests))
 	fmt.Printf("  Items: %.1f\n", float64(totalItems)/float64(len(quests)))
 	fmt.Printf("  Skill Points: %.1f\n", float64(totalSkillPoints)/float64(len(quests)))
-	
+
 	// Total value
 	totalValue := 0
 	for _, q := range quests {

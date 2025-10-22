@@ -63,7 +63,7 @@ func main() {
 	tileGen := tiles.NewGenerator()
 
 	tileTypes := []struct {
-		name string
+		name  string
 		tType tiles.TileType
 	}{
 		{"Floor", tiles.TileFloor},

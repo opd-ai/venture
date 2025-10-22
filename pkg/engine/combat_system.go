@@ -3,17 +3,17 @@ package engine
 import (
 	"math"
 	"math/rand"
-	
+
 	"github.com/opd-ai/venture/pkg/combat"
 )
 
 // CombatSystem handles combat interactions, damage calculation, and status effects.
 type CombatSystem struct {
 	rng *rand.Rand
-	
+
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
-	
+
 	// Callback for when damage is dealt
 	onDamageCallback func(attacker, target *Entity, damage float64)
 }
@@ -34,23 +34,23 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 			attack := attackComp.(*AttackComponent)
 			attack.UpdateCooldown(deltaTime)
 		}
-		
+
 		// Process status effects
 		if statusComp, ok := entity.GetComponent("status_effect"); ok {
 			status := statusComp.(*StatusEffectComponent)
-			
+
 			// Update status effect
 			if ticked := status.Update(deltaTime); ticked {
 				s.applyStatusEffectTick(entity, status)
 			}
-			
+
 			// Remove expired effects
 			if status.IsExpired() {
 				entity.RemoveComponent("status_effect")
 			}
 		}
 	}
-	
+
 	// Clean up dead entities
 	for _, entity := range entities {
 		if healthComp, ok := entity.GetComponent("health"); ok {
@@ -70,9 +70,9 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 	if !ok {
 		return
 	}
-	
+
 	health := healthComp.(*HealthComponent)
-	
+
 	switch effect.EffectType {
 	case "poison", "burn":
 		// Damage over time
@@ -92,23 +92,23 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		return false
 	}
 	attack := attackComp.(*AttackComponent)
-	
+
 	// Check cooldown
 	if !attack.CanAttack() {
 		return false
 	}
-	
+
 	targetHealth, ok := target.GetComponent("health")
 	if !ok {
 		return false
 	}
 	health := targetHealth.(*HealthComponent)
-	
+
 	// Check if target is already dead
 	if health.IsDead() {
 		return false
 	}
-	
+
 	// Check range
 	_, attackerHasPos := attacker.GetComponent("position")
 	_, targetHasPos := target.GetComponent("position")
@@ -118,31 +118,31 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			return false
 		}
 	}
-	
+
 	// Get attacker stats
 	attackerStatsComp, _ := attacker.GetComponent("stats")
 	var attackerStats *StatsComponent
 	if attackerStatsComp != nil {
 		attackerStats = attackerStatsComp.(*StatsComponent)
 	}
-	
+
 	// Get target stats
 	targetStatsComp, _ := target.GetComponent("stats")
 	var targetStats *StatsComponent
 	if targetStatsComp != nil {
 		targetStats = targetStatsComp.(*StatsComponent)
 	}
-	
+
 	// Check for evasion
 	if targetStats != nil && s.rollChance(targetStats.Evasion) {
 		// Attack missed
 		attack.ResetCooldown()
 		return false
 	}
-	
+
 	// Calculate damage
 	baseDamage := attack.Damage
-	
+
 	// Apply attacker stats
 	if attackerStats != nil {
 		if attack.DamageType == combat.DamageMagical {
@@ -150,13 +150,13 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		} else {
 			baseDamage += attackerStats.Attack
 		}
-		
+
 		// Check for critical hit
 		if s.rollChance(attackerStats.CritChance) {
 			baseDamage *= attackerStats.CritDamage
 		}
 	}
-	
+
 	// Apply target defense and resistances
 	finalDamage := baseDamage
 	if targetStats != nil {
@@ -166,28 +166,28 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		} else {
 			finalDamage -= targetStats.Defense
 		}
-		
+
 		// Apply resistance
 		resistance := targetStats.GetResistance(attack.DamageType)
 		finalDamage *= (1.0 - resistance)
 	}
-	
+
 	// Minimum damage
 	if finalDamage < 1.0 {
 		finalDamage = 1.0
 	}
-	
+
 	// Apply damage
 	health.TakeDamage(finalDamage)
-	
+
 	// Reset cooldown
 	attack.ResetCooldown()
-	
+
 	// Trigger callback
 	if s.onDamageCallback != nil {
 		s.onDamageCallback(attacker, target, finalDamage)
 	}
-	
+
 	return true
 }
 
@@ -209,16 +209,16 @@ func (s *CombatSystem) CanAttackTarget(attacker, target *Entity) bool {
 		return false
 	}
 	attack := attackComp.(*AttackComponent)
-	
+
 	if !attack.CanAttack() {
 		return false
 	}
-	
+
 	targetHealth, ok := target.GetComponent("health")
 	if !ok || targetHealth.(*HealthComponent).IsDead() {
 		return false
 	}
-	
+
 	// Check range if both have positions
 	_, attackerHasPos := attacker.GetComponent("position")
 	_, targetHasPos := target.GetComponent("position")
@@ -228,7 +228,7 @@ func (s *CombatSystem) CanAttackTarget(attacker, target *Entity) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -241,7 +241,7 @@ func (s *CombatSystem) ApplyStatusEffect(target *Entity, effectType string, dura
 		TickInterval: tickInterval,
 		NextTick:     tickInterval,
 	}
-	
+
 	// Replace any existing status effect (simplification)
 	target.AddComponent(effect)
 }
@@ -252,7 +252,7 @@ func (s *CombatSystem) Heal(target *Entity, amount float64) {
 	if !ok {
 		return
 	}
-	
+
 	health := healthComp.(*HealthComponent)
 	health.Heal(amount)
 }
@@ -273,20 +273,20 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 	if !ok {
 		return nil
 	}
-	
+
 	attackerTeam, _ := attacker.GetComponent("team")
 	var attackerTeamID int
 	if attackerTeam != nil {
 		attackerTeamID = attackerTeam.(*TeamComponent).TeamID
 	}
-	
+
 	enemies := make([]*Entity, 0)
-	
+
 	for _, entity := range world.GetEntities() {
 		if entity.ID == attacker.ID {
 			continue
 		}
-		
+
 		// Check team
 		targetTeam, hasTeam := entity.GetComponent("team")
 		if hasTeam {
@@ -295,25 +295,25 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 				continue
 			}
 		}
-		
+
 		// Check health
 		healthComp, hasHealth := entity.GetComponent("health")
 		if !hasHealth || healthComp.(*HealthComponent).IsDead() {
 			continue
 		}
-		
+
 		// Check range
 		_, hasPos := entity.GetComponent("position")
 		if !hasPos {
 			continue
 		}
-		
+
 		distance := GetDistance(attacker, entity)
 		if distance <= maxRange {
 			enemies = append(enemies, entity)
 		}
 	}
-	
+
 	return enemies
 }
 
@@ -323,10 +323,10 @@ func FindNearestEnemy(world *World, attacker *Entity, maxRange float64) *Entity 
 	if len(enemies) == 0 {
 		return nil
 	}
-	
+
 	var nearest *Entity
 	nearestDistance := math.MaxFloat64
-	
+
 	for _, enemy := range enemies {
 		distance := GetDistance(attacker, enemy)
 		if distance < nearestDistance {
@@ -334,6 +334,6 @@ func FindNearestEnemy(world *World, attacker *Entity, maxRange float64) *Entity 
 			nearest = enemy
 		}
 	}
-	
+
 	return nearest
 }

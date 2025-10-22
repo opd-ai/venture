@@ -10,11 +10,11 @@ func TestNoteToFrequency(t *testing.T) {
 		note int
 		want float64
 	}{
-		{69, 440.0},   // A4
-		{57, 220.0},   // A3
-		{81, 880.0},   // A5
-		{60, 261.63},  // C4 (approximate)
-		{64, 329.63},  // E4 (approximate)
+		{69, 440.0},  // A4
+		{57, 220.0},  // A3
+		{81, 880.0},  // A5
+		{60, 261.63}, // C4 (approximate)
+		{64, 329.63}, // E4 (approximate)
 	}
 
 	for _, tt := range tests {
@@ -92,15 +92,15 @@ func TestGetRhythmForContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.context, func(t *testing.T) {
 			rhythm := GetRhythmForContext(tt.context)
-			
+
 			if len(rhythm.Pattern) == 0 {
 				t.Error("rhythm has no pattern")
 			}
-			
+
 			if len(rhythm.Velocity) != len(rhythm.Pattern) {
 				t.Errorf("velocity length %d != pattern length %d", len(rhythm.Velocity), len(rhythm.Pattern))
 			}
-			
+
 			// Check all velocities are in valid range
 			for i, v := range rhythm.Velocity {
 				if v < 0.0 || v > 1.0 {
@@ -113,9 +113,9 @@ func TestGetRhythmForContext(t *testing.T) {
 
 func TestGetTempoForContext(t *testing.T) {
 	tests := []struct {
-		context  string
-		wantMin  float64
-		wantMax  float64
+		context string
+		wantMin float64
+		wantMax float64
 	}{
 		{"combat", 120.0, 160.0},
 		{"exploration", 80.0, 100.0},
@@ -190,17 +190,17 @@ func TestGenerator_GenerateTrack(t *testing.T) {
 
 func TestGenerator_Determinism(t *testing.T) {
 	seed := int64(99999)
-	
+
 	gen1 := NewGenerator(44100, seed)
 	sample1 := gen1.GenerateTrack("fantasy", "combat", seed, 1.0)
-	
+
 	gen2 := NewGenerator(44100, seed)
 	sample2 := gen2.GenerateTrack("fantasy", "combat", seed, 1.0)
-	
+
 	if len(sample1.Data) != len(sample2.Data) {
 		t.Fatal("samples have different lengths")
 	}
-	
+
 	// Check for general similarity (not exact due to RNG and mixing)
 	differenceCount := 0
 	for i := range sample1.Data {
@@ -208,7 +208,7 @@ func TestGenerator_Determinism(t *testing.T) {
 			differenceCount++
 		}
 	}
-	
+
 	// Should be mostly identical
 	maxAllowedDifferences := len(sample1.Data) / 10 // Allow 10% difference
 	if differenceCount > maxAllowedDifferences {
@@ -219,14 +219,14 @@ func TestGenerator_Determinism(t *testing.T) {
 func TestGenerator_FadeInOut(t *testing.T) {
 	gen := NewGenerator(44100, 12345)
 	sample := gen.GenerateTrack("fantasy", "combat", 12345, 2.0)
-	
+
 	// Check fade in - first samples should be quieter
 	firstAvg := 0.0
 	for i := 0; i < 1000; i++ {
 		firstAvg += math.Abs(sample.Data[i])
 	}
 	firstAvg /= 1000
-	
+
 	// Middle samples should be louder
 	midAvg := 0.0
 	mid := len(sample.Data) / 2
@@ -234,7 +234,7 @@ func TestGenerator_FadeInOut(t *testing.T) {
 		midAvg += math.Abs(sample.Data[i])
 	}
 	midAvg /= 1000
-	
+
 	// Last samples should be quieter (fade out)
 	lastAvg := 0.0
 	start := len(sample.Data) - 1000
@@ -242,11 +242,11 @@ func TestGenerator_FadeInOut(t *testing.T) {
 		lastAvg += math.Abs(sample.Data[i])
 	}
 	lastAvg /= 1000
-	
+
 	if midAvg <= firstAvg {
 		t.Error("middle section not louder than beginning (fade in not working)")
 	}
-	
+
 	if midAvg <= lastAvg {
 		t.Error("middle section not louder than end (fade out not working)")
 	}
@@ -254,7 +254,7 @@ func TestGenerator_FadeInOut(t *testing.T) {
 
 func BenchmarkGenerator_GenerateTrack(b *testing.B) {
 	gen := NewGenerator(44100, 12345)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		gen.GenerateTrack("fantasy", "combat", int64(i), 2.0)

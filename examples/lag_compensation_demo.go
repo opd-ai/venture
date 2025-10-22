@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package main
@@ -34,11 +35,11 @@ func main() {
 	// Record snapshots over time as players move
 	fmt.Println("3. Recording World Snapshots (simulating 20 updates/sec)")
 	baseTime := time.Now().Add(-1 * time.Second)
-	
+
 	for i := 0; i < 20; i++ {
 		// Player B is moving from position (100, 100) to (200, 100) over 1 second
 		playerBX := 100.0 + float64(i*5)
-		
+
 		snapshot := network.WorldSnapshot{
 			Timestamp: baseTime.Add(time.Duration(i*50) * time.Millisecond),
 			Entities: map[uint64]network.EntitySnapshot{
@@ -54,9 +55,9 @@ func main() {
 				},
 			},
 		}
-		
+
 		lc.RecordSnapshot(snapshot)
-		
+
 		if i%5 == 0 {
 			fmt.Printf("   [%dms] Player B position: (%.0f, %.0f)\n", i*50, playerBX, 100.0)
 		}
@@ -86,42 +87,42 @@ func main() {
 	fmt.Println("6. Hit Detection WITH Lag Compensation")
 	fmt.Printf("   Player A's latency: 200ms\n")
 	fmt.Println("   Rewinding game state to 200ms ago...")
-	
+
 	rewindResult := lc.RewindToPlayerTime(200 * time.Millisecond)
 	if !rewindResult.Success {
 		fmt.Println("   ERROR: Failed to rewind")
 		return
 	}
-	
+
 	fmt.Printf("   Compensated Time: %v ago\n", time.Since(rewindResult.CompensatedTime))
 	fmt.Printf("   Was Clamped: %v\n", rewindResult.WasClamped)
-	
+
 	// Get Player B's position at that historical time
 	playerBHistorical, exists := rewindResult.Snapshot.Entities[2]
 	if !exists {
 		fmt.Println("   ERROR: Player B not found in snapshot")
 		return
 	}
-	
-	fmt.Printf("   Player B's HISTORICAL position (200ms ago): (%.0f, %.0f)\n", 
+
+	fmt.Printf("   Player B's HISTORICAL position (200ms ago): (%.0f, %.0f)\n",
 		playerBHistorical.Position.X, playerBHistorical.Position.Y)
-	
+
 	// Validate the hit
 	hitPosition := network.Position{X: 175, Y: 100}
 	hitRadius := 10.0 // Hit radius in game units
-	
+
 	fmt.Printf("   Player A aims at: (%.0f, %.0f)\n", hitPosition.X, hitPosition.Y)
 	fmt.Printf("   Hit radius: %.0f units\n", hitRadius)
-	
+
 	valid, err := lc.ValidateHit(1, 2, hitPosition, 200*time.Millisecond, hitRadius)
 	if err != nil {
 		fmt.Printf("   ERROR: %v\n", err)
 		return
 	}
-	
+
 	actualDistance := distance(playerBHistorical.Position, hitPosition)
 	fmt.Printf("   Distance to historical position: %.1f units\n", actualDistance)
-	
+
 	if valid {
 		fmt.Println("   Result: ✓ HIT CONFIRMED (fair hit detection)")
 	} else {
@@ -132,10 +133,10 @@ func main() {
 	// Scenario 3: High latency connection (e.g., Tor)
 	fmt.Println("7. High Latency Scenario (e.g., Tor connection)")
 	fmt.Println("   Reconfiguring for high-latency (5000ms max)...")
-	
+
 	highLatencyConfig := network.HighLatencyLagCompensationConfig()
 	highLatencyLC := network.NewLagCompensator(highLatencyConfig)
-	
+
 	// Record same snapshots
 	for i := 0; i < 20; i++ {
 		playerBX := 100.0 + float64(i*5)
@@ -148,11 +149,11 @@ func main() {
 		}
 		highLatencyLC.RecordSnapshot(snapshot)
 	}
-	
+
 	// Try to compensate for 800ms latency
 	fmt.Println("   Player with 800ms latency shoots...")
 	highLatencyResult := highLatencyLC.RewindToPlayerTime(800 * time.Millisecond)
-	
+
 	if highLatencyResult.Success {
 		fmt.Printf("   Compensated for: %v\n", highLatencyResult.ActualLatency)
 		fmt.Printf("   Was Clamped: %v\n", highLatencyResult.WasClamped)
@@ -164,16 +165,16 @@ func main() {
 
 	// Scenario 4: Demonstrate interpolation for smoother position
 	fmt.Println("8. Entity Interpolation (for smooth rendering)")
-	
+
 	// Interpolate Player B's position between snapshots
 	interpolateTime := baseTime.Add(425 * time.Millisecond) // Between snapshots
 	interpolated, err := lc.InterpolateEntityAt(2, interpolateTime)
-	
+
 	if err != nil {
 		fmt.Printf("   ERROR: %v\n", err)
 	} else {
 		fmt.Printf("   Time: 425ms (between 400ms and 450ms snapshots)\n")
-		fmt.Printf("   Interpolated position: (%.1f, %.1f)\n", 
+		fmt.Printf("   Interpolated position: (%.1f, %.1f)\n",
 			interpolated.Position.X, interpolated.Position.Y)
 		fmt.Println("   Result: Smooth position between discrete snapshots")
 	}
@@ -181,7 +182,7 @@ func main() {
 
 	// Scenario 5: Performance characteristics
 	fmt.Println("9. Performance Characteristics")
-	
+
 	// Measure rewind performance
 	iterations := 10000
 	start := time.Now()
@@ -189,7 +190,7 @@ func main() {
 		lc.RewindToPlayerTime(200 * time.Millisecond)
 	}
 	elapsed := time.Since(start)
-	
+
 	fmt.Printf("   Rewind operations: %d\n", iterations)
 	fmt.Printf("   Total time: %v\n", elapsed)
 	fmt.Printf("   Average: %.2f µs/op\n", float64(elapsed.Microseconds())/float64(iterations))

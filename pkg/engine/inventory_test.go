@@ -52,8 +52,8 @@ func createTestArmor(name string, armorType item.ArmorType, defense int, weight 
 // TestInventoryComponent_Basic tests basic inventory operations.
 func TestInventoryComponent_Basic(t *testing.T) {
 	tests := []struct {
-		name     string
-		maxItems int
+		name      string
+		maxItems  int
 		maxWeight float64
 	}{
 		{"small inventory", 10, 50.0},
@@ -303,10 +303,10 @@ func TestEquipmentComponent_CanEquip(t *testing.T) {
 	potion := createTestItem("Potion", item.TypeConsumable, 0.5, 20, 0, 0)
 
 	tests := []struct {
-		name  string
-		item  *item.Item
-		slot  EquipmentSlot
-		want  bool
+		name string
+		item *item.Item
+		slot EquipmentSlot
+		want bool
 	}{
 		{"sword in main hand", sword, SlotMainHand, true},
 		{"sword in off hand", sword, SlotOffHand, true},

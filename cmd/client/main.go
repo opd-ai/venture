@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	width     = flag.Int("width", 800, "Screen width")
-	height    = flag.Int("height", 600, "Screen height")
-	seed      = flag.Int64("seed", 12345, "World generation seed")
-	genreID   = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	verbose   = flag.Bool("verbose", false, "Enable verbose logging")
+	width   = flag.Int("width", 800, "Screen width")
+	height  = flag.Int("height", 600, "Screen height")
+	seed    = flag.Int64("seed", 12345, "World generation seed")
+	genreID = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	verbose = flag.Bool("verbose", false, "Enable verbose logging")
 )
 
 func main() {
@@ -103,19 +103,19 @@ func main() {
 
 	// Add player progression
 	playerProgress := &engine.ProgressionComponent{
-		Level:              1,
-		ExperiencePoints:   0,
-		ExperienceToLevel:  100,
-		SkillPoints:        0,
-		UnlockedSkills:     make([]string, 0),
+		Level:             1,
+		ExperiencePoints:  0,
+		ExperienceToLevel: 100,
+		SkillPoints:       0,
+		UnlockedSkills:    make([]string, 0),
 	}
 	player.AddComponent(playerProgress)
 
 	// Add player inventory
 	playerInventory := &engine.InventoryComponent{
-		Items:       make([]engine.InventoryItem, 0),
-		Capacity:    20,
-		Gold:        100,
+		Items:    make([]engine.InventoryItem, 0),
+		Capacity: 20,
+		Gold:     100,
 	}
 	player.AddComponent(playerInventory)
 
@@ -129,10 +129,10 @@ func main() {
 
 	// Add collision for player
 	player.AddComponent(&engine.CollisionComponent{
-		Radius:      16,
-		Mass:        1.0,
-		IsTrigger:   false,
-		IsStatic:    false,
+		Radius:    16,
+		Mass:      1.0,
+		IsTrigger: false,
+		IsStatic:  false,
 	})
 
 	if *verbose {

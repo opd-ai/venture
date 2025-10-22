@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"image/color"
 	"log"
 
 	"github.com/opd-ai/venture/pkg/combat"
@@ -33,6 +34,7 @@ func main() {
 	}
 
 	// Add core gameplay systems
+	inputSystem := engine.NewInputSystem()
 	movementSystem := &engine.MovementSystem{}
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
@@ -40,6 +42,7 @@ func main() {
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
 
+	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
@@ -48,7 +51,7 @@ func main() {
 	game.World.AddSystem(inventorySystem)
 
 	if *verbose {
-		log.Println("Systems initialized: Movement, Collision, Combat, AI, Progression, Inventory")
+		log.Println("Systems initialized: Input, Movement, Collision, Combat, AI, Progression, Inventory")
 	}
 
 	// Generate initial world terrain
@@ -90,6 +93,25 @@ func main() {
 	player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team
+
+	// Add input component for player control
+	player.AddComponent(&engine.InputComponent{})
+
+	// Add sprite for rendering
+	playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
+	playerSprite.Layer = 10 // Draw player on top
+	player.AddComponent(playerSprite)
+
+	// Add camera that follows the player
+	camera := engine.NewCameraComponent()
+	camera.Smoothing = 0.1
+	player.AddComponent(camera)
+
+	// Set player as the active camera
+	game.CameraSystem.SetActiveCamera(player)
+
+	// Set player for HUD display
+	game.HUDSystem.SetPlayerEntity(player)
 
 	// Add player stats
 	playerStats := engine.NewStatsComponent()

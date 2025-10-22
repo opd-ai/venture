@@ -1,6 +1,6 @@
 # Project Overview
 
-Venture is a fully procedural multiplayer action-RPG built with Go 1.24 and the Ebiten 2.9 game engine. The project represents an ambitious technical achievement: a complete action-RPG where every aspect—graphics, audio, terrain, items, enemies, and abilities—is generated procedurally at runtime with zero external asset files. The game combines deep roguelike-style procedural generation (inspired by Dungeon Crawl Stone Soup and Cataclysm DDA) with real-time action gameplay reminiscent of The Legend of Zelda and Chrono Trigger.
+Venture is a fully procedural multiplayer action-RPG built with Go 1.24 and the Ebiten 2.9 game engine. The project represents an ambitious technical achievement: a complete action-RPG where every aspect—graphics, audio, terrain, items, enemies, and abilities—is generated procedurally at runtime with zero external asset files. The game combines deep roguelike-style procedural generation (inspired by Dungeon Crawl Stone Soup and Cataclysm DDA) with real-time action gameplay reminiscent of The Legend of Zelda and Anodyne.
 
 The architecture is built on an Entity-Component-System (ECS) pattern for maximum flexibility and performance. The system supports multiple genres (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic), each with distinct visual palettes, entity types, and thematic elements. Multiplayer functionality is designed to support high-latency connections (200-5000ms), including slow connections like onion services (Tor), through client-side prediction and authoritative server architecture.
 

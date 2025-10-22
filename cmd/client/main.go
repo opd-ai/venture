@@ -210,65 +210,65 @@ func main() {
 				currentHealth, maxHealth = health.Current, health.Max
 			}
 
-			// Get player stats
-			var attack, defense, magic float64
-			if statsComp, ok := player.GetComponent("stats"); ok {
-				stats := statsComp.(*engine.StatsComponent)
-				attack, defense, magic = stats.Attack, stats.Defense, stats.Magic
-			}
-
-			// Get player level and XP
+		// Get player stats
+		var attack, defense, magic float64
+		if statsComp, ok := player.GetComponent("stats"); ok {
+			stats := statsComp.(*engine.StatsComponent)
+			attack, defense, magic = stats.Attack, stats.Defense, stats.MagicPower
+		}			// Get player level and XP
 			var level int
-			var currentXP, xpToNext int64
+			var currentXP int64
 			if expComp, ok := player.GetComponent("experience"); ok {
 				exp := expComp.(*engine.ExperienceComponent)
-				level, currentXP, xpToNext = exp.Level, exp.CurrentXP, exp.XPToNext
+				level, currentXP = exp.Level, int64(exp.CurrentXP)
 			}
 
-			// Get inventory data
-			var gold int
-			var items []saveload.ItemData
+			// Get inventory data (store only item IDs for now)
+			var inventoryItems []uint64
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
-				gold = inv.Gold
-				// Convert inventory items to ItemData (simplified - would need full serialization)
-				for _, item := range inv.Items {
-					items = append(items, saveload.ItemData{
-						Name:   item.Name,
-						Type:   string(item.Type),
-						Weight: item.Weight,
-					})
+				_ = inv.Gold // We have gold but don't store it separately in PlayerState yet
+				// Store item IDs (simplified - full serialization would need entity ID mapping)
+				for range inv.Items {
+					// TODO: Map items to entity IDs for proper persistence
+					// For now, we'll skip this as it requires additional entity-item mapping
 				}
 			}
 
 			// Create game save
 			gameSave := &saveload.GameSave{
-				Player: saveload.PlayerState{
-					Position: saveload.Position{X: posX, Y: posY},
-					Health:   saveload.Health{Current: currentHealth, Max: maxHealth},
-					Stats: saveload.Stats{
-						Attack:  attack,
-						Defense: defense,
-						Magic:   magic,
-					},
-					Level:     level,
-					CurrentXP: currentXP,
-					XPToNext:  xpToNext,
-					Inventory: saveload.Inventory{
-						Items: items,
-						Gold:  gold,
-					},
+				Version:   saveload.SaveVersion,
+				PlayerState: &saveload.PlayerState{
+					EntityID:      player.ID,
+					X:             posX,
+					Y:             posY,
+					CurrentHealth: currentHealth,
+					MaxHealth:     maxHealth,
+					Level:         level,
+					Experience:    int(currentXP),
+					Attack:        attack,
+					Defense:       defense,
+					MagicPower:    magic,
+					Speed:         1.0, // Default speed
+					InventoryItems: inventoryItems,
 				},
-				World: saveload.WorldState{
+				WorldState: &saveload.WorldState{
 					Seed:       *seed,
-					Genre:      *genreID,
+					GenreID:    *genreID,
 					Width:      generatedTerrain.Width,
 					Height:     generatedTerrain.Height,
 					Difficulty: 0.5,
+					Depth:      1,
 				},
-				Settings: saveload.GameSettings{
+				Settings: &saveload.GameSettings{
 					ScreenWidth:  *width,
 					ScreenHeight: *height,
+					Fullscreen:   false,
+					VSync:        true,
+					MasterVolume: 1.0,
+					MusicVolume:  0.7,
+					SFXVolume:    0.8,
+					KeyBindings:  make(map[string]string),
 				},
 			}
 
@@ -294,38 +294,38 @@ func main() {
 			// Restore player position
 			if posComp, ok := player.GetComponent("position"); ok {
 				pos := posComp.(*engine.PositionComponent)
-				pos.X = gameSave.Player.Position.X
-				pos.Y = gameSave.Player.Position.Y
+				pos.X = gameSave.PlayerState.X
+				pos.Y = gameSave.PlayerState.Y
 			}
 
 			// Restore player health
 			if healthComp, ok := player.GetComponent("health"); ok {
 				health := healthComp.(*engine.HealthComponent)
-				health.Current = gameSave.Player.Health.Current
-				health.Max = gameSave.Player.Health.Max
+				health.Current = gameSave.PlayerState.CurrentHealth
+				health.Max = gameSave.PlayerState.MaxHealth
 			}
 
 			// Restore player stats
 			if statsComp, ok := player.GetComponent("stats"); ok {
 				stats := statsComp.(*engine.StatsComponent)
-				stats.Attack = gameSave.Player.Stats.Attack
-				stats.Defense = gameSave.Player.Stats.Defense
-				stats.Magic = gameSave.Player.Stats.Magic
+				stats.Attack = gameSave.PlayerState.Attack
+				stats.Defense = gameSave.PlayerState.Defense
+				stats.MagicPower = gameSave.PlayerState.MagicPower
 			}
 
 			// Restore player level and XP
 			if expComp, ok := player.GetComponent("experience"); ok {
 				exp := expComp.(*engine.ExperienceComponent)
-				exp.Level = gameSave.Player.Level
-				exp.CurrentXP = gameSave.Player.CurrentXP
-				exp.XPToNext = gameSave.Player.XPToNext
+				exp.Level = gameSave.PlayerState.Level
+				exp.CurrentXP = gameSave.PlayerState.Experience
+				// Note: RequiredXP is recalculated by progression system
 			}
 
 			// Restore inventory (simplified)
 			if invComp, ok := player.GetComponent("inventory"); ok {
-				inv := invComp.(*engine.InventoryComponent)
-				inv.Gold = gameSave.Player.Inventory.Gold
 				// Note: Full item restoration would require recreating item objects
+				// from stored inventory item IDs
+				_ = invComp
 			}
 
 			log.Println("Game loaded successfully!")

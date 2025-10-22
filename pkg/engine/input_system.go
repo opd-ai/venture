@@ -38,29 +38,61 @@ type InputSystem struct {
 	MoveSpeed float64
 
 	// Key bindings
-	KeyUp      ebiten.Key
-	KeyDown    ebiten.Key
-	KeyLeft    ebiten.Key
-	KeyRight   ebiten.Key
-	KeyAction  ebiten.Key
-	KeyUseItem ebiten.Key
+	KeyUp        ebiten.Key
+	KeyDown      ebiten.Key
+	KeyLeft      ebiten.Key
+	KeyRight     ebiten.Key
+	KeyAction    ebiten.Key
+	KeyUseItem   ebiten.Key
+	KeyHelp      ebiten.Key // ESC key for help menu
+	KeyQuickSave ebiten.Key // F5 key for quick save
+	KeyQuickLoad ebiten.Key // F9 key for quick load
+
+	// References to game systems for special key handling
+	helpSystem *HelpSystem
+
+	// Callbacks for save/load operations
+	onQuickSave func() error
+	onQuickLoad func() error
 }
 
 // NewInputSystem creates a new input system with default key bindings.
 func NewInputSystem() *InputSystem {
 	return &InputSystem{
-		MoveSpeed:  100.0, // pixels per second
-		KeyUp:      ebiten.KeyW,
-		KeyDown:    ebiten.KeyS,
-		KeyLeft:    ebiten.KeyA,
-		KeyRight:   ebiten.KeyD,
-		KeyAction:  ebiten.KeySpace,
-		KeyUseItem: ebiten.KeyE,
+		MoveSpeed:    100.0, // pixels per second
+		KeyUp:        ebiten.KeyW,
+		KeyDown:      ebiten.KeyS,
+		KeyLeft:      ebiten.KeyA,
+		KeyRight:     ebiten.KeyD,
+		KeyAction:    ebiten.KeySpace,
+		KeyUseItem:   ebiten.KeyE,
+		KeyHelp:      ebiten.KeyEscape,
+		KeyQuickSave: ebiten.KeyF5,
+		KeyQuickLoad: ebiten.KeyF9,
 	}
 }
 
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
+	// Handle global keys first (help menu, save/load, etc.)
+	if inpututil.IsKeyJustPressed(s.KeyHelp) && s.helpSystem != nil {
+		s.helpSystem.Toggle()
+	}
+
+	// Handle quick save (F5)
+	if inpututil.IsKeyJustPressed(s.KeyQuickSave) && s.onQuickSave != nil {
+		if err := s.onQuickSave(); err != nil {
+			// Error is logged by the callback
+		}
+	}
+
+	// Handle quick load (F9)
+	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
+		if err := s.onQuickLoad(); err != nil {
+			// Error is logged by the callback
+		}
+	}
+
 	for _, entity := range entities {
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {
@@ -129,4 +161,19 @@ func (s *InputSystem) SetKeyBindings(up, down, left, right, action, useItem ebit
 	s.KeyRight = right
 	s.KeyAction = action
 	s.KeyUseItem = useItem
+}
+
+// SetHelpSystem connects the help system for ESC key toggling.
+func (s *InputSystem) SetHelpSystem(helpSystem *HelpSystem) {
+	s.helpSystem = helpSystem
+}
+
+// SetQuickSaveCallback sets the callback function for quick save (F5).
+func (s *InputSystem) SetQuickSaveCallback(callback func() error) {
+	s.onQuickSave = callback
+}
+
+// SetQuickLoadCallback sets the callback function for quick load (F9).
+func (s *InputSystem) SetQuickLoadCallback(callback func() error) {
+	s.onQuickLoad = callback
 }

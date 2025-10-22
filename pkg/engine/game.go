@@ -26,6 +26,8 @@ type Game struct {
 	RenderSystem        *RenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
 	HUDSystem           *HUDSystem
+	TutorialSystem      *TutorialSystem
+	HelpSystem          *HelpSystem
 }
 
 // NewGame creates a new game instance.
@@ -83,6 +85,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Render HUD overlay
 	g.HUDSystem.Draw(screen)
+
+	// Render tutorial overlay (if active)
+	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
+		g.TutorialSystem.Draw(screen)
+	}
+
+	// Render help overlay (if visible)
+	if g.HelpSystem != nil && g.HelpSystem.Visible {
+		g.HelpSystem.Draw(screen)
+	}
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.

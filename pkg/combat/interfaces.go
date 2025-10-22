@@ -16,13 +16,13 @@ const (
 type Damage struct {
 	// Amount of damage
 	Amount float64
-	
+
 	// Type of damage
 	Type DamageType
-	
+
 	// Source entity ID
 	SourceID uint64
-	
+
 	// Target entity ID
 	TargetID uint64
 }
@@ -32,25 +32,25 @@ type Stats struct {
 	// Health points
 	HP    float64
 	MaxHP float64
-	
+
 	// Mana/energy for abilities
 	Mana    float64
 	MaxMana float64
-	
+
 	// Offensive stats
-	Attack       float64
-	MagicPower   float64
-	CritChance   float64
-	CritDamage   float64
-	
+	Attack     float64
+	MagicPower float64
+	CritChance float64
+	CritDamage float64
+
 	// Defensive stats
-	Defense        float64
-	MagicDefense   float64
-	Evasion        float64
-	
+	Defense      float64
+	MagicDefense float64
+	Evasion      float64
+
 	// Movement
 	Speed float64
-	
+
 	// Resistances (0.0 = no resistance, 1.0 = immune)
 	Resistances map[DamageType]float64
 }
@@ -73,7 +73,7 @@ func NewStats() *Stats {
 type CombatResolver interface {
 	// CalculateDamage computes final damage after resistances and defenses
 	CalculateDamage(damage Damage, targetStats *Stats) float64
-	
+
 	// ResolveCombat handles a combat interaction between entities
 	ResolveCombat(attackerID, defenderID uint64) []Damage
 }

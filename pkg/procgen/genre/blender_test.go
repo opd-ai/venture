@@ -600,7 +600,7 @@ func TestBlendThemes(t *testing.T) {
 			themes := blendThemes(tt.primary, tt.secondary, tt.weight, import_rand)
 
 			if len(themes) < tt.minCount || len(themes) > tt.maxCount {
-				t.Errorf("blendThemes() returned %d themes, want between %d and %d", 
+				t.Errorf("blendThemes() returned %d themes, want between %d and %d",
 					len(themes), tt.minCount, tt.maxCount)
 			}
 

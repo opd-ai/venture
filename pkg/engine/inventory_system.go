@@ -26,7 +26,7 @@ func (s *InventorySystem) AddItemToInventory(entityID uint64, itm *item.Item) (b
 	if !ok {
 		return false, fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return false, fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -35,7 +35,7 @@ func (s *InventorySystem) AddItemToInventory(entityID uint64, itm *item.Item) (b
 	if !ok {
 		return false, fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	return invComp.AddItem(itm), nil
 }
 
@@ -45,7 +45,7 @@ func (s *InventorySystem) RemoveItemFromInventory(entityID uint64, index int) (*
 	if !ok {
 		return nil, fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return nil, fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -54,12 +54,12 @@ func (s *InventorySystem) RemoveItemFromInventory(entityID uint64, index int) (*
 	if !ok {
 		return nil, fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	itm := invComp.RemoveItem(index)
 	if itm == nil {
 		return nil, fmt.Errorf("invalid item index %d", index)
 	}
-	
+
 	return itm, nil
 }
 
@@ -70,7 +70,7 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -79,7 +79,7 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	comp2, ok := entity.GetComponent("equipment")
 	if !ok {
 		return fmt.Errorf("entity %d does not have equipment component", entityID)
@@ -88,25 +88,25 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 	if !ok {
 		return fmt.Errorf("entity %d equipment component has wrong type", entityID)
 	}
-	
+
 	// Get item from inventory
 	if inventoryIndex < 0 || inventoryIndex >= len(invComp.Items) {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
 	itm := invComp.Items[inventoryIndex]
-	
+
 	// Check if item can be equipped
 	slot, canEquip := equipComp.GetSlotForItem(itm)
 	if !canEquip {
 		return fmt.Errorf("item %s cannot be equipped", itm.Name)
 	}
-	
+
 	// Equip the item (this may return a previously equipped item)
 	previousItem := equipComp.Equip(itm, slot)
-	
+
 	// Remove from inventory
 	invComp.RemoveItem(inventoryIndex)
-	
+
 	// If there was a previously equipped item, add it to inventory
 	if previousItem != nil {
 		if !invComp.AddItem(previousItem) {
@@ -117,10 +117,10 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 			return fmt.Errorf("cannot equip: inventory full for swapped item")
 		}
 	}
-	
+
 	// Update entity stats based on new equipment
 	s.applyEquipmentStats(entityID)
-	
+
 	return nil
 }
 
@@ -130,7 +130,7 @@ func (s *InventorySystem) UnequipItem(entityID uint64, slot EquipmentSlot) error
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -139,7 +139,7 @@ func (s *InventorySystem) UnequipItem(entityID uint64, slot EquipmentSlot) error
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	comp2, ok := entity.GetComponent("equipment")
 	if !ok {
 		return fmt.Errorf("entity %d does not have equipment component", entityID)
@@ -148,23 +148,23 @@ func (s *InventorySystem) UnequipItem(entityID uint64, slot EquipmentSlot) error
 	if !ok {
 		return fmt.Errorf("entity %d equipment component has wrong type", entityID)
 	}
-	
+
 	// Unequip the item
 	itm := equipComp.Unequip(slot)
 	if itm == nil {
 		return fmt.Errorf("no item equipped in slot %s", slot.String())
 	}
-	
+
 	// Add to inventory
 	if !invComp.AddItem(itm) {
 		// Inventory is full, re-equip the item
 		equipComp.Equip(itm, slot)
 		return fmt.Errorf("cannot unequip: inventory full")
 	}
-	
+
 	// Update entity stats
 	s.applyEquipmentStats(entityID)
-	
+
 	return nil
 }
 
@@ -175,7 +175,7 @@ func (s *InventorySystem) UseConsumable(entityID uint64, inventoryIndex int) err
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -184,26 +184,26 @@ func (s *InventorySystem) UseConsumable(entityID uint64, inventoryIndex int) err
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	// Get item from inventory
 	if inventoryIndex < 0 || inventoryIndex >= len(invComp.Items) {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
 	itm := invComp.Items[inventoryIndex]
-	
+
 	// Check if item is consumable
 	if !itm.IsConsumable() {
 		return fmt.Errorf("item %s is not consumable", itm.Name)
 	}
-	
+
 	// Apply consumable effects
 	if err := s.applyConsumableEffects(entityID, itm); err != nil {
 		return fmt.Errorf("failed to use consumable: %w", err)
 	}
-	
+
 	// Remove from inventory
 	invComp.RemoveItem(inventoryIndex)
-	
+
 	return nil
 }
 
@@ -213,14 +213,14 @@ func (s *InventorySystem) applyConsumableEffects(entityID uint64, itm *item.Item
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	// Get health component if it exists
 	comp, hasHealth := entity.GetComponent("health")
 	var healthComp *HealthComponent
 	if hasHealth {
 		healthComp, _ = comp.(*HealthComponent)
 	}
-	
+
 	// Apply effects based on consumable type
 	switch itm.ConsumableType {
 	case item.ConsumablePotion:
@@ -230,25 +230,25 @@ func (s *InventorySystem) applyConsumableEffects(entityID uint64, itm *item.Item
 			healAmount := float64(itm.Stats.Value) / 10.0
 			healthComp.Heal(healAmount)
 		}
-		
+
 	case item.ConsumableScroll:
 		// Scrolls might cast a spell or provide a buff
 		// For now, just a placeholder
 		// In a full implementation, this would trigger a spell effect
-		
+
 	case item.ConsumableFood:
 		// Food restores health over time
 		if healthComp != nil {
 			healAmount := float64(itm.Stats.Value) / 20.0
 			healthComp.Heal(healAmount)
 		}
-		
+
 	case item.ConsumableBomb:
 		// Bombs would deal area damage
 		// This would require position and collision detection
 		// Placeholder for now
 	}
-	
+
 	return nil
 }
 
@@ -258,7 +258,7 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 	if !ok {
 		return
 	}
-	
+
 	comp, ok := entity.GetComponent("equipment")
 	if !ok {
 		return
@@ -267,10 +267,10 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 	if equipComp == nil {
 		return
 	}
-	
+
 	// Get equipment stats
 	equipStats := equipComp.GetStats()
-	
+
 	// Update stats component if it exists
 	comp2, ok := entity.GetComponent("stats")
 	if ok {
@@ -281,7 +281,7 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 			statsComp.Defense = float64(equipStats.Defense)
 		}
 	}
-	
+
 	// Update attack component if it exists
 	comp3, ok := entity.GetComponent("attack")
 	if ok {
@@ -291,13 +291,13 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 			if weaponDamage > 0 {
 				attackComp.Damage = float64(weaponDamage)
 			}
-			
+
 			// Apply weapon speed
 			weaponSpeed := equipComp.GetWeaponSpeed()
 			if weaponSpeed > 0 {
 				attackComp.Cooldown = 1.0 / weaponSpeed
 			}
-			
+
 			// Set damage type based on weapon
 			mainHand := equipComp.GetEquipped(SlotMainHand)
 			if mainHand != nil {
@@ -322,7 +322,7 @@ func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -331,17 +331,17 @@ func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	// Remove item from inventory
 	itm := invComp.RemoveItem(inventoryIndex)
 	if itm == nil {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
-	
+
 	// TODO: Create a world entity for the dropped item
 	// This would require position information and a new entity type
 	// For now, the item is simply removed
-	
+
 	return nil
 }
 
@@ -352,7 +352,7 @@ func (s *InventorySystem) TransferItem(fromEntityID, toEntityID uint64, inventor
 	if !ok {
 		return fmt.Errorf("source entity %d not found", fromEntityID)
 	}
-	
+
 	comp, ok := fromEntity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("source entity %d does not have inventory component", fromEntityID)
@@ -361,13 +361,13 @@ func (s *InventorySystem) TransferItem(fromEntityID, toEntityID uint64, inventor
 	if !ok {
 		return fmt.Errorf("source entity %d inventory component has wrong type", fromEntityID)
 	}
-	
+
 	// Get destination entity
 	toEntity, ok := s.world.GetEntity(toEntityID)
 	if !ok {
 		return fmt.Errorf("destination entity %d not found", toEntityID)
 	}
-	
+
 	comp2, ok := toEntity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("destination entity %d does not have inventory component", toEntityID)
@@ -376,22 +376,22 @@ func (s *InventorySystem) TransferItem(fromEntityID, toEntityID uint64, inventor
 	if !ok {
 		return fmt.Errorf("destination entity %d inventory component has wrong type", toEntityID)
 	}
-	
+
 	// Get item from source inventory
 	if inventoryIndex < 0 || inventoryIndex >= len(fromInv.Items) {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
 	itm := fromInv.Items[inventoryIndex]
-	
+
 	// Check if destination can accept the item
 	if !toInv.CanAddItem(itm) {
 		return fmt.Errorf("destination inventory cannot accept item")
 	}
-	
+
 	// Transfer the item
 	fromInv.RemoveItem(inventoryIndex)
 	toInv.AddItem(itm)
-	
+
 	return nil
 }
 
@@ -401,7 +401,7 @@ func (s *InventorySystem) GetInventoryValue(entityID uint64) (int, error) {
 	if !ok {
 		return 0, fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return 0, fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -410,12 +410,12 @@ func (s *InventorySystem) GetInventoryValue(entityID uint64) (int, error) {
 	if !ok {
 		return 0, fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	totalValue := invComp.Gold
 	for _, itm := range invComp.Items {
 		totalValue += itm.GetValue()
 	}
-	
+
 	return totalValue, nil
 }
 
@@ -425,7 +425,7 @@ func (s *InventorySystem) SortInventoryByValue(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -434,7 +434,7 @@ func (s *InventorySystem) SortInventoryByValue(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	// Simple bubble sort (good enough for small inventories)
 	items := invComp.Items
 	n := len(items)
@@ -445,7 +445,7 @@ func (s *InventorySystem) SortInventoryByValue(entityID uint64) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -455,7 +455,7 @@ func (s *InventorySystem) SortInventoryByWeight(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -464,7 +464,7 @@ func (s *InventorySystem) SortInventoryByWeight(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	// Simple bubble sort
 	items := invComp.Items
 	n := len(items)
@@ -475,7 +475,7 @@ func (s *InventorySystem) SortInventoryByWeight(entityID uint64) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -485,7 +485,7 @@ func (s *InventorySystem) SortInventoryByType(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d not found", entityID)
 	}
-	
+
 	comp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return fmt.Errorf("entity %d does not have inventory component", entityID)
@@ -494,7 +494,7 @@ func (s *InventorySystem) SortInventoryByType(entityID uint64) error {
 	if !ok {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
-	
+
 	// Simple bubble sort by type
 	items := invComp.Items
 	n := len(items)
@@ -505,6 +505,6 @@ func (s *InventorySystem) SortInventoryByType(entityID uint64) error {
 			}
 		}
 	}
-	
+
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 // TestAIComponent tests the AIComponent functionality.
 func TestAIComponent(t *testing.T) {
 	ai := NewAIComponent(100, 200)
-	
+
 	// Test initial state
 	if ai.State != AIStateIdle {
 		t.Errorf("initial state = %v, want %v", ai.State, AIStateIdle)
@@ -23,7 +23,7 @@ func TestAIComponent(t *testing.T) {
 // TestAIComponentStateChanges tests state transitions.
 func TestAIComponentStateChanges(t *testing.T) {
 	ai := NewAIComponent(0, 0)
-	
+
 	// Change state
 	ai.ChangeState(AIStateChase)
 	if ai.State != AIStateChase {
@@ -32,13 +32,13 @@ func TestAIComponentStateChanges(t *testing.T) {
 	if ai.StateTimer != 0 {
 		t.Errorf("state timer = %v, want 0", ai.StateTimer)
 	}
-	
+
 	// Update state timer
 	ai.UpdateStateTimer(1.5)
 	if ai.StateTimer != 1.5 {
 		t.Errorf("state timer = %v, want 1.5", ai.StateTimer)
 	}
-	
+
 	// Change state again should reset timer
 	ai.ChangeState(AIStateAttack)
 	if ai.StateTimer != 0 {
@@ -51,17 +51,17 @@ func TestAIComponentDecisionTimer(t *testing.T) {
 	ai := NewAIComponent(0, 0)
 	ai.DecisionInterval = 1.0
 	ai.DecisionTimer = 1.0
-	
+
 	// Should not update yet
 	if ai.ShouldUpdateDecision(0.5) {
 		t.Error("should not update decision yet")
 	}
-	
+
 	// Should update now
 	if !ai.ShouldUpdateDecision(0.6) {
 		t.Error("should update decision now")
 	}
-	
+
 	// Timer should be reset
 	if ai.DecisionTimer <= 0 || ai.DecisionTimer > 1.0 {
 		t.Errorf("decision timer = %v, should be reset to interval", ai.DecisionTimer)
@@ -71,7 +71,7 @@ func TestAIComponentDecisionTimer(t *testing.T) {
 // TestAIComponentSpeedMultipliers tests speed multipliers for different states.
 func TestAIComponentSpeedMultipliers(t *testing.T) {
 	ai := NewAIComponent(0, 0)
-	
+
 	tests := []struct {
 		state AIState
 		want  float64
@@ -83,7 +83,7 @@ func TestAIComponentSpeedMultipliers(t *testing.T) {
 		{AIStateFlee, 1.5},
 		{AIStateReturn, 0.8},
 	}
-	
+
 	for _, tt := range tests {
 		ai.State = tt.state
 		got := ai.GetSpeedMultiplier()
@@ -96,20 +96,20 @@ func TestAIComponentSpeedMultipliers(t *testing.T) {
 // TestAIComponentDistanceCalculations tests distance from spawn.
 func TestAIComponentDistanceCalculations(t *testing.T) {
 	ai := NewAIComponent(100, 100)
-	
+
 	tests := []struct {
-		name      string
-		x, y      float64
-		wantDist  float64
+		name       string
+		x, y       float64
+		wantDist   float64
 		wantReturn bool
 	}{
 		{"at spawn", 100, 100, 0, false},
 		{"close to spawn", 110, 110, 14.142, false},
 		{"far from spawn", 700, 100, 600, true}, // sqrt(600^2 + 0^2) = 600
 	}
-	
+
 	ai.MaxChaseDistance = 500
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dist := ai.GetDistanceFromSpawn(tt.x, tt.y)
@@ -117,7 +117,7 @@ func TestAIComponentDistanceCalculations(t *testing.T) {
 			if dist < tt.wantDist-50 || dist > tt.wantDist+50 {
 				t.Errorf("distance = %v, want ~%v", dist, tt.wantDist)
 			}
-			
+
 			shouldReturn := ai.ShouldReturnToSpawn(tt.x, tt.y)
 			if shouldReturn != tt.wantReturn {
 				t.Errorf("should return = %v, want %v", shouldReturn, tt.wantReturn)
@@ -130,27 +130,27 @@ func TestAIComponentDistanceCalculations(t *testing.T) {
 func TestAISystemIdle(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity
 	ai := world.CreateEntity()
 	ai.AddComponent(NewAIComponent(100, 100))
 	ai.AddComponent(&PositionComponent{X: 100, Y: 100})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
-	
+
 	// Create enemy
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 150})
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	world.Update(0)
-	
+
 	// Update AI - should detect enemy
 	aiSystem.Update(0.6) // Trigger decision update
-	
+
 	aiComp, _ := ai.GetComponent("ai")
 	aiC := aiComp.(*AIComponent)
-	
+
 	// Should have detected enemy
 	if aiC.State != AIStateDetect {
 		t.Errorf("state = %v, want %v", aiC.State, AIStateDetect)
@@ -164,7 +164,7 @@ func TestAISystemIdle(t *testing.T) {
 func TestAISystemChase(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity with all needed components
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -174,26 +174,26 @@ func TestAISystemChase(t *testing.T) {
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&AttackComponent{Range: 50, Cooldown: 1.0})
-	
+
 	// Create enemy within detection range but outside attack range
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 200, Y: 100}) // 100 pixels away
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	aiComp.Target = enemy
 	aiComp.DetectionRange = 300 // Ensure enemy is within detection range
-	
+
 	world.Update(0)
-	
+
 	// Update AI
 	aiSystem.Update(0.6)
-	
+
 	// Should still be chasing (enemy is in detection range but not attack range)
 	if aiComp.State != AIStateChase {
 		t.Errorf("state = %v, want %v", aiComp.State, AIStateChase)
 	}
-	
+
 	// Should have set velocity towards enemy
 	velComp, _ := ai.GetComponent("velocity")
 	vel := velComp.(*VelocityComponent)
@@ -206,7 +206,7 @@ func TestAISystemChase(t *testing.T) {
 func TestAISystemAttack(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -216,36 +216,36 @@ func TestAISystemAttack(t *testing.T) {
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&AttackComponent{
-		Damage: 10,
-		Range: 100,
-		Cooldown: 1.0,
+		Damage:        10,
+		Range:         100,
+		Cooldown:      1.0,
 		CooldownTimer: 0,
 	})
 	ai.AddComponent(NewStatsComponent())
-	
+
 	// Create enemy in attack range
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 100})
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	enemy.AddComponent(NewStatsComponent())
-	
+
 	aiComp.Target = enemy
-	
+
 	world.Update(0)
-	
+
 	// Get initial enemy health
 	enemyHealth, _ := enemy.GetComponent("health")
 	initialHealth := enemyHealth.(*HealthComponent).Current
-	
+
 	// Update AI
 	aiSystem.Update(0.6)
-	
+
 	// Should still be in attack state
 	if aiComp.State != AIStateAttack {
 		t.Errorf("state = %v, want %v", aiComp.State, AIStateAttack)
 	}
-	
+
 	// Enemy should have taken damage
 	currentHealth := enemyHealth.(*HealthComponent).Current
 	if currentHealth >= initialHealth {
@@ -257,7 +257,7 @@ func TestAISystemAttack(t *testing.T) {
 func TestAISystemFlee(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity with low health
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -267,17 +267,17 @@ func TestAISystemFlee(t *testing.T) {
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&HealthComponent{Current: 10, Max: 100}) // 10% health
-	
+
 	world.Update(0)
-	
+
 	// Update AI
 	aiSystem.Update(0.6)
-	
+
 	// Should still be fleeing
 	if aiComp.State != AIStateFlee {
 		t.Errorf("state = %v, want %v", aiComp.State, AIStateFlee)
 	}
-	
+
 	// Should be moving towards spawn
 	velComp, _ := ai.GetComponent("velocity")
 	vel := velComp.(*VelocityComponent)
@@ -290,7 +290,7 @@ func TestAISystemFlee(t *testing.T) {
 func TestAISystemReturn(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity far from spawn
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -299,17 +299,17 @@ func TestAISystemReturn(t *testing.T) {
 	ai.AddComponent(&PositionComponent{X: 500, Y: 500})
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
-	
+
 	world.Update(0)
-	
+
 	// Update AI
 	aiSystem.Update(0.6)
-	
+
 	// Should still be returning
 	if aiComp.State != AIStateReturn {
 		t.Errorf("state = %v, want %v", aiComp.State, AIStateReturn)
 	}
-	
+
 	// Should be moving towards spawn
 	velComp, _ := ai.GetComponent("velocity")
 	vel := velComp.(*VelocityComponent)
@@ -322,7 +322,7 @@ func TestAISystemReturn(t *testing.T) {
 func TestAISystemReturnAtSpawn(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity close to spawn
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -331,17 +331,17 @@ func TestAISystemReturnAtSpawn(t *testing.T) {
 	ai.AddComponent(&PositionComponent{X: 105, Y: 105})
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
-	
+
 	world.Update(0)
-	
+
 	// Update AI
 	aiSystem.Update(0.6)
-	
+
 	// Should transition to idle
 	if aiComp.State != AIStateIdle {
 		t.Errorf("state = %v, want %v after returning to spawn", aiComp.State, AIStateIdle)
 	}
-	
+
 	// Velocity should be stopped
 	velComp, _ := ai.GetComponent("velocity")
 	vel := velComp.(*VelocityComponent)
@@ -354,7 +354,7 @@ func TestAISystemReturnAtSpawn(t *testing.T) {
 func TestAISystemFleeTransition(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity in attack state with low health
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -366,20 +366,20 @@ func TestAISystemFleeTransition(t *testing.T) {
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&AttackComponent{Range: 100, Cooldown: 1.0})
 	ai.AddComponent(&HealthComponent{Current: 15, Max: 100}) // 15% health
-	
+
 	// Create enemy
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 100})
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	aiComp.Target = enemy
-	
+
 	world.Update(0)
-	
+
 	// Update AI - should transition to flee
 	aiSystem.Update(0.6)
-	
+
 	if aiComp.State != AIStateFlee {
 		t.Errorf("state = %v, want %v when health low", aiComp.State, AIStateFlee)
 	}
@@ -389,7 +389,7 @@ func TestAISystemFleeTransition(t *testing.T) {
 func TestAISystemChaseRange(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity far from spawn
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -400,20 +400,20 @@ func TestAISystemChaseRange(t *testing.T) {
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&AttackComponent{Range: 50, Cooldown: 1.0})
-	
+
 	// Create enemy
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 450, Y: 100})
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	aiComp.Target = enemy
-	
+
 	world.Update(0)
-	
+
 	// Update AI - should transition to return (too far from spawn)
 	aiSystem.Update(0.6)
-	
+
 	if aiComp.State != AIStateReturn {
 		t.Errorf("state = %v, want %v when too far from spawn", aiComp.State, AIStateReturn)
 	}
@@ -423,13 +423,13 @@ func TestAISystemChaseRange(t *testing.T) {
 func TestAISystemNoComponents(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity without position
 	ai := world.CreateEntity()
 	ai.AddComponent(NewAIComponent(100, 100))
-	
+
 	world.Update(0)
-	
+
 	// Should not crash
 	aiSystem.Update(0.6)
 }
@@ -438,7 +438,7 @@ func TestAISystemNoComponents(t *testing.T) {
 func TestAISystemDeadTarget(t *testing.T) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create AI entity
 	ai := world.CreateEntity()
 	aiComp := NewAIComponent(100, 100)
@@ -448,20 +448,20 @@ func TestAISystemDeadTarget(t *testing.T) {
 	ai.AddComponent(&VelocityComponent{})
 	ai.AddComponent(&TeamComponent{TeamID: 1})
 	ai.AddComponent(&AttackComponent{Range: 100, Cooldown: 1.0})
-	
+
 	// Create dead enemy
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 100})
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	enemy.AddComponent(&HealthComponent{Current: 0, Max: 100}) // Dead
-	
+
 	aiComp.Target = enemy
-	
+
 	world.Update(0)
-	
+
 	// Update AI - should lose target and return
 	aiSystem.Update(0.6)
-	
+
 	if aiComp.State != AIStateReturn {
 		t.Errorf("state = %v, want %v when target is dead", aiComp.State, AIStateReturn)
 	}
@@ -474,7 +474,7 @@ func TestAISystemDeadTarget(t *testing.T) {
 func BenchmarkAISystemUpdate(b *testing.B) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create 50 AI entities
 	for i := 0; i < 50; i++ {
 		ai := world.CreateEntity()
@@ -485,9 +485,9 @@ func BenchmarkAISystemUpdate(b *testing.B) {
 		ai.AddComponent(&AttackComponent{Range: 50, Cooldown: 1.0})
 		ai.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	}
-	
+
 	world.Update(0)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		aiSystem.Update(0.016) // ~60 FPS
@@ -498,7 +498,7 @@ func BenchmarkAISystemUpdate(b *testing.B) {
 func BenchmarkAISystemUpdateMany(b *testing.B) {
 	world := NewWorld()
 	aiSystem := NewAISystem(world)
-	
+
 	// Create 200 AI entities
 	for i := 0; i < 200; i++ {
 		ai := world.CreateEntity()
@@ -509,9 +509,9 @@ func BenchmarkAISystemUpdateMany(b *testing.B) {
 		ai.AddComponent(&AttackComponent{Range: 50, Cooldown: 1.0})
 		ai.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	}
-	
+
 	world.Update(0)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		aiSystem.Update(0.016) // ~60 FPS

@@ -2,10 +2,10 @@ package skills
 
 // SkillTreeTemplate defines a template for generating a complete skill tree.
 type SkillTreeTemplate struct {
-	Name            string
-	Description     string
-	Category        SkillCategory
-	SkillTemplates  []SkillTemplate
+	Name           string
+	Description    string
+	Category       SkillCategory
+	SkillTemplates []SkillTemplate
 }
 
 // GetFantasyTreeTemplates returns skill tree templates for fantasy genre.
@@ -117,8 +117,8 @@ func GetFantasyTreeTemplates() []SkillTreeTemplate {
 					DescriptionFormat: "Launch %s at enemies",
 					EffectTypes:       []string{"spell_damage", "mana_cost", "cooldown_reduction"},
 					ValueRanges: map[string][2]float64{
-						"spell_damage":        {0.60, 1.80},
-						"mana_cost":           {-0.10, -0.05},
+						"spell_damage":       {0.60, 1.80},
+						"mana_cost":          {-0.10, -0.05},
 						"cooldown_reduction": {0.05, 0.15},
 					},
 					Tags:          []string{"magic", "active", "spell"},
@@ -290,9 +290,9 @@ func GetSciFiTreeTemplates() []SkillTreeTemplate {
 					DescriptionFormat: "Enhances %s defensive capabilities",
 					EffectTypes:       []string{"armor", "shield_capacity", "regen_rate"},
 					ValueRanges: map[string][2]float64{
-						"armor":          {0.06, 0.16},
+						"armor":           {0.06, 0.16},
 						"shield_capacity": {0.12, 0.28},
-						"regen_rate":     {0.08, 0.18},
+						"regen_rate":      {0.08, 0.18},
 					},
 					Tags:          []string{"defense", "passive", "tank"},
 					TierRange:     [2]int{0, 4},
@@ -423,9 +423,9 @@ func GetSciFiTreeTemplates() []SkillTreeTemplate {
 					DescriptionFormat: "Release %s to damage and control enemies",
 					EffectTypes:       []string{"psi_damage", "crowd_control", "shield_damage"},
 					ValueRanges: map[string][2]float64{
-						"psi_damage":     {0.50, 1.50},
-						"crowd_control":  {0.20, 0.50},
-						"shield_damage":  {0.30, 0.80},
+						"psi_damage":    {0.50, 1.50},
+						"crowd_control": {0.20, 0.50},
+						"shield_damage": {0.30, 0.80},
 					},
 					Tags:          []string{"magic", "active", "control"},
 					TierRange:     [2]int{1, 5},
@@ -440,7 +440,7 @@ func GetSciFiTreeTemplates() []SkillTreeTemplate {
 					DescriptionFormat: "Creates %s for protection",
 					EffectTypes:       []string{"shield_strength", "damage_absorption", "regen"},
 					ValueRanges: map[string][2]float64{
-						"shield_strength":    {0.15, 0.35},
+						"shield_strength":   {0.15, 0.35},
 						"damage_absorption": {0.08, 0.18},
 						"regen":             {0.10, 0.20},
 					},

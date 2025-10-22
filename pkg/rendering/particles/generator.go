@@ -76,7 +76,7 @@ func (g *Generator) generateSparks(system *ParticleSystem, pal *palette.Palette,
 	for i := range system.Particles {
 		angle := rng.Float64() * 2 * math.Pi
 		speed := rng.Float64() * config.SpreadX
-		
+
 		system.Particles[i] = Particle{
 			X:           0,
 			Y:           0,
@@ -131,7 +131,7 @@ func (g *Generator) generateMagic(system *ParticleSystem, pal *palette.Palette, 
 	for i := range system.Particles {
 		angle := rng.Float64() * 2 * math.Pi
 		speed := rng.Float64() * config.SpreadX * 0.7
-		
+
 		system.Particles[i] = Particle{
 			X:           0,
 			Y:           0,
@@ -219,7 +219,7 @@ func (g *Generator) generateDust(system *ParticleSystem, pal *palette.Palette, r
 			X:           (rng.Float64()*2 - 1) * 5,
 			Y:           (rng.Float64()*2 - 1) * 5,
 			VX:          math.Cos(angle) * speed,
-			VY:          math.Sin(angle) * speed - 1, // Slight upward drift
+			VY:          math.Sin(angle)*speed - 1, // Slight upward drift
 			Color:       dustColors[rng.Intn(len(dustColors))],
 			Size:        config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)*0.5,
 			Life:        1.0,

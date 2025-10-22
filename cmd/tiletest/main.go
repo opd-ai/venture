@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	tileType  = flag.String("type", "floor", "Tile type (floor, wall, door, corridor, water, lava, trap, stairs)")
-	width     = flag.Int("width", 32, "Tile width in pixels")
-	height    = flag.Int("height", 32, "Tile height in pixels")
-	genre     = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	seed      = flag.Int64("seed", 12345, "Random seed for generation")
-	variant   = flag.Float64("variant", 0.5, "Visual variant (0.0-1.0)")
-	count     = flag.Int("count", 10, "Number of tiles to generate")
-	output    = flag.String("output", "", "Output file for tile image (PNG format)")
-	verbose   = flag.Bool("verbose", false, "Show verbose output")
+	tileType = flag.String("type", "floor", "Tile type (floor, wall, door, corridor, water, lava, trap, stairs)")
+	width    = flag.Int("width", 32, "Tile width in pixels")
+	height   = flag.Int("height", 32, "Tile height in pixels")
+	genre    = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	seed     = flag.Int64("seed", 12345, "Random seed for generation")
+	variant  = flag.Float64("variant", 0.5, "Visual variant (0.0-1.0)")
+	count    = flag.Int("count", 10, "Number of tiles to generate")
+	output   = flag.String("output", "", "Output file for tile image (PNG format)")
+	verbose  = flag.Bool("verbose", false, "Show verbose output")
 )
 
 func main() {

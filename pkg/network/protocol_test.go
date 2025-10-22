@@ -5,9 +5,9 @@ import "testing"
 // TestComponentData_Structure verifies ComponentData struct initialization and fields.
 func TestComponentData_Structure(t *testing.T) {
 	tests := []struct {
-		name         string
+		name          string
 		componentType string
-		data         []byte
+		data          []byte
 	}{
 		{"position_component", "position", []byte{1, 2, 3, 4}},
 		{"velocity_component", "velocity", []byte{5, 6, 7, 8}},

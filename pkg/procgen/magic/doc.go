@@ -75,15 +75,15 @@
 //			"count": 20,
 //		},
 //	}
-//	
+//
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	
+//
 //	spells := result.([]*magic.Spell)
 //	for _, spell := range spells {
-//		fmt.Printf("%s (%s): %s\n", 
+//		fmt.Printf("%s (%s): %s\n",
 //			spell.Name, spell.Rarity, spell.Description)
 //	}
 //

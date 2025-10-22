@@ -15,10 +15,10 @@ const (
 type Note struct {
 	// Frequency in Hz
 	Frequency float64
-	
+
 	// Duration in seconds
 	Duration float64
-	
+
 	// Velocity (volume) from 0.0 to 1.0
 	Velocity float64
 }
@@ -27,7 +27,7 @@ type Note struct {
 type AudioSample struct {
 	// SampleRate in Hz (e.g., 44100)
 	SampleRate int
-	
+
 	// Data contains the audio samples (-1.0 to 1.0)
 	Data []float64
 }
@@ -36,7 +36,7 @@ type AudioSample struct {
 type Synthesizer interface {
 	// Generate creates an audio sample from parameters
 	Generate(waveform WaveformType, frequency float64, duration float64) *AudioSample
-	
+
 	// GenerateNote creates an audio sample for a musical note
 	GenerateNote(note Note, waveform WaveformType) *AudioSample
 }
@@ -57,10 +57,10 @@ type SFXGenerator interface {
 type AudioMixer interface {
 	// PlaySample plays an audio sample
 	PlaySample(sample *AudioSample, loop bool)
-	
+
 	// Stop stops playback
 	Stop()
-	
+
 	// SetVolume sets the master volume (0.0 to 1.0)
 	SetVolume(volume float64)
 }

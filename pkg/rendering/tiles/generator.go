@@ -68,7 +68,7 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 // generateFloor creates a floor tile with subtle texture.
 func (g *Generator) generateFloor(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	baseColor := g.pickColor(pal, "floor", rng)
-	
+
 	// Use variant to select pattern
 	pattern := g.selectPattern(config.Variant, rng, []Pattern{
 		PatternSolid, PatternCheckerboard, PatternDots,
@@ -87,7 +87,7 @@ func (g *Generator) generateFloor(img *image.RGBA, pal *palette.Palette, rng *ra
 // generateWall creates a wall tile with brick or stone pattern.
 func (g *Generator) generateWall(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	baseColor := g.pickColor(pal, "wall", rng)
-	
+
 	// Walls typically use brick or solid pattern
 	pattern := g.selectPattern(config.Variant, rng, []Pattern{
 		PatternSolid, PatternBrick, PatternLines,
@@ -108,7 +108,7 @@ func (g *Generator) generateDoor(img *image.RGBA, pal *palette.Palette, rng *ran
 	// Doors use grain pattern to simulate wood
 	baseColor := g.pickColor(pal, "door", rng)
 	g.fillGrain(img, baseColor, config.Variant, rng)
-	
+
 	// Add door frame
 	frameColor := g.darkenColor(baseColor, 0.3)
 	g.drawFrame(img, frameColor, 2)
@@ -140,7 +140,7 @@ func (g *Generator) generateTrap(img *image.RGBA, pal *palette.Palette, rng *ran
 	// Traps look like floors with a danger indicator
 	baseColor := g.pickColor(pal, "floor", rng)
 	g.fillSolid(img, baseColor, config.Variant, rng)
-	
+
 	// Add danger pattern in center
 	dangerColor := g.pickColor(pal, "danger", rng)
 	centerX := config.Width / 2
@@ -153,12 +153,12 @@ func (g *Generator) generateTrap(img *image.RGBA, pal *palette.Palette, rng *ran
 func (g *Generator) generateStairs(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	baseColor := g.pickColor(pal, "floor", rng)
 	g.fillSolid(img, baseColor, 0.1, rng)
-	
+
 	// Draw stairs as horizontal lines
 	stepColor := g.darkenColor(baseColor, 0.3)
 	stepCount := 5
 	stepHeight := config.Height / stepCount
-	
+
 	for i := 0; i < stepCount; i++ {
 		y := i * stepHeight
 		for x := 0; x < config.Width; x++ {
@@ -175,7 +175,7 @@ func (g *Generator) generateStairs(img *image.RGBA, pal *palette.Palette, rng *r
 func (g *Generator) fillSolid(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	bounds := img.Bounds()
 	r, gr, b, a := baseColor.RGBA()
-	
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			// Add slight random variation
@@ -183,7 +183,7 @@ func (g *Generator) fillSolid(img *image.RGBA, baseColor color.Color, variance f
 			varR := uint8(math.Min(255, float64(r>>8)*variation))
 			varG := uint8(math.Min(255, float64(gr>>8)*variation))
 			varB := uint8(math.Min(255, float64(b>>8)*variation))
-			
+
 			img.Set(x, y, color.RGBA{R: varR, G: varG, B: varB, A: uint8(a >> 8)})
 		}
 	}
@@ -193,10 +193,10 @@ func (g *Generator) fillCheckerboard(img *image.RGBA, baseColor color.Color, var
 	bounds := img.Bounds()
 	altColor := g.lightenColor(baseColor, 0.1)
 	checkSize := 4
-	
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			useAlt := ((x / checkSize) + (y / checkSize)) % 2 == 0
+			useAlt := ((x/checkSize)+(y/checkSize))%2 == 0
 			if useAlt {
 				img.Set(x, y, altColor)
 			} else {
@@ -208,11 +208,11 @@ func (g *Generator) fillCheckerboard(img *image.RGBA, baseColor color.Color, var
 
 func (g *Generator) fillDots(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	g.fillSolid(img, baseColor, variance, rng)
-	
+
 	dotColor := g.darkenColor(baseColor, 0.2)
 	spacing := 6
 	radius := 1
-	
+
 	bounds := img.Bounds()
 	for y := bounds.Min.Y + spacing/2; y < bounds.Max.Y; y += spacing {
 		for x := bounds.Min.X + spacing/2; x < bounds.Max.X; x += spacing {
@@ -223,10 +223,10 @@ func (g *Generator) fillDots(img *image.RGBA, baseColor color.Color, variance fl
 
 func (g *Generator) fillLines(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	g.fillSolid(img, baseColor, variance, rng)
-	
+
 	lineColor := g.darkenColor(baseColor, 0.15)
 	spacing := 4
-	
+
 	bounds := img.Bounds()
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += spacing {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -237,23 +237,23 @@ func (g *Generator) fillLines(img *image.RGBA, baseColor color.Color, variance f
 
 func (g *Generator) fillBrick(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	g.fillSolid(img, baseColor, variance, rng)
-	
+
 	mortarColor := g.darkenColor(baseColor, 0.3)
 	brickWidth := 16
 	brickHeight := 8
-	
+
 	bounds := img.Bounds()
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += brickHeight {
 		offset := 0
 		if (y/brickHeight)%2 == 1 {
 			offset = brickWidth / 2
 		}
-		
+
 		// Horizontal mortar line
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			img.Set(x, y, mortarColor)
 		}
-		
+
 		// Vertical mortar lines
 		for x := bounds.Min.X + offset; x < bounds.Max.X; x += brickWidth {
 			for dy := 0; dy < brickHeight && y+dy < bounds.Max.Y; dy++ {
@@ -266,17 +266,17 @@ func (g *Generator) fillBrick(img *image.RGBA, baseColor color.Color, variance f
 func (g *Generator) fillGrain(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	bounds := img.Bounds()
 	r, gr, b, a := baseColor.RGBA()
-	
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		// Create horizontal grain lines with noise
 		grainIntensity := math.Sin(float64(y)*0.3) * 0.1
-		
+
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			variation := 1.0 + grainIntensity + (rng.Float64()*2.0-1.0)*variance*0.05
 			varR := uint8(math.Min(255, float64(r>>8)*variation))
 			varG := uint8(math.Min(255, float64(gr>>8)*variation))
 			varB := uint8(math.Min(255, float64(b>>8)*variation))
-			
+
 			img.Set(x, y, color.RGBA{R: varR, G: varG, B: varB, A: uint8(a >> 8)})
 		}
 	}
@@ -284,14 +284,14 @@ func (g *Generator) fillGrain(img *image.RGBA, baseColor color.Color, variance f
 
 func (g *Generator) drawFrame(img *image.RGBA, frameColor color.Color, thickness int) {
 	bounds := img.Bounds()
-	
+
 	for t := 0; t < thickness; t++ {
 		// Top and bottom
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			img.Set(x, bounds.Min.Y+t, frameColor)
 			img.Set(x, bounds.Max.Y-t-1, frameColor)
 		}
-		
+
 		// Left and right
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			img.Set(bounds.Min.X+t, y, frameColor)
@@ -359,13 +359,13 @@ func (g *Generator) selectPattern(variant float64, rng *rand.Rand, patterns []Pa
 	if len(patterns) == 0 {
 		return PatternSolid
 	}
-	
+
 	// Use variant to influence selection
 	idx := int(variant * float64(len(patterns)))
 	if idx >= len(patterns) {
 		idx = len(patterns) - 1
 	}
-	
+
 	return patterns[idx]
 }
 
@@ -375,15 +375,15 @@ func (g *Generator) Validate(result interface{}) error {
 	if !ok {
 		return fmt.Errorf("result is not an *image.RGBA")
 	}
-	
+
 	if img == nil {
 		return fmt.Errorf("generated image is nil")
 	}
-	
+
 	bounds := img.Bounds()
 	if bounds.Dx() == 0 || bounds.Dy() == 0 {
 		return fmt.Errorf("generated image has zero dimensions")
 	}
-	
+
 	return nil
 }

@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package main
@@ -147,7 +148,7 @@ func generateEntities(genreID string, count int) {
 
 	entities := result.([]*entity.Entity)
 	for i, ent := range entities {
-		fmt.Printf("  %d. %s (%s) - Level %d\n", 
+		fmt.Printf("  %d. %s (%s) - Level %d\n",
 			i+1, ent.Name, ent.Type, ent.Stats.Level)
 		fmt.Printf("     HP: %d | Damage: %d | Defense: %d\n",
 			ent.Stats.MaxHealth, ent.Stats.Damage, ent.Stats.Defense)
@@ -173,9 +174,9 @@ func generateItems(genreID string, count int) {
 
 	items := result.([]*item.Item)
 	for i, itm := range items {
-		fmt.Printf("  %d. %s (%s) - %s\n", 
+		fmt.Printf("  %d. %s (%s) - %s\n",
 			i+1, itm.Name, itm.Type, itm.Rarity)
-		
+
 		// Show relevant stats
 		if itm.Type == item.TypeWeapon {
 			fmt.Printf("     Damage: %d", itm.Stats.Damage)
@@ -212,16 +213,16 @@ func generateSpells(genreID string, count int) {
 
 	spells := result.([]*magic.Spell)
 	for i, spell := range spells {
-		fmt.Printf("  %d. %s (%s/%s)\n", 
+		fmt.Printf("  %d. %s (%s/%s)\n",
 			i+1, spell.Name, spell.Element, spell.Type)
-		
+
 		// Show damage or healing based on type
 		if spell.Stats.Damage > 0 {
 			fmt.Printf("     Damage: %d", spell.Stats.Damage)
 		} else if spell.Stats.Healing > 0 {
 			fmt.Printf("     Healing: %d", spell.Stats.Healing)
 		}
-		
+
 		fmt.Printf(" | Range: %.1f | Cost: %d\n",
 			spell.Stats.Range, spell.Stats.ManaCost)
 		fmt.Printf("     Target: %s", spell.Target)

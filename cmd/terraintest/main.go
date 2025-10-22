@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -80,11 +81,11 @@ func main() {
 
 // renderTerrain converts terrain to ASCII art
 func renderTerrain(terr *terrain.Terrain) string {
-	var result string
+	var builder strings.Builder
 
 	// Add header
-	result += fmt.Sprintf("Terrain %dx%d (Seed: %d)\n", terr.Width, terr.Height, terr.Seed)
-	result += fmt.Sprintf("Rooms: %d\n\n", len(terr.Rooms))
+	builder.WriteString(fmt.Sprintf("Terrain %dx%d (Seed: %d)\n", terr.Width, terr.Height, terr.Seed))
+	builder.WriteString(fmt.Sprintf("Rooms: %d\n\n", len(terr.Rooms)))
 
 	// Render each row
 	for y := 0; y < terr.Height; y++ {
@@ -92,18 +93,18 @@ func renderTerrain(terr *terrain.Terrain) string {
 			tile := terr.GetTile(x, y)
 			switch tile {
 			case terrain.TileWall:
-				result += "#"
+				builder.WriteString("#")
 			case terrain.TileFloor:
-				result += "."
+				builder.WriteString(".")
 			case terrain.TileCorridor:
-				result += ":"
+				builder.WriteString(":")
 			case terrain.TileDoor:
-				result += "+"
+				builder.WriteString("+")
 			default:
-				result += "?"
+				builder.WriteString("?")
 			}
 		}
-		result += "\n"
+		builder.WriteString("\n")
 	}
 
 	// Add stats
@@ -117,8 +118,8 @@ func renderTerrain(terr *terrain.Terrain) string {
 	}
 
 	totalTiles := terr.Width * terr.Height
-	result += fmt.Sprintf("\nWalkable tiles: %d/%d (%.1f%%)\n",
-		walkable, totalTiles, float64(walkable)/float64(totalTiles)*100)
+	builder.WriteString(fmt.Sprintf("\nWalkable tiles: %d/%d (%.1f%%)\n",
+		walkable, totalTiles, float64(walkable)/float64(totalTiles)*100))
 
-	return result
+	return builder.String()
 }

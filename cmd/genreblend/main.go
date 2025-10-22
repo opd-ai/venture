@@ -48,7 +48,7 @@ func main() {
 		fmt.Printf("Creating preset blend: %s (seed: %d)\n\n", *preset, *seed)
 		blended, err = blender.CreatePresetBlend(*preset, *seed)
 	} else {
-		fmt.Printf("Blending %s + %s (weight: %.2f, seed: %d)\n\n", 
+		fmt.Printf("Blending %s + %s (weight: %.2f, seed: %d)\n\n",
 			*primaryID, *secondaryID, *weight, *seed)
 		blended, err = blender.Blend(*primaryID, *secondaryID, *weight, *seed)
 	}
@@ -63,7 +63,7 @@ func main() {
 
 func showGenres() {
 	registry := genre.DefaultRegistry()
-	fmt.Println("=== Available Base Genres ===\n")
+	fmt.Println("=== Available Base Genres ===")
 
 	for _, g := range registry.All() {
 		fmt.Printf("ID: %s\n", g.ID)
@@ -76,7 +76,7 @@ func showGenres() {
 
 func showPresets() {
 	presets := genre.PresetBlends()
-	fmt.Println("=== Available Preset Blends ===\n")
+	fmt.Println("=== Available Preset Blends ===")
 
 	for name, config := range presets {
 		fmt.Printf("Name: %s\n", name)
@@ -121,12 +121,12 @@ func showBlendedGenre(blended *genre.BlendedGenre, verbose bool) {
 		fmt.Println()
 		fmt.Printf("Primary Genre: %s\n", primary.Name)
 		fmt.Printf("  Themes: %v\n", primary.Themes)
-		fmt.Printf("  Colors: %s, %s, %s\n", 
+		fmt.Printf("  Colors: %s, %s, %s\n",
 			primary.PrimaryColor, primary.SecondaryColor, primary.AccentColor)
 		fmt.Println()
 		fmt.Printf("Secondary Genre: %s\n", secondary.Name)
 		fmt.Printf("  Themes: %v\n", secondary.Themes)
-		fmt.Printf("  Colors: %s, %s, %s\n", 
+		fmt.Printf("  Colors: %s, %s, %s\n",
 			secondary.PrimaryColor, secondary.SecondaryColor, secondary.AccentColor)
 		fmt.Println()
 		fmt.Printf("Blend Weight: %.2f\n", blended.BlendWeight)

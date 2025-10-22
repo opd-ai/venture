@@ -48,12 +48,12 @@ func (o *Oscillator) Generate(waveform audio.WaveformType, frequency float64, du
 // GenerateNote creates an audio sample for a musical note.
 func (o *Oscillator) GenerateNote(note audio.Note, waveform audio.WaveformType) *audio.AudioSample {
 	sample := o.Generate(waveform, note.Frequency, note.Duration)
-	
+
 	// Apply velocity (volume)
 	for i := range sample.Data {
 		sample.Data[i] *= note.Velocity
 	}
-	
+
 	return sample
 }
 

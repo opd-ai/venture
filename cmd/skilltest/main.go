@@ -209,7 +209,7 @@ func printTreeDetailed(out *os.File, tree *skills.SkillTree) {
 
 		for _, node := range nodes {
 			skill := node.Skill
-			
+
 			typeStr := ""
 			switch skill.Type {
 			case skills.TypePassive:

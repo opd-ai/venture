@@ -21,14 +21,14 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 		// Check if entity has required components
 		posComp, hasPos := entity.GetComponent("position")
 		velComp, hasVel := entity.GetComponent("velocity")
-		
+
 		if !hasPos || !hasVel {
 			continue
 		}
-		
+
 		pos := posComp.(*PositionComponent)
 		vel := velComp.(*VelocityComponent)
-		
+
 		// Apply speed limit if configured
 		if s.MaxSpeed > 0 {
 			speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
@@ -38,16 +38,16 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				vel.VY *= scale
 			}
 		}
-		
+
 		// Update position based on velocity
 		pos.X += vel.VX * deltaTime
 		pos.Y += vel.VY * deltaTime
-		
+
 		// Apply bounds if entity has them
 		if boundsComp, hasBounds := entity.GetComponent("bounds"); hasBounds {
 			bounds := boundsComp.(*BoundsComponent)
 			pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
-			
+
 			// Stop movement at boundaries if not wrapping
 			if !bounds.Wrap {
 				if pos.X <= bounds.MinX || pos.X >= bounds.MaxX {
@@ -92,11 +92,11 @@ func SetPosition(entity *Entity, x, y float64) {
 func GetDistance(e1, e2 *Entity) float64 {
 	x1, y1, ok1 := GetPosition(e1)
 	x2, y2, ok2 := GetPosition(e2)
-	
+
 	if !ok1 || !ok2 {
 		return math.Inf(1)
 	}
-	
+
 	dx := x2 - x1
 	dy := y2 - y1
 	return math.Sqrt(dx*dx + dy*dy)
@@ -109,21 +109,21 @@ func MoveTowards(entity *Entity, targetX, targetY, speed, deltaTime float64) boo
 	if !ok {
 		return false
 	}
-	
+
 	dx := targetX - x
 	dy := targetY - y
 	distance := math.Sqrt(dx*dx + dy*dy)
-	
+
 	// Already at target
 	if distance < 0.1 {
 		SetVelocity(entity, 0, 0)
 		return true
 	}
-	
+
 	// Normalize direction and apply speed
 	vx := (dx / distance) * speed
 	vy := (dy / distance) * speed
-	
+
 	SetVelocity(entity, vx, vy)
 	return false
 }

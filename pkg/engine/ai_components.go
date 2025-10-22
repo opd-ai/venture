@@ -52,31 +52,31 @@ func (s AIState) String() string {
 type AIComponent struct {
 	// Current behavior state
 	State AIState
-	
+
 	// Target entity being pursued or attacked (nil if no target)
 	Target *Entity
-	
+
 	// Spawn position for returning after combat
 	SpawnX, SpawnY float64
-	
+
 	// Detection range for finding enemies (in pixels)
 	DetectionRange float64
-	
+
 	// Range at which to start fleeing (based on health percentage, 0.0-1.0)
 	FleeHealthThreshold float64
-	
+
 	// Maximum distance from spawn before returning (0 = unlimited)
 	MaxChaseDistance float64
-	
+
 	// Time until next decision update (in seconds)
 	DecisionTimer float64
-	
+
 	// How often to make decisions (in seconds)
 	DecisionInterval float64
-	
+
 	// Time spent in current state (for state-specific behaviors)
 	StateTimer float64
-	
+
 	// Speed multiplier for different states (e.g., faster when fleeing)
 	PatrolSpeed float64
 	ChaseSpeed  float64
@@ -100,12 +100,12 @@ func NewAIComponent(spawnX, spawnY float64) *AIComponent {
 		FleeHealthThreshold: 0.2,   // Flee when below 20% health
 		MaxChaseDistance:    500.0, // Don't chase more than 500 pixels from spawn
 		DecisionTimer:       0.0,
-		DecisionInterval:    0.5,   // Make decisions twice per second
+		DecisionInterval:    0.5, // Make decisions twice per second
 		StateTimer:          0.0,
-		PatrolSpeed:         0.5,   // Half speed when patrolling
-		ChaseSpeed:          1.0,   // Normal speed when chasing
-		FleeSpeed:           1.5,   // 50% faster when fleeing
-		ReturnSpeed:         0.8,   // Slightly slower when returning
+		PatrolSpeed:         0.5, // Half speed when patrolling
+		ChaseSpeed:          1.0, // Normal speed when chasing
+		FleeSpeed:           1.5, // 50% faster when fleeing
+		ReturnSpeed:         0.8, // Slightly slower when returning
 	}
 }
 
@@ -187,5 +187,3 @@ func (a *AIComponent) String() string {
 	return fmt.Sprintf("AI State: %s, Target: %s, Detection: %.0f, Timer: %.2f",
 		a.State.String(), targetInfo, a.DetectionRange, a.StateTimer)
 }
-
-

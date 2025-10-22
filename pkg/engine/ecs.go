@@ -53,10 +53,10 @@ type System interface {
 
 // World manages all entities and systems in the game.
 type World struct {
-	entities       map[uint64]*Entity
-	systems        []System
-	nextEntityID   uint64
-	entitiesToAdd  []*Entity
+	entities          map[uint64]*Entity
+	systems           []System
+	nextEntityID      uint64
+	entitiesToAdd     []*Entity
 	entityIDsToRemove []uint64
 }
 

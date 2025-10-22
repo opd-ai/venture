@@ -398,7 +398,7 @@ func TestInterpolateEntityAt_Success(t *testing.T) {
 	if latest == nil {
 		t.Fatal("No snapshots recorded")
 	}
-	
+
 	entity, err := lc.InterpolateEntityAt(1, latest.Timestamp)
 
 	if err != nil {

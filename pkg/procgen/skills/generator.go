@@ -56,7 +56,7 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 	for i := 0; i < count; i++ {
 		// Select template
 		template := templates[i%len(templates)]
-		
+
 		// Generate tree from template
 		tree := g.generateTree(rng, template, params, seed+int64(i))
 		trees = append(trees, tree)
@@ -86,7 +86,7 @@ func (g *SkillTreeGenerator) generateTree(rng *rand.Rand, template SkillTreeTemp
 	for tier := 0; tier <= 6; tier++ {
 		// Determine number of skills in this tier
 		tierSkillCount := g.getTierSkillCount(tier, params.Depth)
-		
+
 		for i := 0; i < tierSkillCount; i++ {
 			// Select appropriate template for this tier
 			skillTemplate := g.selectSkillTemplate(rng, template.SkillTemplates, tier)
@@ -100,7 +100,7 @@ func (g *SkillTreeGenerator) generateTree(rng *rand.Rand, template SkillTreeTemp
 
 			// Create node
 			node := &SkillNode{
-				Skill: skill,
+				Skill:    skill,
 				Children: make([]*SkillNode, 0),
 				Position: Position{
 					X: i,
@@ -147,7 +147,7 @@ func (g *SkillTreeGenerator) generateSkill(rng *rand.Rand, template SkillTemplat
 	minLevel := template.MaxLevelRange[0]
 	maxLevel := template.MaxLevelRange[1]
 	skill.MaxLevel = minLevel + rng.Intn(maxLevel-minLevel+1)
-	
+
 	// Ultimate skills have fixed max level
 	if skill.Type == TypeUltimate {
 		skill.MaxLevel = 1
@@ -173,7 +173,7 @@ func (g *SkillTreeGenerator) generateSkill(rng *rand.Rand, template SkillTemplat
 // generateEffects creates skill effects from template.
 func (g *SkillTreeGenerator) generateEffects(rng *rand.Rand, template SkillTemplate, tier int, params procgen.GenerationParams) []Effect {
 	effects := make([]Effect, 0)
-	
+
 	// Tier scaling
 	tierScale := 1.0 + float64(tier)*0.3
 	depthScale := 1.0 + float64(params.Depth)*0.05
@@ -185,7 +185,7 @@ func (g *SkillTreeGenerator) generateEffects(rng *rand.Rand, template SkillTempl
 	for i := 0; i < numEffects && i < len(template.EffectTypes); i++ {
 		// Select random effect type
 		effectType := template.EffectTypes[rng.Intn(len(template.EffectTypes))]
-		
+
 		// Avoid duplicates
 		if usedTypes[effectType] {
 			continue
@@ -205,14 +205,14 @@ func (g *SkillTreeGenerator) generateEffects(rng *rand.Rand, template SkillTempl
 		value = value * tierScale * depthScale
 
 		// Determine if percentage
-		isPercent := strings.HasSuffix(effectType, "_percent") || 
+		isPercent := strings.HasSuffix(effectType, "_percent") ||
 			strings.Contains(effectType, "bonus") ||
 			strings.Contains(effectType, "reduction")
 
 		effect := Effect{
-			Type:      effectType,
-			Value:     value,
-			IsPercent: isPercent,
+			Type:        effectType,
+			Value:       value,
+			IsPercent:   isPercent,
 			Description: g.formatEffectDescription(effectType, value, isPercent),
 		}
 

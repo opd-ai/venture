@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -223,24 +224,20 @@ func rarityToIndicator(r item.Rarity) string {
 }
 
 func separator(width int) string {
-	result := ""
-	for i := 0; i < width; i++ {
-		result += "="
-	}
-	return result
+	return strings.Repeat("=", width)
 }
 
 func bar(percentage float64, maxWidth int) string {
 	filled := int(percentage / 100.0 * float64(maxWidth))
-	result := ""
+	var builder strings.Builder
 	for i := 0; i < maxWidth; i++ {
 		if i < filled {
-			result += "█"
+			builder.WriteString("█")
 		} else {
-			result += "░"
+			builder.WriteString("░")
 		}
 	}
-	return result
+	return builder.String()
 }
 
 func init() {

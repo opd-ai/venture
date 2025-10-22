@@ -161,8 +161,8 @@ func (sm *SnapshotManager) InterpolateEntity(entityID uint64, renderTime time.Ti
 			before = snapshot
 			// Look for the next snapshot after this one
 			nextIdx := (idx + 1) % sm.maxSnapshots
-			if sm.snapshots[nextIdx].Sequence != 0 && 
-			   (sm.snapshots[nextIdx].Timestamp.After(renderTime) || sm.snapshots[nextIdx].Timestamp.Equal(renderTime)) {
+			if sm.snapshots[nextIdx].Sequence != 0 &&
+				(sm.snapshots[nextIdx].Timestamp.After(renderTime) || sm.snapshots[nextIdx].Timestamp.Equal(renderTime)) {
 				after = &sm.snapshots[nextIdx]
 			}
 			break
@@ -282,9 +282,9 @@ func (sm *SnapshotManager) CreateDelta(fromSeq, toSeq uint32) *SnapshotDelta {
 type SnapshotDelta struct {
 	FromSequence uint32
 	ToSequence   uint32
-	Added        []uint64                    // Entity IDs that were added
-	Removed      []uint64                    // Entity IDs that were removed
-	Changed      map[uint64]EntitySnapshot   // Entities that changed
+	Added        []uint64                  // Entity IDs that were added
+	Removed      []uint64                  // Entity IDs that were removed
+	Changed      map[uint64]EntitySnapshot // Entities that changed
 }
 
 // ApplyDelta applies a delta to a snapshot to produce a new snapshot

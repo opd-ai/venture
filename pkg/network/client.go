@@ -9,21 +9,21 @@ import (
 
 // ClientConfig holds configuration for the network client.
 type ClientConfig struct {
-	ServerAddress   string        // Server address (host:port)
+	ServerAddress     string        // Server address (host:port)
 	ConnectionTimeout time.Duration // Timeout for connection attempts
-	PingInterval    time.Duration // Interval between ping messages
-	MaxLatency      time.Duration // Maximum acceptable latency before warnings
-	BufferSize      int           // Size of send/receive buffers
+	PingInterval      time.Duration // Interval between ping messages
+	MaxLatency        time.Duration // Maximum acceptable latency before warnings
+	BufferSize        int           // Size of send/receive buffers
 }
 
 // DefaultClientConfig returns a client configuration with sensible defaults.
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
-		ServerAddress:   "localhost:8080",
+		ServerAddress:     "localhost:8080",
 		ConnectionTimeout: 10 * time.Second,
-		PingInterval:    1 * time.Second,
-		MaxLatency:      500 * time.Millisecond,
-		BufferSize:      256,
+		PingInterval:      1 * time.Second,
+		MaxLatency:        500 * time.Millisecond,
+		BufferSize:        256,
 	}
 }
 
@@ -31,29 +31,29 @@ func DefaultClientConfig() ClientConfig {
 type Client struct {
 	config   ClientConfig
 	protocol Protocol
-	
+
 	// Connection state
 	conn      net.Conn
 	connected bool
 	playerID  uint64
-	
+
 	// Sequence tracking
-	inputSeq  uint32
-	stateSeq  uint32
-	
+	inputSeq uint32
+	stateSeq uint32
+
 	// Channels for async communication
 	stateUpdates chan *StateUpdate
 	inputQueue   chan *InputCommand
 	errors       chan error
-	
+
 	// Latency tracking
-	latency     time.Duration
-	lastPing    time.Time
-	lastPong    time.Time
-	
+	latency  time.Duration
+	lastPing time.Time
+	lastPong time.Time
+
 	// Thread safety
 	mu sync.RWMutex
-	
+
 	// Shutdown
 	done chan struct{}
 	wg   sync.WaitGroup
@@ -75,27 +75,27 @@ func NewClient(config ClientConfig) *Client {
 func (c *Client) Connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.connected {
 		return fmt.Errorf("already connected")
 	}
-	
+
 	// Set connection timeout
 	conn, err := net.DialTimeout("tcp", c.config.ServerAddress, c.config.ConnectionTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", c.config.ServerAddress, err)
 	}
-	
+
 	c.conn = conn
 	c.connected = true
 	c.lastPing = time.Now()
 	c.lastPong = time.Now()
-	
+
 	// Start async handlers
 	c.wg.Add(2)
 	go c.receiveLoop()
 	go c.sendLoop()
-	
+
 	return nil
 }
 
@@ -106,19 +106,19 @@ func (c *Client) Disconnect() error {
 		c.mu.Unlock()
 		return nil
 	}
-	
+
 	c.connected = false
 	close(c.done)
-	
+
 	// Close connection
 	if c.conn != nil {
 		c.conn.Close()
 	}
 	c.mu.Unlock()
-	
+
 	// Wait for goroutines
 	c.wg.Wait()
-	
+
 	return nil
 }
 
@@ -157,7 +157,7 @@ func (c *Client) SendInput(inputType string, data []byte) error {
 		c.mu.Unlock()
 		return fmt.Errorf("not connected")
 	}
-	
+
 	cmd := &InputCommand{
 		PlayerID:       c.playerID,
 		Timestamp:      uint64(time.Now().UnixNano()),
@@ -167,7 +167,7 @@ func (c *Client) SendInput(inputType string, data []byte) error {
 	}
 	c.inputSeq++
 	c.mu.Unlock()
-	
+
 	select {
 	case c.inputQueue <- cmd:
 		return nil
@@ -191,7 +191,7 @@ func (c *Client) ReceiveError() <-chan error {
 // receiveLoop continuously receives data from the server.
 func (c *Client) receiveLoop() {
 	defer c.wg.Done()
-	
+
 	buf := make([]byte, 4096)
 	for {
 		select {
@@ -199,10 +199,10 @@ func (c *Client) receiveLoop() {
 			return
 		default:
 		}
-		
+
 		// Set read deadline
 		c.conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
-		
+
 		// Read message length (4 bytes)
 		if _, err := c.conn.Read(buf[:4]); err != nil {
 			if c.IsConnected() {
@@ -210,14 +210,14 @@ func (c *Client) receiveLoop() {
 			}
 			return
 		}
-		
+
 		// Decode length
 		msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
 		if msgLen > uint32(len(buf)) {
 			c.errors <- fmt.Errorf("message too large: %d bytes", msgLen)
 			return
 		}
-		
+
 		// Read message data
 		if _, err := c.conn.Read(buf[:msgLen]); err != nil {
 			if c.IsConnected() {
@@ -225,19 +225,19 @@ func (c *Client) receiveLoop() {
 			}
 			return
 		}
-		
+
 		// Decode state update
 		update, err := c.protocol.DecodeStateUpdate(buf[:msgLen])
 		if err != nil {
 			c.errors <- fmt.Errorf("decode error: %w", err)
 			continue
 		}
-		
+
 		// Update sequence number
 		c.mu.Lock()
 		c.stateSeq = update.SequenceNumber
 		c.mu.Unlock()
-		
+
 		// Send to channel (non-blocking)
 		select {
 		case c.stateUpdates <- update:
@@ -252,26 +252,26 @@ func (c *Client) receiveLoop() {
 // sendLoop continuously sends queued inputs to the server.
 func (c *Client) sendLoop() {
 	defer c.wg.Done()
-	
+
 	pingTicker := time.NewTicker(c.config.PingInterval)
 	defer pingTicker.Stop()
-	
+
 	for {
 		select {
 		case <-c.done:
 			return
-			
+
 		case <-pingTicker.C:
 			// Send ping (empty input with type "ping")
 			c.mu.Lock()
 			c.lastPing = time.Now()
 			c.mu.Unlock()
-			
+
 			// Update latency (time since last pong)
 			c.mu.RLock()
 			c.latency = time.Since(c.lastPong)
 			c.mu.RUnlock()
-			
+
 		case cmd := <-c.inputQueue:
 			// Encode input
 			data, err := c.protocol.EncodeInputCommand(cmd)
@@ -279,7 +279,7 @@ func (c *Client) sendLoop() {
 				c.errors <- fmt.Errorf("encode error: %w", err)
 				continue
 			}
-			
+
 			// Send length prefix
 			msgLen := uint32(len(data))
 			lenBuf := []byte{
@@ -288,10 +288,10 @@ func (c *Client) sendLoop() {
 				byte(msgLen >> 16),
 				byte(msgLen >> 24),
 			}
-			
+
 			// Set write deadline
 			c.conn.SetWriteDeadline(time.Now().Add(c.config.ConnectionTimeout))
-			
+
 			// Send length + data
 			if _, err := c.conn.Write(lenBuf); err != nil {
 				if c.IsConnected() {

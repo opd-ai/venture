@@ -236,83 +236,83 @@ func (i *Item) GetValue() int {
 
 // ItemTemplate defines a template for generating items.
 type ItemTemplate struct {
-	BaseType        ItemType
-	WeaponType      WeaponType
-	ArmorType       ArmorType
-	ConsumableType  ConsumableType
-	NamePrefixes    []string
-	NameSuffixes    []string
-	Tags            []string
-	DamageRange     [2]int
-	DefenseRange    [2]int
+	BaseType         ItemType
+	WeaponType       WeaponType
+	ArmorType        ArmorType
+	ConsumableType   ConsumableType
+	NamePrefixes     []string
+	NameSuffixes     []string
+	Tags             []string
+	DamageRange      [2]int
+	DefenseRange     [2]int
 	AttackSpeedRange [2]float64
-	ValueRange      [2]int
-	WeightRange     [2]float64
-	DurabilityRange [2]int
+	ValueRange       [2]int
+	WeightRange      [2]float64
+	DurabilityRange  [2]int
 }
 
 // GetFantasyWeaponTemplates returns weapon templates for fantasy genre.
 func GetFantasyWeaponTemplates() []ItemTemplate {
 	return []ItemTemplate{
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponSword,
-			NamePrefixes:    []string{"Iron", "Steel", "Silver", "Elven", "Dwarven"},
-			NameSuffixes:    []string{"Sword", "Blade", "Saber", "Longsword", "Cutlass"},
-			Tags:            []string{"balanced", "versatile"},
-			DamageRange:     [2]int{8, 15},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponSword,
+			NamePrefixes:     []string{"Iron", "Steel", "Silver", "Elven", "Dwarven"},
+			NameSuffixes:     []string{"Sword", "Blade", "Saber", "Longsword", "Cutlass"},
+			Tags:             []string{"balanced", "versatile"},
+			DamageRange:      [2]int{8, 15},
 			AttackSpeedRange: [2]float64{1.0, 1.2},
-			ValueRange:      [2]int{50, 200},
-			WeightRange:     [2]float64{3.0, 5.0},
-			DurabilityRange: [2]int{80, 120},
+			ValueRange:       [2]int{50, 200},
+			WeightRange:      [2]float64{3.0, 5.0},
+			DurabilityRange:  [2]int{80, 120},
 		},
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponAxe,
-			NamePrefixes:    []string{"Battle", "War", "Great", "Heavy", "Brutal"},
-			NameSuffixes:    []string{"Axe", "Hammer", "Mace", "Cleaver"},
-			Tags:            []string{"heavy", "powerful", "slow"},
-			DamageRange:     [2]int{12, 20},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponAxe,
+			NamePrefixes:     []string{"Battle", "War", "Great", "Heavy", "Brutal"},
+			NameSuffixes:     []string{"Axe", "Hammer", "Mace", "Cleaver"},
+			Tags:             []string{"heavy", "powerful", "slow"},
+			DamageRange:      [2]int{12, 20},
 			AttackSpeedRange: [2]float64{0.7, 0.9},
-			ValueRange:      [2]int{60, 250},
-			WeightRange:     [2]float64{6.0, 10.0},
-			DurabilityRange: [2]int{100, 150},
+			ValueRange:       [2]int{60, 250},
+			WeightRange:      [2]float64{6.0, 10.0},
+			DurabilityRange:  [2]int{100, 150},
 		},
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponBow,
-			NamePrefixes:    []string{"Hunter's", "Ranger's", "Composite", "Long", "Elven"},
-			NameSuffixes:    []string{"Bow", "Longbow", "Shortbow", "Crossbow"},
-			Tags:            []string{"ranged", "precise"},
-			DamageRange:     [2]int{6, 12},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponBow,
+			NamePrefixes:     []string{"Hunter's", "Ranger's", "Composite", "Long", "Elven"},
+			NameSuffixes:     []string{"Bow", "Longbow", "Shortbow", "Crossbow"},
+			Tags:             []string{"ranged", "precise"},
+			DamageRange:      [2]int{6, 12},
 			AttackSpeedRange: [2]float64{1.2, 1.5},
-			ValueRange:      [2]int{40, 180},
-			WeightRange:     [2]float64{2.0, 4.0},
-			DurabilityRange: [2]int{60, 100},
+			ValueRange:       [2]int{40, 180},
+			WeightRange:      [2]float64{2.0, 4.0},
+			DurabilityRange:  [2]int{60, 100},
 		},
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponStaff,
-			NamePrefixes:    []string{"Wizard's", "Arcane", "Mystic", "Elder", "Ancient"},
-			NameSuffixes:    []string{"Staff", "Rod", "Wand", "Scepter"},
-			Tags:            []string{"magical", "casting"},
-			DamageRange:     [2]int{5, 10},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponStaff,
+			NamePrefixes:     []string{"Wizard's", "Arcane", "Mystic", "Elder", "Ancient"},
+			NameSuffixes:     []string{"Staff", "Rod", "Wand", "Scepter"},
+			Tags:             []string{"magical", "casting"},
+			DamageRange:      [2]int{5, 10},
 			AttackSpeedRange: [2]float64{0.8, 1.0},
-			ValueRange:      [2]int{80, 300},
-			WeightRange:     [2]float64{1.5, 3.0},
-			DurabilityRange: [2]int{50, 80},
+			ValueRange:       [2]int{80, 300},
+			WeightRange:      [2]float64{1.5, 3.0},
+			DurabilityRange:  [2]int{50, 80},
 		},
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponDagger,
-			NamePrefixes:    []string{"Sharp", "Quick", "Silent", "Poison", "Shadow"},
-			NameSuffixes:    []string{"Dagger", "Knife", "Stiletto", "Dirk"},
-			Tags:            []string{"fast", "stealth", "light"},
-			DamageRange:     [2]int{4, 8},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponDagger,
+			NamePrefixes:     []string{"Sharp", "Quick", "Silent", "Poison", "Shadow"},
+			NameSuffixes:     []string{"Dagger", "Knife", "Stiletto", "Dirk"},
+			Tags:             []string{"fast", "stealth", "light"},
+			DamageRange:      [2]int{4, 8},
 			AttackSpeedRange: [2]float64{1.5, 2.0},
-			ValueRange:      [2]int{30, 150},
-			WeightRange:     [2]float64{0.5, 1.5},
-			DurabilityRange: [2]int{40, 70},
+			ValueRange:       [2]int{30, 150},
+			WeightRange:      [2]float64{0.5, 1.5},
+			DurabilityRange:  [2]int{40, 70},
 		},
 	}
 }
@@ -384,28 +384,28 @@ func GetFantasyConsumableTemplates() []ItemTemplate {
 func GetSciFiWeaponTemplates() []ItemTemplate {
 	return []ItemTemplate{
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponSword, // Using as energy blade
-			NamePrefixes:    []string{"Plasma", "Energy", "Photon", "Quantum", "Nano"},
-			NameSuffixes:    []string{"Blade", "Saber", "Cutter", "Sword"},
-			Tags:            []string{"energy", "melee"},
-			DamageRange:     [2]int{10, 18},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponSword, // Using as energy blade
+			NamePrefixes:     []string{"Plasma", "Energy", "Photon", "Quantum", "Nano"},
+			NameSuffixes:     []string{"Blade", "Saber", "Cutter", "Sword"},
+			Tags:             []string{"energy", "melee"},
+			DamageRange:      [2]int{10, 18},
 			AttackSpeedRange: [2]float64{1.2, 1.5},
-			ValueRange:      [2]int{150, 500},
-			WeightRange:     [2]float64{1.0, 2.0},
-			DurabilityRange: [2]int{200, 300},
+			ValueRange:       [2]int{150, 500},
+			WeightRange:      [2]float64{1.0, 2.0},
+			DurabilityRange:  [2]int{200, 300},
 		},
 		{
-			BaseType:        TypeWeapon,
-			WeaponType:      WeaponBow, // Using as ranged weapon
-			NamePrefixes:    []string{"Laser", "Pulse", "Plasma", "Rail", "Ion"},
-			NameSuffixes:    []string{"Rifle", "Pistol", "Cannon", "Blaster"},
-			Tags:            []string{"energy", "ranged"},
-			DamageRange:     [2]int{8, 15},
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponBow, // Using as ranged weapon
+			NamePrefixes:     []string{"Laser", "Pulse", "Plasma", "Rail", "Ion"},
+			NameSuffixes:     []string{"Rifle", "Pistol", "Cannon", "Blaster"},
+			Tags:             []string{"energy", "ranged"},
+			DamageRange:      [2]int{8, 15},
 			AttackSpeedRange: [2]float64{1.5, 2.0},
-			ValueRange:      [2]int{200, 600},
-			WeightRange:     [2]float64{2.0, 5.0},
-			DurabilityRange: [2]int{150, 250},
+			ValueRange:       [2]int{200, 600},
+			WeightRange:      [2]float64{2.0, 5.0},
+			DurabilityRange:  [2]int{150, 250},
 		},
 	}
 }

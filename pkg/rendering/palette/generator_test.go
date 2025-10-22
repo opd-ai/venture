@@ -180,38 +180,38 @@ func TestGenerateDifferentSeeds(t *testing.T) {
 
 func TestHSLToColor(t *testing.T) {
 	tests := []struct {
-		name string
+		name    string
 		h, s, l float64
-		want color.RGBA
+		want    color.RGBA
 	}{
 		{
 			name: "red",
-			h: 0, s: 1.0, l: 0.5,
+			h:    0, s: 1.0, l: 0.5,
 			want: color.RGBA{R: 255, G: 0, B: 0, A: 255},
 		},
 		{
 			name: "green",
-			h: 120, s: 1.0, l: 0.5,
+			h:    120, s: 1.0, l: 0.5,
 			want: color.RGBA{R: 0, G: 255, B: 0, A: 255},
 		},
 		{
 			name: "blue",
-			h: 240, s: 1.0, l: 0.5,
+			h:    240, s: 1.0, l: 0.5,
 			want: color.RGBA{R: 0, G: 0, B: 255, A: 255},
 		},
 		{
 			name: "white",
-			h: 0, s: 0, l: 1.0,
+			h:    0, s: 0, l: 1.0,
 			want: color.RGBA{R: 255, G: 255, B: 255, A: 255},
 		},
 		{
 			name: "black",
-			h: 0, s: 0, l: 0,
+			h:    0, s: 0, l: 0,
 			want: color.RGBA{R: 0, G: 0, B: 0, A: 255},
 		},
 		{
 			name: "gray",
-			h: 0, s: 0, l: 0.5,
+			h:    0, s: 0, l: 0.5,
 			want: color.RGBA{R: 127, G: 127, B: 127, A: 255},
 		},
 	}
@@ -220,13 +220,13 @@ func TestHSLToColor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := hslToColor(tt.h, tt.s, tt.l)
 			rgba := colorToRGBA(got)
-			
+
 			// Allow small rounding errors (±2)
 			tolerance := uint8(2)
 			if !withinTolerance(rgba.R, tt.want.R, tolerance) ||
-			   !withinTolerance(rgba.G, tt.want.G, tolerance) ||
-			   !withinTolerance(rgba.B, tt.want.B, tolerance) {
-				t.Errorf("hslToColor(%v, %v, %v) = %v, want %v", 
+				!withinTolerance(rgba.G, tt.want.G, tolerance) ||
+				!withinTolerance(rgba.B, tt.want.B, tolerance) {
+				t.Errorf("hslToColor(%v, %v, %v) = %v, want %v",
 					tt.h, tt.s, tt.l, rgba, tt.want)
 			}
 		})
@@ -235,7 +235,7 @@ func TestHSLToColor(t *testing.T) {
 
 func TestClamp(t *testing.T) {
 	tests := []struct {
-		name string
+		name                  string
 		value, min, max, want float64
 	}{
 		{"below minimum", -1.0, 0.0, 1.0, 0.0},

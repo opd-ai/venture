@@ -146,7 +146,7 @@ func (e *Entity) IsBoss() bool {
 func (e *Entity) GetThreatLevel() int {
 	// Calculate threat based on stats and type
 	baseThreat := e.Stats.Health/10 + e.Stats.Damage*5 + e.Stats.Defense*2
-	
+
 	// Modify based on type before applying level
 	typeMultiplier := 1.0
 	switch e.Type {
@@ -157,14 +157,14 @@ func (e *Entity) GetThreatLevel() int {
 	case TypeMinion:
 		typeMultiplier = 0.5
 	}
-	
+
 	threat := int(float64(baseThreat) * typeMultiplier * float64(e.Stats.Level) * 0.1)
-	
+
 	// Cap at 100
 	if threat > 100 {
 		threat = 100
 	}
-	
+
 	return threat
 }
 

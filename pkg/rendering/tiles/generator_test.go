@@ -431,8 +431,8 @@ func TestGenerator_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Valid image",
-			result: image.NewRGBA(image.Rect(0, 0, 32, 32)),
+			name:    "Valid image",
+			result:  image.NewRGBA(image.Rect(0, 0, 32, 32)),
 			wantErr: false,
 		},
 		{

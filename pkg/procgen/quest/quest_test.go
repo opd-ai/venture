@@ -224,7 +224,7 @@ func TestQuestGetRewardValue(t *testing.T) {
 
 	value := quest.GetRewardValue()
 	expected := 100 + (50 * 2) + (2 * 100) + (2 * 500)
-	
+
 	if value != expected {
 		t.Errorf("Quest.GetRewardValue() = %v, want %v", value, expected)
 	}
@@ -306,14 +306,14 @@ func TestQuestGeneratorGenerate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := generator.Generate(tt.seed, tt.params)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Generate() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Generate() unexpected error: %v", err)
 				return
@@ -580,7 +580,7 @@ func TestQuestGeneratorScaling(t *testing.T) {
 				if quest.Reward.XP <= 0 {
 					t.Errorf("Quest has no XP reward")
 				}
-				
+
 				// Higher depth/difficulty should generally give better rewards
 				// (though randomness can vary individual quests)
 				t.Logf("Depth %d, Diff %.1f: Quest '%s' rewards %d XP, %d gold",

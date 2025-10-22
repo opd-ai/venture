@@ -83,11 +83,11 @@ func DefaultConfig() Config {
 
 // Layer represents a single layer in a sprite composition.
 type Layer struct {
-	Shape    shapes.Shape
-	OffsetX  int
-	OffsetY  int
-	ZIndex   int
-	Opacity  float64
+	Shape     shapes.Shape
+	OffsetX   int
+	OffsetY   int
+	ZIndex    int
+	Opacity   float64
 	BlendMode string
 }
 

@@ -226,7 +226,7 @@ func (s *Spell) IsSupport() bool {
 func (s *Spell) GetPowerLevel() int {
 	// Calculate power based on stats
 	basePower := 0
-	
+
 	if s.Stats.Damage > 0 {
 		basePower += s.Stats.Damage * 2
 	}
@@ -239,12 +239,12 @@ func (s *Spell) GetPowerLevel() int {
 	if s.Stats.AreaSize > 0 {
 		basePower += int(s.Stats.AreaSize * 5)
 	}
-	
+
 	// Adjust for cost
 	if s.Stats.ManaCost > 0 {
 		basePower = basePower * 100 / s.Stats.ManaCost
 	}
-	
+
 	// Multiply by rarity
 	rarityMultiplier := 1.0
 	switch s.Rarity {
@@ -257,33 +257,33 @@ func (s *Spell) GetPowerLevel() int {
 	case RarityLegendary:
 		rarityMultiplier = 3.0
 	}
-	
+
 	power := int(float64(basePower) * rarityMultiplier)
-	
+
 	// Cap at 100
 	if power > 100 {
 		power = 100
 	}
-	
+
 	return power
 }
 
 // SpellTemplate defines a template for generating spells.
 type SpellTemplate struct {
-	BaseType         SpellType
-	BaseElement      ElementType
-	BaseTarget       TargetType
-	NamePrefixes     []string
-	NameSuffixes     []string
-	Tags             []string
-	DamageRange      [2]int
-	HealingRange     [2]int
-	ManaCostRange    [2]int
-	CooldownRange    [2]float64
-	CastTimeRange    [2]float64
-	RangeRange       [2]float64
-	AreaSizeRange    [2]float64
-	DurationRange    [2]float64
+	BaseType      SpellType
+	BaseElement   ElementType
+	BaseTarget    TargetType
+	NamePrefixes  []string
+	NameSuffixes  []string
+	Tags          []string
+	DamageRange   [2]int
+	HealingRange  [2]int
+	ManaCostRange [2]int
+	CooldownRange [2]float64
+	CastTimeRange [2]float64
+	RangeRange    [2]float64
+	AreaSizeRange [2]float64
+	DurationRange [2]float64
 }
 
 // GetFantasyOffensiveTemplates returns offensive spell templates for fantasy genre.

@@ -107,12 +107,12 @@ func TestSetTile(t *testing.T) {
 	m := NewMap(10, 10, 12345)
 
 	tests := []struct {
-		name       string
-		x          int
-		y          int
-		tileType   TileType
-		walkable   bool
-		shouldSet  bool
+		name      string
+		x         int
+		y         int
+		tileType  TileType
+		walkable  bool
+		shouldSet bool
 	}{
 		{"set_wall", 5, 5, TileWall, false, true},
 		{"set_floor", 3, 3, TileFloor, true, true},
@@ -165,9 +165,9 @@ func TestIsWalkable(t *testing.T) {
 	m.SetTile(4, 4, Tile{Type: TileWater, Walkable: false})
 
 	tests := []struct {
-		name            string
-		x               int
-		y               int
+		name             string
+		x                int
+		y                int
 		expectedWalkable bool
 	}{
 		{"empty_tile_default", 0, 0, true},

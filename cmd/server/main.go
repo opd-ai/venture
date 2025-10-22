@@ -88,9 +88,9 @@ func main() {
 
 	// Create server with configuration
 	serverConfig := network.ServerConfig{
-		Port:        *port,
-		MaxPlayers:  *maxPlayers,
-		TickRate:    *tickRate,
+		Port:       *port,
+		MaxPlayers: *maxPlayers,
+		TickRate:   *tickRate,
 	}
 
 	// Create snapshot manager for state synchronization

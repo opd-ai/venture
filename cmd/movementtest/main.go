@@ -25,7 +25,7 @@ func main() {
 
 	// Create world and systems
 	world := engine.NewWorld()
-	movementSystem := engine.NewMovementSystem(200.0) // Max speed of 200 units/s
+	movementSystem := engine.NewMovementSystem(200.0)  // Max speed of 200 units/s
 	collisionSystem := engine.NewCollisionSystem(64.0) // 64 unit cell size
 
 	// Track collisions
@@ -47,18 +47,18 @@ func main() {
 	fmt.Println("Creating entities...")
 	for i := 0; i < *count; i++ {
 		entity := world.CreateEntity()
-		
+
 		// Random position within 800x600 area
 		x := rng.Float64() * 800
 		y := rng.Float64() * 600
-		
+
 		// Random velocity
 		vx := (rng.Float64()*2 - 1) * 100 // -100 to +100
 		vy := (rng.Float64()*2 - 1) * 100
-		
+
 		// Random size
 		size := 10 + rng.Float64()*30 // 10-40 units
-		
+
 		entity.AddComponent(&engine.PositionComponent{X: x, Y: y})
 		entity.AddComponent(&engine.VelocityComponent{VX: vx, VY: vy})
 		entity.AddComponent(&engine.ColliderComponent{
@@ -73,36 +73,36 @@ func main() {
 			MaxY: 600,
 			Wrap: false,
 		})
-		
+
 		if *verbose {
 			fmt.Printf("  Entity %d: pos=(%.1f, %.1f), vel=(%.1f, %.1f), size=%.1f\n",
 				entity.ID, x, y, vx, vy, size)
 		}
 	}
-	
+
 	world.Update(0) // Process entity additions
-	
+
 	fmt.Printf("\nSimulating movement and collisions...\n\n")
-	
+
 	// Simulation loop
 	const targetFPS = 60
 	const deltaTime = 1.0 / targetFPS
 	steps := int(*duration / deltaTime)
-	
+
 	startTime := time.Now()
-	
+
 	for step := 0; step < steps; step++ {
 		world.Update(deltaTime)
-		
+
 		// Print progress every second
 		if *verbose && step%(targetFPS) == 0 {
 			elapsed := float64(step) * deltaTime
 			fmt.Printf("Time: %.1fs, Collisions so far: %d\n", elapsed, collisionCount)
 		}
 	}
-	
+
 	simulationTime := time.Since(startTime)
-	
+
 	// Display final statistics
 	fmt.Println("=== Simulation Complete ===")
 	fmt.Printf("Total time simulated: %.1fs\n", *duration)
@@ -110,7 +110,7 @@ func main() {
 	fmt.Printf("Total collisions detected: %d\n", collisionCount)
 	fmt.Printf("Average collisions/second: %.1f\n", float64(collisionCount)/(*duration))
 	fmt.Printf("Simulation speed: %.1fx real-time\n\n", *duration/simulationTime.Seconds())
-	
+
 	// Show final entity positions
 	if *verbose {
 		fmt.Println("Final entity positions:")
@@ -122,14 +122,14 @@ func main() {
 			}
 		}
 	}
-	
+
 	// Performance analysis
 	fmt.Println("=== Performance Analysis ===")
 	updatesPerSecond := float64(steps) / simulationTime.Seconds()
 	fmt.Printf("World updates/second: %.0f\n", updatesPerSecond)
 	fmt.Printf("Entity updates/second: %.0f\n", updatesPerSecond*float64(*count))
 	fmt.Printf("Target FPS achieved: %v\n", updatesPerSecond >= targetFPS*0.95)
-	
+
 	// Benchmark example
 	fmt.Println("\n=== Integration Example ===")
 	fmt.Println("This demo shows the movement and collision systems working together:")

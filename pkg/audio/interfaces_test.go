@@ -118,11 +118,11 @@ func TestAudioSample_Structure(t *testing.T) {
 		sampleRate int
 		dataLength int
 	}{
-		{"cd_quality", 44100, 44100},      // 1 second at CD quality
-		{"high_quality", 48000, 48000},    // 1 second at 48kHz
-		{"low_quality", 22050, 22050},     // 1 second at lower quality
-		{"short_sample", 44100, 4410},     // 0.1 second
-		{"long_sample", 44100, 441000},    // 10 seconds
+		{"cd_quality", 44100, 44100},   // 1 second at CD quality
+		{"high_quality", 48000, 48000}, // 1 second at 48kHz
+		{"low_quality", 22050, 22050},  // 1 second at lower quality
+		{"short_sample", 44100, 4410},  // 0.1 second
+		{"long_sample", 44100, 441000}, // 10 seconds
 	}
 
 	for _, tt := range tests {
@@ -146,9 +146,9 @@ func TestAudioSample_Structure(t *testing.T) {
 // TestAudioSample_DataRange verifies audio sample data is in valid range.
 func TestAudioSample_DataRange(t *testing.T) {
 	tests := []struct {
-		name   string
-		data   []float64
-		valid  bool
+		name  string
+		data  []float64
+		valid bool
 	}{
 		{"all_zeros", []float64{0.0, 0.0, 0.0}, true},
 		{"valid_range", []float64{-0.5, 0.0, 0.5}, true},
@@ -229,7 +229,7 @@ func TestNote_MusicalNotes(t *testing.T) {
 			}
 
 			if note.Frequency != mn.frequency {
-				t.Errorf("Expected frequency %f for %s, got %f", 
+				t.Errorf("Expected frequency %f for %s, got %f",
 					mn.frequency, mn.name, note.Frequency)
 			}
 		})

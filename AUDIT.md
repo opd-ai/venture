@@ -480,7 +480,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Check readability of tutorial text at minimum panel size
 - **Accessibility**: Ensure minimum font size remains legible (7x13 basicfont = 91px min width for typical text)
 
-#### Issue #9: Border Styles Not Fully Implemented for UI Elements
+#### Issue #9: Border Styles Not Fully Implemented for UI Elements ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:230-249`)
 - **Description**: `BorderStyle` enum defines 4 styles (Solid, Double, Ornate, Glow) but `drawBorder()` implementation only renders Solid style for all. Double/Ornate/Glow fall through to Solid style, making genre-specific border styling ineffective.
 - **Steps to Reproduce**:
@@ -592,6 +593,15 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Unit test: Check pixel values at border positions match expected patterns
 - **Performance**: Minimal impact (<0.1ms per border), happens only during generation (cached)
 - **Design Consideration**: Ensure ornate corners don't clash with button text
+- **Resolution**:
+  - Separated switch cases for each border style instead of falling through to Solid
+  - Implemented BorderSolid: Simple rectangular border (original behavior preserved)
+  - Implemented BorderDouble: Two parallel lines with 2px gap (4 lines total)
+  - Implemented BorderOrnate: Solid border + 4x4 pixel corner embellishments (recursive call to Solid)
+  - Implemented BorderGlow: Gradient fade from alpha 255→51 over 5 pixels
+  - Added bounds checking in Ornate and Glow to prevent out-of-bounds writes
+  - All existing tests pass, confirming backward compatibility
+  - Genre-specific border styling now functional (fantasy=Ornate, sci-fi/cyberpunk=Glow)
 
 #### Issue #10: No Visual Feedback for Quick Save/Load Actions
 - **Component**: Input System (`pkg/engine/input_system.go:113-123`) and Client (`cmd/client/main.go:216-302`)

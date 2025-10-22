@@ -741,7 +741,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 
 ### Low Priority Issues
 
-#### Issue #12: Border Thickness Random Variation (2-3px) Inconsistent Across Sessions
+#### Issue #12: Border Thickness Random Variation (2-3px) Inconsistent Across Sessions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:94`)
 - **Description**: Button border thickness uses `2 + rng.Intn(2)` producing 2 or 3 pixel borders. While deterministic per seed, the inconsistency can make UI feel slightly "off" between different playthroughs or multiplayer clients with different seeds.
 - **Steps to Reproduce**:
@@ -774,6 +775,16 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate 100 buttons per genre, verify consistent thickness
 - **Performance**: Zero impact (removes one RNG call)
 - **Design Consideration**: Consistency aids muscle memory and professional polish
+- **Resolution**:
+  - Replaced random thickness `2 + rng.Intn(2)` with `g.selectBorderThickness(config.GenreID, config.Type)`
+  - Implemented `selectBorderThickness()` method with consistent logic:
+    * Frames: Always 3px for visual hierarchy
+    * Fantasy/Horror genres: 3px for ornate styling
+    * All other elements: 2px for clean minimal look
+  - Border thickness is now consistent across all seeds and sessions
+  - Removed RNG call, improving determinism
+  - All existing tests pass, confirming backward compatibility
+
 
 #### Issue #13: Health Bar "Shine Effect" Hard-Coded Y Position May Clip with Small Bar Heights
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:149-150`)

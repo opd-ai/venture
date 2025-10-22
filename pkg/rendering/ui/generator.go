@@ -92,7 +92,7 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 
 	// Draw border based on genre
 	borderStyle := g.selectBorderStyle(config.GenreID)
-	borderThickness := 2 + rng.Intn(2) // 2 or 3 pixels
+	borderThickness := g.selectBorderThickness(config.GenreID, config.Type)
 	g.drawBorder(img, borderColor, borderStyle, borderThickness)
 
 	// Add highlight if not disabled
@@ -390,6 +390,18 @@ func (g *Generator) selectBorderStyle(genreID string) BorderStyle {
 	default:
 		return BorderSolid
 	}
+}
+
+// selectBorderThickness returns consistent border thickness based on genre and element type.
+// This ensures UI consistency across different seeds while maintaining genre-specific styling.
+func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) int {
+	if elemType == ElementFrame {
+		return 3 // Frames use thicker borders
+	}
+	if genreID == "fantasy" || genreID == "horror" {
+		return 3 // Ornate genres use thicker borders
+	}
+	return 2 // Default thickness for most elements
 }
 
 func min(a, b float64) float64 {

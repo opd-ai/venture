@@ -390,12 +390,8 @@ See [pkg/engine/COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md) for more details 
 ### Root Documentation
 - **README.md** - This file, project overview and quick start guide
 - **STATUS.md** - Current project status and phase completion tracking
-- **IMPLEMENTATION_REPORT.md** - Comprehensive Phase 3 implementation report
-- **PHASE4_AUDIO_IMPLEMENTATION.md** - Phase 4 audio synthesis implementation
-- **PHASE5_MOVEMENT_COLLISION_REPORT.md** - Phase 5 movement and collision systems
-- **PHASE5_COMBAT_IMPLEMENTATION.md** - Phase 5 combat system implementation
 
-### Detailed Documentation (docs/)
+### Core Documentation (docs/)
 - **ARCHITECTURE.md** - Architecture Decision Records (ADRs)
 - **TECHNICAL_SPEC.md** - Complete technical specification
 - **ROADMAP.md** - Detailed 8-phase development roadmap
@@ -410,21 +406,38 @@ See [pkg/engine/COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md) for more details 
 - **PHASE2_SKILLS_IMPLEMENTATION.md** - Skill tree generation
 - **PHASE2_GENRE_IMPLEMENTATION.md** - Genre definition system
 - **PHASE3_RENDERING_IMPLEMENTATION.md** - Visual rendering systems
+- **PHASE4_AUDIO_IMPLEMENTATION.md** - Audio synthesis implementation
+- **PHASE5_COMBAT_IMPLEMENTATION.md** - Combat system implementation
+- **PHASE5_MOVEMENT_COLLISION_REPORT.md** - Movement and collision systems
+- **PHASE5_PROGRESSION_AI_REPORT.md** - Character progression and AI systems
+- **PHASE5_QUEST_IMPLEMENTATION.md** - Quest generation system
 
 ### Package-Specific Documentation
-Each package contains a README.md with detailed usage examples:
-- [pkg/procgen/terrain/README.md](pkg/procgen/terrain/README.md)
-- [pkg/procgen/entity/README.md](pkg/procgen/entity/README.md)
-- [pkg/procgen/item/README.md](pkg/procgen/item/README.md)
-- [pkg/procgen/magic/README.md](pkg/procgen/magic/README.md)
-- [pkg/procgen/skills/README.md](pkg/procgen/skills/README.md)
-- [pkg/procgen/genre/README.md](pkg/procgen/genre/README.md)
-- [pkg/rendering/palette/README.md](pkg/rendering/palette/README.md)
-- [pkg/rendering/tiles/README.md](pkg/rendering/tiles/README.md)
-- [pkg/rendering/particles/README.md](pkg/rendering/particles/README.md)
-- [pkg/audio/README.md](pkg/audio/README.md)
-- [pkg/engine/MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md)
-- [pkg/engine/COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md)
+Each package contains detailed technical documentation:
+
+**Procedural Generation (pkg/procgen/):**
+- [terrain/README.md](pkg/procgen/terrain/README.md) - Terrain/dungeon generation
+- [entity/README.md](pkg/procgen/entity/README.md) - Monster and NPC generation
+- [item/README.md](pkg/procgen/item/README.md) - Item generation
+- [magic/README.md](pkg/procgen/magic/README.md) - Spell generation
+- [skills/README.md](pkg/procgen/skills/README.md) - Skill tree generation
+- [genre/README.md](pkg/procgen/genre/README.md) - Genre system
+- [quest/README.md](pkg/procgen/quest/README.md) - Quest generation
+
+**Rendering (pkg/rendering/):**
+- [palette/README.md](pkg/rendering/palette/README.md) - Color palette generation
+- [tiles/README.md](pkg/rendering/tiles/README.md) - Tile rendering
+- [particles/README.md](pkg/rendering/particles/README.md) - Particle effects
+
+**Audio (pkg/audio/):**
+- [README.md](pkg/audio/README.md) - Audio synthesis system
+
+**Game Engine (pkg/engine/):**
+- [MOVEMENT_COLLISION.md](pkg/engine/MOVEMENT_COLLISION.md) - Movement and collision system
+- [COMBAT_SYSTEM.md](pkg/engine/COMBAT_SYSTEM.md) - Combat system
+- [INVENTORY_EQUIPMENT.md](pkg/engine/INVENTORY_EQUIPMENT.md) - Inventory and equipment system
+- [PROGRESSION_SYSTEM.md](pkg/engine/PROGRESSION_SYSTEM.md) - Character progression system
+- [AI_SYSTEM.md](pkg/engine/AI_SYSTEM.md) - AI behavior system
 
 ## Project Structure
 

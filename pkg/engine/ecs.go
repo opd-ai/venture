@@ -58,13 +58,19 @@ type World struct {
 	nextEntityID      uint64
 	entitiesToAdd     []*Entity
 	entityIDsToRemove []uint64
+	
+	// Cached entity list to reduce allocations
+	cachedEntityList []*Entity
+	entityListDirty  bool
 }
 
 // NewWorld creates a new game world.
 func NewWorld() *World {
 	return &World{
-		entities: make(map[uint64]*Entity),
-		systems:  make([]System, 0),
+		entities:         make(map[uint64]*Entity),
+		systems:          make([]System, 0),
+		cachedEntityList: make([]*Entity, 0, 256), // Pre-allocate for 256 entities
+		entityListDirty:  true,
 	}
 }
 
@@ -80,11 +86,13 @@ func (w *World) CreateEntity() *Entity {
 // AddEntity adds an existing entity to the world.
 func (w *World) AddEntity(entity *Entity) {
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
+	w.entityListDirty = true
 }
 
 // RemoveEntity marks an entity for removal from the world.
 func (w *World) RemoveEntity(entityID uint64) {
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
+	w.entityListDirty = true
 }
 
 // GetEntity retrieves an entity by ID.
@@ -101,36 +109,58 @@ func (w *World) AddSystem(system System) {
 // Update updates all systems with the current entity list.
 func (w *World) Update(deltaTime float64) {
 	// Process pending additions
-	for _, entity := range w.entitiesToAdd {
-		w.entities[entity.ID] = entity
+	if len(w.entitiesToAdd) > 0 {
+		for _, entity := range w.entitiesToAdd {
+			w.entities[entity.ID] = entity
+		}
+		w.entitiesToAdd = w.entitiesToAdd[:0]
+		w.entityListDirty = true
 	}
-	w.entitiesToAdd = w.entitiesToAdd[:0]
 
 	// Process pending removals
-	for _, id := range w.entityIDsToRemove {
-		delete(w.entities, id)
-	}
-	w.entityIDsToRemove = w.entityIDsToRemove[:0]
-
-	// Convert map to slice for systems
-	entityList := make([]*Entity, 0, len(w.entities))
-	for _, entity := range w.entities {
-		entityList = append(entityList, entity)
+	if len(w.entityIDsToRemove) > 0 {
+		for _, id := range w.entityIDsToRemove {
+			delete(w.entities, id)
+		}
+		w.entityIDsToRemove = w.entityIDsToRemove[:0]
+		w.entityListDirty = true
 	}
 
-	// Update all systems
+	// Rebuild cached entity list if needed
+	if w.entityListDirty {
+		w.rebuildEntityCache()
+	}
+
+	// Update all systems with cached list
 	for _, system := range w.systems {
-		system.Update(entityList, deltaTime)
+		system.Update(w.cachedEntityList, deltaTime)
 	}
 }
 
-// GetEntities returns all entities in the world.
-func (w *World) GetEntities() []*Entity {
-	entities := make([]*Entity, 0, len(w.entities))
-	for _, entity := range w.entities {
-		entities = append(entities, entity)
+// rebuildEntityCache rebuilds the cached entity list.
+func (w *World) rebuildEntityCache() {
+	// Reuse existing slice capacity
+	w.cachedEntityList = w.cachedEntityList[:0]
+	
+	// Ensure capacity
+	if cap(w.cachedEntityList) < len(w.entities) {
+		w.cachedEntityList = make([]*Entity, 0, len(w.entities))
 	}
-	return entities
+	
+	for _, entity := range w.entities {
+		w.cachedEntityList = append(w.cachedEntityList, entity)
+	}
+	
+	w.entityListDirty = false
+}
+
+// GetEntities returns all entities in the world.
+// Note: Returns the cached list, do not modify.
+func (w *World) GetEntities() []*Entity {
+	if w.entityListDirty {
+		w.rebuildEntityCache()
+	}
+	return w.cachedEntityList
 }
 
 // GetEntitiesWith returns all entities that have all of the specified component types.

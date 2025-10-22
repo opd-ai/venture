@@ -19,9 +19,10 @@ type Game struct {
 	Paused         bool
 
 	// Rendering systems
-	CameraSystem *CameraSystem
-	RenderSystem *RenderSystem
-	HUDSystem    *HUDSystem
+	CameraSystem        *CameraSystem
+	RenderSystem        *RenderSystem
+	TerrainRenderSystem *TerrainRenderSystem
+	HUDSystem           *HUDSystem
 }
 
 // NewGame creates a new game instance.
@@ -29,6 +30,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
 	renderSystem := NewRenderSystem(cameraSystem)
 	hudSystem := NewHUDSystem(screenWidth, screenHeight)
+	// TerrainRenderSystem will be initialized later with specific genre/seed
 
 	return &Game{
 		World:          NewWorld(),
@@ -68,6 +70,11 @@ func (g *Game) Update() error {
 
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *Game) Draw(screen *ebiten.Image) {
+	// Render terrain (if available)
+	if g.TerrainRenderSystem != nil {
+		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+	}
+
 	// Render all entities
 	g.RenderSystem.Draw(screen, g.World.GetEntities())
 

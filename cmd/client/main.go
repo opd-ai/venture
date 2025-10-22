@@ -81,6 +81,19 @@ func main() {
 			generatedTerrain.Width, generatedTerrain.Height, len(generatedTerrain.Rooms))
 	}
 
+	// Initialize terrain rendering system
+	if *verbose {
+		log.Println("Initializing terrain rendering system...")
+	}
+
+	terrainRenderSystem := engine.NewTerrainRenderSystem(32, 32, *genreID, *seed)
+	terrainRenderSystem.SetTerrain(generatedTerrain)
+	game.TerrainRenderSystem = terrainRenderSystem
+
+	if *verbose {
+		log.Println("Terrain rendering system initialized")
+	}
+
 	// Create player entity
 	if *verbose {
 		log.Println("Creating player entity...")

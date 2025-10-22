@@ -8,13 +8,12 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
 // SpriteComponent holds visual representation data for an entity.
 type SpriteComponent struct {
-	// Sprite image (if using procedural sprites)
-	Sprite *sprites.Sprite
+	// Sprite image (procedurally generated)
+	Image *ebiten.Image
 
 	// Color tint
 	Color color.Color
@@ -127,13 +126,13 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 	}
 
 	// Draw sprite or colored rectangle
-	if sprite.Sprite != nil && sprite.Sprite.Image != nil {
+	if sprite.Image != nil {
 		// Draw procedural sprite
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
 		opts.GeoM.Rotate(sprite.Rotation)
 		opts.GeoM.Translate(screenX, screenY)
-		r.screen.DrawImage(sprite.Sprite.Image, opts)
+		r.screen.DrawImage(sprite.Image, opts)
 	} else {
 		// Draw colored rectangle as fallback
 		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2,

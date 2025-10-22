@@ -347,7 +347,7 @@ Planned improvements:
 ## Related Systems
 
 - **Terrain Generation**: `pkg/procgen/terrain` - Generate dungeons and caves
-- **Item Generation**: `pkg/procgen/items` (TODO) - Generate weapons and armor
+- **Item Generation**: `pkg/procgen/item` - Generate weapons and armor
 - **ECS System**: `pkg/engine` - Entity-Component-System framework
 
 ## API Reference

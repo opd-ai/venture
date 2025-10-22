@@ -36,5 +36,5 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install JavaScript dependencies
+      - name: Install build dependencies
         run: apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config

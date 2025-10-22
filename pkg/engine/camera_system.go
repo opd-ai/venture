@@ -84,11 +84,14 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 		targetX := pos.X + camera.OffsetX
 		targetY := pos.Y + camera.OffsetY
 
-		// Apply smoothing (lerp)
+		// Apply smoothing (lerp with frame-rate independent exponential decay)
 		if camera.Smoothing > 0 {
-			smoothFactor := 1.0 - math.Pow(camera.Smoothing, deltaTime*60) // 60 fps normalized
-			camera.X += (targetX - camera.X) * smoothFactor
-			camera.Y += (targetY - camera.Y) * smoothFactor
+			// Use exponential decay formula for frame-rate independence
+			// Higher smoothing value = slower camera tracking
+			// alpha approaches 1 as deltaTime increases, ensuring smooth convergence
+			alpha := 1.0 - math.Exp(-deltaTime/camera.Smoothing)
+			camera.X += (targetX - camera.X) * alpha
+			camera.Y += (targetY - camera.Y) * alpha
 		} else {
 			camera.X = targetX
 			camera.Y = targetY

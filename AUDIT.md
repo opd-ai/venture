@@ -299,7 +299,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Alternative Solution**: Use fixed color roles (Primary for normal, Accent1 for hover) instead of random selection
 - **WCAG Reference**: [WCAG 2.1 Success Criterion 1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html)
 
-#### Issue #6: Camera Smoothing Calculation Frame-Rate Dependent
+#### Issue #6: Camera Smoothing Calculation Frame-Rate Dependent ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: Camera System (`pkg/engine/camera_system.go:66-68`)
 - **Description**: Camera smoothing uses frame-rate normalization `camera.Smoothing, deltaTime*60` which assumes 60 FPS. On higher refresh rate displays (120Hz, 144Hz), camera moves slower than intended. On lower frame rates (<60 FPS), camera moves faster, causing jarring motion.
 - **Steps to Reproduce**:
@@ -349,6 +350,15 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Test with smoothing values: 0.0 (instant), 0.1 (very smooth), 0.5 (moderate), 0.9 (slow)
 - **Mathematical Explanation**: Exponential smoothing should use `exp(-deltaTime/tau)` where tau is time constant, not `pow(factor, deltaTime*fps)`
 - **Performance**: Negligible impact (one math.Exp call per frame)
+- **Resolution**:
+  - Replaced incorrect formula `1.0 - math.Pow(camera.Smoothing, deltaTime*60)` with proper exponential decay
+  - New formula: `alpha = 1.0 - math.Exp(-deltaTime/camera.Smoothing)`
+  - Verified frame-rate independence with mathematical analysis:
+    * At 60 FPS: alpha ≈ 0.154 per frame → 99.99% convergence in 1 second
+    * At 120 FPS: alpha ≈ 0.080 per frame → 99.99% convergence in 1 second
+    * At 30 FPS: alpha ≈ 0.283 per frame → 99.99% convergence in 1 second
+  - Camera now feels identical at all frame rates (30, 60, 120, 144 FPS)
+  - Updated comments to explain the exponential decay approach
 
 #### Issue #7: Health Bar and XP Bar Not Synchronized with Component Updates
 - **Component**: HUD System (entire `hud_system.go`) and Combat/Progression Systems

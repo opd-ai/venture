@@ -820,7 +820,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - All existing tests pass, visual appearance improved for custom-sized health bars
 
 
-#### Issue #14: Panel Semi-Transparency Fixed at Alpha=200, Not Configurable
+#### Issue #14: Panel Semi-Transparency Fixed at Alpha=200, Not Configurable ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:106-113`)
 - **Description**: Panel backgrounds use hard-coded `A: 200` alpha value. For HUD panels that overlay gameplay, alpha should be configurable (e.g., more opaque for menus, less opaque for in-game overlays).
 - **Steps to Reproduce**:
@@ -868,6 +869,17 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate panels with alpha values 0, 100, 200, 255, verify transparency
 - **Backward Compatibility**: Default alpha=200 maintains current behavior
 - **Related**: Could extend to other elements (buttons, labels) for themed transparency
+- **Resolution**:
+  - Added alpha configuration via `config.Custom["alpha"]` parameter
+  - Default value remains 200 for backward compatibility
+  - Values are clamped to valid range [0, 255]
+  - Usage examples:
+    * No Custom["alpha"]: uses default 200 (backward compatible)
+    * Custom["alpha"] = 255: fully opaque modal dialogs
+    * Custom["alpha"] = 150: subtle HUD overlays
+    * Custom["alpha"] = -10: clamped to 0 (fully transparent)
+    * Custom["alpha"] = 300: clamped to 255 (fully opaque)
+  - All existing tests pass, new flexibility for future UI features
 
 #### Issue #15: Icon Shape Selection Based on Genre Is Non-Deterministic Across Genres
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:182-200`)

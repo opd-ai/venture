@@ -104,6 +104,19 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 
 // generatePanel creates a panel UI element.
 func (g *Generator) generatePanel(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
+	// Get alpha from custom config, default to 200
+	alpha := 200
+	if customAlpha, ok := config.Custom["alpha"].(int); ok {
+		// Clamp to valid range [0, 255]
+		if customAlpha < 0 {
+			alpha = 0
+		} else if customAlpha > 255 {
+			alpha = 255
+		} else {
+			alpha = customAlpha
+		}
+	}
+
 	// Semi-transparent background
 	bgColor := pal.Background
 	r, gr, b, _ := bgColor.RGBA()
@@ -111,7 +124,7 @@ func (g *Generator) generatePanel(img *image.RGBA, pal *palette.Palette, rng *ra
 		R: uint8(r >> 8),
 		G: uint8(gr >> 8),
 		B: uint8(b >> 8),
-		A: 200,
+		A: uint8(alpha),
 	}
 
 	// Fill background

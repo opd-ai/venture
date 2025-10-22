@@ -13,15 +13,15 @@ This comprehensive functional audit examined the Venture procedural action-RPG c
 
 ### Issue Count by Category
 
-- **CRITICAL BUG**: 2 (1 resolved)
+- **CRITICAL BUG**: 2 (2 resolved) ✅
 - **FUNCTIONAL MISMATCH**: 1
 - **MISSING FEATURE**: 0
-- **EDGE CASE BUG**: 1 (1 resolved)
+- **EDGE CASE BUG**: 1 (1 resolved) ✅
 - **PERFORMANCE ISSUE**: 0
 
 **Total Issues Found:** 4  
-**Resolved:** 2  
-**Remaining:** 2
+**Resolved:** 3  
+**Remaining:** 1
 
 ### Overall Assessment
 
@@ -34,7 +34,7 @@ The codebase is generally well-implemented with comprehensive test coverage (mos
 ### CRITICAL BUG: Panic on Negative Terrain Dimensions ✅ RESOLVED
 **File:** pkg/procgen/terrain/bsp.go:40-45, cmd/terraintest/main.go:25-30  
 **Severity:** High  
-**Status:** Fixed in commit [pending]  
+**Status:** Fixed in commit 58d008c  
 **Fixed:** 2025-10-22  
 **Description:** The terrain generation system does not validate input dimensions before allocating slice memory. When negative width or height values are provided, the system panics with "makeslice: len out of range" instead of returning a proper error.
 
@@ -79,9 +79,11 @@ func Generate(seed int64, params GenerationParams) (*Terrain, error) {
 
 ---
 
-### CRITICAL BUG: Type Assertions Without Panic Protection in Public API
+### CRITICAL BUG: Type Assertions Without Panic Protection in Public API ✅ RESOLVED
 **File:** pkg/engine/collision.go:177-185  
 **Severity:** High  
+**Status:** Fixed in commit [pending]  
+**Fixed:** 2025-10-22  
 **Description:** The `resolveCollision` function performs type assertions on component values without checking if GetComponent returned a valid component. While this function is currently only called internally on pre-filtered entities, it's a public method that external code could call, leading to potential panics.
 
 **Expected Behavior:** Type assertions should use the two-value form to safely handle cases where components might not exist, or the function should document its preconditions clearly.
@@ -89,6 +91,20 @@ func Generate(seed int64, params GenerationParams) (*Terrain, error) {
 **Actual Behavior:** Direct type assertion will panic if called on entities without the required components:
 
 **Impact:** If external code (plugins, mods, or future features) calls `resolveCollision` directly on unfiltered entities, the application will panic. This violates Go best practices for public APIs.
+
+**Resolution:** Converted all unsafe type assertions to use the two-value form with nil checks:
+- `resolveCollision()`: Added safe assertions, returns early if components missing
+- `addToGrid()`: Added safe assertions, returns early if components missing  
+- `getNearbyEntities()`: Added safe assertions, returns nil if components missing
+- `Update()`: Added safe assertions, continues to next entity if components missing
+- `CheckCollision()`: Added safe assertions, returns false if components missing
+- Added precondition documentation comments
+- Added comprehensive test coverage for missing component scenarios
+
+**Verification:**
+- All existing collision tests pass
+- New tests verify graceful handling of missing components
+- No panics when processing entities with incomplete component sets
 
 **Reproduction:** Call `resolveCollision` with entities lacking position or collider components.
 
@@ -150,7 +166,7 @@ ok  	github.com/opd-ai/venture/pkg/engine	0.010s	coverage: 77.8% of statements
 ### EDGE CASE BUG: Zero Dimension Terrain Generation Produces Misleading Error ✅ RESOLVED
 **File:** pkg/procgen/terrain/bsp.go (BSP generator), cmd/terraintest/main.go  
 **Severity:** Low  
-**Status:** Fixed in commit [pending]  
+**Status:** Fixed in commit 58d008c  
 **Fixed:** 2025-10-22  
 **Description:** When generating terrain with zero dimensions (width=0 or height=0), the validation error message "room out of bounds" is misleading. The actual problem is invalid input dimensions, not a room placement issue.
 

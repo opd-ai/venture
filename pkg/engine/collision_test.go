@@ -319,6 +319,64 @@ func BenchmarkCollisionSystem(b *testing.B) {
 	}
 }
 
+func TestCollisionSystem_MissingComponents(t *testing.T) {
+	world := NewWorld()
+	system := NewCollisionSystem(32.0)
+
+	// Create entities with missing components
+	e1 := world.CreateEntity()
+	e1.AddComponent(&PositionComponent{X: 0, Y: 0})
+	// Missing collider
+
+	e2 := world.CreateEntity()
+	e2.AddComponent(&ColliderComponent{Width: 10, Height: 10, Solid: true})
+	// Missing position
+
+	e3 := world.CreateEntity()
+	e3.AddComponent(&PositionComponent{X: 5, Y: 5})
+	e3.AddComponent(&ColliderComponent{Width: 10, Height: 10, Solid: true})
+
+	world.Update(0)
+
+	// Should not panic when processing entities with missing components
+	collisionCount := 0
+	system.SetCollisionCallback(func(e1, e2 *Entity) {
+		collisionCount++
+	})
+
+	// This should not panic
+	system.Update(world.GetEntities(), 0.016)
+
+	// Should not detect any collisions since e1 and e2 are incomplete
+	if collisionCount != 0 {
+		t.Error("Should not detect collisions with incomplete entities")
+	}
+}
+
+func TestCheckCollision_MissingComponents(t *testing.T) {
+	e1 := NewEntity(1)
+	e1.AddComponent(&PositionComponent{X: 0, Y: 0})
+	// Missing collider
+
+	e2 := NewEntity(2)
+	e2.AddComponent(&PositionComponent{X: 5, Y: 5})
+	e2.AddComponent(&ColliderComponent{Width: 10, Height: 10})
+
+	// Should return false without panicking
+	if CheckCollision(e1, e2) {
+		t.Error("Should not detect collision when e1 is missing collider")
+	}
+
+	// Add collider to e1 but remove position
+	e1.AddComponent(&ColliderComponent{Width: 10, Height: 10})
+	e1.RemoveComponent("position")
+
+	// Should return false without panicking
+	if CheckCollision(e1, e2) {
+		t.Error("Should not detect collision when e1 is missing position")
+	}
+}
+
 func BenchmarkMovementSystem(b *testing.B) {
 	world := NewWorld()
 	system := NewMovementSystem(0)

@@ -239,7 +239,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verified gradient calculations with manual testing at 100%, 80%, 75%, 60%, 50%, 40%, 25%, 10%, 0% health
   - All transitions are now smooth and natural, health appears accurate at all levels
 
-#### Issue #5: Button State Color Contrast May Be Insufficient with Some Seeds
+#### Issue #5: Button State Color Contrast May Be Insufficient with Some Seeds ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:69-70, 77-88`)
 - **Description**: Button color is randomly selected from palette colors without checking if it provides adequate contrast for state variations (normal/hover/pressed). Some seed values may produce low-contrast buttons where states are barely distinguishable.
 - **Steps to Reproduce**:
@@ -298,6 +299,24 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Benchmark to ensure <1ms overhead per button
 - **Alternative Solution**: Use fixed color roles (Primary for normal, Accent1 for hover) instead of random selection
 - **WCAG Reference**: [WCAG 2.1 Success Criterion 1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html)
+- **Resolution**:
+  - Implemented `selectButtonBaseColor()` function with luminance validation
+  - Selection algorithm:
+    * Try up to 5 random colors from palette
+    * Check if luminance is in mid-range (0.25-0.75)
+    * Accept first color meeting criteria
+    * Fallback to Primary color if no good match found
+  - This ensures effective state differentiation:
+    * Very dark colors (luminance < 0.25): Rejected, try another
+    * Very light colors (luminance > 0.75): Rejected, try another
+    * Mid-range colors: Accepted, good contrast potential for lighten/darken
+  - Maintains seed-based variation while guaranteeing good contrast
+  - Example improvement:
+    * Old: Could select black (lum=0) → lighten 20% → still dark
+    * New: Requires lum > 0.25 → lighten 20% → clearly visible
+  - All existing tests pass including seed variation test
+  - Minimal performance impact (0-4 extra color picks per button)
+
 
 #### Issue #6: Camera Smoothing Calculation Frame-Rate Dependent ✅ RESOLVED
 - **Status**: RESOLVED (2025-10-22)

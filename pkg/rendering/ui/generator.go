@@ -69,9 +69,9 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 	// Select colors based on state
 	var bgColor, borderColor color.Color
 
-	// Use random color from palette to add seed variation
-	colorIndex := rng.Intn(len(pal.Colors))
-	baseColor := pal.Colors[colorIndex]
+	// Select a base color with good contrast potential
+	// Try to find a color with mid-range luminance for better state differentiation
+	baseColor := g.selectButtonBaseColor(pal, rng)
 
 	switch config.State {
 	case StateNormal:
@@ -421,6 +421,29 @@ func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) 
 		return 3 // Ornate genres use thicker borders
 	}
 	return 2 // Default thickness for most elements
+}
+
+// selectButtonBaseColor chooses a base color from the palette that has good contrast potential.
+// Colors with mid-range luminance (0.25-0.75) work better for state variations (lighten/darken).
+func (g *Generator) selectButtonBaseColor(pal *palette.Palette, rng *rand.Rand) color.Color {
+	// Try up to 5 attempts to find a good color
+	for attempt := 0; attempt < 5; attempt++ {
+		colorIndex := rng.Intn(len(pal.Colors))
+		candidate := pal.Colors[colorIndex]
+		
+		// Calculate relative luminance
+		r, gr, b, _ := candidate.RGBA()
+		luminance := (0.299*float64(r) + 0.587*float64(gr) + 0.114*float64(b)) / 65535.0
+		
+		// Prefer colors with mid-range luminance (not too dark or too light)
+		// This ensures effective lightening and darkening for button states
+		if luminance > 0.25 && luminance < 0.75 {
+			return candidate
+		}
+	}
+	
+	// Fallback: use Primary color which should be well-balanced
+	return pal.Primary
 }
 
 // isTechGenre determines if a genre ID represents a technological/futuristic theme.

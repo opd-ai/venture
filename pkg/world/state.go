@@ -1,3 +1,6 @@
+// Package world provides world state management.
+// This file defines world state structures including tiles, entities,
+// and terrain data for the game world.
 package world
 
 // TileType represents different types of terrain tiles.

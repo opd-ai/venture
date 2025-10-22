@@ -1,3 +1,6 @@
+// Package palette provides color palette type definitions.
+// This file defines palette data structures and color relationships
+// used by the palette generator.
 package palette
 
 import (

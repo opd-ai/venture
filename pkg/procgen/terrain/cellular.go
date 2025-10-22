@@ -1,4 +1,8 @@
+// Package terrain provides cellular automata cave generation.
+// This file implements cellular automata algorithm for organic
+// cave and cavern generation.
 package terrain
+
 
 import (
 	"fmt"

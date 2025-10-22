@@ -1,4 +1,8 @@
+// Package quest provides quest type definitions.
+// This file defines quest types, objectives, rewards, and quest state
+// used by the quest generator.
 package quest
+
 
 // QuestType represents the classification of a quest.
 type QuestType int

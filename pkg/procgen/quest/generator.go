@@ -1,4 +1,8 @@
+// Package quest provides procedural quest generation.
+// This file implements quest generators for main story, side quests,
+// and dynamic objectives with rewards.
 package quest
+
 
 import (
 	"fmt"

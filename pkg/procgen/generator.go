@@ -1,3 +1,6 @@
+// Package procgen provides core generation types and interfaces.
+// This file defines GenerationParams which control procedural generation
+// parameters across all content generators.
 package procgen
 
 // GenerationParams contains parameters that control content generation.

@@ -1,3 +1,6 @@
+// Package shapes provides shape type definitions.
+// This file defines shape types, geometry data, and rendering
+// parameters used by the shape generator.
 package shapes
 
 import (

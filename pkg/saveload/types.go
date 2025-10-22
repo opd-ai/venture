@@ -1,3 +1,6 @@
+// Package saveload provides type definitions for save data.
+// This file defines save game data structures including player state,
+// inventory, and world information for persistence.
 package saveload
 
 import (

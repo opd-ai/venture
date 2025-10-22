@@ -1,3 +1,6 @@
+// Package music provides procedural music composition.
+// This file implements music generators that create dynamic background
+// music using music theory and genre-specific patterns.
 package music
 
 import (

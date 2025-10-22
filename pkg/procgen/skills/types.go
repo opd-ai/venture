@@ -1,4 +1,8 @@
+// Package skills provides skill type definitions.
+// This file defines skill types, progression requirements, and effects
+// used by the skill generator.
 package skills
+
 
 // SkillType represents the classification of a skill.
 type SkillType int

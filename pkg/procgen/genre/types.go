@@ -1,4 +1,8 @@
+// Package genre provides genre type definitions.
+// This file defines genre classifications and characteristics used
+// throughout the procedural generation system.
 package genre
+
 
 import "fmt"
 

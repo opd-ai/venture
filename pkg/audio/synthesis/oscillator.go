@@ -1,3 +1,6 @@
+// Package synthesis provides audio waveform generation.
+// This file implements oscillators for generating basic waveforms
+// (sine, square, triangle, sawtooth) for audio synthesis.
 package synthesis
 
 import (

@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides sprite rendering for entities.
+// This file implements RenderSystem which handles entity sprite rendering
+// with camera transformations and visual effects.
 package engine
 
 import (

@@ -1,3 +1,6 @@
+// Package engine provides basic physics components for the ECS.
+// This file defines fundamental components: PositionComponent, VelocityComponent,
+// ColliderComponent, and BoundsComponent used across all game systems.
 package engine
 
 import "math"

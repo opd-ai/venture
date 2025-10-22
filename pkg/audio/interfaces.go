@@ -1,3 +1,6 @@
+// Package audio provides core audio synthesis interfaces.
+// This file defines audio interfaces and waveform types used by
+// the audio generation and synthesis subsystem.
 package audio
 
 // WaveformType represents different basic waveform types.

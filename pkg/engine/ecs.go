@@ -1,11 +1,7 @@
+// Package engine provides ECS (Entity-Component-System) implementation.
+// This file contains the core Entity and World types that manage game entities
+// and their lifecycle within the ECS architecture.
 package engine
-
-// Component represents a data container attached to an Entity.
-// Components should be pure data structures without behavior.
-type Component interface {
-	// Type returns a unique identifier for this component type
-	Type() string
-}
 
 // Entity represents a game object composed of components.
 // Entities are identified by a unique ID and contain a collection of components.
@@ -42,13 +38,6 @@ func (e *Entity) RemoveComponent(componentType string) {
 func (e *Entity) HasComponent(componentType string) bool {
 	_, ok := e.Components[componentType]
 	return ok
-}
-
-// System represents a behavior that operates on entities with specific components.
-// Systems should be stateless where possible and operate on entity data.
-type System interface {
-	// Update is called every frame to update entities managed by this system
-	Update(entities []*Entity, deltaTime float64)
 }
 
 // World manages all entities and systems in the game.

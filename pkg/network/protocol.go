@@ -1,3 +1,6 @@
+// Package network provides network protocol data structures.
+// This file defines core protocol types for state updates, input commands,
+// and network messages used in client-server communication.
 package network
 
 // ComponentData represents serialized component data for network transmission.
@@ -56,19 +59,4 @@ type ConnectionInfo struct {
 
 	// Connected indicates if the connection is active
 	Connected bool
-}
-
-// Protocol defines the interface for network protocol implementations.
-type Protocol interface {
-	// EncodeStateUpdate serializes a state update for transmission
-	EncodeStateUpdate(update *StateUpdate) ([]byte, error)
-
-	// DecodeStateUpdate deserializes a state update from network data
-	DecodeStateUpdate(data []byte) (*StateUpdate, error)
-
-	// EncodeInputCommand serializes an input command for transmission
-	EncodeInputCommand(cmd *InputCommand) ([]byte, error)
-
-	// DecodeInputCommand deserializes an input command from network data
-	DecodeInputCommand(data []byte) (*InputCommand, error)
 }

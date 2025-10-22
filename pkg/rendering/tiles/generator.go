@@ -1,3 +1,6 @@
+// Package tiles provides procedural tile rendering.
+// This file implements tile renderers that generate terrain tiles
+// at runtime from terrain data.
 package tiles
 
 import (

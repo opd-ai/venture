@@ -1,3 +1,6 @@
+// Package engine provides AI components for entity behavior.
+// This file defines AIComponent which manages AI state machines for autonomous
+// entity behaviors including patrol, chase, attack, and flee states.
 package engine
 
 import (

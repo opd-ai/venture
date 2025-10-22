@@ -1,3 +1,6 @@
+// Package engine provides tile caching for efficient rendering.
+// This file implements TileCache which caches rendered tiles to avoid
+// redundant procedural generation and improve performance.
 package engine
 
 import (

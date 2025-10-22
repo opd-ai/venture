@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides HUD rendering for game UI.
+// This file implements HUDSystem which renders the heads-up display including
+// health bars, stats, and other UI elements.
 package engine
 
 import (

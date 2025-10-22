@@ -1,3 +1,6 @@
+// Package network provides lag compensation for fair hit detection.
+// This file implements lag compensation using snapshot history to rewind
+// game state for accurate hit detection on the server.
 package network
 
 import (

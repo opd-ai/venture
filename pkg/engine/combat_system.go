@@ -1,3 +1,6 @@
+// Package engine provides the combat system for damage and status effects.
+// This file implements CombatSystem which handles damage calculation, combat
+// interactions, and status effect management using the combat package.
 package engine
 
 import (

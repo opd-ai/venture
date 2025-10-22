@@ -1,3 +1,6 @@
+// Package ui provides procedural UI element generation.
+// This file implements UI element generators for menus, buttons,
+// panels, and other interface components.
 package ui
 
 import (

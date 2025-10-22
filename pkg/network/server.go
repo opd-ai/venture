@@ -1,3 +1,6 @@
+// Package network provides multiplayer server functionality.
+// This file implements Server which handles authoritative game state,
+// client connections, and state synchronization for multiplayer games.
 package network
 
 import (

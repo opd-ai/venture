@@ -1,3 +1,6 @@
+// Package engine provides inventory and equipment components.
+// This file defines components for item storage, equipment slots, and
+// inventory management used by the inventory system.
 package engine
 
 import (

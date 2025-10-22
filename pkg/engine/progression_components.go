@@ -1,3 +1,6 @@
+// Package engine provides character progression components.
+// This file defines components for experience, leveling, and skill progression
+// used by the progression system.
 package engine
 
 import "fmt"

@@ -1,4 +1,8 @@
+// Package terrain provides BSP dungeon generation.
+// This file implements Binary Space Partitioning algorithm for
+// procedural dungeon layout generation.
 package terrain
+
 
 import (
 	"fmt"

@@ -1,3 +1,6 @@
+// Package sprites provides sprite type definitions.
+// This file defines sprite data structures, animation parameters,
+// and rendering state used by the sprite generator.
 package sprites
 
 import (

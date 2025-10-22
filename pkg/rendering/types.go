@@ -1,3 +1,6 @@
+// Package rendering provides core rendering type definitions.
+// This file defines rendering-related types and enums used across
+// the rendering subsystem.
 package rendering
 
 import (

@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides tutorial and guidance for new players.
+// This file implements TutorialSystem which displays step-by-step tutorials
+// and hints to help players learn the game mechanics.
 package engine
 
 import (

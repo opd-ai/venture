@@ -63,7 +63,7 @@ func main() {
 
 func showGenres() {
 	registry := genre.DefaultRegistry()
-	fmt.Println("=== Available Base Genres ===\n")
+	fmt.Println("=== Available Base Genres ===")
 
 	for _, g := range registry.All() {
 		fmt.Printf("ID: %s\n", g.ID)
@@ -76,7 +76,7 @@ func showGenres() {
 
 func showPresets() {
 	presets := genre.PresetBlends()
-	fmt.Println("=== Available Preset Blends ===\n")
+	fmt.Println("=== Available Preset Blends ===")
 
 	for name, config := range presets {
 		fmt.Printf("Name: %s\n", name)

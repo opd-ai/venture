@@ -1,4 +1,8 @@
+// Package item provides procedural item generation.
+// This file implements item generators for weapons, armor, consumables,
+// and accessories with procedural stats and effects.
 package item
+
 
 import (
 	"fmt"

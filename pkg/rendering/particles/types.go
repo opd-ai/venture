@@ -1,3 +1,6 @@
+// Package particles provides particle type definitions.
+// This file defines particle data structures, emitter types, and
+// behavior parameters used by the particle generator.
 package particles
 
 import (

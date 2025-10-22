@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package shapes provides procedural shape generation.
+// This file implements shape generators for geometric primitives
+// used in sprite and UI rendering.
 package shapes
 
 import (

@@ -1,4 +1,8 @@
+// Package skills provides skill tree templates.
+// This file defines skill tree templates used by the skill generator
+// to create structured progression systems.
 package skills
+
 
 // SkillTreeTemplate defines a template for generating a complete skill tree.
 type SkillTreeTemplate struct {

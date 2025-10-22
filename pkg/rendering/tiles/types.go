@@ -1,3 +1,6 @@
+// Package tiles provides tile type definitions.
+// This file defines tile data structures, rendering options, and
+// cache parameters used by the tile renderer.
 package tiles
 
 import (

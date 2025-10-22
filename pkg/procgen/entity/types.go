@@ -1,4 +1,8 @@
+// Package entity provides entity type definitions.
+// This file defines entity types, stats, and classification used by
+// the entity generator.
 package entity
+
 
 // EntityType represents the classification of an entity.
 type EntityType int

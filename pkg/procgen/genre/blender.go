@@ -1,4 +1,8 @@
+// Package genre provides genre blending for procedural content.
+// This file implements genre blending which combines multiple genre
+// characteristics for cross-genre content generation.
 package genre
+
 
 import (
 	"fmt"

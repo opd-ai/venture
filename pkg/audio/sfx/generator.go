@@ -1,3 +1,6 @@
+// Package sfx provides procedural sound effect generation.
+// This file implements sound effect generators for game events like
+// attacks, impacts, pickups, and environmental sounds.
 package sfx
 
 import (

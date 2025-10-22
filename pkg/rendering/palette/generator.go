@@ -1,3 +1,6 @@
+// Package palette provides procedural color palette generation.
+// This file implements palette generators for genre-specific color schemes
+// with harmonious color relationships.
 package palette
 
 import (

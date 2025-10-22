@@ -1,4 +1,8 @@
+// Package magic provides procedural magic and spell generation.
+// This file implements spell generators for offensive, defensive, utility,
+// and summoning spells with procedural effects.
 package magic
+
 
 import (
 	"fmt"

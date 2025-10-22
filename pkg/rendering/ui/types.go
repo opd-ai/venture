@@ -1,3 +1,6 @@
+// Package ui provides UI type definitions.
+// This file defines UI element data structures, layout parameters,
+// and styling options used by the UI generator.
 package ui
 
 import (

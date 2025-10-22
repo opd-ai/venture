@@ -1,3 +1,6 @@
+// Package synthesis provides ADSR envelope control.
+// This file implements ADSR (Attack, Decay, Sustain, Release) envelopes
+// for shaping sound amplitude over time.
 package synthesis
 
 // Envelope represents an ADSR (Attack, Decay, Sustain, Release) envelope.

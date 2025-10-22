@@ -1,4 +1,8 @@
+// Package item provides item type definitions.
+// This file defines item types, rarity, slots, and classification
+// used by the item generator.
 package item
+
 
 // ItemType represents the classification of an item.
 type ItemType int

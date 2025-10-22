@@ -1,3 +1,6 @@
+// Package music provides music theory utilities.
+// This file implements music theory concepts including scales, chords,
+// and harmonic progressions for procedural composition.
 package music
 
 import (

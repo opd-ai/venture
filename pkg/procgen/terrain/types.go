@@ -1,4 +1,8 @@
+// Package terrain provides terrain type definitions.
+// This file defines tile types, terrain data structures, and
+// generation parameters used by terrain generators.
 package terrain
+
 
 // TileType represents different types of terrain tiles.
 type TileType int

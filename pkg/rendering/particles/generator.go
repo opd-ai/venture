@@ -1,3 +1,6 @@
+// Package particles provides procedural particle effect generation.
+// This file implements particle generators for visual effects like fire,
+// smoke, magic, and explosions.
 package particles
 
 import (

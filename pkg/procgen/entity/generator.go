@@ -1,4 +1,8 @@
+// Package entity provides procedural entity generation.
+// This file implements entity generators for monsters, NPCs, and bosses
+// with stats, abilities, and AI behaviors.
 package entity
+
 
 import (
 	"fmt"

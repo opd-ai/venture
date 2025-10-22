@@ -1,4 +1,8 @@
+// Package skills provides procedural skill tree generation.
+// This file implements skill tree generators with prerequisites,
+// progression paths, and balanced skill nodes.
 package skills
+
 
 import (
 	"fmt"

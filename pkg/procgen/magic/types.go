@@ -1,4 +1,8 @@
+// Package magic provides magic type definitions.
+// This file defines spell types, elements, targeting, and effect types
+// used by the magic generator.
 package magic
+
 
 // SpellType represents the classification of a spell.
 type SpellType int

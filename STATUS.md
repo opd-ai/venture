@@ -60,7 +60,7 @@ Phase 1 of the Venture project has been successfully completed. All foundational
 - [x] README.md - Comprehensive project overview
 
 ### 5. Testing ✅
-- [x] Unit tests for ECS framework (88.4% coverage)
+- [x] Unit tests for ECS framework (81.0% coverage)
 - [x] Unit tests for generators (100% coverage)
 - [x] Build tag system for CI/headless environments
 - [x] All tests passing

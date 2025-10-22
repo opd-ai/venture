@@ -37,8 +37,8 @@ This document provides a complete summary of the magic/spell generation implemen
 
 Venture is a procedural multiplayer action-RPG generating 100% of content at runtime. The project follows an Entity-Component-System architecture using Go and Ebiten. Phase 1 (Architecture) is complete with solid foundations. Phase 2 (Procedural Generation) was in progress with three systems completed:
 
-- **Terrain Generation** (91.5% coverage): BSP and Cellular Automata algorithms
-- **Entity Generation** (87.8% coverage): Monsters, NPCs, bosses with stats
+- **Terrain Generation** (96.4% coverage): BSP and Cellular Automata algorithms
+- **Entity Generation** (95.9% coverage): Monsters, NPCs, bosses with stats
 - **Item Generation** (93.8% coverage): Weapons, armor, consumables
 
 ### Code Maturity Assessment
@@ -571,7 +571,7 @@ func CreateSpellScroll(spell *magic.Spell) *item.Item {
 
 | Feature | Terrain | Entity | Item | Magic |
 |---------|---------|--------|------|-------|
-| Coverage | 91.5% | 87.8% | 93.8% | 91.9% |
+| Coverage | 96.4% | 95.9% | 93.8% | 91.9% |
 | Tests | 10 | 15 | 16 | 18 |
 | CLI Tool | ✅ | ✅ | ✅ | ✅ |
 | Documentation | ✅ | ✅ | ✅ | ✅ |

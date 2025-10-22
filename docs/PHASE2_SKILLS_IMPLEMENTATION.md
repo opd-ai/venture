@@ -15,8 +15,8 @@
 Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. The project aims to generate 100% of content—graphics, audio, and gameplay—at runtime with no external asset files. Following an Entity-Component-System (ECS) architecture, the game supports single-player and multiplayer co-op gameplay with high-latency tolerance.
 
 **Phase 2 Status (Prior to This Implementation):**
-- ✅ Terrain/dungeon generation (BSP, Cellular Automata) - 91.5% coverage
-- ✅ Entity generation (monsters, NPCs) - 87.8% coverage  
+- ✅ Terrain/dungeon generation (BSP, Cellular Automata) - 96.4% coverage
+- ✅ Entity generation (monsters, NPCs) - 95.9% coverage  
 - ✅ Item generation (weapons, armor, consumables) - 93.8% coverage
 - ✅ Magic/spell generation - 91.9% coverage
 - ❌ **Skill tree generation** - MISSING

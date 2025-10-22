@@ -3,11 +3,11 @@
 ## 1. Executive Summary
 
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
-**Language:** Go 1.21+  
-**Engine:** Ebiten 2.x  
+**Language:** Go 1.24.7+  
+**Engine:** Ebiten 2.9.2  
 **Architecture:** Entity-Component-System (ECS)  
 **Content:** 100% procedurally generated (graphics, audio, gameplay)  
-**Network:** Client-server with high-latency support (200-500ms)  
+**Network:** Client-server with high-latency support (200-5000ms)  
 **Timeline:** 20 weeks, 8 major phases
 
 ### Vision
@@ -105,12 +105,12 @@ github.com/opd-ai/venture/
     ├── procgen/         # Procedural generation
     │   ├── terrain/     # Map generation
     │   ├── entity/      # Monster/NPC generation
-    │   ├── items/       # Item generation
+    │   ├── item/        # Item generation
     │   ├── magic/       # Spell generation
     │   ├── skills/      # Skill tree generation
     │   └── genre/       # Genre modifiers
     ├── rendering/       # Visual generation
-    │   ├── primitives/  # Shape rendering
+    │   ├── shapes/      # Shape rendering
     │   ├── sprites/     # Sprite generation
     │   ├── tiles/       # Tile rendering
     │   ├── particles/   # Particle effects
@@ -119,14 +119,8 @@ github.com/opd-ai/venture/
     ├── audio/           # Audio synthesis
     │   ├── synthesis/   # Waveform generation
     │   ├── music/       # Music composition
-    │   ├── sfx/         # Sound effects
-    │   └── mixer/       # Audio mixing
+    │   └── sfx/         # Sound effects
     ├── network/         # Multiplayer
-    │   ├── protocol/    # Network protocol
-    │   ├── server/      # Server implementation
-    │   ├── client/      # Client networking
-    │   ├── sync/        # State synchronization
-    │   └── lag/         # Lag compensation
     ├── combat/          # Combat mechanics
     └── world/           # World state
 ```
@@ -646,9 +640,9 @@ max_entities = 10000
 
 ### 12.1 Go Version Compatibility
 
-- Minimum: Go 1.21
-- Recommended: Go 1.22+
-- Tested: Go 1.21, 1.22
+- Minimum: Go 1.24.7
+- Recommended: Go 1.24.7+
+- Tested: Go 1.24.7
 
 ### 12.2 Dependencies
 
@@ -657,6 +651,8 @@ require (
     github.com/hajimehoshi/ebiten/v2 v2.9.2
 )
 ```
+
+All dependencies are indirect, managed automatically by Go modules.
 
 ### 12.3 License
 

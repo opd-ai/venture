@@ -285,7 +285,7 @@ go test -bench=. ./pkg/procgen/entity/...
 
 Test results:
 - ✅ 14 tests, all passing
-- ✅ 87.8% code coverage
+- ✅ 95.9% code coverage
 - ✅ Deterministic generation verified
 - ✅ ~14.5μs per 10-entity batch
 
@@ -347,7 +347,7 @@ Planned improvements:
 ## Related Systems
 
 - **Terrain Generation**: `pkg/procgen/terrain` - Generate dungeons and caves
-- **Item Generation**: `pkg/procgen/items` (TODO) - Generate weapons and armor
+- **Item Generation**: `pkg/procgen/item` - Generate weapons and armor
 - **ECS System**: `pkg/engine` - Entity-Component-System framework
 
 ## API Reference

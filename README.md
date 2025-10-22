@@ -4,7 +4,7 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten. Every aspect
 
 ## Overview
 
-Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Chrono Cross.
+Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Chrono Trigger.
 
 **Key Features:**
 - 🎮 Real-time action-RPG combat and exploration
@@ -26,7 +26,7 @@ Phases 1-5 complete (Architecture, Procedural Generation, Visual Rendering, Audi
 - [x] **Terrain/Dungeon Generation**
   - [x] BSP (Binary Space Partitioning) algorithm
   - [x] Cellular Automata algorithm
-  - [x] Comprehensive test suite (91.5% coverage)
+  - [x] Comprehensive test suite (96.4% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
 - [x] **Entity Generator (monsters, NPCs)**
@@ -34,7 +34,7 @@ Phases 1-5 complete (Architecture, Procedural Generation, Visual Rendering, Audi
   - [x] Stats and rarity system
   - [x] Fantasy and Sci-Fi templates
   - [x] Deterministic generation with level scaling
-  - [x] Comprehensive test suite (87.8% coverage)
+  - [x] Comprehensive test suite (95.9% coverage)
   - [x] CLI tool for visualization
   - [x] Complete documentation
 - [x] **Item Generation System**
@@ -142,7 +142,7 @@ See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) 
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24.7 or later
 - Platform-specific dependencies for Ebiten:
   - **Linux:** `apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config`
   - **macOS:** Xcode command line tools
@@ -187,6 +187,12 @@ go build -o audiotest ./cmd/audiotest
 
 # Build the movement test tool
 go build -o movementtest ./cmd/movementtest
+
+# Build the inventory test tool (no graphics dependencies)
+go build -o inventorytest ./cmd/inventorytest
+
+# Build the tile test tool (no graphics dependencies)
+go build -o tiletest ./cmd/tiletest
 ```
 
 ### Testing Terrain Generation
@@ -501,12 +507,12 @@ venture/
 │   ├── procgen/         # Procedural generation systems
 │   │   ├── terrain/     # Map/dungeon generation
 │   │   ├── entity/      # Monster/NPC generation
-│   │   ├── items/       # Weapon/armor/item generation
+│   │   ├── item/        # Weapon/armor/item generation
 │   │   ├── magic/       # Spell/ability generation
 │   │   ├── skills/      # Skill tree generation
 │   │   └── genre/       # Genre definition system
 │   ├── rendering/       # Visual generation
-│   │   ├── primitives/  # Shape generation
+│   │   ├── shapes/      # Shape generation
 │   │   ├── sprites/     # Sprite generation
 │   │   ├── tiles/       # Tile rendering
 │   │   ├── particles/   # Particle effects
@@ -515,14 +521,8 @@ venture/
 │   ├── audio/           # Sound synthesis
 │   │   ├── synthesis/   # Waveform generation
 │   │   ├── music/       # Music composition
-│   │   ├── sfx/         # Sound effects
-│   │   └── mixer/       # Audio mixing
+│   │   └── sfx/         # Sound effects
 │   ├── network/         # Multiplayer systems
-│   │   ├── protocol/    # Network protocol
-│   │   ├── server/      # Game server
-│   │   ├── client/      # Client networking
-│   │   ├── sync/        # State synchronization
-│   │   └── lag/         # Lag compensation
 │   ├── combat/          # Combat mechanics
 │   └── world/           # World state management
 ├── docs/

@@ -28,8 +28,8 @@ Venture is a procedural action-RPG that generates all content at runtime. The ga
 
 ### Current Features
 The application includes complete procedural generation systems for:
-- **Terrain/Dungeons** (BSP, Cellular Automata) - 91.5% coverage
-- **Entities** (Monsters, Bosses, NPCs) - 87.8% coverage
+- **Terrain/Dungeons** (BSP, Cellular Automata) - 96.4% coverage
+- **Entities** (Monsters, Bosses, NPCs) - 95.9% coverage
 - **Items** (Weapons, Armor, Consumables) - 93.8% coverage
 - **Magic/Spells** (7 types, 8 elements) - 91.9% coverage
 - **Skill Trees** (Multiple archetypes) - 90.6% coverage
@@ -712,11 +712,11 @@ Package                              Coverage
 -------------------------------------------------
 pkg/procgen/genre                    100.0%
 pkg/procgen                          100.0%
-pkg/procgen/entity                    87.8%
+pkg/procgen/entity                    95.9%
 pkg/procgen/item                      93.8%
 pkg/procgen/magic                     91.9%
 pkg/procgen/skills                    90.6%
-pkg/procgen/terrain                   91.5%
+pkg/procgen/terrain                   96.4%
 -------------------------------------------------
 Average (all procgen packages)        92.2%
 ```
@@ -812,8 +812,8 @@ fmt.Println(g.EntityPrefix)   // "Ancient"
 
 | Component | Status | Coverage | Documentation |
 |-----------|--------|----------|---------------|
-| Terrain Generation | ✅ | 91.5% | Complete |
-| Entity Generation | ✅ | 87.8% | Complete |
+| Terrain Generation | ✅ | 96.4% | Complete |
+| Entity Generation | ✅ | 95.9% | Complete |
 | Item Generation | ✅ | 93.8% | Complete |
 | Magic Generation | ✅ | 91.9% | Complete |
 | Skill Generation | ✅ | 90.6% | Complete |

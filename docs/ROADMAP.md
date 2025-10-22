@@ -329,7 +329,7 @@ pkg/network/
 - **Prediction:** Client-side for responsiveness
 - **Interpolation:** Smooth entity movement
 
-### Optimization for High Latency (200-500ms)
+### Optimization for High Latency (200-5000ms)
 - Prioritized state updates (nearby entities first)
 - Adaptive update rates based on bandwidth
 - Aggressive state compression
@@ -344,7 +344,7 @@ pkg/network/
 - Network protocol specification
 
 ### Acceptance Criteria
-- Playable with 200-500ms latency
+- Playable with 200-5000ms latency
 - No obvious desyncs
 - Responsive player controls
 - Smooth remote entity movement

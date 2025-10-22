@@ -49,6 +49,8 @@ func main() {
 
 	// Connect help system to input system for ESC key handling
 	inputSystem.SetHelpSystem(helpSystem)
+	// Connect tutorial system to input system for ESC key skip handling
+	inputSystem.SetTutorialSystem(tutorialSystem)
 
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(movementSystem)

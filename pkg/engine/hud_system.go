@@ -11,8 +11,9 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/font/basicfont"
 )
 
 // HUDSystem renders the heads-up display (health bars, stats, etc).
@@ -20,9 +21,6 @@ type HUDSystem struct {
 	screen       *ebiten.Image
 	screenWidth  int
 	screenHeight int
-
-	// Font for text rendering (if available)
-	fontFace text.Face
 
 	// HUD visibility
 	Visible bool
@@ -178,28 +176,36 @@ func (h *HUDSystem) drawExperienceBar() {
 
 // getHealthColor returns a color based on health percentage.
 func (h *HUDSystem) getHealthColor(healthPct float32) color.Color {
-	if healthPct > 0.6 {
-		// Green to yellow
-		return color.RGBA{
-			R: uint8((1.0 - healthPct) * 255 * 2.5),
-			G: 200,
-			B: 0,
-			A: 255,
-		}
-	} else if healthPct > 0.3 {
-		// Yellow to orange
-		return color.RGBA{R: 255, G: 180, B: 0, A: 255}
+	if healthPct > 0.75 {
+		// 100%-75%: Pure green to slight yellow tint
+		// R increases from 0 to 100
+		redAmount := uint8((1.0 - healthPct) * 4.0 * 100) // 0 at 100%, 100 at 75%
+		return color.RGBA{R: redAmount, G: 200, B: 0, A: 255}
+	} else if healthPct > 0.5 {
+		// 75%-50%: Yellow-green to yellow
+		// R increases from 100 to 255
+		redAmount := uint8(100 + ((0.75 - healthPct) * 4.0 * 155)) // 100 at 75%, 255 at 50%
+		return color.RGBA{R: redAmount, G: 200, B: 0, A: 255}
+	} else if healthPct > 0.25 {
+		// 50%-25%: Yellow to orange
+		// G decreases from 200 to 180
+		greenAmount := uint8(200 - ((0.5 - healthPct) * 4.0 * 20)) // 200 at 50%, 180 at 25%
+		return color.RGBA{R: 255, G: greenAmount, B: 0, A: 255}
 	} else {
-		// Red
-		return color.RGBA{R: 220, G: 50, B: 50, A: 255}
+		// <25%: Orange to red
+		// G decreases from 180 to 50 (minimum)
+		greenAmount := uint8(180 * (healthPct * 4.0)) // 180 at 25%, 0 at 0%
+		if greenAmount < 50 {
+			greenAmount = 50 // Minimum green for visibility
+		}
+		return color.RGBA{R: 220, G: greenAmount, B: 50, A: 255}
 	}
 }
 
-// drawText draws text at the specified position.
-// This is a simple fallback implementation without proper font rendering.
+// drawText draws text at the specified position using basicfont.
+// This provides readable text for HUD elements (health values, stats, XP).
 func (h *HUDSystem) drawText(str string, x, y int, col color.Color) {
-	// Note: This uses ebiten's debug text which is very basic
-	// In a real implementation, you'd use ebitengine/text with proper fonts
-	// For now, we'll skip text rendering to keep it simple
-	// The bars and visual elements are the main HUD features
+	// Use basicfont.Face7x13 for consistent text rendering across all UI systems
+	// Note: y coordinate is the baseline, not top-left, so text appears below y
+	text.Draw(h.screen, str, basicfont.Face7x13, x, y+13, col)
 }

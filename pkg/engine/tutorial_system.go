@@ -337,7 +337,7 @@ func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 
 	// Skip hint
 	hintColor := color.RGBA{150, 150, 150, 255}
-	text.Draw(screen, "Press ESC to skip tutorial", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
+	text.Draw(screen, "Press ESC to skip current step", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
 
 	// Show notification if available
 	if ts.NotificationTTL > 0 {

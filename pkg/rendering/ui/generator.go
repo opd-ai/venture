@@ -240,8 +240,8 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 	h := bounds.Dy()
 
 	switch style {
-	case BorderSolid, BorderDouble, BorderOrnate, BorderGlow:
-		// All styles use solid for now
+	case BorderSolid:
+		// Simple solid rectangular border
 		for t := 0; t < thickness; t++ {
 			// Top and bottom
 			for x := 0; x < w; x++ {
@@ -252,6 +252,69 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 			for y := 0; y < h; y++ {
 				img.Set(t, y, col)
 				img.Set(w-t-1, y, col)
+			}
+		}
+
+	case BorderDouble:
+		// Two parallel lines with 2px gap
+		for x := 0; x < w; x++ {
+			img.Set(x, 0, col)
+			img.Set(x, 2, col)
+			img.Set(x, h-3, col)
+			img.Set(x, h-1, col)
+		}
+		for y := 0; y < h; y++ {
+			img.Set(0, y, col)
+			img.Set(2, y, col)
+			img.Set(w-3, y, col)
+			img.Set(w-1, y, col)
+		}
+
+	case BorderOrnate:
+		// Solid border plus corner decorations
+		g.drawBorder(img, col, BorderSolid, thickness)
+		// Add corner embellishments (4x4 squares at corners)
+		cornerSize := 4
+		for dy := 0; dy < cornerSize; dy++ {
+			for dx := 0; dx < cornerSize; dx++ {
+				if dx < w && dy < h {
+					img.Set(dx, dy, col) // Top-left
+				}
+				if w-cornerSize+dx < w && dy < h {
+					img.Set(w-cornerSize+dx, dy, col) // Top-right
+				}
+				if dx < w && h-cornerSize+dy < h {
+					img.Set(dx, h-cornerSize+dy, col) // Bottom-left
+				}
+				if w-cornerSize+dx < w && h-cornerSize+dy < h {
+					img.Set(w-cornerSize+dx, h-cornerSize+dy, col) // Bottom-right
+				}
+			}
+		}
+
+	case BorderGlow:
+		// Gradient fade from opaque to transparent over 5 pixels
+		r, gr, b, _ := col.RGBA()
+		for t := 0; t < 5; t++ {
+			alpha := uint8(255 - t*51) // Fade: 255, 204, 153, 102, 51
+			glowCol := color.RGBA{
+				R: uint8(r >> 8),
+				G: uint8(gr >> 8),
+				B: uint8(b >> 8),
+				A: alpha,
+			}
+			// Draw progressively fainter borders
+			for x := 0; x < w; x++ {
+				if t < h {
+					img.Set(x, t, glowCol)
+					img.Set(x, h-t-1, glowCol)
+				}
+			}
+			for y := 0; y < h; y++ {
+				if t < w {
+					img.Set(t, y, glowCol)
+					img.Set(w-t-1, y, glowCol)
+				}
 			}
 		}
 	}

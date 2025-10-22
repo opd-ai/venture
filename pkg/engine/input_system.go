@@ -49,7 +49,8 @@ type InputSystem struct {
 	KeyQuickLoad ebiten.Key // F9 key for quick load
 
 	// References to game systems for special key handling
-	helpSystem *HelpSystem
+	helpSystem     *HelpSystem
+	tutorialSystem *TutorialSystem
 
 	// Callbacks for save/load operations
 	onQuickSave func() error
@@ -75,8 +76,16 @@ func NewInputSystem() *InputSystem {
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	// Handle global keys first (help menu, save/load, etc.)
-	if inpututil.IsKeyJustPressed(s.KeyHelp) && s.helpSystem != nil {
-		s.helpSystem.Toggle()
+	// ESC key handling - context-aware: tutorial takes priority over help menu
+	if inpututil.IsKeyJustPressed(s.KeyHelp) {
+		// Check if tutorial is active and should handle the ESC key
+		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
+			// Skip current tutorial step
+			s.tutorialSystem.Skip()
+		} else if s.helpSystem != nil {
+			// Otherwise toggle help menu
+			s.helpSystem.Toggle()
+		}
 	}
 
 	// Handle quick save (F5)
@@ -90,6 +99,25 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
 		if err := s.onQuickLoad(); err != nil {
 			// Error is logged by the callback
+		}
+	}
+
+	// Handle help topic switching with number keys 1-6 (when help is visible)
+	if s.helpSystem != nil && s.helpSystem.Visible {
+		topicKeys := []ebiten.Key{
+			ebiten.Key1, ebiten.Key2, ebiten.Key3,
+			ebiten.Key4, ebiten.Key5, ebiten.Key6,
+		}
+		topicIDs := []string{
+			"controls", "combat", "inventory",
+			"progression", "world", "multiplayer",
+		}
+
+		for i, key := range topicKeys {
+			if inpututil.IsKeyJustPressed(key) {
+				s.helpSystem.ShowTopic(topicIDs[i])
+				break
+			}
 		}
 	}
 
@@ -166,6 +194,11 @@ func (s *InputSystem) SetKeyBindings(up, down, left, right, action, useItem ebit
 // SetHelpSystem connects the help system for ESC key toggling.
 func (s *InputSystem) SetHelpSystem(helpSystem *HelpSystem) {
 	s.helpSystem = helpSystem
+}
+
+// SetTutorialSystem connects the tutorial system for ESC key handling.
+func (s *InputSystem) SetTutorialSystem(tutorialSystem *TutorialSystem) {
+	s.tutorialSystem = tutorialSystem
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

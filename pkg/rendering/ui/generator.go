@@ -145,9 +145,10 @@ func (g *Generator) generateHealthBar(img *image.RGBA, pal *palette.Palette, rng
 	if filledWidth > 0 {
 		g.fillRect(img, 2, 2, filledWidth, config.Height-4, fillColor)
 
-		// Add shine effect
+		// Add shine effect (positioned proportionally at 20% from top)
+		shineY := 2 + maxInt(1, config.Height/5) // At least 1px from fill start
 		shineColor := g.lightenColor(fillColor, 0.3)
-		g.drawLine(img, 2, 3, filledWidth, 3, shineColor)
+		g.drawLine(img, 2, shineY, filledWidth, shineY, shineColor)
 	}
 
 	// Border
@@ -406,6 +407,13 @@ func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) 
 
 func min(a, b float64) float64 {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b

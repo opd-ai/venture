@@ -786,7 +786,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - All existing tests pass, confirming backward compatibility
 
 
-#### Issue #13: Health Bar "Shine Effect" Hard-Coded Y Position May Clip with Small Bar Heights
+#### Issue #13: Health Bar "Shine Effect" Hard-Coded Y Position May Clip with Small Bar Heights ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:149-150`)
 - **Description**: Health bar shine effect is drawn at `y=3` which works for default height (20-30px) but may be outside bounds or look wrong for smaller custom health bars (<10px height).
 - **Steps to Reproduce**:
@@ -807,6 +808,17 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate health bars with heights 5, 10, 20, 30, 50 pixels, verify shine looks good
 - **Performance**: Zero impact (simple integer division)
 - **Note**: Client code uses default 20px height (`hud_system.go:69`), so this only affects custom UI elements
+- **Resolution**:
+  - Changed hard-coded `y=3` to proportional calculation: `shineY := 2 + maxInt(1, config.Height/5)`
+  - Added `maxInt()` helper function for integer maximum
+  - Shine effect now positioned at ~20-30% from top, scaled with bar height:
+    * 5px bar: shine at y=3 (60% - visible)
+    * 10px bar: shine at y=4 (40%)
+    * 20px bar: shine at y=6 (30%)
+    * 30px bar: shine at y=8 (27%)
+    * 50px bar: shine at y=12 (24%)
+  - All existing tests pass, visual appearance improved for custom-sized health bars
+
 
 #### Issue #14: Panel Semi-Transparency Fixed at Alpha=200, Not Configurable
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:106-113`)

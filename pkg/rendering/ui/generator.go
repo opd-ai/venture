@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"math/rand"
+	"strings"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 )
@@ -196,11 +197,15 @@ func (g *Generator) generateIcon(img *image.RGBA, pal *palette.Palette, rng *ran
 	// Background circle or square based on genre
 	bgColor := pal.Primary
 
-	if config.GenreID == "scifi" || config.GenreID == "cyberpunk" {
+	// Determine if this should be a square icon based on genre
+	// Tech/futuristic genres use squares, organic/natural genres use circles
+	useSquare := g.isTechGenre(config.GenreID)
+
+	if useSquare {
 		// Square icon for tech genres
 		g.fillRect(img, 2, 2, config.Width-4, config.Height-4, bgColor)
 	} else {
-		// Circular icon for others
+		// Circular icon for organic/natural genres
 		centerX := config.Width / 2
 		centerY := config.Height / 2
 		radius := config.Width/2 - 2
@@ -416,6 +421,27 @@ func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) 
 		return 3 // Ornate genres use thicker borders
 	}
 	return 2 // Default thickness for most elements
+}
+
+// isTechGenre determines if a genre ID represents a technological/futuristic theme.
+// Tech genres use square icons, while organic/natural genres use circular icons.
+// This includes both pure genres and blended genres containing tech elements.
+func (g *Generator) isTechGenre(genreID string) bool {
+	// Direct tech genre IDs
+	if genreID == "scifi" || genreID == "cyberpunk" {
+		return true
+	}
+	
+	// Check for tech-related keywords in blended genre IDs
+	// This handles cases like "sci-fi-horror", "cyber-fantasy", etc.
+	techKeywords := []string{"scifi", "sci-fi", "cyber", "tech", "digital", "future"}
+	for _, keyword := range techKeywords {
+		if strings.Contains(genreID, keyword) {
+			return true
+		}
+	}
+	
+	return false
 }
 
 func min(a, b float64) float64 {

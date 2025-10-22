@@ -881,7 +881,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
     * Custom["alpha"] = 300: clamped to 255 (fully opaque)
   - All existing tests pass, new flexibility for future UI features
 
-#### Issue #15: Icon Shape Selection Based on Genre Is Non-Deterministic Across Genres
+#### Issue #15: Icon Shape Selection Based on Genre Is Non-Deterministic Across Genres ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:182-200`)
 - **Description**: Icon shape (circle vs. square) is determined by exact genre ID match ("scifi" or "cyberpunk" = square, else circle). Blended genres or custom genre IDs fall back to circle, causing inconsistent styling expectations.
 - **Steps to Reproduce**:
@@ -930,6 +931,22 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate icons for all genres and blends, verify shapes match genre aesthetic
 - **Performance**: Minimal impact (one theme list iteration)
 - **Design Consideration**: Could extend to other shape variations (hexagons for cyberpunk, organic shapes for horror)
+- **Resolution**:
+  - Implemented keyword-based genre detection with `isTechGenre()` helper function
+  - Tech keywords: "scifi", "sci-fi", "cyber", "tech", "digital", "future"
+  - Square icons for: direct tech genres ("scifi", "cyberpunk") and blended genres containing tech keywords
+  - Circle icons for: organic/natural genres ("fantasy", "horror", "postapoc")
+  - Verification of genre shape assignment:
+    * "scifi" → square (direct match)
+    * "cyberpunk" → square (direct match)
+    * "sci-fi-horror" → square (contains "sci-fi")
+    * "cyber-fantasy" → square (contains "cyber")
+    * "fantasy" → circle (no tech keywords)
+    * "horror" → circle (no tech keywords)
+    * "postapoc" → circle (survival-focused, not tech)
+  - All existing tests pass
+  - Added `strings` import for `strings.Contains()` utility
+
 
 ## Positive Observations
 

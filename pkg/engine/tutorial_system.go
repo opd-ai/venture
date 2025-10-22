@@ -36,9 +36,9 @@ type TutorialSystem struct {
 // NewTutorialSystem creates a new tutorial system with default steps
 func NewTutorialSystem() *TutorialSystem {
 	return &TutorialSystem{
-		Enabled:    true,
-		ShowUI:     true,
-		Steps:      createDefaultTutorialSteps(),
+		Enabled:        true,
+		ShowUI:         true,
+		Steps:          createDefaultTutorialSteps(),
 		CurrentStepIdx: 0,
 	}
 }

@@ -11,6 +11,7 @@ import (
 // EffectType represents different types of sound effects.
 type EffectType string
 
+// Sound effect type constants.
 const (
 	EffectImpact    EffectType = "impact"
 	EffectExplosion EffectType = "explosion"

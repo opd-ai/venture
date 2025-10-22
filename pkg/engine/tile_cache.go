@@ -33,13 +33,13 @@ type tileCacheEntry struct {
 
 // TileCache provides LRU caching for procedurally generated tiles.
 type TileCache struct {
-	mu       sync.RWMutex
-	maxSize  int
-	cache    map[string]*tileCacheEntry
-	lruList  *list.List
-	gen      *tiles.Generator
-	hits     uint64
-	misses   uint64
+	mu      sync.RWMutex
+	maxSize int
+	cache   map[string]*tileCacheEntry
+	lruList *list.List
+	gen     *tiles.Generator
+	hits    uint64
+	misses  uint64
 }
 
 // NewTileCache creates a new tile cache with the specified maximum size.
@@ -60,13 +60,13 @@ func (c *TileCache) Get(key TileCacheKey) (*image.RGBA, error) {
 	c.mu.RLock()
 	if entry, ok := c.cache[keyStr]; ok {
 		c.mu.RUnlock()
-		
+
 		// Move to front of LRU list (write lock)
 		c.mu.Lock()
 		c.lruList.MoveToFront(entry.elem)
 		c.hits++
 		c.mu.Unlock()
-		
+
 		return entry.image, nil
 	}
 	c.mu.RUnlock()
@@ -74,7 +74,7 @@ func (c *TileCache) Get(key TileCacheKey) (*image.RGBA, error) {
 	// Cache miss - generate tile
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.misses++
 
 	// Double-check after acquiring write lock (another goroutine might have generated it)

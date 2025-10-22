@@ -31,7 +31,7 @@ type Quadtree struct {
 	capacity int
 	entities []*Entity
 	divided  bool
-	
+
 	// Child quadrants (NW, NE, SW, SE)
 	northwest *Quadtree
 	northeast *Quadtree
@@ -59,23 +59,23 @@ func (q *Quadtree) Insert(entity *Entity) bool {
 		return false
 	}
 	pos := posComp.(*PositionComponent)
-	
+
 	// Check if point is in bounds
 	if !q.bounds.Contains(pos.X, pos.Y) {
 		return false
 	}
-	
+
 	// If we have capacity, add here
 	if len(q.entities) < q.capacity {
 		q.entities = append(q.entities, entity)
 		return true
 	}
-	
+
 	// Otherwise, subdivide and insert into child
 	if !q.divided {
 		q.subdivide()
 	}
-	
+
 	// Try to insert into children
 	if q.northwest.Insert(entity) {
 		return true
@@ -89,7 +89,7 @@ func (q *Quadtree) Insert(entity *Entity) bool {
 	if q.southeast.Insert(entity) {
 		return true
 	}
-	
+
 	// Shouldn't happen, but handle gracefully
 	return false
 }
@@ -100,12 +100,12 @@ func (q *Quadtree) subdivide() {
 	y := q.bounds.Y
 	w := q.bounds.Width / 2
 	h := q.bounds.Height / 2
-	
+
 	q.northwest = NewQuadtree(Bounds{x, y, w, h}, q.capacity)
 	q.northeast = NewQuadtree(Bounds{x + w, y, w, h}, q.capacity)
 	q.southwest = NewQuadtree(Bounds{x, y + h, w, h}, q.capacity)
 	q.southeast = NewQuadtree(Bounds{x + w, y + h, w, h}, q.capacity)
-	
+
 	q.divided = true
 }
 
@@ -122,7 +122,7 @@ func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 	if !q.bounds.Intersects(queryBounds) {
 		return
 	}
-	
+
 	// Check entities at this level
 	for _, entity := range q.entities {
 		posComp, ok := entity.GetComponent("position")
@@ -130,12 +130,12 @@ func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 			continue
 		}
 		pos := posComp.(*PositionComponent)
-		
+
 		if queryBounds.Contains(pos.X, pos.Y) {
 			*result = append(*result, entity)
 		}
 	}
-	
+
 	// Recursively check children
 	if q.divided {
 		q.northwest.queryRecursive(queryBounds, result)
@@ -154,29 +154,29 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 		Width:  radius * 2,
 		Height: radius * 2,
 	}
-	
+
 	candidates := q.Query(queryBounds)
-	
+
 	// Filter by actual circular distance
 	result := make([]*Entity, 0, len(candidates))
 	radiusSq := radius * radius
-	
+
 	for _, entity := range candidates {
 		posComp, ok := entity.GetComponent("position")
 		if !ok {
 			continue
 		}
 		pos := posComp.(*PositionComponent)
-		
+
 		dx := pos.X - x
 		dy := pos.Y - y
 		distSq := dx*dx + dy*dy
-		
+
 		if distSq <= radiusSq {
 			result = append(result, entity)
 		}
 	}
-	
+
 	return result
 }
 
@@ -213,11 +213,11 @@ func (q *Quadtree) Count() int {
 
 // SpatialPartitionSystem maintains a quadtree for efficient spatial queries.
 type SpatialPartitionSystem struct {
-	quadtree      *Quadtree
-	worldBounds   Bounds
-	rebuildEvery  int     // Rebuild every N frames
-	frameCount    int
-	
+	quadtree     *Quadtree
+	worldBounds  Bounds
+	rebuildEvery int // Rebuild every N frames
+	frameCount   int
+
 	// Statistics
 	lastRebuildTime float64
 	queryCount      int
@@ -231,7 +231,7 @@ func NewSpatialPartitionSystem(worldWidth, worldHeight float64) *SpatialPartitio
 		Width:  worldWidth,
 		Height: worldHeight,
 	}
-	
+
 	return &SpatialPartitionSystem{
 		quadtree:     NewQuadtree(bounds, 8), // 8 entities per node
 		worldBounds:  bounds,
@@ -243,7 +243,7 @@ func NewSpatialPartitionSystem(worldWidth, worldHeight float64) *SpatialPartitio
 // Update rebuilds the quadtree periodically.
 func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 	s.frameCount++
-	
+
 	// Rebuild periodically to account for entity movement
 	if s.frameCount >= s.rebuildEvery {
 		start := s.lastRebuildTime

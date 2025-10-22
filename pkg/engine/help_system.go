@@ -247,7 +247,7 @@ func (hs *HelpSystem) Toggle() {
 	}
 }
 
-// ShowQuickHint displays a context-sensitive hint
+// ShowQuickHintFor displays a context-sensitive hint
 func (hs *HelpSystem) ShowQuickHintFor(context string) {
 	if !hs.Enabled {
 		return

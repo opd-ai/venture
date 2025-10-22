@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides contextual help display for the game.
+// This file implements HelpSystem which renders help topics and controls
+// information using an in-game overlay.
 package engine
 
 import (

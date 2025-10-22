@@ -1,3 +1,6 @@
+// Package engine provides the AI system for autonomous entity behavior.
+// This file implements AISystem which manages state transitions and behaviors
+// for AI-controlled entities using a state machine pattern.
 package engine
 
 import (

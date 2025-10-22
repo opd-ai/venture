@@ -1,3 +1,6 @@
+// Package engine provides the character progression system.
+// This file implements ProgressionSystem which handles experience gain,
+// leveling, and skill tree progression for entities.
 package engine
 
 import (

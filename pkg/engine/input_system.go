@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides player input handling.
+// This file implements InputSystem which processes keyboard and mouse input
+// for player-controlled entities and game controls.
 package engine
 
 import (

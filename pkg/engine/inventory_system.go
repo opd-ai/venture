@@ -1,3 +1,6 @@
+// Package engine provides the inventory management system.
+// This file implements InventorySystem which handles item management,
+// equipment, and inventory operations for entities.
 package engine
 
 import (

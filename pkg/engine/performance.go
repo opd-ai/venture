@@ -1,3 +1,6 @@
+// Package engine provides performance monitoring and optimization.
+// This file implements PerformanceMonitor for tracking FPS, frame time,
+// entity counts, and system performance metrics.
 package engine
 
 import (

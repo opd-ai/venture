@@ -1,3 +1,6 @@
+// Package engine provides movement mechanics for entities.
+// This file implements movement logic with velocity, friction, and boundary
+// checking for entity position updates.
 package engine
 
 import "math"

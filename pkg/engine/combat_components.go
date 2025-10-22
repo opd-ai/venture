@@ -1,3 +1,6 @@
+// Package engine provides combat-related components.
+// This file defines components for health, damage, and combat statistics
+// used by the combat system.
 package engine
 
 import "github.com/opd-ai/venture/pkg/combat"

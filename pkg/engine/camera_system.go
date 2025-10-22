@@ -1,3 +1,6 @@
+// Package engine provides camera control for view management.
+// This file implements CameraSystem which handles camera positioning, zoom,
+// and viewport calculations for rendering.
 package engine
 
 import "math"

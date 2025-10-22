@@ -1,6 +1,9 @@
 //go:build !test
 // +build !test
 
+// Package engine provides the main game loop and Ebiten integration.
+// This file implements Game which ties together the ECS world, rendering
+// systems, and the Ebiten game engine.
 package engine
 
 import (

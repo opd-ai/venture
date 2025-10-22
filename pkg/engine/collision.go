@@ -1,3 +1,6 @@
+// Package engine provides collision detection and resolution.
+// This file implements CollisionSystem with spatial partitioning for efficient
+// broad-phase collision detection using a grid-based approach.
 package engine
 
 import "math"

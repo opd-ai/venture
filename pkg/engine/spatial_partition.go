@@ -1,3 +1,6 @@
+// Package engine provides spatial partitioning for efficient entity queries.
+// This file implements SpatialPartition using a grid-based structure for
+// fast spatial lookups and collision detection.
 package engine
 
 import (

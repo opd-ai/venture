@@ -1,3 +1,6 @@
+// Package engine provides the core ECS (Entity-Component-System) interfaces.
+// This file contains the fundamental interfaces for the ECS architecture:
+// Component and System, which define the contracts for game data and behavior.
 package engine
 
 // Component represents a data container attached to an Entity.

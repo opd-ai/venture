@@ -1,3 +1,6 @@
+// Package engine provides ECS (Entity-Component-System) implementation.
+// This file contains the core Entity and World types that manage game entities
+// and their lifecycle within the ECS architecture.
 package engine
 
 // Entity represents a game object composed of components.

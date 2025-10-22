@@ -44,6 +44,7 @@ itemtest
 magictest
 skilltest
 genretest
+genreblend
 rendertest
 tiletest
 audiotest

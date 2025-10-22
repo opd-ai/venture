@@ -162,11 +162,117 @@ genre, _ := registry.Get("steampunk")
 fmt.Println(genre.Name) // "Steampunk"
 ```
 
-## CLI Tool
+## Genre Blending
 
-The genre system includes a command-line tool for exploring genres:
+Create hybrid genres by blending two base genres together. The blender creates a new genre with:
+- Blended color palettes (interpolated from both base genres)
+- Combined themes (selected from both genres based on weight)
+- Mixed naming conventions (probabilistic selection)
+- Deterministic generation (same seed produces same result)
 
-### Build and Run
+### Basic Blending
+
+```go
+import "github.com/opd-ai/venture/pkg/procgen/genre"
+
+// Create a blender with default registry
+registry := genre.DefaultRegistry()
+blender := genre.NewGenreBlender(registry)
+
+// Blend sci-fi and horror equally (weight 0.5)
+scifiHorror, err := blender.Blend("scifi", "horror", 0.5, 12345)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Blended Genre: %s\n", scifiHorror.Name)
+// Output: "Sci-Fi/Horror"
+
+fmt.Printf("Themes: %v\n", scifiHorror.Themes)
+// Output: Mix of sci-fi and horror themes
+
+fmt.Printf("Primary Color: %s\n", scifiHorror.PrimaryColor)
+// Output: Blended color between sci-fi and horror
+```
+
+### Weight Parameter
+
+The `weight` parameter controls the blend ratio (0.0 to 1.0):
+- `0.0` = 100% primary genre
+- `0.5` = Equal blend
+- `1.0` = 100% secondary genre
+
+```go
+// Dark fantasy: 70% fantasy, 30% horror
+darkFantasy, _ := blender.Blend("fantasy", "horror", 0.3, 12345)
+// Primarily fantasy with horror elements
+
+// Horror-heavy blend: 30% fantasy, 70% horror
+horrorHeavy, _ := blender.Blend("fantasy", "horror", 0.7, 12345)
+// Primarily horror with fantasy elements
+```
+
+### Preset Blends
+
+Use common preset combinations:
+
+```go
+// Create a sci-fi horror blend
+scifiHorror, err := blender.CreatePresetBlend("sci-fi-horror", 12345)
+
+// Available presets:
+// - "sci-fi-horror": Space horror (Alien, Dead Space style)
+// - "dark-fantasy": Horror-tinged fantasy (Dark Souls, Bloodborne style)
+// - "cyber-horror": Cyberpunk with horror elements
+// - "post-apoc-scifi": Post-apocalyptic with sci-fi technology
+// - "wasteland-fantasy": Post-apocalyptic with fantasy elements
+```
+
+### Blended Genre Properties
+
+```go
+// Check if a genre is blended
+if scifiHorror.IsBlended() {
+    primary, secondary := scifiHorror.GetBaseGenres()
+    fmt.Printf("Base genres: %s + %s\n", primary.Name, secondary.Name)
+}
+
+// Access blended properties
+fmt.Printf("ID: %s\n", scifiHorror.ID)
+fmt.Printf("Name: %s\n", scifiHorror.Name)
+fmt.Printf("Description: %s\n", scifiHorror.Description)
+fmt.Printf("Themes: %v\n", scifiHorror.Themes)
+
+// Use blended colors
+colors := scifiHorror.ColorPalette()
+fmt.Printf("Colors: %v\n", colors)
+
+// Use blended prefixes for generation
+entityName := fmt.Sprintf("%s Xenomorph", scifiHorror.EntityPrefix)
+itemName := fmt.Sprintf("%s Weapon", scifiHorror.ItemPrefix)
+```
+
+### Deterministic Generation
+
+Blending is deterministic - same parameters produce same results:
+
+```go
+blend1, _ := blender.Blend("fantasy", "scifi", 0.5, 12345)
+blend2, _ := blender.Blend("fantasy", "scifi", 0.5, 12345)
+
+// These will be identical:
+// - blend1.ID == blend2.ID
+// - blend1.Themes == blend2.Themes
+// - blend1.PrimaryColor == blend2.PrimaryColor
+```
+
+## CLI Tools
+
+The genre system includes command-line tools for exploring and blending genres.
+
+### Genre Test Tool
+
+Explore available genres:
 
 ```bash
 # Build the tool
@@ -183,6 +289,30 @@ go build -o genretest ./cmd/genretest
 
 # Validate a genre ID
 ./genretest -validate horror
+```
+
+### Genre Blender Tool
+
+Create and explore blended genres:
+
+```bash
+# Build the tool
+go build -o genreblend ./cmd/genreblend
+
+# List all preset blends
+./genreblend -list-presets
+
+# Create a preset blend
+./genreblend -preset=sci-fi-horror -seed 12345
+
+# Create a custom blend
+./genreblend -primary=fantasy -secondary=horror -weight=0.3
+
+# Show detailed blend information
+./genreblend -preset=dark-fantasy -verbose
+
+# List all available base genres
+./genreblend -list-genres
 ```
 
 ### Example Output

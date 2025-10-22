@@ -38,9 +38,9 @@ func main() {
 	movementSystem := &engine.MovementSystem{}
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
-	aiSystem := &engine.AISystem{}
-	progressionSystem := &engine.ProgressionSystem{}
-	inventorySystem := &engine.InventorySystem{}
+	aiSystem := engine.NewAISystem(world)
+	progressionSystem := engine.NewProgressionSystem(world)
+	inventorySystem := engine.NewInventorySystem(world)
 
 	world.AddSystem(movementSystem)
 	world.AddSystem(collisionSystem)
@@ -58,15 +58,14 @@ func main() {
 		log.Println("Generating world terrain...")
 	}
 
-	terrainGen := terrain.NewTerrainGenerator()
+	terrainGen := terrain.NewBSPGenerator() // Use BSP algorithm
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
 		GenreID:    *genreID,
 		Custom: map[string]interface{}{
-			"width":     100,
-			"height":    100,
-			"algorithm": "bsp",
+			"width":  100,
+			"height": 100,
 		},
 	}
 
@@ -87,11 +86,10 @@ func main() {
 	}
 
 	// Create server with configuration
-	serverConfig := network.ServerConfig{
-		Port:       *port,
-		MaxPlayers: *maxPlayers,
-		TickRate:   *tickRate,
-	}
+	serverConfig := network.DefaultServerConfig()
+	serverConfig.Address = ":" + *port
+	serverConfig.MaxPlayers = *maxPlayers
+	serverConfig.UpdateRate = *tickRate
 
 	// Create snapshot manager for state synchronization
 	snapshotManager := network.NewSnapshotManager(100)
@@ -102,6 +100,8 @@ func main() {
 
 	if *verbose {
 		log.Println("Network systems initialized")
+		log.Printf("Server config: Address=%s, MaxPlayers=%d, UpdateRate=%d Hz",
+			serverConfig.Address, serverConfig.MaxPlayers, serverConfig.UpdateRate)
 	}
 
 	log.Println("Server initialized successfully")
@@ -135,9 +135,8 @@ func main() {
 
 			if *verbose && int(now.Unix())%10 == 0 {
 				// Log every 10 seconds
-				stats := snapshotManager.GetStats()
-				log.Printf("Server tick: %d snapshots, %d entities",
-					stats.SnapshotCount, len(world.GetEntities()))
+				log.Printf("Server tick: %d entities",
+					len(world.GetEntities()))
 			}
 
 			// TODO: Broadcast state to connected clients (when network server is implemented)
@@ -162,14 +161,14 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 			velX, velY := 0.0, 0.0
 			if velComp, ok := entity.GetComponent("velocity"); ok {
 				vel := velComp.(*engine.VelocityComponent)
-				velX = vel.X
-				velY = vel.Y
+				velX = vel.VX
+				velY = vel.VY
 			}
 
 			snapshot.Entities[entity.ID] = network.EntitySnapshot{
 				EntityID: entity.ID,
 				Position: network.Position{X: pos.X, Y: pos.Y},
-				Velocity: network.Velocity{X: velX, Y: velY},
+				Velocity: network.Velocity{VX: velX, VY: velY},
 			}
 		}
 	}

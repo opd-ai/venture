@@ -18,8 +18,8 @@ func NewAISystem(world *World) *AISystem {
 }
 
 // Update processes AI behavior for all entities with AI components.
-func (ai *AISystem) Update(deltaTime float64) {
-	for _, entity := range ai.world.entities {
+func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
+	for _, entity := range entities {
 		// Check if entity has AI component
 		aiComp, ok := entity.GetComponent("ai")
 		if !ok {

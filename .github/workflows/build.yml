@@ -54,10 +54,30 @@ jobs:
           OUTPUT_NAME="build/venture-server-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}"
           go build -tags test -ldflags="-s -w" -o "${OUTPUT_NAME}" ./cmd/server
 
-      - name: Upload artifacts
+      - name: Build client
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p build
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+          OUTPUT_NAME="build/venture-client-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}"
+          go build -ldflags="-s -w" -o "${OUTPUT_NAME}" ./cmd/client
+
+      - name: Upload server artifacts
         uses: actions/upload-artifact@v4
         with:
           name: venture-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: build/venture-server-*
+          retention-days: 7
+
+      - name: Upload client artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: venture-client-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/venture-client-*
           retention-days: 7
 

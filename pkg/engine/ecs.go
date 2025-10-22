@@ -58,7 +58,7 @@ type World struct {
 	nextEntityID      uint64
 	entitiesToAdd     []*Entity
 	entityIDsToRemove []uint64
-	
+
 	// Cached entity list to reduce allocations
 	cachedEntityList []*Entity
 	entityListDirty  bool
@@ -141,16 +141,16 @@ func (w *World) Update(deltaTime float64) {
 func (w *World) rebuildEntityCache() {
 	// Reuse existing slice capacity
 	w.cachedEntityList = w.cachedEntityList[:0]
-	
+
 	// Ensure capacity
 	if cap(w.cachedEntityList) < len(w.entities) {
 		w.cachedEntityList = make([]*Entity, 0, len(w.entities))
 	}
-	
+
 	for _, entity := range w.entities {
 		w.cachedEntityList = append(w.cachedEntityList, entity)
 	}
-	
+
 	w.entityListDirty = false
 }
 

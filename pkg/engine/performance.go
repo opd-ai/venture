@@ -9,32 +9,32 @@ import (
 // PerformanceMetrics tracks performance statistics for the game.
 type PerformanceMetrics struct {
 	mu sync.RWMutex
-	
+
 	// Frame timing
-	FPS               float64
-	FrameTime         time.Duration // Current frame time
-	AverageFrameTime  time.Duration
-	MinFrameTime      time.Duration
-	MaxFrameTime      time.Duration
-	
+	FPS              float64
+	FrameTime        time.Duration // Current frame time
+	AverageFrameTime time.Duration
+	MinFrameTime     time.Duration
+	MaxFrameTime     time.Duration
+
 	// Update timing
 	UpdateTime        time.Duration
 	AverageUpdateTime time.Duration
-	
+
 	// System timing (per system)
-	SystemTimes       map[string]time.Duration
-	
+	SystemTimes map[string]time.Duration
+
 	// Entity stats
 	EntityCount       int
 	ActiveEntityCount int
-	
+
 	// Memory stats (sampled)
-	MemoryAllocated   uint64
-	MemoryInUse       uint64
-	
+	MemoryAllocated uint64
+	MemoryInUse     uint64
+
 	// Frame counter
-	FrameCount        uint64
-	
+	FrameCount uint64
+
 	// Timing history for averaging
 	frameTimeHistory  []time.Duration
 	updateTimeHistory []time.Duration
@@ -47,7 +47,7 @@ func NewPerformanceMetrics() *PerformanceMetrics {
 		SystemTimes:       make(map[string]time.Duration),
 		frameTimeHistory:  make([]time.Duration, 0, 60),
 		updateTimeHistory: make([]time.Duration, 0, 60),
-		historySize:       60, // Track last 60 frames
+		historySize:       60,        // Track last 60 frames
 		MinFrameTime:      time.Hour, // Start with max value
 	}
 }
@@ -56,10 +56,10 @@ func NewPerformanceMetrics() *PerformanceMetrics {
 func (pm *PerformanceMetrics) RecordFrame(frameTime time.Duration) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.FrameCount++
 	pm.FrameTime = frameTime
-	
+
 	// Update min/max
 	if frameTime < pm.MinFrameTime {
 		pm.MinFrameTime = frameTime
@@ -67,13 +67,13 @@ func (pm *PerformanceMetrics) RecordFrame(frameTime time.Duration) {
 	if frameTime > pm.MaxFrameTime {
 		pm.MaxFrameTime = frameTime
 	}
-	
+
 	// Add to history
 	pm.frameTimeHistory = append(pm.frameTimeHistory, frameTime)
 	if len(pm.frameTimeHistory) > pm.historySize {
 		pm.frameTimeHistory = pm.frameTimeHistory[1:]
 	}
-	
+
 	// Calculate average
 	var sum time.Duration
 	for _, t := range pm.frameTimeHistory {
@@ -82,7 +82,7 @@ func (pm *PerformanceMetrics) RecordFrame(frameTime time.Duration) {
 	if len(pm.frameTimeHistory) > 0 {
 		pm.AverageFrameTime = sum / time.Duration(len(pm.frameTimeHistory))
 	}
-	
+
 	// Calculate FPS
 	if pm.AverageFrameTime > 0 {
 		pm.FPS = float64(time.Second) / float64(pm.AverageFrameTime)
@@ -93,15 +93,15 @@ func (pm *PerformanceMetrics) RecordFrame(frameTime time.Duration) {
 func (pm *PerformanceMetrics) RecordUpdate(updateTime time.Duration) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.UpdateTime = updateTime
-	
+
 	// Add to history
 	pm.updateTimeHistory = append(pm.updateTimeHistory, updateTime)
 	if len(pm.updateTimeHistory) > pm.historySize {
 		pm.updateTimeHistory = pm.updateTimeHistory[1:]
 	}
-	
+
 	// Calculate average
 	var sum time.Duration
 	for _, t := range pm.updateTimeHistory {
@@ -116,7 +116,7 @@ func (pm *PerformanceMetrics) RecordUpdate(updateTime time.Duration) {
 func (pm *PerformanceMetrics) RecordSystemTime(systemName string, duration time.Duration) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.SystemTimes[systemName] = duration
 }
 
@@ -124,7 +124,7 @@ func (pm *PerformanceMetrics) RecordSystemTime(systemName string, duration time.
 func (pm *PerformanceMetrics) UpdateEntityCount(total, active int) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.EntityCount = total
 	pm.ActiveEntityCount = active
 }
@@ -133,7 +133,7 @@ func (pm *PerformanceMetrics) UpdateEntityCount(total, active int) {
 func (pm *PerformanceMetrics) UpdateMemoryStats(allocated, inUse uint64) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.MemoryAllocated = allocated
 	pm.MemoryInUse = inUse
 }
@@ -142,7 +142,7 @@ func (pm *PerformanceMetrics) UpdateMemoryStats(allocated, inUse uint64) {
 func (pm *PerformanceMetrics) GetSnapshot() PerformanceMetrics {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	// Create a copy
 	snapshot := PerformanceMetrics{
 		FPS:               pm.FPS,
@@ -159,12 +159,12 @@ func (pm *PerformanceMetrics) GetSnapshot() PerformanceMetrics {
 		FrameCount:        pm.FrameCount,
 		SystemTimes:       make(map[string]time.Duration),
 	}
-	
+
 	// Copy system times
 	for k, v := range pm.SystemTimes {
 		snapshot.SystemTimes[k] = v
 	}
-	
+
 	return snapshot
 }
 
@@ -172,7 +172,7 @@ func (pm *PerformanceMetrics) GetSnapshot() PerformanceMetrics {
 func (pm *PerformanceMetrics) Reset() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	pm.FPS = 0
 	pm.FrameTime = 0
 	pm.AverageFrameTime = 0
@@ -194,7 +194,7 @@ func (pm *PerformanceMetrics) Reset() {
 func (pm *PerformanceMetrics) String() string {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	return fmt.Sprintf(
 		"FPS: %.1f | Frame: %.2fms (avg: %.2fms, min: %.2fms, max: %.2fms) | Update: %.2fms | Entities: %d/%d",
 		pm.FPS,
@@ -212,20 +212,20 @@ func (pm *PerformanceMetrics) String() string {
 func (pm *PerformanceMetrics) DetailedString() string {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	result := pm.String() + "\n"
 	result += "System Times:\n"
-	
+
 	for name, duration := range pm.SystemTimes {
 		result += fmt.Sprintf("  %s: %.2fms\n", name, float64(duration.Microseconds())/1000.0)
 	}
-	
+
 	if pm.MemoryAllocated > 0 {
 		result += fmt.Sprintf("Memory: %.2f MB allocated, %.2f MB in use\n",
 			float64(pm.MemoryAllocated)/(1024*1024),
 			float64(pm.MemoryInUse)/(1024*1024))
 	}
-	
+
 	return result
 }
 
@@ -233,7 +233,7 @@ func (pm *PerformanceMetrics) DetailedString() string {
 func (pm *PerformanceMetrics) IsPerformanceTarget() bool {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	return pm.FPS >= 60.0
 }
 
@@ -241,19 +241,19 @@ func (pm *PerformanceMetrics) IsPerformanceTarget() bool {
 func (pm *PerformanceMetrics) GetFrameTimePercent() map[string]float64 {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	result := make(map[string]float64)
 	if pm.FrameTime == 0 {
 		return result
 	}
-	
+
 	totalFrameNanos := float64(pm.FrameTime.Nanoseconds())
-	
+
 	for name, duration := range pm.SystemTimes {
 		percent := (float64(duration.Nanoseconds()) / totalFrameNanos) * 100.0
 		result[name] = percent
 	}
-	
+
 	return result
 }
 
@@ -294,16 +294,16 @@ func (pm *PerformanceMonitor) Update(deltaTime float64) {
 		pm.world.Update(deltaTime)
 		return
 	}
-	
+
 	startFrame := time.Now()
-	
+
 	// Track update time
 	startUpdate := time.Now()
 	pm.world.Update(deltaTime)
 	updateDuration := time.Since(startUpdate)
-	
+
 	pm.metrics.RecordUpdate(updateDuration)
-	
+
 	// Update entity counts
 	entities := pm.world.GetEntities()
 	activeCount := 0
@@ -314,7 +314,7 @@ func (pm *PerformanceMonitor) Update(deltaTime float64) {
 		}
 	}
 	pm.metrics.UpdateEntityCount(len(entities), activeCount)
-	
+
 	// Record total frame time
 	frameDuration := time.Since(startFrame)
 	pm.metrics.RecordFrame(frameDuration)

@@ -43,17 +43,17 @@ func main() {
 
 	for i := 0; i < *entityCount; i++ {
 		entity := world.CreateEntity()
-		
+
 		// Position scattered across world
 		x := float64(i%100) * 100.0
 		y := float64(i/100) * 100.0
-		
+
 		entity.AddComponent(&engine.PositionComponent{X: x, Y: y})
 		entity.AddComponent(&engine.VelocityComponent{
 			VX: float64((i%3)-1) * 50.0, // -50, 0, or 50
 			VY: float64((i%5)-2) * 50.0,
 		})
-		
+
 		// Add collider to only 10% of entities (reduces collision overhead)
 		if i%10 == 0 {
 			entity.AddComponent(&engine.ColliderComponent{
@@ -88,19 +88,19 @@ func main() {
 
 	for time.Now().Before(endTime) {
 		<-ticker.C
-		
+
 		deltaTime := frameDuration.Seconds()
 		monitor.Update(deltaTime)
-		
+
 		frameCount++
 
 		// Report every second
 		if time.Since(lastReport) >= reportInterval {
 			metrics := monitor.GetMetrics()
-			
+
 			if *verbose {
 				fmt.Println(metrics.DetailedString())
-				
+
 				// Show spatial partition stats
 				stats := spatialSystem.GetStatistics()
 				fmt.Printf("Spatial Partition: %d entities, %d queries\n",
@@ -108,7 +108,7 @@ func main() {
 			} else {
 				fmt.Println(metrics.String())
 			}
-			
+
 			lastReport = time.Now()
 		}
 	}
@@ -116,7 +116,7 @@ func main() {
 	// Final report
 	log.Println("\n=== Performance Test Complete ===")
 	metrics := monitor.GetMetrics()
-	
+
 	fmt.Printf("\nFinal Statistics:\n")
 	fmt.Printf("  Total Frames: %d\n", frameCount)
 	fmt.Printf("  Average FPS: %.2f\n", metrics.FPS)

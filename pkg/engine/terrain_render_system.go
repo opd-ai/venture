@@ -13,13 +13,13 @@ import (
 
 // TerrainRenderSystem handles rendering of procedural terrain tiles.
 type TerrainRenderSystem struct {
-	tileCache   *TileCache
-	terrain     *terrain.Terrain
-	genreID     string
-	seed        int64
-	tileWidth   int
-	tileHeight  int
-	tileImages  map[string]*ebiten.Image // Pre-converted ebiten images
+	tileCache  *TileCache
+	terrain    *terrain.Terrain
+	genreID    string
+	seed       int64
+	tileWidth  int
+	tileHeight int
+	tileImages map[string]*ebiten.Image // Pre-converted ebiten images
 }
 
 // NewTerrainRenderSystem creates a new terrain rendering system.

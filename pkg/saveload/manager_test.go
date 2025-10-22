@@ -188,10 +188,10 @@ func TestSaveManager_ListSaves(t *testing.T) {
 		save := NewGameSave()
 		save.PlayerState.Level = i * 10
 		save.WorldState.GenreID = "fantasy"
-		
+
 		// Sleep briefly to ensure different timestamps
 		time.Sleep(10 * time.Millisecond)
-		
+
 		saveName := "save" + string(rune('0'+i))
 		err = manager.SaveGame(saveName, save)
 		if err != nil {
@@ -389,7 +389,7 @@ func TestSaveManager_ComplexSave(t *testing.T) {
 
 	// Create a complex save with all fields populated
 	save := NewGameSave()
-	
+
 	// Player state
 	save.PlayerState.EntityID = 99999
 	save.PlayerState.X = 123.45

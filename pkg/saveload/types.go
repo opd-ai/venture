@@ -39,12 +39,12 @@ type PlayerState struct {
 	MaxHealth     float64 `json:"max_health"`
 
 	// Stats
-	Level       int     `json:"level"`
-	Experience  int     `json:"experience"`
-	Attack      float64 `json:"attack"`
-	Defense     float64 `json:"defense"`
-	MagicPower  float64 `json:"magic_power"`
-	Speed       float64 `json:"speed"`
+	Level      int     `json:"level"`
+	Experience int     `json:"experience"`
+	Attack     float64 `json:"attack"`
+	Defense    float64 `json:"defense"`
+	MagicPower float64 `json:"magic_power"`
+	Speed      float64 `json:"speed"`
 
 	// Inventory (item IDs)
 	InventoryItems []uint64 `json:"inventory_items"`

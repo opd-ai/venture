@@ -171,7 +171,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 
 ### High Priority Issues
 
-#### Issue #4: Health Bar Color Gradient Mathematical Error
+#### Issue #4: Health Bar Color Gradient Mathematical Error ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: HUD System (`pkg/engine/hud_system.go:179-194`)
 - **Description**: Health bar color calculation uses incorrect formula for green-to-yellow transition. At 80% health (0.8), formula `(1.0 - 0.8) * 255 * 2.5 = 127.5` produces yellow-orange instead of green, making health appear lower than actual.
 - **Steps to Reproduce**:
@@ -229,6 +230,14 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Visual test in game at various health levels
 - **Visual Reference**: Use color picker tools to verify gradient appears natural
 - **Performance**: Negligible impact (single calculation per frame)
+- **Resolution**:
+  - Replaced single-range gradient with 4-tier gradient system
+  - Tier 1 (100%-75%): Pure green to slight yellow tint (R: 0→100)
+  - Tier 2 (75%-50%): Yellow-green to yellow (R: 100→255)
+  - Tier 3 (50%-25%): Yellow to orange (G: 200→180)
+  - Tier 4 (<25%): Orange to red (G: 180→50, clamped minimum 50)
+  - Verified gradient calculations with manual testing at 100%, 80%, 75%, 60%, 50%, 40%, 25%, 10%, 0% health
+  - All transitions are now smooth and natural, health appears accurate at all levels
 
 #### Issue #5: Button State Color Contrast May Be Insufficient with Some Seeds
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:69-70, 77-88`)

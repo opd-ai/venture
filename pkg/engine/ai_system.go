@@ -272,7 +272,7 @@ func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 }
 
 // findNearestEnemy finds the closest enemy within the detection range.
-func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, range_ float64) *Entity {
+func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, detectionRange float64) *Entity {
 	teamComp, ok := entity.GetComponent("team")
 	if !ok {
 		return nil // No team component, can't determine enemies
@@ -280,7 +280,7 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, ran
 	team := teamComp.(*TeamComponent)
 
 	var nearest *Entity
-	nearestDist := range_
+	nearestDist := detectionRange
 
 	for _, other := range ai.world.entities {
 		if other == entity {
@@ -379,11 +379,11 @@ func (ai *AISystem) getDistance(x1, y1, x2, y2 float64) float64 {
 }
 
 // SetDetectionRange sets the detection range for all AI entities.
-func (ai *AISystem) SetDetectionRange(entity *Entity, range_ float64) {
+func (ai *AISystem) SetDetectionRange(entity *Entity, detectionRange float64) {
 	aiComp, ok := entity.GetComponent("ai")
 	if ok {
 		aiC := aiComp.(*AIComponent)
-		aiC.DetectionRange = range_
+		aiC.DetectionRange = detectionRange
 	}
 }
 

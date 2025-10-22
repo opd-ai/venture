@@ -1,8 +1,8 @@
 # Resolved Issues
 
 ## Summary
-- Total issues fixed: 15
-- Files modified: 17
+- Total issues fixed: 17
+- Files modified: 18
 
 ## Detailed Changes
 
@@ -194,6 +194,15 @@
 **Line(s)**: Multiple
 **Change**: Applied go fmt to fix indentation and alignment
 **Rationale**: go fmt enforces consistent formatting.
+
+---
+
+### pkg/engine/ai_system.go
+**Issue**: Underscore in parameter name (range_)
+**Category**: golint violation - naming convention
+**Line(s)**: 275, 382
+**Change**: Renamed parameter `range_` to `detectionRange` in methods `findNearestEnemy()` and `SetDetectionRange()`
+**Rationale**: Go naming conventions discourage underscores in names. While `range_` was used to avoid the reserved keyword `range`, the more idiomatic solution is to use a descriptive name like `detectionRange` that both avoids the keyword and improves code clarity. Per Go Code Review Comments, prefer camelCase names without underscores.
 
 ---
 

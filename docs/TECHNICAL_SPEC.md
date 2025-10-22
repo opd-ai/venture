@@ -88,7 +88,7 @@ type World struct {
 | SpriteComponent | Visual | Sprite reference, animation state |
 | HealthComponent | HP tracking | Current HP, Max HP |
 | StatsComponent | Character stats | Attack, Defense, Speed, etc. |
-| InventoryComponent | Item storage | Item list, capacity |
+| InventoryComponent | Item storage | Items []*item.Item, MaxItems, MaxWeight, Gold |
 | AIComponent | NPC behavior | Behavior tree, state |
 | CollisionComponent | Physics | Bounds, collision mask |
 | NetworkComponent | Sync data | Ownership, sync state |

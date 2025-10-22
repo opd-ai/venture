@@ -10544,14 +10544,14 @@ Based on software development best practices:
    - AISystem (monster behaviors)
    - ProgressionSystem (XP, leveling)
    - InventorySystem (items, equipment)
-3. Generate initial world terrain using `terrain.NewTerrainGenerator()`
+3. Generate initial world terrain using specific generators (`terrain.NewBSPGenerator()` or `terrain.NewCellularGenerator()`)
 4. Create player entity with components:
    - PositionComponent (location in world)
    - VelocityComponent (movement)
    - HealthComponent (HP tracking)
    - TeamComponent (player team ID)
-   - StatsComponent (level, attack, defense, speed)
-   - ProgressionComponent (XP, skill points)
+   - StatsComponent (attack, defense, magic stats, resistances)
+   - ExperienceComponent (XP, level, skill points)
    - InventoryComponent (items, gold)
    - AttackComponent (damage, range, cooldown)
    - CollisionComponent (physics)
@@ -10641,7 +10641,8 @@ world.AddSystem(inventorySystem)
 #### 2. Procedural World Generation
 
 ```go
-terrainGen := terrain.NewTerrainGenerator()
+// Use specific generator for desired algorithm
+terrainGen := terrain.NewBSPGenerator() // or NewCellularGenerator()
 params := procgen.GenerationParams{
     Difficulty: 0.5,
     Depth:      1,
@@ -10649,7 +10650,6 @@ params := procgen.GenerationParams{
     Custom: map[string]interface{}{
         "width":     80,
         "height":    50,
-        "algorithm": "bsp",
     },
 }
 terrainResult, err := terrainGen.Generate(*seed, params)
@@ -10662,7 +10662,7 @@ terrainResult, err := terrainGen.Generate(*seed, params)
 ```go
 player := game.World.CreateEntity()
 player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
-player.AddComponent(&engine.VelocityComponent{X: 0, Y: 0})
+player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 player.AddComponent(&engine.TeamComponent{TeamID: 1})
 // ... more components
@@ -10828,7 +10828,7 @@ func main() {
 		log.Println("Generating procedural terrain...")
 	}
 
-	terrainGen := terrain.NewTerrainGenerator()
+	terrainGen := terrain.NewBSPGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -10836,7 +10836,6 @@ func main() {
 		Custom: map[string]interface{}{
 			"width":     80,
 			"height":    50,
-			"algorithm": "bsp",
 		},
 	}
 
@@ -10860,35 +10859,23 @@ func main() {
 
 	// Add player components
 	player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
-	player.AddComponent(&engine.VelocityComponent{X: 0, Y: 0})
+	player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team
 
 	// Add player stats
 	playerStats := engine.NewStatsComponent()
-	playerStats.Level = 1
-	playerStats.Health = 100
 	playerStats.Attack = 10
 	playerStats.Defense = 5
-	playerStats.Speed = 5.0
 	player.AddComponent(playerStats)
 
-	// Add player progression
-	playerProgress := &engine.ProgressionComponent{
-		Level:              1,
-		ExperiencePoints:   0,
-		ExperienceToLevel:  100,
-		SkillPoints:        0,
-		UnlockedSkills:     make([]string, 0),
-	}
+	// Add player progression (experience tracking)
+	playerProgress := engine.NewExperienceComponent()
 	player.AddComponent(playerProgress)
 
 	// Add player inventory
-	playerInventory := &engine.InventoryComponent{
-		Items:       make([]engine.InventoryItem, 0),
-		Capacity:    20,
-		Gold:        100,
-	}
+	playerInventory := engine.NewInventoryComponent(20, 100.0)
+	playerInventory.Gold = 100
 	player.AddComponent(playerInventory)
 
 	// Add player attack capability
@@ -10988,7 +10975,7 @@ func main() {
 		log.Println("Generating world terrain...")
 	}
 
-	terrainGen := terrain.NewTerrainGenerator()
+	terrainGen := terrain.NewBSPGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -10996,7 +10983,6 @@ func main() {
 		Custom: map[string]interface{}{
 			"width":     100,
 			"height":    100,
-			"algorithm": "bsp",
 		},
 	}
 
@@ -11017,11 +11003,10 @@ func main() {
 	}
 
 	// Create server with configuration
-	serverConfig := network.ServerConfig{
-		Port:        *port,
-		MaxPlayers:  *maxPlayers,
-		TickRate:    *tickRate,
-	}
+	serverConfig := network.DefaultServerConfig()
+	serverConfig.Address = fmt.Sprintf(":%d", *port)
+	serverConfig.MaxPlayers = *maxPlayers
+	serverConfig.UpdateRate = *tickRate
 
 	// Create snapshot manager for state synchronization
 	snapshotManager := network.NewSnapshotManager(100)
@@ -11254,7 +11239,7 @@ The client/server integration is a **non-breaking addition** that wires existing
 
 1. **Uses Existing Systems**: All systems (movement, combat, AI, etc.) are already implemented and tested. Client/server just initialize and add them to the world.
 
-2. **Uses Existing Generators**: Terrain generation uses existing `terrain.NewTerrainGenerator()` with standard `GenerationParams`.
+2. **Uses Existing Generators**: Terrain generation uses existing terrain generators (`terrain.NewBSPGenerator()` or `terrain.NewCellularGenerator()`) with standard `GenerationParams`.
 
 3. **Follows ECS Patterns**: Player entity creation follows standard ECS component pattern used throughout codebase.
 

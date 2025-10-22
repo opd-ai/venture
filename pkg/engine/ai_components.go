@@ -1,6 +1,9 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 // AIState represents the current behavior state of an AI-controlled entity.
 type AIState int
@@ -164,7 +167,7 @@ func (a *AIComponent) ClearTarget() {
 func (a *AIComponent) GetDistanceFromSpawn(currentX, currentY float64) float64 {
 	dx := currentX - a.SpawnX
 	dy := currentY - a.SpawnY
-	return sqrt(dx*dx + dy*dy)
+	return math.Sqrt(dx*dx + dy*dy)
 }
 
 // ShouldReturnToSpawn checks if the entity has wandered too far from spawn.
@@ -185,15 +188,4 @@ func (a *AIComponent) String() string {
 		a.State.String(), targetInfo, a.DetectionRange, a.StateTimer)
 }
 
-// sqrt is a simple square root approximation using Newton's method.
-// This avoids importing math for a single function.
-func sqrt(x float64) float64 {
-	if x == 0 {
-		return 0
-	}
-	z := x
-	for i := 0; i < 10; i++ {
-		z = z - (z*z-x)/(2*z)
-	}
-	return z
-}
+

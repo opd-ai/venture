@@ -3,7 +3,6 @@
 // throughout the procedural generation system.
 package genre
 
-
 import "fmt"
 
 // Genre represents a game genre with associated metadata and theming.

@@ -7,7 +7,7 @@ import (
 )
 
 // Helper function to create a test item
-func createTestItem(name string, itemType item.ItemType, weight float64, value int, damage int, defense int) *item.Item {
+func createTestItem(name string, itemType item.ItemType, weight float64, value, damage, defense int) *item.Item {
 	return &item.Item{
 		Name: name,
 		Type: itemType,
@@ -21,7 +21,7 @@ func createTestItem(name string, itemType item.ItemType, weight float64, value i
 }
 
 // Helper function to create a test weapon
-func createTestWeapon(name string, weaponType item.WeaponType, damage int, weight float64, speed float64) *item.Item {
+func createTestWeapon(name string, weaponType item.WeaponType, damage int, weight, speed float64) *item.Item {
 	return &item.Item{
 		Name:       name,
 		Type:       item.TypeWeapon,

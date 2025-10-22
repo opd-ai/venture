@@ -3,7 +3,6 @@
 // and accessories with procedural stats and effects.
 package item
 
-
 import (
 	"fmt"
 	"math/rand"
@@ -281,7 +280,7 @@ func (g *ItemGenerator) generateStats(template ItemTemplate, depth int, rarity R
 }
 
 // scaleStatByFactors applies scaling based on depth, rarity, and difficulty.
-func (g *ItemGenerator) scaleStatByFactors(baseStat int, depth int, rarity Rarity, difficulty float64) int {
+func (g *ItemGenerator) scaleStatByFactors(baseStat, depth int, rarity Rarity, difficulty float64) int {
 	// Depth scaling: +10% per depth level
 	depthMultiplier := 1.0 + (float64(depth) * 0.1)
 

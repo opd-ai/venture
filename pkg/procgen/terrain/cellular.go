@@ -3,7 +3,6 @@
 // cave and cavern generation.
 package terrain
 
-
 import (
 	"fmt"
 	"math/rand"

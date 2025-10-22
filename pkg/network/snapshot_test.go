@@ -380,7 +380,7 @@ func TestEntitySnapshot_Struct(t *testing.T) {
 		Position:  Position{X: 100, Y: 200},
 		Velocity:  Velocity{VX: 10, VY: 20},
 		Components: map[string][]byte{
-			"health": []byte{1, 2, 3},
+			"health": {1, 2, 3},
 		},
 	}
 

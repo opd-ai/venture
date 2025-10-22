@@ -56,7 +56,7 @@ func NewClientPredictor() *ClientPredictor {
 }
 
 // PredictInput predicts the result of applying an input and stores it for reconciliation
-func (cp *ClientPredictor) PredictInput(dx, dy float64, deltaTime float64) PredictedState {
+func (cp *ClientPredictor) PredictInput(dx, dy, deltaTime float64) PredictedState {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
@@ -98,7 +98,7 @@ func (cp *ClientPredictor) ReconcileServerState(serverSeq uint32, serverPos Posi
 	cp.lastAckedSeq = serverSeq
 
 	// Find the state that corresponds to the server's acknowledged sequence
-	var stateIndex = -1
+	stateIndex := -1
 	for i, state := range cp.stateHistory {
 		if state.Sequence == serverSeq {
 			stateIndex = i

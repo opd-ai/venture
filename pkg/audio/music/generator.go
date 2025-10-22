@@ -27,7 +27,7 @@ func NewGenerator(sampleRate int, seed int64) *Generator {
 }
 
 // GenerateTrack creates a music track for the given context.
-func (g *Generator) GenerateTrack(genre string, context string, seed int64, duration float64) *audio.AudioSample {
+func (g *Generator) GenerateTrack(genre, context string, seed int64, duration float64) *audio.AudioSample {
 	localRng := rand.New(rand.NewSource(seed))
 
 	// Get musical parameters based on genre and context

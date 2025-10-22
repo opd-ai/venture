@@ -3,7 +3,6 @@
 // used by the quest generator.
 package quest
 
-
 // QuestType represents the classification of a quest.
 type QuestType int
 

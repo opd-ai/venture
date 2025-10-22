@@ -3,7 +3,6 @@
 // used by the skill generator.
 package skills
 
-
 // SkillType represents the classification of a skill.
 type SkillType int
 
@@ -175,7 +174,7 @@ type SkillTemplate struct {
 }
 
 // IsUnlocked checks if a skill can be unlocked given current state.
-func (s *Skill) IsUnlocked(playerLevel int, skillPoints int, learnedSkills map[string]bool, attributes map[string]int) bool {
+func (s *Skill) IsUnlocked(playerLevel, skillPoints int, learnedSkills map[string]bool, attributes map[string]int) bool {
 	// Check player level
 	if playerLevel < s.Requirements.PlayerLevel {
 		return false

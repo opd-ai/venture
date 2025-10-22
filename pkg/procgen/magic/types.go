@@ -3,7 +3,6 @@
 // used by the magic generator.
 package magic
 
-
 // SpellType represents the classification of a spell.
 type SpellType int
 

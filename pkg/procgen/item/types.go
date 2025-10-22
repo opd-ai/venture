@@ -3,7 +3,6 @@
 // used by the item generator.
 package item
 
-
 // ItemType represents the classification of an item.
 type ItemType int
 

@@ -63,7 +63,7 @@ func main() {
 
 	// Output to file or console
 	if *output != "" {
-		if err := os.WriteFile(*output, []byte(rendered), 0644); err != nil {
+		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
 			log.Fatalf("Failed to write output file: %v", err)
 		}
 		log.Printf("Entities saved to %s", *output)

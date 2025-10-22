@@ -56,7 +56,7 @@ func (c *ColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY floa
 	minY = y + c.OffsetY
 	maxX = minX + c.Width
 	maxY = minY + c.Height
-	return
+	return minX, minY, maxX, maxY
 }
 
 // Intersects checks if this collider intersects with another collider.

@@ -3,7 +3,6 @@
 // to create structured progression systems.
 package skills
 
-
 // SkillTreeTemplate defines a template for generating a complete skill tree.
 type SkillTreeTemplate struct {
 	Name           string

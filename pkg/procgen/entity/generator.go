@@ -3,7 +3,6 @@
 // with stats, abilities, and AI behaviors.
 package entity
 
-
 import (
 	"fmt"
 	"math/rand"

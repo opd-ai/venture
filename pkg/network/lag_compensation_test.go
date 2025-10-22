@@ -192,7 +192,6 @@ func TestValidateHit_Success(t *testing.T) {
 	// Validate hit on target at historical position
 	hitPos := Position{X: 112, Y: 100}
 	valid, err := lc.ValidateHit(1, 2, hitPos, 100*time.Millisecond, 5.0)
-
 	if err != nil {
 		t.Fatalf("ValidateHit returned error: %v", err)
 	}
@@ -225,7 +224,6 @@ func TestValidateHit_Miss(t *testing.T) {
 	// Try to hit target at wrong position
 	hitPos := Position{X: 110, Y: 100}
 	valid, err := lc.ValidateHit(1, 2, hitPos, 100*time.Millisecond, 5.0)
-
 	if err != nil {
 		t.Fatalf("ValidateHit returned error: %v", err)
 	}
@@ -322,7 +320,6 @@ func TestGetEntityPositionAt_Success(t *testing.T) {
 	lc.RecordSnapshot(snapshot)
 
 	pos, err := lc.GetEntityPositionAt(1, snapshotTime)
-
 	if err != nil {
 		t.Fatalf("GetEntityPositionAt returned error: %v", err)
 	}
@@ -400,7 +397,6 @@ func TestInterpolateEntityAt_Success(t *testing.T) {
 	}
 
 	entity, err := lc.InterpolateEntityAt(1, latest.Timestamp)
-
 	if err != nil {
 		t.Fatalf("InterpolateEntityAt returned error: %v", err)
 	}

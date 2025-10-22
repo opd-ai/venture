@@ -3,7 +3,6 @@
 // the entity generator.
 package entity
 
-
 // EntityType represents the classification of an entity.
 type EntityType int
 

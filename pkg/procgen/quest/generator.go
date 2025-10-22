@@ -3,7 +3,6 @@
 // and dynamic objectives with rewards.
 package quest
 
-
 import (
 	"fmt"
 	"math/rand"

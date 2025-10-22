@@ -3,7 +3,6 @@
 // progression paths, and balanced skill nodes.
 package skills
 
-
 import (
 	"fmt"
 	"math/rand"
@@ -129,7 +128,7 @@ func (g *SkillTreeGenerator) generateTree(rng *rand.Rand, template SkillTreeTemp
 }
 
 // generateSkill creates a single skill from a template.
-func (g *SkillTreeGenerator) generateSkill(rng *rand.Rand, template SkillTemplate, tier int, id int, treeSeed int64, params procgen.GenerationParams) *Skill {
+func (g *SkillTreeGenerator) generateSkill(rng *rand.Rand, template SkillTemplate, tier, id int, treeSeed int64, params procgen.GenerationParams) *Skill {
 	skill := &Skill{
 		ID:       fmt.Sprintf("skill_%d_%d", treeSeed, id),
 		Type:     template.BaseType,
@@ -273,7 +272,7 @@ func (g *SkillTreeGenerator) generateDescription(skill *Skill, format string) st
 }
 
 // getTierSkillCount determines how many skills should be in a tier.
-func (g *SkillTreeGenerator) getTierSkillCount(tier int, depth int) int {
+func (g *SkillTreeGenerator) getTierSkillCount(tier, depth int) int {
 	// Pyramid structure: more skills in lower tiers
 	switch tier {
 	case 0:

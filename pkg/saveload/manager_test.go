@@ -486,7 +486,7 @@ func TestSaveManager_LoadCorruptedFile(t *testing.T) {
 
 	// Write corrupted JSON file
 	filename := manager.getFilePath("corrupted")
-	err = os.WriteFile(filename, []byte("not valid json {{{"), 0644)
+	err = os.WriteFile(filename, []byte("not valid json {{{"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write corrupted file: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestSaveManager_LoadMissingFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filename := manager.getFilePath(tt.name)
-			err := os.WriteFile(filename, []byte(tt.saveData), 0644)
+			err := os.WriteFile(filename, []byte(tt.saveData), 0o644)
 			if err != nil {
 				t.Fatalf("Failed to write test file: %v", err)
 			}
@@ -558,7 +558,7 @@ func TestSaveManager_GetMetadataEmptyFile(t *testing.T) {
 
 	// Write empty file
 	filename := manager.getFilePath("empty")
-	err = os.WriteFile(filename, []byte(""), 0644)
+	err = os.WriteFile(filename, []byte(""), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write empty file: %v", err)
 	}
@@ -586,11 +586,11 @@ func TestSaveManager_ListSavesWithNonSavFiles(t *testing.T) {
 	}
 
 	// Create some non-.sav files in the directory
-	os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("test"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("test"), 0o644)
+	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte("{}"), 0o644)
 
 	// Create a subdirectory
-	os.Mkdir(filepath.Join(tmpDir, "subdir"), 0755)
+	os.Mkdir(filepath.Join(tmpDir, "subdir"), 0o755)
 
 	// List saves - should only return the valid save
 	saves, err := manager.ListSaves()

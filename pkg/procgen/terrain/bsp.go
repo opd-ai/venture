@@ -3,7 +3,6 @@
 // procedural dungeon layout generation.
 package terrain
 
-
 import (
 	"fmt"
 	"math/rand"

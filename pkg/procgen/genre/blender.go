@@ -3,7 +3,6 @@
 // characteristics for cross-genre content generation.
 package genre
 
-
 import (
 	"fmt"
 	"math/rand"
@@ -197,7 +196,7 @@ func parseHexColor(hex string) (r, g, b int) {
 		r, g, b = int(r64), int(g64), int(b64)
 	}
 
-	return
+	return r, g, b
 }
 
 // selectPrefix selects a prefix based on weight and randomness.

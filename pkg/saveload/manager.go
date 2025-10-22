@@ -24,7 +24,7 @@ type SaveManager struct {
 // The directory will be created if it doesn't exist.
 func NewSaveManager(saveDir string) (*SaveManager, error) {
 	// Create save directory if it doesn't exist
-	if err := os.MkdirAll(saveDir, 0755); err != nil {
+	if err := os.MkdirAll(saveDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create save directory: %w", err)
 	}
 
@@ -57,7 +57,7 @@ func (m *SaveManager) SaveGame(name string, save *GameSave) error {
 
 	// Write to file
 	filename := m.getFilePath(name)
-	if err := os.WriteFile(filename, data, 0644); err != nil {
+	if err := os.WriteFile(filename, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write save file: %w", err)
 	}
 

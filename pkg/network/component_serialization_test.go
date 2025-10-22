@@ -82,7 +82,6 @@ func TestComponentSerializer_Velocity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeVelocity(tt.vx, tt.vy)
 			vx, vy, err := s.DeserializeVelocity(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -121,7 +120,6 @@ func TestComponentSerializer_Health(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeHealth(tt.current, tt.max)
 			current, max, err := s.DeserializeHealth(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -161,7 +159,6 @@ func TestComponentSerializer_Stats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeStats(tt.attack, tt.defense, tt.magicPower)
 			attack, defense, magicPower, err := s.DeserializeStats(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -201,7 +198,6 @@ func TestComponentSerializer_Team(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeTeam(tt.teamID)
 			teamID, err := s.DeserializeTeam(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -240,7 +236,6 @@ func TestComponentSerializer_Level(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeLevel(tt.level, tt.xp)
 			level, xp, err := s.DeserializeLevel(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -281,7 +276,6 @@ func TestComponentSerializer_Input(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeInput(tt.dx, tt.dy)
 			dx, dy, err := s.DeserializeInput(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -319,7 +313,6 @@ func TestComponentSerializer_Attack(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeAttack(tt.targetID)
 			targetID, err := s.DeserializeAttack(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}
@@ -357,7 +350,6 @@ func TestComponentSerializer_Item(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := s.SerializeItem(tt.itemID)
 			itemID, err := s.DeserializeItem(data)
-
 			if err != nil {
 				t.Errorf("Deserialize failed: %v", err)
 			}

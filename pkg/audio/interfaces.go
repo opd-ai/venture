@@ -39,7 +39,7 @@ type AudioSample struct {
 // Synthesizer generates audio waveforms.
 type Synthesizer interface {
 	// Generate creates an audio sample from parameters
-	Generate(waveform WaveformType, frequency float64, duration float64) *AudioSample
+	Generate(waveform WaveformType, frequency, duration float64) *AudioSample
 
 	// GenerateNote creates an audio sample for a musical note
 	GenerateNote(note Note, waveform WaveformType) *AudioSample
@@ -48,7 +48,7 @@ type Synthesizer interface {
 // MusicGenerator creates procedural music.
 type MusicGenerator interface {
 	// GenerateTrack creates a music track for the given context
-	GenerateTrack(genre string, context string, seed int64, duration float64) *AudioSample
+	GenerateTrack(genre, context string, seed int64, duration float64) *AudioSample
 }
 
 // SFXGenerator creates sound effects.

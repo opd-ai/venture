@@ -328,7 +328,7 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 }
 
 // isValidTarget checks if a target is still valid (alive, in range, etc.).
-func (ai *AISystem) isValidTarget(target *Entity, entity *Entity, pos *PositionComponent, maxRange float64) bool {
+func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent, maxRange float64) bool {
 	if target == nil {
 		return false
 	}

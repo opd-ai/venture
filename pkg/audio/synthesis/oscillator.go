@@ -25,7 +25,7 @@ func NewOscillator(sampleRate int, seed int64) *Oscillator {
 }
 
 // Generate creates an audio sample with the specified waveform, frequency, and duration.
-func (o *Oscillator) Generate(waveform audio.WaveformType, frequency float64, duration float64) *audio.AudioSample {
+func (o *Oscillator) Generate(waveform audio.WaveformType, frequency, duration float64) *audio.AudioSample {
 	numSamples := int(float64(o.sampleRate) * duration)
 	data := make([]float64, numSamples)
 

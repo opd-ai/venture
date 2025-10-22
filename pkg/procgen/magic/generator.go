@@ -3,7 +3,6 @@
 // and summoning spells with procedural effects.
 package magic
 
-
 import (
 	"fmt"
 	"math/rand"

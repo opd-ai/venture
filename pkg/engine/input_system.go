@@ -102,6 +102,25 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
+	// Handle help topic switching with number keys 1-6 (when help is visible)
+	if s.helpSystem != nil && s.helpSystem.Visible {
+		topicKeys := []ebiten.Key{
+			ebiten.Key1, ebiten.Key2, ebiten.Key3,
+			ebiten.Key4, ebiten.Key5, ebiten.Key6,
+		}
+		topicIDs := []string{
+			"controls", "combat", "inventory",
+			"progression", "world", "multiplayer",
+		}
+
+		for i, key := range topicKeys {
+			if inpututil.IsKeyJustPressed(key) {
+				s.helpSystem.ShowTopic(topicIDs[i])
+				break
+			}
+		}
+	}
+
 	for _, entity := range entities {
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {

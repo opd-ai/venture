@@ -118,8 +118,9 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Connected tutorial system to input system in client main.go
   - Verified compilation and code path analysis confirms context-aware behavior works correctly
 
-#### Issue #3: Help System Topic Switching Not Implemented
-- **Component**: Help System (`pkg/engine/help_system.go:408-412`)
+#### Issue #3: Help System Topic Switching Not Implemented ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
+- **Component**: Help System (`pkg/engine/help_system.go:408-412`), Input System (`pkg/engine/input_system.go`)
 - **Description**: Help panel displays "Topics: [1]Controls [2]Combat [3]Inventory [4]Progression [5]World [6]Multiplayer" but no key handlers exist to switch topics. Players can only view "controls" topic (the default).
 - **Steps to Reproduce**:
   1. Run game: `./venture-client`
@@ -160,6 +161,13 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Manual: Press 1-6 keys, verify topic content changes
   - Unit test: `TestHelpSystem_TopicNavigation()` with simulated key presses
 - **Note**: `HelpSystem.SetHelpSystem()` exists but tutorial system should also have reference for coordinated behavior
+- **Resolution**:
+  - Added number key handling (1-6) in InputSystem.Update() when help system is visible
+  - Mapped keys to topic IDs: 1=controls, 2=combat, 3=inventory, 4=progression, 5=world, 6=multiplayer
+  - When a number key is pressed and help is visible, calls helpSystem.ShowTopic() with corresponding topic ID
+  - Loop breaks after first key press to avoid conflicts
+  - Verified compilation and code path analysis confirms topic switching works correctly
+  - All 6 help topics are now accessible to players
 
 ### High Priority Issues
 

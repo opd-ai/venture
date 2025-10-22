@@ -282,3 +282,10 @@ func (ps *ProgressionSystem) InitializeEntityAtLevel(entity *Entity, level int) 
 
 	return nil
 }
+
+// Update implements the System interface.
+// ProgressionSystem doesn't need per-frame updates, so this is a no-op.
+func (ps *ProgressionSystem) Update(entities []*Entity, deltaTime float64) {
+	// ProgressionSystem is event-driven (AwardXP), not frame-driven
+	// No per-frame updates needed
+}

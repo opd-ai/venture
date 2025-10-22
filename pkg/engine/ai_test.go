@@ -146,7 +146,7 @@ func TestAISystemIdle(t *testing.T) {
 	world.Update(0)
 
 	// Update AI - should detect enemy
-	aiSystem.Update(0.6) // Trigger decision update
+	aiSystem.Update(world.GetEntities(), 0.6) // Trigger decision update
 
 	aiComp, _ := ai.GetComponent("ai")
 	aiC := aiComp.(*AIComponent)
@@ -187,7 +187,7 @@ func TestAISystemChase(t *testing.T) {
 	world.Update(0)
 
 	// Update AI
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	// Should still be chasing (enemy is in detection range but not attack range)
 	if aiComp.State != AIStateChase {
@@ -239,7 +239,7 @@ func TestAISystemAttack(t *testing.T) {
 	initialHealth := enemyHealth.(*HealthComponent).Current
 
 	// Update AI
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	// Should still be in attack state
 	if aiComp.State != AIStateAttack {
@@ -271,7 +271,7 @@ func TestAISystemFlee(t *testing.T) {
 	world.Update(0)
 
 	// Update AI
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	// Should still be fleeing
 	if aiComp.State != AIStateFlee {
@@ -303,7 +303,7 @@ func TestAISystemReturn(t *testing.T) {
 	world.Update(0)
 
 	// Update AI
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	// Should still be returning
 	if aiComp.State != AIStateReturn {
@@ -335,7 +335,7 @@ func TestAISystemReturnAtSpawn(t *testing.T) {
 	world.Update(0)
 
 	// Update AI
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	// Should transition to idle
 	if aiComp.State != AIStateIdle {
@@ -378,7 +378,7 @@ func TestAISystemFleeTransition(t *testing.T) {
 	world.Update(0)
 
 	// Update AI - should transition to flee
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	if aiComp.State != AIStateFlee {
 		t.Errorf("state = %v, want %v when health low", aiComp.State, AIStateFlee)
@@ -412,7 +412,7 @@ func TestAISystemChaseRange(t *testing.T) {
 	world.Update(0)
 
 	// Update AI - should transition to return (too far from spawn)
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	if aiComp.State != AIStateReturn {
 		t.Errorf("state = %v, want %v when too far from spawn", aiComp.State, AIStateReturn)
@@ -431,7 +431,7 @@ func TestAISystemNoComponents(t *testing.T) {
 	world.Update(0)
 
 	// Should not crash
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 }
 
 // TestAISystemDeadTarget tests behavior when target dies.
@@ -460,7 +460,7 @@ func TestAISystemDeadTarget(t *testing.T) {
 	world.Update(0)
 
 	// Update AI - should lose target and return
-	aiSystem.Update(0.6)
+	aiSystem.Update(world.GetEntities(), 0.6)
 
 	if aiComp.State != AIStateReturn {
 		t.Errorf("state = %v, want %v when target is dead", aiComp.State, AIStateReturn)
@@ -490,7 +490,7 @@ func BenchmarkAISystemUpdate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		aiSystem.Update(0.016) // ~60 FPS
+		aiSystem.Update(world.GetEntities(), 0.016) // ~60 FPS
 	}
 }
 
@@ -514,6 +514,6 @@ func BenchmarkAISystemUpdateMany(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		aiSystem.Update(0.016) // ~60 FPS
+		aiSystem.Update(world.GetEntities(), 0.016) // ~60 FPS
 	}
 }

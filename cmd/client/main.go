@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"image/color"
 	"log"
 
 	"github.com/opd-ai/venture/pkg/combat"
@@ -33,13 +34,15 @@ func main() {
 	}
 
 	// Add core gameplay systems
+	inputSystem := engine.NewInputSystem()
 	movementSystem := &engine.MovementSystem{}
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
-	aiSystem := &engine.AISystem{}
-	progressionSystem := &engine.ProgressionSystem{}
-	inventorySystem := &engine.InventorySystem{}
+	aiSystem := engine.NewAISystem(game.World)
+	progressionSystem := engine.NewProgressionSystem(game.World)
+	inventorySystem := engine.NewInventorySystem(game.World)
 
+	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
@@ -48,7 +51,7 @@ func main() {
 	game.World.AddSystem(inventorySystem)
 
 	if *verbose {
-		log.Println("Systems initialized: Movement, Collision, Combat, AI, Progression, Inventory")
+		log.Println("Systems initialized: Input, Movement, Collision, Combat, AI, Progression, Inventory")
 	}
 
 	// Generate initial world terrain
@@ -56,15 +59,14 @@ func main() {
 		log.Println("Generating procedural terrain...")
 	}
 
-	terrainGen := terrain.NewTerrainGenerator()
+	terrainGen := terrain.NewBSPGenerator() // Use BSP algorithm
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
 		GenreID:    *genreID,
 		Custom: map[string]interface{}{
-			"width":     80,
-			"height":    50,
-			"algorithm": "bsp",
+			"width":  80,
+			"height": 50,
 		},
 	}
 
@@ -88,35 +90,42 @@ func main() {
 
 	// Add player components
 	player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
-	player.AddComponent(&engine.VelocityComponent{X: 0, Y: 0})
+	player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team
 
+	// Add input component for player control
+	player.AddComponent(&engine.InputComponent{})
+
+	// Add sprite for rendering
+	playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
+	playerSprite.Layer = 10 // Draw player on top
+	player.AddComponent(playerSprite)
+
+	// Add camera that follows the player
+	camera := engine.NewCameraComponent()
+	camera.Smoothing = 0.1
+	player.AddComponent(camera)
+
+	// Set player as the active camera
+	game.CameraSystem.SetActiveCamera(player)
+
+	// Set player for HUD display
+	game.HUDSystem.SetPlayerEntity(player)
+
 	// Add player stats
 	playerStats := engine.NewStatsComponent()
-	playerStats.Level = 1
-	playerStats.Health = 100
 	playerStats.Attack = 10
 	playerStats.Defense = 5
-	playerStats.Speed = 5.0
 	player.AddComponent(playerStats)
 
-	// Add player progression
-	playerProgress := &engine.ProgressionComponent{
-		Level:             1,
-		ExperiencePoints:  0,
-		ExperienceToLevel: 100,
-		SkillPoints:       0,
-		UnlockedSkills:    make([]string, 0),
-	}
-	player.AddComponent(playerProgress)
+	// Add player experience/progression
+	playerExp := engine.NewExperienceComponent()
+	player.AddComponent(playerExp)
 
 	// Add player inventory
-	playerInventory := &engine.InventoryComponent{
-		Items:    make([]engine.InventoryItem, 0),
-		Capacity: 20,
-		Gold:     100,
-	}
+	playerInventory := engine.NewInventoryComponent(20, 100.0) // 20 items, 100 weight max
+	playerInventory.Gold = 100
 	player.AddComponent(playerInventory)
 
 	// Add player attack capability
@@ -128,11 +137,14 @@ func main() {
 	})
 
 	// Add collision for player
-	player.AddComponent(&engine.CollisionComponent{
-		Radius:    16,
-		Mass:      1.0,
+	player.AddComponent(&engine.ColliderComponent{
+		Width:     32,
+		Height:    32,
+		Solid:     true,
 		IsTrigger: false,
-		IsStatic:  false,
+		Layer:     1,
+		OffsetX:   -16, // Center the collider
+		OffsetY:   -16,
 	})
 
 	if *verbose {

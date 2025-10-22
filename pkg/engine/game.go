@@ -17,15 +17,27 @@ type Game struct {
 	ScreenWidth    int
 	ScreenHeight   int
 	Paused         bool
+
+	// Rendering systems
+	CameraSystem *CameraSystem
+	RenderSystem *RenderSystem
+	HUDSystem    *HUDSystem
 }
 
 // NewGame creates a new game instance.
 func NewGame(screenWidth, screenHeight int) *Game {
+	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
+	renderSystem := NewRenderSystem(cameraSystem)
+	hudSystem := NewHUDSystem(screenWidth, screenHeight)
+
 	return &Game{
 		World:          NewWorld(),
 		lastUpdateTime: time.Now(),
 		ScreenWidth:    screenWidth,
 		ScreenHeight:   screenHeight,
+		CameraSystem:   cameraSystem,
+		RenderSystem:   renderSystem,
+		HUDSystem:      hudSystem,
 	}
 }
 
@@ -48,13 +60,19 @@ func (g *Game) Update() error {
 	// Update the world
 	g.World.Update(deltaTime)
 
+	// Update camera system
+	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
+
 	return nil
 }
 
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *Game) Draw(screen *ebiten.Image) {
-	// Drawing is handled by rendering systems that are part of the World
-	// Systems can access the screen through a component or global state
+	// Render all entities
+	g.RenderSystem.Draw(screen, g.World.GetEntities())
+
+	// Render HUD overlay
+	g.HUDSystem.Draw(screen)
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.

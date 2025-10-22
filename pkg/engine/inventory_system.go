@@ -508,3 +508,10 @@ func (s *InventorySystem) SortInventoryByType(entityID uint64) error {
 
 	return nil
 }
+
+// Update implements the System interface.
+// InventorySystem doesn't need per-frame updates, so this is a no-op.
+func (s *InventorySystem) Update(entities []*Entity, deltaTime float64) {
+	// InventorySystem is event-driven (AddItem, RemoveItem, etc.), not frame-driven
+	// No per-frame updates needed
+}

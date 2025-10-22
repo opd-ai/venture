@@ -1,3 +1,6 @@
+// Package network provides JSON serialization for network protocol.
+// This file implements JSONProtocol which serializes game state and commands
+// using JSON for human-readable network debugging.
 package network
 
 import (

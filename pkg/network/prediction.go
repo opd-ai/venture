@@ -1,3 +1,6 @@
+// Package network provides client-side prediction for responsive gameplay.
+// This file implements client-side prediction and server reconciliation
+// to ensure smooth gameplay despite network latency.
 package network
 
 import (

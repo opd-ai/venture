@@ -1,3 +1,6 @@
+// Package network provides network protocol interfaces.
+// This file defines the Protocol interface for network communication
+// implementations supporting different serialization formats.
 package network
 
 // Protocol defines the interface for network protocol implementations.

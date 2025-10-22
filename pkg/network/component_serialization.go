@@ -1,3 +1,6 @@
+// Package network provides component serialization for networking.
+// This file implements serialization and deserialization of ECS components
+// for efficient network transmission.
 package network
 
 import (

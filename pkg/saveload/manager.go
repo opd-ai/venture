@@ -1,3 +1,6 @@
+// Package saveload provides save/load manager for game state persistence.
+// This file implements SaveLoadManager which handles saving and loading
+// game state to/from disk using JSON serialization.
 package saveload
 
 import (

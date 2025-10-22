@@ -1,3 +1,6 @@
+// Package combat provides combat system interfaces and types.
+// This file defines the damage calculation interface and core combat
+// types used by the combat system.
 package combat
 
 // DamageType represents different types of damage.

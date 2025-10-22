@@ -1,3 +1,6 @@
+// Package network provides network protocol data structures.
+// This file defines core protocol types for state updates, input commands,
+// and network messages used in client-server communication.
 package network
 
 // ComponentData represents serialized component data for network transmission.

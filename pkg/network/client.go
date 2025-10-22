@@ -1,3 +1,6 @@
+// Package network provides multiplayer client functionality.
+// This file implements Client which handles client-side networking, prediction,
+// and server communication for multiplayer gameplay.
 package network
 
 import (

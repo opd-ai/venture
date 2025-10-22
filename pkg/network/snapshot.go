@@ -1,3 +1,6 @@
+// Package network provides snapshot management for state history.
+// This file implements snapshot buffering and interpolation for smooth
+// entity movement and lag compensation.
 package network
 
 import (

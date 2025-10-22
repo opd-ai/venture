@@ -37,7 +37,7 @@ Phases 1-7.1 complete (Architecture, Procedural Generation, Visual Rendering, Au
   - [x] Network snapshot recording
   - [x] Lag compensation integration
 
-See [Phase 8.1 Implementation](docs/PHASE8_1_CLIENT_SERVER_INTEGRATION.md) for complete details.
+See [Implemented Phases Documentation](docs/IMPLEMENTED_PHASES.md) for complete details.
 
 ### Phase 2 Progress
 
@@ -91,7 +91,7 @@ See [Phase 8.1 Implementation](docs/PHASE8_1_CLIENT_SERVER_INTEGRATION.md) for c
   - [x] CLI tool for genre exploration
   - [x] Complete documentation
 
-See the [Phase 2 Terrain Implementation](docs/PHASE2_TERRAIN_IMPLEMENTATION.md) for complete details.
+See the [Implemented Phases Documentation](docs/IMPLEMENTED_PHASES.md) for complete details on all phases.
 
 ### Development Roadmap
 
@@ -504,24 +504,9 @@ See [pkg/network/README.md](pkg/network/README.md) for more details on the netwo
 - **TECHNICAL_SPEC.md** - Complete technical specification
 - **ROADMAP.md** - Detailed 8-phase development roadmap
 - **DEVELOPMENT.md** - Development guide and best practices
-- **CLEANUP_REPORT_2025-10-22.md** - Repository cleanup summary (Oct 2025)
 
 ### Phase Implementation Reports (docs/)
-- **PHASE1_SUMMARY.md** - Phase 1: Architecture & Foundation
-- **PHASE2_TERRAIN_IMPLEMENTATION.md** - Terrain/dungeon generation (BSP, cellular automata)
-- **PHASE2_ENTITY_IMPLEMENTATION.md** - Monster and NPC generation
-- **PHASE2_ITEM_IMPLEMENTATION.md** - Weapons, armor, and consumables
-- **PHASE2_MAGIC_IMPLEMENTATION.md** - Spell and ability generation
-- **PHASE2_SKILLS_IMPLEMENTATION.md** - Skill tree generation
-- **PHASE2_GENRE_IMPLEMENTATION.md** - Genre definition system
-- **PHASE3_RENDERING_IMPLEMENTATION.md** - Visual rendering systems
-- **PHASE4_AUDIO_IMPLEMENTATION.md** - Audio synthesis implementation
-- **PHASE5_COMBAT_IMPLEMENTATION.md** - Combat system implementation
-- **PHASE5_MOVEMENT_COLLISION_REPORT.md** - Movement and collision systems
-- **PHASE5_PROGRESSION_AI_REPORT.md** - Character progression and AI systems
-- **PHASE5_QUEST_IMPLEMENTATION.md** - Quest generation system
-- **PHASE6_NETWORKING_IMPLEMENTATION.md** - Networking and multiplayer foundation
-- **PHASE6_2_PREDICTION_SYNC_IMPLEMENTATION.md** - Client-side prediction and state synchronization
+- **IMPLEMENTED_PHASES.md** - Consolidated documentation for all implemented phases (Phases 1-8.1)
 
 ### Package-Specific Documentation
 Each package contains detailed technical documentation:

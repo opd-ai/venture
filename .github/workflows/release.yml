@@ -1,0 +1,136 @@
+---
+name: Release
+
+on:
+  schedule:
+    # Run nightly at 00:00 UTC
+    - cron: '0 0 * * *'
+  push:
+    tags:
+      # Match semantic version tags like v1.2.3
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Determine release type
+        id: release_type
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "type=version" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "name=Release ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "type=nightly" >> $GITHUB_OUTPUT
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "name=Nightly Build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing nightly release
+        if: steps.release_type.outputs.type == 'nightly'
+        continue-on-error: true
+        run: |
+          # Delete the release first
+          gh release delete nightly --yes || true
+          # Delete the tag
+          git push --delete origin nightly || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create nightly tag
+        if: steps.release_type.outputs.type == 'nightly'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly
+          git push -f origin nightly
+
+      - name: Build binaries
+        run: |
+          mkdir -p build
+
+          # Define platforms
+          platforms=(
+            "linux/amd64"
+            "linux/arm64"
+            "darwin/amd64"
+            "darwin/arm64"
+            "windows/amd64"
+          )
+
+          for platform in "${platforms[@]}"; do
+            IFS='/' read -r goos goarch <<< "$platform"
+
+            output_name="venture-server-${goos}-${goarch}"
+            if [ "$goos" = "windows" ]; then
+              output_name="${output_name}.exe"
+            fi
+
+            echo "Building for $goos/$goarch..."
+            GOOS=$goos GOARCH=$goarch go build -tags test -ldflags="-s -w" -o "build/${output_name}" ./cmd/server
+
+            # Create archive
+            if [ "$goos" = "windows" ]; then
+              (cd build && zip "${output_name%.exe}.zip" "$output_name")
+            else
+              (cd build && tar czf "${output_name}.tar.gz" "$output_name")
+            fi
+          done
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          if [ "${{ steps.release_type.outputs.type }}" = "version" ]; then
+            # For version releases, generate changelog from git log
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "# Changes since $PREVIOUS_TAG" > release_notes.md
+              git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" >> release_notes.md
+            else
+              echo "# Release ${{ steps.release_type.outputs.tag }}" > release_notes.md
+              git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
+            fi
+          else
+            # For nightly, show recent commits
+            echo "# Nightly Build - $(date +'%Y-%m-%d')" > release_notes.md
+            echo "" >> release_notes.md
+            echo "Automated nightly build from the main branch." >> release_notes.md
+            echo "" >> release_notes.md
+            echo "## Recent Changes" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_type.outputs.tag }}
+          name: ${{ steps.release_type.outputs.name }}
+          body_path: release_notes.md
+          prerelease: ${{ steps.release_type.outputs.prerelease }}
+          files: |
+            build/*.tar.gz
+            build/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -379,7 +379,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Camera now feels identical at all frame rates (30, 60, 120, 144 FPS)
   - Updated comments to explain the exponential decay approach
 
-#### Issue #7: Health Bar and XP Bar Not Synchronized with Component Updates
+#### Issue #7: Health Bar and XP Bar Not Synchronized with Component Updates - DEFERRED
+- **Status**: DEFERRED - Requires profiling and investigation to confirm issue exists
 - **Component**: HUD System (entire `hud_system.go`) and Combat/Progression Systems
 - **Description**: HUD reads component state in `Draw()` method every frame, but components may be updated mid-frame in `Update()`. This can cause 1-frame delay where damage/XP changes are applied but HUD shows old values, creating visual disconnect.
 - **Steps to Reproduce**:
@@ -430,6 +431,7 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Automated test: Apply damage, check that Draw() on same frame shows updated value
   - Performance: Dirty flag system adds zero overhead (single boolean check)
 - **Status**: POTENTIAL issue - needs confirmation via profiling and user testing
+- **Deferral Reason**: Code analysis shows Update() runs before Draw() in the same frame, which should work correctly (no delay). The audit itself notes "Actually this should work correctly". Requires profiling with timestamps and high-speed recording to confirm if a perceptible 1-frame delay actually exists. If confirmed, can be addressed with the suggested dirty flag system.
 
 ### Medium Priority Issues
 
@@ -723,7 +725,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Players now get immediate visual feedback for all save/load operations
 
 
-#### Issue #11: Tutorial Step Conditions May Fire Multiple Times
+#### Issue #11: Tutorial Step Conditions May Fire Multiple Times - DEFERRED
+- **Status**: DEFERRED - Issue analysis shows current code is safe
 - **Component**: Tutorial System (`pkg/engine/tutorial_system.go:46-151, 214-233`)
 - **Description**: Tutorial step completion conditions are checked every frame in `Update()` without rate limiting. Some conditions (like "inventory has items") may trigger repeatedly if player picks up and drops items, causing notification spam or step confusion.
 - **Steps to Reproduce**:
@@ -786,6 +789,7 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verify no step regression
 - **Severity Justification**: Medium - current code appears safe, but lacks robustness for edge cases
 - **Priority**: Can defer to post-release polish
+- **Deferral Reason**: Code analysis confirms the `Completed` flag prevents re-triggering. This is a potential enhancement for edge cases, not a bug requiring immediate fix. Can be addressed in post-release polish phase.
 
 ### Low Priority Issues
 

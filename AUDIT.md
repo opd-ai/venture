@@ -13,13 +13,15 @@ This comprehensive functional audit examined the Venture procedural action-RPG c
 
 ### Issue Count by Category
 
-- **CRITICAL BUG**: 2
+- **CRITICAL BUG**: 2 (1 resolved)
 - **FUNCTIONAL MISMATCH**: 1
 - **MISSING FEATURE**: 0
-- **EDGE CASE BUG**: 1
+- **EDGE CASE BUG**: 1 (1 resolved)
 - **PERFORMANCE ISSUE**: 0
 
-**Total Issues Found:** 4
+**Total Issues Found:** 4  
+**Resolved:** 2  
+**Remaining:** 2
 
 ### Overall Assessment
 
@@ -29,9 +31,11 @@ The codebase is generally well-implemented with comprehensive test coverage (mos
 
 ## DETAILED FINDINGS
 
-### CRITICAL BUG: Panic on Negative Terrain Dimensions
+### CRITICAL BUG: Panic on Negative Terrain Dimensions ✅ RESOLVED
 **File:** pkg/procgen/terrain/bsp.go:40-45, cmd/terraintest/main.go:25-30  
 **Severity:** High  
+**Status:** Fixed in commit [pending]  
+**Fixed:** 2025-10-22  
 **Description:** The terrain generation system does not validate input dimensions before allocating slice memory. When negative width or height values are provided, the system panics with "makeslice: len out of range" instead of returning a proper error.
 
 **Expected Behavior:** Function should validate input parameters and return an error for invalid dimensions (negative or zero values).
@@ -42,6 +46,19 @@ panic: runtime error: makeslice: len out of range
 ```
 
 **Impact:** Denial of service vulnerability; any caller providing negative dimensions (from user input, network data, or corrupted configuration) will crash the entire application. In a multiplayer context, a malicious client could potentially crash the server.
+
+**Resolution:** Added input validation in both `BSPGenerator.Generate()` and `CellularGenerator.Generate()` methods:
+- Validates dimensions are positive (> 0)
+- Validates dimensions don't exceed maximum (10,000)
+- Returns clear error messages for invalid input
+- Added comprehensive test coverage for edge cases
+
+**Verification:**
+```bash
+# Now returns proper error instead of panic
+./terraintest -algorithm bsp -width -10 -height -10 -seed 12345
+# Output: Generation failed: invalid dimensions: width and height must be positive (got width=-10, height=-10)
+```
 
 **Reproduction:**
 ```bash
@@ -130,9 +147,11 @@ ok  	github.com/opd-ai/venture/pkg/engine	0.010s	coverage: 77.8% of statements
 
 ---
 
-### EDGE CASE BUG: Zero Dimension Terrain Generation Produces Misleading Error
+### EDGE CASE BUG: Zero Dimension Terrain Generation Produces Misleading Error ✅ RESOLVED
 **File:** pkg/procgen/terrain/bsp.go (BSP generator), cmd/terraintest/main.go  
 **Severity:** Low  
+**Status:** Fixed in commit [pending]  
+**Fixed:** 2025-10-22  
 **Description:** When generating terrain with zero dimensions (width=0 or height=0), the validation error message "room out of bounds" is misleading. The actual problem is invalid input dimensions, not a room placement issue.
 
 **Expected Behavior:** Should return a clear validation error like "invalid dimensions: width and height must be positive" before attempting generation.
@@ -140,6 +159,17 @@ ok  	github.com/opd-ai/venture/pkg/engine	0.010s	coverage: 77.8% of statements
 **Actual Behavior:** Attempts to generate terrain with zero dimensions and fails with "room out of bounds" validation error.
 
 **Impact:** Confusing error messages make debugging difficult. Developers or users may investigate room generation algorithms when the actual issue is input validation.
+
+**Resolution:** Fixed by the same validation added for Bug #1. Now returns clear error message:
+```
+invalid dimensions: width and height must be positive (got width=0, height=0)
+```
+
+**Verification:**
+```bash
+./terraintest -algorithm bsp -width 0 -height 0 -seed 12345
+# Output: Generation failed: invalid dimensions: width and height must be positive (got width=0, height=0)
+```
 
 **Reproduction:**
 ```bash

@@ -53,8 +53,13 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 		posComp, _ := entity.GetComponent("position")
 		colliderComp, _ := entity.GetComponent("collider")
 
-		pos := posComp.(*PositionComponent)
-		collider := colliderComp.(*ColliderComponent)
+		// Safe type assertions with nil checks
+		pos, ok1 := posComp.(*PositionComponent)
+		collider, ok2 := colliderComp.(*ColliderComponent)
+
+		if !ok1 || !ok2 {
+			continue
+		}
 
 		// Get potential collision candidates from nearby cells
 		candidates := s.getNearbyEntities(entity)
@@ -84,8 +89,13 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 			otherPosComp, _ := other.GetComponent("position")
 			otherColliderComp, _ := other.GetComponent("collider")
 
-			otherPos := otherPosComp.(*PositionComponent)
-			otherCollider := otherColliderComp.(*ColliderComponent)
+			// Safe type assertions with nil checks
+			otherPos, ok1 := otherPosComp.(*PositionComponent)
+			otherCollider, ok2 := otherColliderComp.(*ColliderComponent)
+
+			if !ok1 || !ok2 {
+				continue
+			}
 
 			// Check layer compatibility (0 = all layers)
 			if collider.Layer != 0 && otherCollider.Layer != 0 && collider.Layer != otherCollider.Layer {
@@ -109,12 +119,19 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 }
 
 // addToGrid adds an entity to the spatial grid.
+// Precondition: Entity must have position and collider components.
 func (s *CollisionSystem) addToGrid(entity *Entity) {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
-	pos := posComp.(*PositionComponent)
-	collider := colliderComp.(*ColliderComponent)
+	// Safe type assertions with nil checks
+	pos, ok1 := posComp.(*PositionComponent)
+	collider, ok2 := colliderComp.(*ColliderComponent)
+
+	if !ok1 || !ok2 {
+		// Components missing or wrong type - should not happen if Update() filters correctly
+		return
+	}
 
 	// Get bounding box
 	minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
@@ -137,12 +154,19 @@ func (s *CollisionSystem) addToGrid(entity *Entity) {
 }
 
 // getNearbyEntities returns entities in the same or adjacent grid cells.
+// Precondition: Entity must have position and collider components.
 func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
-	pos := posComp.(*PositionComponent)
-	collider := colliderComp.(*ColliderComponent)
+	// Safe type assertions with nil checks
+	pos, ok1 := posComp.(*PositionComponent)
+	collider, ok2 := colliderComp.(*ColliderComponent)
+
+	if !ok1 || !ok2 {
+		// Components missing or wrong type - should not happen if Update() filters correctly
+		return nil
+	}
 
 	minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
 
@@ -173,16 +197,23 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 }
 
 // resolveCollision separates two colliding entities.
+// Precondition: Both entities must have position and collider components.
 func (s *CollisionSystem) resolveCollision(e1, e2 *Entity) {
 	pos1Comp, _ := e1.GetComponent("position")
 	pos2Comp, _ := e2.GetComponent("position")
 	collider1Comp, _ := e1.GetComponent("collider")
 	collider2Comp, _ := e2.GetComponent("collider")
 
-	pos1 := pos1Comp.(*PositionComponent)
-	pos2 := pos2Comp.(*PositionComponent)
-	collider1 := collider1Comp.(*ColliderComponent)
-	collider2 := collider2Comp.(*ColliderComponent)
+	// Safe type assertions with nil checks to prevent panics
+	pos1, ok1 := pos1Comp.(*PositionComponent)
+	pos2, ok2 := pos2Comp.(*PositionComponent)
+	collider1, ok3 := collider1Comp.(*ColliderComponent)
+	collider2, ok4 := collider2Comp.(*ColliderComponent)
+
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		// Components missing or wrong type - should not happen if Update() filters correctly
+		return
+	}
 
 	// Get bounding boxes
 	min1X, min1Y, max1X, max1Y := collider1.GetBounds(pos1.X, pos1.Y)
@@ -246,10 +277,15 @@ func CheckCollision(e1, e2 *Entity) bool {
 	collider1Comp, _ := e1.GetComponent("collider")
 	collider2Comp, _ := e2.GetComponent("collider")
 
-	pos1 := pos1Comp.(*PositionComponent)
-	pos2 := pos2Comp.(*PositionComponent)
-	collider1 := collider1Comp.(*ColliderComponent)
-	collider2 := collider2Comp.(*ColliderComponent)
+	// Safe type assertions with nil checks
+	pos1, ok1 := pos1Comp.(*PositionComponent)
+	pos2, ok2 := pos2Comp.(*PositionComponent)
+	collider1, ok3 := collider1Comp.(*ColliderComponent)
+	collider2, ok4 := collider2Comp.(*ColliderComponent)
+
+	if !ok1 || !ok2 || !ok3 || !ok4 {
+		return false
+	}
 
 	return collider1.Intersects(pos1.X, pos1.Y, collider2, pos2.X, pos2.Y)
 }

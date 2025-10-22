@@ -44,6 +44,17 @@ func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (in
 		}
 	}
 
+	// Validate dimensions to prevent panic on slice allocation
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("invalid dimensions: width and height must be positive (got width=%d, height=%d)", width, height)
+	}
+
+	// Set reasonable maximum to prevent memory exhaustion
+	const maxDimension = 10000
+	if width > maxDimension || height > maxDimension {
+		return nil, fmt.Errorf("dimensions too large: maximum is %d (got width=%d, height=%d)", maxDimension, width, height)
+	}
+
 	// Create random source from seed for deterministic generation
 	rng := rand.New(rand.NewSource(seed))
 

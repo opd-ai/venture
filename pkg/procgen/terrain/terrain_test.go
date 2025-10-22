@@ -156,6 +156,43 @@ func TestBSPValidation_InvalidInput(t *testing.T) {
 	}
 }
 
+func TestBSPGenerator_InvalidDimensions(t *testing.T) {
+	gen := NewBSPGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+	}
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"negative width", -10, 50},
+		{"negative height", 80, -10},
+		{"both negative", -10, -10},
+		{"zero width", 0, 50},
+		{"zero height", 80, 0},
+		{"both zero", 0, 0},
+		{"too large width", 20000, 50},
+		{"too large height", 80, 20000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params.Custom = map[string]interface{}{
+				"width":  tt.width,
+				"height": tt.height,
+			}
+			_, err := gen.Generate(12345, params)
+			if err == nil {
+				t.Errorf("Generate should fail for invalid dimensions: width=%d, height=%d", tt.width, tt.height)
+			}
+		})
+	}
+}
+
 func TestCellularValidation_InvalidInput(t *testing.T) {
 	gen := NewCellularGenerator()
 
@@ -181,6 +218,43 @@ func TestCellularValidation_InvalidInput(t *testing.T) {
 	err = gen.Validate(wallTerrain)
 	if err != nil {
 		t.Errorf("Validate should succeed for terrain with walkable tiles: %v", err)
+	}
+}
+
+func TestCellularGenerator_InvalidDimensions(t *testing.T) {
+	gen := NewCellularGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "caves",
+	}
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"negative width", -10, 50},
+		{"negative height", 80, -10},
+		{"both negative", -10, -10},
+		{"zero width", 0, 50},
+		{"zero height", 80, 0},
+		{"both zero", 0, 0},
+		{"too large width", 20000, 50},
+		{"too large height", 80, 20000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params.Custom = map[string]interface{}{
+				"width":  tt.width,
+				"height": tt.height,
+			}
+			_, err := gen.Generate(12345, params)
+			if err == nil {
+				t.Errorf("Generate should fail for invalid dimensions: width=%d, height=%d", tt.width, tt.height)
+			}
+		})
 	}
 }
 

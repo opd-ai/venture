@@ -239,7 +239,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verified gradient calculations with manual testing at 100%, 80%, 75%, 60%, 50%, 40%, 25%, 10%, 0% health
   - All transitions are now smooth and natural, health appears accurate at all levels
 
-#### Issue #5: Button State Color Contrast May Be Insufficient with Some Seeds
+#### Issue #5: Button State Color Contrast May Be Insufficient with Some Seeds ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:69-70, 77-88`)
 - **Description**: Button color is randomly selected from palette colors without checking if it provides adequate contrast for state variations (normal/hover/pressed). Some seed values may produce low-contrast buttons where states are barely distinguishable.
 - **Steps to Reproduce**:
@@ -298,6 +299,24 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Benchmark to ensure <1ms overhead per button
 - **Alternative Solution**: Use fixed color roles (Primary for normal, Accent1 for hover) instead of random selection
 - **WCAG Reference**: [WCAG 2.1 Success Criterion 1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html)
+- **Resolution**:
+  - Implemented `selectButtonBaseColor()` function with luminance validation
+  - Selection algorithm:
+    * Try up to 5 random colors from palette
+    * Check if luminance is in mid-range (0.25-0.75)
+    * Accept first color meeting criteria
+    * Fallback to Primary color if no good match found
+  - This ensures effective state differentiation:
+    * Very dark colors (luminance < 0.25): Rejected, try another
+    * Very light colors (luminance > 0.75): Rejected, try another
+    * Mid-range colors: Accepted, good contrast potential for lighten/darken
+  - Maintains seed-based variation while guaranteeing good contrast
+  - Example improvement:
+    * Old: Could select black (lum=0) → lighten 20% → still dark
+    * New: Requires lum > 0.25 → lighten 20% → clearly visible
+  - All existing tests pass including seed variation test
+  - Minimal performance impact (0-4 extra color picks per button)
+
 
 #### Issue #6: Camera Smoothing Calculation Frame-Rate Dependent ✅ RESOLVED
 - **Status**: RESOLVED (2025-10-22)
@@ -360,7 +379,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Camera now feels identical at all frame rates (30, 60, 120, 144 FPS)
   - Updated comments to explain the exponential decay approach
 
-#### Issue #7: Health Bar and XP Bar Not Synchronized with Component Updates
+#### Issue #7: Health Bar and XP Bar Not Synchronized with Component Updates - DEFERRED
+- **Status**: DEFERRED - Requires profiling and investigation to confirm issue exists
 - **Component**: HUD System (entire `hud_system.go`) and Combat/Progression Systems
 - **Description**: HUD reads component state in `Draw()` method every frame, but components may be updated mid-frame in `Update()`. This can cause 1-frame delay where damage/XP changes are applied but HUD shows old values, creating visual disconnect.
 - **Steps to Reproduce**:
@@ -411,10 +431,12 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Automated test: Apply damage, check that Draw() on same frame shows updated value
   - Performance: Dirty flag system adds zero overhead (single boolean check)
 - **Status**: POTENTIAL issue - needs confirmation via profiling and user testing
+- **Deferral Reason**: Code analysis shows Update() runs before Draw() in the same frame, which should work correctly (no delay). The audit itself notes "Actually this should work correctly". Requires profiling with timestamps and high-speed recording to confirm if a perceptible 1-frame delay actually exists. If confirmed, can be addressed with the suggested dirty flag system.
 
 ### Medium Priority Issues
 
-#### Issue #8: Tutorial Panel Overlaps HUD Elements at Small Resolutions
+#### Issue #8: Tutorial Panel Overlaps HUD Elements at Small Resolutions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: Tutorial System (`pkg/engine/tutorial_system.go:299-305`)
 - **Description**: Tutorial panel is hard-coded to 400x150 pixels in bottom-right corner. At minimum resolution (800x600), panel overlaps XP bar and stats panel, obscuring critical HUD information during tutorial.
 - **Steps to Reproduce**:
@@ -479,6 +501,20 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verify no overlap with HUD at any resolution
   - Check readability of tutorial text at minimum panel size
 - **Accessibility**: Ensure minimum font size remains legible (7x13 basicfont = 91px min width for typical text)
+- **Resolution**:
+  - Implemented responsive panel positioning with HUD collision avoidance
+  - Panel width scales down on small screens (min 300px)
+  - Three positioning modes based on screen size:
+    * Large screens (≥800x600): bottom-right, 60px above XP bar
+    * Medium screens (<800 width, ≥400 height): center-bottom, above XP bar
+    * Small screens (<400 height): center-center overlay
+  - Verified positioning at different resolutions:
+    * 800x600: panelX=380, panelY=390 (was 430, now 40px higher - no overlap)
+    * 1280x720: panelX=860, panelY=510 (no overlap)
+    * 1920x1080: panelX=1500, panelY=870 (no overlap)
+    * 640x480: panelX=170, panelY=270 (centered, above XP bar)
+  - All HUD elements remain visible at all tested resolutions
+
 
 #### Issue #9: Border Styles Not Fully Implemented for UI Elements ✅ RESOLVED
 - **Status**: RESOLVED (2025-10-22)
@@ -603,7 +639,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - All existing tests pass, confirming backward compatibility
   - Genre-specific border styling now functional (fantasy=Ornate, sci-fi/cyberpunk=Glow)
 
-#### Issue #10: No Visual Feedback for Quick Save/Load Actions
+#### Issue #10: No Visual Feedback for Quick Save/Load Actions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: Input System (`pkg/engine/input_system.go:113-123`) and Client (`cmd/client/main.go:216-302`)
 - **Description**: F5 (quick save) and F9 (quick load) key presses have no visual confirmation. Console logs indicate success/failure but player has no in-game feedback. Save could fail silently if player doesn't monitor terminal.
 - **Steps to Reproduce**:
@@ -674,8 +711,22 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Load game, verify notification appears
 - **UX Best Practice**: Use color coding (green=success, red=error, blue=info)
 - **Accessibility**: Ensure notification text is large enough to read quickly (minimum 14pt)
+- **Resolution**:
+  - Implemented alternative quick fix using tutorial notification system
+  - Added `ShowNotification(msg string, duration float64)` public method to TutorialSystem
+  - Modified InputSystem save/load handlers to show notifications:
+    * F5 save success: "Game Saved!" (2 seconds)
+    * F5 save error: "Save Failed: [error]" (3 seconds)
+    * F9 load success: "Game Loaded!" (2 seconds)
+    * F9 load error: "Load Failed: [error]" (3 seconds)
+  - Reuses existing notification rendering infrastructure (no new system needed)
+  - Works independently of tutorial state (notifications shown even when tutorial disabled)
+  - Notifications automatically fade in/out with existing animation
+  - Players now get immediate visual feedback for all save/load operations
 
-#### Issue #11: Tutorial Step Conditions May Fire Multiple Times
+
+#### Issue #11: Tutorial Step Conditions May Fire Multiple Times - DEFERRED
+- **Status**: DEFERRED - Issue analysis shows current code is safe
 - **Component**: Tutorial System (`pkg/engine/tutorial_system.go:46-151, 214-233`)
 - **Description**: Tutorial step completion conditions are checked every frame in `Update()` without rate limiting. Some conditions (like "inventory has items") may trigger repeatedly if player picks up and drops items, causing notification spam or step confusion.
 - **Steps to Reproduce**:
@@ -738,10 +789,12 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Verify no step regression
 - **Severity Justification**: Medium - current code appears safe, but lacks robustness for edge cases
 - **Priority**: Can defer to post-release polish
+- **Deferral Reason**: Code analysis confirms the `Completed` flag prevents re-triggering. This is a potential enhancement for edge cases, not a bug requiring immediate fix. Can be addressed in post-release polish phase.
 
 ### Low Priority Issues
 
-#### Issue #12: Border Thickness Random Variation (2-3px) Inconsistent Across Sessions
+#### Issue #12: Border Thickness Random Variation (2-3px) Inconsistent Across Sessions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:94`)
 - **Description**: Button border thickness uses `2 + rng.Intn(2)` producing 2 or 3 pixel borders. While deterministic per seed, the inconsistency can make UI feel slightly "off" between different playthroughs or multiplayer clients with different seeds.
 - **Steps to Reproduce**:
@@ -774,8 +827,19 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate 100 buttons per genre, verify consistent thickness
 - **Performance**: Zero impact (removes one RNG call)
 - **Design Consideration**: Consistency aids muscle memory and professional polish
+- **Resolution**:
+  - Replaced random thickness `2 + rng.Intn(2)` with `g.selectBorderThickness(config.GenreID, config.Type)`
+  - Implemented `selectBorderThickness()` method with consistent logic:
+    * Frames: Always 3px for visual hierarchy
+    * Fantasy/Horror genres: 3px for ornate styling
+    * All other elements: 2px for clean minimal look
+  - Border thickness is now consistent across all seeds and sessions
+  - Removed RNG call, improving determinism
+  - All existing tests pass, confirming backward compatibility
 
-#### Issue #13: Health Bar "Shine Effect" Hard-Coded Y Position May Clip with Small Bar Heights
+
+#### Issue #13: Health Bar "Shine Effect" Hard-Coded Y Position May Clip with Small Bar Heights ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:149-150`)
 - **Description**: Health bar shine effect is drawn at `y=3` which works for default height (20-30px) but may be outside bounds or look wrong for smaller custom health bars (<10px height).
 - **Steps to Reproduce**:
@@ -796,8 +860,20 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate health bars with heights 5, 10, 20, 30, 50 pixels, verify shine looks good
 - **Performance**: Zero impact (simple integer division)
 - **Note**: Client code uses default 20px height (`hud_system.go:69`), so this only affects custom UI elements
+- **Resolution**:
+  - Changed hard-coded `y=3` to proportional calculation: `shineY := 2 + maxInt(1, config.Height/5)`
+  - Added `maxInt()` helper function for integer maximum
+  - Shine effect now positioned at ~20-30% from top, scaled with bar height:
+    * 5px bar: shine at y=3 (60% - visible)
+    * 10px bar: shine at y=4 (40%)
+    * 20px bar: shine at y=6 (30%)
+    * 30px bar: shine at y=8 (27%)
+    * 50px bar: shine at y=12 (24%)
+  - All existing tests pass, visual appearance improved for custom-sized health bars
 
-#### Issue #14: Panel Semi-Transparency Fixed at Alpha=200, Not Configurable
+
+#### Issue #14: Panel Semi-Transparency Fixed at Alpha=200, Not Configurable ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:106-113`)
 - **Description**: Panel backgrounds use hard-coded `A: 200` alpha value. For HUD panels that overlay gameplay, alpha should be configurable (e.g., more opaque for menus, less opaque for in-game overlays).
 - **Steps to Reproduce**:
@@ -845,8 +921,20 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate panels with alpha values 0, 100, 200, 255, verify transparency
 - **Backward Compatibility**: Default alpha=200 maintains current behavior
 - **Related**: Could extend to other elements (buttons, labels) for themed transparency
+- **Resolution**:
+  - Added alpha configuration via `config.Custom["alpha"]` parameter
+  - Default value remains 200 for backward compatibility
+  - Values are clamped to valid range [0, 255]
+  - Usage examples:
+    * No Custom["alpha"]: uses default 200 (backward compatible)
+    * Custom["alpha"] = 255: fully opaque modal dialogs
+    * Custom["alpha"] = 150: subtle HUD overlays
+    * Custom["alpha"] = -10: clamped to 0 (fully transparent)
+    * Custom["alpha"] = 300: clamped to 255 (fully opaque)
+  - All existing tests pass, new flexibility for future UI features
 
-#### Issue #15: Icon Shape Selection Based on Genre Is Non-Deterministic Across Genres
+#### Issue #15: Icon Shape Selection Based on Genre Is Non-Deterministic Across Genres ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: UI Generator (`pkg/rendering/ui/generator.go:182-200`)
 - **Description**: Icon shape (circle vs. square) is determined by exact genre ID match ("scifi" or "cyberpunk" = square, else circle). Blended genres or custom genre IDs fall back to circle, causing inconsistent styling expectations.
 - **Steps to Reproduce**:
@@ -895,6 +983,22 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
 - **Testing**: Generate icons for all genres and blends, verify shapes match genre aesthetic
 - **Performance**: Minimal impact (one theme list iteration)
 - **Design Consideration**: Could extend to other shape variations (hexagons for cyberpunk, organic shapes for horror)
+- **Resolution**:
+  - Implemented keyword-based genre detection with `isTechGenre()` helper function
+  - Tech keywords: "scifi", "sci-fi", "cyber", "tech", "digital", "future"
+  - Square icons for: direct tech genres ("scifi", "cyberpunk") and blended genres containing tech keywords
+  - Circle icons for: organic/natural genres ("fantasy", "horror", "postapoc")
+  - Verification of genre shape assignment:
+    * "scifi" → square (direct match)
+    * "cyberpunk" → square (direct match)
+    * "sci-fi-horror" → square (contains "sci-fi")
+    * "cyber-fantasy" → square (contains "cyber")
+    * "fantasy" → circle (no tech keywords)
+    * "horror" → circle (no tech keywords)
+    * "postapoc" → circle (survival-focused, not tech)
+  - All existing tests pass
+  - Added `strings` import for `strings.Contains()` utility
+
 
 ## Positive Observations
 

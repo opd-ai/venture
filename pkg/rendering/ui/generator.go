@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"math/rand"
+	"strings"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 )
@@ -68,9 +69,9 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 	// Select colors based on state
 	var bgColor, borderColor color.Color
 
-	// Use random color from palette to add seed variation
-	colorIndex := rng.Intn(len(pal.Colors))
-	baseColor := pal.Colors[colorIndex]
+	// Select a base color with good contrast potential
+	// Try to find a color with mid-range luminance for better state differentiation
+	baseColor := g.selectButtonBaseColor(pal, rng)
 
 	switch config.State {
 	case StateNormal:
@@ -92,7 +93,7 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 
 	// Draw border based on genre
 	borderStyle := g.selectBorderStyle(config.GenreID)
-	borderThickness := 2 + rng.Intn(2) // 2 or 3 pixels
+	borderThickness := g.selectBorderThickness(config.GenreID, config.Type)
 	g.drawBorder(img, borderColor, borderStyle, borderThickness)
 
 	// Add highlight if not disabled
@@ -104,6 +105,19 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 
 // generatePanel creates a panel UI element.
 func (g *Generator) generatePanel(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
+	// Get alpha from custom config, default to 200
+	alpha := 200
+	if customAlpha, ok := config.Custom["alpha"].(int); ok {
+		// Clamp to valid range [0, 255]
+		if customAlpha < 0 {
+			alpha = 0
+		} else if customAlpha > 255 {
+			alpha = 255
+		} else {
+			alpha = customAlpha
+		}
+	}
+
 	// Semi-transparent background
 	bgColor := pal.Background
 	r, gr, b, _ := bgColor.RGBA()
@@ -111,7 +125,7 @@ func (g *Generator) generatePanel(img *image.RGBA, pal *palette.Palette, rng *ra
 		R: uint8(r >> 8),
 		G: uint8(gr >> 8),
 		B: uint8(b >> 8),
-		A: 200,
+		A: uint8(alpha),
 	}
 
 	// Fill background
@@ -145,9 +159,10 @@ func (g *Generator) generateHealthBar(img *image.RGBA, pal *palette.Palette, rng
 	if filledWidth > 0 {
 		g.fillRect(img, 2, 2, filledWidth, config.Height-4, fillColor)
 
-		// Add shine effect
+		// Add shine effect (positioned proportionally at 20% from top)
+		shineY := 2 + maxInt(1, config.Height/5) // At least 1px from fill start
 		shineColor := g.lightenColor(fillColor, 0.3)
-		g.drawLine(img, 2, 3, filledWidth, 3, shineColor)
+		g.drawLine(img, 2, shineY, filledWidth, shineY, shineColor)
 	}
 
 	// Border
@@ -182,11 +197,15 @@ func (g *Generator) generateIcon(img *image.RGBA, pal *palette.Palette, rng *ran
 	// Background circle or square based on genre
 	bgColor := pal.Primary
 
-	if config.GenreID == "scifi" || config.GenreID == "cyberpunk" {
+	// Determine if this should be a square icon based on genre
+	// Tech/futuristic genres use squares, organic/natural genres use circles
+	useSquare := g.isTechGenre(config.GenreID)
+
+	if useSquare {
 		// Square icon for tech genres
 		g.fillRect(img, 2, 2, config.Width-4, config.Height-4, bgColor)
 	} else {
-		// Circular icon for others
+		// Circular icon for organic/natural genres
 		centerX := config.Width / 2
 		centerY := config.Height / 2
 		radius := config.Width/2 - 2
@@ -392,8 +411,71 @@ func (g *Generator) selectBorderStyle(genreID string) BorderStyle {
 	}
 }
 
+// selectBorderThickness returns consistent border thickness based on genre and element type.
+// This ensures UI consistency across different seeds while maintaining genre-specific styling.
+func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) int {
+	if elemType == ElementFrame {
+		return 3 // Frames use thicker borders
+	}
+	if genreID == "fantasy" || genreID == "horror" {
+		return 3 // Ornate genres use thicker borders
+	}
+	return 2 // Default thickness for most elements
+}
+
+// selectButtonBaseColor chooses a base color from the palette that has good contrast potential.
+// Colors with mid-range luminance (0.25-0.75) work better for state variations (lighten/darken).
+func (g *Generator) selectButtonBaseColor(pal *palette.Palette, rng *rand.Rand) color.Color {
+	// Try up to 5 attempts to find a good color
+	for attempt := 0; attempt < 5; attempt++ {
+		colorIndex := rng.Intn(len(pal.Colors))
+		candidate := pal.Colors[colorIndex]
+		
+		// Calculate relative luminance
+		r, gr, b, _ := candidate.RGBA()
+		luminance := (0.299*float64(r) + 0.587*float64(gr) + 0.114*float64(b)) / 65535.0
+		
+		// Prefer colors with mid-range luminance (not too dark or too light)
+		// This ensures effective lightening and darkening for button states
+		if luminance > 0.25 && luminance < 0.75 {
+			return candidate
+		}
+	}
+	
+	// Fallback: use Primary color which should be well-balanced
+	return pal.Primary
+}
+
+// isTechGenre determines if a genre ID represents a technological/futuristic theme.
+// Tech genres use square icons, while organic/natural genres use circular icons.
+// This includes both pure genres and blended genres containing tech elements.
+func (g *Generator) isTechGenre(genreID string) bool {
+	// Direct tech genre IDs
+	if genreID == "scifi" || genreID == "cyberpunk" {
+		return true
+	}
+	
+	// Check for tech-related keywords in blended genre IDs
+	// This handles cases like "sci-fi-horror", "cyber-fantasy", etc.
+	techKeywords := []string{"scifi", "sci-fi", "cyber", "tech", "digital", "future"}
+	for _, keyword := range techKeywords {
+		if strings.Contains(genreID, keyword) {
+			return true
+		}
+	}
+	
+	return false
+}
+
 func min(a, b float64) float64 {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b

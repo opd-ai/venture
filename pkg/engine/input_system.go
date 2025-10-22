@@ -91,14 +91,30 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	// Handle quick save (F5)
 	if inpututil.IsKeyJustPressed(s.KeyQuickSave) && s.onQuickSave != nil {
 		if err := s.onQuickSave(); err != nil {
-			// Error is logged by the callback
+			// Show error notification
+			if s.tutorialSystem != nil {
+				s.tutorialSystem.ShowNotification("Save Failed: "+err.Error(), 3.0)
+			}
+		} else {
+			// Show success notification
+			if s.tutorialSystem != nil {
+				s.tutorialSystem.ShowNotification("Game Saved!", 2.0)
+			}
 		}
 	}
 
 	// Handle quick load (F9)
 	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
 		if err := s.onQuickLoad(); err != nil {
-			// Error is logged by the callback
+			// Show error notification
+			if s.tutorialSystem != nil {
+				s.tutorialSystem.ShowNotification("Load Failed: "+err.Error(), 3.0)
+			}
+		} else {
+			// Show success notification
+			if s.tutorialSystem != nil {
+				s.tutorialSystem.ShowNotification("Game Loaded!", 2.0)
+			}
 		}
 	}
 

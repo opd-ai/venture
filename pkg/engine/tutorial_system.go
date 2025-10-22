@@ -277,6 +277,13 @@ func (ts *TutorialSystem) Reset() {
 	}
 }
 
+// ShowNotification displays a notification message for the specified duration.
+// This can be used to show feedback for game actions like saving/loading.
+func (ts *TutorialSystem) ShowNotification(msg string, duration float64) {
+	ts.NotificationMsg = msg
+	ts.NotificationTTL = duration
+}
+
 // Draw renders the tutorial UI overlay
 func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 	if !ts.Enabled || !ts.ShowUI {
@@ -292,14 +299,42 @@ func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Draw tutorial panel in bottom-right
+	// Draw tutorial panel with responsive positioning to avoid HUD overlap
 	screenWidth := screen.Bounds().Dx()
 	screenHeight := screen.Bounds().Dy()
 
+	// Scale panel size based on screen dimensions
 	panelWidth := 400
+	if screenWidth < 800 {
+		// Minimum 300px, or leave 100px margin
+		if screenWidth-100 > 300 {
+			panelWidth = screenWidth - 100
+		} else {
+			panelWidth = 300
+		}
+	}
 	panelHeight := 150
-	panelX := screenWidth - panelWidth - 20
-	panelY := screenHeight - panelHeight - 20
+
+	// HUD element margins (approximate positions)
+	const hudMarginTop = 120    // Health bar + stats panel height
+	const hudMarginBottom = 60  // XP bar height
+	const hudMarginRight = 220  // Stats panel width + margin
+
+	// Position panel to avoid HUD elements
+	var panelX, panelY int
+	if screenWidth >= 800 && screenHeight >= 600 {
+		// Standard position: bottom-right, above XP bar
+		panelX = screenWidth - panelWidth - 20
+		panelY = screenHeight - panelHeight - hudMarginBottom
+	} else if screenHeight >= 400 {
+		// Small screen: center-bottom, above XP bar
+		panelX = (screenWidth - panelWidth) / 2
+		panelY = screenHeight - panelHeight - hudMarginBottom
+	} else {
+		// Tiny screen: center-center overlay (last resort)
+		panelX = (screenWidth - panelWidth) / 2
+		panelY = (screenHeight - panelHeight) / 2
+	}
 
 	// Semi-transparent background
 	vector.DrawFilledRect(screen,

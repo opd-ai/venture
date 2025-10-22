@@ -295,42 +295,76 @@ Common errors:
 
 ### Component Serialization
 
-Components can be serialized for network transmission:
+The `ComponentSerializer` provides ready-to-use methods for serializing common ECS components:
 
 ```go
 import (
-    "encoding/binary"
     "github.com/opd-ai/venture/pkg/engine"
     "github.com/opd-ai/venture/pkg/network"
 )
 
-// Serialize position component
-func SerializePosition(pos *engine.PositionComponent) []byte {
-    buf := make([]byte, 16)
-    binary.LittleEndian.PutUint64(buf[0:8], math.Float64bits(pos.X))
-    binary.LittleEndian.PutUint64(buf[8:16], math.Float64bits(pos.Y))
-    return buf
-}
+// Create serializer
+serializer := network.NewComponentSerializer()
 
-// Deserialize position component
-func DeserializePosition(data []byte) *engine.PositionComponent {
-    x := math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
-    y := math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
-    return &engine.PositionComponent{X: x, Y: y}
-}
+// Serialize position
+pos := &engine.PositionComponent{X: 123.45, Y: 678.90}
+posData := serializer.SerializePosition(pos.X, pos.Y)
 
+// Deserialize position
+x, y, err := serializer.DeserializePosition(posData)
+
+// Serialize health
+health := &engine.HealthComponent{Current: 75, Max: 100}
+healthData := serializer.SerializeHealth(health.Current, health.Max)
+
+// Deserialize health
+current, max, err := serializer.DeserializeHealth(healthData)
+
+// Serialize stats
+statsData := serializer.SerializeStats(attack, defense, magicPower)
+
+// Serialize input
+inputData := serializer.SerializeInput(dx, dy)
+
+// Serialize attack command
+attackData := serializer.SerializeAttack(targetID)
+```
+
+**Supported Components:**
+- **Position**: X, Y coordinates (16 bytes)
+- **Velocity**: VX, VY velocities (16 bytes)
+- **Health**: Current, Max health (16 bytes)
+- **Stats**: Attack, Defense, MagicPower (24 bytes)
+- **Team**: Team ID (8 bytes)
+- **Level**: Level, XP (8 bytes)
+- **Input**: Movement dx, dy (2 bytes)
+- **Attack**: Target entity ID (8 bytes)
+- **Item**: Item ID (8 bytes)
+
+### Creating Entity Updates
+
+```go
 // Create state update for entity
-func CreateEntityUpdate(entity *engine.Entity) *network.StateUpdate {
+func CreateEntityUpdate(entity *engine.Entity, serializer *network.ComponentSerializer) *network.StateUpdate {
     components := []network.ComponentData{}
     
+    // Serialize position
     if pos, ok := entity.GetComponent("position"); ok {
+        position := pos.(*engine.PositionComponent)
         components = append(components, network.ComponentData{
             Type: "position",
-            Data: SerializePosition(pos.(*engine.PositionComponent)),
+            Data: serializer.SerializePosition(position.X, position.Y),
         })
     }
     
-    // Add other components...
+    // Serialize health
+    if hp, ok := entity.GetComponent("health"); ok {
+        health := hp.(*engine.HealthComponent)
+        components = append(components, network.ComponentData{
+            Type: "health",
+            Data: serializer.SerializeHealth(health.Current, health.Max),
+        })
+    }
     
     return &network.StateUpdate{
         Timestamp:  uint64(time.Now().UnixNano()),

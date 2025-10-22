@@ -391,6 +391,15 @@ go run -tags test ./examples/network_demo.go
 #   - Client/server configuration
 #   - State broadcasting
 #   - Performance characteristics
+
+# Run the multiplayer integration demo (requires -tags test)
+go run -tags test ./examples/multiplayer_demo.go
+
+# Demonstrates:
+#   - Complete client-server setup
+#   - Component serialization with ECS
+#   - Simulated multiplayer game loop
+#   - Multiple concurrent players
 ```
 
 See [pkg/network/README.md](pkg/network/README.md) for more details on the networking system.

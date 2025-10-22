@@ -181,6 +181,9 @@ go build -o skilltest ./cmd/skilltest
 # Build the genre test tool (no graphics dependencies)
 go build -o genretest ./cmd/genretest
 
+# Build the genre blender tool (no graphics dependencies)
+go build -o genreblend ./cmd/genreblend
+
 # Build the rendering test tool (no graphics dependencies)
 go build -o rendertest ./cmd/rendertest
 
@@ -310,6 +313,40 @@ Explore the genre definition system:
 ```
 
 See [pkg/procgen/genre/README.md](pkg/procgen/genre/README.md) for more details on the genre system.
+
+### Testing Genre Blending
+
+Create hybrid genres by blending two base genres:
+
+```bash
+# List all preset blended genres
+./genreblend -list-presets
+
+# Create a sci-fi horror blend
+./genreblend -preset=sci-fi-horror -seed 12345 -verbose
+
+# Custom blend: dark fantasy (70% fantasy, 30% horror)
+./genreblend -primary=fantasy -secondary=horror -weight=0.3 -verbose
+
+# Create a cyberpunk-horror hybrid
+./genreblend -primary=cyberpunk -secondary=horror -weight=0.5
+
+# List all available base genres
+./genreblend -list-genres
+```
+
+The genre blender creates hybrid genres with:
+- Blended color palettes
+- Mixed themes from both genres
+- Combined naming conventions
+- Deterministic generation (same seed = same result)
+
+Available preset blends:
+- **sci-fi-horror**: Space horror (Alien, Dead Space)
+- **dark-fantasy**: Horror-tinged fantasy (Dark Souls, Bloodborne)
+- **cyber-horror**: Cyberpunk with horror elements
+- **post-apoc-scifi**: Post-apocalyptic with sci-fi technology
+- **wasteland-fantasy**: Post-apocalyptic with fantasy elements
 
 ### Testing Rendering System
 

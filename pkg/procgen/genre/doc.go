@@ -2,7 +2,8 @@
 //
 // The genre system manages all game genres (fantasy, sci-fi, horror, etc.) and provides
 // a consistent interface for genre-based content generation across all procedural
-// generation systems.
+// generation systems. It supports both predefined genres and cross-genre blending
+// for hybrid content.
 //
 // # Features
 //
@@ -10,6 +11,8 @@
 //   - Genre validation and lookup by ID
 //   - Color palette associations
 //   - Theme descriptions and naming conventions
+//   - Cross-genre blending for hybrid genres
+//   - Preset blended genre combinations
 //   - Easy extension for new genres
 //
 // # Usage
@@ -34,6 +37,21 @@
 //	    fmt.Printf("%s: %s\n", g.ID, g.Name)
 //	}
 //
+// # Genre Blending
+//
+// Create hybrid genres by blending two base genres:
+//
+//	blender := genre.NewGenreBlender(registry)
+//	scifiHorror, err := blender.Blend("scifi", "horror", 0.5, 12345)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Printf("Blended genre: %s\n", scifiHorror.Name)
+//
+// Use preset blends for common combinations:
+//
+//	darkFantasy, err := blender.CreatePresetBlend("dark-fantasy", 12345)
+//
 // # Supported Genres
 //
 // The system comes with the following predefined genres:
@@ -43,6 +61,9 @@
 //   - Horror: Dark, atmospheric horror themes
 //   - Cyberpunk: High-tech dystopian future
 //   - Post-Apocalyptic: Wasteland survival themes
+//
+// Preset blends include: sci-fi-horror, dark-fantasy, cyber-horror,
+// post-apoc-scifi, and wasteland-fantasy.
 //
 // # Adding New Genres
 //

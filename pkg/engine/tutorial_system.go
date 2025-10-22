@@ -277,6 +277,13 @@ func (ts *TutorialSystem) Reset() {
 	}
 }
 
+// ShowNotification displays a notification message for the specified duration.
+// This can be used to show feedback for game actions like saving/loading.
+func (ts *TutorialSystem) ShowNotification(msg string, duration float64) {
+	ts.NotificationMsg = msg
+	ts.NotificationTTL = duration
+}
+
 // Draw renders the tutorial UI overlay
 func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 	if !ts.Enabled || !ts.ShowUI {

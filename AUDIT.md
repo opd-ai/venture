@@ -637,7 +637,8 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - All existing tests pass, confirming backward compatibility
   - Genre-specific border styling now functional (fantasy=Ornate, sci-fi/cyberpunk=Glow)
 
-#### Issue #10: No Visual Feedback for Quick Save/Load Actions
+#### Issue #10: No Visual Feedback for Quick Save/Load Actions ✅ RESOLVED
+- **Status**: RESOLVED (2025-10-22)
 - **Component**: Input System (`pkg/engine/input_system.go:113-123`) and Client (`cmd/client/main.go:216-302`)
 - **Description**: F5 (quick save) and F9 (quick load) key presses have no visual confirmation. Console logs indicate success/failure but player has no in-game feedback. Save could fail silently if player doesn't monitor terminal.
 - **Steps to Reproduce**:
@@ -708,6 +709,19 @@ This comprehensive UI audit of Venture examined all UI systems including procedu
   - Load game, verify notification appears
 - **UX Best Practice**: Use color coding (green=success, red=error, blue=info)
 - **Accessibility**: Ensure notification text is large enough to read quickly (minimum 14pt)
+- **Resolution**:
+  - Implemented alternative quick fix using tutorial notification system
+  - Added `ShowNotification(msg string, duration float64)` public method to TutorialSystem
+  - Modified InputSystem save/load handlers to show notifications:
+    * F5 save success: "Game Saved!" (2 seconds)
+    * F5 save error: "Save Failed: [error]" (3 seconds)
+    * F9 load success: "Game Loaded!" (2 seconds)
+    * F9 load error: "Load Failed: [error]" (3 seconds)
+  - Reuses existing notification rendering infrastructure (no new system needed)
+  - Works independently of tutorial state (notifications shown even when tutorial disabled)
+  - Notifications automatically fade in/out with existing animation
+  - Players now get immediate visual feedback for all save/load operations
+
 
 #### Issue #11: Tutorial Step Conditions May Fire Multiple Times
 - **Component**: Tutorial System (`pkg/engine/tutorial_system.go:46-151, 214-233`)

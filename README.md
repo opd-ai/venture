@@ -504,7 +504,6 @@ See [pkg/network/README.md](pkg/network/README.md) for more details on the netwo
 - **TECHNICAL_SPEC.md** - Complete technical specification
 - **ROADMAP.md** - Detailed 8-phase development roadmap
 - **DEVELOPMENT.md** - Development guide and best practices
-- **CLEANUP_REPORT_2025-10-22.md** - Repository cleanup summary (Oct 2025)
 
 ### Phase Implementation Reports (docs/)
 - **PHASE1_SUMMARY.md** - Phase 1: Architecture & Foundation

@@ -1,6 +1,6 @@
 # Network Package
 
-The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, state synchronization, client-side prediction, and entity interpolation. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
+The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, state synchronization, client-side prediction, entity interpolation, and lag compensation. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
 
 ## Features
 
@@ -9,6 +9,7 @@ The network package provides multiplayer networking functionality for Venture, i
 - **Server Networking**: Client management, broadcasting, authoritative state
 - **Client-Side Prediction**: Immediate response to player input with server reconciliation
 - **Entity Interpolation**: Smooth remote entity movement between server snapshots
+- **Lag Compensation**: Server-side rewind for fair hit detection in high-latency environments
 - **Snapshot Management**: Efficient state history with delta compression
 - **Low Latency**: Optimized for real-time multiplayer (sub-millisecond serialization)
 - **High Bandwidth**: Minimal packet sizes (<100 bytes typical)
@@ -58,6 +59,16 @@ The `SnapshotManager` handles state synchronization:
 - Interpolates entity positions between snapshots
 - Creates delta updates for bandwidth efficiency
 - Retrieves historical states for lag compensation
+
+### Lag Compensation Layer
+
+The `LagCompensator` provides server-side lag compensation:
+
+- Records historical world state snapshots
+- Rewinds game state to player's perspective time
+- Validates hits against historical positions
+- Prevents exploitation with configurable time limits (10ms-500ms default, up to 5000ms)
+- Enables fair gameplay in high-latency environments
 
 ## Usage
 
@@ -258,6 +269,69 @@ for {
         client.SendInput("move", encodeMovement(0, -1))
     }
 }
+```
+
+### Lag Compensation
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Create lag compensator (default: 500ms max, suitable for internet play)
+config := network.DefaultLagCompensationConfig()
+lagComp := network.NewLagCompensator(config)
+
+// For high-latency connections (e.g., Tor, up to 5000ms)
+// config := network.HighLatencyLagCompensationConfig()
+
+// In game loop: record world state
+func updateGameState() {
+    snapshot := network.WorldSnapshot{
+        Timestamp: time.Now(),
+        Entities: map[uint64]network.EntitySnapshot{
+            1: {
+                EntityID: 1,
+                Position: network.Position{X: player1.X, Y: player1.Y},
+                Velocity: network.Velocity{VX: player1.VX, VY: player1.VY},
+            },
+            2: {
+                EntityID: 2,
+                Position: network.Position{X: player2.X, Y: player2.Y},
+                Velocity: network.Velocity{VX: player2.VX, VY: player2.VY},
+            },
+        },
+    }
+    lagComp.RecordSnapshot(snapshot)
+}
+
+// When player shoots: validate hit with lag compensation
+func handlePlayerShoot(shooterID, targetID uint64, hitPos network.Position, playerLatency time.Duration) {
+    // Validate hit against historical position
+    valid, err := lagComp.ValidateHit(
+        shooterID,
+        targetID,
+        hitPos,
+        playerLatency,
+        10.0, // hit radius
+    )
+    
+    if err != nil {
+        log.Printf("Hit validation error: %v", err)
+        return
+    }
+    
+    if valid {
+        // Hit confirmed! Apply damage
+        applyDamage(targetID)
+    } else {
+        // Miss
+        log.Printf("Shot missed target")
+    }
+}
+
+// Get statistics
+stats := lagComp.GetStats()
+log.Printf("Lag compensator has %d snapshots, oldest is %v old",
+    stats.TotalSnapshots, stats.OldestSnapshotAge)
 ```
 
 ### Binary Protocol

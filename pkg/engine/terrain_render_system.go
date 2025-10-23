@@ -190,7 +190,7 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(screenX, screenY)
-	opts.ColorScale.Scale(float32(r)/255, float32(g)/255, float32(b)/255, 1.0)
+	// GAP REPAIR: Remove redundant color scaling - image is already colored
 	screen.DrawImage(fallbackImg, opts)
 }
 

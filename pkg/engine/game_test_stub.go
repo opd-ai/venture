@@ -76,7 +76,7 @@ type TutorialSystem struct{}
 
 func (t *TutorialSystem) Update([]*Entity, float64) {}
 
-func (t *TutorialSystem) ShowNotification(message string) {}
+func (t *TutorialSystem) ShowNotification(message string, duration float64) {}
 
 type HelpSystem struct{}
 

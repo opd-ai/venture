@@ -459,15 +459,16 @@ fmt.Printf("Effect: %s\n", spell.Description)
 **Package:** `github.com/opd-ai/venture/pkg/procgen/skills`
 
 ```go
-gen := skills.NewGenerator()
+gen := skills.NewSkillTreeGenerator()
 
 result, err := gen.Generate(seed, params)
-tree := result.(*skills.SkillTree)
+trees := result.([]*skills.SkillTree)
+tree := trees[0] // First tree
 
 fmt.Printf("Tree: %s\n", tree.Name)
-fmt.Printf("Skills: %d\n", len(tree.Skills))
+fmt.Printf("Skills: %d\n", len(tree.Nodes))
 
-for _, skill := range tree.Skills {
+for _, skill := range tree.Nodes {
     fmt.Printf("  %s (Tier %d)\n", skill.Name, skill.Tier)
     fmt.Printf("    Type: %s\n", skill.Type)
     fmt.Printf("    Effect: %s\n", skill.Effect)
@@ -483,12 +484,13 @@ for _, skill := range tree.Skills {
 **Package:** `github.com/opd-ai/venture/pkg/procgen/quest`
 
 ```go
-gen := quest.NewGenerator()
+gen := quest.NewQuestGenerator()
 
 result, err := gen.Generate(seed, params)
-quest := result.(*quest.Quest)
+quests := result.([]*quest.Quest)
+generatedQuest := quests[0] // First quest
 
-fmt.Printf("Quest: %s\n", quest.Title)
+fmt.Printf("Quest: %s\n", generatedQuest.Name)
 fmt.Printf("Type: %s\n", quest.Type)
 fmt.Printf("Description: %s\n", quest.Description)
 

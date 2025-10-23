@@ -28,23 +28,37 @@ type Game struct {
 	HUDSystem           *HUDSystem
 	TutorialSystem      *TutorialSystem
 	HelpSystem          *HelpSystem
+
+	// UI systems
+	InventoryUI *InventoryUI
+	QuestUI     *QuestUI
+
+	// Player entity reference (for UI systems)
+	PlayerEntity *Entity
 }
 
 // NewGame creates a new game instance.
 func NewGame(screenWidth, screenHeight int) *Game {
+	world := NewWorld()
 	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
 	renderSystem := NewRenderSystem(cameraSystem)
 	hudSystem := NewHUDSystem(screenWidth, screenHeight)
 	// TerrainRenderSystem will be initialized later with specific genre/seed
 
+	// Create UI systems
+	inventoryUI := NewInventoryUI(world, screenWidth, screenHeight)
+	questUI := NewQuestUI(world, screenWidth, screenHeight)
+
 	return &Game{
-		World:          NewWorld(),
+		World:          world,
 		lastUpdateTime: time.Now(),
 		ScreenWidth:    screenWidth,
 		ScreenHeight:   screenHeight,
 		CameraSystem:   cameraSystem,
 		RenderSystem:   renderSystem,
 		HUDSystem:      hudSystem,
+		InventoryUI:    inventoryUI,
+		QuestUI:        questUI,
 	}
 }
 
@@ -64,8 +78,14 @@ func (g *Game) Update() error {
 		deltaTime = 0.1
 	}
 
-	// Update the world
-	g.World.Update(deltaTime)
+	// Update UI systems first (they capture input if visible)
+	g.InventoryUI.Update()
+	g.QuestUI.Update()
+
+	// Update the world (unless UI is blocking input)
+	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() {
+		g.World.Update(deltaTime)
+	}
 
 	// Update camera system
 	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
@@ -95,11 +115,47 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.HelpSystem != nil && g.HelpSystem.Visible {
 		g.HelpSystem.Draw(screen)
 	}
+
+	// Render UI overlays (drawn last so they're on top)
+	g.InventoryUI.Draw(screen)
+	g.QuestUI.Draw(screen)
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return g.ScreenWidth, g.ScreenHeight
+}
+
+// SetPlayerEntity sets the player entity for the game and UI systems.
+// This should be called after creating the player entity.
+func (g *Game) SetPlayerEntity(entity *Entity) {
+	g.PlayerEntity = entity
+	g.InventoryUI.SetPlayerEntity(entity)
+	g.QuestUI.SetPlayerEntity(entity)
+}
+
+// SetInventorySystem connects the inventory system to the inventory UI for item actions.
+func (g *Game) SetInventorySystem(system *InventorySystem) {
+	g.InventoryUI.SetInventorySystem(system)
+}
+
+// SetupInputCallbacks connects the input system callbacks to the UI systems.
+// This should be called after the InputSystem is added to the world.
+func (g *Game) SetupInputCallbacks(inputSystem *InputSystem) {
+	// Connect inventory toggle
+	inputSystem.SetInventoryCallback(func() {
+		g.InventoryUI.Toggle()
+	})
+
+	// Connect quest log toggle
+	inputSystem.SetQuestsCallback(func() {
+		g.QuestUI.Toggle()
+	})
+
+	// TODO: Connect other callbacks when character/skills/map UIs are implemented
+	// inputSystem.SetCharacterCallback(func() { ... })
+	// inputSystem.SetSkillsCallback(func() { ... })
+	// inputSystem.SetMapCallback(func() { ... })
 }
 
 // Run starts the game loop.

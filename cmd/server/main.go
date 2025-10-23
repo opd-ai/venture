@@ -91,6 +91,9 @@ func main() {
 	serverConfig.MaxPlayers = *maxPlayers
 	serverConfig.UpdateRate = *tickRate
 
+	// Create network server
+	server := network.NewServer(serverConfig)
+
 	// Create snapshot manager for state synchronization
 	snapshotManager := network.NewSnapshotManager(100)
 
@@ -104,9 +107,22 @@ func main() {
 			serverConfig.Address, serverConfig.MaxPlayers, serverConfig.UpdateRate)
 	}
 
+	// Start network server
+	if err := server.Start(); err != nil {
+		log.Fatalf("Failed to start network server: %v", err)
+	}
+
 	log.Println("Server initialized successfully")
-	log.Printf("Server running on port %s (not accepting connections yet - network layer stub)", *port)
+	log.Printf("Server listening on port %s", *port)
+	log.Printf("Max players: %d, Update rate: %d Hz", *maxPlayers, *tickRate)
 	log.Printf("Game world ready with %d entities", len(world.GetEntities()))
+
+	// Handle server shutdown gracefully
+	defer func() {
+		if err := server.Stop(); err != nil {
+			log.Printf("Error stopping server: %v", err)
+		}
+	}()
 
 	// Run authoritative game loop
 	tickDuration := time.Duration(1000000000 / *tickRate) // nanoseconds per tick
@@ -116,6 +132,25 @@ func main() {
 	lastUpdate := time.Now()
 
 	log.Printf("Starting authoritative game loop at %d Hz...", *tickRate)
+
+	// Handle server errors in background
+	go func() {
+		for err := range server.ReceiveError() {
+			log.Printf("Network error: %v", err)
+		}
+	}()
+
+	// Handle client input commands in background
+	go func() {
+		for cmd := range server.ReceiveInputCommand() {
+			// TODO: Process player input commands
+			// For now, just log them in verbose mode
+			if *verbose {
+				log.Printf("Received input from player %d: type=%s, seq=%d",
+					cmd.PlayerID, cmd.InputType, cmd.SequenceNumber)
+			}
+		}
+	}()
 
 	for {
 		select {
@@ -133,13 +168,16 @@ func main() {
 			snapshotManager.AddSnapshot(snapshot)
 			lagCompensator.RecordSnapshot(snapshot)
 
+			// Broadcast state to connected clients
+			stateUpdate := convertSnapshotToStateUpdate(snapshot)
+			server.BroadcastStateUpdate(stateUpdate)
+
 			if *verbose && int(now.Unix())%10 == 0 {
 				// Log every 10 seconds
-				log.Printf("Server tick: %d entities",
-					len(world.GetEntities()))
+				playerCount := server.GetPlayerCount()
+				log.Printf("Server tick: %d entities, %d players connected",
+					len(world.GetEntities()), playerCount)
 			}
-
-			// TODO: Broadcast state to connected clients (when network server is implemented)
 		}
 	}
 }
@@ -174,4 +212,15 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 	}
 
 	return snapshot
+}
+
+// convertSnapshotToStateUpdate converts a WorldSnapshot to a StateUpdate for broadcasting
+func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.StateUpdate {
+	// For now, create a simple state update
+	// In a full implementation, this would serialize component data efficiently
+	update := &network.StateUpdate{
+		Timestamp: uint64(snapshot.Timestamp.UnixNano() / 1000000), // milliseconds
+		Priority:  128,                                             // Normal priority
+	}
+	return update
 }

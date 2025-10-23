@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"image/color"
 	"log"
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/saveload"
 )
@@ -19,6 +22,146 @@ var (
 	genreID = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	verbose = flag.Bool("verbose", false, "Enable verbose logging")
 )
+
+// addStarterItems generates and adds starting items to the player's inventory.
+func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, verbose bool) {
+	itemGen := item.NewItemGenerator()
+
+	// Generate a starting weapon (1 weapon, common)
+	weaponParams := procgen.GenerationParams{
+		Difficulty: 0.0, // Easy starter weapon
+		Depth:      1,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 1,
+			"type":  "weapon",
+		},
+	}
+
+	weaponResult, err := itemGen.Generate(seed+1, weaponParams)
+	if err != nil {
+		log.Printf("Warning: Failed to generate starter weapon: %v", err)
+	} else {
+		weapons := weaponResult.([]*item.Item)
+		if len(weapons) > 0 {
+			weapon := weapons[0]
+			weapon.Name = "Rusty " + weapon.Name // Make it clearly a starter item
+			weapon.Stats.Value = 5               // Low value
+			inventory.Items = append(inventory.Items, weapon)
+			if verbose {
+				log.Printf("Added starter weapon: %s (Damage: %d)", weapon.Name, weapon.Stats.Damage)
+			}
+		}
+	}
+
+	// Generate 2 healing potions
+	potionParams := procgen.GenerationParams{
+		Difficulty: 0.0,
+		Depth:      1,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 2,
+			"type":  "consumable",
+		},
+	}
+
+	potionResult, err := itemGen.Generate(seed+2, potionParams)
+	if err != nil {
+		log.Printf("Warning: Failed to generate healing potions: %v", err)
+	} else {
+		potions := potionResult.([]*item.Item)
+		for i, potion := range potions {
+			potion.Name = "Minor Health Potion"
+			potion.Stats.Value = 10
+			potion.Stats.Weight = 0.2
+			inventory.Items = append(inventory.Items, potion)
+			if verbose && i == 0 {
+				log.Printf("Added %d healing potions", len(potions))
+			}
+		}
+	}
+
+	// Generate a piece of armor (1 armor, common)
+	armorParams := procgen.GenerationParams{
+		Difficulty: 0.0,
+		Depth:      1,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 1,
+			"type":  "armor",
+		},
+	}
+
+	armorResult, err := itemGen.Generate(seed+100, armorParams)
+	if err != nil {
+		log.Printf("Warning: Failed to generate starter armor: %v", err)
+	} else {
+		armors := armorResult.([]*item.Item)
+		if len(armors) > 0 {
+			armor := armors[0]
+			armor.Name = "Worn " + armor.Name
+			armor.Stats.Value = 8
+			inventory.Items = append(inventory.Items, armor)
+			if verbose {
+				log.Printf("Added starter armor: %s (Defense: %d)", armor.Name, armor.Stats.Defense)
+			}
+		}
+	}
+
+	if verbose {
+		log.Printf("Starter items added: %d items in inventory", len(inventory.Items))
+	}
+}
+
+// addTutorialQuest creates and adds a tutorial quest to the player's quest tracker.
+func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID string, verbose bool) {
+	// Create a simple tutorial quest manually (more reliable than generation)
+	tutorialQuest := &quest.Quest{
+		ID:            fmt.Sprintf("tutorial_%d", seed),
+		Name:          "Welcome to Venture",
+		Type:          quest.TypeExplore,
+		Difficulty:    quest.DifficultyTrivial,
+		Description:   "Learn the basics of survival in this procedurally generated world. Explore your surroundings, manage your inventory, and prepare for adventure!",
+		RequiredLevel: 1,
+		Status:        quest.StatusActive,
+		Seed:          seed,
+		Tags:          []string{"tutorial", "starter"},
+		GiverNPC:      "System",
+		Objectives: []quest.Objective{
+			{
+				Description: "Open your inventory (press I)",
+				Target:      "inventory",
+				Required:    1,
+				Current:     0,
+			},
+			{
+				Description: "Check your quest log (press J)",
+				Target:      "questlog",
+				Required:    1,
+				Current:     1, // Auto-complete since they're viewing it now!
+			},
+			{
+				Description: "Explore the dungeon (move with WASD)",
+				Target:      "explore",
+				Required:    10, // Move 10 tiles
+				Current:     0,
+			},
+		},
+		Reward: quest.Reward{
+			XP:          50,
+			Gold:        25,
+			Items:       []string{},
+			SkillPoints: 0,
+		},
+	}
+
+	// Accept the quest
+	tracker.AcceptQuest(tutorialQuest, 0)
+
+	if verbose {
+		log.Printf("Tutorial quest added: '%s' with %d objectives", tutorialQuest.Name, len(tutorialQuest.Objectives))
+	}
+}
 
 func main() {
 	flag.Parse()
@@ -142,6 +285,9 @@ func main() {
 	// Set player for HUD display
 	game.HUDSystem.SetPlayerEntity(player)
 
+	// Set player for UI systems (inventory, quests)
+	game.SetPlayerEntity(player)
+
 	// Add player stats
 	playerStats := engine.NewStatsComponent()
 	playerStats.Attack = 10
@@ -156,6 +302,14 @@ func main() {
 	playerInventory := engine.NewInventoryComponent(20, 100.0) // 20 items, 100 weight max
 	playerInventory.Gold = 100
 	player.AddComponent(playerInventory)
+
+	// Add player equipment
+	playerEquipment := engine.NewEquipmentComponent()
+	player.AddComponent(playerEquipment)
+
+	// Add quest tracker
+	questTracker := engine.NewQuestTrackerComponent(5) // Max 5 active quests
+	player.AddComponent(questTracker)
 
 	// Add player attack capability
 	player.AddComponent(&engine.AttackComponent{
@@ -179,6 +333,18 @@ func main() {
 	if *verbose {
 		log.Printf("Player entity created (ID: %d) at position (400, 300)", player.ID)
 	}
+
+	// Add starter items to inventory
+	if *verbose {
+		log.Println("Adding starter items to inventory...")
+	}
+	addStarterItems(playerInventory, *seed, *genreID, *verbose)
+
+	// Add tutorial quest
+	if *verbose {
+		log.Println("Creating tutorial quest...")
+	}
+	addTutorialQuest(questTracker, *seed, *genreID, *verbose)
 
 	// Initialize save/load system (Phase 8.4)
 	if *verbose {
@@ -339,11 +505,24 @@ func main() {
 		}
 	}
 
+	// Connect inventory system to UI for item actions
+	game.SetInventorySystem(inventorySystem)
+
+	// Setup UI input callbacks
+	if *verbose {
+		log.Println("Setting up UI input callbacks...")
+	}
+	game.SetupInputCallbacks(inputSystem)
+	if *verbose {
+		log.Println("UI callbacks registered (I: Inventory, J: Quests)")
+		log.Println("Inventory actions: E to equip/use, D to drop")
+	}
+
 	// Process initial entity additions
 	game.World.Update(0)
 
 	log.Println("Game initialized successfully")
-	log.Printf("Controls: WASD to move, Space to attack, E to use item")
+	log.Printf("Controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
 	log.Printf("Genre: %s, Seed: %d", *genreID, *seed)
 
 	// Run the game loop

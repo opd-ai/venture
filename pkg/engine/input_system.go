@@ -37,39 +37,71 @@ type InputSystem struct {
 	// Movement speed multiplier
 	MoveSpeed float64
 
-	// Key bindings
-	KeyUp        ebiten.Key
-	KeyDown      ebiten.Key
-	KeyLeft      ebiten.Key
-	KeyRight     ebiten.Key
-	KeyAction    ebiten.Key
-	KeyUseItem   ebiten.Key
-	KeyHelp      ebiten.Key // ESC key for help menu
-	KeyQuickSave ebiten.Key // F5 key for quick save
-	KeyQuickLoad ebiten.Key // F9 key for quick load
+	// Key bindings - Movement
+	KeyUp    ebiten.Key
+	KeyDown  ebiten.Key
+	KeyLeft  ebiten.Key
+	KeyRight ebiten.Key
+
+	// Key bindings - Actions
+	KeyAction  ebiten.Key
+	KeyUseItem ebiten.Key
+
+	// Key bindings - UI
+	KeyInventory ebiten.Key // I key for inventory
+	KeyCharacter ebiten.Key // C key for character screen
+	KeySkills    ebiten.Key // K key for skills screen
+	KeyQuests    ebiten.Key // J key for quest log
+	KeyMap       ebiten.Key // M key for map
+
+	// Key bindings - System
+	KeyHelp         ebiten.Key // ESC key for help menu
+	KeyQuickSave    ebiten.Key // F5 key for quick save
+	KeyQuickLoad    ebiten.Key // F9 key for quick load
+	KeyCycleTargets ebiten.Key // Tab key for cycling targets
 
 	// References to game systems for special key handling
 	helpSystem     *HelpSystem
 	tutorialSystem *TutorialSystem
 
-	// Callbacks for save/load operations
-	onQuickSave func() error
-	onQuickLoad func() error
+	// Callbacks for UI and save/load operations
+	onQuickSave     func() error
+	onQuickLoad     func() error
+	onInventoryOpen func()
+	onCharacterOpen func()
+	onSkillsOpen    func()
+	onQuestsOpen    func()
+	onMapOpen       func()
+	onCycleTargets  func()
 }
 
 // NewInputSystem creates a new input system with default key bindings.
 func NewInputSystem() *InputSystem {
 	return &InputSystem{
-		MoveSpeed:    100.0, // pixels per second
-		KeyUp:        ebiten.KeyW,
-		KeyDown:      ebiten.KeyS,
-		KeyLeft:      ebiten.KeyA,
-		KeyRight:     ebiten.KeyD,
-		KeyAction:    ebiten.KeySpace,
-		KeyUseItem:   ebiten.KeyE,
-		KeyHelp:      ebiten.KeyEscape,
-		KeyQuickSave: ebiten.KeyF5,
-		KeyQuickLoad: ebiten.KeyF9,
+		MoveSpeed: 100.0, // pixels per second
+
+		// Movement keys
+		KeyUp:    ebiten.KeyW,
+		KeyDown:  ebiten.KeyS,
+		KeyLeft:  ebiten.KeyA,
+		KeyRight: ebiten.KeyD,
+
+		// Action keys
+		KeyAction:  ebiten.KeySpace,
+		KeyUseItem: ebiten.KeyE,
+
+		// UI keys
+		KeyInventory: ebiten.KeyI,
+		KeyCharacter: ebiten.KeyC,
+		KeySkills:    ebiten.KeyK,
+		KeyQuests:    ebiten.KeyJ,
+		KeyMap:       ebiten.KeyM,
+
+		// System keys
+		KeyHelp:         ebiten.KeyEscape,
+		KeyQuickSave:    ebiten.KeyF5,
+		KeyQuickLoad:    ebiten.KeyF9,
+		KeyCycleTargets: ebiten.KeyTab,
 	}
 }
 
@@ -116,6 +148,28 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 				s.tutorialSystem.ShowNotification("Game Loaded!", 2.0)
 			}
 		}
+	}
+
+	// Handle UI shortcuts
+	if inpututil.IsKeyJustPressed(s.KeyInventory) && s.onInventoryOpen != nil {
+		s.onInventoryOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyCharacter) && s.onCharacterOpen != nil {
+		s.onCharacterOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeySkills) && s.onSkillsOpen != nil {
+		s.onSkillsOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyQuests) && s.onQuestsOpen != nil {
+		s.onQuestsOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyMap) && s.onMapOpen != nil {
+		s.onMapOpen()
+	}
+
+	// Handle target cycling
+	if inpututil.IsKeyJustPressed(s.KeyCycleTargets) && s.onCycleTargets != nil {
+		s.onCycleTargets()
 	}
 
 	// Handle help topic switching with number keys 1-6 (when help is visible)
@@ -225,4 +279,34 @@ func (s *InputSystem) SetQuickSaveCallback(callback func() error) {
 // SetQuickLoadCallback sets the callback function for quick load (F9).
 func (s *InputSystem) SetQuickLoadCallback(callback func() error) {
 	s.onQuickLoad = callback
+}
+
+// SetInventoryCallback sets the callback function for opening inventory (I key).
+func (s *InputSystem) SetInventoryCallback(callback func()) {
+	s.onInventoryOpen = callback
+}
+
+// SetCharacterCallback sets the callback function for opening character screen (C key).
+func (s *InputSystem) SetCharacterCallback(callback func()) {
+	s.onCharacterOpen = callback
+}
+
+// SetSkillsCallback sets the callback function for opening skills screen (K key).
+func (s *InputSystem) SetSkillsCallback(callback func()) {
+	s.onSkillsOpen = callback
+}
+
+// SetQuestsCallback sets the callback function for opening quest log (J key).
+func (s *InputSystem) SetQuestsCallback(callback func()) {
+	s.onQuestsOpen = callback
+}
+
+// SetMapCallback sets the callback function for opening map (M key).
+func (s *InputSystem) SetMapCallback(callback func()) {
+	s.onMapOpen = callback
+}
+
+// SetCycleTargetsCallback sets the callback function for cycling targets (Tab key).
+func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
+	s.onCycleTargets = callback
 }

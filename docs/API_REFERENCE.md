@@ -36,9 +36,10 @@ The World is the central ECS container.
 // Create a new world
 world := engine.NewWorld()
 
-// Add systems
-world.AddSystem(&engine.MovementSystem{})
-world.AddSystem(engine.NewCollisionSystem(32.0))
+// Add systems with proper constructors
+world.AddSystem(engine.NewMovementSystem(200.0)) // Max speed 200 units/sec
+world.AddSystem(engine.NewCollisionSystem(32.0))  // 32x32 tile size
+world.AddSystem(engine.NewInputSystem())
 
 // Update world (call every frame)
 deltaTime := 0.016 // 60 FPS
@@ -46,16 +47,21 @@ world.Update(deltaTime)
 
 // Query entities
 entities := world.GetEntities()
+
+// Query specific entities
+playersAndEnemies := world.GetEntitiesWith("position", "health")
 ```
 
 **Methods:**
 - `NewWorld() *World` - Create new world instance
 - `AddSystem(system System)` - Register a system
 - `Update(deltaTime float64)` - Update all systems
-- `GetEntities() []*Entity` - Get all entities
+- `GetEntities() []*Entity` - Get all entities (returns cached list)
 - `AddEntity(entity *Entity)` - Add entity to world
-- `RemoveEntity(id uint64)` - Remove entity by ID
-- `GetEntity(id uint64) *Entity` - Find entity by ID
+- `RemoveEntity(entityID uint64)` - Remove entity by ID
+- `GetEntity(entityID uint64) (*Entity, bool)` - Find entity by ID
+- `CreateEntity() *Entity` - Create new entity with auto-assigned ID
+- `GetEntitiesWith(componentTypes ...string) []*Entity` - Get entities with specific components
 
 #### Entity
 
@@ -69,7 +75,7 @@ entity := engine.NewEntity(123) // ID: 123
 entity.AddComponent(&engine.PositionComponent{X: 100, Y: 50})
 entity.AddComponent(&engine.VelocityComponent{VX: 10, VY: 0})
 
-// Get component
+// Get component (note: method parameter is componentType, not name)
 pos, ok := entity.GetComponent("position")
 if ok {
     position := pos.(*engine.PositionComponent)
@@ -86,10 +92,9 @@ entity.RemoveComponent("position")
 **Methods:**
 - `NewEntity(id uint64) *Entity` - Create entity with ID
 - `AddComponent(comp Component)` - Add component
-- `GetComponent(name string) (Component, bool)` - Get component by type
-- `HasComponent(name string) bool` - Check component existence
-- `RemoveComponent(name string)` - Remove component
-- `GetComponents() map[string]Component` - Get all components
+- `GetComponent(componentType string) (Component, bool)` - Get component by type
+- `HasComponent(componentType string) bool` - Check component existence
+- `RemoveComponent(componentType string)` - Remove component
 
 #### Component
 
@@ -113,14 +118,24 @@ entity.AddComponent(&MyComponent{Value: 42, Data: "hello"})
 **Built-in Components:**
 - `PositionComponent` - X, Y coordinates
 - `VelocityComponent` - VX, VY velocity
-- `SpriteComponent` - Visual representation
-- `ColliderComponent` - Collision box
-- `HealthComponent` - HP tracking
-- `StatsComponent` - RPG stats
+- `ColliderComponent` - Collision box (Width, Height, Solid, IsTrigger, Layer)
+- `BoundsComponent` - World boundaries (MinX, MinY, MaxX, MaxY, Wrap)
+- `SpriteComponent` - Visual representation (Width, Height, Color, Image)
+- `HealthComponent` - HP tracking (Current, Max)
+- `StatsComponent` - RPG stats (Attack, Defense, MagicPower, etc.)
+- `AttackComponent` - Combat abilities (Damage, DamageType, Range, Cooldown)
+- `StatusEffectComponent` - Temporary effects (EffectType, Duration, Magnitude)
+- `TeamComponent` - Team/faction ID
 - `InventoryComponent` - Item storage
 - `EquipmentComponent` - Equipped items
-- `AIComponent` - AI behavior
-- `InputComponent` - Player input
+- `AIComponent` - AI behavior state machine
+- `InputComponent` - Player input state
+- `NetworkComponent` - Network synchronization data
+- `ExperienceComponent` - XP and leveling
+- `QuestTrackerComponent` - Quest progress tracking
+- `ParticleEmitterComponent` - Particle effects
+- `CameraComponent` - Camera targeting
+- `HotbarComponent` - Quick-use item slots
 
 #### System
 
@@ -150,16 +165,25 @@ world.AddSystem(&MySystem{})
 ```
 
 **Built-in Systems:**
-- `MovementSystem` - Applies velocity to position
-- `CollisionSystem` - Detects collisions
+- `MovementSystem` - Applies velocity to position (requires `NewMovementSystem(maxSpeed float64)`)
+- `CollisionSystem` - Detects collisions (requires `NewCollisionSystem(tileSize float64)`)
 - `CombatSystem` - Damage calculation
-- `AISystem` - Enemy behavior
+- `PlayerCombatSystem` - Player-specific combat handling
+- `AISystem` - Enemy behavior AI state machine
 - `ProgressionSystem` - XP and leveling
+- `SkillProgressionSystem` - Skill tree progression
 - `InventorySystem` - Item management
-- `InputSystem` - Player input handling
-- `RenderSystem` - Visual rendering
-- `CameraSystem` - Camera control
-- `HUDSystem` - UI overlay
+- `InputSystem` - Player input handling (requires `NewInputSystem()`)
+- `RenderSystem` - Visual rendering (requires `NewRenderSystem(cameraSystem)`)
+- `TerrainRenderSystem` - Terrain/tile rendering
+- `CameraSystem` - Camera control (requires `NewCameraSystem(width, height)`)
+- `HUDSystem` - UI overlay (requires `NewHUDSystem(width, height)`)
+- `ParticleSystem` - Particle effects
+- `TutorialSystem` - Tutorial guidance
+- `MenuSystem` - Game menus and save/load
+- `ObjectiveTrackerSystem` - Quest objective tracking
+- `PlayerItemUseSystem` - Item usage handling
+- `PlayerSpellCastingSystem` - Spell casting for player
 
 #### Game
 
@@ -169,8 +193,15 @@ The Game struct integrates with Ebiten.
 // Create game
 game := engine.NewGame(800, 600)
 
-// Add systems
-game.World.AddSystem(&engine.MovementSystem{})
+// Add systems to the world
+game.World.AddSystem(engine.NewMovementSystem(200.0))
+game.World.AddSystem(engine.NewInputSystem())
+
+// Set up a player entity
+player := engine.NewEntity(1)
+player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
+game.World.AddEntity(player)
+game.SetPlayerEntity(player)
 
 // Run game loop
 err := game.Run("Venture")
@@ -180,11 +211,14 @@ if err != nil {
 ```
 
 **Methods:**
-- `NewGame(width, height int) *Game` - Create game instance
+- `NewGame(screenWidth, screenHeight int) *Game` - Create game instance
 - `Update() error` - Called every frame (implements ebiten.Game)
-- `Draw(screen *ebiten.Image)` - Render frame
-- `Layout(w, h int) (int, int)` - Screen size
+- `Draw(screen *ebiten.Image)` - Render frame (implements ebiten.Game)
+- `Layout(outsideWidth, outsideHeight int) (int, int)` - Screen size (implements ebiten.Game)
 - `Run(title string) error` - Start game loop
+- `SetPlayerEntity(entity *Entity)` - Set player entity for UI systems
+- `SetInventorySystem(system *InventorySystem)` - Connect inventory system to UI
+- `SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem)` - Setup UI callbacks
 
 ---
 
@@ -205,7 +239,7 @@ player.AddComponent(&engine.StatsComponent{
     Speed:   100,
 })
 player.AddComponent(&engine.InputComponent{})
-player.AddComponent(engine.NewInventoryComponent(20, 100))
+player.AddComponent(engine.NewInventoryComponent(20, 100.0)) // 20 slots, 100kg capacity
 
 world.AddEntity(player)
 ```
@@ -311,6 +345,10 @@ for y := 0; y < terrain.Height; y++ {
             // Walkable floor
         } else if tile == terrain.TileWall {
             // Solid wall
+        } else if tile == terrain.TileDoor {
+            // Doorway
+        } else if tile == terrain.TileCorridor {
+            // Corridor connecting rooms
         }
     }
 }
@@ -695,28 +733,38 @@ predictor.Reconcile(serverState, entity)
 
 ```go
 // Create save manager
-mgr := saveload.NewManager("./saves")
+mgr, err := saveload.NewSaveManager("./saves")
+if err != nil {
+    log.Fatal(err)
+}
 
-// Build game state
-state := &saveload.GameState{
-    Version: "1.0",
-    Player: saveload.PlayerState{
-        Position: saveload.Position{X: 100, Y: 50},
-        Health:   80,
-        MaxHealth: 100,
-        Level:    5,
-        Experience: 1200,
+// Build game save
+save := &saveload.GameSave{
+    PlayerState: &saveload.PlayerState{
+        EntityID:      1,
+        X:             100,
+        Y:             50,
+        CurrentHealth: 80,
+        MaxHealth:     100,
+        Level:         5,
+        Experience:    1200,
     },
-    World: saveload.WorldState{
+    WorldState: &saveload.WorldState{
         Seed:       12345,
         GenreID:    "fantasy",
         Depth:      10,
         TimePlayed: 3600,
     },
+    Settings: &saveload.GameSettings{
+        MusicVolume: 0.8,
+        SfxVolume:   1.0,
+        WindowWidth: 800,
+        WindowHeight: 600,
+    },
 }
 
 // Save
-err := mgr.Save("mysave", state)
+err = mgr.SaveGame("mysave", save)
 if err != nil {
     log.Fatal(err)
 }
@@ -726,20 +774,23 @@ if err != nil {
 
 ```go
 // Load save
-state, err := mgr.Load("mysave")
+save, err := mgr.LoadGame("mysave")
 if err != nil {
     log.Fatal(err)
 }
 
 // Restore game state
-playerX := state.Player.Position.X
-playerY := state.Player.Position.Y
-worldSeed := state.World.Seed
+playerX := save.PlayerState.X
+playerY := save.PlayerState.Y
+worldSeed := save.WorldState.Seed
 
 // List saves
-saves, err := mgr.List()
+saves, err := mgr.ListSaves()
+if err != nil {
+    log.Fatal(err)
+}
 for _, save := range saves {
-    fmt.Printf("%s - Level %d\n", save.Name, save.Metadata.PlayerLevel)
+    fmt.Printf("%s - Level %d\n", save.Name, save.PlayerLevel)
 }
 ```
 
@@ -747,13 +798,19 @@ for _, save := range saves {
 
 ```go
 // Delete save
-err := mgr.Delete("mysave")
+err := mgr.DeleteSave("mysave")
+if err != nil {
+    log.Fatal(err)
+}
 
 // Check if save exists
-exists := mgr.Exists("mysave")
+exists := mgr.SaveExists("mysave")
 
 // Get save metadata
-metadata, err := mgr.GetMetadata("mysave")
+metadata, err := mgr.GetSaveMetadata("mysave")
+if err != nil {
+    log.Fatal(err)
+}
 fmt.Printf("Saved at: %s\n", metadata.SavedAt)
 fmt.Printf("Level: %d\n", metadata.PlayerLevel)
 ```

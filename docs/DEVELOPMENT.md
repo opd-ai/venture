@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- **Go:** Version 1.24.7 or later
+- **Go:** Version 1.24.5 or later
 - **Operating System:** Windows, macOS, or Linux
 - **Platform-specific dependencies:**
   - **Linux:** X11 development libraries

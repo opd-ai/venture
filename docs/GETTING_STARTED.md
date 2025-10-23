@@ -7,7 +7,7 @@ Welcome to Venture, a fully procedural multiplayer action-RPG! This guide will h
 ### 1. Installation
 
 **Prerequisites:**
-- Go 1.24.7 or later
+- Go 1.24.5 or later
 - Platform dependencies:
   - **Linux:** `sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config`
   - **macOS:** Xcode command line tools (`xcode-select --install`)

@@ -3,7 +3,7 @@
 ## 1. Executive Summary
 
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
-**Language:** Go 1.24.7+  
+**Language:** Go 1.24.5+  
 **Engine:** Ebiten 2.9.2  
 **Architecture:** Entity-Component-System (ECS)  
 **Content:** 100% procedurally generated (graphics, audio, gameplay)  
@@ -640,9 +640,9 @@ max_entities = 10000
 
 ### 12.1 Go Version Compatibility
 
-- Minimum: Go 1.24.7
-- Recommended: Go 1.24.7+
-- Tested: Go 1.24.7
+- Minimum: Go 1.24.5
+- Recommended: Go 1.24.5+
+- Tested: Go 1.24.5
 
 ### 12.2 Dependencies
 

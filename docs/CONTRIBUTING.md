@@ -43,7 +43,7 @@ We pledge to make participation in our project a harassment-free experience for 
 
 ### Prerequisites
 
-- Go 1.24.7 or later
+- Go 1.24.5 or later
 - Git for version control
 - See [Development Guide](DEVELOPMENT.md) for complete setup instructions
 
@@ -321,7 +321,7 @@ What actually happens
 
 **Environment:**
 - OS: [e.g., Ubuntu 22.04]
-- Go Version: [e.g., 1.24.7]
+- Go Version: [e.g., 1.24.5]
 - Commit/Version: [e.g., abc1234]
 
 **Additional Context:**

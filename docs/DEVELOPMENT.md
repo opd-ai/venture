@@ -282,25 +282,14 @@ go tool trace trace.out
 
 ## Contributing
 
-1. **Create a feature branch:**
-   ```bash
-   git checkout -b feature/my-feature
-   ```
+**For contribution guidelines, code of conduct, and pull request process, see [Contributing Guide](CONTRIBUTING.md).**
 
+Quick workflow:
+
+1. **Create a feature branch:** `git checkout -b feature/my-feature`
 2. **Make changes following code standards**
-
-3. **Test thoroughly:**
-   ```bash
-   go test -tags test ./...
-   go test -tags test -race ./...
-   go vet ./...
-   ```
-
-4. **Commit with descriptive messages:**
-   ```bash
-   git commit -m "Add terrain generation system"
-   ```
-
+3. **Test thoroughly:** `go test -tags test ./...` and `go test -tags test -race ./...`
+4. **Commit with descriptive messages:** `git commit -m "Add feature"`
 5. **Push and create pull request**
 
 ## Performance Optimization

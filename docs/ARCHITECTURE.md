@@ -143,31 +143,11 @@ Target specifications:
 - **Negative:** May limit graphical complexity
 - **Negative:** Requires careful optimization
 
-## Implementation Guidelines
+---
 
-### Testing Strategy
-- Unit tests for all generators (verify determinism)
-- Integration tests for system interactions
-- Network simulation tests (latency, packet loss)
-- Performance regression tests
-- Target: 80%+ code coverage
+## Related Documentation
 
-### Development Workflow
-1. Implement feature vertically (full stack)
-2. Test determinism continuously
-3. Maintain playable build after Week 13
-4. Document decisions in ADR format
-5. Use feature flags for incomplete systems
-
-### Code Quality Standards
-- All packages must have `doc.go`
-- Public interfaces in `interfaces.go`
-- Comprehensive godoc comments
-- golangci-lint compliance
-- No circular dependencies
-
-### Performance Profiling
-- Use `pprof` for CPU/memory profiling
-- `go test -race` for concurrency
-- Benchmark critical paths
-- Profile early and often
+For implementation details, development workflows, testing strategies, and code quality standards, see:
+- **[Development Guide](DEVELOPMENT.md)** - Complete development workflow and best practices
+- **[Contributing Guide](CONTRIBUTING.md)** - Contribution guidelines and code standards
+- **[Technical Specification](TECHNICAL_SPEC.md)** - Detailed technical architecture

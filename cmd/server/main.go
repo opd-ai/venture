@@ -433,7 +433,7 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 		attack.ResetCooldown()
 
 		if verbose {
-			log.Printf("Player %d attack triggered (damage: %d, range: %.1f)",
+			log.Printf("Player %d attack triggered (damage: %.1f, range: %.1f)",
 				cmd.PlayerID, attack.Damage, attack.Range)
 		}
 

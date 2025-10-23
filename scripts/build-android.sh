@@ -5,7 +5,7 @@ set -e
 # Requires: Go 1.24+, Android SDK, NDK, ebitenmobile
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_ROOT/build/android"
 OUTPUT_DIR="$PROJECT_ROOT/dist/android"
 

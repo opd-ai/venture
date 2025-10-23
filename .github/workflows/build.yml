@@ -95,9 +95,6 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
 
     steps:
       - name: Checkout code

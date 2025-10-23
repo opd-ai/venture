@@ -122,6 +122,7 @@ jobs:
       - name: Build server
         env:
           GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
         run: |
           mkdir -p build
           go build -tags test -ldflags="-s -w" -o "build/venture-server-darwin-${{ matrix.arch }}" ./cmd/server
@@ -129,6 +130,7 @@ jobs:
       - name: Build client
         env:
           GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
         run: |
           go build -ldflags="-s -w" -o "build/venture-client-darwin-${{ matrix.arch }}" ./cmd/client
 

@@ -270,11 +270,12 @@ func main() {
 	// 5. Combat - handles damage/status effects
 	// 6. AI - enemy decision-making
 	// 7. Progression - XP and leveling
-	// 8. Item Pickup - collects nearby items
-	// 9. Spell Casting - executes spell effects
-	// 10. Mana Regen - regenerates mana
-	// 11. Inventory - item management
-	// 12. Tutorial/Help - UI overlays
+	// 8. Skill Progression - applies skill effects to stats
+	// 9. Item Pickup - collects nearby items
+	// 10. Spell Casting - executes spell effects
+	// 11. Mana Regen - regenerates mana
+	// 12. Inventory - item management
+	// 13. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
@@ -284,6 +285,11 @@ func main() {
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
+
+	// Add skill progression system
+	skillProgressionSystem := engine.NewSkillProgressionSystem()
+	game.World.AddSystem(skillProgressionSystem)
+
 	game.World.AddSystem(itemPickupSystem)
 	game.World.AddSystem(spellCastingSystem)
 	game.World.AddSystem(manaRegenSystem)
@@ -296,7 +302,7 @@ func main() {
 	game.HelpSystem = helpSystem
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
 	}
 
 	// Gap #3: Initialize performance monitoring (wraps World.Update)
@@ -460,6 +466,20 @@ func main() {
 	}
 	if *verbose {
 		log.Println("Player spells loaded (keys 1-5)")
+	}
+
+	// Load procedurally generated skill tree
+	err = engine.LoadPlayerSkillTree(player, *seed, *genreID, 0)
+	if err != nil {
+		log.Fatalf("Failed to load skill tree: %v", err)
+	}
+	if *verbose {
+		comp, _ := player.GetComponent("skill_tree")
+		if comp != nil {
+			treeComp := comp.(*engine.SkillTreeComponent)
+			log.Printf("Skill tree '%s' loaded with %d skills (press K)",
+				treeComp.Tree.Name, len(treeComp.Tree.Nodes))
+		}
 	}
 
 	// Add quest tracker

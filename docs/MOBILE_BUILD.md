@@ -291,6 +291,42 @@ control := &VirtualControl{
 
 ### GitHub Actions Workflows
 
+#### Release Workflow
+
+Workflow file: `.github/workflows/release.yml`
+
+The release workflow automatically builds mobile artifacts alongside desktop builds:
+
+```yaml
+# Triggered on:
+# - Semantic version tags (v1.2.3)
+# - Nightly builds (cron schedule)
+
+# Produces:
+# - Android AAR library (venture.aar)
+# - Android APK (unsigned release build)
+# - iOS XCFramework (Venture.xcframework.zip)
+
+# Jobs:
+# 1. release: Builds desktop binaries, creates GitHub release
+# 2. build-android: Builds Android AAR and APK, uploads to release
+# 3. build-ios: Builds iOS XCFramework, uploads to release
+```
+
+To create a new release:
+```bash
+# Tag a version release
+git tag v1.0.0
+git push origin v1.0.0
+
+# Or let nightly build run automatically (00:00 UTC daily)
+```
+
+Mobile artifacts are attached to the GitHub release:
+- `venture.aar` - Android library for integration into apps
+- `*.apk` - Android application package (unsigned)
+- `Venture-ios-*.zip` - iOS framework for integration into apps
+
 #### Android Build
 
 Workflow file: `.github/workflows/android.yml`

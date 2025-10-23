@@ -335,6 +335,10 @@ func main() {
 	skillProgressionSystem := engine.NewSkillProgressionSystem()
 	game.World.AddSystem(skillProgressionSystem)
 
+	// GAP-012 REPAIR: Add visual feedback system for hit flashes and tints
+	visualFeedbackSystem := engine.NewVisualFeedbackSystem()
+	game.World.AddSystem(visualFeedbackSystem)
+
 	// Add audio manager system
 	game.World.AddSystem(audioManagerSystem)
 
@@ -352,8 +356,11 @@ func main() {
 	game.TutorialSystem = tutorialSystem
 	game.HelpSystem = helpSystem
 
+	// GAP-012 REPAIR: Set camera reference on combat system for screen shake
+	combatSystem.SetCamera(game.CameraSystem)
+
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {
@@ -556,6 +563,9 @@ func main() {
 		OffsetX:   -16, // Center the collider
 		OffsetY:   -16,
 	})
+
+	// GAP-012 REPAIR: Add visual feedback for hit flash
+	player.AddComponent(engine.NewVisualFeedbackComponent())
 
 	if *verbose {
 		log.Printf("Player entity created (ID: %d) at position (400, 300)", player.ID)

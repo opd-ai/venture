@@ -128,18 +128,52 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 		return
 	}
 
+	// GAP-012 REPAIR: Apply visual feedback effects (hit flash, tints)
+	var flashAlpha float64
+	var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
+	if feedbackComp, ok := entity.GetComponent("visual_feedback"); ok {
+		feedback := feedbackComp.(*VisualFeedbackComponent)
+		flashAlpha = feedback.GetFlashAlpha()
+		tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+	}
+
 	// Draw sprite or colored rectangle
 	if sprite.Image != nil {
 		// Draw procedural sprite
 		opts := &ebiten.DrawImageOptions{}
+
+		// GAP-012 REPAIR: Apply color effects
+		if flashAlpha > 0 || tintR != 1.0 || tintG != 1.0 || tintB != 1.0 || tintA != 1.0 {
+			// Apply flash (additive white) and tint (multiplicative color)
+			opts.ColorScale.ScaleWithColor(color.RGBA{
+				R: uint8((tintR + flashAlpha) * 255),
+				G: uint8((tintG + flashAlpha) * 255),
+				B: uint8((tintB + flashAlpha) * 255),
+				A: uint8(tintA * 255),
+			})
+		}
+
 		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
 		opts.GeoM.Rotate(sprite.Rotation)
 		opts.GeoM.Translate(screenX, screenY)
 		r.screen.DrawImage(sprite.Image, opts)
 	} else {
 		// Draw colored rectangle as fallback
+		col := sprite.Color
+
+		// GAP-012 REPAIR: Apply flash to fallback rect
+		if flashAlpha > 0 {
+			red, green, blue, alpha := col.RGBA()
+			col = color.RGBA{
+				R: uint8((float64(red>>8) + flashAlpha*255) / 2),
+				G: uint8((float64(green>>8) + flashAlpha*255) / 2),
+				B: uint8((float64(blue>>8) + flashAlpha*255) / 2),
+				A: uint8(alpha >> 8),
+			}
+		}
+
 		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2,
-			sprite.Width, sprite.Height, sprite.Color)
+			sprite.Width, sprite.Height, col)
 	}
 }
 

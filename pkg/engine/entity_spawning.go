@@ -168,6 +168,9 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			sprite.Layer = 5 // Enemies drawn below player (layer 10)
 			enemy.AddComponent(sprite)
 
+			// GAP-012 REPAIR: Add visual feedback for hit flash
+			enemy.AddComponent(NewVisualFeedbackComponent())
+
 			spawned++
 		}
 	}

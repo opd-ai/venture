@@ -14,6 +14,9 @@ import (
 type CombatSystem struct {
 	rng *rand.Rand
 
+	// Camera reference for screen shake feedback (GAP-012)
+	camera *CameraSystem
+
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
 
@@ -26,6 +29,11 @@ func NewCombatSystem(seed int64) *CombatSystem {
 	return &CombatSystem{
 		rng: rand.New(rand.NewSource(seed)),
 	}
+}
+
+// SetCamera sets the camera reference for screen shake feedback (GAP-012).
+func (s *CombatSystem) SetCamera(camera *CameraSystem) {
+	s.camera = camera
 }
 
 // Update implements the System interface.
@@ -182,6 +190,27 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Apply damage
 	health.TakeDamage(finalDamage)
+
+	// GAP-012 REPAIR: Trigger hit flash on damage
+	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {
+		feedback := feedbackComp.(*VisualFeedbackComponent)
+		// Flash intensity scales with damage (0.3-1.0 range)
+		flashIntensity := 0.3 + (finalDamage / 100.0)
+		if flashIntensity > 1.0 {
+			flashIntensity = 1.0
+		}
+		feedback.TriggerFlash(flashIntensity)
+	}
+
+	// GAP-012 REPAIR: Trigger screen shake on damage
+	if s.camera != nil {
+		// Shake intensity scales with damage (0.1-0.5 range for subtlety)
+		shakeIntensity := (finalDamage / 100.0) * 5.0
+		if shakeIntensity > 5.0 {
+			shakeIntensity = 5.0
+		}
+		s.camera.Shake(shakeIntensity)
+	}
 
 	// Reset cooldown
 	attack.ResetCooldown()

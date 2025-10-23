@@ -39,10 +39,49 @@ type Tile struct {
 	X, Y int
 }
 
+// RoomType represents the special purpose or theme of a room.
+type RoomType int
+
+const (
+	// RoomNormal represents a standard empty room
+	RoomNormal RoomType = iota
+	// RoomTreasure represents a room with valuable loot
+	RoomTreasure
+	// RoomBoss represents a room with a boss enemy
+	RoomBoss
+	// RoomTrap represents a room with hazards or traps
+	RoomTrap
+	// RoomSpawn represents the player starting room
+	RoomSpawn
+	// RoomExit represents the dungeon exit/stairs
+	RoomExit
+)
+
+// String returns the string representation of a room type.
+func (rt RoomType) String() string {
+	switch rt {
+	case RoomNormal:
+		return "normal"
+	case RoomTreasure:
+		return "treasure"
+	case RoomBoss:
+		return "boss"
+	case RoomTrap:
+		return "trap"
+	case RoomSpawn:
+		return "spawn"
+	case RoomExit:
+		return "exit"
+	default:
+		return "unknown"
+	}
+}
+
 // Room represents a rectangular area in the dungeon.
 type Room struct {
 	X, Y          int // Top-left corner
 	Width, Height int
+	Type          RoomType // Special room type
 }
 
 // Center returns the center coordinates of the room.

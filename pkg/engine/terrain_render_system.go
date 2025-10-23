@@ -164,12 +164,27 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 	// Create a small fallback image
 	fallbackImg := ebiten.NewImage(t.tileWidth, t.tileHeight)
 
-	// Color based on tile type
+	// Color based on tile type and room type
 	var r, g, b uint8
 	if tileType == terrain.TileWall {
 		r, g, b = 60, 60, 60 // Dark gray for walls
 	} else {
-		r, g, b = 100, 100, 100 // Light gray for floors
+		// GAP-006 REPAIR: Check room type for floor color theming
+		roomType := t.getRoomTypeAt(tileX, tileY)
+		switch roomType {
+		case terrain.RoomSpawn:
+			r, g, b = 100, 120, 100 // Light green for spawn
+		case terrain.RoomExit:
+			r, g, b = 100, 100, 140 // Light blue for exit
+		case terrain.RoomBoss:
+			r, g, b = 140, 80, 80 // Dark red for boss
+		case terrain.RoomTreasure:
+			r, g, b = 140, 140, 80 // Gold for treasure
+		case terrain.RoomTrap:
+			r, g, b = 120, 80, 120 // Purple for traps
+		default:
+			r, g, b = 100, 100, 100 // Light gray for normal floors
+		}
 	}
 	fallbackImg.Fill(color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255})
 
@@ -177,6 +192,24 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 	opts.GeoM.Translate(screenX, screenY)
 	opts.ColorScale.Scale(float32(r)/255, float32(g)/255, float32(b)/255, 1.0)
 	screen.DrawImage(fallbackImg, opts)
+}
+
+// getRoomTypeAt returns the room type for the tile at the given coordinates.
+// Returns RoomNormal if the tile is not in any room.
+func (t *TerrainRenderSystem) getRoomTypeAt(tileX, tileY int) terrain.RoomType {
+	if t.terrain == nil {
+		return terrain.RoomNormal
+	}
+
+	// Check which room contains this tile
+	for _, room := range t.terrain.Rooms {
+		if tileX >= room.X && tileX < room.X+room.Width &&
+			tileY >= room.Y && tileY < room.Y+room.Height {
+			return room.Type
+		}
+	}
+
+	return terrain.RoomNormal
 }
 
 // terrainTileToRenderTile converts a terrain.TileType to a tiles.TileType.

@@ -81,6 +81,9 @@ func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (in
 	// Connect rooms with corridors
 	g.connectRooms(root, terrain)
 
+	// GAP-006 REPAIR: Assign special room types
+	g.assignRoomTypes(terrain, rng)
+
 	return terrain, nil
 }
 
@@ -299,4 +302,63 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// assignRoomTypes assigns special purposes to rooms in the dungeon.
+// Ensures dungeons have spawn, exit, boss, treasure, and trap rooms.
+func (g *BSPGenerator) assignRoomTypes(terrain *Terrain, rng *rand.Rand) {
+	numRooms := len(terrain.Rooms)
+	if numRooms == 0 {
+		return
+	}
+
+	// First room is always the spawn point
+	terrain.Rooms[0].Type = RoomSpawn
+
+	// Last room (farthest from spawn) is the exit
+	if numRooms > 1 {
+		terrain.Rooms[numRooms-1].Type = RoomExit
+	}
+
+	// If we have at least 3 rooms, assign a boss room
+	// Boss room should be near the end but not the exit
+	if numRooms >= 3 {
+		bossIdx := numRooms - 1 - rng.Intn(min(3, numRooms-1))
+		if bossIdx == numRooms-1 && numRooms > 2 {
+			bossIdx = numRooms - 2
+		}
+		terrain.Rooms[bossIdx].Type = RoomBoss
+	}
+
+	// Assign treasure rooms (10-20% of remaining rooms)
+	numTreasure := max(1, numRooms/8)
+	treasureAssigned := 0
+	for i := 1; i < numRooms-1 && treasureAssigned < numTreasure; i++ {
+		// Skip if already assigned a special type
+		if terrain.Rooms[i].Type != RoomNormal {
+			continue
+		}
+		// 30% chance to be a treasure room
+		if rng.Float64() < 0.3 {
+			terrain.Rooms[i].Type = RoomTreasure
+			treasureAssigned++
+		}
+	}
+
+	// Assign trap rooms (10-15% of remaining rooms)
+	numTraps := max(1, numRooms/10)
+	trapsAssigned := 0
+	for i := 1; i < numRooms-1 && trapsAssigned < numTraps; i++ {
+		// Skip if already assigned a special type
+		if terrain.Rooms[i].Type != RoomNormal {
+			continue
+		}
+		// 25% chance to be a trap room
+		if rng.Float64() < 0.25 {
+			terrain.Rooms[i].Type = RoomTrap
+			trapsAssigned++
+		}
+	}
+
+	// All remaining rooms stay as RoomNormal (already default)
 }

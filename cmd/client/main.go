@@ -343,7 +343,7 @@ func main() {
 	game.World.Update(0)
 
 	log.Println("Game initialized successfully")
-	log.Printf("Controls: Arrow keys to move, Space to attack")
+	log.Printf("Controls: WASD to move, Space to attack, E to use item")
 	log.Printf("Genre: %s, Seed: %d", *genreID, *seed)
 
 	// Run the game loop

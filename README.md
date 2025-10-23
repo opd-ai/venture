@@ -44,7 +44,7 @@ Phases 1-8.6 complete (Architecture, Procedural Generation, Visual Rendering, Au
   - [x] Benchmark suite for critical paths
   - [x] Comprehensive performance optimization guide
   - [x] Validated 60+ FPS with 2000 entities (106 FPS achieved)
-  - [x] 80.2% test coverage for engine package
+  - [x] 80.4% test coverage for engine package
 
 ### Previous Completion: Phase 8.4 - Save/Load System ✅
 
@@ -163,7 +163,7 @@ See the [Implemented Phases Documentation](docs/IMPLEMENTED_PHASES.md) for compl
   - [x] Basic Ebiten game loop
   - [x] Architecture Decision Records
 
-- [ ] **Phase 2: Procedural Generation Core** (Weeks 3-5) ✅
+- [x] **Phase 2: Procedural Generation Core** (Weeks 3-5) ✅
   - [x] Terrain/dungeon generation (BSP, cellular automata)
   - [x] Entity generator (monsters, NPCs)
   - [x] Item generation system
@@ -232,7 +232,7 @@ Network package now at 66.8% coverage with all core functionality complete.
     - [x] Player/world/settings persistence
     - [x] Save file management (CRUD operations)
     - [x] Version tracking and migration
-- [ ] **Phase 8.5: Performance Optimization** ✅ COMPLETE
+- [x] **Phase 8.5: Performance Optimization** ✅ COMPLETE
   - [x] Spatial partitioning with quadtree
   - [x] Performance monitoring/telemetry
   - [x] ECS optimization (entity list caching)
@@ -317,6 +317,12 @@ go build -o inventorytest ./cmd/inventorytest
 
 # Build the tile test tool (no graphics dependencies)
 go build -o tiletest ./cmd/tiletest
+
+# Build the quest test tool (no graphics dependencies)
+go build -o questtest ./cmd/questtest
+
+# Build the performance test tool (no graphics dependencies)
+go build -o perftest ./cmd/perftest
 ```
 
 ### Testing Terrain Generation

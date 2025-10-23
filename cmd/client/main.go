@@ -216,9 +216,36 @@ func main() {
 	movementSystem := &engine.MovementSystem{}
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
+
+	// GAP-001 REPAIR: Set death callback for loot drops
+	combatSystem.SetDeathCallback(func(enemy *engine.Entity) {
+		// Only drop loot from enemies, not the player
+		if enemy.HasComponent("input") {
+			return // Skip player death
+		}
+
+		// Get enemy position
+		posComp, hasPos := enemy.GetComponent("position")
+		if !hasPos {
+			return
+		}
+		pos := posComp.(*engine.PositionComponent)
+
+		// Generate and spawn loot drop
+		engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, *seed, *genreID)
+	})
+
 	aiSystem := engine.NewAISystem(game.World)
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
+
+	// Add item pickup system to automatically collect nearby items
+	itemPickupSystem := engine.NewItemPickupSystem(game.World)
+
+	// GAP-002 REPAIR: Add spell casting systems
+	spellCastingSystem := engine.NewSpellCastingSystem(game.World)
+	playerSpellCastingSystem := engine.NewPlayerSpellCastingSystem(spellCastingSystem, game.World)
+	manaRegenSystem := &engine.ManaRegenSystem{}
 
 	// GAP #2 REPAIR: Add player combat system to connect Space key to combat
 	playerCombatSystem := engine.NewPlayerCombatSystem(combatSystem, game.World)
@@ -237,22 +264,29 @@ func main() {
 
 	// Add systems in correct order:
 	// 1. Input - captures player actions
-	// 2. Player Combat/Item Use - processes input flags
+	// 2. Player Combat/Item Use/Spell Casting - processes input flags
 	// 3. Movement - applies velocity to position
 	// 4. Collision - checks and resolves collisions
 	// 5. Combat - handles damage/status effects
 	// 6. AI - enemy decision-making
 	// 7. Progression - XP and leveling
-	// 8. Inventory - item management
-	// 9. Tutorial/Help - UI overlays
+	// 8. Item Pickup - collects nearby items
+	// 9. Spell Casting - executes spell effects
+	// 10. Mana Regen - regenerates mana
+	// 11. Inventory - item management
+	// 12. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
+	game.World.AddSystem(playerSpellCastingSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
+	game.World.AddSystem(itemPickupSystem)
+	game.World.AddSystem(spellCastingSystem)
+	game.World.AddSystem(manaRegenSystem)
 	game.World.AddSystem(inventorySystem)
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
@@ -262,7 +296,7 @@ func main() {
 	game.HelpSystem = helpSystem
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, Movement, Collision, Combat, AI, Progression, Inventory, Tutorial, Help")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
 	}
 
 	// Gap #3: Initialize performance monitoring (wraps World.Update)
@@ -410,6 +444,23 @@ func main() {
 	// Add player equipment
 	playerEquipment := engine.NewEquipmentComponent()
 	player.AddComponent(playerEquipment)
+
+	// GAP-002 REPAIR: Add mana and spells
+	playerMana := &engine.ManaComponent{
+		Current: 100,
+		Max:     100,
+		Regen:   5.0, // 5 mana per second
+	}
+	player.AddComponent(playerMana)
+
+	// Load procedurally generated spells
+	err = engine.LoadPlayerSpells(player, *seed, *genreID, 1)
+	if err != nil {
+		log.Fatalf("Failed to load player spells: %v", err)
+	}
+	if *verbose {
+		log.Println("Player spells loaded (keys 1-5)")
+	}
 
 	// Add quest tracker
 	questTracker := engine.NewQuestTrackerComponent(5) // Max 5 active quests

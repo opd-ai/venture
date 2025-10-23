@@ -6,7 +6,7 @@ package engine
 
 // RenderSystem handles rendering of entities (test stub).
 type RenderSystem struct {
-	cameraSystem *CameraSystem
+	cameraSystem  *CameraSystem
 	ShowColliders bool
 	ShowGrid      bool
 }

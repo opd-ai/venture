@@ -9,36 +9,26 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
-// TestTerrainCollisionSystem_NewSystem tests system creation.
-func TestTerrainCollisionSystem_NewSystem(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
+// TestTerrainCollisionChecker_NewChecker tests checker creation.
+func TestTerrainCollisionChecker_NewChecker(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
-	if system == nil {
-		t.Fatal("NewTerrainCollisionSystem returned nil")
+	if checker == nil {
+		t.Fatal("NewTerrainCollisionChecker returned nil")
 	}
 
-	if system.world != world {
-		t.Error("World reference not set correctly")
+	if checker.tileWidth != 32 || checker.tileHeight != 32 {
+		t.Errorf("Tile size not set correctly: expected 32x32, got %dx%d", checker.tileWidth, checker.tileHeight)
 	}
 
-	if system.tileWidth != 32 || system.tileHeight != 32 {
-		t.Errorf("Tile size not set correctly: expected 32x32, got %dx%d", system.tileWidth, system.tileHeight)
-	}
-
-	if system.initialized {
-		t.Error("System should not be initialized without terrain")
-	}
-
-	if len(system.wallEntities) != 0 {
-		t.Error("Wall entities should be empty initially")
+	if checker.terrain != nil {
+		t.Error("Terrain should be nil initially")
 	}
 }
 
-// TestTerrainCollisionSystem_SetTerrain tests terrain setting and wall creation.
-func TestTerrainCollisionSystem_SetTerrain(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
+// TestTerrainCollisionChecker_SetTerrain tests terrain setting.
+func TestTerrainCollisionChecker_SetTerrain(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create simple test terrain
 	testTerrain := terrain.NewTerrain(5, 5, 12345)
@@ -48,192 +38,135 @@ func TestTerrainCollisionSystem_SetTerrain(t *testing.T) {
 	testTerrain.SetTile(2, 2, terrain.TileFloor)
 
 	// Set terrain
-	err := system.SetTerrain(testTerrain)
-	if err != nil {
-		t.Fatalf("SetTerrain failed: %v", err)
-	}
+	checker.SetTerrain(testTerrain)
 
-	// Check system state
-	if !system.IsInitialized() {
-		t.Error("System should be initialized after setting terrain")
-	}
-
-	// Should create collision entities for walls (21 walls in 5x5 grid with 4 floor tiles)
-	expectedWalls := 25 - 4 // Total tiles - floor tiles
-	if system.GetWallEntityCount() != expectedWalls {
-		t.Errorf("Expected %d wall entities, got %d", expectedWalls, system.GetWallEntityCount())
-	}
-
-	// Check that wall entities were added to world
-	entities := world.GetEntities()
-	wallEntityCount := 0
-	for _, entity := range entities {
-		if entity.HasComponent("wall") {
-			wallEntityCount++
-		}
-	}
-
-	if wallEntityCount != expectedWalls {
-		t.Errorf("Expected %d wall entities in world, got %d", expectedWalls, wallEntityCount)
+	// Check terrain was set
+	if checker.terrain != testTerrain {
+		t.Error("Terrain not set correctly")
 	}
 }
 
-// TestTerrainCollisionSystem_SetTerrainNil tests error handling for nil terrain.
-func TestTerrainCollisionSystem_SetTerrainNil(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
+// TestTerrainCollisionChecker_SetTerrainNil tests nil terrain handling.
+func TestTerrainCollisionChecker_SetTerrainNil(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
-	err := system.SetTerrain(nil)
-	if err == nil {
-		t.Error("SetTerrain should return error for nil terrain")
+	// SetTerrain accepts nil (no error returned)
+	checker.SetTerrain(nil)
+
+	if checker.terrain != nil {
+		t.Error("Terrain should be nil after setting to nil")
 	}
 }
 
-// TestTerrainCollisionSystem_WallColliderProperties tests wall collider properties.
-func TestTerrainCollisionSystem_WallColliderProperties(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
+// TestTerrainCollisionChecker_CheckCollision tests collision detection.
+func TestTerrainCollisionChecker_CheckCollision(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
-	// Create simple terrain with one wall
+	// Create simple terrain with one floor tile at (1,1), rest walls
 	testTerrain := terrain.NewTerrain(3, 3, 12345)
-	testTerrain.SetTile(1, 1, terrain.TileFloor) // Make center floor, rest walls
+	testTerrain.SetTile(1, 1, terrain.TileFloor)
+	checker.SetTerrain(testTerrain)
 
-	err := system.SetTerrain(testTerrain)
-	if err != nil {
-		t.Fatalf("SetTerrain failed: %v", err)
+	tests := []struct {
+		name     string
+		x, y     float64
+		width    float64
+		height   float64
+		wantColl bool
+	}{
+		{"center of floor tile", 48.0, 48.0, 16.0, 16.0, false},   // 32+16 = center of tile (1,1)
+		{"center of wall tile", 16.0, 16.0, 16.0, 16.0, true},     // center of tile (0,0) which is wall
+		{"edge of floor into wall", 32.0, 48.0, 16.0, 16.0, true}, // overlapping wall at x=0
+		{"entirely in floor", 48.0, 48.0, 8.0, 8.0, false},        // small entity in floor
 	}
 
-	// Find a wall entity
-	entities := world.GetEntities()
-	var wallEntity *Entity
-	for _, entity := range entities {
-		if entity.HasComponent("wall") {
-			wallEntity = entity
-			break
-		}
-	}
-
-	if wallEntity == nil {
-		t.Fatal("No wall entity found")
-	}
-
-	// Check position component
-	if !wallEntity.HasComponent("position") {
-		t.Error("Wall entity should have position component")
-	}
-
-	// Check collider component
-	if !wallEntity.HasComponent("collider") {
-		t.Error("Wall entity should have collider component")
-	}
-
-	colliderComp, _ := wallEntity.GetComponent("collider")
-	collider := colliderComp.(*ColliderComponent)
-
-	if !collider.Solid {
-		t.Error("Wall collider should be solid")
-	}
-
-	if collider.IsTrigger {
-		t.Error("Wall collider should not be a trigger")
-	}
-
-	if collider.Layer != 0 {
-		t.Errorf("Wall collider should be on layer 0, got layer %d", collider.Layer)
-	}
-
-	if collider.Width != 32 || collider.Height != 32 {
-		t.Errorf("Wall collider should be 32x32, got %.1fx%.1f", collider.Width, collider.Height)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotColl := checker.CheckCollision(tt.x, tt.y, tt.width, tt.height)
+			if gotColl != tt.wantColl {
+				t.Errorf("CheckCollision(%v, %v, %v, %v) = %v, want %v",
+					tt.x, tt.y, tt.width, tt.height, gotColl, tt.wantColl)
+			}
+		})
 	}
 }
 
-// TestTerrainCollisionSystem_Cleanup tests entity cleanup on re-initialization.
-func TestTerrainCollisionSystem_Cleanup(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
+// TestTerrainCollisionChecker_CheckEntityCollision tests entity collision detection.
+func TestTerrainCollisionChecker_CheckEntityCollision(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
-	// Create terrain and initialize
-	testTerrain1 := terrain.NewTerrain(3, 3, 12345)
-	testTerrain1.SetTile(1, 1, terrain.TileFloor)
-
-	err := system.SetTerrain(testTerrain1)
-	if err != nil {
-		t.Fatalf("SetTerrain failed: %v", err)
-	}
-
-	initialWallCount := system.GetWallEntityCount()
-	if initialWallCount == 0 {
-		t.Fatal("Should have created some wall entities")
-	}
-
-	// Re-initialize with different terrain
-	testTerrain2 := terrain.NewTerrain(2, 2, 54321)
-	// All walls in 2x2 terrain
-
-	err = system.SetTerrain(testTerrain2)
-	if err != nil {
-		t.Fatalf("Second SetTerrain failed: %v", err)
-	}
-
-	// Should have cleaned up old entities and created new ones
-	newWallCount := system.GetWallEntityCount()
-	if newWallCount != 4 { // 2x2 = 4 walls
-		t.Errorf("Expected 4 wall entities after re-init, got %d", newWallCount)
-	}
-
-	// Check that old entities are no longer in world
-	entities := world.GetEntities()
-	wallEntityCount := 0
-	for _, entity := range entities {
-		if entity.HasComponent("wall") {
-			wallEntityCount++
-		}
-	}
-
-	if wallEntityCount != newWallCount {
-		t.Errorf("Cleanup failed: expected %d wall entities in world, got %d", newWallCount, wallEntityCount)
-	}
-}
-
-// TestTerrainCollisionSystem_Update tests the update method (should be no-op).
-func TestTerrainCollisionSystem_Update(t *testing.T) {
-	world := NewWorld()
-	system := NewTerrainCollisionSystem(world, 32, 32)
-
-	// Create terrain
+	// Create terrain with floor at (1,1), rest walls
 	testTerrain := terrain.NewTerrain(3, 3, 12345)
-	err := system.SetTerrain(testTerrain)
-	if err != nil {
-		t.Fatalf("SetTerrain failed: %v", err)
+	testTerrain.SetTile(1, 1, terrain.TileFloor)
+	checker.SetTerrain(testTerrain)
+
+	world := NewWorld()
+
+	// Create entity in floor tile (should not collide)
+	floorEntity := world.CreateEntity()
+	floorEntity.AddComponent(&PositionComponent{X: 48.0, Y: 48.0}) // center of tile (1,1)
+	floorEntity.AddComponent(&ColliderComponent{Width: 16.0, Height: 16.0})
+
+	// Create entity in wall tile (should collide)
+	wallEntity := world.CreateEntity()
+	wallEntity.AddComponent(&PositionComponent{X: 16.0, Y: 16.0}) // center of tile (0,0)
+	wallEntity.AddComponent(&ColliderComponent{Width: 16.0, Height: 16.0})
+
+	// Test floor entity
+	if checker.CheckEntityCollision(floorEntity) {
+		t.Error("Entity in floor tile should not collide with terrain")
 	}
 
-	initialCount := system.GetWallEntityCount()
-
-	// Update should not change anything
-	system.Update(world.GetEntities(), 0.016)
-
-	if system.GetWallEntityCount() != initialCount {
-		t.Error("Update should not modify wall entity count")
-	}
-
-	if !system.IsInitialized() {
-		t.Error("Update should not change initialization state")
+	// Test wall entity
+	if !checker.CheckEntityCollision(wallEntity) {
+		t.Error("Entity in wall tile should collide with terrain")
 	}
 }
 
-// TestTerrainCollisionSystem_WallComponent tests the WallComponent.
-func TestTerrainCollisionSystem_WallComponent(t *testing.T) {
-	wallComp := &WallComponent{TileX: 5, TileY: 10}
+// TestTerrainCollisionChecker_NoTerrain tests behavior when no terrain is set.
+func TestTerrainCollisionChecker_NoTerrain(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
 
-	if wallComp.Type() != "wall" {
-		t.Errorf("WallComponent.Type() should return 'wall', got '%s'", wallComp.Type())
+	// Without terrain, should not detect collisions
+	if checker.CheckCollision(0, 0, 16, 16) {
+		t.Error("Checker without terrain should not detect collisions")
 	}
 
-	if wallComp.TileX != 5 {
-		t.Errorf("TileX should be 5, got %d", wallComp.TileX)
+	world := NewWorld()
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	entity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
+
+	if checker.CheckEntityCollision(entity) {
+		t.Error("Checker without terrain should not detect entity collisions")
+	}
+}
+
+// TestTerrainCollisionChecker_MissingComponents tests entity without required components.
+func TestTerrainCollisionChecker_MissingComponents(t *testing.T) {
+	checker := NewTerrainCollisionChecker(32, 32)
+	testTerrain := terrain.NewTerrain(3, 3, 12345)
+	checker.SetTerrain(testTerrain)
+
+	world := NewWorld()
+
+	// Entity without components
+	entity1 := world.CreateEntity()
+	if checker.CheckEntityCollision(entity1) {
+		t.Error("Entity without components should not collide")
 	}
 
-	if wallComp.TileY != 10 {
-		t.Errorf("TileY should be 10, got %d", wallComp.TileY)
+	// Entity with only position
+	entity2 := world.CreateEntity()
+	entity2.AddComponent(&PositionComponent{X: 0, Y: 0})
+	if checker.CheckEntityCollision(entity2) {
+		t.Error("Entity without collider should not collide")
+	}
+
+	// Entity with only collider
+	entity3 := world.CreateEntity()
+	entity3.AddComponent(&ColliderComponent{Width: 16, Height: 16})
+	if checker.CheckEntityCollision(entity3) {
+		t.Error("Entity without position should not collide")
 	}
 }

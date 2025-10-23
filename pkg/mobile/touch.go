@@ -124,7 +124,7 @@ func (h *TouchInputHandler) IsLongPress() bool {
 
 // GetSwipe returns the swipe direction and distance if a swipe was detected.
 // Returns (0, 0, 0) if no swipe detected.
-func (h *TouchInputHandler) GetSwipe() (direction float64, distance float64, detected bool) {
+func (h *TouchInputHandler) GetSwipe() (direction, distance float64, detected bool) {
 	return h.gestureDetector.GetSwipe()
 }
 
@@ -294,7 +294,7 @@ func (g *GestureDetector) GetLongPressPosition() (int, int) {
 }
 
 // GetSwipe returns swipe information if detected this frame.
-func (g *GestureDetector) GetSwipe() (direction float64, distance float64, detected bool) {
+func (g *GestureDetector) GetSwipe() (direction, distance float64, detected bool) {
 	return g.swipeDirection, g.swipeDistance, g.swipeDetected
 }
 

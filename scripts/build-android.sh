@@ -66,6 +66,9 @@ build_aar() {
     
     cd "$PROJECT_ROOT"
     
+    # Ensure output directory exists
+    mkdir -p "$BUILD_DIR/libs"
+    
     # Build the AAR
     ebitenmobile bind \
         -target android \

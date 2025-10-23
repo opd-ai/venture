@@ -79,98 +79,29 @@ go build -o venture-server ./cmd/server
 ## Documentation
 
 **For Players:**
-- [Getting Started Guide](docs/GETTING_STARTED.md) - Installation and first game (5 minutes)
+- [Getting Started Guide](docs/GETTING_STARTED.md) - Quick installation and first game (5 minutes)
 - [User Manual](docs/USER_MANUAL.md) - Complete gameplay guide and mechanics
 
 **For Developers:**
-- [API Reference](docs/API_REFERENCE.md) - Complete API documentation with examples
-- [Development Guide](docs/DEVELOPMENT.md) - Setup, workflow, and best practices
+- [Development Guide](docs/DEVELOPMENT.md) - Setup, workflow, testing, and best practices
 - [Contributing Guide](docs/CONTRIBUTING.md) - How to contribute to the project
+- [API Reference](docs/API_REFERENCE.md) - Complete API documentation with examples
 
 **Project Information:**
 - [Roadmap](docs/ROADMAP.md) - Development phases and milestones
 - [Architecture](docs/ARCHITECTURE.md) - Architecture Decision Records (ADRs)
 - [Technical Specification](docs/TECHNICAL_SPEC.md) - Complete technical details
 
-**Package Documentation:** Each package in `pkg/` contains a README.md with detailed technical information.
-
-## Project Structure
-
-```
-venture/
-├── cmd/
-│   ├── client/          # Client application
-│   ├── server/          # Server application
-│   ├── movementtest/    # Movement/collision demo tool
-│   └── ... (other test tools)
-├── pkg/
-│   ├── engine/          # Core game loop and ECS framework
-│   │   ├── ecs.go       # Entity-Component-System
-│   │   ├── components.go # Movement/collision components
-│   │   ├── movement.go  # Movement system
-│   │   ├── collision.go # Collision detection system
-│   │   └── game.go      # Ebiten integration
-│   ├── procgen/         # Procedural generation systems
-│   │   ├── terrain/     # Map/dungeon generation
-│   │   ├── entity/      # Monster/NPC generation
-│   │   ├── item/        # Weapon/armor/item generation
-│   │   ├── magic/       # Spell/ability generation
-│   │   ├── skills/      # Skill tree generation
-│   │   └── genre/       # Genre definition system
-│   ├── rendering/       # Visual generation
-│   │   ├── shapes/      # Shape generation
-│   │   ├── sprites/     # Sprite generation
-│   │   ├── tiles/       # Tile rendering
-│   │   ├── particles/   # Particle effects
-│   │   ├── ui/          # UI rendering
-│   │   └── palette/     # Color scheme generation
-│   ├── audio/           # Sound synthesis
-│   │   ├── synthesis/   # Waveform generation
-│   │   ├── music/       # Music composition
-│   │   └── sfx/         # Sound effects
-│   ├── network/         # Multiplayer systems
-│   ├── combat/          # Combat mechanics
-│   └── world/           # World state management
-├── docs/
-│   └── ARCHITECTURE.md  # Architectural decisions
-├── go.mod
-└── README.md
-```
-
-## Architecture
-
-The game uses an Entity-Component-System (ECS) architecture for maximum flexibility and performance. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architectural decisions.
-
-### Core Concepts
-
-**Entities:** Game objects represented by unique IDs with attached components
-**Components:** Pure data structures (Position, Health, Sprite, etc.)
-**Systems:** Behavior logic that operates on entities with specific components
-
-This architecture allows for easy composition of complex behaviors and efficient data processing.
-
-## Performance Targets
-
-- **FPS:** 60 minimum on modest hardware (Intel i5/Ryzen 5, 8GB RAM, integrated graphics)
-- **Memory:** <500MB client, <1GB server (4 players)
-- **Generation:** <2 seconds for new world areas
-- **Network:** <100KB/s per player at 20 updates/second
-
 ## Contributing
 
-Contributions welcome! Please see [Contributing Guide](docs/CONTRIBUTING.md) for:
-- Code of conduct
-- Development setup
-- Pull request process
-- Coding standards
-- Testing requirements
+Contributions welcome! Please see [Contributing Guide](docs/CONTRIBUTING.md) for guidelines and [Development Guide](docs/DEVELOPMENT.md) for setup instructions.
 
-Quick start for contributors:
+Quick verification commands:
 ```bash
 # Run tests
 go test -tags test ./...
 
-# Check code quality
+# Format and check code
 go fmt ./...
 go vet ./...
 ```

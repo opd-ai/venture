@@ -60,19 +60,7 @@ We pledge to make participation in our project a harassment-free experience for 
    git remote add upstream https://github.com/opd-ai/venture.git
    ```
 
-### Quick Development Setup
-
-```bash
-# Download dependencies
-go mod download
-
-# Verify setup
-go test -tags test ./...
-go build ./cmd/client
-go build ./cmd/server
-```
-
-**For detailed development environment setup, build instructions, profiling, and debugging, see [Development Guide](DEVELOPMENT.md).**
+**For complete development environment setup, dependencies, build instructions, testing workflows, profiling, and debugging, see [Development Guide](DEVELOPMENT.md).**
 
 ---
 
@@ -574,14 +562,11 @@ See [Architecture](ARCHITECTURE.md) for detailed architectural decisions and [Te
 
 ## Performance Guidelines
 
-**Optimization Priorities:**
-1. Correctness first (make it work)
-2. Clarity second (make it clear)
-3. Performance third (make it fast)
+When contributing performance improvements:
 
-**Performance Targets:** 60+ FPS with 2000 entities, <500MB client memory, <2s generation time
-
-**Before optimizing:** Profile using `go test -cpuprofile` and `go test -memprofile`
+1. **Profile first:** Use `go test -cpuprofile` and `go test -memprofile` before optimizing
+2. **Target specifications:** 60+ FPS, <500MB client memory, <2s generation time
+3. **Optimization priority:** Correctness → Clarity → Performance
 
 **For detailed profiling instructions, benchmarking, and optimization techniques, see [Development Guide](DEVELOPMENT.md).**
 

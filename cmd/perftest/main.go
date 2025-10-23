@@ -4,21 +4,36 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
 )
 
 var (
-	entityCount = flag.Int("entities", 1000, "Number of entities to spawn")
-	duration    = flag.Int("duration", 10, "Test duration in seconds")
-	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
+	entityCount  = flag.Int("entities", 1000, "Number of entities to spawn")
+	duration     = flag.Int("duration", 10, "Test duration in seconds")
+	verbose      = flag.Bool("verbose", false, "Enable verbose logging")
+	validate2k   = flag.Bool("validate-2k", false, "Run validation test with 2000 entities (for README claim)")
+	targetFPS    = flag.Float64("target-fps", 60.0, "Target FPS to validate against")
+	outputReport = flag.String("output", "", "Output performance report to file")
 )
 
 func main() {
 	flag.Parse()
 
+	// Validation mode for README claims
+	if *validate2k {
+		log.Println("Running validation test for README performance claim (2000 entities)")
+		*entityCount = 2000
+		*duration = 30     // Longer test for stability
+		*targetFPS = 106.0 // Specific claim from README
+	}
+
 	log.Printf("Performance Test - Spawning %d entities for %d seconds", *entityCount, *duration)
+	if *targetFPS != 60.0 {
+		log.Printf("Custom target FPS: %.2f", *targetFPS)
+	}
 
 	// Create world with performance monitoring
 	world := engine.NewWorld()
@@ -73,10 +88,9 @@ func main() {
 
 	// Run simulation
 	log.Println("Starting performance test...")
-	log.Printf("Target: 60 FPS (16.67ms per frame)")
+	log.Printf("Target: %.0f FPS (%.2fms per frame)", *targetFPS, 1000.0 / *targetFPS)
 
-	targetFPS := 60.0
-	frameDuration := time.Second / time.Duration(targetFPS)
+	frameDuration := time.Second / time.Duration(*targetFPS)
 	endTime := time.Now().Add(time.Duration(*duration) * time.Second)
 	frameCount := 0
 
@@ -133,11 +147,49 @@ func main() {
 	}
 
 	// Check if meeting target
-	fmt.Printf("\nPerformance Target (60 FPS): ")
-	if metrics.IsPerformanceTarget() {
+	targetMet := metrics.FPS >= *targetFPS
+	fmt.Printf("\nPerformance Target (%.0f FPS): ", *targetFPS)
+	if targetMet {
 		fmt.Printf("✅ MET (%.2f FPS)\n", metrics.FPS)
 	} else {
-		fmt.Printf("❌ NOT MET (%.2f FPS)\n", metrics.FPS)
+		fmt.Printf("❌ NOT MET (%.2f FPS, shortfall: %.2f FPS)\n", metrics.FPS, *targetFPS-metrics.FPS)
+	}
+
+	// Output report to file if requested
+	if *outputReport != "" {
+		reportContent := fmt.Sprintf(`Performance Test Report
+Generated: %s
+Test Configuration:
+  Entity Count: %d
+  Duration: %d seconds
+  Total Frames: %d
+
+Results:
+  Average FPS: %.2f
+  Min Frame Time: %.2fms
+  Max Frame Time: %.2fms
+  Average Update Time: %.2fms
+
+Target: %.0f FPS - %s
+
+System Breakdown:
+`, time.Now().Format(time.RFC3339), *entityCount, *duration, frameCount,
+			metrics.FPS,
+			float64(metrics.MinFrameTime.Microseconds())/1000.0,
+			float64(metrics.MaxFrameTime.Microseconds())/1000.0,
+			float64(metrics.AverageUpdateTime.Microseconds())/1000.0,
+			*targetFPS,
+			map[bool]string{true: "MET ✅", false: "NOT MET ❌"}[targetMet])
+
+		for name, percent := range percentages {
+			reportContent += fmt.Sprintf("  %s: %.2f%%\n", name, percent)
+		}
+
+		if err := os.WriteFile(*outputReport, []byte(reportContent), 0644); err != nil {
+			log.Printf("Failed to write report: %v", err)
+		} else {
+			log.Printf("Performance report written to: %s", *outputReport)
+		}
 	}
 
 	// Spatial partition stats

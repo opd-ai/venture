@@ -8,6 +8,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
@@ -16,11 +17,13 @@ import (
 )
 
 var (
-	width   = flag.Int("width", 800, "Screen width")
-	height  = flag.Int("height", 600, "Screen height")
-	seed    = flag.Int64("seed", 12345, "World generation seed")
-	genreID = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	verbose = flag.Bool("verbose", false, "Enable verbose logging")
+	width       = flag.Int("width", 800, "Screen width")
+	height      = flag.Int("height", 600, "Screen height")
+	seed        = flag.Int64("seed", 12345, "World generation seed")
+	genreID     = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
+	multiplayer = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server      = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
 )
 
 // addStarterItems generates and adds starting items to the player's inventory.
@@ -168,6 +171,36 @@ func main() {
 
 	log.Printf("Starting Venture - Procedural Action RPG")
 	log.Printf("Screen: %dx%d, Seed: %d, Genre: %s", *width, *height, *seed, *genreID)
+
+	// Initialize network client if multiplayer mode is enabled
+	var networkClient *network.Client
+	if *multiplayer {
+		log.Printf("Multiplayer mode enabled - connecting to server at %s", *server)
+
+		clientConfig := network.DefaultClientConfig()
+		clientConfig.ServerAddress = *server
+		networkClient = network.NewClient(clientConfig)
+
+		// Connect to server
+		if err := networkClient.Connect(); err != nil {
+			log.Fatalf("Failed to connect to server: %v", err)
+		}
+
+		log.Printf("Connected to server successfully")
+
+		// Handle network errors in background
+		go func() {
+			for err := range networkClient.ReceiveError() {
+				log.Printf("Network error: %v", err)
+			}
+		}()
+
+		if *verbose {
+			log.Println("Network client initialized and connected")
+		}
+	} else {
+		log.Println("Single-player mode (use -multiplayer flag to connect to server)")
+	}
 
 	// Create the game instance
 	game := engine.NewGame(*width, *height)
@@ -524,6 +557,19 @@ func main() {
 	log.Println("Game initialized successfully")
 	log.Printf("Controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
 	log.Printf("Genre: %s, Seed: %d", *genreID, *seed)
+	if *multiplayer {
+		log.Printf("Multiplayer: Connected to %s", *server)
+	}
+
+	// Setup cleanup handler for network client
+	defer func() {
+		if networkClient != nil {
+			log.Println("Disconnecting from server...")
+			if err := networkClient.Disconnect(); err != nil {
+				log.Printf("Error disconnecting: %v", err)
+			}
+		}
+	}()
 
 	// Run the game loop
 	if err := game.Run("Venture - Procedural Action RPG"); err != nil {

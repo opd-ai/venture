@@ -28,6 +28,7 @@ type Game struct {
 	HUDSystem           *HUDSystem
 	TutorialSystem      *TutorialSystem
 	HelpSystem          *HelpSystem
+	MenuSystem          *MenuSystem
 
 	// UI systems
 	InventoryUI *InventoryUI
@@ -49,6 +50,13 @@ func NewGame(screenWidth, screenHeight int) *Game {
 	inventoryUI := NewInventoryUI(world, screenWidth, screenHeight)
 	questUI := NewQuestUI(world, screenWidth, screenHeight)
 
+	// Create menu system with save directory
+	menuSystem, err := NewMenuSystem(world, screenWidth, screenHeight, "./saves")
+	if err != nil {
+		// Log error but continue (save/load won't work but game can run)
+		fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
+	}
+
 	return &Game{
 		World:          world,
 		lastUpdateTime: time.Now(),
@@ -57,6 +65,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 		CameraSystem:   cameraSystem,
 		RenderSystem:   renderSystem,
 		HUDSystem:      hudSystem,
+		MenuSystem:     menuSystem,
 		InventoryUI:    inventoryUI,
 		QuestUI:        questUI,
 	}
@@ -64,10 +73,6 @@ func NewGame(screenWidth, screenHeight int) *Game {
 
 // Update implements ebiten.Game interface. Called every frame.
 func (g *Game) Update() error {
-	if g.Paused {
-		return nil
-	}
-
 	// Calculate delta time
 	now := time.Now()
 	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
@@ -76,6 +81,18 @@ func (g *Game) Update() error {
 	// Cap delta time to prevent spiral of death
 	if deltaTime > 0.1 {
 		deltaTime = 0.1
+	}
+
+	// If menu is visible, pause game world (but allow menu input)
+	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
+		g.Paused = true
+		// Update menu even when paused
+		g.MenuSystem.Update(g.World.GetEntities(), deltaTime)
+		return nil
+	}
+
+	if g.Paused {
+		return nil
 	}
 
 	// Update UI systems first (they capture input if visible)
@@ -114,6 +131,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Render help overlay (if visible)
 	if g.HelpSystem != nil && g.HelpSystem.Visible {
 		g.HelpSystem.Draw(screen)
+	}
+
+	// Render menu overlay (if active)
+	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
+		g.MenuSystem.Draw(screen)
 	}
 
 	// Render UI overlays (drawn last so they're on top)

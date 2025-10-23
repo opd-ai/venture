@@ -32,22 +32,23 @@ go.work.sum
 # .vscode/
 
 # Built binaries (in project root)
-/client
-/server
-/venture-client
-/venture-server
+/client*
+/server*
+/venture-client*
+/venture-server*
 
 # Test tool binaries
-terraintest
-entitytest
-itemtest
-magictest
-skilltest
-genretest
-genreblend
-rendertest
-tiletest
-audiotest
-movementtest
-questtest
-inventorytest
+/terraintest*
+/entitytest*
+/itemtest*
+/magictest*
+/skilltest*
+/genretest*
+/genreblend*
+/rendertest*
+/tiletest*
+/audiotest*
+/movementtest*
+/questtest*
+/inventorytest*
+/perftest*

@@ -99,6 +99,11 @@ func (g *Game) Update() error {
 	g.InventoryUI.Update()
 	g.QuestUI.Update()
 
+	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
+	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
+		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
+	}
+
 	// Update the world (unless UI is blocking input)
 	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() {
 		g.World.Update(deltaTime)

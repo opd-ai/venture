@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
@@ -245,6 +246,22 @@ func main() {
 	if *verbose {
 		log.Println("Systems initialized: Input, Movement, Collision, Combat, AI, Progression, Inventory")
 	}
+
+	// Gap #3: Initialize performance monitoring (wraps World.Update)
+	perfMonitor := engine.NewPerformanceMonitor(game.World)
+	if *verbose {
+		log.Println("Performance monitoring initialized")
+		// Start periodic performance logging in background
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				metrics := perfMonitor.GetMetrics()
+				log.Printf("Performance: %s", metrics.String())
+			}
+		}()
+	}
+	_ = perfMonitor // Suppress unused warning when not verbose
 
 	// Generate initial world terrain
 	if *verbose {

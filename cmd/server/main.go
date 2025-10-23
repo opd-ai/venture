@@ -11,6 +11,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
+	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
@@ -405,18 +406,104 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 		}
 
 	case "attack":
-		// Trigger attack (future implementation)
+		// Trigger attack
 		if verbose {
-			log.Printf("Player %d attacking (not yet implemented)", cmd.PlayerID)
+			log.Printf("Player %d attacking", cmd.PlayerID)
 		}
-		// TODO: Implement attack handling
+
+		// Get attack component
+		attackComp, hasAttack := entity.GetComponent("attack")
+		if !hasAttack {
+			if verbose {
+				log.Printf("Player %d has no attack component", cmd.PlayerID)
+			}
+			return
+		}
+		attack := attackComp.(*engine.AttackComponent)
+
+		// Check cooldown using CanAttack method
+		if !attack.CanAttack() {
+			if verbose {
+				log.Printf("Player %d attack on cooldown (%.2fs remaining)", cmd.PlayerID, attack.CooldownTimer)
+			}
+			return
+		}
+
+		// Trigger attack by resetting cooldown
+		attack.ResetCooldown()
+
+		if verbose {
+			log.Printf("Player %d attack triggered (damage: %d, range: %.1f)",
+				cmd.PlayerID, attack.Damage, attack.Range)
+		}
 
 	case "use_item":
-		// Use item (future implementation)
+		// Use item from inventory
 		if verbose {
-			log.Printf("Player %d using item (not yet implemented)", cmd.PlayerID)
+			log.Printf("Player %d using item", cmd.PlayerID)
 		}
-		// TODO: Implement item use handling
+
+		// Get inventory component
+		invComp, hasInv := entity.GetComponent("inventory")
+		if !hasInv {
+			if verbose {
+				log.Printf("Player %d has no inventory component", cmd.PlayerID)
+			}
+			return
+		}
+		inventory := invComp.(*engine.InventoryComponent)
+
+		// Parse item index from command data
+		if len(cmd.Data) < 1 {
+			if verbose {
+				log.Printf("Player %d use_item command missing item index", cmd.PlayerID)
+			}
+			return
+		}
+		itemIndex := int(cmd.Data[0])
+
+		// Validate item index
+		if itemIndex < 0 || itemIndex >= len(inventory.Items) {
+			if verbose {
+				log.Printf("Player %d invalid item index: %d (inventory size: %d)",
+					cmd.PlayerID, itemIndex, len(inventory.Items))
+			}
+			return
+		}
+
+		// Get item
+		item := inventory.Items[itemIndex]
+
+		// Check if item is consumable (using imported item package constant)
+		if item.Type != itemgen.TypeConsumable {
+			if verbose {
+				log.Printf("Player %d attempted to use non-consumable item: %s",
+					cmd.PlayerID, item.Name)
+			}
+			return
+		}
+
+		// Apply item effect (health restoration for now)
+		if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
+			health := healthComp.(*engine.HealthComponent)
+
+			// Restore health based on item power
+			healAmount := float64(item.Stats.Defense) // Use defense stat as heal power
+			if healAmount > 0 {
+				health.Current += healAmount
+				if health.Current > health.Max {
+					health.Current = health.Max
+				}
+
+				if verbose {
+					log.Printf("Player %d used %s, healed %.1f HP (now %.1f/%.1f)",
+						cmd.PlayerID, item.Name, healAmount, health.Current, health.Max)
+				}
+
+				// Remove consumed item from inventory
+				inventory.Items = append(inventory.Items[:itemIndex], inventory.Items[itemIndex+1:]...)
+			}
+		}
 
 	default:
 		if verbose {

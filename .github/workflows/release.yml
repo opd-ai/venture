@@ -14,26 +14,20 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Create Release
+  prepare-release:
+    name: Prepare Release
     runs-on: ubuntu-latest
+    outputs:
+      release_type: ${{ steps.release_type.outputs.type }}
+      release_tag: ${{ steps.release_type.outputs.tag }}
+      release_name: ${{ steps.release_type.outputs.name }}
+      prerelease: ${{ steps.release_type.outputs.prerelease }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for changelog generation
-
-      - name: Install build dependencies
-        run: sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.x'
-
-      - name: Download dependencies
-        run: go mod download
 
       - name: Determine release type
         id: release_type
@@ -69,50 +63,6 @@ jobs:
           git tag -f nightly
           git push -f origin nightly
 
-      - name: Build binaries
-        run: |
-          mkdir -p build
-
-          # Define platforms
-          platforms=(
-            "linux/amd64"
-            "linux/arm64"
-            "darwin/amd64"
-            "darwin/arm64"
-            "windows/amd64"
-          )
-
-          for platform in "${platforms[@]}"; do
-            IFS='/' read -r goos goarch <<< "$platform"
-
-            # Build server
-            server_name="venture-server-${goos}-${goarch}"
-            if [ "$goos" = "windows" ]; then
-              server_name="${server_name}.exe"
-            fi
-
-            echo "Building server for $goos/$goarch..."
-            GOOS=$goos GOARCH=$goarch go build -tags test -ldflags="-s -w" -o "build/${server_name}" ./cmd/server
-
-            # Build client
-            client_name="venture-client-${goos}-${goarch}"
-            if [ "$goos" = "windows" ]; then
-              client_name="${client_name}.exe"
-            fi
-
-            echo "Building client for $goos/$goarch..."
-            GOOS=$goos GOARCH=$goarch go build -ldflags="-s -w" -o "build/${client_name}" ./cmd/client
-
-            # Create archives
-            if [ "$goos" = "windows" ]; then
-              (cd build && zip "${server_name%.exe}.zip" "$server_name")
-              (cd build && zip "${client_name%.exe}.zip" "$client_name")
-            else
-              (cd build && tar czf "${server_name}.tar.gz" "$server_name")
-              (cd build && tar czf "${client_name}.tar.gz" "$client_name")
-            fi
-          done
-
       - name: Generate release notes
         id: release_notes
         run: |
@@ -136,23 +86,152 @@ jobs:
             git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
           fi
 
-      - name: Create release
-        id: create_release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.release_type.outputs.tag }}
-          name: ${{ steps.release_type.outputs.name }}
-          body_path: release_notes.md
-          prerelease: ${{ steps.release_type.outputs.prerelease }}
-          files: |
-            build/*.tar.gz
-            build/*.zip
+          name: release-notes
+          path: release_notes.md
+          retention-days: 1
+
+  build-linux:
+    name: Build Linux
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binaries
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build
+          
+          # Build server
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-linux-${{ matrix.arch }}" ./cmd/server
+          
+          # Build client
+          go build -ldflags="-s -w" -o "build/venture-client-linux-${{ matrix.arch }}" ./cmd/client
+
+      - name: Create archives
+        run: |
+          cd build
+          tar czf venture-server-linux-${{ matrix.arch }}.tar.gz venture-server-linux-${{ matrix.arch }}
+          tar czf venture-client-linux-${{ matrix.arch }}.tar.gz venture-client-linux-${{ matrix.arch }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: build/*.tar.gz
+          retention-days: 1
+
+  build-windows:
+    name: Build Windows
+    needs: prepare-release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binaries
+        run: |
+          New-Item -ItemType Directory -Force -Path build
+          
+          # Build server
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-windows-amd64.exe" ./cmd/server
+          
+          # Build client
+          go build -ldflags="-s -w" -o "build/venture-client-windows-amd64.exe" ./cmd/client
+
+      - name: Create archives
+        run: |
+          cd build
+          Compress-Archive -Path venture-server-windows-amd64.exe -DestinationPath venture-server-windows-amd64.zip
+          Compress-Archive -Path venture-client-windows-amd64.exe -DestinationPath venture-client-windows-amd64.zip
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: build/*.zip
+          retention-days: 1
+
+  build-macos:
+    name: Build macOS
+    needs: prepare-release
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binaries
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build
+          
+          # Build server
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-darwin-${{ matrix.arch }}" ./cmd/server
+          
+          # Build client
+          go build -ldflags="-s -w" -o "build/venture-client-darwin-${{ matrix.arch }}" ./cmd/client
+
+      - name: Create archives
+        run: |
+          cd build
+          tar czf venture-server-darwin-${{ matrix.arch }}.tar.gz venture-server-darwin-${{ matrix.arch }}
+          tar czf venture-client-darwin-${{ matrix.arch }}.tar.gz venture-client-darwin-${{ matrix.arch }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-${{ matrix.arch }}
+          path: build/*.tar.gz
+          retention-days: 1
 
   build-android:
     name: Build Android
-    needs: release
+    needs: prepare-release
     runs-on: ubuntu-latest
 
     steps:
@@ -163,106 +242,50 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
+          cache: true
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
-      - name: Install ebitenmobile
-        run: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
-
-      - name: Setup Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK components
         run: |
-          sdkmanager "build-tools;34.0.0"
-          sdkmanager "platforms;android-34"
-          sdkmanager "ndk;26.1.10909125"
+          yes | sdkmanager "build-tools;34.0.0"
+          yes | sdkmanager "platforms;android-34"
+          yes | sdkmanager "ndk;26.1.10909125"
 
-      - name: Initialize ebitenmobile
-        run: ebitenmobile init -javac /usr/bin/javac
+      - name: Install ebitenmobile
+        run: |
+          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Determine release tag
-        id: release_info
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=nightly" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build Android AAR
+        run: ./scripts/build-android.sh aar
+
+      - name: Create archive
         run: |
-          mkdir -p build/android
-          ebitenmobile bind -target android -javac /usr/bin/javac -o build/android/venture.aar ./cmd/mobile
+          cd build/android/libs
+          zip venture-android-${{ needs.prepare-release.outputs.release_tag }}.zip mobile.aar
 
-      - name: Build Android APK
-        run: |
-          cd build/android
-          cat > build.gradle << 'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-
-          android {
-              namespace 'com.venture.game'
-              compileSdk 34
-
-              defaultConfig {
-                  applicationId "com.venture.game"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "${{ steps.release_info.outputs.tag }}"
-              }
-
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-          }
-
-          repositories {
-              google()
-              mavenCentral()
-          }
-
-          dependencies {
-              implementation files('venture.aar')
-          }
-          EOF
-
-          mkdir -p src/main/res/values
-          cat > src/main/res/values/strings.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <string name="app_name">Venture</string>
-          </resources>
-          EOF
-
-          cp ../../build/android/AndroidManifest.xml src/main/
-          gradle assembleRelease
-
-      - name: Upload APK to release
-        uses: softprops/action-gh-release@v2
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.release_info.outputs.tag }}
-          files: |
-            build/android/venture.aar
-            build/android/build/outputs/apk/release/*.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: android
+          path: build/android/libs/*.zip
+          retention-days: 1
 
   build-ios:
     name: Build iOS
-    needs: release
+    needs: prepare-release
     runs-on: macos-13
 
     steps:
@@ -273,40 +296,61 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
+          cache: true
 
       - name: Install ebitenmobile
-        run: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
-
-      - name: Initialize ebitenmobile
-        run: ebitenmobile init
+        run: |
+          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Determine release tag
-        id: release_info
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=nightly" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build iOS XCFramework
-        run: |
-          mkdir -p build/ios
-          ebitenmobile bind -target ios -o build/ios/Venture.xcframework ./cmd/mobile
+        run: ./scripts/build-ios.sh xcframework
 
-      - name: Create iOS Framework Archive
+      - name: Create archive
         run: |
           cd build/ios
-          zip -r Venture-ios-${{ steps.release_info.outputs.tag }}.zip Venture.xcframework
+          zip -r venture-ios-${{ needs.prepare-release.outputs.release_tag }}.zip Mobile.xcframework
 
-      - name: Upload iOS Framework to release
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: build/ios/*.zip
+          retention-days: 1
+
+  publish-release:
+    name: Publish Release
+    needs: [prepare-release, build-linux, build-windows, build-macos, build-android, build-ios]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize artifacts
+        run: |
+          mkdir -p build
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} build/ \;
+
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_info.outputs.tag }}
-          files: build/ios/Venture-ios-*.zip
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          body_path: release_notes.md
+          prerelease: ${{ needs.prepare-release.outputs.prerelease }}
+          files: build/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

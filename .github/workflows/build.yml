@@ -9,75 +9,205 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build artifacts
+  build-linux:
+    name: Build Linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
+        arch: [amd64, arm64]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install build dependencies
-        run: sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
+          cache: true
 
       - name: Download dependencies
         run: go mod download
 
       - name: Build server
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          GOARCH: ${{ matrix.arch }}
         run: |
           mkdir -p build
-          EXT=""
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            EXT=".exe"
-          fi
-          OUTPUT_NAME="build/venture-server-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}"
-          go build -tags test -ldflags="-s -w" -o "${OUTPUT_NAME}" ./cmd/server
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-linux-${{ matrix.arch }}" ./cmd/server
 
       - name: Build client
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          GOARCH: ${{ matrix.arch }}
         run: |
-          mkdir -p build
-          EXT=""
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            EXT=".exe"
-          fi
-          OUTPUT_NAME="build/venture-client-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}"
-          go build -ldflags="-s -w" -o "${OUTPUT_NAME}" ./cmd/client
+          go build -ldflags="-s -w" -o "build/venture-client-linux-${{ matrix.arch }}" ./cmd/client
 
-      - name: Upload server artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: venture-server-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/venture-server-*
+          name: linux-${{ matrix.arch }}
+          path: build/venture-*
           retention-days: 7
 
-      - name: Upload client artifacts
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build server
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          New-Item -ItemType Directory -Force -Path build
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-windows-${{ matrix.arch }}.exe" ./cmd/server
+
+      - name: Build client
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w" -o "build/venture-client-windows-${{ matrix.arch }}.exe" ./cmd/client
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: venture-client-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/venture-client-*
+          name: windows-${{ matrix.arch }}
+          path: build/venture-*
+          retention-days: 7
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build server
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build
+          go build -tags test -ldflags="-s -w" -o "build/venture-server-darwin-${{ matrix.arch }}" ./cmd/server
+
+      - name: Build client
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w" -o "build/venture-client-darwin-${{ matrix.arch }}" ./cmd/client
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-${{ matrix.arch }}
+          path: build/venture-*
+          retention-days: 7
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager "build-tools;34.0.0"
+          yes | sdkmanager "platforms;android-34"
+          yes | sdkmanager "ndk;26.1.10909125"
+
+      - name: Install ebitenmobile
+        run: |
+          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Android AAR
+        run: ./scripts/build-android.sh aar
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: build/android/libs/*.aar
+          retention-days: 7
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Install ebitenmobile
+        run: |
+          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build iOS XCFramework
+        run: ./scripts/build-ios.sh xcframework
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: build/ios/Mobile.xcframework
           retention-days: 7
 

@@ -63,6 +63,7 @@ type InputSystem struct {
 	// References to game systems for special key handling
 	helpSystem     *HelpSystem
 	tutorialSystem *TutorialSystem
+	menuSystem     *MenuSystem
 
 	// Callbacks for UI and save/load operations
 	onQuickSave     func() error
@@ -73,6 +74,7 @@ type InputSystem struct {
 	onQuestsOpen    func()
 	onMapOpen       func()
 	onCycleTargets  func()
+	onMenuToggle    func() // Callback for ESC menu toggle
 }
 
 // NewInputSystem creates a new input system with default key bindings.
@@ -108,15 +110,18 @@ func NewInputSystem() *InputSystem {
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	// Handle global keys first (help menu, save/load, etc.)
-	// ESC key handling - context-aware: tutorial takes priority over help menu
+	// ESC key handling - context-aware priority: tutorial > help > pause menu
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
-		// Check if tutorial is active and should handle the ESC key
+		// Priority 1: Check if tutorial is active and should handle the ESC key
 		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
 			// Skip current tutorial step
 			s.tutorialSystem.Skip()
-		} else if s.helpSystem != nil {
-			// Otherwise toggle help menu
+		} else if s.helpSystem != nil && s.helpSystem.Visible {
+			// Priority 2: If help system is visible, close it
 			s.helpSystem.Toggle()
+		} else if s.onMenuToggle != nil {
+			// Priority 3: Otherwise toggle pause menu
+			s.onMenuToggle()
 		}
 	}
 
@@ -309,4 +314,16 @@ func (s *InputSystem) SetMapCallback(callback func()) {
 // SetCycleTargetsCallback sets the callback function for cycling targets (Tab key).
 func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
 	s.onCycleTargets = callback
+}
+
+// SetMenuToggleCallback sets the callback function for toggling the pause menu (ESC key).
+// This is called when ESC is pressed and neither tutorial nor help system consume the event.
+func (s *InputSystem) SetMenuToggleCallback(callback func()) {
+	s.onMenuToggle = callback
+}
+
+// SetMenuSystem connects the menu system for ESC key toggling.
+// Deprecated: Use SetMenuToggleCallback instead for better decoupling.
+func (s *InputSystem) SetMenuSystem(menuSystem *MenuSystem) {
+	s.menuSystem = menuSystem
 }

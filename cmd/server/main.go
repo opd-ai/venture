@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"image/color"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -140,15 +143,73 @@ func main() {
 		}
 	}()
 
+	// Track player entities
+	playerEntities := make(map[uint64]*engine.Entity)
+	playerEntitiesMu := &sync.RWMutex{}
+
+	// Handle new player connections in background
+	go func() {
+		for playerID := range server.ReceivePlayerJoin() {
+			if *verbose {
+				log.Printf("Player %d joined - creating player entity", playerID)
+			}
+
+			// Create player entity for new connection
+			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, *verbose)
+
+			// Store player entity mapping
+			playerEntitiesMu.Lock()
+			playerEntities[playerID] = entity
+			playerEntitiesMu.Unlock()
+
+			if *verbose {
+				log.Printf("Player %d entity created (ID: %d)", playerID, entity.ID)
+			}
+		}
+	}()
+
+	// Handle player disconnections in background
+	go func() {
+		for playerID := range server.ReceivePlayerLeave() {
+			if *verbose {
+				log.Printf("Player %d left - removing player entity", playerID)
+			}
+
+			// Remove player entity
+			playerEntitiesMu.Lock()
+			if entity, exists := playerEntities[playerID]; exists {
+				world.RemoveEntity(entity.ID)
+				delete(playerEntities, playerID)
+				if *verbose {
+					log.Printf("Player %d entity removed (ID: %d)", playerID, entity.ID)
+				}
+			}
+			playerEntitiesMu.Unlock()
+		}
+	}()
+
 	// Handle client input commands in background
 	go func() {
 		for cmd := range server.ReceiveInputCommand() {
-			// TODO: Process player input commands
-			// For now, just log them in verbose mode
 			if *verbose {
 				log.Printf("Received input from player %d: type=%s, seq=%d",
 					cmd.PlayerID, cmd.InputType, cmd.SequenceNumber)
 			}
+
+			// Get player entity
+			playerEntitiesMu.RLock()
+			entity, exists := playerEntities[cmd.PlayerID]
+			playerEntitiesMu.RUnlock()
+
+			if !exists {
+				if *verbose {
+					log.Printf("Warning: No entity for player %d", cmd.PlayerID)
+				}
+				continue
+			}
+
+			// Apply input to entity
+			applyInputCommand(entity, cmd, *verbose)
 		}
 	}()
 
@@ -223,4 +284,143 @@ func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.State
 		Priority:  128,                                             // Normal priority
 	}
 	return update
+}
+
+// createPlayerEntity creates a player entity for a connected client
+func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID uint64, seed int64, genreID string, verbose bool) *engine.Entity {
+	// Create player entity
+	entity := world.CreateEntity()
+
+	// Find valid spawn position in first room
+	spawnX, spawnY := 400.0, 300.0 // Default spawn
+	if len(terrain.Rooms) > 0 {
+		room := terrain.Rooms[0]
+		// Spawn in center of first room
+		spawnX = float64(room.X+room.Width/2) * 32  // Convert to pixel coordinates (32px tiles)
+		spawnY = float64(room.Y+room.Height/2) * 32
+	}
+
+	// Add core components
+	entity.AddComponent(&engine.PositionComponent{X: spawnX, Y: spawnY})
+	entity.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
+	entity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	entity.AddComponent(&engine.TeamComponent{TeamID: 1}) // All players on team 1
+
+	// Add network component to mark as networked entity
+	entity.AddComponent(&engine.NetworkComponent{
+		PlayerID: playerID,
+		Synced:   true,
+	})
+
+	// Add sprite for rendering
+	playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
+	playerSprite.Layer = 10 // Draw players on top
+	entity.AddComponent(playerSprite)
+
+	// Add player stats
+	playerStats := engine.NewStatsComponent()
+	playerStats.Attack = 10
+	playerStats.Defense = 5
+	entity.AddComponent(playerStats)
+
+	// Add player experience/progression
+	playerExp := engine.NewExperienceComponent()
+	entity.AddComponent(playerExp)
+
+	// Add player inventory
+	playerInventory := engine.NewInventoryComponent(20, 100.0) // 20 items, 100 weight max
+	playerInventory.Gold = 100
+	entity.AddComponent(playerInventory)
+
+	// Add player equipment
+	playerEquipment := engine.NewEquipmentComponent()
+	entity.AddComponent(playerEquipment)
+
+	// Add quest tracker
+	questTracker := engine.NewQuestTrackerComponent(5) // Max 5 active quests
+	entity.AddComponent(questTracker)
+
+	// Add player attack capability
+	entity.AddComponent(&engine.AttackComponent{
+		Damage:     15,
+		DamageType: combat.DamagePhysical,
+		Range:      50,
+		Cooldown:   0.5,
+	})
+
+	// Add collision for player
+	entity.AddComponent(&engine.ColliderComponent{
+		Width:     32,
+		Height:    32,
+		Solid:     true,
+		IsTrigger: false,
+		Layer:     1,
+		OffsetX:   -16, // Center the collider
+		OffsetY:   -16,
+	})
+
+	if verbose {
+		log.Printf("Player entity created: ID=%d, PlayerID=%d, Position=(%.1f, %.1f)",
+			entity.ID, playerID, spawnX, spawnY)
+	}
+
+	return entity
+}
+
+// applyInputCommand applies a network input command to a player entity
+func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose bool) {
+	// Get velocity component
+	velComp, hasVel := entity.GetComponent("velocity")
+	if !hasVel {
+		return
+	}
+	velocity := velComp.(*engine.VelocityComponent)
+
+	// Process input based on type
+	switch cmd.InputType {
+	case "move":
+		// Apply movement input to velocity
+		if len(cmd.Data) >= 2 {
+			moveX := float64(int8(cmd.Data[0])) // Convert byte to signed value (-128 to 127)
+			moveY := float64(int8(cmd.Data[1]))
+
+			// Normalize to -1.0 to 1.0 range
+			moveX /= 127.0
+			moveY /= 127.0
+
+			// Normalize diagonal movement
+			if moveX != 0 && moveY != 0 {
+				moveX *= 0.707
+				moveY *= 0.707
+			}
+
+			// Apply movement speed (100 pixels/second)
+			velocity.VX = moveX * 100.0
+			velocity.VY = moveY * 100.0
+
+			if verbose && (moveX != 0 || moveY != 0) {
+				log.Printf("Player %d moving: velocity=(%.1f, %.1f)",
+					cmd.PlayerID, velocity.VX, velocity.VY)
+			}
+		}
+
+	case "attack":
+		// Trigger attack (future implementation)
+		if verbose {
+			log.Printf("Player %d attacking (not yet implemented)", cmd.PlayerID)
+		}
+		// TODO: Implement attack handling
+
+	case "use_item":
+		// Use item (future implementation)
+		if verbose {
+			log.Printf("Player %d using item (not yet implemented)", cmd.PlayerID)
+		}
+		// TODO: Implement item use handling
+
+	default:
+		if verbose {
+			log.Printf("Unknown input type from player %d: %s", cmd.PlayerID, cmd.InputType)
+		}
+	}
 }

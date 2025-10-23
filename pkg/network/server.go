@@ -48,6 +48,8 @@ type Server struct {
 
 	// Channels for game logic
 	inputCommands chan *InputCommand
+	playerJoins   chan uint64 // Player connection events
+	playerLeaves  chan uint64 // Player disconnection events
 	errors        chan error
 
 	// Shutdown
@@ -82,6 +84,8 @@ func NewServer(config ServerConfig) *Server {
 		clients:       make(map[uint64]*clientConnection),
 		nextPlayerID:  1,
 		inputCommands: make(chan *InputCommand, config.BufferSize*config.MaxPlayers),
+		playerJoins:   make(chan uint64, config.MaxPlayers),
+		playerLeaves:  make(chan uint64, config.MaxPlayers),
 		errors:        make(chan error, 64),
 		done:          make(chan struct{}),
 	}
@@ -208,6 +212,16 @@ func (s *Server) ReceiveInputCommand() <-chan *InputCommand {
 	return s.inputCommands
 }
 
+// ReceivePlayerJoin returns a channel for receiving player join events.
+func (s *Server) ReceivePlayerJoin() <-chan uint64 {
+	return s.playerJoins
+}
+
+// ReceivePlayerLeave returns a channel for receiving player leave events.
+func (s *Server) ReceivePlayerLeave() <-chan uint64 {
+	return s.playerLeaves
+}
+
 // ReceiveError returns a channel for receiving errors.
 func (s *Server) ReceiveError() <-chan error {
 	return s.errors
@@ -256,6 +270,15 @@ func (s *Server) acceptLoop() {
 
 		s.clients[playerID] = client
 		s.clientsMu.Unlock()
+
+		// Notify game logic of new player
+		select {
+		case s.playerJoins <- playerID:
+		case <-s.done:
+			return
+		default:
+			s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID)
+		}
 
 		// Start client handlers
 		s.wg.Add(2)
@@ -381,6 +404,16 @@ func (s *Server) disconnectClient(playerID uint64) {
 		delete(s.clients, playerID)
 	}
 	s.clientsMu.Unlock()
+
+	// Notify game logic of player leave
+	if exists {
+		select {
+		case s.playerLeaves <- playerID:
+		case <-s.done:
+		default:
+			s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID)
+		}
+	}
 }
 
 // clientConnection methods

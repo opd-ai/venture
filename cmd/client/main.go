@@ -547,8 +547,159 @@ func main() {
 	}
 	game.SetupInputCallbacks(inputSystem)
 	if *verbose {
-		log.Println("UI callbacks registered (I: Inventory, J: Quests)")
+		log.Println("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		log.Println("Inventory actions: E to equip/use, D to drop")
+	}
+
+	// Connect save/load callbacks to menu system
+	if game.MenuSystem != nil && saveManager != nil {
+		if *verbose {
+			log.Println("Connecting save/load callbacks to menu system...")
+		}
+
+		// Create save callback that reuses the quick save logic
+		saveCallback := func(saveName string) error {
+			if *verbose {
+				log.Printf("Menu save to '%s'...", saveName)
+			}
+
+			// Get player position
+			var posX, posY float64
+			if posComp, ok := player.GetComponent("position"); ok {
+				pos := posComp.(*engine.PositionComponent)
+				posX, posY = pos.X, pos.Y
+			}
+
+			// Get player health
+			var currentHealth, maxHealth float64
+			if healthComp, ok := player.GetComponent("health"); ok {
+				health := healthComp.(*engine.HealthComponent)
+				currentHealth, maxHealth = health.Current, health.Max
+			}
+
+			// Get player stats
+			var attack, defense, magic float64
+			if statsComp, ok := player.GetComponent("stats"); ok {
+				stats := statsComp.(*engine.StatsComponent)
+				attack, defense, magic = stats.Attack, stats.Defense, stats.MagicPower
+			}
+
+			// Get player level and XP
+			var level int
+			var currentXP int64
+			if expComp, ok := player.GetComponent("experience"); ok {
+				exp := expComp.(*engine.ExperienceComponent)
+				level, currentXP = exp.Level, int64(exp.CurrentXP)
+			}
+
+			// Get inventory data (store only item IDs for now)
+			var inventoryItems []uint64
+			if invComp, ok := player.GetComponent("inventory"); ok {
+				inv := invComp.(*engine.InventoryComponent)
+				_ = inv.Gold
+				for range inv.Items {
+					// TODO: Map items to entity IDs for proper persistence
+				}
+			}
+
+			// Create game save
+			gameSave := &saveload.GameSave{
+				Version: saveload.SaveVersion,
+				PlayerState: &saveload.PlayerState{
+					EntityID:       player.ID,
+					X:              posX,
+					Y:              posY,
+					CurrentHealth:  currentHealth,
+					MaxHealth:      maxHealth,
+					Level:          level,
+					Experience:     int(currentXP),
+					Attack:         attack,
+					Defense:        defense,
+					MagicPower:     magic,
+					Speed:          1.0,
+					InventoryItems: inventoryItems,
+				},
+				WorldState: &saveload.WorldState{
+					Seed:       *seed,
+					GenreID:    *genreID,
+					Width:      generatedTerrain.Width,
+					Height:     generatedTerrain.Height,
+					Difficulty: 0.5,
+					Depth:      1,
+				},
+				Settings: &saveload.GameSettings{
+					ScreenWidth:  *width,
+					ScreenHeight: *height,
+					Fullscreen:   false,
+					VSync:        true,
+					MasterVolume: 1.0,
+					MusicVolume:  0.7,
+					SFXVolume:    0.8,
+					KeyBindings:  make(map[string]string),
+				},
+			}
+
+			if err := saveManager.SaveGame(saveName, gameSave); err != nil {
+				log.Printf("Failed to save game to '%s': %v", saveName, err)
+				return err
+			}
+
+			log.Printf("Game saved successfully to '%s'!", saveName)
+			return nil
+		}
+
+		// Create load callback that reuses the quick load logic
+		loadCallback := func(saveName string) error {
+			if *verbose {
+				log.Printf("Menu load from '%s'...", saveName)
+			}
+
+			gameSave, err := saveManager.LoadGame(saveName)
+			if err != nil {
+				log.Printf("Failed to load game from '%s': %v", saveName, err)
+				return err
+			}
+
+			// Restore player position
+			if posComp, ok := player.GetComponent("position"); ok {
+				pos := posComp.(*engine.PositionComponent)
+				pos.X = gameSave.PlayerState.X
+				pos.Y = gameSave.PlayerState.Y
+			}
+
+			// Restore player health
+			if healthComp, ok := player.GetComponent("health"); ok {
+				health := healthComp.(*engine.HealthComponent)
+				health.Current = gameSave.PlayerState.CurrentHealth
+				health.Max = gameSave.PlayerState.MaxHealth
+			}
+
+			// Restore player stats
+			if statsComp, ok := player.GetComponent("stats"); ok {
+				stats := statsComp.(*engine.StatsComponent)
+				stats.Attack = gameSave.PlayerState.Attack
+				stats.Defense = gameSave.PlayerState.Defense
+				stats.MagicPower = gameSave.PlayerState.MagicPower
+			}
+
+			// Restore player level and XP
+			if expComp, ok := player.GetComponent("experience"); ok {
+				exp := expComp.(*engine.ExperienceComponent)
+				exp.Level = gameSave.PlayerState.Level
+				exp.CurrentXP = gameSave.PlayerState.Experience
+			}
+
+			log.Printf("Game loaded successfully from '%s'!", saveName)
+			return nil
+		}
+
+		// Connect callbacks to menu system
+		game.MenuSystem.SetSaveCallback(saveCallback)
+		game.MenuSystem.SetLoadCallback(loadCallback)
+
+		if *verbose {
+			log.Println("Save/load callbacks connected to menu system")
+		}
 	}
 
 	// Process initial entity additions

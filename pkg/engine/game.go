@@ -174,6 +174,13 @@ func (g *Game) SetupInputCallbacks(inputSystem *InputSystem) {
 		g.QuestUI.Toggle()
 	})
 
+	// Connect pause menu toggle (ESC key)
+	if g.MenuSystem != nil {
+		inputSystem.SetMenuToggleCallback(func() {
+			g.MenuSystem.Toggle()
+		})
+	}
+
 	// TODO: Connect other callbacks when character/skills/map UIs are implemented
 	// inputSystem.SetCharacterCallback(func() { ... })
 	// inputSystem.SetSkillsCallback(func() { ... })

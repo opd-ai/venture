@@ -154,9 +154,52 @@ func (ms *MenuSystem) Update(entities []*Entity, deltaTime float64) {
 	ms.handleInput(menuComp)
 }
 
-// handleInput processes keyboard input for menu navigation.
+// handleInput processes keyboard and mouse input for menu navigation.
 func (ms *MenuSystem) handleInput(menu *MenuComponent) {
-	// Navigate up
+	// Calculate menu bounds for mouse detection
+	menuWidth := 400
+	menuHeight := 300
+	menuX := (ms.screenWidth - menuWidth) / 2
+	menuY := (ms.screenHeight - menuHeight) / 2
+
+	// Mouse input handling
+	mouseX, mouseY := ebiten.CursorPosition()
+	mouseClicked := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+
+	// Calculate item bounds and handle mouse hover/click
+	itemY := menuY + 70
+	for i := range menu.Items {
+		itemBounds := struct {
+			x, y, width, height int
+		}{
+			x:      menuX + 10,
+			y:      itemY,
+			width:  menuWidth - 20,
+			height: 20,
+		}
+
+		// Check if mouse is over this item
+		if mouseX >= itemBounds.x && mouseX < itemBounds.x+itemBounds.width &&
+			mouseY >= itemBounds.y && mouseY < itemBounds.y+itemBounds.height {
+			// Mouse is over this item - highlight it
+			menu.SelectedIndex = i
+
+			// Handle click
+			if mouseClicked {
+				item := menu.Items[i]
+				if item.Enabled && item.Action != nil {
+					if err := item.Action(); err != nil {
+						menu.ErrorMessage = err.Error()
+						menu.ErrorTimeout = 3.0
+					}
+				}
+			}
+		}
+
+		itemY += 25
+	}
+
+	// Keyboard input - Navigate up
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) || inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		menu.SelectedIndex--
 		if menu.SelectedIndex < 0 {
@@ -172,7 +215,7 @@ func (ms *MenuSystem) handleInput(menu *MenuComponent) {
 		}
 	}
 
-	// Select item
+	// Select item with keyboard
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		if menu.SelectedIndex >= 0 && menu.SelectedIndex < len(menu.Items) {
 			item := menu.Items[menu.SelectedIndex]
@@ -478,12 +521,23 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 	// Draw menu items
 	itemY := menuY + 70
 	for i, item := range menuComp.Items {
-		if i == menuComp.SelectedIndex {
+		// Highlight selected item
+		isSelected := i == menuComp.SelectedIndex
+
+		if isSelected {
+			// Draw selection background
+			selectionBg := ebiten.NewImage(menuWidth-20, 20)
+			selectionBg.Fill(color.RGBA{80, 80, 100, 200})
+			bgOpts := &ebiten.DrawImageOptions{}
+			bgOpts.GeoM.Translate(float64(menuX+10), float64(itemY))
+			screen.DrawImage(selectionBg, bgOpts)
+
 			// Draw selection indicator
 			ebitenutil.DebugPrintAt(screen, ">", menuX+10, itemY)
 		}
 
 		// Draw item label (offset for selection indicator)
+		// Note: Disabled items should appear grayed out, but ebitenutil doesn't support color
 		ebitenutil.DebugPrintAt(screen, item.Label, menuX+30, itemY)
 
 		itemY += 25
@@ -497,5 +551,5 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 
 	// Draw controls hint
 	controlsY := menuY + menuHeight - 10
-	ebitenutil.DebugPrintAt(screen, "WASD/Arrows: Navigate | Enter: Select | ESC: Back", menuX+10, controlsY)
+	ebitenutil.DebugPrintAt(screen, "WASD/Arrows: Navigate | Enter/Click: Select | ESC: Back", menuX+10, controlsY)
 }

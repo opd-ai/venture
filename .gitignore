@@ -52,3 +52,5 @@ go.work.sum
 /questtest*
 /inventorytest*
 /perftest*
+/*demo*
+/*test*

@@ -51,7 +51,7 @@ func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
 }
 
 // OnEnemyKilled should be called by combat system when an enemy dies.
-func (s *ObjectiveTrackerSystem) OnEnemyKilled(killer *Entity, enemy *Entity) {
+func (s *ObjectiveTrackerSystem) OnEnemyKilled(killer, enemy *Entity) {
 	if !killer.HasComponent("questtracker") {
 		return
 	}

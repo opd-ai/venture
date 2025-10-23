@@ -8,11 +8,7 @@ import (
 )
 
 // Test stub types and functions for tutorial system
-type InputComponent struct {
-	Action bool
-}
-
-func (i InputComponent) Type() string { return "input" }
+// Note: InputComponent is now defined in components_test_stub.go
 
 type TutorialStep struct {
 	ID          string

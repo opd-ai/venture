@@ -346,8 +346,26 @@ func main() {
 
 	player := game.World.CreateEntity()
 
+	// GAP #3 REPAIR: Calculate player spawn position from first room
+	var playerX, playerY float64
+	if len(generatedTerrain.Rooms) > 0 {
+		// Spawn in center of first room
+		firstRoom := generatedTerrain.Rooms[0]
+		cx, cy := firstRoom.Center()
+		playerX = float64(cx * 32) // Convert tile coordinates to world coordinates
+		playerY = float64(cy * 32)
+		if *verbose {
+			log.Printf("Player spawning in first room at tile (%d, %d), world (%.0f, %.0f)",
+				cx, cy, playerX, playerY)
+		}
+	} else {
+		// Fallback to default position if no rooms (shouldn't happen with valid terrain)
+		playerX, playerY = 400, 300
+		log.Println("Warning: No rooms in terrain, using default spawn position")
+	}
+
 	// Add player components
-	player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
+	player.AddComponent(&engine.PositionComponent{X: playerX, Y: playerY})
 	player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team

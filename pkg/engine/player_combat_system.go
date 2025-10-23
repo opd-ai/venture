@@ -50,6 +50,9 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		maxRange := attack.Range
 		target := FindNearestEnemy(s.world, entity, maxRange)
 
+		// Consume the input immediately to prevent multiple triggers
+		input.ActionPressed = false
+
 		if target == nil {
 			// No enemy in range - attack fails silently
 			// Could add feedback later (swing animation, miss sound)
@@ -66,8 +69,5 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			// - Screen shake
 			// - Tutorial progress tracking
 		}
-
-		// Consume the input so it doesn't trigger multiple times
-		input.ActionPressed = false
 	}
 }

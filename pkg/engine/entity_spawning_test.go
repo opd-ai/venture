@@ -105,7 +105,7 @@ func TestSpawnEnemiesInTerrain_NoRooms(t *testing.T) {
 		Width:  10,
 		Height: 10,
 		Tiles:  make([][]terrain.TileType, 10),
-		Rooms:  []terrain.Room{},
+		Rooms:  []*terrain.Room{},
 		Seed:   12345,
 	}
 
@@ -292,7 +292,7 @@ func TestSpawnEnemiesInTerrain_MultipleRooms(t *testing.T) {
 		Width:  50,
 		Height: 50,
 		Tiles:  make([][]terrain.TileType, 50),
-		Rooms: []terrain.Room{
+		Rooms: []*terrain.Room{
 			{X: 5, Y: 5, Width: 10, Height: 10},
 			{X: 20, Y: 5, Width: 10, Height: 10},
 			{X: 35, Y: 5, Width: 10, Height: 10},

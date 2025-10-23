@@ -100,10 +100,10 @@ func TestPlayerCombatSystem_AttackOnCooldown(t *testing.T) {
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
 	player.AddComponent(&InputComponent{ActionPressed: true})
 	attackComp := &AttackComponent{
-		Damage:          15,
-		Range:           50,
-		Cooldown:        1.0,
-		CurrentCooldown: 0.5, // Still on cooldown
+		Damage:        15,
+		Range:         50,
+		Cooldown:      1.0,
+		CooldownTimer: 0.5, // Still on cooldown
 	}
 	player.AddComponent(attackComp)
 	player.AddComponent(&HealthComponent{Current: 100, Max: 100})

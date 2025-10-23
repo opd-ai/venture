@@ -554,7 +554,7 @@ Try out the networking and multiplayer systems:
 
 ```bash
 # Run the networking demo (requires -tags test)
-go run -tags test ./examples/network_demo.go
+go run -tags test ./examples/network_demo
 
 # Demonstrates:
 #   - Binary protocol serialization
@@ -563,7 +563,7 @@ go run -tags test ./examples/network_demo.go
 #   - Performance characteristics
 
 # Run the multiplayer integration demo (requires -tags test)
-go run -tags test ./examples/multiplayer_demo.go
+go run -tags test ./examples/multiplayer_demo
 
 # Demonstrates:
 #   - Complete client-server setup
@@ -572,7 +572,7 @@ go run -tags test ./examples/multiplayer_demo.go
 #   - Multiple concurrent players
 
 # Run the prediction and synchronization demo (requires -tags test)
-go run -tags test ./examples/prediction_demo.go
+go run -tags test ./examples/prediction_demo
 
 # Demonstrates:
 #   - Client-side prediction for responsive controls
@@ -591,8 +591,8 @@ The save/load system allows saving and loading game progress:
 # Save files are stored in ./saves/ directory by default
 # Save format is JSON (human-readable)
 
-# Example: Programmatic save/load
-go run -tags test ./examples/saveload_demo.go
+# Example: Programmatic save/load (when implemented)
+# go run -tags test ./examples/saveload_demo
 
 # In-game (when implemented in Phase 8.5):
 #   F5 - Quick save

@@ -170,7 +170,7 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
 
 ## Multiplayer and Networking
 
-- **Client-Side Prediction**: Client immediately applies player input locally while sending to server. Server validates and sends authoritative state. Client reconciles prediction with server state and replays inputs if misprediction detected. See `pkg/network/prediction.go` and `examples/prediction_demo.go`.
+- **Client-Side Prediction**: Client immediately applies player input locally while sending to server. Server validates and sends authoritative state. Client reconciles prediction with server state and replays inputs if misprediction detected. See `pkg/network/prediction.go` and `examples/prediction_demo/`.
 
 - **Entity Interpolation**: Server sends snapshots at 20 Hz. Client buffers snapshots (100-200ms) and interpolates between them for smooth movement despite network jitter. Remote entities are always slightly in the past.
 
@@ -183,17 +183,19 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
 ## Examples and Demonstrations
 
 The `examples/` directory contains standalone demonstrations of major systems:
-- `complete_dungeon_generation.go` - Full dungeon generation pipeline
-- `genre_blending_demo.go` - Cross-genre blending system
-- `audio_demo.go` - Audio synthesis and music composition
-- `prediction_demo.go` - Client-side prediction and reconciliation
-- `phase3_demo.go` - Visual rendering system showcase
-- `movement_collision_demo.go` - Movement and collision detection
-- `combat_demo.go` - Combat system with damage calculation
-- `network_demo.go` - Networking and protocol serialization
-- `multiplayer_demo.go` - Complete multiplayer integration
+- `complete_dungeon_generation/` - Full dungeon generation pipeline
+- `genre_blending_demo/` - Cross-genre blending system
+- `audio_demo/` - Audio synthesis and music composition
+- `prediction_demo/` - Client-side prediction and reconciliation
+- `phase3_demo/` - Visual rendering system showcase
+- `movement_collision_demo/` - Movement and collision detection
+- `combat_demo/` - Combat system with damage calculation
+- `network_demo/` - Networking and protocol serialization
+- `multiplayer_demo/` - Complete multiplayer integration
+- `lag_compensation_demo/` - Lag compensation techniques
+- `terrain_entity_integration/` - Terrain and entity integration
 
-Run examples with: `go run -tags test ./examples/<example_name>.go`
+Run examples with: `go run -tags test ./examples/<example_name>`
 
 ## Genre-Specific Guidelines
 

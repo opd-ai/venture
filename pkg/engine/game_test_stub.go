@@ -66,3 +66,9 @@ func (g *Game) Run(title string) error {
 	// Stub - tests don't actually run game loop
 	return nil
 }
+
+// Stub system types for test builds
+type TerrainRenderSystem struct{}
+type TutorialSystem struct{}
+type HelpSystem struct{}
+type InputSystem struct{}

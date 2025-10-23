@@ -3,7 +3,11 @@
 // used by the progression system.
 package engine
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/opd-ai/venture/pkg/procgen/skills"
+)
 
 // ExperienceComponent tracks an entity's experience points and level.
 // Experience is gained through combat and completing objectives.
@@ -147,4 +151,130 @@ func (l *LevelScalingComponent) String() string {
 	return fmt.Sprintf("Scaling: HP+%.1f ATK+%.1f DEF+%.1f MAG+%.1f MDEF+%.1f",
 		l.HealthPerLevel, l.AttackPerLevel, l.DefensePerLevel,
 		l.MagicPowerPerLevel, l.MagicDefensePerLevel)
+}
+
+// SkillTreeComponent stores the player's skill tree and learned skills.
+type SkillTreeComponent struct {
+	Tree           *skills.SkillTree      // The skill tree structure
+	LearnedSkills  map[string]bool        // Skill IDs that have been learned
+	SkillLevels    map[string]int         // Current level of each learned skill
+	Attributes     map[string]int         // Attributes for prerequisites (e.g., strength, intelligence)
+	TotalPointsUsed int                   // Total skill points spent
+}
+
+// Type returns the component type identifier.
+func (s *SkillTreeComponent) Type() string {
+	return "skill_tree"
+}
+
+// NewSkillTreeComponent creates a new skill tree component with the given tree.
+func NewSkillTreeComponent(tree *skills.SkillTree) *SkillTreeComponent {
+	return &SkillTreeComponent{
+		Tree:            tree,
+		LearnedSkills:   make(map[string]bool),
+		SkillLevels:     make(map[string]int),
+		Attributes:      make(map[string]int),
+		TotalPointsUsed: 0,
+	}
+}
+
+// LearnSkill marks a skill as learned and increments its level.
+// Returns true if successful, false if already at max level or not unlocked.
+func (s *SkillTreeComponent) LearnSkill(skillID string, availablePoints int) bool {
+	skill := s.Tree.GetSkillByID(skillID)
+	if skill == nil {
+		return false
+	}
+
+	// Check if skill can be learned (prerequisites met)
+	currentLevel := s.SkillLevels[skillID]
+	if currentLevel >= skill.MaxLevel {
+		return false // Already at max level
+	}
+
+	// For first level, check if prerequisites are met
+	if currentLevel == 0 {
+		// Get player level from context (simplified here, would normally come from ExperienceComponent)
+		playerLevel := 1 // Simplified
+		if !skill.IsUnlocked(playerLevel, availablePoints, s.LearnedSkills, s.Attributes) {
+			return false
+		}
+	}
+
+	// Check if enough skill points available
+	if availablePoints < skill.Requirements.SkillPoints {
+		return false
+	}
+
+	// Learn/level up the skill
+	s.SkillLevels[skillID]++
+	s.LearnedSkills[skillID] = true
+	s.TotalPointsUsed += skill.Requirements.SkillPoints
+	skill.Level = s.SkillLevels[skillID]
+
+	return true
+}
+
+// UnlearnSkill removes a skill (for respec).
+// Returns the skill points refunded.
+func (s *SkillTreeComponent) UnlearnSkill(skillID string) int {
+	skill := s.Tree.GetSkillByID(skillID)
+	if skill == nil {
+		return 0
+	}
+
+	currentLevel := s.SkillLevels[skillID]
+	if currentLevel == 0 {
+		return 0 // Not learned
+	}
+
+	// Check if any other skills depend on this one
+	for learnedID := range s.LearnedSkills {
+		learnedSkill := s.Tree.GetSkillByID(learnedID)
+		if learnedSkill != nil {
+			for _, prereqID := range learnedSkill.Requirements.PrerequisiteIDs {
+				if prereqID == skillID {
+					return 0 // Cannot unlearn if another skill depends on it
+				}
+			}
+		}
+	}
+
+	// Refund points
+	pointsRefunded := skill.Requirements.SkillPoints * currentLevel
+	s.TotalPointsUsed -= pointsRefunded
+
+	// Remove skill
+	delete(s.SkillLevels, skillID)
+	delete(s.LearnedSkills, skillID)
+	skill.Level = 0
+
+	return pointsRefunded
+}
+
+// GetSkillLevel returns the current level of a skill.
+func (s *SkillTreeComponent) GetSkillLevel(skillID string) int {
+	return s.SkillLevels[skillID]
+}
+
+// IsSkillLearned checks if a skill has been learned (level > 0).
+func (s *SkillTreeComponent) IsSkillLearned(skillID string) bool {
+	return s.LearnedSkills[skillID]
+}
+
+// GetAvailableSkills returns all skills that can currently be learned.
+func (s *SkillTreeComponent) GetAvailableSkills(playerLevel, availablePoints int) []*skills.Skill {
+	available := make([]*skills.Skill, 0)
+	for _, node := range s.Tree.Nodes {
+		skill := node.Skill
+		// Skip if already at max level
+		if s.SkillLevels[skill.ID] >= skill.MaxLevel {
+			continue
+		}
+		// Check if unlocked
+		if skill.IsUnlocked(playerLevel, availablePoints, s.LearnedSkills, s.Attributes) {
+			available = append(available, skill)
+		}
+	}
+	return available
 }

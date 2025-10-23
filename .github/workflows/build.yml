@@ -12,13 +12,16 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev libgl1-mesa-dev xorg-dev
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev xorg-dev
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -52,6 +55,9 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64]
 
     steps:
       - name: Checkout code
@@ -89,6 +95,9 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64]
 
     steps:
       - name: Checkout code

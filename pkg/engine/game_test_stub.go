@@ -66,22 +66,3 @@ func (g *Game) Run(title string) error {
 	// Stub - tests don't actually run game loop
 	return nil
 }
-
-// Stub system types for test builds
-type TerrainRenderSystem struct{}
-
-func (t *TerrainRenderSystem) Update([]*Entity, float64) {}
-
-type TutorialSystem struct{}
-
-func (t *TutorialSystem) Update([]*Entity, float64) {}
-
-func (t *TutorialSystem) ShowNotification(message string, duration float64) {}
-
-type HelpSystem struct{}
-
-func (h *HelpSystem) Update([]*Entity, float64) {}
-
-type InputSystem struct{}
-
-func (i *InputSystem) Update([]*Entity, float64) {}

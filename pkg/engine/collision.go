@@ -16,6 +16,9 @@ type CollisionSystem struct {
 
 	// Collision callbacks
 	onCollision func(e1, e2 *Entity)
+
+	// Terrain collision checker for efficient wall collision
+	terrainChecker *TerrainCollisionChecker
 }
 
 // NewCollisionSystem creates a new collision system.
@@ -24,6 +27,11 @@ func NewCollisionSystem(cellSize float64) *CollisionSystem {
 		CellSize: cellSize,
 		grid:     make(map[int]map[int][]*Entity),
 	}
+}
+
+// SetTerrainChecker sets the terrain collision checker for wall collision.
+func (s *CollisionSystem) SetTerrainChecker(checker *TerrainCollisionChecker) {
+	s.terrainChecker = checker
 }
 
 // SetCollisionCallback sets a function to be called when entities collide.
@@ -116,6 +124,13 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 				if collider.Solid && otherCollider.Solid && !collider.IsTrigger && !otherCollider.IsTrigger {
 					s.resolveCollision(entity, other)
 				}
+			}
+		}
+
+		// Check terrain collision for solid entities
+		if s.terrainChecker != nil && collider.Solid && !collider.IsTrigger {
+			if s.terrainChecker.CheckEntityCollision(entity) {
+				s.resolveTerrainCollision(entity)
 			}
 		}
 	}
@@ -265,6 +280,63 @@ func (s *CollisionSystem) resolveCollision(e1, e2 *Entity) {
 			vel2, _ := e2.GetComponent("velocity")
 			vel2.(*VelocityComponent).VY = 0
 		}
+	}
+}
+
+// resolveTerrainCollision resolves collision between an entity and terrain walls.
+func (s *CollisionSystem) resolveTerrainCollision(entity *Entity) {
+	if !entity.HasComponent("position") || !entity.HasComponent("collider") {
+		return
+	}
+
+	posComp, _ := entity.GetComponent("position")
+	colliderComp, _ := entity.GetComponent("collider")
+
+	pos := posComp.(*PositionComponent)
+	collider := colliderComp.(*ColliderComponent)
+
+	// Try to find a valid position by moving away from walls
+	// Check 8 directions around the entity
+	directions := []struct{ dx, dy float64 }{
+		{-1, 0}, {1, 0}, {0, -1}, {0, 1}, // Cardinal directions
+		{-1, -1}, {1, -1}, {-1, 1}, {1, 1}, // Diagonal directions
+	}
+
+	originalX, originalY := pos.X, pos.Y
+	pushDistance := 2.0 // Pixels to push away from wall
+
+	for _, dir := range directions {
+		testX := originalX + dir.dx*pushDistance
+		testY := originalY + dir.dy*pushDistance
+
+		// Check if this position is clear of terrain walls
+		if !s.terrainChecker.CheckCollision(testX, testY, collider.Width, collider.Height) {
+			pos.X = testX
+			pos.Y = testY
+
+			// Stop movement in the blocked direction
+			if entity.HasComponent("velocity") {
+				vel, _ := entity.GetComponent("velocity")
+				velocity := vel.(*VelocityComponent)
+
+				// Stop velocity component that's moving into the wall
+				if dir.dx != 0 {
+					velocity.VX = 0
+				}
+				if dir.dy != 0 {
+					velocity.VY = 0
+				}
+			}
+			return
+		}
+	}
+
+	// If no direction works, stop all movement
+	if entity.HasComponent("velocity") {
+		vel, _ := entity.GetComponent("velocity")
+		velocity := vel.(*VelocityComponent)
+		velocity.VX = 0
+		velocity.VY = 0
 	}
 }
 

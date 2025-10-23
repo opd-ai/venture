@@ -1,153 +1,80 @@
 //go:build !test
 // +build !test
 
-// Package engine provides terrain collision system.
-// This file implements TerrainCollisionSystem which creates collision entities
-// for terrain walls to enable proper physics and movement blocking.
+// Package engine provides efficient terrain collision checking.
+// This file implements terrain collision detection by extending the existing
+// collision system to check terrain data directly instead of creating entities.
 package engine
 
 import (
-	"fmt"
+	"math"
 
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
-// TerrainCollisionSystem creates collision entities for terrain walls.
-// This system converts terrain data into physical collision entities that
-// can interact with the physics system.
-type TerrainCollisionSystem struct {
-	world        *World
-	terrain      *terrain.Terrain
-	tileWidth    int
-	tileHeight   int
-	initialized  bool
-	wallEntities []*Entity // Track created wall entities for cleanup
+// TerrainCollisionChecker provides efficient terrain collision detection.
+// This integrates with the existing collision system to check terrain walls
+// without creating thousands of collision entities.
+type TerrainCollisionChecker struct {
+	terrain    *terrain.Terrain
+	tileWidth  int
+	tileHeight int
 }
 
-// NewTerrainCollisionSystem creates a new terrain collision system.
-func NewTerrainCollisionSystem(world *World, tileWidth, tileHeight int) *TerrainCollisionSystem {
-	return &TerrainCollisionSystem{
-		world:        world,
-		tileWidth:    tileWidth,
-		tileHeight:   tileHeight,
-		initialized:  false,
-		wallEntities: make([]*Entity, 0),
+// NewTerrainCollisionChecker creates a new terrain collision checker.
+func NewTerrainCollisionChecker(tileWidth, tileHeight int) *TerrainCollisionChecker {
+	return &TerrainCollisionChecker{
+		tileWidth:  tileWidth,
+		tileHeight: tileHeight,
 	}
 }
 
-// SetTerrain sets the terrain and creates collision entities for all walls.
-// This should be called after terrain generation and before the game starts.
-func (t *TerrainCollisionSystem) SetTerrain(terrain *terrain.Terrain) error {
-	if terrain == nil {
-		return fmt.Errorf("terrain cannot be nil")
-	}
-
-	// Clean up existing wall entities if re-initializing
-	t.cleanup()
-
+// SetTerrain sets the terrain data for collision checking.
+func (t *TerrainCollisionChecker) SetTerrain(terrain *terrain.Terrain) {
 	t.terrain = terrain
-	t.initialized = false
-
-	// Create collision entities for all wall tiles
-	return t.initializeWallColliders()
 }
 
-// initializeWallColliders creates collision entities for all wall tiles in the terrain.
-func (t *TerrainCollisionSystem) initializeWallColliders() error {
+// CheckCollision checks if a world position collides with a terrain wall.
+func (t *TerrainCollisionChecker) CheckCollision(worldX, worldY, width, height float64) bool {
 	if t.terrain == nil {
-		return fmt.Errorf("terrain not set")
+		return false
 	}
 
-	wallCount := 0
+	// Calculate bounding box in world coordinates
+	minX := worldX - width/2
+	minY := worldY - height/2
+	maxX := worldX + width/2
+	maxY := worldY + height/2
 
-	// Iterate through all tiles and create collision entities for walls
-	for y := 0; y < t.terrain.Height; y++ {
-		for x := 0; x < t.terrain.Width; x++ {
-			tileType := t.terrain.GetTile(x, y)
+	// Convert to tile coordinates
+	minTileX := int(math.Floor(minX / float64(t.tileWidth)))
+	minTileY := int(math.Floor(minY / float64(t.tileHeight)))
+	maxTileX := int(math.Floor(maxX / float64(t.tileWidth)))
+	maxTileY := int(math.Floor(maxY / float64(t.tileHeight)))
 
-			// Create collision entity for walls only
-			if tileType == terrain.TileWall {
-				err := t.createWallCollider(x, y)
-				if err != nil {
-					return fmt.Errorf("failed to create wall collider at (%d, %d): %w", x, y, err)
-				}
-				wallCount++
+	// Check all tiles that the entity overlaps
+	for y := minTileY; y <= maxTileY; y++ {
+		for x := minTileX; x <= maxTileX; x++ {
+			if t.terrain.GetTile(x, y) == terrain.TileWall {
+				return true
 			}
 		}
 	}
 
-	t.initialized = true
-	return nil
+	return false
 }
 
-// createWallCollider creates a collision entity for a single wall tile.
-func (t *TerrainCollisionSystem) createWallCollider(tileX, tileY int) error {
-	// Create wall entity
-	wallEntity := t.world.CreateEntity()
-
-	// Calculate world position (center of tile)
-	worldX := float64(tileX*t.tileWidth) + float64(t.tileWidth)/2
-	worldY := float64(tileY*t.tileHeight) + float64(t.tileHeight)/2
-
-	// Add position component
-	wallEntity.AddComponent(&PositionComponent{
-		X: worldX,
-		Y: worldY,
-	})
-
-	// Add collision component
-	wallEntity.AddComponent(&ColliderComponent{
-		Width:     float64(t.tileWidth),
-		Height:    float64(t.tileHeight),
-		Solid:     true,
-		IsTrigger: false,
-		Layer:     0,                         // Environment layer (collides with all entities)
-		OffsetX:   -float64(t.tileWidth) / 2, // Center the collider
-		OffsetY:   -float64(t.tileHeight) / 2,
-	})
-
-	// Add a component to identify this as a wall entity for debugging
-	wallEntity.AddComponent(&WallComponent{
-		TileX: tileX,
-		TileY: tileY,
-	})
-
-	// Track this entity for cleanup
-	t.wallEntities = append(t.wallEntities, wallEntity)
-
-	return nil
-}
-
-// cleanup removes all previously created wall entities.
-func (t *TerrainCollisionSystem) cleanup() {
-	for _, entity := range t.wallEntities {
-		t.world.RemoveEntity(entity.ID)
+// CheckEntityCollision checks if an entity collides with terrain walls.
+func (t *TerrainCollisionChecker) CheckEntityCollision(entity *Entity) bool {
+	if !entity.HasComponent("position") || !entity.HasComponent("collider") {
+		return false
 	}
-	t.wallEntities = make([]*Entity, 0)
-}
 
-// Update is called every frame but terrain collision is static.
-func (t *TerrainCollisionSystem) Update(entities []*Entity, deltaTime float64) {
-	// Static terrain collision doesn't need per-frame updates
-}
+	posComp, _ := entity.GetComponent("position")
+	colliderComp, _ := entity.GetComponent("collider")
 
-// IsInitialized returns whether the terrain collision system has been set up.
-func (t *TerrainCollisionSystem) IsInitialized() bool {
-	return t.initialized
-}
+	pos := posComp.(*PositionComponent)
+	collider := colliderComp.(*ColliderComponent)
 
-// GetWallEntityCount returns the number of wall collision entities created.
-func (t *TerrainCollisionSystem) GetWallEntityCount() int {
-	return len(t.wallEntities)
-}
-
-// WallComponent identifies an entity as a terrain wall for debugging.
-type WallComponent struct {
-	TileX int
-	TileY int
-}
-
-// Type implements Component interface.
-func (w *WallComponent) Type() string {
-	return "wall"
+	return t.CheckCollision(pos.X, pos.Y, collider.Width, collider.Height)
 }

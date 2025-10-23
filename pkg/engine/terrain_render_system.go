@@ -164,26 +164,26 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 	// Create a small fallback image
 	fallbackImg := ebiten.NewImage(t.tileWidth, t.tileHeight)
 
-	// Color based on tile type and room type
+	// Color based on tile type and room type - make colors brighter for visibility
 	var r, g, b uint8
 	if tileType == terrain.TileWall {
-		r, g, b = 60, 60, 60 // Dark gray for walls
+		r, g, b = 120, 120, 120 // Brighter gray for walls (was 60,60,60)
 	} else {
 		// GAP-006 REPAIR: Check room type for floor color theming
 		roomType := t.getRoomTypeAt(tileX, tileY)
 		switch roomType {
 		case terrain.RoomSpawn:
-			r, g, b = 100, 120, 100 // Light green for spawn
+			r, g, b = 150, 180, 150 // Brighter green for spawn
 		case terrain.RoomExit:
-			r, g, b = 100, 100, 140 // Light blue for exit
+			r, g, b = 150, 150, 200 // Brighter blue for exit
 		case terrain.RoomBoss:
-			r, g, b = 140, 80, 80 // Dark red for boss
+			r, g, b = 200, 120, 120 // Brighter red for boss
 		case terrain.RoomTreasure:
-			r, g, b = 140, 140, 80 // Gold for treasure
+			r, g, b = 200, 200, 120 // Brighter gold for treasure
 		case terrain.RoomTrap:
-			r, g, b = 120, 80, 120 // Purple for traps
+			r, g, b = 180, 120, 180 // Brighter purple for traps
 		default:
-			r, g, b = 100, 100, 100 // Light gray for normal floors
+			r, g, b = 150, 150, 150 // Brighter gray for normal floors
 		}
 	}
 	fallbackImg.Fill(color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255})

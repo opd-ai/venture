@@ -69,6 +69,17 @@ func (g *Game) Run(title string) error {
 
 // Stub system types for test builds
 type TerrainRenderSystem struct{}
+
+func (t *TerrainRenderSystem) Update(world *World) {}
+
 type TutorialSystem struct{}
+
+func (t *TutorialSystem) Update(world *World) {}
+
 type HelpSystem struct{}
+
+func (h *HelpSystem) Update(world *World) {}
+
 type InputSystem struct{}
+
+func (i *InputSystem) Update(world *World) {}

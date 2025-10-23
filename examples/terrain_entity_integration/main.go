@@ -13,7 +13,7 @@ import (
 // to create a complete dungeon level with placed enemies.
 
 func main() {
-	fmt.Println("=== Venture - Integrated Terrain & Entity Generation Example ===\n")
+	fmt.Println("=== Venture - Integrated Terrain & Entity Generation Example ===")
 
 	// Use a fixed seed for reproducible results
 	seed := int64(12345)
@@ -66,7 +66,7 @@ func main() {
 
 	// Step 4: Display the dungeon with entity placements
 	fmt.Println("\nStep 4: Dungeon Overview")
-	fmt.Println("========================\n")
+	fmt.Println("========================")
 
 	// Show room assignments
 	for i, room := range terr.Rooms {

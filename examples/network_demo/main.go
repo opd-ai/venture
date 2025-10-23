@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Venture Networking Demo ===\n")
+	fmt.Println("=== Venture Networking Demo ===")
 
 	// Demonstrate protocol serialization
 	demonstrateProtocol()

@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Venture Multiplayer Demo ===\n")
+	fmt.Println("=== Venture Multiplayer Demo ===")
 
 	// Create worlds for server and clients
 	serverWorld := engine.NewWorld()
@@ -44,7 +44,7 @@ func main() {
 
 	// Simulate game loop
 	fmt.Println("\n=== Simulating Multiplayer Gameplay ===")
-	fmt.Println("(Server would normally run on separate machine)\n")
+	fmt.Println("(Server would normally run on separate machine)")
 
 	var wg sync.WaitGroup
 

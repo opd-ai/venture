@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Movement and Collision System Example ===\n")
+	fmt.Println("=== Movement and Collision System Example ===")
 
 	// Create world and systems
 	world := engine.NewWorld()
@@ -168,7 +168,7 @@ func main() {
 
 	x, y, _ = engine.GetPosition(bounded)
 	fmt.Printf("Position after 1 second: (%.1f, %.1f)\n", x, y)
-	fmt.Println("✓ Entity stopped at boundary\n")
+	fmt.Println("✓ Entity stopped at boundary")
 
 	// Example 5: Multiple entities with spatial partitioning
 	fmt.Println("Example 5: Spatial Partitioning Performance")
@@ -217,7 +217,7 @@ func main() {
 	}
 
 	fmt.Printf("✓ Detected %d collisions\n", collisionCount)
-	fmt.Println("✓ Spatial partitioning enabled O(n) performance\n")
+	fmt.Println("✓ Spatial partitioning enabled O(n) performance")
 
 	// Summary
 	fmt.Println("=== Summary ===")

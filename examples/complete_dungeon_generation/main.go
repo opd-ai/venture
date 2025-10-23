@@ -14,7 +14,7 @@ import (
 // to create a complete dungeon level with enemies and loot.
 
 func main() {
-	fmt.Println("=== Venture - Complete Dungeon Generation Example ===\n")
+	fmt.Println("=== Venture - Complete Dungeon Generation Example ===")
 
 	// Use a fixed seed for reproducible results
 	baseSeed := int64(12345)

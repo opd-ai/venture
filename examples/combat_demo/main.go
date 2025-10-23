@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Combat System Example ===\n")
+	fmt.Println("=== Combat System Example ===")
 
 	// Create world and systems
 	world := engine.NewWorld()
@@ -174,7 +174,7 @@ func main() {
 	// Check effect expired
 	_, hasEffect := target.GetComponent("status_effect")
 	if !hasEffect {
-		fmt.Println("✓ Poison effect expired\n")
+		fmt.Println("✓ Poison effect expired")
 	}
 
 	// Example 4: Critical hits

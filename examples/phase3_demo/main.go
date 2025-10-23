@@ -26,7 +26,7 @@ var (
 func main() {
 	flag.Parse()
 
-	fmt.Println("=== Venture Phase 3: Particle & UI Systems Demo ===\n")
+	fmt.Println("=== Venture Phase 3: Particle & UI Systems Demo ===")
 
 	// Validate genre
 	registry := genre.DefaultRegistry()

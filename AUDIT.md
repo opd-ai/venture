@@ -1,10 +1,43 @@
 # Ebiten Menu System Implementation
 **Generated:** 2025-10-23T00:00:00Z  
+**Updated:** 2025-01-23T19:00:00Z  
 **Project:** Venture - Procedural Action RPG  
 **Engine:** Ebiten 2.9.2 + Go 1.24.7  
 **Total Gaps Addressed:** 15  
-**Total Methods to Implement:** 47  
+**Total Methods Implemented:** 28/47 (60%)  
 **Phase:** 8.2 - Input & Rendering Polish
+
+---
+
+## Implementation Progress
+
+### ✅ Completed Features (2/5)
+
+1. **Character Stats UI (C Key)** - Commit d7a3932
+   - Full 3-panel layout with stats, equipment, and attributes
+   - 13 methods implemented with comprehensive test coverage
+   - Real-time stat calculation with equipment bonuses
+   - Resistance display with color coding
+   - Integrated with Game loop and InputSystem
+
+2. **Skills Tree UI (K Key)** - Commit ff4280d  
+   - Visual skill tree with node rendering and connections
+   - 15 methods implemented with complete component API
+   - Purchase/refund functionality with prerequisite validation
+   - Mouse hover tooltips and click interactions
+   - SkillTreeComponent added for skill progression management
+
+### 🚧 In Progress (1/5)
+
+3. **Map UI (M Key)** - Status: Starting
+   - Minimap and full-screen map visualization
+   - Fog of war and explored tile tracking
+   - 21 methods planned
+
+### 📋 Remaining Features (2/5)
+
+4. **Mouse Support for MenuSystem** - Not started
+5. **Enhanced InventoryUI Drag-and-Drop** - Not started
 
 ---
 

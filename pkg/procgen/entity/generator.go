@@ -24,7 +24,10 @@ func NewEntityGenerator() *EntityGenerator {
 	// Register genre templates
 	gen.templates["fantasy"] = GetFantasyTemplates()
 	gen.templates["scifi"] = GetSciFiTemplates()
-	gen.templates[""] = GetFantasyTemplates() // default
+	gen.templates["horror"] = GetHorrorTemplates()       // GAP-005 REPAIR
+	gen.templates["cyberpunk"] = GetCyberpunkTemplates() // GAP-005 REPAIR
+	gen.templates["postapoc"] = GetPostApocTemplates()   // GAP-005 REPAIR
+	gen.templates[""] = GetFantasyTemplates()            // default
 
 	return gen
 }

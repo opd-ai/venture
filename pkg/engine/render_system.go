@@ -175,6 +175,81 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2,
 			sprite.Width, sprite.Height, col)
 	}
+
+	// GAP-013 REPAIR: Draw health bar for damaged enemies and bosses
+	r.drawHealthBar(entity, screenX, screenY, sprite.Width, sprite.Height)
+}
+
+// drawHealthBar renders a health bar above an entity if appropriate.
+// GAP-013 REPAIR: Shows health status for enemies (when damaged) and bosses (always).
+func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
+	// Only draw health bars for entities with health component
+	healthComp, hasHealth := entity.GetComponent("health")
+	if !hasHealth {
+		return
+	}
+
+	health := healthComp.(*HealthComponent)
+
+	// Don't draw health bar for player (has HUD display)
+	if entity.HasComponent("input") {
+		return
+	}
+
+	// Check if entity is a boss (high attack indicates boss)
+	isBoss := false
+	if attackComp, ok := entity.GetComponent("attack"); ok {
+		attack := attackComp.(*AttackComponent)
+		isBoss = attack.Damage > 20 // Boss threshold
+	}
+
+	// Only show health bar if: (1) damaged, or (2) is boss
+	if health.Current >= health.Max && !isBoss {
+		return
+	}
+
+	// Calculate health bar dimensions
+	barWidth := spriteWidth
+	barHeight := 4.0
+	barX := screenX - barWidth/2
+	barY := screenY - spriteHeight/2 - barHeight - 5 // 5px above sprite
+
+	// Draw background (dark gray)
+	bgColor := color.RGBA{40, 40, 40, 200}
+	vector.DrawFilledRect(r.screen, float32(barX), float32(barY),
+		float32(barWidth), float32(barHeight), bgColor, false)
+
+	// Calculate health percentage
+	healthPercent := health.Current / health.Max
+	if healthPercent < 0 {
+		healthPercent = 0
+	}
+	if healthPercent > 1 {
+		healthPercent = 1
+	}
+
+	// Determine health bar color (green → yellow → red)
+	var healthColor color.RGBA
+	if healthPercent > 0.6 {
+		// Green (healthy)
+		healthColor = color.RGBA{50, 200, 50, 255}
+	} else if healthPercent > 0.3 {
+		// Yellow (wounded)
+		healthColor = color.RGBA{220, 220, 50, 255}
+	} else {
+		// Red (critical)
+		healthColor = color.RGBA{220, 50, 50, 255}
+	}
+
+	// Draw health bar (scaled by percentage)
+	healthBarWidth := barWidth * healthPercent
+	vector.DrawFilledRect(r.screen, float32(barX), float32(barY),
+		float32(healthBarWidth), float32(barHeight), healthColor, false)
+
+	// Draw border around health bar (makes it more visible)
+	borderColor := color.RGBA{200, 200, 200, 255}
+	vector.StrokeRect(r.screen, float32(barX), float32(barY),
+		float32(barWidth), float32(barHeight), 1, borderColor, false)
 }
 
 // drawRect draws a filled rectangle at the given screen position.

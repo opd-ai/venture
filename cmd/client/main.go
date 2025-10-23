@@ -505,9 +505,9 @@ func main() {
 	playerStats.Attack = 10
 	playerStats.Defense = 5
 	// GAP-003 REPAIR: Initialize derived stats with baseline values
-	playerStats.CritChance = 0.05  // 5% crit chance
-	playerStats.CritDamage = 1.5   // 1.5x crit damage multiplier
-	playerStats.Evasion = 0.05     // 5% evasion chance
+	playerStats.CritChance = 0.05 // 5% crit chance
+	playerStats.CritDamage = 1.5  // 1.5x crit damage multiplier
+	playerStats.Evasion = 0.05    // 5% evasion chance
 	// Resistances default to 0.0 (handled by NewStatsComponent)
 	player.AddComponent(playerStats)
 

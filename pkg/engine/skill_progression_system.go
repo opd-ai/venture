@@ -207,17 +207,17 @@ func (s *SkillProgressionSystem) applyBonusesToStats(stats *StatsComponent, bonu
 	// TODO: Properly implement attack/defense/magic bonuses once we have base stat tracking
 	// For now, leaving them commented out to avoid compound multiplication bug
 	/*
-	if bonuses.DamageBonus != 0 {
-		stats.Attack = stats.Attack * (1.0 + bonuses.DamageBonus)
-	}
+		if bonuses.DamageBonus != 0 {
+			stats.Attack = stats.Attack * (1.0 + bonuses.DamageBonus)
+		}
 
-	if bonuses.DefenseBonus != 0 {
-		stats.Defense = stats.Defense * (1.0 + bonuses.DefenseBonus)
-	}
+		if bonuses.DefenseBonus != 0 {
+			stats.Defense = stats.Defense * (1.0 + bonuses.DefenseBonus)
+		}
 
-	if bonuses.MagicPowerBonus != 0 {
-		stats.MagicPower = stats.MagicPower * (1.0 + bonuses.MagicPowerBonus)
-	}
+		if bonuses.MagicPowerBonus != 0 {
+			stats.MagicPower = stats.MagicPower * (1.0 + bonuses.MagicPowerBonus)
+		}
 	*/
 
 	// Note: Health and speed bonuses not applied here since:

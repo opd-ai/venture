@@ -86,8 +86,7 @@ func (r *RenderSystem) Update(entities []*Entity, deltaTime float64) {
 func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
 	r.screen = screen
 
-	// Clear screen
-	screen.Fill(color.RGBA{20, 20, 30, 255}) // Dark background
+	// Note: Screen clearing is handled by terrain rendering system
 
 	// Sort entities by layer
 	sortedEntities := r.sortEntitiesByLayer(entities)

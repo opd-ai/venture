@@ -95,6 +95,7 @@ func (t *TerrainRenderSystem) drawTile(screen *ebiten.Image, camera *CameraSyste
 
 	// Get tile type from terrain
 	terrainTileType := t.terrain.GetTile(tileX, tileY)
+
 	tileType := t.terrainTileToRenderTile(terrainTileType)
 
 	// Get or generate tile image

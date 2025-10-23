@@ -155,11 +155,11 @@ func (l *LevelScalingComponent) String() string {
 
 // SkillTreeComponent stores the player's skill tree and learned skills.
 type SkillTreeComponent struct {
-	Tree           *skills.SkillTree      // The skill tree structure
-	LearnedSkills  map[string]bool        // Skill IDs that have been learned
-	SkillLevels    map[string]int         // Current level of each learned skill
-	Attributes     map[string]int         // Attributes for prerequisites (e.g., strength, intelligence)
-	TotalPointsUsed int                   // Total skill points spent
+	Tree            *skills.SkillTree // The skill tree structure
+	LearnedSkills   map[string]bool   // Skill IDs that have been learned
+	SkillLevels     map[string]int    // Current level of each learned skill
+	Attributes      map[string]int    // Attributes for prerequisites (e.g., strength, intelligence)
+	TotalPointsUsed int               // Total skill points spent
 }
 
 // Type returns the component type identifier.

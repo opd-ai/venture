@@ -50,11 +50,11 @@ type SkillsUI struct {
 	hoveredNode   *skills.SkillNode
 
 	// Layout
-	nodeSize     int               // Diameter of skill node circle
-	nodeSpacing  int               // Space between nodes
-	treeOffsetX  int               // X offset for centering
-	treeOffsetY  int               // Y offset for header
-	nodePositions map[string]Point  // Cache of node screen positions
+	nodeSize      int              // Diameter of skill node circle
+	nodeSpacing   int              // Space between nodes
+	treeOffsetX   int              // X offset for centering
+	treeOffsetY   int              // Y offset for header
+	nodePositions map[string]Point // Cache of node screen positions
 }
 
 // NewSkillsUI creates a new skills UI system.
@@ -71,10 +71,10 @@ func NewSkillsUI(world *World, screenWidth, screenHeight int) *SkillsUI {
 		world:         world,
 		screenWidth:   screenWidth,
 		screenHeight:  screenHeight,
-		nodeSize:      40,   // 40px diameter circles
-		nodeSpacing:   100,  // 100px between node centers
-		treeOffsetX:   100,  // Left margin
-		treeOffsetY:   100,  // Top margin (below header)
+		nodeSize:      40,  // 40px diameter circles
+		nodeSpacing:   100, // 100px between node centers
+		treeOffsetX:   100, // Left margin
+		treeOffsetY:   100, // Top margin (below header)
 		nodePositions: make(map[string]Point),
 	}
 }

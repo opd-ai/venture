@@ -81,9 +81,9 @@ func TestCharacterUI_CalculateDerivedStats(t *testing.T) {
 	ui := NewCharacterUI(world, 800, 600)
 
 	stats := NewStatsComponent()
-	stats.CritChance = 0.15  // 15%
-	stats.CritDamage = 2.5   // 250%
-	stats.Evasion = 0.10     // 10%
+	stats.CritChance = 0.15 // 15%
+	stats.CritDamage = 2.5  // 250%
+	stats.Evasion = 0.10    // 10%
 
 	derived := ui.calculateDerivedStats(stats)
 
@@ -112,7 +112,7 @@ func TestCharacterUI_FormatStatValue(t *testing.T) {
 		expected     string
 	}{
 		{"integer as number", 42.0, false, "42"},
-		{"float as number", 42.5, false, "42"},  // Go's %.0f rounds down for .5
+		{"float as number", 42.5, false, "42"}, // Go's %.0f rounds down for .5
 		{"percentage", 15.5, true, "15.5%"},
 		{"zero percentage", 0.0, true, "0.0%"},
 		{"high percentage", 99.9, true, "99.9%"},

@@ -17,7 +17,7 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
   - Go's built-in testing package with `-tags test` flag
   - Table-driven tests for comprehensive scenario coverage
   - Benchmark tests for performance-critical paths
-  - Target coverage: 80%+ (current: engine 77.6%, procgen 100%, entity 95.9%, terrain 96.6%, magic 91.9%, item 93.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 100%, sprites 100%, tiles 92.6%, particles 98.0%, ui 94.8%, music 100%, sfx 99.1%, synthesis 94.2%, network 66.8%, combat 100%, world 100%)
+  - Target coverage: 80%+ (current: engine 70.7%, procgen 100%, entity 96.1%, terrain 97.4%, magic 91.9%, item 93.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 100%, sprites 100%, tiles 92.6%, particles 98.0%, ui 94.8%, music 100%, sfx 85.3%, synthesis 94.2%, network 66.0%, combat 100%, world 100%)
   - Race detection with `go test -race`
 - **Build/Deploy**: 
   - Single binary distribution via `go build`
@@ -118,7 +118,7 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
 
 ## Quality Standards
 
-- **Testing Requirements**: Maintain minimum 80% code coverage per package (current: engine 77.6%, procgen 100%, entity 95.9%, terrain 96.6%, magic 91.9%, item 93.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 100%, sprites 100%, tiles 92.6%, particles 98.0%, ui 94.8%, music 100%, sfx 99.1%, synthesis 94.2%, network 66.8%*, combat 100%, world 100%). All tests must pass with `-tags test` flag. Use table-driven tests for multiple scenarios. Test both success and error paths. Verify deterministic generation by comparing outputs from same seed. Include benchmarks for generation functions. Run race detector: `go test -race ./...`. Example benchmark:
+- **Testing Requirements**: Maintain minimum 80% code coverage per package (current: engine 70.7%, procgen 100%, entity 96.1%, terrain 97.4%, magic 91.9%, item 93.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 100%, sprites 100%, tiles 92.6%, particles 98.0%, ui 94.8%, music 100%, sfx 85.3%, synthesis 94.2%, network 66.0%*, combat 100%, world 100%). All tests must pass with `-tags test` flag. Use table-driven tests for multiple scenarios. Test both success and error paths. Verify deterministic generation by comparing outputs from same seed. Include benchmarks for generation functions. Run race detector: `go test -race ./...`. Example benchmark:
   ```go
   func BenchmarkGenerate(b *testing.B) {
       gen := NewGenerator()

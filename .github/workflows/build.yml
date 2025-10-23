@@ -12,9 +12,6 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
 
     steps:
       - name: Checkout code
@@ -55,9 +52,6 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    strategy:
-      matrix:
-        arch: [amd64]
 
     steps:
       - name: Checkout code

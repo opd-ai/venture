@@ -18,21 +18,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Phase:** 8 (Polish & Optimization) - ✅ COMPLETE  
-**Version:** 1.0 Beta  
-**Status:** Ready for Beta Release 🎉
+**Version:** 1.0 Beta - Ready for Release 🎉
 
-All major development phases complete with:
-- ✅ 100% procedural content generation (graphics, audio, gameplay)
-- ✅ Full multiplayer co-op support (2-4 players, high-latency tolerant)
-- ✅ Native mobile support (iOS & Android)
-- ✅ Five distinct genres with blending system
-- ✅ Comprehensive tutorial and documentation
-- ✅ Performance-optimized (106 FPS with 2000 entities)
-- ✅ Production-ready save/load system
-- ✅ 80%+ test coverage across all packages
-
-**See [Development Roadmap](docs/ROADMAP.md) for complete phase details and milestones.**
+All core features implemented and tested. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
 
 ## Quick Start
 
@@ -78,33 +66,15 @@ go build -o venture-server ./cmd/server
 
 ## Documentation
 
-**For Players:**
-- [Getting Started Guide](docs/GETTING_STARTED.md) - Quick installation and first game (5 minutes)
-- [User Manual](docs/USER_MANUAL.md) - Complete gameplay guide and mechanics
+**New Players:** [Getting Started Guide](docs/GETTING_STARTED.md) (5 minutes) → [User Manual](docs/USER_MANUAL.md)  
+**Developers:** [Development Guide](docs/DEVELOPMENT.md) → [API Reference](docs/API_REFERENCE.md)  
+**Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
 
-**For Developers:**
-- [Development Guide](docs/DEVELOPMENT.md) - Setup, workflow, testing, and best practices
-- [Contributing Guide](docs/CONTRIBUTING.md) - How to contribute to the project
-- [API Reference](docs/API_REFERENCE.md) - Complete API documentation with examples
-
-**Project Information:**
-- [Roadmap](docs/ROADMAP.md) - Development phases and milestones
-- [Architecture](docs/ARCHITECTURE.md) - Architecture Decision Records (ADRs)
-- [Technical Specification](docs/TECHNICAL_SPEC.md) - Complete technical details
+**Project Info:** [Roadmap](docs/ROADMAP.md) | [Architecture](docs/ARCHITECTURE.md) | [Technical Spec](docs/TECHNICAL_SPEC.md)
 
 ## Contributing
 
-Contributions welcome! Please see [Contributing Guide](docs/CONTRIBUTING.md) for guidelines and [Development Guide](docs/DEVELOPMENT.md) for setup instructions.
-
-Quick verification commands:
-```bash
-# Run tests
-go test -tags test ./...
-
-# Format and check code
-go fmt ./...
-go vet ./...
-```
+Contributions welcome! See [Contributing Guide](docs/CONTRIBUTING.md) for guidelines and [Development Guide](docs/DEVELOPMENT.md) for setup.
 
 ## License
 

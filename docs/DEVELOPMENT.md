@@ -172,26 +172,167 @@ pkg/newpkg/
 
 ### Code Standards
 
-1. **Documentation:**
-   - Every exported function, type, and constant must have a doc comment
-   - Package must have a `doc.go` file
-   - Use complete sentences starting with the element name
+#### Go Conventions
 
-2. **Testing:**
-   - Target 80%+ code coverage
-   - Test edge cases and error conditions
-   - Use table-driven tests for multiple scenarios
-   - Benchmark performance-critical code
+Follow standard Go conventions:
 
-3. **Error Handling:**
-   - Return errors, don't panic (except for programmer errors)
-   - Wrap errors with context using `fmt.Errorf`
-   - Check all errors
+1. **Formatting**: Use `go fmt`
+2. **Linting**: Pass `go vet`
+3. **Naming**: Use `MixedCaps`, not `snake_case`
+4. **Error handling**: Always check errors
+5. **Comments**: Document all exported items
 
-4. **Concurrency:**
-   - Use goroutines sparingly and document their lifecycle
-   - Protect shared state with mutexes or channels
-   - Test with `-race` flag
+#### Documentation Standards
+
+**Package Documentation:** Every package needs a `doc.go` file:
+
+```go
+// Package mypackage provides functionality for X.
+//
+// This package implements Y using Z algorithm.
+//
+// Example usage:
+//     gen := mypackage.NewGenerator()
+//     result, err := gen.Generate(seed, params)
+//
+package mypackage
+```
+
+**Function Documentation:**
+
+```go
+// GenerateTerrain creates a procedural dungeon using BSP algorithm.
+//
+// The seed parameter ensures deterministic generation. The same seed
+// with the same params will always produce identical terrain.
+//
+// Parameters:
+//   - seed: Random seed for generation
+//   - params: Configuration including width, height, difficulty
+//
+// Returns the generated terrain or an error if validation fails.
+func GenerateTerrain(seed int64, params GenerationParams) (*Terrain, error) {
+    // ...
+}
+```
+
+#### Error Handling Patterns
+
+```go
+// ✅ GOOD: Check all errors
+result, err := DoSomething()
+if err != nil {
+    return fmt.Errorf("failed to do something: %w", err)
+}
+
+// ❌ BAD: Ignore errors
+result, _ := DoSomething()
+
+// ✅ GOOD: Wrap errors with context
+if err != nil {
+    return fmt.Errorf("generating terrain at depth %d: %w", depth, err)
+}
+```
+
+#### File Organization
+
+```go
+// 1. Package declaration and imports
+package mypackage
+
+import (
+    "fmt"
+    "math/rand"
+    
+    "github.com/opd-ai/venture/pkg/procgen"
+)
+
+// 2. Constants
+const (
+    MaxWidth  = 100
+    MaxHeight = 100
+)
+
+// 3. Type definitions
+type Generator struct {
+    // fields
+}
+
+// 4. Constructor
+func NewGenerator() *Generator {
+    return &Generator{}
+}
+
+// 5. Methods
+func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+    // implementation
+}
+
+// 6. Helper functions (unexported)
+func helper() {
+    // ...
+}
+```
+
+#### Testing Standards
+
+- Target 80%+ code coverage
+- Test edge cases and error conditions  
+- Use table-driven tests for multiple scenarios
+- Test determinism for procedural generation
+- Benchmark performance-critical code
+- Use `-race` flag to detect race conditions
+
+**Table-driven test example:**
+
+```go
+func TestMyFeature(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   int
+        want    int
+        wantErr bool
+    }{
+        {"positive", 5, 10, false},
+        {"negative", -5, 0, true},
+        {"zero", 0, 0, false},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got, err := MyFunction(tt.input)
+            
+            if (err != nil) != tt.wantErr {
+                t.Errorf("MyFunction() error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+            
+            if got != tt.want {
+                t.Errorf("MyFunction() = %v, want %v", got, tt.want)
+            }
+        })
+    }
+}
+```
+
+**Determinism test:**
+
+```go
+func TestDeterministicGeneration(t *testing.T) {
+    gen := NewGenerator()
+    seed := int64(12345)
+    params := procgen.GenerationParams{...}
+    
+    // Generate twice with same seed
+    result1, _ := gen.Generate(seed, params)
+    result2, _ := gen.Generate(seed, params)
+    
+    // Results must be identical
+    if !reflect.DeepEqual(result1, result2) {
+        t.Error("Generation is not deterministic")
+    }
+}
+```
 
 ### Adding a System to the ECS
 

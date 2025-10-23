@@ -47,16 +47,13 @@ We pledge to make participation in our project a harassment-free experience for 
 - Git for version control
 - See [Development Guide](DEVELOPMENT.md) for complete setup instructions
 
-### Fork and Clone
+### Development Setup
 
 1. Fork the repository on GitHub
-2. Clone your fork locally:
+2. Clone your fork and set up development environment:
    ```bash
    git clone https://github.com/YOUR_USERNAME/venture.git
    cd venture
-   ```
-3. Add the upstream repository:
-   ```bash
    git remote add upstream https://github.com/opd-ai/venture.git
    ```
 
@@ -187,198 +184,23 @@ func (s *MovementSystem) Update(entities []*Entity, dt float64) {
 
 ### Writing Tests
 
-```go
-func TestMyFeature(t *testing.T) {
-    // Table-driven test
-    tests := []struct {
-        name    string
-        input   int
-        want    int
-        wantErr bool
-    }{
-        {"positive", 5, 10, false},
-        {"negative", -5, 0, true},
-        {"zero", 0, 0, false},
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            got, err := MyFunction(tt.input)
-            
-            if (err != nil) != tt.wantErr {
-                t.Errorf("MyFunction() error = %v, wantErr %v", err, tt.wantErr)
-                return
-            }
-            
-            if got != tt.want {
-                t.Errorf("MyFunction() = %v, want %v", got, tt.want)
-            }
-        })
-    }
-}
-```
+Write table-driven tests with good coverage. Always test that procedural generation is deterministic (same seed = same output). Add benchmarks for performance-critical code.
 
-### Determinism Tests
-
-Always test that generation is deterministic:
-
-```go
-func TestDeterministicGeneration(t *testing.T) {
-    gen := NewGenerator()
-    seed := int64(12345)
-    params := procgen.GenerationParams{...}
-    
-    // Generate twice with same seed
-    result1, err := gen.Generate(seed, params)
-    if err != nil {
-        t.Fatal(err)
-    }
-    
-    result2, err := gen.Generate(seed, params)
-    if err != nil {
-        t.Fatal(err)
-    }
-    
-    // Results must be identical
-    if !reflect.DeepEqual(result1, result2) {
-        t.Error("Generation is not deterministic")
-    }
-}
-```
-
-### Benchmarks
-
-Add benchmarks for performance-critical code:
-
-```go
-func BenchmarkGenerate(b *testing.B) {
-    gen := NewGenerator()
-    seed := int64(12345)
-    params := procgen.GenerationParams{...}
-    
-    for i := 0; i < b.N; i++ {
-        gen.Generate(seed, params)
-    }
-}
-```
-
-Run benchmarks:
-```bash
-go test -tags test -bench=. -benchmem ./...
-```
+**For detailed testing examples, patterns, and best practices, see [Development Guide](DEVELOPMENT.md).**
 
 ---
 
 ## Code Style
 
-### Go Conventions
+Follow standard Go conventions: use `go fmt`, pass `go vet`, check all errors, document exported items.
 
-Follow standard Go conventions:
+**Key requirements:**
+- Deterministic generation (same seed = same output)
+- ECS architecture (separate entities, components, systems)
+- 80% test coverage minimum
+- No external assets (100% procedural)
 
-1. **Formatting**: Use `go fmt`
-2. **Linting**: Pass `go vet`
-3. **Naming**: Use `MixedCaps`, not `snake_case`
-4. **Error handling**: Always check errors
-5. **Comments**: Document all exported items
-
-### Documentation
-
-**Package Documentation:**
-
-Every package needs a `doc.go` file:
-
-```go
-// Package mypackage provides functionality for X.
-//
-// This package implements Y using Z algorithm.
-//
-// Example usage:
-//     gen := mypackage.NewGenerator()
-//     result, err := gen.Generate(seed, params)
-//
-package mypackage
-```
-
-**Function Documentation:**
-
-```go
-// GenerateTerrain creates a procedural dungeon using BSP algorithm.
-//
-// The seed parameter ensures deterministic generation. The same seed
-// with the same params will always produce identical terrain.
-//
-// Parameters:
-//   - seed: Random seed for generation
-//   - params: Configuration including width, height, difficulty
-//
-// Returns the generated terrain or an error if validation fails.
-func GenerateTerrain(seed int64, params GenerationParams) (*Terrain, error) {
-    // ...
-}
-```
-
-### Error Handling
-
-```go
-// ✅ GOOD: Check all errors
-result, err := DoSomething()
-if err != nil {
-    return fmt.Errorf("failed to do something: %w", err)
-}
-
-// ❌ BAD: Ignore errors
-result, _ := DoSomething()
-
-// ✅ GOOD: Wrap errors with context
-if err != nil {
-    return fmt.Errorf("generating terrain at depth %d: %w", depth, err)
-}
-
-// ❌ BAD: Lose error context
-if err != nil {
-    return err
-}
-```
-
-### File Organization
-
-```go
-// 1. Package declaration and imports
-package mypackage
-
-import (
-    "fmt"
-    "math/rand"
-    
-    "github.com/opd-ai/venture/pkg/procgen"
-)
-
-// 2. Constants
-const (
-    MaxWidth  = 100
-    MaxHeight = 100
-)
-
-// 3. Type definitions
-type Generator struct {
-    // fields
-}
-
-// 4. Constructor
-func NewGenerator() *Generator {
-    return &Generator{}
-}
-
-// 5. Methods
-func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-    // implementation
-}
-
-// 6. Helper functions (unexported)
-func helper() {
-    // ...
-}
-```
+**For detailed code style guidelines, documentation standards, and examples, see [Development Guide](DEVELOPMENT.md).**
 
 ---
 
@@ -544,31 +366,13 @@ Good features:
 
 ## Project Structure
 
-See [Architecture](ARCHITECTURE.md) for detailed architectural decisions and [Technical Specification](TECHNICAL_SPEC.md) for complete system architecture.
-
-**Key directories:**
-- `cmd/` - Executable applications (client, server, test tools)
-- `pkg/` - Reusable library packages (engine, procgen, rendering, audio, network)
-- `docs/` - Project documentation
-- `examples/` - Standalone demonstration programs
-
-**Package Guidelines:**
-- Lower layers don't depend on upper layers
-- Use interfaces to break circular dependencies
-- Keep packages loosely coupled
-- See [Development Guide](DEVELOPMENT.md) for detailed package organization
+See [Development Guide](DEVELOPMENT.md) for detailed project structure, package organization, and architectural guidelines.
 
 ---
 
 ## Performance Guidelines
 
-When contributing performance improvements:
-
-1. **Profile first:** Use `go test -cpuprofile` and `go test -memprofile` before optimizing
-2. **Target specifications:** 60+ FPS, <500MB client memory, <2s generation time
-3. **Optimization priority:** Correctness → Clarity → Performance
-
-**For detailed profiling instructions, benchmarking, and optimization techniques, see [Development Guide](DEVELOPMENT.md).**
+When contributing performance improvements, always profile first and focus on correctness before optimization. See [Development Guide](DEVELOPMENT.md) for detailed profiling instructions and performance targets.
 
 ---
 

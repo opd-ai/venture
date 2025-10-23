@@ -51,38 +51,21 @@ When you start, you'll spawn in a procedurally generated dungeon. Here's what to
 4. **Level Up**: Gain experience and unlock new abilities
 5. **Progress**: Find the stairs to descend to deeper levels
 
-## Game Overview
+## Core Gameplay
 
-### What Makes Venture Unique?
+Venture is a procedurally generated action-RPG where everything is created at runtime. The basic gameplay loop is:
 
-- **100% Procedurally Generated**: Everything—maps, enemies, items, music, graphics—is generated at runtime
-- **No Asset Files**: Single binary with zero external dependencies
-- **Multiplayer Ready**: Co-op gameplay with high-latency support (even over Tor!)
-- **Multiple Genres**: Play in fantasy, sci-fi, horror, cyberpunk, or post-apocalyptic settings
+**Explore → Fight → Collect → Level Up → Progress → Repeat**
 
-### Core Gameplay Loop
+You'll explore unique dungeons, fight generated enemies, collect randomized loot, and progress deeper into increasingly challenging levels.
 
-```
-Explore → Fight → Collect → Level Up → Progress → Repeat
-```
+## Key Concepts
 
-1. **Explore** procedurally generated dungeons with unique layouts every time
-2. **Fight** dynamically generated enemies with scaled difficulty
-3. **Collect** procedurally created items with randomized stats
-4. **Level Up** your character with generated skill trees
-5. **Progress** to deeper levels with increasing challenges
+- **Real-time combat** with movement, attacks, and abilities
+- **Character progression** through XP, levels, and skill points  
+- **Inventory management** with equipment slots and item rarity
 
-## Basic Concepts
-
-**Character Stats:** Health, Attack, Defense, Magic, Speed - grow as you level up
-
-**Combat:** Real-time action combat with melee, ranged, and magic options
-
-**Inventory:** Limited slots, equipment slots (weapon, armor, helmet, accessory), item rarity system
-
-**Progression:** Gain XP, level up, earn skill points, unlock abilities
-
-**For detailed mechanics, stats, and advanced gameplay, see [User Manual](USER_MANUAL.md).**
+**For detailed mechanics and advanced gameplay, see [User Manual](USER_MANUAL.md).**
 
 ## Game Modes
 

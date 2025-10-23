@@ -123,18 +123,20 @@ func (am *AudioManager) PlayMusic(genre, context string) error {
 
 // PlaySFX generates and plays a sound effect of the specified type.
 // Effect types: "impact", "explosion", "magic", "laser", "pickup", "hit", "jump", "death", "powerup"
+// GAP-011 REPAIR: Now uses genre-aware SFX generation for variety.
 func (am *AudioManager) PlaySFX(effectType string, effectSeed int64) error {
 	am.mu.RLock()
 	enabled := am.sfxEnabled
 	volume := am.sfxVolume
+	genre := am.currentGenre // GAP-011 REPAIR: Use current genre
 	am.mu.RUnlock()
 
 	if !enabled {
 		return nil // SFX disabled, silently succeed
 	}
 
-	// Generate the sound effect
-	sample := am.sfxGen.Generate(effectType, effectSeed)
+	// GAP-011 REPAIR: Generate genre-aware sound effect
+	sample := am.sfxGen.GenerateWithGenre(effectType, effectSeed, genre)
 
 	// Apply volume scaling
 	_ = am.applyVolumeToTrack(sample, volume)

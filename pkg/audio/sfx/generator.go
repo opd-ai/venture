@@ -44,31 +44,88 @@ func NewGenerator(sampleRate int, seed int64) *Generator {
 }
 
 // Generate creates a sound effect of the specified type.
+// GAP-011 REPAIR: Added genre parameter for genre-specific sound variations.
 func (g *Generator) Generate(effectType string, seed int64) *audio.AudioSample {
+	return g.GenerateWithGenre(effectType, seed, "")
+}
+
+// GenerateWithGenre creates a sound effect with genre-specific characteristics.
+// GAP-011 REPAIR: Genre affects frequency ranges, waveforms, and envelopes.
+func (g *Generator) GenerateWithGenre(effectType string, seed int64, genre string) *audio.AudioSample {
 	// Use provided seed for variation
 	localRng := rand.New(rand.NewSource(seed))
 
+	// Generate base sound effect
+	var sample *audio.AudioSample
 	switch EffectType(effectType) {
 	case EffectImpact:
-		return g.generateImpact(localRng)
+		sample = g.generateImpact(localRng)
 	case EffectExplosion:
-		return g.generateExplosion(localRng)
+		sample = g.generateExplosion(localRng)
 	case EffectMagic:
-		return g.generateMagic(localRng)
+		sample = g.generateMagic(localRng)
 	case EffectLaser:
-		return g.generateLaser(localRng)
+		sample = g.generateLaser(localRng)
 	case EffectPickup:
-		return g.generatePickup(localRng)
+		sample = g.generatePickup(localRng)
 	case EffectHit:
-		return g.generateHit(localRng)
+		sample = g.generateHit(localRng)
 	case EffectJump:
-		return g.generateJump(localRng)
+		sample = g.generateJump(localRng)
 	case EffectDeath:
-		return g.generateDeath(localRng)
+		sample = g.generateDeath(localRng)
 	case EffectPowerup:
-		return g.generatePowerup(localRng)
+		sample = g.generatePowerup(localRng)
 	default:
-		return g.generateImpact(localRng)
+		sample = g.generateImpact(localRng)
+	}
+
+	// Apply genre-specific modifications
+	if genre != "" && genre != "fantasy" {
+		g.applyGenreModifications(sample, genre)
+	}
+
+	return sample
+}
+
+// applyGenreModifications modifies a sound sample based on genre.
+// GAP-011 REPAIR: Different genres have different sonic characteristics.
+func (g *Generator) applyGenreModifications(sample *audio.AudioSample, genre string) {
+	switch genre {
+	case "scifi":
+		// Synthetic, clean, higher pitch
+		g.applyPitchBend(sample.Data, 1.3, 1.3)
+		// Reduce amplitude for cleaner sound
+		for i := range sample.Data {
+			sample.Data[i] *= 0.9
+		}
+	case "horror":
+		// Dissonant, unsettling, lower pitch
+		g.applyPitchBend(sample.Data, 0.7, 0.7)
+		// Add vibrato for unsettling effect
+		g.applyVibrato(sample.Data, 3.0, 0.2)
+	case "cyberpunk":
+		// Sharp, electronic, glitchy
+		g.applyPitchBend(sample.Data, 1.4, 1.4)
+		// Add hard clipping for digital effect
+		for i := range sample.Data {
+			if sample.Data[i] > 0.7 {
+				sample.Data[i] = 0.7
+			} else if sample.Data[i] < -0.7 {
+				sample.Data[i] = -0.7
+			}
+		}
+	case "postapoc":
+		// Harsh, gritty, distorted
+		g.applyPitchBend(sample.Data, 0.9, 0.9)
+		// Add soft clipping for gritty effect
+		for i := range sample.Data {
+			if sample.Data[i] > 0.5 {
+				sample.Data[i] = 0.5 + (sample.Data[i]-0.5)*0.3
+			} else if sample.Data[i] < -0.5 {
+				sample.Data[i] = -0.5 + (sample.Data[i]+0.5)*0.3
+			}
+		}
 	}
 }
 

@@ -219,7 +219,7 @@ func main() {
 
 	// Store player reference for death callback (will be set after player creation)
 	var playerEntity *engine.Entity
-	
+
 	// Store audio manager reference for callbacks (will be set after audio system creation)
 	var audioManager *engine.AudioManager
 
@@ -256,7 +256,7 @@ func main() {
 		if playerEntity != nil {
 			objectiveTracker.OnEnemyKilled(playerEntity, enemy)
 		}
-		
+
 		// GAP-010 REPAIR: Play death sound effect
 		if err := audioManager.PlaySFX("death", time.Now().UnixNano()); err != nil {
 			if *verbose {
@@ -272,12 +272,12 @@ func main() {
 	// GAP-010 REPAIR: Initialize audio system
 	audioManager = engine.NewAudioManager(44100, *seed) // 44.1kHz sample rate
 	audioManagerSystem := engine.NewAudioManagerSystem(audioManager)
-	
+
 	// Start playing exploration music
 	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
 		log.Printf("Warning: Failed to start background music: %v", err)
 	}
-	
+
 	if *verbose {
 		log.Println("Audio system initialized (music and SFX generators)")
 	}

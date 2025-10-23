@@ -22,7 +22,7 @@ type AudioManager struct {
 	sfxVolume      float64
 	seed           int64
 	mu             sync.RWMutex
-	
+
 	// Track whether audio is enabled
 	musicEnabled bool
 	sfxEnabled   bool
@@ -98,26 +98,26 @@ func (am *AudioManager) GetSFXVolume() float64 {
 func (am *AudioManager) PlayMusic(genre, context string) error {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	
+
 	if !am.musicEnabled {
 		return nil // Music disabled, silently succeed
 	}
-	
+
 	// Don't regenerate if already playing the same music
 	if am.currentGenre == genre && am.currentContext == context && am.currentTrack != nil {
 		return nil
 	}
-	
+
 	// Generate a new music track (30 seconds duration)
 	track := am.musicGen.GenerateTrack(genre, context, am.seed, 30.0)
-	
+
 	// Apply volume scaling to the generated track
 	scaledTrack := am.applyVolumeToTrack(track, am.musicVolume)
-	
+
 	am.currentTrack = scaledTrack
 	am.currentGenre = genre
 	am.currentContext = context
-	
+
 	return nil
 }
 
@@ -128,20 +128,20 @@ func (am *AudioManager) PlaySFX(effectType string, effectSeed int64) error {
 	enabled := am.sfxEnabled
 	volume := am.sfxVolume
 	am.mu.RUnlock()
-	
+
 	if !enabled {
 		return nil // SFX disabled, silently succeed
 	}
-	
+
 	// Generate the sound effect
 	sample := am.sfxGen.Generate(effectType, effectSeed)
-	
+
 	// Apply volume scaling
 	_ = am.applyVolumeToTrack(sample, volume)
-	
+
 	// In a real implementation, we would play the sample through an audio system
 	// For now, we just generate it (Phase 8 focus is on integration, not audio playback)
-	
+
 	return nil
 }
 
@@ -200,34 +200,34 @@ func NewAudioManagerSystem(audioManager *AudioManager) *AudioManagerSystem {
 // This runs every frame to detect context changes (e.g., entering/leaving combat).
 func (ams *AudioManagerSystem) Update(entities []*Entity, deltaTime float64) {
 	ams.updateTimer++
-	
+
 	// Check for context changes every 60 frames (1 second at 60 FPS)
 	if ams.updateTimer < 60 {
 		return
 	}
 	ams.updateTimer = 0
-	
+
 	// Determine current game context by checking for enemies
 	context := "exploration"
 	enemyCount := 0
-	
+
 	for _, entity := range entities {
 		// Skip player entities
 		if entity.HasComponent("input") {
 			continue
 		}
-		
+
 		// Count enemies (have health but not input = enemy)
 		if entity.HasComponent("health") {
 			enemyCount++
 		}
 	}
-	
+
 	// Switch to combat music if enemies present
 	if enemyCount > 0 {
 		context = "combat"
 	}
-	
+
 	// Check for boss enemies (high attack power)
 	for _, entity := range entities {
 		if entity.HasComponent("stats") {
@@ -242,19 +242,19 @@ func (ams *AudioManagerSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 	}
-	
+
 	// Update music if context changed
 	if context != ams.lastContext {
 		// Get genre from world settings (default to fantasy)
 		genre := "fantasy"
 		// In a full implementation, we'd get this from world state
-		
+
 		err := ams.audioManager.PlayMusic(genre, context)
 		if err != nil {
 			// Log error but don't crash
 			fmt.Printf("Warning: Failed to update music: %v\n", err)
 		}
-		
+
 		ams.lastContext = context
 		ams.lastGenre = genre
 	}

@@ -426,6 +426,22 @@ func main() {
 		log.Println("Terrain rendering system initialized")
 	}
 
+	// GAP REPAIR: Initialize terrain collision system for wall physics
+	if *verbose {
+		log.Println("Initializing terrain collision system...")
+	}
+
+	terrainCollisionSystem := engine.NewTerrainCollisionSystem(game.World, 32, 32)
+	err = terrainCollisionSystem.SetTerrain(generatedTerrain)
+	if err != nil {
+		log.Fatalf("Failed to initialize terrain collision: %v", err)
+	}
+
+	if *verbose {
+		log.Printf("Terrain collision system initialized with %d wall entities", 
+			terrainCollisionSystem.GetWallEntityCount())
+	}
+
 	// GAP-001 REPAIR: Connect terrain to MapUI for map functionality
 	if *verbose {
 		log.Println("Connecting terrain to Map UI...")

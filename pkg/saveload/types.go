@@ -49,13 +49,81 @@ type PlayerState struct {
 	MagicPower float64 `json:"magic_power"`
 	Speed      float64 `json:"speed"`
 
-	// Inventory (item IDs)
-	InventoryItems []uint64 `json:"inventory_items"`
+	// Inventory (item IDs - DEPRECATED, use Items instead)
+	InventoryItems []uint64 `json:"inventory_items,omitempty"`
 
-	// Equipment (item IDs)
+	// GAP-007 REPAIR: Full inventory item data
+	Items []ItemData `json:"items"`
+
+	// GAP-009 REPAIR: Gold currency
+	Gold int `json:"gold"`
+
+	// Equipment (item IDs - DEPRECATED, use EquippedItems instead)
 	EquippedWeapon    uint64 `json:"equipped_weapon,omitempty"`
 	EquippedArmor     uint64 `json:"equipped_armor,omitempty"`
 	EquippedAccessory uint64 `json:"equipped_accessory,omitempty"`
+
+	// GAP-008 REPAIR: Full equipment data
+	EquippedItems EquipmentData `json:"equipped_items"`
+
+	// Mana (for spell casting)
+	CurrentMana int `json:"current_mana"`
+	MaxMana     int `json:"max_mana"`
+
+	// Spell slots
+	Spells []SpellData `json:"spells,omitempty"`
+}
+
+// ItemData represents a serialized item for save files.
+type ItemData struct {
+	Name           string   `json:"name"`
+	Type           string   `json:"type"` // "weapon", "armor", "consumable", "accessory"
+	WeaponType     string   `json:"weapon_type,omitempty"`
+	ArmorType      string   `json:"armor_type,omitempty"`
+	ConsumableType string   `json:"consumable_type,omitempty"`
+	Rarity         string   `json:"rarity"` // "common", "uncommon", "rare", "epic", "legendary"
+	Seed           int64    `json:"seed"`
+	Tags           []string `json:"tags,omitempty"`
+	Description    string   `json:"description,omitempty"`
+
+	// Stats
+	Damage        int     `json:"damage,omitempty"`
+	Defense       int     `json:"defense,omitempty"`
+	AttackSpeed   float64 `json:"attack_speed,omitempty"`
+	Value         int     `json:"value"`
+	Weight        float64 `json:"weight"`
+	RequiredLevel int     `json:"required_level,omitempty"`
+	DurabilityMax int     `json:"durability_max,omitempty"`
+	Durability    int     `json:"durability,omitempty"`
+}
+
+// EquipmentData represents equipped items.
+type EquipmentData struct {
+	Weapon    *ItemData `json:"weapon,omitempty"`
+	Armor     *ItemData `json:"armor,omitempty"`
+	Accessory *ItemData `json:"accessory,omitempty"`
+}
+
+// SpellData represents a serialized spell for save files.
+type SpellData struct {
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`    // "offensive", "defensive", "healing", etc.
+	Element     string   `json:"element"` // "fire", "ice", "lightning", etc.
+	Target      string   `json:"target"`  // "self", "single", "area", etc.
+	Rarity      string   `json:"rarity"`
+	Seed        int64    `json:"seed"`
+	Tags        []string `json:"tags,omitempty"`
+	Description string   `json:"description,omitempty"`
+
+	// Stats
+	Damage   int     `json:"damage,omitempty"`
+	Healing  int     `json:"healing,omitempty"`
+	ManaCost int     `json:"mana_cost"`
+	Cooldown float64 `json:"cooldown"`
+	CastTime float64 `json:"cast_time"`
+	Range    float64 `json:"range,omitempty"`
+	AreaSize float64 `json:"area_size,omitempty"`
+	Duration float64 `json:"duration,omitempty"`
 }
 
 // WorldState represents all world-related state that needs to be saved.

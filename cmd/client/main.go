@@ -548,13 +548,54 @@ func main() {
 
 			// Get inventory data (store only item IDs for now)
 			var inventoryItems []uint64
+			var gold int
+			itemDataList := make([]saveload.ItemData, 0)
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
-				_ = inv.Gold // We have gold but don't store it separately in PlayerState yet
-				// Store item IDs (simplified - full serialization would need entity ID mapping)
-				for range inv.Items {
-					// TODO: Map items to entity IDs for proper persistence
-					// For now, we'll skip this as it requires additional entity-item mapping
+				gold = inv.Gold // GAP-009: Save gold
+				// GAP-007: Serialize full item data
+				for _, itm := range inv.Items {
+					itemDataList = append(itemDataList, saveload.ItemToData(itm))
+				}
+			}
+
+			// GAP-008: Serialize equipped items
+			var equippedItems saveload.EquipmentData
+			if equip, hasEquip := player.GetComponent("equipment"); hasEquip {
+				equipment := equip.(*engine.EquipmentComponent)
+				// Check main hand for weapon
+				if weapon := equipment.Slots[engine.SlotMainHand]; weapon != nil {
+					weaponData := saveload.ItemToData(weapon)
+					equippedItems.Weapon = &weaponData
+				}
+				// Check chest for armor (primary armor slot)
+				if armor := equipment.Slots[engine.SlotChest]; armor != nil {
+					armorData := saveload.ItemToData(armor)
+					equippedItems.Armor = &armorData
+				}
+				// Check accessory slots
+				if accessory := equipment.Slots[engine.SlotAccessory1]; accessory != nil {
+					accessoryData := saveload.ItemToData(accessory)
+					equippedItems.Accessory = &accessoryData
+				}
+			}
+
+			// Serialize mana
+			var currentMana, maxMana int
+			if manaComp, hasMana := player.GetComponent("mana"); hasMana {
+				mana := manaComp.(*engine.ManaComponent)
+				currentMana = mana.Current
+				maxMana = mana.Max
+			}
+
+			// Serialize spells
+			spellDataList := make([]saveload.SpellData, 0)
+			if slotsComp, hasSlots := player.GetComponent("spell_slots"); hasSlots {
+				slots := slotsComp.(*engine.SpellSlotComponent)
+				for i := 0; i < 5; i++ {
+					if spell := slots.GetSlot(i); spell != nil {
+						spellDataList = append(spellDataList, saveload.SpellToData(spell))
+					}
 				}
 			}
 
@@ -572,8 +613,14 @@ func main() {
 					Attack:         attack,
 					Defense:        defense,
 					MagicPower:     magic,
-					Speed:          1.0, // Default speed
-					InventoryItems: inventoryItems,
+					Speed:          1.0,
+					InventoryItems: inventoryItems, // Keep for backward compatibility
+					Items:          itemDataList,   // GAP-007: Full item data
+					Gold:           gold,           // GAP-009: Gold persistence
+					EquippedItems:  equippedItems,  // GAP-008: Equipment persistence
+					CurrentMana:    currentMana,
+					MaxMana:        maxMana,
+					Spells:         spellDataList,
 				},
 				WorldState: &saveload.WorldState{
 					Seed:       *seed,
@@ -646,9 +693,74 @@ func main() {
 
 			// Restore inventory (simplified)
 			if invComp, ok := player.GetComponent("inventory"); ok {
-				// Note: Full item restoration would require recreating item objects
-				// from stored inventory item IDs
-				_ = invComp
+				inv := invComp.(*engine.InventoryComponent)
+
+				// GAP-007: Restore full inventory items
+				inv.Items = make([]*item.Item, 0, len(gameSave.PlayerState.Items))
+				for _, itemData := range gameSave.PlayerState.Items {
+					restoredItem := saveload.DataToItem(itemData)
+					inv.Items = append(inv.Items, restoredItem)
+				}
+
+				// GAP-009: Restore gold
+				inv.Gold = gameSave.PlayerState.Gold
+
+				if *verbose {
+					log.Printf("Restored %d items and %d gold", len(inv.Items), inv.Gold)
+				}
+			}
+
+			// GAP-008: Restore equipped items
+			if equipComp, ok := player.GetComponent("equipment"); ok {
+				equipment := equipComp.(*engine.EquipmentComponent)
+
+				// Clear existing equipment
+				equipment.Slots = make(map[engine.EquipmentSlot]*item.Item)
+
+				// Restore weapon
+				if gameSave.PlayerState.EquippedItems.Weapon != nil {
+					weapon := saveload.DataToItem(*gameSave.PlayerState.EquippedItems.Weapon)
+					equipment.Slots[engine.SlotMainHand] = weapon
+				}
+
+				// Restore armor
+				if gameSave.PlayerState.EquippedItems.Armor != nil {
+					armor := saveload.DataToItem(*gameSave.PlayerState.EquippedItems.Armor)
+					equipment.Slots[engine.SlotChest] = armor
+				}
+
+				// Restore accessory
+				if gameSave.PlayerState.EquippedItems.Accessory != nil {
+					accessory := saveload.DataToItem(*gameSave.PlayerState.EquippedItems.Accessory)
+					equipment.Slots[engine.SlotAccessory1] = accessory
+				}
+
+				equipment.StatsDirty = true // Trigger stats recalculation
+			}
+
+			// Restore mana
+			if manaComp, ok := player.GetComponent("mana"); ok {
+				mana := manaComp.(*engine.ManaComponent)
+				mana.Current = gameSave.PlayerState.CurrentMana
+				mana.Max = gameSave.PlayerState.MaxMana
+			}
+
+			// Restore spells
+			if slotsComp, ok := player.GetComponent("spell_slots"); ok {
+				slots := slotsComp.(*engine.SpellSlotComponent)
+
+				// Clear existing spells
+				for i := 0; i < 5; i++ {
+					slots.Slots[i] = nil
+				}
+
+				// Restore saved spells
+				for i, spellData := range gameSave.PlayerState.Spells {
+					if i < 5 {
+						restoredSpell := saveload.DataToSpell(spellData)
+						slots.SetSlot(i, restoredSpell)
+					}
+				}
 			}
 
 			log.Println("Game loaded successfully!")

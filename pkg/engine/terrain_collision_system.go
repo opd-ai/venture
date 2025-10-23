@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package engine provides efficient terrain collision checking.
 // This file implements terrain collision detection by extending the existing
 // collision system to check terrain data directly instead of creating entities.

@@ -506,6 +506,9 @@ func (ui *SkillsUI) attemptPurchaseSkill(skillID string) {
 				exp.SkillPoints -= skill.Requirements.SkillPoints
 			}
 		}
+
+		// GAP-008 REPAIR: Immediately recalculate skill bonuses after learning
+		RecalculateSkillBonuses(ui.playerEntity)
 	}
 }
 
@@ -527,6 +530,9 @@ func (ui *SkillsUI) attemptRefundSkill(skillID string) {
 			exp := expComp.(*ExperienceComponent)
 			exp.SkillPoints += pointsRefunded
 		}
+
+		// GAP-008 REPAIR: Immediately recalculate skill bonuses after refunding
+		RecalculateSkillBonuses(ui.playerEntity)
 	}
 }
 

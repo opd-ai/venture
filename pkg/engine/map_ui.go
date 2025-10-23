@@ -92,6 +92,43 @@ func (ui *MapUI) SetTerrain(terrain *terrain.Terrain) {
 	ui.mapNeedsUpdate = true
 }
 
+// GAP-005 REPAIR: Add fog of war getter for save/load system
+// GetFogOfWar returns a copy of the fog of war exploration state.
+// Returns: 2D boolean array where true = explored
+// Called by: SaveManager when serializing game state
+func (ui *MapUI) GetFogOfWar() [][]bool {
+	if ui.fogOfWar == nil {
+		return nil
+	}
+	// Return deep copy to prevent external modification
+	fogCopy := make([][]bool, len(ui.fogOfWar))
+	for y := range ui.fogOfWar {
+		fogCopy[y] = make([]bool, len(ui.fogOfWar[y]))
+		copy(fogCopy[y], ui.fogOfWar[y])
+	}
+	return fogCopy
+}
+
+// GAP-005 REPAIR: Add fog of war setter for save/load system
+// SetFogOfWar restores fog of war exploration state from save file.
+// Parameters:
+//
+//	fogOfWar - 2D boolean array where true = explored
+//
+// Called by: LoadManager when deserializing game state
+func (ui *MapUI) SetFogOfWar(fogOfWar [][]bool) {
+	if fogOfWar == nil {
+		return
+	}
+	// Deep copy the provided fog of war data
+	ui.fogOfWar = make([][]bool, len(fogOfWar))
+	for y := range fogOfWar {
+		ui.fogOfWar[y] = make([]bool, len(fogOfWar[y]))
+		copy(ui.fogOfWar[y], fogOfWar[y])
+	}
+	ui.mapNeedsUpdate = true
+}
+
 // ToggleFullScreen switches between minimap and full-screen modes.
 // Called by: InputSystem when M key is pressed
 func (ui *MapUI) ToggleFullScreen() {

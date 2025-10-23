@@ -108,6 +108,35 @@ func (s *ObjectiveTrackerSystem) OnItemCollected(collector *Entity, itemName str
 	}
 }
 
+// GAP-014 REPAIR: OnUIOpened should be called when player opens a UI screen.
+// Parameters:
+//
+//	entity - Entity opening the UI (usually player)
+//	uiName - Name of UI screen: "inventory", "quest_log", "character", "skills", "map"
+//
+// Called by: InputSystem callbacks when UI toggle keys are pressed
+func (s *ObjectiveTrackerSystem) OnUIOpened(entity *Entity, uiName string) {
+	if !entity.HasComponent("questtracker") {
+		return
+	}
+
+	comp, ok := entity.GetComponent("questtracker")
+	if !ok {
+		return
+	}
+	tracker := comp.(*QuestTrackerComponent)
+
+	// Update UI interaction objectives (used in tutorial quests)
+	for _, tracked := range tracker.ActiveQuests {
+		for i, obj := range tracked.Quest.Objectives {
+			// Check if objective targets this UI
+			if s.matchesTarget(obj.Target, uiName, "ui") {
+				tracker.IncrementProgress(tracked.Quest.ID, i, 1)
+			}
+		}
+	}
+}
+
 // OnTileExplored should be called by movement system when player enters new tile.
 func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 	if !explorer.HasComponent("questtracker") {
@@ -215,6 +244,24 @@ func (s *ObjectiveTrackerSystem) matchesTarget(target, name, context string) boo
 	case "collect":
 		// Generic collect objectives match any item
 		if targetLower == "item" || targetLower == "items" {
+			return true
+		}
+	case "ui":
+		// GAP-014 REPAIR: UI objective matching (for tutorial)
+		// Handle variations in objective naming
+		if targetLower == "inventory" && nameLower == "inventory" {
+			return true
+		}
+		if targetLower == "quest_log" && nameLower == "quest_log" {
+			return true
+		}
+		if strings.Contains(targetLower, "character") && nameLower == "character" {
+			return true
+		}
+		if strings.Contains(targetLower, "skill") && nameLower == "skills" {
+			return true
+		}
+		if strings.Contains(targetLower, "map") && nameLower == "map" {
 			return true
 		}
 	}

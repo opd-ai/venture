@@ -57,17 +57,24 @@ func (s *PlayerSpellCastingSystem) Update(entities []*Entity, deltaTime float64)
 		return
 	}
 
-	// Check spell slot keys
+	// GAP-002 REPAIR: Read spell input flags from InputComponent
+	inputComp, hasInput := player.GetComponent("input")
+	if !hasInput {
+		return
+	}
+	input := inputComp.(*InputComponent)
+
+	// Check spell slot input flags (keys 1-5)
 	slotIndex := -1
-	if ebiten.IsKeyPressed(s.KeySpell1) {
+	if input.Spell1Pressed {
 		slotIndex = 0
-	} else if ebiten.IsKeyPressed(s.KeySpell2) {
+	} else if input.Spell2Pressed {
 		slotIndex = 1
-	} else if ebiten.IsKeyPressed(s.KeySpell3) {
+	} else if input.Spell3Pressed {
 		slotIndex = 2
-	} else if ebiten.IsKeyPressed(s.KeySpell4) {
+	} else if input.Spell4Pressed {
 		slotIndex = 3
-	} else if ebiten.IsKeyPressed(s.KeySpell5) {
+	} else if input.Spell5Pressed {
 		slotIndex = 4
 	}
 

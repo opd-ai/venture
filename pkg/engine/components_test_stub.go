@@ -19,6 +19,13 @@ type InputComponent struct {
 	UseItemPressed  bool
 	Action          bool // Alias for ActionPressed (backward compatibility)
 
+	// GAP-002 REPAIR: Spell casting input flags (keys 1-5)
+	Spell1Pressed bool
+	Spell2Pressed bool
+	Spell3Pressed bool
+	Spell4Pressed bool
+	Spell5Pressed bool
+
 	// Mouse state
 	MouseX, MouseY int
 	MousePressed   bool

@@ -23,6 +23,13 @@ type InputComponent struct {
 	SecondaryAction bool
 	UseItemPressed  bool
 
+	// GAP-002 REPAIR: Spell casting input flags (keys 1-5)
+	Spell1Pressed bool
+	Spell2Pressed bool
+	Spell3Pressed bool
+	Spell4Pressed bool
+	Spell5Pressed bool
+
 	// Mouse state
 	MouseX, MouseY int
 	MousePressed   bool
@@ -47,6 +54,13 @@ type InputSystem struct {
 	// Key bindings - Actions
 	KeyAction  ebiten.Key
 	KeyUseItem ebiten.Key
+
+	// GAP-002 REPAIR: Spell casting key bindings (keys 1-5)
+	KeySpell1 ebiten.Key
+	KeySpell2 ebiten.Key
+	KeySpell3 ebiten.Key
+	KeySpell4 ebiten.Key
+	KeySpell5 ebiten.Key
 
 	// Key bindings - UI
 	KeyInventory ebiten.Key // I key for inventory
@@ -102,6 +116,13 @@ func NewInputSystem() *InputSystem {
 		// Action keys
 		KeyAction:  ebiten.KeySpace,
 		KeyUseItem: ebiten.KeyE,
+
+		// GAP-002 REPAIR: Spell casting keys (1-5)
+		KeySpell1: ebiten.Key1,
+		KeySpell2: ebiten.Key2,
+		KeySpell3: ebiten.Key3,
+		KeySpell4: ebiten.Key4,
+		KeySpell5: ebiten.Key5,
 
 		// UI keys
 		KeyInventory: ebiten.KeyI,
@@ -278,6 +299,12 @@ func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaT
 	input.MoveY = 0
 	input.ActionPressed = false
 	input.UseItemPressed = false
+	// GAP-002 REPAIR: Reset spell input flags
+	input.Spell1Pressed = false
+	input.Spell2Pressed = false
+	input.Spell3Pressed = false
+	input.Spell4Pressed = false
+	input.Spell5Pressed = false
 
 	// Auto-detect input method: if touch input is detected, switch to touch mode
 	if s.mobileEnabled && len(ebiten.TouchIDs()) > 0 {
@@ -345,6 +372,23 @@ func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaT
 		}
 		if inpututil.IsKeyJustPressed(s.KeyUseItem) {
 			input.UseItemPressed = true
+		}
+
+		// GAP-002 REPAIR: Process spell casting keys (1-5)
+		if inpututil.IsKeyJustPressed(s.KeySpell1) {
+			input.Spell1Pressed = true
+		}
+		if inpututil.IsKeyJustPressed(s.KeySpell2) {
+			input.Spell2Pressed = true
+		}
+		if inpututil.IsKeyJustPressed(s.KeySpell3) {
+			input.Spell3Pressed = true
+		}
+		if inpututil.IsKeyJustPressed(s.KeySpell4) {
+			input.Spell4Pressed = true
+		}
+		if inpututil.IsKeyJustPressed(s.KeySpell5) {
+			input.Spell5Pressed = true
 		}
 
 		// Process mouse input

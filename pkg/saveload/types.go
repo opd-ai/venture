@@ -147,6 +147,11 @@ type WorldState struct {
 	// Current depth (dungeon level)
 	Depth int `json:"depth"`
 
+	// GAP-005 REPAIR: Fog of war exploration state
+	// 2D array where true = explored, false = unexplored
+	// Serialized as nested arrays for JSON compatibility
+	FogOfWar [][]bool `json:"fog_of_war,omitempty"`
+
 	// Entity states (for NPCs, monsters, items in the world)
 	// We store minimal info and rely on seed-based regeneration
 	// for most entities, only saving what's been modified

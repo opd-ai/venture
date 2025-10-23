@@ -515,6 +515,26 @@ func (s *InventorySystem) SortInventoryByType(entityID uint64) error {
 // Update implements the System interface.
 // InventorySystem doesn't need per-frame updates, so this is a no-op.
 func (s *InventorySystem) Update(entities []*Entity, deltaTime float64) {
-	// InventorySystem is event-driven (AddItem, RemoveItem, etc.), not frame-driven
-	// No per-frame updates needed
+	// GAP-006 REPAIR: Ensure equipment stats are recalculated when dirty
+	for _, entity := range entities {
+		// Only process entities with equipment component
+		equipComp, hasEquip := entity.GetComponent("equipment")
+		if !hasEquip {
+			continue
+		}
+
+		equipment := equipComp.(*EquipmentComponent)
+
+		// Recalculate equipment stats if dirty
+		// This ensures CachedStats is up-to-date for CharacterUI display
+		// and combat calculations
+		if equipment.StatsDirty {
+			equipment.RecalculateStats()
+		}
+
+		// Note: Equipment stats are now available via equipment.CachedStats
+		// CharacterUI reads equipment.CachedStats to show bonuses
+		// Combat system uses GetWeaponDamage() and GetTotalDefense()
+		// No need to modify base StatsComponent - equipment provides bonuses separately
+	}
 }

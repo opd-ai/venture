@@ -194,30 +194,51 @@ func (g *Game) SetInventorySystem(system *InventorySystem) {
 
 // SetupInputCallbacks connects the input system callbacks to the UI systems.
 // This should be called after the InputSystem is added to the world.
-func (g *Game) SetupInputCallbacks(inputSystem *InputSystem) {
+// GAP-014 REPAIR: Accept objective tracker for quest progress tracking
+func (g *Game) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
 	// Connect inventory toggle
 	inputSystem.SetInventoryCallback(func() {
 		g.InventoryUI.Toggle()
+		// GAP-014 REPAIR: Track inventory UI opens for tutorial objectives
+		if objectiveTracker != nil && g.PlayerEntity != nil {
+			objectiveTracker.OnUIOpened(g.PlayerEntity, "inventory")
+		}
 	})
 
 	// Connect quest log toggle
 	inputSystem.SetQuestsCallback(func() {
 		g.QuestUI.Toggle()
+		// GAP-014 REPAIR: Track quest log UI opens for tutorial objectives
+		if objectiveTracker != nil && g.PlayerEntity != nil {
+			objectiveTracker.OnUIOpened(g.PlayerEntity, "quest_log")
+		}
 	})
 
 	// Connect character screen toggle
 	inputSystem.SetCharacterCallback(func() {
 		g.CharacterUI.Toggle()
+		// GAP-014 REPAIR: Track character UI opens for tutorial objectives
+		if objectiveTracker != nil && g.PlayerEntity != nil {
+			objectiveTracker.OnUIOpened(g.PlayerEntity, "character")
+		}
 	})
 
 	// Connect skills screen toggle
 	inputSystem.SetSkillsCallback(func() {
 		g.SkillsUI.Toggle()
+		// GAP-014 REPAIR: Track skills UI opens for tutorial objectives
+		if objectiveTracker != nil && g.PlayerEntity != nil {
+			objectiveTracker.OnUIOpened(g.PlayerEntity, "skills")
+		}
 	})
 
 	// Connect map toggle
 	inputSystem.SetMapCallback(func() {
 		g.MapUI.ToggleFullScreen()
+		// GAP-014 REPAIR: Track map UI opens for tutorial objectives
+		if objectiveTracker != nil && g.PlayerEntity != nil {
+			objectiveTracker.OnUIOpened(g.PlayerEntity, "map")
+		}
 	})
 
 	// Connect pause menu toggle (ESC key)

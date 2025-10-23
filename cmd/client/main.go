@@ -417,6 +417,15 @@ func main() {
 		log.Println("Terrain rendering system initialized")
 	}
 
+	// GAP-001 REPAIR: Connect terrain to MapUI for map functionality
+	if *verbose {
+		log.Println("Connecting terrain to Map UI...")
+	}
+	game.MapUI.SetTerrain(generatedTerrain)
+	if *verbose {
+		log.Println("Map UI configured with terrain data")
+	}
+
 	// GAP #1 REPAIR: Spawn enemies in terrain rooms
 	if *verbose {
 		log.Println("Spawning enemies in dungeon rooms...")
@@ -495,6 +504,11 @@ func main() {
 	playerStats := engine.NewStatsComponent()
 	playerStats.Attack = 10
 	playerStats.Defense = 5
+	// GAP-003 REPAIR: Initialize derived stats with baseline values
+	playerStats.CritChance = 0.05  // 5% crit chance
+	playerStats.CritDamage = 1.5   // 1.5x crit damage multiplier
+	playerStats.Evasion = 0.05     // 5% evasion chance
+	// Resistances default to 0.0 (handled by NewStatsComponent)
 	player.AddComponent(playerStats)
 
 	// Add player experience/progression
@@ -681,6 +695,20 @@ func main() {
 				}
 			}
 
+			// GAP-005 REPAIR: Serialize fog of war exploration state
+			var fogOfWar [][]bool
+			if game.MapUI != nil {
+				fogOfWar = game.MapUI.GetFogOfWar()
+				if *verbose {
+					log.Printf("Serializing fog of war: %dx%d", len(fogOfWar), func() int {
+						if len(fogOfWar) > 0 {
+							return len(fogOfWar[0])
+						}
+						return 0
+					}())
+				}
+			}
+
 			// Create game save
 			gameSave := &saveload.GameSave{
 				Version: saveload.SaveVersion,
@@ -711,6 +739,7 @@ func main() {
 					Height:     generatedTerrain.Height,
 					Difficulty: 0.5,
 					Depth:      1,
+					FogOfWar:   fogOfWar, // GAP-005: Fog of war persistence
 				},
 				Settings: &saveload.GameSettings{
 					ScreenWidth:  *width,
@@ -845,6 +874,20 @@ func main() {
 				}
 			}
 
+			// GAP-005 REPAIR: Restore fog of war exploration state
+			if game.MapUI != nil && gameSave.WorldState != nil && gameSave.WorldState.FogOfWar != nil {
+				game.MapUI.SetFogOfWar(gameSave.WorldState.FogOfWar)
+				if *verbose {
+					fogData := gameSave.WorldState.FogOfWar
+					log.Printf("Restored fog of war: %dx%d", len(fogData), func() int {
+						if len(fogData) > 0 {
+							return len(fogData[0])
+						}
+						return 0
+					}())
+				}
+			}
+
 			log.Println("Game loaded successfully!")
 			return nil
 		})
@@ -861,7 +904,8 @@ func main() {
 	if *verbose {
 		log.Println("Setting up UI input callbacks...")
 	}
-	game.SetupInputCallbacks(inputSystem)
+	// GAP-014 REPAIR: Pass objective tracker to enable tutorial quest tracking
+	game.SetupInputCallbacks(inputSystem, objectiveTracker)
 	if *verbose {
 		log.Println("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		log.Println("Inventory actions: E to equip/use, D to drop")

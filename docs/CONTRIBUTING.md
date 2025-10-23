@@ -45,10 +45,7 @@ We pledge to make participation in our project a harassment-free experience for 
 
 - Go 1.24.7 or later
 - Git for version control
-- Platform-specific dependencies for Ebiten:
-  - **Linux:** X11 libraries (`libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config`)
-  - **macOS:** Xcode command line tools
-  - **Windows:** No additional dependencies
+- See [Development Guide](DEVELOPMENT.md) for complete setup instructions
 
 ### Fork and Clone
 
@@ -63,62 +60,19 @@ We pledge to make participation in our project a harassment-free experience for 
    git remote add upstream https://github.com/opd-ai/venture.git
    ```
 
----
-
-## Development Setup
-
-### Install Dependencies
+### Quick Development Setup
 
 ```bash
-# Download Go modules
+# Download dependencies
 go mod download
 
-# Verify everything builds
+# Verify setup
+go test -tags test ./...
 go build ./cmd/client
 go build ./cmd/server
 ```
 
-### Run Tests
-
-```bash
-# Run all tests
-go test -tags test ./...
-
-# Run with coverage
-go test -tags test -cover ./...
-
-# Run with race detection
-go test -tags test -race ./...
-```
-
-### Development Workflow
-
-1. **Create a branch** for your changes:
-   ```bash
-   git checkout -b feature/my-feature
-   ```
-
-2. **Make your changes** following the guidelines below
-
-3. **Test your changes** thoroughly:
-   ```bash
-   go test -tags test ./...
-   go vet ./...
-   go fmt ./...
-   ```
-
-4. **Commit your changes**:
-   ```bash
-   git add .
-   git commit -m "Add feature: description"
-   ```
-
-5. **Push to your fork**:
-   ```bash
-   git push origin feature/my-feature
-   ```
-
-6. **Open a Pull Request** on GitHub
+**For detailed development environment setup, build instructions, profiling, and debugging, see [Development Guide](DEVELOPMENT.md).**
 
 ---
 
@@ -602,88 +556,34 @@ Good features:
 
 ## Project Structure
 
-### Directory Layout
+See [Architecture](ARCHITECTURE.md) for detailed architectural decisions and [Technical Specification](TECHNICAL_SPEC.md) for complete system architecture.
 
-```
-venture/
-├── cmd/              # Executable applications
-│   ├── client/       # Game client
-│   ├── server/       # Dedicated server
-│   └── ...test/      # CLI testing tools
-├── pkg/              # Library code
-│   ├── engine/       # ECS and core systems
-│   ├── procgen/      # Procedural generation
-│   ├── rendering/    # Visual generation
-│   ├── audio/        # Sound synthesis
-│   ├── network/      # Multiplayer
-│   ├── combat/       # Combat mechanics
-│   ├── world/        # World state
-│   └── saveload/     # Save system
-├── docs/             # Documentation
-├── examples/         # Standalone demos
-└── go.mod            # Go module definition
-```
+**Key directories:**
+- `cmd/` - Executable applications (client, server, test tools)
+- `pkg/` - Reusable library packages (engine, procgen, rendering, audio, network)
+- `docs/` - Project documentation
+- `examples/` - Standalone demonstration programs
 
-### Package Dependencies
-
-Follow this dependency hierarchy:
-
-```
-cmd/
-  ↓
-pkg/world/
-  ↓
-pkg/engine/
-  ↓
-pkg/procgen/ ← pkg/rendering/ ← pkg/audio/
-  ↓
-(no dependencies)
-```
-
-**Rules:**
+**Package Guidelines:**
 - Lower layers don't depend on upper layers
 - Use interfaces to break circular dependencies
 - Keep packages loosely coupled
+- See [Development Guide](DEVELOPMENT.md) for detailed package organization
 
 ---
 
 ## Performance Guidelines
 
-### Optimization Priorities
+**Optimization Priorities:**
+1. Correctness first (make it work)
+2. Clarity second (make it clear)
+3. Performance third (make it fast)
 
-1. **Correctness first**: Make it work
-2. **Clarity second**: Make it clear
-3. **Performance third**: Make it fast
+**Performance Targets:** 60+ FPS with 2000 entities, <500MB client memory, <2s generation time
 
-### Performance Targets
+**Before optimizing:** Profile using `go test -cpuprofile` and `go test -memprofile`
 
-- **FPS**: 60+ with 2000 entities
-- **Frame Time**: <16.67ms
-- **Memory**: <500MB client
-- **Generation**: <2s for world areas
-- **Network**: <100KB/s per player
-
-### Profiling
-
-Before optimizing, profile:
-
-```bash
-# CPU profiling
-go test -tags test -cpuprofile=cpu.prof -bench=.
-go tool pprof cpu.prof
-
-# Memory profiling
-go test -tags test -memprofile=mem.prof -bench=.
-go tool pprof mem.prof
-```
-
-### Optimization Tips
-
-1. **Avoid allocations in hot paths**
-2. **Use spatial partitioning for entity queries**
-3. **Cache frequently accessed data**
-4. **Benchmark before and after**
-5. **Don't micro-optimize without profiling**
+**For detailed profiling instructions, benchmarking, and optimization techniques, see [Development Guide](DEVELOPMENT.md).**
 
 ---
 
@@ -695,13 +595,13 @@ go tool pprof mem.prof
 - **Pull Requests**: Code contributions and reviews
 - **Discussions**: General questions and ideas
 
-### Resources
+### Additional Resources
 
-- [Getting Started Guide](GETTING_STARTED.md)
-- [User Manual](USER_MANUAL.md)
-- [API Reference](API_REFERENCE.md)
-- [Architecture Documentation](ARCHITECTURE.md)
-- [Development Guide](DEVELOPMENT.md)
+- [Development Guide](DEVELOPMENT.md) - Complete development environment setup and workflow
+- [API Reference](API_REFERENCE.md) - API documentation with code examples
+- [Architecture](ARCHITECTURE.md) - Architectural decisions and patterns
+- [Technical Specification](TECHNICAL_SPEC.md) - Complete technical details
+- [Roadmap](ROADMAP.md) - Development phases and progress
 
 ---
 

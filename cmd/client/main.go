@@ -217,7 +217,25 @@ func main() {
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
 
-	// GAP-001 REPAIR: Set death callback for loot drops
+	// Store player reference for death callback (will be set after player creation)
+	var playerEntity *engine.Entity
+	
+	// Store audio manager reference for callbacks (will be set after audio system creation)
+	var audioManager *engine.AudioManager
+
+	// GAP-004 REPAIR: Add objective tracker system for quest progress
+	objectiveTracker := engine.NewObjectiveTrackerSystem()
+
+	// Set quest completion callback to award rewards
+	objectiveTracker.SetQuestCompleteCallback(func(entity *engine.Entity, qst *quest.Quest) {
+		engine.AwardQuestRewards(entity, qst)
+		if *verbose {
+			log.Printf("Quest '%s' completed! Rewards: %d XP, %d gold, %d skill points",
+				qst.Name, qst.Reward.XP, qst.Reward.Gold, qst.Reward.SkillPoints)
+		}
+	})
+
+	// GAP-001 & GAP-004 REPAIR: Set death callback for loot drops and quest tracking
 	combatSystem.SetDeathCallback(func(enemy *engine.Entity) {
 		// Only drop loot from enemies, not the player
 		if enemy.HasComponent("input") {
@@ -233,11 +251,36 @@ func main() {
 
 		// Generate and spawn loot drop
 		engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, *seed, *genreID)
+
+		// Track enemy kill for quest objectives
+		if playerEntity != nil {
+			objectiveTracker.OnEnemyKilled(playerEntity, enemy)
+		}
+		
+		// GAP-010 REPAIR: Play death sound effect
+		if err := audioManager.PlaySFX("death", time.Now().UnixNano()); err != nil {
+			if *verbose {
+				log.Printf("Warning: Failed to play death SFX: %v", err)
+			}
+		}
 	})
 
 	aiSystem := engine.NewAISystem(game.World)
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
+
+	// GAP-010 REPAIR: Initialize audio system
+	audioManager = engine.NewAudioManager(44100, *seed) // 44.1kHz sample rate
+	audioManagerSystem := engine.NewAudioManagerSystem(audioManager)
+	
+	// Start playing exploration music
+	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
+		log.Printf("Warning: Failed to start background music: %v", err)
+	}
+	
+	if *verbose {
+		log.Println("Audio system initialized (music and SFX generators)")
+	}
 
 	// Add item pickup system to automatically collect nearby items
 	itemPickupSystem := engine.NewItemPickupSystem(game.World)
@@ -271,11 +314,13 @@ func main() {
 	// 6. AI - enemy decision-making
 	// 7. Progression - XP and leveling
 	// 8. Skill Progression - applies skill effects to stats
-	// 9. Item Pickup - collects nearby items
-	// 10. Spell Casting - executes spell effects
-	// 11. Mana Regen - regenerates mana
-	// 12. Inventory - item management
-	// 13. Tutorial/Help - UI overlays
+	// 9. Audio Manager - updates music based on game context
+	// 10. Objective Tracker - updates quest progress
+	// 11. Item Pickup - collects nearby items
+	// 12. Spell Casting - executes spell effects
+	// 13. Mana Regen - regenerates mana
+	// 14. Inventory - item management
+	// 15. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
@@ -290,6 +335,12 @@ func main() {
 	skillProgressionSystem := engine.NewSkillProgressionSystem()
 	game.World.AddSystem(skillProgressionSystem)
 
+	// Add audio manager system
+	game.World.AddSystem(audioManagerSystem)
+
+	// Add objective tracker system
+	game.World.AddSystem(objectiveTracker)
+
 	game.World.AddSystem(itemPickupSystem)
 	game.World.AddSystem(spellCastingSystem)
 	game.World.AddSystem(manaRegenSystem)
@@ -302,10 +353,8 @@ func main() {
 	game.HelpSystem = helpSystem
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
-	}
-
-	// Gap #3: Initialize performance monitoring (wraps World.Update)
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
+	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {
 		log.Println("Performance monitoring initialized")
@@ -385,6 +434,9 @@ func main() {
 	}
 
 	player := game.World.CreateEntity()
+
+	// Store player entity reference for death callback
+	playerEntity = player
 
 	// GAP #3 REPAIR: Calculate player spawn position from first room
 	var playerX, playerY float64

@@ -116,26 +116,29 @@ entity.AddComponent(&MyComponent{Value: 42, Data: "hello"})
 ```
 
 **Built-in Components:**
-- `PositionComponent` - X, Y coordinates
-- `VelocityComponent` - VX, VY velocity
-- `ColliderComponent` - Collision box (Width, Height, Solid, IsTrigger, Layer)
+- `PositionComponent` - X, Y coordinates (float64)
+- `VelocityComponent` - VX, VY velocity (float64)
+- `ColliderComponent` - Collision box (Width, Height, Solid, IsTrigger, Layer, OffsetX, OffsetY)
 - `BoundsComponent` - World boundaries (MinX, MinY, MaxX, MaxY, Wrap)
-- `SpriteComponent` - Visual representation (Width, Height, Color, Image)
-- `HealthComponent` - HP tracking (Current, Max)
-- `StatsComponent` - RPG stats (Attack, Defense, MagicPower, etc.)
-- `AttackComponent` - Combat abilities (Damage, DamageType, Range, Cooldown)
-- `StatusEffectComponent` - Temporary effects (EffectType, Duration, Magnitude)
-- `TeamComponent` - Team/faction ID
-- `InventoryComponent` - Item storage
-- `EquipmentComponent` - Equipped items
-- `AIComponent` - AI behavior state machine
-- `InputComponent` - Player input state
-- `NetworkComponent` - Network synchronization data
-- `ExperienceComponent` - XP and leveling
-- `QuestTrackerComponent` - Quest progress tracking
-- `ParticleEmitterComponent` - Particle effects
-- `CameraComponent` - Camera targeting
-- `HotbarComponent` - Quick-use item slots
+- `SpriteComponent` - Visual representation (Width, Height, Color, Image, Layer)
+- `HealthComponent` - HP tracking (Current, Max float64)
+- `StatsComponent` - RPG stats (Attack, Defense, MagicPower, MagicDefense, CritChance, CritDamage, Evasion, Resistances)
+- `AttackComponent` - Combat abilities (Damage, DamageType, Range, Cooldown, CooldownTimer)
+- `StatusEffectComponent` - Temporary effects (EffectType, Duration, Magnitude, TickInterval, NextTick)
+- `TeamComponent` - Team/faction ID (TeamID int)
+- `InventoryComponent` - Item storage (Items, MaxItems, MaxWeight, Gold)
+- `EquipmentComponent` - Equipped items (Slots map[EquipmentSlot]*Item, CachedStats, StatsDirty)
+- `AIComponent` - AI behavior state machine (State, Data, TargetEntity, LastUpdate, StateDuration)
+- `InputComponent` - Player input state (Up, Down, Left, Right, Attack, Use, various key states)
+- `NetworkComponent` - Network synchronization data (OwnerID, Priority, LastSync)
+- `ExperienceComponent` - XP and leveling (Level, CurrentXP, RequiredXP, SkillPoints, StatPoints)
+- `QuestTrackerComponent` - Quest progress tracking (ActiveQuests, MaxActiveQuests)
+- `ParticleEmitterComponent` - Particle effects (Particles, MaxParticles, EmissionRate, LastEmission)
+- `CameraComponent` - Camera targeting (TargetX, TargetY, Smoothing, Shake)
+- `ManaComponent` - Magic resource (Current, Max int, Regen float64)
+- `SpellSlotComponent` - Spell management (Slots [5]*Spell)
+- `VisualFeedbackComponent` - Visual effects (FlashTimer, FlashColor, TintTimer, TintColor)
+- `HotbarComponent` - Quick-use item slots (Slots, MaxSlots)
 
 #### System
 
@@ -165,25 +168,30 @@ world.AddSystem(&MySystem{})
 ```
 
 **Built-in Systems:**
-- `MovementSystem` - Applies velocity to position (requires `NewMovementSystem(maxSpeed float64)`)
-- `CollisionSystem` - Detects collisions (requires `NewCollisionSystem(tileSize float64)`)
-- `CombatSystem` - Damage calculation
-- `PlayerCombatSystem` - Player-specific combat handling
-- `AISystem` - Enemy behavior AI state machine
-- `ProgressionSystem` - XP and leveling
-- `SkillProgressionSystem` - Skill tree progression
-- `InventorySystem` - Item management
-- `InputSystem` - Player input handling (requires `NewInputSystem()`)
-- `RenderSystem` - Visual rendering (requires `NewRenderSystem(cameraSystem)`)
-- `TerrainRenderSystem` - Terrain/tile rendering
-- `CameraSystem` - Camera control (requires `NewCameraSystem(width, height)`)
-- `HUDSystem` - UI overlay (requires `NewHUDSystem(width, height)`)
-- `ParticleSystem` - Particle effects
-- `TutorialSystem` - Tutorial guidance
-- `MenuSystem` - Game menus and save/load
-- `ObjectiveTrackerSystem` - Quest objective tracking
-- `PlayerItemUseSystem` - Item usage handling
-- `PlayerSpellCastingSystem` - Spell casting for player
+- `MovementSystem` - Applies velocity to position (`NewMovementSystem(maxSpeed float64)`)
+- `CollisionSystem` - Detects collisions (`NewCollisionSystem(cellSize float64)`)
+- `CombatSystem` - Damage calculation (`NewCombatSystem(seed int64)`)
+- `PlayerCombatSystem` - Player-specific combat handling (`NewPlayerCombatSystem(combatSystem, world)`)
+- `AISystem` - Enemy behavior AI state machine (`NewAISystem(world *World)`)
+- `ProgressionSystem` - XP and leveling (`NewProgressionSystem(world *World)`)
+- `SkillProgressionSystem` - Skill tree progression (`NewSkillProgressionSystem()`)
+- `InventorySystem` - Item management (`NewInventorySystem(world *World)`)
+- `InputSystem` - Player input handling (`NewInputSystem()`)
+- `RenderSystem` - Visual rendering (`NewRenderSystem(cameraSystem *CameraSystem)`)
+- `TerrainRenderSystem` - Terrain/tile rendering (`NewTerrainRenderSystem(tileWidth, tileHeight int, genreID string, seed int64)`)
+- `CameraSystem` - Camera control (`NewCameraSystem(screenWidth, screenHeight int)`)
+- `HUDSystem` - UI overlay (`NewHUDSystem(screenWidth, screenHeight int)`)
+- `ParticleSystem` - Particle effects (`NewParticleSystem()`)
+- `ObjectiveTrackerSystem` - Quest objective tracking (`NewObjectiveTrackerSystem()`)
+- `ItemPickupSystem` - Automatic item collection (`NewItemPickupSystem(world *World)`)
+- `SpellCastingSystem` - Magic spell execution (`NewSpellCastingSystem(world *World)`)
+- `PlayerSpellCastingSystem` - Player spell casting (`NewPlayerSpellCastingSystem(spellCasting, world)`)
+- `PlayerItemUseSystem` - Player item usage (`NewPlayerItemUseSystem(inventory, world)`)
+- `ManaRegenSystem` - Mana regeneration (`&ManaRegenSystem{}`)
+- `TutorialSystem` - Tutorial guidance (`NewTutorialSystem()`)
+- `MenuSystem` - Game menus and save/load (`NewMenuSystem(world, screenWidth, screenHeight, saveDir)`)
+- `VisualFeedbackSystem` - Hit flashes and visual effects (`NewVisualFeedbackSystem()`)
+- `AudioManagerSystem` - Audio playback (`NewAudioManagerSystem(audioManager)`)
 
 #### Game
 
@@ -198,9 +206,8 @@ game.World.AddSystem(engine.NewMovementSystem(200.0))
 game.World.AddSystem(engine.NewInputSystem())
 
 // Set up a player entity
-player := engine.NewEntity(1)
+player := game.World.CreateEntity() // Use CreateEntity() for auto-ID assignment
 player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
-game.World.AddEntity(player)
 game.SetPlayerEntity(player)
 
 // Run game loop
@@ -228,20 +235,21 @@ if err != nil {
 
 ```go
 // Player entity
-player := engine.NewEntity(1)
+player := world.CreateEntity() // Use CreateEntity() for auto-ID assignment
 player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
 player.AddComponent(&engine.VelocityComponent{})
-player.AddComponent(&engine.SpriteComponent{Width: 32, Height: 32})
+// Note: SpriteComponent has different fields - use engine.NewSpriteComponent()
+playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
+player.AddComponent(playerSprite)
 player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
-player.AddComponent(&engine.StatsComponent{
-    Attack:  10,
-    Defense: 5,
-    Speed:   100,
-})
+// Use constructor for proper initialization
+playerStats := engine.NewStatsComponent()
+playerStats.Attack = 10
+playerStats.Defense = 5
+// Note: No Speed field in StatsComponent - speed is handled by MovementSystem
+player.AddComponent(playerStats)
 player.AddComponent(&engine.InputComponent{})
 player.AddComponent(engine.NewInventoryComponent(20, 100.0)) // 20 slots, 100kg capacity
-
-world.AddEntity(player)
 ```
 
 ### Querying Entities
@@ -372,20 +380,20 @@ result, err := gen.Generate(seed, params)
 if err != nil {
     log.Fatal(err)
 }
-entity := result.(*entity.Entity)
+generatedEntity := result.(*entity.Entity)
 
-fmt.Printf("Name: %s\n", entity.Name)
-fmt.Printf("Type: %s\n", entity.Type)
-fmt.Printf("Level: %d\n", entity.Level)
+fmt.Printf("Name: %s\n", generatedEntity.Name)
+fmt.Printf("Type: %s\n", generatedEntity.Type)
+fmt.Printf("Level: %d\n", generatedEntity.Stats.Level)
 fmt.Printf("HP: %d, Attack: %d, Defense: %d\n",
-    entity.Health, entity.Attack, entity.Defense)
+    generatedEntity.Stats.Health, generatedEntity.Stats.Damage, generatedEntity.Stats.Defense)
 
 // Generate multiple entities
 rng := rand.New(rand.NewSource(seed))
 for i := 0; i < 20; i++ {
     result, _ := gen.Generate(rng.Int63(), params)
-    e := result.(*entity.Entity)
-    // ... use entity
+    generatedEntity := result.(*entity.Entity)
+    // ... use generatedEntity
 }
 ```
 
@@ -394,27 +402,37 @@ for i := 0; i < 20; i++ {
 **Package:** `github.com/opd-ai/venture/pkg/procgen/item`
 
 ```go
-gen := item.NewGenerator()
+gen := item.NewItemGenerator()
 
-// Generate random item
+// Generate random items (returns []*item.Item)
 result, err := gen.Generate(seed, params)
-item := result.(*item.Item)
+items := result.([]*item.Item)
+generatedItem := items[0] // First item
 
-fmt.Printf("%s (%s)\n", item.Name, item.Rarity)
-fmt.Printf("Type: %s\n", item.Type)
-fmt.Printf("Value: %d gold\n", item.Value)
+fmt.Printf("%s (%s)\n", generatedItem.Name, generatedItem.Rarity)
+fmt.Printf("Type: %s\n", generatedItem.Type)
+fmt.Printf("Value: %d gold\n", generatedItem.Stats.Value)
 
-// Stats
-for stat, value := range item.Stats {
-    fmt.Printf("  +%d %s\n", value, stat)
+// Display stats
+if generatedItem.Stats.Damage > 0 {
+    fmt.Printf("  +%d Damage\n", generatedItem.Stats.Damage)
+}
+if generatedItem.Stats.Defense > 0 {
+    fmt.Printf("  +%d Defense\n", generatedItem.Stats.Defense)
+}
+if generatedItem.Stats.AttackSpeed > 0 {
+    fmt.Printf("  %.1fx Attack Speed\n", generatedItem.Stats.AttackSpeed)
 }
 
 // Generate specific type
+// Generate specific type
 params.Custom = map[string]interface{}{
     "type": "weapon",
+    "count": 1,
 }
 result, _ = gen.Generate(seed, params)
-weapon := result.(*item.Item)
+weapons := result.([]*item.Item)
+weapon := weapons[0]
 ```
 
 ### Magic Generation

@@ -107,8 +107,8 @@ Start a dedicated server:
 # Adjust screen size
 ./venture-client -width 1280 -height 720
 
-# Set difficulty (0.0-1.0)
-./venture-client -difficulty 0.5
+# Enable verbose logging
+./venture-client -verbose
 ```
 
 **For complete customization options and advanced settings, see [User Manual](USER_MANUAL.md).**
@@ -145,8 +145,8 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-difficulty`, `-server`
-**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-verbose`, `-multiplayer`, `-server`
+**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`
 
 **For complete command-line options and configuration details, see [User Manual](USER_MANUAL.md).**
 

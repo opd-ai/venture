@@ -1,0 +1,76 @@
+# Makefile for Venture mobile builds
+
+.PHONY: help mobile-deps android-aar android-apk android-apk-release android-aab android-install ios-xcframework ios-simulator ios-device ios-ipa ios-install clean-mobile
+
+help:
+	@echo "Venture Mobile Build Commands:"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make mobile-deps          - Install mobile build dependencies"
+	@echo ""
+	@echo "Android:"
+	@echo "  make android-aar          - Build Android AAR library"
+	@echo "  make android-apk          - Build debug APK"
+	@echo "  make android-apk-release  - Build release APK (requires signing)"
+	@echo "  make android-aab          - Build Android App Bundle"
+	@echo "  make android-install      - Build and install debug APK on device"
+	@echo ""
+	@echo "iOS (requires macOS):"
+	@echo "  make ios-xcframework      - Build iOS XCFramework"
+	@echo "  make ios-simulator        - Build for iOS Simulator"
+	@echo "  make ios-device           - Build for iOS device"
+	@echo "  make ios-ipa              - Build and export IPA"
+	@echo "  make ios-install          - Build and install on connected device"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make clean-mobile         - Clean mobile build artifacts"
+
+# Install mobile build dependencies
+mobile-deps:
+	@echo "Installing ebitenmobile..."
+	go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+	@echo "Mobile dependencies installed"
+
+# Android targets
+android-aar:
+	./scripts/build-android.sh aar
+
+android-apk:
+	./scripts/build-android.sh apk
+
+android-apk-release:
+	./scripts/build-android.sh apk-release
+
+android-aab:
+	./scripts/build-android.sh aab
+
+android-install:
+	./scripts/build-android.sh install
+
+# iOS targets
+ios-xcframework:
+	./scripts/build-ios.sh xcframework
+
+ios-simulator:
+	./scripts/build-ios.sh simulator
+
+ios-device:
+	./scripts/build-ios.sh device
+
+ios-ipa:
+	./scripts/build-ios.sh ipa
+
+ios-install:
+	./scripts/build-ios.sh install
+
+# Cleanup
+clean-mobile:
+	@echo "Cleaning mobile build artifacts..."
+	rm -rf build/android/libs/*.aar
+	rm -rf build/android/app/build
+	rm -rf build/ios/Mobile.xcframework
+	rm -rf build/ios/DerivedData
+	rm -rf build/ios/*.xcarchive
+	rm -rf dist/android
+	rm -rf dist/ios
+	@echo "Mobile artifacts cleaned"

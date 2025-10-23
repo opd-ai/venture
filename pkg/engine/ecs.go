@@ -169,3 +169,8 @@ func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 	}
 	return result
 }
+
+// GetSystems returns all registered systems.
+func (w *World) GetSystems() []System {
+	return w.systems
+}

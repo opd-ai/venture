@@ -1,0 +1,71 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.application'
+
+android {
+    compileSdk 34
+    
+    defaultConfig {
+        applicationId "com.venture.game"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+        
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+        }
+    }
+    
+    signingConfigs {
+        release {
+            // Set via environment variables or gradle.properties:
+            // VENTURE_KEYSTORE_FILE, VENTURE_KEYSTORE_PASSWORD,
+            // VENTURE_KEY_ALIAS, VENTURE_KEY_PASSWORD
+            if (project.hasProperty('VENTURE_KEYSTORE_FILE')) {
+                storeFile file(VENTURE_KEYSTORE_FILE)
+                storePassword VENTURE_KEYSTORE_PASSWORD
+                keyAlias VENTURE_KEY_ALIAS
+                keyPassword VENTURE_KEY_PASSWORD
+            }
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    
+    namespace 'com.venture.game'
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.aar'])
+}

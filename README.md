@@ -8,6 +8,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 **Key Features:**
 - 🎮 Real-time action-RPG combat and exploration
+- 📱 **Native mobile support** - iOS and Android with touch-optimized controls
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
 - 🎨 Runtime-generated graphics using procedural techniques
 - 🎵 Procedural audio synthesis for music and sound effects
@@ -281,6 +282,14 @@ go build -o venture-client ./cmd/client
 
 # Build the server
 go build -o venture-server ./cmd/server
+
+# Build for mobile (requires ebitenmobile)
+# Android APK:
+make android-apk
+
+# iOS (macOS only):
+make ios-simulator
+# See docs/MOBILE_BUILD.md for detailed mobile build instructions
 
 # Build the terrain test tool (no graphics dependencies)
 go build -o terraintest ./cmd/terraintest

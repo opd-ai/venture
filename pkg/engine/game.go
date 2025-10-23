@@ -146,6 +146,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Render UI overlays (drawn last so they're on top)
 	g.InventoryUI.Draw(screen)
 	g.QuestUI.Draw(screen)
+
+	// Render virtual controls (mobile only, drawn last to be on top of everything)
+	for _, system := range g.World.GetSystems() {
+		if inputSys, ok := system.(*InputSystem); ok {
+			inputSys.DrawVirtualControls(screen)
+			break
+		}
+	}
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.

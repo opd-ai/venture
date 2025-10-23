@@ -2,13 +2,14 @@
 // +build !test
 
 // Package engine provides player input handling.
-// This file implements InputSystem which processes keyboard and mouse input
+// This file implements InputSystem which processes keyboard, mouse, and touch input
 // for player-controlled entities and game controls.
 package engine
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 )
 
 // InputComponent stores the current input state for an entity.
@@ -32,7 +33,7 @@ func (i *InputComponent) Type() string {
 	return "input"
 }
 
-// InputSystem processes keyboard and mouse input and updates input components.
+// InputSystem processes keyboard, mouse, and touch input and updates input components.
 type InputSystem struct {
 	// Movement speed multiplier
 	MoveSpeed float64
@@ -64,6 +65,12 @@ type InputSystem struct {
 	helpSystem     *HelpSystem
 	tutorialSystem *TutorialSystem
 	menuSystem     *MenuSystem
+
+	// Mobile input support
+	touchHandler    *mobile.TouchInputHandler
+	virtualControls *mobile.VirtualControlsLayout
+	mobileEnabled   bool
+	useTouchInput   bool // Auto-detected or manually set
 
 	// Callbacks for UI and save/load operations
 	onQuickSave     func() error
@@ -104,11 +111,50 @@ func NewInputSystem() *InputSystem {
 		KeyQuickSave:    ebiten.KeyF5,
 		KeyQuickLoad:    ebiten.KeyF9,
 		KeyCycleTargets: ebiten.KeyTab,
+
+		// Mobile input
+		touchHandler:  mobile.NewTouchInputHandler(),
+		mobileEnabled: mobile.IsMobilePlatform(),
+		useTouchInput: mobile.IsMobilePlatform(),
 	}
+}
+
+// InitializeVirtualControls sets up virtual controls for mobile platforms.
+// Should be called after screen size is known.
+func (s *InputSystem) InitializeVirtualControls(screenWidth, screenHeight int) {
+	if s.mobileEnabled {
+		s.virtualControls = mobile.NewVirtualControlsLayout(screenWidth, screenHeight)
+	}
+}
+
+// SetMobileEnabled manually enables or disables mobile input support.
+func (s *InputSystem) SetMobileEnabled(enabled bool) {
+	s.mobileEnabled = enabled
+	s.useTouchInput = enabled
+}
+
+// IsMobileEnabled returns true if mobile input support is active.
+func (s *InputSystem) IsMobileEnabled() bool {
+	return s.mobileEnabled
 }
 
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
+	// Update mobile touch input
+	if s.mobileEnabled && s.touchHandler != nil {
+		s.touchHandler.Update()
+
+		// Update virtual controls
+		if s.virtualControls != nil {
+			s.virtualControls.Update()
+
+			// Handle menu button on virtual controls
+			if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
+				s.onMenuToggle()
+			}
+		}
+	}
+
 	// Handle global keys first (help menu, save/load, etc.)
 	// ESC key handling - context-aware priority: tutorial > help > pause menu
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
@@ -215,38 +261,78 @@ func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaT
 	input.ActionPressed = false
 	input.UseItemPressed = false
 
-	// Process keyboard movement
-	if ebiten.IsKeyPressed(s.KeyUp) {
-		input.MoveY = -1.0
-	}
-	if ebiten.IsKeyPressed(s.KeyDown) {
-		input.MoveY = 1.0
-	}
-	if ebiten.IsKeyPressed(s.KeyLeft) {
-		input.MoveX = -1.0
-	}
-	if ebiten.IsKeyPressed(s.KeyRight) {
-		input.MoveX = 1.0
+	// Auto-detect input method: if touch input is detected, switch to touch mode
+	if s.mobileEnabled && len(ebiten.TouchIDs()) > 0 {
+		s.useTouchInput = true
+	} else if !s.mobileEnabled && len(ebiten.TouchIDs()) == 0 {
+		// Allow falling back to keyboard if no touches (e.g., tablet with keyboard)
+		s.useTouchInput = false
 	}
 
-	// Normalize diagonal movement
-	if input.MoveX != 0 && input.MoveY != 0 {
-		// Divide by sqrt(2) to maintain constant speed in all directions
-		input.MoveX *= 0.707
-		input.MoveY *= 0.707
-	}
+	// Process touch input (priority on mobile)
+	if s.useTouchInput && s.virtualControls != nil {
+		// Get movement from virtual D-pad
+		moveX, moveY := s.virtualControls.GetMovementInput()
+		input.MoveX = moveX
+		input.MoveY = moveY
 
-	// Process action keys
-	if inpututil.IsKeyJustPressed(s.KeyAction) {
-		input.ActionPressed = true
-	}
-	if inpututil.IsKeyJustPressed(s.KeyUseItem) {
-		input.UseItemPressed = true
-	}
+		// Get action button presses
+		if s.virtualControls.IsActionPressed() {
+			input.ActionPressed = true
+		}
+		if s.virtualControls.IsSecondaryPressed() {
+			input.UseItemPressed = true
+		}
 
-	// Process mouse input
-	input.MouseX, input.MouseY = ebiten.CursorPosition()
-	input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+		// Use first touch outside controls as "mouse" position
+		if s.touchHandler != nil {
+			touches := s.touchHandler.GetActiveTouches()
+			for _, touch := range touches {
+				// Check if touch is outside virtual controls
+				// (simple heuristic: use center-screen touches)
+				screenW, _ := ebiten.WindowSize()
+				if touch.X > 200 && touch.X < screenW-200 {
+					input.MouseX = touch.X
+					input.MouseY = touch.Y
+					input.MousePressed = true
+					break
+				}
+			}
+		}
+	} else {
+		// Process keyboard movement (desktop mode)
+		if ebiten.IsKeyPressed(s.KeyUp) {
+			input.MoveY = -1.0
+		}
+		if ebiten.IsKeyPressed(s.KeyDown) {
+			input.MoveY = 1.0
+		}
+		if ebiten.IsKeyPressed(s.KeyLeft) {
+			input.MoveX = -1.0
+		}
+		if ebiten.IsKeyPressed(s.KeyRight) {
+			input.MoveX = 1.0
+		}
+
+		// Normalize diagonal movement
+		if input.MoveX != 0 && input.MoveY != 0 {
+			// Divide by sqrt(2) to maintain constant speed in all directions
+			input.MoveX *= 0.707
+			input.MoveY *= 0.707
+		}
+
+		// Process action keys
+		if inpututil.IsKeyJustPressed(s.KeyAction) {
+			input.ActionPressed = true
+		}
+		if inpututil.IsKeyJustPressed(s.KeyUseItem) {
+			input.UseItemPressed = true
+		}
+
+		// Process mouse input
+		input.MouseX, input.MouseY = ebiten.CursorPosition()
+		input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	}
 
 	// Apply movement to velocity component if it exists
 	if velComp, ok := entity.GetComponent("velocity"); ok {
@@ -326,4 +412,24 @@ func (s *InputSystem) SetMenuToggleCallback(callback func()) {
 // Deprecated: Use SetMenuToggleCallback instead for better decoupling.
 func (s *InputSystem) SetMenuSystem(menuSystem *MenuSystem) {
 	s.menuSystem = menuSystem
+}
+
+// DrawVirtualControls renders virtual controls on screen (mobile only).
+// Should be called during the game's Draw phase.
+func (s *InputSystem) DrawVirtualControls(screen *ebiten.Image) {
+	if s.mobileEnabled && s.virtualControls != nil {
+		s.virtualControls.Draw(screen)
+	}
+}
+
+// GetTouchHandler returns the touch input handler for advanced touch processing.
+func (s *InputSystem) GetTouchHandler() *mobile.TouchInputHandler {
+	return s.touchHandler
+}
+
+// SetVirtualControlsVisible controls visibility of virtual controls.
+func (s *InputSystem) SetVirtualControlsVisible(visible bool) {
+	if s.virtualControls != nil {
+		s.virtualControls.SetVisible(visible)
+	}
 }

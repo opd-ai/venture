@@ -34,6 +34,7 @@ type InventoryUI struct {
 	// Dragging
 	dragging     bool
 	draggedIndex int
+	dragPreview  *ebiten.Image // Preview image for dragged item
 
 	// System reference for item actions
 	inventorySystem *InventorySystem
@@ -133,10 +134,16 @@ func (ui *InventoryUI) Update() {
 			// Handle click
 			if mousePressed {
 				if slotIndex < len(inventory.Items) {
-					// Start dragging
-					ui.dragging = true
-					ui.draggedIndex = slotIndex
-					ui.selectedSlot = slotIndex
+					item := inventory.Items[slotIndex]
+					if item != nil {
+						// Start dragging
+						ui.dragging = true
+						ui.draggedIndex = slotIndex
+						ui.selectedSlot = slotIndex
+
+						// Generate drag preview
+						ui.dragPreview = ui.generateItemPreview(item)
+					}
 				}
 			}
 		} else {
@@ -149,6 +156,9 @@ func (ui *InventoryUI) Update() {
 	// Handle drag release
 	if mouseReleased && ui.dragging {
 		if ui.hoveredSlot >= 0 && ui.hoveredSlot != ui.draggedIndex {
+			// Check if hovering over equipment slot (future enhancement)
+			// For now, only handle inventory-to-inventory swaps
+
 			// Swap items (simple implementation)
 			// In full implementation, would use InventorySystem methods
 			if ui.hoveredSlot < len(inventory.Items) && ui.draggedIndex < len(inventory.Items) {
@@ -158,6 +168,7 @@ func (ui *InventoryUI) Update() {
 		}
 		ui.dragging = false
 		ui.draggedIndex = -1
+		ui.dragPreview = nil // Clear preview
 	}
 
 	// Handle keyboard shortcuts
@@ -336,6 +347,17 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 	// Draw controls hint
 	controlsY := windowY + windowHeight - 20
 	ebitenutil.DebugPrintAt(screen, "I: Close | E: Use/Equip | D: Drop | Click+Drag: Move", windowX+10, controlsY)
+
+	// Draw drag preview (if dragging)
+	if ui.dragging && ui.dragPreview != nil {
+		mouseX, mouseY := ebiten.CursorPosition()
+		previewOpts := &ebiten.DrawImageOptions{}
+		// Center preview on cursor
+		previewOpts.GeoM.Translate(float64(mouseX-ui.slotSize/2), float64(mouseY-ui.slotSize/2))
+		// Make slightly transparent to show it's being dragged
+		previewOpts.ColorScale.ScaleAlpha(0.7)
+		screen.DrawImage(ui.dragPreview, previewOpts)
+	}
 }
 
 func min(a, b int) int {
@@ -343,4 +365,46 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// generateItemPreview creates a visual preview image for an item being dragged.
+// This provides better visual feedback during drag-and-drop operations.
+func (ui *InventoryUI) generateItemPreview(item interface{}) *ebiten.Image {
+	// Create preview image with same size as slot
+	size := ui.slotSize - 2
+	preview := ebiten.NewImage(size, size)
+
+	// Determine item color based on rarity/type
+	// For now, use a simple color scheme
+	itemColor := color.RGBA{120, 120, 180, 255} // Default blue-ish
+
+	// Fill with item color
+	preview.Fill(itemColor)
+
+	// Draw border
+	borderColor := color.RGBA{200, 200, 220, 255}
+	// Top border
+	topBorder := ebiten.NewImage(size, 2)
+	topBorder.Fill(borderColor)
+	preview.DrawImage(topBorder, nil)
+
+	// Bottom border
+	bottomOpts := &ebiten.DrawImageOptions{}
+	bottomOpts.GeoM.Translate(0, float64(size-2))
+	preview.DrawImage(topBorder, bottomOpts)
+
+	// Left border
+	leftBorder := ebiten.NewImage(2, size)
+	leftBorder.Fill(borderColor)
+	preview.DrawImage(leftBorder, nil)
+
+	// Right border
+	rightOpts := &ebiten.DrawImageOptions{}
+	rightOpts.GeoM.Translate(float64(size-2), 0)
+	preview.DrawImage(leftBorder, rightOpts)
+
+	// TODO: In future enhancement, could draw actual item icon/sprite here
+	// For now, the colored square with border provides clear visual feedback
+
+	return preview
 }

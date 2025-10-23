@@ -17,6 +17,12 @@ type CombatSystem struct {
 	// Camera reference for screen shake feedback (GAP-012)
 	camera *CameraSystem
 
+	// GAP-016 REPAIR: Particle system for hit effects
+	particleSystem *ParticleSystem
+	world          *World
+	seed           int64
+	genreID        string
+
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
 
@@ -27,13 +33,21 @@ type CombatSystem struct {
 // NewCombatSystem creates a new combat system with a given random seed.
 func NewCombatSystem(seed int64) *CombatSystem {
 	return &CombatSystem{
-		rng: rand.New(rand.NewSource(seed)),
+		rng:  rand.New(rand.NewSource(seed)),
+		seed: seed,
 	}
 }
 
 // SetCamera sets the camera reference for screen shake feedback (GAP-012).
 func (s *CombatSystem) SetCamera(camera *CameraSystem) {
 	s.camera = camera
+}
+
+// GAP-016 REPAIR: SetParticleSystem sets the particle system reference for hit effects.
+func (s *CombatSystem) SetParticleSystem(ps *ParticleSystem, world *World, genreID string) {
+	s.particleSystem = ps
+	s.world = world
+	s.genreID = genreID
 }
 
 // Update implements the System interface.
@@ -190,6 +204,16 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Apply damage
 	health.TakeDamage(finalDamage)
+
+	// GAP-016 REPAIR: Spawn hit particles at target position
+	if s.particleSystem != nil && s.world != nil {
+		if posComp, ok := target.GetComponent("position"); ok {
+			pos := posComp.(*PositionComponent)
+			// Use timestamp for particle seed variation
+			particleSeed := s.seed + int64(pos.X*1000) + int64(pos.Y*1000)
+			s.particleSystem.SpawnHitSparks(s.world, pos.X, pos.Y, particleSeed, s.genreID)
+		}
+	}
 
 	// GAP-012 REPAIR: Trigger hit flash on damage
 	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {

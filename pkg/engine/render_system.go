@@ -97,6 +97,9 @@ func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
 		r.drawEntity(entity)
 	}
 
+	// GAP-016 REPAIR: Draw particle effects
+	r.drawParticles(entities)
+
 	// Draw debug overlays
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
@@ -250,6 +253,50 @@ func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWid
 	borderColor := color.RGBA{200, 200, 200, 255}
 	vector.StrokeRect(r.screen, float32(barX), float32(barY),
 		float32(barWidth), float32(barHeight), 1, borderColor, false)
+}
+
+// GAP-016 REPAIR: drawParticles renders all particle effects to the screen.
+func (r *RenderSystem) drawParticles(entities []*Entity) {
+	for _, entity := range entities {
+		comp, ok := entity.GetComponent("particle_emitter")
+		if !ok {
+			continue
+		}
+
+		emitter := comp.(*ParticleEmitterComponent)
+
+		// Render each particle system
+		for _, system := range emitter.Systems {
+			for _, particle := range system.GetAliveParticles() {
+				// Convert world coordinates to screen coordinates
+				screenX, screenY := r.cameraSystem.WorldToScreen(particle.X, particle.Y)
+
+				// Calculate alpha based on particle life (fade out)
+				alpha := particle.Life
+				if alpha < 0 {
+					alpha = 0
+				}
+				if alpha > 1 {
+					alpha = 1
+				}
+
+				// Extract color with alpha applied
+				pr, pg, pb, _ := particle.Color.RGBA()
+				particleColor := color.RGBA{
+					R: uint8(pr >> 8),
+					G: uint8(pg >> 8),
+					B: uint8(pb >> 8),
+					A: uint8(float64(255) * alpha),
+				}
+
+				// Draw particle as a small filled circle
+				vector.DrawFilledCircle(r.screen,
+					float32(screenX), float32(screenY),
+					float32(particle.Size),
+					particleColor, false)
+			}
+		}
+	}
 }
 
 // drawRect draws a filled rectangle at the given screen position.

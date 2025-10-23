@@ -217,6 +217,9 @@ func main() {
 	collisionSystem := &engine.CollisionSystem{}
 	combatSystem := engine.NewCombatSystem(*seed)
 
+	// GAP-016 REPAIR: Initialize particle system for visual effects
+	particleSystem := engine.NewParticleSystem()
+
 	// Store player reference for death callback (will be set after player creation)
 	var playerEntity *engine.Entity
 
@@ -352,6 +355,9 @@ func main() {
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
 
+	// GAP-016 REPAIR: Add particle system for rendering effects
+	game.World.AddSystem(particleSystem)
+
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
 	game.HelpSystem = helpSystem
@@ -359,8 +365,11 @@ func main() {
 	// GAP-012 REPAIR: Set camera reference on combat system for screen shake
 	combatSystem.SetCamera(game.CameraSystem)
 
+	// GAP-016 REPAIR: Set particle system reference on combat system for hit effects
+	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
+
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help, Particles")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {

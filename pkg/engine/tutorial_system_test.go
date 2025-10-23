@@ -168,6 +168,12 @@ func (ts *TutorialSystem) Reset() {
 	}
 }
 
+// ShowNotification displays a notification message for the specified duration.
+func (ts *TutorialSystem) ShowNotification(msg string, duration float64) {
+	ts.NotificationMsg = msg
+	ts.NotificationTTL = duration
+}
+
 func splitWords(str string) []string {
 	var words []string
 	currentWord := ""

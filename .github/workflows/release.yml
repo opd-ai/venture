@@ -137,6 +137,7 @@ jobs:
           fi
 
       - name: Create release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_type.outputs.tag }}
@@ -146,6 +147,166 @@ jobs:
           files: |
             build/*.tar.gz
             build/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    name: Build Android
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install ebitenmobile
+        run: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "build-tools;34.0.0"
+          sdkmanager "platforms;android-34"
+          sdkmanager "ndk;26.1.10909125"
+
+      - name: Initialize ebitenmobile
+        run: ebitenmobile init -javac /usr/bin/javac
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Determine release tag
+        id: release_info
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Android AAR
+        run: |
+          mkdir -p build/android
+          ebitenmobile bind -target android -javac /usr/bin/javac -o build/android/venture.aar ./cmd/mobile
+
+      - name: Build Android APK
+        run: |
+          cd build/android
+          cat > build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.venture.game'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.venture.game"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "${{ steps.release_info.outputs.tag }}"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+
+          repositories {
+              google()
+              mavenCentral()
+          }
+
+          dependencies {
+              implementation files('venture.aar')
+          }
+          EOF
+
+          mkdir -p src/main/res/values
+          cat > src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Venture</string>
+          </resources>
+          EOF
+
+          cp ../../build/android/AndroidManifest.xml src/main/
+          gradle assembleRelease
+
+      - name: Upload APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          files: |
+            build/android/venture.aar
+            build/android/build/outputs/apk/release/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-ios:
+    name: Build iOS
+    needs: release
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Install ebitenmobile
+        run: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+
+      - name: Initialize ebitenmobile
+        run: ebitenmobile init
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Determine release tag
+        id: release_info
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build iOS XCFramework
+        run: |
+          mkdir -p build/ios
+          ebitenmobile bind -target ios -o build/ios/Venture.xcframework ./cmd/mobile
+
+      - name: Create iOS Framework Archive
+        run: |
+          cd build/ios
+          zip -r Venture-ios-${{ steps.release_info.outputs.tag }}.zip Venture.xcframework
+
+      - name: Upload iOS Framework to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          files: build/ios/Venture-ios-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

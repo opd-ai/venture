@@ -479,3 +479,8 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
         entity.Name = nameTemplates[nameIndex]
         
         // Generate
+6. Verify coverage: `go test -tags test -cover ./pkg/procgen/entity` (expect 97%+)
+7. Build and test client: `go build ./cmd/client`
+8. Build and test server: `go build ./cmd/server`
+9. Run multiplayer test: spawn 2 clients with same seed, verify identical entities
+10. Monitor for desynchronization issues in production multiplayer sessions

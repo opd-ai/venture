@@ -16,11 +16,11 @@ import (
 // This system converts terrain data into physical collision entities that
 // can interact with the physics system.
 type TerrainCollisionSystem struct {
-	world       *World
-	terrain     *terrain.Terrain
-	tileWidth   int
-	tileHeight  int
-	initialized bool
+	world        *World
+	terrain      *terrain.Terrain
+	tileWidth    int
+	tileHeight   int
+	initialized  bool
 	wallEntities []*Entity // Track created wall entities for cleanup
 }
 
@@ -64,7 +64,7 @@ func (t *TerrainCollisionSystem) initializeWallColliders() error {
 	for y := 0; y < t.terrain.Height; y++ {
 		for x := 0; x < t.terrain.Width; x++ {
 			tileType := t.terrain.GetTile(x, y)
-			
+
 			// Create collision entity for walls only
 			if tileType == terrain.TileWall {
 				err := t.createWallCollider(x, y)
@@ -101,8 +101,8 @@ func (t *TerrainCollisionSystem) createWallCollider(tileX, tileY int) error {
 		Height:    float64(t.tileHeight),
 		Solid:     true,
 		IsTrigger: false,
-		Layer:     0, // Environment layer (collides with all entities)
-		OffsetX:   -float64(t.tileWidth) / 2,  // Center the collider
+		Layer:     0,                         // Environment layer (collides with all entities)
+		OffsetX:   -float64(t.tileWidth) / 2, // Center the collider
 		OffsetY:   -float64(t.tileHeight) / 2,
 	})
 

@@ -438,7 +438,7 @@ func main() {
 	}
 
 	if *verbose {
-		log.Printf("Terrain collision system initialized with %d wall entities", 
+		log.Printf("Terrain collision system initialized with %d wall entities",
 			terrainCollisionSystem.GetWallEntityCount())
 	}
 

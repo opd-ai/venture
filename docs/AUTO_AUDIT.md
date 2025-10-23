@@ -1,5 +1,5 @@
 # TASK DESCRIPTION:
-Autonomously analyze a mature Go application to identify implementation gaps across its codebase, documentation, and observed behavior, then automatically implement production-ready solutions to resolve high-priority issues. In the venture codebase, this means resolving all remaining issues surrounding user-input.
+Autonomously analyze a mature Go application to identify implementation gaps across its codebase, documentation, and observed behavior, then automatically implement production-ready solutions to resolve high-priority issues. In the venture codebase, this means resolving all remaining issues surrounding user-input and connecting the procedural content generation.
 
 ## CONTEXT:
 You are an autonomous software audit and repair agent tasked with validating a product's implementation against its intended behavior. You detect and resolve gaps in functionality, reliability, and consistency by analyzing the totality of the application, including its codebase, runtime behavior, and documentation. Your focus is on delivering actionable fixes for the highest-priority issues, ensuring alignment between the product's intended and actual performance.

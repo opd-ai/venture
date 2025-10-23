@@ -13,23 +13,25 @@
 
 ### ✅ Completed Features (2/5)
 
-1. **Character Stats UI (C Key)** - Commit d7a3932
+1. **Character Stats UI (C Key)** - ✅ VERIFIED COMPLETE (Commit d7a3932)
    - Full 3-panel layout with stats, equipment, and attributes
    - 13 methods implemented with comprehensive test coverage
    - Real-time stat calculation with equipment bonuses
    - Resistance display with color coding
    - Integrated with Game loop and InputSystem
+   - File: pkg/engine/character_ui.go (589 lines)
 
-2. **Skills Tree UI (K Key)** - Commit ff4280d  
+2. **Skills Tree UI (K Key)** - ✅ VERIFIED COMPLETE (Commit ff4280d)
    - Visual skill tree with node rendering and connections
    - 15 methods implemented with complete component API
    - Purchase/refund functionality with prerequisite validation
    - Mouse hover tooltips and click interactions
    - SkillTreeComponent added for skill progression management
+   - File: pkg/engine/skills_ui.go (525 lines)
 
 ### 🚧 In Progress (1/5)
 
-3. **Map UI (M Key)** - Status: Starting
+3. **Map UI (M Key)** - Status: Implementing Now
    - Minimap and full-screen map visualization
    - Fog of war and explored tile tracking
    - 21 methods planned

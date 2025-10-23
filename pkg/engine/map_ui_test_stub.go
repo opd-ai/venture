@@ -11,18 +11,18 @@ import (
 
 // MapUI stub for testing
 type MapUI struct {
-	visible      bool
-	fullScreen   bool
-	world        *World
-	playerEntity *Entity
-	terrain      *terrain.Terrain
-	screenWidth  int
-	screenHeight int
-	fogOfWar     [][]bool
-	scale        float64
-	offsetX      float64
-	offsetY      float64
-	minimapSize  int
+	visible        bool
+	fullScreen     bool
+	world          *World
+	playerEntity   *Entity
+	terrain        *terrain.Terrain
+	screenWidth    int
+	screenHeight   int
+	fogOfWar       [][]bool
+	scale          float64
+	offsetX        float64
+	offsetY        float64
+	minimapSize    int
 	minimapPadding int
 	mapNeedsUpdate bool
 }

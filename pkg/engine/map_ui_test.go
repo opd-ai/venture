@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 // Package engine provides map UI testing.

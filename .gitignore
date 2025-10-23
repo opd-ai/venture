@@ -56,3 +56,4 @@ go.work.sum
 /*test*
 /build
 /dist
+/run.sh

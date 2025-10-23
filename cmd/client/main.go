@@ -220,6 +220,12 @@ func main() {
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
 
+	// GAP #2 REPAIR: Add player combat system to connect Space key to combat
+	playerCombatSystem := engine.NewPlayerCombatSystem(combatSystem, game.World)
+
+	// GAP #3 REPAIR: Add player item use system to connect E key to inventory
+	playerItemUseSystem := engine.NewPlayerItemUseSystem(inventorySystem, game.World)
+
 	// Add tutorial and help systems (Phase 8.6)
 	tutorialSystem := engine.NewTutorialSystem()
 	helpSystem := engine.NewHelpSystem()
@@ -229,7 +235,19 @@ func main() {
 	// Connect tutorial system to input system for ESC key skip handling
 	inputSystem.SetTutorialSystem(tutorialSystem)
 
+	// Add systems in correct order:
+	// 1. Input - captures player actions
+	// 2. Player Combat/Item Use - processes input flags
+	// 3. Movement - applies velocity to position
+	// 4. Collision - checks and resolves collisions
+	// 5. Combat - handles damage/status effects
+	// 6. AI - enemy decision-making
+	// 7. Progression - XP and leveling
+	// 8. Inventory - item management
+	// 9. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
+	game.World.AddSystem(playerCombatSystem)
+	game.World.AddSystem(playerItemUseSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
@@ -244,7 +262,7 @@ func main() {
 	game.HelpSystem = helpSystem
 
 	if *verbose {
-		log.Println("Systems initialized: Input, Movement, Collision, Combat, AI, Progression, Inventory")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, Movement, Collision, Combat, AI, Progression, Inventory, Tutorial, Help")
 	}
 
 	// Gap #3: Initialize performance monitoring (wraps World.Update)
@@ -301,6 +319,24 @@ func main() {
 
 	if *verbose {
 		log.Println("Terrain rendering system initialized")
+	}
+
+	// GAP #1 REPAIR: Spawn enemies in terrain rooms
+	if *verbose {
+		log.Println("Spawning enemies in dungeon rooms...")
+	}
+
+	enemyParams := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+	}
+
+	enemyCount, err := engine.SpawnEnemiesInTerrain(game.World, generatedTerrain, *seed, enemyParams)
+	if err != nil {
+		log.Printf("Warning: Failed to spawn enemies: %v", err)
+	} else if *verbose {
+		log.Printf("Spawned %d enemies across %d rooms", enemyCount, len(generatedTerrain.Rooms)-1)
 	}
 
 	// Create player entity

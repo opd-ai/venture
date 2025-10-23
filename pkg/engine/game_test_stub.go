@@ -8,10 +8,10 @@ package engine
 
 // Game represents the main game instance (test stub).
 type Game struct {
-	World          *World
-	ScreenWidth    int
-	ScreenHeight   int
-	Paused         bool
+	World        *World
+	ScreenWidth  int
+	ScreenHeight int
+	Paused       bool
 
 	// Rendering systems (stubs)
 	CameraSystem        *CameraSystem

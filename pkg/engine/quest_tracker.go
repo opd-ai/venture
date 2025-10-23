@@ -78,7 +78,7 @@ func (q *QuestTrackerComponent) AcceptQuest(qst *quest.Quest, startTime int64) b
 }
 
 // UpdateProgress updates the progress of a quest objective.
-func (q *QuestTrackerComponent) UpdateProgress(questID string, objectiveIndex int, progress int) {
+func (q *QuestTrackerComponent) UpdateProgress(questID string, objectiveIndex, progress int) {
 	for _, tracked := range q.ActiveQuests {
 		if tracked.Quest.ID == questID {
 			if objectiveIndex >= 0 && objectiveIndex < len(tracked.Quest.Objectives) {
@@ -90,7 +90,7 @@ func (q *QuestTrackerComponent) UpdateProgress(questID string, objectiveIndex in
 }
 
 // IncrementProgress increments the progress of a quest objective.
-func (q *QuestTrackerComponent) IncrementProgress(questID string, objectiveIndex int, amount int) {
+func (q *QuestTrackerComponent) IncrementProgress(questID string, objectiveIndex, amount int) {
 	for _, tracked := range q.ActiveQuests {
 		if tracked.Quest.ID == questID {
 			if objectiveIndex >= 0 && objectiveIndex < len(tracked.Quest.Objectives) {

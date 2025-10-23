@@ -153,8 +153,7 @@ func (ui *InventoryUI) Update() {
 			// In full implementation, would use InventorySystem methods
 			if ui.hoveredSlot < len(inventory.Items) && ui.draggedIndex < len(inventory.Items) {
 				// Swap
-				inventory.Items[ui.hoveredSlot], inventory.Items[ui.draggedIndex] =
-					inventory.Items[ui.draggedIndex], inventory.Items[ui.hoveredSlot]
+				inventory.Items[ui.hoveredSlot], inventory.Items[ui.draggedIndex] = inventory.Items[ui.draggedIndex], inventory.Items[ui.hoveredSlot]
 			}
 		}
 		ui.dragging = false

@@ -185,7 +185,7 @@ System Breakdown:
 			reportContent += fmt.Sprintf("  %s: %.2f%%\n", name, percent)
 		}
 
-		if err := os.WriteFile(*outputReport, []byte(reportContent), 0644); err != nil {
+		if err := os.WriteFile(*outputReport, []byte(reportContent), 0o644); err != nil {
 			log.Printf("Failed to write report: %v", err)
 		} else {
 			log.Printf("Performance report written to: %s", *outputReport)

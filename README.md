@@ -516,7 +516,7 @@ Try out the movement and collision systems:
 
 ```bash
 # Run the interactive example (requires -tags test)
-go run -tags test ./examples/movement_collision_demo.go
+go run -tags test ./examples/movement_collision_demo
 
 # Or build and run the CLI tool (requires display currently)
 ./movementtest -count 50 -duration 3.0 -verbose
@@ -536,7 +536,7 @@ Try out the combat system with damage calculation, status effects, and team mech
 
 ```bash
 # Run the interactive combat demo (requires -tags test)
-go run -tags test ./examples/combat_demo.go
+go run -tags test ./examples/combat_demo
 
 # Demonstrates:
 #   - Basic melee combat with stats

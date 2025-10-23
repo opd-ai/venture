@@ -3,6 +3,7 @@
 package engine
 
 import (
+	"fmt"
 	"image/color"
 	"math/rand"
 
@@ -169,16 +170,49 @@ func getItemColor(itm *item.Item) color.RGBA {
 	}
 }
 
-// ItemPickupSystem handles automatic item collection when players walk over items.
+// ItemPickupSystem handles automatic item pickup when player moves close to items.
 type ItemPickupSystem struct {
-	world *World
+	world        *World
+	pickupRadius float64 // How close player needs to be to auto-pickup
+	
+	// GAP-015 REPAIR: System references for feedback
+	audioManager   *AudioManager
+	tutorialSystem *TutorialSystem
 }
 
 // NewItemPickupSystem creates a new item pickup system.
 func NewItemPickupSystem(world *World) *ItemPickupSystem {
 	return &ItemPickupSystem{
-		world: world,
+		world:        world,
+		pickupRadius: 32.0, // Default pickup radius (one tile)
 	}
+}
+
+// GAP-015 REPAIR: Helper methods to get system references
+func (s *ItemPickupSystem) getAudioManager() *AudioManager {
+	if s.audioManager == nil {
+		// Lazy lookup from world systems
+		for _, sys := range s.world.GetSystems() {
+			if audioMgrSys, ok := sys.(*AudioManagerSystem); ok {
+				s.audioManager = audioMgrSys.audioManager
+				break
+			}
+		}
+	}
+	return s.audioManager
+}
+
+func (s *ItemPickupSystem) getTutorialSystem() *TutorialSystem {
+	if s.tutorialSystem == nil {
+		// Lazy lookup from world systems
+		for _, sys := range s.world.GetSystems() {
+			if tutSys, ok := sys.(*TutorialSystem); ok {
+				s.tutorialSystem = tutSys
+				break
+			}
+		}
+	}
+	return s.tutorialSystem
 }
 
 // Update checks for item-player collisions and handles pickup.
@@ -240,10 +274,24 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 					// Remove item entity from world
 					s.world.RemoveEntity(itemEntity.ID)
 
-					// TODO: Play pickup sound effect
-					// TODO: Show pickup notification UI
+					// GAP-015 REPAIR: Play pickup sound effect
+					if audioSys := s.getAudioManager(); audioSys != nil {
+						if err := audioSys.PlaySFX("pickup", int64(itemEntity.ID)); err != nil {
+							// Audio failure is non-critical, log and continue
+							_ = err
+						}
+					}
+					
+					// GAP-015 REPAIR: Show pickup notification
+					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+						notifText := fmt.Sprintf("Picked up: %s", itemData.Item.Name)
+						tutorialSys.ShowNotification(notifText, 2.0)
+					}
 				} else {
-					// TODO: Show "inventory full" message
+					// GAP-015 REPAIR: Show "inventory full" message
+					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+						tutorialSys.ShowNotification("Inventory full!", 2.0)
+					}
 				}
 			}
 		}

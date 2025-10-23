@@ -1,4 +1,22 @@
-# 🎉 Starter Content Complete!
+# 🎉**In-Game Actions**
+
+**Inventory Management (Press I to toggle):**
+- ✅ View 4 starting items:
+  - Rusty Great Hammer (weapon, 17 damage)
+  - Minor Health Potion x2 (consumables)
+  - Worn Knight's Cap (armor, 5 defense)
+- ✅ Click items to select
+- ✅ Press **E** to equip weapons/armor or use potions
+- ✅ Press **D** to drop unwanted items
+- ✅ Hover mouse for item tooltips
+- ✅ Press **I** again to close
+
+**Quest Tracking (Press J to toggle):**
+- ✅ View tutorial quest "Welcome to Venture"
+- ✅ See 3 objectives with progress bars
+- ✅ Track completion status
+- ✅ See rewards: 50 XP + 25 Gold
+- ✅ Press **J** again to closeComplete!
 
 ## What You Can Do Now
 

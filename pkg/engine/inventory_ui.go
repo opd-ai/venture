@@ -88,6 +88,12 @@ func (ui *InventoryUI) Hide() {
 
 // Update processes input for the inventory UI.
 func (ui *InventoryUI) Update() {
+	// Always check for toggle key, even when not visible
+	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
+		ui.Toggle()
+		return // Don't process other input on the same frame as toggle
+	}
+
 	if !ui.visible || ui.playerEntity == nil {
 		return
 	}

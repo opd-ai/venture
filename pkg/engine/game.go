@@ -35,6 +35,7 @@ type Game struct {
 	QuestUI     *QuestUI
 	CharacterUI *CharacterUI
 	SkillsUI    *SkillsUI
+	MapUI       *MapUI
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
@@ -53,6 +54,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 	questUI := NewQuestUI(world, screenWidth, screenHeight)
 	characterUI := NewCharacterUI(world, screenWidth, screenHeight)
 	skillsUI := NewSkillsUI(world, screenWidth, screenHeight)
+	mapUI := NewMapUI(world, screenWidth, screenHeight)
 
 	// Create menu system with save directory
 	menuSystem, err := NewMenuSystem(world, screenWidth, screenHeight, "./saves")
@@ -74,6 +76,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 		QuestUI:        questUI,
 		CharacterUI:    characterUI,
 		SkillsUI:       skillsUI,
+		MapUI:          mapUI,
 	}
 }
 
@@ -106,6 +109,7 @@ func (g *Game) Update() error {
 	g.QuestUI.Update()
 	g.CharacterUI.Update(deltaTime)
 	g.SkillsUI.Update(deltaTime)
+	g.MapUI.Update(deltaTime)
 
 	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
@@ -113,7 +117,7 @@ func (g *Game) Update() error {
 	}
 
 	// Update the world (unless UI is blocking input)
-	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() {
+	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() {
 		g.World.Update(deltaTime)
 	}
 
@@ -156,6 +160,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.QuestUI.Draw(screen)
 	g.CharacterUI.Draw(screen)
 	g.SkillsUI.Draw(screen)
+	g.MapUI.Draw(screen) // Map UI draws last to be on top of everything
 
 	// Render virtual controls (mobile only, drawn last to be on top of everything)
 	for _, system := range g.World.GetSystems() {
@@ -179,6 +184,7 @@ func (g *Game) SetPlayerEntity(entity *Entity) {
 	g.QuestUI.SetPlayerEntity(entity)
 	g.CharacterUI.SetPlayerEntity(entity)
 	g.SkillsUI.SetPlayerEntity(entity)
+	g.MapUI.SetPlayerEntity(entity)
 }
 
 // SetInventorySystem connects the inventory system to the inventory UI for item actions.
@@ -209,17 +215,17 @@ func (g *Game) SetupInputCallbacks(inputSystem *InputSystem) {
 		g.SkillsUI.Toggle()
 	})
 
+	// Connect map toggle
+	inputSystem.SetMapCallback(func() {
+		g.MapUI.ToggleFullScreen()
+	})
+
 	// Connect pause menu toggle (ESC key)
 	if g.MenuSystem != nil {
 		inputSystem.SetMenuToggleCallback(func() {
 			g.MenuSystem.Toggle()
 		})
 	}
-
-	// TODO: Connect other callbacks when character/skills/map UIs are implemented
-	// inputSystem.SetCharacterCallback(func() { ... })
-	// inputSystem.SetSkillsCallback(func() { ... })
-	// inputSystem.SetMapCallback(func() { ... })
 }
 
 // Run starts the game loop.

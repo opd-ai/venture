@@ -440,10 +440,11 @@ weapon := weapons[0]
 **Package:** `github.com/opd-ai/venture/pkg/procgen/magic`
 
 ```go
-gen := magic.NewGenerator()
+gen := magic.NewSpellGenerator()
 
 result, err := gen.Generate(seed, params)
-spell := result.(*magic.Spell)
+spells := result.([]*magic.Spell)
+spell := spells[0] // First spell
 
 fmt.Printf("Spell: %s\n", spell.Name)
 fmt.Printf("Type: %s\n", spell.Type)

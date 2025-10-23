@@ -54,3 +54,5 @@ go.work.sum
 /perftest*
 /*demo*
 /*test*
+/build
+/dist

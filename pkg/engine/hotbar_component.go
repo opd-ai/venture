@@ -10,12 +10,13 @@ import (
 // Slots are typically mapped to number keys 1-6 for instant use during combat.
 //
 // Usage:
-//   hotbar := engine.NewHotbarComponent()
-//   hotbar.SetSlot(0, myPotion) // Assign potion to slot 1 (key 1)
-//   if !hotbar.IsOnCooldown(0) {
-//       // Use item, trigger cooldown
-//       hotbar.TriggerCooldown(0)
-//   }
+//
+//	hotbar := engine.NewHotbarComponent()
+//	hotbar.SetSlot(0, myPotion) // Assign potion to slot 1 (key 1)
+//	if !hotbar.IsOnCooldown(0) {
+//	    // Use item, trigger cooldown
+//	    hotbar.TriggerCooldown(0)
+//	}
 type HotbarComponent struct {
 	Slots         [6]*item.Item // Item references (nil = empty slot)
 	Cooldowns     [6]float64    // Remaining cooldown per slot (seconds)
@@ -45,7 +46,7 @@ func (h *HotbarComponent) SetSlot(slotIndex int, itm *item.Item) bool {
 		return false
 	}
 	h.Slots[slotIndex] = itm
-	
+
 	// Set cooldown based on item type
 	if itm != nil && itm.Type == item.TypeConsumable {
 		h.MaxCooldowns[slotIndex] = 2.0 // 2s cooldown for consumables

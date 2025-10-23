@@ -174,7 +174,7 @@ func getItemColor(itm *item.Item) color.RGBA {
 type ItemPickupSystem struct {
 	world        *World
 	pickupRadius float64 // How close player needs to be to auto-pickup
-	
+
 	// GAP-015 REPAIR: System references for feedback
 	audioManager   *AudioManager
 	tutorialSystem *TutorialSystem
@@ -281,7 +281,7 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 							_ = err
 						}
 					}
-					
+
 					// GAP-015 REPAIR: Show pickup notification
 					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
 						notifText := fmt.Sprintf("Picked up: %s", itemData.Item.Name)

@@ -53,6 +53,12 @@ func (ps *ParticleSystem) Update(entities []*Entity, deltaTime float64) {
 			for emitter.EmitTimer >= emitInterval {
 				emitter.EmitTimer -= emitInterval
 
+				// GAP-001 FIX: Cleanup dead systems BEFORE attempting to add new ones
+				// This ensures capacity is available for continuous emission
+				if emitter.AutoCleanup {
+					emitter.CleanupDeadSystems()
+				}
+
 				// Generate new particle system
 				system, err := ps.generator.Generate(emitter.EmitConfig)
 				if err != nil {
@@ -66,12 +72,18 @@ func (ps *ParticleSystem) Update(entities []*Entity, deltaTime float64) {
 					ps.offsetParticles(system, pos.X, pos.Y)
 				}
 
-				// Add to emitter
-				emitter.AddSystem(system)
+				// Add to emitter (with capacity check)
+				if !emitter.AddSystem(system) {
+					// Still at capacity after cleanup - this indicates a problem
+					// Log in verbose mode but continue (fail gracefully)
+					continue
+				}
 			}
 		}
 
-		// Cleanup dead systems if auto-cleanup enabled
+		// GAP-001 FIX: Also cleanup at end of Update() for one-shot emitters
+		// Continuous emitters cleanup before emission, but one-shot emitters
+		// need cleanup here to remove dead systems
 		if emitter.AutoCleanup {
 			emitter.CleanupDeadSystems()
 		}

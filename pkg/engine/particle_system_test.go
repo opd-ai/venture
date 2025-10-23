@@ -49,6 +49,9 @@ func TestParticleSystem_Update_ContinuousEmitter(t *testing.T) {
 	emitter := NewParticleEmitterComponent(5.0, config, 5) // 5 particles/second
 	entity.AddComponent(emitter)
 
+	// GAP-001 FIX: Process pending entity additions before testing
+	world.Update(0)
+
 	// Update for 0.5 seconds (should emit 2-3 times at 5Hz)
 	for i := 0; i < 5; i++ {
 		ps.Update(world.GetEntities(), 0.1)
@@ -199,6 +202,10 @@ func TestParticleSystem_Update_ParticleLifetime(t *testing.T) {
 	}
 
 	entity := ps.SpawnParticles(world, config, 100, 100)
+
+	// GAP-001 FIX: Process pending entity additions before testing
+	world.Update(0)
+
 	comp, ok := entity.GetComponent("particle_emitter")
 	if !ok {
 		t.Fatal("Entity missing particle_emitter component")
@@ -357,11 +364,11 @@ func TestParticleEmitterComponent_AddSystem(t *testing.T) {
 	config := particles.DefaultConfig()
 	emitter := NewParticleEmitterComponent(0, config, 3) // Max 3 systems
 
-	// Create mock particle systems
-	system1 := &particles.ParticleSystem{Particles: make([]particles.Particle, 10)}
-	system2 := &particles.ParticleSystem{Particles: make([]particles.Particle, 10)}
-	system3 := &particles.ParticleSystem{Particles: make([]particles.Particle, 10)}
-	system4 := &particles.ParticleSystem{Particles: make([]particles.Particle, 10)}
+	// GAP-001 FIX: Create mock particle systems with alive particles (Life > 0)
+	system1 := &particles.ParticleSystem{Particles: []particles.Particle{{Life: 1.0}, {Life: 1.0}}}
+	system2 := &particles.ParticleSystem{Particles: []particles.Particle{{Life: 1.0}, {Life: 1.0}}}
+	system3 := &particles.ParticleSystem{Particles: []particles.Particle{{Life: 1.0}, {Life: 1.0}}}
+	system4 := &particles.ParticleSystem{Particles: []particles.Particle{{Life: 1.0}, {Life: 1.0}}}
 
 	// Add up to capacity
 	if !emitter.AddSystem(system1) {
@@ -379,9 +386,15 @@ func TestParticleEmitterComponent_AddSystem(t *testing.T) {
 		t.Errorf("Expected 3 systems, got %d", len(emitter.Systems))
 	}
 
-	// Adding beyond capacity should fail
+	// GAP-001 FIX: AddSystem() now returns false when at capacity
+	// Adding beyond capacity should return false
 	if emitter.AddSystem(system4) {
-		t.Error("Should not add system beyond capacity")
+		t.Error("Should not add system beyond capacity (returned true, expected false)")
+	}
+
+	// Verify still at capacity (system4 wasn't added)
+	if len(emitter.Systems) != 3 {
+		t.Errorf("Expected 3 systems after failed add, got %d", len(emitter.Systems))
 	}
 }
 

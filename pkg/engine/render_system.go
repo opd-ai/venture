@@ -124,8 +124,9 @@ func (e *EbitenImage) GetPixel(x, y int) color.Color {
 var _ SpriteProvider = (*EbitenSprite)(nil)
 var _ ImageProvider = (*EbitenImage)(nil)
 
-// RenderSystem handles rendering of entities to the screen.
-type RenderSystem struct {
+// EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
+// Implements RenderingSystem interface.
+type EbitenRenderSystem struct {
 	screen       *ebiten.Image
 	cameraSystem *CameraSystem
 
@@ -135,8 +136,8 @@ type RenderSystem struct {
 }
 
 // NewRenderSystem creates a new render system.
-func NewRenderSystem(cameraSystem *CameraSystem) *RenderSystem {
-	return &RenderSystem{
+func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
+	return &EbitenRenderSystem{
 		cameraSystem:  cameraSystem,
 		ShowColliders: false,
 		ShowGrid:      false,
@@ -144,21 +145,27 @@ func NewRenderSystem(cameraSystem *CameraSystem) *RenderSystem {
 }
 
 // SetScreen sets the render target.
-func (r *RenderSystem) SetScreen(screen *ebiten.Image) {
+func (r *EbitenRenderSystem) SetScreen(screen *ebiten.Image) {
 	r.screen = screen
 }
 
 // Update is called every frame but doesn't modify entities.
 // Actual rendering happens in Draw which is called by ebiten.
-func (r *RenderSystem) Update(entities []*Entity, deltaTime float64) {
+func (r *EbitenRenderSystem) Update(entities []*Entity, deltaTime float64) {
 	// RenderSystem doesn't need to update entity state
 	// Rendering is handled in the Draw call
 }
 
-// Draw renders all visible entities to the screen.
+// Draw renders all visible entities to the screen (implements RenderingSystem interface).
 // This should be called from the game's Draw method.
-func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
-	r.screen = screen
+// The screen parameter should be *ebiten.Image in production.
+func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
+	// Type assert to *ebiten.Image
+	ebitenScreen, ok := screen.(*ebiten.Image)
+	if !ok {
+		return // Invalid screen type
+	}
+	r.screen = ebitenScreen
 
 	// Note: Screen clearing is handled by terrain rendering system
 
@@ -180,7 +187,7 @@ func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
 }
 
 // drawEntity renders a single entity.
-func (r *RenderSystem) drawEntity(entity *Entity) {
+func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	// Get required components
 	posComp, hasPos := entity.GetComponent("position")
 	spriteComp, hasSprite := entity.GetComponent("sprite")
@@ -258,7 +265,7 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 
 // drawHealthBar renders a health bar above an entity if appropriate.
 // GAP-013 REPAIR: Shows health status for enemies (when damaged) and bosses (always).
-func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
+func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
 	// Only draw health bars for entities with health component
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
@@ -329,7 +336,7 @@ func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWid
 }
 
 // GAP-016 REPAIR: drawParticles renders all particle effects to the screen.
-func (r *RenderSystem) drawParticles(entities []*Entity) {
+func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("particle_emitter")
 		if !ok {
@@ -373,7 +380,7 @@ func (r *RenderSystem) drawParticles(entities []*Entity) {
 }
 
 // drawRect draws a filled rectangle at the given screen position.
-func (r *RenderSystem) drawRect(x, y, width, height float64, col color.Color) {
+func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Convert color
 	red, green, blue, alpha := col.RGBA()
 	clr := color.RGBA{
@@ -389,7 +396,7 @@ func (r *RenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 }
 
 // drawColliders draws collision bounds for debugging.
-func (r *RenderSystem) drawColliders(entities []*Entity) {
+func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 	debugColor := color.RGBA{0, 255, 0, 128} // Semi-transparent green
 
 	for _, entity := range entities {
@@ -419,7 +426,7 @@ func (r *RenderSystem) drawColliders(entities []*Entity) {
 }
 
 // sortEntitiesByLayer sorts entities by their sprite layer for correct draw order.
-func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
+func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 	sorted := make([]*Entity, 0, len(entities))
 
 	// Collect entities with sprites
@@ -447,3 +454,16 @@ func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 
 	return sorted
 }
+
+// SetShowColliders implements RenderingSystem interface.
+func (r *EbitenRenderSystem) SetShowColliders(show bool) {
+	r.ShowColliders = show
+}
+
+// SetShowGrid implements RenderingSystem interface.
+func (r *EbitenRenderSystem) SetShowGrid(show bool) {
+	r.ShowGrid = show
+}
+
+// Compile-time interface check
+var _ RenderingSystem = (*EbitenRenderSystem)(nil)

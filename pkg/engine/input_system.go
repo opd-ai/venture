@@ -150,8 +150,8 @@ type InputSystem struct {
 	KeyCycleTargets ebiten.Key // Tab key for cycling targets
 
 	// References to game systems for special key handling
-	helpSystem     *HelpSystem
-	tutorialSystem *TutorialSystem
+	helpSystem     *EbitenHelpSystem
+	tutorialSystem *EbitenTutorialSystem
 	menuSystem     *MenuSystem
 
 	// Mobile input support
@@ -514,12 +514,12 @@ func (s *InputSystem) SetKeyBindings(up, down, left, right, action, useItem ebit
 }
 
 // SetHelpSystem connects the help system for ESC key toggling.
-func (s *InputSystem) SetHelpSystem(helpSystem *HelpSystem) {
+func (s *InputSystem) SetHelpSystem(helpSystem *EbitenHelpSystem) {
 	s.helpSystem = helpSystem
 }
 
 // SetTutorialSystem connects the tutorial system for ESC key handling.
-func (s *InputSystem) SetTutorialSystem(tutorialSystem *TutorialSystem) {
+func (s *InputSystem) SetTutorialSystem(tutorialSystem *EbitenTutorialSystem) {
 	s.tutorialSystem = tutorialSystem
 }
 

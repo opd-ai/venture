@@ -1,8 +1,5 @@
-//go:build !test
-// +build !test
-
 // Package engine provides tutorial and guidance for new players.
-// This file implements TutorialSystem which displays step-by-step tutorials
+// This file implements EbitenTutorialSystem which displays step-by-step tutorials
 // and hints to help players learn the game mechanics.
 package engine
 
@@ -26,8 +23,9 @@ type TutorialStep struct {
 	Condition   func(*World) bool // Function that returns true when step is complete
 }
 
-// TutorialSystem manages the in-game tutorial progression
-type TutorialSystem struct {
+// EbitenTutorialSystem manages the in-game tutorial progression (Ebiten implementation).
+// Implements UISystem interface.
+type EbitenTutorialSystem struct {
 	Enabled         bool
 	CurrentStepIdx  int
 	Steps           []TutorialStep
@@ -36,9 +34,9 @@ type TutorialSystem struct {
 	NotificationTTL float64 // Time-to-live for notification (seconds)
 }
 
-// NewTutorialSystem creates a new tutorial system with default steps
-func NewTutorialSystem() *TutorialSystem {
-	return &TutorialSystem{
+// NewTutorialSystem creates a new tutorial system with default steps.
+func NewTutorialSystem() *EbitenTutorialSystem {
+	return &EbitenTutorialSystem{
 		Enabled:        true,
 		ShowUI:         true,
 		Steps:          createDefaultTutorialSteps(),
@@ -195,7 +193,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 }
 
 // Update processes the tutorial system each frame
-func (ts *TutorialSystem) Update(entities []*Entity, deltaTime float64) {
+func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	if !ts.Enabled || ts.CurrentStepIdx >= len(ts.Steps) {
 		return
 	}
@@ -234,7 +232,7 @@ func (ts *TutorialSystem) Update(entities []*Entity, deltaTime float64) {
 }
 
 // GetCurrentStep returns the current tutorial step, or nil if complete
-func (ts *TutorialSystem) GetCurrentStep() *TutorialStep {
+func (ts *EbitenTutorialSystem) GetCurrentStep() *TutorialStep {
 	if !ts.Enabled || ts.CurrentStepIdx >= len(ts.Steps) {
 		return nil
 	}
@@ -242,7 +240,7 @@ func (ts *TutorialSystem) GetCurrentStep() *TutorialStep {
 }
 
 // GetProgress returns the tutorial progress (0.0 to 1.0)
-func (ts *TutorialSystem) GetProgress() float64 {
+func (ts *EbitenTutorialSystem) GetProgress() float64 {
 	if len(ts.Steps) == 0 {
 		return 1.0
 	}
@@ -250,7 +248,7 @@ func (ts *TutorialSystem) GetProgress() float64 {
 }
 
 // Skip skips the current tutorial step
-func (ts *TutorialSystem) Skip() {
+func (ts *EbitenTutorialSystem) Skip() {
 	if ts.Enabled && ts.CurrentStepIdx < len(ts.Steps) {
 		ts.Steps[ts.CurrentStepIdx].Completed = true
 		ts.CurrentStepIdx++
@@ -261,13 +259,13 @@ func (ts *TutorialSystem) Skip() {
 }
 
 // SkipAll disables the tutorial entirely
-func (ts *TutorialSystem) SkipAll() {
+func (ts *EbitenTutorialSystem) SkipAll() {
 	ts.Enabled = false
 	ts.ShowUI = false
 }
 
 // Reset resets the tutorial to the beginning
-func (ts *TutorialSystem) Reset() {
+func (ts *EbitenTutorialSystem) Reset() {
 	ts.Enabled = true
 	ts.ShowUI = true
 	ts.CurrentStepIdx = 0
@@ -281,7 +279,7 @@ func (ts *TutorialSystem) Reset() {
 // GAP-006 REPAIR: Public API for querying tutorial state
 
 // IsStepCompleted returns true if the step with given ID has been completed
-func (ts *TutorialSystem) IsStepCompleted(stepID string) bool {
+func (ts *EbitenTutorialSystem) IsStepCompleted(stepID string) bool {
 	for _, step := range ts.Steps {
 		if step.ID == stepID {
 			return step.Completed
@@ -291,7 +289,7 @@ func (ts *TutorialSystem) IsStepCompleted(stepID string) bool {
 }
 
 // GetStepByID returns the tutorial step with the given ID, or nil if not found
-func (ts *TutorialSystem) GetStepByID(stepID string) *TutorialStep {
+func (ts *EbitenTutorialSystem) GetStepByID(stepID string) *TutorialStep {
 	for i := range ts.Steps {
 		if ts.Steps[i].ID == stepID {
 			return &ts.Steps[i]
@@ -301,12 +299,12 @@ func (ts *TutorialSystem) GetStepByID(stepID string) *TutorialStep {
 }
 
 // IsActive returns true if the tutorial system is currently enabled and showing UI
-func (ts *TutorialSystem) IsActive() bool {
+func (ts *EbitenTutorialSystem) IsActive() bool {
 	return ts.Enabled && ts.ShowUI
 }
 
 // GetCurrentStepID returns the ID of the current step, or empty string if complete
-func (ts *TutorialSystem) GetCurrentStepID() string {
+func (ts *EbitenTutorialSystem) GetCurrentStepID() string {
 	step := ts.GetCurrentStep()
 	if step == nil {
 		return ""
@@ -315,7 +313,7 @@ func (ts *TutorialSystem) GetCurrentStepID() string {
 }
 
 // GetAllSteps returns all tutorial steps (read-only access for UI integration)
-func (ts *TutorialSystem) GetAllSteps() []TutorialStep {
+func (ts *EbitenTutorialSystem) GetAllSteps() []TutorialStep {
 	// Return copy to prevent external modification
 	steps := make([]TutorialStep, len(ts.Steps))
 	copy(steps, ts.Steps)
@@ -326,7 +324,7 @@ func (ts *TutorialSystem) GetAllSteps() []TutorialStep {
 
 // ExportState exports the current tutorial state for saving
 // Returns map of step IDs to completion status, current index, and enabled flags
-func (ts *TutorialSystem) ExportState() (enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+func (ts *EbitenTutorialSystem) ExportState() (enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
 	completedSteps = make(map[string]bool)
 	for _, step := range ts.Steps {
 		if step.Completed {
@@ -338,7 +336,7 @@ func (ts *TutorialSystem) ExportState() (enabled, showUI bool, currentStepIdx in
 
 // ImportState restores tutorial state from saved data
 // Applies saved completion status to matching step IDs
-func (ts *TutorialSystem) ImportState(enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+func (ts *EbitenTutorialSystem) ImportState(enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
 	ts.Enabled = enabled
 	ts.ShowUI = showUI
 	ts.CurrentStepIdx = currentStepIdx
@@ -362,13 +360,20 @@ func (ts *TutorialSystem) ImportState(enabled, showUI bool, currentStepIdx int, 
 
 // ShowNotification displays a notification message for the specified duration.
 // This can be used to show feedback for game actions like saving/loading.
-func (ts *TutorialSystem) ShowNotification(msg string, duration float64) {
+func (ts *EbitenTutorialSystem) ShowNotification(msg string, duration float64) {
 	ts.NotificationMsg = msg
 	ts.NotificationTTL = duration
 }
 
-// Draw renders the tutorial UI overlay
-func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
+// Draw renders the tutorial UI overlay (implements UISystem interface).
+// The screen parameter should be *ebiten.Image in production.
+func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
+	// Type assert to *ebiten.Image
+	ebitenScreen, ok := screen.(*ebiten.Image)
+	if !ok {
+		return // Invalid screen type
+	}
+	
 	if !ts.Enabled || !ts.ShowUI {
 		return
 	}
@@ -377,14 +382,14 @@ func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 	if step == nil {
 		// Show notification if available
 		if ts.NotificationTTL > 0 {
-			ts.drawNotification(screen)
+			ts.drawNotification(ebitenScreen)
 		}
 		return
 	}
 
 	// Draw tutorial panel with responsive positioning to avoid HUD overlap
-	screenWidth := screen.Bounds().Dx()
-	screenHeight := screen.Bounds().Dy()
+	screenWidth := ebitenScreen.Bounds().Dx()
+	screenHeight := ebitenScreen.Bounds().Dy()
 
 	// Scale panel size based on screen dimensions
 	panelWidth := 400
@@ -420,51 +425,51 @@ func (ts *TutorialSystem) Draw(screen *ebiten.Image) {
 	}
 
 	// Semi-transparent background
-	vector.DrawFilledRect(screen,
+	vector.DrawFilledRect(ebitenScreen,
 		float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		color.RGBA{0, 0, 0, 200}, false)
 
 	// Border
-	vector.StrokeRect(screen,
+	vector.StrokeRect(ebitenScreen,
 		float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		2, color.RGBA{100, 200, 255, 255}, false)
 
 	// Progress bar
 	progressWidth := int(float64(panelWidth-20) * ts.GetProgress())
-	vector.DrawFilledRect(screen,
+	vector.DrawFilledRect(ebitenScreen,
 		float32(panelX+10), float32(panelY+10),
 		float32(progressWidth), 4,
 		color.RGBA{100, 200, 255, 255}, false)
 
 	// Title
 	titleColor := color.RGBA{255, 255, 100, 255}
-	text.Draw(screen, fmt.Sprintf("Tutorial (%d/%d)", ts.CurrentStepIdx+1, len(ts.Steps)),
+	text.Draw(ebitenScreen, fmt.Sprintf("Tutorial (%d/%d)", ts.CurrentStepIdx+1, len(ts.Steps)),
 		basicfont.Face7x13, panelX+10, panelY+35, titleColor)
 
-	text.Draw(screen, step.Title, basicfont.Face7x13, panelX+10, panelY+55, color.White)
+	text.Draw(ebitenScreen, step.Title, basicfont.Face7x13, panelX+10, panelY+55, color.White)
 
 	// Description
 	descColor := color.RGBA{200, 200, 200, 255}
-	ts.drawWrappedText(screen, step.Description, panelX+10, panelY+75, panelWidth-20, descColor)
+	ts.drawWrappedText(ebitenScreen, step.Description, panelX+10, panelY+75, panelWidth-20, descColor)
 
 	// Objective
 	objColor := color.RGBA{100, 255, 100, 255}
-	text.Draw(screen, "Objective: "+step.Objective, basicfont.Face7x13, panelX+10, panelY+120, objColor)
+	text.Draw(ebitenScreen, "Objective: "+step.Objective, basicfont.Face7x13, panelX+10, panelY+120, objColor)
 
 	// Skip hint
 	hintColor := color.RGBA{150, 150, 150, 255}
-	text.Draw(screen, "Press ESC to skip current step", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
+	text.Draw(ebitenScreen, "Press ESC to skip current step", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
 
 	// Show notification if available
 	if ts.NotificationTTL > 0 {
-		ts.drawNotification(screen)
+		ts.drawNotification(ebitenScreen)
 	}
 }
 
 // drawNotification renders a temporary notification message
-func (ts *TutorialSystem) drawNotification(screen *ebiten.Image) {
+func (ts *EbitenTutorialSystem) drawNotification(screen *ebiten.Image) {
 	if ts.NotificationMsg == "" {
 		return
 	}
@@ -502,7 +507,7 @@ func (ts *TutorialSystem) drawNotification(screen *ebiten.Image) {
 }
 
 // drawWrappedText draws text with word wrapping
-func (ts *TutorialSystem) drawWrappedText(screen *ebiten.Image, str string, x, y, maxWidth int, clr color.Color) {
+func (ts *EbitenTutorialSystem) drawWrappedText(screen *ebiten.Image, str string, x, y, maxWidth int, clr color.Color) {
 	charWidth := 7 // basicfont.Face7x13 character width
 	maxChars := maxWidth / charWidth
 
@@ -555,3 +560,11 @@ func splitWords(str string) []string {
 
 	return words
 }
+
+// SetActive implements UISystem interface.
+func (ts *EbitenTutorialSystem) SetActive(active bool) {
+	ts.ShowUI = active
+}
+
+// Compile-time interface check
+var _ UISystem = (*EbitenTutorialSystem)(nil)

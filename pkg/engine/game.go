@@ -22,11 +22,11 @@ type EbitenGame struct {
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
-	RenderSystem        *RenderSystem
+	RenderSystem        *EbitenRenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
 	HUDSystem           *HUDSystem
-	TutorialSystem      *TutorialSystem
-	HelpSystem          *HelpSystem
+	TutorialSystem      *EbitenTutorialSystem
+	HelpSystem          *EbitenHelpSystem
 	MenuSystem          *MenuSystem
 
 	// UI systems

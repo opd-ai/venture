@@ -17,7 +17,7 @@ func NewStubMenuSystem(world *World) *StubMenuSystem {
 }
 
 // Update is called every frame but stub doesn't need to do anything.
-func (s *StubMenuSystem) Update() {
+func (s *StubMenuSystem) Update(entities []*Entity, deltaTime float64) {
 	s.UpdateCount++
 }
 

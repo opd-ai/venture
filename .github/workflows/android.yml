@@ -38,6 +38,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --list || true
+          yes | sdkmanager "cmdline-tools;latest" "platform-tools" "platforms;android-${{ env.ANDROID_API_LEVEL }}" "build-tools;${{ env.ANDROID_BUILD_TOOLS }}"
+          yes | sdkmanager --licenses
+
       - name: Install NDK
         run: sdkmanager "ndk;${{ env.NDK_VERSION }}"
       

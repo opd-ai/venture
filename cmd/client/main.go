@@ -515,8 +515,8 @@ func main() {
 	// Add input component for player control
 	player.AddComponent(&engine.InputComponent{})
 
-	// Add sprite for rendering
-	playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
+	// Add sprite for rendering (28x28 to fit through 32px corridors)
+	playerSprite := engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
 	playerSprite.Layer = 10 // Draw player on top
 	player.AddComponent(playerSprite)
 
@@ -601,15 +601,15 @@ func main() {
 		Cooldown:   0.5,
 	})
 
-	// Add collision for player
+	// Add collision for player (28x28 to fit through 32px corridors)
 	player.AddComponent(&engine.ColliderComponent{
-		Width:     32,
-		Height:    32,
+		Width:     28,
+		Height:    28,
 		Solid:     true,
 		IsTrigger: false,
 		Layer:     1,
-		OffsetX:   -16, // Center the collider
-		OffsetY:   -16,
+		OffsetX:   -14, // Center the collider (28/2 = 14)
+		OffsetY:   -14,
 	})
 
 	// GAP-012 REPAIR: Add visual feedback for hit flash

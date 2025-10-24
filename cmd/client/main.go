@@ -212,7 +212,7 @@ func main() {
 	}
 
 	// Create the game instance
-	game := engine.NewGame(*width, *height)
+	game := engine.NewEbitenGame(*width, *height)
 
 	// Initialize game systems
 	if *verbose {

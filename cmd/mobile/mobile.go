@@ -8,7 +8,7 @@ import (
 )
 
 // Game is the mobile game instance
-var gameInstance *engine.Game
+var gameInstance *engine.EbitenGame
 
 // Init initializes the game for mobile platforms.
 // This must be called before any other functions.
@@ -19,7 +19,7 @@ func Init() {
 
 	// Create the game instance with mobile-friendly dimensions
 	// Portrait mode: 720x1280 (9:16 aspect ratio)
-	gameInstance = engine.NewGame(720, 1280)
+	gameInstance = engine.NewEbitenGame(720, 1280)
 
 	// Log initialization
 	log.Println("Mobile game initialized")

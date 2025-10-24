@@ -1,9 +1,7 @@
-//go:build !test
-// +build !test
-
 // Package engine provides the main game loop and Ebiten integration.
-// This file implements Game which ties together the ECS world, rendering
-// systems, and the Ebiten game engine.
+// This file implements EbitenGame which ties together the ECS world, rendering
+// systems, and the Ebiten game engine. EbitenGame implements both ebiten.Game
+// and GameRunner interfaces.
 package engine
 
 import (
@@ -13,8 +11,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// Game represents the main game instance with the ECS world and game loop.
-type Game struct {
+// EbitenGame represents the main game instance with the ECS world and game loop.
+// Implements both ebiten.Game and GameRunner interfaces.
+type EbitenGame struct {
 	World          *World
 	lastUpdateTime time.Time
 	ScreenWidth    int
@@ -41,8 +40,8 @@ type Game struct {
 	PlayerEntity *Entity
 }
 
-// NewGame creates a new game instance.
-func NewGame(screenWidth, screenHeight int) *Game {
+// NewEbitenGame creates a new game instance with Ebiten integration.
+func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
 	world := NewWorld()
 	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
 	renderSystem := NewRenderSystem(cameraSystem)
@@ -63,7 +62,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 		fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
 	}
 
-	return &Game{
+	return &EbitenGame{
 		World:          world,
 		lastUpdateTime: time.Now(),
 		ScreenWidth:    screenWidth,
@@ -81,7 +80,7 @@ func NewGame(screenWidth, screenHeight int) *Game {
 }
 
 // Update implements ebiten.Game interface. Called every frame.
-func (g *Game) Update() error {
+func (g *EbitenGame) Update() error {
 	// Calculate delta time
 	now := time.Now()
 	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
@@ -128,7 +127,7 @@ func (g *Game) Update() error {
 }
 
 // Draw implements ebiten.Game interface. Called every frame.
-func (g *Game) Draw(screen *ebiten.Image) {
+func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	// Render terrain (if available)
 	if g.TerrainRenderSystem != nil {
 		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
@@ -172,13 +171,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return g.ScreenWidth, g.ScreenHeight
 }
 
 // SetPlayerEntity sets the player entity for the game and UI systems.
 // This should be called after creating the player entity.
-func (g *Game) SetPlayerEntity(entity *Entity) {
+func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	g.PlayerEntity = entity
 	g.InventoryUI.SetPlayerEntity(entity)
 	g.QuestUI.SetPlayerEntity(entity)
@@ -188,14 +187,14 @@ func (g *Game) SetPlayerEntity(entity *Entity) {
 }
 
 // SetInventorySystem connects the inventory system to the inventory UI for item actions.
-func (g *Game) SetInventorySystem(system *InventorySystem) {
+func (g *EbitenGame) SetInventorySystem(system *InventorySystem) {
 	g.InventoryUI.SetInventorySystem(system)
 }
 
 // SetupInputCallbacks connects the input system callbacks to the UI systems.
 // This should be called after the InputSystem is added to the world.
 // GAP-014 REPAIR: Accept objective tracker for quest progress tracking
-func (g *Game) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
+func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
 	// Connect inventory toggle
 	inputSystem.SetInventoryCallback(func() {
 		g.InventoryUI.Toggle()
@@ -249,8 +248,33 @@ func (g *Game) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *O
 	}
 }
 
+// GetWorld returns the ECS world instance (implements GameRunner interface).
+func (g *EbitenGame) GetWorld() *World {
+	return g.World
+}
+
+// GetScreenSize returns the current screen dimensions (implements GameRunner interface).
+func (g *EbitenGame) GetScreenSize() (width, height int) {
+	return g.ScreenWidth, g.ScreenHeight
+}
+
+// IsPaused returns whether the game is currently paused (implements GameRunner interface).
+func (g *EbitenGame) IsPaused() bool {
+	return g.Paused
+}
+
+// SetPaused sets the game pause state (implements GameRunner interface).
+func (g *EbitenGame) SetPaused(paused bool) {
+	g.Paused = paused
+}
+
+// GetPlayerEntity returns the current player entity (implements GameRunner interface).
+func (g *EbitenGame) GetPlayerEntity() *Entity {
+	return g.PlayerEntity
+}
+
 // Run starts the game loop.
-func (g *Game) Run(title string) error {
+func (g *EbitenGame) Run(title string) error {
 	ebiten.SetWindowSize(g.ScreenWidth, g.ScreenHeight)
 	ebiten.SetWindowTitle(title)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -261,3 +285,7 @@ func (g *Game) Run(title string) error {
 
 	return nil
 }
+
+// Compile-time interface checks
+var _ GameRunner = (*EbitenGame)(nil)
+var _ ebiten.Game = (*EbitenGame)(nil)

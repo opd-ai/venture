@@ -46,7 +46,7 @@ jobs:
           fi
 
       - name: Build server
-        run: go build -tags test -ldflags="-s -w" -o /tmp/venture-server ./cmd/server
+        run: go build -ldflags="-s -w" -o /tmp/venture-server ./cmd/server
 
       - name: Build client
         run: go build -ldflags="-s -w" -o /tmp/venture-client ./cmd/client

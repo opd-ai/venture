@@ -287,5 +287,7 @@ func (g *EbitenGame) Run(title string) error {
 }
 
 // Compile-time interface checks
-var _ GameRunner = (*EbitenGame)(nil)
-var _ ebiten.Game = (*EbitenGame)(nil)
+var (
+	_ GameRunner  = (*EbitenGame)(nil)
+	_ ebiten.Game = (*EbitenGame)(nil)
+)

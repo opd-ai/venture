@@ -413,13 +413,13 @@ func (ui *EbitenInventoryUI) generateItemPreview(item interface{}) *ebiten.Image
 // IsActive returns whether the inventory UI is currently visible.
 // Implements UISystem interface.
 func (i *EbitenInventoryUI) IsActive() bool {
-return i.visible
+	return i.visible
 }
 
 // SetActive sets whether the inventory UI is visible.
 // Implements UISystem interface.
 func (i *EbitenInventoryUI) SetActive(active bool) {
-i.visible = active
+	i.visible = active
 }
 
 // Compile-time check that EbitenInventoryUI implements UISystem

@@ -1,29 +1,29 @@
 package engine
 
 type StubInventoryUI struct {
-UpdateCount int
-DrawCount   int
-active      bool
+	UpdateCount int
+	DrawCount   int
+	active      bool
 }
 
 func NewStubInventoryUI() *StubInventoryUI {
-return &StubInventoryUI{}
+	return &StubInventoryUI{}
 }
 
 func (s *StubInventoryUI) Update(entities []*Entity, deltaTime float64) {
-s.UpdateCount++
+	s.UpdateCount++
 }
 
 func (s *StubInventoryUI) Draw(screen interface{}) {
-s.DrawCount++
+	s.DrawCount++
 }
 
 func (s *StubInventoryUI) IsActive() bool {
-return s.active
+	return s.active
 }
 
 func (s *StubInventoryUI) SetActive(active bool) {
-s.active = active
+	s.active = active
 }
 
 var _ UISystem = (*StubInventoryUI)(nil)

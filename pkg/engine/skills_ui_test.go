@@ -1,29 +1,29 @@
 package engine
 
 type StubSkillsUI struct {
-UpdateCount int
-DrawCount   int
-active      bool
+	UpdateCount int
+	DrawCount   int
+	active      bool
 }
 
 func NewStubSkillsUI() *StubSkillsUI {
-return &StubSkillsUI{}
+	return &StubSkillsUI{}
 }
 
 func (s *StubSkillsUI) Update(entities []*Entity, deltaTime float64) {
-s.UpdateCount++
+	s.UpdateCount++
 }
 
 func (s *StubSkillsUI) Draw(screen interface{}) {
-s.DrawCount++
+	s.DrawCount++
 }
 
 func (s *StubSkillsUI) IsActive() bool {
-return s.active
+	return s.active
 }
 
 func (s *StubSkillsUI) SetActive(active bool) {
-s.active = active
+	s.active = active
 }
 
 var _ UISystem = (*StubSkillsUI)(nil)

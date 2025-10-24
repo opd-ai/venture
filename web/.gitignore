@@ -1,0 +1,8 @@
+# Generated WASM build artifacts
+venture.wasm
+wasm_exec.js
+game.html
+index.html
+
+# Keep the README
+!README.md

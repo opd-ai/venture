@@ -38,6 +38,22 @@ Venture uses platform-native build jobs for all targets instead of cross-compila
 
 **Artifacts:** All build outputs are uploaded as artifacts with 7-day retention
 
+### Deploy to GitHub Pages Workflow (`.github/workflows/pages.yml`)
+
+**Trigger:** 
+- Push to `main` branch
+- Manual workflow dispatch
+
+**Purpose:** Build and deploy WebAssembly version to GitHub Pages
+
+**Jobs:**
+1. `build` - Compiles client to WASM, generates HTML files, uploads artifact
+2. `deploy` - Deploys artifact to GitHub Pages
+
+**Deployment URL:** `https://opd-ai.github.io/venture/`
+
+**See:** [GitHub Pages Guide](GITHUB_PAGES.md) for detailed setup and troubleshooting
+
 ### Release Workflow (`.github/workflows/release.yml`)
 
 **Trigger:** 

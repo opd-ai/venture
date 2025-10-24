@@ -8,6 +8,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 **Key Features:**
 - 🎮 Real-time action-RPG combat and exploration
+- 🌐 **Play in browser** - WebAssembly build available on [GitHub Pages](https://opd-ai.github.io/venture/)
 - 📱 **Native mobile support** - iOS and Android with touch-optimized controls
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
 - 🎨 Runtime-generated graphics using procedural techniques
@@ -63,6 +64,17 @@ go build -o venture-server ./cmd/server
 **For complete setup instructions, gameplay guide, and all features, see:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and first steps (5 minutes)
 - **[User Manual](docs/USER_MANUAL.md)** - Complete gameplay documentation
+
+## Platform Support
+
+Venture runs on multiple platforms:
+
+- **🖥️ Desktop:** Linux, macOS, Windows (x64/ARM64) - Native builds
+- **🌐 Web:** Play in browser via [GitHub Pages](https://opd-ai.github.io/venture/) (WebAssembly)
+- **📱 Mobile:** iOS and Android - Touch-optimized (see [Mobile Build Guide](docs/MOBILE_BUILD.md))
+
+**WebAssembly Deployment:**
+The game automatically deploys to GitHub Pages on every push to main. See [GitHub Pages Guide](docs/GITHUB_PAGES.md) for details.
 
 ## Documentation
 

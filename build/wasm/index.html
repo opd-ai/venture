@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venture - Procedural Action RPG</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 20px;
+        }
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        iframe {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .info h3 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        .info ul {
+            margin: 10px 0;
+        }
+        .info li {
+            margin: 5px 0;
+        }
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Venture</h1>
+        <p class="subtitle">A Fully Procedural Multiplayer Action-RPG</p>
+        
+        <iframe src="game.html" width="800" height="600" allow="autoplay"></iframe>
+        
+        <div class="info">
+            <h3>About Venture</h3>
+            <p>Venture is a fully procedural multiplayer action-RPG where everything—graphics, audio, terrain, items, enemies, and abilities—is generated at runtime with zero external asset files.</p>
+            
+            <h3>Features</h3>
+            <ul>
+                <li>🎮 Real-time action combat</li>
+                <li>🎲 Infinite procedural content generation</li>
+                <li>🌍 Multiple genres: Fantasy, Sci-Fi, Horror, Cyberpunk, Post-Apocalyptic</li>
+                <li>🎨 Runtime-generated graphics and sprites</li>
+                <li>🎵 Procedural music and sound effects</li>
+                <li>👥 Multiplayer co-op support</li>
+            </ul>
+            
+            <h3>Links</h3>
+            <ul>
+                <li><a href="https://github.com/opd-ai/venture" target="_blank">GitHub Repository</a></li>
+                <li><a href="https://github.com/opd-ai/venture/blob/main/docs/USER_MANUAL.md" target="_blank">User Manual</a></li>
+                <li><a href="https://github.com/opd-ai/venture/blob/main/docs/GETTING_STARTED.md" target="_blank">Getting Started Guide</a></li>
+            </ul>
+            
+            <p class="loading">Note: The game may take a few seconds to load. The WASM binary is generated procedurally!</p>
+        </div>
+    </div>
+</body>
+</html>

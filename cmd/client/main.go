@@ -213,8 +213,9 @@ func main() {
 
 	// Add core gameplay systems
 	inputSystem := engine.NewInputSystem()
-	movementSystem := &engine.MovementSystem{}
-	collisionSystem := &engine.CollisionSystem{}
+	// GAP-001 & GAP-002 REPAIR: Use proper constructors with required parameters
+	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
+	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
 	combatSystem := engine.NewCombatSystem(*seed)
 
 	// GAP-016 REPAIR: Initialize particle system for visual effects

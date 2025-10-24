@@ -156,7 +156,7 @@ func (s *MovementSystem) anyEntityBlocking(entity *Entity, x, y float64, entitie
 		}
 	}
 	return false
-}// SetVelocity is a helper to set entity velocity.
+} // SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		vel := velComp.(*VelocityComponent)

@@ -216,10 +216,10 @@ func main() {
 	// GAP-001 & GAP-002 REPAIR: Use proper constructors with required parameters
 	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
 	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
-	
+
 	// GAP-001 REPAIR: Connect collision system to movement system for predictive collision
 	movementSystem.SetCollisionSystem(collisionSystem)
-	
+
 	combatSystem := engine.NewCombatSystem(*seed)
 
 	// GAP-016 REPAIR: Initialize particle system for visual effects

@@ -24,17 +24,17 @@ type EbitenGame struct {
 	CameraSystem        *CameraSystem
 	RenderSystem        *EbitenRenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
-	HUDSystem           *HUDSystem
+	HUDSystem           *EbitenHUDSystem
 	TutorialSystem      *EbitenTutorialSystem
 	HelpSystem          *EbitenHelpSystem
-	MenuSystem          *MenuSystem
+	MenuSystem          *EbitenMenuSystem
 
 	// UI systems
-	InventoryUI *InventoryUI
-	QuestUI     *QuestUI
-	CharacterUI *CharacterUI
-	SkillsUI    *SkillsUI
-	MapUI       *MapUI
+	InventoryUI *EbitenInventoryUI
+	QuestUI     *EbitenQuestUI
+	CharacterUI *EbitenCharacterUI
+	SkillsUI    *EbitenSkillsUI
+	MapUI       *EbitenMapUI
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
@@ -45,18 +45,18 @@ func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
 	world := NewWorld()
 	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
 	renderSystem := NewRenderSystem(cameraSystem)
-	hudSystem := NewHUDSystem(screenWidth, screenHeight)
+	hudSystem := NewEbitenHUDSystem(screenWidth, screenHeight)
 	// TerrainRenderSystem will be initialized later with specific genre/seed
 
 	// Create UI systems
-	inventoryUI := NewInventoryUI(world, screenWidth, screenHeight)
-	questUI := NewQuestUI(world, screenWidth, screenHeight)
-	characterUI := NewCharacterUI(world, screenWidth, screenHeight)
-	skillsUI := NewSkillsUI(world, screenWidth, screenHeight)
-	mapUI := NewMapUI(world, screenWidth, screenHeight)
+	inventoryUI := NewEbitenInventoryUI(world, screenWidth, screenHeight)
+	questUI := NewEbitenQuestUI(world, screenWidth, screenHeight)
+	characterUI := NewEbitenCharacterUI(world, screenWidth, screenHeight)
+	skillsUI := NewEbitenSkillsUI(world, screenWidth, screenHeight)
+	mapUI := NewEbitenMapUI(world, screenWidth, screenHeight)
 
 	// Create menu system with save directory
-	menuSystem, err := NewMenuSystem(world, screenWidth, screenHeight, "./saves")
+	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
 	if err != nil {
 		// Log error but continue (save/load won't work but game can run)
 		fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
@@ -104,11 +104,11 @@ func (g *EbitenGame) Update() error {
 	}
 
 	// Update UI systems first (they capture input if visible)
-	g.InventoryUI.Update()
-	g.QuestUI.Update()
-	g.CharacterUI.Update(deltaTime)
-	g.SkillsUI.Update(deltaTime)
-	g.MapUI.Update(deltaTime)
+	g.InventoryUI.Update(nil, deltaTime)
+	g.QuestUI.Update(nil, deltaTime)
+	g.CharacterUI.Update(nil, deltaTime)
+	g.SkillsUI.Update(nil, deltaTime)
+	g.MapUI.Update(nil, deltaTime)
 
 	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {

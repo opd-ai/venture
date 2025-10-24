@@ -8,8 +8,8 @@ type StubRenderSystem struct {
 	ShowGrid      bool
 
 	// Test state tracking
-	UpdateCount int
-	DrawCount   int
+	UpdateCount          int
+	DrawCount            int
 	LastDrawnEntityCount int
 }
 

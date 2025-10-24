@@ -313,7 +313,7 @@ func (hs *EbitenHelpSystem) Draw(screen interface{}) {
 	if !ok {
 		return // Invalid screen type
 	}
-	
+
 	if !hs.Enabled {
 		return
 	}

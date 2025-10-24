@@ -152,7 +152,7 @@ type InputSystem struct {
 	// References to game systems for special key handling
 	helpSystem     *EbitenHelpSystem
 	tutorialSystem *EbitenTutorialSystem
-	menuSystem     *MenuSystem
+	menuSystem     *EbitenMenuSystem
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -571,7 +571,7 @@ func (s *InputSystem) SetMenuToggleCallback(callback func()) {
 
 // SetMenuSystem connects the menu system for ESC key toggling.
 // Deprecated: Use SetMenuToggleCallback instead for better decoupling.
-func (s *InputSystem) SetMenuSystem(menuSystem *MenuSystem) {
+func (s *InputSystem) SetMenuSystem(menuSystem *EbitenMenuSystem) {
 	s.menuSystem = menuSystem
 }
 

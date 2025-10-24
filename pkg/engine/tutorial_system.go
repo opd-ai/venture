@@ -373,7 +373,7 @@ func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
 	if !ok {
 		return // Invalid screen type
 	}
-	
+
 	if !ts.Enabled || !ts.ShowUI {
 		return
 	}

@@ -1,9 +1,6 @@
-//go:build !test
-// +build !test
-
-// Package engine provides character stats UI rendering.
-// This file implements CharacterUI which displays detailed character information
-// including stats, equipment, and derived attributes.
+// Package engine provides character UI system for displaying player stats and equipment.
+// This file implements CharacterUI which handles rendering and interaction for the
+// character stats screen, including stats, equipment, and derived attributes.
 package engine
 
 import (
@@ -25,7 +22,7 @@ type Rectangle struct {
 }
 
 // CharacterUI handles rendering and interaction for the character stats screen.
-type CharacterUI struct {
+type EbitenCharacterUI struct {
 	visible      bool
 	world        *World
 	playerEntity *Entity
@@ -46,8 +43,8 @@ type CharacterUI struct {
 //
 // Returns: Initialized CharacterUI ready for use
 // Called by: Game.NewGame() during initialization
-func NewCharacterUI(world *World, screenWidth, screenHeight int) *CharacterUI {
-	ui := &CharacterUI{
+func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCharacterUI {
+	ui := &EbitenCharacterUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -63,7 +60,7 @@ func NewCharacterUI(world *World, screenWidth, screenHeight int) *CharacterUI {
 //	entity - Player entity with StatsComponent, EquipmentComponent, etc.
 //
 // Called by: Game.SetPlayerEntity() after player creation
-func (ui *CharacterUI) SetPlayerEntity(entity *Entity) {
+func (ui *EbitenCharacterUI) SetPlayerEntity(entity *Entity) {
 	ui.playerEntity = entity
 	if ui.visible {
 		ui.calculateLayout()
@@ -72,7 +69,7 @@ func (ui *CharacterUI) SetPlayerEntity(entity *Entity) {
 
 // Toggle shows or hides the character UI.
 // Called by: InputSystem when C key is pressed
-func (ui *CharacterUI) Toggle() {
+func (ui *EbitenCharacterUI) Toggle() {
 	ui.visible = !ui.visible
 	if ui.visible {
 		ui.calculateLayout()
@@ -82,18 +79,18 @@ func (ui *CharacterUI) Toggle() {
 // IsVisible returns whether the character UI is currently shown.
 // Returns: true if visible, false otherwise
 // Called by: Game.Update() to determine if input should be blocked
-func (ui *CharacterUI) IsVisible() bool {
+func (ui *EbitenCharacterUI) IsVisible() bool {
 	return ui.visible
 }
 
 // Show displays the character UI.
-func (ui *CharacterUI) Show() {
+func (ui *EbitenCharacterUI) Show() {
 	ui.visible = true
 	ui.calculateLayout()
 }
 
 // Hide hides the character UI.
-func (ui *CharacterUI) Hide() {
+func (ui *EbitenCharacterUI) Hide() {
 	ui.visible = false
 }
 
@@ -103,7 +100,7 @@ func (ui *CharacterUI) Hide() {
 //	deltaTime - Time since last frame in seconds
 //
 // Called by: Game.Update() every frame
-func (ui *CharacterUI) Update(deltaTime float64) {
+func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
 	if !ui.visible {
 		return
 	}
@@ -119,14 +116,14 @@ func (ui *CharacterUI) Update(deltaTime float64) {
 	}
 }
 
-// Draw renders the character UI overlay.
-// Parameters:
-//
-//	screen - Ebiten image to render to
+// Draw renders the character UI screen with stats, equipment, and attributes.
+// Only renders if visible is true and player entity is set.
+// Implements UISystem interface.
 //
 // Called by: Game.Draw() every frame
-func (ui *CharacterUI) Draw(screen *ebiten.Image) {
-	if !ui.visible || ui.playerEntity == nil {
+func (ui *EbitenCharacterUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok || !ui.visible || ui.playerEntity == nil {
 		return
 	}
 
@@ -147,7 +144,7 @@ func (ui *CharacterUI) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw semi-transparent overlay
-	vector.DrawFilledRect(screen, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
+	vector.DrawFilledRect(img, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
 		color.RGBA{0, 0, 0, 180}, false)
 
 	// Draw main panel background (800x600 centered)
@@ -164,12 +161,12 @@ func (ui *CharacterUI) Draw(screen *ebiten.Image) {
 	panelY := (ui.screenHeight - panelHeight) / 2
 
 	// Panel background
-	vector.DrawFilledRect(screen, float32(panelX), float32(panelY),
+	vector.DrawFilledRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		color.RGBA{20, 20, 30, 255}, false)
 
 	// Panel border
-	vector.StrokeRect(screen, float32(panelX), float32(panelY),
+	vector.StrokeRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight), 2,
 		color.RGBA{100, 150, 200, 255}, false)
 
@@ -177,40 +174,40 @@ func (ui *CharacterUI) Draw(screen *ebiten.Image) {
 	titleText := "CHARACTER STATS"
 	titleX := panelX + panelWidth/2 - len(titleText)*3
 	titleY := panelY + 20
-	text.Draw(screen, titleText, basicfont.Face7x13, titleX, titleY+13,
+	text.Draw(img, titleText, basicfont.Face7x13, titleX, titleY+13,
 		color.RGBA{255, 255, 100, 255})
 
 	// Level and Gold info
 	if hasExp {
 		exp := expComp.(*ExperienceComponent)
 		levelText := fmt.Sprintf("Level %d", exp.Level)
-		text.Draw(screen, levelText, basicfont.Face7x13, panelX+20, titleY+13,
+		text.Draw(img, levelText, basicfont.Face7x13, panelX+20, titleY+13,
 			color.RGBA{100, 255, 100, 255})
 	}
 
 	if hasInv {
 		inv := invComp.(*InventoryComponent)
 		goldText := fmt.Sprintf("Gold: %d", inv.Gold)
-		text.Draw(screen, goldText, basicfont.Face7x13, panelX+panelWidth-120, titleY+13,
+		text.Draw(img, goldText, basicfont.Face7x13, panelX+panelWidth-120, titleY+13,
 			color.RGBA{255, 215, 0, 255})
 	}
 
 	// Draw three panels
-	ui.drawStatsPanel(screen, stats, equipment)
-	ui.drawEquipmentPanel(screen, equipment)
-	ui.drawAttributesPanel(screen, stats)
+	ui.drawStatsPanel(img, stats, equipment)
+	ui.drawEquipmentPanel(img, equipment)
+	ui.drawAttributesPanel(img, stats)
 
 	// Draw controls hint at bottom
 	controlsText := "[ESC] or [C] to Close"
 	controlsX := panelX + panelWidth/2 - len(controlsText)*3
 	controlsY := panelY + panelHeight - 20
-	text.Draw(screen, controlsText, basicfont.Face7x13, controlsX, controlsY,
+	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
 }
 
-// calculateLayout computes panel positions based on screen size.
-// Called by: Draw() on first render or screen resize
-func (ui *CharacterUI) calculateLayout() {
+// calculateLayout computes panel positions based on img size.
+// Called by: Draw() on first render or img resize
+func (ui *EbitenCharacterUI) calculateLayout() {
 	panelWidth := 800
 	panelHeight := 600
 	if ui.screenWidth < 800 {
@@ -259,7 +256,7 @@ func (ui *CharacterUI) calculateLayout() {
 //	screen - Target image
 //	statsComp - StatsComponent with current values
 //	equipComp - EquipmentComponent for bonus calculation
-func (ui *CharacterUI) drawStatsPanel(screen *ebiten.Image, statsComp *StatsComponent, equipComp *EquipmentComponent) {
+func (ui *EbitenCharacterUI) drawStatsPanel(screen *ebiten.Image, statsComp *StatsComponent, equipComp *EquipmentComponent) {
 	panel := ui.statsPanel
 
 	// Panel background
@@ -317,7 +314,7 @@ func (ui *CharacterUI) drawStatsPanel(screen *ebiten.Image, statsComp *StatsComp
 }
 
 // drawStatLine draws a stat with base and bonus values.
-func (ui *CharacterUI) drawStatLine(screen *ebiten.Image, x, y int, label string, base, bonus, total float64) {
+func (ui *EbitenCharacterUI) drawStatLine(screen *ebiten.Image, x, y int, label string, base, bonus, total float64) {
 	// Label
 	text.Draw(screen, label+":", basicfont.Face7x13, x, y,
 		color.RGBA{200, 200, 200, 255})
@@ -336,7 +333,7 @@ func (ui *CharacterUI) drawStatLine(screen *ebiten.Image, x, y int, label string
 }
 
 // drawStatBar draws a visual bar for a stat value.
-func (ui *CharacterUI) drawStatBar(screen *ebiten.Image, x, y, width int, value, max float64, col color.Color) {
+func (ui *EbitenCharacterUI) drawStatBar(screen *ebiten.Image, x, y, width int, value, max float64, col color.Color) {
 	barHeight := 8
 
 	// Background
@@ -362,7 +359,7 @@ func (ui *CharacterUI) drawStatBar(screen *ebiten.Image, x, y, width int, value,
 //
 //	screen - Target image
 //	equipComp - EquipmentComponent with equipped items
-func (ui *CharacterUI) drawEquipmentPanel(screen *ebiten.Image, equipComp *EquipmentComponent) {
+func (ui *EbitenCharacterUI) drawEquipmentPanel(screen *ebiten.Image, equipComp *EquipmentComponent) {
 	panel := ui.equipmentPanel
 
 	// Panel background
@@ -443,7 +440,7 @@ func (ui *CharacterUI) drawEquipmentPanel(screen *ebiten.Image, equipComp *Equip
 }
 
 // drawItemIcon renders a simple colored icon for an item.
-func (ui *CharacterUI) drawItemIcon(screen *ebiten.Image, x, y, size int, item interface{}) {
+func (ui *EbitenCharacterUI) drawItemIcon(screen *ebiten.Image, x, y, size int, item interface{}) {
 	// Generate color based on item rarity (simplified)
 	col := color.RGBA{180, 180, 180, 255} // Default gray
 
@@ -461,7 +458,7 @@ func (ui *CharacterUI) drawItemIcon(screen *ebiten.Image, x, y, size int, item i
 //
 //	screen - Target image
 //	statsComp - StatsComponent for calculations
-func (ui *CharacterUI) drawAttributesPanel(screen *ebiten.Image, statsComp *StatsComponent) {
+func (ui *EbitenCharacterUI) drawAttributesPanel(screen *ebiten.Image, statsComp *StatsComponent) {
 	panel := ui.attributesPanel
 
 	// Panel background
@@ -524,7 +521,7 @@ func (ui *CharacterUI) drawAttributesPanel(screen *ebiten.Image, statsComp *Stat
 }
 
 // drawAttributeLine draws a single attribute line.
-func (ui *CharacterUI) drawAttributeLine(screen *ebiten.Image, x, y int, label, value string, col color.Color) {
+func (ui *EbitenCharacterUI) drawAttributeLine(screen *ebiten.Image, x, y int, label, value string, col color.Color) {
 	// Label
 	text.Draw(screen, label+":", basicfont.Face7x13, x, y,
 		color.RGBA{180, 180, 180, 255})
@@ -539,7 +536,7 @@ func (ui *CharacterUI) drawAttributeLine(screen *ebiten.Image, x, y int, label, 
 //	stats - Base stats component
 //
 // Returns: Map of derived stat names to values
-func (ui *CharacterUI) calculateDerivedStats(stats *StatsComponent) map[string]float64 {
+func (ui *EbitenCharacterUI) calculateDerivedStats(stats *StatsComponent) map[string]float64 {
 	derived := make(map[string]float64)
 
 	// Critical chance: base + bonus from attack
@@ -570,7 +567,7 @@ func formatStatValue(value float64, isPercentage bool) string {
 }
 
 // getResistanceColor returns a color based on resistance value.
-func (ui *CharacterUI) getResistanceColor(resist float64) color.Color {
+func (ui *EbitenCharacterUI) getResistanceColor(resist float64) color.Color {
 	if resist >= 0.5 {
 		return color.RGBA{100, 255, 100, 255} // High resistance (green)
 	} else if resist >= 0.25 {
@@ -580,3 +577,18 @@ func (ui *CharacterUI) getResistanceColor(resist float64) color.Color {
 	}
 	return color.RGBA{150, 150, 150, 255} // No resistance (gray)
 }
+
+// IsActive returns whether the character UI is currently visible.
+// Implements UISystem interface.
+func (ui *EbitenCharacterUI) IsActive() bool {
+	return ui.visible
+}
+
+// SetActive sets whether the character UI is visible.
+// Implements UISystem interface.
+func (ui *EbitenCharacterUI) SetActive(active bool) {
+	ui.visible = active
+}
+
+// Compile-time check that EbitenCharacterUI implements UISystem
+var _ UISystem = (*EbitenCharacterUI)(nil)

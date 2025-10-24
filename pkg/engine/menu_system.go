@@ -1,7 +1,6 @@
-//go:build !test
-// +build !test
-
-// Package engine provides the menu system for save/load and game pause functionality.
+// Package engine provides menu system for game UI.
+// This file implements MenuSystem which handles in-game menus including
+// main menu, save/load menus, and menu navigation.
 package engine
 
 import (
@@ -53,7 +52,7 @@ func (m *MenuComponent) Type() string {
 }
 
 // MenuSystem manages the game menu, including pause, save, and load functionality.
-type MenuSystem struct {
+type EbitenMenuSystem struct {
 	world        *World
 	screenWidth  int
 	screenHeight int
@@ -67,14 +66,14 @@ type MenuSystem struct {
 	menuEntity *Entity
 }
 
-// NewMenuSystem creates a new menu system.
-func NewMenuSystem(world *World, screenWidth, screenHeight int, saveDir string) (*MenuSystem, error) {
+// NewEbitenMenuSystem creates a new menu system.
+func NewEbitenMenuSystem(world *World, screenWidth, screenHeight int, saveDir string) (*EbitenMenuSystem, error) {
 	saveManager, err := saveload.NewSaveManager(saveDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize save manager: %w", err)
 	}
 
-	return &MenuSystem{
+	return &EbitenMenuSystem{
 		world:        world,
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
@@ -83,17 +82,17 @@ func NewMenuSystem(world *World, screenWidth, screenHeight int, saveDir string) 
 }
 
 // SetSaveCallback sets the callback for save operations.
-func (ms *MenuSystem) SetSaveCallback(callback func(name string) error) {
+func (ms *EbitenMenuSystem) SetSaveCallback(callback func(name string) error) {
 	ms.onSave = callback
 }
 
 // SetLoadCallback sets the callback for load operations.
-func (ms *MenuSystem) SetLoadCallback(callback func(name string) error) {
+func (ms *EbitenMenuSystem) SetLoadCallback(callback func(name string) error) {
 	ms.onLoad = callback
 }
 
 // Toggle opens or closes the main menu.
-func (ms *MenuSystem) Toggle() {
+func (ms *EbitenMenuSystem) Toggle() {
 	if ms.menuEntity == nil {
 		ms.menuEntity = ms.world.CreateEntity()
 		menu := &MenuComponent{
@@ -119,7 +118,7 @@ func (ms *MenuSystem) Toggle() {
 }
 
 // IsActive returns true if the menu is currently displayed.
-func (ms *MenuSystem) IsActive() bool {
+func (ms *EbitenMenuSystem) IsActive() bool {
 	if ms.menuEntity == nil {
 		return false
 	}
@@ -130,7 +129,7 @@ func (ms *MenuSystem) IsActive() bool {
 }
 
 // Update processes menu input and state.
-func (ms *MenuSystem) Update(entities []*Entity, deltaTime float64) {
+func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 	if ms.menuEntity == nil {
 		return
 	}
@@ -155,7 +154,7 @@ func (ms *MenuSystem) Update(entities []*Entity, deltaTime float64) {
 }
 
 // handleInput processes keyboard and mouse input for menu navigation.
-func (ms *MenuSystem) handleInput(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) handleInput(menu *MenuComponent) {
 	// Calculate menu bounds for mouse detection
 	menuWidth := 400
 	menuHeight := 300
@@ -243,7 +242,7 @@ func (ms *MenuSystem) handleInput(menu *MenuComponent) {
 }
 
 // buildMainMenu constructs the main pause menu.
-func (ms *MenuSystem) buildMainMenu(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 	menu.Items = []MenuItem{
 		{
 			Label:   "Save Game",
@@ -296,7 +295,7 @@ func (ms *MenuSystem) buildMainMenu(menu *MenuComponent) {
 }
 
 // buildSaveMenu constructs the save game menu with available save slots.
-func (ms *MenuSystem) buildSaveMenu(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
 	menu.Items = []MenuItem{
 		{
 			Label:   "Quick Save (slot 1)",
@@ -357,7 +356,7 @@ func (ms *MenuSystem) buildSaveMenu(menu *MenuComponent) {
 }
 
 // buildLoadMenu constructs the load game menu with existing saves.
-func (ms *MenuSystem) buildLoadMenu(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 	menu.Items = []MenuItem{}
 
 	// Get list of saves
@@ -423,7 +422,7 @@ func (ms *MenuSystem) buildLoadMenu(menu *MenuComponent) {
 }
 
 // buildConfirmMenu constructs a confirmation dialog.
-func (ms *MenuSystem) buildConfirmMenu(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) buildConfirmMenu(menu *MenuComponent) {
 	menu.Items = []MenuItem{
 		{
 			Label:   "Yes",
@@ -453,7 +452,7 @@ func (ms *MenuSystem) buildConfirmMenu(menu *MenuComponent) {
 }
 
 // rebuildMenu reconstructs the menu based on current menu type.
-func (ms *MenuSystem) rebuildMenu(menu *MenuComponent) {
+func (ms *EbitenMenuSystem) rebuildMenu(menu *MenuComponent) {
 	menu.SelectedIndex = 0
 	switch menu.CurrentMenu {
 	case MenuTypeMain:
@@ -468,7 +467,12 @@ func (ms *MenuSystem) rebuildMenu(menu *MenuComponent) {
 }
 
 // Draw renders the menu overlay.
-func (ms *MenuSystem) Draw(screen *ebiten.Image) {
+// Implements UISystem interface.
+func (ms *EbitenMenuSystem) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
 	if ms.menuEntity == nil {
 		return
 	}
@@ -483,7 +487,8 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ms.screenWidth, ms.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 180})
-	screen.DrawImage(overlay, nil)
+	img.DrawImage(overlay, nil)
+	img.DrawImage(overlay, nil)
 
 	// Calculate menu position (centered)
 	menuWidth := 400
@@ -496,7 +501,7 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 	menuBg.Fill(color.RGBA{40, 40, 50, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(menuX), float64(menuY))
-	screen.DrawImage(menuBg, opts)
+	img.DrawImage(menuBg, opts)
 
 	// Draw menu title
 	var title string
@@ -511,11 +516,11 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 		title = "CONFIRM"
 	}
 
-	ebitenutil.DebugPrintAt(screen, title, menuX+10, menuY+10)
+	ebitenutil.DebugPrintAt(img, title, menuX+10, menuY+10)
 
 	// Draw confirmation message if present
 	if menuComp.CurrentMenu == MenuTypeConfirm && menuComp.ConfirmMessage != "" {
-		ebitenutil.DebugPrintAt(screen, menuComp.ConfirmMessage, menuX+10, menuY+40)
+		ebitenutil.DebugPrintAt(img, menuComp.ConfirmMessage, menuX+10, menuY+40)
 	}
 
 	// Draw menu items
@@ -530,15 +535,15 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 			selectionBg.Fill(color.RGBA{80, 80, 100, 200})
 			bgOpts := &ebiten.DrawImageOptions{}
 			bgOpts.GeoM.Translate(float64(menuX+10), float64(itemY))
-			screen.DrawImage(selectionBg, bgOpts)
+			img.DrawImage(selectionBg, bgOpts)
 
 			// Draw selection indicator
-			ebitenutil.DebugPrintAt(screen, ">", menuX+10, itemY)
+			ebitenutil.DebugPrintAt(img, ">", menuX+10, itemY)
 		}
 
 		// Draw item label (offset for selection indicator)
 		// Note: Disabled items should appear grayed out, but ebitenutil doesn't support color
-		ebitenutil.DebugPrintAt(screen, item.Label, menuX+30, itemY)
+		ebitenutil.DebugPrintAt(img, item.Label, menuX+30, itemY)
 
 		itemY += 25
 	}
@@ -546,10 +551,28 @@ func (ms *MenuSystem) Draw(screen *ebiten.Image) {
 	// Draw error message if present
 	if menuComp.ErrorMessage != "" {
 		errorY := menuY + menuHeight - 30
-		ebitenutil.DebugPrintAt(screen, menuComp.ErrorMessage, menuX+10, errorY)
+		ebitenutil.DebugPrintAt(img, menuComp.ErrorMessage, menuX+10, errorY)
 	}
 
 	// Draw controls hint
 	controlsY := menuY + menuHeight - 10
-	ebitenutil.DebugPrintAt(screen, "WASD/Arrows: Navigate | Enter/Click: Select | ESC: Back", menuX+10, controlsY)
+	ebitenutil.DebugPrintAt(img, "WASD/Arrows: Navigate | Enter/Click: Select | ESC: Back", menuX+10, controlsY)
 }
+
+// SetActive opens or closes the menu.
+// Implements UISystem interface.
+func (ms *EbitenMenuSystem) SetActive(active bool) {
+	if active {
+		if ms.menuEntity == nil {
+			ms.Toggle()
+		}
+	} else {
+		if ms.menuEntity != nil {
+			ms.world.RemoveEntity(ms.menuEntity.ID)
+			ms.menuEntity = nil
+		}
+	}
+}
+
+// Compile-time check that EbitenMenuSystem implements UISystem
+var _ UISystem = (*EbitenMenuSystem)(nil)

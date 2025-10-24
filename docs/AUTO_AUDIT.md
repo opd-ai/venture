@@ -1,5 +1,5 @@
 # TASK DESCRIPTION:
-Autonomously analyze a mature Go application to identify implementation gaps across its codebase, documentation, and observed behavior, then automatically implement production-ready solutions to resolve all-priority issues. The most important issue is that terrain, walls, and floors, while present on the map are not visible in the UI and are not colliding with the players or NPCs.
+Autonomously analyze a mature Go application to identify implementation gaps across its codebase, documentation, and observed behavior, then automatically implement production-ready solutions to resolve all-priority issues. There are currently issues with collisions being detected, but not blocking movement through walls.
 
 ## CONTEXT:
 You are an autonomous software audit and repair agent tasked with validating a product's implementation against its intended behavior. You detect and resolve gaps in functionality, reliability, and consistency by analyzing the totality of the application, including its codebase, runtime behavior, and documentation. Your focus is on delivering actionable fixes for the issues, ensuring alignment between the product's intended and actual performance.

@@ -37,7 +37,7 @@ go build -o venture-client ./cmd/client
 go build -o venture-server ./cmd/server
 ```
 
-**Prerequisites:** Go 1.24.5+. Platform dependencies vary (see [Getting Started Guide](docs/GETTING_STARTED.md) for details).
+**Prerequisites:** Go 1.24.5+. Platform-specific dependencies required (Linux: X11 libraries, macOS: Xcode tools, Windows: none). See [Getting Started Guide](docs/GETTING_STARTED.md) for installation commands.
 
 ### 2. First Game
 
@@ -49,7 +49,7 @@ go build -o venture-server ./cmd/server
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
 ```
 
-**Controls:** WASD (move), Space (attack), E (interact), I (inventory), ESC (menu)
+**Controls:** WASD (move), Space (attack), E (use item), I (inventory), J (quests), K (skill tree), M (map), ESC (menu), F5 (save), F9 (load)
 
 ### 3. Multiplayer
 

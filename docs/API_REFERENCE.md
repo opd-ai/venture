@@ -36,10 +36,10 @@ The World is the central ECS container.
 // Create a new world
 world := engine.NewWorld()
 
-// Add systems with proper constructors
-world.AddSystem(engine.NewMovementSystem(200.0)) // Max speed 200 units/sec
-world.AddSystem(engine.NewCollisionSystem(32.0))  // 32x32 tile size
-world.AddSystem(engine.NewInputSystem())
+// Add systems with proper constructors (parameters required)
+world.AddSystem(engine.NewMovementSystem(200.0))  // Max speed parameter required
+world.AddSystem(engine.NewCollisionSystem(32.0))  // Cell size parameter required
+world.AddSystem(engine.NewInputSystem())          // No parameters
 
 // Update world (call every frame)
 deltaTime := 0.016 // 60 FPS
@@ -75,7 +75,7 @@ entity := engine.NewEntity(123) // ID: 123
 entity.AddComponent(&engine.PositionComponent{X: 100, Y: 50})
 entity.AddComponent(&engine.VelocityComponent{VX: 10, VY: 0})
 
-// Get component (note: method parameter is componentType, not name)
+// Get component by type string
 pos, ok := entity.GetComponent("position")
 if ok {
     position := pos.(*engine.PositionComponent)

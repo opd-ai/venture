@@ -35,11 +35,16 @@ Start the game client:
 
 **Default Controls:**
 - **WASD** - Move your character
-- **Mouse** - Look around and target
-- **Space** - Attack/Interact
-- **E** - Use item/Open inventory
-- **Tab** - Toggle character stats
-- **Esc** - Pause menu
+- **Space** - Attack
+- **E** - Use item
+- **I** - Open inventory
+- **J** - Open quest log
+- **K** - Open skill tree
+- **M** - Open map
+- **Esc** - Pause menu/Help
+- **F5** - Quick save
+- **F9** - Quick load
+- **1-5** - Cast spells
 
 ### 3. Your First Game
 

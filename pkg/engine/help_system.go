@@ -1,8 +1,5 @@
-//go:build !test
-// +build !test
-
 // Package engine provides contextual help display for the game.
-// This file implements HelpSystem which renders help topics and controls
+// This file implements EbitenHelpSystem which renders help topics and controls
 // information using an in-game overlay.
 package engine
 
@@ -23,8 +20,9 @@ type HelpTopic struct {
 	Keys    []string // Related keyboard shortcuts
 }
 
-// HelpSystem provides context-sensitive help to the player
-type HelpSystem struct {
+// EbitenHelpSystem provides context-sensitive help to the player (Ebiten implementation).
+// Implements UISystem interface.
+type EbitenHelpSystem struct {
 	Enabled       bool
 	Visible       bool
 	CurrentTopic  string
@@ -34,9 +32,9 @@ type HelpSystem struct {
 	CurrentHint   string
 }
 
-// NewHelpSystem creates a new help system with default topics
-func NewHelpSystem() *HelpSystem {
-	return &HelpSystem{
+// NewHelpSystem creates a new help system with default topics.
+func NewHelpSystem() *EbitenHelpSystem {
+	return &EbitenHelpSystem{
 		Enabled:    true,
 		Visible:    false,
 		Topics:     createDefaultHelpTopics(),
@@ -225,7 +223,7 @@ func createDefaultQuickHints() map[string]string {
 }
 
 // ShowTopic displays a specific help topic
-func (hs *HelpSystem) ShowTopic(topicID string) {
+func (hs *EbitenHelpSystem) ShowTopic(topicID string) {
 	if !hs.Enabled {
 		return
 	}
@@ -237,12 +235,12 @@ func (hs *HelpSystem) ShowTopic(topicID string) {
 }
 
 // Hide hides the help display
-func (hs *HelpSystem) Hide() {
+func (hs *EbitenHelpSystem) Hide() {
 	hs.Visible = false
 }
 
 // Toggle toggles the help display visibility
-func (hs *HelpSystem) Toggle() {
+func (hs *EbitenHelpSystem) Toggle() {
 	hs.Visible = !hs.Visible
 	if hs.Visible && hs.CurrentTopic == "" {
 		// Default to controls topic
@@ -251,7 +249,7 @@ func (hs *HelpSystem) Toggle() {
 }
 
 // ShowQuickHintFor displays a context-sensitive hint
-func (hs *HelpSystem) ShowQuickHintFor(context string) {
+func (hs *EbitenHelpSystem) ShowQuickHintFor(context string) {
 	if !hs.Enabled {
 		return
 	}
@@ -263,13 +261,13 @@ func (hs *HelpSystem) ShowQuickHintFor(context string) {
 }
 
 // HideQuickHint hides the current hint
-func (hs *HelpSystem) HideQuickHint() {
+func (hs *EbitenHelpSystem) HideQuickHint() {
 	hs.ShowQuickHint = false
 	hs.CurrentHint = ""
 }
 
 // Update processes the help system (can be used for auto-hiding hints)
-func (hs *HelpSystem) Update(entities []*Entity, deltaTime float64) {
+func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 	if !hs.Enabled {
 		return
 	}
@@ -307,25 +305,32 @@ func (hs *HelpSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 }
 
-// Draw renders the help system UI
-func (hs *HelpSystem) Draw(screen *ebiten.Image) {
+// Draw renders the help system UI (implements UISystem interface).
+// The screen parameter should be *ebiten.Image in production.
+func (hs *EbitenHelpSystem) Draw(screen interface{}) {
+	// Type assert to *ebiten.Image
+	ebitenScreen, ok := screen.(*ebiten.Image)
+	if !ok {
+		return // Invalid screen type
+	}
+
 	if !hs.Enabled {
 		return
 	}
 
 	// Draw quick hint if active
 	if hs.ShowQuickHint && hs.CurrentHint != "" {
-		hs.drawQuickHint(screen)
+		hs.drawQuickHint(ebitenScreen)
 	}
 
 	// Draw full help panel if visible
 	if hs.Visible && hs.CurrentTopic != "" {
-		hs.drawHelpPanel(screen)
+		hs.drawHelpPanel(ebitenScreen)
 	}
 }
 
 // drawQuickHint renders a small hint at the top of screen
-func (hs *HelpSystem) drawQuickHint(screen *ebiten.Image) {
+func (hs *EbitenHelpSystem) drawQuickHint(screen *ebiten.Image) {
 	screenWidth := screen.Bounds().Dx()
 
 	hintWidth := 600
@@ -351,7 +356,7 @@ func (hs *HelpSystem) drawQuickHint(screen *ebiten.Image) {
 }
 
 // drawHelpPanel renders the full help panel
-func (hs *HelpSystem) drawHelpPanel(screen *ebiten.Image) {
+func (hs *EbitenHelpSystem) drawHelpPanel(screen *ebiten.Image) {
 	topic, exists := hs.Topics[hs.CurrentTopic]
 	if !exists {
 		return
@@ -411,7 +416,7 @@ func (hs *HelpSystem) drawHelpPanel(screen *ebiten.Image) {
 }
 
 // GetTopicList returns all available topic IDs
-func (hs *HelpSystem) GetTopicList() []string {
+func (hs *EbitenHelpSystem) GetTopicList() []string {
 	topics := make([]string, 0, len(hs.Topics))
 	for id := range hs.Topics {
 		topics = append(topics, id)
@@ -420,7 +425,20 @@ func (hs *HelpSystem) GetTopicList() []string {
 }
 
 // GetTopic returns a specific help topic
-func (hs *HelpSystem) GetTopic(id string) (*HelpTopic, bool) {
+func (hs *EbitenHelpSystem) GetTopic(id string) (*HelpTopic, bool) {
 	topic, exists := hs.Topics[id]
 	return &topic, exists
 }
+
+// IsActive implements UISystem interface.
+func (hs *EbitenHelpSystem) IsActive() bool {
+	return hs.Visible
+}
+
+// SetActive implements UISystem interface.
+func (hs *EbitenHelpSystem) SetActive(active bool) {
+	hs.Visible = active
+}
+
+// Compile-time interface check
+var _ UISystem = (*EbitenHelpSystem)(nil)

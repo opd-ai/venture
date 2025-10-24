@@ -1,9 +1,4 @@
-//go:build !test
-// +build !test
-
-// Package engine provides map UI rendering.
-// This file implements MapUI which displays terrain exploration,
-// fog of war, and minimap/full-screen map views.
+// Package engine provides map_ui for game UI.
 package engine
 
 import (
@@ -19,7 +14,7 @@ import (
 )
 
 // MapUI handles rendering and interaction for the world map display.
-type MapUI struct {
+type EbitenMapUI struct {
 	visible      bool
 	fullScreen   bool // true = full-screen map, false = minimap
 	world        *World
@@ -49,8 +44,8 @@ type MapUI struct {
 //
 // Returns: Initialized MapUI
 // Called by: Game.NewGame()
-func NewMapUI(world *World, screenWidth, screenHeight int) *MapUI {
-	return &MapUI{
+func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
+	return &EbitenMapUI{
 		visible:        false,
 		fullScreen:     false,
 		world:          world,
@@ -69,7 +64,7 @@ func NewMapUI(world *World, screenWidth, screenHeight int) *MapUI {
 //	entity - Player entity with PositionComponent
 //
 // Called by: Game.SetPlayerEntity()
-func (ui *MapUI) SetPlayerEntity(entity *Entity) {
+func (ui *EbitenMapUI) SetPlayerEntity(entity *Entity) {
 	ui.playerEntity = entity
 	ui.mapNeedsUpdate = true
 }
@@ -80,7 +75,7 @@ func (ui *MapUI) SetPlayerEntity(entity *Entity) {
 //	terrain - Terrain data from TerrainRenderSystem
 //
 // Called by: Game after terrain generation
-func (ui *MapUI) SetTerrain(terrain *terrain.Terrain) {
+func (ui *EbitenMapUI) SetTerrain(terrain *terrain.Terrain) {
 	ui.terrain = terrain
 	if terrain != nil {
 		// Initialize fog of war to match terrain dimensions
@@ -96,7 +91,7 @@ func (ui *MapUI) SetTerrain(terrain *terrain.Terrain) {
 // GetFogOfWar returns a copy of the fog of war exploration state.
 // Returns: 2D boolean array where true = explored
 // Called by: SaveManager when serializing game state
-func (ui *MapUI) GetFogOfWar() [][]bool {
+func (ui *EbitenMapUI) GetFogOfWar() [][]bool {
 	if ui.fogOfWar == nil {
 		return nil
 	}
@@ -116,7 +111,7 @@ func (ui *MapUI) GetFogOfWar() [][]bool {
 //	fogOfWar - 2D boolean array where true = explored
 //
 // Called by: LoadManager when deserializing game state
-func (ui *MapUI) SetFogOfWar(fogOfWar [][]bool) {
+func (ui *EbitenMapUI) SetFogOfWar(fogOfWar [][]bool) {
 	if fogOfWar == nil {
 		return
 	}
@@ -131,7 +126,7 @@ func (ui *MapUI) SetFogOfWar(fogOfWar [][]bool) {
 
 // ToggleFullScreen switches between minimap and full-screen modes.
 // Called by: InputSystem when M key is pressed
-func (ui *MapUI) ToggleFullScreen() {
+func (ui *EbitenMapUI) ToggleFullScreen() {
 	ui.fullScreen = !ui.fullScreen
 	ui.visible = true // Always make visible when toggling
 	if ui.fullScreen {
@@ -143,12 +138,12 @@ func (ui *MapUI) ToggleFullScreen() {
 // IsFullScreen returns whether full-screen map is shown.
 // Returns: true if full-screen, false if minimap or hidden
 // Called by: Game.Update() to block input
-func (ui *MapUI) IsFullScreen() bool {
+func (ui *EbitenMapUI) IsFullScreen() bool {
 	return ui.fullScreen
 }
 
 // ShowFullScreen displays the full-screen map.
-func (ui *MapUI) ShowFullScreen() {
+func (ui *EbitenMapUI) ShowFullScreen() {
 	ui.fullScreen = true
 	ui.visible = true
 	ui.centerOnPlayer()
@@ -156,7 +151,7 @@ func (ui *MapUI) ShowFullScreen() {
 }
 
 // HideFullScreen returns to minimap mode.
-func (ui *MapUI) HideFullScreen() {
+func (ui *EbitenMapUI) HideFullScreen() {
 	ui.fullScreen = false
 }
 
@@ -166,7 +161,7 @@ func (ui *MapUI) HideFullScreen() {
 //	deltaTime - Time since last frame
 //
 // Called by: Game.Update() every frame
-func (ui *MapUI) Update(deltaTime float64) {
+func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 	// Always update fog of war (even when not visible)
 	ui.updateFogOfWar()
 
@@ -227,15 +222,19 @@ func (ui *MapUI) Update(deltaTime float64) {
 //	screen - Ebiten image
 //
 // Called by: Game.Draw() every frame
-func (ui *MapUI) Draw(screen *ebiten.Image) {
+func (ui *EbitenMapUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
 	if !ui.visible {
 		return
 	}
 
 	if ui.fullScreen {
-		ui.drawFullScreenMap(screen)
+		ui.drawFullScreenMap(img)
 	} else {
-		ui.drawMinimap(screen)
+		ui.drawMinimap(img)
 	}
 }
 
@@ -245,7 +244,7 @@ func (ui *MapUI) Draw(screen *ebiten.Image) {
 //	screen - Target image
 //
 // Called by: Draw() when fullScreen is false
-func (ui *MapUI) drawMinimap(screen *ebiten.Image) {
+func (ui *EbitenMapUI) drawMinimap(screen *ebiten.Image) {
 	if ui.terrain == nil || ui.playerEntity == nil {
 		return
 	}
@@ -319,7 +318,7 @@ func (ui *MapUI) drawMinimap(screen *ebiten.Image) {
 //	screen - Target image
 //
 // Called by: Draw() when fullScreen is true
-func (ui *MapUI) drawFullScreenMap(screen *ebiten.Image) {
+func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 	if ui.terrain == nil {
 		return
 	}
@@ -409,7 +408,7 @@ func (ui *MapUI) drawFullScreenMap(screen *ebiten.Image) {
 
 // updateFogOfWar marks tiles as explored based on player visibility.
 // Called by: Update() every frame
-func (ui *MapUI) updateFogOfWar() {
+func (ui *EbitenMapUI) updateFogOfWar() {
 	if ui.terrain == nil || ui.playerEntity == nil || ui.fogOfWar == nil {
 		return
 	}
@@ -455,7 +454,7 @@ func (ui *MapUI) updateFogOfWar() {
 
 // regenerateMapImage rebuilds the cached map rendering.
 // Called by: Update() when mapNeedsUpdate is true
-func (ui *MapUI) regenerateMapImage() {
+func (ui *EbitenMapUI) regenerateMapImage() {
 	// For now, we regenerate on each draw
 	// Future optimization: pre-render to an image
 	ui.mapNeedsUpdate = false
@@ -467,7 +466,7 @@ func (ui *MapUI) regenerateMapImage() {
 //	tileX, tileY - Tile coordinates
 //
 // Returns: Screen pixel coordinates
-func (ui *MapUI) tileToScreen(tileX, tileY int) (int, int) {
+func (ui *EbitenMapUI) tileToScreen(tileX, tileY int) (int, int) {
 	tileSize := 8.0 * ui.scale
 	screenX := (float64(tileX) * tileSize) - ui.offsetX
 	screenY := (float64(tileY) * tileSize) - ui.offsetY
@@ -480,7 +479,7 @@ func (ui *MapUI) tileToScreen(tileX, tileY int) (int, int) {
 //	screenX, screenY - Screen pixel coordinates
 //
 // Returns: Tile coordinates
-func (ui *MapUI) screenToTile(screenX, screenY int) (int, int) {
+func (ui *EbitenMapUI) screenToTile(screenX, screenY int) (int, int) {
 	tileSize := 8.0 * ui.scale
 	tileX := int((float64(screenX) + ui.offsetX) / tileSize)
 	tileY := int((float64(screenY) + ui.offsetY) / tileSize)
@@ -488,17 +487,17 @@ func (ui *MapUI) screenToTile(screenX, screenY int) (int, int) {
 }
 
 // drawMapTile renders a single tile on the map (unused - kept for API completeness).
-func (ui *MapUI) drawMapTile(img *ebiten.Image, tileX, tileY int, tileType terrain.TileType, explored bool) {
+func (ui *EbitenMapUI) drawMapTile(screen *ebiten.Image, tileX, tileY int, tileType terrain.TileType, explored bool) {
 	// Implementation merged into drawFullScreenMap for performance
 }
 
 // drawMapIcons renders player, enemy, item markers.
 // Parameters:
 //
-//	img - Target image
+//	screen - Target image
 //
 // Called by: drawFullScreenMap() and drawMinimap()
-func (ui *MapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY int) {
+func (ui *EbitenMapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY int) {
 	if ui.playerEntity == nil {
 		return
 	}
@@ -566,7 +565,7 @@ func (ui *MapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int, tile
 
 // getVisibleRadius returns the player's vision radius in tiles.
 // Returns: Number of tiles visible around player
-func (ui *MapUI) getVisibleRadius() int {
+func (ui *EbitenMapUI) getVisibleRadius() int {
 	// Default vision radius
 	return 10
 }
@@ -577,7 +576,7 @@ func (ui *MapUI) getVisibleRadius() int {
 //	dx, dy - Delta movement
 //
 // Called by: Update() when arrow keys pressed in full-screen mode
-func (ui *MapUI) panMap(dx, dy float64) {
+func (ui *EbitenMapUI) panMap(dx, dy float64) {
 	ui.offsetX += dx
 	ui.offsetY += dy
 
@@ -605,7 +604,7 @@ func (ui *MapUI) panMap(dx, dy float64) {
 //	delta - Zoom delta (positive = zoom in, negative = zoom out)
 //
 // Called by: Update() on mouse wheel input
-func (ui *MapUI) zoomMap(delta float64) {
+func (ui *EbitenMapUI) zoomMap(delta float64) {
 	ui.scale += delta
 	if ui.scale < 0.5 {
 		ui.scale = 0.5
@@ -618,7 +617,7 @@ func (ui *MapUI) zoomMap(delta float64) {
 
 // centerOnPlayer resets pan/zoom to center on player.
 // Called by: ShowFullScreen() when opening map
-func (ui *MapUI) centerOnPlayer() {
+func (ui *EbitenMapUI) centerOnPlayer() {
 	if ui.playerEntity == nil || ui.terrain == nil {
 		return
 	}
@@ -653,7 +652,7 @@ func (ui *MapUI) centerOnPlayer() {
 }
 
 // getTileColor returns a color for a terrain tile type.
-func (ui *MapUI) getTileColor(tileType terrain.TileType, explored bool) color.Color {
+func (ui *EbitenMapUI) getTileColor(tileType terrain.TileType, explored bool) color.Color {
 	var baseColor color.Color
 
 	switch tileType {
@@ -678,7 +677,7 @@ func (ui *MapUI) getTileColor(tileType terrain.TileType, explored bool) color.Co
 }
 
 // drawLegend renders the map legend explaining tile colors.
-func (ui *MapUI) drawLegend(screen *ebiten.Image, x, y int) {
+func (ui *EbitenMapUI) drawLegend(screen *ebiten.Image, x, y int) {
 	text.Draw(screen, "Legend:", basicfont.Face7x13, x, y, color.RGBA{200, 200, 200, 255})
 
 	legendItems := []struct {
@@ -702,3 +701,18 @@ func (ui *MapUI) drawLegend(screen *ebiten.Image, x, y int) {
 		y += 15
 	}
 }
+
+// IsActive returns whether the map UI is currently visible.
+// Implements UISystem interface.
+func (m *EbitenMapUI) IsActive() bool {
+	return m.visible
+}
+
+// SetActive sets whether the map UI is visible.
+// Implements UISystem interface.
+func (m *EbitenMapUI) SetActive(active bool) {
+	m.visible = active
+}
+
+// Compile-time check that EbitenMapUI implements UISystem
+var _ UISystem = (*EbitenMapUI)(nil)

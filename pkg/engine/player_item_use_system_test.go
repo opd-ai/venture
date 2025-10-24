@@ -18,7 +18,7 @@ func TestPlayerItemUseSystem_UseConsumable(t *testing.T) {
 	// Create player with damaged health
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 	player.AddComponent(&HealthComponent{Current: 50, Max: 100})
 
 	inventory := NewInventoryComponent(10, 50.0)
@@ -64,7 +64,7 @@ func TestPlayerItemUseSystem_UseConsumable(t *testing.T) {
 
 	// Verify input was consumed
 	inputComp, _ := player.GetComponent("input")
-	input := inputComp.(*InputComponent)
+	input := inputComp.(*StubInput)
 	if input.UseItemPressed {
 		t.Error("UseItemPressed should be false after use")
 	}
@@ -78,7 +78,7 @@ func TestPlayerItemUseSystem_NoUsableItems(t *testing.T) {
 
 	// Create player
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 
 	inventory := NewInventoryComponent(10, 50.0)
 
@@ -106,7 +106,7 @@ func TestPlayerItemUseSystem_NoUsableItems(t *testing.T) {
 
 	// Input should still be consumed
 	inputComp, _ := player.GetComponent("input")
-	input := inputComp.(*InputComponent)
+	input := inputComp.(*StubInput)
 	if input.UseItemPressed {
 		t.Error("UseItemPressed should be consumed even if no usable item")
 	}
@@ -120,7 +120,7 @@ func TestPlayerItemUseSystem_EmptyInventory(t *testing.T) {
 
 	// Create player with empty inventory
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 	inventory := NewInventoryComponent(10, 50.0)
 	player.AddComponent(inventory)
 
@@ -131,7 +131,7 @@ func TestPlayerItemUseSystem_EmptyInventory(t *testing.T) {
 
 	// Input should be consumed
 	inputComp, _ := player.GetComponent("input")
-	input := inputComp.(*InputComponent)
+	input := inputComp.(*StubInput)
 	if input.UseItemPressed {
 		t.Error("UseItemPressed should be consumed")
 	}
@@ -163,7 +163,7 @@ func TestPlayerItemUseSystem_NoInventoryComponent(t *testing.T) {
 
 	// Create player without inventory
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 
 	world.Update(0)
 
@@ -179,7 +179,7 @@ func TestPlayerItemUseSystem_MultipleConsumables(t *testing.T) {
 
 	// Create player
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 	player.AddComponent(&HealthComponent{Current: 50, Max: 100})
 
 	inventory := NewInventoryComponent(10, 50.0)
@@ -274,7 +274,7 @@ func TestPlayerItemUseSystem_InputNotPressed(t *testing.T) {
 
 	// Create player with input not pressed
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: false})
+	player.AddComponent(&StubInput{UseItemPressed: false})
 
 	inventory := NewInventoryComponent(10, 50.0)
 	potion := &item.Item{
@@ -305,7 +305,7 @@ func BenchmarkPlayerItemUseSystem(b *testing.B) {
 
 	// Create player with inventory
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{UseItemPressed: true})
+	player.AddComponent(&StubInput{UseItemPressed: true})
 	player.AddComponent(&HealthComponent{Current: 50, Max: 100})
 
 	inventory := NewInventoryComponent(10, 50.0)
@@ -325,7 +325,7 @@ func BenchmarkPlayerItemUseSystem(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Reset input for each iteration
 		inputComp, _ := player.GetComponent("input")
-		input := inputComp.(*InputComponent)
+		input := inputComp.(*StubInput)
 		input.UseItemPressed = true
 
 		itemUseSys.Update(entities, 0.016)

@@ -1,8 +1,3 @@
-//go:build !test
-// +build !test
-
-// Package engine provides HUD rendering for game UI.
-// This file implements HUDSystem which renders the heads-up display including
 // health bars, stats, and other UI elements.
 package engine
 
@@ -17,7 +12,7 @@ import (
 )
 
 // HUDSystem renders the heads-up display (health bars, stats, etc).
-type HUDSystem struct {
+type EbitenHUDSystem struct {
 	screen       *ebiten.Image
 	screenWidth  int
 	screenHeight int
@@ -29,9 +24,9 @@ type HUDSystem struct {
 	playerEntity *Entity
 }
 
-// NewHUDSystem creates a new HUD system.
-func NewHUDSystem(screenWidth, screenHeight int) *HUDSystem {
-	return &HUDSystem{
+// NewEbitenHUDSystem creates a new HUD system.
+func NewEbitenHUDSystem(screenWidth, screenHeight int) *EbitenHUDSystem {
+	return &EbitenHUDSystem{
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 		Visible:      true,
@@ -39,22 +34,27 @@ func NewHUDSystem(screenWidth, screenHeight int) *HUDSystem {
 }
 
 // SetPlayerEntity sets the player entity whose stats will be displayed.
-func (h *HUDSystem) SetPlayerEntity(entity *Entity) {
+func (h *EbitenHUDSystem) SetPlayerEntity(entity *Entity) {
 	h.playerEntity = entity
 }
 
 // Update is called every frame but HUD doesn't need to update entities.
-func (h *HUDSystem) Update(entities []*Entity, deltaTime float64) {
+func (h *EbitenHUDSystem) Update(entities []*Entity, deltaTime float64) {
 	// HUD doesn't modify entities, just reads their state
 }
 
 // Draw renders the HUD overlay on the screen.
-func (h *HUDSystem) Draw(screen *ebiten.Image) {
+// Implements UISystem interface.
+func (h *EbitenHUDSystem) Draw(screen interface{}) {
 	if !h.Visible || h.playerEntity == nil {
 		return
 	}
 
-	h.screen = screen
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
+	h.screen = img
 
 	// Draw health bar
 	h.drawHealthBar()
@@ -67,7 +67,7 @@ func (h *HUDSystem) Draw(screen *ebiten.Image) {
 }
 
 // drawHealthBar draws the player's health bar at the top left.
-func (h *HUDSystem) drawHealthBar() {
+func (h *EbitenHUDSystem) drawHealthBar() {
 	healthComp, ok := h.playerEntity.GetComponent("health")
 	if !ok {
 		return
@@ -102,7 +102,7 @@ func (h *HUDSystem) drawHealthBar() {
 }
 
 // drawStatsPanel draws the player's stats in the top right.
-func (h *HUDSystem) drawStatsPanel() {
+func (h *EbitenHUDSystem) drawStatsPanel() {
 	statsComp, hasStats := h.playerEntity.GetComponent("stats")
 	expComp, hasExp := h.playerEntity.GetComponent("experience")
 
@@ -142,7 +142,7 @@ func (h *HUDSystem) drawStatsPanel() {
 }
 
 // drawExperienceBar draws the experience progress bar at the bottom.
-func (h *HUDSystem) drawExperienceBar() {
+func (h *EbitenHUDSystem) drawExperienceBar() {
 	expComp, ok := h.playerEntity.GetComponent("experience")
 	if !ok {
 		return
@@ -175,7 +175,7 @@ func (h *HUDSystem) drawExperienceBar() {
 }
 
 // getHealthColor returns a color based on health percentage.
-func (h *HUDSystem) getHealthColor(healthPct float32) color.Color {
+func (h *EbitenHUDSystem) getHealthColor(healthPct float32) color.Color {
 	if healthPct > 0.75 {
 		// 100%-75%: Pure green to slight yellow tint
 		// R increases from 0 to 100
@@ -204,8 +204,23 @@ func (h *HUDSystem) getHealthColor(healthPct float32) color.Color {
 
 // drawText draws text at the specified position using basicfont.
 // This provides readable text for HUD elements (health values, stats, XP).
-func (h *HUDSystem) drawText(str string, x, y int, col color.Color) {
+func (h *EbitenHUDSystem) drawText(str string, x, y int, col color.Color) {
 	// Use basicfont.Face7x13 for consistent text rendering across all UI systems
 	// Note: y coordinate is the baseline, not top-left, so text appears below y
 	text.Draw(h.screen, str, basicfont.Face7x13, x, y+13, col)
 }
+
+// IsActive returns whether the HUD is currently visible.
+// Implements UISystem interface.
+func (h *EbitenHUDSystem) IsActive() bool {
+	return h.Visible
+}
+
+// SetActive sets whether the HUD is visible.
+// Implements UISystem interface.
+func (h *EbitenHUDSystem) SetActive(active bool) {
+	h.Visible = active
+}
+
+// Compile-time check that EbitenHUDSystem implements UISystem
+var _ UISystem = (*EbitenHUDSystem)(nil)

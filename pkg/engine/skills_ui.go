@@ -1,9 +1,4 @@
-//go:build !test
-// +build !test
-
-// Package engine provides skills tree UI rendering.
-// This file implements SkillsUI which displays skill tree progression,
-// allows skill point spending, and visualizes skill node relationships.
+// Package engine provides skills_ui for game UI.
 package engine
 
 import (
@@ -37,7 +32,7 @@ type Point struct {
 }
 
 // SkillsUI handles rendering and interaction for the skill tree screen.
-type SkillsUI struct {
+type EbitenSkillsUI struct {
 	visible      bool
 	world        *World
 	playerEntity *Entity
@@ -65,8 +60,8 @@ type SkillsUI struct {
 //
 // Returns: Initialized SkillsUI
 // Called by: Game.NewGame() during initialization
-func NewSkillsUI(world *World, screenWidth, screenHeight int) *SkillsUI {
-	return &SkillsUI{
+func NewEbitenSkillsUI(world *World, screenWidth, screenHeight int) *EbitenSkillsUI {
+	return &EbitenSkillsUI{
 		visible:       false,
 		world:         world,
 		screenWidth:   screenWidth,
@@ -85,7 +80,7 @@ func NewSkillsUI(world *World, screenWidth, screenHeight int) *SkillsUI {
 //	entity - Player entity with SkillTreeComponent
 //
 // Called by: Game.SetPlayerEntity()
-func (ui *SkillsUI) SetPlayerEntity(entity *Entity) {
+func (ui *EbitenSkillsUI) SetPlayerEntity(entity *Entity) {
 	ui.playerEntity = entity
 	if ui.visible {
 		ui.loadSkillTree()
@@ -95,7 +90,7 @@ func (ui *SkillsUI) SetPlayerEntity(entity *Entity) {
 
 // Toggle shows or hides the skills UI.
 // Called by: InputSystem when K key is pressed
-func (ui *SkillsUI) Toggle() {
+func (ui *EbitenSkillsUI) Toggle() {
 	ui.visible = !ui.visible
 	if ui.visible {
 		ui.loadSkillTree()
@@ -106,26 +101,26 @@ func (ui *SkillsUI) Toggle() {
 // IsVisible returns whether the skills UI is currently shown.
 // Returns: true if visible, false otherwise
 // Called by: Game.Update() to block input
-func (ui *SkillsUI) IsVisible() bool {
+func (ui *EbitenSkillsUI) IsVisible() bool {
 	return ui.visible
 }
 
 // Show displays the skills UI.
-func (ui *SkillsUI) Show() {
+func (ui *EbitenSkillsUI) Show() {
 	ui.visible = true
 	ui.loadSkillTree()
 	ui.calculateNodeLayout()
 }
 
 // Hide hides the skills UI.
-func (ui *SkillsUI) Hide() {
+func (ui *EbitenSkillsUI) Hide() {
 	ui.visible = false
 	ui.selectedNode = nil
 	ui.hoveredNode = nil
 }
 
 // loadSkillTree loads the skill tree component from the player entity.
-func (ui *SkillsUI) loadSkillTree() {
+func (ui *EbitenSkillsUI) loadSkillTree() {
 	if ui.playerEntity == nil {
 		return
 	}
@@ -141,7 +136,7 @@ func (ui *SkillsUI) loadSkillTree() {
 //	deltaTime - Time since last frame
 //
 // Called by: Game.Update() every frame
-func (ui *SkillsUI) Update(deltaTime float64) {
+func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 	if !ui.visible {
 		return
 	}
@@ -181,13 +176,17 @@ func (ui *SkillsUI) Update(deltaTime float64) {
 //	screen - Ebiten image
 //
 // Called by: Game.Draw() every frame
-func (ui *SkillsUI) Draw(screen *ebiten.Image) {
+func (ui *EbitenSkillsUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
 	if !ui.visible || ui.playerEntity == nil || ui.skillTreeComp == nil {
 		return
 	}
 
 	// Draw semi-transparent overlay
-	vector.DrawFilledRect(screen, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
+	vector.DrawFilledRect(img, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
 		color.RGBA{0, 0, 0, 180}, false)
 
 	// Draw main panel background
@@ -203,10 +202,10 @@ func (ui *SkillsUI) Draw(screen *ebiten.Image) {
 	panelX := (ui.screenWidth - panelWidth) / 2
 	panelY := (ui.screenHeight - panelHeight) / 2
 
-	vector.DrawFilledRect(screen, float32(panelX), float32(panelY),
+	vector.DrawFilledRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		color.RGBA{20, 20, 30, 255}, false)
-	vector.StrokeRect(screen, float32(panelX), float32(panelY),
+	vector.StrokeRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight), 2,
 		color.RGBA{100, 150, 200, 255}, false)
 
@@ -217,13 +216,13 @@ func (ui *SkillsUI) Draw(screen *ebiten.Image) {
 	}
 	titleX := panelX + panelWidth/2 - len(titleText)*3
 	titleY := panelY + 20
-	text.Draw(screen, titleText, basicfont.Face7x13, titleX, titleY+13,
+	text.Draw(img, titleText, basicfont.Face7x13, titleX, titleY+13,
 		color.RGBA{255, 255, 100, 255})
 
 	// Display available skill points
 	availablePoints := ui.getAvailableSkillPoints()
 	pointsText := fmt.Sprintf("Skill Points: %d", availablePoints)
-	text.Draw(screen, pointsText, basicfont.Face7x13, panelX+panelWidth-150, titleY+13,
+	text.Draw(img, pointsText, basicfont.Face7x13, panelX+panelWidth-150, titleY+13,
 		color.RGBA{100, 255, 100, 255})
 
 	// Ensure node layout is calculated
@@ -232,25 +231,25 @@ func (ui *SkillsUI) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw skill tree
-	ui.drawSkillTree(screen, panelX, panelY, panelWidth, panelHeight)
+	ui.drawSkillTree(img, panelX, panelY, panelWidth, panelHeight)
 
 	// Draw tooltip for hovered node
 	if ui.hoveredNode != nil {
 		mouseX, mouseY := ebiten.CursorPosition()
-		ui.drawSkillTooltip(screen, ui.hoveredNode, mouseX, mouseY)
+		ui.drawSkillTooltip(img, ui.hoveredNode, mouseX, mouseY)
 	}
 
 	// Draw controls hint
 	controlsText := "[Left Click] Purchase | [Right Click] Refund | [ESC] or [K] Close"
 	controlsX := panelX + 10
 	controlsY := panelY + panelHeight - 20
-	text.Draw(screen, controlsText, basicfont.Face7x13, controlsX, controlsY,
+	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
 }
 
 // calculateNodeLayout computes screen positions for all skill nodes.
 // Uses tree structure to arrange nodes in tiers (rows).
-func (ui *SkillsUI) calculateNodeLayout() {
+func (ui *EbitenSkillsUI) calculateNodeLayout() {
 	if ui.skillTreeComp == nil || ui.skillTreeComp.Tree == nil {
 		return
 	}
@@ -290,7 +289,7 @@ func (ui *SkillsUI) calculateNodeLayout() {
 }
 
 // drawSkillTree renders all skill nodes and connections.
-func (ui *SkillsUI) drawSkillTree(screen *ebiten.Image, panelX, panelY, panelWidth, panelHeight int) {
+func (ui *EbitenSkillsUI) drawSkillTree(screen *ebiten.Image, panelX, panelY, panelWidth, panelHeight int) {
 	if ui.skillTreeComp.Tree == nil {
 		return
 	}
@@ -322,7 +321,7 @@ func (ui *SkillsUI) drawSkillTree(screen *ebiten.Image, panelX, panelY, panelWid
 //	node - Skill node data
 //	x, y - Center position
 //	state - Locked/Unlocked/Purchased state
-func (ui *SkillsUI) drawSkillNode(screen *ebiten.Image, node *skills.SkillNode, x, y int, state NodeState) {
+func (ui *EbitenSkillsUI) drawSkillNode(screen *ebiten.Image, node *skills.SkillNode, x, y int, state NodeState) {
 	radius := float32(ui.nodeSize / 2)
 
 	// Determine node color based on state
@@ -373,7 +372,7 @@ func (ui *SkillsUI) drawSkillNode(screen *ebiten.Image, node *skills.SkillNode, 
 //	screen - Target image
 //	node - Current node
 //	nodePositions - Map of node ID to screen position
-func (ui *SkillsUI) drawNodeConnections(screen *ebiten.Image, node *skills.SkillNode, nodePositions map[string]Point) {
+func (ui *EbitenSkillsUI) drawNodeConnections(screen *ebiten.Image, node *skills.SkillNode, nodePositions map[string]Point) {
 	currentPos, exists := nodePositions[node.Skill.ID]
 	if !exists {
 		return
@@ -406,7 +405,7 @@ func (ui *SkillsUI) drawNodeConnections(screen *ebiten.Image, node *skills.Skill
 //	screen - Target image
 //	node - Hovered skill node
 //	mouseX, mouseY - Mouse position for tooltip placement
-func (ui *SkillsUI) drawSkillTooltip(screen *ebiten.Image, node *skills.SkillNode, mouseX, mouseY int) {
+func (ui *EbitenSkillsUI) drawSkillTooltip(screen *ebiten.Image, node *skills.SkillNode, mouseX, mouseY int) {
 	skill := node.Skill
 
 	// Calculate tooltip size
@@ -488,7 +487,7 @@ func (ui *SkillsUI) drawSkillTooltip(screen *ebiten.Image, node *skills.SkillNod
 // Parameters:
 //
 //	skillID - ID of skill to purchase
-func (ui *SkillsUI) attemptPurchaseSkill(skillID string) {
+func (ui *EbitenSkillsUI) attemptPurchaseSkill(skillID string) {
 	if ui.skillTreeComp == nil || ui.playerEntity == nil {
 		return
 	}
@@ -516,7 +515,7 @@ func (ui *SkillsUI) attemptPurchaseSkill(skillID string) {
 // Parameters:
 //
 //	skillID - ID of skill to refund
-func (ui *SkillsUI) attemptRefundSkill(skillID string) {
+func (ui *EbitenSkillsUI) attemptRefundSkill(skillID string) {
 	if ui.skillTreeComp == nil || ui.playerEntity == nil {
 		return
 	}
@@ -544,7 +543,7 @@ func (ui *SkillsUI) attemptRefundSkill(skillID string) {
 //	availablePoints - Available skill points
 //
 // Returns: NodeState enum value
-func (ui *SkillsUI) getNodeState(node *skills.SkillNode, playerLevel, availablePoints int) NodeState {
+func (ui *EbitenSkillsUI) getNodeState(node *skills.SkillNode, playerLevel, availablePoints int) NodeState {
 	if ui.skillTreeComp.IsSkillLearned(node.Skill.ID) {
 		return NodeStatePurchased
 	}
@@ -570,7 +569,7 @@ func (ui *SkillsUI) getNodeState(node *skills.SkillNode, playerLevel, availableP
 //	x, y - Screen coordinates
 //
 // Returns: Node at position or nil
-func (ui *SkillsUI) findNodeAtPosition(x, y int) *skills.SkillNode {
+func (ui *EbitenSkillsUI) findNodeAtPosition(x, y int) *skills.SkillNode {
 	if ui.skillTreeComp == nil || ui.skillTreeComp.Tree == nil {
 		return nil
 	}
@@ -597,7 +596,7 @@ func (ui *SkillsUI) findNodeAtPosition(x, y int) *skills.SkillNode {
 }
 
 // getAvailableSkillPoints returns the number of unspent skill points.
-func (ui *SkillsUI) getAvailableSkillPoints() int {
+func (ui *EbitenSkillsUI) getAvailableSkillPoints() int {
 	if ui.playerEntity == nil {
 		return 0
 	}
@@ -610,7 +609,7 @@ func (ui *SkillsUI) getAvailableSkillPoints() int {
 }
 
 // getPlayerLevel returns the player's current level.
-func (ui *SkillsUI) getPlayerLevel() int {
+func (ui *EbitenSkillsUI) getPlayerLevel() int {
 	if ui.playerEntity == nil {
 		return 1
 	}
@@ -621,3 +620,18 @@ func (ui *SkillsUI) getPlayerLevel() int {
 
 	return 1
 }
+
+// IsActive returns whether the skills UI is currently visible.
+// Implements UISystem interface.
+func (s *EbitenSkillsUI) IsActive() bool {
+return s.visible
+}
+
+// SetActive sets whether the skills UI is visible.
+// Implements UISystem interface.
+func (s *EbitenSkillsUI) SetActive(active bool) {
+s.visible = active
+}
+
+// Compile-time check that EbitenSkillsUI implements UISystem
+var _ UISystem = (*EbitenSkillsUI)(nil)

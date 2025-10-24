@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package engine provides sprite rendering for entities.
 // This file implements RenderSystem which handles entity sprite rendering
 // with camera transformations and visual effects.
@@ -13,8 +10,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// SpriteComponent holds visual representation data for an entity.
-type SpriteComponent struct {
+// EbitenSprite holds visual representation data for an entity (Ebiten implementation).
+// Implements SpriteProvider interface.
+type EbitenSprite struct {
 	// Sprite image (procedurally generated)
 	Image *ebiten.Image
 
@@ -34,14 +32,65 @@ type SpriteComponent struct {
 	Layer int
 }
 
-// Type returns the component type identifier.
-func (s *SpriteComponent) Type() string {
+// Type returns the component type identifier (implements Component).
+func (s *EbitenSprite) Type() string {
 	return "sprite"
 }
 
-// NewSpriteComponent creates a new sprite component.
-func NewSpriteComponent(width, height float64, color color.Color) *SpriteComponent {
-	return &SpriteComponent{
+// GetImage implements SpriteProvider interface.
+func (s *EbitenSprite) GetImage() ImageProvider {
+	if s.Image == nil {
+		return nil
+	}
+	return &EbitenImage{image: s.Image}
+}
+
+// GetSize implements SpriteProvider interface.
+func (s *EbitenSprite) GetSize() (width, height float64) {
+	return s.Width, s.Height
+}
+
+// GetColor implements SpriteProvider interface.
+func (s *EbitenSprite) GetColor() color.Color {
+	if s.Color == nil {
+		return color.White
+	}
+	return s.Color
+}
+
+// GetRotation implements SpriteProvider interface.
+func (s *EbitenSprite) GetRotation() float64 {
+	return s.Rotation
+}
+
+// GetLayer implements SpriteProvider interface.
+func (s *EbitenSprite) GetLayer() int {
+	return s.Layer
+}
+
+// IsVisible implements SpriteProvider interface.
+func (s *EbitenSprite) IsVisible() bool {
+	return s.Visible
+}
+
+// SetVisible implements SpriteProvider interface.
+func (s *EbitenSprite) SetVisible(visible bool) {
+	s.Visible = visible
+}
+
+// SetColor implements SpriteProvider interface.
+func (s *EbitenSprite) SetColor(col color.Color) {
+	s.Color = col
+}
+
+// SetRotation implements SpriteProvider interface.
+func (s *EbitenSprite) SetRotation(rotation float64) {
+	s.Rotation = rotation
+}
+
+// NewSpriteComponent creates a new Ebiten sprite component.
+func NewSpriteComponent(width, height float64, color color.Color) *EbitenSprite {
+	return &EbitenSprite{
 		Width:   width,
 		Height:  height,
 		Color:   color,
@@ -50,8 +99,34 @@ func NewSpriteComponent(width, height float64, color color.Color) *SpriteCompone
 	}
 }
 
-// RenderSystem handles rendering of entities to the screen.
-type RenderSystem struct {
+// EbitenImage wraps an Ebiten image for the ImageProvider interface.
+type EbitenImage struct {
+	image *ebiten.Image
+}
+
+// GetSize implements ImageProvider interface.
+func (e *EbitenImage) GetSize() (width, height int) {
+	if e.image == nil {
+		return 0, 0
+	}
+	return e.image.Bounds().Dx(), e.image.Bounds().Dy()
+}
+
+// GetPixel implements ImageProvider interface.
+func (e *EbitenImage) GetPixel(x, y int) color.Color {
+	if e.image == nil {
+		return color.Transparent
+	}
+	return e.image.At(x, y)
+}
+
+// Compile-time interface checks
+var _ SpriteProvider = (*EbitenSprite)(nil)
+var _ ImageProvider = (*EbitenImage)(nil)
+
+// EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
+// Implements RenderingSystem interface.
+type EbitenRenderSystem struct {
 	screen       *ebiten.Image
 	cameraSystem *CameraSystem
 
@@ -61,8 +136,8 @@ type RenderSystem struct {
 }
 
 // NewRenderSystem creates a new render system.
-func NewRenderSystem(cameraSystem *CameraSystem) *RenderSystem {
-	return &RenderSystem{
+func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
+	return &EbitenRenderSystem{
 		cameraSystem:  cameraSystem,
 		ShowColliders: false,
 		ShowGrid:      false,
@@ -70,21 +145,27 @@ func NewRenderSystem(cameraSystem *CameraSystem) *RenderSystem {
 }
 
 // SetScreen sets the render target.
-func (r *RenderSystem) SetScreen(screen *ebiten.Image) {
+func (r *EbitenRenderSystem) SetScreen(screen *ebiten.Image) {
 	r.screen = screen
 }
 
 // Update is called every frame but doesn't modify entities.
 // Actual rendering happens in Draw which is called by ebiten.
-func (r *RenderSystem) Update(entities []*Entity, deltaTime float64) {
+func (r *EbitenRenderSystem) Update(entities []*Entity, deltaTime float64) {
 	// RenderSystem doesn't need to update entity state
 	// Rendering is handled in the Draw call
 }
 
-// Draw renders all visible entities to the screen.
+// Draw renders all visible entities to the screen (implements RenderingSystem interface).
 // This should be called from the game's Draw method.
-func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
-	r.screen = screen
+// The screen parameter should be *ebiten.Image in production.
+func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
+	// Type assert to *ebiten.Image
+	ebitenScreen, ok := screen.(*ebiten.Image)
+	if !ok {
+		return // Invalid screen type
+	}
+	r.screen = ebitenScreen
 
 	// Note: Screen clearing is handled by terrain rendering system
 
@@ -106,7 +187,7 @@ func (r *RenderSystem) Draw(screen *ebiten.Image, entities []*Entity) {
 }
 
 // drawEntity renders a single entity.
-func (r *RenderSystem) drawEntity(entity *Entity) {
+func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	// Get required components
 	posComp, hasPos := entity.GetComponent("position")
 	spriteComp, hasSprite := entity.GetComponent("sprite")
@@ -116,7 +197,7 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 	}
 
 	pos := posComp.(*PositionComponent)
-	sprite := spriteComp.(*SpriteComponent)
+	sprite := spriteComp.(*EbitenSprite)
 
 	if !sprite.Visible {
 		return
@@ -184,7 +265,7 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 
 // drawHealthBar renders a health bar above an entity if appropriate.
 // GAP-013 REPAIR: Shows health status for enemies (when damaged) and bosses (always).
-func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
+func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
 	// Only draw health bars for entities with health component
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
@@ -255,7 +336,7 @@ func (r *RenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWid
 }
 
 // GAP-016 REPAIR: drawParticles renders all particle effects to the screen.
-func (r *RenderSystem) drawParticles(entities []*Entity) {
+func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("particle_emitter")
 		if !ok {
@@ -299,7 +380,7 @@ func (r *RenderSystem) drawParticles(entities []*Entity) {
 }
 
 // drawRect draws a filled rectangle at the given screen position.
-func (r *RenderSystem) drawRect(x, y, width, height float64, col color.Color) {
+func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Convert color
 	red, green, blue, alpha := col.RGBA()
 	clr := color.RGBA{
@@ -315,7 +396,7 @@ func (r *RenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 }
 
 // drawColliders draws collision bounds for debugging.
-func (r *RenderSystem) drawColliders(entities []*Entity) {
+func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 	debugColor := color.RGBA{0, 255, 0, 128} // Semi-transparent green
 
 	for _, entity := range entities {
@@ -345,7 +426,7 @@ func (r *RenderSystem) drawColliders(entities []*Entity) {
 }
 
 // sortEntitiesByLayer sorts entities by their sprite layer for correct draw order.
-func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
+func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 	sorted := make([]*Entity, 0, len(entities))
 
 	// Collect entities with sprites
@@ -362,8 +443,8 @@ func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 			sprite1, _ := sorted[j].GetComponent("sprite")
 			sprite2, _ := sorted[j+1].GetComponent("sprite")
 
-			layer1 := sprite1.(*SpriteComponent).Layer
-			layer2 := sprite2.(*SpriteComponent).Layer
+			layer1 := sprite1.(*EbitenSprite).Layer
+			layer2 := sprite2.(*EbitenSprite).Layer
 
 			if layer1 > layer2 {
 				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
@@ -373,3 +454,16 @@ func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 
 	return sorted
 }
+
+// SetShowColliders implements RenderingSystem interface.
+func (r *EbitenRenderSystem) SetShowColliders(show bool) {
+	r.ShowColliders = show
+}
+
+// SetShowGrid implements RenderingSystem interface.
+func (r *EbitenRenderSystem) SetShowGrid(show bool) {
+	r.ShowGrid = show
+}
+
+// Compile-time interface check
+var _ RenderingSystem = (*EbitenRenderSystem)(nil)

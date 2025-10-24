@@ -16,7 +16,7 @@ func TestPlayerCombatSystem_AttackInRange(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{
 		Damage:   15,
 		Range:    50,
@@ -46,7 +46,7 @@ func TestPlayerCombatSystem_AttackInRange(t *testing.T) {
 
 	// Verify input was consumed
 	inputComp, _ := player.GetComponent("input")
-	input := inputComp.(*InputComponent)
+	input := inputComp.(*StubInput)
 	if input.ActionPressed {
 		t.Error("ActionPressed should be false after use")
 	}
@@ -61,7 +61,7 @@ func TestPlayerCombatSystem_AttackOutOfRange(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{
 		Damage:   15,
 		Range:    50,
@@ -98,7 +98,7 @@ func TestPlayerCombatSystem_AttackOnCooldown(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	attackComp := &AttackComponent{
 		Damage:        15,
 		Range:         50,
@@ -154,7 +154,7 @@ func TestPlayerCombatSystem_NoAttackComponent(t *testing.T) {
 	// Create player without attack component
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 
 	world.Update(0)
 
@@ -171,7 +171,7 @@ func TestPlayerCombatSystem_MultipleEnemies(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{Damage: 15, Range: 100, Cooldown: 1.0})
 	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(&TeamComponent{TeamID: 1})
@@ -218,7 +218,7 @@ func TestPlayerCombatSystem_NoEnemies(t *testing.T) {
 	// Create player only
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{Damage: 15, Range: 50, Cooldown: 1.0})
 	player.AddComponent(&TeamComponent{TeamID: 1})
 
@@ -229,7 +229,7 @@ func TestPlayerCombatSystem_NoEnemies(t *testing.T) {
 
 	// Input should be consumed anyway
 	inputComp, _ := player.GetComponent("input")
-	input := inputComp.(*InputComponent)
+	input := inputComp.(*StubInput)
 	if input.ActionPressed {
 		t.Error("ActionPressed should be consumed even if no target")
 	}
@@ -244,7 +244,7 @@ func TestPlayerCombatSystem_DeadEnemy(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{Damage: 15, Range: 50, Cooldown: 1.0})
 	player.AddComponent(&TeamComponent{TeamID: 1})
 
@@ -269,7 +269,7 @@ func BenchmarkPlayerCombatSystem(b *testing.B) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{ActionPressed: true})
+	player.AddComponent(&StubInput{ActionPressed: true})
 	player.AddComponent(&AttackComponent{Damage: 15, Range: 50, Cooldown: 0.0})
 	player.AddComponent(&TeamComponent{TeamID: 1})
 

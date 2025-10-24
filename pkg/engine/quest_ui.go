@@ -1,7 +1,4 @@
-//go:build !test
-// +build !test
-
-// Package engine provides quest log UI rendering and interaction.
+// Package engine provides quest_ui for game UI.
 package engine
 
 import (
@@ -14,7 +11,7 @@ import (
 )
 
 // QuestUI handles rendering and interaction for the quest log.
-type QuestUI struct {
+type EbitenQuestUI struct {
 	visible      bool
 	world        *World
 	playerEntity *Entity
@@ -28,8 +25,8 @@ type QuestUI struct {
 }
 
 // NewQuestUI creates a new quest UI.
-func NewQuestUI(world *World, screenWidth, screenHeight int) *QuestUI {
-	return &QuestUI{
+func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestUI {
+	return &EbitenQuestUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -39,32 +36,32 @@ func NewQuestUI(world *World, screenWidth, screenHeight int) *QuestUI {
 }
 
 // SetPlayerEntity sets the player entity whose quests to display.
-func (ui *QuestUI) SetPlayerEntity(entity *Entity) {
+func (ui *EbitenQuestUI) SetPlayerEntity(entity *Entity) {
 	ui.playerEntity = entity
 }
 
 // Toggle shows or hides the quest UI.
-func (ui *QuestUI) Toggle() {
+func (ui *EbitenQuestUI) Toggle() {
 	ui.visible = !ui.visible
 }
 
 // IsVisible returns whether the quest log is currently shown.
-func (ui *QuestUI) IsVisible() bool {
+func (ui *EbitenQuestUI) IsVisible() bool {
 	return ui.visible
 }
 
 // Show displays the quest UI.
-func (ui *QuestUI) Show() {
+func (ui *EbitenQuestUI) Show() {
 	ui.visible = true
 }
 
 // Hide hides the quest UI.
-func (ui *QuestUI) Hide() {
+func (ui *EbitenQuestUI) Hide() {
 	ui.visible = false
 }
 
 // Update processes input for the quest UI.
-func (ui *QuestUI) Update() {
+func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	// Always check for toggle key, even when not visible
 	if inpututil.IsKeyJustPressed(ebiten.KeyJ) {
 		ui.Toggle()
@@ -85,7 +82,11 @@ func (ui *QuestUI) Update() {
 }
 
 // Draw renders the quest UI.
-func (ui *QuestUI) Draw(screen *ebiten.Image) {
+func (ui *EbitenQuestUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
 	if !ui.visible || ui.playerEntity == nil {
 		return
 	}
@@ -100,7 +101,7 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 180})
-	screen.DrawImage(overlay, nil)
+	img.DrawImage(overlay, nil)
 
 	// Calculate window position
 	windowWidth := 600
@@ -113,10 +114,10 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 	windowBg.Fill(color.RGBA{40, 40, 50, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	screen.DrawImage(windowBg, opts)
+	img.DrawImage(windowBg, opts)
 
 	// Draw title
-	ebitenutil.DebugPrintAt(screen, "QUEST LOG", windowX+10, windowY+10)
+	ebitenutil.DebugPrintAt(img, "QUEST LOG", windowX+10, windowY+10)
 
 	// Draw tabs
 	tabY := windowY + 40
@@ -132,9 +133,9 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 		tabBg.Fill(tabColor)
 		tabOpts := &ebiten.DrawImageOptions{}
 		tabOpts.GeoM.Translate(float64(tabX), float64(tabY))
-		screen.DrawImage(tabBg, tabOpts)
+		img.DrawImage(tabBg, tabOpts)
 
-		ebitenutil.DebugPrintAt(screen, tabName, tabX+10, tabY+10)
+		ebitenutil.DebugPrintAt(img, tabName, tabX+10, tabY+10)
 	}
 
 	// Draw quest list based on current tab
@@ -147,23 +148,23 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 	}
 
 	if len(quests) == 0 {
-		ebitenutil.DebugPrintAt(screen, "No quests", windowX+20, listY+20)
+		ebitenutil.DebugPrintAt(img, "No quests", windowX+20, listY+20)
 	} else {
 		y := listY + 10
 		for _, tracked := range quests {
 			// Draw quest name
-			ebitenutil.DebugPrintAt(screen, tracked.Quest.Name, windowX+20, y)
+			ebitenutil.DebugPrintAt(img, tracked.Quest.Name, windowX+20, y)
 			y += 20
 
 			// Draw quest type and difficulty
 			info := fmt.Sprintf("%s | %s", tracked.Quest.Type.String(), tracked.Quest.Difficulty.String())
-			ebitenutil.DebugPrintAt(screen, info, windowX+30, y)
+			ebitenutil.DebugPrintAt(img, info, windowX+30, y)
 			y += 20
 
 			// Draw objectives
 			for i, obj := range tracked.Quest.Objectives {
 				progress := fmt.Sprintf("  [%d/%d] %s", obj.Current, obj.Required, obj.Description)
-				ebitenutil.DebugPrintAt(screen, progress, windowX+30, y)
+				ebitenutil.DebugPrintAt(img, progress, windowX+30, y)
 				y += 15
 
 				// Draw progress bar
@@ -177,7 +178,7 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 				barBg.Fill(color.RGBA{60, 60, 70, 255})
 				barOpts := &ebiten.DrawImageOptions{}
 				barOpts.GeoM.Translate(float64(barX), float64(barY))
-				screen.DrawImage(barBg, barOpts)
+				img.DrawImage(barBg, barOpts)
 
 				// Progress
 				progressPct := obj.Progress()
@@ -189,7 +190,7 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 						fillColor = color.RGBA{100, 220, 100, 255}
 					}
 					barFill.Fill(fillColor)
-					screen.DrawImage(barFill, barOpts)
+					img.DrawImage(barFill, barOpts)
 				}
 
 				if i < len(tracked.Quest.Objectives)-1 {
@@ -200,7 +201,7 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 			// Draw rewards
 			y += 20
 			rewards := fmt.Sprintf("  Rewards: %d XP, %d Gold", tracked.Quest.Reward.XP, tracked.Quest.Reward.Gold)
-			ebitenutil.DebugPrintAt(screen, rewards, windowX+30, y)
+			ebitenutil.DebugPrintAt(img, rewards, windowX+30, y)
 			y += 30
 
 			if y > windowY+windowHeight-40 {
@@ -211,5 +212,20 @@ func (ui *QuestUI) Draw(screen *ebiten.Image) {
 
 	// Draw controls hint
 	controlsY := windowY + windowHeight - 20
-	ebitenutil.DebugPrintAt(screen, "J: Close | 1: Active | 2: Completed", windowX+10, controlsY)
+	ebitenutil.DebugPrintAt(img, "J: Close | 1: Active | 2: Completed", windowX+10, controlsY)
 }
+
+// IsActive returns whether the quest UI is currently visible.
+// Implements UISystem interface.
+func (q *EbitenQuestUI) IsActive() bool {
+return q.visible
+}
+
+// SetActive sets whether the quest UI is visible.
+// Implements UISystem interface.
+func (q *EbitenQuestUI) SetActive(active bool) {
+q.visible = active
+}
+
+// Compile-time check that EbitenQuestUI implements UISystem
+var _ UISystem = (*EbitenQuestUI)(nil)

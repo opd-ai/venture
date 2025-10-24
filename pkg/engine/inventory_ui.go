@@ -1,7 +1,4 @@
-//go:build !test
-// +build !test
-
-// Package engine provides inventory UI rendering and interaction.
+// Package engine provides inventory_ui for game UI.
 package engine
 
 import (
@@ -14,7 +11,7 @@ import (
 )
 
 // InventoryUI handles rendering and interaction for the inventory screen.
-type InventoryUI struct {
+type EbitenInventoryUI struct {
 	visible      bool
 	world        *World
 	playerEntity *Entity
@@ -41,8 +38,8 @@ type InventoryUI struct {
 }
 
 // NewInventoryUI creates a new inventory UI.
-func NewInventoryUI(world *World, screenWidth, screenHeight int) *InventoryUI {
-	return &InventoryUI{
+func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenInventoryUI {
+	return &EbitenInventoryUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -58,37 +55,37 @@ func NewInventoryUI(world *World, screenWidth, screenHeight int) *InventoryUI {
 }
 
 // SetPlayerEntity sets the player entity whose inventory to display.
-func (ui *InventoryUI) SetPlayerEntity(entity *Entity) {
+func (ui *EbitenInventoryUI) SetPlayerEntity(entity *Entity) {
 	ui.playerEntity = entity
 }
 
 // SetInventorySystem sets the inventory system for item actions.
-func (ui *InventoryUI) SetInventorySystem(system *InventorySystem) {
+func (ui *EbitenInventoryUI) SetInventorySystem(system *InventorySystem) {
 	ui.inventorySystem = system
 }
 
 // Toggle shows or hides the inventory UI.
-func (ui *InventoryUI) Toggle() {
+func (ui *EbitenInventoryUI) Toggle() {
 	ui.visible = !ui.visible
 }
 
 // IsVisible returns whether the inventory is currently shown.
-func (ui *InventoryUI) IsVisible() bool {
+func (ui *EbitenInventoryUI) IsVisible() bool {
 	return ui.visible
 }
 
 // Show displays the inventory UI.
-func (ui *InventoryUI) Show() {
+func (ui *EbitenInventoryUI) Show() {
 	ui.visible = true
 }
 
 // Hide hides the inventory UI.
-func (ui *InventoryUI) Hide() {
+func (ui *EbitenInventoryUI) Hide() {
 	ui.visible = false
 }
 
 // Update processes input for the inventory UI.
-func (ui *InventoryUI) Update() {
+func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	// Always check for toggle key, even when not visible
 	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
 		ui.Toggle()
@@ -208,7 +205,11 @@ func (ui *InventoryUI) Update() {
 }
 
 // Draw renders the inventory UI.
-func (ui *InventoryUI) Draw(screen *ebiten.Image) {
+func (ui *EbitenInventoryUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
 	if !ui.visible || ui.playerEntity == nil {
 		return
 	}
@@ -223,7 +224,7 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 180})
-	screen.DrawImage(overlay, nil)
+	img.DrawImage(overlay, nil)
 
 	// Calculate window position
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
@@ -236,17 +237,17 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 	windowBg.Fill(color.RGBA{40, 40, 50, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	screen.DrawImage(windowBg, opts)
+	img.DrawImage(windowBg, opts)
 
 	// Draw title
-	ebitenutil.DebugPrintAt(screen, "INVENTORY", windowX+10, windowY+10)
+	ebitenutil.DebugPrintAt(img, "INVENTORY", windowX+10, windowY+10)
 
 	// Draw capacity info
 	capacityText := fmt.Sprintf("Weight: %.1f / %.1f", inventory.GetCurrentWeight(), inventory.MaxWeight)
-	ebitenutil.DebugPrintAt(screen, capacityText, windowX+windowWidth-150, windowY+10)
+	ebitenutil.DebugPrintAt(img, capacityText, windowX+windowWidth-150, windowY+10)
 
 	goldText := fmt.Sprintf("Gold: %d", inventory.Gold)
-	ebitenutil.DebugPrintAt(screen, goldText, windowX+windowWidth-150, windowY+30)
+	ebitenutil.DebugPrintAt(img, goldText, windowX+windowWidth-150, windowY+30)
 
 	// Draw inventory grid
 	startY := windowY + 60
@@ -269,7 +270,7 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 			slot.Fill(slotColor)
 			slotOpts := &ebiten.DrawImageOptions{}
 			slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-			screen.DrawImage(slot, slotOpts)
+			img.DrawImage(slot, slotOpts)
 
 			// Draw item if present
 			if slotIndex < len(inventory.Items) {
@@ -277,7 +278,7 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 				if item != nil {
 					// Draw item icon (simplified - just show first letter of name)
 					itemText := string(item.Name[0])
-					ebitenutil.DebugPrintAt(screen, itemText, slotX+16, slotY+16)
+					ebitenutil.DebugPrintAt(img, itemText, slotX+16, slotY+16)
 
 					// Draw item name on hover
 					if slotIndex == ui.hoveredSlot {
@@ -291,10 +292,10 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 						tooltipBg.Fill(color.RGBA{20, 20, 30, 240})
 						tooltipOpts := &ebiten.DrawImageOptions{}
 						tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
-						screen.DrawImage(tooltipBg, tooltipOpts)
+						img.DrawImage(tooltipBg, tooltipOpts)
 
-						ebitenutil.DebugPrintAt(screen, item.Name, tooltipX+5, tooltipY+5)
-						ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Value: %d", item.Stats.Value), tooltipX+5, tooltipY+20)
+						ebitenutil.DebugPrintAt(img, item.Name, tooltipX+5, tooltipY+5)
+						ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", item.Stats.Value), tooltipX+5, tooltipY+20)
 					}
 				}
 			}
@@ -303,7 +304,7 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 
 	// Draw equipment slots
 	equipY := startY + ui.gridRows*ui.slotSize + 20
-	ebitenutil.DebugPrintAt(screen, "Equipment:", windowX+10, equipY)
+	ebitenutil.DebugPrintAt(img, "Equipment:", windowX+10, equipY)
 
 	// Get equipment component if exists
 	equipComp, hasEquipment := ui.playerEntity.GetComponent("equipment")
@@ -326,9 +327,9 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 		slotBg.Fill(color.RGBA{60, 60, 70, 255})
 		slotOpts := &ebiten.DrawImageOptions{}
 		slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-		screen.DrawImage(slotBg, slotOpts)
+		img.DrawImage(slotBg, slotOpts)
 
-		ebitenutil.DebugPrintAt(screen, slotInfo.name, slotX+5, slotY+5)
+		ebitenutil.DebugPrintAt(img, slotInfo.name, slotX+5, slotY+5)
 
 		// Show equipped item if present
 		if hasEquipment {
@@ -339,14 +340,14 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 				if len(itemName) > 10 {
 					itemName = itemName[:10]
 				}
-				ebitenutil.DebugPrintAt(screen, itemName, slotX+5, slotY+20)
+				ebitenutil.DebugPrintAt(img, itemName, slotX+5, slotY+20)
 			}
 		}
 	}
 
 	// Draw controls hint
 	controlsY := windowY + windowHeight - 20
-	ebitenutil.DebugPrintAt(screen, "I: Close | E: Use/Equip | D: Drop | Click+Drag: Move", windowX+10, controlsY)
+	ebitenutil.DebugPrintAt(img, "I: Close | E: Use/Equip | D: Drop | Click+Drag: Move", windowX+10, controlsY)
 
 	// Draw drag preview (if dragging)
 	if ui.dragging && ui.dragPreview != nil {
@@ -356,7 +357,7 @@ func (ui *InventoryUI) Draw(screen *ebiten.Image) {
 		previewOpts.GeoM.Translate(float64(mouseX-ui.slotSize/2), float64(mouseY-ui.slotSize/2))
 		// Make slightly transparent to show it's being dragged
 		previewOpts.ColorScale.ScaleAlpha(0.7)
-		screen.DrawImage(ui.dragPreview, previewOpts)
+		img.DrawImage(ui.dragPreview, previewOpts)
 	}
 }
 
@@ -369,7 +370,7 @@ func min(a, b int) int {
 
 // generateItemPreview creates a visual preview image for an item being dragged.
 // This provides better visual feedback during drag-and-drop operations.
-func (ui *InventoryUI) generateItemPreview(item interface{}) *ebiten.Image {
+func (ui *EbitenInventoryUI) generateItemPreview(item interface{}) *ebiten.Image {
 	// Create preview image with same size as slot
 	size := ui.slotSize - 2
 	preview := ebiten.NewImage(size, size)
@@ -408,3 +409,18 @@ func (ui *InventoryUI) generateItemPreview(item interface{}) *ebiten.Image {
 
 	return preview
 }
+
+// IsActive returns whether the inventory UI is currently visible.
+// Implements UISystem interface.
+func (i *EbitenInventoryUI) IsActive() bool {
+return i.visible
+}
+
+// SetActive sets whether the inventory UI is visible.
+// Implements UISystem interface.
+func (i *EbitenInventoryUI) SetActive(active bool) {
+i.visible = active
+}
+
+// Compile-time check that EbitenInventoryUI implements UISystem
+var _ UISystem = (*EbitenInventoryUI)(nil)

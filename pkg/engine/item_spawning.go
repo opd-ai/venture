@@ -177,7 +177,7 @@ type ItemPickupSystem struct {
 
 	// GAP-015 REPAIR: System references for feedback
 	audioManager   *AudioManager
-	tutorialSystem *TutorialSystem
+	tutorialSystem *EbitenTutorialSystem
 }
 
 // NewItemPickupSystem creates a new item pickup system.
@@ -202,11 +202,11 @@ func (s *ItemPickupSystem) getAudioManager() *AudioManager {
 	return s.audioManager
 }
 
-func (s *ItemPickupSystem) getTutorialSystem() *TutorialSystem {
+func (s *ItemPickupSystem) getTutorialSystem() *EbitenTutorialSystem {
 	if s.tutorialSystem == nil {
 		// Lazy lookup from world systems
 		for _, sys := range s.world.GetSystems() {
-			if tutSys, ok := sys.(*TutorialSystem); ok {
+			if tutSys, ok := sys.(*EbitenTutorialSystem); ok {
 				s.tutorialSystem = tutSys
 				break
 			}

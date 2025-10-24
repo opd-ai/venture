@@ -189,6 +189,8 @@ go test -bench=BenchmarkWorldUpdate ./pkg/engine
 |-----------|-----------|------|-------------|
 | `SpriteProvider` | `EbitenSprite` | `StubSprite` | Visual sprite data |
 | `InputProvider` | `EbitenInput` | `StubInput` | Player input state |
+| `ClientConnection` | `TCPClient` | `MockClient` | Network client operations |
+| `ServerConnection` | `TCPServer` | `MockServer` | Network server operations |
 
 ### Systems
 
@@ -468,6 +470,154 @@ func TestInventoryAddItem(t *testing.T) {
 }
 ```
 
+### Testing Network Communication
+
+The network package uses mock implementations to test client-server communication without real network I/O:
+
+```go
+func TestClientServerCommunication(t *testing.T) {
+    // Create mock client and server
+    client := network.NewMockClient()
+    server := network.NewMockServer()
+    
+    // Simulate server starting
+    if err := server.Start(); err != nil {
+        t.Fatalf("server start failed: %v", err)
+    }
+    
+    // Simulate client connecting
+    if err := client.Connect(); err != nil {
+        t.Fatalf("client connect failed: %v", err)
+    }
+    
+    playerID := uint64(123)
+    client.SetPlayerID(playerID)
+    
+    // Simulate player joining server
+    server.SimulatePlayerJoin(playerID)
+    
+    // Test sending input from client
+    err := client.SendInput("move", []byte{1, 0})
+    if err != nil {
+        t.Errorf("send input failed: %v", err)
+    }
+    
+    // Verify input was recorded
+    if client.GetSentInputCount() != 1 {
+        t.Errorf("expected 1 sent input, got %d", client.GetSentInputCount())
+    }
+    
+    // Test server broadcasting state
+    update := &network.StateUpdate{
+        Sequence:  1,
+        Timestamp: 1000,
+    }
+    server.BroadcastStateUpdate(update)
+    
+    // Verify broadcast was recorded
+    if server.BroadcastCalls != 1 {
+        t.Errorf("expected 1 broadcast, got %d", server.BroadcastCalls)
+    }
+}
+```
+
+**Testing Network Errors:**
+
+```go
+func TestNetworkErrorHandling(t *testing.T) {
+    client := network.NewMockClient()
+    
+    // Configure mock to return error
+    client.ConnectError = fmt.Errorf("connection refused")
+    
+    // Attempt connection
+    err := client.Connect()
+    if err == nil {
+        t.Error("expected connection error")
+    }
+    
+    // Verify error message
+    if !strings.Contains(err.Error(), "connection refused") {
+        t.Errorf("unexpected error: %v", err)
+    }
+}
+```
+
+**Testing Latency Simulation:**
+
+```go
+func TestNetworkLatency(t *testing.T) {
+    client := network.NewMockClient()
+    
+    // Set high latency
+    client.SetLatency(500 * time.Millisecond)
+    
+    if client.GetLatency() != 500*time.Millisecond {
+        t.Errorf("expected 500ms latency, got %v", client.GetLatency())
+    }
+    
+    // Test behavior under high latency conditions
+    // ... your latency-dependent logic here
+}
+```
+
+**Testing Server Player Management:**
+
+```go
+func TestServerPlayerManagement(t *testing.T) {
+    server := network.NewMockServer()
+    server.Start()
+    
+    // Simulate multiple players joining
+    server.SimulatePlayerJoin(1)
+    server.SimulatePlayerJoin(2)
+    server.SimulatePlayerJoin(3)
+    
+    // Verify player count
+    if count := server.GetPlayerCount(); count != 3 {
+        t.Errorf("expected 3 players, got %d", count)
+    }
+    
+    // Get player list
+    players := server.GetPlayers()
+    if len(players) != 3 {
+        t.Errorf("expected 3 players in list, got %d", len(players))
+    }
+    
+    // Simulate player leaving
+    server.SimulatePlayerLeave(2)
+    
+    if count := server.GetPlayerCount(); count != 2 {
+        t.Errorf("expected 2 players after leave, got %d", count)
+    }
+}
+```
+
+**Resetting Mocks Between Tests:**
+
+```go
+func TestMultipleScenarios(t *testing.T) {
+    client := network.NewMockClient()
+    
+    t.Run("scenario 1", func(t *testing.T) {
+        client.Connect()
+        client.SendInput("action", []byte{1})
+        // ... test logic
+        client.Reset() // Clean state for next test
+    })
+    
+    t.Run("scenario 2", func(t *testing.T) {
+        // Client is clean, no previous state
+        if client.IsConnected() {
+            t.Error("client should not be connected after reset")
+        }
+        if client.GetSentInputCount() != 0 {
+            t.Error("sent input count should be 0 after reset")
+        }
+    })
+}
+```
+
 ## Test Organization
 
 ```
@@ -595,19 +745,19 @@ func TestWithContext(t *testing.T) {
 
 ## Coverage Goals
 
-| Package | Target | Current |
-|---------|--------|---------|
-| pkg/engine | 80%+ | 70.7% |
-| pkg/procgen/* | 90%+ | 100% |
-| pkg/rendering/* | 90%+ | 92-100% |
-| pkg/audio/* | 90%+ | 85-100% |
-| pkg/network | 70%+ | 66.8% |
-| pkg/combat | 90%+ | 100% |
-| pkg/world | 90%+ | 100% |
+| Package | Target | Current | Notes |
+|---------|--------|---------|-------|
+| pkg/engine | 80%+ | 70.7% | UI systems need integration tests |
+| pkg/procgen/* | 90%+ | 100% | Excellent coverage |
+| pkg/rendering/* | 90%+ | 92-100% | Excellent coverage |
+| pkg/audio/* | 90%+ | 85-100% | Good coverage |
+| pkg/network | 70%+ | 54.1% | Mock implementations added, coverage will improve as used |
+| pkg/combat | 90%+ | 100% | Excellent coverage |
+| pkg/world | 90%+ | 100% | Excellent coverage |
 
 **Focus areas for improvement:**
 - `pkg/engine`: UI system coverage (needs integration tests)
-- `pkg/network`: Integration testing (I/O heavy)
+- `pkg/network`: Write tests using new MockClient/MockServer to improve from 54.1% to 70%+
 
 ## Troubleshooting
 

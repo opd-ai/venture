@@ -23,7 +23,7 @@ type MockServer struct {
 	BroadcastCalls int
 	SendCalls      int
 	SentUpdates    []struct {
-		PlayerID uint64        // 0 for broadcasts
+		PlayerID uint64 // 0 for broadcasts
 		Update   *StateUpdate
 	}
 

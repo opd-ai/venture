@@ -119,6 +119,73 @@
 
 **Time Taken:** ~1 hour 15 minutes (estimated 2 hours)
 
+### Phase 2c: Migrate Components ✅ COMPLETE
+
+**Commit:** `d798cb4` - "refactor(engine): migrate SpriteComponent and InputComponent to interface pattern (Phase 2c)"
+
+**Files Modified:**
+- ✅ `pkg/engine/render_system.go` - Renamed SpriteComponent → EbitenSprite, removed build tags, added EbitenImage
+- ✅ `pkg/engine/sprite_component_test.go` - Created StubSprite (new file, 91 lines)
+- ✅ `pkg/engine/input_system.go` - Renamed InputComponent → EbitenInput, removed build tags
+- ✅ `pkg/engine/input_component_test.go` - Created StubInput (new file, 106 lines)
+- ✅ `pkg/engine/player_item_use_system.go` - Updated to use EbitenInput
+- ✅ `pkg/engine/player_spell_casting.go` - Updated to use EbitenInput
+- ✅ `pkg/engine/player_combat_system.go` - Updated to use EbitenInput
+- ✅ `pkg/engine/tutorial_system.go` - Updated to use EbitenInput
+- ✅ `cmd/client/main.go` - Updated to use EbitenInput
+- ✅ `pkg/engine/player_item_use_system_test.go` - Updated to use StubInput
+- ✅ `pkg/engine/player_combat_system_test.go` - Updated to use StubInput
+- ❌ `pkg/engine/components_test_stub.go` - Deleted (replaced by typed stubs)
+
+**SpriteComponent Changes:**
+1. ✅ Removed `//go:build !test` and `// +build !test` from render_system.go
+2. ✅ Renamed `type SpriteComponent` → `type EbitenSprite`
+3. ✅ Implemented all SpriteProvider interface methods:
+   - GetImage() ImageProvider
+   - GetSize() (width, height float64)
+   - GetColor() color.Color
+   - GetRotation() float64
+   - GetLayer() int
+   - IsVisible() bool
+   - SetVisible(visible bool)
+   - SetColor(col color.Color)
+   - SetRotation(rotation float64)
+4. ✅ Created EbitenImage wrapper implementing ImageProvider
+5. ✅ Created StubSprite in sprite_component_test.go
+6. ✅ Updated all type assertions (*SpriteComponent → *EbitenSprite)
+7. ✅ Added compile-time interface checks
+8. ✅ Kept NewSpriteComponent constructor for compatibility
+
+**InputComponent Changes:**
+1. ✅ Removed `//go:build !test` and `// +build !test` from input_system.go
+2. ✅ Renamed `type InputComponent` → `type EbitenInput`
+3. ✅ Implemented all InputProvider interface methods:
+   - GetMovement() (x, y float64)
+   - IsActionPressed() bool
+   - IsActionJustPressed() bool
+   - IsUseItemPressed() bool
+   - IsUseItemJustPressed() bool
+   - IsSpellPressed(slot int) bool
+   - GetMousePosition() (x, y int)
+   - IsMousePressed() bool
+   - SetMovement(x, y float64)
+   - SetActionPressed(pressed bool)
+4. ✅ Created StubInput in input_component_test.go
+5. ✅ Updated all type assertions (*InputComponent → *EbitenInput)
+6. ✅ Updated all production code references (5 files)
+7. ✅ Updated all test code references (2 files)
+8. ✅ Added compile-time interface checks
+
+**Verification:**
+```bash
+✅ go build ./pkg/engine - Success (production code)
+✅ go build ./cmd/client - Success
+✅ Both components implement their interfaces correctly
+✅ NewSpriteComponent still works (returns *EbitenSprite)
+```
+
+**Time Taken:** ~1 hour 30 minutes (estimated 2 hours)
+
 #### Analysis Findings
 
 **Build Tag Usage:**
@@ -166,6 +233,15 @@
 - Implemented GameRunner interface in both
 - Updated all references in cmd/* packages
 - Deleted game_test_stub.go
+
+**Phase 2c: Migrate Components** ✅ COMPLETE (1 hour 30 minutes)
+- Renamed SpriteComponent → EbitenSprite, removed build tags
+- Created StubSprite in sprite_component_test.go
+- Renamed InputComponent → EbitenInput, removed build tags
+- Created StubInput in input_component_test.go
+- Implemented SpriteProvider and InputProvider interfaces
+- Updated all references (9 production files, 2 test files)
+- Deleted components_test_stub.go
 
 ### 🔄 Ready to Execute
 

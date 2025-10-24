@@ -106,15 +106,15 @@ build_apk() {
     # Build APK
     if [ "$build_type" == "release" ]; then
         ./gradlew assembleRelease
-        APK_FILE="$BUILD_DIR/app/build/outputs/apk/release/app-release.apk"
+        APK_FILE="$BUILD_DIR/build/outputs/apk/release/*.apk"
     else
         ./gradlew assembleDebug
-        APK_FILE="$BUILD_DIR/app/build/outputs/apk/debug/app-debug.apk"
+        APK_FILE="$BUILD_DIR/build/outputs/apk/debug/*.apk"
     fi
     
     # Copy to output directory
     mkdir -p "$OUTPUT_DIR"
-    cp "$APK_FILE" "$OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}-${build_type}.apk"
+    cp $APK_FILE "$OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}-${build_type}.apk"
     
     echo_info "APK built: $OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}-${build_type}.apk"
 }
@@ -127,11 +127,11 @@ build_aab() {
     
     ./gradlew bundleRelease
     
-    AAB_FILE="$BUILD_DIR/app/build/outputs/bundle/release/app-release.aab"
+    AAB_FILE="$BUILD_DIR/build/outputs/bundle/release/*.aab"
     
     # Copy to output directory
     mkdir -p "$OUTPUT_DIR"
-    cp "$AAB_FILE" "$OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}.aab"
+    cp $AAB_FILE "$OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}.aab"
     
     echo_info "AAB built: $OUTPUT_DIR/${APP_NAME}-${VERSION_NAME}.aab"
 }

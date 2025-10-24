@@ -174,9 +174,9 @@ type Terrain struct {
 	Tiles      [][]TileType
 	Rooms      []*Room
 	Seed       int64
-	Level      int      // Dungeon level (0 = first level)
-	StairsUp   []Point  // Positions of upward stairs
-	StairsDown []Point  // Positions of downward stairs
+	Level      int     // Dungeon level (0 = first level)
+	StairsUp   []Point // Positions of upward stairs
+	StairsDown []Point // Positions of downward stairs
 }
 
 // NewTerrain creates a new terrain map filled with walls.

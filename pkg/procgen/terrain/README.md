@@ -247,11 +247,21 @@ All generators produce identical output for the same seed and parameters. This i
 
 Potential additions to the terrain system:
 
+- [x] **Point utilities for coordinates** (✓ Completed: Phase 1)
+- [x] **Multi-level dungeons with stairs** (✓ Completed: Phase 1 - Infrastructure)
+- [x] **Extended tile types** (water, trees, bridges, structures) (✓ Completed: Phase 1)
 - [ ] Room templates and prefabs
 - [ ] Door placement algorithms
 - [ ] Treasure room generation
-- [ ] Multi-level dungeons with stairs
+- [ ] **Multi-level generator** (Phase 6 - connects levels)
 - [ ] Themed room variants (treasure, boss, puzzle)
+- [ ] **Maze generator** (Phase 2 - recursive backtracking)
+- [ ] **Forest generator** (Phase 3 - natural environments)
+- [ ] **City generator** (Phase 4 - urban environments)
+- [ ] **Water system** (Phase 5 - lakes, rivers, moats)
+- [ ] **Composite generator** (Phase 7 - multi-biome maps)
 - [ ] Drunkard's walk algorithm
 - [ ] Voronoi diagram-based generation
 - [ ] Integration with entity placement system
+
+See `PLAN.md` in the project root for the complete terrain expansion roadmap.

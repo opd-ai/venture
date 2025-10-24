@@ -47,10 +47,10 @@ func (p Point) IsInBounds(width, height int) bool {
 // Neighbors returns the four orthogonal neighbors of this point.
 func (p Point) Neighbors() []Point {
 	return []Point{
-		{X: p.X, Y: p.Y - 1},     // North
-		{X: p.X + 1, Y: p.Y},     // East
-		{X: p.X, Y: p.Y + 1},     // South
-		{X: p.X - 1, Y: p.Y},     // West
+		{X: p.X, Y: p.Y - 1}, // North
+		{X: p.X + 1, Y: p.Y}, // East
+		{X: p.X, Y: p.Y + 1}, // South
+		{X: p.X - 1, Y: p.Y}, // West
 	}
 }
 

@@ -18,6 +18,13 @@ android {
         }
     }
     
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            res.srcDirs = ['res']
+        }
+    }
+    
     signingConfigs {
         release {
             // Set via environment variables or gradle.properties:

@@ -326,7 +326,7 @@ func (ts *TutorialSystem) GetAllSteps() []TutorialStep {
 
 // ExportState exports the current tutorial state for saving
 // Returns map of step IDs to completion status, current index, and enabled flags
-func (ts *TutorialSystem) ExportState() (enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+func (ts *TutorialSystem) ExportState() (enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
 	completedSteps = make(map[string]bool)
 	for _, step := range ts.Steps {
 		if step.Completed {
@@ -338,7 +338,7 @@ func (ts *TutorialSystem) ExportState() (enabled bool, showUI bool, currentStepI
 
 // ImportState restores tutorial state from saved data
 // Applies saved completion status to matching step IDs
-func (ts *TutorialSystem) ImportState(enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+func (ts *TutorialSystem) ImportState(enabled, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
 	ts.Enabled = enabled
 	ts.ShowUI = showUI
 	ts.CurrentStepIdx = currentStepIdx

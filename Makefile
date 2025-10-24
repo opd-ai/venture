@@ -2,9 +2,9 @@
 
 .PHONY: help all build test clean deps lint fmt build-all \
         build-linux build-windows build-macos \
-        build-server build-client \
+        build-server build-client build-wasm \
         android ios mobile-deps \
-        run-client run-server
+        run-client run-server serve-wasm
 
 # Default target
 .DEFAULT_GOAL := help
@@ -103,6 +103,7 @@ clean: ## Clean build artifacts
 	rm -rf $(DIST_DIR)
 	rm -rf coverage.out coverage.html
 	rm -f cpu.prof mem.prof
+	rm -f build/wasm/venture.wasm build/wasm/wasm_exec.js
 
 run-client: build-client ## Build and run client
 	./$(BUILD_DIR)/venture-client
@@ -188,6 +189,25 @@ docs: ## Generate documentation
 	@echo "Godoc server starting at http://localhost:6060"
 	@echo "Press Ctrl+C to stop"
 	godoc -http=:6060
+
+# WebAssembly build
+build-wasm: ## Build WebAssembly version for web browsers
+	@echo "Building WebAssembly..."
+	@mkdir -p build/wasm
+	GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
+	@echo "Copying wasm_exec.js..."
+	cp $$(go env GOROOT)/lib/wasm/wasm_exec.js build/wasm/
+	@echo "WebAssembly build complete: build/wasm/venture.wasm"
+	@echo "Run 'make serve-wasm' to test locally"
+
+serve-wasm: build-wasm ## Build and serve WebAssembly version locally
+	@echo "Starting local server at http://localhost:8080"
+	@echo "Press Ctrl+C to stop"
+	@cd build/wasm && python3 -m http.server 8080 || \
+		(echo "Python3 not found, trying Go..." && \
+		go run -tags http.Server -ldflags="-s -w" \
+		-modfile <(echo "module main"; echo "go 1.24") \
+		-exec "cd build/wasm &&" . :8080)
 
 # Git helpers
 git-clean: ## Remove all untracked files (use with caution!)

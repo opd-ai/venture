@@ -133,7 +133,7 @@ func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.Generation
 	item.Stats = g.generateStats(template, params.Depth, item.Rarity, params.Difficulty, rng)
 
 	// Generate description
-	item.Description = g.generateDescription(item, template)
+	item.Description = g.generateDescription(item, template, rng)
 
 	return item
 }
@@ -304,8 +304,8 @@ func (g *ItemGenerator) scaleStatByFactors(baseStat, depth int, rarity Rarity, d
 	return int(result)
 }
 
-// generateDescription creates flavor text for the item.
-func (g *ItemGenerator) generateDescription(item *Item, template ItemTemplate) string {
+// generateDescription creates flavor text for the item using deterministic RNG.
+func (g *ItemGenerator) generateDescription(item *Item, template ItemTemplate, rng *rand.Rand) string {
 	descriptions := make([]string, 0)
 
 	// Add type-specific descriptions
@@ -346,9 +346,9 @@ func (g *ItemGenerator) generateDescription(item *Item, template ItemTemplate) s
 		)
 	}
 
-	// Return a random description
+	// Return a random description using the seeded RNG
 	if len(descriptions) > 0 {
-		return descriptions[rand.Intn(len(descriptions))]
+		return descriptions[rng.Intn(len(descriptions))]
 	}
 	return "A mysterious item."
 }

@@ -54,4 +54,5 @@ dependencies {
     // Explicit AAR dependencies instead of fileTree (Gradle 10 compatible)
     // Uncomment and specify AAR files as needed:
     //implementation files('libs/venture.aar')
+    implementation files('libs/mobile.aar')
 }

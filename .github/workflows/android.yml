@@ -47,6 +47,9 @@ jobs:
       - name: Install NDK
         run: sdkmanager "ndk;${{ env.NDK_VERSION }}"
       
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      
       - name: Install ebitenmobile
         run: |
           go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest

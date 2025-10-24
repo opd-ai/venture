@@ -60,6 +60,16 @@ check_prerequisites() {
     echo_info "Prerequisites OK"
 }
 
+# Generate Android resources (icons, etc.)
+generate_resources() {
+    echo_info "Generating Android resources..."
+    
+    # Generate launcher icons
+    "$SCRIPT_DIR/generate-android-icons.sh"
+    
+    echo_info "Resources generated successfully"
+}
+
 # Build AAR library
 build_aar() {
     echo_info "Building Android AAR library..."
@@ -141,6 +151,7 @@ main() {
     local command=${1:-all}
     
     check_prerequisites
+    generate_resources
     
     case $command in
         aar)

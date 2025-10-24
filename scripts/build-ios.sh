@@ -66,6 +66,9 @@ build_xcframework() {
     
     cd "$PROJECT_ROOT"
     
+    # Ensure output directory exists
+    mkdir -p "$OUTPUT_DIR"
+    
     # Build the XCFramework
     ebitenmobile bind \
         -target ios \
@@ -73,10 +76,41 @@ build_xcframework() {
         ./cmd/mobile
     
     echo_info "XCFramework built successfully"
+    echo_info "Output: $BUILD_DIR/Mobile.xcframework"
 }
 
-# Build for simulator
+# Package XCFramework for distribution
+package_xcframework() {
+    echo_info "Packaging XCFramework..."
+    
+    cd "$BUILD_DIR"
+    
+    if [ ! -d "Mobile.xcframework" ]; then
+        echo_error "XCFramework not found. Build it first with: $0 xcframework"
+        exit 1
+    fi
+    
+    # Create zip archive
+    zip -r "$OUTPUT_DIR/Venture.xcframework.zip" Mobile.xcframework
+    
+    echo_info "XCFramework packaged: $OUTPUT_DIR/Venture.xcframework.zip"
+}
+
+# Build for simulator (requires Xcode project)
 build_simulator() {
+    echo_warn "Building iOS simulator app requires an Xcode project."
+    echo_warn "The XCFramework is available for integration into your Xcode project."
+    echo_warn "See docs/MOBILE_BUILD.md for integration instructions."
+    
+    if [ ! -d "$BUILD_DIR/Venture.xcodeproj" ]; then
+        echo_error "Xcode project not found at $BUILD_DIR/Venture.xcodeproj"
+        echo_error "To create a simulator build:"
+        echo_error "1. Create an Xcode project in $BUILD_DIR"
+        echo_error "2. Link the Mobile.xcframework"
+        echo_error "3. Build with xcodebuild"
+        exit 1
+    fi
+    
     echo_info "Building for iOS Simulator..."
     
     cd "$BUILD_DIR"
@@ -92,9 +126,17 @@ build_simulator() {
     echo_info "Simulator build complete"
 }
 
-# Build for device (requires signing)
+# Build for device (requires Xcode project and signing)
 build_device() {
     local build_type=${1:-Debug}
+    
+    echo_warn "Building iOS device app requires an Xcode project and code signing."
+    echo_warn "The XCFramework is available for integration into your Xcode project."
+    
+    if [ ! -d "$BUILD_DIR/Venture.xcodeproj" ]; then
+        echo_error "Xcode project not found at $BUILD_DIR/Venture.xcodeproj"
+        exit 1
+    fi
     
     echo_info "Building for iOS device ($build_type)..."
     
@@ -125,9 +167,14 @@ build_device() {
     echo_info "Device build archived"
 }
 
-# Export IPA
+# Export IPA (requires device build)
 export_ipa() {
     local export_method=${1:-development}
+    
+    if [ ! -d "$BUILD_DIR/$APP_NAME.xcarchive" ]; then
+        echo_error "Archive not found. Build for device first with: $0 device"
+        exit 1
+    fi
     
     echo_info "Exporting IPA (method: $export_method)..."
     
@@ -158,7 +205,7 @@ EOF
     echo_info "IPA exported: $OUTPUT_DIR/$APP_NAME.ipa"
 }
 
-# Install on connected device
+# Install on connected device (requires IPA)
 install_device() {
     echo_info "Installing on connected device..."
     
@@ -170,7 +217,7 @@ install_device() {
     IPA_FILE="$OUTPUT_DIR/$APP_NAME.ipa"
     
     if [ ! -f "$IPA_FILE" ]; then
-        echo_error "IPA file not found. Build first."
+        echo_error "IPA file not found. Build first with: $0 ipa"
         exit 1
     fi
     
@@ -181,13 +228,16 @@ install_device() {
 
 # Main execution
 main() {
-    local command=${1:-all}
+    local command=${1:-xcframework}
     
     check_prerequisites
     
     case $command in
         xcframework)
             build_xcframework
+            ;;
+        package)
+            package_xcframework
             ;;
         simulator)
             build_xcframework
@@ -215,19 +265,23 @@ main() {
             ;;
         all)
             build_xcframework
-            build_simulator
+            package_xcframework
             ;;
         *)
-            echo "Usage: $0 {xcframework|simulator|device|ipa|ipa-dev|install|all}"
+            echo "Usage: $0 {xcframework|package|simulator|device|ipa|ipa-dev|install|all}"
             echo ""
             echo "Commands:"
-            echo "  xcframework  - Build XCFramework only"
-            echo "  simulator    - Build for iOS Simulator"
-            echo "  device       - Build for iOS device (requires signing)"
-            echo "  ipa          - Build and export IPA for App Store"
-            echo "  ipa-dev      - Build and export IPA for development"
-            echo "  install      - Build and install on connected device"
-            echo "  all          - Build XCFramework and simulator app (default)"
+            echo "  xcframework  - Build XCFramework only (default, CI-recommended)"
+            echo "  package      - Package XCFramework as zip for distribution"
+            echo "  simulator    - Build for iOS Simulator (requires Xcode project)"
+            echo "  device       - Build for iOS device (requires Xcode project + signing)"
+            echo "  ipa          - Build and export IPA for App Store (requires project + signing)"
+            echo "  ipa-dev      - Build and export IPA for development (requires project + signing)"
+            echo "  install      - Build and install on connected device (requires project + signing)"
+            echo "  all          - Build and package XCFramework"
+            echo ""
+            echo "Note: simulator, device, ipa, and install commands require an Xcode project."
+            echo "See docs/MOBILE_BUILD.md for instructions on creating an Xcode project wrapper."
             exit 1
             ;;
     esac

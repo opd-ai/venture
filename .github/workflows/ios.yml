@@ -1,4 +1,4 @@
-name: iOS Build
+name: iOS XCFramework Build
 
 on:
   push:
@@ -48,39 +48,19 @@ jobs:
       - name: Build XCFramework
         run: ./scripts/build-ios.sh xcframework
       
-      - name: Build for Simulator
-        if: github.event.inputs.build_type == 'simulator' || github.event.inputs.build_type == ''
-        run: ./scripts/build-ios.sh simulator
+      - name: Create dist directory
+        run: mkdir -p dist/ios
       
-      - name: Build for Device
-        if: github.event.inputs.build_type == 'device' || github.event.inputs.build_type == 'ipa'
-        env:
-          IOS_SIGNING_IDENTITY: ${{ secrets.IOS_SIGNING_IDENTITY }}
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-        run: ./scripts/build-ios.sh device
-      
-      - name: Export IPA
-        if: github.event.inputs.build_type == 'ipa'
-        env:
-          IOS_SIGNING_IDENTITY: ${{ secrets.IOS_SIGNING_IDENTITY }}
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-        run: ./scripts/build-ios.sh ipa
+      - name: Package XCFramework
+        run: |
+          cd build/ios
+          zip -r ../../dist/ios/Venture.xcframework.zip Mobile.xcframework
       
       - name: Upload XCFramework artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-xcframework
-          path: build/ios/Mobile.xcframework
-          retention-days: 30
-      
-      - name: Upload IPA artifact
-        if: github.event.inputs.build_type == 'ipa'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: dist/ios/*.ipa
+          path: dist/ios/Venture.xcframework.zip
           retention-days: 30
       
       - name: Create Release
@@ -88,6 +68,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/ios/*.ipa
+            dist/ios/Venture.xcframework.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

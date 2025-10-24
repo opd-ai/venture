@@ -173,13 +173,73 @@ adb install -r dist/android/Venture-1.0.0-debug.apk
 
 ## iOS Build
 
+### Current Build Status
+
+**Note**: The iOS build currently produces an **XCFramework only**. This is a reusable framework that can be integrated into an iOS app project. Building a complete iOS app requires creating an Xcode project wrapper, which is not included in the automated build.
+
+For CI/CD and distribution purposes, the build system generates:
+- `Mobile.xcframework` - The compiled game framework for iOS
+- `Venture.xcframework.zip` - Packaged framework for distribution
+
 ### Build Types
 
-#### 1. iOS Simulator (Development)
+#### 1. XCFramework (Recommended for CI/CD)
 
 ```bash
-# Build for simulator
-make ios-simulator
+# Build XCFramework only (default)
+make ios-xcframework
+# or
+./scripts/build-ios.sh xcframework
+
+# Output: build/ios/Mobile.xcframework
+
+# Package for distribution
+./scripts/build-ios.sh package
+# Output: dist/ios/Venture.xcframework.zip
+```
+
+The XCFramework supports both device and simulator architectures and can be integrated into any iOS project.
+
+#### 2. Integrating XCFramework into Your Xcode Project
+
+To use the generated XCFramework in your own iOS app:
+
+1. **Create or Open Your Xcode Project**
+2. **Add the Framework**:
+   - Drag `Mobile.xcframework` into your project
+   - Select "Copy items if needed"
+   - Ensure it's added to your target's "Frameworks, Libraries, and Embedded Content"
+   - Set to "Embed & Sign"
+
+3. **Import and Initialize**:
+   ```swift
+   import Mobile
+   
+   class GameViewController: UIViewController {
+       override func viewDidLoad() {
+           super.viewDidLoad()
+           
+           // Initialize the mobile game
+           MobileInit()
+           
+           // Start the game loop
+           MobileStart()
+       }
+   }
+   ```
+
+4. **Configure Info.plist**:
+   - Set Bundle Identifier: `com.venture.game`
+   - Set Display Name: `Venture`
+   - Configure permissions as needed
+
+#### 3. iOS Simulator (Requires Xcode Project)
+
+**Note**: This requires an existing Xcode project that integrates the XCFramework.
+
+```bash
+# Build for simulator (if you have an Xcode project setup)
+./scripts/build-ios.sh simulator
 
 # The build will be in build/ios/DerivedData/
 # You can run it from Xcode or with:
@@ -188,9 +248,9 @@ xcrun simctl install booted build/ios/DerivedData/Build/Products/Debug-iphonesim
 xcrun simctl launch booted com.venture.game
 ```
 
-#### 2. Device Build (Testing)
+#### 4. Device Build (Requires Xcode Project + Signing)
 
-Requires Apple Developer account and provisioning profile:
+Requires Apple Developer account, Xcode project, and provisioning profile:
 
 ```bash
 # Set environment variables
@@ -198,25 +258,27 @@ export IOS_SIGNING_IDENTITY="Apple Development: Your Name (TEAM123)"
 export IOS_PROVISIONING_PROFILE="Venture Development Profile"
 export IOS_TEAM_ID="TEAM123"
 
-# Build for device
-make ios-device
+# Build for device (requires Xcode project)
+./scripts/build-ios.sh device
 ```
 
-#### 3. IPA Export (Distribution)
+#### 5. IPA Export (Requires Xcode Project + Signing)
 
 ```bash
-# Export IPA for distribution
-make ios-ipa
+# Export IPA for distribution (requires Xcode project)
+./scripts/build-ios.sh ipa
 
 # Output: dist/ios/Venture.ipa
 ```
 
-### Code Signing Setup
+### Code Signing Setup (For Device/IPA Builds)
+
+**Note**: Code signing is only required if you're building a complete iOS app with an Xcode project. If you're only using the XCFramework for integration, you'll handle signing in your own project.
 
 1. **Create App ID**:
    - Open [Apple Developer Portal](https://developer.apple.com/)
    - Go to Certificates, Identifiers & Profiles
-   - Create new App ID: `com.venture.game`
+   - Create new App ID: `com.venture.game` (or your own bundle ID)
 
 2. **Generate Certificate**:
    - Request certificate from Certificate Authority
@@ -233,11 +295,51 @@ make ios-ipa
    - Preferences → Accounts → Add Apple ID
    - Download Manual Profiles
 
+### Creating a Minimal Xcode Project Wrapper
+
+If you want to build a complete iOS app from the XCFramework:
+
+1. **Create New Project in Xcode**:
+   ```
+   File → New → Project → iOS → App
+   - Product Name: Venture
+   - Bundle Identifier: com.venture.game
+   - Interface: SwiftUI or UIKit
+   - Language: Swift
+   ```
+
+2. **Add the XCFramework**:
+   - Build the XCFramework: `./scripts/build-ios.sh xcframework`
+   - Drag `build/ios/Mobile.xcframework` into your project
+   - Ensure "Embed & Sign" is selected
+
+3. **Set Up the View Controller** (UIKit example):
+   ```swift
+   import UIKit
+   import Mobile
+
+   class GameViewController: UIViewController {
+       override func viewDidLoad() {
+           super.viewDidLoad()
+           MobileInit()
+           MobileStart()
+       }
+   }
+   ```
+
+4. **Configure Build Settings**:
+   - Set Minimum Deployment Target: iOS 14.0+
+   - Ensure the framework is linked and embedded
+
+5. **Save Project** in `build/ios/Venture.xcodeproj`
+
+Once you have an Xcode project setup, you can use the `simulator`, `device`, and `ipa` commands in the build script.
+
 ### Installing on Device
 
 ```bash
-# Using ios-deploy
-make ios-install
+# Using ios-deploy (requires Xcode project and IPA)
+./scripts/build-ios.sh install
 
 # Or manually via Xcode:
 # 1. Open build/ios/Venture.xcodeproj in Xcode
@@ -325,9 +427,9 @@ git push origin v1.0.0
 Mobile artifacts are attached to the GitHub release:
 - `venture.aar` - Android library for integration into apps
 - `*.apk` - Android application package (unsigned)
-- `Venture-ios-*.zip` - iOS framework for integration into apps
+- `Venture.xcframework.zip` - iOS framework for integration into apps
 
-#### Android Build
+#### Android Build Workflow
 
 Workflow file: `.github/workflows/android.yml`
 
@@ -337,6 +439,10 @@ Workflow file: `.github/workflows/android.yml`
 # - Pull requests
 # - Manual dispatch
 
+# Produces:
+# - Android AAR library
+# - Debug/Release APKs
+
 # Secrets required for release builds:
 # - ANDROID_KEYSTORE_FILE (base64 encoded)
 # - ANDROID_KEYSTORE_PASSWORD
@@ -344,7 +450,7 @@ Workflow file: `.github/workflows/android.yml`
 # - ANDROID_KEY_PASSWORD
 ```
 
-#### iOS Build
+#### iOS XCFramework Build Workflow
 
 Workflow file: `.github/workflows/ios.yml`
 
@@ -354,15 +460,27 @@ Workflow file: `.github/workflows/ios.yml`
 # - Pull requests
 # - Manual dispatch
 
-# Secrets required for device/IPA builds:
-# - IOS_SIGNING_IDENTITY
-# - IOS_PROVISIONING_PROFILE
-# - IOS_TEAM_ID
+# Produces:
+# - Mobile.xcframework (for integration)
+# - Venture.xcframework.zip (packaged for distribution)
+
+# Note: This workflow builds the XCFramework only.
+# Building complete iOS apps requires an Xcode project (not included).
 ```
+
+**Why XCFramework Only?**
+
+The iOS workflow builds a reusable framework rather than a complete app because:
+1. **Flexibility**: Developers can integrate the framework into their own app projects
+2. **No Code Signing Required**: Framework builds don't need Apple Developer credentials
+3. **CI/CD Simplicity**: No need to manage certificates and provisioning profiles in CI
+4. **Multi-Project Support**: One framework can be used in multiple app targets
+
+To build a complete iOS app, create an Xcode project that links the XCFramework (see instructions above).
 
 ### Setting Up Secrets
 
-1. **Android Keystore**:
+**Android Keystore**:
 ```bash
 # Encode keystore to base64
 base64 -i venture.keystore -o keystore.txt
@@ -373,20 +491,14 @@ base64 -i venture.keystore -o keystore.txt
 # Value: <paste contents of keystore.txt>
 ```
 
-2. **iOS Certificates**:
-```bash
-# Export certificate and provisioning profile from Keychain
-# Add to GitHub Secrets similar to Android
-```
-
 ### Manual Workflow Dispatch
 
 ```bash
 # Trigger Android build via gh CLI
 gh workflow run android.yml -f build_type=release
 
-# Trigger iOS build
-gh workflow run ios.yml -f build_type=ipa
+# Trigger iOS XCFramework build
+gh workflow run ios.yml
 ```
 
 ## Troubleshooting

@@ -98,3 +98,9 @@ func (ui *MapUI) Draw(screen interface{}) {
 func (ui *MapUI) GetFogOfWar() [][]bool {
 	return ui.fogOfWar
 }
+
+// SetFogOfWar sets the fog of war state (for save/load).
+func (ui *MapUI) SetFogOfWar(fog [][]bool) {
+	ui.fogOfWar = fog
+	ui.mapNeedsUpdate = true
+}

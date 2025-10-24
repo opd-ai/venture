@@ -111,7 +111,15 @@ type RewindResult struct {
 func (lc *LagCompensator) RewindToPlayerTime(playerLatency time.Duration) *RewindResult {
 	lc.mu.RLock()
 	defer lc.mu.RUnlock()
+	
+	return lc.rewindToPlayerTimeUnlocked(playerLatency)
+}
 
+// GAP-002 REPAIR: Internal unlocked version to prevent recursive locking
+// This method assumes the caller already holds the appropriate lock.
+// Used by methods like ValidateHit that need to call rewind logic while
+// already holding a lock, avoiding deadlock.
+func (lc *LagCompensator) rewindToPlayerTimeUnlocked(playerLatency time.Duration) *RewindResult {
 	now := time.Now()
 	result := &RewindResult{
 		Success:    false,
@@ -151,6 +159,8 @@ func (lc *LagCompensator) RewindToPlayerTime(playerLatency time.Duration) *Rewin
 // might manipulate latency to gain an advantage.
 //
 // Returns true if the hit is valid, false otherwise.
+//
+// GAP-002 REPAIR: Uses unlocked internal method to avoid recursive locking deadlock
 func (lc *LagCompensator) ValidateHit(
 	attackerID uint64,
 	targetID uint64,
@@ -161,8 +171,8 @@ func (lc *LagCompensator) ValidateHit(
 	lc.mu.RLock()
 	defer lc.mu.RUnlock()
 
-	// Rewind to player's perspective
-	rewind := lc.RewindToPlayerTime(playerLatency)
+	// GAP-002 FIX: Use internal unlocked version to avoid recursive lock
+	rewind := lc.rewindToPlayerTimeUnlocked(playerLatency)
 	if !rewind.Success {
 		return false, fmt.Errorf("failed to rewind to player time: no snapshot available")
 	}

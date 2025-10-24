@@ -4,6 +4,10 @@
 // Package engine provides test stubs for Game type and related systems.
 // This file provides stub implementations when building with the test tag,
 // allowing unit tests to compile without Ebiten/X11 dependencies.
+//
+// GAP-001 REPAIR: System type stubs (InputSystem, HelpSystem, TerrainRenderSystem)
+// are defined in their respective test files (input_system_test.go,
+// terrain_render_system_test.go) to avoid duplication.
 package engine
 
 // Game represents the main game instance (test stub).
@@ -57,7 +61,7 @@ func (g *Game) SetInventorySystem(system *InventorySystem) {
 }
 
 // SetupInputCallbacks connects the input system callbacks to the UI systems (test stub).
-func (g *Game) SetupInputCallbacks(inputSystem *InputSystem) {
+func (g *Game) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
 	// Stub - no op in tests
 }
 

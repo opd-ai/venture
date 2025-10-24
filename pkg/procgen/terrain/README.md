@@ -58,6 +58,41 @@ result, err := gen.Generate(12345, params)
 terrain := result.(*terrain.Terrain)
 ```
 
+### Maze (Recursive Backtracking)
+
+The maze algorithm creates complex, winding corridors using recursive backtracking. It produces confusing, labyrinthine layouts with optional rooms at dead ends.
+
+**Features:**
+- Complex, winding corridors
+- Guaranteed connectivity (all areas reachable)
+- Optional rooms at dead ends
+- Configurable corridor width
+- Stairs placed in opposite corners
+
+**Usage:**
+```go
+gen := terrain.NewMazeGenerator()
+params := procgen.GenerationParams{
+    Difficulty: 0.5,
+    Depth:      7, // Mazes are typically deeper levels
+    GenreID:    "dungeon",
+    Custom: map[string]interface{}{
+        "width":         81,
+        "height":        81,
+        "roomChance":    0.1,  // 10% of dead ends become rooms
+        "corridorWidth": 1,    // 1 = single tile, 2 = double-wide
+    },
+}
+result, err := gen.Generate(12345, params)
+terrain := result.(*terrain.Terrain)
+```
+
+**Parameters:**
+- `roomChance` (float64): Probability (0.0-1.0) of creating a room at a dead end (default: 0.1)
+- `corridorWidth` (int): Width of corridors, 1 for single-tile or 2 for double-wide (default: 1)
+
+**Note:** The algorithm automatically adjusts even dimensions to odd values (required for the algorithm to work correctly).
+
 ## Tile Types
 
 The terrain system uses several tile types:
@@ -194,13 +229,16 @@ go build -o terraintest ./cmd/terraintest
 # Generate cellular caves
 ./terraintest -algorithm cellular -width 80 -height 50 -seed 54321
 
+# Generate maze
+./terraintest -algorithm maze -width 81 -height 81 -seed 99999
+
 # Save to file
 ./terraintest -algorithm bsp -output dungeon.txt
 ```
 
 ### CLI Options
 
-- `-algorithm` - Generation algorithm: "bsp" or "cellular" (default: "bsp")
+- `-algorithm` - Generation algorithm: "bsp", "cellular", or "maze" (default: "bsp")
 - `-width` - Map width in tiles (default: 80)
 - `-height` - Map height in tiles (default: 50)
 - `-seed` - Random seed for deterministic generation (default: 12345)
@@ -226,14 +264,16 @@ The CLI tool renders terrain as ASCII art:
 
 ## Performance
 
-Both algorithms are designed to be fast and efficient:
+All algorithms are designed to be fast and efficient:
 
 - **BSP**: O(n) where n is the number of nodes in the BSP tree
 - **Cellular**: O(w × h × i) where w and h are dimensions and i is iterations
+- **Maze**: O(w × h) recursive backtracking with stack-based traversal
 
 Typical generation times:
 - 80×50 BSP dungeon: < 1ms
 - 80×50 Cellular caves: 2-5ms
+- 81×81 Maze: 2-10ms
 
 ## Determinism
 
@@ -250,12 +290,12 @@ Potential additions to the terrain system:
 - [x] **Point utilities for coordinates** (✓ Completed: Phase 1)
 - [x] **Multi-level dungeons with stairs** (✓ Completed: Phase 1 - Infrastructure)
 - [x] **Extended tile types** (water, trees, bridges, structures) (✓ Completed: Phase 1)
+- [x] **Maze generator** (✓ Completed: Phase 2 - recursive backtracking)
 - [ ] Room templates and prefabs
 - [ ] Door placement algorithms
 - [ ] Treasure room generation
 - [ ] **Multi-level generator** (Phase 6 - connects levels)
 - [ ] Themed room variants (treasure, boss, puzzle)
-- [ ] **Maze generator** (Phase 2 - recursive backtracking)
 - [ ] **Forest generator** (Phase 3 - natural environments)
 - [ ] **City generator** (Phase 4 - urban environments)
 - [ ] **Water system** (Phase 5 - lakes, rivers, moats)

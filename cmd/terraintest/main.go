@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	algorithm = flag.String("algorithm", "bsp", "Generation algorithm: bsp or cellular")
+	algorithm = flag.String("algorithm", "bsp", "Generation algorithm: bsp, cellular, or maze")
 	width     = flag.Int("width", 80, "Map width")
 	height    = flag.Int("height", 50, "Map height")
 	seed      = flag.Int64("seed", 12345, "Generation seed")
@@ -32,8 +32,10 @@ func main() {
 		gen = terrain.NewBSPGenerator()
 	case "cellular":
 		gen = terrain.NewCellularGenerator()
+	case "maze":
+		gen = terrain.NewMazeGenerator()
 	default:
-		log.Fatalf("Unknown algorithm: %s (use 'bsp' or 'cellular')", *algorithm)
+		log.Fatalf("Unknown algorithm: %s (use 'bsp', 'cellular', or 'maze')", *algorithm)
 	}
 
 	// Set up generation parameters

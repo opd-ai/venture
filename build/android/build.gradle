@@ -1,24 +1,10 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
-    }
+plugins {
+    id 'com.android.application' version '8.5.0'
 }
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-apply plugin: 'com.android.application'
 
 android {
     compileSdk 34
+    namespace 'com.venture.game'
     
     defaultConfig {
         applicationId "com.venture.game"
@@ -29,18 +15,6 @@ android {
         
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
-        }
-    }
-    
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
-        }
-        debug {
-            applicationIdSuffix ".debug"
-            debuggable true
         }
     }
     
@@ -58,14 +32,26 @@ android {
         }
     }
     
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+        }
     }
     
-    namespace 'com.venture.game'
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.aar'])
+    // Explicit AAR dependencies instead of fileTree (Gradle 10 compatible)
+    // Uncomment and specify AAR files as needed:
+    //implementation files('libs/venture.aar')
 }

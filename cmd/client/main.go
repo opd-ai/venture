@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/combat"
@@ -20,12 +21,19 @@ import (
 var (
 	width       = flag.Int("width", 800, "Screen width")
 	height      = flag.Int("height", 600, "Screen height")
-	seed        = flag.Int64("seed", 12345, "World generation seed")
+	seed        = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID     = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
 	multiplayer = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
 	server      = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
 )
+
+// return a random seed
+func seededRandom() int64 {
+	time := time.Now().UnixNano()
+	rand := rand.New(rand.NewSource(time))
+	return rand.Int63()
+}
 
 // addStarterItems generates and adds starting items to the player's inventory.
 func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, verbose bool) {
@@ -743,6 +751,18 @@ func main() {
 				}
 			}
 
+			// GAP-003 REPAIR: Export tutorial state
+			var tutorialStateData *saveload.TutorialStateData
+			if game.TutorialSystem != nil {
+				enabled, showUI, currentStep, completed := game.TutorialSystem.ExportState()
+				tutorialStateData = &saveload.TutorialStateData{
+					Enabled:        enabled,
+					ShowUI:         showUI,
+					CurrentStepIdx: currentStep,
+					CompletedSteps: completed,
+				}
+			}
+
 			// Create game save
 			gameSave := &saveload.GameSave{
 				Version: saveload.SaveVersion,
@@ -765,6 +785,7 @@ func main() {
 					CurrentMana:    currentMana,
 					MaxMana:        maxMana,
 					Spells:         spellDataList,
+					TutorialState:  tutorialStateData, // GAP-003 REPAIR: Tutorial persistence
 				},
 				WorldState: &saveload.WorldState{
 					Seed:       *seed,
@@ -919,6 +940,21 @@ func main() {
 						}
 						return 0
 					}())
+				}
+			}
+
+			// GAP-003 REPAIR: Restore tutorial state
+			if game.TutorialSystem != nil && gameSave.PlayerState.TutorialState != nil {
+				tutState := gameSave.PlayerState.TutorialState
+				game.TutorialSystem.ImportState(
+					tutState.Enabled,
+					tutState.ShowUI,
+					tutState.CurrentStepIdx,
+					tutState.CompletedSteps,
+				)
+				if *verbose {
+					log.Printf("Restored tutorial state: enabled=%v, step=%d/%d",
+						tutState.Enabled, tutState.CurrentStepIdx, len(game.TutorialSystem.Steps))
 				}
 			}
 

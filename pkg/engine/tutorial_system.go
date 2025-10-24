@@ -53,10 +53,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 			ID:          "welcome",
 			Title:       "Welcome to Venture!",
 			Description: "Welcome to the world of procedural adventure. Every dungeon, enemy, and item is unique!",
-			Objective:   "Press SPACE to continue",
+			Objective:   "Press any key to continue", // GAP-005 REPAIR: Changed from "Press SPACE"
 			Completed:   false,
 			Condition: func(world *World) bool {
-				// Check for any input entity (player pressed a key)
+				// GAP-001/GAP-005 REPAIR: Check for any key press using frame-persistent flag
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") {
 						comp, ok := entity.GetComponent("input")
@@ -64,7 +64,8 @@ func createDefaultTutorialSteps() []TutorialStep {
 							continue
 						}
 						input := comp.(*InputComponent)
-						return input.ActionPressed
+						// Use frame-persistent AnyKeyPressed flag instead of ActionPressed
+						return input.AnyKeyPressed
 					}
 				}
 				return false
@@ -200,7 +201,7 @@ func (ts *TutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Create temporary world for condition checking
-	world := &World{entities: make(map[uint64]*Entity)}
+	world := &World{entities: make(map[uint64]*Entity), entityListDirty: true}
 	for _, entity := range entities {
 		world.entities[entity.ID] = entity
 	}
@@ -274,6 +275,88 @@ func (ts *TutorialSystem) Reset() {
 	ts.NotificationTTL = 0
 	for i := range ts.Steps {
 		ts.Steps[i].Completed = false
+	}
+}
+
+// GAP-006 REPAIR: Public API for querying tutorial state
+
+// IsStepCompleted returns true if the step with given ID has been completed
+func (ts *TutorialSystem) IsStepCompleted(stepID string) bool {
+	for _, step := range ts.Steps {
+		if step.ID == stepID {
+			return step.Completed
+		}
+	}
+	return false
+}
+
+// GetStepByID returns the tutorial step with the given ID, or nil if not found
+func (ts *TutorialSystem) GetStepByID(stepID string) *TutorialStep {
+	for i := range ts.Steps {
+		if ts.Steps[i].ID == stepID {
+			return &ts.Steps[i]
+		}
+	}
+	return nil
+}
+
+// IsActive returns true if the tutorial system is currently enabled and showing UI
+func (ts *TutorialSystem) IsActive() bool {
+	return ts.Enabled && ts.ShowUI
+}
+
+// GetCurrentStepID returns the ID of the current step, or empty string if complete
+func (ts *TutorialSystem) GetCurrentStepID() string {
+	step := ts.GetCurrentStep()
+	if step == nil {
+		return ""
+	}
+	return step.ID
+}
+
+// GetAllSteps returns all tutorial steps (read-only access for UI integration)
+func (ts *TutorialSystem) GetAllSteps() []TutorialStep {
+	// Return copy to prevent external modification
+	steps := make([]TutorialStep, len(ts.Steps))
+	copy(steps, ts.Steps)
+	return steps
+}
+
+// GAP-003 REPAIR: Tutorial state serialization for save/load
+
+// ExportState exports the current tutorial state for saving
+// Returns map of step IDs to completion status, current index, and enabled flags
+func (ts *TutorialSystem) ExportState() (enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+	completedSteps = make(map[string]bool)
+	for _, step := range ts.Steps {
+		if step.Completed {
+			completedSteps[step.ID] = true
+		}
+	}
+	return ts.Enabled, ts.ShowUI, ts.CurrentStepIdx, completedSteps
+}
+
+// ImportState restores tutorial state from saved data
+// Applies saved completion status to matching step IDs
+func (ts *TutorialSystem) ImportState(enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+	ts.Enabled = enabled
+	ts.ShowUI = showUI
+	ts.CurrentStepIdx = currentStepIdx
+
+	// Apply completion status from save data
+	for i := range ts.Steps {
+		stepID := ts.Steps[i].ID
+		if completed, ok := completedSteps[stepID]; ok {
+			ts.Steps[i].Completed = completed
+		}
+	}
+
+	// Validate currentStepIdx (in case tutorial steps changed between save/load)
+	if ts.CurrentStepIdx >= len(ts.Steps) {
+		ts.CurrentStepIdx = len(ts.Steps) - 1
+		if ts.CurrentStepIdx < 0 {
+			ts.CurrentStepIdx = 0
+		}
 	}
 }
 

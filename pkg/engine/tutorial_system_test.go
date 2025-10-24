@@ -42,10 +42,16 @@ func createDefaultTutorialSteps() []TutorialStep {
 		{
 			ID:          "welcome",
 			Title:       "Welcome",
-			Description: "Welcome to the game",
+			Description: "Game start",
 			Objective:   "Press any key",
 			Completed:   false,
 			Condition: func(world *World) bool {
+				for _, entity := range world.GetEntities() {
+					if comp, ok := entity.GetComponent("input"); ok {
+						input := comp.(*InputComponent)
+						return input.AnyKeyPressed
+					}
+				}
 				return false
 			},
 		},
@@ -106,7 +112,7 @@ func (ts *TutorialSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	world := &World{entities: make(map[uint64]*Entity)}
+	world := &World{entities: make(map[uint64]*Entity), entityListDirty: true}
 	for _, entity := range entities {
 		world.entities[entity.ID] = entity
 	}
@@ -119,7 +125,8 @@ func (ts *TutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	currentStep := &ts.Steps[ts.CurrentStepIdx]
-	if !currentStep.Completed && currentStep.Condition(world) {
+	condResult := currentStep.Condition(world)
+	if !currentStep.Completed && condResult {
 		currentStep.Completed = true
 		ts.CurrentStepIdx++
 		if ts.CurrentStepIdx >= len(ts.Steps) {
@@ -172,6 +179,75 @@ func (ts *TutorialSystem) Reset() {
 func (ts *TutorialSystem) ShowNotification(msg string, duration float64) {
 	ts.NotificationMsg = msg
 	ts.NotificationTTL = duration
+}
+
+// GAP-003 REPAIR: Tutorial state serialization for save/load (test stub)
+func (ts *TutorialSystem) ExportState() (enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+	completedSteps = make(map[string]bool)
+	for _, step := range ts.Steps {
+		if step.Completed {
+			completedSteps[step.ID] = true
+		}
+	}
+	return ts.Enabled, ts.ShowUI, ts.CurrentStepIdx, completedSteps
+}
+
+func (ts *TutorialSystem) ImportState(enabled bool, showUI bool, currentStepIdx int, completedSteps map[string]bool) {
+	ts.Enabled = enabled
+	ts.ShowUI = showUI
+	ts.CurrentStepIdx = currentStepIdx
+
+	for i := range ts.Steps {
+		stepID := ts.Steps[i].ID
+		if completed, ok := completedSteps[stepID]; ok {
+			ts.Steps[i].Completed = completed
+		}
+	}
+
+	// GAP-003 REPAIR: Clamp to valid range
+	if ts.CurrentStepIdx >= len(ts.Steps) {
+		ts.CurrentStepIdx = len(ts.Steps) - 1
+	}
+	if ts.CurrentStepIdx < 0 {
+		ts.CurrentStepIdx = 0
+	}
+}
+
+// GAP-006 REPAIR: Public API for querying tutorial state (test stub)
+func (ts *TutorialSystem) IsStepCompleted(stepID string) bool {
+	for _, step := range ts.Steps {
+		if step.ID == stepID {
+			return step.Completed
+		}
+	}
+	return false
+}
+
+func (ts *TutorialSystem) GetStepByID(stepID string) *TutorialStep {
+	for i := range ts.Steps {
+		if ts.Steps[i].ID == stepID {
+			return &ts.Steps[i]
+		}
+	}
+	return nil
+}
+
+func (ts *TutorialSystem) IsActive() bool {
+	return ts.Enabled && ts.ShowUI
+}
+
+func (ts *TutorialSystem) GetCurrentStepID() string {
+	step := ts.GetCurrentStep()
+	if step == nil {
+		return ""
+	}
+	return step.ID
+}
+
+func (ts *TutorialSystem) GetAllSteps() []TutorialStep {
+	steps := make([]TutorialStep, len(ts.Steps))
+	copy(steps, ts.Steps)
+	return steps
 }
 
 func splitWords(str string) []string {

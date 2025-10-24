@@ -14,14 +14,24 @@ import (
 
 // InputComponent stores the current input state for an entity.
 // This is typically only used for player-controlled entities.
+//
+// GAP-001/GAP-002 REPAIR: Separated immediate-consumption flags from persistent detection flags.
+// ActionPressed/UseItemPressed are for immediate consumption (combat, actions).
+// ActionJustPressed/UseItemJustPressed persist for the entire frame for UI/tutorial detection.
 type InputComponent struct {
 	// Movement input (-1.0 to 1.0 for each axis)
 	MoveX, MoveY float64
 
-	// Action buttons
+	// Action buttons - Immediate consumption (reset after first system uses them)
 	ActionPressed   bool
 	SecondaryAction bool
 	UseItemPressed  bool
+
+	// Action buttons - Frame-persistent detection (available to all systems this frame)
+	// GAP-001 REPAIR: These flags persist for the full frame for tutorial/UI detection
+	ActionJustPressed  bool // Set when action key first pressed this frame
+	UseItemJustPressed bool // Set when use item key first pressed this frame
+	AnyKeyPressed      bool // GAP-005 REPAIR: Set when any key pressed this frame
 
 	// GAP-002 REPAIR: Spell casting input flags (keys 1-5)
 	Spell1Pressed bool
@@ -263,6 +273,7 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Handle help topic switching with number keys 1-6 (when help is visible)
+	// GAP-004 REPAIR: Return early after handling help keys to prevent spell casting
 	if s.helpSystem != nil && s.helpSystem.Visible {
 		topicKeys := []ebiten.Key{
 			ebiten.Key1, ebiten.Key2, ebiten.Key3,
@@ -276,7 +287,8 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 		for i, key := range topicKeys {
 			if inpututil.IsKeyJustPressed(key) {
 				s.helpSystem.ShowTopic(topicIDs[i])
-				break
+				// GAP-004 REPAIR: Early return to prevent number keys from casting spells
+				return
 			}
 		}
 	}
@@ -294,7 +306,7 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 
 // processInput handles input processing for a single entity.
 func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaTime float64) {
-	// Reset input state
+	// GAP-001/GAP-002 REPAIR: Reset immediate-consumption flags but preserve frame-persistent flags
 	input.MoveX = 0
 	input.MoveY = 0
 	input.ActionPressed = false
@@ -305,6 +317,12 @@ func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaT
 	input.Spell3Pressed = false
 	input.Spell4Pressed = false
 	input.Spell5Pressed = false
+
+	// GAP-001/GAP-005 REPAIR: Reset frame-persistent detection flags at start of new frame
+	// These will be set again if keys are pressed this frame
+	input.ActionJustPressed = false
+	input.UseItemJustPressed = false
+	input.AnyKeyPressed = false
 
 	// Auto-detect input method: if touch input is detected, switch to touch mode
 	if s.mobileEnabled && len(ebiten.TouchIDs()) > 0 {
@@ -369,26 +387,43 @@ func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaT
 		// Process action keys
 		if inpututil.IsKeyJustPressed(s.KeyAction) {
 			input.ActionPressed = true
+			input.ActionJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
+			input.AnyKeyPressed = true     // GAP-005 REPAIR: Any key detection
 		}
 		if inpututil.IsKeyJustPressed(s.KeyUseItem) {
 			input.UseItemPressed = true
+			input.UseItemJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
+			input.AnyKeyPressed = true      // GAP-005 REPAIR: Any key detection
 		}
 
 		// GAP-002 REPAIR: Process spell casting keys (1-5)
 		if inpututil.IsKeyJustPressed(s.KeySpell1) {
 			input.Spell1Pressed = true
+			input.AnyKeyPressed = true // GAP-005 REPAIR
 		}
 		if inpututil.IsKeyJustPressed(s.KeySpell2) {
 			input.Spell2Pressed = true
+			input.AnyKeyPressed = true // GAP-005 REPAIR
 		}
 		if inpututil.IsKeyJustPressed(s.KeySpell3) {
 			input.Spell3Pressed = true
+			input.AnyKeyPressed = true // GAP-005 REPAIR
 		}
 		if inpututil.IsKeyJustPressed(s.KeySpell4) {
 			input.Spell4Pressed = true
+			input.AnyKeyPressed = true // GAP-005 REPAIR
 		}
 		if inpututil.IsKeyJustPressed(s.KeySpell5) {
 			input.Spell5Pressed = true
+			input.AnyKeyPressed = true // GAP-005 REPAIR
+		}
+
+		// GAP-005 REPAIR: Detect any key press for tutorial "press any key" prompts
+		if !input.AnyKeyPressed {
+			pressedKeys := inpututil.AppendPressedKeys(nil)
+			if len(pressedKeys) > 0 {
+				input.AnyKeyPressed = true
+			}
 		}
 
 		// Process mouse input

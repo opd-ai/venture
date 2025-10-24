@@ -72,6 +72,18 @@ type PlayerState struct {
 
 	// Spell slots
 	Spells []SpellData `json:"spells,omitempty"`
+
+	// GAP-003 REPAIR: Tutorial progress persistence
+	TutorialState *TutorialStateData `json:"tutorial_state,omitempty"`
+}
+
+// TutorialStateData represents saved tutorial progress
+// GAP-003 REPAIR: Allows tutorial state to persist across saves/loads
+type TutorialStateData struct {
+	Enabled        bool            `json:"enabled"`
+	ShowUI         bool            `json:"show_ui"`
+	CurrentStepIdx int             `json:"current_step_idx"`
+	CompletedSteps map[string]bool `json:"completed_steps"` // Step ID -> completed
 }
 
 // ItemData represents a serialized item for save files.

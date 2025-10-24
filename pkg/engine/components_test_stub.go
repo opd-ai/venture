@@ -19,6 +19,11 @@ type InputComponent struct {
 	UseItemPressed  bool
 	Action          bool // Alias for ActionPressed (backward compatibility)
 
+	// GAP-001/GAP-002 REPAIR: Frame-persistent detection flags for tutorial/UI
+	ActionJustPressed  bool // Set when action key first pressed this frame
+	UseItemJustPressed bool // Set when use item key first pressed this frame
+	AnyKeyPressed      bool // GAP-005 REPAIR: Set when any key pressed this frame
+
 	// GAP-002 REPAIR: Spell casting input flags (keys 1-5)
 	Spell1Pressed bool
 	Spell2Pressed bool

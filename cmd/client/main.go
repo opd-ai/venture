@@ -521,7 +521,7 @@ func main() {
 	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team
 
 	// Add input component for player control
-	player.AddComponent(&engine.InputComponent{})
+	player.AddComponent(&engine.EbitenInput{})
 
 	// Add sprite for rendering (28x28 to fit through 32px corridors)
 	playerSprite := engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})

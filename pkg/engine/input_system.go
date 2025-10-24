@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package engine provides player input handling.
 // This file implements InputSystem which processes keyboard, mouse, and touch input
 // for player-controlled entities and game controls.
@@ -12,13 +9,14 @@ import (
 	"github.com/opd-ai/venture/pkg/mobile"
 )
 
-// InputComponent stores the current input state for an entity.
+// EbitenInput stores the current input state for an entity (Ebiten implementation).
 // This is typically only used for player-controlled entities.
+// Implements InputProvider interface.
 //
 // GAP-001/GAP-002 REPAIR: Separated immediate-consumption flags from persistent detection flags.
 // ActionPressed/UseItemPressed are for immediate consumption (combat, actions).
 // ActionJustPressed/UseItemJustPressed persist for the entire frame for UI/tutorial detection.
-type InputComponent struct {
+type EbitenInput struct {
 	// Movement input (-1.0 to 1.0 for each axis)
 	MoveX, MoveY float64
 
@@ -45,10 +43,76 @@ type InputComponent struct {
 	MousePressed   bool
 }
 
-// Type returns the component type identifier.
-func (i *InputComponent) Type() string {
+// Type returns the component type identifier (implements Component).
+func (i *EbitenInput) Type() string {
 	return "input"
 }
+
+// GetMovement implements InputProvider interface.
+func (i *EbitenInput) GetMovement() (x, y float64) {
+	return i.MoveX, i.MoveY
+}
+
+// IsActionPressed implements InputProvider interface.
+func (i *EbitenInput) IsActionPressed() bool {
+	return i.ActionPressed
+}
+
+// IsActionJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsActionJustPressed() bool {
+	return i.ActionJustPressed
+}
+
+// IsUseItemPressed implements InputProvider interface.
+func (i *EbitenInput) IsUseItemPressed() bool {
+	return i.UseItemPressed
+}
+
+// IsUseItemJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsUseItemJustPressed() bool {
+	return i.UseItemJustPressed
+}
+
+// IsSpellPressed implements InputProvider interface.
+func (i *EbitenInput) IsSpellPressed(slot int) bool {
+	switch slot {
+	case 1:
+		return i.Spell1Pressed
+	case 2:
+		return i.Spell2Pressed
+	case 3:
+		return i.Spell3Pressed
+	case 4:
+		return i.Spell4Pressed
+	case 5:
+		return i.Spell5Pressed
+	default:
+		return false
+	}
+}
+
+// GetMousePosition implements InputProvider interface.
+func (i *EbitenInput) GetMousePosition() (x, y int) {
+	return i.MouseX, i.MouseY
+}
+
+// IsMousePressed implements InputProvider interface.
+func (i *EbitenInput) IsMousePressed() bool {
+	return i.MousePressed
+}
+
+// SetMovement implements InputProvider interface.
+func (i *EbitenInput) SetMovement(x, y float64) {
+	i.MoveX, i.MoveY = x, y
+}
+
+// SetActionPressed implements InputProvider interface.
+func (i *EbitenInput) SetActionPressed(pressed bool) {
+	i.ActionPressed = pressed
+}
+
+// Compile-time interface check
+var _ InputProvider = (*EbitenInput)(nil)
 
 // InputSystem processes keyboard, mouse, and touch input and updates input components.
 type InputSystem struct {
@@ -299,13 +363,13 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		input := inputComp.(*InputComponent)
+		input := inputComp.(*EbitenInput)
 		s.processInput(entity, input, deltaTime)
 	}
 }
 
 // processInput handles input processing for a single entity.
-func (s *InputSystem) processInput(entity *Entity, input *InputComponent, deltaTime float64) {
+func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime float64) {
 	// GAP-001/GAP-002 REPAIR: Reset immediate-consumption flags but preserve frame-persistent flags
 	input.MoveX = 0
 	input.MoveY = 0

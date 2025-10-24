@@ -27,7 +27,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		input := inputComp.(*InputComponent)
+		input := inputComp.(*EbitenInput)
 
 		// Check if player pressed attack button
 		if !input.ActionPressed {

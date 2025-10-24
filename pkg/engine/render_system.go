@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package engine provides sprite rendering for entities.
 // This file implements RenderSystem which handles entity sprite rendering
 // with camera transformations and visual effects.
@@ -13,8 +10,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// SpriteComponent holds visual representation data for an entity.
-type SpriteComponent struct {
+// EbitenSprite holds visual representation data for an entity (Ebiten implementation).
+// Implements SpriteProvider interface.
+type EbitenSprite struct {
 	// Sprite image (procedurally generated)
 	Image *ebiten.Image
 
@@ -34,14 +32,65 @@ type SpriteComponent struct {
 	Layer int
 }
 
-// Type returns the component type identifier.
-func (s *SpriteComponent) Type() string {
+// Type returns the component type identifier (implements Component).
+func (s *EbitenSprite) Type() string {
 	return "sprite"
 }
 
-// NewSpriteComponent creates a new sprite component.
-func NewSpriteComponent(width, height float64, color color.Color) *SpriteComponent {
-	return &SpriteComponent{
+// GetImage implements SpriteProvider interface.
+func (s *EbitenSprite) GetImage() ImageProvider {
+	if s.Image == nil {
+		return nil
+	}
+	return &EbitenImage{image: s.Image}
+}
+
+// GetSize implements SpriteProvider interface.
+func (s *EbitenSprite) GetSize() (width, height float64) {
+	return s.Width, s.Height
+}
+
+// GetColor implements SpriteProvider interface.
+func (s *EbitenSprite) GetColor() color.Color {
+	if s.Color == nil {
+		return color.White
+	}
+	return s.Color
+}
+
+// GetRotation implements SpriteProvider interface.
+func (s *EbitenSprite) GetRotation() float64 {
+	return s.Rotation
+}
+
+// GetLayer implements SpriteProvider interface.
+func (s *EbitenSprite) GetLayer() int {
+	return s.Layer
+}
+
+// IsVisible implements SpriteProvider interface.
+func (s *EbitenSprite) IsVisible() bool {
+	return s.Visible
+}
+
+// SetVisible implements SpriteProvider interface.
+func (s *EbitenSprite) SetVisible(visible bool) {
+	s.Visible = visible
+}
+
+// SetColor implements SpriteProvider interface.
+func (s *EbitenSprite) SetColor(col color.Color) {
+	s.Color = col
+}
+
+// SetRotation implements SpriteProvider interface.
+func (s *EbitenSprite) SetRotation(rotation float64) {
+	s.Rotation = rotation
+}
+
+// NewSpriteComponent creates a new Ebiten sprite component.
+func NewSpriteComponent(width, height float64, color color.Color) *EbitenSprite {
+	return &EbitenSprite{
 		Width:   width,
 		Height:  height,
 		Color:   color,
@@ -49,6 +98,31 @@ func NewSpriteComponent(width, height float64, color color.Color) *SpriteCompone
 		Layer:   0,
 	}
 }
+
+// EbitenImage wraps an Ebiten image for the ImageProvider interface.
+type EbitenImage struct {
+	image *ebiten.Image
+}
+
+// GetSize implements ImageProvider interface.
+func (e *EbitenImage) GetSize() (width, height int) {
+	if e.image == nil {
+		return 0, 0
+	}
+	return e.image.Bounds().Dx(), e.image.Bounds().Dy()
+}
+
+// GetPixel implements ImageProvider interface.
+func (e *EbitenImage) GetPixel(x, y int) color.Color {
+	if e.image == nil {
+		return color.Transparent
+	}
+	return e.image.At(x, y)
+}
+
+// Compile-time interface checks
+var _ SpriteProvider = (*EbitenSprite)(nil)
+var _ ImageProvider = (*EbitenImage)(nil)
 
 // RenderSystem handles rendering of entities to the screen.
 type RenderSystem struct {
@@ -116,7 +190,7 @@ func (r *RenderSystem) drawEntity(entity *Entity) {
 	}
 
 	pos := posComp.(*PositionComponent)
-	sprite := spriteComp.(*SpriteComponent)
+	sprite := spriteComp.(*EbitenSprite)
 
 	if !sprite.Visible {
 		return
@@ -362,8 +436,8 @@ func (r *RenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 			sprite1, _ := sorted[j].GetComponent("sprite")
 			sprite2, _ := sorted[j+1].GetComponent("sprite")
 
-			layer1 := sprite1.(*SpriteComponent).Layer
-			layer2 := sprite2.(*SpriteComponent).Layer
+			layer1 := sprite1.(*EbitenSprite).Layer
+			layer2 := sprite2.(*EbitenSprite).Layer
 
 			if layer1 > layer2 {
 				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]

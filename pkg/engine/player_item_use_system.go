@@ -29,7 +29,7 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		input := inputComp.(*InputComponent)
+		input := inputComp.(*EbitenInput)
 
 		// Check if player pressed use item button
 		if !input.UseItemPressed {

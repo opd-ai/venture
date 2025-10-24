@@ -63,7 +63,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						input := comp.(*InputComponent)
+						input := comp.(*EbitenInput)
 						// Use frame-persistent AnyKeyPressed flag instead of ActionPressed
 						return input.AnyKeyPressed
 					}

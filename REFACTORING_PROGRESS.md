@@ -82,6 +82,43 @@
 
 **Time Taken:** ~45 minutes (estimated 1 hour)
 
+### Phase 2b: Migrate Game Type ✅ COMPLETE
+
+**Commit:** `c75c8f2` - "refactor(engine): migrate Game to EbitenGame with GameRunner interface (Phase 2b)"
+
+**Files Modified:**
+- ✅ `pkg/engine/game.go` - Renamed Game → EbitenGame, removed build tags, implemented GameRunner
+- ✅ `pkg/engine/game_test.go` - Created StubGame implementing GameRunner (new file, 95 lines)
+- ✅ `cmd/client/main.go` - Updated NewGame → NewEbitenGame
+- ✅ `cmd/mobile/mobile.go` - Updated NewGame → NewEbitenGame, *engine.Game → *engine.EbitenGame
+- ❌ `pkg/engine/game_test_stub.go` - Deleted (replaced by StubGame)
+
+**Changes Made:**
+1. ✅ Removed `//go:build !test` and `// +build !test` from game.go
+2. ✅ Renamed `type Game` → `type EbitenGame` with updated documentation
+3. ✅ Renamed `func NewGame` → `func NewEbitenGame`
+4. ✅ Updated all method receivers `(g *Game)` → `(g *EbitenGame)`
+5. ✅ Implemented GameRunner interface methods:
+   - GetWorld() *World
+   - GetScreenSize() (width, height int)
+   - IsPaused() bool
+   - SetPaused(paused bool)
+   - GetPlayerEntity() *Entity
+6. ✅ Added compile-time interface checks (GameRunner and ebiten.Game)
+7. ✅ Created StubGame in game_test.go with GameRunner implementation
+8. ✅ Updated all references in cmd/client and cmd/mobile
+9. ✅ Deleted obsolete game_test_stub.go
+
+**Verification:**
+```bash
+✅ go build ./pkg/engine - Success (production code)
+✅ go build ./cmd/client - Success
+✅ go build ./cmd/mobile - Success
+⚠️  go test -tags test ./pkg/engine - Expected failures (UI systems not migrated yet)
+```
+
+**Time Taken:** ~1 hour 15 minutes (estimated 2 hours)
+
 #### Analysis Findings
 
 **Build Tag Usage:**
@@ -122,6 +159,13 @@
 - Added DrawOptions struct
 - No build tags
 - Verified compilation
+
+**Phase 2b: Migrate Game Type** ✅ COMPLETE (1 hour 15 minutes)
+- Renamed Game → EbitenGame, removed build tags
+- Created StubGame in game_test.go
+- Implemented GameRunner interface in both
+- Updated all references in cmd/* packages
+- Deleted game_test_stub.go
 
 ### 🔄 Ready to Execute
 

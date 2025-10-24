@@ -1015,4 +1015,106 @@ Where:
 
 ---
 
+## Supplemental Audit - Additional Gaps Found (October 24, 2025)
+
+During a comprehensive autonomous audit of pre-existing issues flagged in the repair documentation, three additional critical gaps were identified and resolved:
+
+### GAP-018: Collision Prediction Test False Positives
+**Priority Score**: 540.4 (Critical)  
+**Status**: ✅ RESOLVED
+
+**Nature**: Test implementation error causing false failure reports
+
+**Root Cause**: The test `TestPredictiveCollisionMethods` created a 10×10 terrain grid using `terrain.NewTerrain()`, which initializes ALL tiles as walls by default. The test then set tile (5,5) to TileWall (redundant), but never cleared the surrounding tiles to floor. This caused the entity at position (100, 100) to correctly detect collision with the wall tiles at its location (tiles 2,2 through 3,3).
+
+**Resolution**: Modified test to clear all tiles to TileFloor before setting the single wall at (5,5).
+
+**Files Modified**:
+- `pkg/engine/movement_collision_integration_test.go` (lines 274-287)
+
+**Test Results**: ✅ Test now passes correctly
+
+---
+
+### GAP-019: Movement System Delta Time Calculation Error  
+**Priority Score**: 300.8 (Critical)  
+**Status**: ✅ RESOLVED
+
+**Nature**: Test implementation error with incorrect time calculation
+
+**Root Cause**: The test `TestMovementWithoutCollisionSystem` ran 60 iterations with deltaTime=0.016 seconds each, totaling 0.96 seconds (60 × 0.016), but expected movement as if 1.0 second had elapsed. The entity correctly moved 48 units (50 units/sec × 0.96 sec), but the test expected 50 units.
+
+**Resolution**: Changed the test to use precise deltaTime=1/60 and calculate totalTime correctly as 60 frames × (1/60) = exactly 1.0 second.
+
+**Files Modified**:
+- `pkg/engine/movement_collision_integration_test.go` (lines 254-265)
+
+**Test Results**: ✅ Test now passes with correct 50-unit movement
+
+---
+
+### GAP-020: Non-Deterministic Item Description Generation
+**Priority Score**: 270.0 (Behavioral Inconsistency - HIGH SEVERITY)  
+**Status**: ✅ RESOLVED
+
+**Nature**: Violation of deterministic generation requirement in production code
+
+**Root Cause**: The `generateDescription()` method in `pkg/procgen/item/generator.go` used global `rand.Intn()` instead of the seeded `rng *rand.Rand` parameter, causing identical seeds to produce different item descriptions on subsequent generations.
+
+**Code Evidence**:
+```go
+// BEFORE (Non-deterministic):
+func (g *ItemGenerator) generateDescription(item *Item, template ItemTemplate) string {
+    // ...
+    return descriptions[rand.Intn(len(descriptions))]  // ← Uses global rand!
+}
+
+// AFTER (Deterministic):
+func (g *ItemGenerator) generateDescription(item *Item, template ItemTemplate, rng *rand.Rand) string {
+    // ...
+    return descriptions[rng.Intn(len(descriptions))]  // ← Uses seeded rng
+}
+```
+
+**Impact**: 
+- **Multiplayer**: Clients and server generate different descriptions for same items
+- **Testing**: Cannot reproduce specific item generations
+- **Architecture**: Violates core determinism guarantee
+- **User Experience**: Item descriptions inconsistent in multiplayer sessions
+
+**Resolution**:
+1. Added `rng *rand.Rand` parameter to `generateDescription()` method
+2. Updated method signature in `generator.go` line 308
+3. Updated call site in `generateSingleItem()` line 136
+4. Replaced `rand.Intn()` with `rng.Intn()` throughout method
+
+**Files Modified**:
+- `pkg/procgen/item/generator.go` (lines 136, 308, 351)
+
+**Test Coverage**: Created comprehensive determinism test suite in `pkg/procgen/item/determinism_test.go`:
+- `TestItemDescriptionDeterminism`: Verifies identical descriptions for same seed
+- `TestItemDescriptionDeterminismAcrossGenres`: Validates determinism across all 5 genres
+- `TestItemDescriptionVariety`: Ensures different seeds still produce variety
+
+**Test Results**: ✅ All tests pass, confirmed 100% determinism with variety maintained
+
+**Coverage Impact**: Item package coverage increased from 93.8% to 94.8%
+
+---
+
+### Summary of Supplemental Repairs
+
+| Gap ID | Description | Priority | Status | Files Modified |
+|--------|-------------|----------|--------|----------------|
+| GAP-018 | Collision test false positive | 540.4 | ✅ Resolved | movement_collision_integration_test.go |
+| GAP-019 | Movement time calculation | 300.8 | ✅ Resolved | movement_collision_integration_test.go |
+| GAP-020 | Non-deterministic items | 270.0 | ✅ Resolved | generator.go, determinism_test.go |
+
+**Validation**: All engine and item generator tests pass (100% pass rate)  
+**Regression Testing**: Full test suite executed - no regressions detected  
+**Coverage**: Item package coverage increased to 94.8% (+1.0%)
+
+---
+
 **End of Audit Report**
+

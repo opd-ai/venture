@@ -135,8 +135,8 @@ func TestItemDescriptionVariety(t *testing.T) {
 		Depth:      5,
 		GenreID:    "fantasy",
 		Custom: map[string]interface{}{
-			"count": 1,
-			"type":  "weapon",
+			"count":  1,
+			"type":   "weapon",
 			"rarity": RarityLegendary, // High rarity to get rarity-specific descriptions
 		},
 	}

@@ -265,7 +265,7 @@ func TestMovementWithoutCollisionSystem(t *testing.T) {
 
 	// Entity should have moved (no collision checking)
 	totalTime := deltaTime * float64(numFrames) // Exactly 1.0 second
-	expectedX := startX + 50*totalTime           // VX * time = 50 * 1.0 = 50
+	expectedX := startX + 50*totalTime          // VX * time = 50 * 1.0 = 50
 	if math.Abs(finalX-expectedX) > 0.1 {
 		t.Errorf("Movement incorrect without collision. Start=%.2f, Final=%.2f, Expected=%.2f", startX, finalX, expectedX)
 	}
@@ -280,14 +280,14 @@ func TestPredictiveCollisionMethods(t *testing.T) {
 
 	// Create terrain with single wall tile
 	testTerrain := terrain.NewTerrain(10, 10, 12345)
-	
+
 	// Clear all tiles to floor first (NewTerrain initializes everything as walls)
 	for y := 0; y < 10; y++ {
 		for x := 0; x < 10; x++ {
 			testTerrain.SetTile(x, y, terrain.TileFloor)
 		}
 	}
-	
+
 	// Now set one wall tile for testing
 	testTerrain.SetTile(5, 5, terrain.TileWall) // Wall at world (160, 160)
 

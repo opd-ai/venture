@@ -38,9 +38,9 @@ func main() {
 
 	world := engine.NewWorld()
 
-	// Add gameplay systems
-	movementSystem := &engine.MovementSystem{}
-	collisionSystem := &engine.CollisionSystem{}
+	// Add gameplay systems with proper constructors
+	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
+	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
 	combatSystem := engine.NewCombatSystem(*seed)
 	aiSystem := engine.NewAISystem(world)
 	progressionSystem := engine.NewProgressionSystem(world)

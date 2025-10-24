@@ -39,6 +39,74 @@ func (s *CollisionSystem) SetCollisionCallback(callback func(e1, e2 *Entity)) {
 	s.onCollision = callback
 }
 
+// WouldCollideWithTerrain checks if an entity would collide with terrain at the given position.
+// This is a predictive check that doesn't modify entity state.
+// Returns true if the entity would collide with terrain walls at the specified position.
+func (s *CollisionSystem) WouldCollideWithTerrain(entity *Entity, newX, newY float64) bool {
+	if s.terrainChecker == nil {
+		return false
+	}
+
+	if !entity.HasComponent("collider") {
+		return false
+	}
+
+	colliderComp, _ := entity.GetComponent("collider")
+	collider := colliderComp.(*ColliderComponent)
+
+	// Only check solid colliders (triggers don't block movement)
+	if !collider.Solid || collider.IsTrigger {
+		return false
+	}
+
+	// Get bounds at the predicted position
+	minX, minY, maxX, maxY := collider.GetBounds(newX, newY)
+
+	// Check collision using bounds
+	return s.terrainChecker.CheckCollisionBounds(minX, minY, maxX, maxY)
+}
+
+// WouldCollideWithEntity checks if an entity would collide with another entity at the given position.
+// This is a predictive check that doesn't modify entity state.
+// Returns true if the entity would collide with the other entity at the specified position.
+func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY float64, other *Entity) bool {
+	if !entity.HasComponent("collider") || !other.HasComponent("collider") {
+		return false
+	}
+
+	if !other.HasComponent("position") {
+		return false
+	}
+
+	// Get collider components
+	collider1Comp, _ := entity.GetComponent("collider")
+	collider2Comp, _ := other.GetComponent("collider")
+	collider1 := collider1Comp.(*ColliderComponent)
+	collider2 := collider2Comp.(*ColliderComponent)
+
+	// Skip trigger colliders (they don't block movement)
+	if collider1.IsTrigger || collider2.IsTrigger {
+		return false
+	}
+
+	// Skip if either is not solid
+	if !collider1.Solid || !collider2.Solid {
+		return false
+	}
+
+	// Check layer compatibility (0 = all layers)
+	if collider1.Layer != 0 && collider2.Layer != 0 && collider1.Layer != collider2.Layer {
+		return false
+	}
+
+	// Get other entity's current position
+	pos2Comp, _ := other.GetComponent("position")
+	pos2 := pos2Comp.(*PositionComponent)
+
+	// Check intersection at predicted position
+	return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
+}
+
 // Update detects and resolves collisions between entities.
 func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 	// Clear the grid

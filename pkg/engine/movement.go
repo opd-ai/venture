@@ -9,6 +9,9 @@ import "math"
 type MovementSystem struct {
 	// MaxSpeed limits entity velocity (0 = no limit)
 	MaxSpeed float64
+
+	// CollisionSystem for predictive collision checking (optional)
+	collisionSystem *CollisionSystem
 }
 
 // NewMovementSystem creates a new movement system.
@@ -16,6 +19,12 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 	return &MovementSystem{
 		MaxSpeed: maxSpeed,
 	}
+}
+
+// SetCollisionSystem sets the collision system for predictive collision checking.
+// When set, MovementSystem will validate positions before applying movement.
+func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
+	s.collisionSystem = collisionSystem
 }
 
 // Update applies velocity to position for all entities with both components.
@@ -42,9 +51,76 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 
-		// Update position based on velocity
-		pos.X += vel.VX * deltaTime
-		pos.Y += vel.VY * deltaTime
+		// Calculate new position
+		newX := pos.X + vel.VX*deltaTime
+		newY := pos.Y + vel.VY*deltaTime
+
+		// GAP-001 REPAIR: Predictive collision checking before updating position
+		// If collision system is set, validate position before moving
+		if s.collisionSystem != nil && entity.HasComponent("collider") {
+			colliderComp, _ := entity.GetComponent("collider")
+			collider := colliderComp.(*ColliderComponent)
+
+			// Only check solid, non-trigger colliders
+			if collider.Solid && !collider.IsTrigger {
+				// Check terrain collision at new position
+				if s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
+					// Collision detected - try sliding along walls
+					// Try X movement only
+					if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
+						newY = pos.Y // Keep Y, allow X movement (slide horizontally)
+						vel.VY = 0
+					} else if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
+						// Try Y movement only
+						newX = pos.X // Keep X, allow Y movement (slide vertically)
+						vel.VX = 0
+					} else {
+						// Completely blocked - don't move at all
+						newX = pos.X
+						newY = pos.Y
+						vel.VX = 0
+						vel.VY = 0
+					}
+				}
+
+				// Check entity-to-entity collisions at new position
+				// Only if we're still planning to move
+				if newX != pos.X || newY != pos.Y {
+					blocked := false
+					for _, other := range entities {
+						if other.ID == entity.ID {
+							continue
+						}
+						if s.collisionSystem.WouldCollideWithEntity(entity, newX, newY, other) {
+							// Blocked by another entity - stop movement
+							blocked = true
+							break
+						}
+					}
+
+					if blocked {
+						// Try sliding along the blocking entity
+						if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
+							newY = pos.Y // Slide horizontally
+							vel.VY = 0
+						} else if !s.anyEntityBlocking(entity, pos.X, newY, entities) {
+							newX = pos.X // Slide vertically
+							vel.VX = 0
+						} else {
+							// Completely blocked
+							newX = pos.X
+							newY = pos.Y
+							vel.VX = 0
+							vel.VY = 0
+						}
+					}
+				}
+			}
+		}
+
+		// Update position (only if validated or no collision checking)
+		pos.X = newX
+		pos.Y = newY
 
 		// Apply bounds if entity has them
 		if boundsComp, hasBounds := entity.GetComponent("bounds"); hasBounds {
@@ -64,7 +140,23 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 }
 
-// SetVelocity is a helper to set entity velocity.
+// anyEntityBlocking checks if any entity would block movement to the given position.
+// Helper method for collision sliding logic.
+func (s *MovementSystem) anyEntityBlocking(entity *Entity, x, y float64, entities []*Entity) bool {
+	if s.collisionSystem == nil {
+		return false
+	}
+
+	for _, other := range entities {
+		if other.ID == entity.ID {
+			continue
+		}
+		if s.collisionSystem.WouldCollideWithEntity(entity, x, y, other) {
+			return true
+		}
+	}
+	return false
+}// SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		vel := velComp.(*VelocityComponent)

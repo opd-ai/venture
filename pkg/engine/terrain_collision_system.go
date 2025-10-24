@@ -43,13 +43,25 @@ func (t *TerrainCollisionChecker) CheckCollision(worldX, worldY, width, height f
 	maxX := worldX + width/2
 	maxY := worldY + height/2
 
+	return t.CheckCollisionBounds(minX, minY, maxX, maxY)
+}
+
+// CheckCollisionBounds checks if a bounding box collides with terrain walls.
+// This method accepts explicit bounds coordinates for more precise collision detection.
+// minX, minY are the top-left corner of the bounding box
+// maxX, maxY are the bottom-right corner of the bounding box
+func (t *TerrainCollisionChecker) CheckCollisionBounds(minX, minY, maxX, maxY float64) bool {
+	if t.terrain == nil {
+		return false
+	}
+
 	// Convert to tile coordinates
 	minTileX := int(math.Floor(minX / float64(t.tileWidth)))
 	minTileY := int(math.Floor(minY / float64(t.tileHeight)))
 	maxTileX := int(math.Floor(maxX / float64(t.tileWidth)))
 	maxTileY := int(math.Floor(maxY / float64(t.tileHeight)))
 
-	// Check all tiles that the entity overlaps
+	// Check all tiles that the bounding box overlaps
 	for y := minTileY; y <= maxTileY; y++ {
 		for x := minTileX; x <= maxTileX; x++ {
 			if t.terrain.GetTile(x, y) == terrain.TileWall {

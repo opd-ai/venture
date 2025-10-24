@@ -705,13 +705,13 @@ func (ui *EbitenMapUI) drawLegend(screen *ebiten.Image, x, y int) {
 // IsActive returns whether the map UI is currently visible.
 // Implements UISystem interface.
 func (m *EbitenMapUI) IsActive() bool {
-return m.visible
+	return m.visible
 }
 
 // SetActive sets whether the map UI is visible.
 // Implements UISystem interface.
 func (m *EbitenMapUI) SetActive(active bool) {
-m.visible = active
+	m.visible = active
 }
 
 // Compile-time check that EbitenMapUI implements UISystem

@@ -111,7 +111,7 @@ type RewindResult struct {
 func (lc *LagCompensator) RewindToPlayerTime(playerLatency time.Duration) *RewindResult {
 	lc.mu.RLock()
 	defer lc.mu.RUnlock()
-	
+
 	return lc.rewindToPlayerTimeUnlocked(playerLatency)
 }
 

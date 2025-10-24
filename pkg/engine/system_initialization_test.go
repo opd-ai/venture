@@ -88,8 +88,10 @@ func TestCollisionSystemTerrainIntegration(t *testing.T) {
 	}
 
 	// Move entity towards wall (left)
+	// Entity needs to move from X=160 to X<48 to collide with wall at tile 0
+	// Distance needed: >112 pixels. With VX=-100, need deltaTime > 1.12s
 	movementSys := NewMovementSystem(200.0)
-	movementSys.Update(world.GetEntities(), 1.0) // Move 100 pixels left
+	movementSys.Update(world.GetEntities(), 1.2) // Move 120 pixels left (to X=40)
 
 	// New position should collide with left wall
 	if !terrainChecker.CheckEntityCollision(entity) {

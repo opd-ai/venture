@@ -121,8 +121,10 @@ func (e *EbitenImage) GetPixel(x, y int) color.Color {
 }
 
 // Compile-time interface checks
-var _ SpriteProvider = (*EbitenSprite)(nil)
-var _ ImageProvider = (*EbitenImage)(nil)
+var (
+	_ SpriteProvider = (*EbitenSprite)(nil)
+	_ ImageProvider  = (*EbitenImage)(nil)
+)
 
 // EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
 // Implements RenderingSystem interface.

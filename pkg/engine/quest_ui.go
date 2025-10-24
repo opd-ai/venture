@@ -218,13 +218,13 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 // IsActive returns whether the quest UI is currently visible.
 // Implements UISystem interface.
 func (q *EbitenQuestUI) IsActive() bool {
-return q.visible
+	return q.visible
 }
 
 // SetActive sets whether the quest UI is visible.
 // Implements UISystem interface.
 func (q *EbitenQuestUI) SetActive(active bool) {
-q.visible = active
+	q.visible = active
 }
 
 // Compile-time check that EbitenQuestUI implements UISystem

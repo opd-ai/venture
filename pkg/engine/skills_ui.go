@@ -624,13 +624,13 @@ func (ui *EbitenSkillsUI) getPlayerLevel() int {
 // IsActive returns whether the skills UI is currently visible.
 // Implements UISystem interface.
 func (s *EbitenSkillsUI) IsActive() bool {
-return s.visible
+	return s.visible
 }
 
 // SetActive sets whether the skills UI is visible.
 // Implements UISystem interface.
 func (s *EbitenSkillsUI) SetActive(active bool) {
-s.visible = active
+	s.visible = active
 }
 
 // Compile-time check that EbitenSkillsUI implements UISystem

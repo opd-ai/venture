@@ -182,7 +182,7 @@ func main() {
 	log.Printf("Screen: %dx%d, Seed: %d, Genre: %s", *width, *height, *seed, *genreID)
 
 	// Initialize network client if multiplayer mode is enabled
-	var networkClient *network.Client
+	var networkClient network.ClientConnection
 	if *multiplayer {
 		log.Printf("Multiplayer mode enabled - connecting to server at %s", *server)
 

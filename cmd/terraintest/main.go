@@ -84,25 +84,14 @@ func renderTerrain(terr *terrain.Terrain) string {
 	var builder strings.Builder
 
 	// Add header
-	builder.WriteString(fmt.Sprintf("Terrain %dx%d (Seed: %d)\n", terr.Width, terr.Height, terr.Seed))
-	builder.WriteString(fmt.Sprintf("Rooms: %d\n\n", len(terr.Rooms)))
+	builder.WriteString(fmt.Sprintf("Terrain %dx%d (Seed: %d, Level: %d)\n", terr.Width, terr.Height, terr.Seed, terr.Level))
+	builder.WriteString(fmt.Sprintf("Rooms: %d, Stairs Up: %d, Stairs Down: %d\n\n", len(terr.Rooms), len(terr.StairsUp), len(terr.StairsDown)))
 
 	// Render each row
 	for y := 0; y < terr.Height; y++ {
 		for x := 0; x < terr.Width; x++ {
 			tile := terr.GetTile(x, y)
-			switch tile {
-			case terrain.TileWall:
-				builder.WriteString("#")
-			case terrain.TileFloor:
-				builder.WriteString(".")
-			case terrain.TileCorridor:
-				builder.WriteString(":")
-			case terrain.TileDoor:
-				builder.WriteString("+")
-			default:
-				builder.WriteString("?")
-			}
+			builder.WriteString(getTileChar(tile))
 		}
 		builder.WriteString("\n")
 	}
@@ -121,5 +110,46 @@ func renderTerrain(terr *terrain.Terrain) string {
 	builder.WriteString(fmt.Sprintf("\nWalkable tiles: %d/%d (%.1f%%)\n",
 		walkable, totalTiles, float64(walkable)/float64(totalTiles)*100))
 
+	// Add legend
+	builder.WriteString("\nLegend:\n")
+	builder.WriteString("  # = Wall      . = Floor     : = Corridor  + = Door\n")
+	builder.WriteString("  W = Shallow   ~ = Deep      T = Tree      ^ = Stairs Up\n")
+	builder.WriteString("  v = Stairs Dn [ = Trap Door ? = Secret    = = Bridge\n")
+	builder.WriteString("  @ = Structure\n")
+
 	return builder.String()
+}
+
+// getTileChar returns the ASCII character for a tile type
+func getTileChar(tile terrain.TileType) string {
+	switch tile {
+	case terrain.TileWall:
+		return "#"
+	case terrain.TileFloor:
+		return "."
+	case terrain.TileCorridor:
+		return ":"
+	case terrain.TileDoor:
+		return "+"
+	case terrain.TileWaterShallow:
+		return "W"
+	case terrain.TileWaterDeep:
+		return "~"
+	case terrain.TileTree:
+		return "T"
+	case terrain.TileStairsUp:
+		return "^"
+	case terrain.TileStairsDown:
+		return "v"
+	case terrain.TileTrapDoor:
+		return "["
+	case terrain.TileSecretDoor:
+		return "?"
+	case terrain.TileBridge:
+		return "="
+	case terrain.TileStructure:
+		return "@"
+	default:
+		return "?"
+	}
 }

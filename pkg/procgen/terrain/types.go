@@ -3,6 +3,8 @@
 // generation parameters used by terrain generators.
 package terrain
 
+import "fmt"
+
 // TileType represents different types of terrain tiles.
 type TileType int
 
@@ -15,6 +17,24 @@ const (
 	TileDoor
 	// TileCorridor represents a connecting passage
 	TileCorridor
+	// TileWaterShallow represents shallow water that is walkable but slows movement
+	TileWaterShallow
+	// TileWaterDeep represents deep water that blocks movement
+	TileWaterDeep
+	// TileTree represents a tree or natural obstacle that blocks movement
+	TileTree
+	// TileStairsUp represents stairs leading to an upper level
+	TileStairsUp
+	// TileStairsDown represents stairs leading to a lower level
+	TileStairsDown
+	// TileTrapDoor represents a hidden or revealed trap door
+	TileTrapDoor
+	// TileSecretDoor represents a hidden door
+	TileSecretDoor
+	// TileBridge represents a walkable bridge over water
+	TileBridge
+	// TileStructure represents a building or ruins
+	TileStructure
 )
 
 // String returns the string representation of a tile type.
@@ -28,8 +48,58 @@ func (t TileType) String() string {
 		return "door"
 	case TileCorridor:
 		return "corridor"
+	case TileWaterShallow:
+		return "shallow_water"
+	case TileWaterDeep:
+		return "deep_water"
+	case TileTree:
+		return "tree"
+	case TileStairsUp:
+		return "stairs_up"
+	case TileStairsDown:
+		return "stairs_down"
+	case TileTrapDoor:
+		return "trap_door"
+	case TileSecretDoor:
+		return "secret_door"
+	case TileBridge:
+		return "bridge"
+	case TileStructure:
+		return "structure"
 	default:
 		return "unknown"
+	}
+}
+
+// IsWalkableTile returns true if this tile type is walkable.
+func (t TileType) IsWalkableTile() bool {
+	return t == TileFloor || t == TileDoor || t == TileCorridor ||
+		t == TileWaterShallow || t == TileStairsUp || t == TileStairsDown ||
+		t == TileTrapDoor || t == TileSecretDoor || t == TileBridge
+}
+
+// IsTransparent returns true if this tile type doesn't block vision.
+func (t TileType) IsTransparent() bool {
+	// Most tiles are transparent except walls and structures
+	return t != TileWall && t != TileStructure && t != TileTree && t != TileSecretDoor
+}
+
+// MovementCost returns the movement cost multiplier for this tile type.
+// 1.0 is normal speed, higher values slow movement, Inf means impassable.
+func (t TileType) MovementCost() float64 {
+	switch t {
+	case TileFloor, TileDoor, TileCorridor, TileBridge, TileStairsUp, TileStairsDown:
+		return 1.0
+	case TileWaterShallow:
+		return 2.0 // Half speed in shallow water
+	case TileTrapDoor:
+		return 1.5 // Slightly slower on trap doors
+	case TileSecretDoor:
+		return 1.0 // Once discovered, normal speed
+	case TileWall, TileWaterDeep, TileTree, TileStructure:
+		return -1 // Impassable (represented as -1 instead of Inf for easier testing)
+	default:
+		return -1 // Unknown tiles are impassable
 	}
 }
 
@@ -99,11 +169,14 @@ func (r *Room) Overlaps(other *Room) bool {
 
 // Terrain represents a generated terrain map.
 type Terrain struct {
-	Width  int
-	Height int
-	Tiles  [][]TileType
-	Rooms  []*Room
-	Seed   int64
+	Width      int
+	Height     int
+	Tiles      [][]TileType
+	Rooms      []*Room
+	Seed       int64
+	Level      int      // Dungeon level (0 = first level)
+	StairsUp   []Point  // Positions of upward stairs
+	StairsDown []Point  // Positions of downward stairs
 }
 
 // NewTerrain creates a new terrain map filled with walls.
@@ -117,11 +190,14 @@ func NewTerrain(width, height int, seed int64) *Terrain {
 	}
 
 	return &Terrain{
-		Width:  width,
-		Height: height,
-		Tiles:  tiles,
-		Rooms:  make([]*Room, 0),
-		Seed:   seed,
+		Width:      width,
+		Height:     height,
+		Tiles:      tiles,
+		Rooms:      make([]*Room, 0),
+		Seed:       seed,
+		Level:      0,
+		StairsUp:   make([]Point, 0),
+		StairsDown: make([]Point, 0),
 	}
 }
 
@@ -143,5 +219,87 @@ func (t *Terrain) SetTile(x, y int, tileType TileType) {
 // IsWalkable returns true if the tile at the given coordinates is walkable.
 func (t *Terrain) IsWalkable(x, y int) bool {
 	tile := t.GetTile(x, y)
-	return tile == TileFloor || tile == TileDoor || tile == TileCorridor
+	return tile.IsWalkableTile()
+}
+
+// AddStairs adds stairs at the specified position and updates the stairs list.
+func (t *Terrain) AddStairs(x, y int, up bool) {
+	if !t.IsInBounds(x, y) {
+		return
+	}
+
+	point := Point{X: x, Y: y}
+	if up {
+		t.SetTile(x, y, TileStairsUp)
+		// Check if point already exists
+		for _, p := range t.StairsUp {
+			if p.Equals(point) {
+				return
+			}
+		}
+		t.StairsUp = append(t.StairsUp, point)
+	} else {
+		t.SetTile(x, y, TileStairsDown)
+		// Check if point already exists
+		for _, p := range t.StairsDown {
+			if p.Equals(point) {
+				return
+			}
+		}
+		t.StairsDown = append(t.StairsDown, point)
+	}
+}
+
+// IsInBounds checks if the given coordinates are within the terrain bounds.
+func (t *Terrain) IsInBounds(x, y int) bool {
+	return x >= 0 && x < t.Width && y >= 0 && y < t.Height
+}
+
+// ValidateStairPlacement checks that all stairs are placed in valid, walkable locations.
+func (t *Terrain) ValidateStairPlacement() error {
+	// Check stairs up
+	for _, p := range t.StairsUp {
+		tile := t.GetTile(p.X, p.Y)
+		if tile != TileStairsUp {
+			return fmt.Errorf("stairs up at (%d, %d) not placed correctly (tile is %s)", p.X, p.Y, tile.String())
+		}
+		// Check that at least one adjacent tile is walkable (for accessibility)
+		accessible := false
+		for _, neighbor := range p.Neighbors() {
+			if t.IsInBounds(neighbor.X, neighbor.Y) {
+				neighborTile := t.GetTile(neighbor.X, neighbor.Y)
+				if neighborTile.IsWalkableTile() && neighborTile != TileStairsUp && neighborTile != TileStairsDown {
+					accessible = true
+					break
+				}
+			}
+		}
+		if !accessible {
+			return fmt.Errorf("stairs up at (%d, %d) is not accessible from walkable tiles", p.X, p.Y)
+		}
+	}
+
+	// Check stairs down
+	for _, p := range t.StairsDown {
+		tile := t.GetTile(p.X, p.Y)
+		if tile != TileStairsDown {
+			return fmt.Errorf("stairs down at (%d, %d) not placed correctly (tile is %s)", p.X, p.Y, tile.String())
+		}
+		// Check that at least one adjacent tile is walkable (for accessibility)
+		accessible := false
+		for _, neighbor := range p.Neighbors() {
+			if t.IsInBounds(neighbor.X, neighbor.Y) {
+				neighborTile := t.GetTile(neighbor.X, neighbor.Y)
+				if neighborTile.IsWalkableTile() && neighborTile != TileStairsUp && neighborTile != TileStairsDown {
+					accessible = true
+					break
+				}
+			}
+		}
+		if !accessible {
+			return fmt.Errorf("stairs down at (%d, %d) is not accessible from walkable tiles", p.X, p.Y)
+		}
+	}
+
+	return nil
 }

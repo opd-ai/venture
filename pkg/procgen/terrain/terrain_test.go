@@ -110,6 +110,15 @@ func TestTileType_String(t *testing.T) {
 		{"Floor", TileFloor, "floor"},
 		{"Door", TileDoor, "door"},
 		{"Corridor", TileCorridor, "corridor"},
+		{"Shallow Water", TileWaterShallow, "shallow_water"},
+		{"Deep Water", TileWaterDeep, "deep_water"},
+		{"Tree", TileTree, "tree"},
+		{"Stairs Up", TileStairsUp, "stairs_up"},
+		{"Stairs Down", TileStairsDown, "stairs_down"},
+		{"Trap Door", TileTrapDoor, "trap_door"},
+		{"Secret Door", TileSecretDoor, "secret_door"},
+		{"Bridge", TileBridge, "bridge"},
+		{"Structure", TileStructure, "structure"},
 		{"Unknown", TileType(99), "unknown"},
 	}
 

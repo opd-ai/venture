@@ -62,10 +62,43 @@ terrain := result.(*terrain.Terrain)
 
 The terrain system uses several tile types:
 
+### Basic Tiles
 - **TileWall**: Solid walls that block movement
 - **TileFloor**: Walkable floor space (rooms)
 - **TileCorridor**: Walkable passages connecting areas
 - **TileDoor**: Doorways (walkable, but can be closed)
+
+### Water Tiles
+- **TileWaterShallow**: Walkable shallow water (movement cost: 2.0x, slows movement)
+- **TileWaterDeep**: Impassable deep water
+
+### Natural Obstacles
+- **TileTree**: Tree or natural obstacle that blocks movement
+
+### Level Transitions
+- **TileStairsUp**: Stairs leading to an upper level
+- **TileStairsDown**: Stairs leading to a lower level
+- **TileTrapDoor**: Hidden or revealed trap door (movement cost: 1.5x)
+
+### Special Tiles
+- **TileSecretDoor**: Hidden door (blocks vision until discovered)
+- **TileBridge**: Walkable bridge over water
+- **TileStructure**: Building or ruins that blocks movement
+
+### Tile Properties
+
+Each tile type has three key properties:
+
+```go
+// Check if a tile type is walkable
+isWalkable := tile.IsWalkableTile()
+
+// Check if a tile type blocks vision
+isTransparent := tile.IsTransparent()
+
+// Get movement cost multiplier (1.0 = normal, 2.0 = half speed, -1 = impassable)
+cost := tile.MovementCost()
+```
 
 ## Terrain Structure
 
@@ -75,11 +108,14 @@ The `Terrain` type represents a generated map:
 
 ```go
 type Terrain struct {
-    Width  int           // Map width in tiles
-    Height int           // Map height in tiles
-    Tiles  [][]TileType  // 2D grid of tiles
-    Rooms  []*Room       // List of rooms (BSP only)
-    Seed   int64         // Generation seed
+    Width      int           // Map width in tiles
+    Height     int           // Map height in tiles
+    Tiles      [][]TileType  // 2D grid of tiles
+    Rooms      []*Room       // List of rooms (BSP only)
+    Seed       int64         // Generation seed
+    Level      int           // Dungeon level (0 = first level)
+    StairsUp   []Point       // Positions of upward stairs
+    StairsDown []Point       // Positions of downward stairs
 }
 ```
 
@@ -87,6 +123,27 @@ type Terrain struct {
 - `GetTile(x, y int) TileType` - Safely get a tile (returns wall for out-of-bounds)
 - `SetTile(x, y int, tileType TileType)` - Safely set a tile
 - `IsWalkable(x, y int) bool` - Check if a position is walkable
+- `AddStairs(x, y int, up bool)` - Add stairs at the specified position
+- `IsInBounds(x, y int) bool` - Check if coordinates are within terrain bounds
+- `ValidateStairPlacement() error` - Validate that all stairs are placed correctly
+
+### Point Type
+
+The `Point` type represents a 2D coordinate:
+
+```go
+type Point struct {
+    X, Y int
+}
+```
+
+**Methods:**
+- `Distance(other Point) float64` - Calculate Euclidean distance
+- `ManhattanDistance(other Point) int` - Calculate Manhattan (taxicab) distance
+- `Equals(other Point) bool` - Check if two points are equal
+- `IsInBounds(width, height int) bool` - Check if point is within bounds
+- `Neighbors() []Point` - Get the four orthogonal neighbors
+- `AllNeighbors() []Point` - Get all eight neighbors (orthogonal and diagonal)
 
 ### Room Type
 
@@ -157,6 +214,15 @@ The CLI tool renders terrain as ASCII art:
 - `.` - Floor
 - `:` - Corridor
 - `+` - Door
+- `W` - Shallow Water
+- `~` - Deep Water
+- `T` - Tree
+- `^` - Stairs Up
+- `v` - Stairs Down
+- `[` - Trap Door
+- `?` - Secret Door
+- `=` - Bridge
+- `@` - Structure
 
 ## Performance
 

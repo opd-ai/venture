@@ -15,8 +15,8 @@ type StubGame struct {
 	PlayerEntity *Entity
 
 	// Test state tracking
-	UpdateCount int
-	InventorySystem *InventorySystem
+	UpdateCount         int
+	InventorySystem     *InventorySystem
 	InputCallbacksSetup bool
 }
 

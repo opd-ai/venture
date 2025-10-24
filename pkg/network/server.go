@@ -1,6 +1,6 @@
 // Package network provides multiplayer server functionality.
-// This file implements Server which handles authoritative game state,
-// client connections, and state synchronization for multiplayer games.
+// This file implements TCPServer which handles authoritative game state,
+// client connections, and state synchronization for multiplayer games over TCP.
 package network
 
 import (
@@ -32,8 +32,9 @@ func DefaultServerConfig() ServerConfig {
 	}
 }
 
-// Server handles server-side networking for multiplayer.
-type Server struct {
+// TCPServer handles server-side networking for multiplayer over TCP.
+// Implements ServerConnection interface.
+type TCPServer struct {
 	config   ServerConfig
 	protocol Protocol
 
@@ -77,8 +78,8 @@ type clientConnection struct {
 }
 
 // NewServer creates a new network server.
-func NewServer(config ServerConfig) *Server {
-	return &Server{
+func NewServer(config ServerConfig) *TCPServer {
+	return &TCPServer{
 		config:        config,
 		protocol:      NewBinaryProtocol(),
 		clients:       make(map[uint64]*clientConnection),
@@ -92,7 +93,7 @@ func NewServer(config ServerConfig) *Server {
 }
 
 // Start begins listening for client connections.
-func (s *Server) Start() error {
+func (s *TCPServer) Start() error {
 	s.clientsMu.Lock()
 	if s.running {
 		s.clientsMu.Unlock()
@@ -117,7 +118,7 @@ func (s *Server) Start() error {
 }
 
 // Stop shuts down the server.
-func (s *Server) Stop() error {
+func (s *TCPServer) Stop() error {
 	s.clientsMu.Lock()
 	if !s.running {
 		s.clientsMu.Unlock()
@@ -145,21 +146,21 @@ func (s *Server) Stop() error {
 }
 
 // IsRunning returns whether the server is running.
-func (s *Server) IsRunning() bool {
+func (s *TCPServer) IsRunning() bool {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 	return s.running
 }
 
 // GetPlayerCount returns the number of connected players.
-func (s *Server) GetPlayerCount() int {
+func (s *TCPServer) GetPlayerCount() int {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 	return len(s.clients)
 }
 
 // GetPlayers returns a list of connected player IDs.
-func (s *Server) GetPlayers() []uint64 {
+func (s *TCPServer) GetPlayers() []uint64 {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 
@@ -171,7 +172,7 @@ func (s *Server) GetPlayers() []uint64 {
 }
 
 // BroadcastStateUpdate sends a state update to all connected clients.
-func (s *Server) BroadcastStateUpdate(update *StateUpdate) {
+func (s *TCPServer) BroadcastStateUpdate(update *StateUpdate) {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 
@@ -188,7 +189,7 @@ func (s *Server) BroadcastStateUpdate(update *StateUpdate) {
 }
 
 // SendStateUpdate sends a state update to a specific client.
-func (s *Server) SendStateUpdate(playerID uint64, update *StateUpdate) error {
+func (s *TCPServer) SendStateUpdate(playerID uint64, update *StateUpdate) error {
 	s.clientsMu.RLock()
 	client, exists := s.clients[playerID]
 	s.clientsMu.RUnlock()
@@ -208,27 +209,27 @@ func (s *Server) SendStateUpdate(playerID uint64, update *StateUpdate) error {
 }
 
 // ReceiveInputCommand returns a channel for receiving input commands from clients.
-func (s *Server) ReceiveInputCommand() <-chan *InputCommand {
+func (s *TCPServer) ReceiveInputCommand() <-chan *InputCommand {
 	return s.inputCommands
 }
 
 // ReceivePlayerJoin returns a channel for receiving player join events.
-func (s *Server) ReceivePlayerJoin() <-chan uint64 {
+func (s *TCPServer) ReceivePlayerJoin() <-chan uint64 {
 	return s.playerJoins
 }
 
 // ReceivePlayerLeave returns a channel for receiving player leave events.
-func (s *Server) ReceivePlayerLeave() <-chan uint64 {
+func (s *TCPServer) ReceivePlayerLeave() <-chan uint64 {
 	return s.playerLeaves
 }
 
 // ReceiveError returns a channel for receiving errors.
-func (s *Server) ReceiveError() <-chan error {
+func (s *TCPServer) ReceiveError() <-chan error {
 	return s.errors
 }
 
 // acceptLoop accepts incoming client connections.
-func (s *Server) acceptLoop() {
+func (s *TCPServer) acceptLoop() {
 	defer s.wg.Done()
 
 	for {
@@ -288,7 +289,7 @@ func (s *Server) acceptLoop() {
 }
 
 // handleClientReceive receives data from a client.
-func (s *Server) handleClientReceive(client *clientConnection) {
+func (s *TCPServer) handleClientReceive(client *clientConnection) {
 	defer s.wg.Done()
 	defer s.disconnectClient(client.playerID)
 
@@ -350,7 +351,7 @@ func (s *Server) handleClientReceive(client *clientConnection) {
 }
 
 // handleClientSend sends state updates to a client.
-func (s *Server) handleClientSend(client *clientConnection) {
+func (s *TCPServer) handleClientSend(client *clientConnection) {
 	defer s.wg.Done()
 
 	for {
@@ -396,7 +397,7 @@ func (s *Server) handleClientSend(client *clientConnection) {
 }
 
 // disconnectClient removes a client from the server.
-func (s *Server) disconnectClient(playerID uint64) {
+func (s *TCPServer) disconnectClient(playerID uint64) {
 	s.clientsMu.Lock()
 	client, exists := s.clients[playerID]
 	if exists {
@@ -451,3 +452,6 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 		// Drop if full (prioritize fresh updates)
 	}
 }
+
+// Compile-time interface check
+var _ ServerConnection = (*TCPServer)(nil)

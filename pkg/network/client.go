@@ -1,6 +1,6 @@
 // Package network provides multiplayer client functionality.
-// This file implements Client which handles client-side networking, prediction,
-// and server communication for multiplayer gameplay.
+// This file implements TCPClient which handles client-side networking, prediction,
+// and server communication for multiplayer gameplay over TCP connections.
 package network
 
 import (
@@ -30,8 +30,9 @@ func DefaultClientConfig() ClientConfig {
 	}
 }
 
-// Client handles client-side networking.
-type Client struct {
+// TCPClient handles client-side networking over TCP.
+// Implements ClientConnection interface.
+type TCPClient struct {
 	config   ClientConfig
 	protocol Protocol
 
@@ -63,8 +64,8 @@ type Client struct {
 }
 
 // NewClient creates a new network client.
-func NewClient(config ClientConfig) *Client {
-	return &Client{
+func NewClient(config ClientConfig) *TCPClient {
+	return &TCPClient{
 		config:       config,
 		protocol:     NewBinaryProtocol(),
 		stateUpdates: make(chan *StateUpdate, config.BufferSize),
@@ -75,7 +76,7 @@ func NewClient(config ClientConfig) *Client {
 }
 
 // Connect establishes connection to the server.
-func (c *Client) Connect() error {
+func (c *TCPClient) Connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -103,7 +104,7 @@ func (c *Client) Connect() error {
 }
 
 // Disconnect closes the connection to the server.
-func (c *Client) Disconnect() error {
+func (c *TCPClient) Disconnect() error {
 	c.mu.Lock()
 	if !c.connected {
 		c.mu.Unlock()
@@ -126,35 +127,35 @@ func (c *Client) Disconnect() error {
 }
 
 // IsConnected returns whether the client is connected.
-func (c *Client) IsConnected() bool {
+func (c *TCPClient) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.connected
 }
 
 // GetPlayerID returns the client's player ID.
-func (c *Client) GetPlayerID() uint64 {
+func (c *TCPClient) GetPlayerID() uint64 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.playerID
 }
 
 // SetPlayerID sets the client's player ID (called after authentication).
-func (c *Client) SetPlayerID(id uint64) {
+func (c *TCPClient) SetPlayerID(id uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.playerID = id
 }
 
 // GetLatency returns the current network latency.
-func (c *Client) GetLatency() time.Duration {
+func (c *TCPClient) GetLatency() time.Duration {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.latency
 }
 
 // SendInput queues an input command to send to the server.
-func (c *Client) SendInput(inputType string, data []byte) error {
+func (c *TCPClient) SendInput(inputType string, data []byte) error {
 	c.mu.Lock()
 	if !c.connected {
 		c.mu.Unlock()
@@ -182,17 +183,17 @@ func (c *Client) SendInput(inputType string, data []byte) error {
 }
 
 // ReceiveStateUpdate returns a channel for receiving state updates from the server.
-func (c *Client) ReceiveStateUpdate() <-chan *StateUpdate {
+func (c *TCPClient) ReceiveStateUpdate() <-chan *StateUpdate {
 	return c.stateUpdates
 }
 
 // ReceiveError returns a channel for receiving errors.
-func (c *Client) ReceiveError() <-chan error {
+func (c *TCPClient) ReceiveError() <-chan error {
 	return c.errors
 }
 
 // receiveLoop continuously receives data from the server.
-func (c *Client) receiveLoop() {
+func (c *TCPClient) receiveLoop() {
 	defer c.wg.Done()
 
 	buf := make([]byte, 4096)
@@ -253,7 +254,7 @@ func (c *Client) receiveLoop() {
 }
 
 // sendLoop continuously sends queued inputs to the server.
-func (c *Client) sendLoop() {
+func (c *TCPClient) sendLoop() {
 	defer c.wg.Done()
 
 	pingTicker := time.NewTicker(c.config.PingInterval)
@@ -311,3 +312,6 @@ func (c *Client) sendLoop() {
 		}
 	}
 }
+
+// Compile-time interface check
+var _ ClientConnection = (*TCPClient)(nil)

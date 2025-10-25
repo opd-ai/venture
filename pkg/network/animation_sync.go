@@ -13,11 +13,11 @@ import (
 // This packet is sent when an entity's animation state changes (e.g., idle -> walk).
 // Only state changes are transmitted to minimize bandwidth usage.
 type AnimationStatePacket struct {
-	EntityID   uint64                  // Entity being animated
-	State      engine.AnimationState   // New animation state
-	FrameIndex int                     // Current frame in animation
-	Timestamp  int64                   // Server timestamp (for interpolation)
-	Loop       bool                    // Whether animation should loop
+	EntityID   uint64                // Entity being animated
+	State      engine.AnimationState // New animation state
+	FrameIndex int                   // Current frame in animation
+	Timestamp  int64                 // Server timestamp (for interpolation)
+	Loop       bool                  // Whether animation should loop
 }
 
 // AnimationStateBatch groups multiple animation state changes into a single packet.
@@ -191,11 +191,11 @@ func (b *AnimationStateBatch) Decode(data []byte) error {
 type AnimationSyncManager struct {
 	// State tracking
 	lastState map[uint64]engine.AnimationState // EntityID -> last sent state
-	
+
 	// Interpolation buffer (client-side)
 	stateBuffer map[uint64][]AnimationStatePacket // EntityID -> buffered states
-	bufferSize  int                                // Number of states to buffer (default: 3)
-	
+	bufferSize  int                               // Number of states to buffer (default: 3)
+
 	// Statistics
 	stateChangesSent uint64
 	statesReceived   uint64
@@ -219,7 +219,7 @@ func (m *AnimationSyncManager) ShouldSync(entityID uint64, newState engine.Anima
 		// First time seeing this entity - always sync
 		return true
 	}
-	
+
 	// Only sync if state changed
 	return lastState != newState
 }
@@ -235,13 +235,13 @@ func (m *AnimationSyncManager) RecordSync(entityID uint64, state engine.Animatio
 // Client-side only. Returns true if the state should be applied immediately.
 func (m *AnimationSyncManager) BufferState(packet AnimationStatePacket) bool {
 	entityID := packet.EntityID
-	
+
 	// Add to buffer
 	buffer := m.stateBuffer[entityID]
 	buffer = append(buffer, packet)
 	m.stateBuffer[entityID] = buffer
 	m.statesReceived++
-	
+
 	// Apply immediately if buffer full
 	return len(buffer) >= m.bufferSize
 }
@@ -253,11 +253,11 @@ func (m *AnimationSyncManager) GetNextState(entityID uint64) *AnimationStatePack
 	if len(buffer) == 0 {
 		return nil
 	}
-	
+
 	// Pop first state (FIFO)
 	state := buffer[0]
 	m.stateBuffer[entityID] = buffer[1:]
-	
+
 	return &state
 }
 

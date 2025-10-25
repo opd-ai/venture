@@ -75,6 +75,9 @@ type PlayerState struct {
 
 	// GAP-003 REPAIR: Tutorial progress persistence
 	TutorialState *TutorialStateData `json:"tutorial_state,omitempty"`
+
+	// Phase 7.2: Animation state persistence
+	AnimationState *AnimationStateData `json:"animation_state,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -84,6 +87,22 @@ type TutorialStateData struct {
 	ShowUI         bool            `json:"show_ui"`
 	CurrentStepIdx int             `json:"current_step_idx"`
 	CompletedSteps map[string]bool `json:"completed_steps"` // Step ID -> completed
+}
+
+// AnimationStateData represents saved animation state for entities
+// Phase 7.2: Allows animation states to persist across saves/loads
+type AnimationStateData struct {
+	// Current animation state (idle, walk, run, attack, etc.)
+	State string `json:"state"`
+
+	// Current frame index in the animation
+	FrameIndex uint8 `json:"frame_index"`
+
+	// Whether the animation should loop
+	Loop bool `json:"loop"`
+
+	// Timestamp of last frame update (for timing calculations)
+	LastUpdateTime float64 `json:"last_update_time,omitempty"`
 }
 
 // ItemData represents a serialized item for save files.
@@ -179,6 +198,9 @@ type ModifiedEntity struct {
 	Health   float64 `json:"health,omitempty"`
 	IsAlive  bool    `json:"is_alive"`
 	IsPicked bool    `json:"is_picked,omitempty"` // For items
+
+	// Phase 7.2: Animation state for entity
+	AnimationState *AnimationStateData `json:"animation_state,omitempty"`
 }
 
 // GameSettings represents game configuration that should persist.

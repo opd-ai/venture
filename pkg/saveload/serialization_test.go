@@ -367,3 +367,177 @@ func BenchmarkDataToItem(b *testing.B) {
 		_ = DataToItem(data)
 	}
 }
+
+// TestAnimationStateToData tests animation state serialization.
+func TestAnimationStateToData(t *testing.T) {
+	tests := []struct {
+		name           string
+		state          string
+		frameIndex     uint8
+		loop           bool
+		lastUpdateTime float64
+	}{
+		{"idle state", "idle", 0, true, 0.0},
+		{"walk state", "walk", 3, true, 1.5},
+		{"attack state", "attack", 5, false, 2.75},
+		{"death state", "death", 7, false, 10.0},
+		{"run state", "run", 2, true, 0.333},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := AnimationStateToData(tt.state, tt.frameIndex, tt.loop, tt.lastUpdateTime)
+
+			if data == nil {
+				t.Fatal("AnimationStateToData returned nil")
+			}
+
+			if data.State != tt.state {
+				t.Errorf("State = %s, want %s", data.State, tt.state)
+			}
+			if data.FrameIndex != tt.frameIndex {
+				t.Errorf("FrameIndex = %d, want %d", data.FrameIndex, tt.frameIndex)
+			}
+			if data.Loop != tt.loop {
+				t.Errorf("Loop = %v, want %v", data.Loop, tt.loop)
+			}
+			if data.LastUpdateTime != tt.lastUpdateTime {
+				t.Errorf("LastUpdateTime = %f, want %f", data.LastUpdateTime, tt.lastUpdateTime)
+			}
+		})
+	}
+}
+
+// TestDataToAnimationState tests animation state deserialization.
+func TestDataToAnimationState(t *testing.T) {
+	tests := []struct {
+		name           string
+		data           *AnimationStateData
+		wantState      string
+		wantFrame      uint8
+		wantLoop       bool
+		wantUpdateTime float64
+	}{
+		{
+			name: "valid data",
+			data: &AnimationStateData{
+				State:          "walk",
+				FrameIndex:     3,
+				Loop:           true,
+				LastUpdateTime: 1.5,
+			},
+			wantState:      "walk",
+			wantFrame:      3,
+			wantLoop:       true,
+			wantUpdateTime: 1.5,
+		},
+		{
+			name: "attack data",
+			data: &AnimationStateData{
+				State:          "attack",
+				FrameIndex:     5,
+				Loop:           false,
+				LastUpdateTime: 2.75,
+			},
+			wantState:      "attack",
+			wantFrame:      5,
+			wantLoop:       false,
+			wantUpdateTime: 2.75,
+		},
+		{
+			name:           "nil data defaults",
+			data:           nil,
+			wantState:      "idle",
+			wantFrame:      0,
+			wantLoop:       true,
+			wantUpdateTime: 0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state, frame, loop, updateTime := DataToAnimationState(tt.data)
+
+			if state != tt.wantState {
+				t.Errorf("state = %s, want %s", state, tt.wantState)
+			}
+			if frame != tt.wantFrame {
+				t.Errorf("frame = %d, want %d", frame, tt.wantFrame)
+			}
+			if loop != tt.wantLoop {
+				t.Errorf("loop = %v, want %v", loop, tt.wantLoop)
+			}
+			if updateTime != tt.wantUpdateTime {
+				t.Errorf("updateTime = %f, want %f", updateTime, tt.wantUpdateTime)
+			}
+		})
+	}
+}
+
+// TestAnimationStateRoundTrip tests serialization and deserialization round-trip.
+func TestAnimationStateRoundTrip(t *testing.T) {
+	tests := []struct {
+		name       string
+		state      string
+		frameIndex uint8
+		loop       bool
+		updateTime float64
+	}{
+		{"idle", "idle", 0, true, 0.0},
+		{"walk", "walk", 3, true, 1.5},
+		{"run", "run", 2, true, 0.75},
+		{"attack", "attack", 5, false, 2.0},
+		{"cast", "cast", 4, false, 1.8},
+		{"hit", "hit", 1, false, 0.2},
+		{"death", "death", 7, false, 3.5},
+		{"jump", "jump", 2, false, 0.5},
+		{"crouch", "crouch", 0, true, 0.0},
+		{"use", "use", 1, false, 0.3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Serialize
+			data := AnimationStateToData(tt.state, tt.frameIndex, tt.loop, tt.updateTime)
+
+			// Deserialize
+			gotState, gotFrame, gotLoop, gotTime := DataToAnimationState(data)
+
+			// Verify round-trip
+			if gotState != tt.state {
+				t.Errorf("Round-trip state = %s, want %s", gotState, tt.state)
+			}
+			if gotFrame != tt.frameIndex {
+				t.Errorf("Round-trip frame = %d, want %d", gotFrame, tt.frameIndex)
+			}
+			if gotLoop != tt.loop {
+				t.Errorf("Round-trip loop = %v, want %v", gotLoop, tt.loop)
+			}
+			if gotTime != tt.updateTime {
+				t.Errorf("Round-trip time = %f, want %f", gotTime, tt.updateTime)
+			}
+		})
+	}
+}
+
+// BenchmarkAnimationStateToData benchmarks serialization.
+func BenchmarkAnimationStateToData(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = AnimationStateToData("walk", 3, true, 1.5)
+	}
+}
+
+// BenchmarkDataToAnimationState benchmarks deserialization.
+func BenchmarkDataToAnimationState(b *testing.B) {
+	data := &AnimationStateData{
+		State:          "walk",
+		FrameIndex:     3,
+		Loop:           true,
+		LastUpdateTime: 1.5,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _, _ = DataToAnimationState(data)
+	}
+}

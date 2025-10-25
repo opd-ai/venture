@@ -1,4 +1,3 @@
-// Package engine provides inventory_ui for game UI.
 package engine
 
 import (
@@ -8,6 +7,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 // InventoryUI handles rendering and interaction for the inventory screen.
@@ -370,20 +371,60 @@ func min(a, b int) int {
 
 // generateItemPreview creates a visual preview image for an item being dragged.
 // This provides better visual feedback during drag-and-drop operations.
-func (ui *EbitenInventoryUI) generateItemPreview(item interface{}) *ebiten.Image {
+func (ui *EbitenInventoryUI) generateItemPreview(itm interface{}) *ebiten.Image {
 	// Create preview image with same size as slot
 	size := ui.slotSize - 2
 	preview := ebiten.NewImage(size, size)
 
-	// Determine item color based on rarity/type
-	// For now, use a simple color scheme
-	itemColor := color.RGBA{120, 120, 180, 255} // Default blue-ish
+	// Determine item color and icon based on item type
+	itemColor := color.RGBA{120, 120, 180, 255}     // Default blue-ish
+	iconColor := color.RGBA{220, 220, 240, 255}     // Lighter shade for icon
+	borderColor := color.RGBA{200, 200, 220, 255}   // Border color
+	
+	// Try to extract item type
+	if itemPtr, ok := itm.(*item.Item); ok {
+		// Color based on item type
+		switch itemPtr.Type {
+		case item.TypeWeapon:
+			itemColor = color.RGBA{180, 60, 60, 255}   // Red for weapons
+			iconColor = color.RGBA{240, 120, 120, 255}
+		case item.TypeArmor:
+			itemColor = color.RGBA{80, 140, 80, 255}   // Green for armor
+			iconColor = color.RGBA{140, 200, 140, 255}
+		case item.TypeConsumable:
+			itemColor = color.RGBA{180, 140, 60, 255}  // Orange for consumables
+			iconColor = color.RGBA{240, 200, 120, 255}
+		case item.TypeAccessory:
+			itemColor = color.RGBA{140, 80, 180, 255}  // Purple for accessories
+			iconColor = color.RGBA{200, 140, 240, 255}
+		}
+		
+		// Adjust shade based on rarity
+		switch itemPtr.Rarity {
+		case item.RarityLegendary:
+			borderColor = color.RGBA{255, 200, 50, 255}  // Gold border
+		case item.RarityEpic:
+			borderColor = color.RGBA{200, 100, 255, 255} // Purple border
+		case item.RarityRare:
+			borderColor = color.RGBA{100, 150, 255, 255} // Blue border
+		}
+	}
 
 	// Fill with item color
 	preview.Fill(itemColor)
 
-	// Draw border
-	borderColor := color.RGBA{200, 200, 220, 255}
+	// Draw a simple icon shape in the center
+	centerX := float32(size / 2)
+	centerY := float32(size / 2)
+	iconSize := float32(size) * 0.4
+
+	// Draw a circle icon (could be enhanced to draw different shapes per item type)
+	vector.DrawFilledCircle(preview, centerX, centerY, iconSize, iconColor, true)
+	
+	// Draw icon border/outline
+	vector.StrokeCircle(preview, centerX, centerY, iconSize, 1.5, borderColor, true)
+
+	// Draw border around entire preview
 	// Top border
 	topBorder := ebiten.NewImage(size, 2)
 	topBorder.Fill(borderColor)
@@ -403,9 +444,6 @@ func (ui *EbitenInventoryUI) generateItemPreview(item interface{}) *ebiten.Image
 	rightOpts := &ebiten.DrawImageOptions{}
 	rightOpts.GeoM.Translate(float64(size-2), 0)
 	preview.DrawImage(leftBorder, rightOpts)
-
-	// TODO: In future enhancement, could draw actual item icon/sprite here
-	// For now, the colored square with border provides clear visual feedback
 
 	return preview
 }

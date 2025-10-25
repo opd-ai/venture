@@ -26,7 +26,7 @@ void triggerIOSHaptic(int intensity) {
 			default:
 				style = UIImpactFeedbackStyleMedium;
 		}
-		
+
 		UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:style];
 		[generator prepare];
 		[generator impactOccurred];

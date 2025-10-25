@@ -18,7 +18,7 @@ void triggerAndroidHaptic(int intensity) {
 	// 1. Get JNIEnv and activity context
 	// 2. Get Vibrator service via Context.getSystemService
 	// 3. Call vibrate() with appropriate duration
-	
+
 	// Example durations for different intensities:
 	// Light: 10ms, Medium: 20ms, Heavy: 50ms
 	int duration = 20; // Default medium
@@ -27,7 +27,7 @@ void triggerAndroidHaptic(int intensity) {
 		case 1: duration = 20; break;  // Medium
 		case 2: duration = 50; break;  // Heavy
 	}
-	
+
 	// TODO: Implement actual JNI calls to Android Vibrator API
 	// This requires access to JNIEnv and activity context from Ebiten/mobile
 }

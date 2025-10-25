@@ -9,7 +9,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/combat"
@@ -101,18 +100,18 @@ func (ui *EbitenCharacterUI) Hide() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
+	// Standardized dual-exit menu navigation: toggle key (C) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Character, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Hide()
+		}
+		return // Don't process other input on the same frame as toggle/close
+	}
+
 	if !ui.visible {
 		return
-	}
-
-	// Handle ESC key to close UI
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		ui.Hide()
-	}
-
-	// Handle C key to toggle UI
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
-		ui.Toggle()
 	}
 }
 
@@ -197,8 +196,8 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 	ui.drawEquipmentPanel(img, equipment)
 	ui.drawAttributesPanel(img, stats)
 
-	// Draw controls hint at bottom
-	controlsText := "[ESC] or [C] to Close"
+	// Draw controls hint at bottom (standardized menu navigation)
+	controlsText := "Press [C] or [ESC] to close"
 	controlsX := panelX + panelWidth/2 - len(controlsText)*3
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,

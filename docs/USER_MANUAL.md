@@ -60,13 +60,13 @@ Venture is a procedurally generated action-RPG where every playthrough is unique
 - `F` - Quick Spell 3
 
 **Interface:**
-- `I` - Toggle Inventory
-- `C` - Character Stats
-- `K` - Skill Tree
-- `J` - Quest Log
-- `M` - Map (if available)
+- `I` - Inventory (Press I or ESC to close)
+- `C` - Character Stats (Press C or ESC to close)
+- `K` - Skill Tree (Press K or ESC to close)
+- `J` - Quest Log (Press J or ESC to close)
+- `M` - Map (Press M or ESC to close)
 - `Tab` - Cycle Targets
-- `Esc` - Pause Menu
+- `Esc` - Close any open menu / Pause Menu
 
 **Saving:**
 - `F5` - Quick Save
@@ -81,6 +81,26 @@ Venture is a procedurally generated action-RPG where every playthrough is unique
 ### Custom Key Bindings
 
 Edit key bindings in the settings menu (Esc → Settings → Controls).
+
+### Menu Navigation Standard
+
+All in-game menus follow a consistent, user-friendly navigation pattern:
+
+| Menu | Open Key | Close Methods |
+|------|----------|---------------|
+| Inventory | `I` | Press `I` again OR press `ESC` |
+| Character Stats | `C` | Press `C` again OR press `ESC` |
+| Skill Tree | `K` | Press `K` again OR press `ESC` |
+| Quest Log | `J` | Press `J` again OR press `ESC` |
+| World Map | `M` | Press `M` again OR press `ESC` |
+
+**Key Navigation Features:**
+- **Toggle Key**: Each menu uses its assigned letter key to both open and close
+- **Universal Exit**: `ESC` closes any open menu without reopening it
+- **No Traps**: You're never stuck in a menu—both exit methods always work simultaneously
+- **Visual Hints**: Each menu displays "Press [KEY] or [ESC] to close" at the top or bottom
+
+**Example:** Open inventory with `I`, close it with either `I` or `ESC`. The same pattern works for all menus.
 
 ---
 

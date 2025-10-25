@@ -169,16 +169,20 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Handle M key toggle for full-screen
-	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
-		ui.ToggleFullScreen()
-		return
-	}
-
-	// Handle ESC key to close full-screen map
-	if ui.fullScreen && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		ui.HideFullScreen()
-		return
+	// Standardized dual-exit menu navigation: toggle key (M) OR Escape
+	// Note: For map, we toggle between minimap and full-screen, then close full-screen
+	if ui.fullScreen {
+		// When in full-screen mode, both M and Escape should close full-screen
+		if shouldClose, _ := HandleMenuInput(MenuKeys.Map, true); shouldClose {
+			ui.HideFullScreen()
+			return
+		}
+	} else {
+		// When showing minimap, M key should open full-screen
+		if IsKeyJustPressed(MenuKeys.Map) {
+			ui.ShowFullScreen()
+			return
+		}
 	}
 
 	// Handle input for full-screen mode
@@ -400,8 +404,8 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 	// Draw legend
 	ui.drawLegend(screen, panelX+10, panelY+panelHeight-60)
 
-	// Draw controls
-	controlsText := "[Arrow Keys/WASD] Pan | [Mouse Wheel] Zoom | [Space] Center | [M] or [ESC] Close"
+	// Draw controls (standardized menu navigation)
+	controlsText := "[Arrow Keys/WASD] Pan | [Mouse Wheel] Zoom | [Space] Center | Press [M] or [ESC] to close"
 	text.Draw(screen, controlsText, basicfont.Face7x13,
 		panelX+10, panelY+panelHeight-10, color.RGBA{180, 180, 180, 255})
 }

@@ -87,10 +87,14 @@ func (ui *EbitenInventoryUI) Hide() {
 
 // Update processes input for the inventory UI.
 func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
-	// Always check for toggle key, even when not visible
-	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
-		ui.Toggle()
-		return // Don't process other input on the same frame as toggle
+	// Standardized dual-exit menu navigation: toggle key (I) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Hide()
+		}
+		return // Don't process other input on the same frame as toggle/close
 	}
 
 	if !ui.visible || ui.playerEntity == nil {
@@ -242,6 +246,10 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 
 	// Draw title
 	ebitenutil.DebugPrintAt(img, "INVENTORY", windowX+10, windowY+10)
+
+	// Draw exit hint (standardized menu navigation)
+	exitHint := "Press [I] or [ESC] to close"
+	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
 	// Draw capacity info
 	capacityText := fmt.Sprintf("Weight: %.1f / %.1f", inventory.GetCurrentWeight(), inventory.MaxWeight)

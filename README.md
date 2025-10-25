@@ -49,7 +49,9 @@ go build -o venture-server ./cmd/server
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
 ```
 
-**Controls:** WASD (move), Space (attack), E (use item), I (inventory), J (quests), K (skill tree), M (map), ESC (menu), F5 (save), F9 (load)
+**Controls:** WASD (move), Space (attack), E (use item), I (inventory), J (quests), K (skill tree), M (map), C (character), ESC (close menus/pause), F5 (save), F9 (load)
+
+**Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 
 ### 3. Multiplayer
 

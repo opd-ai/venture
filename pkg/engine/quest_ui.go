@@ -62,10 +62,14 @@ func (ui *EbitenQuestUI) Hide() {
 
 // Update processes input for the quest UI.
 func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
-	// Always check for toggle key, even when not visible
-	if inpututil.IsKeyJustPressed(ebiten.KeyJ) {
-		ui.Toggle()
-		return // Don't process other input on the same frame as toggle
+	// Standardized dual-exit menu navigation: toggle key (J) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Hide()
+		}
+		return // Don't process other input on the same frame as toggle/close
 	}
 
 	if !ui.visible || ui.playerEntity == nil {
@@ -118,6 +122,10 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 
 	// Draw title
 	ebitenutil.DebugPrintAt(img, "QUEST LOG", windowX+10, windowY+10)
+
+	// Draw exit hint (standardized menu navigation)
+	exitHint := "Press [J] or [ESC] to close"
+	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
 	// Draw tabs
 	tabY := windowY + 40

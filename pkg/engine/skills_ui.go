@@ -137,19 +137,17 @@ func (ui *EbitenSkillsUI) loadSkillTree() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
+	// Standardized dual-exit menu navigation: toggle key (K) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Skills, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Hide()
+		}
+		return // Don't process other input on the same frame as toggle/close
+	}
+
 	if !ui.visible {
-		return
-	}
-
-	// Handle ESC key to close
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		ui.Hide()
-		return
-	}
-
-	// Handle K key to toggle
-	if inpututil.IsKeyJustPressed(ebiten.KeyK) {
-		ui.Toggle()
 		return
 	}
 
@@ -218,6 +216,11 @@ func (ui *EbitenSkillsUI) Draw(screen interface{}) {
 	titleY := panelY + 20
 	text.Draw(img, titleText, basicfont.Face7x13, titleX, titleY+13,
 		color.RGBA{255, 255, 100, 255})
+
+	// Draw exit hint (standardized menu navigation)
+	exitHint := "Press [K] or [ESC] to close"
+	text.Draw(img, exitHint, basicfont.Face7x13, panelX+10, titleY+13,
+		color.RGBA{180, 180, 200, 255})
 
 	// Display available skill points
 	availablePoints := ui.getAvailableSkillPoints()

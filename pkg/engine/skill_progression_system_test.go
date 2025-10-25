@@ -97,12 +97,12 @@ func TestSkillProgressionSystem_Update_NoStats(t *testing.T) {
 	// Create skill tree with learned skill
 	critSkill := createSkill("crit_1", "Critical Strike", "crit_chance", 0.05, false)
 	skillNode := createSkillNode(critSkill)
-	
+
 	skillTree := &skills.SkillTree{
 		Name:  "Test Tree",
 		Nodes: []*skills.SkillNode{skillNode},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["crit_1"] = true
 	skillTreeComp.SkillLevels["crit_1"] = 1
@@ -127,12 +127,12 @@ func TestSkillProgressionSystem_CritChanceBonus(t *testing.T) {
 	// Create skill tree with crit chance skill
 	critSkill := createSkill("crit_1", "Critical Strike", "crit_chance", 0.10, false) // +10%
 	skillNode := createSkillNode(critSkill)
-	
+
 	skillTree := &skills.SkillTree{
 		Name:  "Warrior Tree",
 		Nodes: []*skills.SkillNode{skillNode},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["crit_1"] = true
 	skillTreeComp.SkillLevels["crit_1"] = 1
@@ -163,12 +163,12 @@ func TestSkillProgressionSystem_CritDamageBonus(t *testing.T) {
 	// Create skill tree with crit damage skill (percentage bonus)
 	critDmgSkill := createSkill("critdmg_1", "Deadly Strike", "crit_damage", 0.25, true) // +25%
 	skillNode := createSkillNode(critDmgSkill)
-	
+
 	skillTree := &skills.SkillTree{
 		Name:  "Warrior Tree",
 		Nodes: []*skills.SkillNode{skillNode},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["critdmg_1"] = true
 	skillTreeComp.SkillLevels["critdmg_1"] = 1
@@ -199,7 +199,7 @@ func TestSkillProgressionSystem_MultipleSkills(t *testing.T) {
 	// Create skill tree with multiple skills
 	critSkill := createSkill("crit_1", "Critical Strike", "crit_chance", 0.08, false)
 	critDmgSkill := createSkill("critdmg_1", "Deadly Strike", "crit_damage", 0.30, true)
-	
+
 	skillTree := &skills.SkillTree{
 		Name: "Warrior Tree",
 		Nodes: []*skills.SkillNode{
@@ -207,7 +207,7 @@ func TestSkillProgressionSystem_MultipleSkills(t *testing.T) {
 			createSkillNode(critDmgSkill),
 		},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["crit_1"] = true
 	skillTreeComp.LearnedSkills["critdmg_1"] = true
@@ -259,12 +259,12 @@ func TestSkillProgressionSystem_SkillLevelScaling(t *testing.T) {
 			// Create skill with base bonus (crit chance)
 			critSkill := createSkill("crit_1", "Critical Strike", "crit_chance", tt.baseBonus, false)
 			skillNode := createSkillNode(critSkill)
-			
+
 			skillTree := &skills.SkillTree{
 				Name:  "Test Tree",
 				Nodes: []*skills.SkillNode{skillNode},
 			}
-			
+
 			skillTreeComp := NewSkillTreeComponent(skillTree)
 			skillTreeComp.LearnedSkills["crit_1"] = true
 			skillTreeComp.SkillLevels["crit_1"] = tt.skillLevel
@@ -298,12 +298,12 @@ func TestSkillProgressionSystem_CritChanceCap(t *testing.T) {
 	// Create skill tree with huge crit chance bonus
 	critSkill := createSkill("crit_1", "Critical Strike", "crit_chance", 1.50, false) // +150%
 	skillNode := createSkillNode(critSkill)
-	
+
 	skillTree := &skills.SkillTree{
 		Name:  "Test Tree",
 		Nodes: []*skills.SkillNode{skillNode},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["crit_1"] = true
 	skillTreeComp.SkillLevels["crit_1"] = 1
@@ -438,7 +438,7 @@ func TestSkillProgressionSystem_BonusAccumulation(t *testing.T) {
 	skill1 := createSkill("crit_1", "Crit I", "crit_chance", 0.05, false)
 	skill2 := createSkill("crit_2", "Crit II", "crit_chance", 0.08, false)
 	skill3 := createSkill("crit_3", "Crit III", "crit_chance", 0.12, false)
-	
+
 	skillTree := &skills.SkillTree{
 		Name: "Multi-Crit Tree",
 		Nodes: []*skills.SkillNode{
@@ -447,7 +447,7 @@ func TestSkillProgressionSystem_BonusAccumulation(t *testing.T) {
 			createSkillNode(skill3),
 		},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["crit_1"] = true
 	skillTreeComp.LearnedSkills["crit_2"] = true
@@ -485,7 +485,7 @@ func TestSkillProgressionSystem_EmptyLearnedSkills(t *testing.T) {
 		Name:  "Test Tree",
 		Nodes: []*skills.SkillNode{createSkillNode(critSkill)},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	// Don't add any learned skills
 	entity.AddComponent(skillTreeComp)
@@ -521,18 +521,18 @@ func TestSkillProgressionSystem_MixedEffectTypes(t *testing.T) {
 		Effects: []skills.Effect{
 			{Type: "crit_chance", Value: 0.10, IsPercent: false},
 			{Type: "crit_damage", Value: 0.50, IsPercent: true},
-			{Type: "damage", Value: 0.20, IsPercent: true},       // Should be ignored (not implemented)
-			{Type: "defense", Value: 0.15, IsPercent: true},      // Should be ignored (not implemented)
+			{Type: "damage", Value: 0.20, IsPercent: true},  // Should be ignored (not implemented)
+			{Type: "defense", Value: 0.15, IsPercent: true}, // Should be ignored (not implemented)
 		},
 		Level:    1,
 		MaxLevel: 5,
 	}
-	
+
 	skillTree := &skills.SkillTree{
 		Name:  "Mixed Tree",
 		Nodes: []*skills.SkillNode{createSkillNode(multiSkill)},
 	}
-	
+
 	skillTreeComp := NewSkillTreeComponent(skillTree)
 	skillTreeComp.LearnedSkills["multi_1"] = true
 	skillTreeComp.SkillLevels["multi_1"] = 1
@@ -548,14 +548,14 @@ func TestSkillProgressionSystem_MixedEffectTypes(t *testing.T) {
 	// Only crit bonuses should apply
 	expectedCrit := 0.05 + 0.10
 	expectedCritDmg := 2.0 + 0.50
-	
+
 	if math.Abs(stats.CritChance-expectedCrit) > 0.0001 {
 		t.Errorf("Expected crit chance %f, got %f", expectedCrit, stats.CritChance)
 	}
 	if math.Abs(stats.CritDamage-expectedCritDmg) > 0.0001 {
 		t.Errorf("Expected crit damage %f, got %f", expectedCritDmg, stats.CritDamage)
 	}
-	
+
 	// Attack and defense should remain at defaults (not implemented)
 	if stats.Attack != 10.0 {
 		t.Errorf("Expected attack to remain at default 10.0, got %f", stats.Attack)

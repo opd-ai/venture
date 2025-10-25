@@ -9,7 +9,7 @@ import (
 // TestHotbarComponent_Type tests the Type method
 func TestHotbarComponent_Type(t *testing.T) {
 	hotbar := NewHotbarComponent()
-	
+
 	if hotbar.Type() != "hotbar" {
 		t.Errorf("Expected type 'hotbar', got '%s'", hotbar.Type())
 	}
@@ -68,7 +68,7 @@ func TestHotbarComponent_SetSlot(t *testing.T) {
 			if ok != tt.wantOK {
 				t.Errorf("SetSlot() = %v, want %v", ok, tt.wantOK)
 			}
-			
+
 			// Verify item was set if operation was successful and slot is valid
 			if ok && tt.slotIndex >= 0 && tt.slotIndex < 6 {
 				if hotbar.Slots[tt.slotIndex] != tt.item {
@@ -325,10 +325,10 @@ func TestHotbarComponent_UpdateCooldowns(t *testing.T) {
 		slotIndex int
 		want      float64
 	}{
-		{0, 1.5},  // 2.0 - 0.5
-		{1, 0.0},  // 0.5 - 0.5 (clamped to 0)
-		{2, 0.0},  // 0.1 - 0.5 (clamped to 0)
-		{3, 0.0},  // Already 0
+		{0, 1.5}, // 2.0 - 0.5
+		{1, 0.0}, // 0.5 - 0.5 (clamped to 0)
+		{2, 0.0}, // 0.1 - 0.5 (clamped to 0)
+		{3, 0.0}, // Already 0
 	}
 
 	for _, tt := range tests {

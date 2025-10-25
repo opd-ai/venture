@@ -11,6 +11,7 @@ type StubInput struct {
 	UseItemPressed     bool
 	ActionJustPressed  bool
 	UseItemJustPressed bool
+	AnyKeyPressed      bool // GAP-005: Track any key press
 
 	// Spell casting
 	Spell1Pressed bool
@@ -42,6 +43,11 @@ func (i *StubInput) IsActionPressed() bool {
 // IsActionJustPressed implements InputProvider interface.
 func (i *StubInput) IsActionJustPressed() bool {
 	return i.ActionJustPressed
+}
+
+// IsAnyKeyPressed implements InputProvider interface.
+func (i *StubInput) IsAnyKeyPressed() bool {
+	return i.AnyKeyPressed
 }
 
 // IsUseItemPressed implements InputProvider interface.

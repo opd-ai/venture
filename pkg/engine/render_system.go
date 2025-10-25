@@ -132,23 +132,72 @@ type EbitenRenderSystem struct {
 	screen       *ebiten.Image
 	cameraSystem *CameraSystem
 
+	// Spatial partitioning for viewport culling
+	spatialPartition *SpatialPartitionSystem
+	enableCulling    bool
+
+	// Batch rendering optimization
+	enableBatching bool
+	batches        map[*ebiten.Image][]*Entity // Group entities by sprite image
+	batchPool      []map[*ebiten.Image][]*Entity
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
+
+	// Performance statistics
+	stats RenderStats
+}
+
+// RenderStats tracks rendering performance metrics.
+type RenderStats struct {
+	TotalEntities    int // Total entities in scene
+	RenderedEntities int // Entities actually rendered
+	CulledEntities   int // Entities culled by viewport check
+	BatchCount       int // Number of batches created
+	LastFrameTime    float64
 }
 
 // NewRenderSystem creates a new render system.
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
-		cameraSystem:  cameraSystem,
-		ShowColliders: false,
-		ShowGrid:      false,
+		cameraSystem:     cameraSystem,
+		spatialPartition: nil, // Will be set when world bounds are known
+		enableCulling:    true,
+		enableBatching:   true, // Batching enabled by default
+		batches:          make(map[*ebiten.Image][]*Entity),
+		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
+		ShowColliders:    false,
+		ShowGrid:         false,
 	}
 }
 
 // SetScreen sets the render target.
 func (r *EbitenRenderSystem) SetScreen(screen *ebiten.Image) {
 	r.screen = screen
+}
+
+// SetSpatialPartition sets the spatial partition system for viewport culling.
+// This enables efficient culling of off-screen entities.
+func (r *EbitenRenderSystem) SetSpatialPartition(partition *SpatialPartitionSystem) {
+	r.spatialPartition = partition
+}
+
+// EnableCulling enables or disables viewport culling.
+// When disabled, all entities are rendered (useful for debugging).
+func (r *EbitenRenderSystem) EnableCulling(enable bool) {
+	r.enableCulling = enable
+}
+
+// EnableBatching enables or disables batch rendering.
+// When enabled, entities with the same sprite are grouped to reduce GPU state changes.
+func (r *EbitenRenderSystem) EnableBatching(enable bool) {
+	r.enableBatching = enable
+}
+
+// GetStats returns rendering performance statistics.
+func (r *EbitenRenderSystem) GetStats() RenderStats {
+	return r.stats
 }
 
 // Update is called every frame but doesn't modify entities.
@@ -169,15 +218,34 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	}
 	r.screen = ebitenScreen
 
+	// Reset stats for this frame
+	r.stats = RenderStats{
+		TotalEntities: len(entities),
+	}
+
 	// Note: Screen clearing is handled by terrain rendering system
 
-	// Sort entities by layer
-	sortedEntities := r.sortEntitiesByLayer(entities)
-
-	// Draw each entity
-	for _, entity := range sortedEntities {
-		r.drawEntity(entity)
+	// Get visible entities using spatial partition (if enabled)
+	visibleEntities := entities
+	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
+		visibleEntities = r.getVisibleEntities(entities)
 	}
+
+	// Sort entities by layer
+	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
+
+	// Render using batching (if enabled) or individual draws
+	if r.enableBatching {
+		r.drawBatched(sortedEntities)
+	} else {
+		for _, entity := range sortedEntities {
+			r.drawEntity(entity)
+			r.stats.RenderedEntities++
+		}
+	}
+
+	// Calculate culled count
+	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
 
 	// GAP-016 REPAIR: Draw particle effects
 	r.drawParticles(entities)
@@ -186,6 +254,112 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
 	}
+}
+
+// drawBatched renders entities using batch optimization to reduce GPU state changes.
+// Entities with the same sprite image are grouped together.
+func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
+	// Get or create batch map from pool
+	batches := r.getBatchMap()
+	defer r.returnBatchMap(batches)
+
+	// Group entities by sprite image
+	for _, entity := range entities {
+		spriteComp, hasSprite := entity.GetComponent("sprite")
+		if !hasSprite {
+			continue
+		}
+		sprite := spriteComp.(*EbitenSprite)
+
+		if !sprite.Visible || sprite.Image == nil {
+			continue
+		}
+
+		// Group by sprite image pointer (entities with same sprite are batched)
+		batches[sprite.Image] = append(batches[sprite.Image], entity)
+	}
+
+	r.stats.BatchCount = len(batches)
+
+	// Draw each batch
+	for _, batch := range batches {
+		r.drawBatch(batch)
+	}
+}
+
+// drawBatch renders a group of entities with the same sprite image.
+func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
+	for _, entity := range entities {
+		r.drawEntity(entity)
+		r.stats.RenderedEntities++
+	}
+}
+
+// getBatchMap retrieves a batch map from the pool or creates a new one.
+func (r *EbitenRenderSystem) getBatchMap() map[*ebiten.Image][]*Entity {
+	if len(r.batchPool) > 0 {
+		// Pop from pool
+		batches := r.batchPool[len(r.batchPool)-1]
+		r.batchPool = r.batchPool[:len(r.batchPool)-1]
+
+		// Clear the map
+		for k := range batches {
+			batches[k] = batches[k][:0] // Reuse slice capacity
+		}
+		return batches
+	}
+
+	// Create new map with initial capacity
+	return make(map[*ebiten.Image][]*Entity, 32)
+}
+
+// returnBatchMap returns a batch map to the pool for reuse.
+func (r *EbitenRenderSystem) returnBatchMap(batches map[*ebiten.Image][]*Entity) {
+	if len(r.batchPool) < 2 { // Keep small pool
+		r.batchPool = append(r.batchPool, batches)
+	}
+}
+
+// getVisibleEntities returns only entities visible in the current viewport.
+// This uses spatial partitioning for efficient culling.
+func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
+	// Get camera bounds in world space
+	cam := r.cameraSystem.activeCamera
+	if cam == nil {
+		return entities // No camera, render all
+	}
+
+	camComp, ok := cam.GetComponent("camera")
+	if !ok {
+		return entities
+	}
+	camera := camComp.(*CameraComponent)
+
+	// Calculate viewport bounds in world space with margin for sprites
+	margin := 100.0 // Extra space to render sprites partially off-screen
+
+	// Get camera position
+	camPos, ok := cam.GetComponent("position")
+	if !ok {
+		return entities
+	}
+	pos := camPos.(*PositionComponent)
+
+	// Calculate world viewport bounds
+	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
+	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
+
+	viewportBounds := Bounds{
+		X:      pos.X - viewportWidth/2 - margin,
+		Y:      pos.Y - viewportHeight/2 - margin,
+		Width:  viewportWidth + margin*2,
+		Height: viewportHeight + margin*2,
+	}
+
+	// Query spatial partition for entities in viewport
+	visible := r.spatialPartition.QueryBounds(viewportBounds)
+
+	return visible
 }
 
 // drawEntity renders a single entity.

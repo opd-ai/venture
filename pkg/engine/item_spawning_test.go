@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 package engine
 
 import (
@@ -66,7 +63,7 @@ func TestItemPickupSystem(t *testing.T) {
 	// Create player with inventory
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{}) // Marks as player
+	player.AddComponent(NewStubInput()) // Marks as player
 	inventory := NewInventoryComponent(10, 50.0)
 	player.AddComponent(inventory)
 
@@ -111,7 +108,7 @@ func TestItemPickupDistance(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{})
+	player.AddComponent(NewStubInput())
 	inventory := NewInventoryComponent(10, 50.0)
 	player.AddComponent(inventory)
 
@@ -273,7 +270,7 @@ func BenchmarkItemPickupSystem(b *testing.B) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{})
+	player.AddComponent(NewStubInput())
 	inventory := NewInventoryComponent(100, 500.0)
 	player.AddComponent(inventory)
 
@@ -341,7 +338,7 @@ func TestItemPickupSystem_FullInventory(t *testing.T) {
 	// Create player with small inventory
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&InputComponent{})
+	player.AddComponent(NewStubInput())
 	inventory := NewInventoryComponent(1, 50.0) // Only 1 slot
 	player.AddComponent(inventory)
 

@@ -77,6 +77,28 @@ func (g *Generator) isInside(config Config, dx, dy, centerX, centerY float64) bo
 		return g.inStar(dx, dy, centerX, centerY, config.Sides, config.InnerRatio, config.Rotation, config.Smoothing)
 	case ShapeRing:
 		return g.inRing(dx, dy, centerX, centerY, config.InnerRatio, config.Smoothing)
+	case ShapeHexagon:
+		return g.inPolygon(dx, dy, centerX, centerY, 6, config.Rotation, config.Smoothing)
+	case ShapeOctagon:
+		return g.inPolygon(dx, dy, centerX, centerY, 8, config.Rotation, config.Smoothing)
+	case ShapeCross:
+		return g.inCross(dx, dy, centerX, centerY, config.Smoothing)
+	case ShapeHeart:
+		return g.inHeart(dx, dy, centerX, centerY, config.Smoothing)
+	case ShapeCrescent:
+		return g.inCrescent(dx, dy, centerX, centerY, config.InnerRatio, config.Rotation, config.Smoothing)
+	case ShapeGear:
+		return g.inGear(dx, dy, centerX, centerY, config.Sides, config.InnerRatio, config.Rotation, config.Smoothing)
+	case ShapeCrystal:
+		return g.inCrystal(dx, dy, centerX, centerY, config.Rotation, config.Smoothing)
+	case ShapeLightning:
+		return g.inLightning(dx, dy, centerX, centerY, config.Seed, config.Smoothing)
+	case ShapeWave:
+		return g.inWave(dx, dy, centerX, centerY, config.Seed, config.Smoothing)
+	case ShapeSpiral:
+		return g.inSpiral(dx, dy, centerX, centerY, config.Seed, config.Smoothing)
+	case ShapeOrganic:
+		return g.inOrganic(dx, dy, centerX, centerY, config.Seed, config.Smoothing)
 	default:
 		return false
 	}
@@ -263,4 +285,211 @@ func (g *Generator) inRing(dx, dy, cx, cy, innerRatio, smoothing float64) bool {
 		return (innerRadius-dist)/(innerRadius-innerEdge) < 0.5
 	}
 	return (dist-outerEdge)/(outerRadius-outerEdge) < 0.5
+}
+
+// inCross checks if a point is inside a cross/plus shape.
+func (g *Generator) inCross(dx, dy, cx, cy, smoothing float64) bool {
+	halfW := cx * 0.8
+	halfH := cy * 0.8
+	thickness := math.Min(halfW, halfH) * 0.3
+
+	absDx := math.Abs(dx)
+	absDy := math.Abs(dy)
+
+	// Vertical bar
+	verticalBar := absDx <= thickness && absDy <= halfH
+	// Horizontal bar
+	horizontalBar := absDy <= thickness && absDx <= halfW
+
+	return verticalBar || horizontalBar
+}
+
+// inHeart checks if a point is inside a heart shape.
+func (g *Generator) inHeart(dx, dy, cx, cy, smoothing float64) bool {
+	// Normalize coordinates
+	x := dx / (cx * 0.8)
+	y := -dy / (cy * 0.8) // Flip Y to point heart upward
+
+	// Heart equation: (x^2 + y^2 - 1)^3 - x^2*y^3 = 0
+	// Simplified for filled heart
+	x2 := x * x
+	y2 := y * y
+
+	// Adjust Y offset to center the heart
+	y = y - 0.3
+
+	// Heart boundary check
+	value := math.Pow(x2+y2-1, 3) - x2*math.Pow(y, 3)
+
+	return value <= 0
+}
+
+// inCrescent checks if a point is inside a crescent/moon shape.
+func (g *Generator) inCrescent(dx, dy, cx, cy, innerRatio, rotation, smoothing float64) bool {
+	// Rotate point
+	angle := rotation * math.Pi / 180.0
+	rx := dx*math.Cos(angle) - dy*math.Sin(angle)
+	ry := dx*math.Sin(angle) + dy*math.Cos(angle)
+
+	// Outer circle
+	dist := math.Sqrt(rx*rx + ry*ry)
+	outerRadius := math.Min(cx, cy) * 0.8
+
+	// Inner circle (offset to create crescent)
+	offsetX := outerRadius * innerRatio
+	innerDx := rx - offsetX
+	innerDist := math.Sqrt(innerDx*innerDx + ry*ry)
+	innerRadius := outerRadius * 0.85
+
+	// Inside outer circle but outside inner circle
+	return dist <= outerRadius && innerDist >= innerRadius
+}
+
+// inGear checks if a point is inside a gear shape.
+func (g *Generator) inGear(dx, dy, cx, cy float64, teeth int, innerRatio, rotation, smoothing float64) bool {
+	if teeth < 4 {
+		teeth = 4
+	}
+
+	angle := math.Atan2(dy, dx)
+	dist := math.Sqrt(dx*dx + dy*dy)
+	outerRadius := math.Min(cx, cy) * 0.8
+	innerRadius := outerRadius * innerRatio
+
+	// Calculate tooth pattern
+	angleStep := 2 * math.Pi / float64(teeth)
+	rotRad := rotation * math.Pi / 180.0
+	normalizedAngle := math.Mod(angle-rotRad+math.Pi*2, angleStep)
+
+	// Tooth profile: square wave
+	toothHeight := (outerRadius - innerRadius) * 0.3
+	toothWidth := angleStep * 0.4
+
+	var targetRadius float64
+	if normalizedAngle < toothWidth {
+		// On tooth
+		targetRadius = outerRadius
+	} else {
+		// Between teeth
+		targetRadius = outerRadius - toothHeight
+	}
+
+	return dist <= targetRadius && dist >= innerRadius*0.5
+}
+
+// inCrystal checks if a point is inside a crystalline/gem shape.
+func (g *Generator) inCrystal(dx, dy, cx, cy, rotation, smoothing float64) bool {
+	// Rotate point
+	angle := rotation * math.Pi / 180.0
+	rx := dx*math.Cos(angle) - dy*math.Sin(angle)
+	ry := dx*math.Sin(angle) + dy*math.Cos(angle)
+
+	radius := math.Min(cx, cy) * 0.8
+
+	// Crystal is a combination of hexagon top and triangle bottom
+	if ry < 0 {
+		// Bottom half: triangle
+		slope := radius / (radius * 0.6)
+		leftEdge := -slope * (-ry)
+		rightEdge := slope * (-ry)
+		return rx > leftEdge && rx < rightEdge && ry > -radius*0.8
+	}
+
+	// Top half: narrower hexagon
+	hexWidth := radius * (1.0 - ry/(radius*1.2))
+	return math.Abs(rx) < hexWidth && ry < radius*0.4
+}
+
+// inLightning checks if a point is inside a lightning bolt shape.
+func (g *Generator) inLightning(dx, dy, cx, cy float64, seed int64, smoothing float64) bool {
+	radius := math.Min(cx, cy) * 0.8
+
+	// Lightning bolt is a zigzag pattern
+	// Vertical main bolt with horizontal branches
+
+	// Main vertical bolt
+	boltWidth := radius * 0.15
+	if math.Abs(dx) < boltWidth && math.Abs(dy) < radius {
+		return true
+	}
+
+	// Zigzag pattern using seed for determinism
+	segments := 4
+	segmentHeight := radius * 2 / float64(segments)
+
+	for i := 0; i < segments; i++ {
+		segmentY := -radius + float64(i)*segmentHeight
+		if dy > segmentY && dy < segmentY+segmentHeight {
+			// Zigzag offset based on segment
+			zigzagOffset := radius * 0.3 * float64((i%2)*2-1)
+			if math.Abs(dx-zigzagOffset) < boltWidth*1.5 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// inWave checks if a point is inside a wave shape.
+func (g *Generator) inWave(dx, dy, cx, cy float64, seed int64, smoothing float64) bool {
+	radius := math.Min(cx, cy) * 0.8
+
+	// Sine wave pattern
+	frequency := 2.0
+	amplitude := radius * 0.4
+	thickness := radius * 0.15
+
+	// Calculate wave Y position
+	waveY := amplitude * math.Sin(frequency*dx/radius)
+
+	// Check if point is within thickness of wave
+	return math.Abs(dy-waveY) < thickness && math.Abs(dx) < radius
+}
+
+// inSpiral checks if a point is inside a spiral shape.
+func (g *Generator) inSpiral(dx, dy, cx, cy float64, seed int64, smoothing float64) bool {
+	angle := math.Atan2(dy, dx)
+	dist := math.Sqrt(dx*dx + dy*dy)
+	maxRadius := math.Min(cx, cy) * 0.8
+
+	// Archimedean spiral: r = a + b*theta
+	turns := 3.0
+	spiralRadius := (angle + math.Pi) / (2 * math.Pi * turns) * maxRadius
+
+	thickness := maxRadius * 0.1
+
+	// Check if point is on spiral path
+	diff := math.Abs(dist - spiralRadius)
+	return diff < thickness && dist < maxRadius
+}
+
+// inOrganic checks if a point is inside an organic blob shape.
+func (g *Generator) inOrganic(dx, dy, cx, cy float64, seed int64, smoothing float64) bool {
+	angle := math.Atan2(dy, dx)
+	dist := math.Sqrt(dx*dx + dy*dy)
+	baseRadius := math.Min(cx, cy) * 0.7
+
+	// Use seed to create deterministic noise
+	// Simple pseudo-random based on angle
+	noise := math.Sin(float64(seed)*0.001+angle*5.0) * 0.3
+	noise += math.Sin(float64(seed)*0.002+angle*3.0) * 0.2
+	noise += math.Sin(float64(seed)*0.003+angle*7.0) * 0.1
+
+	// Modulate radius with noise
+	targetRadius := baseRadius * (1.0 + noise)
+
+	if smoothing == 0 {
+		return dist <= targetRadius
+	}
+
+	// Smooth edge
+	edge := targetRadius * (1.0 - smoothing)
+	if dist < edge {
+		return true
+	}
+	if dist > targetRadius {
+		return false
+	}
+	return (dist-edge)/(targetRadius-edge) < 0.5
 }

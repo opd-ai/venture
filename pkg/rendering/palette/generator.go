@@ -28,6 +28,11 @@ func NewGenerator() *Generator {
 
 // Generate creates a palette for the given genre ID and seed.
 func (g *Generator) Generate(genreID string, seed int64) (*Palette, error) {
+	return g.GenerateWithOptions(genreID, seed, DefaultOptions())
+}
+
+// GenerateWithOptions creates a palette with specific generation options.
+func (g *Generator) GenerateWithOptions(genreID string, seed int64, opts GenerationOptions) (*Palette, error) {
 	genre, err := g.registry.Get(genreID)
 	if err != nil {
 		return nil, err
@@ -38,7 +43,7 @@ func (g *Generator) Generate(genreID string, seed int64) (*Palette, error) {
 	rng := rand.New(rand.NewSource(paletteSeed))
 
 	scheme := g.getSchemeForGenre(genre)
-	return g.generateFromScheme(scheme, rng), nil
+	return g.generateFromScheme(scheme, rng, opts), nil
 }
 
 // getSchemeForGenre returns the appropriate color scheme for a genre.
@@ -103,28 +108,47 @@ func (g *Generator) getSchemeForGenre(genre *genre.Genre) ColorScheme {
 }
 
 // generateFromScheme creates a palette from a color scheme and RNG.
-func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand) *Palette {
+func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand, opts GenerationOptions) *Palette {
+	// Adjust scheme based on mood
+	scheme = g.applyMood(scheme, opts.Mood)
+
+	// Adjust scheme based on rarity
+	scheme = g.applyRarity(scheme, opts.Rarity)
+
 	palette := &Palette{
-		Colors: make([]color.Color, 8),
+		Colors: make([]color.Color, max(opts.MinColors, 12)),
 	}
 
-	// Generate primary color
+	// Generate colors based on harmony type
+	baseHue := scheme.BaseHue
+	harmonyHues := g.getHarmonyHues(baseHue, opts.Harmony)
+
+	// GAP-019 REPAIR: Add hue variation to primary color for entity diversity
+	// Use HueVariation to create different colored entities within the genre theme
+	primaryHueOffset := (rng.Float64()*2 - 1) * scheme.HueVariation // -HueVariation to +HueVariation
+	primaryHue := math.Mod(baseHue+primaryHueOffset, 360)
+	if primaryHue < 0 {
+		primaryHue += 360
+	}
+
+	// Generate primary color with variation
 	palette.Primary = hslToColor(
-		scheme.BaseHue,
-		scheme.Saturation,
-		scheme.Lightness,
+		primaryHue,
+		clamp(scheme.Saturation+rng.Float64()*scheme.SaturationVariation-scheme.SaturationVariation/2, 0, 1),
+		clamp(scheme.Lightness+rng.Float64()*scheme.LightnessVariation-scheme.LightnessVariation/2, 0, 1),
 	)
 
-	// Generate secondary color (complementary hue)
+	// Generate secondary color based on harmony
+	secondaryHue := harmonyHues[min(1, len(harmonyHues)-1)]
 	palette.Secondary = hslToColor(
-		math.Mod(scheme.BaseHue+180+rng.Float64()*scheme.HueVariation-scheme.HueVariation/2, 360),
+		secondaryHue,
 		clamp(scheme.Saturation+rng.Float64()*scheme.SaturationVariation-scheme.SaturationVariation/2, 0, 1),
 		clamp(scheme.Lightness+rng.Float64()*scheme.LightnessVariation-scheme.LightnessVariation/2, 0, 1),
 	)
 
 	// Generate background (darker version of base)
 	palette.Background = hslToColor(
-		scheme.BaseHue,
+		baseHue,
 		scheme.Saturation*0.3,
 		scheme.Lightness*0.2,
 	)
@@ -136,28 +160,74 @@ func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand) *Pale
 		palette.Text = color.RGBA{R: 20, G: 20, B: 20, A: 255}
 	}
 
-	// Generate accent colors
+	// Generate accent colors from harmony hues
 	palette.Accent1 = hslToColor(
-		math.Mod(scheme.BaseHue+120, 360),
+		harmonyHues[min(1, len(harmonyHues)-1)],
 		scheme.Saturation*0.8,
 		scheme.Lightness*1.1,
 	)
 
 	palette.Accent2 = hslToColor(
-		math.Mod(scheme.BaseHue+240, 360),
+		harmonyHues[min(2, len(harmonyHues)-1)],
 		scheme.Saturation*0.9,
 		scheme.Lightness*0.9,
 	)
 
-	// Generate danger color (red tint)
+	palette.Accent3 = hslToColor(
+		harmonyHues[min(3, len(harmonyHues)-1)],
+		scheme.Saturation*0.85,
+		scheme.Lightness*1.05,
+	)
+
+	// Generate highlight colors (brighter versions)
+	palette.Highlight1 = hslToColor(
+		baseHue,
+		scheme.Saturation*0.6,
+		clamp(scheme.Lightness*1.4, 0, 0.9),
+	)
+
+	palette.Highlight2 = hslToColor(
+		harmonyHues[min(1, len(harmonyHues)-1)],
+		scheme.Saturation*0.5,
+		clamp(scheme.Lightness*1.5, 0, 0.95),
+	)
+
+	// Generate shadow colors (darker versions)
+	palette.Shadow1 = hslToColor(
+		baseHue,
+		scheme.Saturation*0.4,
+		scheme.Lightness*0.3,
+	)
+
+	palette.Shadow2 = hslToColor(
+		harmonyHues[min(1, len(harmonyHues)-1)],
+		scheme.Saturation*0.3,
+		scheme.Lightness*0.25,
+	)
+
+	// Generate neutral color (desaturated)
+	palette.Neutral = hslToColor(
+		baseHue,
+		scheme.Saturation*0.15,
+		scheme.Lightness*0.6,
+	)
+
+	// Generate UI feedback colors
 	palette.Danger = hslToColor(0, 0.8, 0.5)
-
-	// Generate success color (green tint)
 	palette.Success = hslToColor(120, 0.7, 0.5)
+	palette.Warning = hslToColor(45, 0.9, 0.55)
+	palette.Info = hslToColor(200, 0.75, 0.5)
 
-	// Generate additional colors for variety
-	for i := 0; i < 8; i++ {
-		hue := math.Mod(scheme.BaseHue+float64(i)*45+rng.Float64()*scheme.HueVariation, 360)
+	// Generate additional colors for variety using harmony hues
+	minColors := max(opts.MinColors, 12)
+	for i := 0; i < minColors; i++ {
+		hueIdx := i % len(harmonyHues)
+		hue := harmonyHues[hueIdx]
+
+		// Add slight variation to each color
+		hueVariation := rng.Float64()*scheme.HueVariation - scheme.HueVariation/2
+		hue = math.Mod(hue+hueVariation, 360)
+
 		sat := clamp(scheme.Saturation+rng.Float64()*scheme.SaturationVariation-scheme.SaturationVariation/2, 0, 1)
 		light := clamp(scheme.Lightness+rng.Float64()*scheme.LightnessVariation-scheme.LightnessVariation/2, 0.2, 0.8)
 		palette.Colors[i] = hslToColor(hue, sat, light)
@@ -226,4 +296,133 @@ func clamp(value, min, max float64) float64 {
 		return max
 	}
 	return value
+}
+
+// max returns the maximum of two integers.
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// min returns the minimum of two integers.
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// getHarmonyHues returns hues based on harmony type.
+func (g *Generator) getHarmonyHues(baseHue float64, harmony HarmonyType) []float64 {
+	switch harmony {
+	case HarmonyComplementary:
+		// Base + opposite (180°)
+		return []float64{
+			baseHue,
+			math.Mod(baseHue+180, 360),
+		}
+	case HarmonyAnalogous:
+		// Base + adjacent hues (±30°)
+		return []float64{
+			baseHue,
+			math.Mod(baseHue+30, 360),
+			math.Mod(baseHue-30+360, 360),
+		}
+	case HarmonyTriadic:
+		// Three evenly spaced hues (120° apart)
+		return []float64{
+			baseHue,
+			math.Mod(baseHue+120, 360),
+			math.Mod(baseHue+240, 360),
+		}
+	case HarmonyTetradic:
+		// Four evenly spaced hues (90° apart)
+		return []float64{
+			baseHue,
+			math.Mod(baseHue+90, 360),
+			math.Mod(baseHue+180, 360),
+			math.Mod(baseHue+270, 360),
+		}
+	case HarmonySplitComplementary:
+		// Base + two adjacent to complement (150° and 210°)
+		return []float64{
+			baseHue,
+			math.Mod(baseHue+150, 360),
+			math.Mod(baseHue+210, 360),
+		}
+	case HarmonyMonochromatic:
+		// Single hue with variations in saturation/lightness
+		return []float64{baseHue}
+	default:
+		return []float64{baseHue}
+	}
+}
+
+// applyMood adjusts color scheme based on mood type.
+func (g *Generator) applyMood(scheme ColorScheme, mood MoodType) ColorScheme {
+	adjusted := scheme
+
+	switch mood {
+	case MoodBright:
+		// Increase lightness for cheerful tone
+		adjusted.Lightness = clamp(adjusted.Lightness*1.3, 0, 0.9)
+		adjusted.Saturation = clamp(adjusted.Saturation*1.1, 0, 1)
+	case MoodDark:
+		// Decrease lightness for somber tone
+		adjusted.Lightness = clamp(adjusted.Lightness*0.6, 0.1, 1)
+		adjusted.Saturation = clamp(adjusted.Saturation*0.8, 0, 1)
+	case MoodSaturated:
+		// Increase saturation for intense colors
+		adjusted.Saturation = clamp(adjusted.Saturation*1.4, 0, 1)
+	case MoodMuted:
+		// Decrease saturation for subdued colors
+		adjusted.Saturation = clamp(adjusted.Saturation*0.5, 0, 1)
+	case MoodVibrant:
+		// Maximize saturation and optimize lightness
+		adjusted.Saturation = clamp(adjusted.Saturation*1.5, 0, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.2, 0, 0.7)
+	case MoodPastel:
+		// High lightness with low saturation
+		adjusted.Lightness = clamp(adjusted.Lightness*1.5, 0.7, 0.95)
+		adjusted.Saturation = clamp(adjusted.Saturation*0.4, 0, 0.5)
+	case MoodNormal:
+		// No adjustments
+	}
+
+	return adjusted
+}
+
+// applyRarity adjusts color scheme based on rarity tier.
+func (g *Generator) applyRarity(scheme ColorScheme, rarity Rarity) ColorScheme {
+	adjusted := scheme
+
+	switch rarity {
+	case RarityCommon:
+		// Muted, standard colors
+		adjusted.Saturation = clamp(adjusted.Saturation*0.8, 0, 1)
+	case RarityUncommon:
+		// Slightly enhanced colors
+		adjusted.Saturation = clamp(adjusted.Saturation*1.0, 0, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.05, 0, 1)
+	case RarityRare:
+		// Vibrant, saturated colors
+		adjusted.Saturation = clamp(adjusted.Saturation*1.3, 0, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.1, 0, 1)
+	case RarityEpic:
+		// Intense colors with higher contrast
+		adjusted.Saturation = clamp(adjusted.Saturation*1.5, 0, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.15, 0, 0.85)
+		adjusted.LightnessVariation *= 1.3
+	case RarityLegendary:
+		// Extraordinary colors with maximum impact
+		adjusted.Saturation = clamp(adjusted.Saturation*1.7, 0, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.2, 0, 0.8)
+		adjusted.HueVariation *= 1.5
+		adjusted.SaturationVariation *= 1.4
+		adjusted.LightnessVariation *= 1.5
+	}
+
+	return adjusted
 }

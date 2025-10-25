@@ -30,6 +30,11 @@ func NewGenerator() *Generator {
 	}
 }
 
+// GetPaletteGenerator returns the palette generator.
+func (g *Generator) GetPaletteGenerator() *palette.Generator {
+	return g.paletteGen
+}
+
 // Generate creates a sprite from the configuration.
 func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
 	// Generate palette if not provided

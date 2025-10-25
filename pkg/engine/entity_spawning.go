@@ -162,11 +162,23 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 				OffsetY:   -enemySize / 2,
 			})
 
-			// Visual sprite (procedurally generated)
-			spriteColor := getEnemyColor(genEntity)
-			sprite := NewSpriteComponent(enemySize, enemySize, spriteColor)
-			sprite.Layer = 5 // Enemies drawn below player (layer 10)
-			enemy.AddComponent(sprite)
+			// Visual sprite (procedurally generated, animated)
+			enemySprite := &EbitenSprite{
+				Width:   enemySize,
+				Height:  enemySize,
+				Visible: true,
+				Layer:   5, // Enemies drawn below player (layer 10)
+			}
+			enemy.AddComponent(enemySprite)
+
+			// GAP-018 REPAIR: Add animation component for enemy animations
+			enemyAnim := NewAnimationComponent(seed + int64(enemy.ID))
+			enemyAnim.CurrentState = AnimationStateIdle
+			enemyAnim.FrameTime = 0.2 // Slightly slower than player (~5 FPS)
+			enemyAnim.Loop = true
+			enemyAnim.Playing = true
+			enemyAnim.FrameCount = 4
+			enemy.AddComponent(enemyAnim)
 
 			// GAP-012 REPAIR: Add visual feedback for hit flash
 			enemy.AddComponent(NewVisualFeedbackComponent())
@@ -261,11 +273,23 @@ func SpawnEnemyFromTemplate(world *World, genEntity *entity.Entity, x, y float64
 		OffsetY:   -enemySize / 2,
 	})
 
-	// Sprite
-	spriteColor := getEnemyColor(genEntity)
-	sprite := NewSpriteComponent(enemySize, enemySize, spriteColor)
-	sprite.Layer = 5
-	enemy.AddComponent(sprite)
+	// Sprite (animated)
+	enemySprite := &EbitenSprite{
+		Width:   enemySize,
+		Height:  enemySize,
+		Visible: true,
+		Layer:   5,
+	}
+	enemy.AddComponent(enemySprite)
+
+	// Animation
+	enemyAnim := NewAnimationComponent(12345 + int64(enemy.ID))
+	enemyAnim.CurrentState = AnimationStateIdle
+	enemyAnim.FrameTime = 0.2
+	enemyAnim.Loop = true
+	enemyAnim.Playing = true
+	enemyAnim.FrameCount = 4
+	enemy.AddComponent(enemyAnim)
 
 	return enemy
 }

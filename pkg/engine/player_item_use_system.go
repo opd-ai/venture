@@ -29,10 +29,13 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		input := inputComp.(*EbitenInput)
+		input, ok := inputComp.(InputProvider)
+		if !ok {
+			continue // Not an InputProvider
+		}
 
 		// Check if player pressed use item button
-		if !input.UseItemPressed {
+		if !input.IsUseItemPressed() {
 			continue
 		}
 
@@ -50,7 +53,7 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		if selectedIndex == -1 {
 			// No usable item found
 			log.Println("No usable items in inventory")
-			input.UseItemPressed = false
+			// Note: Input flag will be cleared by InputSystem on next frame
 			continue
 		}
 
@@ -68,8 +71,7 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 			log.Printf("Failed to use item: %v", err)
 		}
 
-		// Consume the input so it doesn't trigger multiple times
-		input.UseItemPressed = false
+		// Note: Input flag will be cleared by InputSystem on next frame
 	}
 }
 

@@ -1,0 +1,252 @@
+//go:build !test
+// +build !test
+
+// Package engine provides equipment visual system for updating equipment layers on sprites.
+package engine
+
+import (
+	"fmt"
+
+	"github.com/opd-ai/venture/pkg/rendering/sprites"
+)
+
+// EquipmentVisualSystem updates equipment visual components and regenerates equipment layers.
+type EquipmentVisualSystem struct {
+	spriteGenerator *sprites.Generator
+}
+
+// NewEquipmentVisualSystem creates a new equipment visual system.
+func NewEquipmentVisualSystem(spriteGenerator *sprites.Generator) *EquipmentVisualSystem {
+	return &EquipmentVisualSystem{
+		spriteGenerator: spriteGenerator,
+	}
+}
+
+// Update processes all entities with equipment visual components.
+func (s *EquipmentVisualSystem) Update(entities []*Entity, deltaTime float64) error {
+	for _, entity := range entities {
+		equipComp := s.getEquipmentVisualComponent(entity)
+		if equipComp == nil {
+			continue
+		}
+
+		// Skip if not dirty
+		if !equipComp.Dirty {
+			continue
+		}
+
+		// Get sprite component for base configuration
+		spriteComp := s.getSpriteComponent(entity)
+		if spriteComp == nil {
+			continue
+		}
+
+		// Regenerate equipment layers
+		if err := s.regenerateEquipmentLayers(entity, equipComp, spriteComp); err != nil {
+			return fmt.Errorf("failed to regenerate equipment layers: %w", err)
+		}
+
+		// Mark as clean
+		equipComp.MarkClean()
+	}
+
+	return nil
+}
+
+// regenerateEquipmentLayers creates new equipment visual layers.
+func (s *EquipmentVisualSystem) regenerateEquipmentLayers(entity *Entity, equipComp *EquipmentVisualComponent, spriteComp *EbitenSprite) error {
+	// Build composite config
+	compositeConfig := s.buildCompositeConfig(entity, equipComp, spriteComp)
+
+	// Generate composite sprite
+	compositeImg, err := s.spriteGenerator.GenerateComposite(compositeConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate composite: %w", err)
+	}
+
+	// Update sprite component with composite image
+	spriteComp.Image = compositeImg
+
+	return nil
+}
+
+// buildCompositeConfig creates a composite configuration from components.
+func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *EquipmentVisualComponent, spriteComp *EbitenSprite) sprites.CompositeConfig {
+	// Get or create palette
+	entitySeed := s.getEntitySeed(entity)
+	genreID := s.getGenreID(entity)
+
+	// Generate palette for base config
+	pal, err := s.spriteGenerator.GetPaletteGenerator().Generate(genreID, entitySeed)
+	if err != nil {
+		// Fallback to default palette if generation fails
+		pal = nil
+	}
+
+	// Base sprite config
+	baseConfig := sprites.Config{
+		Type:       sprites.SpriteEntity,
+		Width:      int(spriteComp.Width),
+		Height:     int(spriteComp.Height),
+		Seed:       entitySeed,
+		Complexity: 0.5,
+		GenreID:    genreID,
+		Palette:    pal,
+	}
+
+	// Build layers (always include body)
+	layers := []sprites.LayerConfig{
+		{
+			Type:      sprites.LayerBody,
+			ZIndex:    10,
+			OffsetX:   0,
+			OffsetY:   0,
+			Scale:     1.0,
+			Visible:   true,
+			Seed:      baseConfig.Seed,
+			ShapeType: 0, // Circle
+		},
+		{
+			Type:      sprites.LayerHead,
+			ZIndex:    20,
+			OffsetX:   0,
+			OffsetY:   -8,
+			Scale:     1.0,
+			Visible:   true,
+			Seed:      baseConfig.Seed + 1,
+			ShapeType: 0, // Circle
+		},
+	}
+
+	// Build equipment visuals
+	equipment := make([]sprites.EquipmentVisual, 0)
+
+	if equipComp.HasWeapon() && equipComp.ShowWeapon {
+		equipment = append(equipment, sprites.EquipmentVisual{
+			Slot:   "weapon",
+			ItemID: equipComp.WeaponID,
+			Seed:   equipComp.WeaponSeed,
+			Layer:  sprites.LayerWeapon,
+			Params: make(map[string]interface{}),
+		})
+	}
+
+	if equipComp.HasArmor() && equipComp.ShowArmor {
+		equipment = append(equipment, sprites.EquipmentVisual{
+			Slot:   "armor",
+			ItemID: equipComp.ArmorID,
+			Seed:   equipComp.ArmorSeed,
+			Layer:  sprites.LayerArmor,
+			Params: make(map[string]interface{}),
+		})
+	}
+
+	if equipComp.HasAccessories() && equipComp.ShowAccessories {
+		for i, accessoryID := range equipComp.AccessoryIDs {
+			equipment = append(equipment, sprites.EquipmentVisual{
+				Slot:   "accessory",
+				ItemID: accessoryID,
+				Seed:   equipComp.AccessorySeeds[i],
+				Layer:  sprites.LayerAccessory,
+				Params: make(map[string]interface{}),
+			})
+		}
+	}
+
+	// Get status effects if available
+	statusEffects := s.getStatusEffects(entity)
+
+	return sprites.CompositeConfig{
+		BaseConfig:    baseConfig,
+		Layers:        layers,
+		Equipment:     equipment,
+		StatusEffects: statusEffects,
+	}
+}
+
+// getEntitySeed gets a deterministic seed for the entity.
+func (s *EquipmentVisualSystem) getEntitySeed(entity *Entity) int64 {
+	// Use entity ID as base seed
+	return int64(entity.ID)
+}
+
+// getGenreID gets the genre ID for the entity.
+func (s *EquipmentVisualSystem) getGenreID(entity *Entity) string {
+	// Try to get genre from entity component
+	// For now, return default fantasy genre
+	// TODO: Add genre component when implemented
+	return "fantasy"
+}
+
+// getStatusEffects extracts status effects from entity components.
+func (s *EquipmentVisualSystem) getStatusEffects(entity *Entity) []sprites.StatusEffect {
+	effects := make([]sprites.StatusEffect, 0)
+
+	// Check for status effect component (if it exists in the future)
+	// For now, return empty list
+	// TODO: Implement when StatusEffectComponent is added
+
+	return effects
+}
+
+// Helper methods
+
+func (s *EquipmentVisualSystem) getEquipmentVisualComponent(entity *Entity) *EquipmentVisualComponent {
+	comp, ok := entity.GetComponent("equipment_visual")
+	if !ok || comp == nil {
+		return nil
+	}
+	equipComp, ok := comp.(*EquipmentVisualComponent)
+	if !ok {
+		return nil
+	}
+	return equipComp
+}
+
+func (s *EquipmentVisualSystem) getSpriteComponent(entity *Entity) *EbitenSprite {
+	comp, ok := entity.GetComponent("sprite")
+	if !ok || comp == nil {
+		return nil
+	}
+	spriteComp, ok := comp.(*EbitenSprite)
+	if !ok {
+		return nil
+	}
+	return spriteComp
+}
+
+// EquipItem updates equipment visuals when an item is equipped.
+func (s *EquipmentVisualSystem) EquipItem(entity *Entity, slot, itemID string, seed int64) {
+	equipComp := s.getEquipmentVisualComponent(entity)
+	if equipComp == nil {
+		// Create component if it doesn't exist
+		equipComp = NewEquipmentVisualComponent()
+		entity.AddComponent(equipComp)
+	}
+
+	switch slot {
+	case "weapon":
+		equipComp.SetWeapon(itemID, seed)
+	case "armor":
+		equipComp.SetArmor(itemID, seed)
+	case "accessory":
+		equipComp.AddAccessory(itemID, seed)
+	}
+}
+
+// UnequipItem removes equipment visuals when an item is unequipped.
+func (s *EquipmentVisualSystem) UnequipItem(entity *Entity, slot string) {
+	equipComp := s.getEquipmentVisualComponent(entity)
+	if equipComp == nil {
+		return
+	}
+
+	switch slot {
+	case "weapon":
+		equipComp.ClearWeapon()
+	case "armor":
+		equipComp.ClearArmor()
+	case "accessories":
+		equipComp.ClearAccessories()
+	}
+}

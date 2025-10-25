@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 // Package engine provides integration tests for movement and collision systems.
 // This file tests the critical interaction between MovementSystem and CollisionSystem,
 // particularly the prevention of movement through walls.

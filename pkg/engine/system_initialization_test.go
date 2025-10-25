@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 // Package engine provides tests for proper system initialization.
 // This file tests that systems are correctly initialized with required
 // parameters and validates against common initialization errors.

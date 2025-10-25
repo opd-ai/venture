@@ -101,3 +101,123 @@ type Sprite struct {
 	Width  int
 	Height int
 }
+
+// LayerType represents different sprite layers for composition.
+type LayerType int
+
+const (
+	// LayerBody is the main body layer
+	LayerBody LayerType = iota
+	// LayerHead is the head/face layer
+	LayerHead
+	// LayerLegs is the legs/lower body layer
+	LayerLegs
+	// LayerWeapon is the weapon layer
+	LayerWeapon
+	// LayerArmor is the armor/clothing layer
+	LayerArmor
+	// LayerAccessory is accessories (hat, cape, etc.)
+	LayerAccessory
+	// LayerEffect is status effects overlay
+	LayerEffect
+)
+
+// String returns the string representation of a layer type.
+func (l LayerType) String() string {
+	switch l {
+	case LayerBody:
+		return "body"
+	case LayerHead:
+		return "head"
+	case LayerLegs:
+		return "legs"
+	case LayerWeapon:
+		return "weapon"
+	case LayerArmor:
+		return "armor"
+	case LayerAccessory:
+		return "accessory"
+	case LayerEffect:
+		return "effect"
+	default:
+		return "unknown"
+	}
+}
+
+// LayerConfig defines a single layer in a composite sprite.
+type LayerConfig struct {
+	// Type of layer
+	Type LayerType
+
+	// Z-index for rendering order (higher = drawn on top)
+	ZIndex int
+
+	// Offset from base position
+	OffsetX, OffsetY float64
+
+	// Scale factor (1.0 = normal size)
+	Scale float64
+
+	// Color tint (nil = no tint)
+	ColorTint *palette.Palette
+
+	// Visibility flag
+	Visible bool
+
+	// Seed for this layer's generation
+	Seed int64
+
+	// Shape type for this layer (if applicable)
+	ShapeType shapes.ShapeType
+}
+
+// CompositeConfig contains parameters for multi-layer sprite composition.
+type CompositeConfig struct {
+	// Base configuration
+	BaseConfig Config
+
+	// Layers to composite (rendered in order of ZIndex)
+	Layers []LayerConfig
+
+	// Equipment visuals
+	Equipment []EquipmentVisual
+
+	// Status effects to overlay
+	StatusEffects []StatusEffect
+}
+
+// EquipmentVisual represents visual properties of equipped items.
+type EquipmentVisual struct {
+	// Slot type (weapon, armor, accessory)
+	Slot string
+
+	// Item ID for deterministic generation
+	ItemID string
+
+	// Seed for visual generation
+	Seed int64
+
+	// Layer to render on
+	Layer LayerType
+
+	// Custom visual parameters
+	Params map[string]interface{}
+}
+
+// StatusEffect represents a visual status effect overlay.
+type StatusEffect struct {
+	// Effect type (burning, frozen, poisoned, etc.)
+	Type string
+
+	// Intensity (0.0-1.0)
+	Intensity float64
+
+	// Color for the effect
+	Color string
+
+	// Animation speed modifier
+	AnimSpeed float64
+
+	// Particle count for effect
+	ParticleCount int
+}

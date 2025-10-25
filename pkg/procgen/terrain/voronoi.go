@@ -221,7 +221,7 @@ func (vd *VoronoiDiagram) GetRegionBounds(regionID int) (minX, minY, maxX, maxY 
 
 // ExpandBoundaryZone expands the boundary tiles by the specified radius.
 // This creates a transition zone around region boundaries.
-func ExpandBoundaryZone(boundaries []Point, radius int, width, height int) []Point {
+func ExpandBoundaryZone(boundaries []Point, radius, width, height int) []Point {
 	zone := make(map[Point]bool)
 
 	// Add original boundaries

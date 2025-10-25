@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 // Package engine provides tests for GAP-001, GAP-002, GAP-003, GAP-005, GAP-006 fixes
 // This file tests the tutorial system repairs for space bar detection, input persistence,
 // save/load state, "press any key" detection, and public API.
@@ -18,9 +15,8 @@ func TestGAP001_TutorialSpaceBarDetection(t *testing.T) {
 
 	// Create player entity with input component
 	player := NewEntity(1)
-	input := &InputComponent{
-		AnyKeyPressed: false,
-	}
+	input := NewStubInput()
+	input.AnyKeyPressed = false
 	player.AddComponent(input)
 	world.AddEntity(player)
 	world.Update(0.016) // Process pending additions
@@ -70,7 +66,7 @@ func TestGAP001_TutorialSpaceBarDetection(t *testing.T) {
 // TestGAP002_InputFramePersistence tests that input flags persist for entire frame
 // GAP-002 REPAIR: ActionJustPressed separate from ActionPressed for multi-system use
 func TestGAP002_InputFramePersistence(t *testing.T) {
-	input := &InputComponent{}
+	input := NewStubInput()
 
 	// Simulate input system setting flags (what would happen in processInput)
 	input.ActionPressed = true     // For immediate consumption by combat system
@@ -181,7 +177,7 @@ func TestGAP005_AnyKeyDetection(t *testing.T) {
 
 	// Create player entity with input component
 	player := NewEntity(1)
-	input := &InputComponent{}
+	input := NewStubInput()
 	player.AddComponent(input)
 	world.AddEntity(player)
 	world.Update(0.016)
@@ -213,12 +209,12 @@ func TestGAP005_MultipleKeyTypes(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		keySimulator func(*InputComponent)
+		keySimulator func(*StubInput)
 		description  string
 	}{
 		{
 			name: "action_key",
-			keySimulator: func(input *InputComponent) {
+			keySimulator: func(input *StubInput) {
 				input.ActionJustPressed = true
 				input.AnyKeyPressed = true
 			},
@@ -226,7 +222,7 @@ func TestGAP005_MultipleKeyTypes(t *testing.T) {
 		},
 		{
 			name: "movement_key",
-			keySimulator: func(input *InputComponent) {
+			keySimulator: func(input *StubInput) {
 				input.MoveX = -1.0
 				input.AnyKeyPressed = true
 			},
@@ -234,7 +230,7 @@ func TestGAP005_MultipleKeyTypes(t *testing.T) {
 		},
 		{
 			name: "spell_key",
-			keySimulator: func(input *InputComponent) {
+			keySimulator: func(input *StubInput) {
 				input.Spell1Pressed = true
 				input.AnyKeyPressed = true
 			},
@@ -244,7 +240,7 @@ func TestGAP005_MultipleKeyTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			input := &InputComponent{}
+			input := NewStubInput()
 			tc.keySimulator(input)
 
 			if !input.AnyKeyPressed {
@@ -361,7 +357,7 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 	world := NewWorld()
 
 	player := NewEntity(1)
-	input := &InputComponent{}
+	input := NewStubInput()
 	player.AddComponent(input)
 	player.AddComponent(&PositionComponent{X: 400, Y: 300})
 	world.AddEntity(player)
@@ -374,6 +370,7 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 		t.Fatal("Should start on welcome step")
 	}
 
+	// Simulate key press using any key flag (proper interface usage)
 	input.AnyKeyPressed = true
 	ts.Update(entities, 0.016)
 
@@ -407,7 +404,7 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 // TestRegression_ActionPressedConsumption tests that ActionPressed is still consumed
 // Ensures GAP-001/002 fix doesn't break existing combat system behavior
 func TestRegression_ActionPressedConsumption(t *testing.T) {
-	input := &InputComponent{}
+	input := NewStubInput()
 
 	// Simulate input system detecting space bar press
 	input.ActionPressed = true
@@ -436,7 +433,7 @@ func Benchmark_TutorialUpdate(b *testing.B) {
 	world := NewWorld()
 
 	player := NewEntity(1)
-	player.AddComponent(&InputComponent{})
+	player.AddComponent(NewStubInput())
 	player.AddComponent(&PositionComponent{X: 400, Y: 300})
 	world.AddEntity(player)
 	world.Update(0.016)

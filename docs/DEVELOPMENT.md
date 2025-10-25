@@ -30,7 +30,7 @@ cd venture
 go mod download
 
 # Verify setup by running tests
-go test -tags test ./pkg/...
+go test ./pkg/...
 
 # Build the project
 go build ./cmd/client
@@ -80,25 +80,25 @@ go build -ldflags="-s -w" ./cmd/server
 ### 2. Testing
 
 ```bash
-# Run all package tests (excludes Ebiten initialization)
-go test -tags test ./pkg/...
+# Run all package tests
+go test ./pkg/...
 
 # Run tests with coverage
-go test -tags test -cover ./pkg/...
+go test -cover ./pkg/...
 
 # Run tests with race detection
-go test -tags test -race ./pkg/...
+go test -race ./pkg/...
 
 # Run specific package tests
-go test -tags test ./pkg/engine
-go test -tags test ./pkg/procgen
+go test ./pkg/engine
+go test ./pkg/procgen
 
 # Generate coverage report
-go test -tags test -coverprofile=coverage.out ./pkg/...
+go test -coverprofile=coverage.out ./pkg/...
 go tool cover -html=coverage.out
 ```
 
-**Note:** Tests use the `-tags test` flag to exclude Ebiten initialization which requires a display. This allows running tests in CI/headless environments.
+**Note:** Tests use interface-based dependency injection with stub implementations (StubInput, StubSprite, etc.) instead of production Ebiten types, enabling testing without display requirements in CI/headless environments.
 
 ### 3. Running
 
@@ -133,11 +133,11 @@ staticcheck ./...
 
 ```bash
 # CPU profiling
-go test -tags test -cpuprofile=cpu.prof -bench=. ./pkg/engine
+go test -cpuprofile=cpu.prof -bench=. ./pkg/engine
 go tool pprof cpu.prof
 
 # Memory profiling
-go test -tags test -memprofile=mem.prof -bench=. ./pkg/engine
+go test -memprofile=mem.prof -bench=. ./pkg/engine
 go tool pprof mem.prof
 
 # Profile running application
@@ -397,12 +397,12 @@ func TestDeterministicGeneration(t *testing.T) {
 ### Common Issues
 
 **"undefined: engine.NewGame" when testing:**
-- Use `-tags test` flag: `go test -tags test ./...`
-- The `NewGame` function requires Ebiten and is excluded from tests
+- Tests use interface-based dependency injection with stub implementations
+- The `NewGame` function requires Ebiten and is used only in production code
 
 **"DISPLAY environment variable missing":**
-- Tests requiring display are automatically skipped in headless environments
-- Build tags prevent Ebiten initialization during tests
+- Tests use stub implementations (StubInput, StubSprite) that don't require a display
+- No Ebiten initialization occurs during testing
 
 **Build fails on Linux:**
 - Install required X11 development libraries (see Prerequisites)
@@ -411,13 +411,13 @@ func TestDeterministicGeneration(t *testing.T) {
 
 ```bash
 # Print variables during test
-go test -tags test -v ./pkg/engine
+go test -v ./pkg/engine
 
 # Run with delve debugger
-dlv test -- -tags test ./pkg/engine
+dlv test ./pkg/engine
 
 # Trace execution
-go test -tags test -trace trace.out ./pkg/engine
+go test -trace trace.out ./pkg/engine
 go tool trace trace.out
 ```
 
@@ -429,7 +429,7 @@ Quick workflow:
 
 1. **Create a feature branch:** `git checkout -b feature/my-feature`
 2. **Make changes following code standards**
-3. **Test thoroughly:** `go test -tags test ./...` and `go test -tags test -race ./...`
+3. **Test thoroughly:** `go test ./...` and `go test -race ./...`
 4. **Commit with descriptive messages:** `git commit -m "Add feature"`
 5. **Push and create pull request**
 
@@ -455,7 +455,7 @@ Quick workflow:
 ## Release Process
 
 1. **Version bump:** Update version in code
-2. **Run full test suite:** `go test -tags test ./...`
+2. **Run full test suite:** `go test ./...`
 3. **Build release binaries:**
    ```bash
    GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o venture-client-linux ./cmd/client

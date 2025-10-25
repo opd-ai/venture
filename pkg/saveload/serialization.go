@@ -5,6 +5,28 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 )
 
+// AnimationStateToData converts animation state information to AnimationStateData for serialization.
+// This function takes individual animation state parameters rather than engine.AnimationComponent
+// to avoid import cycles (engine imports saveload).
+func AnimationStateToData(state string, frameIndex uint8, loop bool, lastUpdateTime float64) *AnimationStateData {
+	return &AnimationStateData{
+		State:          state,
+		FrameIndex:     frameIndex,
+		Loop:           loop,
+		LastUpdateTime: lastUpdateTime,
+	}
+}
+
+// DataToAnimationState extracts animation state fields from AnimationStateData.
+// Returns state, frameIndex, loop, lastUpdateTime values.
+// Caller is responsible for applying these to their animation component.
+func DataToAnimationState(data *AnimationStateData) (state string, frameIndex uint8, loop bool, lastUpdateTime float64) {
+	if data == nil {
+		return "idle", 0, true, 0.0
+	}
+	return data.State, data.FrameIndex, data.Loop, data.LastUpdateTime
+}
+
 // ItemToData converts an item.Item to ItemData for serialization.
 func ItemToData(itm *item.Item) ItemData {
 	if itm == nil {

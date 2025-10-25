@@ -1,6 +1,3 @@
-// go:build test
-//go:build test
-
 package terrain
 
 import (

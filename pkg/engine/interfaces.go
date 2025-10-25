@@ -178,6 +178,10 @@ type InputProvider interface {
 	// Used for actions that should trigger once per press (attacks, confirmations)
 	IsActionJustPressed() bool
 
+	// IsAnyKeyPressed returns whether any key was pressed this frame
+	// Used for "press any key to continue" interactions
+	IsAnyKeyPressed() bool
+
 	// IsUseItemPressed returns whether the use item button is currently held down
 	IsUseItemPressed() bool
 

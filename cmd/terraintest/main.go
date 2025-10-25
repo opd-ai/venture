@@ -20,6 +20,7 @@ var (
 	numLevels  = flag.Int("levels", 1, "Number of levels for multilevel generation")
 	showAll    = flag.Bool("showAll", false, "Show all levels (multilevel only)")
 	biomeCount = flag.Int("biomes", 3, "Number of biomes for composite generation (2-4)")
+	genre      = flag.String("genre", "fantasy", "Genre theme: fantasy, scifi, horror, cyberpunk, or postapoc")
 )
 
 func main() {
@@ -27,6 +28,7 @@ func main() {
 
 	log.Printf("Generating terrain using %s algorithm", *algorithm)
 	log.Printf("Size: %dx%d, Seed: %d", *width, *height, *seed)
+	log.Printf("Genre: %s", *genre)
 	if *algorithm == "multilevel" {
 		log.Printf("Levels: %d", *numLevels)
 	}
@@ -60,12 +62,15 @@ func main() {
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
-		GenreID:    "fantasy",
+		GenreID:    *genre,
 		Custom: map[string]interface{}{
 			"width":  *width,
 			"height": *height,
 		},
 	}
+
+	// Apply genre-specific defaults
+	terrain.ApplyGenreDefaults(&params)
 
 	// Add biome count for composite generation
 	if *algorithm == "composite" {
@@ -114,12 +119,15 @@ func generateMultiLevel() {
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
-		GenreID:    "fantasy",
+		GenreID:    *genre,
 		Custom: map[string]interface{}{
 			"width":  *width,
 			"height": *height,
 		},
 	}
+
+	// Apply genre-specific defaults
+	terrain.ApplyGenreDefaults(&params)
 
 	// Generate all levels
 	levels, err := gen.GenerateMultiLevel(*numLevels, *seed, params)

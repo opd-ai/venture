@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package terrain
@@ -157,7 +158,7 @@ func TestCompositeGenerator_Determinism(t *testing.T) {
 	// Check overall structure similarity (tile type distribution should be similar)
 	tileCount1 := make(map[TileType]int)
 	tileCount2 := make(map[TileType]int)
-	
+
 	for y := 0; y < terrain1.Height; y++ {
 		for x := 0; x < terrain1.Width; x++ {
 			tileCount1[terrain1.GetTile(x, y)]++
@@ -173,20 +174,20 @@ func TestCompositeGenerator_Determinism(t *testing.T) {
 		if diff < 0 {
 			diff = -diff
 		}
-		
+
 		// Skip if very low count (transition tiles are inherently variable)
 		if count1 < 50 {
 			continue
 		}
-		
+
 		percentDiff := float64(diff) / float64(count1) * 100
-		
+
 		if percentDiff > 15.0 {
-			t.Errorf("Tile type %v distribution differs by %.1f%%: %d vs %d", 
+			t.Errorf("Tile type %v distribution differs by %.1f%%: %d vs %d",
 				tileType, percentDiff, count1, count2)
 		}
 	}
-	
+
 	// Note: Exact tile-by-tile determinism is hard to achieve with complex
 	// multi-generator systems that use transition blending. This test verifies
 	// that the overall structure and distribution are consistent.
@@ -282,7 +283,7 @@ func TestCompositeGenerator_Validate(t *testing.T) {
 
 func TestVoronoiDiagram_Generation(t *testing.T) {
 	width, height := 100, 80
-	
+
 	tests := []struct {
 		name       string
 		numRegions int

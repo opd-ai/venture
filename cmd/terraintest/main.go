@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	algorithm = flag.String("algorithm", "bsp", "Generation algorithm: bsp, cellular, maze, forest, city, composite, or multilevel")
-	width     = flag.Int("width", 80, "Map width")
-	height    = flag.Int("height", 50, "Map height")
-	seed      = flag.Int64("seed", 12345, "Generation seed")
-	output    = flag.String("output", "", "Output file (leave empty for console)")
-	numLevels = flag.Int("levels", 1, "Number of levels for multilevel generation")
-	showAll   = flag.Bool("showAll", false, "Show all levels (multilevel only)")
+	algorithm  = flag.String("algorithm", "bsp", "Generation algorithm: bsp, cellular, maze, forest, city, composite, or multilevel")
+	width      = flag.Int("width", 80, "Map width")
+	height     = flag.Int("height", 50, "Map height")
+	seed       = flag.Int64("seed", 12345, "Generation seed")
+	output     = flag.String("output", "", "Output file (leave empty for console)")
+	numLevels  = flag.Int("levels", 1, "Number of levels for multilevel generation")
+	showAll    = flag.Bool("showAll", false, "Show all levels (multilevel only)")
 	biomeCount = flag.Int("biomes", 3, "Number of biomes for composite generation (2-4)")
 )
 
@@ -65,6 +65,12 @@ func main() {
 			"width":  *width,
 			"height": *height,
 		},
+	}
+
+	// Add biome count for composite generation
+	if *algorithm == "composite" {
+		params.Custom["biomeCount"] = *biomeCount
+		log.Printf("Biomes: %d", *biomeCount)
 	}
 
 	// Generate terrain

@@ -47,9 +47,9 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 	// Extract custom parameters
 	width := 80
 	height := 50
-	biomeCount := g.biomeCount      // Use local copy
-	transitionWidth := g.transitionWidth  // Use local copy
-	
+	biomeCount := g.biomeCount           // Use local copy
+	transitionWidth := g.transitionWidth // Use local copy
+
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok {
 			width = w
@@ -217,7 +217,7 @@ func (g *CompositeGenerator) generateBiomeRegion(terrain *Terrain, region *Biome
 	if regionHeight < minRegionHeight {
 		regionHeight = minRegionHeight
 	}
-	
+
 	// Never exceed the original terrain dimensions
 	if minX+regionWidth > terrain.Width {
 		regionWidth = terrain.Width - minX
@@ -233,14 +233,14 @@ func (g *CompositeGenerator) generateBiomeRegion(terrain *Terrain, region *Biome
 		GenreID:    params.GenreID,
 		Custom:     make(map[string]interface{}),
 	}
-	
+
 	// Copy original custom params
 	if params.Custom != nil {
 		for k, v := range params.Custom {
 			regionParams.Custom[k] = v
 		}
 	}
-	
+
 	// Override dimensions for this region
 	regionParams.Custom["width"] = regionWidth
 	regionParams.Custom["height"] = regionHeight

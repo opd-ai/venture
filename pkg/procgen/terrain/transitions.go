@@ -252,7 +252,7 @@ func BlendTransitionZones(terrain *Terrain, diagram *VoronoiDiagram, biomeTypes 
 	for pair := range regionPairs {
 		sortedPairs = append(sortedPairs, pair)
 	}
-	
+
 	// Sort by region IDs for consistent ordering
 	for i := 0; i < len(sortedPairs); i++ {
 		for j := i + 1; j < len(sortedPairs); j++ {
@@ -262,7 +262,7 @@ func BlendTransitionZones(terrain *Terrain, diagram *VoronoiDiagram, biomeTypes 
 			}
 		}
 	}
-	
+
 	// Apply transitions in deterministic order
 	for _, pair := range sortedPairs {
 		tiles := regionPairs[pair]

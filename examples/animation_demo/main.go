@@ -20,6 +20,16 @@ const (
 	screenHeight = 480
 )
 
+// animSystemWrapper adapts AnimationSystem to the System interface.
+type animSystemWrapper struct {
+	system *engine.AnimationSystem
+}
+
+// Update calls the underlying AnimationSystem.Update and discards the error.
+func (w *animSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	_ = w.system.Update(entities, deltaTime)
+}
+
 // Game represents the game state for animation demo.
 type Game struct {
 	world         *engine.World
@@ -27,9 +37,10 @@ type Game struct {
 	entities      []*engine.Entity
 	currentEntity int
 	frameCount    int
-}
+	// Wrap animation system to match System interface
+	world.AddSystem(&animSystemWrapper{animSystem})
 
-// NewGame creates a new animation demo game.
+	// Create demo entities with different animation states
 func NewGame() (*Game, error) {
 	// Initialize world and systems
 	world := engine.NewWorld()
@@ -138,10 +149,11 @@ func (g *Game) getNextState(current engine.AnimationState) engine.AnimationState
 		engine.AnimationStateAttack,
 		engine.AnimationStateCast,
 		engine.AnimationStateHit,
-	}
-
-	for i, state := range states {
-		if state == current {
+// Draw renders the game.
+func (g *Game) Draw(screen *ebiten.Image) {
+	// Clear screen
+	bgColor := palette.RGB(20, 20, 30)
+	screen.Fill(bgColor)
 			return states[(i+1)%len(states)]
 		}
 	}

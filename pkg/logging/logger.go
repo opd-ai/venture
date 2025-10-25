@@ -189,3 +189,24 @@ func SaveLoadLogger(logger *logrus.Logger, operation string, path string) *logru
 		"path":      path,
 	})
 }
+
+// TestUtilityLogger creates a logger configured for CLI test utilities.
+// Uses colored text format for better readability in terminal.
+func TestUtilityLogger(utilityName string) *logrus.Logger {
+	config := Config{
+		Level:       InfoLevel,
+		Format:      TextFormat,
+		AddCaller:   false, // Cleaner output for CLI tools
+		EnableColor: true,  // Color for terminal readability
+	}
+
+	// Override from environment if set
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		config.Level = LogLevel(strings.ToLower(level))
+	}
+
+	logger := NewLogger(config)
+	
+	// Add utility name as field for all logs
+	return logger
+}

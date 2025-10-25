@@ -23,6 +23,28 @@ const (
 	ShapeStar
 	// ShapeRing represents a ring/donut shape
 	ShapeRing
+	// ShapeHexagon represents a six-sided hexagon
+	ShapeHexagon
+	// ShapeOctagon represents an eight-sided octagon
+	ShapeOctagon
+	// ShapeCross represents a cross/plus shape
+	ShapeCross
+	// ShapeHeart represents a heart shape
+	ShapeHeart
+	// ShapeCrescent represents a crescent/moon shape
+	ShapeCrescent
+	// ShapeGear represents a mechanical gear shape
+	ShapeGear
+	// ShapeCrystal represents a crystalline/gem shape
+	ShapeCrystal
+	// ShapeLightning represents a lightning bolt shape
+	ShapeLightning
+	// ShapeWave represents a sine wave shape
+	ShapeWave
+	// ShapeSpiral represents a spiral/vortex shape
+	ShapeSpiral
+	// ShapeOrganic represents an organic blob shape
+	ShapeOrganic
 )
 
 // String returns the string representation of a shape type.
@@ -40,6 +62,28 @@ func (s ShapeType) String() string {
 		return "star"
 	case ShapeRing:
 		return "ring"
+	case ShapeHexagon:
+		return "hexagon"
+	case ShapeOctagon:
+		return "octagon"
+	case ShapeCross:
+		return "cross"
+	case ShapeHeart:
+		return "heart"
+	case ShapeCrescent:
+		return "crescent"
+	case ShapeGear:
+		return "gear"
+	case ShapeCrystal:
+		return "crystal"
+	case ShapeLightning:
+		return "lightning"
+	case ShapeWave:
+		return "wave"
+	case ShapeSpiral:
+		return "spiral"
+	case ShapeOrganic:
+		return "organic"
 	default:
 		return "unknown"
 	}

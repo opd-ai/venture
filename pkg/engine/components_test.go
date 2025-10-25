@@ -335,3 +335,94 @@ func TestMoveTowards(t *testing.T) {
 		t.Error("Should have reached target")
 	}
 }
+
+func TestMovementSystemWithDeadComponent(t *testing.T) {
+	// Test that dead entities cannot move (Priority 1.2)
+	world := NewWorld()
+	system := NewMovementSystem(0) // No speed limit
+
+	// Create living entity
+	livingEntity := world.CreateEntity()
+	livingEntity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	livingEntity.AddComponent(&VelocityComponent{VX: 10, VY: 5})
+
+	// Create dead entity with same velocity
+	deadEntity := world.CreateEntity()
+	deadEntity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	deadEntity.AddComponent(&VelocityComponent{VX: 10, VY: 5})
+	deadEntity.AddComponent(NewDeadComponent(0.0))
+
+	world.Update(0) // Process pending additions
+
+	// Update for 1 second
+	system.Update(world.GetEntities(), 1.0)
+
+	// Living entity should have moved
+	livingPos, _ := livingEntity.GetComponent("position")
+	livingPosition := livingPos.(*PositionComponent)
+	if livingPosition.X != 10 || livingPosition.Y != 5 {
+		t.Errorf("Living entity position = (%f, %f), want (10, 5)", livingPosition.X, livingPosition.Y)
+	}
+
+	// Dead entity should NOT have moved
+	deadPos, _ := deadEntity.GetComponent("position")
+	deadPosition := deadPos.(*PositionComponent)
+	if deadPosition.X != 0 || deadPosition.Y != 0 {
+		t.Errorf("Dead entity position = (%f, %f), want (0, 0) - dead entities should not move", deadPosition.X, deadPosition.Y)
+	}
+}
+
+func TestMovementSystemDeadEntityVelocityUnchanged(t *testing.T) {
+	// Verify that dead entity velocity is not modified (for potential revival mechanics)
+	world := NewWorld()
+	system := NewMovementSystem(100.0) // With speed limit
+
+	deadEntity := world.CreateEntity()
+	deadEntity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	deadEntity.AddComponent(&VelocityComponent{VX: 200, VY: 150}) // Exceeds speed limit
+	deadEntity.AddComponent(NewDeadComponent(5.0))
+
+	world.Update(0)
+
+	// Update movement system
+	system.Update(world.GetEntities(), 1.0)
+
+	// Velocity should remain unchanged (system skips dead entities entirely)
+	vel, _ := deadEntity.GetComponent("velocity")
+	velocity := vel.(*VelocityComponent)
+	if velocity.VX != 200 || velocity.VY != 150 {
+		t.Errorf("Dead entity velocity = (%f, %f), want (200, 150) - velocity should not be clamped for dead entities", velocity.VX, velocity.VY)
+	}
+
+	// Position should not change
+	pos, _ := deadEntity.GetComponent("position")
+	position := pos.(*PositionComponent)
+	if position.X != 0 || position.Y != 0 {
+		t.Errorf("Dead entity moved to (%f, %f), should stay at (0, 0)", position.X, position.Y)
+	}
+}
+
+func TestMovementSystemDeadEntityWithBounds(t *testing.T) {
+	// Test that dead entities don't interact with boundary system
+	world := NewWorld()
+	system := NewMovementSystem(0)
+
+	deadEntity := world.CreateEntity()
+	deadEntity.AddComponent(&PositionComponent{X: 95, Y: 50})
+	deadEntity.AddComponent(&VelocityComponent{VX: 100, VY: 0})
+	deadEntity.AddComponent(&BoundsComponent{MinX: 0, MinY: 0, MaxX: 100, MaxY: 100})
+	deadEntity.AddComponent(NewDeadComponent(10.0))
+
+	world.Update(0)
+
+	// Update for 1 second - dead entity should not move at all
+	system.Update(world.GetEntities(), 1.0)
+
+	pos, _ := deadEntity.GetComponent("position")
+	position := pos.(*PositionComponent)
+
+	// Should remain at original position (95, 50), not move or clamp
+	if position.X != 95 || position.Y != 50 {
+		t.Errorf("Dead entity position = (%f, %f), want (95, 50)", position.X, position.Y)
+	}
+}

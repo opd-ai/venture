@@ -53,14 +53,21 @@ func (s *CombatSystem) SetParticleSystem(ps *ParticleSystem, world *World, genre
 // Update implements the System interface.
 // Updates attack cooldowns and processes status effects.
 func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
-	// Update attack cooldowns
+	// Update attack cooldowns and status effects
 	for _, entity := range entities {
-		if attackComp, ok := entity.GetComponent("attack"); ok {
-			attack := attackComp.(*AttackComponent)
-			attack.UpdateCooldown(deltaTime)
+		// Priority 1.3: Dead entities don't progress attack cooldowns
+		// but status effects continue (poison doesn't stop at death)
+		isDead := entity.HasComponent("dead")
+
+		if !isDead {
+			// Update attack cooldowns only for living entities
+			if attackComp, ok := entity.GetComponent("attack"); ok {
+				attack := attackComp.(*AttackComponent)
+				attack.UpdateCooldown(deltaTime)
+			}
 		}
 
-		// Process status effects
+		// Process status effects (for both living and dead entities)
 		if statusComp, ok := entity.GetComponent("status_effect"); ok {
 			status := statusComp.(*StatusEffectComponent)
 
@@ -111,6 +118,16 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 // Attack performs an attack from attacker to target.
 // Returns true if the attack hit, false if it missed or was invalid.
 func (s *CombatSystem) Attack(attacker, target *Entity) bool {
+	// Priority 1.3: Dead entities cannot attack
+	if attacker.HasComponent("dead") {
+		return false
+	}
+
+	// Priority 1.3: Dead entities cannot be targeted for attacks
+	if target.HasComponent("dead") {
+		return false
+	}
+
 	// Validate entities have required components
 	attackComp, ok := attacker.GetComponent("attack")
 	if !ok {
@@ -356,6 +373,11 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 
 	for _, entity := range world.GetEntities() {
 		if entity.ID == attacker.ID {
+			continue
+		}
+
+		// Priority 1.3: Skip dead entities - they cannot be targeted
+		if entity.HasComponent("dead") {
 			continue
 		}
 

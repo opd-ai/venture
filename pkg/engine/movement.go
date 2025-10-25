@@ -30,6 +30,12 @@ func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
 // Update applies velocity to position for all entities with both components.
 func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
+		// Skip dead entities - they cannot move (Priority 1.2)
+		// Dead entities are immobilized until revived or removed from the world
+		if entity.HasComponent("dead") {
+			continue
+		}
+
 		// Check if entity has required components
 		posComp, hasPos := entity.GetComponent("position")
 		velComp, hasVel := entity.GetComponent("velocity")

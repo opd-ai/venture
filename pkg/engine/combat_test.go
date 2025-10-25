@@ -513,6 +513,219 @@ func TestCombatSystemDeathCallback(t *testing.T) {
 	}
 }
 
+func TestCombatSystemDeadAttackerCannotAttack(t *testing.T) {
+	// Priority 1.3: Dead entities cannot perform attacks
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+
+	// Create dead attacker
+	attacker := world.CreateEntity()
+	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+	attacker.AddComponent(&AttackComponent{
+		Damage:     20,
+		DamageType: combat.DamagePhysical,
+		Range:      100,
+		Cooldown:   0, // Ready to attack
+	})
+	attacker.AddComponent(NewStatsComponent())
+	attacker.AddComponent(NewDeadComponent(5.0)) // Mark as dead
+
+	// Create living target
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 50, Y: 0})
+	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	target.AddComponent(NewStatsComponent())
+
+	world.Update(0)
+
+	// Dead attacker should not be able to attack
+	hit := combatSystem.Attack(attacker, target)
+	if hit {
+		t.Error("dead attacker should not be able to attack")
+	}
+
+	// Target health should be unchanged
+	healthComp, _ := target.GetComponent("health")
+	health := healthComp.(*HealthComponent)
+	if health.Current != 100 {
+		t.Errorf("target health = %f, want 100 (dead attacker should deal no damage)", health.Current)
+	}
+}
+
+func TestCombatSystemDeadTargetCannotBeAttacked(t *testing.T) {
+	// Priority 1.3: Dead entities cannot be targeted for attacks
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+
+	// Create living attacker
+	attacker := world.CreateEntity()
+	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+	attacker.AddComponent(&AttackComponent{
+		Damage:     20,
+		DamageType: combat.DamagePhysical,
+		Range:      100,
+		Cooldown:   0, // Ready to attack
+	})
+	attacker.AddComponent(NewStatsComponent())
+
+	// Create dead target
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 50, Y: 0})
+	target.AddComponent(&HealthComponent{Current: 0, Max: 100}) // Dead (0 health)
+	target.AddComponent(NewStatsComponent())
+	target.AddComponent(NewDeadComponent(3.0)) // Mark as dead
+
+	world.Update(0)
+
+	// Should not be able to attack dead target
+	hit := combatSystem.Attack(attacker, target)
+	if hit {
+		t.Error("should not be able to attack dead target")
+	}
+
+	// Attack cooldown should not be triggered (attack didn't happen)
+	attackComp, _ := attacker.GetComponent("attack")
+	attack := attackComp.(*AttackComponent)
+	if !attack.CanAttack() {
+		t.Error("attack cooldown should not be triggered when targeting dead entity")
+	}
+}
+
+func TestCombatSystemDeadEntityNoCooldownUpdate(t *testing.T) {
+	// Priority 1.3: Dead entities don't progress attack cooldowns
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+	world.AddSystem(combatSystem)
+
+	// Create dead entity with attack on cooldown
+	deadEntity := world.CreateEntity()
+	deadEntity.AddComponent(&AttackComponent{
+		Damage:        20,
+		DamageType:    combat.DamagePhysical,
+		Range:         100,
+		Cooldown:      5.0,
+		CooldownTimer: 5.0, // Full cooldown
+	})
+	deadEntity.AddComponent(NewDeadComponent(0.0))
+
+	// Create living entity with same cooldown
+	livingEntity := world.CreateEntity()
+	livingEntity.AddComponent(&AttackComponent{
+		Damage:        20,
+		DamageType:    combat.DamagePhysical,
+		Range:         100,
+		Cooldown:      5.0,
+		CooldownTimer: 5.0, // Full cooldown
+	})
+
+	world.Update(0)
+
+	// Update for 3 seconds
+	world.Update(3.0)
+
+	// Living entity cooldown should decrease
+	livingAttackComp, _ := livingEntity.GetComponent("attack")
+	livingAttack := livingAttackComp.(*AttackComponent)
+	if livingAttack.CooldownTimer != 2.0 {
+		t.Errorf("living entity cooldown = %f, want 2.0", livingAttack.CooldownTimer)
+	}
+
+	// Dead entity cooldown should remain unchanged
+	deadAttackComp, _ := deadEntity.GetComponent("attack")
+	deadAttack := deadAttackComp.(*AttackComponent)
+	if deadAttack.CooldownTimer != 5.0 {
+		t.Errorf("dead entity cooldown = %f, want 5.0 (should not decrease)", deadAttack.CooldownTimer)
+	}
+}
+
+func TestCombatSystemDeadEntityStatusEffectsStillProcess(t *testing.T) {
+	// Status effects should continue on dead entities (design decision: effects don't stop at death)
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+	world.AddSystem(combatSystem)
+
+	// Create entity with low health
+	entity := world.CreateEntity()
+	entity.AddComponent(&HealthComponent{Current: 5, Max: 100})
+
+	world.Update(0)
+
+	// Apply poison effect
+	combatSystem.ApplyStatusEffect(entity, "poison", 3.0, 10.0, 1.0)
+
+	// Kill the entity by reducing health to 0
+	healthComp, _ := entity.GetComponent("health")
+	health := healthComp.(*HealthComponent)
+	health.TakeDamage(5)
+
+	// Mark as dead
+	entity.AddComponent(NewDeadComponent(1.0))
+
+	// Verify entity is dead
+	if health.Current != 0 {
+		t.Fatalf("entity should have 0 health, got %f", health.Current)
+	}
+
+	// Update to trigger poison tick
+	world.Update(1.1)
+
+	// Health should remain at 0 (clamped minimum), but the effect still processed
+	// The status effect component should still exist and update
+	if !entity.HasComponent("status_effect") {
+		t.Error("status effect should still exist on dead entity")
+	}
+
+	// Verify health stays at 0 (design: health doesn't go negative)
+	if health.Current != 0 {
+		t.Errorf("health should be clamped at 0, got %f", health.Current)
+	}
+}
+
+func TestFindEnemiesInRangeExcludesDeadEntities(t *testing.T) {
+	// Helper functions should exclude dead entities from targeting
+	world := NewWorld()
+
+	// Create player
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 0, Y: 0})
+	player.AddComponent(&TeamComponent{TeamID: 1})
+
+	// Create living enemy
+	livingEnemy := world.CreateEntity()
+	livingEnemy.AddComponent(&PositionComponent{X: 30, Y: 0})
+	livingEnemy.AddComponent(&TeamComponent{TeamID: 2})
+	livingEnemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+	// Create dead enemy
+	deadEnemy := world.CreateEntity()
+	deadEnemy.AddComponent(&PositionComponent{X: 40, Y: 0})
+	deadEnemy.AddComponent(&TeamComponent{TeamID: 2})
+	deadEnemy.AddComponent(&HealthComponent{Current: 0, Max: 100})
+	deadEnemy.AddComponent(NewDeadComponent(1.0))
+
+	world.Update(0)
+
+	// Find enemies - should only return living enemy
+	enemies := FindEnemiesInRange(world, player, 100)
+
+	if len(enemies) != 1 {
+		t.Errorf("expected 1 living enemy, got %d", len(enemies))
+	}
+
+	if len(enemies) > 0 && enemies[0].ID != livingEnemy.ID {
+		t.Error("returned enemy should be the living one")
+	}
+
+	// Find nearest enemy - should return living enemy, not closer dead one
+	nearest := FindNearestEnemy(world, player, 100)
+	if nearest == nil {
+		t.Fatal("should find nearest living enemy")
+	}
+	if nearest.ID != livingEnemy.ID {
+		t.Error("nearest enemy should be the living one, not the dead one")
+	}
+}
+
 func TestCombatSystemDamageCallback(t *testing.T) {
 	world := NewWorld()
 	combatSystem := NewCombatSystem(12345)

@@ -281,6 +281,11 @@ func main() {
 
 	// GAP-001 & GAP-004 REPAIR: Set death callback for loot drops and quest tracking
 	combatSystem.SetDeathCallback(func(enemy *engine.Entity) {
+		// Priority 1.4: Only process death once (callback called every frame while entity is dead)
+		if enemy.HasComponent("dead") {
+			return
+		}
+
 		// Get enemy position
 		posComp, hasPos := enemy.GetComponent("position")
 		if !hasPos {
@@ -378,7 +383,7 @@ func main() {
 				})
 				// Add friction for smooth deceleration
 				lootEntity.AddComponent(engine.NewFrictionComponent(0.12))
-				
+
 				deadComp.AddDroppedItem(lootEntity.ID)
 			}
 

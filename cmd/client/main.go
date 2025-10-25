@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -280,11 +281,6 @@ func main() {
 
 	// GAP-001 & GAP-004 REPAIR: Set death callback for loot drops and quest tracking
 	combatSystem.SetDeathCallback(func(enemy *engine.Entity) {
-		// Only drop loot from enemies, not the player
-		if enemy.HasComponent("input") {
-			return // Skip player death
-		}
-
 		// Get enemy position
 		posComp, hasPos := enemy.GetComponent("position")
 		if !hasPos {
@@ -292,12 +288,98 @@ func main() {
 		}
 		pos := posComp.(*engine.PositionComponent)
 
-		// Generate and spawn loot drop
-		engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, *seed, *genreID)
+		// Priority 1.4: Add DeadComponent to mark entity as dead
+		gameTime := float64(time.Now().Unix()) // Use game time if available
+		deadComp := engine.NewDeadComponent(gameTime)
+		enemy.AddComponent(deadComp)
 
-		// Track enemy kill for quest objectives
-		if playerEntity != nil {
-			objectiveTracker.OnEnemyKilled(playerEntity, enemy)
+		// Priority 1.4: Drop all items from entity's inventory
+		if invComp, hasInv := enemy.GetComponent("inventory"); hasInv {
+			inventory := invComp.(*engine.InventoryComponent)
+			
+			// Spawn each item in the inventory with scatter physics
+			for i, itm := range inventory.Items {
+				if itm == nil {
+					continue
+				}
+
+				// Calculate scatter offset using circular distribution
+				angle := float64(i) * 6.28318 / float64(len(inventory.Items)) // 2*PI radians
+				scatterDist := 20.0 + float64(i)*5.0 // Items spread 20-50 pixels out
+				offsetX := scatterDist * math.Cos(angle)
+				offsetY := scatterDist * math.Sin(angle)
+
+				// Spawn item entity at scattered position
+				itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
+				if itemEntity != nil {
+					// Add physics velocity for scatter effect (items fly outward then slow down)
+					velocityX := offsetX * 3.0 // Initial velocity proportional to offset
+					velocityY := offsetY * 3.0
+					itemEntity.AddComponent(&engine.VelocityComponent{
+						VX: velocityX,
+						VY: velocityY,
+					})
+
+					// Add friction to slow down items (handled by movement system)
+					// Items will gradually come to rest
+
+					// Track dropped item in DeadComponent
+					deadComp.AddDroppedItem(itemEntity.ID)
+				}
+			}
+
+			// Clear inventory after dropping all items
+			inventory.Clear()
+		}
+
+		// Priority 1.4: Also drop equipped items
+		if equipComp, hasEquip := enemy.GetComponent("equipment"); hasEquip {
+			equipment := equipComp.(*engine.EquipmentComponent)
+			equippedItems := equipment.UnequipAll()
+
+			// Spawn equipped items with additional scatter
+			for i, itm := range equippedItems {
+				if itm == nil {
+					continue
+				}
+
+				// Use different angle range for equipped items (opposite side)
+				angle := (float64(i) * 6.28318 / float64(len(equippedItems))) + 3.14159 // Offset by PI
+				scatterDist := 30.0 + float64(i)*5.0
+				offsetX := scatterDist * math.Cos(angle)
+				offsetY := scatterDist * math.Sin(angle)
+
+				itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
+				if itemEntity != nil {
+					velocityX := offsetX * 3.0
+					velocityY := offsetY * 3.0
+					itemEntity.AddComponent(&engine.VelocityComponent{
+						VX: velocityX,
+						VY: velocityY,
+					})
+
+					deadComp.AddDroppedItem(itemEntity.ID)
+				}
+			}
+		}
+
+		// Generate and spawn procedural loot drop (in addition to inventory items)
+		// This is for enemies that don't have inventory but should drop random loot
+		if !enemy.HasComponent("input") { // Only for NPCs/enemies, not players
+			lootEntity := engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, *seed, *genreID)
+			if lootEntity != nil {
+				// Add physics to procedural loot too
+				lootEntity.AddComponent(&engine.VelocityComponent{
+					VX: (rand.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
+					VY: (rand.Float64()*2.0 - 1.0) * 30.0,
+				})
+				deadComp.AddDroppedItem(lootEntity.ID)
+			}
+
+			// Track enemy kill for quest objectives
+			if playerEntity != nil {
+				objectiveTracker.OnEnemyKilled(playerEntity, enemy)
+			}
 		}
 
 		// GAP-010 REPAIR: Play death sound effect

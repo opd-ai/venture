@@ -103,3 +103,24 @@ func (b *BoundsComponent) Clamp(x, y float64) (float64, float64) {
 	}
 	return x, y
 }
+
+// FrictionComponent applies drag/friction to slow down moving entities.
+// Used for items dropped on death to create a realistic scatter effect.
+// Priority 1.4: Loot Drop System
+type FrictionComponent struct {
+	// Coefficient is the friction multiplier (0.0 = no friction, 1.0 = stops instantly)
+	// Typical values: 0.05-0.15 for smooth deceleration
+	Coefficient float64
+}
+
+// Type returns the component type identifier.
+func (f *FrictionComponent) Type() string {
+	return "friction"
+}
+
+// NewFrictionComponent creates a friction component with the specified coefficient.
+func NewFrictionComponent(coefficient float64) *FrictionComponent {
+	return &FrictionComponent{
+		Coefficient: coefficient,
+	}
+}

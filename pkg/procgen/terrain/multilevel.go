@@ -308,9 +308,9 @@ func PlaceStairsSymmetric(terrain *Terrain, up, down bool, rng *rand.Rand) error
 	corners := []struct {
 		x, y, w, h int
 	}{
-		{0, 0, quarterWidth, quarterHeight},                                               // Top-left
-		{terrain.Width - quarterWidth, 0, quarterWidth, quarterHeight},                    // Top-right
-		{0, terrain.Height - quarterHeight, quarterWidth, quarterHeight},                  // Bottom-left
+		{0, 0, quarterWidth, quarterHeight},                                                         // Top-left
+		{terrain.Width - quarterWidth, 0, quarterWidth, quarterHeight},                              // Top-right
+		{0, terrain.Height - quarterHeight, quarterWidth, quarterHeight},                            // Bottom-left
 		{terrain.Width - quarterWidth, terrain.Height - quarterHeight, quarterWidth, quarterHeight}, // Bottom-right
 	}
 

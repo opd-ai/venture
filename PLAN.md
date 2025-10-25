@@ -491,8 +491,10 @@ func GetTileTheme(genreID string, tile TileType) string
 
 ---
 
-### Phase 9: CLI Test Tool Enhancement (1-2 hours)
+### Phase 9: CLI Test Tool Enhancement (1-2 hours) ✅
 **Objective:** Update `terraintest` to support all new generators and features.
+
+**Status:** Complete - All visualization modes implemented and tested
 
 **File to Modify:** `cmd/terraintest/main.go`
 
@@ -502,7 +504,7 @@ func GetTileTheme(genreID string, tile TileType) string
 -genre string       // "fantasy", "scifi", "horror", "cyberpunk", "postapoc"
 -levels int         // Generate multi-level dungeon
 -water bool         // Include water features
--visualize string   // "ascii", "color", "stats"
+-visualize string   // "ascii", "color", "stats" ✅
 ```
 
 **Update Rendering:**
@@ -515,18 +517,34 @@ func renderTerrain(terr *Terrain) string {
 }
 
 func renderTerrainColor(terr *Terrain) string {
-    // ANSI color codes for different tiles
+    // ANSI color codes for different tiles ✅
+    // Genre-specific color palettes:
+    // - Fantasy: gray stone walls, brown floors
+    // - Sci-Fi: white/cyan metal panels
+    // - Horror: red flesh walls, crimson blood floors
+    // - Cyberpunk: magenta neon, cyan circuits
+    // - Post-Apocalyptic: yellow rubble, green toxic waste
 }
 
 func renderStats(terr *Terrain) string {
-    // Detailed statistics:
-    // - Tile type distribution
-    // - Room count and types
-    // - Connectivity metrics
-    // - Water coverage
-    // - Stair locations
+    // Detailed statistics: ✅
+    // - Tile type distribution with counts and percentages
+    // - Room count, types, and size metrics
+    // - Connectivity metrics (walkable tiles, walkability %)
+    // - Water coverage (shallow, deep, total)
+    // - Stair locations (up, down)
+    // - Special tiles (traps, secrets, bridges)
 }
 ```
+
+**Implementation Details:**
+- Added `-visualize` flag with three modes: ascii (default), color, stats
+- Implemented `renderTerrainColor()` with ANSI escape codes for terminal colors
+- Created genre-specific color functions for all 5 genres with thematic palettes
+- Implemented `renderStats()` with comprehensive tile distribution and metrics
+- Updated both single-level and multi-level rendering to support all visualization modes
+- Color mode uses genre themes (e.g., horror = red flesh walls, sci-fi = white metal)
+- Stats mode shows detailed breakdowns: tile counts, walkability %, room info, stairs
 
 ---
 
@@ -756,10 +774,12 @@ type TerrainSyncMessage struct {
 - ✅ All generators pass determinism tests
 - ✅ Performance targets met (<2s for 200x200, composite <1.2s)
 - ✅ CLI tool supports all new features (algorithms, genres, biomes, levels)
+- ✅ Visualization modes implemented (ascii, color, stats) (Phase 9 complete)
+- ✅ ANSI color rendering for all 5 genres with thematic palettes
 - ⬜ Integration with rendering/movement/collision systems (Future)
 - ⬜ Documentation updated (doc.go, README.md) - In Progress
 
-**Current Status:** Phase 8 Complete - 8/9 phases finished (89% complete)
+**Current Status:** Phase 9 Complete - 9/9 phases finished (100% complete)
 
 ---
 

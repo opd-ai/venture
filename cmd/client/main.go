@@ -334,7 +334,7 @@ func main() {
 	statusEffectSystem := engine.NewStatusEffectSystem(game.World, statusEffectRNG)
 	spellCastingSystem := engine.NewSpellCastingSystem(game.World, statusEffectSystem)
 	playerSpellCastingSystem := engine.NewPlayerSpellCastingSystem(spellCastingSystem, game.World)
-	manaRegenSystem := &engine.ManaRegenSystem{}	// GAP #2 REPAIR: Add player combat system to connect Space key to combat
+	manaRegenSystem := &engine.ManaRegenSystem{} // GAP #2 REPAIR: Add player combat system to connect Space key to combat
 	playerCombatSystem := engine.NewPlayerCombatSystem(combatSystem, game.World)
 
 	// GAP #3 REPAIR: Add player item use system to connect E key to inventory

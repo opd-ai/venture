@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/sirupsen/logrus"
 )
 
 // EbitenGame represents the main game instance with the ECS world and game loop.
@@ -38,11 +39,26 @@ type EbitenGame struct {
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
+
+	// Logger for game operations
+	logger *logrus.Entry
 }
 
 // NewEbitenGame creates a new game instance with Ebiten integration.
 func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
-	world := NewWorld()
+	return NewEbitenGameWithLogger(screenWidth, screenHeight, nil)
+}
+
+// NewEbitenGameWithLogger creates a new game instance with a logger.
+func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logger) *EbitenGame {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "game",
+		})
+	}
+
+	world := NewWorldWithLogger(logger)
 	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
 	renderSystem := NewRenderSystem(cameraSystem)
 	hudSystem := NewEbitenHUDSystem(screenWidth, screenHeight)
@@ -59,10 +75,14 @@ func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
 	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
 	if err != nil {
 		// Log error but continue (save/load won't work but game can run)
-		fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
+		if logEntry != nil {
+			logEntry.WithError(err).Warn("failed to initialize menu system")
+		} else {
+			fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
+		}
 	}
 
-	return &EbitenGame{
+	game := &EbitenGame{
 		World:          world,
 		lastUpdateTime: time.Now(),
 		ScreenWidth:    screenWidth,
@@ -76,7 +96,17 @@ func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
 		CharacterUI:    characterUI,
 		SkillsUI:       skillsUI,
 		MapUI:          mapUI,
+		logger:         logEntry,
 	}
+
+	if logEntry != nil {
+		logEntry.WithFields(logrus.Fields{
+			"screenWidth":  screenWidth,
+			"screenHeight": screenHeight,
+		}).Info("game initialized")
+	}
+
+	return game
 }
 
 // Update implements ebiten.Game interface. Called every frame.

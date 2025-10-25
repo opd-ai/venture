@@ -3,6 +3,10 @@
 // and their lifecycle within the ECS architecture.
 package engine
 
+import (
+	"github.com/sirupsen/logrus"
+)
+
 // Entity represents a game object composed of components.
 // Entities are identified by a unique ID and contain a collection of components.
 type Entity struct {
@@ -23,6 +27,17 @@ func (e *Entity) AddComponent(c Component) {
 	e.Components[c.Type()] = c
 }
 
+// AddComponentWithLogger adds a component to this entity with logging.
+func (e *Entity) AddComponentWithLogger(c Component, logger *logrus.Entry) {
+	e.Components[c.Type()] = c
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entityID":      e.ID,
+			"componentType": c.Type(),
+		}).Debug("component added")
+	}
+}
+
 // GetComponent retrieves a component by type.
 func (e *Entity) GetComponent(componentType string) (Component, bool) {
 	c, ok := e.Components[componentType]
@@ -32,6 +47,17 @@ func (e *Entity) GetComponent(componentType string) (Component, bool) {
 // RemoveComponent removes a component from this entity.
 func (e *Entity) RemoveComponent(componentType string) {
 	delete(e.Components, componentType)
+}
+
+// RemoveComponentWithLogger removes a component from this entity with logging.
+func (e *Entity) RemoveComponentWithLogger(componentType string, logger *logrus.Entry) {
+	delete(e.Components, componentType)
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entityID":      e.ID,
+			"componentType": componentType,
+		}).Debug("component removed")
+	}
 }
 
 // HasComponent checks if this entity has a component of the given type.
@@ -51,16 +77,38 @@ type World struct {
 	// Cached entity list to reduce allocations
 	cachedEntityList []*Entity
 	entityListDirty  bool
+
+	// Logger for ECS operations
+	logger *logrus.Entry
 }
 
 // NewWorld creates a new game world.
 func NewWorld() *World {
-	return &World{
+	return NewWorldWithLogger(nil)
+}
+
+// NewWorldWithLogger creates a new game world with a logger.
+func NewWorldWithLogger(logger *logrus.Logger) *World {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "ecs",
+		})
+	}
+
+	w := &World{
 		entities:         make(map[uint64]*Entity),
 		systems:          make([]System, 0),
 		cachedEntityList: make([]*Entity, 0, 256), // Pre-allocate for 256 entities
 		entityListDirty:  true,
+		logger:           logEntry,
 	}
+
+	if w.logger != nil {
+		w.logger.Debug("world created")
+	}
+
+	return w
 }
 
 // CreateEntity creates a new entity and adds it to the world.
@@ -69,6 +117,11 @@ func (w *World) CreateEntity() *Entity {
 	w.nextEntityID++
 	entity := NewEntity(id)
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
+
+	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		w.logger.WithField("entityID", id).Debug("entity created")
+	}
+
 	return entity
 }
 
@@ -82,6 +135,10 @@ func (w *World) AddEntity(entity *Entity) {
 func (w *World) RemoveEntity(entityID uint64) {
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
 	w.entityListDirty = true
+
+	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		w.logger.WithField("entityID", entityID).Debug("entity marked for removal")
+	}
 }
 
 // GetEntity retrieves an entity by ID.
@@ -93,6 +150,15 @@ func (w *World) GetEntity(entityID uint64) (*Entity, bool) {
 // AddSystem adds a system to the world.
 func (w *World) AddSystem(system System) {
 	w.systems = append(w.systems, system)
+
+	if w.logger != nil {
+		// Get system name if available
+		systemName := "unknown"
+		if named, ok := system.(interface{ Name() string }); ok {
+			systemName = named.Name()
+		}
+		w.logger.WithField("system", systemName).Debug("system added")
+	}
 }
 
 // Update updates all systems with the current entity list.
@@ -174,3 +240,9 @@ func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 func (w *World) GetSystems() []System {
 	return w.systems
 }
+
+// GetLogger returns the world's logger entry.
+func (w *World) GetLogger() *logrus.Entry {
+	return w.logger
+}
+

@@ -219,7 +219,7 @@ func NewInputSystem() *InputSystem {
 		// Mobile input
 		touchHandler:  mobile.NewTouchInputHandler(),
 		mobileEnabled: mobile.IsMobilePlatform(),
-		useTouchInput: mobile.IsMobilePlatform(),
+		useTouchInput: mobile.IsTouchCapable(), // Enable touch input for mobile AND WASM
 	}
 }
 

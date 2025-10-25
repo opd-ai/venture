@@ -335,20 +335,24 @@ func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
 
-	// Remove item from inventory
+	// Check inventory index is valid before removing
+	if inventoryIndex < 0 || inventoryIndex >= len(invComp.Items) || invComp.Items[inventoryIndex] == nil {
+		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
+	}
+
+	// Get entity position to spawn dropped item BEFORE removing from inventory
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		// Entity has no position - can't drop item in world
+		return fmt.Errorf("entity %d has no position component, cannot drop item", entityID)
+	}
+	pos := posComp.(*PositionComponent)
+
+	// Remove item from inventory (only after we know we can drop it)
 	itm := invComp.RemoveItem(inventoryIndex)
 	if itm == nil {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
-
-	// Get entity position to spawn dropped item
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		// Entity has no position - can't drop item in world
-		// Item is lost (could return error instead if desired)
-		return fmt.Errorf("entity %d has no position component, cannot drop item", entityID)
-	}
-	pos := posComp.(*PositionComponent)
 
 	// Spawn item entity in the world at entity's position
 	// The SpawnItemInWorld function creates a collectable item entity

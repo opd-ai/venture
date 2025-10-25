@@ -155,10 +155,10 @@ func TestRevivalSystemMultipleDeadPlayers(t *testing.T) {
 func TestRevivalSystemCustomParameters(t *testing.T) {
 	world := NewWorld()
 	revivalSystem := NewRevivalSystem(world)
-	
+
 	// Set custom parameters
-	revivalSystem.RevivalRange = 64.0  // Double range
-	revivalSystem.RevivalAmount = 0.5  // 50% health instead of 20%
+	revivalSystem.RevivalRange = 64.0 // Double range
+	revivalSystem.RevivalAmount = 0.5 // 50% health instead of 20%
 
 	// Create living player
 	livingPlayer := world.CreateEntity()
@@ -227,9 +227,9 @@ func TestRevivalSystemDeadLivingPlayerCannotRevive(t *testing.T) {
 // TestIsPlayerRevivable tests the revivability checker function
 func TestIsPlayerRevivable(t *testing.T) {
 	tests := []struct {
-		name       string
-		setup      func() *Entity
-		revivable  bool
+		name      string
+		setup     func() *Entity
+		revivable bool
 	}{
 		{
 			name: "revivable dead player",
@@ -390,7 +390,7 @@ func TestRevivalWithDroppedItems(t *testing.T) {
 	deadPlayer.AddComponent(&PositionComponent{X: 110, Y: 100})
 	deadPlayer.AddComponent(&HealthComponent{Current: 0, Max: 100})
 	deadPlayer.AddComponent(&EbitenInput{})
-	
+
 	deadComp := NewDeadComponent(0.0)
 	deadComp.AddDroppedItem(1001) // Simulate dropped item entities
 	deadComp.AddDroppedItem(1002)

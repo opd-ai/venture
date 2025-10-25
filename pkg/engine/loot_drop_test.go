@@ -60,7 +60,7 @@ func TestLootDropFromInventory(t *testing.T) {
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 
 	inventory := NewInventoryComponent(10, 100.0)
-	
+
 	// Add test items to inventory
 	testItem1 := &item.Item{
 		Name: "Test Sword",
@@ -77,7 +77,7 @@ func TestLootDropFromInventory(t *testing.T) {
 			Weight: 1.0,
 		},
 	}
-	
+
 	inventory.AddItem(testItem1)
 	inventory.AddItem(testItem2)
 	entity.AddComponent(inventory)
@@ -179,7 +179,7 @@ func TestLootDropFromEquipment(t *testing.T) {
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 
 	equipment := NewEquipmentComponent()
-	
+
 	weapon := &item.Item{
 		Name:       "Equipped Sword",
 		Type:       item.TypeWeapon,
@@ -336,7 +336,7 @@ func TestLootDropEmptyInventory(t *testing.T) {
 		// Try to process empty inventory - should not crash
 		if invComp, hasInv := entity.GetComponent("inventory"); hasInv {
 			inventory := invComp.(*InventoryComponent)
-			
+
 			posComp, _ := entity.GetComponent("position")
 			pos := posComp.(*PositionComponent)
 

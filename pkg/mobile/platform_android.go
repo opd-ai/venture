@@ -12,7 +12,7 @@ package mobile
 
 // Android haptic feedback using Vibrator service
 // Note: Requires android.permission.VIBRATE in AndroidManifest.xml
-// 
+//
 // IMPLEMENTATION NOTE: Full JNI integration requires Android NDK environment,
 // access to JNIEnv*, and activity context from the Ebiten mobile runtime.
 // This would need to be integrated with the gomobile build process and
@@ -40,14 +40,14 @@ void triggerAndroidHaptic(int intensity) {
 	// Get JNIEnv and activity context from gomobile
 	// Find Context class and getSystemService method
 	// Get Vibrator service
-	// Find Vibrator class and vibrate method  
+	// Find Vibrator class and vibrate method
 	// Call vibrate with calculated duration
 	//
 	// This cannot be completed without Android NDK build environment
 	// and runtime access to JNIEnv from Ebiten's gomobile integration
 }
 */
-import "C"// triggerHapticImpl implements platform-specific haptic feedback for Android.
+import "C" // triggerHapticImpl implements platform-specific haptic feedback for Android.
 func triggerHapticImpl(feedback HapticFeedback) {
 	C.triggerAndroidHaptic(C.int(feedback))
 }

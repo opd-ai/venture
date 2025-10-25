@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -27,16 +28,24 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Printf("Generating terrain using %s algorithm", *algorithm)
-	log.Printf("Size: %dx%d, Seed: %d", *width, *height, *seed)
-	log.Printf("Genre: %s", *genre)
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("terraintest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"algorithm": *algorithm,
+		"width":     *width,
+		"height":    *height,
+		"seed":      *seed,
+		"genre":     *genre,
+	})
+
+	testLogger.Info("generating terrain")
 	if *algorithm == "multilevel" {
-		log.Printf("Levels: %d", *numLevels)
+		testLogger.WithField("levels", *numLevels).Info("multi-level generation")
 	}
 
 	// Handle multi-level generation separately
 	if *algorithm == "multilevel" {
-		generateMultiLevel()
+		generateMultiLevel(logger)
 		return
 	}
 
@@ -56,7 +65,7 @@ func main() {
 	case "composite":
 		gen = terrain.NewCompositeGenerator()
 	default:
-		log.Fatalf("Unknown algorithm: %s (use 'bsp', 'cellular', 'maze', 'forest', 'city', 'composite', or 'multilevel')", *algorithm)
+		testLogger.WithField("algorithm", *algorithm).Fatal("unknown algorithm (use 'bsp', 'cellular', 'maze', 'forest', 'city', 'composite', or 'multilevel')")
 	}
 
 	// Set up generation parameters
@@ -76,26 +85,29 @@ func main() {
 	// Add biome count for composite generation
 	if *algorithm == "composite" {
 		params.Custom["biomeCount"] = *biomeCount
-		log.Printf("Biomes: %d", *biomeCount)
+		testLogger.WithField("biomeCount", *biomeCount).Info("composite generation parameters")
 	}
 
 	// Generate terrain
+	genLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genre)
+	genLogger.Debug("starting terrain generation")
+	
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Generation failed: %v", err)
+		genLogger.WithError(err).Fatal("generation failed")
 	}
 
 	terr, ok := result.(*terrain.Terrain)
 	if !ok {
-		log.Fatal("Result is not a Terrain")
+		genLogger.Fatal("result is not a Terrain")
 	}
 
 	// Validate
 	if err := gen.Validate(terr); err != nil {
-		log.Fatalf("Validation failed: %v", err)
+		genLogger.WithError(err).Fatal("validation failed")
 	}
 
-	log.Printf("Generated %d rooms", len(terr.Rooms))
+	genLogger.WithField("roomCount", len(terr.Rooms)).Info("terrain generated successfully")
 
 	// Render to string based on visualization mode
 	var rendered string
@@ -113,16 +125,16 @@ func main() {
 	// Output to file or console
 	if *output != "" {
 		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
-			log.Fatalf("Failed to write output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to write output file")
 		}
-		log.Printf("Terrain saved to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("terrain saved to file")
 	} else {
 		fmt.Println(rendered)
 	}
 }
 
 // generateMultiLevel handles multi-level dungeon generation
-func generateMultiLevel() {
+func generateMultiLevel(logger *logrus.Logger) {
 	// Create level generator
 	gen := terrain.NewLevelGenerator()
 
@@ -141,12 +153,15 @@ func generateMultiLevel() {
 	terrain.ApplyGenreDefaults(&params)
 
 	// Generate all levels
+	genLogger := logging.GeneratorLogger(logger, "multilevel-terrain", *seed, *genre)
+	genLogger.WithField("numLevels", *numLevels).Debug("starting multi-level generation")
+	
 	levels, err := gen.GenerateMultiLevel(*numLevels, *seed, params)
 	if err != nil {
-		log.Fatalf("Multi-level generation failed: %v", err)
+		genLogger.WithError(err).Fatal("multi-level generation failed")
 	}
 
-	log.Printf("Generated %d levels", len(levels))
+	genLogger.WithField("levelCount", len(levels)).Info("multi-level terrain generated")
 
 	// Render based on showAll flag and visualization mode
 	var rendered string
@@ -187,7 +202,7 @@ func generateMultiLevel() {
 		rendered = builder.String()
 	} else {
 		// Show only first level
-		log.Printf("Showing level 0 (use -showAll to see all levels)")
+		genLogger.Info("showing level 0 (use -showAll to see all levels)")
 
 		// Render based on visualization mode
 		switch *visualize {
@@ -201,11 +216,12 @@ func generateMultiLevel() {
 	}
 
 	// Output to file or console
+	testLogger := logger.WithField("utility", "terraintest")
 	if *output != "" {
 		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
-			log.Fatalf("Failed to write output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to write output file")
 		}
-		log.Printf("Terrain saved to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("terrain saved to file")
 	} else {
 		fmt.Println(rendered)
 	}

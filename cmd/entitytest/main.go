@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/entity"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,8 +25,17 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Printf("Generating entities for %s genre", *genre)
-	log.Printf("Count: %d, Depth: %d, Difficulty: %.1f, Seed: %d", *count, *depth, *difficulty, *seed)
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("entitytest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"genre":      *genre,
+		"count":      *count,
+		"depth":      *depth,
+		"difficulty": *difficulty,
+		"seed":       *seed,
+	})
+
+	testLogger.Info("generating entities")
 
 	// Create generator
 	gen := entity.NewEntityGenerator()
@@ -41,22 +51,25 @@ func main() {
 	}
 
 	// Generate entities
+	genLogger := logging.GeneratorLogger(logger, "entity", *seed, *genre)
+	genLogger.Debug("starting entity generation")
+	
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Generation failed: %v", err)
+		genLogger.WithError(err).Fatal("generation failed")
 	}
 
 	entities, ok := result.([]*entity.Entity)
 	if !ok {
-		log.Fatal("Result is not []*Entity")
+		genLogger.Fatal("result is not []*Entity")
 	}
 
 	// Validate
 	if err := gen.Validate(entities); err != nil {
-		log.Fatalf("Validation failed: %v", err)
+		genLogger.WithError(err).Fatal("validation failed")
 	}
 
-	log.Printf("Generated %d entities", len(entities))
+	genLogger.WithField("entityCount", len(entities)).Info("entities generated successfully")
 
 	// Render to string
 	rendered := renderEntities(entities, *verbose)
@@ -64,9 +77,9 @@ func main() {
 	// Output to file or console
 	if *output != "" {
 		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
-			log.Fatalf("Failed to write output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to write output file")
 		}
-		log.Printf("Entities saved to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("entities saved to file")
 	} else {
 		fmt.Println(rendered)
 	}

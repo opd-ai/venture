@@ -3,16 +3,18 @@ package main
 import (
 	"flag"
 	"image/color"
-	"log"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -27,16 +29,44 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Printf("Starting Venture Game Server")
-	log.Printf("Port: %s, Max Players: %d, Tick Rate: %d Hz", *port, *maxPlayers, *tickRate)
-	log.Printf("World Seed: %d, Genre: %s", *seed, *genreID)
-
-	// Create game world
-	if *verbose {
-		log.Println("Creating game world...")
+	// Initialize structured logger with JSON format for server (log aggregation)
+	logConfig := logging.Config{
+		Level:      logging.InfoLevel,
+		Format:     logging.JSONFormat, // Always JSON for server
+		AddCaller:  true,
+		EnableColor: false,
 	}
 
-	world := engine.NewWorld()
+	// Override log level from environment variable
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		logConfig.Level = logging.LogLevel(logLevel)
+	} else if *verbose {
+		logConfig.Level = logging.DebugLevel
+	}
+
+	logger := logging.NewLogger(logConfig)
+	serverLogger := logger.WithFields(logrus.Fields{
+		"component": "server",
+		"seed":      *seed,
+		"genre":     *genreID,
+	})
+
+	serverLogger.Info("Starting Venture Game Server")
+	serverLogger.WithFields(logrus.Fields{
+		"port":       *port,
+		"maxPlayers": *maxPlayers,
+		"tickRate":   *tickRate,
+		"seed":       *seed,
+		"genre":      *genreID,
+	}).Info("server configuration")
+
+	// Create game world
+	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
+	if logger.GetLevel() >= logrus.DebugLevel {
+		worldLogger.Debug("creating game world")
+	}
+
+	world := engine.NewWorldWithLogger(logger)
 
 	// Add gameplay systems with proper constructors
 	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
@@ -53,13 +83,17 @@ func main() {
 	world.AddSystem(progressionSystem)
 	world.AddSystem(inventorySystem)
 
-	if *verbose {
-		log.Println("Game systems initialized")
+	if logger.GetLevel() >= logrus.DebugLevel {
+		worldLogger.Debug("game systems initialized")
 	}
 
 	// Generate initial world terrain
-	if *verbose {
-		log.Println("Generating world terrain...")
+	terrainLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genreID)
+	if logger.GetLevel() >= logrus.DebugLevel {
+		terrainLogger.WithFields(logrus.Fields{
+			"width":  100,
+			"height": 100,
+		}).Debug("generating world terrain")
 	}
 
 	terrainGen := terrain.NewBSPGenerator() // Use BSP algorithm
@@ -75,18 +109,20 @@ func main() {
 
 	terrainResult, err := terrainGen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Failed to generate terrain: %v", err)
+		serverLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
 	generatedTerrain := terrainResult.(*terrain.Terrain)
-	if *verbose {
-		log.Printf("World terrain generated: %dx%d with %d rooms",
-			generatedTerrain.Width, generatedTerrain.Height, len(generatedTerrain.Rooms))
-	}
+	terrainLogger.WithFields(logrus.Fields{
+		"width":     generatedTerrain.Width,
+		"height":    generatedTerrain.Height,
+		"roomCount": len(generatedTerrain.Rooms),
+	}).Info("world terrain generated")
 
 	// Initialize network components
-	if *verbose {
-		log.Println("Initializing network systems...")
+	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
+	if logger.GetLevel() >= logrus.DebugLevel {
+		networkLogger.Debug("initializing network systems")
 	}
 
 	// Create server with configuration
@@ -105,26 +141,30 @@ func main() {
 	lagCompConfig := network.DefaultLagCompensationConfig()
 	lagCompensator := network.NewLagCompensator(lagCompConfig)
 
-	if *verbose {
-		log.Println("Network systems initialized")
-		log.Printf("Server config: Address=%s, MaxPlayers=%d, UpdateRate=%d Hz",
-			serverConfig.Address, serverConfig.MaxPlayers, serverConfig.UpdateRate)
-	}
+	networkLogger.WithFields(logrus.Fields{
+		"address":    serverConfig.Address,
+		"maxPlayers": serverConfig.MaxPlayers,
+		"updateRate": serverConfig.UpdateRate,
+	}).Info("network systems initialized")
 
 	// Start network server
 	if err := server.Start(); err != nil {
-		log.Fatalf("Failed to start network server: %v", err)
+		serverLogger.WithError(err).Fatal("failed to start network server")
 	}
 
-	log.Println("Server initialized successfully")
-	log.Printf("Server listening on port %s", *port)
-	log.Printf("Max players: %d, Update rate: %d Hz", *maxPlayers, *tickRate)
-	log.Printf("Game world ready with %d entities", len(world.GetEntities()))
+	serverLogger.Info("server initialized successfully")
+	serverLogger.WithFields(logrus.Fields{
+		"port":        *port,
+		"maxPlayers":  *maxPlayers,
+		"updateRate":  *tickRate,
+		"entityCount": len(world.GetEntities()),
+	}).Info("server listening")
 
 	// Handle server shutdown gracefully
 	defer func() {
+		serverLogger.Info("shutting down server")
 		if err := server.Stop(); err != nil {
-			log.Printf("Error stopping server: %v", err)
+			serverLogger.WithError(err).Error("error stopping server")
 		}
 	}()
 
@@ -135,12 +175,12 @@ func main() {
 
 	lastUpdate := time.Now()
 
-	log.Printf("Starting authoritative game loop at %d Hz...", *tickRate)
+	serverLogger.WithField("tickRate", *tickRate).Info("starting authoritative game loop")
 
 	// Handle server errors in background
 	go func() {
 		for err := range server.ReceiveError() {
-			log.Printf("Network error: %v", err)
+			networkLogger.WithError(err).Error("network error")
 		}
 	}()
 
@@ -151,39 +191,33 @@ func main() {
 	// Handle new player connections in background
 	go func() {
 		for playerID := range server.ReceivePlayerJoin() {
-			if *verbose {
-				log.Printf("Player %d joined - creating player entity", playerID)
-			}
+			playerLogger := logging.NetworkLogger(logger, "", "connected").WithField("playerID", playerID)
+			playerLogger.Info("player joined - creating entity")
 
 			// Create player entity for new connection
-			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, *verbose)
+			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, logger)
 
 			// Store player entity mapping
 			playerEntitiesMu.Lock()
 			playerEntities[playerID] = entity
 			playerEntitiesMu.Unlock()
 
-			if *verbose {
-				log.Printf("Player %d entity created (ID: %d)", playerID, entity.ID)
-			}
+			playerLogger.WithField("entityID", entity.ID).Debug("player entity created")
 		}
 	}()
 
 	// Handle player disconnections in background
 	go func() {
 		for playerID := range server.ReceivePlayerLeave() {
-			if *verbose {
-				log.Printf("Player %d left - removing player entity", playerID)
-			}
+			playerLogger := logging.NetworkLogger(logger, "", "disconnected").WithField("playerID", playerID)
+			playerLogger.Info("player left - removing entity")
 
 			// Remove player entity
 			playerEntitiesMu.Lock()
 			if entity, exists := playerEntities[playerID]; exists {
 				world.RemoveEntity(entity.ID)
 				delete(playerEntities, playerID)
-				if *verbose {
-					log.Printf("Player %d entity removed (ID: %d)", playerID, entity.ID)
-				}
+				playerLogger.WithField("entityID", entity.ID).Debug("player entity removed")
 			}
 			playerEntitiesMu.Unlock()
 		}
@@ -192,9 +226,12 @@ func main() {
 	// Handle client input commands in background
 	go func() {
 		for cmd := range server.ReceiveInputCommand() {
-			if *verbose {
-				log.Printf("Received input from player %d: type=%s, seq=%d",
-					cmd.PlayerID, cmd.InputType, cmd.SequenceNumber)
+			if logger.GetLevel() >= logrus.DebugLevel {
+				networkLogger.WithFields(logrus.Fields{
+					"playerID":       cmd.PlayerID,
+					"inputType":      cmd.InputType,
+					"sequenceNumber": cmd.SequenceNumber,
+				}).Debug("received input command")
 			}
 
 			// Get player entity
@@ -203,14 +240,14 @@ func main() {
 			playerEntitiesMu.RUnlock()
 
 			if !exists {
-				if *verbose {
-					log.Printf("Warning: No entity for player %d", cmd.PlayerID)
+				if logger.GetLevel() >= logrus.WarnLevel {
+					networkLogger.WithField("playerID", cmd.PlayerID).Warn("no entity for player")
 				}
 				continue
 			}
 
 			// Apply input to entity
-			applyInputCommand(entity, cmd, *verbose)
+			applyInputCommand(entity, cmd, logger)
 		}
 	}()
 
@@ -234,11 +271,14 @@ func main() {
 			stateUpdate := convertSnapshotToStateUpdate(snapshot)
 			server.BroadcastStateUpdate(stateUpdate)
 
-			if *verbose && int(now.Unix())%10 == 0 {
+			// Periodic server metrics logging
+			if logger.GetLevel() >= logrus.DebugLevel && int(now.Unix())%10 == 0 {
 				// Log every 10 seconds
 				playerCount := server.GetPlayerCount()
-				log.Printf("Server tick: %d entities, %d players connected",
-					len(world.GetEntities()), playerCount)
+				serverLogger.WithFields(logrus.Fields{
+					"entityCount": len(world.GetEntities()),
+					"playerCount": playerCount,
+				}).Debug("server tick metrics")
 			}
 		}
 	}
@@ -288,7 +328,7 @@ func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.State
 }
 
 // createPlayerEntity creates a player entity for a connected client
-func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID uint64, seed int64, genreID string, verbose bool) *engine.Entity {
+func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID uint64, seed int64, genreID string, logger *logrus.Logger) *engine.Entity {
 	// Create player entity
 	entity := world.CreateEntity()
 
@@ -360,16 +400,19 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 		OffsetY:   -14,
 	})
 
-	if verbose {
-		log.Printf("Player entity created: ID=%d, PlayerID=%d, Position=(%.1f, %.1f)",
-			entity.ID, playerID, spawnX, spawnY)
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.EntityLogger(logger, int(entity.ID)).WithFields(logrus.Fields{
+			"playerID": playerID,
+			"x":        spawnX,
+			"y":        spawnY,
+		}).Debug("player entity created")
 	}
 
 	return entity
 }
 
 // applyInputCommand applies a network input command to a player entity
-func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose bool) {
+func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
 	// Get velocity component
 	velComp, hasVel := entity.GetComponent("velocity")
 	if !hasVel {
@@ -399,23 +442,26 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 			velocity.VX = moveX * 100.0
 			velocity.VY = moveY * 100.0
 
-			if verbose && (moveX != 0 || moveY != 0) {
-				log.Printf("Player %d moving: velocity=(%.1f, %.1f)",
-					cmd.PlayerID, velocity.VX, velocity.VY)
+			if logger.GetLevel() >= logrus.DebugLevel && (moveX != 0 || moveY != 0) {
+				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+					"playerID":  cmd.PlayerID,
+					"velocityX": velocity.VX,
+					"velocityY": velocity.VY,
+				}).Debug("player moving")
 			}
 		}
 
 	case "attack":
 		// Trigger attack
-		if verbose {
-			log.Printf("Player %d attacking", cmd.PlayerID)
+		if logger.GetLevel() >= logrus.DebugLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player attacking")
 		}
 
 		// Get attack component
 		attackComp, hasAttack := entity.GetComponent("attack")
 		if !hasAttack {
-			if verbose {
-				log.Printf("Player %d has no attack component", cmd.PlayerID)
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no attack component")
 			}
 			return
 		}
@@ -423,8 +469,11 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 
 		// Check cooldown using CanAttack method
 		if !attack.CanAttack() {
-			if verbose {
-				log.Printf("Player %d attack on cooldown (%.2fs remaining)", cmd.PlayerID, attack.CooldownTimer)
+			if logger.GetLevel() >= logrus.DebugLevel {
+				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+					"playerID":       cmd.PlayerID,
+					"cooldownRemain": attack.CooldownTimer,
+				}).Debug("player attack on cooldown")
 			}
 			return
 		}
@@ -432,22 +481,25 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 		// Trigger attack by resetting cooldown
 		attack.ResetCooldown()
 
-		if verbose {
-			log.Printf("Player %d attack triggered (damage: %.1f, range: %.1f)",
-				cmd.PlayerID, attack.Damage, attack.Range)
+		if logger.GetLevel() >= logrus.DebugLevel {
+			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+				"playerID": cmd.PlayerID,
+				"damage":   attack.Damage,
+				"range":    attack.Range,
+			}).Debug("player attack triggered")
 		}
 
 	case "use_item":
 		// Use item from inventory
-		if verbose {
-			log.Printf("Player %d using item", cmd.PlayerID)
+		if logger.GetLevel() >= logrus.DebugLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player using item")
 		}
 
 		// Get inventory component
 		invComp, hasInv := entity.GetComponent("inventory")
 		if !hasInv {
-			if verbose {
-				log.Printf("Player %d has no inventory component", cmd.PlayerID)
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no inventory component")
 			}
 			return
 		}
@@ -455,8 +507,8 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 
 		// Parse item index from command data
 		if len(cmd.Data) < 1 {
-			if verbose {
-				log.Printf("Player %d use_item command missing item index", cmd.PlayerID)
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("use_item command missing item index")
 			}
 			return
 		}
@@ -464,9 +516,12 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 
 		// Validate item index
 		if itemIndex < 0 || itemIndex >= len(inventory.Items) {
-			if verbose {
-				log.Printf("Player %d invalid item index: %d (inventory size: %d)",
-					cmd.PlayerID, itemIndex, len(inventory.Items))
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+					"playerID":      cmd.PlayerID,
+					"itemIndex":     itemIndex,
+					"inventorySize": len(inventory.Items),
+				}).Warn("invalid item index")
 			}
 			return
 		}
@@ -476,9 +531,11 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 
 		// Check if item is consumable (using imported item package constant)
 		if item.Type != itemgen.TypeConsumable {
-			if verbose {
-				log.Printf("Player %d attempted to use non-consumable item: %s",
-					cmd.PlayerID, item.Name)
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+					"playerID": cmd.PlayerID,
+					"itemName": item.Name,
+				}).Warn("attempted to use non-consumable item")
 			}
 			return
 		}
@@ -495,9 +552,14 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 					health.Current = health.Max
 				}
 
-				if verbose {
-					log.Printf("Player %d used %s, healed %.1f HP (now %.1f/%.1f)",
-						cmd.PlayerID, item.Name, healAmount, health.Current, health.Max)
+				if logger.GetLevel() >= logrus.InfoLevel {
+					logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+						"playerID":      cmd.PlayerID,
+						"itemName":      item.Name,
+						"healAmount":    healAmount,
+						"currentHealth": health.Current,
+						"maxHealth":     health.Max,
+					}).Info("player used item")
 				}
 
 				// Remove consumed item from inventory
@@ -506,8 +568,11 @@ func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, verbose
 		}
 
 	default:
-		if verbose {
-			log.Printf("Unknown input type from player %d: %s", cmd.PlayerID, cmd.InputType)
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+				"playerID":  cmd.PlayerID,
+				"inputType": cmd.InputType,
+			}).Warn("unknown input type")
 		}
 	}
 }

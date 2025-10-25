@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -20,11 +21,23 @@ var (
 func main() {
 	flag.Parse()
 
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("questtest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"seed":       *seed,
+		"genre":      *genre,
+		"depth":      *depth,
+		"difficulty": *difficulty,
+		"count":      *count,
+	})
+
 	fmt.Println("=== Venture Quest Generator Test ===")
 	fmt.Printf("Seed: %d\n", *seed)
 	fmt.Printf("Genre: %s\n", *genre)
 	fmt.Printf("Depth: %d, Difficulty: %.2f\n", *depth, *difficulty)
 	fmt.Printf("Generating %d quests...\n\n", *count)
+
+	testLogger.Info("generating quests")
 
 	// Create generator
 	generator := quest.NewQuestGenerator()
@@ -40,17 +53,22 @@ func main() {
 	}
 
 	// Generate quests
+	genLogger := logging.GeneratorLogger(logger, "quest", *seed, *genre)
+	genLogger.Debug("starting quest generation")
+	
 	result, err := generator.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Generation failed: %v", err)
+		genLogger.WithError(err).Fatal("generation failed")
 	}
 
 	// Validate
 	if err := generator.Validate(result); err != nil {
-		log.Fatalf("Validation failed: %v", err)
+		genLogger.WithError(err).Fatal("validation failed")
 	}
 
 	quests := result.([]*quest.Quest)
+	
+	genLogger.WithField("questCount", len(quests)).Info("quests generated successfully")
 
 	// Display quests
 	for i, q := range quests {

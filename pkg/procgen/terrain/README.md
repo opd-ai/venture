@@ -141,6 +141,57 @@ terrain := result.(*terrain.Terrain)
 - 80x50 forest: ~0.83ms
 - 150x100 forest: ~3.5ms
 
+### City (Grid Subdivision)
+
+The city algorithm creates urban environments with buildings, streets, and public spaces using grid-based block subdivision.
+
+**Features:**
+- Grid-based city blocks with configurable size
+- Street network with grid pattern
+- Three types of blocks: buildings, plazas, parks
+- Building interiors with BSP subdivision
+- Solid structures and accessible buildings with rooms
+- Parks with trees and optional ponds
+
+**Usage:**
+```go
+gen := terrain.NewCityGenerator()
+params := procgen.GenerationParams{
+    Difficulty: 0.5,
+    Depth:      1,
+    GenreID:    "scifi",
+    Custom: map[string]interface{}{
+        "width":           80,
+        "height":          50,
+        "blockSize":       12,   // Size of city blocks
+        "streetWidth":     2,    // Width of streets
+        "buildingDensity": 0.7,  // 70% of blocks have buildings
+        "plazaDensity":    0.2,  // 20% of blocks are plazas
+    },
+}
+result, err := gen.Generate(12345, params)
+terrain := result.(*terrain.Terrain)
+```
+
+**Parameters:**
+- `blockSize` (int): Size of city blocks in tiles, 4-30 (default: 12)
+- `streetWidth` (int): Width of streets in tiles, 1-5 (default: 2)
+- `buildingDensity` (float64): Percentage of blocks with buildings, 0.0-1.0 (default: 0.7)
+- `plazaDensity` (float64): Percentage of blocks that are plazas, 0.0-1.0 (default: 0.2)
+
+**Technical Details:**
+- Grid subdivision creates regular city blocks separated by streets
+- Buildings: 70% solid structures, 30% accessible with single room
+- Large buildings (10x10+): BSP subdivided interiors with multiple rooms
+- Plazas: Open public squares (tracked as rooms for stairs placement)
+- Parks: Green spaces with trees (30% coverage) and optional ponds (20% chance)
+- Streets provide full connectivity between all blocks
+
+**Performance:**
+- 40x30 city: ~0.02ms
+- 80x50 city: ~0.06ms
+- 200x200 city: ~2.9ms
+
 ## Tile Types
 
 The terrain system uses several tile types:
@@ -283,13 +334,16 @@ go build -o terraintest ./cmd/terraintest
 # Generate forest
 ./terraintest -algorithm forest -width 80 -height 50 -seed 12345
 
+# Generate city
+./terraintest -algorithm city -width 80 -height 50 -seed 67890
+
 # Save to file
 ./terraintest -algorithm bsp -output dungeon.txt
 ```
 
 ### CLI Options
 
-- `-algorithm` - Generation algorithm: "bsp", "cellular", "maze", or "forest" (default: "bsp")
+- `-algorithm` - Generation algorithm: "bsp", "cellular", "maze", "forest", or "city" (default: "bsp")
 - `-width` - Map width in tiles (default: 80)
 - `-height` - Map height in tiles (default: 50)
 - `-seed` - Random seed for deterministic generation (default: 12345)

@@ -36,8 +36,10 @@ func main() {
 		gen = terrain.NewMazeGenerator()
 	case "forest":
 		gen = terrain.NewForestGenerator()
+	case "city":
+		gen = terrain.NewCityGenerator()
 	default:
-		log.Fatalf("Unknown algorithm: %s (use 'bsp', 'cellular', 'maze', or 'forest')", *algorithm)
+		log.Fatalf("Unknown algorithm: %s (use 'bsp', 'cellular', 'maze', 'forest', or 'city')", *algorithm)
 	}
 
 	// Set up generation parameters

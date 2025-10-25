@@ -255,8 +255,8 @@ func (g *ForestGenerator) poissonDiscSampling(width, height int, minDist float64
 
 // isValidPoissonPoint checks if a point is valid for Poisson disc sampling.
 func (g *ForestGenerator) isValidPoissonPoint(point Point, points []Point, grid [][]int,
-	cellSize, minDist float64, width, height int) bool {
-
+	cellSize, minDist float64, width, height int,
+) bool {
 	// Get grid cell
 	gridX := int(float64(point.X) / cellSize)
 	gridY := int(float64(point.Y) / cellSize)

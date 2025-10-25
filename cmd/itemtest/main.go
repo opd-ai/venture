@@ -3,14 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -29,6 +30,20 @@ func main() {
 	if *seed == 0 {
 		*seed = time.Now().UnixNano()
 	}
+
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("itemtest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"genre": *genre,
+		"count": *count,
+		"depth": *depth,
+		"seed":  *seed,
+	})
+	if *itemType != "" {
+		testLogger = testLogger.WithField("itemType", *itemType)
+	}
+
+	testLogger.Info("generating items")
 
 	// Create generator
 	generator := item.NewItemGenerator()
@@ -49,27 +64,33 @@ func main() {
 	}
 
 	// Generate items
+	genLogger := logging.GeneratorLogger(logger, "item", *seed, *genre)
+	genLogger.Debug("starting item generation")
+	
 	result, err := generator.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Failed to generate items: %v", err)
+		genLogger.WithError(err).Fatal("failed to generate items")
 	}
 
 	items := result.([]*item.Item)
 
 	// Validate items
 	if err := generator.Validate(items); err != nil {
-		log.Fatalf("Generated items failed validation: %v", err)
+		genLogger.WithError(err).Fatal("generated items failed validation")
 	}
+
+	genLogger.WithField("itemCount", len(items)).Info("items generated successfully")
 
 	// Prepare output
 	var outputFile *os.File
 	if *output != "" {
 		f, err := os.Create(*output)
 		if err != nil {
-			log.Fatalf("Failed to create output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to create output file")
 		}
 		defer f.Close()
 		outputFile = f
+		testLogger.WithField("outputFile", *output).Info("writing items to file")
 	} else {
 		outputFile = os.Stdout
 	}

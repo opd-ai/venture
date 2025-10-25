@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/skills"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -28,8 +29,16 @@ func main() {
 		*seed = time.Now().UnixNano()
 	}
 
-	log.Printf("Generating %d skill trees...", *count)
-	log.Printf("Genre: %s, Depth: %d, Seed: %d", *genre, *depth, *seed)
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("skilltest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"genre": *genre,
+		"count": *count,
+		"depth": *depth,
+		"seed":  *seed,
+	})
+
+	testLogger.Info("generating skill trees")
 
 	// Create generator
 	generator := skills.NewSkillTreeGenerator()
@@ -45,35 +54,41 @@ func main() {
 	}
 
 	// Generate skill trees
+	genLogger := logging.GeneratorLogger(logger, "skill-tree", *seed, *genre)
+	genLogger.Debug("starting skill tree generation")
+	
 	start := time.Now()
 	result, err := generator.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Generation failed: %v", err)
+		genLogger.WithError(err).Fatal("generation failed")
 	}
 	elapsed := time.Since(start)
 
 	trees, ok := result.([]*skills.SkillTree)
 	if !ok {
-		log.Fatalf("Unexpected result type: %T", result)
+		genLogger.WithField("resultType", fmt.Sprintf("%T", result)).Fatal("unexpected result type")
 	}
 
 	// Validate
 	if err := generator.Validate(result); err != nil {
-		log.Fatalf("Validation failed: %v", err)
+		genLogger.WithError(err).Fatal("validation failed")
 	}
 
-	log.Printf("Generated %d skill trees in %v", len(trees), elapsed)
+	genLogger.WithFields(logrus.Fields{
+		"treeCount": len(trees),
+		"duration":  elapsed,
+	}).Info("skill trees generated successfully")
 
 	// Format output
 	var out *os.File
 	if *output != "" {
 		f, err := os.Create(*output)
 		if err != nil {
-			log.Fatalf("Failed to create output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to create output file")
 		}
 		defer f.Close()
 		out = f
-		log.Printf("Writing to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("writing skill trees to file")
 	} else {
 		out = os.Stdout
 	}

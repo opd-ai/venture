@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -25,8 +26,20 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Printf("Generating spells for %s genre", *genre)
-	log.Printf("Count: %d, Depth: %d, Difficulty: %.1f, Seed: %d", *count, *depth, *difficulty, *seed)
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("magictest")
+	testLogger := logger.WithFields(logrus.Fields{
+		"genre":      *genre,
+		"count":      *count,
+		"depth":      *depth,
+		"difficulty": *difficulty,
+		"seed":       *seed,
+	})
+	if *spellType != "" {
+		testLogger = testLogger.WithField("spellType", *spellType)
+	}
+
+	testLogger.Info("generating spells")
 
 	// Create generator
 	gen := magic.NewSpellGenerator()
@@ -42,28 +55,36 @@ func main() {
 	}
 
 	// Generate spells
+	genLogger := logging.GeneratorLogger(logger, "magic", *seed, *genre)
+	genLogger.Debug("starting spell generation")
+	
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Generation failed: %v", err)
+		genLogger.WithError(err).Fatal("generation failed")
 	}
 
 	spells, ok := result.([]*magic.Spell)
 	if !ok {
-		log.Fatal("Result is not []*Spell")
+		genLogger.Fatal("result is not []*Spell")
 	}
 
 	// Validate
 	if err := gen.Validate(spells); err != nil {
-		log.Fatalf("Validation failed: %v", err)
+		genLogger.WithError(err).Fatal("validation failed")
 	}
 
 	// Filter by type if specified
 	if *spellType != "" {
 		spells = filterByType(spells, *spellType)
-		log.Printf("Filtered to %d spells of type %s", len(spells), *spellType)
+		testLogger.WithFields(logrus.Fields{
+			"filteredCount": len(spells),
+			"spellType":     *spellType,
+		}).Info("spells filtered by type")
 	}
 
-	log.Printf("Generated %d spells", len(spells))
+	genLogger.WithField("spellCount", len(spells)).Info("spells generated successfully")
+
+	genLogger.WithField("spellCount", len(spells)).Info("spells generated successfully")
 
 	// Render to string
 	rendered := renderSpells(spells, *verbose)
@@ -71,9 +92,9 @@ func main() {
 	// Output to file or console
 	if *output != "" {
 		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {
-			log.Fatalf("Failed to write output file: %v", err)
+			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to write output file")
 		}
-		log.Printf("Spells saved to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("spells saved to file")
 	} else {
 		fmt.Println(rendered)
 	}

@@ -77,6 +77,11 @@ func (g *CellularGenerator) Generate(seed int64, params procgen.GenerationParams
 	// Post-process to ensure connectivity
 	g.ensureConnectivity(terrain)
 
+	// Add underground lakes (30% chance)
+	if rng.Float64() < 0.3 {
+		g.addUndergroundLakes(terrain, rng)
+	}
+
 	return terrain, nil
 }
 
@@ -272,4 +277,68 @@ func (g *CellularGenerator) Validate(result interface{}) error {
 	}
 
 	return nil
+}
+
+// addUndergroundLakes creates small lakes in cave chambers.
+// Lakes are placed in open floor areas, giving caves a natural water feature.
+func (g *CellularGenerator) addUndergroundLakes(terrain *Terrain, rng *rand.Rand) {
+	// Find suitable locations for lakes (open areas with floor tiles)
+	candidates := make([]Point, 0, 50)
+
+	for y := 5; y < terrain.Height-5; y++ {
+		for x := 5; x < terrain.Width-5; x++ {
+			// Check if this is a floor tile surrounded by mostly floor tiles
+			if terrain.GetTile(x, y) == TileFloor {
+				// Count floor neighbors in 5x5 area
+				floorNeighbors := 0
+				for dy := -2; dy <= 2; dy++ {
+					for dx := -2; dx <= 2; dx++ {
+						nx, ny := x+dx, y+dy
+						if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
+							floorNeighbors++
+						}
+					}
+				}
+
+				// If area is mostly open (>15 floor tiles in 5x5), it's a good lake spot
+				if floorNeighbors > 15 {
+					candidates = append(candidates, Point{x, y})
+				}
+			}
+		}
+	}
+
+	if len(candidates) == 0 {
+		return
+	}
+
+	// Create 1-3 small underground lakes
+	numLakes := 1 + rng.Intn(3)
+	for i := 0; i < numLakes && len(candidates) > 0; i++ {
+		// Pick a random location
+		idx := rng.Intn(len(candidates))
+		center := candidates[idx]
+
+		// Remove nearby candidates to avoid overlapping lakes
+		newCandidates := make([]Point, 0, len(candidates))
+		for _, c := range candidates {
+			dist := abs(c.X-center.X) + abs(c.Y-center.Y)
+			if dist > 15 { // Manhattan distance > 15
+				newCandidates = append(newCandidates, c)
+			}
+		}
+		candidates = newCandidates
+
+		// Generate small lake (radius 3-6)
+		radius := 3 + rng.Intn(4)
+		GenerateLake(center, radius, terrain, rng)
+	}
+}
+
+// abs returns the absolute value of an integer.
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }

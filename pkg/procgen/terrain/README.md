@@ -192,6 +192,161 @@ terrain := result.(*terrain.Terrain)
 - 80x50 city: ~0.06ms
 - 200x200 city: ~2.9ms
 
+## Water System
+
+The water system provides utilities for generating lakes, rivers, moats, and other water features. All water generation is deterministic and integrates seamlessly with existing terrain generators.
+
+**Features:**
+- Natural-looking lakes with elliptical shapes
+- Winding rivers between points
+- Defensive moats around rooms
+- Automatic bridge placement over water
+- Flood fill utilities for water body creation
+- Deep and shallow water zones
+
+**Usage:**
+```go
+import "github.com/opd-ai/venture/pkg/procgen/terrain"
+
+// Generate a lake
+terrain := NewTerrain(80, 50)
+rng := rand.New(rand.NewSource(12345))
+lake := GenerateLake(terrain, 40, 25, 10, rng)
+// Lake has shallow water at edges, deep water at center
+
+// Generate a river
+river := GenerateRiver(terrain, Point{X: 5, Y: 25}, Point{X: 75, Y: 25}, 3, rng)
+// River meanders naturally between start and end points
+
+// Generate a moat around a room
+room := &Room{X: 30, Y: 20, Width: 10, Height: 8}
+moat := GenerateMoat(terrain, room, 2, rng)
+// Moat surrounds room at specified width
+
+// Place bridges over water
+path := []Point{{5, 20}, {10, 20}, {15, 20}} // Path crosses water
+PlaceBridges(terrain, lake, path)
+// Bridges automatically placed where path crosses water
+
+// Flood fill for custom water bodies
+start := Point{X: 40, Y: 25}
+tiles := FloodFill(terrain, start, 100, rng)
+FloodFillWater(terrain, tiles, 0.5, rng) // 50% deep, 50% shallow
+```
+
+### Water Types
+
+The water system supports three main types of water features:
+
+```go
+type WaterType int
+
+const (
+    WaterTypeLake  WaterType = iota  // Natural lakes with elliptical shape
+    WaterTypeRiver                    // Winding rivers between points
+    WaterTypeMoat                     // Defensive moats around rooms
+)
+```
+
+### Water Feature Structure
+
+Each water feature tracks its tiles and any auto-placed bridges:
+
+```go
+type WaterFeature struct {
+    Type    WaterType  // Type of water feature
+    Tiles   []Point    // All water tiles in feature
+    Bridges []Point    // Auto-placed bridge locations
+}
+```
+
+### Water Generation Functions
+
+**GenerateLake(terrain \*Terrain, centerX, centerY, radius int, rng \*rand.Rand) WaterFeature**
+- Creates elliptical lake with radius variance (10-30% shape variation)
+- Deep water (TileWaterDeep) at center (normalized distance ≤ 0.6)
+- Shallow water (TileWaterShallow) at edges (normalized distance ≤ 1.0)
+- Returns WaterFeature with all tiles
+
+**GenerateRiver(terrain \*Terrain, start, end Point, width int, rng \*rand.Rand) WaterFeature**
+- Creates winding river path between start and end points
+- 20% perpendicular offset for natural meandering
+- Width 1-5 tiles supported
+- Deep water in center of wide rivers (width ≥ 3), shallow at edges
+- Returns WaterFeature with all tiles
+
+**GenerateMoat(terrain \*Terrain, room \*Room, width int, rng \*rand.Rand) WaterFeature**
+- Surrounds room perimeter at specified width (1-3 tiles)
+- Distance-based depth: deep water if dist ≤ width/2, else shallow
+- Respects room boundaries (never overwrites room interior)
+- Returns WaterFeature with all tiles
+
+**PlaceBridges(terrain \*Terrain, waterFeature WaterFeature, path []Point)**
+- Automatically places bridges where paths cross water
+- Checks for water on both sides of path to detect crossings
+- Converts TileCorridor and TileFloor to TileBridge
+- Updates waterFeature.Bridges with bridge locations
+
+**FloodFill(terrain \*Terrain, start Point, maxTiles int, rng \*rand.Rand) []Point**
+- BFS traversal from starting point
+- Only visits walkable tiles (TileFloor, TileCorridor, TileDoor)
+- Stops when maxTiles reached or no more walkable neighbors
+- Returns list of filled tiles
+
+**FloodFillWater(terrain \*Terrain, tiles []Point, deepRatio float64, rng \*rand.Rand) WaterFeature**
+- Converts flood-filled area into water body
+- deepRatio controls proportion of deep vs shallow water (0.0-1.0)
+- Randomly assigns depth to each tile based on ratio
+- Returns WaterFeature with all tiles
+
+### Integration with Terrain Generators
+
+The water system integrates with all terrain generators:
+
+**BSP Dungeons:**
+- Moats around boss rooms (1-2 tile width based on room size ≥8x8)
+- Creates defensive perimeters for challenging encounters
+
+**Cellular Caves:**
+- 1-3 underground lakes per map (30% chance)
+- Radius 3-6 tiles, placed in open chambers
+- Maintains 15+ Manhattan distance separation for variety
+
+**Forest:**
+- Natural lakes and winding rivers
+- Automatic bridge placement where paths cross water
+- Shallow edges for realism
+
+**Maze:**
+- Water hazards in dead ends (20% chance per dead end)
+- 2-3 tile pools with deep water at end, shallow toward corridor
+- Avoids room locations to preserve accessible areas
+
+### Performance
+
+Water generation is highly efficient:
+- GenerateLake: ~0.019ms (40x30 terrain, radius 10)
+- GenerateRiver: ~0.24ms (80x50 terrain, width 3)
+- FloodFill: ~0.10ms (100 tile limit)
+- Memory: 35-206 KB per generation operation
+
+### Design Notes
+
+**Depth System:**
+Water uses a two-tier depth system for tactical gameplay:
+- **Shallow Water** (TileWaterShallow): Walkable but slows movement (2.0x cost)
+- **Deep Water** (TileWaterDeep): Impassable, blocks movement entirely
+
+**Natural Appearance:**
+- Lakes use elliptical shapes with radius variance (10-30%) for organic look
+- Rivers meander with perpendicular offsets (20% of distance) to avoid straight lines
+- Flood fill respects terrain connectivity for realistic water bodies
+
+**Bridge Placement:**
+- Automatic detection of water crossings in paths
+- Only places bridges where water exists on opposite sides of path
+- Preserves path connectivity while adding visual variety
+
 ## Tile Types
 
 The terrain system uses several tile types:
@@ -396,14 +551,14 @@ Potential additions to the terrain system:
 - [x] **Multi-level dungeons with stairs** (✓ Completed: Phase 1 - Infrastructure)
 - [x] **Extended tile types** (water, trees, bridges, structures) (✓ Completed: Phase 1)
 - [x] **Maze generator** (✓ Completed: Phase 2 - recursive backtracking)
+- [x] **Forest generator** (✓ Completed: Phase 3 - Poisson disc sampling)
+- [x] **City generator** (✓ Completed: Phase 4 - grid subdivision)
+- [x] **Water system** (✓ Completed: Phase 5 - lakes, rivers, moats, bridges)
 - [ ] Room templates and prefabs
 - [ ] Door placement algorithms
 - [ ] Treasure room generation
 - [ ] **Multi-level generator** (Phase 6 - connects levels)
 - [ ] Themed room variants (treasure, boss, puzzle)
-- [ ] **Forest generator** (Phase 3 - natural environments)
-- [ ] **City generator** (Phase 4 - urban environments)
-- [ ] **Water system** (Phase 5 - lakes, rivers, moats)
 - [ ] **Composite generator** (Phase 7 - multi-biome maps)
 - [ ] Drunkard's walk algorithm
 - [ ] Voronoi diagram-based generation

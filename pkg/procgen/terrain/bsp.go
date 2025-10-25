@@ -84,6 +84,9 @@ func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (in
 	// GAP-006 REPAIR: Assign special room types
 	g.assignRoomTypes(terrain, rng)
 
+	// Add water features (moats around boss rooms)
+	g.addWaterFeatures(terrain, rng)
+
 	return terrain, nil
 }
 
@@ -361,4 +364,25 @@ func (g *BSPGenerator) assignRoomTypes(terrain *Terrain, rng *rand.Rand) {
 	}
 
 	// All remaining rooms stay as RoomNormal (already default)
+}
+
+// addWaterFeatures adds water features like moats to special rooms.
+// Boss rooms get moats for dramatic effect and tactical challenge.
+func (g *BSPGenerator) addWaterFeatures(terrain *Terrain, rng *rand.Rand) {
+	// Add moats around boss rooms (if they exist and are large enough)
+	for _, room := range terrain.Rooms {
+		if room.Type == RoomBoss {
+			// Only add moat if room is large enough (at least 8x8)
+			if room.Width >= 8 && room.Height >= 8 {
+				// Moat width: 1-2 tiles based on room size
+				moatWidth := 1
+				if room.Width >= 12 && room.Height >= 12 {
+					moatWidth = 2
+				}
+
+				// Generate moat around boss room
+				_ = GenerateMoat(room, moatWidth, terrain)
+			}
+		}
+	}
 }

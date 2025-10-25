@@ -83,6 +83,9 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		}
 	}
 
+	// Add water hazards to some remaining dead ends (20% chance)
+	g.addWaterHazards(terrain, deadEnds, rng)
+
 	// Place stairs at furthest corners
 	g.placeStairsInCorners(terrain, rng)
 
@@ -330,4 +333,61 @@ func (g *MazeGenerator) Validate(result interface{}) error {
 	}
 
 	return nil
+}
+
+// addWaterHazards fills some dead ends with water for additional maze challenges.
+// Creates small water pools (2-3 tiles) at dead ends that weren't converted to rooms.
+func (g *MazeGenerator) addWaterHazards(terrain *Terrain, deadEnds []Point, rng *rand.Rand) {
+	for _, point := range deadEnds {
+		// Skip if this dead end was turned into a room or stairs
+		tile := terrain.GetTile(point.X, point.Y)
+		if tile != TileFloor {
+			continue
+		}
+
+		// Skip if this point is part of a room
+		isInRoom := false
+		for _, room := range terrain.Rooms {
+			if point.X >= room.X && point.X < room.X+room.Width &&
+				point.Y >= room.Y && point.Y < room.Y+room.Height {
+				isInRoom = true
+				break
+			}
+		}
+		if isInRoom {
+			continue
+		}
+
+		// 20% chance to create water hazard
+		if rng.Float64() < 0.2 {
+			// Create small water pool (2-3 tiles from the dead end)
+			poolSize := 2 + rng.Intn(2)
+
+			// Find the direction of the corridor leading to this dead end
+			directions := []struct{ dx, dy int }{
+				{0, -1}, // North
+				{1, 0},  // East
+				{0, 1},  // South
+				{-1, 0}, // West
+			}
+
+			for _, dir := range directions {
+				nx, ny := point.X+dir.dx, point.Y+dir.dy
+				if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
+					// Found corridor direction, place water in dead end
+					terrain.SetTile(point.X, point.Y, TileWaterDeep)
+
+					// Add 1-2 more shallow water tiles back toward corridor
+					for i := 1; i < poolSize; i++ {
+						wx := point.X - dir.dx*i
+						wy := point.Y - dir.dy*i
+						if terrain.IsInBounds(wx, wy) && terrain.GetTile(wx, wy) == TileFloor {
+							terrain.SetTile(wx, wy, TileWaterShallow)
+						}
+					}
+					break
+				}
+			}
+		}
+	}
 }

@@ -158,9 +158,9 @@ func TestPlayerSpellCastingSystem_Update_MultipleSlotsInput(t *testing.T) {
 
 			slots := &SpellSlotComponent{Casting: -1}
 			testSpell := &magic.Spell{
-				Name:    "Test Spell",
-				Type:    magic.TypeOffensive,
-				Stats:   magic.Stats{ManaCost: 20, CastTime: 0.5},
+				Name:  "Test Spell",
+				Type:  magic.TypeOffensive,
+				Stats: magic.Stats{ManaCost: 20, CastTime: 0.5},
 			}
 			slots.SetSlot(tt.slotIndex, testSpell)
 			player.AddComponent(slots)
@@ -199,14 +199,14 @@ func TestPlayerSpellCastingSystem_Update_AlreadyCasting(t *testing.T) {
 
 	slots := &SpellSlotComponent{Casting: -1}
 	spell1 := &magic.Spell{
-		Name:    "Spell 1",
-		Type:    magic.TypeOffensive,
-		Stats:   magic.Stats{ManaCost: 20, CastTime: 1.0}, // Long cast time
+		Name:  "Spell 1",
+		Type:  magic.TypeOffensive,
+		Stats: magic.Stats{ManaCost: 20, CastTime: 1.0}, // Long cast time
 	}
 	spell2 := &magic.Spell{
-		Name:    "Spell 2",
-		Type:    magic.TypeOffensive,
-		Stats:   magic.Stats{ManaCost: 20, CastTime: 0.5},
+		Name:  "Spell 2",
+		Type:  magic.TypeOffensive,
+		Stats: magic.Stats{ManaCost: 20, CastTime: 0.5},
 	}
 	slots.SetSlot(0, spell1)
 	slots.SetSlot(1, spell2)

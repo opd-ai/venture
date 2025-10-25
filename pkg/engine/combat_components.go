@@ -195,3 +195,54 @@ func (t *TeamComponent) IsAlly(otherTeam int) bool {
 func (t *TeamComponent) IsEnemy(otherTeam int) bool {
 	return t.TeamID != otherTeam && t.TeamID != 0 && otherTeam != 0
 }
+
+// ShieldComponent represents a temporary damage absorption barrier.
+type ShieldComponent struct {
+	// Amount is the remaining shield health
+	Amount float64
+	// MaxAmount is the initial shield strength
+	MaxAmount float64
+	// Duration is the remaining time in seconds
+	Duration float64
+	// MaxDuration is the initial duration
+	MaxDuration float64
+}
+
+// Type returns the component type identifier.
+func (s *ShieldComponent) Type() string {
+	return "shield"
+}
+
+// IsActive returns true if the shield still has absorption remaining and hasn't expired.
+func (s *ShieldComponent) IsActive() bool {
+	return s.Amount > 0 && s.Duration > 0
+}
+
+// AbsorbDamage reduces the shield amount and returns actual damage absorbed.
+func (s *ShieldComponent) AbsorbDamage(damage float64) float64 {
+	if !s.IsActive() {
+		return 0
+	}
+
+	absorbed := damage
+	if absorbed > s.Amount {
+		absorbed = s.Amount
+	}
+
+	s.Amount -= absorbed
+	if s.Amount < 0 {
+		s.Amount = 0
+	}
+
+	return absorbed
+}
+
+// Update reduces the shield duration.
+func (s *ShieldComponent) Update(deltaTime float64) {
+	if s.Duration > 0 {
+		s.Duration -= deltaTime
+		if s.Duration < 0 {
+			s.Duration = 0
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/procgen/magic"
@@ -68,7 +69,9 @@ func TestSpellSlotComponent(t *testing.T) {
 // TestSpellCastingSystem tests spell casting mechanics.
 func TestSpellCastingSystem(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	// Create caster entity
 	caster := world.CreateEntity()
@@ -145,7 +148,9 @@ func TestSpellCastingSystem(t *testing.T) {
 // TestSpellCastingSystem_InsufficientMana tests casting without enough mana.
 func TestSpellCastingSystem_InsufficientMana(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	caster := world.CreateEntity()
 	caster.AddComponent(&PositionComponent{X: 100, Y: 100})
@@ -174,7 +179,9 @@ func TestSpellCastingSystem_InsufficientMana(t *testing.T) {
 // TestSpellCastingSystem_Cooldown tests cooldown mechanics.
 func TestSpellCastingSystem_Cooldown(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	caster := world.CreateEntity()
 	caster.AddComponent(&ManaComponent{Current: 100, Max: 100, Regen: 5.0})
@@ -216,7 +223,9 @@ func TestSpellCastingSystem_Cooldown(t *testing.T) {
 // TestCancelCast tests spell cast cancellation.
 func TestCancelCast(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	caster := world.CreateEntity()
 	caster.AddComponent(&ManaComponent{Current: 100, Max: 100, Regen: 5.0})
@@ -345,7 +354,9 @@ func TestLoadPlayerSpells_Determinism(t *testing.T) {
 // TestHealingSpell tests healing spell execution.
 func TestHealingSpell(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	caster := world.CreateEntity()
 	caster.AddComponent(&PositionComponent{X: 100, Y: 100})
@@ -383,7 +394,9 @@ func TestHealingSpell(t *testing.T) {
 // TestInstantCast tests instant cast spells (0 cast time).
 func TestInstantCast(t *testing.T) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	caster := world.CreateEntity()
 	caster.AddComponent(&PositionComponent{X: 100, Y: 100})
@@ -432,7 +445,9 @@ func TestInstantCast(t *testing.T) {
 // BenchmarkSpellCastingSystem benchmarks the spell casting system.
 func BenchmarkSpellCastingSystem(b *testing.B) {
 	world := NewWorld()
-	system := NewSpellCastingSystem(world)
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	system := NewSpellCastingSystem(world, statusSys)
 
 	// Create 10 casters with spells
 	for i := 0; i < 10; i++ {
@@ -461,5 +476,412 @@ func BenchmarkSpellCastingSystem(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		system.Update(entities, 0.016)
+	}
+}
+
+// TestSpellCasting_ElementalEffects tests that offensive spells apply elemental status effects.
+func TestSpellCasting_ElementalEffects(t *testing.T) {
+	tests := []struct {
+		name           string
+		element        magic.ElementType
+		expectedEffect string
+	}{
+		{"Fire applies burning", magic.ElementFire, "burning"},
+		{"Ice applies frozen", magic.ElementIce, "frozen"},
+		{"Lightning applies shocked", magic.ElementLightning, "shocked"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create world and systems
+			world := NewWorld()
+			rng := rand.New(rand.NewSource(12345))
+			statusSys := NewStatusEffectSystem(world, rng)
+			spellSys := NewSpellCastingSystem(world, statusSys)
+
+			// Create caster and target
+			caster := &Entity{ID: 1, Components: make(map[string]Component)}
+			target := &Entity{ID: 2, Components: make(map[string]Component)}
+
+			// Add required components
+			caster.AddComponent(&PositionComponent{X: 0, Y: 0})
+			target.AddComponent(&PositionComponent{X: 5, Y: 5})
+			target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+			// Add entities to world
+			world.AddEntity(caster)
+			world.AddEntity(target)
+			world.Update(0) // Initialize entities list
+
+			// Create offensive spell with element
+			spell := &magic.Spell{
+				Name:    "Test Spell",
+				Type:    magic.TypeOffensive,
+				Element: tt.element,
+				Target:  magic.TargetSingle,
+				Stats: magic.Stats{
+					Damage: 20,
+					Range:  20.0,
+				},
+			}
+
+			// Cast spell
+			spellSys.castOffensiveSpell(caster, spell, 0, 0)
+
+			// Verify status effect applied
+			hasEffect := false
+			for _, comp := range target.Components {
+				if effect, ok := comp.(*StatusEffectComponent); ok {
+					if effect.EffectType == tt.expectedEffect {
+						hasEffect = true
+						break
+					}
+				}
+			}
+
+			if !hasEffect {
+				t.Errorf("Expected status effect %s not found on target", tt.expectedEffect)
+			}
+		})
+	}
+}
+
+// TestSpellCasting_ShieldMechanics tests defensive spell shield creation.
+func TestSpellCasting_ShieldMechanics(t *testing.T) {
+	// Create world and systems
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Create caster
+	caster := &Entity{ID: 1, Components: make(map[string]Component)}
+	caster.AddComponent(&PositionComponent{X: 0, Y: 0})
+
+	// Create defensive spell
+	spell := &magic.Spell{
+		Name:    "Shield",
+		Type:    magic.TypeDefensive,
+		Element: magic.ElementArcane,
+		Target:  magic.TargetSelf,
+		Stats: magic.Stats{
+			Damage:   50, // Shield amount
+			Duration: 30.0,
+		},
+	}
+
+	// Cast spell
+	spellSys.castDefensiveSpell(caster, spell)
+
+	// Verify shield component added
+	shieldComp, hasShield := caster.GetComponent("shield")
+	if !hasShield {
+		t.Fatal("Shield component not added to caster")
+	}
+
+	shield := shieldComp.(*ShieldComponent)
+	if shield.Amount != 50.0 {
+		t.Errorf("Shield amount = %f, want 50.0", shield.Amount)
+	}
+	if shield.Duration != 30.0 {
+		t.Errorf("Shield duration = %f, want 30.0", shield.Duration)
+	}
+}
+
+// TestSpellCasting_BuffSystem tests stat-boosting spells.
+func TestSpellCasting_BuffSystem(t *testing.T) {
+	// Create world and systems
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Create caster with stats
+	caster := &Entity{ID: 1, Components: make(map[string]Component)}
+	caster.AddComponent(&PositionComponent{X: 0, Y: 0})
+	stats := &StatsComponent{
+		Attack:  10.0,
+		Defense: 10.0,
+	}
+	caster.AddComponent(stats)
+
+	// Create buff spell (Strength)
+	spell := &magic.Spell{
+		Name:    "Strength",
+		Type:    magic.TypeBuff,
+		Element: magic.ElementLight,
+		Target:  magic.TargetSelf,
+		Stats: magic.Stats{
+			Duration: 30.0,
+		},
+	}
+
+	// Cast spell
+	spellSys.castBuffSpell(caster, spell)
+
+	// Verify attack increased
+	if stats.Attack <= 10.0 {
+		t.Errorf("Attack not buffed: %f", stats.Attack)
+	}
+
+	// Expected: 10.0 * 1.3 = 13.0
+	expected := 13.0
+	if stats.Attack < expected-0.1 || stats.Attack > expected+0.1 {
+		t.Errorf("Attack = %f, want approximately %f", stats.Attack, expected)
+	}
+}
+
+// TestSpellCasting_DebuffSystem tests stat-reducing spells.
+func TestSpellCasting_DebuffSystem(t *testing.T) {
+	// Create world and systems
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Create caster and target
+	caster := &Entity{ID: 1, Components: make(map[string]Component)}
+	target := &Entity{ID: 2, Components: make(map[string]Component)}
+
+	caster.AddComponent(&PositionComponent{X: 0, Y: 0})
+	target.AddComponent(&PositionComponent{X: 5, Y: 5})
+	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	targetStats := &StatsComponent{
+		Attack:  20.0,
+		Defense: 20.0,
+	}
+	target.AddComponent(targetStats)
+
+	world.AddEntity(caster)
+	world.AddEntity(target)
+
+	// Create debuff spell (Weakness)
+	spell := &magic.Spell{
+		Name:    "Weakness",
+		Type:    magic.TypeDebuff,
+		Element: magic.ElementDark,
+		Target:  magic.TargetSingle,
+		Stats: magic.Stats{
+			Damage:   5,
+			Range:    20.0,
+			Duration: 10.0,
+		},
+	}
+
+	// Cast spell
+	spellSys.castDebuffSpell(caster, spell, 0, 0)
+
+	// Verify attack decreased
+	if targetStats.Attack >= 20.0 {
+		t.Errorf("Attack not debuffed: %f", targetStats.Attack)
+	}
+
+	// Expected: 20.0 * 0.7 = 14.0
+	expected := 14.0
+	if targetStats.Attack < expected-0.1 || targetStats.Attack > expected+0.1 {
+		t.Errorf("Attack = %f, want approximately %f", targetStats.Attack, expected)
+	}
+}
+
+// TestShieldComponent_AbsorbDamage tests shield damage absorption.
+func TestShieldComponent_AbsorbDamage(t *testing.T) {
+	tests := []struct {
+		name           string
+		shieldAmount   float64
+		incomingDamage float64
+		expectedAbsorb float64
+		expectedRemain float64
+	}{
+		{"Shield absorbs all", 50.0, 30.0, 30.0, 20.0},
+		{"Shield partially absorbs", 20.0, 50.0, 20.0, 0.0},
+		{"Shield exactly absorbs", 30.0, 30.0, 30.0, 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shield := &ShieldComponent{
+				Amount:      tt.shieldAmount,
+				MaxAmount:   tt.shieldAmount,
+				Duration:    30.0,
+				MaxDuration: 30.0,
+			}
+
+			absorbed := shield.AbsorbDamage(tt.incomingDamage)
+
+			if absorbed != tt.expectedAbsorb {
+				t.Errorf("Absorbed = %f, want %f", absorbed, tt.expectedAbsorb)
+			}
+			if shield.Amount != tt.expectedRemain {
+				t.Errorf("Shield amount = %f, want %f", shield.Amount, tt.expectedRemain)
+			}
+		})
+	}
+}
+
+// TestStatusEffectSystem_BurningDamage tests burning DoT effect.
+func TestStatusEffectSystem_BurningDamage(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+
+	entity := &Entity{ID: 1, Components: make(map[string]Component)}
+	health := &HealthComponent{Current: 100, Max: 100}
+	entity.AddComponent(health)
+
+	// Apply burning effect
+	statusSys.ApplyStatusEffect(entity, "burning", 10.0, 3.0, 1.0)
+
+	// Update for 1 second (should trigger tick)
+	entities := []*Entity{entity}
+	statusSys.Update(entities, 1.0)
+
+	// Health should be reduced by magnitude (10)
+	if health.Current != 90.0 {
+		t.Errorf("Health = %f, want 90.0", health.Current)
+	}
+
+	// Update for 2 more seconds
+	statusSys.Update(entities, 1.0)
+	statusSys.Update(entities, 1.0)
+
+	// Should have taken 30 total damage (3 ticks × 10)
+	if health.Current != 70.0 {
+		t.Errorf("Health = %f, want 70.0 after 3 ticks", health.Current)
+	}
+}
+
+// TestCombatSystem_ShieldIntegration tests shield integration in combat.
+func TestCombatSystem_ShieldIntegration(t *testing.T) {
+	combatSys := NewCombatSystem(12345)
+
+	// Create attacker
+	attacker := &Entity{ID: 1, Components: make(map[string]Component)}
+	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+	attack := &AttackComponent{
+		Damage:   30.0,
+		Range:    10.0,
+		Cooldown: 1.0,
+	}
+	attacker.AddComponent(attack)
+
+	// Create target with shield
+	target := &Entity{ID: 2, Components: make(map[string]Component)}
+	target.AddComponent(&PositionComponent{X: 5, Y: 0})
+	health := &HealthComponent{Current: 100, Max: 100}
+	target.AddComponent(health)
+	shield := &ShieldComponent{
+		Amount:      50.0,
+		MaxAmount:   50.0,
+		Duration:    30.0,
+		MaxDuration: 30.0,
+	}
+	target.AddComponent(shield)
+
+	// Attack target
+	hit := combatSys.Attack(attacker, target)
+	if !hit {
+		t.Fatal("Attack should have hit")
+	}
+
+	// Shield should absorb all damage
+	if health.Current != 100.0 {
+		t.Errorf("Health = %f, want 100.0 (shield absorbed)", health.Current)
+	}
+	if shield.Amount != 20.0 {
+		t.Errorf("Shield amount = %f, want 20.0", shield.Amount)
+	}
+
+	// Attack again
+	combatSys.Attack(attacker, target)
+
+	// Shield should be depleted, health should take damage
+	if health.Current >= 100.0 {
+		t.Errorf("Health = %f, should be less than 100.0", health.Current)
+	}
+	if shield.Amount != 0.0 {
+		t.Errorf("Shield amount = %f, want 0.0 (depleted)", shield.Amount)
+	}
+}
+
+// TestSpellCasting_HealingAllyTargeting tests healing spell ally targeting.
+func TestSpellCasting_HealingAllyTargeting(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Create caster (player team)
+	caster := &Entity{ID: 1, Components: make(map[string]Component)}
+	caster.AddComponent(&PositionComponent{X: 0, Y: 0})
+	caster.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	caster.AddComponent(&TeamComponent{TeamID: 1})
+
+	// Create injured ally
+	ally := &Entity{ID: 2, Components: make(map[string]Component)}
+	ally.AddComponent(&PositionComponent{X: 5, Y: 0})
+	allyHealth := &HealthComponent{Current: 30, Max: 100}
+	ally.AddComponent(allyHealth)
+	ally.AddComponent(&TeamComponent{TeamID: 1})
+
+	// Create enemy (should not be targeted)
+	enemy := &Entity{ID: 3, Components: make(map[string]Component)}
+	enemy.AddComponent(&PositionComponent{X: 10, Y: 0})
+	enemy.AddComponent(&HealthComponent{Current: 50, Max: 100})
+	enemy.AddComponent(&TeamComponent{TeamID: 2})
+
+	world.AddEntity(caster)
+	world.AddEntity(ally)
+	world.AddEntity(enemy)
+
+	// Create healing spell
+	spell := &magic.Spell{
+		Name:    "Heal",
+		Type:    magic.TypeHealing,
+		Element: magic.ElementLight,
+		Target:  magic.TargetSingle,
+		Stats: magic.Stats{
+			Healing: 50,
+			Range:   20.0,
+		},
+	}
+
+	// Cast spell (should target injured ally, not caster or enemy)
+	spellSys.castHealingSpell(caster, spell)
+
+	// Ally should be healed
+	if allyHealth.Current != 80.0 {
+		t.Errorf("Ally health = %f, want 80.0", allyHealth.Current)
+	}
+}
+
+// TestStatusEffectSystem_StatModifiers tests that buff/debuff stat changes are applied and removed.
+func TestStatusEffectSystem_StatModifiers(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+
+	entity := &Entity{ID: 1, Components: make(map[string]Component)}
+	stats := &StatsComponent{
+		Attack:  10.0,
+		Defense: 10.0,
+	}
+	entity.AddComponent(stats)
+
+	// Apply strength buff (+30%)
+	statusSys.ApplyStatusEffect(entity, "strength", 0.3, 5.0, 0)
+
+	// Attack should increase
+	expectedAttack := 13.0
+	if stats.Attack < expectedAttack-0.1 || stats.Attack > expectedAttack+0.1 {
+		t.Errorf("Attack after buff = %f, want %f", stats.Attack, expectedAttack)
+	}
+
+	// Update until effect expires
+	entities := []*Entity{entity}
+	statusSys.Update(entities, 6.0)
+
+	// Attack should return to original value
+	if stats.Attack < 9.9 || stats.Attack > 10.1 {
+		t.Errorf("Attack after buff expired = %f, want 10.0", stats.Attack)
 	}
 }

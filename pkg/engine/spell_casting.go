@@ -60,13 +60,15 @@ func (s *SpellSlotComponent) IsCasting() bool {
 
 // SpellCastingSystem handles spell execution and cooldowns.
 type SpellCastingSystem struct {
-	world *World
+	world            *World
+	statusEffectSys  *StatusEffectSystem
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
-func NewSpellCastingSystem(world *World) *SpellCastingSystem {
+func NewSpellCastingSystem(world *World, statusEffectSys *StatusEffectSystem) *SpellCastingSystem {
 	return &SpellCastingSystem{
-		world: world,
+		world:           world,
+		statusEffectSys: statusEffectSys,
 	}
 }
 
@@ -188,7 +190,11 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 			health.Current = 0
 		}
 
-		// TODO: Apply elemental effects (burn, freeze, shock, etc.)
+		// Apply elemental effects based on spell element
+		if s.statusEffectSys != nil {
+			s.applyElementalEffect(target, spell)
+		}
+		
 		// TODO: Spawn damage visual effect
 	}
 }
@@ -197,10 +203,25 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell) {
 	target := caster
 	if spell.Target == magic.TargetSingle {
-		// TODO: Find nearest ally in range
-		// For now, heal self
+		// Find nearest injured ally in range
+		ally := s.findNearestInjuredAlly(caster, spell.Stats.Range)
+		if ally != nil {
+			target = ally
+		}
+	} else if spell.Target == magic.TargetArea || spell.Target == magic.TargetAllAllies {
+		// Heal multiple allies
+		allies := s.findAlliesInRange(caster, spell.Stats.AreaSize)
+		for _, ally := range allies {
+			s.healTarget(ally, spell)
+		}
+		return
 	}
 
+	s.healTarget(target, spell)
+}
+
+// healTarget applies healing to a single target.
+func (s *SpellCastingSystem) healTarget(target *Entity, spell *magic.Spell) {
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
 		return
@@ -215,23 +236,136 @@ func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell
 	// TODO: Spawn healing visual effect
 }
 
+// findNearestInjuredAlly finds the nearest ally that needs healing.
+func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange float64) *Entity {
+	entities := s.world.GetEntities()
+	var nearestAlly *Entity
+	minDist := maxRange
+	
+	// Get caster's team
+	var casterTeamID int
+	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
+		casterTeamID = teamComp.(*TeamComponent).TeamID
+	}
+	
+	for _, entity := range entities {
+		if entity == caster {
+			continue
+		}
+		
+		// Check if ally
+		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
+			team := teamComp.(*TeamComponent)
+			if !team.IsAlly(casterTeamID) {
+				continue
+			}
+		} else {
+			// No team component - skip
+			continue
+		}
+		
+		// Check if injured
+		healthComp, hasHealth := entity.GetComponent("health")
+		if !hasHealth {
+			continue
+		}
+		health := healthComp.(*HealthComponent)
+		if health.Current >= health.Max {
+			continue // At full health
+		}
+		
+		// Check distance
+		dist := GetDistance(caster, entity)
+		if dist <= minDist {
+			nearestAlly = entity
+			minDist = dist
+		}
+	}
+	
+	return nearestAlly
+}
+
+// findAlliesInRange finds all allies within range.
+func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64) []*Entity {
+	entities := s.world.GetEntities()
+	var allies []*Entity
+	
+	// Get caster's team
+	var casterTeamID int
+	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
+		casterTeamID = teamComp.(*TeamComponent).TeamID
+	}
+	
+	for _, entity := range entities {
+		// Check if ally (including self)
+		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
+			team := teamComp.(*TeamComponent)
+			if !team.IsAlly(casterTeamID) {
+				continue
+			}
+		} else if entity != caster {
+			continue
+		}
+		
+		// Check if has health
+		if !entity.HasComponent("health") {
+			continue
+		}
+		
+		// Check distance
+		dist := GetDistance(caster, entity)
+		if dist <= maxRange {
+			allies = append(allies, entity)
+		}
+	}
+	
+	return allies
+}
+
 // castDefensiveSpell applies shields or defensive buffs.
 func (s *SpellCastingSystem) castDefensiveSpell(caster *Entity, spell *magic.Spell) {
-	// TODO: Implement shield mechanics
-	// For now, just consume mana (already done in executeCast)
-
-	// Could add a ShieldComponent here
-	// shield := &ShieldComponent{
-	//     Amount: spell.Stats.Damage, // Reuse damage stat for shield value
-	//     Duration: spell.Stats.Duration,
-	// }
-	// caster.AddComponent(shield)
+	// Apply shield using the damage stat as shield strength
+	if s.statusEffectSys != nil {
+		shieldAmount := float64(spell.Stats.Damage)
+		if shieldAmount <= 0 {
+			shieldAmount = 50.0 // Default shield if no damage stat
+		}
+		
+		duration := spell.Stats.Duration
+		if duration <= 0 {
+			duration = 30.0 // Default duration
+		}
+		
+		s.statusEffectSys.ApplyShield(caster, shieldAmount, duration)
+	}
 }
 
 // castBuffSpell applies stat boosts.
 func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
-	// TODO: Implement buff system with StatusEffectComponent
-	// For now, just consume mana
+	if s.statusEffectSys == nil {
+		return
+	}
+	
+	duration := spell.Stats.Duration
+	if duration <= 0 {
+		duration = 30.0 // Default duration
+	}
+	
+	// Determine buff type based on spell element
+	switch spell.Element {
+	case magic.ElementWind:
+		// Haste - increased attack speed (represented as attack boost)
+		s.statusEffectSys.ApplyStatusEffect(caster, "haste", 0.5, duration, 0)
+	case magic.ElementLight:
+		// Strength - increased attack
+		s.statusEffectSys.ApplyStatusEffect(caster, "strength", 0.3, duration, 0)
+	case magic.ElementEarth:
+		// Fortify - increased defense
+		s.statusEffectSys.ApplyStatusEffect(caster, "fortify", 0.3, duration, 0)
+	default:
+		// Generic buff - small attack and defense boost
+		s.statusEffectSys.ApplyStatusEffect(caster, "strength", 0.2, duration, 0)
+	}
 }
 
 // castDebuffSpell applies stat reductions to enemies.
@@ -251,8 +385,64 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			}
 		}
 
-		// TODO: Apply debuff effects (slow, weaken, etc.)
+		// Apply debuff effects
+		if s.statusEffectSys != nil {
+			duration := spell.Stats.Duration
+			if duration <= 0 {
+				duration = 10.0 // Default duration
+			}
+			
+			// Determine debuff type based on spell element
+			switch spell.Element {
+			case magic.ElementDark:
+				// Weakness - reduced attack
+				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.7, duration, 0)
+			case magic.ElementEarth:
+				// Vulnerability - reduced defense
+				s.statusEffectSys.ApplyStatusEffect(target, "vulnerability", 0.7, duration, 0)
+			default:
+				// Generic debuff - small attack reduction
+				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.8, duration, 0)
+			}
+		}
 	}
+}
+
+// applyElementalEffect applies status effects based on spell element.
+func (s *SpellCastingSystem) applyElementalEffect(target *Entity, spell *magic.Spell) {
+	switch spell.Element {
+	case magic.ElementFire:
+		// Burning: 10 damage per second for 3 seconds
+		s.statusEffectSys.ApplyStatusEffect(target, "burning", 10.0, 3.0, 1.0)
+		
+	case magic.ElementIce:
+		// Frozen: 50% movement slow for 2 seconds (visual indicator only, actual movement handled by AI)
+		s.statusEffectSys.ApplyStatusEffect(target, "frozen", 0.5, 2.0, 0)
+		
+	case magic.ElementLightning:
+		// Shocked: chain to nearby enemies
+		if spell.Target == magic.TargetSingle || spell.Target == magic.TargetArea {
+			s.statusEffectSys.ChainLightning(nil, target, float64(spell.Stats.Damage)*0.5, 2, 15.0)
+		}
+		// Apply shocked marker for visual effects
+		s.statusEffectSys.ApplyStatusEffect(target, "shocked", 0, 2.0, 0)
+		
+	case magic.ElementEarth:
+		// Earth spells can apply poison effect
+		// Poison: 5 damage per second ignoring armor for 5 seconds
+		if s.shouldApplyPoison() {
+			s.statusEffectSys.ApplyStatusEffect(target, "poisoned", 5.0, 5.0, 1.0)
+		}
+	}
+}
+
+// shouldApplyPoison returns true 30% of the time for Earth spells.
+func (s *SpellCastingSystem) shouldApplyPoison() bool {
+	// Use status effect system's RNG if available
+	if s.statusEffectSys != nil && s.statusEffectSys.rng != nil {
+		return s.statusEffectSys.rng.Float64() < 0.3
+	}
+	return true
 }
 
 // castUtilitySpell handles non-combat spells.

@@ -202,7 +202,23 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		finalDamage = 1.0
 	}
 
-	// Apply damage
+	// Check for shield first
+	if shieldComp, hasShield := target.GetComponent("shield"); hasShield {
+		shield := shieldComp.(*ShieldComponent)
+		if shield.IsActive() {
+			// Shield absorbs damage
+			absorbed := shield.AbsorbDamage(finalDamage)
+			finalDamage -= absorbed
+			
+			// If shield absorbed all damage, no health damage
+			if finalDamage <= 0 {
+				attack.ResetCooldown()
+				return true
+			}
+		}
+	}
+
+	// Apply remaining damage to health
 	health.TakeDamage(finalDamage)
 
 	// GAP-016 REPAIR: Spawn hit particles at target position

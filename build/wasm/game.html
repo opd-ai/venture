@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Venture Game</title>
     <style>
         body {
@@ -14,10 +16,18 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            /* Prevent touch actions that interfere with gameplay */
+            touch-action: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         #gameCanvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            /* Prevent canvas-specific touch behaviors */
+            touch-action: none;
         }
         #loading {
             position: absolute;
@@ -52,6 +62,38 @@
             errorDiv.style.display = 'block';
             errorDiv.textContent = message;
         }
+        
+        // Prevent default touch behaviors (zoom, scroll, pull-to-refresh)
+        document.addEventListener('touchstart', function(e) {
+            // Allow touch events to reach the game canvas
+            // but prevent default browser behaviors
+            if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('touchend', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        // Prevent context menu on long press
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+        
+        // Prevent double-tap zoom
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
         
         // Check for WebAssembly support
         if (!WebAssembly) {

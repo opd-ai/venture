@@ -14,6 +14,8 @@ const (
 	PlatformIOS
 	// PlatformAndroid represents Android.
 	PlatformAndroid
+	// PlatformWASM represents WebAssembly/browser (js/wasm).
+	PlatformWASM
 )
 
 // String returns the string representation of the platform.
@@ -23,6 +25,8 @@ func (p Platform) String() string {
 		return "iOS"
 	case PlatformAndroid:
 		return "Android"
+	case PlatformWASM:
+		return "WASM"
 	default:
 		return "Unknown"
 	}
@@ -35,6 +39,8 @@ func GetPlatform() Platform {
 		return PlatformIOS
 	case "android":
 		return PlatformAndroid
+	case "js":
+		return PlatformWASM
 	default:
 		return PlatformUnknown
 	}
@@ -44,6 +50,18 @@ func GetPlatform() Platform {
 func IsMobilePlatform() bool {
 	platform := GetPlatform()
 	return platform == PlatformIOS || platform == PlatformAndroid
+}
+
+// IsTouchCapable returns true if the platform supports touch input.
+// This includes mobile platforms (iOS, Android) and WASM (browser with touch).
+func IsTouchCapable() bool {
+	platform := GetPlatform()
+	return platform == PlatformIOS || platform == PlatformAndroid || platform == PlatformWASM
+}
+
+// IsWASM returns true if running in WebAssembly/browser.
+func IsWASM() bool {
+	return GetPlatform() == PlatformWASM
 }
 
 // IsIOS returns true if running on iOS.

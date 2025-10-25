@@ -19,21 +19,21 @@ type EquipmentVisualComponent struct {
 	AccessoryLayers []*ebiten.Image
 
 	// Equipment IDs for tracking changes
-	WeaponID    string
-	ArmorID     string
+	WeaponID     string
+	ArmorID      string
 	AccessoryIDs []string
 
 	// Seeds for deterministic generation
-	WeaponSeed    int64
-	ArmorSeed     int64
+	WeaponSeed     int64
+	ArmorSeed      int64
 	AccessorySeeds []int64
 
 	// Dirty flag - regenerate layers if true
 	Dirty bool
 
 	// Visibility flags per layer
-	ShowWeapon     bool
-	ShowArmor      bool
+	ShowWeapon      bool
+	ShowArmor       bool
 	ShowAccessories bool
 }
 

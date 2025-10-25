@@ -221,4 +221,3 @@ type StatusEffect struct {
 	// Particle count for effect
 	ParticleCount int
 }
-

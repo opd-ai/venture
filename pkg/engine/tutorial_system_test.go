@@ -92,10 +92,10 @@ func TestTutorialSystem_GetProgress(t *testing.T) {
 	ts := NewTutorialSystem()
 
 	tests := []struct {
-		name          string
-		stepIdx       int
-		wantMin       float64
-		wantMax       float64
+		name    string
+		stepIdx int
+		wantMin float64
+		wantMax float64
 	}{
 		{"Start", 0, 0.0, 0.01},
 		{"Mid", 3, 0.42, 0.44},
@@ -404,9 +404,9 @@ func TestTutorialSystem_ImportState(t *testing.T) {
 // TestTutorialSystem_ImportState_Validation tests import validation
 func TestTutorialSystem_ImportState_Validation(t *testing.T) {
 	tests := []struct {
-		name          string
-		stepIdx       int
-		wantIdx       int
+		name    string
+		stepIdx int
+		wantIdx int
 	}{
 		{"Valid index", 3, 3},
 		{"Negative index", -5, 0},
@@ -448,7 +448,7 @@ func TestTutorialSystem_Update(t *testing.T) {
 
 	// Create mock world with player entity
 	player := NewEntity(1)
-	
+
 	// Create entities slice
 	entities := []*Entity{player}
 
@@ -463,11 +463,11 @@ func TestTutorialSystem_Update(t *testing.T) {
 	// Note: We can't easily test the condition functions without full game state
 	// but we can test the progression logic
 	ts.Steps[0].Completed = true
-	
+
 	// Reset for proper progression test
 	ts.CurrentStepIdx = 0
 	ts.Steps[0].Completed = false
-	
+
 	// Create a custom step with simple condition
 	ts.Steps = []TutorialStep{
 		{
@@ -508,7 +508,7 @@ func TestTutorialSystem_Update(t *testing.T) {
 // TestTutorialSystem_Update_NotificationTTL tests notification timeout
 func TestTutorialSystem_Update_NotificationTTL(t *testing.T) {
 	ts := NewTutorialSystem()
-	
+
 	ts.NotificationMsg = "Test"
 	ts.NotificationTTL = 0.1
 

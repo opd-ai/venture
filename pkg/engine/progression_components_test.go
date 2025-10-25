@@ -43,10 +43,10 @@ func TestNewExperienceComponent(t *testing.T) {
 // TestExperienceComponent_AddXP tests XP addition
 func TestExperienceComponent_AddXP(t *testing.T) {
 	tests := []struct {
-		name       string
-		initialXP  int
-		requiredXP int
-		addXP      int
+		name        string
+		initialXP   int
+		requiredXP  int
+		addXP       int
 		wantLevelUp bool
 		wantCurrent int
 		wantTotal   int

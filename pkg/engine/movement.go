@@ -143,6 +143,23 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				}
 			}
 		}
+
+		// Priority 1.4: Apply friction/drag to slow down entities
+		if frictionComp, hasFriction := entity.GetComponent("friction"); hasFriction {
+			friction := frictionComp.(*FrictionComponent)
+			
+			// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
+			// For small deltaTime and coefficient, this approximates: v *= (1 - coefficient * deltaTime)
+			decayFactor := math.Pow(1.0-friction.Coefficient, deltaTime*60.0) // Normalize to 60 FPS
+			vel.VX *= decayFactor
+			vel.VY *= decayFactor
+
+			// Stop completely if velocity is very small (optimization)
+			if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
+				vel.VX = 0
+				vel.VY = 0
+			}
+		}
 	}
 }
 

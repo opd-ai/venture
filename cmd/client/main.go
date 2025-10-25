@@ -296,7 +296,7 @@ func main() {
 		// Priority 1.4: Drop all items from entity's inventory
 		if invComp, hasInv := enemy.GetComponent("inventory"); hasInv {
 			inventory := invComp.(*engine.InventoryComponent)
-			
+
 			// Spawn each item in the inventory with scatter physics
 			for i, itm := range inventory.Items {
 				if itm == nil {
@@ -305,7 +305,7 @@ func main() {
 
 				// Calculate scatter offset using circular distribution
 				angle := float64(i) * 6.28318 / float64(len(inventory.Items)) // 2*PI radians
-				scatterDist := 20.0 + float64(i)*5.0 // Items spread 20-50 pixels out
+				scatterDist := 20.0 + float64(i)*5.0                          // Items spread 20-50 pixels out
 				offsetX := scatterDist * math.Cos(angle)
 				offsetY := scatterDist * math.Sin(angle)
 
@@ -320,8 +320,8 @@ func main() {
 						VY: velocityY,
 					})
 
-					// Add friction to slow down items (handled by movement system)
-					// Items will gradually come to rest
+					// Add friction to slow down items over time
+					itemEntity.AddComponent(engine.NewFrictionComponent(0.12)) // 12% friction per frame (at 60 FPS)
 
 					// Track dropped item in DeadComponent
 					deadComp.AddDroppedItem(itemEntity.ID)
@@ -358,6 +358,9 @@ func main() {
 						VY: velocityY,
 					})
 
+					// Add friction for smooth deceleration
+					itemEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
 					deadComp.AddDroppedItem(itemEntity.ID)
 				}
 			}
@@ -373,6 +376,9 @@ func main() {
 					VX: (rand.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
 					VY: (rand.Float64()*2.0 - 1.0) * 30.0,
 				})
+				// Add friction for smooth deceleration
+				lootEntity.AddComponent(engine.NewFrictionComponent(0.12))
+				
 				deadComp.AddDroppedItem(lootEntity.ID)
 			}
 

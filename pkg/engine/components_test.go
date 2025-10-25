@@ -426,3 +426,136 @@ func TestMovementSystemDeadEntityWithBounds(t *testing.T) {
 		t.Errorf("Dead entity position = (%f, %f), want (95, 50)", position.X, position.Y)
 	}
 }
+
+func TestFrictionComponent(t *testing.T) {
+	// Priority 1.4: Test friction component for loot drop deceleration
+	tests := []struct {
+		name        string
+		coefficient float64
+		expectType  string
+	}{
+		{"low friction", 0.05, "friction"},
+		{"medium friction", 0.12, "friction"},
+		{"high friction", 0.25, "friction"},
+		{"zero friction", 0.0, "friction"},
+		{"max friction", 1.0, "friction"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			friction := NewFrictionComponent(tt.coefficient)
+
+			if friction.Type() != tt.expectType {
+				t.Errorf("Type() = %q, want %q", friction.Type(), tt.expectType)
+			}
+
+			if friction.Coefficient != tt.coefficient {
+				t.Errorf("Coefficient = %f, want %f", friction.Coefficient, tt.coefficient)
+			}
+		})
+	}
+}
+
+func TestMovementSystemWithFriction(t *testing.T) {
+	// Priority 1.4: Test that friction slows down moving entities
+	world := NewWorld()
+	system := NewMovementSystem(0) // No speed limit
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	entity.AddComponent(&VelocityComponent{VX: 100, VY: 100})
+	entity.AddComponent(NewFrictionComponent(0.1)) // 10% friction
+
+	world.Update(0)
+
+	initialVel := 100.0
+
+	// Update for 0.1 seconds (multiple frames)
+	system.Update(world.GetEntities(), 0.1)
+
+	vel, _ := entity.GetComponent("velocity")
+	velocity := vel.(*VelocityComponent)
+
+	// Velocity should decrease due to friction
+	if velocity.VX >= initialVel || velocity.VY >= initialVel {
+		t.Errorf("Velocity should decrease with friction, got VX=%f VY=%f", velocity.VX, velocity.VY)
+	}
+
+	// Velocity should still be positive (not reversed)
+	if velocity.VX < 0 || velocity.VY < 0 {
+		t.Error("Friction should not reverse velocity direction")
+	}
+}
+
+func TestMovementSystemFrictionStopsSlowMovement(t *testing.T) {
+	// Priority 1.4: Test that very slow moving entities stop completely
+	world := NewWorld()
+	system := NewMovementSystem(0)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	entity.AddComponent(&VelocityComponent{VX: 0.05, VY: 0.05}) // Very slow
+	entity.AddComponent(NewFrictionComponent(0.15))
+
+	world.Update(0)
+
+	// Update several times
+	for i := 0; i < 10; i++ {
+		system.Update(world.GetEntities(), 0.016) // ~60 FPS
+	}
+
+	vel, _ := entity.GetComponent("velocity")
+	velocity := vel.(*VelocityComponent)
+
+	// Should have stopped completely
+	if velocity.VX != 0 || velocity.VY != 0 {
+		t.Errorf("Very slow entity should stop completely, got VX=%f VY=%f", velocity.VX, velocity.VY)
+	}
+}
+
+func TestMovementSystemFrictionWithoutVelocity(t *testing.T) {
+	// Edge case: Entity has friction but no velocity component
+	world := NewWorld()
+	system := NewMovementSystem(0)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	entity.AddComponent(NewFrictionComponent(0.1))
+	// No velocity component
+
+	world.Update(0)
+
+	// Should not crash
+	system.Update(world.GetEntities(), 0.1)
+
+	// Position should not change
+	pos, _ := entity.GetComponent("position")
+	position := pos.(*PositionComponent)
+	if position.X != 0 || position.Y != 0 {
+		t.Error("Entity without velocity should not move")
+	}
+}
+
+func TestMovementSystemHighFrictionRapidDeceleration(t *testing.T) {
+	// Test high friction causes rapid deceleration
+	world := NewWorld()
+	system := NewMovementSystem(0)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	entity.AddComponent(&VelocityComponent{VX: 200, VY: 200})
+	entity.AddComponent(NewFrictionComponent(0.5)) // 50% friction - very high
+
+	world.Update(0)
+
+	// Update for just 0.1 seconds
+	system.Update(world.GetEntities(), 0.1)
+
+	vel, _ := entity.GetComponent("velocity")
+	velocity := vel.(*VelocityComponent)
+
+	// With 50% friction, velocity should drop dramatically
+	if velocity.VX > 50 || velocity.VY > 50 {
+		t.Errorf("High friction should cause rapid deceleration, got VX=%f VY=%f", velocity.VX, velocity.VY)
+	}
+}

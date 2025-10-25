@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
@@ -215,8 +216,9 @@ func (s *ObjectiveTrackerSystem) checkQuestCompletion(entity *Entity) {
 
 		// Check if all objectives are complete
 		if tracked.Quest.IsComplete() {
-			// Mark quest as complete
-			tracker.CompleteQuest(tracked.Quest.ID, 0) // TODO: Use real timestamp
+			// Mark quest as complete with current timestamp
+			timestamp := time.Now().Unix()
+			tracker.CompleteQuest(tracked.Quest.ID, timestamp)
 
 			// Trigger completion callback for rewards
 			if s.onQuestComplete != nil {

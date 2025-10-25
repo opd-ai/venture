@@ -1168,13 +1168,34 @@ func main() {
 				level, currentXP = exp.Level, int64(exp.CurrentXP)
 			}
 
-			// Get inventory data (store only item IDs for now)
-			var inventoryItems []uint64
+			// Get inventory data
+			var items []saveload.ItemData
+			var gold int
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
-				_ = inv.Gold
-				for range inv.Items {
-					// TODO: Map items to entity IDs for proper persistence
+				gold = inv.Gold
+				
+				// Convert items to ItemData for persistence
+				for _, itm := range inv.Items {
+					items = append(items, saveload.ItemData{
+						Name:           itm.Name,
+						Type:           itm.Type.String(),
+						WeaponType:     itm.WeaponType.String(),
+						ArmorType:      itm.ArmorType.String(),
+						ConsumableType: itm.ConsumableType.String(),
+						Rarity:         itm.Rarity.String(),
+						Seed:           itm.Seed,
+						Tags:           itm.Tags,
+						Description:    itm.Description,
+						Damage:         itm.Stats.Damage,
+						Defense:        itm.Stats.Defense,
+						AttackSpeed:    itm.Stats.AttackSpeed,
+						Value:          itm.Stats.Value,
+						Weight:         itm.Stats.Weight,
+						RequiredLevel:  itm.Stats.RequiredLevel,
+						DurabilityMax:  itm.Stats.DurabilityMax,
+						Durability:     itm.Stats.Durability,
+					})
 				}
 			}
 
@@ -1182,18 +1203,19 @@ func main() {
 			gameSave := &saveload.GameSave{
 				Version: saveload.SaveVersion,
 				PlayerState: &saveload.PlayerState{
-					EntityID:       player.ID,
-					X:              posX,
-					Y:              posY,
-					CurrentHealth:  currentHealth,
-					MaxHealth:      maxHealth,
-					Level:          level,
-					Experience:     int(currentXP),
-					Attack:         attack,
-					Defense:        defense,
-					MagicPower:     magic,
-					Speed:          1.0,
-					InventoryItems: inventoryItems,
+					EntityID:      player.ID,
+					X:             posX,
+					Y:             posY,
+					CurrentHealth: currentHealth,
+					MaxHealth:     maxHealth,
+					Level:         level,
+					Experience:    int(currentXP),
+					Attack:        attack,
+					Defense:       defense,
+					MagicPower:    magic,
+					Speed:         1.0,
+					Items:         items, // Use new Items field instead of InventoryItems
+					Gold:          gold,
 				},
 				WorldState: &saveload.WorldState{
 					Seed:       *seed,

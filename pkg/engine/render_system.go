@@ -607,14 +607,14 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 	// Pre-allocate with capacity
 	sorted := make([]*Entity, 0, len(entities))
-	
+
 	// Cache sprite components to avoid repeated GetComponent calls
 	type entitySprite struct {
 		entity *Entity
 		sprite *EbitenSprite
 		layer  int
 	}
-	
+
 	cache := make([]entitySprite, 0, len(entities))
 
 	// Collect entities with sprites and cache their sprite components

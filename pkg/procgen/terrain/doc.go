@@ -21,6 +21,18 @@
 //   - Navigation: StairsUp, StairsDown, TrapDoor, SecretDoor
 //   - Urban: Structure (buildings/ruins)
 //
+// # Genre System
+//
+// The package supports 5 genre themes that influence terrain generation:
+//   - Fantasy: Medieval dungeons, forests, stone castles (BSP, Cellular, Forest)
+//   - Sci-Fi: Space stations, tech facilities, no natural elements (City, Maze, BSP)
+//   - Horror: Flesh walls, blood pools, dead trees, high water (Cellular, Maze, Forest)
+//   - Cyberpunk: Neon cities, urban sprawl, industrial (City, Maze, Cellular)
+//   - Post-Apocalyptic: Ruins, toxic water, mutated nature (Cellular, City, Forest)
+//
+// Genre affects generator selection, tile themes, water/tree density, and default parameters.
+// Use GetGeneratorForGenre() for automatic genre-appropriate generator selection based on depth.
+//
 // # Usage Examples
 //
 // Basic dungeon generation:
@@ -37,6 +49,25 @@
 //	}
 //	result, err := gen.Generate(12345, params)
 //	terrain := result.(*terrain.Terrain)
+//
+// Genre-aware generation with defaults:
+//
+//	params := procgen.GenerationParams{
+//	    Difficulty: 0.5,
+//	    Depth:      5,
+//	    GenreID:    "horror",  // Influences generation style
+//	    Custom: map[string]interface{}{
+//	        "width":  100,
+//	        "height": 80,
+//	    },
+//	}
+//	// Apply genre defaults (tree density, water chance, etc.)
+//	terrain.ApplyGenreDefaults(&params)
+//	
+//	// Get genre-appropriate generator for this depth
+//	rng := rand.New(rand.NewSource(12345))
+//	gen := terrain.GetGeneratorForGenre("horror", 5, rng)
+//	result, err := gen.Generate(12345, params)
 //
 // Composite multi-biome generation:
 //
@@ -70,6 +101,11 @@
 //	}
 //	levels, err := gen.GenerateMultiLevel(5, 12345, params)
 //	// Returns 5 connected levels with stairs
+//
+// Get tile theme for rendering:
+//
+//	theme := terrain.GetTileTheme("scifi", terrain.TileWall)
+//	// Returns "metal_panel" for sci-fi wall theme
 //
 // # Performance Targets
 //

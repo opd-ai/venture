@@ -22,7 +22,7 @@ var (
 	width       = flag.Int("width", 800, "Screen width")
 	height      = flag.Int("height", 600, "Screen height")
 	seed        = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID     = flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	genreID     = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
 	multiplayer = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
 	server      = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
@@ -33,6 +33,14 @@ func seededRandom() int64 {
 	time := time.Now().UnixNano()
 	rand := rand.New(rand.NewSource(time))
 	return rand.Int63()
+}
+
+// return a random genre
+func randomGenre() string {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	time := time.Now().UnixNano()
+	rand := rand.New(rand.NewSource(time))
+	return genres[rand.Intn(len(genres))]
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.

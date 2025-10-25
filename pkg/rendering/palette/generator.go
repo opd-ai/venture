@@ -123,11 +123,19 @@ func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand, opts 
 	baseHue := scheme.BaseHue
 	harmonyHues := g.getHarmonyHues(baseHue, opts.Harmony)
 
-	// Generate primary color
+	// GAP-019 REPAIR: Add hue variation to primary color for entity diversity
+	// Use HueVariation to create different colored entities within the genre theme
+	primaryHueOffset := (rng.Float64()*2 - 1) * scheme.HueVariation // -HueVariation to +HueVariation
+	primaryHue := math.Mod(baseHue+primaryHueOffset, 360)
+	if primaryHue < 0 {
+		primaryHue += 360
+	}
+
+	// Generate primary color with variation
 	palette.Primary = hslToColor(
-		baseHue,
-		scheme.Saturation,
-		scheme.Lightness,
+		primaryHue,
+		clamp(scheme.Saturation+rng.Float64()*scheme.SaturationVariation-scheme.SaturationVariation/2, 0, 1),
+		clamp(scheme.Lightness+rng.Float64()*scheme.LightnessVariation-scheme.LightnessVariation/2, 0, 1),
 	)
 
 	// Generate secondary color based on harmony

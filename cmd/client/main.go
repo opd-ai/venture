@@ -571,7 +571,7 @@ func main() {
 	// Add animation component for multi-frame character animation
 	playerAnim := engine.NewAnimationComponent(*seed + int64(player.ID))
 	playerAnim.CurrentState = engine.AnimationStateIdle
-	playerAnim.FrameTime = 0.15  // ~6.7 FPS for smooth animation
+	playerAnim.FrameTime = 0.15 // ~6.7 FPS for smooth animation
 	playerAnim.Loop = true
 	playerAnim.Playing = true
 	playerAnim.FrameCount = 4 // 4 frames per animation

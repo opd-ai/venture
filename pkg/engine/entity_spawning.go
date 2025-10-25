@@ -174,7 +174,7 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			// GAP-018 REPAIR: Add animation component for enemy animations
 			enemyAnim := NewAnimationComponent(seed + int64(enemy.ID))
 			enemyAnim.CurrentState = AnimationStateIdle
-			enemyAnim.FrameTime = 0.2  // Slightly slower than player (~5 FPS)
+			enemyAnim.FrameTime = 0.2 // Slightly slower than player (~5 FPS)
 			enemyAnim.Loop = true
 			enemyAnim.Playing = true
 			enemyAnim.FrameCount = 4

@@ -511,7 +511,7 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 			anim := animComp.(*AnimationComponent)
 			// Check if player is moving
 			isMoving := (velocity.VX != 0 || velocity.VY != 0)
-			
+
 			if isMoving && anim.CurrentState == AnimationStateIdle {
 				anim.SetState(AnimationStateWalk)
 			} else if !isMoving && anim.CurrentState == AnimationStateWalk {

@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen/genre"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -21,29 +22,36 @@ var (
 func main() {
 	flag.Parse()
 
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("genretest")
+
 	registry := genre.DefaultRegistry()
 
 	// List all genres
 	if *listAll {
+		logger.Info("listing all available genres")
 		listGenres(registry)
 		return
 	}
 
 	// Show details for a specific genre
 	if *genreID != "" {
+		logger.WithField("genreID", *genreID).Info("showing genre details")
 		showGenreDetails(registry, *genreID)
 		return
 	}
 
 	// Show all genres with details
 	if *showAll {
+		logger.Info("showing all genres with details")
 		showAllGenres(registry)
 		return
 	}
 
 	// Validate a genre ID
 	if *validate != "" {
-		validateGenre(registry, *validate)
+		logger.WithField("genreID", *validate).Info("validating genre")
+		validateGenre(registry, *validate, logger)
 		return
 	}
 
@@ -78,7 +86,8 @@ func listGenres(registry *genre.Registry) {
 func showGenreDetails(registry *genre.Registry, id string) {
 	g, err := registry.Get(id)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("Genre Details")
@@ -124,12 +133,14 @@ func showGenreDetailsInline(g *genre.Genre) {
 		g.EntityPrefix, g.ItemPrefix, g.LocationPrefix)
 }
 
-func validateGenre(registry *genre.Registry, id string) {
+func validateGenre(registry *genre.Registry, id string, logger *logrus.Logger) {
 	if registry.Has(id) {
+		logger.WithField("genreID", id).Info("genre is valid")
 		fmt.Printf("✓ Genre '%s' is valid\n", id)
 		g, _ := registry.Get(id)
 		fmt.Printf("  Name: %s\n", g.Name)
 	} else {
+		logger.WithField("genreID", id).Warn("genre not found")
 		fmt.Printf("✗ Genre '%s' is not found\n", id)
 		fmt.Println("\nAvailable genres:")
 		for _, id := range registry.IDs() {

@@ -123,14 +123,15 @@ func TestAIComponent_ShouldUpdateDecision(t *testing.T) {
 	if ai.ShouldUpdateDecision(0.3) {
 		t.Error("Should not update decision before interval passes")
 	}
-	if ai.DecisionTimer != 0.7 {
+	tolerance := 0.0001
+	if diff := ai.DecisionTimer - 0.7; diff < -tolerance || diff > tolerance {
 		t.Errorf("DecisionTimer = %v, want 0.7", ai.DecisionTimer)
 	}
 
 	if ai.ShouldUpdateDecision(0.3) {
 		t.Error("Should not update decision yet")
 	}
-	if ai.DecisionTimer != 0.4 {
+	if diff := ai.DecisionTimer - 0.4; diff < -tolerance || diff > tolerance {
 		t.Errorf("DecisionTimer = %v, want 0.4", ai.DecisionTimer)
 	}
 

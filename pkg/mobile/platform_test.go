@@ -8,7 +8,7 @@ import (
 func TestGetPlatform(t *testing.T) {
 	// Test current platform detection
 	platform := GetPlatform()
-	
+
 	// Verify it returns a valid platform
 	switch runtime.GOOS {
 	case "ios":
@@ -40,7 +40,7 @@ func TestPlatformString(t *testing.T) {
 		{PlatformWASM, "WASM"},
 		{PlatformUnknown, "Unknown"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			got := tt.platform.String()
@@ -54,7 +54,7 @@ func TestPlatformString(t *testing.T) {
 func TestIsMobilePlatform(t *testing.T) {
 	// IsMobilePlatform should only return true for iOS and Android, not WASM
 	result := IsMobilePlatform()
-	
+
 	switch runtime.GOOS {
 	case "ios", "android":
 		if !result {
@@ -70,7 +70,7 @@ func TestIsMobilePlatform(t *testing.T) {
 func TestIsTouchCapable(t *testing.T) {
 	// IsTouchCapable should return true for iOS, Android, and WASM
 	result := IsTouchCapable()
-	
+
 	switch runtime.GOOS {
 	case "ios", "android", "js":
 		if !result {
@@ -85,7 +85,7 @@ func TestIsTouchCapable(t *testing.T) {
 
 func TestIsWASM(t *testing.T) {
 	result := IsWASM()
-	
+
 	if runtime.GOOS == "js" {
 		if !result {
 			t.Error("IsWASM() = false for js, want true")
@@ -99,7 +99,7 @@ func TestIsWASM(t *testing.T) {
 
 func TestIsIOS(t *testing.T) {
 	result := IsIOS()
-	
+
 	if runtime.GOOS == "ios" {
 		if !result {
 			t.Error("IsIOS() = false for ios, want true")
@@ -113,7 +113,7 @@ func TestIsIOS(t *testing.T) {
 
 func TestIsAndroid(t *testing.T) {
 	result := IsAndroid()
-	
+
 	if runtime.GOOS == "android" {
 		if !result {
 			t.Error("IsAndroid() = false for android, want true")
@@ -136,12 +136,12 @@ func TestGetOrientation(t *testing.T) {
 		{"Portrait", 600, 800, OrientationPortrait},
 		{"Square", 600, 600, OrientationUnknown},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetOrientation(tt.width, tt.height)
 			if got != tt.expected {
-				t.Errorf("GetOrientation(%d, %d) = %v, want %v", 
+				t.Errorf("GetOrientation(%d, %d) = %v, want %v",
 					tt.width, tt.height, got, tt.expected)
 			}
 		})
@@ -157,7 +157,7 @@ func TestOrientationString(t *testing.T) {
 		{OrientationLandscape, "Landscape"},
 		{OrientationUnknown, "Unknown"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			got := tt.orientation.String()

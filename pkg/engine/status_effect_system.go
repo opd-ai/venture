@@ -192,7 +192,7 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 }
 
 // ChainLightning applies chain lightning damage to nearby enemies.
-func (s *StatusEffectSystem) ChainLightning(source *Entity, initialTarget *Entity, damage float64, chains int, range_ float64) {
+func (s *StatusEffectSystem) ChainLightning(source, initialTarget *Entity, damage float64, chains int, range_ float64) {
 	if chains <= 0 {
 		return
 	}
@@ -236,7 +236,7 @@ func (s *StatusEffectSystem) ChainLightning(source *Entity, initialTarget *Entit
 }
 
 // isEnemyTarget checks if an entity is a valid enemy target.
-func isEnemyTarget(caster *Entity, target *Entity) bool {
+func isEnemyTarget(caster, target *Entity) bool {
 	if target == caster {
 		return false
 	}

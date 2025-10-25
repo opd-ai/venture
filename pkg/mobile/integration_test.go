@@ -14,10 +14,10 @@ func TestWASMPlatformDetection(t *testing.T) {
 	t.Log("- IsTouchCapable() returns true for WASM")
 	t.Log("- IsMobilePlatform() returns false for WASM")
 	t.Log("- IsWASM() returns true for WASM")
-	
+
 	// Verify the API surface exists and works correctly
 	// (Already tested in platform_test.go, this is documentation)
-	
+
 	// The key distinction:
 	// - Mobile platforms (iOS/Android) show virtual controls by default
 	// - WASM detects touch input but doesn't force virtual controls

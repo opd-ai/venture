@@ -34,7 +34,6 @@ func TestEquipmentVisualSystem_Update_NoEquipment(t *testing.T) {
 
 	entities := []*Entity{entity}
 	err := sys.Update(entities, 0.016)
-
 	if err != nil {
 		t.Errorf("Update should not error: %v", err)
 	}
@@ -72,7 +71,6 @@ func TestEquipmentVisualSystem_Update_DirtyEquipment(t *testing.T) {
 
 	entities := []*Entity{entity}
 	err := sys.Update(entities, 0.016)
-
 	if err != nil {
 		t.Errorf("Update failed: %v", err)
 	}
@@ -109,7 +107,6 @@ func TestEquipmentVisualSystem_Update_CleanEquipment(t *testing.T) {
 
 	entities := []*Entity{entity}
 	err := sys.Update(entities, 0.016)
-
 	if err != nil {
 		t.Errorf("Update failed: %v", err)
 	}
@@ -151,7 +148,6 @@ func TestEquipmentVisualSystem_EquipItem(t *testing.T) {
 	// Update to regenerate sprite
 	entities := []*Entity{entity}
 	err := sys.Update(entities, 0.016)
-
 	if err != nil {
 		t.Errorf("Update failed: %v", err)
 	}
@@ -194,7 +190,6 @@ func TestEquipmentVisualSystem_UnequipItem(t *testing.T) {
 	// Update to regenerate sprite
 	entities := []*Entity{entity}
 	err := sys.Update(entities, 0.016)
-
 	if err != nil {
 		t.Errorf("Update failed: %v", err)
 	}

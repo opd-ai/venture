@@ -216,7 +216,7 @@ func (s *EquipmentVisualSystem) getSpriteComponent(entity *Entity) *EbitenSprite
 }
 
 // EquipItem updates equipment visuals when an item is equipped.
-func (s *EquipmentVisualSystem) EquipItem(entity *Entity, slot string, itemID string, seed int64) {
+func (s *EquipmentVisualSystem) EquipItem(entity *Entity, slot, itemID string, seed int64) {
 	equipComp := s.getEquipmentVisualComponent(entity)
 	if equipComp == nil {
 		// Create component if it doesn't exist

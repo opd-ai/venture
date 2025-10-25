@@ -93,6 +93,54 @@ terrain := result.(*terrain.Terrain)
 
 **Note:** The algorithm automatically adjusts even dimensions to odd values (required for the algorithm to work correctly).
 
+### Forest (Poisson Disc Sampling)
+
+The forest algorithm creates natural outdoor environments with trees, clearings, and water features using Poisson disc sampling for realistic tree distribution.
+
+**Features:**
+- Natural tree placement using Poisson disc sampling
+- Elliptical clearings with organic shapes
+- Lakes and rivers with shallow/deep water
+- Automatic bridge placement over water
+- Organic paths connecting clearings
+- Stairs placed in clearings
+
+**Usage:**
+```go
+gen := terrain.NewForestGenerator()
+params := procgen.GenerationParams{
+    Difficulty: 0.5,
+    Depth:      1,
+    GenreID:    "fantasy",
+    Custom: map[string]interface{}{
+        "width":         80,
+        "height":        50,
+        "treeDensity":   0.3,  // 30% density for Poisson sampling
+        "clearingCount": 3,    // Number of clearings to create
+        "waterChance":   0.3,  // 30% probability of water features
+    },
+}
+result, err := gen.Generate(12345, params)
+terrain := result.(*terrain.Terrain)
+```
+
+**Parameters:**
+- `treeDensity` (float64): Density parameter for Poisson disc sampling, controls tree spacing (default: 0.3)
+- `clearingCount` (int): Number of open clearings to create (default: 3)
+- `waterChance` (float64): Probability (0.0-1.0) of generating lakes or rivers (default: 0.3)
+
+**Technical Details:**
+- Uses Poisson disc sampling with grid-based spatial hashing for O(n) performance
+- Minimum tree distance calculated from density: `minDist = 3.0 / sqrt(density)`
+- Clearings are elliptical with configurable size (8-17 tiles in each dimension)
+- Water features can be lakes (elliptical with noise) or rivers (winding paths)
+- Bridges automatically placed where paths cross water
+
+**Performance:**
+- 40x30 forest: ~0.27ms
+- 80x50 forest: ~0.83ms
+- 150x100 forest: ~3.5ms
+
 ## Tile Types
 
 The terrain system uses several tile types:
@@ -232,13 +280,16 @@ go build -o terraintest ./cmd/terraintest
 # Generate maze
 ./terraintest -algorithm maze -width 81 -height 81 -seed 99999
 
+# Generate forest
+./terraintest -algorithm forest -width 80 -height 50 -seed 12345
+
 # Save to file
 ./terraintest -algorithm bsp -output dungeon.txt
 ```
 
 ### CLI Options
 
-- `-algorithm` - Generation algorithm: "bsp", "cellular", or "maze" (default: "bsp")
+- `-algorithm` - Generation algorithm: "bsp", "cellular", "maze", or "forest" (default: "bsp")
 - `-width` - Map width in tiles (default: 80)
 - `-height` - Map height in tiles (default: 50)
 - `-seed` - Random seed for deterministic generation (default: 12345)

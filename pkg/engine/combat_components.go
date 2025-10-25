@@ -246,3 +246,40 @@ func (s *ShieldComponent) Update(deltaTime float64) {
 		}
 	}
 }
+
+// DeadComponent marks an entity as dead and tracks death-related information.
+// When an entity dies, this component is added to prevent further actions
+// and track dropped loot items.
+//
+// Design rationale:
+// - Uses component-based approach following ECS architecture pattern
+// - TimeOfDeath enables time-based cleanup or respawn mechanics
+// - DroppedItems tracks spawned loot for cleanup or reclamation
+// - Simple data structure with no behavior (logic in systems)
+type DeadComponent struct {
+	// TimeOfDeath records when the entity died (game time in seconds)
+	TimeOfDeath float64
+
+	// DroppedItems contains entity IDs of items spawned from this entity's inventory
+	DroppedItems []uint64
+}
+
+// Type returns the component type identifier.
+func (d *DeadComponent) Type() string {
+	return "dead"
+}
+
+// NewDeadComponent creates a new DeadComponent with the given death time.
+// DroppedItems slice is initialized empty and populated by the loot system.
+func NewDeadComponent(timeOfDeath float64) *DeadComponent {
+	return &DeadComponent{
+		TimeOfDeath:  timeOfDeath,
+		DroppedItems: make([]uint64, 0),
+	}
+}
+
+// AddDroppedItem adds an item entity ID to the dropped items list.
+// This tracks all items spawned from the entity's inventory upon death.
+func (d *DeadComponent) AddDroppedItem(itemEntityID uint64) {
+	d.DroppedItems = append(d.DroppedItems, itemEntityID)
+}

@@ -549,3 +549,187 @@ func TestCombatSystemDamageCallback(t *testing.T) {
 		t.Error("damage amount should be positive")
 	}
 }
+
+func TestDeadComponent(t *testing.T) {
+	tests := []struct {
+		name              string
+		timeOfDeath       float64
+		itemsToAdd        []uint64
+		expectedItems     int
+		expectedType      string
+		expectedTimestamp float64
+	}{
+		{
+			name:              "new dead component",
+			timeOfDeath:       10.5,
+			itemsToAdd:        []uint64{},
+			expectedItems:     0,
+			expectedType:      "dead",
+			expectedTimestamp: 10.5,
+		},
+		{
+			name:              "with single dropped item",
+			timeOfDeath:       20.0,
+			itemsToAdd:        []uint64{1001},
+			expectedItems:     1,
+			expectedType:      "dead",
+			expectedTimestamp: 20.0,
+		},
+		{
+			name:              "with multiple dropped items",
+			timeOfDeath:       30.5,
+			itemsToAdd:        []uint64{1001, 1002, 1003},
+			expectedItems:     3,
+			expectedType:      "dead",
+			expectedTimestamp: 30.5,
+		},
+		{
+			name:              "zero time of death",
+			timeOfDeath:       0.0,
+			itemsToAdd:        []uint64{},
+			expectedItems:     0,
+			expectedType:      "dead",
+			expectedTimestamp: 0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test NewDeadComponent constructor
+			deadComp := NewDeadComponent(tt.timeOfDeath)
+
+			// Verify type
+			if deadComp.Type() != tt.expectedType {
+				t.Errorf("expected type %q, got %q", tt.expectedType, deadComp.Type())
+			}
+
+			// Verify time of death
+			if deadComp.TimeOfDeath != tt.expectedTimestamp {
+				t.Errorf("expected TimeOfDeath %v, got %v", tt.expectedTimestamp, deadComp.TimeOfDeath)
+			}
+
+			// Verify DroppedItems initialized empty
+			if deadComp.DroppedItems == nil {
+				t.Error("DroppedItems should be initialized, not nil")
+			}
+			if len(deadComp.DroppedItems) != 0 {
+				t.Errorf("expected 0 initial items, got %d", len(deadComp.DroppedItems))
+			}
+
+			// Add items
+			for _, itemID := range tt.itemsToAdd {
+				deadComp.AddDroppedItem(itemID)
+			}
+
+			// Verify item count
+			if len(deadComp.DroppedItems) != tt.expectedItems {
+				t.Errorf("expected %d items, got %d", tt.expectedItems, len(deadComp.DroppedItems))
+			}
+
+			// Verify item IDs match
+			for i, expectedID := range tt.itemsToAdd {
+				if deadComp.DroppedItems[i] != expectedID {
+					t.Errorf("item %d: expected ID %d, got %d", i, expectedID, deadComp.DroppedItems[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDeadComponentWithEntity(t *testing.T) {
+	world := NewWorld()
+
+	// Create entity
+	entity := world.CreateEntity()
+	entity.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	entity.AddComponent(&PositionComponent{X: 100, Y: 200})
+
+	world.Update(0)
+
+	// Verify entity doesn't have dead component initially
+	if entity.HasComponent("dead") {
+		t.Error("entity should not have dead component initially")
+	}
+
+	// Simulate death by adding DeadComponent
+	gameTime := 42.5
+	deadComp := NewDeadComponent(gameTime)
+	entity.AddComponent(deadComp)
+
+	// Verify component attached
+	if !entity.HasComponent("dead") {
+		t.Fatal("entity should have dead component after adding")
+	}
+
+	// Retrieve and verify
+	comp, ok := entity.GetComponent("dead")
+	if !ok {
+		t.Fatal("failed to retrieve dead component")
+	}
+
+	retrieved := comp.(*DeadComponent)
+	if retrieved.TimeOfDeath != gameTime {
+		t.Errorf("expected TimeOfDeath %v, got %v", gameTime, retrieved.TimeOfDeath)
+	}
+
+	// Add dropped items
+	retrieved.AddDroppedItem(5001)
+	retrieved.AddDroppedItem(5002)
+
+	if len(retrieved.DroppedItems) != 2 {
+		t.Errorf("expected 2 dropped items, got %d", len(retrieved.DroppedItems))
+	}
+}
+
+func TestDeadComponentEdgeCases(t *testing.T) {
+	t.Run("negative time of death", func(t *testing.T) {
+		// Should handle negative time (e.g., for testing or bugs)
+		deadComp := NewDeadComponent(-5.0)
+		if deadComp.TimeOfDeath != -5.0 {
+			t.Error("should preserve negative time of death")
+		}
+	})
+
+	t.Run("add duplicate item IDs", func(t *testing.T) {
+		// Should allow duplicates (intentional design - track all spawned items)
+		deadComp := NewDeadComponent(10.0)
+		deadComp.AddDroppedItem(1001)
+		deadComp.AddDroppedItem(1001)
+
+		if len(deadComp.DroppedItems) != 2 {
+			t.Errorf("expected 2 items (duplicates allowed), got %d", len(deadComp.DroppedItems))
+		}
+	})
+
+	t.Run("add many items", func(t *testing.T) {
+		// Stress test with many items
+		deadComp := NewDeadComponent(10.0)
+		for i := uint64(0); i < 100; i++ {
+			deadComp.AddDroppedItem(i)
+		}
+
+		if len(deadComp.DroppedItems) != 100 {
+			t.Errorf("expected 100 items, got %d", len(deadComp.DroppedItems))
+		}
+
+		// Verify order preserved
+		for i := uint64(0); i < 100; i++ {
+			if deadComp.DroppedItems[i] != i {
+				t.Errorf("item %d: expected ID %d, got %d", i, i, deadComp.DroppedItems[i])
+			}
+		}
+	})
+
+	t.Run("add zero item ID", func(t *testing.T) {
+		// Should allow zero ID (might be used for invalid/null entities)
+		deadComp := NewDeadComponent(10.0)
+		deadComp.AddDroppedItem(0)
+
+		if len(deadComp.DroppedItems) != 1 {
+			t.Error("should allow adding zero ID")
+		}
+		if deadComp.DroppedItems[0] != 0 {
+			t.Error("should preserve zero ID")
+		}
+	})
+}

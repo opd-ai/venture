@@ -94,10 +94,12 @@ func TestRenderSystem_CullingDisabled(t *testing.T) {
 
 	// Create entities
 	entities := []*Entity{}
+	sprite := ebiten.NewImage(32, 32) // Create a sprite image
 	for i := 0; i < 20; i++ {
 		entity := NewEntity(uint64(i + 2))
 		entity.AddComponent(&PositionComponent{X: float64(i * 100), Y: float64(i * 100)})
 		entity.AddComponent(&EbitenSprite{
+			Image:   sprite,
 			Width:   32,
 			Height:  32,
 			Color:   color.White,

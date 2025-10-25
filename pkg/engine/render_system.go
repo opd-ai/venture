@@ -136,6 +136,11 @@ type EbitenRenderSystem struct {
 	spatialPartition *SpatialPartitionSystem
 	enableCulling    bool
 
+	// Batch rendering optimization
+	enableBatching bool
+	batches        map[*ebiten.Image][]*Entity // Group entities by sprite image
+	batchPool      []map[*ebiten.Image][]*Entity
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -149,6 +154,7 @@ type RenderStats struct {
 	TotalEntities    int // Total entities in scene
 	RenderedEntities int // Entities actually rendered
 	CulledEntities   int // Entities culled by viewport check
+	BatchCount       int // Number of batches created
 	LastFrameTime    float64
 }
 
@@ -158,6 +164,9 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		cameraSystem:     cameraSystem,
 		spatialPartition: nil, // Will be set when world bounds are known
 		enableCulling:    true,
+		enableBatching:   true, // Batching enabled by default
+		batches:          make(map[*ebiten.Image][]*Entity),
+		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
 		ShowColliders:    false,
 		ShowGrid:         false,
 	}
@@ -178,6 +187,12 @@ func (r *EbitenRenderSystem) SetSpatialPartition(partition *SpatialPartitionSyst
 // When disabled, all entities are rendered (useful for debugging).
 func (r *EbitenRenderSystem) EnableCulling(enable bool) {
 	r.enableCulling = enable
+}
+
+// EnableBatching enables or disables batch rendering.
+// When enabled, entities with the same sprite are grouped to reduce GPU state changes.
+func (r *EbitenRenderSystem) EnableBatching(enable bool) {
+	r.enableBatching = enable
 }
 
 // GetStats returns rendering performance statistics.
@@ -219,10 +234,14 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	// Sort entities by layer
 	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
 
-	// Draw each entity
-	for _, entity := range sortedEntities {
-		r.drawEntity(entity)
-		r.stats.RenderedEntities++
+	// Render using batching (if enabled) or individual draws
+	if r.enableBatching {
+		r.drawBatched(sortedEntities)
+	} else {
+		for _, entity := range sortedEntities {
+			r.drawEntity(entity)
+			r.stats.RenderedEntities++
+		}
 	}
 
 	// Calculate culled count
@@ -234,6 +253,70 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	// Draw debug overlays
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
+	}
+}
+
+// drawBatched renders entities using batch optimization to reduce GPU state changes.
+// Entities with the same sprite image are grouped together.
+func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
+	// Get or create batch map from pool
+	batches := r.getBatchMap()
+	defer r.returnBatchMap(batches)
+
+	// Group entities by sprite image
+	for _, entity := range entities {
+		spriteComp, hasSprite := entity.GetComponent("sprite")
+		if !hasSprite {
+			continue
+		}
+		sprite := spriteComp.(*EbitenSprite)
+
+		if !sprite.Visible || sprite.Image == nil {
+			continue
+		}
+
+		// Group by sprite image pointer (entities with same sprite are batched)
+		batches[sprite.Image] = append(batches[sprite.Image], entity)
+	}
+
+	r.stats.BatchCount = len(batches)
+
+	// Draw each batch
+	for _, batch := range batches {
+		r.drawBatch(batch)
+	}
+}
+
+// drawBatch renders a group of entities with the same sprite image.
+func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
+	for _, entity := range entities {
+		r.drawEntity(entity)
+		r.stats.RenderedEntities++
+	}
+}
+
+// getBatchMap retrieves a batch map from the pool or creates a new one.
+func (r *EbitenRenderSystem) getBatchMap() map[*ebiten.Image][]*Entity {
+	if len(r.batchPool) > 0 {
+		// Pop from pool
+		batches := r.batchPool[len(r.batchPool)-1]
+		r.batchPool = r.batchPool[:len(r.batchPool)-1]
+
+		// Clear the map
+		for k := range batches {
+			batches[k] = batches[k][:0] // Reuse slice capacity
+		}
+		return batches
+	}
+
+	// Create new map with initial capacity
+	return make(map[*ebiten.Image][]*Entity, 32)
+}
+
+// returnBatchMap returns a batch map to the pool for reuse.
+func (r *EbitenRenderSystem) returnBatchMap(batches map[*ebiten.Image][]*Entity) {
+	if len(r.batchPool) < 2 { // Keep small pool
+		r.batchPool = append(r.batchPool, batches)
 	}
 }
 

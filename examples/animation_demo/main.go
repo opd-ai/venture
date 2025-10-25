@@ -1,12 +1,8 @@
-//go:build !testpackage
-// +build !testpackage
-
-// Package main demonstrates the animation system with procedural sprite generation.
-// This example shows how to integrate animation components with the ECS architecture.
 package main
 
 import (
 	"fmt"
+	"image/color"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -37,18 +33,17 @@ type Game struct {
 	entities      []*engine.Entity
 	currentEntity int
 	frameCount    int
-	// Wrap animation system to match System interface
-	world.AddSystem(&animSystemWrapper{animSystem})
+}
 
-	// Create demo entities with different animation states
+// NewGame creates a new game instance with animated entities.
 func NewGame() (*Game, error) {
 	// Initialize world and systems
 	world := engine.NewWorld()
 	spriteGen := sprites.NewGenerator()
 	animSystem := engine.NewAnimationSystem(spriteGen)
 
-	// Add animation system to world
-	world.AddSystem(animSystem)
+	// Wrap animation system to match System interface
+	world.AddSystem(&animSystemWrapper{animSystem})
 
 	// Create demo entities with different animation states
 	game := &Game{
@@ -149,11 +144,10 @@ func (g *Game) getNextState(current engine.AnimationState) engine.AnimationState
 		engine.AnimationStateAttack,
 		engine.AnimationStateCast,
 		engine.AnimationStateHit,
-// Draw renders the game.
-func (g *Game) Draw(screen *ebiten.Image) {
-	// Clear screen
-	bgColor := palette.RGB(20, 20, 30)
-	screen.Fill(bgColor)
+	}
+
+	for i, state := range states {
+		if state == current {
 			return states[(i+1)%len(states)]
 		}
 	}
@@ -164,7 +158,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // Draw renders the game.
 func (g *Game) Draw(screen *ebiten.Image) {
 	// Clear screen
-	screen.Fill(palette.ColorFromRGB(20, 20, 30))
+	screen.Fill(color.RGBA{R: 20, G: 20, B: 30, A: 255})
 
 	// Draw all entities
 	for _, entity := range g.entities {

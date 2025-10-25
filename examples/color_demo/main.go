@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Venture Color System Demo (Phase 4) ===\n")
+	fmt.Println("=== Venture Color System Demo (Phase 4) ===")
 
 	gen := palette.NewGenerator()
 	seed := int64(12345)
@@ -29,7 +29,7 @@ func main() {
 	// Demo 1: Show expanded 12+ color palette
 	fmt.Println("1. Expanded Color Palette (12+ colors)")
 	fmt.Println("   Previous: 8 colors | Now: 12+ colors")
-	fmt.Println("   New roles: Accent3, Highlight1/2, Shadow1/2, Neutral, Warning, Info\n")
+	fmt.Println("   New roles: Accent3, Highlight1/2, Shadow1/2, Neutral, Warning, Info")
 
 	opts := palette.DefaultOptions()
 	pal, err := gen.GenerateWithOptions("fantasy", seed, opts)
@@ -43,7 +43,7 @@ func main() {
 
 	// Demo 2: Color Harmony Types
 	fmt.Println("2. Color Harmony Types (6 types)")
-	fmt.Println("   Demonstrates mathematically harmonious color relationships\n")
+	fmt.Println("   Demonstrates mathematically harmonious color relationships")
 
 	harmonies := []palette.HarmonyType{
 		palette.HarmonyComplementary,
@@ -71,7 +71,7 @@ func main() {
 
 	// Demo 3: Mood Variations
 	fmt.Println("3. Mood Variations (7 moods)")
-	fmt.Println("   Adjusts emotional tone while maintaining genre identity\n")
+	fmt.Println("   Adjusts emotional tone while maintaining genre identity")
 
 	moods := []palette.MoodType{
 		palette.MoodNormal,
@@ -101,7 +101,7 @@ func main() {
 
 	// Demo 4: Rarity Tiers
 	fmt.Println("4. Rarity-Based Color Schemes (5 tiers)")
-	fmt.Println("   Color intensity increases with rarity for visual impact\n")
+	fmt.Println("   Color intensity increases with rarity for visual impact")
 
 	rarities := []palette.Rarity{
 		palette.RarityCommon,
@@ -129,7 +129,7 @@ func main() {
 
 	// Demo 5: Genre Comparisons
 	fmt.Println("5. Genre-Specific Palettes")
-	fmt.Println("   Each genre has distinct color personality\n")
+	fmt.Println("   Each genre has distinct color personality")
 
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	genreNames := []string{"Fantasy", "Sci-Fi", "Horror", "Cyberpunk", "Post-Apocalyptic"}
@@ -151,7 +151,7 @@ func main() {
 
 	// Demo 6: Custom MinColors
 	fmt.Println("6. Custom Color Count")
-	fmt.Println("   Generate palettes with 12, 16, 20, or 24+ colors\n")
+	fmt.Println("   Generate palettes with 12, 16, 20, or 24+ colors")
 
 	colorCounts := []int{12, 16, 20, 24}
 	for _, count := range colorCounts {
@@ -167,7 +167,7 @@ func main() {
 
 	// Demo 7: Combined Effects
 	fmt.Println("7. Combined Effects (Harmony + Mood + Rarity)")
-	fmt.Println("   All features work together for maximum variety\n")
+	fmt.Println("   All features work together for maximum variety")
 
 	combinations := []struct {
 		harmony palette.HarmonyType

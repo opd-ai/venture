@@ -132,23 +132,57 @@ type EbitenRenderSystem struct {
 	screen       *ebiten.Image
 	cameraSystem *CameraSystem
 
+	// Spatial partitioning for viewport culling
+	spatialPartition *SpatialPartitionSystem
+	enableCulling    bool
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
+
+	// Performance statistics
+	stats RenderStats
+}
+
+// RenderStats tracks rendering performance metrics.
+type RenderStats struct {
+	TotalEntities    int // Total entities in scene
+	RenderedEntities int // Entities actually rendered
+	CulledEntities   int // Entities culled by viewport check
+	LastFrameTime    float64
 }
 
 // NewRenderSystem creates a new render system.
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
-		cameraSystem:  cameraSystem,
-		ShowColliders: false,
-		ShowGrid:      false,
+		cameraSystem:     cameraSystem,
+		spatialPartition: nil, // Will be set when world bounds are known
+		enableCulling:    true,
+		ShowColliders:    false,
+		ShowGrid:         false,
 	}
 }
 
 // SetScreen sets the render target.
 func (r *EbitenRenderSystem) SetScreen(screen *ebiten.Image) {
 	r.screen = screen
+}
+
+// SetSpatialPartition sets the spatial partition system for viewport culling.
+// This enables efficient culling of off-screen entities.
+func (r *EbitenRenderSystem) SetSpatialPartition(partition *SpatialPartitionSystem) {
+	r.spatialPartition = partition
+}
+
+// EnableCulling enables or disables viewport culling.
+// When disabled, all entities are rendered (useful for debugging).
+func (r *EbitenRenderSystem) EnableCulling(enable bool) {
+	r.enableCulling = enable
+}
+
+// GetStats returns rendering performance statistics.
+func (r *EbitenRenderSystem) GetStats() RenderStats {
+	return r.stats
 }
 
 // Update is called every frame but doesn't modify entities.
@@ -169,15 +203,30 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	}
 	r.screen = ebitenScreen
 
+	// Reset stats for this frame
+	r.stats = RenderStats{
+		TotalEntities: len(entities),
+	}
+
 	// Note: Screen clearing is handled by terrain rendering system
 
+	// Get visible entities using spatial partition (if enabled)
+	visibleEntities := entities
+	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
+		visibleEntities = r.getVisibleEntities(entities)
+	}
+
 	// Sort entities by layer
-	sortedEntities := r.sortEntitiesByLayer(entities)
+	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
 
 	// Draw each entity
 	for _, entity := range sortedEntities {
 		r.drawEntity(entity)
+		r.stats.RenderedEntities++
 	}
+
+	// Calculate culled count
+	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
 
 	// GAP-016 REPAIR: Draw particle effects
 	r.drawParticles(entities)
@@ -186,6 +235,48 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
 	}
+}
+
+// getVisibleEntities returns only entities visible in the current viewport.
+// This uses spatial partitioning for efficient culling.
+func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
+	// Get camera bounds in world space
+	cam := r.cameraSystem.activeCamera
+	if cam == nil {
+		return entities // No camera, render all
+	}
+
+	camComp, ok := cam.GetComponent("camera")
+	if !ok {
+		return entities
+	}
+	camera := camComp.(*CameraComponent)
+
+	// Calculate viewport bounds in world space with margin for sprites
+	margin := 100.0 // Extra space to render sprites partially off-screen
+
+	// Get camera position
+	camPos, ok := cam.GetComponent("position")
+	if !ok {
+		return entities
+	}
+	pos := camPos.(*PositionComponent)
+
+	// Calculate world viewport bounds
+	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
+	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
+
+	viewportBounds := Bounds{
+		X:      pos.X - viewportWidth/2 - margin,
+		Y:      pos.Y - viewportHeight/2 - margin,
+		Width:  viewportWidth + margin*2,
+		Height: viewportHeight + margin*2,
+	}
+
+	// Query spatial partition for entities in viewport
+	visible := r.spatialPartition.QueryBounds(viewportBounds)
+
+	return visible
 }
 
 // drawEntity renders a single entity.

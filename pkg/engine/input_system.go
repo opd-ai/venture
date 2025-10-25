@@ -9,6 +9,93 @@ import (
 	"github.com/opd-ai/venture/pkg/mobile"
 )
 
+// GameState represents the current state of the game for input filtering.
+// Priority 2.3: State-based input filtering to prevent conflicts.
+type GameState int
+
+const (
+	// StateExploring is the default gameplay state (movement, combat, exploration)
+	StateExploring GameState = iota
+	// StateCombat is active combat state (may have different input rules)
+	StateCombat
+	// StateMenu is when pause/settings menu is open (blocks gameplay input)
+	StateMenu
+	// StateDialogue is when talking to NPCs (blocks movement, allows choices)
+	StateDialogue
+	// StateInventory is when inventory UI is open (blocks movement)
+	StateInventory
+	// StateCharacterScreen is when character sheet is open
+	StateCharacterScreen
+	// StateSkillTree is when skill tree UI is open
+	StateSkillTree
+	// StateQuestLog is when quest log UI is open
+	StateQuestLog
+	// StateMap is when map UI is open
+	StateMap
+)
+
+// String returns human-readable state name for debugging.
+func (s GameState) String() string {
+	switch s {
+	case StateExploring:
+		return "Exploring"
+	case StateCombat:
+		return "Combat"
+	case StateMenu:
+		return "Menu"
+	case StateDialogue:
+		return "Dialogue"
+	case StateInventory:
+		return "Inventory"
+	case StateCharacterScreen:
+		return "Character"
+	case StateSkillTree:
+		return "Skills"
+	case StateQuestLog:
+		return "Quests"
+	case StateMap:
+		return "Map"
+	default:
+		return "Unknown"
+	}
+}
+
+// AllowsMovement returns true if player can move in this state.
+func (s GameState) AllowsMovement() bool {
+	switch s {
+	case StateExploring, StateCombat:
+		return true
+	default:
+		return false
+	}
+}
+
+// AllowsCombat returns true if player can attack/cast spells in this state.
+func (s GameState) AllowsCombat() bool {
+	switch s {
+	case StateExploring, StateCombat:
+		return true
+	default:
+		return false
+	}
+}
+
+// AllowsUIToggle returns true if UI can be opened/closed in this state.
+func (s GameState) AllowsUIToggle() bool {
+	// UI can be toggled in any state except dialogue (must finish dialogue first)
+	return s != StateDialogue
+}
+
+// IsUIState returns true if this is a UI-focused state (not gameplay).
+func (s GameState) IsUIState() bool {
+	switch s {
+	case StateMenu, StateInventory, StateCharacterScreen, StateSkillTree, StateQuestLog, StateMap:
+		return true
+	default:
+		return false
+	}
+}
+
 // EbitenInput stores the current input state for an entity (Ebiten implementation).
 // This is typically only used for player-controlled entities.
 // Implements InputProvider interface.
@@ -179,6 +266,12 @@ type InputSystem struct {
 	onMapOpen       func()
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
+
+	// Priority 2.3: Game state for input filtering
+	currentState GameState
+
+	// Priority 2.1: Key binding registry for centralized binding management
+	keyBindings *KeyBindingRegistry
 }
 
 // NewInputSystem creates a new input system with default key bindings.
@@ -220,6 +313,12 @@ func NewInputSystem() *InputSystem {
 		touchHandler:  mobile.NewTouchInputHandler(),
 		mobileEnabled: mobile.IsMobilePlatform(),
 		useTouchInput: mobile.IsTouchCapable(), // Enable touch input for mobile AND WASM
+
+		// Priority 2.3: Initialize game state to exploring
+		currentState: StateExploring,
+
+		// Priority 2.1: Initialize key binding registry
+		keyBindings: NewKeyBindingRegistry(),
 	}
 }
 
@@ -240,6 +339,24 @@ func (s *InputSystem) SetMobileEnabled(enabled bool) {
 // IsMobileEnabled returns true if mobile input support is active.
 func (s *InputSystem) IsMobileEnabled() bool {
 	return s.mobileEnabled
+}
+
+// GetGameState returns the current game state for input filtering.
+// Priority 2.3: State management for input filtering
+func (s *InputSystem) GetGameState() GameState {
+	return s.currentState
+}
+
+// SetGameState changes the current game state and adjusts input filtering accordingly.
+// Priority 2.3: Allows game to switch between states (e.g., opening inventory, entering combat)
+func (s *InputSystem) SetGameState(state GameState) {
+	s.currentState = state
+}
+
+// GetKeyBindings returns the key binding registry for UI label generation.
+// Priority 2.1: Allows UI systems to query keybindings for accurate labels
+func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
+	return s.keyBindings
 }
 
 // Update processes input for all entities with input components.
@@ -433,58 +550,64 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 		}
 	} else {
 		// Process keyboard movement (desktop mode)
-		if ebiten.IsKeyPressed(s.KeyUp) {
-			input.MoveY = -1.0
-		}
-		if ebiten.IsKeyPressed(s.KeyDown) {
-			input.MoveY = 1.0
-		}
-		if ebiten.IsKeyPressed(s.KeyLeft) {
-			input.MoveX = -1.0
-		}
-		if ebiten.IsKeyPressed(s.KeyRight) {
-			input.MoveX = 1.0
-		}
+		// Priority 2.3: Only allow movement in appropriate game states
+		if s.currentState.AllowsMovement() {
+			if ebiten.IsKeyPressed(s.KeyUp) {
+				input.MoveY = -1.0
+			}
+			if ebiten.IsKeyPressed(s.KeyDown) {
+				input.MoveY = 1.0
+			}
+			if ebiten.IsKeyPressed(s.KeyLeft) {
+				input.MoveX = -1.0
+			}
+			if ebiten.IsKeyPressed(s.KeyRight) {
+				input.MoveX = 1.0
+			}
 
-		// Normalize diagonal movement
-		if input.MoveX != 0 && input.MoveY != 0 {
-			// Divide by sqrt(2) to maintain constant speed in all directions
-			input.MoveX *= 0.707
-			input.MoveY *= 0.707
+			// Normalize diagonal movement
+			if input.MoveX != 0 && input.MoveY != 0 {
+				// Divide by sqrt(2) to maintain constant speed in all directions
+				input.MoveX *= 0.707
+				input.MoveY *= 0.707
+			}
 		}
 
 		// Process action keys
-		if inpututil.IsKeyJustPressed(s.KeyAction) {
-			input.ActionPressed = true
-			input.ActionJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-			input.AnyKeyPressed = true     // GAP-005 REPAIR: Any key detection
-		}
-		if inpututil.IsKeyJustPressed(s.KeyUseItem) {
-			input.UseItemPressed = true
-			input.UseItemJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-			input.AnyKeyPressed = true      // GAP-005 REPAIR: Any key detection
-		}
+		// Priority 2.3: Only allow combat actions in appropriate game states
+		if s.currentState.AllowsCombat() {
+			if inpututil.IsKeyJustPressed(s.KeyAction) {
+				input.ActionPressed = true
+				input.ActionJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
+				input.AnyKeyPressed = true     // GAP-005 REPAIR: Any key detection
+			}
+			if inpututil.IsKeyJustPressed(s.KeyUseItem) {
+				input.UseItemPressed = true
+				input.UseItemJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
+				input.AnyKeyPressed = true      // GAP-005 REPAIR: Any key detection
+			}
 
-		// GAP-002 REPAIR: Process spell casting keys (1-5)
-		if inpututil.IsKeyJustPressed(s.KeySpell1) {
-			input.Spell1Pressed = true
-			input.AnyKeyPressed = true // GAP-005 REPAIR
-		}
-		if inpututil.IsKeyJustPressed(s.KeySpell2) {
-			input.Spell2Pressed = true
-			input.AnyKeyPressed = true // GAP-005 REPAIR
-		}
-		if inpututil.IsKeyJustPressed(s.KeySpell3) {
-			input.Spell3Pressed = true
-			input.AnyKeyPressed = true // GAP-005 REPAIR
-		}
-		if inpututil.IsKeyJustPressed(s.KeySpell4) {
-			input.Spell4Pressed = true
-			input.AnyKeyPressed = true // GAP-005 REPAIR
-		}
-		if inpututil.IsKeyJustPressed(s.KeySpell5) {
-			input.Spell5Pressed = true
-			input.AnyKeyPressed = true // GAP-005 REPAIR
+			// GAP-002 REPAIR: Process spell casting keys (1-5)
+			if inpututil.IsKeyJustPressed(s.KeySpell1) {
+				input.Spell1Pressed = true
+				input.AnyKeyPressed = true // GAP-005 REPAIR
+			}
+			if inpututil.IsKeyJustPressed(s.KeySpell2) {
+				input.Spell2Pressed = true
+				input.AnyKeyPressed = true // GAP-005 REPAIR
+			}
+			if inpututil.IsKeyJustPressed(s.KeySpell3) {
+				input.Spell3Pressed = true
+				input.AnyKeyPressed = true // GAP-005 REPAIR
+			}
+			if inpututil.IsKeyJustPressed(s.KeySpell4) {
+				input.Spell4Pressed = true
+				input.AnyKeyPressed = true // GAP-005 REPAIR
+			}
+			if inpututil.IsKeyJustPressed(s.KeySpell5) {
+				input.Spell5Pressed = true
+				input.AnyKeyPressed = true // GAP-005 REPAIR
+			}
 		}
 
 		// GAP-005 REPAIR: Detect any key press for tutorial "press any key" prompts

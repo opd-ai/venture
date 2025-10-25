@@ -158,14 +158,14 @@ func TestPoint_AllNeighbors(t *testing.T) {
 
 	// Check that all expected neighbors are present
 	expected := []Point{
-		{5, 4},  // North
-		{6, 4},  // Northeast
-		{6, 5},  // East
-		{6, 6},  // Southeast
-		{5, 6},  // South
-		{4, 6},  // Southwest
-		{4, 5},  // West
-		{4, 4},  // Northwest
+		{5, 4}, // North
+		{6, 4}, // Northeast
+		{6, 5}, // East
+		{6, 6}, // Southeast
+		{5, 6}, // South
+		{4, 6}, // Southwest
+		{4, 5}, // West
+		{4, 4}, // Northwest
 	}
 
 	for i, exp := range expected {

@@ -241,7 +241,7 @@ func TestAIComponent_GetSpeedMultiplier(t *testing.T) {
 // TestAIComponent_GetSpeedMultiplier_CustomSpeeds tests custom speed values
 func TestAIComponent_GetSpeedMultiplier_CustomSpeeds(t *testing.T) {
 	ai := NewAIComponent(0, 0)
-	
+
 	// Set custom speeds
 	ai.PatrolSpeed = 0.3
 	ai.ChaseSpeed = 1.5
@@ -355,7 +355,7 @@ func TestAIComponent_GetDistanceFromSpawn(t *testing.T) {
 		{"100 units east", 200, 100, 99.9, 100.1},
 		{"100 units north", 100, 200, 99.9, 100.1},
 		{"Diagonal 100,100", 200, 200, 141.4, 141.5}, // sqrt(100^2 + 100^2) ≈ 141.42
-		{"Far away", 500, 500, 565, 566},              // sqrt(400^2 + 400^2) ≈ 565.69
+		{"Far away", 500, 500, 565, 566},             // sqrt(400^2 + 400^2) ≈ 565.69
 	}
 
 	for _, tt := range tests {
@@ -372,11 +372,11 @@ func TestAIComponent_GetDistanceFromSpawn(t *testing.T) {
 // TestAIComponent_ShouldReturnToSpawn tests return-to-spawn logic
 func TestAIComponent_ShouldReturnToSpawn(t *testing.T) {
 	tests := []struct {
-		name             string
-		spawnX, spawnY   float64
+		name               string
+		spawnX, spawnY     float64
 		currentX, currentY float64
-		maxDistance      float64
-		want             bool
+		maxDistance        float64
+		want               bool
 	}{
 		{"At spawn", 100, 100, 100, 100, 500, false},
 		{"Within range", 100, 100, 200, 100, 500, false},

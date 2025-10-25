@@ -600,13 +600,13 @@ go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
 
 ```bash
 # Run all mobile tests
-go test -tags test ./pkg/mobile/...
+go test ./pkg/mobile/...
 
 # Test touch input system
-go test -tags test ./pkg/mobile -run TestTouchInput
+go test ./pkg/mobile -run TestTouchInput
 
 # Benchmark touch processing
-go test -tags test ./pkg/mobile -bench=BenchmarkTouchProcessing
+go test ./pkg/mobile -bench=BenchmarkTouchProcessing
 ```
 
 #### Integration Tests

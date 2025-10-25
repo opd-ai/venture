@@ -14,10 +14,10 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
   - Standard library for most functionality
   - No external dependencies beyond Ebiten ecosystem
 - **Testing**: 
-  - Go's built-in testing package with `-tags test` flag
+  - Go's built-in testing package (no build tags required)
   - Table-driven tests for comprehensive scenario coverage
   - Benchmark tests for performance-critical paths
-  - Target coverage: 80%+ (current: engine 70.7%, procgen 100%, entity 96.1%, terrain 97.4%, magic 91.9%, item 93.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 100%, sprites 100%, tiles 92.6%, particles 98.0%, ui 94.8%, music 100%, sfx 85.3%, synthesis 94.2%, network 66.0%, combat 100%, world 100%)
+  - Target coverage: 80%+ (current: engine 42.3%, procgen 100%, entity 96.1%, terrain 93.4%, magic 91.9%, item 94.8%, skills 90.6%, quest 96.6%, palette 98.4%, shapes 7.0%, sprites 8.7%, tiles 92.6%, particles 98.0%, ui 88.2%, music 100%, sfx 85.3%, synthesis 94.2%, network 54.1%, combat 100%, world 100%)
   - Race detection with `go test -race`
 - **Build/Deploy**: 
   - Single binary distribution via `go build`
@@ -45,7 +45,7 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
 
 3. **Package Structure and Dependencies**: Follow the established `pkg/` organization with clear boundaries. Packages under `pkg/procgen/` should have minimal external dependencies. The `engine` package is foundational and should not import domain-specific packages. Use interfaces in `interfaces.go` files for public contracts. Avoid circular dependencies by keeping dependency flow one-directional (engine ← procgen ← rendering). Each package must have a `doc.go` file with comprehensive package documentation.
 
-4. **Testing Requirements**: Write table-driven tests for functions with multiple scenarios. Test both success and error paths, including validation failures. Verify determinism by generating content twice with the same seed and comparing results. All tests must use `-tags test` to exclude Ebiten initialization in CI environments. Target minimum 80% code coverage per package. Include benchmarks for performance-critical generation functions. Example table-driven test:
+4. **Testing Requirements**: Write table-driven tests for functions with multiple scenarios. Test both success and error paths, including validation failures. Verify determinism by generating content twice with the same seed and comparing results. Tests use interface-based dependency injection with stub implementations, enabling testing without Ebiten initialization in CI environments. Target minimum 80% code coverage per package. Include benchmarks for performance-critical generation functions. Example table-driven test:
    ```go
    func TestGenerator(t *testing.T) {
        tests := []struct {
@@ -139,7 +139,7 @@ Currently in Phase 8 (Polish & Optimization), the project has completed Phases 1
 
 - **Building**: Use `go build ./cmd/client` and `go build ./cmd/server` for development. Use CLI test tools (`terraintest`, `entitytest`, `itemtest`, `magictest`, `skilltest`, `genretest`, `genreblend`, `rendertest`, `audiotest`, `movementtest`, `inventorytest`, `tiletest`, `questtest`) for rapid iteration on generators without running full game. Release builds use: `go build -ldflags="-s -w"` for binary size reduction.
 
-- **Testing**: Run `go test -tags test ./...` for all tests. Use `go test -tags test -cover ./pkg/procgen/...` for coverage reports. Generate HTML coverage: `go test -tags test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out`. Use `go test -tags test -race ./...` to detect race conditions. Run benchmarks: `go test -tags test -bench=. -benchmem ./...`.
+- **Testing**: Run `go test ./...` for all tests. Use `go test -cover ./pkg/procgen/...` for coverage reports. Generate HTML coverage: `go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out`. Use `go test -race ./...` to detect race conditions. Run benchmarks: `go test -bench=. -benchmem ./...`.
 
 - **Profiling**: Use `go test -tags test -cpuprofile=cpu.prof -bench=.` then `go tool pprof cpu.prof` for CPU profiling. Use `go test -tags test -memprofile=mem.prof -bench=.` then `go tool pprof mem.prof` for memory profiling. Profile before optimizing to identify actual bottlenecks.
 

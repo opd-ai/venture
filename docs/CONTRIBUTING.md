@@ -178,7 +178,7 @@ func (s *MovementSystem) Update(entities []*Entity, dt float64) {
 ### Test Requirements
 
 - **Coverage Target**: 80% minimum per package
-- **Test Tags**: Use `-tags test` for all tests
+- **Test Execution**: Run tests with standard `go test` command (no build tags required)
 - **Table-Driven Tests**: For multiple scenarios
 - **Benchmarks**: For performance-critical code
 
@@ -216,7 +216,7 @@ Follow standard Go conventions: use `go fmt`, pass `go vet`, check all errors, d
 
 2. **Run all checks**:
    ```bash
-   go test -tags test ./...
+   go test ./...
    go vet ./...
    go fmt ./...
    ```

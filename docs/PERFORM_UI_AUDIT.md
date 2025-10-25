@@ -21,7 +21,7 @@ CONTEXT:
 **Testing Tools Available:**
 - `cmd/rendertest/` - CLI tool for testing palette generation
 - `cmd/client/` - Full game client with all systems integrated
-- `go test -tags test ./pkg/rendering/ui/...` - Unit tests for UI generation
+- `go test ./pkg/rendering/ui/...` - Unit tests for UI generation
 
 REQUIREMENTS:
 
@@ -43,13 +43,13 @@ REQUIREMENTS:
    go run main.go -genre fantasy -seed 12345 -verbose
    
    # Run UI generator tests
-   go test -tags test -v ./pkg/rendering/ui/...
+   go test -v ./pkg/rendering/ui/...
    ```
 
 3. **Check for compilation and dependency issues:**
    ```bash
    go build ./...
-   go test -tags test ./pkg/...
+   go test ./pkg/...
    ```
 
 4. **Verify Ebiten dependencies (Linux):**
@@ -102,8 +102,8 @@ REQUIREMENTS:
      - Check color contrast ratios for text readability
    - **Performance** (frame rate impact, lag, stuttering):
      - Monitor FPS during UI-heavy screens (inventory, skill trees)
-     - Use Go profiling: `go test -tags test -cpuprofile=cpu.prof -bench=.`
-     - Profile UI generation: `go test -tags test -memprofile=mem.prof ./pkg/rendering/ui/...`
+     - Use Go profiling: `go test -cpuprofile=cpu.prof -bench=.`
+     - Profile UI generation: `go test -memprofile=mem.prof ./pkg/rendering/ui/...`
      - Check for memory leaks with large UI hierarchies
    - **Edge cases** (empty states, maximum values, rapid inputs):
      - Test empty inventory
@@ -156,7 +156,7 @@ Categorize findings by severity and link to specific code locations:
 - **High**: Significantly impairs usability or immersion
   - Example: Health bar doesn't update when taking damage
   - Action: Reference combat system integration in `pkg/engine/combat_system.go`
-  - Test: Run combat tests with `go test -tags test ./pkg/engine/combat_test.go`
+  - Test: Run combat tests with `go test ./pkg/engine/combat_test.go`
   
 - **Medium**: Noticeable but doesn't prevent gameplay
   - Example: Button hover state color too similar to normal state
@@ -177,7 +177,7 @@ Categorize findings by severity and link to specific code locations:
 **Investigation Steps:**
 1. Check if element generation succeeds:
    ```bash
-   go test -tags test -v -run TestGenerator_Generate ./pkg/rendering/ui/
+   go test -v -run TestGenerator_Generate ./pkg/rendering/ui/
    ```
 
 2. Verify Draw() method is called:
@@ -211,7 +211,7 @@ Categorize findings by severity and link to specific code locations:
 
 2. Run benchmarks on UI generation:
    ```bash
-   go test -tags test -bench=BenchmarkGenerate -benchmem ./pkg/rendering/ui/
+   go test -bench=BenchmarkGenerate -benchmem ./pkg/rendering/ui/
    ```
 
 3. Check for common performance issues:
@@ -224,7 +224,7 @@ Categorize findings by severity and link to specific code locations:
    - Cache generated UI elements when not changing
    - Use object pooling for frequently created UI
    - Implement dirty flag to only regenerate when needed
-   - Profile with: `go test -tags test -cpuprofile=cpu.prof -memprofile=mem.prof`
+   - Profile with: `go test -cpuprofile=cpu.prof -memprofile=mem.prof`
 
 ### Workflow 3: Color/Visual Inconsistencies
 
@@ -380,14 +380,14 @@ Use this checklist to systematically investigate any UI issue:
 - [ ] Check system implementations for UI state management
 
 ### Testing Checklist
-- [ ] Run unit tests: `go test -tags test ./pkg/rendering/ui/...`
-- [ ] Run with race detector: `go test -tags test -race ./...`
+- [ ] Run unit tests: `go test ./pkg/rendering/ui/...`
+- [ ] Run with race detector: `go test -race ./...`
 - [ ] Test with multiple seeds: 12345, 67890, 11111, 99999
 - [ ] Test all genres: fantasy, scifi, horror, cyberpunk, postapoc
 - [ ] Test at multiple resolutions: 800x600, 1280x720, 1920x1080
-- [ ] Profile CPU: `go test -tags test -cpuprofile=cpu.prof`
-- [ ] Profile memory: `go test -tags test -memprofile=mem.prof`
-- [ ] Run benchmarks: `go test -tags test -bench=. -benchmem`
+- [ ] Profile CPU: `go test -cpuprofile=cpu.prof`
+- [ ] Profile memory: `go test -memprofile=mem.prof`
+- [ ] Run benchmarks: `go test -bench=. -benchmem`
 
 ### Determinism Verification
 - [ ] Generate UI element twice with same parameters
@@ -440,30 +440,30 @@ go build -ldflags="-s -w" -o venture-client ./cmd/client
 ### Testing
 ```bash
 # Run all tests
-go test -tags test ./...
+go test ./...
 
 # Test specific package
-go test -tags test -v ./pkg/rendering/ui/
+go test -v ./pkg/rendering/ui/
 
 # Test with coverage
-go test -tags test -cover -coverprofile=coverage.out ./pkg/rendering/...
+go test -cover -coverprofile=coverage.out ./pkg/rendering/...
 go tool cover -html=coverage.out
 
 # Test with race detection
-go test -tags test -race ./...
+go test -race ./...
 
 # Run benchmarks
-go test -tags test -bench=. -benchmem ./pkg/rendering/ui/
+go test -bench=. -benchmem ./pkg/rendering/ui/
 ```
 
 ### Profiling
 ```bash
 # CPU profiling
-go test -tags test -cpuprofile=cpu.prof -bench=. ./pkg/rendering/ui/
+go test -cpuprofile=cpu.prof -bench=. ./pkg/rendering/ui/
 go tool pprof -http=:8080 cpu.prof
 
 # Memory profiling
-go test -tags test -memprofile=mem.prof -bench=. ./pkg/rendering/ui/
+go test -memprofile=mem.prof -bench=. ./pkg/rendering/ui/
 go tool pprof -http=:8080 mem.prof
 
 # Profile running application

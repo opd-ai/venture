@@ -188,4 +188,3 @@ func TestInputSystemIntegration(t *testing.T) {
 	t.Log("- Only drawn if mobileEnabled && virtualControls != nil")
 	t.Log("- WASM doesn't show controls unless manually enabled")
 }
-

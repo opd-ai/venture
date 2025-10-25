@@ -63,7 +63,7 @@
 //	}
 //	// Apply genre defaults (tree density, water chance, etc.)
 //	terrain.ApplyGenreDefaults(&params)
-//	
+//
 //	// Get genre-appropriate generator for this depth
 //	rng := rand.New(rand.NewSource(12345))
 //	gen := terrain.GetGeneratorForGenre("horror", 5, rng)

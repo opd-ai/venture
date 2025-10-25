@@ -331,7 +331,6 @@ func TestGenerateNewShapes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img, err := gen.Generate(tt.config)
-
 			if err != nil {
 				t.Errorf("Generate() error = %v", err)
 				return
@@ -403,7 +402,6 @@ func TestAllShapeTypes(t *testing.T) {
 			config.Seed = 12345 + int64(shapeType)
 
 			img, err := gen.Generate(config)
-
 			if err != nil {
 				t.Errorf("Failed to generate %s: %v", shapeType.String(), err)
 			}

@@ -383,7 +383,7 @@ func TestRarity_String(t *testing.T) {
 func TestGenerateWithOptions_Harmony(t *testing.T) {
 	gen := NewGenerator()
 	seed := int64(12345)
-	
+
 	tests := []struct {
 		name    string
 		harmony HarmonyType
@@ -575,8 +575,8 @@ func TestGetHarmonyHues(t *testing.T) {
 	baseHue := 30.0
 
 	tests := []struct {
-		name        string
-		harmony     HarmonyType
+		name         string
+		harmony      HarmonyType
 		wantHueCount int
 	}{
 		{"complementary", HarmonyComplementary, 2},
@@ -621,33 +621,33 @@ func TestApplyMood(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		mood           MoodType
-		checkLightness func(float64) bool
+		name            string
+		mood            MoodType
+		checkLightness  func(float64) bool
 		checkSaturation func(float64) bool
 	}{
 		{
-			name: "bright increases lightness",
-			mood: MoodBright,
-			checkLightness: func(l float64) bool { return l > baseScheme.Lightness },
+			name:            "bright increases lightness",
+			mood:            MoodBright,
+			checkLightness:  func(l float64) bool { return l > baseScheme.Lightness },
 			checkSaturation: func(s float64) bool { return true }, // Don't check
 		},
 		{
-			name: "dark decreases lightness",
-			mood: MoodDark,
-			checkLightness: func(l float64) bool { return l < baseScheme.Lightness },
+			name:            "dark decreases lightness",
+			mood:            MoodDark,
+			checkLightness:  func(l float64) bool { return l < baseScheme.Lightness },
 			checkSaturation: func(s float64) bool { return true },
 		},
 		{
-			name: "saturated increases saturation",
-			mood: MoodSaturated,
-			checkLightness: func(l float64) bool { return true },
+			name:            "saturated increases saturation",
+			mood:            MoodSaturated,
+			checkLightness:  func(l float64) bool { return true },
 			checkSaturation: func(s float64) bool { return s > baseScheme.Saturation },
 		},
 		{
-			name: "muted decreases saturation",
-			mood: MoodMuted,
-			checkLightness: func(l float64) bool { return true },
+			name:            "muted decreases saturation",
+			mood:            MoodMuted,
+			checkLightness:  func(l float64) bool { return true },
 			checkSaturation: func(s float64) bool { return s < baseScheme.Saturation },
 		},
 	}
@@ -686,8 +686,8 @@ func TestApplyRarity(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		rarity Rarity
+		name           string
+		rarity         Rarity
 		checkIntensity func(ColorScheme) bool
 	}{
 		{
@@ -716,7 +716,7 @@ func TestApplyRarity(t *testing.T) {
 			rarity: RarityLegendary,
 			checkIntensity: func(s ColorScheme) bool {
 				return s.Saturation > baseScheme.Saturation*1.3 &&
-					   s.HueVariation > baseScheme.HueVariation
+					s.HueVariation > baseScheme.HueVariation
 			},
 		},
 	}

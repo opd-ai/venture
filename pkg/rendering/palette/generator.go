@@ -215,11 +215,11 @@ func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand, opts 
 	for i := 0; i < minColors; i++ {
 		hueIdx := i % len(harmonyHues)
 		hue := harmonyHues[hueIdx]
-		
+
 		// Add slight variation to each color
 		hueVariation := rng.Float64()*scheme.HueVariation - scheme.HueVariation/2
 		hue = math.Mod(hue+hueVariation, 360)
-		
+
 		sat := clamp(scheme.Saturation+rng.Float64()*scheme.SaturationVariation-scheme.SaturationVariation/2, 0, 1)
 		light := clamp(scheme.Lightness+rng.Float64()*scheme.LightnessVariation-scheme.LightnessVariation/2, 0.2, 0.8)
 		palette.Colors[i] = hslToColor(hue, sat, light)

@@ -238,15 +238,12 @@ if err != nil {
 player := world.CreateEntity() // Use CreateEntity() for auto-ID assignment
 player.AddComponent(&engine.PositionComponent{X: 400, Y: 300})
 player.AddComponent(&engine.VelocityComponent{})
-// Note: SpriteComponent has different fields - use engine.NewSpriteComponent()
 playerSprite := engine.NewSpriteComponent(32, 32, color.RGBA{100, 150, 255, 255})
 player.AddComponent(playerSprite)
 player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
-// Use constructor for proper initialization
 playerStats := engine.NewStatsComponent()
 playerStats.Attack = 10
 playerStats.Defense = 5
-// Note: No Speed field in StatsComponent - speed is handled by MovementSystem
 player.AddComponent(playerStats)
 player.AddComponent(&engine.InputComponent{})
 player.AddComponent(engine.NewInventoryComponent(20, 100.0)) // 20 slots, 100kg capacity
@@ -375,12 +372,13 @@ for _, room := range terrain.Rooms {
 ```go
 gen := entity.NewGenerator()
 
-// Generate single entity
+// Generate entities (returns slice)
 result, err := gen.Generate(seed, params)
 if err != nil {
     log.Fatal(err)
 }
-generatedEntity := result.(*entity.Entity)
+entities := result.([]*entity.Entity)
+generatedEntity := entities[0] // First entity
 
 fmt.Printf("Name: %s\n", generatedEntity.Name)
 fmt.Printf("Type: %s\n", generatedEntity.Type)
@@ -388,12 +386,13 @@ fmt.Printf("Level: %d\n", generatedEntity.Stats.Level)
 fmt.Printf("HP: %d, Attack: %d, Defense: %d\n",
     generatedEntity.Stats.Health, generatedEntity.Stats.Damage, generatedEntity.Stats.Defense)
 
-// Generate multiple entities
+// Generate multiple entities with different seeds
 rng := rand.New(rand.NewSource(seed))
 for i := 0; i < 20; i++ {
     result, _ := gen.Generate(rng.Int63(), params)
-    generatedEntity := result.(*entity.Entity)
-    // ... use generatedEntity
+    entities := result.([]*entity.Entity)
+    entity := entities[0]
+    // ... use entity
 }
 ```
 
@@ -491,19 +490,19 @@ quests := result.([]*quest.Quest)
 generatedQuest := quests[0] // First quest
 
 fmt.Printf("Quest: %s\n", generatedQuest.Name)
-fmt.Printf("Type: %s\n", quest.Type)
-fmt.Printf("Description: %s\n", quest.Description)
+fmt.Printf("Type: %s\n", generatedQuest.Type)
+fmt.Printf("Description: %s\n", generatedQuest.Description)
 
 // Objectives
-for _, obj := range quest.Objectives {
+for _, obj := range generatedQuest.Objectives {
     fmt.Printf("  - %s (%d/%d)\n", 
         obj.Description, obj.Current, obj.Target)
 }
 
 // Rewards
 fmt.Printf("Rewards:\n")
-fmt.Printf("  XP: %d\n", quest.RewardXP)
-fmt.Printf("  Gold: %d\n", quest.RewardGold)
+fmt.Printf("  XP: %d\n", generatedQuest.RewardXP)
+fmt.Printf("  Gold: %d\n", generatedQuest.RewardGold)
 ```
 
 ### Seed Management

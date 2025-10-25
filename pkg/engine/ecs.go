@@ -245,4 +245,3 @@ func (w *World) GetSystems() []System {
 func (w *World) GetLogger() *logrus.Entry {
 	return w.logger
 }
-

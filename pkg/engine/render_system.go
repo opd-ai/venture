@@ -5,6 +5,7 @@ package engine
 
 import (
 	"image/color"
+	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -602,30 +603,40 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 }
 
 // sortEntitiesByLayer sorts entities by their sprite layer for correct draw order.
+// Optimized: Uses Go's sort.Slice (O(n log n)) and caches sprite components to avoid repeated map lookups.
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
+	// Pre-allocate with capacity
 	sorted := make([]*Entity, 0, len(entities))
+	
+	// Cache sprite components to avoid repeated GetComponent calls
+	type entitySprite struct {
+		entity *Entity
+		sprite *EbitenSprite
+		layer  int
+	}
+	
+	cache := make([]entitySprite, 0, len(entities))
 
-	// Collect entities with sprites
+	// Collect entities with sprites and cache their sprite components
 	for _, entity := range entities {
-		if entity.HasComponent("sprite") {
-			sorted = append(sorted, entity)
+		if sprite, ok := entity.GetComponent("sprite"); ok {
+			ebitenSprite := sprite.(*EbitenSprite)
+			cache = append(cache, entitySprite{
+				entity: entity,
+				sprite: ebitenSprite,
+				layer:  ebitenSprite.Layer,
+			})
 		}
 	}
 
-	// Simple bubble sort by layer (good enough for small entity counts)
-	n := len(sorted)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			sprite1, _ := sorted[j].GetComponent("sprite")
-			sprite2, _ := sorted[j+1].GetComponent("sprite")
+	// Sort using Go's optimized sort (O(n log n) instead of O(n²) bubble sort)
+	sort.Slice(cache, func(i, j int) bool {
+		return cache[i].layer < cache[j].layer
+	})
 
-			layer1 := sprite1.(*EbitenSprite).Layer
-			layer2 := sprite2.(*EbitenSprite).Layer
-
-			if layer1 > layer2 {
-				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
-			}
-		}
+	// Extract sorted entities
+	for _, es := range cache {
+		sorted = append(sorted, es.entity)
 	}
 
 	return sorted

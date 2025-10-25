@@ -8,7 +8,7 @@ import (
 )
 
 // Helper function to create a skill with a name and effect
-func createSkill(id, name string, effectType string, value float64, isPercent bool) *skills.Skill {
+func createSkill(id, name, effectType string, value float64, isPercent bool) *skills.Skill {
 	return &skills.Skill{
 		ID:   id,
 		Name: name,

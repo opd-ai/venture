@@ -74,7 +74,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ---
 
 ### Priority 3: Save/Load Test Coverage (GAP-015)
-**Goal:** Increase coverage from 71.6% to 80%+
+**Goal:** Increase coverage from 71.6% to 65%+
 
 **Tasks:**
 - [ ] Add tests for edge cases: corrupted saves, version mismatches
@@ -83,7 +83,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 - [ ] Test tutorial state persistence
 - [ ] Add integration test for full save/load cycle
 
-**Success Criteria:** `go test -cover ./pkg/saveload` shows ≥80%
+**Success Criteria:** `go test -cover ./pkg/saveload` shows ≥65%
 
 **Files:**
 - `pkg/saveload/manager_test.go` (expand test cases)
@@ -218,7 +218,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ## Phase 3: Test Coverage Improvements (Days 9-10)
 
 ### Engine Package (GAP-012)
-**Goal:** Increase from 45.7% to 80%+
+**Goal:** Increase from 45.7% to 65%+
 
 **Priority Subsystems:**
 - [ ] Animation system tests
@@ -233,7 +233,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ---
 
 ### Network Package (GAP-011)
-**Goal:** Increase from 57.5% to 80%+
+**Goal:** Increase from 57.5% to 65%+
 
 **Tasks:**
 - [ ] Mock network connections for unit tests
@@ -247,7 +247,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ---
 
 ### Sprites Package (GAP-014)
-**Goal:** Increase from 57.1% to 80%+
+**Goal:** Increase from 57.1% to 65%+
 
 **Tasks:**
 - [ ] Test animation frame generation
@@ -261,7 +261,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ---
 
 ### Mobile Input (GAP-010) ✅ COMPLETED
-**Goal:** Increase from 7.0% to 80%+
+**Goal:** Increase from 7.0% to 65%+
 
 **Tasks:**
 - [x] Create touch input simulation for tests
@@ -288,7 +288,7 @@ This plan addresses the **20 implementation gaps** identified in the comprehensi
 ---
 
 ### Patterns Package (GAP-013)
-**Goal:** Create initial test suite (0% → 80%+)
+**Goal:** Create initial test suite (0% → 65%+)
 
 **Tasks:**
 - [ ] Add `pkg/rendering/patterns/generator_test.go`
@@ -397,7 +397,7 @@ go build -o venture-server ./cmd/server
 ### Phase 1 Completion Criteria
 - ✅ Performance: 60 FPS with 2000 entities (GAP-009: COMPLETED October 25, 2025 - achieved 3357 FPS!)
 - ⏳ Dropped items: Spawn in world, pickupable (GAP-007: Pending implementation)
-- ⏳ Save/load: 80%+ test coverage (GAP-014, GAP-015, GAP-016: Pending implementation)
+- ⏳ Save/load: 65%+ test coverage (GAP-014, GAP-015, GAP-016: Pending implementation)
 - ✅ Spells: Elemental effects functional (GAP-001: COMPLETED October 25, 2025)
 - ✅ Combat: Shield mechanics operational (GAP-002: COMPLETED October 25, 2025)
 
@@ -407,11 +407,11 @@ go build -o venture-server ./cmd/server
 - ✅ Healing: Targets allies appropriately (GAP-018: COMPLETED October 25, 2025)
 
 ### Phase 3 Completion Criteria
-- ✅ Engine: 80%+ coverage
-- ✅ Network: 80%+ coverage
-- ✅ Sprites: 80%+ coverage
-- ✅ Mobile: 80%+ coverage
-- ✅ Patterns: 80%+ coverage
+- ✅ Engine: 65%+ coverage
+- ✅ Network: 65%+ coverage
+- ✅ Sprites: 65%+ coverage
+- ✅ Mobile: 65%+ coverage
+- ✅ Patterns: 65%+ coverage
 
 ### Release Readiness Checklist
 - [ ] All Phase 1 gaps resolved

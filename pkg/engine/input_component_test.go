@@ -45,6 +45,11 @@ func (i *StubInput) IsActionJustPressed() bool {
 	return i.ActionJustPressed
 }
 
+// IsAnyKeyPressed implements InputProvider interface.
+func (i *StubInput) IsAnyKeyPressed() bool {
+	return i.AnyKeyPressed
+}
+
 // IsUseItemPressed implements InputProvider interface.
 func (i *StubInput) IsUseItemPressed() bool {
 	return i.UseItemPressed

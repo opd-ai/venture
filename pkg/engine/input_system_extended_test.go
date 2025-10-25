@@ -262,13 +262,12 @@ func TestInputSystem_GetKeyBinding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.action, func(t *testing.T) {
-			key, ok := inputSys.GetKeyBinding(tt.action)
+			_, ok := inputSys.GetKeyBinding(tt.action)
 			if ok != tt.valid {
-				t.Errorf("GetKeyBinding(%q) returned %v, want %v", tt.action, ok, tt.valid)
+				t.Errorf("GetKeyBinding(%q) returned ok=%v, want %v", tt.action, ok, tt.valid)
 			}
-			if tt.valid && key == 0 {
-				t.Errorf("GetKeyBinding(%q) returned key 0 (unset)", tt.action)
-			}
+			// Note: Don't check if key == 0, as ebiten.KeyA has value 0
+			// If ok is true, the binding exists regardless of key value
 		})
 	}
 }

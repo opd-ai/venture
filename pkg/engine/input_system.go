@@ -63,6 +63,11 @@ func (i *EbitenInput) IsActionJustPressed() bool {
 	return i.ActionJustPressed
 }
 
+// IsAnyKeyPressed implements InputProvider interface.
+func (i *EbitenInput) IsAnyKeyPressed() bool {
+	return i.AnyKeyPressed
+}
+
 // IsUseItemPressed implements InputProvider interface.
 func (i *EbitenInput) IsUseItemPressed() bool {
 	return i.UseItemPressed

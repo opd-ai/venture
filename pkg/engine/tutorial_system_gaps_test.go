@@ -370,6 +370,7 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 		t.Fatal("Should start on welcome step")
 	}
 
+	// Simulate key press using any key flag (proper interface usage)
 	input.AnyKeyPressed = true
 	ts.Update(entities, 0.016)
 

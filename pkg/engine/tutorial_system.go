@@ -61,9 +61,13 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						input := comp.(*EbitenInput)
-						// Use frame-persistent AnyKeyPressed flag instead of ActionPressed
-						return input.AnyKeyPressed
+						// Use InputProvider interface instead of concrete type
+						input, ok := comp.(InputProvider)
+						if !ok {
+							continue
+						}
+						// Check for any key press using interface method
+						return input.IsAnyKeyPressed()
 					}
 				}
 				return false
@@ -350,6 +354,11 @@ func (ts *EbitenTutorialSystem) ImportState(enabled, showUI bool, currentStepIdx
 	}
 
 	// Validate currentStepIdx (in case tutorial steps changed between save/load)
+	// Clamp negative values to 0
+	if ts.CurrentStepIdx < 0 {
+		ts.CurrentStepIdx = 0
+	}
+	// Clamp values beyond step count to last step
 	if ts.CurrentStepIdx >= len(ts.Steps) {
 		ts.CurrentStepIdx = len(ts.Steps) - 1
 		if ts.CurrentStepIdx < 0 {

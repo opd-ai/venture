@@ -121,11 +121,19 @@ const (
 )
 
 // TriggerHaptic triggers haptic feedback on mobile devices.
-// Note: This is a placeholder. Actual implementation requires platform-specific code
-// or additional libraries for iOS/Android haptic APIs.
+// Platform-specific implementations should be provided via build tags:
+// - platform_ios.go with //go:build ios tag for iOS Core Haptics
+// - platform_android.go with //go:build android tag for Android Vibrator
+// This default implementation is a no-op for desktop/WASM builds.
 func TriggerHaptic(feedback HapticFeedback) {
-	// TODO: Implement platform-specific haptic feedback
-	// iOS: Use Core Haptics or UIImpactFeedbackGenerator
-	// Android: Use Vibrator service
-	// For now, this is a no-op
+	// Default no-op implementation for non-mobile platforms
+	// Mobile platforms should provide their own implementations via build tags
+	triggerHapticImpl(feedback)
+}
+
+// triggerHapticImpl is the platform-specific implementation.
+// Default implementation is a no-op.
+func triggerHapticImpl(feedback HapticFeedback) {
+	// No-op on desktop/WASM platforms
+	_ = feedback
 }

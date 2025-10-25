@@ -1,11 +1,15 @@
 package mobile
 
 import (
+	"image"
 	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 // VirtualDPad represents an on-screen directional pad for movement.
@@ -213,8 +217,26 @@ func (b *VirtualButton) Draw(screen *ebiten.Image) {
 	// Draw button border
 	vector.StrokeCircle(screen, float32(b.X), float32(b.Y), float32(b.Radius), 2, b.TextColor, true)
 
-	// TODO: Draw label text (requires text rendering integration)
-	// For now, the button is just a circle
+	// Draw label text centered in button
+	if b.Label != "" {
+		// Measure text dimensions
+		bounds, _ := font.BoundString(basicfont.Face7x13, b.Label)
+		textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+		textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
+
+		// Center text in button
+		textX := int(b.X) - textWidth/2
+		textY := int(b.Y) + textHeight/2
+
+		// Draw text
+		d := &font.Drawer{
+			Dst:  screen,
+			Src:  &image.Uniform{b.TextColor},
+			Face: basicfont.Face7x13,
+			Dot:  fixed.P(textX, textY),
+		}
+		d.DrawString(b.Label)
+	}
 }
 
 // VirtualControlsLayout manages the complete virtual control layout.

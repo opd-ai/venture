@@ -1174,7 +1174,7 @@ func main() {
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
 				gold = inv.Gold
-				
+
 				// Convert items to ItemData for persistence
 				for _, itm := range inv.Items {
 					items = append(items, saveload.ItemData{

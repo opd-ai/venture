@@ -1,10 +1,14 @@
 package mobile
 
 import (
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 // MobileMenu represents a touch-friendly menu system.
@@ -132,8 +136,26 @@ func (m *MobileMenu) Draw(screen *ebiten.Image) {
 		// Draw item background
 		vector.DrawFilledRect(screen, float32(m.X+5), float32(itemY+2), float32(m.Width-10), float32(itemHeight-4), itemColor, true)
 
-		// TODO: Draw item text (requires text rendering)
-		// For now, just draw the item boxes
+		// Draw item text
+		if item.Label != "" {
+			textColor := color.RGBA{255, 255, 255, 255}
+			if !item.Enabled {
+				textColor = color.RGBA{100, 100, 100, 255}
+			}
+
+			// Calculate text position (left-aligned with padding)
+			textX := int(m.X) + 15
+			textY := int(itemY+itemHeight/2) + 6 // Center vertically
+
+			// Draw the text
+			d := &font.Drawer{
+				Dst:  screen,
+				Src:  &image.Uniform{textColor},
+				Face: basicfont.Face7x13,
+				Dot:  fixed.P(textX, textY),
+			}
+			d.DrawString(item.Label)
+		}
 	}
 }
 
@@ -337,6 +359,14 @@ type MinimapWidget struct {
 	X, Y            float64
 	Width, Height   float64
 	BackgroundColor color.Color
+
+	// World data for rendering (set externally)
+	TerrainWidth  int
+	TerrainHeight int
+	TileData      [][]int // 2D array of tile types
+	PlayerX       int     // Player tile position
+	PlayerY       int     // Player tile position
+	FogOfWar      [][]bool
 }
 
 // NewMinimapWidget creates a new minimap widget.
@@ -359,7 +389,66 @@ func (m *MinimapWidget) Draw(screen *ebiten.Image) {
 	borderColor := color.RGBA{100, 100, 100, 255}
 	vector.StrokeRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), 2, borderColor, true)
 
-	// TODO: Draw actual minimap content
+	// Draw minimap content if terrain data is available
+	if m.TileData != nil && m.TerrainWidth > 0 && m.TerrainHeight > 0 {
+		// Calculate tile scaling to fit terrain in minimap
+		scaleX := m.Width / float64(m.TerrainWidth)
+		scaleY := m.Height / float64(m.TerrainHeight)
+		tileScale := scaleX
+		if scaleY < scaleX {
+			tileScale = scaleY
+		}
+
+		// Draw terrain tiles
+		for y := 0; y < m.TerrainHeight && y < len(m.TileData); y++ {
+			for x := 0; x < m.TerrainWidth && x < len(m.TileData[y]); x++ {
+				// Check fog of war
+				if m.FogOfWar != nil && y < len(m.FogOfWar) && x < len(m.FogOfWar[y]) {
+					if !m.FogOfWar[y][x] {
+						continue // Skip unexplored tiles
+					}
+				}
+
+				// Get tile color based on type
+				tileType := m.TileData[y][x]
+				tileColor := m.getTileColorForType(tileType)
+
+				// Calculate pixel position
+				pixelX := float32(m.X) + float32(float64(x)*tileScale)
+				pixelY := float32(m.Y) + float32(float64(y)*tileScale)
+				pixelSize := float32(tileScale)
+
+				if pixelSize < 1 {
+					pixelSize = 1
+				}
+
+				vector.DrawFilledRect(screen, pixelX, pixelY, pixelSize, pixelSize, tileColor, true)
+			}
+		}
+
+		// Draw player icon
+		if m.PlayerX >= 0 && m.PlayerX < m.TerrainWidth && m.PlayerY >= 0 && m.PlayerY < m.TerrainHeight {
+			pixelX := float32(m.X) + float32(float64(m.PlayerX)*tileScale)
+			pixelY := float32(m.Y) + float32(float64(m.PlayerY)*tileScale)
+
+			// Draw player as bright circle
+			vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 200, 255, 255}, true)
+		}
+	}
+}
+
+// getTileColorForType returns a color for a given tile type.
+func (m *MinimapWidget) getTileColorForType(tileType int) color.Color {
+	// Map tile types to colors (simplified version)
+	// 0 = wall/solid, 1 = floor/walkable
+	switch tileType {
+	case 0:
+		return color.RGBA{60, 60, 60, 255} // Dark gray for walls
+	case 1:
+		return color.RGBA{150, 150, 150, 255} // Light gray for floor
+	default:
+		return color.RGBA{100, 100, 100, 255} // Default gray
+	}
 }
 
 // NotificationWidget displays temporary notifications.
@@ -422,5 +511,25 @@ func (n *NotificationWidget) Draw(screen *ebiten.Image) {
 	// Draw background
 	vector.DrawFilledRect(screen, float32(n.X), float32(n.Y), float32(n.Width), float32(n.Height), bgColor, true)
 
-	// TODO: Draw message text (requires text rendering)
+	// Draw message text
+	if n.Message != "" {
+		textColor := n.TextColor.(color.RGBA)
+		textColor.A = alpha
+
+		// Center text horizontally and vertically
+		bounds, _ := font.BoundString(basicfont.Face7x13, n.Message)
+		textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+		textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
+
+		textX := int(n.X + (n.Width-float64(textWidth))/2)
+		textY := int(n.Y + (n.Height+float64(textHeight))/2)
+
+		d := &font.Drawer{
+			Dst:  screen,
+			Src:  &image.Uniform{textColor},
+			Face: basicfont.Face7x13,
+			Dot:  fixed.P(textX, textY),
+		}
+		d.DrawString(n.Message)
+	}
 }

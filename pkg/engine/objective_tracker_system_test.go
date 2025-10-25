@@ -456,7 +456,8 @@ func TestAwardQuestRewards(t *testing.T) {
 	}
 
 	// Award rewards
-	AwardQuestRewards(player, q)
+	tracker := NewObjectiveTrackerSystem()
+	tracker.AwardQuestRewards(player, q)
 
 	// Check XP
 	if exp.CurrentXP != 100 {
@@ -488,7 +489,8 @@ func TestAwardQuestRewards_NoComponents(t *testing.T) {
 	}
 
 	// Should not panic
-	AwardQuestRewards(player, q)
+	tracker := NewObjectiveTrackerSystem()
+	tracker.AwardQuestRewards(player, q)
 }
 
 // TestUpdate tests the main update loop
@@ -575,7 +577,7 @@ func TestObjectiveTrackerSystem_Integration(t *testing.T) {
 	completedQuests := []string{}
 	sys.SetQuestCompleteCallback(func(entity *Entity, qst *quest.Quest) {
 		completedQuests = append(completedQuests, qst.ID)
-		AwardQuestRewards(entity, qst)
+		sys.AwardQuestRewards(entity, qst)
 	})
 
 	// Create player with all components

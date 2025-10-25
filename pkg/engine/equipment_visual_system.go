@@ -173,8 +173,13 @@ func (s *EquipmentVisualSystem) getEntitySeed(entity *Entity) int64 {
 // getGenreID gets the genre ID for the entity.
 func (s *EquipmentVisualSystem) getGenreID(entity *Entity) string {
 	// Try to get genre from entity component
-	// For now, return default fantasy genre
-	// TODO: Add genre component when implemented
+	if genreComp, hasGenre := entity.GetComponent("genre"); hasGenre {
+		if genre, ok := genreComp.(*GenreComponent); ok {
+			return genre.GetPrimaryGenre()
+		}
+	}
+
+	// Default to fantasy genre if not specified
 	return "fantasy"
 }
 
@@ -182,11 +187,46 @@ func (s *EquipmentVisualSystem) getGenreID(entity *Entity) string {
 func (s *EquipmentVisualSystem) getStatusEffects(entity *Entity) []sprites.StatusEffect {
 	effects := make([]sprites.StatusEffect, 0)
 
-	// Check for status effect component (if it exists in the future)
-	// For now, return empty list
-	// TODO: Implement when StatusEffectComponent is added
+	// Get all components and check for status effects
+	for name, comp := range entity.Components {
+		if name == "status_effect" {
+			if effectComp, ok := comp.(*StatusEffectComponent); ok {
+				// Convert engine status effect to sprite status effect
+				effect := sprites.StatusEffect{
+					Type:          effectComp.EffectType,
+					Intensity:     effectComp.Magnitude,
+					Color:         s.getEffectColor(effectComp.EffectType),
+					AnimSpeed:     1.0,
+					ParticleCount: int(effectComp.Magnitude * 10), // Scale particles by magnitude
+				}
+				effects = append(effects, effect)
+			}
+		}
+	}
 
 	return effects
+}
+
+// getEffectColor returns the visual color for a status effect type.
+func (s *EquipmentVisualSystem) getEffectColor(effectType string) string {
+	switch effectType {
+	case "poison":
+		return "green"
+	case "burning", "fire":
+		return "red"
+	case "frozen", "ice":
+		return "cyan"
+	case "stunned":
+		return "yellow"
+	case "bleeding":
+		return "darkred"
+	case "blessed", "heal":
+		return "gold"
+	case "cursed":
+		return "purple"
+	default:
+		return "white"
+	}
 }
 
 // Helper methods

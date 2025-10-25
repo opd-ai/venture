@@ -93,7 +93,7 @@ func (s *SkillProgressionSystem) applySkillBonuses(entity *Entity) {
 	}
 
 	// Apply accumulated bonuses to stats
-	s.applyBonusesToStats(stats, bonuses)
+	s.applyBonusesToStats(entity, stats, bonuses)
 }
 
 // applyEffect adds a single effect to the bonus accumulator.
@@ -162,7 +162,7 @@ func (s *SkillProgressionSystem) applyEffect(bonuses *SkillBonuses, effect skill
 
 // applyBonusesToStats modifies stats based on calculated bonuses.
 // GAP-008 REPAIR: Store base stats and reapply bonuses from scratch to avoid compounding.
-func (s *SkillProgressionSystem) applyBonusesToStats(stats *StatsComponent, bonuses *SkillBonuses) {
+func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *StatsComponent, bonuses *SkillBonuses) {
 	// Initialize base stats if not already stored (first time)
 	// We use a marker pattern: if all bonuses are zero and stats look unmodified, store them
 	// Otherwise, we need to compute base stats by reverse engineering
@@ -204,26 +204,53 @@ func (s *SkillProgressionSystem) applyBonusesToStats(stats *StatsComponent, bonu
 		stats.CritDamage = baseCritDamage + bonuses.CritDamageBonus
 	}
 
-	// TODO: Properly implement attack/defense/magic bonuses once we have base stat tracking
-	// For now, leaving them commented out to avoid compound multiplication bug
-	/*
+	// Apply attack/defense/magic bonuses using base stats
+	baseStatsComp, hasBaseStats := entity.GetComponent("base_stats")
+	if hasBaseStats {
+		baseStats := baseStatsComp.(*BaseStatsComponent)
+
+		// Apply attack bonus
 		if bonuses.DamageBonus != 0 {
-			stats.Attack = stats.Attack * (1.0 + bonuses.DamageBonus)
+			if attackComp, ok := entity.GetComponent("attack"); ok {
+				attack := attackComp.(*AttackComponent)
+				attack.Damage = baseStats.BaseAttack * (1.0 + bonuses.DamageBonus)
+			}
 		}
 
+		// Apply defense bonus
 		if bonuses.DefenseBonus != 0 {
-			stats.Defense = stats.Defense * (1.0 + bonuses.DefenseBonus)
+			stats.Defense = baseStats.BaseDefense * (1.0 + bonuses.DefenseBonus)
 		}
 
+		// Apply magic power bonus
 		if bonuses.MagicPowerBonus != 0 {
-			stats.MagicPower = stats.MagicPower * (1.0 + bonuses.MagicPowerBonus)
+			stats.MagicPower = baseStats.BaseMagicPower * (1.0 + bonuses.MagicPowerBonus)
 		}
-	*/
 
-	// Note: Health and speed bonuses not applied here since:
-	// - Health is managed by separate HealthComponent
-	// - Speed is managed by separate MovementComponent
-	// These could be added in future if needed
+		// Apply health bonus
+		if bonuses.HealthBonus != 0 {
+			if healthComp, ok := entity.GetComponent("health"); ok {
+				health := healthComp.(*HealthComponent)
+				oldMax := health.Max
+				health.Max = baseStats.BaseMaxHealth * (1.0 + bonuses.HealthBonus)
+				// Scale current health proportionally
+				if oldMax > 0 {
+					health.Current = health.Current * (health.Max / oldMax)
+				}
+			}
+		}
+
+		// Apply mana regen bonus
+		if bonuses.ManaRegenBonus != 0 {
+			if manaComp, ok := entity.GetComponent("mana"); ok {
+				mana := manaComp.(*ManaComponent)
+				mana.Regen = baseStats.BaseManaRegen * (1.0 + bonuses.ManaRegenBonus)
+			}
+		}
+	}
+
+	// Note: Speed bonus not applied here since it's managed by separate MovementComponent
+	// Cooldown reduction applied during spell casting
 }
 
 // SkillBonuses accumulates all skill effect bonuses.

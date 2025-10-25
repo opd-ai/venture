@@ -3,8 +3,11 @@ package engine
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 
+	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 )
 
@@ -20,12 +23,16 @@ type ObjectiveTrackerSystem struct {
 
 	// Tracking state
 	exploredTiles map[uint64]map[string]bool // entityID -> tileKey -> explored
+
+	// Item generator for quest rewards
+	itemGenerator *item.ItemGenerator
 }
 
 // NewObjectiveTrackerSystem creates a new objective tracker.
 func NewObjectiveTrackerSystem() *ObjectiveTrackerSystem {
 	return &ObjectiveTrackerSystem{
 		exploredTiles: make(map[uint64]map[string]bool),
+		itemGenerator: item.NewItemGenerator(),
 	}
 }
 
@@ -276,7 +283,7 @@ func tileKeyFromCoords(x, y int) string {
 }
 
 // AwardQuestRewards distributes rewards from a completed quest.
-func AwardQuestRewards(entity *Entity, qst *quest.Quest) {
+func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Quest) {
 	// Award XP
 	if qst.Reward.XP > 0 {
 		if expComp, ok := entity.GetComponent("experience"); ok {
@@ -304,5 +311,96 @@ func AwardQuestRewards(entity *Entity, qst *quest.Quest) {
 		}
 	}
 
-	// TODO: Award items (requires item generation from item names)
+	// Award items
+	if len(qst.Reward.Items) > 0 {
+		s.awardQuestItems(entity, qst)
+	}
+}
+
+// awardQuestItems generates and awards items from quest rewards.
+func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Quest) {
+	invComp, ok := entity.GetComponent("inventory")
+	if !ok {
+		return // No inventory to receive items
+	}
+	inv := invComp.(*InventoryComponent)
+
+	// Get genre for item generation
+	genreID := "fantasy" // Default genre
+	if genreComp, hasGenre := entity.GetComponent("genre"); hasGenre {
+		if genre, ok := genreComp.(*GenreComponent); ok {
+			genreID = genre.GetPrimaryGenre()
+		}
+	}
+
+	// Generate items based on quest reward item names
+	for i, itemName := range qst.Reward.Items {
+		// Create generation seed from quest seed and item index
+		itemSeed := qst.Seed + int64(i)*100
+
+		// Determine item type from name
+		itemType := s.inferItemTypeFromName(itemName)
+
+		// Set up generation parameters
+		params := procgen.GenerationParams{
+			Difficulty: float64(qst.Difficulty) / 5.0, // Convert difficulty to 0-1 range
+			Depth:      qst.RequiredLevel,
+			GenreID:    genreID,
+			Custom: map[string]interface{}{
+				"count": 1,
+				"type":  itemType,
+			},
+		}
+
+		// Generate item
+		result, err := s.itemGenerator.Generate(itemSeed, params)
+		if err != nil {
+			continue // Skip items that fail to generate
+		}
+
+		items, ok := result.([]*item.Item)
+		if !ok || len(items) == 0 {
+			continue
+		}
+
+		// Add item to inventory
+		generatedItem := items[0]
+		if inv.CanAddItem(generatedItem) {
+			inv.AddItem(generatedItem)
+		}
+	}
+}
+
+// inferItemTypeFromName attempts to determine item type from the item name string.
+// Quest item names are descriptive (e.g., "healing potion", "iron sword", "leather armor").
+func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
+	nameLower := strings.ToLower(itemName)
+
+	// Check for weapon keywords
+	weaponKeywords := []string{"sword", "axe", "bow", "staff", "dagger", "mace", "spear", "hammer"}
+	for _, keyword := range weaponKeywords {
+		if strings.Contains(nameLower, keyword) {
+			return "weapon"
+		}
+	}
+
+	// Check for armor keywords
+	armorKeywords := []string{"armor", "helm", "helmet", "boots", "gloves", "shield", "chest", "plate", "mail"}
+	for _, keyword := range armorKeywords {
+		if strings.Contains(nameLower, keyword) {
+			return "armor"
+		}
+	}
+
+	// Check for consumable keywords
+	consumableKeywords := []string{"potion", "elixir", "scroll", "food", "drink", "medicine"}
+	for _, keyword := range consumableKeywords {
+		if strings.Contains(nameLower, keyword) {
+			return "consumable"
+		}
+	}
+
+	// Default to random item type
+	itemTypes := []string{"weapon", "armor", "consumable"}
+	return itemTypes[rand.Intn(len(itemTypes))]
 }

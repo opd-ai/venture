@@ -1,0 +1,5 @@
+Optimize and refine the attached prompt. Fence the optimized output in a ~~~~ codeblock. do not execute the instructions, only optimize the prompt. Keep it around 400 words long.
+
+~~~~
+Carefully scan all implemented ebiten system structs and ensure that they are correctly wired into the game system, ensuring they are present in the game and working correctly. Start by identifying all systems, then systematically identify where they are instantiated and added to the game. Finally examine how they interact with other entities and components. During this process, identify and fix improperly implemented or connected components. If the component is implemented correctly, then mark it complete and move on. Ensure that you fix bugs autonomously, as you go. Keep track of your findings in the docs/FINAL_AUDIT.md file. If a docs/FINAL_AUDIT.md file one already exists, delete it and replace it with your findings.
+~~~~

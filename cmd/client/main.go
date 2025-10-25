@@ -272,7 +272,7 @@ func main() {
 
 	// Set quest completion callback to award rewards
 	objectiveTracker.SetQuestCompleteCallback(func(entity *engine.Entity, qst *quest.Quest) {
-		engine.AwardQuestRewards(entity, qst)
+		objectiveTracker.AwardQuestRewards(entity, qst)
 		if *verbose {
 			log.Printf("Quest '%s' completed! Rewards: %d XP, %d gold, %d skill points",
 				qst.Name, qst.Reward.XP, qst.Reward.Gold, qst.Reward.SkillPoints)

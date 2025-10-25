@@ -3,7 +3,11 @@
 // to inventory item usage for consumables and equipment.
 package engine
 
-import "log"
+import (
+	"log"
+
+	"github.com/opd-ai/venture/pkg/procgen/item"
+)
 
 // PlayerItemUseSystem processes player item use input (E key).
 // It bridges InputSystem and InventorySystem to consume/equip items.
@@ -46,9 +50,24 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 		inventory := invComp.(*InventoryComponent)
 
-		// Get selected item index (for now, use first consumable)
-		// TODO: Implement hotbar/selection system
-		selectedIndex := s.findFirstUsableItem(inventory)
+		// Get hotbar component for selected item (if available)
+		var selectedIndex int
+		if hotbarComp, hasHotbar := entity.GetComponent("hotbar"); hasHotbar {
+			hotbar := hotbarComp.(*HotbarComponent)
+			selectedIndex = hotbar.LastUsedIndex
+			// Check if the slot has an item
+			if selectedIndex == -1 || hotbar.GetSlot(selectedIndex) == nil {
+				// No selected item, fall back to first consumable
+				selectedIndex = s.findFirstUsableItem(inventory)
+			} else {
+				// Find the hotbar item in inventory
+				targetItem := hotbar.GetSlot(selectedIndex)
+				selectedIndex = s.findItemInInventory(inventory, targetItem)
+			}
+		} else {
+			// No hotbar, use first consumable
+			selectedIndex = s.findFirstUsableItem(inventory)
+		}
 
 		if selectedIndex == -1 {
 			// No usable item found
@@ -87,11 +106,27 @@ func (s *PlayerItemUseSystem) findFirstUsableItem(inventory *InventoryComponent)
 	return -1
 }
 
-// SetSelectedItem sets the currently selected item index for quick use.
-// This will be used when hotbar system is implemented.
-func (s *PlayerItemUseSystem) SetSelectedItem(entity *Entity, index int) {
-	// TODO: Store selected index in a component when hotbar is added
-	// For now, this is a placeholder for future implementation
-	_ = entity
-	_ = index
+// findItemInInventory finds the inventory index of a specific item.
+// Returns -1 if not found.
+func (s *PlayerItemUseSystem) findItemInInventory(inventory *InventoryComponent, targetItem *item.Item) int {
+	if targetItem == nil {
+		return -1
+	}
+	for i, invItem := range inventory.Items {
+		// Compare item references (assuming same pointer means same item)
+		if invItem == targetItem {
+			return i
+		}
+	}
+	return -1
+}
+
+// SetSelectedItem sets the currently selected hotbar slot for quick use.
+func (s *PlayerItemUseSystem) SetSelectedItem(entity *Entity, slotIndex int) {
+	hotbarComp, hasHotbar := entity.GetComponent("hotbar")
+	if !hasHotbar {
+		return
+	}
+	hotbar := hotbarComp.(*HotbarComponent)
+	hotbar.LastUsedIndex = slotIndex
 }

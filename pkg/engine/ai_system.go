@@ -62,7 +62,7 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 		ai.processIdle(entity, aiComp, pos)
 
 	case AIStatePatrol:
-		ai.processPatrol(entity, aiComp, pos)
+		ai.processPatrol(entity, aiComp, pos, deltaTime)
 
 	case AIStateDetect:
 		ai.processDetect(entity, aiComp, pos)
@@ -100,17 +100,68 @@ func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *Positi
 	}
 }
 
-// processPatrol handles the patrol state - similar to idle for now.
-func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+// processPatrol handles the patrol state - move between waypoints.
+func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *PositionComponent, deltaTime float64) {
 	// Look for enemies in range
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
 
 	if target != nil {
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
+		return
 	}
 
-	// TODO: Implement actual patrol movement along a route
+	// Check if patrol route is configured
+	if !aiComp.HasPatrolRoute() {
+		// No patrol route, behave like idle
+		return
+	}
+
+	// Get current waypoint
+	waypoint := aiComp.GetCurrentWaypoint()
+	if waypoint == nil {
+		return
+	}
+
+	// Check if waiting at waypoint
+	if aiComp.IsWaitingAtWaypoint(deltaTime) {
+		// Stop movement while waiting
+		if velComp, ok := entity.GetComponent("velocity"); ok {
+			vel := velComp.(*VelocityComponent)
+			vel.VX = 0
+			vel.VY = 0
+		}
+		return
+	}
+
+	// Calculate distance to waypoint
+	dx := waypoint.X - pos.X
+	dy := waypoint.Y - pos.Y
+	distToWaypoint := math.Sqrt(dx*dx + dy*dy)
+
+	// Check if reached waypoint
+	if distToWaypoint <= aiComp.WaypointReachDistance {
+		aiComp.AdvanceToNextWaypoint()
+		return
+	}
+
+	// Move towards waypoint
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		vel := velComp.(*VelocityComponent)
+
+		// Use default base speed (velocity component doesn't store speed)
+		baseSpeed := 100.0 // Default pixels per second
+
+		// Normalize direction and apply patrol speed multiplier
+		if distToWaypoint > 0 {
+			dirX := dx / distToWaypoint
+			dirY := dy / distToWaypoint
+			speed := baseSpeed * aiComp.GetSpeedMultiplier()
+
+			vel.VX = dirX * speed
+			vel.VY = dirY * speed
+		}
+	}
 }
 
 // processDetect handles the detect state - confirm target and start chase.

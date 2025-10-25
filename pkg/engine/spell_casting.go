@@ -65,8 +65,9 @@ func (s *SpellSlotComponent) IsCasting() bool {
 type SpellCastingSystem struct {
 	world           *World
 	statusEffectSys *StatusEffectSystem
-	particleSys     *ParticleSystem // For visual effects
-	audioMgr        *AudioManager   // For sound effects
+	particleSys     *ParticleSystem       // For visual effects
+	audioMgr        *AudioManager         // For sound effects
+	tutorialSys     *EbitenTutorialSystem // For notifications
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
@@ -89,6 +90,12 @@ func (s *SpellCastingSystem) SetAudioManager(audioMgr *AudioManager) {
 // This allows using a shared particle system if desired.
 func (s *SpellCastingSystem) SetParticleSystem(particleSys *ParticleSystem) {
 	s.particleSys = particleSys
+}
+
+// SetTutorialSystem sets the tutorial system for notifications.
+// This allows displaying feedback messages to the player.
+func (s *SpellCastingSystem) SetTutorialSystem(tutorialSys *EbitenTutorialSystem) {
+	s.tutorialSys = tutorialSys
 }
 
 // Update processes spell casting and cooldowns.
@@ -153,8 +160,10 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 	mana := manaComp.(*ManaComponent)
 
 	if mana.Current < spell.Stats.ManaCost {
-		// Not enough mana
-		// TODO: Show "Not enough mana" message
+		// Not enough mana - show notification to player
+		if s.tutorialSys != nil {
+			s.tutorialSys.ShowNotification("Not enough mana!", 1.5)
+		}
 		return
 	}
 
@@ -839,23 +848,149 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 			targets = append(targets, entity)
 		}
 
-	case magic.TargetCone, magic.TargetLine:
-		// TODO: Implement directional targeting
-		// For now, treat like single target
+	case magic.TargetCone:
+		// Cone targeting: entities within angle from caster's facing direction
+		casterPos, hasCasterPos := caster.GetComponent("position")
+		if !hasCasterPos {
+			break
+		}
+		casterPosComp := casterPos.(*PositionComponent)
+
+		// Get caster's facing direction (use velocity or mouse aim)
+		dirX, dirY := s.getCasterDirection(caster, x, y)
+		if dirX == 0 && dirY == 0 {
+			dirX = 1.0 // Default to facing right
+		}
+
+		// Normalize direction
+		dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
+		dirX /= dirLength
+		dirY /= dirLength
+
+		// Cone parameters
+		coneAngle := 45.0 * math.Pi / 180.0 // 45-degree cone (adjustable)
+
 		for _, entity := range entities {
 			if !isEnemyTarget(entity) {
 				continue
 			}
 
-			dist := GetDistance(caster, entity)
-			if dist <= spell.Stats.Range {
+			entityPos, hasPos := entity.GetComponent("position")
+			if !hasPos {
+				continue
+			}
+			entityPosComp := entityPos.(*PositionComponent)
+
+			// Vector from caster to entity
+			toEntityX := entityPosComp.X - casterPosComp.X
+			toEntityY := entityPosComp.Y - casterPosComp.Y
+			dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+			// Check if within range
+			if dist > spell.Stats.Range || dist < 0.1 {
+				continue
+			}
+
+			// Normalize to entity vector
+			toEntityX /= dist
+			toEntityY /= dist
+
+			// Calculate angle between direction and to-entity vector
+			dotProduct := dirX*toEntityX + dirY*toEntityY
+			angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
+
+			// Check if within cone angle
+			if angle <= coneAngle {
 				targets = append(targets, entity)
-				break // Just one for now
+			}
+		}
+
+	case magic.TargetLine:
+		// Line targeting: entities along a line from caster in facing direction
+		casterPos, hasCasterPos := caster.GetComponent("position")
+		if !hasCasterPos {
+			break
+		}
+		casterPosComp := casterPos.(*PositionComponent)
+
+		// Get caster's facing direction (use velocity or mouse aim)
+		dirX, dirY := s.getCasterDirection(caster, x, y)
+		if dirX == 0 && dirY == 0 {
+			dirX = 1.0 // Default to facing right
+		}
+
+		// Normalize direction
+		dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
+		dirX /= dirLength
+		dirY /= dirLength
+
+		// Line width tolerance (in pixels)
+		lineWidth := 32.0
+
+		for _, entity := range entities {
+			if !isEnemyTarget(entity) {
+				continue
+			}
+
+			entityPos, hasPos := entity.GetComponent("position")
+			if !hasPos {
+				continue
+			}
+			entityPosComp := entityPos.(*PositionComponent)
+
+			// Vector from caster to entity
+			toEntityX := entityPosComp.X - casterPosComp.X
+			toEntityY := entityPosComp.Y - casterPosComp.Y
+			dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+			// Check if within range
+			if dist > spell.Stats.Range || dist < 0.1 {
+				continue
+			}
+
+			// Calculate perpendicular distance from line
+			// Project entity position onto line direction
+			projection := toEntityX*dirX + toEntityY*dirY
+			if projection < 0 {
+				continue // Behind caster
+			}
+
+			// Calculate perpendicular distance
+			perpX := toEntityX - projection*dirX
+			perpY := toEntityY - projection*dirY
+			perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
+
+			// Check if within line width
+			if perpDist <= lineWidth {
+				targets = append(targets, entity)
 			}
 		}
 	}
 
 	return targets
+}
+
+// getCasterDirection determines the caster's facing direction for directional spells.
+// Uses velocity if moving, otherwise uses direction towards target point (x, y).
+func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY float64) (dirX, dirY float64) {
+	// Try to use velocity for moving entities
+	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
+		vel := velComp.(*VelocityComponent)
+		if vel.VX != 0 || vel.VY != 0 {
+			return vel.VX, vel.VY
+		}
+	}
+
+	// Fall back to direction towards target point
+	if posComp, hasPos := caster.GetComponent("position"); hasPos {
+		pos := posComp.(*PositionComponent)
+		dirX = targetX - pos.X
+		dirY = targetY - pos.Y
+		return dirX, dirY
+	}
+
+	// Default to facing right if no position
+	return 1.0, 0.0
 }
 
 // StartCast initiates casting a spell from a slot.

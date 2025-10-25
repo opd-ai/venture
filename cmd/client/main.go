@@ -568,10 +568,11 @@ func main() {
 	}
 	player.AddComponent(playerSprite)
 
-	// Add animation component for multi-frame character animation
-	playerAnim := engine.NewAnimationComponent(*seed + int64(player.ID))
+		// Add animation component for multi-frame character animation
+	// GAP-019 REPAIR: Use special seed offset for player to ensure distinct color
+	playerAnim := engine.NewAnimationComponent(*seed + int64(player.ID*1000))
 	playerAnim.CurrentState = engine.AnimationStateIdle
-	playerAnim.FrameTime = 0.15 // ~6.7 FPS for smooth animation
+	playerAnim.FrameTime = 0.15  // ~6.7 FPS for smooth animation
 	playerAnim.Loop = true
 	playerAnim.Playing = true
 	playerAnim.FrameCount = 4 // 4 frames per animation

@@ -209,7 +209,7 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			// Shield absorbs damage
 			absorbed := shield.AbsorbDamage(finalDamage)
 			finalDamage -= absorbed
-			
+
 			// If shield absorbed all damage, no health damage
 			if finalDamage <= 0 {
 				attack.ResetCooldown()

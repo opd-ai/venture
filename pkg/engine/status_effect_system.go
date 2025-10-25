@@ -23,12 +23,12 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
 		// Collect all status effect components
 		var effectsToRemove []Component
-		
+
 		for _, comp := range entity.Components {
 			if effect, ok := comp.(*StatusEffectComponent); ok {
 				// Update effect duration and check for ticks
 				ticked := effect.Update(deltaTime)
-				
+
 				if effect.IsExpired() {
 					// Remove expired effects
 					effectsToRemove = append(effectsToRemove, effect)
@@ -39,17 +39,17 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 				}
 			}
 		}
-		
+
 		// Remove expired effects
 		for _, effect := range effectsToRemove {
 			entity.RemoveComponent(effect.Type())
 		}
-		
+
 		// Update shield duration
 		if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
 			shield := shieldComp.(*ShieldComponent)
 			shield.Update(deltaTime)
-			
+
 			// Remove depleted shields
 			if !shield.IsActive() {
 				entity.RemoveComponent("shield")
@@ -65,16 +65,16 @@ func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusE
 		return
 	}
 	health := healthComp.(*HealthComponent)
-	
+
 	switch effect.EffectType {
 	case "burning":
 		// Fire DoT (damage over time)
 		health.TakeDamage(effect.Magnitude)
-		
+
 	case "poisoned":
 		// Poison DoT (ignores armor)
 		health.TakeDamage(effect.Magnitude)
-		
+
 	case "regeneration":
 		// Healing over time
 		health.Heal(effect.Magnitude)
@@ -88,20 +88,20 @@ func (s *StatusEffectSystem) removeEffectModifiers(entity *Entity, effect *Statu
 		return
 	}
 	stats := statsComp.(*StatsComponent)
-	
+
 	switch effect.EffectType {
 	case "strength":
 		// Remove attack boost
 		stats.Attack /= (1.0 + effect.Magnitude)
-		
+
 	case "weakness":
 		// Remove attack penalty
 		stats.Attack /= effect.Magnitude
-		
+
 	case "fortify":
 		// Remove defense boost
 		stats.Defense /= (1.0 + effect.Magnitude)
-		
+
 	case "vulnerability":
 		// Remove defense penalty
 		stats.Defense /= effect.Magnitude
@@ -122,7 +122,7 @@ func (s *StatusEffectSystem) ApplyStatusEffect(entity *Entity, effectType string
 			}
 		}
 	}
-	
+
 	// Create new status effect
 	effect := &StatusEffectComponent{
 		EffectType:   effectType,
@@ -131,9 +131,9 @@ func (s *StatusEffectSystem) ApplyStatusEffect(entity *Entity, effectType string
 		TickInterval: tickInterval,
 		NextTick:     tickInterval,
 	}
-	
+
 	entity.AddComponent(effect)
-	
+
 	// Apply immediate stat modifications
 	s.applyEffectModifiers(entity, effect)
 }
@@ -145,20 +145,20 @@ func (s *StatusEffectSystem) applyEffectModifiers(entity *Entity, effect *Status
 		return
 	}
 	stats := statsComp.(*StatsComponent)
-	
+
 	switch effect.EffectType {
 	case "strength":
 		// Attack boost (magnitude is percentage: 0.3 = +30%)
 		stats.Attack *= (1.0 + effect.Magnitude)
-		
+
 	case "weakness":
 		// Attack penalty (magnitude is fraction: 0.7 = 70% attack)
 		stats.Attack *= effect.Magnitude
-		
+
 	case "fortify":
 		// Defense boost
 		stats.Defense *= (1.0 + effect.Magnitude)
-		
+
 	case "vulnerability":
 		// Defense penalty
 		stats.Defense *= effect.Magnitude
@@ -196,31 +196,31 @@ func (s *StatusEffectSystem) ChainLightning(source *Entity, initialTarget *Entit
 	if chains <= 0 {
 		return
 	}
-	
+
 	// Apply damage to initial target
 	if healthComp, hasHealth := initialTarget.GetComponent("health"); hasHealth {
 		health := healthComp.(*HealthComponent)
 		health.TakeDamage(damage)
-		
+
 		// Apply shocked effect
 		s.ApplyStatusEffect(initialTarget, "shocked", 0, 2.0, 0)
 	}
-	
+
 	// Find next chain target
 	entities := s.world.GetEntities()
 	var nextTarget *Entity
 	minDist := range_
-	
+
 	for _, entity := range entities {
 		if entity == source || entity == initialTarget {
 			continue
 		}
-		
+
 		// Must be an enemy
 		if !isEnemyTarget(source, entity) {
 			continue
 		}
-		
+
 		// Check distance from current target
 		dist := GetDistance(initialTarget, entity)
 		if dist <= minDist {
@@ -228,7 +228,7 @@ func (s *StatusEffectSystem) ChainLightning(source *Entity, initialTarget *Entit
 			minDist = dist
 		}
 	}
-	
+
 	// Recursively chain to next target with reduced damage
 	if nextTarget != nil {
 		s.ChainLightning(source, nextTarget, damage*0.7, chains-1, range_)
@@ -240,17 +240,17 @@ func isEnemyTarget(caster *Entity, target *Entity) bool {
 	if target == caster {
 		return false
 	}
-	
+
 	// Player has input component
 	if target.HasComponent("input") {
 		return false
 	}
-	
+
 	// Must have health
 	if !target.HasComponent("health") {
 		return false
 	}
-	
+
 	// Check team if available
 	if casterTeam, hasCasterTeam := caster.GetComponent("team"); hasCasterTeam {
 		if targetTeam, hasTargetTeam := target.GetComponent("team"); hasTargetTeam {
@@ -259,6 +259,6 @@ func isEnemyTarget(caster *Entity, target *Entity) bool {
 			return ct.IsEnemy(tt.TeamID)
 		}
 	}
-	
+
 	return true
 }

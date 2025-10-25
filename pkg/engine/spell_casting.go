@@ -60,8 +60,8 @@ func (s *SpellSlotComponent) IsCasting() bool {
 
 // SpellCastingSystem handles spell execution and cooldowns.
 type SpellCastingSystem struct {
-	world            *World
-	statusEffectSys  *StatusEffectSystem
+	world           *World
+	statusEffectSys *StatusEffectSystem
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
@@ -194,7 +194,7 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 		if s.statusEffectSys != nil {
 			s.applyElementalEffect(target, spell)
 		}
-		
+
 		// TODO: Spawn damage visual effect
 	}
 }
@@ -241,18 +241,18 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 	entities := s.world.GetEntities()
 	var nearestAlly *Entity
 	minDist := maxRange
-	
+
 	// Get caster's team
 	var casterTeamID int
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
 		casterTeamID = teamComp.(*TeamComponent).TeamID
 	}
-	
+
 	for _, entity := range entities {
 		if entity == caster {
 			continue
 		}
-		
+
 		// Check if ally
 		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
 			team := teamComp.(*TeamComponent)
@@ -263,7 +263,7 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 			// No team component - skip
 			continue
 		}
-		
+
 		// Check if injured
 		healthComp, hasHealth := entity.GetComponent("health")
 		if !hasHealth {
@@ -273,7 +273,7 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 		if health.Current >= health.Max {
 			continue // At full health
 		}
-		
+
 		// Check distance
 		dist := GetDistance(caster, entity)
 		if dist <= minDist {
@@ -281,7 +281,7 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 			minDist = dist
 		}
 	}
-	
+
 	return nearestAlly
 }
 
@@ -289,13 +289,13 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64) []*Entity {
 	entities := s.world.GetEntities()
 	var allies []*Entity
-	
+
 	// Get caster's team
 	var casterTeamID int
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
 		casterTeamID = teamComp.(*TeamComponent).TeamID
 	}
-	
+
 	for _, entity := range entities {
 		// Check if ally (including self)
 		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
@@ -306,19 +306,19 @@ func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64)
 		} else if entity != caster {
 			continue
 		}
-		
+
 		// Check if has health
 		if !entity.HasComponent("health") {
 			continue
 		}
-		
+
 		// Check distance
 		dist := GetDistance(caster, entity)
 		if dist <= maxRange {
 			allies = append(allies, entity)
 		}
 	}
-	
+
 	return allies
 }
 
@@ -330,12 +330,12 @@ func (s *SpellCastingSystem) castDefensiveSpell(caster *Entity, spell *magic.Spe
 		if shieldAmount <= 0 {
 			shieldAmount = 50.0 // Default shield if no damage stat
 		}
-		
+
 		duration := spell.Stats.Duration
 		if duration <= 0 {
 			duration = 30.0 // Default duration
 		}
-		
+
 		s.statusEffectSys.ApplyShield(caster, shieldAmount, duration)
 	}
 }
@@ -345,12 +345,12 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 	if s.statusEffectSys == nil {
 		return
 	}
-	
+
 	duration := spell.Stats.Duration
 	if duration <= 0 {
 		duration = 30.0 // Default duration
 	}
-	
+
 	// Determine buff type based on spell element
 	switch spell.Element {
 	case magic.ElementWind:
@@ -391,7 +391,7 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			if duration <= 0 {
 				duration = 10.0 // Default duration
 			}
-			
+
 			// Determine debuff type based on spell element
 			switch spell.Element {
 			case magic.ElementDark:
@@ -414,11 +414,11 @@ func (s *SpellCastingSystem) applyElementalEffect(target *Entity, spell *magic.S
 	case magic.ElementFire:
 		// Burning: 10 damage per second for 3 seconds
 		s.statusEffectSys.ApplyStatusEffect(target, "burning", 10.0, 3.0, 1.0)
-		
+
 	case magic.ElementIce:
 		// Frozen: 50% movement slow for 2 seconds (visual indicator only, actual movement handled by AI)
 		s.statusEffectSys.ApplyStatusEffect(target, "frozen", 0.5, 2.0, 0)
-		
+
 	case magic.ElementLightning:
 		// Shocked: chain to nearby enemies
 		if spell.Target == magic.TargetSingle || spell.Target == magic.TargetArea {
@@ -426,7 +426,7 @@ func (s *SpellCastingSystem) applyElementalEffect(target *Entity, spell *magic.S
 		}
 		// Apply shocked marker for visual effects
 		s.statusEffectSys.ApplyStatusEffect(target, "shocked", 0, 2.0, 0)
-		
+
 	case magic.ElementEarth:
 		// Earth spells can apply poison effect
 		// Poison: 5 damage per second ignoring armor for 5 seconds

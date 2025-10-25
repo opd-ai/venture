@@ -46,6 +46,4 @@ Implement comprehensive structured logging using logrus throughout the entire Ve
    - Engine systems: Log entity lifecycle, component additions/removals
    - Combat: Log damage calculations, death events
 
-9. **Testing**: Update existing tests to handle log output gracefully. Use `log.SetOutput(io.Discard)` in tests unless debugging.
-
 Maintain deterministic behavior—logging should never affect game state or generation. Preserve all existing functionality while adding observability for debugging, profiling, and production monitoring.

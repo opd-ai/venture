@@ -11,6 +11,7 @@ type StubInput struct {
 	UseItemPressed     bool
 	ActionJustPressed  bool
 	UseItemJustPressed bool
+	AnyKeyPressed      bool // GAP-005: Track any key press
 
 	// Spell casting
 	Spell1Pressed bool

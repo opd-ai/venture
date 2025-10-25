@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 // Package engine provides tests for network components.
 package engine
 

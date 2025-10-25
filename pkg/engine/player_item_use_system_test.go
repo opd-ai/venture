@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 package engine
 
 import (
@@ -44,6 +41,11 @@ func TestPlayerItemUseSystem_UseConsumable(t *testing.T) {
 
 	// Run item use system
 	itemUseSys.Update(world.GetEntities(), 0.016)
+
+	// Simulate InputSystem clearing flags (it runs after item use system normally)
+	tmpInputComp, _ := player.GetComponent("input")
+	tmpInput := tmpInputComp.(*StubInput)
+	tmpInput.UseItemPressed = false // Normally done by InputSystem
 
 	// Verify health increased (consumable effect)
 	healthComp, _ := player.GetComponent("health")

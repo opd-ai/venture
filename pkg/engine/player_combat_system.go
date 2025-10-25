@@ -27,10 +27,13 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		input := inputComp.(*EbitenInput)
+		input, ok := inputComp.(InputProvider)
+		if !ok {
+			continue // Not an InputProvider
+		}
 
 		// Check if player pressed attack button
-		if !input.ActionPressed {
+		if !input.IsActionPressed() {
 			continue
 		}
 
@@ -51,7 +54,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		target := FindNearestEnemy(s.world, entity, maxRange)
 
 		// Consume the input immediately to prevent multiple triggers
-		input.ActionPressed = false
+		input.SetActionPressed(false)
 
 		if target == nil {
 			// No enemy in range - attack fails silently

@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 package engine
 
 import (
@@ -256,7 +253,7 @@ func TestAudioManagerSystem_Update(t *testing.T) {
 
 	// Create player entity
 	player := world.CreateEntity()
-	player.AddComponent(&InputComponent{})
+	player.AddComponent(NewStubInput())
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
 
 	// Create enemy entity

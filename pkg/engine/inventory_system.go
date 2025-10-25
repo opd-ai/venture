@@ -318,8 +318,8 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 }
 
 // DropItem removes an item from inventory and places it in the world.
-// For now, this just removes the item. A full implementation would create
-// a world entity for the dropped item.
+// The item is spawned as a physical entity at the entity's current position
+// that can be picked up by players.
 func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
@@ -341,9 +341,19 @@ func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
 	}
 
-	// TODO: Create a world entity for the dropped item
-	// This would require position information and a new entity type
-	// For now, the item is simply removed
+	// Get entity position to spawn dropped item
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		// Entity has no position - can't drop item in world
+		// Item is lost (could return error instead if desired)
+		return fmt.Errorf("entity %d has no position component, cannot drop item", entityID)
+	}
+	pos := posComp.(*PositionComponent)
+
+	// Spawn item entity in the world at entity's position
+	// The SpawnItemInWorld function creates a collectable item entity
+	// with collision detection for automatic pickup
+	SpawnItemInWorld(s.world, itm, pos.X, pos.Y)
 
 	return nil
 }

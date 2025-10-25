@@ -3,6 +3,7 @@ package engine
 import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
+	"github.com/opd-ai/venture/pkg/rendering/particles"
 )
 
 // ManaComponent tracks entity's magical energy.
@@ -62,6 +63,8 @@ func (s *SpellSlotComponent) IsCasting() bool {
 type SpellCastingSystem struct {
 	world           *World
 	statusEffectSys *StatusEffectSystem
+	particleSys     *ParticleSystem // For visual effects
+	audioMgr        *AudioManager   // For sound effects
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
@@ -69,7 +72,21 @@ func NewSpellCastingSystem(world *World, statusEffectSys *StatusEffectSystem) *S
 	return &SpellCastingSystem{
 		world:           world,
 		statusEffectSys: statusEffectSys,
+		particleSys:     NewParticleSystem(),
+		audioMgr:        nil, // Will be set via SetAudioManager()
 	}
+}
+
+// SetAudioManager sets the audio manager for sound effects.
+// This allows deferred initialization when audio system is ready.
+func (s *SpellCastingSystem) SetAudioManager(audioMgr *AudioManager) {
+	s.audioMgr = audioMgr
+}
+
+// SetParticleSystem sets the particle system for visual effects.
+// This allows using a shared particle system if desired.
+func (s *SpellCastingSystem) SetParticleSystem(particleSys *ParticleSystem) {
+	s.particleSys = particleSys
 }
 
 // Update processes spell casting and cooldowns.
@@ -168,8 +185,19 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 		s.castUtilitySpell(caster, spell)
 	}
 
-	// TODO: Play cast sound effect
-	// TODO: Spawn cast visual effect
+	// Play cast sound effect (genre-aware)
+	if s.audioMgr != nil {
+		effectType := "magic" // Generic magic sound
+		if err := s.audioMgr.PlaySFX(effectType, int64(caster.ID)); err != nil {
+			// Audio failure is non-critical, continue
+			_ = err
+		}
+	}
+
+	// Spawn cast visual effect (magic particles at caster position)
+	if s.particleSys != nil {
+		s.particleSys.SpawnMagicParticles(s.world, pos.X, pos.Y, int64(caster.ID), "fantasy")
+	}
 }
 
 // castOffensiveSpell deals damage to enemies in range.
@@ -195,7 +223,20 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 			s.applyElementalEffect(target, spell)
 		}
 
-		// TODO: Spawn damage visual effect
+		// Spawn damage visual effect based on element
+		if s.particleSys != nil {
+			targetPos, hasPos := target.GetComponent("position")
+			if hasPos {
+				pos := targetPos.(*PositionComponent)
+				// Spawn element-specific particles
+				s.spawnElementalHitEffect(pos.X, pos.Y, spell.Element, target.ID)
+			}
+		}
+
+		// Play impact sound effect
+		if s.audioMgr != nil {
+			_ = s.audioMgr.PlaySFX("impact", int64(target.ID))
+		}
 	}
 }
 
@@ -233,7 +274,32 @@ func (s *SpellCastingSystem) healTarget(target *Entity, spell *magic.Spell) {
 		health.Current = health.Max
 	}
 
-	// TODO: Spawn healing visual effect
+	// Spawn healing visual effect (green/gold particles rising upward)
+	if s.particleSys != nil {
+		targetPos, hasPos := target.GetComponent("position")
+		if hasPos {
+			pos := targetPos.(*PositionComponent)
+			config := particles.Config{
+				Type:     particles.ParticleMagic,
+				Count:    20,
+				GenreID:  "fantasy",
+				Seed:     int64(target.ID),
+				Duration: 1.0,
+				SpreadX:  60.0,
+				SpreadY:  60.0,
+				Gravity:  -80.0, // Rise upward for healing
+				MinSize:  4.0,
+				MaxSize:  8.0,
+				Custom:   map[string]interface{}{"color": "healing"},
+			}
+			s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+		}
+	}
+
+	// Play healing sound effect
+	if s.audioMgr != nil {
+		_ = s.audioMgr.PlaySFX("powerup", int64(target.ID))
+	}
 }
 
 // findNearestInjuredAlly finds the nearest ally that needs healing.
@@ -591,6 +657,146 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 
 	slots.Casting = -1
 	slots.CastingBar = 0
+}
+
+// spawnElementalHitEffect creates element-specific particle effects for spell hits.
+func (s *SpellCastingSystem) spawnElementalHitEffect(x, y float64, element magic.ElementType, seed uint64) {
+	if s.particleSys == nil {
+		return
+	}
+
+	var config particles.Config
+	switch element {
+	case magic.ElementFire:
+		// Fire: Orange/red flames rising upward
+		config = particles.Config{
+			Type:     particles.ParticleFlame,
+			Count:    20,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 0.8,
+			SpreadX:  80.0,
+			SpreadY:  80.0,
+			Gravity:  -100.0, // Rise upward
+			MinSize:  3.0,
+			MaxSize:  7.0,
+			Custom:   make(map[string]interface{}),
+		}
+
+	case magic.ElementIce:
+		// Ice: Blue/white crystals with slower movement
+		config = particles.Config{
+			Type:     particles.ParticleMagic, // Use magic particles with blue tint
+			Count:    15,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 1.2,
+			SpreadX:  60.0,
+			SpreadY:  60.0,
+			Gravity:  50.0, // Slow fall
+			MinSize:  4.0,
+			MaxSize:  8.0,
+			Custom:   map[string]interface{}{"color": "ice"},
+		}
+
+	case magic.ElementLightning:
+		// Lightning: Fast yellow/white sparks
+		config = particles.Config{
+			Type:     particles.ParticleSpark,
+			Count:    25,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 0.4,
+			SpreadX:  120.0,
+			SpreadY:  120.0,
+			Gravity:  0.0, // No gravity, pure energy
+			MinSize:  2.0,
+			MaxSize:  5.0,
+			Custom:   map[string]interface{}{"color": "lightning"},
+		}
+
+	case magic.ElementEarth:
+		// Earth: Brown/green dust/rock particles (can apply poison)
+		config = particles.Config{
+			Type:     particles.ParticleDust,
+			Count:    18,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 1.2,
+			SpreadX:  70.0,
+			SpreadY:  70.0,
+			Gravity:  100.0, // Fall to ground
+			MinSize:  3.0,
+			MaxSize:  7.0,
+			Custom:   map[string]interface{}{"color": "earth"},
+		}
+
+	case magic.ElementWind:
+		// Wind: Fast-moving dust particles
+		config = particles.Config{
+			Type:     particles.ParticleDust,
+			Count:    20,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 0.6,
+			SpreadX:  150.0,
+			SpreadY:  80.0,
+			Gravity:  20.0,
+			MinSize:  2.0,
+			MaxSize:  4.0,
+			Custom:   map[string]interface{}{"color": "wind"},
+		}
+
+	case magic.ElementLight:
+		// Light: Bright white/yellow particles
+		config = particles.Config{
+			Type:     particles.ParticleSpark,
+			Count:    22,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 1.0,
+			SpreadX:  100.0,
+			SpreadY:  100.0,
+			Gravity:  -30.0, // Slow rise
+			MinSize:  3.0,
+			MaxSize:  6.0,
+			Custom:   map[string]interface{}{"color": "light"},
+		}
+
+	case magic.ElementDark:
+		// Dark: Purple/black smoke particles
+		config = particles.Config{
+			Type:     particles.ParticleSmoke,
+			Count:    20,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 1.5,
+			SpreadX:  90.0,
+			SpreadY:  90.0,
+			Gravity:  -10.0, // Slow rise
+			MinSize:  4.0,
+			MaxSize:  8.0,
+			Custom:   map[string]interface{}{"color": "dark"},
+		}
+
+	default:
+		// Generic magic effect for other elements (none, arcane)
+		config = particles.Config{
+			Type:     particles.ParticleMagic,
+			Count:    15,
+			GenreID:  "fantasy",
+			Seed:     int64(seed),
+			Duration: 0.8,
+			SpreadX:  90.0,
+			SpreadY:  90.0,
+			Gravity:  -50.0,
+			MinSize:  3.0,
+			MaxSize:  6.0,
+			Custom:   make(map[string]interface{}),
+		}
+	}
+
+	s.particleSys.SpawnParticles(s.world, config, x, y)
 }
 
 // ManaRegenSystem regenerates mana over time.

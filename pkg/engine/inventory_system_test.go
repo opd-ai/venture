@@ -544,6 +544,8 @@ func TestInventorySystem_DropItem(t *testing.T) {
 
 	entity := world.CreateEntity()
 	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	// Add position so item can be dropped in world
+	entity.AddComponent(&PositionComponent{X: 100.0, Y: 150.0})
 
 	world.Update(0.0) // Process entity additions
 	comp, _ := entity.GetComponent("inventory")
@@ -551,14 +553,222 @@ func TestInventorySystem_DropItem(t *testing.T) {
 	sword := createTestWeapon("Sword", item.WeaponSword, 15, 5.0, 1.2)
 	inv.AddItem(sword)
 
+	// Count entities before drop
+	entitiesBefore := len(world.GetEntities())
+
 	// Drop item
 	err := system.DropItem(entity.ID, 0)
 	if err != nil {
 		t.Fatalf("DropItem failed: %v", err)
 	}
 
-	// Verify item was removed
+	// Verify item was removed from inventory
 	if inv.GetItemCount() != 0 {
 		t.Error("Item should be removed from inventory after dropping")
+	}
+
+	// Verify new item entity was created in world
+	world.Update(0.0) // Process entity additions
+	entitiesAfter := len(world.GetEntities())
+	if entitiesAfter != entitiesBefore+1 {
+		t.Errorf("Expected %d entities after drop, got %d", entitiesBefore+1, entitiesAfter)
+	}
+
+	// Find the dropped item entity
+	var droppedItem *Entity
+	for _, e := range world.GetEntities() {
+		if e.HasComponent("item_entity") {
+			droppedItem = e
+			break
+		}
+	}
+
+	if droppedItem == nil {
+		t.Fatal("Dropped item entity not found in world")
+	}
+
+	// Verify item entity has required components
+	if !droppedItem.HasComponent("position") {
+		t.Error("Dropped item should have position component")
+	}
+	if !droppedItem.HasComponent("sprite") {
+		t.Error("Dropped item should have sprite component")
+	}
+	if !droppedItem.HasComponent("collider") {
+		t.Error("Dropped item should have collider component")
+	}
+	if !droppedItem.HasComponent("item_entity") {
+		t.Error("Dropped item should have item_entity component")
+	}
+
+	// Verify item entity position matches dropper position
+	posComp, _ := droppedItem.GetComponent("position")
+	pos := posComp.(*PositionComponent)
+	if pos.X != 100.0 || pos.Y != 150.0 {
+		t.Errorf("Dropped item at wrong position: got (%.1f, %.1f), want (100.0, 150.0)", pos.X, pos.Y)
+	}
+
+	// Verify item entity contains correct item data
+	itemEntityComp, _ := droppedItem.GetComponent("item_entity")
+	itemEntity := itemEntityComp.(*ItemEntityComponent)
+	if itemEntity.Item.Name != "Sword" {
+		t.Errorf("Dropped item has wrong name: got %s, want Sword", itemEntity.Item.Name)
+	}
+}
+
+// TestInventorySystem_DropItem_NoPosition tests dropping item when entity has no position.
+func TestInventorySystem_DropItem_NoPosition(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	// No position component
+
+	world.Update(0.0)
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+	sword := createTestWeapon("Sword", item.WeaponSword, 15, 5.0, 1.2)
+	inv.AddItem(sword)
+
+	// Attempt to drop item without position
+	err := system.DropItem(entity.ID, 0)
+	if err == nil {
+		t.Fatal("Expected error when dropping item without position component")
+	}
+
+	// Item should still be in inventory since drop failed
+	if inv.GetItemCount() != 1 {
+		t.Errorf("Item should remain in inventory when drop fails, got %d items", inv.GetItemCount())
+	}
+}
+
+// TestInventorySystem_DropItem_InvalidIndex tests dropping item with invalid index.
+func TestInventorySystem_DropItem_InvalidIndex(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	entity.AddComponent(&PositionComponent{X: 100.0, Y: 150.0})
+
+	world.Update(0.0)
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+	sword := createTestWeapon("Sword", item.WeaponSword, 15, 5.0, 1.2)
+	inv.AddItem(sword)
+
+	// Try to drop item at invalid index
+	err := system.DropItem(entity.ID, 10)
+	if err == nil {
+		t.Fatal("Expected error when dropping item at invalid index")
+	}
+
+	// Item should still be in inventory
+	if inv.GetItemCount() != 1 {
+		t.Error("Item should remain in inventory when drop fails")
+	}
+}
+
+// TestInventorySystem_DropItem_EmptyInventory tests dropping when inventory is empty.
+func TestInventorySystem_DropItem_EmptyInventory(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	entity.AddComponent(&PositionComponent{X: 100.0, Y: 150.0})
+
+	world.Update(0.0)
+
+	// Try to drop from empty inventory
+	err := system.DropItem(entity.ID, 0)
+	if err == nil {
+		t.Fatal("Expected error when dropping from empty inventory")
+	}
+}
+
+// TestInventorySystem_DropAndPickup tests full drop/pickup cycle.
+func TestInventorySystem_DropAndPickup(t *testing.T) {
+	world := NewWorld()
+	inventorySystem := NewInventorySystem(world)
+	pickupSystem := NewItemPickupSystem(world)
+
+	// Create player with inventory
+	player := world.CreateEntity()
+	player.AddComponent(NewInventoryComponent(10, 100.0))
+	player.AddComponent(&PositionComponent{X: 100.0, Y: 100.0})
+	player.AddComponent(NewStubInput()) // Mark as player
+
+	world.Update(0.0)
+	comp, _ := player.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add sword to inventory
+	sword := createTestWeapon("Test Sword", item.WeaponSword, 20, 6.0, 1.5)
+	inv.AddItem(sword)
+
+	originalCount := inv.GetItemCount()
+	if originalCount != 1 {
+		t.Fatalf("Expected 1 item in inventory, got %d", originalCount)
+	}
+
+	// Drop the item
+	err := inventorySystem.DropItem(player.ID, 0)
+	if err != nil {
+		t.Fatalf("DropItem failed: %v", err)
+	}
+
+	// Verify item removed from inventory
+	if inv.GetItemCount() != 0 {
+		t.Error("Item should be removed from inventory after drop")
+	}
+
+	world.Update(0.0) // Process entity additions
+
+	// Verify item entity exists in world
+	entities := world.GetEntities()
+	var itemEntity *Entity
+	for _, e := range entities {
+		if e.HasComponent("item_entity") {
+			itemEntity = e
+			break
+		}
+	}
+	if itemEntity == nil {
+		t.Fatal("Dropped item entity not found in world")
+	}
+
+	// Move player near dropped item (within pickup radius of 32 pixels)
+	// Item was dropped at player position (100, 100)
+	playerPos, _ := player.GetComponent("position")
+	pos := playerPos.(*PositionComponent)
+	pos.X = 100.0
+	pos.Y = 100.0
+
+	// Run pickup system (should auto-pickup item)
+	pickupSystem.Update(entities, 0.016)
+
+	// Verify item is back in inventory
+	if inv.GetItemCount() != 1 {
+		t.Errorf("Item should be picked up, got %d items in inventory", inv.GetItemCount())
+	}
+
+	// Verify picked up item has correct data
+	if inv.Items[0].Name != "Test Sword" {
+		t.Errorf("Picked up item has wrong name: got %s, want Test Sword", inv.Items[0].Name)
+	}
+
+	// Verify item entity was removed from world
+	world.Update(0.0)
+	entities = world.GetEntities()
+	itemCount := 0
+	for _, e := range entities {
+		if e.HasComponent("item_entity") {
+			itemCount++
+		}
+	}
+	if itemCount != 0 {
+		t.Errorf("Item entity should be removed after pickup, found %d item entities", itemCount)
 	}
 }

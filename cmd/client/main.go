@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
@@ -21,6 +20,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
@@ -207,7 +207,7 @@ func main() {
 
 	// Initialize structured logger
 	logConfig := logging.DefaultConfig()
-	
+
 	// Check for JSON format from environment (default to text for client)
 	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
 		logConfig.Format = logging.JSONFormat
@@ -215,7 +215,7 @@ func main() {
 		logConfig.Format = logging.TextFormat
 		logConfig.EnableColor = true
 	}
-	
+
 	// Set log level from environment or use Info as default
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 		logConfig.Level = logging.LogLevel(logLevel)
@@ -224,7 +224,7 @@ func main() {
 	} else {
 		logConfig.Level = logging.InfoLevel
 	}
-	
+
 	logger := logging.NewLogger(logConfig)
 	clientLogger := logger.WithFields(logrus.Fields{
 		"component": "client",

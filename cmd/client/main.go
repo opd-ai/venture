@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"log"
 	"math/rand"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/network"
@@ -15,8 +15,23 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 )
+
+// animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
+type animationSystemWrapper struct {
+	system  *engine.AnimationSystem
+	verbose bool
+}
+
+func (w *animationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	if err := w.system.Update(entities, deltaTime); err != nil {
+		if w.verbose {
+			log.Printf("Animation system error: %v", err)
+		}
+	}
+}
 
 var (
 	width       = flag.Int("width", 800, "Screen width")
@@ -241,6 +256,10 @@ func main() {
 	// GAP-016 REPAIR: Initialize particle system for visual effects
 	particleSystem := engine.NewParticleSystem()
 
+	// GAP-017 REPAIR: Initialize animation system for animated sprites
+	spriteGenerator := sprites.NewGenerator()
+	animationSystem := engine.NewAnimationSystem(spriteGenerator)
+
 	// Store player reference for death callback (will be set after player creation)
 	var playerEntity *engine.Entity
 
@@ -344,7 +363,8 @@ func main() {
 	// 12. Spell Casting - executes spell effects
 	// 13. Mana Regen - regenerates mana
 	// 14. Inventory - item management
-	// 15. Tutorial/Help - UI overlays
+	// 15. Animation - updates sprite frames (before rendering)
+	// 16. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
@@ -373,6 +393,13 @@ func main() {
 	game.World.AddSystem(spellCastingSystem)
 	game.World.AddSystem(manaRegenSystem)
 	game.World.AddSystem(inventorySystem)
+
+	// GAP-017 REPAIR: Add animation system before tutorial/help to update sprites first
+	game.World.AddSystem(&animationSystemWrapper{
+		system:  animationSystem,
+		verbose: *verbose,
+	})
+
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
 
@@ -390,7 +417,7 @@ func main() {
 	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Tutorial, Help, Particles")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Animation, Tutorial, Help, Particles")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {
@@ -531,10 +558,24 @@ func main() {
 	// Add input component for player control
 	player.AddComponent(&engine.EbitenInput{})
 
-	// Add sprite for rendering (28x28 to fit through 32px corridors)
-	playerSprite := engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
-	playerSprite.Layer = 10 // Draw player on top
+	// GAP-017 REPAIR: Add animated sprite instead of static sprite
+	playerSprite := &engine.EbitenSprite{
+		Image:   ebiten.NewImage(28, 28), // Initial image (will be replaced by animation)
+		Width:   28,
+		Height:  28,
+		Visible: true,
+		Layer:   10, // Draw player on top
+	}
 	player.AddComponent(playerSprite)
+
+	// Add animation component for multi-frame character animation
+	playerAnim := engine.NewAnimationComponent(*seed + int64(player.ID))
+	playerAnim.CurrentState = engine.AnimationStateIdle
+	playerAnim.FrameTime = 0.15  // ~6.7 FPS for smooth animation
+	playerAnim.Loop = true
+	playerAnim.Playing = true
+	playerAnim.FrameCount = 4 // 4 frames per animation
+	player.AddComponent(playerAnim)
 
 	// Add camera that follows the player
 	camera := engine.NewCameraComponent()

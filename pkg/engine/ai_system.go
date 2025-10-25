@@ -206,6 +206,14 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// Attack if cooldown is ready
 	if attack.CanAttack() {
+		// GAP-018 REPAIR: Set animation to attack when attacking
+		if animComp, ok := entity.GetComponent("animation"); ok {
+			anim := animComp.(*AnimationComponent)
+			if anim.CurrentState != AnimationStateAttack {
+				anim.SetState(AnimationStateAttack)
+			}
+		}
+
 		// Create a combat system to perform the attack
 		// In a real game, this would be a separate system call
 		combatSystem := NewCombatSystem(12345) // Use fixed seed for now
@@ -245,6 +253,14 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 			vel := velComp.(*VelocityComponent)
 			vel.VX = 0
 			vel.VY = 0
+		}
+
+		// GAP-018 REPAIR: Set animation to idle when stopped
+		if animComp, ok := entity.GetComponent("animation"); ok {
+			anim := animComp.(*AnimationComponent)
+			if anim.CurrentState != AnimationStateIdle {
+				anim.SetState(AnimationStateIdle)
+			}
 		}
 		return
 	}
@@ -371,6 +387,14 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 		speed := 100.0 * speedMultiplier // Default speed
 		vel.VX = (dx / dist) * speed
 		vel.VY = (dy / dist) * speed
+
+		// GAP-018 REPAIR: Update animation state to walk when moving
+		if animComp, ok := entity.GetComponent("animation"); ok {
+			anim := animComp.(*AnimationComponent)
+			if anim.CurrentState != AnimationStateWalk {
+				anim.SetState(AnimationStateWalk)
+			}
+		}
 	}
 }
 

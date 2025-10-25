@@ -16,6 +16,15 @@ import (
 // GenerateAnimationFrame creates a single frame of an animation sequence.
 // Uses deterministic generation based on seed, state, and frame index.
 func (g *Generator) GenerateAnimationFrame(config Config, state string, frameIndex, frameCount int) (*ebiten.Image, error) {
+	// Generate palette if not provided
+	if config.Palette == nil {
+		pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate palette: %w", err)
+		}
+		config.Palette = pal
+	}
+
 	// Create frame-specific seed
 	frameSeed := config.Seed + int64(frameIndex) + hashString(state)
 	rng := rand.New(rand.NewSource(frameSeed))

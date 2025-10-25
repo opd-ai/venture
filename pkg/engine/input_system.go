@@ -505,6 +505,19 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 		velocity := velComp.(*VelocityComponent)
 		velocity.VX = input.MoveX * s.MoveSpeed
 		velocity.VY = input.MoveY * s.MoveSpeed
+
+		// GAP-018 REPAIR: Update player animation based on movement
+		if animComp, ok := entity.GetComponent("animation"); ok {
+			anim := animComp.(*AnimationComponent)
+			// Check if player is moving
+			isMoving := (velocity.VX != 0 || velocity.VY != 0)
+			
+			if isMoving && anim.CurrentState == AnimationStateIdle {
+				anim.SetState(AnimationStateWalk)
+			} else if !isMoving && anim.CurrentState == AnimationStateWalk {
+				anim.SetState(AnimationStateIdle)
+			}
+		}
 	}
 }
 

@@ -329,11 +329,12 @@ func main() {
 	itemPickupSystem := engine.NewItemPickupSystem(game.World)
 
 	// GAP-002 REPAIR: Add spell casting systems
-	spellCastingSystem := engine.NewSpellCastingSystem(game.World)
+	// Initialize status effect system first (required by spell casting system)
+	statusEffectRNG := rand.New(rand.NewSource(*seed + 999)) // Use seed offset for status effects
+	statusEffectSystem := engine.NewStatusEffectSystem(game.World, statusEffectRNG)
+	spellCastingSystem := engine.NewSpellCastingSystem(game.World, statusEffectSystem)
 	playerSpellCastingSystem := engine.NewPlayerSpellCastingSystem(spellCastingSystem, game.World)
-	manaRegenSystem := &engine.ManaRegenSystem{}
-
-	// GAP #2 REPAIR: Add player combat system to connect Space key to combat
+	manaRegenSystem := &engine.ManaRegenSystem{}	// GAP #2 REPAIR: Add player combat system to connect Space key to combat
 	playerCombatSystem := engine.NewPlayerCombatSystem(combatSystem, game.World)
 
 	// GAP #3 REPAIR: Add player item use system to connect E key to inventory
@@ -354,17 +355,18 @@ func main() {
 	// 3. Movement - applies velocity to position
 	// 4. Collision - checks and resolves collisions
 	// 5. Combat - handles damage/status effects
-	// 6. AI - enemy decision-making
-	// 7. Progression - XP and leveling
-	// 8. Skill Progression - applies skill effects to stats
-	// 9. Audio Manager - updates music based on game context
-	// 10. Objective Tracker - updates quest progress
-	// 11. Item Pickup - collects nearby items
-	// 12. Spell Casting - executes spell effects
-	// 13. Mana Regen - regenerates mana
-	// 14. Inventory - item management
-	// 15. Animation - updates sprite frames (before rendering)
-	// 16. Tutorial/Help - UI overlays
+	// 6. Status Effects - processes DoT, buffs, debuffs, shields
+	// 7. AI - enemy decision-making
+	// 8. Progression - XP and leveling
+	// 9. Skill Progression - applies skill effects to stats
+	// 10. Audio Manager - updates music based on game context
+	// 11. Objective Tracker - updates quest progress
+	// 12. Item Pickup - collects nearby items
+	// 13. Spell Casting - executes spell effects
+	// 14. Mana Regen - regenerates mana
+	// 15. Inventory - item management
+	// 16. Animation - updates sprite frames (before rendering)
+	// 17. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
@@ -372,6 +374,7 @@ func main() {
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
+	game.World.AddSystem(statusEffectSystem) // Process status effects after combat
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
 
@@ -417,7 +420,7 @@ func main() {
 	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Animation, Tutorial, Help, Particles")
+		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, StatusEffects, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Animation, Tutorial, Help, Particles")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {

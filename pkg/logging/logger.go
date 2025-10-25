@@ -166,3 +166,26 @@ func NetworkLogger(logger *logrus.Logger, playerID string, connectionState strin
 		"connectionState": connectionState,
 	})
 }
+
+// PerformanceLogger creates a logger with performance metrics context.
+func PerformanceLogger(logger *logrus.Logger, operation string) *logrus.Entry {
+	return logger.WithFields(logrus.Fields{
+		"operation": operation,
+	})
+}
+
+// CombatLogger creates a logger with combat context.
+func CombatLogger(logger *logrus.Logger, attackerID, targetID int) *logrus.Entry {
+	return logger.WithFields(logrus.Fields{
+		"attackerID": attackerID,
+		"targetID":   targetID,
+	})
+}
+
+// SaveLoadLogger creates a logger with save/load context.
+func SaveLoadLogger(logger *logrus.Logger, operation string, path string) *logrus.Entry {
+	return logger.WithFields(logrus.Fields{
+		"operation": operation,
+		"path":      path,
+	})
+}

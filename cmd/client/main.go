@@ -6,11 +6,14 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/sirupsen/logrus"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
@@ -202,8 +205,40 @@ func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID
 func main() {
 	flag.Parse()
 
-	log.Printf("Starting Venture - Procedural Action RPG")
-	log.Printf("Screen: %dx%d, Seed: %d, Genre: %s", *width, *height, *seed, *genreID)
+	// Initialize structured logger
+	logConfig := logging.DefaultConfig()
+	
+	// Check for JSON format from environment (default to text for client)
+	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
+		logConfig.Format = logging.JSONFormat
+	} else {
+		logConfig.Format = logging.TextFormat
+		logConfig.EnableColor = true
+	}
+	
+	// Set log level from environment or use Info as default
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		logConfig.Level = logging.LogLevel(logLevel)
+	} else if *verbose {
+		logConfig.Level = logging.DebugLevel
+	} else {
+		logConfig.Level = logging.InfoLevel
+	}
+	
+	logger := logging.NewLogger(logConfig)
+	clientLogger := logger.WithFields(logrus.Fields{
+		"component": "client",
+		"genre":     *genreID,
+		"seed":      *seed,
+	})
+
+	clientLogger.Info("Starting Venture - Procedural Action RPG")
+	clientLogger.WithFields(logrus.Fields{
+		"width":  *width,
+		"height": *height,
+		"seed":   *seed,
+		"genre":  *genreID,
+	}).Info("client configuration")
 
 	// Initialize network client if multiplayer mode is enabled
 	var networkClient network.ClientConnection

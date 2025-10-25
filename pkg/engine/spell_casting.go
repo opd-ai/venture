@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"math"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
@@ -513,8 +515,258 @@ func (s *SpellCastingSystem) shouldApplyPoison() bool {
 
 // castUtilitySpell handles non-combat spells.
 func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell) {
-	// TODO: Implement utility spells (teleport, light, reveal map, etc.)
-	// For now, just consume mana
+	// Determine utility spell type based on tags and element
+	switch {
+	case containsTag(spell.Tags, "teleport"):
+		s.castTeleportSpell(caster, spell)
+	case containsTag(spell.Tags, "light"), containsTag(spell.Tags, "reveal"):
+		s.castRevealSpell(caster, spell)
+	case containsTag(spell.Tags, "speed"), containsTag(spell.Tags, "haste"):
+		s.castSpeedBoostSpell(caster, spell)
+	default:
+		// Generic utility effect based on element
+		switch spell.Element {
+		case magic.ElementLight:
+			s.castRevealSpell(caster, spell)
+		case magic.ElementWind:
+			s.castSpeedBoostSpell(caster, spell)
+		case magic.ElementArcane:
+			s.castTeleportSpell(caster, spell)
+		}
+	}
+}
+
+// castTeleportSpell teleports the caster to a nearby safe location.
+// Teleport distance is based on spell range, and landing spot must be walkable.
+func (s *SpellCastingSystem) castTeleportSpell(caster *Entity, spell *magic.Spell) {
+	posComp, hasPos := caster.GetComponent("position")
+	if !hasPos {
+		return
+	}
+	pos := posComp.(*PositionComponent)
+
+	// Calculate teleport direction and distance
+	// Use spell range as max teleport distance
+	maxDist := spell.Stats.Range
+	if maxDist <= 0 {
+		maxDist = 100.0 // Default teleport range
+	}
+
+	// For simplicity, teleport forward (could be enhanced with mouse targeting later)
+	// Use velocity direction if available, otherwise default direction
+	dirX, dirY := 0.0, 1.0 // Default: down
+	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
+		vel := velComp.(*VelocityComponent)
+		if vel.VX != 0 || vel.VY != 0 {
+			// Normalize velocity to get direction
+			mag := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+			if mag > 0 {
+				dirX = vel.VX / mag
+				dirY = vel.VY / mag
+			}
+		}
+	}
+
+	// Calculate target position
+	targetX := pos.X + dirX*maxDist
+	targetY := pos.Y + dirY*maxDist
+
+	// Validate landing position (check collision)
+	if s.isPositionWalkable(targetX, targetY, caster) {
+		// Teleport successful
+		pos.X = targetX
+		pos.Y = targetY
+
+		// Spawn teleport visual effect at departure
+		if s.particleSys != nil {
+			config := particles.Config{
+				Type:     particles.ParticleMagic,
+				Count:    30,
+				GenreID:  "fantasy",
+				Seed:     int64(caster.ID),
+				Duration: 0.5,
+				SpreadX:  80.0,
+				SpreadY:  80.0,
+				Gravity:  0.0,
+				MinSize:  4.0,
+				MaxSize:  8.0,
+				Custom:   map[string]interface{}{"color": "teleport"},
+			}
+			s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+		}
+
+		// Play teleport sound
+		if s.audioMgr != nil {
+			_ = s.audioMgr.PlaySFX("magic", int64(caster.ID))
+		}
+	}
+	// If position not walkable, teleport fails (mana still consumed as per executeCast)
+}
+
+// castRevealSpell reveals fog of war in an area around the caster.
+// Useful for exploration and finding hidden enemies/items.
+func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell) {
+	posComp, hasPos := caster.GetComponent("position")
+	if !hasPos {
+		return
+	}
+	pos := posComp.(*PositionComponent)
+
+	// Determine reveal radius from spell stats
+	revealRadius := spell.Stats.AreaSize
+	if revealRadius <= 0 {
+		revealRadius = 200.0 // Default reveal radius
+	}
+
+	// Reveal fog of war (requires access to map UI system)
+	// This is handled at a higher level in the game loop
+	// For now, we mark this with a temporary status effect that the map system can detect
+	if s.statusEffectSys != nil {
+		duration := 0.1 // Brief marker effect
+		s.statusEffectSys.ApplyStatusEffect(caster, "revealing", revealRadius, duration, 0)
+	}
+
+	// Spawn light particles to indicate reveal
+	if s.particleSys != nil {
+		config := particles.Config{
+			Type:     particles.ParticleSpark,
+			Count:    40,
+			GenreID:  "fantasy",
+			Seed:     int64(caster.ID),
+			Duration: 1.5,
+			SpreadX:  revealRadius,
+			SpreadY:  revealRadius,
+			Gravity:  -20.0, // Slow rise
+			MinSize:  3.0,
+			MaxSize:  6.0,
+			Custom:   map[string]interface{}{"color": "light"},
+		}
+		s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+	}
+
+	// Play light sound
+	if s.audioMgr != nil {
+		_ = s.audioMgr.PlaySFX("powerup", int64(caster.ID))
+	}
+}
+
+// castSpeedBoostSpell applies a temporary speed boost to the caster.
+// Increases movement speed for exploration or combat mobility.
+func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Spell) {
+	if s.statusEffectSys == nil {
+		return
+	}
+
+	// Determine duration from spell stats
+	duration := spell.Stats.Duration
+	if duration <= 0 {
+		duration = 10.0 // Default speed boost duration
+	}
+
+	// Speed multiplier based on spell power
+	speedMultiplier := 1.5 // 50% speed increase
+	if spell.Rarity >= magic.RarityRare {
+		speedMultiplier = 2.0 // 100% speed increase for rare+ spells
+	}
+
+	// Apply speed boost as a status effect
+	// The movement system will need to check for this effect
+	s.statusEffectSys.ApplyStatusEffect(caster, "speed_boost", speedMultiplier, duration, 0)
+
+	// Spawn speed particles (fast-moving wind particles)
+	if s.particleSys != nil {
+		posComp, hasPos := caster.GetComponent("position")
+		if hasPos {
+			pos := posComp.(*PositionComponent)
+			config := particles.Config{
+				Type:     particles.ParticleDust,
+				Count:    25,
+				GenreID:  "fantasy",
+				Seed:     int64(caster.ID),
+				Duration: duration,
+				SpreadX:  100.0,
+				SpreadY:  60.0,
+				Gravity:  10.0,
+				MinSize:  2.0,
+				MaxSize:  4.0,
+				Custom:   map[string]interface{}{"color": "wind"},
+			}
+			s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+		}
+	}
+
+	// Play speed boost sound
+	if s.audioMgr != nil {
+		_ = s.audioMgr.PlaySFX("powerup", int64(caster.ID))
+	}
+}
+
+// isPositionWalkable checks if a position is valid for teleportation.
+// Returns true if the position has no solid colliders.
+func (s *SpellCastingSystem) isPositionWalkable(x, y float64, caster *Entity) bool {
+	entities := s.world.GetEntities()
+
+	// Check for collisions with solid entities
+	for _, entity := range entities {
+		if entity == caster {
+			continue
+		}
+
+		// Check if entity has collider
+		colliderComp, hasCollider := entity.GetComponent("collider")
+		if !hasCollider {
+			continue
+		}
+		collider := colliderComp.(*ColliderComponent)
+
+		// Skip non-solid colliders
+		if !collider.Solid {
+			continue
+		}
+
+		// Check if position intersects with this collider
+		entityPos, hasPos := entity.GetComponent("position")
+		if !hasPos {
+			continue
+		}
+		pos := entityPos.(*PositionComponent)
+
+		// Get caster collider for size checking
+		casterCollider, hasCasterCollider := caster.GetComponent("collider")
+		if hasCasterCollider {
+			cc := casterCollider.(*ColliderComponent)
+			// Create temporary collider at target position
+			tempCollider := &ColliderComponent{
+				Width:   cc.Width,
+				Height:  cc.Height,
+				OffsetX: cc.OffsetX,
+				OffsetY: cc.OffsetY,
+				Solid:   true,
+				Layer:   cc.Layer,
+			}
+			if tempCollider.Intersects(x, y, collider, pos.X, pos.Y) {
+				return false // Collision detected
+			}
+		} else {
+			// No caster collider, check point collision
+			minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
+			if x >= minX && x <= maxX && y >= minY && y <= maxY {
+				return false
+			}
+		}
+	}
+
+	return true // Position is walkable
+}
+
+// containsTag checks if a spell has a specific tag.
+func containsTag(tags []string, tag string) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // findTargets returns entities affected by the spell.

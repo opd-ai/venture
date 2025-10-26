@@ -1,36 +1,45 @@
-Create a comprehensive PLAN.md document that outlines a systematic approach to enhance the visual fidelity and recognizability of procedurally-generated sprites and graphical elements in the Venture game engine. The objective is to improve the representational quality of generated content so that characters, items, and entities are more visually identifiable and resemble their intended forms.
+**Objective**: Design a plan(in PLAN.md) to enhance the procedural character avatar generation system with two critical improvements: (1) directional facing indicators and (2) migration from side-view to aerial-view perspective. Ensure that all implemented improvements are made available in the main game.
 
-**Primary Goals:**
+**Execution Mode**: Report generation - produce a detailed implementation plan for review, do not execute changes.
 
-1. **Character Anatomy Enhancement**: Develop algorithms to generate more recognizable character sprites with distinguishable anatomical features including head, torso, arms, and legs. Use top-down perspective conventions to create approximate but clear body part representations.
+**Current Issues**:
+1. No visual representation of character facing direction (N/S/E/W)
+2. Side-view perspective incompatible with top-down gameplay camera
 
-2. **Strict Constraint Compliance**: All player character sprites must remain exactly 28x28 pixels. Entity sprites should adhere to their existing dimensional constraints. Solutions must work within current memory and performance budgets (60 FPS, <500MB client memory).
+**Required Deliverables**:
 
-3. **Procedural Realism Balance**: Acknowledge that perfect photorealistic representation is unattainable with pure procedural generation. Focus on achieving "good enough" visual clarity—sprites should be immediately recognizable as their entity type at a glance.
+1. **Architecture Analysis** (200 words max):
+   - Review `pkg/rendering/sprites/` avatar generation system
+   - Identify affected components and dependencies
+   - Note integration points with movement/rendering systems
 
-**Required Analysis:**
+2. **Technical Design** (300 words max):
+   - Directional sprite variants (4 or 8 directions)
+   - Aerial-view template specifications (body shapes, proportions)
+   - Sprite sheet layout or rotation strategy
+   - Performance impact assessment
 
-- Survey current sprite generation pipeline (`pkg/rendering/sprites/`) and identify specific visual ambiguity issues
-- Evaluate existing shape primitives (`pkg/rendering/shapes/`) and their limitations for anatomical representation
-- Review genre-specific color palette constraints that may affect visibility
-- Assess performance impact of more complex generation algorithms
+3. **Implementation Roadmap** (300 words max):
+   - Ordered task list with file paths
+   - Testing strategy (visual validation, determinism checks)
+   - Backward compatibility considerations
+   - Estimated effort per task
 
-**Implementation Strategy:**
+4. **Quality Improvements** (200 words max):
+   - Consistency enhancements (anatomy proportions, color coherence)
+   - Genre-specific aerial templates
+   - Animation frame considerations
 
-The plan should propose incremental improvements organized into phases:
+**Success Criteria**:
+- Maintains seed-based determinism
+- Supports 4 cardinal directions minimum
+- Aerial perspective matches game camera
+- No performance regression
+- Passes existing sprite tests
 
-- **Template Enhancement**: Refine entity templates with more detailed body part specifications
-- **Shape Primitive Expansion**: Add new procedural primitives for common anatomical features (heads, limbs, torsos)
-- **Layered Composition**: Implement sprite layer system for overlaying body parts, equipment, and effects
-- **Silhouette Definition**: Ensure sprites have clear, readable silhouettes distinguishable from backgrounds
-- **Genre-Appropriate Styling**: Maintain genre aesthetic consistency (fantasy vs. sci-fi vs. horror) while improving clarity
+**Constraints**:
+- Must work with current ECS architecture
+- Zero external assets (procedural only)
+- Maintain <65ms generation time per sprite
 
-**Deliverables:**
-
-- Prioritized list of visual improvements with effort estimates
-- Technical approach for each enhancement (algorithm modifications, new components)
-- Testing criteria to validate improved recognizability
-- Performance benchmarks to ensure optimizations don't degrade frame rate
-- Example mockups or pseudocode demonstrating key techniques
-
-The plan should be actionable, technically feasible within the existing ECS architecture, maintain deterministic seed-based generation, and preserve the project's zero-external-assets philosophy.
+Output as structured markdown with file references and code patterns where relevant.

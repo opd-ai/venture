@@ -21,6 +21,7 @@ var MenuKeys = struct {
 	Skills    ebiten.Key // K - Skill tree
 	Quests    ebiten.Key // J - Quest log (J for "Journal")
 	Map       ebiten.Key // M - World map
+	Shop      ebiten.Key // S - Shop interface
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -31,6 +32,7 @@ var MenuKeys = struct {
 	SkillsLabel    string
 	QuestsLabel    string
 	MapLabel       string
+	ShopLabel      string
 	ExitHint       string // Standard exit hint text
 }{
 	// Key assignments
@@ -39,6 +41,7 @@ var MenuKeys = struct {
 	Skills:    ebiten.KeyK,
 	Quests:    ebiten.KeyJ,
 	Map:       ebiten.KeyM,
+	Shop:      ebiten.KeyS,
 	Exit:      ebiten.KeyEscape,
 
 	// Display labels
@@ -47,6 +50,7 @@ var MenuKeys = struct {
 	SkillsLabel:    "[K] Skills",
 	QuestsLabel:    "[J] Quests",
 	MapLabel:       "[M] Map",
+	ShopLabel:      "[S] Shop",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }
 

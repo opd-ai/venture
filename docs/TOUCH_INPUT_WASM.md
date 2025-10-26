@@ -130,10 +130,10 @@ Run tests to verify touch input integration:
 
 ```bash
 # Platform detection tests
-go test -tags test ./pkg/mobile/ -v -run TestPlatform
+go test ./pkg/mobile/ -v -run TestPlatform
 
 # Integration documentation tests  
-go test -tags test ./pkg/mobile/ -v -run TestTouch
+go test ./pkg/mobile/ -v -run TestTouch
 
 # Build WASM binary
 make build-wasm

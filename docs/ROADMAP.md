@@ -493,7 +493,7 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 - Critical packages (engine, network, saveload) ≥ 70%
 - No untestable code (0% coverage) except Ebiten-dependent rendering (pixel operations)
 - New tests follow table-driven pattern matching project convention
-- CI pipeline runs all tests with `-tags test` flag successfully
+- CI pipeline runs all tests successfully (graphics tests may be skipped in headless CI)
 
 **Risks**:
 - Time investment with limited user-facing benefit (mitigate by prioritizing critical paths)

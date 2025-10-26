@@ -272,6 +272,22 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Apply remaining damage to health
 	health.TakeDamage(finalDamage)
 
+	// Trigger attack animation for attacker
+	if animComp, hasAnim := attacker.GetComponent("animation"); hasAnim {
+		anim := animComp.(*AnimationComponent)
+		anim.SetState(AnimationStateAttack)
+	}
+
+	// Trigger hurt animation for target
+	if animComp, hasAnim := target.GetComponent("animation"); hasAnim {
+		anim := animComp.(*AnimationComponent)
+		anim.SetState(AnimationStateHit)
+		// Set a callback to return to idle after hurt animation
+		anim.OnComplete = func() {
+			anim.SetState(AnimationStateIdle)
+		}
+	}
+
 	// Log damage event
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 		s.logger.WithFields(logrus.Fields{

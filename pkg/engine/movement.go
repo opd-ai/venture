@@ -160,6 +160,33 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				vel.VY = 0
 			}
 		}
+
+		// Update animation state based on movement
+		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
+			anim := animComp.(*AnimationComponent)
+			speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+
+			// Determine animation state based on velocity
+			if speed > 0.1 {
+				// Moving - determine if walking or running
+				if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
+					// Fast movement - running
+					if anim.CurrentState != AnimationStateRun {
+						anim.SetState(AnimationStateRun)
+					}
+				} else {
+					// Normal movement - walking
+					if anim.CurrentState != AnimationStateWalk {
+						anim.SetState(AnimationStateWalk)
+					}
+				}
+			} else {
+				// Not moving - idle
+				if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
+					anim.SetState(AnimationStateIdle)
+				}
+			}
+		}
 	}
 }
 

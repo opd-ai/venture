@@ -282,11 +282,11 @@ func (cg *CachedGenerator) Stats() CacheStats {
 
 // BatchConfig contains configuration for batch sprite generation.
 type BatchConfig struct {
-	Configs     []Config
-	Concurrent  bool
-	MaxWorkers  int
-	OnProgress  func(completed, total int)
-	OnError     func(index int, err error)
+	Configs    []Config
+	Concurrent bool
+	MaxWorkers int
+	OnProgress func(completed, total int)
+	OnError    func(index int, err error)
 }
 
 // BatchGenerate generates multiple sprites, optionally in parallel.

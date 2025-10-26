@@ -106,7 +106,7 @@ func TestCache_HashConfigWithCustom(t *testing.T) {
 		Seed:    12345,
 		GenreID: "fantasy",
 		Custom: map[string]interface{}{
-			"equipped": true,
+			"equipped":  true,
 			"direction": 0,
 		},
 	}
@@ -116,7 +116,7 @@ func TestCache_HashConfigWithCustom(t *testing.T) {
 		Seed:    12345,
 		GenreID: "fantasy",
 		Custom: map[string]interface{}{
-			"equipped": false, // Different value
+			"equipped":  false, // Different value
 			"direction": 0,
 		},
 	}

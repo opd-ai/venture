@@ -1,6 +1,5 @@
 // Package main - silhouettetest - Visual validation tool for Phase 5.5 silhouette analysis.package silhouettetest
 
-//
 // This tool demonstrates silhouette analysis, outline generation, and contrast testing
 // to verify sprite readability optimization systems.
 package main

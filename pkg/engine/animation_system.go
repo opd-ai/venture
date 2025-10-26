@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/sirupsen/logrus"
 )
 
 // AnimationSystem updates animation components and manages frame transitions.
@@ -18,15 +19,29 @@ type AnimationSystem struct {
 	cacheMutex      sync.RWMutex
 	maxCacheSize    int
 	cacheKeys       []string // For LRU eviction
+	logger          *logrus.Entry
 }
 
 // NewAnimationSystem creates a new animation system.
 func NewAnimationSystem(spriteGenerator *sprites.Generator) *AnimationSystem {
+	return NewAnimationSystemWithLogger(spriteGenerator, nil)
+}
+
+// NewAnimationSystemWithLogger creates a new animation system with a logger.
+func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *logrus.Logger) *AnimationSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "animation",
+		})
+	}
+	
 	return &AnimationSystem{
 		spriteGenerator: spriteGenerator,
 		frameCache:      make(map[string][]*ebiten.Image),
 		maxCacheSize:    100, // Cache up to 100 animation sequences
 		cacheKeys:       make([]string, 0, 100),
+		logger:          logEntry,
 	}
 }
 
@@ -48,11 +63,17 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 
 		// Regenerate frames if dirty (state changed)
 		if animComp.Dirty {
-			// DEBUG: Log animation frame generation
-			if entity.HasComponent("input") { // Only log for player
-				fmt.Printf("[ANIMATION] Entity %d: Generating %d frames for state=%s (sprite=%dx%d)\n",
-					entity.ID, s.getFrameCount(animComp.CurrentState), animComp.CurrentState,
-					int(spriteComp.Width), int(spriteComp.Height))
+			// Only log for player entities at debug level
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				if entity.HasComponent("input") {
+					s.logger.WithFields(logrus.Fields{
+						"entityID":   entity.ID,
+						"state":      animComp.CurrentState,
+						"frameCount": s.getFrameCount(animComp.CurrentState),
+						"width":      int(spriteComp.Width),
+						"height":     int(spriteComp.Height),
+					}).Debug("generating animation frames")
+				}
 			}
 
 			if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
@@ -60,10 +81,15 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			}
 			animComp.Dirty = false
 
-			// DEBUG: Verify frames were generated
-			if entity.HasComponent("input") && len(animComp.Frames) > 0 {
-				fmt.Printf("[ANIMATION] Entity %d: Successfully generated %d frames, now showing frame %d\n",
-					entity.ID, len(animComp.Frames), animComp.FrameIndex)
+			// Verify frames were generated (debug level)
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				if entity.HasComponent("input") && len(animComp.Frames) > 0 {
+					s.logger.WithFields(logrus.Fields{
+						"entityID":     entity.ID,
+						"framesGenerated": len(animComp.Frames),
+						"currentFrame":    animComp.FrameIndex,
+					}).Debug("animation frames generated successfully")
+				}
 			}
 		}
 
@@ -97,11 +123,8 @@ func (s *AnimationSystem) updateFrame(anim *AnimationComponent, deltaTime float6
 			} else {
 				anim.FrameIndex = len(anim.Frames) - 1
 				anim.Playing = false
-				fmt.Printf("[ANIM SYSTEM] Animation complete - calling OnComplete callback (exists: %v)\n",
-					anim.OnComplete != nil)
 				if anim.OnComplete != nil {
 					anim.OnComplete()
-					fmt.Printf("[ANIM SYSTEM] OnComplete callback executed\n")
 				}
 			}
 		}
@@ -340,10 +363,6 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 				}
 				// Store facing for idle state
 				anim.LastFacing = facing
-
-				// DEBUG: Log facing changes for player
-				fmt.Printf("[ANIMATION] Entity %d facing: %s (velocity: %.1f, %.1f)\n",
-					entity.ID, facing, vel.VX, vel.VY)
 			} else if anim.LastFacing != "" {
 				// Use last facing direction when idle
 				facing = anim.LastFacing

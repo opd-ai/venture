@@ -1,12 +1,12 @@
 package engine
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/opd-ai/venture/pkg/audio"
 	"github.com/opd-ai/venture/pkg/audio/music"
 	"github.com/opd-ai/venture/pkg/audio/sfx"
+	"github.com/sirupsen/logrus"
 )
 
 // AudioManager manages game audio including music and sound effects.
@@ -190,15 +190,29 @@ type AudioManagerSystem struct {
 	playerEntity      *Entity
 	genreID           string
 	updateTimer       int
+	logger            *logrus.Entry
 }
 
 // NewAudioManagerSystem creates a new audio manager system.
 func NewAudioManagerSystem(audioManager *AudioManager) *AudioManagerSystem {
+	return NewAudioManagerSystemWithLogger(audioManager, nil)
+}
+
+// NewAudioManagerSystemWithLogger creates a new audio manager system with a logger.
+func NewAudioManagerSystemWithLogger(audioManager *AudioManager, logger *logrus.Logger) *AudioManagerSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "audio",
+		})
+	}
+	
 	return &AudioManagerSystem{
 		audioManager:      audioManager,
 		detector:          NewMusicContextDetector(),
 		transitionManager: NewMusicTransitionManager(),
 		updateTimer:       0,
+		logger:            logEntry,
 	}
 }
 
@@ -241,7 +255,12 @@ func (ams *AudioManagerSystem) Update(entities []*Entity, deltaTime float64) {
 		err := ams.audioManager.PlayMusic(genre, newContext.String())
 		if err != nil {
 			// Log error but don't crash
-			fmt.Printf("Warning: Failed to update music: %v\n", err)
+			if ams.logger != nil {
+				ams.logger.WithError(err).WithFields(logrus.Fields{
+					"genre":   genre,
+					"context": newContext.String(),
+				}).Warn("failed to update music")
+			}
 		}
 
 		// Mark transition complete (in a real implementation with crossfade,

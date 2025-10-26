@@ -128,7 +128,11 @@ func (g *Game) generateItem(itemType sprites.ItemType, rarity sprites.ItemRarity
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		g.logger.WithError(rarity, itemType, err).WithField("item", "item %s %s").Error("failed to generate")
+		g.logger.WithError(err).WithFields(logrus.Fields{
+			"item":     fmt.Sprintf("item %s %s", rarity, itemType),
+			"rarity":   rarity,
+			"itemType": itemType,
+		}).Error("failed to generate")
 		return ebiten.NewImage(*width, *height)
 	}
 
@@ -319,6 +323,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func main() {
 	flag.Parse()
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
 
 	game, err := NewGame(*seed, *genre, logger)
 	if err != nil {

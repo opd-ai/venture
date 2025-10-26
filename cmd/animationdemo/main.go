@@ -415,6 +415,9 @@ func main() {
 	genre := flag.String("genre", "fantasy", "Genre (fantasy, scifi, horror, cyberpunk, postapoc)")
 	flag.Parse()
 
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
 	game := NewGame(*seed, *genre)
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)

@@ -155,7 +155,7 @@ func (g *Game) addEntity(name, entityType, facing string, hasWeapon, hasShield b
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		g.logger.WithError(name, err).WithField("item", "entity %s").Error("failed to generate")
+		g.logger.WithError(err).WithField("entity", name).Error("failed to generate entity sprite")
 		sprite = ebiten.NewImage(32, 32)
 	}
 
@@ -180,7 +180,7 @@ func (g *Game) addItem(name string, itemType sprites.ItemType, rarity sprites.It
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		g.logger.WithError(name, err).WithField("item", "item %s").Error("failed to generate")
+		g.logger.WithError(err).WithField("item", name).Error("failed to generate item sprite")
 		sprite = ebiten.NewImage(32, 32)
 	}
 
@@ -397,6 +397,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func main() {
 	flag.Parse()
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
 
 	game, err := NewGame(*seed, *genre, logger)
 	if err != nil {

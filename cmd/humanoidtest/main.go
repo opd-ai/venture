@@ -134,9 +134,10 @@ func (g *Game) generateHumanoid(width, height int, entityType, facing, genre str
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
 		g.logger.WithError(err).WithFields(logrus.Fields{
-			"variant": variant,
-			"width":   width,
-			"height":  height,
+			"entityType": entityType,
+			"facing":     facing,
+			"width":      width,
+			"height":     height,
 		}).Error("failed to generate sprite")
 		return ebiten.NewImage(width, height)
 	}

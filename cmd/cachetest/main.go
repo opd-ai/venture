@@ -265,6 +265,9 @@ func main() {
 	ebiten.SetWindowTitle("Sprite Cache Performance Test")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
 	logger.WithField("capacity", *cacheCapacity).Info("starting cache test")
 	logger.Info("controls:")
 	logger.Info("  SPACE - Pause/Resume")

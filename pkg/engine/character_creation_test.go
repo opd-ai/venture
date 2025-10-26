@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -605,6 +607,114 @@ func TestResetWithoutDefaults(t *testing.T) {
 	}
 	if cc.currentStep != stepNameInput {
 		t.Errorf("After Reset(), currentStep = %v, want %v", cc.currentStep, stepNameInput)
+	}
+}
+
+// TestLoadPortrait_InvalidFile tests loading invalid portrait files
+func TestLoadPortrait_InvalidFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "empty path",
+			path:    "",
+			wantErr: false, // Empty is valid (no portrait)
+		},
+		{
+			name:    "nonexistent file",
+			path:    "/nonexistent/file.png",
+			wantErr: true,
+			errMsg:  "portrait file not found",
+		},
+		{
+			name:    "wrong extension",
+			path:    "/tmp/test.jpg",
+			wantErr: true,
+			errMsg:  "portrait must be a .png file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := LoadPortrait(tt.path)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("LoadPortrait() expected error containing %q, got nil", tt.errMsg)
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("LoadPortrait() error = %v, want error containing %q", err, tt.errMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("LoadPortrait() unexpected error = %v", err)
+				}
+				if tt.path == "" && img != nil {
+					t.Errorf("LoadPortrait(\"\") = %v, want nil", img)
+				}
+			}
+		})
+	}
+}
+
+// TestMax tests the max helper function
+func TestMax(t *testing.T) {
+	tests := []struct {
+		a, b, want int
+	}{
+		{5, 10, 10},
+		{10, 5, 10},
+		{7, 7, 7},
+		{-5, 3, 3},
+		{0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("max(%d,%d)", tt.a, tt.b), func(t *testing.T) {
+			got := max(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("max(%d, %d) = %d, want %d", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestCharacterData_WithPortrait tests CharacterData with portrait field
+func TestCharacterData_WithPortrait(t *testing.T) {
+	cd := CharacterData{
+		Name:         "TestHero",
+		Class:        ClassWarrior,
+		PortraitPath: "/path/to/portrait.png",
+		Portrait:     nil, // Can be nil
+	}
+
+	if err := cd.Validate(); err != nil {
+		t.Errorf("CharacterData.Validate() with portrait path error = %v, want nil", err)
+	}
+}
+
+// TestSetDefaults_WithPortrait tests setting defaults including portrait path
+func TestSetDefaults_WithPortrait(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+
+	defaults := CharacterCreationDefaults{
+		DefaultName:         "TestHero",
+		DefaultClass:        ClassMage,
+		DefaultPortraitPath: "/home/user/portrait.png",
+	}
+
+	cc.SetDefaults(defaults)
+
+	got := cc.GetDefaults()
+	if got.DefaultName != "TestHero" {
+		t.Errorf("GetDefaults().DefaultName = %q, want %q", got.DefaultName, "TestHero")
+	}
+	if got.DefaultClass != ClassMage {
+		t.Errorf("GetDefaults().DefaultClass = %v, want %v", got.DefaultClass, ClassMage)
+	}
+	if got.DefaultPortraitPath != "/home/user/portrait.png" {
+		t.Errorf("GetDefaults().DefaultPortraitPath = %q, want %q", got.DefaultPortraitPath, "/home/user/portrait.png")
 	}
 }
 

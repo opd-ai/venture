@@ -5,13 +5,18 @@ package engine
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	"image/png"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -57,14 +62,17 @@ func (c CharacterClass) Description() string {
 
 // CharacterData holds the player's character creation choices
 type CharacterData struct {
-	Name  string
-	Class CharacterClass
+	Name         string
+	Class        CharacterClass
+	PortraitPath string         // Path to user's custom portrait image (optional)
+	Portrait     *ebiten.Image  // Loaded portrait image (optional, max 512x512)
 }
 
 // CharacterCreationDefaults holds custom default values for character creation
 type CharacterCreationDefaults struct {
-	DefaultName  string         // Default name to pre-fill
-	DefaultClass CharacterClass // Default class to pre-select
+	DefaultName         string         // Default name to pre-fill
+	DefaultClass        CharacterClass // Default class to pre-select
+	DefaultPortraitPath string         // Default portrait path to pre-fill
 }
 
 // Validate checks if the character data is valid
@@ -84,12 +92,72 @@ func (cd *CharacterData) Validate() error {
 	return nil
 }
 
+// LoadPortrait loads a portrait image from the given path and downscales if needed
+// Maximum size is 512x512, aspect ratio is preserved
+func LoadPortrait(path string) (*ebiten.Image, error) {
+	if path == "" {
+		return nil, nil // No portrait is valid
+	}
+
+	// Validate extension first
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".png" {
+		return nil, fmt.Errorf("portrait must be a .png file, got: %s", ext)
+	}
+
+	// Validate file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("portrait file not found: %s", path)
+	}
+
+	// Load image
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open portrait: %w", err)
+	}
+	defer file.Close()
+
+	img, err := png.Decode(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PNG: %w", err)
+	}
+
+	// Downscale if needed (max 512x512, preserve aspect ratio)
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	
+	const maxSize = 512
+	if width > maxSize || height > maxSize {
+		// Calculate scale factor to fit within maxSize x maxSize
+		scale := float64(maxSize) / float64(max(width, height))
+		newWidth := int(float64(width) * scale)
+		newHeight := int(float64(height) * scale)
+
+		// Create scaled image
+		scaled := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+		draw.BiLinear.Scale(scaled, scaled.Bounds(), img, bounds, draw.Over, nil)
+		img = scaled
+	}
+
+	// Convert to Ebiten image
+	return ebiten.NewImageFromImage(img), nil
+}
+
+// max returns the larger of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // creationStep represents the current step in character creation
 type creationStep int
 
 const (
 	stepNameInput creationStep = iota
 	stepClassSelection
+	stepPortraitSelection
 	stepConfirmation
 )
 
@@ -99,6 +167,7 @@ type EbitenCharacterCreation struct {
 	characterData CharacterData
 	nameInput     string
 	selectedClass CharacterClass
+	portraitInput string // Path input for portrait image
 	confirmed     bool
 	errorMsg      string
 
@@ -152,6 +221,8 @@ func (cc *EbitenCharacterCreation) Update() bool {
 		cc.updateNameInput()
 	case stepClassSelection:
 		cc.updateClassSelection()
+	case stepPortraitSelection:
+		cc.updatePortraitSelection()
 	case stepConfirmation:
 		cc.updateConfirmation()
 	}
@@ -189,7 +260,7 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 			cc.errorMsg = "Name cannot be empty"
 		}
 	}
-	
+
 	// F2 to save current name as default
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		if len(strings.TrimSpace(cc.nameInput)) > 0 {
@@ -229,16 +300,89 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	// Enter to proceed, Backspace to go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		cc.characterData.Class = cc.selectedClass
-		cc.currentStep = stepConfirmation
+		cc.currentStep = stepPortraitSelection
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
 	}
-	
+
 	// F2 to save current class as default
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		cc.defaults.DefaultClass = cc.selectedClass
 		cc.errorMsg = fmt.Sprintf("Default class saved: %s", cc.selectedClass.String())
+	}
+}
+
+// updatePortraitSelection handles portrait file path input
+func (cc *EbitenCharacterCreation) updatePortraitSelection() {
+	// Handle text input for file path
+	cc.inputBuffer = ebiten.AppendInputChars(cc.inputBuffer[:0])
+	for _, r := range cc.inputBuffer {
+		// Allow printable characters for file paths
+		if r >= 32 && r <= 126 {
+			cc.portraitInput += string(r)
+		}
+	}
+
+	// Handle backspace
+	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
+		if len(cc.portraitInput) > 0 {
+			cc.portraitInput = cc.portraitInput[:len(cc.portraitInput)-1]
+		} else {
+			// Empty backspace goes back to class selection
+			cc.currentStep = stepClassSelection
+			return
+		}
+	}
+
+	// ESC to go back
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		cc.currentStep = stepClassSelection
+		return
+	}
+
+	// Tab to skip portrait (optional)
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		cc.characterData.PortraitPath = ""
+		cc.characterData.Portrait = nil
+		cc.currentStep = stepConfirmation
+		cc.errorMsg = ""
+		return
+	}
+
+	// Enter to load portrait and proceed
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		portraitPath := strings.TrimSpace(cc.portraitInput)
+		
+		if portraitPath == "" {
+			// Empty path is valid (no portrait)
+			cc.characterData.PortraitPath = ""
+			cc.characterData.Portrait = nil
+			cc.currentStep = stepConfirmation
+			cc.errorMsg = ""
+			return
+		}
+
+		// Try to load the portrait
+		portrait, err := LoadPortrait(portraitPath)
+		if err != nil {
+			cc.errorMsg = fmt.Sprintf("Failed to load portrait: %v", err)
+			return
+		}
+
+		// Success - save portrait and proceed
+		cc.characterData.PortraitPath = portraitPath
+		cc.characterData.Portrait = portrait
+		cc.currentStep = stepConfirmation
+		cc.errorMsg = ""
+	}
+
+	// F2 to save current portrait path as default
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+		if len(strings.TrimSpace(cc.portraitInput)) > 0 {
+			cc.defaults.DefaultPortraitPath = strings.TrimSpace(cc.portraitInput)
+			cc.errorMsg = "Default portrait path saved!"
+		}
 	}
 }
 
@@ -255,9 +399,9 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 		}
 	}
 
-	// Backspace to go back
+	// Backspace to go back to portrait selection
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		cc.currentStep = stepClassSelection
+		cc.currentStep = stepPortraitSelection
 	}
 }
 
@@ -289,6 +433,8 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 		cc.drawNameInput(screen, panelX, panelY, panelWidth, panelHeight)
 	case stepClassSelection:
 		cc.drawClassSelection(screen, panelX, panelY, panelWidth, panelHeight)
+	case stepPortraitSelection:
+		cc.drawPortraitSelection(screen, panelX, panelY, panelWidth, panelHeight)
 	case stepConfirmation:
 		cc.drawConfirmation(screen, panelX, panelY, panelWidth, panelHeight)
 	}
@@ -311,7 +457,7 @@ func (cc *EbitenCharacterCreation) drawNameInput(screen *ebiten.Image, x, y, w, 
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 1 of 3: Choose Your Name"
+	stepText := "Step 1 of 4: Choose Your Name"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -360,7 +506,7 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 2 of 3: Choose Your Class"
+	stepText := "Step 2 of 4: Choose Your Class"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -427,6 +573,93 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		color.RGBA{150, 200, 150, 255})
 }
 
+// drawPortraitSelection renders the portrait selection screen
+func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x, y, w, h int) {
+	// Title
+	title := "CHARACTER CREATION"
+	titleX := x + w/2 - len(title)*3
+	text.Draw(screen, title, basicfont.Face7x13, titleX, y+40,
+		color.RGBA{255, 255, 100, 255})
+
+	// Step indicator
+	stepText := "Step 3 of 4: Choose Portrait (Optional)"
+	stepX := x + w/2 - len(stepText)*3
+	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
+		color.RGBA{200, 200, 200, 255})
+
+	// Instructions
+	instructionY := y + 110
+	instructions := []string{
+		"Enter path to a .png file (max 512x512):",
+		"Leave empty or press TAB to skip",
+	}
+	for i, line := range instructions {
+		lineX := x + w/2 - len(line)*3
+		text.Draw(screen, line, basicfont.Face7x13, lineX, instructionY+i*20,
+			color.RGBA{180, 180, 180, 255})
+	}
+
+	// Input box for file path
+	inputBoxY := y + 170
+	inputBoxX := x + 50
+	inputBoxWidth := w - 100
+	inputBoxHeight := 30
+	vector.DrawFilledRect(screen, float32(inputBoxX), float32(inputBoxY),
+		float32(inputBoxWidth), float32(inputBoxHeight),
+		color.RGBA{40, 40, 50, 255}, false)
+	vector.StrokeRect(screen, float32(inputBoxX), float32(inputBoxY),
+		float32(inputBoxWidth), float32(inputBoxHeight), 2,
+		color.RGBA{100, 150, 200, 255}, false)
+
+	// Display current input with cursor
+	displayText := cc.portraitInput
+	if len(displayText) > 60 {
+		// Truncate display to fit
+		displayText = "..." + displayText[len(displayText)-57:]
+	}
+	displayText += "_"
+	textX := inputBoxX + 10
+	text.Draw(screen, displayText, basicfont.Face7x13, textX, inputBoxY+20,
+		color.RGBA{255, 255, 255, 255})
+
+	// Show current default if set
+	if cc.defaults.DefaultPortraitPath != "" {
+		defaultText := fmt.Sprintf("Current default: %s", cc.defaults.DefaultPortraitPath)
+		if len(defaultText) > 70 {
+			defaultText = defaultText[:67] + "..."
+		}
+		defaultX := x + w/2 - len(defaultText)*3
+		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+220,
+			color.RGBA{150, 150, 150, 255})
+	}
+
+	// Portrait preview (if loaded)
+	if cc.characterData.Portrait != nil {
+		previewY := y + 250
+		previewX := x + w/2 - cc.characterData.Portrait.Bounds().Dx()/2
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(previewX), float64(previewY))
+		screen.DrawImage(cc.characterData.Portrait, opts)
+		
+		// Label
+		labelText := "Preview:"
+		labelX := x + w/2 - len(labelText)*3
+		text.Draw(screen, labelText, basicfont.Face7x13, labelX, previewY-10,
+			color.RGBA{200, 200, 100, 255})
+	}
+
+	// Help text
+	helpY := y + h - 80
+	helpText1 := "Press ENTER to load portrait | TAB to skip"
+	helpText2 := "F2 to save as default | BACKSPACE to go back"
+	helpX1 := x + w/2 - len(helpText1)*3
+	helpX2 := x + w/2 - len(helpText2)*3
+	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, helpY,
+		color.RGBA{150, 200, 150, 255})
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, helpY+20,
+		color.RGBA{150, 200, 150, 255})
+}
+
 // drawConfirmation renders the confirmation screen
 func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, w, h int) {
 	// Title
@@ -436,7 +669,7 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 3 of 3: Confirm Your Character"
+	stepText := "Step 4 of 4: Confirm Your Character"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -452,8 +685,38 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 	text.Draw(screen, classText, basicfont.Face7x13, x+w/2-len(classText)*3, summaryY+30,
 		color.RGBA{255, 255, 255, 255})
 
+	// Portrait preview (if set)
+	if cc.characterData.Portrait != nil {
+		portraitText := fmt.Sprintf("Portrait: Custom (%dx%d)",
+			cc.characterData.Portrait.Bounds().Dx(),
+			cc.characterData.Portrait.Bounds().Dy())
+		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+60,
+			color.RGBA{255, 255, 255, 255})
+		
+		// Show small preview
+		previewSize := 64
+		previewX := x + w/2 - previewSize/2
+		previewY := summaryY + 80
+		
+		opts := &ebiten.DrawImageOptions{}
+		// Scale down to 64x64 preview
+		scaleX := float64(previewSize) / float64(cc.characterData.Portrait.Bounds().Dx())
+		scaleY := float64(previewSize) / float64(cc.characterData.Portrait.Bounds().Dy())
+		scale := scaleX
+		if scaleY < scaleX {
+			scale = scaleY
+		}
+		opts.GeoM.Scale(scale, scale)
+		opts.GeoM.Translate(float64(previewX), float64(previewY))
+		screen.DrawImage(cc.characterData.Portrait, opts)
+	} else {
+		portraitText := "Portrait: None"
+		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+60,
+			color.RGBA{180, 180, 180, 255})
+	}
+
 	// Class stats preview
-	statsY := summaryY + 80
+	statsY := summaryY + 180
 	statsTitle := "Starting Stats:"
 	text.Draw(screen, statsTitle, basicfont.Face7x13, x+w/2-len(statsTitle)*3, statsY,
 		color.RGBA{200, 200, 100, 255})
@@ -523,7 +786,7 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.characterData = CharacterData{}
 	cc.confirmed = false
 	cc.errorMsg = ""
-	
+
 	// Apply defaults to both input fields and character data
 	if cc.defaults.DefaultName != "" {
 		cc.nameInput = cc.defaults.DefaultName
@@ -533,6 +796,18 @@ func (cc *EbitenCharacterCreation) Reset() {
 	}
 	cc.selectedClass = cc.defaults.DefaultClass
 	cc.characterData.Class = cc.defaults.DefaultClass
+	
+	// Apply portrait default
+	if cc.defaults.DefaultPortraitPath != "" {
+		cc.portraitInput = cc.defaults.DefaultPortraitPath
+		// Try to load the default portrait
+		if portrait, err := LoadPortrait(cc.defaults.DefaultPortraitPath); err == nil {
+			cc.characterData.PortraitPath = cc.defaults.DefaultPortraitPath
+			cc.characterData.Portrait = portrait
+		}
+	} else {
+		cc.portraitInput = ""
+	}
 }
 
 // SaveAsDefaults saves the current character data as defaults for future use

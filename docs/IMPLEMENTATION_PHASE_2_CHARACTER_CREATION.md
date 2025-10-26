@@ -12,19 +12,21 @@ Implemented a comprehensive character creation system that provides a unified on
 
 ### Core Files Created
 
-1. **`pkg/engine/character_creation.go`** (626 lines)
-   - Interactive three-step UI flow
+1. **`pkg/engine/character_creation.go`** (900+ lines)
+   - Interactive four-step UI flow
    - CharacterClass enum (Warrior, Mage, Rogue)
    - CharacterData struct with validation
    - EbitenCharacterCreation UI system
    - ApplyClassStats() function for stat application
+   - **LoadPortrait() function for image loading and downscaling** *(NEW)*
 
-2. **`pkg/engine/character_creation_test.go`** (523+ lines)
-   - 19 test functions (including defaults tests)
-   - 45+ individual test cases
+2. **`pkg/engine/character_creation_test.go`** (720+ lines)
+   - 22 test functions (including portrait tests)
+   - 52+ individual test cases
    - Table-driven tests for all scenarios
    - 100% coverage on testable (non-Ebiten) functions
    - Tests for custom defaults: TestSetDefaults, TestResetAppliesDefaults, TestResetWithoutDefaults
+   - **Tests for portrait system: TestLoadPortrait_InvalidFile, TestMax, TestCharacterData_WithPortrait, TestSetDefaults_WithPortrait** *(NEW)*
 
 ### Modified Files
 

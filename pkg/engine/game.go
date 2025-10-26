@@ -22,11 +22,11 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager       *AppStateManager
-	MainMenuUI         *MainMenuUI
-	CharacterCreation  *EbitenCharacterCreation
-	pendingCharData    *CharacterData
-	isMultiplayerMode  bool // Track if character creation is for multiplayer
+	StateManager      *AppStateManager
+	MainMenuUI        *MainMenuUI
+	CharacterCreation *EbitenCharacterCreation
+	pendingCharData   *CharacterData
+	isMultiplayerMode bool // Track if character creation is for multiplayer
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -247,7 +247,7 @@ func (g *EbitenGame) Update() error {
 						return err
 					}
 				}
-				
+
 				if g.logger != nil {
 					g.logger.WithFields(logrus.Fields{
 						"name":  charData.Name,
@@ -268,7 +268,7 @@ func (g *EbitenGame) Update() error {
 						return err
 					}
 				}
-				
+
 				if g.logger != nil {
 					g.logger.WithFields(logrus.Fields{
 						"name":  charData.Name,

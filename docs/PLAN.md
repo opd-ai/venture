@@ -96,21 +96,25 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - ✅ Three-step creation flow: Name input → Class selection → Confirmation
 - ✅ Integrated with AppState system (AppStateCharacterCreation)
 - ✅ Character data applied to player entity via ApplyClassStats()
-- ✅ Comprehensive test suite with 100% coverage on testable functions (19 test functions, 45+ test cases)
+- ✅ Comprehensive test suite with 100% coverage on testable functions (22 test functions, 52+ test cases)
 - ✅ Tutorial integration: class descriptions teach gameplay during selection
-- ✅ **Custom Defaults Feature**: Press F2 to save preferred name/class for faster repeated character creation *(NEW)*
+- ✅ **Custom Defaults Feature**: Press F2 to save preferred name/class for faster repeated character creation
+- ✅ **Custom Portrait Feature**: User-provided .png images (up to 512x512, auto-downscaled) for visual customization *(NEW)*
 
 **Status**: ✅ Complete - Production-ready with full integration
 
 **Current Behavior**:
-- Main Menu → Single-Player → Character Creation (3 steps) → Gameplay
-- Main Menu → Multi-Player → Character Creation (3 steps) → Connect to Server
-- Name input with keyboard entry (alphanumeric + spaces, max 20 characters)
-- Class selection via arrow keys or number keys (1-3)
+- Main Menu → Single-Player → Character Creation (4 steps) → Gameplay
+- Main Menu → Multi-Player → Character Creation (4 steps) → Connect to Server
+- Step 1: Name input with keyboard entry (alphanumeric + spaces, max 20 characters)
+- Step 2: Class selection via arrow keys or number keys (1-3)
+- Step 3: Portrait selection - enter path to local .png file (optional, press TAB to skip)
+- Step 4: Confirmation showing name, class, portrait preview, and stats
 - Tutorial prompts embedded in class descriptions
 - Stats applied immediately on game start (both single-player and multiplayer)
 - Character data ready for network sync to server
-- **Custom Defaults**: Press F2 on name/class screens to save as defaults; Reset() automatically applies saved defaults *(NEW)*
+- **Custom Defaults**: Press F2 on name/class/portrait screens to save as defaults; Reset() automatically applies saved defaults
+- **Portrait Validation**: Auto-downscales images >512x512 while preserving aspect ratio; only .png files accepted
 
 **Class Stats**:
 - **Warrior**: HP 150, Mana 50, Attack 12, Defense 8, Crit Damage 2.0x
@@ -126,8 +130,9 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Validation ensures names 1-20 characters, valid class selection
 - UI uses Ebiten drawing with keyboard navigation (no mouse required)
 - Character data automatically synced to server when connecting (multiplayer)
-- **Custom Defaults**: CharacterCreationDefaults struct stores default name/class; SetDefaults()/GetDefaults() for configuration; F2 handlers save current selection; displayed in gray text *(NEW)*
-- Future: Server validates and stores character data, broadcasts to other players
+- **Custom Defaults**: CharacterCreationDefaults struct stores default name/class/portrait; SetDefaults()/GetDefaults() for configuration; F2 handlers save current selection; displayed in gray text
+- **Portrait System**: LoadPortrait() loads .png from user's local filesystem; validates extension and downscales >512x512 using bilinear interpolation; preserves aspect ratio; Portrait field in CharacterData holds *ebiten.Image; user-provided images not considered "game assets"
+- Future: Server validates and stores character data, broadcasts to other players; portrait images can be synced via base64 encoding or hash-based caching
 
 ---
 

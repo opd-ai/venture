@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
+	"image/color"
 	"math/rand"
 	"time"
 
@@ -34,7 +34,7 @@ type Game struct {
 	genreIndex     int
 	genres         []string
 	showStats      bool
-	logger       *logrus.Logger
+	logger         *logrus.Logger
 }
 
 // NewGame creates a new cache test game.

@@ -41,7 +41,7 @@ func main() {
 		"entities": *entityCount,
 		"duration": *duration,
 	}).Info("performance test starting")
-	
+
 	if *targetFPS != 60.0 {
 		logger.WithField("targetFPS", *targetFPS).Info("custom target FPS")
 	}
@@ -103,8 +103,8 @@ func main() {
 	// Run simulation
 	logger.Info("starting performance test")
 	logger.WithFields(logrus.Fields{
-		"targetFPS":       *targetFPS,
-		"msPerFrame":      1000.0 / *targetFPS,
+		"targetFPS":  *targetFPS,
+		"msPerFrame": 1000.0 / *targetFPS,
 	}).Info("performance targets")
 
 	frameDuration := time.Second / time.Duration(*targetFPS)

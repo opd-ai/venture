@@ -299,6 +299,6 @@ func main() {
 			logger.WithError(err).Fatal("game error")
 		}
 	}
-	
+
 	logger.Info("monster test complete")
 }

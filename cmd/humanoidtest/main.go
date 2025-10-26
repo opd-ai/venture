@@ -7,9 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -283,6 +283,6 @@ func main() {
 			logger.WithError(err).Fatal("game error")
 		}
 	}
-	
+
 	logger.Info("humanoid test complete")
 }

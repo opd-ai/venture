@@ -296,9 +296,9 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		// Log animation trigger for player when debugging
 		if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
-				"attackerID":     attacker.ID,
-				"previousState":  anim.CurrentState,
-				"newState":       "ATTACK",
+				"attackerID":    attacker.ID,
+				"previousState": anim.CurrentState,
+				"newState":      "ATTACK",
 			}).Debug("player attack animation triggered")
 		}
 

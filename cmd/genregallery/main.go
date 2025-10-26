@@ -79,9 +79,9 @@ func (g *Game) generateSprites() {
 		sprite, err := g.generator.Generate(config)
 		if err != nil {
 			g.logger.WithError(err).WithFields(logrus.Fields{
-				"type":   config.Type,
-				"genre":  config.GenreID,
-				"seed":   config.Seed,
+				"type":  config.Type,
+				"genre": config.GenreID,
+				"seed":  config.Seed,
 			}).Error("failed to generate sprite")
 			continue
 		}
@@ -351,7 +351,7 @@ func main() {
 
 	// Initialize logger for test utility
 	logger := logging.TestUtilityLogger("genregallery")
-	
+
 	logger.WithField("seed", *seed).Info("starting genre gallery")
 	logger.Info("controls:")
 	logger.Info("  LEFT/RIGHT - Change Genre")
@@ -383,7 +383,7 @@ func main() {
 		"pagesViewed":   game.page + 1,
 		"currentGenre":  game.genres[game.genreIndex],
 	}).Info("final statistics")
-	
+
 	fmt.Println("\nFinal Statistics:")
 	fmt.Printf("  Cache Size: %d / %d\n", stats.Size, stats.Capacity)
 	fmt.Printf("  Cache Hits: %d\n", stats.Hits)

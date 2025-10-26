@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
+	"image/color"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -33,7 +33,7 @@ type Game struct {
 	mode             int // 0=idle, 1=walk, 2=attack demo
 	demoTimer        float64
 	showInstructions bool
-	logger       *logrus.Logger
+	logger           *logrus.Logger
 }
 
 // NewGame creates a new animation demo game.

@@ -7,9 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -89,11 +89,11 @@ func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 		spriteNames:  make([]string, 0),
 		currentIndex: 0,
 		viewMode:     ViewOriginal,
-		bgColor:      color.RGBA{50, 50, 50, 255		logger:       logger,
-	},
+		bgColor:      color.RGBA{50, 50, 50, 255},
 		spriteGen:    spriteGen,
 		paletteGen:   paletteGen,
 		currentPal:   pal,
+		logger:       logger,
 	}
 
 	// Generate all test sprites

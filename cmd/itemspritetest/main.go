@@ -7,9 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/color"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -45,7 +45,7 @@ type Game struct {
 	itemsPerRow   int
 	thumbnailSize int
 	zoom          int
-	logger       *logrus.Logger
+	logger        *logrus.Logger
 }
 
 // NewGame creates a new item sprite test game.
@@ -72,7 +72,7 @@ func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 		itemsPerRow:   10,
 		thumbnailSize: 48,
 		zoom:          spriteScale,
-			logger:       logger,
+		logger:        logger,
 	}
 
 	// Generate all test sprites

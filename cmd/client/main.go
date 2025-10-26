@@ -636,6 +636,37 @@ func main() {
 		log.Printf("Terrain collision system initialized (efficient mode)")
 	}
 
+	// CATEGORY 4.3: Initialize spatial partition system for viewport culling
+	// Provides significant performance benefits with large entity counts through spatial queries
+	// Always enabled as a core optimization (previously optional, now standard)
+	if *verbose {
+		log.Println("Initializing spatial partition system for viewport culling...")
+	}
+
+	// Calculate world bounds from terrain dimensions (32 pixels per tile)
+	worldWidth := float64(generatedTerrain.Width) * 32.0
+	worldHeight := float64(generatedTerrain.Height) * 32.0
+
+	// Create spatial partition system with quadtree-based structure
+	spatialSystem := engine.NewSpatialPartitionSystem(worldWidth, worldHeight)
+
+	// Register with ECS World for automatic updates every 60 frames
+	game.World.AddSystem(spatialSystem)
+
+	// Connect to render system for viewport culling
+	game.RenderSystem.SetSpatialPartition(spatialSystem)
+	game.RenderSystem.EnableCulling(true)
+
+	clientLogger.WithFields(logrus.Fields{
+		"worldWidth":  worldWidth,
+		"worldHeight": worldHeight,
+		"cellSize":    8, // Quadtree capacity per node (8 entities before subdivision)
+	}).Info("spatial partition system initialized with viewport culling enabled")
+
+	if *verbose {
+		log.Printf("Spatial partition enabled: world bounds %.0fx%.0f pixels", worldWidth, worldHeight)
+	}
+
 	// GAP-001 REPAIR: Connect terrain to MapUI for map functionality
 	if *verbose {
 		log.Println("Connecting terrain to Map UI...")

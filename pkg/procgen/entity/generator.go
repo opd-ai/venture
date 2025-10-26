@@ -8,17 +8,30 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // EntityGenerator generates procedural entities (monsters, NPCs).
 type EntityGenerator struct {
 	templates map[string][]EntityTemplate
+	logger    *logrus.Entry
 }
 
 // NewEntityGenerator creates a new entity generator.
 func NewEntityGenerator() *EntityGenerator {
+	return NewEntityGeneratorWithLogger(nil)
+}
+
+// NewEntityGeneratorWithLogger creates a new entity generator with a logger.
+func NewEntityGeneratorWithLogger(logger *logrus.Logger) *EntityGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "entity")
+	}
+
 	gen := &EntityGenerator{
 		templates: make(map[string][]EntityTemplate),
+		logger:    logEntry,
 	}
 
 	// Register genre templates
@@ -29,11 +42,23 @@ func NewEntityGenerator() *EntityGenerator {
 	gen.templates["postapoc"] = GetPostApocTemplates()   // GAP-005 REPAIR
 	gen.templates[""] = GetFantasyTemplates()            // default
 
+	if logEntry != nil {
+		logEntry.Debug("entity generator initialized")
+	}
+
 	return gen
 }
 
 // Generate creates entities based on the seed and parameters.
 func (g *EntityGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":    seed,
+			"genreID": params.GenreID,
+			"depth":   params.Depth,
+		}).Debug("starting entity generation")
+	}
+
 	// Get count from custom parameters
 	count := 10 // default
 	if params.Custom != nil {
@@ -57,6 +82,14 @@ func (g *EntityGenerator) Generate(seed int64, params procgen.GenerationParams) 
 		// Use a different seed for each entity
 		entitySeed := seed + int64(i)*1000
 		entities[i] = g.generateSingleEntity(entitySeed, params, templates, rng)
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"count":   len(entities),
+			"seed":    seed,
+			"genreID": params.GenreID,
+		}).Info("entity generation complete")
 	}
 
 	return entities, nil

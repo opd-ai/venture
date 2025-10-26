@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // BSPGenerator generates dungeons using Binary Space Partitioning.
@@ -15,13 +16,24 @@ import (
 type BSPGenerator struct {
 	minRoomSize int
 	maxRoomSize int
+	logger      *logrus.Entry
 }
 
 // NewBSPGenerator creates a new BSP dungeon generator.
 func NewBSPGenerator() *BSPGenerator {
+	return NewBSPGeneratorWithLogger(nil)
+}
+
+// NewBSPGeneratorWithLogger creates a new BSP dungeon generator with a logger.
+func NewBSPGeneratorWithLogger(logger *logrus.Logger) *BSPGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "BSP")
+	}
 	return &BSPGenerator{
 		minRoomSize: 6,
 		maxRoomSize: 15,
+		logger:      logEntry,
 	}
 }
 
@@ -35,6 +47,15 @@ type bspNode struct {
 
 // Generate creates a dungeon using BSP algorithm.
 func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting BSP terrain generation")
+	}
+
 	// Use custom parameters if provided, otherwise use defaults
 	width := 80
 	height := 50
@@ -86,6 +107,15 @@ func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (in
 
 	// Add water features (moats around boss rooms)
 	g.addWaterFeatures(terrain, rng)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":     terrain.Width,
+			"height":    terrain.Height,
+			"roomCount": len(terrain.Rooms),
+			"seed":      seed,
+		}).Info("BSP terrain generation complete")
+	}
 
 	return terrain, nil
 }

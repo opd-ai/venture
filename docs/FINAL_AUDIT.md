@@ -642,3 +642,169 @@ The Venture game architecture demonstrates a well-structured ECS implementation 
 ---
 
 **Audit Complete**
+
+---
+
+## Server-Side System Integration
+
+### Dedicated Server (cmd/server/main.go)
+
+The dedicated server uses a subset of systems focused on authoritative game logic without rendering:
+
+#### Systems Registered on Server
+
+| System | Location | Line | Purpose |
+|--------|----------|------|---------|
+| **MovementSystem** | cmd/server/main.go:79 | 72 | Server-authoritative movement |
+| **CollisionSystem** | cmd/server/main.go:80 | 73 | Server-side collision detection |
+| **CombatSystem** | cmd/server/main.go:81 | 74 | Authoritative damage calculation |
+| **AISystem** | cmd/server/main.go:82 | 75 | Enemy AI (server-controlled) |
+| **ProgressionSystem** | cmd/server/main.go:83 | 76 | XP and leveling |
+| **InventorySystem** | cmd/server/main.go:84 | 77 | Item management |
+
+#### Systems NOT on Server (Client-Only)
+
+These systems are client-side only and not present on server:
+
+- **InputSystem** - Client captures input and sends to server
+- **RenderSystem** - No rendering on headless server
+- **CameraSystem** - No viewport on server
+- **HUDSystem** - No UI on server
+- **ParticleSystem** - Visual effects client-side only
+- **AnimationSystem** - Sprite animation client-side only
+- **AudioManagerSystem** - Sound client-side only
+- **UI Systems** (Inventory, Quest, Character, Skills, Map) - Client-side only
+- **TutorialSystem** - Client-side only
+- **HelpSystem** - Client-side only
+
+#### Network Integration
+
+Server-specific components not present in client:
+
+- **SnapshotManager** - State synchronization (line 138)
+- **LagCompensator** - Lag compensation for hit detection (line 142)
+- **Network Server** - Handles connections, commands, broadcasts (line 135)
+
+**Verification:** ✅ Server system configuration is correct - only authoritative game logic systems are present. Client rendering, input, and UI systems are properly excluded.
+
+---
+
+## System Update Order Analysis
+
+### Client System Execution Sequence
+
+```
+Frame N: Input → Processing → State Update → Rendering
+│
+├─ 1. InputSystem               (Capture keyboard, mouse, touch)
+│   └─ Sets input flags on entities
+│
+├─ 2. PlayerCombatSystem        (Process Space key → attack)
+│   └─ Sets attack flags
+│
+├─ 3. PlayerItemUseSystem       (Process E key → use item)
+│   └─ Triggers item effects
+│
+├─ 4. PlayerSpellCastingSystem  (Process 1-5 keys → cast spell)
+│   └─ Creates spell projectiles
+│
+├─ 5. MovementSystem            (Apply velocity → position)
+│   └─ Uses CollisionSystem for predictive collision
+│
+├─ 6. CollisionSystem           (Detect & resolve collisions)
+│   └─ Uses TerrainCollisionChecker for walls
+│   └─ Uses spatial grid for entity-entity
+│
+├─ 7. CombatSystem              (Process attacks, calculate damage)
+│   └─ Triggers death callbacks
+│   └─ Spawns hit particles
+│   └─ Plays hit sounds
+│   └─ Shakes camera
+│
+├─ 8. StatusEffectSystem        (Apply DoT, buffs, debuffs, shields)
+│   └─ Processes after combat for proper effect timing
+│
+├─ 9. AISystem                  (Enemy decision-making, pathfinding)
+│   └─ Queries spatial partition
+│
+├─ 10. ProgressionSystem        (XP tracking, level-up)
+│   └─ Triggers level-up callbacks
+│
+├─ 11. SkillProgressionSystem   (Apply skill tree effects)
+│   └─ Modifies entity stats based on skills
+│
+├─ 12. VisualFeedbackSystem     (Hit flashes, damage tints)
+│   └─ Updates visual feedback timers
+│
+├─ 13. AudioManagerSystem       (Update music context)
+│   └─ Checks for combat, boss proximity
+│
+├─ 14. ObjectiveTrackerSystem   (Quest progress tracking)
+│   └─ Monitors kills, UI opens, movement
+│
+├─ 15. ItemPickupSystem         (Automatic item collection)
+│   └─ Checks radius around player
+│
+├─ 16. SpellCastingSystem       (Execute spell effects)
+│   └─ Projectile movement, collision, damage
+│
+├─ 17. ManaRegenSystem          (Passive mana regeneration)
+│   └─ Adds mana per second
+│
+├─ 18. InventorySystem          (Item weight, capacity checks)
+│   └─ Validates inventory operations
+│
+├─ 19. AnimationSystem          (Update sprite frames)
+│   └─ Cycles through animation frames
+│   └─ Updates sprite images
+│
+├─ 20. TutorialSystem           (Tutorial progress tracking)
+│   └─ Monitors player actions
+│
+├─ 21. HelpSystem               (Help overlay state)
+│   └─ Minimal update logic
+│
+└─ 22. ParticleSystem           (Update particle emitters)
+    └─ Update particle positions, lifetimes
+    └─ Emit new particles
+    └─ Cleanup dead particles
+```
+
+### Server System Execution Sequence
+
+```
+Tick N: Network Input → Processing → State Update → Network Broadcast
+│
+├─ 1. MovementSystem            (Apply validated movement)
+│   └─ Server-authoritative positions
+│
+├─ 2. CollisionSystem           (Authoritative collision resolution)
+│   └─ Server validates all collisions
+│
+├─ 3. CombatSystem              (Authoritative damage calculation)
+│   └─ Server determines hits, damage
+│
+├─ 4. AISystem                  (Server-controlled enemy AI)
+│   └─ NPCs fully server-side
+│
+├─ 5. ProgressionSystem         (Authoritative XP/leveling)
+│   └─ Server prevents XP cheating
+│
+└─ 6. InventorySystem           (Authoritative item management)
+    └─ Server validates all item operations
+```
+
+**Critical Ordering Rationale:**
+
+1. **Input First** - Capture raw input before any processing
+2. **Player Actions Early** - Translate input to game actions immediately
+3. **Movement Before Collision** - Calculate intended position first
+4. **Collision Before Combat** - Resolve position before damage
+5. **Combat Before Status Effects** - Apply base damage before modifiers
+6. **Status After Combat** - DoT and shields process after hits
+7. **AI After Physics** - AI decisions based on finalized positions
+8. **Progression After Combat** - XP rewards after kill confirmation
+9. **Particles Last** - Visual effects after all game logic
+
+**Verification:** ✅ System execution order is logically correct and prevents race conditions.
+

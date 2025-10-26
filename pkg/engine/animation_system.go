@@ -35,7 +35,7 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 			"system": "animation",
 		})
 	}
-	
+
 	return &AnimationSystem{
 		spriteGenerator: spriteGenerator,
 		frameCache:      make(map[string][]*ebiten.Image),
@@ -85,7 +85,7 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 				if entity.HasComponent("input") && len(animComp.Frames) > 0 {
 					s.logger.WithFields(logrus.Fields{
-						"entityID":     entity.ID,
+						"entityID":        entity.ID,
 						"framesGenerated": len(animComp.Frames),
 						"currentFrame":    animComp.FrameIndex,
 					}).Debug("animation frames generated successfully")

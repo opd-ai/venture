@@ -206,7 +206,7 @@ func NewAudioManagerSystemWithLogger(audioManager *AudioManager, logger *logrus.
 			"system": "audio",
 		})
 	}
-	
+
 	return &AudioManagerSystem{
 		audioManager:      audioManager,
 		detector:          NewMusicContextDetector(),

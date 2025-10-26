@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/opd-ai/venture/pkg/logging"
-	"github.com/sirupsen/logrus"
 	"image/color"
 	"math/rand"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"

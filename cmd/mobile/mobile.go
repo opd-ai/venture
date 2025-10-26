@@ -8,8 +8,10 @@ import (
 )
 
 // Game is the mobile game instance
-var gameInstance *engine.EbitenGame
-var logger *logrus.Logger
+var (
+	gameInstance *engine.EbitenGame
+	logger       *logrus.Logger
+)
 
 func init() {
 	// Initialize logger for mobile

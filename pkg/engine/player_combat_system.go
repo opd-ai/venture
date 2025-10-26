@@ -72,7 +72,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !attack.CanAttack() {
 			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 				s.logger.WithFields(logrus.Fields{
-					"entityID":         entity.ID,
+					"entityID":          entity.ID,
 					"cooldownRemaining": attack.CooldownTimer,
 				}).Debug("attack on cooldown")
 			}

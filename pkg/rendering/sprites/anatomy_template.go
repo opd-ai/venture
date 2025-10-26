@@ -1060,3 +1060,357 @@ func SelectHumanoidTemplate(genre, entityType string, direction Direction) Anato
 		return HumanoidDirectionalTemplate(direction)
 	}
 }
+
+// HumanoidAerialTemplate returns a humanoid template optimized for aerial/top-down perspective.
+// Proportions are adjusted for top-down view: head 35%, torso 50%, legs 15% (compressed vertical).
+// Creates visual asymmetry based on facing direction for clear directional indication.
+//
+// Key differences from side-view:
+//   - Head more prominent (35% vs 30%) - more visible from above
+//   - Torso compressed vertically but wider horizontally (50% vs 40%)
+//   - Legs minimally visible (15% vs 30%) - mostly obscured from top-down view
+//   - Shadow ellipse at base for depth perception
+//   - Directional asymmetry in head position and arm visibility
+func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
+	template := AnatomicalTemplate{
+		Name:           "humanoid_aerial_" + string(direction),
+		BodyPartLayout: make(map[BodyPart]PartSpec),
+	}
+
+	// Shadow - ellipse at base for depth perception
+	template.BodyPartLayout[PartShadow] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.90,
+		RelativeWidth:  0.50,
+		RelativeHeight: 0.15,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+		ZIndex:         0,
+		ColorRole:      "shadow",
+		Opacity:        0.35,
+		Rotation:       0,
+	}
+
+	// Legs - minimal visibility from top-down, compressed
+	template.BodyPartLayout[PartLegs] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.80,
+		RelativeWidth:  0.35,
+		RelativeHeight: 0.15,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
+		ZIndex:         5,
+		ColorRole:      "primary",
+		Opacity:        0.8,
+		Rotation:       0,
+	}
+
+	// Torso - wider horizontally, compressed vertically for aerial view
+	template.BodyPartLayout[PartTorso] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.50,
+		RelativeWidth:  0.60,
+		RelativeHeight: 0.50,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeRectangle},
+		ZIndex:         10,
+		ColorRole:      "primary",
+		Opacity:        1.0,
+		Rotation:       0,
+	}
+
+	// Direction-specific head and arm positioning for visual asymmetry
+	switch direction {
+	case DirUp:
+		// Facing away - head centered, arms symmetrical
+		template.BodyPartLayout[PartHead] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.20,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+			ZIndex:         15,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+		template.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.50,
+			RelativeWidth:  0.70,
+			RelativeHeight: 0.25,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8, // Arms behind torso when facing up
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+
+	case DirDown:
+		// Facing toward viewer - head centered, arms asymmetric (forward reach)
+		template.BodyPartLayout[PartHead] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.20,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+			ZIndex:         15,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+		template.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.52,
+			RelativeWidth:  0.65,
+			RelativeHeight: 0.30,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         12, // Arms in front of torso when facing down
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+
+	case DirLeft:
+		// Facing left - head shifted left, left arm visible
+		template.BodyPartLayout[PartHead] = PartSpec{
+			RelativeX:      0.42,
+			RelativeY:      0.20,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+			ZIndex:         15,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+		template.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.35,
+			RelativeY:      0.50,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.28,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       270,
+		}
+
+	case DirRight:
+		// Facing right - head shifted right, right arm visible
+		template.BodyPartLayout[PartHead] = PartSpec{
+			RelativeX:      0.58,
+			RelativeY:      0.20,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+			ZIndex:         15,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+		template.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.65,
+			RelativeY:      0.50,
+			RelativeWidth:  0.35,
+			RelativeHeight: 0.28,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       90,
+		}
+	}
+
+	return template
+}
+
+// FantasyHumanoidAerial returns a fantasy-themed aerial humanoid template.
+// Broader shoulders, visible helmet, cape shadow for medieval fantasy aesthetic.
+func FantasyHumanoidAerial(direction Direction) AnatomicalTemplate {
+	base := HumanoidAerialTemplate(direction)
+	base.Name = "fantasy_aerial_" + string(direction)
+
+	// Broader shoulders for armored knight appearance
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.RelativeWidth = 0.65
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Add helmet shape on head
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeCircle, shapes.ShapeOctagon}
+	headSpec.RelativeWidth = 0.38
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Thicker arms for armored appearance
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeHeight = 0.32
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	return base
+}
+
+// SciFiHumanoidAerial returns a sci-fi themed aerial humanoid template.
+// Angular shapes, glowing accents, jetpack indicator for futuristic aesthetic.
+func SciFiHumanoidAerial(direction Direction) AnatomicalTemplate {
+	base := HumanoidAerialTemplate(direction)
+	base.Name = "scifi_aerial_" + string(direction)
+
+	// Angular torso with tech aesthetic
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle}
+	torsoSpec.RelativeWidth = 0.58
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Angular helmet head
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOctagon, shapes.ShapeHexagon}
+	headSpec.RelativeWidth = 0.36
+	headSpec.RelativeHeight = 0.36
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Add jetpack indicator when facing up
+	if direction == DirUp {
+		base.BodyPartLayout[PartArmor] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.52,
+			RelativeWidth:  0.25,
+			RelativeHeight: 0.18,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeHexagon},
+			ZIndex:         7, // Behind torso
+			ColorRole:      "accent3",
+			Opacity:        0.9,
+			Rotation:       0,
+		}
+	}
+
+	return base
+}
+
+// HorrorHumanoidAerial returns a horror-themed aerial humanoid template.
+// Elongated head, irregular shapes, reduced shadow for ghostly effect.
+func HorrorHumanoidAerial(direction Direction) AnatomicalTemplate {
+	base := HumanoidAerialTemplate(direction)
+	base.Name = "horror_aerial_" + string(direction)
+
+	// Elongated, narrow head for unsettling appearance
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.RelativeHeight = 0.40
+	headSpec.RelativeWidth = 0.28
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeSkull, shapes.ShapeEllipse}
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Irregular torso shape
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean}
+	torsoSpec.RelativeWidth = 0.55
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Reduced shadow opacity for ghostly effect
+	shadowSpec := base.BodyPartLayout[PartShadow]
+	shadowSpec.Opacity = 0.2
+	base.BodyPartLayout[PartShadow] = shadowSpec
+
+	// Thin, elongated limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeHeight = 0.35
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	return base
+}
+
+// CyberpunkHumanoidAerial returns a cyberpunk-themed aerial humanoid template.
+// Neon glow outlines, asymmetric tech implants, compact build.
+func CyberpunkHumanoidAerial(direction Direction) AnatomicalTemplate {
+	base := HumanoidAerialTemplate(direction)
+	base.Name = "cyberpunk_aerial_" + string(direction)
+
+	// Compact torso with angular shapes
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.RelativeWidth = 0.56
+	torsoSpec.RelativeHeight = 0.48
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeRectangle}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Angular head with tech aesthetic
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOctagon, shapes.ShapeHexagon}
+	headSpec.RelativeWidth = 0.36
+	headSpec.ColorRole = "accent1" // Tech glow color
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Add neon glow outline as armor overlay
+	base.BodyPartLayout[PartArmor] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.50,
+		RelativeWidth:  0.62,
+		RelativeHeight: 0.52,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeHexagon},
+		ZIndex:         9, // Just below torso
+		ColorRole:      "accent1",
+		Opacity:        0.3, // Subtle glow effect
+		Rotation:       0,
+	}
+
+	return base
+}
+
+// PostApocHumanoidAerial returns a post-apocalyptic themed aerial humanoid template.
+// Ragged edges, makeshift armor, irregular shapes for survival aesthetic.
+func PostApocHumanoidAerial(direction Direction) AnatomicalTemplate {
+	base := HumanoidAerialTemplate(direction)
+	base.Name = "postapoc_aerial_" + string(direction)
+
+	// Irregular torso with ragged appearance
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean, shapes.ShapeRectangle}
+	torsoSpec.RelativeWidth = 0.58
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Covered head (masks, hoods, makeshift helmets)
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeOrganic, shapes.ShapeSkull}
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Rough, angular limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	legsSpec := base.BodyPartLayout[PartLegs]
+	legsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
+	base.BodyPartLayout[PartLegs] = legsSpec
+
+	return base
+}
+
+// SelectAerialTemplate chooses an appropriate aerial template based on entity type, genre, and direction.
+// For humanoid types, returns genre-specific aerial templates.
+// For non-humanoid types, falls back to existing side-view templates.
+func SelectAerialTemplate(entityType, genre string, direction Direction) AnatomicalTemplate {
+	// Check if this is a humanoid type
+	isHumanoid := false
+	switch entityType {
+	case "humanoid", "player", "npc", "knight", "mage", "warrior":
+		isHumanoid = true
+	}
+
+	if !isHumanoid {
+		// Fall back to existing templates for non-humanoid entities
+		return SelectTemplate(entityType)
+	}
+
+	// Apply genre-specific aerial styling for humanoids
+	switch genre {
+	case "fantasy":
+		return FantasyHumanoidAerial(direction)
+	case "scifi", "sci-fi":
+		return SciFiHumanoidAerial(direction)
+	case "horror":
+		return HorrorHumanoidAerial(direction)
+	case "cyberpunk":
+		return CyberpunkHumanoidAerial(direction)
+	case "postapoc", "post-apocalyptic":
+		return PostApocHumanoidAerial(direction)
+	default:
+		return HumanoidAerialTemplate(direction)
+	}
+}

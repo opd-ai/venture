@@ -920,3 +920,447 @@ func BenchmarkBossScaling(b *testing.B) {
 		_ = BossTemplate(base, 2.5)
 	}
 }
+
+// TestHumanoidAerialTemplate tests aerial-view humanoid templates (Phase 1).
+func TestHumanoidAerialTemplate(t *testing.T) {
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	for _, dir := range directions {
+		t.Run(string(dir), func(t *testing.T) {
+			template := HumanoidAerialTemplate(dir)
+
+			// Verify template name
+			expectedName := "humanoid_aerial_" + string(dir)
+			if template.Name != expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, expectedName)
+			}
+
+			// Verify all required aerial parts are present
+			requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+			for _, part := range requiredParts {
+				if _, exists := template.BodyPartLayout[part]; !exists {
+					t.Errorf("Missing required part: %s", part.String())
+				}
+			}
+
+			// Verify aerial proportions (35/50/15 for head/torso/legs)
+			headSpec := template.BodyPartLayout[PartHead]
+			torsoSpec := template.BodyPartLayout[PartTorso]
+			legsSpec := template.BodyPartLayout[PartLegs]
+
+			// Head should be ~35% (±0.02 tolerance)
+			if headSpec.RelativeHeight < 0.33 || headSpec.RelativeHeight > 0.37 {
+				t.Errorf("Aerial head height = %f, want 0.33-0.37 (35%% ±2%%)", headSpec.RelativeHeight)
+			}
+
+			// Torso should be ~50% (±0.03 tolerance)
+			if torsoSpec.RelativeHeight < 0.47 || torsoSpec.RelativeHeight > 0.53 {
+				t.Errorf("Aerial torso height = %f, want 0.47-0.53 (50%% ±3%%)", torsoSpec.RelativeHeight)
+			}
+
+			// Legs should be ~15% (±0.02 tolerance)
+			if legsSpec.RelativeHeight < 0.13 || legsSpec.RelativeHeight > 0.17 {
+				t.Errorf("Aerial legs height = %f, want 0.13-0.17 (15%% ±2%%)", legsSpec.RelativeHeight)
+			}
+
+			// Verify shadow is ellipse for aerial depth perception
+			shadowSpec := template.BodyPartLayout[PartShadow]
+			hasEllipse := false
+			for _, shape := range shadowSpec.ShapeTypes {
+				if shape == shapes.ShapeEllipse {
+					hasEllipse = true
+					break
+				}
+			}
+			if !hasEllipse {
+				t.Error("Aerial shadow should use ellipse shape")
+			}
+		})
+	}
+}
+
+// TestAerialDirectionalAsymmetry tests that aerial templates create directional asymmetry.
+func TestAerialDirectionalAsymmetry(t *testing.T) {
+	tests := []struct {
+		direction      Direction
+		checkAsymmetry func(*testing.T, AnatomicalTemplate)
+	}{
+		{
+			direction: DirUp,
+			checkAsymmetry: func(t *testing.T, template AnatomicalTemplate) {
+				// Up: head centered, arms behind torso
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeX != 0.5 {
+					t.Errorf("DirUp head should be centered (X=0.5), got %f", headSpec.RelativeX)
+				}
+				armsSpec := template.BodyPartLayout[PartArms]
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if armsSpec.ZIndex >= torsoSpec.ZIndex {
+					t.Error("DirUp arms should be behind torso (lower ZIndex)")
+				}
+			},
+		},
+		{
+			direction: DirDown,
+			checkAsymmetry: func(t *testing.T, template AnatomicalTemplate) {
+				// Down: head centered, arms in front of torso
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeX != 0.5 {
+					t.Errorf("DirDown head should be centered (X=0.5), got %f", headSpec.RelativeX)
+				}
+				armsSpec := template.BodyPartLayout[PartArms]
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if armsSpec.ZIndex <= torsoSpec.ZIndex {
+					t.Error("DirDown arms should be in front of torso (higher ZIndex)")
+				}
+			},
+		},
+		{
+			direction: DirLeft,
+			checkAsymmetry: func(t *testing.T, template AnatomicalTemplate) {
+				// Left: head shifted left, arms rotated 270°
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeX >= 0.5 {
+					t.Errorf("DirLeft head should be left of center (X<0.5), got %f", headSpec.RelativeX)
+				}
+				armsSpec := template.BodyPartLayout[PartArms]
+				if armsSpec.Rotation != 270 {
+					t.Errorf("DirLeft arms rotation = %f, want 270", armsSpec.Rotation)
+				}
+			},
+		},
+		{
+			direction: DirRight,
+			checkAsymmetry: func(t *testing.T, template AnatomicalTemplate) {
+				// Right: head shifted right, arms rotated 90°
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeX <= 0.5 {
+					t.Errorf("DirRight head should be right of center (X>0.5), got %f", headSpec.RelativeX)
+				}
+				armsSpec := template.BodyPartLayout[PartArms]
+				if armsSpec.Rotation != 90 {
+					t.Errorf("DirRight arms rotation = %f, want 90", armsSpec.Rotation)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.direction), func(t *testing.T) {
+			template := HumanoidAerialTemplate(tt.direction)
+			tt.checkAsymmetry(t, template)
+		})
+	}
+}
+
+// TestAerialGenreVariants tests genre-specific aerial templates.
+func TestAerialGenreVariants(t *testing.T) {
+	tests := []struct {
+		name          string
+		templateFunc  func(Direction) AnatomicalTemplate
+		expectedName  string
+		checkFeatures func(*testing.T, AnatomicalTemplate)
+	}{
+		{
+			name:         "fantasy_aerial",
+			templateFunc: FantasyHumanoidAerial,
+			expectedName: "fantasy_aerial_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Fantasy should have broader shoulders (wider torso)
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if torsoSpec.RelativeWidth < 0.64 {
+					t.Errorf("Fantasy aerial should have broad shoulders (torso width >= 0.64), got %f", torsoSpec.RelativeWidth)
+				}
+				// Check for helmet shape in head
+				headSpec := template.BodyPartLayout[PartHead]
+				hasHelmetShape := false
+				for _, shape := range headSpec.ShapeTypes {
+					if shape == shapes.ShapeHexagon || shape == shapes.ShapeOctagon {
+						hasHelmetShape = true
+						break
+					}
+				}
+				if !hasHelmetShape {
+					t.Error("Fantasy aerial head should include helmet shapes (hexagon/octagon)")
+				}
+			},
+		},
+		{
+			name:         "scifi_aerial",
+			templateFunc: SciFiHumanoidAerial,
+			expectedName: "scifi_aerial_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Sci-fi should have angular shapes
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				hasAngular := false
+				for _, shape := range torsoSpec.ShapeTypes {
+					if shape == shapes.ShapeHexagon || shape == shapes.ShapeOctagon {
+						hasAngular = true
+						break
+					}
+				}
+				if !hasAngular {
+					t.Error("Sci-fi aerial should have angular torso shapes")
+				}
+				// Check for angular head
+				headSpec := template.BodyPartLayout[PartHead]
+				hasAngularHead := false
+				for _, shape := range headSpec.ShapeTypes {
+					if shape == shapes.ShapeOctagon || shape == shapes.ShapeHexagon {
+						hasAngularHead = true
+						break
+					}
+				}
+				if !hasAngularHead {
+					t.Error("Sci-fi aerial head should be angular (octagon/hexagon)")
+				}
+			},
+		},
+		{
+			name:         "horror_aerial",
+			templateFunc: HorrorHumanoidAerial,
+			expectedName: "horror_aerial_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Horror should have elongated head
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeHeight <= 0.38 {
+					t.Errorf("Horror aerial should have elongated head (height > 0.38), got %f", headSpec.RelativeHeight)
+				}
+				// Check for reduced shadow opacity
+				shadowSpec := template.BodyPartLayout[PartShadow]
+				if shadowSpec.Opacity > 0.25 {
+					t.Errorf("Horror aerial shadow should be faint (opacity <= 0.25), got %f", shadowSpec.Opacity)
+				}
+			},
+		},
+		{
+			name:         "cyberpunk_aerial",
+			templateFunc: CyberpunkHumanoidAerial,
+			expectedName: "cyberpunk_aerial_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Cyberpunk should have compact build
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if torsoSpec.RelativeHeight > 0.50 {
+					t.Errorf("Cyberpunk aerial should have compact torso (height <= 0.50), got %f", torsoSpec.RelativeHeight)
+				}
+				// Check for neon glow overlay (armor part)
+				if _, hasArmor := template.BodyPartLayout[PartArmor]; !hasArmor {
+					t.Error("Cyberpunk aerial should have neon glow overlay (armor part)")
+				}
+			},
+		},
+		{
+			name:         "postapoc_aerial",
+			templateFunc: PostApocHumanoidAerial,
+			expectedName: "postapoc_aerial_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Post-apoc should have irregular shapes
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				hasOrganic := false
+				for _, shape := range torsoSpec.ShapeTypes {
+					if shape == shapes.ShapeOrganic {
+						hasOrganic = true
+						break
+					}
+				}
+				if !hasOrganic {
+					t.Error("Post-apoc aerial should have organic/ragged torso shapes")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := tt.templateFunc(DirDown)
+
+			// Verify template name
+			if template.Name != tt.expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, tt.expectedName)
+			}
+
+			// Verify all aerial parts present
+			requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+			for _, part := range requiredParts {
+				if _, exists := template.BodyPartLayout[part]; !exists {
+					t.Errorf("Missing required part: %s", part.String())
+				}
+			}
+
+			// Run genre-specific feature checks
+			tt.checkFeatures(t, template)
+		})
+	}
+}
+
+// TestSelectAerialTemplate tests the aerial template dispatcher.
+func TestSelectAerialTemplate(t *testing.T) {
+	tests := []struct {
+		name           string
+		entityType     string
+		genre          string
+		direction      Direction
+		expectedName   string
+		shouldBeAerial bool
+	}{
+		{"humanoid_fantasy", "player", "fantasy", DirDown, "fantasy_aerial_down", true},
+		{"humanoid_scifi", "humanoid", "scifi", DirUp, "scifi_aerial_up", true},
+		{"humanoid_horror", "warrior", "horror", DirLeft, "horror_aerial_left", true},
+		{"humanoid_cyberpunk", "knight", "cyberpunk", DirRight, "cyberpunk_aerial_right", true},
+		{"humanoid_postapoc", "npc", "postapoc", DirDown, "postapoc_aerial_down", true},
+		{"humanoid_unknown_genre", "player", "unknown", DirDown, "humanoid_aerial_down", true},
+		{"non_humanoid_blob", "blob", "fantasy", DirDown, "blob", false},
+		{"non_humanoid_quadruped", "wolf", "scifi", DirUp, "quadruped", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := SelectAerialTemplate(tt.entityType, tt.genre, tt.direction)
+
+			if template.Name != tt.expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, tt.expectedName)
+			}
+
+			// Verify aerial templates have proper proportions
+			if tt.shouldBeAerial {
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				// Aerial torsos should be ~50% height
+				if torsoSpec.RelativeHeight < 0.45 || torsoSpec.RelativeHeight > 0.55 {
+					t.Errorf("Aerial torso height should be ~50%%, got %f", torsoSpec.RelativeHeight)
+				}
+			}
+		})
+	}
+}
+
+// TestAerialTemplate_Determinism tests that aerial templates are deterministic.
+func TestAerialTemplate_Determinism(t *testing.T) {
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	for _, dir := range directions {
+		t.Run(string(dir), func(t *testing.T) {
+			// Generate template twice
+			template1 := HumanoidAerialTemplate(dir)
+			template2 := HumanoidAerialTemplate(dir)
+
+			// Verify names match
+			if template1.Name != template2.Name {
+				t.Errorf("Template names differ: %s vs %s", template1.Name, template2.Name)
+			}
+
+			// Verify same number of parts
+			if len(template1.BodyPartLayout) != len(template2.BodyPartLayout) {
+				t.Errorf("Part count differs: %d vs %d", len(template1.BodyPartLayout), len(template2.BodyPartLayout))
+			}
+
+			// Verify all specs match
+			for part, spec1 := range template1.BodyPartLayout {
+				spec2, exists := template2.BodyPartLayout[part]
+				if !exists {
+					t.Errorf("Part %s missing in second generation", part.String())
+					continue
+				}
+
+				// Compare all fields
+				if spec1.RelativeX != spec2.RelativeX {
+					t.Errorf("Part %s RelativeX differs: %f vs %f", part.String(), spec1.RelativeX, spec2.RelativeX)
+				}
+				if spec1.RelativeY != spec2.RelativeY {
+					t.Errorf("Part %s RelativeY differs: %f vs %f", part.String(), spec1.RelativeY, spec2.RelativeY)
+				}
+				if spec1.ZIndex != spec2.ZIndex {
+					t.Errorf("Part %s ZIndex differs: %d vs %d", part.String(), spec1.ZIndex, spec2.ZIndex)
+				}
+				if spec1.Rotation != spec2.Rotation {
+					t.Errorf("Part %s Rotation differs: %f vs %f", part.String(), spec1.Rotation, spec2.Rotation)
+				}
+			}
+		})
+	}
+}
+
+// TestAerialProportions_Standard tests that all aerial templates follow standard proportions.
+func TestAerialProportions_Standard(t *testing.T) {
+	genres := []struct {
+		name         string
+		templateFunc func(Direction) AnatomicalTemplate
+	}{
+		{"base", HumanoidAerialTemplate},
+		{"fantasy", FantasyHumanoidAerial},
+		{"scifi", SciFiHumanoidAerial},
+		{"horror", HorrorHumanoidAerial},
+		{"cyberpunk", CyberpunkHumanoidAerial},
+		{"postapoc", PostApocHumanoidAerial},
+	}
+
+	for _, g := range genres {
+		t.Run(g.name, func(t *testing.T) {
+			template := g.templateFunc(DirDown)
+
+			// Head: 35% ± 5% tolerance (allow genre variation)
+			headSpec := template.BodyPartLayout[PartHead]
+			if headSpec.RelativeHeight < 0.28 || headSpec.RelativeHeight > 0.42 {
+				t.Errorf("%s head height = %f, want 0.28-0.42 (35%% ±7%%)", g.name, headSpec.RelativeHeight)
+			}
+
+			// Torso: 50% ± 5% tolerance
+			torsoSpec := template.BodyPartLayout[PartTorso]
+			if torsoSpec.RelativeHeight < 0.45 || torsoSpec.RelativeHeight > 0.55 {
+				t.Errorf("%s torso height = %f, want 0.45-0.55 (50%% ±5%%)", g.name, torsoSpec.RelativeHeight)
+			}
+
+			// Legs: 15% ± 3% tolerance (minimal from aerial view)
+			legsSpec := template.BodyPartLayout[PartLegs]
+			if legsSpec.RelativeHeight < 0.12 || legsSpec.RelativeHeight > 0.18 {
+				t.Errorf("%s legs height = %f, want 0.12-0.18 (15%% ±3%%)", g.name, legsSpec.RelativeHeight)
+			}
+
+			// Verify reduced leg opacity for aerial perspective
+			if legsSpec.Opacity > 0.85 {
+				t.Errorf("%s legs should have reduced opacity for aerial view, got %f", g.name, legsSpec.Opacity)
+			}
+		})
+	}
+}
+
+// BenchmarkAerialTemplates benchmarks aerial template generation performance.
+func BenchmarkAerialTemplates(b *testing.B) {
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	for _, dir := range directions {
+		b.Run("base_"+string(dir), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = HumanoidAerialTemplate(dir)
+			}
+		})
+	}
+}
+
+// BenchmarkAerialGenreTemplates benchmarks genre-specific aerial template generation.
+func BenchmarkAerialGenreTemplates(b *testing.B) {
+	genres := []struct {
+		name         string
+		templateFunc func(Direction) AnatomicalTemplate
+	}{
+		{"fantasy", FantasyHumanoidAerial},
+		{"scifi", SciFiHumanoidAerial},
+		{"horror", HorrorHumanoidAerial},
+		{"cyberpunk", CyberpunkHumanoidAerial},
+		{"postapoc", PostApocHumanoidAerial},
+	}
+
+	for _, g := range genres {
+		b.Run(g.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = g.templateFunc(DirDown)
+			}
+		})
+	}
+}
+
+// BenchmarkSelectAerialTemplate benchmarks the aerial template dispatcher.
+func BenchmarkSelectAerialTemplate(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = SelectAerialTemplate("player", "fantasy", DirDown)
+	}
+}

@@ -85,6 +85,9 @@ func TestInventorySystemLogging(t *testing.T) {
 		MaxItems: 20,
 	})
 
+	// Flush pending entities to active entities map
+	world.Update(0)
+
 	// Create inventory system with logger
 	is := NewInventorySystemWithLogger(world, logger)
 
@@ -175,6 +178,7 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 			Items:    make([]*item.Item, 0),
 			MaxItems: 20,
 		})
+		world1.Update(0) // Flush entities to active map
 		is1 := NewInventorySystem(world1)
 		success1, _ := is1.AddItemToInventory(entity1.ID, testItem)
 
@@ -189,6 +193,7 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 			Items:    make([]*item.Item, 0),
 			MaxItems: 20,
 		})
+		world2.Update(0) // Flush entities to active map
 		is2 := NewInventorySystemWithLogger(world2, logger)
 		success2, _ := is2.AddItemToInventory(entity2.ID, testItem)
 

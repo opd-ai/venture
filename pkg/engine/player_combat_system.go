@@ -3,7 +3,10 @@
 // to combat actions via the CombatSystem.
 package engine
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 // PlayerCombatSystem processes player combat input and triggers attacks.
 // It bridges the InputSystem (which captures Space key) and CombatSystem (which applies damage).
@@ -54,25 +57,49 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			continue // Still on cooldown
 		}
 
-		// Find nearest enemy within attack range
-		maxRange := attack.Range
-		target := FindNearestEnemy(s.world, entity, maxRange)
-
 		// Consume the input immediately to prevent multiple triggers
 		input.SetActionPressed(false)
 
+		// ALWAYS trigger attack animation, even if no target
+		// This provides visual feedback that the attack button was pressed
+		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
+			anim := animComp.(*AnimationComponent)
+			anim.SetState(AnimationStateAttack)
+			fmt.Printf("[PLAYER COMBAT] Triggering attack animation (current state: %s)\n", anim.CurrentState)
+
+			// Set OnComplete callback to return to idle/walk
+			anim.OnComplete = func() {
+				if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
+					vel := velComp.(*VelocityComponent)
+					speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+					if speed > 0.1 {
+						anim.SetState(AnimationStateWalk)
+					} else {
+						anim.SetState(AnimationStateIdle)
+					}
+				}
+			}
+		}
+
+		// Start cooldown even if no target (player swung at air)
+		attack.ResetCooldown()
+
+		// Find nearest enemy within attack range for damage
+		maxRange := attack.Range
+		target := FindNearestEnemy(s.world, entity, maxRange)
+
 		if target == nil {
-			// No enemy in range - attack fails silently
-			// Could add feedback later (swing animation, miss sound)
+			// No enemy in range - attack animation plays but no damage
+			fmt.Printf("[PLAYER COMBAT] Attack animation playing, but no target in range\n")
 			continue
 		}
 
-		// Perform attack through combat system
+		// Perform attack through combat system (only if target exists)
 		hit := s.combatSystem.Attack(entity, target)
 
 		if hit {
+			fmt.Printf("[PLAYER COMBAT] Attack hit target entity %d\n", target.ID)
 			// Attack successful - could trigger effects here
-			// - Attack animation
 			// - Hit sound effect
 			// - Screen shake
 			// - Tutorial progress tracking

@@ -214,29 +214,29 @@ func calculateAnimationOffset(state string, frameIndex, frameCount int) struct{ 
 
 	switch state {
 	case "walk", "run":
-		// Bobbing motion - increase amplitude for visibility
+		// Bobbing motion - SIGNIFICANTLY increased amplitude for visibility
 		cycle := math.Sin(t * 2 * math.Pi)
-		offset.Y = cycle * 4.0 // Increased from 2.0 to 4.0 pixels
+		offset.Y = cycle * 8.0 // Increased from 4.0 to 8.0 pixels (200% increase)
 
 	case "jump":
 		// Parabolic arc
 		offset.Y = -4.0 * (t - t*t) * 15.0 // Jump up and down
 
 	case "attack":
-		// Forward lunge - increase amplitude for visibility
+		// Forward lunge - SIGNIFICANTLY increased amplitude for visibility
 		if t < 0.5 {
-			offset.X = t * 8.0 // Increased from 4.0 to 8.0 pixels
+			offset.X = t * 16.0 // Increased from 8.0 to 16.0 pixels (200% increase)
 		} else {
-			offset.X = (1.0 - t) * 8.0
+			offset.X = (1.0 - t) * 16.0
 		}
 
 	case "hit":
-		// Knockback
-		offset.X = -(1.0 - t) * 6.0 // Increased from 3.0 to 6.0 pixels
+		// Knockback - SIGNIFICANTLY increased amplitude
+		offset.X = -(1.0 - t) * 12.0 // Increased from 6.0 to 12.0 pixels (200% increase)
 
 	case "death":
-		// Fall down
-		offset.Y = t * 12.0 // Increased from 8.0 to 12.0 pixels
+		// Fall down - SIGNIFICANTLY increased amplitude
+		offset.Y = t * 20.0 // Increased from 12.0 to 20.0 pixels (167% increase)
 	}
 
 	return offset
@@ -248,13 +248,13 @@ func calculateAnimationRotation(state string, frameIndex, frameCount int) float6
 
 	switch state {
 	case "attack":
-		// Swing arc
+		// Swing arc - SIGNIFICANTLY increased for visibility
 		if t < 0.3 {
-			return -t * 0.5 // Wind up
+			return -t * 1.0 // Wind up (increased from 0.5 to 1.0 radians)
 		} else if t < 0.6 {
-			return (t - 0.3) * 1.5 // Swing through
+			return (t - 0.3) * 3.0 // Swing through (increased from 1.5 to 3.0 radians)
 		} else {
-			return (1.0 - t) * 0.3 // Follow through
+			return (1.0 - t) * 0.6 // Follow through (increased from 0.3 to 0.6 radians)
 		}
 
 	case "death":
@@ -262,8 +262,8 @@ func calculateAnimationRotation(state string, frameIndex, frameCount int) float6
 		return t * math.Pi / 2 // 90 degree rotation
 
 	case "cast":
-		// Gentle sway
-		return math.Sin(t*2*math.Pi) * 0.1
+		// Gentle sway - increased
+		return math.Sin(t*2*math.Pi) * 0.2 // Increased from 0.1 to 0.2
 	}
 
 	return 0
@@ -275,23 +275,23 @@ func calculateAnimationScale(state string, frameIndex, frameCount int) float64 {
 
 	switch state {
 	case "jump":
-		// Squash and stretch
+		// Squash and stretch - more dramatic
 		if t < 0.2 {
-			return 1.0 - t*0.5 // Squash before jump
+			return 1.0 - t // Squash before jump (more pronounced)
 		} else if t < 0.8 {
-			return 0.9 + (t-0.2)*0.3 // Stretch during jump
+			return 0.8 + (t-0.2)*0.5 // Stretch during jump
 		} else {
-			return 1.0 - (t-0.8)*0.5 // Squash on landing
+			return 1.0 - (t - 0.8) // Squash on landing
 		}
 
 	case "hit":
-		// Squash on impact
-		return 1.0 - t*0.2
+		// Squash on impact - more dramatic
+		return 1.0 - t*0.4 // Increased from 0.2 to 0.4
 
 	case "attack":
-		// Slight scale up during strike
+		// Slight scale up during strike - more pronounced
 		if t > 0.3 && t < 0.6 {
-			return 1.0 + (t-0.3)*0.3
+			return 1.0 + (t-0.3)*0.6 // Increased from 0.3 to 0.6
 		}
 	}
 
@@ -337,6 +337,10 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 				}
 				// Store facing for idle state
 				anim.LastFacing = facing
+
+				// DEBUG: Log facing changes for player
+				fmt.Printf("[ANIMATION] Entity %d facing: %s (velocity: %.1f, %.1f)\n",
+					entity.ID, facing, vel.VX, vel.VY)
 			} else if anim.LastFacing != "" {
 				// Use last facing direction when idle
 				facing = anim.LastFacing

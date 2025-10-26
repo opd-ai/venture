@@ -138,7 +138,7 @@ This approach allows immediate user feedback while keeping the codebase maintain
 
 ---
 
-## Phase 3: Commerce & NPC Interaction **IN PROGRESS** (October 26, 2025)
+## Phase 3: Commerce & NPC Interaction ✅ COMPLETE (October 26, 2025)
 
 **Goal**: Shop system with merchant NPCs and dialog interface.
 
@@ -170,13 +170,46 @@ This approach allows immediate user feedback while keeping the codebase maintain
   - Comprehensive test suite with 8 test functions covering all message types (protocol_test.go)
   - Full workflow test demonstrating client-server commerce interaction
   - Error scenario tests for transaction failures
-- ⏳ Integration into client (TODO)
+- ✅ Client integration in `cmd/client/main.go` (October 26, 2025)
+  - SpawnMerchantsInTerrain() spawns 2 merchants per dungeon level
+  - CommerceSystem and DialogSystem initialized and wired to game systems
+  - ShopUI integrated into game rendering and update loop
+  - F key for NPC interaction with proximity detection (64 pixel range)
+  - FindClosestMerchant() and GetNearbyMerchants() for merchant discovery
+  - GetMerchantInteractionPrompt() for UI feedback
+  - Shop UI blocks game input when visible (similar to inventory/quest UI)
+- ✅ Helper functions in `pkg/engine/merchant_spawn.go` (312 lines)
+  - SpawnMerchantFromData() converts procgen MerchantData to engine entities
+  - SpawnMerchantsInTerrain() spawns merchants at deterministic locations
+  - GetNearbyMerchants() returns merchants within radius
+  - FindClosestMerchant() finds nearest merchant for interaction
+  - GetMerchantInteractionPrompt() generates UI text
+  - Comprehensive test suite with 5 test functions (merchant_spawn_test.go)
+
+**Technical Notes**:
+- Merchant Generation: docs/IMPLEMENTATION_MERCHANT_GENERATION.md
+- Network Protocol: docs/IMPLEMENTATION_COMMERCE_PROTOCOL.md
+- All merchants have dialog components with MerchantDialogProvider
+- Merchants spawn with full inventories (15-24 items, genre-appropriate)
+- Fixed merchants for dungeon shops, nomadic merchants for future wandering NPCs
+- F key interaction with proximity detection (no need to aim)
+- Shop UI follows same patterns as Inventory/Quest UI for consistency
+- Transaction validation extensible via TransactionValidator interface
+- Server-authoritative commerce prevents multiplayer exploits
 
 **Components**:
 - Fixed-location shopkeepers (towns/settlements)
 - Nomadic merchants with procedural spawn logic
-- Basic dialog system with extensible interface
-- Buy/sell transactions integrated with inventory
+- Dialog system with extensible provider interface
+- Buy/sell transactions integrated with inventory system
+- Network protocol for multiplayer commerce synchronization
+- Proximity-based NPC interaction system
+
+**Known Limitations**:
+- Merchants currently have infinite gold (future: limited merchant funds)
+- No merchant reputation system yet
+- Dialog system is simple (future: branching conversations, quest dialogs)
+- No merchant restocking yet (RestockTimeSec field prepared for future use)
 
 **Technical Notes**:
 - Merchant entity type in `pkg/procgen/entity`

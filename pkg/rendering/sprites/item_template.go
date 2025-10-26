@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package sprites - item template system for recognizable equipment and consumables.
 // This file implements Phase 5.4 of the Visual Fidelity Enhancement Plan.
 package sprites

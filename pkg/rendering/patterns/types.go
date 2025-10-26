@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package patterns provides pattern type definitions and configuration.
 package patterns
 

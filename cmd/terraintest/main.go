@@ -55,15 +55,15 @@ func main() {
 	case "bsp":
 		gen = terrain.NewBSPGeneratorWithLogger(logger)
 	case "cellular":
-		gen = terrain.NewCellularGenerator()
+		gen = terrain.NewCellularGeneratorWithLogger(logger)
 	case "maze":
-		gen = terrain.NewMazeGenerator()
+		gen = terrain.NewMazeGeneratorWithLogger(logger)
 	case "forest":
-		gen = terrain.NewForestGenerator()
+		gen = terrain.NewForestGeneratorWithLogger(logger)
 	case "city":
-		gen = terrain.NewCityGenerator()
+		gen = terrain.NewCityGeneratorWithLogger(logger)
 	case "composite":
-		gen = terrain.NewCompositeGenerator()
+		gen = terrain.NewCompositeGeneratorWithLogger(logger)
 	default:
 		testLogger.WithField("algorithm", *algorithm).Fatal("unknown algorithm (use 'bsp', 'cellular', 'maze', 'forest', 'city', 'composite', or 'multilevel')")
 	}

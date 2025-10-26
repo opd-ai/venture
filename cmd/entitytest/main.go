@@ -37,8 +37,8 @@ func main() {
 
 	testLogger.Info("generating entities")
 
-	// Create generator
-	gen := entity.NewEntityGenerator()
+	// Create generator with logger
+	gen := entity.NewEntityGeneratorWithLogger(logger)
 
 	// Set up generation parameters
 	params := procgen.GenerationParams{

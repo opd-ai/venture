@@ -56,7 +56,7 @@ func main() {
 	fmt.Printf("- Equipment Slots: 10 (weapons, armor, accessories)\n\n")
 
 	// Generate items
-	itemGen := item.NewItemGenerator()
+	itemGen := item.NewItemGeneratorWithLogger(logger)
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      *depth,

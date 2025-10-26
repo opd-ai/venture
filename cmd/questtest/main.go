@@ -39,8 +39,8 @@ func main() {
 
 	testLogger.Info("generating quests")
 
-	// Create generator
-	generator := quest.NewQuestGenerator()
+	// Create generator with logger
+	generator := quest.NewQuestGeneratorWithLogger(logger)
 
 	// Set up generation parameters
 	params := procgen.GenerationParams{

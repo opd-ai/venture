@@ -41,8 +41,8 @@ func main() {
 
 	testLogger.Info("generating skill trees")
 
-	// Create generator
-	generator := skills.NewSkillTreeGenerator()
+	// Create generator with logger
+	generator := skills.NewSkillTreeGeneratorWithLogger(logger)
 
 	// Set up generation parameters
 	params := procgen.GenerationParams{

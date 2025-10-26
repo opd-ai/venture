@@ -45,8 +45,8 @@ func main() {
 
 	testLogger.Info("generating items")
 
-	// Create generator
-	generator := item.NewItemGenerator()
+	// Create generator with logger
+	generator := item.NewItemGeneratorWithLogger(logger)
 
 	// Set up parameters
 	params := procgen.GenerationParams{

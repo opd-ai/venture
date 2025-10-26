@@ -2,335 +2,864 @@
 
 ## Overview
 
-This document outlines the development plan for Venture, a fully procedural multiplayer action-RPG. The project was organized into 8 major phases, each with specific deliverables and milestones.
+This document outlines the development plan for Venture, a fully procedural multiplayer action-RPG built with Go 1.24 and Ebiten 2.9. The project successfully completed its initial 8 development phases (Foundation through Polish & Optimization) in October 2025. This roadmap presents the post-Beta enhancement strategy based on comprehensive technical audits and community feedback priorities.
 
-## Project Status: ALL PHASES COMPLETE ✅
+## Project Status: BETA TO PRODUCTION TRANSITION 🚀
 
-**Phase:** 8 (Polish & Optimization) - ✅ COMPLETE  
-**Version:** 1.0 Beta  
-**Status:** Ready for Beta Release 🎉
+**Current Phase:** Post-Beta Enhancement (Phase 9)  
+**Version:** 1.0 Beta → 1.1 Production  
+**Timeline Horizon:** 6-8 months (January - August 2026)  
+**Status:** Active Development - Production Hardening
 
-All major development phases complete with:
-- ✅ 100% procedural content generation (graphics, audio, gameplay)
-- ✅ Full multiplayer co-op support (2-4 players, high-latency tolerant)  
-- ✅ Native mobile support (iOS & Android)
-- ✅ Five distinct genres with blending system
-- ✅ Comprehensive tutorial and documentation
-- ✅ Performance-optimized (106 FPS with 2000 entities)
-- ✅ Production-ready save/load system
-- ✅ 80%+ test coverage across all packages
+### Current State Strengths ✅
 
-**Next milestone:** Public Beta release and community feedback collection.
+- **Mature Architecture**: Clean ECS design with 48.9% engine coverage, 100% combat/procgen coverage
+- **Deterministic Generation**: Fully seed-based with multiplayer synchronization proven at 200-5000ms latency
+- **Cross-Platform**: Desktop (Linux/macOS/Windows), WebAssembly, mobile (iOS/Android) all operational
+- **Comprehensive Testing**: 82.4% average test coverage, table-driven tests throughout
+- **Production Monitoring**: Structured logging with logrus integrated across all major packages
+- **Visual Fidelity**: Phase 5 sprite system complete with silhouette analysis, cache optimization (65-75% hit rate)
+- **Performance**: 106 FPS achieved with 2000 entities (exceeds 60 FPS target)
 
----
+### Technical Debt Priorities 🔧
 
-## Phase 1: Architecture & Foundation ✅
-**Timeline:** Weeks 1-2  
-**Status:** COMPLETE
+1. **Test Coverage Gaps**: engine (48.9%), rendering/sprites (50.0%), rendering/patterns (0.0%), saveload (66.9%), network (57.1%)
+2. **Death/Revival Mechanics**: Incomplete implementation - player death doesn't disable actions or drop items
+3. **Menu UX Consistency**: Not all menus support dual-exit (toggle key + ESC)
+4. **Performance Profiling**: Visual sluggishness reported despite 106 FPS metric (frame time variance likely)
+5. **LAN Party Experience**: No single-command "host-and-play" mode for local co-op
 
-### Objectives
-- [x] Set up project structure and Go module
-- [x] Define core interfaces for all major systems
-- [x] Implement ECS (Entity-Component-System) framework
-- [x] Create basic Ebiten game loop integration
-- [x] Write Architecture Decision Records
+### Active Development Focus (January 2026) 🎯
 
-### Deliverables
-- [x] Complete project structure with `cmd/` and `pkg/` organization
-- [x] Core ECS implementation in `pkg/engine/`
-- [x] Base generator interface in `pkg/procgen/`
-- [x] Network protocol interfaces in `pkg/network/`
-- [x] Rendering interfaces in `pkg/rendering/`
-- [x] Audio interfaces in `pkg/audio/`
-- [x] Combat and world state packages
-- [x] Client and server executable stubs
-- [x] Comprehensive documentation (ARCHITECTURE.md, DEVELOPMENT.md)
-- [x] Build and test infrastructure
+Per `IMPLEMENTATION_REPORT.md`, currently completing **GAP-001 through GAP-003** (Spell System):
+- ✅ Elemental status effects (Fire/Ice/Lightning/Poison DoT)
+- ✅ Shield absorption mechanics
+- ✅ Buff/debuff stat modification system
+- Coverage improvement: 45.7% → 46.4% (engine package)
 
-### Technical Achievements
-- Entity-Component-System pattern implemented
-- Deterministic seed generation system
-- Clean package boundaries with minimal dependencies
-- Test infrastructure with build tags for CI/headless environments
-- Documentation covering all architectural decisions
+**Next milestone:** Complete remaining high-priority gaps (GAP-007, GAP-009, GAP-015), then proceed to Phase 9 enhancements.
 
 ---
 
-## Phase 2: Procedural Generation Core
-**Timeline:** Weeks 3-5  
-**Status:** ✅ COMPLETE
+## Enhancement Categories
 
-### Objectives
-- [x] Implement terrain/dungeon generation algorithms
-- [x] Create entity (monster/NPC) generation system
-- [x] Build item generation with stats and properties
-- [x] Implement magic/spell generation system
-- [x] Create skill tree and progression generation
-- [x] Build genre definition and modifier system
-- [x] Ensure all generation is deterministic
-
-### Deliverables
-- [x] Terrain generation (BSP and Cellular Automata algorithms)
-- [x] Entity generator with templates and stat scaling
-- [x] Item generation system with rarity tiers
-- [x] Magic/spell generation with elements and effects
-- [x] Skill tree generation with prerequisites
-- [x] Genre definition system (5 base genres)
-- [x] CLI testing tools for all generators
-- [x] Comprehensive test suites (90%+ coverage)
-
-### Acceptance Criteria
-- ✅ Same seed produces identical content every time
-- ✅ Generated content is balanced and playable
-- ✅ Generation completes within performance targets (<2s)
-- ✅ Content variety is sufficient (thousands of unique items/monsters)
+Based on comprehensive analysis of `docs/auditors/` and codebase audit, enhancements are organized into 6 categories prioritized by impact, effort, and risk.
 
 ---
 
-## Phase 3: Visual Rendering System
-**Timeline:** Weeks 6-7  
-**Status:** ✅ COMPLETE
+### Category 1: Core Gameplay Mechanics (MUST HAVE)
 
-### Objectives
-- [x] Implement procedural shape generation primitives
-- [x] Create runtime sprite generation system
-- [x] Build tile rendering for terrain
-- [x] Implement particle effects system
-- [x] Create UI element rendering
-- [x] Build color palette generation per genre
+**Priority**: Critical  
+**Estimated Effort**: Large (3-4 weeks)  
+**Dependencies**: None - foundational work
 
-### Deliverables
-- [x] Genre-based color palettes (98.4% coverage)
-- [x] Procedural shape generation (100% coverage)
-- [x] Runtime sprite generation (100% coverage)
-- [x] Tile rendering system (92.6% coverage)
-- [x] Particle effects (98.0% coverage)
-- [x] UI rendering (94.8% coverage)
-- [x] Performance benchmarks achieving 60+ FPS
+These enhancements address game-breaking gaps and incomplete mechanics identified in `docs/auditors/AUTO_AUDIT.md` and `docs/auditors/EVENT.md`.
 
-### Acceptance Criteria
-- ✅ 60 FPS on target hardware
-- ✅ Visually distinct genres
-- ✅ Smooth animations
-- ✅ Readable UI elements
+#### 1.1: Complete Death & Revival System
 
----
+**Description**: Implement comprehensive death mechanics including entity immobilization, action disabling, item dropping, and multiplayer revival system.
 
-## Phase 4: Audio Synthesis
-**Timeline:** Weeks 8-9  
-**Status:** ✅ COMPLETE
+**Rationale**: Currently referenced in `docs/auditors/EVENT.md:L15-L34` as critical gap. Player death doesn't properly disable actions, items don't drop, and revival mechanics are non-functional. This creates confusing gameplay states and breaks multiplayer cooperation expectations.
 
-### Objectives
-- [x] Implement waveform synthesis (sine, square, sawtooth, noise)
-- [x] Create procedural music composition system
-- [x] Build sound effect generation
-- [x] Implement audio mixing via Ebiten audio
-- [x] Create genre-specific audio profiles
+**Technical Approach**:
+1. Add `DeadComponent` to `pkg/engine/combat_components.go` with `timeOfDeath` field
+2. Modify `CombatSystem.Update()` in `pkg/engine/combat_system.go:L123-L187` to check health and apply `DeadComponent`
+3. Gate all action systems (movement, attack, spell casting, item use) on absence of `DeadComponent`
+4. Implement item drop spawning in death handler: create entity with `PositionComponent`, `SpriteComponent`, and `PickupComponent`
+5. Add proximity detection in multiplayer: check for nearby ally entities (distance < 32 units)
+6. On revival: remove `DeadComponent`, restore 20% health, trigger resurrection animation
 
-### Deliverables
-- [x] Waveform generation (5 types, 94.2% coverage)
-- [x] Procedural music composition (100% coverage)
-- [x] Sound effect generation (9 types, 85.3% coverage)
-- [x] Audio mixing and processing
-- [x] Genre-aware audio themes
-- [x] CLI testing tool (audiotest)
+**Success Criteria**:
+- Zero-health entities cannot move, attack, cast spells, or use items
+- Items from inventory spawn at death location within 64-unit radius
+- In multiplayer, ally touch triggers revival restoring 20% max health
+- Death and revival properly synchronized across clients via network protocol
+- Comprehensive test suite covering single-player death, multiplayer revival, edge cases (simultaneous deaths)
 
-### Acceptance Criteria
-- ✅ Audio plays without glitches or stuttering
-- ✅ Music is pleasant and genre-appropriate
-- ✅ SFX provide good feedback for player actions
-- ✅ Audio generation doesn't impact frame rate
+**Risks**:
+- Network desync if death/revival not properly synchronized (mitigate with authoritative server approach)
+- Item drop physics causing items to spawn inside walls (mitigate with collision validation)
+- Revival griefing potential (mitigate with cooldown or animation lock)
+
+**Reference Files**:
+- `pkg/engine/combat_system.go` (death detection logic)
+- `pkg/engine/combat_components.go` (new DeadComponent)
+- `pkg/engine/movement_system.go` (gate on !hasDeadComponent)
+- `pkg/engine/spell_casting.go` (gate on !hasDeadComponent)
+- `pkg/network/protocol.go` (add death/revival message types)
 
 ---
 
-## Phase 5: Core Gameplay Systems
-**Timeline:** Weeks 10-13  
-**Status:** ✅ COMPLETE
+#### 1.2: Menu Navigation Standardization
 
-### Objectives
-- [x] Implement real-time movement and collision detection
-- [x] Create complete combat system (melee, ranged, magic)
-- [x] Build inventory and equipment management
-- [x] Implement character progression (XP, leveling, skills)
-- [x] Create AI behavior trees for monsters
-- [x] Build quest generation and tracking system
+**Description**: Enforce consistent dual-exit navigation (toggle key + ESC) across all in-game menus as specified in `docs/auditors/MENUS.md`.
 
-### Deliverables
-- [x] Movement and collision detection (95.4% coverage)
-- [x] Combat system (melee, ranged, magic) (90.1% coverage)
-- [x] Inventory and equipment (85.1% coverage)
-- [x] Character progression (100% coverage)
-- [x] Monster AI (100% coverage)
-- [x] Quest generation (96.6% coverage)
-- [x] Fully playable single-player prototype
-- [x] Performance profiling results
+**Rationale**: Referenced in `docs/auditors/MENUS.md:L1-L40`. Current implementation has "menu traps" where only specific exit methods work. Inconsistent UX reduces polish and frustrates players accustomed to standard escape patterns.
 
-### Acceptance Criteria
-- ✅ Smooth, responsive controls
-- ✅ Balanced combat encounters
-- ✅ Interesting character progression
-- ✅ Varied monster behaviors
-- ✅ Engaging quest variety
+**Technical Approach**:
+1. Audit all menu handlers in `cmd/client/main.go:L600-L1360` (inventory, character, skills, quests, map, settings)
+2. Create `MenuState` abstraction in `pkg/engine/menu_system.go` with `openKey`, `isOpen`, `Toggle()`, `Close()` methods
+3. Modify input handling to check for both `ebiten.Key{openKey}` and `ebiten.KeyEscape` on every frame
+4. Ensure `game.menuOpen` state properly tracks active menu for mutual exclusion
+5. Add visual indicators: "[I] Inventory - Press I or ESC to close" in menu headers
+6. Implement menu stack for nested menus (e.g., settings submenu)
 
----
+**Success Criteria**:
+- All 8 menus (Inventory, Character, Skills, Quests, Map, Settings, Help, Debug) support both toggle key and ESC
+- No menu can become "trapped" requiring specific exit action
+- Menu toggle keys documented in central constants file (`pkg/engine/menu_keys.go`)
+- Visual indicators present in all menu headers
+- Test cases verify both exit methods from all game states (combat, exploration, pause)
 
-## Phase 6: Networking & Multiplayer
-**Timeline:** Weeks 14-16  
-**Status:** ✅ COMPLETE
+**Risks**:
+- Key conflict with existing bindings (mitigate with conflict detection system)
+- Nested menu confusion (mitigate with breadcrumb navigation)
 
-### Objectives
-- [x] Implement binary network protocol
-- [x] Create authoritative game server
-- [x] Build client-side prediction and interpolation
-- [x] Implement state synchronization system
-- [x] Create lag compensation for high-latency connections
-- [x] Build network performance testing suite
-
-### Deliverables
-- [x] Binary protocol serialization (100% coverage)
-- [x] Network client layer (66% coverage)
-- [x] Authoritative game server
-- [x] Client-side prediction (100% coverage)
-- [x] State synchronization (100% coverage)
-- [x] Lag compensation (100% coverage)
-- [x] Working multiplayer for 2-4 players
-- [x] Network performance testing suite
-- [x] Documentation for hosting servers
-
-### Acceptance Criteria
-- ✅ Playable with 200-5000ms latency
-- ✅ No obvious desyncs
-- ✅ Responsive player controls
-- ✅ Smooth remote entity movement
-- ✅ <100KB/s per player bandwidth
+**Reference Files**:
+- `cmd/client/main.go:L1000-L1100` (input handling)
+- `pkg/engine/ui_system.go` (menu rendering)
+- New file: `pkg/engine/menu_system.go` (abstraction layer)
 
 ---
 
-## Phase 7: Genre System & Content Variety
-**Timeline:** Weeks 17-18  
-**Status:** ✅ COMPLETE
+#### 1.3: Commerce & NPC Interaction System
 
-### Objectives
-- [x] Create genre template system
-- [x] Implement cross-genre modifiers
-- [x] Build theme-appropriate content generation rules
-- [x] Create visual/audio style adapters per genre
-- [x] Ensure at least 5 distinct playable genres
+**Description**: Implement shop mechanics with fixed and nomadic merchants, dialog interface, and transaction system as outlined in `docs/auditors/EXPAND.md:L23-L42`.
 
-### Deliverables
-- [x] Genre templates (5 base genres: Fantasy, Sci-Fi, Horror, Cyberpunk, Post-Apocalyptic)
-- [x] Cross-genre blending system (100% coverage)
-- [x] Theme-appropriate content generation
-- [x] 25+ possible genre combinations
-- [x] CLI testing tool (genreblend)
-- [x] Documentation of genre system
+**Rationale**: Provides gameplay depth, economic loops, and NPC interaction missing from current implementation. Essential for long-term engagement and resource management strategy.
 
-### Acceptance Criteria
-- ✅ Each genre feels unique and cohesive
-- ✅ Mixed genres create interesting combinations
-- ✅ Content generation respects genre themes
-- ✅ Visual and audio styles match genre
+**Technical Approach**:
+1. Create `MerchantComponent` in `pkg/engine/commerce_components.go` with `inventory`, `priceMultiplier`, `merchantType` (fixed/nomadic)
+2. Add `DialogComponent` with `currentDialog`, `availableOptions []DialogOption`, `state` fields
+3. Implement `DialogSystem` in `pkg/engine/dialog_system.go` using interface `DialogProvider` for extensibility
+4. Generate merchant inventory using existing `item.Generator` with genre-appropriate stock
+5. Add shop UI in `pkg/rendering/ui/shop.go` showing merchant inventory grid and player gold
+6. Implement transaction logic: validate gold, transfer items, apply price calculations
+7. Spawn nomadic merchants deterministically: use world seed + time cycle to place in random rooms
 
----
+**Success Criteria**:
+- Fixed shopkeepers spawn in town areas (terrain type = settlement)
+- Nomadic merchants spawn every 10 minutes at deterministic locations
+- Dialog system supports simple text-based interaction with "Buy", "Sell", "Leave" options
+- Transactions validate gold availability and inventory space
+- Prices scale with item rarity: Common 1.0x, Uncommon 1.5x, Rare 3.0x, Epic 8.0x, Legendary 25.0x
+- Interface designed for future extensions (branching dialogs, voice, animations)
+- Multiplayer synchronization ensures only one player can transact at a time
 
-## Phase 8: Polish & Optimization
-**Timeline:** Weeks 19-20  
-**Status:** ✅ COMPLETE
+**Risks**:
+- Economic balance issues (mitigate with configurable price multipliers and testing)
+- Merchant spawn determinism breaking in multiplayer (mitigate with server-authoritative spawn logic)
 
-### Objectives
-- [x] Performance optimization and profiling
-- [x] Game balance and difficulty tuning
-- [x] Tutorial/help system
-- [x] Save/load functionality
-- [x] Configuration options
-- [x] Complete documentation
-- [x] Release preparation
-
-### Sub-Phases
-
-#### Phase 8.1: Client/Server Integration ✅
-- [x] System initialization and integration
-- [x] Procedural world generation
-- [x] Player entity creation
-- [x] Authoritative server game loop
-
-#### Phase 8.2: Input & Rendering ✅
-- [x] Keyboard/mouse input handling
-- [x] Rendering system integration
-- [x] Camera and HUD systems
-
-#### Phase 8.3: Terrain & Sprite Rendering ✅
-- [x] Terrain tile rendering integration
-- [x] Procedural sprite generation for entities
-- [x] Particle effects integration
-
-#### Phase 8.4: Save/Load System ✅
-- [x] JSON-based save file format
-- [x] Player/world/settings persistence
-- [x] Save file management (CRUD operations)
-- [x] Version tracking and migration
-
-#### Phase 8.5: Performance Optimization ✅
-- [x] Spatial partitioning with quadtree
-- [x] Performance monitoring/telemetry
-- [x] ECS optimization (entity list caching)
-- [x] Profiling utilities
-- [x] Benchmarks for critical paths
-- [x] 60+ FPS validation (106 FPS with 2000 entities)
-
-#### Phase 8.6: Tutorial & Documentation ✅
-- [x] Interactive tutorial system (7 steps)
-- [x] Context-sensitive help (6 topics)
-- [x] Getting Started guide
-- [x] User Manual
-- [x] API Reference
-- [x] Contributing guidelines
-
-### Deliverables
-- [x] Performance benchmarks meeting all targets
-- [x] Complete user and developer documentation
-- [x] Release candidate build
-- [x] Mobile support (iOS & Android)
-
-### Acceptance Criteria
-- ✅ All performance targets met (106 FPS achieved)
-- ✅ Complete documentation
-- ✅ No critical bugs
-- ✅ Ready for Beta release
+**Reference Files**:
+- New files: `pkg/engine/commerce_components.go`, `pkg/engine/dialog_system.go`, `pkg/rendering/ui/shop.go`
+- `pkg/procgen/entity/generator.go:L200-L250` (NPC generation)
+- `pkg/procgen/terrain/generator.go:L150-L200` (settlement detection)
 
 ---
 
-## Progress Tracking
+### Category 2: User Experience & Polish (SHOULD HAVE)
 
-### Weekly Checkpoints (All Complete ✅)
+**Priority**: High  
+**Estimated Effort**: Medium (2-3 weeks)  
+**Dependencies**: Category 1 completion for consistent base
 
-- **Week 2:** ✅ Basic game window with ECS framework
-- **Week 5:** ✅ Content generation working (can generate items/monsters)
-- **Week 7:** ✅ Visuals rendering procedurally
-- **Week 9:** ✅ Audio playing
-- **Week 13:** ✅ Single-player fully playable
-- **Week 16:** ✅ Multiplayer functional
-- **Week 18:** ✅ Multiple genres working
-- **Week 20:** ✅ Polished release candidate
+#### 2.1: LAN Party "Host-and-Play" Mode
 
-### Final Metrics (All Targets Met ✅)
+**Description**: Single-command mode that starts authoritative server and auto-connects local client, as specified in `docs/auditors/LAN_PARTY.md`.
 
-- **Code Coverage:** ✅ 80%+ for all packages (achieved: engine 70.7%, procgen 100%, rendering 95%+, audio 93%+)
-- **Performance:** ✅ 60 FPS on target hardware (achieved: 106 FPS with 2000 entities)
-- **Memory:** ✅ <500MB client, <1GB server
-- **Network:** ✅ <100KB/s per player
-- **Generation:** ✅ <2s for world areas
-- **Build Time:** ✅ <1 minute for full build
+**Rationale**: Current workflow requires two terminals and manual connection steps. Ideal LAN party/casual co-op experience should be "player 1 runs one command, shares IP, others join". Reduces barrier to entry for multiplayer.
+
+**Technical Approach**:
+1. Add `--host-and-play` flag to `cmd/client/main.go`
+2. When flag set, start `server.Run()` in goroutine before game initialization
+3. Bind server to `127.0.0.1:8080` by default (security: localhost only)
+4. Add `--host-lan` flag to override bind address to `0.0.0.0` with warning
+5. Wait for server readiness via channel: `serverReady := make(chan struct{})`
+6. Auto-set `-server localhost:8080` flag and enable `-multiplayer`
+7. Implement graceful shutdown: defer `server.Shutdown()` and wait for goroutine completion
+8. Add port conflict handling: try ports 8080-8089, fail with clear error if all in use
+
+**Success Criteria**:
+- Single command `./venture-client --host-and-play` starts server and connects client
+- Default bind to localhost (secure) with explicit `--host-lan` for 0.0.0.0
+- Server logs clearly indicate "Server ready on localhost:8080"
+- Graceful shutdown on client exit: server goroutine terminates cleanly
+- Documentation in README.md shows LAN party workflow: host runs command, shares IP, others join
+- Integration test verifies server start, client connection, and clean shutdown
+
+**Risks**:
+- Port conflicts on shared machines (mitigated by auto-fallback)
+- Firewall blocking LAN connections (document firewall rules)
+- Resource cleanup issues (mitigated by defer pattern and channel synchronization)
+
+**Reference Files**:
+- `cmd/client/main.go:L220-L280` (initialization)
+- `cmd/server/main.go:L100-L150` (server startup)
+- New file: `pkg/engine/host_and_play.go` (goroutine management)
 
 ---
 
-## Project Complete - Beta Release Ready 🎉
+#### 2.2: Character Creation & Tutorial Integration
 
-All 8 development phases complete. Venture is ready for Beta release with:
-- Complete procedural generation pipeline
-- Full multiplayer support
-- Native mobile support (iOS & Android)
-- Comprehensive documentation
-- Production-ready performance
+**Description**: Transform existing tutorial into unified character creation onboarding flow as outlined in `docs/auditors/EXPAND.md:L9-L21`.
 
-**Next milestone:** Public Beta release and community feedback collection.
+**Rationale**: Current tutorial system (`pkg/engine/tutorial.go`) is separate from game start. Modern RPGs integrate character creation with tutorial for seamless onboarding. Improves first-time user experience and reduces player drop-off.
+
+**Technical Approach**:
+1. Create `CharacterCreationState` game state in `pkg/engine/game_states.go`
+2. Modify main menu to show "New Game" → CharacterCreationState transition
+3. Design creation flow: Name input → Class selection (Warrior/Mage/Rogue) → Confirm
+4. During creation, show tutorial prompts: "Warriors excel at melee combat", "Use WASD to move"
+5. Generate starting stats based on class: Warrior (high HP, low mana), Mage (low HP, high mana), Rogue (balanced)
+6. Transition to gameplay after creation with tutorial quest auto-added
+7. Ensure creation works in both single-player and multiplayer (sync character data to server)
+
+**Success Criteria**:
+- New game flow: Main menu → Character creation → Gameplay (no interruption)
+- Tutorial information integrated naturally into creation steps
+- Class selection affects starting stats and equipment
+- Character data persists through save/load system
+- Multiplayer: character creation happens client-side, synced to server on connection
+- Extensible for future customization: appearance, stat allocation, ability selection
+
+**Risks**:
+- Complexity increase for new players (mitigate with clear step-by-step UI)
+- Save/load compatibility with existing saves (mitigate with optional character data in save format)
+
+**Reference Files**:
+- `pkg/engine/tutorial.go:L1-L100` (existing tutorial system)
+- `cmd/client/main.go:L190-L250` (player entity creation)
+- New file: `pkg/engine/character_creation.go`
+
+---
+
+#### 2.3: Main Menu & Game Modes System
+
+**Description**: Implement splash screen menu system with Single-Player/Multi-Player selection and sub-menus as described in `docs/auditors/EXPAND.md:L1-L7`.
+
+**Rationale**: Current implementation starts directly into gameplay with CLI flags. Professional games need proper main menu with save management, server connection UI, and settings before gameplay starts.
+
+**Technical Approach**:
+1. Create `MainMenuState` in `pkg/engine/game_states.go` as initial game state
+2. Render menu using `pkg/rendering/ui/menu.go` with vertical option list
+3. Main menu options: "Single-Player", "Multi-Player", "Settings", "Quit"
+4. Single-Player submenu: "New Game" (→ CharacterCreation), "Load Game" (→ save file picker), "Back"
+5. Multi-Player submenu: Text field for server address, "Connect" button, "Back"
+6. Store menu state in `game.currentState` and route `Update()`/`Draw()` calls
+7. Implement smooth transitions: fade out → state change → fade in
+
+**Success Criteria**:
+- Game launches to main menu, not directly into gameplay
+- All menu options functional and lead to correct states
+- Server address field supports standard input (keyboard entry, paste)
+- Settings menu persists between sessions (stored in config file)
+- Visual polish: title logo (procedurally generated), genre-themed background
+- Responsive controls: mouse and keyboard navigation
+
+**Risks**:
+- Increased startup time perception (mitigate with quick initial load and background generation)
+- UI complexity (mitigate with simple, clean design and consistent navigation)
+
+**Reference Files**:
+- New file: `pkg/engine/game_states.go` (state machine)
+- New file: `pkg/rendering/ui/main_menu.go`
+- `cmd/client/main.go:L1-L50` (CLI flag handling → migrate to menu)
+
+---
+
+### Category 3: Gameplay Depth Expansion (COULD HAVE)
+
+**Priority**: Medium  
+**Estimated Effort**: Large (4-5 weeks)  
+**Dependencies**: Category 1 and 2 for stable foundation
+
+#### 3.1: Environmental Manipulation System
+
+**Description**: Destructible and constructible terrain with fire propagation as outlined in `docs/auditors/EXPAND.md:L44-L65`.
+
+**Rationale**: Adds strategic depth and emergent gameplay. Players can create shortcuts, block enemy paths, or suffer consequences of fire spells. Aligns with immersive sim design philosophy.
+
+**Technical Approach**:
+1. Add `Destructible` flag to `TileComponent` in `pkg/engine/terrain_components.go`
+2. Implement `TerrainModificationSystem` in `pkg/engine/terrain_system.go`
+3. Weapon-based destruction: check weapon type (pickaxe, bombs) and apply to adjacent tiles on attack
+4. Spell-based destruction: fire/explosion spells check area of effect and destroy vulnerable tiles
+5. Fire propagation: add `FireComponent` to tiles with `intensity`, `duration`, `spreadChance` fields
+6. Fire system: each tick, check 4-connected neighbors, spread based on chance and tile material
+7. Construction: add `BuildComponent` with required materials (stone, wood from inventory)
+8. Networked sync: send tile modification messages to server, broadcast to all clients
+9. Save/load: serialize modified tiles with world state
+
+**Success Criteria**:
+- Pickaxe weapons can destroy wall tiles (2-3 hits depending on material)
+- Fire/explosion spells destroy tiles in 3×3 area
+- Fire spreads to adjacent wooden/flammable tiles at 30% chance per second
+- Fire burns for 10-15 seconds before extinguishing
+- Players can build walls from inventory materials (10 stone per tile)
+- Multiplayer: all clients see same terrain modifications deterministically
+- Performance: <5ms per frame for fire propagation with 100 burning tiles
+
+**Risks**:
+- Performance impact with many simultaneous fires (mitigate with spatial culling and maximum fire entity limit)
+- Map becoming unsolvable (mitigate by marking critical paths as indestructible)
+- Network bandwidth for frequent modifications (mitigate with delta compression and batching)
+
+**Reference Files**:
+- `pkg/procgen/terrain/generator.go:L100-L200` (tile generation)
+- `pkg/engine/combat_system.go:L200-L250` (damage application)
+- New file: `pkg/engine/terrain_system.go`
+
+---
+
+#### 3.2: Crafting System (Potions, Enchanting, Magic Items)
+
+**Description**: Comprehensive crafting mechanics for consumables, equipment enhancement, and magic item creation as described in `docs/auditors/EXPAND.md:L67-L88`.
+
+**Rationale**: Provides long-term progression, resource management, and player agency. Integrates with existing item generation system to create hybrid player-crafted/procedurally-enhanced items.
+
+**Technical Approach**:
+1. Create `CraftingSystem` in `pkg/engine/crafting_system.go` with recipe management
+2. Define `Recipe` struct: `inputs []ItemRequirement`, `output ItemTemplate`, `skillRequired`, `successChance`
+3. Implement recipe discovery: found in world, unlocked via skill progression, learned from NPCs
+4. Potion brewing: combine herbs (consumable items) + flask → healing/mana/buff potions
+5. Enchanting: weapon/armor + enchantment scroll + gold → add stat bonuses or effects
+6. Magic item crafting: base item + magic essence + crafting materials → wands/rings/amulets
+7. Add crafting UI in `pkg/rendering/ui/crafting.go` showing available recipes and material availability
+8. Integrate with skill system: crafting skill level affects success chance and available recipes
+9. Deterministic results: use player seed + recipe ID + material seeds for output generation
+
+**Success Criteria**:
+- 15+ base recipes across 3 crafting types (potions, enchanting, magic items)
+- Recipes discovered through gameplay (world drops, quest rewards, NPC teaching)
+- Crafting success chance based on skill level (50% at level 1, 95% at max)
+- Failed crafting consumes 50% of materials (player risk/reward decision)
+- Crafted items retain procedural generation aesthetic while showing player customization
+- Multiplayer: crafting synchronized, recipe knowledge shared in party
+
+**Risks**:
+- Economic balance disruption (mitigate with high material costs and failure chance)
+- Complexity overwhelming players (mitigate with tutorial quest and gradual recipe introduction)
+- Determinism issues with multiplayer crafting (mitigate with server-authoritative results)
+
+**Reference Files**:
+- `pkg/procgen/item/generator.go:L150-L300` (item generation)
+- `pkg/engine/inventory_system.go:L100-L200` (inventory management)
+- New file: `pkg/engine/crafting_system.go`
+- New file: `pkg/rendering/ui/crafting.go`
+
+---
+
+### Category 4: Performance & Optimization (SHOULD HAVE)
+
+**Priority**: High  
+**Estimated Effort**: Medium (2-3 weeks)  
+**Dependencies**: Profiling must happen early to inform all other work
+
+#### 4.1: Visual Performance Optimization
+
+**Description**: Eliminate reported sluggishness through comprehensive profiling and optimization as detailed in `docs/auditors/PERFORMANCE_AUDIT.md`.
+
+**Rationale**: Despite 106 FPS average, players report visible lag. Likely culprit is frame time variance (jank) causing perceived stutter. Profiling required to identify actual bottlenecks rather than premature optimization.
+
+**Technical Approach**:
+1. **Assessment Phase** (3 days):
+   - CPU profiling: `go test -cpuprofile=cpu.prof -bench=. ./pkg/...`
+   - Memory profiling: `go test -memprofile=mem.prof -bench=. ./pkg/...`
+   - Frame time tracking: add `FrameTimeTracker` to measure 1%, 0.1% lows
+   - Network profiling: log packet sizes and timing in multiplayer
+
+2. **Critical Path Optimization** (4 days):
+   - Sprite batch rendering: group draws by texture atlas (reduce draw calls)
+   - Entity query caching: cache `GetEntitiesWithComponents()` results until invalidation
+   - Collision detection: optimize quadtree (tune cell size, implement lazy updates)
+   - Component access: add fast-path type assertions in hot loops
+
+3. **Memory Allocation Reduction** (3 days):
+   - Audit allocations in `Update()` loops across all systems
+   - Implement object pooling for `StatusEffectComponent`, `ParticleComponent`
+   - Reuse slice buffers for entity queries: `entityBuffer []Entity` as system field
+   - Profile-guided optimization: focus on top 5 allocation sites
+
+4. **Validation** (2 days):
+   - Before/after frame time distribution graphs
+   - Performance regression test suite: benchmark all systems
+   - 60 FPS validation with 5000 entities (2.5x stress test)
+
+**Success Criteria**:
+- 1% low frame time ≥ 16.67ms (no perceptible stutter)
+- 0.1% low frame time ≥ 10ms (rare frames OK, no hard drops)
+- Allocation rate < 10MB/s during typical gameplay
+- Draw calls < 100 per frame (batch rendering effective)
+- Frame time variance (std dev) < 2ms
+- All optimizations verified with benchmarks showing ≥ 20% improvement
+
+**Risks**:
+- Premature optimization reducing code clarity (mitigate with profiling-first approach)
+- Platform-specific issues (mitigate with testing on Linux/macOS/Windows)
+
+**Reference Files**:
+- `pkg/rendering/sprites/generator.go:L200-L300` (sprite generation)
+- `pkg/engine/ecs.go:L50-L100` (entity queries)
+- `pkg/engine/collision_system.go:L100-L200` (quadtree)
+- `docs/PERFORMANCE.md` (existing performance guide)
+
+---
+
+#### 4.2: Test Coverage Improvement
+
+**Description**: Increase test coverage in packages below 70% to meet project standard: engine (48.9%), rendering/sprites (50.0%), rendering/patterns (0.0%), saveload (66.9%), network (57.1%).
+
+**Rationale**: Current coverage gaps identified in test run output. Low coverage in critical systems (engine, network) increases risk of regressions and production bugs. Project standard is 65%+ per package, 80%+ for critical paths.
+
+**Technical Approach**:
+1. **Coverage Analysis** (1 day):
+   - Run `go test -coverprofile=coverage.out ./pkg/...`
+   - Generate HTML: `go tool cover -html=coverage.out -o coverage.html`
+   - Identify uncovered critical paths using coverage annotations
+
+2. **Engine Package** (3 days, target 70%):
+   - Focus on untested systems: `AnimationSystem`, `ParticleSystem`, `MenuSystem`
+   - Add integration tests for system interactions (combat + status effects)
+   - Mock Ebiten dependencies for CI-friendly tests
+
+3. **Rendering Packages** (3 days, target 75%):
+   - `rendering/sprites`: test cache miss paths, edge cases in generation
+   - `rendering/patterns`: implement first tests (currently 0%), focus on pattern generation algorithms
+   - Use interface-based mocks for `ebiten.Image` operations
+
+4. **Network Package** (2 days, target 70%):
+   - Add tests for error conditions: connection drops, malformed packets
+   - Integration tests for prediction and reconciliation
+   - Mock network I/O for deterministic testing
+
+5. **Saveload Package** (1 day, target 75%):
+   - Test edge cases: corrupted saves, missing files, version mismatches
+   - Test equipment and fog-of-war persistence (currently missing per GAP-015)
+
+**Success Criteria**:
+- All packages ≥ 65% coverage
+- Critical packages (engine, network, saveload) ≥ 70%
+- No untestable code (0% coverage) except Ebiten-dependent rendering (pixel operations)
+- New tests follow table-driven pattern matching project convention
+- CI pipeline runs all tests with `-tags test` flag successfully
+
+**Risks**:
+- Time investment with limited user-facing benefit (mitigate by prioritizing critical paths)
+- Mock complexity for Ebiten dependencies (mitigate with thin interface wrappers)
+
+**Reference Files**:
+- All `pkg/` directories with `*_test.go` files
+- `.github/workflows/test.yml` (CI configuration)
+
+---
+
+### Category 5: Visual Fidelity Enhancement (COULD HAVE)
+
+**Priority**: Medium  
+**Estimated Effort**: Medium (3-4 weeks)  
+**Dependencies**: Performance optimization (Category 4) to ensure budget for visual improvements
+
+#### 5.1: Advanced Anatomical Sprite Generation
+
+**Description**: Enhance sprite recognizability with improved anatomical accuracy as detailed in `docs/auditors/VISUAL.md` and `VISUAL_FIDELITY_SUMMARY.md`.
+
+**Rationale**: While Phase 5 established foundation (silhouette analysis, cache, outlines), sprites still lack fine anatomical detail. Current 28×28 pixel constraint limits clarity. Goal is "good enough" visual recognition, not photorealism.
+
+**Technical Approach**:
+1. **Enhanced Body Part Templates** (1 week):
+   - Refine humanoid templates in `pkg/rendering/sprites/templates.go`
+   - Add sub-pixel rendering hints: anti-aliasing for diagonal edges
+   - Implement proportional scaling: head = 4×4 pixels, torso = 4×6, legs = 4×8
+   - Add facial feature generation: eyes (2 pixels), mouth (1-2 pixels) for close-up views
+
+2. **Layered Composition Enhancement** (1 week):
+   - Improve `pkg/rendering/sprites/composition.go` with blend modes
+   - Add shadow layer: 50% opacity, 1-pixel offset for depth perception
+   - Implement highlight layer: 25% opacity, top-edge for lighting effect
+   - Clothing over skin: proper alpha blending and color tinting
+
+3. **Genre-Specific Anatomy Variations** (1 week):
+   - Fantasy: organic proportions, flowing robes, medieval armor plates
+   - Sci-Fi: geometric augments, angular armor, cybernetic limbs
+   - Horror: elongated/distorted proportions, visible bone/decay
+   - Refine genre palettes for anatomical emphasis
+
+4. **Silhouette Refinement** (1 week):
+   - Improve silhouette scoring algorithm to penalize ambiguous shapes
+   - Implement iterative refinement: regenerate sprites scoring < 0.6
+   - Add A/B testing framework: compare old vs. new sprite generations
+
+**Success Criteria**:
+- Silhouette scores increase by average of 0.1 (e.g., 0.65 → 0.75)
+- Player survey: 80%+ can identify entity type at a glance (warrior vs. mage vs. rogue)
+- No performance regression: sprite generation still < 5ms per sprite (cached)
+- Maintain 28×28 pixel constraint for player characters
+- Enemy sprites can scale up to 64×64 for bosses with proportional detail increase
+
+**Risks**:
+- Diminishing returns on 28×28 canvas (mitigate with selective detail and color coding)
+- Generation complexity increase (mitigate with caching and lazy evaluation)
+
+**Reference Files**:
+- `pkg/rendering/sprites/templates.go:L50-L200`
+- `pkg/rendering/sprites/humanoid.go:L100-L300`
+- `pkg/rendering/sprites/silhouette.go:L200-L400`
+- `docs/auditors/VISUAL_FIDELITY_SUMMARY.md` (Phase 5 baseline)
+
+---
+
+### Category 6: Infrastructure & Tooling (SHOULD HAVE)
+
+**Priority**: Medium-High  
+**Estimated Effort**: Small-Medium (1-2 weeks)  
+**Dependencies**: Should be implemented early to support ongoing development
+
+#### 6.1: Comprehensive System Integration Audit
+
+**Description**: Complete audit and verification of all game systems as specified in `docs/auditors/SCAN_AUDIT.md` to ensure proper wiring and integration.
+
+**Rationale**: As project matured through 8 phases, systems were added incrementally. Need to verify all systems are properly instantiated, registered with ECS world, and communicating correctly. Prevents "orphaned systems" and integration bugs.
+
+**Technical Approach**:
+1. **Discovery Phase**:
+   - Grep all `type *System struct` declarations across `pkg/engine/` and `pkg/`
+   - Document expected interfaces: `System.Update()`, initialization requirements
+   - Create system dependency graph (which systems require others)
+
+2. **Integration Verification**:
+   - Trace each system from `cmd/client/main.go` initialization
+   - Verify `world.AddSystem()` calls for all discovered systems
+   - Check `Update()` method calls in game loop
+   - Validate component queries work (systems get expected entities)
+
+3. **Issue Resolution**:
+   - Fix any improperly wired systems immediately during audit
+   - Document changes in `docs/FINAL_AUDIT.md`
+   - Add integration tests to prevent regression
+
+4. **Documentation**:
+   - Create system interaction map showing dependencies
+   - Document initialization order requirements
+   - Add checklist for future system additions
+
+**Success Criteria**:
+- All 20+ systems (ECS, rendering, audio, network, UI) accounted for and verified
+- System dependency graph documented
+- Zero orphaned systems (defined but not instantiated)
+- Integration tests cover critical system interactions
+- `docs/FINAL_AUDIT.md` created with complete inventory and status
+
+**Risks**:
+- Discovering deep integration issues requiring architectural changes (mitigate with incremental fixes)
+
+**Reference Files**:
+- `cmd/client/main.go:L280-L450` (system initialization)
+- `pkg/engine/ecs.go:L50-L150` (system registration)
+- All `pkg/engine/*_system.go` files
+
+---
+
+#### 6.2: Continuous Logging Enhancement
+
+**Description**: Complete structured logging implementation as specified in `docs/auditors/LOGGING_REQUIREMENTS.md`, ensuring all packages use logrus consistently.
+
+**Rationale**: Logging partially implemented per commit history (commits 2059477, 089c972, 2de8c76). Need to ensure completeness, consistent field usage, and production-ready configuration for debugging and monitoring.
+
+**Technical Approach**:
+1. **Audit Current State**:
+   - Check all packages for logger initialization
+   - Verify log levels used appropriately (Debug for internal state, Info for lifecycle, Error for failures)
+   - Ensure structured fields (logrus.Fields) used, not string concatenation
+
+2. **Complete Missing Packages**:
+   - Add logging to packages with 0 log statements
+   - Focus on critical paths: rendering pipeline, network packet handling, save/load operations
+
+3. **Standardize Field Names**:
+   - Create `pkg/logging/fields.go` with standard field name constants
+   - Entity operations: `entityID`, `componentType`, `systemName`
+   - Procgen: `seed`, `genreID`, `depth`, `difficulty`
+   - Network: `playerID`, `latency`, `packetSize`
+
+4. **Performance Optimization**:
+   - Add conditional debug logging: `if logger.GetLevel() >= logrus.DebugLevel`
+   - Lazy evaluation for expensive field computation
+   - Ensure no logging in game loop hot paths above Info level
+
+**Success Criteria**:
+- All packages in `pkg/` have logger integration
+- Consistent field naming across codebase (using constants)
+- No performance regression from logging (benchmark validation)
+- Client uses text format with color, server uses JSON format
+- Environment variable `LOG_LEVEL` controls verbosity without recompilation
+- Documentation in `docs/STRUCTURED_LOGGING_GUIDE.md` updated
+
+**Risks**:
+- Performance impact from excessive logging (mitigate with conditional compilation and level checks)
+
+**Reference Files**:
+- `pkg/logging/logger.go:L1-L100` (logger implementation)
+- `docs/STRUCTURED_LOGGING_GUIDE.md` (usage guide)
+- All `pkg/` packages for audit
+
+---
+
+## Phased Implementation Plan
+
+Based on MoSCoW prioritization and dependency analysis, the roadmap is organized into 4 phases over 6-8 months.
+
+### Phase 9.1: Production Readiness (Months 1-2, January-February 2026)
+
+**Focus**: Critical gameplay gaps and infrastructure foundation
+
+**Must Have**:
+- ✅ Complete current spell system work (GAP-001, GAP-002, GAP-003) - ONGOING
+- [ ] **1.1: Death & Revival System** (2 weeks) - Game-breaking gap
+- [ ] **1.2: Menu Navigation Standardization** (1 week) - UX polish
+- [ ] **6.1: System Integration Audit** (1 week) - Foundation validation
+- [ ] **6.2: Logging Enhancement** (3 days) - Production monitoring
+
+**Should Have**:
+- [ ] **4.2: Test Coverage Improvement** (1 week) - Focus on engine, network packages
+
+**Deliverable**: Version 1.1 Alpha - Core mechanics complete, production-ready monitoring
+
+---
+
+### Phase 9.2: Player Experience Enhancement (Months 3-4, March-April 2026)
+
+**Focus**: User onboarding and multiplayer accessibility
+
+**Must Have**:
+- [ ] **1.3: Commerce & NPC System** (2 weeks) - Gameplay depth
+
+**Should Have**:
+- [ ] **2.1: LAN Party Host-and-Play** (1 week) - Multiplayer UX
+- [ ] **2.2: Character Creation Integration** (2 weeks) - Onboarding flow
+- [ ] **2.3: Main Menu & Game Modes** (1 week) - Professional presentation
+
+**Could Have**:
+- [ ] **4.1: Visual Performance Optimization** (2 weeks) - Address sluggishness
+
+**Deliverable**: Version 1.2 Beta - Complete player-facing experience
+
+---
+
+### Phase 9.3: Gameplay Depth Expansion (Months 5-6, May-June 2026)
+
+**Focus**: Strategic depth and emergent gameplay
+
+**Could Have**:
+- [ ] **3.1: Environmental Manipulation** (3 weeks) - Destructible terrain, fire propagation
+- [ ] **3.2: Crafting System** (3 weeks) - Potions, enchanting, magic items
+
+**Should Have** (if time permits):
+- [ ] **5.1: Advanced Anatomical Sprites** (2 weeks) - Visual fidelity improvement
+
+**Deliverable**: Version 1.3 - Deep gameplay systems
+
+---
+
+### Phase 9.4: Polish & Long-term Support (Months 7-8, July-August 2026)
+
+**Focus**: Final polish, optimization, and production release
+
+**Must Have**:
+- [ ] Complete remaining test coverage gaps (target 75%+ all packages)
+- [ ] Performance validation and regression testing
+- [ ] Documentation updates reflecting all new features
+- [ ] Production deployment guide and server hosting documentation
+
+**Should Have**:
+- [ ] **5.1: Advanced Anatomical Sprites** (if not completed in Phase 9.3)
+- [ ] Balance tuning based on playtesting feedback
+- [ ] Accessibility features (colorblind modes, key rebinding)
+
+**Could Have** (stretch goals):
+- [ ] Mod support infrastructure
+- [ ] Replay system for sharing gameplay moments
+- [ ] Achievement system
+
+**Deliverable**: Version 1.5 Production - Polished, production-ready release
+
+---
+
+## Dependencies & Blockers
+
+### Cross-Cutting Dependencies
+
+1. **Performance Budget**: All new features must maintain 60 FPS target
+   - **Blocker**: Visual optimization (4.1) should complete before heavy gameplay additions (3.1, 3.2)
+   - **Mitigation**: Performance regression tests in CI pipeline
+
+2. **Network Protocol Stability**: Multiplayer features require protocol versioning
+   - **Blocker**: Death/revival (1.1), commerce (1.3), environmental manipulation (3.1) all add new message types
+   - **Mitigation**: Implement protocol version negotiation in Phase 9.1
+
+3. **Save/Load Compatibility**: New components must serialize correctly
+   - **Blocker**: Every system addition requires saveload integration
+   - **Mitigation**: Automated serialization tests, version migration system
+
+4. **Test Coverage**: Infrastructure improvements enable safer feature additions
+   - **Blocker**: Low test coverage in engine (48.9%) increases regression risk
+   - **Mitigation**: Prioritize coverage improvements (4.2) in Phase 9.1
+
+### System Integration Dependencies
+
+- **Death/Revival (1.1)** → Required for balanced commerce system (1.3) to prevent death-exploit loops
+- **Menu System (2.3)** → Required before character creation (2.2) for navigation
+- **Performance Optimization (4.1)** → Should complete before environmental manipulation (3.1) to ensure fire propagation budget
+- **Crafting (3.2)** → Requires commerce system (1.3) for material sourcing and economy balance
+
+---
+
+## Metrics for Success
+
+### Technical Metrics
+
+**Code Quality**:
+- Test coverage: ≥ 70% all packages, ≥ 80% critical packages (engine, network, combat)
+- Zero critical bugs in production (severity: data loss, crashes, security)
+- Build time: < 2 minutes for full build + tests
+
+**Performance**:
+- Frame rate: 60 FPS average, ≥ 55 FPS 1% lows (no perceptible stutter)
+- Memory: < 500MB client, < 1GB server (4 players)
+- Network: < 100KB/s per player, < 150ms perceived latency (with prediction)
+- Load times: < 3s world generation, < 1s menu transitions
+
+**Reliability**:
+- Crash rate: < 0.1% of play sessions
+- Save corruption: < 0.01% of save operations
+- Multiplayer desync: < 1 per 100 player-hours
+
+### User Experience Metrics
+
+**Onboarding**:
+- Tutorial completion rate: ≥ 80% of new players
+- Time to first gameplay: < 2 minutes from launch (including character creation)
+- Multiplayer setup success: ≥ 90% of attempts (LAN party mode)
+
+**Engagement**:
+- Average session length: ≥ 45 minutes (indicating engagement)
+- Save file retention: ≥ 60% players create multiple characters
+- Multiplayer adoption: ≥ 30% of playtime in co-op mode
+
+**Quality Perception**:
+- Player-reported bugs per hour: < 0.5 (based on issue tracker)
+- "Game feels responsive": ≥ 85% positive in surveys
+- "Graphics are clear and readable": ≥ 75% positive
+
+### Development Velocity Metrics
+
+**Phase Completion**:
+- Phase 9.1: 100% Must Have items, ≥ 80% Should Have items
+- Phase 9.2: 100% Must Have items, ≥ 70% Should Have/Could Have items
+- Schedule adherence: < 2 weeks variance per phase
+
+**Quality Gates**:
+- All tests passing before phase completion
+- No regressions in existing functionality (automated regression suite)
+- Documentation updated within 3 days of feature completion
+
+---
+
+## Completed Phases (Reference)
+
+### Phase 1-8: Foundation Through Beta (Weeks 1-20, 2025) ✅
+
+All initial phases complete as documented in original roadmap sections. Key achievements:
+
+- **Phase 1-2**: ECS architecture, procedural generation core (terrain, entities, items, magic, skills, quests)
+- **Phase 3-4**: Visual rendering system, audio synthesis (100% procedural, zero external assets)
+- **Phase 5-6**: Core gameplay systems, networking & multiplayer (200-5000ms latency support)
+- **Phase 7**: Genre system with 5 base genres and cross-genre blending
+- **Phase 8**: Polish & optimization (save/load, performance, tutorial, documentation)
+
+**Metrics Achieved**:
+- Test coverage: 82.4% average (procgen/combat 100%, audio 93%+, rendering 95%+)
+- Performance: 106 FPS with 2000 entities (exceeds 60 FPS target)
+- Multiplayer: 2-4 players with lag compensation and client-side prediction
+- Platforms: Desktop (Linux/macOS/Windows), WebAssembly, mobile (iOS/Android)
+
+---
+
+## Roadmap Maintenance
+
+### Review Cadence
+
+- **Weekly**: Phase progress tracking, blocker identification
+- **Bi-weekly**: Sprint planning, priority adjustments based on discoveries
+- **Monthly**: Phase retrospectives, metrics review, community feedback integration
+- **Quarterly**: Strategic roadmap review, long-term goal alignment
+
+### Priority Adjustment Criteria
+
+Priorities may shift based on:
+1. **Critical bugs discovered**: Move to Must Have and address immediately
+2. **Community feedback**: Adjust Could Have items based on player demand
+3. **Technical discoveries**: Re-estimate effort if complexity higher than anticipated
+4. **Performance issues**: Prioritize optimization if targets not met
+5. **Platform requirements**: Platform-specific issues may require urgent attention
+
+### Success Criteria for Production Release
+
+Version 1.5 Production release requires:
+- ✅ All Phase 9.1 and 9.2 Must Have items complete
+- ✅ ≥ 75% of Should Have items complete
+- ✅ All technical metrics met (performance, reliability, test coverage)
+- ✅ Zero critical or high-severity bugs in issue tracker
+- ✅ User manual and developer documentation complete and accurate
+- ✅ Deployment guide and server hosting documentation available
+- ✅ At least 100 hours of cumulative playtesting with feedback incorporated
+
+---
+
+## Auditor Coverage Analysis
+
+### Auditor Documents Addressed
+
+| Auditor Document | Primary Roadmap Items | Coverage |
+|-----------------|----------------------|----------|
+| `AUTO_AUDIT.md` | 1.1 (Death/Revival), 6.1 (System Audit) | 100% |
+| `AUTO_BUG_AUDIT.md` | 1.1 (Death/Revival), 4.2 (Test Coverage) | 100% |
+| `EVENT.md` | 1.1 (Death/Revival mechanics) | 100% |
+| `EXPAND.md` | 1.3 (Commerce), 2.2 (Character Creation), 2.3 (Main Menu), 3.1 (Environmental), 3.2 (Crafting) | 100% |
+| `LAN_PARTY.md` | 2.1 (Host-and-Play mode) | 100% |
+| `MENUS.md` | 1.2 (Menu Navigation) | 100% |
+| `PERFORMANCE_AUDIT.md` | 4.1 (Visual Performance) | 100% |
+| `VISUAL.md` | 5.1 (Anatomical Sprites) | 100% |
+| `VISUAL_FIDELITY_SUMMARY.md` | 5.1 (Building on Phase 5 foundation) | 100% |
+| `SCAN_AUDIT.md` | 6.1 (System Integration Audit) | 100% |
+| `LOGGING_REQUIREMENTS.md` | 6.2 (Logging Enhancement) | 100% |
+
+**Total Coverage**: 11/11 auditor documents fully addressed (100%)
+
+### Items NOT Included (With Rationale)
+
+**None** - All auditor suggestions have been incorporated into the roadmap with appropriate prioritization. Items marked "Could Have" or placed in Phase 9.3/9.4 are still planned, just deferred based on:
+- **Dependency chains**: Need foundation work first (e.g., performance optimization before heavy features)
+- **Scope management**: Ensuring Phase 9.1-9.2 remain achievable within 4 months
+- **Risk mitigation**: Core mechanics and UX take priority over advanced features
+
+---
+
+## Conclusion
+
+This roadmap transforms Venture from a feature-complete Beta into a production-ready 1.5 release through 6-8 months of focused enhancement. The phased approach balances:
+
+- **Critical gaps** (death/revival, menu UX) that impact core experience
+- **Strategic depth** (commerce, crafting, environmental manipulation) for long-term engagement
+- **Technical excellence** (test coverage, performance, system integration) for maintainability
+- **Player accessibility** (LAN party mode, character creation, main menu) for wider adoption
+
+Every enhancement is grounded in specific codebase analysis, auditor recommendations, and project architecture patterns. The roadmap is actionable, measurable, and aligned with the project's commitment to deterministic procedural generation, zero-asset architecture, and high-performance gameplay.
+
+**Development team can begin Phase 9.1 work immediately** - all tasks have clear technical approaches, success criteria, and reference files. The structured priority system (MoSCoW) enables flexible response to discoveries while maintaining core milestone commitments.
+
+---
+
+**Document Version**: 2.0 (Post-Beta Enhancement Roadmap)  
+**Last Updated**: October 25, 2025  
+**Next Review**: January 15, 2026 (Phase 9.1 completion)  
+**Maintained By**: Venture Development Team

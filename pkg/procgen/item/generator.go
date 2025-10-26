@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // ItemGenerator generates procedural items (weapons, armor, consumables).
@@ -15,14 +16,26 @@ type ItemGenerator struct {
 	weaponTemplates     map[string][]ItemTemplate
 	armorTemplates      map[string][]ItemTemplate
 	consumableTemplates map[string][]ItemTemplate
+	logger              *logrus.Entry
 }
 
 // NewItemGenerator creates a new item generator.
 func NewItemGenerator() *ItemGenerator {
+	return NewItemGeneratorWithLogger(nil)
+}
+
+// NewItemGeneratorWithLogger creates a new item generator with a logger.
+func NewItemGeneratorWithLogger(logger *logrus.Logger) *ItemGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "item")
+	}
+
 	gen := &ItemGenerator{
 		weaponTemplates:     make(map[string][]ItemTemplate),
 		armorTemplates:      make(map[string][]ItemTemplate),
 		consumableTemplates: make(map[string][]ItemTemplate),
+		logger:              logEntry,
 	}
 
 	// Register fantasy genre templates
@@ -39,11 +52,23 @@ func NewItemGenerator() *ItemGenerator {
 	gen.armorTemplates[""] = GetFantasyArmorTemplates()
 	gen.consumableTemplates[""] = GetFantasyConsumableTemplates()
 
+	if logEntry != nil {
+		logEntry.Debug("item generator initialized")
+	}
+
 	return gen
 }
 
 // Generate creates items based on the seed and parameters.
 func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":    seed,
+			"genreID": params.GenreID,
+			"depth":   params.Depth,
+		}).Debug("starting item generation")
+	}
+
 	// Get count from custom parameters
 	count := 10 // default
 	if params.Custom != nil {
@@ -79,6 +104,21 @@ func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		// Use a different seed for each item
 		itemSeed := seed + int64(i)*1000
 		items[i] = g.generateSingleItem(itemSeed, params, itemTypeFilter, rng)
+	}
+
+	if g.logger != nil {
+		var typeFilter string
+		if itemTypeFilter != nil {
+			typeFilter = itemTypeFilter.String()
+		} else {
+			typeFilter = "all"
+		}
+		g.logger.WithFields(logrus.Fields{
+			"count":      len(items),
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"typeFilter": typeFilter,
+		}).Info("item generation complete")
 	}
 
 	return items, nil

@@ -5,18 +5,29 @@ package engine
 
 import (
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // AISystem manages artificial intelligence behaviors for entities.
 // It implements a state machine that transitions between idle, patrol, chase, attack, and flee states.
 type AISystem struct {
-	world *World
+	world  *World
+	logger *logrus.Entry
 }
 
 // NewAISystem creates a new AI system.
 func NewAISystem(world *World) *AISystem {
+	var logEntry *logrus.Entry
+	if world != nil && world.logger != nil {
+		logEntry = world.logger.Logger.WithField("system", "ai")
+		if logEntry.Logger.GetLevel() >= logrus.DebugLevel {
+			logEntry.Debug("AI system created")
+		}
+	}
 	return &AISystem{
-		world: world,
+		world:  world,
+		logger: logEntry,
 	}
 }
 

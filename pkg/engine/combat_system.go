@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/combat"
+	"github.com/sirupsen/logrus"
 )
 
 // CombatSystem handles combat interactions, damage calculation, and status effects.
@@ -28,13 +29,31 @@ type CombatSystem struct {
 
 	// Callback for when damage is dealt
 	onDamageCallback func(attacker, target *Entity, damage float64)
+
+	// Logger for combat events
+	logger *logrus.Entry
 }
 
 // NewCombatSystem creates a new combat system with a given random seed.
 func NewCombatSystem(seed int64) *CombatSystem {
+	return NewCombatSystemWithLogger(seed, nil)
+}
+
+// NewCombatSystemWithLogger creates a new combat system with a logger.
+func NewCombatSystemWithLogger(seed int64, logger *logrus.Logger) *CombatSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "combat",
+			"seed":   seed,
+		})
+		logEntry.Debug("combat system created")
+	}
+
 	return &CombatSystem{
-		rng:  rand.New(rand.NewSource(seed)),
-		seed: seed,
+		rng:    rand.New(rand.NewSource(seed)),
+		seed:   seed,
+		logger: logEntry,
 	}
 }
 
@@ -88,6 +107,12 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if healthComp, ok := entity.GetComponent("health"); ok {
 			health := healthComp.(*HealthComponent)
 			if health.IsDead() {
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entityID":      entity.ID,
+						"currentHealth": health.Current,
+					}).Info("entity death")
+				}
 				if s.onDeathCallback != nil {
 					s.onDeathCallback(entity)
 				}
@@ -178,12 +203,20 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Check for evasion
 	if targetStats != nil && s.rollChance(targetStats.Evasion) {
 		// Attack missed
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"attackerID": attacker.ID,
+				"targetID":   target.ID,
+				"evasion":    targetStats.Evasion,
+			}).Debug("attack evaded")
+		}
 		attack.ResetCooldown()
 		return false
 	}
 
 	// Calculate damage
 	baseDamage := attack.Damage
+	isCrit := false
 
 	// Apply attacker stats
 	if attackerStats != nil {
@@ -196,6 +229,7 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		// Check for critical hit
 		if s.rollChance(attackerStats.CritChance) {
 			baseDamage *= attackerStats.CritDamage
+			isCrit = true
 		}
 	}
 
@@ -237,6 +271,19 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Apply remaining damage to health
 	health.TakeDamage(finalDamage)
+
+	// Log damage event
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"attackerID":   attacker.ID,
+			"targetID":     target.ID,
+			"damage":       finalDamage,
+			"baseDamage":   baseDamage,
+			"damageType":   attack.DamageType.String(),
+			"critical":     isCrit,
+			"targetHealth": health.Current,
+		}).Info("damage dealt")
+	}
 
 	// GAP-016 REPAIR: Spawn hit particles at target position
 	if s.particleSystem != nil && s.world != nil {

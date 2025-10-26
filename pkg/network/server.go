@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ServerConfig holds configuration for the network server.
@@ -60,6 +62,9 @@ type TCPServer struct {
 	// State tracking
 	stateSeq uint32
 	stateMu  sync.Mutex
+
+	// Logger for network operations
+	logger *logrus.Entry
 }
 
 // clientConnection represents a connected client.
@@ -79,6 +84,19 @@ type clientConnection struct {
 
 // NewServer creates a new network server.
 func NewServer(config ServerConfig) *TCPServer {
+	return NewServerWithLogger(config, nil)
+}
+
+// NewServerWithLogger creates a new network server with a logger.
+func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"component": "network_server",
+			"address":   config.Address,
+		})
+	}
+
 	return &TCPServer{
 		config:        config,
 		protocol:      NewBinaryProtocol(),
@@ -89,6 +107,7 @@ func NewServer(config ServerConfig) *TCPServer {
 		playerLeaves:  make(chan uint64, config.MaxPlayers),
 		errors:        make(chan error, 64),
 		done:          make(chan struct{}),
+		logger:        logEntry,
 	}
 }
 

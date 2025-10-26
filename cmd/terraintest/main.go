@@ -53,7 +53,7 @@ func main() {
 	var gen procgen.Generator
 	switch *algorithm {
 	case "bsp":
-		gen = terrain.NewBSPGenerator()
+		gen = terrain.NewBSPGeneratorWithLogger(logger)
 	case "cellular":
 		gen = terrain.NewCellularGenerator()
 	case "maze":

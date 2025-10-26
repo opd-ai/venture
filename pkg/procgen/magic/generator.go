@@ -8,24 +8,53 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // SpellGenerator implements the Generator interface for procedural spell creation.
-type SpellGenerator struct{}
+type SpellGenerator struct {
+	logger *logrus.Entry
+}
 
 // NewSpellGenerator creates a new spell generator.
 func NewSpellGenerator() *SpellGenerator {
-	return &SpellGenerator{}
+	return NewSpellGeneratorWithLogger(nil)
+}
+
+// NewSpellGeneratorWithLogger creates a new spell generator with a logger.
+func NewSpellGeneratorWithLogger(logger *logrus.Logger) *SpellGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "spell")
+		logEntry.Debug("spell generator initialized")
+	}
+	return &SpellGenerator{
+		logger: logEntry,
+	}
 }
 
 // Generate creates spells based on the seed and parameters.
 // Returns []*Spell or error.
 func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":    seed,
+			"genreID": params.GenreID,
+			"depth":   params.Depth,
+		}).Debug("starting spell generation")
+	}
+
 	// Validate parameters
 	if params.Depth < 0 {
+		if g.logger != nil {
+			g.logger.WithField("depth", params.Depth).Warn("invalid depth parameter")
+		}
 		return nil, fmt.Errorf("depth must be non-negative")
 	}
 	if params.Difficulty < 0 || params.Difficulty > 1 {
+		if g.logger != nil {
+			g.logger.WithField("difficulty", params.Difficulty).Warn("invalid difficulty parameter")
+		}
 		return nil, fmt.Errorf("difficulty must be between 0 and 1")
 	}
 
@@ -52,6 +81,9 @@ func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	}
 
 	if len(templates) == 0 {
+		if g.logger != nil {
+			g.logger.WithField("genreID", params.GenreID).Error("no templates available")
+		}
 		return nil, fmt.Errorf("no templates available for genre: %s", params.GenreID)
 	}
 
@@ -66,6 +98,14 @@ func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (
 		spell.Seed = seed + int64(i)
 
 		spells = append(spells, spell)
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"count":   len(spells),
+			"seed":    seed,
+			"genreID": params.GenreID,
+		}).Info("spell generation complete")
 	}
 
 	return spells, nil

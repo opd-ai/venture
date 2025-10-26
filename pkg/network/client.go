@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ClientConfig holds configuration for the network client.
@@ -61,10 +63,26 @@ type TCPClient struct {
 	// Shutdown
 	done chan struct{}
 	wg   sync.WaitGroup
+
+	// Logger for network operations
+	logger *logrus.Entry
 }
 
 // NewClient creates a new network client.
 func NewClient(config ClientConfig) *TCPClient {
+	return NewClientWithLogger(config, nil)
+}
+
+// NewClientWithLogger creates a new network client with a logger.
+func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"component": "network_client",
+			"server":    config.ServerAddress,
+		})
+	}
+
 	return &TCPClient{
 		config:       config,
 		protocol:     NewBinaryProtocol(),
@@ -72,6 +90,7 @@ func NewClient(config ClientConfig) *TCPClient {
 		inputQueue:   make(chan *InputCommand, config.BufferSize),
 		errors:       make(chan error, 16),
 		done:         make(chan struct{}),
+		logger:       logEntry,
 	}
 }
 
@@ -84,9 +103,16 @@ func (c *TCPClient) Connect() error {
 		return fmt.Errorf("already connected")
 	}
 
+	if c.logger != nil {
+		c.logger.WithField("server", c.config.ServerAddress).Info("connecting to server")
+	}
+
 	// Set connection timeout
 	conn, err := net.DialTimeout("tcp", c.config.ServerAddress, c.config.ConnectionTimeout)
 	if err != nil {
+		if c.logger != nil {
+			c.logger.WithError(err).WithField("server", c.config.ServerAddress).Error("failed to connect")
+		}
 		return fmt.Errorf("failed to connect to %s: %w", c.config.ServerAddress, err)
 	}
 
@@ -94,6 +120,10 @@ func (c *TCPClient) Connect() error {
 	c.connected = true
 	c.lastPing = time.Now()
 	c.lastPong = time.Now()
+
+	if c.logger != nil {
+		c.logger.WithField("server", c.config.ServerAddress).Info("connected successfully")
+	}
 
 	// Start async handlers
 	c.wg.Add(2)
@@ -111,6 +141,10 @@ func (c *TCPClient) Disconnect() error {
 		return nil
 	}
 
+	if c.logger != nil {
+		c.logger.Info("disconnecting from server")
+	}
+
 	c.connected = false
 	close(c.done)
 
@@ -122,6 +156,10 @@ func (c *TCPClient) Disconnect() error {
 
 	// Wait for goroutines
 	c.wg.Wait()
+
+	if c.logger != nil {
+		c.logger.Info("disconnected successfully")
+	}
 
 	return nil
 }

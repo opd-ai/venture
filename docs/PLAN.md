@@ -160,7 +160,16 @@ This approach allows immediate user feedback while keeping the codebase maintain
   - Added NPC templates for all 5 genres (scifi, horror, cyberpunk, postapoc)
   - MerchantNameTemplates with genre-specific merchant names
   - Comprehensive test suite with 9 test functions + 2 benchmarks (merchant_test.go)
-- ⏳ Network protocol support (TODO)
+- ✅ Network protocol support in `pkg/network/protocol.go` (6 new message types)
+  - OpenShopMessage: Client request to interact with merchant
+  - ShopInventoryMessage: Server response with merchant stock and pricing
+  - BuyItemMessage: Client request to purchase item
+  - SellItemMessage: Client request to sell item
+  - TransactionResultMessage: Server response with transaction outcome
+  - CloseShopMessage: Client notification of shop UI closure
+  - Comprehensive test suite with 8 test functions covering all message types (protocol_test.go)
+  - Full workflow test demonstrating client-server commerce interaction
+  - Error scenario tests for transaction failures
 - ⏳ Integration into client (TODO)
 
 **Components**:
@@ -174,7 +183,9 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Dialog component + system in `pkg/engine`
 - Shop UI in `pkg/rendering/ui`
 - Transaction validation on server for multiplayer
-- **Detailed Documentation**: See `docs/IMPLEMENTATION_MERCHANT_GENERATION.md` for complete merchant generation system documentation, API usage, and integration guide
+- **Detailed Documentation**: 
+  - Merchant Generation: `docs/IMPLEMENTATION_MERCHANT_GENERATION.md`
+  - Network Protocol: `docs/IMPLEMENTATION_COMMERCE_PROTOCOL.md`
 
 ---
 

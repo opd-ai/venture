@@ -1,49 +1,77 @@
-Implement comprehensive structured logging using logrus throughout the entire Venture codebase. The implementation must follow these requirements:
+Implement structured logging with logrus across the Venture codebase.
 
-## Core Requirements
+**EXECUTION MODE**: Autonomous action - Implement directly without requiring approval for each change.
 
-1. **Package Integration**: Add logrus to all packages in `pkg/` (engine, procgen, rendering, audio, network, combat, world, saveload, mobile) and all commands in `cmd/` (client, server, and test utilities).
+**OBJECTIVE**: 
+Replace all logging statements with logrus-based structured logging that provides production-grade observability while maintaining deterministic behavior and performance targets (60 FPS, <500MB memory).
 
-2. **Log Levels**: Use appropriate levels consistently:
-   - **Debug**: Detailed system state, component creation, seed values, generation parameters
-   - **Info**: Startup/shutdown, phase transitions, world generation, player connections/disconnections
-   - **Warn**: Validation failures, retries, performance degradation, high latency
-   - **Error**: Generation failures, network errors, invalid state, component errors
-   - **Fatal**: Unrecoverable errors only (initialization failures, critical resource errors)
+**SCOPE**:
+- All packages: `pkg/{engine,procgen,rendering,audio,network,combat,world,saveload,mobile}`
+- All commands: `cmd/{client,server,*test}`
+- Exclude: `examples/`, test files (`*_test.go`)
 
-3. **Structured Fields**: Always use logrus.Fields for context:
-   - Entity operations: `entityID`, `componentType`, `systemName`
+**IMPLEMENTATION RULES**:
+
+1. **Level Usage**:
+   - Debug: Internal state, seeds, parameters (NOT in hot paths)
+   - Info: Lifecycle events (startup/shutdown, connections, generation completion)
+   - Warn: Non-fatal issues (validation, retries, latency >200ms)
+   - Error: Failures (generation, network, I/O)
+   - Fatal: Unrecoverable initialization errors only
+
+2. **Structured Fields** (always use `logrus.Fields`):
    - Procgen: `seed`, `genreID`, `depth`, `difficulty`, `generatorType`
-   - Network: `playerID`, `latency`, `packetSize`, `connectionState`
-   - Performance: `duration`, `allocations`, `fps`, `entityCount`
+   - Entities: `entityID`, `componentType`, `systemName`
+   - Network: `playerID`, `latency`, `packetSize`, `state`
+   - Performance: `duration`, `count`, `fps` (Info level only)
 
-4. **Logger Configuration**:
-   - Client: JSON formatter for production, Text formatter for development
-   - Server: Always JSON for log aggregation
-   - Include timestamps, caller information (file:line)
-   - Support environment variable `LOG_LEVEL` for runtime control
-   - Test utilities: Text formatter with color
+3. **Logger Initialization**:
+   - Client/Test utilities: `logging.TestUtilityLogger("name")` (text format, color)
+   - Server: `logging.NewLogger(logging.Config{Format: logging.JSONFormat})` (JSON)
+   - Pass logger instances via constructors/methods (no globals)
 
-5. **Performance Considerations**:
-   - No logging in hot paths (game loop, rendering, input handling) above Info level
-   - Use conditional debug logging: `if log.GetLevel() >= log.DebugLevel`
-   - Lazy evaluation for expensive field computation
-   - Pool logrus.Fields objects if allocations become problematic
+4. **Performance Safeguards**:
+   - NO logging in: game loop updates, rendering per-frame, input handling per-event
+   - Wrap Debug calls: `if logger.GetLevel() >= logrus.DebugLevel { ... }`
+   - Summary logging only (e.g., "processed 50 entities" not per-entity logs)
 
-6. **Context Propagation**: Pass logger instances with contextual fields:
+5. **Integration Pattern**:
    ```go
-   logger := log.WithFields(log.Fields{"system": "terrain", "seed": seed})
+   import "github.com/opd-ai/venture/pkg/logging"
+   
+   type System struct {
+       logger *logrus.Entry
+   }
+   
+   func NewSystem(logger *logrus.Logger) *System {
+       return &System{logger: logging.SystemLogger(logger, "systemName")}
+   }
    ```
 
-7. **Error Integration**: Wrap errors with context before logging:
+6. **Error Handling**:
    ```go
-   logger.WithError(err).WithFields(log.Fields{...}).Error("operation failed")
+   if err != nil {
+       logger.WithError(err).WithFields(logrus.Fields{
+           "operation": "action",
+           "context": value,
+       }).Error("operation failed")
+       return fmt.Errorf("action: %w", err)
+   }
    ```
 
-8. **Special Cases**:
-   - Network package: Log packet types, sizes, timing
-   - Procgen: Log generation success/failure with validation results
-   - Engine systems: Log entity lifecycle, component additions/removals
-   - Combat: Log damage calculations, death events
+**OUTPUT FORMAT**:
+- Modified files with logrus imports and structured logging calls
+- Brief summary: file count, level distribution, performance impact notes
+- No separate documentation file needed (STRUCTURED_LOGGING_GUIDE.md already exists)
 
-Maintain deterministic behavior—logging should never affect game state or generation. Preserve all existing functionality while adding observability for debugging, profiling, and production monitoring.
+**SUCCESS CRITERIA**:
+- Zero `log.Printf`/`fmt.Println` in non-test code
+- All existing tests pass unchanged
+- No behavior changes (determinism preserved)
+- Performance targets maintained (verify no hot-path logging)
+
+**CONSTRAINTS**:
+- Do NOT modify test files (`*_test.go`)
+- Do NOT modify examples/
+- Preserve all function signatures
+- Maintain existing error handling patterns

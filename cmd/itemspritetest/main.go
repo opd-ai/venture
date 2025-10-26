@@ -7,8 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -44,10 +45,11 @@ type Game struct {
 	itemsPerRow   int
 	thumbnailSize int
 	zoom          int
+	logger        *logrus.Logger
 }
 
 // NewGame creates a new item sprite test game.
-func NewGame(seed int64, genreID string) (*Game, error) {
+func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 	spriteGen := sprites.NewGenerator()
 	paletteGen := palette.NewGenerator()
 
@@ -70,6 +72,7 @@ func NewGame(seed int64, genreID string) (*Game, error) {
 		itemsPerRow:   10,
 		thumbnailSize: 48,
 		zoom:          spriteScale,
+		logger:        logger,
 	}
 
 	// Generate all test sprites
@@ -125,7 +128,7 @@ func (g *Game) generateItem(itemType sprites.ItemType, rarity sprites.ItemRarity
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		log.Printf("Failed to generate item %s %s: %v", rarity, itemType, err)
+		g.logger.WithError(rarity, itemType, err).WithField("item", "item %s %s").Error("failed to generate")
 		return ebiten.NewImage(*width, *height)
 	}
 
@@ -317,9 +320,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 func main() {
 	flag.Parse()
 
-	game, err := NewGame(*seed, *genre)
+	game, err := NewGame(*seed, *genre, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)
@@ -327,6 +330,6 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	if err := ebiten.RunGame(game); err != nil && err.Error() != "quit" {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 }

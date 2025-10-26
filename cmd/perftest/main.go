@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -22,17 +23,27 @@ var (
 func main() {
 	flag.Parse()
 
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("perftest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
 	// Validation mode for README claims
 	if *validate2k {
-		log.Println("Running validation test for README performance claim (2000 entities)")
+		logger.Info("running validation test for README performance claim (2000 entities)")
 		*entityCount = 2000
 		*duration = 30     // Longer test for stability
 		*targetFPS = 106.0 // Specific claim from README
 	}
 
-	log.Printf("Performance Test - Spawning %d entities for %d seconds", *entityCount, *duration)
+	logger.WithFields(logrus.Fields{
+		"entities": *entityCount,
+		"duration": *duration,
+	}).Info("performance test starting")
+
 	if *targetFPS != 60.0 {
-		log.Printf("Custom target FPS: %.2f", *targetFPS)
+		logger.WithField("targetFPS", *targetFPS).Info("custom target FPS")
 	}
 
 	// Create world with performance monitoring
@@ -50,10 +61,10 @@ func main() {
 	world.AddSystem(movementSystem)
 	world.AddSystem(collisionSystem)
 
-	log.Println("Systems initialized: Movement, Collision, Spatial Partitioning")
+	logger.Info("systems initialized: Movement, Collision, Spatial Partitioning")
 
 	// Spawn entities
-	log.Printf("Spawning %d entities...", *entityCount)
+	logger.WithField("entityCount", *entityCount).Info("spawning entities...")
 	startSpawn := time.Now()
 
 	for i := 0; i < *entityCount; i++ {
@@ -84,11 +95,17 @@ func main() {
 	world.Update(0)
 	spawnDuration := time.Since(startSpawn)
 
-	log.Printf("Spawned %d entities in %.2fms", *entityCount, float64(spawnDuration.Microseconds())/1000.0)
+	logger.WithFields(logrus.Fields{
+		"entityCount": *entityCount,
+		"duration":    float64(spawnDuration.Microseconds()) / 1000.0,
+	}).Info("entities spawned")
 
 	// Run simulation
-	log.Println("Starting performance test...")
-	log.Printf("Target: %.0f FPS (%.2fms per frame)", *targetFPS, 1000.0 / *targetFPS)
+	logger.Info("starting performance test")
+	logger.WithFields(logrus.Fields{
+		"targetFPS":  *targetFPS,
+		"msPerFrame": 1000.0 / *targetFPS,
+	}).Info("performance targets")
 
 	frameDuration := time.Second / time.Duration(*targetFPS)
 	endTime := time.Now().Add(time.Duration(*duration) * time.Second)
@@ -128,8 +145,19 @@ func main() {
 	}
 
 	// Final report
-	log.Println("\n=== Performance Test Complete ===")
+	logger.Info("performance test complete")
 	metrics := monitor.GetMetrics()
+
+	logger.WithFields(logrus.Fields{
+		"totalFrames":       frameCount,
+		"avgFPS":            metrics.FPS,
+		"avgFrameTime":      float64(metrics.AverageFrameTime.Microseconds()) / 1000.0,
+		"minFrameTime":      float64(metrics.MinFrameTime.Microseconds()) / 1000.0,
+		"maxFrameTime":      float64(metrics.MaxFrameTime.Microseconds()) / 1000.0,
+		"avgUpdateTime":     float64(metrics.AverageUpdateTime.Microseconds()) / 1000.0,
+		"entityCount":       metrics.EntityCount,
+		"activeEntityCount": metrics.ActiveEntityCount,
+	}).Info("final statistics")
 
 	fmt.Printf("\nFinal Statistics:\n")
 	fmt.Printf("  Total Frames: %d\n", frameCount)
@@ -186,9 +214,9 @@ System Breakdown:
 		}
 
 		if err := os.WriteFile(*outputReport, []byte(reportContent), 0o644); err != nil {
-			log.Printf("Failed to write report: %v", err)
+			logger.WithError(err).Error("failed to write report")
 		} else {
-			log.Printf("Performance report written to: %s", *outputReport)
+			logger.WithField("path", *outputReport).Info("performance report written")
 		}
 	}
 
@@ -213,5 +241,5 @@ System Breakdown:
 	fmt.Printf("  %d queries in %.2fms\n", queryCount, float64(queryDuration.Microseconds())/1000.0)
 	fmt.Printf("  Average query time: %.2fμs\n", float64(avgQueryTime.Nanoseconds())/1000.0)
 
-	log.Println("\nPerformance test complete!")
+	logger.Info("performance test complete!")
 }

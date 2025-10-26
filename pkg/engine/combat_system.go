@@ -79,9 +79,9 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 		// but status effects continue (poison doesn't stop at death)
 		isDead := entity.HasComponent("dead")
 
-		// DEBUG: Log if player is somehow marked as dead
-		if entity.HasComponent("input") && isDead {
-			fmt.Printf("[COMBAT SYSTEM] WARNING: Player entity %d has 'dead' component!\n", entity.ID)
+		// Log if player is somehow marked as dead
+		if entity.HasComponent("input") && isDead && s.logger != nil {
+			s.logger.WithField("entityID", entity.ID).Warn("player entity has dead component")
 		}
 
 		if !isDead {
@@ -91,10 +91,14 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 				beforeCooldown := attack.CooldownTimer
 				attack.UpdateCooldown(deltaTime)
 
-				// DEBUG: Log cooldown updates for player (entity with input component)
-				if entity.HasComponent("input") && beforeCooldown > 0 {
-					fmt.Printf("[COMBAT SYSTEM] Entity %d cooldown: %.2f → %.2f (delta: %.3f)\n",
-						entity.ID, beforeCooldown, attack.CooldownTimer, deltaTime)
+				// Log cooldown updates for player when debugging
+				if entity.HasComponent("input") && beforeCooldown > 0 && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entityID":       entity.ID,
+						"cooldownBefore": beforeCooldown,
+						"cooldownAfter":  attack.CooldownTimer,
+						"deltaTime":      deltaTime,
+					}).Debug("player attack cooldown updated")
 				}
 			}
 		}
@@ -289,9 +293,13 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	if animComp, hasAnim := attacker.GetComponent("animation"); hasAnim {
 		anim := animComp.(*AnimationComponent)
 
-		// DEBUG: Log animation trigger
-		if attacker.HasComponent("input") {
-			fmt.Printf("[ATTACK ANIM] Player attacking - setting state to ATTACK (was %s)\n", anim.CurrentState)
+		// Log animation trigger for player when debugging
+		if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"attackerID":    attacker.ID,
+				"previousState": anim.CurrentState,
+				"newState":      "ATTACK",
+			}).Debug("player attack animation triggered")
 		}
 
 		anim.SetState(AnimationStateAttack)
@@ -310,8 +318,8 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 				anim.SetState(AnimationStateIdle)
 			}
 
-			if attacker.HasComponent("input") {
-				fmt.Printf("[ATTACK ANIM] Player attack complete - returning to idle/walk\n")
+			if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithField("attackerID", attacker.ID).Debug("player attack animation complete")
 			}
 		}
 	}

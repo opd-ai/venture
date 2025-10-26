@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -98,7 +97,7 @@ func main() {
 	printTrees(out, trees, *verbose)
 
 	if *output != "" {
-		log.Printf("Output written to %s", *output)
+		testLogger.WithField("outputFile", *output).Info("output written to file")
 	}
 }
 

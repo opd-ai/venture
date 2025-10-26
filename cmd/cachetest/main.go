@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"image/color"
-	"log"
 	"math/rand"
 	"time"
 
@@ -33,6 +34,7 @@ type Game struct {
 	genreIndex     int
 	genres         []string
 	showStats      bool
+	logger         *logrus.Logger
 }
 
 // NewGame creates a new cache test game.
@@ -139,7 +141,7 @@ func (g *Game) Update() error {
 		// Request sprite (will use cache if available)
 		_, err := g.cachedGen.Generate(config)
 		if err != nil {
-			log.Printf("Error generating sprite: %v", err)
+			g.logger.WithError(err).Error("failed to generate sprite")
 		}
 
 		g.totalRequests++
@@ -263,17 +265,17 @@ func main() {
 	ebiten.SetWindowTitle("Sprite Cache Performance Test")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	log.Printf("Starting cache test with capacity: %d", *cacheCapacity)
-	log.Println("Controls:")
-	log.Println("  SPACE - Pause/Resume")
-	log.Println("  C - Clear Cache")
-	log.Println("  G - Change Genre")
-	log.Println("  S - Toggle Stats")
-	log.Println("  +/- - Adjust Generation Speed")
-	log.Println("  ESC - Quit")
+	logger.WithField("capacity", *cacheCapacity).Info("starting cache test")
+	logger.Info("controls:")
+	logger.Info("  SPACE - Pause/Resume")
+	logger.Info("  C - Clear Cache")
+	logger.Info("  G - Change Genre")
+	logger.Info("  S - Toggle Stats")
+	logger.Info("  +/- - Adjust Generation Speed")
+	logger.Info("  ESC - Quit")
 
 	if err := ebiten.RunGame(game); err != nil && err.Error() != "quit" {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 
 	// Print final stats

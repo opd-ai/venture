@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"image/color"
-	"log"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -32,6 +33,7 @@ type Game struct {
 	mode             int // 0=idle, 1=walk, 2=attack demo
 	demoTimer        float64
 	showInstructions bool
+	logger           *logrus.Logger
 }
 
 // NewGame creates a new animation demo game.
@@ -166,7 +168,7 @@ func (g *Game) Update() error {
 
 	g.movementSys.Update(entities, dt)
 	if err := g.animationSys.Update(entities, dt); err != nil {
-		log.Printf("Animation system error: %v", err)
+		g.logger.WithError(err).Error("animation system error")
 	}
 	g.combatSys.Update(entities, dt)
 
@@ -419,14 +421,14 @@ func main() {
 	ebiten.SetWindowTitle("Venture - Animation System Demo")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	log.Println("Starting animation demo...")
-	log.Println("Press 1, 2, or 3 to switch demo modes")
-	log.Println("Press H to toggle help")
-	log.Println("Press ESC to quit")
+	logger.Info("Starting animation demo...")
+	logger.Info("Press 1, 2, or 3 to switch demo modes")
+	logger.Info("Press H to toggle help")
+	logger.Info("Press ESC to quit")
 
 	if err := ebiten.RunGame(game); err != nil && err.Error() != "quit" {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 
-	log.Println("Demo finished")
+	logger.Info("Demo finished")
 }

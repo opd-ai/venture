@@ -7,8 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -41,6 +42,7 @@ type Game struct {
 	spriteGen    *sprites.Generator
 	paletteGen   *palette.Generator
 	currentPal   *palette.Palette
+	logger       *logrus.Logger
 }
 
 // ViewMode determines what is displayed.
@@ -69,7 +71,7 @@ func (v ViewMode) String() string {
 }
 
 // NewGame creates a new silhouette test game.
-func NewGame(seed int64, genreID string) (*Game, error) {
+func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 	spriteGen := sprites.NewGenerator()
 	paletteGen := palette.NewGenerator()
 
@@ -91,6 +93,7 @@ func NewGame(seed int64, genreID string) (*Game, error) {
 		spriteGen:    spriteGen,
 		paletteGen:   paletteGen,
 		currentPal:   pal,
+		logger:       logger,
 	}
 
 	// Generate all test sprites
@@ -152,7 +155,7 @@ func (g *Game) addEntity(name, entityType, facing string, hasWeapon, hasShield b
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		log.Printf("Failed to generate entity %s: %v", name, err)
+		g.logger.WithError(name, err).WithField("item", "entity %s").Error("failed to generate")
 		sprite = ebiten.NewImage(32, 32)
 	}
 
@@ -177,7 +180,7 @@ func (g *Game) addItem(name string, itemType sprites.ItemType, rarity sprites.It
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		log.Printf("Failed to generate item %s: %v", name, err)
+		g.logger.WithError(name, err).WithField("item", "item %s").Error("failed to generate")
 		sprite = ebiten.NewImage(32, 32)
 	}
 
@@ -395,9 +398,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 func main() {
 	flag.Parse()
 
-	game, err := NewGame(*seed, *genre)
+	game, err := NewGame(*seed, *genre, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)
@@ -405,6 +408,6 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	if err := ebiten.RunGame(game); err != nil && err.Error() != "quit" {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("error")
 	}
 }

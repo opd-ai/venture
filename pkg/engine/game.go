@@ -22,8 +22,10 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager *AppStateManager
-	MainMenuUI   *MainMenuUI
+	StateManager      *AppStateManager
+	MainMenuUI        *MainMenuUI
+	CharacterCreation *EbitenCharacterCreation
+	pendingCharData   *CharacterData
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -92,22 +94,23 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	}
 
 	game := &EbitenGame{
-		World:          world,
-		lastUpdateTime: time.Now(),
-		ScreenWidth:    screenWidth,
-		ScreenHeight:   screenHeight,
-		StateManager:   NewAppStateManager(),
-		MainMenuUI:     NewMainMenuUI(screenWidth, screenHeight),
-		CameraSystem:   cameraSystem,
-		RenderSystem:   renderSystem,
-		HUDSystem:      hudSystem,
-		MenuSystem:     menuSystem,
-		InventoryUI:    inventoryUI,
-		QuestUI:        questUI,
-		CharacterUI:    characterUI,
-		SkillsUI:       skillsUI,
-		MapUI:          mapUI,
-		logger:         logEntry,
+		World:             world,
+		lastUpdateTime:    time.Now(),
+		ScreenWidth:       screenWidth,
+		ScreenHeight:      screenHeight,
+		StateManager:      NewAppStateManager(),
+		MainMenuUI:        NewMainMenuUI(screenWidth, screenHeight),
+		CharacterCreation: NewCharacterCreation(screenWidth, screenHeight),
+		CameraSystem:      cameraSystem,
+		RenderSystem:      renderSystem,
+		HUDSystem:         hudSystem,
+		MenuSystem:        menuSystem,
+		InventoryUI:       inventoryUI,
+		QuestUI:           questUI,
+		CharacterUI:       characterUI,
+		SkillsUI:          skillsUI,
+		MapUI:             mapUI,
+		logger:            logEntry,
 	}
 
 	if logEntry != nil {
@@ -142,23 +145,19 @@ func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
 func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	switch option {
 	case MainMenuOptionSinglePlayer:
-		// For MVP, single player directly starts a new game
-		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		// Transition to character creation
+		if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
 			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to gameplay")
+				g.logger.WithError(err).Error("failed to transition to character creation")
 			}
 			return
 		}
 
-		// Trigger new game callback if set
-		if g.onNewGame != nil {
-			if err := g.onNewGame(); err != nil {
-				if g.logger != nil {
-					g.logger.WithError(err).Error("new game callback failed")
-				}
-				// Transition back to menu on error
-				_ = g.StateManager.TransitionTo(AppStateMainMenu)
-			}
+		// Reset character creation UI for new game
+		g.CharacterCreation.Reset()
+
+		if g.logger != nil {
+			g.logger.Info("entering character creation")
 		}
 
 	case MainMenuOptionMultiPlayer:
@@ -216,6 +215,50 @@ func (g *EbitenGame) Update() error {
 	}
 
 	// If in main menu state, only update main menu
+	if g.StateManager.CurrentState() == AppStateMainMenu {
+		g.MainMenuUI.Update()
+		return nil
+	}
+
+	// If in character creation state, update character creation
+	if g.StateManager.CurrentState() == AppStateCharacterCreation {
+		completed := g.CharacterCreation.Update()
+		if completed {
+			// Character creation finished, store data and transition to gameplay
+			charData := g.CharacterCreation.GetCharacterData()
+			g.pendingCharData = &charData
+
+			if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+				if g.logger != nil {
+					g.logger.WithError(err).Error("failed to transition to gameplay after character creation")
+				}
+				return err
+			}
+
+			// Trigger new game callback with character data
+			if g.onNewGame != nil {
+				if err := g.onNewGame(); err != nil {
+					if g.logger != nil {
+						g.logger.WithError(err).Error("new game callback failed")
+					}
+					// Transition back to menu on error
+					_ = g.StateManager.TransitionTo(AppStateMainMenu)
+					g.pendingCharData = nil
+					return err
+				}
+			}
+
+			if g.logger != nil {
+				g.logger.WithFields(logrus.Fields{
+					"name":  charData.Name,
+					"class": charData.Class.String(),
+				}).Info("character created, starting game")
+			}
+		}
+		return nil
+	}
+
+	// If in any other menu state, only update menu
 	if g.StateManager.IsInMenu() {
 		g.MainMenuUI.Update()
 		return nil
@@ -261,6 +304,18 @@ func (g *EbitenGame) Update() error {
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	// If in main menu state, only draw main menu
+	if g.StateManager.CurrentState() == AppStateMainMenu {
+		g.MainMenuUI.Draw(screen)
+		return
+	}
+
+	// If in character creation state, only draw character creation
+	if g.StateManager.CurrentState() == AppStateCharacterCreation {
+		g.CharacterCreation.Draw(screen)
+		return
+	}
+
+	// If in any other menu state, draw main menu
 	if g.StateManager.IsInMenu() {
 		g.MainMenuUI.Draw(screen)
 		return
@@ -329,6 +384,14 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 // SetInventorySystem connects the inventory system to the inventory UI for item actions.
 func (g *EbitenGame) SetInventorySystem(system *InventorySystem) {
 	g.InventoryUI.SetInventorySystem(system)
+}
+
+// GetPendingCharacterData returns the character data from character creation (if any).
+// Returns nil if no character data is pending. Clears the pending data after retrieval.
+func (g *EbitenGame) GetPendingCharacterData() *CharacterData {
+	data := g.pendingCharData
+	g.pendingCharData = nil // Clear after retrieval
+	return data
 }
 
 // SetupInputCallbacks connects the input system callbacks to the UI systems.

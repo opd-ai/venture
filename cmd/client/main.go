@@ -940,6 +940,21 @@ func main() {
 
 	clientLogger.WithField("entityID", player.ID).Info("player entity created")
 
+	// Apply character class stats if character data is available
+	if charData := game.GetPendingCharacterData(); charData != nil {
+		clientLogger.WithFields(logrus.Fields{
+			"name":  charData.Name,
+			"class": charData.Class.String(),
+		}).Info("applying character class stats")
+
+		if err := engine.ApplyClassStats(player, charData.Class); err != nil {
+			log.Fatalf("Failed to apply character class stats: %v", err)
+		}
+
+		// TODO: Store character name in player component for display
+		// Future enhancement: Add NameComponent for multiplayer identification
+	}
+
 	// Add starter items to inventory
 	clientLogger.Info("adding starter items to inventory")
 	addStarterItems(playerInventory, *seed, *genreID, logger)

@@ -184,18 +184,32 @@ func (am *AudioManager) applyVolumeToTrack(track *audio.AudioSample, volume floa
 
 // AudioManagerSystem is an ECS system that updates audio state based on game context.
 type AudioManagerSystem struct {
-	audioManager *AudioManager
-	lastGenre    string
-	lastContext  string
-	updateTimer  int
+	audioManager      *AudioManager
+	detector          *MusicContextDetector
+	transitionManager *MusicTransitionManager
+	playerEntity      *Entity
+	genreID           string
+	updateTimer       int
 }
 
 // NewAudioManagerSystem creates a new audio manager system.
 func NewAudioManagerSystem(audioManager *AudioManager) *AudioManagerSystem {
 	return &AudioManagerSystem{
-		audioManager: audioManager,
-		updateTimer:  0,
+		audioManager:      audioManager,
+		detector:          NewMusicContextDetector(),
+		transitionManager: NewMusicTransitionManager(),
+		updateTimer:       0,
 	}
+}
+
+// SetPlayerEntity sets the player entity reference for context detection
+func (ams *AudioManagerSystem) SetPlayerEntity(player *Entity) {
+	ams.playerEntity = player
+}
+
+// SetGenreID sets the genre for music generation
+func (ams *AudioManagerSystem) SetGenreID(genre string) {
+	ams.genreID = genre
 }
 
 // Update checks game state and updates audio context as needed.
@@ -209,55 +223,29 @@ func (ams *AudioManagerSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	ams.updateTimer = 0
 
-	// Determine current game context by checking for enemies
-	context := "exploration"
-	enemyCount := 0
+	// Detect current music context
+	newContext := ams.detector.DetectContext(entities, ams.playerEntity)
 
-	for _, entity := range entities {
-		// Skip player entities
-		if entity.HasComponent("input") {
-			continue
+	// Check if we should transition
+	if ams.transitionManager.ShouldTransition(newContext) {
+		// Get genre from system (default to fantasy if not set)
+		genre := ams.genreID
+		if genre == "" {
+			genre = "fantasy"
 		}
 
-		// Count enemies (have health but not input = enemy)
-		if entity.HasComponent("health") {
-			enemyCount++
-		}
-	}
+		// Begin transition
+		ams.transitionManager.BeginTransition(newContext)
 
-	// Switch to combat music if enemies present
-	if enemyCount > 0 {
-		context = "combat"
-	}
-
-	// Check for boss enemies (high attack power)
-	for _, entity := range entities {
-		if entity.HasComponent("stats") {
-			statsComp, ok := entity.GetComponent("stats")
-			if !ok {
-				continue
-			}
-			stats := statsComp.(*StatsComponent)
-			if stats.Attack > 20 {
-				context = "boss"
-				break
-			}
-		}
-	}
-
-	// Update music if context changed
-	if context != ams.lastContext {
-		// Get genre from world settings (default to fantasy)
-		genre := "fantasy"
-		// In a full implementation, we'd get this from world state
-
-		err := ams.audioManager.PlayMusic(genre, context)
+		// Play new music
+		err := ams.audioManager.PlayMusic(genre, newContext.String())
 		if err != nil {
 			// Log error but don't crash
 			fmt.Printf("Warning: Failed to update music: %v\n", err)
 		}
 
-		ams.lastContext = context
-		ams.lastGenre = genre
+		// Mark transition complete (in a real implementation with crossfade,
+		// this would happen after the crossfade completes)
+		ams.transitionManager.CompleteTransition()
 	}
 }

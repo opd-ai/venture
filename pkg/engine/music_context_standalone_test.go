@@ -12,39 +12,39 @@ import (
 func TestMusicContextIntegrationStandalone(t *testing.T) {
 	// Create entities with different states
 	explorationEntities := []*Entity{
-		{id: 1, components: make(map[string]Component)},
+		{ID: 1, Components: make(map[string]Component)},
 	}
 
 	combatEntities := []*Entity{
-		{id: 1, components: make(map[string]Component)}, // player
-		{id: 2, components: make(map[string]Component)}, // enemy
+		{ID: 1, Components: make(map[string]Component)}, // player
+		{ID: 2, Components: make(map[string]Component)}, // enemy
 	}
-	combatEntities[0].components["position"] = &struct {
+	combatEntities[0].Components["position"] = &struct {
 		X, Y float64
 		Component
 	}{X: 0, Y: 0}
-	combatEntities[0].components["health"] = &struct {
+	combatEntities[0].Components["health"] = &struct {
 		Current, Max float64
 		Component
 	}{Current: 100, Max: 100}
-	combatEntities[0].components["team"] = &struct {
+	combatEntities[0].Components["team"] = &struct {
 		Team string
 		Component
 	}{Team: "player"}
 
-	combatEntities[1].components["position"] = &struct {
+	combatEntities[1].Components["position"] = &struct {
 		X, Y float64
 		Component
 	}{X: 100, Y: 100}
-	combatEntities[1].components["health"] = &struct {
+	combatEntities[1].Components["health"] = &struct {
 		Current, Max float64
 		Component
 	}{Current: 50, Max: 50}
-	combatEntities[1].components["stats"] = &struct {
+	combatEntities[1].Components["stats"] = &struct {
 		Attack, Defense float64
 		Component
 	}{Attack: 10, Defense: 5}
-	combatEntities[1].components["team"] = &struct {
+	combatEntities[1].Components["team"] = &struct {
 		Team string
 		Component
 	}{Team: "enemy"}

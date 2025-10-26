@@ -22,10 +22,11 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager      *AppStateManager
-	MainMenuUI        *MainMenuUI
-	CharacterCreation *EbitenCharacterCreation
-	pendingCharData   *CharacterData
+	StateManager       *AppStateManager
+	MainMenuUI         *MainMenuUI
+	CharacterCreation  *EbitenCharacterCreation
+	pendingCharData    *CharacterData
+	isMultiplayerMode  bool // Track if character creation is for multiplayer
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -155,30 +156,27 @@ func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 
 		// Reset character creation UI for new game
 		g.CharacterCreation.Reset()
+		g.isMultiplayerMode = false // Single-player mode
 
 		if g.logger != nil {
-			g.logger.Info("entering character creation")
+			g.logger.Info("entering character creation for single-player")
 		}
 
 	case MainMenuOptionMultiPlayer:
-		// For MVP, use default server address from flags
-		// Future: show multiplayer submenu with server address input
-		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		// Transition to character creation (same as single-player)
+		if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
 			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to gameplay")
+				g.logger.WithError(err).Error("failed to transition to character creation")
 			}
 			return
 		}
 
-		// Trigger multiplayer connect callback if set (client will have set server address)
-		if g.onMultiplayerConnect != nil {
-			if err := g.onMultiplayerConnect(""); err != nil {
-				if g.logger != nil {
-					g.logger.WithError(err).Error("multiplayer connect callback failed")
-				}
-				// Transition back to menu on error
-				_ = g.StateManager.TransitionTo(AppStateMainMenu)
-			}
+		// Reset character creation UI for multiplayer
+		g.CharacterCreation.Reset()
+		g.isMultiplayerMode = true // Multiplayer mode
+
+		if g.logger != nil {
+			g.logger.Info("entering character creation for multiplayer")
 		}
 
 	case MainMenuOptionSettings:
@@ -235,24 +233,49 @@ func (g *EbitenGame) Update() error {
 				return err
 			}
 
-			// Trigger new game callback with character data
-			if g.onNewGame != nil {
-				if err := g.onNewGame(); err != nil {
-					if g.logger != nil {
-						g.logger.WithError(err).Error("new game callback failed")
+			// Trigger appropriate callback based on mode
+			if g.isMultiplayerMode {
+				// Multiplayer: connect to server with character data
+				if g.onMultiplayerConnect != nil {
+					if err := g.onMultiplayerConnect(""); err != nil {
+						if g.logger != nil {
+							g.logger.WithError(err).Error("multiplayer connect callback failed")
+						}
+						// Transition back to menu on error
+						_ = g.StateManager.TransitionTo(AppStateMainMenu)
+						g.pendingCharData = nil
+						return err
 					}
-					// Transition back to menu on error
-					_ = g.StateManager.TransitionTo(AppStateMainMenu)
-					g.pendingCharData = nil
-					return err
 				}
-			}
-
-			if g.logger != nil {
-				g.logger.WithFields(logrus.Fields{
-					"name":  charData.Name,
-					"class": charData.Class.String(),
-				}).Info("character created, starting game")
+				
+				if g.logger != nil {
+					g.logger.WithFields(logrus.Fields{
+						"name":  charData.Name,
+						"class": charData.Class.String(),
+						"mode":  "multiplayer",
+					}).Info("character created, connecting to server")
+				}
+			} else {
+				// Single-player: start new game
+				if g.onNewGame != nil {
+					if err := g.onNewGame(); err != nil {
+						if g.logger != nil {
+							g.logger.WithError(err).Error("new game callback failed")
+						}
+						// Transition back to menu on error
+						_ = g.StateManager.TransitionTo(AppStateMainMenu)
+						g.pendingCharData = nil
+						return err
+					}
+				}
+				
+				if g.logger != nil {
+					g.logger.WithFields(logrus.Fields{
+						"name":  charData.Name,
+						"class": charData.Class.String(),
+						"mode":  "single-player",
+					}).Info("character created, starting game")
+				}
 			}
 		}
 		return nil

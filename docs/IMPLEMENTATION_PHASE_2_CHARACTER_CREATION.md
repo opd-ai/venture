@@ -19,11 +19,12 @@ Implemented a comprehensive character creation system that provides a unified on
    - EbitenCharacterCreation UI system
    - ApplyClassStats() function for stat application
 
-2. **`pkg/engine/character_creation_test.go`** (523 lines)
-   - 16 test functions
-   - 42 individual test cases
+2. **`pkg/engine/character_creation_test.go`** (523+ lines)
+   - 19 test functions (including defaults tests)
+   - 45+ individual test cases
    - Table-driven tests for all scenarios
    - 100% coverage on testable (non-Ebiten) functions
+   - Tests for custom defaults: TestSetDefaults, TestResetAppliesDefaults, TestResetWithoutDefaults
 
 ### Modified Files
 
@@ -90,15 +91,37 @@ Implemented a comprehensive character creation system that provides a unified on
 
 ```
 Main Menu
-    ↓ [Select Single-Player]
+    ↓ [Select Single-Player OR Multi-Player]
 Character Creation - Step 1: Name Input
-    ↓ [Enter name, press ENTER]
+    ↓ [Enter name, press ENTER | Press F2 to save as default]
 Character Creation - Step 2: Class Selection
-    ↓ [Choose Warrior/Mage/Rogue, press ENTER]
+    ↓ [Choose Warrior/Mage/Rogue, press ENTER | Press F2 to save as default]
 Character Creation - Step 3: Confirmation
     ↓ [Review character, press ENTER to confirm]
-Gameplay (with class-specific stats applied)
+Single-Player: Start Gameplay with class-specific stats
+Multi-Player: Connect to Server with character data
 ```
+
+### Custom Defaults Feature
+
+Players can save their preferred name and class as defaults using the **F2 key**:
+
+- **Step 1 (Name Input)**: Press F2 to save the current name as default
+- **Step 2 (Class Selection)**: Press F2 to save the current class as default
+- **Reset Behavior**: When character creation is reset (e.g., new game), defaults are automatically applied
+- **Visual Feedback**: Current default values are displayed in gray text on each screen
+- **Testing Benefits**: Saves time during development and repeated testing
+
+**Example Workflow**:
+1. Enter preferred name (e.g., "Hero"), press F2 → "Default name saved!"
+2. Select preferred class (e.g., Warrior), press F2 → "Default class saved!"
+3. On subsequent character creations, name and class are pre-filled
+
+**Implementation**:
+- `CharacterCreationDefaults` struct stores default name and class
+- `SetDefaults()` and `GetDefaults()` methods provide external configuration
+- `Reset()` method applies defaults when resetting character creation
+- F2 key handlers in both name input and class selection screens
 
 ### Controls
 
@@ -122,14 +145,20 @@ Gameplay (with class-specific stats applied)
 
 ### State Machine Integration
 
-Character creation integrates with the existing AppState system:
+Character creation integrates with the existing AppState system for both single-player and multiplayer:
 
 ```
 AppStateMainMenu 
+    ↓ [Single-Player]
+AppStateCharacterCreation (isMultiplayerMode = false)
     ↓
-AppStateCharacterCreation 
+AppStateGameplay → onNewGame() callback
+
+AppStateMainMenu
+    ↓ [Multi-Player]
+AppStateCharacterCreation (isMultiplayerMode = true)
     ↓
-AppStateGameplay
+AppStateGameplay → onMultiplayerConnect() callback
 ```
 
 The AppStateCharacterCreation state is already defined in `pkg/engine/app_state.go` and was waiting for implementation.
@@ -137,14 +166,18 @@ The AppStateCharacterCreation state is already defined in `pkg/engine/app_state.
 ### Data Flow
 
 1. **User Input**: Player enters name and selects class in UI
-2. **Validation**: CharacterData.Validate() checks name length and class validity
-3. **Pending Storage**: Data stored in game.pendingCharData during transition
-4. **Stat Application**: After player entity creation, ApplyClassStats() modifies components:
+2. **Mode Selection**: isMultiplayerMode flag set based on menu choice
+3. **Validation**: CharacterData.Validate() checks name length and class validity
+4. **Pending Storage**: Data stored in game.pendingCharData during transition
+5. **Callback Routing**: 
+   - Single-player: onNewGame() → world generation → player entity creation
+   - Multiplayer: onMultiplayerConnect() → server connection → player entity creation
+6. **Stat Application**: After player entity creation, ApplyClassStats() modifies components:
    - HealthComponent (Current, Max)
    - ManaComponent (Current, Max, Regen)
    - StatsComponent (Attack, Defense, CritChance, CritDamage, Evasion)
    - AttackComponent (Damage, Cooldown)
-5. **Cleanup**: pendingCharData cleared after application
+7. **Cleanup**: pendingCharData cleared after application
 
 ### Multiplayer Readiness
 
@@ -154,7 +187,13 @@ The CharacterData struct is designed for network synchronization:
 - No Ebiten-specific types
 - Ready for protocol buffer or JSON encoding
 
-Future enhancement: Add network message type for character sync to server.
+**Current Implementation**: Character creation happens on both client and server connection flows. When a player selects "Multi-Player" from the main menu, they create their character before connecting to the server. The character data is available via `GetPendingCharacterData()` when the connection is established.
+
+**Future Enhancement**: 
+- Add network protocol message type for character data sync
+- Server validates character data on connection
+- Server broadcasts character info to other players
+- Add NameComponent for displaying player names in multiplayer
 
 ## Testing Strategy
 
@@ -171,6 +210,8 @@ All non-Ebiten-dependent functions have 100% test coverage:
 - getClassStats()
 - wrapText()
 - ApplyClassStats()
+- SetDefaults() / GetDefaults() *(NEW)*
+- Custom defaults integration with Reset() *(NEW)*
 
 ### Test Categories
 
@@ -178,16 +219,23 @@ All non-Ebiten-dependent functions have 100% test coverage:
    - String conversion
    - Validation rules
    - State management
+   - *Custom defaults get/set* *(NEW)*
 
 2. **Integration Tests**: Component interaction
    - ApplyClassStats() with all classes
    - Error handling for missing components
    - Character data flow through state machine
+   - *Defaults application on reset* *(NEW)*
 
 3. **Table-Driven Tests**: Multiple scenarios
    - Valid/invalid names
    - All character classes
    - Edge cases (empty, too long, whitespace)
+
+4. **Defaults Feature Tests** *(NEW)*
+   - **TestSetDefaults**: Verifies SetDefaults() stores and GetDefaults() retrieves correct values
+   - **TestResetAppliesDefaults**: Verifies Reset() applies default name and class to character data
+   - **TestResetWithoutDefaults**: Verifies Reset() works correctly when no defaults are set (clears to zero values)
 
 ### Example Test
 

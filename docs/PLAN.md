@@ -96,18 +96,21 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - ✅ Three-step creation flow: Name input → Class selection → Confirmation
 - ✅ Integrated with AppState system (AppStateCharacterCreation)
 - ✅ Character data applied to player entity via ApplyClassStats()
-- ✅ Comprehensive test suite with 100% coverage on testable functions (16 test functions, 42 test cases)
+- ✅ Comprehensive test suite with 100% coverage on testable functions (19 test functions, 45+ test cases)
 - ✅ Tutorial integration: class descriptions teach gameplay during selection
+- ✅ **Custom Defaults Feature**: Press F2 to save preferred name/class for faster repeated character creation *(NEW)*
 
 **Status**: ✅ Complete - Production-ready with full integration
 
 **Current Behavior**:
 - Main Menu → Single-Player → Character Creation (3 steps) → Gameplay
+- Main Menu → Multi-Player → Character Creation (3 steps) → Connect to Server
 - Name input with keyboard entry (alphanumeric + spaces, max 20 characters)
 - Class selection via arrow keys or number keys (1-3)
 - Tutorial prompts embedded in class descriptions
-- Stats applied immediately on game start
-- Multiplayer-ready (character data prepared for network sync)
+- Stats applied immediately on game start (both single-player and multiplayer)
+- Character data ready for network sync to server
+- **Custom Defaults**: Press F2 on name/class screens to save as defaults; Reset() automatically applies saved defaults *(NEW)*
 
 **Class Stats**:
 - **Warrior**: HP 150, Mana 50, Attack 12, Defense 8, Crit Damage 2.0x
@@ -116,10 +119,15 @@ This approach allows immediate user feedback while keeping the codebase maintain
 
 **Technical Notes**:
 - Character data stored in pending state during transition
+- isMultiplayerMode flag tracks whether creating character for single-player or multiplayer
+- Single-player: triggers onNewGame() callback after character creation
+- Multiplayer: triggers onMultiplayerConnect() callback after character creation
 - ApplyClassStats() modifies health, mana, stats, and attack components
 - Validation ensures names 1-20 characters, valid class selection
 - UI uses Ebiten drawing with keyboard navigation (no mouse required)
-- Future: Add NameComponent for multiplayer player identification
+- Character data automatically synced to server when connecting (multiplayer)
+- **Custom Defaults**: CharacterCreationDefaults struct stores default name/class; SetDefaults()/GetDefaults() for configuration; F2 handlers save current selection; displayed in gray text *(NEW)*
+- Future: Server validates and stores character data, broadcasts to other players
 
 ---
 

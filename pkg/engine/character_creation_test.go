@@ -530,3 +530,81 @@ func TestCharacterCreation_GetClassStats(t *testing.T) {
 		t.Errorf("getClassStats() for unknown class returned %d lines, want 0", len(stats))
 	}
 }
+
+// TestSetDefaults tests setting custom default values
+func TestSetDefaults(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+
+	defaults := CharacterCreationDefaults{
+		DefaultName:  "TestHero",
+		DefaultClass: ClassMage,
+	}
+
+	cc.SetDefaults(defaults)
+
+	got := cc.GetDefaults()
+	if got.DefaultName != "TestHero" {
+		t.Errorf("GetDefaults().DefaultName = %q, want %q", got.DefaultName, "TestHero")
+	}
+	if got.DefaultClass != ClassMage {
+		t.Errorf("GetDefaults().DefaultClass = %v, want %v", got.DefaultClass, ClassMage)
+	}
+}
+
+// TestResetAppliesDefaults tests that Reset applies default values
+func TestResetAppliesDefaults(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+
+	// Set defaults
+	defaults := CharacterCreationDefaults{
+		DefaultName:  "DefaultHero",
+		DefaultClass: ClassRogue,
+	}
+	cc.SetDefaults(defaults)
+
+	// Modify character data away from defaults
+	cc.nameInput = "SomeOtherName"
+	cc.characterData.Name = "SomeOtherName"
+	cc.characterData.Class = ClassWarrior
+
+	// Reset should apply defaults
+	cc.Reset()
+
+	if cc.nameInput != "DefaultHero" {
+		t.Errorf("After Reset(), nameInput = %q, want %q", cc.nameInput, "DefaultHero")
+	}
+	if cc.characterData.Name != "DefaultHero" {
+		t.Errorf("After Reset(), characterData.Name = %q, want %q", cc.characterData.Name, "DefaultHero")
+	}
+	if cc.characterData.Class != ClassRogue {
+		t.Errorf("After Reset(), characterData.Class = %v, want %v", cc.characterData.Class, ClassRogue)
+	}
+}
+
+// TestResetWithoutDefaults tests that Reset works when no defaults are set
+func TestResetWithoutDefaults(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+
+	// Modify character data
+	cc.nameInput = "SomeName"
+	cc.characterData.Name = "SomeName"
+	cc.characterData.Class = ClassMage
+	cc.currentStep = stepClassSelection
+
+	// Reset without defaults should clear everything
+	cc.Reset()
+
+	if cc.nameInput != "" {
+		t.Errorf("After Reset() without defaults, nameInput = %q, want empty", cc.nameInput)
+	}
+	if cc.characterData.Name != "" {
+		t.Errorf("After Reset() without defaults, characterData.Name = %q, want empty", cc.characterData.Name)
+	}
+	if cc.characterData.Class != ClassWarrior {
+		t.Errorf("After Reset() without defaults, characterData.Class = %v, want %v (zero value)", cc.characterData.Class, ClassWarrior)
+	}
+	if cc.currentStep != stepNameInput {
+		t.Errorf("After Reset(), currentStep = %v, want %v", cc.currentStep, stepNameInput)
+	}
+}
+

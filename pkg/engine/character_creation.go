@@ -61,6 +61,12 @@ type CharacterData struct {
 	Class CharacterClass
 }
 
+// CharacterCreationDefaults holds custom default values for character creation
+type CharacterCreationDefaults struct {
+	DefaultName  string         // Default name to pre-fill
+	DefaultClass CharacterClass // Default class to pre-select
+}
+
 // Validate checks if the character data is valid
 func (cd *CharacterData) Validate() error {
 	// Trim whitespace
@@ -96,6 +102,9 @@ type EbitenCharacterCreation struct {
 	confirmed     bool
 	errorMsg      string
 
+	// Custom defaults
+	defaults CharacterCreationDefaults
+
 	// Input state
 	inputBuffer []rune
 
@@ -111,7 +120,28 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		screenWidth:   screenWidth,
 		screenHeight:  screenHeight,
 		inputBuffer:   make([]rune, 0),
+		defaults: CharacterCreationDefaults{
+			DefaultName:  "", // No default initially
+			DefaultClass: ClassWarrior,
+		},
 	}
+}
+
+// SetDefaults sets custom default values for character creation
+func (cc *EbitenCharacterCreation) SetDefaults(defaults CharacterCreationDefaults) {
+	cc.defaults = defaults
+	// Apply defaults to current state
+	if cc.currentStep == stepNameInput && cc.defaults.DefaultName != "" {
+		cc.nameInput = cc.defaults.DefaultName
+	}
+	if cc.currentStep == stepClassSelection {
+		cc.selectedClass = cc.defaults.DefaultClass
+	}
+}
+
+// GetDefaults returns the current default values
+func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
+	return cc.defaults
 }
 
 // Update handles input for character creation (keyboard/mouse navigation)
@@ -159,6 +189,14 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 			cc.errorMsg = "Name cannot be empty"
 		}
 	}
+	
+	// F2 to save current name as default
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+		if len(strings.TrimSpace(cc.nameInput)) > 0 {
+			cc.defaults.DefaultName = strings.TrimSpace(cc.nameInput)
+			cc.errorMsg = "Default name saved!"
+		}
+	}
 }
 
 // updateClassSelection handles class selection with keyboard/mouse
@@ -195,6 +233,12 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
+	}
+	
+	// F2 to save current class as default
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+		cc.defaults.DefaultClass = cc.selectedClass
+		cc.errorMsg = fmt.Sprintf("Default class saved: %s", cc.selectedClass.String())
 	}
 }
 
@@ -292,10 +336,18 @@ func (cc *EbitenCharacterCreation) drawNameInput(screen *ebiten.Image, x, y, w, 
 	text.Draw(screen, displayText, basicfont.Face7x13, textX, inputBoxY+20,
 		color.RGBA{255, 255, 255, 255})
 
+	// Show current default if set
+	if cc.defaults.DefaultName != "" {
+		defaultText := fmt.Sprintf("Current default: %s", cc.defaults.DefaultName)
+		defaultX := x + w/2 - len(defaultText)*3
+		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+200,
+			color.RGBA{150, 150, 150, 255})
+	}
+
 	// Help text
-	helpText := "Press ENTER to continue"
-	helpX := x + w/2 - len(helpText)*3
-	text.Draw(screen, helpText, basicfont.Face7x13, helpX, y+h-60,
+	helpText1 := "Press ENTER to continue | F2 to save as default"
+	helpX1 := x + w/2 - len(helpText1)*3
+	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-60,
 		color.RGBA{150, 200, 150, 255})
 }
 
@@ -351,14 +403,27 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		}
 	}
 
+	// Show current default if set (defaults to ClassWarrior as zero value)
+	// Only show if explicitly set, which we track by checking if DefaultName is also set
+	if cc.defaults.DefaultName != "" {
+		defaultText := fmt.Sprintf("Current default: %s", cc.defaults.DefaultClass.String())
+		defaultX := x + w/2 - len(defaultText)*3
+		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+h-110,
+			color.RGBA{150, 150, 150, 255})
+	}
+
 	// Help text
 	helpText1 := "Use ARROW KEYS or 1-3 to select"
-	helpText2 := "Press ENTER to continue | BACKSPACE to go back"
+	helpText2 := "Press ENTER to continue | F2 to save as default"
+	helpText3 := "BACKSPACE to go back"
 	helpX1 := x + w/2 - len(helpText1)*3
 	helpX2 := x + w/2 - len(helpText2)*3
-	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-75,
+	helpX3 := x + w/2 - len(helpText3)*3
+	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-85,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-55,
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-65,
+		color.RGBA{150, 200, 150, 255})
+	text.Draw(screen, helpText3, basicfont.Face7x13, helpX3, y+h-45,
 		color.RGBA{150, 200, 150, 255})
 }
 
@@ -452,16 +517,25 @@ func (cc *EbitenCharacterCreation) IsComplete() bool {
 }
 
 // Reset resets the character creation to initial state
+// Applies custom defaults if they are set
 func (cc *EbitenCharacterCreation) Reset() {
 	cc.currentStep = stepNameInput
 	cc.characterData = CharacterData{}
-	cc.nameInput = ""
-	cc.selectedClass = ClassWarrior
 	cc.confirmed = false
 	cc.errorMsg = ""
+	
+	// Apply defaults to both input fields and character data
+	if cc.defaults.DefaultName != "" {
+		cc.nameInput = cc.defaults.DefaultName
+		cc.characterData.Name = cc.defaults.DefaultName
+	} else {
+		cc.nameInput = ""
+	}
+	cc.selectedClass = cc.defaults.DefaultClass
+	cc.characterData.Class = cc.defaults.DefaultClass
 }
 
-// wrapText splits text into lines of approximately maxChars length
+// SaveAsDefaults saves the current character data as defaults for future use
 func wrapText(text string, maxChars int) []string {
 	words := strings.Fields(text)
 	if len(words) == 0 {

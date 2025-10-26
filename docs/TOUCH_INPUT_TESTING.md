@@ -250,10 +250,10 @@ While manual testing is required for true touch input, you can verify the build:
 
 ```bash
 # Verify platform detection
-go test -tags test ./pkg/mobile/ -run TestPlatform -v
+go test ./pkg/mobile/ -run TestPlatform -v
 
 # Verify integration points
-go test -tags test ./pkg/mobile/ -run TestTouch -v
+go test ./pkg/mobile/ -run TestTouch -v
 
 # Build test
 GOOS=js GOARCH=wasm go build -o /tmp/test.wasm ./cmd/client

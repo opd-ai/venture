@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package rendering provides core rendering interfaces.
 // This file defines the Renderer interface used by all rendering components
 // for drawing to Ebiten images.

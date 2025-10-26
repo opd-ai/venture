@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package sprites - anatomical template system for structured sprite generation.
 // This file implements Phase 5.1 of the Visual Fidelity Enhancement Plan.
 package sprites

@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package sprites provides composite sprite generation with multi-layer composition.
 package sprites
 

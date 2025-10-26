@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package sprites provides procedural sprite generation.
 // This file implements sprite generators that create entity visuals
 // at runtime without external assets.

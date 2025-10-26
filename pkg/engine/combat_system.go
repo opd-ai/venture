@@ -279,7 +279,7 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			"targetID":     target.ID,
 			"damage":       finalDamage,
 			"baseDamage":   baseDamage,
-			"damageType":   attack.DamageType.String(),
+			"damageType":   attack.DamageType,
 			"critical":     isCrit,
 			"targetHealth": health.Current,
 		}).Info("damage dealt")

@@ -6,6 +6,8 @@ package engine
 import (
 	"fmt"
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // LevelUpCallback is called when an entity levels up.
@@ -18,6 +20,7 @@ type ProgressionSystem struct {
 	world            *World
 	levelUpCallbacks []LevelUpCallback
 	xpCurve          XPCurveFunc
+	logger           *logrus.Entry
 }
 
 // XPCurveFunc defines how much XP is required for each level.
@@ -26,10 +29,20 @@ type XPCurveFunc func(level int) int
 
 // NewProgressionSystem creates a new progression system.
 func NewProgressionSystem(world *World) *ProgressionSystem {
+	return NewProgressionSystemWithLogger(world, nil)
+}
+
+// NewProgressionSystemWithLogger creates a new progression system with a logger.
+func NewProgressionSystemWithLogger(world *World, logger *logrus.Logger) *ProgressionSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("system", "progression")
+	}
 	return &ProgressionSystem{
 		world:            world,
 		levelUpCallbacks: make([]LevelUpCallback, 0),
 		xpCurve:          DefaultXPCurve,
+		logger:           logEntry,
 	}
 }
 
@@ -96,6 +109,15 @@ func (ps *ProgressionSystem) AwardXP(entity *Entity, xp int) error {
 
 	exp := expComp.(*ExperienceComponent)
 
+	if ps.logger != nil && ps.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		ps.logger.WithFields(logrus.Fields{
+			"entityID":    entity.ID,
+			"xp":          xp,
+			"currentXP":   exp.CurrentXP,
+			"currentLevel": exp.Level,
+		}).Debug("awarding XP to entity")
+	}
+
 	// Add the XP
 	leveled := exp.AddXP(xp)
 
@@ -123,6 +145,15 @@ func (ps *ProgressionSystem) processLevelUps(entity *Entity, exp *ExperienceComp
 
 		// Update stats based on level scaling
 		ps.updateStatsForLevel(entity, exp.Level)
+
+		if ps.logger != nil {
+			ps.logger.WithFields(logrus.Fields{
+				"entityID":    entity.ID,
+				"newLevel":    exp.Level,
+				"skillPoints": exp.SkillPoints,
+				"requiredXP":  exp.RequiredXP,
+			}).Info("entity leveled up")
+		}
 
 		// Trigger callbacks
 		for _, callback := range ps.levelUpCallbacks {

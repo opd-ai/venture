@@ -159,6 +159,8 @@ func (c WeatherConfig) GetParticleCount() int {
 }
 
 // WeatherSystem represents a weather particle system.
+// Future feature: This system is designed for weather effects (rain, snow, etc.) but not yet integrated.
+// Planned integration per roadmap category 5.4 for dynamic weather and environmental effects.
 type WeatherSystem struct {
 	// Configuration
 	Config WeatherConfig

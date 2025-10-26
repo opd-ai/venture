@@ -24,15 +24,15 @@ const (
 
 // Game implements the Ebiten game interface for genre gallery.
 type Game struct {
-	generator   *sprites.CombinedGenerator
-	genres      []string
-	genreIndex  int
-	sprites     []*ebiten.Image
-	configs     []sprites.Config
-	seedBase    int64
-	page        int
-	maxPages    int
-	showInfo    bool
+	generator  *sprites.CombinedGenerator
+	genres     []string
+	genreIndex int
+	sprites    []*ebiten.Image
+	configs    []sprites.Config
+	seedBase   int64
+	page       int
+	maxPages   int
+	showInfo   bool
 }
 
 // NewGame creates a new genre gallery game.

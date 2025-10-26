@@ -143,7 +143,6 @@ func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	switch option {
 	case MainMenuOptionSinglePlayer:
 		// For MVP, single player directly starts a new game
-		// Future: transition to single player submenu (New Game/Load Game)
 		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 			if g.logger != nil {
 				g.logger.WithError(err).Error("failed to transition to gameplay")

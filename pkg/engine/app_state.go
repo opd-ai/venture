@@ -111,7 +111,8 @@ func (asm *AppStateManager) Back() error {
 	case AppStateSinglePlayerMenu, AppStateMultiPlayerMenu, AppStateSettings:
 		targetState = AppStateMainMenu
 	case AppStateCharacterCreation:
-		targetState = AppStateSinglePlayerMenu
+		// For MVP, go back to main menu (skip single player submenu)
+		targetState = AppStateMainMenu
 	default:
 		return fmt.Errorf("cannot navigate back from %s", asm.currentState)
 	}
@@ -129,8 +130,8 @@ func isValidAppTransition(from, to AppState) bool {
 
 	switch from {
 	case AppStateMainMenu:
-		// Can go to any submenu or settings from main menu
-		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings
+		// Can go to any submenu, settings, or directly to gameplay (MVP) from main menu
+		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay
 	case AppStateSinglePlayerMenu:
 		// Can start new game or go back to main menu
 		return to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu
@@ -138,8 +139,8 @@ func isValidAppTransition(from, to AppState) bool {
 		// Can connect to game or go back
 		return to == AppStateGameplay || to == AppStateMainMenu
 	case AppStateCharacterCreation:
-		// Can complete creation and start game or go back
-		return to == AppStateGameplay || to == AppStateSinglePlayerMenu
+		// Can complete creation and start game or go back to main menu (MVP flow)
+		return to == AppStateGameplay || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
 	case AppStateSettings:
 		// Can only go back to main menu
 		return to == AppStateMainMenu

@@ -52,6 +52,8 @@ func TestAppStateManager_TransitionTo(t *testing.T) {
 		{"main menu to single player", AppStateMainMenu, AppStateSinglePlayerMenu, false},
 		{"main menu to multiplayer", AppStateMainMenu, AppStateMultiPlayerMenu, false},
 		{"main menu to settings", AppStateMainMenu, AppStateSettings, false},
+		{"main menu to character creation", AppStateMainMenu, AppStateCharacterCreation, false},
+		{"main menu to gameplay", AppStateMainMenu, AppStateGameplay, false},
 
 		// Valid transitions from single player menu
 		{"single player to gameplay", AppStateSinglePlayerMenu, AppStateGameplay, false},
@@ -73,8 +75,6 @@ func TestAppStateManager_TransitionTo(t *testing.T) {
 		{"settings to main menu", AppStateSettings, AppStateMainMenu, false},
 
 		// Invalid transitions
-		{"main menu to character creation", AppStateMainMenu, AppStateCharacterCreation, true},
-		{"main menu to gameplay", AppStateMainMenu, AppStateGameplay, true},
 		{"gameplay to single player", AppStateGameplay, AppStateSinglePlayerMenu, true},
 		{"gameplay to settings", AppStateGameplay, AppStateSettings, true},
 		{"multiplayer to single player", AppStateMultiPlayerMenu, AppStateSinglePlayerMenu, true},
@@ -122,7 +122,7 @@ func TestAppStateManager_Back(t *testing.T) {
 		{"back from single player menu", AppStateSinglePlayerMenu, AppStateMainMenu, false},
 		{"back from multiplayer menu", AppStateMultiPlayerMenu, AppStateMainMenu, false},
 		{"back from settings", AppStateSettings, AppStateMainMenu, false},
-		{"back from character creation", AppStateCharacterCreation, AppStateSinglePlayerMenu, false},
+		{"back from character creation", AppStateCharacterCreation, AppStateMainMenu, false},
 		{"cannot back from main menu", AppStateMainMenu, AppStateMainMenu, true},
 		{"cannot back from gameplay", AppStateGameplay, AppStateGameplay, true},
 	}

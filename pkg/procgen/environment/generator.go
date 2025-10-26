@@ -8,14 +8,12 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
-	"github.com/opd-ai/venture/pkg/rendering/shapes"
 	"github.com/sirupsen/logrus"
 )
 
 // Generator generates environmental objects.
 type Generator struct {
 	paletteGen *palette.Generator
-	shapeGen   *shapes.Generator
 	logger     *logrus.Entry
 }
 
@@ -34,7 +32,6 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
-		shapeGen:   shapes.NewGenerator(),
 		logger:     logEntry,
 	}
 }

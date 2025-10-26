@@ -34,6 +34,10 @@ func (s *PlayerSpellCastingSystem) Update(entities []*Entity, deltaTime float64)
 	var player *Entity
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
+			// Skip dead entities - they cannot cast spells (Category 1.1)
+			if entity.HasComponent("dead") {
+				continue
+			}
 			player = entity
 			break
 		}

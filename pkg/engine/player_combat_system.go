@@ -27,6 +27,11 @@ func NewPlayerCombatSystem(combatSystem *CombatSystem, world *World) *PlayerComb
 // This system must run AFTER InputSystem but BEFORE MovementSystem.
 func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
+		// Skip dead entities - they cannot attack (Category 1.1)
+		if entity.HasComponent("dead") {
+			continue
+		}
+
 		// Check for input component (player-controlled entities only)
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {

@@ -28,6 +28,11 @@ func NewPlayerItemUseSystem(inventorySystem *InventorySystem, world *World) *Pla
 // This system must run AFTER InputSystem.
 func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
+		// Skip dead entities - they cannot use items (Category 1.1)
+		if entity.HasComponent("dead") {
+			continue
+		}
+
 		// Check for input component (player-controlled entities only)
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {

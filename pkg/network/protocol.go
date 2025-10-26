@@ -60,3 +60,43 @@ type ConnectionInfo struct {
 	// Connected indicates if the connection is active
 	Connected bool
 }
+
+// DeathMessage represents entity death notification from server to clients.
+// Server broadcasts this message when an entity dies to synchronize death state.
+// Category 1.1: Death & Revival System
+type DeathMessage struct {
+	// EntityID identifies the entity that died
+	EntityID uint64
+
+	// TimeOfDeath is the server timestamp when death occurred
+	TimeOfDeath float64
+
+	// KillerID identifies the entity that caused the death (0 if environmental)
+	KillerID uint64
+
+	// DroppedItemIDs contains entity IDs of items spawned from death
+	DroppedItemIDs []uint64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// RevivalMessage represents player revival notification from server to clients.
+// Server broadcasts this message when a player is revived by a teammate.
+// Category 1.1: Death & Revival System
+type RevivalMessage struct {
+	// EntityID identifies the entity being revived
+	EntityID uint64
+
+	// ReviverID identifies the entity that performed the revival
+	ReviverID uint64
+
+	// TimeOfRevival is the server timestamp when revival occurred
+	TimeOfRevival float64
+
+	// RestoredHealth is the health amount restored (as fraction of max)
+	RestoredHealth float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}

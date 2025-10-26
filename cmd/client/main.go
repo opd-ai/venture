@@ -499,6 +499,12 @@ func main() {
 	game.World.AddSystem(collisionSystem)
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(statusEffectSystem) // Process status effects after combat
+
+	// Add revival system for multiplayer death mechanics (Category 1.1)
+	// Allows living players to revive dead teammates through proximity interaction
+	revivalSystem := engine.NewRevivalSystem(game.World)
+	game.World.AddSystem(revivalSystem)
+
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
 

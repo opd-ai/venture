@@ -7,14 +7,15 @@ import (
 	"flag"
 	"fmt"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,10 +35,11 @@ type Game struct {
 	spriteGen    *sprites.Generator
 	paletteGen   *palette.Generator
 	currentPal   *palette.Palette
+	logger       *logrus.Logger
 }
 
 // NewGame creates a new monster test game.
-func NewGame(seed int64, genreID string) (*Game, error) {
+func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 	shapeGen := shapes.NewGenerator()
 	spriteGen := sprites.NewGenerator()
 	paletteGen := palette.NewGenerator()
@@ -58,6 +60,7 @@ func NewGame(seed int64, genreID string) (*Game, error) {
 		spriteGen:    spriteGen,
 		paletteGen:   paletteGen,
 		currentPal:   pal,
+		logger:       logger,
 	}
 
 	// Generate all test sprites
@@ -121,7 +124,12 @@ func (g *Game) generateMonster(width, height int, entityType string, isBoss bool
 
 	sprite, err := g.spriteGen.Generate(config)
 	if err != nil {
-		log.Printf("Failed to generate sprite: %v", err)
+		g.logger.WithError(err).WithFields(logrus.Fields{
+			"entityType": entityType,
+			"isBoss":     isBoss,
+			"width":      width,
+			"height":     height,
+		}).Error("failed to generate sprite")
 		return ebiten.NewImage(width, height)
 	}
 
@@ -267,10 +275,17 @@ func main() {
 	genreID := flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	flag.Parse()
 
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("monstertest")
+	logger.WithFields(logrus.Fields{
+		"seed":  *seed,
+		"genre": *genreID,
+	}).Info("starting monster test")
+
 	// Create game
-	game, err := NewGame(*seed, *genreID)
+	game, err := NewGame(*seed, *genreID, logger)
 	if err != nil {
-		log.Fatalf("Failed to create game: %v", err)
+		logger.WithError(err).Fatal("failed to create game")
 	}
 
 	// Set window properties
@@ -281,7 +296,9 @@ func main() {
 	// Run game
 	if err := ebiten.RunGame(game); err != nil {
 		if err.Error() != "quit" {
-			log.Fatal(err)
+			logger.WithError(err).Fatal("game error")
 		}
 	}
+	
+	logger.Info("monster test complete")
 }

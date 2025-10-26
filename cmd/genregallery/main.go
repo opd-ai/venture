@@ -4,13 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"image/color"
-	"log"
 	"math/rand"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,10 +34,11 @@ type Game struct {
 	page       int
 	maxPages   int
 	showInfo   bool
+	logger     *logrus.Logger
 }
 
 // NewGame creates a new genre gallery game.
-func NewGame(seedBase int64) *Game {
+func NewGame(seedBase int64, logger *logrus.Logger) *Game {
 	return &Game{
 		generator:  sprites.NewCombinedGenerator(200),
 		genres:     []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apoc"},
@@ -45,6 +47,7 @@ func NewGame(seedBase int64) *Game {
 		page:       0,
 		maxPages:   5, // 5 pages × 72 sprites = 360 sprites per genre
 		showInfo:   true,
+		logger:     logger,
 	}
 }
 
@@ -75,7 +78,11 @@ func (g *Game) generateSprites() {
 
 		sprite, err := g.generator.Generate(config)
 		if err != nil {
-			log.Printf("Error generating sprite: %v", err)
+			g.logger.WithError(err).WithFields(logrus.Fields{
+				"type":   config.Type,
+				"genre":  config.GenreID,
+				"seed":   config.Seed,
+			}).Error("failed to generate sprite")
 			continue
 		}
 
@@ -342,28 +349,41 @@ func main() {
 	seed := flag.Int64("seed", 12345, "Random seed for generation")
 	flag.Parse()
 
+	// Initialize logger for test utility
+	logger := logging.TestUtilityLogger("genregallery")
+	
+	logger.WithField("seed", *seed).Info("starting genre gallery")
+	logger.Info("controls:")
+	logger.Info("  LEFT/RIGHT - Change Genre")
+	logger.Info("  UP/DOWN - Change Page")
+	logger.Info("  I - Toggle Info Panel")
+	logger.Info("  R - Regenerate Current Page")
+	logger.Info("  C - Clear Cache")
+	logger.Info("  ESC - Quit")
+
 	// Create and run game
-	game := NewGame(*seed)
+	game := NewGame(*seed, logger)
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Venture - Genre Gallery")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	log.Printf("Starting genre gallery with seed: %d", *seed)
-	log.Println("Controls:")
-	log.Println("  LEFT/RIGHT - Change Genre")
-	log.Println("  UP/DOWN - Change Page")
-	log.Println("  I - Toggle Info Panel")
-	log.Println("  R - Regenerate Current Page")
-	log.Println("  C - Clear Cache")
-	log.Println("  ESC - Quit")
-
 	if err := ebiten.RunGame(game); err != nil && err.Error() != "quit" {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("game error")
 	}
 
 	// Print final stats
 	stats := game.generator.Stats()
+	logger.WithFields(logrus.Fields{
+		"cacheSize":     stats.Size,
+		"cacheCapacity": stats.Capacity,
+		"hits":          stats.Hits,
+		"misses":        stats.Misses,
+		"hitRate":       stats.HitRate * 100,
+		"pagesViewed":   game.page + 1,
+		"currentGenre":  game.genres[game.genreIndex],
+	}).Info("final statistics")
+	
 	fmt.Println("\nFinal Statistics:")
 	fmt.Printf("  Cache Size: %d / %d\n", stats.Size, stats.Capacity)
 	fmt.Printf("  Cache Hits: %d\n", stats.Hits)

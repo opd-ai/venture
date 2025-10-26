@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // MazeGenerator generates mazes using recursive backtracking algorithm.
@@ -15,18 +16,38 @@ import (
 type MazeGenerator struct {
 	roomChance    float64 // Probability (0.0-1.0) of creating a room at a dead end
 	corridorWidth int     // Width of corridors (1 = single tile, 2 = double-wide)
+	logger        *logrus.Entry
 }
 
 // NewMazeGenerator creates a new maze generator with default parameters.
 func NewMazeGenerator() *MazeGenerator {
+	return NewMazeGeneratorWithLogger(nil)
+}
+
+// NewMazeGeneratorWithLogger creates a new maze generator with a logger.
+func NewMazeGeneratorWithLogger(logger *logrus.Logger) *MazeGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "maze")
+	}
 	return &MazeGenerator{
 		roomChance:    0.1, // 10% of dead ends become rooms
 		corridorWidth: 1,   // Single-tile corridors
+		logger:        logEntry,
 	}
 }
 
 // Generate creates a maze using recursive backtracking algorithm.
 func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting maze terrain generation")
+	}
+
 	// Use custom parameters if provided, otherwise use defaults
 	width := 80
 	height := 50
@@ -88,6 +109,14 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 	// Place stairs at furthest corners
 	g.placeStairsInCorners(terrain, rng)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":    terrain.Width,
+			"height":   terrain.Height,
+			"deadEnds": len(deadEnds),
+		}).Info("maze terrain generation complete")
+	}
 
 	return terrain, nil
 }

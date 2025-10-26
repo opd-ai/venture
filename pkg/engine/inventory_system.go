@@ -8,17 +8,29 @@ import (
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 // InventorySystem manages inventory and equipment operations.
 type InventorySystem struct {
-	world *World
+	world  *World
+	logger *logrus.Entry
 }
 
 // NewInventorySystem creates a new inventory system.
 func NewInventorySystem(world *World) *InventorySystem {
+	return NewInventorySystemWithLogger(world, nil)
+}
+
+// NewInventorySystemWithLogger creates a new inventory system with a logger.
+func NewInventorySystemWithLogger(world *World, logger *logrus.Logger) *InventorySystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("system", "inventory")
+	}
 	return &InventorySystem{
-		world: world,
+		world:  world,
+		logger: logEntry,
 	}
 }
 
@@ -39,7 +51,18 @@ func (s *InventorySystem) AddItemToInventory(entityID uint64, itm *item.Item) (b
 		return false, fmt.Errorf("entity %d inventory component has wrong type", entityID)
 	}
 
-	return invComp.AddItem(itm), nil
+	success := invComp.AddItem(itm)
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entityID": entityID,
+			"itemName": itm.Name,
+			"itemType": itm.Type.String(),
+			"success":  success,
+		}).Debug("adding item to inventory")
+	}
+
+	return success, nil
 }
 
 // RemoveItemFromInventory removes an item from inventory by index.
@@ -123,6 +146,15 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 
 	// Update entity stats based on new equipment
 	s.applyEquipmentStats(entityID)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":     entityID,
+			"itemName":     itm.Name,
+			"slot":         slot.String(),
+			"previousItem": previousItem != nil,
+		}).Info("item equipped")
+	}
 
 	return nil
 }

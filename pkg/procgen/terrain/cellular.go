@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // CellularGenerator generates cave-like terrain using cellular automata.
@@ -17,20 +18,40 @@ type CellularGenerator struct {
 	iterations      int
 	birthLimit      int
 	deathLimit      int
+	logger          *logrus.Entry
 }
 
 // NewCellularGenerator creates a new cellular automata generator.
 func NewCellularGenerator() *CellularGenerator {
+	return NewCellularGeneratorWithLogger(nil)
+}
+
+// NewCellularGeneratorWithLogger creates a new cellular automata generator with a logger.
+func NewCellularGeneratorWithLogger(logger *logrus.Logger) *CellularGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "cellular")
+	}
 	return &CellularGenerator{
 		fillProbability: 0.40,
 		iterations:      5,
 		birthLimit:      4,
 		deathLimit:      3,
+		logger:          logEntry,
 	}
 }
 
 // Generate creates cave-like terrain using cellular automata.
 func (g *CellularGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting cellular automata terrain generation")
+	}
+
 	// Use custom parameters if provided, otherwise use defaults
 	width := 80
 	height := 50
@@ -78,8 +99,19 @@ func (g *CellularGenerator) Generate(seed int64, params procgen.GenerationParams
 	g.ensureConnectivity(terrain)
 
 	// Add underground lakes (30% chance)
+	addedLakes := false
 	if rng.Float64() < 0.3 {
 		g.addUndergroundLakes(terrain, rng)
+		addedLakes = true
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":      terrain.Width,
+			"height":     terrain.Height,
+			"iterations": g.iterations,
+			"lakes":      addedLakes,
+		}).Info("cellular automata terrain generation complete")
 	}
 
 	return terrain, nil
@@ -273,7 +305,23 @@ func (g *CellularGenerator) Validate(result interface{}) error {
 	// Check that we have a reasonable amount of open space (at least 30%)
 	totalTiles := terrain.Width * terrain.Height
 	if floorCount < totalTiles*3/10 {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"floorCount":  floorCount,
+				"totalTiles":  totalTiles,
+				"percentage":  float64(floorCount) / float64(totalTiles) * 100,
+				"minRequired": 30.0,
+			}).Warn("terrain validation failed: insufficient walkable tiles")
+		}
 		return fmt.Errorf("too few walkable tiles: %d/%d", floorCount, totalTiles)
+	}
+
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"floorCount": floorCount,
+			"totalTiles": totalTiles,
+			"percentage": float64(floorCount) / float64(totalTiles) * 100,
+		}).Debug("terrain validation passed")
 	}
 
 	return nil

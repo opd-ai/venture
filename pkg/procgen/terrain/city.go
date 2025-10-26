@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // CityGenerator generates urban environments with buildings and streets.
@@ -16,15 +17,26 @@ type CityGenerator struct {
 	streetWidth     int     // Width of streets (2-3 tiles)
 	buildingDensity float64 // Percentage of blocks with buildings (0.7 = 70%)
 	plazaDensity    float64 // Percentage of blocks that are plazas (0.2 = 20%)
+	logger          *logrus.Entry
 }
 
 // NewCityGenerator creates a new city generator with default parameters.
 func NewCityGenerator() *CityGenerator {
+	return NewCityGeneratorWithLogger(nil)
+}
+
+// NewCityGeneratorWithLogger creates a new city generator with a logger.
+func NewCityGeneratorWithLogger(logger *logrus.Logger) *CityGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "city")
+	}
 	return &CityGenerator{
 		blockSize:       12, // 12x12 tile blocks
 		streetWidth:     2,  // 2-tile wide streets
 		buildingDensity: 0.7,
 		plazaDensity:    0.2,
+		logger:          logEntry,
 	}
 }
 
@@ -60,6 +72,15 @@ func (r Rect) Center() (int, int) {
 
 // Generate creates a city environment with buildings, streets, and public spaces.
 func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting city terrain generation")
+	}
+
 	// Use custom parameters if provided
 	width := 80
 	height := 50
@@ -130,6 +151,14 @@ func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 	// Place stairs in central plaza or large building
 	g.placeStairs(blocks, terrain, rng)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":  terrain.Width,
+			"height": terrain.Height,
+			"blocks": len(blocks),
+		}).Info("city terrain generation complete")
+	}
 
 	return terrain, nil
 }

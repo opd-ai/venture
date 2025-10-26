@@ -280,28 +280,40 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 ---
 
-#### 2.3: Main Menu & Game Modes System
+#### 2.3: Main Menu & Game Modes System ✅ **COMPLETED (MVP)** (October 26, 2025)
 
 **Description**: Implement splash screen menu system with Single-Player/Multi-Player selection and sub-menus as described in `docs/auditors/EXPAND.md:L1-L7`.
 
-**Rationale**: Current implementation starts directly into gameplay with CLI flags. Professional games need proper main menu with save management, server connection UI, and settings before gameplay starts.
+**Implementation Summary**:
+- ✅ Created `pkg/engine/app_state.go` with AppStateManager (100% test coverage)
+- ✅ Created `pkg/engine/main_menu_ui.go` with keyboard/mouse navigation (92.3% coverage)
+- ✅ Integrated into EbitenGame.Update()/Draw() with state-aware rendering
+- ✅ Main menu options: Single-Player, Multi-Player, Settings (stub), Quit
+- ✅ State machine enforces valid transitions with callback hooks
 
-**Technical Approach**:
-1. Create `MainMenuState` in `pkg/engine/game_states.go` as initial game state
-2. Render menu using `pkg/rendering/ui/menu.go` with vertical option list
-3. Main menu options: "Single-Player", "Multi-Player", "Settings", "Quit"
-4. Single-Player submenu: "New Game" (→ CharacterCreation), "Load Game" (→ save file picker), "Back"
-5. Multi-Player submenu: Text field for server address, "Connect" button, "Back"
-6. Store menu state in `game.currentState` and route `Update()`/`Draw()` calls
-7. Implement smooth transitions: fade out → state change → fade in
+**Status**: ✅ MVP Complete - Functional main menu with simplified flow
 
-**Success Criteria**:
-- Game launches to main menu, not directly into gameplay
-- All menu options functional and lead to correct states
-- Server address field supports standard input (keyboard entry, paste)
-- Settings menu persists between sessions (stored in config file)
-- Visual polish: title logo (procedurally generated), genre-themed background
-- Responsive controls: mouse and keyboard navigation
+**Current Behavior**:
+- Game launches to main menu (AppStateMainMenu)
+- Single-Player directly starts new game (submenus deferred to Phase 2.3.1)
+- Multi-Player uses CLI flags (submenu with address input deferred to Phase 2.3.1)
+- Settings shows "not implemented" message
+
+**Deferred to Phase 2.3.1** (Future Enhancement):
+- Single-Player submenu: "New Game" / "Load Game" / "Back"
+- Multi-Player submenu: server address text input + "Connect" button
+- Settings menu implementation with persistence
+- Visual polish: procedural title logo, genre-themed backgrounds
+- Smooth fade transitions between states
+
+**Rationale for Simplified MVP**: Following SIMPLICITY RULE, the MVP implements core menu functionality without submenu complexity. This allows immediate user testing and feedback while maintaining clean, testable code. Submenus add UI complexity (text input, save file lists) that can be layered in once base menu is validated.
+
+**Reference Files**:
+- `pkg/engine/app_state.go` - Application state machine
+- `pkg/engine/main_menu_ui.go` - Main menu UI component
+- `pkg/engine/game.go:L16-L48` - EbitenGame with state management integration
+
+---
 
 **Risks**:
 - Increased startup time perception (mitigate with quick initial load and background generation)

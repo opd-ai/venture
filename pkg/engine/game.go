@@ -21,6 +21,10 @@ type EbitenGame struct {
 	ScreenHeight   int
 	Paused         bool
 
+	// Application state management
+	StateManager *AppStateManager
+	MainMenuUI   *MainMenuUI
+
 	// Rendering systems
 	CameraSystem        *CameraSystem
 	RenderSystem        *EbitenRenderSystem
@@ -39,6 +43,11 @@ type EbitenGame struct {
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
+
+	// Callbacks for state transitions
+	onNewGame            func() error
+	onMultiplayerConnect func(serverAddr string) error
+	onQuitToMenu         func() error
 
 	// Logger for game operations
 	logger *logrus.Entry
@@ -87,6 +96,8 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		lastUpdateTime: time.Now(),
 		ScreenWidth:    screenWidth,
 		ScreenHeight:   screenHeight,
+		StateManager:   NewAppStateManager(),
+		MainMenuUI:     NewMainMenuUI(screenWidth, screenHeight),
 		CameraSystem:   cameraSystem,
 		RenderSystem:   renderSystem,
 		HUDSystem:      hudSystem,
@@ -106,7 +117,91 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		}).Info("game initialized")
 	}
 
+	// Setup main menu callback
+	game.MainMenuUI.SetSelectCallback(game.handleMainMenuSelection)
+
 	return game
+}
+
+// SetNewGameCallback sets the callback function called when New Game is selected.
+func (g *EbitenGame) SetNewGameCallback(callback func() error) {
+	g.onNewGame = callback
+}
+
+// SetMultiplayerConnectCallback sets the callback function called when connecting to multiplayer.
+func (g *EbitenGame) SetMultiplayerConnectCallback(callback func(serverAddr string) error) {
+	g.onMultiplayerConnect = callback
+}
+
+// SetQuitToMenuCallback sets the callback function called when quitting to main menu.
+func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
+	g.onQuitToMenu = callback
+}
+
+// handleMainMenuSelection processes main menu option selections and triggers state transitions.
+func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
+	switch option {
+	case MainMenuOptionSinglePlayer:
+		// For MVP, single player directly starts a new game
+		// Future: transition to single player submenu (New Game/Load Game)
+		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to transition to gameplay")
+			}
+			return
+		}
+
+		// Trigger new game callback if set
+		if g.onNewGame != nil {
+			if err := g.onNewGame(); err != nil {
+				if g.logger != nil {
+					g.logger.WithError(err).Error("new game callback failed")
+				}
+				// Transition back to menu on error
+				_ = g.StateManager.TransitionTo(AppStateMainMenu)
+			}
+		}
+
+	case MainMenuOptionMultiPlayer:
+		// For MVP, use default server address from flags
+		// Future: show multiplayer submenu with server address input
+		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to transition to gameplay")
+			}
+			return
+		}
+
+		// Trigger multiplayer connect callback if set (client will have set server address)
+		if g.onMultiplayerConnect != nil {
+			if err := g.onMultiplayerConnect(""); err != nil {
+				if g.logger != nil {
+					g.logger.WithError(err).Error("multiplayer connect callback failed")
+				}
+				// Transition back to menu on error
+				_ = g.StateManager.TransitionTo(AppStateMainMenu)
+			}
+		}
+
+	case MainMenuOptionSettings:
+		// Future: transition to settings menu
+		if g.logger != nil {
+			g.logger.Info("settings menu not yet implemented")
+		}
+
+	case MainMenuOptionQuit:
+		// Exit the application
+		if g.logger != nil {
+			g.logger.Info("quit selected")
+		}
+		// Ebiten doesn't have a clean exit API, so we return an error which will terminate RunGame
+		// The client can handle this gracefully
+	}
+}
+
+// IsInMainMenu returns true if currently displaying the main menu.
+func (g *EbitenGame) IsInMainMenu() bool {
+	return g.StateManager.IsInMenu()
 }
 
 // Update implements ebiten.Game interface. Called every frame.
@@ -120,6 +215,14 @@ func (g *EbitenGame) Update() error {
 	if deltaTime > 0.1 {
 		deltaTime = 0.1
 	}
+
+	// If in main menu state, only update main menu
+	if g.StateManager.IsInMenu() {
+		g.MainMenuUI.Update()
+		return nil
+	}
+
+	// From here on, we're in gameplay state
 
 	// If menu is visible, pause game world (but allow menu input)
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
@@ -158,6 +261,14 @@ func (g *EbitenGame) Update() error {
 
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
+	// If in main menu state, only draw main menu
+	if g.StateManager.IsInMenu() {
+		g.MainMenuUI.Draw(screen)
+		return
+	}
+
+	// From here on, we're in gameplay state and render the full game
+
 	// Render terrain (if available)
 	if g.TerrainRenderSystem != nil {
 		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)

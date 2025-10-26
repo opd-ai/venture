@@ -281,6 +281,17 @@ func GetSciFiTemplates() []EntityTemplate {
 			DefenseRange: [2]int{20, 35},
 			SpeedRange:   [2]float64{0.5, 0.8},
 		},
+		{
+			BaseType:     TypeNPC,
+			BaseSize:     SizeMedium,
+			NamePrefixes: []string{"Station", "Orbital", "Tech", "Supply"},
+			NameSuffixes: []string{"Trader", "Merchant", "Vendor", "Dealer"},
+			Tags:         []string{"friendly", "trader", "merchant"},
+			HealthRange:  [2]int{50, 100},
+			DamageRange:  [2]int{5, 10},
+			DefenseRange: [2]int{5, 10},
+			SpeedRange:   [2]float64{1.0, 1.0},
+		},
 	}
 }
 
@@ -320,6 +331,17 @@ func GetHorrorTemplates() []EntityTemplate {
 			DamageRange:  [2]int{40, 70},
 			DefenseRange: [2]int{15, 30},
 			SpeedRange:   [2]float64{0.6, 0.9},
+		},
+		{
+			BaseType:     TypeNPC,
+			BaseSize:     SizeMedium,
+			NamePrefixes: []string{"Wandering", "Lost", "Cursed", "Mad"},
+			NameSuffixes: []string{"Trader", "Survivor", "Merchant", "Keeper"},
+			Tags:         []string{"friendly", "trader", "merchant"},
+			HealthRange:  [2]int{50, 100},
+			DamageRange:  [2]int{5, 10},
+			DefenseRange: [2]int{5, 10},
+			SpeedRange:   [2]float64{1.0, 1.0},
 		},
 	}
 }
@@ -361,6 +383,17 @@ func GetCyberpunkTemplates() []EntityTemplate {
 			DefenseRange: [2]int{18, 32},
 			SpeedRange:   [2]float64{0.7, 1.0},
 		},
+		{
+			BaseType:     TypeNPC,
+			BaseSize:     SizeMedium,
+			NamePrefixes: []string{"Black Market", "Data", "Tech", "Neural"},
+			NameSuffixes: []string{"Broker", "Dealer", "Fence", "Trader"},
+			Tags:         []string{"friendly", "trader", "merchant"},
+			HealthRange:  [2]int{50, 100},
+			DamageRange:  [2]int{5, 10},
+			DefenseRange: [2]int{5, 10},
+			SpeedRange:   [2]float64{1.0, 1.0},
+		},
 	}
 }
 
@@ -400,6 +433,17 @@ func GetPostApocTemplates() []EntityTemplate {
 			DamageRange:  [2]int{42, 72},
 			DefenseRange: [2]int{16, 28},
 			SpeedRange:   [2]float64{0.5, 0.7},
+		},
+		{
+			BaseType:     TypeNPC,
+			BaseSize:     SizeMedium,
+			NamePrefixes: []string{"Wasteland", "Scrap", "Salvage", "Nomad"},
+			NameSuffixes: []string{"Trader", "Merchant", "Peddler", "Dealer"},
+			Tags:         []string{"friendly", "trader", "merchant"},
+			HealthRange:  [2]int{50, 100},
+			DamageRange:  [2]int{5, 10},
+			DefenseRange: [2]int{5, 10},
+			SpeedRange:   [2]float64{1.0, 1.0},
 		},
 	}
 }

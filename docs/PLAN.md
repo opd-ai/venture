@@ -153,7 +153,13 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - ✅ DefaultTransactionValidator for extensible transaction validation
 - ✅ BuyItem() and SellItem() methods with atomic rollback on failure
 - ✅ Shop UI with dual-mode (buy/sell), keyboard/mouse navigation, dual-exit (S key + ESC), transaction feedback
-- ⏳ Merchant NPC generation (TODO)
+- ✅ Merchant NPC generation in `pkg/procgen/entity/merchant.go` (282 lines, 92.0% coverage)
+  - GenerateMerchant() creates merchants with genre-appropriate names and inventory
+  - MerchantData struct holds entity, type (fixed/nomadic), inventory, pricing parameters
+  - GenerateMerchantSpawnPoints() provides deterministic spawn locations
+  - Added NPC templates for all 5 genres (scifi, horror, cyberpunk, postapoc)
+  - MerchantNameTemplates with genre-specific merchant names
+  - Comprehensive test suite with 9 test functions + 2 benchmarks (merchant_test.go)
 - ⏳ Network protocol support (TODO)
 - ⏳ Integration into client (TODO)
 

@@ -45,6 +45,20 @@ const (
 	ShapeSpiral
 	// ShapeOrganic represents an organic blob shape
 	ShapeOrganic
+	// ShapeEllipse represents an oval/ellipse shape (Phase 5.1)
+	ShapeEllipse
+	// ShapeCapsule represents a rounded rectangle/pill shape (Phase 5.1)
+	ShapeCapsule
+	// ShapeBean represents a kidney bean/organic body shape (Phase 5.1)
+	ShapeBean
+	// ShapeWedge represents a directional triangle/arrow (Phase 5.1)
+	ShapeWedge
+	// ShapeShield represents a shield/defense icon (Phase 5.1)
+	ShapeShield
+	// ShapeBlade represents a sword/blade shape (Phase 5.1)
+	ShapeBlade
+	// ShapeSkull represents a skull/head shape (Phase 5.1)
+	ShapeSkull
 )
 
 // String returns the string representation of a shape type.
@@ -84,6 +98,20 @@ func (s ShapeType) String() string {
 		return "spiral"
 	case ShapeOrganic:
 		return "organic"
+	case ShapeEllipse:
+		return "ellipse"
+	case ShapeCapsule:
+		return "capsule"
+	case ShapeBean:
+		return "bean"
+	case ShapeWedge:
+		return "wedge"
+	case ShapeShield:
+		return "shield"
+	case ShapeBlade:
+		return "blade"
+	case ShapeSkull:
+		return "skull"
 	default:
 		return "unknown"
 	}

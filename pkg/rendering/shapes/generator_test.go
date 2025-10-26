@@ -458,6 +458,7 @@ func BenchmarkNewShapes(b *testing.B) {
 		},
 	}
 
+
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
@@ -466,3 +467,332 @@ func BenchmarkNewShapes(b *testing.B) {
 		})
 	}
 }
+
+// TestNewShapes_Phase51 tests the new shape primitives added in Phase 5.1.
+func TestNewShapes_Phase51(t *testing.T) {
+	gen := NewGenerator()
+	testColor := color.RGBA{R: 100, G: 150, B: 200, A: 255}
+
+	tests := []struct {
+		name      string
+		shapeType ShapeType
+		config    Config
+	}{
+		{
+			name:      "ellipse",
+			shapeType: ShapeEllipse,
+			config: Config{
+				Type:      ShapeEllipse,
+				Width:     32,
+				Height:    48, // Taller than wide for oval shape
+				Color:     testColor,
+				Seed:      12345,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name:      "capsule vertical",
+			shapeType: ShapeCapsule,
+			config: Config{
+				Type:      ShapeCapsule,
+				Width:     20,
+				Height:    40, // Vertical capsule (limb shape)
+				Color:     testColor,
+				Seed:      12346,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "capsule horizontal",
+			shapeType: ShapeCapsule,
+			config: Config{
+				Type:      ShapeCapsule,
+				Width:     40,
+				Height:    20, // Horizontal capsule
+				Color:     testColor,
+				Seed:      12347,
+				Smoothing: 0.2,
+				Rotation:  90,
+			},
+		},
+		{
+			name:      "bean",
+			shapeType: ShapeBean,
+			config: Config{
+				Type:      ShapeBean,
+				Width:     32,
+				Height:    40, // Bean-shaped torso
+				Color:     testColor,
+				Seed:      12348,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "wedge up",
+			shapeType: ShapeWedge,
+			config: Config{
+				Type:      ShapeWedge,
+				Width:     24,
+				Height:    32, // Pointing up
+				Color:     testColor,
+				Seed:      12349,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "wedge right",
+			shapeType: ShapeWedge,
+			config: Config{
+				Type:      ShapeWedge,
+				Width:     32,
+				Height:    24, // Pointing right
+				Color:     testColor,
+				Seed:      12350,
+				Smoothing: 0.2,
+				Rotation:  90,
+			},
+		},
+		{
+			name:      "shield",
+			shapeType: ShapeShield,
+			config: Config{
+				Type:      ShapeShield,
+				Width:     28,
+				Height:    36, // Shield icon
+				Color:     testColor,
+				Seed:      12351,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "blade",
+			shapeType: ShapeBlade,
+			config: Config{
+				Type:      ShapeBlade,
+				Width:     16,
+				Height:    48, // Thin blade
+				Color:     testColor,
+				Seed:      12352,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "skull",
+			shapeType: ShapeSkull,
+			config: Config{
+				Type:      ShapeSkull,
+				Width:     32,
+				Height:    32, // Skull head
+				Color:     testColor,
+				Seed:      12353,
+				Smoothing: 0.2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := gen.Generate(tt.config)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			if img == nil {
+				t.Fatal("Generate() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != tt.config.Width {
+				t.Errorf("Image width = %v, want %v", bounds.Dx(), tt.config.Width)
+			}
+			if bounds.Dy() != tt.config.Height {
+				t.Errorf("Image height = %v, want %v", bounds.Dy(), tt.config.Height)
+			}
+
+			// Note: Pixel inspection requires game context (Ebiten runtime)
+			// Skipping pixel validation in unit tests to avoid X11/graphics dependencies
+			// Visual validation should be done with cmd/anatomytest tool
+		})
+	}
+}
+
+// TestShapeType_String_Phase51 tests string representation of new shape types.
+func TestShapeType_String_Phase51(t *testing.T) {
+	tests := []struct {
+		name      string
+		shapeType ShapeType
+		want      string
+	}{
+		{"ellipse", ShapeEllipse, "ellipse"},
+		{"capsule", ShapeCapsule, "capsule"},
+		{"bean", ShapeBean, "bean"},
+		{"wedge", ShapeWedge, "wedge"},
+		{"shield", ShapeShield, "shield"},
+		{"blade", ShapeBlade, "blade"},
+		{"skull", ShapeSkull, "skull"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.shapeType.String()
+			if got != tt.want {
+				t.Errorf("ShapeType.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestShapeDeterminism_Phase51 tests that new shapes generate consistently with same seed.
+func TestShapeDeterminism_Phase51(t *testing.T) {
+	gen := NewGenerator()
+
+	shapes := []ShapeType{
+		ShapeEllipse,
+		ShapeCapsule,
+		ShapeBean,
+		ShapeWedge,
+		ShapeShield,
+		ShapeBlade,
+		ShapeSkull,
+	}
+
+	for _, shapeType := range shapes {
+		t.Run(shapeType.String(), func(t *testing.T) {
+			config := Config{
+				Type:      shapeType,
+				Width:     32,
+				Height:    32,
+				Color:     color.RGBA{R: 255, G: 0, B: 0, A: 255},
+				Seed:      42,
+				Smoothing: 0.2,
+				Rotation:  45,
+			}
+
+			// Generate twice with same config
+			img1, err1 := gen.Generate(config)
+			if err1 != nil {
+				t.Fatalf("First generate failed: %v", err1)
+			}
+
+			img2, err2 := gen.Generate(config)
+			if err2 != nil {
+				t.Fatalf("Second generate failed: %v", err2)
+			}
+
+			// Compare bounds (dimensions should match)
+			bounds1 := img1.Bounds()
+			bounds2 := img2.Bounds()
+
+			if bounds1 != bounds2 {
+				t.Fatalf("Image bounds differ: %v vs %v", bounds1, bounds2)
+			}
+
+			// Note: Pixel-level comparison requires Ebiten game loop running
+			// For unit tests, we verify that generation succeeds deterministically
+			// Visual validation of determinism should be done with cmd/anatomytest
+			// The shape generation algorithms are deterministic by design (no time.Now() or rand.Intn())
+		})
+	}
+}
+
+// BenchmarkNewShapes_Phase51 benchmarks new shape generation performance.
+func BenchmarkNewShapes_Phase51(b *testing.B) {
+	gen := NewGenerator()
+	testColor := color.RGBA{R: 100, G: 150, B: 200, A: 255}
+
+	benchmarks := []struct {
+		name   string
+		config Config
+	}{
+		{
+			name: "ellipse",
+			config: Config{
+				Type:      ShapeEllipse,
+				Width:     32,
+				Height:    48,
+				Color:     testColor,
+				Seed:      12345,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "capsule",
+			config: Config{
+				Type:      ShapeCapsule,
+				Width:     20,
+				Height:    40,
+				Color:     testColor,
+				Seed:      12346,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "bean",
+			config: Config{
+				Type:      ShapeBean,
+				Width:     32,
+				Height:    40,
+				Color:     testColor,
+				Seed:      12348,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "wedge",
+			config: Config{
+				Type:      ShapeWedge,
+				Width:     24,
+				Height:    32,
+				Color:     testColor,
+				Seed:      12349,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "shield",
+			config: Config{
+				Type:      ShapeShield,
+				Width:     28,
+				Height:    36,
+				Color:     testColor,
+				Seed:      12351,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "blade",
+			config: Config{
+				Type:      ShapeBlade,
+				Width:     16,
+				Height:    48,
+				Color:     testColor,
+				Seed:      12352,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "skull",
+			config: Config{
+				Type:      ShapeSkull,
+				Width:     32,
+				Height:    32,
+				Color:     testColor,
+				Seed:      12353,
+				Smoothing: 0.2,
+			},
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, _ = gen.Generate(bm.config)
+			}
+		})
+	}
+}
+

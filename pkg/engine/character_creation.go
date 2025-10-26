@@ -197,7 +197,6 @@ func OpenPortraitDialog() (string, error) {
 			CaseFold: false,
 		},
 	)
-
 	if err != nil {
 		// User cancelled (zenity.ErrCanceled) or error occurred
 		if err == zenity.ErrCanceled {

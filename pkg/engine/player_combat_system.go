@@ -54,11 +54,16 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check if attack is ready (cooldown)
 		if !attack.CanAttack() {
+			fmt.Printf("[PLAYER COMBAT] Entity %d attack on cooldown (%.2fs remaining)\n",
+				entity.ID, attack.CooldownTimer)
 			continue // Still on cooldown
 		}
 
 		// Consume the input immediately to prevent multiple triggers
 		input.SetActionPressed(false)
+
+		fmt.Printf("[PLAYER COMBAT] Entity %d attack ready! Cooldown: %.2f, Timer: %.2f\n",
+			entity.ID, attack.Cooldown, attack.CooldownTimer)
 
 		// ALWAYS trigger attack animation, even if no target
 		// This provides visual feedback that the attack button was pressed
@@ -83,6 +88,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Start cooldown even if no target (player swung at air)
 		attack.ResetCooldown()
+		fmt.Printf("[PLAYER COMBAT] Cooldown reset to %.2fs\n", attack.CooldownTimer)
 
 		// Find nearest enemy within attack range for damage
 		maxRange := attack.Range

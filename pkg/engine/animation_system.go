@@ -97,8 +97,11 @@ func (s *AnimationSystem) updateFrame(anim *AnimationComponent, deltaTime float6
 			} else {
 				anim.FrameIndex = len(anim.Frames) - 1
 				anim.Playing = false
+				fmt.Printf("[ANIM SYSTEM] Animation complete - calling OnComplete callback (exists: %v)\n",
+					anim.OnComplete != nil)
 				if anim.OnComplete != nil {
 					anim.OnComplete()
+					fmt.Printf("[ANIM SYSTEM] OnComplete callback executed\n")
 				}
 			}
 		}

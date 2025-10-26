@@ -2,6 +2,8 @@
 package engine
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -102,12 +104,17 @@ func (a *AnimationComponent) Stop() {
 // SetState changes the animation state and marks frames as dirty.
 // Frames will be regenerated on next update.
 func (a *AnimationComponent) SetState(state AnimationState) {
+	// DEBUG: Always log state changes
+	fmt.Printf("[ANIM COMPONENT] SetState called: %s → %s (dirty will be: %v)\n",
+		a.CurrentState, state, a.CurrentState != state)
+
 	if a.CurrentState != state {
 		a.PreviousState = a.CurrentState
 		a.CurrentState = state
 		a.Dirty = true
 		a.FrameIndex = 0
 		a.TimeAccumulator = 0.0
+		a.Playing = true // CRITICAL: Always start playing when state changes
 
 		// CRITICAL FIX: Set loop based on animation type
 		// Action animations (attack, hit, death, cast, use) should play once
@@ -116,12 +123,23 @@ func (a *AnimationComponent) SetState(state AnimationState) {
 		case AnimationStateAttack, AnimationStateHit, AnimationStateDeath,
 			AnimationStateCast, AnimationStateUse:
 			a.Loop = false // Play once, then call OnComplete
+			fmt.Printf("[ANIM COMPONENT] Action animation - Loop=false, OnComplete will fire\n")
 		case AnimationStateIdle, AnimationStateWalk, AnimationStateRun,
 			AnimationStateJump, AnimationStateCrouch:
 			a.Loop = true // Loop continuously
+			fmt.Printf("[ANIM COMPONENT] Movement animation - Loop=true\n")
 		default:
 			a.Loop = true // Default to looping
 		}
+	} else {
+		// CRITICAL FIX: If setting to same state (e.g., attack → attack),
+		// restart the animation from the beginning. This allows re-triggering
+		// attack animations or other actions without changing state.
+		fmt.Printf("[ANIM COMPONENT] Same state - restarting animation\n")
+		a.FrameIndex = 0
+		a.TimeAccumulator = 0.0
+		a.Playing = true
+		a.Dirty = true // Force regeneration to ensure frames are fresh
 	}
 }
 

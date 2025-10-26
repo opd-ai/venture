@@ -79,11 +79,23 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 		// but status effects continue (poison doesn't stop at death)
 		isDead := entity.HasComponent("dead")
 
+		// DEBUG: Log if player is somehow marked as dead
+		if entity.HasComponent("input") && isDead {
+			fmt.Printf("[COMBAT SYSTEM] WARNING: Player entity %d has 'dead' component!\n", entity.ID)
+		}
+
 		if !isDead {
 			// Update attack cooldowns only for living entities
 			if attackComp, ok := entity.GetComponent("attack"); ok {
 				attack := attackComp.(*AttackComponent)
+				beforeCooldown := attack.CooldownTimer
 				attack.UpdateCooldown(deltaTime)
+
+				// DEBUG: Log cooldown updates for player (entity with input component)
+				if entity.HasComponent("input") && beforeCooldown > 0 {
+					fmt.Printf("[COMBAT SYSTEM] Entity %d cooldown: %.2f → %.2f (delta: %.3f)\n",
+						entity.ID, beforeCooldown, attack.CooldownTimer, deltaTime)
+				}
 			}
 		}
 

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // CompositeGenerator combines multiple terrain biomes in a single level.
@@ -16,10 +17,20 @@ type CompositeGenerator struct {
 	biomeCount      int                          // Number of biomes to combine (2-4)
 	transitionWidth int                          // Width of transition zones in tiles (2-4)
 	generators      map[string]procgen.Generator // Available generators by name
+	logger          *logrus.Entry
 }
 
 // NewCompositeGenerator creates a new composite terrain generator.
 func NewCompositeGenerator() *CompositeGenerator {
+	return NewCompositeGeneratorWithLogger(nil)
+}
+
+// NewCompositeGeneratorWithLogger creates a new composite terrain generator with a logger.
+func NewCompositeGeneratorWithLogger(logger *logrus.Logger) *CompositeGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "composite")
+	}
 	return &CompositeGenerator{
 		biomeCount:      3, // Default: 3 biomes
 		transitionWidth: 3, // Default: 3-tile transitions
@@ -30,6 +41,7 @@ func NewCompositeGenerator() *CompositeGenerator {
 			"forest":   NewForestGenerator(),
 			"city":     NewCityGenerator(),
 		},
+		logger: logEntry,
 	}
 }
 
@@ -44,6 +56,15 @@ type BiomeRegionInfo struct {
 
 // Generate creates composite terrain by combining multiple biome generators.
 func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting composite terrain generation")
+	}
+
 	// Extract custom parameters
 	width := 80
 	height := 50
@@ -136,6 +157,15 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 
 	// Store biome region info in terrain (for debugging/visualization)
 	terrain.Rooms = make([]*Room, 0)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":       terrain.Width,
+			"height":      terrain.Height,
+			"biomeCount":  len(biomeRegions),
+			"biomeRegions": len(biomeRegions),
+		}).Info("composite terrain generation complete")
+	}
 
 	return terrain, nil
 }

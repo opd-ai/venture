@@ -9,6 +9,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // ForestGenerator generates natural forest environments with trees, clearings, and water.
@@ -16,19 +17,39 @@ type ForestGenerator struct {
 	treeDensity   float64 // Percentage of tiles that should be trees (0.0-1.0)
 	clearingCount int     // Number of open clearings to create
 	waterChance   float64 // Probability of water features (0.0-1.0)
+	logger        *logrus.Entry
 }
 
 // NewForestGenerator creates a new forest generator with default parameters.
 func NewForestGenerator() *ForestGenerator {
+	return NewForestGeneratorWithLogger(nil)
+}
+
+// NewForestGeneratorWithLogger creates a new forest generator with a logger.
+func NewForestGeneratorWithLogger(logger *logrus.Logger) *ForestGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("generator", "forest")
+	}
 	return &ForestGenerator{
 		treeDensity:   0.3, // 30% of tiles are trees
 		clearingCount: 3,   // 3-5 clearings
 		waterChance:   0.3, // 30% chance of water features
+		logger:        logEntry,
 	}
 }
 
 // Generate creates a forest environment using Poisson disc sampling for trees.
 func (g *ForestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting forest terrain generation")
+	}
+
 	// Use custom parameters if provided
 	width := 80
 	height := 50
@@ -89,6 +110,14 @@ func (g *ForestGenerator) Generate(seed int64, params procgen.GenerationParams) 
 
 	// Place stairs in largest clearings
 	g.placeStairsInClearings(terrain, clearings, rng)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":     terrain.Width,
+			"height":    terrain.Height,
+			"clearings": len(clearings),
+		}).Info("forest terrain generation complete")
+	}
 
 	return terrain, nil
 }

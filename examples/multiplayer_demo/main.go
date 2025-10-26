@@ -95,18 +95,49 @@ func main() {
 	fmt.Println("  4. Test with real network connections")
 }
 
-func createServer() *network.Server {
-	config := network.DefaultServerConfig()
-	config.Address = ":8080"
-	config.MaxPlayers = 4
-	return network.NewServer(config)
+// Server is a stub for demonstration purposes
+type Server struct {
+	config ServerConfig
 }
 
-func createClient(playerID uint64) *network.Client {
-	config := network.DefaultClientConfig()
-	config.ServerAddress = "localhost:8080"
-	client := network.NewClient(config)
-	client.SetPlayerID(playerID)
+// ServerConfig holds server configuration
+type ServerConfig struct {
+	Address    string
+	MaxPlayers int
+}
+
+// Client is a stub for demonstration purposes
+type Client struct {
+	config   ClientConfig
+	playerID uint64
+}
+
+// ClientConfig holds client configuration
+type ClientConfig struct {
+	ServerAddress string
+}
+
+func createServer() *Server {
+	config := ServerConfig{
+		Address:    ":8080",
+		MaxPlayers: 10,
+	}
+	return &Server{config: config}
+}
+
+func (s *Server) BroadcastStateUpdate(update *network.StateUpdate) {
+	// Stub implementation for demo
+}
+
+func (c *Client) SetPlayerID(id uint64) {
+	c.playerID = id
+}
+
+func createClient(playerID uint64) *Client {
+	config := ClientConfig{
+		ServerAddress: "localhost:8080",
+	}
+	client := &Client{config: config, playerID: playerID}
 	return client
 }
 
@@ -120,7 +151,7 @@ func createPlayerEntity(world *engine.World, playerID uint64, x, y float64) *eng
 	return entity
 }
 
-func simulateServerLoop(server *network.Server, world *engine.World, serializer *network.ComponentSerializer, updates int) {
+func simulateServerLoop(server *Server, world *engine.World, serializer *network.ComponentSerializer, updates int) {
 	fmt.Println("Server: Starting game loop simulation...")
 
 	for i := 0; i < updates; i++ {
@@ -163,7 +194,7 @@ func simulateServerLoop(server *network.Server, world *engine.World, serializer 
 	fmt.Println("Server: Completed game loop simulation")
 }
 
-func simulateClientInput(client *network.Client, playerID uint64, inputs int) {
+func simulateClientInput(client *Client, playerID uint64, inputs int) {
 	fmt.Printf("Client %d: Starting input simulation...\n", playerID)
 
 	serializer := network.NewComponentSerializer()
@@ -192,7 +223,7 @@ func simulateClientInput(client *network.Client, playerID uint64, inputs int) {
 	fmt.Printf("Client %d: Completed input simulation\n", playerID)
 }
 
-func simulateClientReceive(client *network.Client, world *engine.World, playerID uint64, updates int) {
+func simulateClientReceive(client *Client, world *engine.World, playerID uint64, updates int) {
 	fmt.Printf("Client %d: Starting state receive simulation...\n", playerID)
 
 	serializer := network.NewComponentSerializer()

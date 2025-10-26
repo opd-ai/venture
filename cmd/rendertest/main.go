@@ -4,10 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"image/color"
-	"log"
 	"os"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -20,15 +21,25 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Printf("Venture Rendering Test Tool")
-	log.Printf("Testing palette generation for genre: %s, seed: %d", *genreID, *seed)
+	// Initialize logger
+	logger := logging.TestUtilityLogger("rendertest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"genre": *genreID,
+		"seed":  *seed,
+	}).Info("Rendering Test Tool started")
 
 	// Generate palette
-	gen := palette.NewGenerator()
+	gen := palette.NewGeneratorWithLogger(logger)
 	pal, err := gen.Generate(*genreID, *seed)
 	if err != nil {
-		log.Fatalf("Error generating palette: %v", err)
+		logger.WithError(err).Fatal("palette generation failed")
 	}
+
+	logger.Info("palette generated successfully")
 
 	// Display palette
 	displayPalette(pal)
@@ -36,9 +47,9 @@ func main() {
 	// Save to file if requested
 	if *output != "" {
 		if err := savePalette(pal, *output); err != nil {
-			log.Fatalf("Error saving palette: %v", err)
+			logger.WithError(err).Fatal("failed to save palette")
 		}
-		log.Printf("Palette saved to %s", *output)
+		logger.WithField("path", *output).Info("palette saved")
 	}
 }
 

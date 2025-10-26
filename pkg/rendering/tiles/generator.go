@@ -11,23 +11,49 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural tile images.
 type Generator struct {
 	paletteGen *palette.Generator
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new tile generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new tile generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "tile",
+		})
+	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
+		logger:     logEntry,
 	}
 }
 
 // Generate creates a tile image from the given configuration.
 func (g *Generator) Generate(config Config) (*image.RGBA, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"type":    config.Type,
+			"genreID": config.GenreID,
+			"seed":    config.Seed,
+			"variant": config.Variant,
+		}).Debug("generating tile")
+	}
+
 	if err := config.Validate(); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("invalid tile config")
+		}
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
@@ -37,6 +63,9 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("palette generation failed")
+		}
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
@@ -62,7 +91,18 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 	case TileStairs:
 		g.generateStairs(img, pal, rng, config)
 	default:
-		return nil, fmt.Errorf("unknown tile type: %d", config.Type)
+		err := fmt.Errorf("unknown tile type: %d", config.Type)
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("type", config.Type).Error("unknown tile type")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"type": config.Type,
+			"seed": config.Seed,
+		}).Info("tile generated")
 	}
 
 	return img, nil

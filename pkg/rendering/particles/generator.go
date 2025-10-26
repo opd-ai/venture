@@ -10,23 +10,49 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural particle systems.
 type Generator struct {
 	paletteGen *palette.Generator
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new particle system generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new particle system generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "particle",
+		})
+	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
+		logger:     logEntry,
 	}
 }
 
 // Generate creates a particle system from the given configuration.
 func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"type":    config.Type,
+			"genreID": config.GenreID,
+			"seed":    config.Seed,
+			"count":   config.Count,
+		}).Debug("generating particle system")
+	}
+
 	if err := config.Validate(); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("invalid particle config")
+		}
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
@@ -36,6 +62,9 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("palette generation failed")
+		}
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
@@ -62,7 +91,18 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 	case ParticleDust:
 		g.generateDust(system, pal, rng, config)
 	default:
-		return nil, fmt.Errorf("unknown particle type: %d", config.Type)
+		err := fmt.Errorf("unknown particle type: %d", config.Type)
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("type", config.Type).Error("unknown particle type")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"type":  config.Type,
+			"count": config.Count,
+		}).Info("particle system generated")
 	}
 
 	return system, nil

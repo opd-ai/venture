@@ -4,10 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"image/png"
-	"log"
 	"os"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/tiles"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,6 +25,19 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Initialize logger
+	logger := logging.TestUtilityLogger("tiletest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"type":  *tileType,
+		"genre": *genre,
+		"seed":  *seed,
+		"count": *count,
+	}).Info("Tile Test Tool started")
 
 	// Parse tile type
 	var tileTypeEnum tiles.TileType
@@ -45,11 +59,11 @@ func main() {
 	case "stairs":
 		tileTypeEnum = tiles.TileStairs
 	default:
-		log.Fatalf("Unknown tile type: %s", *tileType)
+		logger.WithField("type", *tileType).Fatal("unknown tile type")
 	}
 
 	// Create generator
-	gen := tiles.NewGenerator()
+	gen := tiles.NewGeneratorWithLogger(logger)
 
 	fmt.Printf("=== Tile Generator Test ===\n\n")
 	fmt.Printf("Configuration:\n")
@@ -73,7 +87,7 @@ func main() {
 
 		img, err := gen.Generate(config)
 		if err != nil {
-			log.Fatalf("Failed to generate tile %d: %v", i+1, err)
+			logger.WithError(err).WithField("tileIndex", i+1).Fatal("tile generation failed")
 		}
 
 		if *verbose {
@@ -87,13 +101,20 @@ func main() {
 		if *output != "" && i == 0 {
 			f, err := os.Create(*output)
 			if err != nil {
-				log.Fatalf("Failed to create output file: %v", err)
+				logger.WithError(err).WithField("path", *output).Fatal("failed to create output file")
 			}
 			defer f.Close()
 
 			err = png.Encode(f, img)
 			if err != nil {
-				log.Fatalf("Failed to encode PNG: %v", err)
+				logger.WithError(err).Fatal("failed to encode PNG")
+			}
+
+			logger.WithField("path", *output).Info("tile saved")
+		}
+	}
+
+	logger.WithField("count", *count).Info("tile generation completed")
 			}
 
 			fmt.Printf("Saved tile to: %s\n", *output)

@@ -10,19 +10,33 @@ import (
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/genre"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates color palettes based on genre and seed.
 type Generator struct {
 	registry *genre.Registry
 	seedGen  *procgen.SeedGenerator
+	logger   *logrus.Entry
 }
 
 // NewGenerator creates a new palette generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new palette generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "palette",
+		})
+	}
 	return &Generator{
 		registry: genre.DefaultRegistry(),
 		seedGen:  procgen.NewSeedGenerator(0),
+		logger:   logEntry,
 	}
 }
 
@@ -33,8 +47,18 @@ func (g *Generator) Generate(genreID string, seed int64) (*Palette, error) {
 
 // GenerateWithOptions creates a palette with specific generation options.
 func (g *Generator) GenerateWithOptions(genreID string, seed int64, opts GenerationOptions) (*Palette, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"genreID": genreID,
+			"seed":    seed,
+		}).Debug("generating color palette")
+	}
+
 	genre, err := g.registry.Get(genreID)
 	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("genreID", genreID).Error("genre not found")
+		}
 		return nil, err
 	}
 
@@ -43,7 +67,16 @@ func (g *Generator) GenerateWithOptions(genreID string, seed int64, opts Generat
 	rng := rand.New(rand.NewSource(paletteSeed))
 
 	scheme := g.getSchemeForGenre(genre)
-	return g.generateFromScheme(scheme, rng, opts), nil
+	palette := g.generateFromScheme(scheme, rng, opts)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"genreID": genreID,
+			"seed":    seed,
+		}).Info("color palette generated")
+	}
+
+	return palette, nil
 }
 
 // getSchemeForGenre returns the appropriate color scheme for a genre.

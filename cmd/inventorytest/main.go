@@ -3,21 +3,35 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	seed  = flag.Int64("seed", 12345, "Generation seed")
-	count = flag.Int("count", 10, "Number of items to generate")
-	depth = flag.Int("depth", 5, "Dungeon depth for item generation")
+	seed    = flag.Int64("seed", 12345, "Generation seed")
+	count   = flag.Int("count", 10, "Number of items to generate")
+	depth   = flag.Int("depth", 5, "Dungeon depth for item generation")
+	verbose = flag.Bool("verbose", false, "Show detailed output")
 )
 
 func main() {
 	flag.Parse()
+
+	// Initialize logger
+	logger := logging.TestUtilityLogger("inventorytest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"seed":  *seed,
+		"count": *count,
+		"depth": *depth,
+	}).Info("Inventory Test Tool started")
 
 	fmt.Println("=== Venture Inventory & Equipment System Demo ===")
 	fmt.Printf("Seed: %d, Items: %d, Depth: %d\n\n", *seed, *count, *depth)
@@ -34,6 +48,8 @@ func main() {
 	player.AddComponent(&engine.StatsComponent{})
 	player.AddComponent(&engine.AttackComponent{})
 	world.Update(0.0)
+
+	logger.WithField("playerID", player.ID).Info("player entity created")
 
 	fmt.Println("Created player entity with inventory and equipment")
 	fmt.Printf("- Inventory Capacity: 20 items, 100.0 kg\n")
@@ -52,10 +68,12 @@ func main() {
 
 	result, err := itemGen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Failed to generate items: %v", err)
+		logger.WithError(err).Fatal("item generation failed")
 	}
 
 	items := result.([]*item.Item)
+	logger.WithField("itemCount", len(items)).Info("items generated")
+
 	fmt.Printf("Generated %d items:\n", len(items))
 	for i, itm := range items {
 		fmt.Printf("%2d. %-30s %-12s Dmg:%-3d Def:%-3d Weight:%.1fkg Value:%d\n",
@@ -70,7 +88,8 @@ func main() {
 	for _, itm := range items {
 		success, err := invSystem.AddItemToInventory(player.ID, itm)
 		if err != nil {
-			log.Printf("Error adding item: %v", err)
+			logger.WithError(err).WithField("item", itm.Name).Warn("failed to add item to inventory")
+			fmt.Printf("  Error adding item %s: %v\n", itm.Name, err)
 			continue
 		}
 		if success {

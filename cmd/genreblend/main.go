@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen/genre"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,15 +25,23 @@ var (
 func main() {
 	flag.Parse()
 
+	// Initialize logger for CLI tool
+	logger := logging.TestUtilityLogger("genreblend")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.Info("Genre Blend Tool started")
+
 	// List presets
 	if *listPresets {
-		showPresets()
+		showPresets(logger)
 		return
 	}
 
 	// List genres
 	if *listGenres {
-		showGenres()
+		showGenres(logger)
 		return
 	}
 
@@ -45,23 +54,38 @@ func main() {
 
 	// Blend genres
 	if *preset != "" {
+		logger.WithFields(logrus.Fields{
+			"preset": *preset,
+			"seed":   *seed,
+		}).Info("creating preset blend")
 		fmt.Printf("Creating preset blend: %s (seed: %d)\n\n", *preset, *seed)
 		blended, err = blender.CreatePresetBlend(*preset, *seed)
 	} else {
+		logger.WithFields(logrus.Fields{
+			"primary":   *primaryID,
+			"secondary": *secondaryID,
+			"weight":    *weight,
+			"seed":      *seed,
+		}).Info("blending genres")
 		fmt.Printf("Blending %s + %s (weight: %.2f, seed: %d)\n\n",
 			*primaryID, *secondaryID, *weight, *seed)
 		blended, err = blender.Blend(*primaryID, *secondaryID, *weight, *seed)
 	}
 
 	if err != nil {
-		log.Fatalf("Blend failed: %v", err)
+		logger.WithError(err).Fatal("blend failed")
 	}
 
+	logger.WithFields(logrus.Fields{
+		"blendID": blended.ID,
+		"name":    blended.Name,
+	}).Info("blend created successfully")
+
 	// Display results
-	showBlendedGenre(blended, *verbose)
+	showBlendedGenre(blended, *verbose, logger)
 }
 
-func showGenres() {
+func showGenres(logger *logrus.Logger) {
 	registry := genre.DefaultRegistry()
 	fmt.Println("=== Available Base Genres ===")
 
@@ -72,9 +96,10 @@ func showGenres() {
 		fmt.Printf("Themes: %v\n", g.Themes)
 		fmt.Println()
 	}
+	logger.WithField("count", len(registry.All())).Info("genres listed")
 }
 
-func showPresets() {
+func showPresets(logger *logrus.Logger) {
 	presets := genre.PresetBlends()
 	fmt.Println("=== Available Preset Blends ===")
 
@@ -87,9 +112,10 @@ func showPresets() {
 	}
 
 	fmt.Println("Usage: genreblend -preset=<name> -seed=<seed>")
+	logger.WithField("count", len(presets)).Info("presets listed")
 }
 
-func showBlendedGenre(blended *genre.BlendedGenre, verbose bool) {
+func showBlendedGenre(blended *genre.BlendedGenre, verbose bool, logger *logrus.Logger) {
 	fmt.Println("=== Blended Genre ===")
 	fmt.Println()
 	fmt.Printf("ID: %s\n", blended.ID)

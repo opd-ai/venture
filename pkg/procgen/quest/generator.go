@@ -8,25 +8,58 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // QuestGenerator implements the Generator interface for procedural quest creation.
-type QuestGenerator struct{}
+type QuestGenerator struct {
+	logger *logrus.Entry
+}
 
 // NewQuestGenerator creates a new quest generator.
 func NewQuestGenerator() *QuestGenerator {
-	return &QuestGenerator{}
+	return NewQuestGeneratorWithLogger(nil)
+}
+
+// NewQuestGeneratorWithLogger creates a new quest generator with a logger.
+func NewQuestGeneratorWithLogger(logger *logrus.Logger) *QuestGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "quest",
+		})
+	}
+	return &QuestGenerator{
+		logger: logEntry,
+	}
 }
 
 // Generate creates quests based on the seed and parameters.
 // Returns []*Quest or error.
 func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting quest generation")
+	}
+
 	// Validate parameters
 	if params.Depth < 0 {
-		return nil, fmt.Errorf("depth must be non-negative")
+		err := fmt.Errorf("depth must be non-negative")
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("depth", params.Depth).Error("invalid depth parameter")
+		}
+		return nil, err
 	}
 	if params.Difficulty < 0 || params.Difficulty > 1 {
-		return nil, fmt.Errorf("difficulty must be between 0 and 1")
+		err := fmt.Errorf("difficulty must be between 0 and 1")
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("difficulty", params.Difficulty).Error("invalid difficulty parameter")
+		}
+		return nil, err
 	}
 
 	// Extract custom parameters
@@ -55,7 +88,18 @@ func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	}
 
 	if len(templates) == 0 {
-		return nil, fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		err := fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("genreID", params.GenreID).Error("template selection failed")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"count":         count,
+			"templateCount": len(templates),
+		}).Debug("generating quests")
 	}
 
 	// Generate quests
@@ -69,6 +113,22 @@ func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (
 		quest.Seed = seed + int64(i)
 
 		quests = append(quests, quest)
+
+		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			g.logger.WithFields(logrus.Fields{
+				"questIndex": i,
+				"questName":  quest.Name,
+				"questType":  quest.Type,
+				"difficulty": quest.Difficulty,
+			}).Debug("quest generated")
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"questCount": len(quests),
+			"seed":       seed,
+		}).Info("quest generation complete")
 	}
 
 	return quests, nil

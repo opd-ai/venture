@@ -9,6 +9,8 @@ import (
 	"github.com/opd-ai/venture/pkg/audio/music"
 	"github.com/opd-ai/venture/pkg/audio/sfx"
 	"github.com/opd-ai/venture/pkg/audio/synthesis"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -25,23 +27,37 @@ func main() {
 
 	flag.Parse()
 
+	// Initialize logger
+	logger := logging.TestUtilityLogger("audiotest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"type": *testType,
+		"seed": *seed,
+	}).Info("Audio Test Tool started")
+
 	sampleRate := 44100
 
 	switch *testType {
 	case "oscillator":
-		testOscillator(sampleRate, *seed, *waveform, *frequency, *duration, *verbose)
+		testOscillator(sampleRate, *seed, *waveform, *frequency, *duration, *verbose, logger)
 	case "sfx":
-		testSFX(sampleRate, *seed, *effectType, *verbose)
+		testSFX(sampleRate, *seed, *effectType, *genre, *verbose, logger)
 	case "music":
-		testMusic(sampleRate, *seed, *genre, *context, *duration, *verbose)
+		testMusic(sampleRate, *seed, *genre, *context, *duration, *verbose, logger)
 	default:
+		logger.WithField("type", *testType).Error("unknown test type")
 		fmt.Fprintf(os.Stderr, "Unknown test type: %s\n", *testType)
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	logger.Info("audio test completed")
 }
 
-func testOscillator(sampleRate int, seed int64, waveformStr string, frequency, duration float64, verbose bool) {
+func testOscillator(sampleRate int, seed int64, waveformStr string, frequency, duration float64, verbose bool, logger *logrus.Logger) {
 	fmt.Printf("=== Testing Oscillator ===\n")
 	fmt.Printf("Waveform: %s\n", waveformStr)
 	fmt.Printf("Frequency: %.2f Hz\n", frequency)
@@ -74,23 +90,37 @@ func testOscillator(sampleRate int, seed int64, waveformStr string, frequency, d
 	fmt.Printf("  Samples: %d\n", len(sample.Data))
 	fmt.Printf("  Duration: %.3f seconds\n", float64(len(sample.Data))/float64(sample.SampleRate))
 
+	logger.WithFields(logrus.Fields{
+		"waveform":  waveformStr,
+		"frequency": frequency,
+		"duration":  duration,
+		"samples":   len(sample.Data),
+	}).Info("oscillator test complete")
+
 	if verbose {
 		printSampleStats(sample)
 	}
 }
 
-func testSFX(sampleRate int, seed int64, effectType string, verbose bool) {
+func testSFX(sampleRate int, seed int64, effectType string, genre string, verbose bool, logger *logrus.Logger) {
 	fmt.Printf("=== Testing Sound Effects ===\n")
 	fmt.Printf("Effect Type: %s\n", effectType)
+	fmt.Printf("Genre: %s\n", genre)
 	fmt.Printf("Seed: %d\n\n", seed)
 
-	gen := sfx.NewGenerator(sampleRate, seed)
-	sample := gen.Generate(effectType, seed)
+	gen := sfx.NewGeneratorWithLogger(sampleRate, seed, logger)
+	sample := gen.GenerateWithGenre(effectType, seed, genre)
 
 	fmt.Printf("Generated:\n")
 	fmt.Printf("  Sample Rate: %d Hz\n", sample.SampleRate)
 	fmt.Printf("  Samples: %d\n", len(sample.Data))
 	fmt.Printf("  Duration: %.3f seconds\n", float64(len(sample.Data))/float64(sample.SampleRate))
+
+	logger.WithFields(logrus.Fields{
+		"effectType": effectType,
+		"genre":      genre,
+		"samples":    len(sample.Data),
+	}).Info("sfx test complete")
 
 	if verbose {
 		printSampleStats(sample)
@@ -102,20 +132,26 @@ func testSFX(sampleRate int, seed int64, effectType string, verbose bool) {
 	}
 }
 
-func testMusic(sampleRate int, seed int64, genre, context string, duration float64, verbose bool) {
+func testMusic(sampleRate int, seed int64, genre, context string, duration float64, verbose bool, logger *logrus.Logger) {
 	fmt.Printf("=== Testing Music Generation ===\n")
 	fmt.Printf("Genre: %s\n", genre)
 	fmt.Printf("Context: %s\n", context)
 	fmt.Printf("Duration: %.2f seconds\n", duration)
 	fmt.Printf("Seed: %d\n\n", seed)
 
-	gen := music.NewGenerator(sampleRate, seed)
+	gen := music.NewGeneratorWithLogger(sampleRate, seed, logger)
 	sample := gen.GenerateTrack(genre, context, seed, duration)
 
 	fmt.Printf("Generated:\n")
 	fmt.Printf("  Sample Rate: %d Hz\n", sample.SampleRate)
 	fmt.Printf("  Samples: %d\n", len(sample.Data))
 	fmt.Printf("  Duration: %.3f seconds\n", float64(len(sample.Data))/float64(sample.SampleRate))
+
+	logger.WithFields(logrus.Fields{
+		"genre":   genre,
+		"context": context,
+		"samples": len(sample.Data),
+	}).Info("music test complete")
 
 	if verbose {
 		printSampleStats(sample)

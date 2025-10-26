@@ -88,20 +88,66 @@ Start the client directly to play solo:
 
 ### Multiplayer Co-op
 
-Start a dedicated server:
+#### Quick Start - Host-and-Play (LAN Party Mode)
+
+Perfect for LAN parties and local co-op! The host player starts both server and client with a single command:
+
+```bash
+# Host player: start server + client (one command!)
+./venture-client --host-and-play
+
+# Other players on the same network: join the host
+./venture-client -multiplayer -server <host-ip>:8080
+```
+
+**Host Configuration:**
+- `--host-lan`: Allow LAN connections (default: localhost only for security)
+- `-port 8080`: Starting port (auto-tries 8081-8089 if occupied)
+- `-max-players 4`: Maximum players (default: 4)
+- `-tick-rate 20`: Server update rate (default: 20 Hz)
+
+**Finding the Host IP:**
+- **Linux:** `ip addr show | grep inet`
+- **Windows:** `ipconfig`
+- **macOS:** `ifconfig | grep inet`
+
+**Security Note:** By default, `--host-and-play` binds to localhost only (127.0.0.1). To allow LAN connections, explicitly add `--host-lan`:
+
+```bash
+# Allow LAN connections (other computers on local network can join)
+./venture-client --host-and-play --host-lan
+```
+
+**Example LAN Party Setup:**
+```bash
+# Host (192.168.1.100): start server accessible on LAN
+./venture-client --host-and-play --host-lan -max-players 4
+
+# Player 2: connect from another computer
+./venture-client -multiplayer -server 192.168.1.100:8080
+
+# Player 3: connect
+./venture-client -multiplayer -server 192.168.1.100:8080
+```
+
+#### Traditional Setup - Dedicated Server
+
+For persistent servers or remote hosting, use a dedicated server:
+
 ```bash
 # Start server
 ./venture-server -port 8080 -max-players 4
 
 # Connect clients
-./venture-client -server localhost:8080
+./venture-client -multiplayer -server localhost:8080
 ```
 
 **Multiplayer Features:**
-- Up to 4 players cooperative
+- Up to 4 players cooperative (configurable)
 - Shared world with synchronized state
-- High-latency support (200-5000ms)
+- High-latency support (200-5000ms, including Tor/onion services)
 - Client-side prediction for responsiveness
+- Automatic port fallback (tries 8080-8089)
 
 ## Customization
 

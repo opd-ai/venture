@@ -219,8 +219,8 @@ func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID
 }
 
 // startEmbeddedServer starts a server in a background goroutine for host-and-play mode
-// Design: Runs complete server logic from cmd/server/main.go in a goroutine
-// Why: Reuses existing server implementation without code duplication
+// Design: Uses ServerManager from pkg/hostplay for lifecycle management
+// Why: Reuses server implementation with proper resource management
 //
 // Returns: (serverAddress, cleanupFunction, error)
 func startEmbeddedServer(logger *logrus.Logger, seed int64, genreID string) (string, func(), error) {
@@ -230,138 +230,60 @@ func startEmbeddedServer(logger *logrus.Logger, seed int64, genreID string) (str
 		"genre":     genreID,
 	})
 
-	// Configure host-and-play server
-	config := hostplay.DefaultConfig()
-	config.StartPort = *serverPort
-	config.PortRange = 10
-	config.BindLAN = *hostLAN
+	serverLogger.Info("starting server in background")
 
-	// Create server manager
-	hostServer := hostplay.New(config)
-
-	// Find available port
-	port, bindAddr, err := hostServer.FindAvailablePort()
-	if err != nil {
-		return "", nil, fmt.Errorf("no available ports: %w", err)
+	// Create server configuration
+	serverConfig := &hostplay.ServerConfig{
+		Port:       *serverPort,
+		MaxPlayers: *serverPlayers,
+		BindLAN:    *hostLAN,
+		WorldSeed:  seed,
+		GenreID:    genreID,
+		Difficulty: 0.5,
+		TickRate:   *serverTick,
 	}
 
-	hostServer.SetPort(port, bindAddr)
+	// Create server manager
+	manager, err := hostplay.NewServerManager(serverConfig, logger)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create server manager: %w", err)
+	}
+
+	// Start the server (blocks until listening or error)
+	if err := manager.Start(); err != nil {
+		return "", nil, fmt.Errorf("failed to start server: %w", err)
+	}
+
+	serverAddr := manager.Address()
+	port := manager.Port()
 
 	if *hostLAN {
 		serverLogger.WithField("bindAddr", "0.0.0.0").Warn("server accessible on LAN - firewall may block connections")
+
+		// Try to get LAN IP for display
+		if lanAddr := manager.GetLANAddress(); lanAddr != "" {
+			serverLogger.WithField("lanAddress", lanAddr).Info("LAN players can connect to this address")
+		}
 	} else {
 		serverLogger.WithField("bindAddr", "127.0.0.1").Info("server bound to localhost only")
 	}
 
 	serverLogger.WithFields(logrus.Fields{
+		"address":    serverAddr,
 		"port":       port,
 		"maxPlayers": *serverPlayers,
 		"tickRate":   *serverTick,
-	}).Info("starting server in background")
+	}).Info("server ready for connections")
 
-	// Create game world
-	world := engine.NewWorldWithLogger(logger)
-
-	// Add minimal server-side systems (no rendering)
-	movementSystem := engine.NewMovementSystem(200.0)
-	collisionSystem := engine.NewCollisionSystem(64.0)
-	combatSystem := engine.NewCombatSystemWithLogger(seed, logger)
-	aiSystem := engine.NewAISystem(world)
-	progressionSystem := engine.NewProgressionSystem(world)
-	inventorySystem := engine.NewInventorySystem(world)
-
-	world.AddSystem(movementSystem)
-	world.AddSystem(collisionSystem)
-	world.AddSystem(combatSystem)
-	world.AddSystem(aiSystem)
-	world.AddSystem(progressionSystem)
-	world.AddSystem(inventorySystem)
-
-	// Generate initial world terrain
-	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
-	params := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      1,
-		GenreID:    genreID,
-		Custom: map[string]interface{}{
-			"width":  100,
-			"height": 100,
-		},
-	}
-
-	terrainResult, err := terrainGen.Generate(seed, params)
-	if err != nil {
-		return "", nil, fmt.Errorf("terrain generation failed: %w", err)
-	}
-
-	generatedTerrain := terrainResult.(*terrain.Terrain)
-	serverLogger.WithFields(logrus.Fields{
-		"width":     generatedTerrain.Width,
-		"height":    generatedTerrain.Height,
-		"roomCount": len(generatedTerrain.Rooms),
-	}).Info("world terrain generated")
-
-	// Create network server
-	serverConfig := network.DefaultServerConfig()
-	serverConfig.Address = fmt.Sprintf("%s:%d", bindAddr, port)
-	serverConfig.MaxPlayers = *serverPlayers
-	serverConfig.UpdateRate = *serverTick
-
-	netServer := network.NewServerWithLogger(serverConfig, logger)
-
-	// Start network server
-	if err := netServer.Start(); err != nil {
-		return "", nil, fmt.Errorf("network server start failed: %w", err)
-	}
-
-	serverLogger.WithField("address", serverConfig.Address).Info("server listening")
-
-	// Start server game loop in background
-	ctx := hostServer.GetContext()
-	go func() {
-		defer serverLogger.Info("server goroutine exited")
-
-		ticker := time.NewTicker(time.Duration(1000000000 / *serverTick))
-		defer ticker.Stop()
-
-		lastUpdate := time.Now()
-
-		for {
-			select {
-			case <-ctx.Done():
-				// Shutdown requested
-				serverLogger.Info("shutdown requested, stopping server")
-				if err := netServer.Stop(); err != nil {
-					serverLogger.WithError(err).Error("error stopping server")
-				}
-				return
-
-			case <-ticker.C:
-				// Calculate delta time
-				now := time.Now()
-				deltaTime := now.Sub(lastUpdate).Seconds()
-				lastUpdate = now
-
-				// Update game world
-				world.Update(deltaTime)
-			}
-		}
-	}()
-
-	// Wait briefly for server to initialize
-	time.Sleep(100 * time.Millisecond)
-
-	serverLogger.Info("server ready for connections")
-
-	// Return address and cleanup function
+	// Return cleanup function
 	cleanup := func() {
 		serverLogger.Info("initiating graceful shutdown")
-		if err := hostServer.Shutdown(); err != nil {
+		if err := manager.Stop(); err != nil {
 			serverLogger.WithError(err).Error("shutdown error")
 		}
 	}
 
-	return hostServer.GetAddress(), cleanup, nil
+	return serverAddr, cleanup, nil
 }
 
 func main() {

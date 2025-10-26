@@ -111,15 +111,10 @@ func main() {
 			}
 
 			logger.WithField("path", *output).Info("tile saved")
-		}
-	}
-
-	logger.WithField("count", *count).Info("tile generation completed")
-			}
-
 			fmt.Printf("Saved tile to: %s\n", *output)
 		}
 	}
 
 	fmt.Printf("Successfully generated %d tiles\n", *count)
+	logger.WithField("count", *count).Info("tile generation completed")
 }

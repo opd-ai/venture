@@ -177,6 +177,18 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		}
 	}
 
+	// Extract boss flag and scale (Phase 5.3)
+	isBoss := false
+	bossScale := 2.5 // Default boss scale
+	if config.Custom != nil {
+		if b, ok := config.Custom["isBoss"].(bool); ok {
+			isBoss = b
+		}
+		if scale, ok := config.Custom["bossScale"].(float64); ok {
+			bossScale = scale
+		}
+	}
+
 	// Select appropriate template based on entity type, genre, direction, and equipment
 	var template AnatomicalTemplate
 
@@ -199,6 +211,15 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 	} else {
 		// Use basic template for non-humanoids
 		template = SelectTemplate(entityType)
+	}
+
+	// Apply boss scaling if needed (Phase 5.3)
+	if isBoss {
+		template = BossTemplate(template, bossScale)
+		// Optionally add boss enhancements
+		if config.Complexity > 0.6 {
+			template = ApplyBossEnhancements(template)
+		}
 	}
 
 	// Get sorted parts for correct rendering order (Z-index)
@@ -291,11 +312,31 @@ func (g *Generator) getColorForRole(role string, pal *palette.Palette) color.Col
 	}
 }
 
-// generateItem creates an item sprite.
+// generateItem creates an item sprite using item templates (Phase 5.4).
 func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, error) {
 	img := ebiten.NewImage(config.Width, config.Height)
 
-	// Items are typically simpler with 1-3 shapes
+	// Extract item type and rarity from config
+	var itemType ItemType
+	var rarity ItemRarity = RarityCommon
+
+	if config.Custom != nil {
+		if it, ok := config.Custom["itemType"].(string); ok {
+			itemType = ItemType(it)
+		}
+		if r, ok := config.Custom["rarity"].(int); ok {
+			rarity = ItemRarity(r)
+		} else if r, ok := config.Custom["rarity"].(ItemRarity); ok {
+			rarity = r
+		}
+	}
+
+	// Use template-based generation if item type specified
+	if itemType != "" {
+		return g.generateItemWithTemplate(config, itemType, rarity, rng)
+	}
+
+	// Fallback to original random generation for backward compatibility
 	numShapes := 1 + int(config.Complexity*2)
 
 	for i := 0; i < numShapes; i++ {
@@ -328,6 +369,68 @@ func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, 
 			float64(config.Width-itemConfig.Width)/2,
 			float64(config.Height-itemConfig.Height)/2,
 		)
+		img.DrawImage(shape, opts)
+	}
+
+	return img, nil
+}
+
+// generateItemWithTemplate creates an item sprite using item templates (Phase 5.4).
+func (g *Generator) generateItemWithTemplate(config Config, itemType ItemType, rarity ItemRarity, rng *rand.Rand) (*ebiten.Image, error) {
+	img := ebiten.NewImage(config.Width, config.Height)
+
+	// Select appropriate template
+	template := SelectItemTemplate(itemType, rarity)
+
+	// Render each part
+	for _, part := range template.Parts {
+		// Calculate actual dimensions
+		partWidth := int(float64(config.Width) * part.RelativeWidth)
+		partHeight := int(float64(config.Height) * part.RelativeHeight)
+
+		// Skip invalid parts
+		if partWidth <= 0 || partHeight <= 0 {
+			continue
+		}
+
+		// Select shape type
+		var shapeType shapes.ShapeType
+		if len(part.ShapeTypes) > 0 {
+			shapeType = part.ShapeTypes[rng.Intn(len(part.ShapeTypes))]
+		} else {
+			shapeType = shapes.ShapeCircle
+		}
+
+		// Get color based on role
+		partColor := g.getColorForRole(part.ColorRole, config.Palette)
+
+		// Generate shape
+		shapeConfig := shapes.Config{
+			Type:      shapeType,
+			Width:     partWidth,
+			Height:    partHeight,
+			Color:     partColor,
+			Seed:      config.Seed + int64(part.ZIndex),
+			Smoothing: 0.2,
+			Rotation:  part.Rotation,
+		}
+
+		shape, err := g.shapeGen.Generate(shapeConfig)
+		if err != nil {
+			continue
+		}
+
+		// Position and draw
+		opts := &ebiten.DrawImageOptions{}
+		x := float64(config.Width)*part.RelativeX - float64(partWidth)/2
+		y := float64(config.Height)*part.RelativeY - float64(partHeight)/2
+		opts.GeoM.Translate(x, y)
+
+		// Apply opacity
+		if part.Opacity < 1.0 {
+			opts.ColorScale.ScaleAlpha(float32(part.Opacity))
+		}
+
 		img.DrawImage(shape, opts)
 	}
 

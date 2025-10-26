@@ -648,3 +648,275 @@ func BenchmarkGenreTemplates(b *testing.B) {
 		})
 	}
 }
+
+// TestSerpentineTemplate tests the serpentine creature template (Phase 5.3).
+func TestSerpentineTemplate(t *testing.T) {
+	template := SerpentineTemplate()
+
+	if template.Name != "serpentine" {
+		t.Errorf("Template name = %s, want serpentine", template.Name)
+	}
+
+	// Verify has required parts
+	requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartHead}
+	for _, part := range requiredParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing required part: %s", part.String())
+		}
+	}
+
+	// Verify elongated body (torso taller than wide)
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.RelativeHeight <= torsoSpec.RelativeWidth {
+		t.Error("Serpentine torso should be taller than wide")
+	}
+
+	// Verify wedge-shaped head for snake appearance
+	headSpec := template.BodyPartLayout[PartHead]
+	hasWedge := false
+	for _, shape := range headSpec.ShapeTypes {
+		if shape == shapes.ShapeWedge {
+			hasWedge = true
+			break
+		}
+	}
+	if !hasWedge {
+		t.Error("Serpentine head should include wedge shape")
+	}
+}
+
+// TestArachnidTemplate tests the spider/insect template (Phase 5.3).
+func TestArachnidTemplate(t *testing.T) {
+	template := ArachnidTemplate()
+
+	if template.Name != "arachnid" {
+		t.Errorf("Template name = %s, want arachnid", template.Name)
+	}
+
+	// Verify has required parts including multi-leg representation
+	requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartHead, PartArms}
+	for _, part := range requiredParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing required part: %s", part.String())
+		}
+	}
+
+	// Verify wide leg spread (wider than body)
+	legsSpec := template.BodyPartLayout[PartLegs]
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if legsSpec.RelativeWidth <= torsoSpec.RelativeWidth {
+		t.Error("Arachnid legs should be wider than torso")
+	}
+
+	// Verify has lightning shape for leg appearance
+	hasLightning := false
+	for _, shape := range legsSpec.ShapeTypes {
+		if shape == shapes.ShapeLightning {
+			hasLightning = true
+			break
+		}
+	}
+	if !hasLightning {
+		t.Error("Arachnid legs should include lightning shape for multi-leg appearance")
+	}
+}
+
+// TestUndeadTemplate tests the undead creature template (Phase 5.3).
+func TestUndeadTemplate(t *testing.T) {
+	template := UndeadTemplate()
+
+	if template.Name != "undead" {
+		t.Errorf("Template name = %s, want undead", template.Name)
+	}
+
+	// Verify has all humanoid-like parts
+	requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+	for _, part := range requiredParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing required part: %s", part.String())
+		}
+	}
+
+	// Verify reduced opacity for ethereal appearance
+	for part, spec := range template.BodyPartLayout {
+		if part != PartShadow && spec.Opacity > 0.9 {
+			t.Errorf("Undead part %s should have reduced opacity, got %f", part.String(), spec.Opacity)
+		}
+	}
+
+	// Verify skull shape in head
+	headSpec := template.BodyPartLayout[PartHead]
+	hasSkull := false
+	for _, shape := range headSpec.ShapeTypes {
+		if shape == shapes.ShapeSkull {
+			hasSkull = true
+			break
+		}
+	}
+	if !hasSkull {
+		t.Error("Undead head should include skull shape")
+	}
+
+	// Verify thin limbs
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.RelativeWidth > 0.30 {
+		t.Errorf("Undead legs should be thin, got width %f", legsSpec.RelativeWidth)
+	}
+}
+
+// TestBossTemplate tests boss scaling (Phase 5.3).
+func TestBossTemplate(t *testing.T) {
+	tests := []struct {
+		name      string
+		baseFunc  func() AnatomicalTemplate
+		scale     float64
+		checkSize func(*testing.T, AnatomicalTemplate, AnatomicalTemplate)
+	}{
+		{
+			name:     "boss_humanoid_2x",
+			baseFunc: HumanoidTemplate,
+			scale:    2.0,
+			checkSize: func(t *testing.T, base, boss AnatomicalTemplate) {
+				baseTorso := base.BodyPartLayout[PartTorso]
+				bossTorso := boss.BodyPartLayout[PartTorso]
+				if bossTorso.RelativeWidth < baseTorso.RelativeWidth*1.9 {
+					t.Error("Boss torso should be approximately 2x wider")
+				}
+			},
+		},
+		{
+			name:     "boss_quadruped_3x",
+			baseFunc: QuadrupedTemplate,
+			scale:    3.0,
+			checkSize: func(t *testing.T, base, boss AnatomicalTemplate) {
+				baseTorso := base.BodyPartLayout[PartTorso]
+				bossTorso := boss.BodyPartLayout[PartTorso]
+				if bossTorso.RelativeHeight < baseTorso.RelativeHeight*2.9 {
+					t.Error("Boss torso should be approximately 3x taller")
+				}
+			},
+		},
+		{
+			name:     "boss_blob_4x",
+			baseFunc: BlobTemplate,
+			scale:    4.0,
+			checkSize: func(t *testing.T, base, boss AnatomicalTemplate) {
+				baseTorso := base.BodyPartLayout[PartTorso]
+				bossTorso := boss.BodyPartLayout[PartTorso]
+				if bossTorso.RelativeWidth < baseTorso.RelativeWidth*3.9 {
+					t.Error("Boss torso should be approximately 4x wider")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := tt.baseFunc()
+			boss := BossTemplate(base, tt.scale)
+
+			// Verify name prefix
+			expectedName := "boss_" + base.Name
+			if boss.Name != expectedName {
+				t.Errorf("Boss name = %s, want %s", boss.Name, expectedName)
+			}
+
+			// Verify all parts copied
+			if len(boss.BodyPartLayout) != len(base.BodyPartLayout) {
+				t.Errorf("Boss part count = %d, want %d", len(boss.BodyPartLayout), len(base.BodyPartLayout))
+			}
+
+			// Run size check
+			tt.checkSize(t, base, boss)
+		})
+	}
+}
+
+// TestApplyBossEnhancements tests boss detail enhancements (Phase 5.3).
+func TestApplyBossEnhancements(t *testing.T) {
+	base := HumanoidTemplate()
+	enhanced := ApplyBossEnhancements(base)
+
+	// Verify name prefix
+	expectedName := "enhanced_" + base.Name
+	if enhanced.Name != expectedName {
+		t.Errorf("Enhanced name = %s, want %s", enhanced.Name, expectedName)
+	}
+
+	// Verify armor part added
+	if _, hasArmor := enhanced.BodyPartLayout[PartArmor]; !hasArmor {
+		t.Error("Enhanced boss should have armor part")
+	}
+
+	// Verify armor is larger than torso
+	armorSpec := enhanced.BodyPartLayout[PartArmor]
+	torsoSpec := enhanced.BodyPartLayout[PartTorso]
+	if armorSpec.RelativeWidth <= torsoSpec.RelativeWidth {
+		t.Error("Boss armor should be larger than torso")
+	}
+
+	// Verify armor has lower Z-index (behind torso)
+	if armorSpec.ZIndex >= torsoSpec.ZIndex {
+		t.Error("Boss armor should render behind torso")
+	}
+}
+
+// TestSelectTemplate_Phase53 tests new monster archetypes (Phase 5.3).
+func TestSelectTemplate_Phase53(t *testing.T) {
+	tests := []struct {
+		entityType   string
+		expectedName string
+	}{
+		{"serpentine", "serpentine"},
+		{"snake", "serpentine"},
+		{"worm", "serpentine"},
+		{"tentacle", "serpentine"},
+		{"wyrm", "serpentine"},
+		{"arachnid", "arachnid"},
+		{"spider", "arachnid"},
+		{"insect", "arachnid"},
+		{"beetle", "arachnid"},
+		{"undead", "undead"},
+		{"skeleton", "undead"},
+		{"ghost", "undead"},
+		{"zombie", "undead"},
+		{"lich", "undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.entityType, func(t *testing.T) {
+			template := SelectTemplate(tt.entityType)
+			if template.Name != tt.expectedName {
+				t.Errorf("SelectTemplate(%s) name = %s, want %s", tt.entityType, template.Name, tt.expectedName)
+			}
+		})
+	}
+}
+
+// BenchmarkMonsterTemplates benchmarks Phase 5.3 monster template generation.
+func BenchmarkMonsterTemplates(b *testing.B) {
+	templates := []struct {
+		name string
+		fn   func() AnatomicalTemplate
+	}{
+		{"serpentine", SerpentineTemplate},
+		{"arachnid", ArachnidTemplate},
+		{"undead", UndeadTemplate},
+	}
+
+	for _, tmpl := range templates {
+		b.Run(tmpl.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = tmpl.fn()
+			}
+		})
+	}
+}
+
+// BenchmarkBossScaling benchmarks boss template scaling.
+func BenchmarkBossScaling(b *testing.B) {
+	base := HumanoidTemplate()
+	for i := 0; i < b.N; i++ {
+		_ = BossTemplate(base, 2.5)
+	}
+}

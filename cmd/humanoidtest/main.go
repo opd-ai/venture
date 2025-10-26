@@ -26,15 +26,15 @@ const (
 
 // Game holds the game state for the humanoid test viewer.
 type Game struct {
-	sprites       []*ebiten.Image
-	spriteNames   []string
-	currentIndex  int
-	seed          int64
-	genreID       string
-	shapeGen      *shapes.Generator
-	spriteGen     *sprites.Generator
-	paletteGen    *palette.Generator
-	currentPal    *palette.Palette
+	sprites      []*ebiten.Image
+	spriteNames  []string
+	currentIndex int
+	seed         int64
+	genreID      string
+	shapeGen     *shapes.Generator
+	spriteGen    *sprites.Generator
+	paletteGen   *palette.Generator
+	currentPal   *palette.Palette
 }
 
 // NewGame creates a new humanoid test game.

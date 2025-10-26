@@ -438,12 +438,260 @@ func SelectTemplate(entityType string) AnatomicalTemplate {
 		return BlobTemplate()
 	case "mechanical", "robot", "golem", "construct", "android":
 		return MechanicalTemplate()
-	case "flying", "bird", "dragon", "bat", "wyrm":
+	case "flying", "bird", "dragon", "bat", "wyvern":
 		return FlyingTemplate()
+	case "serpentine", "snake", "worm", "tentacle", "wyrm":
+		return SerpentineTemplate()
+	case "arachnid", "spider", "insect", "beetle":
+		return ArachnidTemplate()
+	case "undead", "skeleton", "ghost", "zombie", "lich":
+		return UndeadTemplate()
 	default:
 		// Default to humanoid for unknown types
 		return HumanoidTemplate()
 	}
+}
+
+// SerpentineTemplate returns a template for snake-like creatures.
+// Optimized for 32x32 pixels (snakes, worms, tentacles).
+func SerpentineTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "serpentine",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.88,
+				RelativeWidth:  0.70,
+				RelativeHeight: 0.18,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.35,
+				Rotation:       0,
+			},
+			// Use legs part for tail/lower body segment
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.80,
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.35,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeEllipse, shapes.ShapeWave},
+				ZIndex:         5,
+				ColorRole:      "primary",
+				Opacity:        1.0,
+				Rotation:       0,
+			},
+			// Main body (elongated)
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.35,
+				RelativeHeight: 0.70,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean, shapes.ShapeWave},
+				ZIndex:         10,
+				ColorRole:      "primary",
+				Opacity:        1.0,
+				Rotation:       0,
+			},
+			// Head at top
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.20,
+				RelativeWidth:  0.30,
+				RelativeHeight: 0.28,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeEllipse, shapes.ShapeTriangle},
+				ZIndex:         15,
+				ColorRole:      "secondary",
+				Opacity:        1.0,
+				Rotation:       0,
+			},
+		},
+	}
+}
+
+// ArachnidTemplate returns a template for spider-like creatures.
+// Optimized for 32x32 pixels (spiders, insects with 6-8 legs).
+func ArachnidTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "arachnid",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.90,
+				RelativeWidth:  0.75,
+				RelativeHeight: 0.18,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+			},
+			// Legs (spread wide for multi-leg appearance)
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.70,
+				RelativeWidth:  0.85,
+				RelativeHeight: 0.35,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeLightning},
+				ZIndex:         5,
+				ColorRole:      "primary",
+				Opacity:        0.95,
+				Rotation:       0,
+			},
+			// Central body (small, oval)
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.45,
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.55,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCircle},
+				ZIndex:         10,
+				ColorRole:      "primary",
+				Opacity:        1.0,
+				Rotation:       0,
+			},
+			// Head/fangs (smaller, forward)
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.25,
+				RelativeWidth:  0.35,
+				RelativeHeight: 0.25,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeWedge, shapes.ShapeEllipse},
+				ZIndex:         12,
+				ColorRole:      "secondary",
+				Opacity:        1.0,
+				Rotation:       0,
+			},
+			// Additional leg detail using arms slot
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.90,
+				RelativeHeight: 0.28,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeLightning, shapes.ShapeCapsule},
+				ZIndex:         8,
+				ColorRole:      "primary",
+				Opacity:        0.9,
+				Rotation:       15,
+			},
+		},
+	}
+}
+
+// UndeadTemplate returns a template for undead creatures.
+// Optimized for 32x32 pixels (skeletons, ghosts, zombies).
+func UndeadTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "undead",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.92,
+				RelativeWidth:  0.35,
+				RelativeHeight: 0.12,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.2, // Fainter shadow for undead
+				Rotation:       0,
+			},
+			// Skeletal legs (thin)
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.75,
+				RelativeWidth:  0.28,
+				RelativeHeight: 0.38,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:         5,
+				ColorRole:      "primary",
+				Opacity:        0.85, // Slightly translucent
+				Rotation:       0,
+			},
+			// Ribcage/torso (gaunt)
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.48,
+				RelativeWidth:  0.42,
+				RelativeHeight: 0.48,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeEllipse, shapes.ShapeOrganic},
+				ZIndex:         10,
+				ColorRole:      "primary",
+				Opacity:        0.85,
+				Rotation:       0,
+			},
+			// Bony arms (thin, angular)
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.48,
+				RelativeWidth:  0.62,
+				RelativeHeight: 0.32,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:         8,
+				ColorRole:      "secondary",
+				Opacity:        0.85,
+				Rotation:       0,
+			},
+			// Skull head
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.22,
+				RelativeWidth:  0.38,
+				RelativeHeight: 0.38,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeSkull, shapes.ShapeCircle},
+				ZIndex:         15,
+				ColorRole:      "secondary",
+				Opacity:        0.85,
+				Rotation:       0,
+			},
+		},
+	}
+}
+
+// BossTemplate returns a scaled-up version of any template for boss enemies.
+// Scale should be 2.0-4.0 for bosses (2x to 4x larger than normal).
+func BossTemplate(baseTemplate AnatomicalTemplate, scale float64) AnatomicalTemplate {
+	boss := AnatomicalTemplate{
+		Name:           "boss_" + baseTemplate.Name,
+		BodyPartLayout: make(map[BodyPart]PartSpec),
+	}
+
+	// Copy and scale all body parts
+	for part, spec := range baseTemplate.BodyPartLayout {
+		bossSpec := spec
+		// Scale dimensions (but keep relative positions)
+		bossSpec.RelativeWidth *= scale
+		bossSpec.RelativeHeight *= scale
+
+		// For bosses, enhance opacity and add slight size variations
+		if part == PartTorso || part == PartHead {
+			bossSpec.Opacity = 1.0 // Full opacity for prominent parts
+		}
+
+		boss.BodyPartLayout[part] = bossSpec
+	}
+
+	return boss
+}
+
+// ApplyBossEnhancements adds additional detail to boss sprites.
+// This includes armor plates, spikes, or other prominent features.
+func ApplyBossEnhancements(template AnatomicalTemplate) AnatomicalTemplate {
+	enhanced := template
+	enhanced.Name = "enhanced_" + template.Name
+
+	// Add armor plating if torso exists
+	if torsoSpec, hasTorso := enhanced.BodyPartLayout[PartTorso]; hasTorso {
+		armorSpec := torsoSpec
+		armorSpec.RelativeWidth *= 1.15  // Slightly larger than torso
+		armorSpec.RelativeHeight *= 1.15
+		armorSpec.ZIndex = torsoSpec.ZIndex - 1 // Behind torso
+		armorSpec.ColorRole = "accent3"
+		armorSpec.Opacity = 0.8
+		armorSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle}
+		enhanced.BodyPartLayout[PartArmor] = armorSpec
+	}
+
+	return enhanced
 }
 
 // HumanoidDirectionalTemplate returns a humanoid template with directional facing.

@@ -129,7 +129,7 @@ func (g *Game) generateAllSprites() error {
 }
 
 // addEntity adds an entity sprite with analysis.
-func (g *Game) addEntity(name string, entityType string, facing string, hasWeapon, hasShield bool, customGenre ...string) {
+func (g *Game) addEntity(name, entityType, facing string, hasWeapon, hasShield bool, customGenre ...string) {
 	config := sprites.Config{
 		Type:       sprites.SpriteEntity,
 		Width:      32,

@@ -152,9 +152,14 @@ func measureEdgeContrast(img *ebiten.Image, x, y int) float64 {
 
 	// Check 8-connected neighbors for maximum contrast
 	neighbors := [][2]int{
-		{-1, -1}, {0, -1}, {1, -1},
-		{-1, 0}, {1, 0},
-		{-1, 1}, {0, 1}, {1, 1},
+		{-1, -1},
+		{0, -1},
+		{1, -1},
+		{-1, 0},
+		{1, 0},
+		{-1, 1},
+		{0, 1},
+		{1, 1},
 	}
 
 	for _, n := range neighbors {

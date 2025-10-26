@@ -86,21 +86,20 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 
-		// Start cooldown even if no target (player swung at air)
-		attack.ResetCooldown()
-		fmt.Printf("[PLAYER COMBAT] Cooldown reset to %.2fs\n", attack.CooldownTimer)
-
 		// Find nearest enemy within attack range for damage
 		maxRange := attack.Range
 		target := FindNearestEnemy(s.world, entity, maxRange)
 
 		if target == nil {
 			// No enemy in range - attack animation plays but no damage
-			fmt.Printf("[PLAYER COMBAT] Attack animation playing, but no target in range\n")
+			// Start cooldown even if no target (player swung at air)
+			attack.ResetCooldown()
+			fmt.Printf("[PLAYER COMBAT] Attack animation playing, but no target in range. Cooldown reset to %.2fs\n", attack.CooldownTimer)
 			continue
 		}
 
 		// Perform attack through combat system (only if target exists)
+		// Note: CombatSystem.Attack() handles cooldown reset internally
 		hit := s.combatSystem.Attack(entity, target)
 
 		if hit {

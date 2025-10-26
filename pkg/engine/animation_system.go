@@ -316,7 +316,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		// Player character - use humanoid template
 		config.Custom["entityType"] = "humanoid"
 		config.Custom["facing"] = "down" // Default facing direction
-		
+
 		// Check for equipment to show on sprite
 		if entity.HasComponent("equipment") {
 			config.Custom["hasWeapon"] = true
@@ -327,7 +327,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		if team.TeamID == 2 { // Enemy team
 			// Determine monster type based on entity characteristics
 			entityType := "humanoid" // Default
-			
+
 			// Check if it's a boss (high damage indicates boss)
 			if attackComp, ok := entity.GetComponent("attack"); ok {
 				attack := attackComp.(*AttackComponent)
@@ -337,7 +337,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 					config.Custom["bossScale"] = 1.5
 				}
 			}
-			
+
 			// Check size based on collider
 			if colliderComp, ok := entity.GetComponent("collider"); ok {
 				collider := colliderComp.(*ColliderComponent)
@@ -347,7 +347,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 					entityType = "minion" // Small creature
 				}
 			}
-			
+
 			config.Custom["entityType"] = entityType
 			config.Custom["facing"] = "down"
 		}

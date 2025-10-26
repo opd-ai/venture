@@ -111,9 +111,9 @@ func (ps *ProgressionSystem) AwardXP(entity *Entity, xp int) error {
 
 	if ps.logger != nil && ps.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		ps.logger.WithFields(logrus.Fields{
-			"entityID":    entity.ID,
-			"xp":          xp,
-			"currentXP":   exp.CurrentXP,
+			"entityID":     entity.ID,
+			"xp":           xp,
+			"currentXP":    exp.CurrentXP,
 			"currentLevel": exp.Level,
 		}).Debug("awarding XP to entity")
 	}

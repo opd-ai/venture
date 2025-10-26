@@ -31,8 +31,8 @@ func TestProgressionSystemLogging(t *testing.T) {
 		RequiredXP: 100,
 	})
 	entity.AddComponent(&LevelScalingComponent{
-		HealthPerLevel: 10,
-		ManaPerLevel:   5,
+		HealthPerLevel:     10,
+		MagicPowerPerLevel: 5,
 	})
 	entity.AddComponent(&HealthComponent{
 		Current: 100,
@@ -82,7 +82,7 @@ func TestInventorySystemLogging(t *testing.T) {
 	entity := world.CreateEntity()
 	entity.AddComponent(&InventoryComponent{
 		Items:    make([]*item.Item, 0),
-		Capacity: 20,
+		MaxItems: 20,
 	})
 
 	// Create inventory system with logger
@@ -91,7 +91,7 @@ func TestInventorySystemLogging(t *testing.T) {
 	// Create a test item
 	testItem := &item.Item{
 		Name: "Test Sword",
-		Type: item.ItemWeapon,
+		Type: item.TypeWeapon,
 	}
 
 	// Add item
@@ -136,7 +136,8 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 		ps1 := NewProgressionSystem(world1)
 		ps1.AwardXP(entity1, 250)
 
-		exp1 := entity1.GetComponent("experience").(*ExperienceComponent)
+		comp1, _ := entity1.GetComponent("experience")
+		exp1 := comp1.(*ExperienceComponent)
 
 		// With logging
 		logger := createTestLogger()
@@ -150,7 +151,8 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 		ps2 := NewProgressionSystemWithLogger(world2, logger)
 		ps2.AwardXP(entity2, 250)
 
-		exp2 := entity2.GetComponent("experience").(*ExperienceComponent)
+		comp2, _ := entity2.GetComponent("experience")
+		exp2 := comp2.(*ExperienceComponent)
 
 		// Compare results
 		if exp1.Level != exp2.Level {
@@ -160,12 +162,10 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 			t.Errorf("XP mismatch: %d (no log) vs %d (with log)", exp1.CurrentXP, exp2.CurrentXP)
 		}
 	})
-
-	// Test inventory system
 	t.Run("InventorySystem", func(t *testing.T) {
 		testItem := &item.Item{
 			Name: "Test Item",
-			Type: item.ItemConsumable,
+			Type: item.TypeConsumable,
 		}
 
 		// Without logging
@@ -173,12 +173,13 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 		entity1 := world1.CreateEntity()
 		entity1.AddComponent(&InventoryComponent{
 			Items:    make([]*item.Item, 0),
-			Capacity: 20,
+			MaxItems: 20,
 		})
 		is1 := NewInventorySystem(world1)
 		success1, _ := is1.AddItemToInventory(entity1.ID, testItem)
 
-		inv1 := entity1.GetComponent("inventory").(*InventoryComponent)
+		comp1, _ := entity1.GetComponent("inventory")
+		inv1 := comp1.(*InventoryComponent)
 
 		// With logging
 		logger := createTestLogger()
@@ -186,12 +187,13 @@ func TestLoggingDoesNotBreakDeterminism(t *testing.T) {
 		entity2 := world2.CreateEntity()
 		entity2.AddComponent(&InventoryComponent{
 			Items:    make([]*item.Item, 0),
-			Capacity: 20,
+			MaxItems: 20,
 		})
 		is2 := NewInventorySystemWithLogger(world2, logger)
 		success2, _ := is2.AddItemToInventory(entity2.ID, testItem)
 
-		inv2 := entity2.GetComponent("inventory").(*InventoryComponent)
+		comp2, _ := entity2.GetComponent("inventory")
+		inv2 := comp2.(*InventoryComponent)
 
 		// Compare results
 		if success1 != success2 {

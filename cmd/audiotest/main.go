@@ -102,7 +102,7 @@ func testOscillator(sampleRate int, seed int64, waveformStr string, frequency, d
 	}
 }
 
-func testSFX(sampleRate int, seed int64, effectType string, genre string, verbose bool, logger *logrus.Logger) {
+func testSFX(sampleRate int, seed int64, effectType, genre string, verbose bool, logger *logrus.Logger) {
 	fmt.Printf("=== Testing Sound Effects ===\n")
 	fmt.Printf("Effect Type: %s\n", effectType)
 	fmt.Printf("Genre: %s\n", genre)

@@ -67,10 +67,10 @@ func (g *Generator) GenerateTrack(genre, context string, seed int64, duration fl
 
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
-			"scale":       scale.Name,
-			"tempo":       tempo,
-			"rootNote":    rootNote,
-			"chordCount":  len(chords),
+			"scale":      scale.Name,
+			"tempo":      tempo,
+			"rootNote":   rootNote,
+			"chordCount": len(chords),
 		}).Debug("music parameters selected")
 	}
 

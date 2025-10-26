@@ -160,9 +160,9 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"width":       terrain.Width,
-			"height":      terrain.Height,
-			"biomeCount":  len(biomeRegions),
+			"width":        terrain.Width,
+			"height":       terrain.Height,
+			"biomeCount":   len(biomeRegions),
 			"biomeRegions": len(biomeRegions),
 		}).Info("composite terrain generation complete")
 	}

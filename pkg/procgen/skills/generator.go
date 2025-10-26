@@ -110,10 +110,10 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 
 		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			g.logger.WithFields(logrus.Fields{
-				"treeIndex":  i,
-				"treeName":   tree.Name,
-				"nodeCount":  len(tree.Nodes),
-				"maxPoints":  tree.MaxPoints,
+				"treeIndex": i,
+				"treeName":  tree.Name,
+				"nodeCount": len(tree.Nodes),
+				"maxPoints": tree.MaxPoints,
 			}).Debug("skill tree generated")
 		}
 	}

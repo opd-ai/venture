@@ -123,12 +123,26 @@ func TestAnimationComponent_SetState(t *testing.T) {
 		t.Errorf("Expected frame index to reset to 0, got %d", anim.FrameIndex)
 	}
 
-	// Setting same state should not change anything
+	// Setting same state should restart animation (allows re-triggering attacks, etc.)
 	anim.Dirty = false
+	anim.FrameIndex = 3
+	anim.TimeAccumulator = 0.25
 	anim.SetState(AnimationStateWalk)
 
-	if anim.Dirty {
-		t.Error("Expected dirty flag to remain false when setting same state")
+	if !anim.Dirty {
+		t.Error("Expected dirty flag to be set when restarting animation with same state")
+	}
+
+	if anim.FrameIndex != 0 {
+		t.Errorf("Expected frame index to reset to 0 when restarting, got %d", anim.FrameIndex)
+	}
+
+	if anim.TimeAccumulator != 0.0 {
+		t.Errorf("Expected time accumulator to reset to 0.0 when restarting, got %f", anim.TimeAccumulator)
+	}
+
+	if !anim.Playing {
+		t.Error("Expected animation to be playing after restart")
 	}
 }
 

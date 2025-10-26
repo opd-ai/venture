@@ -5,8 +5,6 @@ package engine
 
 import (
 	"math"
-
-	"github.com/sirupsen/logrus"
 )
 
 // MovementSystem handles entity movement based on velocity.

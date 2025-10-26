@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/sirupsen/logrus"
 
 	"github.com/hajimehoshi/ebiten/v2"

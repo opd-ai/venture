@@ -3,7 +3,6 @@ package engine
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/sirupsen/logrus"
 )
 
 // AnimationState represents the current animation state of an entity.

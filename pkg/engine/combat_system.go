@@ -4,7 +4,6 @@
 package engine
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 

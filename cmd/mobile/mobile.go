@@ -1,14 +1,20 @@
 package mobile
 
 import (
-	"log"
-
 	"github.com/hajimehoshi/ebiten/v2/mobile"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 // Game is the mobile game instance
 var gameInstance *engine.EbitenGame
+var logger *logrus.Logger
+
+func init() {
+	// Initialize logger for mobile
+	logger = logging.TestUtilityLogger("mobile")
+}
 
 // Init initializes the game for mobile platforms.
 // This must be called before any other functions.
@@ -19,10 +25,10 @@ func Init() {
 
 	// Create the game instance with mobile-friendly dimensions
 	// Portrait mode: 720x1280 (9:16 aspect ratio)
-	gameInstance = engine.NewEbitenGame(720, 1280)
+	gameInstance = engine.NewEbitenGameWithLogger(720, 1280, logger)
 
 	// Log initialization
-	log.Println("Mobile game initialized")
+	logger.Info("mobile game initialized")
 
 	// Register the game with ebitenmobile
 	mobile.SetGame(gameInstance)

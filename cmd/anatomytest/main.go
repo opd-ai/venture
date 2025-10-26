@@ -4,13 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -25,10 +26,11 @@ type Game struct {
 	currentEntity int
 	sprites       []*ebiten.Image
 	labels        []string
+	logger        *logrus.Logger
 }
 
 // NewGame creates a new anatomy test game.
-func NewGame(seed int64, genreID string) (*Game, error) {
+func NewGame(seed int64, genreID string, logger *logrus.Logger) (*Game, error) {
 	spriteGen := sprites.NewGenerator()
 
 	// Generate palette
@@ -44,6 +46,7 @@ func NewGame(seed int64, genreID string) (*Game, error) {
 		currentEntity: 0,
 		sprites:       make([]*ebiten.Image, 0),
 		labels:        make([]string, 0),
+		logger:        logger,
 	}
 
 	// Generate test sprites for all entity types
@@ -93,7 +96,9 @@ func (g *Game) generateTestSprites(seed int64) {
 
 		sprite, err := g.spriteGen.Generate(config)
 		if err != nil {
-			log.Printf("Warning: Failed to generate %s sprite: %v", entityType.name, err)
+			if g.logger != nil {
+				g.logger.WithError(err).WithField("entityType", entityType.name).Warn("failed to generate sprite")
+			}
 			continue
 		}
 
@@ -128,7 +133,9 @@ func (g *Game) generateTestSprites(seed int64) {
 
 		shapeImg, err := shapeGen.Generate(shapeConfig)
 		if err != nil {
-			log.Printf("Warning: Failed to generate %s shape: %v", st.name, err)
+			if g.logger != nil {
+				g.logger.WithError(err).WithField("shapeType", st.name).Warn("failed to generate shape")
+			}
 			continue
 		}
 
@@ -240,11 +247,15 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 func main() {
 	flag.Parse()
 
-	log.Printf("Starting Anatomy Test - Seed: %d, Genre: %s", *seed, *genreID)
+	logger := logging.TestUtilityLogger("anatomytest")
+	logger.WithFields(logrus.Fields{
+		"seed":  *seed,
+		"genre": *genreID,
+	}).Info("starting anatomy test")
 
-	game, err := NewGame(*seed, *genreID)
+	game, err := NewGame(*seed, *genreID, logger)
 	if err != nil {
-		log.Fatalf("Failed to create game: %v", err)
+		logger.WithError(err).Fatal("failed to create game")
 	}
 
 	ebiten.SetWindowSize(800, 600)
@@ -252,6 +263,6 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	if err := ebiten.RunGame(game); err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("game error")
 	}
 }

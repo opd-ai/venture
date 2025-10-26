@@ -4,8 +4,9 @@
 package engine
 
 import (
-	"fmt"
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MovementSystem handles entity movement based on velocity.
@@ -175,10 +176,6 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				anim.CurrentState == AnimationStateDeath ||
 				anim.CurrentState == AnimationStateCast {
 				// Animation is in action state, don't override with movement
-				if entity.HasComponent("input") {
-					// DEBUG: Log when we skip overriding attack animations
-					fmt.Printf("[MOVEMENT] Skipping animation update - entity in %s state\n", anim.CurrentState)
-				}
 				continue
 			}
 

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // PerformanceMetrics tracks performance statistics for the game.
@@ -325,8 +327,9 @@ func (pm *PerformanceMonitor) Update(deltaTime float64) {
 
 // Timer is a helper for timing code sections.
 type Timer struct {
-	start time.Time
-	name  string
+	start  time.Time
+	name   string
+	logger *logrus.Entry
 }
 
 // NewTimer creates a new timer with the given name.
@@ -334,6 +337,21 @@ func NewTimer(name string) *Timer {
 	return &Timer{
 		start: time.Now(),
 		name:  name,
+	}
+}
+
+// NewTimerWithLogger creates a new timer with the given name and logger.
+func NewTimerWithLogger(name string, logger *logrus.Logger) *Timer {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"operation": name,
+		})
+	}
+	return &Timer{
+		start:  time.Now(),
+		name:   name,
+		logger: logEntry,
 	}
 }
 
@@ -345,6 +363,12 @@ func (t *Timer) Stop() time.Duration {
 // StopAndLog stops the timer and logs the result.
 func (t *Timer) StopAndLog() time.Duration {
 	elapsed := time.Since(t.start)
-	fmt.Printf("[PERF] %s: %.2fms\n", t.name, float64(elapsed.Microseconds())/1000.0)
+	if t.logger != nil && t.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		t.logger.WithFields(logrus.Fields{
+			"duration":   elapsed.Microseconds(),
+			"durationMs": float64(elapsed.Microseconds()) / 1000.0,
+		}).Debug("operation completed")
+	}
 	return elapsed
+}
 }

@@ -71,7 +71,7 @@ func main() {
 	// Add gameplay systems with proper constructors
 	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
 	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
-	combatSystem := engine.NewCombatSystem(*seed)
+	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
 	aiSystem := engine.NewAISystem(world)
 	progressionSystem := engine.NewProgressionSystem(world)
 	inventorySystem := engine.NewInventorySystem(world)
@@ -96,7 +96,7 @@ func main() {
 		}).Debug("generating world terrain")
 	}
 
-	terrainGen := terrain.NewBSPGenerator() // Use BSP algorithm
+	terrainGen := terrain.NewBSPGeneratorWithLogger(logger) // Use BSP algorithm with logging
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -131,8 +131,8 @@ func main() {
 	serverConfig.MaxPlayers = *maxPlayers
 	serverConfig.UpdateRate = *tickRate
 
-	// Create network server
-	server := network.NewServer(serverConfig)
+	// Create network server with logging
+	server := network.NewServerWithLogger(serverConfig, logger)
 
 	// Create snapshot manager for state synchronization
 	snapshotManager := network.NewSnapshotManager(100)

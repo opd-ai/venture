@@ -243,35 +243,31 @@ func main() {
 	// Initialize network client if multiplayer mode is enabled
 	var networkClient network.ClientConnection
 	if *multiplayer {
-		log.Printf("Multiplayer mode enabled - connecting to server at %s", *server)
+		clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
 
 		clientConfig := network.DefaultClientConfig()
 		clientConfig.ServerAddress = *server
-		networkClient = network.NewClient(clientConfig)
+		networkClient = network.NewClientWithLogger(clientConfig, logger)
 
 		// Connect to server
 		if err := networkClient.Connect(); err != nil {
-			log.Fatalf("Failed to connect to server: %v", err)
+			clientLogger.WithError(err).Fatal("failed to connect to server")
 		}
 
-		log.Printf("Connected to server successfully")
+		clientLogger.Info("connected to server successfully")
 
 		// Handle network errors in background
 		go func() {
 			for err := range networkClient.ReceiveError() {
-				log.Printf("Network error: %v", err)
+				clientLogger.WithError(err).Error("network error")
 			}
 		}()
-
-		if *verbose {
-			log.Println("Network client initialized and connected")
-		}
 	} else {
-		log.Println("Single-player mode (use -multiplayer flag to connect to server)")
+		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
 	}
 
 	// Create the game instance
-	game := engine.NewEbitenGame(*width, *height)
+	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
 
 	// Initialize game systems
 	if *verbose {
@@ -287,7 +283,7 @@ func main() {
 	// GAP-001 REPAIR: Connect collision system to movement system for predictive collision
 	movementSystem.SetCollisionSystem(collisionSystem)
 
-	combatSystem := engine.NewCombatSystem(*seed)
+	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
 
 	// GAP-016 REPAIR: Initialize particle system for visual effects
 	particleSystem := engine.NewParticleSystem()
@@ -570,7 +566,7 @@ func main() {
 		log.Println("Generating procedural terrain...")
 	}
 
-	terrainGen := terrain.NewBSPGenerator() // Use BSP algorithm
+	terrainGen := terrain.NewBSPGeneratorWithLogger(logger) // Use BSP algorithm with logging
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -583,14 +579,15 @@ func main() {
 
 	terrainResult, err := terrainGen.Generate(*seed, params)
 	if err != nil {
-		log.Fatalf("Failed to generate terrain: %v", err)
+		clientLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
 	generatedTerrain := terrainResult.(*terrain.Terrain)
-	if *verbose {
-		log.Printf("Terrain generated: %dx%d with %d rooms",
-			generatedTerrain.Width, generatedTerrain.Height, len(generatedTerrain.Rooms))
-	}
+	clientLogger.WithFields(logrus.Fields{
+		"width":     generatedTerrain.Width,
+		"height":    generatedTerrain.Height,
+		"roomCount": len(generatedTerrain.Rooms),
+	}).Info("terrain generated")
 
 	// Initialize terrain rendering system
 	if *verbose {

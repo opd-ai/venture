@@ -8,26 +8,50 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
-	"github.com/opd-ai/venture/pkg/rendering/shapes"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator generates environmental objects.
 type Generator struct {
 	paletteGen *palette.Generator
-	shapeGen   *shapes.Generator
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new environmental object generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new environmental object generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "environment",
+		})
+	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
-		shapeGen:   shapes.NewGenerator(),
+		logger:     logEntry,
 	}
 }
 
 // Generate creates a single environmental object.
 func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"subType": config.SubType,
+			"genreID": config.GenreID,
+			"seed":    config.Seed,
+			"width":   config.Width,
+			"height":  config.Height,
+		}).Debug("generating environmental object")
+	}
+
 	if err := config.Validate(); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("invalid config")
+		}
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
@@ -40,13 +64,16 @@ func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
 	// Generate sprite
 	sprite, err := g.generateSprite(config, rng)
 	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("subType", config.SubType).Error("sprite generation failed")
+		}
 		return nil, fmt.Errorf("failed to generate sprite: %w", err)
 	}
 
 	// Generate name
 	name := g.generateName(config.SubType, config.GenreID, rng)
 
-	return &EnvironmentalObject{
+	obj := &EnvironmentalObject{
 		Type:         config.SubType.GetObjectType(),
 		SubType:      config.SubType,
 		Sprite:       sprite,
@@ -59,7 +86,16 @@ func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
 		GenreID:      config.GenreID,
 		Seed:         config.Seed,
 		Name:         name,
-	}, nil
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"name":    name,
+			"subType": config.SubType,
+		}).Info("environmental object generated")
+	}
+
+	return obj, nil
 }
 
 // generateSprite creates a sprite for the object.

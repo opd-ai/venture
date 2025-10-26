@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -16,6 +18,18 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Show detailed output")
 	seed := flag.Int64("seed", time.Now().UnixNano(), "Random seed")
 	flag.Parse()
+
+	// Initialize logger
+	logger := logging.TestUtilityLogger("movementtest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"entities": *count,
+		"duration": *duration,
+		"seed":     *seed,
+	}).Info("Movement Test Tool started")
 
 	fmt.Println("=== Movement and Collision System Demo ===")
 	fmt.Printf("Entities: %d, Duration: %.1fs, Seed: %d\n\n", *count, *duration, *seed)
@@ -37,11 +51,17 @@ func main() {
 			x2, y2, _ := engine.GetPosition(e2)
 			fmt.Printf("  Collision: Entity %d at (%.1f, %.1f) <-> Entity %d at (%.1f, %.1f)\n",
 				e1.ID, x1, y1, e2.ID, x2, y2)
+			logger.WithFields(logrus.Fields{
+				"entity1": e1.ID,
+				"entity2": e2.ID,
+			}).Debug("collision detected")
 		}
 	})
 
 	world.AddSystem(movementSystem)
 	world.AddSystem(collisionSystem)
+
+	logger.Info("systems initialized")
 
 	// Create entities with random positions and velocities
 	fmt.Println("Creating entities...")
@@ -80,6 +100,8 @@ func main() {
 		}
 	}
 
+	logger.WithField("count", *count).Info("entities created")
+
 	world.Update(0) // Process entity additions
 
 	fmt.Printf("\nSimulating movement and collisions...\n\n")
@@ -110,6 +132,12 @@ func main() {
 	fmt.Printf("Total collisions detected: %d\n", collisionCount)
 	fmt.Printf("Average collisions/second: %.1f\n", float64(collisionCount)/(*duration))
 	fmt.Printf("Simulation speed: %.1fx real-time\n\n", *duration/simulationTime.Seconds())
+
+	logger.WithFields(logrus.Fields{
+		"collisions":      collisionCount,
+		"computationTime": simulationTime.String(),
+		"speedRatio":      *duration / simulationTime.Seconds(),
+	}).Info("simulation completed")
 
 	// Show final entity positions
 	if *verbose {

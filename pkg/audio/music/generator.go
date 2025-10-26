@@ -8,6 +8,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/audio"
 	"github.com/opd-ai/venture/pkg/audio/synthesis"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural music tracks.
@@ -15,19 +16,42 @@ type Generator struct {
 	sampleRate int
 	osc        *synthesis.Oscillator
 	rng        *rand.Rand
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new music generator.
 func NewGenerator(sampleRate int, seed int64) *Generator {
+	return NewGeneratorWithLogger(sampleRate, seed, nil)
+}
+
+// NewGeneratorWithLogger creates a new music generator with a logger.
+func NewGeneratorWithLogger(sampleRate int, seed int64, logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator":  "music",
+			"sampleRate": sampleRate,
+		})
+	}
 	return &Generator{
 		sampleRate: sampleRate,
 		osc:        synthesis.NewOscillator(sampleRate, seed),
 		rng:        rand.New(rand.NewSource(seed)),
+		logger:     logEntry,
 	}
 }
 
 // GenerateTrack creates a music track for the given context.
 func (g *Generator) GenerateTrack(genre, context string, seed int64, duration float64) *audio.AudioSample {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"genre":    genre,
+			"context":  context,
+			"seed":     seed,
+			"duration": duration,
+		}).Debug("generating music track")
+	}
+
 	localRng := rand.New(rand.NewSource(seed))
 
 	// Get musical parameters based on genre and context
@@ -41,6 +65,15 @@ func (g *Generator) GenerateTrack(genre, context string, seed int64, duration fl
 	// Get chord progression
 	chords := GetChordProgression(genre, rootNote)
 
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"scale":       scale.Name,
+			"tempo":       tempo,
+			"rootNote":    rootNote,
+			"chordCount":  len(chords),
+		}).Debug("music parameters selected")
+	}
+
 	// Generate the track
 	numSamples := int(float64(g.sampleRate) * duration)
 	track := make([]float64, numSamples)
@@ -51,6 +84,13 @@ func (g *Generator) GenerateTrack(genre, context string, seed int64, duration fl
 
 	// Apply master envelope for fade in/out
 	g.applyMasterEnvelope(track, duration)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"sampleCount": len(track),
+			"duration":    duration,
+		}).Info("music track generated")
+	}
 
 	return &audio.AudioSample{
 		SampleRate: g.sampleRate,

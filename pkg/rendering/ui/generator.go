@@ -11,23 +11,50 @@ import (
 	"strings"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural UI elements.
 type Generator struct {
 	paletteGen *palette.Generator
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new UI element generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new UI element generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "ui",
+		})
+	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
+		logger:     logEntry,
 	}
 }
 
 // Generate creates a UI element image from the given configuration.
 func (g *Generator) Generate(config Config) (*image.RGBA, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"type":    config.Type,
+			"genreID": config.GenreID,
+			"seed":    config.Seed,
+			"width":   config.Width,
+			"height":  config.Height,
+		}).Debug("generating UI element")
+	}
+
 	if err := config.Validate(); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("invalid UI config")
+		}
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
@@ -37,6 +64,9 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("palette generation failed")
+		}
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
@@ -58,7 +88,18 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 	case ElementFrame:
 		g.generateFrame(img, pal, rng, config)
 	default:
-		return nil, fmt.Errorf("unknown element type: %d", config.Type)
+		err := fmt.Errorf("unknown element type: %d", config.Type)
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("type", config.Type).Error("unknown element type")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"type": config.Type,
+			"seed": config.Seed,
+		}).Info("UI element generated")
 	}
 
 	return img, nil

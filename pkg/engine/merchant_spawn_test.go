@@ -11,10 +11,10 @@ import (
 
 func TestSpawnMerchantFromData(t *testing.T) {
 	tests := []struct {
-		name            string
-		setupMerchant   func() *procgenEntity.MerchantData
-		x, y            float64
-		expectNil       bool
+		name              string
+		setupMerchant     func() *procgenEntity.MerchantData
+		x, y              float64
+		expectNil         bool
 		expectedCompCount int
 	}{
 		{
@@ -147,12 +147,12 @@ func TestSpawnMerchantsInTerrain(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		terrain        *terrain.Terrain
-		worldSeed      int64
-		merchantCount  int
-		expectedMin    int // Minimum merchants spawned
-		expectedMax    int // Maximum merchants spawned
+		name          string
+		terrain       *terrain.Terrain
+		worldSeed     int64
+		merchantCount int
+		expectedMin   int // Minimum merchants spawned
+		expectedMax   int // Maximum merchants spawned
 	}{
 		{
 			name:          "spawn 2 merchants",
@@ -309,11 +309,11 @@ func TestFindClosestMerchant(t *testing.T) {
 	world.Update(0)
 
 	tests := []struct {
-		name             string
-		x, y             float64
-		radius           float64
-		expectMerchant   bool
-		expectedID       uint64 // ID of expected closest merchant (0 if none)
+		name           string
+		x, y           float64
+		radius         float64
+		expectMerchant bool
+		expectedID     uint64 // ID of expected closest merchant (0 if none)
 	}{
 		{
 			name:           "closest to merchant1",

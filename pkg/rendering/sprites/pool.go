@@ -13,7 +13,7 @@ import (
 // Images are expensive to allocate due to GPU texture creation overhead.
 // Pooling allows reuse of images instead of creating new ones each frame.
 type ImagePool struct {
-	pool  sync.Pool
+	pool   sync.Pool
 	width  int
 	height int
 }
@@ -169,9 +169,9 @@ func (pg *PooledGenerator) GetPool() *ShapePool {
 
 // CombinedGenerator combines caching and pooling for maximum performance.
 type CombinedGenerator struct {
-	generator  *Generator
-	cache      *Cache
-	shapePool  *ShapePool
+	generator    *Generator
+	cache        *Cache
+	shapePool    *ShapePool
 	cacheEnabled bool
 	poolEnabled  bool
 }

@@ -333,8 +333,8 @@ func TestShapePool_Concurrency(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < operationsPerGoroutine; j++ {
 				// Simulate accessing different pool sizes
-				width := 32 + (id % 3) * 32  // 32, 64, or 96
-				height := 32 + (j % 3) * 32
+				width := 32 + (id%3)*32 // 32, 64, or 96
+				height := 32 + (j%3)*32
 
 				// This will create pools on-demand
 				key := width*10000 + height

@@ -218,9 +218,9 @@ type InputSystem struct {
 	KeyRight ebiten.Key
 
 	// Key bindings - Actions
-	KeyAction    ebiten.Key
-	KeyUseItem   ebiten.Key
-	KeyInteract  ebiten.Key // F key for interacting with NPCs/merchants
+	KeyAction   ebiten.Key
+	KeyUseItem  ebiten.Key
+	KeyInteract ebiten.Key // F key for interacting with NPCs/merchants
 
 	// GAP-002 REPAIR: Spell casting key bindings (keys 1-5)
 	KeySpell1 ebiten.Key

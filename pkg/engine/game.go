@@ -309,13 +309,18 @@ func (g *EbitenGame) Update() error {
 	g.SkillsUI.Update(nil, deltaTime)
 	g.MapUI.Update(nil, deltaTime)
 
+	// Update shop UI (if initialized)
+	if g.ShopUI != nil {
+		g.ShopUI.Update(g.World.GetEntities(), deltaTime)
+	}
+
 	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
 
 	// Update the world (unless UI is blocking input)
-	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() {
+	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() && (g.ShopUI == nil || !g.ShopUI.IsVisible()) {
 		g.World.Update(deltaTime)
 	}
 

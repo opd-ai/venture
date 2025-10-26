@@ -8,6 +8,8 @@ import (
 )
 
 // System manages multiple light sources and applies lighting to images.
+// Future feature: This system is designed for dynamic lighting but not yet integrated into the main game loop.
+// Planned integration in Phase 9+ for enhanced visual effects.
 type System struct {
 	lights []Light
 	config LightingConfig

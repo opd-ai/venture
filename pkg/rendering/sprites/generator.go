@@ -179,7 +179,7 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 
 	// Select appropriate template based on entity type, genre, direction, and equipment
 	var template AnatomicalTemplate
-	
+
 	// Check if humanoid with equipment
 	isHumanoid := false
 	switch entityType {

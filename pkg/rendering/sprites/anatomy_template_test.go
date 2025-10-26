@@ -326,3 +326,325 @@ func BenchmarkGetSortedParts(b *testing.B) {
 		_ = template.GetSortedParts()
 	}
 }
+
+// TestBodyPart_String_Phase52 tests new body part string representations.
+func TestBodyPart_String_Phase52(t *testing.T) {
+	tests := []struct {
+		part BodyPart
+		want string
+	}{
+		{PartHelmet, "helmet"},
+		{PartArmor, "armor"},
+		{PartTail, "tail"},
+		{PartWings, "wings"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.part.String()
+			if got != tt.want {
+				t.Errorf("BodyPart.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestHumanoidDirectionalTemplate tests directional variants (Phase 5.2).
+func TestHumanoidDirectionalTemplate(t *testing.T) {
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	for _, dir := range directions {
+		t.Run(string(dir), func(t *testing.T) {
+			template := HumanoidDirectionalTemplate(dir)
+
+			// Verify template name
+			expectedName := "humanoid_" + string(dir)
+			if template.Name != expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, expectedName)
+			}
+
+			// Verify has required parts
+			requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+			for _, part := range requiredParts {
+				if _, exists := template.BodyPartLayout[part]; !exists {
+					t.Errorf("Missing required part: %s", part.String())
+				}
+			}
+
+			// Verify arms positioning differs by direction
+			armsSpec := template.BodyPartLayout[PartArms]
+			switch dir {
+			case DirLeft:
+				if armsSpec.Rotation != 270 {
+					t.Errorf("Left-facing arms rotation = %f, want 270", armsSpec.Rotation)
+				}
+			case DirRight:
+				if armsSpec.Rotation != 90 {
+					t.Errorf("Right-facing arms rotation = %f, want 90", armsSpec.Rotation)
+				}
+			}
+
+			// Verify head positioning for left/right
+			headSpec := template.BodyPartLayout[PartHead]
+			switch dir {
+			case DirLeft:
+				if headSpec.RelativeX != 0.45 {
+					t.Errorf("Left-facing head X = %f, want 0.45", headSpec.RelativeX)
+				}
+			case DirRight:
+				if headSpec.RelativeX != 0.55 {
+					t.Errorf("Right-facing head X = %f, want 0.55", headSpec.RelativeX)
+				}
+			}
+		})
+	}
+}
+
+// TestHumanoidWithEquipment tests equipment positioning (Phase 5.2).
+func TestHumanoidWithEquipment(t *testing.T) {
+	tests := []struct {
+		name      string
+		direction Direction
+		hasWeapon bool
+		hasShield bool
+	}{
+		{"weapon_only_down", DirDown, true, false},
+		{"shield_only_down", DirDown, false, true},
+		{"both_down", DirDown, true, true},
+		{"weapon_only_right", DirRight, true, false},
+		{"shield_only_left", DirLeft, false, true},
+		{"both_up", DirUp, true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := HumanoidWithEquipment(tt.direction, tt.hasWeapon, tt.hasShield)
+
+			// Verify weapon present when requested
+			_, hasWeaponPart := template.BodyPartLayout[PartWeapon]
+			if tt.hasWeapon && !hasWeaponPart {
+				t.Error("Expected weapon part but not found")
+			}
+			if !tt.hasWeapon && hasWeaponPart {
+				t.Error("Unexpected weapon part found")
+			}
+
+			// Verify shield present when requested
+			_, hasShieldPart := template.BodyPartLayout[PartShield]
+			if tt.hasShield && !hasShieldPart {
+				t.Error("Expected shield part but not found")
+			}
+			if !tt.hasShield && hasShieldPart {
+				t.Error("Unexpected shield part found")
+			}
+
+			// Verify weapon has appropriate shape
+			if tt.hasWeapon {
+				weaponSpec := template.BodyPartLayout[PartWeapon]
+				hasBladeShape := false
+				for _, shape := range weaponSpec.ShapeTypes {
+					if shape == shapes.ShapeBlade {
+						hasBladeShape = true
+						break
+					}
+				}
+				if !hasBladeShape {
+					t.Error("Weapon should include ShapeBlade")
+				}
+			}
+
+			// Verify shield has appropriate shape
+			if tt.hasShield {
+				shieldSpec := template.BodyPartLayout[PartShield]
+				hasShieldShape := false
+				for _, shape := range shieldSpec.ShapeTypes {
+					if shape == shapes.ShapeShield {
+						hasShieldShape = true
+						break
+					}
+				}
+				if !hasShieldShape {
+					t.Error("Shield should include ShapeShield")
+				}
+			}
+		})
+	}
+}
+
+// TestGenreSpecificHumanoids tests genre-specific template variations (Phase 5.2).
+func TestGenreSpecificHumanoids(t *testing.T) {
+	tests := []struct {
+		name          string
+		templateFunc  func(Direction) AnatomicalTemplate
+		expectedName  string
+		checkFeatures func(*testing.T, AnatomicalTemplate)
+	}{
+		{
+			name:         "fantasy",
+			templateFunc: FantasyHumanoidTemplate,
+			expectedName: "fantasy_humanoid_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Fantasy should have broader shoulders
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if torsoSpec.RelativeWidth < 0.54 {
+					t.Error("Fantasy humanoid should have broader shoulders")
+				}
+			},
+		},
+		{
+			name:         "scifi",
+			templateFunc: SciFiHumanoidTemplate,
+			expectedName: "scifi_humanoid_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Sci-fi should have angular shapes
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				hasAngular := false
+				for _, shape := range torsoSpec.ShapeTypes {
+					if shape == shapes.ShapeHexagon || shape == shapes.ShapeOctagon {
+						hasAngular = true
+						break
+					}
+				}
+				if !hasAngular {
+					t.Error("Sci-fi humanoid should have angular shapes")
+				}
+			},
+		},
+		{
+			name:         "horror",
+			templateFunc: HorrorHumanoidTemplate,
+			expectedName: "horror_humanoid_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Horror should have elongated head
+				headSpec := template.BodyPartLayout[PartHead]
+				if headSpec.RelativeHeight <= 0.35 {
+					t.Error("Horror humanoid should have elongated head")
+				}
+			},
+		},
+		{
+			name:         "cyberpunk",
+			templateFunc: CyberpunkHumanoidTemplate,
+			expectedName: "cyberpunk_humanoid_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Cyberpunk should have compact build
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				if torsoSpec.RelativeHeight > 0.45 {
+					t.Error("Cyberpunk humanoid should have compact torso")
+				}
+			},
+		},
+		{
+			name:         "postapoc",
+			templateFunc: PostApocHumanoidTemplate,
+			expectedName: "postapoc_humanoid_down",
+			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
+				// Post-apoc should have irregular/organic shapes
+				torsoSpec := template.BodyPartLayout[PartTorso]
+				hasOrganic := false
+				for _, shape := range torsoSpec.ShapeTypes {
+					if shape == shapes.ShapeOrganic {
+						hasOrganic = true
+						break
+					}
+				}
+				if !hasOrganic {
+					t.Error("Post-apoc humanoid should have organic shapes")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := tt.templateFunc(DirDown)
+
+			// Verify template name
+			if template.Name != tt.expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, tt.expectedName)
+			}
+
+			// Verify has all humanoid parts
+			requiredParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+			for _, part := range requiredParts {
+				if _, exists := template.BodyPartLayout[part]; !exists {
+					t.Errorf("Missing required part: %s", part.String())
+				}
+			}
+
+			// Run genre-specific feature checks
+			tt.checkFeatures(t, template)
+		})
+	}
+}
+
+// TestSelectHumanoidTemplate tests the genre-aware template selector (Phase 5.2).
+func TestSelectHumanoidTemplate(t *testing.T) {
+	tests := []struct {
+		genre        string
+		entityType   string
+		direction    Direction
+		expectedName string
+	}{
+		{"fantasy", "player", DirDown, "fantasy_humanoid_down"},
+		{"scifi", "humanoid", DirUp, "scifi_humanoid_up"},
+		{"horror", "warrior", DirLeft, "horror_humanoid_left"},
+		{"cyberpunk", "knight", DirRight, "cyberpunk_humanoid_right"},
+		{"postapoc", "npc", DirDown, "postapoc_humanoid_down"},
+		{"unknown", "player", DirDown, "humanoid_down"},
+		{"fantasy", "blob", DirDown, "blob"}, // Non-humanoid
+	}
+
+	for _, tt := range tests {
+		name := tt.genre + "_" + tt.entityType + "_" + string(tt.direction)
+		t.Run(name, func(t *testing.T) {
+			template := SelectHumanoidTemplate(tt.genre, tt.entityType, tt.direction)
+
+			if template.Name != tt.expectedName {
+				t.Errorf("Template name = %s, want %s", template.Name, tt.expectedName)
+			}
+		})
+	}
+}
+
+// BenchmarkDirectionalTemplates benchmarks directional template generation.
+func BenchmarkDirectionalTemplates(b *testing.B) {
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	for _, dir := range directions {
+		b.Run(string(dir), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = HumanoidDirectionalTemplate(dir)
+			}
+		})
+	}
+}
+
+// BenchmarkEquipmentTemplates benchmarks equipment template generation.
+func BenchmarkEquipmentTemplates(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = HumanoidWithEquipment(DirDown, true, true)
+	}
+}
+
+// BenchmarkGenreTemplates benchmarks genre-specific template generation.
+func BenchmarkGenreTemplates(b *testing.B) {
+	genres := []struct {
+		name         string
+		templateFunc func(Direction) AnatomicalTemplate
+	}{
+		{"fantasy", FantasyHumanoidTemplate},
+		{"scifi", SciFiHumanoidTemplate},
+		{"horror", HorrorHumanoidTemplate},
+		{"cyberpunk", CyberpunkHumanoidTemplate},
+		{"postapoc", PostApocHumanoidTemplate},
+	}
+
+	for _, g := range genres {
+		b.Run(g.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = g.templateFunc(DirDown)
+			}
+		})
+	}
+}

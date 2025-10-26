@@ -45,17 +45,16 @@ func (g *Generator) GenerateAnimationFrame(config Config, state string, frameInd
 		return nil, fmt.Errorf("failed to generate base sprite: %w", err)
 	}
 
-	// Create output image with room for transformations
-	outputWidth := config.Width + int(math.Abs(offset.X)*2) + 10
-	outputHeight := config.Height + int(math.Abs(offset.Y)*2) + 10
-	img := ebiten.NewImage(outputWidth, outputHeight)
+	// Create output image with exact config dimensions
+	// The image must match the requested width and height exactly
+	img := ebiten.NewImage(config.Width, config.Height)
 
 	// Apply transformations to the generated sprite
 	opts := &ebiten.DrawImageOptions{}
 
 	// Center sprite in output image
-	centerX := float64(outputWidth) / 2
-	centerY := float64(outputHeight) / 2
+	centerX := float64(config.Width) / 2
+	centerY := float64(config.Height) / 2
 
 	// Apply scale
 	if scale != 1.0 {

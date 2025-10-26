@@ -64,8 +64,8 @@ func (c CharacterClass) Description() string {
 type CharacterData struct {
 	Name         string
 	Class        CharacterClass
-	PortraitPath string         // Path to user's custom portrait image (optional)
-	Portrait     *ebiten.Image  // Loaded portrait image (optional, max 512x512)
+	PortraitPath string        // Path to user's custom portrait image (optional)
+	Portrait     *ebiten.Image // Loaded portrait image (optional, max 512x512)
 }
 
 // CharacterCreationDefaults holds custom default values for character creation
@@ -125,7 +125,7 @@ func LoadPortrait(path string) (*ebiten.Image, error) {
 	// Downscale if needed (max 512x512, preserve aspect ratio)
 	bounds := img.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
-	
+
 	const maxSize = 512
 	if width > maxSize || height > maxSize {
 		// Calculate scale factor to fit within maxSize x maxSize
@@ -353,7 +353,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// Enter to load portrait and proceed
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		portraitPath := strings.TrimSpace(cc.portraitInput)
-		
+
 		if portraitPath == "" {
 			// Empty path is valid (no portrait)
 			cc.characterData.PortraitPath = ""
@@ -640,7 +640,7 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(previewX), float64(previewY))
 		screen.DrawImage(cc.characterData.Portrait, opts)
-		
+
 		// Label
 		labelText := "Preview:"
 		labelX := x + w/2 - len(labelText)*3
@@ -692,12 +692,12 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 			cc.characterData.Portrait.Bounds().Dy())
 		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+60,
 			color.RGBA{255, 255, 255, 255})
-		
+
 		// Show small preview
 		previewSize := 64
 		previewX := x + w/2 - previewSize/2
 		previewY := summaryY + 80
-		
+
 		opts := &ebiten.DrawImageOptions{}
 		// Scale down to 64x64 preview
 		scaleX := float64(previewSize) / float64(cc.characterData.Portrait.Bounds().Dx())
@@ -796,7 +796,7 @@ func (cc *EbitenCharacterCreation) Reset() {
 	}
 	cc.selectedClass = cc.defaults.DefaultClass
 	cc.characterData.Class = cc.defaults.DefaultClass
-	
+
 	// Apply portrait default
 	if cc.defaults.DefaultPortraitPath != "" {
 		cc.portraitInput = cc.defaults.DefaultPortraitPath

@@ -98,8 +98,10 @@ Character Creation - Step 1: Name Input
     ↓ [Enter name, press ENTER | Press F2 to save as default]
 Character Creation - Step 2: Class Selection
     ↓ [Choose Warrior/Mage/Rogue, press ENTER | Press F2 to save as default]
-Character Creation - Step 3: Confirmation
-    ↓ [Review character, press ENTER to confirm]
+Character Creation - Step 3: Portrait Selection (Optional)
+    ↓ [Enter path to .png file OR press TAB to skip | Press F2 to save as default]
+Character Creation - Step 4: Confirmation
+    ↓ [Review character with portrait preview, press ENTER to confirm]
 Single-Player: Start Gameplay with class-specific stats
 Multi-Player: Connect to Server with character data
 ```
@@ -110,6 +112,7 @@ Players can save their preferred name and class as defaults using the **F2 key**
 
 - **Step 1 (Name Input)**: Press F2 to save the current name as default
 - **Step 2 (Class Selection)**: Press F2 to save the current class as default
+- **Step 3 (Portrait Selection)**: Press F2 to save the current portrait path as default *(NEW)*
 - **Reset Behavior**: When character creation is reset (e.g., new game), defaults are automatically applied
 - **Visual Feedback**: Current default values are displayed in gray text on each screen
 - **Testing Benefits**: Saves time during development and repeated testing
@@ -117,13 +120,37 @@ Players can save their preferred name and class as defaults using the **F2 key**
 **Example Workflow**:
 1. Enter preferred name (e.g., "Hero"), press F2 → "Default name saved!"
 2. Select preferred class (e.g., Warrior), press F2 → "Default class saved!"
-3. On subsequent character creations, name and class are pre-filled
+3. Enter portrait path (e.g., "/home/user/avatar.png"), press F2 → "Default portrait path saved!" *(NEW)*
+4. On subsequent character creations, name, class, and portrait are pre-filled
 
 **Implementation**:
-- `CharacterCreationDefaults` struct stores default name and class
+- `CharacterCreationDefaults` struct stores default name, class, and portrait path
 - `SetDefaults()` and `GetDefaults()` methods provide external configuration
 - `Reset()` method applies defaults when resetting character creation
-- F2 key handlers in both name input and class selection screens
+- F2 key handlers in name input, class selection, and portrait selection screens
+
+### Custom Portrait Feature *(NEW)*
+
+Players can customize their character's appearance with a local `.png` image:
+
+- **File Requirements**: PNG format only, maximum 512x512 pixels
+- **Auto-Downscaling**: Images larger than 512x512 are automatically downscaled using bilinear interpolation while preserving aspect ratio
+- **Optional**: Press TAB or leave empty to skip portrait selection
+- **Multiplayer Support**: Portrait images are user-provided from local device, not considered "static game assets"
+- **Visual Preview**: Portrait is displayed during confirmation step and in final character summary
+
+**Technical Implementation**:
+- `LoadPortrait(path string)` function validates file extension, loads PNG, and downscales if needed
+- Uses `golang.org/x/image/draw` package for high-quality bilinear scaling
+- Portrait stored as `*ebiten.Image` in `CharacterData.Portrait` field
+- Portrait path stored in `CharacterData.PortraitPath` for persistence/networking
+- Validation order: extension check → file exists check → PNG decode → downscaling
+
+**Benefits**:
+- **Personalization**: Players can use their own artwork or photos
+- **Multiplayer Identity**: Other players see custom portraits for easy identification
+- **No Asset Pipeline**: No need to integrate portraits into game build process
+- **Future-Ready**: Portrait data can be synced to server via base64 encoding or hash caching
 
 ### Controls
 
@@ -212,8 +239,10 @@ All non-Ebiten-dependent functions have 100% test coverage:
 - getClassStats()
 - wrapText()
 - ApplyClassStats()
-- SetDefaults() / GetDefaults() *(NEW)*
-- Custom defaults integration with Reset() *(NEW)*
+- SetDefaults() / GetDefaults()
+- Custom defaults integration with Reset()
+- **LoadPortrait() - file validation and error handling** *(NEW)*
+- **max() - helper function for downscaling** *(NEW)*
 
 ### Test Categories
 
@@ -221,23 +250,34 @@ All non-Ebiten-dependent functions have 100% test coverage:
    - String conversion
    - Validation rules
    - State management
-   - *Custom defaults get/set* *(NEW)*
+   - Custom defaults get/set
+   - **Portrait loading and validation** *(NEW)*
 
 2. **Integration Tests**: Component interaction
    - ApplyClassStats() with all classes
    - Error handling for missing components
    - Character data flow through state machine
-   - *Defaults application on reset* *(NEW)*
+   - Defaults application on reset
+   - **Portrait with character data** *(NEW)*
 
 3. **Table-Driven Tests**: Multiple scenarios
    - Valid/invalid names
    - All character classes
    - Edge cases (empty, too long, whitespace)
+   - **Portrait file validation (empty, nonexistent, wrong extension)** *(NEW)*
+   - **max() function with various inputs** *(NEW)*
 
-4. **Defaults Feature Tests** *(NEW)*
+4. **Defaults Feature Tests**
    - **TestSetDefaults**: Verifies SetDefaults() stores and GetDefaults() retrieves correct values
    - **TestResetAppliesDefaults**: Verifies Reset() applies default name and class to character data
    - **TestResetWithoutDefaults**: Verifies Reset() works correctly when no defaults are set (clears to zero values)
+   - **TestSetDefaults_WithPortrait**: Verifies portrait path defaults are stored and retrieved *(NEW)*
+
+5. **Portrait Feature Tests** *(NEW)*
+   - **TestLoadPortrait_InvalidFile**: Tests empty path (valid), nonexistent file (error), wrong extension (error)
+   - **TestMax**: Tests max() helper function with various integer pairs
+   - **TestCharacterData_WithPortrait**: Tests CharacterData validation with portrait fields
+   - **TestSetDefaults_WithPortrait**: Tests defaults system with portrait path included
 
 ### Example Test
 

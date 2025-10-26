@@ -717,4 +717,3 @@ func TestSetDefaults_WithPortrait(t *testing.T) {
 		t.Errorf("GetDefaults().DefaultPortraitPath = %q, want %q", got.DefaultPortraitPath, "/home/user/portrait.png")
 	}
 }
-

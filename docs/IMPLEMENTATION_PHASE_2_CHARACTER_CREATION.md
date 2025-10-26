@@ -12,21 +12,24 @@ Implemented a comprehensive character creation system that provides a unified on
 
 ### Core Files Created
 
-1. **`pkg/engine/character_creation.go`** (900+ lines)
+1. **`pkg/engine/character_creation.go`** (985+ lines)
    - Interactive four-step UI flow
    - CharacterClass enum (Warrior, Mage, Rogue)
    - CharacterData struct with validation
    - EbitenCharacterCreation UI system
    - ApplyClassStats() function for stat application
-   - **LoadPortrait() function for image loading and downscaling** *(NEW)*
+   - LoadPortrait() function for image loading and downscaling
+   - **OpenPortraitDialog() function for native file picker dialogs** *(NEW)*
+   - **GetDefaultPicturesDirectory() function for OS-specific Pictures folder detection** *(NEW)*
 
-2. **`pkg/engine/character_creation_test.go`** (720+ lines)
-   - 22 test functions (including portrait tests)
-   - 52+ individual test cases
+2. **`pkg/engine/character_creation_test.go`** (745+ lines)
+   - 23 test functions (including portrait and dialog tests)
+   - 55+ individual test cases
    - Table-driven tests for all scenarios
    - 100% coverage on testable (non-Ebiten) functions
    - Tests for custom defaults: TestSetDefaults, TestResetAppliesDefaults, TestResetWithoutDefaults
-   - **Tests for portrait system: TestLoadPortrait_InvalidFile, TestMax, TestCharacterData_WithPortrait, TestSetDefaults_WithPortrait** *(NEW)*
+   - Tests for portrait system: TestLoadPortrait_InvalidFile, TestMax, TestCharacterData_WithPortrait, TestSetDefaults_WithPortrait
+   - **Test for default directory: TestGetDefaultPicturesDirectory** *(NEW)*
 
 ### Modified Files
 
@@ -99,7 +102,7 @@ Character Creation - Step 1: Name Input
 Character Creation - Step 2: Class Selection
     ↓ [Choose Warrior/Mage/Rogue, press ENTER | Press F2 to save as default]
 Character Creation - Step 3: Portrait Selection (Optional)
-    ↓ [Enter path to .png file OR press TAB to skip | Press F2 to save as default]
+    ↓ [Press SPACE/B to browse OR type path | TAB to skip | F2 to save as default]
 Character Creation - Step 4: Confirmation
     ↓ [Review character with portrait preview, press ENTER to confirm]
 Single-Player: Start Gameplay with class-specific stats
@@ -129,24 +132,46 @@ Players can save their preferred name and class as defaults using the **F2 key**
 - `Reset()` method applies defaults when resetting character creation
 - F2 key handlers in name input, class selection, and portrait selection screens
 
-### Custom Portrait Feature *(NEW)*
+### Custom Portrait Feature
 
 Players can customize their character's appearance with a local `.png` image:
 
+- **Native File Dialog**: Press SPACE or B to open platform-native file picker (Windows Explorer, macOS Finder, Linux file manager) *(NEW)*
+- **Smart Default Directory**: Dialog opens in user's Pictures directory by default *(NEW)*
 - **File Requirements**: PNG format only, maximum 512x512 pixels
 - **Auto-Downscaling**: Images larger than 512x512 are automatically downscaled using bilinear interpolation while preserving aspect ratio
+- **Manual Path Entry**: Advanced users can still type paths manually (fallback option)
 - **Optional**: Press TAB or leave empty to skip portrait selection
+- **Mobile Support**: Works on Android and iOS using platform-appropriate file pickers *(NEW)*
 - **Multiplayer Support**: Portrait images are user-provided from local device, not considered "static game assets"
 - **Visual Preview**: Portrait is displayed during confirmation step and in final character summary
 
+**User Interaction**:
+1. On portrait selection screen, press **SPACE** or **B** to open file browser
+2. Native dialog appears starting in Pictures directory with PNG filter applied
+3. Select image file or cancel to return
+4. Selected path is automatically loaded and validated
+5. Preview appears if image loads successfully
+
 **Technical Implementation**:
+- `OpenPortraitDialog()` function uses `github.com/ncruces/zenity` library *(NEW)*
+- **Zenity Advantages**: Native dialogs on all platforms without GTK dependencies, better mobile support, smaller binary size *(NEW)*
+- `GetDefaultPicturesDirectory()` detects OS-specific Pictures folder using `runtime.GOOS` *(NEW)*
+  - Windows: `%USERPROFILE%\Pictures`
+  - macOS: `~/Pictures`
+  - Linux: `~/Pictures` (XDG standard)
+  - Mobile: App's home directory
 - `LoadPortrait(path string)` function validates file extension, loads PNG, and downscales if needed
 - Uses `golang.org/x/image/draw` package for high-quality bilinear scaling
 - Portrait stored as `*ebiten.Image` in `CharacterData.Portrait` field
 - Portrait path stored in `CharacterData.PortraitPath` for persistence/networking
 - Validation order: extension check → file exists check → PNG decode → downscaling
+- File dialog runs in goroutine to avoid blocking game loop *(NEW)*
 
 **Benefits**:
+- **User-Friendly**: No need to memorize or type file paths *(NEW)*
+- **Visual Browsing**: See thumbnails and navigate folders naturally *(NEW)*
+- **Platform-Native**: Familiar UI on every operating system *(NEW)*
 - **Personalization**: Players can use their own artwork or photos
 - **Multiplayer Identity**: Other players see custom portraits for easy identification
 - **No Asset Pipeline**: No need to integrate portraits into game build process
@@ -241,8 +266,9 @@ All non-Ebiten-dependent functions have 100% test coverage:
 - ApplyClassStats()
 - SetDefaults() / GetDefaults()
 - Custom defaults integration with Reset()
-- **LoadPortrait() - file validation and error handling** *(NEW)*
-- **max() - helper function for downscaling** *(NEW)*
+- LoadPortrait() - file validation and error handling
+- max() - helper function for downscaling
+- **GetDefaultPicturesDirectory() - OS-specific Pictures folder detection** *(NEW)*
 
 ### Test Categories
 
@@ -273,11 +299,12 @@ All non-Ebiten-dependent functions have 100% test coverage:
    - **TestResetWithoutDefaults**: Verifies Reset() works correctly when no defaults are set (clears to zero values)
    - **TestSetDefaults_WithPortrait**: Verifies portrait path defaults are stored and retrieved *(NEW)*
 
-5. **Portrait Feature Tests** *(NEW)*
+5. **Portrait Feature Tests**
    - **TestLoadPortrait_InvalidFile**: Tests empty path (valid), nonexistent file (error), wrong extension (error)
    - **TestMax**: Tests max() helper function with various integer pairs
    - **TestCharacterData_WithPortrait**: Tests CharacterData validation with portrait fields
    - **TestSetDefaults_WithPortrait**: Tests defaults system with portrait path included
+   - **TestGetDefaultPicturesDirectory**: Tests OS-specific Pictures directory detection *(NEW)*
 
 ### Example Test
 

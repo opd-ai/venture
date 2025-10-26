@@ -108,13 +108,14 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Main Menu → Multi-Player → Character Creation (4 steps) → Connect to Server
 - Step 1: Name input with keyboard entry (alphanumeric + spaces, max 20 characters)
 - Step 2: Class selection via arrow keys or number keys (1-3)
-- Step 3: Portrait selection - enter path to local .png file (optional, press TAB to skip)
+- Step 3: Portrait selection - **press SPACE/B to open native file picker dialog** (optional, press TAB to skip) *(UPDATED)*
 - Step 4: Confirmation showing name, class, portrait preview, and stats
 - Tutorial prompts embedded in class descriptions
 - Stats applied immediately on game start (both single-player and multiplayer)
 - Character data ready for network sync to server
 - **Custom Defaults**: Press F2 on name/class/portrait screens to save as defaults; Reset() automatically applies saved defaults
 - **Portrait Validation**: Auto-downscales images >512x512 while preserving aspect ratio; only .png files accepted
+- **Native File Dialog**: Uses platform-native file pickers (Windows Explorer, macOS Finder, Linux file dialogs) starting in user's Pictures directory *(NEW)*
 
 **Class Stats**:
 - **Warrior**: HP 150, Mana 50, Attack 12, Defense 8, Crit Damage 2.0x
@@ -132,6 +133,7 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Character data automatically synced to server when connecting (multiplayer)
 - **Custom Defaults**: CharacterCreationDefaults struct stores default name/class/portrait; SetDefaults()/GetDefaults() for configuration; F2 handlers save current selection; displayed in gray text
 - **Portrait System**: LoadPortrait() loads .png from user's local filesystem; validates extension and downscales >512x512 using bilinear interpolation; preserves aspect ratio; Portrait field in CharacterData holds *ebiten.Image; user-provided images not considered "game assets"
+- **File Dialog System**: OpenPortraitDialog() uses github.com/ncruces/zenity for native platform dialogs without GTK dependencies; GetDefaultPicturesDirectory() detects OS-specific Pictures folder (Windows: %USERPROFILE%\Pictures, macOS: ~/Pictures, Linux: ~/Pictures, Mobile: app directory); cross-platform support for Windows, macOS, Linux, Android, iOS *(NEW)*
 - Future: Server validates and stores character data, broadcasts to other players; portrait images can be synced via base64 encoding or hash-based caching
 
 ---

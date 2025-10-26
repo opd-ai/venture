@@ -717,3 +717,20 @@ func TestSetDefaults_WithPortrait(t *testing.T) {
 		t.Errorf("GetDefaults().DefaultPortraitPath = %q, want %q", got.DefaultPortraitPath, "/home/user/portrait.png")
 	}
 }
+
+// TestGetDefaultPicturesDirectory tests the Pictures directory detection
+func TestGetDefaultPicturesDirectory(t *testing.T) {
+	dir := GetDefaultPicturesDirectory()
+
+	// Should return a non-empty string
+	if dir == "" {
+		t.Error("GetDefaultPicturesDirectory() returned empty string")
+	}
+
+	// Should contain expected path component based on OS
+	// We can't test exact paths due to different environments, but we can check it's reasonable
+	if !strings.Contains(dir, "Pictures") && !strings.Contains(dir, "home") && !strings.Contains(dir, "Users") {
+		// On some systems it might just be home dir, that's okay
+		t.Logf("GetDefaultPicturesDirectory() = %q (acceptable)", dir)
+	}
+}

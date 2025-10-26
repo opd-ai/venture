@@ -10,15 +10,44 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/ncruces/zenity"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
+
+// GetDefaultPicturesDirectory returns the user's Pictures directory path
+// Cross-platform: Works on Windows, macOS, Linux, and mobile
+func GetDefaultPicturesDirectory() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "."
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %USERPROFILE%\Pictures
+		return filepath.Join(homeDir, "Pictures")
+	case "darwin":
+		// macOS: ~/Pictures
+		return filepath.Join(homeDir, "Pictures")
+	case "linux":
+		// Linux: ~/Pictures (XDG standard)
+		return filepath.Join(homeDir, "Pictures")
+	case "android", "ios":
+		// Mobile: Use app's documents directory or similar
+		// On mobile, file picking is handled differently via native pickers
+		return homeDir
+	default:
+		return homeDir
+	}
+}
 
 // CharacterClass represents a player archetype with specific stat distributions
 type CharacterClass int
@@ -149,6 +178,35 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// OpenPortraitDialog opens a native file picker dialog for selecting a portrait image
+// Returns the selected file path or empty string if cancelled
+func OpenPortraitDialog() (string, error) {
+	// Start in user's Pictures directory
+	defaultDir := GetDefaultPicturesDirectory()
+
+	// Create dialog with PNG filter
+	// Zenity uses native dialogs on each platform (Windows, macOS, Linux)
+	filename, err := zenity.SelectFile(
+		zenity.Title("Select Portrait Image"),
+		zenity.Filename(defaultDir),
+		zenity.FileFilter{
+			Name:     "PNG Images",
+			Patterns: []string{"*.png"},
+			CaseFold: false,
+		},
+	)
+
+	if err != nil {
+		// User cancelled (zenity.ErrCanceled) or error occurred
+		if err == zenity.ErrCanceled {
+			return "", nil // Not an error, user cancelled
+		}
+		return "", fmt.Errorf("file dialog error: %w", err)
+	}
+
+	return filename, nil
 }
 
 // creationStep represents the current step in character creation
@@ -313,9 +371,25 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 }
 
-// updatePortraitSelection handles portrait file path input
+// updatePortraitSelection handles portrait file selection via dialog
 func (cc *EbitenCharacterCreation) updatePortraitSelection() {
-	// Handle text input for file path
+	// SPACE or B key to open file browser dialog
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
+		// Open file dialog (this will block until user selects or cancels)
+		go func() {
+			filename, err := OpenPortraitDialog()
+			if err != nil {
+				cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)
+				return
+			}
+			if filename != "" {
+				cc.portraitInput = filename
+			}
+		}()
+		return
+	}
+
+	// Manual text input for file path (fallback for advanced users)
 	cc.inputBuffer = ebiten.AppendInputChars(cc.inputBuffer[:0])
 	for _, r := range cc.inputBuffer {
 		// Allow printable characters for file paths
@@ -590,8 +664,9 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 	// Instructions
 	instructionY := y + 110
 	instructions := []string{
-		"Enter path to a .png file (max 512x512):",
-		"Leave empty or press TAB to skip",
+		"Press SPACE or B to browse for a .png file",
+		"Or type path manually (max 512x512)",
+		"Press TAB to skip (optional)",
 	}
 	for i, line := range instructions {
 		lineX := x + w/2 - len(line)*3
@@ -649,8 +724,8 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 	}
 
 	// Help text
-	helpY := y + h - 80
-	helpText1 := "Press ENTER to load portrait | TAB to skip"
+	helpY := y + h - 100
+	helpText1 := "Press SPACE/B to browse | ENTER to load | TAB to skip"
 	helpText2 := "F2 to save as default | BACKSPACE to go back"
 	helpX1 := x + w/2 - len(helpText1)*3
 	helpX2 := x + w/2 - len(helpText2)*3

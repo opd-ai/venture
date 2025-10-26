@@ -123,7 +123,7 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		} else {
 			if s.logger != nil {
 				s.logger.WithFields(logrus.Fields{
-					"entityID": entity.ID,
+					"entityID":  entity.ID,
 					"itemIndex": selectedIndex,
 				}).WithError(err).Warn("failed to use item")
 			}

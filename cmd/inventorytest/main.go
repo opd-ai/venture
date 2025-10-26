@@ -88,7 +88,8 @@ func main() {
 	for _, itm := range items {
 		success, err := invSystem.AddItemToInventory(player.ID, itm)
 		if err != nil {
-			log.Printf("Error adding item: %v", err)
+			logger.WithError(err).WithField("item", itm.Name).Warn("failed to add item to inventory")
+			fmt.Printf("  Error adding item %s: %v\n", itm.Name, err)
 			continue
 		}
 		if success {

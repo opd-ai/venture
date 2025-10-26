@@ -25,27 +25,28 @@ func (g *Generator) GenerateAnimationFrame(config Config, state string, frameInd
 		config.Palette = pal
 	}
 
-	// Create frame-specific seed
-	frameSeed := config.Seed + int64(frameIndex) + hashString(state)
-	rng := rand.New(rand.NewSource(frameSeed))
+	// CRITICAL FIX: Use the SAME seed for all frames in an animation!
+	// Only the animation state affects the seed, NOT the frame index
+	// This ensures the sprite looks consistent across all frames
+	baseSeed := config.Seed + hashString(state)
+	rng := rand.New(rand.NewSource(baseSeed))
 
-	// Apply state-specific transformations
+	// Apply state-specific transformations (this is what changes between frames)
 	offset := calculateAnimationOffset(state, frameIndex, frameCount)
 	rotation := calculateAnimationRotation(state, frameIndex, frameCount)
 	scale := calculateAnimationScale(state, frameIndex, frameCount)
 
-	// Generate base sprite
-	baseConfig := config
-	baseConfig.Seed = frameSeed
+	// Generate base sprite using CONSISTENT seed
 	img := ebiten.NewImage(config.Width, config.Height)
 
 	// Generate body with transformations
+	// Use the SAME seed for all frames so the sprite shape stays consistent
 	bodyConfig := shapes.Config{
 		Type:      shapes.ShapeType(rng.Intn(3)), // Circle, Rectangle, Triangle
 		Width:     int(float64(config.Width) * 0.7 * scale),
 		Height:    int(float64(config.Height) * 0.7 * scale),
 		Color:     config.Palette.Primary,
-		Seed:      frameSeed,
+		Seed:      baseSeed, // FIXED: Use baseSeed, not frameSeed
 		Smoothing: 0.2,
 	}
 

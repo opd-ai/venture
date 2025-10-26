@@ -45,12 +45,25 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			continue
 		}
 
-		// Regenerate frames if dirty
+		// Regenerate frames if dirty (state changed)
 		if animComp.Dirty {
+			// DEBUG: Log animation frame generation
+			if entity.HasComponent("input") { // Only log for player
+				fmt.Printf("[ANIMATION] Entity %d: Generating %d frames for state=%s (sprite=%dx%d)\n",
+					entity.ID, s.getFrameCount(animComp.CurrentState), animComp.CurrentState,
+					int(spriteComp.Width), int(spriteComp.Height))
+			}
+
 			if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
 				return fmt.Errorf("failed to regenerate frames: %w", err)
 			}
 			animComp.Dirty = false
+
+			// DEBUG: Verify frames were generated
+			if entity.HasComponent("input") && len(animComp.Frames) > 0 {
+				fmt.Printf("[ANIMATION] Entity %d: Successfully generated %d frames, now showing frame %d\n",
+					entity.ID, len(animComp.Frames), animComp.FrameIndex)
+			}
 		}
 
 		// Update animation if playing

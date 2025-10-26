@@ -174,6 +174,7 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Dialog component + system in `pkg/engine`
 - Shop UI in `pkg/rendering/ui`
 - Transaction validation on server for multiplayer
+- **Detailed Documentation**: See `docs/IMPLEMENTATION_MERCHANT_GENERATION.md` for complete merchant generation system documentation, API usage, and integration guide
 
 ---
 

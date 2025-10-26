@@ -145,12 +145,61 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 	return img, nil
 }
 
-// generateEntityWithTemplate creates an entity sprite using anatomical templates (Phase 5.1).
+// generateEntityWithTemplate creates an entity sprite using anatomical templates (Phase 5.1 & 5.2).
 func (g *Generator) generateEntityWithTemplate(config Config, entityType string, rng *rand.Rand) (*ebiten.Image, error) {
 	img := ebiten.NewImage(config.Width, config.Height)
 
-	// Select appropriate template based on entity type
-	template := SelectTemplate(entityType)
+	// Extract direction from config (Phase 5.2)
+	direction := DirDown // Default facing down
+	if config.Custom != nil {
+		if dir, ok := config.Custom["facing"].(string); ok {
+			direction = Direction(dir)
+		}
+	}
+
+	// Extract genre from config (Phase 5.2)
+	genre := ""
+	if config.Custom != nil {
+		if g, ok := config.Custom["genre"].(string); ok {
+			genre = g
+		}
+	}
+
+	// Extract equipment flags (Phase 5.2)
+	hasWeapon := false
+	hasShield := false
+	if config.Custom != nil {
+		if w, ok := config.Custom["hasWeapon"].(bool); ok {
+			hasWeapon = w
+		}
+		if s, ok := config.Custom["hasShield"].(bool); ok {
+			hasShield = s
+		}
+	}
+
+	// Select appropriate template based on entity type, genre, direction, and equipment
+	var template AnatomicalTemplate
+	
+	// Check if humanoid with equipment
+	isHumanoid := false
+	switch entityType {
+	case "humanoid", "player", "npc", "knight", "mage", "warrior":
+		isHumanoid = true
+	}
+
+	if isHumanoid && (hasWeapon || hasShield) {
+		// Use equipment template
+		template = HumanoidWithEquipment(direction, hasWeapon, hasShield)
+	} else if isHumanoid && genre != "" {
+		// Use genre-specific humanoid template
+		template = SelectHumanoidTemplate(genre, entityType, direction)
+	} else if isHumanoid {
+		// Use directional template
+		template = HumanoidDirectionalTemplate(direction)
+	} else {
+		// Use basic template for non-humanoids
+		template = SelectTemplate(entityType)
+	}
 
 	// Get sorted parts for correct rendering order (Z-index)
 	parts := template.GetSortedParts()

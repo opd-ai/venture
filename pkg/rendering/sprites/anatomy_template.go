@@ -27,6 +27,28 @@ const (
 	PartWeapon
 	// PartShield represents equipped shield
 	PartShield
+	// PartHelmet represents head armor
+	PartHelmet
+	// PartArmor represents body armor overlay
+	PartArmor
+	// PartTail represents tail (for certain creatures)
+	PartTail
+	// PartWings represents wings (left/right combined)
+	PartWings
+)
+
+// Direction represents facing direction for directional sprites.
+type Direction string
+
+const (
+	// DirUp represents facing upward
+	DirUp Direction = "up"
+	// DirDown represents facing downward
+	DirDown Direction = "down"
+	// DirLeft represents facing left
+	DirLeft Direction = "left"
+	// DirRight represents facing right
+	DirRight Direction = "right"
 )
 
 // String returns the string representation of a body part.
@@ -46,6 +68,14 @@ func (b BodyPart) String() string {
 		return "weapon"
 	case PartShield:
 		return "shield"
+	case PartHelmet:
+		return "helmet"
+	case PartArmor:
+		return "armor"
+	case PartTail:
+		return "tail"
+	case PartWings:
+		return "wings"
 	default:
 		return "unknown"
 	}
@@ -413,5 +443,375 @@ func SelectTemplate(entityType string) AnatomicalTemplate {
 	default:
 		// Default to humanoid for unknown types
 		return HumanoidTemplate()
+	}
+}
+
+// HumanoidDirectionalTemplate returns a humanoid template with directional facing.
+// Direction should be provided in Config.Custom["facing"] ("up", "down", "left", "right").
+// This creates asymmetry to indicate facing direction.
+func HumanoidDirectionalTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidTemplate()
+	base.Name = "humanoid_" + string(direction)
+
+	switch direction {
+	case DirUp:
+		// Facing away - head at top, arms spread slightly
+		base.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.48,
+			RelativeWidth:  0.70,
+			RelativeHeight: 0.30,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+
+	case DirDown:
+		// Facing toward viewer - head at top, arms slightly forward
+		base.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.5,
+			RelativeY:      0.52,
+			RelativeWidth:  0.60,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         12, // Arms in front
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       0,
+		}
+
+	case DirLeft:
+		// Facing left - asymmetric arm positioning
+		base.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.45,
+			RelativeY:      0.50,
+			RelativeWidth:  0.40,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       270,
+		}
+		// Shift head slightly left
+		headSpec := base.BodyPartLayout[PartHead]
+		headSpec.RelativeX = 0.45
+		base.BodyPartLayout[PartHead] = headSpec
+
+	case DirRight:
+		// Facing right - asymmetric arm positioning
+		base.BodyPartLayout[PartArms] = PartSpec{
+			RelativeX:      0.55,
+			RelativeY:      0.50,
+			RelativeWidth:  0.40,
+			RelativeHeight: 0.35,
+			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
+			ZIndex:         8,
+			ColorRole:      "secondary",
+			Opacity:        1.0,
+			Rotation:       90,
+		}
+		// Shift head slightly right
+		headSpec := base.BodyPartLayout[PartHead]
+		headSpec.RelativeX = 0.55
+		base.BodyPartLayout[PartHead] = headSpec
+	}
+
+	return base
+}
+
+// HumanoidWithEquipment returns a humanoid template with weapon and shield positioning.
+// hasWeapon and hasShield should be provided in Config.Custom.
+func HumanoidWithEquipment(direction Direction, hasWeapon, hasShield bool) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "humanoid_equipped_" + string(direction)
+
+	if hasWeapon {
+		var weaponSpec PartSpec
+		switch direction {
+		case DirUp:
+			weaponSpec = PartSpec{
+				RelativeX:      0.65,
+				RelativeY:      0.50,
+				RelativeWidth:  0.15,
+				RelativeHeight: 0.40,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBlade, shapes.ShapeRectangle},
+				ZIndex:         7,
+				ColorRole:      "accent1",
+				Opacity:        1.0,
+				Rotation:       45,
+			}
+		case DirDown:
+			weaponSpec = PartSpec{
+				RelativeX:      0.70,
+				RelativeY:      0.55,
+				RelativeWidth:  0.15,
+				RelativeHeight: 0.40,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBlade, shapes.ShapeRectangle},
+				ZIndex:         13,
+				ColorRole:      "accent1",
+				Opacity:        1.0,
+				Rotation:       135,
+			}
+		case DirLeft:
+			weaponSpec = PartSpec{
+				RelativeX:      0.30,
+				RelativeY:      0.50,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.15,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBlade, shapes.ShapeRectangle},
+				ZIndex:         7,
+				ColorRole:      "accent1",
+				Opacity:        1.0,
+				Rotation:       270,
+			}
+		case DirRight:
+			weaponSpec = PartSpec{
+				RelativeX:      0.70,
+				RelativeY:      0.50,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.15,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBlade, shapes.ShapeRectangle},
+				ZIndex:         7,
+				ColorRole:      "accent1",
+				Opacity:        1.0,
+				Rotation:       90,
+			}
+		}
+		base.BodyPartLayout[PartWeapon] = weaponSpec
+	}
+
+	if hasShield {
+		var shieldSpec PartSpec
+		switch direction {
+		case DirUp:
+			shieldSpec = PartSpec{
+				RelativeX:      0.35,
+				RelativeY:      0.50,
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.30,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeShield, shapes.ShapeCircle},
+				ZIndex:         7,
+				ColorRole:      "accent2",
+				Opacity:        1.0,
+				Rotation:       0,
+			}
+		case DirDown:
+			shieldSpec = PartSpec{
+				RelativeX:      0.30,
+				RelativeY:      0.55,
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.30,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeShield, shapes.ShapeCircle},
+				ZIndex:         13,
+				ColorRole:      "accent2",
+				Opacity:        1.0,
+				Rotation:       0,
+			}
+		case DirLeft:
+			shieldSpec = PartSpec{
+				RelativeX:      0.25,
+				RelativeY:      0.50,
+				RelativeWidth:  0.20,
+				RelativeHeight: 0.30,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeShield, shapes.ShapeCircle},
+				ZIndex:         13,
+				ColorRole:      "accent2",
+				Opacity:        1.0,
+				Rotation:       270,
+			}
+		case DirRight:
+			shieldSpec = PartSpec{
+				RelativeX:      0.75,
+				RelativeY:      0.50,
+				RelativeWidth:  0.20,
+				RelativeHeight: 0.30,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeShield, shapes.ShapeCircle},
+				ZIndex:         7,
+				ColorRole:      "accent2",
+				Opacity:        1.0,
+				Rotation:       90,
+			}
+		}
+		base.BodyPartLayout[PartShield] = shieldSpec
+	}
+
+	return base
+}
+
+// FantasyHumanoidTemplate returns a humanoid with fantasy-specific proportions.
+// Broader shoulders, medieval aesthetic.
+func FantasyHumanoidTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "fantasy_humanoid_" + string(direction)
+
+	// Broader shoulders
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.RelativeWidth = 0.55
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Thicker limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeWidth = 0.70
+	armsSpec.RelativeHeight = 0.38
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	legsSpec := base.BodyPartLayout[PartLegs]
+	legsSpec.RelativeWidth = 0.40
+	base.BodyPartLayout[PartLegs] = legsSpec
+
+	return base
+}
+
+// SciFiHumanoidTemplate returns a humanoid with sci-fi aesthetic.
+// Angular features, sleek profile, helmet shapes.
+func SciFiHumanoidTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "scifi_humanoid_" + string(direction)
+
+	// Angular torso
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Sleeker limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeWidth = 0.60
+	armsSpec.RelativeHeight = 0.32
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	// Helmet-like head
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle}
+	headSpec.RelativeWidth = 0.38
+	headSpec.RelativeHeight = 0.38
+	base.BodyPartLayout[PartHead] = headSpec
+
+	return base
+}
+
+// HorrorHumanoidTemplate returns a humanoid with horror aesthetic.
+// Distorted proportions, unnatural shapes.
+func HorrorHumanoidTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "horror_humanoid_" + string(direction)
+
+	// Elongated head
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.RelativeHeight = 0.42
+	headSpec.RelativeWidth = 0.30
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeSkull, shapes.ShapeEllipse}
+	base.BodyPartLayout[PartHead] = headSpec
+
+	// Thin, elongated limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeHeight = 0.45
+	armsSpec.RelativeWidth = 0.55
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	legsSpec := base.BodyPartLayout[PartLegs]
+	legsSpec.RelativeHeight = 0.40
+	legsSpec.RelativeWidth = 0.28
+	base.BodyPartLayout[PartLegs] = legsSpec
+
+	// Distorted torso
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.RelativeWidth = 0.45
+	torsoSpec.RelativeHeight = 0.50
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	return base
+}
+
+// CyberpunkHumanoidTemplate returns a humanoid with cyberpunk aesthetic.
+// Compact build, angular limbs, tech implants.
+func CyberpunkHumanoidTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "cyberpunk_humanoid_" + string(direction)
+
+	// Compact torso
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.RelativeWidth = 0.48
+	torsoSpec.RelativeHeight = 0.42
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeRectangle}
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Angular limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.RelativeWidth = 0.62
+	armsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	// Helmeted head
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOctagon, shapes.ShapeHexagon}
+	headSpec.RelativeWidth = 0.36
+	headSpec.ColorRole = "accent1" // Tech glow
+	base.BodyPartLayout[PartHead] = headSpec
+
+	return base
+}
+
+// PostApocHumanoidTemplate returns a humanoid with post-apocalyptic aesthetic.
+// Rough edges, tattered appearance, improvised equipment.
+func PostApocHumanoidTemplate(direction Direction) AnatomicalTemplate {
+	base := HumanoidDirectionalTemplate(direction)
+	base.Name = "postapoc_humanoid_" + string(direction)
+
+	// Irregular torso (tattered clothing)
+	torsoSpec := base.BodyPartLayout[PartTorso]
+	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean, shapes.ShapeRectangle}
+	torsoSpec.RelativeWidth = 0.52
+	base.BodyPartLayout[PartTorso] = torsoSpec
+
+	// Rough limbs
+	armsSpec := base.BodyPartLayout[PartArms]
+	armsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
+	base.BodyPartLayout[PartArms] = armsSpec
+
+	legsSpec := base.BodyPartLayout[PartLegs]
+	legsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
+	base.BodyPartLayout[PartLegs] = legsSpec
+
+	// Covered head (masks, hoods)
+	headSpec := base.BodyPartLayout[PartHead]
+	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeOrganic, shapes.ShapeSkull}
+	base.BodyPartLayout[PartHead] = headSpec
+
+	return base
+}
+
+// SelectHumanoidTemplate chooses an appropriate humanoid template based on genre and direction.
+// Returns directional humanoid with genre-specific styling.
+func SelectHumanoidTemplate(genre, entityType string, direction Direction) AnatomicalTemplate {
+	// Check if this is a humanoid type
+	isHumanoid := false
+	switch entityType {
+	case "humanoid", "player", "npc", "knight", "mage", "warrior":
+		isHumanoid = true
+	}
+
+	if !isHumanoid {
+		return SelectTemplate(entityType)
+	}
+
+	// Apply genre-specific styling
+	switch genre {
+	case "fantasy":
+		return FantasyHumanoidTemplate(direction)
+	case "scifi", "sci-fi":
+		return SciFiHumanoidTemplate(direction)
+	case "horror":
+		return HorrorHumanoidTemplate(direction)
+	case "cyberpunk":
+		return CyberpunkHumanoidTemplate(direction)
+	case "postapoc", "post-apocalyptic":
+		return PostApocHumanoidTemplate(direction)
+	default:
+		return HumanoidDirectionalTemplate(direction)
 	}
 }

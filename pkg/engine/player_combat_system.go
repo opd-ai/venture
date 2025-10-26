@@ -4,8 +4,9 @@
 package engine
 
 import (
-	"fmt"
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // PlayerCombatSystem processes player combat input and triggers attacks.
@@ -13,13 +14,26 @@ import (
 type PlayerCombatSystem struct {
 	combatSystem *CombatSystem
 	world        *World
+	logger       *logrus.Entry
 }
 
 // NewPlayerCombatSystem creates a new player combat system.
 func NewPlayerCombatSystem(combatSystem *CombatSystem, world *World) *PlayerCombatSystem {
+	return NewPlayerCombatSystemWithLogger(combatSystem, world, nil)
+}
+
+// NewPlayerCombatSystemWithLogger creates a new player combat system with a logger.
+func NewPlayerCombatSystemWithLogger(combatSystem *CombatSystem, world *World, logger *logrus.Logger) *PlayerCombatSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "player_combat",
+		})
+	}
 	return &PlayerCombatSystem{
 		combatSystem: combatSystem,
 		world:        world,
+		logger:       logEntry,
 	}
 }
 
@@ -47,9 +61,6 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// DEBUG: Player is trying to attack
-		fmt.Printf("[PLAYER COMBAT] Entity %d pressing attack button\n", entity.ID)
-
 		// Get attack component
 		attackComp, ok := entity.GetComponent("attack")
 		if !ok {
@@ -59,23 +70,30 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check if attack is ready (cooldown)
 		if !attack.CanAttack() {
-			fmt.Printf("[PLAYER COMBAT] Entity %d attack on cooldown (%.2fs remaining)\n",
-				entity.ID, attack.CooldownTimer)
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithFields(logrus.Fields{
+					"entityID":         entity.ID,
+					"cooldownRemaining": attack.CooldownTimer,
+				}).Debug("attack on cooldown")
+			}
 			continue // Still on cooldown
 		}
 
 		// Consume the input immediately to prevent multiple triggers
 		input.SetActionPressed(false)
 
-		fmt.Printf("[PLAYER COMBAT] Entity %d attack ready! Cooldown: %.2f, Timer: %.2f\n",
-			entity.ID, attack.Cooldown, attack.CooldownTimer)
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entityID": entity.ID,
+				"cooldown": attack.Cooldown,
+			}).Debug("attack triggered")
+		}
 
 		// ALWAYS trigger attack animation, even if no target
 		// This provides visual feedback that the attack button was pressed
 		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
 			anim := animComp.(*AnimationComponent)
 			anim.SetState(AnimationStateAttack)
-			fmt.Printf("[PLAYER COMBAT] Triggering attack animation (current state: %s)\n", anim.CurrentState)
 
 			// Set OnComplete callback to return to idle/walk
 			anim.OnComplete = func() {
@@ -99,7 +117,6 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			// No enemy in range - attack animation plays but no damage
 			// Start cooldown even if no target (player swung at air)
 			attack.ResetCooldown()
-			fmt.Printf("[PLAYER COMBAT] Attack animation playing, but no target in range. Cooldown reset to %.2fs\n", attack.CooldownTimer)
 			continue
 		}
 
@@ -107,8 +124,14 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		// Note: CombatSystem.Attack() handles cooldown reset internally
 		hit := s.combatSystem.Attack(entity, target)
 
+		if hit && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entityID": entity.ID,
+				"targetID": target.ID,
+			}).Debug("attack hit target")
+		}
+
 		if hit {
-			fmt.Printf("[PLAYER COMBAT] Attack hit target entity %d\n", target.ID)
 			// Attack successful - could trigger effects here
 			// - Hit sound effect
 			// - Screen shake

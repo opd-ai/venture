@@ -371,4 +371,3 @@ func (t *Timer) StopAndLog() time.Duration {
 	}
 	return elapsed
 }
-}

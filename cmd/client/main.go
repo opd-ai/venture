@@ -540,6 +540,13 @@ func main() {
 	progressionSystem := engine.NewProgressionSystem(game.World)
 	inventorySystem := engine.NewInventorySystem(game.World)
 
+	// GAP-004 REPAIR: Initialize commerce and dialog systems
+	commerceSystem := engine.NewCommerceSystemWithLogger(game.World, inventorySystem, logger)
+	dialogSystem := engine.NewDialogSystemWithLogger(game.World, logger)
+
+	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
+	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
+
 	// GAP-010 REPAIR: Initialize audio system
 	audioManager = engine.NewAudioManager(44100, *seed) // 44.1kHz sample rate
 	audioManagerSystem := engine.NewAudioManagerSystem(audioManager)
@@ -786,6 +793,24 @@ func main() {
 		log.Printf("Spawned %d enemies across %d rooms", enemyCount, len(generatedTerrain.Rooms)-1)
 	}
 
+	// GAP #4 REPAIR: Spawn merchants in dungeon
+	if *verbose {
+		log.Println("Spawning merchants in dungeon...")
+	}
+
+	merchantParams := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+	}
+
+	merchantCount, err := engine.SpawnMerchantsInTerrain(game.World, generatedTerrain, *seed, merchantParams, 2) // Spawn 2 merchants per level
+	if err != nil {
+		log.Printf("Warning: Failed to spawn merchants: %v", err)
+	} else if *verbose {
+		log.Printf("Spawned %d merchants", merchantCount)
+	}
+
 	// Create player entity
 	if *verbose {
 		log.Println("Creating player entity...")
@@ -854,8 +879,19 @@ func main() {
 	// Set player for HUD display
 	game.HUDSystem.SetPlayerEntity(player)
 
-	// Set player for UI systems (inventory, quests)
+	// Set player for UI systems (inventory, quests, shop)
 	game.SetPlayerEntity(player)
+
+	// GAP-004 REPAIR: Initialize and wire up commerce UI
+	shopUI := engine.NewShopUI(*width, *height)
+	shopUI.SetPlayerEntity(player)
+	shopUI.SetCommerceSystem(commerceSystem)
+	shopUI.SetDialogSystem(dialogSystem)
+	game.ShopUI = shopUI
+
+	if *verbose {
+		log.Println("Shop UI initialized and connected to commerce/dialog systems")
+	}
 
 	// Add player stats
 	playerStats := engine.NewStatsComponent()
@@ -1301,6 +1337,54 @@ func main() {
 	if *verbose {
 		log.Println("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		log.Println("Inventory actions: E to equip/use, D to drop")
+	}
+
+	// GAP-004 REPAIR: Setup merchant interaction callback (F key)
+	inputSystem.SetInteractCallback(func() {
+		// Get player position
+		if player == nil {
+			return
+		}
+		posComp, ok := player.GetComponent("position")
+		if !ok {
+			return
+		}
+		pos := posComp.(*engine.PositionComponent)
+
+		// Find closest merchant within interaction range (64 pixels)
+		merchant, dist := engine.FindClosestMerchant(game.World, pos.X, pos.Y, 64.0)
+		if merchant == nil {
+			// No merchant nearby
+			if *verbose {
+				log.Println("No merchant nearby to interact with")
+			}
+			return
+		}
+
+		// Start dialog with merchant
+		success, err := dialogSystem.StartDialog(player.ID, merchant.ID)
+		if err != nil {
+			log.Printf("Failed to start dialog: %v", err)
+			return
+		}
+
+		if !success {
+			if *verbose {
+				log.Println("Dialog could not be started")
+			}
+			return
+		}
+
+		// Open shop UI
+		shopUI.Open(merchant)
+
+		if *verbose {
+			log.Printf("Opened shop with merchant (distance: %.1f)", dist)
+		}
+	})
+
+	if *verbose {
+		log.Println("Merchant interaction registered (F key when near merchant)")
 	}
 
 	// Connect save/load callbacks to menu system

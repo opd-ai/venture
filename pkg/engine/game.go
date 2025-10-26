@@ -43,6 +43,7 @@ type EbitenGame struct {
 	CharacterUI *EbitenCharacterUI
 	SkillsUI    *EbitenSkillsUI
 	MapUI       *EbitenMapUI
+	ShopUI      *ShopUI // Commerce and merchant interaction UI
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
@@ -379,6 +380,11 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	g.SkillsUI.Draw(screen)
 	g.MapUI.Draw(screen) // Map UI draws last to be on top of everything
 
+	// Render shop UI (if initialized)
+	if g.ShopUI != nil {
+		g.ShopUI.Draw(screen)
+	}
+
 	// Render virtual controls (mobile only, drawn last to be on top of everything)
 	for _, system := range g.World.GetSystems() {
 		if inputSys, ok := system.(*InputSystem); ok {
@@ -402,6 +408,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	g.CharacterUI.SetPlayerEntity(entity)
 	g.SkillsUI.SetPlayerEntity(entity)
 	g.MapUI.SetPlayerEntity(entity)
+
+	// Set player for shop UI (if initialized)
+	if g.ShopUI != nil {
+		g.ShopUI.SetPlayerEntity(entity)
+	}
 }
 
 // SetInventorySystem connects the inventory system to the inventory UI for item actions.

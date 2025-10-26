@@ -218,8 +218,9 @@ type InputSystem struct {
 	KeyRight ebiten.Key
 
 	// Key bindings - Actions
-	KeyAction  ebiten.Key
-	KeyUseItem ebiten.Key
+	KeyAction    ebiten.Key
+	KeyUseItem   ebiten.Key
+	KeyInteract  ebiten.Key // F key for interacting with NPCs/merchants
 
 	// GAP-002 REPAIR: Spell casting key bindings (keys 1-5)
 	KeySpell1 ebiten.Key
@@ -266,6 +267,7 @@ type InputSystem struct {
 	onMapOpen       func()
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
+	onInteract      func() // Callback for F key NPC/merchant interaction
 
 	// Priority 2.3: Game state for input filtering
 	currentState GameState
@@ -286,8 +288,9 @@ func NewInputSystem() *InputSystem {
 		KeyRight: ebiten.KeyD,
 
 		// Action keys
-		KeyAction:  ebiten.KeySpace,
-		KeyUseItem: ebiten.KeyE,
+		KeyAction:   ebiten.KeySpace,
+		KeyUseItem:  ebiten.KeyE,
+		KeyInteract: ebiten.KeyF, // F key for interaction with NPCs/merchants
 
 		// GAP-002 REPAIR: Spell casting keys (1-5)
 		KeySpell1: ebiten.Key1,
@@ -451,6 +454,11 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyMap) && s.onMapOpen != nil {
 		s.onMapOpen()
+	}
+
+	// Handle NPC/merchant interaction (F key)
+	if inpututil.IsKeyJustPressed(s.KeyInteract) && s.onInteract != nil {
+		s.onInteract()
 	}
 
 	// Handle target cycling
@@ -708,6 +716,11 @@ func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
 // This is called when ESC is pressed and neither tutorial nor help system consume the event.
 func (s *InputSystem) SetMenuToggleCallback(callback func()) {
 	s.onMenuToggle = callback
+}
+
+// SetInteractCallback sets the callback function for interacting with NPCs/merchants (F key).
+func (s *InputSystem) SetInteractCallback(callback func()) {
+	s.onInteract = callback
 }
 
 // SetMenuSystem connects the menu system for ESC key toggling.

@@ -185,32 +185,6 @@ func TestCommerceSystem_BuyItem_InventoryFull(t *testing.T) {
 }
 
 func TestCommerceSystem_SellItem(t *testing.T) {
-	world := NewWorld()
-	invSystem := NewInventorySystem(world)
-	system := NewCommerceSystem(world, invSystem)
-
-	// Create player
-	player := world.CreateEntity()
-	playerID := player.ID
-	playerInv := NewInventoryComponent(10, 100.0)
-	playerInv.Gold = 50
-	player.AddComponent(playerInv)
-
-	// Add items to player
-	sword := &item.Item{Name: "Sword", Stats: item.Stats{Value: 100}}
-	potion := &item.Item{Name: "Potion", Stats: item.Stats{Value: 50}}
-	playerInv.AddItem(sword)
-	playerInv.AddItem(potion)
-
-	// Create merchant
-	merchant := world.CreateEntity()
-	merchantID := merchant.ID
-	merchantComp := NewMerchantComponent(10, MerchantFixed, 1.5)
-	merchant.AddComponent(merchantComp)
-
-	// Process entities
-	world.Update(0)
-
 	tests := []struct {
 		name          string
 		itemIndex     int
@@ -218,22 +192,40 @@ func TestCommerceSystem_SellItem(t *testing.T) {
 		wantGoldDelta int
 		wantErrMsg    string
 	}{
-		{"sell sword success", 0, true, 50, ""}, // 100 * 0.5 = 50
-		{"sell potion success", 0, true, 25, ""}, // 50 * 0.5 = 25 (now index 0 after sword sold)
+		{"sell sword success", 0, true, 50, ""},  // 100 * 0.5 = 50
+		{"sell potion success", 1, true, 25, ""}, // 50 * 0.5 = 25
 		{"invalid index negative", -1, false, 0, "Invalid item index"},
 		{"invalid index too high", 99, false, 0, "Invalid item index"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset state for clean tests
-			if tt.name == "sell sword success" || tt.name == "sell potion success" {
-				playerInv.Items = playerInv.Items[:0]
-				playerInv.AddItem(sword)
-				playerInv.AddItem(potion)
-				playerInv.Gold = 50
-				merchantComp.Inventory = merchantComp.Inventory[:0]
-			}
+			// Create fresh world and system for each test
+			world := NewWorld()
+			invSystem := NewInventorySystem(world)
+			system := NewCommerceSystem(world, invSystem)
+
+			// Create player
+			player := world.CreateEntity()
+			playerID := player.ID
+			playerInv := NewInventoryComponent(10, 100.0)
+			playerInv.Gold = 50
+			player.AddComponent(playerInv)
+
+			// Add items to player
+			sword := &item.Item{Name: "Sword", Stats: item.Stats{Value: 100}}
+			potion := &item.Item{Name: "Potion", Stats: item.Stats{Value: 50}}
+			playerInv.AddItem(sword)
+			playerInv.AddItem(potion)
+
+			// Create merchant
+			merchant := world.CreateEntity()
+			merchantID := merchant.ID
+			merchantComp := NewMerchantComponent(10, MerchantFixed, 1.5)
+			merchant.AddComponent(merchantComp)
+
+			// Process entities
+			world.Update(0)
 
 			initialGold := playerInv.Gold
 			initialPlayerItems := len(playerInv.Items)

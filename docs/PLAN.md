@@ -143,12 +143,13 @@ This approach allows immediate user feedback while keeping the codebase maintain
 **Goal**: Shop system with merchant NPCs and dialog interface.
 
 **Implementation Progress**:
-- ✅ Created `pkg/engine/commerce_components.go` with MerchantComponent, DialogComponent, and related types (320 lines, 100% coverage on most functions)
-- ✅ Created `pkg/engine/dialog_system.go` with DialogSystem for NPC interactions (205 lines, 82% average coverage)
-- ✅ Comprehensive test suites: `commerce_components_test.go` (390+ lines, 24 test cases) and `dialog_system_test.go` (420+ lines, 13 test functions)
+- ✅ Created `pkg/engine/commerce_components.go` with MerchantComponent, DialogComponent, and related types (320 lines, 87.4% coverage)
+- ✅ Created `pkg/engine/dialog_system.go` with DialogSystem for NPC interactions (205 lines, 77.7% coverage)
+- ✅ Created `pkg/engine/commerce_system.go` with atomic transaction logic (370 lines, 85.3% coverage)
+- ✅ Comprehensive test suites: `commerce_components_test.go` (390+ lines, 24 test cases), `dialog_system_test.go` (420+ lines, 13 test functions), `commerce_system_test.go` (520+ lines, 13 test functions with 52+ test cases)
 - ✅ MerchantDialogProvider for simple buy/sell/leave dialogs
-- ✅ DefaultTransactionValidator for gold and inventory validation
-- ⏳ Transaction logic with item transfer (TODO)
+- ✅ DefaultTransactionValidator for extensible transaction validation
+- ✅ BuyItem() and SellItem() methods with atomic rollback on failure
 - ⏳ Shop UI rendering system (TODO)
 - ⏳ Merchant NPC generation (TODO)
 - ⏳ Network protocol support (TODO)

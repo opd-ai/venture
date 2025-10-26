@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package sprites provides animation frame generation for procedural sprites.
 package sprites
 

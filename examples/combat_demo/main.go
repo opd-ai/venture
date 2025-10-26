@@ -1,6 +1,3 @@
-//go:build test
-// +build test
-
 package main
 
 // This example demonstrates the combat system.

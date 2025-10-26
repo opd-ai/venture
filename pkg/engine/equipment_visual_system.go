@@ -1,6 +1,3 @@
-//go:build !test
-// +build !test
-
 // Package engine provides equipment visual system for updating equipment layers on sprites.
 package engine
 

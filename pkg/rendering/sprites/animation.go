@@ -15,6 +15,8 @@ import (
 
 // GenerateAnimationFrame creates a single frame of an animation sequence.
 // Uses deterministic generation based on seed, state, and frame index.
+// CRITICAL: Uses the full sprite generation pipeline (with anatomical templates)
+// and applies transformations, rather than generating simple shapes.
 func (g *Generator) GenerateAnimationFrame(config Config, state string, frameIndex, frameCount int) (*ebiten.Image, error) {
 	// Generate palette if not provided
 	if config.Palette == nil {
@@ -28,52 +30,51 @@ func (g *Generator) GenerateAnimationFrame(config Config, state string, frameInd
 	// CRITICAL FIX: Use the SAME seed for all frames in an animation!
 	// Only the animation state affects the seed, NOT the frame index
 	// This ensures the sprite looks consistent across all frames
-	baseSeed := config.Seed + hashString(state)
-	rng := rand.New(rand.NewSource(baseSeed))
+	baseConfig := config
+	baseConfig.Seed = config.Seed // Keep seed consistent across frames
 
 	// Apply state-specific transformations (this is what changes between frames)
 	offset := calculateAnimationOffset(state, frameIndex, frameCount)
 	rotation := calculateAnimationRotation(state, frameIndex, frameCount)
 	scale := calculateAnimationScale(state, frameIndex, frameCount)
 
-	// Generate base sprite using CONSISTENT seed
-	img := ebiten.NewImage(config.Width, config.Height)
-
-	// Generate body with transformations
-	// Use the SAME seed for all frames so the sprite shape stays consistent
-	bodyConfig := shapes.Config{
-		Type:      shapes.ShapeType(rng.Intn(3)), // Circle, Rectangle, Triangle
-		Width:     int(float64(config.Width) * 0.7 * scale),
-		Height:    int(float64(config.Height) * 0.7 * scale),
-		Color:     config.Palette.Primary,
-		Seed:      baseSeed, // FIXED: Use baseSeed, not frameSeed
-		Smoothing: 0.2,
-	}
-
-	bodyShape, err := g.shapeGen.Generate(bodyConfig)
+	// Generate the FULL sprite using the proper generation pipeline
+	// This ensures we get anatomical templates, layering, and all visual details
+	baseSprite, err := g.Generate(baseConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate body shape: %w", err)
+		return nil, fmt.Errorf("failed to generate base sprite: %w", err)
 	}
 
-	// Draw body with offset and rotation
+	// Create output image with room for transformations
+	outputWidth := config.Width + int(math.Abs(offset.X)*2) + 10
+	outputHeight := config.Height + int(math.Abs(offset.Y)*2) + 10
+	img := ebiten.NewImage(outputWidth, outputHeight)
+
+	// Apply transformations to the generated sprite
 	opts := &ebiten.DrawImageOptions{}
 
-	// Apply rotation if needed
+	// Center sprite in output image
+	centerX := float64(outputWidth) / 2
+	centerY := float64(outputHeight) / 2
+
+	// Apply scale
+	if scale != 1.0 {
+		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
+		opts.GeoM.Scale(scale, scale)
+		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
+	}
+
+	// Apply rotation around center
 	if rotation != 0 {
 		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
 		opts.GeoM.Rotate(rotation)
 		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
 	}
 
-	// Apply position offset
-	opts.GeoM.Translate(offset.X, offset.Y)
+	// Apply position offset and center in output
+	opts.GeoM.Translate(centerX-float64(config.Width)/2+offset.X, centerY-float64(config.Height)/2+offset.Y)
 
-	img.DrawImage(bodyShape, opts)
-
-	// Add details based on complexity
-	if config.Complexity > 0.3 {
-		g.addAnimationDetails(img, config, rng, frameIndex, frameCount)
-	}
+	img.DrawImage(baseSprite, opts)
 
 	return img, nil
 }

@@ -3,7 +3,10 @@
 // checking for entity position updates.
 package engine
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // MovementSystem handles entity movement based on velocity.
 type MovementSystem struct {
@@ -166,6 +169,19 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 			anim := animComp.(*AnimationComponent)
 			speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
 
+			// DON'T override attack/hit/death/cast animations - let them finish
+			if anim.CurrentState == AnimationStateAttack ||
+				anim.CurrentState == AnimationStateHit ||
+				anim.CurrentState == AnimationStateDeath ||
+				anim.CurrentState == AnimationStateCast {
+				// Animation is in action state, don't override with movement
+				if entity.HasComponent("input") {
+					// DEBUG: Log when we skip overriding attack animations
+					fmt.Printf("[MOVEMENT] Skipping animation update - entity in %s state\n", anim.CurrentState)
+				}
+				continue
+			}
+
 			// Determine animation state based on velocity
 			if speed > 0.1 {
 				// Moving - determine if walking or running
@@ -181,7 +197,7 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 					}
 				}
 			} else {
-				// Not moving - idle
+				// Not moving - idle (only if currently in a movement state)
 				if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
 					anim.SetState(AnimationStateIdle)
 				}

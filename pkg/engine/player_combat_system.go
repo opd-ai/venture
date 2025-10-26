@@ -3,6 +3,8 @@
 // to combat actions via the CombatSystem.
 package engine
 
+import "fmt"
+
 // PlayerCombatSystem processes player combat input and triggers attacks.
 // It bridges the InputSystem (which captures Space key) and CombatSystem (which applies damage).
 type PlayerCombatSystem struct {
@@ -36,6 +38,9 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !input.IsActionPressed() {
 			continue
 		}
+		
+		// DEBUG: Player is trying to attack
+		fmt.Printf("[PLAYER COMBAT] Entity %d pressing attack button\n", entity.ID)
 
 		// Get attack component
 		attackComp, ok := entity.GetComponent("attack")

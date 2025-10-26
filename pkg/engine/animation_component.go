@@ -65,6 +65,9 @@ type AnimationComponent struct {
 
 	// Dirty flag - regenerate frames if true
 	Dirty bool
+	
+	// Last facing direction (for maintaining direction during idle)
+	LastFacing string
 }
 
 // Type returns the component type identifier.
@@ -105,6 +108,20 @@ func (a *AnimationComponent) SetState(state AnimationState) {
 		a.Dirty = true
 		a.FrameIndex = 0
 		a.TimeAccumulator = 0.0
+
+		// CRITICAL FIX: Set loop based on animation type
+		// Action animations (attack, hit, death, cast, use) should play once
+		// Movement animations (idle, walk, run, jump, crouch) should loop
+		switch state {
+		case AnimationStateAttack, AnimationStateHit, AnimationStateDeath,
+			AnimationStateCast, AnimationStateUse:
+			a.Loop = false // Play once, then call OnComplete
+		case AnimationStateIdle, AnimationStateWalk, AnimationStateRun,
+			AnimationStateJump, AnimationStateCrouch:
+			a.Loop = true // Loop continuously
+		default:
+			a.Loop = true // Default to looping
+		}
 	}
 }
 

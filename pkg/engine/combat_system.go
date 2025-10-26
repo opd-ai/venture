@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 
@@ -275,7 +276,32 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Trigger attack animation for attacker
 	if animComp, hasAnim := attacker.GetComponent("animation"); hasAnim {
 		anim := animComp.(*AnimationComponent)
+
+		// DEBUG: Log animation trigger
+		if attacker.HasComponent("input") {
+			fmt.Printf("[ATTACK ANIM] Player attacking - setting state to ATTACK (was %s)\n", anim.CurrentState)
+		}
+
 		anim.SetState(AnimationStateAttack)
+		// Set callback to return to idle after attack animation completes
+		anim.OnComplete = func() {
+			// Check if entity is moving to set appropriate idle/walk state
+			if velComp, hasVel := attacker.GetComponent("velocity"); hasVel {
+				vel := velComp.(*VelocityComponent)
+				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+				if speed > 0.1 {
+					anim.SetState(AnimationStateWalk)
+				} else {
+					anim.SetState(AnimationStateIdle)
+				}
+			} else {
+				anim.SetState(AnimationStateIdle)
+			}
+
+			if attacker.HasComponent("input") {
+				fmt.Printf("[ATTACK ANIM] Player attack complete - returning to idle/walk\n")
+			}
+		}
 	}
 
 	// Trigger hurt animation for target
@@ -284,7 +310,18 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		anim.SetState(AnimationStateHit)
 		// Set a callback to return to idle after hurt animation
 		anim.OnComplete = func() {
-			anim.SetState(AnimationStateIdle)
+			// Check if entity is moving to set appropriate idle/walk state
+			if velComp, hasVel := target.GetComponent("velocity"); hasVel {
+				vel := velComp.(*VelocityComponent)
+				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+				if speed > 0.1 {
+					anim.SetState(AnimationStateWalk)
+				} else {
+					anim.SetState(AnimationStateIdle)
+				}
+			} else {
+				anim.SetState(AnimationStateIdle)
+			}
 		}
 	}
 

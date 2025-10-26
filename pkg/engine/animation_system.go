@@ -75,6 +75,11 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		// Update sprite component with current frame
 		if frame := animComp.CurrentFrame(); frame != nil {
 			spriteComp.Image = frame
+			// DEBUG: Verify sprite image is being updated (only for player)
+			if entity.HasComponent("input") {
+				fmt.Printf("[SPRITE UPDATE] Entity %d: Set sprite.Image to frame %d (state=%s, image=%v)\n",
+					entity.ID, animComp.FrameIndex, animComp.CurrentState, frame != nil)
+			}
 		}
 	}
 
@@ -315,7 +320,34 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 	if entity.HasComponent("input") {
 		// Player character - use humanoid template
 		config.Custom["entityType"] = "humanoid"
-		config.Custom["facing"] = "down" // Default facing direction
+		
+		// GAP FIX: Determine facing direction based on velocity
+		facing := "down" // Default
+		if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
+			vel := velComp.(*VelocityComponent)
+			// Use velocity direction if moving, otherwise keep last facing
+			if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
+				if math.Abs(vel.VX) > math.Abs(vel.VY) {
+					if vel.VX > 0 {
+						facing = "right"
+					} else {
+						facing = "left"
+					}
+				} else {
+					if vel.VY > 0 {
+						facing = "down"
+					} else {
+						facing = "up"
+					}
+				}
+				// Store facing for idle state
+				anim.LastFacing = facing
+			} else if anim.LastFacing != "" {
+				// Use last facing direction when idle
+				facing = anim.LastFacing
+			}
+		}
+		config.Custom["facing"] = facing
 
 		// Check for equipment to show on sprite
 		if entity.HasComponent("equipment") {
@@ -349,7 +381,34 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 			}
 
 			config.Custom["entityType"] = entityType
-			config.Custom["facing"] = "down"
+			
+			// GAP FIX: Determine facing direction based on velocity
+			facing := "down" // Default
+			if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
+				vel := velComp.(*VelocityComponent)
+				// Use velocity direction if moving, otherwise keep last facing
+				if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
+					if math.Abs(vel.VX) > math.Abs(vel.VY) {
+						if vel.VX > 0 {
+							facing = "right"
+						} else {
+							facing = "left"
+						}
+					} else {
+						if vel.VY > 0 {
+							facing = "down"
+						} else {
+							facing = "up"
+						}
+					}
+					// Store facing for idle state
+					anim.LastFacing = facing
+				} else if anim.LastFacing != "" {
+					// Use last facing direction when idle
+					facing = anim.LastFacing
+				}
+			}
+			config.Custom["facing"] = facing
 		}
 	}
 

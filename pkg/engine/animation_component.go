@@ -27,6 +27,37 @@ func (a AnimationState) String() string {
 	return string(a)
 }
 
+// Direction represents the facing direction of an entity.
+// Compatible with sprites.Direction for template generation.
+type Direction int
+
+const (
+	// DirUp represents facing upward
+	DirUp Direction = iota
+	// DirDown represents facing downward
+	DirDown
+	// DirLeft represents facing left
+	DirLeft
+	// DirRight represents facing right
+	DirRight
+)
+
+// String returns the string representation of the direction.
+func (d Direction) String() string {
+	switch d {
+	case DirUp:
+		return "up"
+	case DirDown:
+		return "down"
+	case DirLeft:
+		return "left"
+	case DirRight:
+		return "right"
+	default:
+		return "unknown"
+	}
+}
+
 // AnimationComponent holds animation state and frame data for an entity.
 // Integrates with ECS to provide multi-frame sprite animations.
 type AnimationComponent struct {
@@ -68,6 +99,9 @@ type AnimationComponent struct {
 
 	// Last facing direction (for maintaining direction during idle)
 	LastFacing string
+
+	// Facing direction for directional sprites (Phase 2: Aerial Template Integration)
+	Facing Direction
 }
 
 // Type returns the component type identifier.
@@ -161,6 +195,20 @@ func (a *AnimationComponent) Reset() {
 	a.Dirty = true
 }
 
+// SetFacing updates the facing direction.
+// This is typically called by MovementSystem based on velocity.
+func (a *AnimationComponent) SetFacing(dir Direction) {
+	if a.Facing != dir {
+		a.Facing = dir
+		// Note: Sprite switching happens in RenderSystem, not here
+	}
+}
+
+// GetFacing returns the current facing direction.
+func (a *AnimationComponent) GetFacing() Direction {
+	return a.Facing
+}
+
 // NewAnimationComponent creates a new animation component with default values.
 func NewAnimationComponent(seed int64) *AnimationComponent {
 	return &AnimationComponent{
@@ -175,5 +223,6 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 		Seed:            seed,
 		FrameCount:      4, // Default 4 frames per animation
 		Dirty:           true,
+		Facing:          DirDown, // Default facing down (toward viewer)
 	}
 }

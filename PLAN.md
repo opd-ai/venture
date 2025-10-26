@@ -1,21 +1,21 @@
 # Character Avatar Enhancement Plan
 ## Directional Facing & Aerial-View Perspective Migration
 
-**Status**: 🚧 IN PROGRESS - Phase 1 Complete, Phase 2 Next  
+**Status**: 🚧 IN PROGRESS - Phases 1-2 Complete, Phase 3 Next  
 **Date**: October 26, 2025 (Updated)  
 **Priority**: CRITICAL - Next blocking task for Phase 9.1 completion  
 **Objective**: Enhance procedural character sprite generation with (1) directional facing indicators and (2) aerial-view perspective compatible with top-down gameplay
 
-**Progress**: 1/7 Phases Complete (14%)
+**Progress**: 2/7 Phases Complete (29%)
 - ✅ Phase 1: Aerial Template Foundation (3.5 hours actual)
-- ⏳ Phase 2: Engine Component Integration (2-3 hours estimated)
+- ✅ Phase 2: Engine Component Integration (1.5 hours actual)
 - ⏳ Phase 3: Movement System Integration (2 hours estimated)
 - ⏳ Phase 4: Sprite Generation Pipeline (3 hours estimated)
 - ⏳ Phase 5: Visual Consistency Refinement (2-3 hours estimated)
 - ⏳ Phase 6: Testing & Validation (3 hours estimated)
 - ⏳ Phase 7: Documentation & Migration (1-2 hours estimated)
 
-**Next Action**: Begin Phase 2 (Engine Component Integration)
+**Next Action**: Begin Phase 3 (Movement System Integration)
 
 ---
 
@@ -209,37 +209,49 @@ go test -bench=BenchmarkAerial ./pkg/rendering/sprites/
 - Memory: 1040-1144 B/op, 8-13 allocs/op
 - **Result**: Exceeds performance target by 50,000x
 
-### Phase 2: Engine Component Integration (2-3 hours)
-**Files**: `pkg/engine/animation.go`, `pkg/engine/render_system.go`
+### Phase 2: Engine Component Integration ✅ COMPLETE (1.5 hours actual)
+**Files**: `pkg/engine/animation_component.go`, `pkg/engine/render_system.go`
 
 **Tasks**:
 1. ✅ Add `Facing Direction` field to `AnimationComponent`
-   - Update `NewAnimationComponent()` constructor (default: `DirDown`)
-   - Add `SetFacing(dir Direction)` method
+   - Updated `NewAnimationComponent()` constructor (default: `DirDown`)
+   - Added `SetFacing(dir Direction)` and `GetFacing()` methods
+   - Added Direction enum (DirUp, DirDown, DirLeft, DirRight) with String()
 2. ✅ Extend `EbitenSprite` with directional storage
-   - Add `DirectionalImages map[sprites.Direction]*ebiten.Image`
-   - Add `CurrentDirection sprites.Direction`
-   - Update `NewSpriteComponent()` to initialize map
+   - Added `DirectionalImages map[int]*ebiten.Image`
+   - Added `CurrentDirection int`
+   - Updated `NewSpriteComponent()` to initialize map
 3. ✅ Modify `render_system.go::drawEntity()`
    - Select sprite from `DirectionalImages[sprite.CurrentDirection]`
    - Fallback to `sprite.Image` if directional not available (backward compatible)
+4. ✅ Comprehensive test coverage
+   - 5 new test functions (Direction.String, Facing, persistence, idempotency)
+   - 1 performance benchmark (0.56 ns/op, zero allocations)
+   - All 14 animation component tests pass
 
-**Testing**:
+**Testing Results**:
 ```bash
-go test -run TestAnimationComponent_Facing ./pkg/engine/
-go test -run TestEbitenSprite_DirectionalImages ./pkg/engine/
+✅ TestDirection_String (5 sub-tests)
+✅ TestAnimationComponent_Facing
+✅ TestAnimationComponent_FacingPersistence  
+✅ TestAnimationComponent_SetFacingIdempotent
+✅ BenchmarkAnimationComponent_SetFacing (0.56 ns/op)
 ```
+
+**Documentation**: 
+- Implementation report: `docs/IMPLEMENTATION_PHASE_2_ENGINE_INTEGRATION.md` (4,800 lines)
+- Completion summary: `PHASE2_COMPLETE.md`
 
 ### Phase 3: Movement System Integration (2 hours)
 **Files**: `pkg/engine/movement.go`
 
 **Tasks**:
-1. ✅ Add direction calculation logic in `MovementSystem::Update()`
+1. ⏳ Add direction calculation logic in `MovementSystem::Update()`
    - Insert after velocity application, before animation state update
    - Use velocity vector to determine cardinal direction
    - Apply 0.1 threshold to filter noise
-2. ✅ Update `AnimationComponent.Facing` based on velocity
-3. ✅ Preserve facing when entity is stationary (use last direction)
+2. ⏳ Update `AnimationComponent.Facing` based on velocity
+3. ⏳ Preserve facing when entity is stationary (use last direction)
 
 **Testing**:
 ```bash
@@ -251,15 +263,15 @@ go test -run TestMovementSystem_DirectionUpdate ./pkg/engine/
 **Files**: `pkg/rendering/sprites/generator.go`, `cmd/server/main.go`, `cmd/client/`
 
 **Tasks**:
-1. ✅ Update `generator.go::generateEntityWithTemplate()`
+1. ⏳ Update `generator.go::generateEntityWithTemplate()`
    - Check for `config.Custom["useAerial"]` flag
    - Route to `SelectAerialTemplate()` when flag is true
    - Maintain backward compatibility (default to side-view)
-2. ✅ Modify `cmd/server/main.go::createPlayerEntity()`
+2. ⏳ Modify `cmd/server/main.go::createPlayerEntity()`
    - Generate 4-directional sprite sheet at entity creation
    - Pass `useAerial: true` and `facing` to sprite generator
    - Store all 4 images in `sprite.DirectionalImages`
-3. ✅ Update client sprite generation calls
+3. ⏳ Update client sprite generation calls
    - Add aerial flag for player entities
    - Generate on first use for NPCs/enemies (lazy loading)
 

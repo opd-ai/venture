@@ -343,3 +343,113 @@ func BenchmarkAnimationComponent_CurrentFrame(b *testing.B) {
 		_ = anim.CurrentFrame()
 	}
 }
+
+// TestDirection_String tests Direction string representation (Phase 2).
+func TestDirection_String(t *testing.T) {
+	tests := []struct {
+		dir      Direction
+		expected string
+	}{
+		{DirUp, "up"},
+		{DirDown, "down"},
+		{DirLeft, "left"},
+		{DirRight, "right"},
+		{Direction(999), "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			if tt.dir.String() != tt.expected {
+				t.Errorf("Direction.String() = %v, want %v", tt.dir.String(), tt.expected)
+			}
+		})
+	}
+}
+
+// TestAnimationComponent_Facing tests facing direction management (Phase 2).
+func TestAnimationComponent_Facing(t *testing.T) {
+	anim := NewAnimationComponent(12345)
+
+	// Test default facing
+	if anim.Facing != DirDown {
+		t.Errorf("Expected default facing %v, got %v", DirDown, anim.Facing)
+	}
+
+	// Test GetFacing
+	if anim.GetFacing() != DirDown {
+		t.Errorf("GetFacing() = %v, want %v", anim.GetFacing(), DirDown)
+	}
+
+	// Test SetFacing
+	anim.SetFacing(DirUp)
+	if anim.Facing != DirUp {
+		t.Errorf("After SetFacing(DirUp), Facing = %v, want %v", anim.Facing, DirUp)
+	}
+
+	// Test all directions
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+	for _, dir := range directions {
+		anim.SetFacing(dir)
+		if anim.Facing != dir {
+			t.Errorf("SetFacing(%v) failed, Facing = %v", dir, anim.Facing)
+		}
+		if anim.GetFacing() != dir {
+			t.Errorf("GetFacing() after SetFacing(%v) = %v, want %v", dir, anim.GetFacing(), dir)
+		}
+	}
+}
+
+// TestAnimationComponent_FacingPersistence tests facing persists across state changes (Phase 2).
+func TestAnimationComponent_FacingPersistence(t *testing.T) {
+	anim := NewAnimationComponent(12345)
+
+	// Set facing to right
+	anim.SetFacing(DirRight)
+
+	// Change animation state
+	anim.SetState(AnimationStateWalk)
+
+	// Facing should persist
+	if anim.Facing != DirRight {
+		t.Errorf("Facing changed after state change, got %v, want %v", anim.Facing, DirRight)
+	}
+
+	// Change to attack state
+	anim.SetState(AnimationStateAttack)
+
+	// Facing should still persist
+	if anim.Facing != DirRight {
+		t.Errorf("Facing changed after attack state, got %v, want %v", anim.Facing, DirRight)
+	}
+
+	// Reset should NOT change facing (facing is orthogonal to animation state)
+	anim.Reset()
+	if anim.Facing != DirRight {
+		t.Errorf("Facing changed after reset, got %v, want %v", anim.Facing, DirRight)
+	}
+}
+
+// TestAnimationComponent_SetFacingIdempotent tests setting same direction multiple times (Phase 2).
+func TestAnimationComponent_SetFacingIdempotent(t *testing.T) {
+	anim := NewAnimationComponent(12345)
+	anim.SetFacing(DirLeft)
+
+	// Set same direction multiple times
+	for i := 0; i < 10; i++ {
+		anim.SetFacing(DirLeft)
+		if anim.Facing != DirLeft {
+			t.Errorf("Iteration %d: SetFacing(DirLeft) changed facing to %v", i, anim.Facing)
+		}
+	}
+}
+
+// BenchmarkAnimationComponent_SetFacing benchmarks facing direction updates (Phase 2).
+func BenchmarkAnimationComponent_SetFacing(b *testing.B) {
+	anim := NewAnimationComponent(12345)
+	directions := []Direction{DirUp, DirDown, DirLeft, DirRight}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		anim.SetFacing(directions[i%4])
+	}
+}

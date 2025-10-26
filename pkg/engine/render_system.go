@@ -17,6 +17,13 @@ type EbitenSprite struct {
 	// Sprite image (procedurally generated)
 	Image *ebiten.Image
 
+	// Directional sprite images for aerial-view rendering (Phase 2: Aerial Template Integration)
+	// Maps Direction (Up/Down/Left/Right) to corresponding sprite image
+	DirectionalImages map[int]*ebiten.Image
+
+	// Current facing direction for sprite selection
+	CurrentDirection int
+
 	// Color tint
 	Color color.Color
 
@@ -92,11 +99,13 @@ func (s *EbitenSprite) SetRotation(rotation float64) {
 // NewSpriteComponent creates a new Ebiten sprite component.
 func NewSpriteComponent(width, height float64, color color.Color) *EbitenSprite {
 	return &EbitenSprite{
-		Width:   width,
-		Height:  height,
-		Color:   color,
-		Visible: true,
-		Layer:   0,
+		Width:             width,
+		Height:            height,
+		Color:             color,
+		Visible:           true,
+		Layer:             0,
+		DirectionalImages: make(map[int]*ebiten.Image), // Initialize directional sprite map
+		CurrentDirection:  1,                            // Default to DirDown (1)
 	}
 }
 
@@ -398,7 +407,22 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	}
 
 	// Draw sprite or colored rectangle
-	if sprite.Image != nil {
+	// Phase 2: Support directional sprites with fallback to single image
+	var spriteImage *ebiten.Image
+	if len(sprite.DirectionalImages) > 0 {
+		// Use directional sprite if available
+		if dirImg, exists := sprite.DirectionalImages[sprite.CurrentDirection]; exists && dirImg != nil {
+			spriteImage = dirImg
+		} else {
+			// Fallback to default direction or single image
+			spriteImage = sprite.Image
+		}
+	} else {
+		// Use single image (backward compatibility)
+		spriteImage = sprite.Image
+	}
+
+	if spriteImage != nil {
 		// Draw procedural sprite
 		opts := &ebiten.DrawImageOptions{}
 
@@ -416,7 +440,7 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
 		opts.GeoM.Rotate(sprite.Rotation)
 		opts.GeoM.Translate(screenX, screenY)
-		r.screen.DrawImage(sprite.Image, opts)
+		r.screen.DrawImage(spriteImage, opts)
 	} else {
 		// Draw colored rectangle as fallback
 		col := sprite.Color

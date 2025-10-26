@@ -9,6 +9,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/audio"
 	"github.com/opd-ai/venture/pkg/audio/synthesis"
+	"github.com/sirupsen/logrus"
 )
 
 // EffectType represents different types of sound effects.
@@ -32,14 +33,28 @@ type Generator struct {
 	sampleRate int
 	osc        *synthesis.Oscillator
 	rng        *rand.Rand
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new SFX generator.
 func NewGenerator(sampleRate int, seed int64) *Generator {
+	return NewGeneratorWithLogger(sampleRate, seed, nil)
+}
+
+// NewGeneratorWithLogger creates a new SFX generator with a logger.
+func NewGeneratorWithLogger(sampleRate int, seed int64, logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator":  "sfx",
+			"sampleRate": sampleRate,
+		})
+	}
 	return &Generator{
 		sampleRate: sampleRate,
 		osc:        synthesis.NewOscillator(sampleRate, seed),
 		rng:        rand.New(rand.NewSource(seed)),
+		logger:     logEntry,
 	}
 }
 
@@ -52,6 +67,14 @@ func (g *Generator) Generate(effectType string, seed int64) *audio.AudioSample {
 // GenerateWithGenre creates a sound effect with genre-specific characteristics.
 // GAP-011 REPAIR: Genre affects frequency ranges, waveforms, and envelopes.
 func (g *Generator) GenerateWithGenre(effectType string, seed int64, genre string) *audio.AudioSample {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"effectType": effectType,
+			"seed":       seed,
+			"genre":      genre,
+		}).Debug("generating sound effect")
+	}
+
 	// Use provided seed for variation
 	localRng := rand.New(rand.NewSource(seed))
 
@@ -83,6 +106,13 @@ func (g *Generator) GenerateWithGenre(effectType string, seed int64, genre strin
 	// Apply genre-specific modifications
 	if genre != "" && genre != "fantasy" {
 		g.applyGenreModifications(sample, genre)
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"effectType":  effectType,
+			"sampleCount": len(sample.Data),
+		}).Info("sound effect generated")
 	}
 
 	return sample

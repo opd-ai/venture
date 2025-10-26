@@ -9,25 +9,58 @@ import (
 	"strings"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // SkillTreeGenerator implements the Generator interface for procedural skill tree creation.
-type SkillTreeGenerator struct{}
+type SkillTreeGenerator struct {
+	logger *logrus.Entry
+}
 
 // NewSkillTreeGenerator creates a new skill tree generator.
 func NewSkillTreeGenerator() *SkillTreeGenerator {
-	return &SkillTreeGenerator{}
+	return NewSkillTreeGeneratorWithLogger(nil)
+}
+
+// NewSkillTreeGeneratorWithLogger creates a new skill tree generator with a logger.
+func NewSkillTreeGeneratorWithLogger(logger *logrus.Logger) *SkillTreeGenerator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "skill_tree",
+		})
+	}
+	return &SkillTreeGenerator{
+		logger: logEntry,
+	}
 }
 
 // Generate creates skill trees based on the seed and parameters.
 // Returns []*SkillTree or error.
 func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting skill tree generation")
+	}
+
 	// Validate parameters
 	if params.Depth < 0 {
-		return nil, fmt.Errorf("depth must be non-negative")
+		err := fmt.Errorf("depth must be non-negative")
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("depth", params.Depth).Error("invalid depth parameter")
+		}
+		return nil, err
 	}
 	if params.Difficulty < 0 || params.Difficulty > 1 {
-		return nil, fmt.Errorf("difficulty must be between 0 and 1")
+		err := fmt.Errorf("difficulty must be between 0 and 1")
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("difficulty", params.Difficulty).Error("invalid difficulty parameter")
+		}
+		return nil, err
 	}
 
 	// Extract custom parameters
@@ -51,7 +84,18 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 	}
 
 	if len(templates) == 0 {
-		return nil, fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		err := fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("genreID", params.GenreID).Error("template selection failed")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"count":         count,
+			"templateCount": len(templates),
+		}).Debug("generating skill trees")
 	}
 
 	// Generate skill trees
@@ -63,6 +107,22 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 		// Generate tree from template
 		tree := g.generateTree(rng, template, params, seed+int64(i))
 		trees = append(trees, tree)
+
+		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			g.logger.WithFields(logrus.Fields{
+				"treeIndex":  i,
+				"treeName":   tree.Name,
+				"nodeCount":  len(tree.Nodes),
+				"maxPoints":  tree.MaxPoints,
+			}).Debug("skill tree generated")
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"treeCount": len(trees),
+			"seed":      seed,
+		}).Info("skill tree generation complete")
 	}
 
 	return trees, nil

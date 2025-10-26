@@ -14,19 +14,33 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural sprites.
 type Generator struct {
 	paletteGen *palette.Generator
 	shapeGen   *shapes.Generator
+	logger     *logrus.Entry
 }
 
 // NewGenerator creates a new sprite generator.
 func NewGenerator() *Generator {
+	return NewGeneratorWithLogger(nil)
+}
+
+// NewGeneratorWithLogger creates a new sprite generator with a logger.
+func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"generator": "sprite",
+		})
+	}
 	return &Generator{
 		paletteGen: palette.NewGenerator(),
 		shapeGen:   shapes.NewGenerator(),
+		logger:     logEntry,
 	}
 }
 
@@ -37,10 +51,24 @@ func (g *Generator) GetPaletteGenerator() *palette.Generator {
 
 // Generate creates a sprite from the configuration.
 func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"type":       config.Type,
+			"genreID":    config.GenreID,
+			"seed":       config.Seed,
+			"width":      config.Width,
+			"height":     config.Height,
+			"complexity": config.Complexity,
+		}).Debug("generating sprite")
+	}
+
 	// Generate palette if not provided
 	if config.Palette == nil {
 		pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 		if err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("palette generation failed")
+			}
 			return nil, err
 		}
 		config.Palette = pal
@@ -51,20 +79,38 @@ func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
 	rng := rand.New(rand.NewSource(seedGen.GetSeed("sprite", config.Variation)))
 
 	// Generate sprite based on type
+	var img *ebiten.Image
+	var err error
 	switch config.Type {
 	case SpriteEntity:
-		return g.generateEntity(config, rng)
+		img, err = g.generateEntity(config, rng)
 	case SpriteItem:
-		return g.generateItem(config, rng)
+		img, err = g.generateItem(config, rng)
 	case SpriteTile:
-		return g.generateTile(config, rng)
+		img, err = g.generateTile(config, rng)
 	case SpriteParticle:
-		return g.generateParticle(config, rng)
+		img, err = g.generateParticle(config, rng)
 	case SpriteUI:
-		return g.generateUI(config, rng)
+		img, err = g.generateUI(config, rng)
 	default:
-		return g.generateEntity(config, rng)
+		img, err = g.generateEntity(config, rng)
 	}
+
+	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).WithField("type", config.Type).Error("sprite generation failed")
+		}
+		return nil, err
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"type": config.Type,
+			"seed": config.Seed,
+		}).Info("sprite generated")
+	}
+
+	return img, nil
 }
 
 // generateEntity creates an entity/character sprite.

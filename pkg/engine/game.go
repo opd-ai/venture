@@ -90,9 +90,8 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		// Log error but continue (save/load won't work but game can run)
 		if logEntry != nil {
 			logEntry.WithError(err).Warn("failed to initialize menu system")
-		} else {
-			fmt.Printf("Warning: Failed to initialize menu system: %v\n", err)
 		}
+		// Note: No fallback logging when logEntry is nil - silent initialization failure
 	}
 
 	game := &EbitenGame{

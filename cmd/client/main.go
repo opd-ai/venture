@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -659,18 +658,18 @@ func main() {
 	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
 
 	if *verbose {
-		log.Println("Systems initialized: Input, PlayerCombat, PlayerItemUse, PlayerSpellCasting, Movement, Collision, Combat, StatusEffects, AI, Progression, SkillProgression, VisualFeedback, AudioManager, ObjectiveTracker, ItemPickup, SpellCasting, ManaRegen, Inventory, Animation, Tutorial, Help, Particles")
+		clientLogger.Info("systems initialized")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
 	if *verbose {
-		log.Println("Performance monitoring initialized")
+		clientLogger.Info("performance monitoring initialized")
 		// Start periodic performance logging in background
 		go func() {
 			ticker := time.NewTicker(10 * time.Second)
 			defer ticker.Stop()
 			for range ticker.C {
 				metrics := perfMonitor.GetMetrics()
-				log.Printf("Performance: %s", metrics.String())
+				clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
 			}
 		}()
 	}
@@ -704,7 +703,7 @@ func main() {
 
 	// Initialize terrain rendering system
 	if *verbose {
-		log.Println("Initializing terrain rendering system...")
+		clientLogger.Info("initializing terrain rendering system")
 	}
 
 	terrainRenderSystem := engine.NewTerrainRenderSystem(32, 32, *genreID, *seed)
@@ -712,12 +711,12 @@ func main() {
 	game.TerrainRenderSystem = terrainRenderSystem
 
 	if *verbose {
-		log.Println("Terrain rendering system initialized")
+		clientLogger.Info("terrain rendering system initialized")
 	}
 
 	// GAP REPAIR: Initialize efficient terrain collision checking
 	if *verbose {
-		log.Println("Initializing terrain collision system...")
+		clientLogger.Info("initializing terrain collision system")
 	}
 
 	terrainChecker := engine.NewTerrainCollisionChecker(32, 32)
@@ -732,14 +731,14 @@ func main() {
 	}
 
 	if *verbose {
-		log.Printf("Terrain collision system initialized (efficient mode)")
+		clientLogger.Info("terrain collision system initialized (efficient mode)")
 	}
 
 	// CATEGORY 4.3: Initialize spatial partition system for viewport culling
 	// Provides significant performance benefits with large entity counts through spatial queries
 	// Always enabled as a core optimization (previously optional, now standard)
 	if *verbose {
-		log.Println("Initializing spatial partition system for viewport culling...")
+		clientLogger.Info("initializing spatial partition system for viewport culling")
 	}
 
 	// Calculate world bounds from terrain dimensions (32 pixels per tile)
@@ -763,21 +762,24 @@ func main() {
 	}).Info("spatial partition system initialized with viewport culling enabled")
 
 	if *verbose {
-		log.Printf("Spatial partition enabled: world bounds %.0fx%.0f pixels", worldWidth, worldHeight)
+		clientLogger.WithFields(logrus.Fields{
+			"worldWidth":  worldWidth,
+			"worldHeight": worldHeight,
+		}).Info("spatial partition enabled")
 	}
 
 	// GAP-001 REPAIR: Connect terrain to MapUI for map functionality
 	if *verbose {
-		log.Println("Connecting terrain to Map UI...")
+		clientLogger.Info("connecting terrain to Map UI")
 	}
 	game.MapUI.SetTerrain(generatedTerrain)
 	if *verbose {
-		log.Println("Map UI configured with terrain data")
+		clientLogger.Info("Map UI configured with terrain data")
 	}
 
 	// GAP #1 REPAIR: Spawn enemies in terrain rooms
 	if *verbose {
-		log.Println("Spawning enemies in dungeon rooms...")
+		clientLogger.Info("spawning enemies in dungeon rooms")
 	}
 
 	enemyParams := procgen.GenerationParams{
@@ -788,14 +790,17 @@ func main() {
 
 	enemyCount, err := engine.SpawnEnemiesInTerrain(game.World, generatedTerrain, *seed, enemyParams)
 	if err != nil {
-		log.Printf("Warning: Failed to spawn enemies: %v", err)
+		clientLogger.WithError(err).Warn("failed to spawn enemies")
 	} else if *verbose {
-		log.Printf("Spawned %d enemies across %d rooms", enemyCount, len(generatedTerrain.Rooms)-1)
+		clientLogger.WithFields(logrus.Fields{
+			"enemyCount": enemyCount,
+			"roomCount":  len(generatedTerrain.Rooms) - 1,
+		}).Info("spawned enemies")
 	}
 
 	// GAP #4 REPAIR: Spawn merchants in dungeon
 	if *verbose {
-		log.Println("Spawning merchants in dungeon...")
+		clientLogger.Info("spawning merchants in dungeon")
 	}
 
 	merchantParams := procgen.GenerationParams{
@@ -806,14 +811,14 @@ func main() {
 
 	merchantCount, err := engine.SpawnMerchantsInTerrain(game.World, generatedTerrain, *seed, merchantParams, 2) // Spawn 2 merchants per level
 	if err != nil {
-		log.Printf("Warning: Failed to spawn merchants: %v", err)
+		clientLogger.WithError(err).Warn("failed to spawn merchants")
 	} else if *verbose {
-		log.Printf("Spawned %d merchants", merchantCount)
+		clientLogger.WithField("merchantCount", merchantCount).Info("spawned merchants")
 	}
 
 	// Create player entity
 	if *verbose {
-		log.Println("Creating player entity...")
+		clientLogger.Info("creating player entity")
 	}
 
 	player := game.World.CreateEntity()
@@ -830,13 +835,17 @@ func main() {
 		playerX = float64(cx * 32) // Convert tile coordinates to world coordinates
 		playerY = float64(cy * 32)
 		if *verbose {
-			log.Printf("Player spawning in first room at tile (%d, %d), world (%.0f, %.0f)",
-				cx, cy, playerX, playerY)
+			clientLogger.WithFields(logrus.Fields{
+				"tileX":  cx,
+				"tileY":  cy,
+				"worldX": playerX,
+				"worldY": playerY,
+			}).Info("player spawning in first room")
 		}
 	} else {
 		// Fallback to default position if no rooms (shouldn't happen with valid terrain)
 		playerX, playerY = 400, 300
-		log.Println("Warning: No rooms in terrain, using default spawn position")
+		clientLogger.Warn("no rooms in terrain, using default spawn position")
 	}
 
 	// Add player components
@@ -890,7 +899,7 @@ func main() {
 	game.ShopUI = shopUI
 
 	if *verbose {
-		log.Println("Shop UI initialized and connected to commerce/dialog systems")
+		clientLogger.Info("shop UI initialized and connected to commerce/dialog systems")
 	}
 
 	// Add player stats
@@ -928,23 +937,25 @@ func main() {
 	// Load procedurally generated spells
 	err = engine.LoadPlayerSpells(player, *seed, *genreID, 1)
 	if err != nil {
-		log.Fatalf("Failed to load player spells: %v", err)
+		clientLogger.WithError(err).Fatal("failed to load player spells")
 	}
 	if *verbose {
-		log.Println("Player spells loaded (keys 1-5)")
+		clientLogger.Info("player spells loaded (keys 1-5)")
 	}
 
 	// Load procedurally generated skill tree
 	err = engine.LoadPlayerSkillTree(player, *seed, *genreID, 0)
 	if err != nil {
-		log.Fatalf("Failed to load skill tree: %v", err)
+		clientLogger.WithError(err).Fatal("failed to load skill tree")
 	}
 	if *verbose {
 		comp, _ := player.GetComponent("skill_tree")
 		if comp != nil {
 			treeComp := comp.(*engine.SkillTreeComponent)
-			log.Printf("Skill tree '%s' loaded with %d skills (press K)",
-				treeComp.Tree.Name, len(treeComp.Tree.Nodes))
+			clientLogger.WithFields(logrus.Fields{
+				"treeName":   treeComp.Tree.Name,
+				"skillCount": len(treeComp.Tree.Nodes),
+			}).Info("skill tree loaded (press K)")
 		}
 	}
 
@@ -984,7 +995,7 @@ func main() {
 		}).Info("applying character class stats")
 
 		if err := engine.ApplyClassStats(player, charData.Class); err != nil {
-			log.Fatalf("Failed to apply character class stats: %v", err)
+			clientLogger.WithError(err).Fatal("failed to apply character class stats")
 		}
 
 		// TODO: Store character name in player component for display
@@ -1004,16 +1015,15 @@ func main() {
 
 	saveManager, err := saveload.NewSaveManager("./saves")
 	if err != nil {
-		log.Printf("Warning: Failed to initialize save manager: %v", err)
-		log.Println("Save/load functionality will be unavailable")
+		clientLogger.WithError(err).Warn("failed to initialize save manager, save/load functionality will be unavailable")
 	} else {
 		if *verbose {
-			log.Println("Save/load system initialized")
+			clientLogger.Info("save/load system initialized")
 		}
 
 		// Setup quick save callback (F5)
 		inputSystem.SetQuickSaveCallback(func() error {
-			log.Println("Quick save (F5 pressed)...")
+			clientLogger.Info("quick save (F5 pressed)")
 
 			// Get player position
 			var posX, posY float64
@@ -1100,12 +1110,14 @@ func main() {
 			if game.MapUI != nil {
 				fogOfWar = game.MapUI.GetFogOfWar()
 				if *verbose {
-					log.Printf("Serializing fog of war: %dx%d", len(fogOfWar), func() int {
-						if len(fogOfWar) > 0 {
-							return len(fogOfWar[0])
-						}
-						return 0
-					}())
+					height := 0
+					if len(fogOfWar) > 0 {
+						height = len(fogOfWar[0])
+					}
+					clientLogger.WithFields(logrus.Fields{
+						"width":  len(fogOfWar),
+						"height": height,
+					}).Debug("serializing fog of war")
 				}
 			}
 
@@ -1167,21 +1179,21 @@ func main() {
 			}
 
 			if err := saveManager.SaveGame("quicksave", gameSave); err != nil {
-				log.Printf("Failed to save game: %v", err)
+				clientLogger.WithError(err).Error("failed to save game")
 				return err
 			}
 
-			log.Println("Game saved successfully!")
+			clientLogger.Info("game saved successfully")
 			return nil
 		})
 
 		// Setup quick load callback (F9)
 		inputSystem.SetQuickLoadCallback(func() error {
-			log.Println("Quick load (F9 pressed)...")
+			clientLogger.Info("quick load (F9 pressed)")
 
 			gameSave, err := saveManager.LoadGame("quicksave")
 			if err != nil {
-				log.Printf("Failed to load game: %v", err)
+				clientLogger.WithError(err).Error("failed to load game")
 				return err
 			}
 
@@ -1230,7 +1242,10 @@ func main() {
 				inv.Gold = gameSave.PlayerState.Gold
 
 				if *verbose {
-					log.Printf("Restored %d items and %d gold", len(inv.Items), inv.Gold)
+					clientLogger.WithFields(logrus.Fields{
+						"itemCount": len(inv.Items),
+						"gold":      inv.Gold,
+					}).Debug("restored inventory")
 				}
 			}
 
@@ -1292,12 +1307,14 @@ func main() {
 				game.MapUI.SetFogOfWar(gameSave.WorldState.FogOfWar)
 				if *verbose {
 					fogData := gameSave.WorldState.FogOfWar
-					log.Printf("Restored fog of war: %dx%d", len(fogData), func() int {
-						if len(fogData) > 0 {
-							return len(fogData[0])
-						}
-						return 0
-					}())
+					height := 0
+					if len(fogData) > 0 {
+						height = len(fogData[0])
+					}
+					clientLogger.WithFields(logrus.Fields{
+						"width":  len(fogData),
+						"height": height,
+					}).Debug("restored fog of war")
 				}
 			}
 
@@ -1311,17 +1328,20 @@ func main() {
 					tutState.CompletedSteps,
 				)
 				if *verbose {
-					log.Printf("Restored tutorial state: enabled=%v, step=%d/%d",
-						tutState.Enabled, tutState.CurrentStepIdx, len(game.TutorialSystem.Steps))
+					clientLogger.WithFields(logrus.Fields{
+						"enabled":     tutState.Enabled,
+						"currentStep": tutState.CurrentStepIdx,
+						"totalSteps":  len(game.TutorialSystem.Steps),
+					}).Debug("restored tutorial state")
 				}
 			}
 
-			log.Println("Game loaded successfully!")
+			clientLogger.Info("game loaded successfully")
 			return nil
 		})
 
 		if *verbose {
-			log.Println("Quick save/load callbacks registered (F5/F9)")
+			clientLogger.Info("quick save/load callbacks registered (F5/F9)")
 		}
 	}
 
@@ -1330,13 +1350,13 @@ func main() {
 
 	// Setup UI input callbacks
 	if *verbose {
-		log.Println("Setting up UI input callbacks...")
+		clientLogger.Info("setting up UI input callbacks")
 	}
 	// GAP-014 REPAIR: Pass objective tracker to enable tutorial quest tracking
 	game.SetupInputCallbacks(inputSystem, objectiveTracker)
 	if *verbose {
-		log.Println("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
-		log.Println("Inventory actions: E to equip/use, D to drop")
+		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
+		clientLogger.Info("inventory actions: E to equip/use, D to drop")
 	}
 
 	// GAP-004 REPAIR: Setup merchant interaction callback (F key)
@@ -1356,7 +1376,7 @@ func main() {
 		if merchant == nil {
 			// No merchant nearby
 			if *verbose {
-				log.Println("No merchant nearby to interact with")
+				clientLogger.Debug("no merchant nearby to interact with")
 			}
 			return
 		}
@@ -1364,13 +1384,13 @@ func main() {
 		// Start dialog with merchant
 		success, err := dialogSystem.StartDialog(player.ID, merchant.ID)
 		if err != nil {
-			log.Printf("Failed to start dialog: %v", err)
+			clientLogger.WithError(err).Warn("failed to start dialog")
 			return
 		}
 
 		if !success {
 			if *verbose {
-				log.Println("Dialog could not be started")
+				clientLogger.Debug("dialog could not be started")
 			}
 			return
 		}
@@ -1379,24 +1399,24 @@ func main() {
 		shopUI.Open(merchant)
 
 		if *verbose {
-			log.Printf("Opened shop with merchant (distance: %.1f)", dist)
+			clientLogger.WithField("distance", dist).Debug("opened shop with merchant")
 		}
 	})
 
 	if *verbose {
-		log.Println("Merchant interaction registered (F key when near merchant)")
+		clientLogger.Info("merchant interaction registered (F key when near merchant)")
 	}
 
 	// Connect save/load callbacks to menu system
 	if game.MenuSystem != nil && saveManager != nil {
 		if *verbose {
-			log.Println("Connecting save/load callbacks to menu system...")
+			clientLogger.Info("connecting save/load callbacks to menu system")
 		}
 
 		// Create save callback that reuses the quick save logic
 		saveCallback := func(saveName string) error {
 			if *verbose {
-				log.Printf("Menu save to '%s'...", saveName)
+				clientLogger.WithField("saveName", saveName).Info("menu save")
 			}
 
 			// Get player position
@@ -1498,23 +1518,23 @@ func main() {
 			}
 
 			if err := saveManager.SaveGame(saveName, gameSave); err != nil {
-				log.Printf("Failed to save game to '%s': %v", saveName, err)
+				clientLogger.WithError(err).WithField("saveName", saveName).Error("failed to save game")
 				return err
 			}
 
-			log.Printf("Game saved successfully to '%s'!", saveName)
+			clientLogger.WithField("saveName", saveName).Info("game saved successfully")
 			return nil
 		}
 
 		// Create load callback that reuses the quick load logic
 		loadCallback := func(saveName string) error {
 			if *verbose {
-				log.Printf("Menu load from '%s'...", saveName)
+				clientLogger.WithField("saveName", saveName).Info("menu load")
 			}
 
 			gameSave, err := saveManager.LoadGame(saveName)
 			if err != nil {
-				log.Printf("Failed to load game from '%s': %v", saveName, err)
+				clientLogger.WithError(err).WithField("saveName", saveName).Error("failed to load game")
 				return err
 			}
 
@@ -1547,7 +1567,7 @@ func main() {
 				exp.CurrentXP = gameSave.PlayerState.Experience
 			}
 
-			log.Printf("Game loaded successfully from '%s'!", saveName)
+			clientLogger.WithField("saveName", saveName).Info("game loaded successfully")
 			return nil
 		}
 
@@ -1556,32 +1576,32 @@ func main() {
 		game.MenuSystem.SetLoadCallback(loadCallback)
 
 		if *verbose {
-			log.Println("Save/load callbacks connected to menu system")
+			clientLogger.Info("save/load callbacks connected to menu system")
 		}
 	}
 
 	// Process initial entity additions
 	game.World.Update(0)
 
-	log.Println("Game initialized successfully")
-	log.Printf("Controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
-	log.Printf("Genre: %s, Seed: %d", *genreID, *seed)
+	clientLogger.Info("game initialized successfully")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
+	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
 	if *multiplayer {
-		log.Printf("Multiplayer: Connected to %s", *server)
+		clientLogger.WithField("server", *server).Info("multiplayer connected")
 	}
 
 	// Setup cleanup handler for network client
 	defer func() {
 		if networkClient != nil {
-			log.Println("Disconnecting from server...")
+			clientLogger.Info("disconnecting from server")
 			if err := networkClient.Disconnect(); err != nil {
-				log.Printf("Error disconnecting: %v", err)
+				clientLogger.WithError(err).Warn("error disconnecting")
 			}
 		}
 	}()
 
 	// Run the game loop
 	if err := game.Run("Venture - Procedural Action RPG"); err != nil {
-		log.Fatalf("Error running game: %v", err)
+		clientLogger.WithError(err).Fatal("error running game")
 	}
 }

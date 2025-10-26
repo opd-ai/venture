@@ -91,14 +91,14 @@ func (t *AnatomicalTemplate) GetSortedParts() []struct {
 		Part BodyPart
 		Spec PartSpec
 	}, 0, len(t.BodyPartLayout))
-	
+
 	for part, spec := range t.BodyPartLayout {
 		parts = append(parts, struct {
 			Part BodyPart
 			Spec PartSpec
 		}{Part: part, Spec: spec})
 	}
-	
+
 	// Sort by Z-index (bubble sort is fine for small slices)
 	for i := 0; i < len(parts); i++ {
 		for j := i + 1; j < len(parts); j++ {
@@ -107,7 +107,7 @@ func (t *AnatomicalTemplate) GetSortedParts() []struct {
 			}
 		}
 	}
-	
+
 	return parts
 }
 

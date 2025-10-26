@@ -72,7 +72,7 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 	// Phase 5.1: Check if we should use template-based generation
 	// Use templates for complexity >= 0.3 (Tier 2+), fallback to random for low complexity
 	useTemplate := config.Complexity >= 0.3
-	
+
 	// Check if entity type is specified in Custom config
 	var entityType string
 	if config.Custom != nil {
@@ -81,12 +81,12 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 			useTemplate = true // Always use templates when entity type is specified
 		}
 	}
-	
+
 	// Use template-based generation if enabled
 	if useTemplate && entityType != "" {
 		return g.generateEntityWithTemplate(config, entityType, rng)
 	}
-	
+
 	// Fallback to original random generation for simple entities or when no type specified
 	img := ebiten.NewImage(config.Width, config.Height)
 
@@ -148,25 +148,25 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 // generateEntityWithTemplate creates an entity sprite using anatomical templates (Phase 5.1).
 func (g *Generator) generateEntityWithTemplate(config Config, entityType string, rng *rand.Rand) (*ebiten.Image, error) {
 	img := ebiten.NewImage(config.Width, config.Height)
-	
+
 	// Select appropriate template based on entity type
 	template := SelectTemplate(entityType)
-	
+
 	// Get sorted parts for correct rendering order (Z-index)
 	parts := template.GetSortedParts()
-	
+
 	for _, partData := range parts {
 		spec := partData.Spec
-		
+
 		// Calculate actual dimensions and position from relative values
 		partWidth := int(float64(config.Width) * spec.RelativeWidth)
 		partHeight := int(float64(config.Height) * spec.RelativeHeight)
-		
+
 		// Skip parts with invalid dimensions
 		if partWidth <= 0 || partHeight <= 0 {
 			continue
 		}
-		
+
 		// Select shape type for this part (randomly from allowed shapes)
 		var shapeType shapes.ShapeType
 		if len(spec.ShapeTypes) > 0 {
@@ -174,10 +174,10 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		} else {
 			shapeType = shapes.ShapeCircle // Default fallback
 		}
-		
+
 		// Get color based on color role
 		partColor := g.getColorForRole(spec.ColorRole, config.Palette)
-		
+
 		// Generate shape for this body part
 		shapeConfig := shapes.Config{
 			Type:      shapeType,
@@ -188,28 +188,28 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 			Smoothing: 0.2,
 			Rotation:  spec.Rotation,
 		}
-		
+
 		shape, err := g.shapeGen.Generate(shapeConfig)
 		if err != nil {
 			continue // Skip on error
 		}
-		
+
 		// Position shape according to template
 		opts := &ebiten.DrawImageOptions{}
-		
+
 		// Calculate position (relative to sprite center)
 		x := float64(config.Width)*spec.RelativeX - float64(partWidth)/2
 		y := float64(config.Height)*spec.RelativeY - float64(partHeight)/2
 		opts.GeoM.Translate(x, y)
-		
+
 		// Apply opacity
 		if spec.Opacity < 1.0 {
 			opts.ColorScale.ScaleAlpha(float32(spec.Opacity))
 		}
-		
+
 		img.DrawImage(shape, opts)
 	}
-	
+
 	return img, nil
 }
 

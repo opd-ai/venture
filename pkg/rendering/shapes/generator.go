@@ -280,13 +280,13 @@ func (g *Generator) inEllipse(dx, dy, centerX, centerY, smoothing float64) bool 
 	// where a = width/2, b = height/2
 	radiusX := centerX
 	radiusY := centerY
-	
+
 	// Normalize coordinates to ellipse space
 	nx := dx / radiusX
 	ny := dy / radiusY
-	
+
 	dist := math.Sqrt(nx*nx + ny*ny)
-	
+
 	// Apply smoothing for anti-aliasing
 	edge := 1.0 - smoothing
 	if dist < edge {
@@ -307,29 +307,29 @@ func (g *Generator) inCapsule(dx, dy, centerX, centerY, rotation, smoothing floa
 	sin := math.Sin(angle)
 	rx := dx*cos - dy*sin
 	ry := dx*sin + dy*cos
-	
+
 	// Capsule is a rectangle with semicircular ends
 	// Determine if vertical or horizontal based on dimensions
 	halfWidth := centerX * 0.3   // 30% of width for capsule width
-	halfHeight := centerY * 0.85  // 85% of height for capsule length
-	
+	halfHeight := centerY * 0.85 // 85% of height for capsule length
+
 	// Check if in main rectangular body
 	if math.Abs(rx) <= halfWidth && math.Abs(ry) <= halfHeight {
 		return true
 	}
-	
+
 	// Check if in top semicircle
 	if ry > halfHeight {
 		topDist := math.Sqrt(rx*rx + math.Pow(ry-halfHeight, 2))
 		return topDist <= halfWidth*(1.0+smoothing)
 	}
-	
+
 	// Check if in bottom semicircle
 	if ry < -halfHeight {
 		bottomDist := math.Sqrt(rx*rx + math.Pow(ry+halfHeight, 2))
 		return bottomDist <= halfWidth*(1.0+smoothing)
 	}
-	
+
 	return false
 }
 
@@ -342,19 +342,19 @@ func (g *Generator) inBean(dx, dy, centerX, centerY, rotation, smoothing float64
 	sin := math.Sin(angle)
 	rx := dx*cos - dy*sin
 	ry := dx*sin + dy*cos
-	
+
 	// Normalize to -1 to 1 range
 	nx := rx / centerX
 	ny := ry / centerY
-	
+
 	// Bean shape: ellipse with indent on one side
 	// Use modified ellipse equation with curvature
 	dist := math.Sqrt(nx*nx + ny*ny)
-	
+
 	// Add curvature based on x position (indent on right side)
 	curvature := 0.2 * nx * (1.0 - ny*ny) // More indent near center Y
 	threshold := 0.9 + curvature
-	
+
 	// Apply smoothing
 	edge := threshold - smoothing
 	if dist < edge {
@@ -375,34 +375,34 @@ func (g *Generator) inWedge(dx, dy, centerX, centerY, rotation, smoothing float6
 	sin := math.Sin(angle)
 	rx := dx*cos - dy*sin
 	ry := dx*sin + dy*cos
-	
+
 	// Normalize
 	nx := rx / centerX
 	ny := ry / centerY
-	
+
 	// Wedge: isosceles triangle pointing upward
 	// Base at bottom, point at top
 	// Triangle vertices: (0, -1), (-0.7, 0.5), (0.7, 0.5)
-	
+
 	// Check if below base line
 	if ny > 0.5 {
 		return false
 	}
-	
+
 	// Check if left of left edge: line from (-0.7, 0.5) to (0, -1)
 	// Slope: (-1 - 0.5) / (0 - (-0.7)) = -1.5 / 0.7 ≈ -2.14
 	leftEdge := -2.14*nx - 1.0
 	if ny < leftEdge-smoothing {
 		return false
 	}
-	
+
 	// Check if right of right edge: line from (0.7, 0.5) to (0, -1)
 	// Slope: (-1 - 0.5) / (0 - 0.7) = -1.5 / -0.7 ≈ 2.14
 	rightEdge := 2.14*nx - 1.0
 	if ny < rightEdge-smoothing {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -415,11 +415,11 @@ func (g *Generator) inShield(dx, dy, centerX, centerY, rotation, smoothing float
 	sin := math.Sin(angle)
 	rx := dx*cos - dy*sin
 	ry := dx*sin + dy*cos
-	
+
 	// Normalize
 	nx := rx / centerX
 	ny := ry / centerY
-	
+
 	// Shield: rounded top, pointed bottom
 	// Top half: circle/ellipse
 	if ny < 0 {
@@ -434,28 +434,28 @@ func (g *Generator) inShield(dx, dy, centerX, centerY, rotation, smoothing float
 		if ny > 1.2 {
 			return false
 		}
-		
+
 		// Left edge
-		leftEdge := -0.67*nx + 0.0  // Line from (-0.8, 0) to (0, 1.2)
+		leftEdge := -0.67*nx + 0.0 // Line from (-0.8, 0) to (0, 1.2)
 		if ny < leftEdge-smoothing {
 			return false
 		}
-		
+
 		// Right edge
 		rightEdge := 0.67*nx + 0.0
 		if ny < rightEdge-smoothing {
 			return false
 		}
-		
+
 		// Width taper: shield narrows toward bottom
 		maxWidth := 0.8 * (1.0 - ny/1.2)
 		if math.Abs(nx) > maxWidth+smoothing {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	return false
 }
 
@@ -468,20 +468,20 @@ func (g *Generator) inBlade(dx, dy, centerX, centerY, rotation, smoothing float6
 	sin := math.Sin(angle)
 	rx := dx*cos - dy*sin
 	ry := dx*sin + dy*cos
-	
+
 	// Normalize
 	nx := rx / centerX
 	ny := ry / centerY
-	
+
 	// Blade: thin rectangle with tapered point
 	// Blade body: 70% of length, full width
 	// Blade tip: 30% of length, tapers to point
-	
+
 	bladeWidth := 0.15 // Thin blade
 	bladeStart := -0.9
 	bladeEnd := 0.5
 	tipEnd := 1.0
-	
+
 	// Check hilt/handle (bottom)
 	if ny < bladeStart {
 		// Hilt: slightly wider
@@ -501,7 +501,7 @@ func (g *Generator) inBlade(dx, dy, centerX, centerY, rotation, smoothing float6
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -511,7 +511,7 @@ func (g *Generator) inSkull(dx, dy, centerX, centerY, smoothing float64) bool {
 	// Normalize
 	nx := dx / centerX
 	ny := dy / centerY
-	
+
 	// Skull: rounded cranium + jaw
 	// Upper skull: circle
 	crownRadius := 0.7
@@ -523,18 +523,18 @@ func (g *Generator) inSkull(dx, dy, centerX, centerY, smoothing float64) bool {
 		rightEyeX := 0.3
 		eyeY := -0.2
 		eyeRadius := 0.15
-		
+
 		leftEyeDist := math.Sqrt(math.Pow(nx-leftEyeX, 2) + math.Pow(ny-eyeY, 2))
 		rightEyeDist := math.Sqrt(math.Pow(nx-rightEyeX, 2) + math.Pow(ny-eyeY, 2))
-		
+
 		// Exclude eye sockets
 		if leftEyeDist < eyeRadius || rightEyeDist < eyeRadius {
 			return false
 		}
-		
+
 		return true
 	}
-	
+
 	// Lower jaw: trapezoid shape
 	if ny > 0.2 && ny < 0.7 {
 		// Jaw narrows toward bottom
@@ -543,7 +543,7 @@ func (g *Generator) inSkull(dx, dy, centerX, centerY, smoothing float64) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

@@ -30,7 +30,7 @@ type Game struct {
 // NewGame creates a new anatomy test game.
 func NewGame(seed int64, genreID string) (*Game, error) {
 	spriteGen := sprites.NewGenerator()
-	
+
 	// Generate palette
 	paletteGen := spriteGen.GetPaletteGenerator()
 	pal, err := paletteGen.Generate(genreID, seed)
@@ -169,13 +169,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts := &ebiten.DrawImageOptions{}
 		scale := 8.0 // 8x scale for visibility
 		opts.GeoM.Scale(scale, scale)
-		
+
 		// Center the sprite
 		bounds := sprite.Bounds()
 		centerX := float64(800/2) - float64(bounds.Dx())*scale/2
 		centerY := float64(600/2) - float64(bounds.Dy())*scale/2
 		opts.GeoM.Translate(centerX, centerY)
-		
+
 		screen.DrawImage(sprite, opts)
 
 		// Draw label
@@ -194,37 +194,37 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for i, sprite := range g.sprites {
 		opts := &ebiten.DrawImageOptions{}
-		
+
 		// Scale thumbnail (2x)
 		thumbnailScale := 2.0
 		opts.GeoM.Scale(thumbnailScale, thumbnailScale)
-		
+
 		// Position thumbnail
 		x := float64(thumbnailStartX + i*thumbnailSpacing)
 		y := float64(thumbnailY)
 		opts.GeoM.Translate(x, y)
-		
+
 		// Highlight current thumbnail
 		if i == g.currentEntity {
 			// Draw selection box
 			bounds := sprite.Bounds()
 			boxW := float64(bounds.Dx()) * thumbnailScale
 			boxH := float64(bounds.Dy()) * thumbnailScale
-			
+
 			// Draw white rectangle around selected thumbnail
 			for offset := 0; offset < 3; offset++ {
 				fx := x - float64(offset)
 				fy := y - float64(offset)
 				fw := boxW + float64(offset*2)
 				fh := boxH + float64(offset*2)
-				
-				ebitenutil.DrawRect(screen, fx, fy, 2, fh, color.White)                    // Left
-				ebitenutil.DrawRect(screen, fx, fy, fw, 2, color.White)                    // Top
-				ebitenutil.DrawRect(screen, fx+fw-2, fy, 2, fh, color.White)              // Right
-				ebitenutil.DrawRect(screen, fx, fy+fh-2, fw, 2, color.White)              // Bottom
+
+				ebitenutil.DrawRect(screen, fx, fy, 2, fh, color.White)      // Left
+				ebitenutil.DrawRect(screen, fx, fy, fw, 2, color.White)      // Top
+				ebitenutil.DrawRect(screen, fx+fw-2, fy, 2, fh, color.White) // Right
+				ebitenutil.DrawRect(screen, fx, fy+fh-2, fw, 2, color.White) // Bottom
 			}
 		}
-		
+
 		screen.DrawImage(sprite, opts)
 	}
 

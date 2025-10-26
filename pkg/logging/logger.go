@@ -160,7 +160,7 @@ func GeneratorLogger(logger *logrus.Logger, generatorType string, seed int64, ge
 }
 
 // NetworkLogger creates a logger with network context.
-func NetworkLogger(logger *logrus.Logger, playerID string, connectionState string) *logrus.Entry {
+func NetworkLogger(logger *logrus.Logger, playerID, connectionState string) *logrus.Entry {
 	return logger.WithFields(logrus.Fields{
 		"playerID":        playerID,
 		"connectionState": connectionState,
@@ -183,7 +183,7 @@ func CombatLogger(logger *logrus.Logger, attackerID, targetID int) *logrus.Entry
 }
 
 // SaveLoadLogger creates a logger with save/load context.
-func SaveLoadLogger(logger *logrus.Logger, operation string, path string) *logrus.Entry {
+func SaveLoadLogger(logger *logrus.Logger, operation, path string) *logrus.Entry {
 	return logger.WithFields(logrus.Fields{
 		"operation": operation,
 		"path":      path,
@@ -206,7 +206,7 @@ func TestUtilityLogger(utilityName string) *logrus.Logger {
 	}
 
 	logger := NewLogger(config)
-	
+
 	// Add utility name as field for all logs
 	return logger
 }

@@ -66,7 +66,7 @@ func main() {
 	// Generate items
 	genLogger := logging.GeneratorLogger(logger, "item", *seed, *genre)
 	genLogger.Debug("starting item generation")
-	
+
 	result, err := generator.Generate(*seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("failed to generate items")

@@ -53,7 +53,7 @@ func main() {
 	// Generate entities
 	genLogger := logging.GeneratorLogger(logger, "entity", *seed, *genre)
 	genLogger.Debug("starting entity generation")
-	
+
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("generation failed")

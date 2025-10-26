@@ -67,7 +67,7 @@ var MenuKeys = struct {
 //	    ui.visible = false
 //	    return
 //	}
-func HandleMenuInput(toggleKey ebiten.Key, isVisible bool) (shouldClose bool, shouldToggle bool) {
+func HandleMenuInput(toggleKey ebiten.Key, isVisible bool) (shouldClose, shouldToggle bool) {
 	// Check for toggle key (works whether menu is open or closed)
 	if IsKeyJustPressed(toggleKey) {
 		return true, true // Close if open, open if closed

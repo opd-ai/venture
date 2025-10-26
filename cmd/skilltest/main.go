@@ -56,7 +56,7 @@ func main() {
 	// Generate skill trees
 	genLogger := logging.GeneratorLogger(logger, "skill-tree", *seed, *genre)
 	genLogger.Debug("starting skill tree generation")
-	
+
 	start := time.Now()
 	result, err := generator.Generate(*seed, params)
 	if err != nil {

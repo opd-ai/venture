@@ -57,7 +57,7 @@ func main() {
 	// Generate spells
 	genLogger := logging.GeneratorLogger(logger, "magic", *seed, *genre)
 	genLogger.Debug("starting spell generation")
-	
+
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("generation failed")

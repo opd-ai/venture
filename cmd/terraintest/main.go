@@ -91,7 +91,7 @@ func main() {
 	// Generate terrain
 	genLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genre)
 	genLogger.Debug("starting terrain generation")
-	
+
 	result, err := gen.Generate(*seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("generation failed")
@@ -155,7 +155,7 @@ func generateMultiLevel(logger *logrus.Logger) {
 	// Generate all levels
 	genLogger := logging.GeneratorLogger(logger, "multilevel-terrain", *seed, *genre)
 	genLogger.WithField("numLevels", *numLevels).Debug("starting multi-level generation")
-	
+
 	levels, err := gen.GenerateMultiLevel(*numLevels, *seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("multi-level generation failed")

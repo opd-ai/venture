@@ -55,7 +55,7 @@ func main() {
 	// Generate quests
 	genLogger := logging.GeneratorLogger(logger, "quest", *seed, *genre)
 	genLogger.Debug("starting quest generation")
-	
+
 	result, err := generator.Generate(*seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("generation failed")
@@ -67,7 +67,7 @@ func main() {
 	}
 
 	quests := result.([]*quest.Quest)
-	
+
 	genLogger.WithField("questCount", len(quests)).Info("quests generated successfully")
 
 	// Display quests

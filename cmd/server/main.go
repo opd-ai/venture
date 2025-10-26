@@ -31,9 +31,9 @@ func main() {
 
 	// Initialize structured logger with JSON format for server (log aggregation)
 	logConfig := logging.Config{
-		Level:      logging.InfoLevel,
-		Format:     logging.JSONFormat, // Always JSON for server
-		AddCaller:  true,
+		Level:       logging.InfoLevel,
+		Format:      logging.JSONFormat, // Always JSON for server
+		AddCaller:   true,
 		EnableColor: false,
 	}
 

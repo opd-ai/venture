@@ -25,14 +25,14 @@ import (
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
 type animationSystemWrapper struct {
-	system  *engine.AnimationSystem
-	verbose bool
+	system *engine.AnimationSystem
+	logger *logrus.Entry
 }
 
 func (w *animationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	if err := w.system.Update(entities, deltaTime); err != nil {
-		if w.verbose {
-			log.Printf("Animation system error: %v", err)
+		if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			w.logger.WithError(err).Debug("animation system error")
 		}
 	}
 }
@@ -63,8 +63,9 @@ func randomGenre() string {
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
-func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, verbose bool) {
+func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, logger *logrus.Logger) {
 	itemGen := item.NewItemGenerator()
+	itemLogger := logging.GeneratorLogger(logger, "item", seed, genreID)
 
 	// Generate a starting weapon (1 weapon, common)
 	weaponParams := procgen.GenerationParams{
@@ -79,7 +80,7 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	weaponResult, err := itemGen.Generate(seed+1, weaponParams)
 	if err != nil {
-		log.Printf("Warning: Failed to generate starter weapon: %v", err)
+		itemLogger.WithError(err).Warn("failed to generate starter weapon")
 	} else {
 		weapons := weaponResult.([]*item.Item)
 		if len(weapons) > 0 {
@@ -87,8 +88,11 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 			weapon.Name = "Rusty " + weapon.Name // Make it clearly a starter item
 			weapon.Stats.Value = 5               // Low value
 			inventory.Items = append(inventory.Items, weapon)
-			if verbose {
-				log.Printf("Added starter weapon: %s (Damage: %d)", weapon.Name, weapon.Stats.Damage)
+			if logger.GetLevel() >= logrus.InfoLevel {
+				itemLogger.WithFields(logrus.Fields{
+					"weaponName": weapon.Name,
+					"damage":     weapon.Stats.Damage,
+				}).Info("added starter weapon")
 			}
 		}
 	}
@@ -106,17 +110,17 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	potionResult, err := itemGen.Generate(seed+2, potionParams)
 	if err != nil {
-		log.Printf("Warning: Failed to generate healing potions: %v", err)
+		itemLogger.WithError(err).Warn("failed to generate healing potions")
 	} else {
 		potions := potionResult.([]*item.Item)
-		for i, potion := range potions {
+		for _, potion := range potions {
 			potion.Name = "Minor Health Potion"
 			potion.Stats.Value = 10
 			potion.Stats.Weight = 0.2
 			inventory.Items = append(inventory.Items, potion)
-			if verbose && i == 0 {
-				log.Printf("Added %d healing potions", len(potions))
-			}
+		}
+		if logger.GetLevel() >= logrus.InfoLevel && len(potions) > 0 {
+			itemLogger.WithField("count", len(potions)).Info("added healing potions")
 		}
 	}
 
@@ -133,7 +137,7 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	armorResult, err := itemGen.Generate(seed+100, armorParams)
 	if err != nil {
-		log.Printf("Warning: Failed to generate starter armor: %v", err)
+		itemLogger.WithError(err).Warn("failed to generate starter armor")
 	} else {
 		armors := armorResult.([]*item.Item)
 		if len(armors) > 0 {
@@ -141,19 +145,22 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 			armor.Name = "Worn " + armor.Name
 			armor.Stats.Value = 8
 			inventory.Items = append(inventory.Items, armor)
-			if verbose {
-				log.Printf("Added starter armor: %s (Defense: %d)", armor.Name, armor.Stats.Defense)
+			if logger.GetLevel() >= logrus.InfoLevel {
+				itemLogger.WithFields(logrus.Fields{
+					"armorName": armor.Name,
+					"defense":   armor.Stats.Defense,
+				}).Info("added starter armor")
 			}
 		}
 	}
 
-	if verbose {
-		log.Printf("Starter items added: %d items in inventory", len(inventory.Items))
+	if logger.GetLevel() >= logrus.InfoLevel {
+		itemLogger.WithField("itemCount", len(inventory.Items)).Info("starter items added")
 	}
 }
 
 // addTutorialQuest creates and adds a tutorial quest to the player's quest tracker.
-func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID string, verbose bool) {
+func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID string, logger *logrus.Logger) {
 	// Create a simple tutorial quest manually (more reliable than generation)
 	tutorialQuest := &quest.Quest{
 		ID:            fmt.Sprintf("tutorial_%d", seed),
@@ -197,8 +204,11 @@ func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID
 	// Accept the quest
 	tracker.AcceptQuest(tutorialQuest, 0)
 
-	if verbose {
-		log.Printf("Tutorial quest added: '%s' with %d objectives", tutorialQuest.Name, len(tutorialQuest.Objectives))
+	if logger.GetLevel() >= logrus.InfoLevel {
+		logging.ComponentLogger(logger, "quest").WithFields(logrus.Fields{
+			"questName":      tutorialQuest.Name,
+			"objectiveCount": len(tutorialQuest.Objectives),
+		}).Info("tutorial quest added")
 	}
 }
 
@@ -270,9 +280,7 @@ func main() {
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
 
 	// Initialize game systems
-	if *verbose {
-		log.Println("Initializing game systems...")
-	}
+	clientLogger.Info("initializing game systems")
 
 	// Add core gameplay systems
 	inputSystem := engine.NewInputSystem()
@@ -304,9 +312,13 @@ func main() {
 	// Set quest completion callback to award rewards
 	objectiveTracker.SetQuestCompleteCallback(func(entity *engine.Entity, qst *quest.Quest) {
 		objectiveTracker.AwardQuestRewards(entity, qst)
-		if *verbose {
-			log.Printf("Quest '%s' completed! Rewards: %d XP, %d gold, %d skill points",
-				qst.Name, qst.Reward.XP, qst.Reward.Gold, qst.Reward.SkillPoints)
+		if logger.GetLevel() >= logrus.InfoLevel {
+			logging.ComponentLogger(logger, "quest").WithFields(logrus.Fields{
+				"questName":   qst.Name,
+				"xpReward":    qst.Reward.XP,
+				"goldReward":  qst.Reward.Gold,
+				"skillPoints": qst.Reward.SkillPoints,
+			}).Info("quest completed")
 		}
 	})
 
@@ -426,8 +438,8 @@ func main() {
 
 		// GAP-010 REPAIR: Play death sound effect
 		if err := audioManager.PlaySFX("death", time.Now().UnixNano()); err != nil {
-			if *verbose {
-				log.Printf("Warning: Failed to play death SFX: %v", err)
+			if logger.GetLevel() >= logrus.WarnLevel {
+				logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to play death SFX")
 			}
 		}
 	})
@@ -442,12 +454,10 @@ func main() {
 
 	// Start playing exploration music
 	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
-		log.Printf("Warning: Failed to start background music: %v", err)
+		logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to start background music")
 	}
 
-	if *verbose {
-		log.Println("Audio system initialized (music and SFX generators)")
-	}
+	logging.ComponentLogger(logger, "audio").Info("audio system initialized (music and SFX generators)")
 
 	// Add item pickup system to automatically collect nearby items
 	itemPickupSystem := engine.NewItemPickupSystem(game.World)
@@ -529,8 +539,8 @@ func main() {
 
 	// GAP-017 REPAIR: Add animation system before tutorial/help to update sprites first
 	game.World.AddSystem(&animationSystemWrapper{
-		system:  animationSystem,
-		verbose: *verbose,
+		system: animationSystem,
+		logger: game.World.GetLogger(),
 	})
 
 	game.World.AddSystem(tutorialSystem)
@@ -568,9 +578,7 @@ func main() {
 	_ = perfMonitor // Suppress unused warning when not verbose
 
 	// Generate initial world terrain
-	if *verbose {
-		log.Println("Generating procedural terrain...")
-	}
+	clientLogger.Info("generating procedural terrain")
 
 	terrainGen := terrain.NewBSPGeneratorWithLogger(logger) // Use BSP algorithm with logging
 	params := procgen.GenerationParams{
@@ -807,26 +815,18 @@ func main() {
 	// GAP-012 REPAIR: Add visual feedback for hit flash
 	player.AddComponent(engine.NewVisualFeedbackComponent())
 
-	if *verbose {
-		log.Printf("Player entity created (ID: %d) at position (400, 300)", player.ID)
-	}
+	clientLogger.WithField("entityID", player.ID).Info("player entity created")
 
 	// Add starter items to inventory
-	if *verbose {
-		log.Println("Adding starter items to inventory...")
-	}
-	addStarterItems(playerInventory, *seed, *genreID, *verbose)
+	clientLogger.Info("adding starter items to inventory")
+	addStarterItems(playerInventory, *seed, *genreID, logger)
 
 	// Add tutorial quest
-	if *verbose {
-		log.Println("Creating tutorial quest...")
-	}
-	addTutorialQuest(questTracker, *seed, *genreID, *verbose)
+	clientLogger.Info("creating tutorial quest")
+	addTutorialQuest(questTracker, *seed, *genreID, logger)
 
 	// Initialize save/load system (Phase 8.4)
-	if *verbose {
-		log.Println("Initializing save/load system...")
-	}
+	clientLogger.Info("initializing save/load system")
 
 	saveManager, err := saveload.NewSaveManager("./saves")
 	if err != nil {

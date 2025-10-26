@@ -4,9 +4,8 @@
 package engine
 
 import (
-	"log"
-
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 // PlayerItemUseSystem processes player item use input (E key).
@@ -14,6 +13,7 @@ import (
 type PlayerItemUseSystem struct {
 	inventorySystem *InventorySystem
 	world           *World
+	logger          *logrus.Entry
 }
 
 // NewPlayerItemUseSystem creates a new player item use system.
@@ -21,6 +21,22 @@ func NewPlayerItemUseSystem(inventorySystem *InventorySystem, world *World) *Pla
 	return &PlayerItemUseSystem{
 		inventorySystem: inventorySystem,
 		world:           world,
+		logger:          nil,
+	}
+}
+
+// NewPlayerItemUseSystemWithLogger creates a new player item use system with structured logging.
+func NewPlayerItemUseSystemWithLogger(inventorySystem *InventorySystem, world *World, logger *logrus.Logger) *PlayerItemUseSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "playerItemUse",
+		})
+	}
+	return &PlayerItemUseSystem{
+		inventorySystem: inventorySystem,
+		world:           world,
+		logger:          logEntry,
 	}
 }
 
@@ -76,7 +92,9 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 
 		if selectedIndex == -1 {
 			// No usable item found
-			log.Println("No usable items in inventory")
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithField("entityID", entity.ID).Debug("no usable items in inventory")
+			}
 			// Note: Input flag will be cleared by InputSystem on next frame
 			continue
 		}
@@ -85,14 +103,30 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		err := s.inventorySystem.UseConsumable(entity.ID, selectedIndex)
 
 		if err == nil {
-			log.Printf("Used item at index %d", selectedIndex)
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+				// Get item name for logging
+				var itemName string
+				if selectedIndex < len(inventory.Items) {
+					itemName = inventory.Items[selectedIndex].Name
+				}
+				s.logger.WithFields(logrus.Fields{
+					"entityID":  entity.ID,
+					"itemIndex": selectedIndex,
+					"itemName":  itemName,
+				}).Info("item used")
+			}
 			// Could trigger effects here:
 			// - Use animation
 			// - Sound effect
 			// - Visual feedback
 			// - Tutorial progress tracking
 		} else {
-			log.Printf("Failed to use item: %v", err)
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entityID": entity.ID,
+					"itemIndex": selectedIndex,
+				}).WithError(err).Warn("failed to use item")
+			}
 		}
 
 		// Note: Input flag will be cleared by InputSystem on next frame

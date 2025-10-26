@@ -55,13 +55,28 @@ go build -o venture-server ./cmd/server
 
 ### 3. Multiplayer
 
+#### Quick Start (LAN Party Mode)
 ```bash
-# Start a server
+# Host player: start server and auto-connect (one command!)
+./venture-client --host-and-play
+
+# Other players: join the host
+./venture-client -multiplayer -server <host-ip>:8080
+```
+
+**Host gets IP address:** `ip addr show` (Linux) / `ipconfig` (Windows) / `ifconfig` (macOS)  
+**For LAN access:** Add `--host-lan` flag to bind to all interfaces (default is localhost only)
+
+#### Traditional Setup
+```bash
+# Start a dedicated server
 ./venture-server -port 8080 -max-players 4
 
 # Connect clients
-./venture-client -server localhost:8080
+./venture-client -multiplayer -server localhost:8080
 ```
+
+**Port Fallback:** If port 8080 is occupied, the system automatically tries ports 8081-8089. Use `-port <num>` to specify a different starting port.
 
 **For complete setup instructions, gameplay guide, and all features, see:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and first steps (5 minutes)

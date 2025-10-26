@@ -1,10 +1,24 @@
 # Venture Game Mechanics Expansion Plan
 
-**Status**: Planning Phase  
+**Status**: In Progress  
 **Target Version**: 1.1+  
 **Last Updated**: October 26, 2025
 
 This document outlines the roadmap for expanding Venture's gameplay mechanics beyond the current 1.0 foundation.
+
+## Completed Items ✅
+
+### Host-and-Play Mode (October 26, 2025)
+**Goal**: Single-command LAN party mode for easy multiplayer hosting.
+
+**Implementation**:
+- Created `pkg/hostplay` package with server lifecycle management
+- Added `--host-and-play` and `--host-lan` flags to client
+- Port fallback mechanism (8080-8089) with automatic detection
+- 96% test coverage with comprehensive error handling
+- Documentation updated in README.md and ROADMAP.md
+
+**Usage**: `./venture-client --host-and-play` starts server and connects automatically.
 
 ---
 

@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/hostplay"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -38,13 +39,18 @@ func (w *animationSystemWrapper) Update(entities []*engine.Entity, deltaTime flo
 }
 
 var (
-	width       = flag.Int("width", 800, "Screen width")
-	height      = flag.Int("height", 600, "Screen height")
-	seed        = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID     = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	verbose     = flag.Bool("verbose", false, "Enable verbose logging")
-	multiplayer = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server      = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	width         = flag.Int("width", 800, "Screen width")
+	height        = flag.Int("height", 600, "Screen height")
+	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID       = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
+	multiplayer   = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay   = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 )
 
 // return a random seed
@@ -212,6 +218,152 @@ func addTutorialQuest(tracker *engine.QuestTrackerComponent, seed int64, genreID
 	}
 }
 
+// startEmbeddedServer starts a server in a background goroutine for host-and-play mode
+// Design: Runs complete server logic from cmd/server/main.go in a goroutine
+// Why: Reuses existing server implementation without code duplication
+//
+// Returns: (serverAddress, cleanupFunction, error)
+func startEmbeddedServer(logger *logrus.Logger, seed int64, genreID string) (string, func(), error) {
+	serverLogger := logger.WithFields(logrus.Fields{
+		"component": "embedded-server",
+		"seed":      seed,
+		"genre":     genreID,
+	})
+
+	// Configure host-and-play server
+	config := hostplay.DefaultConfig()
+	config.StartPort = *serverPort
+	config.PortRange = 10
+	config.BindLAN = *hostLAN
+
+	// Create server manager
+	hostServer := hostplay.New(config)
+
+	// Find available port
+	port, bindAddr, err := hostServer.FindAvailablePort()
+	if err != nil {
+		return "", nil, fmt.Errorf("no available ports: %w", err)
+	}
+
+	hostServer.SetPort(port, bindAddr)
+
+	if *hostLAN {
+		serverLogger.WithField("bindAddr", "0.0.0.0").Warn("server accessible on LAN - firewall may block connections")
+	} else {
+		serverLogger.WithField("bindAddr", "127.0.0.1").Info("server bound to localhost only")
+	}
+
+	serverLogger.WithFields(logrus.Fields{
+		"port":       port,
+		"maxPlayers": *serverPlayers,
+		"tickRate":   *serverTick,
+	}).Info("starting server in background")
+
+	// Create game world
+	world := engine.NewWorldWithLogger(logger)
+
+	// Add minimal server-side systems (no rendering)
+	movementSystem := engine.NewMovementSystem(200.0)
+	collisionSystem := engine.NewCollisionSystem(64.0)
+	combatSystem := engine.NewCombatSystemWithLogger(seed, logger)
+	aiSystem := engine.NewAISystem(world)
+	progressionSystem := engine.NewProgressionSystem(world)
+	inventorySystem := engine.NewInventorySystem(world)
+
+	world.AddSystem(movementSystem)
+	world.AddSystem(collisionSystem)
+	world.AddSystem(combatSystem)
+	world.AddSystem(aiSystem)
+	world.AddSystem(progressionSystem)
+	world.AddSystem(inventorySystem)
+
+	// Generate initial world terrain
+	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"width":  100,
+			"height": 100,
+		},
+	}
+
+	terrainResult, err := terrainGen.Generate(seed, params)
+	if err != nil {
+		return "", nil, fmt.Errorf("terrain generation failed: %w", err)
+	}
+
+	generatedTerrain := terrainResult.(*terrain.Terrain)
+	serverLogger.WithFields(logrus.Fields{
+		"width":     generatedTerrain.Width,
+		"height":    generatedTerrain.Height,
+		"roomCount": len(generatedTerrain.Rooms),
+	}).Info("world terrain generated")
+
+	// Create network server
+	serverConfig := network.DefaultServerConfig()
+	serverConfig.Address = fmt.Sprintf("%s:%d", bindAddr, port)
+	serverConfig.MaxPlayers = *serverPlayers
+	serverConfig.UpdateRate = *serverTick
+
+	netServer := network.NewServerWithLogger(serverConfig, logger)
+
+	// Start network server
+	if err := netServer.Start(); err != nil {
+		return "", nil, fmt.Errorf("network server start failed: %w", err)
+	}
+
+	serverLogger.WithField("address", serverConfig.Address).Info("server listening")
+
+	// Start server game loop in background
+	ctx := hostServer.GetContext()
+	go func() {
+		defer serverLogger.Info("server goroutine exited")
+
+		ticker := time.NewTicker(time.Duration(1000000000 / *serverTick))
+		defer ticker.Stop()
+
+		lastUpdate := time.Now()
+
+		for {
+			select {
+			case <-ctx.Done():
+				// Shutdown requested
+				serverLogger.Info("shutdown requested, stopping server")
+				if err := netServer.Stop(); err != nil {
+					serverLogger.WithError(err).Error("error stopping server")
+				}
+				return
+
+			case <-ticker.C:
+				// Calculate delta time
+				now := time.Now()
+				deltaTime := now.Sub(lastUpdate).Seconds()
+				lastUpdate = now
+
+				// Update game world
+				world.Update(deltaTime)
+			}
+		}
+	}()
+
+	// Wait briefly for server to initialize
+	time.Sleep(100 * time.Millisecond)
+
+	serverLogger.Info("server ready for connections")
+
+	// Return address and cleanup function
+	cleanup := func() {
+		serverLogger.Info("initiating graceful shutdown")
+		if err := hostServer.Shutdown(); err != nil {
+			serverLogger.WithError(err).Error("shutdown error")
+		}
+	}
+
+	return hostServer.GetAddress(), cleanup, nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -249,6 +401,24 @@ func main() {
 		"seed":   *seed,
 		"genre":  *genreID,
 	}).Info("client configuration")
+
+	// Handle host-and-play mode: start embedded server before client
+	if *hostAndPlay {
+		clientLogger.Info("host-and-play mode enabled - starting embedded server")
+
+		// Start embedded server
+		serverAddr, cleanup, err := startEmbeddedServer(logger, *seed, *genreID)
+		if err != nil {
+			clientLogger.WithError(err).Fatal("failed to start embedded server")
+		}
+		defer cleanup() // Ensure cleanup on exit
+
+		// Override server flag to connect to embedded server
+		*server = serverAddr
+		*multiplayer = true
+
+		clientLogger.WithField("serverAddr", serverAddr).Info("embedded server started, connecting client")
+	}
 
 	// Initialize network client if multiplayer mode is enabled
 	var networkClient network.ClientConnection

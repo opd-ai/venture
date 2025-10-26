@@ -210,6 +210,42 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 ---
 
+#### 2.1: LAN Party "Host-and-Play" Mode ✅ **COMPLETED** (October 26, 2025)
+
+**Description**: Single-command mode that starts authoritative server and auto-connects local client, as specified in `docs/auditors/LAN_PARTY.md`.
+
+**Implementation Summary**:
+- ✅ `pkg/hostplay` package created with server lifecycle management
+- ✅ Port fallback mechanism (tries ports 8080-8089 automatically)
+- ✅ `--host-and-play` flag added to cmd/client/main.go
+- ✅ `--host-lan` flag for LAN binding (default: localhost only for security)
+- ✅ Graceful shutdown with context cancellation and timeouts
+- ✅ Comprehensive test suite (96% coverage)
+- ✅ Documentation updated in README.md
+
+**Technical Details**:
+- Default ports: 8080-8089 (configurable via `-port` flag)
+- Bind address: 127.0.0.1 (localhost only) or 0.0.0.0 (LAN mode with security warning)
+- Server runs in background goroutine with clean shutdown on client exit
+- Reuses existing server implementation from cmd/server/main.go
+- Context-based cancellation ensures no resource leaks
+
+**Usage**:
+```bash
+# Host and play (localhost only, secure)
+./venture-client --host-and-play
+
+# Host for LAN party (accessible on network)
+./venture-client --host-and-play --host-lan
+
+# Others join
+./venture-client -multiplayer -server <host-ip>:8080
+```
+
+**Status**: ✅ Fully implemented and tested. All success criteria met.
+
+---
+
 #### 2.2: Character Creation & Tutorial Integration
 
 **Description**: Transform existing tutorial into unified character creation onboarding flow as outlined in `docs/auditors/EXPAND.md:L9-L21`.

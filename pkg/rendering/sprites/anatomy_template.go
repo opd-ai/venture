@@ -682,7 +682,7 @@ func ApplyBossEnhancements(template AnatomicalTemplate) AnatomicalTemplate {
 	// Add armor plating if torso exists
 	if torsoSpec, hasTorso := enhanced.BodyPartLayout[PartTorso]; hasTorso {
 		armorSpec := torsoSpec
-		armorSpec.RelativeWidth *= 1.15  // Slightly larger than torso
+		armorSpec.RelativeWidth *= 1.15 // Slightly larger than torso
 		armorSpec.RelativeHeight *= 1.15
 		armorSpec.ZIndex = torsoSpec.ZIndex - 1 // Behind torso
 		armorSpec.ColorRole = "accent3"

@@ -30,14 +30,14 @@ type ItemType string
 
 const (
 	// Weapons
-	ItemSword   ItemType = "sword"
-	ItemAxe     ItemType = "axe"
-	ItemBow     ItemType = "bow"
-	ItemStaff   ItemType = "staff"
-	ItemGun     ItemType = "gun"
-	ItemDagger  ItemType = "dagger"
-	ItemHammer  ItemType = "hammer"
-	ItemSpear   ItemType = "spear"
+	ItemSword  ItemType = "sword"
+	ItemAxe    ItemType = "axe"
+	ItemBow    ItemType = "bow"
+	ItemStaff  ItemType = "staff"
+	ItemGun    ItemType = "gun"
+	ItemDagger ItemType = "dagger"
+	ItemHammer ItemType = "hammer"
+	ItemSpear  ItemType = "spear"
 
 	// Armor
 	ItemHelmet ItemType = "helmet"

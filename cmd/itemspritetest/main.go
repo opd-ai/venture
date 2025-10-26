@@ -142,7 +142,7 @@ func (g *Game) addSprite(name string, sprite *ebiten.Image) {
 func (g *Game) generateThumbnails() {
 	for _, sprite := range g.sprites {
 		thumbnail := ebiten.NewImage(g.thumbnailSize, g.thumbnailSize)
-		
+
 		// Scale to fit
 		op := &ebiten.DrawImageOptions{}
 		scaleX := float64(g.thumbnailSize) / float64(sprite.Bounds().Dx())
@@ -152,12 +152,12 @@ func (g *Game) generateThumbnails() {
 			scale = scaleY
 		}
 		op.GeoM.Scale(scale, scale)
-		
+
 		// Center
 		offsetX := (g.thumbnailSize - int(float64(sprite.Bounds().Dx())*scale)) / 2
 		offsetY := (g.thumbnailSize - int(float64(sprite.Bounds().Dy())*scale)) / 2
 		op.GeoM.Translate(float64(offsetX), float64(offsetY))
-		
+
 		thumbnail.DrawImage(sprite, op)
 		g.thumbnails = append(g.thumbnails, thumbnail)
 	}
@@ -278,7 +278,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			ebitenutil.DrawRect(screen, float64(x), float64(y),
 				float64(g.thumbnailSize), float64(g.thumbnailSize),
 				color.RGBA{30, 30, 40, 255})
-			
+
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(x), float64(y))
 			screen.DrawImage(g.thumbnails[idx], op)

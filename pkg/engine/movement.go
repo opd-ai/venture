@@ -191,11 +191,39 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 						anim.SetState(AnimationStateWalk)
 					}
 				}
+
+				// Phase 3: Update facing direction based on velocity
+				// Apply 0.1 threshold to filter input jitter and noise
+				absVX := math.Abs(vel.VX)
+				absVY := math.Abs(vel.VY)
+
+				if absVX > 0.1 || absVY > 0.1 {
+					// Prioritize horizontal movement for diagonal directions
+					// This provides clearer visual feedback for player control
+					// For perfect diagonals (absVX == absVY), horizontal takes priority
+					if absVX >= absVY {
+						// Moving horizontally (or perfect diagonal)
+						if vel.VX > 0 {
+							anim.SetFacing(DirRight)
+						} else {
+							anim.SetFacing(DirLeft)
+						}
+					} else {
+						// Moving vertically
+						if vel.VY > 0 {
+							anim.SetFacing(DirDown)
+						} else {
+							anim.SetFacing(DirUp)
+						}
+					}
+				}
+				// If velocity is below threshold, preserve current facing
 			} else {
 				// Not moving - idle (only if currently in a movement state)
 				if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
 					anim.SetState(AnimationStateIdle)
 				}
+				// When idle, preserve facing direction (don't reset)
 			}
 		}
 	}

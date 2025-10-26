@@ -1,21 +1,21 @@
 # Character Avatar Enhancement Plan
 ## Directional Facing & Aerial-View Perspective Migration
 
-**Status**: 🚧 IN PROGRESS - Phases 1-2 Complete, Phase 3 Next  
+**Status**: 🚧 IN PROGRESS - Phases 1-3 Complete, Phase 4 Next  
 **Date**: October 26, 2025 (Updated)  
 **Priority**: CRITICAL - Next blocking task for Phase 9.1 completion  
 **Objective**: Enhance procedural character sprite generation with (1) directional facing indicators and (2) aerial-view perspective compatible with top-down gameplay
 
-**Progress**: 2/7 Phases Complete (29%)
+**Progress**: 3/7 Phases Complete (43%)
 - ✅ Phase 1: Aerial Template Foundation (3.5 hours actual)
 - ✅ Phase 2: Engine Component Integration (1.5 hours actual)
-- ⏳ Phase 3: Movement System Integration (2 hours estimated)
+- ✅ Phase 3: Movement System Integration (1.5 hours actual)
 - ⏳ Phase 4: Sprite Generation Pipeline (3 hours estimated)
 - ⏳ Phase 5: Visual Consistency Refinement (2-3 hours estimated)
 - ⏳ Phase 6: Testing & Validation (3 hours estimated)
 - ⏳ Phase 7: Documentation & Migration (1-2 hours estimated)
 
-**Next Action**: Begin Phase 3 (Movement System Integration)
+**Next Action**: Begin Phase 4 (Sprite Generation Pipeline)
 
 ---
 
@@ -242,22 +242,42 @@ go test -bench=BenchmarkAerial ./pkg/rendering/sprites/
 - Implementation report: `docs/IMPLEMENTATION_PHASE_2_ENGINE_INTEGRATION.md` (4,800 lines)
 - Completion summary: `PHASE2_COMPLETE.md`
 
-### Phase 3: Movement System Integration (2 hours)
-**Files**: `pkg/engine/movement.go`
+### Phase 3: Movement System Integration ✅ COMPLETE (1.5 hours actual)
+**Files**: `pkg/engine/movement.go`, `pkg/engine/movement_direction_test.go`
 
 **Tasks**:
-1. ⏳ Add direction calculation logic in `MovementSystem::Update()`
-   - Insert after velocity application, before animation state update
-   - Use velocity vector to determine cardinal direction
-   - Apply 0.1 threshold to filter noise
-2. ⏳ Update `AnimationComponent.Facing` based on velocity
-3. ⏳ Preserve facing when entity is stationary (use last direction)
+1. ✅ Add direction calculation logic in `MovementSystem::Update()`
+   - Integrated after animation state update, within movement check
+   - Uses velocity vector with >= operator for perfect diagonals
+   - Applied 0.1 threshold to filter jitter/noise
+2. ✅ Update `AnimationComponent.Facing` based on velocity
+   - Horizontal priority (absVX >= absVY)
+   - Automatic facing updates during movement
+3. ✅ Preserve facing when entity is stationary (use last direction)
+   - Velocity below 0.1 threshold preserves facing
+   - Action states (attack/hit/death/cast) skip facing updates
+4. ✅ Comprehensive test coverage
+   - 10 test functions: cardinal, diagonal, jitter, stationary, actions, friction
+   - 38 test cases, 100% pass rate
+   - 1 performance benchmark (54.11 ns/op, zero allocations)
 
-**Testing**:
+**Testing Results**:
 ```bash
-go test -run TestMovementSystem_DirectionUpdate ./pkg/engine/
-# Test scenarios: moving N/S/E/W, diagonal (prioritize horizontal), stationary
+✅ TestMovementSystem_DirectionUpdate_CardinalDirections (8/8)
+✅ TestMovementSystem_DirectionUpdate_DiagonalMovement (8/8)
+✅ TestMovementSystem_DirectionUpdate_JitterFiltering (8/8)
+✅ TestMovementSystem_DirectionUpdate_StationaryPreservesFacing (4/4)
+✅ TestMovementSystem_DirectionUpdate_MovementResume
+✅ TestMovementSystem_DirectionUpdate_NoAnimationComponent
+✅ TestMovementSystem_DirectionUpdate_ActionStates (4/4)
+✅ TestMovementSystem_DirectionUpdate_MultipleEntities
+✅ TestMovementSystem_DirectionUpdate_FrictionPreservesFacing
+✅ BenchmarkMovementSystem_DirectionUpdate (54.11 ns/op)
 ```
+
+**Documentation**:
+- Implementation report: `docs/IMPLEMENTATION_PHASE_3_MOVEMENT_INTEGRATION.md` (5,200 lines)
+- Completion summary: `PHASE3_COMPLETE.md`
 
 ### Phase 4: Sprite Generation Pipeline (3 hours)
 **Files**: `pkg/rendering/sprites/generator.go`, `cmd/server/main.go`, `cmd/client/`

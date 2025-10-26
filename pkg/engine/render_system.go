@@ -105,7 +105,7 @@ func NewSpriteComponent(width, height float64, color color.Color) *EbitenSprite 
 		Visible:           true,
 		Layer:             0,
 		DirectionalImages: make(map[int]*ebiten.Image), // Initialize directional sprite map
-		CurrentDirection:  1,                            // Default to DirDown (1)
+		CurrentDirection:  1,                           // Default to DirDown (1)
 	}
 }
 

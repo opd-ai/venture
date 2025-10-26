@@ -75,11 +75,6 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		// Update sprite component with current frame
 		if frame := animComp.CurrentFrame(); frame != nil {
 			spriteComp.Image = frame
-			// DEBUG: Verify sprite image is being updated (only for player)
-			if entity.HasComponent("input") {
-				fmt.Printf("[SPRITE UPDATE] Entity %d: Set sprite.Image to frame %d (state=%s, image=%v)\n",
-					entity.ID, animComp.FrameIndex, animComp.CurrentState, frame != nil)
-			}
 		}
 	}
 
@@ -320,7 +315,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 	if entity.HasComponent("input") {
 		// Player character - use humanoid template
 		config.Custom["entityType"] = "humanoid"
-		
+
 		// GAP FIX: Determine facing direction based on velocity
 		facing := "down" // Default
 		if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
@@ -381,7 +376,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 			}
 
 			config.Custom["entityType"] = entityType
-			
+
 			// GAP FIX: Determine facing direction based on velocity
 			facing := "down" // Default
 			if velComp, hasVel := entity.GetComponent("velocity"); hasVel {

@@ -38,7 +38,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !input.IsActionPressed() {
 			continue
 		}
-		
+
 		// DEBUG: Player is trying to attack
 		fmt.Printf("[PLAYER COMBAT] Entity %d pressing attack button\n", entity.ID)
 

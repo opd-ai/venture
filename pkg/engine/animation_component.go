@@ -65,7 +65,7 @@ type AnimationComponent struct {
 
 	// Dirty flag - regenerate frames if true
 	Dirty bool
-	
+
 	// Last facing direction (for maintaining direction during idle)
 	LastFacing string
 }

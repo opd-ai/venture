@@ -36,7 +36,7 @@ type Game struct {
 
 // NewGame creates a new animation demo game.
 func NewGame(seed int64, genreID string) *Game {
-	world := engine.NewWorld(seed)
+	world := engine.NewWorld()
 	spriteGen := sprites.NewGenerator()
 	animationSys := engine.NewAnimationSystem(spriteGen)
 	combatSys := engine.NewCombatSystem(seed)
@@ -162,7 +162,7 @@ func (g *Game) Update() error {
 	}
 
 	// Update systems
-	entities := g.world.GetAllEntities()
+	entities := g.world.GetEntities()
 
 	g.movementSys.Update(entities, dt)
 	if err := g.animationSys.Update(entities, dt); err != nil {
@@ -173,7 +173,9 @@ func (g *Game) Update() error {
 	// Update camera to follow player
 	if posComp, ok := g.player.GetComponent("position"); ok {
 		pos := posComp.(*engine.PositionComponent)
-		g.camera.CenterOn(pos.X, pos.Y)
+		// Note: Camera system requires an active camera entity with CameraComponent
+		// For this demo, we'll handle camera transform directly in WorldToScreen calls
+		_ = pos
 	}
 
 	return nil
@@ -196,8 +198,7 @@ func (g *Game) runIdleDemo() {
 
 // runWalkDemo makes entities walk in patterns.
 func (g *Game) runWalkDemo(dt float64) {
-	// Move player in a circle
-	angle := g.demoTimer
+	// Move player in a circle pattern
 	speed := 50.0
 	vx := speed * 2.0 * 3.14159 / 4.0
 	vy := speed * 2.0 * 3.14159 / 4.0

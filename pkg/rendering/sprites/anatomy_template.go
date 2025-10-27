@@ -1286,15 +1286,15 @@ func SciFiHumanoidAerial(direction Direction) AnatomicalTemplate {
 }
 
 // HorrorHumanoidAerial returns a horror-themed aerial humanoid template.
-// Elongated head, irregular shapes, reduced shadow for ghostly effect.
+// Narrow head with skull shapes, irregular torso, reduced shadow for ghostly effect.
+// Maintains 35/50/15 proportions while achieving unsettling aesthetic through shape and width.
 func HorrorHumanoidAerial(direction Direction) AnatomicalTemplate {
 	base := HumanoidAerialTemplate(direction)
 	base.Name = "horror_aerial_" + string(direction)
 
-	// Elongated, narrow head for unsettling appearance
+	// Narrow head for unsettling appearance (maintain 0.35 height for proportion consistency)
 	headSpec := base.BodyPartLayout[PartHead]
-	headSpec.RelativeHeight = 0.40
-	headSpec.RelativeWidth = 0.28
+	headSpec.RelativeWidth = 0.28 // Narrow width creates elongated visual effect
 	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeSkull, shapes.ShapeEllipse}
 	base.BodyPartLayout[PartHead] = headSpec
 
@@ -1309,9 +1309,9 @@ func HorrorHumanoidAerial(direction Direction) AnatomicalTemplate {
 	shadowSpec.Opacity = 0.2
 	base.BodyPartLayout[PartShadow] = shadowSpec
 
-	// Thin, elongated limbs
+	// Thin, extended arms (maintain base height, use narrower width)
 	armsSpec := base.BodyPartLayout[PartArms]
-	armsSpec.RelativeHeight = 0.35
+	armsSpec.RelativeWidth = 0.60 // Thinner arms for gaunt appearance
 	base.BodyPartLayout[PartArms] = armsSpec
 
 	return base
@@ -1413,4 +1413,55 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	default:
 		return HumanoidAerialTemplate(direction)
 	}
+}
+
+// BossAerialTemplate creates a scaled boss variant of an aerial template.
+// Applies uniform scaling to all body parts while preserving:
+// - 35/50/15 proportion ratios
+// - Directional asymmetry (head offset, arm positioning)
+// - Color role assignments
+// - Z-index layering
+//
+// The scale parameter is typically 2.5 for boss entities, making them
+// 2.5× larger than normal entities while maintaining the same visual structure.
+// Directional asymmetry remains intact (head offsets scale proportionally).
+//
+// Example usage:
+//
+//	base := FantasyHumanoidAerial(DirDown)
+//	boss := BossAerialTemplate(base, 2.5)
+func BossAerialTemplate(base AnatomicalTemplate, scale float64) AnatomicalTemplate {
+	if scale <= 0 {
+		scale = 1.0 // Safety: prevent invalid scaling
+	}
+
+	boss := AnatomicalTemplate{
+		Name:           base.Name + "_boss",
+		BodyPartLayout: make(map[BodyPart]PartSpec),
+	}
+
+	// Scale all body parts proportionally
+	for part, spec := range base.BodyPartLayout {
+		scaledSpec := spec
+
+		// Scale dimensions (width and height)
+		scaledSpec.RelativeWidth *= scale
+		scaledSpec.RelativeHeight *= scale
+
+		// Scale position offsets from center (0.5, 0.5)
+		// This maintains directional asymmetry:
+		// - Left head (X=0.42) becomes further left
+		// - Right head (X=0.58) becomes further right
+		offsetX := spec.RelativeX - 0.5
+		offsetY := spec.RelativeY - 0.5
+		scaledSpec.RelativeX = 0.5 + (offsetX * scale)
+		scaledSpec.RelativeY = 0.5 + (offsetY * scale)
+
+		// Keep color roles, shapes, opacity, rotation, and Z-index unchanged
+		// These define the visual character and should not scale
+
+		boss.BodyPartLayout[part] = scaledSpec
+	}
+
+	return boss
 }

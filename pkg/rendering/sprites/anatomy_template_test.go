@@ -1121,12 +1121,16 @@ func TestAerialGenreVariants(t *testing.T) {
 			templateFunc: HorrorHumanoidAerial,
 			expectedName: "horror_aerial_down",
 			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
-				// Horror should have elongated head
+				// Horror should maintain 35% head height for proportion consistency
 				headSpec := template.BodyPartLayout[PartHead]
-				if headSpec.RelativeHeight <= 0.38 {
-					t.Errorf("Horror aerial should have elongated head (height > 0.38), got %f", headSpec.RelativeHeight)
+				if headSpec.RelativeHeight < 0.30 || headSpec.RelativeHeight > 0.40 {
+					t.Errorf("Horror aerial head height should be ~0.35 (±0.05), got %f", headSpec.RelativeHeight)
 				}
-				// Check for reduced shadow opacity
+				// Horror aesthetic achieved through narrow width (elongated visual effect)
+				if headSpec.RelativeWidth > 0.30 {
+					t.Errorf("Horror aerial head should be narrow (width <= 0.30), got %f", headSpec.RelativeWidth)
+				}
+				// Check for reduced shadow opacity (ghostly effect)
 				shadowSpec := template.BodyPartLayout[PartShadow]
 				if shadowSpec.Opacity > 0.25 {
 					t.Errorf("Horror aerial shadow should be faint (opacity <= 0.25), got %f", shadowSpec.Opacity)

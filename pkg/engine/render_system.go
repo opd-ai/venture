@@ -5,6 +5,7 @@ package engine
 
 import (
 	"image/color"
+	"math"
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -297,11 +298,160 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	}
 }
 
-// drawBatch renders a group of entities with the same sprite image.
+// drawBatch renders a group of entities with the same sprite image using vertex batching.
+// This combines multiple sprites into a single DrawTriangles call for better performance.
 func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
+	if len(entities) == 0 {
+		return
+	}
+
+	// Get sprite image from first entity (all entities in batch share same image)
+	firstSprite, _ := entities[0].GetComponent("sprite")
+	sprite := firstSprite.(*EbitenSprite)
+	spriteImage := sprite.Image
+
+	// Pre-allocate vertex and index buffers
+	// Each sprite needs 4 vertices and 6 indices (2 triangles)
+	maxVertices := len(entities) * 4
+	maxIndices := len(entities) * 6
+
+	vertices := make([]ebiten.Vertex, 0, maxVertices)
+	indices := make([]uint16, 0, maxIndices)
+
+	vertexIndex := uint16(0)
+
+	// Build vertex and index buffers for all entities in batch
 	for _, entity := range entities {
-		r.drawEntity(entity)
+		posComp, hasPos := entity.GetComponent("position")
+		spriteComp, hasSprite := entity.GetComponent("sprite")
+
+		if !hasPos || !hasSprite {
+			continue
+		}
+
+		pos := posComp.(*PositionComponent)
+		sprite := spriteComp.(*EbitenSprite)
+
+		if !sprite.Visible {
+			continue
+		}
+
+		// Phase 4: Sync CurrentDirection from AnimationComponent.Facing
+		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
+			anim := animComp.(*AnimationComponent)
+			sprite.CurrentDirection = int(anim.GetFacing())
+		}
+
+		// Convert world position to screen position
+		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+
+		// Check if entity is visible on screen
+		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+			continue
+		}
+
+		// Get the actual sprite image (directional or single)
+		var actualSpriteImage *ebiten.Image
+		if len(sprite.DirectionalImages) > 0 {
+			if dirImg, exists := sprite.DirectionalImages[sprite.CurrentDirection]; exists && dirImg != nil {
+				actualSpriteImage = dirImg
+			} else {
+				actualSpriteImage = sprite.Image
+			}
+		} else {
+			actualSpriteImage = sprite.Image
+		}
+
+		// Skip if image doesn't match batch (only happens with directional sprites)
+		if actualSpriteImage != spriteImage {
+			r.drawEntity(entity) // Draw individually if image mismatch
+			r.stats.RenderedEntities++
+			continue
+		}
+
+		// GAP-012 REPAIR: Apply visual feedback effects (hit flash, tints)
+		var flashAlpha float64
+		var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
+		if feedbackComp, ok := entity.GetComponent("visual_feedback"); ok {
+			feedback := feedbackComp.(*VisualFeedbackComponent)
+			flashAlpha = feedback.GetFlashAlpha()
+			tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+		}
+
+		// Calculate sprite corners in screen space
+		halfW := sprite.Width / 2
+		halfH := sprite.Height / 2
+
+		// Apply rotation if needed
+		cos := float32(1.0)
+		sin := float32(0.0)
+		if sprite.Rotation != 0 {
+			cos = float32(math.Cos(sprite.Rotation))
+			sin = float32(math.Sin(sprite.Rotation))
+		}
+
+		// Calculate rotated corners
+		corners := [4][2]float32{
+			{-float32(halfW), -float32(halfH)}, // Top-left
+			{float32(halfW), -float32(halfH)},  // Top-right
+			{-float32(halfW), float32(halfH)},  // Bottom-left
+			{float32(halfW), float32(halfH)},   // Bottom-right
+		}
+
+		// Get sprite texture bounds
+		imgBounds := spriteImage.Bounds()
+		w, h := float32(imgBounds.Dx()), float32(imgBounds.Dy())
+
+		// Create color scale from flash and tint
+		colorR := float32((tintR + flashAlpha))
+		colorG := float32((tintG + flashAlpha))
+		colorB := float32((tintB + flashAlpha))
+		colorA := float32(tintA)
+
+		// Add 4 vertices for this sprite
+		for i, corner := range corners {
+			// Apply rotation
+			rotatedX := corner[0]*cos - corner[1]*sin
+			rotatedY := corner[0]*sin + corner[1]*cos
+
+			// Calculate texture coordinates (0,0 is top-left, 1,1 is bottom-right)
+			u, v := float32(0), float32(0)
+			if i == 1 || i == 3 { // Right side
+				u = w
+			}
+			if i == 2 || i == 3 { // Bottom side
+				v = h
+			}
+
+			vertices = append(vertices, ebiten.Vertex{
+				DstX:   float32(screenX) + rotatedX,
+				DstY:   float32(screenY) + rotatedY,
+				SrcX:   u,
+				SrcY:   v,
+				ColorR: colorR,
+				ColorG: colorG,
+				ColorB: colorB,
+				ColorA: colorA,
+			})
+		}
+
+		// Add 6 indices for 2 triangles (forming a quad)
+		// Triangle 1: 0, 1, 2 (top-left, top-right, bottom-left)
+		// Triangle 2: 1, 3, 2 (top-right, bottom-right, bottom-left)
+		indices = append(indices,
+			vertexIndex+0, vertexIndex+1, vertexIndex+2, // First triangle
+			vertexIndex+1, vertexIndex+3, vertexIndex+2, // Second triangle
+		)
+
+		vertexIndex += 4
 		r.stats.RenderedEntities++
+	}
+
+	// Draw all sprites in this batch with a single DrawTriangles call
+	if len(vertices) > 0 && len(indices) > 0 {
+		r.screen.DrawTriangles(vertices, indices, spriteImage, &ebiten.DrawTrianglesOptions{
+			Filter: ebiten.FilterLinear,
+		})
 	}
 }
 

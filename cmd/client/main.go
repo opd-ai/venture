@@ -543,8 +543,13 @@ func main() {
 	commerceSystem := engine.NewCommerceSystemWithLogger(game.World, inventorySystem, logger)
 	dialogSystem := engine.NewDialogSystemWithLogger(game.World, logger)
 
+	// Initialize crafting system
+	itemGen := item.NewItemGenerator()
+	craftingSystem := engine.NewCraftingSystem(game.World, inventorySystem, itemGen)
+
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
 	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
+	logging.ComponentLogger(logger, "crafting").Info("crafting system initialized")
 
 	// GAP-010 REPAIR: Initialize audio system
 	audioManager = engine.NewAudioManager(44100, *seed) // 44.1kHz sample rate
@@ -643,9 +648,6 @@ func main() {
 
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
-
-	// AUDIT FIX: Add dialog system to World for state updates
-	game.World.AddSystem(dialogSystem)
 
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
@@ -903,6 +905,16 @@ func main() {
 
 	if *verbose {
 		clientLogger.Info("shop UI initialized and connected to commerce/dialog systems")
+	}
+
+	// Initialize and wire up crafting UI
+	craftingUI := engine.NewCraftingUI(*width, *height)
+	craftingUI.SetPlayerEntity(player)
+	craftingUI.SetCraftingSystem(craftingSystem)
+	game.CraftingUI = craftingUI
+
+	if *verbose {
+		clientLogger.Info("crafting UI initialized and connected to crafting system")
 	}
 
 	// Add player stats

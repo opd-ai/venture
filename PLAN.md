@@ -489,7 +489,15 @@ result, err := craftingSystem.StartCraft(entity.ID, potionRecipe, station.ID)
   - ✅ Keyboard and mouse navigation support
   - ✅ Comprehensive test suite: 13 test functions, 95.6% coverage on testable functions
   - ✅ All tests passing (13/13)
-- [ ] Client integration: wire system, add C key binding
+- [x] **Client integration: wire system, add C key binding** (October 27, 2025)
+  - ✅ Added CraftingUI field to EbitenGame struct in `pkg/engine/game.go`
+  - ✅ Initialized CraftingSystem with itemGen in `cmd/client/main.go` (line ~547)
+  - ✅ Initialized CraftingUI and connected to player entity and CraftingSystem (line ~910)
+  - ✅ Added CraftingUI.Update() call to game loop (updates C key toggle)
+  - ✅ Added CraftingUI.Draw() call to rendering pipeline
+  - ✅ Added CraftingUI visibility check to input blocking logic
+  - ✅ Updated SetPlayerEntity() to wire CraftingUI
+  - ✅ Client builds successfully, C key toggle functional
 - [ ] Recipe discovery integration with loot tables
 - [ ] Network protocol messages for multiplayer
 - [ ] Crafting stations in world generation (alchemy tables, forges, workbenches)

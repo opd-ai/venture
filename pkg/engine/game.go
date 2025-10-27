@@ -314,13 +314,18 @@ func (g *EbitenGame) Update() error {
 		g.ShopUI.Update(g.World.GetEntities(), deltaTime)
 	}
 
+	// Update crafting UI (if initialized)
+	if g.CraftingUI != nil {
+		g.CraftingUI.Update(nil, deltaTime)
+	}
+
 	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
 
 	// Update the world (unless UI is blocking input)
-	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() && (g.ShopUI == nil || !g.ShopUI.IsVisible()) {
+	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() && (g.ShopUI == nil || !g.ShopUI.IsVisible()) && (g.CraftingUI == nil || !g.CraftingUI.IsVisible()) {
 		g.World.Update(deltaTime)
 	}
 
@@ -390,6 +395,11 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 		g.ShopUI.Draw(screen)
 	}
 
+	// Render crafting UI (if initialized)
+	if g.CraftingUI != nil {
+		g.CraftingUI.Draw(screen)
+	}
+
 	// Render virtual controls (mobile only, drawn last to be on top of everything)
 	for _, system := range g.World.GetSystems() {
 		if inputSys, ok := system.(*InputSystem); ok {
@@ -417,6 +427,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	// Set player for shop UI (if initialized)
 	if g.ShopUI != nil {
 		g.ShopUI.SetPlayerEntity(entity)
+	}
+
+	// Set player for crafting UI (if initialized)
+	if g.CraftingUI != nil {
+		g.CraftingUI.SetPlayerEntity(entity)
 	}
 }
 

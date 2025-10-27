@@ -185,10 +185,30 @@ func TestGenreSelectionMenu_Navigation(t *testing.T) {
 		navigation  func()
 		expectedIdx int
 	}{
-		{"down from first", 0, func() { menu.selectedIdx++; if menu.selectedIdx >= genreCount { menu.selectedIdx = 0 } }, 1},
-		{"down from last wrap", genreCount - 1, func() { menu.selectedIdx++; if menu.selectedIdx >= genreCount { menu.selectedIdx = 0 } }, 0},
-		{"up from first wrap", 0, func() { menu.selectedIdx--; if menu.selectedIdx < 0 { menu.selectedIdx = genreCount - 1 } }, genreCount - 1},
-		{"up from second", 1, func() { menu.selectedIdx--; if menu.selectedIdx < 0 { menu.selectedIdx = genreCount - 1 } }, 0},
+		{"down from first", 0, func() {
+			menu.selectedIdx++
+			if menu.selectedIdx >= genreCount {
+				menu.selectedIdx = 0
+			}
+		}, 1},
+		{"down from last wrap", genreCount - 1, func() {
+			menu.selectedIdx++
+			if menu.selectedIdx >= genreCount {
+				menu.selectedIdx = 0
+			}
+		}, 0},
+		{"up from first wrap", 0, func() {
+			menu.selectedIdx--
+			if menu.selectedIdx < 0 {
+				menu.selectedIdx = genreCount - 1
+			}
+		}, genreCount - 1},
+		{"up from second", 1, func() {
+			menu.selectedIdx--
+			if menu.selectedIdx < 0 {
+				menu.selectedIdx = genreCount - 1
+			}
+		}, 0},
 	}
 
 	for _, tt := range tests {

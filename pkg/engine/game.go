@@ -22,16 +22,16 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager        *AppStateManager
-	MainMenuUI          *MainMenuUI
-	SinglePlayerMenu    *SinglePlayerMenu    // Submenu for single-player options
-	GenreSelectionMenu  *GenreSelectionMenu  // Genre selection for single-player
-	SettingsUI          *SettingsUI
-	SettingsManager     *SettingsManager
-	CharacterCreation   *EbitenCharacterCreation
-	pendingCharData     *CharacterData
-	isMultiplayerMode   bool   // Track if character creation is for multiplayer
-	selectedGenreID     string // Selected genre for world generation
+	StateManager       *AppStateManager
+	MainMenuUI         *MainMenuUI
+	SinglePlayerMenu   *SinglePlayerMenu   // Submenu for single-player options
+	GenreSelectionMenu *GenreSelectionMenu // Genre selection for single-player
+	SettingsUI         *SettingsUI
+	SettingsManager    *SettingsManager
+	CharacterCreation  *EbitenCharacterCreation
+	pendingCharData    *CharacterData
+	isMultiplayerMode  bool   // Track if character creation is for multiplayer
+	selectedGenreID    string // Selected genre for world generation
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -126,7 +126,7 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
 
 	game := &EbitenGame{
-		World:             world,
+		World:              world,
 		lastUpdateTime:     time.Now(),
 		ScreenWidth:        screenWidth,
 		ScreenHeight:       screenHeight,

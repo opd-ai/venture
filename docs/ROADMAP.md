@@ -31,7 +31,7 @@ This document outlines the development plan for Venture, a fully procedural mult
 
 ### Active Development Focus (January 2026) 🎯
 
-Per `IMPLEMENTATION_REPORT.md`, currently completing **GAP-001 through GAP-003** (Spell System):
+Currently completing **GAP-001 through GAP-003** (Spell System):
 - ✅ Elemental status effects (Fire/Ice/Lightning/Poison DoT)
 - ✅ Shield absorption mechanics
 - ✅ Buff/debuff stat modification system
@@ -731,7 +731,6 @@ Based on MoSCoW prioritization and dependency analysis, the roadmap is organized
   - CombatSystem verified as exemplary (no changes needed)
   - Zero build regressions, all tests pass
   - LOG_LEVEL and LOG_FORMAT environment variables working
-  - Documentation: LOGGING_AUDIT_CATEGORY_6.2.md + IMPLEMENTATION_CATEGORY_6.2.md
   - Status: Production-ready structured logging with JSON/Text formatters
 
 **Should Have**:

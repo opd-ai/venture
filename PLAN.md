@@ -222,9 +222,20 @@ This approach allows immediate user feedback while keeping the codebase maintain
 
 ---
 
-## Phase 4: Environmental Manipulation
+## Phase 4: Environmental Manipulation **IN PROGRESS** (October 26, 2025)
 
 **Goal**: Destructible and constructible terrain.
+
+**Implementation Progress**:
+- ✅ Created `pkg/engine/terrain_components.go` with terrain modification components (October 26, 2025)
+  - MaterialType enum with 6 material types (Stone, Wood, Earth, Metal, Glass, Ice)
+  - DestructibleComponent for tile health, damage tracking, and destruction
+  - FireComponent for fire propagation with intensity, duration, and spread mechanics
+  - BuildableComponent for construction progress tracking
+  - Comprehensive test suite: `terrain_components_test.go` (24 test functions, 95%+ coverage)
+  - All components follow ECS pattern (data-only, no behavior)
+- 🚧 Creating terrain modification systems (in progress)
+- 🚧 Network protocol support (planned)
 
 **Components**:
 - **Destruction**: Wall breaking via weapons/spells, fire propagation
@@ -234,9 +245,13 @@ This approach allows immediate user feedback while keeping the codebase maintain
 
 **Technical Notes**:
 - Terrain modification in `pkg/world` with network sync
-- New destructible terrain component
-- Fire propagation system (cellular automata)
+- Material types: Stone (100 HP, not flammable), Wood (50 HP, flammable), Earth (30 HP), Metal (200 HP), Glass (20 HP), Ice (40 HP)
+- Fire burns for 10-15 seconds (configurable), spreads to adjacent flammable tiles at 30% * intensity chance/second
+- Construction requires materials (default: 10 stone per wall), takes 3 seconds (configurable)
 - Client prediction for instant feedback
+- Server-authoritative for multiplayer synchronization
+
+**Status**: 🚧 Phase 4.1 Complete (Components), Phase 4.2-4.5 In Progress (Systems, Network, Integration)
 
 ---
 

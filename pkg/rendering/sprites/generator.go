@@ -232,6 +232,14 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		}
 	}
 
+	// Extract useAerial flag (Phase 4)
+	useAerial := false
+	if config.Custom != nil {
+		if aerial, ok := config.Custom["useAerial"].(bool); ok {
+			useAerial = aerial
+		}
+	}
+
 	// Select appropriate template based on entity type, genre, direction, and equipment
 	var template AnatomicalTemplate
 
@@ -242,7 +250,11 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		isHumanoid = true
 	}
 
-	if isHumanoid && (hasWeapon || hasShield) {
+	// Phase 4: Use aerial template if useAerial flag is set
+	if useAerial && isHumanoid {
+		// Use SelectAerialTemplate which provides 35/50/15 proportions
+		template = SelectAerialTemplate(entityType, genre, direction)
+	} else if isHumanoid && (hasWeapon || hasShield) {
 		// Use equipment template
 		template = HumanoidWithEquipment(direction, hasWeapon, hasShield)
 	} else if isHumanoid && genre != "" {
@@ -593,4 +605,80 @@ func (g *Generator) generateUI(config Config, rng *rand.Rand) (*ebiten.Image, er
 	}
 
 	return result, nil
+}
+
+// GenerateDirectionalSprites generates a 4-directional sprite sheet (Phase 4).
+// Returns map[int]*ebiten.Image where keys are Direction constants (0-3).
+func (g *Generator) GenerateDirectionalSprites(config Config) (map[int]*ebiten.Image, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"type":       config.Type,
+			"genreID":    config.GenreID,
+			"seed":       config.Seed,
+			"entityType": config.Custom["entityType"],
+		}).Debug("generating directional sprite sheet")
+	}
+
+	// Check if useAerial flag is set
+	useAerial := false
+	if config.Custom != nil {
+		if aerial, ok := config.Custom["useAerial"].(bool); ok {
+			useAerial = aerial
+		}
+	}
+
+	sprites := make(map[int]*ebiten.Image)
+
+	// Generate sprite for each direction
+	directions := []struct {
+		index int
+		name  string
+	}{
+		{0, "up"},
+		{1, "down"},
+		{2, "left"},
+		{3, "right"},
+	}
+
+	for _, dir := range directions {
+		// Create config for this direction
+		dirConfig := config
+		if dirConfig.Custom == nil {
+			dirConfig.Custom = make(map[string]interface{})
+		}
+
+		// Copy existing custom params
+		for k, v := range config.Custom {
+			dirConfig.Custom[k] = v
+		}
+
+		// Set facing direction
+		dirConfig.Custom["facing"] = dir.name
+
+		// Use aerial template if flag is set
+		if useAerial {
+			dirConfig.Custom["useAerial"] = true
+		}
+
+		// Generate sprite for this direction
+		sprite, err := g.Generate(dirConfig)
+		if err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).WithField("direction", dir.name).Error("directional sprite generation failed")
+			}
+			return nil, err
+		}
+
+		sprites[dir.index] = sprite
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"seed":      config.Seed,
+			"useAerial": useAerial,
+			"count":     len(sprites),
+		}).Info("directional sprite sheet generated")
+	}
+
+	return sprites, nil
 }

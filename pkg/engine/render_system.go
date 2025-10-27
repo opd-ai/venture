@@ -389,6 +389,12 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		return
 	}
 
+	// Phase 4: Sync CurrentDirection from AnimationComponent.Facing
+	if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
+		anim := animComp.(*AnimationComponent)
+		sprite.CurrentDirection = int(anim.GetFacing())
+	}
+
 	// Convert world position to screen position
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 

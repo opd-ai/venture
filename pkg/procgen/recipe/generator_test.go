@@ -1,5 +1,4 @@
 package recipe
-package recipe
 
 import (
 	"testing"

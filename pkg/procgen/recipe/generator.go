@@ -29,17 +29,17 @@ type RecipeGenerator struct {
 
 // RecipeTemplate defines a pattern for generating recipes.
 type RecipeTemplate struct {
-	NamePrefix      string
-	NameSuffix      string
-	RecipeType      engine.RecipeType
-	RecipeRarity    engine.RecipeRarity
-	OutputType      item.ItemType
-	MaterialNames   []string // Pool of possible material names
-	MaterialCount   [2]int   // Min and max materials required
-	GoldCostRange   [2]int   // Min and max gold cost
-	SkillRange      [2]int   // Min and max skill requirement
+	NamePrefix       string
+	NameSuffix       string
+	RecipeType       engine.RecipeType
+	RecipeRarity     engine.RecipeRarity
+	OutputType       item.ItemType
+	MaterialNames    []string   // Pool of possible material names
+	MaterialCount    [2]int     // Min and max materials required
+	GoldCostRange    [2]int     // Min and max gold cost
+	SkillRange       [2]int     // Min and max skill requirement
 	BaseSuccessRange [2]float64 // Min and max base success chance
-	CraftTimeRange  [2]float64 // Min and max craft time in seconds
+	CraftTimeRange   [2]float64 // Min and max craft time in seconds
 }
 
 // NewRecipeGenerator creates a new recipe generator.
@@ -146,9 +146,9 @@ func (g *RecipeGenerator) Generate(seed int64, params procgen.GenerationParams) 
 
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
-			"seed":         seed,
-			"recipeCount":  len(recipes),
-			"genreID":      params.GenreID,
+			"seed":        seed,
+			"recipeCount": len(recipes),
+			"genreID":     params.GenreID,
 		}).Debug("recipe generation complete")
 	}
 
@@ -259,10 +259,10 @@ func (g *RecipeGenerator) calculateRarity(rng *rand.Rand, depth int, difficulty 
 	// Base chances: Common 50%, Uncommon 30%, Rare 15%, Epic 4%, Legendary 1%
 	// Modified by depth and difficulty
 	roll := rng.Float64()
-	
+
 	// Adjust thresholds based on depth and difficulty
 	rarityBonus := (float64(depth) * 0.02) + (difficulty * 0.1)
-	
+
 	if roll < 0.50-rarityBonus {
 		return engine.RecipeCommon
 	} else if roll < 0.80-rarityBonus/2 {
@@ -301,24 +301,24 @@ func (g *RecipeGenerator) registerFantasyTemplates() {
 		{
 			NamePrefix: "Healing", NameSuffix: "Potion",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Healing Herb", "Water Flask", "Honey"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{5, 15},
-			SkillRange: [2]int{0, 2},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Healing Herb", "Water Flask", "Honey"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{5, 15},
+			SkillRange:       [2]int{0, 2},
 			BaseSuccessRange: [2]float64{0.75, 0.85},
-			CraftTimeRange: [2]float64{3.0, 5.0},
+			CraftTimeRange:   [2]float64{3.0, 5.0},
 		},
 		{
 			NamePrefix: "Mana", NameSuffix: "Elixir",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeUncommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Mana Crystal", "Purified Water", "Arcane Dust"},
-			MaterialCount: [2]int{2, 4},
-			GoldCostRange: [2]int{15, 30},
-			SkillRange: [2]int{3, 5},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Mana Crystal", "Purified Water", "Arcane Dust"},
+			MaterialCount:    [2]int{2, 4},
+			GoldCostRange:    [2]int{15, 30},
+			SkillRange:       [2]int{3, 5},
 			BaseSuccessRange: [2]float64{0.65, 0.75},
-			CraftTimeRange: [2]float64{5.0, 8.0},
+			CraftTimeRange:   [2]float64{5.0, 8.0},
 		},
 	}
 
@@ -326,13 +326,13 @@ func (g *RecipeGenerator) registerFantasyTemplates() {
 		{
 			NamePrefix: "Minor", NameSuffix: "Enchantment",
 			RecipeType: engine.RecipeEnchanting, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Enchantment Scroll", "Magic Ink", "Silver Dust"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{20, 40},
-			SkillRange: [2]int{2, 4},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Enchantment Scroll", "Magic Ink", "Silver Dust"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{20, 40},
+			SkillRange:       [2]int{2, 4},
 			BaseSuccessRange: [2]float64{0.70, 0.80},
-			CraftTimeRange: [2]float64{8.0, 12.0},
+			CraftTimeRange:   [2]float64{8.0, 12.0},
 		},
 	}
 
@@ -340,13 +340,13 @@ func (g *RecipeGenerator) registerFantasyTemplates() {
 		{
 			NamePrefix: "Apprentice", NameSuffix: "Wand",
 			RecipeType: engine.RecipeMagicItem, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Oak Branch", "Magic Crystal", "Silver Wire"},
-			MaterialCount: [2]int{3, 4},
-			GoldCostRange: [2]int{30, 60},
-			SkillRange: [2]int{5, 7},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Oak Branch", "Magic Crystal", "Silver Wire"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{30, 60},
+			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.60, 0.70},
-			CraftTimeRange: [2]float64{10.0, 15.0},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
 }
@@ -356,13 +356,13 @@ func (g *RecipeGenerator) registerSciFiTemplates() {
 		{
 			NamePrefix: "Nano", NameSuffix: "Stim",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Nano-Gel", "Synth Fluid", "Med-Pack"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{10, 20},
-			SkillRange: [2]int{0, 2},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Nano-Gel", "Synth Fluid", "Med-Pack"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{10, 20},
+			SkillRange:       [2]int{0, 2},
 			BaseSuccessRange: [2]float64{0.75, 0.85},
-			CraftTimeRange: [2]float64{3.0, 5.0},
+			CraftTimeRange:   [2]float64{3.0, 5.0},
 		},
 	}
 
@@ -370,13 +370,13 @@ func (g *RecipeGenerator) registerSciFiTemplates() {
 		{
 			NamePrefix: "Basic", NameSuffix: "Mod-Chip",
 			RecipeType: engine.RecipeEnchanting, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Circuit Board", "Nano-Wire", "Power Cell"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{25, 45},
-			SkillRange: [2]int{2, 4},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Circuit Board", "Nano-Wire", "Power Cell"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{25, 45},
+			SkillRange:       [2]int{2, 4},
 			BaseSuccessRange: [2]float64{0.70, 0.80},
-			CraftTimeRange: [2]float64{8.0, 12.0},
+			CraftTimeRange:   [2]float64{8.0, 12.0},
 		},
 	}
 
@@ -384,13 +384,13 @@ func (g *RecipeGenerator) registerSciFiTemplates() {
 		{
 			NamePrefix: "Plasma", NameSuffix: "Pistol",
 			RecipeType: engine.RecipeMagicItem, RecipeRarity: engine.RecipeUncommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Plasma Core", "Weapon Frame", "Energy Coil"},
-			MaterialCount: [2]int{3, 4},
-			GoldCostRange: [2]int{40, 80},
-			SkillRange: [2]int{5, 7},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Plasma Core", "Weapon Frame", "Energy Coil"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{40, 80},
+			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.60, 0.70},
-			CraftTimeRange: [2]float64{10.0, 15.0},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
 }
@@ -400,13 +400,13 @@ func (g *RecipeGenerator) registerHorrorTemplates() {
 		{
 			NamePrefix: "Blood", NameSuffix: "Tincture",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Dried Blood", "Bone Dust", "Dark Herb"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{8, 18},
-			SkillRange: [2]int{0, 2},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Dried Blood", "Bone Dust", "Dark Herb"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{8, 18},
+			SkillRange:       [2]int{0, 2},
 			BaseSuccessRange: [2]float64{0.70, 0.80},
-			CraftTimeRange: [2]float64{4.0, 6.0},
+			CraftTimeRange:   [2]float64{4.0, 6.0},
 		},
 	}
 
@@ -414,13 +414,13 @@ func (g *RecipeGenerator) registerHorrorTemplates() {
 		{
 			NamePrefix: "Cursed", NameSuffix: "Binding",
 			RecipeType: engine.RecipeEnchanting, RecipeRarity: engine.RecipeUncommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Ritual Scroll", "Soul Fragment", "Black Ink"},
-			MaterialCount: [2]int{2, 4},
-			GoldCostRange: [2]int{20, 50},
-			SkillRange: [2]int{3, 5},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Ritual Scroll", "Soul Fragment", "Black Ink"},
+			MaterialCount:    [2]int{2, 4},
+			GoldCostRange:    [2]int{20, 50},
+			SkillRange:       [2]int{3, 5},
 			BaseSuccessRange: [2]float64{0.65, 0.75},
-			CraftTimeRange: [2]float64{10.0, 15.0},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
 
@@ -428,13 +428,13 @@ func (g *RecipeGenerator) registerHorrorTemplates() {
 		{
 			NamePrefix: "Bone", NameSuffix: "Dagger",
 			RecipeType: engine.RecipeMagicItem, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Human Bone", "Dark Crystal", "Sinew"},
-			MaterialCount: [2]int{3, 4},
-			GoldCostRange: [2]int{35, 65},
-			SkillRange: [2]int{5, 7},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Human Bone", "Dark Crystal", "Sinew"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{35, 65},
+			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.60, 0.70},
-			CraftTimeRange: [2]float64{12.0, 18.0},
+			CraftTimeRange:   [2]float64{12.0, 18.0},
 		},
 	}
 }
@@ -444,13 +444,13 @@ func (g *RecipeGenerator) registerCyberpunkTemplates() {
 		{
 			NamePrefix: "Street", NameSuffix: "Juice",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Synth-Chem", "Neuro-Booster", "Filter Capsule"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{12, 22},
-			SkillRange: [2]int{0, 2},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Synth-Chem", "Neuro-Booster", "Filter Capsule"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{12, 22},
+			SkillRange:       [2]int{0, 2},
 			BaseSuccessRange: [2]float64{0.75, 0.85},
-			CraftTimeRange: [2]float64{3.0, 5.0},
+			CraftTimeRange:   [2]float64{3.0, 5.0},
 		},
 	}
 
@@ -458,13 +458,13 @@ func (g *RecipeGenerator) registerCyberpunkTemplates() {
 		{
 			NamePrefix: "Neural", NameSuffix: "Upgrade",
 			RecipeType: engine.RecipeEnchanting, RecipeRarity: engine.RecipeUncommon,
-			OutputType: item.TypeAccessory,
-			MaterialNames: []string{"Neural Link", "Bio-Circuit", "Interface Chip"},
-			MaterialCount: [2]int{2, 4},
-			GoldCostRange: [2]int{30, 60},
-			SkillRange: [2]int{3, 5},
+			OutputType:       item.TypeAccessory,
+			MaterialNames:    []string{"Neural Link", "Bio-Circuit", "Interface Chip"},
+			MaterialCount:    [2]int{2, 4},
+			GoldCostRange:    [2]int{30, 60},
+			SkillRange:       [2]int{3, 5},
 			BaseSuccessRange: [2]float64{0.65, 0.75},
-			CraftTimeRange: [2]float64{8.0, 12.0},
+			CraftTimeRange:   [2]float64{8.0, 12.0},
 		},
 	}
 
@@ -472,13 +472,13 @@ func (g *RecipeGenerator) registerCyberpunkTemplates() {
 		{
 			NamePrefix: "Cyber", NameSuffix: "Blade",
 			RecipeType: engine.RecipeMagicItem, RecipeRarity: engine.RecipeUncommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Titanium Alloy", "Mono-Wire", "Power Core"},
-			MaterialCount: [2]int{3, 4},
-			GoldCostRange: [2]int{45, 85},
-			SkillRange: [2]int{5, 7},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Titanium Alloy", "Mono-Wire", "Power Core"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{45, 85},
+			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.60, 0.70},
-			CraftTimeRange: [2]float64{10.0, 15.0},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
 }
@@ -488,13 +488,13 @@ func (g *RecipeGenerator) registerPostApocTemplates() {
 		{
 			NamePrefix: "Wasteland", NameSuffix: "Remedy",
 			RecipeType: engine.RecipePotion, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeConsumable,
-			MaterialNames: []string{"Purified Water", "Scrap Medicine", "Mutant Plant"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{6, 16},
-			SkillRange: [2]int{0, 2},
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Purified Water", "Scrap Medicine", "Mutant Plant"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{6, 16},
+			SkillRange:       [2]int{0, 2},
 			BaseSuccessRange: [2]float64{0.70, 0.80},
-			CraftTimeRange: [2]float64{4.0, 6.0},
+			CraftTimeRange:   [2]float64{4.0, 6.0},
 		},
 	}
 
@@ -502,13 +502,13 @@ func (g *RecipeGenerator) registerPostApocTemplates() {
 		{
 			NamePrefix: "Scrap", NameSuffix: "Modification",
 			RecipeType: engine.RecipeEnchanting, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Scrap Metal", "Duct Tape", "Rusty Nails"},
-			MaterialCount: [2]int{2, 3},
-			GoldCostRange: [2]int{15, 30},
-			SkillRange: [2]int{2, 4},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Scrap Metal", "Duct Tape", "Rusty Nails"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{15, 30},
+			SkillRange:       [2]int{2, 4},
 			BaseSuccessRange: [2]float64{0.70, 0.80},
-			CraftTimeRange: [2]float64{6.0, 10.0},
+			CraftTimeRange:   [2]float64{6.0, 10.0},
 		},
 	}
 
@@ -516,13 +516,13 @@ func (g *RecipeGenerator) registerPostApocTemplates() {
 		{
 			NamePrefix: "Makeshift", NameSuffix: "Weapon",
 			RecipeType: engine.RecipeMagicItem, RecipeRarity: engine.RecipeCommon,
-			OutputType: item.TypeWeapon,
-			MaterialNames: []string{"Scrap Metal", "Pipe", "Wire"},
-			MaterialCount: [2]int{3, 4},
-			GoldCostRange: [2]int{25, 50},
-			SkillRange: [2]int{5, 7},
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Scrap Metal", "Pipe", "Wire"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{25, 50},
+			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.65, 0.75},
-			CraftTimeRange: [2]float64{8.0, 12.0},
+			CraftTimeRange:   [2]float64{8.0, 12.0},
 		},
 	}
 }

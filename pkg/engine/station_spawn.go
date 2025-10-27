@@ -16,7 +16,7 @@ import (
 // StationData represents procedurally generated crafting station data.
 // This avoids import cycle between pkg/procgen/station and pkg/engine.
 type StationData struct {
-	StationType int    // 0=alchemy, 1=forge, 2=workbench
+	StationType int // 0=alchemy, 1=forge, 2=workbench
 	Name        string
 	SpawnX      float64
 	SpawnY      float64

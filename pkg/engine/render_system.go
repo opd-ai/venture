@@ -253,7 +253,7 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 			r.drawEntity(entity)
 			r.stats.RenderedEntities++
 		}
-	}	// Calculate culled count
+	} // Calculate culled count
 	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
 
 	// GAP-016 REPAIR: Draw particle effects
@@ -309,7 +309,7 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 		r.drawEntity(entity)
 		r.stats.RenderedEntities++
 	}
-}// drawBatch renders a group of entities with the same sprite image using vertex batching.
+} // drawBatch renders a group of entities with the same sprite image using vertex batching.
 // This combines multiple sprites into a single DrawTriangles call for better performance.
 func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 	if len(entities) == 0 {

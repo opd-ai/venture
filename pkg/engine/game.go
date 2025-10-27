@@ -67,6 +67,11 @@ type EbitenGame struct {
 
 	// Logger for game operations
 	logger *logrus.Entry
+
+	// Performance monitoring
+	frameTimeTracker *FrameTimeTracker
+	frameCount       uint64
+	profilingEnabled bool
 }
 
 // NewEbitenGame creates a new game instance with Ebiten integration.
@@ -128,6 +133,9 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
 
+	// Initialize frame time tracker (disabled by default, enabled via EnableFrameTimeProfiling)
+	frameTimeTracker := NewFrameTimeTracker(1000) // Track last 1000 frames (~16 seconds at 60 FPS)
+
 	game := &EbitenGame{
 		World:              world,
 		lastUpdateTime:     time.Now(),
@@ -152,6 +160,9 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		SkillsUI:           skillsUI,
 		MapUI:              mapUI,
 		logger:             logEntry,
+		frameTimeTracker:   frameTimeTracker,
+		frameCount:         0,
+		profilingEnabled:   false,
 	}
 
 	if logEntry != nil {
@@ -551,6 +562,37 @@ func (g *EbitenGame) IsInMainMenu() bool {
 
 // Update implements ebiten.Game interface. Called every frame.
 func (g *EbitenGame) Update() error {
+	// Track frame time for performance monitoring
+	frameStart := time.Now()
+	defer func() {
+		if g.profilingEnabled && g.frameTimeTracker != nil {
+			g.frameTimeTracker.RecordFrame(time.Since(frameStart))
+			g.frameCount++
+
+			// Log stats every 300 frames (5 seconds at 60 FPS)
+			if g.frameCount%300 == 0 && g.logger != nil {
+				stats := g.frameTimeTracker.GetStats()
+				fields := logrus.Fields{
+					"avg_ms":      stats.Average.Milliseconds(),
+					"min_ms":      stats.Min.Milliseconds(),
+					"max_ms":      stats.Max.Milliseconds(),
+					"1pct_low_ms": stats.Percentile1.Milliseconds(),
+					"avg_fps":     stats.GetFPS(),
+					"worst_fps":   stats.GetWorstFPS(),
+					"samples":     stats.SampleCount,
+				}
+
+				// Warn if stuttering detected
+				if stats.IsStuttering() {
+					fields["stuttering"] = true
+					g.logger.WithFields(fields).Warn("frame time stuttering detected")
+				} else {
+					g.logger.WithFields(fields).Info("frame time stats")
+				}
+			}
+		}
+	}()
+
 	// Calculate delta time
 	now := time.Now()
 	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
@@ -1018,6 +1060,32 @@ func (g *EbitenGame) ApplySettings() error {
 	}
 
 	return nil
+}
+
+// EnableFrameTimeProfiling enables performance profiling with frame time tracking.
+// This should be called before starting the game loop.
+func (g *EbitenGame) EnableFrameTimeProfiling() {
+	g.profilingEnabled = true
+	if g.logger != nil {
+		g.logger.Info("frame time profiling enabled")
+	}
+}
+
+// DisableFrameTimeProfiling disables performance profiling.
+func (g *EbitenGame) DisableFrameTimeProfiling() {
+	g.profilingEnabled = false
+	if g.logger != nil {
+		g.logger.Info("frame time profiling disabled")
+	}
+}
+
+// GetFrameTimeStats returns the current frame time statistics.
+// Returns empty stats if profiling is disabled or no frames recorded.
+func (g *EbitenGame) GetFrameTimeStats() FrameTimeStats {
+	if g.frameTimeTracker == nil {
+		return FrameTimeStats{}
+	}
+	return g.frameTimeTracker.GetStats()
 }
 
 // Run starts the game loop.

@@ -45,6 +45,7 @@ var (
 	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID       = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
+	profile       = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
 	multiplayer   = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
 	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
 	hostAndPlay   = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
@@ -371,6 +372,12 @@ func main() {
 
 	// Create the game instance
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
+
+	// Enable performance profiling if requested
+	if *profile {
+		game.EnableFrameTimeProfiling()
+		clientLogger.Info("performance profiling enabled - frame time stats will be logged every 5 seconds")
+	}
 
 	// Initialize game systems
 	clientLogger.Info("initializing game systems")

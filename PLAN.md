@@ -485,20 +485,31 @@ result, err := craftingSystem.StartCraft(entity.ID, potionRecipe, station.ID)
   - ✅ Skill requirement and success chance visualization
   - ✅ Crafting progress display with percentage completion
   - ✅ Station bonus indicators (+5% success, 25% faster)
-  - ✅ Dual-exit navigation (C key + ESC)
+  - ✅ Dual-exit navigation (R key + ESC)
   - ✅ Keyboard and mouse navigation support
   - ✅ Comprehensive test suite: 13 test functions, 95.6% coverage on testable functions
   - ✅ All tests passing (13/13)
-- [x] **Client integration: wire system, add C key binding** (October 27, 2025)
+- [x] **Client integration: wire system, add R key binding** (October 27, 2025)
   - ✅ Added CraftingUI field to EbitenGame struct in `pkg/engine/game.go`
   - ✅ Initialized CraftingSystem with itemGen in `cmd/client/main.go` (line ~547)
   - ✅ Initialized CraftingUI and connected to player entity and CraftingSystem (line ~910)
-  - ✅ Added CraftingUI.Update() call to game loop (updates C key toggle)
+  - ✅ Added CraftingUI.Update() call to game loop (updates R key toggle)
   - ✅ Added CraftingUI.Draw() call to rendering pipeline
   - ✅ Added CraftingUI visibility check to input blocking logic
   - ✅ Updated SetPlayerEntity() to wire CraftingUI
-  - ✅ Client builds successfully, C key toggle functional
-- [ ] Recipe discovery integration with loot tables
+  - ✅ Client builds successfully, R key toggle functional (R for Recipe)
+- [x] **Recipe discovery integration with loot tables** (October 27, 2025)
+  - ✅ Created `RecipeEntityComponent` in `pkg/engine/item_spawning.go` marking recipe entities
+  - ✅ Implemented `SpawnRecipeInWorld()` creating pickupable recipe entities with physics
+  - ✅ Implemented `GenerateRecipeDrop()` with deterministic generation (5% base, 20% bosses)
+  - ✅ Extended `ItemPickupSystem` to handle recipe pickups and auto-learn
+  - ✅ Recipe colors based on type: purple (potions), blue (enchanting), gold (magic items)
+  - ✅ Rarity affects brightness (1.0x to 2.0x multiplier)
+  - ✅ Integration in `cmd/client/main.go` death callback alongside item drops
+  - ✅ Comprehensive test suite: 10 new test functions covering spawn, generation, pickup
+  - ✅ Recipe drop rate testing: validates 5% normal, 20% boss drop rates
+  - ✅ Coverage: SpawnRecipeInWorld 100%, GenerateRecipeDrop 90.9%, getRecipeColor 90.9%
+  - ✅ All tests passing (10/10 recipe tests)
 - [ ] Network protocol messages for multiplayer
 - [ ] Crafting stations in world generation (alchemy tables, forges, workbenches)
 

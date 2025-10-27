@@ -122,9 +122,9 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Dual-exit navigation: C key (toggle) OR ESC (close only)
-	// Note: Crafting uses C key by convention (though not yet added to MenuKeys)
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	// Dual-exit navigation: R key (toggle) OR ESC (close only)
+	// Note: Crafting uses R key (R for Recipe)
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		ui.Toggle()
 		return
 	}

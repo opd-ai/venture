@@ -1,5 +1,5 @@
 // Package engine provides item spawning and loot drop functionality.
-// This file implements SpawnItemInWorld and loot drop mechanics for the combat system.
+// This file implements SpawnItemInWorld, SpawnRecipeInWorld, and loot drop mechanics for the combat system.
 package engine
 
 import (
@@ -116,6 +116,63 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 
 	// Spawn the item in the world
 	return SpawnItemInWorld(world, items[0], x, y)
+}
+
+// GenerateRecipeDrop creates a random recipe appropriate for the enemy's level and drops it.
+// Uses the procedural recipe generator with scaling based on enemy difficulty.
+// Returns nil if no recipe should be dropped (based on drop chance).
+// Recipe drop chances are lower than item drops to maintain balance.
+func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
+	// Calculate recipe drop chance based on enemy type
+	// Recipes are rarer than items: 5% base, 20% for bosses
+	dropChance := 0.05 // 5% base drop chance for recipes
+
+	// Increase drop chance for bosses/elites
+	if statsComp, ok := enemy.GetComponent("stats"); ok {
+		stats := statsComp.(*StatsComponent)
+		if stats.Attack > 20 || stats.Defense > 20 {
+			dropChance = 0.2 // 20% for strong enemies
+		}
+	}
+
+	// Roll for drop
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 500))
+	if rng.Float64() > dropChance {
+		return nil // No recipe drop
+	}
+
+	// Determine recipe depth/difficulty from enemy stats
+	depth := 1
+	difficulty := 0.3 // Start lower for common recipes
+
+	if expComp, ok := enemy.GetComponent("experience"); ok {
+		exp := expComp.(*ExperienceComponent)
+		depth = exp.Level
+		difficulty = 0.3 + float64(depth)*0.05 // Scale with depth
+	}
+
+	// Generate recipe
+	params := procgen.GenerationParams{
+		Difficulty: difficulty,
+		Depth:      depth,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 1, // Generate 1 recipe
+		},
+	}
+
+	result, err := recipeGen.Generate(seed+int64(enemy.ID)+1000, params)
+	if err != nil {
+		return nil
+	}
+
+	recipes := result.([]*Recipe)
+	if len(recipes) == 0 {
+		return nil
+	}
+
+	// Spawn the recipe in the world
+	return SpawnRecipeInWorld(world, recipes[0], x, y)
 }
 
 // getItemColor determines the sprite color based on item type and rarity.
@@ -295,5 +352,183 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 				}
 			}
 		}
+
+		// Check for recipe entities
+		var recipes []*Entity
+		for _, entity := range entities {
+			if entity.HasComponent("recipe_entity") {
+				recipes = append(recipes, entity)
+			}
+		}
+
+		// Check each player against each recipe
+		for _, recipeEntity := range recipes {
+			_, hasRecipePos := recipeEntity.GetComponent("position")
+			if !hasRecipePos {
+				continue
+			}
+
+			recipeEntityComp, hasRecipeData := recipeEntity.GetComponent("recipe_entity")
+			if !hasRecipeData {
+				continue
+			}
+
+			recipeData := recipeEntityComp.(*RecipeEntityComponent)
+
+			// Check distance for pickup (32 pixels = 1 tile)
+			distance := GetDistance(player, recipeEntity)
+			if distance <= 32.0 {
+				// Get player's recipe knowledge component
+				knowledgeComp, hasKnowledge := player.GetComponent("recipe_knowledge")
+				if !hasKnowledge {
+					// Player doesn't have recipe knowledge component, create one
+					knowledgeComp = NewRecipeKnowledgeComponent(0) // Unlimited recipes
+					player.AddComponent(knowledgeComp)
+				}
+
+				knowledge := knowledgeComp.(*RecipeKnowledgeComponent)
+
+				// Check if player already knows this recipe
+				if knowledge.KnowsRecipe(recipeData.Recipe.ID) {
+					// Already known, show message
+					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+						tutorialSys.ShowNotification("Recipe already known!", 1.5)
+					}
+					continue
+				}
+
+				// Learn the recipe
+				if !knowledge.LearnRecipe(recipeData.Recipe) {
+					// Failed to learn (recipe limit reached?)
+					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+						tutorialSys.ShowNotification("Cannot learn more recipes!", 2.0)
+					}
+					continue
+				}
+
+				// Successfully learned
+				// Remove recipe entity from world
+				s.world.RemoveEntity(recipeEntity.ID)
+
+				// GAP-015 REPAIR: Play pickup sound effect (different from item pickup)
+				if audioSys := s.getAudioManager(); audioSys != nil {
+					if err := audioSys.PlaySFX("spell", int64(recipeEntity.ID)); err != nil {
+						// Audio failure is non-critical, log and continue
+						_ = err
+					}
+				}
+
+				// GAP-015 REPAIR: Show recipe learned notification
+				if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+					notifText := fmt.Sprintf("Learned Recipe: %s", recipeData.Recipe.Name)
+					tutorialSys.ShowNotification(notifText, 3.0)
+				}
+			}
+		}
+	}
+}
+
+// RecipeEntityComponent marks an entity as representing a collectable recipe in the world.
+// When the player collides with this entity, the recipe is learned.
+type RecipeEntityComponent struct {
+	Recipe *Recipe // The procedurally generated recipe
+}
+
+// Type returns the component type identifier.
+func (r *RecipeEntityComponent) Type() string {
+	return "recipe_entity"
+}
+
+// SpawnRecipeInWorld creates a recipe entity at the specified world position.
+// The recipe becomes a physical object that players can walk over to learn.
+// Returns the spawned recipe entity.
+func SpawnRecipeInWorld(world *World, recipe *Recipe, x, y float64) *Entity {
+	if recipe == nil {
+		return nil
+	}
+
+	// Create recipe entity
+	recipeEntity := world.CreateEntity()
+
+	// Position in world
+	recipeEntity.AddComponent(&PositionComponent{
+		X: x,
+		Y: y,
+	})
+
+	// Visual representation - recipes look like scrolls/books
+	recipeSize := 24.0
+	recipeColor := getRecipeColor(recipe)
+	sprite := NewSpriteComponent(recipeSize, recipeSize, recipeColor)
+	sprite.Layer = 3 // Recipes drawn at same layer as items
+	recipeEntity.AddComponent(sprite)
+
+	// Collision for pickup detection
+	recipeEntity.AddComponent(&ColliderComponent{
+		Width:     recipeSize,
+		Height:    recipeSize,
+		Solid:     false, // Recipes don't block movement
+		IsTrigger: true,  // Trigger collision events for pickup
+		Layer:     3,     // Recipe collision layer
+		OffsetX:   -recipeSize / 2,
+		OffsetY:   -recipeSize / 2,
+	})
+
+	// Mark as recipe entity with the recipe data
+	recipeEntity.AddComponent(&RecipeEntityComponent{
+		Recipe: recipe,
+	})
+
+	return recipeEntity
+}
+
+// getRecipeColor determines the sprite color based on recipe type and rarity.
+// Recipes appear as magical scrolls with colors indicating their properties.
+func getRecipeColor(recipe *Recipe) color.RGBA {
+	// Base color by recipe type
+	var baseColor color.RGBA
+	switch recipe.Type {
+	case RecipePotion:
+		baseColor = color.RGBA{150, 100, 200, 255} // Purple for potions
+	case RecipeEnchanting:
+		baseColor = color.RGBA{100, 150, 250, 255} // Blue for enchanting
+	case RecipeMagicItem:
+		baseColor = color.RGBA{200, 150, 100, 255} // Gold for magic items
+	default:
+		baseColor = color.RGBA{180, 180, 180, 255} // Gray default
+	}
+
+	// Modify by rarity
+	rarityMultiplier := 1.0
+	switch recipe.Rarity {
+	case RecipeUncommon:
+		rarityMultiplier = 1.15
+	case RecipeRare:
+		rarityMultiplier = 1.35
+	case RecipeEpic:
+		rarityMultiplier = 1.6
+	case RecipeLegendary:
+		rarityMultiplier = 2.0
+	}
+
+	// Apply rarity brightness (clamp to 255)
+	r := float64(baseColor.R) * rarityMultiplier
+	if r > 255 {
+		r = 255
+	}
+	g := float64(baseColor.G) * rarityMultiplier
+	if g > 255 {
+		g = 255
+	}
+	b := float64(baseColor.B) * rarityMultiplier
+	if b > 255 {
+		b = 255
+	}
+
+	return color.RGBA{
+		R: uint8(r),
+		G: uint8(g),
+		B: uint8(b),
+		A: 255,
 	}
 }

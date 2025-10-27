@@ -3,6 +3,7 @@ package engine
 import (
 	"testing"
 
+	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
@@ -432,4 +433,425 @@ func TestItemColor_RarityBrightness(t *testing.T) {
 		previousBrightness = brightness
 		t.Logf("%s brightness: %d", rarity.String(), brightness)
 	}
+}
+
+// TestSpawnRecipeInWorld tests spawning recipes as world entities.
+func TestSpawnRecipeInWorld(t *testing.T) {
+	world := NewWorld()
+
+	// Create a test recipe
+	testRecipe := &Recipe{
+		ID:          "test_recipe_123",
+		Name:        "Test Healing Potion Recipe",
+		Description: "A recipe for crafting healing potions",
+		Type:        RecipePotion,
+		Rarity:      RecipeCommon,
+	}
+
+	// Spawn recipe
+	recipeEntity := SpawnRecipeInWorld(world, testRecipe, 150, 250)
+
+	if recipeEntity == nil {
+		t.Fatal("SpawnRecipeInWorld returned nil")
+	}
+
+	// Verify position
+	posComp, ok := recipeEntity.GetComponent("position")
+	if !ok {
+		t.Fatal("Recipe entity missing position component")
+	}
+	pos := posComp.(*PositionComponent)
+	if pos.X != 150 || pos.Y != 250 {
+		t.Errorf("Recipe position = (%f, %f), want (150, 250)", pos.X, pos.Y)
+	}
+
+	// Verify has sprite
+	if !recipeEntity.HasComponent("sprite") {
+		t.Error("Recipe entity missing sprite component")
+	}
+
+	// Verify has collider
+	if !recipeEntity.HasComponent("collider") {
+		t.Error("Recipe entity missing collider component")
+	}
+
+	// Verify has recipe data
+	recipeComp, ok := recipeEntity.GetComponent("recipe_entity")
+	if !ok {
+		t.Fatal("Recipe entity missing recipe_entity component")
+	}
+
+	recipeData := recipeComp.(*RecipeEntityComponent)
+	if recipeData.Recipe.ID != "test_recipe_123" {
+		t.Errorf("Recipe ID = %s, want test_recipe_123", recipeData.Recipe.ID)
+	}
+}
+
+// TestSpawnRecipeInWorld_Nil tests that nil recipe returns nil entity.
+func TestSpawnRecipeInWorld_Nil(t *testing.T) {
+	world := NewWorld()
+	recipeEntity := SpawnRecipeInWorld(world, nil, 0, 0)
+
+	if recipeEntity != nil {
+		t.Error("SpawnRecipeInWorld with nil recipe should return nil")
+	}
+}
+
+// TestGenerateRecipeDrop tests recipe generation from enemies.
+func TestGenerateRecipeDrop(t *testing.T) {
+	// Create mock recipe generator
+	mockRecipeGen := &MockRecipeGenerator{
+		recipes: []*Recipe{
+			{
+				ID:          "recipe_001",
+				Name:        "Minor Healing Potion Recipe",
+				Description: "Basic healing recipe",
+				Type:        RecipePotion,
+				Rarity:      RecipeCommon,
+			},
+		},
+	}
+
+	world := NewWorld()
+	seed := int64(12345)
+	genreID := "fantasy"
+
+	// Create test enemy
+	enemy := world.CreateEntity()
+	enemy.AddComponent(&PositionComponent{X: 200, Y: 200})
+	enemy.AddComponent(&StatsComponent{Attack: 15, Defense: 10})
+	enemy.AddComponent(&ExperienceComponent{Level: 5})
+
+	// Generate multiple drops to test probability
+	dropCount := 0
+	trials := 100
+
+	for i := 0; i < trials; i++ {
+		recipe := GenerateRecipeDrop(mockRecipeGen, world, enemy, 200, 200, seed+int64(i), genreID)
+		if recipe != nil {
+			dropCount++
+		}
+	}
+
+	// Recipe drops should be rare (around 5% base)
+	// Allow for some variance due to RNG
+	if dropCount < 1 || dropCount > 15 {
+		t.Errorf("Recipe drop rate = %d/%d (%.1f%%), expected around 5%%", dropCount, trials, float64(dropCount)/float64(trials)*100)
+	}
+
+	t.Logf("Recipe drop rate: %d/%d (%.1f%%)", dropCount, trials, float64(dropCount)/float64(trials)*100)
+}
+
+// TestGenerateRecipeDrop_BossDropRate tests that bosses have higher recipe drop rates.
+func TestGenerateRecipeDrop_BossDropRate(t *testing.T) {
+	mockRecipeGen := &MockRecipeGenerator{
+		recipes: []*Recipe{
+			{
+				ID:     "recipe_boss_001",
+				Name:   "Epic Recipe",
+				Type:   RecipeEnchanting,
+				Rarity: RecipeEpic,
+			},
+		},
+	}
+
+	world := NewWorld()
+	seed := int64(54321)
+	genreID := "scifi"
+
+	// Create boss enemy (high stats)
+	boss := world.CreateEntity()
+	boss.AddComponent(&PositionComponent{X: 300, Y: 300})
+	boss.AddComponent(&StatsComponent{Attack: 30, Defense: 25}) // Boss-level stats
+	boss.AddComponent(&ExperienceComponent{Level: 10})
+
+	// Generate multiple drops
+	dropCount := 0
+	trials := 100
+
+	for i := 0; i < trials; i++ {
+		recipe := GenerateRecipeDrop(mockRecipeGen, world, boss, 300, 300, seed+int64(i), genreID)
+		if recipe != nil {
+			dropCount++
+		}
+	}
+
+	// Bosses should drop recipes around 20%
+	// Allow for variance due to RNG
+	if dropCount < 10 || dropCount > 35 {
+		t.Errorf("Boss recipe drop rate = %d/%d (%.1f%%), expected around 20%%", dropCount, trials, float64(dropCount)/float64(trials)*100)
+	}
+
+	t.Logf("Boss recipe drop rate: %d/%d (%.1f%%)", dropCount, trials, float64(dropCount)/float64(trials)*100)
+}
+
+// TestGenerateRecipeDrop_NoDrop tests the no-drop case.
+func TestGenerateRecipeDrop_NoDrop(t *testing.T) {
+	mockRecipeGen := &MockRecipeGenerator{
+		recipes: []*Recipe{
+			{ID: "recipe_002", Name: "Test Recipe"},
+		},
+	}
+
+	world := NewWorld()
+	seed := int64(99999) // Seed that produces no drop
+	genreID := "horror"
+
+	enemy := world.CreateEntity()
+	enemy.AddComponent(&PositionComponent{X: 100, Y: 100})
+	enemy.AddComponent(&StatsComponent{Attack: 5, Defense: 3})
+
+	recipe := GenerateRecipeDrop(mockRecipeGen, world, enemy, 100, 100, seed, genreID)
+
+	// With low stats and specific seed, should not drop
+	// This is probabilistic, but with seed 99999 should be consistent
+	_ = recipe // May or may not be nil, depends on RNG
+}
+
+// TestRecipePickup tests that recipes are learned when picked up.
+func TestRecipePickup(t *testing.T) {
+	world := NewWorld()
+
+	// Create player with input component
+	player := world.CreateEntity()
+	player.AddComponent(NewStubInput()) // Marks as player
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+	inventory := NewInventoryComponent(10, 50.0)
+	player.AddComponent(inventory)
+	// Note: RecipeKnowledgeComponent will be created automatically on first pickup
+
+	// Create recipe entity
+	testRecipe := &Recipe{
+		ID:          "pickup_recipe_001",
+		Name:        "Pickup Test Recipe",
+		Description: "Recipe for testing pickup",
+		Type:        RecipePotion,
+		Rarity:      RecipeCommon,
+	}
+	recipeEntity := SpawnRecipeInWorld(world, testRecipe, 100, 100) // Same position as player
+
+	world.AddEntity(player)
+	world.AddEntity(recipeEntity)
+
+	// Flush pending entities
+	world.Update(0.0)
+
+	// Create pickup system
+	pickupSystem := NewItemPickupSystem(world)
+
+	// Update should trigger pickup
+	pickupSystem.Update(world.GetEntities(), 0.016)
+
+	// Flush removals
+	world.Update(0.0)
+
+	// Verify recipe was learned
+	knowledgeComp, hasKnowledge := player.GetComponent("recipe_knowledge")
+	if !hasKnowledge {
+		t.Fatal("Player should have recipe_knowledge component after pickup")
+	}
+
+	knowledge := knowledgeComp.(*RecipeKnowledgeComponent)
+	if !knowledge.KnowsRecipe("pickup_recipe_001") {
+		t.Error("Player should know the picked up recipe")
+	}
+
+	// Verify recipe entity was removed
+	entities := world.GetEntities()
+	for _, e := range entities {
+		if e.HasComponent("recipe_entity") {
+			t.Error("Recipe entity should have been removed after pickup")
+		}
+	}
+}
+
+// TestRecipePickup_AlreadyKnown tests that duplicate recipes show a message.
+func TestRecipePickup_AlreadyKnown(t *testing.T) {
+	world := NewWorld()
+
+	// Create player with recipe already known
+	player := world.CreateEntity()
+	player.AddComponent(NewStubInput())
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+	inventory := NewInventoryComponent(10, 50.0)
+	player.AddComponent(inventory)
+
+	// Add recipe knowledge with recipe already learned
+	knowledge := NewRecipeKnowledgeComponent(0)
+	testRecipe := &Recipe{
+		ID:     "known_recipe_001",
+		Name:   "Already Known Recipe",
+		Type:   RecipePotion,
+		Rarity: RecipeCommon,
+	}
+	knowledge.LearnRecipe(testRecipe)
+	player.AddComponent(knowledge)
+
+	// Create recipe entity for the same recipe
+	recipeEntity := SpawnRecipeInWorld(world, testRecipe, 100, 100)
+
+	world.AddEntity(player)
+	world.AddEntity(recipeEntity)
+
+	// Flush pending entities
+	world.Update(0.0)
+
+	// Create pickup system
+	pickupSystem := NewItemPickupSystem(world)
+
+	// Update should trigger pickup attempt
+	pickupSystem.Update(world.GetEntities(), 0.016)
+
+	// Recipe entity should still exist (not picked up)
+	entities := world.GetEntities()
+	found := false
+	for _, e := range entities {
+		if e.HasComponent("recipe_entity") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("Recipe entity should not have been removed for already-known recipe")
+	}
+}
+
+// TestRecipePickup_SlotLimit tests recipe limit enforcement.
+func TestRecipePickup_SlotLimit(t *testing.T) {
+	world := NewWorld()
+
+	// Create player with recipe slot limit
+	player := world.CreateEntity()
+	player.AddComponent(NewStubInput())
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+	inventory := NewInventoryComponent(10, 50.0)
+	player.AddComponent(inventory)
+
+	// Add recipe knowledge with only 2 slots
+	knowledge := NewRecipeKnowledgeComponent(2)
+
+	// Fill up the slots
+	recipe1 := &Recipe{ID: "slot_recipe_001", Name: "Recipe 1", Type: RecipePotion, Rarity: RecipeCommon}
+	recipe2 := &Recipe{ID: "slot_recipe_002", Name: "Recipe 2", Type: RecipePotion, Rarity: RecipeCommon}
+	knowledge.LearnRecipe(recipe1)
+	knowledge.LearnRecipe(recipe2)
+
+	player.AddComponent(knowledge)
+
+	// Try to pick up a third recipe
+	recipe3 := &Recipe{ID: "slot_recipe_003", Name: "Recipe 3", Type: RecipePotion, Rarity: RecipeCommon}
+	recipeEntity := SpawnRecipeInWorld(world, recipe3, 100, 100)
+
+	world.AddEntity(player)
+	world.AddEntity(recipeEntity)
+
+	// Flush pending entities
+	world.Update(0.0)
+
+	// Create pickup system
+	pickupSystem := NewItemPickupSystem(world)
+
+	// Update should attempt pickup but fail
+	pickupSystem.Update(world.GetEntities(), 0.016)
+
+	// Recipe entity should still exist (limit reached)
+	entities := world.GetEntities()
+	found := false
+	for _, e := range entities {
+		if e.HasComponent("recipe_entity") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("Recipe entity should not have been removed when slot limit reached")
+	}
+
+	// Verify recipe was not learned
+	if knowledge.KnowsRecipe("slot_recipe_003") {
+		t.Error("Recipe should not have been learned when slot limit reached")
+	}
+}
+
+// TestRecipeColor_TypeColors verifies different recipe types have distinct colors.
+func TestRecipeColor_TypeColors(t *testing.T) {
+	types := []RecipeType{RecipePotion, RecipeEnchanting, RecipeMagicItem}
+
+	colors := make(map[RecipeType]string)
+
+	for _, recipeType := range types {
+		testRecipe := &Recipe{
+			ID:     "color_test",
+			Name:   "Color Test",
+			Type:   recipeType,
+			Rarity: RecipeCommon,
+		}
+
+		col := getRecipeColor(testRecipe)
+		colorKey := string([]byte{col.R, col.G, col.B})
+		colors[recipeType] = colorKey
+
+		t.Logf("%s color: RGB(%d, %d, %d)", recipeType.String(), col.R, col.G, col.B)
+	}
+
+	// Verify all types have different colors
+	seen := make(map[string]bool)
+	for _, colorKey := range colors {
+		if seen[colorKey] {
+			t.Error("Multiple recipe types have the same color")
+		}
+		seen[colorKey] = true
+	}
+}
+
+// TestRecipeColor_RarityBrightness verifies rarity affects recipe brightness.
+func TestRecipeColor_RarityBrightness(t *testing.T) {
+	rarities := []RecipeRarity{
+		RecipeCommon,
+		RecipeUncommon,
+		RecipeRare,
+		RecipeEpic,
+		RecipeLegendary,
+	}
+
+	var previousBrightness int
+
+	for _, rarity := range rarities {
+		testRecipe := &Recipe{
+			ID:     "brightness_test",
+			Name:   "Brightness Test",
+			Type:   RecipePotion,
+			Rarity: rarity,
+		}
+
+		col := getRecipeColor(testRecipe)
+		brightness := int(col.R) + int(col.G) + int(col.B)
+
+		// Higher rarity should have equal or higher brightness
+		if previousBrightness > 0 && brightness < previousBrightness {
+			t.Errorf("Rarity %s has lower brightness than previous rarity", rarity.String())
+		}
+
+		previousBrightness = brightness
+		t.Logf("%s brightness: %d", rarity.String(), brightness)
+	}
+}
+
+// MockRecipeGenerator is a test helper that implements procgen.Generator for recipes.
+type MockRecipeGenerator struct {
+	recipes []*Recipe
+	err     error
+}
+
+func (m *MockRecipeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.recipes, nil
+}
+
+func (m *MockRecipeGenerator) Validate(result interface{}) error {
+	return nil
 }

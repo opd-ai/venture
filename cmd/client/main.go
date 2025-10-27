@@ -17,6 +17,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
+	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
@@ -400,6 +401,10 @@ func main() {
 	// GAP-004 REPAIR: Add objective tracker system for quest progress
 	objectiveTracker := engine.NewObjectiveTrackerSystem()
 
+	// Initialize generators for loot and recipe drops
+	itemGen := item.NewItemGenerator()
+	recipeGen := recipe.NewRecipeGenerator()
+
 	// Set quest completion callback to award rewards
 	objectiveTracker.SetQuestCompleteCallback(func(entity *engine.Entity, qst *quest.Quest) {
 		objectiveTracker.AwardQuestRewards(entity, qst)
@@ -521,6 +526,20 @@ func main() {
 				deadComp.AddDroppedItem(lootEntity.ID)
 			}
 
+			// Generate and spawn recipe drops (rarer than item drops)
+			recipeEntity := engine.GenerateRecipeDrop(recipeGen, game.World, enemy, pos.X, pos.Y, *seed, *genreID)
+			if recipeEntity != nil {
+				// Add physics to recipe drops
+				recipeEntity.AddComponent(&engine.VelocityComponent{
+					VX: (rand.Float64()*2.0 - 1.0) * 25.0, // Slightly slower velocity for recipes
+					VY: (rand.Float64()*2.0 - 1.0) * 25.0,
+				})
+				// Add friction for smooth deceleration
+				recipeEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+				deadComp.AddDroppedItem(recipeEntity.ID)
+			}
+
 			// Track enemy kill for quest objectives
 			if playerEntity != nil {
 				objectiveTracker.OnEnemyKilled(playerEntity, enemy)
@@ -543,8 +562,7 @@ func main() {
 	commerceSystem := engine.NewCommerceSystemWithLogger(game.World, inventorySystem, logger)
 	dialogSystem := engine.NewDialogSystemWithLogger(game.World, logger)
 
-	// Initialize crafting system
-	itemGen := item.NewItemGenerator()
+	// Initialize crafting system (itemGen and recipeGen already initialized earlier)
 	craftingSystem := engine.NewCraftingSystem(game.World, inventorySystem, itemGen)
 
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")

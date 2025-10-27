@@ -50,20 +50,29 @@ This document outlines the roadmap for expanding Venture's gameplay mechanics be
 - ✅ Main menu options: Single-Player, Multi-Player, Settings, Quit
 - ✅ Callbacks for state transitions (onNewGame, onMultiplayerConnect, onQuitToMenu)
 
-**Status**: ✅ MVP Complete - Main menu system functional with simplified flow
+**Status**: ✅ MVP Complete - Main menu system functional with settings menu
 
 **Current Behavior**:
 - Game starts in AppStateMainMenu showing main menu
 - Single-Player directly transitions to gameplay (New Game)
 - Multi-Player uses existing CLI flags for server connection
-- Settings shows "not implemented" message (future feature)
+- **Settings menu fully functional with interactive controls** ✅ **(NEW)**
 - Quit option ready for implementation
 
 **Future Enhancements** (Phase 1.1):
 - Single-player submenu with "New Game" / "Load Game" / "Back"
 - Multi-player submenu with server address input field
-- Settings menu implementation
-- Character creation integration before gameplay start
+
+**Settings Menu Implementation** ✅ **COMPLETE** (October 27, 2025):
+- ✅ Created `pkg/engine/settings.go` with SettingsManager for persistent storage
+- ✅ Created `pkg/engine/settings_ui.go` with interactive controls (keyboard/mouse navigation)
+- ✅ Settings stored in `~/.venture/settings.json` with automatic validation
+- ✅ Options: Master/Music/SFX Volume, Graphics Quality, VSync, Show FPS, Fullscreen
+- ✅ Dual-exit navigation (ESC to save and return)
+- ✅ Comprehensive test suites: 90.7% coverage on settings.go, 95%+ on settings_ui.go
+- ✅ Integrated with AppState system (AppStateSettings)
+- ✅ Automatic save on hide, graceful degradation on errors
+- ✅ Real-time adjustment with visual feedback (< value >)
 
 **Technical Notes**:
 - AppState separate from GameState (input filtering) to avoid namespace collision

@@ -22,11 +22,13 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager      *AppStateManager
-	MainMenuUI        *MainMenuUI
-	CharacterCreation *EbitenCharacterCreation
-	pendingCharData   *CharacterData
-	isMultiplayerMode bool // Track if character creation is for multiplayer
+	StateManager       *AppStateManager
+	MainMenuUI         *MainMenuUI
+	SettingsUI         *SettingsUI
+	SettingsManager    *SettingsManager
+	CharacterCreation  *EbitenCharacterCreation
+	pendingCharData    *CharacterData
+	isMultiplayerMode  bool // Track if character creation is for multiplayer
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -95,6 +97,28 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		// Note: No fallback logging when logEntry is nil - silent initialization failure
 	}
 
+	// Create settings manager and UI
+	settingsManager, err := NewSettingsManager()
+	if err != nil {
+		// Log error but continue with default settings
+		if logEntry != nil {
+			logEntry.WithError(err).Warn("failed to initialize settings manager, using defaults")
+		}
+		// Create a minimal settings manager with defaults
+		settingsManager = &SettingsManager{
+			settings: DefaultSettings(),
+		}
+	} else {
+		// Load existing settings
+		if err := settingsManager.LoadSettings(); err != nil {
+			if logEntry != nil {
+				logEntry.WithError(err).Warn("failed to load settings, using defaults")
+			}
+		}
+	}
+
+	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
+
 	game := &EbitenGame{
 		World:             world,
 		lastUpdateTime:    time.Now(),
@@ -102,6 +126,8 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		ScreenHeight:      screenHeight,
 		StateManager:      NewAppStateManager(),
 		MainMenuUI:        NewMainMenuUI(screenWidth, screenHeight),
+		SettingsUI:        settingsUI,
+		SettingsManager:   settingsManager,
 		CharacterCreation: NewCharacterCreation(screenWidth, screenHeight),
 		CameraSystem:      cameraSystem,
 		RenderSystem:      renderSystem,
@@ -124,6 +150,16 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	// Setup main menu callback
 	game.MainMenuUI.SetSelectCallback(game.handleMainMenuSelection)
+
+	// Setup settings UI callback
+	game.SettingsUI.SetBackCallback(func() {
+		// Return to main menu when back is pressed
+		if err := game.StateManager.TransitionTo(AppStateMainMenu); err != nil {
+			if logEntry != nil {
+				logEntry.WithError(err).Error("failed to return to main menu from settings")
+			}
+		}
+	})
 
 	return game
 }
@@ -181,9 +217,19 @@ func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 		}
 
 	case MainMenuOptionSettings:
-		// Future: transition to settings menu
+		// Transition to settings menu
+		if err := g.StateManager.TransitionTo(AppStateSettings); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to transition to settings")
+			}
+			return
+		}
+
+		// Show settings UI
+		g.SettingsUI.Show()
+
 		if g.logger != nil {
-			g.logger.Info("settings menu not yet implemented")
+			g.logger.Info("entering settings menu")
 		}
 
 	case MainMenuOptionQuit:
@@ -216,6 +262,12 @@ func (g *EbitenGame) Update() error {
 	// If in main menu state, only update main menu
 	if g.StateManager.CurrentState() == AppStateMainMenu {
 		g.MainMenuUI.Update()
+		return nil
+	}
+
+	// If in settings state, only update settings
+	if g.StateManager.CurrentState() == AppStateSettings {
+		g.SettingsUI.Update()
 		return nil
 	}
 
@@ -340,6 +392,12 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	// If in main menu state, only draw main menu
 	if g.StateManager.CurrentState() == AppStateMainMenu {
 		g.MainMenuUI.Draw(screen)
+		return
+	}
+
+	// If in settings state, only draw settings
+	if g.StateManager.CurrentState() == AppStateSettings {
+		g.SettingsUI.Draw(screen)
 		return
 	}
 

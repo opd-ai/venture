@@ -983,13 +983,13 @@ func TestCommerceProtocolFailureScenarios(t *testing.T) {
 // TestTileDamageMessage_Structure verifies TileDamageMessage struct initialization.
 func TestTileDamageMessage_Structure(t *testing.T) {
 	tests := []struct {
-		name       string
-		playerID   uint64
-		tileX      int
-		tileY      int
-		damage     float64
-		weaponID   uint64
-		sequence   uint32
+		name     string
+		playerID uint64
+		tileX    int
+		tileY    int
+		damage   float64
+		weaponID uint64
+		sequence uint32
 	}{
 		{"valid_damage", 123, 5, 10, 50.0, 999, 1},
 		{"zero_damage", 456, 0, 0, 0.0, 0, 2},

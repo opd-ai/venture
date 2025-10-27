@@ -428,7 +428,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		// Draw success chance
 		successChance := recipe.GetEffectiveSuccessChance(skill.SkillLevel)
 		successText := fmt.Sprintf("Success: %.0f%%", successChance*100)
-		
+
 		// Show station bonus in success chance
 		if ui.stationEntity != nil {
 			if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
@@ -439,12 +439,12 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 					if bonusChance > 0.95 {
 						bonusChance = 0.95 // Cap at 95%
 					}
-					successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)", 
+					successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)",
 						successChance*100, bonusChance*100, station.BonusSuccessChance*100)
 				}
 			}
 		}
-		
+
 		if successChance == 0 {
 			successText = "Success: Impossible (low skill)"
 		}
@@ -504,7 +504,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	footerY := windowY + windowHeight - 30
 	ebitenutil.DebugPrintAt(img, "Arrow Keys: Navigate | ENTER/SPACE: Craft | Mouse Wheel: Scroll",
 		windowX+10, footerY)
-	
+
 	// Draw nearby station hint if not at a station
 	if ui.stationEntity == nil && ui.playerEntity != nil {
 		if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
@@ -532,7 +532,7 @@ func (ui *CraftingUI) findNearestStation(centerX, centerY, maxDistance float64) 
 	}
 
 	entities := ui.craftingSystem.world.GetEntities()
-	
+
 	// Convert []*Entity to []Entity for FindClosestStation
 	entitySlice := make([]Entity, len(entities))
 	for i, e := range entities {
@@ -540,7 +540,7 @@ func (ui *CraftingUI) findNearestStation(centerX, centerY, maxDistance float64) 
 			entitySlice[i] = *e
 		}
 	}
-	
+
 	return FindClosestStation(entitySlice, centerX, centerY, maxDistance)
 }
 

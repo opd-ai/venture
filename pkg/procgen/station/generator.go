@@ -55,9 +55,9 @@ type StationData struct {
 
 // StationNameTemplate defines naming patterns for stations.
 type StationNameTemplate struct {
-	Prefix   []string
+	Prefix    []string
 	Adjective []string
-	Noun     []string
+	Noun      []string
 }
 
 // StationGenerator generates procedural crafting stations.

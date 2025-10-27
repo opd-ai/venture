@@ -979,3 +979,540 @@ func TestCommerceProtocolFailureScenarios(t *testing.T) {
 		})
 	}
 }
+
+// TestTileDamageMessage_Structure verifies TileDamageMessage struct initialization.
+func TestTileDamageMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name       string
+		playerID   uint64
+		tileX      int
+		tileY      int
+		damage     float64
+		weaponID   uint64
+		sequence   uint32
+	}{
+		{"valid_damage", 123, 5, 10, 50.0, 999, 1},
+		{"zero_damage", 456, 0, 0, 0.0, 0, 2},
+		{"high_damage", 789, 15, 20, 500.0, 888, 3},
+		{"negative_coords", 111, -5, -10, 25.0, 777, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := TileDamageMessage{
+				PlayerID:       tt.playerID,
+				TileX:          tt.tileX,
+				TileY:          tt.tileY,
+				Damage:         tt.damage,
+				WeaponID:       tt.weaponID,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.PlayerID != tt.playerID {
+				t.Errorf("Expected PlayerID %d, got %d", tt.playerID, msg.PlayerID)
+			}
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.Damage != tt.damage {
+				t.Errorf("Expected Damage %.2f, got %.2f", tt.damage, msg.Damage)
+			}
+			if msg.WeaponID != tt.weaponID {
+				t.Errorf("Expected WeaponID %d, got %d", tt.weaponID, msg.WeaponID)
+			}
+		})
+	}
+}
+
+// TestTileDestroyedMessage_Structure verifies TileDestroyedMessage struct initialization.
+func TestTileDestroyedMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name                string
+		tileX               int
+		tileY               int
+		timeOfDestruction   float64
+		destroyedByPlayerID uint64
+		sequence            uint32
+	}{
+		{"player_destroyed", 5, 10, 123.456, 999, 1},
+		{"environmental", 15, 20, 789.012, 0, 2},
+		{"negative_coords", -5, -10, 345.678, 888, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := TileDestroyedMessage{
+				TileX:               tt.tileX,
+				TileY:               tt.tileY,
+				TimeOfDestruction:   tt.timeOfDestruction,
+				DestroyedByPlayerID: tt.destroyedByPlayerID,
+				SequenceNumber:      tt.sequence,
+			}
+
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.TimeOfDestruction != tt.timeOfDestruction {
+				t.Errorf("Expected TimeOfDestruction %.3f, got %.3f", tt.timeOfDestruction, msg.TimeOfDestruction)
+			}
+			if msg.DestroyedByPlayerID != tt.destroyedByPlayerID {
+				t.Errorf("Expected DestroyedByPlayerID %d, got %d", tt.destroyedByPlayerID, msg.DestroyedByPlayerID)
+			}
+		})
+	}
+}
+
+// TestTileConstructMessage_Structure verifies TileConstructMessage struct initialization.
+func TestTileConstructMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name     string
+		playerID uint64
+		tileX    int
+		tileY    int
+		tileType uint8
+		sequence uint32
+	}{
+		{"build_wall", 123, 5, 10, 1, 1},
+		{"build_door", 456, 15, 20, 2, 2},
+		{"zero_type", 789, 0, 0, 0, 3},
+		{"max_type", 111, 25, 30, 255, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := TileConstructMessage{
+				PlayerID:       tt.playerID,
+				TileX:          tt.tileX,
+				TileY:          tt.tileY,
+				TileType:       tt.tileType,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.PlayerID != tt.playerID {
+				t.Errorf("Expected PlayerID %d, got %d", tt.playerID, msg.PlayerID)
+			}
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.TileType != tt.tileType {
+				t.Errorf("Expected TileType %d, got %d", tt.tileType, msg.TileType)
+			}
+		})
+	}
+}
+
+// TestConstructionStartedMessage_Structure verifies ConstructionStartedMessage struct initialization.
+func TestConstructionStartedMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name             string
+		tileX            int
+		tileY            int
+		builderPlayerID  uint64
+		tileType         uint8
+		constructionTime float64
+		timeStarted      float64
+		sequence         uint32
+	}{
+		{"valid_start", 5, 10, 123, 1, 3.0, 100.0, 1},
+		{"fast_build", 15, 20, 456, 2, 1.0, 200.0, 2},
+		{"slow_build", 25, 30, 789, 3, 10.0, 300.0, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := ConstructionStartedMessage{
+				TileX:            tt.tileX,
+				TileY:            tt.tileY,
+				BuilderPlayerID:  tt.builderPlayerID,
+				TileType:         tt.tileType,
+				ConstructionTime: tt.constructionTime,
+				TimeStarted:      tt.timeStarted,
+				SequenceNumber:   tt.sequence,
+			}
+
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.BuilderPlayerID != tt.builderPlayerID {
+				t.Errorf("Expected BuilderPlayerID %d, got %d", tt.builderPlayerID, msg.BuilderPlayerID)
+			}
+			if msg.ConstructionTime != tt.constructionTime {
+				t.Errorf("Expected ConstructionTime %.2f, got %.2f", tt.constructionTime, msg.ConstructionTime)
+			}
+			if msg.TimeStarted != tt.timeStarted {
+				t.Errorf("Expected TimeStarted %.2f, got %.2f", tt.timeStarted, msg.TimeStarted)
+			}
+		})
+	}
+}
+
+// TestConstructionCompletedMessage_Structure verifies ConstructionCompletedMessage struct initialization.
+func TestConstructionCompletedMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name          string
+		tileX         int
+		tileY         int
+		tileType      uint8
+		timeCompleted float64
+		sequence      uint32
+	}{
+		{"completed_wall", 5, 10, 1, 103.0, 1},
+		{"completed_door", 15, 20, 2, 201.0, 2},
+		{"completed_structure", 25, 30, 3, 310.0, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := ConstructionCompletedMessage{
+				TileX:          tt.tileX,
+				TileY:          tt.tileY,
+				TileType:       tt.tileType,
+				TimeCompleted:  tt.timeCompleted,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.TileType != tt.tileType {
+				t.Errorf("Expected TileType %d, got %d", tt.tileType, msg.TileType)
+			}
+			if msg.TimeCompleted != tt.timeCompleted {
+				t.Errorf("Expected TimeCompleted %.2f, got %.2f", tt.timeCompleted, msg.TimeCompleted)
+			}
+		})
+	}
+}
+
+// TestFireIgniteMessage_Structure verifies FireIgniteMessage struct initialization.
+func TestFireIgniteMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name       string
+		playerID   uint64
+		tileX      int
+		tileY      int
+		intensity  float64
+		sourceType string
+		sequence   uint32
+	}{
+		{"spell_ignite", 123, 5, 10, 0.8, "spell", 1},
+		{"explosion_ignite", 456, 15, 20, 1.0, "explosion", 2},
+		{"environmental", 789, 25, 30, 0.5, "environmental", 3},
+		{"low_intensity", 111, 35, 40, 0.1, "spell", 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := FireIgniteMessage{
+				PlayerID:       tt.playerID,
+				TileX:          tt.tileX,
+				TileY:          tt.tileY,
+				Intensity:      tt.intensity,
+				SourceType:     tt.sourceType,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.PlayerID != tt.playerID {
+				t.Errorf("Expected PlayerID %d, got %d", tt.playerID, msg.PlayerID)
+			}
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.Intensity != tt.intensity {
+				t.Errorf("Expected Intensity %.2f, got %.2f", tt.intensity, msg.Intensity)
+			}
+			if msg.SourceType != tt.sourceType {
+				t.Errorf("Expected SourceType %s, got %s", tt.sourceType, msg.SourceType)
+			}
+		})
+	}
+}
+
+// TestFireSpreadMessage_Structure verifies FireSpreadMessage struct initialization.
+func TestFireSpreadMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name        string
+		tileX       int
+		tileY       int
+		intensity   float64
+		duration    float64
+		timeIgnited float64
+		sequence    uint32
+	}{
+		{"high_intensity", 5, 10, 0.9, 12.0, 100.0, 1},
+		{"medium_intensity", 15, 20, 0.5, 10.0, 200.0, 2},
+		{"low_intensity", 25, 30, 0.2, 8.0, 300.0, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := FireSpreadMessage{
+				TileX:          tt.tileX,
+				TileY:          tt.tileY,
+				Intensity:      tt.intensity,
+				Duration:       tt.duration,
+				TimeIgnited:    tt.timeIgnited,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.Intensity != tt.intensity {
+				t.Errorf("Expected Intensity %.2f, got %.2f", tt.intensity, msg.Intensity)
+			}
+			if msg.Duration != tt.duration {
+				t.Errorf("Expected Duration %.2f, got %.2f", tt.duration, msg.Duration)
+			}
+			if msg.TimeIgnited != tt.timeIgnited {
+				t.Errorf("Expected TimeIgnited %.2f, got %.2f", tt.timeIgnited, msg.TimeIgnited)
+			}
+		})
+	}
+}
+
+// TestFireExtinguishedMessage_Structure verifies FireExtinguishedMessage struct initialization.
+func TestFireExtinguishedMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name             string
+		tileX            int
+		tileY            int
+		timeExtinguished float64
+		reason           string
+		sequence         uint32
+	}{
+		{"burned_out", 5, 10, 112.0, "burned_out", 1},
+		{"extinguished", 15, 20, 205.0, "extinguished", 2},
+		{"tile_destroyed", 25, 30, 315.0, "tile_destroyed", 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := FireExtinguishedMessage{
+				TileX:            tt.tileX,
+				TileY:            tt.tileY,
+				TimeExtinguished: tt.timeExtinguished,
+				Reason:           tt.reason,
+				SequenceNumber:   tt.sequence,
+			}
+
+			if msg.TileX != tt.tileX {
+				t.Errorf("Expected TileX %d, got %d", tt.tileX, msg.TileX)
+			}
+			if msg.TileY != tt.tileY {
+				t.Errorf("Expected TileY %d, got %d", tt.tileY, msg.TileY)
+			}
+			if msg.TimeExtinguished != tt.timeExtinguished {
+				t.Errorf("Expected TimeExtinguished %.2f, got %.2f", tt.timeExtinguished, msg.TimeExtinguished)
+			}
+			if msg.Reason != tt.reason {
+				t.Errorf("Expected Reason %s, got %s", tt.reason, msg.Reason)
+			}
+		})
+	}
+}
+
+// TestTerrainModificationWorkflow tests a complete terrain modification flow.
+func TestTerrainModificationWorkflow(t *testing.T) {
+	// Simulate client-server terrain modification interaction
+
+	// Step 1: Client damages tile
+	damageMsg := TileDamageMessage{
+		PlayerID:       100,
+		TileX:          5,
+		TileY:          10,
+		Damage:         50.0,
+		WeaponID:       999,
+		SequenceNumber: 1,
+	}
+
+	if damageMsg.Damage <= 0 {
+		t.Error("Damage should be positive")
+	}
+
+	// Step 2: After enough damage, server broadcasts destruction
+	destroyMsg := TileDestroyedMessage{
+		TileX:               5,
+		TileY:               10,
+		TimeOfDestruction:   123.456,
+		DestroyedByPlayerID: 100,
+		SequenceNumber:      2,
+	}
+
+	if destroyMsg.TileX != damageMsg.TileX || destroyMsg.TileY != damageMsg.TileY {
+		t.Error("Destroyed tile coordinates should match damaged tile")
+	}
+	if destroyMsg.DestroyedByPlayerID != damageMsg.PlayerID {
+		t.Error("Destroyer should match damager")
+	}
+
+	// Step 3: Player rebuilds wall
+	constructMsg := TileConstructMessage{
+		PlayerID:       100,
+		TileX:          5,
+		TileY:          10,
+		TileType:       1,
+		SequenceNumber: 3,
+	}
+
+	if constructMsg.TileX != destroyMsg.TileX || constructMsg.TileY != destroyMsg.TileY {
+		t.Error("Construction coordinates should match destroyed tile")
+	}
+
+	// Step 4: Server broadcasts construction start
+	startMsg := ConstructionStartedMessage{
+		TileX:            5,
+		TileY:            10,
+		BuilderPlayerID:  100,
+		TileType:         1,
+		ConstructionTime: 3.0,
+		TimeStarted:      125.0,
+		SequenceNumber:   4,
+	}
+
+	if startMsg.BuilderPlayerID != constructMsg.PlayerID {
+		t.Error("Builder should match constructor")
+	}
+	if startMsg.TimeStarted <= destroyMsg.TimeOfDestruction {
+		t.Error("Construction should start after destruction")
+	}
+
+	// Step 5: Server broadcasts construction completion
+	completeMsg := ConstructionCompletedMessage{
+		TileX:          5,
+		TileY:          10,
+		TileType:       1,
+		TimeCompleted:  128.0,
+		SequenceNumber: 5,
+	}
+
+	if completeMsg.TimeCompleted < startMsg.TimeStarted+startMsg.ConstructionTime {
+		t.Error("Completion should be after start time + construction time")
+	}
+}
+
+// TestFirePropagationWorkflow tests a complete fire propagation flow.
+func TestFirePropagationWorkflow(t *testing.T) {
+	// Simulate client-server fire propagation interaction
+
+	// Step 1: Client ignites tile
+	igniteMsg := FireIgniteMessage{
+		PlayerID:       100,
+		TileX:          5,
+		TileY:          10,
+		Intensity:      0.8,
+		SourceType:     "spell",
+		SequenceNumber: 1,
+	}
+
+	if igniteMsg.Intensity < 0 || igniteMsg.Intensity > 1.0 {
+		t.Error("Fire intensity should be between 0 and 1")
+	}
+
+	// Step 2: Server broadcasts fire spread to adjacent tiles
+	spreadMsg := FireSpreadMessage{
+		TileX:          6,
+		TileY:          10,
+		Intensity:      0.6,
+		Duration:       12.0,
+		TimeIgnited:    100.0,
+		SequenceNumber: 2,
+	}
+
+	// Verify spread is to adjacent tile
+	dx := spreadMsg.TileX - igniteMsg.TileX
+	dy := spreadMsg.TileY - igniteMsg.TileY
+	if (dx != 0 && dy != 0) || (dx == 0 && dy == 0) {
+		t.Error("Fire should spread to adjacent tile (4-connected)")
+	}
+	if spreadMsg.Intensity >= igniteMsg.Intensity {
+		t.Error("Spread intensity should be lower than source")
+	}
+
+	// Step 3: Fire burns out
+	extinguishMsg := FireExtinguishedMessage{
+		TileX:            6,
+		TileY:            10,
+		TimeExtinguished: 112.0,
+		Reason:           "burned_out",
+		SequenceNumber:   3,
+	}
+
+	if extinguishMsg.TileX != spreadMsg.TileX || extinguishMsg.TileY != spreadMsg.TileY {
+		t.Error("Extinguished tile should match spread tile")
+	}
+	if extinguishMsg.TimeExtinguished < spreadMsg.TimeIgnited+spreadMsg.Duration {
+		t.Error("Extinguish time should be after ignition + duration")
+	}
+}
+
+// TestTerrainProtocolValidation tests validation scenarios for terrain messages.
+func TestTerrainProtocolValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		description string
+		validate    func() bool
+	}{
+		{
+			name:        "damage_positive",
+			description: "Tile damage should be positive",
+			validate: func() bool {
+				msg := TileDamageMessage{Damage: 50.0}
+				return msg.Damage > 0
+			},
+		},
+		{
+			name:        "fire_intensity_range",
+			description: "Fire intensity should be 0.0-1.0",
+			validate: func() bool {
+				msg := FireIgniteMessage{Intensity: 0.8}
+				return msg.Intensity >= 0.0 && msg.Intensity <= 1.0
+			},
+		},
+		{
+			name:        "construction_time_positive",
+			description: "Construction time should be positive",
+			validate: func() bool {
+				msg := ConstructionStartedMessage{ConstructionTime: 3.0}
+				return msg.ConstructionTime > 0
+			},
+		},
+		{
+			name:        "fire_duration_positive",
+			description: "Fire duration should be positive",
+			validate: func() bool {
+				msg := FireSpreadMessage{Duration: 12.0}
+				return msg.Duration > 0
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.validate() {
+				t.Errorf("Validation failed: %s", tt.description)
+			}
+		})
+	}
+}

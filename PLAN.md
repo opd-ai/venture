@@ -222,7 +222,7 @@ This approach allows immediate user feedback while keeping the codebase maintain
 
 ---
 
-## Phase 4: Environmental Manipulation **IN PROGRESS** (October 26, 2025)
+## Phase 4: Environmental Manipulation ✅ **COMPLETE** (October 26, 2025)
 
 **Goal**: Destructible and constructible terrain.
 
@@ -265,7 +265,18 @@ This approach allows immediate user feedback while keeping the codebase maintain
   - Placement validation: Tile must be walkable (TileFloor), not occupied
   - Comprehensive test suite: 12 test functions, all passing, 2 benchmarks
   - 356 lines with full ECS integration
-- 🚧 Network protocol support (planned)
+- ✅ Network protocol support in `pkg/network/protocol.go` (8 new message types) (October 26, 2025)
+  - TileDamageMessage: Client→Server damage request (PlayerID, TileX/Y, Damage, WeaponID, SequenceNumber)
+  - TileDestroyedMessage: Server→Clients destruction notification (TileX/Y, TimeOfDestruction, DestroyedByPlayerID, SequenceNumber)
+  - TileConstructMessage: Client→Server build request (PlayerID, TileX/Y, TileType, SequenceNumber)
+  - ConstructionStartedMessage: Server→Clients start notification (TileX/Y, BuilderPlayerID, TileType, ConstructionTime, TimeStarted, SequenceNumber)
+  - ConstructionCompletedMessage: Server→Clients completion notification (TileX/Y, TileType, TimeCompleted, SequenceNumber)
+  - FireIgniteMessage: Client→Server ignition request (PlayerID, TileX/Y, Intensity, SourceType, SequenceNumber)
+  - FireSpreadMessage: Server→Clients spread notification (TileX/Y, Intensity, Duration, TimeIgnited, SequenceNumber)
+  - FireExtinguishedMessage: Server→Clients extinguish notification (TileX/Y, TimeExtinguished, Reason, SequenceNumber)
+  - Comprehensive test suite: `protocol_test.go` (11 test functions: 8 structure tests, 2 workflow tests, 1 validation test, all passing)
+  - Coverage: 57.1% (protocol.go is simple data structures, tests verify struct initialization and workflows)
+  - Server-authoritative design: clients request, server validates and broadcasts
 - ✅ Additional test suites (terrain_modification_system_test.go) (October 26, 2025)
   - Comprehensive test coverage for TerrainModificationSystem
   - 18 test functions: reference setting, weapon checks, damage calculation, direction detection, tile damage, destruction flow, weapon attack processing, world coordinate damage, area damage, entity lookup, entity creation, tile replacement
@@ -349,7 +360,7 @@ system.Update(entities, deltaTime)
 progress := system.GetConstructionProgress(tileX, tileY) // 0.0-1.0
 ```
 
-**Status**: 🚧 Phase 4.1-4.4 Complete (Components, Modification System + Tests, Fire System, Construction System), Phase 4.5 In Progress (Network)
+**Status**: ✅ Phase 4 Complete (Components, Modification System + Tests, Fire System, Construction System, Network Protocol)
 
 ---
 

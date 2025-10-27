@@ -234,3 +234,186 @@ type CloseShopMessage struct {
 	// SequenceNumber for message ordering
 	SequenceNumber uint32
 }
+
+// TileDamageMessage represents terrain damage notification from client to server.
+// Client sends this when player attacks terrain with a weapon.
+// Server validates the action and broadcasts terrain state changes.
+// Phase 4: Environmental Manipulation System
+type TileDamageMessage struct {
+	// PlayerID identifies the player performing the action
+	PlayerID uint64
+
+	// TileX is the X coordinate of the tile being damaged
+	TileX int
+
+	// TileY is the Y coordinate of the tile being damaged
+	TileY int
+
+	// Damage is the amount of damage to apply
+	Damage float64
+
+	// WeaponID is the entity ID of the weapon used (0 if spell/ability)
+	WeaponID uint64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// TileDestroyedMessage represents terrain destruction notification from server to clients.
+// Server broadcasts this when a tile is destroyed (health reaches 0).
+// Clients update local terrain state to match.
+// Phase 4: Environmental Manipulation System
+type TileDestroyedMessage struct {
+	// TileX is the X coordinate of the destroyed tile
+	TileX int
+
+	// TileY is the Y coordinate of the destroyed tile
+	TileY int
+
+	// TimeOfDestruction is the server timestamp when destruction occurred
+	TimeOfDestruction float64
+
+	// DestroyedByPlayerID identifies the player that destroyed the tile (0 if environmental)
+	DestroyedByPlayerID uint64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// TileConstructMessage represents construction request from client to server.
+// Client sends this when player attempts to build a wall or structure.
+// Server validates materials, location, and broadcasts construction start.
+// Phase 4: Environmental Manipulation System
+type TileConstructMessage struct {
+	// PlayerID identifies the player performing construction
+	PlayerID uint64
+
+	// TileX is the X coordinate where construction is attempted
+	TileX int
+
+	// TileY is the Y coordinate where construction is attempted
+	TileY int
+
+	// TileType is the type of tile to construct (wall, door, etc.)
+	TileType uint8
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// ConstructionStartedMessage represents construction start notification from server to clients.
+// Server broadcasts this after validating TileConstructMessage.
+// Clients create buildable entities and start progress tracking.
+// Phase 4: Environmental Manipulation System
+type ConstructionStartedMessage struct {
+	// TileX is the X coordinate of construction
+	TileX int
+
+	// TileY is the Y coordinate of construction
+	TileY int
+
+	// BuilderPlayerID identifies the player performing construction
+	BuilderPlayerID uint64
+
+	// TileType is the type of tile being constructed
+	TileType uint8
+
+	// ConstructionTime is the duration in seconds to complete
+	ConstructionTime float64
+
+	// TimeStarted is the server timestamp when construction began
+	TimeStarted float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// ConstructionCompletedMessage represents construction completion notification from server to clients.
+// Server broadcasts this when construction timer reaches completion.
+// Clients place the final tile and remove buildable entities.
+// Phase 4: Environmental Manipulation System
+type ConstructionCompletedMessage struct {
+	// TileX is the X coordinate of completed construction
+	TileX int
+
+	// TileY is the Y coordinate of completed construction
+	TileY int
+
+	// TileType is the type of tile constructed
+	TileType uint8
+
+	// TimeCompleted is the server timestamp when construction finished
+	TimeCompleted float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// FireIgniteMessage represents fire ignition request from client to server.
+// Client sends this when player uses fire spell/ability or ignites terrain.
+// Server validates and broadcasts fire spread.
+// Phase 4: Environmental Manipulation System
+type FireIgniteMessage struct {
+	// PlayerID identifies the player causing the ignition
+	PlayerID uint64
+
+	// TileX is the X coordinate where fire starts
+	TileX int
+
+	// TileY is the Y coordinate where fire starts
+	TileY int
+
+	// Intensity is the initial fire intensity (0.0-1.0)
+	Intensity float64
+
+	// SourceType indicates ignition source ("spell", "explosion", "environmental")
+	SourceType string
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// FireSpreadMessage represents fire spread notification from server to clients.
+// Server broadcasts this when fire spreads to adjacent tiles.
+// Clients create fire components on affected entities.
+// Phase 4: Environmental Manipulation System
+type FireSpreadMessage struct {
+	// TileX is the X coordinate where fire spread
+	TileX int
+
+	// TileY is the Y coordinate where fire spread
+	TileY int
+
+	// Intensity is the fire intensity at this tile (0.0-1.0)
+	Intensity float64
+
+	// Duration is how long the fire will burn (seconds)
+	Duration float64
+
+	// TimeIgnited is the server timestamp when fire started
+	TimeIgnited float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// FireExtinguishedMessage represents fire extinguishment notification from server to clients.
+// Server broadcasts this when fire burns out or is manually extinguished.
+// Clients remove fire components from affected entities.
+// Phase 4: Environmental Manipulation System
+type FireExtinguishedMessage struct {
+	// TileX is the X coordinate where fire was extinguished
+	TileX int
+
+	// TileY is the Y coordinate where fire was extinguished
+	TileY int
+
+	// TimeExtinguished is the server timestamp when fire ended
+	TimeExtinguished float64
+
+	// Reason indicates why fire ended ("burned_out", "extinguished", "tile_destroyed")
+	Reason string
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}

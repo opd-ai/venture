@@ -73,7 +73,39 @@ This document outlines the roadmap for expanding Venture's gameplay mechanics be
 
 ---
 
-## Phase 1 Implementation Notes
+## 🚀 Future Enhancements
+
+These are optional features that would add polish but are not required for core functionality:
+
+### Crafting System Enhancements
+- [ ] **Crafting stations in world generation** (alchemy tables, forges, workbenches)
+  - Would provide bonuses: +5% success chance, 25% faster crafting
+  - Stations already defined in `CraftingStationComponent`
+  - Integration would require spawning in terrain generation
+  - Optional quality-of-life improvement
+
+### Genre System Enhancements
+- [ ] Dynamic genre transitions during gameplay
+- [ ] Genre-specific world events and weather effects
+- [ ] Cross-genre legendary items with unique mechanics
+
+### Multiplayer Enhancements  
+- [ ] Voice chat support
+- [ ] Guild/clan systems
+- [ ] PvP arenas
+- [ ] Ranked leaderboards
+
+### Performance & Polish
+- [ ] Level streaming for massive worlds
+- [ ] Texture atlasing for sprite batching
+- [ ] Advanced particle pooling
+- [ ] LOD system for distant entities
+
+---
+
+## 📋 Archived Phases
+
+The following phases represent completed major milestones in the project:
 
 The Phase 1 MVP implements a working main menu system following the SIMPLICITY RULE from copilot-instructions. The implementation:
 

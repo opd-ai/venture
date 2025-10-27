@@ -8,13 +8,13 @@ import (
 func BenchmarkSpatialPartitionWithoutDirtyTracking(b *testing.B) {
 	system := NewSpatialPartitionSystem(1000, 1000)
 	system.SetRebuildInterval(1) // Rebuild every frame (old behavior)
-	
+
 	entities := make([]*Entity, 500)
 	for i := 0; i < 500; i++ {
 		entity := NewEntity(uint64(i))
 		entity.AddComponent(&PositionComponent{
-			X: float64(i % 50) * 20,
-			Y: float64(i / 50) * 20,
+			X: float64(i%50) * 20,
+			Y: float64(i/50) * 20,
 		})
 		entities[i] = entity
 	}
@@ -29,13 +29,13 @@ func BenchmarkSpatialPartitionWithoutDirtyTracking(b *testing.B) {
 func BenchmarkSpatialPartitionWithDirtyTracking(b *testing.B) {
 	system := NewSpatialPartitionSystem(1000, 1000)
 	system.SetRebuildInterval(60) // Check every 60 frames (1 second)
-	
+
 	entities := make([]*Entity, 500)
 	for i := 0; i < 500; i++ {
 		entity := NewEntity(uint64(i))
 		entity.AddComponent(&PositionComponent{
-			X: float64(i % 50) * 20,
-			Y: float64(i / 50) * 20,
+			X: float64(i%50) * 20,
+			Y: float64(i/50) * 20,
 		})
 		entities[i] = entity
 	}
@@ -55,12 +55,12 @@ func BenchmarkSpatialPartitionWithDirtyTracking(b *testing.B) {
 func BenchmarkQuadtreeCapacity8vs16(b *testing.B) {
 	bounds := Bounds{X: 0, Y: 0, Width: 1000, Height: 1000}
 	entities := make([]*Entity, 1000)
-	
+
 	for i := 0; i < 1000; i++ {
 		entity := NewEntity(uint64(i))
 		entity.AddComponent(&PositionComponent{
-			X: float64(i % 100) * 10,
-			Y: float64(i / 100) * 10,
+			X: float64(i%100) * 10,
+			Y: float64(i/100) * 10,
 		})
 		entities[i] = entity
 	}
@@ -106,8 +106,8 @@ func BenchmarkMovementSystemWithSpatialPartition(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		entity := NewEntity(uint64(i))
 		entity.AddComponent(&PositionComponent{
-			X: float64(i % 10) * 100,
-			Y: float64(i / 10) * 100,
+			X: float64(i%10) * 100,
+			Y: float64(i/10) * 100,
 		})
 		entity.AddComponent(&VelocityComponent{
 			VX: 50.0,

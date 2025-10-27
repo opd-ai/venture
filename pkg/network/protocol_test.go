@@ -1516,3 +1516,412 @@ func TestTerrainProtocolValidation(t *testing.T) {
 		})
 	}
 }
+
+// TestStartCraftMessage_Structure verifies StartCraftMessage struct initialization.
+// Phase 5: Crafting Systems
+func TestStartCraftMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name          string
+		playerID      uint64
+		recipeID      string
+		stationID     uint64
+		timeRequested float64
+		sequence      uint32
+	}{
+		{"basic_craft", 100, "recipe_healing_potion", 0, 10.5, 1},
+		{"with_station", 200, "recipe_mana_elixir", 50, 20.5, 2},
+		{"alchemy_table", 300, "recipe_fire_resistance", 75, 30.5, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := StartCraftMessage{
+				PlayerID:       tt.playerID,
+				RecipeID:       tt.recipeID,
+				StationID:      tt.stationID,
+				TimeRequested:  tt.timeRequested,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.PlayerID != tt.playerID {
+				t.Errorf("Expected PlayerID %d, got %d", tt.playerID, msg.PlayerID)
+			}
+			if msg.RecipeID != tt.recipeID {
+				t.Errorf("Expected RecipeID %s, got %s", tt.recipeID, msg.RecipeID)
+			}
+			if msg.StationID != tt.stationID {
+				t.Errorf("Expected StationID %d, got %d", tt.stationID, msg.StationID)
+			}
+			if msg.TimeRequested != tt.timeRequested {
+				t.Errorf("Expected TimeRequested %.2f, got %.2f", tt.timeRequested, msg.TimeRequested)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestCraftProgressMessage_Structure verifies CraftProgressMessage struct initialization.
+// Phase 5: Crafting Systems
+func TestCraftProgressMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name            string
+		entityID        uint64
+		recipeID        string
+		recipeName      string
+		elapsedTime     float64
+		totalTime       float64
+		percentComplete float64
+		timeUpdated     float64
+		sequence        uint32
+	}{
+		{"start", 100, "recipe_healing_potion", "Healing Potion", 0.0, 4.0, 0.0, 10.0, 1},
+		{"halfway", 100, "recipe_healing_potion", "Healing Potion", 2.0, 4.0, 0.5, 12.0, 2},
+		{"nearly_done", 100, "recipe_healing_potion", "Healing Potion", 3.8, 4.0, 0.95, 13.8, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := CraftProgressMessage{
+				EntityID:        tt.entityID,
+				RecipeID:        tt.recipeID,
+				RecipeName:      tt.recipeName,
+				ElapsedTimeSec:  tt.elapsedTime,
+				TotalTimeSec:    tt.totalTime,
+				PercentComplete: tt.percentComplete,
+				TimeUpdated:     tt.timeUpdated,
+				SequenceNumber:  tt.sequence,
+			}
+
+			if msg.EntityID != tt.entityID {
+				t.Errorf("Expected EntityID %d, got %d", tt.entityID, msg.EntityID)
+			}
+			if msg.RecipeID != tt.recipeID {
+				t.Errorf("Expected RecipeID %s, got %s", tt.recipeID, msg.RecipeID)
+			}
+			if msg.RecipeName != tt.recipeName {
+				t.Errorf("Expected RecipeName %s, got %s", tt.recipeName, msg.RecipeName)
+			}
+			if msg.ElapsedTimeSec != tt.elapsedTime {
+				t.Errorf("Expected ElapsedTimeSec %.2f, got %.2f", tt.elapsedTime, msg.ElapsedTimeSec)
+			}
+			if msg.TotalTimeSec != tt.totalTime {
+				t.Errorf("Expected TotalTimeSec %.2f, got %.2f", tt.totalTime, msg.TotalTimeSec)
+			}
+			if msg.PercentComplete != tt.percentComplete {
+				t.Errorf("Expected PercentComplete %.2f, got %.2f", tt.percentComplete, msg.PercentComplete)
+			}
+			if msg.TimeUpdated != tt.timeUpdated {
+				t.Errorf("Expected TimeUpdated %.2f, got %.2f", tt.timeUpdated, msg.TimeUpdated)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestCraftCompleteMessage_Structure verifies CraftCompleteMessage struct initialization.
+// Phase 5: Crafting Systems
+func TestCraftCompleteMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name          string
+		entityID      uint64
+		recipeID      string
+		recipeName    string
+		success       bool
+		itemID        uint64
+		itemName      string
+		xpGained      int
+		materialsLost []string
+		timeCompleted float64
+		sequence      uint32
+	}{
+		{
+			"success",
+			100,
+			"recipe_healing_potion",
+			"Healing Potion",
+			true,
+			500,
+			"Greater Healing Potion",
+			10,
+			[]string{"Healing Herb", "Healing Herb", "Water Flask"},
+			14.0,
+			1,
+		},
+		{
+			"failure",
+			100,
+			"recipe_fire_resistance",
+			"Fire Resistance Potion",
+			false,
+			0,
+			"",
+			5,
+			[]string{"Fire Crystal", "Obsidian Dust"},
+			20.0,
+			2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := CraftCompleteMessage{
+				EntityID:       tt.entityID,
+				RecipeID:       tt.recipeID,
+				RecipeName:     tt.recipeName,
+				Success:        tt.success,
+				ItemID:         tt.itemID,
+				ItemName:       tt.itemName,
+				XPGained:       tt.xpGained,
+				MaterialsLost:  tt.materialsLost,
+				TimeCompleted:  tt.timeCompleted,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.EntityID != tt.entityID {
+				t.Errorf("Expected EntityID %d, got %d", tt.entityID, msg.EntityID)
+			}
+			if msg.RecipeID != tt.recipeID {
+				t.Errorf("Expected RecipeID %s, got %s", tt.recipeID, msg.RecipeID)
+			}
+			if msg.RecipeName != tt.recipeName {
+				t.Errorf("Expected RecipeName %s, got %s", tt.recipeName, msg.RecipeName)
+			}
+			if msg.Success != tt.success {
+				t.Errorf("Expected Success %v, got %v", tt.success, msg.Success)
+			}
+			if msg.ItemID != tt.itemID {
+				t.Errorf("Expected ItemID %d, got %d", tt.itemID, msg.ItemID)
+			}
+			if msg.ItemName != tt.itemName {
+				t.Errorf("Expected ItemName %s, got %s", tt.itemName, msg.ItemName)
+			}
+			if msg.XPGained != tt.xpGained {
+				t.Errorf("Expected XPGained %d, got %d", tt.xpGained, msg.XPGained)
+			}
+			if len(msg.MaterialsLost) != len(tt.materialsLost) {
+				t.Errorf("Expected %d materials lost, got %d", len(tt.materialsLost), len(msg.MaterialsLost))
+			}
+			if msg.TimeCompleted != tt.timeCompleted {
+				t.Errorf("Expected TimeCompleted %.2f, got %.2f", tt.timeCompleted, msg.TimeCompleted)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestRecipeLearnMessage_Structure verifies RecipeLearnMessage struct initialization.
+// Phase 5: Crafting Systems
+func TestRecipeLearnMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name         string
+		entityID     uint64
+		recipeID     string
+		recipeName   string
+		recipeType   string
+		recipeRarity string
+		source       string
+		timeLearned  float64
+		sequence     uint32
+	}{
+		{"drop", 100, "recipe_healing_potion", "Healing Potion", "potion", "common", "drop", 10.0, 1},
+		{"quest", 200, "recipe_enchant_weapon", "Enchant Weapon", "enchanting", "uncommon", "quest", 50.0, 2},
+		{"npc", 300, "recipe_legendary_sword", "Legendary Sword", "magic_item", "legendary", "npc", 100.0, 3},
+		{"pickup", 400, "recipe_mana_elixir", "Mana Elixir", "potion", "rare", "pickup", 25.5, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := RecipeLearnMessage{
+				EntityID:       tt.entityID,
+				RecipeID:       tt.recipeID,
+				RecipeName:     tt.recipeName,
+				RecipeType:     tt.recipeType,
+				RecipeRarity:   tt.recipeRarity,
+				Source:         tt.source,
+				TimeLearned:    tt.timeLearned,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.EntityID != tt.entityID {
+				t.Errorf("Expected EntityID %d, got %d", tt.entityID, msg.EntityID)
+			}
+			if msg.RecipeID != tt.recipeID {
+				t.Errorf("Expected RecipeID %s, got %s", tt.recipeID, msg.RecipeID)
+			}
+			if msg.RecipeName != tt.recipeName {
+				t.Errorf("Expected RecipeName %s, got %s", tt.recipeName, msg.RecipeName)
+			}
+			if msg.RecipeType != tt.recipeType {
+				t.Errorf("Expected RecipeType %s, got %s", tt.recipeType, msg.RecipeType)
+			}
+			if msg.RecipeRarity != tt.recipeRarity {
+				t.Errorf("Expected RecipeRarity %s, got %s", tt.recipeRarity, msg.RecipeRarity)
+			}
+			if msg.Source != tt.source {
+				t.Errorf("Expected Source %s, got %s", tt.source, msg.Source)
+			}
+			if msg.TimeLearned != tt.timeLearned {
+				t.Errorf("Expected TimeLearned %.2f, got %.2f", tt.timeLearned, msg.TimeLearned)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestCraftingWorkflow tests a complete crafting interaction flow.
+// Phase 5: Crafting Systems
+func TestCraftingWorkflow(t *testing.T) {
+	// Simulate client-server crafting interaction
+
+	// Step 1: Player learns recipe (from drop, quest, NPC, etc.)
+	learnMsg := RecipeLearnMessage{
+		EntityID:       100,
+		RecipeID:       "recipe_healing_potion",
+		RecipeName:     "Healing Potion",
+		RecipeType:     "potion",
+		RecipeRarity:   "common",
+		Source:         "drop",
+		TimeLearned:    10.0,
+		SequenceNumber: 1,
+	}
+
+	if learnMsg.RecipeID == "" {
+		t.Error("RecipeID should not be empty")
+	}
+	if learnMsg.Source == "" {
+		t.Error("Source should not be empty")
+	}
+
+	// Step 2: Client requests to start crafting
+	startMsg := StartCraftMessage{
+		PlayerID:       100,
+		RecipeID:       "recipe_healing_potion",
+		StationID:      0, // No station required
+		TimeRequested:  15.0,
+		SequenceNumber: 2,
+	}
+
+	if startMsg.PlayerID != learnMsg.EntityID {
+		t.Error("PlayerID should match the entity that learned the recipe")
+	}
+	if startMsg.RecipeID != learnMsg.RecipeID {
+		t.Error("RecipeID should match the learned recipe")
+	}
+
+	// Step 3: Server validates and broadcasts progress updates
+	progressMsg := CraftProgressMessage{
+		EntityID:        100,
+		RecipeID:        "recipe_healing_potion",
+		RecipeName:      "Healing Potion",
+		ElapsedTimeSec:  2.0,
+		TotalTimeSec:    4.0,
+		PercentComplete: 0.5,
+		TimeUpdated:     17.0,
+		SequenceNumber:  3,
+	}
+
+	if progressMsg.PercentComplete < 0.0 || progressMsg.PercentComplete > 1.0 {
+		t.Error("PercentComplete should be between 0.0 and 1.0")
+	}
+	if progressMsg.ElapsedTimeSec > progressMsg.TotalTimeSec {
+		t.Error("ElapsedTimeSec should not exceed TotalTimeSec")
+	}
+
+	// Step 4: Server broadcasts completion (success)
+	completeMsg := CraftCompleteMessage{
+		EntityID:       100,
+		RecipeID:       "recipe_healing_potion",
+		RecipeName:     "Healing Potion",
+		Success:        true,
+		ItemID:         500,
+		ItemName:       "Greater Healing Potion",
+		XPGained:       10,
+		MaterialsLost:  []string{"Healing Herb", "Healing Herb", "Water Flask"},
+		TimeCompleted:  19.0,
+		SequenceNumber: 4,
+	}
+
+	if !completeMsg.Success {
+		t.Error("Craft should succeed")
+	}
+	if completeMsg.ItemID == 0 {
+		t.Error("ItemID should be set on success")
+	}
+	if completeMsg.ItemName == "" {
+		t.Error("ItemName should be set on success")
+	}
+	if completeMsg.XPGained <= 0 {
+		t.Error("XPGained should be positive")
+	}
+	if len(completeMsg.MaterialsLost) == 0 {
+		t.Error("MaterialsLost should contain consumed materials")
+	}
+
+	// Verify sequence ordering
+	if learnMsg.SequenceNumber >= startMsg.SequenceNumber {
+		t.Error("Learn message should come before start message")
+	}
+	if startMsg.SequenceNumber >= progressMsg.SequenceNumber {
+		t.Error("Start message should come before progress message")
+	}
+	if progressMsg.SequenceNumber >= completeMsg.SequenceNumber {
+		t.Error("Progress message should come before complete message")
+	}
+}
+
+// TestCraftingWorkflow_Failure tests a crafting flow that results in failure.
+// Phase 5: Crafting Systems
+func TestCraftingWorkflow_Failure(t *testing.T) {
+	// Simulate crafting failure scenario
+
+	// Step 1: Client requests to start crafting a difficult recipe
+	startMsg := StartCraftMessage{
+		PlayerID:       100,
+		RecipeID:       "recipe_legendary_sword",
+		StationID:      50, // Requires forge
+		TimeRequested:  20.0,
+		SequenceNumber: 1,
+	}
+
+	if startMsg.StationID == 0 {
+		t.Error("Legendary recipes should require a station")
+	}
+
+	// Step 2: Server broadcasts completion (failure)
+	completeMsg := CraftCompleteMessage{
+		EntityID:       100,
+		RecipeID:       "recipe_legendary_sword",
+		RecipeName:     "Legendary Sword",
+		Success:        false,
+		ItemID:         0,
+		ItemName:       "",
+		XPGained:       5, // Half XP on failure
+		MaterialsLost:  []string{"Mithril Ingot", "Dragon Scale"},
+		TimeCompleted:  32.0,
+		SequenceNumber: 2,
+	}
+
+	if completeMsg.Success {
+		t.Error("Craft should fail")
+	}
+	if completeMsg.ItemID != 0 {
+		t.Error("ItemID should be 0 on failure")
+	}
+	if completeMsg.ItemName != "" {
+		t.Error("ItemName should be empty on failure")
+	}
+	if completeMsg.XPGained <= 0 {
+		t.Error("XPGained should still be positive on failure (reduced amount)")
+	}
+	if len(completeMsg.MaterialsLost) == 0 {
+		t.Error("MaterialsLost should contain consumed materials even on failure")
+	}
+}

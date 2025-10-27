@@ -417,3 +417,120 @@ type FireExtinguishedMessage struct {
 	// SequenceNumber for message ordering
 	SequenceNumber uint32
 }
+
+// StartCraftMessage represents a crafting request from client to server.
+// Client sends this when a player initiates crafting a recipe.
+// Server validates recipe knowledge, materials, skill, and station requirements.
+// Phase 5: Crafting Systems
+type StartCraftMessage struct {
+	// PlayerID identifies the player attempting to craft
+	PlayerID uint64
+
+	// RecipeID uniquely identifies the recipe to craft (from recipe generator)
+	RecipeID string
+
+	// StationID identifies the crafting station being used (0 if no station)
+	StationID uint64
+
+	// TimeRequested is the client timestamp when craft was initiated
+	TimeRequested float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// CraftProgressMessage represents crafting progress update from server to clients.
+// Server broadcasts this periodically to synchronize crafting progress.
+// Clients update CraftingProgressComponent or UI progress bars.
+// Phase 5: Crafting Systems
+type CraftProgressMessage struct {
+	// EntityID identifies the entity crafting (player or NPC)
+	EntityID uint64
+
+	// RecipeID identifies the recipe being crafted
+	RecipeID string
+
+	// RecipeName is the human-readable recipe name
+	RecipeName string
+
+	// ElapsedTimeSec is how long crafting has been active
+	ElapsedTimeSec float64
+
+	// TotalTimeSec is the total time required to complete
+	TotalTimeSec float64
+
+	// PercentComplete is the completion percentage (0.0-1.0)
+	PercentComplete float64
+
+	// TimeUpdated is the server timestamp of this update
+	TimeUpdated float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// CraftCompleteMessage represents crafting completion notification from server to clients.
+// Server broadcasts this when crafting finishes (success or failure).
+// Clients create item entities, award XP, play effects, and remove CraftingProgressComponent.
+// Phase 5: Crafting Systems
+type CraftCompleteMessage struct {
+	// EntityID identifies the entity that completed crafting
+	EntityID uint64
+
+	// RecipeID identifies the recipe that was crafted
+	RecipeID string
+
+	// RecipeName is the human-readable recipe name
+	RecipeName string
+
+	// Success indicates if the craft succeeded (true) or failed (false)
+	Success bool
+
+	// ItemID is the generated item's unique ID (0 if failed)
+	ItemID uint64
+
+	// ItemName is the crafted item's name (empty if failed)
+	ItemName string
+
+	// XPGained is the crafting XP awarded
+	XPGained int
+
+	// MaterialsLost contains names of materials consumed
+	MaterialsLost []string
+
+	// TimeCompleted is the server timestamp when craft finished
+	TimeCompleted float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// RecipeLearnMessage represents recipe discovery notification from server to clients.
+// Server broadcasts this when a player learns a new recipe (via drop, quest, NPC, or level-up).
+// Clients add recipe to player's RecipeKnowledgeComponent and show UI notification.
+// Phase 5: Crafting Systems
+type RecipeLearnMessage struct {
+	// EntityID identifies the entity learning the recipe (player)
+	EntityID uint64
+
+	// RecipeID uniquely identifies the learned recipe
+	RecipeID string
+
+	// RecipeName is the human-readable recipe name
+	RecipeName string
+
+	// RecipeType indicates the crafting category ("potion", "enchanting", "magic_item")
+	RecipeType string
+
+	// RecipeRarity indicates the recipe tier ("common", "uncommon", "rare", "epic", "legendary")
+	RecipeRarity string
+
+	// Source indicates how the recipe was learned ("drop", "quest", "npc", "level_up", "pickup")
+	Source string
+
+	// TimeLearned is the server timestamp when recipe was learned
+	TimeLearned float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}

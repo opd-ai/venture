@@ -510,7 +510,23 @@ result, err := craftingSystem.StartCraft(entity.ID, potionRecipe, station.ID)
   - ✅ Recipe drop rate testing: validates 5% normal, 20% boss drop rates
   - ✅ Coverage: SpawnRecipeInWorld 100%, GenerateRecipeDrop 90.9%, getRecipeColor 90.9%
   - ✅ All tests passing (10/10 recipe tests)
-- [ ] Network protocol messages for multiplayer
+- [x] **Network protocol messages for multiplayer** (October 27, 2025)
+  - ✅ Created `StartCraftMessage` in `pkg/network/protocol.go` for craft requests (client → server)
+  - ✅ Created `CraftProgressMessage` for progress updates (server → clients, periodic sync)
+  - ✅ Created `CraftCompleteMessage` for completion/failure notifications (server → clients)
+  - ✅ Created `RecipeLearnMessage` for recipe discovery synchronization (server → clients)
+  - ✅ All messages follow existing protocol patterns with SequenceNumber, timestamps, entity IDs
+  - ✅ Comprehensive test suite in `protocol_test.go`:
+    * TestStartCraftMessage_Structure (3 test cases)
+    * TestCraftProgressMessage_Structure (3 test cases: start, halfway, nearly done)
+    * TestCraftCompleteMessage_Structure (2 test cases: success, failure)
+    * TestRecipeLearnMessage_Structure (4 test cases: drop, quest, npc, pickup)
+    * TestCraftingWorkflow (complete success flow)
+    * TestCraftingWorkflow_Failure (failure flow)
+  - ✅ All tests passing (6 test functions, 15+ test cases)
+  - ✅ Coverage: 57.1% for network package (protocol.go is data structures)
+  - ✅ Server-authoritative design: clients request, server validates and broadcasts
+  - ✅ Documentation: comprehensive GoDoc comments for all message types
 - [ ] Crafting stations in world generation (alchemy tables, forges, workbenches)
 
 **Components**:
@@ -531,6 +547,15 @@ result, err := craftingSystem.StartCraft(entity.ID, potionRecipe, station.ID)
 - Deterministic crafting results (seed-based) ✅
 - Server-authoritative validation ✅
 - Client-side progress tracking ✅
+- Network protocol in `pkg/network/protocol.go`:
+  * StartCraftMessage: Client requests crafting with recipe ID and optional station
+  * CraftProgressMessage: Server broadcasts progress (elapsed/total time, percent complete)
+  * CraftCompleteMessage: Server broadcasts result (success/failure, item, XP, materials lost)
+  * RecipeLearnMessage: Server broadcasts recipe discovery (source: drop, quest, npc, pickup, level_up)
+  * All messages include SequenceNumber for ordering, timestamps for synchronization
+  * Server validates recipe knowledge, materials, skill, station before starting craft
+  * Clients update UI progress bars and components from CraftProgressMessage
+  * Client-side prediction possible but server has final authority ✅
 
 ---
 

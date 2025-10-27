@@ -57,10 +57,10 @@ func BenchmarkGetEntitiesWithMultipleQueries(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Simulate typical frame with multiple system queries
-		_ = world.GetEntitiesWith("position", "velocity")    // Movement system
-		_ = world.GetEntitiesWith("position", "collider")    // Collision system
-		_ = world.GetEntitiesWith("position", "health")      // Health bar render
-		_ = world.GetEntitiesWith("position")                // General position queries
+		_ = world.GetEntitiesWith("position", "velocity") // Movement system
+		_ = world.GetEntitiesWith("position", "collider") // Collision system
+		_ = world.GetEntitiesWith("position", "health")   // Health bar render
+		_ = world.GetEntitiesWith("position")             // General position queries
 	}
 }
 

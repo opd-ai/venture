@@ -68,7 +68,7 @@ func (f *FrameTimeTracker) GetStats() FrameTimeStats {
 	// Calculate percentiles
 	// For 1% low, we want the 1st percentile (worst 1% of frames)
 	// This should be a HIGH value (slow frames), not low
-	idx1Pct := int(float64(count) * 0.99)    // 99th percentile index
+	idx1Pct := int(float64(count) * 0.99) // 99th percentile index
 	if idx1Pct >= count {
 		idx1Pct = count - 1
 	}
@@ -82,10 +82,10 @@ func (f *FrameTimeTracker) GetStats() FrameTimeStats {
 		Average:       avg,
 		Min:           sorted[0],
 		Max:           sorted[count-1],
-		Percentile1:   sorted[idx1Pct],    // 99th percentile (1% worst frames)
-		Percentile01:  sorted[count-1],     // 0.1% low (worst frame)
-		Percentile99:  sorted[idx99Pct],    // 99th percentile
-		Percentile999: sorted[idx999Pct],   // 99.9th percentile
+		Percentile1:   sorted[idx1Pct],   // 99th percentile (1% worst frames)
+		Percentile01:  sorted[count-1],   // 0.1% low (worst frame)
+		Percentile99:  sorted[idx99Pct],  // 99th percentile
+		Percentile999: sorted[idx999Pct], // 99.9th percentile
 		StdDev:        stdDev,
 		SampleCount:   count,
 	}

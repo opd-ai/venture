@@ -60,7 +60,7 @@ func TestFrameTimeStats_GetFPS(t *testing.T) {
 func BenchmarkFrameTimeTracker_Record(b *testing.B) {
 	tracker := NewFrameTimeTracker(1000)
 	frameTime := 16 * time.Millisecond
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tracker.RecordFrame(frameTime)
@@ -72,7 +72,7 @@ func BenchmarkFrameTimeTracker_GetStats(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		tracker.RecordFrame(16 * time.Millisecond)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = tracker.GetStats()

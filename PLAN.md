@@ -242,10 +242,30 @@ This approach allows immediate user feedback while keeping the codebase maintain
   - Helper methods: DamageTileAtWorldPosition(), DamageTilesInArea() for area effects
   - Server-authoritative design (requires world, terrain, worldMap references)
   - 343 lines with comprehensive logging support
-- 🚧 Fire propagation system (planned)
-- 🚧 Terrain construction system (planned)
+- ✅ Created `pkg/engine/fire_propagation_system.go` with fire spread system (October 26, 2025)
+  - FirePropagationSystem implements cellular automata for fire propagation
+  - Checks 4-connected neighbors (up, down, left, right) for spread
+  - Spread chance: 0.3 * intensity per second to adjacent tiles
+  - Flammability based on material type (only wood is flammable)
+  - Fire burns for 10-15 seconds (default: 12, configurable)
+  - Helper methods: IgniteTile(), IgniteTilesInArea() for external systems
+  - GetActiveFireCount() for performance monitoring
+  - Comprehensive test suite: 10 test functions, all passing
+  - 348 lines with full ECS integration
+- ✅ Created `pkg/engine/terrain_construction_system.go` with wall building system (October 26, 2025)
+  - TerrainConstructionSystem handles wall placement with inventory material consumption
+  - StartConstruction() validates placement and creates buildable entity
+  - Material requirements: Default 10 stone per wall (configurable via BuildableComponent)
+  - Material sources: Inventory items (name-based detection) + gold (10 gold = 1 stone equivalent)
+  - Construction time: 3 seconds default (configurable)
+  - Update() processes construction progress with timer
+  - completeConstruction() places wall tile and removes buildable entity
+  - GetConstructionProgress() returns 0.0-1.0 for UI feedback
+  - Placement validation: Tile must be walkable (TileFloor), not occupied
+  - Comprehensive test suite: 12 test functions, all passing, 2 benchmarks
+  - 356 lines with full ECS integration
 - 🚧 Network protocol support (planned)
-- 🚧 System test suites (planned)
+- 🚧 Additional test suites (terrain_modification_system_test.go) (planned)
 
 **Components**:
 - **Destruction**: Wall breaking via weapons/spells, fire propagation
@@ -261,10 +281,12 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Weapon damage to terrain: weapon.Stats.Damage * 0.5 (terrain multiplier)
 - Attack direction determined by AnimationComponent.Facing (DirUp/Down/Left/Right)
 - Destructible entities automatically created for damaged walls, removed when destroyed
+- Fire spread uses cellular automata: checks 4-connected neighbors each update
+- Fire tracking via internal map for performance (<2ms per frame for 100 fires)
 - Client prediction for instant feedback
 - Server-authoritative for multiplayer synchronization
 
-**Usage Example**:
+**Usage Example - Terrain Destruction**:
 ```go
 // Setup
 system := engine.NewTerrainModificationSystem(tileSize)
@@ -279,7 +301,49 @@ system.ProcessWeaponAttack(playerEntity, equippedWeapon)
 system.DamageTilesInArea(centerX, centerY, radius, damage)
 ```
 
-**Status**: 🚧 Phase 4.1-4.2 Complete (Components, Modification System), Phase 4.3-4.6 In Progress (Fire, Construction, Network, Tests)
+**Usage Example - Fire Propagation**:
+```go
+// Setup
+system := engine.NewFirePropagationSystem(tileSize, seed)
+system.SetWorld(world)
+system.SetTerrain(terrain)
+
+// Ignite single tile
+system.IgniteTile(tileX, tileY, intensity)
+
+// Ignite area (explosions, fire spells)
+system.IgniteTilesInArea(centerX, centerY, radius, intensity)
+
+// Update in game loop
+system.Update(entities, deltaTime)
+
+// Monitor fire count
+activeCount := system.GetActiveFireCount()
+```
+
+**Usage Example - Terrain Construction**:
+```go
+// Setup
+system := engine.NewTerrainConstructionSystem(tileSize)
+system.SetWorld(world)
+system.SetTerrain(terrain)
+system.SetWorldMap(worldMap)
+
+// Start building a wall
+err := system.StartConstruction(builderEntity, tileX, tileY, world.TileWall)
+if err != nil {
+    // Handle error: invalid placement, insufficient materials, etc.
+}
+
+// Update in game loop
+entities := world.GetEntities()
+system.Update(entities, deltaTime)
+
+// Check construction progress for UI feedback
+progress := system.GetConstructionProgress(tileX, tileY) // 0.0-1.0
+```
+
+**Status**: 🚧 Phase 4.1-4.4 Complete (Components, Modification System, Fire System, Construction System), Phase 4.5-4.6 In Progress (Network, Additional Tests)
 
 ---
 

@@ -57,79 +57,27 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 #### 1.1: Complete Death & Revival System ✅ **COMPLETED** (October 26, 2025)
 
-**Description**: Implement comprehensive death mechanics including entity immobilization, action disabling, item dropping, and multiplayer revival system.
+**Features**:
+- RevivalSystem integrated with proximity-based revival (32 pixel range, 20% health restoration)
+- Action systems properly gated on DeadComponent (movement, combat, spells, items)
+- Death triggers item/equipment dropping with scatter physics
+- Network protocol support (DeathMessage, RevivalMessage)
+- Comprehensive test coverage (15 table-driven tests)
 
-**Implementation Summary**:
-- ✅ RevivalSystem integrated into client game loop (cmd/client/main.go:L503-L506)
-- ✅ Action systems gated on DeadComponent absence:
-  - MovementSystem: L35-L38 (pre-existing)
-  - PlayerCombatSystem: L29-L32 (added)
-  - PlayerSpellCastingSystem: L38-L42 (added)
-  - PlayerItemUseSystem: L29-L32 (added)
-- ✅ Death detection and item dropping fully implemented (cmd/client/main.go:L314-L432)
-  - DeadComponent addition on death
-  - Inventory items dropped with scatter physics (20-50 pixel radius)
-  - Equipment items dropped with separate scatter pattern
-  - Procedural loot generation for NPCs
-  - Quest tracking integration
-  - Death sound effects
-- ✅ Network protocol support added:
-  - DeathMessage type (pkg/network/protocol.go)
-  - RevivalMessage type (pkg/network/protocol.go)
-  - Server-authoritative synchronization ready
-- ✅ Comprehensive test suite exists (pkg/engine/revival_system_test.go):
-  - 15 table-driven tests covering all scenarios
-  - Proximity detection tests (in range, out of range, boundary cases)
-  - Health restoration tests (default 20%, custom amounts)
-  - Input validation tests
-  - Multiple dead players tests (closest revived first)
-  - Edge cases (dead cannot revive, NPCs not revivable)
-  - Helper function tests (IsPlayerRevivable, FindRevivablePlayersInRange)
-
-**Technical Details**:
-- Revival range: 32 pixels (one tile) by default, configurable
-- Health restoration: 20% of max health by default, configurable
-- Item drop physics: Circular scatter with velocity and friction
-- Server authority: Death/revival messages support multiplayer synchronization
-
-**Status**: ✅ Fully implemented and integrated. All success criteria met. System is production-ready for Phase 9.1 completion.
+**Status**: ✅ Production-ready
 
 ---
 
-#### 1.2: Menu Navigation Standardization ✅ **COMPLETED (VERIFIED)** (October 26, 2025)
+#### 1.2: Menu Navigation Standardization ✅ **COMPLETED** (October 26, 2025)
 
-**Description**: Enforce consistent dual-exit navigation (toggle key + ESC) across all in-game menus as specified in `docs/auditors/MENUS.md`.
+**Features**:
+- Centralized menu key configuration (I=Inventory, C=Character, K=Skills, J=Quests, M=Map)
+- Universal dual-exit pattern: toggle key + ESC on all 7 menus
+- Proper input processing order prevents key consumption conflicts
+- Visual hints show available exit methods on each menu
+- ESC priority chain: Tutorial → Help → Pause
 
-**Implementation Summary** (Audit Finding: Already Complete):
-- ✅ Centralized configuration in `pkg/engine/menu_keys.go` (89 lines)
-  - Standard key bindings: I (Inventory), C (Character), K (Skills), J (Quests), M (Map)
-  - Universal exit key: Escape
-  - `HandleMenuInput()` function provides reusable dual-exit logic
-- ✅ All 7 menus implement dual-exit pattern:
-  - Inventory UI (I key): HandleMenuInput (L91), visual hint (L251) - "Press [I] or [ESC] to close"
-  - Character UI (C key): HandleMenuInput (L104), visual hint (L200) - "Press [C] or [ESC] to close"
-  - Skills UI (K key): HandleMenuInput (L141), visual hint (L221) - "Press [K] or [ESC] to close"
-  - Quests UI (J key): HandleMenuInput (L66), visual hint (L127) - "Press [J] or [ESC] to close"
-  - Map UI (M key): HandleMenuInput (L176), visual hint (L408) - "Press [M] or [ESC] to close"
-  - Help System (ESC): Managed by InputSystem priority, visual hint (L396) - "[ESC to close]"
-  - Pause Menu (ESC): Direct ESC handling (L231), visual hint (L559) - "ESC: Back"
-- ✅ Proper input processing order (game.go:L137-148):
-  - UI systems update BEFORE World update
-  - Prevents key consumption conflicts
-- ✅ ESC key priority chain (input_system.go:L394-405):
-  - Tutorial System (highest priority)
-  - Help System (if visible)
-  - Pause Menu (fallback)
-- ✅ Build verification: Successful compilation with zero errors
-
-**Technical Details**:
-- Reusable `HandleMenuInput()` returns (shouldClose, shouldToggle) booleans
-- Toggle key works in both directions (open/close)
-- ESC works close-only when menu is visible
-- No menu traps - all menus support both exit methods
-- Visual indicators follow consistent format: "[KEY] or [ESC] to close"
-
-**Status**: ✅ Verified complete through comprehensive code audit. All requirements satisfied. See `docs/IMPLEMENTATION_CATEGORY_1.2.md` for detailed audit report.
+**Status**: ✅ Production-ready
 
 ---
 
@@ -212,105 +160,60 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 #### 2.1: LAN Party "Host-and-Play" Mode ✅ **COMPLETED** (October 26, 2025)
 
-**Description**: Single-command mode that starts authoritative server and auto-connects local client, as specified in `docs/auditors/LAN_PARTY.md`.
-
-**Implementation Summary**:
-- ✅ `pkg/hostplay` package created with server lifecycle management
-- ✅ Port fallback mechanism (tries ports 8080-8089 automatically)
-- ✅ `--host-and-play` flag added to cmd/client/main.go
-- ✅ `--host-lan` flag for LAN binding (default: localhost only for security)
-- ✅ Graceful shutdown with context cancellation and timeouts
-- ✅ Comprehensive test suite (96% coverage)
-- ✅ Documentation updated in README.md
-
-**Technical Details**:
-- Default ports: 8080-8089 (configurable via `-port` flag)
-- Bind address: 127.0.0.1 (localhost only) or 0.0.0.0 (LAN mode with security warning)
-- Server runs in background goroutine with clean shutdown on client exit
-- Reuses existing server implementation from cmd/server/main.go
-- Context-based cancellation ensures no resource leaks
+**Features**:
+- Single-command mode starts server and connects client: `./venture-client --host-and-play`
+- Port fallback mechanism (tries 8080-8089 automatically)
+- `--host-lan` flag for LAN binding (default: localhost only for security)
+- Graceful shutdown with context cancellation
+- Comprehensive test suite (96% coverage)
 
 **Usage**:
 ```bash
-# Host and play (localhost only, secure)
+# Host and play (localhost, secure)
 ./venture-client --host-and-play
 
-# Host for LAN party (accessible on network)
+# Host for LAN party
 ./venture-client --host-and-play --host-lan
 
 # Others join
 ./venture-client -multiplayer -server <host-ip>:8080
 ```
 
-**Status**: ✅ Fully implemented and tested. All success criteria met.
+**Status**: ✅ Production-ready
 
 ---
 
 #### 2.2: Character Creation & Tutorial Integration ✅ **COMPLETED** (October 26, 2025)
 
-**Description**: Transform existing tutorial into unified character creation onboarding flow as outlined in `docs/auditors/EXPAND.md:L9-L21`.
-
-**Implementation Summary**:
-- ✅ Created `pkg/engine/character_creation.go` (626 lines) with three-step UI flow
-- ✅ Integrated with AppStateCharacterCreation and main menu system
-- ✅ Three character classes with distinct stat distributions:
+**Features**:
+- Three-step UI flow: Name → Class → Confirmation
+- Three character classes with distinct stats:
   - Warrior: HP 150, high defense, 2.0x crit damage
   - Mage: HP 80, Mana 150, 10% crit, 8 mana/s regen
   - Rogue: HP 100, 15% crit/evasion, 0.3s attack cooldown
-- ✅ ApplyClassStats() function modifies player components
-- ✅ Tutorial information embedded in class descriptions
-- ✅ Comprehensive test suite: 16 test functions, 42 test cases, 100% coverage on testable functions
-- ✅ Integrated into cmd/client/main.go with GetPendingCharacterData()
+- Tutorial information embedded in class descriptions
+- Comprehensive test suite (100% coverage on testable functions)
 
-**Technical Details**:
-- Name input: alphanumeric + spaces, 1-20 characters with validation
-- Class selection: keyboard navigation (arrow keys or 1-3 numbers)
-- Three-step flow: Name → Class → Confirmation
-- Character data stored during transition, applied after world generation
-- Multiplayer-ready: character data structure prepared for network sync
-
-**Status**: ✅ Fully implemented and tested. Character creation provides seamless onboarding with tutorial integration through class descriptions.
-
-**Reference Files**:
-- `pkg/engine/character_creation.go` (implementation + ApplyClassStats)
-- `pkg/engine/character_creation_test.go` (comprehensive test suite)
-- `pkg/engine/game.go` (state machine integration)
-- `cmd/client/main.go:L941-L956` (character stats application)
+**Status**: ✅ Production-ready
 
 ---
 
 #### 2.3: Main Menu & Game Modes System ✅ **COMPLETED (MVP)** (October 26, 2025)
 
-**Description**: Implement splash screen menu system with Single-Player/Multi-Player selection and sub-menus as described in `docs/auditors/EXPAND.md:L1-L7`.
+**Features**:
+- AppStateManager with state machine (100% test coverage)
+- Main menu with keyboard/mouse navigation (92.3% coverage)
+- Menu options: Single-Player, Multi-Player, Settings (stub), Quit
+- Single-Player directly starts new game (submenus deferred)
+- Multi-Player uses CLI flags (address input deferred)
 
-**Implementation Summary**:
-- ✅ Created `pkg/engine/app_state.go` with AppStateManager (100% test coverage)
-- ✅ Created `pkg/engine/main_menu_ui.go` with keyboard/mouse navigation (92.3% coverage)
-- ✅ Integrated into EbitenGame.Update()/Draw() with state-aware rendering
-- ✅ Main menu options: Single-Player, Multi-Player, Settings (stub), Quit
-- ✅ State machine enforces valid transitions with callback hooks
-
-**Status**: ✅ MVP Complete - Functional main menu with simplified flow
-
-**Current Behavior**:
-- Game launches to main menu (AppStateMainMenu)
-- Single-Player directly starts new game (submenus deferred to Phase 2.3.1)
-- Multi-Player uses CLI flags (submenu with address input deferred to Phase 2.3.1)
-- Settings shows "not implemented" message
-
-**Deferred to Phase 2.3.1** (Future Enhancement):
+**Deferred to Future**:
 - Single-Player submenu: "New Game" / "Load Game" / "Back"
 - Multi-Player submenu: server address text input + "Connect" button
-- Settings menu implementation with persistence
-- Visual polish: procedural title logo, genre-themed backgrounds
-- Smooth fade transitions between states
+- Settings menu implementation
+- Visual polish: title logo, themed backgrounds, transitions
 
-**Rationale for Simplified MVP**: Following SIMPLICITY RULE, the MVP implements core menu functionality without submenu complexity. This allows immediate user testing and feedback while maintaining clean, testable code. Submenus add UI complexity (text input, save file lists) that can be layered in once base menu is validated.
-
-**Reference Files**:
-- `pkg/engine/app_state.go` - Application state machine
-- `pkg/engine/main_menu_ui.go` - Main menu UI component
-- `pkg/engine/game.go:L16-L48` - EbitenGame with state management integration
+**Status**: ✅ MVP complete, enhanced features planned for future phases
 
 ---
 
@@ -327,49 +230,14 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 #### 2.4: Dynamic Music Context Switching ✅ **COMPLETED** (January 2026)
 
-**Description**: Implement adaptive music system that changes background music based on game context (exploration, combat, boss fight, victory).
+**Features**:
+- Context detection system with 6 music contexts: Exploration, Combat, Boss, Danger, Victory, Death
+- Proximity-based enemy detection (300px radius), boss detection (Attack > 20), danger detection (HP < 20%)
+- Transition management with cooldown (10s) and priority system
+- AudioManagerSystem integration with automatic context switching
+- Comprehensive test coverage (96.9%)
 
-**Rationale**: Identified in system integration audit (`docs/FINAL_AUDIT.md` Issue #5). AudioManager currently only plays exploration music without context awareness. Dynamic music significantly enhances player immersion and emotional engagement.
-
-**Implementation Summary**:
-- ✅ Context detection system implemented (`pkg/engine/music_context.go`):
-  - MusicContext enum: Exploration, Combat, Boss, Danger, Victory, Death
-  - Proximity-based enemy detection (300px radius)
-  - Boss detection (Attack stat > 20)
-  - Danger detection (player health < 20%)
-  - Team-based filtering (excludes friendly entities)
-- ✅ Transition management system:
-  - Cooldown-based transition prevention (10 seconds default)
-  - Priority system (Boss=100, Combat=80, Danger=60, Victory=50, Death=40, Exploration=20)
-  - Higher-priority contexts can interrupt lower-priority ones
-  - Context persistence prevents rapid switching
-- ✅ AudioManagerSystem integration (`pkg/engine/audio_manager.go`):
-  - MusicContextDetector and MusicTransitionManager instances
-  - Context detection runs every 60 frames (1 second at 60 FPS)
-  - Automatic music switching based on detected context
-  - Genre-aware music generation support
-- ✅ Comprehensive test coverage (96.9%):
-  - 24 table-driven test cases across 9 test functions
-  - Context detection validation (all scenarios covered)
-  - Priority system validation
-  - Transition logic validation (cooldown, priority interruption)
-  - Distance calculation tests
-
-**Technical Details**:
-- Detection radius: 300 pixels (configurable)
-- Transition cooldown: 10 seconds (configurable)
-- Boss detection threshold: Attack > 20
-- Danger detection threshold: Health < 20%
-- Update frequency: Once per second (60 frames at 60 FPS)
-- Distance calculation: Euclidean distance for proximity checks
-
-**Status**: ✅ Fully implemented and tested. Music context detection and transition systems production-ready. Integration with AudioManagerSystem complete. System achieves 96.9% test coverage exceeding 80% requirement.
-
-**Reference Files**:
-- `pkg/engine/music_context.go` (280 lines - context detection)
-- `pkg/engine/music_context_test.go` (453 lines - comprehensive tests)
-- `pkg/engine/audio_manager.go` (updated AudioManagerSystem integration)
-- `docs/FINAL_AUDIT.md` (Issue #5: Music Context Not Dynamic)
+**Status**: ✅ Production-ready
 
 ---
 
@@ -561,41 +429,15 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 #### 4.3: Spatial Partition System Integration ✅ **COMPLETED** (October 26, 2025)
 
-**Description**: Integrate SpatialPartitionSystem from perftest into main game client for improved entity query performance with large entity counts.
-
-**Rationale**: Identified in system integration audit (`docs/FINAL_AUDIT.md`). SpatialPartitionSystem currently only used in `cmd/perftest` but could provide viewport culling optimization for main game when entity counts exceed 500. Performance tests show benefits with 2000+ entities.
-
-**Implementation Summary**:
-- ✅ SpatialPartitionSystem instantiated in `cmd/client/main.go` after terrain generation (L642-L670)
-- ✅ World bounds calculated from terrain dimensions: `terrainWidth * 32.0` pixels (32px per tile)
-- ✅ System registered with ECS World via `world.AddSystem(spatialSystem)` for automatic updates
-- ✅ Connected to RenderSystem via `SetSpatialPartition()` with culling enabled
-- ✅ Quadtree capacity set to 8 entities per node (optimal balance from perftest benchmarks)
-- ✅ Periodic rebuild every 60 frames (1 second at 60 FPS) to track entity movement
-- ✅ Always enabled as core optimization (no flag - proven performance benefit)
-- ✅ Structured logging integration with world dimensions and configuration
-- ✅ Comprehensive test suite verified (pkg/engine/spatial_partition_test.go)
-
-**Technical Details**:
+**Features**:
 - Quadtree-based spatial partitioning with O(log n) query performance
 - Viewport culling reduces rendering overhead for off-screen entities
-- Automatic rebuild maintains accuracy as entities move
-- Zero visual artifacts or entity popping at viewport edges
-- Graceful handling of entities without position components
-
-**Performance Impact**:
+- Automatic rebuild every 60 frames maintains accuracy as entities move
+- Integrated into RenderSystem with world bounds calculated from terrain dimensions
 - Estimated 10-15% frame time reduction with 500+ entities
-- Proven scalability to 2000+ entities from perftest validation
-- Query operations average <10μs per call (from perftest benchmarks)
+- Proven scalability to 2000+ entities
 
-**Status**: ✅ Fully integrated and production-ready. All success criteria met. System provides automatic performance optimization for all entity counts.
-
-**Reference Files**:
-- ✅ `cmd/client/main.go:642-670` (integration code)
-- `pkg/engine/spatial_partition.go:218` (SpatialPartitionSystem definition)
-- `pkg/engine/render_system.go:183` (SetSpatialPartition method)
-- `cmd/perftest/main.go:43` (performance validation example)
-- `docs/FINAL_AUDIT.md` (Issue #4: SpatialPartitionSystem Not Integrated)
+**Status**: ✅ Production-ready, provides automatic performance optimization
 
 ---
 
@@ -803,49 +645,23 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 **Estimated Effort**: Small-Medium (1-2 weeks)  
 **Dependencies**: Should be implemented early to support ongoing development
 
-#### 6.1: Comprehensive System Integration Audit ✅ COMPLETED
+#### 6.1: Comprehensive System Integration Audit ✅ **COMPLETED** (October 26, 2025)
 
-**Status**: ✅ **COMPLETED** (October 26, 2025)
+**Results**:
+- 38 total systems identified and audited
+- 33 systems verified as properly integrated (87%)
+- 5 systems identified as orphaned/future features (13%)
+- Zero critical bugs found - all core gameplay systems functional
+- Comprehensive documentation in `docs/FINAL_AUDIT.md` (810 lines)
 
-**Description**: Complete audit and verification of all game systems as specified in `docs/auditors/SCAN_AUDIT.md` to ensure proper wiring and integration.
+**Orphaned Systems Addressed**:
+1. RevivalSystem → Category 1.1 ✅
+2. EquipmentVisualSystem → Category 5.2
+3. SpatialPartitionSystem → Category 4.3 ✅
+4. lighting.System → Category 5.3
+5. particles.WeatherSystem → Category 5.4
 
-**Rationale**: As project matured through 8 phases, systems were added incrementally. Need to verify all systems are properly instantiated, registered with ECS world, and communicating correctly. Prevents "orphaned systems" and integration bugs.
-
-**Completion Summary**:
-- ✅ **38 total systems** identified and audited across engine, rendering, and audio packages
-- ✅ **33 systems verified** as properly integrated (87% integration rate)
-- ✅ **5 systems identified** as orphaned/future features (13% - see below)
-- ✅ **Zero critical bugs** found - all core gameplay systems functional
-- ✅ **Documentation complete**: `docs/FINAL_AUDIT.md` (810 lines) with comprehensive analysis
-
-**Audit Results**:
-
-*Systems Properly Integrated:*
-- 22 ECS systems registered in World (Input, Movement, Collision, Combat, AI, etc.)
-- 7 Rendering systems (Camera, Render, Terrain, HUD, Tutorial, Help, Menu)
-- 5 UI systems (Inventory, Quest, Character, Skills, Map)
-- Server correctly uses 6 authoritative ECS systems (no rendering/UI)
-
-*Orphaned/Future Systems Identified:*
-1. **RevivalSystem** - Defined but not integrated (addressed in Category 1.1)
-2. **EquipmentVisualSystem** - Not integrated (NEW: addressed in Category 5.2)
-3. **SpatialPartitionSystem** - Used only in perftest (NEW: addressed in Category 4.3)
-4. **lighting.System** - Not integrated (NEW: addressed in Category 5.3)
-5. **particles.WeatherSystem** - Not integrated (NEW: addressed in Category 5.4)
-
-*Additional Recommendations from Audit:*
-- Dynamic music context switching (NEW: addressed in Category 2.4)
-- System lifecycle hooks (Init/Shutdown) - future enhancement
-- Runtime system introspection methods - future enhancement
-
-**Next Steps**:
-All future features identified in the audit have been added to this roadmap with appropriate prioritization and technical approaches. See Categories 2.4, 4.3, 5.2-5.4 for implementation plans.
-
-**Reference Files**:
-- ✅ `docs/FINAL_AUDIT.md` (completed audit report)
-- `cmd/client/main.go:L280-L450` (system initialization verified)
-- `pkg/engine/ecs.go:L50-L150` (system registration verified)
-- All `pkg/engine/*_system.go` files (audited)
+**Status**: ✅ Audit complete, roadmap updated with findings
 
 ---
 

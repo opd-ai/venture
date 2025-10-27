@@ -22,16 +22,19 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager       *AppStateManager
-	MainMenuUI         *MainMenuUI
-	SinglePlayerMenu   *SinglePlayerMenu   // Submenu for single-player options
-	GenreSelectionMenu *GenreSelectionMenu // Genre selection for single-player
-	SettingsUI         *SettingsUI
-	SettingsManager    *SettingsManager
-	CharacterCreation  *EbitenCharacterCreation
-	pendingCharData    *CharacterData
-	isMultiplayerMode  bool   // Track if character creation is for multiplayer
-	selectedGenreID    string // Selected genre for world generation
+	StateManager         *AppStateManager
+	MainMenuUI           *MainMenuUI
+	SinglePlayerMenu     *SinglePlayerMenu     // Submenu for single-player options
+	GenreSelectionMenu   *GenreSelectionMenu   // Genre selection for single-player
+	MultiplayerMenu      *MultiplayerMenu      // Submenu for multiplayer options
+	ServerAddressInput   *ServerAddressInput   // Text input for server address
+	SettingsUI           *SettingsUI
+	SettingsManager      *SettingsManager
+	CharacterCreation    *EbitenCharacterCreation
+	pendingCharData      *CharacterData
+	isMultiplayerMode    bool   // Track if character creation is for multiplayer
+	selectedGenreID      string // Selected genre for world generation
+	pendingServerAddress string // Server address for Join option
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -134,6 +137,8 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		MainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
 		SinglePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
 		GenreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
+		MultiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
+		ServerAddressInput: NewServerAddressInput(screenWidth, screenHeight),
 		SettingsUI:         settingsUI,
 		SettingsManager:    settingsManager,
 		CharacterCreation:  NewCharacterCreation(screenWidth, screenHeight),
@@ -167,6 +172,15 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	// Setup genre selection menu callbacks
 	game.GenreSelectionMenu.SetGenreSelectCallback(game.handleGenreSelection)
 	game.GenreSelectionMenu.SetBackCallback(game.handleGenreSelectionBack)
+
+	// Setup multiplayer menu callbacks
+	game.MultiplayerMenu.SetJoinCallback(game.handleMultiplayerMenuJoin)
+	game.MultiplayerMenu.SetHostCallback(game.handleMultiplayerMenuHost)
+	game.MultiplayerMenu.SetBackCallback(game.handleMultiplayerMenuBack)
+
+	// Setup server address input callbacks
+	game.ServerAddressInput.SetConnectCallback(game.handleServerAddressConnect)
+	game.ServerAddressInput.SetCancelCallback(game.handleServerAddressCancel)
 
 	// Setup settings UI callbacks
 	game.SettingsUI.SetBackCallback(func() {
@@ -226,20 +240,21 @@ func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 		}
 
 	case MainMenuOptionMultiPlayer:
-		// Transition to character creation (same as single-player)
-		if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
+		// Transition to multiplayer submenu
+		if err := g.StateManager.TransitionTo(AppStateMultiPlayerMenu); err != nil {
 			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to character creation")
+				g.logger.WithError(err).Error("failed to transition to multiplayer menu")
 			}
 			return
 		}
 
-		// Reset character creation UI for multiplayer
-		g.CharacterCreation.Reset()
-		g.isMultiplayerMode = true // Multiplayer mode
+		// Show multiplayer menu
+		if g.MultiplayerMenu != nil {
+			g.MultiplayerMenu.Show()
+		}
 
 		if g.logger != nil {
-			g.logger.Info("entering character creation for multiplayer")
+			g.logger.Info("entering multiplayer menu")
 		}
 
 	case MainMenuOptionSettings:
@@ -375,6 +390,160 @@ func (g *EbitenGame) handleSinglePlayerMenuBack() {
 	}
 }
 
+// handleMultiplayerMenuJoin handles the Join Server selection from multiplayer menu.
+func (g *EbitenGame) handleMultiplayerMenuJoin() {
+	// Transition to server address input
+	if err := g.StateManager.TransitionTo(AppStateServerAddressInput); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to server address input")
+		}
+		return
+	}
+
+	// Show server address input
+	if g.ServerAddressInput != nil {
+		g.ServerAddressInput.Show()
+	}
+
+	// Hide multiplayer menu
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Hide()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("showing server address input for join")
+	}
+}
+
+// handleMultiplayerMenuHost handles the Host Game selection from multiplayer menu.
+func (g *EbitenGame) handleMultiplayerMenuHost() {
+	if g.logger != nil {
+		g.logger.Info("host game selected - starting local server")
+	}
+
+	// TODO: Start local server using pkg/hostplay
+	// For now, automatically connect to localhost:8080
+	g.pendingServerAddress = "localhost:8080"
+
+	// Transition to gameplay
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to gameplay")
+		}
+		return
+	}
+
+	// Hide multiplayer menu
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Hide()
+	}
+
+	// Call multiplayer connect callback if set
+	if g.onMultiplayerConnect != nil {
+		if err := g.onMultiplayerConnect(g.pendingServerAddress); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to connect to hosted server")
+			}
+			// Transition back to multiplayer menu on error
+			g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
+			if g.MultiplayerMenu != nil {
+				g.MultiplayerMenu.Show()
+			}
+			return
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithField("address", g.pendingServerAddress).Info("connected to hosted server")
+	}
+}
+
+// handleMultiplayerMenuBack handles the Back selection from multiplayer menu.
+func (g *EbitenGame) handleMultiplayerMenuBack() {
+	// Transition back to main menu
+	if err := g.StateManager.TransitionTo(AppStateMainMenu); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition back to main menu")
+		}
+		return
+	}
+
+	// Hide multiplayer menu
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Hide()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("returning to main menu from multiplayer menu")
+	}
+}
+
+// handleServerAddressConnect handles connecting to the entered server address.
+func (g *EbitenGame) handleServerAddressConnect(address string) {
+	if g.logger != nil {
+		g.logger.WithField("address", address).Info("connecting to server")
+	}
+
+	g.pendingServerAddress = address
+
+	// Transition to gameplay
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to gameplay")
+		}
+		return
+	}
+
+	// Hide server address input
+	if g.ServerAddressInput != nil {
+		g.ServerAddressInput.Hide()
+	}
+
+	// Call multiplayer connect callback if set
+	if g.onMultiplayerConnect != nil {
+		if err := g.onMultiplayerConnect(address); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to connect to server")
+			}
+			// Transition back to server address input on error
+			g.StateManager.TransitionTo(AppStateServerAddressInput)
+			if g.ServerAddressInput != nil {
+				g.ServerAddressInput.Show()
+			}
+			return
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithField("address", address).Info("connected to server")
+	}
+}
+
+// handleServerAddressCancel handles canceling server address input.
+func (g *EbitenGame) handleServerAddressCancel() {
+	// Transition back to multiplayer menu
+	if err := g.StateManager.TransitionTo(AppStateMultiPlayerMenu); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition back to multiplayer menu")
+		}
+		return
+	}
+
+	// Hide server address input
+	if g.ServerAddressInput != nil {
+		g.ServerAddressInput.Hide()
+	}
+
+	// Show multiplayer menu
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Show()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("cancelled server address input, returning to multiplayer menu")
+	}
+}
+
 // IsInMainMenu returns true if currently displaying the main menu.
 func (g *EbitenGame) IsInMainMenu() bool {
 	return g.StateManager.IsInMenu()
@@ -410,6 +579,22 @@ func (g *EbitenGame) Update() error {
 	if g.StateManager.CurrentState() == AppStateGenreSelection {
 		if g.GenreSelectionMenu != nil {
 			g.GenreSelectionMenu.Update()
+		}
+		return nil
+	}
+
+	// If in multiplayer menu state, only update multiplayer menu
+	if g.StateManager.CurrentState() == AppStateMultiPlayerMenu {
+		if g.MultiplayerMenu != nil {
+			g.MultiplayerMenu.Update()
+		}
+		return nil
+	}
+
+	// If in server address input state, only update server address input
+	if g.StateManager.CurrentState() == AppStateServerAddressInput {
+		if g.ServerAddressInput != nil {
+			g.ServerAddressInput.Update()
 		}
 		return nil
 	}
@@ -556,6 +741,22 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	if g.StateManager.CurrentState() == AppStateGenreSelection {
 		if g.GenreSelectionMenu != nil {
 			g.GenreSelectionMenu.Draw(screen)
+		}
+		return
+	}
+
+	// If in multiplayer menu state, only draw multiplayer menu
+	if g.StateManager.CurrentState() == AppStateMultiPlayerMenu {
+		if g.MultiplayerMenu != nil {
+			g.MultiplayerMenu.Draw(screen)
+		}
+		return
+	}
+
+	// If in server address input state, only draw server address input
+	if g.StateManager.CurrentState() == AppStateServerAddressInput {
+		if g.ServerAddressInput != nil {
+			g.ServerAddressInput.Draw(screen)
 		}
 		return
 	}

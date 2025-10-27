@@ -17,8 +17,10 @@ const (
 	AppStateSinglePlayerMenu
 	// AppStateGenreSelection shows genre selection for single-player.
 	AppStateGenreSelection
-	// AppStateMultiPlayerMenu shows server connection UI.
+	// AppStateMultiPlayerMenu shows Join/Host/Back options for multiplayer.
 	AppStateMultiPlayerMenu
+	// AppStateServerAddressInput shows text input for server address.
+	AppStateServerAddressInput
 	// AppStateCharacterCreation shows character creation UI (future).
 	AppStateCharacterCreation
 	// AppStateGameplay is the active game state with world simulation.
@@ -38,6 +40,8 @@ func (s AppState) String() string {
 		return "GenreSelection"
 	case AppStateMultiPlayerMenu:
 		return "MultiPlayerMenu"
+	case AppStateServerAddressInput:
+		return "ServerAddressInput"
 	case AppStateCharacterCreation:
 		return "CharacterCreation"
 	case AppStateGameplay:
@@ -140,8 +144,11 @@ func isValidAppTransition(from, to AppState) bool {
 		// Can start new game (via genre selection), load game, or go back to main menu
 		return to == AppStateGenreSelection || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu
 	case AppStateMultiPlayerMenu:
-		// Can connect to game or go back
-		return to == AppStateGameplay || to == AppStateMainMenu
+		// Can show server address input (Join), start host game, or go back
+		return to == AppStateServerAddressInput || to == AppStateGameplay || to == AppStateMainMenu
+	case AppStateServerAddressInput:
+		// Can connect to server (gameplay) or go back to multiplayer menu
+		return to == AppStateGameplay || to == AppStateMultiPlayerMenu || to == AppStateMainMenu
 	case AppStateGenreSelection:
 		// Can proceed to character creation or go back to single-player menu
 		return to == AppStateCharacterCreation || to == AppStateSinglePlayerMenu || to == AppStateMainMenu

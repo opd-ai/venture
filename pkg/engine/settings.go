@@ -112,7 +112,7 @@ func NewSettingsManager() (*SettingsManager, error) {
 	settingsPath := filepath.Join(settingsDir, "settings.json")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(settingsDir, 0755); err != nil {
+	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create settings directory: %w", err)
 	}
 
@@ -157,7 +157,7 @@ func (sm *SettingsManager) SaveSettings() error {
 		return fmt.Errorf("failed to marshal settings: %w", err)
 	}
 
-	if err := os.WriteFile(sm.settingsPath, data, 0644); err != nil {
+	if err := os.WriteFile(sm.settingsPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write settings file: %w", err)
 	}
 

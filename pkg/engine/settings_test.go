@@ -308,7 +308,7 @@ func TestSettingsManager_LoadInvalidJSON(t *testing.T) {
 
 	// Write invalid JSON
 	invalidJSON := []byte("{invalid json content")
-	err := os.WriteFile(settingsPath, invalidJSON, 0644)
+	err := os.WriteFile(settingsPath, invalidJSON, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
@@ -339,7 +339,7 @@ func TestSettingsManager_LoadCorruptedSettings(t *testing.T) {
 	}
 
 	data, _ := json.Marshal(corruptedSettings)
-	err := os.WriteFile(settingsPath, data, 0644)
+	err := os.WriteFile(settingsPath, data, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}

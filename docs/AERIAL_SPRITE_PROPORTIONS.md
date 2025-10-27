@@ -463,7 +463,6 @@ if config.Custom["useAerial"] == true {
 - Implementation: `pkg/rendering/sprites/anatomy_template.go`
 - Tests: `pkg/rendering/sprites/anatomy_template_test.go`
 - Plan: `PLAN.md` (Phase 1 complete)
-- Report: `docs/IMPLEMENTATION_PHASE_1_AERIAL_TEMPLATES.md`
 
 ---
 

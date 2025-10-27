@@ -292,10 +292,20 @@ func TestAudioManagerSystem_BossMusic(t *testing.T) {
 
 	world := NewWorld()
 
-	// Create boss enemy (high attack)
+	// Create player entity with position
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&EbitenInput{}) // Mark as player
+
+	// Set player entity in system
+	system.SetPlayerEntity(player)
+
+	// Create boss enemy (high attack) near player
 	boss := world.CreateEntity()
 	boss.AddComponent(&HealthComponent{Current: 500, Max: 500})
 	boss.AddComponent(&StatsComponent{Attack: 25}) // > 20 = boss
+	boss.AddComponent(&PositionComponent{X: 200, Y: 200}) // Within 300px combat radius
 
 	world.Update(0.016)
 

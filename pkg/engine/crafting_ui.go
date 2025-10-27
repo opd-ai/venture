@@ -428,6 +428,23 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		// Draw success chance
 		successChance := recipe.GetEffectiveSuccessChance(skill.SkillLevel)
 		successText := fmt.Sprintf("Success: %.0f%%", successChance*100)
+		
+		// Show station bonus in success chance
+		if ui.stationEntity != nil {
+			if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
+				station := stationComp.(*CraftingStationComponent)
+				// Check if station type matches recipe type
+				if station.StationType == recipe.Type {
+					bonusChance := successChance + station.BonusSuccessChance
+					if bonusChance > 0.95 {
+						bonusChance = 0.95 // Cap at 95%
+					}
+					successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)", 
+						successChance*100, bonusChance*100, station.BonusSuccessChance*100)
+				}
+			}
+		}
+		
 		if successChance == 0 {
 			successText = "Success: Impossible (low skill)"
 		}
@@ -487,6 +504,44 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	footerY := windowY + windowHeight - 30
 	ebitenutil.DebugPrintAt(img, "Arrow Keys: Navigate | ENTER/SPACE: Craft | Mouse Wheel: Scroll",
 		windowX+10, footerY)
+	
+	// Draw nearby station hint if not at a station
+	if ui.stationEntity == nil && ui.playerEntity != nil {
+		if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
+			pos := posComp.(*PositionComponent)
+			// Find nearest station within 100 pixels
+			nearestStation, distance := ui.findNearestStation(pos.X, pos.Y, 100)
+			if nearestStation != nil {
+				if stationComp, ok := nearestStation.GetComponent("crafting_station"); ok {
+					station := stationComp.(*CraftingStationComponent)
+					stationHint := fmt.Sprintf("Nearby: %s (%.0f units away) - Move closer to use station bonuses",
+						station.StationType.String(), distance)
+					ebitenutil.DebugPrintAt(img, stationHint, windowX+10, footerY-20)
+				}
+			}
+		}
+	}
+}
+
+// findNearestStation finds the nearest crafting station within maxDistance.
+// Returns nil if no station is found within range.
+// Uses the same logic as FindClosestStation from station_spawn.go but operates on World entities.
+func (ui *CraftingUI) findNearestStation(centerX, centerY, maxDistance float64) (*Entity, float64) {
+	if ui.craftingSystem == nil || ui.craftingSystem.world == nil {
+		return nil, 0
+	}
+
+	entities := ui.craftingSystem.world.GetEntities()
+	
+	// Convert []*Entity to []Entity for FindClosestStation
+	entitySlice := make([]Entity, len(entities))
+	for i, e := range entities {
+		if e != nil {
+			entitySlice[i] = *e
+		}
+	}
+	
+	return FindClosestStation(entitySlice, centerX, centerY, maxDistance)
 }
 
 // minInt returns the minimum of two integers.

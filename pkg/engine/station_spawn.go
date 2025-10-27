@@ -10,6 +10,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
@@ -119,15 +120,13 @@ func SpawnStationsInTerrain(world *World, stationGen procgen.Generator, terrainD
 		return 0
 	}
 
-	// Convert to our local StationData type to avoid import cycle
-	var stations []*StationData
-	if stationsInterface, ok := result.([]interface{}); ok {
-		for _, s := range stationsInterface {
-			// Type assertion would fail here due to different package types
-			// We'll handle this in the integration layer
-			_ = s
-		}
-		return 0 // Skip for now, will be handled in integration
+	// Type assert to station.StationData slice
+	var stations []*station.StationData
+	if stationSlice, ok := result.([]*station.StationData); ok {
+		stations = stationSlice
+	} else {
+		// Validation failed or wrong type
+		return 0
 	}
 
 	// Generate spawn points with minimum 200 pixel separation
@@ -182,8 +181,17 @@ func SpawnStationsInTerrain(world *World, stationGen procgen.Generator, terrainD
 			}
 		}
 
+		// Convert station.StationData to local StationData format
+		localStationData := &StationData{
+			StationType: int(stationData.StationType),
+			Name:        stationData.Name,
+			SpawnX:      point.X,
+			SpawnY:      point.Y,
+			Seed:        stationData.Seed,
+		}
+
 		// Spawn station at validated position
-		stationEntity := SpawnStationFromData(world, stationData, point.X, point.Y)
+		stationEntity := SpawnStationFromData(world, localStationData, point.X, point.Y)
 		if stationEntity != nil {
 			spawnedCount++
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
+	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
@@ -837,6 +838,17 @@ func main() {
 		clientLogger.WithError(err).Warn("failed to spawn merchants")
 	} else if *verbose {
 		clientLogger.WithField("merchantCount", merchantCount).Info("spawned merchants")
+	}
+
+	// Spawn crafting stations in dungeon
+	if *verbose {
+		clientLogger.Info("spawning crafting stations in dungeon")
+	}
+
+	stationGen := station.NewStationGenerator()
+	stationCount := engine.SpawnStationsInTerrain(game.World, stationGen, generatedTerrain, 32, *seed+1000, *genreID)
+	if *verbose {
+		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
 	}
 
 	// Create player entity

@@ -11,7 +11,7 @@ import (
 func BenchmarkRenderSystemNoBatching(b *testing.B) {
 	// Create test world with entities
 	world := NewWorld()
-	
+
 	// Create camera system first
 	cameraSys := NewCameraSystem(800, 600)
 	camera := world.CreateEntity()
@@ -20,7 +20,7 @@ func BenchmarkRenderSystemNoBatching(b *testing.B) {
 		Zoom: 1.0,
 	})
 	cameraSys.SetActiveCamera(camera)
-	
+
 	// Create render system with camera
 	renderSys := NewRenderSystem(cameraSys)
 	renderSys.enableBatching = false // Disable batching
@@ -60,7 +60,7 @@ func BenchmarkRenderSystemNoBatching(b *testing.B) {
 func BenchmarkRenderSystemWithBatching(b *testing.B) {
 	// Create test world with entities
 	world := NewWorld()
-	
+
 	// Create camera system first
 	cameraSys := NewCameraSystem(800, 600)
 	camera := world.CreateEntity()
@@ -69,7 +69,7 @@ func BenchmarkRenderSystemWithBatching(b *testing.B) {
 		Zoom: 1.0,
 	})
 	cameraSys.SetActiveCamera(camera)
-	
+
 	// Create render system with camera
 	renderSys := NewRenderSystem(cameraSys)
 	renderSys.enableBatching = true // Enable batching
@@ -109,7 +109,7 @@ func BenchmarkRenderSystemWithBatching(b *testing.B) {
 func BenchmarkRenderSystemManySprites(b *testing.B) {
 	// Create test world with entities
 	world := NewWorld()
-	
+
 	// Create camera system first
 	cameraSys := NewCameraSystem(800, 600)
 	camera := world.CreateEntity()
@@ -118,7 +118,7 @@ func BenchmarkRenderSystemManySprites(b *testing.B) {
 		Zoom: 1.0,
 	})
 	cameraSys.SetActiveCamera(camera)
-	
+
 	// Create render system with camera
 	renderSys := NewRenderSystem(cameraSys)
 	renderSys.enableBatching = true // Enable batching
@@ -167,7 +167,7 @@ func BenchmarkRenderSystemManySprites(b *testing.B) {
 // BenchmarkDrawBatchSmall measures batching performance with small batch (10 sprites)
 func BenchmarkDrawBatchSmall(b *testing.B) {
 	world := NewWorld()
-	
+
 	// Create camera system first
 	cameraSys := NewCameraSystem(800, 600)
 	camera := world.CreateEntity()
@@ -176,7 +176,7 @@ func BenchmarkDrawBatchSmall(b *testing.B) {
 		Zoom: 1.0,
 	})
 	cameraSys.SetActiveCamera(camera)
-	
+
 	// Create render system with camera
 	renderSys := NewRenderSystem(cameraSys)
 
@@ -213,7 +213,7 @@ func BenchmarkDrawBatchSmall(b *testing.B) {
 // BenchmarkDrawBatchLarge measures batching performance with large batch (100 sprites)
 func BenchmarkDrawBatchLarge(b *testing.B) {
 	world := NewWorld()
-	
+
 	// Create camera system first
 	cameraSys := NewCameraSystem(800, 600)
 	camera := world.CreateEntity()
@@ -222,7 +222,7 @@ func BenchmarkDrawBatchLarge(b *testing.B) {
 		Zoom: 1.0,
 	})
 	cameraSys.SetActiveCamera(camera)
-	
+
 	// Create render system with camera
 	renderSys := NewRenderSystem(cameraSys)
 

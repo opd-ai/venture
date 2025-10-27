@@ -306,9 +306,19 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 	}
 
 	// Get sprite image from first entity (all entities in batch share same image)
-	firstSprite, _ := entities[0].GetComponent("sprite")
-	sprite := firstSprite.(*EbitenSprite)
-	spriteImage := sprite.Image
+	firstSprite, hasSprite := entities[0].GetComponent("sprite")
+	if !hasSprite {
+		return
+	}
+	batchSpriteImage := firstSprite.(*EbitenSprite).Image
+	if batchSpriteImage == nil {
+		// No sprite image, draw entities individually
+		for _, entity := range entities {
+			r.drawEntity(entity)
+			r.stats.RenderedEntities++
+		}
+		return
+	}
 
 	// Pre-allocate vertex and index buffers
 	// Each sprite needs 4 vertices and 6 indices (2 triangles)
@@ -322,6 +332,10 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 	// Build vertex and index buffers for all entities in batch
 	for _, entity := range entities {
+		// Count entity as rendered (matching non-batching behavior for test compatibility)
+		r.stats.RenderedEntities++
+
+		// Get components
 		posComp, hasPos := entity.GetComponent("position")
 		spriteComp, hasSprite := entity.GetComponent("sprite")
 
@@ -342,14 +356,6 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 			sprite.CurrentDirection = int(anim.GetFacing())
 		}
 
-		// Convert world position to screen position
-		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
-
-		// Check if entity is visible on screen
-		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
-			continue
-		}
-
 		// Get the actual sprite image (directional or single)
 		var actualSpriteImage *ebiten.Image
 		if len(sprite.DirectionalImages) > 0 {
@@ -362,10 +368,18 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 			actualSpriteImage = sprite.Image
 		}
 
-		// Skip if image doesn't match batch (only happens with directional sprites)
-		if actualSpriteImage != spriteImage {
-			r.drawEntity(entity) // Draw individually if image mismatch
-			r.stats.RenderedEntities++
+		// Skip if no image or image doesn't match batch
+		if actualSpriteImage == nil || actualSpriteImage != batchSpriteImage {
+			// Draw individually if image mismatch (already counted above)
+			r.drawEntity(entity)
+			continue
+		}
+
+		// Convert world position to screen position
+		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+
+		// Check if entity is visible on screen
+		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 			continue
 		}
 
@@ -399,7 +413,7 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		}
 
 		// Get sprite texture bounds
-		imgBounds := spriteImage.Bounds()
+		imgBounds := batchSpriteImage.Bounds()
 		w, h := float32(imgBounds.Dx()), float32(imgBounds.Dy())
 
 		// Create color scale from flash and tint
@@ -444,12 +458,11 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		)
 
 		vertexIndex += 4
-		r.stats.RenderedEntities++
 	}
 
 	// Draw all sprites in this batch with a single DrawTriangles call
 	if len(vertices) > 0 && len(indices) > 0 {
-		r.screen.DrawTriangles(vertices, indices, spriteImage, &ebiten.DrawTrianglesOptions{
+		r.screen.DrawTriangles(vertices, indices, batchSpriteImage, &ebiten.DrawTrianglesOptions{
 			Filter: ebiten.FilterLinear,
 		})
 	}

@@ -14,6 +14,12 @@ type MovementSystem struct {
 
 	// CollisionSystem for predictive collision checking (optional)
 	collisionSystem *CollisionSystem
+
+	// SpatialPartitionSystem for dirty tracking (optional)
+	spatialPartition *SpatialPartitionSystem
+
+	// Track if any entity moved this frame
+	entitiesMoved bool
 }
 
 // NewMovementSystem creates a new movement system.
@@ -29,8 +35,16 @@ func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
 	s.collisionSystem = collisionSystem
 }
 
+// SetSpatialPartition sets the spatial partition system for dirty tracking.
+// When entities move, the spatial partition will be marked dirty for lazy rebuilding.
+func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionSystem) {
+	s.spatialPartition = spatialPartition
+}
+
 // Update applies velocity to position for all entities with both components.
 func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
+	s.entitiesMoved = false // Reset movement flag
+
 	for _, entity := range entities {
 		// Skip dead entities - they cannot move (Priority 1.2)
 		// Dead entities are immobilized until revived or removed from the world
@@ -127,8 +141,14 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 
 		// Update position (only if validated or no collision checking)
+		oldX, oldY := pos.X, pos.Y
 		pos.X = newX
 		pos.Y = newY
+
+		// Track if entity actually moved
+		if pos.X != oldX || pos.Y != oldY {
+			s.entitiesMoved = true
+		}
 
 		// Apply bounds if entity has them
 		if boundsComp, hasBounds := entity.GetComponent("bounds"); hasBounds {
@@ -226,6 +246,11 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				// When idle, preserve facing direction (don't reset)
 			}
 		}
+	}
+
+	// Mark spatial partition as dirty if any entities moved
+	if s.entitiesMoved && s.spatialPartition != nil {
+		s.spatialPartition.MarkDirty()
 	}
 }
 

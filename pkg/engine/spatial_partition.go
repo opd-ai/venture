@@ -221,9 +221,17 @@ type SpatialPartitionSystem struct {
 	rebuildEvery int // Rebuild every N frames
 	frameCount   int
 
+	// Dirty tracking for lazy rebuilding
+	isDirty          bool
+	lastRebuildFrame int
+	minRebuildFrames int // Minimum frames between rebuilds (e.g., 3 = 50ms at 60fps)
+
 	// Statistics
 	lastRebuildTime float64
 	queryCount      int
+	skippedRebuilds int
+	forcedRebuilds  int
+	lazyRebuilds    int
 }
 
 // NewSpatialPartitionSystem creates a new spatial partition system.
@@ -236,24 +244,83 @@ func NewSpatialPartitionSystem(worldWidth, worldHeight float64) *SpatialPartitio
 	}
 
 	return &SpatialPartitionSystem{
-		quadtree:     NewQuadtree(bounds, 8), // 8 entities per node
-		worldBounds:  bounds,
-		rebuildEvery: 60, // Rebuild every 60 frames (1 second at 60fps)
-		frameCount:   0,
+		quadtree:         NewQuadtree(bounds, 16), // 16 entities per node (tuned for better performance)
+		worldBounds:      bounds,
+		rebuildEvery:     60, // Check for rebuild every 60 frames (1 second at 60fps)
+		frameCount:       0,
+		isDirty:          false,
+		lastRebuildFrame: 0,
+		minRebuildFrames: 3, // Minimum 3 frames (50ms at 60fps) between rebuilds
 	}
 }
 
-// Update rebuilds the quadtree periodically.
+// SetCapacity sets the quadtree capacity (entities per node before subdivision).
+// Higher values reduce tree depth but increase query time per node.
+// Recommended values: 8-32 depending on entity density.
+func (s *SpatialPartitionSystem) SetCapacity(capacity int) {
+	// Rebuild quadtree with new capacity
+	s.quadtree = NewQuadtree(s.worldBounds, capacity)
+	s.isDirty = true
+}
+
+// SetRebuildInterval sets how many frames to wait before checking for rebuild.
+// Lower values provide more up-to-date spatial data but cost more CPU.
+// Higher values reduce CPU but may have stale data.
+// Recommended: 30-60 frames (0.5-1 second at 60fps).
+func (s *SpatialPartitionSystem) SetRebuildInterval(frames int) {
+	s.rebuildEvery = frames
+}
+
+// Update rebuilds the quadtree periodically with lazy rebuild optimization.
+// Uses dirty tracking to skip rebuilds when entities haven't moved significantly.
 func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 	s.frameCount++
 
-	// Rebuild periodically to account for entity movement
+	// Check if enough time has passed since last rebuild
+	framesSinceRebuild := s.frameCount - s.lastRebuildFrame
+
+	// Rebuild if:
+	// 1. We've reached the rebuild interval, AND
+	// 2. Enough frames have passed since last rebuild (rate limiting)
+	// 3. OR we're marked as dirty (entities moved)
+	shouldRebuild := false
+
 	if s.frameCount >= s.rebuildEvery {
-		start := s.lastRebuildTime
-		s.quadtree.Rebuild(entities)
-		s.lastRebuildTime = deltaTime - start
+		if s.isDirty {
+			// Entities moved, need to rebuild
+			if framesSinceRebuild >= s.minRebuildFrames {
+				shouldRebuild = true
+				s.lazyRebuilds++
+			}
+		} else {
+			// No movement detected, skip rebuild
+			s.skippedRebuilds++
+		}
 		s.frameCount = 0
 	}
+
+	// Force rebuild if too much time has passed (safety fallback)
+	if framesSinceRebuild >= s.rebuildEvery*2 {
+		shouldRebuild = true
+		s.forcedRebuilds++
+	}
+
+	if shouldRebuild {
+		s.quadtree.Rebuild(entities)
+		s.lastRebuildFrame = s.frameCount
+		s.isDirty = false // Clear dirty flag after rebuild
+	}
+}
+
+// MarkDirty marks the spatial partition as needing a rebuild.
+// Should be called when entities move significantly.
+func (s *SpatialPartitionSystem) MarkDirty() {
+	s.isDirty = true
+}
+
+// IsDirty returns whether the spatial partition needs rebuilding.
+func (s *SpatialPartitionSystem) IsDirty() bool {
+	return s.isDirty
 }
 
 // QueryRadius returns entities within radius of a point.
@@ -275,6 +342,10 @@ func (s *SpatialPartitionSystem) GetStatistics() map[string]interface{} {
 		"last_rebuild_time": s.lastRebuildTime,
 		"query_count":       s.queryCount,
 		"frame_count":       s.frameCount,
+		"is_dirty":          s.isDirty,
+		"skipped_rebuilds":  s.skippedRebuilds,
+		"forced_rebuilds":   s.forcedRebuilds,
+		"lazy_rebuilds":     s.lazyRebuilds,
 	}
 }
 

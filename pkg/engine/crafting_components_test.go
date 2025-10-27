@@ -55,12 +55,12 @@ func TestRecipeRarity_String(t *testing.T) {
 // TestRecipe_GetEffectiveSuccessChance tests success chance calculation.
 func TestRecipe_GetEffectiveSuccessChance(t *testing.T) {
 	tests := []struct {
-		name              string
-		baseChance        float64
-		skillRequired     int
-		skillLevel        int
-		expectedChance    float64
-		description       string
+		name           string
+		baseChance     float64
+		skillRequired  int
+		skillLevel     int
+		expectedChance float64
+		description    string
 	}{
 		{
 			name:           "below minimum skill",
@@ -378,14 +378,14 @@ func TestNewCraftingSkillComponent(t *testing.T) {
 // TestCraftingSkillComponent_AddExperience tests XP and leveling.
 func TestCraftingSkillComponent_AddExperience(t *testing.T) {
 	tests := []struct {
-		name               string
-		initialLevel       int
-		initialXP          int
-		addXP              int
-		expectedLevel      int
-		expectedXP         int
-		shouldLevelUp      bool
-		description        string
+		name          string
+		initialLevel  int
+		initialXP     int
+		addXP         int
+		expectedLevel int
+		expectedXP    int
+		shouldLevelUp bool
+		description   string
 	}{
 		{
 			name:          "gain XP no level",
@@ -479,11 +479,11 @@ func TestMaterialRequirement(t *testing.T) {
 // TestRecipe tests full recipe structure.
 func TestRecipe(t *testing.T) {
 	recipe := &Recipe{
-		ID:                "healing_potion_basic",
-		Name:              "Basic Healing Potion",
-		Description:       "Restores 50 HP",
-		Type:              RecipePotion,
-		Rarity:            RecipeCommon,
+		ID:          "healing_potion_basic",
+		Name:        "Basic Healing Potion",
+		Description: "Restores 50 HP",
+		Type:        RecipePotion,
+		Rarity:      RecipeCommon,
 		Materials: []MaterialRequirement{
 			{ItemName: "Healing Herb", Quantity: 2, Optional: false},
 			{ItemName: "Flask", Quantity: 1, Optional: false},

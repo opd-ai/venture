@@ -22,12 +22,12 @@ import (
 
 // CraftingResult contains the outcome of a crafting attempt.
 type CraftingResult struct {
-	Success        bool
-	Item           *item.Item // nil if failed
-	RecipeName     string
-	XPGained       int
-	ErrorMessage   string
-	MaterialsLost  []string // Materials consumed (partial on failure)
+	Success       bool
+	Item          *item.Item // nil if failed
+	RecipeName    string
+	XPGained      int
+	ErrorMessage  string
+	MaterialsLost []string // Materials consumed (partial on failure)
 }
 
 // CraftingSystem manages recipe-based item crafting.
@@ -258,9 +258,9 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 				// Inventory full (shouldn't happen, we validated), drop item near entity
 				if s.logger != nil {
 					s.logger.WithFields(logrus.Fields{
-						"entityID":  entityID,
-						"itemName":  outputItem.Name,
-						"recipeID":  recipe.ID,
+						"entityID": entityID,
+						"itemName": outputItem.Name,
+						"recipeID": recipe.ID,
 					}).Warn("inventory full after craft, item lost")
 				}
 			}
@@ -292,7 +292,7 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 func (s *CraftingSystem) generateOutputItem(recipe *Recipe, rng *rand.Rand) *item.Item {
 	// Build generation parameters
 	params := procgen.GenerationParams{
-		Difficulty: 0.5, // Medium difficulty for crafted items
+		Difficulty: 0.5,                  // Medium difficulty for crafted items
 		Depth:      recipe.SkillRequired, // Depth scales with skill requirement
 		GenreID:    recipe.GenreID,
 		Custom: map[string]interface{}{

@@ -780,13 +780,15 @@ func main() {
 
 	// Connect to render system for viewport culling
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
-	game.RenderSystem.EnableCulling(true)
+	// TEMPORARY: Culling disabled due to spatial partition query returning 0 entities
+	// TODO: Fix spatial partition population/query before re-enabling
+	game.RenderSystem.EnableCulling(false)
 
 	clientLogger.WithFields(logrus.Fields{
 		"worldWidth":  worldWidth,
 		"worldHeight": worldHeight,
 		"cellSize":    8, // Quadtree capacity per node (8 entities before subdivision)
-	}).Info("spatial partition system initialized with viewport culling enabled")
+	}).Info("spatial partition system initialized (culling temporarily disabled)")
 
 	if *verbose {
 		clientLogger.WithFields(logrus.Fields{

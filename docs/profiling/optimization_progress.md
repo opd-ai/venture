@@ -401,3 +401,48 @@ The combination of query result caching, component pointer caching, and sprite b
 **Confidence Level**: **Very High** - All optimizations tested, deterministic, and provide measurable improvements without breaking existing functionality.
 
 **Next**: Phase 3 (Object Pooling) to reduce GC pressure and allocation rate for long-term performance stability.
+
+---
+
+## 🐛 Critical Bug Fix: Entity Rendering Issue (2025-01-27)
+
+### Problem
+After Phase 2.3 sprite batching implementation, entities (players, NPCs, monsters) were **not rendering at all** in the game, despite all tests passing.
+
+### Root Cause
+The `drawBatched()` function was skipping ALL entities with `nil` sprite images:
+```go
+if !sprite.Visible || sprite.Image == nil {
+    continue  // ❌ Skips entities that should render as colored rectangles
+}
+```
+
+Many entities in the game don't have sprite images yet and rely on **colored rectangle fallback rendering**. The old `drawEntity()` code properly handled this case by checking `if spriteImage != nil` and falling back to `drawRect()` for colored rectangles. However, the batching code was filtering them out entirely during the grouping phase.
+
+### Solution
+Modified `drawBatched()` in `pkg/engine/render_system.go` to collect entities with nil sprite images separately and render them individually:
+
+1. **Entities WITH sprite images**: Batched using `DrawTriangles()` for optimal performance
+2. **Entities WITHOUT sprite images**: Collected separately and rendered individually using `drawEntity()`, which calls `drawRect()` for colored rectangle fallback
+
+```go
+// Entities without sprite images need individual rendering
+if sprite.Image == nil {
+    nonSpriteEntities = append(nonSpriteEntities, entity)
+    continue
+}
+```
+
+### Impact
+- ✅ All entities now render correctly (players, NPCs, monsters visible)
+- ✅ Maintains batching performance benefits for sprite-based entities
+- ✅ Preserves colored rectangle fallback for entities without sprite images
+- ✅ All tests continue to pass
+
+### Files Modified
+- `pkg/engine/render_system.go`: Modified `drawBatched()` to handle nil sprite images
+
+### Lesson Learned
+**Test Coverage Gap**: Existing unit tests passed because they created entities with sprite images. Real gameplay revealed that many entities use colored rectangles as placeholders. Future tests should include entities without sprite images to catch this regression.
+
+```

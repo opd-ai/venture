@@ -173,9 +173,9 @@ type RenderStats struct {
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
 		cameraSystem:     cameraSystem,
-		spatialPartition: nil, // Will be set when world bounds are known
-		enableCulling:    true,
-		enableBatching:   true, // Batching enabled by default
+		spatialPartition: nil,   // Will be set when world bounds are known
+		enableCulling:    false, // TEMPORARY: Disabled culling due to spatial partition issue
+		enableBatching:   true,  // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
 		ShowColliders:    false,
@@ -253,9 +253,7 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 			r.drawEntity(entity)
 			r.stats.RenderedEntities++
 		}
-	}
-
-	// Calculate culled count
+	}	// Calculate culled count
 	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
 
 	// GAP-016 REPAIR: Draw particle effects
@@ -274,6 +272,9 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	batches := r.getBatchMap()
 	defer r.returnBatchMap(batches)
 
+	// Collect entities without sprite images (will draw individually with colored rectangles)
+	nonSpriteEntities := make([]*Entity, 0)
+
 	// Group entities by sprite image
 	for _, entity := range entities {
 		spriteComp, hasSprite := entity.GetComponent("sprite")
@@ -282,7 +283,13 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 		}
 		sprite := spriteComp.(*EbitenSprite)
 
-		if !sprite.Visible || sprite.Image == nil {
+		if !sprite.Visible {
+			continue
+		}
+
+		// Entities without sprite images need individual rendering
+		if sprite.Image == nil {
+			nonSpriteEntities = append(nonSpriteEntities, entity)
 			continue
 		}
 
@@ -292,13 +299,17 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 
 	r.stats.BatchCount = len(batches)
 
-	// Draw each batch
+	// Draw batched sprites
 	for _, batch := range batches {
 		r.drawBatch(batch)
 	}
-}
 
-// drawBatch renders a group of entities with the same sprite image using vertex batching.
+	// Draw non-sprite entities individually (colored rectangles)
+	for _, entity := range nonSpriteEntities {
+		r.drawEntity(entity)
+		r.stats.RenderedEntities++
+	}
+}// drawBatch renders a group of entities with the same sprite image using vertex batching.
 // This combines multiple sprites into a single DrawTriangles call for better performance.
 func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 	if len(entities) == 0 {
@@ -378,7 +389,7 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		// Convert world position to screen position
 		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
-		// Check if entity is visible on screen
+		// Check if entity is visible on screen (per-entity culling for batched rendering)
 		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 			continue
 		}
@@ -561,7 +572,7 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	// Convert world position to screen position
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
-	// Check if entity is visible on screen
+	// Check if entity is visible on screen (per-entity culling)
 	if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return
 	}

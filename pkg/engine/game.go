@@ -22,13 +22,13 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager       *AppStateManager
-	MainMenuUI         *MainMenuUI
-	SettingsUI         *SettingsUI
-	SettingsManager    *SettingsManager
-	CharacterCreation  *EbitenCharacterCreation
-	pendingCharData    *CharacterData
-	isMultiplayerMode  bool // Track if character creation is for multiplayer
+	StateManager      *AppStateManager
+	MainMenuUI        *MainMenuUI
+	SettingsUI        *SettingsUI
+	SettingsManager   *SettingsManager
+	CharacterCreation *EbitenCharacterCreation
+	pendingCharData   *CharacterData
+	isMultiplayerMode bool // Track if character creation is for multiplayer
 
 	// Rendering systems
 	CameraSystem        *CameraSystem

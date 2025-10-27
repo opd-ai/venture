@@ -318,10 +318,10 @@ func TestSettingsUI_ActivateOption(t *testing.T) {
 	ui.Show()
 
 	tests := []struct {
-		name         string
-		option       SettingsOption
-		setupFunc    func()
-		verifyFunc   func(t *testing.T)
+		name       string
+		option     SettingsOption
+		setupFunc  func()
+		verifyFunc func(t *testing.T)
 	}{
 		{
 			name:   "activate back",

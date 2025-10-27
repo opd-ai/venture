@@ -15,6 +15,8 @@ const (
 	AppStateMainMenu AppState = iota
 	// AppStateSinglePlayerMenu shows New Game / Load Game / Back options.
 	AppStateSinglePlayerMenu
+	// AppStateGenreSelection shows genre selection for single-player.
+	AppStateGenreSelection
 	// AppStateMultiPlayerMenu shows server connection UI.
 	AppStateMultiPlayerMenu
 	// AppStateCharacterCreation shows character creation UI (future).
@@ -32,6 +34,8 @@ func (s AppState) String() string {
 		return "MainMenu"
 	case AppStateSinglePlayerMenu:
 		return "SinglePlayerMenu"
+	case AppStateGenreSelection:
+		return "GenreSelection"
 	case AppStateMultiPlayerMenu:
 		return "MultiPlayerMenu"
 	case AppStateCharacterCreation:
@@ -133,11 +137,14 @@ func isValidAppTransition(from, to AppState) bool {
 		// Can go to any submenu, settings, or directly to gameplay (MVP) from main menu
 		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay
 	case AppStateSinglePlayerMenu:
-		// Can start new game or go back to main menu
-		return to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu
+		// Can start new game (via genre selection), load game, or go back to main menu
+		return to == AppStateGenreSelection || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu
 	case AppStateMultiPlayerMenu:
 		// Can connect to game or go back
 		return to == AppStateGameplay || to == AppStateMainMenu
+	case AppStateGenreSelection:
+		// Can proceed to character creation or go back to single-player menu
+		return to == AppStateCharacterCreation || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
 	case AppStateCharacterCreation:
 		// Can complete creation and start game or go back to main menu (MVP flow)
 		return to == AppStateGameplay || to == AppStateSinglePlayerMenu || to == AppStateMainMenu

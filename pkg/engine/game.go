@@ -22,14 +22,16 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager       *AppStateManager
-	MainMenuUI         *MainMenuUI
-	SinglePlayerMenu   *SinglePlayerMenu // Submenu for single-player options
-	SettingsUI         *SettingsUI
-	SettingsManager    *SettingsManager
-	CharacterCreation  *EbitenCharacterCreation
-	pendingCharData    *CharacterData
-	isMultiplayerMode  bool // Track if character creation is for multiplayer
+	StateManager        *AppStateManager
+	MainMenuUI          *MainMenuUI
+	SinglePlayerMenu    *SinglePlayerMenu    // Submenu for single-player options
+	GenreSelectionMenu  *GenreSelectionMenu  // Genre selection for single-player
+	SettingsUI          *SettingsUI
+	SettingsManager     *SettingsManager
+	CharacterCreation   *EbitenCharacterCreation
+	pendingCharData     *CharacterData
+	isMultiplayerMode   bool   // Track if character creation is for multiplayer
+	selectedGenreID     string // Selected genre for world generation
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -125,24 +127,26 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	game := &EbitenGame{
 		World:             world,
-		lastUpdateTime:    time.Now(),
-		ScreenWidth:       screenWidth,
-		ScreenHeight:      screenHeight,
-		StateManager:      NewAppStateManager(),
-		MainMenuUI:        NewMainMenuUI(screenWidth, screenHeight),
-		SettingsUI:        settingsUI,
-		SettingsManager:   settingsManager,
-		CharacterCreation: NewCharacterCreation(screenWidth, screenHeight),
-		CameraSystem:      cameraSystem,
-		RenderSystem:      renderSystem,
-		HUDSystem:         hudSystem,
-		MenuSystem:        menuSystem,
-		InventoryUI:       inventoryUI,
-		QuestUI:           questUI,
-		CharacterUI:       characterUI,
-		SkillsUI:          skillsUI,
-		MapUI:             mapUI,
-		logger:            logEntry,
+		lastUpdateTime:     time.Now(),
+		ScreenWidth:        screenWidth,
+		ScreenHeight:       screenHeight,
+		StateManager:       NewAppStateManager(),
+		MainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
+		SinglePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
+		GenreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
+		SettingsUI:         settingsUI,
+		SettingsManager:    settingsManager,
+		CharacterCreation:  NewCharacterCreation(screenWidth, screenHeight),
+		CameraSystem:       cameraSystem,
+		RenderSystem:       renderSystem,
+		HUDSystem:          hudSystem,
+		MenuSystem:         menuSystem,
+		InventoryUI:        inventoryUI,
+		QuestUI:            questUI,
+		CharacterUI:        characterUI,
+		SkillsUI:           skillsUI,
+		MapUI:              mapUI,
+		logger:             logEntry,
 	}
 
 	if logEntry != nil {
@@ -154,6 +158,15 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	// Setup main menu callback
 	game.MainMenuUI.SetSelectCallback(game.handleMainMenuSelection)
+
+	// Setup single-player menu callbacks
+	game.SinglePlayerMenu.SetNewGameCallback(game.handleSinglePlayerMenuNewGame)
+	game.SinglePlayerMenu.SetLoadGameCallback(game.handleSinglePlayerMenuLoadGame)
+	game.SinglePlayerMenu.SetBackCallback(game.handleSinglePlayerMenuBack)
+
+	// Setup genre selection menu callbacks
+	game.GenreSelectionMenu.SetGenreSelectCallback(game.handleGenreSelection)
+	game.GenreSelectionMenu.SetBackCallback(game.handleGenreSelectionBack)
 
 	// Setup settings UI callbacks
 	game.SettingsUI.SetBackCallback(func() {
@@ -195,20 +208,21 @@ func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
 func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	switch option {
 	case MainMenuOptionSinglePlayer:
-		// Transition to character creation
-		if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
+		// Transition to single-player submenu
+		if err := g.StateManager.TransitionTo(AppStateSinglePlayerMenu); err != nil {
 			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to character creation")
+				g.logger.WithError(err).Error("failed to transition to single-player menu")
 			}
 			return
 		}
 
-		// Reset character creation UI for new game
-		g.CharacterCreation.Reset()
-		g.isMultiplayerMode = false // Single-player mode
+		// Show single-player menu
+		if g.SinglePlayerMenu != nil {
+			g.SinglePlayerMenu.Show()
+		}
 
 		if g.logger != nil {
-			g.logger.Info("entering character creation for single-player")
+			g.logger.Info("entering single-player menu")
 		}
 
 	case MainMenuOptionMultiPlayer:
@@ -254,6 +268,113 @@ func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	}
 }
 
+// handleSinglePlayerMenuNewGame handles the New Game selection from single-player menu.
+func (g *EbitenGame) handleSinglePlayerMenuNewGame() {
+	// Transition to genre selection
+	if err := g.StateManager.TransitionTo(AppStateGenreSelection); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to genre selection")
+		}
+		return
+	}
+
+	// Show genre selection menu
+	if g.GenreSelectionMenu != nil {
+		g.GenreSelectionMenu.Show()
+	}
+
+	// Hide single-player menu
+	if g.SinglePlayerMenu != nil {
+		g.SinglePlayerMenu.Hide()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("entering genre selection for new single-player game")
+	}
+}
+
+// handleGenreSelection handles genre selection from the genre selection menu.
+func (g *EbitenGame) handleGenreSelection(genreID string) {
+	// Store selected genre
+	g.selectedGenreID = genreID
+
+	// Transition to character creation
+	if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to character creation")
+		}
+		return
+	}
+
+	// Reset character creation UI for new game
+	g.CharacterCreation.Reset()
+	g.isMultiplayerMode = false // Single-player mode
+
+	// Hide genre selection menu
+	if g.GenreSelectionMenu != nil {
+		g.GenreSelectionMenu.Hide()
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"genre": genreID,
+		}).Info("genre selected, entering character creation")
+	}
+}
+
+// handleGenreSelectionBack handles the Back selection from genre selection menu.
+func (g *EbitenGame) handleGenreSelectionBack() {
+	// Transition back to single-player menu
+	if err := g.StateManager.TransitionTo(AppStateSinglePlayerMenu); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition back to single-player menu")
+		}
+		return
+	}
+
+	// Hide genre selection menu
+	if g.GenreSelectionMenu != nil {
+		g.GenreSelectionMenu.Hide()
+	}
+
+	// Show single-player menu
+	if g.SinglePlayerMenu != nil {
+		g.SinglePlayerMenu.Show()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("returning to single-player menu from genre selection")
+	}
+}
+
+// handleSinglePlayerMenuLoadGame handles the Load Game selection (Phase 8.3).
+func (g *EbitenGame) handleSinglePlayerMenuLoadGame() {
+	// TODO: Phase 8.3 - Implement save/load system
+	if g.logger != nil {
+		g.logger.Info("load game selected (not yet implemented)")
+	}
+}
+
+// handleSinglePlayerMenuBack handles the Back selection from single-player menu.
+func (g *EbitenGame) handleSinglePlayerMenuBack() {
+	// Transition back to main menu
+	if err := g.StateManager.TransitionTo(AppStateMainMenu); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition back to main menu")
+		}
+		return
+	}
+
+	// Hide single-player menu
+	if g.SinglePlayerMenu != nil {
+		g.SinglePlayerMenu.Hide()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("returning to main menu from single-player menu")
+	}
+}
+
 // IsInMainMenu returns true if currently displaying the main menu.
 func (g *EbitenGame) IsInMainMenu() bool {
 	return g.StateManager.IsInMenu()
@@ -274,6 +395,22 @@ func (g *EbitenGame) Update() error {
 	// If in main menu state, only update main menu
 	if g.StateManager.CurrentState() == AppStateMainMenu {
 		g.MainMenuUI.Update()
+		return nil
+	}
+
+	// If in single-player menu state, only update single-player menu
+	if g.StateManager.CurrentState() == AppStateSinglePlayerMenu {
+		if g.SinglePlayerMenu != nil {
+			g.SinglePlayerMenu.Update()
+		}
+		return nil
+	}
+
+	// If in genre selection state, only update genre selection menu
+	if g.StateManager.CurrentState() == AppStateGenreSelection {
+		if g.GenreSelectionMenu != nil {
+			g.GenreSelectionMenu.Update()
+		}
 		return nil
 	}
 
@@ -407,6 +544,22 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 		return
 	}
 
+	// If in single-player menu state, only draw single-player menu
+	if g.StateManager.CurrentState() == AppStateSinglePlayerMenu {
+		if g.SinglePlayerMenu != nil {
+			g.SinglePlayerMenu.Draw(screen)
+		}
+		return
+	}
+
+	// If in genre selection state, only draw genre selection menu
+	if g.StateManager.CurrentState() == AppStateGenreSelection {
+		if g.GenreSelectionMenu != nil {
+			g.GenreSelectionMenu.Draw(screen)
+		}
+		return
+	}
+
 	// If in settings state, only draw settings
 	if g.StateManager.CurrentState() == AppStateSettings {
 		g.SettingsUI.Draw(screen)
@@ -527,6 +680,13 @@ func (g *EbitenGame) GetPendingCharacterData() *CharacterData {
 	data := g.pendingCharData
 	g.pendingCharData = nil // Clear after retrieval
 	return data
+}
+
+// GetSelectedGenreID returns the selected genre ID and clears it.
+func (g *EbitenGame) GetSelectedGenreID() string {
+	genreID := g.selectedGenreID
+	g.selectedGenreID = "" // Clear after retrieval
+	return genreID
 }
 
 // SetupInputCallbacks connects the input system callbacks to the UI systems.

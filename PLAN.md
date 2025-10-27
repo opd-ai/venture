@@ -234,8 +234,18 @@ This approach allows immediate user feedback while keeping the codebase maintain
   - BuildableComponent for construction progress tracking
   - Comprehensive test suite: `terrain_components_test.go` (24 test functions, 95%+ coverage)
   - All components follow ECS pattern (data-only, no behavior)
-- 🚧 Creating terrain modification systems (in progress)
+- ✅ Created `pkg/engine/terrain_modification_system.go` with destruction system (October 26, 2025)
+  - TerrainModificationSystem handles weapon/spell-based tile destruction
+  - ProcessWeaponAttack() for weapon-based terrain damage
+  - Automatic tile replacement: wall → floor when destroyed
+  - Destructible entity management (creation, damage tracking, removal)
+  - Helper methods: DamageTileAtWorldPosition(), DamageTilesInArea() for area effects
+  - Server-authoritative design (requires world, terrain, worldMap references)
+  - 343 lines with comprehensive logging support
+- 🚧 Fire propagation system (planned)
+- 🚧 Terrain construction system (planned)
 - 🚧 Network protocol support (planned)
+- 🚧 System test suites (planned)
 
 **Components**:
 - **Destruction**: Wall breaking via weapons/spells, fire propagation
@@ -248,10 +258,28 @@ This approach allows immediate user feedback while keeping the codebase maintain
 - Material types: Stone (100 HP, not flammable), Wood (50 HP, flammable), Earth (30 HP), Metal (200 HP), Glass (20 HP), Ice (40 HP)
 - Fire burns for 10-15 seconds (configurable), spreads to adjacent flammable tiles at 30% * intensity chance/second
 - Construction requires materials (default: 10 stone per wall), takes 3 seconds (configurable)
+- Weapon damage to terrain: weapon.Stats.Damage * 0.5 (terrain multiplier)
+- Attack direction determined by AnimationComponent.Facing (DirUp/Down/Left/Right)
+- Destructible entities automatically created for damaged walls, removed when destroyed
 - Client prediction for instant feedback
 - Server-authoritative for multiplayer synchronization
 
-**Status**: 🚧 Phase 4.1 Complete (Components), Phase 4.2-4.5 In Progress (Systems, Network, Integration)
+**Usage Example**:
+```go
+// Setup
+system := engine.NewTerrainModificationSystem(tileSize)
+system.SetWorld(world)
+system.SetTerrain(terrain)
+system.SetWorldMap(worldMap)
+
+// Process weapon attack
+system.ProcessWeaponAttack(playerEntity, equippedWeapon)
+
+// Explosion damage
+system.DamageTilesInArea(centerX, centerY, radius, damage)
+```
+
+**Status**: 🚧 Phase 4.1-4.2 Complete (Components, Modification System), Phase 4.3-4.6 In Progress (Fire, Construction, Network, Tests)
 
 ---
 

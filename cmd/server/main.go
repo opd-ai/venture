@@ -14,16 +14,18 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	port       = flag.String("port", "8080", "Server port")
-	maxPlayers = flag.Int("max-players", 4, "Maximum number of players")
-	seed       = flag.Int64("seed", 12345, "World generation seed")
-	genreID    = flag.String("genre", "fantasy", "Genre ID for world generation")
-	tickRate   = flag.Int("tick-rate", 20, "Server update rate (updates per second)")
-	verbose    = flag.Bool("verbose", false, "Enable verbose logging")
+	port          = flag.String("port", "8080", "Server port")
+	maxPlayers    = flag.Int("max-players", 4, "Maximum number of players")
+	seed          = flag.Int64("seed", 12345, "World generation seed")
+	genreID       = flag.String("genre", "fantasy", "Genre ID for world generation")
+	tickRate      = flag.Int("tick-rate", 20, "Server update rate (updates per second)")
+	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
+	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
 )
 
 func main() {
@@ -53,11 +55,12 @@ func main() {
 
 	serverLogger.Info("Starting Venture Game Server")
 	serverLogger.WithFields(logrus.Fields{
-		"port":       *port,
-		"maxPlayers": *maxPlayers,
-		"tickRate":   *tickRate,
-		"seed":       *seed,
-		"genre":      *genreID,
+		"port":          *port,
+		"maxPlayers":    *maxPlayers,
+		"tickRate":      *tickRate,
+		"seed":          *seed,
+		"genre":         *genreID,
+		"aerialSprites": *aerialSprites,
 	}).Info("server configuration")
 
 	// Create game world
@@ -195,7 +198,7 @@ func main() {
 			playerLogger.Info("player joined - creating entity")
 
 			// Create player entity for new connection
-			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, logger)
+			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, *aerialSprites, logger)
 
 			// Store player entity mapping
 			playerEntitiesMu.Lock()
@@ -328,7 +331,7 @@ func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.State
 }
 
 // createPlayerEntity creates a player entity for a connected client
-func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID uint64, seed int64, genreID string, logger *logrus.Logger) *engine.Entity {
+func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID uint64, seed int64, genreID string, useAerialSprites bool, logger *logrus.Logger) *engine.Entity {
 	// Create player entity
 	entity := world.CreateEntity()
 
@@ -354,7 +357,50 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 	})
 
 	// Add sprite for rendering (28x28 to fit through 32px corridors)
-	playerSprite := engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
+	var playerSprite *engine.EbitenSprite
+	if useAerialSprites {
+		// Generate procedural directional sprites with aerial-view perspective
+		spriteGen := sprites.NewGenerator()
+		config := sprites.Config{
+			Width:   28,
+			Height:  28,
+			Seed:    seed + int64(playerID), // Unique seed per player
+			GenreID: genreID,
+			Type:    sprites.SpriteEntity,
+			Custom: map[string]interface{}{
+				"entityType": "humanoid",
+				"useAerial":  true,
+			},
+		}
+
+		directionalSprites, err := spriteGen.GenerateDirectionalSprites(config)
+		if err != nil {
+			logger.WithError(err).Warn("failed to generate directional sprites, using fallback")
+			playerSprite = engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
+		} else {
+			// Create sprite component with initial down-facing direction
+			// directionalSprites is map[int]*ebiten.Image with keys 0-3
+			playerSprite = &engine.EbitenSprite{
+				Image:             directionalSprites[int(engine.DirDown)],
+				Width:             28,
+				Height:            28,
+				Visible:           true,
+				Layer:             10,
+				CurrentDirection:  int(engine.DirDown),
+				DirectionalImages: directionalSprites, // Already map[int]*ebiten.Image
+			}
+			// Add animation component to enable automatic facing updates
+			entity.AddComponent(&engine.AnimationComponent{
+				Seed:         seed + int64(playerID),
+				CurrentState: engine.AnimationStateIdle,
+				Playing:      true,
+			})
+		}
+	} else {
+		// Use simple colored sprite for side-view
+		playerSprite = engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
+	}
+
 	playerSprite.Layer = 10 // Draw players on top
 	entity.AddComponent(playerSprite)
 

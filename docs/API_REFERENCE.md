@@ -553,6 +553,8 @@ floor := palette.GetColor("floor")
 
 **Package:** `github.com/opd-ai/venture/pkg/rendering/sprites`
 
+#### Basic Sprite Generation
+
 ```go
 gen := sprites.NewGenerator()
 
@@ -569,6 +571,165 @@ sprite := result.(*sprites.Sprite)
 // sprite.Image is *ebiten.Image
 // Render sprite
 screen.DrawImage(sprite.Image, opts)
+```
+
+#### Directional Sprite Generation
+
+Generate 4-directional sprites for top-down gameplay with automatic facing support.
+
+```go
+gen := sprites.NewGenerator()
+
+// Generate 4-directional sprite sheet (Up, Down, Left, Right)
+config := sprites.GenerationConfig{
+    Width:    32,
+    Height:   32,
+    Seed:     12345,
+    GenreID:  "fantasy",
+    EntityType: "humanoid",
+    UseAerial: true,  // Enable aerial-view perspective
+}
+
+sprites, err := gen.GenerateDirectionalSprites(config)
+if err != nil {
+    log.Fatal(err)
+}
+
+// sprites is map[Direction]*ebiten.Image
+upSprite := sprites[sprites.DirUp]
+downSprite := sprites[sprites.DirDown]
+leftSprite := sprites[sprites.DirLeft]
+rightSprite := sprites[sprites.DirRight]
+
+// Render based on entity facing direction
+currentDirection := entity.GetComponent("animation").(*engine.AnimationComponent).Facing
+screen.DrawImage(sprites[currentDirection], opts)
+```
+
+#### Aerial-View Templates
+
+Aerial-view templates provide top-down character perspectives optimized for overhead gameplay cameras. All templates maintain consistent 35/50/15 proportions (head/torso/legs).
+
+**Base Aerial Template:**
+
+```go
+// Get base humanoid aerial template
+template := sprites.HumanoidAerial()
+
+// Template maintains 35/50/15 proportions:
+// - Head: 35% of total height (top of sprite)
+// - Torso: 50% of total height (middle section)
+// - Legs: 15% of total height (bottom of sprite)
+
+// Each body part has:
+// - RelativeWidth/RelativeHeight (percentage of sprite dimensions)
+// - RelativeX/RelativeY (position from sprite center, 0.5 = center)
+// - Role (primary, secondary, accent, detail)
+// - Shape (rectangle, ellipse, polygon)
+```
+
+**Genre-Specific Aerial Templates:**
+
+```go
+// Get genre-specific template with thematic variations
+fantasyTemplate := sprites.FantasyHumanoidAerial()
+// - Broader shoulders (0.55 width)
+// - Helmet/head detail (accent role)
+// - Shield/weapon positioning
+
+scifiTemplate := sprites.SciFiHumanoidAerial()
+// - Angular shapes
+// - Jetpack/tech details
+// - Streamlined proportions
+
+horrorTemplate := sprites.HorrorHumanoidAerial()
+// - Narrow, elongated head (0.28 width)
+// - Reduced shadow opacity (0.2)
+// - Unsettling asymmetry
+
+cyberpunkTemplate := sprites.CyberpunkHumanoidAerial()
+// - Compact build (0.45 torso width)
+// - Tech accents (neon glows)
+// - Urban aesthetic
+
+postapocTemplate := sprites.PostApocalypticHumanoidAerial()
+// - Ragged organic shapes
+// - Makeshift appearance
+// - Survival theme
+```
+
+**Boss Scaling:**
+
+```go
+// Scale any aerial template for boss entities
+baseTemplate := sprites.FantasyHumanoidAerial()
+bossTemplate := sprites.BossAerialTemplate(baseTemplate, 2.5)
+
+// Boss scaling:
+// - Uniformly scales all body part dimensions by 2.5x
+// - Preserves 35/50/15 proportions
+// - Maintains directional asymmetry
+// - Scales position offsets from center (asymmetry preservation)
+
+// Use scaled template for boss sprite generation
+config := sprites.GenerationConfig{
+    Width:      64,  // Larger canvas for scaled boss
+    Height:     64,
+    Template:   &bossTemplate,
+    UseAerial:  true,
+}
+```
+
+**Directional Asymmetry:**
+
+Aerial templates include directional variations for visual clarity:
+
+- **Up (North)**: Head offset upward, arms positioned high
+- **Down (South)**: Head centered, arms at sides
+- **Left (West)**: Head offset left, left arm forward
+- **Right (East)**: Head offset right, right arm forward
+
+```go
+// Templates automatically create directional variants
+// Movement system updates facing based on velocity
+// Render system selects correct directional sprite
+
+// No manual direction handling required - it's automatic!
+```
+
+**Proportion Ratios:**
+
+All aerial templates follow strict proportion guidelines:
+
+| Body Part | Height % | Purpose |
+|-----------|----------|---------|
+| Head      | 35%      | Character recognition, facial features |
+| Torso     | 50%      | Main body mass, equipment visibility |
+| Legs      | 15%      | Ground contact, movement indication |
+| **Total** | **100%** | Complete sprite height |
+
+**Color Roles:**
+
+- `Primary`: Main body color (torso, legs)
+- `Secondary`: Accent elements (clothing, armor)
+- `Accent`: Highlights (eyes, weapons, glows)
+- `Detail`: Fine features (shadows, outlines)
+
+**Integration with Movement System:**
+
+```go
+// Movement system automatically updates facing direction
+// Based on velocity vector (see pkg/engine/movement.go)
+
+// Horizontal priority: |VX| >= |VY| chooses left/right
+// Vertical movement: |VY| > |VX| chooses up/down
+// Jitter filtering: velocities < 0.1 don't change facing
+// Action preservation: attack/hit/death states preserve facing
+
+// Example: Entity moving right with velocity (5.0, 0.0)
+// → AnimationComponent.Facing automatically set to DirRight
+// → RenderSystem displays sprites[DirRight]
+// No manual coordination needed!
 ```
 
 ### Tile Rendering

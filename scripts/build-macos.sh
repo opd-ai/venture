@@ -55,7 +55,7 @@ cd "$PROJECT_ROOT"
 
 # Build server
 echo_info "Building server..."
-GOARCH="$ARCH" go build -tags test -ldflags="-s -w" \
+GOARCH="$ARCH" go build -ldflags="-s -w" \
     -o "$BUILD_DIR/venture-server-darwin-$ARCH" \
     ./cmd/server
 

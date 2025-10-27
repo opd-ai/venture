@@ -50,7 +50,7 @@ cd "$PROJECT_ROOT"
 
 # Build server
 echo_info "Building server..."
-GOOS=windows GOARCH="$ARCH" go build -tags test -ldflags="-s -w" \
+GOOS=windows GOARCH="$ARCH" go build -ldflags="-s -w" \
     -o "$BUILD_DIR/venture-server-windows-$ARCH.exe" \
     ./cmd/server
 

@@ -29,11 +29,11 @@ func TestNewRecipeGenerator(t *testing.T) {
 // TestRecipeGenerator_Generate tests recipe generation.
 func TestRecipeGenerator_Generate(t *testing.T) {
 	tests := []struct {
-		name       string
-		seed       int64
-		params     procgen.GenerationParams
-		wantCount  int
-		wantErr    bool
+		name      string
+		seed      int64
+		params    procgen.GenerationParams
+		wantCount int
+		wantErr   bool
 	}{
 		{
 			name:      "fantasy recipes",
@@ -343,11 +343,11 @@ func TestRecipeGenerator_SkillScaling(t *testing.T) {
 	gen := NewRecipeGenerator()
 
 	tests := []struct {
-		name           string
-		depth          int
-		difficulty     float64
-		minSkill       int
-		maxSkill       int
+		name       string
+		depth      int
+		difficulty float64
+		minSkill   int
+		maxSkill   int
 	}{
 		{"low depth/difficulty", 1, 0.2, 0, 5},
 		{"medium depth/difficulty", 5, 0.5, 0, 10},

@@ -45,7 +45,7 @@ build: build-server build-client ## Build server and client for current platform
 
 build-server: ## Build server for current platform
 	@echo "Building server..."
-	go build -tags test -ldflags="-s -w" -o $(BUILD_DIR)/venture-server ./cmd/server
+	go build -ldflags="-s -w" -o $(BUILD_DIR)/venture-server ./cmd/server
 
 build-client: ## Build client for current platform
 	go build -ldflags="-s -w" -o $(BUILD_DIR)/venture-client ./cmd/client
@@ -68,21 +68,21 @@ build-macos: ## Build for macOS (amd64 and arm64)
 
 test: ## Run tests
 	@echo "Running tests..."
-	go test -tags test -v ./...
+	go test -v ./...
 
 test-coverage: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
-	go test -tags test -cover -coverprofile=coverage.out ./...
+	go test -cover -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
 test-race: ## Run tests with race detection
 	@echo "Running tests with race detection..."
-	go test -tags test -race ./...
+	go test -race ./...
 
 bench: ## Run benchmarks
 	@echo "Running benchmarks..."
-	go test -tags test -bench=. -benchmem ./...
+	go test -bench=. -benchmem ./...
 
 lint: ## Run linters
 	@echo "Running linters..."
@@ -175,12 +175,12 @@ install-tools: ## Install development tools
 
 profile-cpu: ## Run CPU profiling
 	@echo "Running CPU profiling..."
-	go test -tags test -cpuprofile=cpu.prof -bench=. ./...
+	go test -cpuprofile=cpu.prof -bench=. ./...
 	go tool pprof cpu.prof
 
 profile-mem: ## Run memory profiling
 	@echo "Running memory profiling..."
-	go test -tags test -memprofile=mem.prof -bench=. ./...
+	go test -memprofile=mem.prof -bench=. ./...
 	go tool pprof mem.prof
 
 # Documentation

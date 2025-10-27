@@ -16,7 +16,7 @@ Audit all system structs that implement Ebiten interfaces or extend the ECS arch
 1. Identify all system structs across the codebase using grep/semantic search
 2. Categorize systems by type (ECS, rendering, input, audio, network, UI)
 3. Document expected system interfaces and contracts
-4. Create initial inventory in `docs/FINAL_AUDIT.md`
+4. Create initial inventory in `docs/auditors/FINAL_AUDIT.md`
 
 ### Phase 2: Integration Verification
 For each system, verify:

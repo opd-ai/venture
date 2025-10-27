@@ -78,6 +78,13 @@ type World struct {
 	cachedEntityList []*Entity
 	entityListDirty  bool
 
+	// Reusable buffer for entity queries to reduce allocations
+	queryBuffer []*Entity
+
+	// Query cache: map[component types] -> []*Entity
+	queryCache      map[string][]*Entity
+	queryCacheDirty map[string]bool
+
 	// Logger for ECS operations
 	logger *logrus.Entry
 }
@@ -100,6 +107,9 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		entities:         make(map[uint64]*Entity),
 		systems:          make([]System, 0),
 		cachedEntityList: make([]*Entity, 0, 256), // Pre-allocate for 256 entities
+		queryBuffer:      make([]*Entity, 0, 256), // Pre-allocate query buffer
+		queryCache:       make(map[string][]*Entity),
+		queryCacheDirty:  make(map[string]bool),
 		entityListDirty:  true,
 		logger:           logEntry,
 	}
@@ -129,12 +139,14 @@ func (w *World) CreateEntity() *Entity {
 func (w *World) AddEntity(entity *Entity) {
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
 	w.entityListDirty = true
+	w.invalidateQueryCache()
 }
 
 // RemoveEntity marks an entity for removal from the world.
 func (w *World) RemoveEntity(entityID uint64) {
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
 	w.entityListDirty = true
+	w.invalidateQueryCache()
 
 	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		w.logger.WithField("entityID", entityID).Debug("entity marked for removal")
@@ -219,8 +231,34 @@ func (w *World) GetEntities() []*Entity {
 }
 
 // GetEntitiesWith returns all entities that have all of the specified component types.
+// Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
 func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
-	result := make([]*Entity, 0)
+	// Generate cache key from component types
+	// Use a simple string concatenation with separator
+	key := ""
+	for i, compType := range componentTypes {
+		if i > 0 {
+			key += "|"
+		}
+		key += compType
+	}
+
+	// Check if cache is valid
+	if !w.queryCacheDirty[key] {
+		if cached, exists := w.queryCache[key]; exists {
+			return cached
+		}
+	}
+
+	// Cache miss or dirty - rebuild query result
+	// Reuse buffer, reset length to 0
+	w.queryBuffer = w.queryBuffer[:0]
+
+	// Ensure capacity
+	if cap(w.queryBuffer) < len(w.entities) {
+		w.queryBuffer = make([]*Entity, 0, len(w.entities))
+	}
+
 	for _, entity := range w.entities {
 		hasAll := true
 		for _, compType := range componentTypes {
@@ -230,10 +268,25 @@ func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 			}
 		}
 		if hasAll {
-			result = append(result, entity)
+			w.queryBuffer = append(w.queryBuffer, entity)
 		}
 	}
+
+	// Cache the result (make a copy to avoid queryBuffer reuse issues)
+	result := make([]*Entity, len(w.queryBuffer))
+	copy(result, w.queryBuffer)
+	w.queryCache[key] = result
+	w.queryCacheDirty[key] = false
+
 	return result
+}
+
+// invalidateQueryCache marks all cached queries as dirty.
+// Called when entities are added or removed from the world.
+func (w *World) invalidateQueryCache() {
+	for key := range w.queryCache {
+		w.queryCacheDirty[key] = true
+	}
 }
 
 // GetSystems returns all registered systems.

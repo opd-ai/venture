@@ -644,6 +644,9 @@ func main() {
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
 
+	// AUDIT FIX: Add dialog system to World for state updates
+	game.World.AddSystem(dialogSystem)
+
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
 

@@ -43,7 +43,8 @@ type EbitenGame struct {
 	CharacterUI *EbitenCharacterUI
 	SkillsUI    *EbitenSkillsUI
 	MapUI       *EbitenMapUI
-	ShopUI      *ShopUI // Commerce and merchant interaction UI
+	ShopUI      *ShopUI      // Commerce and merchant interaction UI
+	CraftingUI  *CraftingUI  // Crafting and recipe UI
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity

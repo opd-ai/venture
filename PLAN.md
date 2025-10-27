@@ -478,7 +478,17 @@ result, err := craftingSystem.StartCraft(entity.ID, potionRecipe, station.ID)
 ```
 
 **Remaining Work** (Phase 5.1 - UI & Integration):
-- [ ] Crafting UI with recipe list, material display, craft button
+- [x] **Crafting UI with recipe list, material display, craft button** (October 27, 2025)
+  - ✅ Created `pkg/engine/crafting_ui.go` (499 lines) following ShopUI patterns
+  - ✅ Recipe list with scrolling support for large recipe collections
+  - ✅ Material requirement display with availability checking
+  - ✅ Skill requirement and success chance visualization
+  - ✅ Crafting progress display with percentage completion
+  - ✅ Station bonus indicators (+5% success, 25% faster)
+  - ✅ Dual-exit navigation (C key + ESC)
+  - ✅ Keyboard and mouse navigation support
+  - ✅ Comprehensive test suite: 13 test functions, 95.6% coverage on testable functions
+  - ✅ All tests passing (13/13)
 - [ ] Client integration: wire system, add C key binding
 - [ ] Recipe discovery integration with loot tables
 - [ ] Network protocol messages for multiplayer

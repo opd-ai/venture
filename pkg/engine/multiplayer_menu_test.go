@@ -218,14 +218,14 @@ func TestMultiplayerMenu_GetOptionAtPosition(t *testing.T) {
 	menu := NewMultiplayerMenu(1280, 720)
 
 	tests := []struct {
-		name         string
-		x, y         int
-		expectedOpt  int
+		name        string
+		x, y        int
+		expectedOpt int
 	}{
 		{"outside menu top", 640, 200, -1},
 		{"far right", 1000, 310, -1},
 		{"far left", 200, 310, -1},
-		{"near first option", 640, 310, 0}, // y = 360 - 50 = 310
+		{"near first option", 640, 310, 0},  // y = 360 - 50 = 310
 		{"near second option", 640, 360, 1}, // y = 360
 		{"near third option", 640, 410, 2},  // y = 360 + 50 = 410
 		{"far below", 640, 600, -1},

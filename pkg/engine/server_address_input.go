@@ -221,7 +221,7 @@ func (s *ServerAddressInput) Draw(screen *ebiten.Image) {
 	textX := inputBoxX + 10
 	textY := inputBoxY + 20
 	textColor := color.White
-	
+
 	// Draw text before cursor
 	beforeCursor := s.address[:s.cursorPos]
 	text.Draw(screen, beforeCursor, basicfont.Face7x13, textX, textY, textColor)
@@ -233,7 +233,7 @@ func (s *ServerAddressInput) Draw(screen *ebiten.Image) {
 	// Draw cursor (blinking vertical line)
 	if s.showCursor {
 		cursorColor := color.RGBA{255, 255, 100, 255}
-		for y := textY - 12; y < textY + 2; y++ {
+		for y := textY - 12; y < textY+2; y++ {
 			screen.Set(cursorX, y, cursorColor)
 		}
 	}

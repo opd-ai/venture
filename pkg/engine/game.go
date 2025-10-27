@@ -24,10 +24,10 @@ type EbitenGame struct {
 	// Application state management
 	StateManager         *AppStateManager
 	MainMenuUI           *MainMenuUI
-	SinglePlayerMenu     *SinglePlayerMenu     // Submenu for single-player options
-	GenreSelectionMenu   *GenreSelectionMenu   // Genre selection for single-player
-	MultiplayerMenu      *MultiplayerMenu      // Submenu for multiplayer options
-	ServerAddressInput   *ServerAddressInput   // Text input for server address
+	SinglePlayerMenu     *SinglePlayerMenu   // Submenu for single-player options
+	GenreSelectionMenu   *GenreSelectionMenu // Genre selection for single-player
+	MultiplayerMenu      *MultiplayerMenu    // Submenu for multiplayer options
+	ServerAddressInput   *ServerAddressInput // Text input for server address
 	SettingsUI           *SettingsUI
 	SettingsManager      *SettingsManager
 	CharacterCreation    *EbitenCharacterCreation

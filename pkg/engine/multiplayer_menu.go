@@ -199,7 +199,7 @@ func (m *MultiplayerMenu) getOptionAtPosition(x, y int) int {
 	for i := range m.options {
 		optionY := startY + i*optionHeight
 		optionText := m.options[i].String()
-		
+
 		// Add number shortcut to text
 		displayText := ""
 		if i < 9 {
@@ -207,7 +207,7 @@ func (m *MultiplayerMenu) getOptionAtPosition(x, y int) int {
 		} else {
 			displayText = optionText
 		}
-		
+
 		bounds := text.BoundString(basicfont.Face7x13, displayText)
 		textWidth := bounds.Dx()
 		textHeight := bounds.Dy()

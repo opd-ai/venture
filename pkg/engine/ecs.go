@@ -12,6 +12,15 @@ import (
 type Entity struct {
 	ID         uint64
 	Components map[string]Component
+
+	// Fast-path cache for frequently accessed components
+	// These eliminate map lookups in hot paths
+	position  *PositionComponent
+	velocity  *VelocityComponent
+	health    *HealthComponent
+	collider  *ColliderComponent
+	inventory *InventoryComponent
+	stats     *StatsComponent
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -25,6 +34,22 @@ func NewEntity(id uint64) *Entity {
 // AddComponent adds a component to this entity.
 func (e *Entity) AddComponent(c Component) {
 	e.Components[c.Type()] = c
+
+	// Update fast-path cache for hot components
+	switch c.Type() {
+	case "position":
+		e.position = c.(*PositionComponent)
+	case "velocity":
+		e.velocity = c.(*VelocityComponent)
+	case "health":
+		e.health = c.(*HealthComponent)
+	case "collider":
+		e.collider = c.(*ColliderComponent)
+	case "inventory":
+		e.inventory = c.(*InventoryComponent)
+	case "stats":
+		e.stats = c.(*StatsComponent)
+	}
 }
 
 // AddComponentWithLogger adds a component to this entity with logging.
@@ -47,6 +72,22 @@ func (e *Entity) GetComponent(componentType string) (Component, bool) {
 // RemoveComponent removes a component from this entity.
 func (e *Entity) RemoveComponent(componentType string) {
 	delete(e.Components, componentType)
+
+	// Clear fast-path cache for hot components
+	switch componentType {
+	case "position":
+		e.position = nil
+	case "velocity":
+		e.velocity = nil
+	case "health":
+		e.health = nil
+	case "collider":
+		e.collider = nil
+	case "inventory":
+		e.inventory = nil
+	case "stats":
+		e.stats = nil
+	}
 }
 
 // RemoveComponentWithLogger removes a component from this entity with logging.
@@ -64,6 +105,69 @@ func (e *Entity) RemoveComponentWithLogger(componentType string, logger *logrus.
 func (e *Entity) HasComponent(componentType string) bool {
 	_, ok := e.Components[componentType]
 	return ok
+}
+
+// Typed component getters for hot path optimization.
+// These eliminate map lookups and type assertions in performance-critical loops.
+
+// GetPosition retrieves the PositionComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetPosition() *PositionComponent {
+	return e.position
+}
+
+// GetVelocity retrieves the VelocityComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetVelocity() *VelocityComponent {
+	return e.velocity
+}
+
+// GetHealth retrieves the HealthComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetHealth() *HealthComponent {
+	return e.health
+}
+
+// GetCollider retrieves the ColliderComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetCollider() *ColliderComponent {
+	return e.collider
+}
+
+// GetInventory retrieves the InventoryComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetInventory() *InventoryComponent {
+	return e.inventory
+}
+
+// GetStats retrieves the StatsComponent if present.
+// Uses cached pointer for zero-overhead access.
+func (e *Entity) GetStats() *StatsComponent {
+	return e.stats
+}
+
+// GetExperience retrieves the ExperienceComponent if present.
+func (e *Entity) GetExperience() *ExperienceComponent {
+	if comp, ok := e.Components["experience"]; ok {
+		return comp.(*ExperienceComponent)
+	}
+	return nil
+}
+
+// GetAttack retrieves the AttackComponent if present.
+func (e *Entity) GetAttack() *AttackComponent {
+	if comp, ok := e.Components["attack"]; ok {
+		return comp.(*AttackComponent)
+	}
+	return nil
+}
+
+// GetAnimation retrieves the AnimationComponent if present.
+func (e *Entity) GetAnimation() *AnimationComponent {
+	if comp, ok := e.Components["animation"]; ok {
+		return comp.(*AnimationComponent)
+	}
+	return nil
 }
 
 // World manages all entities and systems in the game.

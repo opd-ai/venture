@@ -574,6 +574,9 @@ func main() {
 	audioManager = engine.NewAudioManager(44100, *seed) // 44.1kHz sample rate
 	audioManagerSystem := engine.NewAudioManagerSystem(audioManager)
 
+	// Wire audio manager to game for settings integration
+	game.SetAudioManager(audioManager)
+
 	// Start playing exploration music
 	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
 		logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to start background music")

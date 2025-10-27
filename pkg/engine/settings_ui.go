@@ -66,6 +66,9 @@ type SettingsUI struct {
 	// Callback for when back is selected
 	onBack func()
 
+	// Callback for when settings are applied (after save)
+	onSettingsApplied func()
+
 	// Visibility flag
 	visible bool
 }
@@ -97,6 +100,12 @@ func (s *SettingsUI) SetBackCallback(callback func()) {
 	s.onBack = callback
 }
 
+// SetApplyCallback sets the callback function called when settings are applied.
+// This allows the game to react to settings changes (e.g., update volumes, vsync).
+func (s *SettingsUI) SetApplyCallback(callback func()) {
+	s.onSettingsApplied = callback
+}
+
 // Show displays the settings menu and loads current settings.
 func (s *SettingsUI) Show() {
 	s.visible = true
@@ -109,6 +118,11 @@ func (s *SettingsUI) Hide() {
 	s.visible = false
 	// Save settings on hide
 	s.settingsManager.UpdateSettings(s.currentSettings)
+
+	// Notify that settings have been applied
+	if s.onSettingsApplied != nil {
+		s.onSettingsApplied()
+	}
 }
 
 // IsVisible returns whether the settings menu is currently visible.

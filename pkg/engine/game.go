@@ -22,13 +22,14 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager      *AppStateManager
-	MainMenuUI        *MainMenuUI
-	SettingsUI        *SettingsUI
-	SettingsManager   *SettingsManager
-	CharacterCreation *EbitenCharacterCreation
-	pendingCharData   *CharacterData
-	isMultiplayerMode bool // Track if character creation is for multiplayer
+	StateManager       *AppStateManager
+	MainMenuUI         *MainMenuUI
+	SinglePlayerMenu   *SinglePlayerMenu // Submenu for single-player options
+	SettingsUI         *SettingsUI
+	SettingsManager    *SettingsManager
+	CharacterCreation  *EbitenCharacterCreation
+	pendingCharData    *CharacterData
+	isMultiplayerMode  bool // Track if character creation is for multiplayer
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -47,6 +48,9 @@ type EbitenGame struct {
 	MapUI       *EbitenMapUI
 	ShopUI      *ShopUI     // Commerce and merchant interaction UI
 	CraftingUI  *CraftingUI // Crafting and recipe UI
+
+	// Audio system (for settings integration)
+	AudioManager *AudioManager
 
 	// Player entity reference (for UI systems)
 	PlayerEntity *Entity
@@ -151,12 +155,20 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	// Setup main menu callback
 	game.MainMenuUI.SetSelectCallback(game.handleMainMenuSelection)
 
-	// Setup settings UI callback
+	// Setup settings UI callbacks
 	game.SettingsUI.SetBackCallback(func() {
 		// Return to main menu when back is pressed
 		if err := game.StateManager.TransitionTo(AppStateMainMenu); err != nil {
 			if logEntry != nil {
 				logEntry.WithError(err).Error("failed to return to main menu from settings")
+			}
+		}
+	})
+	game.SettingsUI.SetApplyCallback(func() {
+		// Apply settings when they're saved
+		if err := game.ApplySettings(); err != nil {
+			if logEntry != nil {
+				logEntry.WithError(err).Error("failed to apply settings")
 			}
 		}
 	})
@@ -493,6 +505,17 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	}
 }
 
+// SetAudioManager sets the audio manager for the game.
+// This should be called before ApplySettings() to enable volume control.
+func (g *EbitenGame) SetAudioManager(audioManager *AudioManager) {
+	g.AudioManager = audioManager
+
+	// Apply current settings to audio if settings manager exists
+	if g.SettingsManager != nil {
+		_ = g.ApplySettings() // Ignore error, just apply what we can
+	}
+}
+
 // SetInventorySystem connects the inventory system to the inventory UI for item actions.
 func (g *EbitenGame) SetInventorySystem(system *InventorySystem) {
 	g.InventoryUI.SetInventorySystem(system)
@@ -586,6 +609,54 @@ func (g *EbitenGame) SetPaused(paused bool) {
 // GetPlayerEntity returns the current player entity (implements GameRunner interface).
 func (g *EbitenGame) GetPlayerEntity() *Entity {
 	return g.PlayerEntity
+}
+
+// ApplySettings applies settings from SettingsManager to game systems.
+// This should be called when settings are loaded or changed.
+// Returns error if application fails for critical settings.
+func (g *EbitenGame) ApplySettings() error {
+	if g.SettingsManager == nil {
+		return nil // No settings to apply
+	}
+
+	settings := g.SettingsManager.GetSettings()
+
+	// Apply audio volumes
+	if g.AudioManager != nil {
+		// Master volume affects both music and SFX as a multiplier
+		g.AudioManager.SetMusicVolume(settings.MasterVolume * settings.MusicVolume)
+		g.AudioManager.SetSFXVolume(settings.MasterVolume * settings.SFXVolume)
+
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"masterVolume": settings.MasterVolume,
+				"musicVolume":  settings.MusicVolume,
+				"sfxVolume":    settings.SFXVolume,
+			}).Debug("applied audio settings")
+		}
+	}
+
+	// Apply VSync
+	ebiten.SetVsyncEnabled(settings.VSync)
+
+	// Apply fullscreen (Note: this triggers a window mode change)
+	if settings.Fullscreen != ebiten.IsFullscreen() {
+		ebiten.SetFullscreen(settings.Fullscreen)
+	}
+
+	// Graphics quality and ShowFPS are informational for now
+	// Future: could affect particle counts, sprite quality, etc.
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"vsync":      settings.VSync,
+			"fullscreen": settings.Fullscreen,
+			"quality":    settings.GraphicsQuality,
+			"showFPS":    settings.ShowFPS,
+		}).Debug("applied display settings")
+	}
+
+	return nil
 }
 
 // Run starts the game loop.

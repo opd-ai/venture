@@ -74,11 +74,37 @@ This document outlines the roadmap for expanding Venture's gameplay mechanics be
 - ✅ Automatic save on hide, graceful degradation on errors
 - ✅ Real-time adjustment with visual feedback (< value >)
 
+**Settings Application Integration** ✅ **COMPLETE** (October 27, 2025):
+- ✅ Added `ApplySettings()` method to `pkg/engine/game.go` for real-time application
+- ✅ Volume control: applies Master/Music/SFX volumes to AudioManager (master * specific)
+- ✅ Display control: applies VSync and Fullscreen settings to Ebiten window
+- ✅ Callback system: SettingsUI.SetApplyCallback() → game.ApplySettings()
+- ✅ AudioManager wiring: SetAudioManager() auto-applies settings on initialization
+- ✅ Client integration: game.SetAudioManager(audioManager) in `cmd/client/main.go`
+- ✅ Comprehensive test suite: `settings_integration_test.go` (13 test functions, 2 benchmarks)
+  * TestApplySettings_AudioVolumes: Validates volume application with master multiplier
+  * TestApplySettings_NoAudioManager: Graceful handling when AudioManager is nil
+  * TestApplySettings_NoSettingsManager: Graceful handling when SettingsManager is nil
+  * TestSetAudioManager: Validates auto-apply on manager initialization
+  * TestSettingsUI_ApplyCallback: Verifies callback triggers on Hide()
+  * TestApplySettings_MasterVolumeZero: Confirms zero master mutes all audio
+  * TestApplySettings_MaxVolumes: Validates maximum volume settings
+  * BenchmarkApplySettings: Performance baseline for settings application
+  * BenchmarkSetAudioManager: Performance baseline for manager initialization
+- ✅ Coverage: ApplySettings 78.6%, SetAudioManager 100%, SetApplyCallback 100%
+- ✅ All tests passing (13/13)
+- ✅ Zero build errors, production-ready
+
 **Technical Notes**:
 - AppState separate from GameState (input filtering) to avoid namespace collision
 - State machine enforces valid transitions
 - Callbacks allow client to control world initialization timing
 - Menu rendered before world generation for fast startup
+- **Settings Application**: Changes apply immediately to running game (no restart required)
+- **Master Volume**: Acts as global multiplier (actualVolume = masterVolume * specificVolume)
+- **Callback Chain**: SettingsUI.Hide() → onSettingsApplied → game.ApplySettings()
+- **Graceful Degradation**: ApplySettings handles nil AudioManager/SettingsManager safely
+- **Initialization Order**: SetAudioManager() automatically applies settings on first call
 
 ---
 

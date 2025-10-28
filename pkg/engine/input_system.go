@@ -235,6 +235,7 @@ type InputSystem struct {
 	KeySkills    ebiten.Key // K key for skills screen
 	KeyQuests    ebiten.Key // J key for quest log
 	KeyMap       ebiten.Key // M key for map
+	KeyCrafting  ebiten.Key // R key for crafting
 
 	// Key bindings - System
 	KeyHelp         ebiten.Key // ESC key for help menu
@@ -265,6 +266,7 @@ type InputSystem struct {
 	onSkillsOpen    func()
 	onQuestsOpen    func()
 	onMapOpen       func()
+	onCraftingOpen  func() // Callback for crafting UI toggle
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -305,6 +307,7 @@ func NewInputSystem() *InputSystem {
 		KeySkills:    ebiten.KeyK,
 		KeyQuests:    ebiten.KeyJ,
 		KeyMap:       ebiten.KeyM,
+		KeyCrafting:  ebiten.KeyR,
 
 		// System keys
 		KeyHelp:         ebiten.KeyEscape,
@@ -454,6 +457,9 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyMap) && s.onMapOpen != nil {
 		s.onMapOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyCrafting) && s.onCraftingOpen != nil {
+		s.onCraftingOpen()
 	}
 
 	// Handle NPC/merchant interaction (F key)
@@ -707,6 +713,11 @@ func (s *InputSystem) SetMapCallback(callback func()) {
 	s.onMapOpen = callback
 }
 
+// SetCraftingCallback sets the callback function for opening crafting UI (R key).
+func (s *InputSystem) SetCraftingCallback(callback func()) {
+	s.onCraftingOpen = callback
+}
+
 // SetCycleTargetsCallback sets the callback function for cycling targets (Tab key).
 func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
 	s.onCycleTargets = callback
@@ -862,7 +873,7 @@ func (s *InputSystem) GetMouseWheel() (deltaX, deltaY float64) {
 // SetKeyBinding sets a specific key binding by action name.
 // BUG-019 fix: Comprehensive key binding API supporting all 18 keys.
 // Valid action names: "up", "down", "left", "right", "action", "useitem",
-// "inventory", "character", "skills", "quests", "map",
+// "inventory", "character", "skills", "quests", "map", "crafting",
 // "help", "quicksave", "quickload", "cycletargets"
 func (s *InputSystem) SetKeyBinding(action string, key ebiten.Key) bool {
 	switch action {
@@ -891,6 +902,8 @@ func (s *InputSystem) SetKeyBinding(action string, key ebiten.Key) bool {
 		s.KeyQuests = key
 	case "map":
 		s.KeyMap = key
+	case "crafting":
+		s.KeyCrafting = key
 	// System
 	case "help":
 		s.KeyHelp = key
@@ -936,6 +949,8 @@ func (s *InputSystem) GetKeyBinding(action string) (ebiten.Key, bool) {
 		return s.KeyQuests, true
 	case "map":
 		return s.KeyMap, true
+	case "crafting":
+		return s.KeyCrafting, true
 	// System
 	case "help":
 		return s.KeyHelp, true
@@ -968,6 +983,7 @@ func (s *InputSystem) GetAllKeyBindings() map[string]ebiten.Key {
 		"skills":    s.KeySkills,
 		"quests":    s.KeyQuests,
 		"map":       s.KeyMap,
+		"crafting":  s.KeyCrafting,
 		// System
 		"help":         s.KeyHelp,
 		"quicksave":    s.KeyQuickSave,

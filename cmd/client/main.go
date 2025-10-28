@@ -661,6 +661,11 @@ func main() {
 	game.World.AddSystem(spellCastingSystem)
 	game.World.AddSystem(manaRegenSystem)
 	game.World.AddSystem(inventorySystem)
+	
+	// Add commerce, dialog, and crafting systems (Category 1.3 - Commerce & NPC Integration)
+	game.World.AddSystem(commerceSystem)
+	game.World.AddSystem(dialogSystem)
+	game.World.AddSystem(craftingSystem)
 
 	// GAP-017 REPAIR: Add animation system before tutorial/help to update sprites first
 	game.World.AddSystem(&animationSystemWrapper{

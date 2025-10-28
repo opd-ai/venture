@@ -95,7 +95,7 @@ game.World.AddSystem(craftingSystem)
 - Set `KeyCrafting: ebiten.KeyR` in DefaultInputConfig()  
 - Add `onCraftingOpen func()` callback field
 
-**Technical Reasoning:** Follows established pattern for UI toggle keys (I/C/K/J/M)
+**Technical Reasoning:** Follows established pattern for UI toggle keys (I/C/K/J/M). R key selected for crafting (mnemonic: "Recipe"/"cRafting"), doesn't conflict with movement (WASD), spells (1-5), or interact (F).
 
 #### Change 3: Input Handling
 **File:** `pkg/engine/input_system.go` (line 461, 719)  

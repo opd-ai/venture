@@ -442,13 +442,8 @@ func (s *CombatSystem) CanAttackTarget(attacker, target *Entity) bool {
 
 // ApplyStatusEffect applies a status effect to an entity.
 func (s *CombatSystem) ApplyStatusEffect(target *Entity, effectType string, duration, magnitude, tickInterval float64) {
-	effect := &StatusEffectComponent{
-		EffectType:   effectType,
-		Duration:     duration,
-		Magnitude:    magnitude,
-		TickInterval: tickInterval,
-		NextTick:     tickInterval,
-	}
+	// Use pooled status effect to reduce GC pressure
+	effect := NewStatusEffectComponent(effectType, magnitude, duration, tickInterval)
 
 	// Replace any existing status effect (simplification)
 	target.AddComponent(effect)

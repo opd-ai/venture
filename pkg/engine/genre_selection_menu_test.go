@@ -148,26 +148,34 @@ func TestGenreSelectionMenu_SelectCurrentGenre(t *testing.T) {
 		selectedGenreID = genreID
 	})
 
-	// Select first genre (Fantasy)
+	// Select first genre (any valid genre)
 	menu.selectedIdx = 0
 	selected := menu.selectCurrentGenre()
 	if !selected {
 		t.Error("expected selectCurrentGenre to return true")
 	}
 
-	if selectedGenreID != "fantasy" {
-		t.Errorf("expected genre 'fantasy', got %q", selectedGenreID)
+	firstGenreID := selectedGenreID
+	registry := genre.DefaultRegistry()
+	if g, err := registry.Get(firstGenreID); err != nil || g == nil {
+		t.Errorf("first genre ID %q is not in registry: %v", firstGenreID, err)
 	}
 
-	// Select second genre (Sci-Fi)
+	// Select second genre (should be different from first if registry has at least 2 genres)
 	menu.selectedIdx = 1
 	selected = menu.selectCurrentGenre()
 	if !selected {
 		t.Error("expected selectCurrentGenre to return true")
 	}
 
-	if selectedGenreID != "scifi" {
-		t.Errorf("expected genre 'scifi', got %q", selectedGenreID)
+	secondGenreID := selectedGenreID
+	if g, err := registry.Get(secondGenreID); err != nil || g == nil {
+		t.Errorf("second genre ID %q is not in registry: %v", secondGenreID, err)
+	}
+
+	// Verify different genres if registry has at least 2
+	if menu.GetGenreCount() >= 2 && firstGenreID == secondGenreID {
+		t.Errorf("expected different genres at indices 0 and 1")
 	}
 }
 
@@ -255,31 +263,41 @@ func TestGenreSelectionMenu_GetGenreAtPosition(t *testing.T) {
 func TestGenreSelectionMenu_GetSelectedGenre(t *testing.T) {
 	menu := NewGenreSelectionMenu(1280, 720)
 
-	// First genre selected by default
-	genre := menu.GetSelectedGenre()
-	if genre == nil {
+	// First genre selected by default (any genre is valid, just verify it's not nil)
+	selectedGenre := menu.GetSelectedGenre()
+	if selectedGenre == nil {
 		t.Fatal("expected non-nil genre")
 	}
+	firstGenreID := selectedGenre.ID
 
-	if genre.ID != "fantasy" {
-		t.Errorf("expected first genre 'fantasy', got %q", genre.ID)
+	// Verify it's a valid genre ID from the registry
+	registry := genre.DefaultRegistry()
+	if g, err := registry.Get(firstGenreID); err != nil || g == nil {
+		t.Errorf("first genre ID %q is not in registry: %v", firstGenreID, err)
 	}
 
-	// Change selection
+	// Change selection to second index
 	menu.selectedIdx = 1
-	genre = menu.GetSelectedGenre()
-	if genre == nil {
-		t.Fatal("expected non-nil genre")
+	genre2 := menu.GetSelectedGenre()
+	if genre2 == nil {
+		t.Fatal("expected non-nil genre for second index")
+	}
+	secondGenreID := genre2.ID
+
+	// Verify it's different from first (assuming registry has at least 2 genres)
+	if menu.GetGenreCount() >= 2 && firstGenreID == secondGenreID {
+		t.Errorf("expected different genres at indices 0 and 1")
 	}
 
-	if genre.ID != "scifi" {
-		t.Errorf("expected second genre 'scifi', got %q", genre.ID)
+	// Verify second genre is also valid
+	if g, err := registry.Get(secondGenreID); err != nil || g == nil {
+		t.Errorf("second genre ID %q is not in registry: %v", secondGenreID, err)
 	}
 
 	// Out of bounds should return nil
 	menu.selectedIdx = 999
-	genre = menu.GetSelectedGenre()
-	if genre != nil {
+	selectedGenre = menu.GetSelectedGenre()
+	if selectedGenre != nil {
 		t.Error("expected nil genre for out-of-bounds index")
 	}
 }

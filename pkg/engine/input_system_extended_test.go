@@ -278,11 +278,11 @@ func TestInputSystem_GetAllKeyBindings(t *testing.T) {
 
 	bindings := inputSys.GetAllKeyBindings()
 
-	// Should have all 15 actions
+	// Should have all 16 actions
 	expectedActions := []string{
 		"up", "down", "left", "right",
 		"action", "useitem",
-		"inventory", "character", "skills", "quests", "map",
+		"inventory", "character", "skills", "quests", "map", "crafting",
 		"help", "quicksave", "quickload", "cycletargets",
 	}
 

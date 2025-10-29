@@ -1005,7 +1005,7 @@ func (s *InputSystem) GetAllKeyBindings() map[string]ebiten.Key {
 // DrawVirtualControls renders virtual controls on screen (mobile and WASM).
 // Should be called during the game's Draw phase.
 func (s *InputSystem) DrawVirtualControls(screen *ebiten.Image) {
-	if s.useTouchInput && s.virtualControls != nil {
+	if screen != nil && s.useTouchInput && s.virtualControls != nil {
 		s.virtualControls.Draw(screen)
 	}
 }

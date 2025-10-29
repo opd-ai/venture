@@ -205,7 +205,7 @@ func TestSettingsUI_DecreaseValue(t *testing.T) {
 			// Handle float comparison
 			if floatActual, ok := actual.(float64); ok {
 				floatExpected := expected.(float64)
-				if !floatEqual(floatActual, floatExpected, 0.01) {
+				if !settingsFloatEqual(floatActual, floatExpected, 0.01) {
 					t.Errorf("Expected %v, got %v", expected, actual)
 				}
 			} else if actual != expected {
@@ -297,7 +297,7 @@ func TestSettingsUI_IncreaseValue(t *testing.T) {
 			// Handle float comparison
 			if floatActual, ok := actual.(float64); ok {
 				floatExpected := expected.(float64)
-				if !floatEqual(floatActual, floatExpected, 0.01) {
+				if !settingsFloatEqual(floatActual, floatExpected, 0.01) {
 					t.Errorf("Expected %v, got %v", expected, actual)
 				}
 			} else if actual != expected {
@@ -490,7 +490,7 @@ func TestSettingsUI_SaveOnHide(t *testing.T) {
 	}
 	sm2.LoadSettings()
 
-	if !floatEqual(sm2.GetSettings().MasterVolume, 0.9, 0.01) {
+	if !settingsFloatEqual(sm2.GetSettings().MasterVolume, 0.9, 0.01) {
 		t.Errorf("Expected MasterVolume 0.9, got %f", sm2.GetSettings().MasterVolume)
 	}
 }
@@ -512,7 +512,7 @@ func TestSettingsUI_GetCurrentSettings(t *testing.T) {
 	// Get current settings
 	current := ui.GetCurrentSettings()
 
-	if !floatEqual(current.MasterVolume, 0.8, 0.01) {
+	if !settingsFloatEqual(current.MasterVolume, 0.8, 0.01) {
 		t.Errorf("Expected MasterVolume 0.8, got %f", current.MasterVolume)
 	}
 
@@ -543,7 +543,7 @@ func TestSettingsUI_Draw_NoEbitenRuntime(t *testing.T) {
 }
 
 // Helper function for float comparison with tolerance
-func floatEqual(a, b, tolerance float64) bool {
+func settingsFloatEqual(a, b, tolerance float64) bool {
 	diff := a - b
 	if diff < 0 {
 		diff = -diff

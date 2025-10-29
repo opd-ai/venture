@@ -81,8 +81,8 @@ func TestRotationComponent_SetTargetAngle(t *testing.T) {
 	comp := NewRotationComponent(0, 3.0)
 
 	tests := []struct {
-		name       string
-		targetAngle float64
+		name           string
+		targetAngle    float64
 		wantNormalized float64
 	}{
 		{"zero", 0, 0},
@@ -162,11 +162,11 @@ func TestRotationComponent_Update(t *testing.T) {
 		{
 			name:          "rotation wraps around zero",
 			initialAngle:  0.1,
-			targetAngle:   2 * math.Pi - 0.1,
+			targetAngle:   2*math.Pi - 0.1,
 			rotationSpeed: 3.0,
-			deltaTime:     0.1, // Should rotate counter-clockwise
-			wantAngle:     2*math.Pi - 0.2, // Moved 0.3 radians counter-clockwise
-			wantComplete:  false,
+			deltaTime:     0.1,             // Should rotate counter-clockwise
+			wantAngle:     2*math.Pi - 0.1, // Completes the rotation (shortest distance is 0.2)
+			wantComplete:  true,
 		},
 	}
 
@@ -251,7 +251,7 @@ func TestRotationComponent_GetCardinalDirection(t *testing.T) {
 		{"up-left", 5 * math.Pi / 4, 5},
 		{"up", 3 * math.Pi / 2, 6},
 		{"up-right", 7 * math.Pi / 4, 7},
-		{"near right", 0.1, 0}, // Within right sector
+		{"near right", 0.1, 0},          // Within right sector
 		{"near left", math.Pi - 0.1, 4}, // Within left sector
 	}
 

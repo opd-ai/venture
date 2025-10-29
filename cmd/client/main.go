@@ -393,6 +393,9 @@ func main() {
 	spriteGenerator := sprites.NewGenerator()
 	animationSystem := engine.NewAnimationSystem(spriteGenerator)
 
+	// Category 5.2: Initialize equipment visual system for showing equipped items on sprites
+	equipmentVisualSystem := engine.NewEquipmentVisualSystem(spriteGenerator)
+
 	// Store player reference for death callback (will be set after player creation)
 	var playerEntity *engine.Entity
 
@@ -661,7 +664,7 @@ func main() {
 	game.World.AddSystem(spellCastingSystem)
 	game.World.AddSystem(manaRegenSystem)
 	game.World.AddSystem(inventorySystem)
-	
+
 	// Add commerce, dialog, and crafting systems (Category 1.3 - Commerce & NPC Integration)
 	game.World.AddSystem(commerceSystem)
 	game.World.AddSystem(dialogSystem)
@@ -672,6 +675,9 @@ func main() {
 		system: animationSystem,
 		logger: game.World.GetLogger(),
 	})
+
+	// Category 5.2: Add equipment visual system after animation to update equipment layers
+	game.World.AddSystem(equipmentVisualSystem)
 
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
@@ -921,6 +927,10 @@ func main() {
 	playerAnim.Playing = true
 	playerAnim.FrameCount = 4 // 4 frames per animation
 	player.AddComponent(playerAnim)
+
+	// Category 5.2: Add equipment visual component for showing equipped items on sprite
+	equipmentVisualComp := engine.NewEquipmentVisualComponent()
+	player.AddComponent(equipmentVisualComp)
 
 	// Add camera that follows the player
 	camera := engine.NewCameraComponent()

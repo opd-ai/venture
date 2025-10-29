@@ -22,6 +22,9 @@ func NewEquipmentVisualSystem(spriteGenerator *sprites.Generator) *EquipmentVisu
 // Update processes all entities with equipment visual components.
 func (s *EquipmentVisualSystem) Update(entities []*Entity, deltaTime float64) error {
 	for _, entity := range entities {
+		// First, sync equipment visual component with equipment component changes
+		s.syncEquipmentChanges(entity)
+
 		equipComp := s.getEquipmentVisualComponent(entity)
 		if equipComp == nil {
 			continue
@@ -224,6 +227,51 @@ func (s *EquipmentVisualSystem) getEffectColor(effectType string) string {
 	default:
 		return "white"
 	}
+}
+
+// syncEquipmentChanges updates the equipment visual component based on changes in the equipment component.
+func (s *EquipmentVisualSystem) syncEquipmentChanges(entity *Entity) {
+	equipVisualComp := s.getEquipmentVisualComponent(entity)
+	if equipVisualComp == nil {
+		return
+	}
+
+	// Get equipment component to check for changes
+	comp, ok := entity.GetComponent("equipment")
+	if !ok {
+		return
+	}
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok {
+		return
+	}
+
+	// Check each equipment slot for changes and update visual component
+	mainHand := equipComp.GetEquipped(SlotMainHand)
+	if mainHand != nil {
+		// Use item ID as unique identifier and item seed for generation
+		itemID := mainHand.ID
+		itemSeed := mainHand.Seed
+		if equipVisualComp.WeaponID != itemID {
+			equipVisualComp.SetWeapon(itemID, itemSeed)
+		}
+	} else if equipVisualComp.HasWeapon() {
+		equipVisualComp.ClearWeapon()
+	}
+
+	// Check armor (chest slot is primary armor visual)
+	chest := equipComp.GetEquipped(SlotChest)
+	if chest != nil {
+		itemID := chest.ID
+		itemSeed := chest.Seed
+		if equipVisualComp.ArmorID != itemID {
+			equipVisualComp.SetArmor(itemID, itemSeed)
+		}
+	} else if equipVisualComp.HasArmor() {
+		equipVisualComp.ClearArmor()
+	}
+
+	// TODO: Add accessory syncing when more equipment slots are used
 }
 
 // Helper methods

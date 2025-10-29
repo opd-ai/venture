@@ -39,6 +39,15 @@ func (w *animationSystemWrapper) Update(entities []*engine.Entity, deltaTime flo
 	}
 }
 
+// rotationSystemWrapper adapts RotationSystem to System interface
+type rotationSystemWrapper struct {
+	system *engine.RotationSystem
+}
+
+func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width         = flag.Int("width", 800, "Screen width")
 	height        = flag.Int("height", 600, "Screen height")
@@ -613,23 +622,30 @@ func main() {
 
 	// Add systems in correct order:
 	// 1. Input - captures player actions
-	// 2. Player Combat/Item Use/Spell Casting - processes input flags
-	// 3. Movement - applies velocity to position
-	// 4. Collision - checks and resolves collisions
-	// 5. Combat - handles damage/status effects
-	// 6. Status Effects - processes DoT, buffs, debuffs, shields
-	// 7. AI - enemy decision-making
-	// 8. Progression - XP and leveling
-	// 9. Skill Progression - applies skill effects to stats
-	// 10. Audio Manager - updates music based on game context
-	// 11. Objective Tracker - updates quest progress
-	// 12. Item Pickup - collects nearby items
-	// 13. Spell Casting - executes spell effects
-	// 14. Mana Regen - regenerates mana
-	// 15. Inventory - item management
-	// 16. Animation - updates sprite frames (before rendering)
-	// 17. Tutorial/Help - UI overlays
+	// 2. Rotation - updates entity facing direction based on aim (Phase 10.1)
+	// 3. Player Combat/Item Use/Spell Casting - processes input flags
+	// 4. Movement - applies velocity to position
+	// 5. Collision - checks and resolves collisions
+	// 6. Combat - handles damage/status effects
+	// 7. Status Effects - processes DoT, buffs, debuffs, shields
+	// 8. AI - enemy decision-making
+	// 9. Progression - XP and leveling
+	// 10. Skill Progression - applies skill effects to stats
+	// 11. Audio Manager - updates music based on game context
+	// 12. Objective Tracker - updates quest progress
+	// 13. Item Pickup - collects nearby items
+	// 14. Spell Casting - executes spell effects
+	// 15. Mana Regen - regenerates mana
+	// 16. Inventory - item management
+	// 17. Animation - updates sprite frames (before rendering)
+	// 18. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
+
+	// Phase 10.1: Add rotation system for 360° rotation and mouse aim
+	// Processes after input to update facing direction based on aim component
+	rotationSystem := engine.NewRotationSystem(game.World)
+	game.World.AddSystem(&rotationSystemWrapper{system: rotationSystem})
+
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
 	game.World.AddSystem(playerSpellCastingSystem)
@@ -907,6 +923,12 @@ func main() {
 
 	// Add input component for player control
 	player.AddComponent(&engine.EbitenInput{})
+
+	// Phase 10.1: Add rotation and aim components for 360° rotation and mouse aim
+	// RotationComponent stores facing direction with smooth interpolation (3.0 rad/s = ~172°/s)
+	player.AddComponent(engine.NewRotationComponent(0, 3.0)) // Start facing right (0 radians)
+	// AimComponent manages independent aim direction (mouse/touch input)
+	player.AddComponent(engine.NewAimComponent(0)) // Start aiming right
 
 	// GAP-017 REPAIR: Add animated sprite instead of static sprite
 	playerSprite := &engine.EbitenSprite{

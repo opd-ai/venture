@@ -71,11 +71,15 @@ func (p *ParticleEmitterComponent) AddSystem(system *particles.ParticleSystem) b
 }
 
 // CleanupDeadSystems removes particle systems with no alive particles.
+// Dead systems are returned to the pool to reduce GC pressure.
 func (p *ParticleEmitterComponent) CleanupDeadSystems() {
 	alive := make([]*particles.ParticleSystem, 0, len(p.Systems))
 	for _, system := range p.Systems {
 		if system.IsAlive() {
 			alive = append(alive, system)
+		} else {
+			// Return dead system to pool for reuse
+			particles.ReleaseParticleSystem(system)
 		}
 	}
 	p.Systems = alive

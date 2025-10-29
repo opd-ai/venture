@@ -165,8 +165,8 @@ func TestRotationComponent_Update(t *testing.T) {
 			targetAngle:   2 * math.Pi - 0.1,
 			rotationSpeed: 3.0,
 			deltaTime:     0.1, // Should rotate counter-clockwise
-			wantAngle:     2*math.Pi - 0.2, // Moved 0.3 radians counter-clockwise
-			wantComplete:  false,
+			wantAngle:     2*math.Pi - 0.1, // Completes the rotation (shortest distance is 0.2)
+			wantComplete:  true,
 		},
 	}
 

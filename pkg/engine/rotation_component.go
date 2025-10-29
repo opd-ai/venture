@@ -104,6 +104,13 @@ func (r *RotationComponent) Update(deltaTime float64) bool {
 
 	r.Angle = normalizeAngle(r.Angle + rotationDirection*actualRotation)
 
+	// Check if rotation is now complete after the update
+	if actualRotation >= math.Abs(angleDiff) {
+		r.Angle = r.TargetAngle
+		r.AngularVelocity = 0
+		return true
+	}
+
 	return false
 }
 

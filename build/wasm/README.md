@@ -67,3 +67,27 @@ Tested browsers:
 - Chrome/Edge 90+
 - Firefox 88+
 - Safari 14+
+
+## Touch Input Support
+
+The WASM build fully supports touch input for mobile and touch-capable devices:
+
+- **Automatic detection**: Touch input activates when the screen is touched
+- **Virtual controls**: On-screen D-pad and action buttons appear automatically
+- **Gesture support**: Tap, swipe, pinch, long-press, and double-tap gestures
+- **Dual input**: Seamlessly switches between touch and keyboard/mouse
+
+To test touch input:
+1. Build and serve the WASM version locally
+2. Access from a touch-capable device on the same network
+3. Touch the screen - virtual controls will appear automatically
+
+See [docs/TESTING_TOUCH_INPUT.md](../../docs/TESTING_TOUCH_INPUT.md) for detailed testing instructions.
+
+## Performance
+
+Expected performance on modern devices:
+- **Desktop browsers**: 60 FPS with keyboard/mouse
+- **Mobile browsers**: 30-60 FPS with touch input
+- **Memory usage**: 50-100 MB RAM
+- **Load time**: 2-5 seconds initial load (cached after first visit)

@@ -87,8 +87,11 @@ go build -o venture-server ./cmd/server
 Venture runs on multiple platforms:
 
 - **🖥️ Desktop:** Linux, macOS, Windows (x64/ARM64) - Native builds
-- **🌐 Web:** Play in browser via [GitHub Pages](https://opd-ai.github.io/venture/) (WebAssembly)
+- **🌐 Web:** Play in browser via [GitHub Pages](https://opd-ai.github.io/venture/) (WebAssembly) - Full touch support
 - **📱 Mobile:** iOS and Android - Touch-optimized (see [Mobile Build Guide](docs/MOBILE_BUILD.md))
+
+**Touch Input:**
+The WebAssembly build fully supports touch input for mobile browsers and touch-capable devices. Virtual controls appear automatically when you touch the screen. See [Touch Input Testing Guide](docs/TESTING_TOUCH_INPUT.md) for details.
 
 **WebAssembly Deployment:**
 The game automatically deploys to GitHub Pages on every push to main. See [GitHub Pages Guide](docs/GITHUB_PAGES.md) for details.

@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -21,7 +22,8 @@ type SystemValidation struct {
 
 func main() {
 	fmt.Println("Venture System Validation Report")
-	fmt.Println("=================================\n")
+	fmt.Println("=================================")
+	fmt.Println()
 
 	validations := []SystemValidation{
 		{
@@ -143,7 +145,7 @@ func validateCraftingSystem() error {
 	// Check crafting component types exist
 	entity := world.CreateEntity()
 	craftingComp := &engine.CraftingProgressComponent{
-		RecipeName:      "test_recipe",
+		CurrentRecipe:   nil, // nil is valid for testing component registration
 		RequiredTimeSec: 5.0,
 		ElapsedTimeSec:  0.0,
 	}
@@ -158,7 +160,7 @@ func validateCraftingSystem() error {
 
 func validateCharacterCreation() error {
 	// Verify character creation UI exists
-	ui := engine.NewCharacterCreationUI(800, 600)
+	ui := engine.NewCharacterCreation(800, 600)
 	if ui == nil {
 		return fmt.Errorf("failed to create character creation UI")
 	}
@@ -193,11 +195,20 @@ func validateSaveLoadSystem() error {
 
 	// Create dummy save
 	save := &saveload.GameSave{
-		PlayerName:   "TestPlayer",
-		Seed:         12345,
-		GenreID:      "fantasy",
-		CurrentDepth: 1,
-		PlayTimeSec:  60.0,
+		Version:   "1.0",
+		Timestamp: time.Now(),
+		PlayerState: &saveload.PlayerState{
+			EntityID:      1,
+			X:             0,
+			Y:             0,
+			CurrentHealth: 100,
+			MaxHealth:     100,
+		},
+		WorldState: &saveload.WorldState{
+			Seed:  12345,
+			Depth: 1,
+		},
+		Settings: &saveload.GameSettings{},
 	}
 
 	// Test save
@@ -211,9 +222,9 @@ func validateSaveLoadSystem() error {
 		return fmt.Errorf("failed to load game: %w", err)
 	}
 
-	if loaded.PlayerName != save.PlayerName {
-		return fmt.Errorf("loaded data mismatch: expected %s, got %s",
-			save.PlayerName, loaded.PlayerName)
+	if loaded.WorldState.Seed != save.WorldState.Seed {
+		return fmt.Errorf("loaded data mismatch: expected %d, got %d",
+			save.WorldState.Seed, loaded.WorldState.Seed)
 	}
 
 	// Cleanup
@@ -236,7 +247,7 @@ func validateEnvironmentalManipulation() error {
 	}
 
 	// Verify fire propagation system exists
-	fireSys := engine.NewFirePropagationSystem()
+	fireSys := engine.NewFirePropagationSystem(32, 12345) // 32 = tile size, 12345 = seed
 	if fireSys == nil {
 		return fmt.Errorf("failed to create fire propagation system")
 	}

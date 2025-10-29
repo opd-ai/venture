@@ -33,10 +33,7 @@ func TestEquipmentVisualSystem_Update_NoEquipment(t *testing.T) {
 	entity.AddComponent(equipComp)
 
 	entities := []*Entity{entity}
-	err := sys.Update(entities, 0.016)
-	if err != nil {
-		t.Errorf("Update should not error: %v", err)
-	}
+	sys.Update(entities, 0.016)
 
 	// Should remain dirty if no sprite component exists
 	if !equipComp.Dirty {
@@ -70,10 +67,7 @@ func TestEquipmentVisualSystem_Update_DirtyEquipment(t *testing.T) {
 	}
 
 	entities := []*Entity{entity}
-	err := sys.Update(entities, 0.016)
-	if err != nil {
-		t.Errorf("Update failed: %v", err)
-	}
+	sys.Update(entities, 0.016)
 
 	if equipComp.Dirty {
 		t.Error("Equipment component should be clean after update")
@@ -106,10 +100,7 @@ func TestEquipmentVisualSystem_Update_CleanEquipment(t *testing.T) {
 	originalImg := spriteComp.Image
 
 	entities := []*Entity{entity}
-	err := sys.Update(entities, 0.016)
-	if err != nil {
-		t.Errorf("Update failed: %v", err)
-	}
+	sys.Update(entities, 0.016)
 
 	// Should not regenerate since not dirty
 	if spriteComp.Image != originalImg {
@@ -147,10 +138,7 @@ func TestEquipmentVisualSystem_EquipItem(t *testing.T) {
 
 	// Update to regenerate sprite
 	entities := []*Entity{entity}
-	err := sys.Update(entities, 0.016)
-	if err != nil {
-		t.Errorf("Update failed: %v", err)
-	}
+	sys.Update(entities, 0.016)
 
 	if spriteComp.Image == nil {
 		t.Error("Expected sprite image to be generated")
@@ -189,10 +177,7 @@ func TestEquipmentVisualSystem_UnequipItem(t *testing.T) {
 
 	// Update to regenerate sprite
 	entities := []*Entity{entity}
-	err := sys.Update(entities, 0.016)
-	if err != nil {
-		t.Errorf("Update failed: %v", err)
-	}
+	sys.Update(entities, 0.016)
 
 	if spriteComp.Image == nil {
 		t.Error("Expected sprite image to be regenerated")
@@ -230,7 +215,7 @@ func BenchmarkEquipmentVisualSystem_Update(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = sys.Update(entities, 0.016)
+		sys.Update(entities, 0.016)
 
 		// Mark some dirty for next iteration
 		if i%10 == 0 {

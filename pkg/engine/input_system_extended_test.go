@@ -500,7 +500,7 @@ func TestInputSystem_VirtualControlsAutoInit(t *testing.T) {
 	inputSys.virtualControls = nil // Clear any existing controls
 
 	// Create a test entity with input component
-	entity := NewEntity()
+	entity := NewEntity(1)
 	inputComp := &EbitenInput{}
 	entity.AddComponent(inputComp)
 	entities := []*Entity{entity}

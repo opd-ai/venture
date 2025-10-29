@@ -8,8 +8,8 @@ import "math"
 
 // RevivalSystem handles player revival mechanics in multiplayer.
 // Living players can revive dead teammates by standing nearby and pressing
-// the revival input key. This system implements the PLAN.md Priority 1.5
-// revival mechanics with proximity detection and health restoration.
+// the revival input key. This system implements multiplayer revival mechanics
+// with proximity detection and health restoration.
 type RevivalSystem struct {
 	world *World
 

@@ -100,7 +100,7 @@ This is critical to prevent:
 
 ### Expected Improvements
 
-Based on PLAN.md targets:
+Based on performance optimization targets:
 - **Allocations eliminated**: 10-20 per second during combat
 - **GC pause reduction**: 30-40% (fewer objects to scan)
 - **Frame time improvement**: 0.2-0.5ms (fewer GC pauses)
@@ -173,7 +173,7 @@ ReleaseStatusEffect(effect)
 
 ### Additional Pooling Candidates
 
-Based on PLAN.md Phase 3 priorities:
+Based on performance optimization priorities:
 
 1. **ParticleComponent** (Phase 3.2)
    - Similar pattern to StatusEffectComponent
@@ -221,13 +221,14 @@ Object pooling does not affect determinism:
 
 ## References
 
-- **PLAN.md**: Performance Optimization Plan, Phase 3.1
-- **docs/profiling/optimization_progress.md**: Performance tracking
+- **docs/ROADMAP.md**: Development roadmap and performance optimization plan
+- **docs/PERFORMANCE.md**: Performance documentation
+- **docs/profiling/PROFILING_GUIDE.md**: Performance profiling guide
 - **Go sync.Pool documentation**: https://pkg.go.dev/sync#Pool
 
 ## Author
 
-Performance Optimization Team, based on PLAN.md specifications
+Performance Optimization Team, based on performance optimization specifications
 
 ## Date
 

@@ -185,7 +185,6 @@ func max(a, b int) int {
 // - character_creation_desktop.go for desktop platforms (uses zenity)
 // - character_creation_mobile.go for mobile/WASM platforms (returns error)
 
-
 // creationStep represents the current step in character creation
 type creationStep int
 

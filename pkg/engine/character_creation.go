@@ -17,7 +17,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/ncruces/zenity"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
@@ -182,31 +181,10 @@ func max(a, b int) int {
 
 // OpenPortraitDialog opens a native file picker dialog for selecting a portrait image
 // Returns the selected file path or empty string if cancelled
-func OpenPortraitDialog() (string, error) {
-	// Start in user's Pictures directory
-	defaultDir := GetDefaultPicturesDirectory()
+// Platform-specific implementations are provided via:
+// - character_creation_desktop.go for desktop platforms (uses zenity)
+// - character_creation_mobile.go for mobile/WASM platforms (returns error)
 
-	// Create dialog with PNG filter
-	// Zenity uses native dialogs on each platform (Windows, macOS, Linux)
-	filename, err := zenity.SelectFile(
-		zenity.Title("Select Portrait Image"),
-		zenity.Filename(defaultDir),
-		zenity.FileFilter{
-			Name:     "PNG Images",
-			Patterns: []string{"*.png"},
-			CaseFold: false,
-		},
-	)
-	if err != nil {
-		// User cancelled (zenity.ErrCanceled) or error occurred
-		if err == zenity.ErrCanceled {
-			return "", nil // Not an error, user cancelled
-		}
-		return "", fmt.Errorf("file dialog error: %w", err)
-	}
-
-	return filename, nil
-}
 
 // creationStep represents the current step in character creation
 type creationStep int

@@ -72,7 +72,7 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 	// Note: NewParticleSystem expects particles to be passed in, but we
 	// need to generate them. Create temporary slice, then pass to pooled system.
 	particles := make([]Particle, config.Count)
-	
+
 	// Temporarily create system for generation (will be replaced with pooled version)
 	system := &ParticleSystem{
 		Particles:   particles,
@@ -113,7 +113,7 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 	// Use pooled particle system instead of direct allocation
 	// This transfers particles to a pooled system, reducing GC pressure
 	pooledSystem := NewParticleSystem(system.Particles, config.Type, config)
-	
+
 	return pooledSystem, nil
 }
 

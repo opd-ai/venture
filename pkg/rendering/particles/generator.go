@@ -68,9 +68,14 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
-	// Create particle system
+	// Create particle system from pool with pre-allocated particles
+	// Note: NewParticleSystem expects particles to be passed in, but we
+	// need to generate them. Create temporary slice, then pass to pooled system.
+	particles := make([]Particle, config.Count)
+	
+	// Temporarily create system for generation (will be replaced with pooled version)
 	system := &ParticleSystem{
-		Particles:   make([]Particle, config.Count),
+		Particles:   particles,
 		Type:        config.Type,
 		Config:      config,
 		ElapsedTime: 0,
@@ -105,7 +110,11 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 		}).Info("particle system generated")
 	}
 
-	return system, nil
+	// Use pooled particle system instead of direct allocation
+	// This transfers particles to a pooled system, reducing GC pressure
+	pooledSystem := NewParticleSystem(system.Particles, config.Type, config)
+	
+	return pooledSystem, nil
 }
 
 // generateSparks creates bright, quick-moving spark particles.

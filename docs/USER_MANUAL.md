@@ -55,9 +55,8 @@ Venture is a procedurally generated action-RPG where every playthrough is unique
 **Actions:**
 - `Space` - Primary Attack / Interact
 - `E` - Use Item / Open Chest
-- `Q` - Quick Spell 1
-- `R` - Quick Spell 2
-- `F` - Quick Spell 3
+- `F` - Interact with NPCs / Merchants (when nearby)
+- `1-5` - Cast Spell (slots 1-5)
 
 **Interface:**
 - `I` - Inventory (Press I or ESC to close)
@@ -65,6 +64,7 @@ Venture is a procedurally generated action-RPG where every playthrough is unique
 - `K` - Skill Tree (Press K or ESC to close)
 - `J` - Quest Log (Press J or ESC to close)
 - `M` - Map (Press M or ESC to close)
+- `R` - Crafting Menu (Press R or ESC to close)
 - `Tab` - Cycle Targets
 - `Esc` - Close any open menu / Pause Menu
 
@@ -93,6 +93,7 @@ All in-game menus follow a consistent, user-friendly navigation pattern:
 | Skill Tree | `K` | Press `K` again OR press `ESC` |
 | Quest Log | `J` | Press `J` again OR press `ESC` |
 | World Map | `M` | Press `M` again OR press `ESC` |
+| Crafting | `R` | Press `R` again OR press `ESC` |
 
 **Key Navigation Features:**
 - **Toggle Key**: Each menu uses its assigned letter key to both open and close
@@ -761,6 +762,62 @@ Combine two genres for hybrid worlds:
 - Special abilities
 - Pattern-based attacks
 - Enrage at low HP
+
+### Commerce & Trading
+
+**Merchant NPCs:**
+Merchants spawn in dungeons and settlements, offering items for purchase and accepting items for sale.
+
+**Interacting with Merchants:**
+1. Approach a merchant (within ~64 pixels)
+2. Press `F` to interact
+3. Dialog menu appears with options
+4. Shop UI opens showing merchant inventory
+
+**Buying Items:**
+- Browse merchant inventory in shop UI
+- Item prices scale with rarity (Common 1.0x, Uncommon 1.5x, Rare 3.0x, Epic 8.0x, Legendary 25.0x)
+- Click item to purchase (requires sufficient gold)
+- Item transfers to your inventory
+
+**Selling Items:**
+- Switch to "Sell" mode in shop UI
+- Select items from your inventory
+- Receive gold based on item value
+- Useful for clearing inventory space
+
+**Merchant Types:**
+- **Fixed Merchants**: Permanent location in settlements
+- **Nomadic Merchants**: Spawn periodically in random dungeon rooms
+
+### Crafting System
+
+**Opening Crafting UI:**
+Press `R` anywhere to open the crafting menu.
+
+**Recipe-Based Crafting:**
+- Discover recipes through gameplay
+- Each recipe requires specific materials
+- Success chance scales with skill level (50% at level 1, 95% at max)
+- Failed crafts consume 50% of materials
+
+**Crafting Categories:**
+- **Potions**: Health, mana, buff consumables
+- **Enchanting**: Enhance weapon/armor stats
+- **Magic Items**: Create wands, rings, amulets
+
+**Material Collection:**
+- Gather materials from defeated enemies
+- Find materials in treasure chests
+- Purchase rare materials from merchants
+
+**Crafting Process:**
+1. Open crafting UI (`R` key)
+2. Select a known recipe
+3. System checks for required materials
+4. Crafting takes time (progress bar)
+5. Success/failure based on skill level
+6. Gain XP on completion
 
 ### Advanced Combat Techniques
 

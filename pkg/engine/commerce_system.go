@@ -348,3 +348,11 @@ func (s *CommerceSystem) getMerchantComponent(entity *Entity) (*MerchantComponen
 	}
 	return merchantComp, nil
 }
+
+// Update satisfies the System interface but commerce transactions
+// are handled via direct method calls (BuyItem, SellItem),
+// not per-frame updates.
+func (s *CommerceSystem) Update(entities []*Entity, deltaTime float64) {
+	// Commerce transactions are event-driven, not tick-based
+	// This method is a no-op to satisfy the System interface
+}

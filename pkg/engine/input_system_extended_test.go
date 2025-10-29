@@ -278,11 +278,11 @@ func TestInputSystem_GetAllKeyBindings(t *testing.T) {
 
 	bindings := inputSys.GetAllKeyBindings()
 
-	// Should have all 15 actions
+	// Should have all 16 actions
 	expectedActions := []string{
 		"up", "down", "left", "right",
 		"action", "useitem",
-		"inventory", "character", "skills", "quests", "map",
+		"inventory", "character", "skills", "quests", "map", "crafting",
 		"help", "quicksave", "quickload", "cycletargets",
 	}
 
@@ -500,7 +500,7 @@ func TestInputSystem_VirtualControlsAutoInit(t *testing.T) {
 	inputSys.virtualControls = nil // Clear any existing controls
 
 	// Create a test entity with input component
-	entity := NewEntity()
+	entity := NewEntity(1)
 	inputComp := &EbitenInput{}
 	entity.AddComponent(inputComp)
 	entities := []*Entity{entity}

@@ -103,7 +103,7 @@ func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 	for i := 0; i < count; i++ {
 		// Use a different seed for each item
 		itemSeed := seed + int64(i)*1000
-		items[i] = g.generateSingleItem(itemSeed, params, itemTypeFilter, rng)
+		items[i] = g.generateSingleItem(itemSeed, params, itemTypeFilter, i, rng)
 	}
 
 	if g.logger != nil {
@@ -125,7 +125,7 @@ func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 }
 
 // generateSingleItem creates one item.
-func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.GenerationParams, itemTypeFilter *ItemType, rng *rand.Rand) *Item {
+func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.GenerationParams, itemTypeFilter *ItemType, index int, rng *rand.Rand) *Item {
 	// Determine item type
 	itemType := g.determineItemType(itemTypeFilter, rng)
 
@@ -154,6 +154,7 @@ func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.Generation
 
 	// Generate item
 	item := &Item{
+		ID:             fmt.Sprintf("item_%d_%d", params.Depth, index),
 		Type:           itemType,
 		WeaponType:     template.WeaponType,
 		ArmorType:      template.ArmorType,

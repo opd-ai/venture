@@ -10,6 +10,7 @@ import (
 // TestItemToData tests item serialization.
 func TestItemToData(t *testing.T) {
 	testItem := &item.Item{
+		ID:          "item_1_5",
 		Name:        "Iron Sword",
 		Type:        item.TypeWeapon,
 		WeaponType:  item.WeaponSword,
@@ -30,6 +31,9 @@ func TestItemToData(t *testing.T) {
 
 	data := ItemToData(testItem)
 
+	if data.ID != "item_1_5" {
+		t.Errorf("ID = %s, want 'item_1_5'", data.ID)
+	}
 	if data.Name != "Iron Sword" {
 		t.Errorf("Name = %s, want 'Iron Sword'", data.Name)
 	}
@@ -53,6 +57,7 @@ func TestItemToData(t *testing.T) {
 // TestDataToItem tests item deserialization.
 func TestDataToItem(t *testing.T) {
 	data := ItemData{
+		ID:          "item_2_3",
 		Name:        "Leather Armor",
 		Type:        "armor",
 		ArmorType:   "chest",
@@ -67,6 +72,9 @@ func TestDataToItem(t *testing.T) {
 
 	itm := DataToItem(data)
 
+	if itm.ID != "item_2_3" {
+		t.Errorf("ID = %s, want 'item_2_3'", itm.ID)
+	}
 	if itm.Name != "Leather Armor" {
 		t.Errorf("Name = %s, want 'Leather Armor'", itm.Name)
 	}
@@ -87,6 +95,7 @@ func TestDataToItem(t *testing.T) {
 // TestItemRoundTrip tests item serialization and deserialization.
 func TestItemRoundTrip(t *testing.T) {
 	original := &item.Item{
+		ID:          "item_5_10",
 		Name:        "Epic Fire Staff",
 		Type:        item.TypeWeapon,
 		WeaponType:  item.WeaponStaff,
@@ -112,6 +121,9 @@ func TestItemRoundTrip(t *testing.T) {
 	restored := DataToItem(data)
 
 	// Verify
+	if restored.ID != original.ID {
+		t.Errorf("ID = %s, want %s", restored.ID, original.ID)
+	}
 	if restored.Name != original.Name {
 		t.Errorf("Name = %s, want %s", restored.Name, original.Name)
 	}
@@ -314,6 +326,7 @@ func TestParseRarity(t *testing.T) {
 // TestConsumableItem tests consumable item serialization.
 func TestConsumableItem(t *testing.T) {
 	original := &item.Item{
+		ID:             "item_3_7",
 		Name:           "Health Potion",
 		Type:           item.TypeConsumable,
 		ConsumableType: item.ConsumablePotion,
@@ -340,6 +353,7 @@ func TestConsumableItem(t *testing.T) {
 // BenchmarkItemToData benchmarks item serialization.
 func BenchmarkItemToData(b *testing.B) {
 	testItem := &item.Item{
+		ID:     "item_bench_1",
 		Name:   "Test Item",
 		Type:   item.TypeWeapon,
 		Rarity: item.RarityCommon,
@@ -355,6 +369,7 @@ func BenchmarkItemToData(b *testing.B) {
 // BenchmarkDataToItem benchmarks item deserialization.
 func BenchmarkDataToItem(b *testing.B) {
 	data := ItemData{
+		ID:     "item_bench_2",
 		Name:   "Test Item",
 		Type:   "weapon",
 		Rarity: "common",

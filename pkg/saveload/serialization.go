@@ -34,6 +34,7 @@ func ItemToData(itm *item.Item) ItemData {
 	}
 
 	data := ItemData{
+		ID:            itm.ID,
 		Name:          itm.Name,
 		Type:          itm.Type.String(),
 		Rarity:        itm.Rarity.String(),
@@ -66,6 +67,7 @@ func ItemToData(itm *item.Item) ItemData {
 // DataToItem converts ItemData back to item.Item.
 func DataToItem(data ItemData) *item.Item {
 	itm := &item.Item{
+		ID:          data.ID,
 		Name:        data.Name,
 		Seed:        data.Seed,
 		Tags:        data.Tags,

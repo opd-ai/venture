@@ -195,6 +195,8 @@ type Stats struct {
 
 // Item represents a generated game item.
 type Item struct {
+	// ID is a unique identifier for this item
+	ID string
 	// Name is the procedurally generated name
 	Name string
 	// Type categorizes the item

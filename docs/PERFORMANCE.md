@@ -940,9 +940,9 @@ func (g *Game) Update() error {
   - Integration guides
 
 ### Project Planning
-- **Development Plan**: `docs/PLAN.md`
-  - Phase 6 completion details
-  - Performance targets and achievements
+- **Development Roadmap**: `docs/ROADMAP.md`
+  - Complete development history (Phases 1-8)
+  - Performance optimization details
   - Timeline and milestones
 
 ---

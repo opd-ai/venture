@@ -275,7 +275,7 @@ Potential improvements for future phases:
 - [Architecture](ARCHITECTURE.md) - Overall system design
 - [Technical Spec](TECHNICAL_SPEC.md) - Implementation details
 - [Development Guide](DEVELOPMENT.md) - Contributing guidelines
-- [Phase 1 Complete](../PHASE1_COMPLETE.md) - Phase 1 completion status
+- [Roadmap](ROADMAP.md) - Development roadmap and phase history
 - [Procedural Genre System](../pkg/procgen/genre/doc.go) - Genre definition system
 
 ## Code References

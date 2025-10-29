@@ -40,9 +40,13 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 
-		// Remove expired effects
+		// Remove expired effects and return to pool
 		for _, effect := range effectsToRemove {
 			entity.RemoveComponent(effect.Type())
+			// Return to pool to reduce GC pressure
+			if statusEffect, ok := effect.(*StatusEffectComponent); ok {
+				ReleaseStatusEffect(statusEffect)
+			}
 		}
 
 		// Update shield duration
@@ -123,14 +127,8 @@ func (s *StatusEffectSystem) ApplyStatusEffect(entity *Entity, effectType string
 		}
 	}
 
-	// Create new status effect
-	effect := &StatusEffectComponent{
-		EffectType:   effectType,
-		Duration:     duration,
-		Magnitude:    magnitude,
-		TickInterval: tickInterval,
-		NextTick:     tickInterval,
-	}
+	// Create new status effect from pool
+	effect := NewStatusEffectComponent(effectType, magnitude, duration, tickInterval)
 
 	entity.AddComponent(effect)
 

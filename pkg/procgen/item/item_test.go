@@ -53,6 +53,9 @@ func TestItemGeneration(t *testing.T) {
 			t.Errorf("Item %d is nil", i)
 			continue
 		}
+		if item.ID == "" {
+			t.Errorf("Item %d has empty ID", i)
+		}
 		if item.Name == "" {
 			t.Errorf("Item %d has empty name", i)
 		}

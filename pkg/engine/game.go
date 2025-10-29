@@ -981,6 +981,17 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 		}
 	})
 
+	// Connect crafting toggle (Category 1.3 - Commerce & Crafting Integration)
+	inputSystem.SetCraftingCallback(func() {
+		if g.CraftingUI != nil {
+			g.CraftingUI.Toggle()
+			// Track crafting UI opens for tutorial objectives
+			if objectiveTracker != nil && g.PlayerEntity != nil {
+				objectiveTracker.OnUIOpened(g.PlayerEntity, "crafting")
+			}
+		}
+	})
+
 	// Connect pause menu toggle (ESC key)
 	if g.MenuSystem != nil {
 		inputSystem.SetMenuToggleCallback(func() {

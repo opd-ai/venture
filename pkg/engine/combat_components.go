@@ -133,6 +133,7 @@ func (a *AttackComponent) UpdateCooldown(deltaTime float64) {
 }
 
 // StatusEffectComponent represents a temporary buff or debuff.
+// It uses object pooling to reduce GC pressure during combat.
 type StatusEffectComponent struct {
 	// Effect type (e.g., "poison", "stun", "speed_boost")
 	EffectType string
@@ -173,6 +174,17 @@ func (s *StatusEffectComponent) Update(deltaTime float64) bool {
 	}
 
 	return false // No tick
+}
+
+// Reset clears the component state for reuse from the pool.
+// This method should be called before returning to the pool to prevent
+// memory leaks and ensure clean state for next use.
+func (s *StatusEffectComponent) Reset() {
+	s.EffectType = ""
+	s.Duration = 0
+	s.Magnitude = 0
+	s.TickInterval = 0
+	s.NextTick = 0
 }
 
 // TeamComponent identifies which team an entity belongs to.

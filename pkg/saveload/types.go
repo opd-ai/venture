@@ -107,6 +107,7 @@ type AnimationStateData struct {
 
 // ItemData represents a serialized item for save files.
 type ItemData struct {
+	ID             string   `json:"id"`
 	Name           string   `json:"name"`
 	Type           string   `json:"type"` // "weapon", "armor", "consumable", "accessory"
 	WeaponType     string   `json:"weapon_type,omitempty"`

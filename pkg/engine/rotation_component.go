@@ -7,10 +7,11 @@ import "math"
 
 // RotationComponent stores the facing direction of an entity in 2D space.
 // Angles are measured in radians with the following convention:
-//   0 radians = facing right (positive X axis)
-//   π/2 radians = facing down (positive Y axis)
-//   π radians = facing left (negative X axis)
-//   3π/2 radians = facing up (negative Y axis)
+//
+//	0 radians = facing right (positive X axis)
+//	π/2 radians = facing down (positive Y axis)
+//	π radians = facing left (negative X axis)
+//	3π/2 radians = facing up (negative Y axis)
 //
 // The component supports smooth rotation via angular velocity and configurable
 // rotation speed limits. This enables dual-stick shooter mechanics where

@@ -42,7 +42,7 @@ func (s *RotationSystem) Update(deltaTime float64) {
 			aimComp, ok := entity.GetComponent("aim")
 			if ok {
 				aim := aimComp.(*AimComponent)
-				
+
 				// Update aim angle from position if target-based
 				if entity.HasComponent("position") {
 					posComp, ok := entity.GetComponent("position")
@@ -51,7 +51,7 @@ func (s *RotationSystem) Update(deltaTime float64) {
 						aim.UpdateAimAngle(pos.X, pos.Y)
 					}
 				}
-				
+
 				// Set rotation target to match aim
 				rotation.SetTargetAngle(aim.AimAngle)
 			}

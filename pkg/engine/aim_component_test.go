@@ -359,53 +359,53 @@ func TestAimComponent_ApplyAutoAim(t *testing.T) {
 // TestAimComponent_IsAimingAt tests aim direction checking
 func TestAimComponent_IsAimingAt(t *testing.T) {
 	tests := []struct {
-		name      string
-		aimAngle  float64
-		entityX   float64
-		entityY   float64
-		targetX   float64
-		targetY   float64
-		tolerance float64
+		name       string
+		aimAngle   float64
+		entityX    float64
+		entityY    float64
+		targetX    float64
+		targetY    float64
+		tolerance  float64
 		wantAiming bool
 	}{
 		{
-			name:      "directly aiming",
-			aimAngle:  0,
-			entityX:   0,
-			entityY:   0,
-			targetX:   100,
-			targetY:   0,
-			tolerance: math.Pi / 16,
+			name:       "directly aiming",
+			aimAngle:   0,
+			entityX:    0,
+			entityY:    0,
+			targetX:    100,
+			targetY:    0,
+			tolerance:  math.Pi / 16,
 			wantAiming: true,
 		},
 		{
-			name:      "within tolerance",
-			aimAngle:  0.1, // Slightly off right
-			entityX:   0,
-			entityY:   0,
-			targetX:   100,
-			targetY:   0,
-			tolerance: math.Pi / 16,
+			name:       "within tolerance",
+			aimAngle:   0.1, // Slightly off right
+			entityX:    0,
+			entityY:    0,
+			targetX:    100,
+			targetY:    0,
+			tolerance:  math.Pi / 16,
 			wantAiming: true,
 		},
 		{
-			name:      "outside tolerance",
-			aimAngle:  math.Pi / 4, // 45 degrees
-			entityX:   0,
-			entityY:   0,
-			targetX:   100,
-			targetY:   0,
-			tolerance: math.Pi / 16,
+			name:       "outside tolerance",
+			aimAngle:   math.Pi / 4, // 45 degrees
+			entityX:    0,
+			entityY:    0,
+			targetX:    100,
+			targetY:    0,
+			tolerance:  math.Pi / 16,
 			wantAiming: false,
 		},
 		{
-			name:      "opposite direction",
-			aimAngle:  math.Pi,
-			entityX:   0,
-			entityY:   0,
-			targetX:   100,
-			targetY:   0,
-			tolerance: math.Pi / 16,
+			name:       "opposite direction",
+			aimAngle:   math.Pi,
+			entityX:    0,
+			entityY:    0,
+			targetX:    100,
+			targetY:    0,
+			tolerance:  math.Pi / 16,
 			wantAiming: false,
 		},
 	}

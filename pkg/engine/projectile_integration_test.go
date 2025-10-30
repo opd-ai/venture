@@ -68,6 +68,9 @@ func TestProjectileSystemIntegration(t *testing.T) {
 	}
 	attacker.AddComponent(attackComp)
 	
+	// Process entity additions
+	world.Update(0)
+	
 	// Count entities before attack
 	entitiesBefore := len(world.GetEntities())
 	
@@ -77,6 +80,9 @@ func TestProjectileSystemIntegration(t *testing.T) {
 	if !success {
 		t.Error("expected attack to succeed and spawn projectile")
 	}
+	
+	// Process entity additions (projectile spawned)
+	world.Update(0)
 	
 	// Count entities after attack
 	entitiesAfter := len(world.GetEntities())
@@ -183,7 +189,13 @@ func TestProjectileSpawnWithPiercing(t *testing.T) {
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
 	
+	// Process entity additions
+	world.Update(0)
+	
 	cs.Attack(attacker, target)
+	
+	// Process projectile spawn
+	world.Update(0)
 	
 	projectiles := world.GetEntitiesWith("projectile")
 	if len(projectiles) != 1 {
@@ -245,7 +257,13 @@ func TestProjectileSpawnWithExplosive(t *testing.T) {
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
 	
+	// Process entity additions
+	world.Update(0)
+	
 	cs.Attack(attacker, target)
+	
+	// Process projectile spawn
+	world.Update(0)
 	
 	projectiles := world.GetEntitiesWith("projectile")
 	if len(projectiles) != 1 {
@@ -331,9 +349,12 @@ func TestProjectileSystemUpdate(t *testing.T) {
 	proj.AddComponent(&VelocityComponent{VX: 100, VY: 0}) // Moving right at 100 px/s
 	proj.AddComponent(NewProjectileComponent(10.0, 100.0, 1.0, "arrow", 999))
 	
+	// Process entity addition
+	world.Update(0)
+	
 	// Update for 0.1 seconds
 	deltaTime := 0.1
-	entities := []*Entity{proj}
+	entities := world.GetEntities()
 	ps.Update(entities, deltaTime)
 	
 	// Check projectile moved

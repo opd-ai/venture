@@ -841,7 +841,7 @@ func main() {
 	// Phase 10.2: Add projectile system for ranged weapon physics
 	// Processes after collision to use terrain checker for wall bounces
 	projectileSystem := engine.NewProjectileSystem(game.World)
-	projectileSystem.SetTerrainChecker(terrainChecker)
+	// Note: terrainChecker will be set after terrain generation
 	game.World.AddSystem(projectileSystem)
 	
 	game.World.AddSystem(combatSystem)
@@ -988,11 +988,13 @@ func main() {
 	terrainChecker := engine.NewTerrainCollisionChecker(32, 32)
 	terrainChecker.SetTerrain(generatedTerrain)
 
-	// Connect terrain checker to collision system
+	// Connect terrain checker to collision system and projectile system
 	for _, system := range game.World.GetSystems() {
 		if collisionSys, ok := system.(*engine.CollisionSystem); ok {
 			collisionSys.SetTerrainChecker(terrainChecker)
-			break
+		}
+		if projSys, ok := system.(*engine.ProjectileSystem); ok {
+			projSys.SetTerrainChecker(terrainChecker)
 		}
 	}
 

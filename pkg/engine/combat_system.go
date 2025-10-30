@@ -8,7 +8,6 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
@@ -197,7 +196,7 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// If so, spawn a projectile instead of doing instant damage
 	if equipComp, hasEquip := attacker.GetComponent("equipment"); hasEquip {
 		equipment := equipComp.(*EquipmentComponent)
-		if weapon, hasWeapon := equipment.Slots[SlotWeapon]; hasWeapon && weapon != nil {
+		if weapon, hasWeapon := equipment.Slots[SlotMainHand]; hasWeapon && weapon != nil {
 			if weapon.Stats.IsProjectile {
 				// Spawn projectile for ranged weapon
 				success := s.spawnProjectile(attacker, target, weapon, attack)

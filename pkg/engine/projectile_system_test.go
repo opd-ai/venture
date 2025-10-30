@@ -36,7 +36,7 @@ func TestProjectileSystem_SpawnProjectile(t *testing.T) {
 	w := NewWorld()
 	sys := NewProjectileSystem(w)
 
-	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 1)
+	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 200.0, 300.0, 0.0, projComp)
 
 	if entity == nil {
@@ -94,7 +94,7 @@ func TestProjectileSystem_GetProjectileCount(t *testing.T) {
 	}
 
 	// Spawn some projectiles
-	projComp1 := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 1)
+	projComp1 := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 999)
 	sys.SpawnProjectile(100.0, 100.0, 100.0, 0.0, projComp1)
 
 	projComp2 := NewProjectileComponent(30.0, 500.0, 3.0, "bullet", 2)
@@ -111,7 +111,7 @@ func TestProjectileSystem_Update_Movement(t *testing.T) {
 	sys := NewProjectileSystem(w)
 
 	// Spawn projectile moving right
-	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 1)
+	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 100.0, 400.0, 0.0, projComp)
 
 	// Process pending entities
@@ -153,7 +153,7 @@ func TestProjectileSystem_Update_Expiration(t *testing.T) {
 	sys := NewProjectileSystem(w)
 
 	// Spawn projectile with 2 second lifetime
-	projComp := NewProjectileComponent(25.0, 400.0, 2.0, "arrow", 1)
+	projComp := NewProjectileComponent(25.0, 400.0, 2.0, "arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 100.0, 100.0, 0.0, projComp)
 	entityID := entity.ID
 
@@ -189,7 +189,7 @@ func TestProjectileSystem_EntityCollision(t *testing.T) {
 	target.AddComponent(&HealthComponent{Current: 100.0, Max: 100.0})
 
 	// Spawn projectile aimed at target
-	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 1)
+	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 100.0, 400.0, 0.0, projComp)
 	entityID := entity.ID
 
@@ -234,7 +234,7 @@ func TestProjectileSystem_PierceCollision(t *testing.T) {
 	target2.AddComponent(&HealthComponent{Current: 100.0, Max: 100.0})
 
 	// Spawn piercing projectile
-	projComp := NewPiercingProjectile(30.0, 200.0, 5.0, 1, "piercing_arrow", 1)
+	projComp := NewPiercingProjectile(30.0, 200.0, 5.0, 1, "piercing_arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 100.0, 200.0, 0.0, projComp)
 	entityID := entity.ID
 
@@ -289,20 +289,22 @@ func TestProjectileSystem_ExplosiveProjectile(t *testing.T) {
 	sys := NewProjectileSystem(w)
 
 	// Create multiple targets within explosion radius
+	// Projectile travels horizontally from (100,100) with velocity (400,0)
+	// After 0.19s: position is (100 + 400*0.19, 100) = (176, 100)
 	target1 := w.CreateEntity()
-	target1.AddComponent(&PositionComponent{X: 210.0, Y: 100.0}) // Close to explosion
+	target1.AddComponent(&PositionComponent{X: 176.0, Y: 100.0}) // On projectile path for collision
 	target1.AddComponent(&HealthComponent{Current: 100.0, Max: 100.0})
 
 	target2 := w.CreateEntity()
-	target2.AddComponent(&PositionComponent{X: 250.0, Y: 100.0}) // At edge of explosion
+	target2.AddComponent(&PositionComponent{X: 210.0, Y: 100.0}) // Within explosion radius from impact point
 	target2.AddComponent(&HealthComponent{Current: 100.0, Max: 100.0})
 
 	target3 := w.CreateEntity()
-	target3.AddComponent(&PositionComponent{X: 400.0, Y: 100.0}) // Outside explosion
+	target3.AddComponent(&PositionComponent{X: 300.0, Y: 100.0}) // Outside explosion radius
 	target3.AddComponent(&HealthComponent{Current: 100.0, Max: 100.0})
 
-	// Spawn explosive projectile
-	projComp := NewExplosiveProjectile(50.0, 400.0, 5.0, 50.0, "grenade", 1)
+	// Spawn explosive projectile (ownerID=999 to not match any target)
+	projComp := NewExplosiveProjectile(50.0, 400.0, 5.0, 50.0, "grenade", 999)
 	sys.SpawnProjectile(100.0, 100.0, 400.0, 0.0, projComp)
 
 	// Process pending entities
@@ -311,8 +313,8 @@ func TestProjectileSystem_ExplosiveProjectile(t *testing.T) {
 	// Get all entities for update
 	entities := w.GetEntities()
 
-	// Update - projectile hits first target and explodes
-	sys.Update(entities, 0.3)
+	// Update - projectile hits first target and explodes (0.19s to reach collision at x=176)
+	sys.Update(entities, 0.19)
 	w.Update(0.0)
 
 	// Check damage to targets
@@ -360,7 +362,7 @@ func TestProjectileSystem_NilWorld(t *testing.T) {
 	sys.Update(entities, 1.0)
 
 	// SpawnProjectile should return nil with nil world
-	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 1)
+	projComp := NewProjectileComponent(25.0, 400.0, 5.0, "arrow", 999)
 	entity := sys.SpawnProjectile(100.0, 100.0, 100.0, 0.0, projComp)
 	if entity != nil {
 		t.Error("SpawnProjectile should return nil when world is nil")

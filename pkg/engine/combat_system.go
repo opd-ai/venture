@@ -545,3 +545,63 @@ func FindNearestEnemy(world *World, attacker *Entity, maxRange float64) *Entity 
 
 	return nearest
 }
+
+// FindEnemyInAimDirection finds an enemy in the aim direction within attack range.
+// Phase 10.1: Uses AimComponent to determine attack direction for dual-stick shooter mechanics.
+// aimAngle: aim direction in radians (0 = right, π/2 = down, π = left, 3π/2 = up)
+// maxRange: maximum attack range
+// aimCone: angle cone in radians (e.g., π/4 = 45° cone for forgiving aim)
+// Returns the closest enemy within the aim cone, or nil if none found.
+func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange, aimCone float64) *Entity {
+	// Get all enemies in range first (distance check)
+	enemies := FindEnemiesInRange(world, attacker, maxRange)
+	if len(enemies) == 0 {
+		return nil
+	}
+
+	// Get attacker position
+	attackerPos, hasPos := attacker.GetComponent("position")
+	if !hasPos {
+		return nil
+	}
+	pos := attackerPos.(*PositionComponent)
+
+	// Filter enemies by aim cone and find closest
+	var bestEnemy *Entity
+	bestDistanceSquared := math.MaxFloat64
+
+	for _, enemy := range enemies {
+		// Get enemy position
+		enemyPos, hasEnemyPos := enemy.GetComponent("position")
+		if !hasEnemyPos {
+			continue
+		}
+		ePos := enemyPos.(*PositionComponent)
+
+		// Calculate angle from attacker to enemy
+		dx := ePos.X - pos.X
+		dy := ePos.Y - pos.Y
+		angleToEnemy := math.Atan2(dy, dx)
+
+		// Normalize angle difference to [-π, π]
+		angleDiff := angleToEnemy - aimAngle
+		for angleDiff > math.Pi {
+			angleDiff -= 2 * math.Pi
+		}
+		for angleDiff < -math.Pi {
+			angleDiff += 2 * math.Pi
+		}
+
+		// Check if enemy is within aim cone
+		if math.Abs(angleDiff) <= aimCone/2 {
+			// Enemy is in aim cone - check distance using squared distance to avoid sqrt
+			distanceSquared := dx*dx + dy*dy
+			if distanceSquared < bestDistanceSquared {
+				bestDistanceSquared = distanceSquared
+				bestEnemy = enemy
+			}
+		}
+	}
+
+	return bestEnemy
+}

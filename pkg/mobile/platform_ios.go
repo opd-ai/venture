@@ -1,8 +1,9 @@
-//go:build ios
-// +build ios
+//go:build ios && cgo && ebitenmobilebind
+// +build ios,cgo,ebitenmobilebind
 
 // Package mobile provides iOS-specific haptic feedback implementation.
 // This file contains iOS Core Haptics integration.
+// This file is only included when building with ebitenmobile bind tool.
 package mobile
 
 /*

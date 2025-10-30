@@ -419,7 +419,7 @@ func TestDialogSystem_Update(t *testing.T) {
 	system := NewDialogSystem(world)
 
 	// Update should not panic (currently no-op, but reserved for future)
-	system.Update(0.016)
-	system.Update(1.0)
-	system.Update(0.0)
+	system.Update(nil, 0.016)
+	system.Update(nil, 1.0)
+	system.Update(nil, 0.0)
 }

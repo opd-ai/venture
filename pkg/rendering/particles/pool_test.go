@@ -11,15 +11,15 @@ func TestNewParticleSystem_UsesPool(t *testing.T) {
 	ps1 := NewParticleSystem([]Particle{}, ParticleSpark, DefaultConfig())
 	addr1 := uintptr(unsafe.Pointer(ps1))
 	ReleaseParticleSystem(ps1)
-	
+
 	// Next allocation should reuse same memory
 	ps2 := NewParticleSystem([]Particle{}, ParticleSmoke, DefaultConfig())
 	addr2 := uintptr(unsafe.Pointer(ps2))
-	
+
 	if addr1 != addr2 {
 		t.Errorf("Pool not reusing objects: addr1=%v, addr2=%v", addr1, addr2)
 	}
-	
+
 	// Verify state was reset
 	if ps2.Type != ParticleSmoke {
 		t.Errorf("ParticleSystem type not set correctly: got %v, want %v", ps2.Type, ParticleSmoke)
@@ -30,7 +30,7 @@ func TestNewParticleSystem_UsesPool(t *testing.T) {
 	if len(ps2.Particles) != 0 {
 		t.Errorf("ParticleSystem particles not cleared: got %d particles", len(ps2.Particles))
 	}
-	
+
 	ReleaseParticleSystem(ps2)
 }
 
@@ -52,10 +52,10 @@ func TestNewParticleSystem_InitializesCorrectly(t *testing.T) {
 		MaxSize:  3.0,
 		Custom:   make(map[string]interface{}),
 	}
-	
+
 	ps := NewParticleSystem(particles, ParticleMagic, config)
 	defer ReleaseParticleSystem(ps)
-	
+
 	if ps.Type != ParticleMagic {
 		t.Errorf("Type = %v, want %v", ps.Type, ParticleMagic)
 	}
@@ -80,12 +80,12 @@ func TestReleaseParticleSystem_ClearsState(t *testing.T) {
 	}
 	ps := NewParticleSystem(particles, ParticleFlame, DefaultConfig())
 	ps.ElapsedTime = 5.0
-	
+
 	ReleaseParticleSystem(ps)
-	
+
 	// Get same system back from pool
 	ps2 := NewParticleSystem([]Particle{}, ParticleDust, DefaultConfig())
-	
+
 	// All fields should be reset
 	if len(ps2.Particles) != 0 {
 		t.Errorf("Particles not cleared: got %d particles", len(ps2.Particles))
@@ -97,7 +97,7 @@ func TestReleaseParticleSystem_ClearsState(t *testing.T) {
 	if ps2.Type != ParticleDust {
 		t.Errorf("Type = %v, want %v (should be new value)", ps2.Type, ParticleDust)
 	}
-	
+
 	ReleaseParticleSystem(ps2)
 }
 
@@ -112,20 +112,20 @@ func TestParticleSystem_CapacityReuse(t *testing.T) {
 	for i := range particles {
 		particles[i] = Particle{X: float64(i), Y: float64(i)}
 	}
-	
+
 	ps := NewParticleSystem(particles, ParticleSpark, DefaultConfig())
 	originalCap := cap(ps.Particles)
 	ReleaseParticleSystem(ps)
-	
+
 	// Reuse should keep capacity
 	ps2 := NewParticleSystem([]Particle{}, ParticleSmoke, DefaultConfig())
 	newCap := cap(ps2.Particles)
-	
+
 	// Capacity should be at least original (may be larger)
 	if newCap < originalCap {
 		t.Errorf("Capacity shrunk: was %d, now %d", originalCap, newCap)
 	}
-	
+
 	ReleaseParticleSystem(ps2)
 }
 
@@ -133,32 +133,32 @@ func TestAcquireParticleSlice_UsesPool(t *testing.T) {
 	slice1 := AcquireParticleSlice()
 	addr1 := uintptr(unsafe.Pointer(slice1))
 	ReleaseParticleSlice(slice1)
-	
+
 	slice2 := AcquireParticleSlice()
 	addr2 := uintptr(unsafe.Pointer(slice2))
-	
+
 	if addr1 != addr2 {
 		t.Errorf("Slice pool not reusing objects: addr1=%v, addr2=%v", addr1, addr2)
 	}
-	
+
 	if len(*slice2) != 0 {
 		t.Errorf("Slice not reset: length = %d, want 0", len(*slice2))
 	}
 	if cap(*slice2) < 100 {
 		t.Errorf("Slice capacity = %d, want >= 100", cap(*slice2))
 	}
-	
+
 	ReleaseParticleSlice(slice2)
 }
 
 func TestAcquireParticleSlice_AppendWorks(t *testing.T) {
 	slice := AcquireParticleSlice()
 	defer ReleaseParticleSlice(slice)
-	
+
 	// Append particles
 	*slice = append(*slice, Particle{X: 1, Y: 2})
 	*slice = append(*slice, Particle{X: 3, Y: 4})
-	
+
 	if len(*slice) != 2 {
 		t.Errorf("Length after append = %d, want 2", len(*slice))
 	}
@@ -175,13 +175,13 @@ func TestReleaseParticleSlice_NilSafe(t *testing.T) {
 func TestParticlePoolStats_Tracking(t *testing.T) {
 	// Reset stats
 	ResetParticlePoolStats()
-	
+
 	// Get initial stats (should be zero)
 	stats := GetParticlePoolStats()
 	if stats.SystemsActive != 0 {
 		t.Errorf("Initial SystemsActive = %d, want 0", stats.SystemsActive)
 	}
-	
+
 	// Note: Actual stat tracking is disabled by default for performance.
 	// This test just verifies the API works without panicking.
 }
@@ -195,14 +195,14 @@ func TestParticlePool_NoMemoryLeaks(t *testing.T) {
 		ps := NewParticleSystem(particles, ParticleSpark, DefaultConfig())
 		ReleaseParticleSystem(ps)
 	}
-	
+
 	// Create and release many particle slices
 	for i := 0; i < 1000; i++ {
 		slice := AcquireParticleSlice()
 		*slice = append(*slice, Particle{X: float64(i)})
 		ReleaseParticleSlice(slice)
 	}
-	
+
 	// If no panic and test completes, no obvious leak
 	// (Actual leak testing requires runtime memory profiling)
 }
@@ -210,7 +210,7 @@ func TestParticlePool_NoMemoryLeaks(t *testing.T) {
 func TestParticlePool_ConcurrentAccess(t *testing.T) {
 	// sync.Pool is thread-safe, but verify no panics with concurrent use
 	done := make(chan bool)
-	
+
 	for i := 0; i < 10; i++ {
 		go func() {
 			for j := 0; j < 100; j++ {
@@ -221,12 +221,12 @@ func TestParticlePool_ConcurrentAccess(t *testing.T) {
 			done <- true
 		}()
 	}
-	
+
 	// Wait for all goroutines
 	for i := 0; i < 10; i++ {
 		<-done
 	}
-	
+
 	// No panic = success
 }
 
@@ -239,7 +239,7 @@ func BenchmarkParticleSystemPooling(b *testing.B) {
 		{X: 5, Y: 6, VX: 0.5, VY: 0.5, Life: 1.0, InitialLife: 1.0, Size: 2.0},
 	}
 	config := DefaultConfig()
-	
+
 	b.Run("WithPooling", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -247,7 +247,7 @@ func BenchmarkParticleSystemPooling(b *testing.B) {
 			ReleaseParticleSystem(ps)
 		}
 	})
-	
+
 	b.Run("WithoutPooling", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -273,7 +273,7 @@ func BenchmarkParticleSlicePooling(b *testing.B) {
 			ReleaseParticleSlice(slice)
 		}
 	})
-	
+
 	b.Run("WithoutPooling", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -294,20 +294,20 @@ func BenchmarkParticleSystemUpdate(b *testing.B) {
 			X: float64(i), Y: float64(i),
 			VX: 1.0, VY: 1.0,
 			Life: 1.0, InitialLife: 1.0,
-			Size: 2.0,
+			Size:  2.0,
 			Color: color.RGBA{255, 255, 255, 255},
 		}
 	}
-	
+
 	config := DefaultConfig()
 	config.Gravity = 9.8
-	
+
 	ps := NewParticleSystem(particles, ParticleSpark, config)
 	defer ReleaseParticleSystem(ps)
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		ps.Update(0.016) // 60 FPS delta time
 	}

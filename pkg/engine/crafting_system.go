@@ -60,7 +60,7 @@ func NewCraftingSystemWithLogger(world *World, inventorySystem *InventorySystem,
 
 // Update processes crafting progress for all entities with CraftingProgressComponent.
 // Call this each game tick with deltaTime in seconds.
-func (s *CraftingSystem) Update(entities []Entity, deltaTime float64) {
+func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("crafting_progress")
 		if !ok {

@@ -20,12 +20,12 @@ import (
 )
 
 var (
-	cpuProfile    = flag.String("cpuprofile", "", "Write CPU profile to file")
-	memProfile    = flag.String("memprofile", "", "Write memory profile to file")
-	duration      = flag.Duration("duration", 10*time.Second, "Duration to run profiling")
-	entityCount   = flag.Int("entities", 1000, "Number of entities to simulate")
-	reportOutput  = flag.String("output", "docs/profiling/assessment_report.md", "Output file for profiling report")
-	verbose       = flag.Bool("v", false, "Verbose output")
+	cpuProfile   = flag.String("cpuprofile", "", "Write CPU profile to file")
+	memProfile   = flag.String("memprofile", "", "Write memory profile to file")
+	duration     = flag.Duration("duration", 10*time.Second, "Duration to run profiling")
+	entityCount  = flag.Int("entities", 1000, "Number of entities to simulate")
+	reportOutput = flag.String("output", "docs/profiling/assessment_report.md", "Output file for profiling report")
+	verbose      = flag.Bool("v", false, "Verbose output")
 )
 
 func main() {
@@ -85,30 +85,30 @@ func main() {
 
 // ProfileReport contains comprehensive profiling data.
 type ProfileReport struct {
-	Duration          time.Duration
-	EntityCount       int
-	
+	Duration    time.Duration
+	EntityCount int
+
 	// ECS Performance
-	WorldUpdateTime   time.Duration
-	EntityQueryTime   time.Duration
+	WorldUpdateTime     time.Duration
+	EntityQueryTime     time.Duration
 	ComponentAccessTime time.Duration
-	
+
 	// Memory statistics
-	InitialMemory     runtime.MemStats
-	FinalMemory       runtime.MemStats
-	MemoryGrowth      uint64
-	GCCount           uint32
-	GCPauseTotal      time.Duration
-	
+	InitialMemory runtime.MemStats
+	FinalMemory   runtime.MemStats
+	MemoryGrowth  uint64
+	GCCount       uint32
+	GCPauseTotal  time.Duration
+
 	// Generation performance
-	TerrainGenTime    time.Duration
-	EntityGenTime     time.Duration
-	ItemGenTime       time.Duration
-	SpellGenTime      time.Duration
-	
+	TerrainGenTime time.Duration
+	EntityGenTime  time.Duration
+	ItemGenTime    time.Duration
+	SpellGenTime   time.Duration
+
 	// Query cache performance
-	QueryCacheHits    int
-	QueryCacheMisses  int
+	QueryCacheHits   int
+	QueryCacheMisses int
 }
 
 func runProfileTests(logger *logrus.Logger) *ProfileReport {
@@ -259,26 +259,26 @@ func writeReport(report *ProfileReport, filename string) error {
 	fmt.Fprintf(f, "**Generated:** %s\n", time.Now().Format(time.RFC3339))
 	fmt.Fprintf(f, "**Duration:** %v\n", report.Duration)
 	fmt.Fprintf(f, "**Entity Count:** %d\n\n", report.EntityCount)
-	
+
 	fmt.Fprintf(f, "## ECS Performance\n\n")
 	fmt.Fprintf(f, "| Operation | Time | Target | Status |\n")
 	fmt.Fprintf(f, "|-----------|------|--------|--------|\n")
-	
+
 	worldUpdateMs := float64(report.WorldUpdateTime.Microseconds()) / 1000.0
-	fmt.Fprintf(f, "| World Update | %.3f ms | <16.67 ms | %s |\n", 
-		worldUpdateMs, 
+	fmt.Fprintf(f, "| World Update | %.3f ms | <16.67 ms | %s |\n",
+		worldUpdateMs,
 		statusIcon(worldUpdateMs < 16.67))
-	
+
 	queryUs := float64(report.EntityQueryTime.Nanoseconds()) / 1000.0
-	fmt.Fprintf(f, "| Entity Query | %.1f μs | <100 μs | %s |\n", 
+	fmt.Fprintf(f, "| Entity Query | %.1f μs | <100 μs | %s |\n",
 		queryUs,
 		statusIcon(queryUs < 100))
-	
+
 	accessNs := float64(report.ComponentAccessTime.Nanoseconds())
-	fmt.Fprintf(f, "| Component Access | %.1f ns | <5 ns | %s |\n\n", 
+	fmt.Fprintf(f, "| Component Access | %.1f ns | <5 ns | %s |\n\n",
 		accessNs,
 		statusIcon(accessNs < 5))
-	
+
 	fmt.Fprintf(f, "## Memory Analysis\n\n")
 	fmt.Fprintf(f, "| Metric | Initial | Final | Change |\n")
 	fmt.Fprintf(f, "|--------|---------|-------|--------|\n")
@@ -294,43 +294,43 @@ func writeReport(report *ProfileReport, filename string) error {
 		report.InitialMemory.NumGC,
 		report.FinalMemory.NumGC,
 		report.GCCount)
-	
+
 	if report.GCCount > 0 {
 		avgPause := float64(report.GCPauseTotal.Microseconds()) / float64(report.GCCount) / 1000.0
 		fmt.Fprintf(f, "| Avg GC Pause | - | - | %.2f ms |\n\n", avgPause)
-		
-		fmt.Fprintf(f, "**GC Pause Assessment:** %s (target: <5ms)\n\n", 
+
+		fmt.Fprintf(f, "**GC Pause Assessment:** %s (target: <5ms)\n\n",
 			statusIcon(avgPause < 5.0))
 	} else {
 		fmt.Fprintf(f, "| Avg GC Pause | - | - | N/A |\n\n")
 	}
-	
+
 	fmt.Fprintf(f, "## Procedural Generation Performance\n\n")
 	fmt.Fprintf(f, "| Generator | Avg Time | Target | Status |\n")
 	fmt.Fprintf(f, "|-----------|----------|--------|--------|\n")
-	
+
 	terrainMs := float64(report.TerrainGenTime.Microseconds()) / 1000.0
-	fmt.Fprintf(f, "| Terrain | %.2f ms | <2000 ms | %s |\n", 
+	fmt.Fprintf(f, "| Terrain | %.2f ms | <2000 ms | %s |\n",
 		terrainMs,
 		statusIcon(terrainMs < 2000))
-	
+
 	entityMs := float64(report.EntityGenTime.Microseconds()) / 1000.0
-	fmt.Fprintf(f, "| Entity | %.2f ms | <1 ms | %s |\n", 
+	fmt.Fprintf(f, "| Entity | %.2f ms | <1 ms | %s |\n",
 		entityMs,
 		statusIcon(entityMs < 1.0))
-	
+
 	itemMs := float64(report.ItemGenTime.Microseconds()) / 1000.0
-	fmt.Fprintf(f, "| Item | %.2f ms | <1 ms | %s |\n", 
+	fmt.Fprintf(f, "| Item | %.2f ms | <1 ms | %s |\n",
 		itemMs,
 		statusIcon(itemMs < 1.0))
-	
+
 	spellMs := float64(report.SpellGenTime.Microseconds()) / 1000.0
-	fmt.Fprintf(f, "| Spell | %.2f ms | <1 ms | %s |\n\n", 
+	fmt.Fprintf(f, "| Spell | %.2f ms | <1 ms | %s |\n\n",
 		spellMs,
 		statusIcon(spellMs < 1.0))
-	
+
 	fmt.Fprintf(f, "## Summary\n\n")
-	
+
 	// Assess overall performance
 	recs := generateRecommendations(report)
 	if len(recs) == 0 {
@@ -344,19 +344,19 @@ func writeReport(report *ProfileReport, filename string) error {
 			fmt.Fprintf(f, "   - %s\n\n", rec.Description)
 		}
 	}
-	
+
 	fmt.Fprintf(f, "## Usage\n\n")
 	fmt.Fprintf(f, "To re-run this assessment:\n")
 	fmt.Fprintf(f, "```bash\n")
 	fmt.Fprintf(f, "go run ./cmd/perfprofile -duration=%v -entities=%d\n", report.Duration, report.EntityCount)
 	fmt.Fprintf(f, "```\n\n")
-	
+
 	fmt.Fprintf(f, "To profile with CPU/memory traces:\n")
 	fmt.Fprintf(f, "```bash\n")
 	fmt.Fprintf(f, "go run ./cmd/perfprofile -cpuprofile=cpu.prof -memprofile=mem.prof\n")
 	fmt.Fprintf(f, "go tool pprof cpu.prof\n")
 	fmt.Fprintf(f, "```\n")
-	
+
 	return nil
 }
 
@@ -374,7 +374,7 @@ type Recommendation struct {
 
 func generateRecommendations(report *ProfileReport) []Recommendation {
 	var recs []Recommendation
-	
+
 	// Check world update time
 	worldUpdateMs := float64(report.WorldUpdateTime.Microseconds()) / 1000.0
 	if worldUpdateMs >= 16.67 {
@@ -383,7 +383,7 @@ func generateRecommendations(report *ProfileReport) []Recommendation {
 			Description: fmt.Sprintf("World update taking %.2f ms (target: <16.67ms for 60 FPS)", worldUpdateMs),
 		})
 	}
-	
+
 	// Check entity query time
 	queryUs := float64(report.EntityQueryTime.Nanoseconds()) / 1000.0
 	if queryUs >= 100 {
@@ -392,7 +392,7 @@ func generateRecommendations(report *ProfileReport) []Recommendation {
 			Description: fmt.Sprintf("Entity queries taking %.1f μs (target: <100μs). Verify query cache is working.", queryUs),
 		})
 	}
-	
+
 	// Check component access time
 	accessNs := float64(report.ComponentAccessTime.Nanoseconds())
 	if accessNs >= 5 {
@@ -401,7 +401,7 @@ func generateRecommendations(report *ProfileReport) []Recommendation {
 			Description: fmt.Sprintf("Component access taking %.1f ns (target: <5ns). Verify fast-path getters are used.", accessNs),
 		})
 	}
-	
+
 	// Check GC pauses
 	if report.GCCount > 0 {
 		avgPause := float64(report.GCPauseTotal.Microseconds()) / float64(report.GCCount) / 1000.0
@@ -412,7 +412,7 @@ func generateRecommendations(report *ProfileReport) []Recommendation {
 			})
 		}
 	}
-	
+
 	// Check terrain generation
 	terrainMs := float64(report.TerrainGenTime.Microseconds()) / 1000.0
 	if terrainMs >= 2000 {
@@ -421,6 +421,6 @@ func generateRecommendations(report *ProfileReport) []Recommendation {
 			Description: fmt.Sprintf("Terrain generation taking %.2f ms (target: <2000ms). Consider streaming generation.", terrainMs),
 		})
 	}
-	
+
 	return recs
 }

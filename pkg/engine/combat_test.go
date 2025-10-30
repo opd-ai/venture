@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/combat"
@@ -943,6 +944,244 @@ func TestDeadComponentEdgeCases(t *testing.T) {
 		}
 		if deadComp.DroppedItems[0] != 0 {
 			t.Error("should preserve zero ID")
+		}
+	})
+}
+
+// TestFindEnemyInAimDirection tests Phase 10.1 aim-based target selection.
+func TestFindEnemyInAimDirection(t *testing.T) {
+	tests := []struct {
+		name         string
+		aimAngle     float64 // radians: 0=right, π/2=down, π=left, 3π/2=up
+		aimCone      float64 // radians: aim cone width
+		enemyOffsets []struct{ x, y float64 }
+		maxRange     float64
+		expectHit    int // index of expected enemy hit, or -1 for none
+	}{
+		{
+			name:     "enemy directly ahead",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 50, y: 0}, // directly right
+			},
+			maxRange:  100,
+			expectHit: 0,
+		},
+		{
+			name:     "enemy in cone (slight angle)",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 50, y: 10}, // slightly up-right (within 45° cone)
+			},
+			maxRange:  100,
+			expectHit: 0,
+		},
+		{
+			name:     "enemy outside cone",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 10, y: 50}, // almost straight up (outside 45° cone)
+			},
+			maxRange:  100,
+			expectHit: -1, // no hit
+		},
+		{
+			name:     "multiple enemies - choose closest in cone",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 80, y: 5},  // far enemy in cone
+				{x: 30, y: 5},  // close enemy in cone (should hit this one)
+				{x: 10, y: 50}, // enemy outside cone
+			},
+			maxRange:  100,
+			expectHit: 1, // closest enemy in cone
+		},
+		{
+			name:     "enemy out of range",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 150, y: 0}, // too far
+			},
+			maxRange:  100,
+			expectHit: -1, // no hit (out of range)
+		},
+		{
+			name:     "aim left (π radians)",
+			aimAngle: math.Pi,     // aiming left
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: -50, y: 0}, // directly left
+			},
+			maxRange:  100,
+			expectHit: 0,
+		},
+		{
+			name:     "aim down (π/2 radians)",
+			aimAngle: math.Pi / 2, // aiming down
+			aimCone:  math.Pi / 4, // 45° cone
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 0, y: 50}, // directly down
+			},
+			maxRange:  100,
+			expectHit: 0,
+		},
+		{
+			name:     "wide cone catches more enemies",
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 2, // 90° cone (wider)
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 50, y: 30}, // ~31° up-right (in 90° cone, not in 45° cone)
+			},
+			maxRange:  100,
+			expectHit: 0,
+		},
+		{
+			name:     "narrow cone misses off-angle enemy",
+			aimAngle: 0,            // aiming right
+			aimCone:  math.Pi / 16, // ~11° cone (very narrow)
+			enemyOffsets: []struct{ x, y float64 }{
+				{x: 50, y: 10}, // small angle but outside narrow cone
+			},
+			maxRange:  100,
+			expectHit: -1, // miss
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create world and attacker
+			world := NewWorld()
+			attacker := world.CreateEntity()
+			attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+			attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+			// Create enemies at specified offsets
+			enemies := make([]*Entity, len(tt.enemyOffsets))
+			for i, offset := range tt.enemyOffsets {
+				enemy := world.CreateEntity()
+				enemy.AddComponent(&PositionComponent{X: offset.x, Y: offset.y})
+				enemy.AddComponent(&TeamComponent{TeamID: 2}) // Different team
+				enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+				enemies[i] = enemy
+			}
+
+			// Process pending entity additions
+			world.Update(0)
+
+			// Find enemy in aim direction
+			result := FindEnemyInAimDirection(world, attacker, tt.aimAngle, tt.maxRange, tt.aimCone)
+
+			if tt.expectHit == -1 {
+				// Expect no hit
+				if result != nil {
+					t.Errorf("expected no hit, but found enemy %d", result.ID)
+				}
+			} else {
+				// Expect specific enemy hit
+				if result == nil {
+					t.Errorf("expected to hit enemy %d, but got nil", tt.expectHit)
+				} else if result.ID != enemies[tt.expectHit].ID {
+					t.Errorf("expected to hit enemy %d (ID %d), but hit enemy ID %d",
+						tt.expectHit, enemies[tt.expectHit].ID, result.ID)
+				}
+			}
+		})
+	}
+}
+
+// TestFindEnemyInAimDirection_EdgeCases tests edge cases for aim-based targeting.
+func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
+	t.Run("no enemies", func(t *testing.T) {
+		world := NewWorld()
+		attacker := world.CreateEntity()
+		attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+		attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+		world.Update(0) // Process pending additions
+
+		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
+		if result != nil {
+			t.Error("expected nil when no enemies exist")
+		}
+	})
+
+	t.Run("attacker has no position", func(t *testing.T) {
+		world := NewWorld()
+		attacker := world.CreateEntity()
+		// No position component
+
+		enemy := world.CreateEntity()
+		enemy.AddComponent(&PositionComponent{X: 50, Y: 0})
+		enemy.AddComponent(&TeamComponent{TeamID: 2})
+		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
+
+		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
+		if result != nil {
+			t.Error("expected nil when attacker has no position")
+		}
+	})
+
+	t.Run("enemy has no position", func(t *testing.T) {
+		world := NewWorld()
+		attacker := world.CreateEntity()
+		attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+		attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+		enemy := world.CreateEntity()
+		// No position component
+		enemy.AddComponent(&TeamComponent{TeamID: 2})
+		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
+
+		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
+		if result != nil {
+			t.Error("expected nil when enemy has no position")
+		}
+	})
+
+	t.Run("zero aim cone", func(t *testing.T) {
+		world := NewWorld()
+		attacker := world.CreateEntity()
+		attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+		attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+		enemy := world.CreateEntity()
+		enemy.AddComponent(&PositionComponent{X: 50, Y: 0.1}) // Tiny angle offset
+		enemy.AddComponent(&TeamComponent{TeamID: 2})
+		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
+
+		result := FindEnemyInAimDirection(world, attacker, 0, 100, 0) // Zero cone
+		if result != nil {
+			t.Error("expected nil with zero aim cone and non-zero angle")
+		}
+	})
+
+	t.Run("full circle cone (2π)", func(t *testing.T) {
+		world := NewWorld()
+		attacker := world.CreateEntity()
+		attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+		attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+		enemy := world.CreateEntity()
+		enemy.AddComponent(&PositionComponent{X: -50, Y: -50}) // Behind and to the left
+		enemy.AddComponent(&TeamComponent{TeamID: 2})
+		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
+
+		result := FindEnemyInAimDirection(world, attacker, 0, 100, 2*math.Pi) // Full circle
+		if result == nil {
+			t.Error("expected to find enemy with full circle aim cone")
 		}
 	})
 }

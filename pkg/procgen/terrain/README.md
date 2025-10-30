@@ -720,4 +720,4 @@ Potential additions to the terrain system:
 - [ ] Voronoi diagram-based generation
 - [ ] Integration with entity placement system
 
-See `PLAN.md` in the project root for the complete terrain expansion roadmap.
+See `docs/ROADMAP.md` for the complete development roadmap including terrain expansion plans.

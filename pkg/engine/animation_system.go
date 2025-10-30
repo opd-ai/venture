@@ -447,6 +447,10 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		config.Custom["genre"] = "fantasy"
 	}
 
+	// Enable aerial/top-down view for all animated sprites by default
+	// Provides better perspective for action-RPG gameplay
+	config.Custom["useAerial"] = true
+
 	return config
 }
 

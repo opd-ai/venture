@@ -62,18 +62,22 @@ The `GestureDetector` recognizes common touch patterns:
 | **Swipe** | Movement >50px | Navigation, quick actions |
 | **Pinch** | Two-finger distance change | Camera zoom, map scale |
 
-### Virtual Controls (Optional)
+### Virtual Controls
 
-Virtual on-screen controls are available but **disabled by default on WASM**:
+Virtual on-screen controls are **automatically enabled on WASM when touch input is detected**:
 
 - **D-Pad**: Directional movement (bottom left)
 - **Action Button**: Primary action (bottom right)
 - **Secondary Button**: Secondary action (right side)
 - **Menu Button**: Pause/menu (top right)
 
-To enable virtual controls on WASM:
+Virtual controls are initialized automatically when:
+1. The platform is touch-capable (iOS, Android, or WASM)
+2. Touch input is enabled (`useTouchInput = true`)
+3. The first touch event is detected
+
+Manual initialization (optional):
 ```go
-inputSystem.SetMobileEnabled(true)
 inputSystem.InitializeVirtualControls(screenWidth, screenHeight)
 ```
 
@@ -147,14 +151,12 @@ Touch input "just works" on WASM without configuration:
 // InputSystem automatically detects touch capability
 inputSystem := engine.NewInputSystem()
 
-// Touch input activates when touches detected
+// Touch input activates automatically when touches detected
+// Virtual controls appear automatically on first touch
 // No special configuration needed for WASM
 
-// Optional: Enable virtual controls for pure touch devices
-if needsVirtualControls {
-    inputSystem.SetMobileEnabled(true)
-    inputSystem.InitializeVirtualControls(800, 600)
-}
+// Optional: Pre-initialize virtual controls before first touch
+inputSystem.InitializeVirtualControls(screenWidth, screenHeight)
 ```
 
 ## Browser Compatibility
@@ -188,31 +190,42 @@ Console output will show:
 ### Auto-Detection Logic
 
 ```go
-// From input_system.go:392-397
-if s.mobileEnabled && len(ebiten.TouchIDs()) > 0 {
+// From input_system.go (updated for WASM support)
+if len(ebiten.TouchIDs()) > 0 {
     s.useTouchInput = true
+    // Auto-initialize virtual controls when touch detected
+    if s.virtualControls == nil && mobile.IsTouchCapable() {
+        screenW, screenH := ebiten.WindowSize()
+        s.InitializeVirtualControls(screenW, screenH)
+    }
 } else if !s.mobileEnabled && len(ebiten.TouchIDs()) == 0 {
     s.useTouchInput = false
 }
 ```
 
 This allows seamless switching between:
-- Touch input when user touches screen
-- Keyboard/mouse when user uses those instead
+- Touch input when user touches screen (virtual controls appear automatically)
+- Keyboard/mouse when user uses those instead (virtual controls hidden)
+- Dual-input devices can use both methods simultaneously
 
 ### Virtual Controls Visibility
 
 ```go
-// Virtual controls only shown on true mobile platforms
-if s.mobileEnabled && s.virtualControls != nil {
+// Virtual controls shown on all touch-capable platforms when touch input is active
+if s.useTouchInput && s.virtualControls != nil {
     s.virtualControls.Draw(screen)
 }
 ```
 
-WASM doesn't show virtual controls by default because:
-- Desktop browsers have keyboard/mouse
-- Touch-capable laptops can use either input method
-- User can enable if needed for touch-only devices
+Virtual controls are shown dynamically based on input method:
+- **Touch detected**: Virtual controls appear automatically
+- **Keyboard/mouse only**: Virtual controls hidden
+- **Dual-input devices**: Controls appear when touch is used, hidden otherwise
+
+This provides the best experience for all device types:
+- Desktop browsers: Keyboard/mouse by default, touch when tapped
+- Touch-capable laptops: Can use either input method
+- Mobile devices: Touch input with virtual controls always available
 
 ## Future Enhancements
 

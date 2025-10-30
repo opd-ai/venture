@@ -278,11 +278,11 @@ func TestInputSystem_GetAllKeyBindings(t *testing.T) {
 
 	bindings := inputSys.GetAllKeyBindings()
 
-	// Should have all 15 actions
+	// Should have all 16 actions
 	expectedActions := []string{
 		"up", "down", "left", "right",
 		"action", "useitem",
-		"inventory", "character", "skills", "quests", "map",
+		"inventory", "character", "skills", "quests", "map", "crafting",
 		"help", "quicksave", "quickload", "cycletargets",
 	}
 
@@ -464,4 +464,78 @@ func BenchmarkInputSystem_Update(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		inputSys.Update(entities, 0.016)
 	}
+}
+
+// ===== TOUCH INPUT TESTS =====
+
+// TestInputSystem_TouchInputInitialization tests that touch input is properly initialized
+// for touch-capable platforms including WASM/browser builds.
+func TestInputSystem_TouchInputInitialization(t *testing.T) {
+	inputSys := NewInputSystem()
+
+	// useTouchInput should be set based on platform capability at initialization
+	// For testing purposes, we can verify the flag exists and can be set
+	if inputSys.touchHandler == nil {
+		t.Error("TouchHandler should be initialized for all platforms")
+	}
+
+	// Test that virtual controls can be initialized explicitly
+	inputSys.InitializeVirtualControls(800, 600)
+
+	// If useTouchInput is true, virtual controls should be created
+	if inputSys.useTouchInput && inputSys.virtualControls == nil {
+		t.Error("Virtual controls should be initialized when useTouchInput is true")
+	}
+
+	t.Log("Touch input initialization verified")
+}
+
+// TestInputSystem_VirtualControlsAutoInit tests that virtual controls are
+// automatically initialized when needed (WASM support fix).
+func TestInputSystem_VirtualControlsAutoInit(t *testing.T) {
+	inputSys := NewInputSystem()
+
+	// Manually set useTouchInput to simulate WASM platform
+	inputSys.useTouchInput = true
+	inputSys.virtualControls = nil // Clear any existing controls
+
+	// Create a test entity with input component
+	entity := NewEntity(1)
+	inputComp := &EbitenInput{}
+	entity.AddComponent(inputComp)
+	entities := []*Entity{entity}
+
+	// Update should auto-initialize virtual controls
+	inputSys.Update(entities, 0.016)
+
+	// Virtual controls should now be initialized
+	if inputSys.virtualControls == nil {
+		t.Error("Virtual controls should be auto-initialized during Update when useTouchInput is true")
+	}
+
+	t.Log("Virtual controls auto-initialization verified")
+}
+
+// TestInputSystem_DrawVirtualControls tests that virtual controls can be drawn
+// when touch input is enabled (WASM support).
+func TestInputSystem_DrawVirtualControls(t *testing.T) {
+	inputSys := NewInputSystem()
+	inputSys.useTouchInput = true
+	inputSys.InitializeVirtualControls(800, 600)
+
+	// DrawVirtualControls should be callable without panicking
+	// Note: We can't actually test drawing without Ebiten context,
+	// but we can verify the method exists and handles nil screen gracefully
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("DrawVirtualControls should not panic: %v", r)
+		}
+	}()
+
+	// This will likely do nothing or fail gracefully in test environment
+	// The important part is that it doesn't crash
+	var screen *ebiten.Image = nil
+	inputSys.DrawVirtualControls(screen)
+
+	t.Log("DrawVirtualControls method verified")
 }

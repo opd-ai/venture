@@ -247,6 +247,7 @@ type InputSystem struct {
 	helpSystem     *EbitenHelpSystem
 	tutorialSystem *EbitenTutorialSystem
 	menuSystem     *EbitenMenuSystem
+	cameraSystem   *CameraSystem // Phase 10.1: For screen-to-world coordinate conversion
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -328,10 +329,11 @@ func NewInputSystem() *InputSystem {
 	}
 }
 
-// InitializeVirtualControls sets up virtual controls for mobile platforms.
+// InitializeVirtualControls sets up virtual controls for mobile platforms and WASM/browser.
 // Should be called after screen size is known.
 func (s *InputSystem) InitializeVirtualControls(screenWidth, screenHeight int) {
-	if s.mobileEnabled {
+	// Initialize virtual controls for any touch-capable platform (mobile or WASM)
+	if s.useTouchInput {
 		s.virtualControls = mobile.NewVirtualControlsLayout(screenWidth, screenHeight)
 	}
 }
@@ -367,10 +369,11 @@ func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
-	// BUG-023 fix: Validate mobile input initialization
-	if s.mobileEnabled && s.virtualControls == nil {
+	// BUG-023 fix: Validate touch input initialization
+	// Initialize virtual controls for any touch-capable platform if not already done
+	if s.useTouchInput && s.virtualControls == nil {
 		// Auto-initialize with default screen size if not explicitly initialized
-		// This prevents silent input failure on mobile platforms
+		// This prevents silent input failure on touch-capable platforms (mobile/WASM)
 		s.InitializeVirtualControls(800, 600)
 	}
 
@@ -381,8 +384,8 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	s.lastMouseX = currentMouseX
 	s.lastMouseY = currentMouseY
 
-	// Update mobile touch input
-	if s.mobileEnabled && s.touchHandler != nil {
+	// Update touch input for all touch-capable platforms (mobile/WASM)
+	if s.useTouchInput && s.touchHandler != nil {
 		s.touchHandler.Update()
 
 		// Update virtual controls
@@ -525,10 +528,18 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 	input.AnyKeyPressed = false
 
 	// Auto-detect input method: if touch input is detected, switch to touch mode
-	if s.mobileEnabled && len(ebiten.TouchIDs()) > 0 {
+	// This works for WASM/browser as well as native mobile platforms
+	if len(ebiten.TouchIDs()) > 0 {
 		s.useTouchInput = true
+		// Ensure virtual controls are initialized when touch is first detected
+		if s.virtualControls == nil && mobile.IsTouchCapable() {
+			// Get screen size for virtual controls initialization
+			screenW, screenH := ebiten.WindowSize()
+			s.InitializeVirtualControls(screenW, screenH)
+		}
 	} else if !s.mobileEnabled && len(ebiten.TouchIDs()) == 0 {
 		// Allow falling back to keyboard if no touches (e.g., tablet with keyboard)
+		// Only disable touch input on non-mobile platforms to preserve mobile behavior
 		s.useTouchInput = false
 	}
 
@@ -637,6 +648,21 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 		input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	}
 
+	// Phase 10.1: Update aim component with mouse position (world coordinates)
+	// This enables mouse-aim for 360° rotation independent of movement direction
+	if entity.HasComponent("aim") && s.cameraSystem != nil {
+		aimComp, ok := entity.GetComponent("aim")
+		if ok {
+			aim := aimComp.(*AimComponent)
+
+			// Convert screen coordinates to world coordinates
+			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
+
+			// Set aim target in world space
+			aim.SetAimTarget(worldX, worldY)
+		}
+	}
+
 	// Apply movement to velocity component if it exists
 	if velComp, ok := entity.GetComponent("velocity"); ok {
 		velocity := velComp.(*VelocityComponent)
@@ -676,6 +702,12 @@ func (s *InputSystem) SetHelpSystem(helpSystem *EbitenHelpSystem) {
 // SetTutorialSystem connects the tutorial system for ESC key handling.
 func (s *InputSystem) SetTutorialSystem(tutorialSystem *EbitenTutorialSystem) {
 	s.tutorialSystem = tutorialSystem
+}
+
+// SetCameraSystem connects the camera system for screen-to-world coordinate conversion.
+// Phase 10.1: Required for mouse aim to convert cursor position to world coordinates.
+func (s *InputSystem) SetCameraSystem(cameraSystem *CameraSystem) {
+	s.cameraSystem = cameraSystem
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).
@@ -992,10 +1024,10 @@ func (s *InputSystem) GetAllKeyBindings() map[string]ebiten.Key {
 	}
 }
 
-// DrawVirtualControls renders virtual controls on screen (mobile only).
+// DrawVirtualControls renders virtual controls on screen (mobile and WASM).
 // Should be called during the game's Draw phase.
 func (s *InputSystem) DrawVirtualControls(screen *ebiten.Image) {
-	if s.mobileEnabled && s.virtualControls != nil {
+	if screen != nil && s.useTouchInput && s.virtualControls != nil {
 		s.virtualControls.Draw(screen)
 	}
 }

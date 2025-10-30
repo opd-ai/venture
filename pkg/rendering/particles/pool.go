@@ -27,7 +27,7 @@ var particleSlicePool = sync.Pool{
 
 // NewParticleSystem creates a new particle system from the pool.
 // The system is initialized with the given particles, type, and config.
-// 
+//
 // IMPORTANT: The caller must call ReleaseParticleSystem when done to return
 // the system to the pool and prevent memory leaks.
 //
@@ -39,18 +39,18 @@ var particleSlicePool = sync.Pool{
 // Returns: Pooled ParticleSystem ready for use
 func NewParticleSystem(particles []Particle, pType ParticleType, config Config) *ParticleSystem {
 	ps := particleSystemPool.Get().(*ParticleSystem)
-	
+
 	// Clear previous state
 	ps.Particles = ps.Particles[:0]
 	ps.ElapsedTime = 0
-	
+
 	// Set new state
 	ps.Type = pType
 	ps.Config = config
-	
+
 	// Append particles (reuses underlying capacity if available)
 	ps.Particles = append(ps.Particles, particles...)
-	
+
 	return ps
 }
 
@@ -65,16 +65,16 @@ func ReleaseParticleSystem(ps *ParticleSystem) {
 	if ps == nil {
 		return
 	}
-	
+
 	// Clear particle slice to prevent memory retention
 	// Keep capacity for reuse but zero length
 	ps.Particles = ps.Particles[:0]
-	
+
 	// Clear other fields to prevent state leaks
 	ps.ElapsedTime = 0
 	ps.Type = 0
 	// Note: Config is value type, will be overwritten on next use
-	
+
 	particleSystemPool.Put(ps)
 }
 
@@ -94,10 +94,10 @@ func ReleaseParticleSlice(particles *[]Particle) {
 	if particles == nil {
 		return
 	}
-	
+
 	// Reset to zero length, keeping capacity
 	*particles = (*particles)[:0]
-	
+
 	particleSlicePool.Put(particles)
 }
 
@@ -106,19 +106,19 @@ func ReleaseParticleSlice(particles *[]Particle) {
 type ParticlePoolStats struct {
 	// SystemsAcquired is lifetime count of particle systems acquired from pool
 	SystemsAcquired uint64
-	
+
 	// SystemsReleased is lifetime count of particle systems returned to pool
 	SystemsReleased uint64
-	
+
 	// SystemsActive is approximate count of active systems (Acquired - Released)
 	SystemsActive uint64
-	
+
 	// SlicesAcquired is lifetime count of particle slices acquired from pool
 	SlicesAcquired uint64
-	
+
 	// SlicesReleased is lifetime count of particle slices returned to pool
 	SlicesReleased uint64
-	
+
 	// SlicesActive is approximate count of active slices (Acquired - Released)
 	SlicesActive uint64
 }

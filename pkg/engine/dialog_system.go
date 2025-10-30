@@ -197,7 +197,7 @@ func (s *DialogSystem) GetActiveDialogEntity() uint64 {
 
 // Update processes dialog system state each frame.
 // This method is reserved for future use (timed dialogs, auto-close, etc).
-func (s *DialogSystem) Update(deltaTime float64) {
+func (s *DialogSystem) Update(entities []*Entity, deltaTime float64) {
 	// Future enhancement: auto-close dialogs after timeout
 	// Future enhancement: update dynamic dialog content based on game state
 }

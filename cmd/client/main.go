@@ -1,8 +1,14 @@
+//go:build !android && !ios
+// +build !android,!ios
+
+// Package main provides the desktop client application.
+// For mobile platforms (Android/iOS), use cmd/mobile with ebitenmobile build tool.
 package main
 
 import (
 	"flag"
 	"fmt"
+	"image/color"
 	"math"
 	"math/rand"
 	"os"
@@ -39,7 +45,17 @@ func (w *animationSystemWrapper) Update(entities []*engine.Entity, deltaTime flo
 	}
 }
 
+// rotationSystemWrapper adapts RotationSystem to System interface
+type rotationSystemWrapper struct {
+	system *engine.RotationSystem
+}
+
+func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
+<<<<<<< HEAD
 	width         = flag.Int("width", 800, "Screen width")
 	height        = flag.Int("height", 600, "Screen height")
 	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
@@ -53,6 +69,21 @@ var (
 	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+=======
+	width          = flag.Int("width", 800, "Screen width")
+	height         = flag.Int("height", 600, "Screen height")
+	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
+	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
+	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN        = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+>>>>>>> 8228407969cbadf869d831fa554f2b04033bd6de
 )
 
 // return a random seed
@@ -68,6 +99,176 @@ func randomGenre() string {
 	time := time.Now().UnixNano()
 	rand := rand.New(rand.NewSource(time))
 	return genres[rand.Intn(len(genres))]
+}
+
+// spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.
+// Spawns wall torches, magical crystals, and genre-specific lights based on the world seed.
+// This function is part of Phase 5.3: Dynamic Lighting System Integration.
+func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
+	rng := rand.New(rand.NewSource(seed))
+	lightCount := 0
+
+	// Genre-specific light configurations
+	type lightConfig struct {
+		torchInterval   int // Every N tiles along walls/corridors
+		crystalChance   float64
+		torchColor      color.RGBA
+		crystalColor    color.RGBA
+		torchRadius     float64
+		crystalRadius   float64
+		torchFlicker    bool
+		crystalPulse    bool
+	}
+
+	configs := map[string]lightConfig{
+		"fantasy": {
+			torchInterval:   5,
+			crystalChance:   0.15,
+			torchColor:      color.RGBA{255, 150, 80, 255}, // Warm torch light
+			crystalColor:    color.RGBA{150, 200, 255, 255}, // Blue magical crystal
+			torchRadius:     150,
+			crystalRadius:   120,
+			torchFlicker:    true,
+			crystalPulse:    true,
+		},
+		"scifi": {
+			torchInterval:   4,
+			crystalChance:   0.20,
+			torchColor:      color.RGBA{150, 200, 255, 255}, // Cool neon blue
+			crystalColor:    color.RGBA{0, 255, 200, 255},   // Cyan tech light
+			torchRadius:     180,
+			crystalRadius:   140,
+			torchFlicker:    false,
+			crystalPulse:    true,
+		},
+		"horror": {
+			torchInterval:   7,
+			crystalChance:   0.08,
+			torchColor:      color.RGBA{180, 140, 100, 255}, // Dim yellowish
+			crystalColor:    color.RGBA{120, 80, 80, 255},   // Faint reddish
+			torchRadius:     100,
+			crystalRadius:   80,
+			torchFlicker:    true,
+			crystalPulse:    false,
+		},
+		"cyberpunk": {
+			torchInterval:   3,
+			crystalChance:   0.25,
+			torchColor:      color.RGBA{255, 0, 150, 255},  // Neon pink
+			crystalColor:    color.RGBA{0, 255, 255, 255},  // Cyan hologram
+			torchRadius:     160,
+			crystalRadius:   130,
+			torchFlicker:    false,
+			crystalPulse:    true,
+		},
+		"postapoc": {
+			torchInterval:   6,
+			crystalChance:   0.10,
+			torchColor:      color.RGBA{200, 180, 140, 255}, // Dusty yellow
+			crystalColor:    color.RGBA{100, 255, 100, 255}, // Radioactive green
+			torchRadius:     120,
+			crystalRadius:   100,
+			torchFlicker:    true,
+			crystalPulse:    true,
+		},
+	}
+
+	// Get configuration for this genre (default to fantasy if unknown)
+	config, ok := configs[genreID]
+	if !ok {
+		config = configs["fantasy"]
+	}
+
+	// Spawn lights in each room
+	for _, room := range terrain.Rooms {
+		// Skip entrance room (index 0) - keep it dark for dramatic effect
+		if room == terrain.Rooms[0] {
+			continue
+		}
+
+		// Spawn wall torches around room perimeter
+		// Top and bottom walls
+		for x := room.X; x < room.X+room.Width; x++ {
+			if x%config.torchInterval == 0 {
+				// Top wall
+				if rng.Float64() < 0.6 { // 60% chance per position
+					worldX := float64(x * 32)
+					worldY := float64(room.Y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+				// Bottom wall
+				if rng.Float64() < 0.6 {
+					worldX := float64(x * 32)
+					worldY := float64((room.Y + room.Height - 1) * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+			}
+		}
+
+		// Left and right walls
+		for y := room.Y; y < room.Y+room.Height; y++ {
+			if y%config.torchInterval == 0 {
+				// Left wall
+				if rng.Float64() < 0.6 {
+					worldX := float64(room.X * 32)
+					worldY := float64(y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+				// Right wall
+				if rng.Float64() < 0.6 {
+					worldX := float64((room.X + room.Width - 1) * 32)
+					worldY := float64(y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+			}
+		}
+
+		// Spawn magical crystals in room centers (boss rooms, treasure rooms)
+		if rng.Float64() < config.crystalChance {
+			cx, cy := room.Center()
+			worldX := float64(cx * 32)
+			worldY := float64(cy * 32)
+			spawnCrystalLight(world, worldX, worldY, config.crystalColor, config.crystalRadius, config.crystalPulse)
+			lightCount++
+		}
+	}
+
+	return lightCount
+}
+
+// spawnTorchLight creates a wall torch light entity.
+func spawnTorchLight(world *engine.World, x, y float64, color color.RGBA, radius float64, flicker bool) {
+	lightEntity := world.CreateEntity()
+	lightEntity.AddComponent(&engine.PositionComponent{X: x, Y: y})
+
+	torchLight := engine.NewTorchLight(radius)
+	torchLight.Color = color
+	torchLight.Enabled = true
+	if flicker {
+		torchLight.Flickering = true
+		torchLight.FlickerSpeed = 2.0 + (rand.Float64() * 2.0) // Vary flicker speed
+		torchLight.FlickerAmount = 0.15
+	}
+	lightEntity.AddComponent(torchLight)
+}
+
+// spawnCrystalLight creates a magical crystal light entity.
+func spawnCrystalLight(world *engine.World, x, y float64, color color.RGBA, radius float64, pulse bool) {
+	lightEntity := world.CreateEntity()
+	lightEntity.AddComponent(&engine.PositionComponent{X: x, Y: y})
+
+	crystalLight := engine.NewCrystalLight(radius, color)
+	crystalLight.Enabled = true
+	if pulse {
+		crystalLight.Pulsing = true
+		crystalLight.PulseSpeed = 1.5
+		crystalLight.PulseAmount = 0.25
+	}
+	lightEntity.AddComponent(crystalLight)
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
@@ -617,26 +818,35 @@ func main() {
 	inputSystem.SetHelpSystem(helpSystem)
 	// Connect tutorial system to input system for ESC key skip handling
 	inputSystem.SetTutorialSystem(tutorialSystem)
+	// Phase 10.1: Connect camera system to input system for mouse aim (screen-to-world conversion)
+	inputSystem.SetCameraSystem(game.CameraSystem)
 
 	// Add systems in correct order:
 	// 1. Input - captures player actions
-	// 2. Player Combat/Item Use/Spell Casting - processes input flags
-	// 3. Movement - applies velocity to position
-	// 4. Collision - checks and resolves collisions
-	// 5. Combat - handles damage/status effects
-	// 6. Status Effects - processes DoT, buffs, debuffs, shields
-	// 7. AI - enemy decision-making
-	// 8. Progression - XP and leveling
-	// 9. Skill Progression - applies skill effects to stats
-	// 10. Audio Manager - updates music based on game context
-	// 11. Objective Tracker - updates quest progress
-	// 12. Item Pickup - collects nearby items
-	// 13. Spell Casting - executes spell effects
-	// 14. Mana Regen - regenerates mana
-	// 15. Inventory - item management
-	// 16. Animation - updates sprite frames (before rendering)
-	// 17. Tutorial/Help - UI overlays
+	// 2. Rotation - updates entity facing direction based on aim (Phase 10.1)
+	// 3. Player Combat/Item Use/Spell Casting - processes input flags
+	// 4. Movement - applies velocity to position
+	// 5. Collision - checks and resolves collisions
+	// 6. Combat - handles damage/status effects
+	// 7. Status Effects - processes DoT, buffs, debuffs, shields
+	// 8. AI - enemy decision-making
+	// 9. Progression - XP and leveling
+	// 10. Skill Progression - applies skill effects to stats
+	// 11. Audio Manager - updates music based on game context
+	// 12. Objective Tracker - updates quest progress
+	// 13. Item Pickup - collects nearby items
+	// 14. Spell Casting - executes spell effects
+	// 15. Mana Regen - regenerates mana
+	// 16. Inventory - item management
+	// 17. Animation - updates sprite frames (before rendering)
+	// 18. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
+
+	// Phase 10.1: Add rotation system for 360° rotation and mouse aim
+	// Processes after input to update facing direction based on aim component
+	rotationSystem := engine.NewRotationSystem(game.World)
+	game.World.AddSystem(&rotationSystemWrapper{system: rotationSystem})
+
 	game.World.AddSystem(playerCombatSystem)
 	game.World.AddSystem(playerItemUseSystem)
 	game.World.AddSystem(playerSpellCastingSystem)
@@ -691,6 +901,10 @@ func main() {
 
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
+
+	// Phase 5.3: Add lifetime system for temporary entities (spell lights, etc.)
+	lifetimeSystem := engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
+	game.World.AddSystem(lifetimeSystem)
 
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
@@ -757,6 +971,18 @@ func main() {
 
 	if *verbose {
 		clientLogger.Info("terrain rendering system initialized")
+	}
+
+	// Configure lighting system
+	if *enableLighting {
+		clientLogger.Info("enabling dynamic lighting system")
+		game.EnableLighting(true)
+		game.SetLightingGenrePreset(*genreID)
+		clientLogger.WithFields(logrus.Fields{
+			"genre":     *genreID,
+			"enabled":   true,
+			"maxLights": 16,
+		}).Info("lighting system configured")
 	}
 
 	// GAP REPAIR: Initialize efficient terrain collision checking
@@ -874,6 +1100,18 @@ func main() {
 		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
 	}
 
+	// Phase 5.3: Spawn environmental lights in dungeon (if lighting enabled)
+	if *enableLighting {
+		if *verbose {
+			clientLogger.Info("spawning environmental lights in dungeon")
+		}
+		lightCount := spawnEnvironmentalLights(game.World, generatedTerrain, *seed+2000, *genreID)
+		clientLogger.WithFields(logrus.Fields{
+			"lightCount": lightCount,
+			"genre":      *genreID,
+		}).Info("spawned environmental lights")
+	}
+
 	// Create player entity
 	if *verbose {
 		clientLogger.Info("creating player entity")
@@ -915,6 +1153,12 @@ func main() {
 	// Add input component for player control
 	player.AddComponent(&engine.EbitenInput{})
 
+	// Phase 10.1: Add rotation and aim components for 360° rotation and mouse aim
+	// RotationComponent stores facing direction with smooth interpolation (3.0 rad/s = ~172°/s)
+	player.AddComponent(engine.NewRotationComponent(0, 3.0)) // Start facing right (0 radians)
+	// AimComponent manages independent aim direction (mouse/touch input)
+	player.AddComponent(engine.NewAimComponent(0)) // Start aiming right
+
 	// GAP-017 REPAIR: Add animated sprite instead of static sprite
 	playerSprite := &engine.EbitenSprite{
 		Image:   ebiten.NewImage(28, 28), // Initial image (will be replaced by animation)
@@ -943,6 +1187,20 @@ func main() {
 	camera := engine.NewCameraComponent()
 	camera.Smoothing = 0.1
 	player.AddComponent(camera)
+
+	// Phase 5.3: Add player torch for dynamic lighting (if enabled)
+	if *enableLighting {
+		playerTorch := engine.NewTorchLight(200) // 200-pixel radius torch with flicker
+		playerTorch.Enabled = true
+		player.AddComponent(playerTorch)
+
+		if *verbose {
+			clientLogger.WithFields(logrus.Fields{
+				"radius":    200,
+				"intensity": playerTorch.Intensity,
+			}).Info("player torch added")
+		}
+	}
 
 	// Set player as the active camera
 	game.CameraSystem.SetActiveCamera(player)

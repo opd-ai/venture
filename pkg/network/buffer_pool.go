@@ -25,9 +25,10 @@ var bufferPool = sync.Pool{
 // Caller MUST call ReleaseBuffer when done to prevent leaks.
 //
 // Example usage:
-//   buf := AcquireBuffer()
-//   defer ReleaseBuffer(buf)
-//   *buf = append(*buf, data...)
+//
+//	buf := AcquireBuffer()
+//	defer ReleaseBuffer(buf)
+//	*buf = append(*buf, data...)
 func AcquireBuffer() *[]byte {
 	return bufferPool.Get().(*[]byte)
 }
@@ -39,11 +40,11 @@ func ReleaseBuffer(buf *[]byte) {
 	if buf == nil {
 		return
 	}
-	
+
 	// Reset length to 0 (keeps capacity for reuse)
 	// This provides security isolation between uses
 	*buf = (*buf)[:0]
-	
+
 	bufferPool.Put(buf)
 }
 
@@ -52,15 +53,16 @@ func ReleaseBuffer(buf *[]byte) {
 // The buffer is automatically returned to the pool after the function completes.
 //
 // Example usage:
-//   result := WithBuffer(func(buf *[]byte) []byte {
-//       *buf = append(*buf, []byte("message")...)
-//       return *buf
-//   })
+//
+//	result := WithBuffer(func(buf *[]byte) []byte {
+//	    *buf = append(*buf, []byte("message")...)
+//	    return *buf
+//	})
 func WithBuffer(fn func(*[]byte) []byte) []byte {
 	buf := AcquireBuffer()
 	defer ReleaseBuffer(buf)
 	result := fn(buf)
-	
+
 	// Make a copy since buffer will be returned to pool
 	output := make([]byte, len(result))
 	copy(output, result)

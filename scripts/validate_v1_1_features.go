@@ -19,7 +19,8 @@ import (
 
 func main() {
 	fmt.Println("Venture v1.1 Feature Validation")
-	fmt.Println("================================\n")
+	fmt.Println("================================")
+	fmt.Println()
 
 	passed := 0
 	failed := 0
@@ -69,8 +70,11 @@ func main() {
 		GenreID:    "fantasy",
 		Custom:     map[string]interface{}{"count": 1},
 	}
-	merchantData := entityGen.GenerateMerchant(12345, params.GenreID, params.Depth, itemGen)
-	if merchantData != nil && merchantData.Entity != nil && len(merchantData.Inventory) > 0 {
+	merchantData, err := entityGen.GenerateMerchant(12345, params, procgenEntity.MerchantFixed)
+	if err != nil {
+		fmt.Println("FAIL:", err)
+		failed++
+	} else if merchantData != nil && merchantData.Entity != nil && len(merchantData.Inventory) > 0 {
 		fmt.Println("PASS")
 		passed++
 	} else {
@@ -102,7 +106,7 @@ func main() {
 
 	// Test 6: Terrain Modification System
 	fmt.Print("✓ Testing Terrain Modification System... ")
-	terrainMod := engine.NewTerrainModificationSystem(world)
+	terrainMod := engine.NewTerrainModificationSystem(32) // 32 is standard tile size
 	if terrainMod != nil {
 		fmt.Println("PASS")
 		passed++
@@ -113,7 +117,7 @@ func main() {
 
 	// Test 7: Fire Propagation System
 	fmt.Print("✓ Testing Fire Propagation System... ")
-	fireProp := engine.NewFirePropagationSystem(world)
+	fireProp := engine.NewFirePropagationSystem(32, 12345) // 32 = tile size, 12345 = seed
 	if fireProp != nil {
 		fmt.Println("PASS")
 		passed++
@@ -124,7 +128,7 @@ func main() {
 
 	// Test 8: Terrain Construction System
 	fmt.Print("✓ Testing Terrain Construction System... ")
-	terrainConstruct := engine.NewTerrainConstructionSystem(world, inventorySystem)
+	terrainConstruct := engine.NewTerrainConstructionSystem(32) // 32 is standard tile size
 	if terrainConstruct != nil {
 		fmt.Println("PASS")
 		passed++

@@ -9,6 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// DefaultAimCone is the default aim cone width for forgiving aim (45° = π/4 radians).
+// This provides a balance between precision and ease of use, particularly for mobile controls.
+const DefaultAimCone = math.Pi / 4
+
 // PlayerCombatSystem processes player combat input and triggers attacks.
 // It bridges the InputSystem (which captures Space key) and CombatSystem (which applies damage).
 type PlayerCombatSystem struct {
@@ -109,12 +113,38 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 
-		// Find nearest enemy within attack range for damage
+		// Phase 10.1: Find enemy in aim direction instead of nearest enemy
+		// This enables dual-stick shooter mechanics where players aim at specific targets
 		maxRange := attack.Range
-		target := FindNearestEnemy(s.world, entity, maxRange)
+		var target *Entity
+
+		// Check if entity has aim component (Phase 10.1)
+		if aimComp, hasAim := entity.GetComponent("aim"); hasAim {
+			aim := aimComp.(*AimComponent)
+			// Use aim direction for target selection with default aim cone (forgiving aim)
+			target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
+
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				targetID := uint64(0)
+				if target != nil {
+					targetID = target.ID
+				}
+				s.logger.WithFields(logrus.Fields{
+					"entityID":  entity.ID,
+					"aimAngle":  aim.AimAngle,
+					"aimDegree": aim.AimAngle * 180 / math.Pi,
+					"range":     maxRange,
+					"aimCone":   DefaultAimCone * 180 / math.Pi,
+					"targetID":  targetID,
+				}).Debug("aim-based attack target selection")
+			}
+		} else {
+			// Fallback: use nearest enemy for entities without aim component (NPCs, AI)
+			target = FindNearestEnemy(s.world, entity, maxRange)
+		}
 
 		if target == nil {
-			// No enemy in range - attack animation plays but no damage
+			// No enemy in range or aim cone - attack animation plays but no damage
 			// Start cooldown even if no target (player swung at air)
 			attack.ResetCooldown()
 			continue

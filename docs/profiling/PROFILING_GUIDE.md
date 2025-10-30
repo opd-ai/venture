@@ -366,9 +366,8 @@ fi
 
 ## Related Documentation
 
-- [PLAN.md](../../PLAN.md) - Complete optimization plan with priorities
+- [docs/ROADMAP.md](../ROADMAP.md) - Development roadmap with optimization details
 - [docs/PERFORMANCE.md](../PERFORMANCE.md) - Performance optimization guide
-- [docs/profiling/optimization_progress.md](optimization_progress.md) - Completed optimizations
 - [docs/TESTING.md](../TESTING.md) - Testing and benchmarking guide
 
 ## References

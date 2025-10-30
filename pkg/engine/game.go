@@ -41,6 +41,7 @@ type EbitenGame struct {
 	RenderSystem        *EbitenRenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
 	LightingSystem      *LightingSystem // Dynamic lighting system (Phase 5.3)
+	sceneBuffer         *ebiten.Image   // Reusable buffer for lighting post-processing
 	HUDSystem           *EbitenHUDSystem
 	TutorialSystem      *EbitenTutorialSystem
 	HelpSystem          *EbitenHelpSystem
@@ -135,6 +136,10 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	lightingConfig.Enabled = false // Disabled by default, enable via flag
 	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
 
+	// Create reusable scene buffer for lighting post-processing
+	// Allocated once to avoid per-frame allocations (60+ FPS)
+	sceneBuffer := ebiten.NewImage(screenWidth, screenHeight)
+
 	game := &EbitenGame{
 		World:              world,
 		lastUpdateTime:     time.Now(),
@@ -152,6 +157,7 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		CameraSystem:       cameraSystem,
 		RenderSystem:       renderSystem,
 		LightingSystem:     lightingSystem,
+		sceneBuffer:        sceneBuffer,
 		HUDSystem:          hudSystem,
 		MenuSystem:         menuSystem,
 		InventoryUI:        inventoryUI,
@@ -790,17 +796,17 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	// From here on, we're in gameplay state and render the full game
 
 	// If lighting is enabled, use post-processing pipeline
-	if g.LightingSystem != nil && g.LightingSystem.config.Enabled {
-		// Create scene buffer for rendering
-		sceneBuffer := ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
+		// Clear and reuse scene buffer (avoid per-frame allocation)
+		g.sceneBuffer.Clear()
 
 		// Render terrain to buffer (if available)
 		if g.TerrainRenderSystem != nil {
-			g.TerrainRenderSystem.Draw(sceneBuffer, g.CameraSystem)
+			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
 		}
 
 		// Render all entities to buffer
-		g.RenderSystem.Draw(sceneBuffer, g.World.GetEntities())
+		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
 
 		// Update lighting system viewport based on camera
 		if g.CameraSystem != nil {
@@ -810,7 +816,7 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 
 		// Apply lighting as post-processing (renders sceneBuffer with lighting to screen)
 		entities := g.World.GetEntities()
-		g.LightingSystem.ApplyLighting(screen, sceneBuffer, entities)
+		g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
 	} else {
 		// Standard rendering pipeline (no lighting)
 		// Render terrain (if available)

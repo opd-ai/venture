@@ -250,15 +250,16 @@ crystal.PulseAmount = 0.3    // 30% intensity variation
 
 Lighting automatically adapts to the selected genre:
 
-> **Note:** The "Genre ID" column below shows the canonical string to use in code and configuration (e.g., `game.SetLightingGenrePreset("horror")`). Always use the lowercase, hyphen-free ID as shown.
+> **Note:** The "Genre ID" column shows the canonical string used in code (e.g., `game.SetLightingGenrePreset("scifi")`). Hyphenated variants (`sci-fi`, `post-apocalyptic`) are also supported for backward compatibility.
 
-| Genre         | Genre ID         | Ambient Intensity | Ambient Color         | Atmosphere              |
-|--------------|------------------|------------------|----------------------|-------------------------|
-| **Fantasy**          | `fantasy`          | 0.40               | Warm (120, 110, 90)      | Torchlit dungeons       |
-| **Horror**           | `horror`           | 0.15               | Cold (80, 75, 90)        | Dark and foreboding     |
-| **Sci-Fi**           | `scifi`            | 0.35               | Cool blue (90, 110, 140) | Artificial lighting     |
-| **Cyberpunk**        | `cyberpunk`        | 0.30               | Purple haze (110, 90, 130)| Neon atmosphere        |
-| **Post-Apocalyptic** | `postapocalyptic`  | 0.25               | Dusty (100, 95, 80)      | Dim wasteland           |
+| Genre | Genre ID | Aliases | Ambient Intensity | Ambient Color | Atmosphere |
+|-------|----------|---------|------------------|---------------|------------|
+| **Fantasy** | `fantasy` | - | 0.40 | Warm (120, 110, 90) | Torchlit dungeons |
+| **Horror** | `horror` | - | 0.15 | Cold (80, 75, 90) | Dark and foreboding |
+| **Sci-Fi** | `scifi` | `sci-fi` | 0.35 | Cool blue (90, 110, 140) | Artificial lighting |
+| **Cyberpunk** | `cyberpunk` | - | 0.30 | Purple haze (110, 90, 130) | Neon atmosphere |
+| **Post-Apocalyptic** | `postapoc` | `post-apocalyptic` | 0.25 | Dusty (100, 95, 80) | Dim wasteland |
+
 Example automatic configuration:
 
 ```go
@@ -358,7 +359,8 @@ game.SetLightingGenrePreset("horror")
 func (g *EbitenGame) EnableLighting(enabled bool)
 
 // SetLightingGenrePreset configures lighting for the specified genre.
-// Valid genres: "fantasy", "sci-fi", "horror", "cyberpunk", "postapoc"
+// Valid genres: "fantasy", "scifi", "horror", "cyberpunk", "postapoc"
+// Aliases supported: "sci-fi" (for scifi), "post-apocalyptic" (for postapoc)
 func (g *EbitenGame) SetLightingGenrePreset(genreID string)
 ```
 

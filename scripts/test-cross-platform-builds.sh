@@ -28,19 +28,19 @@ test_build() {
     output_file=$(mktemp /tmp/test-$name.XXXXXX)
     if output=$(CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build $extra_flags -o "$output_file" $target 2>&1); then
         echo -e "${GREEN}✓ PASS${NC}"
-        ((PASS_COUNT++))
+        PASS_COUNT=$((PASS_COUNT + 1))
         rm -f "$output_file"
         return 0
     else
         if echo "$output" | grep -q "requires external (cgo) linking"; then
             echo -e "${YELLOW}⚠ SKIP (requires CGO)${NC}"
-            ((SKIP_COUNT++))
+            SKIP_COUNT=$((SKIP_COUNT + 1))
             rm -f "$output_file"
             return 0  # Don't fail the script
         else
             echo -e "${RED}✗ FAIL${NC}"
             echo "$output" | head -5
-            ((FAIL_COUNT++))
+            FAIL_COUNT=$((FAIL_COUNT + 1))
             rm -f "$output_file"
             return 0  # Don't fail the script
         fi
@@ -67,18 +67,31 @@ test_build "server-wasm" "js" "wasm" "./cmd/server" ""
 echo ""
 
 echo "--- Testing Key Packages ---"
-# Discover packages that don't require Ebiten
-# Exclude: engine, mobile, network, hostplay, recipe
-# Exclude: rendering (root), sprites, cache, pool, shapes (have Ebiten deps)
-for pkg in $(go list ./pkg/... | grep -vE "(engine|rendering$|rendering/(sprites|cache|pool|shapes)|procgen/recipe|network|hostplay|mobile)"); do
+# Package exclusion list for cross-platform builds
+# These packages have dependencies that require Ebiten or platform-specific tooling:
+# - engine: Uses ebiten.Game and ebiten.Image types
+# - mobile: Direct ebiten usage for touch controls
+# - network, hostplay: Import engine which imports ebiten
+# - procgen/recipe: Imports engine for recipe types
+# - rendering (root): Uses ebiten.Image directly
+# - rendering/sprites, cache, pool, shapes: Use ebiten.Image for rendering
+EXCLUDED_PACKAGES="(engine|rendering$|rendering/(sprites|cache|pool|shapes)|procgen/recipe|network|hostplay|mobile)"
+
+# Note: We test packages only against Android arm64 as a representative platform.
+# These packages are pure Go with no platform-specific code, so if they build
+# for one platform, they'll build for all (android, ios, js/wasm).
+# This approach keeps the test suite fast while ensuring cross-platform compatibility.
+# For platform-specific binaries (cmd/client, cmd/server), we test all platforms above.
+
+for pkg in $(go list ./pkg/... | grep -vE "$EXCLUDED_PACKAGES"); do
     pkg_name=$(echo $pkg | sed 's|github.com/opd-ai/venture/||')
     echo -n "Testing $pkg_name: "
     if GOOS=android GOARCH=arm64 go build $pkg >/dev/null 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
-        ((PASS_COUNT++))
+        PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo -e "${RED}✗ FAIL${NC}"
-        ((FAIL_COUNT++))
+        FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
 echo ""

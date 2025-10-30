@@ -960,8 +960,8 @@ func TestFindEnemyInAimDirection(t *testing.T) {
 	}{
 		{
 			name:     "enemy directly ahead",
-			aimAngle: 0,                  // aiming right
-			aimCone:  math.Pi / 4,        // 45° cone
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
 			enemyOffsets: []struct{ x, y float64 }{
 				{x: 50, y: 0}, // directly right
 			},

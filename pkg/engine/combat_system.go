@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
 
@@ -683,7 +684,7 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 
 	// Calculate damage (same as melee, includes stats bonuses)
 	baseDamage := attack.Damage
-	
+
 	// Get attacker stats for bonus damage
 	if attackerStatsComp, hasStats := attacker.GetComponent("stats"); hasStats {
 		attackerStats := attackerStatsComp.(*StatsComponent)
@@ -692,7 +693,7 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 		} else {
 			baseDamage += attackerStats.Attack
 		}
-		
+
 		// Check for critical hit
 		if s.rollChance(attackerStats.CritChance) {
 			baseDamage *= attackerStats.CritDamage
@@ -704,14 +705,14 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 	if lifetime <= 0 {
 		lifetime = 3.0 // Default 3 seconds
 	}
-	
+
 	projectileType := weapon.Stats.ProjectileType
 	if projectileType == "" {
 		projectileType = "arrow" // Default
 	}
 
 	projComp := NewProjectileComponent(baseDamage, speed, lifetime, projectileType, attacker.ID)
-	
+
 	// Apply special properties from weapon stats
 	projComp.Pierce = weapon.Stats.Pierce
 	projComp.Bounce = weapon.Stats.Bounce
@@ -728,19 +729,18 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 	projectile.AddComponent(&RotationComponent{Angle: aimAngle})
 
 	// Generate projectile sprite (Phase 10.2)
-	// Use seed combined with projectile ID for variation
-	spriteSeed := s.seed + int64(projectile.ID)
 	spriteSize := 12 // Standard projectile sprite size
 	if projComp.Explosive {
 		spriteSize = 16 // Larger for explosive projectiles
 	}
-	
-	// Import sprites package is needed - will add at top
-	// For now, create a simple colored square sprite
-	// TODO: Use sprites.GenerateProjectileSprite once imports are added
-	sprite := ebiten.NewImage(spriteSize, spriteSize)
-	// Simple colored square for now - will be replaced with proper projectile sprite
-	spriteComp := NewSpriteComponent(float64(spriteSize), float64(spriteSize), color.RGBA{255, 200, 0, 255})
+
+	// Generate procedural sprite using seed for deterministic generation
+	spriteSeed := s.seed + int64(projectile.ID)
+	spriteImage := sprites.GenerateProjectileSprite(spriteSeed, projectileType, s.genreID, spriteSize)
+
+	// Create sprite component with generated image
+	spriteComp := NewSpriteComponent(float64(spriteSize), float64(spriteSize), color.RGBA{255, 255, 255, 255})
+	spriteComp.Image = spriteImage
 	spriteComp.Rotation = aimAngle
 	projectile.AddComponent(spriteComp)
 

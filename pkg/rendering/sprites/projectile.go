@@ -271,7 +271,9 @@ func drawFilledTriangle(img *ebiten.Image, x1, y1, x2, y2, x3, y3 int, col color
 		}
 		
 		for x := xStart; x <= xEnd; x++ {
-			img.Set(x, y, col)
+			if x >= 0 && x < img.Bounds().Dx() && y >= 0 && y < img.Bounds().Dy() {
+				img.Set(x, y, col)
+			}
 		}
 	}
 }

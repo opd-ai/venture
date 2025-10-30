@@ -1098,11 +1098,15 @@ func (g *EbitenGame) EnableLighting(enabled bool) {
 // SetLightingGenrePreset configures lighting for the specified genre.
 // This should be called when the genre is selected or changed.
 func (g *EbitenGame) SetLightingGenrePreset(genreID string) {
-	if g.LightingSystem != nil && g.LightingSystem.config != nil {
-		g.LightingSystem.config.SetGenrePreset(genreID)
+	if g.LightingSystem != nil {
+		config := g.LightingSystem.GetConfig()
+		if config != nil {
+			config.SetGenrePreset(genreID)
+			g.LightingSystem.SetConfig(config)
 
-		if g.logger != nil {
-			g.logger.WithField("genre", genreID).Info("lighting genre preset applied")
+			if g.logger != nil {
+				g.logger.WithField("genre", genreID).Info("lighting genre preset applied")
+			}
 		}
 	}
 }

@@ -260,8 +260,24 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	opts.ColorScale.Scale(float32(r), float32(g), float32(b), 1.0)
 	opts.Blend = ebiten.BlendLighter // Additive blending
 
-	// Note: We would need a proper light sprite/gradient here
-	// For now, this is conceptual - full implementation requires shader or pre-rendered gradients
+	// Minimal implementation: draw a filled white circle as the light influence
+	diameter := 2 * radius
+	if diameter <= 0 {
+		return
+	}
+	lightImg := ebiten.NewImage(diameter, diameter)
+	// Fill with white, but only inside the circle
+	cx, cy := float64(radius), float64(radius)
+	for py := 0; py < diameter; py++ {
+		for px := 0; px < diameter; px++ {
+			dx := float64(px) - cx
+			dy := float64(py) - cy
+			if dx*dx+dy*dy <= float64(radius*radius) {
+				lightImg.Set(px, py, color.White)
+			}
+		}
+	}
+	lightBuffer.DrawImage(lightImg, opts)
 }
 
 // CalculateLightIntensityAt calculates the total light intensity at a point.

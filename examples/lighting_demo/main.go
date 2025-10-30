@@ -3,9 +3,10 @@
 // configure genre-specific lighting, and integrate with the game loop.
 //
 // Usage:
-//   go run ./examples/lighting_demo
-//   go run ./examples/lighting_demo -genre horror
-//   go run ./examples/lighting_demo -no-lighting
+//
+//	go run ./examples/lighting_demo
+//	go run ./examples/lighting_demo -genre horror
+//	go run ./examples/lighting_demo -no-lighting
 package main
 
 import (
@@ -134,10 +135,10 @@ func (g *Game) setupScene() {
 	}
 
 	crystalColors := []color.RGBA{
-		{255, 0, 255, 255},   // Magenta
-		{0, 255, 255, 255},   // Cyan
-		{255, 255, 0, 255},   // Yellow
-		{0, 255, 0, 255},     // Green
+		{255, 0, 255, 255}, // Magenta
+		{0, 255, 255, 255}, // Cyan
+		{255, 255, 0, 255}, // Yellow
+		{0, 255, 0, 255},   // Green
 	}
 
 	for i, pos := range crystalPositions {

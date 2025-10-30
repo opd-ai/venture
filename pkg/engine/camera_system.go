@@ -210,6 +210,22 @@ func (s *CameraSystem) IsVisible(worldX, worldY, radius float64) bool {
 		screenY >= -margin && screenY <= float64(s.ScreenHeight)+margin
 }
 
+// GetPosition returns the current camera position in world coordinates.
+// Returns (0, 0) if there is no active camera.
+func (s *CameraSystem) GetPosition() (float64, float64) {
+	if s.activeCamera == nil {
+		return 0, 0
+	}
+
+	cameraComp, ok := s.activeCamera.GetComponent("camera")
+	if !ok {
+		return 0, 0
+	}
+	camera := cameraComp.(*CameraComponent)
+
+	return camera.X, camera.Y
+}
+
 // Shake triggers a screen shake effect on the active camera.
 // GAP-012 REPAIR: Provides visual feedback for impacts and heavy actions.
 // intensity: shake magnitude in pixels (typical values: 2-10)

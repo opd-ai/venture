@@ -27,11 +27,11 @@ type LightingSystem struct {
 	logger *logrus.Entry
 
 	// Viewport tracking for culling
-	cameraX      float64
-	cameraY      float64
-	viewportW    int
-	viewportH    int
-	viewportSet  bool
+	cameraX     float64
+	cameraY     float64
+	viewportW   int
+	viewportH   int
+	viewportSet bool
 
 	// Light collection (reused each frame)
 	visibleLights []*lightWithPosition

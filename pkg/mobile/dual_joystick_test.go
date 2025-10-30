@@ -511,9 +511,9 @@ func TestVirtualJoystickTouchCapture(t *testing.T) {
 	joystick := NewVirtualJoystick(100, 100, 80, JoystickTypeMovement)
 
 	tests := []struct {
-		name        string
-		touchX      int
-		touchY      int
+		name          string
+		touchX        int
+		touchY        int
 		shouldCapture bool
 	}{
 		{

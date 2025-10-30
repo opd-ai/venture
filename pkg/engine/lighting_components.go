@@ -12,6 +12,7 @@ package engine
 
 import (
 	"image/color"
+	"math"
 )
 
 // LightFalloffType defines how light intensity decreases with distance.
@@ -161,13 +162,15 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 	// Apply flickering effect
 	if l.Flickering {
 		// Use internal time for pseudo-random flicker
-		flicker := 1.0 - l.FlickerAmount*0.5 + l.FlickerAmount*(0.5+0.5*l.fastSin(l.internalTime*l.FlickerSpeed*twoPi))
+		// Range: [1.0 - FlickerAmount, 1.0]
+		flicker := 1.0 - l.FlickerAmount/2.0 + l.FlickerAmount/2.0*l.fastSin(l.internalTime*l.FlickerSpeed*twoPi)
 		intensity *= flicker
 	}
 
 	// Apply pulsing effect
 	if l.Pulsing {
-		pulse := 1.0 - l.PulseAmount*0.5 + l.PulseAmount*(0.5+0.5*l.fastSin(l.internalTime*l.PulseSpeed*twoPi))
+		// Range: [1.0 - PulseAmount, 1.0]
+		pulse := 1.0 - l.PulseAmount/2.0 + l.PulseAmount/2.0*l.fastSin(l.internalTime*l.PulseSpeed*twoPi)
 		intensity *= pulse
 	}
 
@@ -175,19 +178,9 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 }
 
 // fastSin is a fast sine approximation for animation effects.
+// Uses math.Sin for accuracy as approximations have insufficient precision.
 func (l *LightComponent) fastSin(x float64) float64 {
-	// Normalize to [-pi, pi]
-	const pi = 3.141592653589793 // math.Pi
-	for x > pi {
-		x -= 2 * pi
-	}
-	for x < -pi {
-		x += 2 * pi
-	}
-
-	// Taylor series approximation (good enough for visual effects)
-	x2 := x * x
-	return x * (1.0 - x2/6.0*(1.0-x2/20.0))
+	return math.Sin(x)
 }
 
 // AmbientLightComponent defines global ambient lighting for a scene.

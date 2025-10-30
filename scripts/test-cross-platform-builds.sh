@@ -25,19 +25,23 @@ test_build() {
     
     echo -n "Testing $name ($goos/$goarch): "
     
-    if output=$(CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build $extra_flags -o /tmp/test-$name $target 2>&1); then
+    output_file=$(mktemp /tmp/test-$name.XXXXXX)
+    if output=$(CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build $extra_flags -o "$output_file" $target 2>&1); then
         echo -e "${GREEN}✓ PASS${NC}"
         ((PASS_COUNT++))
+        rm -f "$output_file"
         return 0
     else
         if echo "$output" | grep -q "requires external (cgo) linking"; then
             echo -e "${YELLOW}⚠ SKIP (requires CGO)${NC}"
             ((SKIP_COUNT++))
+            rm -f "$output_file"
             return 0  # Don't fail the script
         else
             echo -e "${RED}✗ FAIL${NC}"
             echo "$output" | head -5
             ((FAIL_COUNT++))
+            rm -f "$output_file"
             return 0  # Don't fail the script
         fi
     fi

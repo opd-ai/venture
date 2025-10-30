@@ -196,9 +196,13 @@ func drawEnergyBolt(img *ebiten.Image, size int, col color.RGBA) {
 // Helper drawing functions
 
 func drawFilledRect(img *ebiten.Image, x, y, width, height int, col color.RGBA) {
+	bounds := img.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
 	for i := x; i < x+width; i++ {
 		for j := y; j < y+height; j++ {
-			img.Set(i, j, col)
+			if i >= 0 && i < w && j >= 0 && j < h {
+				img.Set(i, j, col)
+			}
 		}
 	}
 }

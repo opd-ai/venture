@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -209,6 +210,10 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 	if s.particleSys != nil {
 		s.particleSys.SpawnMagicParticles(s.world, pos.X, pos.Y, int64(caster.ID), "fantasy")
 	}
+
+	// Phase 5.3: Spawn spell light for dynamic lighting
+	// Light duration matches typical spell effect duration (2-3 seconds)
+	s.spawnSpellLight(pos.X, pos.Y, spell, 2.5)
 }
 
 // castOffensiveSpell deals damage to enemies in range.
@@ -1244,4 +1249,76 @@ func LoadPlayerSpells(player *Entity, seed int64, genreID string, depth int) err
 	}
 
 	return nil
+}
+
+// spawnSpellLight creates a temporary light entity at the spell cast position.
+// The light color and intensity are based on the spell's elemental type.
+// This function is part of Phase 5.3: Dynamic Lighting System Integration.
+func (s *SpellCastingSystem) spawnSpellLight(x, y float64, spell *magic.Spell, duration float64) {
+	// Get light color based on spell element
+	lightColor := getElementLightColor(spell.Element)
+	
+	// Create light entity
+	lightEntity := s.world.CreateEntity()
+	
+	// Add position component
+	lightEntity.AddComponent(&PositionComponent{X: x, Y: y})
+	
+	// Create spell light with appropriate radius and color
+	// Radius scaled by spell power (damage/healing amount)
+	baseRadius := 100.0
+	powerScale := math.Min(float64(spell.Stats.Damage+spell.Stats.Healing)/50.0, 2.0)
+	radius := baseRadius * powerScale
+	
+	spellLight := NewSpellLight(radius, lightColor)
+	spellLight.Pulsing = true      // Spells have pulsing lights
+	spellLight.PulseSpeed = 4.0    // Fast pulse for dramatic effect
+	spellLight.PulseAmount = 0.3   // Moderate pulse intensity
+	lightEntity.AddComponent(spellLight)
+	
+	// Add lifetime component so light despawns automatically
+	lightEntity.AddComponent(&LifetimeComponent{
+		Duration: duration,
+		Elapsed:  0,
+	})
+}
+
+// getElementLightColor returns the appropriate light color for a spell element.
+// Colors are chosen to match the visual theme of each element while providing
+// good visibility and atmosphere.
+func getElementLightColor(element magic.ElementType) color.RGBA {
+	switch element {
+	case magic.ElementFire:
+		return color.RGBA{255, 100, 0, 255} // Orange-red (warm fire)
+	case magic.ElementIce:
+		return color.RGBA{100, 200, 255, 255} // Cyan (cold ice)
+	case magic.ElementLightning:
+		return color.RGBA{255, 255, 150, 255} // Bright yellow (electric)
+	case magic.ElementEarth:
+		return color.RGBA{139, 90, 43, 255} // Brown (earthy)
+	case magic.ElementWind:
+		return color.RGBA{200, 230, 255, 255} // Light cyan (airy)
+	case magic.ElementLight:
+		return color.RGBA{255, 255, 220, 255} // Bright white-yellow (holy)
+	case magic.ElementDark:
+		return color.RGBA{100, 50, 150, 255} // Purple (shadowy)
+	case magic.ElementArcane:
+		return color.RGBA{200, 100, 255, 255} // Magenta (pure magic)
+	case magic.ElementNone:
+		return color.RGBA{180, 180, 200, 255} // Neutral grey-blue
+	default:
+		return color.RGBA{180, 180, 200, 255} // Default grey-blue
+	}
+}
+
+// LifetimeComponent marks an entity for automatic despawn after a duration.
+// Used for temporary entities like spell lights and particle effects.
+type LifetimeComponent struct {
+	Duration float64 // Total lifetime in seconds
+	Elapsed  float64 // Time elapsed since creation
+}
+
+// Type implements Component interface.
+func (l *LifetimeComponent) Type() string {
+	return "lifetime"
 }

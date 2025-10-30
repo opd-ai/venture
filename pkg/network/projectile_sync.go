@@ -244,6 +244,7 @@ func (s *ProjectileNetworkSync) RecordSnapshot(
 
 	// Keep only recent history (last 1 second)
 	// Supports lag compensation up to 1000ms
+	// This value balances memory usage (~40 snapshots/projectile) with lag compensation range
 	const maxHistoryDuration = 1.0
 	cutoffTime := s.serverTime - maxHistoryDuration
 	for len(history) > 0 && history[0].Timestamp < cutoffTime {
@@ -309,7 +310,7 @@ func (s *ProjectileNetworkSync) CleanupOldHistory() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	const maxHistoryAge = 2.0 // Keep 2 seconds of history for safety
+	const maxHistoryAge = 2.0 // Keep 2 seconds of history for safety (2x maxHistoryDuration for grace period)
 	cutoffTime := s.serverTime - maxHistoryAge
 
 	for projectileID, history := range s.projectileHistory {
@@ -353,8 +354,9 @@ func (s *ProjectileNetworkSync) ConfirmPrediction(predictionID, serverProjectile
 		s.confirmedProjectiles[serverProjectileID] = serverMsg
 
 		// Check for misprediction: if spawn position/velocity differs significantly, correction needed
-		const positionTolerance = 10.0 // pixels
-		const velocityTolerance = 50.0 // pixels per second
+		// Tolerances chosen based on typical network jitter (10-50ms @ 300-600 px/s projectile speeds)
+		const positionTolerance = 10.0 // pixels (allows ~15-30ms prediction error)
+		const velocityTolerance = 50.0 // pixels per second (allows minor aim corrections)
 		dx := serverMsg.PositionX - predictedMsg.PositionX
 		dy := serverMsg.PositionY - predictedMsg.PositionY
 		dvx := serverMsg.VelocityX - predictedMsg.VelocityX

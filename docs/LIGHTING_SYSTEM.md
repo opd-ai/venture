@@ -124,6 +124,13 @@ ambient := engine.NewAmbientLightComponent(
     0.3,                            // Low ambient (dark dungeon)
 )
 ambientEntity.AddComponent(ambient)
+
+// Cache the ambient light entity for performance
+// This avoids O(n) iteration through all entities each frame
+lightingSystem.SetAmbientLightEntity(ambientEntity.ID)
+
+// If the ambient light entity is removed, clear the cache
+// lightingSystem.ClearAmbientLightCache()
 ```
 
 ### Integration with Game Loop

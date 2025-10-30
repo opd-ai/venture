@@ -388,3 +388,61 @@ func TestLightingSystem_WithAmbientLightComponent(t *testing.T) {
 		t.Errorf("CalculateLightIntensityAt() = %v, want ~0.6 (from ambient component)", intensity)
 	}
 }
+
+func TestLightingSystem_SetAmbientLightEntity(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Initially not cached
+	if system.ambientLightCached {
+		t.Error("Ambient light should not be cached initially")
+	}
+
+	// Set ambient light entity
+	system.SetAmbientLightEntity(123)
+
+	if !system.ambientLightCached {
+		t.Error("Ambient light should be cached after SetAmbientLightEntity")
+	}
+	if system.ambientLightEntityID != 123 {
+		t.Errorf("ambientLightEntityID = %v, want 123", system.ambientLightEntityID)
+	}
+}
+
+func TestLightingSystem_ClearAmbientLightCache(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Set and then clear
+	system.SetAmbientLightEntity(123)
+	system.ClearAmbientLightCache()
+
+	if system.ambientLightCached {
+		t.Error("Ambient light cache should be cleared")
+	}
+	if system.ambientLightEntityID != 0 {
+		t.Errorf("ambientLightEntityID = %v, want 0", system.ambientLightEntityID)
+	}
+}
+
+func TestLightingSystem_AmbientLightCaching(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Create ambient light entity
+	ambientEntity := world.CreateEntity()
+	ambient := NewAmbientLightComponent(color.RGBA{200, 200, 255, 255}, 0.6)
+	ambientEntity.AddComponent(ambient)
+
+	// Set the cache
+	system.SetAmbientLightEntity(ambientEntity.ID)
+
+	// Calculate intensity using cached entity
+	entities := []*Entity{ambientEntity}
+	intensity := system.CalculateLightIntensityAt(0, 0, entities)
+
+	// Should use cached ambient component
+	if intensity < 0.5 || intensity > 0.7 {
+		t.Errorf("CalculateLightIntensityAt() = %v, want ~0.6 (from cached ambient)", intensity)
+	}
+}

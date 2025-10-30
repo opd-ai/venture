@@ -38,6 +38,10 @@ type LightingSystem struct {
 
 	// Lighting buffer (reused each frame)
 	lightingBuffer *ebiten.Image
+
+	// Cached ambient light entity (avoid O(n) search each frame)
+	ambientLightEntityID uint64
+	ambientLightCached   bool
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -168,6 +172,21 @@ func (s *LightingSystem) isLightInViewport(x, y, radius float64) bool {
 	return x >= minX && x <= maxX && y >= minY && y <= maxY
 }
 
+// SetAmbientLightEntity sets the cached ambient light entity ID.
+// This should be called when creating or changing the ambient light entity
+// to avoid O(n) iteration on every frame.
+func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
+	s.ambientLightEntityID = entityID
+	s.ambientLightCached = true
+}
+
+// ClearAmbientLightCache clears the cached ambient light entity.
+// Call this if the ambient light entity is removed from the world.
+func (s *LightingSystem) ClearAmbientLightCache() {
+	s.ambientLightEntityID = 0
+	s.ambientLightCached = false
+}
+
 // ApplyLighting applies lighting effects to a rendered image.
 // This is called after the main render pass as a post-processing step.
 // Returns a new image with lighting applied (input image is not modified).
@@ -181,17 +200,18 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 	// Collect visible lights
 	lights := s.CollectVisibleLights(entities)
 
-	// Get or find ambient light
+	// Get ambient light from cache or config defaults
 	ambientIntensity := s.config.AmbientIntensity
 	ambientColor := s.config.AmbientColor
 
-	for _, entity := range entities {
-		ambComp, ok := entity.GetComponent("ambient_light")
-		if ok {
-			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
-				ambientIntensity = ambient.Intensity
-				ambientColor = ambient.Color
-				break
+	// Try cached ambient light entity first
+	if s.ambientLightCached {
+		if entity, ok := s.world.GetEntity(s.ambientLightEntityID); ok {
+			if ambComp, ok := entity.GetComponent("ambient_light"); ok {
+				if ambient, ok := ambComp.(*AmbientLightComponent); ok {
+					ambientIntensity = ambient.Intensity
+					ambientColor = ambient.Color
+				}
 			}
 		}
 	}

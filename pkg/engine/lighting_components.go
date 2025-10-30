@@ -146,6 +146,9 @@ func NewCrystalLight(radius float64, crystalColor color.RGBA) *LightComponent {
 	return light
 }
 
+// twoPi is 2π used for animation calculations
+const twoPi = 6.283185307179586
+
 // GetCurrentIntensity calculates the effective intensity with animations applied.
 // This is called by LightingSystem during rendering.
 func (l *LightComponent) GetCurrentIntensity() float64 {
@@ -158,13 +161,13 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 	// Apply flickering effect
 	if l.Flickering {
 		// Use internal time for pseudo-random flicker
-		flicker := 1.0 - l.FlickerAmount*0.5 + l.FlickerAmount*(0.5+0.5*l.fastSin(l.internalTime*l.FlickerSpeed*6.28))
+		flicker := 1.0 - l.FlickerAmount*0.5 + l.FlickerAmount*(0.5+0.5*l.fastSin(l.internalTime*l.FlickerSpeed*twoPi))
 		intensity *= flicker
 	}
 
 	// Apply pulsing effect
 	if l.Pulsing {
-		pulse := 1.0 - l.PulseAmount*0.5 + l.PulseAmount*(0.5+0.5*l.fastSin(l.internalTime*l.PulseSpeed*6.28))
+		pulse := 1.0 - l.PulseAmount*0.5 + l.PulseAmount*(0.5+0.5*l.fastSin(l.internalTime*l.PulseSpeed*twoPi))
 		intensity *= pulse
 	}
 
@@ -174,7 +177,7 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 // fastSin is a fast sine approximation for animation effects.
 func (l *LightComponent) fastSin(x float64) float64 {
 	// Normalize to [-pi, pi]
-	const pi = 3.14159265359
+	const pi = 3.141592653589793 // math.Pi
 	for x > pi {
 		x -= 2 * pi
 	}

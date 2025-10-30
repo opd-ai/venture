@@ -55,27 +55,13 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 }
 
 var (
-<<<<<<< HEAD
-	width         = flag.Int("width", 800, "Screen width")
-	height        = flag.Int("height", 600, "Screen height")
-	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID       = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
-	profile       = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
-	multiplayer   = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay   = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
-	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
-	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
-	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
-=======
 	width          = flag.Int("width", 800, "Screen width")
 	height         = flag.Int("height", 600, "Screen height")
 	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
 	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
+	profile        = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
 	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
 	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
 	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
@@ -83,7 +69,6 @@ var (
 	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
->>>>>>> 8228407969cbadf869d831fa554f2b04033bd6de
 )
 
 // return a random seed
@@ -110,66 +95,66 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 
 	// Genre-specific light configurations
 	type lightConfig struct {
-		torchInterval   int // Every N tiles along walls/corridors
-		crystalChance   float64
-		torchColor      color.RGBA
-		crystalColor    color.RGBA
-		torchRadius     float64
-		crystalRadius   float64
-		torchFlicker    bool
-		crystalPulse    bool
+		torchInterval int // Every N tiles along walls/corridors
+		crystalChance float64
+		torchColor    color.RGBA
+		crystalColor  color.RGBA
+		torchRadius   float64
+		crystalRadius float64
+		torchFlicker  bool
+		crystalPulse  bool
 	}
 
 	configs := map[string]lightConfig{
 		"fantasy": {
-			torchInterval:   5,
-			crystalChance:   0.15,
-			torchColor:      color.RGBA{255, 150, 80, 255}, // Warm torch light
-			crystalColor:    color.RGBA{150, 200, 255, 255}, // Blue magical crystal
-			torchRadius:     150,
-			crystalRadius:   120,
-			torchFlicker:    true,
-			crystalPulse:    true,
+			torchInterval: 5,
+			crystalChance: 0.15,
+			torchColor:    color.RGBA{255, 150, 80, 255},  // Warm torch light
+			crystalColor:  color.RGBA{150, 200, 255, 255}, // Blue magical crystal
+			torchRadius:   150,
+			crystalRadius: 120,
+			torchFlicker:  true,
+			crystalPulse:  true,
 		},
 		"scifi": {
-			torchInterval:   4,
-			crystalChance:   0.20,
-			torchColor:      color.RGBA{150, 200, 255, 255}, // Cool neon blue
-			crystalColor:    color.RGBA{0, 255, 200, 255},   // Cyan tech light
-			torchRadius:     180,
-			crystalRadius:   140,
-			torchFlicker:    false,
-			crystalPulse:    true,
+			torchInterval: 4,
+			crystalChance: 0.20,
+			torchColor:    color.RGBA{150, 200, 255, 255}, // Cool neon blue
+			crystalColor:  color.RGBA{0, 255, 200, 255},   // Cyan tech light
+			torchRadius:   180,
+			crystalRadius: 140,
+			torchFlicker:  false,
+			crystalPulse:  true,
 		},
 		"horror": {
-			torchInterval:   7,
-			crystalChance:   0.08,
-			torchColor:      color.RGBA{180, 140, 100, 255}, // Dim yellowish
-			crystalColor:    color.RGBA{120, 80, 80, 255},   // Faint reddish
-			torchRadius:     100,
-			crystalRadius:   80,
-			torchFlicker:    true,
-			crystalPulse:    false,
+			torchInterval: 7,
+			crystalChance: 0.08,
+			torchColor:    color.RGBA{180, 140, 100, 255}, // Dim yellowish
+			crystalColor:  color.RGBA{120, 80, 80, 255},   // Faint reddish
+			torchRadius:   100,
+			crystalRadius: 80,
+			torchFlicker:  true,
+			crystalPulse:  false,
 		},
 		"cyberpunk": {
-			torchInterval:   3,
-			crystalChance:   0.25,
-			torchColor:      color.RGBA{255, 0, 150, 255},  // Neon pink
-			crystalColor:    color.RGBA{0, 255, 255, 255},  // Cyan hologram
-			torchRadius:     160,
-			crystalRadius:   130,
-			torchFlicker:    false,
-			crystalPulse:    true,
+			torchInterval: 3,
+			crystalChance: 0.25,
+			torchColor:    color.RGBA{255, 0, 150, 255}, // Neon pink
+			crystalColor:  color.RGBA{0, 255, 255, 255}, // Cyan hologram
+			torchRadius:   160,
+			crystalRadius: 130,
+			torchFlicker:  false,
+			crystalPulse:  true,
 		},
 		"postapoc": {
-			torchInterval:   6,
-			crystalChance:   0.10,
-			torchColor:      color.RGBA{200, 180, 140, 255}, // Dusty yellow
-			crystalColor:    color.RGBA{100, 255, 100, 255}, // Radioactive green
-			torchRadius:     120,
-			crystalRadius:   100,
-			torchFlicker:    true,
-			crystalPulse:    true,
+			torchInterval: 6,
+			crystalChance: 0.10,
+			torchColor:    color.RGBA{200, 180, 140, 255}, // Dusty yellow
+			crystalColor:  color.RGBA{100, 255, 100, 255}, // Radioactive green
+			torchRadius:   120,
+			crystalRadius: 100,
+			torchFlicker:  true,
+			crystalPulse:  true,
 		},
 	}
 

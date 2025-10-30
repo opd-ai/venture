@@ -213,7 +213,8 @@ func (s *CameraSystem) IsVisible(worldX, worldY, radius float64) bool {
 // GetPosition returns the current camera position in world coordinates.
 //
 // Returns:
-//   x, y - the world coordinates of the camera center.
+//
+//	x, y - the world coordinates of the camera center.
 //
 // If there is no active camera, or if the active camera entity does not have a camera component,
 // returns (0, 0).

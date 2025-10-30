@@ -103,8 +103,10 @@ func (g *Game) setupScene() {
 
 	// Create stationary torches (flickering)
 	positions := [][2]float64{
-		{150, 150}, {650, 150},
-		{150, 450}, {650, 450},
+		{150, 150},
+		{650, 150},
+		{150, 450},
+		{650, 450},
 	}
 
 	for i, pos := range positions {

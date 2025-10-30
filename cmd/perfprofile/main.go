@@ -184,7 +184,7 @@ func benchmarkECS(logger *logrus.Logger) (worldUpdate, entityQuery, componentAcc
 	}
 	componentAccess = time.Since(start) / 10000
 
-	return
+	return worldUpdate, entityQuery, componentAccess
 }
 
 func benchmarkTerrain() time.Duration {

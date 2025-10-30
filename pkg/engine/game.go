@@ -135,10 +135,9 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
 
-<<<<<<< HEAD
 	// Initialize frame time tracker (disabled by default, enabled via EnableFrameTimeProfiling)
 	frameTimeTracker := NewFrameTimeTracker(1000) // Track last 1000 frames (~16 seconds at 60 FPS)
-=======
+
 	// Create lighting system with default configuration
 	// Note: Will be enabled via command-line flag in client/main.go
 	lightingConfig := NewLightingConfig()
@@ -148,7 +147,6 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	// Create reusable scene buffer for lighting post-processing
 	// Allocated once to avoid per-frame allocations (60+ FPS)
 	sceneBuffer := ebiten.NewImage(screenWidth, screenHeight)
->>>>>>> 8228407969cbadf869d831fa554f2b04033bd6de
 
 	game := &EbitenGame{
 		World:              world,

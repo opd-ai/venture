@@ -1257,25 +1257,25 @@ func LoadPlayerSpells(player *Entity, seed int64, genreID string, depth int) err
 func (s *SpellCastingSystem) spawnSpellLight(x, y float64, spell *magic.Spell, duration float64) {
 	// Get light color based on spell element
 	lightColor := getElementLightColor(spell.Element)
-	
+
 	// Create light entity
 	lightEntity := s.world.CreateEntity()
-	
+
 	// Add position component
 	lightEntity.AddComponent(&PositionComponent{X: x, Y: y})
-	
+
 	// Create spell light with appropriate radius and color
 	// Radius scaled by spell power (damage/healing amount)
 	baseRadius := 100.0
 	powerScale := math.Min(float64(spell.Stats.Damage+spell.Stats.Healing)/50.0, 2.0)
 	radius := baseRadius * powerScale
-	
+
 	spellLight := NewSpellLight(radius, lightColor)
-	spellLight.Pulsing = true      // Spells have pulsing lights
-	spellLight.PulseSpeed = 4.0    // Fast pulse for dramatic effect
-	spellLight.PulseAmount = 0.3   // Moderate pulse intensity
+	spellLight.Pulsing = true    // Spells have pulsing lights
+	spellLight.PulseSpeed = 4.0  // Fast pulse for dramatic effect
+	spellLight.PulseAmount = 0.3 // Moderate pulse intensity
 	lightEntity.AddComponent(spellLight)
-	
+
 	// Add lifetime component so light despawns automatically
 	lightEntity.AddComponent(&LifetimeComponent{
 		Duration: duration,

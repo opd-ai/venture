@@ -9,6 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// DefaultAimCone is the default aim cone width for forgiving aim (45° = π/4 radians).
+// This provides a balance between precision and ease of use, particularly for mobile controls.
+const DefaultAimCone = math.Pi / 4
+
 // PlayerCombatSystem processes player combat input and triggers attacks.
 // It bridges the InputSystem (which captures Space key) and CombatSystem (which applies damage).
 type PlayerCombatSystem struct {
@@ -117,9 +121,8 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		// Check if entity has aim component (Phase 10.1)
 		if aimComp, hasAim := entity.GetComponent("aim"); hasAim {
 			aim := aimComp.(*AimComponent)
-			// Use aim direction for target selection with 45° aim cone (forgiving aim)
-			aimCone := math.Pi / 4 // 45 degrees = π/4 radians
-			target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, aimCone)
+			// Use aim direction for target selection with default aim cone (forgiving aim)
+			target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
 
 			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 				targetID := -1
@@ -131,7 +134,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 					"aimAngle":  aim.AimAngle,
 					"aimDegree": aim.AimAngle * 180 / math.Pi,
 					"range":     maxRange,
-					"aimCone":   aimCone * 180 / math.Pi,
+					"aimCone":   DefaultAimCone * 180 / math.Pi,
 					"targetID":  targetID,
 				}).Debug("aim-based attack target selection")
 			}

@@ -568,7 +568,7 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 
 	// Filter enemies by aim cone and find closest
 	var bestEnemy *Entity
-	bestDistance := math.MaxFloat64
+	bestDistanceSquared := math.MaxFloat64
 
 	for _, enemy := range enemies {
 		// Get enemy position
@@ -594,10 +594,10 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 
 		// Check if enemy is within aim cone
 		if math.Abs(angleDiff) <= aimCone/2 {
-			// Enemy is in aim cone - check distance
-			distance := math.Sqrt(dx*dx + dy*dy)
-			if distance < bestDistance {
-				bestDistance = distance
+			// Enemy is in aim cone - check distance using squared distance to avoid sqrt
+			distanceSquared := dx*dx + dy*dy
+			if distanceSquared < bestDistanceSquared {
+				bestDistanceSquared = distanceSquared
 				bestEnemy = enemy
 			}
 		}

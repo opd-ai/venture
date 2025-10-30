@@ -23,7 +23,8 @@ Complete guide to gameplay mechanics, systems, and features.
 10. [Multiplayer](#multiplayer)
 11. [Save System](#save-system)
 12. [Genre System](#genre-system)
-13. [Advanced Mechanics](#advanced-mechanics)
+13. [Visual Systems](#visual-systems)
+14. [Advanced Mechanics](#advanced-mechanics)
 
 ---
 
@@ -719,6 +720,70 @@ Combine two genres for hybrid worlds:
 - Hybrid enemy types
 - Combined item themes
 - Merged music styles
+
+---
+
+## Visual Systems
+
+### Dynamic Lighting (Experimental)
+
+**Phase 5.3** introduces an optional dynamic lighting system that enhances atmospheric immersion with real-time light sources, shadows, and genre-specific lighting.
+
+**Enabling Lighting:**
+```bash
+# Enable lighting system (experimental feature)
+./venture-client -enable-lighting
+
+# Combine with other flags
+./venture-client -enable-lighting -genre horror -seed 12345
+```
+
+**Light Sources:**
+- **Player Torch**: Automatically spawns with 200-pixel radius when lighting is enabled
+  - Provides constant illumination in dark dungeons
+  - Follows player movement automatically
+  - Flickers realistically for immersion
+
+- **Environmental Lights**: Procedurally placed throughout dungeons
+  - **Wall Torches**: Attached to room perimeters, spacing varies by genre
+  - **Magical Crystals**: Pulsing lights in special rooms (treasure, boss)
+  - **Genre-specific lights**: Neon (sci-fi), radioactive (post-apocalyptic), etc.
+
+- **Spell Lights**: Dynamic lights generated during spell casting
+  - Each spell creates a temporary light with element-specific color
+  - Fire spells: Orange/red light (radius 60-100px)
+  - Ice spells: Blue/cyan light (radius 50-80px)
+  - Lightning spells: White/yellow light (radius 80-120px)
+  - Light duration: 2-5 seconds depending on spell power
+
+**Genre-Specific Lighting:**
+
+| Genre | Torch Color | Ambient Level | Special Effects |
+|-------|-------------|---------------|-----------------|
+| **Fantasy** | Warm orange (255,150,80) | Medium (0.4) | Flickering torches, blue crystals |
+| **Sci-Fi** | Cool neon blue (150,200,255) | Medium-High (0.5) | Steady tech lights, cyan holograms |
+| **Horror** | Dim yellowish (180,140,100) | Very Low (0.2) | Intense flicker, faint red glow |
+| **Cyberpunk** | Neon pink (255,0,150) | Medium (0.4) | Pulsing lights, cyan accents |
+| **Post-Apoc** | Dusty yellow (200,180,140) | Low (0.3) | Flicker, radioactive green |
+
+**Performance:**
+- Lighting system uses viewport culling (only lights near player are processed)
+- Maximum 16 lights active per frame (configurable)
+- Performance target: 60 FPS maintained with full lighting
+- Impact: ~2-4ms additional frame time on most systems
+
+**Lighting Tips:**
+- Horror genre benefits most from dynamic lighting (creates tension)
+- Sci-fi and cyberpunk genres feature colorful, pulsing lights
+- Disable lighting for maximum performance on low-end systems
+- Environmental lights reveal dungeon layout naturally
+- Spell lights help track projectiles in combat
+
+**Technical Details:**
+- Four falloff types: Linear, Quadratic, Inverse-square, Constant
+- Ambient light configurable per genre for atmosphere
+- Post-processing pipeline for realistic light blending
+- Deferred lighting approach minimizes overdraw
 
 ---
 

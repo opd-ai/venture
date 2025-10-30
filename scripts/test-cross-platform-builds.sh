@@ -62,12 +62,13 @@ test_build "server-wasm" "js" "wasm" "./cmd/server" ""
 echo ""
 
 echo "--- Testing Key Packages ---"
-for pkg in procgen procgen/terrain procgen/entity procgen/item procgen/magic \
-           procgen/skills procgen/quest procgen/station procgen/environment \
-           procgen/genre combat world saveload logging audio audio/music \
-           audio/sfx audio/synthesis; do
-    echo -n "Testing pkg/$pkg: "
-    if GOOS=android GOARCH=arm64 go build ./pkg/$pkg >/dev/null 2>&1; then
+# Discover packages that don't require Ebiten
+# Exclude: engine, mobile, network, hostplay, recipe
+# Exclude: rendering (root), sprites, cache, pool, shapes (have Ebiten deps)
+for pkg in $(go list ./pkg/... | grep -vE "(engine|rendering$|rendering/(sprites|cache|pool|shapes)|procgen/recipe|network|hostplay|mobile)"); do
+    pkg_name=$(echo $pkg | sed 's|github.com/opd-ai/venture/||')
+    echo -n "Testing $pkg_name: "
+    if GOOS=android GOARCH=arm64 go build $pkg >/dev/null 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
         ((PASS_COUNT++))
     else

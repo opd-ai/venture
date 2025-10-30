@@ -1,3 +1,6 @@
+//go:build !android && !ios
+// +build !android,!ios
+
 // Package main contains integration tests for the client application
 package main
 

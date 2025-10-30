@@ -3,7 +3,6 @@
 package sprites
 
 import (
-	"image"
 	"image/color"
 	"math"
 
@@ -37,25 +36,41 @@ func GenerateProjectileSprite(seed int64, projectileType string, genreID string,
 	img := ebiten.NewImage(size, size)
 
 	// Get genre-appropriate color palette
-	pal := palette.Generate(seed, genreID)
+	paletteGen := palette.NewGenerator()
+	pal, err := paletteGen.Generate(genreID, seed)
+	if err != nil {
+		// Fallback to a default palette on error
+		pal = &palette.Palette{
+			Primary:    color.RGBA{R: 100, G: 100, B: 100, A: 255},
+			Accent1:    color.RGBA{R: 150, G: 150, B: 150, A: 255},
+			Highlight1: color.RGBA{R: 200, G: 200, B: 200, A: 255},
+			Secondary:  color.RGBA{R: 100, G: 100, B: 200, A: 255},
+		}
+	}
+
+	// Convert colors to RGBA for drawing
+	primary := toRGBA(pal.Primary)
+	accent := toRGBA(pal.Accent1)
+	highlight := toRGBA(pal.Highlight1)
+	magic := toRGBA(pal.Secondary)
 
 	// Generate based on type
 	switch ProjectileType(projectileType) {
 	case ProjectileArrow:
-		drawArrow(img, size, pal.Primary)
+		drawArrow(img, size, primary)
 	case ProjectileBolt:
-		drawBolt(img, size, pal.Primary)
+		drawBolt(img, size, primary)
 	case ProjectileBullet:
-		drawBullet(img, size, pal.Accent)
+		drawBullet(img, size, accent)
 	case ProjectileMagic:
-		drawMagicBolt(img, size, pal.Magic)
+		drawMagicBolt(img, size, magic)
 	case ProjectileFireball:
-		drawFireball(img, size, pal.Highlight)
+		drawFireball(img, size, highlight)
 	case ProjectileEnergy:
-		drawEnergyBolt(img, size, pal.Accent)
+		drawEnergyBolt(img, size, accent)
 	default:
 		// Default to arrow
-		drawArrow(img, size, pal.Primary)
+		drawArrow(img, size, primary)
 	}
 
 	return img
@@ -351,5 +366,19 @@ func lighten(col color.RGBA, factor float64) color.RGBA {
 		G: uint8(math.Min(255, float64(col.G)+(255-float64(col.G))*factor)),
 		B: uint8(math.Min(255, float64(col.B)+(255-float64(col.B))*factor)),
 		A: col.A,
+	}
+}
+
+// toRGBA converts a color.Color to color.RGBA
+func toRGBA(c color.Color) color.RGBA {
+	if rgba, ok := c.(color.RGBA); ok {
+		return rgba
+	}
+	r, g, b, a := c.RGBA()
+	return color.RGBA{
+		R: uint8(r >> 8),
+		G: uint8(g >> 8),
+		B: uint8(b >> 8),
+		A: uint8(a >> 8),
 	}
 }

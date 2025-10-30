@@ -1086,8 +1086,8 @@ var (
 // EnableLighting enables or disables the dynamic lighting system.
 // When enabled, uses post-processing rendering pipeline with light sources.
 func (g *EbitenGame) EnableLighting(enabled bool) {
-	if g.LightingSystem != nil && g.LightingSystem.config != nil {
-		g.LightingSystem.config.Enabled = enabled
+	if g.LightingSystem != nil {
+		g.LightingSystem.SetEnabled(enabled)
 
 		if g.logger != nil {
 			g.logger.WithField("enabled", enabled).Info("lighting system toggled")

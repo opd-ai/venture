@@ -286,6 +286,7 @@ func (w *World) Update(deltaTime float64) {
 		}
 		w.entitiesToAdd = w.entitiesToAdd[:0]
 		w.entityListDirty = true
+		w.invalidateQueryCache() // Invalidate query cache when entities are added
 	}
 
 	// Process pending removals

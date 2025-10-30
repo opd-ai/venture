@@ -1,12 +1,31 @@
-# Dynamic Lighting System - Implementation Guide
+# Dynamic Lighting System - Implementation & Integration Guide
 
 ## Overview
 
-The Dynamic Lighting System adds atmospheric lighting effects to Venture, enhancing visual immersion with point lights, ambient lighting, and dynamic effects. The system integrates seamlessly with the existing ECS architecture and rendering pipeline.
+The Dynamic Lighting System adds atmospheric lighting effects to Venture, enhancing visual immersion with point lights, ambient lighting, and dynamic effects. The system integrates seamlessly with the existing ECS architecture using a post-processing rendering pipeline.
 
-**Status**: Phase 5.3 - IN PROGRESS  
+**Status**: Phase 5.3 - Week 2 Day 1-3 Complete (Core Integration + Player Torch)  
+**Completion**: 40% (Integration complete, environmental lights pending)  
 **Version**: 1.1 Beta  
 **Implementation Date**: October 2025
+
+## Integration Status
+
+✅ **Complete:**
+- LightComponent with 4 falloff types (85% test coverage)
+- AmbientLightComponent for global scene lighting
+- LightingSystem with viewport culling and light limits
+- Genre-specific presets (5 genres)
+- Animation support (flickering torches, pulsing magic)
+- Post-processing render pipeline integration
+- Player torch implementation
+- Command-line control (`-enable-lighting` flag)
+- Documentation and demo application
+
+⏳ **Pending:**
+- Spell light generation (Week 2 Day 4-5)
+- Environmental light spawning (Week 2 Day 4-5)
+- Performance profiling with 16+ lights (Week 3)
 
 ## Architecture
 

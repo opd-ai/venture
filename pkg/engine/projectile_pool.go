@@ -17,10 +17,11 @@ import (
 // - Improves frame time consistency (reduces 0.1% lows)
 //
 // Usage pattern:
-//   pool := NewProjectilePool()
-//   proj := pool.Get()  // Acquire from pool
-//   // ... use projectile ...
-//   pool.Put(proj)      // Return to pool
+//
+//	pool := NewProjectilePool()
+//	proj := pool.Get()  // Acquire from pool
+//	// ... use projectile ...
+//	pool.Put(proj)      // Return to pool
 type ProjectilePool struct {
 	pool *sync.Pool
 }
@@ -134,10 +135,11 @@ func (p *PositionPool) Put(pos *PositionComponent) {
 // Provides a unified interface for allocating/deallocating complete projectile entities.
 //
 // Usage:
-//   pool := NewProjectileEntityPool()
-//   components := pool.AllocateComponents()
-//   // ... use components ...
-//   pool.DeallocateComponents(components)
+//
+//	pool := NewProjectileEntityPool()
+//	components := pool.AllocateComponents()
+//	// ... use components ...
+//	pool.DeallocateComponents(components)
 type ProjectileEntityPool struct {
 	projectilePool *ProjectilePool
 	velocityPool   *VelocityPool

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Test script for cross-platform builds
 # Tests Android, iOS, and WASM builds
 

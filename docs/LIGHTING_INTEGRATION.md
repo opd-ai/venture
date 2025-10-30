@@ -358,7 +358,7 @@ game.SetLightingGenrePreset("horror")
 func (g *EbitenGame) EnableLighting(enabled bool)
 
 // SetLightingGenrePreset configures lighting for the specified genre.
-// Valid genres: "fantasy", "scifi", "horror", "cyberpunk", "postapoc"
+// Valid genres: "fantasy", "sci-fi", "horror", "cyberpunk", "postapoc"
 func (g *EbitenGame) SetLightingGenrePreset(genreID string)
 ```
 

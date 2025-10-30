@@ -31,9 +31,9 @@ type DualJoystickLayout struct {
 // Action buttons: positioned for easy thumb reach
 func NewDualJoystickLayout(screenWidth, screenHeight int) *DualJoystickLayout {
 	// Calculate responsive sizes based on screen dimensions
-	joystickRadius := float64(screenHeight) * 0.12  // 12% of screen height
-	buttonRadius := float64(screenHeight) * 0.06    // 6% of screen height
-	margin := float64(screenHeight) * 0.04          // 4% margin
+	joystickRadius := float64(screenHeight) * 0.12 // 12% of screen height
+	buttonRadius := float64(screenHeight) * 0.06   // 6% of screen height
+	margin := float64(screenHeight) * 0.04         // 4% margin
 
 	// Left joystick (movement) - bottom-left corner
 	leftX := margin + joystickRadius
@@ -55,7 +55,7 @@ func NewDualJoystickLayout(screenWidth, screenHeight int) *DualJoystickLayout {
 	// Create action buttons positioned above right joystick for easy reach
 	buttonYOffset := rightY - joystickRadius - margin - buttonRadius
 	layout.ActionButtons = []*VirtualButton{
-		NewVirtualButton(rightX, buttonYOffset, buttonRadius, "⚔"), // Attack
+		NewVirtualButton(rightX, buttonYOffset, buttonRadius, "⚔"),                      // Attack
 		NewVirtualButton(rightX-buttonRadius*2.5, buttonYOffset, buttonRadius*0.8, "E"), // Use item
 	}
 
@@ -148,7 +148,7 @@ type JoystickType int
 
 const (
 	JoystickTypeMovement JoystickType = iota // Left joystick for WASD movement
-	JoystickTypeAim                           // Right joystick for mouse aim
+	JoystickTypeAim                          // Right joystick for mouse aim
 )
 
 // VirtualJoystick represents a single virtual joystick with analog input.
@@ -157,28 +157,28 @@ const (
 // - Fixed: joystick stays in one position
 type VirtualJoystick struct {
 	// Configuration
-	Type          JoystickType
-	X, Y          float64 // Center position (base position for floating mode)
-	Radius        float64 // Outer boundary radius
-	DeadZone      float64 // Inner dead zone radius (no input)
-	FloatingMode  bool    // If true, joystick appears at touch position
+	Type         JoystickType
+	X, Y         float64 // Center position (base position for floating mode)
+	Radius       float64 // Outer boundary radius
+	DeadZone     float64 // Inner dead zone radius (no input)
+	FloatingMode bool    // If true, joystick appears at touch position
 
 	// Current state
-	TouchID      ebiten.TouchID
-	Active       bool
-	CurrentX     float64 // Current center (for floating mode)
-	CurrentY     float64 // Current center (for floating mode)
-	DirectionX   float64 // -1.0 to 1.0
-	DirectionY   float64 // -1.0 to 1.0
-	Angle        float64 // Current angle in radians (0=right, π/2=down)
-	Magnitude    float64 // 0.0 to 1.0 (distance from center)
+	TouchID    ebiten.TouchID
+	Active     bool
+	CurrentX   float64 // Current center (for floating mode)
+	CurrentY   float64 // Current center (for floating mode)
+	DirectionX float64 // -1.0 to 1.0
+	DirectionY float64 // -1.0 to 1.0
+	Angle      float64 // Current angle in radians (0=right, π/2=down)
+	Magnitude  float64 // 0.0 to 1.0 (distance from center)
 
 	// Visual settings
-	BaseColor    color.Color // Base circle color
-	StickColor   color.Color // Stick/thumb color
-	ActiveColor  color.Color // Color when active
+	BaseColor     color.Color // Base circle color
+	StickColor    color.Color // Stick/thumb color
+	ActiveColor   color.Color // Color when active
 	DeadZoneColor color.Color // Dead zone indicator
-	Opacity      float64
+	Opacity       float64
 }
 
 // NewVirtualJoystick creates a virtual joystick at the specified position.
@@ -200,8 +200,8 @@ func NewVirtualJoystick(x, y, radius float64, joystickType JoystickType) *Virtua
 		X:             x,
 		Y:             y,
 		Radius:        radius,
-		DeadZone:      radius * 0.2,  // 20% dead zone
-		FloatingMode:  false,         // Fixed by default
+		DeadZone:      radius * 0.2, // 20% dead zone
+		FloatingMode:  false,        // Fixed by default
 		TouchID:       -1,
 		CurrentX:      x,
 		CurrentY:      y,

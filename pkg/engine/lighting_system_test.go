@@ -242,12 +242,12 @@ func TestLightingSystem_calculateFalloff(t *testing.T) {
 	system := NewLightingSystem(world, nil)
 
 	tests := []struct {
-		name         string
-		dist         float64
-		radius       float64
-		falloffType  LightFalloffType
-		wantMin      float64
-		wantMax      float64
+		name        string
+		dist        float64
+		radius      float64
+		falloffType LightFalloffType
+		wantMin     float64
+		wantMax     float64
 	}{
 		{"linear at center", 0, 100, FalloffLinear, 1.0, 1.0},
 		{"linear at half", 50, 100, FalloffLinear, 0.5, 0.5},

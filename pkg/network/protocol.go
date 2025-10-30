@@ -534,3 +534,119 @@ type RecipeLearnMessage struct {
 	// SequenceNumber for message ordering
 	SequenceNumber uint32
 }
+
+// ProjectileSpawnMessage represents projectile spawn notification from server to clients.
+// Server sends this when a projectile is spawned by any entity, including server-authoritative
+// validation of client-predicted projectiles. Clients use this for remote projectile rendering
+// and to correct mispredicted local projectiles.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+type ProjectileSpawnMessage struct {
+	// ProjectileID uniquely identifies this projectile entity
+	ProjectileID uint64
+
+	// OwnerID identifies the entity that fired this projectile
+	OwnerID uint64
+
+	// PositionX is the spawn position X coordinate
+	PositionX float64
+
+	// PositionY is the spawn position Y coordinate
+	PositionY float64
+
+	// VelocityX is the projectile's X velocity in pixels per second
+	VelocityX float64
+
+	// VelocityY is the projectile's Y velocity in pixels per second
+	VelocityY float64
+
+	// Damage is the base damage dealt on hit
+	Damage float64
+
+	// Speed is the movement speed in pixels per second
+	Speed float64
+
+	// Lifetime is the maximum duration before despawning (seconds)
+	Lifetime float64
+
+	// Pierce is the number of entities this projectile can pass through (0=normal, -1=infinite)
+	Pierce int
+
+	// Bounce is the number of wall bounces remaining
+	Bounce int
+
+	// Explosive indicates if projectile explodes on impact
+	Explosive bool
+
+	// ExplosionRadius is the area damage radius in pixels (if Explosive)
+	ExplosionRadius float64
+
+	// ProjectileType describes the visual/logical type ("arrow", "bullet", "fireball", etc.)
+	ProjectileType string
+
+	// SpawnTime is the server timestamp when projectile was spawned
+	SpawnTime float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// ProjectileHitMessage represents projectile collision notification from server to clients.
+// Server sends this when a projectile hits an entity or wall, including damage dealt and
+// special effects (pierce, bounce, explosion). Clients use this for visual feedback and
+// to synchronize projectile state.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+type ProjectileHitMessage struct {
+	// ProjectileID identifies the projectile that hit
+	ProjectileID uint64
+
+	// HitEntityID identifies the entity that was hit (0 if wall hit)
+	HitEntityID uint64
+
+	// HitType indicates the collision type ("entity", "wall", "expire")
+	HitType string
+
+	// DamageDealt is the damage applied to the hit entity (0 for walls)
+	DamageDealt float64
+
+	// PositionX is the collision position X coordinate
+	PositionX float64
+
+	// PositionY is the collision position Y coordinate
+	PositionY float64
+
+	// ProjectileDestroyed indicates if projectile was destroyed by this hit
+	ProjectileDestroyed bool
+
+	// ExplosionTriggered indicates if explosion occurred (for explosive projectiles)
+	ExplosionTriggered bool
+
+	// ExplosionEntities contains entity IDs damaged by explosion (if applicable)
+	ExplosionEntities []uint64
+
+	// ExplosionDamages contains damage dealt to each explosion entity (parallel to ExplosionEntities)
+	ExplosionDamages []float64
+
+	// HitTime is the server timestamp when collision occurred
+	HitTime float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}
+
+// ProjectileDespawnMessage represents projectile despawn notification from server to clients.
+// Server sends this when a projectile expires naturally (lifetime exceeded) or is destroyed.
+// Clients use this to remove projectile entities from their simulation.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+type ProjectileDespawnMessage struct {
+	// ProjectileID identifies the projectile being despawned
+	ProjectileID uint64
+
+	// Reason indicates why projectile despawned ("expired", "hit", "out_of_bounds")
+	Reason string
+
+	// DespawnTime is the server timestamp when projectile was despawned
+	DespawnTime float64
+
+	// SequenceNumber for message ordering
+	SequenceNumber uint32
+}

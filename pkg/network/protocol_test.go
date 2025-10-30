@@ -1925,3 +1925,518 @@ func TestCraftingWorkflow_Failure(t *testing.T) {
 		t.Error("MaterialsLost should contain consumed materials even on failure")
 	}
 }
+
+// TestProjectileSpawnMessage_Structure verifies ProjectileSpawnMessage struct initialization.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileSpawnMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name            string
+		projectileID    uint64
+		ownerID         uint64
+		posX            float64
+		posY            float64
+		velX            float64
+		velY            float64
+		damage          float64
+		speed           float64
+		lifetime        float64
+		pierce          int
+		bounce          int
+		explosive       bool
+		explosionRadius float64
+		projectileType  string
+		spawnTime       float64
+		sequence        uint32
+	}{
+		{"standard_arrow", 1000, 100, 50.0, 50.0, 300.0, 0.0, 25.0, 300.0, 2.0, 0, 0, false, 0.0, "arrow", 10.0, 1},
+		{"piercing_bolt", 1001, 100, 60.0, 60.0, 400.0, 100.0, 30.0, 400.0, 3.0, 2, 0, false, 0.0, "bolt", 11.0, 2},
+		{"bouncing_bullet", 1002, 200, 70.0, 70.0, 600.0, -50.0, 35.0, 600.0, 1.5, 0, 3, false, 0.0, "bullet", 12.0, 3},
+		{"explosive_fireball", 1003, 300, 80.0, 80.0, 250.0, 250.0, 50.0, 350.0, 2.0, 0, 0, true, 80.0, "fireball", 13.0, 4},
+		{"infinite_pierce", 1004, 400, 90.0, 90.0, 500.0, 0.0, 40.0, 500.0, 4.0, -1, 0, false, 0.0, "energy", 14.0, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := ProjectileSpawnMessage{
+				ProjectileID:    tt.projectileID,
+				OwnerID:         tt.ownerID,
+				PositionX:       tt.posX,
+				PositionY:       tt.posY,
+				VelocityX:       tt.velX,
+				VelocityY:       tt.velY,
+				Damage:          tt.damage,
+				Speed:           tt.speed,
+				Lifetime:        tt.lifetime,
+				Pierce:          tt.pierce,
+				Bounce:          tt.bounce,
+				Explosive:       tt.explosive,
+				ExplosionRadius: tt.explosionRadius,
+				ProjectileType:  tt.projectileType,
+				SpawnTime:       tt.spawnTime,
+				SequenceNumber:  tt.sequence,
+			}
+
+			if msg.ProjectileID != tt.projectileID {
+				t.Errorf("Expected ProjectileID %d, got %d", tt.projectileID, msg.ProjectileID)
+			}
+			if msg.OwnerID != tt.ownerID {
+				t.Errorf("Expected OwnerID %d, got %d", tt.ownerID, msg.OwnerID)
+			}
+			if msg.PositionX != tt.posX {
+				t.Errorf("Expected PositionX %.2f, got %.2f", tt.posX, msg.PositionX)
+			}
+			if msg.PositionY != tt.posY {
+				t.Errorf("Expected PositionY %.2f, got %.2f", tt.posY, msg.PositionY)
+			}
+			if msg.VelocityX != tt.velX {
+				t.Errorf("Expected VelocityX %.2f, got %.2f", tt.velX, msg.VelocityX)
+			}
+			if msg.VelocityY != tt.velY {
+				t.Errorf("Expected VelocityY %.2f, got %.2f", tt.velY, msg.VelocityY)
+			}
+			if msg.Damage != tt.damage {
+				t.Errorf("Expected Damage %.2f, got %.2f", tt.damage, msg.Damage)
+			}
+			if msg.Speed != tt.speed {
+				t.Errorf("Expected Speed %.2f, got %.2f", tt.speed, msg.Speed)
+			}
+			if msg.Lifetime != tt.lifetime {
+				t.Errorf("Expected Lifetime %.2f, got %.2f", tt.lifetime, msg.Lifetime)
+			}
+			if msg.Pierce != tt.pierce {
+				t.Errorf("Expected Pierce %d, got %d", tt.pierce, msg.Pierce)
+			}
+			if msg.Bounce != tt.bounce {
+				t.Errorf("Expected Bounce %d, got %d", tt.bounce, msg.Bounce)
+			}
+			if msg.Explosive != tt.explosive {
+				t.Errorf("Expected Explosive %v, got %v", tt.explosive, msg.Explosive)
+			}
+			if msg.ExplosionRadius != tt.explosionRadius {
+				t.Errorf("Expected ExplosionRadius %.2f, got %.2f", tt.explosionRadius, msg.ExplosionRadius)
+			}
+			if msg.ProjectileType != tt.projectileType {
+				t.Errorf("Expected ProjectileType %s, got %s", tt.projectileType, msg.ProjectileType)
+			}
+			if msg.SpawnTime != tt.spawnTime {
+				t.Errorf("Expected SpawnTime %.2f, got %.2f", tt.spawnTime, msg.SpawnTime)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestProjectileHitMessage_Structure verifies ProjectileHitMessage struct initialization.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileHitMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name                string
+		projectileID        uint64
+		hitEntityID         uint64
+		hitType             string
+		damageDealt         float64
+		posX                float64
+		posY                float64
+		projectileDestroyed bool
+		explosionTriggered  bool
+		explosionEntities   []uint64
+		explosionDamages    []float64
+		hitTime             float64
+		sequence            uint32
+	}{
+		{"entity_hit_simple", 1000, 500, "entity", 25.0, 100.0, 100.0, true, false, nil, nil, 15.0, 1},
+		{"wall_hit_bounce", 1001, 0, "wall", 0.0, 150.0, 150.0, false, false, nil, nil, 16.0, 2},
+		{"entity_hit_pierce", 1002, 600, "entity", 30.0, 200.0, 200.0, false, false, nil, nil, 17.0, 3},
+		{
+			"explosive_hit",
+			1003,
+			700,
+			"entity",
+			50.0,
+			250.0,
+			250.0,
+			true,
+			true,
+			[]uint64{700, 701, 702},
+			[]float64{50.0, 35.0, 20.0},
+			18.0,
+			4,
+		},
+		{"expire_hit", 1004, 0, "expire", 0.0, 300.0, 300.0, true, false, nil, nil, 20.0, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := ProjectileHitMessage{
+				ProjectileID:        tt.projectileID,
+				HitEntityID:         tt.hitEntityID,
+				HitType:             tt.hitType,
+				DamageDealt:         tt.damageDealt,
+				PositionX:           tt.posX,
+				PositionY:           tt.posY,
+				ProjectileDestroyed: tt.projectileDestroyed,
+				ExplosionTriggered:  tt.explosionTriggered,
+				ExplosionEntities:   tt.explosionEntities,
+				ExplosionDamages:    tt.explosionDamages,
+				HitTime:             tt.hitTime,
+				SequenceNumber:      tt.sequence,
+			}
+
+			if msg.ProjectileID != tt.projectileID {
+				t.Errorf("Expected ProjectileID %d, got %d", tt.projectileID, msg.ProjectileID)
+			}
+			if msg.HitEntityID != tt.hitEntityID {
+				t.Errorf("Expected HitEntityID %d, got %d", tt.hitEntityID, msg.HitEntityID)
+			}
+			if msg.HitType != tt.hitType {
+				t.Errorf("Expected HitType %s, got %s", tt.hitType, msg.HitType)
+			}
+			if msg.DamageDealt != tt.damageDealt {
+				t.Errorf("Expected DamageDealt %.2f, got %.2f", tt.damageDealt, msg.DamageDealt)
+			}
+			if msg.PositionX != tt.posX {
+				t.Errorf("Expected PositionX %.2f, got %.2f", tt.posX, msg.PositionX)
+			}
+			if msg.PositionY != tt.posY {
+				t.Errorf("Expected PositionY %.2f, got %.2f", tt.posY, msg.PositionY)
+			}
+			if msg.ProjectileDestroyed != tt.projectileDestroyed {
+				t.Errorf("Expected ProjectileDestroyed %v, got %v", tt.projectileDestroyed, msg.ProjectileDestroyed)
+			}
+			if msg.ExplosionTriggered != tt.explosionTriggered {
+				t.Errorf("Expected ExplosionTriggered %v, got %v", tt.explosionTriggered, msg.ExplosionTriggered)
+			}
+
+			// Verify explosion data consistency
+			if tt.explosionTriggered {
+				if len(msg.ExplosionEntities) != len(msg.ExplosionDamages) {
+					t.Errorf("ExplosionEntities and ExplosionDamages length mismatch: %d vs %d",
+						len(msg.ExplosionEntities), len(msg.ExplosionDamages))
+				}
+			}
+
+			if msg.HitTime != tt.hitTime {
+				t.Errorf("Expected HitTime %.2f, got %.2f", tt.hitTime, msg.HitTime)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestProjectileDespawnMessage_Structure verifies ProjectileDespawnMessage struct initialization.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileDespawnMessage_Structure(t *testing.T) {
+	tests := []struct {
+		name         string
+		projectileID uint64
+		reason       string
+		despawnTime  float64
+		sequence     uint32
+	}{
+		{"expire_naturally", 1000, "expired", 20.0, 1},
+		{"hit_entity", 1001, "hit", 21.0, 2},
+		{"out_of_bounds", 1002, "out_of_bounds", 22.0, 3},
+		{"destroyed_by_player", 1003, "hit", 23.0, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := ProjectileDespawnMessage{
+				ProjectileID:   tt.projectileID,
+				Reason:         tt.reason,
+				DespawnTime:    tt.despawnTime,
+				SequenceNumber: tt.sequence,
+			}
+
+			if msg.ProjectileID != tt.projectileID {
+				t.Errorf("Expected ProjectileID %d, got %d", tt.projectileID, msg.ProjectileID)
+			}
+			if msg.Reason != tt.reason {
+				t.Errorf("Expected Reason %s, got %s", tt.reason, msg.Reason)
+			}
+			if msg.DespawnTime != tt.despawnTime {
+				t.Errorf("Expected DespawnTime %.2f, got %.2f", tt.despawnTime, msg.DespawnTime)
+			}
+			if msg.SequenceNumber != tt.sequence {
+				t.Errorf("Expected SequenceNumber %d, got %d", tt.sequence, msg.SequenceNumber)
+			}
+		})
+	}
+}
+
+// TestProjectileWorkflow tests a complete projectile interaction flow.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileWorkflow(t *testing.T) {
+	// Simulate client-server projectile interaction
+
+	// Step 1: Server spawns projectile (client-predicted or server-authoritative)
+	spawnMsg := ProjectileSpawnMessage{
+		ProjectileID:    1000,
+		OwnerID:         100,
+		PositionX:       50.0,
+		PositionY:       50.0,
+		VelocityX:       300.0,
+		VelocityY:       0.0,
+		Damage:          25.0,
+		Speed:           300.0,
+		Lifetime:        2.0,
+		Pierce:          0,
+		Bounce:          0,
+		Explosive:       false,
+		ExplosionRadius: 0.0,
+		ProjectileType:  "arrow",
+		SpawnTime:       10.0,
+		SequenceNumber:  1,
+	}
+
+	if spawnMsg.ProjectileID == 0 {
+		t.Error("ProjectileID should not be zero")
+	}
+	if spawnMsg.OwnerID == 0 {
+		t.Error("OwnerID should not be zero")
+	}
+	if spawnMsg.Damage <= 0 {
+		t.Error("Damage should be positive")
+	}
+	if spawnMsg.Speed <= 0 {
+		t.Error("Speed should be positive")
+	}
+	if spawnMsg.Lifetime <= 0 {
+		t.Error("Lifetime should be positive")
+	}
+
+	// Step 2: Server broadcasts hit when projectile collides
+	hitMsg := ProjectileHitMessage{
+		ProjectileID:        1000,
+		HitEntityID:         500,
+		HitType:             "entity",
+		DamageDealt:         25.0,
+		PositionX:           200.0,
+		PositionY:           50.0,
+		ProjectileDestroyed: true,
+		ExplosionTriggered:  false,
+		ExplosionEntities:   nil,
+		ExplosionDamages:    nil,
+		HitTime:             10.5,
+		SequenceNumber:      2,
+	}
+
+	if hitMsg.ProjectileID != spawnMsg.ProjectileID {
+		t.Error("Hit projectile ID should match spawned projectile")
+	}
+	if hitMsg.HitEntityID == 0 && hitMsg.HitType == "entity" {
+		t.Error("Entity hit should have non-zero HitEntityID")
+	}
+	if hitMsg.DamageDealt != spawnMsg.Damage {
+		t.Error("Damage dealt should match projectile damage")
+	}
+	if hitMsg.HitTime <= spawnMsg.SpawnTime {
+		t.Error("Hit time should be after spawn time")
+	}
+
+	// Step 3: Server broadcasts despawn (redundant if hit destroyed projectile, but validates state)
+	despawnMsg := ProjectileDespawnMessage{
+		ProjectileID:   1000,
+		Reason:         "hit",
+		DespawnTime:    10.5,
+		SequenceNumber: 3,
+	}
+
+	if despawnMsg.ProjectileID != spawnMsg.ProjectileID {
+		t.Error("Despawn projectile ID should match spawned projectile")
+	}
+	if despawnMsg.DespawnTime < hitMsg.HitTime {
+		t.Error("Despawn time should be at or after hit time")
+	}
+	if hitMsg.ProjectileDestroyed && despawnMsg.Reason != "hit" {
+		t.Error("Despawn reason should match hit destruction")
+	}
+
+	// Verify message ordering
+	if spawnMsg.SequenceNumber >= hitMsg.SequenceNumber {
+		t.Error("Spawn should come before hit")
+	}
+	if hitMsg.SequenceNumber >= despawnMsg.SequenceNumber {
+		t.Error("Hit should come before despawn")
+	}
+}
+
+// TestProjectileWorkflow_Explosive tests an explosive projectile interaction flow.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileWorkflow_Explosive(t *testing.T) {
+	// Simulate explosive projectile scenario
+
+	// Step 1: Server spawns explosive projectile
+	spawnMsg := ProjectileSpawnMessage{
+		ProjectileID:    1003,
+		OwnerID:         100,
+		PositionX:       50.0,
+		PositionY:       50.0,
+		VelocityX:       250.0,
+		VelocityY:       0.0,
+		Damage:          50.0,
+		Speed:           250.0,
+		Lifetime:        2.0,
+		Pierce:          0,
+		Bounce:          0,
+		Explosive:       true,
+		ExplosionRadius: 80.0,
+		ProjectileType:  "fireball",
+		SpawnTime:       10.0,
+		SequenceNumber:  1,
+	}
+
+	if !spawnMsg.Explosive {
+		t.Error("Projectile should be explosive")
+	}
+	if spawnMsg.ExplosionRadius <= 0 {
+		t.Error("Explosive projectile should have positive explosion radius")
+	}
+
+	// Step 2: Server broadcasts hit with explosion
+	hitMsg := ProjectileHitMessage{
+		ProjectileID:        1003,
+		HitEntityID:         500,
+		HitType:             "entity",
+		DamageDealt:         50.0,
+		PositionX:           200.0,
+		PositionY:           50.0,
+		ProjectileDestroyed: true,
+		ExplosionTriggered:  true,
+		ExplosionEntities:   []uint64{500, 501, 502},
+		ExplosionDamages:    []float64{50.0, 35.0, 20.0},
+		HitTime:             10.8,
+		SequenceNumber:      2,
+	}
+
+	if !hitMsg.ExplosionTriggered {
+		t.Error("Explosion should be triggered for explosive projectile")
+	}
+	if len(hitMsg.ExplosionEntities) == 0 {
+		t.Error("Explosion should affect entities")
+	}
+	if len(hitMsg.ExplosionEntities) != len(hitMsg.ExplosionDamages) {
+		t.Error("Explosion entities and damages should have same length")
+	}
+
+	// Verify damage falloff (damage should decrease with distance)
+	for i := 1; i < len(hitMsg.ExplosionDamages); i++ {
+		if hitMsg.ExplosionDamages[i] > hitMsg.ExplosionDamages[i-1] {
+			t.Error("Explosion damage should decrease with distance")
+		}
+	}
+
+	// Step 3: Server broadcasts despawn
+	despawnMsg := ProjectileDespawnMessage{
+		ProjectileID:   1003,
+		Reason:         "hit",
+		DespawnTime:    10.8,
+		SequenceNumber: 3,
+	}
+
+	if despawnMsg.ProjectileID != spawnMsg.ProjectileID {
+		t.Error("Despawn projectile ID should match spawned projectile")
+	}
+}
+
+// TestProjectileWorkflow_Pierce tests a piercing projectile interaction flow.
+// Phase 10.2 Week 4: Projectile Multiplayer Synchronization
+func TestProjectileWorkflow_Pierce(t *testing.T) {
+	// Simulate piercing projectile scenario
+
+	// Step 1: Server spawns piercing projectile
+	spawnMsg := ProjectileSpawnMessage{
+		ProjectileID:    1002,
+		OwnerID:         100,
+		PositionX:       50.0,
+		PositionY:       50.0,
+		VelocityX:       400.0,
+		VelocityY:       0.0,
+		Damage:          30.0,
+		Speed:           400.0,
+		Lifetime:        3.0,
+		Pierce:          2,
+		Bounce:          0,
+		Explosive:       false,
+		ExplosionRadius: 0.0,
+		ProjectileType:  "bolt",
+		SpawnTime:       10.0,
+		SequenceNumber:  1,
+	}
+
+	if spawnMsg.Pierce <= 0 {
+		t.Error("Projectile should have pierce capability")
+	}
+
+	// Step 2: Server broadcasts first hit (projectile continues)
+	hitMsg1 := ProjectileHitMessage{
+		ProjectileID:        1002,
+		HitEntityID:         500,
+		HitType:             "entity",
+		DamageDealt:         30.0,
+		PositionX:           150.0,
+		PositionY:           50.0,
+		ProjectileDestroyed: false, // Continues due to pierce
+		ExplosionTriggered:  false,
+		ExplosionEntities:   nil,
+		ExplosionDamages:    nil,
+		HitTime:             10.25,
+		SequenceNumber:      2,
+	}
+
+	if hitMsg1.ProjectileDestroyed {
+		t.Error("Piercing projectile should not be destroyed on first hit")
+	}
+
+	// Step 3: Server broadcasts second hit (projectile continues)
+	hitMsg2 := ProjectileHitMessage{
+		ProjectileID:        1002,
+		HitEntityID:         501,
+		HitType:             "entity",
+		DamageDealt:         30.0,
+		PositionX:           250.0,
+		PositionY:           50.0,
+		ProjectileDestroyed: false, // Still has 1 pierce remaining
+		ExplosionTriggered:  false,
+		ExplosionEntities:   nil,
+		ExplosionDamages:    nil,
+		HitTime:             10.5,
+		SequenceNumber:      3,
+	}
+
+	if hitMsg2.ProjectileDestroyed {
+		t.Error("Piercing projectile should not be destroyed on second hit with pierce=2")
+	}
+
+	// Step 4: Server broadcasts third hit (projectile destroyed, pierce exhausted)
+	hitMsg3 := ProjectileHitMessage{
+		ProjectileID:        1002,
+		HitEntityID:         502,
+		HitType:             "entity",
+		DamageDealt:         30.0,
+		PositionX:           350.0,
+		PositionY:           50.0,
+		ProjectileDestroyed: true, // Pierce exhausted
+		ExplosionTriggered:  false,
+		ExplosionEntities:   nil,
+		ExplosionDamages:    nil,
+		HitTime:             10.75,
+		SequenceNumber:      4,
+	}
+
+	if !hitMsg3.ProjectileDestroyed {
+		t.Error("Piercing projectile should be destroyed after pierce count exhausted")
+	}
+
+	// Verify hit times are increasing
+	if hitMsg1.HitTime >= hitMsg2.HitTime {
+		t.Error("Hit times should be increasing")
+	}
+	if hitMsg2.HitTime >= hitMsg3.HitTime {
+		t.Error("Hit times should be increasing")
+	}
+}

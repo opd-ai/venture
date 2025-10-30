@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image/color"
 	"math"
 	"math/rand"
 	"os"
@@ -82,6 +83,176 @@ func randomGenre() string {
 	time := time.Now().UnixNano()
 	rand := rand.New(rand.NewSource(time))
 	return genres[rand.Intn(len(genres))]
+}
+
+// spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.
+// Spawns wall torches, magical crystals, and genre-specific lights based on the world seed.
+// This function is part of Phase 5.3: Dynamic Lighting System Integration.
+func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
+	rng := rand.New(rand.NewSource(seed))
+	lightCount := 0
+
+	// Genre-specific light configurations
+	type lightConfig struct {
+		torchInterval   int // Every N tiles along walls/corridors
+		crystalChance   float64
+		torchColor      color.RGBA
+		crystalColor    color.RGBA
+		torchRadius     float64
+		crystalRadius   float64
+		torchFlicker    bool
+		crystalPulse    bool
+	}
+
+	configs := map[string]lightConfig{
+		"fantasy": {
+			torchInterval:   5,
+			crystalChance:   0.15,
+			torchColor:      color.RGBA{255, 150, 80, 255}, // Warm torch light
+			crystalColor:    color.RGBA{150, 200, 255, 255}, // Blue magical crystal
+			torchRadius:     150,
+			crystalRadius:   120,
+			torchFlicker:    true,
+			crystalPulse:    true,
+		},
+		"scifi": {
+			torchInterval:   4,
+			crystalChance:   0.20,
+			torchColor:      color.RGBA{150, 200, 255, 255}, // Cool neon blue
+			crystalColor:    color.RGBA{0, 255, 200, 255},   // Cyan tech light
+			torchRadius:     180,
+			crystalRadius:   140,
+			torchFlicker:    false,
+			crystalPulse:    true,
+		},
+		"horror": {
+			torchInterval:   7,
+			crystalChance:   0.08,
+			torchColor:      color.RGBA{180, 140, 100, 255}, // Dim yellowish
+			crystalColor:    color.RGBA{120, 80, 80, 255},   // Faint reddish
+			torchRadius:     100,
+			crystalRadius:   80,
+			torchFlicker:    true,
+			crystalPulse:    false,
+		},
+		"cyberpunk": {
+			torchInterval:   3,
+			crystalChance:   0.25,
+			torchColor:      color.RGBA{255, 0, 150, 255},  // Neon pink
+			crystalColor:    color.RGBA{0, 255, 255, 255},  // Cyan hologram
+			torchRadius:     160,
+			crystalRadius:   130,
+			torchFlicker:    false,
+			crystalPulse:    true,
+		},
+		"postapoc": {
+			torchInterval:   6,
+			crystalChance:   0.10,
+			torchColor:      color.RGBA{200, 180, 140, 255}, // Dusty yellow
+			crystalColor:    color.RGBA{100, 255, 100, 255}, // Radioactive green
+			torchRadius:     120,
+			crystalRadius:   100,
+			torchFlicker:    true,
+			crystalPulse:    true,
+		},
+	}
+
+	// Get configuration for this genre (default to fantasy if unknown)
+	config, ok := configs[genreID]
+	if !ok {
+		config = configs["fantasy"]
+	}
+
+	// Spawn lights in each room
+	for _, room := range terrain.Rooms {
+		// Skip entrance room (index 0) - keep it dark for dramatic effect
+		if room == terrain.Rooms[0] {
+			continue
+		}
+
+		// Spawn wall torches around room perimeter
+		// Top and bottom walls
+		for x := room.X; x < room.X+room.Width; x++ {
+			if x%config.torchInterval == 0 {
+				// Top wall
+				if rng.Float64() < 0.6 { // 60% chance per position
+					worldX := float64(x * 32)
+					worldY := float64(room.Y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+				// Bottom wall
+				if rng.Float64() < 0.6 {
+					worldX := float64(x * 32)
+					worldY := float64((room.Y + room.Height - 1) * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+			}
+		}
+
+		// Left and right walls
+		for y := room.Y; y < room.Y+room.Height; y++ {
+			if y%config.torchInterval == 0 {
+				// Left wall
+				if rng.Float64() < 0.6 {
+					worldX := float64(room.X * 32)
+					worldY := float64(y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+				// Right wall
+				if rng.Float64() < 0.6 {
+					worldX := float64((room.X + room.Width - 1) * 32)
+					worldY := float64(y * 32)
+					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+					lightCount++
+				}
+			}
+		}
+
+		// Spawn magical crystals in room centers (boss rooms, treasure rooms)
+		if rng.Float64() < config.crystalChance {
+			cx, cy := room.Center()
+			worldX := float64(cx * 32)
+			worldY := float64(cy * 32)
+			spawnCrystalLight(world, worldX, worldY, config.crystalColor, config.crystalRadius, config.crystalPulse)
+			lightCount++
+		}
+	}
+
+	return lightCount
+}
+
+// spawnTorchLight creates a wall torch light entity.
+func spawnTorchLight(world *engine.World, x, y float64, color color.RGBA, radius float64, flicker bool) {
+	lightEntity := world.CreateEntity()
+	lightEntity.AddComponent(&engine.PositionComponent{X: x, Y: y})
+
+	torchLight := engine.NewTorchLight(radius)
+	torchLight.Color = color
+	torchLight.Enabled = true
+	if flicker {
+		torchLight.Flickering = true
+		torchLight.FlickerSpeed = 2.0 + (rand.Float64() * 2.0) // Vary flicker speed
+		torchLight.FlickerAmount = 0.15
+	}
+	lightEntity.AddComponent(torchLight)
+}
+
+// spawnCrystalLight creates a magical crystal light entity.
+func spawnCrystalLight(world *engine.World, x, y float64, color color.RGBA, radius float64, pulse bool) {
+	lightEntity := world.CreateEntity()
+	lightEntity.AddComponent(&engine.PositionComponent{X: x, Y: y})
+
+	crystalLight := engine.NewCrystalLight(radius, color)
+	crystalLight.Enabled = true
+	if pulse {
+		crystalLight.Pulsing = true
+		crystalLight.PulseSpeed = 1.5
+		crystalLight.PulseAmount = 0.25
+	}
+	lightEntity.AddComponent(crystalLight)
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
@@ -709,6 +880,10 @@ func main() {
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
 
+	// Phase 5.3: Add lifetime system for temporary entities (spell lights, etc.)
+	lifetimeSystem := engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
+	game.World.AddSystem(lifetimeSystem)
+
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
 	game.HelpSystem = helpSystem
@@ -901,6 +1076,18 @@ func main() {
 	stationCount := engine.SpawnStationsInTerrain(game.World, stationGen, generatedTerrain, 32, *seed+1000, *genreID)
 	if *verbose {
 		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
+	}
+
+	// Phase 5.3: Spawn environmental lights in dungeon (if lighting enabled)
+	if *enableLighting {
+		if *verbose {
+			clientLogger.Info("spawning environmental lights in dungeon")
+		}
+		lightCount := spawnEnvironmentalLights(game.World, generatedTerrain, *seed+2000, *genreID)
+		clientLogger.WithFields(logrus.Fields{
+			"lightCount": lightCount,
+			"genre":      *genreID,
+		}).Info("spawned environmental lights")
 	}
 
 	// Create player entity

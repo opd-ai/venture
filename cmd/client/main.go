@@ -54,18 +54,19 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 }
 
 var (
-	width         = flag.Int("width", 800, "Screen width")
-	height        = flag.Int("height", 600, "Screen height")
-	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID       = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
-	multiplayer   = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay   = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
-	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
-	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
-	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	width          = flag.Int("width", 800, "Screen width")
+	height         = flag.Int("height", 600, "Screen height")
+	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
+	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
+	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN        = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 )
 
 // return a random seed
@@ -775,6 +776,18 @@ func main() {
 		clientLogger.Info("terrain rendering system initialized")
 	}
 
+	// Configure lighting system
+	if *enableLighting {
+		clientLogger.Info("enabling dynamic lighting system")
+		game.EnableLighting(true)
+		game.SetLightingGenrePreset(*genreID)
+		clientLogger.WithFields(logrus.Fields{
+			"genre":     *genreID,
+			"enabled":   true,
+			"maxLights": 16,
+		}).Info("lighting system configured")
+	}
+
 	// GAP REPAIR: Initialize efficient terrain collision checking
 	if *verbose {
 		clientLogger.Info("initializing terrain collision system")
@@ -965,6 +978,20 @@ func main() {
 	camera := engine.NewCameraComponent()
 	camera.Smoothing = 0.1
 	player.AddComponent(camera)
+
+	// Phase 5.3: Add player torch for dynamic lighting (if enabled)
+	if *enableLighting {
+		playerTorch := engine.NewTorchLight(200) // 200-pixel radius torch with flicker
+		playerTorch.Enabled = true
+		player.AddComponent(playerTorch)
+
+		if *verbose {
+			clientLogger.WithFields(logrus.Fields{
+				"radius":    200,
+				"intensity": playerTorch.Intensity,
+			}).Info("player torch added")
+		}
+	}
 
 	// Set player as the active camera
 	game.CameraSystem.SetActiveCamera(player)

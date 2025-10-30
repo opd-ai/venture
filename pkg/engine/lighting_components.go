@@ -253,7 +253,7 @@ func (c *LightingConfig) SetGenrePreset(genreID string) {
 	case "fantasy":
 		c.AmbientIntensity = 0.4
 		c.AmbientColor = color.RGBA{120, 110, 90, 255} // Warm tone
-	case "sci-fi":
+	case "scifi", "sci-fi": // Support both canonical and hyphenated form
 		c.AmbientIntensity = 0.35
 		c.AmbientColor = color.RGBA{90, 110, 140, 255} // Cool blue
 	case "horror":
@@ -262,7 +262,7 @@ func (c *LightingConfig) SetGenrePreset(genreID string) {
 	case "cyberpunk":
 		c.AmbientIntensity = 0.25
 		c.AmbientColor = color.RGBA{100, 80, 120, 255} // Purple tint
-	case "post-apocalyptic":
+	case "postapoc", "post-apocalyptic": // Support both canonical and hyphenated form
 		c.AmbientIntensity = 0.3
 		c.AmbientColor = color.RGBA{130, 120, 100, 255} // Dusty, harsh
 	default:

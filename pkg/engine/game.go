@@ -40,6 +40,8 @@ type EbitenGame struct {
 	CameraSystem        *CameraSystem
 	RenderSystem        *EbitenRenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
+	LightingSystem      *LightingSystem // Dynamic lighting system (Phase 5.3)
+	sceneBuffer         *ebiten.Image   // Reusable buffer for lighting post-processing
 	HUDSystem           *EbitenHUDSystem
 	TutorialSystem      *EbitenTutorialSystem
 	HelpSystem          *EbitenHelpSystem
@@ -128,6 +130,16 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 
 	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
 
+	// Create lighting system with default configuration
+	// Note: Will be enabled via command-line flag in client/main.go
+	lightingConfig := NewLightingConfig()
+	lightingConfig.Enabled = false // Disabled by default, enable via flag
+	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
+
+	// Create reusable scene buffer for lighting post-processing
+	// Allocated once to avoid per-frame allocations (60+ FPS)
+	sceneBuffer := ebiten.NewImage(screenWidth, screenHeight)
+
 	game := &EbitenGame{
 		World:              world,
 		lastUpdateTime:     time.Now(),
@@ -144,6 +156,8 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		CharacterCreation:  NewCharacterCreation(screenWidth, screenHeight),
 		CameraSystem:       cameraSystem,
 		RenderSystem:       renderSystem,
+		LightingSystem:     lightingSystem,
+		sceneBuffer:        sceneBuffer,
 		HUDSystem:          hudSystem,
 		MenuSystem:         menuSystem,
 		InventoryUI:        inventoryUI,
@@ -781,13 +795,38 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 
 	// From here on, we're in gameplay state and render the full game
 
-	// Render terrain (if available)
-	if g.TerrainRenderSystem != nil {
-		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
-	}
+	// If lighting is enabled, use post-processing pipeline
+	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
+		// Clear and reuse scene buffer (avoid per-frame allocation)
+		g.sceneBuffer.Clear()
 
-	// Render all entities
-	g.RenderSystem.Draw(screen, g.World.GetEntities())
+		// Render terrain to buffer (if available)
+		if g.TerrainRenderSystem != nil {
+			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
+		}
+
+		// Render all entities to buffer
+		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+
+		// Update lighting system viewport based on camera
+		if g.CameraSystem != nil {
+			camX, camY := g.CameraSystem.GetPosition()
+			g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
+		}
+
+		// Apply lighting as post-processing (renders sceneBuffer with lighting to screen)
+		entities := g.World.GetEntities()
+		g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
+	} else {
+		// Standard rendering pipeline (no lighting)
+		// Render terrain (if available)
+		if g.TerrainRenderSystem != nil {
+			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+		}
+
+		// Render all entities
+		g.RenderSystem.Draw(screen, g.World.GetEntities())
+	}
 
 	// Render HUD overlay
 	g.HUDSystem.Draw(screen)
@@ -1049,3 +1088,31 @@ var (
 	_ GameRunner  = (*EbitenGame)(nil)
 	_ ebiten.Game = (*EbitenGame)(nil)
 )
+
+// EnableLighting enables or disables the dynamic lighting system.
+// When enabled, uses post-processing rendering pipeline with light sources.
+func (g *EbitenGame) EnableLighting(enabled bool) {
+	if g.LightingSystem != nil {
+		g.LightingSystem.SetEnabled(enabled)
+
+		if g.logger != nil {
+			g.logger.WithField("enabled", enabled).Info("lighting system toggled")
+		}
+	}
+}
+
+// SetLightingGenrePreset configures lighting for the specified genre.
+// This should be called when the genre is selected or changed.
+func (g *EbitenGame) SetLightingGenrePreset(genreID string) {
+	if g.LightingSystem != nil {
+		config := g.LightingSystem.GetConfig()
+		if config != nil {
+			config.SetGenrePreset(genreID)
+			g.LightingSystem.SetConfig(config)
+
+			if g.logger != nil {
+				g.logger.WithField("genre", genreID).Info("lighting genre preset applied")
+			}
+		}
+	}
+}

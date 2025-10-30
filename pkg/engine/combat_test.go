@@ -960,8 +960,8 @@ func TestFindEnemyInAimDirection(t *testing.T) {
 	}{
 		{
 			name:     "enemy directly ahead",
-			aimAngle: 0,                  // aiming right
-			aimCone:  math.Pi / 4,        // 45° cone
+			aimAngle: 0,           // aiming right
+			aimCone:  math.Pi / 4, // 45° cone
 			enemyOffsets: []struct{ x, y float64 }{
 				{x: 50, y: 0}, // directly right
 			},
@@ -1035,7 +1035,7 @@ func TestFindEnemyInAimDirection(t *testing.T) {
 			aimAngle: 0,           // aiming right
 			aimCone:  math.Pi / 2, // 90° cone (wider)
 			enemyOffsets: []struct{ x, y float64 }{
-				{x: 30, y: 40}, // 45° up-right (in 90° cone, not in 45° cone)
+				{x: 50, y: 30}, // ~31° up-right (in 90° cone, not in 45° cone)
 			},
 			maxRange:  100,
 			expectHit: 0,
@@ -1070,6 +1070,9 @@ func TestFindEnemyInAimDirection(t *testing.T) {
 				enemies[i] = enemy
 			}
 
+			// Process pending entity additions
+			world.Update(0)
+
 			// Find enemy in aim direction
 			result := FindEnemyInAimDirection(world, attacker, tt.aimAngle, tt.maxRange, tt.aimCone)
 
@@ -1099,6 +1102,8 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
 		attacker.AddComponent(&TeamComponent{TeamID: 1})
 
+		world.Update(0) // Process pending additions
+
 		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
 		if result != nil {
 			t.Error("expected nil when no enemies exist")
@@ -1114,6 +1119,8 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		enemy.AddComponent(&PositionComponent{X: 50, Y: 0})
 		enemy.AddComponent(&TeamComponent{TeamID: 2})
 		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
 
 		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
 		if result != nil {
@@ -1132,6 +1139,8 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		enemy.AddComponent(&TeamComponent{TeamID: 2})
 		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
+		world.Update(0) // Process pending additions
+
 		result := FindEnemyInAimDirection(world, attacker, 0, 100, math.Pi/4)
 		if result != nil {
 			t.Error("expected nil when enemy has no position")
@@ -1149,6 +1158,8 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		enemy.AddComponent(&TeamComponent{TeamID: 2})
 		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
+		world.Update(0) // Process pending additions
+
 		result := FindEnemyInAimDirection(world, attacker, 0, 100, 0) // Zero cone
 		if result != nil {
 			t.Error("expected nil with zero aim cone and non-zero angle")
@@ -1165,6 +1176,8 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		enemy.AddComponent(&PositionComponent{X: -50, Y: -50}) // Behind and to the left
 		enemy.AddComponent(&TeamComponent{TeamID: 2})
 		enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+		world.Update(0) // Process pending additions
 
 		result := FindEnemyInAimDirection(world, attacker, 0, 100, 2*math.Pi) // Full circle
 		if result == nil {

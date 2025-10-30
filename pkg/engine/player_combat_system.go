@@ -125,7 +125,7 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 			target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
 
 			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				targetID := -1
+				targetID := uint64(0)
 				if target != nil {
 					targetID = target.ID
 				}

@@ -63,17 +63,23 @@
             errorDiv.textContent = message;
         }
         
-        // Prevent default touch behaviors (zoom, scroll, pull-to-refresh)
+        // Prevent default touch behaviors (zoom, scroll, pull-to-refresh) only on document,
+        // but allow touch events to reach the game canvas for game controls.
+        // Touch events will naturally propagate to Ebiten's canvas for game input handling.
         document.addEventListener('touchstart', function(e) {
-            // Allow touch events to reach the game canvas
-            // but prevent default browser behaviors
-            if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+            // Only prevent default for non-interactive elements (links, buttons)
+            // Canvas touches are allowed through for game input
+            if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'CANVAS') {
                 e.preventDefault();
             }
         }, { passive: false });
         
         document.addEventListener('touchmove', function(e) {
-            e.preventDefault();
+            // Allow touch move on canvas for game controls (movement, gestures)
+            // Prevent on document to avoid scrolling
+            if (e.target.tagName !== 'CANVAS') {
+                e.preventDefault();
+            }
         }, { passive: false });
         
         

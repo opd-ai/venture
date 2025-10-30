@@ -11,11 +11,16 @@ This document outlines the next-generation development plan for Venture, buildin
 **Architecture:** Entity-Component-System (ECS) + Deterministic PCG  
 **Engine:** Go 1.24+ with Ebiten 2.9+
 
-## Project Status: VERSION 2.0 PLANNING 🎯
+## Project Status: VERSION 2.0 IN DEVELOPMENT 🚧
 
-**Current State:** Version 1.1 Production Released (Phase 9.4 Complete)  
-**Next Major Version:** 2.0 - Enhanced Mechanics  
-**Status:** Planning & Design Phase
+**Current State:** Version 2.0 Phase 10.1 In Progress (Foundation Components Complete)  
+**Previous Version:** 1.1 Production (Phase 9.4 Complete - October 2025)  
+**Status:** Active Development - 360° Rotation & Mouse Aim System
+
+### Phase 10.1 Status (October 2025)
+- ✅ **Week 1-2 Complete:** RotationComponent, AimComponent, RotationSystem implemented
+- ✅ **Week 3 Complete:** Combat system integration with aim-based targeting
+- ⏳ **Week 4 In Progress:** Mobile dual joystick controls, integration testing
 
 ### Version 1.1 Production Achievements ✅
 
@@ -65,9 +70,38 @@ Version 2.0 transforms Venture from a traditional top-down action-RPG into a **n
 **Priority:** CRITICAL - Foundation for all Version 2.0 features  
 **Dependencies:** None - builds on Phase 9.4 completion
 
-### 10.1: 360° Rotation & Mouse Aim System
+### 10.1: 360° Rotation & Mouse Aim System ✅ **FOUNDATION COMPLETE** (October 2025)
 
 **Description:** Transform combat from 4-directional to full 360° rotation with independent aim control, enabling dual-stick shooter mechanics (WASD movement + mouse aim).
+
+**Completion Status:**
+- ✅ **Week 1-2:** RotationComponent, AimComponent, RotationSystem (100% complete)
+- ✅ **Week 3:** Combat system integration with aim-based targeting (100% complete)
+- ⏳ **Week 4:** Mobile dual joystick controls (in progress)
+
+**Implemented Components:**
+- ✅ `RotationComponent` (`pkg/engine/rotation_component.go`) - 171 lines, 100% tested
+  - Full 360° rotation using radians
+  - Smooth rotation interpolation at 3 rad/s (configurable)
+  - Instant rotation mode for teleports
+  - Cardinal direction mapping (8 directions)
+  - Direction vector calculation
+- ✅ `AimComponent` (`pkg/engine/aim_component.go`) - 179 lines, 100% tested
+  - Target-based aiming (mouse cursor, touch position)
+  - Direct angle specification (gamepad)
+  - Auto-aim assist support
+  - Attack origin calculation
+- ✅ `RotationSystem` (`pkg/engine/rotation_system.go`) - 136 lines, 100% tested
+  - Smooth rotation interpolation
+  - Target angle synchronization
+  - Entity rotation updates
+- ✅ Combat integration (`pkg/engine/combat_system.go`)
+  - `FindEnemyInAimDirection()` function (77 lines)
+  - 45° aim cone targeting
+  - Closest-in-cone selection
+  - 100% test coverage (18 tests)
+
+**Test Coverage:** 100% on all new code (57 tests total)
 
 **Rationale:** Current 4-directional system limits combat dynamics. 360° rotation with mouse aim enables:
 - More precise combat targeting

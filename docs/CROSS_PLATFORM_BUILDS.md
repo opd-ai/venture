@@ -236,6 +236,23 @@ These files are only included when building with `ebitenmobile bind`, not with r
 - Or test only packages without Ebiten dependencies
 - Or use ebitenmobile for mobile platforms
 
+### 4. "undefined: syscall.Exec" (WASM/Mobile Builds)
+
+**Issue:** The `zenity` library (used for native file dialogs) uses `syscall.Exec` which is not available in WebAssembly or mobile platforms.
+
+**Solution:** Implemented platform-specific code using Go build tags:
+- **Desktop** (`pkg/engine/character_creation_desktop.go`): Full zenity support with native file dialogs
+  - Build tag: `//go:build !js && !android && !ios`
+- **Mobile/WASM** (`pkg/engine/character_creation_mobile.go`): Stub that returns "not supported" error
+  - Build tag: `//go:build js || android || ios`
+
+**API Compatibility:** The public API (`OpenPortraitDialog()`) has the same signature on all platforms. Desktop users get full functionality, while mobile/WASM users get a clear error message.
+
+**Future Enhancements:**
+- WASM: Implement HTML5 file input as alternative via syscall/js
+- Android: Use `Intent.ACTION_OPEN_DOCUMENT` for native file picker
+- iOS: Use `UIDocumentPickerViewController` for native file picker
+
 ## References
 
 - [Go Build Constraints](https://pkg.go.dev/go/build#hdr-Build_Constraints)

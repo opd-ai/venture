@@ -2,19 +2,19 @@ package engine
 
 import (
 	"math"
-
-	"github.com/opd-ai/venture/pkg/world"
 )
 
 // ProjectileSystem manages projectile physics, collision detection, and lifecycle.
 type ProjectileSystem struct {
-	world *world.WorldState
+	world *World
 	// Quadtree for efficient spatial queries (optional, can be nil for simple collision)
 	quadtree *Quadtree
+	// Terrain collision checker for wall collision (optional)
+	terrainChecker *TerrainCollisionChecker
 }
 
 // NewProjectileSystem creates a new projectile system.
-func NewProjectileSystem(w *world.WorldState) *ProjectileSystem {
+func NewProjectileSystem(w *World) *ProjectileSystem {
 	return &ProjectileSystem{
 		world:    w,
 		quadtree: nil, // Initialize later if spatial partitioning is available
@@ -26,14 +26,19 @@ func (s *ProjectileSystem) SetQuadtree(qt *Quadtree) {
 	s.quadtree = qt
 }
 
+// SetTerrainChecker assigns a terrain collision checker for wall collision detection.
+func (s *ProjectileSystem) SetTerrainChecker(checker *TerrainCollisionChecker) {
+	s.terrainChecker = checker
+}
+
 // Update processes all projectiles: movement, aging, collision detection.
-func (s *ProjectileSystem) Update(deltaTime float64) {
+func (s *ProjectileSystem) Update(entities []*Entity, deltaTime float64) {
 	if s.world == nil {
 		return
 	}
 
 	// Get all projectile entities
-	projectiles := s.world.GetEntitiesWithComponents("projectile", "position", "velocity")
+	projectiles := s.world.GetEntitiesWith("projectile", "position", "velocity")
 
 	for _, entity := range projectiles {
 		s.updateProjectile(entity, deltaTime)
@@ -42,50 +47,62 @@ func (s *ProjectileSystem) Update(deltaTime float64) {
 
 // updateProjectile handles a single projectile's physics and collision.
 func (s *ProjectileSystem) updateProjectile(entity *Entity, deltaTime float64) {
-	projComp, ok := entity.GetComponent("projectile").(*ProjectileComponent)
+	projComp, ok := entity.GetComponent("projectile")
+	if !ok {
+		return
+	}
+	projComponent, ok := projComp.(*ProjectileComponent)
 	if !ok {
 		return
 	}
 
-	posComp, ok := entity.GetComponent("position").(*PositionComponent)
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return
+	}
+	posComponent, ok := posComp.(*PositionComponent)
 	if !ok {
 		return
 	}
 
-	velComp, ok := entity.GetComponent("velocity").(*VelocityComponent)
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return
+	}
+	velComponent, ok := velComp.(*VelocityComponent)
 	if !ok {
 		return
 	}
 
 	// Age the projectile
-	projComp.Age += deltaTime
-	if projComp.IsExpired() {
+	projComponent.Age += deltaTime
+	if projComponent.IsExpired() {
 		s.despawnProjectile(entity)
 		return
 	}
 
 	// Store old position for collision resolution
-	oldX, oldY := posComp.X, posComp.Y
+	oldX, oldY := posComponent.X, posComponent.Y
 
 	// Move projectile
-	posComp.X += velComp.VX * deltaTime
-	posComp.Y += velComp.VY * deltaTime
+	posComponent.X += velComponent.VX * deltaTime
+	posComponent.Y += velComponent.VY * deltaTime
 
 	// Check wall collision
 	if s.checkWallCollision(entity, oldX, oldY) {
-		if projComp.CanBounce() {
-			s.handleBounce(entity, velComp, posComp, oldX, oldY)
-			if projComp.DecrementBounce() {
+		if projComponent.CanBounce() {
+			s.handleBounce(entity, velComponent, posComponent, oldX, oldY)
+			if projComponent.DecrementBounce() {
 				// Handle explosion if explosive
-				if projComp.Explosive {
-					s.handleExplosion(entity, posComp)
+				if projComponent.Explosive {
+					s.handleExplosion(entity, posComponent)
 				}
 				s.despawnProjectile(entity)
 			}
 		} else {
 			// Handle explosion if explosive
-			if projComp.Explosive {
-				s.handleExplosion(entity, posComp)
+			if projComponent.Explosive {
+				s.handleExplosion(entity, posComponent)
 			}
 			s.despawnProjectile(entity)
 		}
@@ -93,35 +110,31 @@ func (s *ProjectileSystem) updateProjectile(entity *Entity, deltaTime float64) {
 	}
 
 	// Check entity collision
-	hitEntity := s.checkEntityCollision(entity, posComp, projComp)
+	hitEntity := s.checkEntityCollision(entity, posComponent, projComponent)
 	if hitEntity != nil {
-		s.handleEntityHit(entity, hitEntity, projComp, posComp)
+		s.handleEntityHit(entity, hitEntity, projComponent, posComponent)
 	}
 }
 
 // checkWallCollision checks if projectile hit a wall.
 func (s *ProjectileSystem) checkWallCollision(entity *Entity, oldX, oldY float64) bool {
-	posComp, ok := entity.GetComponent("position").(*PositionComponent)
+	// If no terrain checker is set, skip wall collision
+	if s.terrainChecker == nil {
+		return false
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return false
+	}
+	pos, ok := posComp.(*PositionComponent)
 	if !ok {
 		return false
 	}
 
-	// Get terrain map
-	if s.world.CurrentMap == nil {
-		return false
-	}
-
-	tileX := int(posComp.X / 32) // Assuming 32-pixel tiles
-	tileY := int(posComp.Y / 32)
-
-	// Check if position is out of bounds
-	if tileX < 0 || tileY < 0 || tileX >= s.world.CurrentMap.Width || tileY >= s.world.CurrentMap.Height {
-		return true
-	}
-
-	// Check if tile is walkable
-	tile := s.world.CurrentMap.Tiles[tileY][tileX]
-	return tile.Type == world.TileWall || tile.Type == world.TileDoor
+	// Use a small bounding box for the projectile
+	const projectileSize = 4.0
+	return s.terrainChecker.CheckCollision(pos.X, pos.Y, projectileSize, projectileSize)
 }
 
 // handleBounce reflects projectile velocity off a wall.
@@ -140,7 +153,7 @@ func (s *ProjectileSystem) handleBounce(entity *Entity, velComp *VelocityCompone
 // checkEntityCollision checks if projectile hit any entity.
 func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *PositionComponent, projComp *ProjectileComponent) *Entity {
 	// Get all entities with position and health (potential targets)
-	entities := s.world.GetEntitiesWithComponents("position", "health")
+	entities := s.world.GetEntitiesWith("position", "health")
 
 	for _, entity := range entities {
 		// Skip self (owner)
@@ -153,7 +166,11 @@ func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *Pos
 			continue
 		}
 
-		entityPos, ok := entity.GetComponent("position").(*PositionComponent)
+		entityPosComp, ok := entity.GetComponent("position")
+		if !ok {
+			continue
+		}
+		entityPos, ok := entityPosComp.(*PositionComponent)
 		if !ok {
 			continue
 		}
@@ -175,10 +192,13 @@ func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *Pos
 // handleEntityHit processes damage and pierce logic when projectile hits entity.
 func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projComp *ProjectileComponent, posComp *PositionComponent) {
 	// Apply damage
-	healthComp, ok := hitEntity.GetComponent("health").(*HealthComponent)
+	healthComp, ok := hitEntity.GetComponent("health")
 	if ok {
-		healthComp.CurrentHealth -= projComp.Damage
-		projComp.HasHit = true
+		health, ok := healthComp.(*HealthComponent)
+		if ok {
+			health.Current -= projComp.Damage
+			projComp.HasHit = true
+		}
 	}
 
 	// Handle explosion
@@ -194,21 +214,29 @@ func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projCo
 
 // handleExplosion applies area damage around explosion point.
 func (s *ProjectileSystem) handleExplosion(projEntity *Entity, posComp *PositionComponent) {
-	projComp, ok := projEntity.GetComponent("projectile").(*ProjectileComponent)
-	if !ok || !projComp.Explosive {
+	projComp, ok := projEntity.GetComponent("projectile")
+	if !ok {
+		return
+	}
+	proj, ok := projComp.(*ProjectileComponent)
+	if !ok || !proj.Explosive {
 		return
 	}
 
 	// Get all entities within explosion radius
-	entities := s.world.GetEntitiesWithComponents("position", "health")
+	entities := s.world.GetEntitiesWith("position", "health")
 
 	for _, entity := range entities {
 		// Skip owner
-		if entity.ID == projComp.OwnerID {
+		if entity.ID == proj.OwnerID {
 			continue
 		}
 
-		entityPos, ok := entity.GetComponent("position").(*PositionComponent)
+		entityPosComp, ok := entity.GetComponent("position")
+		if !ok {
+			continue
+		}
+		entityPos, ok := entityPosComp.(*PositionComponent)
 		if !ok {
 			continue
 		}
@@ -219,13 +247,16 @@ func (s *ProjectileSystem) handleExplosion(projEntity *Entity, posComp *Position
 		dist := math.Sqrt(dx*dx + dy*dy)
 
 		// Apply damage based on distance (linear falloff)
-		if dist <= projComp.ExplosionRadius {
-			healthComp, ok := entity.GetComponent("health").(*HealthComponent)
+		if dist <= proj.ExplosionRadius {
+			healthComp, ok := entity.GetComponent("health")
 			if ok {
-				// Full damage at center, 0 at edge
-				damageFactor := 1.0 - (dist / projComp.ExplosionRadius)
-				damage := projComp.Damage * damageFactor
-				healthComp.CurrentHealth -= damage
+				health, ok := healthComp.(*HealthComponent)
+				if ok {
+					// Full damage at center, 0 at edge
+					damageFactor := 1.0 - (dist / proj.ExplosionRadius)
+					damage := proj.Damage * damageFactor
+					health.Current -= damage
+				}
 			}
 		}
 	}
@@ -272,5 +303,5 @@ func (s *ProjectileSystem) GetProjectileCount() int {
 	if s.world == nil {
 		return 0
 	}
-	return len(s.world.GetEntitiesWithComponents("projectile"))
+	return len(s.world.GetEntitiesWith("projectile"))
 }

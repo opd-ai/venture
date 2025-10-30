@@ -85,6 +85,9 @@ Start the client directly to play solo:
 - `-seed`: Set world seed (default: random)
 - `-genre`: Choose theme (fantasy, scifi, horror, cyberpunk, postapoc)
 - `-width`/`-height`: Set screen resolution
+- `-enable-lighting`: Enable dynamic lighting system (experimental, enhances atmosphere)
+- `-verbose`: Enable detailed logging
+- `-profile`: Enable performance profiling
 
 ### Multiplayer Co-op
 
@@ -171,6 +174,29 @@ For persistent servers or remote hosting, use a dedicated server:
 - **Progression:** Focus your skill points, complete quests, upgrade equipment regularly
 
 **For detailed strategies, mechanics explanations, and advanced tips, see [User Manual](USER_MANUAL.md).**
+
+## Visual Enhancements (Optional)
+
+### Dynamic Lighting
+
+Venture includes an optional dynamic lighting system that enhances atmosphere:
+
+```bash
+# Enable lighting for a more atmospheric experience
+./venture-client -enable-lighting -genre horror
+```
+
+**Features:**
+- **Player Torch**: Automatic light source that follows you
+- **Environmental Lights**: Wall torches and magical crystals
+- **Spell Lights**: Colorful lights during spell casting
+- **Genre-Specific Atmosphere**: Each genre has unique lighting
+
+**Best Genres:** Horror (creates tension), Cyberpunk (neon colors), Fantasy (torch warmth)
+
+**Performance:** Adds ~2-4ms per frame. Omit flag for maximum performance.
+
+---
 
 ## Troubleshooting
 

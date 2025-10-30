@@ -317,6 +317,48 @@ func (g *ItemGenerator) generateStats(template ItemTemplate, depth int, rarity R
 		stats.Durability = stats.DurabilityMax // Start at full durability
 	}
 
+	// Generate projectile properties if weapon is ranged
+	if template.IsProjectile {
+		stats.IsProjectile = true
+		stats.ProjectileType = template.ProjectileType
+
+		// Generate projectile speed
+		stats.ProjectileSpeed = template.ProjectileSpeedRange[0] + rng.Float64()*(template.ProjectileSpeedRange[1]-template.ProjectileSpeedRange[0])
+		// Increase speed slightly for rare items
+		stats.ProjectileSpeed += float64(rarity) * 20.0
+
+		// Set lifetime
+		stats.ProjectileLifetime = template.ProjectileLifetime
+
+		// Generate pierce based on rarity and chance
+		if rng.Float64() < template.PierceChance*g.getRarityChanceMultiplier(rarity) {
+			if template.PierceRange[1] > template.PierceRange[0] {
+				stats.Pierce = template.PierceRange[0] + rng.Intn(template.PierceRange[1]-template.PierceRange[0]+1)
+			} else {
+				stats.Pierce = template.PierceRange[0]
+			}
+			// Higher rarity = more pierce
+			stats.Pierce += int(rarity) / 2
+		}
+
+		// Generate bounce based on rarity and chance
+		if rng.Float64() < template.BounceChance*g.getRarityChanceMultiplier(rarity) {
+			if template.BounceRange[1] > template.BounceRange[0] {
+				stats.Bounce = template.BounceRange[0] + rng.Intn(template.BounceRange[1]-template.BounceRange[0]+1)
+			} else {
+				stats.Bounce = template.BounceRange[0]
+			}
+		}
+
+		// Generate explosive property based on rarity and chance
+		if rng.Float64() < template.ExplosiveChance*g.getRarityChanceMultiplier(rarity) {
+			stats.Explosive = true
+			stats.ExplosionRadius = template.ExplosionRadiusRange[0] + rng.Float64()*(template.ExplosionRadiusRange[1]-template.ExplosionRadiusRange[0])
+			// Increase explosion radius for rare items
+			stats.ExplosionRadius += float64(rarity) * 10.0
+		}
+	}
+
 	return stats
 }
 
@@ -343,6 +385,25 @@ func (g *ItemGenerator) scaleStatByFactors(baseStat, depth int, rarity Rarity, d
 
 	result := float64(baseStat) * depthMultiplier * rarityMultiplier * difficultyMultiplier
 	return int(result)
+}
+
+// getRarityChanceMultiplier returns a multiplier for special property chances based on rarity.
+// Higher rarity items have increased chance of special projectile properties.
+func (g *ItemGenerator) getRarityChanceMultiplier(rarity Rarity) float64 {
+	switch rarity {
+	case RarityCommon:
+		return 1.0
+	case RarityUncommon:
+		return 1.5
+	case RarityRare:
+		return 2.0
+	case RarityEpic:
+		return 2.5
+	case RarityLegendary:
+		return 3.0
+	default:
+		return 1.0
+	}
 }
 
 // generateDescription creates flavor text for the item using deterministic RNG.

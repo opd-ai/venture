@@ -41,7 +41,7 @@ const (
 	WeaponSword WeaponType = iota
 	// WeaponAxe represents axes and hammers
 	WeaponAxe
-	// WeaponBow represents ranged weapons
+	// WeaponBow represents ranged weapons (arrows)
 	WeaponBow
 	// WeaponStaff represents magical weapons
 	WeaponStaff
@@ -49,6 +49,12 @@ const (
 	WeaponDagger
 	// WeaponSpear represents reach weapons
 	WeaponSpear
+	// WeaponCrossbow represents heavy ranged weapons (bolts)
+	WeaponCrossbow
+	// WeaponGun represents sci-fi ranged weapons (bullets)
+	WeaponGun
+	// WeaponWand represents magical projectile weapons (spells)
+	WeaponWand
 )
 
 // String returns the string representation of a weapon type.
@@ -66,6 +72,12 @@ func (w WeaponType) String() string {
 		return "dagger"
 	case WeaponSpear:
 		return "spear"
+	case WeaponCrossbow:
+		return "crossbow"
+	case WeaponGun:
+		return "gun"
+	case WeaponWand:
+		return "wand"
 	default:
 		return "unknown"
 	}
@@ -191,6 +203,24 @@ type Stats struct {
 	DurabilityMax int
 	// Durability is the current durability
 	Durability int
+
+	// Projectile properties for ranged weapons
+	// IsProjectile indicates if this weapon fires projectiles
+	IsProjectile bool
+	// ProjectileSpeed in pixels per second (0 for non-projectile weapons)
+	ProjectileSpeed float64
+	// ProjectileLifetime in seconds before projectile despawns
+	ProjectileLifetime float64
+	// ProjectileType describes the projectile ("arrow", "bullet", "fireball", etc.)
+	ProjectileType string
+	// Pierce is the number of enemies projectile can pass through (0 = normal, -1 = infinite)
+	Pierce int
+	// Bounce is the number of wall bounces (0 = despawn on wall hit)
+	Bounce int
+	// Explosive indicates if projectile explodes on impact
+	Explosive bool
+	// ExplosionRadius in pixels (if Explosive)
+	ExplosionRadius float64
 }
 
 // Item represents a generated game item.
@@ -254,6 +284,18 @@ type ItemTemplate struct {
 	ValueRange       [2]int
 	WeightRange      [2]float64
 	DurabilityRange  [2]int
+
+	// Projectile template properties
+	IsProjectile           bool
+	ProjectileSpeedRange   [2]float64
+	ProjectileLifetime     float64
+	ProjectileType         string
+	PierceChance           float64 // Probability of having pierce ability
+	PierceRange            [2]int  // Range of pierce count if generated
+	BounceChance           float64 // Probability of having bounce ability
+	BounceRange            [2]int  // Range of bounce count if generated
+	ExplosiveChance        float64 // Probability of being explosive
+	ExplosionRadiusRange   [2]float64
 }
 
 // GetFantasyWeaponTemplates returns weapon templates for fantasy genre.
@@ -294,6 +336,16 @@ func GetFantasyWeaponTemplates() []ItemTemplate {
 			ValueRange:       [2]int{40, 180},
 			WeightRange:      [2]float64{2.0, 4.0},
 			DurabilityRange:  [2]int{60, 100},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{300.0, 500.0}, // pixels per second
+			ProjectileLifetime:   3.0,                       // seconds
+			ProjectileType:       "arrow",
+			PierceChance:         0.15, // 15% chance for piercing arrows
+			PierceRange:          [2]int{1, 2},
+			BounceChance:         0.0,
+			ExplosiveChance:      0.05, // 5% chance for explosive arrows (rare)
+			ExplosionRadiusRange: [2]float64{40.0, 60.0},
 		},
 		{
 			BaseType:         TypeWeapon,
@@ -318,6 +370,51 @@ func GetFantasyWeaponTemplates() []ItemTemplate {
 			ValueRange:       [2]int{30, 150},
 			WeightRange:      [2]float64{0.5, 1.5},
 			DurabilityRange:  [2]int{40, 70},
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponCrossbow,
+			NamePrefixes:     []string{"Heavy", "Repeating", "Siege", "Hand", "Arbalest"},
+			NameSuffixes:     []string{"Crossbow", "Arbalest", "Ballista"},
+			Tags:             []string{"ranged", "powerful", "slow"},
+			DamageRange:      [2]int{10, 18},
+			AttackSpeedRange: [2]float64{0.6, 0.9},
+			ValueRange:       [2]int{70, 250},
+			WeightRange:      [2]float64{5.0, 8.0},
+			DurabilityRange:  [2]int{80, 130},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{400.0, 600.0}, // faster than arrows
+			ProjectileLifetime:   2.5,                       // shorter lifetime
+			ProjectileType:       "bolt",
+			PierceChance:         0.25, // 25% chance for piercing bolts
+			PierceRange:          [2]int{1, 3},
+			BounceChance:         0.0,
+			ExplosiveChance:      0.10, // 10% chance for explosive bolts
+			ExplosionRadiusRange: [2]float64{50.0, 80.0},
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponWand,
+			NamePrefixes:     []string{"Fire", "Ice", "Lightning", "Arcane", "Shadow"},
+			NameSuffixes:     []string{"Wand", "Rod", "Focus", "Conduit"},
+			Tags:             []string{"magical", "ranged", "elemental"},
+			DamageRange:      [2]int{7, 14},
+			AttackSpeedRange: [2]float64{1.3, 1.7},
+			ValueRange:       [2]int{90, 320},
+			WeightRange:      [2]float64{0.8, 2.0},
+			DurabilityRange:  [2]int{60, 90},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{250.0, 400.0}, // slower magical projectiles
+			ProjectileLifetime:   4.0,                       // longer lifetime for magic
+			ProjectileType:       "magic_bolt",
+			PierceChance:         0.20, // 20% chance for piercing magic
+			PierceRange:          [2]int{1, 2},
+			BounceChance:         0.10, // 10% chance for bouncing magic
+			BounceRange:          [2]int{1, 2},
+			ExplosiveChance:      0.15, // 15% chance for explosive magic
+			ExplosionRadiusRange: [2]float64{60.0, 100.0},
 		},
 	}
 }
@@ -402,7 +499,7 @@ func GetSciFiWeaponTemplates() []ItemTemplate {
 		},
 		{
 			BaseType:         TypeWeapon,
-			WeaponType:       WeaponBow, // Using as ranged weapon
+			WeaponType:       WeaponGun,
 			NamePrefixes:     []string{"Laser", "Pulse", "Plasma", "Rail", "Ion"},
 			NameSuffixes:     []string{"Rifle", "Pistol", "Cannon", "Blaster"},
 			Tags:             []string{"energy", "ranged"},
@@ -411,6 +508,17 @@ func GetSciFiWeaponTemplates() []ItemTemplate {
 			ValueRange:       [2]int{200, 600},
 			WeightRange:      [2]float64{2.0, 5.0},
 			DurabilityRange:  [2]int{150, 250},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{600.0, 1000.0}, // very fast bullets
+			ProjectileLifetime:   2.0,                        // short lifetime
+			ProjectileType:       "bullet",
+			PierceChance:         0.30, // 30% chance for armor-piercing rounds
+			PierceRange:          [2]int{2, 4},
+			BounceChance:         0.05, // 5% chance for ricochet rounds
+			BounceRange:          [2]int{1, 2},
+			ExplosiveChance:      0.20, // 20% chance for explosive rounds
+			ExplosionRadiusRange: [2]float64{40.0, 70.0},
 		},
 	}
 }

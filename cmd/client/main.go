@@ -619,6 +619,8 @@ func main() {
 	inputSystem.SetHelpSystem(helpSystem)
 	// Connect tutorial system to input system for ESC key skip handling
 	inputSystem.SetTutorialSystem(tutorialSystem)
+	// Phase 10.1: Connect camera system to input system for mouse aim (screen-to-world conversion)
+	inputSystem.SetCameraSystem(game.CameraSystem)
 
 	// Add systems in correct order:
 	// 1. Input - captures player actions

@@ -192,7 +192,10 @@ func TestLightingSystem_CollectVisibleLightsMaxLimit(t *testing.T) {
 		entity.AddComponent(&PositionComponent{X: float64(i * 100), Y: 100})
 	}
 
-	entities := world.GetAllEntities()
+	// Process pending entity additions
+	world.Update(0)
+
+	entities := world.GetEntities()
 	lights := system.CollectVisibleLights(entities)
 
 	if len(lights) != 3 {

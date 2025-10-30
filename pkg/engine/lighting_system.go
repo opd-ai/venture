@@ -309,6 +309,16 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 
 	totalIntensity := s.config.AmbientIntensity
 
+	// Check for ambient light component in entities first
+	for _, entity := range entities {
+		if ambComp, hasAmb := entity.GetComponent("ambient_light"); hasAmb {
+			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
+				totalIntensity = ambient.Intensity
+				break // Only use first ambient light found
+			}
+		}
+	}
+
 	// Check each light
 	for _, entity := range entities {
 		lightComp, hasLight := entity.GetComponent("light")

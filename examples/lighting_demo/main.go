@@ -188,7 +188,7 @@ func (g *Game) setupScene() {
 	ambientEntity.AddComponent(ambient)
 
 	log.Printf("Scene setup complete: player=%d, entities=%d, lights=%d",
-		g.playerID, len(g.world.GetAllEntities()), 8) // 1 player + 4 torches + 4 crystals - 1 for ambient
+		g.playerID, len(g.world.GetEntities()), 8) // 1 player + 4 torches + 4 crystals - 1 for ambient
 }
 
 // Update updates game logic.
@@ -237,7 +237,7 @@ func (g *Game) Update() error {
 	}
 
 	// Update entity positions
-	entities := g.world.GetAllEntities()
+	entities := g.world.GetEntities()
 	for _, entity := range entities {
 		posComp, hasPos := entity.GetComponent("position")
 		velComp, hasVel := entity.GetComponent("velocity")
@@ -280,7 +280,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{20, 20, 30, 255}) // Dark background
 
 	// Render entities to scene buffer
-	entities := g.world.GetAllEntities()
+	entities := g.world.GetEntities()
 	for _, entity := range entities {
 		spriteComp, hasSprite := entity.GetComponent("sprite")
 		posComp, hasPos := entity.GetComponent("position")
@@ -315,7 +315,7 @@ func (g *Game) drawUI(screen *ebiten.Image) {
 	pos := posComp.(*engine.PositionComponent)
 
 	// Calculate light intensity at player position
-	entities := g.world.GetAllEntities()
+	entities := g.world.GetEntities()
 	intensity := g.lightingSystem.CalculateLightIntensityAt(pos.X, pos.Y, entities)
 
 	// Collect visible lights

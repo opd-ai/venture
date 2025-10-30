@@ -154,6 +154,9 @@ func (s *ProjectileSystem) handleBounce(entity *Entity, velComp *VelocityCompone
 func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *PositionComponent, projComp *ProjectileComponent) *Entity {
 	// Get all entities with position and health (potential targets)
 	entities := s.world.GetEntitiesWith("position", "health")
+	
+	// DEBUG: Log collision check
+	_ = entities // prevent unused warning if logging is disabled
 
 	for _, entity := range entities {
 		// Skip self (owner)

@@ -100,6 +100,9 @@ func TestProjectileSystem_GetProjectileCount(t *testing.T) {
 	projComp2 := NewProjectileComponent(30.0, 500.0, 3.0, "bullet", 2)
 	sys.SpawnProjectile(200.0, 200.0, 200.0, 0.0, projComp2)
 
+	// Process pending entities
+	w.Update(0.0)
+
 	count = sys.GetProjectileCount()
 	if count != 2 {
 		t.Errorf("Count after spawning = %v, want 2", count)
@@ -199,8 +202,10 @@ func TestProjectileSystem_EntityCollision(t *testing.T) {
 	// Get all entities for update
 	entities := w.GetEntities()
 
-	// Update - projectile should hit target and despawn
-	sys.Update(entities, 0.5) // Move projectile to ~300, should hit target at 200
+	// Update - projectile should hit target
+	// Projectile moves at 400 units/s, target at 200, so collision at t=0.25
+	// Use t=0.26 to ensure we're past the collision point
+	sys.Update(entities, 0.26)
 	w.Update(0.0)
 
 	// Check projectile despawned
@@ -245,7 +250,8 @@ func TestProjectileSystem_PierceCollision(t *testing.T) {
 	entities := w.GetEntities()
 
 	// Update - should hit first target but continue
-	sys.Update(entities, 0.15) // Move to ~130, hit target1
+	// Target1 at x=120, collision at t=0.1s, use t=0.11s
+	sys.Update(entities, 0.11)
 	w.Update(0.0)
 
 	// Projectile should still exist (pierce = 1)
@@ -264,8 +270,10 @@ func TestProjectileSystem_PierceCollision(t *testing.T) {
 	}
 
 	// Update again - should hit second target and despawn
+	// After first hit at ~122, need to reach target2 at 160
+	// Distance = 38, speed = 200, time = 0.19s, use t=0.20s
 	entities = w.GetEntities()
-	sys.Update(entities, 0.25) // Move to ~180, hit target2
+	sys.Update(entities, 0.20)
 	w.Update(0.0)
 
 	// Projectile should now be despawned

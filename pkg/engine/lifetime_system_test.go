@@ -50,6 +50,9 @@ func TestLifetimeSystem_EntityDespawn(t *testing.T) {
 				Elapsed:  0,
 			})
 
+			// Process pending entities
+			world.Update(0.0)
+
 			// Get all entities
 			entities := world.GetEntities()
 
@@ -60,6 +63,9 @@ func TestLifetimeSystem_EntityDespawn(t *testing.T) {
 
 			// Update system
 			system.Update(entities, tt.updateTime)
+			
+			// Process entity removals
+			world.Update(0.0)
 
 			// Check if entity still exists
 			entitiesAfter := world.GetEntities()
@@ -95,6 +101,9 @@ func TestLifetimeSystem_MultipleEntities(t *testing.T) {
 	entity4 := world.CreateEntity()
 	entity4.AddComponent(&PositionComponent{X: 100, Y: 100})
 
+	// Process pending entities
+	world.Update(0.0)
+
 	entities := world.GetEntities()
 	if len(entities) != 4 {
 		t.Fatalf("Expected 4 entities, got %d", len(entities))
@@ -102,6 +111,7 @@ func TestLifetimeSystem_MultipleEntities(t *testing.T) {
 
 	// Update for 0.6 seconds (should despawn entity3)
 	system.Update(entities, 0.6)
+	world.Update(0.0) // Process removals
 
 	entitiesAfter := world.GetEntities()
 	if len(entitiesAfter) != 3 {
@@ -111,6 +121,7 @@ func TestLifetimeSystem_MultipleEntities(t *testing.T) {
 	// Update for another 0.6 seconds (total 1.2s, should despawn entity1)
 	entitiesAfter = world.GetEntities()
 	system.Update(entitiesAfter, 0.6)
+	world.Update(0.0) // Process removals
 
 	entitiesAfter = world.GetEntities()
 	if len(entitiesAfter) != 2 {
@@ -120,6 +131,7 @@ func TestLifetimeSystem_MultipleEntities(t *testing.T) {
 	// Update for another 1.0 seconds (total 2.2s, should despawn entity2)
 	entitiesAfter = world.GetEntities()
 	system.Update(entitiesAfter, 1.0)
+	world.Update(0.0) // Process removals
 
 	entitiesAfter = world.GetEntities()
 	if len(entitiesAfter) != 1 {
@@ -140,11 +152,15 @@ func TestLifetimeSystem_IncrementalUpdates(t *testing.T) {
 	entity := world.CreateEntity()
 	entity.AddComponent(&LifetimeComponent{Duration: 2.0, Elapsed: 0})
 
+	// Process pending entities
+	world.Update(0.0)
+
 	// Multiple small updates
 	entities := world.GetEntities()
 	for i := 0; i < 5; i++ {
 		entities = world.GetEntities()
 		system.Update(entities, 0.3)
+		world.Update(0.0) // Process any removals
 	}
 
 	// Total update time: 1.5 seconds (entity should still exist)
@@ -156,6 +172,7 @@ func TestLifetimeSystem_IncrementalUpdates(t *testing.T) {
 	// One more update to exceed duration
 	entities = world.GetEntities()
 	system.Update(entities, 0.6)
+	world.Update(0.0) // Process removal
 
 	// Total: 2.1 seconds (entity should be despawned)
 	entitiesAfter = world.GetEntities()

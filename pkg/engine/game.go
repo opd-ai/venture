@@ -793,21 +793,21 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	if g.LightingSystem != nil && g.LightingSystem.config.Enabled {
 		// Create scene buffer for rendering
 		sceneBuffer := ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-		
+
 		// Render terrain to buffer (if available)
 		if g.TerrainRenderSystem != nil {
 			g.TerrainRenderSystem.Draw(sceneBuffer, g.CameraSystem)
 		}
-		
+
 		// Render all entities to buffer
 		g.RenderSystem.Draw(sceneBuffer, g.World.GetEntities())
-		
+
 		// Update lighting system viewport based on camera
 		if g.CameraSystem != nil {
 			camX, camY := g.CameraSystem.GetPosition()
 			g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
 		}
-		
+
 		// Apply lighting as post-processing (renders sceneBuffer with lighting to screen)
 		entities := g.World.GetEntities()
 		g.LightingSystem.ApplyLighting(screen, sceneBuffer, entities)
@@ -1088,7 +1088,7 @@ var (
 func (g *EbitenGame) EnableLighting(enabled bool) {
 	if g.LightingSystem != nil && g.LightingSystem.config != nil {
 		g.LightingSystem.config.Enabled = enabled
-		
+
 		if g.logger != nil {
 			g.logger.WithField("enabled", enabled).Info("lighting system toggled")
 		}
@@ -1100,7 +1100,7 @@ func (g *EbitenGame) EnableLighting(enabled bool) {
 func (g *EbitenGame) SetLightingGenrePreset(genreID string) {
 	if g.LightingSystem != nil && g.LightingSystem.config != nil {
 		g.LightingSystem.config.SetGenrePreset(genreID)
-		
+
 		if g.logger != nil {
 			g.logger.WithField("genre", genreID).Info("lighting genre preset applied")
 		}

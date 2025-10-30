@@ -54,19 +54,19 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 }
 
 var (
-	width         = flag.Int("width", 800, "Screen width")
-	height        = flag.Int("height", 600, "Screen height")
-	seed          = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID       = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	width          = flag.Int("width", 800, "Screen width")
+	height         = flag.Int("height", 600, "Screen height")
+	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
-	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
-	multiplayer   = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay   = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
-	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
-	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
-	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
+	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN        = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 )
 
 // return a random seed
@@ -984,7 +984,7 @@ func main() {
 		playerTorch := engine.NewTorchLight(200) // 200-pixel radius torch with flicker
 		playerTorch.Enabled = true
 		player.AddComponent(playerTorch)
-		
+
 		if *verbose {
 			clientLogger.WithFields(logrus.Fields{
 				"radius":    200,

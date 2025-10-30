@@ -4,10 +4,13 @@
 package engine
 
 import (
+	"image/color"
 	"math"
 	"math/rand"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,6 +26,9 @@ type CombatSystem struct {
 	world          *World
 	seed           int64
 	genreID        string
+
+	// Phase 10.2: Projectile system for ranged weapon physics
+	projectileSystem *ProjectileSystem
 
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
@@ -67,6 +73,11 @@ func (s *CombatSystem) SetParticleSystem(ps *ParticleSystem, world *World, genre
 	s.particleSystem = ps
 	s.world = world
 	s.genreID = genreID
+}
+
+// SetProjectileSystem sets the projectile system reference for ranged weapon spawning (Phase 10.2).
+func (s *CombatSystem) SetProjectileSystem(ps *ProjectileSystem) {
+	s.projectileSystem = ps
 }
 
 // Update implements the System interface.
@@ -179,6 +190,22 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Check cooldown
 	if !attack.CanAttack() {
 		return false
+	}
+
+	// Phase 10.2: Check if attacker has a projectile weapon equipped
+	// If so, spawn a projectile instead of doing instant damage
+	if equipComp, hasEquip := attacker.GetComponent("equipment"); hasEquip {
+		equipment := equipComp.(*EquipmentComponent)
+		if weapon, hasWeapon := equipment.Slots[SlotWeapon]; hasWeapon && weapon != nil {
+			if weapon.Stats.IsProjectile {
+				// Spawn projectile for ranged weapon
+				success := s.spawnProjectile(attacker, target, weapon, attack)
+				if success {
+					attack.ResetCooldown()
+				}
+				return success
+			}
+		}
 	}
 
 	targetHealth, ok := target.GetComponent("health")
@@ -604,4 +631,132 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 	}
 
 	return bestEnemy
+}
+
+// spawnProjectile creates a projectile entity for ranged weapon attacks (Phase 10.2).
+// Returns true if projectile was successfully spawned, false otherwise.
+func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.Item, attack *AttackComponent) bool {
+	// Check if projectile system is available
+	if s.projectileSystem == nil || s.world == nil {
+		return false
+	}
+
+	// Get attacker position
+	attackerPosComp, hasPos := attacker.GetComponent("position")
+	if !hasPos {
+		return false
+	}
+	attackerPos := attackerPosComp.(*PositionComponent)
+
+	// Get aim direction
+	var aimAngle float64
+	if aimComp, hasAim := attacker.GetComponent("aim"); hasAim {
+		aim := aimComp.(*AimComponent)
+		aimAngle = aim.AimAngle
+	} else if rotComp, hasRot := attacker.GetComponent("rotation"); hasRot {
+		rot := rotComp.(*RotationComponent)
+		aimAngle = rot.Angle
+	} else {
+		// Fallback: aim at target
+		targetPosComp, hasTargetPos := target.GetComponent("position")
+		if !hasTargetPos {
+			return false
+		}
+		targetPos := targetPosComp.(*PositionComponent)
+		dx := targetPos.X - attackerPos.X
+		dy := targetPos.Y - attackerPos.Y
+		aimAngle = math.Atan2(dy, dx)
+	}
+
+	// Calculate projectile spawn position (offset from attacker in aim direction)
+	spawnOffset := 20.0 // pixels in front of attacker
+	spawnX := attackerPos.X + math.Cos(aimAngle)*spawnOffset
+	spawnY := attackerPos.Y + math.Sin(aimAngle)*spawnOffset
+
+	// Calculate projectile velocity
+	speed := weapon.Stats.ProjectileSpeed
+	if speed <= 0 {
+		speed = 400.0 // Default speed if not specified
+	}
+	velocityX := math.Cos(aimAngle) * speed
+	velocityY := math.Sin(aimAngle) * speed
+
+	// Calculate damage (same as melee, includes stats bonuses)
+	baseDamage := attack.Damage
+	
+	// Get attacker stats for bonus damage
+	if attackerStatsComp, hasStats := attacker.GetComponent("stats"); hasStats {
+		attackerStats := attackerStatsComp.(*StatsComponent)
+		if attack.DamageType == combat.DamageMagical {
+			baseDamage += attackerStats.MagicPower
+		} else {
+			baseDamage += attackerStats.Attack
+		}
+		
+		// Check for critical hit
+		if s.rollChance(attackerStats.CritChance) {
+			baseDamage *= attackerStats.CritDamage
+		}
+	}
+
+	// Create projectile component
+	lifetime := weapon.Stats.ProjectileLifetime
+	if lifetime <= 0 {
+		lifetime = 3.0 // Default 3 seconds
+	}
+	
+	projectileType := weapon.Stats.ProjectileType
+	if projectileType == "" {
+		projectileType = "arrow" // Default
+	}
+
+	projComp := NewProjectileComponent(baseDamage, speed, lifetime, projectileType, attacker.ID)
+	
+	// Apply special properties from weapon stats
+	projComp.Pierce = weapon.Stats.Pierce
+	projComp.Bounce = weapon.Stats.Bounce
+	projComp.Explosive = weapon.Stats.Explosive
+	projComp.ExplosionRadius = weapon.Stats.ExplosionRadius
+
+	// Spawn the projectile entity
+	projectile := s.world.CreateEntity()
+	projectile.AddComponent(&PositionComponent{X: spawnX, Y: spawnY})
+	projectile.AddComponent(&VelocityComponent{VX: velocityX, VY: velocityY})
+	projectile.AddComponent(projComp)
+
+	// Add rotation component for projectile orientation (visual only)
+	projectile.AddComponent(&RotationComponent{Angle: aimAngle})
+
+	// Generate projectile sprite (Phase 10.2)
+	// Use seed combined with projectile ID for variation
+	spriteSeed := s.seed + int64(projectile.ID)
+	spriteSize := 12 // Standard projectile sprite size
+	if projComp.Explosive {
+		spriteSize = 16 // Larger for explosive projectiles
+	}
+	
+	// Import sprites package is needed - will add at top
+	// For now, create a simple colored square sprite
+	// TODO: Use sprites.GenerateProjectileSprite once imports are added
+	sprite := ebiten.NewImage(spriteSize, spriteSize)
+	// Simple colored square for now - will be replaced with proper projectile sprite
+	spriteComp := NewSpriteComponent(float64(spriteSize), float64(spriteSize), color.RGBA{255, 200, 0, 255})
+	spriteComp.Rotation = aimAngle
+	projectile.AddComponent(spriteComp)
+
+	// Log projectile spawn
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"attackerID":     attacker.ID,
+			"projectileID":   projectile.ID,
+			"damage":         baseDamage,
+			"speed":          speed,
+			"projectileType": projectileType,
+			"pierce":         projComp.Pierce,
+			"bounce":         projComp.Bounce,
+			"explosive":      projComp.Explosive,
+		}).Debug("projectile spawned")
+	}
+
+	return true
 }

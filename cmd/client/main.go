@@ -837,6 +837,13 @@ func main() {
 	game.World.AddSystem(playerSpellCastingSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
+	
+	// Phase 10.2: Add projectile system for ranged weapon physics
+	// Processes after collision to use terrain checker for wall bounces
+	projectileSystem := engine.NewProjectileSystem(game.World)
+	projectileSystem.SetTerrainChecker(terrainChecker)
+	game.World.AddSystem(projectileSystem)
+	
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(statusEffectSystem) // Process status effects after combat
 
@@ -900,6 +907,9 @@ func main() {
 
 	// GAP-016 REPAIR: Set particle system reference on combat system for hit effects
 	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
+
+	// Phase 10.2: Set projectile system reference on combat system for ranged weapon spawning
+	combatSystem.SetProjectileSystem(projectileSystem)
 
 	if *verbose {
 		clientLogger.Info("systems initialized")

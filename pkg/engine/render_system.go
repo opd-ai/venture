@@ -569,6 +569,13 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		sprite.CurrentDirection = int(anim.GetFacing())
 	}
 
+	// Phase 10.1: Sync sprite rotation from RotationComponent if present
+	// This enables 360° visual rotation for entities with rotation component
+	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
+		rotation := rotComp.(*RotationComponent)
+		sprite.Rotation = rotation.Angle
+	}
+
 	// Convert world position to screen position
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 

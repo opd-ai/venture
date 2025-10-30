@@ -250,14 +250,15 @@ crystal.PulseAmount = 0.3    // 30% intensity variation
 
 Lighting automatically adapts to the selected genre:
 
-| Genre | Ambient Intensity | Ambient Color | Atmosphere |
-|-------|------------------|---------------|------------|
-| **Fantasy** | 0.40 | Warm (120, 110, 90) | Torchlit dungeons |
-| **Horror** | 0.15 | Cold (80, 75, 90) | Dark and foreboding |
-| **Sci-Fi** | 0.35 | Cool blue (90, 110, 140) | Artificial lighting |
-| **Cyberpunk** | 0.30 | Purple haze (110, 90, 130) | Neon atmosphere |
-| **Post-Apocalyptic** | 0.25 | Dusty (100, 95, 80) | Dim wasteland |
+> **Note:** The "Genre ID" column below shows the canonical string to use in code and configuration (e.g., `game.SetLightingGenrePreset("horror")`). Always use the lowercase, hyphen-free ID as shown.
 
+| Genre         | Genre ID         | Ambient Intensity | Ambient Color         | Atmosphere              |
+|--------------|------------------|------------------|----------------------|-------------------------|
+| **Fantasy**          | `fantasy`          | 0.40               | Warm (120, 110, 90)      | Torchlit dungeons       |
+| **Horror**           | `horror`           | 0.15               | Cold (80, 75, 90)        | Dark and foreboding     |
+| **Sci-Fi**           | `scifi`            | 0.35               | Cool blue (90, 110, 140) | Artificial lighting     |
+| **Cyberpunk**        | `cyberpunk`        | 0.30               | Purple haze (110, 90, 130)| Neon atmosphere        |
+| **Post-Apocalyptic** | `postapocalyptic`  | 0.25               | Dusty (100, 95, 80)      | Dim wasteland           |
 Example automatic configuration:
 
 ```go

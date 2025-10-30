@@ -247,6 +247,7 @@ type InputSystem struct {
 	helpSystem     *EbitenHelpSystem
 	tutorialSystem *EbitenTutorialSystem
 	menuSystem     *EbitenMenuSystem
+	cameraSystem   *CameraSystem // Phase 10.1: For screen-to-world coordinate conversion
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -647,6 +648,21 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 		input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	}
 
+	// Phase 10.1: Update aim component with mouse position (world coordinates)
+	// This enables mouse-aim for 360° rotation independent of movement direction
+	if entity.HasComponent("aim") && s.cameraSystem != nil {
+		aimComp, ok := entity.GetComponent("aim")
+		if ok {
+			aim := aimComp.(*AimComponent)
+
+			// Convert screen coordinates to world coordinates
+			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
+
+			// Set aim target in world space
+			aim.SetAimTarget(worldX, worldY)
+		}
+	}
+
 	// Apply movement to velocity component if it exists
 	if velComp, ok := entity.GetComponent("velocity"); ok {
 		velocity := velComp.(*VelocityComponent)
@@ -686,6 +702,12 @@ func (s *InputSystem) SetHelpSystem(helpSystem *EbitenHelpSystem) {
 // SetTutorialSystem connects the tutorial system for ESC key handling.
 func (s *InputSystem) SetTutorialSystem(tutorialSystem *EbitenTutorialSystem) {
 	s.tutorialSystem = tutorialSystem
+}
+
+// SetCameraSystem connects the camera system for screen-to-world coordinate conversion.
+// Phase 10.1: Required for mouse aim to convert cursor position to world coordinates.
+func (s *InputSystem) SetCameraSystem(cameraSystem *CameraSystem) {
+	s.cameraSystem = cameraSystem
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

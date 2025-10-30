@@ -212,32 +212,37 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 					}
 				}
 
-				// Phase 3: Update facing direction based on velocity
-				// Apply 0.1 threshold to filter input jitter and noise
-				absVX := math.Abs(vel.VX)
-				absVY := math.Abs(vel.VY)
+				// Phase 10.1: Only update facing direction from velocity if entity doesn't have rotation component
+				// Entities with RotationComponent use 360° rotation from aim input instead of 4-directional velocity-based facing
+				if !entity.HasComponent("rotation") {
+					// Phase 3: Update facing direction based on velocity
+					// Apply 0.1 threshold to filter input jitter and noise
+					absVX := math.Abs(vel.VX)
+					absVY := math.Abs(vel.VY)
 
-				if absVX > 0.1 || absVY > 0.1 {
-					// Prioritize horizontal movement for diagonal directions
-					// This provides clearer visual feedback for player control
-					// For perfect diagonals (absVX == absVY), horizontal takes priority
-					if absVX >= absVY {
-						// Moving horizontally (or perfect diagonal)
-						if vel.VX > 0 {
-							anim.SetFacing(DirRight)
+					if absVX > 0.1 || absVY > 0.1 {
+						// Prioritize horizontal movement for diagonal directions
+						// This provides clearer visual feedback for player control
+						// For perfect diagonals (absVX == absVY), horizontal takes priority
+						if absVX >= absVY {
+							// Moving horizontally (or perfect diagonal)
+							if vel.VX > 0 {
+								anim.SetFacing(DirRight)
+							} else {
+								anim.SetFacing(DirLeft)
+							}
 						} else {
-							anim.SetFacing(DirLeft)
-						}
-					} else {
-						// Moving vertically
-						if vel.VY > 0 {
-							anim.SetFacing(DirDown)
-						} else {
-							anim.SetFacing(DirUp)
+							// Moving vertically
+							if vel.VY > 0 {
+								anim.SetFacing(DirDown)
+							} else {
+								anim.SetFacing(DirUp)
+							}
 						}
 					}
+					// If velocity is below threshold, preserve current facing
 				}
-				// If velocity is below threshold, preserve current facing
+				// Phase 10.1: If entity has rotation component, facing is determined by RotationComponent.Angle
 			} else {
 				// Not moving - idle (only if currently in a movement state)
 				if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {

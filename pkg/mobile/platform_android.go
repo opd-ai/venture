@@ -1,8 +1,9 @@
-//go:build android
-// +build android
+//go:build android && cgo && ebitenmobilebind
+// +build android,cgo,ebitenmobilebind
 
 // Package mobile provides Android-specific haptic feedback implementation.
 // This file contains Android Vibrator service integration.
+// This file is only included when building with ebitenmobile bind tool.
 package mobile
 
 /*

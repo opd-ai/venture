@@ -1,3 +1,8 @@
+//go:build !android && !ios
+// +build !android,!ios
+
+// Package main provides the desktop client application.
+// For mobile platforms (Android/iOS), use cmd/mobile with ebitenmobile build tool.
 package main
 
 import (

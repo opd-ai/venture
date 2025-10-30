@@ -1,3 +1,8 @@
+//go:build !android && !ios
+// +build !android,!ios
+
+// Package main provides the dedicated server application.
+// Servers are not supported on mobile platforms.
 package main
 
 import (

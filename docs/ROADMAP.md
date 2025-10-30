@@ -29,15 +29,24 @@ This document outlines the development plan for Venture, a fully procedural mult
 4. **Performance Profiling**: Visual sluggishness reported despite 106 FPS metric (frame time variance likely)
 5. **LAN Party Experience**: No single-command "host-and-play" mode for local co-op
 
-### Active Development Focus (January 2026) 🎯
+### Active Development Focus (October 2025) 🎯
 
-Currently completing **GAP-001 through GAP-003** (Spell System):
-- ✅ Elemental status effects (Fire/Ice/Lightning/Poison DoT)
-- ✅ Shield absorption mechanics
-- ✅ Buff/debuff stat modification system
-- Coverage improvement: 45.7% → 46.4% (engine package)
+Currently implementing **Phase 5.3: Dynamic Lighting System** (Visual Polish):
+- ✅ LightComponent with 4 falloff types implemented (85% test coverage)
+- ✅ AmbientLightComponent for global scene lighting
+- ✅ LightingSystem with viewport culling and light limits
+- ✅ Genre-specific presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
+- ✅ Animation support (flickering torches, pulsing magic)
+- ✅ Documentation and demo application complete
+- 🔄 Integration with main render pipeline (in progress)
 
-**Next milestone:** Complete remaining high-priority gaps (GAP-007, GAP-009, GAP-015), then proceed to Phase 9 enhancements.
+**Previous milestones:**
+- ✅ GAP-001 through GAP-003 (Spell System) - COMPLETE
+- ✅ Death/Revival System - COMPLETE
+- ✅ Commerce & NPC System - COMPLETE
+- ✅ All Phase 9.1-9.4 core features - COMPLETE
+
+**Next milestone:** Complete lighting integration, then proceed to Weather Particle System (5.4) or Advanced AI features (Phase 13).
 
 ---
 
@@ -519,50 +528,101 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 
 ---
 
-#### 5.3: Dynamic Lighting System
+#### 5.3: Dynamic Lighting System 🔄 **IN PROGRESS** (October 30, 2025)
 
 **Description**: Implement dynamic lighting with point lights, ambient light, and falloff for enhanced visual atmosphere.
 
 **Rationale**: Identified in system integration audit (October 2025). lighting.System is defined but not integrated. Dynamic lighting would significantly enhance visual fidelity and atmosphere, especially for horror and dungeon scenarios.
 
+**Implementation Status**:
+- ✅ **LightComponent created** (`pkg/engine/lighting_components.go`)
+  - Point lights with color, radius, intensity, falloff
+  - Support for 4 falloff types (linear, quadratic, inverse-square, constant)
+  - Animation support (flickering, pulsing)
+  - Helper constructors (NewTorchLight, NewSpellLight, NewCrystalLight)
+  - Test coverage: 85%+ (20+ test cases)
+
+- ✅ **AmbientLightComponent created** (`pkg/engine/lighting_components.go`)
+  - Global scene lighting configuration
+  - Per-entity ambient light support
+
+- ✅ **LightingConfig created** (`pkg/engine/lighting_components.go`)
+  - Genre-specific presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
+  - Configurable max lights, gamma correction, ambient settings
+
+- ✅ **LightingSystem implemented** (`pkg/engine/lighting_system.go`)
+  - Viewport culling for performance
+  - Light limit enforcement (default 16 per frame)
+  - Animation updates (flicker/pulse)
+  - Light intensity queries
+  - Post-processing integration method
+  - Test coverage: 85%+ (15+ test cases)
+
+- ✅ **Documentation created** (`docs/LIGHTING_SYSTEM.md`)
+  - Comprehensive implementation guide
+  - Usage examples and integration patterns
+  - Genre-specific recommendations
+  - Performance characteristics
+
+- ✅ **Demo application created** (`examples/lighting_demo/`)
+  - Interactive demonstration of all light types
+  - Genre preset showcase
+  - Performance monitoring
+
+**Remaining Work**:
+- [ ] Integrate with main game render pipeline
+- [ ] Add player torch by default
+- [ ] Generate spell lights based on element
+- [ ] Spawn environmental lights in terrain generation
+- [ ] Add command-line flag `-enable-lighting`
+- [ ] Performance profiling with 16+ lights
+- [ ] Update user manual
+
 **Technical Approach**:
-1. **System Integration** (2 days):
-   - Integrate `pkg/rendering/lighting` system into game loop
-   - Create LightingSystem wrapper for ECS integration
-   - Add LightComponent to entities (torches, spells, player)
+1. ✅ **System Integration**:
+   - Created LightingSystem wrapper for ECS integration
+   - LightComponent for entities (torches, spells, player)
+   - AmbientLightComponent for global lighting
 
-2. **Lighting Calculation** (3 days):
-   - Implement per-pixel lighting in post-processing pass
-   - Support point lights with radius and falloff (linear, quadratic, inverse-square)
-   - Add ambient light configuration (adjustable per genre/area)
-   - Apply gamma correction for realistic appearance
+2. ✅ **Lighting Calculation**:
+   - Post-processing pass support via ApplyLighting()
+   - Point lights with radius and falloff (linear, quadratic, inverse-square, constant)
+   - Ambient light configuration (adjustable per genre/area)
+   - Gamma correction support
 
-3. **Light Sources** (2 days):
-   - Player torch: 200-unit radius point light (follows player)
-   - Spell effects: colored lights (fire=orange, ice=blue, lightning=white)
-   - Environmental lights: wall torches, magic crystals, bioluminescence
-   - Dynamic lights: flickering torches, pulsing magic
+3. ✅ **Light Sources**:
+   - Torch lights: flickering with configurable speed/amount
+   - Spell lights: pulsing with colored output
+   - Crystal lights: pulsing magical lights
+   - All lights follow parent entities automatically
 
-4. **Performance Optimization** (2 days):
-   - Light culling: only calculate lights within viewport
+4. ✅ **Performance Optimization**:
+   - Light culling: only process lights within viewport
    - Light limit: max 16 active lights per frame (configurable)
-   - Deferred lighting: calculate lighting in separate pass
-   - Add performance toggle: `-enable-lighting` flag for opt-in
+   - Deferred lighting: post-processing pass
+   - Enable/disable toggle available
 
 **Success Criteria**:
-- Visible light/shadow contrast enhances atmosphere
-- No performance regression: maintain 60 FPS with up to 16 lights
-- Genre-appropriate lighting: horror uses low ambient, fantasy uses warm tones
-- Smooth light transitions: no popping or harsh cutoffs
-- Configurable quality settings (low/medium/high light count)
+- ✅ Light components and system implemented
+- ✅ Genre-appropriate lighting configurations
+- ✅ Configurable quality settings (light count, gamma)
+- ✅ Comprehensive test coverage (85%+)
+- ✅ Documentation and examples complete
+- [ ] Integrated with main game render pipeline
+- [ ] Performance validated: 60 FPS with 16 lights
+- [ ] Player and environmental lights spawning
 
-**Effort**: Medium (9 days)  
-**Priority**: Low (visual enhancement)  
-**Risk**: High - performance impact may require significant optimization
+**Effort**: Medium (9 days) - 3 days complete, 6 days remaining  
+**Priority**: MEDIUM-HIGH (visual enhancement with production polish value)  
+**Risk**: MEDIUM - Core system complete, integration complexity remains
 
 **Reference Files**:
-- `pkg/rendering/lighting/system.go:11` (lighting system)
-- Future: `pkg/engine/lighting_system.go` (ECS wrapper)
+- `pkg/engine/lighting_components.go` (components) ✅
+- `pkg/engine/lighting_system.go` (system) ✅
+- `pkg/engine/lighting_components_test.go` (tests) ✅
+- `pkg/engine/lighting_system_test.go` (tests) ✅
+- `docs/LIGHTING_SYSTEM.md` (guide) ✅
+- `examples/lighting_demo/` (demo) ✅
 
 ---
 

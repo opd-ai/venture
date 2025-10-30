@@ -4,12 +4,12 @@
 
 This document outlines the development plan for Venture, a fully procedural multiplayer action-RPG built with Go 1.24 and Ebiten 2.9. The project successfully completed its initial 8 development phases (Foundation through Polish & Optimization) in October 2025. This roadmap presents the post-Beta enhancement strategy based on comprehensive technical audits and community feedback priorities.
 
-## Project Status: BETA TO PRODUCTION TRANSITION 🚀
+## Project Status: BETA TO PRODUCTION TRANSITION + V2.0 DEVELOPMENT 🚀
 
-**Current Phase:** Post-Beta Enhancement (Phase 9)  
-**Version:** 1.0 Beta → 1.1 Production  
-**Timeline Horizon:** 6-8 months (January - August 2026)  
-**Status:** Active Development - Production Hardening
+**Current Phase:** Phase 9 (Production Hardening) + Phase 10.1 (V2.0 Foundation)  
+**Version:** 1.1 Production (Phase 9 Complete) + 2.0 Alpha (Phase 10.1 In Progress)  
+**Timeline Horizon:** 6-8 months for v1.1 polish, 12-14 months for v2.0  
+**Status:** Dual-track development - Production polish + V2.0 foundation
 
 ### Current State Strengths ✅
 
@@ -31,22 +31,33 @@ This document outlines the development plan for Venture, a fully procedural mult
 
 ### Active Development Focus (October 2025) 🎯
 
-Currently implementing **Phase 5.3: Dynamic Lighting System** (Visual Polish):
-- ✅ LightComponent with 4 falloff types implemented (85% test coverage)
-- ✅ AmbientLightComponent for global scene lighting
-- ✅ LightingSystem with viewport culling and light limits
-- ✅ Genre-specific presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
-- ✅ Animation support (flickering torches, pulsing magic)
-- ✅ Documentation and demo application complete
-- 🔄 Integration with main render pipeline (in progress)
+**Track 1: Version 1.1 Production Polish**
+- Currently implementing **Phase 5.3: Dynamic Lighting System** (Visual Polish):
+  - ✅ LightComponent with 4 falloff types implemented (85% test coverage)
+  - ✅ AmbientLightComponent for global scene lighting
+  - ✅ LightingSystem with viewport culling and light limits
+  - ✅ Genre-specific presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
+  - ✅ Animation support (flickering torches, pulsing magic)
+  - ✅ Documentation and demo application complete
+  - 🔄 Integration with main render pipeline (in progress)
 
-**Previous milestones:**
+**Track 2: Version 2.0 Foundation (Phase 10.1)**
+- **360° Rotation & Mouse Aim System** (Dual-stick shooter mechanics):
+  - ✅ Week 1-2: RotationComponent, AimComponent, RotationSystem (COMPLETE)
+  - ✅ Week 3: Combat system integration with aim-based targeting (COMPLETE)
+  - ⏳ Week 4: Mobile dual joystick controls (in progress)
+
+**Completed milestones:**
 - ✅ GAP-001 through GAP-003 (Spell System) - COMPLETE
 - ✅ Death/Revival System - COMPLETE
 - ✅ Commerce & NPC System - COMPLETE
 - ✅ All Phase 9.1-9.4 core features - COMPLETE
+- ✅ Phase 10.1 Weeks 1-3 (Rotation foundation) - COMPLETE
 
-**Next milestone:** Complete lighting integration, then proceed to Weather Particle System (5.4) or Advanced AI features (Phase 13).
+**Next milestones:** 
+- Complete lighting integration (v1.1)
+- Complete mobile controls (Phase 10.1 Week 4, v2.0)
+- Then proceed to Weather Particle System (5.4) or Projectile Physics (Phase 10.2)
 
 ---
 

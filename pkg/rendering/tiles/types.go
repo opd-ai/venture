@@ -29,13 +29,13 @@ const (
 	TileStairs
 
 	// Phase 11.1: Diagonal wall tiles (45° angles)
-	// TileWallNE represents a diagonal wall from bottom-left to top-right (/)
+	// TileWallNE represents a diagonal wall with a / slope (sloping from lower-left to upper-right)
 	TileWallNE
-	// TileWallNW represents a diagonal wall from bottom-right to top-left (\)
+	// TileWallNW represents a diagonal wall with \ slope (solid in northwest)
 	TileWallNW
-	// TileWallSE represents a diagonal wall from top-left to bottom-right (\)
+	// TileWallSE represents a diagonal wall with \ slope (solid in southeast)
 	TileWallSE
-	// TileWallSW represents a diagonal wall from top-right to bottom-left (/)
+	// TileWallSW represents a diagonal wall with a / slope (sloping from upper-right to lower-left)
 	TileWallSW
 
 	// Phase 11.1: Multi-layer terrain tiles

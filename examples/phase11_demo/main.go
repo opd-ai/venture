@@ -27,9 +27,11 @@ const (
 
 // Game represents the demo application state.
 type Game struct {
-	tileImages map[tiles.TileType]*ebiten.Image
-	currentIdx int
-	tileTypes  []tiles.TileType
+	tileImages       map[tiles.TileType]*ebiten.Image
+	currentIdx       int
+	tileTypes        []tiles.TileType
+	prevRightPressed bool
+	prevLeftPressed  bool
 }
 
 // NewGame creates a new demo game.
@@ -69,21 +71,31 @@ func NewGame() (*Game, error) {
 	}
 
 	return &Game{
-		tileImages: tileImages,
-		tileTypes:  tileTypes,
-		currentIdx: 0,
+		tileImages:       tileImages,
+		tileTypes:        tileTypes,
+		currentIdx:       0,
+		prevRightPressed: false,
+		prevLeftPressed:  false,
 	}, nil
 }
 
 // Update updates the game logic.
 func (g *Game) Update() error {
-	// Cycle through tiles with arrow keys
-	if ebiten.IsKeyPressed(ebiten.KeyRight) && ebiten.IsKeyPressed(ebiten.KeyControl) {
+	// Cycle through tiles with arrow keys (single-step with debouncing)
+	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight) && ebiten.IsKeyPressed(ebiten.KeyControl)
+	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft) && ebiten.IsKeyPressed(ebiten.KeyControl)
+
+	// Advance on key press (not while held)
+	if rightPressed && !g.prevRightPressed {
 		g.currentIdx = (g.currentIdx + 1) % len(g.tileTypes)
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) && ebiten.IsKeyPressed(ebiten.KeyControl) {
+	if leftPressed && !g.prevLeftPressed {
 		g.currentIdx = (g.currentIdx - 1 + len(g.tileTypes)) % len(g.tileTypes)
 	}
+
+	// Track previous frame state for debouncing
+	g.prevRightPressed = rightPressed
+	g.prevLeftPressed = leftPressed
 
 	return nil
 }

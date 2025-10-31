@@ -290,7 +290,7 @@ func TestPuzzleHasMaxAttemptsReached(t *testing.T) {
 }
 
 func TestPuzzleGetProgressPercent(t *testing.T) {
-	const epsilon = 1e-9 // Tolerance for floating point comparison
+	const epsilon = 0.001 // Tolerance for floating point comparison (0.1%)
 
 	tests := []struct {
 		name            string

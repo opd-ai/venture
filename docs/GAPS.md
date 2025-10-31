@@ -74,6 +74,7 @@ C. **Production-Ready Code Generation**
    - Add input validation and boundary condition handling
    - Implement logging and observability hooks consistent with codebase
    - Add inline documentation for complex logic
+   - Code is formatted with `gofmt -w -s`
 
 D. **Integration Requirements**
    - Specify exact file modifications (additions, changes, deletions)

@@ -182,7 +182,7 @@ func TestPressurePlatePuzzle(t *testing.T) {
 		difficulty := gen.calculateDifficulty(params)
 
 		puzzle, err := gen.generatePressurePlatePuzzle(
-			gen.selectRNG(seed+int64(i)),
+			selectRNG(seed+int64(i)),
 			template,
 			difficulty,
 			params,
@@ -225,7 +225,7 @@ func TestLeverSequencePuzzle(t *testing.T) {
 	difficulty := 5
 
 	puzzle, err := gen.generateLeverSequencePuzzle(
-		gen.selectRNG(54321),
+		selectRNG(54321),
 		template,
 		difficulty,
 		procgen.GenerationParams{},
@@ -258,7 +258,7 @@ func TestBlockPushingPuzzle(t *testing.T) {
 	difficulty := 6
 
 	puzzle, err := gen.generateBlockPushingPuzzle(
-		gen.selectRNG(11111),
+		selectRNG(11111),
 		template,
 		difficulty,
 		procgen.GenerationParams{},
@@ -300,7 +300,7 @@ func TestTimedChallengePuzzle(t *testing.T) {
 	difficulty := 7
 
 	puzzle, err := gen.generateTimedChallengePuzzle(
-		gen.selectRNG(22222),
+		selectRNG(22222),
 		template,
 		difficulty,
 		procgen.GenerationParams{},
@@ -326,7 +326,7 @@ func TestMemoryPatternPuzzle(t *testing.T) {
 	difficulty := 4
 
 	puzzle, err := gen.generateMemoryPatternPuzzle(
-		gen.selectRNG(33333),
+		selectRNG(33333),
 		template,
 		difficulty,
 		procgen.GenerationParams{},
@@ -359,7 +359,7 @@ func TestColorMatchingPuzzle(t *testing.T) {
 	difficulty := 5
 
 	puzzle, err := gen.generateColorMatchingPuzzle(
-		gen.selectRNG(44444),
+		selectRNG(44444),
 		template,
 		difficulty,
 		procgen.GenerationParams{},

@@ -35,6 +35,30 @@ const (
 	TileBridge
 	// TileStructure represents a building or ruins
 	TileStructure
+
+	// Diagonal wall tiles (45° angles)
+	// TileWallNE represents a diagonal wall from south-west to north-east (/)
+	TileWallNE
+	// TileWallNW represents a diagonal wall from south-east to north-west (\)
+	TileWallNW
+	// TileWallSE represents a diagonal wall from north-west to south-east (\)
+	TileWallSE
+	// TileWallSW represents a diagonal wall from north-east to south-west (/)
+	TileWallSW
+
+	// Multi-layer terrain tiles
+	// TilePlatform represents an elevated platform entities can walk on
+	TilePlatform
+	// TileRamp represents a ramp for transitioning between layers
+	TileRamp
+	// TileLavaFlow represents flowing lava that damages entities
+	TileLavaFlow
+	// TilePit represents a pit or chasm that blocks movement
+	TilePit
+	// TileRampUp represents a ramp going up to a higher layer
+	TileRampUp
+	// TileRampDown represents a ramp going down to a lower layer
+	TileRampDown
 )
 
 // String returns the string representation of a tile type.
@@ -66,6 +90,26 @@ func (t TileType) String() string {
 		return "bridge"
 	case TileStructure:
 		return "structure"
+	case TileWallNE:
+		return "wall_ne"
+	case TileWallNW:
+		return "wall_nw"
+	case TileWallSE:
+		return "wall_se"
+	case TileWallSW:
+		return "wall_sw"
+	case TilePlatform:
+		return "platform"
+	case TileRamp:
+		return "ramp"
+	case TileLavaFlow:
+		return "lava_flow"
+	case TilePit:
+		return "pit"
+	case TileRampUp:
+		return "ramp_up"
+	case TileRampDown:
+		return "ramp_down"
 	default:
 		return "unknown"
 	}
@@ -75,38 +119,99 @@ func (t TileType) String() string {
 func (t TileType) IsWalkableTile() bool {
 	return t == TileFloor || t == TileDoor || t == TileCorridor ||
 		t == TileWaterShallow || t == TileStairsUp || t == TileStairsDown ||
-		t == TileTrapDoor || t == TileSecretDoor || t == TileBridge
+		t == TileTrapDoor || t == TileSecretDoor || t == TileBridge ||
+		t == TilePlatform || t == TileRamp || t == TileRampUp || t == TileRampDown
 }
 
 // IsTransparent returns true if this tile type doesn't block vision.
 func (t TileType) IsTransparent() bool {
-	// Most tiles are transparent except walls and structures
-	return t != TileWall && t != TileStructure && t != TileTree && t != TileSecretDoor
+	// Most tiles are transparent except walls (including diagonal walls) and structures
+	return t != TileWall && t != TileStructure && t != TileTree && 
+		t != TileSecretDoor && t != TileWallNE && t != TileWallNW && 
+		t != TileWallSE && t != TileWallSW
 }
 
 // MovementCost returns the movement cost multiplier for this tile type.
-// 1.0 is normal speed, higher values slow movement, Inf means impassable.
+// 1.0 is normal speed, higher values slow movement, -1 means impassable.
 func (t TileType) MovementCost() float64 {
 	switch t {
-	case TileFloor, TileDoor, TileCorridor, TileBridge, TileStairsUp, TileStairsDown:
+	case TileFloor, TileDoor, TileCorridor, TileBridge, TileStairsUp, TileStairsDown, TilePlatform:
 		return 1.0
+	case TileRamp, TileRampUp, TileRampDown:
+		return 1.2 // Slightly slower on ramps
 	case TileWaterShallow:
 		return 2.0 // Half speed in shallow water
+	case TileLavaFlow:
+		return 3.0 // Very slow movement through lava (with damage)
 	case TileTrapDoor:
 		return 1.5 // Slightly slower on trap doors
 	case TileSecretDoor:
 		return 1.0 // Once discovered, normal speed
-	case TileWall, TileWaterDeep, TileTree, TileStructure:
-		return -1 // Impassable (represented as -1 instead of Inf for easier testing)
+	case TileWall, TileWallNE, TileWallNW, TileWallSE, TileWallSW:
+		return -1 // All walls are impassable
+	case TileWaterDeep, TileTree, TileStructure, TilePit:
+		return -1 // Impassable terrain
 	default:
 		return -1 // Unknown tiles are impassable
 	}
 }
 
-// Tile represents a single position in the terrain grid.
+// IsDiagonalWall returns true if this tile is a diagonal wall.
+func (t TileType) IsDiagonalWall() bool {
+	return t == TileWallNE || t == TileWallNW || t == TileWallSE || t == TileWallSW
+}
+
+// IsWall returns true if this tile is any type of wall (axis-aligned or diagonal).
+func (t TileType) IsWall() bool {
+	return t == TileWall || t.IsDiagonalWall()
+}
+
+// Layer represents the vertical layer of a terrain tile.
+type Layer int
+
+const (
+	// LayerGround is the base layer (default for most tiles)
+	LayerGround Layer = iota
+	// LayerWater is the water/lava layer (below ground)
+	LayerWater
+	// LayerPlatform is the elevated platform layer (above ground)
+	LayerPlatform
+)
+
+// GetLayer returns the layer this tile type belongs to.
+func (t TileType) GetLayer() Layer {
+	switch t {
+	case TileWaterShallow, TileWaterDeep, TileLavaFlow, TilePit:
+		return LayerWater
+	case TilePlatform:
+		return LayerPlatform
+	case TileBridge:
+		return LayerPlatform // Bridges are elevated over water
+	default:
+		return LayerGround // Most tiles are at ground level
+	}
+}
+
+// CanTransitionToLayer returns true if an entity can move from this tile type
+// to a tile of the target layer (e.g., via ramps or stairs).
+func (t TileType) CanTransitionToLayer(target Layer) bool {
+	// Ramps allow transitioning between layers
+	if t == TileRamp || t == TileRampUp || t == TileRampDown {
+		return true
+	}
+	// Stairs allow vertical movement
+	if t == TileStairsUp || t == TileStairsDown {
+		return true
+	}
+	// Same layer transitions are always allowed
+	return t.GetLayer() == target
+}
+
+// Tile represents a single position in the terrain grid with layer information.
 type Tile struct {
-	Type TileType
-	X, Y int
+	Type  TileType
+	X, Y  int
+	Layer Layer // Vertical layer for multi-layer terrain
 }
 
 // RoomType represents the special purpose or theme of a room.

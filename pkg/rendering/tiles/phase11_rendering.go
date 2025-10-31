@@ -1,6 +1,6 @@
 // Package tiles provides Phase 11.1 diagonal wall and multi-layer terrain rendering.
 // This file implements rendering for diagonal walls (45° angles) and multi-layer
-// terrain features (platforms, pits, ramps, lava).
+// terrain features (platforms, pits, ramps).
 package tiles
 
 import (

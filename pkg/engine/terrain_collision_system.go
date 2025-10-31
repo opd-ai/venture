@@ -168,78 +168,93 @@ func triangleAABBIntersection(
 	t1X, t1Y, t2X, t2Y, t3X, t3Y float64, // Triangle vertices
 	minX, minY, maxX, maxY float64, // AABB bounds
 ) bool {
-	// Test 1: Check if any triangle vertex is inside the AABB
-	if pointInAABB(t1X, t1Y, minX, minY, maxX, maxY) {
+	// Check if AABB is degenerate (zero or near-zero size)
+	// For points or very small AABBs, use inclusive checks
+	epsilon := 1e-10
+	isPoint := (maxX-minX < epsilon) && (maxY-minY < epsilon)
+
+	// Test 1: Check if any triangle vertex is strictly inside the AABB (not just touching boundary)
+	// Phase 11.1 Week 3: Use strict inequality to exclude adjacent (touching) shapes
+	if pointInAABBStrict(t1X, t1Y, minX, minY, maxX, maxY) {
 		return true
 	}
-	if pointInAABB(t2X, t2Y, minX, minY, maxX, maxY) {
+	if pointInAABBStrict(t2X, t2Y, minX, minY, maxX, maxY) {
 		return true
 	}
-	if pointInAABB(t3X, t3Y, minX, minY, maxX, maxY) {
+	if pointInAABBStrict(t3X, t3Y, minX, minY, maxX, maxY) {
 		return true
 	}
 
 	// Test 2: Check if any AABB corner is inside the triangle
-	// AABB corners
-	if pointInTriangle(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if pointInTriangle(maxX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if pointInTriangle(minX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if pointInTriangle(maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-		return true
+	// For points (zero-size AABBs), use non-strict to catch points on edges
+	// For regular AABBs, use strict to exclude adjacent touching
+	if isPoint {
+		// Point AABB: check if point is in triangle (including boundary)
+		if pointInTriangle(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+			return true
+		}
+	} else {
+		// Regular AABB: check if corners are strictly inside triangle
+		if pointInTriangleStrict(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+			return true
+		}
+		if pointInTriangleStrict(maxX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+			return true
+		}
+		if pointInTriangleStrict(minX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+			return true
+		}
+		if pointInTriangleStrict(maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+			return true
+		}
 	}
 
 	// Test 3: Check if any triangle edge intersects any AABB edge
-	// Phase 11.1 Week 3: Unrolled loops to avoid allocations
+	// Phase 11.1 Week 3: Use strict intersection to exclude adjacent (touching) shapes
 	// AABB edges: top, right, bottom, left
 	// Triangle edges: (t1-t2), (t2-t3), (t3-t1)
 
 	// Top edge of AABB vs all triangle edges
-	if lineSegmentsIntersect(minX, minY, maxX, minY, t1X, t1Y, t2X, t2Y) {
+	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t1X, t1Y, t2X, t2Y) {
 		return true
 	}
-	if lineSegmentsIntersect(minX, minY, maxX, minY, t2X, t2Y, t3X, t3Y) {
+	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
-	if lineSegmentsIntersect(minX, minY, maxX, minY, t3X, t3Y, t1X, t1Y) {
+	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t3X, t3Y, t1X, t1Y) {
 		return true
 	}
 
 	// Right edge of AABB vs all triangle edges
-	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y) {
+	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y) {
 		return true
 	}
-	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t2X, t2Y, t3X, t3Y) {
+	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
-	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t3X, t3Y, t1X, t1Y) {
+	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t3X, t3Y, t1X, t1Y) {
 		return true
 	}
 
 	// Bottom edge of AABB vs all triangle edges
-	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t1X, t1Y, t2X, t2Y) {
+	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t1X, t1Y, t2X, t2Y) {
 		return true
 	}
-	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t2X, t2Y, t3X, t3Y) {
+	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
-	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t3X, t3Y, t1X, t1Y) {
+	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t3X, t3Y, t1X, t1Y) {
 		return true
 	}
 
 	// Left edge of AABB vs all triangle edges
-	if lineSegmentsIntersect(minX, maxY, minX, minY, t1X, t1Y, t2X, t2Y) {
+	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t1X, t1Y, t2X, t2Y) {
 		return true
 	}
-	if lineSegmentsIntersect(minX, maxY, minX, minY, t2X, t2Y, t3X, t3Y) {
+	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
-	if lineSegmentsIntersect(minX, maxY, minX, minY, t3X, t3Y, t1X, t1Y) {
+	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t3X, t3Y, t1X, t1Y) {
 		return true
 	}
 
@@ -250,6 +265,13 @@ func triangleAABBIntersection(
 // pointInAABB checks if a point is inside an axis-aligned bounding box.
 func pointInAABB(x, y, minX, minY, maxX, maxY float64) bool {
 	return x >= minX && x <= maxX && y >= minY && y <= maxY
+}
+
+// pointInAABBStrict checks if a point is strictly inside an AABB (not on boundary).
+// Phase 11.1 Week 3: Strict version excludes boundary points to avoid false positives
+// for adjacent (touching) shapes in collision detection.
+func pointInAABBStrict(x, y, minX, minY, maxX, maxY float64) bool {
+	return x > minX && x < maxX && y > minY && y < maxY
 }
 
 // pointInTriangle checks if a point is inside a triangle using barycentric coordinates.
@@ -272,6 +294,30 @@ func pointInTriangle(px, py, t1X, t1Y, t2X, t2Y, t3X, t3Y float64) bool {
 	return !(hasNeg && hasPos)
 }
 
+// pointInTriangleStrict checks if a point is strictly inside a triangle (not on edge).
+// Phase 11.1 Week 3: Strict version excludes edge points to avoid false positives
+// for adjacent (touching) shapes in collision detection.
+func pointInTriangleStrict(px, py, t1X, t1Y, t2X, t2Y, t3X, t3Y float64) bool {
+	// Calculate barycentric coordinates using cross products
+	// A point is strictly inside if all cross products are strictly positive or strictly negative
+
+	// Edge 1-2
+	d1 := (px-t2X)*(t1Y-t2Y) - (t1X-t2X)*(py-t2Y)
+	// Edge 2-3
+	d2 := (px-t3X)*(t2Y-t3Y) - (t2X-t3X)*(py-t3Y)
+	// Edge 3-1
+	d3 := (px-t1X)*(t3Y-t1Y) - (t3X-t1X)*(py-t1Y)
+
+	// Point is strictly inside if all have the same sign AND none are zero
+	if d1 > 0 && d2 > 0 && d3 > 0 {
+		return true
+	}
+	if d1 < 0 && d2 < 0 && d3 < 0 {
+		return true
+	}
+	return false
+}
+
 // lineSegmentsIntersect checks if two line segments intersect.
 // Phase 11.1 Week 3: Line segment intersection test
 func lineSegmentsIntersect(p1X, p1Y, p2X, p2Y, q1X, q1Y, q2X, q2Y float64) bool {
@@ -284,9 +330,59 @@ func lineSegmentsIntersect(p1X, p1Y, p2X, p2Y, q1X, q1Y, q2X, q2Y float64) bool 
 	// Calculate cross product of directions
 	cross := d1X*d2Y - d1Y*d2X
 
-	// Parallel lines (cross product = 0) don't intersect unless collinear
+	// Parallel lines (cross product ≈ 0)
 	if math.Abs(cross) < 1e-10 {
-		return false
+		// Check for collinear segments that overlap
+		// For collinear segments, check if they share any points
+
+		// Check if segments are on the same line using cross product with a connecting vector
+		dx := q1X - p1X
+		dy := q1Y - p1Y
+		crossP := dx*d1Y - dy*d1X
+
+		if math.Abs(crossP) > 1e-10 {
+			// Not on the same line
+			return false
+		}
+
+		// Segments are collinear, check for overlap
+		// Project all points onto the line direction and check for overlap
+		// Use the primary direction (larger component) for projection
+		if math.Abs(d1X) > math.Abs(d1Y) {
+			// Project onto X axis
+			p1 := p1X
+			p2 := p2X
+			q1 := q1X
+			q2 := q2X
+
+			// Ensure p1 <= p2 and q1 <= q2
+			if p1 > p2 {
+				p1, p2 = p2, p1
+			}
+			if q1 > q2 {
+				q1, q2 = q2, q1
+			}
+
+			// Check for overlap: segments overlap if max(p1, q1) <= min(p2, q2)
+			return math.Max(p1, q1) <= math.Min(p2, q2)
+		} else {
+			// Project onto Y axis
+			p1 := p1Y
+			p2 := p2Y
+			q1 := q1Y
+			q2 := q2Y
+
+			// Ensure p1 <= p2 and q1 <= q2
+			if p1 > p2 {
+				p1, p2 = p2, p1
+			}
+			if q1 > q2 {
+				q1, q2 = q2, q1
+			}
+
+			// Check for overlap: segments overlap if max(p1, q1) <= min(p2, q2)
+			return math.Max(p1, q1) <= math.Min(p2, q2)
+		}
 	}
 
 	// Calculate parameters for intersection point
@@ -295,4 +391,79 @@ func lineSegmentsIntersect(p1X, p1Y, p2X, p2Y, q1X, q1Y, q2X, q2Y float64) bool 
 
 	// Intersection occurs if both parameters are in [0, 1]
 	return t >= 0 && t <= 1 && u >= 0 && u <= 1
+}
+
+// lineSegmentsIntersectStrict checks if two line segments have a proper intersection.
+// Phase 11.1 Week 3: Strict version excludes endpoint touching to avoid false positives
+// for adjacent (touching) shapes in collision detection. Only returns true for proper
+// intersections where segments actually cross or overlap with non-zero length.
+func lineSegmentsIntersectStrict(p1X, p1Y, p2X, p2Y, q1X, q1Y, q2X, q2Y float64) bool {
+	// Calculate direction vectors
+	d1X := p2X - p1X
+	d1Y := p2Y - p1Y
+	d2X := q2X - q1X
+	d2Y := q2Y - q1Y
+
+	// Calculate cross product of directions
+	cross := d1X*d2Y - d1Y*d2X
+
+	// Parallel lines (cross product ≈ 0)
+	if math.Abs(cross) < 1e-10 {
+		// For collinear segments, check for proper overlap (not just touching at endpoints)
+
+		// Check if segments are on the same line
+		dx := q1X - p1X
+		dy := q1Y - p1Y
+		crossP := dx*d1Y - dy*d1X
+
+		if math.Abs(crossP) > 1e-10 {
+			// Not on the same line
+			return false
+		}
+
+		// Segments are collinear, check for proper overlap (strict inequality)
+		// Use the primary direction (larger component) for projection
+		if math.Abs(d1X) > math.Abs(d1Y) {
+			// Project onto X axis
+			p1 := p1X
+			p2 := p2X
+			q1 := q1X
+			q2 := q2X
+
+			// Ensure p1 <= p2 and q1 <= q2
+			if p1 > p2 {
+				p1, p2 = p2, p1
+			}
+			if q1 > q2 {
+				q1, q2 = q2, q1
+			}
+
+			// Proper overlap requires: max(p1, q1) < min(p2, q2)
+			return math.Max(p1, q1) < math.Min(p2, q2)
+		} else {
+			// Project onto Y axis
+			p1 := p1Y
+			p2 := p2Y
+			q1 := q1Y
+			q2 := q2Y
+
+			// Ensure p1 <= p2 and q1 <= q2
+			if p1 > p2 {
+				p1, p2 = p2, p1
+			}
+			if q1 > q2 {
+				q1, q2 = q2, q1
+			}
+
+			// Proper overlap requires: max(p1, q1) < min(p2, q2)
+			return math.Max(p1, q1) < math.Min(p2, q2)
+		}
+	}
+
+	// Calculate parameters for intersection point
+	t := ((q1X-p1X)*d2Y - (q1Y-p1Y)*d2X) / cross
+	u := ((q1X-p1X)*d1Y - (q1Y-p1Y)*d1X) / cross
+
+	// Proper intersection requires strict inequality (not at endpoints)
+	return t > 0 && t < 1 && u > 0 && u < 1
 }

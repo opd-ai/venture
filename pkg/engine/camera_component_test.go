@@ -9,19 +9,19 @@ import (
 // TestScreenShakeComponent_New tests component creation.
 func TestScreenShakeComponent_New(t *testing.T) {
 	shake := NewScreenShakeComponent()
-	
+
 	if shake == nil {
 		t.Fatal("NewScreenShakeComponent() returned nil")
 	}
-	
+
 	if shake.Type() != "screenShake" {
 		t.Errorf("expected type 'screenShake', got '%s'", shake.Type())
 	}
-	
+
 	if shake.Active {
 		t.Error("new shake should not be active")
 	}
-	
+
 	if shake.Frequency != 15.0 {
 		t.Errorf("expected default frequency 15.0, got %.2f", shake.Frequency)
 	}
@@ -41,19 +41,19 @@ func TestScreenShakeComponent_TriggerShake(t *testing.T) {
 		{"zero duration", 5.0, 0.0, true},
 		{"negative duration", 5.0, -0.1, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shake := NewScreenShakeComponent()
 			err := shake.TriggerShake(tt.intensity, tt.duration)
-			
+
 			if tt.wantErr && err == nil {
 				t.Error("expected error, got nil")
 			}
 			if !tt.wantErr && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			
+
 			if !tt.wantErr {
 				if !shake.Active {
 					t.Error("shake should be active after trigger")
@@ -72,27 +72,27 @@ func TestScreenShakeComponent_TriggerShake(t *testing.T) {
 // TestScreenShakeComponent_StackingShakes tests shake stacking behavior.
 func TestScreenShakeComponent_StackingShakes(t *testing.T) {
 	shake := NewScreenShakeComponent()
-	
+
 	// First shake
 	err := shake.TriggerShake(5.0, 0.3)
 	if err != nil {
 		t.Fatalf("TriggerShake failed: %v", err)
 	}
-	
+
 	// Simulate time passing
 	shake.Elapsed = 0.1
-	
+
 	// Second shake (higher intensity)
 	err = shake.TriggerShake(8.0, 0.2)
 	if err != nil {
 		t.Fatalf("TriggerShake failed: %v", err)
 	}
-	
+
 	// Should take higher intensity
 	if shake.Intensity != 8.0 {
 		t.Errorf("expected intensity 8.0 from stacking, got %.2f", shake.Intensity)
 	}
-	
+
 	// Duration should extend
 	if shake.Duration < 0.3 {
 		t.Errorf("expected duration extended to at least 0.3, got %.2f", shake.Duration)
@@ -102,16 +102,16 @@ func TestScreenShakeComponent_StackingShakes(t *testing.T) {
 // TestScreenShakeComponent_IsShaking tests shake status.
 func TestScreenShakeComponent_IsShaking(t *testing.T) {
 	shake := NewScreenShakeComponent()
-	
+
 	if shake.IsShaking() {
 		t.Error("new shake should not be shaking")
 	}
-	
+
 	shake.TriggerShake(5.0, 0.3)
 	if !shake.IsShaking() {
 		t.Error("shake should be active after trigger")
 	}
-	
+
 	// Simulate shake completion
 	shake.Elapsed = 0.4
 	if shake.IsShaking() {
@@ -123,7 +123,7 @@ func TestScreenShakeComponent_IsShaking(t *testing.T) {
 func TestScreenShakeComponent_GetProgress(t *testing.T) {
 	shake := NewScreenShakeComponent()
 	shake.TriggerShake(5.0, 1.0)
-	
+
 	tests := []struct {
 		elapsed  float64
 		expected float64
@@ -135,11 +135,11 @@ func TestScreenShakeComponent_GetProgress(t *testing.T) {
 		{1.0, 1.0},
 		{1.5, 1.0}, // Clamped at 1.0
 	}
-	
+
 	for _, tt := range tests {
 		shake.Elapsed = tt.elapsed
 		progress := shake.GetProgress()
-		
+
 		if math.Abs(progress-tt.expected) > 0.001 {
 			t.Errorf("elapsed %.2f: expected progress %.2f, got %.2f", tt.elapsed, tt.expected, progress)
 		}
@@ -150,21 +150,21 @@ func TestScreenShakeComponent_GetProgress(t *testing.T) {
 func TestScreenShakeComponent_GetCurrentIntensity(t *testing.T) {
 	shake := NewScreenShakeComponent()
 	shake.TriggerShake(10.0, 1.0)
-	
+
 	tests := []struct {
 		elapsed  float64
 		expected float64
 	}{
-		{0.0, 10.0},  // Start: 100% intensity
-		{0.5, 5.0},   // Middle: 50% intensity
-		{0.75, 2.5},  // 75%: 25% intensity
-		{1.0, 0.0},   // End: 0% intensity
+		{0.0, 10.0}, // Start: 100% intensity
+		{0.5, 5.0},  // Middle: 50% intensity
+		{0.75, 2.5}, // 75%: 25% intensity
+		{1.0, 0.0},  // End: 0% intensity
 	}
-	
+
 	for _, tt := range tests {
 		shake.Elapsed = tt.elapsed
 		intensity := shake.GetCurrentIntensity()
-		
+
 		if math.Abs(intensity-tt.expected) > 0.001 {
 			t.Errorf("elapsed %.2f: expected intensity %.2f, got %.2f", tt.elapsed, tt.expected, intensity)
 		}
@@ -175,28 +175,28 @@ func TestScreenShakeComponent_GetCurrentIntensity(t *testing.T) {
 func TestScreenShakeComponent_CalculateOffset(t *testing.T) {
 	shake := NewScreenShakeComponent()
 	shake.TriggerShake(10.0, 1.0)
-	
+
 	// Calculate offset at different times
 	shake.Elapsed = 0.0
 	shake.CalculateOffset()
-	
+
 	// Should have some offset
 	if shake.OffsetX == 0 && shake.OffsetY == 0 {
 		t.Error("expected non-zero offset at shake start")
 	}
-	
+
 	// Store initial offset
 	initialX, initialY := shake.OffsetX, shake.OffsetY
-	
+
 	// Advance time
 	shake.Elapsed = 0.1
 	shake.CalculateOffset()
-	
+
 	// Offset should change (sine wave)
 	if shake.OffsetX == initialX && shake.OffsetY == initialY {
 		t.Error("offset should change over time")
 	}
-	
+
 	// At end, offset should be zero
 	shake.Elapsed = 1.0
 	shake.CalculateOffset()
@@ -211,9 +211,9 @@ func TestScreenShakeComponent_Reset(t *testing.T) {
 	shake.TriggerShake(5.0, 0.3)
 	shake.Elapsed = 0.1
 	shake.CalculateOffset()
-	
+
 	shake.Reset()
-	
+
 	if shake.Active {
 		t.Error("shake should not be active after reset")
 	}
@@ -228,19 +228,19 @@ func TestScreenShakeComponent_Reset(t *testing.T) {
 // TestHitStopComponent_New tests component creation.
 func TestHitStopComponent_New(t *testing.T) {
 	hitStop := NewHitStopComponent()
-	
+
 	if hitStop == nil {
 		t.Fatal("NewHitStopComponent() returned nil")
 	}
-	
+
 	if hitStop.Type() != "hitStop" {
 		t.Errorf("expected type 'hitStop', got '%s'", hitStop.Type())
 	}
-	
+
 	if hitStop.Active {
 		t.Error("new hit-stop should not be active")
 	}
-	
+
 	if hitStop.TimeScale != 0.0 {
 		t.Errorf("expected default time scale 0.0, got %.2f", hitStop.TimeScale)
 	}
@@ -261,19 +261,19 @@ func TestHitStopComponent_TriggerHitStop(t *testing.T) {
 		{"negative time scale", 0.1, -0.1, true},
 		{"time scale > 1", 0.1, 1.5, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hitStop := NewHitStopComponent()
 			err := hitStop.TriggerHitStop(tt.duration, tt.timeScale)
-			
+
 			if tt.wantErr && err == nil {
 				t.Error("expected error, got nil")
 			}
 			if !tt.wantErr && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			
+
 			if !tt.wantErr {
 				if !hitStop.Active {
 					t.Error("hit-stop should be active after trigger")
@@ -292,27 +292,27 @@ func TestHitStopComponent_TriggerHitStop(t *testing.T) {
 // TestHitStopComponent_StackingHitStops tests hit-stop stacking.
 func TestHitStopComponent_StackingHitStops(t *testing.T) {
 	hitStop := NewHitStopComponent()
-	
+
 	// First hit-stop
 	err := hitStop.TriggerHitStop(0.1, 0.1)
 	if err != nil {
 		t.Fatalf("TriggerHitStop failed: %v", err)
 	}
-	
+
 	// Simulate time passing
 	hitStop.Elapsed = 0.05
-	
+
 	// Second hit-stop (more dramatic)
 	err = hitStop.TriggerHitStop(0.15, 0.0)
 	if err != nil {
 		t.Fatalf("TriggerHitStop failed: %v", err)
 	}
-	
+
 	// Should take lower time scale (more dramatic)
 	if hitStop.TimeScale != 0.0 {
 		t.Errorf("expected time scale 0.0 from stacking, got %.2f", hitStop.TimeScale)
 	}
-	
+
 	// Duration should extend
 	if hitStop.Duration < 0.15 {
 		t.Errorf("expected duration extended to at least 0.15, got %.2f", hitStop.Duration)
@@ -322,16 +322,16 @@ func TestHitStopComponent_StackingHitStops(t *testing.T) {
 // TestHitStopComponent_IsActive tests active status.
 func TestHitStopComponent_IsActive(t *testing.T) {
 	hitStop := NewHitStopComponent()
-	
+
 	if hitStop.IsActive() {
 		t.Error("new hit-stop should not be active")
 	}
-	
+
 	hitStop.TriggerHitStop(0.1, 0.0)
 	if !hitStop.IsActive() {
 		t.Error("hit-stop should be active after trigger")
 	}
-	
+
 	// Simulate completion
 	hitStop.Elapsed = 0.15
 	if hitStop.IsActive() {
@@ -342,18 +342,18 @@ func TestHitStopComponent_IsActive(t *testing.T) {
 // TestHitStopComponent_GetTimeScale tests time scale retrieval.
 func TestHitStopComponent_GetTimeScale(t *testing.T) {
 	hitStop := NewHitStopComponent()
-	
+
 	// Not active: should return 1.0 (normal time)
 	if hitStop.GetTimeScale() != 1.0 {
 		t.Errorf("expected time scale 1.0 when inactive, got %.2f", hitStop.GetTimeScale())
 	}
-	
+
 	// Active: should return set time scale
 	hitStop.TriggerHitStop(0.1, 0.05)
 	if hitStop.GetTimeScale() != 0.05 {
 		t.Errorf("expected time scale 0.05 when active, got %.2f", hitStop.GetTimeScale())
 	}
-	
+
 	// After duration: should return 1.0 again
 	hitStop.Elapsed = 0.15
 	if hitStop.GetTimeScale() != 1.0 {
@@ -366,9 +366,9 @@ func TestHitStopComponent_Reset(t *testing.T) {
 	hitStop := NewHitStopComponent()
 	hitStop.TriggerHitStop(0.1, 0.0)
 	hitStop.Elapsed = 0.05
-	
+
 	hitStop.Reset()
-	
+
 	if hitStop.Active {
 		t.Error("hit-stop should not be active after reset")
 	}
@@ -391,14 +391,14 @@ func TestCalculateShakeIntensity(t *testing.T) {
 		maxIntensity float64
 		expected     float64
 	}{
-		{"10 damage to 100 HP", 10, 100, 10, 1, 20, 1},      // 10/100*10 = 1 → clamped to min 1
-		{"50 damage to 100 HP", 50, 100, 10, 1, 20, 5},      // 50/100*10 = 5
-		{"100 damage to 100 HP", 100, 100, 10, 1, 20, 10},   // 100/100*10 = 10
-		{"200 damage to 100 HP", 200, 100, 10, 1, 20, 20},   // 200/100*10 = 20 → clamped to max 20
-		{"small damage", 1, 100, 10, 2, 20, 2},              // 1/100*10 = 0.1 → clamped to min 2
-		{"zero max HP", 50, 0, 10, 1, 20, 5},                // Uses default 100
+		{"10 damage to 100 HP", 10, 100, 10, 1, 20, 1},    // 10/100*10 = 1 → clamped to min 1
+		{"50 damage to 100 HP", 50, 100, 10, 1, 20, 5},    // 50/100*10 = 5
+		{"100 damage to 100 HP", 100, 100, 10, 1, 20, 10}, // 100/100*10 = 10
+		{"200 damage to 100 HP", 200, 100, 10, 1, 20, 20}, // 200/100*10 = 20 → clamped to max 20
+		{"small damage", 1, 100, 10, 2, 20, 2},            // 1/100*10 = 0.1 → clamped to min 2
+		{"zero max HP", 50, 0, 10, 1, 20, 5},              // Uses default 100
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CalculateShakeIntensity(tt.damage, tt.maxHP, tt.scaleFactor, tt.minIntensity, tt.maxIntensity)
@@ -425,7 +425,7 @@ func TestCalculateShakeDuration(t *testing.T) {
 		{"max intensity", 20, 0.1, 0.2, 20, 0.3},    // 0.1 + (20/20)*0.2 = 0.3
 		{"over max", 30, 0.1, 0.2, 20, 0.3},         // Clamped to max
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CalculateShakeDuration(tt.intensity, tt.baseDuration, tt.additionalDuration, tt.maxIntensity)
@@ -448,7 +448,7 @@ func BenchmarkScreenShakeComponent_TriggerShake(b *testing.B) {
 func BenchmarkScreenShakeComponent_CalculateOffset(b *testing.B) {
 	shake := NewScreenShakeComponent()
 	shake.TriggerShake(5.0, 0.3)
-	
+
 	for i := 0; i < b.N; i++ {
 		shake.Elapsed = float64(i) * 0.016 // 60 FPS simulation
 		shake.CalculateOffset()

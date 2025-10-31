@@ -1,6 +1,6 @@
 // Package engine provides enhanced camera and visual feedback components.
 // Phase 10.3: Screen Shake & Impact Feedback
-// 
+//
 // This file adds advanced screen shake and hit-stop components to complement
 // the existing CameraSystem (camera_system.go). The existing CameraComponent
 // has basic shake support; these components provide more advanced control.
@@ -111,13 +111,13 @@ func (s *ScreenShakeComponent) CalculateOffset() {
 	}
 
 	currentIntensity := s.GetCurrentIntensity()
-	
+
 	// Use sine wave for smooth oscillation
 	angle := s.Elapsed * s.Frequency * 2 * math.Pi
-	
+
 	// Two perpendicular sine waves for circular-ish shake
 	s.OffsetX = currentIntensity * math.Sin(angle)
-	s.OffsetY = currentIntensity * math.Sin(angle*1.3 + math.Pi/4) // Slightly different frequency and phase
+	s.OffsetY = currentIntensity * math.Sin(angle*1.3+math.Pi/4) // Slightly different frequency and phase
 }
 
 // Reset stops the shake and resets to zero.
@@ -213,11 +213,11 @@ func CalculateShakeIntensity(damage, maxHP, scaleFactor, minIntensity, maxIntens
 	if maxHP <= 0 {
 		maxHP = 100 // Default to avoid division by zero
 	}
-	
+
 	intensity := (damage / maxHP) * scaleFactor
 	intensity = math.Max(minIntensity, intensity)
 	intensity = math.Min(maxIntensity, intensity)
-	
+
 	return intensity
 }
 
@@ -228,7 +228,7 @@ func CalculateShakeDuration(intensity, baseDuration, additionalDuration, maxInte
 	if maxIntensity <= 0 {
 		maxIntensity = 20 // Default
 	}
-	
+
 	ratio := math.Min(intensity/maxIntensity, 1.0)
 	return baseDuration + ratio*additionalDuration
 }

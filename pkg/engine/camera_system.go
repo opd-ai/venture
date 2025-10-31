@@ -77,7 +77,7 @@ func NewCameraSystem(screenWidth, screenHeight int) *CameraSystem {
 func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 	// Phase 10.3: Apply hit-stop time dilation
 	effectiveDeltaTime := s.calculateEffectiveDeltaTime(entities, deltaTime)
-	
+
 	for _, entity := range entities {
 		cameraComp, ok := entity.GetComponent("camera")
 		if !ok {
@@ -140,7 +140,7 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 				camera.ShakeOffsetY = math.Sin(angle) * camera.ShakeIntensity
 			}
 		}
-		
+
 		// Phase 10.3: Update advanced screen shake
 		s.updateAdvancedShake(entity, effectiveDeltaTime)
 	}
@@ -155,23 +155,23 @@ func (s *CameraSystem) calculateEffectiveDeltaTime(entities []*Entity, deltaTime
 		if !ok {
 			continue
 		}
-		
+
 		hitStop := hitStopComp.(*HitStopComponent)
 		if hitStop.IsActive() {
 			// Update hit-stop elapsed time with REAL delta time (not scaled)
 			hitStop.Elapsed += deltaTime
-			
+
 			// Check if hit-stop finished
 			if hitStop.Elapsed >= hitStop.Duration {
 				hitStop.Reset()
 				return deltaTime
 			}
-			
+
 			// Return scaled delta time
 			return deltaTime * hitStop.GetTimeScale()
 		}
 	}
-	
+
 	return deltaTime
 }
 
@@ -182,21 +182,21 @@ func (s *CameraSystem) updateAdvancedShake(entity *Entity, deltaTime float64) {
 	if !ok {
 		return
 	}
-	
+
 	shake := shakeComp.(*ScreenShakeComponent)
 	if !shake.IsShaking() {
 		return
 	}
-	
+
 	// Update elapsed time
 	shake.Elapsed += deltaTime
-	
+
 	// Check if shake finished
 	if shake.Elapsed >= shake.Duration {
 		shake.Reset()
 		return
 	}
-	
+
 	// Calculate offset
 	shake.CalculateOffset()
 }

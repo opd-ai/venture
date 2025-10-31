@@ -6,6 +6,7 @@ package engine
 import (
 	"math"
 
+	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/sirupsen/logrus"
 )
 

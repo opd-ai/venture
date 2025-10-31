@@ -293,6 +293,7 @@ func (g *Generator) calculateDifficulty(params procgen.GenerationParams) int {
 	return difficulty
 }
 
+
 // generatePressurePlatePuzzle creates a pressure plate stepping puzzle.
 func (g *Generator) generatePressurePlatePuzzle(rng *rand.Rand, template PuzzleTemplate, difficulty int, params procgen.GenerationParams) (*Puzzle, error) {
 	// Element count based on difficulty

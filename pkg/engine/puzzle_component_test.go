@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math"
 	"testing"
 	"time"
 )
@@ -289,6 +290,8 @@ func TestPuzzleHasMaxAttemptsReached(t *testing.T) {
 }
 
 func TestPuzzleGetProgressPercent(t *testing.T) {
+	const epsilon = 0.001 // Tolerance for floating point comparison (0.1%)
+
 	tests := []struct {
 		name            string
 		solution        []string
@@ -309,7 +312,7 @@ func TestPuzzleGetProgressPercent(t *testing.T) {
 			puzzle.CurrentProgress = tt.progress
 
 			result := puzzle.GetProgressPercent()
-			if result != tt.expectedPercent {
+			if math.Abs(result-tt.expectedPercent) > epsilon {
 				t.Errorf("Expected %.2f%%, got %.2f%%", tt.expectedPercent, result)
 			}
 		})

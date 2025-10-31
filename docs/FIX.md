@@ -3,6 +3,8 @@ TASK: Autonomously diagnose and fix all build and test failures in the Go codeba
 EXECUTION MODE: Autonomous - automatically implement all fixes without requiring approval.
 
 PROCESS:
+
+0. Install build dependencies as indicated in CI config file or README.md
 1. Run `go build` and `go test ./...` to identify failures
 2. For each failure, determine root cause and implement fix
 3. Verify fix resolves the issue without regressions
@@ -26,6 +28,7 @@ VALIDATION (after each fix):
 - Run affected tests to confirm resolution
 - Run full test suite to detect regressions
 - Verify `go build` still succeeds
+- Code is formatted with `gofmt -w -s`
 
 OUTPUT FORMAT (final report):
 ```

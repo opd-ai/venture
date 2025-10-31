@@ -38,42 +38,43 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 
 // Generate creates a single environmental object.
 func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"subType": config.SubType,
-			"genreID": config.GenreID,
-			"seed":    config.Seed,
-			"width":   config.Width,
-			"height":  config.Height,
-		}).Debug("generating environmental object")
-	}
+	g.logDebug("generating environmental object", logrus.Fields{
+		"subType": config.SubType,
+		"genreID": config.GenreID,
+		"seed":    config.Seed,
+		"width":   config.Width,
+		"height":  config.Height,
+	})
 
 	if err := config.Validate(); err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).Error("invalid config")
-		}
+		g.logError("invalid config", err)
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	// Create RNG with seed
 	rng := rand.New(rand.NewSource(config.Seed))
-
-	// Get object properties
 	collidable, interactable, harmful, damage := GetProperties(config.SubType)
 
-	// Generate sprite
 	sprite, err := g.generateSprite(config, rng)
 	if err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).WithField("subType", config.SubType).Error("sprite generation failed")
-		}
+		g.logError("sprite generation failed", err, logrus.Fields{"subType": config.SubType})
 		return nil, fmt.Errorf("failed to generate sprite: %w", err)
 	}
 
-	// Generate name
 	name := g.generateName(config.SubType, config.GenreID, rng)
+	obj := g.createObject(config, sprite, name, collidable, interactable, harmful, damage)
 
-	obj := &EnvironmentalObject{
+	g.logInfo("environmental object generated", logrus.Fields{
+		"name":    name,
+		"subType": config.SubType,
+	})
+
+	return obj, nil
+}
+
+// createObject assembles an EnvironmentalObject from components.
+func (g *Generator) createObject(config Config, sprite *image.RGBA, name string,
+	collidable, interactable, harmful bool, damage int) *EnvironmentalObject {
+	return &EnvironmentalObject{
 		Type:         config.SubType.GetObjectType(),
 		SubType:      config.SubType,
 		Sprite:       sprite,
@@ -87,105 +88,96 @@ func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
 		Seed:         config.Seed,
 		Name:         name,
 	}
-
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"name":    name,
-			"subType": config.SubType,
-		}).Info("environmental object generated")
-	}
-
-	return obj, nil
 }
 
 // generateSprite creates a sprite for the object.
 func (g *Generator) generateSprite(config Config, rng *rand.Rand) (*image.RGBA, error) {
-	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
-	// Create base image
 	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-
-	// Select colors based on object type
-	var baseColor, accentColor color.Color
-	objectType := config.SubType.GetObjectType()
-
-	switch objectType {
-	case ObjectFurniture:
-		baseColor = pal.Secondary
-		accentColor = pal.Accent1
-	case ObjectDecoration:
-		baseColor = pal.Accent1
-		accentColor = pal.Primary
-	case ObjectObstacle:
-		baseColor = pal.Neutral
-		accentColor = pal.Secondary
-	case ObjectHazard:
-		baseColor = pal.Primary
-		accentColor = pal.Accent1
-	}
-
-	// Draw object based on subtype
-	switch config.SubType {
-	case SubTypeTable, SubTypeDesk:
-		g.drawTable(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeChair, SubTypeBench:
-		g.drawChair(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeBed:
-		g.drawBed(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeShelf, SubTypeCabinet:
-		g.drawShelf(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeChest:
-		g.drawChest(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypePlant:
-		g.drawPlant(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeStatue:
-		g.drawStatue(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypePainting, SubTypeTapestry:
-		g.drawPainting(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeBanner:
-		g.drawBanner(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeTorch, SubTypeCandlestick:
-		g.drawTorch(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeVase:
-		g.drawVase(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeCrystal:
-		g.drawCrystal(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeBook:
-		g.drawBook(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeBarrel, SubTypeCrate:
-		g.drawBarrel(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeRubble, SubTypeDebris:
-		g.drawRubble(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypePillar, SubTypeColumn:
-		g.drawPillar(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeBoulder:
-		g.drawBoulder(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeWreckage:
-		g.drawWreckage(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeSpikes:
-		g.drawSpikes(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypeFirePit, SubTypeLavaPit:
-		g.drawFirePit(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeAcidPool:
-		g.drawAcidPool(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeBearTrap:
-		g.drawBearTrap(img, config.Width, config.Height, baseColor, accentColor)
-	case SubTypePoisonGas:
-		g.drawPoisonGas(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeElectricField:
-		g.drawElectricField(img, config.Width, config.Height, baseColor, accentColor, rng)
-	case SubTypeIceField:
-		g.drawIceField(img, config.Width, config.Height, baseColor, accentColor, rng)
-	default:
-		// Default: draw rectangle
-		g.drawRectangle(img, config.Width, config.Height, baseColor, accentColor)
-	}
+	baseColor, accentColor := g.selectColors(config.SubType.GetObjectType(), pal)
+	g.drawObjectSprite(img, config, baseColor, accentColor, rng)
 
 	return img, nil
+}
+
+// selectColors chooses base and accent colors based on object type.
+func (g *Generator) selectColors(objectType ObjectType, pal *palette.Palette) (base, accent color.Color) {
+	switch objectType {
+	case ObjectFurniture:
+		return pal.Secondary, pal.Accent1
+	case ObjectDecoration:
+		return pal.Accent1, pal.Primary
+	case ObjectObstacle:
+		return pal.Neutral, pal.Secondary
+	case ObjectHazard:
+		return pal.Primary, pal.Accent1
+	default:
+		return pal.Secondary, pal.Accent1
+	}
+}
+
+// drawObjectSprite renders the object sprite based on subtype.
+func (g *Generator) drawObjectSprite(img *image.RGBA, config Config, baseColor, accentColor color.Color, rng *rand.Rand) {
+	w, h := config.Width, config.Height
+
+	switch config.SubType {
+	case SubTypeTable, SubTypeDesk:
+		g.drawTable(img, w, h, baseColor, accentColor)
+	case SubTypeChair, SubTypeBench:
+		g.drawChair(img, w, h, baseColor, accentColor)
+	case SubTypeBed:
+		g.drawBed(img, w, h, baseColor, accentColor)
+	case SubTypeShelf, SubTypeCabinet:
+		g.drawShelf(img, w, h, baseColor, accentColor)
+	case SubTypeChest:
+		g.drawChest(img, w, h, baseColor, accentColor)
+	case SubTypePlant:
+		g.drawPlant(img, w, h, baseColor, accentColor, rng)
+	case SubTypeStatue:
+		g.drawStatue(img, w, h, baseColor, accentColor)
+	case SubTypePainting, SubTypeTapestry:
+		g.drawPainting(img, w, h, baseColor, accentColor, rng)
+	case SubTypeBanner:
+		g.drawBanner(img, w, h, baseColor, accentColor)
+	case SubTypeTorch, SubTypeCandlestick:
+		g.drawTorch(img, w, h, baseColor, accentColor)
+	case SubTypeVase:
+		g.drawVase(img, w, h, baseColor, accentColor)
+	case SubTypeCrystal:
+		g.drawCrystal(img, w, h, baseColor, accentColor, rng)
+	case SubTypeBook:
+		g.drawBook(img, w, h, baseColor, accentColor)
+	case SubTypeBarrel, SubTypeCrate:
+		g.drawBarrel(img, w, h, baseColor, accentColor)
+	case SubTypeRubble, SubTypeDebris:
+		g.drawRubble(img, w, h, baseColor, accentColor, rng)
+	case SubTypePillar, SubTypeColumn:
+		g.drawPillar(img, w, h, baseColor, accentColor)
+	case SubTypeBoulder:
+		g.drawBoulder(img, w, h, baseColor, accentColor, rng)
+	case SubTypeWreckage:
+		g.drawWreckage(img, w, h, baseColor, accentColor, rng)
+	case SubTypeSpikes:
+		g.drawSpikes(img, w, h, baseColor, accentColor)
+	case SubTypeFirePit, SubTypeLavaPit:
+		g.drawFirePit(img, w, h, baseColor, accentColor, rng)
+	case SubTypeAcidPool:
+		g.drawAcidPool(img, w, h, baseColor, accentColor, rng)
+	case SubTypeBearTrap:
+		g.drawBearTrap(img, w, h, baseColor, accentColor)
+	case SubTypePoisonGas:
+		g.drawPoisonGas(img, w, h, baseColor, accentColor, rng)
+	case SubTypeElectricField:
+		g.drawElectricField(img, w, h, baseColor, accentColor, rng)
+	case SubTypeIceField:
+		g.drawIceField(img, w, h, baseColor, accentColor, rng)
+	default:
+		g.drawRectangle(img, w, h, baseColor, accentColor)
+	}
 }
 
 // Drawing helper functions (simple implementations)
@@ -757,4 +749,29 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// logDebug logs a debug message if logger and level are configured.
+func (g *Generator) logDebug(msg string, fields logrus.Fields) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
+}
+
+// logInfo logs an info message if logger is configured.
+func (g *Generator) logInfo(msg string, fields logrus.Fields) {
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
+}
+
+// logError logs an error message if logger is configured.
+func (g *Generator) logError(msg string, err error, fields ...logrus.Fields) {
+	if g.logger != nil {
+		entry := g.logger.WithError(err)
+		if len(fields) > 0 {
+			entry = entry.WithFields(fields[0])
+		}
+		entry.Error(msg)
+	}
 }

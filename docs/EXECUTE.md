@@ -10,6 +10,7 @@ ANALYSIS REQUIREMENTS:
 4. Prioritize based on: explicit roadmap → critical gaps → quality improvements
 
 IMPLEMENTATION CONSTRAINTS:
+- Install all build dependencies so tests can run
 - Follow project's ECS architecture patterns (see copilot-instructions.md)
 - Maintain deterministic generation using seed-based RNG
 - Meet performance targets (60 FPS, <500MB memory)
@@ -48,6 +49,7 @@ OUTPUT FORMAT:
 SUCCESS CRITERIA:
 - Code builds successfully with `go build ./...`
 - All tests pass with `go test ./...`
+- Code is formatted with `gofmt -w -s`
 - Test coverage ≥65% for new code (excluding Ebiten dependencies)
 - Implementation aligns with project architecture (ECS, deterministic generation)
 - Changes integrate seamlessly with existing systems

@@ -1,5 +1,4 @@
-// Package logging provides centralized structured logging configuration and utilities for Venture.package logging
-
+// Package logging provides centralized structured logging configuration and utilities for Venture.
 // This package wraps logrus to provide consistent logging across all packages and commands.
 // It supports environment-based configuration, multiple formatters, and contextual logging.
 //

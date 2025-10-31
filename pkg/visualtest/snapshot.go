@@ -1,5 +1,4 @@
-// Package visualtest provides visual regression testing for procedurally generated content.package visualtest
-
+// Package visualtest provides visual regression testing for procedurally generated content.
 // This package enables establishing visual baselines and detecting unintended changes
 // in sprite generation, color palettes, tile rendering, and animation sequences.
 //
@@ -287,67 +286,48 @@ func Compare(baseline, current *Snapshot, options SnapshotOptions) ComparisonRes
 		Differences: []Difference{},
 	}
 
-	// Compare sprite hashes first (fast path)
-	if baseline.SpriteHash != current.SpriteHash {
-		// Hashes differ, compute detailed similarity
-		similarity := calculateSimilarity(baseline.SpriteImage, current.SpriteImage)
-		result.Metrics.SpriteSimilarity = similarity
+	result.Metrics.SpriteSimilarity = compareComponent(
+		baseline.SpriteHash, current.SpriteHash,
+		baseline.SpriteImage, current.SpriteImage,
+		"sprite", options.SimilarityThreshold, &result,
+	)
 
-		if similarity < options.SimilarityThreshold {
-			result.Passed = false
-			result.Differences = append(result.Differences, Difference{
-				Type:        "sprite",
-				Description: fmt.Sprintf("Sprite visual regression detected (%.2f%% similar)", similarity*100),
-				Severity:    getSeverity(similarity),
-				Similarity:  similarity,
-			})
-		}
-	} else {
-		result.Metrics.SpriteSimilarity = 1.0
-	}
+	result.Metrics.TileSimilarity = compareComponent(
+		baseline.TileHash, current.TileHash,
+		baseline.TileImage, current.TileImage,
+		"tile", options.SimilarityThreshold, &result,
+	)
 
-	// Compare tile hashes
-	if baseline.TileHash != current.TileHash {
-		similarity := calculateSimilarity(baseline.TileImage, current.TileImage)
-		result.Metrics.TileSimilarity = similarity
+	result.Metrics.PaletteSimilarity = compareComponent(
+		baseline.PaletteHash, current.PaletteHash,
+		baseline.PaletteImage, current.PaletteImage,
+		"palette", options.SimilarityThreshold, &result,
+	)
 
-		if similarity < options.SimilarityThreshold {
-			result.Passed = false
-			result.Differences = append(result.Differences, Difference{
-				Type:        "tile",
-				Description: fmt.Sprintf("Tile visual regression detected (%.2f%% similar)", similarity*100),
-				Severity:    getSeverity(similarity),
-				Similarity:  similarity,
-			})
-		}
-	} else {
-		result.Metrics.TileSimilarity = 1.0
-	}
-
-	// Compare palette hashes
-	if baseline.PaletteHash != current.PaletteHash {
-		similarity := calculateSimilarity(baseline.PaletteImage, current.PaletteImage)
-		result.Metrics.PaletteSimilarity = similarity
-
-		if similarity < options.SimilarityThreshold {
-			result.Passed = false
-			result.Differences = append(result.Differences, Difference{
-				Type:        "palette",
-				Description: fmt.Sprintf("Palette visual regression detected (%.2f%% similar)", similarity*100),
-				Severity:    getSeverity(similarity),
-				Similarity:  similarity,
-			})
-		}
-	} else {
-		result.Metrics.PaletteSimilarity = 1.0
-	}
-
-	// Calculate overall similarity
 	result.Metrics.OverallSimilarity = (result.Metrics.SpriteSimilarity +
 		result.Metrics.TileSimilarity +
 		result.Metrics.PaletteSimilarity) / 3.0
 
 	return result
+}
+
+// compareComponent compares a specific visual component between baseline and current.
+func compareComponent(baselineHash, currentHash string, baselineImg, currentImg *image.RGBA,
+	componentType string, threshold float64, result *ComparisonResult) float64 {
+	if baselineHash != currentHash {
+		similarity := calculateSimilarity(baselineImg, currentImg)
+		if similarity < threshold {
+			result.Passed = false
+			result.Differences = append(result.Differences, Difference{
+				Type:        componentType,
+				Description: fmt.Sprintf("%s visual regression detected (%.2f%% similar)", componentType, similarity*100),
+				Severity:    getSeverity(similarity),
+				Similarity:  similarity,
+			})
+		}
+		return similarity
+	}
+	return 1.0
 }
 
 // getSeverity categorizes visual differences by severity.

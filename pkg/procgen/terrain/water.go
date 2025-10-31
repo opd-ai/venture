@@ -11,9 +11,12 @@ import (
 type WaterType int
 
 const (
-	WaterLake  WaterType = iota // Circular/elliptical body of water
-	WaterRiver                  // Linear flowing water feature
-	WaterMoat                   // Water surrounding a room/structure
+	// WaterLake is a circular/elliptical body of water.
+	WaterLake WaterType = iota
+	// WaterRiver is a linear flowing water feature.
+	WaterRiver
+	// WaterMoat is water surrounding a room/structure.
+	WaterMoat
 )
 
 // String returns a human-readable name for the water type.

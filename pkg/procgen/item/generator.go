@@ -61,67 +61,66 @@ func NewItemGeneratorWithLogger(logger *logrus.Logger) *ItemGenerator {
 
 // Generate creates items based on the seed and parameters.
 func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":    seed,
-			"genreID": params.GenreID,
-			"depth":   params.Depth,
-		}).Debug("starting item generation")
-	}
+	g.logDebug("starting item generation", logrus.Fields{
+		"seed":    seed,
+		"genreID": params.GenreID,
+		"depth":   params.Depth,
+	})
 
-	// Get count from custom parameters
-	count := 10 // default
+	count := 10
 	if params.Custom != nil {
 		if c, ok := params.Custom["count"].(int); ok {
 			count = c
 		}
 	}
 
-	// Get item type filter from custom parameters
-	var itemTypeFilter *ItemType
-	if params.Custom != nil {
-		if typeStr, ok := params.Custom["type"].(string); ok {
-			switch typeStr {
-			case "weapon":
-				t := TypeWeapon
-				itemTypeFilter = &t
-			case "armor":
-				t := TypeArmor
-				itemTypeFilter = &t
-			case "consumable":
-				t := TypeConsumable
-				itemTypeFilter = &t
-			}
-		}
-	}
-
-	// Create random source from seed
+	itemTypeFilter := g.getItemTypeFilter(params)
 	rng := rand.New(rand.NewSource(seed))
 
-	// Generate items
 	items := make([]*Item, count)
 	for i := 0; i < count; i++ {
-		// Use a different seed for each item
 		itemSeed := seed + int64(i)*1000
 		items[i] = g.generateSingleItem(itemSeed, params, itemTypeFilter, i, rng)
 	}
 
-	if g.logger != nil {
-		var typeFilter string
-		if itemTypeFilter != nil {
-			typeFilter = itemTypeFilter.String()
-		} else {
-			typeFilter = "all"
-		}
-		g.logger.WithFields(logrus.Fields{
-			"count":      len(items),
-			"seed":       seed,
-			"genreID":    params.GenreID,
-			"typeFilter": typeFilter,
-		}).Info("item generation complete")
+	typeFilter := "all"
+	if itemTypeFilter != nil {
+		typeFilter = itemTypeFilter.String()
 	}
 
+	g.logInfo("item generation complete", logrus.Fields{
+		"count":      len(items),
+		"seed":       seed,
+		"genreID":    params.GenreID,
+		"typeFilter": typeFilter,
+	})
+
 	return items, nil
+}
+
+// getItemTypeFilter extracts item type filter from custom parameters.
+func (g *ItemGenerator) getItemTypeFilter(params procgen.GenerationParams) *ItemType {
+	if params.Custom == nil {
+		return nil
+	}
+
+	typeStr, ok := params.Custom["type"].(string)
+	if !ok {
+		return nil
+	}
+
+	var itemType ItemType
+	switch typeStr {
+	case "weapon":
+		itemType = TypeWeapon
+	case "armor":
+		itemType = TypeArmor
+	case "consumable":
+		itemType = TypeConsumable
+	default:
+		return nil
+	}
+	return &itemType
 }
 
 // generateSingleItem creates one item.
@@ -481,4 +480,18 @@ func (g *ItemGenerator) Validate(result interface{}) error {
 	}
 
 	return nil
+}
+
+// logDebug logs a debug message if logger and level are configured.
+func (g *ItemGenerator) logDebug(msg string, fields logrus.Fields) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
+}
+
+// logInfo logs an info message if logger is configured.
+func (g *ItemGenerator) logInfo(msg string, fields logrus.Fields) {
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
 }

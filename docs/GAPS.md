@@ -68,11 +68,13 @@ B. **Implementation Strategy Generation**
    - Document all files requiring modification
 
 C. **Production-Ready Code Generation**
+   - Install build dependencies so you can run tests
    - Generate complete, executable Go code that resolves the gap
    - Include comprehensive error handling matching existing patterns
    - Add input validation and boundary condition handling
    - Implement logging and observability hooks consistent with codebase
    - Add inline documentation for complex logic
+   - Code is formatted with `gofmt -w -s`
 
 D. **Integration Requirements**
    - Specify exact file modifications (additions, changes, deletions)

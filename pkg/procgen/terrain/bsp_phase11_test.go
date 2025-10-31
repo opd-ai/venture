@@ -133,10 +133,10 @@ func TestChamferRoomCorners(t *testing.T) {
 	cornerTiles := []struct {
 		x, y int
 	}{
-		{room.X, room.Y},                                     // Top-left
-		{room.X + room.Width - 1, room.Y},                    // Top-right
-		{room.X, room.Y + room.Height - 1},                   // Bottom-left
-		{room.X + room.Width - 1, room.Y + room.Height - 1},  // Bottom-right
+		{room.X, room.Y},                                    // Top-left
+		{room.X + room.Width - 1, room.Y},                   // Top-right
+		{room.X, room.Y + room.Height - 1},                  // Bottom-left
+		{room.X + room.Width - 1, room.Y + room.Height - 1}, // Bottom-right
 	}
 
 	diagonalFound := false

@@ -57,23 +57,23 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 }
 
 var (
-	width          = flag.Int("width", 800, "Screen width")
-	height         = flag.Int("height", 600, "Screen height")
-	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
-	enableWeather  = flag.Bool("enable-weather", false, "Enable procedural weather effects (Phase 5.4)")
-	weatherType    = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
+	width            = flag.Int("width", 800, "Screen width")
+	height           = flag.Int("height", 600, "Screen height")
+	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	enableLighting   = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
+	enableWeather    = flag.Bool("enable-weather", false, "Enable procedural weather effects (Phase 5.4)")
+	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
 	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
-	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
-	profile        = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
-	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
-	hostLAN        = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
-	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
-	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	verbose          = flag.Bool("verbose", false, "Enable verbose logging")
+	profile          = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
+	multiplayer      = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server           = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay      = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN          = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort       = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers    = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick       = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 )
 
 // return a random seed
@@ -324,7 +324,7 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 		GenreID:   genreID,
 		Seed:      seed,
 		WindX:     (rng.Float64() - 0.5) * 20.0, // Random wind: -10 to +10 px/s
-		WindY:     0.0,                           // No vertical wind
+		WindY:     0.0,                          // No vertical wind
 		Custom:    make(map[string]interface{}),
 	}
 
@@ -1003,7 +1003,7 @@ func main() {
 
 	// Phase 10.2: Set projectile system reference on combat system for ranged weapon spawning
 	combatSystem.SetProjectileSystem(projectileSystem)
-	
+
 	// Phase 10.3: Set camera reference on projectile system for impact shake
 	projectileSystem.SetCamera(game.CameraSystem)
 
@@ -1295,11 +1295,11 @@ func main() {
 	camera := engine.NewCameraComponent()
 	camera.Smoothing = 0.1
 	player.AddComponent(camera)
-	
+
 	// Phase 10.3: Add advanced screen shake component
 	screenShake := engine.NewScreenShakeComponent()
 	player.AddComponent(screenShake)
-	
+
 	// Phase 10.3: Add hit-stop component
 	hitStop := engine.NewHitStopComponent()
 	player.AddComponent(hitStop)

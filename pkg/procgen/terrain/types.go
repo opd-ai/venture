@@ -126,8 +126,8 @@ func (t TileType) IsWalkableTile() bool {
 // IsTransparent returns true if this tile type doesn't block vision.
 func (t TileType) IsTransparent() bool {
 	// Most tiles are transparent except walls (including diagonal walls) and structures
-	return t != TileWall && t != TileStructure && t != TileTree && 
-		t != TileSecretDoor && t != TileWallNE && t != TileWallNW && 
+	return t != TileWall && t != TileStructure && t != TileTree &&
+		t != TileSecretDoor && t != TileWallNE && t != TileWallNW &&
 		t != TileWallSE && t != TileWallSW
 }
 

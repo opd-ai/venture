@@ -434,14 +434,14 @@ func (g *BSPGenerator) chamferRoomCorners(terrain *Terrain, room *Room, rng *ran
 	// Track which corners to chamfer (at least 1, up to all 4)
 	numCorners := 1 + rng.Intn(4) // 1-4 corners
 	corners := []bool{false, false, false, false}
-	
+
 	// Use Fisher-Yates shuffle to select unique corners
 	cornerIndices := []int{0, 1, 2, 3}
 	for i := len(cornerIndices) - 1; i > 0; i-- {
 		j := rng.Intn(i + 1)
 		cornerIndices[i], cornerIndices[j] = cornerIndices[j], cornerIndices[i]
 	}
-	
+
 	// Mark the first numCorners corners as selected
 	for i := 0; i < numCorners; i++ {
 		corners[cornerIndices[i]] = true

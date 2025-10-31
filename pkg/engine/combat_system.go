@@ -416,16 +416,18 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		}
 		
 		// Calculate shake intensity based on damage relative to max HP
-		shakeIntensity := CalculateShakeIntensity(finalDamage, maxHP, 10.0, 1.0, 15.0)
-		shakeDuration := CalculateShakeDuration(shakeIntensity, 0.1, 0.2, 15.0)
+		shakeIntensity := CalculateShakeIntensity(finalDamage, maxHP, 
+			CombatShakeScaleFactor, CombatShakeMinIntensity, CombatShakeMaxIntensity)
+		shakeDuration := CalculateShakeDuration(shakeIntensity, 
+			CombatShakeBaseDuration, CombatShakeAdditionalDuration, CombatShakeMaxIntensity)
 		
 		// Critical hits get extra shake and hit-stop
 		if isCrit {
-			shakeIntensity *= 1.5
-			shakeDuration *= 1.3
+			shakeIntensity *= CriticalHitShakeMultiplier
+			shakeDuration *= CriticalHitDurationMultiplier
 			
-			// Trigger hit-stop on critical hits (0.08s pause)
-			s.camera.TriggerHitStop(0.08, 0.0)
+			// Trigger hit-stop on critical hits
+			s.camera.TriggerHitStop(CriticalHitStopDuration, 0.0)
 		}
 		
 		// Use advanced shake if available, fallback to basic

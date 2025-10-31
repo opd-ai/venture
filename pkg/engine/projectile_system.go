@@ -4,6 +4,31 @@ import (
 	"math"
 )
 
+// Phase 10.3: Screen shake and hit-stop configuration constants
+const (
+	// Combat shake parameters
+	CombatShakeScaleFactor      = 10.0 // Multiplier for damage/maxHP ratio
+	CombatShakeMinIntensity     = 1.0  // Minimum shake intensity (pixels)
+	CombatShakeMaxIntensity     = 15.0 // Maximum shake intensity (pixels)
+	CombatShakeBaseDuration     = 0.1  // Base shake duration (seconds)
+	CombatShakeAdditionalDuration = 0.2  // Additional duration scaling (seconds)
+	
+	// Projectile shake parameters
+	ProjectileShakeScaleFactor      = 8.0  // Multiplier for damage/maxHP ratio
+	ProjectileShakeMinIntensity     = 0.5  // Minimum shake intensity (pixels)
+	ProjectileShakeMaxIntensity     = 12.0 // Maximum shake intensity (pixels)
+	ProjectileShakeBaseDuration     = 0.08 // Base shake duration (seconds)
+	ProjectileShakeAdditionalDuration = 0.15 // Additional duration scaling (seconds)
+	
+	// Critical hit and explosion bonuses
+	CriticalHitShakeMultiplier     = 1.5 // Intensity multiplier for critical hits
+	CriticalHitDurationMultiplier  = 1.3 // Duration multiplier for critical hits
+	CriticalHitStopDuration        = 0.08 // Hit-stop duration for critical hits (seconds)
+	ExplosionShakeMultiplier       = 1.5 // Intensity multiplier for explosions
+	ExplosionDurationMultiplier    = 1.2 // Duration multiplier for explosions
+	ExplosionHitStopDuration       = 0.06 // Hit-stop duration for explosions (seconds)
+)
+
 // ProjectileSystem manages projectile physics, collision detection, and lifecycle.
 type ProjectileSystem struct {
 	world *World
@@ -214,15 +239,17 @@ func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projCo
 			if s.camera != nil {
 				// Calculate shake based on damage
 				maxHP := health.Max
-				shakeIntensity := CalculateShakeIntensity(projComp.Damage, maxHP, 8.0, 0.5, 12.0)
-				shakeDuration := CalculateShakeDuration(shakeIntensity, 0.08, 0.15, 12.0)
+				shakeIntensity := CalculateShakeIntensity(projComp.Damage, maxHP, 
+					ProjectileShakeScaleFactor, ProjectileShakeMinIntensity, ProjectileShakeMaxIntensity)
+				shakeDuration := CalculateShakeDuration(shakeIntensity, 
+					ProjectileShakeBaseDuration, ProjectileShakeAdditionalDuration, ProjectileShakeMaxIntensity)
 				
 				// Explosive projectiles get extra shake
 				if projComp.Explosive {
-					shakeIntensity *= 1.5
-					shakeDuration *= 1.2
+					shakeIntensity *= ExplosionShakeMultiplier
+					shakeDuration *= ExplosionDurationMultiplier
 					// Trigger brief hit-stop for explosions
-					s.camera.TriggerHitStop(0.06, 0.0)
+					s.camera.TriggerHitStop(ExplosionHitStopDuration, 0.0)
 				}
 				
 				s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)

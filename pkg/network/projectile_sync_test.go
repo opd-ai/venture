@@ -337,10 +337,10 @@ func TestCleanupOldHistory(t *testing.T) {
 
 	// Advance time beyond cleanup threshold
 	sync.UpdateServerTime(2.0)
-	
+
 	// Record a snapshot after the time advance so we have recent data
 	sync.RecordSnapshot(1000, 400.0, 0.0, 100.0, 0.0, 4.0)
-	
+
 	sync.CleanupOldHistory()
 
 	// Old snapshots should be removed
@@ -531,7 +531,7 @@ func TestCleanupTask(t *testing.T) {
 	if snapshot != nil {
 		t.Error("Old snapshot should be cleaned up by background task")
 	}
-	
+
 	// Recent snapshots should still exist
 	snapshot = sync.GetHistoricalState(1000, sync.GetServerTime())
 	if snapshot == nil {

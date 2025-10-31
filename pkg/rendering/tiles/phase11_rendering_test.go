@@ -134,7 +134,7 @@ func TestGeneratePlatform(t *testing.T) {
 				Type:    TilePlatform,
 				Width:   64,
 				Height:  64,
-				GenreID: "scifi", // Fixed: should be "scifi" not "sci-fi"
+				GenreID: "scifi", // Note: uses "scifi" not "sci-fi" per genre system conventions
 				Seed:    54321,
 				Variant: 0.8,
 			},

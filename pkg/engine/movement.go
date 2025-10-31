@@ -5,6 +5,8 @@ package engine
 
 import (
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MovementSystem handles entity movement based on velocity.
@@ -148,6 +150,12 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 		// Track if entity actually moved
 		if pos.X != oldX || pos.Y != oldY {
 			s.entitiesMoved = true
+
+			// Phase 11.1 Week 3: Check for layer transitions via ramps
+			// If entity has collider and moved, check if they're on a ramp tile
+			if s.collisionSystem != nil && entity.HasComponent("collider") {
+				s.checkLayerTransition(entity, pos)
+			}
 		}
 
 		// Apply bounds if entity has them
@@ -340,4 +348,63 @@ func MoveTowards(entity *Entity, targetX, targetY, speed, deltaTime float64) boo
 
 	SetVelocity(entity, vx, vy)
 	return false
+}
+
+// checkLayerTransition checks if an entity is on a ramp tile and updates their layer accordingly.
+// Phase 11.1 Week 3: Layer Transition System
+//
+// This method enables smooth transitions between different terrain layers (ground, water, platform)
+// by detecting ramp tiles and updating the entity's collider layer to match.
+//
+// Ramp tiles allow entities to move between:
+// - LayerGround (0) ↔ LayerPlatform (2) via platform ramps
+// - LayerGround (0) ↔ LayerWater (1) via water ramps (stairs into water)
+//
+// The system uses the tile's GetLayer() method to determine the target layer and checks
+// CanTransitionToLayer() to verify the transition is valid before applying it.
+func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionComponent) {
+	// Get terrain checker from collision system
+	if s.collisionSystem == nil || s.collisionSystem.terrainChecker == nil {
+		return
+	}
+
+	terrainChecker := s.collisionSystem.terrainChecker
+	if terrainChecker.terrain == nil {
+		return
+	}
+
+	// Get entity's collider
+	colliderComp, hasCollider := entity.GetComponent("collider")
+	if !hasCollider {
+		return
+	}
+	collider := colliderComp.(*ColliderComponent)
+
+	// Calculate tile coordinates from entity position using helper method
+	tileX, tileY := terrainChecker.worldToTileCoords(pos.X, pos.Y)
+
+	// Get tile at entity's position
+	currentTile := terrainChecker.terrain.GetTile(tileX, tileY)
+
+	// Check if this is a ramp tile (allows layer transitions)
+	// Use explicit tile type checks for clarity and correctness
+	if currentTile == terrain.TileRamp || currentTile == terrain.TileRampUp || currentTile == terrain.TileRampDown {
+		// Determine target layer based on the tile's layer
+		// Ramps lead TO the layer they're assigned to
+		targetLayer := int(currentTile.GetLayer())
+
+		// Update collider layer if different
+		// This allows entity to interact with tiles on the new layer
+		if collider.Layer != targetLayer {
+			oldLayer := collider.Layer
+			collider.Layer = targetLayer
+			// Phase 11.1 Week 3: Debug logging for layer transitions
+			logrus.WithFields(logrus.Fields{
+				"entity":   entity.ID,
+				"oldLayer": oldLayer,
+				"newLayer": targetLayer,
+				"tile":     currentTile,
+			}).Debug("Entity layer transition via ramp")
+		}
+	}
 }

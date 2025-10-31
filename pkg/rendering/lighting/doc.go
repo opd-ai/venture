@@ -1,5 +1,4 @@
 // Package lighting provides dynamic lighting effects for rendered scenes.
-
 // This package implements a lighting system with support for multiple light sources,
 // color modulation, and realistic light falloff. Light sources can be attached to
 // entities or placed in the environment, and their effects are blended together to

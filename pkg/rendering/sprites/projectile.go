@@ -14,12 +14,18 @@ import (
 type ProjectileType string
 
 const (
-	ProjectileArrow    ProjectileType = "arrow"
-	ProjectileBolt     ProjectileType = "bolt"
-	ProjectileBullet   ProjectileType = "bullet"
-	ProjectileMagic    ProjectileType = "magic"
+	// ProjectileArrow represents an arrow projectile type
+	ProjectileArrow ProjectileType = "arrow"
+	// ProjectileBolt represents a crossbow bolt projectile type
+	ProjectileBolt ProjectileType = "bolt"
+	// ProjectileBullet represents a bullet projectile type
+	ProjectileBullet ProjectileType = "bullet"
+	// ProjectileMagic represents a magical projectile type
+	ProjectileMagic ProjectileType = "magic"
+	// ProjectileFireball represents a fireball projectile type
 	ProjectileFireball ProjectileType = "fireball"
-	ProjectileEnergy   ProjectileType = "energy"
+	// ProjectileEnergy represents an energy projectile type
+	ProjectileEnergy ProjectileType = "energy"
 )
 
 // GenerateProjectileSprite creates a simple procedural sprite for a projectile.

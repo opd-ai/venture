@@ -395,28 +395,28 @@ func (g *SpellGenerator) Validate(result interface{}) error {
 
 // logDebug logs a debug message if logger and level are configured.
 func (g *SpellGenerator) logDebug(msg string, fields logrus.Fields) {
-if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-g.logger.WithFields(fields).Debug(msg)
-}
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
 }
 
 // logInfo logs an info message if logger is configured.
 func (g *SpellGenerator) logInfo(msg string, fields logrus.Fields) {
-if g.logger != nil {
-g.logger.WithFields(fields).Info(msg)
-}
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
 }
 
 // logWarn logs a warning message if logger is configured.
 func (g *SpellGenerator) logWarn(msg string, fields logrus.Fields) {
-if g.logger != nil {
-g.logger.WithFields(fields).Warn(msg)
-}
+	if g.logger != nil {
+		g.logger.WithFields(fields).Warn(msg)
+	}
 }
 
 // logError logs an error message if logger is configured.
 func (g *SpellGenerator) logError(msg string, fields logrus.Fields) {
-if g.logger != nil {
-g.logger.WithFields(fields).Error(msg)
-}
+	if g.logger != nil {
+		g.logger.WithFields(fields).Error(msg)
+	}
 }

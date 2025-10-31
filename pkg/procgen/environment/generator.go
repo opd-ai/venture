@@ -753,25 +753,25 @@ func min(a, b int) int {
 
 // logDebug logs a debug message if logger and level are configured.
 func (g *Generator) logDebug(msg string, fields logrus.Fields) {
-if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-g.logger.WithFields(fields).Debug(msg)
-}
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
 }
 
 // logInfo logs an info message if logger is configured.
 func (g *Generator) logInfo(msg string, fields logrus.Fields) {
-if g.logger != nil {
-g.logger.WithFields(fields).Info(msg)
-}
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
 }
 
 // logError logs an error message if logger is configured.
 func (g *Generator) logError(msg string, err error, fields ...logrus.Fields) {
-if g.logger != nil {
-entry := g.logger.WithError(err)
-if len(fields) > 0 {
-entry = entry.WithFields(fields[0])
-}
-entry.Error(msg)
-}
+	if g.logger != nil {
+		entry := g.logger.WithError(err)
+		if len(fields) > 0 {
+			entry = entry.WithFields(fields[0])
+		}
+		entry.Error(msg)
+	}
 }

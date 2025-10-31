@@ -319,76 +319,76 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 
 // marshalSave marshals save data to JSON.
 func (m *SaveManager) marshalSave(save *GameSave, name string) ([]byte, error) {
-data, err := json.MarshalIndent(save, "", "  ")
-if err != nil {
-m.logError("failed to marshal save data", err, logrus.Fields{"name": name})
-return nil, fmt.Errorf("failed to marshal save data: %w", err)
-}
-return data, nil
+	data, err := json.MarshalIndent(save, "", "  ")
+	if err != nil {
+		m.logError("failed to marshal save data", err, logrus.Fields{"name": name})
+		return nil, fmt.Errorf("failed to marshal save data: %w", err)
+	}
+	return data, nil
 }
 
 // writeSaveFile writes save data to file.
 func (m *SaveManager) writeSaveFile(name string, data []byte) error {
-filename := m.getFilePath(name)
-if err := os.WriteFile(filename, data, 0o644); err != nil {
-m.logError("failed to write save file", err, logrus.Fields{
-"name":     name,
-"filename": filename,
-})
-return fmt.Errorf("failed to write save file: %w", err)
-}
-return nil
+	filename := m.getFilePath(name)
+	if err := os.WriteFile(filename, data, 0o644); err != nil {
+		m.logError("failed to write save file", err, logrus.Fields{
+			"name":     name,
+			"filename": filename,
+		})
+		return fmt.Errorf("failed to write save file: %w", err)
+	}
+	return nil
 }
 
 // readSaveFile reads save data from file.
 func (m *SaveManager) readSaveFile(name string) ([]byte, error) {
-filename := m.getFilePath(name)
-data, err := os.ReadFile(filename)
-if err != nil {
-if os.IsNotExist(err) {
-m.logWarn("save file not found", err, logrus.Fields{"name": name})
-return nil, fmt.Errorf("save file not found: %s", name)
-}
-m.logError("failed to read save file", err, logrus.Fields{"name": name})
-return nil, fmt.Errorf("failed to read save file: %w", err)
-}
-return data, nil
+	filename := m.getFilePath(name)
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			m.logWarn("save file not found", err, logrus.Fields{"name": name})
+			return nil, fmt.Errorf("save file not found: %s", name)
+		}
+		m.logError("failed to read save file", err, logrus.Fields{"name": name})
+		return nil, fmt.Errorf("failed to read save file: %w", err)
+	}
+	return data, nil
 }
 
 // unmarshalSave unmarshals save data from JSON.
 func (m *SaveManager) unmarshalSave(data []byte, name string) (*GameSave, error) {
-var save GameSave
-if err := json.Unmarshal(data, &save); err != nil {
-m.logError("failed to parse save file", err, logrus.Fields{"name": name})
-return nil, fmt.Errorf("failed to parse save file: %w", err)
-}
-return &save, nil
+	var save GameSave
+	if err := json.Unmarshal(data, &save); err != nil {
+		m.logError("failed to parse save file", err, logrus.Fields{"name": name})
+		return nil, fmt.Errorf("failed to parse save file: %w", err)
+	}
+	return &save, nil
 }
 
 // logDebug logs a debug message if logger and level are configured.
 func (m *SaveManager) logDebug(msg string, fields logrus.Fields) {
-if m.logger != nil && m.logger.Logger.GetLevel() >= logrus.DebugLevel {
-m.logger.WithFields(fields).Debug(msg)
-}
+	if m.logger != nil && m.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		m.logger.WithFields(fields).Debug(msg)
+	}
 }
 
 // logInfo logs an info message if logger is configured.
 func (m *SaveManager) logInfo(msg string, fields logrus.Fields) {
-if m.logger != nil {
-m.logger.WithFields(fields).Info(msg)
-}
+	if m.logger != nil {
+		m.logger.WithFields(fields).Info(msg)
+	}
 }
 
 // logWarn logs a warning message if logger is configured.
 func (m *SaveManager) logWarn(msg string, err error, fields logrus.Fields) {
-if m.logger != nil {
-m.logger.WithError(err).WithFields(fields).Warn(msg)
-}
+	if m.logger != nil {
+		m.logger.WithError(err).WithFields(fields).Warn(msg)
+	}
 }
 
 // logError logs an error message if logger is configured.
 func (m *SaveManager) logError(msg string, err error, fields logrus.Fields) {
-if m.logger != nil {
-m.logger.WithError(err).WithFields(fields).Error(msg)
-}
+	if m.logger != nil {
+		m.logger.WithError(err).WithFields(fields).Error(msg)
+	}
 }

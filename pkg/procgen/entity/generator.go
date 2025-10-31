@@ -294,14 +294,14 @@ func (g *EntityGenerator) Validate(result interface{}) error {
 
 // logDebug logs a debug message if logger and level are configured.
 func (g *EntityGenerator) logDebug(msg string, fields logrus.Fields) {
-if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-g.logger.WithFields(fields).Debug(msg)
-}
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
 }
 
 // logInfo logs an info message if logger is configured.
 func (g *EntityGenerator) logInfo(msg string, fields logrus.Fields) {
-if g.logger != nil {
-g.logger.WithFields(fields).Info(msg)
-}
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
 }

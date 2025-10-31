@@ -12,6 +12,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -26,6 +27,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/particles"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/sirupsen/logrus"
@@ -60,6 +62,9 @@ var (
 	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
+	enableWeather  = flag.Bool("enable-weather", false, "Enable procedural weather effects (Phase 5.4)")
+	weatherType    = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
+	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
 	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
 	profile        = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
 	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
@@ -254,6 +259,90 @@ func spawnCrystalLight(world *engine.World, x, y float64, color color.RGBA, radi
 		crystalLight.PulseAmount = 0.25
 	}
 	lightEntity.AddComponent(crystalLight)
+}
+
+// spawnWeather creates a weather effect entity.
+// Phase 5.4: Weather Particle System Integration
+func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64, genreID, weatherTypeStr, intensityStr string) *engine.Entity {
+	rng := rand.New(rand.NewSource(seed))
+
+	// Parse weather intensity
+	var intensity particles.WeatherIntensity
+	switch strings.ToLower(intensityStr) {
+	case "light":
+		intensity = particles.IntensityLight
+	case "medium":
+		intensity = particles.IntensityMedium
+	case "heavy":
+		intensity = particles.IntensityHeavy
+	case "extreme":
+		intensity = particles.IntensityExtreme
+	default:
+		intensity = particles.IntensityMedium
+	}
+
+	// Determine weather type
+	var weatherType particles.WeatherType
+	if weatherTypeStr == "" {
+		// Select genre-appropriate random weather
+		genreWeathers := particles.GetGenreWeather(genreID)
+		if len(genreWeathers) > 0 {
+			weatherType = genreWeathers[rng.Intn(len(genreWeathers))]
+		} else {
+			weatherType = particles.WeatherRain
+		}
+	} else {
+		// Parse explicit weather type
+		switch strings.ToLower(weatherTypeStr) {
+		case "rain":
+			weatherType = particles.WeatherRain
+		case "snow":
+			weatherType = particles.WeatherSnow
+		case "fog":
+			weatherType = particles.WeatherFog
+		case "dust":
+			weatherType = particles.WeatherDust
+		case "ash":
+			weatherType = particles.WeatherAsh
+		case "neonrain":
+			weatherType = particles.WeatherNeonRain
+		case "smog":
+			weatherType = particles.WeatherSmog
+		case "radiation":
+			weatherType = particles.WeatherRadiation
+		default:
+			weatherType = particles.WeatherRain
+		}
+	}
+
+	// Create weather configuration
+	config := particles.WeatherConfig{
+		Type:      weatherType,
+		Intensity: intensity,
+		Width:     screenWidth * 2,  // Cover larger area than screen for smooth edges
+		Height:    screenHeight * 2, // Cover larger area than screen
+		GenreID:   genreID,
+		Seed:      seed,
+		WindX:     (rng.Float64() - 0.5) * 20.0, // Random wind: -10 to +10 px/s
+		WindY:     0.0,                           // No vertical wind
+		Custom:    make(map[string]interface{}),
+	}
+
+	// Create weather entity
+	weatherEntity := world.CreateEntity()
+
+	// Add weather component
+	weatherComp := engine.NewWeatherComponent(config)
+
+	// Start weather immediately with fade-in
+	if err := weatherComp.StartWeather(); err != nil {
+		// Log error but don't fail - weather is optional
+		return nil
+	}
+
+	weatherEntity.AddComponent(weatherComp)
+
+	return weatherEntity
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
@@ -894,6 +983,10 @@ func main() {
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
 
+	// Phase 5.4: Add weather system for atmospheric effects
+	weatherSystem := engine.NewWeatherSystem(game.World)
+	game.World.AddSystem(weatherSystem)
+
 	// Phase 5.3: Add lifetime system for temporary entities (spell lights, etc.)
 	lifetimeSystem := engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	game.World.AddSystem(lifetimeSystem)
@@ -1107,6 +1200,21 @@ func main() {
 			"lightCount": lightCount,
 			"genre":      *genreID,
 		}).Info("spawned environmental lights")
+	}
+
+	// Phase 5.4: Spawn weather effects (if enabled)
+	if *enableWeather {
+		if *verbose {
+			clientLogger.Info("spawning weather effects")
+		}
+		weatherEntity := spawnWeather(game.World, *width, *height, *seed+3000, *genreID, *weatherType, *weatherIntensity)
+		if weatherEntity != nil {
+			clientLogger.WithFields(logrus.Fields{
+				"type":      *weatherType,
+				"intensity": *weatherIntensity,
+				"genre":     *genreID,
+			}).Info("weather effects spawned")
+		}
 	}
 
 	// Create player entity

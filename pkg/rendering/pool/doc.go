@@ -1,5 +1,4 @@
-// Package pool provides object pooling for frequently allocated rendering resources.package pool
-
+// Package pool provides object pooling for frequently allocated rendering resources.
 // The pool package implements sync.Pool-based pooling for Ebiten images and other
 // rendering resources. This reduces allocation pressure and improves garbage collection
 // performance by reusing objects instead of creating new ones.

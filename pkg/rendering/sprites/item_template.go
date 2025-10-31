@@ -26,38 +26,56 @@ const (
 type ItemType string
 
 const (
-	// Weapons
-	ItemSword  ItemType = "sword"
-	ItemAxe    ItemType = "axe"
-	ItemBow    ItemType = "bow"
-	ItemStaff  ItemType = "staff"
-	ItemGun    ItemType = "gun"
+	// ItemSword represents a sword weapon type
+	ItemSword ItemType = "sword"
+	// ItemAxe represents an axe weapon type
+	ItemAxe ItemType = "axe"
+	// ItemBow represents a bow weapon type
+	ItemBow ItemType = "bow"
+	// ItemStaff represents a staff weapon type
+	ItemStaff ItemType = "staff"
+	// ItemGun represents a gun weapon type
+	ItemGun ItemType = "gun"
+	// ItemDagger represents a dagger weapon type
 	ItemDagger ItemType = "dagger"
+	// ItemHammer represents a hammer weapon type
 	ItemHammer ItemType = "hammer"
-	ItemSpear  ItemType = "spear"
+	// ItemSpear represents a spear weapon type
+	ItemSpear ItemType = "spear"
 
-	// Armor
+	// ItemHelmet represents helmet armor
 	ItemHelmet ItemType = "helmet"
-	ItemChest  ItemType = "chest"
+	// ItemChest represents chest armor
+	ItemChest ItemType = "chest"
+	// ItemShield represents a shield
 	ItemShield ItemType = "shield"
-	ItemBoots  ItemType = "boots"
+	// ItemBoots represents boot armor
+	ItemBoots ItemType = "boots"
+	// ItemGloves represents glove armor
 	ItemGloves ItemType = "gloves"
 
-	// Consumables
+	// ItemPotion represents a consumable potion
 	ItemPotion ItemType = "potion"
-	ItemFood   ItemType = "food"
+	// ItemFood represents consumable food
+	ItemFood ItemType = "food"
+	// ItemScroll represents a consumable scroll
 	ItemScroll ItemType = "scroll"
+	// ItemElixir represents a consumable elixir
 	ItemElixir ItemType = "elixir"
 
-	// Accessories
-	ItemRing    ItemType = "ring"
-	ItemAmulet  ItemType = "amulet"
+	// ItemRing represents a ring accessory
+	ItemRing ItemType = "ring"
+	// ItemAmulet represents an amulet accessory
+	ItemAmulet ItemType = "amulet"
+	// ItemTrinket represents a trinket accessory
 	ItemTrinket ItemType = "trinket"
 
-	// Quest Items
-	ItemKey      ItemType = "key"
+	// ItemKey represents a key quest item
+	ItemKey ItemType = "key"
+	// ItemArtifact represents an artifact quest item
 	ItemArtifact ItemType = "artifact"
-	ItemRelic    ItemType = "relic"
+	// ItemRelic represents a relic quest item
+	ItemRelic ItemType = "relic"
 )
 
 // ItemRarity represents item rarity tiers.

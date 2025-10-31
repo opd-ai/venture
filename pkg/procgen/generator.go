@@ -3,6 +3,8 @@
 // parameters across all content generators.
 package procgen
 
+import "fmt"
+
 // GenerationParams contains parameters that control content generation.
 type GenerationParams struct {
 	// Difficulty affects the challenge level of generated content (0.0-1.0)
@@ -48,4 +50,34 @@ func (sg *SeedGenerator) GetSeed(category string, index int) int64 {
 	}
 	hash = hash*31 + int64(index)
 	return hash
+}
+
+// ValidateDepth checks if depth parameter is valid.
+func ValidateDepth(depth int) error {
+	if depth < 0 {
+		return fmt.Errorf("depth must be non-negative, got: %d", depth)
+	}
+	return nil
+}
+
+// ValidateDifficulty checks if difficulty parameter is in valid range.
+func ValidateDifficulty(difficulty float64) error {
+	if difficulty < 0 || difficulty > 1 {
+		return fmt.Errorf("difficulty must be between 0 and 1, got: %f", difficulty)
+	}
+	return nil
+}
+
+// ValidateDimensions checks if width and height are valid.
+func ValidateDimensions(width, height, minWidth, minHeight, maxWidth, maxHeight int) error {
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+	}
+	if width < minWidth || height < minHeight {
+		return fmt.Errorf("dimensions too small: width=%d, height=%d (min %dx%d)", width, height, minWidth, minHeight)
+	}
+	if width > maxWidth || height > maxHeight {
+		return fmt.Errorf("dimensions too large: width=%d, height=%d (max %dx%d)", width, height, maxWidth, maxHeight)
+	}
+	return nil
 }

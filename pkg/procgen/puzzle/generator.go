@@ -293,11 +293,6 @@ func (g *Generator) calculateDifficulty(params procgen.GenerationParams) int {
 	return difficulty
 }
 
-// selectRNG creates a new RNG instance from a seed.
-// This is a helper method for tests to create deterministic RNG instances.
-func (g *Generator) selectRNG(seed int64) *rand.Rand {
-	return rand.New(rand.NewSource(seed))
-}
 
 // generatePressurePlatePuzzle creates a pressure plate stepping puzzle.
 func (g *Generator) generatePressurePlatePuzzle(rng *rand.Rand, template PuzzleTemplate, difficulty int, params procgen.GenerationParams) (*Puzzle, error) {

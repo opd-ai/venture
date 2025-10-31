@@ -285,11 +285,10 @@ func (s *ProjectileNetworkSync) GetHistoricalState(
 	if before != nil && after != nil && before.Timestamp == after.Timestamp {
 		return before
 	}
-	if before == nil {
-		return after
-	}
-	if after == nil {
-		return before
+	// If timestamp is outside the available range, return nil
+	// Don't extrapolate beyond available data for lag compensation
+	if before == nil || after == nil {
+		return nil
 	}
 
 	// Interpolate between before and after

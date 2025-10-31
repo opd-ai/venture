@@ -261,8 +261,8 @@ func TestCreateDespawnMessage(t *testing.T) {
 	}
 }
 
-// TestRecordSnapshot verifies snapshot recording.
-func TestRecordSnapshot(t *testing.T) {
+// TestProjectileRecordSnapshot verifies snapshot recording.
+func TestProjectileRecordSnapshot(t *testing.T) {
 	sync := NewProjectileNetworkSync()
 	sync.UpdateServerTime(10.0)
 
@@ -337,6 +337,10 @@ func TestCleanupOldHistory(t *testing.T) {
 
 	// Advance time beyond cleanup threshold
 	sync.UpdateServerTime(2.0)
+	
+	// Record a snapshot after the time advance so we have recent data
+	sync.RecordSnapshot(1000, 400.0, 0.0, 100.0, 0.0, 4.0)
+	
 	sync.CleanupOldHistory()
 
 	// Old snapshots should be removed
@@ -346,7 +350,8 @@ func TestCleanupOldHistory(t *testing.T) {
 	}
 
 	// Recent snapshots should remain
-	snapshot = sync.GetHistoricalState(1000, sync.GetServerTime()-0.5)
+	// Check for the snapshot we just recorded at serverTime=4.0
+	snapshot = sync.GetHistoricalState(1000, sync.GetServerTime())
 	if snapshot == nil {
 		t.Error("Recent snapshot should not be cleaned up")
 	}
@@ -463,8 +468,8 @@ func TestRemoveProjectile(t *testing.T) {
 	}
 }
 
-// TestGetStats verifies statistics retrieval.
-func TestGetStats(t *testing.T) {
+// TestProjectileGetStats verifies statistics retrieval.
+func TestProjectileGetStats(t *testing.T) {
 	sync := NewProjectileNetworkSync()
 	sync.UpdateServerTime(10.0)
 
@@ -508,12 +513,14 @@ func TestCleanupTask(t *testing.T) {
 	stopChan := sync.CleanupTask()
 	defer func() { stopChan <- struct{}{} }()
 
-	// Create old projectile
+	// Create old projectile and record initial snapshot
 	sync.CreateSpawnMessage(1000, 100, 0.0, 0.0, 100.0, 0.0, 25.0, 100.0, 2.0, 0, 0, false, 0.0, "arrow")
+	sync.RecordSnapshot(1000, 0.0, 0.0, 100.0, 0.0, 0.0)
 
-	// Advance time significantly
+	// Advance time significantly and record snapshots
 	for i := 0; i < 30; i++ {
 		sync.UpdateServerTime(0.1)
+		sync.RecordSnapshot(1000, float64(i+1)*10.0, 0.0, 100.0, 0.0, float64(i+1)*0.1)
 	}
 
 	// Wait for cleanup task to run (runs every 1 second)
@@ -523,6 +530,12 @@ func TestCleanupTask(t *testing.T) {
 	snapshot := sync.GetHistoricalState(1000, 0.0)
 	if snapshot != nil {
 		t.Error("Old snapshot should be cleaned up by background task")
+	}
+	
+	// Recent snapshots should still exist
+	snapshot = sync.GetHistoricalState(1000, sync.GetServerTime())
+	if snapshot == nil {
+		t.Error("Recent snapshot should not be cleaned up")
 	}
 }
 
@@ -550,12 +563,4 @@ func TestSequenceNumberIncrement(t *testing.T) {
 	if msg4.SequenceNumber != 4 {
 		t.Errorf("Expected sequence 4, got %d", msg4.SequenceNumber)
 	}
-}
-
-// Helper function for floating point comparison
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
 }

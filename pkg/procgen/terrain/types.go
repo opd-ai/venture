@@ -37,13 +37,13 @@ const (
 	TileStructure
 
 	// Diagonal wall tiles (45° angles)
-	// TileWallNE represents a diagonal wall from south-west to north-east (/)
+	// TileWallNE represents a diagonal wall from bottom-left to top-right (/)
 	TileWallNE
-	// TileWallNW represents a diagonal wall from south-east to north-west (\)
+	// TileWallNW represents a diagonal wall from bottom-right to top-left (\)
 	TileWallNW
-	// TileWallSE represents a diagonal wall from north-west to south-east (\)
+	// TileWallSE represents a diagonal wall from top-left to bottom-right (\)
 	TileWallSE
-	// TileWallSW represents a diagonal wall from north-east to south-west (/)
+	// TileWallSW represents a diagonal wall from top-right to bottom-left (/)
 	TileWallSW
 
 	// Multi-layer terrain tiles

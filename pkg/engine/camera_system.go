@@ -75,6 +75,9 @@ func NewCameraSystem(screenWidth, screenHeight int) *CameraSystem {
 
 // Update updates camera positions to follow their target entities.
 func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
+	// Phase 10.3: Apply hit-stop time dilation
+	effectiveDeltaTime := s.calculateEffectiveDeltaTime(entities, deltaTime)
+	
 	for _, entity := range entities {
 		cameraComp, ok := entity.GetComponent("camera")
 		if !ok {
@@ -99,7 +102,7 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 			// Use exponential decay formula for frame-rate independence
 			// Higher smoothing value = slower camera tracking
 			// alpha approaches 1 as deltaTime increases, ensuring smooth convergence
-			alpha := 1.0 - math.Exp(-deltaTime/camera.Smoothing)
+			alpha := 1.0 - math.Exp(-effectiveDeltaTime/camera.Smoothing)
 			camera.X += (targetX - camera.X) * alpha
 			camera.Y += (targetY - camera.Y) * alpha
 		} else {
@@ -121,10 +124,10 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 			camera.Y = camera.MaxY
 		}
 
-		// GAP-012 REPAIR: Update screen shake
+		// GAP-012 REPAIR: Update screen shake (basic)
 		if camera.ShakeIntensity > 0 {
 			// Decay shake intensity over time
-			camera.ShakeIntensity -= camera.ShakeDecay * deltaTime
+			camera.ShakeIntensity -= camera.ShakeDecay * effectiveDeltaTime
 			if camera.ShakeIntensity < 0 {
 				camera.ShakeIntensity = 0
 				camera.ShakeOffsetX = 0
@@ -137,7 +140,65 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 				camera.ShakeOffsetY = math.Sin(angle) * camera.ShakeIntensity
 			}
 		}
+		
+		// Phase 10.3: Update advanced screen shake
+		s.updateAdvancedShake(entity, effectiveDeltaTime)
 	}
+}
+
+// calculateEffectiveDeltaTime applies hit-stop time dilation.
+// Phase 10.3: Checks for active hit-stop and adjusts delta time.
+func (s *CameraSystem) calculateEffectiveDeltaTime(entities []*Entity, deltaTime float64) float64 {
+	// Find any active hit-stop component
+	for _, entity := range entities {
+		hitStopComp, ok := entity.GetComponent("hitStop")
+		if !ok {
+			continue
+		}
+		
+		hitStop := hitStopComp.(*HitStopComponent)
+		if hitStop.IsActive() {
+			// Update hit-stop elapsed time with REAL delta time (not scaled)
+			hitStop.Elapsed += deltaTime
+			
+			// Check if hit-stop finished
+			if hitStop.Elapsed >= hitStop.Duration {
+				hitStop.Reset()
+				return deltaTime
+			}
+			
+			// Return scaled delta time
+			return deltaTime * hitStop.GetTimeScale()
+		}
+	}
+	
+	return deltaTime
+}
+
+// updateAdvancedShake updates the advanced screen shake component.
+// Phase 10.3: Handles ScreenShakeComponent with frequency control.
+func (s *CameraSystem) updateAdvancedShake(entity *Entity, deltaTime float64) {
+	shakeComp, ok := entity.GetComponent("screenShake")
+	if !ok {
+		return
+	}
+	
+	shake := shakeComp.(*ScreenShakeComponent)
+	if !shake.IsShaking() {
+		return
+	}
+	
+	// Update elapsed time
+	shake.Elapsed += deltaTime
+	
+	// Check if shake finished
+	if shake.Elapsed >= shake.Duration {
+		shake.Reset()
+		return
+	}
+	
+	// Calculate offset
+	shake.CalculateOffset()
 }
 
 // SetActiveCamera sets the active camera for rendering.
@@ -253,4 +314,75 @@ func (s *CameraSystem) Shake(intensity float64) {
 	if camera.ShakeIntensity > 30.0 {
 		camera.ShakeIntensity = 30.0
 	}
+}
+
+// ShakeAdvanced triggers an advanced screen shake with duration control.
+// Phase 10.3: Enhanced shake system with frequency and duration.
+// Uses ScreenShakeComponent if available, falls back to basic shake.
+func (s *CameraSystem) ShakeAdvanced(intensity, duration float64) {
+	if s.activeCamera == nil {
+		return
+	}
+
+	// Try advanced shake component first
+	shakeComp, ok := s.activeCamera.GetComponent("screenShake")
+	if ok {
+		advanced := shakeComp.(*ScreenShakeComponent)
+		advanced.TriggerShake(intensity, duration)
+		return
+	}
+
+	// Fall back to basic shake
+	s.Shake(intensity)
+}
+
+// TriggerHitStop triggers a hit-stop effect on the active camera.
+// Phase 10.3: Time dilation for impactful moments.
+// duration: seconds to pause/slow (typical: 0.05-0.2s)
+// timeScale: 0 = full stop, 0.1 = slow motion, 1.0 = normal
+func (s *CameraSystem) TriggerHitStop(duration, timeScale float64) {
+	if s.activeCamera == nil {
+		return
+	}
+
+	hitStopComp, ok := s.activeCamera.GetComponent("hitStop")
+	if !ok {
+		return // No hit-stop component, silently ignore
+	}
+
+	hitStop := hitStopComp.(*HitStopComponent)
+	hitStop.TriggerHitStop(duration, timeScale)
+}
+
+// IsHitStopActive returns true if hit-stop is currently active.
+// Phase 10.3: For systems that need to know if time is dilated.
+func (s *CameraSystem) IsHitStopActive() bool {
+	if s.activeCamera == nil {
+		return false
+	}
+
+	hitStopComp, ok := s.activeCamera.GetComponent("hitStop")
+	if !ok {
+		return false
+	}
+
+	hitStop := hitStopComp.(*HitStopComponent)
+	return hitStop.IsActive()
+}
+
+// GetTimeScale returns the current time scale (for hit-stop).
+// Phase 10.3: Systems can query this to apply time dilation.
+// Returns 1.0 when no hit-stop is active (normal time).
+func (s *CameraSystem) GetTimeScale() float64 {
+	if s.activeCamera == nil {
+		return 1.0
+	}
+
+	hitStopComp, ok := s.activeCamera.GetComponent("hitStop")
+	if !ok {
+		return 1.0
+	}
+
+	hitStop := hitStopComp.(*HitStopComponent)
+	return hitStop.GetTimeScale()
 }

@@ -1003,6 +1003,9 @@ func main() {
 
 	// Phase 10.2: Set projectile system reference on combat system for ranged weapon spawning
 	combatSystem.SetProjectileSystem(projectileSystem)
+	
+	// Phase 10.3: Set camera reference on projectile system for impact shake
+	projectileSystem.SetCamera(game.CameraSystem)
 
 	if *verbose {
 		clientLogger.Info("systems initialized")
@@ -1292,6 +1295,14 @@ func main() {
 	camera := engine.NewCameraComponent()
 	camera.Smoothing = 0.1
 	player.AddComponent(camera)
+	
+	// Phase 10.3: Add advanced screen shake component
+	screenShake := engine.NewScreenShakeComponent()
+	player.AddComponent(screenShake)
+	
+	// Phase 10.3: Add hit-stop component
+	hitStop := engine.NewHitStopComponent()
+	player.AddComponent(hitStop)
 
 	// Phase 5.3: Add player torch for dynamic lighting (if enabled)
 	if *enableLighting {

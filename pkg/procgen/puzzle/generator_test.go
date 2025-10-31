@@ -501,8 +501,8 @@ func TestValidation(t *testing.T) {
 	}
 }
 
-// Helper method for tests
-func (g *Generator) selectRNG(seed int64) *rand.Rand {
+// Helper function for tests
+func selectRNG(seed int64) *rand.Rand {
 	return rand.New(rand.NewSource(seed))
 }
 

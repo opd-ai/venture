@@ -31,6 +31,14 @@ func (t *TerrainCollisionChecker) SetTerrain(terrain *terrain.Terrain) {
 	t.terrain = terrain
 }
 
+// worldToTileCoords converts world coordinates to tile coordinates.
+// Phase 11.1 Week 3: Extracted helper to eliminate code duplication.
+func (t *TerrainCollisionChecker) worldToTileCoords(worldX, worldY float64) (tileX, tileY int) {
+	tileX = int(math.Floor(worldX / float64(t.tileWidth)))
+	tileY = int(math.Floor(worldY / float64(t.tileHeight)))
+	return tileX, tileY
+}
+
 // CheckCollision checks if a world position collides with a terrain wall.
 func (t *TerrainCollisionChecker) CheckCollision(worldX, worldY, width, height float64) bool {
 	if t.terrain == nil {
@@ -56,11 +64,9 @@ func (t *TerrainCollisionChecker) CheckCollisionBounds(minX, minY, maxX, maxY fl
 		return false
 	}
 
-	// Convert to tile coordinates
-	minTileX := int(math.Floor(minX / float64(t.tileWidth)))
-	minTileY := int(math.Floor(minY / float64(t.tileHeight)))
-	maxTileX := int(math.Floor(maxX / float64(t.tileWidth)))
-	maxTileY := int(math.Floor(maxY / float64(t.tileHeight)))
+	// Convert to tile coordinates using helper method
+	minTileX, minTileY := t.worldToTileCoords(minX, minY)
+	maxTileX, maxTileY := t.worldToTileCoords(maxX, maxY)
 
 	// Check all tiles that the bounding box overlaps
 	for y := minTileY; y <= maxTileY; y++ {
@@ -125,21 +131,21 @@ func (t *TerrainCollisionChecker) checkDiagonalWallCollision(
 
 	switch tileType {
 	case terrain.TileWallNE: // / diagonal (bottom-left to top-right)
-		v1X, v1Y = tileminX, tilemaxY         // Bottom-left
-		v2X, v2Y = tilemaxX, tilemaxY         // Bottom-right
-		v3X, v3Y = tilemaxX, tileminY         // Top-right
+		v1X, v1Y = tileminX, tilemaxY // Bottom-left
+		v2X, v2Y = tilemaxX, tilemaxY // Bottom-right
+		v3X, v3Y = tilemaxX, tileminY // Top-right
 	case terrain.TileWallNW: // \ diagonal (bottom-right to top-left)
-		v1X, v1Y = tileminX, tilemaxY         // Bottom-left
-		v2X, v2Y = tileminX, tileminY         // Top-left
-		v3X, v3Y = tilemaxX, tilemaxY         // Bottom-right
+		v1X, v1Y = tileminX, tilemaxY // Bottom-left
+		v2X, v2Y = tileminX, tileminY // Top-left
+		v3X, v3Y = tilemaxX, tilemaxY // Bottom-right
 	case terrain.TileWallSE: // \ diagonal (top-left to bottom-right)
-		v1X, v1Y = tileminX, tileminY         // Top-left
-		v2X, v2Y = tilemaxX, tileminY         // Top-right
-		v3X, v3Y = tilemaxX, tilemaxY         // Bottom-right
+		v1X, v1Y = tileminX, tileminY // Top-left
+		v2X, v2Y = tilemaxX, tileminY // Top-right
+		v3X, v3Y = tilemaxX, tilemaxY // Bottom-right
 	case terrain.TileWallSW: // / diagonal (top-right to bottom-left)
-		v1X, v1Y = tileminX, tileminY         // Top-left
-		v2X, v2Y = tileminX, tilemaxY         // Bottom-left
-		v3X, v3Y = tilemaxX, tileminY         // Top-right
+		v1X, v1Y = tileminX, tileminY // Top-left
+		v2X, v2Y = tileminX, tilemaxY // Bottom-left
+		v3X, v3Y = tilemaxX, tileminY // Top-right
 	default:
 		return false
 	}
@@ -189,31 +195,52 @@ func triangleAABBIntersection(
 	}
 
 	// Test 3: Check if any triangle edge intersects any AABB edge
-	// AABB edges (4 edges)
-	aabbEdges := [][4]float64{
-		{minX, minY, maxX, minY}, // Top edge
-		{maxX, minY, maxX, maxY}, // Right edge
-		{maxX, maxY, minX, maxY}, // Bottom edge
-		{minX, maxY, minX, minY}, // Left edge
+	// Phase 11.1 Week 3: Unrolled loops to avoid allocations
+	// AABB edges: top, right, bottom, left
+	// Triangle edges: (t1-t2), (t2-t3), (t3-t1)
+
+	// Top edge of AABB vs all triangle edges
+	if lineSegmentsIntersect(minX, minY, maxX, minY, t1X, t1Y, t2X, t2Y) {
+		return true
+	}
+	if lineSegmentsIntersect(minX, minY, maxX, minY, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if lineSegmentsIntersect(minX, minY, maxX, minY, t3X, t3Y, t1X, t1Y) {
+		return true
 	}
 
-	// Triangle edges (3 edges)
-	triangleEdges := [][4]float64{
-		{t1X, t1Y, t2X, t2Y}, // Edge 1-2
-		{t2X, t2Y, t3X, t3Y}, // Edge 2-3
-		{t3X, t3Y, t1X, t1Y}, // Edge 3-1
+	// Right edge of AABB vs all triangle edges
+	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y) {
+		return true
+	}
+	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if lineSegmentsIntersect(maxX, minY, maxX, maxY, t3X, t3Y, t1X, t1Y) {
+		return true
 	}
 
-	// Check all edge combinations
-	for _, aabbEdge := range aabbEdges {
-		for _, triEdge := range triangleEdges {
-			if lineSegmentsIntersect(
-				aabbEdge[0], aabbEdge[1], aabbEdge[2], aabbEdge[3],
-				triEdge[0], triEdge[1], triEdge[2], triEdge[3],
-			) {
-				return true
-			}
-		}
+	// Bottom edge of AABB vs all triangle edges
+	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t1X, t1Y, t2X, t2Y) {
+		return true
+	}
+	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if lineSegmentsIntersect(maxX, maxY, minX, maxY, t3X, t3Y, t1X, t1Y) {
+		return true
+	}
+
+	// Left edge of AABB vs all triangle edges
+	if lineSegmentsIntersect(minX, maxY, minX, minY, t1X, t1Y, t2X, t2Y) {
+		return true
+	}
+	if lineSegmentsIntersect(minX, maxY, minX, minY, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if lineSegmentsIntersect(minX, maxY, minX, minY, t3X, t3Y, t1X, t1Y) {
+		return true
 	}
 
 	// No intersection found

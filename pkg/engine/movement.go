@@ -5,6 +5,8 @@ package engine
 
 import (
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MovementSystem handles entity movement based on velocity.
@@ -378,15 +380,15 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 	}
 	collider := colliderComp.(*ColliderComponent)
 
-	// Calculate tile coordinates from entity position
-	tileX := int(math.Floor(pos.X / float64(terrainChecker.tileWidth)))
-	tileY := int(math.Floor(pos.Y / float64(terrainChecker.tileHeight)))
+	// Calculate tile coordinates from entity position using helper method
+	tileX, tileY := terrainChecker.worldToTileCoords(pos.X, pos.Y)
 
 	// Get tile at entity's position
 	currentTile := terrainChecker.terrain.GetTile(tileX, tileY)
 
 	// Check if this is a ramp tile (allows layer transitions)
-	if currentTile.CanTransitionToLayer(0) { // 0 is dummy value, method checks if tile IS a ramp
+	// Use explicit tile type checks for clarity and correctness
+	if currentTile == terrain.TileRamp || currentTile == terrain.TileRampUp || currentTile == terrain.TileRampDown {
 		// Determine target layer based on the tile's layer
 		// Ramps lead TO the layer they're assigned to
 		targetLayer := int(currentTile.GetLayer())
@@ -394,8 +396,15 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 		// Update collider layer if different
 		// This allows entity to interact with tiles on the new layer
 		if collider.Layer != targetLayer {
+			oldLayer := collider.Layer
 			collider.Layer = targetLayer
+			// Phase 11.1 Week 3: Debug logging for layer transitions
+			logrus.WithFields(logrus.Fields{
+				"entity":   entity.ID,
+				"oldLayer": oldLayer,
+				"newLayer": targetLayer,
+				"tile":     currentTile,
+			}).Debug("Entity layer transition via ramp")
 		}
 	}
 }
-

@@ -71,7 +71,7 @@ func TestGenerateProjectileSprite(t *testing.T) {
 			if sprite == nil {
 				t.Error("expected non-nil sprite")
 			}
-			
+
 			bounds := sprite.Bounds()
 			if bounds.Dx() != tt.size || bounds.Dy() != tt.size {
 				t.Errorf("expected size %dx%d, got %dx%d", tt.size, tt.size, bounds.Dx(), bounds.Dy())
@@ -90,7 +90,7 @@ func TestProjectileSpriteConstants(t *testing.T) {
 		ProjectileFireball,
 		ProjectileEnergy,
 	}
-	
+
 	for _, pt := range types {
 		if string(pt) == "" {
 			t.Errorf("projectile type constant is empty")
@@ -104,19 +104,19 @@ func TestProjectileSpriteDeterminism(t *testing.T) {
 	projectileType := "arrow"
 	genreID := "fantasy"
 	size := 12
-	
+
 	sprite1 := GenerateProjectileSprite(seed, projectileType, genreID, size)
 	sprite2 := GenerateProjectileSprite(seed, projectileType, genreID, size)
-	
+
 	if sprite1 == nil || sprite2 == nil {
 		t.Fatal("sprites should not be nil")
 	}
-	
+
 	// Check that both sprites have the same size
 	if sprite1.Bounds() != sprite2.Bounds() {
 		t.Error("sprites should have the same bounds")
 	}
-	
+
 	// Note: We can't easily compare pixel-by-pixel without access to pixel data
 	// but the determinism is ensured by the palette generation being deterministic
 }
@@ -127,7 +127,7 @@ func BenchmarkGenerateProjectileSprite(b *testing.B) {
 	projectileType := "arrow"
 	genreID := "fantasy"
 	size := 12
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		GenerateProjectileSprite(seed, projectileType, genreID, size)
@@ -139,7 +139,7 @@ func BenchmarkGenerateProjectileSpriteAllTypes(b *testing.B) {
 	genreID := "fantasy"
 	size := 12
 	types := []string{"arrow", "bolt", "bullet", "magic", "fireball", "energy"}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, pt := range types {

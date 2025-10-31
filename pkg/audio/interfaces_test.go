@@ -367,7 +367,7 @@ func TestNote_FrequencyRange(t *testing.T) {
 	tests := []struct {
 		name      string
 		frequency float64
-		range_    string
+		rangeType string
 	}{
 		{"sub_bass", 20.0, "sub-bass"},
 		{"bass", 100.0, "bass"},

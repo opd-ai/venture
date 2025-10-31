@@ -12,33 +12,33 @@ import (
 func TestProjectileSystemIntegration(t *testing.T) {
 	// Create world
 	world := NewWorld()
-	
+
 	// Create projectile system
 	ps := NewProjectileSystem(world)
-	
+
 	// Create attacker with ranged weapon
 	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
 	attacker.AddComponent(&VelocityComponent{VX: 0, VY: 0})
 	attacker.AddComponent(&RotationComponent{Angle: 0}) // Facing right
 	attacker.AddComponent(&AimComponent{AimAngle: 0})
-	
+
 	// Create target
 	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	// Create combat system
 	cs := NewCombatSystem(12345)
 	cs.world = world
 	cs.genreID = "fantasy"
 	cs.projectileSystem = ps
-	
+
 	// Create ranged weapon (bow)
 	weapon := &item.Item{
-		Name:     "Test Bow",
-		Type:     item.TypeWeapon,
-		Rarity:   item.RarityCommon,
+		Name:       "Test Bow",
+		Type:       item.TypeWeapon,
+		Rarity:     item.RarityCommon,
 		WeaponType: item.WeaponBow,
 		Stats: item.Stats{
 			Damage:             10,
@@ -51,55 +51,55 @@ func TestProjectileSystemIntegration(t *testing.T) {
 			Explosive:          false,
 		},
 	}
-	
+
 	// Equip weapon
 	equipment := &EquipmentComponent{
 		Slots: make(map[EquipmentSlot]*item.Item),
 	}
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
-	
+
 	// Add attack component
 	attackComp := &AttackComponent{
-		Damage:       10.0,
-		Range:        500.0,
-		Cooldown:     1.0,
+		Damage:        10.0,
+		Range:         500.0,
+		Cooldown:      1.0,
 		CooldownTimer: 0.0,
 	}
 	attacker.AddComponent(attackComp)
-	
+
 	// Process entity additions
 	world.Update(0)
-	
+
 	// Count entities before attack
 	entitiesBefore := len(world.GetEntities())
-	
+
 	// Perform attack (should spawn projectile)
 	success := cs.Attack(attacker, target)
-	
+
 	if !success {
 		t.Error("expected attack to succeed and spawn projectile")
 	}
-	
+
 	// Process entity additions (projectile spawned)
 	world.Update(0)
-	
+
 	// Count entities after attack
 	entitiesAfter := len(world.GetEntities())
-	
+
 	if entitiesAfter <= entitiesBefore {
 		t.Errorf("expected new projectile entity, had %d entities, now have %d", entitiesBefore, entitiesAfter)
 	}
-	
+
 	// Find projectile entity
 	projectiles := world.GetEntitiesWith("projectile", "position", "velocity")
 	if len(projectiles) != 1 {
 		t.Errorf("expected 1 projectile, got %d", len(projectiles))
 	}
-	
+
 	if len(projectiles) > 0 {
 		proj := projectiles[0]
-		
+
 		// Check projectile has required components
 		if !proj.HasComponent("projectile") {
 			t.Error("projectile missing projectile component")
@@ -113,7 +113,7 @@ func TestProjectileSystemIntegration(t *testing.T) {
 		if !proj.HasComponent("rotation") {
 			t.Error("projectile missing rotation component")
 		}
-		
+
 		// Check projectile properties
 		projComp, ok := proj.GetComponent("projectile")
 		if !ok {
@@ -135,7 +135,7 @@ func TestProjectileSystemIntegration(t *testing.T) {
 		if projComponent.OwnerID != attacker.ID {
 			t.Errorf("expected ownerID %d, got %d", attacker.ID, projComponent.OwnerID)
 		}
-		
+
 		// Check velocity is set correctly (moving right)
 		velComp, ok := proj.GetComponent("velocity")
 		if !ok {
@@ -156,20 +156,20 @@ func TestProjectileSpawnWithPiercing(t *testing.T) {
 	cs.world = world
 	cs.genreID = "fantasy"
 	cs.projectileSystem = ps
-	
+
 	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
 	attacker.AddComponent(&AimComponent{AimAngle: 0})
 	attacker.AddComponent(&AttackComponent{Damage: 15.0, Range: 500.0, Cooldown: 1.0})
-	
+
 	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	// Piercing weapon
 	weapon := &item.Item{
-		Name:     "Piercing Arrow",
-		Type:     item.TypeWeapon,
+		Name:       "Piercing Arrow",
+		Type:       item.TypeWeapon,
 		WeaponType: item.WeaponBow,
 		Stats: item.Stats{
 			Damage:             15,
@@ -182,26 +182,26 @@ func TestProjectileSpawnWithPiercing(t *testing.T) {
 			Explosive:          false,
 		},
 	}
-	
+
 	equipment := &EquipmentComponent{
 		Slots: make(map[EquipmentSlot]*item.Item),
 	}
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
-	
+
 	// Process entity additions
 	world.Update(0)
-	
+
 	cs.Attack(attacker, target)
-	
+
 	// Process projectile spawn
 	world.Update(0)
-	
+
 	projectiles := world.GetEntitiesWith("projectile")
 	if len(projectiles) != 1 {
 		t.Fatalf("expected 1 projectile, got %d", len(projectiles))
 	}
-	
+
 	projComp, ok := projectiles[0].GetComponent("projectile")
 	if !ok {
 		t.Fatal("failed to get projectile component")
@@ -223,20 +223,20 @@ func TestProjectileSpawnWithExplosive(t *testing.T) {
 	cs.world = world
 	cs.genreID = "fantasy"
 	cs.projectileSystem = ps
-	
+
 	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
 	attacker.AddComponent(&AimComponent{AimAngle: 0})
 	attacker.AddComponent(&AttackComponent{Damage: 20.0, Range: 500.0, Cooldown: 1.0})
-	
+
 	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	// Explosive weapon
 	weapon := &item.Item{
-		Name:     "Explosive Arrow",
-		Type:     item.TypeWeapon,
+		Name:       "Explosive Arrow",
+		Type:       item.TypeWeapon,
 		WeaponType: item.WeaponBow,
 		Stats: item.Stats{
 			Damage:             20,
@@ -250,26 +250,26 @@ func TestProjectileSpawnWithExplosive(t *testing.T) {
 			ExplosionRadius:    50.0,
 		},
 	}
-	
+
 	equipment := &EquipmentComponent{
 		Slots: make(map[EquipmentSlot]*item.Item),
 	}
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
-	
+
 	// Process entity additions
 	world.Update(0)
-	
+
 	cs.Attack(attacker, target)
-	
+
 	// Process projectile spawn
 	world.Update(0)
-	
+
 	projectiles := world.GetEntitiesWith("projectile")
 	if len(projectiles) != 1 {
 		t.Fatalf("expected 1 projectile, got %d", len(projectiles))
 	}
-	
+
 	projComp, ok := projectiles[0].GetComponent("projectile")
 	if !ok {
 		t.Fatal("failed to get projectile component")
@@ -291,42 +291,42 @@ func TestMeleeWeaponDoesNotSpawnProjectile(t *testing.T) {
 	cs.world = world
 	cs.genreID = "fantasy"
 	cs.projectileSystem = ps
-	
+
 	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
 	attacker.AddComponent(&AimComponent{AimAngle: 0})
 	attacker.AddComponent(&AttackComponent{Damage: 10.0, Range: 50.0, Cooldown: 1.0})
-	
+
 	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 120, Y: 100}) // Within melee range
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	// Melee weapon (NOT projectile)
 	weapon := &item.Item{
-		Name:     "Sword",
-		Type:     item.TypeWeapon,
+		Name:       "Sword",
+		Type:       item.TypeWeapon,
 		WeaponType: item.WeaponSword,
 		Stats: item.Stats{
 			Damage:       15,
 			IsProjectile: false, // Not a projectile weapon
 		},
 	}
-	
+
 	equipment := &EquipmentComponent{
 		Slots: make(map[EquipmentSlot]*item.Item),
 	}
 	equipment.Slots[SlotMainHand] = weapon
 	attacker.AddComponent(equipment)
-	
+
 	entitiesBefore := len(world.GetEntities())
 	cs.Attack(attacker, target)
 	entitiesAfter := len(world.GetEntities())
-	
+
 	// No new entities should be created (no projectile spawned)
 	if entitiesAfter != entitiesBefore {
 		t.Errorf("melee weapon should not spawn projectile, had %d entities, now have %d", entitiesBefore, entitiesAfter)
 	}
-	
+
 	// Target should take damage directly (melee hit)
 	healthComp, ok := target.GetComponent("health")
 	if !ok {
@@ -342,21 +342,21 @@ func TestMeleeWeaponDoesNotSpawnProjectile(t *testing.T) {
 func TestProjectileSystemUpdate(t *testing.T) {
 	world := NewWorld()
 	ps := NewProjectileSystem(world)
-	
+
 	// Create projectile entity
 	proj := world.CreateEntity()
 	proj.AddComponent(&PositionComponent{X: 100, Y: 100})
 	proj.AddComponent(&VelocityComponent{VX: 100, VY: 0}) // Moving right at 100 px/s
 	proj.AddComponent(NewProjectileComponent(10.0, 100.0, 1.0, "arrow", 999))
-	
+
 	// Process entity addition
 	world.Update(0)
-	
+
 	// Update for 0.1 seconds
 	deltaTime := 0.1
 	entities := world.GetEntities()
 	ps.Update(entities, deltaTime)
-	
+
 	// Check projectile moved
 	posComp, ok := proj.GetComponent("position")
 	if !ok {
@@ -367,7 +367,7 @@ func TestProjectileSystemUpdate(t *testing.T) {
 	if posComponent.X != expectedX {
 		t.Errorf("expected X position %f, got %f", expectedX, posComponent.X)
 	}
-	
+
 	// Check projectile aged
 	projComp, ok := proj.GetComponent("projectile")
 	if !ok {
@@ -377,10 +377,10 @@ func TestProjectileSystemUpdate(t *testing.T) {
 	if projComponent.Age != deltaTime {
 		t.Errorf("expected age %f, got %f", deltaTime, projComponent.Age)
 	}
-	
+
 	// Update for remaining lifetime (projectile should despawn)
 	ps.Update(entities, 1.0) // Total age now 1.1 seconds, lifetime is 1.0
-	
+
 	// Projectile should be expired (marked for removal)
 	if !projComponent.IsExpired() {
 		t.Error("projectile should be expired after exceeding lifetime")
@@ -395,21 +395,21 @@ func TestNoProjectileSpawnWithoutWeapon(t *testing.T) {
 	cs.world = world
 	cs.genreID = "fantasy"
 	cs.projectileSystem = ps
-	
+
 	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
 	attacker.AddComponent(&AimComponent{AimAngle: 0})
 	attacker.AddComponent(&AttackComponent{Damage: 5.0, Range: 50.0, Cooldown: 1.0})
 	// No equipment component - unarmed
-	
+
 	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 120, Y: 100})
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
-	
+
 	entitiesBefore := len(world.GetEntities())
 	cs.Attack(attacker, target)
 	entitiesAfter := len(world.GetEntities())
-	
+
 	// No projectile should be spawned (falls through to melee)
 	if entitiesAfter != entitiesBefore {
 		t.Error("unarmed attack should not spawn projectile")

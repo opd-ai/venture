@@ -1,4 +1,4 @@
-// Package visualtest provides visual regression testing for procedurally generated content.package visualtest
+// Package visualtest provides visual regression testing for procedurally generated content.
 
 // This package enables establishing visual baselines and detecting unintended changes
 // in sprite generation, color palettes, tile rendering, and animation sequences.

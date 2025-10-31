@@ -1,4 +1,4 @@
-// Package environment provides procedural generation of environmental objects.package environment
+// Package environment provides procedural generation of environmental objects.
 
 // This package generates furniture, decorations, obstacles, and hazards for
 // dungeon and world environments. All objects are generated procedurally with

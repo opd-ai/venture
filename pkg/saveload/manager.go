@@ -61,115 +61,69 @@ func NewSaveManagerWithLogger(saveDir string, logger *logrus.Logger) (*SaveManag
 // SaveGame saves the game state to a file with the specified name.
 // The .sav extension is added automatically if not present.
 func (m *SaveManager) SaveGame(name string, save *GameSave) error {
-	if m.logger != nil && m.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		m.logger.WithField("name", name).Debug("saving game")
-	}
+	m.logDebug("saving game", logrus.Fields{"name": name})
 
 	if save == nil {
 		return fmt.Errorf("save cannot be nil")
 	}
 
-	// Validate save name
 	if err := m.validateSaveName(name); err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Warn("invalid save name")
-		}
+		m.logWarn("invalid save name", err, logrus.Fields{"name": name})
 		return err
 	}
 
-	// Ensure version and timestamp are set
 	save.Version = SaveVersion
 	save.Timestamp = time.Now()
 
-	// Marshal to JSON with indentation for readability
-	data, err := json.MarshalIndent(save, "", "  ")
+	data, err := m.marshalSave(save, name)
 	if err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Error("failed to marshal save data")
-		}
-		return fmt.Errorf("failed to marshal save data: %w", err)
+		return err
 	}
 
-	// Write to file
-	filename := m.getFilePath(name)
-	if err := os.WriteFile(filename, data, 0o644); err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithFields(logrus.Fields{
-				"name":     name,
-				"filename": filename,
-			}).Error("failed to write save file")
-		}
-		return fmt.Errorf("failed to write save file: %w", err)
+	if err := m.writeSaveFile(name, data); err != nil {
+		return err
 	}
 
-	if m.logger != nil {
-		m.logger.WithFields(logrus.Fields{
-			"name":      name,
-			"filename":  filename,
-			"size":      len(data),
-			"timestamp": save.Timestamp,
-		}).Info("game saved successfully")
-	}
+	m.logInfo("game saved successfully", logrus.Fields{
+		"name":      name,
+		"size":      len(data),
+		"timestamp": save.Timestamp,
+	})
 
 	return nil
 }
 
 // LoadGame loads the game state from a file with the specified name.
 func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
-	if m.logger != nil && m.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		m.logger.WithField("name", name).Debug("loading game")
-	}
+	m.logDebug("loading game", logrus.Fields{"name": name})
 
-	// Validate save name
 	if err := m.validateSaveName(name); err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Warn("invalid save name")
-		}
+		m.logWarn("invalid save name", err, logrus.Fields{"name": name})
 		return nil, err
 	}
 
-	// Read file
-	filename := m.getFilePath(name)
-	data, err := os.ReadFile(filename)
+	data, err := m.readSaveFile(name)
 	if err != nil {
-		if os.IsNotExist(err) {
-			if m.logger != nil {
-				m.logger.WithField("name", name).Warn("save file not found")
-			}
-			return nil, fmt.Errorf("save file not found: %s", name)
-		}
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Error("failed to read save file")
-		}
-		return nil, fmt.Errorf("failed to read save file: %w", err)
+		return nil, err
 	}
 
-	// Unmarshal JSON
-	var save GameSave
-	if err := json.Unmarshal(data, &save); err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Error("failed to parse save file")
-		}
-		return nil, fmt.Errorf("failed to parse save file: %w", err)
+	save, err := m.unmarshalSave(data, name)
+	if err != nil {
+		return nil, err
 	}
 
-	// Validate save version and migrate if necessary
-	if err := m.validateAndMigrate(&save); err != nil {
-		if m.logger != nil {
-			m.logger.WithError(err).WithField("name", name).Error("failed to validate/migrate save")
-		}
+	if err := m.validateAndMigrate(save); err != nil {
+		m.logError("failed to validate/migrate save", err, logrus.Fields{"name": name})
 		return nil, fmt.Errorf("failed to validate/migrate save: %w", err)
 	}
 
-	if m.logger != nil {
-		m.logger.WithFields(logrus.Fields{
-			"name":      name,
-			"version":   save.Version,
-			"timestamp": save.Timestamp,
-		}).Info("game loaded successfully")
-	}
+	m.logInfo("game loaded successfully", logrus.Fields{
+		"name":      name,
+		"version":   save.Version,
+		"timestamp": save.Timestamp,
+	})
 
-	return &save, nil
+	return save, nil
 }
 
 // DeleteSave deletes a save file.
@@ -361,4 +315,80 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 	}
 
 	return nil
+}
+
+// marshalSave marshals save data to JSON.
+func (m *SaveManager) marshalSave(save *GameSave, name string) ([]byte, error) {
+data, err := json.MarshalIndent(save, "", "  ")
+if err != nil {
+m.logError("failed to marshal save data", err, logrus.Fields{"name": name})
+return nil, fmt.Errorf("failed to marshal save data: %w", err)
+}
+return data, nil
+}
+
+// writeSaveFile writes save data to file.
+func (m *SaveManager) writeSaveFile(name string, data []byte) error {
+filename := m.getFilePath(name)
+if err := os.WriteFile(filename, data, 0o644); err != nil {
+m.logError("failed to write save file", err, logrus.Fields{
+"name":     name,
+"filename": filename,
+})
+return fmt.Errorf("failed to write save file: %w", err)
+}
+return nil
+}
+
+// readSaveFile reads save data from file.
+func (m *SaveManager) readSaveFile(name string) ([]byte, error) {
+filename := m.getFilePath(name)
+data, err := os.ReadFile(filename)
+if err != nil {
+if os.IsNotExist(err) {
+m.logWarn("save file not found", err, logrus.Fields{"name": name})
+return nil, fmt.Errorf("save file not found: %s", name)
+}
+m.logError("failed to read save file", err, logrus.Fields{"name": name})
+return nil, fmt.Errorf("failed to read save file: %w", err)
+}
+return data, nil
+}
+
+// unmarshalSave unmarshals save data from JSON.
+func (m *SaveManager) unmarshalSave(data []byte, name string) (*GameSave, error) {
+var save GameSave
+if err := json.Unmarshal(data, &save); err != nil {
+m.logError("failed to parse save file", err, logrus.Fields{"name": name})
+return nil, fmt.Errorf("failed to parse save file: %w", err)
+}
+return &save, nil
+}
+
+// logDebug logs a debug message if logger and level are configured.
+func (m *SaveManager) logDebug(msg string, fields logrus.Fields) {
+if m.logger != nil && m.logger.Logger.GetLevel() >= logrus.DebugLevel {
+m.logger.WithFields(fields).Debug(msg)
+}
+}
+
+// logInfo logs an info message if logger is configured.
+func (m *SaveManager) logInfo(msg string, fields logrus.Fields) {
+if m.logger != nil {
+m.logger.WithFields(fields).Info(msg)
+}
+}
+
+// logWarn logs a warning message if logger is configured.
+func (m *SaveManager) logWarn(msg string, err error, fields logrus.Fields) {
+if m.logger != nil {
+m.logger.WithError(err).WithFields(fields).Warn(msg)
+}
+}
+
+// logError logs an error message if logger is configured.
+func (m *SaveManager) logError(msg string, err error, fields logrus.Fields) {
+if m.logger != nil {
+m.logger.WithError(err).WithFields(fields).Error(msg)
+}
 }

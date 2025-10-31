@@ -67,13 +67,13 @@ func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (
 
 // validateParams validates generation parameters.
 func (g *SpellGenerator) validateParams(params procgen.GenerationParams) error {
-	if params.Depth < 0 {
+	if err := procgen.ValidateDepth(params.Depth); err != nil {
 		g.logWarn("invalid depth parameter", logrus.Fields{"depth": params.Depth})
-		return fmt.Errorf("depth must be non-negative")
+		return err
 	}
-	if params.Difficulty < 0 || params.Difficulty > 1 {
+	if err := procgen.ValidateDifficulty(params.Difficulty); err != nil {
 		g.logWarn("invalid difficulty parameter", logrus.Fields{"difficulty": params.Difficulty})
-		return fmt.Errorf("difficulty must be between 0 and 1")
+		return err
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ ANALYSIS REQUIREMENTS:
 4. Prioritize based on: explicit roadmap → critical gaps → quality improvements
 
 IMPLEMENTATION CONSTRAINTS:
-- Install all build dependencies
+- Install all build dependencies so tests can run
 - Follow project's ECS architecture patterns (see copilot-instructions.md)
 - Maintain deterministic generation using seed-based RNG
 - Meet performance targets (60 FPS, <500MB memory)

@@ -18,6 +18,7 @@ IMPLEMENTATION CONSTRAINTS:
 - Use Go standard library; justify external dependencies
 - Backward compatibility NOT required—use latest Go features
 - Keep response concise to respect token limits
+- Update ROADMAP.md upon completion
 
 OUTPUT FORMAT:
 

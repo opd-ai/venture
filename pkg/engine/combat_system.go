@@ -406,13 +406,30 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	}
 
 	// GAP-012 REPAIR: Trigger screen shake on damage
+	// Phase 10.3: Enhanced shake with procedural intensity and duration
 	if s.camera != nil {
-		// Shake intensity scales with damage (0.1-0.5 range for subtlety)
-		shakeIntensity := (finalDamage / 100.0) * 5.0
-		if shakeIntensity > 5.0 {
-			shakeIntensity = 5.0
+		// Use advanced shake if available (with duration control)
+		targetHealthComp, _ := target.GetComponent("health")
+		var maxHP float64 = 100 // Default
+		if targetHealthComp != nil {
+			maxHP = targetHealthComp.(*HealthComponent).Max
 		}
-		s.camera.Shake(shakeIntensity)
+		
+		// Calculate shake intensity based on damage relative to max HP
+		shakeIntensity := CalculateShakeIntensity(finalDamage, maxHP, 10.0, 1.0, 15.0)
+		shakeDuration := CalculateShakeDuration(shakeIntensity, 0.1, 0.2, 15.0)
+		
+		// Critical hits get extra shake and hit-stop
+		if isCrit {
+			shakeIntensity *= 1.5
+			shakeDuration *= 1.3
+			
+			// Trigger hit-stop on critical hits (0.08s pause)
+			s.camera.TriggerHitStop(0.08, 0.0)
+		}
+		
+		// Use advanced shake if available, fallback to basic
+		s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
 	}
 
 	// Reset cooldown

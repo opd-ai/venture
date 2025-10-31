@@ -11,6 +11,8 @@ type ProjectileSystem struct {
 	quadtree *Quadtree
 	// Terrain collision checker for wall collision (optional)
 	terrainChecker *TerrainCollisionChecker
+	// Phase 10.3: Camera system for screen shake on projectile hits
+	camera *CameraSystem
 }
 
 // NewProjectileSystem creates a new projectile system.
@@ -18,6 +20,7 @@ func NewProjectileSystem(w *World) *ProjectileSystem {
 	return &ProjectileSystem{
 		world:    w,
 		quadtree: nil, // Initialize later if spatial partitioning is available
+		camera:   nil, // Optional camera for visual feedback
 	}
 }
 
@@ -29,6 +32,11 @@ func (s *ProjectileSystem) SetQuadtree(qt *Quadtree) {
 // SetTerrainChecker assigns a terrain collision checker for wall collision detection.
 func (s *ProjectileSystem) SetTerrainChecker(checker *TerrainCollisionChecker) {
 	s.terrainChecker = checker
+}
+
+// SetCamera sets the camera reference for screen shake feedback (Phase 10.3).
+func (s *ProjectileSystem) SetCamera(camera *CameraSystem) {
+	s.camera = camera
 }
 
 // Update processes all projectiles: movement, aging, collision detection.
@@ -201,6 +209,24 @@ func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projCo
 		if ok {
 			health.Current -= projComp.Damage
 			projComp.HasHit = true
+			
+			// Phase 10.3: Trigger screen shake on projectile hit
+			if s.camera != nil {
+				// Calculate shake based on damage
+				maxHP := health.Max
+				shakeIntensity := CalculateShakeIntensity(projComp.Damage, maxHP, 8.0, 0.5, 12.0)
+				shakeDuration := CalculateShakeDuration(shakeIntensity, 0.08, 0.15, 12.0)
+				
+				// Explosive projectiles get extra shake
+				if projComp.Explosive {
+					shakeIntensity *= 1.5
+					shakeDuration *= 1.2
+					// Trigger brief hit-stop for explosions
+					s.camera.TriggerHitStop(0.06, 0.0)
+				}
+				
+				s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
+			}
 		}
 	}
 

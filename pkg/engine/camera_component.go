@@ -205,3 +205,30 @@ func (h *HitStopComponent) Reset() {
 	h.Active = false
 	h.Elapsed = 0
 }
+
+// CalculateShakeIntensity calculates shake intensity based on damage.
+// Phase 10.3: Helper for damage-based shake scaling.
+// Formula: intensity = clamp(damage / maxHP * scaleFactor, minIntensity, maxIntensity)
+func CalculateShakeIntensity(damage, maxHP, scaleFactor, minIntensity, maxIntensity float64) float64 {
+	if maxHP <= 0 {
+		maxHP = 100 // Default to avoid division by zero
+	}
+	
+	intensity := (damage / maxHP) * scaleFactor
+	intensity = math.Max(minIntensity, intensity)
+	intensity = math.Min(maxIntensity, intensity)
+	
+	return intensity
+}
+
+// CalculateShakeDuration calculates shake duration based on intensity.
+// Phase 10.3: Helper for intensity-based duration scaling.
+// Formula: duration = baseDuration + (intensity / maxIntensity) * additionalDuration
+func CalculateShakeDuration(intensity, baseDuration, additionalDuration, maxIntensity float64) float64 {
+	if maxIntensity <= 0 {
+		maxIntensity = 20 // Default
+	}
+	
+	ratio := math.Min(intensity/maxIntensity, 1.0)
+	return baseDuration + ratio*additionalDuration
+}

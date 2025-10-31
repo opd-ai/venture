@@ -49,6 +49,7 @@ OUTPUT FORMAT:
 SUCCESS CRITERIA:
 - Code builds successfully with `go build ./...`
 - All tests pass with `go test ./...`
+- Code is formatted with `gofmt -w -s`
 - Test coverage ≥65% for new code (excluding Ebiten dependencies)
 - Implementation aligns with project architecture (ECS, deterministic generation)
 - Changes integrate seamlessly with existing systems

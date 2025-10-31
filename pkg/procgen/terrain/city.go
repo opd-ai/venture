@@ -44,8 +44,11 @@ func NewCityGeneratorWithLogger(logger *logrus.Logger) *CityGenerator {
 type BlockType int
 
 const (
+	// BlockBuilding represents a building block type.
 	BlockBuilding BlockType = iota
+	// BlockPlaza represents a plaza block type.
 	BlockPlaza
+	// BlockPark represents a park block type.
 	BlockPark
 )
 

@@ -837,13 +837,13 @@ func main() {
 	game.World.AddSystem(playerSpellCastingSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
-	
+
 	// Phase 10.2: Add projectile system for ranged weapon physics
 	// Processes after collision to use terrain checker for wall bounces
 	projectileSystem := engine.NewProjectileSystem(game.World)
 	// Note: terrainChecker will be set after terrain generation
 	game.World.AddSystem(projectileSystem)
-	
+
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(statusEffectSystem) // Process status effects after combat
 

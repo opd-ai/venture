@@ -63,7 +63,7 @@ func TestLifetimeSystem_EntityDespawn(t *testing.T) {
 
 			// Update system
 			system.Update(entities, tt.updateTime)
-			
+
 			// Process entity removals
 			world.Update(0.0)
 

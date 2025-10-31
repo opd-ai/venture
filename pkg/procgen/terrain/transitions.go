@@ -9,10 +9,15 @@ import (
 type BiomeType int
 
 const (
+	// BiomeDungeon represents a dungeon biome.
 	BiomeDungeon BiomeType = iota
+	// BiomeCave represents a cave biome.
 	BiomeCave
+	// BiomeForest represents a forest biome.
 	BiomeForest
+	// BiomeCity represents a city biome.
 	BiomeCity
+	// BiomeMaze represents a maze biome.
 	BiomeMaze
 )
 

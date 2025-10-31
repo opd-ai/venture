@@ -10,19 +10,28 @@ import (
 // LogLevel represents the minimum log level.
 type LogLevel string
 
+// Log level constants define the minimum severity level for log messages.
 const (
+	// DebugLevel is for detailed debugging information.
 	DebugLevel LogLevel = "debug"
-	InfoLevel  LogLevel = "info"
-	WarnLevel  LogLevel = "warn"
+	// InfoLevel is for general informational messages.
+	InfoLevel LogLevel = "info"
+	// WarnLevel is for warning messages.
+	WarnLevel LogLevel = "warn"
+	// ErrorLevel is for error messages.
 	ErrorLevel LogLevel = "error"
+	// FatalLevel is for fatal errors that cause the program to exit.
 	FatalLevel LogLevel = "fatal"
 )
 
 // LogFormat represents the output format for logs.
 type LogFormat string
 
+// Log format constants define the output format for logs.
 const (
+	// JSONFormat outputs logs in JSON format for machine parsing.
 	JSONFormat LogFormat = "json"
+	// TextFormat outputs logs in human-readable text format.
 	TextFormat LogFormat = "text"
 )
 

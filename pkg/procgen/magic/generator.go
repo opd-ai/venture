@@ -36,40 +36,61 @@ func NewSpellGeneratorWithLogger(logger *logrus.Logger) *SpellGenerator {
 // Generate creates spells based on the seed and parameters.
 // Returns []*Spell or error.
 func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":    seed,
-			"genreID": params.GenreID,
-			"depth":   params.Depth,
-		}).Debug("starting spell generation")
+	g.logDebug("starting spell generation", logrus.Fields{
+		"seed":    seed,
+		"genreID": params.GenreID,
+		"depth":   params.Depth,
+	})
+
+	if err := g.validateParams(params); err != nil {
+		return nil, err
 	}
 
-	// Validate parameters
+	count := g.getSpellCount(params)
+	rng := rand.New(rand.NewSource(seed))
+
+	templates, err := g.getTemplatesForGenre(params.GenreID)
+	if err != nil {
+		return nil, err
+	}
+
+	spells := g.generateSpells(rng, templates, params, seed, count)
+
+	g.logInfo("spell generation complete", logrus.Fields{
+		"count":   len(spells),
+		"seed":    seed,
+		"genreID": params.GenreID,
+	})
+
+	return spells, nil
+}
+
+// validateParams validates generation parameters.
+func (g *SpellGenerator) validateParams(params procgen.GenerationParams) error {
 	if params.Depth < 0 {
-		if g.logger != nil {
-			g.logger.WithField("depth", params.Depth).Warn("invalid depth parameter")
-		}
-		return nil, fmt.Errorf("depth must be non-negative")
+		g.logWarn("invalid depth parameter", logrus.Fields{"depth": params.Depth})
+		return fmt.Errorf("depth must be non-negative")
 	}
 	if params.Difficulty < 0 || params.Difficulty > 1 {
-		if g.logger != nil {
-			g.logger.WithField("difficulty", params.Difficulty).Warn("invalid difficulty parameter")
-		}
-		return nil, fmt.Errorf("difficulty must be between 0 and 1")
+		g.logWarn("invalid difficulty parameter", logrus.Fields{"difficulty": params.Difficulty})
+		return fmt.Errorf("difficulty must be between 0 and 1")
 	}
+	return nil
+}
 
-	// Extract custom parameters
+// getSpellCount extracts the spell count from custom parameters.
+func (g *SpellGenerator) getSpellCount(params procgen.GenerationParams) int {
 	count := 10 // default
 	if c, ok := params.Custom["count"].(int); ok {
 		count = c
 	}
+	return count
+}
 
-	// Create deterministic RNG
-	rng := rand.New(rand.NewSource(seed))
-
-	// Get templates based on genre
+// getTemplatesForGenre returns spell templates for the specified genre.
+func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, error) {
 	var templates []SpellTemplate
-	switch params.GenreID {
+	switch genreID {
 	case "scifi":
 		templates = append(templates, GetSciFiOffensiveTemplates()...)
 		templates = append(templates, GetSciFiSupportTemplates()...)
@@ -81,34 +102,23 @@ func (g *SpellGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	}
 
 	if len(templates) == 0 {
-		if g.logger != nil {
-			g.logger.WithField("genreID", params.GenreID).Error("no templates available")
-		}
-		return nil, fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		g.logError("no templates available", logrus.Fields{"genreID": genreID})
+		return nil, fmt.Errorf("no templates available for genre: %s", genreID)
 	}
 
-	// Generate spells
+	return templates, nil
+}
+
+// generateSpells generates the specified count of spells from templates.
+func (g *SpellGenerator) generateSpells(rng *rand.Rand, templates []SpellTemplate, params procgen.GenerationParams, seed int64, count int) []*Spell {
 	spells := make([]*Spell, 0, count)
 	for i := 0; i < count; i++ {
-		// Select random template
 		template := templates[rng.Intn(len(templates))]
-
-		// Generate spell from template
 		spell := g.generateFromTemplate(rng, template, params)
 		spell.Seed = seed + int64(i)
-
 		spells = append(spells, spell)
 	}
-
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"count":   len(spells),
-			"seed":    seed,
-			"genreID": params.GenreID,
-		}).Info("spell generation complete")
-	}
-
-	return spells, nil
+	return spells
 }
 
 // generateFromTemplate creates a single spell from a template.
@@ -381,4 +391,32 @@ func (g *SpellGenerator) Validate(result interface{}) error {
 	}
 
 	return nil
+}
+
+// logDebug logs a debug message if logger and level are configured.
+func (g *SpellGenerator) logDebug(msg string, fields logrus.Fields) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(fields).Debug(msg)
+	}
+}
+
+// logInfo logs an info message if logger is configured.
+func (g *SpellGenerator) logInfo(msg string, fields logrus.Fields) {
+	if g.logger != nil {
+		g.logger.WithFields(fields).Info(msg)
+	}
+}
+
+// logWarn logs a warning message if logger is configured.
+func (g *SpellGenerator) logWarn(msg string, fields logrus.Fields) {
+	if g.logger != nil {
+		g.logger.WithFields(fields).Warn(msg)
+	}
+}
+
+// logError logs an error message if logger is configured.
+func (g *SpellGenerator) logError(msg string, fields logrus.Fields) {
+	if g.logger != nil {
+		g.logger.WithFields(fields).Error(msg)
+	}
 }

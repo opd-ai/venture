@@ -286,16 +286,16 @@ type ItemTemplate struct {
 	DurabilityRange  [2]int
 
 	// Projectile template properties
-	IsProjectile           bool
-	ProjectileSpeedRange   [2]float64
-	ProjectileLifetime     float64
-	ProjectileType         string
-	PierceChance           float64 // Probability of having pierce ability
-	PierceRange            [2]int  // Range of pierce count if generated
-	BounceChance           float64 // Probability of having bounce ability
-	BounceRange            [2]int  // Range of bounce count if generated
-	ExplosiveChance        float64 // Probability of being explosive
-	ExplosionRadiusRange   [2]float64
+	IsProjectile         bool
+	ProjectileSpeedRange [2]float64
+	ProjectileLifetime   float64
+	ProjectileType       string
+	PierceChance         float64 // Probability of having pierce ability
+	PierceRange          [2]int  // Range of pierce count if generated
+	BounceChance         float64 // Probability of having bounce ability
+	BounceRange          [2]int  // Range of bounce count if generated
+	ExplosiveChance      float64 // Probability of being explosive
+	ExplosionRadiusRange [2]float64
 }
 
 // GetFantasyWeaponTemplates returns weapon templates for fantasy genre.
@@ -339,7 +339,7 @@ func GetFantasyWeaponTemplates() []ItemTemplate {
 			// Projectile properties
 			IsProjectile:         true,
 			ProjectileSpeedRange: [2]float64{300.0, 500.0}, // pixels per second
-			ProjectileLifetime:   3.0,                       // seconds
+			ProjectileLifetime:   3.0,                      // seconds
 			ProjectileType:       "arrow",
 			PierceChance:         0.15, // 15% chance for piercing arrows
 			PierceRange:          [2]int{1, 2},
@@ -385,7 +385,7 @@ func GetFantasyWeaponTemplates() []ItemTemplate {
 			// Projectile properties
 			IsProjectile:         true,
 			ProjectileSpeedRange: [2]float64{400.0, 600.0}, // faster than arrows
-			ProjectileLifetime:   2.5,                       // shorter lifetime
+			ProjectileLifetime:   2.5,                      // shorter lifetime
 			ProjectileType:       "bolt",
 			PierceChance:         0.25, // 25% chance for piercing bolts
 			PierceRange:          [2]int{1, 3},
@@ -407,7 +407,7 @@ func GetFantasyWeaponTemplates() []ItemTemplate {
 			// Projectile properties
 			IsProjectile:         true,
 			ProjectileSpeedRange: [2]float64{250.0, 400.0}, // slower magical projectiles
-			ProjectileLifetime:   4.0,                       // longer lifetime for magic
+			ProjectileLifetime:   4.0,                      // longer lifetime for magic
 			ProjectileType:       "magic_bolt",
 			PierceChance:         0.20, // 20% chance for piercing magic
 			PierceRange:          [2]int{1, 2},
@@ -511,7 +511,7 @@ func GetSciFiWeaponTemplates() []ItemTemplate {
 			// Projectile properties
 			IsProjectile:         true,
 			ProjectileSpeedRange: [2]float64{600.0, 1000.0}, // very fast bullets
-			ProjectileLifetime:   2.0,                        // short lifetime
+			ProjectileLifetime:   2.0,                       // short lifetime
 			ProjectileType:       "bullet",
 			PierceChance:         0.30, // 30% chance for armor-piercing rounds
 			PierceRange:          [2]int{2, 4},

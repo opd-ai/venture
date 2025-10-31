@@ -27,6 +27,24 @@ const (
 	TileTrap
 	// TileStairs represents stairs (up or down)
 	TileStairs
+
+	// Phase 11.1: Diagonal wall tiles (45° angles)
+	// TileWallNE represents a diagonal wall with a / slope (sloping from lower-left to upper-right)
+	TileWallNE
+	// TileWallNW represents a diagonal wall with \ slope (solid in northwest)
+	TileWallNW
+	// TileWallSE represents a diagonal wall with \ slope (solid in southeast)
+	TileWallSE
+	// TileWallSW represents a diagonal wall with a / slope (sloping from upper-right to lower-left)
+	TileWallSW
+
+	// Phase 11.1: Multi-layer terrain tiles
+	// TilePlatform represents an elevated platform entities can walk on
+	TilePlatform
+	// TileRamp represents a ramp for transitioning between layers
+	TileRamp
+	// TilePit represents a pit or chasm that blocks movement
+	TilePit
 )
 
 // String returns the string representation of a tile type.
@@ -48,6 +66,20 @@ func (t TileType) String() string {
 		return "trap"
 	case TileStairs:
 		return "stairs"
+	case TileWallNE:
+		return "wall_ne"
+	case TileWallNW:
+		return "wall_nw"
+	case TileWallSE:
+		return "wall_se"
+	case TileWallSW:
+		return "wall_sw"
+	case TilePlatform:
+		return "platform"
+	case TileRamp:
+		return "ramp"
+	case TilePit:
+		return "pit"
 	default:
 		return "unknown"
 	}

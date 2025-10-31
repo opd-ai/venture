@@ -28,6 +28,7 @@ VALIDATION (after each fix):
 - Run affected tests to confirm resolution
 - Run full test suite to detect regressions
 - Verify `go build` still succeeds
+- Code is formatted with `gofmt -w -s`
 
 OUTPUT FORMAT (final report):
 ```

@@ -51,46 +51,37 @@ func NewEntityGeneratorWithLogger(logger *logrus.Logger) *EntityGenerator {
 
 // Generate creates entities based on the seed and parameters.
 func (g *EntityGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":    seed,
-			"genreID": params.GenreID,
-			"depth":   params.Depth,
-		}).Debug("starting entity generation")
-	}
+	g.logDebug("starting entity generation", logrus.Fields{
+		"seed":    seed,
+		"genreID": params.GenreID,
+		"depth":   params.Depth,
+	})
 
-	// Get count from custom parameters
-	count := 10 // default
+	count := 10
 	if params.Custom != nil {
 		if c, ok := params.Custom["count"].(int); ok {
 			count = c
 		}
 	}
 
-	// Get templates for the genre
 	templates := g.templates[params.GenreID]
 	if templates == nil {
-		templates = g.templates[""] // fallback to default
+		templates = g.templates[""]
 	}
 
-	// Create random source from seed
 	rng := rand.New(rand.NewSource(seed))
 
-	// Generate entities
 	entities := make([]*Entity, count)
 	for i := 0; i < count; i++ {
-		// Use a different seed for each entity
 		entitySeed := seed + int64(i)*1000
 		entities[i] = g.generateSingleEntity(entitySeed, params, templates, rng)
 	}
 
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"count":   len(entities),
-			"seed":    seed,
-			"genreID": params.GenreID,
-		}).Info("entity generation complete")
-	}
+	g.logInfo("entity generation complete", logrus.Fields{
+		"count":   len(entities),
+		"seed":    seed,
+		"genreID": params.GenreID,
+	})
 
 	return entities, nil
 }
@@ -299,4 +290,18 @@ func (g *EntityGenerator) Validate(result interface{}) error {
 	}
 
 	return nil
+}
+
+// logDebug logs a debug message if logger and level are configured.
+func (g *EntityGenerator) logDebug(msg string, fields logrus.Fields) {
+if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+g.logger.WithFields(fields).Debug(msg)
+}
+}
+
+// logInfo logs an info message if logger is configured.
+func (g *EntityGenerator) logInfo(msg string, fields logrus.Fields) {
+if g.logger != nil {
+g.logger.WithFields(fields).Info(msg)
+}
 }

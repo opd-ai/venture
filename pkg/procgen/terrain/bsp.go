@@ -108,6 +108,9 @@ func (g *BSPGenerator) Generate(seed int64, params procgen.GenerationParams) (in
 	// Add water features (moats around boss rooms)
 	g.addWaterFeatures(terrain, rng)
 
+	// Phase 11.1: Add multi-layer features (platforms, pits, lava flows)
+	g.addMultiLayerFeatures(terrain, rng)
+
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
 			"width":     terrain.Width,
@@ -243,6 +246,11 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 			for x := roomX; x < roomX+roomWidth; x++ {
 				terrain.SetTile(x, y, TileFloor)
 			}
+		}
+
+		// Phase 11.1: Add diagonal walls by chamfering corners (20-40% chance per room)
+		if rng.Float64() < 0.30 { // 30% of rooms get diagonal corners
+			g.chamferRoomCorners(terrain, room, rng)
 		}
 	}
 }
@@ -412,6 +420,251 @@ func (g *BSPGenerator) addWaterFeatures(terrain *Terrain, rng *rand.Rand) {
 
 				// Generate moat around boss room
 				_ = GenerateMoat(room, moatWidth, terrain)
+			}
+		}
+	}
+}
+
+// chamferRoomCorners adds diagonal walls to room corners (Phase 11.1).
+// This creates 45° angle cuts on corners, making rooms more visually interesting.
+func (g *BSPGenerator) chamferRoomCorners(terrain *Terrain, room *Room, rng *rand.Rand) {
+	// Determine chamfer size (1-2 tiles)
+	chamferSize := 1 + rng.Intn(2)
+
+	// Track which corners to chamfer (at least 1, up to all 4)
+	numCorners := 1 + rng.Intn(4) // 1-4 corners
+	corners := []bool{false, false, false, false}
+	
+	// Use Fisher-Yates shuffle to select unique corners
+	cornerIndices := []int{0, 1, 2, 3}
+	for i := len(cornerIndices) - 1; i > 0; i-- {
+		j := rng.Intn(i + 1)
+		cornerIndices[i], cornerIndices[j] = cornerIndices[j], cornerIndices[i]
+	}
+	
+	// Mark the first numCorners corners as selected
+	for i := 0; i < numCorners; i++ {
+		corners[cornerIndices[i]] = true
+	}
+
+	// Top-left corner (NW) - use TileWallSE (\ shape)
+	if corners[0] {
+		for i := 0; i < chamferSize; i++ {
+			x := room.X + i
+			y := room.Y + i
+			if terrain.IsInBounds(x, y) {
+				terrain.SetTile(x, y, TileWallSE)
+			}
+		}
+	}
+
+	// Top-right corner (NE) - use TileWallSW (/ shape)
+	if corners[1] {
+		for i := 0; i < chamferSize; i++ {
+			x := room.X + room.Width - 1 - i
+			y := room.Y + i
+			if terrain.IsInBounds(x, y) {
+				terrain.SetTile(x, y, TileWallSW)
+			}
+		}
+	}
+
+	// Bottom-left corner (SW) - use TileWallNE (/ shape)
+	if corners[2] {
+		for i := 0; i < chamferSize; i++ {
+			x := room.X + i
+			y := room.Y + room.Height - 1 - i
+			if terrain.IsInBounds(x, y) {
+				terrain.SetTile(x, y, TileWallNE)
+			}
+		}
+	}
+
+	// Bottom-right corner (SE) - use TileWallNW (\ shape)
+	if corners[3] {
+		for i := 0; i < chamferSize; i++ {
+			x := room.X + room.Width - 1 - i
+			y := room.Y + room.Height - 1 - i
+			if terrain.IsInBounds(x, y) {
+				terrain.SetTile(x, y, TileWallNW)
+			}
+		}
+	}
+}
+
+// addMultiLayerFeatures adds platforms, pits, and ramps to rooms (Phase 11.1).
+// This creates vertical variety with elevated platforms and chasms.
+func (g *BSPGenerator) addMultiLayerFeatures(terrain *Terrain, rng *rand.Rand) {
+	// 30-50% of rooms get multi-layer features
+	for _, room := range terrain.Rooms {
+		// Skip small rooms
+		if room.Width < 8 || room.Height < 8 {
+			continue
+		}
+
+		featureType := rng.Float64()
+
+		if featureType < 0.15 { // 15% chance: Central platform
+			g.addCentralPlatform(terrain, room, rng)
+		} else if featureType < 0.25 { // 10% chance: Corner pits
+			g.addCornerPits(terrain, room, rng)
+		} else if featureType < 0.35 { // 10% chance: Lava flow
+			g.addLavaFlow(terrain, room, rng)
+		}
+	}
+}
+
+// addCentralPlatform adds an elevated platform in the center of a room.
+func (g *BSPGenerator) addCentralPlatform(terrain *Terrain, room *Room, rng *rand.Rand) {
+	// Platform size: 30-60% of room size
+	platformWidth := room.Width * (30 + rng.Intn(31)) / 100
+	platformHeight := room.Height * (30 + rng.Intn(31)) / 100
+
+	// Ensure minimum size
+	if platformWidth < 3 {
+		platformWidth = 3
+	}
+	if platformHeight < 3 {
+		platformHeight = 3
+	}
+
+	// Center the platform
+	platformX := room.X + (room.Width-platformWidth)/2
+	platformY := room.Y + (room.Height-platformHeight)/2
+
+	// Create platform
+	for y := platformY; y < platformY+platformHeight; y++ {
+		for x := platformX; x < platformX+platformWidth; x++ {
+			if terrain.IsInBounds(x, y) {
+				terrain.SetTile(x, y, TilePlatform)
+			}
+		}
+	}
+
+	// Add ramps on 1-2 sides
+	numRamps := 1 + rng.Intn(2)
+	sides := []int{0, 1, 2, 3} // North, East, South, West
+	// Shuffle sides
+	for i := len(sides) - 1; i > 0; i-- {
+		j := rng.Intn(i + 1)
+		sides[i], sides[j] = sides[j], sides[i]
+	}
+
+	for i := 0; i < numRamps && i < len(sides); i++ {
+		side := sides[i]
+		switch side {
+		case 0: // North
+			rampX := platformX + platformWidth/2
+			if terrain.IsInBounds(rampX, platformY-1) {
+				terrain.SetTile(rampX, platformY-1, TileRampUp)
+			}
+		case 1: // East
+			rampY := platformY + platformHeight/2
+			if terrain.IsInBounds(platformX+platformWidth, rampY) {
+				terrain.SetTile(platformX+platformWidth, rampY, TileRampUp)
+			}
+		case 2: // South
+			rampX := platformX + platformWidth/2
+			if terrain.IsInBounds(rampX, platformY+platformHeight) {
+				terrain.SetTile(rampX, platformY+platformHeight, TileRampDown)
+			}
+		case 3: // West
+			rampY := platformY + platformHeight/2
+			if terrain.IsInBounds(platformX-1, rampY) {
+				terrain.SetTile(platformX-1, rampY, TileRampUp)
+			}
+		}
+	}
+}
+
+// addCornerPits adds pits in the corners of a room.
+func (g *BSPGenerator) addCornerPits(terrain *Terrain, room *Room, rng *rand.Rand) {
+	// Pit size: 2-3 tiles
+	pitSize := 2 + rng.Intn(2)
+
+	// Add pits to 1-2 random corners
+	numPits := 1 + rng.Intn(2)
+	corners := []int{0, 1, 2, 3} // TL, TR, BL, BR
+	// Shuffle corners
+	for i := len(corners) - 1; i > 0; i-- {
+		j := rng.Intn(i + 1)
+		corners[i], corners[j] = corners[j], corners[i]
+	}
+
+	for i := 0; i < numPits && i < len(corners); i++ {
+		corner := corners[i]
+		var startX, startY int
+
+		switch corner {
+		case 0: // Top-left
+			startX = room.X
+			startY = room.Y
+		case 1: // Top-right
+			startX = room.X + room.Width - pitSize
+			startY = room.Y
+		case 2: // Bottom-left
+			startX = room.X
+			startY = room.Y + room.Height - pitSize
+		case 3: // Bottom-right
+			startX = room.X + room.Width - pitSize
+			startY = room.Y + room.Height - pitSize
+		}
+
+		// Create pit
+		for y := startY; y < startY+pitSize; y++ {
+			for x := startX; x < startX+pitSize; x++ {
+				if terrain.IsInBounds(x, y) {
+					terrain.SetTile(x, y, TilePit)
+				}
+			}
+		}
+	}
+}
+
+// addLavaFlow adds a lava stream through a room.
+func (g *BSPGenerator) addLavaFlow(terrain *Terrain, room *Room, rng *rand.Rand) {
+	// Lava flows horizontally or vertically across room
+	horizontal := rng.Float64() < 0.5
+
+	if horizontal {
+		// Horizontal flow
+		lavaY := room.Y + rng.Intn(room.Height)
+		for x := room.X; x < room.X+room.Width; x++ {
+			if terrain.IsInBounds(x, lavaY) {
+				// Skip if it's a wall or door
+				currentTile := terrain.GetTile(x, lavaY)
+				if currentTile == TileFloor || currentTile == TileCorridor {
+					terrain.SetTile(x, lavaY, TileLavaFlow)
+				}
+			}
+		}
+
+		// Add bridges over lava (2-3 crossing points)
+		numBridges := 2 + rng.Intn(2)
+		for i := 0; i < numBridges; i++ {
+			bridgeX := room.X + rng.Intn(room.Width)
+			if terrain.IsInBounds(bridgeX, lavaY) && terrain.GetTile(bridgeX, lavaY) == TileLavaFlow {
+				terrain.SetTile(bridgeX, lavaY, TileBridge)
+			}
+		}
+	} else {
+		// Vertical flow
+		lavaX := room.X + rng.Intn(room.Width)
+		for y := room.Y; y < room.Y+room.Height; y++ {
+			if terrain.IsInBounds(lavaX, y) {
+				currentTile := terrain.GetTile(lavaX, y)
+				if currentTile == TileFloor || currentTile == TileCorridor {
+					terrain.SetTile(lavaX, y, TileLavaFlow)
+				}
+			}
+		}
+
+		// Add bridges over lava
+		numBridges := 2 + rng.Intn(2)
+		for i := 0; i < numBridges; i++ {
+			bridgeY := room.Y + rng.Intn(room.Height)
+			if terrain.IsInBounds(lavaX, bridgeY) && terrain.GetTile(lavaX, bridgeY) == TileLavaFlow {
+				terrain.SetTile(lavaX, bridgeY, TileBridge)
 			}
 		}
 	}

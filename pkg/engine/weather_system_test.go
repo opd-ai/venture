@@ -183,6 +183,9 @@ func TestWeatherSystem_GetWeatherParticles(t *testing.T) {
 	weather := NewWeatherComponent(config)
 	entity.AddComponent(weather)
 
+	// Process entity additions
+	world.Update(0)
+
 	// Before activation, no particles
 	particles := system.GetWeatherParticles()
 	if len(particles) != 0 {
@@ -222,6 +225,9 @@ func TestWeatherSystem_GetWeatherParticles_Opacity(t *testing.T) {
 	weather := NewWeatherComponent(config)
 	entity.AddComponent(weather)
 
+	// Process entity additions
+	world.Update(0)
+
 	// Start weather (fading in)
 	weather.StartWeather()
 	entities := []*Entity{entity}
@@ -258,6 +264,9 @@ func TestWeatherSystem_GetWeatherParticles_ViewportCulling(t *testing.T) {
 	weather := NewWeatherComponent(config)
 	entity.AddComponent(weather)
 
+	// Process entity additions
+	world.Update(0)
+
 	// Activate
 	weather.StartWeather()
 	entities := []*Entity{entity}
@@ -291,6 +300,9 @@ func TestWeatherSystem_GetActiveWeatherType(t *testing.T) {
 	weather := NewWeatherComponent(config)
 	entity.AddComponent(weather)
 
+	// Process entity additions
+	world.Update(0)
+
 	// Start and complete transition
 	weather.StartWeather()
 	entities := []*Entity{entity}
@@ -321,6 +333,9 @@ func TestWeatherSystem_GetWeatherCount(t *testing.T) {
 	entity.AddComponent(weather)
 	weather.StartWeather()
 
+	// Process entity additions
+	world.Update(0)
+
 	// Count should be 1
 	count = system.GetWeatherCount()
 	if count != 1 {
@@ -350,6 +365,9 @@ func TestWeatherSystem_Update_WeatherChange(t *testing.T) {
 	config.Type = particles.WeatherRain
 	weather := NewWeatherComponent(config)
 	entity.AddComponent(weather)
+
+	// Process entity additions
+	world.Update(0)
 
 	// Start rain
 	weather.StartWeather()

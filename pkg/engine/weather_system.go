@@ -63,14 +63,12 @@ func (ws *WeatherSystem) SetViewport(x, y, width, height float64) {
 //   - Handles weather changes and crossfades
 //   - Updates particle positions and lifetimes
 func (ws *WeatherSystem) Update(entities []*Entity, deltaTime float64) {
-	if ws.world == nil {
-		return
-	}
-
-	// Get all entities with weather component
-	weatherEntities := ws.world.GetEntitiesWith("weather")
-
-	for _, entity := range weatherEntities {
+	// Process all entities passed in (filtered by World if needed)
+	for _, entity := range entities {
+		// Check if entity has weather component
+		if !entity.HasComponent("weather") {
+			continue
+		}
 		ws.updateWeather(entity, deltaTime)
 	}
 }
@@ -92,16 +90,25 @@ func (ws *WeatherSystem) updateWeather(entity *Entity, deltaTime float64) {
 
 	// Handle transition completion
 	if transitionCompleted {
-		// If we just finished fading out and need to start new weather
-		if !weather.FadingIn && weather.System == nil {
-			// This happens during weather change - old weather faded out
-			// Start new weather (fade in)
-			weather.StartWeather()
-		}
-
 		// If fading out completed and no new weather pending, clear system
 		if !weather.Active && weather.System != nil {
+			// Check if this is a weather change (config was updated)
+			// Compare the system's config with component's config
+			isWeatherChange := false
+			if weather.System != nil {
+				// If configs differ, it's a weather change
+				if weather.System.Config.Type != weather.Config.Type {
+					isWeatherChange = true
+				}
+			}
+
+			// Clear the old system
 			weather.System = nil
+
+			// If it's a weather change, start new weather
+			if isWeatherChange {
+				weather.StartWeather()
+			}
 		}
 	}
 
@@ -149,16 +156,17 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 			}
 
 			// Apply transition opacity to particle color
-			color := p.Color
+			// Convert color.Color interface to color.RGBA for alpha manipulation
+			rgba := color.RGBAModel.Convert(p.Color).(color.RGBA)
 			// Adjust alpha based on opacity
-			originalAlpha := float64(color.A)
-			color.A = uint8(originalAlpha * opacity)
+			originalAlpha := float64(rgba.A)
+			rgba.A = uint8(originalAlpha * opacity)
 
 			allParticles = append(allParticles, WeatherParticleData{
 				X:        p.X,
 				Y:        p.Y,
 				Size:     p.Size,
-				Color:    color,
+				Color:    rgba,
 				Rotation: p.Rotation,
 			})
 		}

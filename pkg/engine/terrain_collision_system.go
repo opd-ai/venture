@@ -102,10 +102,6 @@ func (t *TerrainCollisionChecker) CheckCollisionBoundsWithLayer(minX, minY, maxX
 				}
 			}
 
-			// Check pits - block movement unless on platform layer or flying
-			if tile == terrain.TilePit && layer != 2 {
-				return true
-			}
 		}
 	}
 

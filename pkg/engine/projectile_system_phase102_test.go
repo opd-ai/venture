@@ -245,6 +245,9 @@ func TestProjectileSystem_ExplosionParticles(t *testing.T) {
 	pos := posComp.(*PositionComponent)
 	sys.handleExplosion(projectile, pos)
 
+	// Process pending entity additions/removals
+	w.Update(0.016)
+
 	// Count entities after explosion
 	entitiesAfter := len(w.GetEntities())
 
@@ -306,6 +309,8 @@ func TestProjectileSystem_ExplosionScreenShake(t *testing.T) {
 	// Camera should not have shake initially
 	cameraEntity := w.CreateEntity()
 	cameraComp := NewCameraComponent()
+	cameraComp.X = 400.0
+	cameraComp.Y = 300.0
 	cameraEntity.AddComponent(cameraComp)
 	cameraEntity.AddComponent(&PositionComponent{X: 400.0, Y: 300.0})
 

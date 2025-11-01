@@ -13,10 +13,17 @@ func TestTerrainCollisionChecker_CheckCollisionBoundsWithLayer(t *testing.T) {
 	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create test terrain with multi-layer tiles
+	tiles := make([][]terrain.TileType, 10)
+	for y := range tiles {
+		tiles[y] = make([]terrain.TileType, 10)
+		for x := range tiles[y] {
+			tiles[y][x] = terrain.TileFloor // Initialize to floor
+		}
+	}
 	testTerrain := &terrain.Terrain{
 		Width:  10,
 		Height: 10,
-		Tiles:  make([]terrain.TileType, 100),
+		Tiles:  tiles,
 	}
 
 	// Setup test tiles:
@@ -86,14 +93,14 @@ func TestTerrainCollisionChecker_CheckCollisionBoundsWithLayer(t *testing.T) {
 		// Diagonal wall collision tests (all layers)
 		{
 			name: "ground layer collides with diagonal wall",
-			minX: 96.0, minY: 96.0, maxX: 112.0, maxY: 112.0,
+			minX: 108.0, minY: 108.0, maxX: 124.0, maxY: 124.0, // Center of tile (3,3) - hits diagonal
 			layer:       0,
 			wantCollide: true,
 			description: "Ground entities hit diagonal walls",
 		},
 		{
 			name: "platform layer collides with diagonal wall",
-			minX: 96.0, minY: 96.0, maxX: 112.0, maxY: 112.0,
+			minX: 108.0, minY: 108.0, maxX: 124.0, maxY: 124.0, // Center of tile (3,3) - hits diagonal
 			layer:       2,
 			wantCollide: true,
 			description: "Platform entities hit diagonal walls",
@@ -164,10 +171,17 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create test terrain
+	tiles := make([][]terrain.TileType, 10)
+	for y := range tiles {
+		tiles[y] = make([]terrain.TileType, 10)
+		for x := range tiles[y] {
+			tiles[y][x] = terrain.TileFloor // Initialize to floor
+		}
+	}
 	testTerrain := &terrain.Terrain{
 		Width:  10,
 		Height: 10,
-		Tiles:  make([]terrain.TileType, 100),
+		Tiles:  tiles,
 	}
 	testTerrain.SetTile(2, 2, terrain.TilePit)
 	checker.SetTerrain(testTerrain)
@@ -181,10 +195,11 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 		{
 			name: "ground entity collides with pit",
 			entity: func() *Entity {
-				e := NewEntity()
+				e := NewEntity(1)
 				e.AddComponent(&PositionComponent{X: 70, Y: 70})
 				e.AddComponent(&ColliderComponent{Width: 16, Height: 16})
-				e.AddComponent(NewLayerComponent()) // Ground layer
+				lc := NewLayerComponent() // Ground layer
+				e.AddComponent(&lc)
 				return e
 			}(),
 			wantCollide: true,
@@ -193,12 +208,12 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 		{
 			name: "flying entity doesn't collide with pit",
 			entity: func() *Entity {
-				e := NewEntity()
+				e := NewEntity(2)
 				e.AddComponent(&PositionComponent{X: 70, Y: 70})
 				e.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 				layerComp := NewFlyingLayerComponent()
 				layerComp.CurrentLayer = 2 // On platform layer
-				e.AddComponent(layerComp)
+				e.AddComponent(&layerComp)
 				return e
 			}(),
 			wantCollide: false,
@@ -207,10 +222,11 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 		{
 			name: "swimming entity in pit doesn't collide",
 			entity: func() *Entity {
-				e := NewEntity()
+				e := NewEntity(3)
 				e.AddComponent(&PositionComponent{X: 70, Y: 70})
 				e.AddComponent(&ColliderComponent{Width: 16, Height: 16})
-				e.AddComponent(NewSwimmingLayerComponent()) // Water layer (1)
+				lc := NewSwimmingLayerComponent() // Water layer (1)
+				e.AddComponent(&lc)
 				return e
 			}(),
 			wantCollide: false,
@@ -219,7 +235,7 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 		{
 			name: "entity without layer component (defaults to ground)",
 			entity: func() *Entity {
-				e := NewEntity()
+				e := NewEntity(4)
 				e.AddComponent(&PositionComponent{X: 70, Y: 70})
 				e.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 				// No layer component - should default to ground (0)
@@ -246,10 +262,17 @@ func TestTerrainCollisionChecker_CheckCollisionWithLayer(t *testing.T) {
 	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create test terrain with a pit
+	tiles := make([][]terrain.TileType, 10)
+	for y := range tiles {
+		tiles[y] = make([]terrain.TileType, 10)
+		for x := range tiles[y] {
+			tiles[y][x] = terrain.TileFloor // Initialize to floor
+		}
+	}
 	testTerrain := &terrain.Terrain{
 		Width:  10,
 		Height: 10,
-		Tiles:  make([]terrain.TileType, 100),
+		Tiles:  tiles,
 	}
 	testTerrain.SetTile(1, 1, terrain.TilePit)
 	checker.SetTerrain(testTerrain)
@@ -297,10 +320,17 @@ func TestTerrainCollisionChecker_MultiLayer_Integration(t *testing.T) {
 	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create complex test terrain
+	tiles := make([][]terrain.TileType, 5)
+	for y := range tiles {
+		tiles[y] = make([]terrain.TileType, 5)
+		for x := range tiles[y] {
+			tiles[y][x] = terrain.TileFloor // Initialize to floor
+		}
+	}
 	testTerrain := &terrain.Terrain{
 		Width:  5,
 		Height: 5,
-		Tiles:  make([]terrain.TileType, 25),
+		Tiles:  tiles,
 	}
 
 	// Setup terrain:
@@ -330,22 +360,23 @@ func TestTerrainCollisionChecker_MultiLayer_Integration(t *testing.T) {
 	checker.SetTerrain(testTerrain)
 
 	// Test entity on ground layer
-	groundEntity := NewEntity()
+	groundEntity := NewEntity(100)
 	groundEntity.AddComponent(&PositionComponent{X: 48, Y: 16}) // Position at pit (1,0)
 	groundEntity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
-	groundEntity.AddComponent(NewLayerComponent())
+	lc := NewLayerComponent()
+	groundEntity.AddComponent(&lc)
 
 	if !checker.CheckEntityCollision(groundEntity) {
 		t.Error("Ground entity should collide with pit at (1,0)")
 	}
 
 	// Test entity on platform layer
-	platformEntity := NewEntity()
+	platformEntity := NewEntity(101)
 	platformEntity.AddComponent(&PositionComponent{X: 48, Y: 16}) // Same position
 	platformEntity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 	layerComp := NewLayerComponent()
 	layerComp.CurrentLayer = 2
-	platformEntity.AddComponent(layerComp)
+	platformEntity.AddComponent(&layerComp)
 
 	if checker.CheckEntityCollision(platformEntity) {
 		t.Error("Platform entity should NOT collide with pit at (1,0)")
@@ -353,12 +384,12 @@ func TestTerrainCollisionChecker_MultiLayer_Integration(t *testing.T) {
 
 	// Test wall collision (all layers)
 	for layer := 0; layer <= 2; layer++ {
-		entity := NewEntity()
+		entity := NewEntity(uint64(200 + layer))
 		entity.AddComponent(&PositionComponent{X: 16, Y: 16}) // Position at wall (0,0)
 		entity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 		layerC := NewLayerComponent()
 		layerC.CurrentLayer = layer
-		entity.AddComponent(layerC)
+		entity.AddComponent(&layerC)
 
 		if !checker.CheckEntityCollision(entity) {
 			t.Errorf("Entity on layer %d should collide with wall at (0,0)", layer)
@@ -371,18 +402,29 @@ func BenchmarkCheckCollisionBoundsWithLayer(b *testing.B) {
 	checker := NewTerrainCollisionChecker(32, 32)
 
 	// Create realistic terrain
+	tiles := make([][]terrain.TileType, 100)
+	for y := range tiles {
+		tiles[y] = make([]terrain.TileType, 100)
+		for x := range tiles[y] {
+			tiles[y][x] = terrain.TileFloor // Initialize to floor
+		}
+	}
 	testTerrain := &terrain.Terrain{
 		Width:  100,
 		Height: 100,
-		Tiles:  make([]terrain.TileType, 10000),
+		Tiles:  tiles,
 	}
 
 	// Fill with some obstacles
 	for i := 0; i < 10000; i += 10 {
-		testTerrain.Tiles[i] = terrain.TileWall
+		x := i % 100
+		y := i / 100
+		testTerrain.SetTile(x, y, terrain.TileWall)
 	}
 	for i := 5; i < 10000; i += 15 {
-		testTerrain.Tiles[i] = terrain.TilePit
+		x := i % 100
+		y := i / 100
+		testTerrain.SetTile(x, y, terrain.TilePit)
 	}
 
 	checker.SetTerrain(testTerrain)

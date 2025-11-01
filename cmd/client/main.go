@@ -1007,6 +1007,10 @@ func main() {
 	// Phase 10.3: Set camera reference on projectile system for impact shake
 	projectileSystem.SetCamera(game.CameraSystem)
 
+	// Phase 10.2: Set genre and seed for projectile visual generation
+	projectileSystem.SetGenre(*genreID)
+	projectileSystem.SetSeed(*seed)
+
 	if *verbose {
 		clientLogger.Info("systems initialized")
 	} // Gap #3: Initialize performance monitoring (wraps World.Update)

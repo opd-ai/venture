@@ -63,13 +63,17 @@ type CameraSystem struct {
 
 	// Active camera entity (if any)
 	activeCamera *Entity
+
+	// Phase 10.3: Accessibility settings for screen shake and effects
+	Accessibility *AccessibilitySettings
 }
 
 // NewCameraSystem creates a new camera system.
 func NewCameraSystem(screenWidth, screenHeight int) *CameraSystem {
 	return &CameraSystem{
-		ScreenWidth:  screenWidth,
-		ScreenHeight: screenHeight,
+		ScreenWidth:   screenWidth,
+		ScreenHeight:  screenHeight,
+		Accessibility: NewAccessibilitySettings(), // Phase 10.3: Default accessibility
 	}
 }
 
@@ -295,10 +299,17 @@ func (s *CameraSystem) GetPosition() (float64, float64) {
 
 // Shake triggers a screen shake effect on the active camera.
 // GAP-012 REPAIR: Provides visual feedback for impacts and heavy actions.
+// Phase 10.3: Respects accessibility settings.
 // intensity: shake magnitude in pixels (typical values: 2-10)
 func (s *CameraSystem) Shake(intensity float64) {
 	if s.activeCamera == nil {
 		return
+	}
+
+	// Phase 10.3: Apply accessibility multiplier
+	intensity = s.Accessibility.ApplyShakeIntensity(intensity)
+	if intensity == 0.0 {
+		return // Shake disabled via accessibility
 	}
 
 	cameraComp, ok := s.activeCamera.GetComponent("camera")
@@ -319,9 +330,16 @@ func (s *CameraSystem) Shake(intensity float64) {
 // ShakeAdvanced triggers an advanced screen shake with duration control.
 // Phase 10.3: Enhanced shake system with frequency and duration.
 // Uses ScreenShakeComponent if available, falls back to basic shake.
+// Respects accessibility settings.
 func (s *CameraSystem) ShakeAdvanced(intensity, duration float64) {
 	if s.activeCamera == nil {
 		return
+	}
+
+	// Phase 10.3: Apply accessibility multiplier
+	intensity = s.Accessibility.ApplyShakeIntensity(intensity)
+	if intensity == 0.0 {
+		return // Shake disabled via accessibility
 	}
 
 	// Try advanced shake component first
@@ -338,11 +356,17 @@ func (s *CameraSystem) ShakeAdvanced(intensity, duration float64) {
 
 // TriggerHitStop triggers a hit-stop effect on the active camera.
 // Phase 10.3: Time dilation for impactful moments.
+// Respects accessibility settings.
 // duration: seconds to pause/slow (typical: 0.05-0.2s)
 // timeScale: 0 = full stop, 0.1 = slow motion, 1.0 = normal
 func (s *CameraSystem) TriggerHitStop(duration, timeScale float64) {
 	if s.activeCamera == nil {
 		return
+	}
+
+	// Phase 10.3: Check accessibility settings
+	if !s.Accessibility.ShouldApplyHitStop() {
+		return // Hit-stop disabled via accessibility
 	}
 
 	hitStopComp, ok := s.activeCamera.GetComponent("hitStop")

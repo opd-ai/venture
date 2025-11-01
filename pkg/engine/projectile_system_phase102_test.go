@@ -285,7 +285,7 @@ func TestProjectileSystem_ExplosionScreenShake(t *testing.T) {
 	w := NewWorld()
 	sys := NewProjectileSystem(w)
 
-	// Create camera system
+	// Create camera system (requires screen dimensions)
 	camera := NewCameraSystem(800, 600)
 	sys.SetCamera(camera)
 
@@ -312,6 +312,10 @@ func TestProjectileSystem_ExplosionScreenShake(t *testing.T) {
 	cameraComp.X = 400.0
 	cameraComp.Y = 300.0
 	cameraEntity.AddComponent(cameraComp)
+	cameraEntity.AddComponent(&PositionComponent{X: 400.0, Y: 300.0})
+
+	// Set as active camera
+	camera.SetActiveCamera(cameraEntity)
 
 	// Trigger explosion
 	sys.handleExplosion(projectile, pos)

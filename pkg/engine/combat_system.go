@@ -395,14 +395,18 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	}
 
 	// GAP-012 REPAIR: Trigger hit flash on damage
+	// Phase 10.3: Respects accessibility settings via camera
 	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {
-		feedback := feedbackComp.(*VisualFeedbackComponent)
-		// Flash intensity scales with damage (0.3-1.0 range)
-		flashIntensity := 0.3 + (finalDamage / 100.0)
-		if flashIntensity > 1.0 {
-			flashIntensity = 1.0
+		// Check accessibility settings for visual flash
+		if s.camera != nil && s.camera.Accessibility.ShouldApplyVisualFlash() {
+			feedback := feedbackComp.(*VisualFeedbackComponent)
+			// Flash intensity scales with damage (0.3-1.0 range)
+			flashIntensity := 0.3 + (finalDamage / 100.0)
+			if flashIntensity > 1.0 {
+				flashIntensity = 1.0
+			}
+			feedback.TriggerFlash(flashIntensity)
 		}
-		feedback.TriggerFlash(flashIntensity)
 	}
 
 	// GAP-012 REPAIR: Trigger screen shake on damage

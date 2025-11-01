@@ -238,7 +238,7 @@ func TestProjectileSystem_ExplosionParticles(t *testing.T) {
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
 	// Count entities before explosion
-	entitiesBefore := len(w.Entities)
+	entitiesBefore := len(w.GetEntities())
 
 	// Manually trigger explosion
 	posComp, _ := projectile.GetComponent("position")
@@ -246,7 +246,7 @@ func TestProjectileSystem_ExplosionParticles(t *testing.T) {
 	sys.handleExplosion(projectile, pos)
 
 	// Count entities after explosion
-	entitiesAfter := len(w.Entities)
+	entitiesAfter := len(w.GetEntities())
 
 	// Should have created explosion entity with particle emitter
 	if entitiesAfter <= entitiesBefore {
@@ -282,8 +282,8 @@ func TestProjectileSystem_ExplosionScreenShake(t *testing.T) {
 	w := NewWorld()
 	sys := NewProjectileSystem(w)
 
-	// Create camera system
-	camera := NewCameraSystem()
+	// Create camera system (requires screen dimensions)
+	camera := NewCameraSystem(800, 600)
 	sys.SetCamera(camera)
 
 	// Create explosive projectile
@@ -305,8 +305,12 @@ func TestProjectileSystem_ExplosionScreenShake(t *testing.T) {
 
 	// Camera should not have shake initially
 	cameraEntity := w.CreateEntity()
-	cameraComp := NewCameraComponent(400.0, 300.0, 800, 600)
+	cameraComp := NewCameraComponent()
 	cameraEntity.AddComponent(cameraComp)
+	cameraEntity.AddComponent(&PositionComponent{X: 400.0, Y: 300.0})
+
+	// Set as active camera
+	camera.SetActiveCamera(cameraEntity)
 
 	// Trigger explosion
 	sys.handleExplosion(projectile, pos)

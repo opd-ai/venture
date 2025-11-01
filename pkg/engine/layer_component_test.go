@@ -242,7 +242,7 @@ func TestLayerComponent_CanTransitionTo(t *testing.T) {
 			name:        "swimming to water",
 			component:   NewSwimmingLayerComponent(),
 			targetLayer: 1,
-			want:        true,
+			want:        false, // Already on water layer
 		},
 		{
 			name:        "swimming to platform - cannot",
@@ -293,8 +293,8 @@ func TestLayerComponent_CanTransitionTo(t *testing.T) {
 
 func TestLayerComponent_GetEffectiveLayer(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(*LayerComponent)
+		name      string
+		setup     func(*LayerComponent)
 		wantLayer int
 	}{
 		{

@@ -124,6 +124,11 @@ func (l *LayerComponent) CanTransitionTo(targetLayer int) bool {
 		return true
 	}
 
+	// Can't transition to the layer you're already on
+	if l.CurrentLayer == targetLayer {
+		return false
+	}
+
 	// Check layer-specific rules
 	switch targetLayer {
 	case 0: // Ground layer

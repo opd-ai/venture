@@ -198,7 +198,7 @@ func TestTerrainCollisionChecker_CheckEntityCollision_WithLayer(t *testing.T) {
 				e.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 				layerComp := NewFlyingLayerComponent()
 				layerComp.CurrentLayer = 2 // On platform layer
-				e.AddComponent(&layerComp)
+				e.AddComponent(layerComp)
 				return e
 			}(),
 			wantCollide: false,
@@ -345,7 +345,7 @@ func TestTerrainCollisionChecker_MultiLayer_Integration(t *testing.T) {
 	platformEntity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 	layerComp := NewLayerComponent()
 	layerComp.CurrentLayer = 2
-	platformEntity.AddComponent(&layerComp)
+	platformEntity.AddComponent(layerComp)
 
 	if checker.CheckEntityCollision(platformEntity) {
 		t.Error("Platform entity should NOT collide with pit at (1,0)")
@@ -358,7 +358,7 @@ func TestTerrainCollisionChecker_MultiLayer_Integration(t *testing.T) {
 		entity.AddComponent(&ColliderComponent{Width: 16, Height: 16})
 		layerC := NewLayerComponent()
 		layerC.CurrentLayer = layer
-		entity.AddComponent(&layerC)
+		entity.AddComponent(layerC)
 
 		if !checker.CheckEntityCollision(entity) {
 			t.Errorf("Entity on layer %d should collide with wall at (0,0)", layer)

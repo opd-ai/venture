@@ -108,8 +108,25 @@ func (t *TerrainCollisionChecker) CheckCollisionBoundsWithLayer(minX, minY, maxX
 	return false
 }
 
-// tileMatchesLayer checks if a tile type is relevant for collision on the given layer.
-// Phase 11.1: Multi-layer terrain support.
+// tileMatchesLayer determines whether a given tile type should be considered
+// collidable for the specified terrain layer during collision detection.
+//
+// Layer matching rules:
+//   - Layer 0 (ground): Entities on the ground collide with solid walls, diagonal walls,
+//     and pits. Pits are considered blocking for ground entities (they cannot walk into pits).
+//   - Layer 1 (water/pit): Entities in water or pits collide only with solid walls and
+//     diagonal walls. Pits are not blocking, as entities are already in the pit/water.
+//   - Layer 2 (platform): Entities on elevated platforms collide only with solid walls and
+//     diagonal walls. Pits are not blocking, as entities are above them.
+//
+// Rationale:
+//   - This method enforces correct collision behavior for multi-layer terrain, ensuring
+//     that entities interact with the environment according to their current layer.
+//   - Ground entities are blocked by pits to prevent falling in unless explicitly allowed.
+//   - Water/pit and platform entities ignore pits, as they are either in or above them.
+//   - Walls and diagonal walls are always blocking for all layers.
+//
+// This logic is performance-critical and must remain deterministic for multiplayer sync.
 func (t *TerrainCollisionChecker) tileMatchesLayer(tile terrain.TileType, layer int) bool {
 	switch layer {
 	case 0: // Ground layer

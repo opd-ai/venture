@@ -1,7 +1,11 @@
 package engine
 
 import (
+	"image/color"
 	"math"
+
+	"github.com/opd-ai/venture/pkg/rendering/particles"
+	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
 // Phase 10.3: Screen shake and hit-stop configuration constants
@@ -38,14 +42,22 @@ type ProjectileSystem struct {
 	terrainChecker *TerrainCollisionChecker
 	// Phase 10.3: Camera system for screen shake on projectile hits
 	camera *CameraSystem
+	// Particle generator for explosion effects
+	particleGenerator *particles.Generator
+	// Genre ID and seed for sprite/particle generation
+	genreID string
+	seed    int64
 }
 
 // NewProjectileSystem creates a new projectile system.
 func NewProjectileSystem(w *World) *ProjectileSystem {
 	return &ProjectileSystem{
-		world:    w,
-		quadtree: nil, // Initialize later if spatial partitioning is available
-		camera:   nil, // Optional camera for visual feedback
+		world:             w,
+		quadtree:          nil, // Initialize later if spatial partitioning is available
+		camera:            nil, // Optional camera for visual feedback
+		particleGenerator: particles.NewGenerator(),
+		genreID:           "fantasy", // Default genre
+		seed:              12345,     // Default seed
 	}
 }
 
@@ -62,6 +74,16 @@ func (s *ProjectileSystem) SetTerrainChecker(checker *TerrainCollisionChecker) {
 // SetCamera sets the camera reference for screen shake feedback (Phase 10.3).
 func (s *ProjectileSystem) SetCamera(camera *CameraSystem) {
 	s.camera = camera
+}
+
+// SetGenre sets the genre ID for visual generation.
+func (s *ProjectileSystem) SetGenre(genreID string) {
+	s.genreID = genreID
+}
+
+// SetSeed sets the seed for deterministic generation.
+func (s *ProjectileSystem) SetSeed(seed int64) {
+	s.seed = seed
 }
 
 // Update processes all projectiles: movement, aging, collision detection.
@@ -317,8 +339,72 @@ func (s *ProjectileSystem) handleExplosion(projEntity *Entity, posComp *Position
 		}
 	}
 
-	// TODO: Spawn explosion particle effect
-	// TODO: Trigger screen shake if damage is significant
+	// Phase 10.2: Spawn explosion particle effect
+	s.spawnExplosionParticles(posComp.X, posComp.Y, proj.ExplosionRadius)
+
+	// Phase 10.2: Trigger screen shake for explosion
+	if s.camera != nil {
+		// Use a substantial shake for explosions
+		shakeIntensity := 8.0 + (proj.ExplosionRadius / 20.0) // Scale with explosion radius
+		if shakeIntensity > ExplosionShakeMaxIntensity {
+			shakeIntensity = ExplosionShakeMaxIntensity
+		}
+		shakeDuration := 0.3 // Fixed duration for explosions
+		s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
+	}
+}
+
+// ExplosionShakeMaxIntensity is maximum shake intensity for explosions
+const ExplosionShakeMaxIntensity = 15.0
+
+// spawnExplosionParticles creates a particle effect at the explosion location.
+func (s *ProjectileSystem) spawnExplosionParticles(x, y, radius float64) {
+	if s.particleGenerator == nil || s.world == nil {
+		return
+	}
+
+	// Calculate particle count based on explosion radius
+	// Larger explosions have more particles
+	particleCount := int(20 + radius/5.0)
+	if particleCount > 100 {
+		particleCount = 100 // Cap at 100 particles
+	}
+
+	// Create particle configuration for explosion
+	config := particles.Config{
+		Type:     particles.ParticleSpark, // Bright spark particles for explosion
+		Count:    particleCount,
+		GenreID:  s.genreID,
+		Seed:     s.seed + int64(x+y), // Vary seed based on position
+		Duration: 0.5,                 // Particles last 0.5 seconds
+		SpreadX:  radius * 2.0,        // Radial spread based on explosion radius
+		SpreadY:  radius * 2.0,
+		Gravity:  50.0, // Slight downward gravity
+		MinSize:  2.0,
+		MaxSize:  6.0,
+	}
+
+	// Generate particle system
+	particleSystem, err := s.particleGenerator.Generate(config)
+	if err != nil {
+		// Failed to generate particles, continue without them
+		return
+	}
+
+	// Position particles at explosion center
+	for i := range particleSystem.Particles {
+		particleSystem.Particles[i].X += x
+		particleSystem.Particles[i].Y += y
+	}
+
+	// Create explosion entity with particle emitter
+	explosionEntity := s.world.CreateEntity()
+	explosionEntity.AddComponent(&PositionComponent{X: x, Y: y})
+
+	// Create one-shot particle emitter (EmitRate = 0)
+	emitter := NewParticleEmitterComponent(0, config, 1)
+	emitter.AddSystem(particleSystem)
+	explosionEntity.AddComponent(emitter)
 }
 
 // despawnProjectile removes a projectile from the world.
@@ -349,7 +435,30 @@ func (s *ProjectileSystem) SpawnProjectile(x, y, vx, vy float64, projComp *Proje
 	// Add projectile component
 	entity.AddComponent(projComp)
 
-	// TODO: Add sprite component for visual representation
+	// Phase 10.2: Add sprite component for visual representation
+	spriteSize := 8 // Default projectile sprite size (8x8 pixels)
+	if projComp.Explosive {
+		spriteSize = 12 // Larger sprite for explosive projectiles
+	}
+
+	// Generate procedural sprite using seed for deterministic generation
+	spriteSeed := s.seed + int64(entity.ID)
+	projectileType := projComp.ProjectileType
+	if projectileType == "" {
+		projectileType = "bullet" // Default type
+	}
+
+	spriteImage := sprites.GenerateProjectileSprite(spriteSeed, projectileType, s.genreID, spriteSize)
+
+	// Create sprite component with generated image
+	spriteComp := NewSpriteComponent(float64(spriteSize), float64(spriteSize), color.RGBA{255, 255, 255, 255})
+	spriteComp.Image = spriteImage
+
+	// Calculate rotation from velocity for proper orientation
+	rotation := math.Atan2(vy, vx)
+	spriteComp.Rotation = rotation
+
+	entity.AddComponent(spriteComp)
 
 	return entity
 }

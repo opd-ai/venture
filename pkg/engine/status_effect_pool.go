@@ -108,3 +108,14 @@ func ResetStatusEffectPoolStats() {
 	defer poolStatsLock.Unlock()
 	poolStats = StatusEffectPoolStats{}
 }
+
+// DrainStatusEffectPool removes all objects from the pool.
+// This is useful for testing to ensure a clean state between tests.
+// Note: This creates a new sync.Pool instance to completely clear the old one.
+func DrainStatusEffectPool() {
+	statusEffectPool = sync.Pool{
+		New: func() interface{} {
+			return &StatusEffectComponent{}
+		},
+	}
+}

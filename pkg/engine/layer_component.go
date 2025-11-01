@@ -127,8 +127,8 @@ func (l *LayerComponent) CanTransitionTo(targetLayer int) bool {
 	// Check layer-specific rules
 	switch targetLayer {
 	case 0: // Ground layer
-		// Can always return to ground from water (if can swim) or platform
-		return l.CanSwim || l.CurrentLayer == 2
+		// Can always return to ground from water (if can swim), platform, or if can climb
+		return l.CanSwim || l.CanClimb || l.CurrentLayer == 2
 	case 1: // Water/Pit layer
 		// Only if can swim
 		return l.CanSwim

@@ -60,6 +60,18 @@ func (t *TerrainCollisionChecker) CheckCollision(worldX, worldY, width, height f
 // maxX, maxY are the bottom-right corner of the bounding box
 // Phase 11.1 Week 3: Enhanced to support diagonal walls and multi-layer terrain.
 func (t *TerrainCollisionChecker) CheckCollisionBounds(minX, minY, maxX, maxY float64) bool {
+	return t.CheckCollisionBoundsWithLayer(minX, minY, maxX, maxY, 0)
+}
+
+// CheckCollisionBoundsWithLayer checks if a bounding box collides with terrain walls
+// on a specific layer. Entities only collide with terrain on their current layer.
+// Phase 11.1: Multi-layer terrain collision detection.
+//
+// Layer semantics:
+//   - Layer 0 (ground): Normal floor/wall tiles
+//   - Layer 1 (water/pit): Deep water, pits block movement unless entity can swim/fly
+//   - Layer 2 (platform): Elevated platforms, entities on ground don't collide
+func (t *TerrainCollisionChecker) CheckCollisionBoundsWithLayer(minX, minY, maxX, maxY float64, layer int) bool {
 	if t.terrain == nil {
 		return false
 	}
@@ -73,6 +85,11 @@ func (t *TerrainCollisionChecker) CheckCollisionBounds(minX, minY, maxX, maxY fl
 		for x := minTileX; x <= maxTileX; x++ {
 			tile := t.terrain.GetTile(x, y)
 
+			// Skip if tile is not on the entity's layer
+			if !t.tileMatchesLayer(tile, layer) {
+				continue
+			}
+
 			// Check standard axis-aligned walls
 			if tile == terrain.TileWall {
 				return true
@@ -84,13 +101,41 @@ func (t *TerrainCollisionChecker) CheckCollisionBounds(minX, minY, maxX, maxY fl
 					return true
 				}
 			}
+
+			// Check pits - block movement unless on platform layer or flying
+			if tile == terrain.TilePit && layer != 2 {
+				return true
+			}
 		}
 	}
 
 	return false
 }
 
+// tileMatchesLayer checks if a tile type is relevant for collision on the given layer.
+// Phase 11.1: Multi-layer terrain support.
+func (t *TerrainCollisionChecker) tileMatchesLayer(tile terrain.TileType, layer int) bool {
+	switch layer {
+	case 0: // Ground layer
+		// Ground entities collide with walls, diagonal walls, and pits
+		return tile == terrain.TileWall ||
+			tile.IsDiagonalWall() ||
+			tile == terrain.TilePit
+	case 1: // Water/Pit layer
+		// Water layer entities collide with walls and diagonal walls
+		// They don't collide with pits (they're IN the pit)
+		return tile == terrain.TileWall || tile.IsDiagonalWall()
+	case 2: // Platform layer
+		// Platform entities collide with walls and diagonal walls
+		// They don't collide with pits (they're above them)
+		return tile == terrain.TileWall || tile.IsDiagonalWall()
+	default:
+		return false
+	}
+}
+
 // CheckEntityCollision checks if an entity collides with terrain walls.
+// Phase 11.1: Enhanced to support multi-layer terrain collision.
 func (t *TerrainCollisionChecker) CheckEntityCollision(entity *Entity) bool {
 	if !entity.HasComponent("position") || !entity.HasComponent("collider") {
 		return false
@@ -102,7 +147,31 @@ func (t *TerrainCollisionChecker) CheckEntityCollision(entity *Entity) bool {
 	pos := posComp.(*PositionComponent)
 	collider := colliderComp.(*ColliderComponent)
 
-	return t.CheckCollision(pos.X, pos.Y, collider.Width, collider.Height)
+	// Get entity's layer (default to ground layer if no layer component)
+	layer := 0
+	if entity.HasComponent("layer") {
+		layerComp, _ := entity.GetComponent("layer")
+		layerComponent := layerComp.(*LayerComponent)
+		layer = layerComponent.GetEffectiveLayer()
+	}
+
+	return t.CheckCollisionWithLayer(pos.X, pos.Y, collider.Width, collider.Height, layer)
+}
+
+// CheckCollisionWithLayer checks if a world position collides with terrain
+// considering the entity's layer. Phase 11.1: Multi-layer collision support.
+func (t *TerrainCollisionChecker) CheckCollisionWithLayer(worldX, worldY, width, height float64, layer int) bool {
+	if t.terrain == nil {
+		return false
+	}
+
+	// Calculate bounding box in world coordinates
+	minX := worldX - width/2
+	minY := worldY - height/2
+	maxX := worldX + width/2
+	maxY := worldY + height/2
+
+	return t.CheckCollisionBoundsWithLayer(minX, minY, maxX, maxY, layer)
 }
 
 // checkDiagonalWallCollision checks if a bounding box collides with a diagonal wall tile.

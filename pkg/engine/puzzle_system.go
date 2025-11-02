@@ -27,7 +27,7 @@ func NewPuzzleSystem(world *World) *PuzzleSystem {
 }
 
 // Update processes puzzle state, timing, and solution checking.
-func (s *PuzzleSystem) Update(deltaTime float64) {
+func (s *PuzzleSystem) Update(entities []*Entity, deltaTime float64) {
 	// Update puzzle element cooldowns
 	s.updateElementCooldowns(deltaTime)
 

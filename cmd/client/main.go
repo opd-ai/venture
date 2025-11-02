@@ -991,6 +991,10 @@ func main() {
 	lifetimeSystem := engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	game.World.AddSystem(lifetimeSystem)
 
+	// Phase 11.2: Add puzzle system for procedural puzzle management
+	puzzleSystem := engine.NewPuzzleSystem(game.World)
+	game.World.AddSystem(puzzleSystem)
+
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
 	game.HelpSystem = helpSystem
@@ -1195,6 +1199,28 @@ func main() {
 	stationCount := engine.SpawnStationsInTerrain(game.World, stationGen, generatedTerrain, 32, *seed+1000, *genreID)
 	if *verbose {
 		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
+	}
+
+	// Phase 11.2: Spawn procedural puzzles in dungeon
+	if *verbose {
+		clientLogger.Info("spawning procedural puzzles in dungeon")
+	}
+
+	puzzleParams := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+	}
+
+	puzzleCount, err := engine.SpawnPuzzlesInTerrain(game.World, generatedTerrain, *seed+2000, puzzleParams, 5)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn puzzles")
+	} else {
+		clientLogger.WithFields(logrus.Fields{
+			"puzzleCount": puzzleCount,
+			"targetCount": 5,
+			"roomCount":   len(generatedTerrain.Rooms) - 1,
+		}).Info("spawned procedural puzzles")
 	}
 
 	// Phase 5.3: Spawn environmental lights in dungeon (if lighting enabled)

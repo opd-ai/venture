@@ -107,6 +107,12 @@ type PuzzleComponent struct {
 
 	// HintsUsed tracks which hints were revealed
 	HintsUsed int
+
+	// HintText provides a player-facing hint for the puzzle
+	HintText string
+
+	// Description provides a player-facing description of the puzzle
+	Description string
 }
 
 // Type returns the component type identifier (implements Component interface).
@@ -133,6 +139,8 @@ func NewPuzzleComponent(puzzleID string, puzzleType PuzzleType, difficulty int) 
 		SolvedAt:        time.Time{},
 		Hints:           []string{},
 		HintsUsed:       0,
+		HintText:        "",
+		Description:     "",
 	}
 }
 

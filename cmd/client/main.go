@@ -668,6 +668,9 @@ func main() {
 
 	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
 
+	// Phase 11.2: Initialize interaction system for puzzle element interactions
+	interactionSystem := engine.NewInteractionSystem(game.World)
+
 	// GAP-016 REPAIR: Initialize particle system for visual effects
 	particleSystem := engine.NewParticleSystem()
 
@@ -967,6 +970,9 @@ func main() {
 	game.World.AddSystem(commerceSystem)
 	game.World.AddSystem(dialogSystem)
 	game.World.AddSystem(craftingSystem)
+
+	// Phase 11.2: Add interaction system for puzzle element interactions
+	game.World.AddSystem(interactionSystem)
 
 	// GAP-017 REPAIR: Add animation system before tutorial/help to update sprites first
 	game.World.AddSystem(&animationSystemWrapper{

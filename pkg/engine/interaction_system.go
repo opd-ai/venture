@@ -39,6 +39,16 @@ func (s *InteractionSystem) SetCarrySystem(carrySystem *CarrySystem) {
 
 // Update checks for interaction key presses and processes player interactions.
 func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
+	// Update context action cooldowns for all entities
+	contextActions := s.world.GetEntitiesWith("contextAction")
+	for _, entity := range contextActions {
+		if comp, ok := entity.GetComponent("contextAction"); ok {
+			if ctx, ok := comp.(*ContextActionComponent); ok {
+				ctx.Update(deltaTime)
+			}
+		}
+	}
+
 	// Check if F key was just pressed (or touch input on mobile)
 	interactionPressed := inpututil.IsKeyJustPressed(ebiten.KeyF)
 
@@ -82,17 +92,8 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 // tryContextActions attempts to interact with context action entities.
 // Returns true if an interaction was performed.
 func (s *InteractionSystem) tryContextActions(player *Entity, playerPos *PositionComponent) bool {
-	// Update context action cooldowns
-	contextActions := s.world.GetEntitiesWith("contextAction")
-	for _, entity := range contextActions {
-		if comp, ok := entity.GetComponent("contextAction"); ok {
-			if ctx, ok := comp.(*ContextActionComponent); ok {
-				ctx.Update(0.016) // Approximate delta time (will be more accurate in real usage)
-			}
-		}
-	}
-
 	// Find nearby context actions
+	contextActions := s.world.GetEntitiesWith("contextAction")
 	for _, entity := range contextActions {
 		// Get entity position
 		entPosComp, ok := entity.GetComponent("position")

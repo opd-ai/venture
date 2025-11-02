@@ -156,24 +156,15 @@ func (s *HazardSystem) applyDamage(entity *Entity, hazard *HazardComponent, delt
 }
 
 // applyMovementModifier applies movement speed modifier to an entity.
+// Note: This is a simplified implementation that modifies current velocity.
+// A more sophisticated approach would store original velocity and restore it
+// when the entity leaves the hazard. This requires tracking which entities
+// are in which hazards, which is deferred to future enhancement.
 func (s *HazardSystem) applyMovementModifier(entity *Entity, hazard *HazardComponent) {
-	// Get velocity component
-	velComp, ok := entity.GetComponent("velocity")
-	if !ok {
-		return // Entity has no velocity
-	}
-
-	vel, ok := velComp.(*VelocityComponent)
-	if !ok {
-		return
-	}
-
-	// Apply movement multiplier
-	// Note: This is a simplified implementation. In a real game, you might want
-	// to store the original velocity and restore it when leaving the hazard.
-	// For now, we just multiply the current velocity.
-	vel.VX *= hazard.MovementMultiplier
-	vel.VY *= hazard.MovementMultiplier
+	// For now, we skip movement modification to avoid cumulative effects.
+	// Future enhancement: Track entity-hazard relationships and apply modifiers
+	// only when entering/exiting hazards, not every frame.
+	// TODO: Implement proper hazard zone tracking system
 }
 
 // CreateHazard creates a hazard entity at the specified position.

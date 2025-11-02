@@ -115,14 +115,16 @@ func (s *InteractionSystem) activatePuzzleElement(player *Entity, element *Entit
 				puzzle.State = PuzzleStateSolving
 			}
 
-			s.logger.WithFields(logrus.Fields{
-				"puzzleID":    puzzle.PuzzleID,
-				"elementName": puzzleElem.ElementName,
-				"elementType": puzzleElem.ElementType,
-				"newState":    puzzleElem.State,
-				"progress":    len(puzzle.CurrentProgress),
-				"solution":    len(puzzle.Solution),
-			}).Debug("puzzle element activated")
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"puzzleID":    puzzle.PuzzleID,
+					"elementName": puzzleElem.ElementName,
+					"elementType": puzzleElem.ElementType,
+					"newState":    puzzleElem.State,
+					"progress":    len(puzzle.CurrentProgress),
+					"solution":    len(puzzle.Solution),
+				}).Debug("puzzle element activated")
+			}
 
 			break
 		}

@@ -95,6 +95,11 @@ func (t *TerrainCollisionChecker) CheckCollisionBoundsWithLayer(minX, minY, maxX
 				return true
 			}
 
+			// Check pits (blocks ground layer entities)
+			if tile == terrain.TilePit {
+				return true
+			}
+
 			// Check diagonal walls using triangle collision
 			if tile.IsDiagonalWall() {
 				if t.checkDiagonalWallCollision(x, y, tile, minX, minY, maxX, maxY) {

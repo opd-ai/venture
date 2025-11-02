@@ -150,7 +150,7 @@ func TestLSystemGenerator_Generate_MaxRoomLimit(t *testing.T) {
 		MinRoomCount: 1,
 		MaxRoomCount: 5, // But limit rooms
 		Rules: []ProductionRule{
-			{From: SymbolStart, To: "SC", Weight: 1.0}, // No corridor to avoid confusion
+			{From: SymbolStart, To: "SC", Weight: 1.0},  // No corridor to avoid confusion
 			{From: SymbolCombat, To: "CC", Weight: 1.0}, // Exponential expansion
 		},
 	}
@@ -441,11 +441,11 @@ func TestGetConfigForGenre(t *testing.T) {
 	seed := int64(12345)
 
 	tests := []struct {
-		name           string
-		genre          string
-		minRooms       int
-		maxRooms       int
-		expectDefault  bool
+		name          string
+		genre         string
+		minRooms      int
+		maxRooms      int
+		expectDefault bool
 	}{
 		{"Fantasy", "fantasy", 8, 20, false},
 		{"SciFi", "sci-fi", 10, 25, false},

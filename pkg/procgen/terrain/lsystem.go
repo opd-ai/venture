@@ -11,17 +11,17 @@ type Symbol rune
 
 // L-system symbols for dungeon generation
 const (
-	SymbolStart     Symbol = 'S' // Starting room (entrance)
-	SymbolEnd       Symbol = 'E' // Ending room (boss/exit)
-	SymbolCombat    Symbol = 'C' // Combat room
-	SymbolTreasure  Symbol = 'T' // Treasure room
-	SymbolPuzzle    Symbol = 'P' // Puzzle room
-	SymbolCorridor  Symbol = '-' // Corridor/hallway
-	SymbolBranch    Symbol = '+' // Branch point
-	SymbolShop      Symbol = '$' // Shop/merchant room
-	SymbolRest      Symbol = 'R' // Rest/safe room
-	SymbolSecret    Symbol = '?' // Secret room
-	SymbolEmpty     Symbol = '.' // Empty/optional room
+	SymbolStart    Symbol = 'S' // Starting room (entrance)
+	SymbolEnd      Symbol = 'E' // Ending room (boss/exit)
+	SymbolCombat   Symbol = 'C' // Combat room
+	SymbolTreasure Symbol = 'T' // Treasure room
+	SymbolPuzzle   Symbol = 'P' // Puzzle room
+	SymbolCorridor Symbol = '-' // Corridor/hallway
+	SymbolBranch   Symbol = '+' // Branch point
+	SymbolShop     Symbol = '$' // Shop/merchant room
+	SymbolRest     Symbol = 'R' // Rest/safe room
+	SymbolSecret   Symbol = '?' // Secret room
+	SymbolEmpty    Symbol = '.' // Empty/optional room
 )
 
 // ProductionRule defines a rewrite rule for L-system generation.
@@ -91,7 +91,7 @@ func (g *LSystemGenerator) Generate() string {
 		for roomCount < g.config.MinRoomCount && len(current) < 1000 {
 			current = g.iterate(current)
 			roomCount = g.countRooms(current)
-			
+
 			// Stop if we exceed max rooms
 			if roomCount >= g.config.MaxRoomCount {
 				break

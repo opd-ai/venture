@@ -60,7 +60,9 @@ func SpawnPuzzlesInTerrain(world *World, terrainData *terrain.Terrain, seed int6
 	}
 
 	if len(suitableRooms) == 0 {
-		logger.Warn("no suitable rooms found for puzzle spawning")
+		if logger != nil {
+			logger.Warn("no suitable rooms found for puzzle spawning")
+		}
 		return 0, nil
 	}
 
@@ -93,45 +95,57 @@ func SpawnPuzzlesInTerrain(world *World, terrainData *terrain.Terrain, seed int6
 		puzzleSeed := seed + int64(i)*1000 + int64(room.X)*100 + int64(room.Y)*10
 		result, err := puzzleGen.Generate(puzzleSeed, params)
 		if err != nil {
-			logger.WithError(err).WithField("roomIndex", i).Warn("failed to generate puzzle")
+			if logger != nil {
+				logger.WithError(err).WithField("roomIndex", i).Warn("failed to generate puzzle")
+			}
 			continue
 		}
 
 		puz, ok := result.(*puzzle.Puzzle)
 		if !ok {
-			logger.WithField("roomIndex", i).Warn("puzzle generation returned invalid type")
+			if logger != nil {
+				logger.WithField("roomIndex", i).Warn("puzzle generation returned invalid type")
+			}
 			continue
 		}
 
 		// Validate puzzle
 		if err := puzzleGen.Validate(puz); err != nil {
-			logger.WithError(err).WithField("puzzleID", puz.ID).Warn("puzzle validation failed")
+			if logger != nil {
+				logger.WithError(err).WithField("puzzleID", puz.ID).Warn("puzzle validation failed")
+			}
 			continue
 		}
 
 		// Spawn puzzle entity and elements in the room
 		if err := spawnPuzzleInRoom(world, puz, room, rng); err != nil {
-			logger.WithError(err).WithField("puzzleID", puz.ID).Warn("failed to spawn puzzle in room")
+			if logger != nil {
+				logger.WithError(err).WithField("puzzleID", puz.ID).Warn("failed to spawn puzzle in room")
+			}
 			continue
 		}
 
 		puzzlesSpawned++
 
-		logger.WithFields(logrus.Fields{
-			"puzzleID":   puz.ID,
-			"puzzleType": puz.Type,
-			"difficulty": puz.Difficulty,
-			"roomX":      room.X,
-			"roomY":      room.Y,
-			"elements":   puz.ElementCount,
-		}).Debug("spawned puzzle in room")
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"puzzleID":   puz.ID,
+				"puzzleType": puz.Type,
+				"difficulty": puz.Difficulty,
+				"roomX":      room.X,
+				"roomY":      room.Y,
+				"elements":   puz.ElementCount,
+			}).Debug("spawned puzzle in room")
+		}
 	}
 
-	logger.WithFields(logrus.Fields{
-		"puzzlesSpawned": puzzlesSpawned,
-		"puzzlesAttempt": actualCount,
-		"suitableRooms":  len(suitableRooms),
-	}).Info("puzzle spawning complete")
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"puzzlesSpawned": puzzlesSpawned,
+			"puzzlesAttempt": actualCount,
+			"suitableRooms":  len(suitableRooms),
+		}).Info("puzzle spawning complete")
+	}
 
 	return puzzlesSpawned, nil
 }
@@ -213,12 +227,14 @@ func spawnPuzzleInRoom(world *World, puz *puzzle.Puzzle, room *terrain.Room, rng
 		puzzleComp.ElementIDs = append(puzzleComp.ElementIDs, elementEntity.ID)
 
 		// Log element spawn
-		world.GetLogger().WithFields(logrus.Fields{
-			"puzzleID":   puz.ID,
-			"elementID":  elem.ID,
-			"elementNum": i + 1,
-			"position":   fmt.Sprintf("(%d, %d)", elemX, elemY),
-		}).Debug("spawned puzzle element")
+		if logger := world.GetLogger(); logger != nil {
+			logger.WithFields(logrus.Fields{
+				"puzzleID":   puz.ID,
+				"elementID":  elem.ID,
+				"elementNum": i + 1,
+				"position":   fmt.Sprintf("(%d, %d)", elemX, elemY),
+			}).Debug("spawned puzzle element")
+		}
 	}
 
 	return nil

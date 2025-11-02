@@ -2,6 +2,7 @@
 package engine
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -55,6 +56,9 @@ func TestSpawnPuzzlesInTerrain(t *testing.T) {
 
 			// Spawn puzzles
 			count, err := SpawnPuzzlesInTerrain(world, terrainData, 54321, params, tt.targetCount)
+
+			// Process entity additions
+			world.Update(0)
 
 			// Check error
 			if (err != nil) != tt.wantErr {
@@ -178,6 +182,10 @@ func TestSpawnPuzzlesInTerrain_Determinism(t *testing.T) {
 	count1, err1 := SpawnPuzzlesInTerrain(world1, terrainData, seed, params, 5)
 	count2, err2 := SpawnPuzzlesInTerrain(world2, terrainData, seed, params, 5)
 
+	// Process entity additions
+	world1.Update(0)
+	world2.Update(0)
+
 	// Both should succeed
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Spawning failed: err1=%v, err2=%v", err1, err2)
@@ -196,6 +204,22 @@ func TestSpawnPuzzlesInTerrain_Determinism(t *testing.T) {
 		t.Errorf("Different puzzle counts: %d vs %d", len(puzzles1), len(puzzles2))
 		return
 	}
+
+	// Sort puzzles by PuzzleID for deterministic comparison
+	sort.Slice(puzzles1, func(i, j int) bool {
+		comp1, _ := puzzles1[i].GetComponent("puzzle")
+		comp2, _ := puzzles1[j].GetComponent("puzzle")
+		puz1 := comp1.(*PuzzleComponent)
+		puz2 := comp2.(*PuzzleComponent)
+		return puz1.PuzzleID < puz2.PuzzleID
+	})
+	sort.Slice(puzzles2, func(i, j int) bool {
+		comp1, _ := puzzles2[i].GetComponent("puzzle")
+		comp2, _ := puzzles2[j].GetComponent("puzzle")
+		puz1 := comp1.(*PuzzleComponent)
+		puz2 := comp2.(*PuzzleComponent)
+		return puz1.PuzzleID < puz2.PuzzleID
+	})
 
 	for i := 0; i < len(puzzles1); i++ {
 		comp1, _ := puzzles1[i].GetComponent("puzzle")

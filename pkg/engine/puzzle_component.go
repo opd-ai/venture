@@ -107,6 +107,12 @@ type PuzzleComponent struct {
 
 	// HintsUsed tracks which hints were revealed
 	HintsUsed int
+
+	// HintText provides a player-facing hint for the puzzle
+	HintText string
+
+	// Description provides a player-facing description of the puzzle
+	Description string
 }
 
 // Type returns the component type identifier (implements Component interface).
@@ -133,6 +139,8 @@ func NewPuzzleComponent(puzzleID string, puzzleType PuzzleType, difficulty int) 
 		SolvedAt:        time.Time{},
 		Hints:           []string{},
 		HintsUsed:       0,
+		HintText:        "",
+		Description:     "",
 	}
 }
 
@@ -242,6 +250,9 @@ type PuzzleElementComponent struct {
 	// RequiresItem optionally requires specific item to interact
 	RequiresItem string
 
+	// ActivatedBy tracks which player last activated this element
+	ActivatedBy uint64
+
 	// ActivationSound for audio feedback
 	ActivationSound string
 
@@ -267,6 +278,7 @@ func NewPuzzleElementComponent(elementName, puzzleID, elementType string) *Puzzl
 		CooldownElapsed:  0,
 		IsInteractable:   true,
 		RequiresItem:     "",
+		ActivatedBy:      0, // No player yet
 		ActivationSound:  "puzzle_activate",
 		VisualFeedback:   "sparkle",
 	}

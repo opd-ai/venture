@@ -53,7 +53,7 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 
 	// Find nearby puzzle elements
 	puzzleElements := s.world.GetEntitiesWith("puzzleElement")
-	
+
 	for _, element := range puzzleElements {
 		// Get element position
 		elemPosComp, ok := element.GetComponent("position")

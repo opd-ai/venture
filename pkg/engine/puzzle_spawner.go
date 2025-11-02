@@ -128,9 +128,9 @@ func SpawnPuzzlesInTerrain(world *World, terrainData *terrain.Terrain, seed int6
 	}
 
 	logger.WithFields(logrus.Fields{
-		"puzzlesSpawned":  puzzlesSpawned,
+		"puzzlesSpawned": puzzlesSpawned,
 		"puzzlesAttempt": actualCount,
-		"suitableRooms":   len(suitableRooms),
+		"suitableRooms":  len(suitableRooms),
 	}).Info("puzzle spawning complete")
 
 	return puzzlesSpawned, nil

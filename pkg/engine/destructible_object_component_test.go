@@ -176,9 +176,9 @@ func TestDestructibleObjectComponent_TakeDamage(t *testing.T) {
 
 func TestDestructibleObjectComponent_HealthPercent(t *testing.T) {
 	tests := []struct {
-		name       string
-		health     float64
-		maxHealth  float64
+		name        string
+		health      float64
+		maxHealth   float64
 		wantPercent float64
 	}{
 		{"full_health", 30.0, 30.0, 1.0},

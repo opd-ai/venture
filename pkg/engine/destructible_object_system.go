@@ -239,7 +239,7 @@ func (s *DestructibleObjectSystem) spawnDebris(x, y float64, destructibleObj *De
 
 		// Add velocity (debris flies outward from explosion)
 		velocityMag := 50.0 + s.rng.Float64()*100.0 // 50-150 pixels/sec
-		angle := s.rng.Float64() * 2.0 * 3.14159265  // Random direction
+		angle := s.rng.Float64() * 2.0 * 3.14159265 // Random direction
 		velComp := &VelocityComponent{
 			VX: velocityMag * float64(math.Cos(angle)),
 			VY: velocityMag * float64(math.Sin(angle)),

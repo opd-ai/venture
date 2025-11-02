@@ -125,9 +125,9 @@ func NewDestructibleObjectComponent(objType ObjectType) *DestructibleObjectCompo
 	case ObjectExplosiveBarrel:
 		comp.Health = 25.0
 		comp.MaxHealth = 25.0
-		comp.ExplosionRadius = 96.0  // 3 tiles
-		comp.ExplosionDamage = 50.0  // Heavy damage
-		comp.DebrisCount = 8         // More debris from explosion
+		comp.ExplosionRadius = 96.0 // 3 tiles
+		comp.ExplosionDamage = 50.0 // Heavy damage
+		comp.DebrisCount = 8        // More debris from explosion
 	}
 
 	return comp

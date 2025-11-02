@@ -7,11 +7,11 @@ import (
 
 func TestNewCarriableComponent(t *testing.T) {
 	tests := []struct {
-		name                     string
-		weight                   float64
-		wantWeight               float64
-		wantThrowVelMultiplier   float64
-		wantImpactDamage         float64
+		name                   string
+		weight                 float64
+		wantWeight             float64
+		wantThrowVelMultiplier float64
+		wantImpactDamage       float64
 	}{
 		{"light_object", 0.2, 0.2, 5.0, 2.0},
 		{"medium_object", 0.5, 0.5, 2.0, 5.0},
@@ -110,13 +110,13 @@ func TestContextActionType_String(t *testing.T) {
 
 func TestNewContextActionComponent(t *testing.T) {
 	tests := []struct {
-		name              string
-		actionType        ContextActionType
-		actionText        string
-		wantText          string
-		wantType          ContextActionType
-		wantRange         float64
-		wantCooldownTime  float64
+		name             string
+		actionType       ContextActionType
+		actionText       string
+		wantText         string
+		wantType         ContextActionType
+		wantRange        float64
+		wantCooldownTime float64
 	}{
 		{"door_open", ActionOpen, "Open Door", "Open Door", ActionOpen, 48.0, 0.5},
 		{"chest_open", ActionOpen, "Open Chest", "Open Chest", ActionOpen, 48.0, 0.5},
@@ -170,7 +170,7 @@ func TestContextActionComponent_Update(t *testing.T) {
 
 	comp.Update(0.5)
 	// Use approximate comparison for floating point
-	if math.Abs(comp.CooldownElapsed - 0.2) > 0.001 {
+	if math.Abs(comp.CooldownElapsed-0.2) > 0.001 {
 		t.Errorf("After 0.8s total, CooldownElapsed = %v, want 0.2", comp.CooldownElapsed)
 	}
 
@@ -220,9 +220,9 @@ func TestContextActionComponent_Activate(t *testing.T) {
 
 func TestHazardType_String(t *testing.T) {
 	tests := []struct {
-		name        string
-		hazardType  HazardType
-		expected    string
+		name       string
+		hazardType HazardType
+		expected   string
 	}{
 		{"poison", HazardPoison, "poison"},
 		{"oil", HazardOil, "oil"},
@@ -243,12 +243,12 @@ func TestHazardType_String(t *testing.T) {
 
 func TestNewHazardComponent(t *testing.T) {
 	tests := []struct {
-		name               string
-		hazardType         HazardType
-		duration           float64
-		radius             float64
-		wantDamagePerSec   float64
-		wantMovementMult   float64
+		name             string
+		hazardType       HazardType
+		duration         float64
+		radius           float64
+		wantDamagePerSec float64
+		wantMovementMult float64
 	}{
 		{"poison", HazardPoison, 10.0, 32.0, 5.0, 1.0},
 		{"oil", HazardOil, 15.0, 48.0, 0.0, 0.7},
@@ -332,9 +332,9 @@ func TestHazardComponent_ShouldRemove(t *testing.T) {
 
 func TestHazardComponent_IsDamaging(t *testing.T) {
 	tests := []struct {
-		name             string
-		damagePerSecond  float64
-		want             bool
+		name            string
+		damagePerSecond float64
+		want            bool
 	}{
 		{"damaging", 5.0, true},
 		{"not_damaging", 0.0, false},

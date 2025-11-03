@@ -68,7 +68,7 @@ func TestBlackboard(t *testing.T) {
 	}
 
 	// Test GetEntity
-	entity := &Entity{ID: 123}
+	entity := NewEntity(123)
 	bb.Set("entity", entity)
 	entityVal, ok := bb.GetEntity("entity")
 	if !ok || entityVal.ID != 123 {
@@ -129,7 +129,7 @@ func TestSequenceNode(t *testing.T) {
 			}
 
 			seq := NewSequenceNode("test", children...)
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			bb := NewBlackboard()
 
 			status := seq.Tick(entity, bb, 0.016)
@@ -185,7 +185,7 @@ func TestSelectorNode(t *testing.T) {
 			}
 
 			sel := NewSelectorNode("test", children...)
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			bb := NewBlackboard()
 
 			status := sel.Tick(entity, bb, 0.016)
@@ -236,7 +236,7 @@ func TestParallelNode(t *testing.T) {
 			}
 
 			par := NewParallelNode("test", children...)
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			bb := NewBlackboard()
 
 			status := par.Tick(entity, bb, 0.016)
@@ -265,7 +265,7 @@ func TestInverterNode(t *testing.T) {
 			})
 
 			inv := NewInverterNode("test", child)
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			bb := NewBlackboard()
 
 			status := inv.Tick(entity, bb, 0.016)
@@ -286,7 +286,7 @@ func TestRepeatNode(t *testing.T) {
 		})
 
 		repeat := NewRepeatNode("test", 3, child)
-		entity := &Entity{ID: 1}
+		entity := NewEntity(1)
 		bb := NewBlackboard()
 
 		// First 2 ticks should return Running
@@ -315,7 +315,7 @@ func TestRepeatNode(t *testing.T) {
 		})
 
 		repeat := NewRepeatNode("test", 5, child)
-		entity := &Entity{ID: 1}
+		entity := NewEntity(1)
 		bb := NewBlackboard()
 
 		status := repeat.Tick(entity, bb, 0.016)
@@ -332,7 +332,7 @@ func TestConditionNode(t *testing.T) {
 			return true
 		})
 
-		entity := &Entity{ID: 1}
+		entity := NewEntity(1)
 		bb := NewBlackboard()
 
 		status := cond.Tick(entity, bb, 0.016)
@@ -346,7 +346,7 @@ func TestConditionNode(t *testing.T) {
 			return false
 		})
 
-		entity := &Entity{ID: 1}
+		entity := NewEntity(1)
 		bb := NewBlackboard()
 
 		status := cond.Tick(entity, bb, 0.016)
@@ -360,7 +360,7 @@ func TestConditionNode(t *testing.T) {
 func TestBehaviorTreeIntegration(t *testing.T) {
 	// Create a simple behavior tree: Selector(Condition->Action, DefaultAction)
 	bb := NewBlackboard()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 
 	successAction := NewActionNode("success", func(*Entity, *Blackboard, float64) NodeStatus {
 		return NodeSuccess

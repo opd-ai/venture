@@ -7,7 +7,7 @@ import (
 
 // TestHasTargetCondition tests the HasTarget condition.
 func TestHasTargetCondition(t *testing.T) {
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	bb := NewBlackboard()
 
 	cond := NewHasTargetCondition()
@@ -19,7 +19,7 @@ func TestHasTargetCondition(t *testing.T) {
 	}
 
 	// Test with target
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	bb.Set("target", target)
 	status = cond.Tick(entity, bb, 0.016)
 	if status != NodeSuccess {
@@ -29,7 +29,7 @@ func TestHasTargetCondition(t *testing.T) {
 
 // TestHealthBelowCondition tests the HealthBelow condition.
 func TestHealthBelowCondition(t *testing.T) {
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	bb := NewBlackboard()
 
 	// Add health component
@@ -51,7 +51,7 @@ func TestHealthBelowCondition(t *testing.T) {
 	}
 
 	// Test without health component
-	entity2 := &Entity{ID: 2}
+	entity2 := NewEntity(2)
 	status = cond.Tick(entity2, bb, 0.016)
 	if status != NodeFailure {
 		t.Errorf("Expected Failure without health component, got %v", status)
@@ -60,8 +60,8 @@ func TestHealthBelowCondition(t *testing.T) {
 
 // TestTargetInRangeCondition tests the TargetInRange condition.
 func TestTargetInRangeCondition(t *testing.T) {
-	entity := &Entity{ID: 1}
-	target := &Entity{ID: 2}
+	entity := NewEntity(1)
+	target := NewEntity(2)
 	bb := NewBlackboard()
 
 	// Add position components
@@ -94,8 +94,8 @@ func TestTargetInRangeCondition(t *testing.T) {
 
 // TestMoveToTargetAction tests the MoveToTarget action.
 func TestMoveToTargetAction(t *testing.T) {
-	entity := &Entity{ID: 1}
-	target := &Entity{ID: 2}
+	entity := NewEntity(1)
+	target := NewEntity(2)
 	bb := NewBlackboard()
 
 	// Add position components
@@ -132,8 +132,8 @@ func TestMoveToTargetAction(t *testing.T) {
 
 // TestAttackTargetAction tests the AttackTarget action.
 func TestAttackTargetAction(t *testing.T) {
-	entity := &Entity{ID: 1}
-	target := &Entity{ID: 2}
+	entity := NewEntity(1)
+	target := NewEntity(2)
 	bb := NewBlackboard()
 
 	// Add attack component
@@ -176,8 +176,8 @@ func TestAttackTargetAction(t *testing.T) {
 
 // TestFleeFromTargetAction tests the FleeFromTarget action.
 func TestFleeFromTargetAction(t *testing.T) {
-	entity := &Entity{ID: 1}
-	target := &Entity{ID: 2}
+	entity := NewEntity(1)
+	target := NewEntity(2)
 	bb := NewBlackboard()
 
 	// Add position components
@@ -207,7 +207,7 @@ func TestFleeFromTargetAction(t *testing.T) {
 
 // TestWanderAction tests the Wander action.
 func TestWanderAction(t *testing.T) {
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	bb := NewBlackboard()
 
 	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
@@ -250,7 +250,7 @@ func TestWanderAction(t *testing.T) {
 
 // TestWaitAction tests the Wait action.
 func TestWaitAction(t *testing.T) {
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	bb := NewBlackboard()
 
 	action := NewWaitAction(1.0) // Wait 1 second
@@ -279,11 +279,11 @@ func TestWaitAction(t *testing.T) {
 
 // TestClearTargetAction tests the ClearTarget action.
 func TestClearTargetAction(t *testing.T) {
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	bb := NewBlackboard()
 
 	// Set a target
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	bb.Set("target", target)
 
 	action := NewClearTargetAction()
@@ -303,21 +303,22 @@ func TestClearTargetAction(t *testing.T) {
 // TestFindTargetAction tests the FindTarget action.
 func TestFindTargetAction(t *testing.T) {
 	// Create a minimal world for testing
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
 	// Create test entity with team
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&TeamComponent{TeamID: 1})
 	world.AddEntity(entity)
 
 	// Create enemy entity
-	enemy := &Entity{ID: 2}
+	enemy := NewEntity(2)
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 100}) // 50 pixels away
-	enemy.AddComponent(&TeamComponent{TeamID: 2})           // Different team
+	enemy.AddComponent(&TeamComponent{TeamID: 2})          // Different team
 	world.AddEntity(enemy)
+
+	// Process entity additions
+	world.Update(0)
 
 	bb := NewBlackboard()
 	action := NewFindTargetAction(200.0, world)

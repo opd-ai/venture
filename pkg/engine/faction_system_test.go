@@ -145,7 +145,7 @@ func TestFactionSystem_Update_ClearsPendingChanges(t *testing.T) {
 	}
 
 	// Update should process and clear them
-	fs.Update(0.016)
+	fs.Update(nil, 0.016)
 
 	if len(fs.PendingReputationChanges) != 0 {
 		t.Errorf("Expected pending changes to be cleared, got %d remaining",

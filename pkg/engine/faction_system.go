@@ -31,7 +31,7 @@ func NewFactionSystem(world *World, logger *logrus.Logger) *FactionSystem {
 }
 
 // Update processes pending reputation changes
-func (fs *FactionSystem) Update(deltaTime float64) {
+func (fs *FactionSystem) Update(entities []*Entity, deltaTime float64) {
 	if len(fs.PendingReputationChanges) == 0 {
 		return
 	}

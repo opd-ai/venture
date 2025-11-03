@@ -29,7 +29,7 @@ func TestBehaviorTreeComponent(t *testing.T) {
 	}
 
 	// Test Tick
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	status := bt.Tick(entity, 0.016)
 	if status != NodeSuccess {
 		t.Errorf("Tick() = %v, want Success", status)
@@ -53,14 +53,12 @@ func TestBehaviorTreeComponent(t *testing.T) {
 
 // TestBehaviorTreeSystem tests the BehaviorTreeSystem.
 func TestBehaviorTreeSystem(t *testing.T) {
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
 	system := NewBehaviorTreeSystem(world)
 
 	// Create entity with behavior tree
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	executed := false
 
 	root := NewActionNode("test", func(*Entity, *Blackboard, float64) NodeStatus {
@@ -122,9 +120,7 @@ func TestEnemyArchetype(t *testing.T) {
 
 // TestBuildBehaviorTree tests building behavior trees for archetypes.
 func TestBuildBehaviorTree(t *testing.T) {
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
 	archetypes := []EnemyArchetype{
 		ArchetypeMelee,
@@ -164,12 +160,10 @@ func TestBuildBehaviorTree(t *testing.T) {
 
 // TestMeleeBehaviorTree tests the melee archetype behavior.
 func TestMeleeBehaviorTree(t *testing.T) {
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
 	// Create entity with necessary components
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{VX: 0, VY: 0})
 	entity.AddComponent(&HealthComponent{Current: 100, Max: 100})
@@ -193,10 +187,13 @@ func TestMeleeBehaviorTree(t *testing.T) {
 	}
 
 	// Add an enemy to trigger combat
-	enemy := &Entity{ID: 2}
+	enemy := NewEntity(2)
 	enemy.AddComponent(&PositionComponent{X: 150, Y: 100}) // 50 pixels away
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	world.AddEntity(enemy)
+
+	// Process entity additions
+	world.Update(0)
 
 	// Reset tree for fresh state
 	bt.Reset()
@@ -221,11 +218,9 @@ func TestMeleeBehaviorTree(t *testing.T) {
 
 // TestRangedBehaviorTree tests the ranged archetype behavior.
 func TestRangedBehaviorTree(t *testing.T) {
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{VX: 0, VY: 0})
 	entity.AddComponent(&HealthComponent{Current: 100, Max: 100})
@@ -238,10 +233,13 @@ func TestRangedBehaviorTree(t *testing.T) {
 
 	// Ranged AI should behave differently - maintaining distance
 	// Create close enemy
-	enemy := &Entity{ID: 2}
+	enemy := NewEntity(2)
 	enemy.AddComponent(&PositionComponent{X: 120, Y: 100}) // Very close (20 pixels)
 	enemy.AddComponent(&TeamComponent{TeamID: 2})
 	world.AddEntity(enemy)
+
+	// Process entity additions
+	world.Update(0)
 
 	bt.Reset()
 
@@ -265,9 +263,7 @@ func TestRangedBehaviorTree(t *testing.T) {
 
 // TestFleeAtLowHealth tests that all archetypes flee when health is low.
 func TestFleeAtLowHealth(t *testing.T) {
-	world := &World{
-		entities: make(map[uint64]*Entity),
-	}
+	world := NewWorld()
 
 	archetypes := []EnemyArchetype{
 		ArchetypeMelee,
@@ -279,7 +275,7 @@ func TestFleeAtLowHealth(t *testing.T) {
 
 	for _, archetype := range archetypes {
 		t.Run(archetype.String(), func(t *testing.T) {
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 			entity.AddComponent(&VelocityComponent{VX: 0, VY: 0})
 			entity.AddComponent(&HealthComponent{Current: 10, Max: 100}) // 10% health
@@ -289,7 +285,7 @@ func TestFleeAtLowHealth(t *testing.T) {
 			entity.AddComponent(bt)
 
 			// Add target
-			enemy := &Entity{ID: 2}
+			enemy := NewEntity(2)
 			enemy.AddComponent(&PositionComponent{X: 150, Y: 100})
 			enemy.AddComponent(&TeamComponent{TeamID: 2})
 

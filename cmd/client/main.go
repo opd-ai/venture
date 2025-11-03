@@ -1363,13 +1363,13 @@ func main() {
 	if err != nil {
 		clientLogger.WithError(err).Fatal("failed to generate factions")
 	}
-	
+
 	worldFactions := factionResult.([]*engine.Faction)
 	clientLogger.WithFields(logrus.Fields{
 		"count": len(worldFactions),
 		"genre": *genreID,
 	}).Info("factions generated")
-	
+
 	// Add factions to faction system
 	for _, fac := range worldFactions {
 		// Get faction system from world

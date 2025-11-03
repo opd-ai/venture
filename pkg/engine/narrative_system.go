@@ -10,6 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// BossDetectionRange is the detection range threshold that indicates a boss entity.
+	BossDetectionRange = 300.0
+)
+
 // NarrativeSystem manages narrative progression and event tracking.
 // It monitors gameplay events, checks trigger conditions, and advances story arcs.
 type NarrativeSystem struct {
@@ -78,9 +83,9 @@ func (ns *NarrativeSystem) shouldProgressAct(narrative *NarrativeComponent) bool
 	// Check if enough progress has been made
 	switch narrative.CurrentAct {
 	case ActSetup:
-		return narrative.StoryProgress >= 0.33
+		return narrative.StoryProgress >= ActTwoThreshold
 	case ActConfrontation:
-		return narrative.StoryProgress >= 0.66
+		return narrative.StoryProgress >= ActThreeThreshold
 	case ActResolution:
 		return false // Already at final act
 	default:
@@ -121,8 +126,8 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 		// Check for boss or elite status
 		if aiComp, ok := enemyEntity.GetComponent("ai"); ok {
 			ai := aiComp.(*AIComponent)
-			// Boss entities typically have high stats
-			if ai.DetectionRange > 300 {
+			// Boss entities typically have high detection range
+			if ai.DetectionRange > BossDetectionRange {
 				importance = 0.8 // Boss fight
 			}
 		}

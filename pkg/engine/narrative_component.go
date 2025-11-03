@@ -198,6 +198,17 @@ func NewNarrativeComponent() *NarrativeComponent {
 	}
 }
 
+const (
+	// StoryProgressMultiplier controls how much each event contributes to story progress.
+	StoryProgressMultiplier = 0.1
+
+	// ActTwoThreshold is the story progress required to advance from Act 1 to Act 2.
+	ActTwoThreshold = 0.33
+
+	// ActThreeThreshold is the story progress required to advance from Act 2 to Act 3.
+	ActThreeThreshold = 0.66
+)
+
 // AddEvent records a new narrative event.
 func (n *NarrativeComponent) AddEvent(event NarrativeEvent) {
 	event.Timestamp = time.Now()
@@ -205,7 +216,7 @@ func (n *NarrativeComponent) AddEvent(event NarrativeEvent) {
 	n.EventHistory = append(n.EventHistory, event)
 
 	// Update story progress based on event importance
-	n.StoryProgress += event.Importance * 0.1
+	n.StoryProgress += event.Importance * StoryProgressMultiplier
 	if n.StoryProgress > 1.0 {
 		n.StoryProgress = 1.0
 	}
@@ -250,17 +261,17 @@ func (n *NarrativeComponent) AddDecision(decision PlayerDecision) {
 func (n *NarrativeComponent) ProgressToNextAct() error {
 	switch n.CurrentAct {
 	case ActSetup:
-		if n.StoryProgress >= 0.33 {
+		if n.StoryProgress >= ActTwoThreshold {
 			n.CurrentAct = ActConfrontation
 			return nil
 		}
-		return fmt.Errorf("insufficient progress for Act 2: %.2f < 0.33", n.StoryProgress)
+		return fmt.Errorf("insufficient progress for Act 2: %.2f < %.2f", n.StoryProgress, ActTwoThreshold)
 	case ActConfrontation:
-		if n.StoryProgress >= 0.66 {
+		if n.StoryProgress >= ActThreeThreshold {
 			n.CurrentAct = ActResolution
 			return nil
 		}
-		return fmt.Errorf("insufficient progress for Act 3: %.2f < 0.66", n.StoryProgress)
+		return fmt.Errorf("insufficient progress for Act 3: %.2f < %.2f", n.StoryProgress, ActThreeThreshold)
 	case ActResolution:
 		return fmt.Errorf("already at final act")
 	default:

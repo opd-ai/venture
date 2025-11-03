@@ -3,7 +3,7 @@
 **Completion Date:** November 3, 2025  
 **Status:** ✅ CORE COMPLETE (Foundation Implementation)  
 **Implementation Time:** ~6 hours  
-**Lines of Code:** 2,673 LOC (1,300 implementation + 1,373 tests)
+**Lines of Code:** 2,926 LOC (1,479 implementation + 1,350 tests + 97 docs)
 
 ## Overview
 
@@ -146,14 +146,15 @@ arc := StoryArc{
 
 | File | LOC | Purpose | Test Coverage |
 |------|-----|---------|---------------|
-| `pkg/engine/narrative_component.go` | 308 | ECS component | 100% |
-| `pkg/engine/narrative_component_test.go` | 379 | Component tests | N/A |
-| `pkg/engine/narrative_system.go` | 318 | ECS system | 100% |
-| `pkg/engine/narrative_system_test.go` | 368 | System tests | N/A |
-| `pkg/procgen/narrative/doc.go` | 67 | Documentation | N/A |
-| `pkg/procgen/narrative/generator.go` | 476 | Story generator | 93.7% |
-| `pkg/procgen/narrative/generator_test.go` | 402 | Generator tests | N/A |
-| **Total** | **2,318** | **7 files** | **95.6% avg** |
+| `pkg/engine/narrative_component.go` | 337 | ECS component | 100% |
+| `pkg/engine/narrative_component_test.go` | 434 | Component tests | N/A |
+| `pkg/engine/narrative_system.go` | 301 | ECS system | 100% |
+| `pkg/engine/narrative_system_test.go` | 370 | System tests | N/A |
+| `pkg/procgen/narrative/doc.go` | 64 | Documentation | N/A |
+| `pkg/procgen/narrative/generator.go` | 477 | Story generator | 93.7% |
+| `pkg/procgen/narrative/generator_test.go` | 546 | Generator tests | N/A |
+| `docs/PHASE12_2_COMPLETION_REPORT.md` | 397 | Completion report | N/A |
+| **Total** | **2,926** | **8 files** | **95.6% avg** |
 
 ## Quality Metrics
 

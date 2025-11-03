@@ -136,9 +136,9 @@ func (s *SquadSystem) calculateFormationPosition(
 	case FormationLine:
 		// Form a horizontal line perpendicular to leader's facing
 		perpAngle := leaderAngle + math.Pi/2
-		offset := (float64(memberIndex) - 0.5) * spacing
+		var offset float64
 		if memberIndex%2 == 0 {
-			offset = float64(memberIndex/2) * spacing
+			offset = float64(memberIndex/2+1) * spacing
 		} else {
 			offset = -float64((memberIndex+1)/2) * spacing
 		}
@@ -150,7 +150,7 @@ func (s *SquadSystem) calculateFormationPosition(
 		if memberIndex%2 == 0 {
 			side = -1.0
 		}
-		row := (memberIndex + 1) / 2
+		row := (memberIndex / 2) + 1
 		backOffset := float64(row) * spacing
 		sideOffset := float64(row) * spacing * 0.6 * side
 

@@ -229,7 +229,7 @@ func TestWanderAction(t *testing.T) {
 	}
 
 	// Continue ticking until wander completes
-	for i := 0; i < 200; i++ { // Max iterations to prevent infinite loop
+	for i := 0; i < 400; i++ { // Increased iterations (wander can take up to 5 seconds, 400*0.016 = 6.4s)
 		status = action.Tick(entity, bb, 0.016)
 		if status == NodeSuccess {
 			break

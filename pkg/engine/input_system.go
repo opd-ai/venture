@@ -246,7 +246,6 @@ type InputSystem struct {
 	// References to game systems for special key handling
 	helpSystem     *EbitenHelpSystem
 	tutorialSystem *EbitenTutorialSystem
-	menuSystem     *EbitenMenuSystem
 	cameraSystem   *CameraSystem // Phase 10.1: For screen-to-world coordinate conversion
 
 	// Mobile input support
@@ -764,12 +763,6 @@ func (s *InputSystem) SetMenuToggleCallback(callback func()) {
 // SetInteractCallback sets the callback function for interacting with NPCs/merchants (F key).
 func (s *InputSystem) SetInteractCallback(callback func()) {
 	s.onInteract = callback
-}
-
-// SetMenuSystem connects the menu system for ESC key toggling.
-// Deprecated: Use SetMenuToggleCallback instead for better decoupling.
-func (s *InputSystem) SetMenuSystem(menuSystem *EbitenMenuSystem) {
-	s.menuSystem = menuSystem
 }
 
 // ===== KEYBOARD INPUT METHODS =====

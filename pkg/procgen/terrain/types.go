@@ -230,6 +230,20 @@ const (
 	RoomSpawn
 	// RoomExit represents the dungeon exit/stairs
 	RoomExit
+	// RoomCombat represents a combat encounter room (grammar-based generation)
+	RoomCombat
+	// RoomPuzzle represents a puzzle/challenge room (grammar-based generation)
+	RoomPuzzle
+	// RoomShop represents a merchant room (grammar-based generation)
+	RoomShop
+	// RoomRest represents a safe room for healing (grammar-based generation)
+	RoomRest
+	// RoomSecret represents a hidden room (grammar-based generation)
+	RoomSecret
+	// RoomCorridor represents a connecting hallway (grammar-based generation)
+	RoomCorridor
+	// RoomBranch represents a junction/hub room (grammar-based generation)
+	RoomBranch
 )
 
 // String returns the string representation of a room type.
@@ -247,6 +261,20 @@ func (rt RoomType) String() string {
 		return "spawn"
 	case RoomExit:
 		return "exit"
+	case RoomCombat:
+		return "combat"
+	case RoomPuzzle:
+		return "puzzle"
+	case RoomShop:
+		return "shop"
+	case RoomRest:
+		return "rest"
+	case RoomSecret:
+		return "secret"
+	case RoomCorridor:
+		return "corridor"
+	case RoomBranch:
+		return "branch"
 	default:
 		return "unknown"
 	}

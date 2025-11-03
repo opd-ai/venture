@@ -156,7 +156,7 @@ func (ns *NarrativeSystem) OnDialogueComplete(narrative *NarrativeComponent, npc
 
 	entityID := -1
 	if npcEntity != nil {
-		entityID = npcEntity.ID
+		entityID = int(npcEntity.ID)
 	}
 
 	ns.TriggerEvent(narrative, EventAlliance, description, importance, []int{entityID}, 0, 0)
@@ -278,7 +278,7 @@ func (ns *NarrativeSystem) GetRelationshipStatus(narrative *NarrativeComponent, 
 		return "Friendly"
 	} else if value >= -0.25 {
 		return "Neutral"
-	} else if value >= -0.75 {
+	} else if value > -0.75 {
 		return "Hostile"
 	} else {
 		return "Enemy"

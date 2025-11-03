@@ -79,7 +79,7 @@ func TestSquadLeaderTree_MakesDecisions(t *testing.T) {
 	world := NewWorld()
 
 	// Create leader entity
-	leader := &Entity{ID: 1}
+	leader := NewEntity(1)
 	leader.AddComponent(&PositionComponent{X: 100, Y: 100})
 	leader.AddComponent(&VelocityComponent{})
 	leader.AddComponent(&HealthComponent{Current: 80, Max: 100})
@@ -101,7 +101,7 @@ func TestSquadMemberTree_FollowsOrders(t *testing.T) {
 	world := NewWorld()
 
 	// Create member entity
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 150, Y: 150})
 	member.AddComponent(&VelocityComponent{})
 	member.AddComponent(&HealthComponent{Current: 100, Max: 100})
@@ -134,13 +134,13 @@ func TestSquadMemberTree_FocusFire(t *testing.T) {
 	world := NewWorld()
 
 	// Create target
-	target := &Entity{ID: 10}
+	target := NewEntity(10)
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 	target.AddComponent(&TeamComponent{TeamID: 2})
 	target.AddComponent(&HealthComponent{Current: 50, Max: 50})
 
 	// Create member entity
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 100, Y: 100})
 	member.AddComponent(&VelocityComponent{})
 	member.AddComponent(&HealthComponent{Current: 100, Max: 100})
@@ -173,7 +173,7 @@ func TestSquadMemberTree_MaintainFormation(t *testing.T) {
 	world := NewWorld()
 
 	// Create member entity
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 100, Y: 100})
 	member.AddComponent(&VelocityComponent{})
 	member.AddComponent(&HealthComponent{Current: 100, Max: 100})
@@ -238,7 +238,7 @@ func TestSquadLeaderTree_CallForHelp(t *testing.T) {
 	world := NewWorld()
 
 	// Create leader entity with low health
-	leader := &Entity{ID: 1}
+	leader := NewEntity(1)
 	leader.AddComponent(&PositionComponent{X: 100, Y: 100})
 	leader.AddComponent(&VelocityComponent{})
 	leader.AddComponent(&HealthComponent{Current: 35, Max: 100}) // 35% health
@@ -248,14 +248,14 @@ func TestSquadLeaderTree_CallForHelp(t *testing.T) {
 	world.AddEntity(leader)
 
 	// Create target
-	target := &Entity{ID: 10}
+	target := NewEntity(10)
 	target.AddComponent(&PositionComponent{X: 150, Y: 100})
 	target.AddComponent(&TeamComponent{TeamID: 2})
 	target.AddComponent(&HealthComponent{Current: 50, Max: 50})
 	world.AddEntity(target)
 
 	// Create nearby squad
-	nearbyLeader := &Entity{ID: 2}
+	nearbyLeader := NewEntity(2)
 	nearbyLeader.AddComponent(&PositionComponent{X: 200, Y: 100})
 	nearbySquad := NewSquadComponent(2, SquadRoleLeader, 0)
 	nearbyLeader.AddComponent(nearbySquad)
@@ -280,7 +280,7 @@ func TestSquadMemberTree_EmergencyFlee(t *testing.T) {
 	world := NewWorld()
 
 	// Create member with very low health
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 100, Y: 100})
 	member.AddComponent(&VelocityComponent{})
 	member.AddComponent(&HealthComponent{Current: 5, Max: 100}) // 5% health
@@ -288,7 +288,7 @@ func TestSquadMemberTree_EmergencyFlee(t *testing.T) {
 	member.AddComponent(NewSquadComponent(1, SquadRoleMember, 1))
 
 	// Create target
-	target := &Entity{ID: 10}
+	target := NewEntity(10)
 	target.AddComponent(&PositionComponent{X: 150, Y: 100})
 	target.AddComponent(&TeamComponent{TeamID: 2})
 

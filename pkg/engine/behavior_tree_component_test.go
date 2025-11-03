@@ -88,7 +88,7 @@ func TestBehaviorTreeSystem(t *testing.T) {
 	}
 
 	// Test with entity without behavior tree
-	entity2 := &Entity{ID: 2}
+	entity2 := NewEntity(2)
 	entities = []*Entity{entity2}
 
 	// Should not crash

@@ -7,7 +7,7 @@ import (
 
 func TestMaintainFormationAction_NoTarget(t *testing.T) {
 	action := NewMaintainFormationAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{})
 	blackboard := NewBlackboard()
@@ -20,7 +20,7 @@ func TestMaintainFormationAction_NoTarget(t *testing.T) {
 
 func TestMaintainFormationAction_AtTarget(t *testing.T) {
 	action := NewMaintainFormationAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{VX: 10, VY: 10})
 
@@ -43,7 +43,7 @@ func TestMaintainFormationAction_AtTarget(t *testing.T) {
 
 func TestMaintainFormationAction_Moving(t *testing.T) {
 	action := NewMaintainFormationAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{})
 
@@ -70,7 +70,7 @@ func TestMaintainFormationAction_Moving(t *testing.T) {
 func TestFlankTargetAction_NoTarget(t *testing.T) {
 	world := NewWorld()
 	action := NewFlankTargetAction(world)
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(NewSquadComponent(1, SquadRoleMember, 10))
 
@@ -86,14 +86,14 @@ func TestFlankTargetAction_WithTarget(t *testing.T) {
 	world := NewWorld()
 	action := NewFlankTargetAction(world)
 
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&VelocityComponent{})
 	squadComp := NewSquadComponent(1, SquadRoleMember, 10)
 	squadComp.FormationPosition = 0 // Even - flank left
 	entity.AddComponent(squadComp)
 
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 
 	blackboard := NewBlackboard()
@@ -114,7 +114,7 @@ func TestFlankTargetAction_WithTarget(t *testing.T) {
 
 func TestFocusFireAction_NoSquad(t *testing.T) {
 	action := NewFocusFireAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	blackboard := NewBlackboard()
 
 	status := action.Tick(entity, blackboard, 0.016)
@@ -125,7 +125,7 @@ func TestFocusFireAction_NoSquad(t *testing.T) {
 
 func TestFocusFireAction_NoPriorityTarget(t *testing.T) {
 	action := NewFocusFireAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(NewSquadComponent(1, SquadRoleMember, 10))
 	blackboard := NewBlackboard()
 
@@ -137,11 +137,11 @@ func TestFocusFireAction_NoPriorityTarget(t *testing.T) {
 
 func TestFocusFireAction_WithPriorityTarget(t *testing.T) {
 	action := NewFocusFireAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	squad := NewSquadComponent(1, SquadRoleMember, 10)
 	entity.AddComponent(squad)
 
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	squad.SharedBlackboard.Set("priority_target", target)
 
 	blackboard := NewBlackboard()
@@ -162,7 +162,7 @@ func TestCallForHelpAction_WithinCooldown(t *testing.T) {
 	world := NewWorld()
 	action := NewCallForHelpAction(world)
 
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	squad := NewSquadComponent(1, SquadRoleLeader, 0)
 	squad.LastAlertTime = 5.0
@@ -183,21 +183,21 @@ func TestCallForHelpAction_AlertsNearbySquads(t *testing.T) {
 	action := NewCallForHelpAction(world)
 
 	// Calling entity
-	caller := &Entity{ID: 1}
+	caller := NewEntity(1)
 	caller.AddComponent(&PositionComponent{X: 100, Y: 100})
 	callerSquad := NewSquadComponent(1, SquadRoleLeader, 0)
 	caller.AddComponent(callerSquad)
 	world.AddEntity(caller)
 
 	// Nearby entity in different squad
-	nearby := &Entity{ID: 2}
+	nearby := NewEntity(2)
 	nearby.AddComponent(&PositionComponent{X: 200, Y: 100}) // 100 pixels away
 	nearbySquad := NewSquadComponent(2, SquadRoleLeader, 0)
 	nearby.AddComponent(nearbySquad)
 	world.AddEntity(nearby)
 
 	// Far entity (should not be alerted)
-	far := &Entity{ID: 3}
+	far := NewEntity(3)
 	far.AddComponent(&PositionComponent{X: 700, Y: 100}) // 600 pixels away
 	farSquad := NewSquadComponent(3, SquadRoleLeader, 0)
 	far.AddComponent(farSquad)
@@ -205,6 +205,9 @@ func TestCallForHelpAction_AlertsNearbySquads(t *testing.T) {
 
 	blackboard := NewBlackboard()
 	blackboard.Set("game_time", 10.0)
+
+	// Process pending entity additions
+	world.Update(0)
 
 	status := action.Tick(caller, blackboard, 0.016)
 	if status != NodeSuccess {
@@ -231,7 +234,7 @@ func TestCallForHelpAction_AlertsNearbySquads(t *testing.T) {
 
 func TestCoordinatedRetreatAction_NoRetreatOrder(t *testing.T) {
 	action := NewCoordinatedRetreatAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(NewSquadComponent(1, SquadRoleMember, 10))
 	blackboard := NewBlackboard()
 
@@ -243,7 +246,7 @@ func TestCoordinatedRetreatAction_NoRetreatOrder(t *testing.T) {
 
 func TestCoordinatedRetreatAction_WithRetreatOrder(t *testing.T) {
 	action := NewCoordinatedRetreatAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&VelocityComponent{})
 	squad := NewSquadComponent(1, SquadRoleMember, 10)
 	squad.SharedBlackboard.Set("retreat_ordered", true)
@@ -268,7 +271,7 @@ func TestCoordinatedRetreatAction_WithRetreatOrder(t *testing.T) {
 
 func TestSquadLeaderDecisionAction_NotLeader(t *testing.T) {
 	action := NewSquadLeaderDecisionAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(NewSquadComponent(1, SquadRoleMember, 10))
 	blackboard := NewBlackboard()
 
@@ -280,13 +283,13 @@ func TestSquadLeaderDecisionAction_NotLeader(t *testing.T) {
 
 func TestSquadLeaderDecisionAction_OrderRetreat(t *testing.T) {
 	action := NewSquadLeaderDecisionAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 	entity.AddComponent(&HealthComponent{Current: 20, Max: 100}) // 20% health
 	squad := NewSquadComponent(1, SquadRoleLeader, 0)
 	entity.AddComponent(squad)
 
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	target.AddComponent(&PositionComponent{X: 200, Y: 100})
 
 	blackboard := NewBlackboard()
@@ -313,7 +316,7 @@ func TestSquadLeaderDecisionAction_OrderRetreat(t *testing.T) {
 
 func TestSquadLeaderDecisionAction_ContinueFighting(t *testing.T) {
 	action := NewSquadLeaderDecisionAction()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	entity.AddComponent(&HealthComponent{Current: 80, Max: 100}) // 80% health
 	squad := NewSquadComponent(1, SquadRoleLeader, 0)
 	entity.AddComponent(squad)
@@ -345,7 +348,7 @@ func TestIsSquadLeaderCondition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			condition := NewIsSquadLeaderCondition()
-			entity := &Entity{ID: 1}
+			entity := NewEntity(1)
 			entity.AddComponent(NewSquadComponent(1, tt.role, 0))
 			blackboard := NewBlackboard()
 
@@ -360,7 +363,7 @@ func TestIsSquadLeaderCondition(t *testing.T) {
 func TestSquadHasPriorityTargetCondition(t *testing.T) {
 	condition := NewSquadHasPriorityTargetCondition()
 
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	squad := NewSquadComponent(1, SquadRoleMember, 10)
 	entity.AddComponent(squad)
 	blackboard := NewBlackboard()
@@ -371,7 +374,7 @@ func TestSquadHasPriorityTargetCondition(t *testing.T) {
 	}
 
 	// With priority target
-	target := &Entity{ID: 2}
+	target := NewEntity(2)
 	squad.SharedBlackboard.Set("priority_target", target)
 	if !condition.condition(entity, blackboard) {
 		t.Error("Expected true when priority target set")
@@ -381,7 +384,7 @@ func TestSquadHasPriorityTargetCondition(t *testing.T) {
 func TestRetreatOrderedCondition(t *testing.T) {
 	condition := NewRetreatOrderedCondition()
 
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	squad := NewSquadComponent(1, SquadRoleMember, 10)
 	entity.AddComponent(squad)
 	blackboard := NewBlackboard()
@@ -400,7 +403,7 @@ func TestRetreatOrderedCondition(t *testing.T) {
 
 func TestHasFormationTargetCondition(t *testing.T) {
 	condition := NewHasFormationTargetCondition()
-	entity := &Entity{ID: 1}
+	entity := NewEntity(1)
 	blackboard := NewBlackboard()
 
 	// No formation target

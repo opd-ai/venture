@@ -26,15 +26,15 @@ func TestSquadSystem_OrganizeSquads(t *testing.T) {
 	system := NewSquadSystem(world)
 
 	// Create entities with different squad IDs
-	e1 := &Entity{ID: 1}
+	e1 := NewEntity(1)
 	e1.AddComponent(&PositionComponent{X: 0, Y: 0})
 	e1.AddComponent(NewSquadComponent(1, SquadRoleLeader, 0))
 
-	e2 := &Entity{ID: 2}
+	e2 := NewEntity(2)
 	e2.AddComponent(&PositionComponent{X: 10, Y: 10})
 	e2.AddComponent(NewSquadComponent(1, SquadRoleMember, 1))
 
-	e3 := &Entity{ID: 3}
+	e3 := NewEntity(3)
 	e3.AddComponent(&PositionComponent{X: 20, Y: 20})
 	e3.AddComponent(NewSquadComponent(2, SquadRoleLeader, 0))
 
@@ -113,11 +113,11 @@ func TestSquadSystem_CalculateFormationPosition_Wedge(t *testing.T) {
 	x0, y0 := system.calculateFormationPosition(FormationWedge, 0, leaderX, leaderY, leaderAngle, spacing)
 	x1, y1 := system.calculateFormationPosition(FormationWedge, 1, leaderX, leaderY, leaderAngle, spacing)
 
-	// Both should be behind the leader (higher X since facing right, angle=0 -> behind is angle=π)
-	if x0 < leaderX {
+	// Both should be behind the leader (lower X since facing right and behind is -X direction)
+	if x0 >= leaderX {
 		t.Errorf("Member 0 X position %v should be behind leader X %v", x0, leaderX)
 	}
-	if x1 < leaderX {
+	if x1 >= leaderX {
 		t.Errorf("Member 1 X position %v should be behind leader X %v", x1, leaderX)
 	}
 
@@ -190,7 +190,7 @@ func TestSquadSystem_UpdateFormation(t *testing.T) {
 	system := NewSquadSystem(world)
 
 	// Create leader with line formation
-	leader := &Entity{ID: 1}
+	leader := NewEntity(1)
 	leader.AddComponent(&PositionComponent{X: 100, Y: 100})
 	leader.AddComponent(&RotationComponent{Angle: 0.0})
 	leaderSquad := NewSquadComponent(1, SquadRoleLeader, 0)
@@ -199,7 +199,7 @@ func TestSquadSystem_UpdateFormation(t *testing.T) {
 	leader.AddComponent(leaderSquad)
 
 	// Create member
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 50, Y: 50})
 	memberBT := NewBehaviorTreeComponent(nil, "test")
 	member.AddComponent(memberBT)
@@ -233,12 +233,12 @@ func TestSquadSystem_SynchronizeBlackboards(t *testing.T) {
 	sharedBB := NewBlackboard()
 	sharedBB.Set("test_key", "test_value")
 
-	e1 := &Entity{ID: 1}
+	e1 := NewEntity(1)
 	squad1 := NewSquadComponent(1, SquadRoleLeader, 0)
 	squad1.SharedBlackboard = sharedBB
 	e1.AddComponent(squad1)
 
-	e2 := &Entity{ID: 2}
+	e2 := NewEntity(2)
 	squad2 := NewSquadComponent(1, SquadRoleMember, 1)
 	squad2.SharedBlackboard = NewBlackboard() // Different initially
 	e2.AddComponent(squad2)
@@ -273,20 +273,23 @@ func TestSquadSystem_Update_WithSquads(t *testing.T) {
 	system := NewSquadSystem(world)
 
 	// Create a squad
-	leader := &Entity{ID: 1}
+	leader := NewEntity(1)
 	leader.AddComponent(&PositionComponent{X: 100, Y: 100})
 	leaderSquad := NewSquadComponent(1, SquadRoleLeader, 0)
 	leaderSquad.Formation = FormationLine
 	leader.AddComponent(leaderSquad)
 	world.AddEntity(leader)
 
-	member := &Entity{ID: 2}
+	member := NewEntity(2)
 	member.AddComponent(&PositionComponent{X: 80, Y: 80})
 	member.AddComponent(NewBehaviorTreeComponent(nil, "test"))
 	memberSquad := NewSquadComponent(1, SquadRoleMember, 1)
 	memberSquad.SharedBlackboard = leaderSquad.SharedBlackboard
 	member.AddComponent(memberSquad)
 	world.AddEntity(member)
+
+	// Process pending entity additions
+	world.Update(0)
 
 	// Update should not panic
 	system.Update(0.016)

@@ -22,6 +22,7 @@ import (
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
@@ -1159,6 +1160,11 @@ func main() {
 	game.World.AddSystem(aiSystem)
 	game.World.AddSystem(progressionSystem)
 
+	// Phase 13.3: Add faction system for reputation tracking and relationships
+	// Manages NPC faction allegiances and player reputation with different groups
+	factionSystem := engine.NewFactionSystem(game.World, logger)
+	game.World.AddSystem(factionSystem)
+
 	// Add skill progression system
 	skillProgressionSystem := engine.NewSkillProgressionSystem()
 	game.World.AddSystem(skillProgressionSystem)
@@ -1348,6 +1354,37 @@ func main() {
 
 	if *verbose {
 		clientLogger.Info("terrain collision system initialized (efficient mode)")
+	}
+
+	// Phase 13.3: Generate world factions
+	clientLogger.Info("generating world factions")
+	factionGen := faction.NewGenerator()
+	factionResult, err := factionGen.Generate(*seed+1000, params) // Use offset seed for faction variety
+	if err != nil {
+		clientLogger.WithError(err).Fatal("failed to generate factions")
+	}
+
+	worldFactions := factionResult.([]*engine.Faction)
+	clientLogger.WithFields(logrus.Fields{
+		"count": len(worldFactions),
+		"genre": *genreID,
+	}).Info("factions generated")
+
+	// Add factions to faction system
+	for _, fac := range worldFactions {
+		// Get faction system from world
+		for _, system := range game.World.GetSystems() {
+			if facSys, ok := system.(*engine.FactionSystem); ok {
+				facSys.AddFaction(fac)
+				if *verbose {
+					clientLogger.WithFields(logrus.Fields{
+						"factionID":   fac.ID,
+						"factionName": fac.Name,
+						"factionType": fac.Type,
+					}).Debug("faction added to world")
+				}
+			}
+		}
 	}
 
 	// CATEGORY 4.3: Initialize spatial partition system for viewport culling

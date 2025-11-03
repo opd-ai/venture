@@ -1783,14 +1783,13 @@ func main() {
 				level, currentXP = exp.Level, int64(exp.CurrentXP)
 			}
 
-			// Get inventory data (store only item IDs for now)
-			var inventoryItems []uint64
+			// Get inventory data
 			var gold int
 			itemDataList := make([]saveload.ItemData, 0)
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
-				gold = inv.Gold // GAP-009: Save gold
-				// GAP-007: Serialize full item data
+				gold = inv.Gold
+				// Serialize full item data
 				for _, itm := range inv.Items {
 					itemDataList = append(itemDataList, saveload.ItemToData(itm))
 				}
@@ -1868,25 +1867,24 @@ func main() {
 			gameSave := &saveload.GameSave{
 				Version: saveload.SaveVersion,
 				PlayerState: &saveload.PlayerState{
-					EntityID:       player.ID,
-					X:              posX,
-					Y:              posY,
-					CurrentHealth:  currentHealth,
-					MaxHealth:      maxHealth,
-					Level:          level,
-					Experience:     int(currentXP),
-					Attack:         attack,
-					Defense:        defense,
-					MagicPower:     magic,
-					Speed:          1.0,
-					InventoryItems: inventoryItems, // Keep for backward compatibility
-					Items:          itemDataList,   // GAP-007: Full item data
-					Gold:           gold,           // GAP-009: Gold persistence
-					EquippedItems:  equippedItems,  // GAP-008: Equipment persistence
-					CurrentMana:    currentMana,
-					MaxMana:        maxMana,
-					Spells:         spellDataList,
-					TutorialState:  tutorialStateData, // GAP-003 REPAIR: Tutorial persistence
+					EntityID:      player.ID,
+					X:             posX,
+					Y:             posY,
+					CurrentHealth: currentHealth,
+					MaxHealth:     maxHealth,
+					Level:         level,
+					Experience:    int(currentXP),
+					Attack:        attack,
+					Defense:       defense,
+					MagicPower:    magic,
+					Speed:         1.0,
+					Items:         itemDataList,
+					Gold:          gold,
+					EquippedItems: equippedItems,
+					CurrentMana:   currentMana,
+					MaxMana:       maxMana,
+					Spells:        spellDataList,
+					TutorialState: tutorialStateData,
 				},
 				WorldState: &saveload.WorldState{
 					Seed:       *seed,

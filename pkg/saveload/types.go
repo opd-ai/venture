@@ -49,21 +49,13 @@ type PlayerState struct {
 	MagicPower float64 `json:"magic_power"`
 	Speed      float64 `json:"speed"`
 
-	// Inventory (item IDs - DEPRECATED, use Items instead)
-	InventoryItems []uint64 `json:"inventory_items,omitempty"`
-
-	// GAP-007 REPAIR: Full inventory item data
+	// Full inventory item data
 	Items []ItemData `json:"items"`
 
-	// GAP-009 REPAIR: Gold currency
+	// Gold currency
 	Gold int `json:"gold"`
 
-	// Equipment (item IDs - DEPRECATED, use EquippedItems instead)
-	EquippedWeapon    uint64 `json:"equipped_weapon,omitempty"`
-	EquippedArmor     uint64 `json:"equipped_armor,omitempty"`
-	EquippedAccessory uint64 `json:"equipped_accessory,omitempty"`
-
-	// GAP-008 REPAIR: Full equipment data
+	// Full equipment data
 	EquippedItems EquipmentData `json:"equipped_items"`
 
 	// Mana (for spell casting)
@@ -251,7 +243,7 @@ func NewGameSave() *GameSave {
 		Version:   SaveVersion,
 		Timestamp: time.Now(),
 		PlayerState: &PlayerState{
-			InventoryItems: make([]uint64, 0),
+			Items: make([]ItemData, 0),
 		},
 		WorldState: &WorldState{
 			ModifiedEntities: make([]ModifiedEntity, 0),

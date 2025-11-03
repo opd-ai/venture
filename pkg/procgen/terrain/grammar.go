@@ -12,14 +12,14 @@ import (
 
 // RoomNode represents a room in the dungeon graph.
 type RoomNode struct {
-	ID          int               // Unique identifier
-	Type        RoomType          // Functional type (uses existing RoomType enum)
-	Position    Point             // Spatial position (grid coordinates)
-	Width       int               // Room width in tiles
-	Height      int               // Room height in tiles
-	Connections []*EdgeConnection // Connections to other rooms
-	Depth       int               // Depth in narrative flow (0 = start)
-	Theme       string            // Architectural theme (from templates)
+	ID          int                    // Unique identifier
+	Type        RoomType               // Functional type (uses existing RoomType enum)
+	Position    Point                  // Spatial position (grid coordinates)
+	Width       int                    // Room width in tiles
+	Height      int                    // Room height in tiles
+	Connections []*EdgeConnection      // Connections to other rooms
+	Depth       int                    // Depth in narrative flow (0 = start)
+	Theme       string                 // Architectural theme (from templates)
 	Properties  map[string]interface{} // Custom properties
 }
 
@@ -67,16 +67,16 @@ func (c ConnectionType) String() string {
 
 // DungeonGraph represents the complete room graph structure.
 type DungeonGraph struct {
-	Rooms           []*RoomNode       // All rooms in the dungeon
-	StartRoom       *RoomNode         // The starting room
-	BossRoom        *RoomNode         // The boss room (if any)
-	RoomsByID       map[int]*RoomNode // Quick lookup by ID
-	Seed            int64             // Generation seed
-	Width           int               // Overall dungeon width
-	Height          int               // Overall dungeon height
-	NarrativeDepth  int               // Maximum narrative depth
-	CriticalPath    []*RoomNode       // Main path from start to boss
-	OptionalBranches [][]*RoomNode    // Side paths and branches
+	Rooms            []*RoomNode       // All rooms in the dungeon
+	StartRoom        *RoomNode         // The starting room
+	BossRoom         *RoomNode         // The boss room (if any)
+	RoomsByID        map[int]*RoomNode // Quick lookup by ID
+	Seed             int64             // Generation seed
+	Width            int               // Overall dungeon width
+	Height           int               // Overall dungeon height
+	NarrativeDepth   int               // Maximum narrative depth
+	CriticalPath     []*RoomNode       // Main path from start to boss
+	OptionalBranches [][]*RoomNode     // Side paths and branches
 }
 
 // NewDungeonGraph creates a new empty dungeon graph.
@@ -174,9 +174,9 @@ func (g *GraphGrammarGenerator) GenerateGraph(width, height int) (*DungeonGraph,
 
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"roomCount":       len(graph.Rooms),
-			"criticalPath":    len(graph.CriticalPath),
-			"narrativeDepth":  graph.NarrativeDepth,
+			"roomCount":      len(graph.Rooms),
+			"criticalPath":   len(graph.CriticalPath),
+			"narrativeDepth": graph.NarrativeDepth,
 		}).Info("dungeon graph generated successfully")
 	}
 
@@ -353,7 +353,7 @@ func (g *GraphGrammarGenerator) assignRoomPositions(graph *DungeonGraph) {
 	if maxDepth == 0 {
 		maxDepth = 1
 	}
-	
+
 	horizontalSpacing := graph.Width / (maxDepth + 2)
 	verticalSpacing := graph.Height / (len(graph.Rooms) + 2)
 
@@ -414,9 +414,9 @@ func (g *GraphGrammarGenerator) getRoomDimensions(roomType RoomType) (int, int) 
 		h := 5 + g.rng.Intn(4)
 		return w, h
 	case RoomCorridor:
-		// Narrow corridors (3-5 wide, random length)
+		// Narrow corridors (3-5 wide, 3-5 tall)
 		w := 3 + g.rng.Intn(3)
-		h := 5 + g.rng.Intn(8)
+		h := 3 + g.rng.Intn(3)
 		return w, h
 	case RoomBranch:
 		// Medium hub rooms (8-12 tiles)
@@ -441,8 +441,10 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 	visited[graph.StartRoom.ID] = true
 
 	var bossRoom *RoomNode
+	var deepestRoom *RoomNode
+	maxDepth := 0
 
-	// BFS to find boss room
+	// BFS to find boss room (and track deepest room as fallback)
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
@@ -450,6 +452,12 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 		if current.Type == RoomBoss {
 			bossRoom = current
 			break
+		}
+
+		// Track deepest room as fallback if no boss exists
+		if current.Depth > maxDepth {
+			maxDepth = current.Depth
+			deepestRoom = current
 		}
 
 		for _, conn := range current.Connections {
@@ -461,10 +469,15 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 		}
 	}
 
-	// Build path from boss back to start
-	if bossRoom != nil {
-		path := []*RoomNode{bossRoom}
-		current := bossRoom
+	// Build path from boss (or deepest room) back to start
+	targetRoom := bossRoom
+	if targetRoom == nil {
+		targetRoom = deepestRoom
+	}
+
+	if targetRoom != nil && targetRoom != graph.StartRoom {
+		path := []*RoomNode{targetRoom}
+		current := targetRoom
 		for current.ID != graph.StartRoom.ID {
 			prev := parent[current.ID]
 			if prev == nil {
@@ -474,6 +487,11 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 			current = prev
 		}
 		graph.CriticalPath = path
+		graph.BossRoom = bossRoom // Update BossRoom reference
+	} else {
+		// If only start room exists, critical path should still have at least 2 rooms
+		// In this case, we need at least 2 rooms for a valid graph
+		graph.CriticalPath = []*RoomNode{graph.StartRoom}
 	}
 
 	// Identify optional branches (rooms not on critical path)
@@ -482,11 +500,37 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 		criticalSet[room.ID] = true
 	}
 
+	// Find all rooms that branch off from the critical path
 	for _, room := range graph.Rooms {
-		if !criticalSet[room.ID] && len(room.Connections) > 0 {
-			// This is a branch - trace its path
-			branch := []*RoomNode{room}
-			graph.OptionalBranches = append(graph.OptionalBranches, branch)
+		if !criticalSet[room.ID] {
+			// Check if this room connects to any room on the critical path
+			connectsToCritical := false
+			for _, conn := range room.Connections {
+				if criticalSet[conn.To.ID] {
+					connectsToCritical = true
+					break
+				}
+			}
+			// Also check reverse connections (rooms that connect to this one)
+			if !connectsToCritical {
+				for _, critRoom := range graph.CriticalPath {
+					for _, conn := range critRoom.Connections {
+						if conn.To.ID == room.ID {
+							connectsToCritical = true
+							break
+						}
+					}
+					if connectsToCritical {
+						break
+					}
+				}
+			}
+
+			if connectsToCritical {
+				// This is a branch room - add it as a single-room branch
+				branch := []*RoomNode{room}
+				graph.OptionalBranches = append(graph.OptionalBranches, branch)
+			}
 		}
 	}
 }
@@ -504,18 +548,26 @@ func (g *GraphGrammarGenerator) validateGraph(graph *DungeonGraph) error {
 		return fmt.Errorf("not all rooms are reachable from start (%d/%d)", reachable, len(graph.Rooms))
 	}
 
-	// Check for critical path (at least start room)
-	// Note: Boss room is optional - not all L-system configurations generate one
-	if len(graph.CriticalPath) < 1 {
-		// If no boss room, critical path should at least contain start
-		if graph.StartRoom != nil {
-			graph.CriticalPath = []*RoomNode{graph.StartRoom}
-		} else {
-			return fmt.Errorf("critical path empty and no start room")
+	// Check for critical path (must have at least 2 rooms for meaningful progression)
+	if len(graph.CriticalPath) < 2 {
+		return fmt.Errorf("critical path too short (%d rooms, need at least 2)", len(graph.CriticalPath))
+	}
+
+	// Check narrative depth progression (must be positive when boss room exists)
+	// Boss room can be identified either by BossRoom field or by room type in critical path
+	hasBoss := graph.BossRoom != nil
+	if !hasBoss {
+		for _, room := range graph.CriticalPath {
+			if room.Type == RoomBoss {
+				hasBoss = true
+				break
+			}
 		}
 	}
 
-	// Check narrative depth progression
+	if hasBoss && graph.NarrativeDepth <= 0 {
+		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
+	}
 	if graph.NarrativeDepth < 0 {
 		return fmt.Errorf("narrative depth negative (%d)", graph.NarrativeDepth)
 	}

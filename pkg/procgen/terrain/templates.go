@@ -452,7 +452,7 @@ func ApplyTemplateToRoom(room *RoomNode, template *RoomTemplate) {
 	if room.Properties == nil {
 		room.Properties = make(map[string]interface{})
 	}
-	
+
 	room.Theme = template.Name
 	room.Properties["description"] = template.Description
 	room.Properties["tileTheme"] = template.TileTheme

@@ -8,9 +8,9 @@ import (
 
 func TestMotifType_String(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		motifType MotifType
-		want     string
+		want      string
 	}{
 		{"character", MotifTypeCharacter, "character"},
 		{"faction", MotifTypeFaction, "faction"},
@@ -60,38 +60,38 @@ func TestMotifGenerator_GenerateMotif(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			motif := gen.GenerateMotif(tt.entityID, tt.genre, tt.motifType)
-			
+
 			if motif == nil {
 				t.Fatal("GenerateMotif() returned nil")
 			}
-			
+
 			if motif.ID != tt.entityID {
 				t.Errorf("ID = %s, want %s", motif.ID, tt.entityID)
 			}
-			
+
 			if motif.Type != tt.motifType {
 				t.Errorf("Type = %v, want %v", motif.Type, tt.motifType)
 			}
-			
+
 			if len(motif.Notes) < tt.wantNotes || len(motif.Notes) > 8 {
 				t.Errorf("Notes count = %d, want 4-8 notes", len(motif.Notes))
 			}
-			
+
 			if len(motif.Rhythm.Pattern) != len(motif.Notes) {
 				t.Errorf("Rhythm pattern length = %d, want %d", len(motif.Rhythm.Pattern), len(motif.Notes))
 			}
-			
+
 			if len(motif.Rhythm.Velocity) != len(motif.Notes) {
 				t.Errorf("Rhythm velocity length = %d, want %d", len(motif.Rhythm.Velocity), len(motif.Notes))
 			}
-			
+
 			if motif.Tempo <= 0 {
 				t.Errorf("Tempo = %f, want > 0", motif.Tempo)
 			}
-			
+
 			// Check that first and last notes are the same (motif identity)
 			if len(motif.Notes) > 2 && motif.Notes[0] != motif.Notes[len(motif.Notes)-1] {
-				t.Errorf("First note (%d) should equal last note (%d) for motif identity", 
+				t.Errorf("First note (%d) should equal last note (%d) for motif identity",
 					motif.Notes[0], motif.Notes[len(motif.Notes)-1])
 			}
 		})
@@ -150,8 +150,8 @@ func TestMotifGenerator_GenreWaveforms(t *testing.T) {
 	gen := NewMotifGenerator(44100, 12345)
 
 	tests := []struct {
-		genre          string
-		expectedTypes  []audio.WaveformType
+		genre         string
+		expectedTypes []audio.WaveformType
 	}{
 		{"fantasy", []audio.WaveformType{audio.WaveformSine, audio.WaveformTriangle}},
 		{"scifi", []audio.WaveformType{audio.WaveformSquare, audio.WaveformSawtooth}},
@@ -163,7 +163,7 @@ func TestMotifGenerator_GenreWaveforms(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.genre, func(t *testing.T) {
 			motif := gen.GenerateMotif("entity", tt.genre, MotifTypeCharacter)
-			
+
 			validWaveform := false
 			for _, expectedType := range tt.expectedTypes {
 				if motif.Waveform == expectedType {
@@ -171,9 +171,9 @@ func TestMotifGenerator_GenreWaveforms(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if !validWaveform {
-				t.Errorf("Genre %s produced unexpected waveform %v, expected one of %v", 
+				t.Errorf("Genre %s produced unexpected waveform %v, expected one of %v",
 					tt.genre, motif.Waveform, tt.expectedTypes)
 			}
 		})
@@ -199,9 +199,9 @@ func TestMotifGenerator_MotifTypeTempos(t *testing.T) {
 			for i := 0; i < 5; i++ {
 				entityID := "entity_" + string(rune(i+'0'))
 				motif := gen.GenerateMotif(entityID, "fantasy", tt.motifType)
-				
+
 				if motif.Tempo < tt.minTempo || motif.Tempo > tt.maxTempo {
-					t.Errorf("Tempo %f out of range [%f, %f] for %s", 
+					t.Errorf("Tempo %f out of range [%f, %f] for %s",
 						motif.Tempo, tt.minTempo, tt.maxTempo, tt.motifType.String())
 				}
 			}
@@ -246,12 +246,12 @@ func TestHashString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hash1 := hashString(tt.input)
 			hash2 := hashString(tt.input)
-			
+
 			// Same string should produce same hash
 			if hash1 != hash2 {
 				t.Errorf("hashString produced different hashes for same input")
 			}
-			
+
 			// Different strings should produce different hashes (not guaranteed but highly likely)
 			if tt.input != "" {
 				differentHash := hashString(tt.input + "x")

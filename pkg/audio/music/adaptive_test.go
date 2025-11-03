@@ -53,13 +53,13 @@ func TestAdaptiveComposer_SetContext(t *testing.T) {
 	composer.Initialize("fantasy", 60)
 
 	tests := []struct {
-		context             string
-		expectedAmbient     bool
-		expectedMelody      bool
-		expectedPercussion  bool
-		expectedIntensity   bool
-		minTempo            float64
-		maxTempo            float64
+		context            string
+		expectedAmbient    bool
+		expectedMelody     bool
+		expectedPercussion bool
+		expectedIntensity  bool
+		minTempo           float64
+		maxTempo           float64
 	}{
 		{"exploration", true, true, false, false, 80.0, 100.0},
 		{"combat", true, true, true, true, 130.0, 150.0},

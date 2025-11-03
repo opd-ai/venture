@@ -35,10 +35,10 @@ type AdaptiveComposer struct {
 	seed       int64
 	osc        *synthesis.Oscillator
 	rng        *rand.Rand
-	
+
 	// Layers contains all available music layers
 	layers map[string]*MusicLayer
-	
+
 	// Current composition state
 	currentGenre   string
 	currentContext string
@@ -62,7 +62,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 	ac.currentGenre = genre
 	ac.rootNote = rootNote
 	ac.tempo = 120.0 // Default tempo
-	
+
 	// Initialize base layers
 	ac.layers["ambient"] = &MusicLayer{
 		Name:         "ambient",
@@ -71,7 +71,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		TargetVolume: 0.3,
 		Waveform:     audio.WaveformSine,
 	}
-	
+
 	ac.layers["melody"] = &MusicLayer{
 		Name:         "melody",
 		Active:       true,
@@ -79,7 +79,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		TargetVolume: 0.4,
 		Waveform:     audio.WaveformTriangle,
 	}
-	
+
 	ac.layers["harmony"] = &MusicLayer{
 		Name:         "harmony",
 		Active:       false,
@@ -87,7 +87,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		TargetVolume: 0.0,
 		Waveform:     audio.WaveformSine,
 	}
-	
+
 	ac.layers["percussion"] = &MusicLayer{
 		Name:         "percussion",
 		Active:       false,
@@ -95,7 +95,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		TargetVolume: 0.0,
 		Waveform:     audio.WaveformSquare,
 	}
-	
+
 	ac.layers["intensity"] = &MusicLayer{
 		Name:         "intensity",
 		Active:       false,
@@ -109,7 +109,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 // Context examples: "exploration", "combat", "boss", "puzzle", "victory"
 func (ac *AdaptiveComposer) SetContext(context string) {
 	ac.currentContext = context
-	
+
 	// Adjust layer volumes and activation based on context
 	switch context {
 	case "exploration":
@@ -119,7 +119,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.setLayerTarget("percussion", 0.0, false)
 		ac.setLayerTarget("intensity", 0.0, false)
 		ac.tempo = 90.0
-		
+
 	case "combat":
 		ac.setLayerTarget("ambient", 0.2, true)
 		ac.setLayerTarget("melody", 0.4, true)
@@ -127,7 +127,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.setLayerTarget("percussion", 0.5, true)
 		ac.setLayerTarget("intensity", 0.3, true)
 		ac.tempo = 140.0
-		
+
 	case "boss":
 		ac.setLayerTarget("ambient", 0.1, true)
 		ac.setLayerTarget("melody", 0.5, true)
@@ -135,7 +135,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.setLayerTarget("percussion", 0.6, true)
 		ac.setLayerTarget("intensity", 0.5, true)
 		ac.tempo = 160.0
-		
+
 	case "puzzle":
 		ac.setLayerTarget("ambient", 0.5, true)
 		ac.setLayerTarget("melody", 0.3, true)
@@ -143,7 +143,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.setLayerTarget("percussion", 0.0, false)
 		ac.setLayerTarget("intensity", 0.0, false)
 		ac.tempo = 80.0
-		
+
 	case "victory":
 		ac.setLayerTarget("ambient", 0.3, true)
 		ac.setLayerTarget("melody", 0.6, true)
@@ -151,7 +151,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.setLayerTarget("percussion", 0.4, true)
 		ac.setLayerTarget("intensity", 0.0, false)
 		ac.tempo = 120.0
-		
+
 	default:
 		// Default to exploration
 		ac.SetContext("exploration")
@@ -175,7 +175,7 @@ func (ac *AdaptiveComposer) UpdateLayers(transitionSpeed float64) {
 		// Smooth volume transition
 		diff := layer.TargetVolume - layer.Volume
 		layer.Volume += diff * transitionSpeed
-		
+
 		// Deactivate layer if volume reaches zero
 		if layer.Volume < 0.01 && layer.TargetVolume == 0.0 {
 			layer.Active = false
@@ -188,28 +188,28 @@ func (ac *AdaptiveComposer) UpdateLayers(transitionSpeed float64) {
 func (ac *AdaptiveComposer) GenerateAdaptiveTrack(duration float64) *audio.AudioSample {
 	numSamples := int(float64(ac.sampleRate) * duration)
 	track := make([]float64, numSamples)
-	
+
 	// Generate each layer
 	for _, layer := range ac.layers {
 		if !layer.Active || layer.Volume <= 0.0 {
 			continue
 		}
-		
+
 		// Generate layer data based on layer type
 		layerData := ac.generateLayer(layer, duration)
-		
+
 		// Mix layer into track with volume
 		for i := 0; i < len(track) && i < len(layerData); i++ {
 			track[i] += layerData[i] * layer.Volume
 		}
 	}
-	
+
 	// Normalize track to prevent clipping
 	ac.normalizeTrack(track)
-	
+
 	// Apply master envelope for smooth start/end
 	ac.applyMasterEnvelope(track, duration)
-	
+
 	return &audio.AudioSample{
 		SampleRate: ac.sampleRate,
 		Data:       track,
@@ -220,34 +220,34 @@ func (ac *AdaptiveComposer) GenerateAdaptiveTrack(duration float64) *audio.Audio
 func (ac *AdaptiveComposer) generateLayer(layer *MusicLayer, duration float64) []float64 {
 	numSamples := int(float64(ac.sampleRate) * duration)
 	data := make([]float64, numSamples)
-	
+
 	scale := GetScaleForGenre(ac.currentGenre)
 	beatDuration := 60.0 / ac.tempo // seconds per beat
-	
+
 	switch layer.Name {
 	case "ambient":
 		// Slow-moving pad sound
 		freq := NoteToFrequency(ac.rootNote - 12) // One octave below root
 		sample := ac.osc.Generate(layer.Waveform, freq, duration)
 		copy(data, sample.Data)
-		
+
 	case "melody":
 		// Melodic line
 		ac.generateMelodyLayer(data, scale, beatDuration)
-		
+
 	case "harmony":
 		// Harmonic support
 		ac.generateHarmonyLayer(data, scale, beatDuration)
-		
+
 	case "percussion":
 		// Rhythmic percussion
 		ac.generatePercussionLayer(data, beatDuration)
-		
+
 	case "intensity":
 		// High-frequency intensity layer
 		ac.generateIntensityLayer(data, beatDuration)
 	}
-	
+
 	return data
 }
 
@@ -255,26 +255,26 @@ func (ac *AdaptiveComposer) generateLayer(layer *MusicLayer, duration float64) [
 func (ac *AdaptiveComposer) generateMelodyLayer(data []float64, scale Scale, beatDuration float64) {
 	samplePos := 0
 	noteDuration := beatDuration * 0.5 // Eighth notes
-	
+
 	for samplePos < len(data) {
 		// Choose note from scale
 		scaleIndex := ac.rng.Intn(len(scale.Intervals))
 		note := ac.rootNote + scale.Intervals[scaleIndex] + 12 // One octave above root
 		freq := NoteToFrequency(note)
-		
+
 		// Generate note
 		noteLen := int(float64(ac.sampleRate) * noteDuration)
 		noteSample := ac.osc.Generate(audio.WaveformTriangle, freq, noteDuration)
-		
+
 		// Apply ADSR envelope
 		env := synthesis.Envelope{Attack: 0.01, Decay: 0.1, Sustain: 0.6, Release: 0.2}
 		env.Apply(noteSample.Data, noteSample.SampleRate)
-		
+
 		// Mix into data
 		for i := 0; i < noteLen && samplePos+i < len(data); i++ {
 			data[samplePos+i] += noteSample.Data[i] * 0.5
 		}
-		
+
 		samplePos += noteLen
 	}
 }
@@ -284,23 +284,23 @@ func (ac *AdaptiveComposer) generateHarmonyLayer(data []float64, scale Scale, be
 	// Generate sustained chords
 	chordDuration := beatDuration * 4.0 // Whole notes
 	samplePos := 0
-	
+
 	for samplePos < len(data) {
 		// Generate major triad from root
 		chord := []int{0, 4, 7} // Major triad intervals
 		chordLen := int(float64(ac.sampleRate) * chordDuration)
-		
+
 		for _, interval := range chord {
 			note := ac.rootNote + interval
 			freq := NoteToFrequency(note)
 			noteSample := ac.osc.Generate(audio.WaveformSine, freq, chordDuration)
-			
+
 			// Mix chord note
 			for i := 0; i < chordLen && samplePos+i < len(data); i++ {
 				data[samplePos+i] += noteSample.Data[i] * 0.3
 			}
 		}
-		
+
 		samplePos += chordLen
 	}
 }
@@ -308,12 +308,12 @@ func (ac *AdaptiveComposer) generateHarmonyLayer(data []float64, scale Scale, be
 // generatePercussionLayer creates rhythmic percussion.
 func (ac *AdaptiveComposer) generatePercussionLayer(data []float64, beatDuration float64) {
 	beatSamples := int(float64(ac.sampleRate) * beatDuration)
-	
+
 	for i := 0; i < len(data); i += beatSamples {
 		// Generate kick drum sound using low-frequency pulse
 		kickDuration := 0.1
 		kickSamples := int(float64(ac.sampleRate) * kickDuration)
-		
+
 		for j := 0; j < kickSamples && i+j < len(data); j++ {
 			t := float64(j) / float64(ac.sampleRate)
 			// Exponential decay envelope
@@ -329,7 +329,7 @@ func (ac *AdaptiveComposer) generateIntensityLayer(data []float64, beatDuration 
 	// High-frequency sustained note for intensity
 	freq := NoteToFrequency(ac.rootNote + 24) // Two octaves above root
 	sample := ac.osc.Generate(audio.WaveformSawtooth, freq, float64(len(data))/float64(ac.sampleRate))
-	
+
 	for i := 0; i < len(data) && i < len(sample.Data); i++ {
 		data[i] += sample.Data[i] * 0.3
 	}
@@ -344,7 +344,7 @@ func (ac *AdaptiveComposer) normalizeTrack(track []float64) {
 			maxAmp = amp
 		}
 	}
-	
+
 	if maxAmp > 1.0 {
 		scale := 0.95 / maxAmp
 		for i := range track {
@@ -357,16 +357,16 @@ func (ac *AdaptiveComposer) normalizeTrack(track []float64) {
 func (ac *AdaptiveComposer) applyMasterEnvelope(track []float64, duration float64) {
 	fadeInTime := 0.5  // 0.5 second fade in
 	fadeOutTime := 1.0 // 1.0 second fade out
-	
+
 	fadeInSamples := int(float64(ac.sampleRate) * fadeInTime)
 	fadeOutSamples := int(float64(ac.sampleRate) * fadeOutTime)
-	
+
 	// Fade in
 	for i := 0; i < fadeInSamples && i < len(track); i++ {
 		env := float64(i) / float64(fadeInSamples)
 		track[i] *= env
 	}
-	
+
 	// Fade out
 	for i := 0; i < fadeOutSamples && i < len(track); i++ {
 		idx := len(track) - 1 - i

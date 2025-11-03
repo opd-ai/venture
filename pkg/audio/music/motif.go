@@ -84,7 +84,7 @@ func (mg *MotifGenerator) GenerateMotif(entityID, genre string, motifType MotifT
 	// Generate melodic pattern (4-8 notes)
 	noteCount := 4 + localRng.Intn(5) // 4-8 notes
 	notes := make([]int, noteCount)
-	
+
 	// Generate interval pattern using scale degrees
 	for i := 0; i < noteCount; i++ {
 		// Use scale degrees (0-6) mapped to scale intervals
@@ -134,7 +134,7 @@ func (mg *MotifGenerator) generateMotifRhythm(noteCount int, motifType MotifType
 	for i := 0; i < noteCount; i++ {
 		// Add slight variation to duration
 		pattern[i] = baseDuration * (0.8 + rng.Float64()*0.4) // ±20% variation
-		
+
 		// Emphasize first and last notes
 		if i == 0 || i == noteCount-1 {
 			velocity[i] = 0.8 + rng.Float64()*0.2 // 0.8-1.0
@@ -152,7 +152,7 @@ func (mg *MotifGenerator) generateMotifRhythm(noteCount int, motifType MotifType
 // getTempoForMotifType returns appropriate tempo for the motif type.
 func (mg *MotifGenerator) getTempoForMotifType(motifType MotifType, rng *rand.Rand) float64 {
 	baseTempo := 120.0
-	
+
 	switch motifType {
 	case MotifTypeCharacter:
 		// Characters: moderate tempo with variation

@@ -26,19 +26,29 @@ type AudioManager struct {
 	// Track whether audio is enabled
 	musicEnabled bool
 	sfxEnabled   bool
+
+	// Phase 12.3: Adaptive composition support
+	adaptiveComposer *music.AdaptiveComposer
+	motifGenerator   *music.MotifGenerator
+	useAdaptive      bool // Flag to enable adaptive composition
+	motifCache       map[string]*music.Motif
 }
 
 // NewAudioManager creates a new audio manager with the specified sample rate and seed.
 // The seed ensures deterministic audio generation for the same game world.
 func NewAudioManager(sampleRate int, seed int64) *AudioManager {
 	return &AudioManager{
-		musicGen:     music.NewGenerator(sampleRate, seed),
-		sfxGen:       sfx.NewGenerator(sampleRate, seed),
-		musicVolume:  1.0,
-		sfxVolume:    1.0,
-		seed:         seed,
-		musicEnabled: true,
-		sfxEnabled:   true,
+		musicGen:         music.NewGenerator(sampleRate, seed),
+		sfxGen:           sfx.NewGenerator(sampleRate, seed),
+		musicVolume:      1.0,
+		sfxVolume:        1.0,
+		seed:             seed,
+		musicEnabled:     true,
+		sfxEnabled:       true,
+		adaptiveComposer: music.NewAdaptiveComposer(sampleRate, seed),
+		motifGenerator:   music.NewMotifGenerator(sampleRate, seed),
+		useAdaptive:      false, // Disabled by default for compatibility
+		motifCache:       make(map[string]*music.Motif),
 	}
 }
 
@@ -168,6 +178,115 @@ func (am *AudioManager) StopMusic() {
 	am.currentTrack = nil
 	am.currentGenre = ""
 	am.currentContext = ""
+}
+
+// Phase 12.3: Adaptive composition methods
+
+// EnableAdaptiveMusic enables adaptive composition for dynamic music layering.
+func (am *AudioManager) EnableAdaptiveMusic(enable bool) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+	am.useAdaptive = enable
+
+	// Initialize adaptive composer if enabled
+	if enable && am.currentGenre != "" {
+		am.adaptiveComposer.Initialize(am.currentGenre, 60) // Middle C as root
+		am.adaptiveComposer.SetContext(am.currentContext)
+	}
+}
+
+// IsAdaptiveMusicEnabled returns whether adaptive composition is active.
+func (am *AudioManager) IsAdaptiveMusicEnabled() bool {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	return am.useAdaptive
+}
+
+// GenerateMotif creates a musical motif for the given entity.
+// Motifs are cached for reuse when the entity appears again.
+func (am *AudioManager) GenerateMotif(entityID, motifType string) *music.Motif {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	// Check cache first
+	cacheKey := entityID + ":" + motifType
+	if motif, exists := am.motifCache[cacheKey]; exists {
+		return motif
+	}
+
+	// Generate new motif
+	var mType music.MotifType
+	switch motifType {
+	case "character":
+		mType = music.MotifTypeCharacter
+	case "faction":
+		mType = music.MotifTypeFaction
+	case "location":
+		mType = music.MotifTypeLocation
+	default:
+		mType = music.MotifTypeCharacter
+	}
+
+	motif := am.motifGenerator.GenerateMotif(entityID, am.currentGenre, mType)
+	am.motifCache[cacheKey] = motif
+	return motif
+}
+
+// UpdateAdaptiveLayers updates the adaptive music layers based on current context.
+// transitionSpeed controls fade speed (0.0-1.0, higher = faster).
+func (am *AudioManager) UpdateAdaptiveLayers(transitionSpeed float64) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return
+	}
+
+	am.adaptiveComposer.UpdateLayers(transitionSpeed)
+}
+
+// PlayAdaptiveMusic generates and plays adaptive music for the current context.
+func (am *AudioManager) PlayAdaptiveMusic(genre, context string, duration float64) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.musicEnabled || !am.useAdaptive {
+		// Fall back to regular music generation
+		am.mu.Unlock()
+		return am.PlayMusic(genre, context)
+	}
+
+	// Update genre and context if changed
+	if am.currentGenre != genre {
+		am.currentGenre = genre
+		am.adaptiveComposer.Initialize(genre, 60)
+	}
+
+	if am.currentContext != context {
+		am.currentContext = context
+		am.adaptiveComposer.SetContext(context)
+	}
+
+	// Generate adaptive track
+	track := am.adaptiveComposer.GenerateAdaptiveTrack(duration)
+
+	// Apply volume scaling
+	scaledTrack := am.applyVolumeToTrack(track, am.musicVolume)
+	am.currentTrack = scaledTrack
+
+	return nil
+}
+
+// GetActiveLayerCount returns the number of active music layers (adaptive mode only).
+func (am *AudioManager) GetActiveLayerCount() int {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+
+	if !am.useAdaptive {
+		return 0
+	}
+
+	return am.adaptiveComposer.GetActiveLayerCount()
 }
 
 // applyVolumeToTrack scales all samples in the track by the given volume multiplier.

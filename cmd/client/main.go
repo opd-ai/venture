@@ -345,6 +345,218 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 	return weatherEntity
 }
 
+// spawnDestructibleObjects spawns destructible objects (crates, barrels, furniture) in dungeon rooms.
+// Phase 11.3: Environmental Destruction & Manipulation
+func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, seed int64, genreID string, logger *logrus.Logger) int {
+	rng := rand.New(rand.NewSource(seed))
+	objectCount := 0
+	tileSize := 32
+
+	// Object spawning configuration per genre
+	type objectConfig struct {
+		crateChance           float64 // Probability of crate spawn per suitable room
+		barrelChance          float64 // Probability of barrel spawn per suitable room
+		furnitureChance       float64 // Probability of furniture spawn per suitable room
+		explosiveBarrelChance float64 // Probability of explosive barrel (vs regular barrel)
+		poisonContainerChance float64 // Probability of poison container spawn
+		objectsPerRoom        int     // Number of objects to spawn in each eligible room
+	}
+
+	configs := map[string]objectConfig{
+		"fantasy": {
+			crateChance:           0.6,
+			barrelChance:          0.5,
+			furnitureChance:       0.4,
+			explosiveBarrelChance: 0.1,
+			poisonContainerChance: 0.05,
+			objectsPerRoom:        3,
+		},
+		"scifi": {
+			crateChance:           0.7,
+			barrelChance:          0.6,
+			furnitureChance:       0.3,
+			explosiveBarrelChance: 0.15,
+			poisonContainerChance: 0.1,
+			objectsPerRoom:        4,
+		},
+		"horror": {
+			crateChance:           0.4,
+			barrelChance:          0.3,
+			furnitureChance:       0.7,
+			explosiveBarrelChance: 0.05,
+			poisonContainerChance: 0.15,
+			objectsPerRoom:        2,
+		},
+		"cyberpunk": {
+			crateChance:           0.65,
+			barrelChance:          0.55,
+			furnitureChance:       0.5,
+			explosiveBarrelChance: 0.2,
+			poisonContainerChance: 0.08,
+			objectsPerRoom:        3,
+		},
+		"postapocalyptic": {
+			crateChance:           0.5,
+			barrelChance:          0.7,
+			furnitureChance:       0.6,
+			explosiveBarrelChance: 0.12,
+			poisonContainerChance: 0.1,
+			objectsPerRoom:        4,
+		},
+	}
+
+	// Default configuration if genre not found
+	config := configs["fantasy"]
+	if genreConfig, ok := configs[genreID]; ok {
+		config = genreConfig
+	}
+
+	// Iterate through rooms (skip entrance room at index 0)
+	for i := 1; i < len(terrainMap.Rooms); i++ {
+		room := terrainMap.Rooms[i]
+
+		// Skip very small rooms (< 4x4 tiles)
+		if room.Width < 4 || room.Height < 4 {
+			continue
+		}
+
+		// Spawn objects in this room based on configuration
+		objectsSpawned := 0
+		for objectsSpawned < config.objectsPerRoom {
+			// Randomly select object type
+			roll := rng.Float64()
+
+			var objectType engine.ObjectType
+			var shouldSpawn bool
+
+			if roll < config.crateChance {
+				objectType = engine.ObjectCrate
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance {
+				// Decide between regular and explosive barrel
+				if rng.Float64() < config.explosiveBarrelChance {
+					objectType = engine.ObjectExplosiveBarrel
+				} else {
+					objectType = engine.ObjectBarrel
+				}
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance {
+				objectType = engine.ObjectFurniture
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance+config.poisonContainerChance {
+				objectType = engine.ObjectPoisonContainer
+				shouldSpawn = true
+			}
+
+			if !shouldSpawn {
+				break // Move to next room
+			}
+
+			// Find a valid spawn location within room (not on walls, not on other objects)
+			attempts := 0
+			maxAttempts := 10
+			for attempts < maxAttempts {
+				// Random position within room (leave 1-tile border)
+				tx := room.X + 1 + rng.Intn(room.Width-2)
+				ty := room.Y + 1 + rng.Intn(room.Height-2)
+
+				// Check if tile is walkable
+				tile := terrainMap.GetTile(tx, ty)
+				if tile == terrain.TileWall || tile == terrain.TileWallNE ||
+					tile == terrain.TileWallNW || tile == terrain.TileWallSE ||
+					tile == terrain.TileWallSW {
+					attempts++
+					continue
+				}
+
+				// Convert tile coordinates to world coordinates (center of tile)
+				worldX := float64(tx*tileSize + tileSize/2)
+				worldY := float64(ty*tileSize + tileSize/2)
+
+				// Check if position is clear of other entities
+				entities := world.GetEntities()
+				tooClose := false
+				for _, entity := range entities {
+					if posComp, ok := entity.GetComponent("position"); ok {
+						pos := posComp.(*engine.PositionComponent)
+						dx := pos.X - worldX
+						dy := pos.Y - worldY
+						dist := math.Sqrt(dx*dx + dy*dy)
+						if dist < float64(tileSize) { // Objects must be at least 1 tile apart
+							tooClose = true
+							break
+						}
+					}
+				}
+
+				if tooClose {
+					attempts++
+					continue
+				}
+
+				// Valid location found, spawn object
+				objectEntity := world.CreateEntity()
+
+				// Add position component
+				posComp := &engine.PositionComponent{
+					X: worldX,
+					Y: worldY,
+				}
+				objectEntity.AddComponent(posComp)
+
+				// Add destructible object component
+				destructibleComp := engine.NewDestructibleObjectComponent(objectType)
+				objectEntity.AddComponent(destructibleComp)
+
+				// Add carriable component (lighter objects can be picked up)
+				weight := 0.5 // Default medium weight
+				if objectType == engine.ObjectCrate {
+					weight = 0.3 // Light crate
+				} else if objectType == engine.ObjectBarrel || objectType == engine.ObjectExplosiveBarrel {
+					weight = 0.7 // Heavy barrel
+				} else if objectType == engine.ObjectFurniture {
+					weight = 0.6 // Medium furniture
+				} else if objectType == engine.ObjectPoisonContainer {
+					weight = 0.4 // Light container
+				}
+				carriableComp := engine.NewCarriableComponent(weight)
+				objectEntity.AddComponent(carriableComp)
+
+				// Add context action component for interaction prompts
+				actionType := engine.ActionPickup
+				actionText := "Pickup"
+				if objectType == engine.ObjectCrate {
+					actionText = "Open Crate"
+					actionType = engine.ActionOpen
+				}
+				contextComp := engine.NewContextActionComponent(actionType, actionText)
+				objectEntity.AddComponent(contextComp)
+
+				objectCount++
+				objectsSpawned++
+
+				if logger != nil && logger.GetLevel() >= logrus.DebugLevel {
+					logger.WithFields(logrus.Fields{
+						"objectType": objectType.String(),
+						"x":          worldX,
+						"y":          worldY,
+						"roomIndex":  i,
+					}).Debug("spawned destructible object")
+				}
+
+				break // Spawned successfully, move to next object
+			}
+
+			if attempts >= maxAttempts {
+				// Couldn't find valid location, stop trying for this room
+				break
+			}
+		}
+	}
+
+	return objectCount
+}
+
 // addStarterItems generates and adds starting items to the player's inventory.
 func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, logger *logrus.Logger) {
 	itemGen := item.NewItemGenerator()
@@ -1001,6 +1213,32 @@ func main() {
 	puzzleSystem := engine.NewPuzzleSystem(game.World)
 	game.World.AddSystem(puzzleSystem)
 
+	// Phase 11.3: Environmental Destruction & Manipulation Systems
+	// Initialize fire propagation system for explosive barrel ignition
+	const tileSize = 32 // Standard tile size used throughout the engine
+	firePropagationSystem := engine.NewFirePropagationSystemWithLogger(tileSize, *seed+1090, clientLogger.Logger)
+	firePropagationSystem.SetWorld(game.World)
+	game.World.AddSystem(firePropagationSystem)
+
+	// Initialize destructible object system for crates, barrels, furniture
+	destructibleObjectSystem := engine.NewDestructibleObjectSystemWithLogger(tileSize, *seed+1100, clientLogger.Logger)
+	destructibleObjectSystem.SetWorld(game.World)
+	destructibleObjectSystem.SetFireSystem(firePropagationSystem)
+	game.World.AddSystem(destructibleObjectSystem)
+
+	// Initialize carry system for pickup and throw mechanics
+	carrySystem := engine.NewCarrySystemWithLogger(clientLogger.Logger)
+	carrySystem.SetWorld(game.World)
+	game.World.AddSystem(carrySystem)
+
+	// Connect carry system to interaction system for F key pickup
+	interactionSystem.SetCarrySystem(carrySystem)
+
+	// Initialize hazard system for poison clouds, oil puddles, smoke
+	hazardSystem := engine.NewHazardSystemWithLogger(clientLogger.Logger)
+	hazardSystem.SetWorld(game.World)
+	game.World.AddSystem(hazardSystem)
+
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
 	game.HelpSystem = helpSystem
@@ -1228,6 +1466,17 @@ func main() {
 			"roomCount":   len(generatedTerrain.Rooms) - 1,
 		}).Info("spawned procedural puzzles")
 	}
+
+	// Phase 11.3: Spawn destructible objects in dungeon (crates, barrels, furniture)
+	if *verbose {
+		clientLogger.Info("spawning destructible objects in dungeon")
+	}
+	objectCount := spawnDestructibleObjects(game.World, generatedTerrain, *seed+3000, *genreID, clientLogger.Logger)
+	clientLogger.WithFields(logrus.Fields{
+		"objectCount": objectCount,
+		"roomCount":   len(generatedTerrain.Rooms) - 1,
+		"genre":       *genreID,
+	}).Info("spawned destructible objects")
 
 	// Phase 5.3: Spawn environmental lights in dungeon (if lighting enabled)
 	if *enableLighting {

@@ -30,11 +30,13 @@ You are an autonomous software maintenance agent operating on the Venture Go cod
 1. **Install & Identify**: Execute dependency installation; run `go build ./...` and `go test ./...` to catalog failures
 2. **Prioritize**: (1) Compilation errors, (2) Import/dependency issues, (3) Test failures by package order, (4) Race conditions
 3. **Fix & Validate**: Determine root causes; apply minimal fixes; verify with affected tests and full suite after each fix
+4. **Skip Condition**: If build succeeds and all tests pass, report "Phase 1: No stabilization needed" and proceed to Phase 2
 
 ### Phase 2: Modernization
 
 4. **Identify Deprecated Code**: Find legacy feature flags, compatibility shims, version checks, conditional branches, "TODO: remove" comments
 5. **Remove & Simplify**: Delete deprecated code and tests; update imports; reduce conditional logic
+6. **Skip Condition**: If no deprecated code, legacy feature flags, or compatibility shims found, report "Phase 2: No modernization needed" and proceed to Phase 3
 
 ### Phase 3: Documentation-Implementation Alignment
 
@@ -46,6 +48,7 @@ You are an autonomous software maintenance agent operating on the Venture Go cod
    - Impact: workflows×2 + prominence×1.5; Risk: corruption=15, security=12, silent=8, user-facing=5, internal=2
    - Complexity: LOC÷100 + deps×2 + API changes×5
 10. **Repair**: Fix top 3 gaps with production-ready code and comprehensive tests
+11. **Skip Condition**: If no documentation-implementation gaps identified, report "Phase 3: Documentation aligned" and proceed to Phase 4
 
 ### Phase 4: Next Development Phase
 
@@ -53,6 +56,7 @@ You are an autonomous software maintenance agent operating on the Venture Go cod
 12. **Implement**: Design ECS-compatible changes; generate complete code with error handling, validation, logging, documentation
 13. **Test**: Create table-driven tests for normal/edge/error cases and determinism
 14. **Verify**: Confirm compilation, test passage, pattern compliance, documentation updates
+15. **Skip Condition**: If no next phase identified in roadmap, no TODOs found, and all planned features complete, report "Phase 4: All roadmap phases complete" and conclude maintenance
 
 ## STANDARDIZED OUTPUT SPECIFICATIONS
 

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"math/rand"
@@ -726,7 +727,7 @@ func TestSelectButtonBaseColor_WCAGCompliance(t *testing.T) {
 
 	for _, genreID := range genres {
 		for _, seed := range seeds {
-			t.Run(genreID+"_seed_"+string(rune(seed)), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_seed_%d", genreID, seed), func(t *testing.T) {
 				// Generate palette for genre
 				pal, err := gen.paletteGen.Generate(genreID, seed)
 				if err != nil {

@@ -132,7 +132,7 @@ func MeasureText(text string, face font.Face) int {
 	bounds := font.MeasureString(face, text)
 
 	// Convert from fixed.Int26_6 to pixels
-	// fixed.Int26_6 uses 26 bits for fractional part (6 bits), so divide by 64
+	// fixed.Int26_6 represents fixed-point values with 26 integer bits and 6 fractional bits, so divide by 64 to get pixel units
 	width := int(bounds / fixed.I(1))
 
 	return width

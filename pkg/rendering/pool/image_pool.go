@@ -2,6 +2,7 @@ package pool
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -37,19 +38,19 @@ func NewImagePool() *ImagePool {
 
 	// Initialize pools with constructors
 	p.pool28.New = func() interface{} {
-		p.creates++
+		atomic.AddUint64(&p.creates, 1)
 		return ebiten.NewImage(SizePlayer, SizePlayer)
 	}
 	p.pool32.New = func() interface{} {
-		p.creates++
+		atomic.AddUint64(&p.creates, 1)
 		return ebiten.NewImage(SizeSmall, SizeSmall)
 	}
 	p.pool64.New = func() interface{} {
-		p.creates++
+		atomic.AddUint64(&p.creates, 1)
 		return ebiten.NewImage(SizeMedium, SizeMedium)
 	}
 	p.pool128.New = func() interface{} {
-		p.creates++
+		atomic.AddUint64(&p.creates, 1)
 		return ebiten.NewImage(SizeLarge, SizeLarge)
 	}
 
@@ -60,7 +61,7 @@ func NewImagePool() *ImagePool {
 // Returns a pooled image for standard sizes (28, 32, 64, 128),
 // or creates a new image for non-standard sizes.
 func (p *ImagePool) GetImage(width, height int) *ebiten.Image {
-	p.gets++
+	atomic.AddUint64(&p.gets, 1)
 
 	// Use pooled images for square sprites of common sizes
 	if width == height {
@@ -77,7 +78,7 @@ func (p *ImagePool) GetImage(width, height int) *ebiten.Image {
 	}
 
 	// Non-standard size: create new image (not pooled)
-	p.creates++
+	atomic.AddUint64(&p.creates, 1)
 	return ebiten.NewImage(width, height)
 }
 
@@ -89,7 +90,7 @@ func (p *ImagePool) PutImage(img *ebiten.Image) {
 		return
 	}
 
-	p.puts++
+	atomic.AddUint64(&p.puts, 1)
 
 	bounds := img.Bounds()
 	width := bounds.Dx()
@@ -129,9 +130,9 @@ type Statistics struct {
 // Stats returns a copy of the current pool statistics.
 func (p *ImagePool) Stats() Statistics {
 	return Statistics{
-		Gets:    p.gets,
-		Puts:    p.puts,
-		Creates: p.creates,
+		Gets:    atomic.LoadUint64(&p.gets),
+		Puts:    atomic.LoadUint64(&p.puts),
+		Creates: atomic.LoadUint64(&p.creates),
 	}
 }
 
@@ -163,7 +164,7 @@ func Stats() Statistics {
 
 // ResetStats resets the global pool statistics.
 func ResetStats() {
-	globalPool.gets = 0
-	globalPool.puts = 0
-	globalPool.creates = 0
+	atomic.StoreUint64(&globalPool.gets, 0)
+	atomic.StoreUint64(&globalPool.puts, 0)
+	atomic.StoreUint64(&globalPool.creates, 0)
 }

@@ -340,14 +340,6 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, "J: Close | 1: Active | 2: Completed", windowX+10, controlsY)
 }
 
-// max returns the maximum of two integers.
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // IsActive returns whether the quest UI is currently visible.
 // Implements UISystem interface.
 func (q *EbitenQuestUI) IsActive() bool {

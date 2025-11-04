@@ -251,6 +251,11 @@ func (h *EbitenHUDSystem) drawNetworkStatus() {
 		return
 	}
 
+	// Only draw if screen is initialized (not in test environment)
+	if h.screen == nil {
+		return
+	}
+
 	// Check if connected
 	if !h.networkClient.IsConnected() {
 		return

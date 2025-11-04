@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-// TestTriggerHaptic tests haptic feedback triggering.
-func TestTriggerHaptic(t *testing.T) {
+// TestTriggerHapticPublic tests haptic feedback triggering.
+func TestTriggerHapticPublic(t *testing.T) {
 	// TriggerHaptic should not panic on any platform
 	// It's a no-op on most platforms except mobile
 	TriggerHaptic(HapticLight)

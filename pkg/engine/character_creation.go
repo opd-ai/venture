@@ -171,14 +171,6 @@ func LoadPortrait(path string) (*ebiten.Image, error) {
 	return ebiten.NewImageFromImage(img), nil
 }
 
-// max returns the larger of two integers
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // OpenPortraitDialog opens a native file picker dialog for selecting a portrait image
 // Returns the selected file path or empty string if cancelled
 // Platform-specific implementations are provided via:

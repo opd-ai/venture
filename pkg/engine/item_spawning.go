@@ -335,7 +335,7 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 					if audioSys := s.getAudioManager(); audioSys != nil {
 						if err := audioSys.PlaySFX("pickup", int64(itemEntity.ID)); err != nil {
 							// Audio failure is non-critical, log and continue
-							_ = err
+							s.logger.Debugf("Failed to play item pickup sound: %v", err)
 						}
 					}
 
@@ -414,7 +414,7 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 				if audioSys := s.getAudioManager(); audioSys != nil {
 					if err := audioSys.PlaySFX("spell", int64(recipeEntity.ID)); err != nil {
 						// Audio failure is non-critical, log and continue
-						_ = err
+						s.logger.Debugf("Failed to play recipe pickup sound: %v", err)
 					}
 				}
 

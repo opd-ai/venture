@@ -68,6 +68,22 @@ func ValidateDifficulty(difficulty float64) error {
 	return nil
 }
 
+// ValidateParams performs comprehensive validation of GenerationParams.
+// This should be called before passing params to any generator to ensure
+// all basic parameter constraints are met.
+func ValidateParams(params GenerationParams) error {
+	if err := ValidateDifficulty(params.Difficulty); err != nil {
+		return fmt.Errorf("invalid difficulty: %w", err)
+	}
+	if err := ValidateDepth(params.Depth); err != nil {
+		return fmt.Errorf("invalid depth: %w", err)
+	}
+	if params.GenreID == "" {
+		return fmt.Errorf("genre ID cannot be empty")
+	}
+	return nil
+}
+
 // ValidateDimensions checks if width and height are valid.
 func ValidateDimensions(width, height, minWidth, minHeight, maxWidth, maxHeight int) error {
 	if width <= 0 || height <= 0 {

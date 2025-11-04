@@ -1,330 +1,276 @@
 # TASK DESCRIPTION:
-Autonomously analyze a mature Go application to identify implementation gaps between codebase and README.md documentation, then automatically implement repairs for high-priority gaps with production-ready code.
+Conduct a comprehensive audit of the Go codebase following the methodology in AUDIT_ME.md, identify all issues and discrepancies in README.md and ROADMAP*.md files, then automatically implement repairs for high-priority issues with production-ready code.
 
 ## CONTEXT:
-You are an autonomous software audit and repair agent that validates implementation against documented specifications and delivers missing functionality. Your analysis determines precise implementation gaps in nearly feature-complete applications, then autonomously implements fixes for the highest-priority discrepancies. Your outputs serve technical teams requiring both actionable gap analysis and immediate production-ready solutions for documentation-implementation alignment issues.
+You are an autonomous software audit and repair agent. Your task is three-fold:
+1. **Audit the codebase**: Follow the comprehensive audit methodology specified in `docs/AUDIT_ME.md` to identify bugs, performance issues, missing features, anti-patterns, and API design flaws. Create `AUDIT.md` in the repository root with your findings.
+2. **Fix audit findings**: Implement repairs for the highest-priority issues identified in the audit.
+3. **Fix documentation discrepancies**: Identify and fix all discrepancies, inconsistencies, and errors in README.md, ROADMAP.md, and ROADMAP_V2.md (version numbers, status markers, duplicate content, stale information, etc.).
 
 ## INSTRUCTIONS:
 
-### 1. Automated Precision Documentation Analysis
-- Parse README.md systematically to extract exact behavioral specifications, API contracts, and feature guarantees
-- Document specific promises about:
-  - Edge case handling and error behavior
-  - Performance guarantees and timing requirements
-  - Response structures, field names, and data types
-  - Default values and optional parameter behavior
-  - Version-specific features and compatibility requirements
-- Identify implicit guarantees in API descriptions and user-facing documentation
-- Extract quantifiable requirements including metrics, constraints, and success criteria
+### Phase 1: Conduct Comprehensive Audit (Following AUDIT_ME.md)
 
-### 2. Implementation Verification Protocol
-- Map actual code paths for each documented feature with precise file and line references
-- Verify exact match between documented and implemented behavior across:
-  - Error message formats, codes, and handling patterns
-  - Response structures and field naming conventions
-  - Timing guarantees and operation ordering promises
-  - Default value assignments and optional parameter handling
-  - Consistency across similar functions and API endpoints
-- Apply deterministic gap classification:
-  - **Critical Gap**: Feature completely missing or produces incorrect results
-  - **Functional Mismatch**: Implementation differs materially from documentation
-  - **Partial Implementation**: Feature 90% complete but missing documented edge cases
-  - **Silent Failure**: Operation fails without proper error reporting as documented
-  - **Behavioral Nuance**: Slight deviation in behavior, timing, or error handling
+**Step 1.1: Review Audit Methodology**
+- Read `docs/AUDIT_ME.md` completely to understand the audit approach and categories
+- The audit covers 5 main categories:
+  1. CORRECTNESS & RELIABILITY (race conditions, nil dereferences, error handling, logic errors, resource leaks)
+  2. PERFORMANCE & EFFICIENCY (memory allocation, algorithmic complexity, concurrency bottlenecks, I/O inefficiencies)
+  3. API DESIGN & USABILITY (safety, completeness, clarity, consistency, documentation)
+  4. CODE QUALITY & MAINTAINABILITY (anti-patterns, code organization, naming, documentation, test coverage, duplication)
+  5. COMPLETENESS & PRODUCTION READINESS (missing functionality, observability, configuration, error messages, graceful degradation)
 
-### 3. Evidence-Based Gap Documentation
-For each finding, capture:
-- Exact quote from README.md with line reference
-- Precise code location (file path and line numbers)
-- Expected behavior per documentation
-- Actual implementation behavior with code evidence
-- Specific scenario demonstrating the gap
-- Clear explanation of the discrepancy
-- Production impact assessment with severity rating
+**Step 1.2: Systematic Code Audit**
+- Analyze the entire codebase following AUDIT_ME.md categories
+- For each file in `pkg/`, `cmd/`, and `examples/`:
+  - Check for race conditions (concurrent map access, unprotected shared state)
+  - Identify nil pointer dereferences and missing nil checks
+  - Find ignored errors and improper error handling
+  - Spot logic errors and edge case failures
+  - Detect resource leaks (unclosed files, goroutine leaks, memory leaks)
+  - Assess performance issues (O(n²) where O(n) possible, excessive allocations)
+  - Evaluate API design (can APIs be misused? Are invariants enforced?)
+  - Check code quality (duplicated code, complex functions, poor naming, missing tests)
+  - Verify completeness (missing observability, inadequate error messages, no graceful degradation)
 
-### 4. Automated Priority Calculation
-For each identified gap, calculate priority score using:
-- **Severity multiplier**: Critical = 10, Functional Mismatch = 7, Partial = 5, Silent Failure = 8, Behavioral Nuance = 3
-- **User impact**: Count of affected workflows × 2 + documentation prominence × 1.5
-- **Production risk**: Data corruption potential = 15, security issue = 12, silent failure = 8, user-facing error = 5, internal only = 2
-- **Technical complexity penalty**: Estimated lines of code ÷ 100 + cross-module dependencies × 2 + external API changes × 5
-- **Final priority score** = (severity × user impact × production risk) - (complexity penalty × 0.3)
+**Step 1.3: Create AUDIT.md Report**
+- Generate `AUDIT.md` in the repository root using the format specified in AUDIT_ME.md
+- Include:
+  - Executive summary with counts by severity (Critical, High, Medium, Low, Info)
+  - Detailed findings for each issue with:
+    - Severity rating
+    - File location and line numbers
+    - Description of the issue
+    - Current code showing the problem
+    - Impact assessment
+    - Recommended fix with code example
+    - Justification for the recommendation
+  - Summary section with:
+    - Critical/High/Medium/Low issue counts
+    - Convention assessment
+    - Overall health assessment
+    - Quick wins (easy fixes with high impact)
 
-Rank all gaps by priority score descending. Select the top 3 highest-scoring gaps for autonomous repair.
+### Phase 2: Fix Documentation Discrepancies
 
-### 5. Autonomous Gap Repair Implementation
-For each selected high-priority gap:
+**Step 2.1: Analyze README.md**
+- Check for:
+  - Version number inconsistencies (compare with ROADMAP*.md)
+  - Stale status information (e.g., "in development" vs "complete")
+  - Broken links or references to non-existent files
+  - Outdated feature descriptions
+  - Incorrect commands or examples
+  - Missing prerequisites or setup steps
+  - Duplicate content
 
-A. **Codebase Pattern Analysis**
-   - Analyze existing code to identify architectural patterns, naming conventions, error handling styles
-   - Extract module structure, dependency patterns, and integration points
-   - Document test coverage patterns and validation approaches
-   - Identify configuration management and deployment considerations
+**Step 2.2: Analyze ROADMAP.md and ROADMAP_V2.md**
+- Check for:
+  - Version number mismatches between files
+  - Inconsistent phase completion markers (marked complete but not implemented, or vice versa)
+  - Duplicate sections or content
+  - Stale timeline information
+  - Conflicting status statements
+  - Incomplete phase descriptions (future tense when should be past tense for completed work)
+  - Missing completion dates
 
-B. **Implementation Strategy Generation**
-   - Design minimal surgical changes that align documented behavior with implementation
-   - Ensure changes integrate seamlessly with existing patterns
-   - Plan backward compatibility preservation where applicable
-   - Document all files requiring modification
+**Step 2.3: Fix All Documentation Issues**
+- Update version numbers to be consistent across all files
+- Remove duplicate content
+- Update completion markers and status descriptions
+- Fix stale timeline information
+- Ensure past tense for completed features
+- Add missing completion dates
+- Document changes made in a summary file
 
-C. **Production-Ready Code Generation**
-   - Install build dependencies so you can run tests
-   - Generate complete, executable Go code that resolves the gap
-   - Include comprehensive error handling matching existing patterns
-   - Add input validation and boundary condition handling
-   - Implement logging and observability hooks consistent with codebase
-   - Add inline documentation for complex logic
-   - Code is formatted with `gofmt -w -s`
+### Phase 3: Prioritize and Fix Issues
 
-D. **Integration Requirements**
-   - Specify exact file modifications (additions, changes, deletions)
-   - List new dependencies and version requirements
-   - Document configuration changes required
-   - Provide database migration scripts if needed
+**Step 3.1: Priority Calculation**
+For each issue identified in the audit (AUDIT.md), calculate priority score:
 
-E. **Validation Test Suite**
-   - Generate unit tests covering normal operation
-   - Create integration tests for cross-module functionality
-   - Add edge case and error condition tests
-   - Include performance tests if timing guarantees are documented
-   - Provide test execution instructions
+**Severity Multipliers:**
+- Critical (crashes, data loss, security vulnerabilities, severe race conditions) = 15
+- High (reliability issues, significant performance problems, major API safety gaps, resource leaks) = 10
+- Medium (moderate performance issues, API usability problems, maintainability concerns) = 5
+- Low (minor inefficiencies, style inconsistencies, documentation gaps) = 2
 
-### 6. Automated Verification Protocol
-Execute these checks before finalizing repairs:
-- Syntax validation: Ensure all generated code compiles without errors
-- Pattern compliance: Verify code matches existing architectural patterns
-- Test coverage: Confirm all gap scenarios are covered by generated tests
-- Documentation alignment: Validate implementation now matches README.md specification
-- No regression: Ensure changes don't break existing functionality
-- Security review: Check for introduced vulnerabilities
+**Impact Factors:**
+- User impact: Number of affected code paths × 2
+- Production risk: Data corruption (20), Security breach (18), Service outage (15), Silent failure (10), Performance degradation (7), User confusion (4)
+- Blast radius: System-wide (5), Multiple packages (3), Single package (2), Single function (1)
 
-## FORMATTING REQUIREMENTS:
+**Complexity Penalty:**
+- Lines of code to fix ÷ 50
+- Cross-package dependencies × 3
+- Breaking changes × 10
 
-### Analysis Output (GAPS-AUDIT.md)
+**Formula:**
+`Priority Score = (Severity × User Impact × Production Risk × Blast Radius) - (Complexity Penalty × 0.2)`
+
+**Step 3.2: Select Top Issues**
+- Rank all issues by priority score (descending)
+- Select the top 5 highest-priority issues for immediate repair
+- Ensure at least one documentation fix is included if any exist
+
+**Step 3.3: Implement Fixes**
+For each selected issue:
+
+**A. Code Analysis**
+- Review existing code patterns, naming conventions, error handling styles
+- Identify integration points and dependencies
+- Document test coverage patterns
+
+**B. Design Fix**
+- Design minimal surgical changes that resolve the issue
+- Ensure changes integrate with existing patterns
+- Plan backward compatibility where needed
+- Document all files requiring modification
+
+**C. Implement Production-Ready Code**
+- Generate complete, executable Go code that fixes the issue
+- Include proper error handling matching existing patterns
+- Add input validation and boundary checks
+- Implement logging consistent with codebase
+- Add inline documentation for complex logic
+- Format code with `gofmt -w -s`
+
+**D. Create Tests**
+- Write unit tests covering normal operation
+- Add integration tests for cross-package functionality
+- Include edge case and error condition tests
+- Add regression tests to prevent issue recurrence
+- Ensure all tests pass
+
+**E. Verify Fix**
+- Compile code: `go build ./...`
+- Run tests: `go test ./...`
+- Run linter: `golangci-lint run` (if available)
+- Verify no regressions in existing functionality
+- Check that documentation updates are accurate
+
+## OUTPUT REQUIREMENTS:
+
+### 1. AUDIT.md (Repository Root)
+Create `AUDIT.md` in the repository root following the format in AUDIT_ME.md:
+
 ```markdown
-# Implementation Gap Analysis
+# Code Audit Report
 Generated: [ISO 8601 timestamp]
 Codebase Version: [commit hash]
-Total Gaps Found: [number]
 
 ## Executive Summary
-- Critical: [count] gaps
-- Functional Mismatch: [count] gaps
-- Partial Implementation: [count] gaps
-- Silent Failure: [count] gaps
-- Behavioral Nuance: [count] gaps
+- **Critical Issues**: [count]
+- **High Priority**: [count]
+- **Medium Priority**: [count]
+- **Low Priority/Info**: [count]
 
-## Priority-Ranked Gaps
+## Findings by Category
 
-### Gap #[number]: [Precise Description] [Priority Score: X.XX]
-**Severity:** [Classification]
-**Documentation Reference:** 
-> [Exact quote from README.md:line_number]
+### [CATEGORY]: [Issue Description]
+**Severity**: [Critical | High | Medium | Low | Info]
+**Location**: `path/to/file.go` (lines X-Y)
 
-**Implementation Location:** `[file.go:line-range]`
+**Description**: [Clear explanation of the issue]
 
-**Expected Behavior:** [What README specifies]
-
-**Actual Implementation:** [What code does]
-
-**Gap Details:** [Precise explanation of discrepancy]
-
-**Reproduction Scenario:**
+**Current Code**:
 ```go
-// Minimal code demonstrating the gap
+// Code showing the problem
 ```
 
-**Production Impact:** [Specific consequences with severity]
+**Impact**: [What problems this causes]
 
-**Code Evidence:**
+**Recommendation**:
 ```go
-// Relevant code snippet showing the gap
+// Suggested fix
 ```
 
-**Priority Calculation:**
-- Severity: [value] × User Impact: [value] × Production Risk: [value] - Complexity: [value]
-- Final Score: [calculated priority]
+**Justification**: [Why this fix improves the code]
+
+---
+
+## Summary
+**Critical Issues**: [count] - [brief list if any]
+**High Priority**: [count] - [brief list]
+**Quick Wins**: [List easy-to-fix issues with high impact]
+**Overall Health**: [Assessment paragraph]
 ```
 
-### Repair Output (GAPS-REPAIR.md)
+### 2. DOCUMENTATION-FIXES.md (Created for tracking)
+Create a summary of all documentation changes:
+
 ```markdown
-# Autonomous Gap Repairs
-Generated: [ISO 8601 timestamp]
-Repairs Implemented: [number]
+# Documentation Discrepancy Fixes
+Date: [ISO 8601 timestamp]
 
-## Repair #[number]: [Gap Description]
-**Original Gap Priority:** [score]
-**Files Modified:** [count]
-**Lines Changed:** [+additions -deletions]
+## Issues Fixed in README.md
+1. [Description of fix] - Line X
+2. [Description of fix] - Line Y
 
-### Implementation Strategy
-[Description of approach taken]
+## Issues Fixed in ROADMAP.md
+1. [Description of fix] - Line X
+2. [Description of fix] - Line Y
 
-### Code Changes
+## Issues Fixed in ROADMAP_V2.md
+1. [Description of fix] - Line X
+2. [Description of fix] - Line Y
 
-#### File: [path/to/file.go]
-**Action:** [Modified/Created/Deleted]
-
-```go
-// Complete implementation with inline comments
+## Summary
+- Total documentation issues fixed: [count]
+- Version consistency established: [version number]
+- Duplicate content removed: [count] instances
+- Completion markers updated: [count] phases
 ```
 
-### Integration Requirements
-- Dependencies: [list with versions]
-- Configuration: [changes required]
-- Migration: [scripts if needed]
+### 3. FIXES-IMPLEMENTED.md (Created for tracking)
+Document all code fixes implemented:
 
-### Validation Tests
+```markdown
+# Code Fixes Implemented
+Date: [ISO 8601 timestamp]
 
-#### Unit Tests: [path/to/test_file.go]
-```go
-// Complete test implementation
-```
+## Fix #1: [Issue Description]
+**Original Priority Score**: [score]
+**Severity**: [Critical/High/Medium/Low]
+**Files Modified**: [count]
+**Lines Changed**: +[additions] -[deletions]
 
-#### Integration Tests: [path/to/integration_test.go]
-```go
-// Complete test implementation
-```
+**Issue**: [Description]
+**Solution**: [What was done]
+**Testing**: [Tests added/updated]
+**Verification**: [How it was verified]
 
-### Verification Results
-- [✓] Syntax validation passed
-- [✓] Pattern compliance verified
-- [✓] Tests pass: [X/Y]
-- [✓] Documentation alignment confirmed
-- [✓] No regressions detected
-- [✓] Security review passed
+---
 
-### Deployment Instructions
-1. [Step-by-step deployment guidance]
+[Repeat for each fix]
+
+## Summary
+- Total issues fixed: [count]
+- Critical issues resolved: [count]
+- High priority issues resolved: [count]
+- Test coverage added: [percentage or count]
+- All tests passing: [Yes/No]
 ```
 
 ## QUALITY CHECKS:
-Execute these automated validations:
-1. Confirm all documented features have gap status assessed
-2. Verify each gap includes exact README.md quote with line number
-3. Ensure all gaps have reproducible evidence with code snippets
-4. Validate priority scoring calculations are mathematically correct
-5. Confirm generated repair code is syntactically valid Go
-6. Verify repair code follows existing codebase patterns
-7. Ensure all repairs include comprehensive test coverage
-8. Validate repairs maintain backward compatibility where required
-9. Check that no new security vulnerabilities are introduced
-10. Confirm documentation alignment after repairs
+Before finalizing, verify:
+1. ✓ AUDIT.md created in repository root following AUDIT_ME.md format
+2. ✓ All audit categories from AUDIT_ME.md have been assessed
+3. ✓ Each audit finding includes file location, code evidence, and recommended fix
+4. ✓ Priority scores calculated correctly using the formula
+5. ✓ Top 5 issues selected for fixing based on priority
+6. ✓ All code fixes compile without errors (`go build ./...`)
+7. ✓ All tests pass (`go test ./...`)
+8. ✓ README.md checked for discrepancies and fixed if found
+9. ✓ ROADMAP.md checked for discrepancies and fixed if found
+10. ✓ ROADMAP_V2.md checked for discrepancies and fixed if found
+11. ✓ Version numbers consistent across all documentation files
+12. ✓ Duplicate content removed from documentation
+13. ✓ Completion markers accurate and in past tense for completed work
+14. ✓ DOCUMENTATION-FIXES.md created summarizing doc changes
+15. ✓ FIXES-IMPLEMENTED.md created documenting code repairs
 
-## EXAMPLES:
-
-### Example Gap Detection:
-
-### Gap #1: Rate Limiter Allows One Extra Request [Priority Score: 47.2]
-**Severity:** Functional Mismatch
-**Documentation Reference:**
-> "The API rate limiter enforces a strict limit of 100 requests per minute per IP address" (README.md:147)
-
-**Implementation Location:** `middleware/ratelimit.go:52-67`
-
-**Expected Behavior:** Exactly 100 requests allowed per minute, 101st request blocked
-
-**Actual Implementation:** 101 requests allowed due to off-by-one error in counter comparison
-
-**Gap Details:** The rate limiter uses `<=` comparison instead of `<`, allowing request 101 to proceed before blocking starts. This violates the documented "strict limit" guarantee.
-
-**Reproduction Scenario:**
-```go
-// Send exactly 101 requests within 59 seconds
-// Expected: Request 101 returns 429 Too Many Requests
-// Actual: Request 101 returns 200 OK, request 102 returns 429
-```
-
-**Production Impact:** Medium - Allows 1% more traffic than documented, could cause downstream service overload if multiple IPs exploit this; violates SLA guarantees to customers
-
-**Code Evidence:**
-```go
-if requestCount <= limit { // BUG: Should be < not <=
-    return next(ctx)
-}
-return ErrRateLimitExceeded
-```
-
-**Priority Calculation:**
-- Severity: 7 × User Impact: 4.5 × Production Risk: 5 - Complexity: 0.5
-- Final Score: 47.2
-
-### Example Autonomous Repair:
-
-## Repair #1: Rate Limiter Off-By-One Correction
-**Original Gap Priority:** 47.2
-**Files Modified:** 2
-**Lines Changed:** +12 -3
-
-### Implementation Strategy
-Minimal surgical fix changing comparison operator from `<=` to `<` in rate limiter logic. Added additional test coverage to prevent regression. No API changes or configuration modifications required.
-
-### Code Changes
-
-#### File: middleware/ratelimit.go
-**Action:** Modified
-
-```go
-// Line 52-67: Rate limiter check function
-func (rl *RateLimiter) checkLimit(ctx context.Context, key string) error {
-    rl.mu.Lock()
-    defer rl.mu.Unlock()
-    
-    requestCount := rl.counters[key]
-    
-    // FIXED: Changed <= to < for strict limit enforcement
-    // This ensures exactly 'limit' requests are allowed, not 'limit + 1'
-    if requestCount < rl.limit {
-        rl.counters[key]++
-        return nil
-    }
-    
-    return ErrRateLimitExceeded
-}
-```
-
-### Integration Requirements
-- Dependencies: None (existing packages sufficient)
-- Configuration: No changes required
-- Migration: None required (backward compatible fix)
-
-### Validation Tests
-
-#### Unit Tests: middleware/ratelimit_test.go
-```go
-// Added: Test for exact limit boundary behavior
-func TestRateLimiterStrictLimit(t *testing.T) {
-    limiter := NewRateLimiter(100, time.Minute)
-    key := "test-ip"
-    
-    // Should allow exactly 100 requests
-    for i := 0; i < 100; i++ {
-        err := limiter.checkLimit(context.Background(), key)
-        if err != nil {
-            t.Fatalf("Request %d should succeed, got error: %v", i+1, err)
-        }
-    }
-    
-    // Request 101 should fail
-    err := limiter.checkLimit(context.Background(), key)
-    if err != ErrRateLimitExceeded {
-        t.Fatalf("Request 101 should fail with ErrRateLimitExceeded, got: %v", err)
-    }
-}
-```
-
-### Verification Results
-- [✓] Syntax validation passed
-- [✓] Pattern compliance verified
-- [✓] Tests pass: 8/8 (added 1 new test)
-- [✓] Documentation alignment confirmed
-- [✓] No regressions detected
-- [✓] Security review passed (no new attack vectors)
-
-### Deployment Instructions
-1. Deploy to staging environment
-2. Run existing test suite: `go test ./middleware/...`
-3. Monitor rate limiter metrics for 24 hours
-4. Verify 429 errors occur at exactly 100 requests per IP
-5. Deploy to production during low-traffic window
-6. Alert on-call team of deployment for monitoring
+## EXECUTION ORDER:
+1. **Phase 1**: Conduct audit, create AUDIT.md (follow AUDIT_ME.md methodology)
+2. **Phase 2**: Fix documentation discrepancies in README.md and ROADMAP*.md
+3. **Phase 3**: Prioritize audit findings, implement top 5 code fixes
+4. **Verify**: Run all quality checks above
+5. **Document**: Create DOCUMENTATION-FIXES.md and FIXES-IMPLEMENTED.md summary files

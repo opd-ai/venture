@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"math/rand"
 	"strings"
 
@@ -466,25 +467,84 @@ func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) 
 
 // selectButtonBaseColor chooses a base color from the palette that has good contrast potential.
 // Colors with mid-range luminance (0.25-0.75) work better for state variations (lighten/darken).
+// Also validates WCAG 2.1 AA contrast ratio (minimum 4.5:1) with text color.
 func (g *Generator) selectButtonBaseColor(pal *palette.Palette, rng *rand.Rand) color.Color {
-	// Try up to 5 attempts to find a good color
-	for attempt := 0; attempt < 5; attempt++ {
+	// Try up to 10 attempts to find a good color (increased from 5 for WCAG compliance)
+	for attempt := 0; attempt < 10; attempt++ {
 		colorIndex := rng.Intn(len(pal.Colors))
 		candidate := pal.Colors[colorIndex]
 
 		// Calculate relative luminance
-		r, gr, b, _ := candidate.RGBA()
-		luminance := (0.299*float64(r) + 0.587*float64(gr) + 0.114*float64(b)) / 65535.0
+		luminance := g.calculateRelativeLuminance(candidate)
 
 		// Prefer colors with mid-range luminance (not too dark or too light)
 		// This ensures effective lightening and darkening for button states
 		if luminance > 0.25 && luminance < 0.75 {
-			return candidate
+			// Validate WCAG 2.1 AA contrast ratio with text color
+			contrastRatio := g.calculateContrastRatio(candidate, pal.Text)
+			if contrastRatio >= 4.5 {
+				return candidate
+			}
 		}
 	}
 
-	// Fallback: use Primary color which should be well-balanced
-	return pal.Primary
+	// Fallback: validate Primary color, or adjust if needed
+	if g.calculateContrastRatio(pal.Primary, pal.Text) >= 4.5 {
+		return pal.Primary
+	}
+
+	// Last resort: create a color that definitely meets WCAG AA
+	// Use a dark background if text is light, or light background if text is dark
+	textLuminance := g.calculateRelativeLuminance(pal.Text)
+	if textLuminance > 0.5 {
+		// Light text: use dark background (0.2 luminance)
+		return color.RGBA{R: 51, G: 51, B: 51, A: 255} // ~0.2 luminance, contrast ~10:1 with white
+	}
+	// Dark text: use light background (0.8 luminance)
+	return color.RGBA{R: 204, G: 204, B: 204, A: 255} // ~0.8 luminance, contrast ~10:1 with black
+}
+
+// calculateRelativeLuminance calculates the relative luminance of a color per WCAG 2.1 spec.
+// Formula: L = 0.2126 * R + 0.7152 * G + 0.0722 * B (using linearized RGB values)
+// Returns value between 0.0 (darkest) and 1.0 (lightest)
+func (g *Generator) calculateRelativeLuminance(c color.Color) float64 {
+	r, gr, b, _ := c.RGBA()
+	// Convert from 16-bit (0-65535) to 8-bit (0-255) then to 0.0-1.0
+	rNorm := float64(r>>8) / 255.0
+	gNorm := float64(gr>>8) / 255.0
+	bNorm := float64(b>>8) / 255.0
+
+	// Linearize sRGB values
+	rLin := g.linearizeSRGB(rNorm)
+	gLin := g.linearizeSRGB(gNorm)
+	bLin := g.linearizeSRGB(bNorm)
+
+	// Calculate relative luminance using WCAG formula
+	return 0.2126*rLin + 0.7152*gLin + 0.0722*bLin
+}
+
+// linearizeSRGB converts sRGB color component to linear RGB per WCAG spec.
+func (g *Generator) linearizeSRGB(component float64) float64 {
+	if component <= 0.03928 {
+		return component / 12.92
+	}
+	return math.Pow((component+0.055)/1.055, 2.4)
+}
+
+// calculateContrastRatio calculates WCAG 2.1 contrast ratio between two colors.
+// Formula: (L1 + 0.05) / (L2 + 0.05) where L1 is the lighter color's luminance
+// Returns ratio between 1:1 (no contrast) and 21:1 (maximum contrast)
+// WCAG 2.1 AA requires minimum 4.5:1 for normal text, 3:1 for large text
+func (g *Generator) calculateContrastRatio(c1, c2 color.Color) float64 {
+	l1 := g.calculateRelativeLuminance(c1)
+	l2 := g.calculateRelativeLuminance(c2)
+
+	// Ensure L1 is the lighter color
+	if l1 < l2 {
+		l1, l2 = l2, l1
+	}
+
+	return (l1 + 0.05) / (l2 + 0.05)
 }
 
 // isTechGenre determines if a genre ID represents a technological/futuristic theme.

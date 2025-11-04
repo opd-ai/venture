@@ -202,7 +202,7 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 		effectType := "magic" // Generic magic sound
 		if err := s.audioMgr.PlaySFX(effectType, int64(caster.ID)); err != nil {
 			// Audio failure is non-critical, continue
-			_ = err
+			s.logger.Debugf("Failed to play spell cast sound: %v", err)
 		}
 	}
 

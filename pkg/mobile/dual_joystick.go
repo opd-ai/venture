@@ -3,6 +3,7 @@ package mobile
 import (
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -179,6 +180,9 @@ type VirtualJoystick struct {
 	ActiveColor   color.Color // Color when active
 	DeadZoneColor color.Color // Dead zone indicator
 	Opacity       float64
+
+	// Haptic feedback tracking
+	lastHaptic time.Time
 }
 
 // NewVirtualJoystick creates a virtual joystick at the specified position.
@@ -260,6 +264,9 @@ func (j *VirtualJoystick) Update(touches map[ebiten.TouchID]*Touch) {
 				j.CurrentX = float64(touch.StartX)
 				j.CurrentY = float64(touch.StartY)
 			}
+
+			// Trigger light haptic feedback when joystick is touched
+			triggerHaptic(hapticLightDuration, hapticLightMagnitude, &j.lastHaptic)
 
 			// Initial direction from current position
 			j.updateDirection(float64(touch.X), float64(touch.Y))

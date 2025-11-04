@@ -613,3 +613,30 @@ func TestVirtualJoystickMaintainsAimDirection(t *testing.T) {
 		t.Errorf("Direction = (%v, %v), want (0, 0) when inactive", dirX, dirY)
 	}
 }
+
+// TestVirtualJoystickHapticIntegration tests joystick triggers haptic on touch.
+func TestVirtualJoystickHapticIntegration(t *testing.T) {
+	joystick := NewVirtualJoystick(200, 200, 80, JoystickTypeMovement)
+
+	// Initially lastHaptic should be zero
+	if !joystick.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be zero initially")
+	}
+
+	// Touch joystick
+	touches := map[ebiten.TouchID]*Touch{
+		0: {ID: 0, X: 220, Y: 220, StartX: 220, StartY: 220, Active: true},
+	}
+
+	joystick.Update(touches)
+
+	// lastHaptic should be set after touch
+	if joystick.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be set after joystick touch")
+	}
+
+	// Should be active now
+	if !joystick.IsActive() {
+		t.Error("Joystick should be active after touch")
+	}
+}

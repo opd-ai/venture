@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -11,6 +12,35 @@ import (
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 )
+
+// Haptic feedback settings for mobile controls.
+// These values provide tactile responsiveness without being intrusive.
+const (
+	hapticLightDuration   = 10 * time.Millisecond // Light tap for D-pad touch
+	hapticLightMagnitude  = 0.3                   // 30% strength
+	hapticButtonDuration  = 20 * time.Millisecond // Medium tap for button press
+	hapticButtonMagnitude = 0.5                   // 50% strength
+	hapticMinInterval     = 50 * time.Millisecond // Minimum time between haptics
+)
+
+// triggerHaptic triggers device vibration with rate limiting.
+// lastHaptic should be a pointer to the last haptic time (0 for first call).
+func triggerHaptic(duration time.Duration, magnitude float64, lastHaptic *time.Time) {
+	now := time.Now()
+
+	// Rate limiting: only trigger if enough time has passed since last haptic
+	if !lastHaptic.IsZero() && now.Sub(*lastHaptic) < hapticMinInterval {
+		return
+	}
+
+	// Trigger vibration on mobile devices
+	ebiten.Vibrate(&ebiten.VibrateOptions{
+		Duration:  duration,
+		Magnitude: magnitude,
+	})
+
+	*lastHaptic = now
+}
 
 // VirtualDPad represents an on-screen directional pad for movement.
 type VirtualDPad struct {
@@ -29,6 +59,9 @@ type VirtualDPad struct {
 	InnerColor  color.Color
 	ActiveColor color.Color
 	Opacity     float64
+
+	// Haptic feedback tracking
+	lastHaptic time.Time
 }
 
 // NewVirtualDPad creates a new virtual D-pad at the specified position.
@@ -93,6 +126,10 @@ func (d *VirtualDPad) Update(touches map[ebiten.TouchID]*Touch) {
 			// Touch started in D-pad area
 			d.TouchID = id
 			d.Active = true
+
+			// Trigger light haptic feedback when D-pad is touched
+			triggerHaptic(hapticLightDuration, hapticLightMagnitude, &d.lastHaptic)
+
 			// Initial direction will be set on next Update
 			break
 		}
@@ -140,6 +177,9 @@ type VirtualButton struct {
 	ActiveColor color.Color
 	TextColor   color.Color
 	Opacity     float64
+
+	// Haptic feedback tracking
+	lastHaptic time.Time
 }
 
 // NewVirtualButton creates a new virtual button at the specified position.
@@ -170,6 +210,9 @@ func (b *VirtualButton) Update(touches map[ebiten.TouchID]*Touch) {
 			// Touch released - trigger button press
 			if b.Active {
 				b.Pressed = true
+
+				// Trigger medium haptic feedback when button is pressed
+				triggerHaptic(hapticButtonDuration, hapticButtonMagnitude, &b.lastHaptic)
 			}
 			b.TouchID = -1
 			b.Active = false

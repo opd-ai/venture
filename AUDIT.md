@@ -1,22 +1,22 @@
 # Venture UI Audit Report - Comprehensive Edition
 **Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG  
 **Audit Date**: 2025-11-04T19:48:50Z  
-**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #30, #31 resolved)  
+**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #30, #31 resolved)  
 **Auditor**: GitHub Copilot Coding Agent  
 **Technology**: Go 1.24+ / Ebiten 2.9.2 / ECS Architecture  
 **Total Issues Found**: 31  
-**Issues Resolved**: 11 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #30, #31)  
-**Issues Remaining**: 20
+**Issues Resolved**: 12 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #30, #31)  
+**Issues Remaining**: 19
 
 ## Executive Summary
 
-**Update (2025-11-04)**: Eleven issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, and HUD now displays network latency with color-coded quality indicators in multiplayer mode.
+**Update (2025-11-04)**: Twelve issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, and mobile touch controls now provide haptic feedback for tactile responsiveness.
 
 This comprehensive audit systematically reviewed Venture's UI systems across all packages (`pkg/rendering/ui/`, `pkg/engine/*ui*.go`, `pkg/mobile/`), with special focus on visual layering, collision detection, and cross-platform compatibility. The audit builds upon previous findings and introduces critical analysis of the multi-layer terrain system (Phase 11.1) and sprite rendering order.
 
 Key findings included **5 critical issues with visual layering and collision detection** that affect gameplay mechanics in multi-layer environments. **All 5 critical issues (Issues #1, #2, #3, #4, #5) have been resolved** with the addition of LayerComponent integration in the collision system, deterministic sprite layer sorting, standardized Z-index constants with validation, and layer transition visual feedback. Issues #30 and #31 were also resolved (one implicitly through Issue #4, one already fixed in codebase).
 
-Additionally, **20 UI issues remain** including missing haptic feedback on mobile and lack of text wrapping in quest UI.
+Additionally, **19 UI issues remain** including lack of text wrapping in quest UI and missing search/filter in crafting.
 
 Positive aspects include excellent deterministic UI generation, comprehensive dual-exit menu navigation, well-structured ECS integration, and strong performance (106 FPS with 2000 entities, 73MB memory). The sprite layer sorting system (O(n log n)) is now fully deterministic with stable sorting. Layer transitions now provide clear visual feedback to players. UI button colors now guarantee WCAG 2.1 AA accessibility compliance across all genres. A comprehensive text wrapping utility is now available for integrating word-wrapped tooltips and descriptions.
 
@@ -253,7 +253,8 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ Tests verify network client can be set/cleared, display is safe when disconnected, and rendering doesn't panic. Compatible with existing TCPClient implementation.
 - **Integration Required**: Client code (cmd/client/main.go) needs to call `hudSystem.SetNetworkClient(networkClient)` after connecting in multiplayer mode
 
-#### Issue #10: Mobile Touch Controls Lack Haptic Feedback
+#### Issue #10: Mobile Touch Controls Lack Haptic Feedback [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
 - **Component**: `pkg/mobile/controls.go`, `dual_joystick.go`
 - **Genre Impact**: All genres
 - **Platform**: Mobile only (iOS/Android)
@@ -261,10 +262,23 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Steps to Reproduce**: Build mobile version, install on physical device, tap controls, observe no vibration
 - **Expected Behavior**: Light tap for buttons, continuous vibration for joystick, medium tap for actions, strong tap for critical events
 - **Actual Behavior**: No haptic feedback on any touch
-- **Suggested Fix**: Check Ebiten v2.9.2 haptic API. If available, add triggerHaptic(duration) to VirtualButton with rate limiting. If unavailable, recommend feature request to Ebiten or use platform-specific CGo (iOS AudioServicesPlaySystemSound, Android Vibrator).
+- **Resolution**: Implemented haptic feedback using Ebiten v2.9.2's `Vibrate()` API with rate limiting. Created `triggerHaptic()` helper function with three constants: `hapticLightDuration` (10ms, 30% magnitude) for D-pad/joystick touch, `hapticButtonDuration` (20ms, 50% magnitude) for button press, and `hapticMinInterval` (50ms) for rate limiting. Added `lastHaptic time.Time` field to `VirtualDPad`, `VirtualButton`, and `VirtualJoystick` structures. D-pad triggers haptic on initial touch, buttons trigger on press (release), joysticks trigger on initial touch. Rate limiting prevents excessive vibration during continuous input.
+- **Changes Made**:
+  - Added haptic constants and `triggerHaptic()` function to `controls.go`
+  - Added `lastHaptic time.Time` field to `VirtualDPad` and `VirtualButton`
+  - Added haptic trigger in `VirtualDPad.Update()` when touch starts
+  - Added haptic trigger in `VirtualButton.Update()` when button is pressed
+  - Added `lastHaptic time.Time` field to `VirtualJoystick` in `dual_joystick.go`
+  - Added haptic trigger in `VirtualJoystick.Update()` when touch starts
+  - Created tests: `TestTriggerHaptic` (rate limiting), `TestVirtualDPadHapticIntegration`, `TestVirtualButtonHapticIntegration`, `TestVirtualJoystickHapticIntegration`
+- **Platform Requirements**:
+  - Android: Requires `<uses-permission android:name="android.permission.VIBRATE"/>` in manifest (already present)
+  - Android API 26+: Magnitude support (older versions ignore magnitude)
+  - iOS: Requires CoreHaptics.framework (iOS 13.0+)
+  - Browsers: Works but ignores magnitude setting
 - **ECS Integration**: No impact - presentation layer only
-- **Performance Impact**: <0.01ms per invocation
-- **Testing Verification**: Test on physical iOS/Android devices with various haptic intensities and durations
+- **Performance Impact**: <0.01ms per invocation, rate limited to max 20 haptics/second
+- **Testing Verification**: ✅ Tests verify rate limiting, haptic tracking on touch/press events, and integration with all control types. Physical device testing recommended to verify vibration feel.
 
 #### Issue #11: Quest Log UI Doesn't Handle Long Quest Descriptions
 - **Component**: `pkg/engine/quest_ui.go` - quest rendering

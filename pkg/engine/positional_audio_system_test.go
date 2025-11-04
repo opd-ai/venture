@@ -49,6 +49,9 @@ func TestPositionalAudioSystem_Update(t *testing.T) {
 	entity.AddComponent(&PositionComponent{X: 600, Y: 500})
 	entity.AddComponent(NewPositionalAudioComponent(1000))
 
+	// Process pending entity additions
+	world.Update(0)
+
 	// Update should calculate volume and pan
 	system.Update(0.016)
 
@@ -125,6 +128,9 @@ func TestPositionalAudioSystem_DistanceFalloff(t *testing.T) {
 			entity.AddComponent(&PositionComponent{X: tt.distance, Y: 0})
 			entity.AddComponent(NewPositionalAudioComponent(tt.maxDistance))
 
+			// Process pending entity additions
+			world.Update(0)
+
 			system.Update(0.016)
 
 			comp, ok := entity.GetComponent("positional_audio")
@@ -178,6 +184,9 @@ func TestPositionalAudioSystem_StereoPanning(t *testing.T) {
 			entity := world.CreateEntity()
 			entity.AddComponent(&PositionComponent{X: tt.x, Y: tt.y})
 			entity.AddComponent(NewPositionalAudioComponent(1000))
+
+			// Process pending entity additions
+			world.Update(0)
 
 			system.Update(0.016)
 
@@ -255,6 +264,9 @@ func TestPositionalAudioSystem_Occlusion(t *testing.T) {
 			audioComp.OcclusionEnabled = true
 			entity.AddComponent(audioComp)
 
+			// Process pending entity additions
+			world.Update(0)
+
 			system.Update(0.016)
 
 			comp, ok := entity.GetComponent("positional_audio")
@@ -286,6 +298,9 @@ func TestPositionalAudioSystem_GetAudioParameters(t *testing.T) {
 	entity := world.CreateEntity()
 	entity.AddComponent(&PositionComponent{X: 200, Y: 100})
 	entity.AddComponent(NewPositionalAudioComponent(1000))
+
+	// Process pending entity additions
+	world.Update(0)
 
 	system.Update(0.016)
 
@@ -338,6 +353,9 @@ func TestPositionalAudioSystem_PerformanceMode(t *testing.T) {
 	audioComp := NewPositionalAudioComponent(1000)
 	audioComp.OcclusionEnabled = true
 	entity.AddComponent(audioComp)
+
+	// Process pending entity additions
+	world.Update(0)
 
 	// With performance mode off, should detect occlusion
 	system.SetPerformanceMode(false)

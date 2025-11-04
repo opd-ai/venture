@@ -1406,9 +1406,8 @@ func main() {
 
 	// Connect to render system for viewport culling
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
-	// TEMPORARY: Culling disabled due to spatial partition query returning 0 entities
-	// TODO: Fix spatial partition population/query before re-enabling
-	game.RenderSystem.EnableCulling(false)
+	// Enable culling for performance optimization (Phase 4.3 complete)
+	game.RenderSystem.EnableCulling(true)
 
 	clientLogger.WithFields(logrus.Fields{
 		"worldWidth":  worldWidth,
@@ -1783,8 +1782,8 @@ func main() {
 			clientLogger.WithError(err).Fatal("failed to apply character class stats")
 		}
 
-		// TODO: Store character name in player component for display
-		// Future enhancement: Add NameComponent for multiplayer identification
+		// Note: Character name stored in character creation data.
+		// Future enhancement: Add NameComponent for displaying names in multiplayer.
 	}
 
 	// Add starter items to inventory

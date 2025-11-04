@@ -95,6 +95,14 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 		g.generateBlood(system, pal, rng, config)
 	case ParticleDust:
 		g.generateDust(system, pal, rng, config)
+	case ParticleEmber:
+		g.generateEmbers(system, pal, rng, config)
+	case ParticleSparkle:
+		g.generateSparkles(system, pal, rng, config)
+	case ParticleSmokePlume:
+		g.generateSmokePlume(system, pal, rng, config)
+	case ParticleDebris:
+		g.generateDebris(system, pal, rng, config)
 	default:
 		err := fmt.Errorf("unknown particle type: %d", config.Type)
 		if g.logger != nil {
@@ -278,6 +286,169 @@ func (g *Generator) generateDust(system *ParticleSystem, pal *palette.Palette, r
 			InitialLife: config.Duration * (0.8 + rng.Float64()*0.4),
 			Rotation:    rng.Float64() * 2 * math.Pi,
 			RotationVel: (rng.Float64()*2 - 1) * 1,
+		}
+	}
+}
+
+// generateEmbers creates glowing fire embers that rise and fade.
+// Embers use rising behavior and air resistance for realistic floating.
+func (g *Generator) generateEmbers(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
+	emberColors := []color.Color{
+		color.RGBA{255, 100, 0, 255},   // Bright orange
+		color.RGBA{255, 150, 50, 255},  // Light orange
+		color.RGBA{200, 50, 0, 255},    // Dark red
+		color.RGBA{255, 200, 100, 255}, // Yellow-orange
+	}
+
+	for i := range system.Particles {
+		// Embers rise upward with some horizontal drift
+		angle := -math.Pi/2 + (rng.Float64()*2-1)*math.Pi/8
+		speed := config.SpreadY * (0.3 + rng.Float64()*0.4)
+
+		// Physics config for rising + air resistance
+		physics := PhysicsConfig{
+			Gravity:       config.Gravity,
+			AirResistance: 0.3, // Moderate air resistance
+		}
+
+		system.Particles[i] = Particle{
+			X:           (rng.Float64()*2 - 1) * 2,
+			Y:           0,
+			VX:          math.Cos(angle) * speed * 0.5,
+			VY:          math.Sin(angle) * speed,
+			Color:       emberColors[rng.Intn(len(emberColors))],
+			Size:        config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize),
+			Life:        1.0,
+			InitialLife: config.Duration * (0.6 + rng.Float64()*0.8),
+			Rotation:    rng.Float64() * 2 * math.Pi,
+			RotationVel: (rng.Float64()*2 - 1) * 3,
+			Behavior:    BehaviorRising | BehaviorAirResistance,
+			Physics:     physics,
+		}
+	}
+}
+
+// generateSparkles creates magical sparkles that orbit and trail.
+// Sparkles use orbital behavior for swirling motion.
+func (g *Generator) generateSparkles(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
+	// Use palette colors for genre-specific sparkles
+	sparkleColors := []color.Color{
+		pal.Primary,
+		pal.Secondary,
+		pal.Colors[rng.Intn(len(pal.Colors)/2)],
+		color.RGBA{255, 255, 255, 255}, // White sparkle
+	}
+
+	for i := range system.Particles {
+		// Random starting position in a circle
+		angle := rng.Float64() * 2 * math.Pi
+		radius := rng.Float64() * 30.0
+
+		// Orbital physics
+		physics := PhysicsConfig{
+			AttractorX:  0,
+			AttractorY:  0,
+			OrbitRadius: 40.0,
+			OrbitSpeed:  2.0 + rng.Float64()*2.0,
+		}
+
+		system.Particles[i] = Particle{
+			X:           math.Cos(angle) * radius,
+			Y:           math.Sin(angle) * radius,
+			VX:          -math.Sin(angle) * physics.OrbitSpeed * radius,
+			VY:          math.Cos(angle) * physics.OrbitSpeed * radius,
+			Color:       sparkleColors[rng.Intn(len(sparkleColors))],
+			Size:        config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)*0.6,
+			Life:        1.0,
+			InitialLife: config.Duration * (0.8 + rng.Float64()*0.4),
+			Rotation:    rng.Float64() * 2 * math.Pi,
+			RotationVel: (rng.Float64()*2 - 1) * 4,
+			Behavior:    BehaviorOrbit,
+			Physics:     physics,
+		}
+	}
+}
+
+// generateSmokePlume creates billowing smoke clouds.
+// Smoke plumes use rising + air resistance for realistic billowing.
+func (g *Generator) generateSmokePlume(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
+	plumeColors := []color.Color{
+		color.RGBA{80, 80, 80, 180},
+		color.RGBA{100, 100, 100, 160},
+		color.RGBA{120, 120, 120, 140},
+		color.RGBA{60, 60, 60, 200},
+	}
+
+	for i := range system.Particles {
+		// Plumes billow upward and outward
+		angle := -math.Pi/2 + (rng.Float64()*2-1)*math.Pi/3
+		speed := config.SpreadY * (0.4 + rng.Float64()*0.6)
+
+		physics := PhysicsConfig{
+			Gravity:       -50.0, // Slight upward force
+			AirResistance: 0.4,   // High air resistance for slow billowing
+		}
+
+		system.Particles[i] = Particle{
+			X:           (rng.Float64()*2 - 1) * 5,
+			Y:           0,
+			VX:          math.Cos(angle) * speed * 0.7,
+			VY:          math.Sin(angle) * speed,
+			Color:       plumeColors[rng.Intn(len(plumeColors))],
+			Size:        config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)*1.5, // Larger
+			Life:        1.0,
+			InitialLife: config.Duration * (1.0 + rng.Float64()*0.5), // Longer life
+			Rotation:    rng.Float64() * 2 * math.Pi,
+			RotationVel: (rng.Float64()*2 - 1) * 1.5,
+			Behavior:    BehaviorRising | BehaviorAirResistance,
+			Physics:     physics,
+		}
+	}
+}
+
+// generateDebris creates bouncing debris chunks.
+// Debris uses gravity + bouncing for realistic physics.
+func (g *Generator) generateDebris(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
+	debrisColors := []color.Color{
+		color.RGBA{100, 80, 60, 255},   // Brown
+		color.RGBA{120, 120, 120, 255}, // Gray
+		color.RGBA{80, 60, 40, 255},    // Dark brown
+		color.RGBA{140, 120, 100, 255}, // Light brown
+	}
+
+	for i := range system.Particles {
+		// Debris shoots outward in all directions
+		angle := rng.Float64() * 2 * math.Pi
+		speed := config.SpreadX * (0.6 + rng.Float64()*0.8)
+
+		// Ground level from config (if specified)
+		groundY := 0.0
+		if val, ok := config.Custom["groundY"]; ok {
+			if gy, ok := val.(float64); ok {
+				groundY = gy
+			}
+		}
+
+		physics := PhysicsConfig{
+			Gravity:       config.Gravity,
+			GroundY:       groundY,
+			BounceDamping: 0.4 + rng.Float64()*0.3, // Variable bounce
+			AirResistance: 0.1,                     // Light air resistance
+		}
+
+		system.Particles[i] = Particle{
+			X:           0,
+			Y:           -rng.Float64() * 3, // Start slightly above origin
+			VX:          math.Cos(angle) * speed,
+			VY:          math.Sin(angle) * speed,
+			Color:       debrisColors[rng.Intn(len(debrisColors))],
+			Size:        config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)*1.2,
+			Life:        1.0,
+			InitialLife: config.Duration * (0.8 + rng.Float64()*0.4),
+			Rotation:    rng.Float64() * 2 * math.Pi,
+			RotationVel: (rng.Float64()*2 - 1) * 6, // Fast rotation
+			Behavior:    BehaviorGravity | BehaviorBounce | BehaviorAirResistance,
+			Physics:     physics,
 		}
 	}
 }

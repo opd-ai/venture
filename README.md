@@ -12,6 +12,8 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 📱 **Native mobile support** - iOS and Android with touch-optimized controls
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
 - 🎨 Runtime-generated graphics using procedural techniques
+- 💡 **Dynamic lighting** - Atmospheric lighting with flickering torches, spell lights, and genre-specific presets
+- 🌦️ **Weather effects** - Procedural rain, snow, fog, and genre-appropriate weather
 - 🎵 Procedural audio synthesis for music and sound effects
 - 🌐 Multiplayer co-op supporting high-latency connections (200-5000ms, onion services)
 - 🎭 Multiple genres (fantasy, sci-fi, post-apocalyptic, horror, cyberpunk)
@@ -19,9 +21,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Version:** 1.0 Beta - Ready for Release 🎉
+**Version:** 1.1 Production - All Features Complete ✅
 
-All core features implemented and tested. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
+Core features implemented, tested, and production-ready. Version 2.0 (advanced features) in development. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
 
 ## Quick Start
 
@@ -47,9 +49,23 @@ go build -o venture-server ./cmd/server
 
 # Or with custom settings
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
+
+# Enable dynamic lighting and weather effects
+./venture-client -enable-lighting -enable-weather
 ```
 
+**Visual Features:**
+- `-enable-lighting`: Adds atmospheric lighting with torches, spell lights, and dynamic shadows
+- `-enable-weather`: Enables genre-appropriate weather (rain, snow, fog, etc.)
+- `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
+- `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
+
 **Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), ESC (close menus/pause), F5 (save), F9 (load)
+
+**Gameplay Systems:**
+- **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
+- **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
+- **Skills & Progression**: Unlock new abilities through the skill tree, gain experience from combat and quests
 
 **Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 

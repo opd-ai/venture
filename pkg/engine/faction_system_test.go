@@ -166,7 +166,7 @@ func TestFactionSystem_GetPlayerReputation_NoPlayer(t *testing.T) {
 
 func TestFactionSystem_CanTrade(t *testing.T) {
 	world := NewWorld()
-	fs := NewFactionSystem(world, logrus.New())
+	_ = NewFactionSystem(world, logrus.New())
 
 	tests := []struct {
 		name       string
@@ -196,7 +196,7 @@ func TestFactionSystem_CanTrade(t *testing.T) {
 
 func TestFactionSystem_ShouldAttackPlayer(t *testing.T) {
 	world := NewWorld()
-	fs := NewFactionSystem(world, logrus.New())
+	_ = NewFactionSystem(world, logrus.New())
 
 	tests := []struct {
 		name         string
@@ -224,7 +224,7 @@ func TestFactionSystem_ShouldAttackPlayer(t *testing.T) {
 
 func TestFactionSystem_GetTradeDiscount(t *testing.T) {
 	world := NewWorld()
-	fs := NewFactionSystem(world, logrus.New())
+	_ = NewFactionSystem(world, logrus.New())
 
 	tests := []struct {
 		name       string
@@ -256,7 +256,7 @@ func TestFactionSystem_ProcessKillReputation_NoVictimFaction(t *testing.T) {
 	fs := NewFactionSystem(world, logrus.New())
 
 	killer := world.CreateEntity()
-	killer.AddComponent(PlayerComponent{})
+	killer.AddComponent(&EbitenInput{})
 
 	victim := world.CreateEntity()
 	// Victim has no faction component
@@ -276,7 +276,7 @@ func TestFactionSystem_ProcessKillReputation_PlayerVictim(t *testing.T) {
 	killer := world.CreateEntity()
 
 	victim := world.CreateEntity()
-	victim.AddComponent(PlayerComponent{})
+	victim.AddComponent(&EbitenInput{})
 	victim.AddComponent(FactionComponent{
 		FactionID:       "test_faction",
 		IsPlayerFaction: true,
@@ -305,7 +305,7 @@ func TestFactionSystem_ProcessKillReputation_PlayerKillsMember(t *testing.T) {
 	fs.AddFaction(faction)
 
 	killer := world.CreateEntity()
-	killer.AddComponent(PlayerComponent{})
+	killer.AddComponent(&EbitenInput{})
 
 	victim := world.CreateEntity()
 	victim.AddComponent(FactionComponent{
@@ -354,7 +354,7 @@ func TestFactionSystem_ProcessKillReputation_EnemyFaction(t *testing.T) {
 	fs.AddFaction(faction2)
 
 	killer := world.CreateEntity()
-	killer.AddComponent(PlayerComponent{})
+	killer.AddComponent(&EbitenInput{})
 
 	victim := world.CreateEntity()
 	victim.AddComponent(FactionComponent{

@@ -7,6 +7,7 @@ package faction
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -88,17 +89,28 @@ func (g *Generator) chooseFactionType(rng *rand.Rand, genreID string) engine.Fac
 	// Genre-specific faction type weights
 	weights := g.getFactionTypeWeights(genreID)
 
-	// Weighted random selection
+	// Sort faction types for deterministic iteration
+	// FactionType is a string type, so lexicographic comparison ensures consistent ordering
+	types := make([]engine.FactionType, 0, len(weights))
+	for factionType := range weights {
+		types = append(types, factionType)
+	}
+	sort.Slice(types, func(i, j int) bool {
+		return types[i] < types[j]
+	})
+
+	// Calculate total weight
 	total := 0
 	for _, weight := range weights {
 		total += weight
 	}
 
+	// Weighted random selection with deterministic iteration
 	roll := rng.Intn(total)
 	cumulative := 0
 
-	for factionType, weight := range weights {
-		cumulative += weight
+	for _, factionType := range types {
+		cumulative += weights[factionType]
 		if roll < cumulative {
 			return factionType
 		}

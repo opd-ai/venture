@@ -74,9 +74,9 @@ func TestGenerateComposite_MultipleLayers(t *testing.T) {
 			Complexity: 0.5,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
-			{Type: LayerHead, ZIndex: 20, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle, OffsetY: -8},
-			{Type: LayerLegs, ZIndex: 5, Scale: 1.0, Visible: true, Seed: 12347, ShapeType: shapes.ShapeRectangle, OffsetY: 8},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle, OffsetY: -8},
+			{Type: LayerLegs, ZIndex: ZIndexLegs, Scale: 1.0, Visible: true, Seed: 12347, ShapeType: shapes.ShapeRectangle, OffsetY: 8},
 		},
 		Equipment:     []EquipmentVisual{},
 		StatusEffects: []StatusEffect{},
@@ -108,7 +108,7 @@ func TestGenerateComposite_WithEquipment(t *testing.T) {
 			Complexity: 0.5,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
 		},
 		Equipment: []EquipmentVisual{
 			{
@@ -148,7 +148,7 @@ func TestGenerateComposite_WithStatusEffects(t *testing.T) {
 			Complexity: 0.5,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
 		},
 		Equipment: []EquipmentVisual{},
 		StatusEffects: []StatusEffect{
@@ -178,7 +178,7 @@ func TestGenerateComposite_LayerOrdering(t *testing.T) {
 
 	pal, _ := palette.NewGenerator().Generate("fantasy", 12345)
 
-	// Layers in non-sorted order
+	// Layers in non-sorted order but with correct Z-indices
 	config := CompositeConfig{
 		BaseConfig: Config{
 			Type:    SpriteEntity,
@@ -188,9 +188,9 @@ func TestGenerateComposite_LayerOrdering(t *testing.T) {
 			Palette: pal,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerHead, ZIndex: 30, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle},
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
-			{Type: LayerLegs, ZIndex: 5, Scale: 1.0, Visible: true, Seed: 12347, ShapeType: shapes.ShapeRectangle},
+			{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerLegs, ZIndex: ZIndexLegs, Scale: 1.0, Visible: true, Seed: 12347, ShapeType: shapes.ShapeRectangle},
 		},
 		Equipment:     []EquipmentVisual{},
 		StatusEffects: []StatusEffect{},
@@ -222,8 +222,8 @@ func TestGenerateComposite_InvisibleLayers(t *testing.T) {
 			Palette: pal,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
-			{Type: LayerHead, ZIndex: 20, Scale: 1.0, Visible: false, Seed: 12346, ShapeType: shapes.ShapeCircle}, // Invisible
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: false, Seed: 12346, ShapeType: shapes.ShapeCircle}, // Invisible
 		},
 		Equipment:     []EquipmentVisual{},
 		StatusEffects: []StatusEffect{},
@@ -346,8 +346,8 @@ func BenchmarkGenerateComposite(b *testing.B) {
 			Palette: pal,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
-			{Type: LayerHead, ZIndex: 20, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeCircle},
 		},
 		Equipment:     []EquipmentVisual{},
 		StatusEffects: []StatusEffect{},
@@ -373,7 +373,7 @@ func BenchmarkGenerateComposite_WithEquipment(b *testing.B) {
 			Palette: pal,
 		},
 		Layers: []LayerConfig{
-			{Type: LayerBody, ZIndex: 10, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
 		},
 		Equipment: []EquipmentVisual{
 			{Slot: "weapon", Seed: 54321, Layer: LayerWeapon},
@@ -391,4 +391,137 @@ func BenchmarkGenerateComposite_WithEquipment(b *testing.B) {
 // Helper for testing
 func NewTestRNG(seed int64) *rand.Rand {
 	return rand.New(rand.NewSource(seed))
+}
+
+// TestZIndexConstants verifies Z-index constants follow correct ordering.
+func TestZIndexConstants(t *testing.T) {
+	// Verify ordering: Legs < Body < Armor < Head < Weapon < Accessory < Effect
+	if ZIndexLegs >= ZIndexBody {
+		t.Errorf("ZIndexLegs (%d) should be less than ZIndexBody (%d)", ZIndexLegs, ZIndexBody)
+	}
+	if ZIndexBody >= ZIndexArmor {
+		t.Errorf("ZIndexBody (%d) should be less than ZIndexArmor (%d)", ZIndexBody, ZIndexArmor)
+	}
+	if ZIndexArmor >= ZIndexHead {
+		t.Errorf("ZIndexArmor (%d) should be less than ZIndexHead (%d)", ZIndexArmor, ZIndexHead)
+	}
+	if ZIndexHead >= ZIndexWeapon {
+		t.Errorf("ZIndexHead (%d) should be less than ZIndexWeapon (%d)", ZIndexHead, ZIndexWeapon)
+	}
+	if ZIndexWeapon >= ZIndexAccessory {
+		t.Errorf("ZIndexWeapon (%d) should be less than ZIndexAccessory (%d)", ZIndexWeapon, ZIndexAccessory)
+	}
+	if ZIndexAccessory >= ZIndexEffect {
+		t.Errorf("ZIndexAccessory (%d) should be less than ZIndexEffect (%d)", ZIndexAccessory, ZIndexEffect)
+	}
+}
+
+// TestValidateZOrderIntegrity_ValidConfig tests validation with proper Z-indices.
+func TestValidateZOrderIntegrity_ValidConfig(t *testing.T) {
+	layers := []LayerConfig{
+		{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true},
+		{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true},
+	}
+
+	equipment := []EquipmentVisual{
+		{Slot: "weapon", Layer: LayerWeapon},
+		{Slot: "armor", Layer: LayerArmor},
+	}
+
+	err := validateZOrderIntegrity(layers, equipment)
+	if err != nil {
+		t.Errorf("Expected valid config to pass validation, got error: %v", err)
+	}
+}
+
+// TestValidateZOrderIntegrity_InvalidBodyZIndex tests validation with wrong body Z-index.
+func TestValidateZOrderIntegrity_InvalidBodyZIndex(t *testing.T) {
+	layers := []LayerConfig{
+		{Type: LayerBody, ZIndex: 999, Scale: 1.0, Visible: true}, // Wrong Z-index
+		{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true},
+	}
+
+	equipment := []EquipmentVisual{}
+
+	err := validateZOrderIntegrity(layers, equipment)
+	if err == nil {
+		t.Error("Expected validation to fail for incorrect body Z-index")
+	}
+}
+
+// TestValidateZOrderIntegrity_InvalidHeadZIndex tests validation with wrong head Z-index.
+func TestValidateZOrderIntegrity_InvalidHeadZIndex(t *testing.T) {
+	layers := []LayerConfig{
+		{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true},
+		{Type: LayerHead, ZIndex: ZIndexLegs, Scale: 1.0, Visible: true}, // Wrong Z-index (below body)
+	}
+
+	equipment := []EquipmentVisual{}
+
+	err := validateZOrderIntegrity(layers, equipment)
+	if err == nil {
+		t.Error("Expected validation to fail for head Z-index below body")
+	}
+}
+
+// TestGetEquipmentZIndex_AllLayers tests Z-index retrieval for all layer types.
+func TestGetEquipmentZIndex_AllLayers(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		layer    LayerType
+		expected int
+	}{
+		{LayerLegs, ZIndexLegs},
+		{LayerBody, ZIndexBody},
+		{LayerArmor, ZIndexArmor},
+		{LayerHead, ZIndexHead},
+		{LayerWeapon, ZIndexWeapon},
+		{LayerAccessory, ZIndexAccessory},
+		{LayerEffect, ZIndexEffect},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.layer.String(), func(t *testing.T) {
+			zIndex := gen.getEquipmentZIndex(tt.layer)
+			if zIndex != tt.expected {
+				t.Errorf("Expected Z-index %d for %s, got %d", tt.expected, tt.layer.String(), zIndex)
+			}
+		})
+	}
+}
+
+// TestGenerateComposite_WithStandardZIndices tests composite generation with standard constants.
+func TestGenerateComposite_WithStandardZIndices(t *testing.T) {
+	gen := NewGenerator()
+	pal, _ := palette.NewGenerator().Generate("fantasy", 12345)
+
+	config := CompositeConfig{
+		BaseConfig: Config{
+			Type:    SpriteEntity,
+			Width:   28,
+			Height:  28,
+			Seed:    12345,
+			Palette: pal,
+		},
+		Layers: []LayerConfig{
+			{Type: LayerBody, ZIndex: ZIndexBody, Scale: 1.0, Visible: true, Seed: 12345, ShapeType: shapes.ShapeCircle},
+			{Type: LayerArmor, ZIndex: ZIndexArmor, Scale: 1.0, Visible: true, Seed: 12346, ShapeType: shapes.ShapeRectangle},
+			{Type: LayerHead, ZIndex: ZIndexHead, Scale: 1.0, Visible: true, Seed: 12347, ShapeType: shapes.ShapeCircle},
+			{Type: LayerWeapon, ZIndex: ZIndexWeapon, Scale: 1.0, Visible: true, Seed: 12348, ShapeType: shapes.ShapeStar},
+		},
+		Equipment: []EquipmentVisual{
+			{Slot: "accessory", Layer: LayerAccessory, Seed: 12349},
+		},
+		StatusEffects: []StatusEffect{},
+	}
+
+	img, err := gen.GenerateComposite(config)
+	if err != nil {
+		t.Fatalf("Failed to generate composite with standard Z-indices: %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("Expected non-nil image")
+	}
 }

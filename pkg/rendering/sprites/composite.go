@@ -228,20 +228,24 @@ func (g *Generator) getLayerConfigForEquipment(equip EquipmentVisual, layers []L
 }
 
 // getEquipmentZIndex returns the rendering order for equipment layers.
+// Uses standardized Z-index constants to ensure correct rendering order.
+// Order: Legs < Body < Armor < Head < Weapon < Accessory < Effect
 func (g *Generator) getEquipmentZIndex(layerType LayerType) int {
 	switch layerType {
-	case LayerBody:
-		return 10
-	case LayerHead:
-		return 20
 	case LayerLegs:
-		return 5
+		return ZIndexLegs
+	case LayerBody:
+		return ZIndexBody
 	case LayerArmor:
-		return 15
+		return ZIndexArmor
+	case LayerHead:
+		return ZIndexHead
 	case LayerWeapon:
-		return 25
+		return ZIndexWeapon
 	case LayerAccessory:
-		return 30
+		return ZIndexAccessory
+	case LayerEffect:
+		return ZIndexEffect
 	default:
 		return 0
 	}
@@ -346,5 +350,75 @@ func (g *Generator) validateCompositeConfig(config CompositeConfig) error {
 		return fmt.Errorf("at least one layer required")
 	}
 
+	// Validate Z-order integrity: ensure layers follow expected ordering conventions
+	if err := validateZOrderIntegrity(config.Layers, config.Equipment); err != nil {
+		return fmt.Errorf("z-order validation failed: %w", err)
+	}
+
 	return nil
+}
+
+// validateZOrderIntegrity ensures equipment layers have proper Z-order relationships.
+// Validates that equipment layers use appropriate Z-index values relative to base layers.
+func validateZOrderIntegrity(layers []LayerConfig, equipment []EquipmentVisual) error {
+	// Build a map of layer types to their Z-indices
+	layerZIndices := make(map[LayerType]int)
+	for _, layer := range layers {
+		layerZIndices[layer.Type] = layer.ZIndex
+	}
+
+	// Check that base body layer exists and has expected Z-index
+	if bodyZ, hasBody := layerZIndices[LayerBody]; hasBody {
+		if bodyZ != ZIndexBody {
+			return fmt.Errorf("body layer has unexpected Z-index %d (expected %d)", bodyZ, ZIndexBody)
+		}
+	}
+
+	// Check that head layer exists and has higher Z-index than body
+	if headZ, hasHead := layerZIndices[LayerHead]; hasHead {
+		if headZ != ZIndexHead {
+			return fmt.Errorf("head layer has unexpected Z-index %d (expected %d)", headZ, ZIndexHead)
+		}
+		if bodyZ, hasBody := layerZIndices[LayerBody]; hasBody && headZ <= bodyZ {
+			return fmt.Errorf("head layer Z-index %d must be higher than body Z-index %d", headZ, bodyZ)
+		}
+	}
+
+	// Verify equipment layers would have correct Z-indices
+	// Note: Equipment Z-indices are assigned during rendering, not in config
+	// This validation ensures the system would assign proper values
+	for _, equip := range equipment {
+		expectedZ := getStandardZIndex(equip.Layer)
+		
+		// Ensure equipment Z-index is higher than body
+		if bodyZ, hasBody := layerZIndices[LayerBody]; hasBody && expectedZ <= bodyZ {
+			return fmt.Errorf("equipment layer %s would have Z-index %d which is not higher than body Z-index %d",
+				equip.Layer.String(), expectedZ, bodyZ)
+		}
+	}
+
+	return nil
+}
+
+// getStandardZIndex returns the standard Z-index for a layer type.
+// This is a helper for validation and mirrors getEquipmentZIndex.
+func getStandardZIndex(layerType LayerType) int {
+	switch layerType {
+	case LayerLegs:
+		return ZIndexLegs
+	case LayerBody:
+		return ZIndexBody
+	case LayerArmor:
+		return ZIndexArmor
+	case LayerHead:
+		return ZIndexHead
+	case LayerWeapon:
+		return ZIndexWeapon
+	case LayerAccessory:
+		return ZIndexAccessory
+	case LayerEffect:
+		return ZIndexEffect
+	default:
+		return 0
+	}
 }

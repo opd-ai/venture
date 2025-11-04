@@ -95,11 +95,12 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 		Palette:    pal,
 	}
 
-	// Build layers (always include body)
+	// Build layers with proper Z-ordering (Body < Armor < Head < Weapon < Accessory)
+	// Uses standardized Z-index constants from sprites package
 	layers := []sprites.LayerConfig{
 		{
 			Type:      sprites.LayerBody,
-			ZIndex:    10,
+			ZIndex:    sprites.ZIndexBody,
 			OffsetX:   0,
 			OffsetY:   0,
 			Scale:     1.0,
@@ -109,7 +110,7 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 		},
 		{
 			Type:      sprites.LayerHead,
-			ZIndex:    20,
+			ZIndex:    sprites.ZIndexHead,
 			OffsetX:   0,
 			OffsetY:   -8,
 			Scale:     1.0,

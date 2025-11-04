@@ -197,27 +197,55 @@ func (s *ReverbSystem) ApplyReverbToSamples(samples []float64, sampleRate int) [
 	output := make([]float64, numSamples)
 
 	// Calculate delay buffer size from decay time
-	delaySamples := int(s.currentReverb.DecayTime * float64(sampleRate))
-	if delaySamples > numSamples {
-		delaySamples = numSamples - 1
+	// Use shorter delays for the buffer to create multiple early reflections
+	delay1 := int(0.029 * float64(sampleRate)) // ~29ms
+	delay2 := int(0.037 * float64(sampleRate)) // ~37ms
+	delay3 := int(0.041 * float64(sampleRate)) // ~41ms
+	delay4 := int(0.043 * float64(sampleRate)) // ~43ms
+
+	// Clamp delays to buffer size
+	if delay1 >= numSamples {
+		delay1 = numSamples / 4
+	}
+	if delay2 >= numSamples {
+		delay2 = numSamples / 3
+	}
+	if delay3 >= numSamples {
+		delay3 = numSamples / 2
+	}
+	if delay4 >= numSamples {
+		delay4 = (numSamples * 2) / 3
 	}
 
-	// Simple feedback delay line (comb filter)
-	feedback := 0.7 * (1.0 - s.currentReverb.Damping)
+	// Feedback based on decay time and damping
+	feedback := 0.5 * (s.currentReverb.DecayTime / 3.0) * (1.0 - s.currentReverb.Damping)
+	if feedback > 0.85 {
+		feedback = 0.85 // Prevent instability
+	}
 	wetLevel := s.currentReverb.Amount
 	dryLevel := 1.0 - wetLevel
 
+	// Process samples with multiple comb filters
 	for i := 0; i < numSamples; i++ {
 		dry := samples[i]
 
-		// Get delayed sample (reverb tail)
+		// Get delayed samples from multiple delay lines (early reflections)
 		var wet float64
-		if i >= delaySamples {
-			wet = output[i-delaySamples] * feedback
+		if i >= delay1 {
+			wet += output[i-delay1] * feedback * 0.37
+		}
+		if i >= delay2 {
+			wet += output[i-delay2] * feedback * 0.33
+		}
+		if i >= delay3 {
+			wet += output[i-delay3] * feedback * 0.19
+		}
+		if i >= delay4 {
+			wet += output[i-delay4] * feedback * 0.11
 		}
 
 		// Mix dry and wet signals
-		output[i] = dry*dryLevel + (dry+wet)*wetLevel
+		output[i] = dry*dryLevel + dry*wetLevel + wet*wetLevel
 	}
 
 	return output

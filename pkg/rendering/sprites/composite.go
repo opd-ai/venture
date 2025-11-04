@@ -389,7 +389,7 @@ func validateZOrderIntegrity(layers []LayerConfig, equipment []EquipmentVisual) 
 	// This validation ensures the system would assign proper values
 	for _, equip := range equipment {
 		expectedZ := getStandardZIndex(equip.Layer)
-		
+
 		// Ensure equipment Z-index is higher than body
 		if bodyZ, hasBody := layerZIndices[LayerBody]; hasBody && expectedZ <= bodyZ {
 			return fmt.Errorf("equipment layer %s would have Z-index %d which is not higher than body Z-index %d",

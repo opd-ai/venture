@@ -1,6 +1,14 @@
-TASK: Conduct a comprehensive audit of a Go codebase to identify bugs, performance issues, missing features, anti-patterns, and API design flaws while respecting existing codebase conventions where they meet minimum Go idiomacy standards. Place the output into a file called `AUDIT.md` directly in the repository root.
+# AUDIT INSTRUCTIONS
 
-CONTEXT: 
+**NOTE:** This file contains instructions and template for conducting a comprehensive code audit. This is NOT the audit results themselves. To conduct an audit following these instructions, the output should be placed in `AUDIT.md` in the repository root.
+
+---
+
+## TASK
+
+Conduct a comprehensive audit of a Go codebase to identify bugs, performance issues, missing features, anti-patterns, and API design flaws while respecting existing codebase conventions where they meet minimum Go idiomacy standards. Place the output into a file called `AUDIT.md` directly in the repository root.
+
+## CONTEXT 
 This audit targets Go codebases of any maturity level. The audit should surface actionable issues while respecting established conventions in the codebase unless they violate fundamental Go principles. Balance between consistency with existing patterns and adherence to Go best practices.
 
 AUDIT APPROACH:

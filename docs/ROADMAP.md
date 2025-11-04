@@ -4,12 +4,12 @@
 
 This document outlines the development plan for Venture, a fully procedural multiplayer action-RPG built with Go 1.24 and Ebiten 2.9. The project successfully completed its initial 8 development phases (Foundation through Polish & Optimization) in October 2025. This roadmap presents the post-Beta enhancement strategy based on comprehensive technical audits and community feedback priorities.
 
-## Project Status: VERSION 2.0 PHASE 14 COMPLETE 🎉
+## Project Status: VERSION 2.0 PRODUCTION COMPLETE 🎉
 
 **Current Phase:** Phase 14 (Visual & Audio Polish) - ✅ COMPLETE  
-**Version:** 1.1 Production + 2.0 Phase 14 Complete  
-**Timeline Horizon:** Version 2.0 Beta Release Ready  
-**Status:** Version 2.0 Phase 14.4 complete (November 4, 2025) - All Phase 14 features implemented
+**Version:** 2.0 Production  
+**Timeline Horizon:** Version 2.1 Planning  
+**Status:** Version 2.0 complete (November 4, 2025) - All Phases 1-14 implemented and production-ready
 
 ### Current State Strengths ✅
 
@@ -150,42 +150,6 @@ These enhancements address game-breaking gaps and incomplete mechanics identifie
 **Priority**: High  
 **Estimated Effort**: Medium (2-3 weeks)  
 **Dependencies**: Category 1 completion for consistent base
-
-#### 2.1: LAN Party "Host-and-Play" Mode
-
-**Description**: Single-command mode that starts authoritative server and auto-connects local client, as specified in `docs/auditors/LAN_PARTY.md`.
-
-**Rationale**: Current workflow requires two terminals and manual connection steps. Ideal LAN party/casual co-op experience should be "player 1 runs one command, shares IP, others join". Reduces barrier to entry for multiplayer.
-
-**Technical Approach**:
-1. Add `--host-and-play` flag to `cmd/client/main.go`
-2. When flag set, start `server.Run()` in goroutine before game initialization
-3. Bind server to `127.0.0.1:8080` by default (security: localhost only)
-4. Add `--host-lan` flag to override bind address to `0.0.0.0` with warning
-5. Wait for server readiness via channel: `serverReady := make(chan struct{})`
-6. Auto-set `-server localhost:8080` flag and enable `-multiplayer`
-7. Implement graceful shutdown: defer `server.Shutdown()` and wait for goroutine completion
-8. Add port conflict handling: try ports 8080-8089, fail with clear error if all in use
-
-**Success Criteria**:
-- Single command `./venture-client --host-and-play` starts server and connects client
-- Default bind to localhost (secure) with explicit `--host-lan` for 0.0.0.0
-- Server logs clearly indicate "Server ready on localhost:8080"
-- Graceful shutdown on client exit: server goroutine terminates cleanly
-- Documentation in README.md shows LAN party workflow: host runs command, shares IP, others join
-- Integration test verifies server start, client connection, and clean shutdown
-
-**Risks**:
-- Port conflicts on shared machines (mitigated by auto-fallback)
-- Firewall blocking LAN connections (document firewall rules)
-- Resource cleanup issues (mitigated by defer pattern and channel synchronization)
-
-**Reference Files**:
-- `cmd/client/main.go:L220-L280` (initialization)
-- `cmd/server/main.go:L100-L150` (server startup)
-- New file: `pkg/engine/host_and_play.go` (goroutine management)
-
----
 
 #### 2.1: LAN Party "Host-and-Play" Mode ✅ **COMPLETED** (October 26, 2025)
 

@@ -584,6 +584,39 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		return
 	}
 
+	// Issue #4 FIX: Apply layer transition visual feedback
+	// When entity transitions between terrain layers, apply depth offset and transparency
+	var layerTransitionYOffset float64
+	var layerTransitionAlpha float64 = 1.0
+	if layerComp, hasLayer := entity.GetComponent("layer"); hasLayer {
+		layer := layerComp.(*LayerComponent)
+		if layer.IsTransitioning() {
+			// Calculate depth offset based on transition progress
+			// Moving up to higher layer (platform): negative offset (entity rises)
+			// Moving down to lower layer: positive offset (entity descends)
+			const maxDepthOffset = 16.0 // Maximum vertical offset in pixels
+			depthOffset := layer.TransitionProgress * maxDepthOffset
+
+			if layer.TargetLayer > layer.CurrentLayer {
+				// Moving up to higher layer
+				layerTransitionYOffset = -depthOffset
+			} else {
+				// Moving down to lower layer
+				layerTransitionYOffset = depthOffset
+			}
+
+			// Apply subtle transparency during transition edges for smooth visual flow
+			// Fade at start (0.0-0.3) and end (0.7-1.0) of transition
+			if layer.TransitionProgress < 0.3 {
+				// Fade in at start: 0.7 at progress=0, 1.0 at progress=0.3
+				layerTransitionAlpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
+			} else if layer.TransitionProgress > 0.7 {
+				// Fade out at end: 1.0 at progress=0.7, 0.7 at progress=1.0
+				layerTransitionAlpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
+			}
+		}
+	}
+
 	// GAP-012 REPAIR: Apply visual feedback effects (hit flash, tints)
 	var flashAlpha float64
 	var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
@@ -592,6 +625,10 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		flashAlpha = feedback.GetFlashAlpha()
 		tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
 	}
+
+	// Issue #4 FIX: Apply layer transition alpha to tint alpha
+	// Combine layer transition transparency with visual feedback tint
+	tintA *= layerTransitionAlpha
 
 	// Draw sprite or colored rectangle
 	// Phase 2: Support directional sprites with fallback to single image
@@ -626,7 +663,8 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
 		opts.GeoM.Rotate(sprite.Rotation)
-		opts.GeoM.Translate(screenX, screenY)
+		// Issue #4 FIX: Apply layer transition Y offset for depth effect
+		opts.GeoM.Translate(screenX, screenY+layerTransitionYOffset)
 		r.screen.DrawImage(spriteImage, opts)
 	} else {
 		// Draw colored rectangle as fallback
@@ -643,7 +681,19 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 			}
 		}
 
-		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2,
+		// Issue #4 FIX: Apply layer transition alpha to fallback rect
+		if layerTransitionAlpha < 1.0 {
+			red, green, blue, alpha := col.RGBA()
+			col = color.RGBA{
+				R: uint8(red >> 8),
+				G: uint8(green >> 8),
+				B: uint8(blue >> 8),
+				A: uint8(float64(alpha>>8) * layerTransitionAlpha),
+			}
+		}
+
+		// Issue #4 FIX: Apply layer transition Y offset to fallback rect position
+		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2+layerTransitionYOffset,
 			sprite.Width, sprite.Height, col)
 	}
 

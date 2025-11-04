@@ -99,6 +99,21 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 		return false
 	}
 
+	// Check terrain layer compatibility for prediction (Phase 11.1 multi-layer support)
+	layer1Comp, hasLayer1 := entity.GetComponent("layer")
+	layer2Comp, hasLayer2 := other.GetComponent("layer")
+	if hasLayer1 && hasLayer2 {
+		l1 := layer1Comp.(*LayerComponent)
+		l2 := layer2Comp.(*LayerComponent)
+		// Flying entities collide with all layers
+		if !l1.CanFly && !l2.CanFly {
+			// Check if entities are on same effective terrain layer
+			if !OnSameLayer(l1, l2) {
+				return false // No collision across terrain layers
+			}
+		}
+	}
+
 	// Get other entity's current position
 	pos2Comp, _ := other.GetComponent("position")
 	pos2 := pos2Comp.(*PositionComponent)
@@ -179,6 +194,22 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 			// Check layer compatibility (0 = all layers)
 			if collider.Layer != 0 && otherCollider.Layer != 0 && collider.Layer != otherCollider.Layer {
 				continue
+			}
+
+			// Check terrain layer compatibility (Phase 11.1 multi-layer support)
+			// Entities on different terrain layers should not collide unless one can fly
+			layer1Comp, hasLayer1 := entity.GetComponent("layer")
+			layer2Comp, hasLayer2 := other.GetComponent("layer")
+			if hasLayer1 && hasLayer2 {
+				l1 := layer1Comp.(*LayerComponent)
+				l2 := layer2Comp.(*LayerComponent)
+				// Flying entities collide with all layers
+				if !l1.CanFly && !l2.CanFly {
+					// Check if entities are on same effective terrain layer
+					if !OnSameLayer(l1, l2) {
+						continue // Skip collision for entities on different terrain layers
+					}
+				}
 			}
 
 			// Check intersection

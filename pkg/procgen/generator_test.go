@@ -173,4 +173,3 @@ func TestValidateParams(t *testing.T) {
 		})
 	}
 }
-

@@ -7,6 +7,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
+	"github.com/sirupsen/logrus"
 )
 
 // ManaComponent tracks entity's magical energy.
@@ -69,15 +70,26 @@ type SpellCastingSystem struct {
 	particleSys     *ParticleSystem       // For visual effects
 	audioMgr        *AudioManager         // For sound effects
 	tutorialSys     *EbitenTutorialSystem // For notifications
+	logger          *logrus.Entry
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
 func NewSpellCastingSystem(world *World, statusEffectSys *StatusEffectSystem) *SpellCastingSystem {
+	return NewSpellCastingSystemWithLogger(world, statusEffectSys, nil)
+}
+
+// NewSpellCastingSystemWithLogger creates a new spell casting system with a logger.
+func NewSpellCastingSystemWithLogger(world *World, statusEffectSys *StatusEffectSystem, logger *logrus.Logger) *SpellCastingSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("system", "spell_casting")
+	}
 	return &SpellCastingSystem{
 		world:           world,
 		statusEffectSys: statusEffectSys,
 		particleSys:     NewParticleSystem(),
 		audioMgr:        nil, // Will be set via SetAudioManager()
+		logger:          logEntry,
 	}
 }
 
@@ -202,7 +214,9 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 		effectType := "magic" // Generic magic sound
 		if err := s.audioMgr.PlaySFX(effectType, int64(caster.ID)); err != nil {
 			// Audio failure is non-critical, continue
-			s.logger.Debugf("Failed to play spell cast sound: %v", err)
+			if s.logger != nil {
+				s.logger.Debugf("Failed to play spell cast sound: %v", err)
+			}
 		}
 	}
 

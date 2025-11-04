@@ -20,7 +20,7 @@ import (
 
 // LightingSystem processes light sources and applies lighting to the scene.
 // This system runs after the main render pass to apply lighting effects
-// as a post-processing step.
+// as a post-processing step. It also manages shadow rendering via ShadowSystem.
 type LightingSystem struct {
 	world  *World
 	config *LightingConfig
@@ -42,6 +42,9 @@ type LightingSystem struct {
 	// Cached ambient light entity (avoid O(n) search each frame)
 	ambientLightEntityID uint64
 	ambientLightCached   bool
+
+	// Shadow system integration (optional)
+	shadowSystem *ShadowSystem
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -67,12 +70,21 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 		config = NewLightingConfig()
 	}
 
-	return &LightingSystem{
+	system := &LightingSystem{
 		world:         world,
 		config:        config,
 		logger:        logEntry,
 		visibleLights: make([]*lightWithPosition, 0, config.MaxLights),
 	}
+
+	// Initialize shadow system if shadows are enabled
+	if config.ShadowsEnabled {
+		system.shadowSystem = NewShadowSystemWithLogger(world, logger)
+		system.shadowSystem.SetMaxShadows(config.MaxShadows)
+		system.shadowSystem.SetRenderQuality(config.ShadowQuality)
+	}
+
+	return system
 }
 
 // SetViewport updates the camera position and viewport size for culling.
@@ -82,6 +94,33 @@ func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int
 	s.viewportW = width
 	s.viewportH = height
 	s.viewportSet = true
+
+	// Update shadow system viewport
+	if s.shadowSystem != nil {
+		s.shadowSystem.SetViewport(cameraX, cameraY, width, height)
+	}
+}
+
+// EnableShadows enables or disables shadow rendering.
+func (s *LightingSystem) EnableShadows(enabled bool) {
+	s.config.ShadowsEnabled = enabled
+	if s.shadowSystem != nil {
+		s.shadowSystem.SetEnabled(enabled)
+	} else if enabled {
+		// Create shadow system if it doesn't exist
+		s.shadowSystem = NewShadowSystem(s.world)
+		s.shadowSystem.SetMaxShadows(s.config.MaxShadows)
+		s.shadowSystem.SetRenderQuality(s.config.ShadowQuality)
+		if s.viewportSet {
+			s.shadowSystem.SetViewport(s.cameraX, s.cameraY, s.viewportW, s.viewportH)
+		}
+	}
+}
+
+// GetShadowSystem returns the shadow system for direct access.
+// Returns nil if shadows are not enabled.
+func (s *LightingSystem) GetShadowSystem() *ShadowSystem {
+	return s.shadowSystem
 }
 
 // Update processes lighting each frame (updates animation times).

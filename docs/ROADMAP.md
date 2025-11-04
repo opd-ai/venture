@@ -4,12 +4,12 @@
 
 This document outlines the development plan for Venture, a fully procedural multiplayer action-RPG built with Go 1.24 and Ebiten 2.9. The project successfully completed its initial 8 development phases (Foundation through Polish & Optimization) in October 2025. This roadmap presents the post-Beta enhancement strategy based on comprehensive technical audits and community feedback priorities.
 
-## Project Status: VERSION 2.0 PHASE 13 COMPLETE 🎉
+## Project Status: VERSION 2.0 PHASE 14 IN PROGRESS 🚀
 
-**Current Phase:** Phase 13 (Advanced AI & Faction Systems) - COMPLETE  
-**Version:** 1.1 Production + 2.0 Phase 13 Complete  
-**Timeline Horizon:** Phase 14 (Visual & Audio Polish) next  
-**Status:** Version 2.0 Phases 10-13 complete (November 3, 2025) - Ready for Phase 14 or v2.0 Beta Release
+**Current Phase:** Phase 14 (Visual & Audio Polish) - IN PROGRESS  
+**Version:** 1.1 Production + 2.0 Phase 14.1 Complete  
+**Timeline Horizon:** Phase 14.2 (Animated Sprites) next  
+**Status:** Version 2.0 Phase 14.1 complete (November 4, 2025) - Phase 14.2-14.4 remaining
 
 ### Current State Strengths ✅
 
@@ -50,8 +50,11 @@ This document outlines the development plan for Venture, a fully procedural mult
 - ✅ Phase 13.2: Squad Tactics & Coordination (November 3, 2025)
 - ✅ Phase 13.3: Faction Reputation & Relationships (November 3, 2025)
 
+**Version 2.0 Visual & Audio Polish - ✅ PHASE 14.1 COMPLETE**
+- ✅ Phase 14.1: Enhanced Lighting & Shadows (November 4, 2025)
+
 **Next milestone:** 
-- Phase 14: Visual & Audio Polish (Enhanced lighting/shadows, animated sprites, 3D audio) OR Version 2.0 Beta Release
+- Phase 14.2: Animated Sprites OR Phase 14.3: Particle System Expansion OR Phase 14.4: Audio System Enhancement
 
 ---
 

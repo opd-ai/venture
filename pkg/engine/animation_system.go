@@ -20,6 +20,25 @@ type AnimationSystem struct {
 	maxCacheSize    int
 	cacheKeys       []string // For LRU eviction
 	logger          *logrus.Entry
+
+	// Phase 14.2: Viewport culling and distance-based optimization
+	cameraSystem        *CameraSystem
+	enableViewportCull  bool
+	enableDistanceLOD   bool
+	playerEntity        *Entity        // Cached player reference for distance calculations
+	distanceCloseThresh float64        // Distance threshold for full animation (default: 200px)
+	distanceMidThresh   float64        // Distance threshold for half rate (default: 400px)
+	stats               AnimationStats // Performance statistics
+}
+
+// AnimationStats holds performance statistics for the animation system.
+type AnimationStats struct {
+	TotalEntities    int // Total entities processed
+	AnimatedEntities int // Entities with active animations
+	CulledByViewport int // Entities culled by viewport check
+	FullRateEntities int // Entities animated at full rate (close)
+	HalfRateEntities int // Entities animated at half rate (mid distance)
+	StaticEntities   int // Entities rendered as static (far distance)
 }
 
 // NewAnimationSystem creates a new animation system.
@@ -42,12 +61,91 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		maxCacheSize:    100, // Cache up to 100 animation sequences
 		cacheKeys:       make([]string, 0, 100),
 		logger:          logEntry,
+		// Phase 14.2: Default optimization settings
+		enableViewportCull:  true,  // Enabled by default for performance
+		enableDistanceLOD:   true,  // Enabled by default for performance
+		distanceCloseThresh: 200.0, // Full animation within 200px
+		distanceMidThresh:   400.0, // Half rate 200-400px, static beyond
 	}
+}
+
+// Phase 14.2: Configuration methods for viewport culling and distance-based LOD
+
+// SetCameraSystem sets the camera system for viewport culling.
+// Call this during initialization to enable viewport-based optimization.
+func (s *AnimationSystem) SetCameraSystem(cameraSystem *CameraSystem) {
+	s.cameraSystem = cameraSystem
+}
+
+// SetPlayerEntity sets the player entity reference for distance calculations.
+// Call this during initialization to enable distance-based frame rate adjustment.
+func (s *AnimationSystem) SetPlayerEntity(player *Entity) {
+	s.playerEntity = player
+}
+
+// EnableViewportCulling enables or disables viewport culling optimization.
+// When enabled, only animates entities visible in the current viewport.
+func (s *AnimationSystem) EnableViewportCulling(enable bool) {
+	s.enableViewportCull = enable
+}
+
+// EnableDistanceLOD enables or disables distance-based level-of-detail.
+// When enabled, adjusts animation frame rate based on distance from player.
+func (s *AnimationSystem) EnableDistanceLOD(enable bool) {
+	s.enableDistanceLOD = enable
+}
+
+// SetDistanceThresholds sets the distance thresholds for LOD tiers.
+// closeThreshold: Full animation rate (default 200px)
+// midThreshold: Half animation rate (default 400px)
+// Beyond midThreshold: Static pose (no animation updates)
+func (s *AnimationSystem) SetDistanceThresholds(closeThreshold, midThreshold float64) {
+	s.distanceCloseThresh = closeThreshold
+	s.distanceMidThresh = midThreshold
+}
+
+// GetStats returns current animation performance statistics.
+// Useful for monitoring and debugging performance.
+func (s *AnimationSystem) GetStats() AnimationStats {
+	return s.stats
 }
 
 // Update processes all entities with animation components.
 // Updates frame timers, transitions states, and regenerates frames if needed.
 func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
+	// Phase 14.2: Reset statistics for this frame
+	s.stats = AnimationStats{
+		TotalEntities: len(entities),
+	}
+
+	// Phase 14.2: Get player position for distance calculations
+	var playerX, playerY float64
+	if s.playerEntity != nil {
+		if posComp, ok := s.playerEntity.GetComponent("position"); ok {
+			pos := posComp.(*PositionComponent)
+			playerX = pos.X
+			playerY = pos.Y
+		}
+	}
+
+	// Phase 14.2: Get viewport bounds for culling
+	var viewportMinX, viewportMinY, viewportMaxX, viewportMaxY float64
+	hasViewport := false
+	if s.enableViewportCull && s.cameraSystem != nil && s.cameraSystem.activeCamera != nil {
+		if camComp, ok := s.cameraSystem.activeCamera.GetComponent("camera"); ok {
+			camera := camComp.(*CameraComponent)
+			// Calculate viewport bounds with margin for sprites
+			margin := 100.0 // Extra margin to start animating before entity enters view
+			halfWidth := float64(s.cameraSystem.ScreenWidth) / (2.0 * camera.Zoom)
+			halfHeight := float64(s.cameraSystem.ScreenHeight) / (2.0 * camera.Zoom)
+			viewportMinX = camera.X - halfWidth - margin
+			viewportMinY = camera.Y - halfHeight - margin
+			viewportMaxX = camera.X + halfWidth + margin
+			viewportMaxY = camera.Y + halfHeight + margin
+			hasViewport = true
+		}
+	}
+
 	for _, entity := range entities {
 		// Get animation component
 		animComp := s.getAnimationComponent(entity)
@@ -55,10 +153,53 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			continue
 		}
 
+		s.stats.AnimatedEntities++
+
 		// Get sprite component for size information
 		spriteComp := s.getSpriteComponent(entity)
 		if spriteComp == nil {
 			continue
+		}
+
+		// Get entity position for viewport and distance checks
+		posComp, hasPos := entity.GetComponent("position")
+		if !hasPos {
+			continue
+		}
+		pos := posComp.(*PositionComponent)
+
+		// Phase 14.2: Viewport culling check
+		if hasViewport {
+			if pos.X < viewportMinX || pos.X > viewportMaxX ||
+				pos.Y < viewportMinY || pos.Y > viewportMaxY {
+				// Entity is outside viewport - skip animation update but keep current frame
+				s.stats.CulledByViewport++
+				continue
+			}
+		}
+
+		// Phase 14.2: Distance-based frame rate adjustment
+		var effectiveDeltaTime float64 = deltaTime
+		if s.enableDistanceLOD && s.playerEntity != nil {
+			// Calculate distance from player
+			dx := pos.X - playerX
+			dy := pos.Y - playerY
+			distSq := dx*dx + dy*dy
+			dist := math.Sqrt(distSq)
+
+			if dist <= s.distanceCloseThresh {
+				// Close range: full animation rate
+				effectiveDeltaTime = deltaTime
+				s.stats.FullRateEntities++
+			} else if dist <= s.distanceMidThresh {
+				// Mid range: half animation rate
+				effectiveDeltaTime = deltaTime * 0.5
+				s.stats.HalfRateEntities++
+			} else {
+				// Far range: static pose (no animation updates)
+				effectiveDeltaTime = 0
+				s.stats.StaticEntities++
+			}
 		}
 
 		// Regenerate frames if dirty (state changed)
@@ -93,9 +234,9 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			}
 		}
 
-		// Update animation if playing
-		if animComp.Playing && len(animComp.Frames) > 0 {
-			s.updateFrame(animComp, deltaTime)
+		// Update animation if playing and not static (far away)
+		if animComp.Playing && len(animComp.Frames) > 0 && effectiveDeltaTime > 0 {
+			s.updateFrame(animComp, effectiveDeltaTime)
 		}
 
 		// Update sprite component with current frame

@@ -467,3 +467,93 @@ func TestVirtualDPad_DeadZone(t *testing.T) {
 		t.Errorf("Direction in dead zone = (%.2f, %.2f), want (0.0, 0.0)", x, y)
 	}
 }
+
+// TestTriggerHaptic tests haptic feedback rate limiting.
+func TestTriggerHaptic(t *testing.T) {
+	var lastHaptic time.Time
+
+	// First call should trigger
+	triggerHaptic(10*time.Millisecond, 0.5, &lastHaptic)
+
+	if lastHaptic.IsZero() {
+		t.Error("lastHaptic should be set after first trigger")
+	}
+
+	firstTime := lastHaptic
+
+	// Second call immediately after should be rate limited
+	triggerHaptic(10*time.Millisecond, 0.5, &lastHaptic)
+
+	if lastHaptic != firstTime {
+		t.Error("lastHaptic should not change when rate limited")
+	}
+
+	// Call after sufficient time should trigger
+	time.Sleep(hapticMinInterval + 10*time.Millisecond)
+	triggerHaptic(10*time.Millisecond, 0.5, &lastHaptic)
+
+	if lastHaptic == firstTime {
+		t.Error("lastHaptic should update after rate limit interval")
+	}
+}
+
+// TestVirtualDPadHapticIntegration tests D-pad triggers haptic on touch.
+func TestVirtualDPadHapticIntegration(t *testing.T) {
+	dpad := NewVirtualDPad(100, 100, 50)
+
+	// Initially lastHaptic should be zero
+	if !dpad.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be zero initially")
+	}
+
+	// Touch D-pad
+	touches := map[ebiten.TouchID]*Touch{
+		0: {ID: 0, X: 110, Y: 110, StartX: 110, StartY: 110, Active: true},
+	}
+
+	dpad.Update(touches)
+
+	// lastHaptic should be set after touch
+	if dpad.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be set after D-pad touch")
+	}
+}
+
+// TestVirtualButtonHapticIntegration tests button triggers haptic on press.
+func TestVirtualButtonHapticIntegration(t *testing.T) {
+	button := NewVirtualButton(100, 100, 30, "A")
+
+	// Initially lastHaptic should be zero
+	if !button.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be zero initially")
+	}
+
+	// Touch button
+	touches := map[ebiten.TouchID]*Touch{
+		0: {ID: 0, X: 100, Y: 100, StartX: 100, StartY: 100, Active: true},
+	}
+
+	button.Update(touches)
+
+	// Button should be active but not pressed yet
+	if !button.IsActive() {
+		t.Error("Button should be active after touch")
+	}
+	if button.IsPressed() {
+		t.Error("Button should not be pressed until release")
+	}
+
+	// Release button
+	touches[0].Active = false
+	button.Update(touches)
+
+	// Button should be pressed now
+	if !button.IsPressed() {
+		t.Error("Button should be pressed after release")
+	}
+
+	// lastHaptic should be set after press
+	if button.lastHaptic.IsZero() {
+		t.Error("lastHaptic should be set after button press")
+	}
+}

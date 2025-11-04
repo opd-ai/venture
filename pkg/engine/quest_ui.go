@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"golang.org/x/image/font/basicfont"
 )
 
 // QuestUI handles rendering and interaction for the quest log.
@@ -22,6 +23,10 @@ type EbitenQuestUI struct {
 
 	// Tab selection
 	currentTab int // 0 = Active, 1 = Completed
+
+	// Scrolling support for long quest lists
+	scrollOffset int // Vertical scroll offset in pixels
+	maxScroll    int // Maximum scroll offset based on content height
 }
 
 // NewQuestUI creates a new quest UI.
@@ -69,6 +74,8 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 		} else {
 			ui.Hide()
 		}
+		// Reset scroll when closing
+		ui.scrollOffset = 0
 		return // Don't process other input on the same frame as toggle/close
 	}
 
@@ -78,10 +85,39 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 
 	// Handle tab switching
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		ui.currentTab = 0 // Active
+		ui.currentTab = 0   // Active
+		ui.scrollOffset = 0 // Reset scroll on tab change
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		ui.currentTab = 1 // Completed
+		ui.currentTab = 1   // Completed
+		ui.scrollOffset = 0 // Reset scroll on tab change
+	}
+
+	// Handle scrolling with arrow keys and mouse wheel
+	scrollSpeed := 20 // Pixels per scroll
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
+		ui.scrollOffset -= scrollSpeed
+		if ui.scrollOffset < 0 {
+			ui.scrollOffset = 0
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		ui.scrollOffset += scrollSpeed
+		if ui.scrollOffset > ui.maxScroll {
+			ui.scrollOffset = ui.maxScroll
+		}
+	}
+
+	// Mouse wheel scrolling
+	_, wheelY := ebiten.Wheel()
+	if wheelY != 0 {
+		ui.scrollOffset -= int(wheelY * float64(scrollSpeed))
+		if ui.scrollOffset < 0 {
+			ui.scrollOffset = 0
+		}
+		if ui.scrollOffset > ui.maxScroll {
+			ui.scrollOffset = ui.maxScroll
+		}
 	}
 }
 
@@ -155,25 +191,72 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 		quests = tracker.CompletedQuests
 	}
 
+	// Define content area for scrolling
+	contentStartY := listY + 10
+	contentMaxY := windowY + windowHeight - 20 // Bottom of window with margin
+	contentHeight := contentMaxY - contentStartY
+
 	if len(quests) == 0 {
-		ebitenutil.DebugPrintAt(img, "No quests", windowX+20, listY+20)
+		ebitenutil.DebugPrintAt(img, "No quests", windowX+20, contentStartY)
 	} else {
-		y := listY + 10
+		// Calculate total content height for scroll calculation
+		y := contentStartY - ui.scrollOffset // Apply scroll offset
+		totalContentHeight := 0
+
+		// Maximum width for text wrapping (leave margin for scrollbar)
+		maxTextWidth := windowWidth - 80
+
 		for _, tracked := range quests {
-			// Draw quest name
-			ebitenutil.DebugPrintAt(img, tracked.Quest.Name, windowX+20, y)
-			y += 20
+			// Skip if entirely above visible area
+			if y < contentStartY-200 {
+				// Estimate height and skip
+				totalContentHeight += 120 // Approximate height per quest
+				y += 120
+				continue
+			}
+
+			// Stop if below visible area
+			if y > contentMaxY {
+				totalContentHeight += 120
+				break
+			}
+
+			questStartY := y
+
+			// Draw quest name with text wrapping
+			nameLines := WrapText(tracked.Quest.Name, maxTextWidth, basicfont.Face7x13)
+			for _, line := range nameLines {
+				if y >= contentStartY && y <= contentMaxY {
+					ebitenutil.DebugPrintAt(img, line, windowX+20, y)
+				}
+				y += 15
+			}
 
 			// Draw quest type and difficulty
 			info := fmt.Sprintf("%s | %s", tracked.Quest.Type.String(), tracked.Quest.Difficulty.String())
-			ebitenutil.DebugPrintAt(img, info, windowX+30, y)
+			if y >= contentStartY && y <= contentMaxY {
+				ebitenutil.DebugPrintAt(img, info, windowX+30, y)
+			}
 			y += 20
 
-			// Draw objectives
-			for i, obj := range tracked.Quest.Objectives {
-				progress := fmt.Sprintf("  [%d/%d] %s", obj.Current, obj.Required, obj.Description)
-				ebitenutil.DebugPrintAt(img, progress, windowX+30, y)
-				y += 15
+			// Draw objectives with text wrapping
+			for _, obj := range tracked.Quest.Objectives {
+				// Wrap objective description
+				progressPrefix := fmt.Sprintf("  [%d/%d] ", obj.Current, obj.Required)
+				descLines := WrapText(obj.Description, maxTextWidth-100, basicfont.Face7x13)
+
+				for i, line := range descLines {
+					prefix := ""
+					if i == 0 {
+						prefix = progressPrefix
+					} else {
+						prefix = "       " // Indent continuation lines
+					}
+					if y >= contentStartY && y <= contentMaxY {
+						ebitenutil.DebugPrintAt(img, prefix+line, windowX+30, y)
+					}
+					y += 15
+				}
 
 				// Draw progress bar
 				barWidth := 200
@@ -181,46 +264,88 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 				barX := windowX + 240
 				barY := y - 10
 
-				// Background
-				barBg := ebiten.NewImage(barWidth, barHeight)
-				barBg.Fill(color.RGBA{60, 60, 70, 255})
-				barOpts := &ebiten.DrawImageOptions{}
-				barOpts.GeoM.Translate(float64(barX), float64(barY))
-				img.DrawImage(barBg, barOpts)
+				if barY >= contentStartY && barY <= contentMaxY {
+					// Background
+					barBg := ebiten.NewImage(barWidth, barHeight)
+					barBg.Fill(color.RGBA{60, 60, 70, 255})
+					barOpts := &ebiten.DrawImageOptions{}
+					barOpts.GeoM.Translate(float64(barX), float64(barY))
+					img.DrawImage(barBg, barOpts)
 
-				// Progress
-				progressPct := obj.Progress()
-				if progressPct > 0 {
-					progressWidth := int(float64(barWidth) * progressPct)
-					barFill := ebiten.NewImage(progressWidth, barHeight)
-					fillColor := color.RGBA{80, 180, 80, 255}
-					if obj.IsComplete() {
-						fillColor = color.RGBA{100, 220, 100, 255}
+					// Progress
+					progressPct := obj.Progress()
+					if progressPct > 0 {
+						progressWidth := int(float64(barWidth) * progressPct)
+						barFill := ebiten.NewImage(progressWidth, barHeight)
+						fillColor := color.RGBA{80, 180, 80, 255}
+						if obj.IsComplete() {
+							fillColor = color.RGBA{100, 220, 100, 255}
+						}
+						barFill.Fill(fillColor)
+						img.DrawImage(barFill, barOpts)
 					}
-					barFill.Fill(fillColor)
-					img.DrawImage(barFill, barOpts)
 				}
 
-				if i < len(tracked.Quest.Objectives)-1 {
-					y += 5
-				}
+				y += 5
 			}
 
 			// Draw rewards
-			y += 20
+			y += 15
 			rewards := fmt.Sprintf("  Rewards: %d XP, %d Gold", tracked.Quest.Reward.XP, tracked.Quest.Reward.Gold)
-			ebitenutil.DebugPrintAt(img, rewards, windowX+30, y)
+			if y >= contentStartY && y <= contentMaxY {
+				ebitenutil.DebugPrintAt(img, rewards, windowX+30, y)
+			}
 			y += 30
 
-			if y > windowY+windowHeight-40 {
-				break // Don't overflow window
-			}
+			// Track total content height
+			questHeight := y - questStartY
+			totalContentHeight += questHeight
+		}
+
+		// Update max scroll based on content height
+		ui.maxScroll = totalContentHeight - contentHeight
+		if ui.maxScroll < 0 {
+			ui.maxScroll = 0
+		}
+
+		// Draw scroll indicator if content exceeds visible area
+		if ui.maxScroll > 0 {
+			// Draw scrollbar background
+			scrollbarX := windowX + windowWidth - 15
+			scrollbarY := contentStartY
+			scrollbarHeight := contentHeight
+			scrollbarBg := ebiten.NewImage(10, scrollbarHeight)
+			scrollbarBg.Fill(color.RGBA{60, 60, 70, 255})
+			scrollbarOpts := &ebiten.DrawImageOptions{}
+			scrollbarOpts.GeoM.Translate(float64(scrollbarX), float64(scrollbarY))
+			img.DrawImage(scrollbarBg, scrollbarOpts)
+
+			// Draw scrollbar handle
+			handleHeight := max(20, (contentHeight*contentHeight)/totalContentHeight)
+			handleY := scrollbarY + (ui.scrollOffset*scrollbarHeight)/totalContentHeight
+			scrollbarHandle := ebiten.NewImage(10, handleHeight)
+			scrollbarHandle.Fill(color.RGBA{150, 150, 170, 255})
+			handleOpts := &ebiten.DrawImageOptions{}
+			handleOpts.GeoM.Translate(float64(scrollbarX), float64(handleY))
+			img.DrawImage(scrollbarHandle, handleOpts)
+
+			// Draw scroll arrows hint
+			scrollHint := "↑↓/Wheel: Scroll"
+			ebitenutil.DebugPrintAt(img, scrollHint, windowX+windowWidth-140, contentStartY-20)
 		}
 	}
 
 	// Draw controls hint
 	controlsY := windowY + windowHeight - 20
 	ebitenutil.DebugPrintAt(img, "J: Close | 1: Active | 2: Completed", windowX+10, controlsY)
+}
+
+// max returns the maximum of two integers.
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // IsActive returns whether the quest UI is currently visible.

@@ -147,6 +147,33 @@ func NewCrystalLight(radius float64, crystalColor color.RGBA) *LightComponent {
 	return light
 }
 
+// NewSpellBurstLight creates a bright, short-lived spell burst effect.
+// This is intended for spell cast effects that rapidly fade.
+func NewSpellBurstLight(radius float64, spellColor color.RGBA) *LightComponent {
+	light := NewLightComponent(radius, spellColor, 2.0) // Very bright
+	light.Falloff = FalloffQuadratic
+	light.Pulsing = true
+	light.PulseSpeed = 4.0  // Rapid pulsing
+	light.PulseAmount = 0.8 // Large variation
+	return light
+}
+
+// NewDynamicLight creates a light with custom animation settings.
+// This provides full control over light animation for special effects.
+func NewDynamicLight(radius float64, lightColor color.RGBA, intensity float64,
+	flickering bool, flickerSpeed, flickerAmount float64,
+	pulsing bool, pulseSpeed, pulseAmount float64) *LightComponent {
+
+	light := NewLightComponent(radius, lightColor, intensity)
+	light.Flickering = flickering
+	light.FlickerSpeed = flickerSpeed
+	light.FlickerAmount = flickerAmount
+	light.Pulsing = pulsing
+	light.PulseSpeed = pulseSpeed
+	light.PulseAmount = pulseAmount
+	return light
+}
+
 // twoPi is 2π used for animation calculations
 const twoPi = 6.283185307179586
 
@@ -233,6 +260,18 @@ type LightingConfig struct {
 
 	// AmbientColor is the default ambient light color
 	AmbientColor color.RGBA
+
+	// ShadowsEnabled toggles shadow rendering
+	ShadowsEnabled bool
+
+	// ShadowOpacity controls default shadow darkness (0.0-1.0)
+	ShadowOpacity float64
+
+	// ShadowQuality controls shadow rendering quality (0.5-2.0)
+	ShadowQuality float64
+
+	// MaxShadows is the maximum number of shadow casters per frame
+	MaxShadows int
 }
 
 // NewLightingConfig creates default lighting configuration.
@@ -244,29 +283,46 @@ func NewLightingConfig() *LightingConfig {
 		Gamma:            2.2,
 		AmbientIntensity: 0.3,
 		AmbientColor:     color.RGBA{100, 100, 120, 255}, // Slight blue tint
+		ShadowsEnabled:   true,
+		ShadowOpacity:    0.5,
+		ShadowQuality:    1.0,
+		MaxShadows:       100,
 	}
 }
 
 // SetGenrePreset configures lighting for a specific genre.
+// This includes ambient light, shadow settings, and atmospheric parameters.
 func (c *LightingConfig) SetGenrePreset(genreID string) {
 	switch genreID {
 	case "fantasy":
 		c.AmbientIntensity = 0.4
 		c.AmbientColor = color.RGBA{120, 110, 90, 255} // Warm tone
+		c.ShadowOpacity = 0.5                          // Medium shadows
+		c.MaxLights = 20                               // More torches/magic lights
 	case "scifi", "sci-fi": // Support both canonical and hyphenated form
 		c.AmbientIntensity = 0.35
 		c.AmbientColor = color.RGBA{90, 110, 140, 255} // Cool blue
+		c.ShadowOpacity = 0.6                          // Sharper shadows
+		c.MaxLights = 24                               // Many tech lights
 	case "horror":
 		c.AmbientIntensity = 0.15
 		c.AmbientColor = color.RGBA{80, 75, 90, 255} // Very dark, cold
+		c.ShadowOpacity = 0.8                        // Deep, oppressive shadows
+		c.MaxLights = 12                             // Limited, scary lighting
 	case "cyberpunk":
 		c.AmbientIntensity = 0.25
 		c.AmbientColor = color.RGBA{100, 80, 120, 255} // Purple tint
+		c.ShadowOpacity = 0.7                          // Strong neon shadows
+		c.MaxLights = 28                               // Neon everywhere
 	case "postapoc", "post-apocalyptic": // Support both canonical and hyphenated form
 		c.AmbientIntensity = 0.3
 		c.AmbientColor = color.RGBA{130, 120, 100, 255} // Dusty, harsh
+		c.ShadowOpacity = 0.4                           // Diffuse, dusty shadows
+		c.MaxLights = 16                                // Standard
 	default:
 		c.AmbientIntensity = 0.3
 		c.AmbientColor = color.RGBA{100, 100, 120, 255}
+		c.ShadowOpacity = 0.5
+		c.MaxLights = 16
 	}
 }

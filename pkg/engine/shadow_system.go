@@ -299,7 +299,7 @@ func (s *ShadowSystem) renderContactShadow(target *ebiten.Image, caster *shadowC
 	}
 
 	shadowImg := ebiten.NewImage(shadowW, shadowH)
-	
+
 	// Fill with gradient (darker in center)
 	shadowImg.Fill(caster.shadow.Color)
 
@@ -363,7 +363,7 @@ func (s *ShadowSystem) renderAOForEntity(target *ebiten.Image, ao *AmbientOcclus
 	}
 
 	aoImg := ebiten.NewImage(aoRadius*2, aoRadius*2)
-	
+
 	// Fill with dark color
 	aoColor := color.RGBA{0, 0, 0, uint8(ao.Intensity * 128)}
 	aoImg.Fill(aoColor)
@@ -380,7 +380,7 @@ func (s *ShadowSystem) renderAOForEntity(target *ebiten.Image, ao *AmbientOcclus
 		if cornerRadius < 1 {
 			return
 		}
-		
+
 		cornerImg := ebiten.NewImage(cornerRadius*2, cornerRadius*2)
 		cornerColor := color.RGBA{0, 0, 0, uint8(ao.CornerAmount * 192)}
 		cornerImg.Fill(cornerColor)

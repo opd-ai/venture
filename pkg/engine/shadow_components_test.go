@@ -14,10 +14,10 @@ func TestShadowComponent_Type(t *testing.T) {
 
 func TestNewShadowComponent(t *testing.T) {
 	tests := []struct {
-		name           string
-		radius         float64
-		expectedRadius float64
-		expectedType   ShadowType
+		name            string
+		radius          float64
+		expectedRadius  float64
+		expectedType    ShadowType
 		expectedOpacity float64
 	}{
 		{"valid radius", 32, 32, ShadowTypeHard, 0.5},
@@ -225,10 +225,10 @@ func TestAmbientOcclusionComponent_Fields(t *testing.T) {
 
 func TestShadowComponent_DefaultColor(t *testing.T) {
 	shadow := NewShadowComponent(16)
-	
+
 	// Default color should be semi-transparent black
 	if shadow.Color.R != 0 || shadow.Color.G != 0 || shadow.Color.B != 0 {
-		t.Errorf("Expected black shadow color, got RGB(%d, %d, %d)", 
+		t.Errorf("Expected black shadow color, got RGB(%d, %d, %d)",
 			shadow.Color.R, shadow.Color.G, shadow.Color.B)
 	}
 	if shadow.Color.A != 128 {

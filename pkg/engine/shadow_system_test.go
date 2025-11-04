@@ -274,7 +274,7 @@ func TestShadowSystem_RenderAmbientOcclusion_Disabled(t *testing.T) {
 	system.SetEnabled(false)
 
 	screen := ebiten.NewImage(800, 600)
-	
+
 	// Should not panic when disabled
 	system.RenderAmbientOcclusion(screen)
 }
@@ -304,7 +304,7 @@ func TestShadowSystem_RenderAmbientOcclusion_WithEntities(t *testing.T) {
 	entity3.AddComponent(ao3)
 
 	screen := ebiten.NewImage(800, 600)
-	
+
 	// Should not panic and should process only entity1
 	system.RenderAmbientOcclusion(screen)
 }
@@ -329,7 +329,7 @@ func TestShadowSystem_RenderAmbientOcclusion_ViewportCulling(t *testing.T) {
 	entity2.AddComponent(NewAmbientOcclusionComponent(0.5, 32))
 
 	screen := ebiten.NewImage(800, 600)
-	
+
 	// Should process only entity1 (entity2 culled)
 	system.RenderAmbientOcclusion(screen)
 }
@@ -360,7 +360,7 @@ func TestShadowSystem_ShadowTypes(t *testing.T) {
 			entity.AddComponent(shadow)
 
 			screen := ebiten.NewImage(800, 600)
-			
+
 			// Should not panic for any shadow type
 			result := system.RenderShadows(screen, 400, 300, 200)
 			if result == nil {

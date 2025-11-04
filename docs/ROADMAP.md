@@ -13,7 +13,7 @@ This document outlines the development plan for Venture, a fully procedural mult
 
 ### Current State Strengths ✅
 
-- **Mature Architecture**: Clean ECS design with 48.9% engine coverage, 100% combat/procgen coverage
+- **Mature Architecture**: Clean ECS design with 54.1% engine coverage, 100% combat/procgen coverage
 - **Deterministic Generation**: Fully seed-based with multiplayer synchronization proven at 200-5000ms latency
 - **Cross-Platform**: Desktop (Linux/macOS/Windows), WebAssembly, mobile (iOS/Android) all operational
 - **Comprehensive Testing**: 82.4% average test coverage, table-driven tests throughout
@@ -23,11 +23,18 @@ This document outlines the development plan for Venture, a fully procedural mult
 
 ### Technical Debt Priorities 🔧
 
-1. **Test Coverage Gaps**: engine (48.9%), rendering/sprites (50.0%), rendering/patterns (0.0%), saveload (66.9%), network (57.1%)
-2. **Death/Revival Mechanics**: Incomplete implementation - player death doesn't disable actions or drop items
-3. **Menu UX Consistency**: Not all menus support dual-exit (toggle key + ESC)
-4. **Performance Profiling**: Visual sluggishness reported despite 106 FPS metric (frame time variance likely)
-5. **LAN Party Experience**: No single-command "host-and-play" mode for local co-op
+1. **Test Coverage Gaps**: engine (54.1%), rendering/sprites (63.8%), saveload (70.9%), network (61.1%)
+   - Current: engine, sprites, network all exceed 60% baseline, saveload at 70.9%
+   - Target: Maintain ≥65% per package (current average: 82.4%)
+   - Note: Ebiten-dependent rendering code excluded from coverage targets
+2. **Performance Profiling**: Visual sluggishness reported despite 106 FPS metric (frame time variance likely)
+   - Need 1% low and 0.1% low frame time measurements
+   - Potential causes: allocation spikes, GPU stalls, input lag
+
+**✅ RESOLVED TECHNICAL DEBT:**
+- ✅ Death/Revival Mechanics - COMPLETE (October 26, 2025): Action systems properly gated on DeadComponent
+- ✅ Menu UX Consistency - COMPLETE (October 26, 2025): All 7 menus support dual-exit pattern
+- ✅ LAN Party Experience - COMPLETE (October 26, 2025): --host-and-play mode with port fallback
 
 ### Completed Development (October-November 2025) 🎯
 

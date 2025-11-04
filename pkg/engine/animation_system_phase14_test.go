@@ -95,7 +95,6 @@ func TestAnimationSystem_DistanceLOD(t *testing.T) {
 	// Create player entity
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 400, Y: 300})
-	player.AddComponent(&InputComponent{})
 
 	// Configure animation system with player
 	sys.SetPlayerEntity(player)
@@ -226,7 +225,6 @@ func TestAnimationSystem_Statistics(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 400, Y: 300})
-	player.AddComponent(&InputComponent{})
 
 	// Create multiple entities at different positions
 	for i := 0; i < 10; i++ {
@@ -238,12 +236,16 @@ func TestAnimationSystem_Statistics(t *testing.T) {
 
 		animComp := NewAnimationComponent(12345 + int64(i))
 		animComp.Frames = []*ebiten.Image{ebiten.NewImage(28, 28)}
+		animComp.Playing = true // Mark as playing so animation system processes it
 		entity.AddComponent(animComp)
 	}
 
 	// Configure system
 	sys.SetPlayerEntity(player)
 	sys.EnableDistanceLOD(true)
+
+	// Process pending entity additions
+	world.Update(0)
 
 	// Update
 	entities := world.GetEntities()

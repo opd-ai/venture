@@ -141,6 +141,9 @@ func TestShadowSystem_CollectShadowCasters(t *testing.T) {
 	shadow4.Enabled = false
 	entity4.AddComponent(shadow4)
 
+	// Process pending entity additions
+	world.Update(0)
+
 	// Collect casters near light at (100, 100) with radius 200
 	casters := system.collectShadowCasters(100, 100, 200)
 
@@ -170,6 +173,9 @@ func TestShadowSystem_CollectShadowCasters_ViewportCulling(t *testing.T) {
 	entity3.AddComponent(&PositionComponent{X: 400, Y: 1000})
 	entity3.AddComponent(NewShadowComponent(16))
 
+	// Process pending entity additions
+	world.Update(0)
+
 	// Collect casters (light at center with large radius)
 	casters := system.collectShadowCasters(400, 300, 1000)
 
@@ -190,6 +196,9 @@ func TestShadowSystem_CollectShadowCasters_MaxShadows(t *testing.T) {
 		entity.AddComponent(&PositionComponent{X: float64(i * 10), Y: float64(i * 10)})
 		entity.AddComponent(NewShadowComponent(16))
 	}
+
+	// Process pending entity additions
+	world.Update(0)
 
 	// Collect casters
 	casters := system.collectShadowCasters(50, 50, 500)
@@ -213,6 +222,9 @@ func TestShadowSystem_CollectShadowCasters_LightRadiusCheck(t *testing.T) {
 	entity2 := world.CreateEntity()
 	entity2.AddComponent(&PositionComponent{X: 500, Y: 500})
 	entity2.AddComponent(NewShadowComponent(16))
+
+	// Process pending entity additions
+	world.Update(0)
 
 	// Light at (100, 100) with small radius
 	casters := system.collectShadowCasters(100, 100, 50)

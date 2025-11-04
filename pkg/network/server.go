@@ -297,7 +297,14 @@ func (s *TCPServer) acceptLoop() {
 		case <-s.done:
 			return
 		default:
-			s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID)
+			// Non-blocking error send
+			select {
+			case s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID):
+			case <-s.done:
+				return
+			default:
+				// Both channels full - continue without notification
+			}
 		}
 
 		// Start client handlers

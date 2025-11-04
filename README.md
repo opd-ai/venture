@@ -21,9 +21,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Version:** 1.1 Production - All Features Complete ✅
+**Version:** 2.0 Beta (Phase 14 Complete) ✅
 
-Core features implemented, tested, and production-ready. Version 2.0 (advanced features) in development. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
+Core features implemented, tested, and production-ready. Version 2.0 (advanced features) complete. All 14 phases implemented. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
 
 ## Quick Start
 

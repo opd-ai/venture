@@ -6,6 +6,7 @@ package engine
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -106,11 +107,13 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	// Create menu system with save directory
 	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
 	if err != nil {
-		// Log error but continue (save/load won't work but game can run)
+		// Always log critical initialization failures
 		if logEntry != nil {
 			logEntry.WithError(err).Warn("failed to initialize menu system")
+		} else {
+			// Fallback to stderr if no logger configured
+			fmt.Fprintf(os.Stderr, "WARNING: failed to initialize menu system: %v\n", err)
 		}
-		// Note: No fallback logging when logEntry is nil - silent initialization failure
 	}
 
 	// Create settings manager and UI

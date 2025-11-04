@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"image/color"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -182,14 +183,14 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 				if item.IsEquippable() {
 					// Try to equip the item
 					if err := ui.inventorySystem.EquipItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Failed to equip (could show error message in UI)
-						_ = err
+						// Log error for debugging
+						fmt.Fprintf(os.Stderr, "Failed to equip item: %v\n", err)
 					}
 				} else if item.IsConsumable() {
 					// Try to use consumable
 					if err := ui.inventorySystem.UseConsumable(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Failed to use (could show error message in UI)
-						_ = err
+						// Log error for debugging
+						fmt.Fprintf(os.Stderr, "Failed to use consumable: %v\n", err)
 					}
 				}
 			}
@@ -200,8 +201,8 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 		// Drop selected item
 		if ui.selectedSlot < len(inventory.Items) {
 			if err := ui.inventorySystem.DropItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-				// Failed to drop (could show error message in UI)
-				_ = err
+				// Log error for debugging
+				fmt.Fprintf(os.Stderr, "Failed to drop item: %v\n", err)
 			}
 			// Deselect after dropping
 			ui.selectedSlot = -1

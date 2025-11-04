@@ -10,7 +10,7 @@ func TestNewParticleSystem_UsesPool(t *testing.T) {
 	// Note: sync.Pool does not guarantee reuse - it may discard objects under memory pressure
 	// or during GC. Instead of testing exact memory reuse (which is non-deterministic),
 	// we test that the pool mechanism works correctly by verifying state reset.
-	
+
 	// Create and release particle system
 	ps1 := NewParticleSystem([]Particle{{X: 100, Y: 200}}, ParticleSpark, DefaultConfig())
 	ps1.ElapsedTime = 5.0 // Set some state
@@ -20,7 +20,7 @@ func TestNewParticleSystem_UsesPool(t *testing.T) {
 	// Get next particle system - may or may not be same address (pool's choice)
 	ps2 := NewParticleSystem([]Particle{}, ParticleSmoke, DefaultConfig())
 	addr2 := uintptr(unsafe.Pointer(ps2))
-	
+
 	// If pool did reuse (addr1 == addr2), verify state was properly reset
 	// If pool didn't reuse (addr1 != addr2), that's also valid behavior
 	if addr1 == addr2 {

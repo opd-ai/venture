@@ -139,8 +139,8 @@ func (fs *FactionSystem) applyReputationChange(change ReputationChange) {
 
 // findPlayerEntity finds the player entity in the world
 func (fs *FactionSystem) findPlayerEntity() *Entity {
-	// Look for entity with PlayerComponent
-	entities := fs.world.GetEntitiesWith("player")
+	// Look for entity with input component (marks player entity)
+	entities := fs.world.GetEntitiesWith("input")
 	if len(entities) > 0 {
 		return entities[0]
 	}
@@ -235,7 +235,7 @@ func (fs *FactionSystem) ProcessKillReputation(killerEntity, victimEntity *Entit
 	}
 
 	// Check if killer is player
-	if _, ok := killerEntity.GetComponent("player"); ok {
+	if _, ok := killerEntity.GetComponent("input"); ok {
 		// Player killed faction member - decrease reputation
 		fs.QueueReputationChange(ReputationChange{
 			FactionID: victimFaction.FactionID,

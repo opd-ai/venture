@@ -24,6 +24,14 @@ const (
 	ParticleBlood
 	// ParticleDust represents small dust particles
 	ParticleDust
+	// ParticleEmber represents glowing fire embers that rise and fade
+	ParticleEmber
+	// ParticleSparkle represents magical sparkles that orbit and trail
+	ParticleSparkle
+	// ParticleSmokePlume represents billowing smoke clouds
+	ParticleSmokePlume
+	// ParticleDebris represents bouncing debris chunks
+	ParticleDebris
 )
 
 // String returns the string representation of a particle type.
@@ -41,6 +49,14 @@ func (p ParticleType) String() string {
 		return "blood"
 	case ParticleDust:
 		return "dust"
+	case ParticleEmber:
+		return "ember"
+	case ParticleSparkle:
+		return "sparkle"
+	case ParticleSmokePlume:
+		return "smoke_plume"
+	case ParticleDebris:
+		return "debris"
 	default:
 		return "unknown"
 	}
@@ -143,6 +159,12 @@ type Particle struct {
 
 	// Rotation velocity
 	RotationVel float64
+
+	// Behavior flags (new for Phase 14.3)
+	Behavior ParticleBehavior
+
+	// Physics configuration (new for Phase 14.3)
+	Physics PhysicsConfig
 }
 
 // ParticleSystem represents a collection of particles.
@@ -170,12 +192,17 @@ func (ps *ParticleSystem) Update(deltaTime float64) {
 		// Update life
 		p.Life -= deltaTime / p.InitialLife
 
+		// Apply physics behaviors (new for Phase 14.3)
+		if p.Behavior != BehaviorNone {
+			ApplyPhysics(p, p.Behavior, p.Physics, deltaTime)
+		} else {
+			// Legacy behavior: basic gravity from config
+			p.VY += ps.Config.Gravity * deltaTime
+		}
+
 		// Update position
 		p.X += p.VX * deltaTime
 		p.Y += p.VY * deltaTime
-
-		// Apply gravity
-		p.VY += ps.Config.Gravity * deltaTime
 
 		// Update rotation
 		p.Rotation += p.RotationVel * deltaTime

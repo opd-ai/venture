@@ -847,7 +847,7 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		if cache[i].layer != cache[j].layer {
 			return cache[i].layer < cache[j].layer
 		}
-		
+
 		// Secondary sort: by Y position for depth sorting
 		// Entities lower on screen (higher Y) appear in front
 		posI, okI := cache[i].entity.GetComponent("position")
@@ -859,7 +859,7 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 				return yI < yJ
 			}
 		}
-		
+
 		// Tertiary sort: by entity ID for complete determinism
 		return cache[i].entity.ID < cache[j].entity.ID
 	})

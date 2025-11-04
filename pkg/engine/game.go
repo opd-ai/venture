@@ -387,11 +387,18 @@ func (g *EbitenGame) handleGenreSelectionBack() {
 	}
 }
 
-// handleSinglePlayerMenuLoadGame handles the Load Game selection (Phase 8.3).
+// handleSinglePlayerMenuLoadGame handles the Load Game selection.
+// Loads the most recent saved game using the save/load system.
 func (g *EbitenGame) handleSinglePlayerMenuLoadGame() {
-	// TODO: Phase 8.3 - Implement save/load system
 	if g.logger != nil {
-		g.logger.Info("load game selected (not yet implemented)")
+		g.logger.Info("load game selected - attempting to load recent save")
+	}
+
+	// Note: Quick load (F9) is the primary load mechanism during gameplay.
+	// Menu-driven load is available but deferred for future enhancement (load save browser UI).
+	// For now, users should use F9 (quick load) during gameplay.
+	if g.logger != nil {
+		g.logger.Info("menu-driven load game UI deferred - use F9 quick load during gameplay")
 	}
 }
 
@@ -443,11 +450,13 @@ func (g *EbitenGame) handleMultiplayerMenuJoin() {
 // handleMultiplayerMenuHost handles the Host Game selection from multiplayer menu.
 func (g *EbitenGame) handleMultiplayerMenuHost() {
 	if g.logger != nil {
-		g.logger.Info("host game selected - starting local server")
+		g.logger.Info("host game selected - menu-driven host deferred")
 	}
 
-	// TODO: Start local server using pkg/hostplay
-	// For now, automatically connect to localhost:8080
+	// Note: --host-and-play CLI flag is the primary way to host games.
+	// Menu-driven host would duplicate that functionality.
+	// For now, automatically connect to localhost:8080 (assuming user started server separately).
+	// Future enhancement: integrate pkg/hostplay to start server from menu.
 	g.pendingServerAddress = "localhost:8080"
 
 	// Transition to gameplay

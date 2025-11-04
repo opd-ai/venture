@@ -90,6 +90,7 @@ func (g *Generator) chooseFactionType(rng *rand.Rand, genreID string) engine.Fac
 	weights := g.getFactionTypeWeights(genreID)
 
 	// Sort faction types for deterministic iteration
+	// FactionType is a string type, so lexicographic comparison ensures consistent ordering
 	types := make([]engine.FactionType, 0, len(weights))
 	for factionType := range weights {
 		types = append(types, factionType)

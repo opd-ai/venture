@@ -247,8 +247,13 @@ func (c *TCPClient) receiveLoop() {
 
 		// Read message length (4 bytes)
 		if _, err := c.conn.Read(buf[:4]); err != nil {
-			if c.IsConnected() {
-				c.errors <- fmt.Errorf("read length error: %w", err)
+			// Non-blocking error send with done channel check
+			select {
+			case c.errors <- fmt.Errorf("read length error: %w", err):
+			case <-c.done:
+				return
+			default:
+				// Error channel full - exit gracefully
 			}
 			return
 		}
@@ -256,14 +261,26 @@ func (c *TCPClient) receiveLoop() {
 		// Decode length
 		msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
 		if msgLen > uint32(len(buf)) {
-			c.errors <- fmt.Errorf("message too large: %d bytes", msgLen)
+			// Non-blocking error send with done channel check
+			select {
+			case c.errors <- fmt.Errorf("message too large: %d bytes", msgLen):
+			case <-c.done:
+				return
+			default:
+				// Error channel full - exit gracefully
+			}
 			return
 		}
 
 		// Read message data
 		if _, err := c.conn.Read(buf[:msgLen]); err != nil {
-			if c.IsConnected() {
-				c.errors <- fmt.Errorf("read data error: %w", err)
+			// Non-blocking error send with done channel check
+			select {
+			case c.errors <- fmt.Errorf("read data error: %w", err):
+			case <-c.done:
+				return
+			default:
+				// Error channel full - exit gracefully
 			}
 			return
 		}
@@ -271,7 +288,14 @@ func (c *TCPClient) receiveLoop() {
 		// Decode state update
 		update, err := c.protocol.DecodeStateUpdate(buf[:msgLen])
 		if err != nil {
-			c.errors <- fmt.Errorf("decode error: %w", err)
+			// Non-blocking error send with done channel check
+			select {
+			case c.errors <- fmt.Errorf("decode error: %w", err):
+			case <-c.done:
+				return
+			default:
+				// Error channel full - continue processing
+			}
 			continue
 		}
 

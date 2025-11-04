@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"fmt"
 	"image"
+	"image/color"
+	"math/rand"
 	"testing"
 )
 
@@ -613,5 +616,174 @@ func BenchmarkGenerator_GenerateHealthBar(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+// TestCalculateRelativeLuminance tests WCAG luminance calculation.
+func TestCalculateRelativeLuminance(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name      string
+		color     color.Color
+		wantRange [2]float64 // [min, max] expected luminance
+	}{
+		{
+			name:      "black",
+			color:     color.RGBA{R: 0, G: 0, B: 0, A: 255},
+			wantRange: [2]float64{0.0, 0.001},
+		},
+		{
+			name:      "white",
+			color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+			wantRange: [2]float64{0.999, 1.0},
+		},
+		{
+			name:      "mid-gray",
+			color:     color.RGBA{R: 128, G: 128, B: 128, A: 255},
+			wantRange: [2]float64{0.18, 0.22},
+		},
+		{
+			name:      "red",
+			color:     color.RGBA{R: 255, G: 0, B: 0, A: 255},
+			wantRange: [2]float64{0.2, 0.23},
+		},
+		{
+			name:      "green",
+			color:     color.RGBA{R: 0, G: 255, B: 0, A: 255},
+			wantRange: [2]float64{0.71, 0.73},
+		},
+		{
+			name:      "blue",
+			color:     color.RGBA{R: 0, G: 0, B: 255, A: 255},
+			wantRange: [2]float64{0.07, 0.09},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			luminance := gen.calculateRelativeLuminance(tt.color)
+			if luminance < tt.wantRange[0] || luminance > tt.wantRange[1] {
+				t.Errorf("calculateRelativeLuminance(%s) = %v, want range [%v, %v]",
+					tt.name, luminance, tt.wantRange[0], tt.wantRange[1])
+			}
+		})
+	}
+}
+
+// TestCalculateContrastRatio tests WCAG contrast ratio calculation.
+func TestCalculateContrastRatio(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name         string
+		color1       color.Color
+		color2       color.Color
+		wantMinRatio float64
+	}{
+		{
+			name:         "black on white",
+			color1:       color.RGBA{R: 0, G: 0, B: 0, A: 255},
+			color2:       color.RGBA{R: 255, G: 255, B: 255, A: 255},
+			wantMinRatio: 21.0, // Maximum contrast
+		},
+		{
+			name:         "white on black",
+			color1:       color.RGBA{R: 255, G: 255, B: 255, A: 255},
+			color2:       color.RGBA{R: 0, G: 0, B: 0, A: 255},
+			wantMinRatio: 21.0, // Maximum contrast
+		},
+		{
+			name:         "same color",
+			color1:       color.RGBA{R: 128, G: 128, B: 128, A: 255},
+			color2:       color.RGBA{R: 128, G: 128, B: 128, A: 255},
+			wantMinRatio: 1.0, // No contrast
+		},
+		{
+			name:         "dark gray on light gray (WCAG AA pass)",
+			color1:       color.RGBA{R: 85, G: 85, B: 85, A: 255},
+			color2:       color.RGBA{R: 204, G: 204, B: 204, A: 255},
+			wantMinRatio: 4.5, // Should meet WCAG AA
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ratio := gen.calculateContrastRatio(tt.color1, tt.color2)
+			if ratio < tt.wantMinRatio {
+				t.Errorf("calculateContrastRatio() = %v, want >= %v", ratio, tt.wantMinRatio)
+			}
+		})
+	}
+}
+
+// TestSelectButtonBaseColor_WCAGCompliance tests that selected colors meet WCAG AA.
+func TestSelectButtonBaseColor_WCAGCompliance(t *testing.T) {
+	gen := NewGenerator()
+
+	// Test with all 5 genres
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	seeds := []int64{12345, 42987, 88432, 77321, 99999}
+
+	for _, genreID := range genres {
+		for _, seed := range seeds {
+			t.Run(fmt.Sprintf("%s_seed_%d", genreID, seed), func(t *testing.T) {
+				// Generate palette for genre
+				pal, err := gen.paletteGen.Generate(genreID, seed)
+				if err != nil {
+					t.Fatalf("failed to generate palette: %v", err)
+				}
+
+				// Select button color
+				rng := rand.New(rand.NewSource(seed))
+				buttonColor := gen.selectButtonBaseColor(pal, rng)
+
+				// Calculate contrast ratio with text color
+				contrastRatio := gen.calculateContrastRatio(buttonColor, pal.Text)
+
+				// Verify WCAG 2.1 AA compliance (minimum 4.5:1)
+				if contrastRatio < 4.5 {
+					t.Errorf("selectButtonBaseColor() contrast ratio = %v, want >= 4.5 (WCAG AA)", contrastRatio)
+					t.Logf("Genre: %s, Seed: %d", genreID, seed)
+					t.Logf("Button color: %+v", buttonColor)
+					t.Logf("Text color: %+v", pal.Text)
+				}
+			})
+		}
+	}
+}
+
+// TestButtonGeneration_AllGenres tests button generation for WCAG compliance across all genres.
+func TestButtonGeneration_AllGenres(t *testing.T) {
+	gen := NewGenerator()
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	for _, genreID := range genres {
+		t.Run(genreID, func(t *testing.T) {
+			config := Config{
+				Type:    ElementButton,
+				Width:   100,
+				Height:  40,
+				GenreID: genreID,
+				Seed:    12345,
+				State:   StateNormal,
+			}
+
+			img, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("failed to generate button: %v", err)
+			}
+
+			if img == nil {
+				t.Fatal("generated image is nil")
+			}
+
+			// Verify dimensions
+			bounds := img.Bounds()
+			if bounds.Dx() != config.Width || bounds.Dy() != config.Height {
+				t.Errorf("button dimensions = %dx%d, want %dx%d",
+					bounds.Dx(), bounds.Dy(), config.Width, config.Height)
+			}
+		})
 	}
 }

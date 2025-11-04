@@ -840,9 +840,28 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Sort using Go's optimized sort (O(n log n) instead of O(n²) bubble sort)
-	sort.Slice(cache, func(i, j int) bool {
-		return cache[i].layer < cache[j].layer
+	// Sort using Go's stable sort for deterministic ordering (O(n log n))
+	// Stable sort ensures entities with the same layer maintain consistent order
+	sort.SliceStable(cache, func(i, j int) bool {
+		// Primary sort: by sprite layer
+		if cache[i].layer != cache[j].layer {
+			return cache[i].layer < cache[j].layer
+		}
+		
+		// Secondary sort: by Y position for depth sorting
+		// Entities lower on screen (higher Y) appear in front
+		posI, okI := cache[i].entity.GetComponent("position")
+		posJ, okJ := cache[j].entity.GetComponent("position")
+		if okI && okJ {
+			yI := posI.(*PositionComponent).Y
+			yJ := posJ.(*PositionComponent).Y
+			if yI != yJ {
+				return yI < yJ
+			}
+		}
+		
+		// Tertiary sort: by entity ID for complete determinism
+		return cache[i].entity.ID < cache[j].entity.ID
 	})
 
 	// Extract sorted entities

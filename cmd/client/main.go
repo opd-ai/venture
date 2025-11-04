@@ -1643,6 +1643,23 @@ func main() {
 	// Set player as the active camera
 	game.CameraSystem.SetActiveCamera(player)
 
+	// Phase 14.2: Configure animation system with player and camera for optimizations
+	animationSystem.SetCameraSystem(game.CameraSystem)
+	animationSystem.SetPlayerEntity(player)
+	// Viewport culling and distance LOD are enabled by default
+	// Can be disabled for debugging with:
+	// animationSystem.EnableViewportCulling(false)
+	// animationSystem.EnableDistanceLOD(false)
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"viewportCulling": true,
+			"distanceLOD":     true,
+			"closeThreshold":  200.0,
+			"midThreshold":    400.0,
+		}).Info("animation system configured with performance optimizations")
+	}
+
 	// Set player for HUD display
 	game.HUDSystem.SetPlayerEntity(player)
 

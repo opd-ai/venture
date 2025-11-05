@@ -81,6 +81,11 @@ func initKeyboardElement() {
 	style.Set("height", "1px")
 	style.Set("opacity", "0")
 	style.Set("pointerEvents", "none")
+	
+	// CRITICAL: Ensure input can receive and maintain focus
+	// Without this, some browsers may dismiss keyboard when input is "invisible"
+	input.Set("tabIndex", 0) // Make focusable
+	input.Set("readOnly", false) // Ensure it's editable
 
 	// MOBILE KEYBOARD FIX: Forward input events to document for Ebiten
 	// When the mobile keyboard types into our hidden input, we need to dispatch
@@ -97,11 +102,18 @@ func initKeyboardElement() {
 			for _, ch := range newChars {
 				dispatchKeyboardEvent(doc, string(ch))
 			}
+			
+			// CRITICAL: Refocus input after dispatching events to keep keyboard open
+			// Dispatching events can cause the canvas to steal focus
+			input.Call("focus")
 		} else if len(currentValue) < len(lastInputValue) {
 			// Characters deleted (backspace) - dispatch backspace event
 			for i := 0; i < len(lastInputValue)-len(currentValue); i++ {
 				dispatchBackspaceEvent(doc)
 			}
+			
+			// CRITICAL: Refocus input after dispatching events to keep keyboard open
+			input.Call("focus")
 		}
 
 		// Update last value
@@ -128,6 +140,32 @@ func initKeyboardElement() {
 	// Attach event listeners
 	input.Call("addEventListener", "input", inputEventListener)
 	input.Call("addEventListener", "keydown", keydownEventListener)
+	
+	// CRITICAL FIX: Prevent canvas from stealing focus while keyboard is active
+	// When events are dispatched to canvas, it can steal focus and hide the keyboard
+	// This listener immediately refocuses the input to keep the keyboard visible
+	focusGuard := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		// If canvas gains focus while input has content, refocus input
+		if len(args) > 0 {
+			event := args[0]
+			target := event.Get("target")
+			
+			// Check if a canvas element gained focus
+			if target.Get("tagName").String() == "CANVAS" {
+				// Check if our input has value (keyboard is in use)
+				if !keyboardElement.IsUndefined() && keyboardElement.Get("value").String() != "" {
+					// Prevent canvas from taking focus
+					event.Call("preventDefault")
+					// Refocus input
+					keyboardElement.Call("focus")
+				}
+			}
+		}
+		return nil
+	})
+	
+	// Listen for focus events on the entire document
+	doc.Call("addEventListener", "focusin", focusGuard, true) // Use capture phase
 
 	// Add to DOM
 	body := doc.Get("body")
@@ -174,7 +212,22 @@ func dispatchInputEvent(target js.Value, char string) {
 	eventInit.Set("composed", true)
 	
 	inputEvent := js.Global().Get("InputEvent").New("input", eventInit)
+	
+	// Dispatch event but ensure canvas doesn't steal focus
+	// Store current active element
+	doc := js.Global().Get("document")
+	activeElement := doc.Get("activeElement")
+	
+	// Dispatch the event
 	target.Call("dispatchEvent", inputEvent)
+	
+	// If the active element changed (canvas stole focus), restore it
+	if !activeElement.IsUndefined() && activeElement.Get("tagName").String() == "INPUT" {
+		newActive := doc.Get("activeElement")
+		if !newActive.Equal(activeElement) {
+			activeElement.Call("focus")
+		}
+	}
 }
 
 // dispatchToTarget dispatches keyboard events to a specific target

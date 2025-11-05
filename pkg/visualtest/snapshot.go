@@ -313,7 +313,8 @@ func Compare(baseline, current *Snapshot, options SnapshotOptions) ComparisonRes
 
 // compareComponent compares a specific visual component between baseline and current.
 func compareComponent(baselineHash, currentHash string, baselineImg, currentImg *image.RGBA,
-	componentType string, threshold float64, result *ComparisonResult) float64 {
+	componentType string, threshold float64, result *ComparisonResult,
+) float64 {
 	if baselineHash != currentHash {
 		similarity := calculateSimilarity(baselineImg, currentImg)
 		if similarity < threshold {

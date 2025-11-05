@@ -187,7 +187,6 @@ func TestPressurePlatePuzzle(t *testing.T) {
 			difficulty,
 			params,
 		)
-
 		if err != nil {
 			t.Fatalf("Failed to generate pressure plate puzzle: %v", err)
 		}
@@ -230,7 +229,6 @@ func TestLeverSequencePuzzle(t *testing.T) {
 		difficulty,
 		procgen.GenerationParams{},
 	)
-
 	if err != nil {
 		t.Fatalf("Failed to generate lever sequence puzzle: %v", err)
 	}
@@ -263,7 +261,6 @@ func TestBlockPushingPuzzle(t *testing.T) {
 		difficulty,
 		procgen.GenerationParams{},
 	)
-
 	if err != nil {
 		t.Fatalf("Failed to generate block pushing puzzle: %v", err)
 	}
@@ -305,7 +302,6 @@ func TestTimedChallengePuzzle(t *testing.T) {
 		difficulty,
 		procgen.GenerationParams{},
 	)
-
 	if err != nil {
 		t.Fatalf("Failed to generate timed challenge puzzle: %v", err)
 	}
@@ -331,7 +327,6 @@ func TestMemoryPatternPuzzle(t *testing.T) {
 		difficulty,
 		procgen.GenerationParams{},
 	)
-
 	if err != nil {
 		t.Fatalf("Failed to generate memory pattern puzzle: %v", err)
 	}
@@ -364,7 +359,6 @@ func TestColorMatchingPuzzle(t *testing.T) {
 		difficulty,
 		procgen.GenerationParams{},
 	)
-
 	if err != nil {
 		t.Fatalf("Failed to generate color matching puzzle: %v", err)
 	}

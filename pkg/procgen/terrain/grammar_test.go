@@ -165,7 +165,6 @@ func TestGraphGrammarGenerator_GenerateGraph_Fantasy(t *testing.T) {
 	gen := NewGraphGrammarGenerator(config)
 
 	graph, err := gen.GenerateGraph(80, 50)
-
 	if err != nil {
 		t.Fatalf("GenerateGraph() error = %v", err)
 	}
@@ -208,7 +207,6 @@ func TestGraphGrammarGenerator_GenerateGraph_SciFi(t *testing.T) {
 	gen := NewGraphGrammarGenerator(config)
 
 	graph, err := gen.GenerateGraph(80, 50)
-
 	if err != nil {
 		t.Fatalf("GenerateGraph() error = %v", err)
 	}
@@ -223,7 +221,6 @@ func TestGraphGrammarGenerator_GenerateGraph_Horror(t *testing.T) {
 	gen := NewGraphGrammarGenerator(config)
 
 	graph, err := gen.GenerateGraph(80, 50)
-
 	if err != nil {
 		t.Fatalf("GenerateGraph() error = %v", err)
 	}
@@ -238,7 +235,6 @@ func TestGraphGrammarGenerator_GenerateGraph_Cyberpunk(t *testing.T) {
 	gen := NewGraphGrammarGenerator(config)
 
 	graph, err := gen.GenerateGraph(80, 50)
-
 	if err != nil {
 		t.Fatalf("GenerateGraph() error = %v", err)
 	}
@@ -253,7 +249,6 @@ func TestGraphGrammarGenerator_GenerateGraph_PostApocalyptic(t *testing.T) {
 	gen := NewGraphGrammarGenerator(config)
 
 	graph, err := gen.GenerateGraph(80, 50)
-
 	if err != nil {
 		t.Fatalf("GenerateGraph() error = %v", err)
 	}
@@ -497,7 +492,6 @@ func TestParseIntoGraph_SimpleSequence(t *testing.T) {
 	lsystemString := "S-C-E"
 
 	err := gen.parseIntoGraph(lsystemString, graph)
-
 	if err != nil {
 		t.Fatalf("parseIntoGraph() error = %v", err)
 	}
@@ -523,7 +517,6 @@ func TestParseIntoGraph_WithBranch(t *testing.T) {
 	lsystemString := "S-+-C-T"
 
 	err := gen.parseIntoGraph(lsystemString, graph)
-
 	if err != nil {
 		t.Fatalf("parseIntoGraph() error = %v", err)
 	}

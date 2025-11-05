@@ -162,8 +162,8 @@ func NewSpellBurstLight(radius float64, spellColor color.RGBA) *LightComponent {
 // This provides full control over light animation for special effects.
 func NewDynamicLight(radius float64, lightColor color.RGBA, intensity float64,
 	flickering bool, flickerSpeed, flickerAmount float64,
-	pulsing bool, pulseSpeed, pulseAmount float64) *LightComponent {
-
+	pulsing bool, pulseSpeed, pulseAmount float64,
+) *LightComponent {
 	light := NewLightComponent(radius, lightColor, intensity)
 	light.Flickering = flickering
 	light.FlickerSpeed = flickerSpeed

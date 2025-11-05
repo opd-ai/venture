@@ -73,7 +73,8 @@ func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
 
 // createObject assembles an EnvironmentalObject from components.
 func (g *Generator) createObject(config Config, sprite *image.RGBA, name string,
-	collidable, interactable, harmful bool, damage int) *EnvironmentalObject {
+	collidable, interactable, harmful bool, damage int,
+) *EnvironmentalObject {
 	return &EnvironmentalObject{
 		Type:         config.SubType.GetObjectType(),
 		SubType:      config.SubType,

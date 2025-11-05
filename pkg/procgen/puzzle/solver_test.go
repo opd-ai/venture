@@ -109,7 +109,6 @@ func TestCSPSolveSimple(t *testing.T) {
 
 	// No constraints - any assignment should work
 	solution, err := csp.Solve()
-
 	if err != nil {
 		t.Errorf("Solve() error = %v, want nil", err)
 	}
@@ -142,7 +141,6 @@ func TestCSPSolveWithConstraint(t *testing.T) {
 	})
 
 	solution, err := csp.Solve()
-
 	if err != nil {
 		t.Errorf("Solve() error = %v, want nil", err)
 	}

@@ -271,7 +271,6 @@ func (ps *PuzzleSolver) AddSequenceConstraint(sequence []string) error {
 
 			return state1 < state2
 		})
-
 		if err != nil {
 			return err
 		}
@@ -302,7 +301,6 @@ func (ps *PuzzleSolver) AddUniquenessConstraint(elements []string) error {
 
 				return v1 != v2
 			})
-
 			if err != nil {
 				return err
 			}

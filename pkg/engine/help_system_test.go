@@ -36,8 +36,10 @@ func TestNewHelpSystem(t *testing.T) {
 	}
 
 	// Check quick hints exist
-	expectedHints := []string{"low_health", "level_up", "inventory_full", "no_mana", 
-		"enemy_nearby", "item_dropped", "boss_ahead", "quest_complete", "first_death"}
+	expectedHints := []string{
+		"low_health", "level_up", "inventory_full", "no_mana",
+		"enemy_nearby", "item_dropped", "boss_ahead", "quest_complete", "first_death",
+	}
 	for _, hintID := range expectedHints {
 		if _, exists := hs.QuickHints[hintID]; !exists {
 			t.Errorf("Expected quick hint %q not found", hintID)
@@ -121,11 +123,11 @@ func TestHide(t *testing.T) {
 // TestToggle validates toggling help visibility.
 func TestToggle(t *testing.T) {
 	tests := []struct {
-		name            string
-		initialVisible  bool
-		initialTopic    string
-		wantVisible     bool
-		wantDefaultSet  bool
+		name           string
+		initialVisible bool
+		initialTopic   string
+		wantVisible    bool
+		wantDefaultSet bool
 	}{
 		{
 			name:           "toggle on from hidden state",
@@ -379,10 +381,10 @@ func TestUpdateDisabled(t *testing.T) {
 // TestUpdateAutoHints validates automatic hint detection.
 func TestUpdateAutoHints(t *testing.T) {
 	tests := []struct {
-		name         string
-		setupEntity  func() *Entity
-		wantHintSet  bool
-		wantContext  string
+		name        string
+		setupEntity func() *Entity
+		wantHintSet bool
+		wantContext string
 	}{
 		{
 			name: "detect low health",
@@ -455,7 +457,7 @@ func TestUpdateAutoHints(t *testing.T) {
 				// Verify the hint is related to the expected context
 				expectedHint := hs.QuickHints[tt.wantContext]
 				if hs.CurrentHint != expectedHint {
-					t.Errorf("Update() CurrentHint = %q, want hint for context %q", 
+					t.Errorf("Update() CurrentHint = %q, want hint for context %q",
 						hs.CurrentHint, tt.wantContext)
 				}
 			} else {

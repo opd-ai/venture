@@ -128,13 +128,13 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 
 	// Handle tab switching
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		ui.currentTab = 0   // Active
-		ui.scrollOffset = 0 // Reset scroll on tab change
+		ui.currentTab = 0     // Active
+		ui.scrollOffset = 0   // Reset scroll on tab change
 		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		ui.currentTab = 1   // Completed
-		ui.scrollOffset = 0 // Reset scroll on tab change
+		ui.currentTab = 1     // Completed
+		ui.scrollOffset = 0   // Reset scroll on tab change
 		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
 	}
 
@@ -409,8 +409,10 @@ func (q *EbitenQuestUI) SetActive(active bool) {
 // M-003 FIX: calculateQuestListHeight computes total height of all quests in list.
 // This is cached to avoid O(n) recalculation every frame.
 // Parameters:
-//   quests - List of quests to measure
-//   windowWidth - Width of window for text wrapping calculation
+//
+//	quests - List of quests to measure
+//	windowWidth - Width of window for text wrapping calculation
+//
 // Returns: Total height in pixels
 func (ui *EbitenQuestUI) calculateQuestListHeight(quests []*TrackedQuest, windowWidth int) int {
 	totalHeight := 0

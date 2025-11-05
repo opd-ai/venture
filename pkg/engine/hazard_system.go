@@ -22,8 +22,9 @@ import (
 
 // HazardSystem manages environmental hazards and their effects.
 type HazardSystem struct {
-	world  *World
-	logger *logrus.Entry
+	world       *World
+	logger      *logrus.Entry
+	zoneTracker *HazardZoneTracker
 }
 
 // NewHazardSystem creates a new hazard system.
@@ -42,7 +43,8 @@ func NewHazardSystemWithLogger(logger *logrus.Logger) *HazardSystem {
 	}
 
 	return &HazardSystem{
-		logger: logEntry,
+		logger:      logEntry,
+		zoneTracker: NewHazardZoneTracker(500), // Max 500 concurrent hazard zones
 	}
 }
 
@@ -56,6 +58,12 @@ func (s *HazardSystem) SetWorld(world *World) {
 func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 	if s.world == nil {
 		return
+	}
+
+	// Update zone tracker (handles expiration and fading)
+	removed := s.zoneTracker.Update(deltaTime)
+	if s.logger != nil && removed > 0 {
+		s.logger.WithField("removed", removed).Debug("expired hazard zones removed")
 	}
 
 	// Find all hazard entities
@@ -74,6 +82,9 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check if hazard should be removed
 		if hazard.ShouldRemove() {
+			// Remove from zone tracker
+			s.zoneTracker.RemoveZone(hazardEntity.ID)
+			// Remove entity
 			s.world.RemoveEntity(hazardEntity.ID)
 			continue
 		}
@@ -85,9 +96,35 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 		hazPos := hazPosComp.(*PositionComponent)
 
-		// Apply hazard effects to entities in range
-		s.applyHazardEffects(hazard, hazPos, deltaTime)
+		// Sync zone tracker with current hazard state
+		zone, exists := s.zoneTracker.GetZone(hazardEntity.ID)
+		if !exists {
+			// Zone not tracked yet, add it
+			zone = &HazardZone{
+				ID:                 hazardEntity.ID,
+				X:                  hazPos.X,
+				Y:                  hazPos.Y,
+				Radius:             hazard.Radius,
+				HazardType:         hazard.HazardType,
+				DamagePerSecond:    hazard.DamagePerSecond,
+				MovementMultiplier: hazard.MovementMultiplier,
+				RemainingDuration:  hazard.Duration,
+			}
+			if !s.zoneTracker.AddZone(zone) {
+				if s.logger != nil {
+					s.logger.Warn("failed to add zone (max limit reached)")
+				}
+			}
+		} else {
+			// Update existing zone with current hazard state
+			zone.X = hazPos.X
+			zone.Y = hazPos.Y
+			zone.RemainingDuration = hazard.Duration
+		}
 	}
+
+	// Apply hazard effects to entities using zone tracker
+	s.applyZoneEffects(deltaTime)
 }
 
 // applyHazardEffects applies hazard effects to entities in range.

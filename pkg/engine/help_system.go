@@ -7,6 +7,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
@@ -65,13 +66,14 @@ func createDefaultHelpTopics() map[string]HelpTopic {
 			"  K - Skill tree",
 			"  J - Quest log",
 			"  M - Map",
-			"  ESC - Menu",
+			"  H or F1 - Help (this screen)",
+			"  ESC - Close menu / Pause",
 			"",
 			"Saving:",
 			"  F5 - Quick save",
 			"  F9 - Quick load",
 		},
-		Keys: []string{"WASD", "SPACE", "I", "C", "K"},
+		Keys: []string{"WASD", "SPACE", "I", "C", "K", "H", "F1"},
 	}
 
 	topics["combat"] = HelpTopic{
@@ -266,10 +268,44 @@ func (hs *EbitenHelpSystem) HideQuickHint() {
 	hs.CurrentHint = ""
 }
 
-// Update processes the help system (can be used for auto-hiding hints)
+// Update processes the help system (can be used for auto-hiding hints).
+// Handles dual-exit navigation (H/F1 key + ESC) for help screen.
 func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 	if !hs.Enabled {
 		return
+	}
+
+	// Standardized dual-exit menu navigation: H or F1 key OR Escape
+	// GAP-004 REPAIR: All menus use toggle key + ESC for consistent UX
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) || inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+		hs.Toggle()
+		return
+	}
+	if hs.Visible && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		hs.Hide()
+		return
+	}
+
+	// Topic switching with number keys (when help visible)
+	if hs.Visible {
+		if inpututil.IsKeyJustPressed(ebiten.Key1) {
+			hs.ShowTopic("controls")
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key2) {
+			hs.ShowTopic("combat")
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key3) {
+			hs.ShowTopic("inventory")
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key4) {
+			hs.ShowTopic("progression")
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key5) {
+			hs.ShowTopic("world")
+		}
+		if inpututil.IsKeyJustPressed(ebiten.Key6) {
+			hs.ShowTopic("multiplayer")
+		}
 	}
 
 	// Auto-detect contexts and show hints
@@ -391,9 +427,9 @@ func (hs *EbitenHelpSystem) drawHelpPanel(screen *ebiten.Image) {
 	titleColor := color.RGBA{255, 255, 255, 255}
 	text.Draw(screen, "Help: "+topic.Title, basicfont.Face7x13, panelX+20, panelY+25, titleColor)
 
-	// Close hint
+	// Close hint with dual-exit pattern (GAP-004 REPAIR)
 	closeColor := color.RGBA{200, 200, 200, 255}
-	text.Draw(screen, "[ESC to close]", basicfont.Face7x13, panelX+panelWidth-150, panelY+25, closeColor)
+	text.Draw(screen, "[H, F1, or ESC to close]", basicfont.Face7x13, panelX+panelWidth-230, panelY+25, closeColor)
 
 	// Content
 	contentY := panelY + 60

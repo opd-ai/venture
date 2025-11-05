@@ -36,15 +36,27 @@ Start the game client:
 **Default Controls:**
 - **WASD** - Move your character
 - **Space** - Attack
-- **E** - Use item
-- **I** - Open inventory
-- **J** - Open quest log
-- **K** - Open skill tree
-- **M** - Open map
-- **Esc** - Pause menu/Help
+- **E** - Use item / Open chest
+- **F** - Interact with NPCs / Browse merchant shop
+- **1-5** - Cast spells
 - **F5** - Quick save
 - **F9** - Quick load
-- **1-5** - Cast spells
+
+**In-Game Menus** (Press key again OR ESC to close):
+
+| Menu | Key | What It Does |
+|------|-----|--------------|
+| Inventory | I | Manage items, drag-drop equipment |
+| Character Stats | C | View health, stats, equipment, attributes |
+| Skill Tree | K | Spend skill points, unlock new abilities |
+| Quest Log | J | Track active quests, view objectives |
+| World Map | M | Navigate explored areas, fog of war |
+| Crafting | R | Brew potions, enchant gear, craft items |
+| Shop | F | Buy/sell items (when near merchant) |
+| Help | H or F1 | Controls reference and game tips |
+| Pause | ESC | Pause game (closes any open menu first) |
+
+**Navigation Tip:** All menus use dual-exit—press the menu's letter key to toggle, or ESC to close any menu.
 
 ### 3. Your First Game
 

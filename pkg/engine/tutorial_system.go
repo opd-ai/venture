@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
@@ -51,26 +52,12 @@ func createDefaultTutorialSteps() []TutorialStep {
 			ID:          "welcome",
 			Title:       "Welcome to Venture!",
 			Description: "Welcome to the world of procedural adventure. Every dungeon, enemy, and item is unique!",
-			Objective:   "Press any key to continue", // GAP-005 REPAIR: Changed from "Press SPACE"
+			Objective:   "Press SPACE or ENTER to continue",
 			Completed:   false,
 			Condition: func(world *World) bool {
-				// GAP-001/GAP-005 REPAIR: Check for any key press using frame-persistent flag
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") {
-						comp, ok := entity.GetComponent("input")
-						if !ok {
-							continue
-						}
-						// Use InputProvider interface instead of concrete type
-						input, ok := comp.(InputProvider)
-						if !ok {
-							continue
-						}
-						// Check for any key press using interface method
-						return input.IsAnyKeyPressed()
-					}
-				}
-				return false
+				// Check for Space or Enter key press directly via ebiten
+				// Tutorial progression uses direct input for clarity (Space/Enter only)
+				return inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 			},
 		},
 		{

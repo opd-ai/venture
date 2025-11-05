@@ -60,14 +60,27 @@ go build -o venture-server ./cmd/server
 - `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
 - `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
 
-**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), ESC (close menus/pause), F5 (save), F9 (load)
+**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), ESC (close menus/pause), F5 (save), F9 (load), H or F1 (help)
+
+**All In-Game Menus** (Dual-Exit: Each menu's key OR ESC):
+
+| Menu | Key | Description |
+|------|-----|-------------|
+| Inventory | I | Manage items and equipment |
+| Character Stats | C | View stats, equipment, attributes |
+| Skill Tree | K | Spend skill points, unlock abilities |
+| Quest Log | J | Track active and completed quests |
+| World Map | M | View explored areas and navigation |
+| Crafting | R | Brew potions, enchant items, craft equipment |
+| Shop | F | Buy/sell items (when near merchant) |
+| Help | H or F1 | View controls and game information |
+
+**Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 
 **Gameplay Systems:**
 - **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
 - **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
 - **Skills & Progression**: Unlock new abilities through the skill tree, gain experience from combat and quests
-
-**Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 
 ### 3. Multiplayer
 

@@ -66,6 +66,7 @@ func (ui *EbitenQuestUI) Hide() {
 }
 
 // Update processes input for the quest UI.
+// Calculates scroll bounds based on current quest list content.
 func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	// Standardized dual-exit menu navigation: toggle key (J) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
@@ -81,6 +82,38 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 
 	if !ui.visible || ui.playerEntity == nil {
 		return
+	}
+
+	// Calculate max scroll based on current quest list
+	// M-003 FIX: Calculate maxScroll in Update() before input processing
+	if ui.playerEntity != nil {
+		trackerComp, ok := ui.playerEntity.GetComponent("questtracker")
+		if ok {
+			tracker := trackerComp.(*QuestTrackerComponent)
+			var quests []*TrackedQuest
+			if ui.currentTab == 0 {
+				quests = tracker.ActiveQuests
+			} else {
+				quests = tracker.CompletedQuests
+			}
+
+			// Estimate total content height (each quest ~120px base + variable content)
+			// This is approximate but sufficient for scroll bounds
+			estimatedHeight := 0
+			for _, tracked := range quests {
+				baseHeight := 120 // Base height per quest
+				// Add extra height for objectives
+				baseHeight += len(tracked.Quest.Objectives) * 20
+				estimatedHeight += baseHeight
+			}
+
+			// Content area height (window height minus header/footer)
+			contentHeight := 500 - 90 - 40 // windowHeight - header - footer
+			ui.maxScroll = estimatedHeight - contentHeight
+			if ui.maxScroll < 0 {
+				ui.maxScroll = 0
+			}
+		}
 	}
 
 	// Handle tab switching
@@ -103,6 +136,7 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		ui.scrollOffset += scrollSpeed
+		// M-003 FIX: Proper bounds checking using calculated maxScroll
 		if ui.scrollOffset > ui.maxScroll {
 			ui.scrollOffset = ui.maxScroll
 		}
@@ -112,6 +146,7 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	_, wheelY := ebiten.Wheel()
 	if wheelY != 0 {
 		ui.scrollOffset -= int(wheelY * float64(scrollSpeed))
+		// M-003 FIX: Clamp to valid range
 		if ui.scrollOffset < 0 {
 			ui.scrollOffset = 0
 		}

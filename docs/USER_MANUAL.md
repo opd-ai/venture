@@ -613,6 +613,8 @@ Venture uses JSON save files:
 - Experience points
 - Inventory and equipment
 - Active quests
+- **Tutorial progress** (completed steps, current step)
+- **Learned spells** (spell slots 1-5)
 
 **World State:**
 - World seed (regenerates terrain)
@@ -620,6 +622,7 @@ Venture uses JSON save files:
 - Time played
 - Difficulty setting
 - Genre
+- **Map exploration** (fog of war)
 
 **Settings:**
 - Key bindings

@@ -258,16 +258,54 @@ func (s *ShadowSystem) renderHardShadow(target *ebiten.Image, caster *shadowCast
 }
 
 // renderSoftShadow renders a soft-edged shadow with penumbra.
+// Implements proper soft shadow using multi-layer rendering:
+// - Umbra: Dark core shadow
+// - Penumbra: Gradient falloff creating soft edges
 func (s *ShadowSystem) renderSoftShadow(target *ebiten.Image, caster *shadowCaster, lightX, lightY float64) {
-	// For now, use hard shadow with slightly lower opacity
-	// Full soft shadow implementation would require blur/gradient rendering
-	tempCaster := *caster
-	tempShadow := *caster.shadow
-	tempShadow.Opacity *= 0.7
-	tempCaster.shadow = &tempShadow
-	s.renderHardShadow(target, &tempCaster, lightX, lightY)
+	// Calculate light direction and distance
+	dx := caster.x - lightX
+	dy := caster.y - lightY
+	distance := math.Sqrt(dx*dx + dy*dy)
 
-	// TODO: Implement proper soft shadow with penumbra gradients
+	if distance < 0.1 {
+		return // Entity is at light source
+	}
+
+	// Penumbra width increases with light distance (inverse square falloff)
+	// Closer lights = harder shadows, distant lights = softer shadows
+	penumbraFactor := math.Min(distance/500.0, 2.0) // Cap at 2x base penumbra
+	penumbraWidth := caster.shadow.SoftEdgeRadius * penumbraFactor
+
+	// Render umbra (core shadow) with full opacity
+	umbraShadow := *caster.shadow
+	umbraShadow.Opacity *= 0.8 // Slightly reduce for realistic rendering
+	umbraCaster := shadowCaster{
+		shadow:   &umbraShadow,
+		position: caster.position,
+		x:        caster.x,
+		y:        caster.y,
+	}
+	s.renderHardShadow(target, &umbraCaster, lightX, lightY)
+
+	// Render penumbra layers (gradient falloff)
+	// Use 3 layers for smooth gradient without performance impact
+	layers := 3
+	for i := 1; i <= layers; i++ {
+		layerFactor := float64(i) / float64(layers+1)
+
+		// Penumbra shadow with expanded radius and reduced opacity
+		penumbraShadow := *caster.shadow
+		penumbraShadow.Radius = caster.shadow.Radius + (penumbraWidth * layerFactor)
+		penumbraShadow.Opacity *= (1.0 - layerFactor) * 0.4 // Fade toward edge
+
+		penumbraCaster := shadowCaster{
+			shadow:   &penumbraShadow,
+			position: caster.position,
+			x:        caster.x,
+			y:        caster.y,
+		}
+		s.renderHardShadow(target, &penumbraCaster, lightX, lightY)
+	}
 }
 
 // renderContactShadow renders a ground contact shadow (entity touching ground).

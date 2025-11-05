@@ -267,6 +267,18 @@ func (s *CameraSystem) ScreenToWorld(screenX, screenY float64) (worldX, worldY f
 
 // IsVisible checks if a world position is visible on screen.
 func (s *CameraSystem) IsVisible(worldX, worldY, radius float64) bool {
+	// BUG FIX: When there's no active camera, all entities are considered visible
+	// because WorldToScreen returns world coordinates unchanged, which would
+	// incorrectly be compared against screen bounds.
+	if s.activeCamera == nil {
+		return true
+	}
+
+	cameraComp, ok := s.activeCamera.GetComponent("camera")
+	if !ok {
+		return true
+	}
+
 	screenX, screenY := s.WorldToScreen(worldX, worldY)
 
 	// Check if within screen bounds (with margin for radius)

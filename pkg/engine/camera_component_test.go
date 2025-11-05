@@ -461,3 +461,100 @@ func BenchmarkHitStopComponent_TriggerHitStop(b *testing.B) {
 		hitStop.TriggerHitStop(0.1, 0.0)
 	}
 }
+
+// TestCameraSystem_IsVisible_NoCamera tests visibility when no camera is active.
+// This is a regression test for the bug where IsVisible incorrectly culled sprites
+// when activeCamera was nil.
+func TestCameraSystem_IsVisible_NoCamera(t *testing.T) {
+	cameraSystem := NewCameraSystem(800, 600)
+
+	// Test entities at various world positions with no camera
+	tests := []struct {
+		name   string
+		worldX float64
+		worldY float64
+		radius float64
+		want   bool
+	}{
+		{"origin", 0, 0, 32, true},
+		{"far positive", 10000, 10000, 32, true},
+		{"far negative", -10000, -10000, 32, true},
+		{"large radius", 5000, 5000, 500, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cameraSystem.IsVisible(tt.worldX, tt.worldY, tt.radius)
+			if got != tt.want {
+				t.Errorf("IsVisible(%v, %v, %v) = %v, want %v",
+					tt.worldX, tt.worldY, tt.radius, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_IsVisible_WithCamera tests visibility with an active camera.
+func TestCameraSystem_IsVisible_WithCamera(t *testing.T) {
+	cameraSystem := NewCameraSystem(800, 600)
+
+	// Create camera entity
+	cameraEntity := NewEntity(1)
+	cameraComp := NewCameraComponent()
+	cameraComp.X = 400 // Camera at center of 800x600 screen
+	cameraComp.Y = 300
+	cameraComp.Zoom = 1.0
+	cameraEntity.AddComponent(cameraComp)
+
+	pos := &PositionComponent{X: 400, Y: 300}
+	cameraEntity.AddComponent(pos)
+
+	cameraSystem.SetActiveCamera(cameraEntity)
+
+	tests := []struct {
+		name   string
+		worldX float64
+		worldY float64
+		radius float64
+		want   bool
+	}{
+		{"camera center", 400, 300, 32, true},
+		{"visible left edge", 50, 300, 32, true},
+		{"visible right edge", 750, 300, 32, true},
+		{"visible top edge", 400, 50, 32, true},
+		{"visible bottom edge", 400, 550, 32, true},
+		{"far off screen left", -500, 300, 32, false},
+		{"far off screen right", 1500, 300, 32, false},
+		{"far off screen top", 400, -500, 32, false},
+		{"far off screen bottom", 400, 1200, 32, false},
+		{"with margin left", -20, 300, 32, true},  // Within margin (radius*2 = 64)
+		{"with margin right", 820, 300, 32, true}, // Within margin
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cameraSystem.IsVisible(tt.worldX, tt.worldY, tt.radius)
+			if got != tt.want {
+				t.Errorf("IsVisible(%v, %v, %v) = %v, want %v",
+					tt.worldX, tt.worldY, tt.radius, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_IsVisible_NoComponent tests visibility when camera entity has no component.
+func TestCameraSystem_IsVisible_NoComponent(t *testing.T) {
+	cameraSystem := NewCameraSystem(800, 600)
+
+	// Create entity without camera component
+	entity := NewEntity(1)
+	pos := &PositionComponent{X: 400, Y: 300}
+	entity.AddComponent(pos)
+
+	cameraSystem.SetActiveCamera(entity)
+
+	// Should return true (all visible) since camera has no component
+	got := cameraSystem.IsVisible(10000, 10000, 32)
+	if !got {
+		t.Error("IsVisible should return true when camera entity has no component")
+	}
+}

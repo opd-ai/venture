@@ -913,22 +913,27 @@ func IsTouchOrMouseJustPressed() bool {
 
 // GetTouchOrMousePosition returns the position of either the first active touch
 // or the mouse cursor. Prioritizes touch input when available.
+// The hasActiveInput return value is true when there's an active touch or pressed mouse button,
+// false when only cursor position is available without interaction.
 // Touch support for WASM/mobile platforms.
-func GetTouchOrMousePosition() (x, y int, hasInput bool) {
+func GetTouchOrMousePosition() (x, y int, hasActiveInput bool) {
 	// Check for active touch first (priority on touch devices)
 	touchIDs := ebiten.TouchIDs()
 	if len(touchIDs) > 0 {
-		// Return the first touch position
+		// Return the first touch position with active input flag
 		x, y := ebiten.TouchPosition(touchIDs[0])
 		return x, y, true
 	}
 	
 	// Fall back to mouse position
 	x, y = ebiten.CursorPosition()
-	return x, y, true
+	// Return cursor position with active input flag based on mouse button state
+	hasActiveInput = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	return x, y, hasActiveInput
 }
 
-// HasTouchOrMouseInput returns true if there is any active touch or mouse input.
+// HasTouchOrMouseInput returns true if there is any active touch or mouse button press.
+// Only checks left mouse button for consistency with touch input (no button distinction).
 // Touch support for WASM/mobile platforms.
 func HasTouchOrMouseInput() bool {
 	// Check for active touches
@@ -936,8 +941,22 @@ func HasTouchOrMouseInput() bool {
 		return true
 	}
 	
-	// Check for mouse button press
+	// Check for left mouse button press (consistent with touch tap behavior)
 	return ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
+// IsTouchOrMouseJustReleased returns true if either a touch or left mouse button
+// was just released this frame. This is the release counterpart to IsTouchOrMouseJustPressed.
+// Touch support for WASM/mobile platforms.
+func IsTouchOrMouseJustReleased() bool {
+	// Check for mouse release
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+		return true
+	}
+	
+	// Check for touch release (any touch that was active but is now gone)
+	touchIDs := inpututil.AppendJustReleasedTouchIDs(nil)
+	return len(touchIDs) > 0
 }
 
 // ===== KEY BINDING MANAGEMENT =====

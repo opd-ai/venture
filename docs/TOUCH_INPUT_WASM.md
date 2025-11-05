@@ -227,6 +227,207 @@ This provides the best experience for all device types:
 - Touch-capable laptops: Can use either input method
 - Mobile devices: Touch input with virtual controls always available
 
+## Mobile Keyboard for Text Input (WASM)
+
+### Overview
+
+On mobile browsers, the native keyboard must be explicitly triggered for text input since the game runs in a canvas element. The keyboard bridge in `pkg/mobile/keyboard_wasm.go` handles this automatically.
+
+### How It Works
+
+1. **Hidden Input Element**: A hidden HTML input element is created off-screen
+2. **Focus/Blur Control**: Focusing the input shows the mobile keyboard, blurring hides it
+3. **Event Forwarding**: Keyboard events from the hidden input are forwarded to Ebiten's `AppendInputChars`
+
+### Text Input Components
+
+All text input UI components follow the mobile keyboard lifecycle pattern:
+
+#### Character Creation (`pkg/engine/character_creation.go`)
+```go
+// Show keyboard when entering name input step
+if !cc.keyboardShown && mobile.IsWASM() {
+    mobile.ShowKeyboard()
+    cc.keyboardShown = true
+}
+
+// Hide keyboard when leaving text input
+if cc.keyboardShown && mobile.IsWASM() {
+    mobile.HideKeyboard()
+    cc.keyboardShown = false
+}
+```
+
+**Lifecycle:**
+- **Name Entry**: Keyboard shown automatically on first Update() in name input step
+- **Class Selection**: Keyboard hidden (no text input needed)
+- **Portrait Selection**: Keyboard not shown automatically (file path not practical on mobile)
+- **Confirmation**: Keyboard remains hidden
+- **Completion**: Cleanup() ensures keyboard is hidden
+
+#### Server Address Input (`pkg/engine/server_address_input.go`)
+```go
+// Show keyboard when input becomes visible
+if mobile.IsWASM() {
+    mobile.ShowKeyboard()
+    s.keyboardShown = true
+}
+
+// Hide keyboard on Enter (connect) or Escape (cancel)
+if s.keyboardShown && mobile.IsWASM() {
+    mobile.HideKeyboard()
+    s.keyboardShown = false
+}
+```
+
+#### Crafting UI Search (`pkg/engine/crafting_ui.go`)
+```go
+// Show keyboard when opening crafting UI (search active)
+if !ui.keyboardShown && mobile.IsWASM() {
+    mobile.ShowKeyboard()
+    ui.keyboardShown = true
+}
+
+// Hide keyboard when closing crafting UI
+if ui.keyboardShown && mobile.IsWASM() {
+    mobile.HideKeyboard()
+    ui.keyboardShown = false
+}
+```
+
+### Keyboard Lifecycle Pattern
+
+All text input components must follow this pattern:
+
+1. **Show on Entry**: When entering a text input state:
+   ```go
+   if !keyboardShown && mobile.IsWASM() {
+       mobile.ShowKeyboard()
+       keyboardShown = true
+   }
+   ```
+
+2. **Hide on Exit**: When leaving text input state:
+   ```go
+   if keyboardShown && mobile.IsWASM() {
+       mobile.HideKeyboard()
+       keyboardShown = false
+   }
+   ```
+
+3. **Reset Flag on Transition**: When moving between UI states:
+   ```go
+   keyboardShown = false  // Will be shown by next state if needed
+   ```
+
+4. **Cleanup on Completion**: Final cleanup when UI closes completely:
+   ```go
+   if keyboardShown && mobile.IsWASM() {
+       mobile.HideKeyboard()
+       keyboardShown = false
+   }
+   ```
+
+### Implementation Details
+
+**Hidden Input Element Attributes:**
+```javascript
+input.type = "text"
+input.inputmode = "text"          // Optimized keyboard layout
+input.autocomplete = "off"        // Disable autocomplete
+input.enterkeyhint = "done"       // Show "Done" button
+```
+
+**Event Forwarding:**
+- Regular keys → Dispatched as `keydown` and `keypress` events
+- Backspace → Dispatched as `keydown` with keyCode 8
+- Special keys (Enter, Tab, Escape) → Forwarded with correct keyCodes
+
+**Character Processing:**
+```go
+// Text input handling in UI components
+runes := ebiten.AppendInputChars(nil)
+for _, r := range runes {
+    // Process character (validation, length check, etc.)
+    nameInput += string(r)
+}
+```
+
+### Testing on Mobile WASM
+
+1. Build WASM: `make build-wasm`
+2. Serve locally: `python3 -m http.server 8000 -d web/`
+3. Open on mobile: `http://<your-ip>:8000`
+4. Test scenarios:
+   - Character name entry: Keyboard appears automatically
+   - Server address input: Keyboard appears when field shown
+   - Crafting search: Keyboard appears when UI opens
+   - Navigation: Keyboard disappears when leaving text input
+
+### Common Pitfalls to Avoid
+
+❌ **Don't**: Show keyboard before UI is ready
+```go
+// BAD: Shows keyboard immediately in Reset()
+mobile.ShowKeyboard()
+```
+
+✅ **Do**: Let Update() show keyboard when state is ready
+```go
+// GOOD: Reset flag, let updateNameInput() show keyboard
+keyboardShown = false
+```
+
+❌ **Don't**: Forget to hide keyboard when UI closes
+```go
+// BAD: Keyboard stays visible after UI closes
+```
+
+✅ **Do**: Always hide keyboard in cleanup
+```go
+// GOOD: Hide keyboard in Hide() or Cleanup()
+if keyboardShown && mobile.IsWASM() {
+    mobile.HideKeyboard()
+    keyboardShown = false
+}
+```
+
+❌ **Don't**: Show keyboard for non-text input steps
+```go
+// BAD: Showing keyboard on file path selection (not practical on mobile)
+if !keyboardShown && mobile.IsWASM() {
+    mobile.ShowKeyboard()
+}
+```
+
+✅ **Do**: Only show keyboard when text input is actually needed
+```go
+// GOOD: Only show keyboard on name entry, not file selection
+// Portrait selection: keyboard not shown automatically
+```
+
+### Debugging Keyboard Issues
+
+Enable verbose logging to debug keyboard visibility:
+```bash
+./venture-client -verbose
+```
+
+Check for:
+- "ShowKeyboard called" / "HideKeyboard called" log messages
+- Keyboard state flag (`keyboardShown`) matches actual visibility
+- Keyboard appears/disappears at correct UI state transitions
+
+### Browser Compatibility
+
+The keyboard bridge works on all modern mobile browsers:
+- ✅ iOS Safari 14+ (iPhone, iPad)
+- ✅ Android Chrome 90+
+- ✅ Android Firefox 88+
+- ✅ Mobile Edge, Brave, Samsung Internet
+
+Desktop browsers ignore keyboard calls (keyboard always available).
+
 ## Future Enhancements
 
 Possible improvements:
@@ -235,6 +436,8 @@ Possible improvements:
 - [ ] Add swipe gestures for inventory/menu navigation
 - [ ] Support for stylus/pen input properties
 - [ ] Touch-optimized UI scaling for small screens
+- [ ] Custom keyboard types (email, URL, numeric) per input field
+- [ ] Predictive text and autocorrect support for mobile typing
 
 ## References
 

@@ -348,8 +348,8 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
-		// MOBILE/WASM FIX: Show keyboard immediately when going back to name input
-		// Reset flag first so updateNameInput will show keyboard on next update
+		// MOBILE/WASM FIX: Reset keyboard flag so updateNameInput will show it
+		// when entering the name input step on next Update()
 		cc.keyboardShown = false
 	}
 
@@ -362,11 +362,11 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 
 // updatePortraitSelection handles portrait file selection via dialog
 func (cc *EbitenCharacterCreation) updatePortraitSelection() {
-	// MOBILE/WASM: Show keyboard for manual path input (file dialog not available on WASM)
-	if !cc.keyboardShown && mobile.IsWASM() {
-		mobile.ShowKeyboard()
-		cc.keyboardShown = true
-	}
+	// MOBILE/WASM FIX: Don't show keyboard automatically on portrait step.
+	// File path input is not practical on mobile devices. Users should press
+	// Tab to skip portrait, or Enter with empty input to proceed.
+	// If they do start typing, the keyboard will appear automatically via browser behavior.
+	// This prevents unnecessary keyboard popup that blocks the UI.
 
 	// SPACE or B key to open file browser dialog
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
@@ -400,8 +400,8 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		} else {
 			// Empty backspace goes back to class selection
 			cc.currentStep = stepClassSelection
-
-			// MOBILE/WASM: Hide keyboard when leaving portrait input
+			// MOBILE/WASM: Ensure keyboard is hidden when going back
+			// (it should already be hidden since we don't show it on portrait step now)
 			if cc.keyboardShown && mobile.IsWASM() {
 				mobile.HideKeyboard()
 				cc.keyboardShown = false
@@ -413,8 +413,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// ESC to go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepClassSelection
-
-		// MOBILE/WASM: Hide keyboard when cancelling
+		// MOBILE/WASM: Ensure keyboard is hidden when cancelling
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()
 			cc.keyboardShown = false
@@ -428,8 +427,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = nil
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
-
-		// MOBILE/WASM: Hide keyboard when skipping portrait
+		// MOBILE/WASM: Ensure keyboard is hidden when skipping
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()
 			cc.keyboardShown = false
@@ -447,8 +445,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 			cc.characterData.Portrait = nil
 			cc.currentStep = stepConfirmation
 			cc.errorMsg = ""
-
-			// MOBILE/WASM: Hide keyboard when completing
+			// MOBILE/WASM: Ensure keyboard is hidden when completing
 			if cc.keyboardShown && mobile.IsWASM() {
 				mobile.HideKeyboard()
 				cc.keyboardShown = false
@@ -468,8 +465,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = portrait
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
-
-		// MOBILE/WASM: Hide keyboard when completing
+		// MOBILE/WASM: Ensure keyboard is hidden when completing
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()
 			cc.keyboardShown = false
@@ -902,17 +898,17 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.confirmed = false
 	cc.errorMsg = ""
 
-	// MOBILE/WASM: Ensure keyboard is hidden when resetting, then show for name input
-	// BUG FIX: Previous implementation would hide keyboard but not show it again.
-	// Since we're resetting to stepNameInput, we need the keyboard visible immediately.
+	// MOBILE/WASM KEYBOARD FIX: Reset keyboard state flag to false.
+	// The keyboard will be shown automatically on the first Update() call
+	// when updateNameInput() detects keyboardShown=false and shows it.
+	// This prevents premature keyboard display before the UI is ready.
 	if mobile.IsWASM() {
-		// Hide first in case it was shown
+		// Hide keyboard if it was shown from previous state
 		if cc.keyboardShown {
 			mobile.HideKeyboard()
 		}
-		// Now show keyboard for name input step
-		mobile.ShowKeyboard()
-		cc.keyboardShown = true
+		// Reset flag - keyboard will be shown by updateNameInput() on next Update()
+		cc.keyboardShown = false
 	}
 
 	// Apply defaults to both input fields and character data

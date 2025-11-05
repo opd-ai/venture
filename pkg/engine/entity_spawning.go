@@ -187,13 +187,14 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			enemy.AddComponent(NewRotationComponent(0, 2.0)) // Enemies face right initially, slower turn speed
 			
 			// Phase 11.1: Add layer component for multi-layer collision
-			enemy.AddComponent(NewLayerComponent(LayerGround)) // Enemies on ground layer
+			layerComp := NewLayerComponent()
+			layerComp.CurrentLayer = 0 // Ground layer
+			enemy.AddComponent(&layerComp)
 			
 			// Phase 14: Add shadow component for enhanced lighting
-			shadowComp := NewShadowComponent()
+			shadowComp := NewShadowComponent(enemySize)
 			shadowComp.CastsShadow = true
 			shadowComp.ShadowType = ShadowTypeHard
-			shadowComp.ShadowLength = enemySize * 0.5 // Shadow proportional to size
 			enemy.AddComponent(shadowComp)
 
 			spawned++

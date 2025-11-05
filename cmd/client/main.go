@@ -1675,13 +1675,14 @@ func main() {
 	player.AddComponent(hitStop)
 	
 	// Phase 11.1: Add layer component for multi-layer collision
-	player.AddComponent(engine.NewLayerComponent(engine.LayerGround)) // Player on ground layer
+	layerComp := engine.NewLayerComponent()
+	layerComp.CurrentLayer = 0 // Ground layer
+	player.AddComponent(&layerComp)
 	
 	// Phase 14: Add shadow component for enhanced lighting
-	playerShadow := engine.NewShadowComponent()
+	playerShadow := engine.NewShadowComponent(28) // Player sprite size
 	playerShadow.CastsShadow = true
 	playerShadow.ShadowType = engine.ShadowTypeSoft // Player gets soft shadow
-	playerShadow.ShadowLength = 20.0
 	player.AddComponent(playerShadow)
 
 	// Phase 5.3: Add player torch for dynamic lighting (if enabled)

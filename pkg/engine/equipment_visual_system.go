@@ -4,6 +4,7 @@ package engine
 import (
 	"fmt"
 
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
@@ -273,10 +274,43 @@ func (s *EquipmentVisualSystem) syncEquipmentChanges(entity *Entity) {
 		equipVisualComp.ClearArmor()
 	}
 
-	// TODO: Add accessory syncing when more equipment slots are used
+	// Sync accessories (accessory slots 1-3)
+	s.syncAccessories(equipComp, equipVisualComp)
 }
 
-// Helper methods
+// syncAccessories synchronizes accessory slots with visual component.
+func (s *EquipmentVisualSystem) syncAccessories(equipComp *EquipmentComponent, equipVisualComp *EquipmentVisualComponent) {
+	// Get currently equipped accessories
+	equippedAccessories := make([]*item.Item, 0, 3)
+	accessorySlots := []EquipmentSlot{SlotAccessory1, SlotAccessory2, SlotAccessory3}
+
+	for _, slot := range accessorySlots {
+		acc := equipComp.GetEquipped(slot)
+		if acc != nil {
+			equippedAccessories = append(equippedAccessories, acc)
+		}
+	}
+
+	// Check if accessories have changed
+	changed := len(equippedAccessories) != len(equipVisualComp.AccessoryIDs)
+	if !changed {
+		// Check if any individual accessory has changed
+		for i, acc := range equippedAccessories {
+			if i >= len(equipVisualComp.AccessoryIDs) || equipVisualComp.AccessoryIDs[i] != acc.ID {
+				changed = true
+				break
+			}
+		}
+	}
+
+	// If changed, rebuild accessory list
+	if changed {
+		equipVisualComp.ClearAccessories()
+		for _, acc := range equippedAccessories {
+			equipVisualComp.AddAccessory(acc.ID, acc.Seed)
+		}
+	}
+} // Helper methods
 
 func (s *EquipmentVisualSystem) getEquipmentVisualComponent(entity *Entity) *EquipmentVisualComponent {
 	comp, ok := entity.GetComponent("equipment_visual")

@@ -23,7 +23,7 @@ type ServerAddressInput struct {
 	maxLength    int
 	blinkTimer   int
 	showCursor   bool
-	
+
 	// Mobile keyboard state (WASM/mobile platforms)
 	keyboardShown bool // Tracks whether mobile keyboard is currently shown
 }
@@ -49,7 +49,7 @@ func (s *ServerAddressInput) Show() {
 	s.cursorPos = len(s.address)
 	s.blinkTimer = 0
 	s.showCursor = true
-	
+
 	// MOBILE/WASM: Show keyboard when input becomes visible
 	// The native mobile keyboard needs to be explicitly triggered on WASM builds
 	if mobile.IsWASM() {
@@ -61,7 +61,7 @@ func (s *ServerAddressInput) Show() {
 // Hide makes the server address input invisible.
 func (s *ServerAddressInput) Hide() {
 	s.isVisible = false
-	
+
 	// MOBILE/WASM: Hide keyboard when input is hidden
 	if s.keyboardShown && mobile.IsWASM() {
 		mobile.HideKeyboard()

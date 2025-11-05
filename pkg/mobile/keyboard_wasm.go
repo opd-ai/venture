@@ -25,11 +25,11 @@ func initKeyboardElement() {
 
 	doc := js.Global().Get("document")
 	input := doc.Call("createElement", "input")
-	
+
 	// Set input type to text for general text input
 	input.Set("type", "text")
 	input.Set("id", "venture-keyboard-input")
-	
+
 	// Style the input to be invisible but functional
 	// Position it off-screen but keep it in the DOM so keyboard triggers work
 	style := input.Get("style")
@@ -40,11 +40,11 @@ func initKeyboardElement() {
 	style.Set("height", "1px")
 	style.Set("opacity", "0")
 	style.Set("pointerEvents", "none")
-	
+
 	// Add to DOM
 	body := doc.Get("body")
 	body.Call("appendChild", input)
-	
+
 	keyboardElement = input
 }
 
@@ -59,7 +59,7 @@ func initKeyboardElement() {
 func ShowKeyboard() {
 	// Ensure keyboard element exists
 	initKeyboardElement()
-	
+
 	// Focus the input element to trigger keyboard
 	// Mobile browsers will show the native keyboard when an input is focused
 	if !keyboardElement.IsUndefined() {
@@ -78,7 +78,7 @@ func HideKeyboard() {
 	// Blur the input element to dismiss keyboard
 	if !keyboardElement.IsUndefined() {
 		keyboardElement.Call("blur")
-		
+
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")
 	}

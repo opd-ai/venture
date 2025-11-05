@@ -294,7 +294,7 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 			cc.characterData.Name = cc.nameInput
 			cc.currentStep = stepClassSelection
 			cc.errorMsg = ""
-			
+
 			// MOBILE/WASM: Hide keyboard when leaving name input
 			if cc.keyboardShown && mobile.IsWASM() {
 				mobile.HideKeyboard()
@@ -399,7 +399,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		} else {
 			// Empty backspace goes back to class selection
 			cc.currentStep = stepClassSelection
-			
+
 			// MOBILE/WASM: Hide keyboard when leaving portrait input
 			if cc.keyboardShown && mobile.IsWASM() {
 				mobile.HideKeyboard()
@@ -412,7 +412,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// ESC to go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepClassSelection
-		
+
 		// MOBILE/WASM: Hide keyboard when cancelling
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()
@@ -427,7 +427,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = nil
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
-		
+
 		// MOBILE/WASM: Hide keyboard when skipping portrait
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()
@@ -446,7 +446,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 			cc.characterData.Portrait = nil
 			cc.currentStep = stepConfirmation
 			cc.errorMsg = ""
-			
+
 			// MOBILE/WASM: Hide keyboard when completing
 			if cc.keyboardShown && mobile.IsWASM() {
 				mobile.HideKeyboard()
@@ -467,7 +467,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = portrait
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
-		
+
 		// MOBILE/WASM: Hide keyboard when completing
 		if cc.keyboardShown && mobile.IsWASM() {
 			mobile.HideKeyboard()

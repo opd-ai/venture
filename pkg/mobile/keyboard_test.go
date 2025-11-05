@@ -10,7 +10,7 @@ func TestShowHideKeyboard(t *testing.T) {
 	// Should not panic on non-WASM builds (no-op functions)
 	ShowKeyboard()
 	HideKeyboard()
-	
+
 	// Test can be called multiple times
 	ShowKeyboard()
 	ShowKeyboard()

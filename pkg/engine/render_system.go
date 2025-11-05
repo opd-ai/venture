@@ -390,7 +390,8 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 		// Check if entity is visible on screen (per-entity culling for batched rendering)
-		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+		// Only apply per-entity culling if culling is enabled
+		if r.enableCulling && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 			continue
 		}
 
@@ -580,7 +581,8 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 	// Check if entity is visible on screen (per-entity culling)
-	if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+	// Only apply per-entity culling if culling is enabled
+	if r.enableCulling && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return
 	}
 

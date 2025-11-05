@@ -1,16 +1,16 @@
 # Venture UI Audit Report - Comprehensive Edition
 **Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG  
 **Audit Date**: 2025-11-04T19:48:50Z  
-**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31 resolved)  
+**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31 resolved)  
 **Auditor**: GitHub Copilot Coding Agent  
 **Technology**: Go 1.24+ / Ebiten 2.9.2 / ECS Architecture  
 **Total Issues Found**: 31  
-**Issues Resolved**: 13 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31)  
-**Issues Remaining**: 18
+**Issues Resolved**: 16 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31)  
+**Issues Remaining**: 15
 
 ## Executive Summary
 
-**Update (2025-11-04)**: Thirteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
+**Update (2025-11-04)**: Sixteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
 
 This comprehensive audit systematically reviewed Venture's UI systems across all packages (`pkg/rendering/ui/`, `pkg/engine/*ui*.go`, `pkg/mobile/`), with special focus on visual layering, collision detection, and cross-platform compatibility. The audit builds upon previous findings and introduces critical analysis of the multi-layer terrain system (Phase 11.1) and sprite rendering order.
 
@@ -25,7 +25,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 ### Critical Issues
 
 #### Issue #1: Collision System Does Not Check LayerComponent for Terrain Layers [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit 0baab03 (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/collision.go` - CollisionSystem.Update()
 - **Genre Impact**: All genres
 - **Platform**: All platforms
@@ -48,7 +48,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ Tests added verifying entities on different layers don't collide, same layer do collide, flying entities collide with all layers
 
 #### Issue #2: WouldCollideWithEntity Ignores LayerComponent for Predictive Checks [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit 0baab03 (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/collision.go` - WouldCollideWithEntity() method
 - **Genre Impact**: All genres
 - **Platform**: All platforms
@@ -70,7 +70,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ Test verifies predictive collision respects terrain layers
 
 #### Issue #3: Equipment Visual Layers Lack Z-Order Validation [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/equipment_visual_component.go`, `equipment_visual_system.go`, `pkg/rendering/sprites/types.go`, `composite.go`
 - **Genre Impact**: All genres
 - **Platform**: All platforms
@@ -101,7 +101,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ All tests pass - Z-order constants validated, validation function tested with valid/invalid configs, all equipment layers verified
 
 #### Issue #4: Layer Transition Visual Feedback Missing [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/layer_component.go`, `pkg/engine/render_system.go`
 - **Genre Impact**: All genres (especially platformer-style games in Phase 11+)
 - **Platform**: All platforms
@@ -140,7 +140,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
   - CancelTransition() automatically resets visual state (resolves Issue #30)
 
 #### Issue #5: Sprite Layer Sorting Not Deterministic for Same Layer Values [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit 0baab03 (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/render_system.go` - sortEntitiesByLayer()
 - **Genre Impact**: All genres (subtle visual flickering)
 - **Platform**: All platforms
@@ -165,7 +165,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 ### High Priority Issues
 
 #### Issue #6: Insufficient Color Contrast in Cyberpunk Genre UI Elements [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit 47ad658 (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/rendering/ui/generator.go` - button and label rendering
 - **Genre Impact**: Cyberpunk (neon color palette); also affects sci-fi
 - **Platform**: All platforms
@@ -186,7 +186,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ Tests verify WCAG formulas, contrast ratios, and cross-genre compliance. All 25 genre/seed combinations now guaranteed to meet 4.5:1 minimum contrast ratio.
 
 #### Issue #7: Missing Text Wrapping for Procedurally Generated Long Names [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit 496b3d0 (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/inventory_ui.go`, `shop_ui.go`, `skills_ui.go` - text rendering
 - **Genre Impact**: All genres (especially sci-fi/cyberpunk with long technical names)
 - **Platform**: All platforms (severe on mobile with limited width)
@@ -231,7 +231,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: Implementation complete. Functionality working as designed per GAP-005 repair.
 
 #### Issue #9: No Visual Feedback for Network Latency in Multiplayer [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/hud_system.go` - missing network status indicator
 - **Genre Impact**: All genres
 - **Platform**: All platforms
@@ -254,7 +254,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Integration Required**: Client code (cmd/client/main.go) needs to call `hudSystem.SetNetworkClient(networkClient)` after connecting in multiplayer mode
 
 #### Issue #10: Mobile Touch Controls Lack Haptic Feedback [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/mobile/controls.go`, `dual_joystick.go`
 - **Genre Impact**: All genres
 - **Platform**: Mobile only (iOS/Android)
@@ -281,7 +281,7 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Testing Verification**: ✅ Tests verify rate limiting, haptic tracking on touch/press events, and integration with all control types. Physical device testing recommended to verify vibration feel.
 
 #### Issue #11: Quest Log UI Doesn't Handle Long Quest Descriptions [RESOLVED]
-- **Status**: ✅ RESOLVED - Fixed in commit [pending] (2025-11-04)
+- **Status**: ✅ RESOLVED - Fixed in commit f509982 (2025-11-04)
 - **Component**: `pkg/engine/quest_ui.go` - quest rendering
 - **Genre Impact**: All genres (verbose in fantasy/horror)
 - **Platform**: All platforms
@@ -307,12 +307,22 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 
 ### Medium Priority Issues
 
-#### Issue #12: Crafting UI Recipe List Missing Search/Filter
+#### Issue #12: Crafting UI Recipe List Missing Search/Filter [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 76588ce (2025-11-04)
 - **Component**: `pkg/engine/crafting_ui.go` - recipe display
 - **Genre Impact**: All genres
 - **Platform**: All platforms
 - **Description**: With 50+ recipes, no search or filtering exists. Recipes not grouped by category or sortable.
-- **Suggested Fix**: Add search input field, category tabs (Weapons/Armor/Consumables), sort options (Name/Tier/Craftable), highlight craftable recipes based on materials.
+- **Resolution**: Implemented comprehensive search/filter system with: (1) Search bar for recipe names with real-time filtering, (2) Category tabs (All/Potions/Enchanting/Magic Items) cycled with TAB key, (3) Sort modes (Name/Tier/Craftable) cycled with F key, (4) Craftable-only filter toggled with C key, (5) Green visual highlighting for craftable recipes. Helper functions added: filterAndSortRecipes(), matchesSearch(), matchesCategory(), canCraftRecipe(), sortRecipes(). UI displays current filter state and provides keyboard controls.
+- **Changes Made**:
+  - Added search/filter fields to CraftingUI struct (searchQuery, filterCategory, sortMode, showOnlyCrafted)
+  - Implemented real-time text input for search (case-insensitive substring matching)
+  - Added TAB/F/C key controls for category filter, sort mode, and craftable filter
+  - Created helper functions for filtering and sorting (160+ lines)
+  - Updated Draw() to display search/filter UI controls
+  - Applied filtering to both Update() and Draw() recipe lists
+  - Added green background tint for craftable recipes
+- **Verification**: Manual code path analysis confirms search filters correctly, category filter uses recipe Type field, sort modes work properly, craftable check validates inventory and gold. UI controls don't conflict with existing crafting controls (R/ESC for toggle/close, ENTER/SPACE for craft).
 
 #### Issue #13: No Colorblind Accessibility Mode
 - **Component**: `pkg/rendering/palette/` - color usage throughout
@@ -363,12 +373,20 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Description**: Orientation changes cause instant position jumps with no animation. Jarring visual discontinuity.
 - **Suggested Fix**: Implement transition animation over 250-300ms with easing. Store from/to positions, interpolate in Draw().
 
-#### Issue #20: ColliderComponent Bounds Don't Account for Sprite Rotation
+#### Issue #20: ColliderComponent Bounds Don't Account for Sprite Rotation [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 3556079 (2025-11-04)
 - **Component**: `pkg/engine/components.go` - ColliderComponent.GetBounds()
 - **Genre Impact**: All genres (affects rotated entities)
 - **Platform**: All platforms
 - **Description**: GetBounds() returns axis-aligned bounding box without considering sprite rotation. Rotated entities have incorrect collision detection.
-- **Suggested Fix**: Calculate rotated bounds or use circular colliders for rotated entities. Add RotatedBounds() method that applies rotation matrix to corners.
+- **Resolution**: Added GetRotatedBounds() method that computes AABB encompassing rotated collision box by rotating all four corners using 2D rotation matrix. Added IntersectsRotated() method for rotation-aware collision checks. Updated CollisionSystem.Update() and WouldCollideWithEntity() to query RotationComponent and use rotated bounds when present. Falls back to regular AABB collision for non-rotated entities for performance. Conservative approach ensures rotated collider is fully contained in computed AABB.
+- **Changes Made**:
+  - Added GetRotatedBounds(x, y, angle) to ColliderComponent (~40 lines)
+  - Added IntersectsRotated() method for rotation-aware intersection (~10 lines)
+  - Updated CollisionSystem.Update() to check RotationComponent and use IntersectsRotated()
+  - Updated WouldCollideWithEntity() for rotation-aware predictive collision
+  - Performance optimized: only uses rotation math when RotationComponent exists
+- **Verification**: Code analysis confirms 2D rotation matrix correctly transforms corners, conservative AABB approach prevents missed collisions, backward compatible with entities lacking RotationComponent.
 
 ### Low Priority Issues
 
@@ -392,9 +410,21 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Description**: Tooltips show absolute stats, no comparison with currently equipped items.
 - **Suggested Fix**: Query EquipmentComponent, calculate stat deltas, render with color coding (green/red) and total preview.
 
-#### Issue #26: Shop UI Doesn't Show Player's Current Gold Prominently
+#### Issue #26: Shop UI Doesn't Show Player's Current Gold Prominently [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 46460f6 (2025-11-04)
+- **Component**: `pkg/engine/shop_ui.go` - gold and affordability display
+- **Genre Impact**: All genres
+- **Platform**: All platforms
 - **Description**: Player gold not displayed in shop UI. No affordability indicators.
-- **Suggested Fix**: Add gold display to shop header, color-code item prices (green affordable, red too expensive).
+- **Resolution**: Moved gold display to prominent position in main shop header (line 2, immediately below title). Added color-coded affordability indicators: green background for affordable items, red background for too-expensive items. Color coding applies to normal, hover, and selection states in Buy mode only. Added explicit text indicators in tooltips: "(CAN AFFORD)" and "(TOO EXPENSIVE)" for clarity. Makes shopping decisions much easier without mental calculation.
+- **Changes Made**:
+  - Relocated gold display from right corner to main header for prominence
+  - Added affordability checking logic comparing price vs playerInv.Gold
+  - Applied green tint (RGB 40,70,40) for affordable item slots
+  - Applied red tint (RGB 80,40,40) for unaffordable item slots
+  - Extended color coding to hover and selection states
+  - Added affordability text to Buy mode tooltips
+- **Verification**: Manual code path analysis confirms affordability check works correctly, color coding only applies in Buy mode (not Sell mode), maintains existing UI interaction patterns.
 
 #### Issue #27: No Visual Indication of Menu Hierarchy/Breadcrumb
 - **Description**: Nested menu navigation with no breadcrumb showing current location. Easy to get lost.

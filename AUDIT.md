@@ -1,16 +1,16 @@
 # Venture UI Audit Report - Comprehensive Edition
 **Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG  
 **Audit Date**: 2025-11-04T19:48:50Z  
-**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31 resolved)  
+**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31 resolved)  
 **Auditor**: GitHub Copilot Coding Agent  
 **Technology**: Go 1.24+ / Ebiten 2.9.2 / ECS Architecture  
 **Total Issues Found**: 31  
-**Issues Resolved**: 14 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31)  
-**Issues Remaining**: 17
+**Issues Resolved**: 15 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31)  
+**Issues Remaining**: 16
 
 ## Executive Summary
 
-**Update (2025-11-04)**: Fourteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
+**Update (2025-11-04)**: Fifteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
 
 This comprehensive audit systematically reviewed Venture's UI systems across all packages (`pkg/rendering/ui/`, `pkg/engine/*ui*.go`, `pkg/mobile/`), with special focus on visual layering, collision detection, and cross-platform compatibility. The audit builds upon previous findings and introduces critical analysis of the multi-layer terrain system (Phase 11.1) and sprite rendering order.
 
@@ -373,12 +373,20 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Description**: Orientation changes cause instant position jumps with no animation. Jarring visual discontinuity.
 - **Suggested Fix**: Implement transition animation over 250-300ms with easing. Store from/to positions, interpolate in Draw().
 
-#### Issue #20: ColliderComponent Bounds Don't Account for Sprite Rotation
+#### Issue #20: ColliderComponent Bounds Don't Account for Sprite Rotation [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 3556079 (2025-11-04)
 - **Component**: `pkg/engine/components.go` - ColliderComponent.GetBounds()
 - **Genre Impact**: All genres (affects rotated entities)
 - **Platform**: All platforms
 - **Description**: GetBounds() returns axis-aligned bounding box without considering sprite rotation. Rotated entities have incorrect collision detection.
-- **Suggested Fix**: Calculate rotated bounds or use circular colliders for rotated entities. Add RotatedBounds() method that applies rotation matrix to corners.
+- **Resolution**: Added GetRotatedBounds() method that computes AABB encompassing rotated collision box by rotating all four corners using 2D rotation matrix. Added IntersectsRotated() method for rotation-aware collision checks. Updated CollisionSystem.Update() and WouldCollideWithEntity() to query RotationComponent and use rotated bounds when present. Falls back to regular AABB collision for non-rotated entities for performance. Conservative approach ensures rotated collider is fully contained in computed AABB.
+- **Changes Made**:
+  - Added GetRotatedBounds(x, y, angle) to ColliderComponent (~40 lines)
+  - Added IntersectsRotated() method for rotation-aware intersection (~10 lines)
+  - Updated CollisionSystem.Update() to check RotationComponent and use IntersectsRotated()
+  - Updated WouldCollideWithEntity() for rotation-aware predictive collision
+  - Performance optimized: only uses rotation math when RotationComponent exists
+- **Verification**: Code analysis confirms 2D rotation matrix correctly transforms corners, conservative AABB approach prevents missed collisions, backward compatible with entities lacking RotationComponent.
 
 ### Low Priority Issues
 

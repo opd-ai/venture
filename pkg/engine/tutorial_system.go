@@ -282,7 +282,9 @@ func (ts *EbitenTutorialSystem) Reset() {
 
 // GAP-006 REPAIR: Public API for querying tutorial state
 
-// IsStepCompleted returns true if the step with given ID has been completed
+// IsStepCompleted returns true if the step with given ID has been completed.
+// Returns false if the step ID doesn't exist.
+// Thread-safe for read-only access.
 func (ts *EbitenTutorialSystem) IsStepCompleted(stepID string) bool {
 	for _, step := range ts.Steps {
 		if step.ID == stepID {
@@ -292,7 +294,9 @@ func (ts *EbitenTutorialSystem) IsStepCompleted(stepID string) bool {
 	return false
 }
 
-// GetStepByID returns the tutorial step with the given ID, or nil if not found
+// GetStepByID returns the tutorial step with the given ID, or nil if not found.
+// Used for querying specific step details and progress.
+// Returns a pointer to the actual step (not a copy), so modifications will affect state.
 func (ts *EbitenTutorialSystem) GetStepByID(stepID string) *TutorialStep {
 	for i := range ts.Steps {
 		if ts.Steps[i].ID == stepID {
@@ -302,12 +306,15 @@ func (ts *EbitenTutorialSystem) GetStepByID(stepID string) *TutorialStep {
 	return nil
 }
 
-// IsActive returns true if the tutorial system is currently enabled and showing UI
+// IsActive returns true if the tutorial system is currently enabled and showing UI.
+// When false, tutorial UI is hidden and tutorial progression is paused.
+// Use this to determine whether tutorial overlay should be rendered.
 func (ts *EbitenTutorialSystem) IsActive() bool {
 	return ts.Enabled && ts.ShowUI
 }
 
-// GetCurrentStepID returns the ID of the current step, or empty string if complete
+// GetCurrentStepID returns the ID of the current step, or empty string if tutorial is complete.
+// Convenience method for logging, save/load, and UI integration.
 func (ts *EbitenTutorialSystem) GetCurrentStepID() string {
 	step := ts.GetCurrentStep()
 	if step == nil {
@@ -316,7 +323,9 @@ func (ts *EbitenTutorialSystem) GetCurrentStepID() string {
 	return step.ID
 }
 
-// GetAllSteps returns all tutorial steps (read-only access for UI integration)
+// GetAllSteps returns all tutorial steps (read-only copy for UI integration).
+// Returns a copy of the steps slice to prevent external modification.
+// Use this for displaying tutorial progress, completion status, or step list UI.
 func (ts *EbitenTutorialSystem) GetAllSteps() []TutorialStep {
 	// Return copy to prevent external modification
 	steps := make([]TutorialStep, len(ts.Steps))
@@ -571,6 +580,8 @@ func splitWords(str string) []string {
 }
 
 // SetActive implements UISystem interface.
+// Controls tutorial UI visibility. When set to false, hides tutorial overlay
+// but does not disable tutorial progression (use SkipAll() to fully disable).
 func (ts *EbitenTutorialSystem) SetActive(active bool) {
 	ts.ShowUI = active
 }

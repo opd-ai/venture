@@ -20,6 +20,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/hostplay"
 	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
@@ -872,6 +873,18 @@ func main() {
 
 	// Add core gameplay systems
 	inputSystem := engine.NewInputSystem()
+
+	// WASM TOUCH FIX: Initialize virtual controls immediately for touch-capable platforms
+	// This ensures controls are visible on page load rather than waiting for first touch
+	if mobile.IsTouchCapable() {
+		inputSystem.InitializeVirtualControls(*width, *height)
+		clientLogger.WithFields(logrus.Fields{
+			"platform": mobile.GetPlatform().String(),
+			"width":    *width,
+			"height":   *height,
+		}).Info("virtual controls initialized for touch-capable platform")
+	}
+
 	// GAP-001 & GAP-002 REPAIR: Use proper constructors with required parameters
 	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
 	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning

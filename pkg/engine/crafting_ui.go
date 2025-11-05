@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 )
 
 // CraftingUI handles rendering and interaction for the crafting screen.
@@ -40,6 +41,9 @@ type CraftingUI struct {
 	filterCategory  RecipeType // Filter by recipe type (use -1 for "All")
 	sortMode        int        // 0=Name, 1=Tier, 2=Craftable
 	showOnlyCrafted bool       // Show only recipes player can craft
+
+	// Mobile keyboard state (WASM/mobile platforms)
+	keyboardShown bool // Tracks whether mobile keyboard is currently shown
 
 	// Crafting feedback
 	craftingMessage     string
@@ -97,6 +101,15 @@ func (ui *CraftingUI) Open(stationEntity *Entity) {
 	ui.filterCategory = -1
 	ui.sortMode = 0
 	ui.showOnlyCrafted = false
+
+	// MOBILE/WASM: Show keyboard when opening crafting UI (search field active)
+	// The crafting UI search is always active, so we show keyboard immediately.
+	// Note: We track keyboard state to avoid redundant calls. The keyboard is
+	// managed by this UI component and should only be shown/hidden by Open/Close.
+	if !ui.keyboardShown && mobile.IsWASM() {
+		mobile.ShowKeyboard()
+		ui.keyboardShown = true
+	}
 }
 
 // Close hides the crafting UI and cleans up state.
@@ -109,6 +122,12 @@ func (ui *CraftingUI) Close() {
 	ui.craftingMessage = ""
 	ui.craftingMessageTime = 0
 	ui.showingProgress = false
+
+	// MOBILE/WASM: Hide keyboard when closing crafting UI
+	if ui.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		ui.keyboardShown = false
+	}
 }
 
 // IsVisible returns whether the crafting UI is currently shown.

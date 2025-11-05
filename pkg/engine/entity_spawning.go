@@ -182,6 +182,20 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 
 			// GAP-012 REPAIR: Add visual feedback for hit flash
 			enemy.AddComponent(NewVisualFeedbackComponent())
+			
+			// Phase 10.1: Add rotation component for 360° rotation and facing direction
+			enemy.AddComponent(NewRotationComponent(0, 2.0)) // Enemies face right initially, slower turn speed
+			
+			// Phase 11.1: Add layer component for multi-layer collision
+			layerComp := NewLayerComponent()
+			layerComp.CurrentLayer = 0 // Ground layer
+			enemy.AddComponent(&layerComp)
+			
+			// Phase 14: Add shadow component for enhanced lighting
+			shadowComp := NewShadowComponent(enemySize)
+			shadowComp.CastsShadow = true
+			shadowComp.ShadowType = ShadowTypeHard
+			enemy.AddComponent(shadowComp)
 
 			spawned++
 		}

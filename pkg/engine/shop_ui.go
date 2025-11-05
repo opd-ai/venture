@@ -213,9 +213,9 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
 
 	// Check if mouse is over item grid
 	gridStartY := windowY + 100 // Below header

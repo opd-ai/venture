@@ -102,8 +102,8 @@ func (m *MultiplayerMenu) Update() {
 		return
 	}
 
-	// Track mouse position
-	m.mouseX, m.mouseY = ebiten.CursorPosition()
+	// Track mouse/touch position (Touch support for WASM/mobile)
+	m.mouseX, m.mouseY, _ = GetTouchOrMousePosition()
 
 	// Keyboard navigation - Arrow keys
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
@@ -147,13 +147,13 @@ func (m *MultiplayerMenu) Update() {
 		}
 	}
 
-	// Mouse hover detection
+	// Mouse/touch hover detection (Touch support for WASM/mobile)
 	if mouseIndex := m.getOptionAtPosition(m.mouseX, m.mouseY); mouseIndex >= 0 {
 		m.selectedIndex = mouseIndex
 	}
 
-	// Mouse click
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	// Mouse/touch click (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
 		if clickIndex := m.getOptionAtPosition(m.mouseX, m.mouseY); clickIndex >= 0 {
 			m.selectedIndex = clickIndex
 			m.selectCurrentOption()

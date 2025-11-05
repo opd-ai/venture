@@ -244,9 +244,9 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	listAreaHeight := windowHeight - 180 // Leave space for footer
 	maxVisibleRecipes := listAreaHeight / ui.listItemHeight
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
 
 	// Check if mouse is over recipe list
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&

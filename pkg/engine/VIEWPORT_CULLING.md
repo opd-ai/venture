@@ -116,8 +116,22 @@ fmt.Printf("Rendered: %d / %d (culled: %d)\n",
 1. **Get camera viewport bounds** in world space (with margin)
 2. **Query spatial partition** for entities intersecting viewport
 3. **Sort visible entities** by render layer
-4. **Render only visible entities** with camera transforms
+4. **Render only visible entities** with camera transforms (per-entity culling is skipped when spatial partition is used)
 5. **Track statistics** (total, rendered, culled counts)
+
+**Important**: When spatial partition culling is active, per-entity `IsVisible()` checks are skipped to avoid redundant double-culling. The render system tracks whether spatial culling was used via the `spatialCullingUsed` flag, ensuring only one culling method is applied per frame.
+
+### Culling Behavior
+
+The render system intelligently applies culling based on available optimizations:
+
+| Scenario | Spatial Partition | Per-Entity Culling | Behavior |
+|----------|-------------------|-------------------|----------|
+| Culling disabled | Not used | Not applied | All entities rendered |
+| Culling enabled, no spatial partition | Not used | Applied | `IsVisible()` checks each entity |
+| Culling enabled, with spatial partition | Used | Skipped | Only spatial partition query |
+
+This design prevents double-culling bugs while maintaining performance benefits.
 
 ### Viewport Margin
 

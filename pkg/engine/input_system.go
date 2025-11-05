@@ -921,8 +921,8 @@ func GetTouchOrMousePosition() (x, y int, hasActiveInput bool) {
 	touchIDs := ebiten.TouchIDs()
 	if len(touchIDs) > 0 {
 		// Return the first touch position with active input flag
-		x, y := ebiten.TouchPosition(touchIDs[0])
-		return x, y, true
+		touchX, touchY := ebiten.TouchPosition(touchIDs[0])
+		return touchX, touchY, true
 	}
 	
 	// Fall back to mouse position

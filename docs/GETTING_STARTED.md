@@ -222,8 +222,8 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-verbose`, `-multiplayer`, `-server`
-**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`
+**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`
 
 **For complete command-line options and configuration details, see [User Manual](USER_MANUAL.md).**
 

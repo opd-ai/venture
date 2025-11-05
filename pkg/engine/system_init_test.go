@@ -209,8 +209,8 @@ func TestInitializeGameSystems_MultipleGenres(t *testing.T) {
 			}
 
 			systems := game.World.GetSystems()
-			if len(systems) != 44 {
-				t.Errorf("Genre %s: expected 44 systems, got %d", genre, len(systems))
+			if len(systems) != 43 {
+				t.Errorf("Genre %s: expected 43 systems (44th requires terrain), got %d", genre, len(systems))
 			}
 		})
 	}

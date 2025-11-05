@@ -12,6 +12,7 @@ You are an autonomous software maintenance agent operating on the Venture Go cod
 
 ### Universal Constraints
 - Install build dependencies from CI config/README.md before starting
+- Use `xvfb` to run the tests
 - Use seed-based RNG for deterministic generation (no `time.Now()` or unseeded `math/rand`)
 - Follow ECS: entities (IDs), components (data), systems (logic)
 - Preserve active features and tests; achieve ≥65% coverage (excluding Ebiten init)

@@ -1,16 +1,16 @@
 # Venture UI Audit Report - Comprehensive Edition
 **Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG  
 **Audit Date**: 2025-11-04T19:48:50Z  
-**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31 resolved)  
+**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31 resolved)  
 **Auditor**: GitHub Copilot Coding Agent  
 **Technology**: Go 1.24+ / Ebiten 2.9.2 / ECS Architecture  
 **Total Issues Found**: 31  
-**Issues Resolved**: 15 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31)  
-**Issues Remaining**: 16
+**Issues Resolved**: 16 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31)  
+**Issues Remaining**: 15
 
 ## Executive Summary
 
-**Update (2025-11-04)**: Fifteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
+**Update (2025-11-04)**: Sixteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #20, #26, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
 
 This comprehensive audit systematically reviewed Venture's UI systems across all packages (`pkg/rendering/ui/`, `pkg/engine/*ui*.go`, `pkg/mobile/`), with special focus on visual layering, collision detection, and cross-platform compatibility. The audit builds upon previous findings and introduces critical analysis of the multi-layer terrain system (Phase 11.1) and sprite rendering order.
 
@@ -410,9 +410,21 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 - **Description**: Tooltips show absolute stats, no comparison with currently equipped items.
 - **Suggested Fix**: Query EquipmentComponent, calculate stat deltas, render with color coding (green/red) and total preview.
 
-#### Issue #26: Shop UI Doesn't Show Player's Current Gold Prominently
+#### Issue #26: Shop UI Doesn't Show Player's Current Gold Prominently [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 46460f6 (2025-11-04)
+- **Component**: `pkg/engine/shop_ui.go` - gold and affordability display
+- **Genre Impact**: All genres
+- **Platform**: All platforms
 - **Description**: Player gold not displayed in shop UI. No affordability indicators.
-- **Suggested Fix**: Add gold display to shop header, color-code item prices (green affordable, red too expensive).
+- **Resolution**: Moved gold display to prominent position in main shop header (line 2, immediately below title). Added color-coded affordability indicators: green background for affordable items, red background for too-expensive items. Color coding applies to normal, hover, and selection states in Buy mode only. Added explicit text indicators in tooltips: "(CAN AFFORD)" and "(TOO EXPENSIVE)" for clarity. Makes shopping decisions much easier without mental calculation.
+- **Changes Made**:
+  - Relocated gold display from right corner to main header for prominence
+  - Added affordability checking logic comparing price vs playerInv.Gold
+  - Applied green tint (RGB 40,70,40) for affordable item slots
+  - Applied red tint (RGB 80,40,40) for unaffordable item slots
+  - Extended color coding to hover and selection states
+  - Added affordability text to Buy mode tooltips
+- **Verification**: Manual code path analysis confirms affordability check works correctly, color coding only applies in Buy mode (not Sell mode), maintains existing UI interaction patterns.
 
 #### Issue #27: No Visual Indication of Menu Hierarchy/Breadcrumb
 - **Description**: Nested menu navigation with no breadcrumb showing current location. Easy to get lost.

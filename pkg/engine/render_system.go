@@ -173,9 +173,9 @@ type RenderStats struct {
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
 		cameraSystem:     cameraSystem,
-		spatialPartition: nil,   // Will be set when world bounds are known
-		enableCulling:    false, // TEMPORARY: Disabled culling due to spatial partition issue
-		enableBatching:   true,  // Batching enabled by default
+		spatialPartition: nil,  // Will be set when world bounds are known
+		enableCulling:    true, // Culling enabled by default (spatial partition bug fixed)
+		enableBatching:   true, // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
 		ShowColliders:    false,
@@ -523,20 +523,19 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	// Calculate viewport bounds in world space with margin for sprites
 	margin := 100.0 // Extra space to render sprites partially off-screen
 
-	// Get camera position
-	camPos, ok := cam.GetComponent("position")
-	if !ok {
-		return entities
-	}
-	pos := camPos.(*PositionComponent)
+	// BUG FIX: Use camera's actual position (camera.X, camera.Y) which includes
+	// smoothing and bounds clamping, NOT the entity's position component.
+	// The camera position is updated by CameraSystem and represents where
+	// the camera is actually looking, which may differ from the entity position
+	// due to smoothing, offsets, and bounds constraints.
 
 	// Calculate world viewport bounds
 	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
 	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
 
 	viewportBounds := Bounds{
-		X:      pos.X - viewportWidth/2 - margin,
-		Y:      pos.Y - viewportHeight/2 - margin,
+		X:      camera.X - viewportWidth/2 - margin,
+		Y:      camera.Y - viewportHeight/2 - margin,
 		Width:  viewportWidth + margin*2,
 		Height: viewportHeight + margin*2,
 	}

@@ -81,10 +81,10 @@ func initKeyboardElement() {
 	style.Set("height", "1px")
 	style.Set("opacity", "0")
 	style.Set("pointerEvents", "none")
-	
+
 	// CRITICAL: Ensure input can receive and maintain focus
 	// Without this, some browsers may dismiss keyboard when input is "invisible"
-	input.Set("tabIndex", 0) // Make focusable
+	input.Set("tabIndex", 0)     // Make focusable
 	input.Set("readOnly", false) // Ensure it's editable
 
 	// MOBILE KEYBOARD FIX: Forward input events to document for Ebiten
@@ -102,7 +102,7 @@ func initKeyboardElement() {
 			for _, ch := range newChars {
 				dispatchKeyboardEvent(doc, string(ch))
 			}
-			
+
 			// CRITICAL: Refocus input after dispatching events to keep keyboard open
 			// Dispatching events can cause the canvas to steal focus
 			input.Call("focus")
@@ -111,7 +111,7 @@ func initKeyboardElement() {
 			for i := 0; i < len(lastInputValue)-len(currentValue); i++ {
 				dispatchBackspaceEvent(doc)
 			}
-			
+
 			// CRITICAL: Refocus input after dispatching events to keep keyboard open
 			input.Call("focus")
 		}
@@ -140,7 +140,7 @@ func initKeyboardElement() {
 	// Attach event listeners
 	input.Call("addEventListener", "input", inputEventListener)
 	input.Call("addEventListener", "keydown", keydownEventListener)
-	
+
 	// CRITICAL FIX: Prevent canvas from stealing focus while keyboard is active
 	// When events are dispatched to canvas, it can steal focus and hide the keyboard
 	// This listener immediately refocuses the input to keep the keyboard visible
@@ -149,7 +149,7 @@ func initKeyboardElement() {
 		if len(args) > 0 {
 			event := args[0]
 			target := event.Get("target")
-			
+
 			// Check if a canvas element gained focus
 			if target.Get("tagName").String() == "CANVAS" {
 				// Check if our input has value (keyboard is in use)
@@ -163,7 +163,7 @@ func initKeyboardElement() {
 		}
 		return nil
 	})
-	
+
 	// Listen for focus events on the entire document
 	doc.Call("addEventListener", "focusin", focusGuard, true) // Use capture phase
 
@@ -190,13 +190,13 @@ func dispatchKeyboardEvent(doc js.Value, char string) {
 		dispatchToTarget(doc, char, false)
 		return
 	}
-	
+
 	canvas := canvasList.Index(0)
-	
+
 	// CRITICAL FIX: Dispatch input event which Ebiten's AppendInputChars actually uses
 	// KeyboardEvent alone doesn't populate inpututil.AppendInputChars
 	dispatchInputEvent(canvas, char)
-	
+
 	// Also dispatch keyboard events for compatibility with IsKeyPressed
 	dispatchToTarget(canvas, char, false)
 	dispatchToTarget(doc, char, false)
@@ -210,17 +210,17 @@ func dispatchInputEvent(target js.Value, char string) {
 	eventInit.Set("bubbles", true)
 	eventInit.Set("cancelable", false)
 	eventInit.Set("composed", true)
-	
+
 	inputEvent := js.Global().Get("InputEvent").New("input", eventInit)
-	
+
 	// Dispatch event but ensure canvas doesn't steal focus
 	// Store current active element
 	doc := js.Global().Get("document")
 	activeElement := doc.Get("activeElement")
-	
+
 	// Dispatch the event
 	target.Call("dispatchEvent", inputEvent)
-	
+
 	// If the active element changed (canvas stole focus), restore it
 	if !activeElement.IsUndefined() && activeElement.Get("tagName").String() == "INPUT" {
 		newActive := doc.Get("activeElement")
@@ -258,7 +258,7 @@ func dispatchToTarget(target js.Value, char string, isSpecial bool) {
 func dispatchBackspaceEvent(doc js.Value) {
 	// Find Ebiten's canvas element
 	canvasList := doc.Call("getElementsByTagName", "canvas")
-	
+
 	eventInit := js.Global().Get("Object").New()
 	eventInit.Set("key", "Backspace")
 	eventInit.Set("code", "Backspace")
@@ -268,13 +268,13 @@ func dispatchBackspaceEvent(doc js.Value) {
 	eventInit.Set("cancelable", true)
 
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
-	
+
 	// Dispatch to canvas if available
 	if canvasList.Get("length").Int() > 0 {
 		canvas := canvasList.Index(0)
 		canvas.Call("dispatchEvent", keydownEvent)
 	}
-	
+
 	// Also dispatch to document for compatibility
 	doc.Call("dispatchEvent", keydownEvent)
 }
@@ -305,16 +305,16 @@ func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 	}
 
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
-	
+
 	// Find Ebiten's canvas element
 	canvasList := doc.Call("getElementsByTagName", "canvas")
-	
+
 	// Dispatch to canvas if available
 	if canvasList.Get("length").Int() > 0 {
 		canvas := canvasList.Index(0)
 		canvas.Call("dispatchEvent", keydownEvent)
 	}
-	
+
 	// Also dispatch to document for compatibility
 	doc.Call("dispatchEvent", keydownEvent)
 }

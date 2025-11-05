@@ -59,3 +59,4 @@ go.work.sum
 /dist
 /run.sh
 ./perfprofile*
+build/

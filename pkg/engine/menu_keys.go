@@ -22,6 +22,7 @@ var MenuKeys = struct {
 	Quests    ebiten.Key // J - Quest log (J for "Journal")
 	Map       ebiten.Key // M - World map
 	Shop      ebiten.Key // S - Shop interface
+	Crafting  ebiten.Key // R - Crafting recipes
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -33,6 +34,7 @@ var MenuKeys = struct {
 	QuestsLabel    string
 	MapLabel       string
 	ShopLabel      string
+	CraftingLabel  string
 	ExitHint       string // Standard exit hint text
 }{
 	// Key assignments
@@ -42,6 +44,7 @@ var MenuKeys = struct {
 	Quests:    ebiten.KeyJ,
 	Map:       ebiten.KeyM,
 	Shop:      ebiten.KeyS,
+	Crafting:  ebiten.KeyR,
 	Exit:      ebiten.KeyEscape,
 
 	// Display labels
@@ -51,6 +54,7 @@ var MenuKeys = struct {
 	QuestsLabel:    "[J] Quests",
 	MapLabel:       "[M] Map",
 	ShopLabel:      "[S] Shop",
+	CraftingLabel:  "[R] Crafting",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }
 
@@ -89,4 +93,47 @@ func HandleMenuInput(toggleKey ebiten.Key, isVisible bool) (shouldClose, shouldT
 // Used internally by HandleMenuInput to detect single key press events.
 func IsKeyJustPressed(key ebiten.Key) bool {
 	return inpututil.IsKeyJustPressed(key)
+}
+
+// GetExitHint returns a standardized exit hint string for the given menu key.
+// This centralizes exit hint formatting to ensure consistency across all menus.
+//
+// Parameters:
+//   - menuKey: The menu's toggle key (e.g., MenuKeys.Inventory)
+//
+// Returns:
+//   - A formatted string like "Press [I] or [ESC] to close"
+//
+// Usage:
+//
+//	exitHint := GetExitHint(MenuKeys.Inventory)
+//	ebitenutil.DebugPrintAt(screen, exitHint, x, y)
+func GetExitHint(menuKey ebiten.Key) string {
+	keyName := getKeyName(menuKey)
+	return "Press [" + keyName + "] or [ESC] to close"
+}
+
+// getKeyName converts an ebiten.Key to its display name.
+// Returns uppercase letter for standard keys, or full name for special keys.
+func getKeyName(key ebiten.Key) string {
+	switch key {
+	case ebiten.KeyI:
+		return "I"
+	case ebiten.KeyC:
+		return "C"
+	case ebiten.KeyK:
+		return "K"
+	case ebiten.KeyJ:
+		return "J"
+	case ebiten.KeyM:
+		return "M"
+	case ebiten.KeyS:
+		return "S"
+	case ebiten.KeyR:
+		return "R"
+	case ebiten.KeyEscape:
+		return "ESC"
+	default:
+		return "KEY"
+	}
 }

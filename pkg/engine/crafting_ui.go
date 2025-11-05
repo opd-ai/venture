@@ -3,11 +3,14 @@ package engine
 import (
 	"fmt"
 	"image/color"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"golang.org/x/image/font/basicfont"
 )
 
 // CraftingUI handles rendering and interaction for the crafting screen.
@@ -144,7 +147,7 @@ func (ui *CraftingUI) Toggle() {
 }
 
 // Update processes input for the crafting UI.
-// Handles dual-exit navigation (C key + ESC), recipe selection (mouse/keyboard),
+// Handles dual-exit navigation (R key + ESC), recipe selection (mouse/keyboard),
 // and crafting initiation (ENTER/click).
 func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	// Update crafting message timer
@@ -156,15 +159,14 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Dual-exit navigation: R key (toggle) OR ESC (close only)
-	// Note: Crafting uses R key (R for Recipe)
-	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		ui.Toggle()
-		return
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) && ui.visible {
-		ui.Close()
-		return
+	// Standardized dual-exit menu navigation: toggle key (R) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Close()
+		}
+		return // Don't process other input on the same frame as toggle/close
 	}
 
 	if !ui.visible || ui.playerEntity == nil {
@@ -425,7 +427,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
 
 	// Draw exit hint (standardized dual-exit navigation)
-	exitHint := "Press [C] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Crafting)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
 	// Draw player stats
@@ -435,9 +437,18 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 
 	// Draw crafting message if active
 	if ui.craftingMessageTime > 0 && ui.craftingMessage != "" {
-		msgColor := color.RGBA{255, 255, 100, 255}
-		ebitenutil.DebugPrintAt(img, ui.craftingMessage, windowX+10, windowY+70)
-		_ = msgColor // TODO: Use colored text when available
+		// Determine message color based on content
+		msgColor := color.RGBA{100, 255, 100, 255} // Green for success
+		if strings.Contains(ui.craftingMessage, "failed") ||
+			strings.Contains(ui.craftingMessage, "cannot") ||
+			strings.Contains(ui.craftingMessage, "not available") {
+			msgColor = color.RGBA{255, 100, 100, 255} // Red for errors
+		} else if strings.Contains(ui.craftingMessage, "progress") {
+			msgColor = color.RGBA{255, 255, 100, 255} // Yellow for in-progress
+		}
+
+		// Use text.Draw with colored font instead of DebugPrintAt
+		text.Draw(img, ui.craftingMessage, basicfont.Face7x13, windowX+10, windowY+80, msgColor)
 	}
 
 	// Draw instructions

@@ -160,7 +160,7 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, "QUEST LOG", windowX+10, windowY+10)
 
 	// Draw exit hint (standardized menu navigation)
-	exitHint := "Press [J] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Quests)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
 	// Draw tabs

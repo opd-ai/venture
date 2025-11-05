@@ -372,7 +372,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, goldText, windowX+10, windowY+30)
 
 	// Draw exit hint (standardized dual-exit navigation)
-	exitHint := "Press [S] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Shop)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
 	// Draw mode indicator and switch hint

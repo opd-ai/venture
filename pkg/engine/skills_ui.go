@@ -219,7 +219,7 @@ func (ui *EbitenSkillsUI) Draw(screen interface{}) {
 		color.RGBA{255, 255, 100, 255})
 
 	// Draw exit hint (standardized menu navigation)
-	exitHint := "Press [K] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Skills)
 	text.Draw(img, exitHint, basicfont.Face7x13, panelX+10, titleY+13,
 		color.RGBA{180, 180, 200, 255})
 

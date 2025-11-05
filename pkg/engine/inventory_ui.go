@@ -249,7 +249,7 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, "INVENTORY", windowX+10, windowY+10)
 
 	// Draw exit hint (standardized menu navigation)
-	exitHint := "Press [I] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Inventory)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
 	// Draw capacity info

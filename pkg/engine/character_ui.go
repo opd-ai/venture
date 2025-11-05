@@ -197,7 +197,7 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 	ui.drawAttributesPanel(img, stats)
 
 	// Draw controls hint at bottom (standardized menu navigation)
-	controlsText := "Press [C] or [ESC] to close"
+	controlsText := GetExitHint(MenuKeys.Character)
 	controlsX := panelX + panelWidth/2 - len(controlsText)*3
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,

@@ -95,12 +95,24 @@ func (m *MobileMenu) Update() {
 		if direction > -1.0 && direction < 1.0 {
 			// Swipe up/down
 			m.scrollOffset += distance * 0.5
+
 			// Clamp scroll offset
+			// Scroll model: offset=0 shows top, negative offset reveals lower items
+			// Example: With 10 items (500px) and height 200px:
+			//   offset=0: shows items 0-3 (top)
+			//   offset=-300: shows items 6-9 (bottom)
 			maxScroll := float64(len(m.Items))*50.0 - m.Height
-			if m.scrollOffset > 0 {
+
+			if maxScroll <= 0 {
+				// Content fits entirely in visible area, no scrolling needed
 				m.scrollOffset = 0
-			} else if m.scrollOffset < -maxScroll && maxScroll > 0 {
-				m.scrollOffset = -maxScroll
+			} else {
+				// Clamp scroll range: [0, -maxScroll]
+				if m.scrollOffset > 0 {
+					m.scrollOffset = 0 // Can't scroll above top
+				} else if m.scrollOffset < -maxScroll {
+					m.scrollOffset = -maxScroll // Can't scroll below bottom
+				}
 			}
 		}
 	}

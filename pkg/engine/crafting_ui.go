@@ -526,8 +526,25 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	recipeList = ui.filterAndSortRecipes(recipeList)
 
 	if len(recipeList) == 0 {
-		ebitenutil.DebugPrintAt(img, "No recipes match your search/filter criteria",
-			windowX+windowWidth/2-120, windowY+windowHeight/2)
+		// Enhanced empty state message with context
+		emptyMsg := "No recipes match your search/filter criteria"
+		if ui.searchQuery != "" {
+			emptyMsg = fmt.Sprintf("No recipes match search: \"%s\"", ui.searchQuery)
+		} else if ui.filterCategory != -1 {
+			emptyMsg = fmt.Sprintf("No %s recipes available", ui.filterCategory.String())
+		} else if ui.showOnlyCrafted {
+			emptyMsg = "No craftable recipes (missing materials or gold)"
+		}
+
+		// Center the message
+		msgLen := len(emptyMsg)
+		msgX := windowX + (windowWidth-msgLen*7)/2
+		ebitenutil.DebugPrintAt(img, emptyMsg, msgX, windowY+windowHeight/2)
+
+		// Show hint about clearing filters
+		hintMsg := "Press [Backspace] to clear search or [C] to show all recipes"
+		hintX := windowX + (windowWidth-len(hintMsg)*7)/2
+		ebitenutil.DebugPrintAt(img, hintMsg, hintX, windowY+windowHeight/2+20)
 		return
 	}
 

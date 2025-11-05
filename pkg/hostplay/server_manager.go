@@ -48,6 +48,8 @@ type ServerManager struct {
 	world            *engine.World
 	snapshotManager  *network.SnapshotManager
 	lagCompensator   *network.LagCompensator
+	inputHandler     *InputHandler
+	stateBroadcaster *StateBroadcaster
 	address          string
 	port             int
 	cancelFunc       context.CancelFunc

@@ -905,7 +905,7 @@ func IsTouchOrMouseJustPressed() bool {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		return true
 	}
-	
+
 	// Check for new touch input
 	touchIDs := inpututil.AppendJustPressedTouchIDs(nil)
 	return len(touchIDs) > 0
@@ -924,7 +924,7 @@ func GetTouchOrMousePosition() (x, y int, hasActiveInput bool) {
 		touchX, touchY := ebiten.TouchPosition(touchIDs[0])
 		return touchX, touchY, true
 	}
-	
+
 	// Fall back to mouse position
 	x, y = ebiten.CursorPosition()
 	// Return cursor position with active input flag based on mouse button state
@@ -940,7 +940,7 @@ func HasTouchOrMouseInput() bool {
 	if len(ebiten.TouchIDs()) > 0 {
 		return true
 	}
-	
+
 	// Check for left mouse button press (consistent with touch tap behavior)
 	return ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 }
@@ -953,7 +953,7 @@ func IsTouchOrMouseJustReleased() bool {
 	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
 		return true
 	}
-	
+
 	// Check for touch release (any touch that was active but is now gone)
 	touchIDs := inpututil.AppendJustReleasedTouchIDs(nil)
 	return len(touchIDs) > 0

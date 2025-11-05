@@ -95,6 +95,7 @@ All in-game menus follow a consistent, user-friendly navigation pattern:
 | Quest Log | `J` | Press `J` again OR press `ESC` |
 | World Map | `M` | Press `M` again OR press `ESC` |
 | Crafting | `R` | Press `R` again OR press `ESC` |
+| Shop | `S` | Press `S` again OR press `ESC` |
 
 **Key Navigation Features:**
 - **Toggle Key**: Each menu uses its assigned letter key to both open and close

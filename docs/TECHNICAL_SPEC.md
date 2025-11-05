@@ -4,7 +4,7 @@
 
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Language:** Go 1.24.5+  
-**Engine:** Ebiten 2.9.2  
+**Engine:** Ebiten 2.9.3  
 **Architecture:** Entity-Component-System (ECS)  
 **Content:** 100% procedurally generated (graphics, audio, gameplay)  
 **Network:** Client-server with high-latency support (200-5000ms)  
@@ -653,7 +653,7 @@ max_entities = 10000
 
 ```go
 require (
-    github.com/hajimehoshi/ebiten/v2 v2.9.2
+    github.com/hajimehoshi/ebiten/v2 v2.9.3
 )
 ```
 

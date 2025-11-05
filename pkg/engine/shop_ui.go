@@ -367,17 +367,17 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	}
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
 
+	// Issue #26 FIX: Display player gold prominently in header
+	goldText := fmt.Sprintf("Your Gold: %d", playerInv.Gold)
+	ebitenutil.DebugPrintAt(img, goldText, windowX+10, windowY+30)
+
 	// Draw exit hint (standardized dual-exit navigation)
 	exitHint := "Press [S] or [ESC] to close"
-	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
+	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
 	// Draw mode indicator and switch hint
 	modeText := fmt.Sprintf("Mode: %s (TAB to switch)", ui.mode.String())
-	ebitenutil.DebugPrintAt(img, modeText, windowX+windowWidth-200, windowY+10)
-
-	// Draw player gold
-	goldText := fmt.Sprintf("Your Gold: %d", playerInv.Gold)
-	ebitenutil.DebugPrintAt(img, goldText, windowX+windowWidth-150, windowY+30)
+	ebitenutil.DebugPrintAt(img, modeText, windowX+windowWidth-200, windowY+30)
 
 	// Draw transaction message if active
 	if ui.transactionMessageTime > 0 && ui.lastTransactionMessage != "" {
@@ -408,12 +408,54 @@ func (ui *ShopUI) Draw(screen interface{}) {
 			slotY := gridStartY + row*ui.slotSize
 
 			// Draw slot background with selection/hover highlighting
+			// Issue #26: Color-code affordability (red tint for too expensive)
 			slotColor := color.RGBA{50, 50, 60, 255}
+			
+			// Check affordability in buy mode
+			if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+				itm := currentInventory[slotIndex]
+				if itm != nil {
+					price := merchant.GetSellPrice(itm)
+					if price > playerInv.Gold {
+						// Red tint for unaffordable items
+						slotColor = color.RGBA{80, 40, 40, 255}
+					} else {
+						// Green tint for affordable items
+						slotColor = color.RGBA{40, 70, 40, 255}
+					}
+				}
+			}
+			
+			// Override with hover/selection highlighting
 			if slotIndex == ui.hoveredSlot {
-				slotColor = color.RGBA{70, 70, 90, 255}
+				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+					itm := currentInventory[slotIndex]
+					if itm != nil {
+						price := merchant.GetSellPrice(itm)
+						if price > playerInv.Gold {
+							slotColor = color.RGBA{100, 60, 60, 255} // Red-tinted hover
+						} else {
+							slotColor = color.RGBA{60, 100, 60, 255} // Green-tinted hover
+						}
+					}
+				} else {
+					slotColor = color.RGBA{70, 70, 90, 255}
+				}
 			}
 			if slotIndex == ui.selectedSlot {
-				slotColor = color.RGBA{90, 90, 120, 255}
+				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+					itm := currentInventory[slotIndex]
+					if itm != nil {
+						price := merchant.GetSellPrice(itm)
+						if price > playerInv.Gold {
+							slotColor = color.RGBA{120, 70, 70, 255} // Red-tinted selection
+						} else {
+							slotColor = color.RGBA{70, 120, 70, 255} // Green-tinted selection
+						}
+					}
+				} else {
+					slotColor = color.RGBA{90, 90, 120, 255}
+				}
 			}
 
 			slot := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
@@ -457,7 +499,14 @@ func (ui *ShopUI) Draw(screen interface{}) {
 						ebitenutil.DebugPrintAt(img, itm.Name, tooltipX+5, tooltipY+5)
 						ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", itm.Stats.Value), tooltipX+5, tooltipY+20)
 						if ui.mode == ShopModeBuy {
-							ebitenutil.DebugPrintAt(img, fmt.Sprintf("Buy Price: %d gold", price), tooltipX+5, tooltipY+35)
+							// Issue #26: Show affordability indicator
+							priceText := fmt.Sprintf("Buy Price: %d gold", price)
+							if price > playerInv.Gold {
+								priceText += " (TOO EXPENSIVE)"
+							} else {
+								priceText += " (CAN AFFORD)"
+							}
+							ebitenutil.DebugPrintAt(img, priceText, tooltipX+5, tooltipY+35)
 						} else {
 							ebitenutil.DebugPrintAt(img, fmt.Sprintf("Sell Price: %d gold", price), tooltipX+5, tooltipY+35)
 						}

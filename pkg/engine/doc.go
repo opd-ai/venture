@@ -41,7 +41,7 @@
 //	type PositionComponent struct {
 //	    X, Y float64
 //	}
-//	
+//
 //	func (p PositionComponent) Type() string { return "position" }
 //
 // ## Systems
@@ -53,7 +53,7 @@
 //	    world    *World
 //	    maxSpeed float64
 //	}
-//	
+//
 //	func (s *MovementSystem) Update(deltaTime float64) {
 //	    entities := s.world.GetEntitiesWith("position", "velocity")
 //	    for _, entity := range entities {
@@ -164,12 +164,12 @@
 //	world := engine.NewWorld()
 //	world.AddSystem(engine.NewMovementSystem(200.0))
 //	world.AddSystem(engine.NewCollisionSystem(32.0))
-//	
+//
 //	player := world.CreateEntity()
 //	player.AddComponent(&engine.PositionComponent{X: 100, Y: 50})
 //	player.AddComponent(&engine.VelocityComponent{VX: 10, VY: 0})
 //	world.AddEntity(player)
-//	
+//
 //	// Game loop
 //	for {
 //	    deltaTime := calculateDeltaTime()
@@ -180,7 +180,7 @@
 //
 //	// Get all entities with position and health
 //	livingEntities := world.GetEntitiesWith("position", "health")
-//	
+//
 //	// Get specific entity by ID
 //	player, exists := world.GetEntity(1)
 //	if exists {
@@ -197,9 +197,9 @@
 //	    Current float64
 //	    Max     float64
 //	}
-//	
+//
 //	func (s StaminaComponent) Type() string { return "stamina" }
-//	
+//
 //	// Use in entity
 //	player.AddComponent(&StaminaComponent{Current: 100, Max: 100})
 //
@@ -209,11 +209,11 @@
 //	    world    *World
 //	    regenRate float64  // per second
 //	}
-//	
+//
 //	func NewStaminaRegenSystem(world *World, rate float64) *StaminaRegenSystem {
 //	    return &StaminaRegenSystem{world: world, regenRate: rate}
 //	}
-//	
+//
 //	func (s *StaminaRegenSystem) Update(deltaTime float64) {
 //	    entities := s.world.GetEntitiesWith("stamina")
 //	    for _, entity := range entities {
@@ -267,14 +267,14 @@
 //	    world := engine.NewWorld()
 //	    system := engine.NewMovementSystem(200.0)
 //	    world.AddSystem(system)
-//	    
+//
 //	    entity := world.CreateEntity()
 //	    entity.AddComponent(&engine.PositionComponent{X: 0, Y: 0})
 //	    entity.AddComponent(&engine.VelocityComponent{VX: 10, VY: 0})
 //	    world.AddEntity(entity)
-//	    
+//
 //	    world.Update(1.0)  // 1 second
-//	    
+//
 //	    pos, _ := entity.GetComponent("position")
 //	    position := pos.(*engine.PositionComponent)
 //	    if position.X != 10.0 {
@@ -286,7 +286,7 @@
 //
 // For more information:
 //   - Architecture: docs/ARCHITECTURE.md
-//   - API Reference: docs/API_REFERENCE.md  
+//   - API Reference: docs/API_REFERENCE.md
 //   - Development Guide: docs/DEVELOPMENT.md
 //   - Technical Spec: docs/TECHNICAL_SPEC.md
 package engine

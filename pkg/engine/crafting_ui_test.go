@@ -377,12 +377,12 @@ func TestCraftingUI_AttemptCraftWithoutSystem(t *testing.T) {
 	// Attempt to craft
 	ui.attemptCraft(recipe)
 
-	// Should show error message
-	if ui.craftingMessage == "" {
+	// Should show error message (H-002 FIX: Check errorState instead of craftingMessage)
+	if ui.errorState.Message == "" {
 		t.Error("Should show error message when system missing")
 	}
-	if ui.craftingMessage != "Crafting system not available" {
-		t.Errorf("Wrong error message: %s", ui.craftingMessage)
+	if ui.errorState.Message != "Crafting system not available" {
+		t.Errorf("Wrong error message: %s", ui.errorState.Message)
 	}
 }
 
@@ -437,8 +437,8 @@ func TestCraftingUI_AttemptCraftInsufficientMaterials(t *testing.T) {
 		t.Error("Crafting should not start without materials")
 	}
 
-	// Should show error message
-	if ui.craftingMessage == "" {
+	// Should show error message (H-002 FIX: Check errorState instead of craftingMessage)
+	if ui.errorState.Message == "" {
 		t.Error("Should show error message for missing materials")
 	}
 }

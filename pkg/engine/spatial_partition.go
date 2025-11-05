@@ -323,6 +323,15 @@ func (s *SpatialPartitionSystem) IsDirty() bool {
 	return s.isDirty
 }
 
+// Rebuild forces an immediate rebuild of the spatial partition with the given entities.
+// This bypasses the normal frame-based rebuild logic and is useful for tests or
+// when you need to ensure the spatial partition is up-to-date immediately.
+func (s *SpatialPartitionSystem) Rebuild(entities []*Entity) {
+	s.quadtree.Rebuild(entities)
+	s.isDirty = false
+	s.lastRebuildFrame = s.frameCount
+}
+
 // QueryRadius returns entities within radius of a point.
 func (s *SpatialPartitionSystem) QueryRadius(x, y, radius float64) []*Entity {
 	s.queryCount++

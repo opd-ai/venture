@@ -58,5 +58,7 @@ go.work.sum
 /*test*
 /dist
 /run.sh
-./perfprofile*
+/perfprofile*
+/complete_dungeon_generation
+/terrain_entity_integration
 build/

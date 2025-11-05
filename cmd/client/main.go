@@ -58,6 +58,15 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 	w.system.Update(deltaTime)
 }
 
+// squadSystemWrapper adapts SquadSystem to System interface
+type squadSystemWrapper struct {
+	system *engine.SquadSystem
+}
+
+func (w *squadSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 800, "Screen width")
 	height           = flag.Int("height", 600, "Screen height")
@@ -1171,6 +1180,17 @@ func main() {
 	game.World.AddSystem(revivalSystem)
 
 	game.World.AddSystem(aiSystem)
+	
+	// Phase 13.1: Add behavior tree system for advanced AI
+	// Executes behavior trees for entities with behavior tree components
+	behaviorTreeSystem := engine.NewBehaviorTreeSystem(game.World)
+	game.World.AddSystem(behaviorTreeSystem)
+	
+	// Phase 13.2: Add squad system for coordinated enemy tactics
+	// Manages squad formations, coordination, and tactical behaviors
+	squadSystem := engine.NewSquadSystem(game.World)
+	game.World.AddSystem(&squadSystemWrapper{system: squadSystem})
+	
 	game.World.AddSystem(progressionSystem)
 
 	// Phase 13.3: Add faction system for reputation tracking and relationships
@@ -1257,6 +1277,16 @@ func main() {
 	hazardSystem := engine.NewHazardSystemWithLogger(clientLogger.Logger)
 	hazardSystem.SetWorld(game.World)
 	game.World.AddSystem(hazardSystem)
+	
+	// Phase 12.2: Add narrative system for story progression
+	// Tracks narrative events and manages story arc advancement
+	narrativeSystem := engine.NewNarrativeSystem(game.World)
+	game.World.AddSystem(narrativeSystem)
+	
+	// Phase 14: Add shadow system for enhanced lighting effects
+	// Processes shadow-casting entities and renders shadows
+	shadowSystem := engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
+	game.World.AddSystem(shadowSystem)
 
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem

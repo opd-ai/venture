@@ -203,3 +203,37 @@ func TestInputHandler_MultipleUsers(t *testing.T) {
 		t.Error("player 2 still exists")
 	}
 }
+
+func TestInputHandler_ProcessInputRaw(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Test valid JSON input
+	rawData := []byte(`{"dx": 1.0, "dy": 0.0}`)
+	handler.ProcessInputRaw(playerID, "move", rawData)
+
+	// Verify velocity was updated
+	comp, ok := entity.GetComponent("velocity")
+	if !ok {
+		t.Fatal("velocity component not found")
+	}
+	velocity := comp.(*engine.VelocityComponent)
+	if velocity.VX == 0 && velocity.VY == 0 {
+		t.Error("velocity not updated by ProcessInputRaw")
+	}
+
+	// Test invalid JSON
+	invalidData := []byte(`{invalid json}`)
+	handler.ProcessInputRaw(playerID, "move", invalidData)
+	// Should not crash, just log warning
+
+	// Test unknown player
+	handler.ProcessInputRaw(uint64(999), "move", rawData)
+	// Should not crash, just log warning
+}

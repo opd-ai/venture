@@ -1,7 +1,8 @@
-// Package hostplay provides dedicated server management for multiplayer games.
 package hostplay
 
 import (
+	"encoding/json"
+
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/sirupsen/logrus"
 )
@@ -34,6 +35,19 @@ func (h *InputHandler) RegisterPlayer(playerID uint64, entity *engine.Entity) {
 func (h *InputHandler) UnregisterPlayer(playerID uint64) {
 	delete(h.playerMap, playerID)
 	h.logger.WithField("player_id", playerID).Debug("player unregistered from input")
+}
+
+// ProcessInputRaw processes raw input data (deserializes JSON first).
+func (h *InputHandler) ProcessInputRaw(playerID uint64, inputType string, rawData []byte) {
+	var data map[string]interface{}
+	if err := json.Unmarshal(rawData, &data); err != nil {
+		h.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"error":     err,
+		}).Warn("failed to deserialize input data")
+		return
+	}
+	h.ProcessInput(playerID, inputType, data)
 }
 
 // ProcessInput processes an input command for a player.

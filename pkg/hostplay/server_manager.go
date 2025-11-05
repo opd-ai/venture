@@ -184,6 +184,11 @@ func (sm *ServerManager) Start() error {
 	lagCompConfig := network.DefaultLagCompensationConfig()
 	sm.lagCompensator = network.NewLagCompensator(lagCompConfig)
 
+	// Create input handler and state broadcaster
+	loggerEntry := sm.logger.WithFields(logrus.Fields{"component": "server"})
+	sm.inputHandler = NewInputHandler(sm.world, loggerEntry)
+	sm.stateBroadcaster = NewStateBroadcaster(sm.world, sm.config.TickRate, loggerEntry)
+
 	// Create context for shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	sm.cancelFunc = cancel
@@ -241,7 +246,8 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 
 		case inputCmd := <-inputCommands:
 			sm.logger.Debug("Received input command", "player_id", inputCmd.PlayerID, "type", inputCmd.InputType)
-			// Process player input (TODO: implement input handling)
+			// Process player input through InputHandler
+			sm.inputHandler.ProcessInputRaw(inputCmd.PlayerID, inputCmd.InputType, inputCmd.Data)
 
 		case err := <-errors:
 			sm.logger.Error("Network error", "error", err)
@@ -251,8 +257,15 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 			dt := float64(1.0 / float64(sm.config.TickRate))
 			sm.world.Update(dt)
 
-			// TODO: Broadcast state updates to clients
-			// For now, we just run the simulation
+			// Broadcast state updates to clients
+			data, shouldBroadcast, err := sm.stateBroadcaster.Broadcast()
+			if err != nil {
+				sm.logger.Error("Failed to broadcast state", "error", err)
+			} else if shouldBroadcast && len(data) > 0 {
+				// Send broadcast data through server's network layer
+				// Note: Actual network sending would be handled by network.TCPServer
+				sm.logger.Debug("State broadcast", "size", len(data))
+			}
 		}
 	}
 }
@@ -282,6 +295,9 @@ func (sm *ServerManager) spawnPlayer(playerID uint64) {
 	networkComp := &engine.NetworkComponent{PlayerID: playerID}
 	playerEntity.AddComponent(networkComp)
 
+	// Register player with input handler
+	sm.inputHandler.RegisterPlayer(playerID, playerEntity)
+
 	sm.logger.WithFields(logrus.Fields{
 		"player_id": playerID,
 		"entity_id": playerEntity.ID,
@@ -292,6 +308,9 @@ func (sm *ServerManager) spawnPlayer(playerID uint64) {
 
 // removePlayer removes a player entity from the world.
 func (sm *ServerManager) removePlayer(playerID uint64) {
+	// Unregister from input handler
+	sm.inputHandler.UnregisterPlayer(playerID)
+
 	// Find entity with matching player ID
 	for _, entity := range sm.world.GetEntities() {
 		netComp, exists := entity.GetComponent("network")

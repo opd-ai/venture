@@ -52,11 +52,21 @@ func createDefaultTutorialSteps() []TutorialStep {
 			ID:          "welcome",
 			Title:       "Welcome to Venture!",
 			Description: "Welcome to the world of procedural adventure. Every dungeon, enemy, and item is unique!",
-			Objective:   "Press SPACE or ENTER to continue",
+			Objective:   "Press any key",
 			Completed:   false,
 			Condition: func(world *World) bool {
-				// Check for Space or Enter key press directly via ebiten
-				// Tutorial progression uses direct input for clarity (Space/Enter only)
+				// GAP-005 REPAIR: Check for any key press via InputProvider interface
+				// This allows both production (Ebiten) and test (StubInput) implementations
+				for _, entity := range world.GetEntities() {
+					if entity.HasComponent("input") {
+						if comp, ok := entity.GetComponent("input"); ok {
+							if inputProvider, ok := comp.(InputProvider); ok {
+								return inputProvider.IsAnyKeyPressed()
+							}
+						}
+					}
+				}
+				// Fallback to direct Ebiten check for compatibility with non-InputProvider implementations
 				return inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 			},
 		},

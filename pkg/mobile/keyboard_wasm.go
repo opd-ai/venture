@@ -137,15 +137,31 @@ func initKeyboardElement() {
 	lastInputValue = ""
 }
 
-// dispatchKeyboardEvent dispatches a synthetic keyboard event to the document
+// dispatchKeyboardEvent dispatches a synthetic keyboard event to the canvas element
 // for a typed character. This allows Ebiten's AppendInputChars to capture
 // characters typed on the mobile keyboard.
 //
 // WASM/Mobile Fix: Mobile keyboards type into the focused input element,
-// but Ebiten listens for keyboard events on the document. We bridge this gap
-// by manually dispatching events.
+// but Ebiten listens for keyboard events on its canvas element. We bridge this gap
+// by manually dispatching events to the canvas.
 func dispatchKeyboardEvent(doc js.Value, char string) {
-	// Create a KeyboardEvent for the character
+	// Find Ebiten's canvas element (it's the first canvas in the document)
+	canvasList := doc.Call("getElementsByTagName", "canvas")
+	if canvasList.Get("length").Int() == 0 {
+		// Canvas not ready yet, try document as fallback
+		dispatchToTarget(doc, char, false)
+		return
+	}
+	
+	canvas := canvasList.Index(0)
+	dispatchToTarget(canvas, char, false)
+	
+	// Also dispatch to document for compatibility
+	dispatchToTarget(doc, char, false)
+}
+
+// dispatchToTarget dispatches keyboard events to a specific target
+func dispatchToTarget(target js.Value, char string, isSpecial bool) {
 	eventInit := js.Global().Get("Object").New()
 	eventInit.Set("key", char)
 	eventInit.Set("code", "")
@@ -156,18 +172,23 @@ func dispatchKeyboardEvent(doc js.Value, char string) {
 
 	// Dispatch both keydown and keypress for maximum compatibility
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
-	doc.Call("dispatchEvent", keydownEvent)
+	target.Call("dispatchEvent", keydownEvent)
 
-	keypressEvent := js.Global().Get("KeyboardEvent").New("keypress", eventInit)
-	doc.Call("dispatchEvent", keypressEvent)
+	if !isSpecial {
+		keypressEvent := js.Global().Get("KeyboardEvent").New("keypress", eventInit)
+		target.Call("dispatchEvent", keypressEvent)
+	}
 }
 
 // dispatchBackspaceEvent dispatches a synthetic backspace keyboard event.
 // This handles the case where the user deletes characters on mobile.
 //
 // WASM/Mobile Fix: When user presses backspace on mobile keyboard,
-// we need to forward that to Ebiten as well.
+// we need to forward that to Ebiten's canvas as well.
 func dispatchBackspaceEvent(doc js.Value) {
+	// Find Ebiten's canvas element
+	canvasList := doc.Call("getElementsByTagName", "canvas")
+	
 	eventInit := js.Global().Get("Object").New()
 	eventInit.Set("key", "Backspace")
 	eventInit.Set("code", "Backspace")
@@ -177,14 +198,22 @@ func dispatchBackspaceEvent(doc js.Value) {
 	eventInit.Set("cancelable", true)
 
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
+	
+	// Dispatch to canvas if available
+	if canvasList.Get("length").Int() > 0 {
+		canvas := canvasList.Index(0)
+		canvas.Call("dispatchEvent", keydownEvent)
+	}
+	
+	// Also dispatch to document for compatibility
 	doc.Call("dispatchEvent", keydownEvent)
 }
 
-// dispatchSpecialKeyEvent forwards special key events (Enter, Tab, Escape) to document.
+// dispatchSpecialKeyEvent forwards special key events (Enter, Tab, Escape) to canvas.
 // These keys are used for navigation and completing text input in the game.
 //
 // WASM/Mobile Fix: Mobile keyboards generate these events on the focused input,
-// but we need to forward them to Ebiten for game control.
+// but we need to forward them to Ebiten's canvas for game control.
 func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 	// Use package-level keyCodeMap to avoid repeated allocations
 	keyCode := keyCodeMap[key]
@@ -206,6 +235,17 @@ func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 	}
 
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
+	
+	// Find Ebiten's canvas element
+	canvasList := doc.Call("getElementsByTagName", "canvas")
+	
+	// Dispatch to canvas if available
+	if canvasList.Get("length").Int() > 0 {
+		canvas := canvasList.Index(0)
+		canvas.Call("dispatchEvent", keydownEvent)
+	}
+	
+	// Also dispatch to document for compatibility
 	doc.Call("dispatchEvent", keydownEvent)
 }
 

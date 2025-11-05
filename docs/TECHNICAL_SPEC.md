@@ -90,7 +90,7 @@ type World struct {
 | PositionComponent | Entity location | X, Y coordinates |
 | VelocityComponent | Movement | VX, VY velocity |
 | Sprite (SpriteProvider) | Visual | Width, Height, Color, Image, Layer, Visible |
-| AnimationComponent | Animation | Frames, FrameDurations, CurrentFrame, Loop |
+| AnimationComponent | Animation | CurrentState, PreviousState, Frames, FrameIndex, Loop |
 | HealthComponent | HP tracking | Current HP, Max HP |
 | StatsComponent | Character stats | Attack, Defense, Speed, etc. |
 | InventoryComponent | Item storage | Items []*item.Item, MaxItems, MaxWeight, Gold |

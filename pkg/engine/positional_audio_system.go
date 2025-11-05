@@ -176,7 +176,7 @@ func (s *PositionalAudioSystem) checkOcclusion(sourceX, sourceY, targetX, target
 
 // GetAudioParameters returns volume and pan for an entity with PositionalAudioComponent.
 // Returns (volume, pan, ok) where ok is false if the entity doesn't have the component.
-func (s *PositionalAudioSystem) GetAudioParameters(entity *Entity) (volume float64, pan float64, ok bool) {
+func (s *PositionalAudioSystem) GetAudioParameters(entity *Entity) (volume, pan float64, ok bool) {
 	audioComp, hasAudio := entity.GetComponent("positional_audio")
 	if !hasAudio {
 		return 0.0, 0.0, false

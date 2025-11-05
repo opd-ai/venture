@@ -130,7 +130,7 @@ func (s *InteractionSystem) tryContextActions(player *Entity, playerPos *Positio
 }
 
 // activateContextAction handles context action activation.
-func (s *InteractionSystem) activateContextAction(player *Entity, entity *Entity, contextAction *ContextActionComponent) {
+func (s *InteractionSystem) activateContextAction(player, entity *Entity, contextAction *ContextActionComponent) {
 	// Activate the action
 	contextAction.Activate()
 
@@ -266,7 +266,7 @@ func (s *InteractionSystem) tryPuzzleInteraction(player *Entity, playerPos *Posi
 }
 
 // activatePuzzleElement handles the interaction with a puzzle element.
-func (s *InteractionSystem) activatePuzzleElement(player *Entity, element *Entity, puzzleElem *PuzzleElementComponent) {
+func (s *InteractionSystem) activatePuzzleElement(player, element *Entity, puzzleElem *PuzzleElementComponent) {
 	// Toggle element state
 	puzzleElem.State = (puzzleElem.State + 1) % 2 // Toggle between 0 and 1
 

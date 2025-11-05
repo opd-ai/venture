@@ -100,7 +100,7 @@ func NewShadowComponent(radius float64) *ShadowComponent {
 }
 
 // NewSoftShadow creates a shadow component with soft edges.
-func NewSoftShadow(radius float64, softEdgeRadius float64) *ShadowComponent {
+func NewSoftShadow(radius, softEdgeRadius float64) *ShadowComponent {
 	shadow := NewShadowComponent(radius)
 	shadow.ShadowType = ShadowTypeSoft
 	shadow.SoftEdgeRadius = softEdgeRadius
@@ -108,7 +108,7 @@ func NewSoftShadow(radius float64, softEdgeRadius float64) *ShadowComponent {
 }
 
 // NewContactShadow creates a contact shadow (for entities touching ground).
-func NewContactShadow(radius float64, height float64) *ShadowComponent {
+func NewContactShadow(radius, height float64) *ShadowComponent {
 	shadow := NewShadowComponent(radius)
 	shadow.ShadowType = ShadowTypeContact
 	shadow.Height = height
@@ -145,7 +145,7 @@ func (a *AmbientOcclusionComponent) Type() string {
 }
 
 // NewAmbientOcclusionComponent creates an AO component with default values.
-func NewAmbientOcclusionComponent(intensity float64, radius float64) *AmbientOcclusionComponent {
+func NewAmbientOcclusionComponent(intensity, radius float64) *AmbientOcclusionComponent {
 	if intensity <= 0 {
 		intensity = 0.3
 	}

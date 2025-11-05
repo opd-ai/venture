@@ -101,7 +101,7 @@ func (s *CarrySystem) Update(entities []*Entity, deltaTime float64) {
 
 // TryPickup attempts to pick up a carriable object.
 // Returns true if pickup was successful.
-func (s *CarrySystem) TryPickup(playerID uint64, objectID uint64) bool {
+func (s *CarrySystem) TryPickup(playerID, objectID uint64) bool {
 	if s.world == nil {
 		return false
 	}

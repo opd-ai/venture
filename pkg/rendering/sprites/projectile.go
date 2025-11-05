@@ -33,7 +33,7 @@ const (
 // projectileType: type of projectile to generate
 // genreID: genre for color palette
 // size: sprite size (typically 8-16 pixels)
-func GenerateProjectileSprite(seed int64, projectileType string, genreID string, size int) *ebiten.Image {
+func GenerateProjectileSprite(seed int64, projectileType, genreID string, size int) *ebiten.Image {
 	// Clamp size to minimum of 4 to avoid invalid images and division by zero
 	if size < 4 {
 		size = 4

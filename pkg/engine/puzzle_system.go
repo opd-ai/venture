@@ -191,7 +191,7 @@ func (s *PuzzleSystem) handleFailedPuzzles() {
 }
 
 // InteractWithElement handles player interaction with puzzle element.
-func (s *PuzzleSystem) InteractWithElement(playerID uint64, elementEntityID uint64) error {
+func (s *PuzzleSystem) InteractWithElement(playerID, elementEntityID uint64) error {
 	// Get element entity
 	elementEntity, ok := s.world.GetEntity(elementEntityID)
 	if !ok || elementEntity == nil {

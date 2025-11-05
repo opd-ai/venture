@@ -188,7 +188,7 @@ func (d *DebrisComponent) Type() string {
 }
 
 // NewDebrisComponent creates a debris component.
-func NewDebrisComponent(sourceType ObjectType, lifetime float64, angularVel float64) *DebrisComponent {
+func NewDebrisComponent(sourceType ObjectType, lifetime, angularVel float64) *DebrisComponent {
 	if lifetime <= 0 {
 		lifetime = 5.0 // Default: 5 seconds
 	}

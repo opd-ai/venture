@@ -286,7 +286,7 @@ func (ns *NarrativeSystem) GetRelationshipStatus(narrative *NarrativeComponent, 
 }
 
 // RecordPlayerDecision records a significant player choice.
-func (ns *NarrativeSystem) RecordPlayerDecision(narrative *NarrativeComponent, description string, chosenOption string, alternatives []string, consequences []string) {
+func (ns *NarrativeSystem) RecordPlayerDecision(narrative *NarrativeComponent, description, chosenOption string, alternatives, consequences []string) {
 	decision := PlayerDecision{
 		Description:         description,
 		Timestamp:           time.Now(),

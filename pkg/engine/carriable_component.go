@@ -243,7 +243,7 @@ func (h *HazardComponent) Type() string {
 }
 
 // NewHazardComponent creates a hazard component.
-func NewHazardComponent(hazardType HazardType, duration float64, radius float64) *HazardComponent {
+func NewHazardComponent(hazardType HazardType, duration, radius float64) *HazardComponent {
 	comp := &HazardComponent{
 		HazardType:         hazardType,
 		Duration:           duration,

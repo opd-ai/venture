@@ -61,7 +61,7 @@ func NewStateBroadcaster(world *engine.World, broadcastRate int, logger *logrus.
 	return &StateBroadcaster{
 		world:          world,
 		broadcastRate:  broadcastRate,
-		lastBroadcast:  time.Now(),
+		lastBroadcast:  time.Time{}, // Zero time ensures first broadcast happens immediately
 		logger:         logger,
 		priorityRadius: 1000.0, // Default 1000 pixels
 	}

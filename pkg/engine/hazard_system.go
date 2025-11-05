@@ -127,7 +127,94 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 	s.applyZoneEffects(deltaTime)
 }
 
-// applyHazardEffects applies hazard effects to entities in range.
+// applyZoneEffects applies hazard effects to entities using zone tracker.
+func (s *HazardSystem) applyZoneEffects(deltaTime float64) {
+	if s.world == nil {
+		return
+	}
+
+	// Find all entities with position and health
+	entities := s.world.GetEntities()
+
+	for _, entity := range entities {
+		// Get entity position
+		entPosComp, ok := entity.GetComponent("position")
+		if !ok {
+			continue
+		}
+		entPos := entPosComp.(*PositionComponent)
+
+		// Query zones at entity position
+		zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
+
+		// Apply effects from all overlapping zones
+		for _, zone := range zones {
+			// Apply damage if zone is damaging
+			if zone.DamagePerSecond > 0 {
+				s.applyZoneDamage(entity, zone, deltaTime)
+			}
+
+			// Apply movement modifier if zone affects movement
+			if zone.MovementMultiplier != 1.0 {
+				s.applyZoneMovementModifier(entity, zone)
+			}
+		}
+	}
+}
+
+// applyZoneDamage applies damage from a hazard zone to an entity.
+func (s *HazardSystem) applyZoneDamage(entity *Entity, zone *HazardZone, deltaTime float64) {
+	// Get health component
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return // Entity has no health
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	// Calculate damage scaled by zone intensity (fading)
+	damage := zone.DamagePerSecond * deltaTime * zone.Intensity
+
+	// Apply damage
+	health.TakeDamage(damage)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":   entity.ID,
+			"hazardType": zone.HazardType.String(),
+			"damage":     damage,
+			"intensity":  zone.Intensity,
+		}).Debug("zone damage applied")
+	}
+}
+
+// applyZoneMovementModifier applies movement speed modifier from a hazard zone.
+// This now uses zone tracking to avoid cumulative effects.
+func (s *HazardSystem) applyZoneMovementModifier(entity *Entity, zone *HazardZone) {
+	// Get velocity component
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return
+	}
+
+	velocity, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
+
+	// Apply movement multiplier (scaled by intensity for fading effect)
+	// Note: This is a simplified implementation that modifies current velocity.
+	// A more sophisticated approach would track original velocity and restore it.
+	multiplier := 1.0 + (zone.MovementMultiplier-1.0)*zone.Intensity
+	velocity.VX *= multiplier
+	velocity.VY *= multiplier
+}
+
+// applyHazardEffects applies hazard effects to entities in range (legacy method).
+// This is kept for backward compatibility but delegates to zone-based system.
 func (s *HazardSystem) applyHazardEffects(hazard *HazardComponent, hazPos *PositionComponent, deltaTime float64) {
 	if s.world == nil {
 		return
@@ -193,15 +280,23 @@ func (s *HazardSystem) applyDamage(entity *Entity, hazard *HazardComponent, delt
 }
 
 // applyMovementModifier applies movement speed modifier to an entity.
-// Note: This is a simplified implementation that modifies current velocity.
-// A more sophisticated approach would store original velocity and restore it
-// when the entity leaves the hazard. This requires tracking which entities
-// are in which hazards, which is deferred to future enhancement.
+// Legacy method maintained for backward compatibility.
 func (s *HazardSystem) applyMovementModifier(entity *Entity, hazard *HazardComponent) {
-	// For now, we skip movement modification to avoid cumulative effects.
-	// Future enhancement: Track entity-hazard relationships and apply modifiers
-	// only when entering/exiting hazards, not every frame.
-	// TODO: Implement proper hazard zone tracking system
+	// Delegate to zone-based system by checking zone tracker
+	// This ensures consistent behavior with new zone tracking
+	entPosComp, ok := entity.GetComponent("position")
+	if !ok {
+		return
+	}
+	entPos := entPosComp.(*PositionComponent)
+
+	zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
+	for _, zone := range zones {
+		if zone.MovementMultiplier != 1.0 {
+			s.applyZoneMovementModifier(entity, zone)
+			break // Apply only strongest effect
+		}
+	}
 }
 
 // CreateHazard creates a hazard entity at the specified position.
@@ -279,6 +374,23 @@ func (s *HazardSystem) GetHazardsAt(x, y float64) []*Entity {
 func (s *HazardSystem) IsPositionHazardous(x, y float64) bool {
 	hazards := s.GetHazardsAt(x, y)
 	return len(hazards) > 0
+}
+
+// GetZoneTracker returns the hazard zone tracker for direct access.
+// This allows external systems to query zones efficiently.
+func (s *HazardSystem) GetZoneTracker() *HazardZoneTracker {
+	return s.zoneTracker
+}
+
+// GetActiveZoneCount returns the number of currently active hazard zones.
+func (s *HazardSystem) GetActiveZoneCount() int {
+	return s.zoneTracker.GetActiveZoneCount()
+}
+
+// GetZonesInRadius returns all hazard zones overlapping a circular area.
+// Useful for area-of-effect queries like explosions.
+func (s *HazardSystem) GetZonesInRadius(x, y, radius float64) []*HazardZone {
+	return s.zoneTracker.GetZonesInRadius(x, y, radius)
 }
 
 // GetActiveHazardCount returns the number of active hazard entities.

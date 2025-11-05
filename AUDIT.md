@@ -1,16 +1,16 @@
 # Venture UI Audit Report - Comprehensive Edition
 **Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG  
 **Audit Date**: 2025-11-04T19:48:50Z  
-**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31 resolved)  
+**Last Update**: 2025-11-04 (Issues #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31 resolved)  
 **Auditor**: GitHub Copilot Coding Agent  
 **Technology**: Go 1.24+ / Ebiten 2.9.2 / ECS Architecture  
 **Total Issues Found**: 31  
-**Issues Resolved**: 13 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31)  
-**Issues Remaining**: 18
+**Issues Resolved**: 14 (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31)  
+**Issues Remaining**: 17
 
 ## Executive Summary
 
-**Update (2025-11-04)**: Thirteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
+**Update (2025-11-04)**: Fourteen issues (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #30, #31) have been resolved. The collision system now properly integrates with LayerComponent for multi-layer terrain support, sprite rendering is fully deterministic, equipment visual layers have validated Z-order enforcement with standardized constants, layer transitions now display smooth visual feedback with depth effects and transparency, UI button colors now meet WCAG 2.1 AA contrast requirements (4.5:1 minimum) across all genres, a comprehensive text wrapping utility is available for long procedurally generated names, fog-of-war exploration state now persists across save/load operations, HUD now displays network latency with color-coded quality indicators in multiplayer mode, mobile touch controls now provide haptic feedback for tactile responsiveness, and quest log UI now handles long descriptions with text wrapping and scrolling support.
 
 This comprehensive audit systematically reviewed Venture's UI systems across all packages (`pkg/rendering/ui/`, `pkg/engine/*ui*.go`, `pkg/mobile/`), with special focus on visual layering, collision detection, and cross-platform compatibility. The audit builds upon previous findings and introduces critical analysis of the multi-layer terrain system (Phase 11.1) and sprite rendering order.
 
@@ -307,12 +307,22 @@ Positive aspects include excellent deterministic UI generation, comprehensive du
 
 ### Medium Priority Issues
 
-#### Issue #12: Crafting UI Recipe List Missing Search/Filter
+#### Issue #12: Crafting UI Recipe List Missing Search/Filter [RESOLVED]
+- **Status**: ✅ RESOLVED - Fixed in commit 76588ce (2025-11-04)
 - **Component**: `pkg/engine/crafting_ui.go` - recipe display
 - **Genre Impact**: All genres
 - **Platform**: All platforms
 - **Description**: With 50+ recipes, no search or filtering exists. Recipes not grouped by category or sortable.
-- **Suggested Fix**: Add search input field, category tabs (Weapons/Armor/Consumables), sort options (Name/Tier/Craftable), highlight craftable recipes based on materials.
+- **Resolution**: Implemented comprehensive search/filter system with: (1) Search bar for recipe names with real-time filtering, (2) Category tabs (All/Potions/Enchanting/Magic Items) cycled with TAB key, (3) Sort modes (Name/Tier/Craftable) cycled with F key, (4) Craftable-only filter toggled with C key, (5) Green visual highlighting for craftable recipes. Helper functions added: filterAndSortRecipes(), matchesSearch(), matchesCategory(), canCraftRecipe(), sortRecipes(). UI displays current filter state and provides keyboard controls.
+- **Changes Made**:
+  - Added search/filter fields to CraftingUI struct (searchQuery, filterCategory, sortMode, showOnlyCrafted)
+  - Implemented real-time text input for search (case-insensitive substring matching)
+  - Added TAB/F/C key controls for category filter, sort mode, and craftable filter
+  - Created helper functions for filtering and sorting (160+ lines)
+  - Updated Draw() to display search/filter UI controls
+  - Applied filtering to both Update() and Draw() recipe lists
+  - Added green background tint for craftable recipes
+- **Verification**: Manual code path analysis confirms search filters correctly, category filter uses recipe Type field, sort modes work properly, craftable check validates inventory and gold. UI controls don't conflict with existing crafting controls (R/ESC for toggle/close, ENTER/SPACE for craft).
 
 #### Issue #13: No Colorblind Accessibility Mode
 - **Component**: `pkg/rendering/palette/` - color usage throughout

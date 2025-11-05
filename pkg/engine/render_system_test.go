@@ -47,3 +47,92 @@ func (r *StubRenderSystem) SetShowGrid(show bool) {
 
 // Compile-time interface check
 var _ RenderingSystem = (*StubRenderSystem)(nil)
+
+// TestRenderSystem_SpatialPartition_CameraPosition tests that spatial partition
+// uses the correct camera position for viewport culling.
+// This is a regression test for the bug where getVisibleEntities used the
+// entity's PositionComponent instead of camera.X/Y.
+func TestRenderSystem_SpatialPartition_CameraPosition(t *testing.T) {
+	// Note: This test cannot use Ebiten types (ebiten.NewImage) as they require
+	// graphics initialization which is not available in CI environments.
+	// We test the logic indirectly through the spatial partition system.
+
+	cameraSystem := NewCameraSystem(800, 600)
+	renderSystem := NewRenderSystem(cameraSystem)
+
+	// Create spatial partition
+	spatialPartition := NewSpatialPartitionSystem(2000, 2000)
+	renderSystem.SetSpatialPartition(spatialPartition)
+	renderSystem.EnableCulling(true)
+
+	// Create camera entity
+	cameraEntity := NewEntity(1)
+	cameraComp := NewCameraComponent()
+
+	// Camera component position is at (1000, 1000) - this is what should be used
+	cameraComp.X = 1000
+	cameraComp.Y = 1000
+	cameraComp.Zoom = 1.0
+	cameraEntity.AddComponent(cameraComp)
+
+	// Entity position is different (500, 500) - this should NOT be used
+	// This is the bug we're testing for
+	entityPos := &PositionComponent{X: 500, Y: 500}
+	cameraEntity.AddComponent(entityPos)
+
+	cameraSystem.SetActiveCamera(cameraEntity)
+
+	// Create test entity that should be visible based on camera.X/Y (1000, 1000)
+	// but NOT visible based on entity position (500, 500)
+	testEntity := NewEntity(2)
+	testPos := &PositionComponent{X: 1100, Y: 1100} // Near camera.X/Y
+	testEntity.AddComponent(testPos)
+
+	testSprite := &EbitenSprite{
+		Width:   32,
+		Height:  32,
+		Visible: true,
+		Layer:   0,
+	}
+	testEntity.AddComponent(testSprite)
+
+	entities := []*Entity{testEntity}
+
+	// Update spatial partition
+	spatialPartition.Update(entities, 0)
+
+	// Test getVisibleEntities - should use camera.X/Y (1000, 1000)
+	// The viewport should be centered at (1000, 1000) with margin
+	// So entity at (1100, 1100) should be visible
+	visibleEntities := renderSystem.getVisibleEntities(entities)
+
+	if len(visibleEntities) != 1 {
+		t.Errorf("Expected 1 visible entity (using camera.X/Y), got %d", len(visibleEntities))
+		t.Logf("Camera component position: (%.0f, %.0f)", cameraComp.X, cameraComp.Y)
+		t.Logf("Entity position component: (%.0f, %.0f)", entityPos.X, entityPos.Y)
+		t.Logf("Test entity position: (%.0f, %.0f)", testPos.X, testPos.Y)
+	}
+}
+
+// TestRenderSystem_EnableCulling tests that culling can be enabled/disabled.
+func TestRenderSystem_EnableCulling(t *testing.T) {
+	cameraSystem := NewCameraSystem(800, 600)
+	renderSystem := NewRenderSystem(cameraSystem)
+
+	// Default should be enabled (after bug fix)
+	if !renderSystem.enableCulling {
+		t.Error("Expected culling to be enabled by default")
+	}
+
+	// Test disable
+	renderSystem.EnableCulling(false)
+	if renderSystem.enableCulling {
+		t.Error("Expected culling to be disabled")
+	}
+
+	// Test enable
+	renderSystem.EnableCulling(true)
+	if !renderSystem.enableCulling {
+		t.Error("Expected culling to be enabled")
+	}
+}

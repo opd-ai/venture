@@ -274,7 +274,7 @@ func (s *CameraSystem) IsVisible(worldX, worldY, radius float64) bool {
 		return true
 	}
 
-	cameraComp, ok := s.activeCamera.GetComponent("camera")
+	_, ok := s.activeCamera.GetComponent("camera")
 	if !ok {
 		return true
 	}

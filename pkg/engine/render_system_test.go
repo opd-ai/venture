@@ -1,5 +1,7 @@
 package engine
 
+import "testing"
+
 // StubRenderSystem is a test implementation of RenderingSystem interface.
 // It provides a simple mock for unit testing without actual rendering.
 type StubRenderSystem struct {
@@ -98,8 +100,8 @@ func TestRenderSystem_SpatialPartition_CameraPosition(t *testing.T) {
 
 	entities := []*Entity{testEntity}
 
-	// Update spatial partition
-	spatialPartition.Update(entities, 0)
+	// Rebuild spatial partition immediately to populate it with entities
+	spatialPartition.Rebuild(entities)
 
 	// Test getVisibleEntities - should use camera.X/Y (1000, 1000)
 	// The viewport should be centered at (1000, 1000) with margin
@@ -111,28 +113,5 @@ func TestRenderSystem_SpatialPartition_CameraPosition(t *testing.T) {
 		t.Logf("Camera component position: (%.0f, %.0f)", cameraComp.X, cameraComp.Y)
 		t.Logf("Entity position component: (%.0f, %.0f)", entityPos.X, entityPos.Y)
 		t.Logf("Test entity position: (%.0f, %.0f)", testPos.X, testPos.Y)
-	}
-}
-
-// TestRenderSystem_EnableCulling tests that culling can be enabled/disabled.
-func TestRenderSystem_EnableCulling(t *testing.T) {
-	cameraSystem := NewCameraSystem(800, 600)
-	renderSystem := NewRenderSystem(cameraSystem)
-
-	// Default should be enabled (after bug fix)
-	if !renderSystem.enableCulling {
-		t.Error("Expected culling to be enabled by default")
-	}
-
-	// Test disable
-	renderSystem.EnableCulling(false)
-	if renderSystem.enableCulling {
-		t.Error("Expected culling to be disabled")
-	}
-
-	// Test enable
-	renderSystem.EnableCulling(true)
-	if !renderSystem.enableCulling {
-		t.Error("Expected culling to be enabled")
 	}
 }

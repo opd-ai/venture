@@ -20,10 +20,10 @@ type SystemInitConfig struct {
 	Logger  *logrus.Logger
 
 	// System-specific settings
-	MaxSpeed        float64 // MovementSystem max speed (default: 200.0)
+	MaxSpeed          float64 // MovementSystem max speed (default: 200.0)
 	CollisionCellSize float64 // CollisionSystem spatial grid cell size (default: 64.0)
-	SampleRate      int     // AudioManager sample rate (default: 44100)
-	TileSize        int     // Tile size for terrain systems (default: 32)
+	SampleRate        int     // AudioManager sample rate (default: 44100)
+	TileSize          int     // Tile size for terrain systems (default: 32)
 
 	// Feature flags
 	EnableVerboseLogging bool // Enable detailed system initialization logging
@@ -32,13 +32,13 @@ type SystemInitConfig struct {
 // DefaultSystemInitConfig returns a configuration with sensible defaults.
 func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) *SystemInitConfig {
 	return &SystemInitConfig{
-		Seed:              seed,
-		GenreID:           genreID,
-		Logger:            logger,
-		MaxSpeed:          200.0,
-		CollisionCellSize: 64.0,
-		SampleRate:        44100,
-		TileSize:          32,
+		Seed:                 seed,
+		GenreID:              genreID,
+		Logger:               logger,
+		MaxSpeed:             200.0,
+		CollisionCellSize:    64.0,
+		SampleRate:           44100,
+		TileSize:             32,
 		EnableVerboseLogging: false,
 	}
 }
@@ -47,20 +47,20 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem      *InputSystem
-	CombatSystem     *CombatSystem
-	CollisionSystem  *CollisionSystem
-	ProjectileSystem *ProjectileSystem
-	AudioManager     *AudioManager
-	ObjectiveTracker *ObjectiveTrackerSystem
-	CommerceSystem   *CommerceSystem
-	DialogSystem     *DialogSystem
-	CraftingSystem   *CraftingSystem
+	InputSystem       *InputSystem
+	CombatSystem      *CombatSystem
+	CollisionSystem   *CollisionSystem
+	ProjectileSystem  *ProjectileSystem
+	AudioManager      *AudioManager
+	ObjectiveTracker  *ObjectiveTrackerSystem
+	CommerceSystem    *CommerceSystem
+	DialogSystem      *DialogSystem
+	CraftingSystem    *CraftingSystem
 	InteractionSystem *InteractionSystem
-	AnimationSystem  *AnimationSystem
-	ParticleSystem   *ParticleSystem
-	TutorialSystem   *EbitenTutorialSystem
-	HelpSystem       *EbitenHelpSystem
+	AnimationSystem   *AnimationSystem
+	ParticleSystem    *ParticleSystem
+	TutorialSystem    *EbitenTutorialSystem
+	HelpSystem        *EbitenHelpSystem
 
 	// System wrappers
 	AnimationSystemWrapper System

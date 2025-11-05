@@ -15,12 +15,12 @@ import (
 
 // Game is the mobile game instance
 var (
-	gameInstance     *engine.EbitenGame
-	logger           *logrus.Logger
+	gameInstance      *engine.EbitenGame
+	logger            *logrus.Logger
 	systemsInitResult *engine.SystemInitResult
-	playerEntity     *engine.Entity
-	worldSeed        int64
-	genreID          string
+	playerEntity      *engine.Entity
+	worldSeed         int64
+	genreID           string
 )
 
 func init() {
@@ -29,7 +29,7 @@ func init() {
 	logConfig.Format = logging.TextFormat
 	logConfig.Level = logging.InfoLevel
 	logger = logging.NewLogger(logConfig)
-	
+
 	// Generate default seed and genre
 	worldSeed = time.Now().UnixNano()
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}

@@ -169,13 +169,13 @@ func TestSystemInitConfig_CustomValues(t *testing.T) {
 	game := NewEbitenGameWithLogger(800, 600, logger)
 
 	config := &SystemInitConfig{
-		Seed:              99999,
-		GenreID:           "horror",
-		Logger:            logger,
-		MaxSpeed:          150.0,
-		CollisionCellSize: 48.0,
-		SampleRate:        48000,
-		TileSize:          64,
+		Seed:                 99999,
+		GenreID:              "horror",
+		Logger:               logger,
+		MaxSpeed:             150.0,
+		CollisionCellSize:    48.0,
+		SampleRate:           48000,
+		TileSize:             64,
 		EnableVerboseLogging: true,
 	}
 
@@ -300,29 +300,29 @@ func BenchmarkInitializeGameSystems(b *testing.B) {
 
 // TestInitializeSpatialPartitionSystem verifies spatial partition system initialization.
 func TestInitializeSpatialPartitionSystem(t *testing.T) {
-logger := logging.TestUtilityLogger("system_init_test")
-game := NewEbitenGameWithLogger(800, 600, logger)
+	logger := logging.TestUtilityLogger("system_init_test")
+	game := NewEbitenGameWithLogger(800, 600, logger)
 
-// First initialize main systems
-config := DefaultSystemInitConfig(12345, "fantasy", logger)
-_, err := InitializeGameSystems(game, config)
-if err != nil {
-t.Fatalf("InitializeGameSystems failed: %v", err)
-}
+	// First initialize main systems
+	config := DefaultSystemInitConfig(12345, "fantasy", logger)
+	_, err := InitializeGameSystems(game, config)
+	if err != nil {
+		t.Fatalf("InitializeGameSystems failed: %v", err)
+	}
 
-// Now initialize spatial partition system with mock terrain dimensions
-worldWidth := 2560.0  // 80 tiles * 32 pixels
-worldHeight := 1600.0 // 50 tiles * 32 pixels
+	// Now initialize spatial partition system with mock terrain dimensions
+	worldWidth := 2560.0  // 80 tiles * 32 pixels
+	worldHeight := 1600.0 // 50 tiles * 32 pixels
 
-spatialSystem := InitializeSpatialPartitionSystem(game, worldWidth, worldHeight, true, true, logger)
+	spatialSystem := InitializeSpatialPartitionSystem(game, worldWidth, worldHeight, true, true, logger)
 
-if spatialSystem == nil {
-t.Error("SpatialPartitionSystem should not be nil")
-}
+	if spatialSystem == nil {
+		t.Error("SpatialPartitionSystem should not be nil")
+	}
 
-// Verify it was added to world (should now have 44 systems)
-systems := game.World.GetSystems()
-if len(systems) != 44 {
-t.Errorf("Expected 44 systems after spatial partition init, got %d", len(systems))
-}
+	// Verify it was added to world (should now have 44 systems)
+	systems := game.World.GetSystems()
+	if len(systems) != 44 {
+		t.Errorf("Expected 44 systems after spatial partition init, got %d", len(systems))
+	}
 }

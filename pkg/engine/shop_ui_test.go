@@ -421,8 +421,8 @@ func TestShopUI_ExecuteTransaction_InsufficientGold(t *testing.T) {
 		t.Errorf("Merchant has %d items, want 1", len(merchantComp.Inventory))
 	}
 
-	// Verify error message was shown
-	if ui.lastTransactionMessage == "" {
+	// Verify error message was shown (H-002 FIX: Check errorState instead of lastTransactionMessage)
+	if ui.errorState.Message == "" {
 		t.Error("No error message shown for insufficient gold")
 	}
 }
@@ -442,8 +442,8 @@ func TestShopUI_ExecuteTransaction_NoCommerceSystem(t *testing.T) {
 	// Execute transaction (should fail gracefully)
 	ui.executeTransaction()
 
-	// Verify error message was shown
-	if ui.lastTransactionMessage == "" {
+	// Verify error message was shown (H-002 FIX: Check errorState instead of lastTransactionMessage)
+	if ui.errorState.Message == "" {
 		t.Error("No error message shown when commerce system missing")
 	}
 }

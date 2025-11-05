@@ -115,10 +115,12 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
-	mouseReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
+	// Note: Touch release detection uses same pattern as mouse
+	touchIDs := ebiten.TouchIDs()
+	mouseReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) || (ui.dragging && len(touchIDs) == 0)
 
 	// Check if mouse is over inventory grid
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&

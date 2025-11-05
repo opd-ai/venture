@@ -161,9 +161,9 @@ func (ms *EbitenMenuSystem) handleInput(menu *MenuComponent) {
 	menuX := (ms.screenWidth - menuWidth) / 2
 	menuY := (ms.screenHeight - menuHeight) / 2
 
-	// Mouse input handling
-	mouseX, mouseY := ebiten.CursorPosition()
-	mouseClicked := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	// Mouse and touch input handling (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mouseClicked := IsTouchOrMouseJustPressed()
 
 	// Calculate item bounds and handle mouse hover/click
 	itemY := menuY + 70

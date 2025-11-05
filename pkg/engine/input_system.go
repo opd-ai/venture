@@ -893,6 +893,53 @@ func (s *InputSystem) GetMouseWheel() (deltaX, deltaY float64) {
 	return ebiten.Wheel()
 }
 
+// ===== UNIFIED TOUCH/MOUSE INPUT HELPERS =====
+// Touch support for WASM/mobile: These functions provide unified detection
+// of both touch and mouse input, enabling full touchscreen gameplay.
+
+// IsTouchOrMouseJustPressed returns true if either a touch or left mouse button
+// was just pressed this frame. This unifies touch and mouse input for UI interactions.
+// Touch support for WASM/mobile platforms.
+func IsTouchOrMouseJustPressed() bool {
+	// Check for mouse click
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return true
+	}
+	
+	// Check for new touch input
+	touchIDs := inpututil.AppendJustPressedTouchIDs(nil)
+	return len(touchIDs) > 0
+}
+
+// GetTouchOrMousePosition returns the position of either the first active touch
+// or the mouse cursor. Prioritizes touch input when available.
+// Touch support for WASM/mobile platforms.
+func GetTouchOrMousePosition() (x, y int, hasInput bool) {
+	// Check for active touch first (priority on touch devices)
+	touchIDs := ebiten.TouchIDs()
+	if len(touchIDs) > 0 {
+		// Return the first touch position
+		x, y := ebiten.TouchPosition(touchIDs[0])
+		return x, y, true
+	}
+	
+	// Fall back to mouse position
+	x, y = ebiten.CursorPosition()
+	return x, y, true
+}
+
+// HasTouchOrMouseInput returns true if there is any active touch or mouse input.
+// Touch support for WASM/mobile platforms.
+func HasTouchOrMouseInput() bool {
+	// Check for active touches
+	if len(ebiten.TouchIDs()) > 0 {
+		return true
+	}
+	
+	// Check for mouse button press
+	return ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
 // ===== KEY BINDING MANAGEMENT =====
 
 // SetKeyBinding sets a specific key binding by action name.

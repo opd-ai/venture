@@ -158,6 +158,10 @@ type EbitenRenderSystem struct {
 
 	// Performance statistics
 	stats RenderStats
+
+	// Track whether spatial partition culling was used this frame
+	// to avoid redundant per-entity culling
+	spatialCullingUsed bool
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -238,8 +242,10 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 
 	// Get visible entities using spatial partition (if enabled)
 	visibleEntities := entities
+	r.spatialCullingUsed = false
 	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
 		visibleEntities = r.getVisibleEntities(entities)
+		r.spatialCullingUsed = true // Mark that spatial culling was used
 	}
 
 	// Sort entities by layer
@@ -390,8 +396,9 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 		// Check if entity is visible on screen (per-entity culling for batched rendering)
-		// Only apply per-entity culling if culling is enabled
-		if r.enableCulling && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+		// Skip per-entity culling if spatial partition already culled entities
+		// to avoid redundant double-culling that could incorrectly hide sprites
+		if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 			continue
 		}
 
@@ -580,8 +587,9 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 	// Check if entity is visible on screen (per-entity culling)
-	// Only apply per-entity culling if culling is enabled
-	if r.enableCulling && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+	// Skip per-entity culling if spatial partition already culled entities
+	// to avoid redundant double-culling that could incorrectly hide sprites
+	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return
 	}
 

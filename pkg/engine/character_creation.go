@@ -348,7 +348,8 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
-		// Reset keyboard shown flag so it will be shown again when entering name input
+		// MOBILE/WASM FIX: Show keyboard immediately when going back to name input
+		// Reset flag first so updateNameInput will show keyboard on next update
 		cc.keyboardShown = false
 	}
 
@@ -882,6 +883,17 @@ func (cc *EbitenCharacterCreation) IsComplete() bool {
 	return cc.confirmed
 }
 
+// Cleanup hides the mobile keyboard and performs any necessary cleanup.
+// MOBILE/WASM FIX: This should be called when character creation completes
+// and the game transitions to gameplay, ensuring the keyboard is dismissed.
+func (cc *EbitenCharacterCreation) Cleanup() {
+	// MOBILE/WASM: Hide keyboard when character creation is complete
+	if cc.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		cc.keyboardShown = false
+	}
+}
+
 // Reset resets the character creation to initial state
 // Applies custom defaults if they are set
 func (cc *EbitenCharacterCreation) Reset() {
@@ -890,10 +902,17 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.confirmed = false
 	cc.errorMsg = ""
 
-	// MOBILE/WASM: Ensure keyboard is hidden when resetting
-	if cc.keyboardShown && mobile.IsWASM() {
-		mobile.HideKeyboard()
-		cc.keyboardShown = false
+	// MOBILE/WASM: Ensure keyboard is hidden when resetting, then show for name input
+	// BUG FIX: Previous implementation would hide keyboard but not show it again.
+	// Since we're resetting to stepNameInput, we need the keyboard visible immediately.
+	if mobile.IsWASM() {
+		// Hide first in case it was shown
+		if cc.keyboardShown {
+			mobile.HideKeyboard()
+		}
+		// Now show keyboard for name input step
+		mobile.ShowKeyboard()
+		cc.keyboardShown = true
 	}
 
 	// Apply defaults to both input fields and character data

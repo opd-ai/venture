@@ -162,32 +162,10 @@ func (s *SkillProgressionSystem) applyEffect(bonuses *SkillBonuses, effect skill
 
 // applyBonusesToStats modifies stats based on calculated bonuses.
 // GAP-008 REPAIR: Store base stats and reapply bonuses from scratch to avoid compounding.
+// This system uses BaseStatsComponent to store original stat values and recalculates
+// derived stats from the base values each update, preventing multiplicative compounding.
 func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *StatsComponent, bonuses *SkillBonuses) {
-	// Initialize base stats if not already stored (first time)
-	// We use a marker pattern: if all bonuses are zero and stats look unmodified, store them
-	// Otherwise, we need to compute base stats by reverse engineering
-	// For simplicity: assume stats are already at base level when first called
-
-	// Since we can't easily track base stats without modifying StatsComponent,
-	// we'll use a different approach: calculate final stats from current stats
-	// This means the skill system should only be the one modifying these stats,
-	// or we need equipment stats to also work additively
-
-	// For now, apply bonuses multiplicatively each frame
-	// This works if we reset to base stats first, but that requires tracking base stats
-	// TEMPORARY FIX: Don't repeatedly multiply - use additive bonuses instead
-
-	// Convert multiplicative bonuses to additive offsets
-	// This prevents compound multiplication on each update
-
-	// Apply percentage-based bonuses to stats (additive, not compound)
-	// Note: This assumes stats have been reset to base values before calling
-	// The proper fix requires adding BaseAttack, BaseDefense etc. to StatsComponent
-
-	// For now: Only apply crit/direct bonuses to avoid compounding attack/defense
-	// Equipment system already handles attack/defense modifications
-
-	// Apply direct bonuses (already in correct units)
+	// Apply direct bonuses to critical hit stats (already in correct units)
 	if bonuses.CritChanceBonus != 0 {
 		// Reset crit chance to base (5%) and add bonuses
 		baseCritChance := 0.05

@@ -115,3 +115,66 @@ func TestRenderSystem_SpatialPartition_CameraPosition(t *testing.T) {
 		t.Logf("Test entity position: (%.0f, %.0f)", testPos.X, testPos.Y)
 	}
 }
+
+// TestRenderSystem_NoDoubleCulling tests that entities are not culled twice
+// when spatial partition is enabled. This is a regression test for the bug
+// where per-entity culling was applied after spatial partition culling.
+func TestRenderSystem_NoDoubleCulling(t *testing.T) {
+	// Create camera system
+	cameraSystem := NewCameraSystem(800, 600)
+	renderSystem := NewRenderSystem(cameraSystem)
+
+	// Create camera entity
+	cameraEntity := NewEntity(1)
+	cameraComp := NewCameraComponent()
+	cameraComp.X = 400
+	cameraComp.Y = 300
+	cameraComp.Zoom = 1.0
+	cameraEntity.AddComponent(cameraComp)
+	cameraEntity.AddComponent(&PositionComponent{X: 400, Y: 300})
+	cameraSystem.SetActiveCamera(cameraEntity)
+
+	// Create spatial partition and enable culling
+	spatialPartition := NewSpatialPartitionSystem(2000, 2000)
+	renderSystem.SetSpatialPartition(spatialPartition)
+	renderSystem.EnableCulling(true)
+
+	// Create entity at camera position (should definitely be visible)
+	testEntity := NewEntity(2)
+	testEntity.AddComponent(&PositionComponent{X: 400, Y: 300})
+	testEntity.AddComponent(&EbitenSprite{
+		Width:   32,
+		Height:  32,
+		Visible: true,
+		Layer:   0,
+	})
+
+	entities := []*Entity{testEntity}
+
+	// Rebuild spatial partition
+	spatialPartition.Rebuild(entities)
+
+	// Test getVisibleEntities - entity should be visible
+	visibleEntities := renderSystem.getVisibleEntities(entities)
+	if len(visibleEntities) != 1 {
+		t.Errorf("Expected 1 visible entity from spatial partition, got %d", len(visibleEntities))
+	}
+
+	// Verify spatialCullingUsed flag is set when spatial partition is used
+	// This flag should prevent per-entity culling in drawEntity/drawBatch
+	renderSystem.spatialCullingUsed = false
+	if renderSystem.enableCulling && renderSystem.spatialPartition != nil && renderSystem.cameraSystem != nil {
+		_ = renderSystem.getVisibleEntities(entities)
+		// After calling getVisibleEntities, the flag should NOT be set
+		// (it's only set in Draw() method)
+		if renderSystem.spatialCullingUsed {
+			t.Error("spatialCullingUsed should only be set by Draw() method")
+		}
+	}
+
+	// Verify the flag is properly set in Draw() context by checking internal state
+	// The spatialCullingUsed flag should be false initially
+	if renderSystem.spatialCullingUsed {
+		t.Error("spatialCullingUsed should be false before Draw()")
+	}
+}

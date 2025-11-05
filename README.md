@@ -116,11 +116,45 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 
 ## Documentation
 
+### Quick Access
 **New Players:** [Getting Started Guide](docs/GETTING_STARTED.md) (5 minutes) → [User Manual](docs/USER_MANUAL.md)  
 **Developers:** [Development Guide](docs/DEVELOPMENT.md) → [API Reference](docs/API_REFERENCE.md)  
 **Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
 
-**Project Info:** [Roadmap](docs/ROADMAP.md) | [Architecture](docs/ARCHITECTURE.md) | [Technical Spec](docs/TECHNICAL_SPEC.md)
+### Project Information
+- **[Roadmap](docs/ROADMAP.md)** - Development roadmap and current status
+- **[Roadmap V2](docs/ROADMAP_V2.md)** - Extended Version 2.0 roadmap with enhanced mechanics
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
+- **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
+- **[Latest Audit](AUDIT_NEW.md)** - Comprehensive codebase audit report
+
+### Build & Deployment Guides
+- **[Mobile Build Guide](docs/MOBILE_BUILD.md)** - iOS and Android build instructions
+- **[GitHub Pages Guide](docs/GITHUB_PAGES.md)** - WebAssembly deployment to GitHub Pages
+- **[Cross-Platform Builds](docs/CROSS_PLATFORM_BUILDS.md)** - Building for multiple platforms
+- **[CI/CD](docs/CI_CD.md)** - Continuous integration and deployment pipeline
+- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Production deployment checklist
+
+### Testing & Quality
+- **[Testing Guide](docs/TESTING.md)** - Testing strategy and practices
+- **[Testing Touch Input](docs/TESTING_TOUCH_INPUT.md)** - Touch input testing procedures
+- **[Performance Guide](docs/PERFORMANCE.md)** - Performance optimization and profiling
+
+### System Documentation
+- **[Lighting System](docs/LIGHTING_SYSTEM.md)** - Dynamic lighting implementation
+- **[Shadow System](docs/SHADOW_SYSTEM.md)** - Shadow casting and ambient occlusion
+- **[Rotation System](docs/ROTATION_SYSTEM_SPEC.md)** - Entity rotation specification
+- **[Rotation User Guide](docs/ROTATION_USER_GUIDE.md)** - User guide for rotation controls
+- **[Structured Logging](docs/STRUCTURED_LOGGING_GUIDE.md)** - Logging best practices
+- **[System Interaction Map](docs/SYSTEM_INTERACTION_MAP.md)** - System dependencies and interactions
+
+### Specialized Topics
+- **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
+- **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
+- **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
+- **[WASM Touch Testing](docs/WASM_TOUCH_TESTING.md)** - WebAssembly touch testing guide
+- **[GAPS](docs/GAPS.md)** - Identified gaps and planned improvements
+- **[Release Notes V1.1](docs/RELEASE_NOTES_V1.1.md)** - Version 1.1 release notes
 
 ## Contributing
 

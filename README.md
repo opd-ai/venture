@@ -139,7 +139,6 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 - **[Roadmap V2](docs/ROADMAP_V2.md)** - Extended Version 2.0 roadmap with enhanced mechanics
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
-- **[Latest Audit](AUDIT_NEW.md)** - Comprehensive codebase audit report
 
 ### Build & Deployment Guides
 - **[Mobile Build Guide](docs/MOBILE_BUILD.md)** - iOS and Android build instructions

@@ -1160,6 +1160,11 @@ func main() {
 	// 18. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 
+	// Phase 10.3: Add camera system for screen shake and visual feedback
+	// Must be in update loop to process ScreenShakeComponent, HitStopComponent, and accessibility settings
+	// Processes after input to apply shake effects before rendering
+	game.World.AddSystem(game.CameraSystem)
+
 	// Phase 10.1: Add rotation system for 360° rotation and mouse aim
 	// Processes after input to update facing direction based on aim component
 	rotationSystem := engine.NewRotationSystem(game.World)

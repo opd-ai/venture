@@ -11,11 +11,26 @@ import (
 // the native mobile keyboard. This element is created lazily on first use.
 var keyboardElement js.Value
 
-// inputEventListener holds the JavaScript callback for input events
+// inputEventListener holds the JavaScript callback for input events.
+// Note: This is a persistent function that lives for the application's duration.
+// We intentionally do not call Release() as it needs to remain active for the
+// entire time the game is running. The browser will clean it up when the page unloads.
 var inputEventListener js.Func
+
+// keydownEventListener holds the JavaScript callback for keydown events.
+// Note: Like inputEventListener, this is persistent for the application's duration.
+var keydownEventListener js.Func
 
 // lastInputValue tracks the previous input value to detect changes
 var lastInputValue string
+
+// keyCodeMap maps special key names to their keyboard codes for event dispatch.
+// Defined at package level to avoid repeated map allocation during event handling.
+var keyCodeMap = map[string]int{
+	"Enter":  13,
+	"Tab":    9,
+	"Escape": 27,
+}
 
 // initKeyboardElement creates a hidden HTML input element that can trigger
 // the native mobile keyboard when focused. This is necessary because canvas
@@ -96,7 +111,7 @@ func initKeyboardElement() {
 
 	// MOBILE KEYBOARD FIX: Forward special keys (Enter, Tab, Escape, etc.)
 	// Mobile keyboards generate keydown events for special keys that need forwarding
-	keydownListener := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	keydownEventListener = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			event := args[0]
 			key := event.Get("key").String()
@@ -112,7 +127,7 @@ func initKeyboardElement() {
 
 	// Attach event listeners
 	input.Call("addEventListener", "input", inputEventListener)
-	input.Call("addEventListener", "keydown", keydownListener)
+	input.Call("addEventListener", "keydown", keydownEventListener)
 
 	// Add to DOM
 	body := doc.Get("body")
@@ -171,13 +186,7 @@ func dispatchBackspaceEvent(doc js.Value) {
 // WASM/Mobile Fix: Mobile keyboards generate these events on the focused input,
 // but we need to forward them to Ebiten for game control.
 func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
-	// Map key names to keyCodes for compatibility
-	keyCodeMap := map[string]int{
-		"Enter":  13,
-		"Tab":    9,
-		"Escape": 27,
-	}
-
+	// Use package-level keyCodeMap to avoid repeated allocations
 	keyCode := keyCodeMap[key]
 
 	eventInit := js.Global().Get("Object").New()

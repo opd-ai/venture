@@ -103,7 +103,9 @@ func (ui *CraftingUI) Open(stationEntity *Entity) {
 	ui.showOnlyCrafted = false
 
 	// MOBILE/WASM: Show keyboard when opening crafting UI (search field active)
-	// The crafting UI search is always active, so we show keyboard immediately
+	// The crafting UI search is always active, so we show keyboard immediately.
+	// Note: We track keyboard state to avoid redundant calls. The keyboard is
+	// managed by this UI component and should only be shown/hidden by Open/Close.
 	if !ui.keyboardShown && mobile.IsWASM() {
 		mobile.ShowKeyboard()
 		ui.keyboardShown = true

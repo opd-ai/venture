@@ -48,6 +48,14 @@ func initKeyboardElement() {
 	input.Set("autocapitalize", "off")
 	input.Set("spellcheck", false)
 
+	// Set inputmode to optimize mobile keyboard layout
+	// "text" mode provides standard keyboard with letters, numbers, symbols
+	input.Set("inputmode", "text")
+
+	// Set enterkeyhint to show appropriate Enter button label on mobile
+	// "done" shows a "Done" button which is intuitive for completing input
+	input.Set("enterkeyhint", "done")
+
 	// Style the input to be invisible but functional
 	// Position it off-screen but keep it in the DOM so keyboard triggers work
 	style := input.Get("style")
@@ -86,8 +94,25 @@ func initKeyboardElement() {
 		return nil
 	})
 
-	// Attach the input event listener
+	// MOBILE KEYBOARD FIX: Forward special keys (Enter, Tab, Escape, etc.)
+	// Mobile keyboards generate keydown events for special keys that need forwarding
+	keydownListener := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		if len(args) > 0 {
+			event := args[0]
+			key := event.Get("key").String()
+
+			// Forward special keys that the game uses for navigation/completion
+			// Enter: Complete input, Tab: Next field, Escape: Cancel
+			if key == "Enter" || key == "Tab" || key == "Escape" {
+				dispatchSpecialKeyEvent(doc, key, event)
+			}
+		}
+		return nil
+	})
+
+	// Attach event listeners
 	input.Call("addEventListener", "input", inputEventListener)
+	input.Call("addEventListener", "keydown", keydownListener)
 
 	// Add to DOM
 	body := doc.Get("body")
@@ -135,6 +160,41 @@ func dispatchBackspaceEvent(doc js.Value) {
 	eventInit.Set("which", 8)
 	eventInit.Set("bubbles", true)
 	eventInit.Set("cancelable", true)
+
+	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
+	doc.Call("dispatchEvent", keydownEvent)
+}
+
+// dispatchSpecialKeyEvent forwards special key events (Enter, Tab, Escape) to document.
+// These keys are used for navigation and completing text input in the game.
+//
+// WASM/Mobile Fix: Mobile keyboards generate these events on the focused input,
+// but we need to forward them to Ebiten for game control.
+func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
+	// Map key names to keyCodes for compatibility
+	keyCodeMap := map[string]int{
+		"Enter":  13,
+		"Tab":    9,
+		"Escape": 27,
+	}
+
+	keyCode := keyCodeMap[key]
+
+	eventInit := js.Global().Get("Object").New()
+	eventInit.Set("key", key)
+	eventInit.Set("code", key)
+	eventInit.Set("keyCode", keyCode)
+	eventInit.Set("which", keyCode)
+	eventInit.Set("bubbles", true)
+	eventInit.Set("cancelable", true)
+
+	// Preserve modifier keys from original event
+	if !originalEvent.IsUndefined() {
+		eventInit.Set("shiftKey", originalEvent.Get("shiftKey"))
+		eventInit.Set("ctrlKey", originalEvent.Get("ctrlKey"))
+		eventInit.Set("altKey", originalEvent.Get("altKey"))
+		eventInit.Set("metaKey", originalEvent.Get("metaKey"))
+	}
 
 	keydownEvent := js.Global().Get("KeyboardEvent").New("keydown", eventInit)
 	doc.Call("dispatchEvent", keydownEvent)

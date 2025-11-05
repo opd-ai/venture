@@ -886,8 +886,9 @@ func (cc *EbitenCharacterCreation) Cleanup() {
 	// MOBILE/WASM: Hide keyboard when character creation is complete
 	if cc.keyboardShown && mobile.IsWASM() {
 		mobile.HideKeyboard()
-		cc.keyboardShown = false
 	}
+	// Always reset the flag regardless of platform for consistent state management
+	cc.keyboardShown = false
 }
 
 // Reset resets the character creation to initial state
@@ -907,9 +908,9 @@ func (cc *EbitenCharacterCreation) Reset() {
 		if cc.keyboardShown {
 			mobile.HideKeyboard()
 		}
-		// Reset flag - keyboard will be shown by updateNameInput() on next Update()
-		cc.keyboardShown = false
 	}
+	// Always reset flag regardless of platform for consistent state management
+	cc.keyboardShown = false
 
 	// Apply defaults to both input fields and character data
 	if cc.defaults.DefaultName != "" {

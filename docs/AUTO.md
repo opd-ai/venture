@@ -2,11 +2,11 @@
 
 ## UNIFIED TASK DESCRIPTION
 
-Autonomously analyze, diagnose, and maintain a Go codebase through comprehensive execution of four integrated objectives: (1) diagnose and fix all build and test failures ensuring 100% pass rate, (2) remove deprecated code paths and backward-compatibility shims to reduce technical debt, (3) identify and repair gaps between README.md documentation and actual implementation with production-ready fixes, and (4) implement the next logical development phase based on project roadmap analysis and code maturity assessment. Execute all tasks without intermediate approval, delivering production-ready code that maintains architectural patterns, achieves test coverage targets, and preserves performance benchmarks.
+Autonomously analyze, diagnose, and maintain a Go codebase through comprehensive execution of four integrated objectives: (1) diagnose and fix all build and test failures ensuring 100% pass rate, (2) modernize codebase by removing deprecated code paths and backward-compatibility shims while integrating new systems, libraries, and patterns to reduce technical debt and adopt best practices, (3) identify and repair gaps between README.md documentation and actual implementation with production-ready fixes, and (4) implement the next logical development phase based on project roadmap analysis and code maturity assessment. Execute all tasks without intermediate approval, delivering production-ready code that maintains architectural patterns, achieves test coverage targets, and preserves performance benchmarks.
 
 ## INTEGRATED CONTEXT
 
-You are an autonomous software maintenance agent operating on the Venture Go codebase—a procedurally generated multiplayer action-RPG using Go 1.24+ and Ebiten 2.9 with ECS architecture and deterministic seed-based generation. Execute four integrated objectives: (1) fix build/test failures, (2) remove deprecated code, (3) align documentation with implementation, (4) implement next development phase. All work proceeds autonomously with ≥65% test coverage, performance targets (60 FPS, <500MB, <2s generation), and architectural pattern preservation.
+You are an autonomous software maintenance agent operating on the Venture Go codebase—a procedurally generated multiplayer action-RPG using Go 1.24+ and Ebiten 2.9 with ECS architecture and deterministic seed-based generation. Execute four integrated objectives: (1) fix build/test failures, (2) modernize codebase (remove deprecated code and integrate new systems), (3) align documentation with implementation, (4) implement next development phase. All work proceeds autonomously with ≥65% test coverage, performance targets (60 FPS, <500MB, <2s generation), and architectural pattern preservation.
 
 ## CONSOLIDATED REQUIREMENTS
 
@@ -36,27 +36,30 @@ You are an autonomous software maintenance agent operating on the Venture Go cod
 
 4. **Identify Deprecated Code**: Find legacy feature flags, compatibility shims, version checks, conditional branches, "TODO: remove" comments
 5. **Remove & Simplify**: Delete deprecated code and tests; update imports; reduce conditional logic
-6. **Skip Condition**: If no deprecated code, legacy feature flags, or compatibility shims found, report "Phase 2: No modernization needed" and proceed to Phase 3
+6. **Identify New Systems**: Review ROADMAP.md for planned system upgrades, examine dependency updates (Go stdlib enhancements, library versions), identify modern patterns to adopt
+7. **Integrate New Systems**: Upgrade to new library versions where beneficial; adopt modern Go idioms; integrate new architectural patterns; update dependencies to latest stable versions
+8. **Validate Integration**: Ensure new systems maintain determinism, meet performance targets, preserve ECS patterns, pass all tests
+9. **Skip Condition**: If no deprecated code, legacy feature flags, compatibility shims found AND no new systems to integrate, report "Phase 2: No modernization needed" and proceed to Phase 3
 
 ### Phase 3: Documentation-Implementation Alignment
 
-6. **Analyze**: Parse README.md for behavioral specs, API contracts, performance guarantees
-7. **Verify**: Map code paths; compare expected vs actual behavior
-8. **Classify Gaps**: Critical (missing), Functional Mismatch (differs), Partial (incomplete), Silent Failure (no error), Behavioral Nuance (slight deviation)
-9. **Prioritize**: Score = (severity × user impact × production risk) - (complexity × 0.3)
+10. **Analyze**: Parse README.md for behavioral specs, API contracts, performance guarantees
+11. **Verify**: Map code paths; compare expected vs actual behavior
+12. **Classify Gaps**: Critical (missing), Functional Mismatch (differs), Partial (incomplete), Silent Failure (no error), Behavioral Nuance (slight deviation)
+13. **Prioritize**: Score = (severity × user impact × production risk) - (complexity × 0.3)
    - Severity: Critical=10, Mismatch=7, Partial=5, Silent=8, Nuance=3
    - Impact: workflows×2 + prominence×1.5; Risk: corruption=15, security=12, silent=8, user-facing=5, internal=2
    - Complexity: LOC÷100 + deps×2 + API changes×5
-10. **Repair**: Fix top 3 gaps with production-ready code and comprehensive tests
-11. **Skip Condition**: If no documentation-implementation gaps identified, report "Phase 3: Documentation aligned" and proceed to Phase 4
+14. **Repair**: Fix top 3 gaps with production-ready code and comprehensive tests
+15. **Skip Condition**: If no documentation-implementation gaps identified, report "Phase 3: Documentation aligned" and proceed to Phase 4
 
 ### Phase 4: Next Development Phase
 
-11. **Select Phase**: Review ROADMAP.md, GAPS.md, copilot-instructions.md; examine TODOs and incomplete features
-12. **Implement**: Design ECS-compatible changes; generate complete code with error handling, validation, logging, documentation
-13. **Test**: Create table-driven tests for normal/edge/error cases and determinism
-14. **Verify**: Confirm compilation, test passage, pattern compliance, documentation updates
-15. **Skip Condition**: If no next phase identified in roadmap, no TODOs found, and all planned features complete, report "Phase 4: All roadmap phases complete" and conclude maintenance
+16. **Select Phase**: Review ROADMAP.md, GAPS.md, copilot-instructions.md; examine TODOs and incomplete features
+17. **Implement**: Design ECS-compatible changes; generate complete code with error handling, validation, logging, documentation
+18. **Test**: Create table-driven tests for normal/edge/error cases and determinism
+19. **Verify**: Confirm compilation, test passage, pattern compliance, documentation updates
+20. **Skip Condition**: If no next phase identified in roadmap, no TODOs found, and all planned features complete, report "Phase 4: All roadmap phases complete" and conclude maintenance
 
 ## STANDARDIZED OUTPUT SPECIFICATIONS
 
@@ -81,10 +84,17 @@ Commit: [git hash]
 **Deprecated Features Removed:** [N]
 **Lines Deleted:** [-deletions]
 **Complexity Reduction:** [N fewer conditional branches]
+**New Systems Integrated:** [N]
 
 ### Removed: [Feature/Code Path]
 - **Files Modified:** [list]
 - **Justification:** [Why safe to remove]
+
+### Integrated: [New System/Library/Pattern]
+- **Files Modified:** [list]
+- **Version/Details:** [e.g., "Upgraded from v1.2 to v2.0" or "Adopted new pattern X"]
+- **Justification:** [Why beneficial - performance, maintainability, modern best practices]
+- **Validation:** [Test results, determinism check, performance metrics]
 
 ## Phase 3: Documentation Alignment
 **Gaps Identified:** [N total]
@@ -147,7 +157,7 @@ go test ./...
 ### Success Criteria (All Phases)
 - ✓ `go build ./...` succeeds; `go test ./...` 100% pass; `go test -race ./...` clean
 - ✓ Coverage ≥65% per package (excluding Ebiten); code formatted with `gofmt -w -s`
-- ✓ No deprecated flags/version checks; documented features verified vs implementation
+- ✓ No deprecated flags/version checks; modern systems integrated where beneficial; documented features verified vs implementation
 - ✓ ECS patterns intact; deterministic generation preserved; no regressions
 - ✓ Performance targets met (60 FPS, <500MB, <2s); documentation updated; ROADMAP.md current
 

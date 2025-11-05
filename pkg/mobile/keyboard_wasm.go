@@ -154,10 +154,27 @@ func dispatchKeyboardEvent(doc js.Value, char string) {
 	}
 	
 	canvas := canvasList.Index(0)
-	dispatchToTarget(canvas, char, false)
 	
-	// Also dispatch to document for compatibility
+	// CRITICAL FIX: Dispatch input event which Ebiten's AppendInputChars actually uses
+	// KeyboardEvent alone doesn't populate inpututil.AppendInputChars
+	dispatchInputEvent(canvas, char)
+	
+	// Also dispatch keyboard events for compatibility with IsKeyPressed
+	dispatchToTarget(canvas, char, false)
 	dispatchToTarget(doc, char, false)
+}
+
+// dispatchInputEvent dispatches an 'input' event which Ebiten uses for text input.
+// This is the key to making AppendInputChars work on WASM.
+func dispatchInputEvent(target js.Value, char string) {
+	eventInit := js.Global().Get("Object").New()
+	eventInit.Set("data", char)
+	eventInit.Set("bubbles", true)
+	eventInit.Set("cancelable", false)
+	eventInit.Set("composed", true)
+	
+	inputEvent := js.Global().Get("InputEvent").New("input", eventInit)
+	target.Call("dispatchEvent", inputEvent)
 }
 
 // dispatchToTarget dispatches keyboard events to a specific target

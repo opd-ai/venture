@@ -15,13 +15,13 @@
 
 | Platform | Status | Version 2.0 Features | Systems Registered | Build Method |
 |----------|--------|---------------------|-------------------|--------------|
-| **Desktop** (Linux/macOS/Windows) | ✅ **COMPLETE** | All 43 systems | 43/43 (100%) | `go build ./cmd/client` |
-| **WASM** (Web browsers) | ✅ **COMPLETE** | All 43 systems | 43/43 (100%) | `GOOS=js GOARCH=wasm go build ./cmd/client` |
-| **Mobile** (Android/iOS) | ❌ **MISSING** | None initialized | 0/43 (0%) | `ebitenmobile bind ./cmd/mobile` |
+| **Desktop** (Linux/macOS/Windows) | ✅ **COMPLETE** | All 44 systems | 44/44 (100%) | `go build ./cmd/client` |
+| **WASM** (Web browsers) | ✅ **COMPLETE** | All 44 systems | 44/44 (100%) | `GOOS=js GOARCH=wasm go build ./cmd/client` |
+| **Mobile** (Android/iOS) | ❌ **MISSING** | None initialized | 0/44 (0%) | `ebitenmobile bind ./cmd/mobile` |
 
 ### Critical Finding
 
-The mobile client (`cmd/mobile/mobile.go`) only initializes a basic `EbitenGame` instance via `NewEbitenGameWithLogger()` but **does not register any of the 43 game systems** required for Version 2.0 functionality. This means mobile players lack:
+The mobile client (`cmd/mobile/mobile.go`) only initializes a basic `EbitenGame` instance via `NewEbitenGameWithLogger()` but **does not register any of the 44 game systems** required for Version 2.0 functionality. This means mobile players lack:
 
 - **Phase 10 Features:** 360° rotation, mouse aim, projectile physics, screen shake, visual feedback
 - **Phase 11 Features:** Multi-layer terrain, procedural puzzles, environmental destruction
@@ -41,7 +41,7 @@ Mobile players effectively have a **non-functional game** as core gameplay syste
 **Build Tags:** `!android && !ios` (excludes mobile platforms)  
 **Status:** All Version 2.0 features fully implemented and operational
 
-#### System Registration Summary (43 systems)
+#### System Registration Summary (44 systems)
 
 **Core Gameplay Systems:**
 1. ✅ InputSystem (line 1161)
@@ -105,8 +105,6 @@ Mobile players effectively have a **non-functional game** as core gameplay syste
 **Phase 12.2 & Phase 14.1:**
 42. ✅ NarrativeSystem (line 1295) - Phase 12.2
 43. ✅ ShadowSystem (line 1300) - Phase 14.1
-
-**Spatial Optimization:**
 44. ✅ SpatialSystem (line 1459) - Quadtree for entity queries
 
 ### 2. WASM Client ✅ COMPLETE
@@ -134,6 +132,8 @@ This tag **only excludes Android and iOS**, not WASM. Therefore, WASM builds inc
 - Touch input handled by browser touch APIs (same `pkg/mobile` package as native mobile)
 - No desktop-only dependencies (file dialogs, native notifications)
 - Single-threaded execution (JavaScript limitation)
+
+The WASM build includes all 44 systems and provides the complete Version 2.0 experience in the browser.
 
 ### 3. Mobile Client ❌ CRITICAL ISSUES
 
@@ -169,7 +169,7 @@ func Init() {
 - ✅ Settings and audio manager
 - ❌ **NO GAMEPLAY SYSTEMS REGISTERED**
 
-#### Missing Systems on Mobile (43 systems)
+#### Missing Systems on Mobile (44 systems)
 
 **Critical Gameplay Systems (13):**
 - ❌ InputSystem - Cannot process player input
@@ -254,9 +254,9 @@ func Init() {
 | Phase 14 | ✅ 100% | ❌ 0% | Enhanced lighting, animations, particles, audio |
 
 **Overall Version 2.0 Coverage:**
-- Desktop: **100%** (43/43 systems)
-- WASM: **100%** (43/43 systems)
-- Mobile: **0%** (0/43 systems) ⚠️
+- Desktop: **100%** (44/44 systems)
+- WASM: **100%** (44/44 systems)
+- Mobile: **0%** (0/44 systems) ⚠️
 
 ---
 
@@ -273,15 +273,15 @@ func Init() {
    // InitializeGameSystems registers all game systems in the correct order.
    // This ensures feature parity across desktop, WASM, and mobile platforms.
    func InitializeGameSystems(game *EbitenGame, seed int64, genreID string, logger *logrus.Logger) error {
-       // Register all 43 systems in proper dependency order
-       // (Copy logic from cmd/client/main.go lines 1100-1310)
+       // Register all 44 systems in proper dependency order
+       // (Copy logic from cmd/client/main.go lines 1100-1310, 1459)
        return nil
    }
    ```
 
 2. **Update desktop client** (`cmd/client/main.go`):
    ```go
-   // Replace lines 1100-1310 with:
+   // Replace lines 1100-1310, 1459 with:
    if err := engine.InitializeGameSystems(game, *seed, *genreID, logger); err != nil {
        return fmt.Errorf("failed to initialize game systems: %w", err)
    }
@@ -354,7 +354,7 @@ Use this checklist to verify Version 2.0 feature parity after implementing fixes
 
 ### System Registration Verification
 
-Run on each platform and verify all 43 systems are registered:
+Run on each platform and verify all 44 systems are registered:
 
 **Core Gameplay (13 systems):**
 - [ ] InputSystem processes keyboard/touch input
@@ -408,6 +408,7 @@ Run on each platform and verify all 43 systems are registered:
 - [ ] HazardSystem applies environmental damage
 - [ ] NarrativeSystem progresses story arcs
 - [ ] ShadowSystem renders dynamic shadows
+- [ ] SpatialSystem provides efficient entity queries (quadtree)
 
 ### Functional Testing (All Platforms)
 
@@ -520,9 +521,9 @@ The desktop client has correct ordering (lines 1161-1300). This order must be pr
 ## Conclusion
 
 **Current Status:**
-- ✅ **Desktop:** 100% Version 2.0 feature complete (43/43 systems)
-- ✅ **WASM:** 100% Version 2.0 feature complete (43/43 systems)
-- ❌ **Mobile:** 0% Version 2.0 feature complete (0/43 systems)
+- ✅ **Desktop:** 100% Version 2.0 feature complete (44/44 systems)
+- ✅ **WASM:** 100% Version 2.0 feature complete (44/44 systems)
+- ❌ **Mobile:** 0% Version 2.0 feature complete (0/44 systems)
 
 **Action Required:**
 Refactor system initialization into shared function callable by both desktop and mobile clients to achieve 100% feature parity across all platforms.

@@ -1099,6 +1099,12 @@ func main() {
 
 	// Wire audio manager to game for settings integration
 	game.SetAudioManager(audioManager)
+	
+	// Phase 12.3: Enable adaptive music composition with motif system
+	audioManager.EnableAdaptiveMusic(true)
+	if *verbose {
+		clientLogger.Info("adaptive music composition enabled with motif system")
+	}
 
 	// Start playing exploration music
 	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
@@ -1667,6 +1673,16 @@ func main() {
 	// Phase 10.3: Add hit-stop component
 	hitStop := engine.NewHitStopComponent()
 	player.AddComponent(hitStop)
+	
+	// Phase 11.1: Add layer component for multi-layer collision
+	player.AddComponent(engine.NewLayerComponent(engine.LayerGround)) // Player on ground layer
+	
+	// Phase 14: Add shadow component for enhanced lighting
+	playerShadow := engine.NewShadowComponent()
+	playerShadow.CastsShadow = true
+	playerShadow.ShadowType = engine.ShadowTypeSoft // Player gets soft shadow
+	playerShadow.ShadowLength = 20.0
+	player.AddComponent(playerShadow)
 
 	// Phase 5.3: Add player torch for dynamic lighting (if enabled)
 	if *enableLighting {

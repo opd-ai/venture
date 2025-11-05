@@ -121,7 +121,7 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 	// Issue #20: Check intersection at predicted position with rotation support
 	rot1Comp, hasRot1 := entity.GetComponent("rotation")
 	rot2Comp, hasRot2 := other.GetComponent("rotation")
-	
+
 	if hasRot1 || hasRot2 {
 		// Use rotation-aware collision for rotated entities
 		angle1 := 0.0
@@ -134,7 +134,7 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 		}
 		return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
 	}
-	
+
 	// Check intersection at predicted position (no rotation)
 	return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
 }
@@ -233,7 +233,7 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 			// Query rotation components for both entities
 			rot1Comp, hasRot1 := entity.GetComponent("rotation")
 			rot2Comp, hasRot2 := other.GetComponent("rotation")
-			
+
 			var intersects bool
 			if hasRot1 || hasRot2 {
 				// At least one entity is rotated, use rotation-aware collision
@@ -250,7 +250,7 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 				// Neither entity is rotated, use faster AABB collision
 				intersects = collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y)
 			}
-			
+
 			if intersects {
 				// Call collision callback if set
 				if s.onCollision != nil {

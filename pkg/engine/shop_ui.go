@@ -410,7 +410,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 			// Draw slot background with selection/hover highlighting
 			// Issue #26: Color-code affordability (red tint for too expensive)
 			slotColor := color.RGBA{50, 50, 60, 255}
-			
+
 			// Check affordability in buy mode
 			if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
 				itm := currentInventory[slotIndex]
@@ -425,7 +425,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 					}
 				}
 			}
-			
+
 			// Override with hover/selection highlighting
 			if slotIndex == ui.hoveredSlot {
 				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {

@@ -437,7 +437,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 
 	// Issue #12 FIX: Draw search/filter UI
 	filterY := windowY + 110
-	
+
 	// Search bar
 	searchText := fmt.Sprintf("Search: %s_", ui.searchQuery)
 	if len(ui.searchQuery) == 0 {
@@ -491,10 +491,10 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	for _, recipe := range recipes {
 		recipeList = append(recipeList, recipe)
 	}
-	
+
 	// Apply search/filter/sort
 	recipeList = ui.filterAndSortRecipes(recipeList)
-	
+
 	if len(recipeList) == 0 {
 		ebitenutil.DebugPrintAt(img, "No recipes match your search/filter criteria",
 			windowX+windowWidth/2-120, windowY+windowHeight/2)
@@ -767,8 +767,8 @@ func (ui *CraftingUI) canCraftRecipe(recipe *Recipe) bool {
 	for _, mat := range recipe.Materials {
 		hasQuantity := 0
 		for _, item := range inventory.Items {
-			if item != nil && item.ID == mat.ItemID {
-				hasQuantity += item.Quantity
+			if item != nil && item.Name == mat.ItemName {
+				hasQuantity++
 			}
 		}
 		if hasQuantity < mat.Quantity {

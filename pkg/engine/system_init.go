@@ -59,8 +59,8 @@ type SystemInitResult struct {
 	InteractionSystem *InteractionSystem
 	AnimationSystem  *AnimationSystem
 	ParticleSystem   *ParticleSystem
-	TutorialSystem   *TutorialSystem
-	HelpSystem       *HelpSystem
+	TutorialSystem   *EbitenTutorialSystem
+	HelpSystem       *EbitenHelpSystem
 
 	// System wrappers
 	AnimationSystemWrapper System

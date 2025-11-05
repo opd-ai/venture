@@ -197,7 +197,7 @@ func TestGetExitHint(t *testing.T) {
 		{"Skills", MenuKeys.Skills, "Press [K] or [ESC] to close"},
 		{"Quests", MenuKeys.Quests, "Press [J] or [ESC] to close"},
 		{"Map", MenuKeys.Map, "Press [M] or [ESC] to close"},
-		{"Shop", MenuKeys.Shop, "Press [S] or [ESC] to close"},
+		{"Shop", MenuKeys.Shop, "Press [F] or [ESC] to close"},
 		{"Crafting", MenuKeys.Crafting, "Press [R] or [ESC] to close"},
 	}
 

@@ -8,7 +8,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
@@ -55,8 +54,8 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Objective:   "Press any key",
 			Completed:   false,
 			Condition: func(world *World) bool {
-				// GAP-005 REPAIR: Check for any key press via InputProvider interface
-				// This allows both production (Ebiten) and test (StubInput) implementations
+				// H-005 FIX: Use InputProvider interface exclusively for platform-agnostic input
+				// Works with production (Ebiten), test (StubInput), and mobile (TouchInput)
 				for _, entity := range world.GetEntities() {
 					if entity.HasComponent("input") {
 						if comp, ok := entity.GetComponent("input"); ok {
@@ -66,8 +65,8 @@ func createDefaultTutorialSteps() []TutorialStep {
 						}
 					}
 				}
-				// Fallback to direct Ebiten check for compatibility with non-InputProvider implementations
-				return inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
+				// If no input provider found, step is not complete
+				return false
 			},
 		},
 		{

@@ -22,6 +22,7 @@ const (
 	SettingsOptionVSync
 	SettingsOptionShowFPS
 	SettingsOptionFullscreen
+	SettingsOptionShowTutorials // H-004: Tutorial enable/disable option
 	SettingsOptionBack
 )
 
@@ -42,6 +43,8 @@ func (o SettingsOption) String() string {
 		return "Show FPS"
 	case SettingsOptionFullscreen:
 		return "Fullscreen"
+	case SettingsOptionShowTutorials:
+		return "Show Tutorials"
 	case SettingsOptionBack:
 		return "Back"
 	default:
@@ -89,6 +92,7 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			SettingsOptionVSync,
 			SettingsOptionShowFPS,
 			SettingsOptionFullscreen,
+			SettingsOptionShowTutorials, // H-004: Tutorial option
 			SettingsOptionBack,
 		},
 		visible: false,
@@ -212,6 +216,8 @@ func (s *SettingsUI) decreaseValue(option SettingsOption) {
 		s.currentSettings.ShowFPS = !s.currentSettings.ShowFPS
 	case SettingsOptionFullscreen:
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
+	case SettingsOptionShowTutorials:
+		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
 	}
 }
 
@@ -249,6 +255,8 @@ func (s *SettingsUI) increaseValue(option SettingsOption) {
 		s.currentSettings.ShowFPS = !s.currentSettings.ShowFPS
 	case SettingsOptionFullscreen:
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
+	case SettingsOptionShowTutorials:
+		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
 	}
 }
 
@@ -266,6 +274,8 @@ func (s *SettingsUI) activateOption(option SettingsOption) {
 		s.currentSettings.ShowFPS = !s.currentSettings.ShowFPS
 	case SettingsOptionFullscreen:
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
+	case SettingsOptionShowTutorials:
+		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
 	}
 }
 
@@ -343,6 +353,11 @@ func (s *SettingsUI) getValueString(option SettingsOption) string {
 		return "OFF"
 	case SettingsOptionFullscreen:
 		if s.currentSettings.Fullscreen {
+			return "ON"
+		}
+		return "OFF"
+	case SettingsOptionShowTutorials:
+		if s.currentSettings.ShowTutorials {
 			return "ON"
 		}
 		return "OFF"

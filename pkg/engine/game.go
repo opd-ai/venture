@@ -989,54 +989,65 @@ func (g *EbitenGame) GetSelectedGenreID() string {
 // SetupInputCallbacks connects the input system callbacks to the UI systems.
 // This should be called after the InputSystem is added to the world.
 // GAP-014 REPAIR: Accept objective tracker for quest progress tracking
-func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
+// H-008 FIX: Returns error if any callback registration fails
+func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) error {
 	// Connect inventory toggle
-	inputSystem.SetInventoryCallback(func() {
+	if err := inputSystem.SetInventoryCallback(func() {
 		g.InventoryUI.Toggle()
 		// GAP-014 REPAIR: Track inventory UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "inventory")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set inventory callback: %w", err)
+	}
 
 	// Connect quest log toggle
-	inputSystem.SetQuestsCallback(func() {
+	if err := inputSystem.SetQuestsCallback(func() {
 		g.QuestUI.Toggle()
 		// GAP-014 REPAIR: Track quest log UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "quest_log")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set quests callback: %w", err)
+	}
 
 	// Connect character screen toggle
-	inputSystem.SetCharacterCallback(func() {
+	if err := inputSystem.SetCharacterCallback(func() {
 		g.CharacterUI.Toggle()
 		// GAP-014 REPAIR: Track character UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "character")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set character callback: %w", err)
+	}
 
 	// Connect skills screen toggle
-	inputSystem.SetSkillsCallback(func() {
+	if err := inputSystem.SetSkillsCallback(func() {
 		g.SkillsUI.Toggle()
 		// GAP-014 REPAIR: Track skills UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "skills")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set skills callback: %w", err)
+	}
 
 	// Connect map toggle
-	inputSystem.SetMapCallback(func() {
+	if err := inputSystem.SetMapCallback(func() {
 		g.MapUI.ToggleFullScreen()
 		// GAP-014 REPAIR: Track map UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "map")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set map callback: %w", err)
+	}
 
 	// Connect crafting toggle (Category 1.3 - Commerce & Crafting Integration)
-	inputSystem.SetCraftingCallback(func() {
+	if err := inputSystem.SetCraftingCallback(func() {
 		if g.CraftingUI != nil {
 			g.CraftingUI.Toggle()
 			// Track crafting UI opens for tutorial objectives
@@ -1044,14 +1055,20 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 				objectiveTracker.OnUIOpened(g.PlayerEntity, "crafting")
 			}
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set crafting callback: %w", err)
+	}
 
 	// Connect pause menu toggle (ESC key)
 	if g.MenuSystem != nil {
-		inputSystem.SetMenuToggleCallback(func() {
+		if err := inputSystem.SetMenuToggleCallback(func() {
 			g.MenuSystem.Toggle()
-		})
+		}); err != nil {
+			return fmt.Errorf("failed to set menu toggle callback: %w", err)
+		}
 	}
+
+	return nil
 }
 
 // GetWorld returns the ECS world instance (implements GameRunner interface).

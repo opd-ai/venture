@@ -85,6 +85,7 @@ var (
 	serverPort       = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers    = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick       = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	noTutorial       = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
 )
 
 // return a random seed
@@ -1130,6 +1131,11 @@ func main() {
 
 	// Add tutorial and help systems (Phase 8.6)
 	tutorialSystem := engine.NewTutorialSystem()
+	// H-004 FIX: Disable tutorial if --no-tutorial flag is set
+	if *noTutorial {
+		tutorialSystem.Enabled = false
+		tutorialSystem.ShowUI = false
+	}
 	helpSystem := engine.NewHelpSystem()
 
 	// Connect help system to input system for ESC key handling
@@ -2200,14 +2206,18 @@ func main() {
 		clientLogger.Info("setting up UI input callbacks")
 	}
 	// GAP-014 REPAIR: Pass objective tracker to enable tutorial quest tracking
-	game.SetupInputCallbacks(inputSystem, objectiveTracker)
+	// H-008 FIX: Check for callback registration errors
+	if err := game.SetupInputCallbacks(inputSystem, objectiveTracker); err != nil {
+		clientLogger.WithError(err).Fatal("failed to setup input callbacks")
+	}
 	if *verbose {
 		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		clientLogger.Info("inventory actions: E to equip/use, D to drop")
 	}
 
 	// GAP-004 REPAIR: Setup merchant interaction callback (F key)
-	inputSystem.SetInteractCallback(func() {
+	// H-008 FIX: Check for callback registration errors
+	if err := inputSystem.SetInteractCallback(func() {
 		// Get player position
 		if player == nil {
 			return
@@ -2248,7 +2258,9 @@ func main() {
 		if *verbose {
 			clientLogger.WithField("distance", dist).Debug("opened shop with merchant")
 		}
-	})
+	}); err != nil {
+		clientLogger.WithError(err).Fatal("failed to setup interact callback")
+	}
 
 	if *verbose {
 		clientLogger.Info("merchant interaction registered (F key when near merchant)")

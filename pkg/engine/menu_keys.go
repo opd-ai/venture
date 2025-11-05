@@ -21,7 +21,7 @@ var MenuKeys = struct {
 	Skills    ebiten.Key // K - Skill tree
 	Quests    ebiten.Key // J - Quest log (J for "Journal")
 	Map       ebiten.Key // M - World map
-	Shop      ebiten.Key // S - Shop interface
+	Shop      ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
 	Crafting  ebiten.Key // R - Crafting recipes
 
 	// Universal exit key (works for all menus)
@@ -43,7 +43,7 @@ var MenuKeys = struct {
 	Skills:    ebiten.KeyK,
 	Quests:    ebiten.KeyJ,
 	Map:       ebiten.KeyM,
-	Shop:      ebiten.KeyS,
+	Shop:      ebiten.KeyF,
 	Crafting:  ebiten.KeyR,
 	Exit:      ebiten.KeyEscape,
 
@@ -53,7 +53,7 @@ var MenuKeys = struct {
 	SkillsLabel:    "[K] Skills",
 	QuestsLabel:    "[J] Quests",
 	MapLabel:       "[M] Map",
-	ShopLabel:      "[S] Shop",
+	ShopLabel:      "[F] Shop",
 	CraftingLabel:  "[R] Crafting",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }

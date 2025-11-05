@@ -27,6 +27,14 @@ type EbitenQuestUI struct {
 	// Scrolling support for long quest lists
 	scrollOffset int // Vertical scroll offset in pixels
 	maxScroll    int // Maximum scroll offset based on content height
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
+
+	// M-003 FIX: Quest list height caching
+	cachedQuestListHeight int  // Cached total content height
+	cacheValid            bool // Whether cache is valid
+	lastQuestCount        int  // Quest count when cache was built
 }
 
 // NewQuestUI creates a new quest UI.
@@ -37,6 +45,8 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 		currentTab:   0,
+		errorState:   NewUIErrorState(), // H-002 FIX
+		cacheValid:   false,             // M-003 FIX
 	}
 }
 
@@ -120,10 +130,12 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		ui.currentTab = 0   // Active
 		ui.scrollOffset = 0 // Reset scroll on tab change
+		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
 		ui.currentTab = 1   // Completed
 		ui.scrollOffset = 0 // Reset scroll on tab change
+		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
 	}
 
 	// Handle scrolling with arrow keys and mouse wheel
@@ -234,9 +246,21 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	if len(quests) == 0 {
 		ebitenutil.DebugPrintAt(img, "No quests", windowX+20, contentStartY)
 	} else {
+		// M-003 FIX: Use cached height calculation or recalculate if invalid
+		var totalContentHeight int
+		if ui.cacheValid && ui.lastQuestCount == len(quests) {
+			// Use cached value - O(1) performance
+			totalContentHeight = ui.cachedQuestListHeight
+		} else {
+			// Recalculate and cache - O(n) but only when needed
+			totalContentHeight = ui.calculateQuestListHeight(quests, windowWidth)
+			ui.cachedQuestListHeight = totalContentHeight
+			ui.lastQuestCount = len(quests)
+			ui.cacheValid = true
+		}
+
 		// Calculate total content height for scroll calculation
 		y := contentStartY - ui.scrollOffset // Apply scroll offset
-		totalContentHeight := 0
 
 		// Maximum width for text wrapping (leave margin for scrollbar)
 		maxTextWidth := windowWidth - 80
@@ -245,18 +269,14 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 			// Skip if entirely above visible area
 			if y < contentStartY-200 {
 				// Estimate height and skip
-				totalContentHeight += 120 // Approximate height per quest
 				y += 120
 				continue
 			}
 
 			// Stop if below visible area
 			if y > contentMaxY {
-				totalContentHeight += 120
 				break
 			}
-
-			questStartY := y
 
 			// Draw quest name with text wrapping
 			nameLines := WrapText(tracked.Quest.Name, maxTextWidth, basicfont.Face7x13)
@@ -331,10 +351,6 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 				ebitenutil.DebugPrintAt(img, rewards, windowX+30, y)
 			}
 			y += 30
-
-			// Track total content height
-			questHeight := y - questStartY
-			totalContentHeight += questHeight
 		}
 
 		// Update max scroll based on content height
@@ -373,6 +389,9 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	// Draw controls hint
 	controlsY := windowY + windowHeight - 20
 	ebitenutil.DebugPrintAt(img, "J: Close | 1: Active | 2: Completed", windowX+10, controlsY)
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 // IsActive returns whether the quest UI is currently visible.
@@ -385,6 +404,40 @@ func (q *EbitenQuestUI) IsActive() bool {
 // Implements UISystem interface.
 func (q *EbitenQuestUI) SetActive(active bool) {
 	q.visible = active
+}
+
+// M-003 FIX: calculateQuestListHeight computes total height of all quests in list.
+// This is cached to avoid O(n) recalculation every frame.
+// Parameters:
+//   quests - List of quests to measure
+//   windowWidth - Width of window for text wrapping calculation
+// Returns: Total height in pixels
+func (ui *EbitenQuestUI) calculateQuestListHeight(quests []*TrackedQuest, windowWidth int) int {
+	totalHeight := 0
+	maxTextWidth := windowWidth - 80 // Leave margin for scrollbar
+
+	for _, tracked := range quests {
+		// Quest name height (with text wrapping)
+		nameLines := WrapText(tracked.Quest.Name, maxTextWidth, basicfont.Face7x13)
+		questHeight := len(nameLines) * 15 // 15px per line
+
+		// Description height (with text wrapping)
+		descLines := WrapText(tracked.Quest.Description, maxTextWidth, basicfont.Face7x13)
+		questHeight += len(descLines) * 15
+
+		// Objectives height
+		questHeight += len(tracked.Quest.Objectives) * 20 // ~20px per objective
+
+		// Rewards line
+		questHeight += 30
+
+		// Spacing between quests
+		questHeight += 30
+
+		totalHeight += questHeight
+	}
+
+	return totalHeight
 }
 
 // Compile-time check that EbitenQuestUI implements UISystem

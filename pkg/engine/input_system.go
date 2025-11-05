@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/mobile"
@@ -720,49 +722,94 @@ func (s *InputSystem) SetQuickLoadCallback(callback func() error) {
 }
 
 // SetInventoryCallback sets the callback function for opening inventory (I key).
-func (s *InputSystem) SetInventoryCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetInventoryCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("inventory callback cannot be nil")
+	}
 	s.onInventoryOpen = callback
+	return nil
 }
 
 // SetCharacterCallback sets the callback function for opening character screen (C key).
-func (s *InputSystem) SetCharacterCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCharacterCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("character callback cannot be nil")
+	}
 	s.onCharacterOpen = callback
+	return nil
 }
 
 // SetSkillsCallback sets the callback function for opening skills screen (K key).
-func (s *InputSystem) SetSkillsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetSkillsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("skills callback cannot be nil")
+	}
 	s.onSkillsOpen = callback
+	return nil
 }
 
 // SetQuestsCallback sets the callback function for opening quest log (J key).
-func (s *InputSystem) SetQuestsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetQuestsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("quests callback cannot be nil")
+	}
 	s.onQuestsOpen = callback
+	return nil
 }
 
 // SetMapCallback sets the callback function for opening map (M key).
-func (s *InputSystem) SetMapCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetMapCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("map callback cannot be nil")
+	}
 	s.onMapOpen = callback
+	return nil
 }
 
 // SetCraftingCallback sets the callback function for opening crafting UI (R key).
-func (s *InputSystem) SetCraftingCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCraftingCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("crafting callback cannot be nil")
+	}
 	s.onCraftingOpen = callback
+	return nil
 }
 
 // SetCycleTargetsCallback sets the callback function for cycling targets (Tab key).
-func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCycleTargetsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("cycle targets callback cannot be nil")
+	}
 	s.onCycleTargets = callback
+	return nil
 }
 
 // SetMenuToggleCallback sets the callback function for toggling the pause menu (ESC key).
 // This is called when ESC is pressed and neither tutorial nor help system consume the event.
-func (s *InputSystem) SetMenuToggleCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetMenuToggleCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("menu toggle callback cannot be nil")
+	}
 	s.onMenuToggle = callback
+	return nil
 }
 
 // SetInteractCallback sets the callback function for interacting with NPCs/merchants (F key).
-func (s *InputSystem) SetInteractCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetInteractCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("interact callback cannot be nil")
+	}
 	s.onInteract = callback
+	return nil
 }
 
 // ===== KEYBOARD INPUT METHODS =====

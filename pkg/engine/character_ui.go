@@ -32,6 +32,9 @@ type EbitenCharacterUI struct {
 	statsPanel      Rectangle
 	equipmentPanel  Rectangle
 	attributesPanel Rectangle
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewCharacterUI creates a new character UI system.
@@ -48,6 +51,7 @@ func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCh
 		world:        world,
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
+		errorState:   NewUIErrorState(), // H-002 FIX
 	}
 	ui.calculateLayout()
 	return ui
@@ -202,6 +206,9 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 // calculateLayout computes panel positions based on img size.

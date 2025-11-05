@@ -62,6 +62,9 @@ type ShopUI struct {
 	// Transaction feedback
 	lastTransactionMessage string
 	transactionMessageTime float64 // Time remaining to show message
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewShopUI creates a new shop UI.
@@ -78,6 +81,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		padding:      15,
 		selectedSlot: -1,
 		hoveredSlot:  -1,
+		errorState:   NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -149,7 +153,7 @@ func (ui *ShopUI) SetMode(mode ShopMode) {
 }
 
 // Update processes input for the shop UI.
-// Handles dual-exit navigation (S key + ESC), mode switching (TAB),
+// Handles dual-exit navigation (F key + ESC), mode switching (TAB),
 // item selection (mouse/keyboard), and transaction confirmation (ENTER/click).
 func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	// Update transaction message timer
@@ -161,8 +165,8 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Dual-exit navigation: S key (toggle) OR ESC (close only)
-	// Note: Shop uses S key by convention, matching inventory (I), character (C), etc.
+	// Dual-exit navigation: F key (toggle) OR ESC (close only)
+	// Note: Shop uses F key to match merchant interaction semantics
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Shop, ui.visible); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
@@ -274,7 +278,8 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 // This is an internal helper called by Update when player confirms a transaction.
 func (ui *ShopUI) executeTransaction() {
 	if ui.commerceSystem == nil {
-		ui.showMessage("Commerce system not available")
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError("Commerce system not available")
 		return
 	}
 
@@ -298,7 +303,8 @@ func (ui *ShopUI) executeTransaction() {
 	}
 
 	if err != nil {
-		ui.showMessage(fmt.Sprintf("Error: %v", err))
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(fmt.Sprintf("Transaction failed: %v", err))
 		return
 	}
 
@@ -310,7 +316,8 @@ func (ui *ShopUI) executeTransaction() {
 		}
 		ui.selectedSlot = -1 // Clear selection after successful transaction
 	} else {
-		ui.showMessage(result.ErrorMessage)
+		// H-002 FIX: Use error state for transaction failures
+		ui.errorState.ShowError(result.ErrorMessage)
 	}
 }
 
@@ -515,4 +522,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 			}
 		}
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }

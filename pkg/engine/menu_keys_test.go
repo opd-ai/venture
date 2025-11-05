@@ -19,7 +19,7 @@ func TestMenuKeys_Constants(t *testing.T) {
 		{"Skills key", MenuKeys.Skills, ebiten.KeyK},
 		{"Quests key", MenuKeys.Quests, ebiten.KeyJ},
 		{"Map key", MenuKeys.Map, ebiten.KeyM},
-		{"Shop key", MenuKeys.Shop, ebiten.KeyS},
+		{"Shop key", MenuKeys.Shop, ebiten.KeyF},
 		{"Crafting key", MenuKeys.Crafting, ebiten.KeyR},
 		{"Exit key", MenuKeys.Exit, ebiten.KeyEscape},
 	}

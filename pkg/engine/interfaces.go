@@ -63,7 +63,8 @@ type GameRunner interface {
 	SetInventorySystem(system *InventorySystem)
 
 	// SetupInputCallbacks connects input system callbacks to UI systems
-	SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem)
+	// H-008 FIX: Returns error if callback registration fails
+	SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) error
 }
 
 // ImageProvider provides access to image data without Ebiten-specific types.

@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"image/color"
-	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -37,6 +36,9 @@ type EbitenInventoryUI struct {
 
 	// System reference for item actions
 	inventorySystem *InventorySystem
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewInventoryUI creates a new inventory UI.
@@ -53,6 +55,7 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		selectedSlot: -1,
 		hoveredSlot:  -1,
 		draggedIndex: -1,
+		errorState:   NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -183,14 +186,14 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 				if item.IsEquippable() {
 					// Try to equip the item
 					if err := ui.inventorySystem.EquipItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Log error for debugging
-						fmt.Fprintf(os.Stderr, "Failed to equip item: %v\n", err)
+						// H-002 FIX: Show error to user instead of logging
+						ui.errorState.ShowError(fmt.Sprintf("Cannot equip: %v", err))
 					}
 				} else if item.IsConsumable() {
 					// Try to use consumable
 					if err := ui.inventorySystem.UseConsumable(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Log error for debugging
-						fmt.Fprintf(os.Stderr, "Failed to use consumable: %v\n", err)
+						// H-002 FIX: Show error to user instead of logging
+						ui.errorState.ShowError(fmt.Sprintf("Cannot use: %v", err))
 					}
 				}
 			}
@@ -201,8 +204,8 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 		// Drop selected item
 		if ui.selectedSlot < len(inventory.Items) {
 			if err := ui.inventorySystem.DropItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-				// Log error for debugging
-				fmt.Fprintf(os.Stderr, "Failed to drop item: %v\n", err)
+				// H-002 FIX: Show error to user instead of logging
+				ui.errorState.ShowError(fmt.Sprintf("Cannot drop: %v", err))
 			}
 			// Deselect after dropping
 			ui.selectedSlot = -1
@@ -369,6 +372,9 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 		previewOpts.ColorScale.ScaleAlpha(0.7)
 		img.DrawImage(ui.dragPreview, previewOpts)
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 func min(a, b int) int {

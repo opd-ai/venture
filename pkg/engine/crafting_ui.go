@@ -52,6 +52,9 @@ type CraftingUI struct {
 	craftingMessage     string
 	craftingMessageTime float64 // Time remaining to show message
 	showingProgress     bool    // Whether currently crafting
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewCraftingUI creates a new crafting UI.
@@ -70,6 +73,7 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 		filterCategory:      -1, // -1 means "All categories"
 		sortMode:            0,  // 0=Name (default)
 		showOnlyCrafted:     false,
+		errorState:          NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -334,7 +338,8 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 // attemptCraft tries to start crafting the selected recipe.
 func (ui *CraftingUI) attemptCraft(recipe *Recipe) {
 	if ui.craftingSystem == nil || ui.playerEntity == nil {
-		ui.showMessage("Crafting system not available")
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError("Crafting system not available")
 		return
 	}
 
@@ -347,12 +352,14 @@ func (ui *CraftingUI) attemptCraft(recipe *Recipe) {
 	// Attempt to start crafting
 	result, err := ui.craftingSystem.StartCraft(ui.playerEntity.ID, recipe, stationID)
 	if err != nil {
-		ui.showMessage(fmt.Sprintf("Error: %v", err))
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(fmt.Sprintf("Crafting failed: %v", err))
 		return
 	}
 
 	if !result.Success {
-		ui.showMessage(result.ErrorMessage)
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(result.ErrorMessage)
 		return
 	}
 
@@ -695,6 +702,9 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 			}
 		}
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 // findNearestStation finds the nearest crafting station within maxDistance.

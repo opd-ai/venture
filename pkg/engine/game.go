@@ -681,6 +681,9 @@ func (g *EbitenGame) Update() error {
 			charData := g.CharacterCreation.GetCharacterData()
 			g.pendingCharData = &charData
 
+			// MOBILE/WASM FIX: Clean up character creation UI (hide keyboard)
+			g.CharacterCreation.Cleanup()
+
 			if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 				if g.logger != nil {
 					g.logger.WithError(err).Error("failed to transition to gameplay after character creation")

@@ -77,10 +77,10 @@ func TestInitializeGameSystems(t *testing.T) {
 		t.Error("SquadSystemWrapper not returned in result")
 	}
 
-	// Verify systems are registered with world
+	// Verify systems are registered with world (43 systems, not including SpatialPartitionSystem)
 	systems := game.World.GetSystems()
-	if len(systems) != 44 {
-		t.Errorf("Expected 44 systems registered, got %d", len(systems))
+	if len(systems) != 43 {
+		t.Errorf("Expected 43 systems registered, got %d", len(systems))
 	}
 
 	// Verify game references are set
@@ -296,4 +296,33 @@ func BenchmarkInitializeGameSystems(b *testing.B) {
 			b.Fatalf("InitializeGameSystems failed: %v", err)
 		}
 	}
+}
+
+// TestInitializeSpatialPartitionSystem verifies spatial partition system initialization.
+func TestInitializeSpatialPartitionSystem(t *testing.T) {
+logger := logging.TestUtilityLogger("system_init_test")
+game := NewEbitenGameWithLogger(800, 600, logger)
+
+// First initialize main systems
+config := DefaultSystemInitConfig(12345, "fantasy", logger)
+_, err := InitializeGameSystems(game, config)
+if err != nil {
+t.Fatalf("InitializeGameSystems failed: %v", err)
+}
+
+// Now initialize spatial partition system with mock terrain dimensions
+worldWidth := 2560.0  // 80 tiles * 32 pixels
+worldHeight := 1600.0 // 50 tiles * 32 pixels
+
+spatialSystem := InitializeSpatialPartitionSystem(game, worldWidth, worldHeight, true, true, logger)
+
+if spatialSystem == nil {
+t.Error("SpatialPartitionSystem should not be nil")
+}
+
+// Verify it was added to world (should now have 44 systems)
+systems := game.World.GetSystems()
+if len(systems) != 44 {
+t.Errorf("Expected 44 systems after spatial partition init, got %d", len(systems))
+}
 }

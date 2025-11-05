@@ -69,7 +69,9 @@ type SystemInitResult struct {
 }
 
 // InitializeGameSystems initializes all game systems for Version 2.0 feature parity.
-// This function registers all 44 systems in the correct dependency order.
+// This function registers 43 systems in the correct dependency order.
+// The 44th system (SpatialPartitionSystem) must be initialized separately after
+// terrain generation using InitializeSpatialPartitionSystem().
 //
 // Returns: SystemInitResult containing references to systems that may need
 // further configuration (callbacks, connections, etc.).
@@ -286,9 +288,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	narrativeSystem := NewNarrativeSystem(game.World)
 	game.World.AddSystem(narrativeSystem)
 
-	// 44. ShadowSystem - enhanced lighting (Phase 14)
+	// 43. ShadowSystem - enhanced lighting (Phase 14)
 	shadowSystem := NewShadowSystemWithLogger(game.World, logger)
 	game.World.AddSystem(shadowSystem)
+
+	// Note: SpatialPartitionSystem (system #44) is initialized separately
+	// after terrain generation via InitializeSpatialPartitionSystem()
+	// because it requires world dimensions from terrain.
 
 	// ========================================================================
 	// POST-INITIALIZATION CONNECTIONS
@@ -314,13 +320,65 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 44,
+			"systemCount": 43,
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
-		}).Info("game systems initialized successfully")
+		}).Info("game systems initialized successfully (44th system requires terrain)")
 	}
 
 	return result, nil
+}
+
+// InitializeSpatialPartitionSystem initializes the SpatialPartitionSystem (system #44)
+// after terrain generation. This must be called separately from InitializeGameSystems()
+// because it requires world dimensions from generated terrain.
+//
+// Parameters:
+//   - game: The game instance
+//   - worldWidth: Width of the game world in pixels (from terrain)
+//   - worldHeight: Height of the game world in pixels (from terrain)
+//   - enableCulling: Whether to enable viewport culling optimization
+//   - verbose: Whether to log detailed information
+//   - logger: Logger for messages
+//
+// Returns: The initialized SpatialPartitionSystem
+func InitializeSpatialPartitionSystem(
+	game *EbitenGame,
+	worldWidth, worldHeight float64,
+	enableCulling bool,
+	verbose bool,
+	logger *logrus.Logger,
+) *SpatialPartitionSystem {
+	if verbose && logger != nil {
+		logger.Info("initializing spatial partition system for viewport culling")
+	}
+
+	// Create spatial partition system with quadtree-based structure
+	spatialSystem := NewSpatialPartitionSystem(worldWidth, worldHeight)
+
+	// Register with ECS World for automatic updates every 60 frames
+	game.World.AddSystem(spatialSystem)
+
+	// Connect to render system for viewport culling
+	game.RenderSystem.SetSpatialPartition(spatialSystem)
+
+	// Enable or disable culling based on parameter
+	game.RenderSystem.EnableCulling(enableCulling)
+
+	if verbose && logger != nil {
+		cullingStatus := "enabled"
+		if !enableCulling {
+			cullingStatus = "disabled"
+		}
+		logger.WithFields(logrus.Fields{
+			"worldWidth":  worldWidth,
+			"worldHeight": worldHeight,
+			"cellSize":    8, // Quadtree capacity per node
+			"culling":     cullingStatus,
+		}).Info("spatial partition system initialized")
+	}
+
+	return spatialSystem
 }
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)

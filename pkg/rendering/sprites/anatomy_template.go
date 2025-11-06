@@ -99,8 +99,9 @@ type PartSpec struct {
 	// RelativeHeight is the height as a fraction of sprite height (0.0-1.0)
 	RelativeHeight float64
 	// PreferredPixelSize optionally specifies exact pixel dimensions for enhanced detail.
-	// When set, this provides a hint for sub-pixel rendering and anatomical accuracy.
-	// If nil, RelativeWidth/RelativeHeight are used exclusively.
+	// When set, GetEffectiveWidth() and GetEffectiveHeight() use these exact dimensions
+	// instead of calculating from RelativeWidth/RelativeHeight, enabling pixel-perfect control.
+	// If nil, RelativeWidth/RelativeHeight are used for calculation.
 	// Phase 15.1: Enables "head 4×4, torso 4×6, legs 4×8" specification.
 	PreferredPixelSize *PixelDimensions
 	// ShapeTypes are the allowed shapes for this part

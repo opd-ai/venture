@@ -221,6 +221,14 @@ func (t *TerrainRenderSystem) terrainTileToRenderTile(tileType terrain.TileType)
 		return tiles.TileDoor
 	case terrain.TileCorridor:
 		return tiles.TileCorridor
+	case terrain.TileWallNE:
+		return tiles.TileWallNE
+	case terrain.TileWallNW:
+		return tiles.TileWallNW
+	case terrain.TileWallSE:
+		return tiles.TileWallSE
+	case terrain.TileWallSW:
+		return tiles.TileWallSW
 	default:
 		return tiles.TileFloor
 	}

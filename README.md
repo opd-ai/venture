@@ -66,9 +66,17 @@ go build -o venture-server ./cmd/server
 # Or with custom settings
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
 
+# Blend two genres for unique experiences (Version 2.0 feature)
+./venture-client -genre-blend fantasy-scifi -blend-ratio 0.7
+
 # Enable dynamic lighting and weather effects
 ./venture-client -enable-lighting -enable-weather
 ```
+
+**Genre Options:**
+- `-genre <id>`: Choose single genre: fantasy, scifi, horror, cyberpunk, postapoc
+- `-genre-blend <genre1-genre2>`: Blend two genres (e.g., fantasy-scifi, horror-cyberpunk)
+- `-blend-ratio <0.5-1.0>`: Primary genre weight (default: 0.7 = 70% primary, 30% secondary)
 
 **Visual Features:**
 - `-enable-lighting`: Adds atmospheric lighting with torches, spell lights, and dynamic shadows

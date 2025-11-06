@@ -72,6 +72,8 @@ var (
 	height           = flag.Int("height", 600, "Screen height")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	genreBlend       = flag.String("genre-blend", "", "Blend two genres (e.g., 'fantasy-scifi' or 'horror-cyberpunk') - overrides -genre")
+	blendRatio       = flag.Float64("blend-ratio", 0.7, "Primary genre weight for blending (0.5-1.0, default 0.7)")
 	enableLighting   = flag.Bool("enable-lighting", true, "Enable dynamic lighting system")
 	enableWeather    = flag.Bool("enable-weather", false, "Enable procedural weather effects")
 	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
@@ -810,10 +812,37 @@ func main() {
 		logConfig.Level = logging.InfoLevel
 	}
 
+	// Handle genre blending if specified
+	finalGenreID := *genreID
+	if *genreBlend != "" {
+		// Parse blend specification (e.g., "fantasy-scifi")
+		parts := strings.Split(*genreBlend, "-")
+		if len(parts) == 2 {
+			primaryID := parts[0]
+			secondaryID := parts[1]
+			
+			// Validate blend ratio
+			ratio := *blendRatio
+			if ratio < 0.5 || ratio > 1.0 {
+				fmt.Printf("Warning: blend-ratio must be 0.5-1.0, using 0.7\n")
+				ratio = 0.7
+			}
+			
+			// Create blended genre ID for logging
+			finalGenreID = fmt.Sprintf("%s-%s (%.1f%%)", primaryID, secondaryID, ratio*100)
+			
+			fmt.Printf("Genre blending enabled: %s + %s (primary weight: %.1f%%)\n", 
+				primaryID, secondaryID, ratio*100)
+		} else {
+			fmt.Printf("Warning: invalid genre-blend format '%s', expected 'genre1-genre2'\n", *genreBlend)
+			fmt.Printf("Valid examples: fantasy-scifi, horror-cyberpunk, postapoc-fantasy\n")
+		}
+	}
+
 	logger := logging.NewLogger(logConfig)
 	clientLogger := logger.WithFields(logrus.Fields{
 		"component": "client",
-		"genre":     *genreID,
+		"genre":     finalGenreID,
 		"seed":      *seed,
 	})
 
@@ -822,7 +851,7 @@ func main() {
 		"width":  *width,
 		"height": *height,
 		"seed":   *seed,
-		"genre":  *genreID,
+		"genre":  finalGenreID,
 	}).Info("client configuration")
 
 	// Handle host-and-play mode: start embedded server before client

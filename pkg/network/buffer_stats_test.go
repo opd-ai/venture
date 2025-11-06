@@ -360,10 +360,15 @@ func TestBufferStats_ConcurrentAccess(t *testing.T) {
 		t.Errorf("GetDropped() = %v, want %v", got, expectedDropped)
 	}
 
-	// Size should be sends - receives
-	expectedSize := (numGoroutines * operationsPerGoroutine) - ((numGoroutines / 2) * operationsPerGoroutine)
-	if got := stats.GetCurrentSize(); got != expectedSize {
-		t.Errorf("GetCurrentSize() = %v, want %v", got, expectedSize)
+	// Size should be in a reasonable range
+	// Due to concurrent execution and the guard in RecordReceive() that prevents
+	// negative sizes, the final size might be higher than sends - receives if
+	// some receives were called when size was 0
+	minExpectedSize := (numGoroutines * operationsPerGoroutine) - ((numGoroutines / 2) * operationsPerGoroutine)
+	maxExpectedSize := numGoroutines * operationsPerGoroutine // If no receives decremented
+	gotSize := stats.GetCurrentSize()
+	if gotSize < minExpectedSize || gotSize > maxExpectedSize {
+		t.Errorf("GetCurrentSize() = %v, want range [%v, %v]", gotSize, minExpectedSize, maxExpectedSize)
 	}
 }
 

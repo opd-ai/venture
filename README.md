@@ -49,14 +49,11 @@ go build -o venture-server ./cmd/server
 
 # Or with custom settings
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
-
-# Enable dynamic lighting and weather effects
-./venture-client -enable-lighting -enable-weather
 ```
 
-**Visual Features:**
-- `-enable-lighting`: Adds atmospheric lighting with torches, spell lights, and dynamic shadows
-- `-enable-weather`: Enables genre-appropriate weather (rain, snow, fog, etc.)
+**Visual Features (enabled by default in V2.0):**
+- **Dynamic Lighting**: Atmospheric lighting with torches, spell lights, and dynamic shadows (disable with `-enable-lighting=false`)
+- **Weather Effects**: Genre-appropriate weather including rain, snow, fog, and more (disable with `-enable-weather=false`)
 - `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
 - `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
 

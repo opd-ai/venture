@@ -143,6 +143,9 @@ func (s *ProjectileSystem) updateProjectile(entity *Entity, deltaTime float64) {
 	posComponent.X += velComponent.VX * deltaTime
 	posComponent.Y += velComponent.VY * deltaTime
 
+	// Spawn trail particles if TrailComponent is present
+	s.spawnTrailParticles(entity, posComponent, deltaTime)
+
 	// Check wall collision
 	if s.checkWallCollision(entity, oldX, oldY) {
 		if projComponent.CanBounce() {
@@ -460,6 +463,23 @@ func (s *ProjectileSystem) SpawnProjectile(x, y, vx, vy float64, projComp *Proje
 
 	entity.AddComponent(spriteComp)
 
+	// Phase 6: Add trail component for visual enhancement
+	// Determine trail type based on projectile type
+	var trail *TrailComponent
+	switch projComp.ProjectileType {
+	case "fireball", "magic_missile", "ice_shard", "lightning_bolt":
+		// Magical projectiles get glowing trails
+		magicColor := spriteComp.Color.(color.RGBA)
+		trail = NewMagicTrailComponent(&magicColor)
+	case "arrow", "bullet", "bolt":
+		// Physical projectiles get subtle trails
+		trail = NewPhysicalTrailComponent()
+	default:
+		// Default trail for unknown types
+		trail = NewTrailComponent()
+	}
+	entity.AddComponent(trail)
+
 	return entity
 }
 
@@ -469,4 +489,101 @@ func (s *ProjectileSystem) GetProjectileCount() int {
 		return 0
 	}
 	return len(s.world.GetEntitiesWith("projectile"))
+}
+
+// spawnTrailParticles spawns particle trail effects for projectiles with TrailComponent.
+// This creates visually appealing trails that enhance projectile visibility and game feel.
+func (s *ProjectileSystem) spawnTrailParticles(entity *Entity, pos *PositionComponent, deltaTime float64) {
+	// Check if entity has a trail component
+	trailComp, ok := entity.GetComponent("trail")
+	if !ok {
+		return
+	}
+	trail, ok := trailComp.(*TrailComponent)
+	if !ok || !trail.Enabled {
+		return
+	}
+
+	// Update spawn timer
+	trail.TimeSinceLastSpawn += deltaTime
+
+	// Calculate spawn interval from spawn rate
+	spawnInterval := 1.0 / trail.SpawnRate
+
+	// Spawn particles if enough time has passed
+	particlesSpawned := 0
+	for trail.TimeSinceLastSpawn >= spawnInterval {
+		trail.TimeSinceLastSpawn -= spawnInterval
+		particlesSpawned++
+
+		// Safety limit: don't spawn too many particles in one frame
+		if particlesSpawned > 10 {
+			trail.TimeSinceLastSpawn = 0
+			break
+		}
+
+		s.spawnTrailParticle(entity, pos, trail)
+	}
+}
+
+// spawnTrailParticle spawns a single trail particle at the projectile's position.
+func (s *ProjectileSystem) spawnTrailParticle(entity *Entity, pos *PositionComponent, trail *TrailComponent) {
+	if s.world == nil {
+		return
+	}
+
+	// Determine particle color
+	particleColor := color.RGBA{R: 200, G: 200, B: 200, A: 255} // Default gray
+	if trail.Color != nil {
+		particleColor = *trail.Color
+	} else {
+		// Try to get color from sprite component
+		if spriteComp, ok := entity.GetComponent("sprite"); ok {
+			if sprite, ok := spriteComp.(*EbitenSprite); ok {
+				if rgba, ok := sprite.Color.(color.RGBA); ok {
+					particleColor = rgba
+				}
+			}
+		}
+	}
+
+	// Create particle config
+	config := particles.Config{
+		Type:     particles.ParticleSparkle, // Sparkle type for trails
+		Count:    1,
+		GenreID:  s.genreID,
+		Seed:     s.seed + int64(entity.ID),
+		Duration: trail.ParticleLifetime,
+		SpreadX:  trail.SpreadX,
+		SpreadY:  trail.SpreadY,
+		Gravity:  0.0, // No gravity for projectile trails
+		MinSize:  trail.ParticleSize,
+		MaxSize:  trail.ParticleSize,
+		Custom:   make(map[string]interface{}),
+	}
+
+	// Generate particle system directly (particle generator returns *ParticleSystem, not interface{})
+	particleSystem, err := s.particleGenerator.Generate(config)
+	if err != nil {
+		return
+	}
+
+	// Position particle at projectile location
+	if len(particleSystem.Particles) > 0 {
+		particleSystem.Particles[0].X = pos.X
+		particleSystem.Particles[0].Y = pos.Y
+		particleSystem.Particles[0].Color = particleColor
+
+		// Set fade rate based on trail settings
+		particleSystem.Particles[0].Life = trail.FadeRate
+	}
+
+	// Create particle entity
+	particleEntity := s.world.CreateEntity()
+	particleEntity.AddComponent(&PositionComponent{X: pos.X, Y: pos.Y})
+
+	// Add particle emitter component (one-shot)
+	emitter := NewParticleEmitterComponent(0, config, 1)
+	emitter.AddSystem(particleSystem)
+	particleEntity.AddComponent(emitter)
 }

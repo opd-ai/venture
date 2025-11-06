@@ -599,10 +599,15 @@ sudo tc qdisc del dev lo root
      - Real-time network statistics
 
 2. Create docs/TOR_SETUP.md
-3. Document timeout formulas and buffer sizing
+3. ✅ **Document timeout formulas and buffer sizing** - **DONE** (completed in Task 1)
+   - Included in MULTIPLAYER.md "Buffer Sizing Formulas" section
+   - Message buffer calculation with examples
+   - Timeout calculations (read, write, connection)
+   - Snapshot buffer and prediction history formulas
+   - General formulas for custom latency configurations
 4. Manual validation over real Tor network
 
-**Deliverable**: Comprehensive documentation for deployment
+**Deliverable Status:** ✅ **75% COMPLETE** - Tasks 1 & 3 done, Task 2 (TOR_SETUP.md) and Task 4 (manual validation) remain
 
 ---
 

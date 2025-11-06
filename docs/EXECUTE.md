@@ -70,3 +70,4 @@ Provide brief status updates:
 - **Performance**: Profile before optimizing (use Makefile targets)
 - **Logging**: Use structured logging with logrus (see pkg/logging/)
 - **No Asset Files**: All content procedurally generated at runtime
+- **Replace, Don't Accumulate**: When a system/technique is completely replaced (e.g., improved sprites, better generation algorithms), remove the old implementation entirely without backward compatibility concerns. Only keep code that still serves a purpose.

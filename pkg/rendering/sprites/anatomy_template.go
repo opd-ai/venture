@@ -78,6 +78,16 @@ func (b BodyPart) String() string {
 	}
 }
 
+// PixelDimensions specifies exact pixel dimensions for a body part.
+// This enables enhanced detail control for Phase 15.1 sub-pixel rendering.
+// Example: head 4×4, torso 4×6, legs 4×8 pixels for humanoid characters.
+type PixelDimensions struct {
+	// Width in pixels
+	Width int
+	// Height in pixels
+	Height int
+}
+
 // PartSpec defines the rendering specification for a body part.
 type PartSpec struct {
 	// RelativeX is the X position as a fraction of sprite width (0.0-1.0)
@@ -88,6 +98,11 @@ type PartSpec struct {
 	RelativeWidth float64
 	// RelativeHeight is the height as a fraction of sprite height (0.0-1.0)
 	RelativeHeight float64
+	// PreferredPixelSize optionally specifies exact pixel dimensions for enhanced detail.
+	// When set, this provides a hint for sub-pixel rendering and anatomical accuracy.
+	// If nil, RelativeWidth/RelativeHeight are used exclusively.
+	// Phase 15.1: Enables "head 4×4, torso 4×6, legs 4×8" specification.
+	PreferredPixelSize *PixelDimensions
 	// ShapeTypes are the allowed shapes for this part
 	ShapeTypes []shapes.ShapeType
 	// ZIndex determines draw order (lower drawn first)
@@ -1464,4 +1479,78 @@ func BossAerialTemplate(base AnatomicalTemplate, scale float64) AnatomicalTempla
 	}
 
 	return boss
+}
+
+// GetEffectiveWidth returns the effective width for a PartSpec in pixels.
+// If PreferredPixelSize is set, uses that width. Otherwise, calculates from RelativeWidth.
+// This enables Phase 15.1 enhanced proportional scaling with explicit pixel control.
+func (p *PartSpec) GetEffectiveWidth(spriteWidth int) int {
+	if p.PreferredPixelSize != nil {
+		return p.PreferredPixelSize.Width
+	}
+	return int(float64(spriteWidth) * p.RelativeWidth)
+}
+
+// GetEffectiveHeight returns the effective height for a PartSpec in pixels.
+// If PreferredPixelSize is set, uses that height. Otherwise, calculates from RelativeHeight.
+// This enables Phase 15.1 enhanced proportional scaling with explicit pixel control.
+func (p *PartSpec) GetEffectiveHeight(spriteHeight int) int {
+	if p.PreferredPixelSize != nil {
+		return p.PreferredPixelSize.Height
+	}
+	return int(float64(spriteHeight) * p.RelativeHeight)
+}
+
+// ToPixelDimensions converts relative dimensions to exact pixel dimensions.
+// This is useful for creating templates with Phase 15.1 pixel-perfect specifications.
+func (p *PartSpec) ToPixelDimensions(spriteWidth, spriteHeight int) PixelDimensions {
+	return PixelDimensions{
+		Width:  int(float64(spriteWidth) * p.RelativeWidth),
+		Height: int(float64(spriteHeight) * p.RelativeHeight),
+	}
+}
+
+// WithPixelDimensions creates a new PartSpec with the specified pixel dimensions set.
+// This enables Phase 15.1 "head 4×4, torso 4×6, legs 4×8" style specifications.
+// Returns a new PartSpec with PreferredPixelSize set, keeping all other fields unchanged.
+func (p PartSpec) WithPixelDimensions(width, height int) PartSpec {
+	p.PreferredPixelSize = &PixelDimensions{
+		Width:  width,
+		Height: height,
+	}
+	return p
+}
+
+// NewPartSpecFromPixels creates a PartSpec with explicit pixel dimensions.
+// This is a convenience constructor for Phase 15.1 enhanced anatomical templates.
+// The relative dimensions are calculated based on typical sprite sizes for reference,
+// but PreferredPixelSize takes precedence during rendering.
+//
+// Example for Phase 15.1 humanoid:
+//
+//	head := NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
+//	torso := NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
+//	legs := NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
+func NewPartSpecFromPixels(width, height int, shapeType shapes.ShapeType, zIndex int, colorRole string) PartSpec {
+	// Calculate relative dimensions assuming a typical 28x28 sprite size
+	// These are fallbacks if PreferredPixelSize is ignored
+	const typicalSize = 28.0
+	relWidth := float64(width) / typicalSize
+	relHeight := float64(height) / typicalSize
+
+	return PartSpec{
+		RelativeX:      0.5, // Centered by default
+		RelativeY:      0.5, // Centered by default
+		RelativeWidth:  relWidth,
+		RelativeHeight: relHeight,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  width,
+			Height: height,
+		},
+		ShapeTypes: []shapes.ShapeType{shapeType},
+		ZIndex:     zIndex,
+		ColorRole:  colorRole,
+		Opacity:    1.0,
+		Rotation:   0,
+	}
 }

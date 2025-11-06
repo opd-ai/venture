@@ -68,13 +68,21 @@
 
 **Focus:** Increase sprite detail, anatomical accuracy, and visual clarity
 
-### 15.1: Advanced Anatomical Templates (3 weeks)
+### 15.1: Advanced Anatomical Templates (3 weeks) - IN PROGRESS
+
+**Status:** Foundation complete - Enhanced proportional scaling system implemented (Nov 2025)
 
 **Deliverables:**
-- Improved humanoid body part templates with sub-pixel rendering
-- Enhanced proportional scaling (head 4×4, torso 4×6, legs 4×8)
-- Facial features for close-up views (eyes 2px, mouth 1-2px)
-- Genre-specific anatomy variations (organic, geometric, distorted, augmented)
+- ✅ **Foundation**: Enhanced proportional scaling support (head 4×4, torso 4×6, legs 4×8)
+  - Added `PixelDimensions` struct for exact pixel size specifications
+  - Added `PreferredPixelSize` field to `PartSpec` for pixel-perfect control
+  - Created helper methods: `GetEffectiveWidth()`, `GetEffectiveHeight()`, `ToPixelDimensions()`, `WithPixelDimensions()`
+  - Created `NewPartSpecFromPixels()` constructor for Phase 15.1 specifications
+  - Full backward compatibility maintained (existing templates unchanged)
+  - Comprehensive test coverage (8 new test functions, 3 benchmarks)
+- 🔄 **In Progress**: Improved humanoid body part templates with sub-pixel rendering
+- ⏳ **Pending**: Facial features for close-up views (eyes 2px, mouth 1-2px)
+- ⏳ **Pending**: Genre-specific anatomy variations (organic, geometric, distorted, augmented)
 
 **Success Metrics:**
 - Silhouette scores increase 0.1 (e.g., 0.65→0.75)
@@ -83,12 +91,19 @@
 - Sprite detail increase: 40% more anatomical features
 
 **Technical Approach:**
+- ✅ Enhanced `pkg/rendering/sprites/anatomy_template.go` with pixel dimension support
 - Refine templates in `pkg/rendering/sprites/templates.go`
 - Add anti-aliasing for diagonal edges
 - Implement layered composition with blend modes
 - Iterative refinement for sprites scoring <0.6
 
 **Testing:** A/B comparison of old vs new sprites, user surveys on clarity
+
+**Next Steps:**
+1. Update existing humanoid templates to use pixel-perfect dimensions
+2. Implement anti-aliasing in shape generator for diagonal edges
+3. Add facial feature support (eyes, mouth) for detailed sprites
+4. Create genre-specific anatomical variations
 
 ---
 

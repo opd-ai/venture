@@ -117,7 +117,7 @@ These tiles integrate with the existing Venture systems:
 
 ## References
 
-- **Roadmap**: docs/ROADMAP_V2.md (Phase 11.1)
+- **Roadmap**: docs/ROADMAP_V3.md (Phase 11.1)
 - **Technical Spec**: pkg/rendering/tiles/phase11_rendering.go
 - **Test Suite**: pkg/rendering/tiles/phase11_rendering_test.go
 - **Architecture**: docs/ARCHITECTURE.md

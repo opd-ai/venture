@@ -79,62 +79,75 @@ func (gv *GenreValidator) Validate() GenreValidationResult {
 	}
 
 	result.Summary.TotalGenres = len(genreList)
+	stats := gv.compareAllGenrePairs(genreList, &result)
 
-	var totalSimilarity float64
-	minSim := 1.0
-	maxSim := 0.0
-
-	// Compare each pair of genres
-	for i := 0; i < len(genreList); i++ {
-		for j := i + 1; j < len(genreList); j++ {
-			genreA := genreList[i]
-			genreB := genreList[j]
-
-			comparison := gv.compareGenres(genreA, genreB)
-			result.Comparisons = append(result.Comparisons, comparison)
-			result.Summary.TotalComparisons++
-
-			totalSimilarity += comparison.OverallSimilarity
-
-			if comparison.OverallSimilarity < minSim {
-				minSim = comparison.OverallSimilarity
-			}
-			if comparison.OverallSimilarity > maxSim {
-				maxSim = comparison.OverallSimilarity
-			}
-
-			if !comparison.SufficientlyDistinct {
-				result.Passed = false
-				result.Summary.FailedComparisons++
-
-				// Add issue
-				severity := "warning"
-				if comparison.OverallSimilarity > 0.85 {
-					severity = "critical"
-				}
-
-				result.Issues = append(result.Issues, GenreIssue{
-					GenreA:     genreA,
-					GenreB:     genreB,
-					Similarity: comparison.OverallSimilarity,
-					Description: fmt.Sprintf("Genres '%s' and '%s' are too similar (%.1f%% similarity, threshold: %.1f%%)",
-						genreA, genreB, comparison.OverallSimilarity*100, (1.0-gv.threshold)*100),
-					Severity: severity,
-				})
-			} else {
-				result.Summary.PassedComparisons++
-			}
-		}
-	}
-
-	// Calculate summary statistics
 	if result.Summary.TotalComparisons > 0 {
-		result.Summary.AvgSimilarity = totalSimilarity / float64(result.Summary.TotalComparisons)
-		result.Summary.MinSimilarity = minSim
-		result.Summary.MaxSimilarity = maxSim
+		result.Summary.AvgSimilarity = stats.totalSimilarity / float64(result.Summary.TotalComparisons)
+		result.Summary.MinSimilarity = stats.minSimilarity
+		result.Summary.MaxSimilarity = stats.maxSimilarity
 	}
 
 	return result
+}
+
+// genreComparisonStats tracks statistics during genre validation.
+type genreComparisonStats struct {
+	totalSimilarity float64
+	minSimilarity   float64
+	maxSimilarity   float64
+}
+
+// compareAllGenrePairs compares all pairs of genres and updates the result.
+func (gv *GenreValidator) compareAllGenrePairs(genreList []string, result *GenreValidationResult) genreComparisonStats {
+	stats := genreComparisonStats{minSimilarity: 1.0, maxSimilarity: 0.0}
+
+	for i := 0; i < len(genreList); i++ {
+		for j := i + 1; j < len(genreList); j++ {
+			gv.processGenrePair(genreList[i], genreList[j], result, &stats)
+		}
+	}
+
+	return stats
+}
+
+// processGenrePair compares a single genre pair and updates result and stats.
+func (gv *GenreValidator) processGenrePair(genreA, genreB string, result *GenreValidationResult, stats *genreComparisonStats) {
+	comparison := gv.compareGenres(genreA, genreB)
+	result.Comparisons = append(result.Comparisons, comparison)
+	result.Summary.TotalComparisons++
+
+	stats.totalSimilarity += comparison.OverallSimilarity
+	if comparison.OverallSimilarity < stats.minSimilarity {
+		stats.minSimilarity = comparison.OverallSimilarity
+	}
+	if comparison.OverallSimilarity > stats.maxSimilarity {
+		stats.maxSimilarity = comparison.OverallSimilarity
+	}
+
+	if !comparison.SufficientlyDistinct {
+		result.Passed = false
+		result.Summary.FailedComparisons++
+		gv.addGenreIssue(genreA, genreB, comparison.OverallSimilarity, result)
+	} else {
+		result.Summary.PassedComparisons++
+	}
+}
+
+// addGenreIssue adds a genre similarity issue to the result.
+func (gv *GenreValidator) addGenreIssue(genreA, genreB string, similarity float64, result *GenreValidationResult) {
+	severity := "warning"
+	if similarity > 0.85 {
+		severity = "critical"
+	}
+
+	result.Issues = append(result.Issues, GenreIssue{
+		GenreA:     genreA,
+		GenreB:     genreB,
+		Similarity: similarity,
+		Description: fmt.Sprintf("Genres '%s' and '%s' are too similar (%.1f%% similarity, threshold: %.1f%%)",
+			genreA, genreB, similarity*100, (1.0-gv.threshold)*100),
+		Severity: severity,
+	})
 }
 
 // compareGenres compares two genres for distinctness.

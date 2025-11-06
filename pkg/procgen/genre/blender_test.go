@@ -596,8 +596,8 @@ func TestBlendThemes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use fixed seed for determinism
-			import_rand := rand.New(rand.NewSource(12345))
-			themes := blendThemes(tt.primary, tt.secondary, tt.weight, import_rand)
+			rng := rand.New(rand.NewSource(12345))
+			themes := blendThemes(tt.primary, tt.secondary, tt.weight, rng)
 
 			if len(themes) < tt.minCount || len(themes) > tt.maxCount {
 				t.Errorf("blendThemes() returned %d themes, want between %d and %d",

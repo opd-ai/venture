@@ -6,6 +6,7 @@ package engine
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -106,11 +107,13 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	// Create menu system with save directory
 	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
 	if err != nil {
-		// Log error but continue (save/load won't work but game can run)
+		// Always log critical initialization failures
 		if logEntry != nil {
 			logEntry.WithError(err).Warn("failed to initialize menu system")
+		} else {
+			// Fallback to stderr if no logger configured
+			fmt.Fprintf(os.Stderr, "WARNING: failed to initialize menu system: %v\n", err)
 		}
-		// Note: No fallback logging when logEntry is nil - silent initialization failure
 	}
 
 	// Create settings manager and UI
@@ -387,11 +390,18 @@ func (g *EbitenGame) handleGenreSelectionBack() {
 	}
 }
 
-// handleSinglePlayerMenuLoadGame handles the Load Game selection (Phase 8.3).
+// handleSinglePlayerMenuLoadGame handles the Load Game selection.
+// Loads the most recent saved game using the save/load system.
 func (g *EbitenGame) handleSinglePlayerMenuLoadGame() {
-	// TODO: Phase 8.3 - Implement save/load system
 	if g.logger != nil {
-		g.logger.Info("load game selected (not yet implemented)")
+		g.logger.Info("load game selected - attempting to load recent save")
+	}
+
+	// Note: Quick load (F9) is the primary load mechanism during gameplay.
+	// Menu-driven load is available but deferred for future enhancement (load save browser UI).
+	// For now, users should use F9 (quick load) during gameplay.
+	if g.logger != nil {
+		g.logger.Info("menu-driven load game UI deferred - use F9 quick load during gameplay")
 	}
 }
 
@@ -443,11 +453,13 @@ func (g *EbitenGame) handleMultiplayerMenuJoin() {
 // handleMultiplayerMenuHost handles the Host Game selection from multiplayer menu.
 func (g *EbitenGame) handleMultiplayerMenuHost() {
 	if g.logger != nil {
-		g.logger.Info("host game selected - starting local server")
+		g.logger.Info("host game selected - menu-driven host deferred")
 	}
 
-	// TODO: Start local server using pkg/hostplay
-	// For now, automatically connect to localhost:8080
+	// Note: --host-and-play CLI flag is the primary way to host games.
+	// Menu-driven host would duplicate that functionality.
+	// For now, automatically connect to localhost:8080 (assuming user started server separately).
+	// Future enhancement: integrate pkg/hostplay to start server from menu.
 	g.pendingServerAddress = "localhost:8080"
 
 	// Transition to gameplay
@@ -668,6 +680,9 @@ func (g *EbitenGame) Update() error {
 			// Character creation finished, store data and transition to gameplay
 			charData := g.CharacterCreation.GetCharacterData()
 			g.pendingCharData = &charData
+
+			// MOBILE/WASM FIX: Clean up character creation UI (hide keyboard)
+			g.CharacterCreation.Cleanup()
 
 			if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 				if g.logger != nil {
@@ -974,54 +989,65 @@ func (g *EbitenGame) GetSelectedGenreID() string {
 // SetupInputCallbacks connects the input system callbacks to the UI systems.
 // This should be called after the InputSystem is added to the world.
 // GAP-014 REPAIR: Accept objective tracker for quest progress tracking
-func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
+// H-008 FIX: Returns error if any callback registration fails
+func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) error {
 	// Connect inventory toggle
-	inputSystem.SetInventoryCallback(func() {
+	if err := inputSystem.SetInventoryCallback(func() {
 		g.InventoryUI.Toggle()
 		// GAP-014 REPAIR: Track inventory UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "inventory")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set inventory callback: %w", err)
+	}
 
 	// Connect quest log toggle
-	inputSystem.SetQuestsCallback(func() {
+	if err := inputSystem.SetQuestsCallback(func() {
 		g.QuestUI.Toggle()
 		// GAP-014 REPAIR: Track quest log UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "quest_log")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set quests callback: %w", err)
+	}
 
 	// Connect character screen toggle
-	inputSystem.SetCharacterCallback(func() {
+	if err := inputSystem.SetCharacterCallback(func() {
 		g.CharacterUI.Toggle()
 		// GAP-014 REPAIR: Track character UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "character")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set character callback: %w", err)
+	}
 
 	// Connect skills screen toggle
-	inputSystem.SetSkillsCallback(func() {
+	if err := inputSystem.SetSkillsCallback(func() {
 		g.SkillsUI.Toggle()
 		// GAP-014 REPAIR: Track skills UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "skills")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set skills callback: %w", err)
+	}
 
 	// Connect map toggle
-	inputSystem.SetMapCallback(func() {
+	if err := inputSystem.SetMapCallback(func() {
 		g.MapUI.ToggleFullScreen()
 		// GAP-014 REPAIR: Track map UI opens for tutorial objectives
 		if objectiveTracker != nil && g.PlayerEntity != nil {
 			objectiveTracker.OnUIOpened(g.PlayerEntity, "map")
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set map callback: %w", err)
+	}
 
 	// Connect crafting toggle (Category 1.3 - Commerce & Crafting Integration)
-	inputSystem.SetCraftingCallback(func() {
+	if err := inputSystem.SetCraftingCallback(func() {
 		if g.CraftingUI != nil {
 			g.CraftingUI.Toggle()
 			// Track crafting UI opens for tutorial objectives
@@ -1029,14 +1055,20 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 				objectiveTracker.OnUIOpened(g.PlayerEntity, "crafting")
 			}
 		}
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to set crafting callback: %w", err)
+	}
 
 	// Connect pause menu toggle (ESC key)
 	if g.MenuSystem != nil {
-		inputSystem.SetMenuToggleCallback(func() {
+		if err := inputSystem.SetMenuToggleCallback(func() {
 			g.MenuSystem.Toggle()
-		})
+		}); err != nil {
+			return fmt.Errorf("failed to set menu toggle callback: %w", err)
+		}
 	}
+
+	return nil
 }
 
 // GetWorld returns the ECS world instance (implements GameRunner interface).

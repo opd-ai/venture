@@ -152,17 +152,18 @@ func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
+	// Get mouse/touch position (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
 
 	// Find hovered node
 	ui.hoveredNode = ui.findNodeAtPosition(mouseX, mouseY)
 
-	// Handle left click to purchase skill
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && ui.hoveredNode != nil {
+	// Handle left click or touch to purchase skill (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() && ui.hoveredNode != nil {
 		ui.attemptPurchaseSkill(ui.hoveredNode.Skill.ID)
 	}
 
-	// Handle right click to refund skill (if implemented)
+	// Handle right click to refund skill (mouse only - not applicable for touch)
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) && ui.hoveredNode != nil {
 		ui.attemptRefundSkill(ui.hoveredNode.Skill.ID)
 	}
@@ -218,7 +219,7 @@ func (ui *EbitenSkillsUI) Draw(screen interface{}) {
 		color.RGBA{255, 255, 100, 255})
 
 	// Draw exit hint (standardized menu navigation)
-	exitHint := "Press [K] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Skills)
 	text.Draw(img, exitHint, basicfont.Face7x13, panelX+10, titleY+13,
 		color.RGBA{180, 180, 200, 255})
 

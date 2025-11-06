@@ -3,10 +3,14 @@ package engine
 import (
 	"fmt"
 	"image/color"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/opd-ai/venture/pkg/mobile"
+	"golang.org/x/image/font/basicfont"
 )
 
 // CraftingUI handles rendering and interaction for the crafting screen.
@@ -35,10 +39,22 @@ type CraftingUI struct {
 	hoveredRecipeIndex  int // Hovered recipe
 	scrollOffset        int // For scrolling through long recipe lists
 
+	// Issue #12 FIX: Search and filter functionality
+	searchQuery     string     // Search text for recipe names
+	filterCategory  RecipeType // Filter by recipe type (use -1 for "All")
+	sortMode        int        // 0=Name, 1=Tier, 2=Craftable
+	showOnlyCrafted bool       // Show only recipes player can craft
+
+	// Mobile keyboard state (WASM/mobile platforms)
+	keyboardShown bool // Tracks whether mobile keyboard is currently shown
+
 	// Crafting feedback
 	craftingMessage     string
 	craftingMessageTime float64 // Time remaining to show message
 	showingProgress     bool    // Whether currently crafting
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewCraftingUI creates a new crafting UI.
@@ -53,6 +69,11 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 		selectedRecipeIndex: -1,
 		hoveredRecipeIndex:  -1,
 		scrollOffset:        0,
+		searchQuery:         "", // Issue #12: Initialize search/filter
+		filterCategory:      -1, // -1 means "All categories"
+		sortMode:            0,  // 0=Name (default)
+		showOnlyCrafted:     false,
+		errorState:          NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -82,6 +103,20 @@ func (ui *CraftingUI) Open(stationEntity *Entity) {
 	ui.craftingMessage = ""
 	ui.craftingMessageTime = 0
 	ui.showingProgress = false
+	// Issue #12: Reset search/filter on open
+	ui.searchQuery = ""
+	ui.filterCategory = -1
+	ui.sortMode = 0
+	ui.showOnlyCrafted = false
+
+	// MOBILE/WASM: Show keyboard when opening crafting UI (search field active)
+	// The crafting UI search is always active, so we show keyboard immediately.
+	// Note: We track keyboard state to avoid redundant calls. The keyboard is
+	// managed by this UI component and should only be shown/hidden by Open/Close.
+	if !ui.keyboardShown && mobile.IsWASM() {
+		mobile.ShowKeyboard()
+		ui.keyboardShown = true
+	}
 }
 
 // Close hides the crafting UI and cleans up state.
@@ -94,6 +129,12 @@ func (ui *CraftingUI) Close() {
 	ui.craftingMessage = ""
 	ui.craftingMessageTime = 0
 	ui.showingProgress = false
+
+	// MOBILE/WASM: Hide keyboard when closing crafting UI
+	if ui.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		ui.keyboardShown = false
+	}
 }
 
 // IsVisible returns whether the crafting UI is currently shown.
@@ -110,7 +151,7 @@ func (ui *CraftingUI) Toggle() {
 }
 
 // Update processes input for the crafting UI.
-// Handles dual-exit navigation (C key + ESC), recipe selection (mouse/keyboard),
+// Handles dual-exit navigation (R key + ESC), recipe selection (mouse/keyboard),
 // and crafting initiation (ENTER/click).
 func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	// Update crafting message timer
@@ -122,15 +163,14 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Dual-exit navigation: R key (toggle) OR ESC (close only)
-	// Note: Crafting uses R key (R for Recipe)
-	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		ui.Toggle()
-		return
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) && ui.visible {
-		ui.Close()
-		return
+	// Standardized dual-exit menu navigation: toggle key (R) OR Escape
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Close()
+		}
+		return // Don't process other input on the same frame as toggle/close
 	}
 
 	if !ui.visible || ui.playerEntity == nil {
@@ -166,6 +206,59 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
+	// Issue #12 FIX: Handle search/filter input
+	// Tab key cycles through categories: All -> Potion -> Enchanting -> MagicItem -> All
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		ui.filterCategory++
+		if ui.filterCategory > RecipeMagicItem {
+			ui.filterCategory = -1 // Back to "All"
+		}
+		ui.scrollOffset = 0
+		ui.selectedRecipeIndex = -1
+	}
+
+	// F key cycles sort modes: Name -> Tier -> Craftable -> Name
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		ui.sortMode = (ui.sortMode + 1) % 3
+		ui.scrollOffset = 0
+	}
+
+	// C key toggles craftable-only filter
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		ui.showOnlyCrafted = !ui.showOnlyCrafted
+		ui.scrollOffset = 0
+		ui.selectedRecipeIndex = -1
+	}
+
+	// Backspace removes last character from search
+	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
+		if len(ui.searchQuery) > 0 {
+			ui.searchQuery = ui.searchQuery[:len(ui.searchQuery)-1]
+			ui.scrollOffset = 0
+		}
+	}
+
+	// Handle text input for search (only letters, numbers, spaces)
+	inputChars := ebiten.AppendInputChars(nil)
+	for _, char := range inputChars {
+		// Allow alphanumeric and space
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == ' ' {
+			if len(ui.searchQuery) < 30 { // Max 30 chars
+				ui.searchQuery += string(char)
+				ui.scrollOffset = 0
+			}
+		}
+	}
+
+	// Apply search/filter/sort to get filtered recipe list
+	recipeList = ui.filterAndSortRecipes(recipeList)
+
+	if len(recipeList) == 0 {
+		ui.showMessage("No recipes match your search/filter")
+		return
+	}
+
 	// Calculate visible area
 	windowWidth := 800
 	windowHeight := 600
@@ -176,9 +269,9 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	listAreaHeight := windowHeight - 180 // Leave space for footer
 	maxVisibleRecipes := listAreaHeight / ui.listItemHeight
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
 
 	// Check if mouse is over recipe list
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
@@ -245,7 +338,8 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 // attemptCraft tries to start crafting the selected recipe.
 func (ui *CraftingUI) attemptCraft(recipe *Recipe) {
 	if ui.craftingSystem == nil || ui.playerEntity == nil {
-		ui.showMessage("Crafting system not available")
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError("Crafting system not available")
 		return
 	}
 
@@ -258,12 +352,14 @@ func (ui *CraftingUI) attemptCraft(recipe *Recipe) {
 	// Attempt to start crafting
 	result, err := ui.craftingSystem.StartCraft(ui.playerEntity.ID, recipe, stationID)
 	if err != nil {
-		ui.showMessage(fmt.Sprintf("Error: %v", err))
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(fmt.Sprintf("Crafting failed: %v", err))
 		return
 	}
 
 	if !result.Success {
-		ui.showMessage(result.ErrorMessage)
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(result.ErrorMessage)
 		return
 	}
 
@@ -338,7 +434,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
 
 	// Draw exit hint (standardized dual-exit navigation)
-	exitHint := "Press [C] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Crafting)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
 	// Draw player stats
@@ -348,9 +444,18 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 
 	// Draw crafting message if active
 	if ui.craftingMessageTime > 0 && ui.craftingMessage != "" {
-		msgColor := color.RGBA{255, 255, 100, 255}
-		ebitenutil.DebugPrintAt(img, ui.craftingMessage, windowX+10, windowY+70)
-		_ = msgColor // TODO: Use colored text when available
+		// Determine message color based on content
+		msgColor := color.RGBA{100, 255, 100, 255} // Green for success
+		if strings.Contains(ui.craftingMessage, "failed") ||
+			strings.Contains(ui.craftingMessage, "cannot") ||
+			strings.Contains(ui.craftingMessage, "not available") {
+			msgColor = color.RGBA{255, 100, 100, 255} // Red for errors
+		} else if strings.Contains(ui.craftingMessage, "progress") {
+			msgColor = color.RGBA{255, 255, 100, 255} // Yellow for in-progress
+		}
+
+		// Use text.Draw with colored font instead of DebugPrintAt
+		text.Draw(img, ui.craftingMessage, basicfont.Face7x13, windowX+10, windowY+80, msgColor)
 	}
 
 	// Draw instructions
@@ -367,9 +472,48 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		ebitenutil.DebugPrintAt(img, "Select recipe and press ENTER/SPACE to craft", windowX+10, instructionY)
 	}
 
+	// Issue #12 FIX: Draw search/filter UI
+	filterY := windowY + 110
+
+	// Search bar
+	searchText := fmt.Sprintf("Search: %s_", ui.searchQuery)
+	if len(ui.searchQuery) == 0 {
+		searchText = "Search: (type to search)"
+	}
+	ebitenutil.DebugPrintAt(img, searchText, windowX+10, filterY)
+
+	// Category filter
+	categoryName := "All"
+	if ui.filterCategory == RecipePotion {
+		categoryName = "Potions"
+	} else if ui.filterCategory == RecipeEnchanting {
+		categoryName = "Enchanting"
+	} else if ui.filterCategory == RecipeMagicItem {
+		categoryName = "Magic Items"
+	}
+	filterText := fmt.Sprintf("[TAB] Category: %s", categoryName)
+	ebitenutil.DebugPrintAt(img, filterText, windowX+280, filterY)
+
+	// Sort mode
+	sortName := "Name"
+	if ui.sortMode == 1 {
+		sortName = "Tier"
+	} else if ui.sortMode == 2 {
+		sortName = "Craftable"
+	}
+	sortText := fmt.Sprintf("[F] Sort: %s", sortName)
+	ebitenutil.DebugPrintAt(img, sortText, windowX+480, filterY)
+
+	// Craftable filter
+	craftableText := "[C] Show All"
+	if ui.showOnlyCrafted {
+		craftableText = "[C] Only Craftable"
+	}
+	ebitenutil.DebugPrintAt(img, craftableText, windowX+620, filterY)
+
 	// Draw recipe list
-	listAreaY := windowY + 120
-	listAreaHeight := windowHeight - 180
+	listAreaY := windowY + 140 // Adjusted down to make room for filters
+	listAreaHeight := windowHeight - 200
 	maxVisibleRecipes := listAreaHeight / ui.listItemHeight
 
 	if len(recipes) == 0 {
@@ -379,10 +523,36 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	}
 
 	// Draw visible recipes
-	// Convert map to slice for ordered iteration
+	// Convert map to slice and apply filters/sorting (Issue #12)
 	var recipeList []*Recipe
 	for _, recipe := range recipes {
 		recipeList = append(recipeList, recipe)
+	}
+
+	// Apply search/filter/sort
+	recipeList = ui.filterAndSortRecipes(recipeList)
+
+	if len(recipeList) == 0 {
+		// Enhanced empty state message with context
+		emptyMsg := "No recipes match your search/filter criteria"
+		if ui.searchQuery != "" {
+			emptyMsg = fmt.Sprintf("No recipes match search: \"%s\"", ui.searchQuery)
+		} else if ui.filterCategory != -1 {
+			emptyMsg = fmt.Sprintf("No %s recipes available", ui.filterCategory.String())
+		} else if ui.showOnlyCrafted {
+			emptyMsg = "No craftable recipes (missing materials or gold)"
+		}
+
+		// Center the message
+		msgLen := len(emptyMsg)
+		msgX := windowX + (windowWidth-msgLen*7)/2
+		ebitenutil.DebugPrintAt(img, emptyMsg, msgX, windowY+windowHeight/2)
+
+		// Show hint about clearing filters
+		hintMsg := "Press [Backspace] to clear search or [C] to show all recipes"
+		hintX := windowX + (windowWidth-len(hintMsg)*7)/2
+		ebitenutil.DebugPrintAt(img, hintMsg, hintX, windowY+windowHeight/2+20)
+		return
 	}
 
 	for i := 0; i < maxVisibleRecipes && (ui.scrollOffset+i) < len(recipeList); i++ {
@@ -393,12 +563,23 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		itemX := windowX + ui.padding
 
 		// Draw recipe background with selection/hover highlighting
+		// Issue #12: Green tint for craftable recipes
+		isCraftable := ui.canCraftRecipe(recipe)
 		itemColor := color.RGBA{50, 50, 60, 255}
+		if isCraftable {
+			itemColor = color.RGBA{50, 70, 50, 255} // Green tint for craftable
+		}
 		if recipeIndex == ui.hoveredRecipeIndex {
 			itemColor = color.RGBA{70, 70, 90, 255}
+			if isCraftable {
+				itemColor = color.RGBA{70, 90, 70, 255} // Green-tinted hover
+			}
 		}
 		if recipeIndex == ui.selectedRecipeIndex {
 			itemColor = color.RGBA{90, 90, 120, 255}
+			if isCraftable {
+				itemColor = color.RGBA{90, 120, 90, 255} // Green-tinted selection
+			}
 		}
 
 		itemBg := ebiten.NewImage(windowWidth-ui.padding*2, ui.listItemHeight-5)
@@ -521,6 +702,9 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 			}
 		}
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 // findNearestStation finds the nearest crafting station within maxDistance.
@@ -542,6 +726,151 @@ func (ui *CraftingUI) findNearestStation(centerX, centerY, maxDistance float64) 
 	}
 
 	return FindClosestStation(entitySlice, centerX, centerY, maxDistance)
+}
+
+// Issue #12 FIX: Helper functions for search/filter functionality
+
+// filterAndSortRecipes applies search, filter, and sort to recipe list.
+// Returns filtered and sorted recipes that match current UI state.
+func (ui *CraftingUI) filterAndSortRecipes(recipes []*Recipe) []*Recipe {
+	// Step 1: Apply search filter
+	var filtered []*Recipe
+	for _, recipe := range recipes {
+		if ui.matchesSearch(recipe) && ui.matchesCategory(recipe) {
+			filtered = append(filtered, recipe)
+		}
+	}
+
+	// Step 2: Apply craftable filter if enabled
+	if ui.showOnlyCrafted {
+		var craftable []*Recipe
+		for _, recipe := range filtered {
+			if ui.canCraftRecipe(recipe) {
+				craftable = append(craftable, recipe)
+			}
+		}
+		filtered = craftable
+	}
+
+	// Step 3: Sort based on current sort mode
+	ui.sortRecipes(filtered)
+
+	return filtered
+}
+
+// matchesSearch returns true if recipe matches current search query.
+func (ui *CraftingUI) matchesSearch(recipe *Recipe) bool {
+	if ui.searchQuery == "" {
+		return true
+	}
+
+	// Case-insensitive substring match on recipe name
+	query := ui.searchQuery
+	name := recipe.Name
+
+	// Simple case-insensitive contains check
+	queryLen := len(query)
+	nameLen := len(name)
+	if queryLen > nameLen {
+		return false
+	}
+
+	for i := 0; i <= nameLen-queryLen; i++ {
+		match := true
+		for j := 0; j < queryLen; j++ {
+			c1 := name[i+j]
+			c2 := query[j]
+			// Convert to lowercase for comparison
+			if c1 >= 'A' && c1 <= 'Z' {
+				c1 = c1 + 32
+			}
+			if c2 >= 'A' && c2 <= 'Z' {
+				c2 = c2 + 32
+			}
+			if c1 != c2 {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+
+	return false
+}
+
+// matchesCategory returns true if recipe matches current category filter.
+func (ui *CraftingUI) matchesCategory(recipe *Recipe) bool {
+	if ui.filterCategory == -1 {
+		return true // "All" category
+	}
+	return recipe.Type == ui.filterCategory
+}
+
+// canCraftRecipe checks if player has materials to craft recipe.
+func (ui *CraftingUI) canCraftRecipe(recipe *Recipe) bool {
+	if ui.playerEntity == nil {
+		return false
+	}
+
+	invComp, hasInv := ui.playerEntity.GetComponent("inventory")
+	if !hasInv {
+		return false
+	}
+	inventory := invComp.(*InventoryComponent)
+
+	// Check if player has all required materials
+	for _, mat := range recipe.Materials {
+		hasQuantity := 0
+		for _, item := range inventory.Items {
+			if item != nil && item.Name == mat.ItemName {
+				hasQuantity++
+			}
+		}
+		if hasQuantity < mat.Quantity {
+			return false // Missing required material
+		}
+	}
+
+	// Check gold requirement
+	if recipe.GoldCost > 0 {
+		if inventory.Gold < recipe.GoldCost {
+			return false
+		}
+	}
+
+	return true
+}
+
+// sortRecipes sorts recipes in place based on current sort mode.
+func (ui *CraftingUI) sortRecipes(recipes []*Recipe) {
+	if len(recipes) <= 1 {
+		return
+	}
+
+	// Bubble sort (simple for small lists)
+	n := len(recipes)
+	for i := 0; i < n-1; i++ {
+		for j := 0; j < n-i-1; j++ {
+			shouldSwap := false
+
+			switch ui.sortMode {
+			case 0: // Sort by name (alphabetical)
+				shouldSwap = recipes[j].Name > recipes[j+1].Name
+			case 1: // Sort by tier (rarity)
+				shouldSwap = recipes[j].Rarity < recipes[j+1].Rarity
+			case 2: // Sort by craftable (craftable first)
+				canJ := ui.canCraftRecipe(recipes[j])
+				canJPlus1 := ui.canCraftRecipe(recipes[j+1])
+				shouldSwap = !canJ && canJPlus1
+			}
+
+			if shouldSwap {
+				recipes[j], recipes[j+1] = recipes[j+1], recipes[j]
+			}
+		}
+	}
 }
 
 // minInt returns the minimum of two integers.

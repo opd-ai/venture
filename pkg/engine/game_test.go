@@ -82,8 +82,10 @@ func (g *StubGame) SetInventorySystem(system *InventorySystem) {
 
 // SetupInputCallbacks connects input callbacks (implements GameRunner).
 // For testing, this just sets a flag to track that it was called.
-func (g *StubGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) {
+// H-008 FIX: Added error return to match interface
+func (g *StubGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTracker *ObjectiveTrackerSystem) error {
 	g.InputCallbacksSetup = true
+	return nil
 }
 
 // Compile-time interface check

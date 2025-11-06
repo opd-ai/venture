@@ -7,25 +7,34 @@ import (
 )
 
 func TestNewParticleSystem_UsesPool(t *testing.T) {
+	// Note: sync.Pool does not guarantee reuse - it may discard objects under memory pressure
+	// or during GC. Instead of testing exact memory reuse (which is non-deterministic),
+	// we test that the pool mechanism works correctly by verifying state reset.
+
 	// Create and release particle system
-	ps1 := NewParticleSystem([]Particle{}, ParticleSpark, DefaultConfig())
+	ps1 := NewParticleSystem([]Particle{{X: 100, Y: 200}}, ParticleSpark, DefaultConfig())
+	ps1.ElapsedTime = 5.0 // Set some state
 	addr1 := uintptr(unsafe.Pointer(ps1))
 	ReleaseParticleSystem(ps1)
 
-	// Next allocation should reuse same memory
+	// Get next particle system - may or may not be same address (pool's choice)
 	ps2 := NewParticleSystem([]Particle{}, ParticleSmoke, DefaultConfig())
 	addr2 := uintptr(unsafe.Pointer(ps2))
 
-	if addr1 != addr2 {
-		t.Errorf("Pool not reusing objects: addr1=%v, addr2=%v", addr1, addr2)
+	// If pool did reuse (addr1 == addr2), verify state was properly reset
+	// If pool didn't reuse (addr1 != addr2), that's also valid behavior
+	if addr1 == addr2 {
+		t.Logf("Pool successfully reused object at address %v", addr1)
+	} else {
+		t.Logf("Pool allocated new object (addr1=%v, addr2=%v) - this is valid behavior", addr1, addr2)
 	}
 
-	// Verify state was reset
+	// Verify state is correct regardless of reuse
 	if ps2.Type != ParticleSmoke {
 		t.Errorf("ParticleSystem type not set correctly: got %v, want %v", ps2.Type, ParticleSmoke)
 	}
 	if ps2.ElapsedTime != 0 {
-		t.Error("ParticleSystem elapsed time not reset")
+		t.Errorf("ParticleSystem elapsed time not reset: got %f, want 0", ps2.ElapsedTime)
 	}
 	if len(ps2.Particles) != 0 {
 		t.Errorf("ParticleSystem particles not cleared: got %d particles", len(ps2.Particles))
@@ -130,17 +139,22 @@ func TestParticleSystem_CapacityReuse(t *testing.T) {
 }
 
 func TestAcquireParticleSlice_UsesPool(t *testing.T) {
+	// Note: sync.Pool does not guarantee reuse - test correct behavior instead of reuse guarantee
 	slice1 := AcquireParticleSlice()
+	*slice1 = append(*slice1, Particle{X: 123, Y: 456}) // Add some state
 	addr1 := uintptr(unsafe.Pointer(slice1))
 	ReleaseParticleSlice(slice1)
 
 	slice2 := AcquireParticleSlice()
 	addr2 := uintptr(unsafe.Pointer(slice2))
 
-	if addr1 != addr2 {
-		t.Errorf("Slice pool not reusing objects: addr1=%v, addr2=%v", addr1, addr2)
+	if addr1 == addr2 {
+		t.Logf("Pool successfully reused slice at address %v", addr1)
+	} else {
+		t.Logf("Pool allocated new slice (addr1=%v, addr2=%v) - this is valid behavior", addr1, addr2)
 	}
 
+	// Verify correct state regardless of reuse
 	if len(*slice2) != 0 {
 		t.Errorf("Slice not reset: length = %d, want 0", len(*slice2))
 	}

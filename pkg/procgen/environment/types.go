@@ -40,52 +40,82 @@ func (o ObjectType) String() string {
 type SubType int
 
 const (
-	// Furniture subtypes (0-19)
+	// SubTypeTable represents a table furniture item (furniture subtypes: 0-19).
 	SubTypeTable SubType = iota
+	// SubTypeChair represents a chair furniture item.
 	SubTypeChair
+	// SubTypeBed represents a bed furniture item.
 	SubTypeBed
+	// SubTypeShelf represents a shelf furniture item.
 	SubTypeShelf
+	// SubTypeChest represents a chest furniture item.
 	SubTypeChest
+	// SubTypeDesk represents a desk furniture item.
 	SubTypeDesk
+	// SubTypeBench represents a bench furniture item.
 	SubTypeBench
+	// SubTypeCabinet represents a cabinet furniture item.
 	SubTypeCabinet
 )
 
 const (
-	// Decoration subtypes (20-39)
+	// SubTypePlant represents a plant decoration (decoration subtypes: 20-39).
 	SubTypePlant SubType = 20 + iota
+	// SubTypeStatue represents a statue decoration.
 	SubTypeStatue
+	// SubTypePainting represents a painting decoration.
 	SubTypePainting
+	// SubTypeBanner represents a banner decoration.
 	SubTypeBanner
+	// SubTypeTorch represents a torch decoration.
 	SubTypeTorch
+	// SubTypeCandlestick represents a candlestick decoration.
 	SubTypeCandlestick
+	// SubTypeVase represents a vase decoration.
 	SubTypeVase
+	// SubTypeTapestry represents a tapestry decoration.
 	SubTypeTapestry
+	// SubTypeCrystal represents a crystal decoration.
 	SubTypeCrystal
+	// SubTypeBook represents a book decoration.
 	SubTypeBook
 )
 
 const (
-	// Obstacle subtypes (40-59)
+	// SubTypeBarrel represents a barrel obstacle (obstacle subtypes: 40-59).
 	SubTypeBarrel SubType = 40 + iota
+	// SubTypeCrate represents a crate obstacle.
 	SubTypeCrate
+	// SubTypeRubble represents rubble obstacle.
 	SubTypeRubble
+	// SubTypePillar represents a pillar obstacle.
 	SubTypePillar
+	// SubTypeBoulder represents a boulder obstacle.
 	SubTypeBoulder
+	// SubTypeDebris represents debris obstacle.
 	SubTypeDebris
+	// SubTypeWreckage represents wreckage obstacle.
 	SubTypeWreckage
+	// SubTypeColumn represents a column obstacle.
 	SubTypeColumn
 )
 
 const (
-	// Hazard subtypes (60-79)
+	// SubTypeSpikes represents spikes hazard (hazard subtypes: 60-79).
 	SubTypeSpikes SubType = 60 + iota
+	// SubTypeFirePit represents a fire pit hazard.
 	SubTypeFirePit
+	// SubTypeAcidPool represents an acid pool hazard.
 	SubTypeAcidPool
+	// SubTypeBearTrap represents a bear trap hazard.
 	SubTypeBearTrap
+	// SubTypePoisonGas represents poison gas hazard.
 	SubTypePoisonGas
+	// SubTypeLavaPit represents a lava pit hazard.
 	SubTypeLavaPit
+	// SubTypeElectricField represents an electric field hazard.
 	SubTypeElectricField
+	// SubTypeIceField represents an ice field hazard.
 	SubTypeIceField
 )
 

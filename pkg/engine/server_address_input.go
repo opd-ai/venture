@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -22,6 +23,9 @@ type ServerAddressInput struct {
 	maxLength    int
 	blinkTimer   int
 	showCursor   bool
+
+	// Mobile keyboard state (WASM/mobile platforms)
+	keyboardShown bool // Tracks whether mobile keyboard is currently shown
 }
 
 // NewServerAddressInput creates a new server address input with the given screen dimensions.
@@ -45,11 +49,24 @@ func (s *ServerAddressInput) Show() {
 	s.cursorPos = len(s.address)
 	s.blinkTimer = 0
 	s.showCursor = true
+
+	// MOBILE/WASM: Show keyboard when input becomes visible
+	// The native mobile keyboard needs to be explicitly triggered on WASM builds
+	if mobile.IsWASM() {
+		mobile.ShowKeyboard()
+		s.keyboardShown = true
+	}
 }
 
 // Hide makes the server address input invisible.
 func (s *ServerAddressInput) Hide() {
 	s.isVisible = false
+
+	// MOBILE/WASM: Hide keyboard when input is hidden
+	if s.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		s.keyboardShown = false
+	}
 }
 
 // IsVisible returns whether the server address input is currently visible.
@@ -160,12 +177,22 @@ func (s *ServerAddressInput) Update() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		address := strings.TrimSpace(s.address)
 		if address != "" && s.onConnect != nil {
+			// MOBILE/WASM: Hide keyboard before connecting
+			if s.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				s.keyboardShown = false
+			}
 			s.onConnect(address)
 		}
 	}
 
 	// Escape to cancel
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		// MOBILE/WASM: Hide keyboard before cancelling
+		if s.keyboardShown && mobile.IsWASM() {
+			mobile.HideKeyboard()
+			s.keyboardShown = false
+		}
 		if s.onCancel != nil {
 			s.onCancel()
 		}

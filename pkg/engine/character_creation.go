@@ -17,6 +17,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
@@ -171,14 +172,6 @@ func LoadPortrait(path string) (*ebiten.Image, error) {
 	return ebiten.NewImageFromImage(img), nil
 }
 
-// max returns the larger of two integers
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // OpenPortraitDialog opens a native file picker dialog for selecting a portrait image
 // Returns the selected file path or empty string if cancelled
 // Platform-specific implementations are provided via:
@@ -210,6 +203,9 @@ type EbitenCharacterCreation struct {
 
 	// Input state
 	inputBuffer []rune
+
+	// Mobile keyboard state (WASM/mobile platforms)
+	keyboardShown bool // Tracks whether mobile keyboard is currently shown
 
 	screenWidth  int
 	screenHeight int
@@ -266,6 +262,14 @@ func (cc *EbitenCharacterCreation) Update() bool {
 
 // updateNameInput handles name input with keyboard
 func (cc *EbitenCharacterCreation) updateNameInput() {
+	// MOBILE/WASM: Show keyboard when entering name input step
+	// The native mobile keyboard needs to be explicitly triggered on WASM builds
+	// because the game runs in a canvas element which doesn't automatically focus
+	if !cc.keyboardShown && mobile.IsWASM() {
+		mobile.ShowKeyboard()
+		cc.keyboardShown = true
+	}
+
 	// Handle text input
 	cc.inputBuffer = ebiten.AppendInputChars(cc.inputBuffer[:0])
 	for _, r := range cc.inputBuffer {
@@ -290,6 +294,12 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 			cc.characterData.Name = cc.nameInput
 			cc.currentStep = stepClassSelection
 			cc.errorMsg = ""
+
+			// MOBILE/WASM: Hide keyboard when leaving name input
+			if cc.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				cc.keyboardShown = false
+			}
 		} else {
 			cc.errorMsg = "Name cannot be empty"
 		}
@@ -338,6 +348,9 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
+		// MOBILE/WASM FIX: Reset keyboard flag so updateNameInput will show it
+		// when entering the name input step on next Update()
+		cc.keyboardShown = false
 	}
 
 	// F2 to save current class as default
@@ -349,6 +362,12 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 
 // updatePortraitSelection handles portrait file selection via dialog
 func (cc *EbitenCharacterCreation) updatePortraitSelection() {
+	// MOBILE/WASM FIX: Don't show keyboard automatically on portrait step.
+	// File path input is not practical on mobile devices. Users should press
+	// Tab to skip portrait, or Enter with empty input to proceed.
+	// If they do start typing, the keyboard will appear automatically via browser behavior.
+	// This prevents unnecessary keyboard popup that blocks the UI.
+
 	// SPACE or B key to open file browser dialog
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
 		// Open file dialog (this will block until user selects or cancels)
@@ -381,6 +400,12 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		} else {
 			// Empty backspace goes back to class selection
 			cc.currentStep = stepClassSelection
+			// MOBILE/WASM: Ensure keyboard is hidden when going back
+			// (it should already be hidden since we don't show it on portrait step now)
+			if cc.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				cc.keyboardShown = false
+			}
 			return
 		}
 	}
@@ -388,6 +413,11 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// ESC to go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepClassSelection
+		// MOBILE/WASM: Ensure keyboard is hidden when cancelling
+		if cc.keyboardShown && mobile.IsWASM() {
+			mobile.HideKeyboard()
+			cc.keyboardShown = false
+		}
 		return
 	}
 
@@ -397,6 +427,11 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = nil
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
+		// MOBILE/WASM: Ensure keyboard is hidden when skipping
+		if cc.keyboardShown && mobile.IsWASM() {
+			mobile.HideKeyboard()
+			cc.keyboardShown = false
+		}
 		return
 	}
 
@@ -410,6 +445,11 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 			cc.characterData.Portrait = nil
 			cc.currentStep = stepConfirmation
 			cc.errorMsg = ""
+			// MOBILE/WASM: Ensure keyboard is hidden when completing
+			if cc.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				cc.keyboardShown = false
+			}
 			return
 		}
 
@@ -425,6 +465,11 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 		cc.characterData.Portrait = portrait
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
+		// MOBILE/WASM: Ensure keyboard is hidden when completing
+		if cc.keyboardShown && mobile.IsWASM() {
+			mobile.HideKeyboard()
+			cc.keyboardShown = false
+		}
 	}
 
 	// F2 to save current portrait path as default
@@ -444,6 +489,8 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 		if err := cc.characterData.Validate(); err != nil {
 			cc.errorMsg = err.Error()
 			cc.currentStep = stepNameInput // Go back to fix
+			// Reset keyboard shown flag so it will be shown again when entering name input
+			cc.keyboardShown = false
 		} else {
 			cc.confirmed = true
 		}
@@ -452,6 +499,8 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 	// Backspace to go back to portrait selection
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepPortraitSelection
+		// Reset keyboard shown flag so it will be shown again when entering portrait path
+		cc.keyboardShown = false
 	}
 }
 
@@ -830,6 +879,18 @@ func (cc *EbitenCharacterCreation) IsComplete() bool {
 	return cc.confirmed
 }
 
+// Cleanup hides the mobile keyboard and performs any necessary cleanup.
+// MOBILE/WASM FIX: This should be called when character creation completes
+// and the game transitions to gameplay, ensuring the keyboard is dismissed.
+func (cc *EbitenCharacterCreation) Cleanup() {
+	// MOBILE/WASM: Hide keyboard when character creation is complete
+	if cc.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+	}
+	// Always reset the flag regardless of platform for consistent state management
+	cc.keyboardShown = false
+}
+
 // Reset resets the character creation to initial state
 // Applies custom defaults if they are set
 func (cc *EbitenCharacterCreation) Reset() {
@@ -837,6 +898,19 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.characterData = CharacterData{}
 	cc.confirmed = false
 	cc.errorMsg = ""
+
+	// MOBILE/WASM KEYBOARD FIX: Reset keyboard state flag to false.
+	// The keyboard will be shown automatically on the first Update() call
+	// when updateNameInput() detects keyboardShown=false and shows it.
+	// This prevents premature keyboard display before the UI is ready.
+	if mobile.IsWASM() {
+		// Hide keyboard if it was shown from previous state
+		if cc.keyboardShown {
+			mobile.HideKeyboard()
+		}
+	}
+	// Always reset flag regardless of platform for consistent state management
+	cc.keyboardShown = false
 
 	// Apply defaults to both input fields and character data
 	if cc.defaults.DefaultName != "" {

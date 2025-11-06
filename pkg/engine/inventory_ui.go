@@ -36,6 +36,9 @@ type EbitenInventoryUI struct {
 
 	// System reference for item actions
 	inventorySystem *InventorySystem
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewInventoryUI creates a new inventory UI.
@@ -52,6 +55,7 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		selectedSlot: -1,
 		hoveredSlot:  -1,
 		draggedIndex: -1,
+		errorState:   NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -114,10 +118,10 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
-	mouseReleased := inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
+	mouseReleased := IsTouchOrMouseJustReleased()
 
 	// Check if mouse is over inventory grid
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
@@ -182,14 +186,14 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 				if item.IsEquippable() {
 					// Try to equip the item
 					if err := ui.inventorySystem.EquipItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Failed to equip (could show error message in UI)
-						_ = err
+						// H-002 FIX: Show error to user instead of logging
+						ui.errorState.ShowError(fmt.Sprintf("Cannot equip: %v", err))
 					}
 				} else if item.IsConsumable() {
 					// Try to use consumable
 					if err := ui.inventorySystem.UseConsumable(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// Failed to use (could show error message in UI)
-						_ = err
+						// H-002 FIX: Show error to user instead of logging
+						ui.errorState.ShowError(fmt.Sprintf("Cannot use: %v", err))
 					}
 				}
 			}
@@ -200,8 +204,8 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 		// Drop selected item
 		if ui.selectedSlot < len(inventory.Items) {
 			if err := ui.inventorySystem.DropItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-				// Failed to drop (could show error message in UI)
-				_ = err
+				// H-002 FIX: Show error to user instead of logging
+				ui.errorState.ShowError(fmt.Sprintf("Cannot drop: %v", err))
 			}
 			// Deselect after dropping
 			ui.selectedSlot = -1
@@ -248,7 +252,7 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	ebitenutil.DebugPrintAt(img, "INVENTORY", windowX+10, windowY+10)
 
 	// Draw exit hint (standardized menu navigation)
-	exitHint := "Press [I] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Inventory)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
 	// Draw capacity info
@@ -368,6 +372,9 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 		previewOpts.ColorScale.ScaleAlpha(0.7)
 		img.DrawImage(ui.dragPreview, previewOpts)
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }
 
 func min(a, b int) int {

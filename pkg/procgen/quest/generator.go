@@ -141,31 +141,61 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 		Status: StatusNotStarted,
 		Tags:   make([]string, len(template.Tags)),
 	}
-
-	// Copy tags
 	copy(quest.Tags, template.Tags)
 
-	// Generate ID
+	// Basic quest properties
 	quest.ID = fmt.Sprintf("quest_%d_%d", params.Depth, index)
-
-	// Determine difficulty based on depth and difficulty parameter
 	quest.Difficulty = g.determineDifficulty(rng, params.Depth, params.Difficulty)
+	quest.Name = g.generateQuestName(rng, template)
 
-	// Generate name
+	// Generate objectives
+	targetType := template.TargetTypes[rng.Intn(len(template.TargetTypes))]
+	objective := g.generateObjective(rng, template, params, targetType)
+	quest.Objectives = []Objective{objective}
+
+	// Generate description
+	quest.Description = g.generateQuestDescription(rng, template, params, targetType, objective.Required)
+
+	// Generate rewards
+	depthScale := 1.0 + float64(params.Depth)*0.15
+	g.generateRewards(rng, quest, template, depthScale)
+
+	// Optional properties
+	quest.RequiredLevel = 1 + params.Depth
+	g.setOptionalProperties(rng, quest, template, targetType)
+
+	return quest
+}
+
+// generateQuestName creates a quest name from template prefixes and suffixes.
+func (g *QuestGenerator) generateQuestName(rng *rand.Rand, template QuestTemplate) string {
 	prefix := template.NamePrefixes[rng.Intn(len(template.NamePrefixes))]
 	suffix := template.NameSuffixes[rng.Intn(len(template.NameSuffixes))]
-	quest.Name = fmt.Sprintf("%s %s", prefix, suffix)
+	return fmt.Sprintf("%s %s", prefix, suffix)
+}
 
-	// Select target type
-	targetType := template.TargetTypes[rng.Intn(len(template.TargetTypes))]
-
-	// Generate objectives with scaling
+// generateObjective creates a quest objective with scaling based on parameters.
+func (g *QuestGenerator) generateObjective(rng *rand.Rand, template QuestTemplate, params procgen.GenerationParams, targetType string) Objective {
 	depthScale := 1.0 + float64(params.Depth)*0.15
 	difficultyScale := 0.7 + params.Difficulty*0.6
 
-	// Calculate required amount
-	minRequired := int(float64(template.RequiredRange[0]) * difficultyScale)
-	maxRequired := int(float64(template.RequiredRange[1]) * difficultyScale * depthScale)
+	required := g.calculateRequiredAmount(rng, template.RequiredRange, difficultyScale, depthScale)
+
+	objective := Objective{
+		Target:      targetType,
+		Required:    required,
+		Current:     0,
+		Description: g.generateObjectiveDescription(template.BaseType, targetType, required),
+	}
+
+	return objective
+}
+
+// calculateRequiredAmount computes the scaled required count for quest objectives.
+func (g *QuestGenerator) calculateRequiredAmount(rng *rand.Rand, reqRange [2]int, difficultyScale, depthScale float64) int {
+	minRequired := int(float64(reqRange[0]) * difficultyScale)
+	maxRequired := int(float64(reqRange[1]) * difficultyScale * depthScale)
+
 	if minRequired < 1 {
 		minRequired = 1
 	}
@@ -173,87 +203,72 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 		maxRequired = minRequired
 	}
 
-	required := minRequired
 	if maxRequired > minRequired {
-		required = minRequired + rng.Intn(maxRequired-minRequired+1)
+		return minRequired + rng.Intn(maxRequired-minRequired+1)
 	}
+	return minRequired
+}
 
-	// Create objective
-	objective := Objective{
-		Target:   targetType,
-		Required: required,
-		Current:  0,
-	}
-
-	// Generate objective description
-	switch template.BaseType {
+// generateObjectiveDescription creates a description for a quest objective.
+func (g *QuestGenerator) generateObjectiveDescription(questType QuestType, targetType string, required int) string {
+	switch questType {
 	case TypeKill:
-		objective.Description = fmt.Sprintf("Defeat %d %s", required, targetType)
+		return fmt.Sprintf("Defeat %d %s", required, targetType)
 	case TypeCollect:
-		objective.Description = fmt.Sprintf("Collect %d %s", required, targetType)
+		return fmt.Sprintf("Collect %d %s", required, targetType)
 	case TypeBoss:
-		objective.Description = fmt.Sprintf("Defeat %s", targetType)
+		return fmt.Sprintf("Defeat %s", targetType)
 	case TypeExplore:
-		objective.Description = fmt.Sprintf("Discover %s", targetType)
+		return fmt.Sprintf("Discover %s", targetType)
 	case TypeEscort:
-		objective.Description = fmt.Sprintf("Escort %s safely", targetType)
+		return fmt.Sprintf("Escort %s safely", targetType)
 	case TypeTalk:
-		objective.Description = fmt.Sprintf("Speak with %s", targetType)
+		return fmt.Sprintf("Speak with %s", targetType)
+	default:
+		return fmt.Sprintf("Complete objective with %s", targetType)
 	}
+}
 
-	quest.Objectives = []Objective{objective}
-
-	// Generate description from template
+// generateQuestDescription creates the quest description with genre-aware formatting.
+func (g *QuestGenerator) generateQuestDescription(rng *rand.Rand, template QuestTemplate, params procgen.GenerationParams, targetType string, required int) string {
 	descIdx := rng.Intn(len(template.DescTemplates))
 	descTemplate := template.DescTemplates[descIdx]
 
-	// Generate description based on quest type
 	switch template.BaseType {
 	case TypeKill:
-		// Fantasy kill templates: "%s have been..." (target, count)
-		// Sci-fi kill template 2: "Destroy %d %s..." (count, target)
 		if params.GenreID == "scifi" && descIdx == 2 {
-			quest.Description = fmt.Sprintf(descTemplate, required, targetType)
-		} else {
-			quest.Description = fmt.Sprintf(descTemplate, targetType, required)
+			return fmt.Sprintf(descTemplate, required, targetType)
 		}
+		return fmt.Sprintf(descTemplate, targetType, required)
 	case TypeCollect:
-		// Collect templates vary by genre and index
-		// Fantasy template 2: "Ancient %s are scattered... Collect %d of them." (target, count)
-		// Sci-fi template 1: "Scanning systems detected %s nearby. Collect %d units." (target, count)
-		// Others: "%d %s" (count, target)
 		if (params.GenreID == "fantasy" && descIdx == 2) || (params.GenreID == "scifi" && descIdx == 1) {
-			quest.Description = fmt.Sprintf(descTemplate, targetType, required)
-		} else {
-			quest.Description = fmt.Sprintf(descTemplate, required, targetType)
+			return fmt.Sprintf(descTemplate, targetType, required)
 		}
+		return fmt.Sprintf(descTemplate, required, targetType)
 	case TypeBoss, TypeExplore, TypeEscort, TypeTalk:
-		// Single target name only
-		quest.Description = fmt.Sprintf(descTemplate, targetType)
+		return fmt.Sprintf(descTemplate, targetType)
 	default:
-		quest.Description = fmt.Sprintf(descTemplate, targetType, required)
+		return fmt.Sprintf(descTemplate, targetType, required)
 	}
+}
 
-	// Calculate rewards with scaling
+// generateRewards calculates and assigns quest rewards based on scaling factors.
+func (g *QuestGenerator) generateRewards(rng *rand.Rand, quest *Quest, template QuestTemplate, depthScale float64) {
 	rarityMultiplier := 1.0 + float64(quest.Difficulty)*0.3
 
+	// XP rewards
 	minXP := int(float64(template.XPRewardRange[0]) * depthScale * rarityMultiplier)
 	maxXP := int(float64(template.XPRewardRange[1]) * depthScale * rarityMultiplier)
-	quest.Reward.XP = minXP
-	if maxXP > minXP {
-		quest.Reward.XP = minXP + rng.Intn(maxXP-minXP+1)
-	}
+	quest.Reward.XP = g.randomInRange(rng, minXP, maxXP)
 
+	// Gold rewards
 	minGold := int(float64(template.GoldRewardRange[0]) * depthScale * rarityMultiplier)
 	maxGold := int(float64(template.GoldRewardRange[1]) * depthScale * rarityMultiplier)
-	quest.Reward.Gold = minGold
-	if maxGold > minGold {
-		quest.Reward.Gold = minGold + rng.Intn(maxGold-minGold+1)
-	}
+	quest.Reward.Gold = g.randomInRange(rng, minGold, maxGold)
 
 	// Item rewards
 	if rng.Float64() < template.ItemRewardChance {
-		numItems := 1 + rng.Intn(2) // 1-2 items
+		numItems := 1 + rng.Intn(2)
 		quest.Reward.Items = make([]string, numItems)
 		for i := 0; i < numItems; i++ {
 			quest.Reward.Items[i] = fmt.Sprintf("item_%s_%d", quest.Difficulty.String(), i)
@@ -262,24 +277,28 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 
 	// Skill point rewards
 	if rng.Float64() < template.SkillPointChance {
-		quest.Reward.SkillPoints = 1 + rng.Intn(2) // 1-2 skill points
+		quest.Reward.SkillPoints = 1 + rng.Intn(2)
 	}
+}
 
-	// Set required level based on depth
-	quest.RequiredLevel = 1 + params.Depth
+// randomInRange returns a random value between min and max inclusive.
+func (g *QuestGenerator) randomInRange(rng *rand.Rand, min, max int) int {
+	if max > min {
+		return min + rng.Intn(max-min+1)
+	}
+	return min
+}
 
-	// Set location (optional)
+// setOptionalProperties sets location and quest giver based on quest type.
+func (g *QuestGenerator) setOptionalProperties(rng *rand.Rand, quest *Quest, template QuestTemplate, targetType string) {
 	if template.BaseType == TypeExplore || template.BaseType == TypeBoss {
 		quest.Location = targetType
 	}
 
-	// Set quest giver NPC (optional)
 	if template.BaseType != TypeExplore {
 		giverNames := []string{"Elder", "Captain", "Merchant", "Wizard", "Guard", "Scout", "Leader"}
 		quest.GiverNPC = giverNames[rng.Intn(len(giverNames))]
 	}
-
-	return quest
 }
 
 // determineDifficulty calculates quest difficulty based on depth and parameters.

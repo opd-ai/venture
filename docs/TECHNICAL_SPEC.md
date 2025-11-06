@@ -4,7 +4,7 @@
 
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Language:** Go 1.24.5+  
-**Engine:** Ebiten 2.9.2  
+**Engine:** Ebiten 2.9.3  
 **Architecture:** Entity-Component-System (ECS)  
 **Content:** 100% procedurally generated (graphics, audio, gameplay)  
 **Network:** Client-server with high-latency support (200-5000ms)  
@@ -73,11 +73,15 @@ type System interface {
     Update(entities []*Entity, deltaTime float64)
 }
 
+// Simplified World structure (actual implementation includes
+// additional fields for caching, buffering, and logging)
 type World struct {
     entities map[uint64]*Entity
     systems  []System
 }
 ```
+
+**Note:** The World struct shown above is simplified for clarity. The actual implementation includes additional private fields for entity caching, query optimization, deferred entity operations, and structured logging.
 
 #### Standard Components
 
@@ -85,12 +89,13 @@ type World struct {
 |-----------|---------|------|
 | PositionComponent | Entity location | X, Y coordinates |
 | VelocityComponent | Movement | VX, VY velocity |
-| SpriteComponent | Visual | Sprite reference, animation state |
+| Sprite (SpriteProvider) | Visual | Width, Height, Color, Image, Layer, Visible |
+| AnimationComponent | Animation | CurrentState, PreviousState, Frames, FrameIndex, Loop |
 | HealthComponent | HP tracking | Current HP, Max HP |
 | StatsComponent | Character stats | Attack, Defense, Speed, etc. |
 | InventoryComponent | Item storage | Items []*item.Item, MaxItems, MaxWeight, Gold |
 | AIComponent | NPC behavior | Behavior tree, state |
-| CollisionComponent | Physics | Bounds, collision mask |
+| ColliderComponent | Physics | Width, Height, Solid, IsTrigger, Layer, Offsets |
 | NetworkComponent | Sync data | Ownership, sync state |
 
 ### 2.3 Package Organization
@@ -648,7 +653,7 @@ max_entities = 10000
 
 ```go
 require (
-    github.com/hajimehoshi/ebiten/v2 v2.9.2
+    github.com/hajimehoshi/ebiten/v2 v2.9.3
 )
 ```
 

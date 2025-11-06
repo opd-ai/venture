@@ -95,7 +95,8 @@ lint: ## Run linters
 
 fmt: ## Format code
 	@echo "Formatting code..."
-	go fmt ./...
+	go install mvdan.cc/gofumpt@latest
+	find . -name '*.go' -exec gofumpt -w -s -extra {} +
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."

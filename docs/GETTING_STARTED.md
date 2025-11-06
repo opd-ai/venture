@@ -36,15 +36,27 @@ Start the game client:
 **Default Controls:**
 - **WASD** - Move your character
 - **Space** - Attack
-- **E** - Use item
-- **I** - Open inventory
-- **J** - Open quest log
-- **K** - Open skill tree
-- **M** - Open map
-- **Esc** - Pause menu/Help
+- **E** - Use item / Open chest
+- **F** - Interact with NPCs / Browse merchant shop
+- **1-5** - Cast spells
 - **F5** - Quick save
 - **F9** - Quick load
-- **1-5** - Cast spells
+
+**In-Game Menus** (Press key again OR ESC to close):
+
+| Menu | Key | What It Does |
+|------|-----|--------------|
+| Inventory | I | Manage items, drag-drop equipment |
+| Character Stats | C | View health, stats, equipment, attributes |
+| Skill Tree | K | Spend skill points, unlock new abilities |
+| Quest Log | J | Track active quests, view objectives |
+| World Map | M | Navigate explored areas, fog of war |
+| Crafting | R | Brew potions, enchant gear, craft items |
+| Shop | F | Buy/sell items (when near merchant) |
+| Help | H or F1 | Controls reference and game tips |
+| Pause | ESC | Pause game (closes any open menu first) |
+
+**Navigation Tip:** All menus use dual-exit—press the menu's letter key to toggle, or ESC to close any menu.
 
 ### 3. Your First Game
 
@@ -85,6 +97,9 @@ Start the client directly to play solo:
 - `-seed`: Set world seed (default: random)
 - `-genre`: Choose theme (fantasy, scifi, horror, cyberpunk, postapoc)
 - `-width`/`-height`: Set screen resolution
+- `-enable-lighting`: Enable dynamic lighting system (experimental, enhances atmosphere)
+- `-verbose`: Enable detailed logging
+- `-profile`: Enable performance profiling
 
 ### Multiplayer Co-op
 
@@ -172,6 +187,29 @@ For persistent servers or remote hosting, use a dedicated server:
 
 **For detailed strategies, mechanics explanations, and advanced tips, see [User Manual](USER_MANUAL.md).**
 
+## Visual Enhancements (Optional)
+
+### Dynamic Lighting
+
+Venture includes an optional dynamic lighting system that enhances atmosphere:
+
+```bash
+# Enable lighting for a more atmospheric experience
+./venture-client -enable-lighting -genre horror
+```
+
+**Features:**
+- **Player Torch**: Automatic light source that follows you
+- **Environmental Lights**: Wall torches and magical crystals
+- **Spell Lights**: Colorful lights during spell casting
+- **Genre-Specific Atmosphere**: Each genre has unique lighting
+
+**Best Genres:** Horror (creates tension), Cyberpunk (neon colors), Fantasy (torch warmth)
+
+**Performance:** Adds ~2-4ms per frame. Omit flag for maximum performance.
+
+---
+
 ## Troubleshooting
 
 **Game won't start:**
@@ -196,8 +234,8 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-verbose`, `-multiplayer`, `-server`
-**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`
+**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`
 
 **For complete command-line options and configuration details, see [User Manual](USER_MANUAL.md).**
 

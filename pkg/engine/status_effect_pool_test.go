@@ -180,6 +180,7 @@ func TestStatusEffectPool_MultipleReleases(t *testing.T) {
 func TestStatusEffectPool_Integration(t *testing.T) {
 	// Test typical usage pattern in combat system
 	ResetStatusEffectPoolStats()
+	DrainStatusEffectPool() // Ensure clean pool state
 
 	// Simulate applying multiple status effects
 	effects := make([]*StatusEffectComponent, 0, 10)

@@ -147,17 +147,17 @@ func (m *SinglePlayerMenu) Update() bool {
 		return m.selectCurrentOption()
 	}
 
-	// Handle mouse input
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
+		mx, my, _ := GetTouchOrMousePosition()
 		if idx := m.getOptionAtPosition(mx, my); idx >= 0 {
 			m.selectedIdx = idx
 			return m.selectCurrentOption()
 		}
 	}
 
-	// Update hover state for mouse
-	mx, my := ebiten.CursorPosition()
+	// Update hover state for mouse/touch (Touch support for WASM/mobile)
+	mx, my, _ := GetTouchOrMousePosition()
 	if idx := m.getOptionAtPosition(mx, my); idx >= 0 {
 		m.selectedIdx = idx
 	}

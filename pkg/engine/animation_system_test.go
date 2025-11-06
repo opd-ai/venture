@@ -354,3 +354,82 @@ func BenchmarkAnimationSystem_CacheFrames(b *testing.B) {
 		sys.cacheFrames(key, frames)
 	}
 }
+
+// BenchmarkAnimationSystem_ViewportCulling benchmarks viewport culling performance.
+func BenchmarkAnimationSystem_ViewportCulling(b *testing.B) {
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
+
+	world := NewWorld()
+
+	// Create camera
+	cameraSystem := NewCameraSystem(800, 600)
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 400, Y: 300})
+	cameraComp := NewCameraComponent()
+	cameraComp.X = 400
+	cameraComp.Y = 300
+	player.AddComponent(cameraComp)
+	cameraSystem.SetActiveCamera(player)
+
+	sys.SetCameraSystem(cameraSystem)
+	sys.EnableViewportCulling(true)
+
+	// Create 100 entities (mix of visible and culled)
+	entities := []*Entity{player}
+	for i := 0; i < 100; i++ {
+		entity := world.CreateEntity()
+		// Half inside viewport, half outside
+		x := float64(400 + (i-50)*50)
+		y := 300.0
+		entity.AddComponent(&PositionComponent{X: x, Y: y})
+		entity.AddComponent(&EbitenSprite{Width: 28, Height: 28, Visible: true, Image: ebiten.NewImage(28, 28)})
+
+		animComp := NewAnimationComponent(int64(i))
+		animComp.Frames = []*ebiten.Image{ebiten.NewImage(28, 28)}
+		entity.AddComponent(animComp)
+
+		entities = append(entities, entity)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sys.Update(entities, 0.016)
+	}
+}
+
+// BenchmarkAnimationSystem_DistanceLOD benchmarks distance-based LOD performance.
+func BenchmarkAnimationSystem_DistanceLOD(b *testing.B) {
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
+
+	world := NewWorld()
+
+	// Create player
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 400, Y: 300})
+
+	sys.SetPlayerEntity(player)
+	sys.EnableDistanceLOD(true)
+
+	// Create 100 entities at various distances
+	entities := []*Entity{player}
+	for i := 0; i < 100; i++ {
+		entity := world.CreateEntity()
+		distance := float64(i * 10)
+		entity.AddComponent(&PositionComponent{X: 400 + distance, Y: 300})
+		entity.AddComponent(&EbitenSprite{Width: 28, Height: 28, Visible: true, Image: ebiten.NewImage(28, 28)})
+
+		animComp := NewAnimationComponent(int64(i))
+		animComp.Frames = []*ebiten.Image{ebiten.NewImage(28, 28)}
+		animComp.Playing = true
+		entity.AddComponent(animComp)
+
+		entities = append(entities, entity)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sys.Update(entities, 0.016)
+	}
+}

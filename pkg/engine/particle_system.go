@@ -187,3 +187,89 @@ func (ps *ParticleSystem) SpawnBloodSplatter(world *World, x, y float64, seed in
 
 	return ps.SpawnParticles(world, config, x, y)
 }
+
+// SpawnEmbers creates fire ember particles at the given position.
+// This is a convenience method for fire effects and destruction.
+// Phase 14.3 addition.
+func (ps *ParticleSystem) SpawnEmbers(world *World, x, y float64, seed int64, genreID string) *Entity {
+	config := particles.Config{
+		Type:     particles.ParticleEmber,
+		Count:    20,
+		GenreID:  genreID,
+		Seed:     seed,
+		Duration: 2.0,
+		SpreadX:  100.0,
+		SpreadY:  100.0,
+		Gravity:  200.0,
+		MinSize:  2.0,
+		MaxSize:  5.0,
+		Custom:   make(map[string]interface{}),
+	}
+
+	return ps.SpawnParticles(world, config, x, y)
+}
+
+// SpawnMagicSparkles creates magical sparkle particles at the given position.
+// This is a convenience method for enhanced spell effects with orbital motion.
+// Phase 14.3 addition.
+func (ps *ParticleSystem) SpawnMagicSparkles(world *World, x, y float64, seed int64, genreID string) *Entity {
+	config := particles.Config{
+		Type:     particles.ParticleSparkle,
+		Count:    25,
+		GenreID:  genreID,
+		Seed:     seed,
+		Duration: 1.5,
+		SpreadX:  80.0,
+		SpreadY:  80.0,
+		Gravity:  0.0,
+		MinSize:  1.0,
+		MaxSize:  3.0,
+		Custom:   make(map[string]interface{}),
+	}
+
+	return ps.SpawnParticles(world, config, x, y)
+}
+
+// SpawnSmokePlume creates billowing smoke particle effect at the given position.
+// This is a convenience method for environmental effects and explosions.
+// Phase 14.3 addition.
+func (ps *ParticleSystem) SpawnSmokePlume(world *World, x, y float64, seed int64, genreID string) *Entity {
+	config := particles.Config{
+		Type:     particles.ParticleSmokePlume,
+		Count:    30,
+		GenreID:  genreID,
+		Seed:     seed,
+		Duration: 3.0,
+		SpreadX:  120.0,
+		SpreadY:  120.0,
+		Gravity:  100.0,
+		MinSize:  3.0,
+		MaxSize:  8.0,
+		Custom:   make(map[string]interface{}),
+	}
+
+	return ps.SpawnParticles(world, config, x, y)
+}
+
+// SpawnDebris creates bouncing debris particles at the given position.
+// This is a convenience method for destructible objects and explosions.
+// Phase 14.3 addition.
+func (ps *ParticleSystem) SpawnDebris(world *World, x, y, groundY float64, seed int64, genreID string) *Entity {
+	config := particles.Config{
+		Type:     particles.ParticleDebris,
+		Count:    25,
+		GenreID:  genreID,
+		Seed:     seed,
+		Duration: 2.5,
+		SpreadX:  150.0,
+		SpreadY:  150.0,
+		Gravity:  300.0,
+		MinSize:  2.0,
+		MaxSize:  6.0,
+		Custom: map[string]interface{}{
+			"groundY": groundY,
+		},
+	}
+
+	return ps.SpawnParticles(world, config, x, y)
+}

@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"testing"
 
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
@@ -241,5 +242,161 @@ func BenchmarkEquipmentVisualSystem_EquipItem(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sys.EquipItem(entity, "weapon", "sword_001", 12345)
 		sys.UnequipItem(entity, "weapon")
+	}
+}
+
+// TestEquipmentVisualSystem_AccessorySync tests accessory slot syncing.
+func TestEquipmentVisualSystem_AccessorySync(t *testing.T) {
+	gen := sprites.NewGenerator()
+	sys := NewEquipmentVisualSystem(gen)
+
+	entity := NewEntity(1)
+
+	// Add equipment component with 3 accessory slots
+	equipComp := NewEquipmentComponent()
+	entity.AddComponent(equipComp)
+
+	// Add equipment visual component
+	equipVisualComp := NewEquipmentVisualComponent()
+	entity.AddComponent(equipVisualComp)
+
+	// Add sprite and animation components
+	spriteComp := NewSpriteComponent(28, 28, color.RGBA{R: 255, G: 0, B: 0, A: 255})
+	entity.AddComponent(spriteComp)
+	animComp := NewAnimationComponent(12345)
+	entity.AddComponent(animComp)
+
+	// Create test accessories
+	ring1 := createTestAccessory("ring_001", 1001)
+	ring2 := createTestAccessory("ring_002", 1002)
+	amulet := createTestAccessory("amulet_001", 1003)
+
+	// Test 1: Equip single accessory
+	equipComp.Equip(ring1, SlotAccessory1)
+	sys.syncEquipmentChanges(entity)
+
+	if len(equipVisualComp.AccessoryIDs) != 1 {
+		t.Errorf("Expected 1 accessory, got %d", len(equipVisualComp.AccessoryIDs))
+	}
+	if equipVisualComp.AccessoryIDs[0] != "ring_001" {
+		t.Errorf("Expected ring_001, got %s", equipVisualComp.AccessoryIDs[0])
+	}
+
+	// Test 2: Equip second accessory
+	equipComp.Equip(ring2, SlotAccessory2)
+	sys.syncEquipmentChanges(entity)
+
+	if len(equipVisualComp.AccessoryIDs) != 2 {
+		t.Errorf("Expected 2 accessories, got %d", len(equipVisualComp.AccessoryIDs))
+	}
+	if equipVisualComp.AccessoryIDs[1] != "ring_002" {
+		t.Errorf("Expected ring_002, got %s", equipVisualComp.AccessoryIDs[1])
+	}
+
+	// Test 3: Equip third accessory (all slots filled)
+	equipComp.Equip(amulet, SlotAccessory3)
+	sys.syncEquipmentChanges(entity)
+
+	if len(equipVisualComp.AccessoryIDs) != 3 {
+		t.Errorf("Expected 3 accessories, got %d", len(equipVisualComp.AccessoryIDs))
+	}
+	if equipVisualComp.AccessoryIDs[2] != "amulet_001" {
+		t.Errorf("Expected amulet_001, got %s", equipVisualComp.AccessoryIDs[2])
+	}
+
+	// Test 4: Unequip middle accessory
+	equipComp.Unequip(SlotAccessory2)
+	sys.syncEquipmentChanges(entity)
+
+	if len(equipVisualComp.AccessoryIDs) != 2 {
+		t.Errorf("Expected 2 accessories after unequip, got %d", len(equipVisualComp.AccessoryIDs))
+	}
+	// Should now have ring_001 and amulet_001 (ring_002 removed)
+	if equipVisualComp.AccessoryIDs[0] != "ring_001" || equipVisualComp.AccessoryIDs[1] != "amulet_001" {
+		t.Errorf("Unexpected accessory order after unequip: %v", equipVisualComp.AccessoryIDs)
+	}
+
+	// Test 5: Unequip all accessories
+	equipComp.Unequip(SlotAccessory1)
+	equipComp.Unequip(SlotAccessory3)
+	sys.syncEquipmentChanges(entity)
+
+	if len(equipVisualComp.AccessoryIDs) != 0 {
+		t.Errorf("Expected 0 accessories after unequip all, got %d", len(equipVisualComp.AccessoryIDs))
+	}
+}
+
+// TestEquipmentVisualSystem_AccessorySyncNoChanges tests that sync doesn't trigger on unchanged accessories.
+func TestEquipmentVisualSystem_AccessorySyncNoChanges(t *testing.T) {
+	gen := sprites.NewGenerator()
+	sys := NewEquipmentVisualSystem(gen)
+
+	entity := NewEntity(1)
+
+	equipComp := NewEquipmentComponent()
+	entity.AddComponent(equipComp)
+
+	equipVisualComp := NewEquipmentVisualComponent()
+	entity.AddComponent(equipVisualComp)
+
+	// Equip an accessory
+	ring := createTestAccessory("ring_001", 1001)
+	equipComp.Equip(ring, SlotAccessory1)
+	sys.syncEquipmentChanges(entity)
+
+	// Mark as clean
+	equipVisualComp.MarkClean()
+
+	// Sync again without changes - should remain clean
+	sys.syncEquipmentChanges(entity)
+
+	if equipVisualComp.Dirty {
+		t.Error("Component should remain clean when accessories haven't changed")
+	}
+}
+
+// TestEquipmentVisualSystem_AccessorySeedTracking tests that accessory seeds are tracked correctly.
+func TestEquipmentVisualSystem_AccessorySeedTracking(t *testing.T) {
+	gen := sprites.NewGenerator()
+	sys := NewEquipmentVisualSystem(gen)
+
+	entity := NewEntity(1)
+
+	equipComp := NewEquipmentComponent()
+	entity.AddComponent(equipComp)
+
+	equipVisualComp := NewEquipmentVisualComponent()
+	entity.AddComponent(equipVisualComp)
+
+	// Equip accessories with different seeds
+	ring1 := createTestAccessory("ring_001", 5001)
+	ring2 := createTestAccessory("ring_002", 5002)
+
+	equipComp.Equip(ring1, SlotAccessory1)
+	equipComp.Equip(ring2, SlotAccessory2)
+	sys.syncEquipmentChanges(entity)
+
+	// Verify seeds are tracked
+	if len(equipVisualComp.AccessorySeeds) != 2 {
+		t.Errorf("Expected 2 accessory seeds, got %d", len(equipVisualComp.AccessorySeeds))
+	}
+	if equipVisualComp.AccessorySeeds[0] != 5001 {
+		t.Errorf("Expected seed 5001, got %d", equipVisualComp.AccessorySeeds[0])
+	}
+	if equipVisualComp.AccessorySeeds[1] != 5002 {
+		t.Errorf("Expected seed 5002, got %d", equipVisualComp.AccessorySeeds[1])
+	}
+}
+
+// createTestAccessory creates a test accessory item for testing.
+func createTestAccessory(id string, seed int64) *item.Item {
+	return &item.Item{
+		ID:   id,
+		Name: id,
+		Type: item.TypeAccessory,
+		Seed: seed,
+		Stats: item.Stats{
+			Weight: 0.1,
+		},
 	}
 }

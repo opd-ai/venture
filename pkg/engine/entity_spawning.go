@@ -183,10 +183,77 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			// GAP-012 REPAIR: Add visual feedback for hit flash
 			enemy.AddComponent(NewVisualFeedbackComponent())
 
-			// Phase 10.1: Add rotation and aim components for 360° enemy rotation
-			// Enemies rotate to face the player during AI targeting
-			enemy.AddComponent(NewRotationComponent(0, 5.0)) // Faster rotation than player (5 rad/s)
-			enemy.AddComponent(NewAimComponent(0))
+			// Phase 10.1: Add rotation component for 360° rotation and facing direction
+			enemy.AddComponent(NewRotationComponent(0, 2.0)) // Enemies face right initially, slower turn speed
+
+			// Phase 11.1: Add layer component for multi-layer collision
+			layerComp := NewLayerComponent()
+			layerComp.CurrentLayer = 0 // Ground layer
+			enemy.AddComponent(&layerComp)
+
+			// Phase 14: Add shadow component for enhanced lighting
+			shadowComp := NewShadowComponent(enemySize)
+			shadowComp.CastsShadow = true
+			shadowComp.ShadowType = ShadowTypeHard
+			enemy.AddComponent(shadowComp)
+
+			// Phase 13.1: Add behavior tree component for intelligent AI
+			// Select archetype based on entity properties
+			var archetype EnemyArchetype
+			if genEntity.Type == entity.TypeBoss {
+				archetype = ArchetypeTank // Bosses are tanky
+			} else if genEntity.Size == entity.SizeTiny || genEntity.Size == entity.SizeSmall {
+				archetype = ArchetypeStealth // Small enemies use stealth
+			} else if genEntity.Stats.Damage > genEntity.Stats.Defense {
+				archetype = ArchetypeMelee // High damage = melee
+			} else {
+				// Distribute other archetypes
+				archetypeRoll := rng.Intn(3)
+				switch archetypeRoll {
+				case 0:
+					archetype = ArchetypeMelee
+				case 1:
+					archetype = ArchetypeRanged
+				case 2:
+					archetype = ArchetypeSupport
+				default:
+					archetype = ArchetypeMelee
+				}
+			}
+			behaviorTree := BuildBehaviorTree(archetype, world)
+			enemy.AddComponent(behaviorTree)
+
+			// Phase 13.2: Add squad component for coordinated tactics
+			// Assign to squads based on room (enemies in same room form squads)
+			squadID := int(len(spawnRooms) - len(spawnRooms[i:]))
+			var role SquadRole
+			if i == 0 {
+				// First enemy in room is leader
+				role = SquadRoleLeader
+			} else {
+				// Others are members
+				role = SquadRoleMember
+			}
+			squadComp := NewSquadComponent(squadID, role, 0)
+			enemy.AddComponent(squadComp)
+
+			// Phase 13.3: Add faction component for reputation system
+			// Assign faction based on genre and entity type
+			var factionID string
+			if genEntity.Type == entity.TypeBoss {
+				factionID = "boss_faction"
+			} else if genEntity.Type == entity.TypeNPC {
+				factionID = "neutral_faction"
+			} else {
+				// Regular enemies belong to hostile faction
+				factionID = "enemy_faction"
+			}
+			factionComp := &FactionComponent{
+				FactionID:       factionID,
+				Reputation:      0,
+				IsPlayerFaction: false,
+			}
+			enemy.AddComponent(factionComp)
 
 			spawned++
 		}
@@ -295,6 +362,47 @@ func SpawnEnemyFromTemplate(world *World, genEntity *entity.Entity, x, y float64
 	enemyAnim.Playing = true
 	enemyAnim.FrameCount = 4
 	enemy.AddComponent(enemyAnim)
+
+	// Visual feedback (Phase 10)
+	enemy.AddComponent(NewVisualFeedbackComponent())
+
+	// Rotation (Phase 10.1)
+	enemy.AddComponent(NewRotationComponent(0, 2.0))
+
+	// Layer (Phase 11.1)
+	layerComp := NewLayerComponent()
+	layerComp.CurrentLayer = 0
+	enemy.AddComponent(&layerComp)
+
+	// Shadow (Phase 14)
+	shadowComp := NewShadowComponent(enemySize)
+	shadowComp.CastsShadow = true
+	shadowComp.ShadowType = ShadowTypeHard
+	enemy.AddComponent(shadowComp)
+
+	// Behavior tree (Phase 13.1) - default to melee
+	behaviorTree := BuildBehaviorTree(ArchetypeMelee, world)
+	enemy.AddComponent(behaviorTree)
+
+	// Squad (Phase 13.2) - solo enemy
+	squadComp := NewSquadComponent(int(enemy.ID), SquadRoleLeader, 0)
+	enemy.AddComponent(squadComp)
+
+	// Faction (Phase 13.3)
+	var factionID string
+	if genEntity.Type == entity.TypeBoss {
+		factionID = "boss_faction"
+	} else if genEntity.Type == entity.TypeNPC {
+		factionID = "neutral_faction"
+	} else {
+		factionID = "enemy_faction"
+	}
+	factionComp := &FactionComponent{
+		FactionID:       factionID,
+		Reputation:      0,
+		IsPlayerFaction: false,
+	}
+	enemy.AddComponent(factionComp)
 
 	return enemy
 }

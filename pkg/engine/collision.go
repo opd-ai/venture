@@ -99,11 +99,43 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 		return false
 	}
 
+	// Check terrain layer compatibility for prediction (Phase 11.1 multi-layer support)
+	layer1Comp, hasLayer1 := entity.GetComponent("layer")
+	layer2Comp, hasLayer2 := other.GetComponent("layer")
+	if hasLayer1 && hasLayer2 {
+		l1 := layer1Comp.(*LayerComponent)
+		l2 := layer2Comp.(*LayerComponent)
+		// Flying entities collide with all layers
+		if !l1.CanFly && !l2.CanFly {
+			// Check if entities are on same effective terrain layer
+			if !OnSameLayer(l1, l2) {
+				return false // No collision across terrain layers
+			}
+		}
+	}
+
 	// Get other entity's current position
 	pos2Comp, _ := other.GetComponent("position")
 	pos2 := pos2Comp.(*PositionComponent)
 
-	// Check intersection at predicted position
+	// Issue #20: Check intersection at predicted position with rotation support
+	rot1Comp, hasRot1 := entity.GetComponent("rotation")
+	rot2Comp, hasRot2 := other.GetComponent("rotation")
+
+	if hasRot1 || hasRot2 {
+		// Use rotation-aware collision for rotated entities
+		angle1 := 0.0
+		angle2 := 0.0
+		if hasRot1 {
+			angle1 = rot1Comp.(*RotationComponent).Angle
+		}
+		if hasRot2 {
+			angle2 = rot2Comp.(*RotationComponent).Angle
+		}
+		return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
+	}
+
+	// Check intersection at predicted position (no rotation)
 	return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
 }
 
@@ -181,8 +213,45 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 				continue
 			}
 
-			// Check intersection
-			if collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y) {
+			// Check terrain layer compatibility (Phase 11.1 multi-layer support)
+			// Entities on different terrain layers should not collide unless one can fly
+			layer1Comp, hasLayer1 := entity.GetComponent("layer")
+			layer2Comp, hasLayer2 := other.GetComponent("layer")
+			if hasLayer1 && hasLayer2 {
+				l1 := layer1Comp.(*LayerComponent)
+				l2 := layer2Comp.(*LayerComponent)
+				// Flying entities collide with all layers
+				if !l1.CanFly && !l2.CanFly {
+					// Check if entities are on same effective terrain layer
+					if !OnSameLayer(l1, l2) {
+						continue // Skip collision for entities on different terrain layers
+					}
+				}
+			}
+
+			// Check intersection (Issue #20: Account for rotation if present)
+			// Query rotation components for both entities
+			rot1Comp, hasRot1 := entity.GetComponent("rotation")
+			rot2Comp, hasRot2 := other.GetComponent("rotation")
+
+			var intersects bool
+			if hasRot1 || hasRot2 {
+				// At least one entity is rotated, use rotation-aware collision
+				angle1 := 0.0
+				angle2 := 0.0
+				if hasRot1 {
+					angle1 = rot1Comp.(*RotationComponent).Angle
+				}
+				if hasRot2 {
+					angle2 = rot2Comp.(*RotationComponent).Angle
+				}
+				intersects = collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
+			} else {
+				// Neither entity is rotated, use faster AABB collision
+				intersects = collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y)
+			}
+
+			if intersects {
 				// Call collision callback if set
 				if s.onCollision != nil {
 					s.onCollision(entity, other)

@@ -90,6 +90,20 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		g.generateTrap(img, pal, rng, config)
 	case TileStairs:
 		g.generateStairs(img, pal, rng, config)
+	case TileWallNE:
+		g.generateDiagonalWall(img, pal, rng, config, DiagonalNE)
+	case TileWallNW:
+		g.generateDiagonalWall(img, pal, rng, config, DiagonalNW)
+	case TileWallSE:
+		g.generateDiagonalWall(img, pal, rng, config, DiagonalSE)
+	case TileWallSW:
+		g.generateDiagonalWall(img, pal, rng, config, DiagonalSW)
+	case TilePlatform:
+		g.generatePlatform(img, pal, rng, config)
+	case TileRamp:
+		g.generateRamp(img, pal, rng, config)
+	case TilePit:
+		g.generatePit(img, pal, rng, config)
 	default:
 		err := fmt.Errorf("unknown tile type: %d", config.Type)
 		if g.logger != nil {

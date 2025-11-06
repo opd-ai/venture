@@ -12,6 +12,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,13 +20,16 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/hostplay"
 	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/particles"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/sirupsen/logrus"
@@ -54,21 +58,34 @@ func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 	w.system.Update(deltaTime)
 }
 
+// squadSystemWrapper adapts SquadSystem to System interface
+type squadSystemWrapper struct {
+	system *engine.SquadSystem
+}
+
+func (w *squadSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
-	width          = flag.Int("width", 800, "Screen width")
-	height         = flag.Int("height", 600, "Screen height")
-	seed           = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID        = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	enableLighting = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
-	verbose        = flag.Bool("verbose", false, "Enable verbose logging")
-	profile        = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
-	multiplayer    = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
-	server         = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay    = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
-	hostLAN        = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
-	serverPort     = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
-	serverPlayers  = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick     = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	width            = flag.Int("width", 800, "Screen width")
+	height           = flag.Int("height", 600, "Screen height")
+	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
+	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	enableLighting   = flag.Bool("enable-lighting", false, "Enable dynamic lighting system (experimental)")
+	enableWeather    = flag.Bool("enable-weather", false, "Enable procedural weather effects (Phase 5.4)")
+	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
+	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
+	verbose          = flag.Bool("verbose", false, "Enable verbose logging")
+	profile          = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
+	multiplayer      = flag.Bool("multiplayer", false, "Enable multiplayer mode (connect to server)")
+	server           = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	hostAndPlay      = flag.Bool("host-and-play", false, "Host server and auto-connect (single command LAN party mode)")
+	hostLAN          = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	serverPort       = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
+	serverPlayers    = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
+	serverTick       = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	noTutorial       = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
 )
 
 // return a random seed
@@ -254,6 +271,302 @@ func spawnCrystalLight(world *engine.World, x, y float64, color color.RGBA, radi
 		crystalLight.PulseAmount = 0.25
 	}
 	lightEntity.AddComponent(crystalLight)
+}
+
+// spawnWeather creates a weather effect entity.
+// Phase 5.4: Weather Particle System Integration
+func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64, genreID, weatherTypeStr, intensityStr string) *engine.Entity {
+	rng := rand.New(rand.NewSource(seed))
+
+	// Parse weather intensity
+	var intensity particles.WeatherIntensity
+	switch strings.ToLower(intensityStr) {
+	case "light":
+		intensity = particles.IntensityLight
+	case "medium":
+		intensity = particles.IntensityMedium
+	case "heavy":
+		intensity = particles.IntensityHeavy
+	case "extreme":
+		intensity = particles.IntensityExtreme
+	default:
+		intensity = particles.IntensityMedium
+	}
+
+	// Determine weather type
+	var weatherType particles.WeatherType
+	if weatherTypeStr == "" {
+		// Select genre-appropriate random weather
+		genreWeathers := particles.GetGenreWeather(genreID)
+		if len(genreWeathers) > 0 {
+			weatherType = genreWeathers[rng.Intn(len(genreWeathers))]
+		} else {
+			weatherType = particles.WeatherRain
+		}
+	} else {
+		// Parse explicit weather type
+		switch strings.ToLower(weatherTypeStr) {
+		case "rain":
+			weatherType = particles.WeatherRain
+		case "snow":
+			weatherType = particles.WeatherSnow
+		case "fog":
+			weatherType = particles.WeatherFog
+		case "dust":
+			weatherType = particles.WeatherDust
+		case "ash":
+			weatherType = particles.WeatherAsh
+		case "neonrain":
+			weatherType = particles.WeatherNeonRain
+		case "smog":
+			weatherType = particles.WeatherSmog
+		case "radiation":
+			weatherType = particles.WeatherRadiation
+		default:
+			weatherType = particles.WeatherRain
+		}
+	}
+
+	// Create weather configuration
+	config := particles.WeatherConfig{
+		Type:      weatherType,
+		Intensity: intensity,
+		Width:     screenWidth * 2,  // Cover larger area than screen for smooth edges
+		Height:    screenHeight * 2, // Cover larger area than screen
+		GenreID:   genreID,
+		Seed:      seed,
+		WindX:     (rng.Float64() - 0.5) * 20.0, // Random wind: -10 to +10 px/s
+		WindY:     0.0,                          // No vertical wind
+		Custom:    make(map[string]interface{}),
+	}
+
+	// Create weather entity
+	weatherEntity := world.CreateEntity()
+
+	// Add weather component
+	weatherComp := engine.NewWeatherComponent(config)
+
+	// Start weather immediately with fade-in
+	if err := weatherComp.StartWeather(); err != nil {
+		// Log error but don't fail - weather is optional
+		return nil
+	}
+
+	weatherEntity.AddComponent(weatherComp)
+
+	return weatherEntity
+}
+
+// spawnDestructibleObjects spawns destructible objects (crates, barrels, furniture) in dungeon rooms.
+// Phase 11.3: Environmental Destruction & Manipulation
+func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, seed int64, genreID string, logger *logrus.Logger) int {
+	rng := rand.New(rand.NewSource(seed))
+	objectCount := 0
+	tileSize := 32
+
+	// Object spawning configuration per genre
+	type objectConfig struct {
+		crateChance           float64 // Probability of crate spawn per suitable room
+		barrelChance          float64 // Probability of barrel spawn per suitable room
+		furnitureChance       float64 // Probability of furniture spawn per suitable room
+		explosiveBarrelChance float64 // Probability of explosive barrel (vs regular barrel)
+		poisonContainerChance float64 // Probability of poison container spawn
+		objectsPerRoom        int     // Number of objects to spawn in each eligible room
+	}
+
+	configs := map[string]objectConfig{
+		"fantasy": {
+			crateChance:           0.6,
+			barrelChance:          0.5,
+			furnitureChance:       0.4,
+			explosiveBarrelChance: 0.1,
+			poisonContainerChance: 0.05,
+			objectsPerRoom:        3,
+		},
+		"scifi": {
+			crateChance:           0.7,
+			barrelChance:          0.6,
+			furnitureChance:       0.3,
+			explosiveBarrelChance: 0.15,
+			poisonContainerChance: 0.1,
+			objectsPerRoom:        4,
+		},
+		"horror": {
+			crateChance:           0.4,
+			barrelChance:          0.3,
+			furnitureChance:       0.7,
+			explosiveBarrelChance: 0.05,
+			poisonContainerChance: 0.15,
+			objectsPerRoom:        2,
+		},
+		"cyberpunk": {
+			crateChance:           0.65,
+			barrelChance:          0.55,
+			furnitureChance:       0.5,
+			explosiveBarrelChance: 0.2,
+			poisonContainerChance: 0.08,
+			objectsPerRoom:        3,
+		},
+		"postapocalyptic": {
+			crateChance:           0.5,
+			barrelChance:          0.7,
+			furnitureChance:       0.6,
+			explosiveBarrelChance: 0.12,
+			poisonContainerChance: 0.1,
+			objectsPerRoom:        4,
+		},
+	}
+
+	// Default configuration if genre not found
+	config := configs["fantasy"]
+	if genreConfig, ok := configs[genreID]; ok {
+		config = genreConfig
+	}
+
+	// Iterate through rooms (skip entrance room at index 0)
+	for i := 1; i < len(terrainMap.Rooms); i++ {
+		room := terrainMap.Rooms[i]
+
+		// Skip very small rooms (< 4x4 tiles)
+		if room.Width < 4 || room.Height < 4 {
+			continue
+		}
+
+		// Spawn objects in this room based on configuration
+		objectsSpawned := 0
+		for objectsSpawned < config.objectsPerRoom {
+			// Randomly select object type
+			roll := rng.Float64()
+
+			var objectType engine.ObjectType
+			var shouldSpawn bool
+
+			if roll < config.crateChance {
+				objectType = engine.ObjectCrate
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance {
+				// Decide between regular and explosive barrel
+				if rng.Float64() < config.explosiveBarrelChance {
+					objectType = engine.ObjectExplosiveBarrel
+				} else {
+					objectType = engine.ObjectBarrel
+				}
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance {
+				objectType = engine.ObjectFurniture
+				shouldSpawn = true
+			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance+config.poisonContainerChance {
+				objectType = engine.ObjectPoisonContainer
+				shouldSpawn = true
+			}
+
+			if !shouldSpawn {
+				break // Move to next room
+			}
+
+			// Find a valid spawn location within room (not on walls, not on other objects)
+			attempts := 0
+			maxAttempts := 10
+			for attempts < maxAttempts {
+				// Random position within room (leave 1-tile border)
+				tx := room.X + 1 + rng.Intn(room.Width-2)
+				ty := room.Y + 1 + rng.Intn(room.Height-2)
+
+				// Check if tile is walkable
+				tile := terrainMap.GetTile(tx, ty)
+				if tile == terrain.TileWall || tile == terrain.TileWallNE ||
+					tile == terrain.TileWallNW || tile == terrain.TileWallSE ||
+					tile == terrain.TileWallSW {
+					attempts++
+					continue
+				}
+
+				// Convert tile coordinates to world coordinates (center of tile)
+				worldX := float64(tx*tileSize + tileSize/2)
+				worldY := float64(ty*tileSize + tileSize/2)
+
+				// Check if position is clear of other entities
+				entities := world.GetEntities()
+				tooClose := false
+				for _, entity := range entities {
+					if posComp, ok := entity.GetComponent("position"); ok {
+						pos := posComp.(*engine.PositionComponent)
+						dx := pos.X - worldX
+						dy := pos.Y - worldY
+						dist := math.Sqrt(dx*dx + dy*dy)
+						if dist < float64(tileSize) { // Objects must be at least 1 tile apart
+							tooClose = true
+							break
+						}
+					}
+				}
+
+				if tooClose {
+					attempts++
+					continue
+				}
+
+				// Valid location found, spawn object
+				objectEntity := world.CreateEntity()
+
+				// Add position component
+				posComp := &engine.PositionComponent{
+					X: worldX,
+					Y: worldY,
+				}
+				objectEntity.AddComponent(posComp)
+
+				// Add destructible object component
+				destructibleComp := engine.NewDestructibleObjectComponent(objectType)
+				objectEntity.AddComponent(destructibleComp)
+
+				// Add carriable component (lighter objects can be picked up)
+				weight := 0.5 // Default medium weight
+				if objectType == engine.ObjectCrate {
+					weight = 0.3 // Light crate
+				} else if objectType == engine.ObjectBarrel || objectType == engine.ObjectExplosiveBarrel {
+					weight = 0.7 // Heavy barrel
+				} else if objectType == engine.ObjectFurniture {
+					weight = 0.6 // Medium furniture
+				} else if objectType == engine.ObjectPoisonContainer {
+					weight = 0.4 // Light container
+				}
+				carriableComp := engine.NewCarriableComponent(weight)
+				objectEntity.AddComponent(carriableComp)
+
+				// Add context action component for interaction prompts
+				actionType := engine.ActionPickup
+				actionText := "Pickup"
+				if objectType == engine.ObjectCrate {
+					actionText = "Open Crate"
+					actionType = engine.ActionOpen
+				}
+				contextComp := engine.NewContextActionComponent(actionType, actionText)
+				objectEntity.AddComponent(contextComp)
+
+				objectCount++
+				objectsSpawned++
+
+				if logger != nil && logger.GetLevel() >= logrus.DebugLevel {
+					logger.WithFields(logrus.Fields{
+						"objectType": objectType.String(),
+						"x":          worldX,
+						"y":          worldY,
+						"roomIndex":  i,
+					}).Debug("spawned destructible object")
+				}
+
+				break // Spawned successfully, move to next object
+			}
+
+			if attempts >= maxAttempts {
+				// Couldn't find valid location, stop trying for this room
+				break
+			}
+		}
+	}
+
+	return objectCount
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
@@ -570,6 +883,18 @@ func main() {
 
 	// Add core gameplay systems
 	inputSystem := engine.NewInputSystem()
+
+	// WASM TOUCH FIX: Initialize virtual controls immediately for touch-capable platforms
+	// This ensures controls are visible on page load rather than waiting for first touch
+	if mobile.IsTouchCapable() {
+		inputSystem.InitializeVirtualControls(*width, *height)
+		clientLogger.WithFields(logrus.Fields{
+			"platform": mobile.GetPlatform().String(),
+			"width":    *width,
+			"height":   *height,
+		}).Info("virtual controls initialized for touch-capable platform")
+	}
+
 	// GAP-001 & GAP-002 REPAIR: Use proper constructors with required parameters
 	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
 	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
@@ -578,6 +903,9 @@ func main() {
 	movementSystem.SetCollisionSystem(collisionSystem)
 
 	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
+
+	// Phase 11.2: Initialize interaction system for puzzle element interactions
+	interactionSystem := engine.NewInteractionSystem(game.World)
 
 	// GAP-016 REPAIR: Initialize particle system for visual effects
 	particleSystem := engine.NewParticleSystem()
@@ -773,6 +1101,12 @@ func main() {
 	// Wire audio manager to game for settings integration
 	game.SetAudioManager(audioManager)
 
+	// Phase 12.3: Enable adaptive music composition with motif system
+	audioManager.EnableAdaptiveMusic(true)
+	if *verbose {
+		clientLogger.Info("adaptive music composition enabled with motif system")
+	}
+
 	// Start playing exploration music
 	if err := audioManager.PlayMusic(*genreID, "exploration"); err != nil {
 		logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to start background music")
@@ -797,6 +1131,11 @@ func main() {
 
 	// Add tutorial and help systems (Phase 8.6)
 	tutorialSystem := engine.NewTutorialSystem()
+	// H-004 FIX: Disable tutorial if --no-tutorial flag is set
+	if *noTutorial {
+		tutorialSystem.Enabled = false
+		tutorialSystem.ShowUI = false
+	}
 	helpSystem := engine.NewHelpSystem()
 
 	// Connect help system to input system for ESC key handling
@@ -827,6 +1166,11 @@ func main() {
 	// 18. Tutorial/Help - UI overlays
 	game.World.AddSystem(inputSystem)
 
+	// Phase 10.3: Add camera system for screen shake and visual feedback
+	// Must be in update loop to process ScreenShakeComponent, HitStopComponent, and accessibility settings
+	// Processes after input to apply shake effects before rendering
+	game.World.AddSystem(game.CameraSystem)
+
 	// Phase 10.1: Add rotation system for 360° rotation and mouse aim
 	// Processes after input to update facing direction based on aim component
 	rotationSystem := engine.NewRotationSystem(game.World)
@@ -837,6 +1181,13 @@ func main() {
 	game.World.AddSystem(playerSpellCastingSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(collisionSystem)
+
+	// Phase 10.2: Add projectile system for ranged weapon physics
+	// Processes after collision to use terrain checker for wall bounces
+	projectileSystem := engine.NewProjectileSystem(game.World)
+	// Note: terrainChecker will be set after terrain generation
+	game.World.AddSystem(projectileSystem)
+
 	game.World.AddSystem(combatSystem)
 	game.World.AddSystem(statusEffectSystem) // Process status effects after combat
 
@@ -846,7 +1197,23 @@ func main() {
 	game.World.AddSystem(revivalSystem)
 
 	game.World.AddSystem(aiSystem)
+
+	// Phase 13.1: Add behavior tree system for advanced AI
+	// Executes behavior trees for entities with behavior tree components
+	behaviorTreeSystem := engine.NewBehaviorTreeSystem(game.World)
+	game.World.AddSystem(behaviorTreeSystem)
+
+	// Phase 13.2: Add squad system for coordinated enemy tactics
+	// Manages squad formations, coordination, and tactical behaviors
+	squadSystem := engine.NewSquadSystem(game.World)
+	game.World.AddSystem(&squadSystemWrapper{system: squadSystem})
+
 	game.World.AddSystem(progressionSystem)
+
+	// Phase 13.3: Add faction system for reputation tracking and relationships
+	// Manages NPC faction allegiances and player reputation with different groups
+	factionSystem := engine.NewFactionSystem(game.World, logger)
+	game.World.AddSystem(factionSystem)
 
 	// Add skill progression system
 	skillProgressionSystem := engine.NewSkillProgressionSystem()
@@ -872,6 +1239,9 @@ func main() {
 	game.World.AddSystem(dialogSystem)
 	game.World.AddSystem(craftingSystem)
 
+	// Phase 11.2: Add interaction system for puzzle element interactions
+	game.World.AddSystem(interactionSystem)
+
 	// GAP-017 REPAIR: Add animation system before tutorial/help to update sprites first
 	game.World.AddSystem(&animationSystemWrapper{
 		system: animationSystem,
@@ -887,9 +1257,53 @@ func main() {
 	// GAP-016 REPAIR: Add particle system for rendering effects
 	game.World.AddSystem(particleSystem)
 
+	// Phase 5.4: Add weather system for atmospheric effects
+	weatherSystem := engine.NewWeatherSystem(game.World)
+	game.World.AddSystem(weatherSystem)
+
 	// Phase 5.3: Add lifetime system for temporary entities (spell lights, etc.)
 	lifetimeSystem := engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	game.World.AddSystem(lifetimeSystem)
+
+	// Phase 11.2: Add puzzle system for procedural puzzle management
+	puzzleSystem := engine.NewPuzzleSystem(game.World)
+	game.World.AddSystem(puzzleSystem)
+
+	// Phase 11.3: Environmental Destruction & Manipulation Systems
+	// Initialize fire propagation system for explosive barrel ignition
+	const tileSize = 32 // Standard tile size used throughout the engine
+	firePropagationSystem := engine.NewFirePropagationSystemWithLogger(tileSize, *seed+1090, clientLogger.Logger)
+	firePropagationSystem.SetWorld(game.World)
+	game.World.AddSystem(firePropagationSystem)
+
+	// Initialize destructible object system for crates, barrels, furniture
+	destructibleObjectSystem := engine.NewDestructibleObjectSystemWithLogger(tileSize, *seed+1100, clientLogger.Logger)
+	destructibleObjectSystem.SetWorld(game.World)
+	destructibleObjectSystem.SetFireSystem(firePropagationSystem)
+	game.World.AddSystem(destructibleObjectSystem)
+
+	// Initialize carry system for pickup and throw mechanics
+	carrySystem := engine.NewCarrySystemWithLogger(clientLogger.Logger)
+	carrySystem.SetWorld(game.World)
+	game.World.AddSystem(carrySystem)
+
+	// Connect carry system to interaction system for F key pickup
+	interactionSystem.SetCarrySystem(carrySystem)
+
+	// Initialize hazard system for poison clouds, oil puddles, smoke
+	hazardSystem := engine.NewHazardSystemWithLogger(clientLogger.Logger)
+	hazardSystem.SetWorld(game.World)
+	game.World.AddSystem(hazardSystem)
+
+	// Phase 12.2: Add narrative system for story progression
+	// Tracks narrative events and manages story arc advancement
+	narrativeSystem := engine.NewNarrativeSystem(game.World)
+	game.World.AddSystem(narrativeSystem)
+
+	// Phase 14: Add shadow system for enhanced lighting effects
+	// Processes shadow-casting entities and renders shadows
+	shadowSystem := engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
+	game.World.AddSystem(shadowSystem)
 
 	// Store references to tutorial and help systems in game for rendering
 	game.TutorialSystem = tutorialSystem
@@ -900,6 +1314,16 @@ func main() {
 
 	// GAP-016 REPAIR: Set particle system reference on combat system for hit effects
 	combatSystem.SetParticleSystem(particleSystem, game.World, *genreID)
+
+	// Phase 10.2: Set projectile system reference on combat system for ranged weapon spawning
+	combatSystem.SetProjectileSystem(projectileSystem)
+
+	// Phase 10.3: Set camera reference on projectile system for impact shake
+	projectileSystem.SetCamera(game.CameraSystem)
+
+	// Phase 10.2: Set genre and seed for projectile visual generation
+	projectileSystem.SetGenre(*genreID)
+	projectileSystem.SetSeed(*seed)
 
 	if *verbose {
 		clientLogger.Info("systems initialized")
@@ -978,16 +1402,49 @@ func main() {
 	terrainChecker := engine.NewTerrainCollisionChecker(32, 32)
 	terrainChecker.SetTerrain(generatedTerrain)
 
-	// Connect terrain checker to collision system
+	// Connect terrain checker to collision system and projectile system
 	for _, system := range game.World.GetSystems() {
 		if collisionSys, ok := system.(*engine.CollisionSystem); ok {
 			collisionSys.SetTerrainChecker(terrainChecker)
-			break
+		}
+		if projSys, ok := system.(*engine.ProjectileSystem); ok {
+			projSys.SetTerrainChecker(terrainChecker)
 		}
 	}
 
 	if *verbose {
 		clientLogger.Info("terrain collision system initialized (efficient mode)")
+	}
+
+	// Phase 13.3: Generate world factions
+	clientLogger.Info("generating world factions")
+	factionGen := faction.NewGenerator()
+	factionResult, err := factionGen.Generate(*seed+1000, params) // Use offset seed for faction variety
+	if err != nil {
+		clientLogger.WithError(err).Fatal("failed to generate factions")
+	}
+
+	worldFactions := factionResult.([]*engine.Faction)
+	clientLogger.WithFields(logrus.Fields{
+		"count": len(worldFactions),
+		"genre": *genreID,
+	}).Info("factions generated")
+
+	// Add factions to faction system
+	for _, fac := range worldFactions {
+		// Get faction system from world
+		for _, system := range game.World.GetSystems() {
+			if facSys, ok := system.(*engine.FactionSystem); ok {
+				facSys.AddFaction(fac)
+				if *verbose {
+					clientLogger.WithFields(logrus.Fields{
+						"factionID":   fac.ID,
+						"factionName": fac.Name,
+						"factionType": fac.Type,
+					}).Debug("faction added to world")
+				}
+			}
+		}
 	}
 
 	// CATEGORY 4.3: Initialize spatial partition system for viewport culling
@@ -1009,9 +1466,8 @@ func main() {
 
 	// Connect to render system for viewport culling
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
-	// TEMPORARY: Culling disabled due to spatial partition query returning 0 entities
-	// TODO: Fix spatial partition population/query before re-enabling
-	game.RenderSystem.EnableCulling(false)
+	// Enable culling for performance optimization (Phase 4.3 complete)
+	game.RenderSystem.EnableCulling(true)
 
 	clientLogger.WithFields(logrus.Fields{
 		"worldWidth":  worldWidth,
@@ -1085,6 +1541,39 @@ func main() {
 		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
 	}
 
+	// Phase 11.2: Spawn procedural puzzles in dungeon
+	if *verbose {
+		clientLogger.Info("spawning procedural puzzles in dungeon")
+	}
+
+	puzzleParams := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+	}
+
+	puzzleCount, err := engine.SpawnPuzzlesInTerrain(game.World, generatedTerrain, *seed+2000, puzzleParams, 5)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn puzzles")
+	} else {
+		clientLogger.WithFields(logrus.Fields{
+			"puzzleCount": puzzleCount,
+			"targetCount": 5,
+			"roomCount":   len(generatedTerrain.Rooms) - 1,
+		}).Info("spawned procedural puzzles")
+	}
+
+	// Phase 11.3: Spawn destructible objects in dungeon (crates, barrels, furniture)
+	if *verbose {
+		clientLogger.Info("spawning destructible objects in dungeon")
+	}
+	objectCount := spawnDestructibleObjects(game.World, generatedTerrain, *seed+3000, *genreID, clientLogger.Logger)
+	clientLogger.WithFields(logrus.Fields{
+		"objectCount": objectCount,
+		"roomCount":   len(generatedTerrain.Rooms) - 1,
+		"genre":       *genreID,
+	}).Info("spawned destructible objects")
+
 	// Phase 5.3: Spawn environmental lights in dungeon (if lighting enabled)
 	if *enableLighting {
 		if *verbose {
@@ -1095,6 +1584,21 @@ func main() {
 			"lightCount": lightCount,
 			"genre":      *genreID,
 		}).Info("spawned environmental lights")
+	}
+
+	// Phase 5.4: Spawn weather effects (if enabled)
+	if *enableWeather {
+		if *verbose {
+			clientLogger.Info("spawning weather effects")
+		}
+		weatherEntity := spawnWeather(game.World, *width, *height, *seed+3000, *genreID, *weatherType, *weatherIntensity)
+		if weatherEntity != nil {
+			clientLogger.WithFields(logrus.Fields{
+				"type":      *weatherType,
+				"intensity": *weatherIntensity,
+				"genre":     *genreID,
+			}).Info("weather effects spawned")
+		}
 	}
 
 	// Create player entity
@@ -1173,6 +1677,25 @@ func main() {
 	camera.Smoothing = 0.1
 	player.AddComponent(camera)
 
+	// Phase 10.3: Add advanced screen shake component
+	screenShake := engine.NewScreenShakeComponent()
+	player.AddComponent(screenShake)
+
+	// Phase 10.3: Add hit-stop component
+	hitStop := engine.NewHitStopComponent()
+	player.AddComponent(hitStop)
+
+	// Phase 11.1: Add layer component for multi-layer collision
+	layerComp := engine.NewLayerComponent()
+	layerComp.CurrentLayer = 0 // Ground layer
+	player.AddComponent(&layerComp)
+
+	// Phase 14: Add shadow component for enhanced lighting
+	playerShadow := engine.NewShadowComponent(28) // Player sprite size
+	playerShadow.CastsShadow = true
+	playerShadow.ShadowType = engine.ShadowTypeSoft // Player gets soft shadow
+	player.AddComponent(playerShadow)
+
 	// Phase 5.3: Add player torch for dynamic lighting (if enabled)
 	if *enableLighting {
 		playerTorch := engine.NewTorchLight(200) // 200-pixel radius torch with flicker
@@ -1189,6 +1712,23 @@ func main() {
 
 	// Set player as the active camera
 	game.CameraSystem.SetActiveCamera(player)
+
+	// Phase 14.2: Configure animation system with player and camera for optimizations
+	animationSystem.SetCameraSystem(game.CameraSystem)
+	animationSystem.SetPlayerEntity(player)
+	// Viewport culling and distance LOD are enabled by default
+	// Can be disabled for debugging with:
+	// animationSystem.EnableViewportCulling(false)
+	// animationSystem.EnableDistanceLOD(false)
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"viewportCulling": true,
+			"distanceLOD":     true,
+			"closeThreshold":  200.0,
+			"midThreshold":    400.0,
+		}).Info("animation system configured with performance optimizations")
+	}
 
 	// Set player for HUD display
 	game.HUDSystem.SetPlayerEntity(player)
@@ -1313,8 +1853,8 @@ func main() {
 			clientLogger.WithError(err).Fatal("failed to apply character class stats")
 		}
 
-		// TODO: Store character name in player component for display
-		// Future enhancement: Add NameComponent for multiplayer identification
+		// Note: Character name stored in character creation data.
+		// Future enhancement: Add NameComponent for displaying names in multiplayer.
 	}
 
 	// Add starter items to inventory
@@ -1367,14 +1907,13 @@ func main() {
 				level, currentXP = exp.Level, int64(exp.CurrentXP)
 			}
 
-			// Get inventory data (store only item IDs for now)
-			var inventoryItems []uint64
+			// Get inventory data
 			var gold int
 			itemDataList := make([]saveload.ItemData, 0)
 			if invComp, ok := player.GetComponent("inventory"); ok {
 				inv := invComp.(*engine.InventoryComponent)
-				gold = inv.Gold // GAP-009: Save gold
-				// GAP-007: Serialize full item data
+				gold = inv.Gold
+				// Serialize full item data
 				for _, itm := range inv.Items {
 					itemDataList = append(itemDataList, saveload.ItemToData(itm))
 				}
@@ -1452,25 +1991,24 @@ func main() {
 			gameSave := &saveload.GameSave{
 				Version: saveload.SaveVersion,
 				PlayerState: &saveload.PlayerState{
-					EntityID:       player.ID,
-					X:              posX,
-					Y:              posY,
-					CurrentHealth:  currentHealth,
-					MaxHealth:      maxHealth,
-					Level:          level,
-					Experience:     int(currentXP),
-					Attack:         attack,
-					Defense:        defense,
-					MagicPower:     magic,
-					Speed:          1.0,
-					InventoryItems: inventoryItems, // Keep for backward compatibility
-					Items:          itemDataList,   // GAP-007: Full item data
-					Gold:           gold,           // GAP-009: Gold persistence
-					EquippedItems:  equippedItems,  // GAP-008: Equipment persistence
-					CurrentMana:    currentMana,
-					MaxMana:        maxMana,
-					Spells:         spellDataList,
-					TutorialState:  tutorialStateData, // GAP-003 REPAIR: Tutorial persistence
+					EntityID:      player.ID,
+					X:             posX,
+					Y:             posY,
+					CurrentHealth: currentHealth,
+					MaxHealth:     maxHealth,
+					Level:         level,
+					Experience:    int(currentXP),
+					Attack:        attack,
+					Defense:       defense,
+					MagicPower:    magic,
+					Speed:         1.0,
+					Items:         itemDataList,
+					Gold:          gold,
+					EquippedItems: equippedItems,
+					CurrentMana:   currentMana,
+					MaxMana:       maxMana,
+					Spells:        spellDataList,
+					TutorialState: tutorialStateData,
 				},
 				WorldState: &saveload.WorldState{
 					Seed:       *seed,
@@ -1668,14 +2206,18 @@ func main() {
 		clientLogger.Info("setting up UI input callbacks")
 	}
 	// GAP-014 REPAIR: Pass objective tracker to enable tutorial quest tracking
-	game.SetupInputCallbacks(inputSystem, objectiveTracker)
+	// H-008 FIX: Check for callback registration errors
+	if err := game.SetupInputCallbacks(inputSystem, objectiveTracker); err != nil {
+		clientLogger.WithError(err).Fatal("failed to setup input callbacks")
+	}
 	if *verbose {
 		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		clientLogger.Info("inventory actions: E to equip/use, D to drop")
 	}
 
 	// GAP-004 REPAIR: Setup merchant interaction callback (F key)
-	inputSystem.SetInteractCallback(func() {
+	// H-008 FIX: Check for callback registration errors
+	if err := inputSystem.SetInteractCallback(func() {
 		// Get player position
 		if player == nil {
 			return
@@ -1716,7 +2258,9 @@ func main() {
 		if *verbose {
 			clientLogger.WithField("distance", dist).Debug("opened shop with merchant")
 		}
-	})
+	}); err != nil {
+		clientLogger.WithError(err).Fatal("failed to setup interact callback")
+	}
 
 	if *verbose {
 		clientLogger.Info("merchant interaction registered (F key when near merchant)")

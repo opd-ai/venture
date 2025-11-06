@@ -149,7 +149,12 @@ func (e *Entity) GetStats() *StatsComponent {
 // GetExperience retrieves the ExperienceComponent if present.
 func (e *Entity) GetExperience() *ExperienceComponent {
 	if comp, ok := e.Components["experience"]; ok {
-		return comp.(*ExperienceComponent)
+		if exp, ok := comp.(*ExperienceComponent); ok {
+			return exp
+		}
+		// Type mismatch - component registered with wrong type
+		// This indicates a serious bug in component registration
+		return nil
 	}
 	return nil
 }
@@ -157,7 +162,12 @@ func (e *Entity) GetExperience() *ExperienceComponent {
 // GetAttack retrieves the AttackComponent if present.
 func (e *Entity) GetAttack() *AttackComponent {
 	if comp, ok := e.Components["attack"]; ok {
-		return comp.(*AttackComponent)
+		if atk, ok := comp.(*AttackComponent); ok {
+			return atk
+		}
+		// Type mismatch - component registered with wrong type
+		// This indicates a serious bug in component registration
+		return nil
 	}
 	return nil
 }
@@ -165,7 +175,12 @@ func (e *Entity) GetAttack() *AttackComponent {
 // GetAnimation retrieves the AnimationComponent if present.
 func (e *Entity) GetAnimation() *AnimationComponent {
 	if comp, ok := e.Components["animation"]; ok {
-		return comp.(*AnimationComponent)
+		if anim, ok := comp.(*AnimationComponent); ok {
+			return anim
+		}
+		// Type mismatch - component registered with wrong type
+		// This indicates a serious bug in component registration
+		return nil
 	}
 	return nil
 }
@@ -286,6 +301,7 @@ func (w *World) Update(deltaTime float64) {
 		}
 		w.entitiesToAdd = w.entitiesToAdd[:0]
 		w.entityListDirty = true
+		w.invalidateQueryCache() // Invalidate query cache when entities are added
 	}
 
 	// Process pending removals

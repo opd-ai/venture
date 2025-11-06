@@ -18,7 +18,8 @@ Developer documentation for the Venture procedural action-RPG engine.
 5. [Audio System](#audio-system)
 6. [Networking](#networking)
 7. [Save/Load System](#saveload-system)
-8. [Examples](#examples)
+8. [UI Systems](#ui-systems)
+9. [Examples](#examples)
 
 ---
 
@@ -120,7 +121,7 @@ entity.AddComponent(&MyComponent{Value: 42, Data: "hello"})
 - `VelocityComponent` - VX, VY velocity (float64)
 - `ColliderComponent` - Collision box (Width, Height, Solid, IsTrigger, Layer, OffsetX, OffsetY)
 - `BoundsComponent` - World boundaries (MinX, MinY, MaxX, MaxY, Wrap)
-- `SpriteComponent` - Visual representation (Width, Height, Color, Image, Layer)
+- Sprite (via `SpriteProvider` interface) - Visual representation (Width, Height, Color, Image, Layer, Visible). Implementations: `EbitenSprite` (production), `StubSprite` (testing)
 - `HealthComponent` - HP tracking (Current, Max float64)
 - `StatsComponent` - RPG stats (Attack, Defense, MagicPower, MagicDefense, CritChance, CritDamage, Evasion, Resistances)
 - `AttackComponent` - Combat abilities (Damage, DamageType, Range, Cooldown, CooldownTimer)
@@ -134,6 +135,7 @@ entity.AddComponent(&MyComponent{Value: 42, Data: "hello"})
 - `ExperienceComponent` - XP and leveling (Level, CurrentXP, RequiredXP, SkillPoints, StatPoints)
 - `QuestTrackerComponent` - Quest progress tracking (ActiveQuests, MaxActiveQuests)
 - `ParticleEmitterComponent` - Particle effects (Particles, MaxParticles, EmissionRate, LastEmission)
+- `AnimationComponent` - Animation state (CurrentState, PreviousState, Frames, FrameIndex, FrameTime, Loop, Playing)
 - `CameraComponent` - Camera targeting (TargetX, TargetY, Smoothing, Shake)
 - `ManaComponent` - Magic resource (Current, Max int, Regen float64)
 - `SpellSlotComponent` - Spell management (Slots [5]*Spell)
@@ -184,7 +186,7 @@ world.AddSystem(&MySystem{})
 - `ParticleSystem` - Particle effects (`NewParticleSystem()`)
 - `ObjectiveTrackerSystem` - Quest objective tracking (`NewObjectiveTrackerSystem()`)
 - `ItemPickupSystem` - Automatic item collection (`NewItemPickupSystem(world *World)`)
-- `SpellCastingSystem` - Magic spell execution (`NewSpellCastingSystem(world *World)`)
+- `SpellCastingSystem` - Magic spell execution (`NewSpellCastingSystem(world *World, statusEffectSys *StatusEffectSystem)`)
 - `PlayerSpellCastingSystem` - Player spell casting (`NewPlayerSpellCastingSystem(spellCasting, world)`)
 - `PlayerItemUseSystem` - Player item usage (`NewPlayerItemUseSystem(inventory, world)`)
 - `ManaRegenSystem` - Mana regeneration (`&ManaRegenSystem{}`)
@@ -992,8 +994,80 @@ metadata, err := mgr.GetSaveMetadata("mysave")
 if err != nil {
     log.Fatal(err)
 }
+}
 fmt.Printf("Saved at: %s\n", metadata.SavedAt)
 fmt.Printf("Level: %d\n", metadata.PlayerLevel)
+```
+
+---
+
+## UI Systems
+
+### Package: `github.com/opd-ai/venture/pkg/engine`
+
+The engine package provides UI systems for inventory, character stats, quests, map, and other game interfaces.
+
+### Map UI
+
+The Map UI displays the explored world map with fog of war exploration tracking.
+
+```go
+// Create map UI
+mapUI := engine.NewEbitenMapUI(world, screenWidth, screenHeight)
+
+// Toggle map visibility
+mapUI.Toggle()
+
+// Check if visible
+if mapUI.IsVisible() {
+    // Map is open
+}
+
+// Set player entity to track
+mapUI.SetPlayerEntity(playerEntity)
+
+// Get fog of war exploration state (for saving)
+fogOfWar := mapUI.GetFogOfWar()
+// Returns [][]bool where true = explored, false = unexplored
+
+// Restore fog of war exploration state (from save file)
+mapUI.SetFogOfWar(savedFogOfWar)
+```
+
+**Fog of War Persistence:**
+The map system tracks which areas have been explored by the player. This exploration state persists across save/load operations:
+- Each tile is either explored (visible on map) or unexplored (fog of war)
+- The `GetFogOfWar()` method returns a 2D boolean array for serialization
+- The `SetFogOfWar()` method restores exploration state from saved data
+- Fog of war dimensions match terrain dimensions (Width x Height)
+
+**Methods:**
+- `NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI` - Create map UI
+- `Toggle()` - Show/hide map
+- `IsVisible() bool` - Check if map is open
+- `Show()` - Display map
+- `Hide()` - Hide map
+- `SetPlayerEntity(entity *Entity)` - Set player entity to track on map
+- `GetFogOfWar() [][]bool` - Get exploration state (for saving)
+- `SetFogOfWar(fogOfWar [][]bool)` - Restore exploration state (from save)
+
+**Dual-Exit Pattern:**
+Like all game menus, the Map UI supports dual-exit navigation (GAP-004 standardization):
+- Press `M` key to toggle map open/closed
+- Press `ESC` to close map (works in all menus)
+
+---
+
+## Examples
+
+### Complete Entity Creation
+
+```go
+func CreatePlayer(world *engine.World, x, y float64) *engine.Entity {
+    player := engine.NewEntity(1)
+    
+    // Position
+```
 ```
 
 ---

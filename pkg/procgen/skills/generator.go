@@ -48,17 +48,15 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 	}
 
 	// Validate parameters
-	if params.Depth < 0 {
-		err := fmt.Errorf("depth must be non-negative")
+	if err := procgen.ValidateDepth(params.Depth); err != nil {
 		if g.logger != nil {
-			g.logger.WithError(err).WithField("depth", params.Depth).Error("invalid depth parameter")
+			g.logger.WithError(err).Error("invalid depth parameter")
 		}
 		return nil, err
 	}
-	if params.Difficulty < 0 || params.Difficulty > 1 {
-		err := fmt.Errorf("difficulty must be between 0 and 1")
+	if err := procgen.ValidateDifficulty(params.Difficulty); err != nil {
 		if g.logger != nil {
-			g.logger.WithError(err).WithField("difficulty", params.Difficulty).Error("invalid difficulty parameter")
+			g.logger.WithError(err).Error("invalid difficulty parameter")
 		}
 		return nil, err
 	}

@@ -32,6 +32,7 @@ func NewVisualFeedbackComponent() *VisualFeedbackComponent {
 }
 
 // TriggerFlash starts a white flash effect (typically when taking damage).
+// Phase 10.3: Can be disabled via accessibility settings (checked by caller).
 func (v *VisualFeedbackComponent) TriggerFlash(intensity float64) {
 	v.FlashIntensity = intensity
 	v.FlashTimer = v.FlashDuration
@@ -68,11 +69,16 @@ func (v *VisualFeedbackComponent) GetFlashAlpha() float64 {
 }
 
 // VisualFeedbackSystem updates visual feedback effects over time.
-type VisualFeedbackSystem struct{}
+type VisualFeedbackSystem struct {
+	// Phase 10.3: Accessibility settings
+	Accessibility *AccessibilitySettings
+}
 
 // NewVisualFeedbackSystem creates a new visual feedback system.
 func NewVisualFeedbackSystem() *VisualFeedbackSystem {
-	return &VisualFeedbackSystem{}
+	return &VisualFeedbackSystem{
+		Accessibility: NewAccessibilitySettings(), // Phase 10.3: Default accessibility
+	}
 }
 
 // Update decrements flash timers and updates visual effects.

@@ -98,9 +98,9 @@ func (m *MainMenuUI) Update() bool {
 		return true
 	}
 
-	// Handle mouse input
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mouseX, mouseY := ebiten.CursorPosition()
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
 		if clickedOption := m.getOptionAtPosition(mouseX, mouseY); clickedOption != -1 {
 			m.selectedIdx = clickedOption
 			if m.onSelect != nil {
@@ -110,8 +110,8 @@ func (m *MainMenuUI) Update() bool {
 		}
 	}
 
-	// Update selection highlight on mouse hover
-	mouseX, mouseY := ebiten.CursorPosition()
+	// Update selection highlight on mouse/touch hover (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	if hoverOption := m.getOptionAtPosition(mouseX, mouseY); hoverOption != -1 {
 		m.selectedIdx = hoverOption
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 // ItemEntityComponent marks an entity as representing a collectable item in the world.
@@ -231,6 +232,7 @@ func getItemColor(itm *item.Item) color.RGBA {
 type ItemPickupSystem struct {
 	world        *World
 	pickupRadius float64 // How close player needs to be to auto-pickup
+	logger       *logrus.Entry
 
 	// GAP-015 REPAIR: System references for feedback
 	audioManager   *AudioManager
@@ -239,9 +241,19 @@ type ItemPickupSystem struct {
 
 // NewItemPickupSystem creates a new item pickup system.
 func NewItemPickupSystem(world *World) *ItemPickupSystem {
+	return NewItemPickupSystemWithLogger(world, nil)
+}
+
+// NewItemPickupSystemWithLogger creates a new item pickup system with a logger.
+func NewItemPickupSystemWithLogger(world *World, logger *logrus.Logger) *ItemPickupSystem {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithField("system", "item_pickup")
+	}
 	return &ItemPickupSystem{
 		world:        world,
 		pickupRadius: 32.0, // Default pickup radius (one tile)
+		logger:       logEntry,
 	}
 }
 
@@ -335,7 +347,9 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 					if audioSys := s.getAudioManager(); audioSys != nil {
 						if err := audioSys.PlaySFX("pickup", int64(itemEntity.ID)); err != nil {
 							// Audio failure is non-critical, log and continue
-							_ = err
+							if s.logger != nil {
+								s.logger.Debugf("Failed to play item pickup sound: %v", err)
+							}
 						}
 					}
 
@@ -414,7 +428,9 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 				if audioSys := s.getAudioManager(); audioSys != nil {
 					if err := audioSys.PlaySFX("spell", int64(recipeEntity.ID)); err != nil {
 						// Audio failure is non-critical, log and continue
-						_ = err
+						if s.logger != nil {
+							s.logger.Debugf("Failed to play recipe pickup sound: %v", err)
+						}
 					}
 				}
 

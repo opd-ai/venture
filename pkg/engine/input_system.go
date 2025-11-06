@@ -249,7 +249,6 @@ type InputSystem struct {
 	// References to game systems for special key handling
 	helpSystem     *EbitenHelpSystem
 	tutorialSystem *EbitenTutorialSystem
-	menuSystem     *EbitenMenuSystem
 	cameraSystem   *CameraSystem // Phase 10.1: For screen-to-world coordinate conversion
 
 	// Mobile input support
@@ -730,55 +729,94 @@ func (s *InputSystem) SetQuickLoadCallback(callback func() error) {
 }
 
 // SetInventoryCallback sets the callback function for opening inventory (I key).
-func (s *InputSystem) SetInventoryCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetInventoryCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("inventory callback cannot be nil")
+	}
 	s.onInventoryOpen = callback
+	return nil
 }
 
 // SetCharacterCallback sets the callback function for opening character screen (C key).
-func (s *InputSystem) SetCharacterCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCharacterCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("character callback cannot be nil")
+	}
 	s.onCharacterOpen = callback
+	return nil
 }
 
 // SetSkillsCallback sets the callback function for opening skills screen (K key).
-func (s *InputSystem) SetSkillsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetSkillsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("skills callback cannot be nil")
+	}
 	s.onSkillsOpen = callback
+	return nil
 }
 
 // SetQuestsCallback sets the callback function for opening quest log (J key).
-func (s *InputSystem) SetQuestsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetQuestsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("quests callback cannot be nil")
+	}
 	s.onQuestsOpen = callback
+	return nil
 }
 
 // SetMapCallback sets the callback function for opening map (M key).
-func (s *InputSystem) SetMapCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetMapCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("map callback cannot be nil")
+	}
 	s.onMapOpen = callback
+	return nil
 }
 
 // SetCraftingCallback sets the callback function for opening crafting UI (R key).
-func (s *InputSystem) SetCraftingCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCraftingCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("crafting callback cannot be nil")
+	}
 	s.onCraftingOpen = callback
+	return nil
 }
 
 // SetCycleTargetsCallback sets the callback function for cycling targets (Tab key).
-func (s *InputSystem) SetCycleTargetsCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetCycleTargetsCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("cycle targets callback cannot be nil")
+	}
 	s.onCycleTargets = callback
+	return nil
 }
 
 // SetMenuToggleCallback sets the callback function for toggling the pause menu (ESC key).
 // This is called when ESC is pressed and neither tutorial nor help system consume the event.
-func (s *InputSystem) SetMenuToggleCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetMenuToggleCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("menu toggle callback cannot be nil")
+	}
 	s.onMenuToggle = callback
+	return nil
 }
 
 // SetInteractCallback sets the callback function for interacting with NPCs/merchants (F key).
-func (s *InputSystem) SetInteractCallback(callback func()) {
+// H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
+func (s *InputSystem) SetInteractCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("interact callback cannot be nil")
+	}
 	s.onInteract = callback
-}
-
-// SetMenuSystem connects the menu system for ESC key toggling.
-// Deprecated: Use SetMenuToggleCallback instead for better decoupling.
-func (s *InputSystem) SetMenuSystem(menuSystem *EbitenMenuSystem) {
-	s.menuSystem = menuSystem
+	return nil
 }
 
 // ===== KEYBOARD INPUT METHODS =====
@@ -907,6 +945,72 @@ func (s *InputSystem) GetMouseDelta() (dx, dy int) {
 // X is for horizontal scroll wheels (less common).
 func (s *InputSystem) GetMouseWheel() (deltaX, deltaY float64) {
 	return ebiten.Wheel()
+}
+
+// ===== UNIFIED TOUCH/MOUSE INPUT HELPERS =====
+// Touch support for WASM/mobile: These functions provide unified detection
+// of both touch and mouse input, enabling full touchscreen gameplay.
+
+// IsTouchOrMouseJustPressed returns true if either a touch or left mouse button
+// was just pressed this frame. This unifies touch and mouse input for UI interactions.
+// Touch support for WASM/mobile platforms.
+func IsTouchOrMouseJustPressed() bool {
+	// Check for mouse click
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return true
+	}
+
+	// Check for new touch input
+	touchIDs := inpututil.AppendJustPressedTouchIDs(nil)
+	return len(touchIDs) > 0
+}
+
+// GetTouchOrMousePosition returns the position of either the first active touch
+// or the mouse cursor. Prioritizes touch input when available.
+// The hasActiveInput return value is true when there's an active touch or pressed mouse button,
+// false when only cursor position is available without interaction.
+// Touch support for WASM/mobile platforms.
+func GetTouchOrMousePosition() (x, y int, hasActiveInput bool) {
+	// Check for active touch first (priority on touch devices)
+	touchIDs := ebiten.TouchIDs()
+	if len(touchIDs) > 0 {
+		// Return the first touch position with active input flag
+		touchX, touchY := ebiten.TouchPosition(touchIDs[0])
+		return touchX, touchY, true
+	}
+
+	// Fall back to mouse position
+	x, y = ebiten.CursorPosition()
+	// Return cursor position with active input flag based on mouse button state
+	hasActiveInput = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	return x, y, hasActiveInput
+}
+
+// HasTouchOrMouseInput returns true if there is any active touch or mouse button press.
+// Only checks left mouse button for consistency with touch input (no button distinction).
+// Touch support for WASM/mobile platforms.
+func HasTouchOrMouseInput() bool {
+	// Check for active touches
+	if len(ebiten.TouchIDs()) > 0 {
+		return true
+	}
+
+	// Check for left mouse button press (consistent with touch tap behavior)
+	return ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
+// IsTouchOrMouseJustReleased returns true if either a touch or left mouse button
+// was just released this frame. This is the release counterpart to IsTouchOrMouseJustPressed.
+// Touch support for WASM/mobile platforms.
+func IsTouchOrMouseJustReleased() bool {
+	// Check for mouse release
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+		return true
+	}
+
+	// Check for touch release (any touch that was active but is now gone)
+	touchIDs := inpututil.AppendJustReleasedTouchIDs(nil)
+	return len(touchIDs) > 0
 }
 
 // ===== KEY BINDING MANAGEMENT =====

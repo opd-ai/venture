@@ -405,7 +405,8 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 	ui.drawLegend(screen, panelX+10, panelY+panelHeight-60)
 
 	// Draw controls (standardized menu navigation)
-	controlsText := "[Arrow Keys/WASD] Pan | [Mouse Wheel] Zoom | [Space] Center | Press [M] or [ESC] to close"
+	exitHint := GetExitHint(MenuKeys.Map)
+	controlsText := "[Arrow Keys/WASD] Pan | [Mouse Wheel] Zoom | [Space] Center | " + exitHint
 	text.Draw(screen, controlsText, basicfont.Face7x13,
 		panelX+10, panelY+panelHeight-10, color.RGBA{180, 180, 180, 255})
 }

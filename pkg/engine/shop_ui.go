@@ -62,6 +62,9 @@ type ShopUI struct {
 	// Transaction feedback
 	lastTransactionMessage string
 	transactionMessageTime float64 // Time remaining to show message
+
+	// H-002 FIX: Error feedback
+	errorState *UIErrorState
 }
 
 // NewShopUI creates a new shop UI.
@@ -78,6 +81,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		padding:      15,
 		selectedSlot: -1,
 		hoveredSlot:  -1,
+		errorState:   NewUIErrorState(), // H-002 FIX
 	}
 }
 
@@ -149,7 +153,7 @@ func (ui *ShopUI) SetMode(mode ShopMode) {
 }
 
 // Update processes input for the shop UI.
-// Handles dual-exit navigation (S key + ESC), mode switching (TAB),
+// Handles dual-exit navigation (F key + ESC), mode switching (TAB),
 // item selection (mouse/keyboard), and transaction confirmation (ENTER/click).
 func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	// Update transaction message timer
@@ -161,8 +165,8 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Dual-exit navigation: S key (toggle) OR ESC (close only)
-	// Note: Shop uses S key by convention, matching inventory (I), character (C), etc.
+	// Dual-exit navigation: F key (toggle) OR ESC (close only)
+	// Note: Shop uses F key to match merchant interaction semantics
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Shop, ui.visible); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
@@ -213,9 +217,9 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Handle mouse input
-	mouseX, mouseY := ebiten.CursorPosition()
-	mousePressed := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
 
 	// Check if mouse is over item grid
 	gridStartY := windowY + 100 // Below header
@@ -274,7 +278,8 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 // This is an internal helper called by Update when player confirms a transaction.
 func (ui *ShopUI) executeTransaction() {
 	if ui.commerceSystem == nil {
-		ui.showMessage("Commerce system not available")
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError("Commerce system not available")
 		return
 	}
 
@@ -298,7 +303,8 @@ func (ui *ShopUI) executeTransaction() {
 	}
 
 	if err != nil {
-		ui.showMessage(fmt.Sprintf("Error: %v", err))
+		// H-002 FIX: Use error state for consistent feedback
+		ui.errorState.ShowError(fmt.Sprintf("Transaction failed: %v", err))
 		return
 	}
 
@@ -310,7 +316,8 @@ func (ui *ShopUI) executeTransaction() {
 		}
 		ui.selectedSlot = -1 // Clear selection after successful transaction
 	} else {
-		ui.showMessage(result.ErrorMessage)
+		// H-002 FIX: Use error state for transaction failures
+		ui.errorState.ShowError(result.ErrorMessage)
 	}
 }
 
@@ -367,17 +374,17 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	}
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
 
+	// Issue #26 FIX: Display player gold prominently in header
+	goldText := fmt.Sprintf("Your Gold: %d", playerInv.Gold)
+	ebitenutil.DebugPrintAt(img, goldText, windowX+10, windowY+30)
+
 	// Draw exit hint (standardized dual-exit navigation)
-	exitHint := "Press [S] or [ESC] to close"
-	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
+	exitHint := GetExitHint(MenuKeys.Shop)
+	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
 	// Draw mode indicator and switch hint
 	modeText := fmt.Sprintf("Mode: %s (TAB to switch)", ui.mode.String())
-	ebitenutil.DebugPrintAt(img, modeText, windowX+windowWidth-200, windowY+10)
-
-	// Draw player gold
-	goldText := fmt.Sprintf("Your Gold: %d", playerInv.Gold)
-	ebitenutil.DebugPrintAt(img, goldText, windowX+windowWidth-150, windowY+30)
+	ebitenutil.DebugPrintAt(img, modeText, windowX+windowWidth-200, windowY+30)
 
 	// Draw transaction message if active
 	if ui.transactionMessageTime > 0 && ui.lastTransactionMessage != "" {
@@ -408,12 +415,54 @@ func (ui *ShopUI) Draw(screen interface{}) {
 			slotY := gridStartY + row*ui.slotSize
 
 			// Draw slot background with selection/hover highlighting
+			// Issue #26: Color-code affordability (red tint for too expensive)
 			slotColor := color.RGBA{50, 50, 60, 255}
+
+			// Check affordability in buy mode
+			if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+				itm := currentInventory[slotIndex]
+				if itm != nil {
+					price := merchant.GetSellPrice(itm)
+					if price > playerInv.Gold {
+						// Red tint for unaffordable items
+						slotColor = color.RGBA{80, 40, 40, 255}
+					} else {
+						// Green tint for affordable items
+						slotColor = color.RGBA{40, 70, 40, 255}
+					}
+				}
+			}
+
+			// Override with hover/selection highlighting
 			if slotIndex == ui.hoveredSlot {
-				slotColor = color.RGBA{70, 70, 90, 255}
+				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+					itm := currentInventory[slotIndex]
+					if itm != nil {
+						price := merchant.GetSellPrice(itm)
+						if price > playerInv.Gold {
+							slotColor = color.RGBA{100, 60, 60, 255} // Red-tinted hover
+						} else {
+							slotColor = color.RGBA{60, 100, 60, 255} // Green-tinted hover
+						}
+					}
+				} else {
+					slotColor = color.RGBA{70, 70, 90, 255}
+				}
 			}
 			if slotIndex == ui.selectedSlot {
-				slotColor = color.RGBA{90, 90, 120, 255}
+				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+					itm := currentInventory[slotIndex]
+					if itm != nil {
+						price := merchant.GetSellPrice(itm)
+						if price > playerInv.Gold {
+							slotColor = color.RGBA{120, 70, 70, 255} // Red-tinted selection
+						} else {
+							slotColor = color.RGBA{70, 120, 70, 255} // Green-tinted selection
+						}
+					}
+				} else {
+					slotColor = color.RGBA{90, 90, 120, 255}
+				}
 			}
 
 			slot := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
@@ -457,7 +506,14 @@ func (ui *ShopUI) Draw(screen interface{}) {
 						ebitenutil.DebugPrintAt(img, itm.Name, tooltipX+5, tooltipY+5)
 						ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", itm.Stats.Value), tooltipX+5, tooltipY+20)
 						if ui.mode == ShopModeBuy {
-							ebitenutil.DebugPrintAt(img, fmt.Sprintf("Buy Price: %d gold", price), tooltipX+5, tooltipY+35)
+							// Issue #26: Show affordability indicator
+							priceText := fmt.Sprintf("Buy Price: %d gold", price)
+							if price > playerInv.Gold {
+								priceText += " (TOO EXPENSIVE)"
+							} else {
+								priceText += " (CAN AFFORD)"
+							}
+							ebitenutil.DebugPrintAt(img, priceText, tooltipX+5, tooltipY+35)
 						} else {
 							ebitenutil.DebugPrintAt(img, fmt.Sprintf("Sell Price: %d gold", price), tooltipX+5, tooltipY+35)
 						}
@@ -466,4 +522,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 			}
 		}
 	}
+
+	// H-002 FIX: Draw error feedback
+	ui.errorState.DrawError(img)
 }

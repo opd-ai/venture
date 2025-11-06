@@ -366,8 +366,8 @@ func TestGameSave_NewGameSave(t *testing.T) {
 		t.Error("Settings should not be nil")
 	}
 
-	if save.PlayerState.InventoryItems == nil {
-		t.Error("InventoryItems should not be nil")
+	if save.PlayerState.Items == nil {
+		t.Error("Items should not be nil")
 	}
 
 	if save.WorldState.ModifiedEntities == nil {
@@ -402,10 +402,17 @@ func TestSaveManager_ComplexSave(t *testing.T) {
 	save.PlayerState.Defense = 50.0
 	save.PlayerState.MagicPower = 80.0
 	save.PlayerState.Speed = 100.0
-	save.PlayerState.InventoryItems = []uint64{1, 2, 3, 4, 5}
-	save.PlayerState.EquippedWeapon = 101
-	save.PlayerState.EquippedArmor = 202
-	save.PlayerState.EquippedAccessory = 303
+	save.PlayerState.Items = []ItemData{
+		{ID: "1", Name: "Sword", Type: "weapon"},
+		{ID: "2", Name: "Shield", Type: "armor"},
+		{ID: "3", Name: "Potion", Type: "consumable"},
+	}
+	save.PlayerState.Gold = 1000
+	save.PlayerState.EquippedItems = EquipmentData{
+		Weapon:    &ItemData{ID: "101", Name: "Epic Sword", Type: "weapon"},
+		Armor:     &ItemData{ID: "202", Name: "Epic Armor", Type: "armor"},
+		Accessory: &ItemData{ID: "303", Name: "Ring", Type: "accessory"},
+	}
 
 	// World state
 	save.WorldState.Seed = 98765
@@ -456,11 +463,14 @@ func TestSaveManager_ComplexSave(t *testing.T) {
 	if loaded.PlayerState.X != save.PlayerState.X {
 		t.Error("X mismatch")
 	}
-	if loaded.PlayerState.EquippedWeapon != save.PlayerState.EquippedWeapon {
-		t.Error("EquippedWeapon mismatch")
+	if loaded.PlayerState.Gold != save.PlayerState.Gold {
+		t.Error("Gold mismatch")
 	}
-	if len(loaded.PlayerState.InventoryItems) != len(save.PlayerState.InventoryItems) {
-		t.Error("InventoryItems length mismatch")
+	if len(loaded.PlayerState.Items) != len(save.PlayerState.Items) {
+		t.Error("Items length mismatch")
+	}
+	if loaded.PlayerState.EquippedItems.Weapon == nil || loaded.PlayerState.EquippedItems.Weapon.ID != "101" {
+		t.Error("EquippedItems.Weapon mismatch")
 	}
 	if loaded.WorldState.GenreID != save.WorldState.GenreID {
 		t.Error("GenreID mismatch")

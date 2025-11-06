@@ -122,6 +122,19 @@ const (
 	LayerEffect
 )
 
+// Z-index constants for layer rendering order.
+// These define the standard ordering: Legs < Body < Armor < Head < Weapon < Accessory < Effect.
+// Higher values render on top of lower values.
+const (
+	ZIndexLegs      = 5  // Legs render below body
+	ZIndexBody      = 10 // Body is the base layer
+	ZIndexArmor     = 15 // Armor renders over body
+	ZIndexHead      = 20 // Head renders over armor
+	ZIndexWeapon    = 25 // Weapon renders over head
+	ZIndexAccessory = 30 // Accessories render on top
+	ZIndexEffect    = 40 // Effects render above everything
+)
+
 // String returns the string representation of a layer type.
 func (l LayerType) String() string {
 	switch l {

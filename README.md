@@ -12,6 +12,8 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 📱 **Native mobile support** - iOS and Android with touch-optimized controls
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
 - 🎨 Runtime-generated graphics using procedural techniques
+- 💡 **Dynamic lighting** - Atmospheric lighting with flickering torches, spell lights, and genre-specific presets
+- 🌦️ **Weather effects** - Procedural rain, snow, fog, and genre-appropriate weather
 - 🎵 Procedural audio synthesis for music and sound effects
 - 🌐 Multiplayer co-op supporting high-latency connections (200-5000ms, onion services)
 - 🎭 Multiple genres (fantasy, sci-fi, post-apocalyptic, horror, cyberpunk)
@@ -19,9 +21,9 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Version:** 1.0 Beta - Ready for Release 🎉
+**Version:** 2.0 Beta (Phase 14 Complete) - Built on 1.1 Production Foundation ✅
 
-All core features implemented and tested. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
+Core features implemented, tested, and production-ready. Version 2.0 (advanced features) complete. All 14 phases implemented. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
 
 ## Quick Start
 
@@ -47,11 +49,38 @@ go build -o venture-server ./cmd/server
 
 # Or with custom settings
 ./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
+
+# Enable dynamic lighting and weather effects
+./venture-client -enable-lighting -enable-weather
 ```
 
-**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), ESC (close menus/pause), F5 (save), F9 (load)
+**Visual Features:**
+- `-enable-lighting`: Adds atmospheric lighting with torches, spell lights, and dynamic shadows
+- `-enable-weather`: Enables genre-appropriate weather (rain, snow, fog, etc.)
+- `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
+- `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
+
+**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), ESC (close menus/pause), F5 (save), F9 (load), H or F1 (help)
+
+**All In-Game Menus** (Dual-Exit: Each menu's key OR ESC):
+
+| Menu | Key | Description |
+|------|-----|-------------|
+| Inventory | I | Manage items and equipment |
+| Character Stats | C | View stats, equipment, attributes |
+| Skill Tree | K | Spend skill points, unlock abilities |
+| Quest Log | J | Track active and completed quests |
+| World Map | M | View explored areas and navigation |
+| Crafting | R | Brew potions, enchant items, craft equipment |
+| Shop | F | Buy/sell items (when near merchant) |
+| Help | H or F1 | View controls and game information |
 
 **Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
+
+**Gameplay Systems:**
+- **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
+- **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
+- **Skills & Progression**: Unlock new abilities through the skill tree, gain experience from combat and quests
 
 ### 3. Multiplayer
 
@@ -100,11 +129,44 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 
 ## Documentation
 
+### Quick Access
 **New Players:** [Getting Started Guide](docs/GETTING_STARTED.md) (5 minutes) → [User Manual](docs/USER_MANUAL.md)  
 **Developers:** [Development Guide](docs/DEVELOPMENT.md) → [API Reference](docs/API_REFERENCE.md)  
 **Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
 
-**Project Info:** [Roadmap](docs/ROADMAP.md) | [Architecture](docs/ARCHITECTURE.md) | [Technical Spec](docs/TECHNICAL_SPEC.md)
+### Project Information
+- **[Roadmap](docs/ROADMAP.md)** - Development roadmap and current status
+- **[Roadmap V2](docs/ROADMAP_V2.md)** - Extended Version 2.0 roadmap with enhanced mechanics
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
+- **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
+
+### Build & Deployment Guides
+- **[Mobile Build Guide](docs/MOBILE_BUILD.md)** - iOS and Android build instructions
+- **[GitHub Pages Guide](docs/GITHUB_PAGES.md)** - WebAssembly deployment to GitHub Pages
+- **[Cross-Platform Builds](docs/CROSS_PLATFORM_BUILDS.md)** - Building for multiple platforms
+- **[CI/CD](docs/CI_CD.md)** - Continuous integration and deployment pipeline
+- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Production deployment checklist
+
+### Testing & Quality
+- **[Testing Guide](docs/TESTING.md)** - Testing strategy and practices
+- **[Testing Touch Input](docs/TESTING_TOUCH_INPUT.md)** - Touch input testing procedures
+- **[Performance Guide](docs/PERFORMANCE.md)** - Performance optimization and profiling
+
+### System Documentation
+- **[Lighting System](docs/LIGHTING_SYSTEM.md)** - Dynamic lighting implementation
+- **[Shadow System](docs/SHADOW_SYSTEM.md)** - Shadow casting and ambient occlusion
+- **[Rotation System](docs/ROTATION_SYSTEM_SPEC.md)** - Entity rotation specification
+- **[Rotation User Guide](docs/ROTATION_USER_GUIDE.md)** - User guide for rotation controls
+- **[Structured Logging](docs/STRUCTURED_LOGGING_GUIDE.md)** - Logging best practices
+- **[System Interaction Map](docs/SYSTEM_INTERACTION_MAP.md)** - System dependencies and interactions
+
+### Specialized Topics
+- **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
+- **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
+- **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
+- **[WASM Touch Testing](docs/WASM_TOUCH_TESTING.md)** - WebAssembly touch testing guide
+- **[GAPS](docs/GAPS.md)** - Identified gaps and planned improvements
+- **[Release Notes V1.1](docs/RELEASE_NOTES_V1.1.md)** - Version 1.1 release notes
 
 ## Contributing
 

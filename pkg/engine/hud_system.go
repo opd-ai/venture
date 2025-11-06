@@ -4,12 +4,20 @@ package engine
 import (
 	"fmt"
 	"image/color"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
 )
+
+// NetworkClient is an interface for getting network stats.
+// This allows the HUD to display network status without depending on concrete implementation.
+type NetworkClient interface {
+	GetLatency() time.Duration
+	IsConnected() bool
+}
 
 // HUDSystem renders the heads-up display (health bars, stats, etc).
 type EbitenHUDSystem struct {
@@ -22,6 +30,9 @@ type EbitenHUDSystem struct {
 
 	// Player entity to display stats for
 	playerEntity *Entity
+
+	// Network client for displaying latency (optional, only in multiplayer)
+	networkClient NetworkClient
 }
 
 // NewEbitenHUDSystem creates a new HUD system.
@@ -36,6 +47,12 @@ func NewEbitenHUDSystem(screenWidth, screenHeight int) *EbitenHUDSystem {
 // SetPlayerEntity sets the player entity whose stats will be displayed.
 func (h *EbitenHUDSystem) SetPlayerEntity(entity *Entity) {
 	h.playerEntity = entity
+}
+
+// SetNetworkClient sets the network client for displaying latency.
+// Pass nil to disable network status display.
+func (h *EbitenHUDSystem) SetNetworkClient(client NetworkClient) {
+	h.networkClient = client
 }
 
 // Update is called every frame but HUD doesn't need to update entities.
@@ -67,6 +84,8 @@ func (h *EbitenHUDSystem) Draw(screen interface{}) {
 
 	// Phase 10.1: Draw aim direction indicator (crosshair)
 	h.drawAimIndicator()
+	// Draw network status if in multiplayer mode
+	h.drawNetworkStatus()
 }
 
 // drawHealthBar draws the player's health bar at the top left.
@@ -277,6 +296,71 @@ func (h *EbitenHUDSystem) IsActive() bool {
 // Implements UISystem interface.
 func (h *EbitenHUDSystem) SetActive(active bool) {
 	h.Visible = active
+}
+
+// drawNetworkStatus displays network latency and connection quality in multiplayer mode.
+// Shown in the top-right corner below the stats panel.
+// Color-coded: Green (<100ms), Yellow (100-300ms), Orange (300-1000ms), Red (>1000ms).
+func (h *EbitenHUDSystem) drawNetworkStatus() {
+	// Only draw if network client is configured (multiplayer mode)
+	if h.networkClient == nil {
+		return
+	}
+
+	// Only draw if screen is initialized (not in test environment)
+	if h.screen == nil {
+		return
+	}
+
+	// Check if connected
+	if !h.networkClient.IsConnected() {
+		return
+	}
+
+	// Get current latency
+	latency := h.networkClient.GetLatency()
+	latencyMs := latency.Milliseconds()
+
+	// Position below stats panel in top-right
+	x := h.screenWidth - 200
+	y := 130 // Below stats panel (which ends around y=100)
+	lineHeight := 20
+
+	// Draw background panel
+	panelWidth := float32(180)
+	panelHeight := float32(40)
+	vector.DrawFilledRect(h.screen, float32(x-10), float32(y-5),
+		panelWidth, panelHeight, color.RGBA{20, 20, 30, 200}, false)
+	vector.StrokeRect(h.screen, float32(x-10), float32(y-5),
+		panelWidth, panelHeight, 2, color.RGBA{255, 255, 255, 128}, false)
+
+	// Draw "Network" label
+	h.drawText("Network:", x, y, color.White)
+	y += lineHeight
+
+	// Determine connection quality color based on latency
+	// Green: <100ms (excellent), Yellow: 100-300ms (good),
+	// Orange: 300-1000ms (fair), Red: >1000ms (poor)
+	var qualityColor color.Color
+	var qualityText string
+
+	if latencyMs < 100 {
+		qualityColor = color.RGBA{100, 255, 100, 255} // Green
+		qualityText = "Excellent"
+	} else if latencyMs < 300 {
+		qualityColor = color.RGBA{255, 255, 100, 255} // Yellow
+		qualityText = "Good"
+	} else if latencyMs < 1000 {
+		qualityColor = color.RGBA{255, 180, 100, 255} // Orange
+		qualityText = "Fair"
+	} else {
+		qualityColor = color.RGBA{255, 100, 100, 255} // Red
+		qualityText = "Poor"
+	}
+
+	// Draw latency with quality indicator
+	latencyText := fmt.Sprintf("%dms (%s)", latencyMs, qualityText)
+	h.drawText(latencyText, x, y, qualityColor)
 }
 
 // Compile-time check that EbitenHUDSystem implements UISystem

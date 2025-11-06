@@ -170,15 +170,9 @@ func TestRenderSystem_EnableCulling(t *testing.T) {
 	cameraSystem := NewCameraSystem(800, 600)
 	renderSystem := NewRenderSystem(cameraSystem)
 
-	// Initially culling should be disabled (due to spatial partition issue - see Phase 2.4 bug fix)
-	if renderSystem.enableCulling {
-		t.Error("Culling should be disabled by default (temporary fix for spatial partition query bug)")
-	}
-
-	// Enable culling
-	renderSystem.EnableCulling(true)
+	// Initially culling should be enabled (spatial partition bug fixed)
 	if !renderSystem.enableCulling {
-		t.Error("Culling should be enabled after EnableCulling(true)")
+		t.Error("Culling should be enabled by default (spatial partition query bug fixed)")
 	}
 
 	// Disable culling

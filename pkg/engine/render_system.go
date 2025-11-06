@@ -159,6 +159,10 @@ type EbitenRenderSystem struct {
 
 	// Performance statistics
 	stats RenderStats
+
+	// Track whether spatial partition culling was used this frame
+	// to avoid redundant per-entity culling
+	spatialCullingUsed bool
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -174,9 +178,9 @@ type RenderStats struct {
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
 		cameraSystem:     cameraSystem,
-		spatialPartition: nil,   // Will be set when world bounds are known
-		enableCulling:    false, // TEMPORARY: Disabled culling due to spatial partition issue
-		enableBatching:   true,  // Batching enabled by default
+		spatialPartition: nil,  // Will be set when world bounds are known
+		enableCulling:    true, // Culling enabled by default (spatial partition bug fixed)
+		enableBatching:   true, // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
 		ShowColliders:    false,
@@ -239,8 +243,10 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 
 	// Get visible entities using spatial partition (if enabled)
 	visibleEntities := entities
+	r.spatialCullingUsed = false
 	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
 		visibleEntities = r.getVisibleEntities(entities)
+		r.spatialCullingUsed = true // Mark that spatial culling was used
 	}
 
 	// Sort entities by layer
@@ -399,7 +405,9 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 		// Check if entity is visible on screen (per-entity culling for batched rendering)
-		if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+		// Skip per-entity culling if spatial partition already culled entities
+		// to avoid redundant double-culling that could incorrectly hide sprites
+		if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 			continue
 		}
 
@@ -537,20 +545,19 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	// Calculate viewport bounds in world space with margin for sprites
 	margin := 100.0 // Extra space to render sprites partially off-screen
 
-	// Get camera position
-	camPos, ok := cam.GetComponent("position")
-	if !ok {
-		return entities
-	}
-	pos := camPos.(*PositionComponent)
+	// BUG FIX: Use camera's actual position (camera.X, camera.Y) which includes
+	// smoothing and bounds clamping, NOT the entity's position component.
+	// The camera position is updated by CameraSystem and represents where
+	// the camera is actually looking, which may differ from the entity position
+	// due to smoothing, offsets, and bounds constraints.
 
 	// Calculate world viewport bounds
 	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
 	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
 
 	viewportBounds := Bounds{
-		X:      pos.X - viewportWidth/2 - margin,
-		Y:      pos.Y - viewportHeight/2 - margin,
+		X:      camera.X - viewportWidth/2 - margin,
+		Y:      camera.Y - viewportHeight/2 - margin,
 		Width:  viewportWidth + margin*2,
 		Height: viewportHeight + margin*2,
 	}
@@ -600,8 +607,43 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 
 	// Check if entity is visible on screen (per-entity culling)
-	if !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+	// Skip per-entity culling if spatial partition already culled entities
+	// to avoid redundant double-culling that could incorrectly hide sprites
+	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return
+	}
+
+	// Issue #4 FIX: Apply layer transition visual feedback
+	// When entity transitions between terrain layers, apply depth offset and transparency
+	var layerTransitionYOffset float64
+	var layerTransitionAlpha float64 = 1.0
+	if layerComp, hasLayer := entity.GetComponent("layer"); hasLayer {
+		layer := layerComp.(*LayerComponent)
+		if layer.IsTransitioning() {
+			// Calculate depth offset based on transition progress
+			// Moving up to higher layer (platform): negative offset (entity rises)
+			// Moving down to lower layer: positive offset (entity descends)
+			const maxDepthOffset = 16.0 // Maximum vertical offset in pixels
+			depthOffset := layer.TransitionProgress * maxDepthOffset
+
+			if layer.TargetLayer > layer.CurrentLayer {
+				// Moving up to higher layer
+				layerTransitionYOffset = -depthOffset
+			} else {
+				// Moving down to lower layer
+				layerTransitionYOffset = depthOffset
+			}
+
+			// Apply subtle transparency during transition edges for smooth visual flow
+			// Fade at start (0.0-0.3) and end (0.7-1.0) of transition
+			if layer.TransitionProgress < 0.3 {
+				// Fade in at start: 0.7 at progress=0, 1.0 at progress=0.3
+				layerTransitionAlpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
+			} else if layer.TransitionProgress > 0.7 {
+				// Fade out at end: 1.0 at progress=0.7, 0.7 at progress=1.0
+				layerTransitionAlpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
+			}
+		}
 	}
 
 	// GAP-012 REPAIR: Apply visual feedback effects (hit flash, tints)
@@ -612,6 +654,10 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		flashAlpha = feedback.GetFlashAlpha()
 		tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
 	}
+
+	// Issue #4 FIX: Apply layer transition alpha to tint alpha
+	// Combine layer transition transparency with visual feedback tint
+	tintA *= layerTransitionAlpha
 
 	// Draw sprite or colored rectangle
 	// Phase 2: Support directional sprites with fallback to single image
@@ -646,7 +692,8 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
 		opts.GeoM.Rotate(sprite.Rotation)
-		opts.GeoM.Translate(screenX, screenY)
+		// Issue #4 FIX: Apply layer transition Y offset for depth effect
+		opts.GeoM.Translate(screenX, screenY+layerTransitionYOffset)
 		r.screen.DrawImage(spriteImage, opts)
 	} else {
 		// Draw colored rectangle as fallback
@@ -663,7 +710,19 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 			}
 		}
 
-		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2,
+		// Issue #4 FIX: Apply layer transition alpha to fallback rect
+		if layerTransitionAlpha < 1.0 {
+			red, green, blue, alpha := col.RGBA()
+			col = color.RGBA{
+				R: uint8(red >> 8),
+				G: uint8(green >> 8),
+				B: uint8(blue >> 8),
+				A: uint8(float64(alpha>>8) * layerTransitionAlpha),
+			}
+		}
+
+		// Issue #4 FIX: Apply layer transition Y offset to fallback rect position
+		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2+layerTransitionYOffset,
 			sprite.Width, sprite.Height, col)
 	}
 
@@ -860,9 +919,28 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Sort using Go's optimized sort (O(n log n) instead of O(n²) bubble sort)
-	sort.Slice(cache, func(i, j int) bool {
-		return cache[i].layer < cache[j].layer
+	// Sort using Go's stable sort for deterministic ordering (O(n log n))
+	// Stable sort ensures entities with the same layer maintain consistent order
+	sort.SliceStable(cache, func(i, j int) bool {
+		// Primary sort: by sprite layer
+		if cache[i].layer != cache[j].layer {
+			return cache[i].layer < cache[j].layer
+		}
+
+		// Secondary sort: by Y position for depth sorting
+		// Entities lower on screen (higher Y) appear in front
+		posI, okI := cache[i].entity.GetComponent("position")
+		posJ, okJ := cache[j].entity.GetComponent("position")
+		if okI && okJ {
+			yI := posI.(*PositionComponent).Y
+			yJ := posJ.(*PositionComponent).Y
+			if yI != yJ {
+				return yI < yJ
+			}
+		}
+
+		// Tertiary sort: by entity ID for complete determinism
+		return cache[i].entity.ID < cache[j].entity.ID
 	})
 
 	// Extract sorted entities

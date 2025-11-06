@@ -6,7 +6,7 @@ import (
 
 func TestNewStateUpdate(t *testing.T) {
 	update := NewStateUpdate(123, 200)
-	
+
 	if update == nil {
 		t.Fatal("Expected non-nil update")
 	}
@@ -20,7 +20,7 @@ func TestNewStateUpdate(t *testing.T) {
 
 func TestNewCriticalUpdate(t *testing.T) {
 	update := NewCriticalUpdate(456)
-	
+
 	if update == nil {
 		t.Fatal("Expected non-nil update")
 	}
@@ -34,7 +34,7 @@ func TestNewCriticalUpdate(t *testing.T) {
 
 func TestNewHighPriorityUpdate(t *testing.T) {
 	update := NewHighPriorityUpdate(789)
-	
+
 	if update == nil {
 		t.Fatal("Expected non-nil update")
 	}
@@ -48,7 +48,7 @@ func TestNewHighPriorityUpdate(t *testing.T) {
 
 func TestNewNormalUpdate(t *testing.T) {
 	update := NewNormalUpdate(101112)
-	
+
 	if update == nil {
 		t.Fatal("Expected non-nil update")
 	}
@@ -62,7 +62,7 @@ func TestNewNormalUpdate(t *testing.T) {
 
 func TestNewLowPriorityUpdate(t *testing.T) {
 	update := NewLowPriorityUpdate(131415)
-	
+
 	if update == nil {
 		t.Fatal("Expected non-nil update")
 	}
@@ -80,7 +80,7 @@ func TestHelperFunctions_PriorityValues(t *testing.T) {
 	high := NewHighPriorityUpdate(2)
 	normal := NewNormalUpdate(3)
 	low := NewLowPriorityUpdate(4)
-	
+
 	if critical.Priority <= high.Priority {
 		t.Error("Expected critical priority > high priority")
 	}

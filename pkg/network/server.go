@@ -464,7 +464,7 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 			// Limit batch size to prevent blocking goroutine for too long
 			const maxBatchSize = 20
 			batchCount := 0
-			
+
 			for batchCount < maxBatchSize {
 				update := client.stateUpdateQueue.Pop()
 				if update == nil {
@@ -507,7 +507,7 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 					return
 				}
 			}
-			
+
 			// If we processed a full batch and there are more updates,
 			// re-signal to continue processing
 			if batchCount == maxBatchSize && !client.stateUpdateQueue.IsEmpty() {
@@ -581,7 +581,7 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 	// Push to priority queue
 	if c.stateUpdateQueue.Push(update) {
 		c.stateUpdateStats.RecordSend()
-		
+
 		// Signal the send goroutine (non-blocking)
 		select {
 		case c.updateSignal <- struct{}{}:

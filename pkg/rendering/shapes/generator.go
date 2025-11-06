@@ -5,6 +5,7 @@ package shapes
 
 import (
 	"image"
+	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -38,6 +39,18 @@ func (g *Generator) generateShape(config Config) *ebiten.Image {
 	centerX := float64(config.Width) / 2.0
 	centerY := float64(config.Height) / 2.0
 
+	// Use anti-aliasing if enabled (Phase 15.1)
+	if config.AntiAlias != AntiAliasOff {
+		g.generateWithAntiAlias(img, config, centerX, centerY)
+	} else {
+		g.generateWithoutAntiAlias(img, config, centerX, centerY)
+	}
+
+	return ebiten.NewImageFromImage(img)
+}
+
+// generateWithoutAntiAlias generates shapes with hard edges (legacy behavior).
+func (g *Generator) generateWithoutAntiAlias(img *image.RGBA, config Config, centerX, centerY float64) {
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {
 			px := float64(x)
@@ -55,8 +68,66 @@ func (g *Generator) generateShape(config Config) *ebiten.Image {
 			}
 		}
 	}
+}
 
-	return ebiten.NewImageFromImage(img)
+// generateWithAntiAlias generates shapes with sub-pixel anti-aliasing for smooth edges.
+// Uses super-sampling based on quality level for accurate edge coverage calculation.
+func (g *Generator) generateWithAntiAlias(img *image.RGBA, config Config, centerX, centerY float64) {
+	// Determine samples per pixel based on quality
+	var samples int
+	switch config.AntiAlias {
+	case AntiAliasLow:
+		samples = 2 // 2x2 = 4 samples
+	case AntiAliasMedium:
+		samples = 4 // 4x4 = 16 samples
+	case AntiAliasHigh:
+		samples = 8 // 8x8 = 64 samples
+	default:
+		samples = 2
+	}
+
+	// Extract RGBA values from config color
+	cr, cg, cb, ca := config.Color.RGBA()
+	baseR := uint8(cr >> 8)
+	baseG := uint8(cg >> 8)
+	baseB := uint8(cb >> 8)
+	baseA := uint8(ca >> 8)
+
+	// Super-sampling step size
+	step := 1.0 / float64(samples)
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			// Count samples inside shape
+			insideCount := 0
+			totalSamples := samples * samples
+
+			// Super-sample within pixel
+			for sy := 0; sy < samples; sy++ {
+				for sx := 0; sx < samples; sx++ {
+					// Sub-pixel position (centered in sample)
+					px := float64(x) + (float64(sx)+0.5)*step
+					py := float64(y) + (float64(sy)+0.5)*step
+
+					dx := px - centerX
+					dy := py - centerY
+
+					if g.isInside(config, dx, dy, centerX, centerY) {
+						insideCount++
+					}
+				}
+			}
+
+			// Calculate coverage (0.0 to 1.0)
+			coverage := float64(insideCount) / float64(totalSamples)
+
+			// Apply alpha based on coverage
+			if coverage > 0 {
+				alpha := uint8(float64(baseA) * coverage)
+				img.Set(x, y, color.RGBA{R: baseR, G: baseG, B: baseB, A: alpha})
+			}
+		}
+	}
 }
 
 // isInside checks if a point is inside the shape.

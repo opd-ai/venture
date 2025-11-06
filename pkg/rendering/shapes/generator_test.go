@@ -794,3 +794,101 @@ func BenchmarkNewShapes_Phase51(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkAntiAliasing_Off benchmarks shape generation without anti-aliasing.
+func BenchmarkAntiAliasing_Off(b *testing.B) {
+	gen := NewGenerator()
+	config := Config{
+		Type:      ShapeCircle,
+		Width:     32,
+		Height:    32,
+		Color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		Seed:      12345,
+		Smoothing: 0.1,
+		AntiAlias: AntiAliasOff,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(config)
+	}
+}
+
+// BenchmarkAntiAliasing_Low benchmarks shape generation with low quality anti-aliasing.
+func BenchmarkAntiAliasing_Low(b *testing.B) {
+	gen := NewGenerator()
+	config := Config{
+		Type:      ShapeCircle,
+		Width:     32,
+		Height:    32,
+		Color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		Seed:      12345,
+		Smoothing: 0.1,
+		AntiAlias: AntiAliasLow,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(config)
+	}
+}
+
+// BenchmarkAntiAliasing_Medium benchmarks shape generation with medium quality anti-aliasing.
+func BenchmarkAntiAliasing_Medium(b *testing.B) {
+	gen := NewGenerator()
+	config := Config{
+		Type:      ShapeCircle,
+		Width:     32,
+		Height:    32,
+		Color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		Seed:      12345,
+		Smoothing: 0.1,
+		AntiAlias: AntiAliasMedium,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(config)
+	}
+}
+
+// BenchmarkAntiAliasing_High benchmarks shape generation with high quality anti-aliasing.
+func BenchmarkAntiAliasing_High(b *testing.B) {
+	gen := NewGenerator()
+	config := Config{
+		Type:      ShapeCircle,
+		Width:     32,
+		Height:    32,
+		Color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		Seed:      12345,
+		Smoothing: 0.1,
+		AntiAlias: AntiAliasHigh,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(config)
+	}
+}
+
+// BenchmarkAntiAliasing_ComplexShape benchmarks anti-aliasing on complex shape (star).
+func BenchmarkAntiAliasing_ComplexShape(b *testing.B) {
+	gen := NewGenerator()
+	config := Config{
+		Type:       ShapeStar,
+		Width:      32,
+		Height:     32,
+		Color:      color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		Seed:       12345,
+		Sides:      8,
+		InnerRatio: 0.5,
+		Rotation:   0,
+		Smoothing:  0.0,
+		AntiAlias:  AntiAliasMedium,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(config)
+	}
+}

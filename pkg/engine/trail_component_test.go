@@ -156,9 +156,9 @@ func TestTrailComponent_SpawnTiming(t *testing.T) {
 
 func TestTrailComponent_SpawnRateCalculation(t *testing.T) {
 	tests := []struct {
-		name               string
-		spawnRate          float64
-		deltaTime          float64
+		name                string
+		spawnRate           float64
+		deltaTime           float64
 		expectedShouldSpawn bool
 	}{
 		{

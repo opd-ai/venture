@@ -46,12 +46,12 @@ func NewTrailComponent() *TrailComponent {
 		Enabled:            true,
 		SpawnRate:          30.0, // 30 particles per second
 		TimeSinceLastSpawn: 0.0,
-		ParticleLifetime:   0.5,  // Half-second lifetime
-		ParticleSize:       2.0,  // 2 pixel particles
-		Color:              nil,  // Use entity color by default
-		FadeRate:           0.8,  // Fast fade
-		SpreadX:            2.0,  // Small horizontal spread
-		SpreadY:            2.0,  // Small vertical spread
+		ParticleLifetime:   0.5, // Half-second lifetime
+		ParticleSize:       2.0, // 2 pixel particles
+		Color:              nil, // Use entity color by default
+		FadeRate:           0.8, // Fast fade
+		SpreadX:            2.0, // Small horizontal spread
+		SpreadY:            2.0, // Small vertical spread
 	}
 }
 
@@ -62,11 +62,11 @@ func NewMagicTrailComponent(color *color.RGBA) *TrailComponent {
 		Enabled:            true,
 		SpawnRate:          40.0, // More particles for magical glow
 		TimeSinceLastSpawn: 0.0,
-		ParticleLifetime:   0.8,  // Longer lifetime for magical sparkle
-		ParticleSize:       3.0,  // Larger particles
+		ParticleLifetime:   0.8,   // Longer lifetime for magical sparkle
+		ParticleSize:       3.0,   // Larger particles
 		Color:              color, // Custom magical color
-		FadeRate:           0.6,  // Slower fade for magical glow
-		SpreadX:            4.0,  // More spread for magical effect
+		FadeRate:           0.6,   // Slower fade for magical glow
+		SpreadX:            4.0,   // More spread for magical effect
 		SpreadY:            4.0,
 	}
 }
@@ -78,11 +78,11 @@ func NewPhysicalTrailComponent() *TrailComponent {
 		Enabled:            true,
 		SpawnRate:          20.0, // Fewer particles for subtle effect
 		TimeSinceLastSpawn: 0.0,
-		ParticleLifetime:   0.3,  // Short lifetime
-		ParticleSize:       1.5,  // Very small particles
-		Color:              nil,  // Use projectile color
-		FadeRate:           0.9,  // Fast fade
-		SpreadX:            1.0,  // Minimal spread
+		ParticleLifetime:   0.3, // Short lifetime
+		ParticleSize:       1.5, // Very small particles
+		Color:              nil, // Use projectile color
+		FadeRate:           0.9, // Fast fade
+		SpreadX:            1.0, // Minimal spread
 		SpreadY:            1.0,
 	}
 }

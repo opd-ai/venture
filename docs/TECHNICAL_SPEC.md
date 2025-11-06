@@ -240,6 +240,6 @@ type Entity struct {
 
 ---
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Last Updated:** October 2025  
 **Maintained By:** Venture Development Team

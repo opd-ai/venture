@@ -272,7 +272,7 @@ All optimizations are production-ready with:
 - **Memory Profiling**: `pkg/engine/MEMORY_PROFILING.md`
 - **API Reference**: `docs/API_REFERENCE.md`
 - **Architecture**: `docs/ARCHITECTURE.md`
-- **Development Roadmap**: `docs/ROADMAP.md` (Phase 6 optimization details)
+- **Development Roadmap**: `docs/ROADMAP_V3.md` (Phase 6 optimization details)
 
 ## Support
 

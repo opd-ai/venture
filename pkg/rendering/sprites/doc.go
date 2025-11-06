@@ -73,8 +73,15 @@
 //	// Head: 4×4 pixels, Torso: 4×6 pixels, Legs: 4×8 pixels
 //	// 40% more anatomical detail, better silhouette scores
 //
+//	// Use detailed template for facial features in close-up views
+//	detailedTemplate := sprites.DetailedHumanoidTemplate()
+//	// Includes all enhanced features PLUS:
+//	// Eyes: 2×1 pixels, Mouth: 2×1 pixels
+//	// Perfect for player characters and important NPCs
+//
 // Enhanced templates provide exact pixel dimensions that remain constant regardless
 // of sprite size, ensuring consistent visual quality and improved player recognition.
+// Detailed templates add facial features for emotional expression and close-up clarity.
 //
 // # Boss Scaling
 //

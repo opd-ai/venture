@@ -18,6 +18,8 @@ func TestBodyPart_String(t *testing.T) {
 		{"torso", PartTorso, "torso"},
 		{"arms", PartArms, "arms"},
 		{"head", PartHead, "head"},
+		{"eyes", PartEyes, "eyes"},
+		{"mouth", PartMouth, "mouth"},
 		{"weapon", PartWeapon, "weapon"},
 		{"shield", PartShield, "shield"},
 		{"unknown", BodyPart(999), "unknown"},
@@ -198,6 +200,102 @@ func TestEnhancedHumanoidTemplate(t *testing.T) {
 	}
 	if headHeightLarge != 4 {
 		t.Errorf("Head effective height at 64x64 = %d, want 4 (pixel-perfect should be constant)", headHeightLarge)
+	}
+}
+
+// TestDetailedHumanoidTemplate tests the Phase 15.1 detailed template with facial features.
+func TestDetailedHumanoidTemplate(t *testing.T) {
+	template := DetailedHumanoidTemplate()
+
+	if template.Name != "detailed_humanoid" {
+		t.Errorf("Template name = %v, want 'detailed_humanoid'", template.Name)
+	}
+
+	// Verify all expected body parts including facial features
+	expectedParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead, PartEyes, PartMouth}
+	for _, part := range expectedParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing body part: %v", part.String())
+		}
+	}
+
+	// Verify eyes have correct pixel dimensions (2×1 pixels)
+	eyesSpec := template.BodyPartLayout[PartEyes]
+	if eyesSpec.PreferredPixelSize == nil {
+		t.Fatal("Eyes PreferredPixelSize should not be nil")
+	}
+	if eyesSpec.PreferredPixelSize.Width != 2 {
+		t.Errorf("Eyes width = %d, want 2", eyesSpec.PreferredPixelSize.Width)
+	}
+	if eyesSpec.PreferredPixelSize.Height != 1 {
+		t.Errorf("Eyes height = %d, want 1", eyesSpec.PreferredPixelSize.Height)
+	}
+
+	// Verify mouth has correct pixel dimensions (2×1 pixels)
+	mouthSpec := template.BodyPartLayout[PartMouth]
+	if mouthSpec.PreferredPixelSize == nil {
+		t.Fatal("Mouth PreferredPixelSize should not be nil")
+	}
+	if mouthSpec.PreferredPixelSize.Width != 2 {
+		t.Errorf("Mouth width = %d, want 2", mouthSpec.PreferredPixelSize.Width)
+	}
+	if mouthSpec.PreferredPixelSize.Height != 1 {
+		t.Errorf("Mouth height = %d, want 1", mouthSpec.PreferredPixelSize.Height)
+	}
+
+	// Verify facial features have higher Z-index than head
+	headZ := template.BodyPartLayout[PartHead].ZIndex
+	eyesZ := eyesSpec.ZIndex
+	mouthZ := mouthSpec.ZIndex
+
+	if eyesZ <= headZ {
+		t.Errorf("Eyes Z-index (%d) should be above head Z-index (%d)", eyesZ, headZ)
+	}
+	if mouthZ <= headZ {
+		t.Errorf("Mouth Z-index (%d) should be above head Z-index (%d)", mouthZ, headZ)
+	}
+
+	// Verify eyes are positioned above mouth
+	eyesY := eyesSpec.RelativeY
+	mouthY := mouthSpec.RelativeY
+	if eyesY >= mouthY {
+		t.Errorf("Eyes Y position (%f) should be above (less than) mouth Y position (%f)", eyesY, mouthY)
+	}
+
+	// Verify GetEffectiveWidth/Height work correctly for facial features
+	const spriteSize = 28
+	eyesWidth := eyesSpec.GetEffectiveWidth(spriteSize)
+	eyesHeight := eyesSpec.GetEffectiveHeight(spriteSize)
+	if eyesWidth != 2 {
+		t.Errorf("Eyes effective width = %d, want 2", eyesWidth)
+	}
+	if eyesHeight != 1 {
+		t.Errorf("Eyes effective height = %d, want 1", eyesHeight)
+	}
+
+	mouthWidth := mouthSpec.GetEffectiveWidth(spriteSize)
+	mouthHeight := mouthSpec.GetEffectiveHeight(spriteSize)
+	if mouthWidth != 2 {
+		t.Errorf("Mouth effective width = %d, want 2", mouthWidth)
+	}
+	if mouthHeight != 1 {
+		t.Errorf("Mouth effective height = %d, want 1", mouthHeight)
+	}
+
+	// Verify base template dimensions are preserved (head, torso, legs)
+	headSpec := template.BodyPartLayout[PartHead]
+	if headSpec.PreferredPixelSize == nil || headSpec.PreferredPixelSize.Width != 4 || headSpec.PreferredPixelSize.Height != 4 {
+		t.Error("Head dimensions should be preserved from EnhancedHumanoidTemplate (4×4)")
+	}
+
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.PreferredPixelSize == nil || torsoSpec.PreferredPixelSize.Width != 4 || torsoSpec.PreferredPixelSize.Height != 6 {
+		t.Error("Torso dimensions should be preserved from EnhancedHumanoidTemplate (4×6)")
+	}
+
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.PreferredPixelSize == nil || legsSpec.PreferredPixelSize.Width != 4 || legsSpec.PreferredPixelSize.Height != 8 {
+		t.Error("Legs dimensions should be preserved from EnhancedHumanoidTemplate (4×8)")
 	}
 }
 

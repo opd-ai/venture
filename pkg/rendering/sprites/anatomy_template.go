@@ -20,6 +20,10 @@ const (
 	PartArms
 	// PartHead represents head/face
 	PartHead
+	// PartEyes represents facial eyes (Phase 15.1: 2px detail)
+	PartEyes
+	// PartMouth represents facial mouth (Phase 15.1: 1-2px detail)
+	PartMouth
 	// PartWeapon represents equipped weapon
 	PartWeapon
 	// PartShield represents equipped shield
@@ -61,6 +65,10 @@ func (b BodyPart) String() string {
 		return "arms"
 	case PartHead:
 		return "head"
+	case PartEyes:
+		return "eyes"
+	case PartMouth:
+		return "mouth"
 	case PartWeapon:
 		return "weapon"
 	case PartShield:
@@ -305,6 +313,58 @@ func EnhancedHumanoidTemplate() AnatomicalTemplate {
 			},
 		},
 	}
+}
+
+// DetailedHumanoidTemplate returns a Phase 15.1 template with facial features.
+// Includes eyes (2px) and mouth (1-2px) for close-up views and enhanced recognition.
+// Builds on EnhancedHumanoidTemplate with additional facial detail.
+//
+// Use this template for:
+// - Player characters that are frequently on-screen
+// - NPCs with whom players interact closely
+// - Character portraits and close-up views
+// - Situations requiring clear emotional expression
+func DetailedHumanoidTemplate() AnatomicalTemplate {
+	// Start with the enhanced template
+	base := EnhancedHumanoidTemplate()
+	base.Name = "detailed_humanoid"
+
+	// Add facial features with pixel-perfect dimensions
+	// Eyes: 2 pixels wide, positioned on upper head
+	base.BodyPartLayout[PartEyes] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.23,  // Slightly above head center
+		RelativeWidth:  0.071, // 2/28
+		RelativeHeight: 0.036, // 1/28 (height)
+		PreferredPixelSize: &PixelDimensions{
+			Width:  2,
+			Height: 1, // Phase 15.1: 2×1 pixel eyes
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:     16, // Above head
+		ColorRole:  "accent1",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	// Mouth: 1-2 pixels, positioned on lower head
+	base.BodyPartLayout[PartMouth] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.27,  // Below eyes
+		RelativeWidth:  0.071, // 2/28
+		RelativeHeight: 0.036, // 1/28
+		PreferredPixelSize: &PixelDimensions{
+			Width:  2,
+			Height: 1, // Phase 15.1: 2×1 pixel mouth
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:     16, // Above head, same as eyes
+		ColorRole:  "accent2",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	return base
 }
 
 // QuadrupedTemplate returns a template for four-legged creatures.

@@ -512,8 +512,12 @@ func (s *TCPServer) disconnectClient(playerID uint64) {
 		case <-s.done:
 		default:
 			s.playerLeaveStats.RecordDrop()
-			s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID)
-		}
+			select {
+			case s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID):
+				s.errorStats.RecordSend()
+			default:
+				s.errorStats.RecordDrop()
+			}
 	}
 }
 

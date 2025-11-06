@@ -377,7 +377,8 @@ func TestClientConnection_SendStateUpdate(t *testing.T) {
 	client := &clientConnection{
 		playerID:         1,
 		connected:        true,
-		stateUpdates:     make(chan *StateUpdate, 10),
+		stateUpdateQueue: NewStateUpdatePriorityQueue(10),
+		updateSignal:     make(chan struct{}, 1),
 		stateUpdateStats: NewBufferStats("test_state_updates", 10, nil),
 	}
 
@@ -390,22 +391,32 @@ func TestClientConnection_SendStateUpdate(t *testing.T) {
 	client.sendStateUpdate(update)
 
 	// Verify update was queued
+	if client.stateUpdateQueue.Len() != 1 {
+		t.Errorf("Expected 1 update in queue, got %d", client.stateUpdateQueue.Len())
+	}
+
+	// Verify signal was sent
 	select {
-	case received := <-client.stateUpdates:
-		if received.Timestamp != update.Timestamp {
-			t.Error("Received update does not match sent update")
-		}
+	case <-client.updateSignal:
+		// Expected
 	case <-time.After(100 * time.Millisecond):
-		t.Error("Timeout waiting for state update")
+		t.Error("Timeout waiting for update signal")
+	}
+
+	// Verify the update can be popped
+	received := client.stateUpdateQueue.Pop()
+	if received == nil || received.Timestamp != update.Timestamp {
+		t.Error("Received update does not match sent update")
 	}
 }
 
 // TestClientConnection_SendStateUpdate_Disconnected verifies no-op when disconnected.
 func TestClientConnection_SendStateUpdate_Disconnected(t *testing.T) {
 	client := &clientConnection{
-		playerID:     1,
-		connected:    false,
-		stateUpdates: make(chan *StateUpdate, 10),
+		playerID:         1,
+		connected:        false,
+		stateUpdateQueue: NewStateUpdatePriorityQueue(10),
+		updateSignal:     make(chan struct{}, 1),
 	}
 
 	update := &StateUpdate{
@@ -418,10 +429,7 @@ func TestClientConnection_SendStateUpdate_Disconnected(t *testing.T) {
 	client.sendStateUpdate(update)
 
 	// Verify no update was queued
-	select {
-	case <-client.stateUpdates:
+	if client.stateUpdateQueue.Len() != 0 {
 		t.Error("Expected no state update when disconnected")
-	case <-time.After(50 * time.Millisecond):
-		// Expected
 	}
 }

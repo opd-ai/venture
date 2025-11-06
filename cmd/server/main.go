@@ -343,7 +343,7 @@ func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.State
 	// In a full implementation, this would serialize component data efficiently
 	update := &network.StateUpdate{
 		Timestamp: uint64(snapshot.Timestamp.UnixNano() / 1000000), // milliseconds
-		Priority:  128,                                             // Normal priority
+		Priority:  network.PriorityNormal,                          // Normal priority for regular updates
 	}
 	return update
 }

@@ -104,8 +104,10 @@ type clientConnection struct {
 	connected  bool
 	lastActive time.Time
 
-	// Channels
-	stateUpdates chan *StateUpdate
+	// Priority queue for state updates (replaces simple channel)
+	stateUpdateQueue *StateUpdatePriorityQueue
+	// Signal channel to notify send goroutine of new updates
+	updateSignal chan struct{}
 
 	// Buffer monitoring
 	stateUpdateStats *BufferStats
@@ -348,7 +350,8 @@ func (s *TCPServer) acceptLoop() {
 			address:          conn.RemoteAddr().String(),
 			connected:        true,
 			lastActive:       time.Now(),
-			stateUpdates:     make(chan *StateUpdate, s.config.BufferSize),
+			stateUpdateQueue: NewStateUpdatePriorityQueue(s.config.BufferSize),
+			updateSignal:     make(chan struct{}, 1), // Buffered to avoid blocking
 			stateUpdateStats: NewBufferStats(fmt.Sprintf("client_%d_state_updates", playerID), s.config.BufferSize, clientLogEntry),
 		}
 
@@ -447,6 +450,7 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 }
 
 // handleClientSend sends state updates to a client.
+// Pops updates from the priority queue, sending higher priority updates first.
 func (s *TCPServer) handleClientSend(client *clientConnection) {
 	defer s.wg.Done()
 
@@ -455,40 +459,63 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 		case <-s.done:
 			return
 
-		case update := <-client.stateUpdates:
-			client.stateUpdateStats.RecordReceive()
+		case <-client.updateSignal:
+			// Process available updates from the priority queue
+			// Limit batch size to prevent blocking goroutine for too long
+			const maxBatchSize = 20
+			batchCount := 0
 
-			// Encode state update
-			data, err := s.protocol.EncodeStateUpdate(update)
-			if err != nil {
-				s.errors <- fmt.Errorf("player %d encode error: %w", client.playerID, err)
-				continue
-			}
-
-			// Send length prefix
-			msgLen := uint32(len(data))
-			lenBuf := []byte{
-				byte(msgLen),
-				byte(msgLen >> 8),
-				byte(msgLen >> 16),
-				byte(msgLen >> 24),
-			}
-
-			// Set write deadline
-			client.conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
-
-			// Send length + data
-			if _, err := client.conn.Write(lenBuf); err != nil {
-				if s.IsRunning() && client.isConnected() {
-					s.errors <- fmt.Errorf("player %d write length error: %w", client.playerID, err)
+			for batchCount < maxBatchSize {
+				update := client.stateUpdateQueue.Pop()
+				if update == nil {
+					break // Queue is empty
 				}
-				return
-			}
-			if _, err := client.conn.Write(data); err != nil {
-				if s.IsRunning() && client.isConnected() {
-					s.errors <- fmt.Errorf("player %d write data error: %w", client.playerID, err)
+				batchCount++
+
+				client.stateUpdateStats.RecordReceive()
+
+				// Encode state update
+				data, err := s.protocol.EncodeStateUpdate(update)
+				if err != nil {
+					s.errors <- fmt.Errorf("player %d encode error: %w", client.playerID, err)
+					continue
 				}
-				return
+
+				// Send length prefix
+				msgLen := uint32(len(data))
+				lenBuf := []byte{
+					byte(msgLen),
+					byte(msgLen >> 8),
+					byte(msgLen >> 16),
+					byte(msgLen >> 24),
+				}
+
+				// Set write deadline
+				client.conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+
+				// Send length + data
+				if _, err := client.conn.Write(lenBuf); err != nil {
+					if s.IsRunning() && client.isConnected() {
+						s.errors <- fmt.Errorf("player %d write length error: %w", client.playerID, err)
+					}
+					return
+				}
+				if _, err := client.conn.Write(data); err != nil {
+					if s.IsRunning() && client.isConnected() {
+						s.errors <- fmt.Errorf("player %d write data error: %w", client.playerID, err)
+					}
+					return
+				}
+			}
+
+			// If we processed a full batch and there are more updates,
+			// re-signal to continue processing
+			if batchCount == maxBatchSize && !client.stateUpdateQueue.IsEmpty() {
+				select {
+				case client.updateSignal <- struct{}{}:
+				default:
+					// Already signaled
+				}
 			}
 		}
 	}
@@ -539,7 +566,7 @@ func (c *clientConnection) disconnect() {
 		if c.conn != nil {
 			c.conn.Close()
 		}
-		close(c.stateUpdates)
+		close(c.updateSignal)
 	}
 }
 
@@ -551,11 +578,18 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 		return
 	}
 
-	select {
-	case c.stateUpdates <- update:
+	// Push to priority queue
+	if c.stateUpdateQueue.Push(update) {
 		c.stateUpdateStats.RecordSend()
-	default:
-		// Drop if full (prioritize fresh updates)
+
+		// Signal the send goroutine (non-blocking)
+		select {
+		case c.updateSignal <- struct{}{}:
+		default:
+			// Channel buffer full, goroutine will process existing signal
+		}
+	} else {
+		// Queue is full, drop the update
 		c.stateUpdateStats.RecordDrop()
 	}
 }

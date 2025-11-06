@@ -182,7 +182,7 @@ func TestServer_PlayerEventMonitoring(t *testing.T) {
 
 	// Check stats
 	stats := server.GetBufferStats()
-	
+
 	joinStats := stats["player_joins"]
 	expectedJoinSent := 3
 	expectedJoinDropped := 2
@@ -208,7 +208,7 @@ func TestBufferMonitoring_HighUtilizationWarning(t *testing.T) {
 	// This test verifies that warnings are logged at 80% threshold.
 	// Since we can't easily capture log output in tests, we verify the
 	// mechanism works by checking that stats are properly tracked.
-	
+
 	config := DefaultClientConfig()
 	config.BufferSize = 10
 	client := NewClient(config)

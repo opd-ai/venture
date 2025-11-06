@@ -375,9 +375,10 @@ func TestClientConnection_IsConnected(t *testing.T) {
 // TestClientConnection_SendStateUpdate verifies sending state to client.
 func TestClientConnection_SendStateUpdate(t *testing.T) {
 	client := &clientConnection{
-		playerID:     1,
-		connected:    true,
-		stateUpdates: make(chan *StateUpdate, 10),
+		playerID:         1,
+		connected:        true,
+		stateUpdates:     make(chan *StateUpdate, 10),
+		stateUpdateStats: NewBufferStats("test_state_updates", 10, nil),
 	}
 
 	update := &StateUpdate{

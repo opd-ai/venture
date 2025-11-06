@@ -621,11 +621,11 @@ func TestSnapshotManager_DefaultEpsilon(t *testing.T) {
 // sensitivity with different epsilon values
 func TestSnapshotManager_DeltaCompressionWithDifferentEpsilons(t *testing.T) {
 	tests := []struct {
-		name            string
-		epsilon         float64
-		positionDiff    float64
-		expectChange    bool
-		description     string
+		name         string
+		epsilon      float64
+		positionDiff float64
+		expectChange bool
+		description  string
 	}{
 		{
 			name:         "tiny change detected with small epsilon",
@@ -718,8 +718,8 @@ func TestSnapshotManager_DeltaCompressionWithDifferentEpsilons(t *testing.T) {
 // with higher epsilon values
 func TestSnapshotManager_EpsilonBandwidthTradeoff(t *testing.T) {
 	// Create two snapshot managers with different epsilons
-	smLowEpsilon := NewSnapshotManagerWithEpsilon(10, 0.001)  // High sensitivity
-	smHighEpsilon := NewSnapshotManagerWithEpsilon(10, 0.01)  // Low sensitivity
+	smLowEpsilon := NewSnapshotManagerWithEpsilon(10, 0.001) // High sensitivity
+	smHighEpsilon := NewSnapshotManagerWithEpsilon(10, 0.01) // Low sensitivity
 
 	// Create initial snapshot
 	snap1 := WorldSnapshot{

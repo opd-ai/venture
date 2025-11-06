@@ -71,7 +71,7 @@ func HighLatencyLagCompensationConfig() LagCompensationConfig {
 	return LagCompensationConfig{
 		MaxCompensation:         5000 * time.Millisecond,
 		MinCompensation:         10 * time.Millisecond,
-		SnapshotBufferSize:      300, // 15s at 20Hz (was 200 = 10s)
+		SnapshotBufferSize:      300,  // 15s at 20Hz (was 200 = 10s)
 		DeltaCompressionEpsilon: 0.01, // 10x less sensitive for bandwidth efficiency
 	}
 }

@@ -21,7 +21,11 @@ type StateUpdate struct {
 	Components []ComponentData
 
 	// Priority determines update ordering (higher = more important)
-	// 0 = low priority, 255 = critical
+	// Use constants: PriorityCritical (255), PriorityHigh (200), PriorityNormal (128), PriorityLow (64)
+	// Critical priority should be used for death/revival events
+	// High priority for combat and damage events
+	// Normal priority for regular entity updates
+	// Low priority for cosmetic updates (animations, particles)
 	Priority uint8
 
 	// SequenceNumber for ordering and detecting packet loss

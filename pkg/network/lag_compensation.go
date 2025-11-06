@@ -43,15 +43,22 @@ type LagCompensationConfig struct {
 	// Should be large enough to cover MaxCompensation
 	// At 20 updates/sec, 100 snapshots = 5 seconds
 	SnapshotBufferSize int
+
+	// DeltaCompressionEpsilon controls sensitivity for delta compression
+	// Smaller values = more sensitive = higher bandwidth
+	// Larger values = less sensitive = lower bandwidth
+	// Typical: 0.001 (default), 0.01 (high-latency)
+	DeltaCompressionEpsilon float64
 }
 
 // DefaultLagCompensationConfig returns a default configuration
 // for typical internet play (up to 500ms latency)
 func DefaultLagCompensationConfig() LagCompensationConfig {
 	return LagCompensationConfig{
-		MaxCompensation:    500 * time.Millisecond,
-		MinCompensation:    10 * time.Millisecond,
-		SnapshotBufferSize: 100,
+		MaxCompensation:         500 * time.Millisecond,
+		MinCompensation:         10 * time.Millisecond,
+		SnapshotBufferSize:      100,
+		DeltaCompressionEpsilon: 0.001, // Default: high sensitivity for accurate low-latency play
 	}
 }
 
@@ -59,18 +66,24 @@ func DefaultLagCompensationConfig() LagCompensationConfig {
 // for high-latency connections (e.g., Tor, up to 5000ms).
 // Uses 300 snapshots at 20Hz = 15 seconds of history, providing adequate
 // buffer for 5000ms MaxCompensation with 10s round-trip time plus safety margin.
+// Also uses higher epsilon (0.01) for better bandwidth efficiency under high latency.
 func HighLatencyLagCompensationConfig() LagCompensationConfig {
 	return LagCompensationConfig{
-		MaxCompensation:    5000 * time.Millisecond,
-		MinCompensation:    10 * time.Millisecond,
-		SnapshotBufferSize: 300, // 15s at 20Hz (was 200 = 10s)
+		MaxCompensation:         5000 * time.Millisecond,
+		MinCompensation:         10 * time.Millisecond,
+		SnapshotBufferSize:      300,  // 15s at 20Hz (was 200 = 10s)
+		DeltaCompressionEpsilon: 0.01, // 10x less sensitive for bandwidth efficiency
 	}
 }
 
 // NewLagCompensator creates a new lag compensator with the given configuration
 func NewLagCompensator(config LagCompensationConfig) *LagCompensator {
+	epsilon := config.DeltaCompressionEpsilon
+	if epsilon <= 0 {
+		epsilon = 0.001 // Default if not specified
+	}
 	return &LagCompensator{
-		snapshots:       NewSnapshotManager(config.SnapshotBufferSize),
+		snapshots:       NewSnapshotManagerWithEpsilon(config.SnapshotBufferSize, epsilon),
 		maxCompensation: config.MaxCompensation,
 		minCompensation: config.MinCompensation,
 	}

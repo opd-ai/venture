@@ -464,6 +464,7 @@ func TestHelperFunctions_Lerp(t *testing.T) {
 }
 
 func TestHelperFunctions_EntityEquals(t *testing.T) {
+	sm := NewSnapshotManager(10)
 	e1 := EntitySnapshot{
 		Position: Position{X: 10, Y: 20},
 		Velocity: Velocity{VX: 1, VY: 2},
@@ -474,7 +475,7 @@ func TestHelperFunctions_EntityEquals(t *testing.T) {
 		Velocity: Velocity{VX: 1, VY: 2},
 	}
 
-	if !entityEquals(e1, e2) {
+	if !sm.entityEquals(e1, e2) {
 		t.Error("Equal entities should return true")
 	}
 
@@ -483,7 +484,7 @@ func TestHelperFunctions_EntityEquals(t *testing.T) {
 		Velocity: Velocity{VX: 1, VY: 2},
 	}
 
-	if entityEquals(e1, e3) {
+	if sm.entityEquals(e1, e3) {
 		t.Error("Different entities should return false")
 	}
 }
@@ -563,6 +564,265 @@ func BenchmarkSnapshotManager_CreateDelta(b *testing.B) {
 		Entities: map[uint64]EntitySnapshot{
 			1: {EntityID: 1, Position: Position{X: 0, Y: 0}},
 			2: {EntityID: 2, Position: Position{X: 10, Y: 0}},
+		},
+	}
+	sm.AddSnapshot(snap1)
+
+	snap2 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 5, Y: 5}},
+			3: {EntityID: 3, Position: Position{X: 20, Y: 0}},
+		},
+	}
+	sm.AddSnapshot(snap2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sm.CreateDelta(1, 2)
+	}
+}
+
+// TestNewSnapshotManagerWithEpsilon verifies custom epsilon configuration
+func TestNewSnapshotManagerWithEpsilon(t *testing.T) {
+	tests := []struct {
+		name            string
+		maxSnapshots    int
+		epsilon         float64
+		expectedEpsilon float64
+	}{
+		{"default epsilon", 10, 0.001, 0.001},
+		{"high latency epsilon", 10, 0.01, 0.01},
+		{"very small epsilon", 10, 0.0001, 0.0001},
+		{"large epsilon", 10, 0.1, 0.1},
+		{"zero epsilon defaults to 0.001", 10, 0, 0.001},
+		{"negative epsilon defaults to 0.001", 10, -0.5, 0.001},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm := NewSnapshotManagerWithEpsilon(tt.maxSnapshots, tt.epsilon)
+			if sm.DeltaCompressionEpsilon != tt.expectedEpsilon {
+				t.Errorf("Expected epsilon %f, got %f", tt.expectedEpsilon, sm.DeltaCompressionEpsilon)
+			}
+		})
+	}
+}
+
+// TestSnapshotManager_DefaultEpsilon verifies NewSnapshotManager uses default epsilon
+func TestSnapshotManager_DefaultEpsilon(t *testing.T) {
+	sm := NewSnapshotManager(10)
+	expectedEpsilon := 0.001
+	if sm.DeltaCompressionEpsilon != expectedEpsilon {
+		t.Errorf("Expected default epsilon %f, got %f", expectedEpsilon, sm.DeltaCompressionEpsilon)
+	}
+}
+
+// TestSnapshotManager_DeltaCompressionWithDifferentEpsilons tests delta compression
+// sensitivity with different epsilon values
+func TestSnapshotManager_DeltaCompressionWithDifferentEpsilons(t *testing.T) {
+	tests := []struct {
+		name         string
+		epsilon      float64
+		positionDiff float64
+		expectChange bool
+		description  string
+	}{
+		{
+			name:         "tiny change detected with small epsilon",
+			epsilon:      0.001,
+			positionDiff: 0.002,
+			expectChange: true,
+			description:  "0.002 difference > 0.001 epsilon",
+		},
+		{
+			name:         "tiny change ignored with large epsilon",
+			epsilon:      0.01,
+			positionDiff: 0.002,
+			expectChange: false,
+			description:  "0.002 difference < 0.01 epsilon",
+		},
+		{
+			name:         "medium change detected with small epsilon",
+			epsilon:      0.001,
+			positionDiff: 0.05,
+			expectChange: true,
+			description:  "0.05 difference > 0.001 epsilon",
+		},
+		{
+			name:         "medium change detected with large epsilon",
+			epsilon:      0.01,
+			positionDiff: 0.05,
+			expectChange: true,
+			description:  "0.05 difference > 0.01 epsilon",
+		},
+		{
+			name:         "no change with identical positions",
+			epsilon:      0.001,
+			positionDiff: 0.0,
+			expectChange: false,
+			description:  "0.0 difference < 0.001 epsilon",
+		},
+		{
+			name:         "sub-epsilon change ignored",
+			epsilon:      0.01,
+			positionDiff: 0.005,
+			expectChange: false,
+			description:  "0.005 difference < 0.01 epsilon",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm := NewSnapshotManagerWithEpsilon(10, tt.epsilon)
+
+			// Create first snapshot
+			snap1 := WorldSnapshot{
+				Entities: map[uint64]EntitySnapshot{
+					1: {EntityID: 1, Position: Position{X: 10.0, Y: 10.0}},
+				},
+			}
+			sm.AddSnapshot(snap1)
+
+			// Create second snapshot with small position change
+			snap2 := WorldSnapshot{
+				Entities: map[uint64]EntitySnapshot{
+					1: {EntityID: 1, Position: Position{X: 10.0 + tt.positionDiff, Y: 10.0}},
+				},
+			}
+			sm.AddSnapshot(snap2)
+
+			// Create delta
+			delta := sm.CreateDelta(1, 2)
+			if delta == nil {
+				t.Fatal("CreateDelta returned nil")
+			}
+
+			// Check if entity was detected as changed
+			_, changed := delta.Changed[1]
+			if changed != tt.expectChange {
+				t.Errorf("%s: expected change=%v, got change=%v", tt.description, tt.expectChange, changed)
+			}
+
+			// Verify no added or removed entities
+			if len(delta.Added) != 0 {
+				t.Errorf("Expected 0 added entities, got %d", len(delta.Added))
+			}
+			if len(delta.Removed) != 0 {
+				t.Errorf("Expected 0 removed entities, got %d", len(delta.Removed))
+			}
+		})
+	}
+}
+
+// TestSnapshotManager_EpsilonBandwidthTradeoff demonstrates bandwidth savings
+// with higher epsilon values
+func TestSnapshotManager_EpsilonBandwidthTradeoff(t *testing.T) {
+	// Create two snapshot managers with different epsilons
+	smLowEpsilon := NewSnapshotManagerWithEpsilon(10, 0.001) // High sensitivity
+	smHighEpsilon := NewSnapshotManagerWithEpsilon(10, 0.01) // Low sensitivity
+
+	// Create initial snapshot
+	snap1 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 10.0, Y: 10.0}},
+			2: {EntityID: 2, Position: Position{X: 20.0, Y: 20.0}},
+			3: {EntityID: 3, Position: Position{X: 30.0, Y: 30.0}},
+		},
+	}
+	smLowEpsilon.AddSnapshot(snap1)
+	smHighEpsilon.AddSnapshot(snap1)
+
+	// Create second snapshot with small movements
+	snap2 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 10.002, Y: 10.003}}, // Very small change
+			2: {EntityID: 2, Position: Position{X: 20.005, Y: 20.006}}, // Small change
+			3: {EntityID: 3, Position: Position{X: 30.0, Y: 30.0}},     // No change
+		},
+	}
+	smLowEpsilon.AddSnapshot(snap2)
+	smHighEpsilon.AddSnapshot(snap2)
+
+	// Get deltas
+	deltaLow := smLowEpsilon.CreateDelta(1, 2)
+	deltaHigh := smHighEpsilon.CreateDelta(1, 2)
+
+	// Low epsilon should detect changes in entities 1 and 2
+	if len(deltaLow.Changed) != 2 {
+		t.Errorf("Low epsilon should detect 2 changes, got %d", len(deltaLow.Changed))
+	}
+
+	// High epsilon should detect no changes (all changes below 0.01 threshold)
+	if len(deltaHigh.Changed) != 0 {
+		t.Errorf("High epsilon should detect 0 changes (bandwidth saving), got %d", len(deltaHigh.Changed))
+	}
+
+	// This demonstrates the bandwidth tradeoff:
+	// - Low epsilon (0.001): 2 entities sent = more bandwidth, higher accuracy
+	// - High epsilon (0.01): 0 entities sent = less bandwidth, lower accuracy
+	t.Logf("Low epsilon (0.001): %d entities changed", len(deltaLow.Changed))
+	t.Logf("High epsilon (0.01): %d entities changed (bandwidth saved)", len(deltaHigh.Changed))
+}
+
+// TestLagCompensationConfig_EpsilonIntegration verifies epsilon is properly
+// integrated into lag compensation configs
+func TestLagCompensationConfig_EpsilonIntegration(t *testing.T) {
+	// Test default config
+	defaultConfig := DefaultLagCompensationConfig()
+	if defaultConfig.DeltaCompressionEpsilon != 0.001 {
+		t.Errorf("Default config should have epsilon 0.001, got %f", defaultConfig.DeltaCompressionEpsilon)
+	}
+
+	// Test high latency config
+	highLatencyConfig := HighLatencyLagCompensationConfig()
+	if highLatencyConfig.DeltaCompressionEpsilon != 0.01 {
+		t.Errorf("High latency config should have epsilon 0.01, got %f", highLatencyConfig.DeltaCompressionEpsilon)
+	}
+
+	// Verify that lag compensator uses the configured epsilon
+	lc := NewLagCompensator(highLatencyConfig)
+	if lc.snapshots.DeltaCompressionEpsilon != 0.01 {
+		t.Errorf("Lag compensator snapshot manager should have epsilon 0.01, got %f",
+			lc.snapshots.DeltaCompressionEpsilon)
+	}
+}
+
+// BenchmarkSnapshotManager_DeltaWithLowEpsilon benchmarks delta compression
+// with low epsilon (high sensitivity)
+func BenchmarkSnapshotManager_DeltaWithLowEpsilon(b *testing.B) {
+	sm := NewSnapshotManagerWithEpsilon(10, 0.001)
+
+	snap1 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 0, Y: 0}},
+			2: {EntityID: 2, Position: Position{X: 10, Y: 10}},
+		},
+	}
+	sm.AddSnapshot(snap1)
+
+	snap2 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 5, Y: 5}},
+			3: {EntityID: 3, Position: Position{X: 20, Y: 0}},
+		},
+	}
+	sm.AddSnapshot(snap2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sm.CreateDelta(1, 2)
+	}
+}
+
+// BenchmarkSnapshotManager_DeltaWithHighEpsilon benchmarks delta compression
+// with high epsilon (low sensitivity)
+func BenchmarkSnapshotManager_DeltaWithHighEpsilon(b *testing.B) {
+	sm := NewSnapshotManagerWithEpsilon(10, 0.01)
+
+	snap1 := WorldSnapshot{
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 0, Y: 0}},
+			2: {EntityID: 2, Position: Position{X: 10, Y: 10}},
 		},
 	}
 	sm.AddSnapshot(snap1)

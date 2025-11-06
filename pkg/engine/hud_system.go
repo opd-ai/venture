@@ -64,6 +64,9 @@ func (h *EbitenHUDSystem) Draw(screen interface{}) {
 
 	// Draw experience bar
 	h.drawExperienceBar()
+
+	// Phase 10.1: Draw aim direction indicator (crosshair)
+	h.drawAimIndicator()
 }
 
 // drawHealthBar draws the player's health bar at the top left.
@@ -208,6 +211,60 @@ func (h *EbitenHUDSystem) drawText(str string, x, y int, col color.Color) {
 	// Use basicfont.Face7x13 for consistent text rendering across all UI systems
 	// Note: y coordinate is the baseline, not top-left, so text appears below y
 	text.Draw(h.screen, str, basicfont.Face7x13, x, y+13, col)
+}
+
+// drawAimIndicator draws a crosshair showing the player's aim direction.
+// Phase 10.1: Visual feedback for 360° mouse aim system.
+func (h *EbitenHUDSystem) drawAimIndicator() {
+	// Get player aim component
+	aimComp, ok := h.playerEntity.GetComponent("aim")
+	if !ok {
+		return // No aim component, skip indicator
+	}
+	aim := aimComp.(*AimComponent)
+
+	// DEBUG: Compare aim vs rotation components
+	if rotComp, ok := h.playerEntity.GetComponent("rotation"); ok {
+		rotation := rotComp.(*RotationComponent)
+		fmt.Printf("[DEBUG] HUD: AimAngle=%.4f, RotationAngle=%.4f, RotationTarget=%.4f\n",
+			aim.AimAngle, rotation.Angle, rotation.TargetAngle)
+	}
+
+	// Draw direction arrow from player center (screen center since camera follows player)
+	// Calculate endpoint 60 pixels away in aim direction
+	dirX, dirY := aim.GetAimDirection()
+	arrowLength := float32(60.0)
+
+	// Center of screen (player is always centered)
+	centerX := float32(h.screenWidth / 2)
+	centerY := float32(h.screenHeight / 2)
+
+	endX := centerX + float32(dirX)*arrowLength
+	endY := centerY + float32(dirY)*arrowLength
+
+	// Draw aim line (semi-transparent white)
+	vector.StrokeLine(h.screen, centerX, centerY, endX, endY, 2,
+		color.RGBA{255, 255, 255, 128}, false)
+
+	// Draw arrowhead
+	arrowSize := float32(8.0)
+	perpX := -float32(dirY) // Perpendicular vector
+	perpY := float32(dirX)
+
+	// Three points of the arrowhead triangle
+	tipX := endX
+	tipY := endY
+	left1X := tipX - float32(dirX)*arrowSize + perpX*arrowSize*0.5
+	left1Y := tipY - float32(dirY)*arrowSize + perpY*arrowSize*0.5
+	left2X := tipX - float32(dirX)*arrowSize - perpX*arrowSize*0.5
+	left2Y := tipY - float32(dirY)*arrowSize - perpY*arrowSize*0.5
+
+	// Draw filled triangle for arrowhead
+	vector.DrawFilledCircle(h.screen, tipX, tipY, 3, color.RGBA{255, 255, 255, 180}, false)
+	vector.StrokeLine(h.screen, left1X, left1Y, tipX, tipY, 2,
+		color.RGBA{255, 255, 255, 180}, false)
+	vector.StrokeLine(h.screen, left2X, left2Y, tipX, tipY, 2,
+		color.RGBA{255, 255, 255, 180}, false)
 }
 
 // IsActive returns whether the HUD is currently visible.

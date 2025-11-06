@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 	"sort"
@@ -367,6 +368,14 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 			sprite.CurrentDirection = int(anim.GetFacing())
 		}
 
+		// Phase 10.1: Sync sprite rotation from RotationComponent if present
+		// This enables 360° visual rotation for entities with rotation component
+		// CRITICAL: Must sync here for batch rendering path (drawEntity has its own sync)
+		if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
+			rotation := rotComp.(*RotationComponent)
+			sprite.Rotation = rotation.Angle
+		}
+
 		// Get the actual sprite image (directional or single)
 		var actualSpriteImage *ebiten.Image
 		if len(sprite.DirectionalImages) > 0 {
@@ -413,6 +422,12 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		if sprite.Rotation != 0 {
 			cos = float32(math.Cos(sprite.Rotation))
 			sin = float32(math.Sin(sprite.Rotation))
+
+			// DEBUG: Log when rotating player sprite
+			if entity.ID == 1 {
+				fmt.Printf("[DEBUG] Batch rendering player with rotation=%.4f, cos=%.4f, sin=%.4f\n",
+					sprite.Rotation, cos, sin)
+			}
 		}
 
 		// Calculate rotated corners
@@ -574,6 +589,11 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
 		rotation := rotComp.(*RotationComponent)
 		sprite.Rotation = rotation.Angle
+
+		// DEBUG: Log rotation values for player entity (entity ID 1)
+		if entity.ID == 1 && sprite.Rotation != 0 {
+			fmt.Printf("[DEBUG] Player sprite.Rotation = %.4f rad (%.1f deg)\n", sprite.Rotation, sprite.Rotation*180/math.Pi)
+		}
 	}
 
 	// Convert world position to screen position

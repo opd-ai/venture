@@ -183,6 +183,11 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			// GAP-012 REPAIR: Add visual feedback for hit flash
 			enemy.AddComponent(NewVisualFeedbackComponent())
 
+			// Phase 10.1: Add rotation and aim components for 360° enemy rotation
+			// Enemies rotate to face the player during AI targeting
+			enemy.AddComponent(NewRotationComponent(0, 5.0)) // Faster rotation than player (5 rad/s)
+			enemy.AddComponent(NewAimComponent(0))
+
 			spawned++
 		}
 	}

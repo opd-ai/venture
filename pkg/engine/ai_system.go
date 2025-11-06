@@ -450,6 +450,13 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 		vel.VX = (dx / dist) * speed
 		vel.VY = (dy / dist) * speed
 
+		// Phase 10.1: Update aim component to face movement direction
+		// This makes enemies visibly rotate towards their target
+		if aimComp, ok := entity.GetComponent("aim"); ok {
+			aim := aimComp.(*AimComponent)
+			aim.SetAimTarget(targetX, targetY)
+		}
+
 		// GAP-018 REPAIR: Update animation state to walk when moving
 		if animComp, ok := entity.GetComponent("animation"); ok {
 			anim := animComp.(*AnimationComponent)

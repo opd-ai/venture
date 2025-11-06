@@ -3,6 +3,10 @@
 // based on aim input, supporting smooth rotation interpolation.
 package engine
 
+import (
+	"fmt"
+)
+
 // RotationSystem manages entity rotation and orientation.
 // Updates RotationComponent based on AimComponent input, enabling
 // smooth transitions between facing directions. Works in conjunction
@@ -54,11 +58,23 @@ func (s *RotationSystem) Update(deltaTime float64) {
 
 				// Set rotation target to match aim
 				rotation.SetTargetAngle(aim.AimAngle)
+
+				// DEBUG: Log rotation updates for player (entity ID 1)
+				if entity.ID == 1 && aim.AimAngle != 0 {
+					fmt.Printf("[DEBUG] RotationSystem: Player aim=%.4f, target=%.4f, current=%.4f\n",
+						aim.AimAngle, rotation.TargetAngle, rotation.Angle)
+				}
 			}
 		}
 
 		// Perform smooth rotation update
 		rotation.Update(deltaTime)
+
+		// DEBUG: Log final angle for player
+		if entity.ID == 1 && rotation.Angle != 0 {
+			fmt.Printf("[DEBUG] RotationSystem: Player final angle=%.4f rad (%.1f deg)\n",
+				rotation.Angle, rotation.Angle*180/3.14159)
+		}
 	}
 }
 

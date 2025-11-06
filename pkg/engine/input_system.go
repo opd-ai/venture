@@ -4,6 +4,9 @@
 package engine
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/mobile"
@@ -658,8 +661,14 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 			// Convert screen coordinates to world coordinates
 			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
 
-			// Set aim target in world space
+			// Set aim target in world space (this updates aim.AimAngle internally)
+			oldAngle := aim.AimAngle
 			aim.SetAimTarget(worldX, worldY)
+
+			// DEBUG: Log aim updates when angle changes significantly
+			if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
+				fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
+			}
 		}
 	}
 

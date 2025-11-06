@@ -1,7 +1,7 @@
 # TASK: Execute Next Planned Task
 
 ## OBJECTIVE
-Identify and implement the next incomplete task from docs/PLAN.md (short-term) or docs/ROADMAP.md (long-term). Prioritize PLAN.md tasks. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE task following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished.
+Identify and implement the next incomplete task from docs/PLAN.md (short-term) or docs/ROADMAP.md (long-term). Prioritize PLAN.md tasks. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE task following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass.
 
 ## EXECUTION MODE
 **Autonomous Action** - Implement the task immediately with full testing and documentation.
@@ -32,6 +32,7 @@ Identify and implement the next incomplete task from docs/PLAN.md (short-term) o
 - **No Ebiten in Tests**: Use stub implementations (StubInput, StubSprite, etc.)
 
 ### 4. Testing
+- Install dependencies per `test.yml` workflow and use `xvfb` to run test suite.
 - Table-driven tests for multiple scenarios
 - Test success AND error paths
 - Verify determinism: same seed = identical output

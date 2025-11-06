@@ -1578,6 +1578,315 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	}
 }
 
+// ============================================================================
+// Phase 15.1: Genre-Specific Anatomical Variations
+// ============================================================================
+// These functions apply genre-specific styling to non-humanoid creature templates.
+// Each genre variation modifies shape types, proportions, and visual characteristics
+// to match the genre's aesthetic while maintaining the base anatomical structure.
+
+// ApplyFantasyVariation applies organic, natural styling to a creature template.
+// Fantasy genre emphasizes softer shapes, organic forms, and natural proportions.
+// Shape modifications: prefer organic, bean, ellipse shapes over geometric ones.
+func ApplyFantasyVariation(template AnatomicalTemplate) AnatomicalTemplate {
+	fantasy := template
+	fantasy.Name = "fantasy_" + template.Name
+
+	// Create new body part layout to avoid modifying original
+	fantasy.BodyPartLayout = make(map[BodyPart]PartSpec)
+
+	// Apply organic shape preferences to all body parts
+	for part, spec := range template.BodyPartLayout {
+		// Skip shadow - it remains ellipse
+		if part == PartShadow {
+			fantasy.BodyPartLayout[part] = spec
+			continue
+		}
+
+		// Filter shapes to prefer organic variants
+		organicShapes := []shapes.ShapeType{}
+		for _, shapeType := range spec.ShapeTypes {
+			switch shapeType {
+			// Keep organic shapes
+			case shapes.ShapeOrganic, shapes.ShapeBean, shapes.ShapeEllipse,
+				shapes.ShapeCircle, shapes.ShapeCapsule, shapes.ShapeWave:
+				organicShapes = append(organicShapes, shapeType)
+			// Replace geometric shapes with organic equivalents
+			case shapes.ShapeRectangle:
+				organicShapes = append(organicShapes, shapes.ShapeCapsule)
+			case shapes.ShapeHexagon, shapes.ShapeOctagon:
+				organicShapes = append(organicShapes, shapes.ShapeEllipse)
+			case shapes.ShapeTriangle:
+				organicShapes = append(organicShapes, shapes.ShapeWedge)
+			// Keep unique shapes that add character
+			default:
+				organicShapes = append(organicShapes, shapeType)
+			}
+		}
+
+		if len(organicShapes) > 0 {
+			spec.ShapeTypes = organicShapes
+		}
+		fantasy.BodyPartLayout[part] = spec
+	}
+
+	return fantasy
+}
+
+// ApplySciFiVariation applies geometric, angular styling to a creature template.
+// Sci-fi genre emphasizes precise shapes, angular forms, and mechanical precision.
+// Shape modifications: prefer hexagon, octagon, rectangle over organic shapes.
+func ApplySciFiVariation(template AnatomicalTemplate) AnatomicalTemplate {
+	scifi := template
+	scifi.Name = "scifi_" + template.Name
+
+	// Create new body part layout to avoid modifying original
+	scifi.BodyPartLayout = make(map[BodyPart]PartSpec)
+
+	// Apply geometric shape preferences to all body parts
+	for part, spec := range template.BodyPartLayout {
+		// Skip shadow - it remains ellipse
+		if part == PartShadow {
+			scifi.BodyPartLayout[part] = spec
+			continue
+		}
+
+		// Filter shapes to prefer geometric variants
+		geometricShapes := []shapes.ShapeType{}
+		for _, shapeType := range spec.ShapeTypes {
+			switch shapeType {
+			// Keep geometric shapes
+			case shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle,
+				shapes.ShapeTriangle, shapes.ShapeGear, shapes.ShapeCrystal:
+				geometricShapes = append(geometricShapes, shapeType)
+			// Replace organic shapes with geometric equivalents
+			case shapes.ShapeOrganic, shapes.ShapeBean:
+				geometricShapes = append(geometricShapes, shapes.ShapeHexagon)
+			case shapes.ShapeEllipse:
+				geometricShapes = append(geometricShapes, shapes.ShapeOctagon)
+			case shapes.ShapeCircle:
+				geometricShapes = append(geometricShapes, shapes.ShapeHexagon)
+			case shapes.ShapeCapsule:
+				geometricShapes = append(geometricShapes, shapes.ShapeRectangle)
+			case shapes.ShapeWave:
+				geometricShapes = append(geometricShapes, shapes.ShapeLightning)
+			// Keep unique shapes
+			default:
+				geometricShapes = append(geometricShapes, shapeType)
+			}
+		}
+
+		if len(geometricShapes) > 0 {
+			spec.ShapeTypes = geometricShapes
+		}
+		scifi.BodyPartLayout[part] = spec
+	}
+
+	return scifi
+}
+
+// ApplyHorrorVariation applies distorted, unsettling styling to a creature template.
+// Horror genre emphasizes irregular shapes, distorted proportions, and unsettling forms.
+// Modifies proportions: elongates some parts, shrinks others, reduces opacity for ghostly effect.
+func ApplyHorrorVariation(template AnatomicalTemplate) AnatomicalTemplate {
+	horror := template
+	horror.Name = "horror_" + template.Name
+
+	// Create new body part layout to avoid modifying original
+	horror.BodyPartLayout = make(map[BodyPart]PartSpec)
+
+	// Apply distortion to all body parts
+	for part, spec := range template.BodyPartLayout {
+		// Reduce shadow opacity for ghostly/otherworldly effect
+		if part == PartShadow {
+			spec.Opacity *= 0.6 // Make shadow fainter
+			horror.BodyPartLayout[part] = spec
+			continue
+		}
+
+		// Distort proportions based on body part
+		switch part {
+		case PartHead:
+			// Elongate head for unsettling appearance
+			spec.RelativeHeight *= 1.2
+			spec.RelativeWidth *= 0.85
+			// Prefer skull and organic shapes
+			spec.ShapeTypes = []shapes.ShapeType{shapes.ShapeSkull, shapes.ShapeOrganic, shapes.ShapeEllipse}
+		case PartTorso:
+			// Irregular torso
+			spec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean}
+			spec.RelativeWidth *= 0.9
+		case PartLegs, PartArms:
+			// Elongate limbs for unnatural appearance
+			spec.RelativeHeight *= 1.15
+			spec.RelativeWidth *= 0.85
+		}
+
+		// Slightly reduce opacity for translucent/ethereal effect
+		if spec.Opacity > 0.5 {
+			spec.Opacity *= 0.95
+		}
+
+		horror.BodyPartLayout[part] = spec
+	}
+
+	return horror
+}
+
+// ApplyCyberpunkVariation applies augmented, tech-enhanced styling to a creature template.
+// Cyberpunk genre emphasizes mechanical additions, tech implants, and neon accents.
+// Adds armor/tech overlay parts and modifies colors to show augmentation.
+func ApplyCyberpunkVariation(template AnatomicalTemplate) AnatomicalTemplate {
+	cyberpunk := template
+	cyberpunk.Name = "cyberpunk_" + template.Name
+
+	// Create new body part layout to avoid modifying original
+	cyberpunk.BodyPartLayout = make(map[BodyPart]PartSpec)
+
+	// Apply angular shapes and tech aesthetic
+	for part, spec := range template.BodyPartLayout {
+		if part == PartShadow {
+			cyberpunk.BodyPartLayout[part] = spec
+			continue
+		}
+
+		// Prefer angular, tech-like shapes
+		techShapes := []shapes.ShapeType{}
+		for _, shapeType := range spec.ShapeTypes {
+			switch shapeType {
+			// Keep angular shapes
+			case shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle:
+				techShapes = append(techShapes, shapeType)
+			// Replace organic with angular
+			case shapes.ShapeOrganic, shapes.ShapeBean:
+				techShapes = append(techShapes, shapes.ShapeHexagon)
+			case shapes.ShapeCircle, shapes.ShapeEllipse:
+				techShapes = append(techShapes, shapes.ShapeOctagon)
+			default:
+				techShapes = append(techShapes, shapeType)
+			}
+		}
+
+		if len(techShapes) > 0 {
+			spec.ShapeTypes = techShapes
+		}
+
+		// Change color roles to show tech augmentation
+		if part == PartHead {
+			spec.ColorRole = "accent1" // Neon glow for head
+		}
+
+		cyberpunk.BodyPartLayout[part] = spec
+	}
+
+	// Add tech overlay/armor if torso exists
+	if torsoSpec, hasTorso := template.BodyPartLayout[PartTorso]; hasTorso {
+		armorSpec := torsoSpec
+		armorSpec.RelativeWidth *= 1.1 // Slightly larger
+		armorSpec.RelativeHeight *= 1.1
+		armorSpec.ZIndex = torsoSpec.ZIndex - 1 // Behind torso
+		armorSpec.ColorRole = "accent1"
+		armorSpec.Opacity = 0.4 // Translucent tech glow
+		armorSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeOctagon}
+		cyberpunk.BodyPartLayout[PartArmor] = armorSpec
+	}
+
+	return cyberpunk
+}
+
+// ApplyPostApocVariation applies weathered, damaged styling to a creature template.
+// Post-apocalyptic genre emphasizes rough edges, irregular forms, and worn appearance.
+// Modifies shapes to appear makeshift and damaged.
+func ApplyPostApocVariation(template AnatomicalTemplate) AnatomicalTemplate {
+	postapoc := template
+	postapoc.Name = "postapoc_" + template.Name
+
+	// Create new body part layout to avoid modifying original
+	postapoc.BodyPartLayout = make(map[BodyPart]PartSpec)
+
+	// Apply rough, irregular styling
+	for part, spec := range template.BodyPartLayout {
+		if part == PartShadow {
+			postapoc.BodyPartLayout[part] = spec
+			continue
+		}
+
+		// Prefer rough, irregular shapes
+		roughShapes := []shapes.ShapeType{}
+		for _, shapeType := range spec.ShapeTypes {
+			switch shapeType {
+			// Keep rough shapes
+			case shapes.ShapeOrganic, shapes.ShapeRectangle, shapes.ShapeCapsule:
+				roughShapes = append(roughShapes, shapeType)
+			// Replace smooth with rough equivalents
+			case shapes.ShapeCircle:
+				roughShapes = append(roughShapes, shapes.ShapeOrganic)
+			case shapes.ShapeEllipse:
+				roughShapes = append(roughShapes, shapes.ShapeBean)
+			case shapes.ShapeHexagon, shapes.ShapeOctagon:
+				roughShapes = append(roughShapes, shapes.ShapeRectangle)
+			default:
+				roughShapes = append(roughShapes, shapeType)
+			}
+		}
+
+		if len(roughShapes) > 0 {
+			spec.ShapeTypes = roughShapes
+		}
+		postapoc.BodyPartLayout[part] = spec
+	}
+
+	return postapoc
+}
+
+// SelectTemplateWithGenre chooses an appropriate template with genre-specific styling.
+// This replaces SelectTemplate for genre-aware template selection.
+// Applies genre variations to non-humanoid creature types.
+// For humanoid types, use SelectHumanoidTemplate instead.
+func SelectTemplateWithGenre(entityType, genre string) AnatomicalTemplate {
+	// Get base template
+	var baseTemplate AnatomicalTemplate
+	switch entityType {
+	case "humanoid", "player", "npc", "knight", "mage", "warrior":
+		// For humanoids, return default - caller should use SelectHumanoidTemplate with direction
+		return HumanoidTemplate()
+	case "quadruped", "wolf", "bear", "animal", "beast":
+		baseTemplate = QuadrupedTemplate()
+	case "blob", "slime", "amoeba", "ooze":
+		baseTemplate = BlobTemplate()
+	case "mechanical", "robot", "golem", "construct", "android":
+		baseTemplate = MechanicalTemplate()
+	case "flying", "bird", "dragon", "bat", "wyvern":
+		baseTemplate = FlyingTemplate()
+	case "serpentine", "snake", "worm", "tentacle", "wyrm":
+		baseTemplate = SerpentineTemplate()
+	case "arachnid", "spider", "insect", "beetle":
+		baseTemplate = ArachnidTemplate()
+	case "undead", "skeleton", "ghost", "zombie", "lich":
+		baseTemplate = UndeadTemplate()
+	default:
+		// Default to humanoid for unknown types
+		return HumanoidTemplate()
+	}
+
+	// Apply genre-specific variation
+	switch genre {
+	case "fantasy":
+		return ApplyFantasyVariation(baseTemplate)
+	case "scifi", "sci-fi":
+		return ApplySciFiVariation(baseTemplate)
+	case "horror":
+		return ApplyHorrorVariation(baseTemplate)
+	case "cyberpunk":
+		return ApplyCyberpunkVariation(baseTemplate)
+	case "postapoc", "post-apocalyptic":
+		return ApplyPostApocVariation(baseTemplate)
+	default:
+		// No genre variation, return base template
+		return baseTemplate
+	}
+}
+
 // BossAerialTemplate creates a scaled boss variant of an aerial template.
 // Applies uniform scaling to all body parts while preserving:
 // - 35/50/15 proportion ratios

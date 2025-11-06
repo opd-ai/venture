@@ -2094,3 +2094,590 @@ func BenchmarkNewPartSpecFromPixels(b *testing.B) {
 		_ = NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
 	}
 }
+
+// ============================================================================
+// Phase 15.1: Genre-Specific Anatomical Variations Tests
+// ============================================================================
+
+// TestApplyFantasyVariation tests fantasy genre variation application.
+func TestApplyFantasyVariation(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseTemplate AnatomicalTemplate
+		wantPrefix   string
+	}{
+		{"quadruped", QuadrupedTemplate(), "fantasy_quadruped"},
+		{"blob", BlobTemplate(), "fantasy_blob"},
+		{"mechanical", MechanicalTemplate(), "fantasy_mechanical"},
+		{"flying", FlyingTemplate(), "fantasy_flying"},
+		{"serpentine", SerpentineTemplate(), "fantasy_serpentine"},
+		{"arachnid", ArachnidTemplate(), "fantasy_arachnid"},
+		{"undead", UndeadTemplate(), "fantasy_undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyFantasyVariation(tt.baseTemplate)
+
+			// Verify name has fantasy prefix
+			if result.Name != tt.wantPrefix {
+				t.Errorf("Name = %v, want %v", result.Name, tt.wantPrefix)
+			}
+
+			// Verify organic shapes are preferred
+			for part, spec := range result.BodyPartLayout {
+				if part == PartShadow {
+					continue // Shadow unchanged
+				}
+
+				// Check that at least one organic shape is present
+				hasOrganicShape := false
+				organicShapes := []shapes.ShapeType{
+					shapes.ShapeOrganic, shapes.ShapeBean, shapes.ShapeEllipse,
+					shapes.ShapeCircle, shapes.ShapeCapsule, shapes.ShapeWave,
+				}
+				for _, shapeType := range spec.ShapeTypes {
+					for _, organic := range organicShapes {
+						if shapeType == organic {
+							hasOrganicShape = true
+							break
+						}
+					}
+					if hasOrganicShape {
+						break
+					}
+				}
+
+				if !hasOrganicShape && len(spec.ShapeTypes) > 0 {
+					// Some parts may use non-organic shapes if they're unique
+					// This is acceptable as long as geometric shapes are avoided
+					for _, shapeType := range spec.ShapeTypes {
+						if shapeType == shapes.ShapeRectangle ||
+							shapeType == shapes.ShapeHexagon ||
+							shapeType == shapes.ShapeOctagon {
+							t.Errorf("Part %v has geometric shape %v, should prefer organic",
+								part.String(), shapeType.String())
+						}
+					}
+				}
+			}
+
+			// Verify shadow remains unchanged
+			if shadowSpec, hasShadow := result.BodyPartLayout[PartShadow]; hasShadow {
+				baseSpec := tt.baseTemplate.BodyPartLayout[PartShadow]
+				if len(shadowSpec.ShapeTypes) != len(baseSpec.ShapeTypes) {
+					t.Error("Shadow shape types should not be modified")
+				}
+			}
+		})
+	}
+}
+
+// TestApplySciFiVariation tests sci-fi genre variation application.
+func TestApplySciFiVariation(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseTemplate AnatomicalTemplate
+		wantPrefix   string
+	}{
+		{"quadruped", QuadrupedTemplate(), "scifi_quadruped"},
+		{"blob", BlobTemplate(), "scifi_blob"},
+		{"mechanical", MechanicalTemplate(), "scifi_mechanical"},
+		{"flying", FlyingTemplate(), "scifi_flying"},
+		{"serpentine", SerpentineTemplate(), "scifi_serpentine"},
+		{"arachnid", ArachnidTemplate(), "scifi_arachnid"},
+		{"undead", UndeadTemplate(), "scifi_undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplySciFiVariation(tt.baseTemplate)
+
+			// Verify name has scifi prefix
+			if result.Name != tt.wantPrefix {
+				t.Errorf("Name = %v, want %v", result.Name, tt.wantPrefix)
+			}
+
+			// Verify geometric shapes are preferred
+			for part, spec := range result.BodyPartLayout {
+				if part == PartShadow {
+					continue // Shadow unchanged
+				}
+
+				// Check that geometric shapes are present or organic shapes avoided
+				hasGeometricShape := false
+				geometricShapes := []shapes.ShapeType{
+					shapes.ShapeHexagon, shapes.ShapeOctagon, shapes.ShapeRectangle,
+					shapes.ShapeTriangle, shapes.ShapeGear, shapes.ShapeCrystal,
+				}
+				for _, shapeType := range spec.ShapeTypes {
+					for _, geometric := range geometricShapes {
+						if shapeType == geometric {
+							hasGeometricShape = true
+							break
+						}
+					}
+					if hasGeometricShape {
+						break
+					}
+				}
+
+				// Verify no organic shapes that should have been replaced
+				for _, shapeType := range spec.ShapeTypes {
+					if shapeType == shapes.ShapeOrganic || shapeType == shapes.ShapeBean {
+						t.Errorf("Part %v still has organic shape %v, should be replaced with geometric",
+							part.String(), shapeType.String())
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestApplyHorrorVariation tests horror genre variation application.
+func TestApplyHorrorVariation(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseTemplate AnatomicalTemplate
+		wantPrefix   string
+	}{
+		{"quadruped", QuadrupedTemplate(), "horror_quadruped"},
+		{"blob", BlobTemplate(), "horror_blob"},
+		{"mechanical", MechanicalTemplate(), "horror_mechanical"},
+		{"flying", FlyingTemplate(), "horror_flying"},
+		{"serpentine", SerpentineTemplate(), "horror_serpentine"},
+		{"arachnid", ArachnidTemplate(), "horror_arachnid"},
+		{"undead", UndeadTemplate(), "horror_undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyHorrorVariation(tt.baseTemplate)
+
+			// Verify name has horror prefix
+			if result.Name != tt.wantPrefix {
+				t.Errorf("Name = %v, want %v", result.Name, tt.wantPrefix)
+			}
+
+			// Verify shadow opacity is reduced
+			if shadowSpec, hasShadow := result.BodyPartLayout[PartShadow]; hasShadow {
+				baseSpec := tt.baseTemplate.BodyPartLayout[PartShadow]
+				if shadowSpec.Opacity >= baseSpec.Opacity {
+					t.Errorf("Shadow opacity not reduced: got %v, want < %v",
+						shadowSpec.Opacity, baseSpec.Opacity)
+				}
+			}
+
+			// Verify head proportions are distorted (if head exists)
+			if headSpec, hasHead := result.BodyPartLayout[PartHead]; hasHead {
+				baseSpec := tt.baseTemplate.BodyPartLayout[PartHead]
+				// Head should be elongated (taller, narrower)
+				if headSpec.RelativeHeight <= baseSpec.RelativeHeight {
+					t.Error("Head should be elongated (increased height)")
+				}
+				if headSpec.RelativeWidth >= baseSpec.RelativeWidth {
+					t.Error("Head should be narrowed (decreased width)")
+				}
+
+				// Should prefer skull/organic shapes
+				hasDistortedShape := false
+				for _, shapeType := range headSpec.ShapeTypes {
+					if shapeType == shapes.ShapeSkull || shapeType == shapes.ShapeOrganic {
+						hasDistortedShape = true
+						break
+					}
+				}
+				if !hasDistortedShape && len(headSpec.ShapeTypes) > 0 {
+					t.Error("Head should use skull or organic shapes for horror aesthetic")
+				}
+			}
+
+			// Verify torso uses irregular shapes
+			if torsoSpec, hasTorso := result.BodyPartLayout[PartTorso]; hasTorso {
+				hasIrregular := false
+				for _, shapeType := range torsoSpec.ShapeTypes {
+					if shapeType == shapes.ShapeOrganic || shapeType == shapes.ShapeBean {
+						hasIrregular = true
+						break
+					}
+				}
+				if !hasIrregular {
+					t.Error("Torso should use irregular organic/bean shapes")
+				}
+			}
+
+			// Verify limbs are elongated (if present)
+			for _, part := range []BodyPart{PartLegs, PartArms} {
+				if spec, exists := result.BodyPartLayout[part]; exists {
+					baseSpec := tt.baseTemplate.BodyPartLayout[part]
+					if spec.RelativeHeight <= baseSpec.RelativeHeight {
+						t.Errorf("Part %v should be elongated (increased height)", part.String())
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestApplyCyberpunkVariation tests cyberpunk genre variation application.
+func TestApplyCyberpunkVariation(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseTemplate AnatomicalTemplate
+		wantPrefix   string
+	}{
+		{"quadruped", QuadrupedTemplate(), "cyberpunk_quadruped"},
+		{"blob", BlobTemplate(), "cyberpunk_blob"},
+		{"mechanical", MechanicalTemplate(), "cyberpunk_mechanical"},
+		{"flying", FlyingTemplate(), "cyberpunk_flying"},
+		{"serpentine", SerpentineTemplate(), "cyberpunk_serpentine"},
+		{"arachnid", ArachnidTemplate(), "cyberpunk_arachnid"},
+		{"undead", UndeadTemplate(), "cyberpunk_undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyCyberpunkVariation(tt.baseTemplate)
+
+			// Verify name has cyberpunk prefix
+			if result.Name != tt.wantPrefix {
+				t.Errorf("Name = %v, want %v", result.Name, tt.wantPrefix)
+			}
+
+			// Verify angular/tech shapes are used
+			for part, spec := range result.BodyPartLayout {
+				if part == PartShadow {
+					continue // Shadow unchanged
+				}
+
+				// No organic shapes should remain
+				for _, shapeType := range spec.ShapeTypes {
+					if shapeType == shapes.ShapeOrganic || shapeType == shapes.ShapeBean {
+						t.Errorf("Part %v has organic shape %v, should be angular",
+							part.String(), shapeType.String())
+					}
+				}
+
+				// Head should use accent1 (tech glow)
+				if part == PartHead && spec.ColorRole != "accent1" {
+					t.Errorf("Head color role = %v, want accent1 for tech glow", spec.ColorRole)
+				}
+			}
+
+			// Verify tech armor overlay is added (if torso exists)
+			if _, hasTorso := tt.baseTemplate.BodyPartLayout[PartTorso]; hasTorso {
+				armorSpec, hasArmor := result.BodyPartLayout[PartArmor]
+				if !hasArmor {
+					t.Error("Should have tech armor overlay when torso exists")
+				} else {
+					// Verify armor properties
+					if armorSpec.ColorRole != "accent1" {
+						t.Errorf("Armor color role = %v, want accent1", armorSpec.ColorRole)
+					}
+					if armorSpec.Opacity >= 0.5 {
+						t.Errorf("Armor opacity too high: %v, want < 0.5 for glow effect",
+							armorSpec.Opacity)
+					}
+					// Should use tech shapes
+					hasTechShape := false
+					for _, shapeType := range armorSpec.ShapeTypes {
+						if shapeType == shapes.ShapeHexagon || shapeType == shapes.ShapeOctagon {
+							hasTechShape = true
+							break
+						}
+					}
+					if !hasTechShape {
+						t.Error("Armor should use hexagon/octagon tech shapes")
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestApplyPostApocVariation tests post-apocalyptic genre variation application.
+func TestApplyPostApocVariation(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseTemplate AnatomicalTemplate
+		wantPrefix   string
+	}{
+		{"quadruped", QuadrupedTemplate(), "postapoc_quadruped"},
+		{"blob", BlobTemplate(), "postapoc_blob"},
+		{"mechanical", MechanicalTemplate(), "postapoc_mechanical"},
+		{"flying", FlyingTemplate(), "postapoc_flying"},
+		{"serpentine", SerpentineTemplate(), "postapoc_serpentine"},
+		{"arachnid", ArachnidTemplate(), "postapoc_arachnid"},
+		{"undead", UndeadTemplate(), "postapoc_undead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyPostApocVariation(tt.baseTemplate)
+
+			// Verify name has postapoc prefix
+			if result.Name != tt.wantPrefix {
+				t.Errorf("Name = %v, want %v", result.Name, tt.wantPrefix)
+			}
+
+			// Verify rough/irregular shapes are preferred
+			for part, spec := range result.BodyPartLayout {
+				if part == PartShadow {
+					continue // Shadow unchanged
+				}
+
+				// Check for rough shapes
+				hasRoughShape := false
+				roughShapes := []shapes.ShapeType{
+					shapes.ShapeOrganic, shapes.ShapeRectangle,
+					shapes.ShapeCapsule, shapes.ShapeBean,
+				}
+				for _, shapeType := range spec.ShapeTypes {
+					for _, rough := range roughShapes {
+						if shapeType == rough {
+							hasRoughShape = true
+							break
+						}
+					}
+					if hasRoughShape {
+						break
+					}
+				}
+
+				// Verify smooth geometric shapes are avoided
+				for _, shapeType := range spec.ShapeTypes {
+					if shapeType == shapes.ShapeCircle && !hasRoughShape {
+						t.Errorf("Part %v uses circle, should prefer organic shapes",
+							part.String())
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestSelectTemplateWithGenre tests genre-aware template selection.
+func TestSelectTemplateWithGenre(t *testing.T) {
+	tests := []struct {
+		name       string
+		entityType string
+		genre      string
+		wantName   string
+	}{
+		// Fantasy variations
+		{"fantasy_quadruped", "quadruped", "fantasy", "fantasy_quadruped"},
+		{"fantasy_blob", "blob", "fantasy", "fantasy_blob"},
+		{"fantasy_flying", "flying", "fantasy", "fantasy_flying"},
+
+		// Sci-fi variations
+		{"scifi_mechanical", "mechanical", "scifi", "scifi_mechanical"},
+		{"scifi_arachnid", "spider", "scifi", "scifi_arachnid"},
+		{"scifi_serpentine", "snake", "sci-fi", "scifi_serpentine"},
+
+		// Horror variations
+		{"horror_undead", "undead", "horror", "horror_undead"},
+		{"horror_quadruped", "wolf", "horror", "horror_quadruped"},
+
+		// Cyberpunk variations
+		{"cyberpunk_mechanical", "robot", "cyberpunk", "cyberpunk_mechanical"},
+		{"cyberpunk_flying", "dragon", "cyberpunk", "cyberpunk_flying"},
+
+		// Post-apoc variations
+		{"postapoc_blob", "slime", "postapoc", "postapoc_blob"},
+		{"postapoc_arachnid", "insect", "post-apocalyptic", "postapoc_arachnid"},
+
+		// No genre (base templates)
+		{"base_quadruped", "quadruped", "", "quadruped"},
+		{"base_blob", "blob", "unknown", "blob"},
+
+		// Humanoid (returns default humanoid)
+		{"humanoid", "humanoid", "fantasy", "humanoid"},
+		{"player", "player", "scifi", "humanoid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SelectTemplateWithGenre(tt.entityType, tt.genre)
+
+			if result.Name != tt.wantName {
+				t.Errorf("Template name = %v, want %v", result.Name, tt.wantName)
+			}
+
+			// Verify template has required body parts
+			if len(result.BodyPartLayout) == 0 {
+				t.Error("Template should have at least one body part")
+			}
+
+			// Verify shadow exists (all templates should have shadow)
+			if _, hasShadow := result.BodyPartLayout[PartShadow]; !hasShadow {
+				t.Error("Template should have shadow part")
+			}
+		})
+	}
+}
+
+// TestGenreVariationDeterminism tests that genre variations are deterministic.
+func TestGenreVariationDeterminism(t *testing.T) {
+	baseTemplate := QuadrupedTemplate()
+
+	tests := []struct {
+		name      string
+		applyFunc func(AnatomicalTemplate) AnatomicalTemplate
+	}{
+		{"fantasy", ApplyFantasyVariation},
+		{"scifi", ApplySciFiVariation},
+		{"horror", ApplyHorrorVariation},
+		{"cyberpunk", ApplyCyberpunkVariation},
+		{"postapoc", ApplyPostApocVariation},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Apply variation twice
+			result1 := tt.applyFunc(baseTemplate)
+			result2 := tt.applyFunc(baseTemplate)
+
+			// Verify same name
+			if result1.Name != result2.Name {
+				t.Errorf("Names differ: %v vs %v", result1.Name, result2.Name)
+			}
+
+			// Verify same number of parts
+			if len(result1.BodyPartLayout) != len(result2.BodyPartLayout) {
+				t.Errorf("Different part counts: %d vs %d",
+					len(result1.BodyPartLayout), len(result2.BodyPartLayout))
+			}
+
+			// Verify each part is identical
+			for part, spec1 := range result1.BodyPartLayout {
+				spec2, exists := result2.BodyPartLayout[part]
+				if !exists {
+					t.Errorf("Part %v missing in second result", part.String())
+					continue
+				}
+
+				// Compare key fields
+				if spec1.RelativeX != spec2.RelativeX {
+					t.Errorf("Part %v: RelativeX differs", part.String())
+				}
+				if spec1.RelativeY != spec2.RelativeY {
+					t.Errorf("Part %v: RelativeY differs", part.String())
+				}
+				if spec1.RelativeWidth != spec2.RelativeWidth {
+					t.Errorf("Part %v: RelativeWidth differs", part.String())
+				}
+				if spec1.RelativeHeight != spec2.RelativeHeight {
+					t.Errorf("Part %v: RelativeHeight differs", part.String())
+				}
+				if spec1.ZIndex != spec2.ZIndex {
+					t.Errorf("Part %v: ZIndex differs", part.String())
+				}
+				if spec1.Opacity != spec2.Opacity {
+					t.Errorf("Part %v: Opacity differs", part.String())
+				}
+				if len(spec1.ShapeTypes) != len(spec2.ShapeTypes) {
+					t.Errorf("Part %v: ShapeTypes length differs", part.String())
+				}
+			}
+		})
+	}
+}
+
+// TestGenreVariationShapePreservation tests that variations maintain valid shapes.
+func TestGenreVariationShapePreservation(t *testing.T) {
+	templates := []AnatomicalTemplate{
+		QuadrupedTemplate(),
+		BlobTemplate(),
+		MechanicalTemplate(),
+		FlyingTemplate(),
+		SerpentineTemplate(),
+		ArachnidTemplate(),
+		UndeadTemplate(),
+	}
+
+	variations := []struct {
+		name      string
+		applyFunc func(AnatomicalTemplate) AnatomicalTemplate
+	}{
+		{"fantasy", ApplyFantasyVariation},
+		{"scifi", ApplySciFiVariation},
+		{"horror", ApplyHorrorVariation},
+		{"cyberpunk", ApplyCyberpunkVariation},
+		{"postapoc", ApplyPostApocVariation},
+	}
+
+	for _, template := range templates {
+		for _, variation := range variations {
+			t.Run(template.Name+"_"+variation.name, func(t *testing.T) {
+				result := variation.applyFunc(template)
+
+				// Verify all parts still have at least one shape type
+				for part, spec := range result.BodyPartLayout {
+					if len(spec.ShapeTypes) == 0 {
+						t.Errorf("Part %v has no shape types after variation", part.String())
+					}
+
+					// Verify shape types are valid (not default zero value)
+					for i, shapeType := range spec.ShapeTypes {
+						if shapeType.String() == "unknown" {
+							t.Errorf("Part %v has invalid shape type at index %d",
+								part.String(), i)
+						}
+					}
+				}
+
+				// Verify Z-index ordering is maintained (shadow lowest)
+				if shadowSpec, hasShadow := result.BodyPartLayout[PartShadow]; hasShadow {
+					for part, spec := range result.BodyPartLayout {
+						if part != PartShadow && spec.ZIndex <= shadowSpec.ZIndex {
+							t.Errorf("Part %v has Z-index %d <= shadow Z-index %d",
+								part.String(), spec.ZIndex, shadowSpec.ZIndex)
+						}
+					}
+				}
+
+				// Verify opacity is valid (0.0-1.0)
+				for part, spec := range result.BodyPartLayout {
+					if spec.Opacity < 0.0 || spec.Opacity > 1.0 {
+						t.Errorf("Part %v has invalid opacity: %v (must be 0.0-1.0)",
+							part.String(), spec.Opacity)
+					}
+				}
+			})
+		}
+	}
+}
+
+// BenchmarkApplyFantasyVariation benchmarks fantasy variation application.
+func BenchmarkApplyFantasyVariation(b *testing.B) {
+	template := QuadrupedTemplate()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ApplyFantasyVariation(template)
+	}
+}
+
+// BenchmarkApplySciFiVariation benchmarks sci-fi variation application.
+func BenchmarkApplySciFiVariation(b *testing.B) {
+	template := MechanicalTemplate()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ApplySciFiVariation(template)
+	}
+}
+
+// BenchmarkApplyHorrorVariation benchmarks horror variation application.
+func BenchmarkApplyHorrorVariation(b *testing.B) {
+	template := UndeadTemplate()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ApplyHorrorVariation(template)
+	}
+}
+
+// BenchmarkSelectTemplateWithGenre benchmarks genre-aware template selection.
+func BenchmarkSelectTemplateWithGenre(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = SelectTemplateWithGenre("quadruped", "fantasy")
+	}
+}

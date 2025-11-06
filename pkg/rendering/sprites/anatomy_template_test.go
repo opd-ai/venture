@@ -18,6 +18,8 @@ func TestBodyPart_String(t *testing.T) {
 		{"torso", PartTorso, "torso"},
 		{"arms", PartArms, "arms"},
 		{"head", PartHead, "head"},
+		{"eyes", PartEyes, "eyes"},
+		{"mouth", PartMouth, "mouth"},
 		{"weapon", PartWeapon, "weapon"},
 		{"shield", PartShield, "shield"},
 		{"unknown", BodyPart(999), "unknown"},
@@ -77,6 +79,223 @@ func TestHumanoidTemplate(t *testing.T) {
 	shadowY := template.BodyPartLayout[PartShadow].RelativeY
 	if shadowY < 0.8 {
 		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
+	}
+}
+
+// TestEnhancedHumanoidTemplate tests the Phase 15.1 enhanced humanoid template.
+func TestEnhancedHumanoidTemplate(t *testing.T) {
+	template := EnhancedHumanoidTemplate()
+
+	if template.Name != "enhanced_humanoid" {
+		t.Errorf("Template name = %v, want 'enhanced_humanoid'", template.Name)
+	}
+
+	// Verify all expected body parts are present
+	expectedParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+	for _, part := range expectedParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing body part: %v", part.String())
+		}
+	}
+
+	// Verify Z-index ordering (shadow < legs < arms < torso < head)
+	shadowZ := template.BodyPartLayout[PartShadow].ZIndex
+	legsZ := template.BodyPartLayout[PartLegs].ZIndex
+	armsZ := template.BodyPartLayout[PartArms].ZIndex
+	torsoZ := template.BodyPartLayout[PartTorso].ZIndex
+	headZ := template.BodyPartLayout[PartHead].ZIndex
+
+	if !(shadowZ < legsZ && legsZ < armsZ && armsZ < torsoZ && torsoZ < headZ) {
+		t.Errorf("Z-index ordering incorrect: shadow=%d, legs=%d, arms=%d, torso=%d, head=%d",
+			shadowZ, legsZ, armsZ, torsoZ, headZ)
+	}
+
+	// Verify Phase 15.1 pixel dimensions are set correctly
+	// Head should be 4×4 pixels
+	headSpec := template.BodyPartLayout[PartHead]
+	if headSpec.PreferredPixelSize == nil {
+		t.Fatal("Head PreferredPixelSize should not be nil")
+	}
+	if headSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Head width = %d, want 4", headSpec.PreferredPixelSize.Width)
+	}
+	if headSpec.PreferredPixelSize.Height != 4 {
+		t.Errorf("Head height = %d, want 4", headSpec.PreferredPixelSize.Height)
+	}
+
+	// Torso should be 4×6 pixels
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.PreferredPixelSize == nil {
+		t.Fatal("Torso PreferredPixelSize should not be nil")
+	}
+	if torsoSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Torso width = %d, want 4", torsoSpec.PreferredPixelSize.Width)
+	}
+	if torsoSpec.PreferredPixelSize.Height != 6 {
+		t.Errorf("Torso height = %d, want 6", torsoSpec.PreferredPixelSize.Height)
+	}
+
+	// Legs should be 4×8 pixels
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.PreferredPixelSize == nil {
+		t.Fatal("Legs PreferredPixelSize should not be nil")
+	}
+	if legsSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Legs width = %d, want 4", legsSpec.PreferredPixelSize.Width)
+	}
+	if legsSpec.PreferredPixelSize.Height != 8 {
+		t.Errorf("Legs height = %d, want 8", legsSpec.PreferredPixelSize.Height)
+	}
+
+	// Arms should have pixel dimensions set
+	armsSpec := template.BodyPartLayout[PartArms]
+	if armsSpec.PreferredPixelSize == nil {
+		t.Fatal("Arms PreferredPixelSize should not be nil")
+	}
+	if armsSpec.PreferredPixelSize.Width < 1 || armsSpec.PreferredPixelSize.Height < 1 {
+		t.Errorf("Arms dimensions invalid: %dx%d", armsSpec.PreferredPixelSize.Width, armsSpec.PreferredPixelSize.Height)
+	}
+
+	// Shadow should not have pixel dimensions (scales with sprite)
+	shadowSpec := template.BodyPartLayout[PartShadow]
+	if shadowSpec.PreferredPixelSize != nil {
+		t.Error("Shadow should not have PreferredPixelSize (should scale with sprite)")
+	}
+
+	// Verify GetEffectiveWidth/Height return pixel dimensions
+	const spriteSize = 28
+	headWidth := headSpec.GetEffectiveWidth(spriteSize)
+	headHeight := headSpec.GetEffectiveHeight(spriteSize)
+	if headWidth != 4 {
+		t.Errorf("Head effective width = %d, want 4", headWidth)
+	}
+	if headHeight != 4 {
+		t.Errorf("Head effective height = %d, want 4", headHeight)
+	}
+
+	torsoWidth := torsoSpec.GetEffectiveWidth(spriteSize)
+	torsoHeight := torsoSpec.GetEffectiveHeight(spriteSize)
+	if torsoWidth != 4 {
+		t.Errorf("Torso effective width = %d, want 4", torsoWidth)
+	}
+	if torsoHeight != 6 {
+		t.Errorf("Torso effective height = %d, want 6", torsoHeight)
+	}
+
+	legsWidth := legsSpec.GetEffectiveWidth(spriteSize)
+	legsHeight := legsSpec.GetEffectiveHeight(spriteSize)
+	if legsWidth != 4 {
+		t.Errorf("Legs effective width = %d, want 4", legsWidth)
+	}
+	if legsHeight != 8 {
+		t.Errorf("Legs effective height = %d, want 8", legsHeight)
+	}
+
+	// Verify proportions remain constant across different sprite sizes
+	const largeSpriteSize = 64
+	headWidthLarge := headSpec.GetEffectiveWidth(largeSpriteSize)
+	headHeightLarge := headSpec.GetEffectiveHeight(largeSpriteSize)
+	if headWidthLarge != 4 {
+		t.Errorf("Head effective width at 64x64 = %d, want 4 (pixel-perfect should be constant)", headWidthLarge)
+	}
+	if headHeightLarge != 4 {
+		t.Errorf("Head effective height at 64x64 = %d, want 4 (pixel-perfect should be constant)", headHeightLarge)
+	}
+}
+
+// TestDetailedHumanoidTemplate tests the Phase 15.1 detailed template with facial features.
+func TestDetailedHumanoidTemplate(t *testing.T) {
+	template := DetailedHumanoidTemplate()
+
+	if template.Name != "detailed_humanoid" {
+		t.Errorf("Template name = %v, want 'detailed_humanoid'", template.Name)
+	}
+
+	// Verify all expected body parts including facial features
+	expectedParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead, PartEyes, PartMouth}
+	for _, part := range expectedParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing body part: %v", part.String())
+		}
+	}
+
+	// Verify eyes have correct pixel dimensions (2×1 pixels)
+	eyesSpec := template.BodyPartLayout[PartEyes]
+	if eyesSpec.PreferredPixelSize == nil {
+		t.Fatal("Eyes PreferredPixelSize should not be nil")
+	}
+	if eyesSpec.PreferredPixelSize.Width != 2 {
+		t.Errorf("Eyes width = %d, want 2", eyesSpec.PreferredPixelSize.Width)
+	}
+	if eyesSpec.PreferredPixelSize.Height != 1 {
+		t.Errorf("Eyes height = %d, want 1", eyesSpec.PreferredPixelSize.Height)
+	}
+
+	// Verify mouth has correct pixel dimensions (2×1 pixels)
+	mouthSpec := template.BodyPartLayout[PartMouth]
+	if mouthSpec.PreferredPixelSize == nil {
+		t.Fatal("Mouth PreferredPixelSize should not be nil")
+	}
+	if mouthSpec.PreferredPixelSize.Width != 2 {
+		t.Errorf("Mouth width = %d, want 2", mouthSpec.PreferredPixelSize.Width)
+	}
+	if mouthSpec.PreferredPixelSize.Height != 1 {
+		t.Errorf("Mouth height = %d, want 1", mouthSpec.PreferredPixelSize.Height)
+	}
+
+	// Verify facial features have higher Z-index than head
+	headZ := template.BodyPartLayout[PartHead].ZIndex
+	eyesZ := eyesSpec.ZIndex
+	mouthZ := mouthSpec.ZIndex
+
+	if eyesZ <= headZ {
+		t.Errorf("Eyes Z-index (%d) should be above head Z-index (%d)", eyesZ, headZ)
+	}
+	if mouthZ <= headZ {
+		t.Errorf("Mouth Z-index (%d) should be above head Z-index (%d)", mouthZ, headZ)
+	}
+
+	// Verify eyes are positioned above mouth
+	eyesY := eyesSpec.RelativeY
+	mouthY := mouthSpec.RelativeY
+	if eyesY >= mouthY {
+		t.Errorf("Eyes Y position (%f) should be above (less than) mouth Y position (%f)", eyesY, mouthY)
+	}
+
+	// Verify GetEffectiveWidth/Height work correctly for facial features
+	const spriteSize = 28
+	eyesWidth := eyesSpec.GetEffectiveWidth(spriteSize)
+	eyesHeight := eyesSpec.GetEffectiveHeight(spriteSize)
+	if eyesWidth != 2 {
+		t.Errorf("Eyes effective width = %d, want 2", eyesWidth)
+	}
+	if eyesHeight != 1 {
+		t.Errorf("Eyes effective height = %d, want 1", eyesHeight)
+	}
+
+	mouthWidth := mouthSpec.GetEffectiveWidth(spriteSize)
+	mouthHeight := mouthSpec.GetEffectiveHeight(spriteSize)
+	if mouthWidth != 2 {
+		t.Errorf("Mouth effective width = %d, want 2", mouthWidth)
+	}
+	if mouthHeight != 1 {
+		t.Errorf("Mouth effective height = %d, want 1", mouthHeight)
+	}
+
+	// Verify base template dimensions are preserved (head, torso, legs)
+	headSpec := template.BodyPartLayout[PartHead]
+	if headSpec.PreferredPixelSize == nil || headSpec.PreferredPixelSize.Width != 4 || headSpec.PreferredPixelSize.Height != 4 {
+		t.Error("Head dimensions should be preserved from EnhancedHumanoidTemplate (4×4)")
+	}
+
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.PreferredPixelSize == nil || torsoSpec.PreferredPixelSize.Width != 4 || torsoSpec.PreferredPixelSize.Height != 6 {
+		t.Error("Torso dimensions should be preserved from EnhancedHumanoidTemplate (4×6)")
+	}
+
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.PreferredPixelSize == nil || legsSpec.PreferredPixelSize.Width != 4 || legsSpec.PreferredPixelSize.Height != 8 {
+		t.Error("Legs dimensions should be preserved from EnhancedHumanoidTemplate (4×8)")
 	}
 }
 
@@ -1366,5 +1585,512 @@ func BenchmarkAerialGenreTemplates(b *testing.B) {
 func BenchmarkSelectAerialTemplate(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = SelectAerialTemplate("player", "fantasy", DirDown)
+	}
+}
+
+// TestPixelDimensions tests the PixelDimensions struct.
+func TestPixelDimensions(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"head 4x4", 4, 4},
+		{"torso 4x6", 4, 6},
+		{"legs 4x8", 4, 8},
+		{"boss head 8x8", 8, 8},
+		{"zero dimensions", 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pd := PixelDimensions{
+				Width:  tt.width,
+				Height: tt.height,
+			}
+
+			if pd.Width != tt.width {
+				t.Errorf("PixelDimensions.Width = %d, want %d", pd.Width, tt.width)
+			}
+			if pd.Height != tt.height {
+				t.Errorf("PixelDimensions.Height = %d, want %d", pd.Height, tt.height)
+			}
+		})
+	}
+}
+
+// TestPartSpec_GetEffectiveWidth tests effective width calculation.
+func TestPartSpec_GetEffectiveWidth(t *testing.T) {
+	tests := []struct {
+		name        string
+		spec        PartSpec
+		spriteWidth int
+		want        int
+	}{
+		{
+			name: "with pixel dimensions",
+			spec: PartSpec{
+				RelativeWidth: 0.5,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 4,
+				},
+			},
+			spriteWidth: 28,
+			want:        4, // Uses PreferredPixelSize, not RelativeWidth
+		},
+		{
+			name: "without pixel dimensions",
+			spec: PartSpec{
+				RelativeWidth:      0.5,
+				PreferredPixelSize: nil,
+			},
+			spriteWidth: 28,
+			want:        14, // 28 * 0.5 = 14
+		},
+		{
+			name: "relative width 0.35",
+			spec: PartSpec{
+				RelativeWidth:      0.35,
+				PreferredPixelSize: nil,
+			},
+			spriteWidth: 28,
+			want:        9, // 28 * 0.35 = 9.8, truncates to 9
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.spec.GetEffectiveWidth(tt.spriteWidth)
+			if got != tt.want {
+				t.Errorf("GetEffectiveWidth() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestPartSpec_GetEffectiveHeight tests effective height calculation.
+func TestPartSpec_GetEffectiveHeight(t *testing.T) {
+	tests := []struct {
+		name         string
+		spec         PartSpec
+		spriteHeight int
+		want         int
+	}{
+		{
+			name: "with pixel dimensions",
+			spec: PartSpec{
+				RelativeHeight: 0.5,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 6,
+				},
+			},
+			spriteHeight: 28,
+			want:         6, // Uses PreferredPixelSize, not RelativeHeight
+		},
+		{
+			name: "without pixel dimensions",
+			spec: PartSpec{
+				RelativeHeight:     0.5,
+				PreferredPixelSize: nil,
+			},
+			spriteHeight: 28,
+			want:         14, // 28 * 0.5 = 14
+		},
+		{
+			name: "relative height 0.45",
+			spec: PartSpec{
+				RelativeHeight:     0.45,
+				PreferredPixelSize: nil,
+			},
+			spriteHeight: 28,
+			want:         12, // 28 * 0.45 = 12.6, truncates to 12
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.spec.GetEffectiveHeight(tt.spriteHeight)
+			if got != tt.want {
+				t.Errorf("GetEffectiveHeight() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestPartSpec_ToPixelDimensions tests conversion from relative to pixel dimensions.
+func TestPartSpec_ToPixelDimensions(t *testing.T) {
+	tests := []struct {
+		name         string
+		spec         PartSpec
+		spriteWidth  int
+		spriteHeight int
+		wantWidth    int
+		wantHeight   int
+	}{
+		{
+			name: "half size sprite",
+			spec: PartSpec{
+				RelativeWidth:  0.5,
+				RelativeHeight: 0.5,
+			},
+			spriteWidth:  28,
+			spriteHeight: 28,
+			wantWidth:    14,
+			wantHeight:   14,
+		},
+		{
+			name: "head proportions",
+			spec: PartSpec{
+				RelativeWidth:  0.35,
+				RelativeHeight: 0.35,
+			},
+			spriteWidth:  28,
+			spriteHeight: 28,
+			wantWidth:    9, // 28 * 0.35 = 9.8, truncates to 9
+			wantHeight:   9, // 28 * 0.35 = 9.8, truncates to 9
+		},
+		{
+			name: "torso proportions",
+			spec: PartSpec{
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.45,
+			},
+			spriteWidth:  28,
+			spriteHeight: 28,
+			wantWidth:    14, // 28 * 0.50 = 14
+			wantHeight:   12, // 28 * 0.45 = 12.6, truncates to 12
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.spec.ToPixelDimensions(tt.spriteWidth, tt.spriteHeight)
+			if got.Width != tt.wantWidth {
+				t.Errorf("ToPixelDimensions().Width = %d, want %d", got.Width, tt.wantWidth)
+			}
+			if got.Height != tt.wantHeight {
+				t.Errorf("ToPixelDimensions().Height = %d, want %d", got.Height, tt.wantHeight)
+			}
+		})
+	}
+}
+
+// TestPartSpec_WithPixelDimensions tests adding pixel dimensions to existing spec.
+func TestPartSpec_WithPixelDimensions(t *testing.T) {
+	originalSpec := PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.25,
+		RelativeWidth:  0.35,
+		RelativeHeight: 0.35,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle},
+		ZIndex:         15,
+		ColorRole:      "secondary",
+		Opacity:        1.0,
+		Rotation:       0,
+	}
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"head 4x4", 4, 4},
+		{"torso 4x6", 4, 6},
+		{"legs 4x8", 4, 8},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := originalSpec.WithPixelDimensions(tt.width, tt.height)
+
+			// Check pixel dimensions are set correctly
+			if got.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if got.PreferredPixelSize.Width != tt.width {
+				t.Errorf("PreferredPixelSize.Width = %d, want %d", got.PreferredPixelSize.Width, tt.width)
+			}
+			if got.PreferredPixelSize.Height != tt.height {
+				t.Errorf("PreferredPixelSize.Height = %d, want %d", got.PreferredPixelSize.Height, tt.height)
+			}
+
+			// Check all other fields are preserved
+			if got.RelativeX != originalSpec.RelativeX {
+				t.Errorf("RelativeX = %f, want %f", got.RelativeX, originalSpec.RelativeX)
+			}
+			if got.RelativeY != originalSpec.RelativeY {
+				t.Errorf("RelativeY = %f, want %f", got.RelativeY, originalSpec.RelativeY)
+			}
+			if got.ZIndex != originalSpec.ZIndex {
+				t.Errorf("ZIndex = %d, want %d", got.ZIndex, originalSpec.ZIndex)
+			}
+			if got.ColorRole != originalSpec.ColorRole {
+				t.Errorf("ColorRole = %s, want %s", got.ColorRole, originalSpec.ColorRole)
+			}
+
+			// Original spec should be unchanged (value receiver)
+			if originalSpec.PreferredPixelSize != nil {
+				t.Error("Original spec should not have PreferredPixelSize set")
+			}
+		})
+	}
+}
+
+// TestNewPartSpecFromPixels tests creating spec from pixel dimensions.
+func TestNewPartSpecFromPixels(t *testing.T) {
+	tests := []struct {
+		name      string
+		width     int
+		height    int
+		shapeType shapes.ShapeType
+		zIndex    int
+		colorRole string
+	}{
+		{"head 4x4", 4, 4, shapes.ShapeCircle, 15, "secondary"},
+		{"torso 4x6", 4, 6, shapes.ShapeRectangle, 10, "primary"},
+		{"legs 4x8", 4, 8, shapes.ShapeCapsule, 5, "primary"},
+		{"boss head 8x8", 8, 8, shapes.ShapeSkull, 15, "accent1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewPartSpecFromPixels(tt.width, tt.height, tt.shapeType, tt.zIndex, tt.colorRole)
+
+			// Check pixel dimensions
+			if got.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if got.PreferredPixelSize.Width != tt.width {
+				t.Errorf("PreferredPixelSize.Width = %d, want %d", got.PreferredPixelSize.Width, tt.width)
+			}
+			if got.PreferredPixelSize.Height != tt.height {
+				t.Errorf("PreferredPixelSize.Height = %d, want %d", got.PreferredPixelSize.Height, tt.height)
+			}
+
+			// Check other fields
+			if got.ZIndex != tt.zIndex {
+				t.Errorf("ZIndex = %d, want %d", got.ZIndex, tt.zIndex)
+			}
+			if got.ColorRole != tt.colorRole {
+				t.Errorf("ColorRole = %s, want %s", got.ColorRole, tt.colorRole)
+			}
+			if len(got.ShapeTypes) != 1 || got.ShapeTypes[0] != tt.shapeType {
+				t.Errorf("ShapeTypes = %v, want [%v]", got.ShapeTypes, tt.shapeType)
+			}
+
+			// Check defaults
+			if got.RelativeX != 0.5 {
+				t.Errorf("RelativeX = %f, want 0.5", got.RelativeX)
+			}
+			if got.RelativeY != 0.5 {
+				t.Errorf("RelativeY = %f, want 0.5", got.RelativeY)
+			}
+			if got.Opacity != 1.0 {
+				t.Errorf("Opacity = %f, want 1.0", got.Opacity)
+			}
+			if got.Rotation != 0 {
+				t.Errorf("Rotation = %f, want 0", got.Rotation)
+			}
+
+			// Check relative dimensions are calculated (as fallbacks)
+			const typicalSize = 28.0
+			expectedRelWidth := float64(tt.width) / typicalSize
+			expectedRelHeight := float64(tt.height) / typicalSize
+			if got.RelativeWidth != expectedRelWidth {
+				t.Errorf("RelativeWidth = %f, want %f", got.RelativeWidth, expectedRelWidth)
+			}
+			if got.RelativeHeight != expectedRelHeight {
+				t.Errorf("RelativeHeight = %f, want %f", got.RelativeHeight, expectedRelHeight)
+			}
+		})
+	}
+}
+
+// TestPhase151EnhancedProportionalScaling demonstrates Phase 15.1 usage.
+// This integration test verifies that the "head 4×4, torso 4×6, legs 4×8" specification
+// from Phase 15.1 can be implemented using the new pixel dimension support.
+func TestPhase151EnhancedProportionalScaling(t *testing.T) {
+	// Create Phase 15.1 humanoid with exact pixel dimensions
+	head := NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
+	torso := NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
+	legs := NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
+
+	// Verify exact pixel dimensions
+	if head.GetEffectiveWidth(28) != 4 {
+		t.Errorf("head width = %d, want 4", head.GetEffectiveWidth(28))
+	}
+	if head.GetEffectiveHeight(28) != 4 {
+		t.Errorf("head height = %d, want 4", head.GetEffectiveHeight(28))
+	}
+
+	if torso.GetEffectiveWidth(28) != 4 {
+		t.Errorf("torso width = %d, want 4", torso.GetEffectiveWidth(28))
+	}
+	if torso.GetEffectiveHeight(28) != 6 {
+		t.Errorf("torso height = %d, want 6", torso.GetEffectiveHeight(28))
+	}
+
+	if legs.GetEffectiveWidth(28) != 4 {
+		t.Errorf("legs width = %d, want 4", legs.GetEffectiveWidth(28))
+	}
+	if legs.GetEffectiveHeight(28) != 8 {
+		t.Errorf("legs height = %d, want 8", legs.GetEffectiveHeight(28))
+	}
+
+	// Verify dimensions work correctly at different sprite sizes
+	// (pixel dimensions should be constant regardless of sprite size)
+	if head.GetEffectiveWidth(32) != 4 {
+		t.Errorf("head width at 32x32 = %d, want 4", head.GetEffectiveWidth(32))
+	}
+	if torso.GetEffectiveHeight(64) != 6 {
+		t.Errorf("torso height at 64x64 = %d, want 6", torso.GetEffectiveHeight(64))
+	}
+
+	// Demonstrate backward compatibility: templates without PreferredPixelSize still work
+	template := HumanoidTemplate()
+	headSpec := template.BodyPartLayout[PartHead]
+
+	// Should calculate from relative dimensions (no PreferredPixelSize set)
+	expectedWidth := int(float64(28) * headSpec.RelativeWidth)
+	if headSpec.GetEffectiveWidth(28) != expectedWidth {
+		t.Errorf("legacy head width = %d, want %d", headSpec.GetEffectiveWidth(28), expectedWidth)
+	}
+
+	// Can upgrade existing template with pixel dimensions
+	upgradedHead := headSpec.WithPixelDimensions(4, 4)
+	if upgradedHead.GetEffectiveWidth(28) != 4 {
+		t.Errorf("upgraded head width = %d, want 4", upgradedHead.GetEffectiveWidth(28))
+	}
+	// Original template unchanged
+	if headSpec.PreferredPixelSize != nil {
+		t.Error("Original template should not have PreferredPixelSize set")
+	}
+}
+
+// TestNewPartSpecFromPixels_Validation tests input validation for pixel dimensions.
+func TestNewPartSpecFromPixels_Validation(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputWidth     int
+		inputHeight    int
+		expectedWidth  int
+		expectedHeight int
+	}{
+		{"zero width", 0, 4, 1, 4},
+		{"zero height", 4, 0, 4, 1},
+		{"both zero", 0, 0, 1, 1},
+		{"negative width", -5, 4, 1, 4},
+		{"negative height", 4, -3, 4, 1},
+		{"both negative", -2, -8, 1, 1},
+		{"valid dimensions", 4, 6, 4, 6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := NewPartSpecFromPixels(tt.inputWidth, tt.inputHeight, shapes.ShapeCircle, 15, "secondary")
+
+			if spec.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if spec.PreferredPixelSize.Width != tt.expectedWidth {
+				t.Errorf("Width = %d, want %d (input was %d)", spec.PreferredPixelSize.Width, tt.expectedWidth, tt.inputWidth)
+			}
+			if spec.PreferredPixelSize.Height != tt.expectedHeight {
+				t.Errorf("Height = %d, want %d (input was %d)", spec.PreferredPixelSize.Height, tt.expectedHeight, tt.inputHeight)
+			}
+		})
+	}
+}
+
+// TestPartSpec_WithPixelDimensions_Validation tests input validation for WithPixelDimensions.
+func TestPartSpec_WithPixelDimensions_Validation(t *testing.T) {
+	baseSpec := PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.25,
+		RelativeWidth:  0.35,
+		RelativeHeight: 0.35,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle},
+		ZIndex:         15,
+		ColorRole:      "secondary",
+		Opacity:        1.0,
+		Rotation:       0,
+	}
+
+	tests := []struct {
+		name           string
+		inputWidth     int
+		inputHeight    int
+		expectedWidth  int
+		expectedHeight int
+	}{
+		{"zero width", 0, 4, 1, 4},
+		{"zero height", 4, 0, 4, 1},
+		{"both zero", 0, 0, 1, 1},
+		{"negative width", -5, 4, 1, 4},
+		{"negative height", 4, -3, 4, 1},
+		{"both negative", -2, -8, 1, 1},
+		{"valid dimensions", 4, 6, 4, 6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := baseSpec.WithPixelDimensions(tt.inputWidth, tt.inputHeight)
+
+			if spec.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if spec.PreferredPixelSize.Width != tt.expectedWidth {
+				t.Errorf("Width = %d, want %d (input was %d)", spec.PreferredPixelSize.Width, tt.expectedWidth, tt.inputWidth)
+			}
+			if spec.PreferredPixelSize.Height != tt.expectedHeight {
+				t.Errorf("Height = %d, want %d (input was %d)", spec.PreferredPixelSize.Height, tt.expectedHeight, tt.inputHeight)
+			}
+
+			// Verify other fields unchanged
+			if spec.RelativeX != baseSpec.RelativeX {
+				t.Errorf("RelativeX changed: got %f, want %f", spec.RelativeX, baseSpec.RelativeX)
+			}
+			if spec.ZIndex != baseSpec.ZIndex {
+				t.Errorf("ZIndex changed: got %d, want %d", spec.ZIndex, baseSpec.ZIndex)
+			}
+		})
+	}
+}
+
+// BenchmarkGetEffectiveWidth benchmarks effective width calculation.
+func BenchmarkGetEffectiveWidth(b *testing.B) {
+	spec := PartSpec{
+		RelativeWidth: 0.5,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  4,
+			Height: 4,
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = spec.GetEffectiveWidth(28)
+	}
+}
+
+// BenchmarkGetEffectiveWidthNoPixelDimensions benchmarks effective width without pixel dimensions.
+func BenchmarkGetEffectiveWidthNoPixelDimensions(b *testing.B) {
+	spec := PartSpec{
+		RelativeWidth:      0.5,
+		PreferredPixelSize: nil,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = spec.GetEffectiveWidth(28)
+	}
+}
+
+// BenchmarkNewPartSpecFromPixels benchmarks creating spec from pixels.
+func BenchmarkNewPartSpecFromPixels(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
 	}
 }

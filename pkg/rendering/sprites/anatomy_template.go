@@ -20,6 +20,10 @@ const (
 	PartArms
 	// PartHead represents head/face
 	PartHead
+	// PartEyes represents facial eyes (Phase 15.1: 2px detail)
+	PartEyes
+	// PartMouth represents facial mouth (Phase 15.1: 1-2px detail)
+	PartMouth
 	// PartWeapon represents equipped weapon
 	PartWeapon
 	// PartShield represents equipped shield
@@ -61,6 +65,10 @@ func (b BodyPart) String() string {
 		return "arms"
 	case PartHead:
 		return "head"
+	case PartEyes:
+		return "eyes"
+	case PartMouth:
+		return "mouth"
 	case PartWeapon:
 		return "weapon"
 	case PartShield:
@@ -78,6 +86,16 @@ func (b BodyPart) String() string {
 	}
 }
 
+// PixelDimensions specifies exact pixel dimensions for a body part.
+// This enables enhanced detail control for Phase 15.1 sub-pixel rendering.
+// Example: head 4×4, torso 4×6, legs 4×8 pixels for humanoid characters.
+type PixelDimensions struct {
+	// Width in pixels
+	Width int
+	// Height in pixels
+	Height int
+}
+
 // PartSpec defines the rendering specification for a body part.
 type PartSpec struct {
 	// RelativeX is the X position as a fraction of sprite width (0.0-1.0)
@@ -88,6 +106,12 @@ type PartSpec struct {
 	RelativeWidth float64
 	// RelativeHeight is the height as a fraction of sprite height (0.0-1.0)
 	RelativeHeight float64
+	// PreferredPixelSize optionally specifies exact pixel dimensions for enhanced detail.
+	// When set, GetEffectiveWidth() and GetEffectiveHeight() use these exact dimensions
+	// instead of calculating from RelativeWidth/RelativeHeight, enabling pixel-perfect control.
+	// If nil, RelativeWidth/RelativeHeight are used for calculation.
+	// Phase 15.1: Enables "head 4×4, torso 4×6, legs 4×8" specification.
+	PreferredPixelSize *PixelDimensions
 	// ShapeTypes are the allowed shapes for this part
 	ShapeTypes []shapes.ShapeType
 	// ZIndex determines draw order (lower drawn first)
@@ -202,6 +226,145 @@ func HumanoidTemplate() AnatomicalTemplate {
 			},
 		},
 	}
+}
+
+// EnhancedHumanoidTemplate returns a Phase 15.1 enhanced humanoid template
+// with pixel-perfect dimensions for improved anatomical accuracy.
+// Uses exact pixel specifications: head 4×4, torso 4×6, legs 4×8 pixels.
+// Optimized for 28x28 pixel sprites with 40% more anatomical detail.
+//
+// This template demonstrates Phase 15.1 enhanced proportional scaling,
+// providing clearer silhouettes and better player recognition at a glance.
+func EnhancedHumanoidTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced_humanoid",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.93,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.12,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+				// Shadow doesn't use pixel dimensions - scales with sprite
+			},
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.75,
+				RelativeWidth:  0.286, // 8/28 for 8 pixel height on 28px sprite
+				RelativeHeight: 0.286,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 8, // Phase 15.1: 4×8 pixel legs
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.214, // 6/28 for 6 pixel height on 28px sprite
+				RelativeHeight: 0.214,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 6, // Phase 15.1: 4×6 pixel torso
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.214, // Arms proportional to torso
+				RelativeHeight: 0.179, // 5/28 for arm length
+				PreferredPixelSize: &PixelDimensions{
+					Width:  6, // Slightly wider for arm reach
+					Height: 5,
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
+				ZIndex:     8,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.25,
+				RelativeWidth:  0.143, // 4/28 for 4 pixel dimensions on 28px sprite
+				RelativeHeight: 0.143,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 4, // Phase 15.1: 4×4 pixel head
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+		},
+	}
+}
+
+// DetailedHumanoidTemplate returns a Phase 15.1 template with facial features.
+// Includes eyes (2px) and mouth (1-2px) for close-up views and enhanced recognition.
+// Builds on EnhancedHumanoidTemplate with additional facial detail.
+//
+// Use this template for:
+// - Player characters that are frequently on-screen
+// - NPCs with whom players interact closely
+// - Character portraits and close-up views
+// - Situations requiring clear emotional expression
+func DetailedHumanoidTemplate() AnatomicalTemplate {
+	// Start with the enhanced template
+	base := EnhancedHumanoidTemplate()
+	base.Name = "detailed_humanoid"
+
+	// Add facial features with pixel-perfect dimensions
+	// Eyes: 2 pixels wide, positioned on upper head
+	base.BodyPartLayout[PartEyes] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.23,  // Slightly above head center
+		RelativeWidth:  0.071, // 2/28
+		RelativeHeight: 0.036, // 1/28 (height)
+		PreferredPixelSize: &PixelDimensions{
+			Width:  2,
+			Height: 1, // Phase 15.1: 2×1 pixel eyes
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:     16, // Above head
+		ColorRole:  "accent1",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	// Mouth: 1-2 pixels, positioned on lower head
+	base.BodyPartLayout[PartMouth] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.27,  // Below eyes
+		RelativeWidth:  0.071, // 2/28
+		RelativeHeight: 0.036, // 1/28
+		PreferredPixelSize: &PixelDimensions{
+			Width:  2,
+			Height: 1, // Phase 15.1: 2×1 pixel mouth
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:     16, // Above head, same as eyes
+		ColorRole:  "accent2",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	return base
 }
 
 // QuadrupedTemplate returns a template for four-legged creatures.
@@ -1464,4 +1627,96 @@ func BossAerialTemplate(base AnatomicalTemplate, scale float64) AnatomicalTempla
 	}
 
 	return boss
+}
+
+// GetEffectiveWidth returns the effective width for a PartSpec in pixels.
+// If PreferredPixelSize is set, uses that width. Otherwise, calculates from RelativeWidth.
+// This enables Phase 15.1 enhanced proportional scaling with explicit pixel control.
+func (p *PartSpec) GetEffectiveWidth(spriteWidth int) int {
+	if p.PreferredPixelSize != nil {
+		return p.PreferredPixelSize.Width
+	}
+	return int(float64(spriteWidth) * p.RelativeWidth)
+}
+
+// GetEffectiveHeight returns the effective height for a PartSpec in pixels.
+// If PreferredPixelSize is set, uses that height. Otherwise, calculates from RelativeHeight.
+// This enables Phase 15.1 enhanced proportional scaling with explicit pixel control.
+func (p *PartSpec) GetEffectiveHeight(spriteHeight int) int {
+	if p.PreferredPixelSize != nil {
+		return p.PreferredPixelSize.Height
+	}
+	return int(float64(spriteHeight) * p.RelativeHeight)
+}
+
+// ToPixelDimensions converts relative dimensions to exact pixel dimensions.
+// This is useful for creating templates with Phase 15.1 pixel-perfect specifications.
+func (p *PartSpec) ToPixelDimensions(spriteWidth, spriteHeight int) PixelDimensions {
+	return PixelDimensions{
+		Width:  int(float64(spriteWidth) * p.RelativeWidth),
+		Height: int(float64(spriteHeight) * p.RelativeHeight),
+	}
+}
+
+// WithPixelDimensions creates a new PartSpec with the specified pixel dimensions set.
+// This enables Phase 15.1 "head 4×4, torso 4×6, legs 4×8" style specifications.
+// Returns a new PartSpec with PreferredPixelSize set, keeping all other fields unchanged.
+// Width and height are clamped to minimum of 1 pixel to prevent rendering issues.
+func (p PartSpec) WithPixelDimensions(width, height int) PartSpec {
+	// Clamp to minimum 1 pixel to prevent rendering issues
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+
+	p.PreferredPixelSize = &PixelDimensions{
+		Width:  width,
+		Height: height,
+	}
+	return p
+}
+
+// NewPartSpecFromPixels creates a PartSpec with explicit pixel dimensions.
+// This is a convenience constructor for Phase 15.1 enhanced anatomical templates.
+// The relative dimensions are calculated based on typical sprite sizes for reference,
+// but PreferredPixelSize takes precedence during rendering.
+// Width and height are clamped to minimum of 1 pixel to prevent rendering issues.
+//
+// Example for Phase 15.1 humanoid:
+//
+//	head := NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
+//	torso := NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
+//	legs := NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
+func NewPartSpecFromPixels(width, height int, shapeType shapes.ShapeType, zIndex int, colorRole string) PartSpec {
+	// Clamp to minimum 1 pixel to prevent rendering issues
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+
+	// Calculate relative dimensions assuming a typical 28x28 sprite size
+	// These are fallbacks if PreferredPixelSize is ignored
+	const typicalSize = 28.0
+	relWidth := float64(width) / typicalSize
+	relHeight := float64(height) / typicalSize
+
+	return PartSpec{
+		RelativeX:      0.5, // Centered by default
+		RelativeY:      0.5, // Centered by default
+		RelativeWidth:  relWidth,
+		RelativeHeight: relHeight,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  width,
+			Height: height,
+		},
+		ShapeTypes: []shapes.ShapeType{shapeType},
+		ZIndex:     zIndex,
+		ColorRole:  colorRole,
+		Opacity:    1.0,
+		Rotation:   0,
+	}
 }

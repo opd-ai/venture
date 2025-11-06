@@ -61,6 +61,28 @@
 //	cyberpunkTemplate := sprites.CyberpunkHumanoidAerial()
 //	postapocTemplate := sprites.PostApocalypticHumanoidAerial()
 //
+//	// Phase 15.1 enhanced template with pixel-perfect dimensions
+//	enhancedTemplate := sprites.EnhancedHumanoidTemplate()
+//
+// # Enhanced Templates (Phase 15.1)
+//
+// Phase 15.1 introduces enhanced templates with pixel-perfect anatomical specifications:
+//
+//	// Use enhanced template for improved clarity and recognition
+//	template := sprites.EnhancedHumanoidTemplate()
+//	// Head: 4×4 pixels, Torso: 4×6 pixels, Legs: 4×8 pixels
+//	// 40% more anatomical detail, better silhouette scores
+//
+//	// Use detailed template for facial features in close-up views
+//	detailedTemplate := sprites.DetailedHumanoidTemplate()
+//	// Includes all enhanced features PLUS:
+//	// Eyes: 2×1 pixels, Mouth: 2×1 pixels
+//	// Perfect for player characters and important NPCs
+//
+// Enhanced templates provide exact pixel dimensions that remain constant regardless
+// of sprite size, ensuring consistent visual quality and improved player recognition.
+// Detailed templates add facial features for emotional expression and close-up clarity.
+//
 // # Boss Scaling
 //
 // Scale any aerial template for boss entities while preserving proportions:
@@ -90,6 +112,31 @@
 //	}
 //
 // No manual direction handling required - the integration is automatic!
+//
+// # Enhanced Proportional Scaling (Phase 15.1)
+//
+// The package supports pixel-perfect anatomical specifications for enhanced detail:
+//
+//	// Create body parts with exact pixel dimensions
+//	head := sprites.NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
+//	torso := sprites.NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
+//	legs := sprites.NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
+//
+//	// Dimensions are exact regardless of sprite size
+//	width := head.GetEffectiveWidth(28)   // Returns 4 pixels
+//	height := head.GetEffectiveHeight(32) // Returns 4 pixels
+//
+//	// Upgrade existing templates with pixel dimensions
+//	template := sprites.HumanoidTemplate()
+//	headSpec := template.BodyPartLayout[sprites.PartHead]
+//	enhancedHead := headSpec.WithPixelDimensions(4, 4)
+//
+// Pixel dimensions enable Phase 15.1 "head 4×4, torso 4×6, legs 4×8" specifications
+// for improved anatomical accuracy and visual clarity. When PreferredPixelSize is set,
+// it takes precedence over relative dimensions, enabling pixel-perfect control.
+//
+// Full backward compatibility maintained - existing templates using relative
+// dimensions continue to work unchanged.
 //
 // # Direction Enum
 //

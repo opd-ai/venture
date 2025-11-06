@@ -34,10 +34,10 @@ const (
 	disconnectTolerance    = 2 * time.Second
 
 	// Failure rate simulation
-	maxLatencyMs       = 5000.0  // Maximum latency for scaling failure rate
-	baseFailureRate    = 0.0001  // Base failure rate at max latency
-	highLatencyThresh  = 1000.0  // Latency threshold (ms) for connection failure simulation
-	highLatencyFailure = 0.05    // 5% connection failure rate for high-latency clients
+	maxLatencyMs       = 5000.0 // Maximum latency for scaling failure rate
+	baseFailureRate    = 0.0001 // Base failure rate at max latency
+	highLatencyThresh  = 1000.0 // Latency threshold (ms) for connection failure simulation
+	highLatencyFailure = 0.05   // 5% connection failure rate for high-latency clients
 )
 
 // TestClient represents a single test client with its metrics.

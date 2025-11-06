@@ -27,6 +27,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Test configuration constants
+const (
+	// Success criteria thresholds
+	successUptimeThreshold = 0.9 // 90% uptime required for success
+	disconnectTolerance    = 2 * time.Second
+
+	// Failure rate simulation
+	maxLatencyMs       = 5000.0  // Maximum latency for scaling failure rate
+	baseFailureRate    = 0.0001  // Base failure rate at max latency
+	highLatencyThresh  = 1000.0  // Latency threshold (ms) for connection failure simulation
+	highLatencyFailure = 0.05    // 5% connection failure rate for high-latency clients
+)
+
 // TestClient represents a single test client with its metrics.
 type TestClient struct {
 	id             int
@@ -286,13 +299,13 @@ func (m *mockTestClient) Connect() error {
 	// Calculate failure rate based on latency (higher latency = higher failure rate)
 	// 50ms -> 0.0001% failure rate, 5000ms -> 0.01% failure rate
 	latencyMs := float64(m.targetLatency.Milliseconds())
-	m.failureRate = (latencyMs / 5000.0) * 0.0001
+	m.failureRate = (latencyMs / maxLatencyMs) * baseFailureRate
 
 	// Simulate connection delay based on target latency
 	time.Sleep(m.targetLatency / 10)
 
 	// 5% chance of initial connection failure for high-latency clients
-	if latencyMs > 1000 && m.rng.Float64() < 0.05 {
+	if latencyMs > highLatencyThresh && m.rng.Float64() < highLatencyFailure {
 		return fmt.Errorf("connection timeout after %s", m.targetLatency)
 	}
 
@@ -401,7 +414,7 @@ func aggregateResults(clients []*TestClient, startTime, endTime time.Time) LoadT
 		}
 
 		// Client is successful if it stayed connected for 90%+ of the test
-		if connectionDuration >= results.Duration*9/10 {
+		if connectionDuration >= results.Duration*time.Duration(successUptimeThreshold*10)/10 {
 			results.SuccessfulClients++
 		}
 
@@ -410,8 +423,8 @@ func aggregateResults(clients []*TestClient, startTime, endTime time.Time) LoadT
 		results.MessagesReceived += c.messagesRecv
 		results.Errors += len(c.errors)
 
-		// Count premature disconnects (disconnected before test end with >1s gap)
-		if !c.disconnectTime.IsZero() && c.disconnectTime.Before(endTime.Add(-2*time.Second)) {
+		// Count premature disconnects (disconnected before test end with >2s gap)
+		if !c.disconnectTime.IsZero() && c.disconnectTime.Before(endTime.Add(-disconnectTolerance)) {
 			results.TotalDisconnects++
 		}
 

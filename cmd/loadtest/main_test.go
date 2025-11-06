@@ -8,6 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Test constants
+const (
+	minSuccessRate = 95 // Minimum success rate (%) for SendUpdate tests
+)
+
 // TestMockTestClientConnect tests the mock client connection behavior.
 func TestMockTestClientConnect(t *testing.T) {
 	tests := []struct {
@@ -73,7 +78,7 @@ func TestMockTestClientSendUpdate(t *testing.T) {
 	}
 
 	// With low latency, should have high success rate (>95%)
-	if successCount < 95 {
+	if successCount < minSuccessRate {
 		t.Errorf("SendUpdate() success rate too low: %d/100", successCount)
 	}
 }

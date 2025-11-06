@@ -132,6 +132,20 @@ type Shape struct {
 	Smoothing  float64 // Edge smoothing factor (0.0-1.0)
 }
 
+// AntiAliasQuality represents the quality level for anti-aliasing.
+type AntiAliasQuality int
+
+const (
+	// AntiAliasOff disables anti-aliasing (hard edges)
+	AntiAliasOff AntiAliasQuality = iota
+	// AntiAliasLow uses 2x super-sampling for anti-aliasing
+	AntiAliasLow
+	// AntiAliasMedium uses 4x super-sampling for anti-aliasing
+	AntiAliasMedium
+	// AntiAliasHigh uses 8x super-sampling for anti-aliasing
+	AntiAliasHigh
+)
+
 // Config holds configuration for shape generation.
 type Config struct {
 	Type       ShapeType
@@ -143,6 +157,8 @@ type Config struct {
 	InnerRatio float64
 	Rotation   float64
 	Smoothing  float64
+	// AntiAlias enables sub-pixel anti-aliasing for smooth edges (Phase 15.1)
+	AntiAlias AntiAliasQuality
 }
 
 // DefaultConfig returns a default shape configuration.
@@ -157,5 +173,6 @@ func DefaultConfig() Config {
 		InnerRatio: 0.5,
 		Rotation:   0,
 		Smoothing:  0.1,
+		AntiAlias:  AntiAliasOff,
 	}
 }

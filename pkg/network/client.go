@@ -489,7 +489,7 @@ func (c *TCPClient) sendLoop() {
 
 		case cmd := <-c.inputQueue:
 			c.inputQueueStats.RecordReceive()
-			
+
 			// Encode input
 			data, err := c.protocol.EncodeInputCommand(cmd)
 			if err != nil {

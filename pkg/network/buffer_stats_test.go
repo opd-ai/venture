@@ -176,10 +176,10 @@ func TestBufferStats_Utilization(t *testing.T) {
 
 func TestBufferStats_DropRate(t *testing.T) {
 	tests := []struct {
-		name    string
-		sends   int
-		drops   int
-		want    float64
+		name  string
+		sends int
+		drops int
+		want  float64
 	}{
 		{
 			name:  "no messages",

@@ -457,7 +457,7 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 
 		case update := <-client.stateUpdates:
 			client.stateUpdateStats.RecordReceive()
-			
+
 			// Encode state update
 			data, err := s.protocol.EncodeStateUpdate(update)
 			if err != nil {
@@ -518,6 +518,7 @@ func (s *TCPServer) disconnectClient(playerID uint64) {
 			default:
 				s.errorStats.RecordDrop()
 			}
+		}
 	}
 }
 

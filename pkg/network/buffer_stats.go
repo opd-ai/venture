@@ -18,14 +18,14 @@ type BufferStats struct {
 	// Atomic counters for thread-safe updates
 	sent    uint64 // Total messages sent to channel
 	dropped uint64 // Messages dropped due to full channel
-	
+
 	// Current size tracking (requires lock)
 	currentSize int
 	mu          sync.RWMutex
-	
+
 	// Logger for warnings
 	logger *logrus.Entry
-	
+
 	// Warning threshold tracking
 	warnThreshold float64 // Percentage (0.0-1.0) to trigger warnings
 	lastWarnSize  int     // Last size that triggered a warning (prevents spam)
@@ -48,12 +48,12 @@ func NewBufferStats(name string, capacity int, logger *logrus.Entry) *BufferStat
 // Call this after successfully sending to a channel.
 func (bs *BufferStats) RecordSend() {
 	atomic.AddUint64(&bs.sent, 1)
-	
+
 	bs.mu.Lock()
 	bs.currentSize++
 	size := bs.currentSize
 	bs.mu.Unlock()
-	
+
 	// Check if we should warn about high utilization
 	bs.checkWarnThreshold(size)
 }
@@ -72,14 +72,14 @@ func (bs *BufferStats) RecordReceive() {
 // Call this when a non-blocking send fails due to full channel.
 func (bs *BufferStats) RecordDrop() {
 	atomic.AddUint64(&bs.dropped, 1)
-	
+
 	// Log drop event
 	if bs.logger != nil {
 		bs.logger.WithFields(logrus.Fields{
-			"buffer":       bs.Name,
-			"utilization":  bs.Utilization(),
-			"total_drops":  bs.GetDropped(),
-			"total_sent":   bs.GetSent(),
+			"buffer":      bs.Name,
+			"utilization": bs.Utilization(),
+			"total_drops": bs.GetDropped(),
+			"total_sent":  bs.GetSent(),
 		}).Warn("buffer full, message dropped")
 	}
 }
@@ -89,24 +89,24 @@ func (bs *BufferStats) checkWarnThreshold(currentSize int) {
 	if bs.logger == nil {
 		return
 	}
-	
+
 	utilization := float64(currentSize) / float64(bs.Capacity)
-	
+
 	// Only warn if:
 	// 1. Utilization exceeds threshold
 	// 2. Size has increased since last warning (prevents spam)
 	if utilization >= bs.warnThreshold && currentSize > bs.lastWarnSize {
 		bs.lastWarnSize = currentSize
 		bs.logger.WithFields(logrus.Fields{
-			"buffer":       bs.Name,
-			"size":         currentSize,
-			"capacity":     bs.Capacity,
-			"utilization":  utilization,
-			"total_sent":   bs.GetSent(),
-			"total_drops":  bs.GetDropped(),
+			"buffer":      bs.Name,
+			"size":        currentSize,
+			"capacity":    bs.Capacity,
+			"utilization": utilization,
+			"total_sent":  bs.GetSent(),
+			"total_drops": bs.GetDropped(),
 		}).Warn("buffer utilization high")
 	}
-	
+
 	// Reset lastWarnSize if utilization drops below threshold
 	if utilization < bs.warnThreshold {
 		bs.lastWarnSize = 0

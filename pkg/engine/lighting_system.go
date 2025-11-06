@@ -312,9 +312,9 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	opts.GeoM.Translate(float64(x-radius), float64(y-radius))
 
 	// Modulate by light color and intensity
-	r := float64(lwp.light.Color.R) / 255.0 * intensity * 0.075 // 0.075 is blend strength (very subtle lighting)
-	g := float64(lwp.light.Color.G) / 255.0 * intensity * 0.075
-	b := float64(lwp.light.Color.B) / 255.0 * intensity * 0.075
+	r := float64(lwp.light.Color.R) / 255.0 * intensity * 0.15 // 0.15 is blend strength (very subtle lighting)
+	g := float64(lwp.light.Color.G) / 255.0 * intensity * 0.15
+	b := float64(lwp.light.Color.B) / 255.0 * intensity * 0.15
 
 	opts.ColorScale.Scale(float32(r), float32(g), float32(b), 1.0)
 	opts.Blend = ebiten.BlendLighter // Additive blending

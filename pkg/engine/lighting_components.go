@@ -281,7 +281,7 @@ func NewLightingConfig() *LightingConfig {
 		MaxLights:        16,
 		GammaCorrection:  true,
 		Gamma:            2.2,
-		AmbientIntensity: 0.7, // Increased for better visibility
+		AmbientIntensity: 0.7,                            // Increased for better visibility
 		AmbientColor:     color.RGBA{200, 200, 210, 255}, // Brighter with slight blue tint
 		ShadowsEnabled:   true,
 		ShadowOpacity:    0.5,
@@ -305,7 +305,7 @@ func (c *LightingConfig) SetGenrePreset(genreID string) {
 		c.ShadowOpacity = 0.6                           // Sharper shadows
 		c.MaxLights = 24                                // Many tech lights
 	case "horror":
-		c.AmbientIntensity = 0.5 // Even horror needs to be visible
+		c.AmbientIntensity = 0.5                        // Even horror needs to be visible
 		c.AmbientColor = color.RGBA{160, 155, 170, 255} // Dark but visible
 		c.ShadowOpacity = 0.8                           // Deep, oppressive shadows
 		c.MaxLights = 12                                // Limited, scary lighting

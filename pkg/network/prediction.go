@@ -46,11 +46,13 @@ type ClientPredictor struct {
 	currentSeq uint32
 }
 
-// NewClientPredictor creates a new client-side predictor
+// NewClientPredictor creates a new client-side predictor.
+// Uses 256 states at 20Hz = 12.8 seconds of history, adequate for high-latency
+// scenarios where round-trip time can reach 10 seconds (5000ms each way).
 func NewClientPredictor() *ClientPredictor {
 	return &ClientPredictor{
-		stateHistory: make([]PredictedState, 0, 128),
-		maxHistory:   128, // Keep last 128 states (6.4 seconds at 20Hz)
+		stateHistory: make([]PredictedState, 0, 256),
+		maxHistory:   256, // Keep last 256 states (12.8 seconds at 20Hz, was 128 = 6.4s)
 		currentSeq:   0,
 	}
 }

@@ -56,12 +56,14 @@ func DefaultLagCompensationConfig() LagCompensationConfig {
 }
 
 // HighLatencyLagCompensationConfig returns a configuration
-// for high-latency connections (e.g., Tor, up to 5000ms)
+// for high-latency connections (e.g., Tor, up to 5000ms).
+// Uses 300 snapshots at 20Hz = 15 seconds of history, providing adequate
+// buffer for 5000ms MaxCompensation with 10s round-trip time plus safety margin.
 func HighLatencyLagCompensationConfig() LagCompensationConfig {
 	return LagCompensationConfig{
 		MaxCompensation:    5000 * time.Millisecond,
 		MinCompensation:    10 * time.Millisecond,
-		SnapshotBufferSize: 200,
+		SnapshotBufferSize: 300, // 15s at 20Hz (was 200 = 10s)
 	}
 }
 

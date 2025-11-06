@@ -55,6 +55,38 @@ func TorClientConfig() ClientConfig {
 	}
 }
 
+// ReconnectConfig configures automatic reconnection behavior with exponential backoff.
+// This provides resilience against transient network failures common in high-latency
+// environments like Tor where connections may drop due to circuit changes or timeouts.
+type ReconnectConfig struct {
+	MaxRetries    int           // Maximum number of reconnection attempts (0 = infinite)
+	InitialDelay  time.Duration // Initial delay before first retry
+	MaxDelay      time.Duration // Maximum delay between retries (caps exponential growth)
+	BackoffFactor float64       // Multiplier for exponential backoff (typically 2.0)
+}
+
+// DefaultReconnectConfig returns a reconnection configuration for standard networks.
+// Retries up to 5 times with exponential backoff capped at 30 seconds.
+func DefaultReconnectConfig() ReconnectConfig {
+	return ReconnectConfig{
+		MaxRetries:    5,
+		InitialDelay:  1 * time.Second,
+		MaxDelay:      30 * time.Second,
+		BackoffFactor: 2.0,
+	}
+}
+
+// TorReconnectConfig returns a reconnection configuration for high-latency networks.
+// More aggressive retry strategy with longer delays to account for Tor circuit rebuilding.
+func TorReconnectConfig() ReconnectConfig {
+	return ReconnectConfig{
+		MaxRetries:    10,                // More retries for unstable Tor circuits
+		InitialDelay:  5 * time.Second,   // Longer initial delay for circuit stability
+		MaxDelay:      120 * time.Second, // Higher cap (2 minutes) for Tor circuit rebuilding
+		BackoffFactor: 2.0,
+	}
+}
+
 // TCPClient handles client-side networking over TCP.
 // Implements ClientConnection interface.
 type TCPClient struct {
@@ -171,6 +203,59 @@ func (c *TCPClient) Connect() error {
 	go c.sendLoop()
 
 	return nil
+}
+
+// ConnectWithRetry establishes connection to the server with automatic retry on failure.
+// Uses exponential backoff to handle transient network issues gracefully.
+// Returns nil on successful connection, or an error if all retries are exhausted.
+//
+// Example usage:
+//
+//	client := NewClient(TorClientConfig())
+//	if err := client.ConnectWithRetry(TorReconnectConfig()); err != nil {
+//	    log.Fatalf("Failed to connect after retries: %v", err)
+//	}
+func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
+	attempt := 0
+	delay := reconnectConfig.InitialDelay
+
+	for {
+		// Attempt connection
+		err := c.Connect()
+		if err == nil {
+			// Success
+			if c.logger != nil && attempt > 0 {
+				c.logger.WithField("attempts", attempt+1).Info("connected successfully after retries")
+			}
+			return nil
+		}
+
+		// Check if we should retry
+		attempt++
+		if reconnectConfig.MaxRetries > 0 && attempt >= reconnectConfig.MaxRetries {
+			if c.logger != nil {
+				c.logger.WithError(err).WithField("attempts", attempt).Error("exhausted all reconnection attempts")
+			}
+			return fmt.Errorf("failed to connect after %d attempts: %w", attempt, err)
+		}
+
+		// Log retry attempt
+		if c.logger != nil {
+			c.logger.WithError(err).WithFields(logrus.Fields{
+				"attempt": attempt,
+				"delay":   delay,
+			}).Warn("connection failed, retrying")
+		}
+
+		// Wait before retry
+		time.Sleep(delay)
+
+		// Calculate next delay with exponential backoff
+		delay = time.Duration(float64(delay) * reconnectConfig.BackoffFactor)
+		if delay > reconnectConfig.MaxDelay {
+			delay = reconnectConfig.MaxDelay
+		}
+	}
 }
 
 // Disconnect closes the connection to the server.

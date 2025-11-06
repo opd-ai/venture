@@ -281,8 +281,8 @@ func NewLightingConfig() *LightingConfig {
 		MaxLights:        16,
 		GammaCorrection:  true,
 		Gamma:            2.2,
-		AmbientIntensity: 0.3,
-		AmbientColor:     color.RGBA{100, 100, 120, 255}, // Slight blue tint
+		AmbientIntensity: 0.7, // Increased for better visibility
+		AmbientColor:     color.RGBA{200, 200, 210, 255}, // Brighter with slight blue tint
 		ShadowsEnabled:   true,
 		ShadowOpacity:    0.5,
 		ShadowQuality:    1.0,
@@ -295,33 +295,33 @@ func NewLightingConfig() *LightingConfig {
 func (c *LightingConfig) SetGenrePreset(genreID string) {
 	switch genreID {
 	case "fantasy":
-		c.AmbientIntensity = 0.4
-		c.AmbientColor = color.RGBA{120, 110, 90, 255} // Warm tone
-		c.ShadowOpacity = 0.5                          // Medium shadows
-		c.MaxLights = 20                               // More torches/magic lights
+		c.AmbientIntensity = 0.75
+		c.AmbientColor = color.RGBA{220, 210, 190, 255} // Warm tone, brighter
+		c.ShadowOpacity = 0.5                           // Medium shadows
+		c.MaxLights = 20                                // More torches/magic lights
 	case "scifi", "sci-fi": // Support both canonical and hyphenated form
-		c.AmbientIntensity = 0.35
-		c.AmbientColor = color.RGBA{90, 110, 140, 255} // Cool blue
-		c.ShadowOpacity = 0.6                          // Sharper shadows
-		c.MaxLights = 24                               // Many tech lights
+		c.AmbientIntensity = 0.7
+		c.AmbientColor = color.RGBA{190, 210, 230, 255} // Cool blue, brighter
+		c.ShadowOpacity = 0.6                           // Sharper shadows
+		c.MaxLights = 24                                // Many tech lights
 	case "horror":
-		c.AmbientIntensity = 0.15
-		c.AmbientColor = color.RGBA{80, 75, 90, 255} // Very dark, cold
-		c.ShadowOpacity = 0.8                        // Deep, oppressive shadows
-		c.MaxLights = 12                             // Limited, scary lighting
+		c.AmbientIntensity = 0.5 // Even horror needs to be visible
+		c.AmbientColor = color.RGBA{160, 155, 170, 255} // Dark but visible
+		c.ShadowOpacity = 0.8                           // Deep, oppressive shadows
+		c.MaxLights = 12                                // Limited, scary lighting
 	case "cyberpunk":
-		c.AmbientIntensity = 0.25
-		c.AmbientColor = color.RGBA{100, 80, 120, 255} // Purple tint
-		c.ShadowOpacity = 0.7                          // Strong neon shadows
-		c.MaxLights = 28                               // Neon everywhere
+		c.AmbientIntensity = 0.65
+		c.AmbientColor = color.RGBA{190, 170, 210, 255} // Purple tint, brighter
+		c.ShadowOpacity = 0.7                           // Strong neon shadows
+		c.MaxLights = 28                                // Neon everywhere
 	case "postapoc", "post-apocalyptic": // Support both canonical and hyphenated form
-		c.AmbientIntensity = 0.3
-		c.AmbientColor = color.RGBA{130, 120, 100, 255} // Dusty, harsh
+		c.AmbientIntensity = 0.7
+		c.AmbientColor = color.RGBA{210, 200, 180, 255} // Dusty, harsh, but visible
 		c.ShadowOpacity = 0.4                           // Diffuse, dusty shadows
 		c.MaxLights = 16                                // Standard
 	default:
-		c.AmbientIntensity = 0.3
-		c.AmbientColor = color.RGBA{100, 100, 120, 255}
+		c.AmbientIntensity = 0.7
+		c.AmbientColor = color.RGBA{200, 200, 210, 255}
 		c.ShadowOpacity = 0.5
 		c.MaxLights = 16
 	}

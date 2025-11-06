@@ -248,8 +248,8 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 			}
 		}
 
-		// Phase 11.1: Add diagonal walls by chamfering corners (20-40% chance per room)
-		if rng.Float64() < 0.30 { // 30% of rooms get diagonal corners
+		// Phase 11.1: Add diagonal walls by chamfering corners (60% chance per room - increased for visibility)
+		if rng.Float64() < 0.60 { // 60% of rooms get diagonal corners (was 0.30)
 			g.chamferRoomCorners(terrain, room, rng)
 		}
 	}
@@ -428,8 +428,8 @@ func (g *BSPGenerator) addWaterFeatures(terrain *Terrain, rng *rand.Rand) {
 // chamferRoomCorners adds diagonal walls to room corners (Phase 11.1).
 // This creates 45° angle cuts on corners, making rooms more visually interesting.
 func (g *BSPGenerator) chamferRoomCorners(terrain *Terrain, room *Room, rng *rand.Rand) {
-	// Determine chamfer size (1-2 tiles)
-	chamferSize := 1 + rng.Intn(2)
+	// Determine chamfer size (2-3 tiles for better visibility)
+	chamferSize := 2 + rng.Intn(2) // 2-3 tiles (was 1-2)
 
 	// Track which corners to chamfer (at least 1, up to all 4)
 	numCorners := 1 + rng.Intn(4) // 1-4 corners

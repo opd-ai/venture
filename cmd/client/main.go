@@ -73,7 +73,7 @@ var (
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting   = flag.Bool("enable-lighting", true, "Enable dynamic lighting system")
-	enableWeather    = flag.Bool("enable-weather", true, "Enable procedural weather effects")
+	enableWeather    = flag.Bool("enable-weather", false, "Enable procedural weather effects")
 	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
 	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
 	verbose          = flag.Bool("verbose", false, "Enable verbose logging")

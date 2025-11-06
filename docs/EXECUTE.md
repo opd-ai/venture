@@ -49,8 +49,8 @@ Identify and implement the next incomplete task from docs/PLAN.md (short-term) o
 - [ ] Test coverage >65% for affected packages
 - [ ] No circular dependencies, follows pkg/ hierarchy
 - [ ] Deterministic generation verified (if applicable)
-- [ ] Update PLAN.md or ROADMAP.md with completion status
-- [ ] Do not create additional `*.md` or `docs/*.md` files
+- [ ] Update PLAN.md or ROADMAP.md with completion status, avoid extra detail
+- [ ] Do not create additional `*.md` or `docs/*.md` files, they just clutter things. Write excellent godoc instead.
 
 ## OUTPUT FORMAT
 Provide brief status updates:

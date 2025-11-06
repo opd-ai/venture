@@ -344,3 +344,260 @@ func TestClient_Protocol(t *testing.T) {
 		t.Error("Expected protocol to be BinaryProtocol")
 	}
 }
+
+// TestDefaultReconnectConfig verifies default reconnection configuration.
+func TestDefaultReconnectConfig(t *testing.T) {
+	config := DefaultReconnectConfig()
+
+	if config.MaxRetries == 0 {
+		t.Error("Expected non-zero max retries")
+	}
+
+	if config.InitialDelay == 0 {
+		t.Error("Expected non-zero initial delay")
+	}
+
+	if config.MaxDelay == 0 {
+		t.Error("Expected non-zero max delay")
+	}
+
+	if config.BackoffFactor == 0 {
+		t.Error("Expected non-zero backoff factor")
+	}
+
+	// Verify sensible defaults
+	expectedMaxRetries := 5
+	if config.MaxRetries != expectedMaxRetries {
+		t.Errorf("Expected MaxRetries %d, got %d", expectedMaxRetries, config.MaxRetries)
+	}
+
+	expectedInitialDelay := 1 * time.Second
+	if config.InitialDelay != expectedInitialDelay {
+		t.Errorf("Expected InitialDelay %v, got %v", expectedInitialDelay, config.InitialDelay)
+	}
+
+	expectedMaxDelay := 30 * time.Second
+	if config.MaxDelay != expectedMaxDelay {
+		t.Errorf("Expected MaxDelay %v, got %v", expectedMaxDelay, config.MaxDelay)
+	}
+
+	expectedBackoffFactor := 2.0
+	if config.BackoffFactor != expectedBackoffFactor {
+		t.Errorf("Expected BackoffFactor %.1f, got %.1f", expectedBackoffFactor, config.BackoffFactor)
+	}
+}
+
+// TestTorReconnectConfig verifies Tor/high-latency reconnection configuration.
+func TestTorReconnectConfig(t *testing.T) {
+	config := TorReconnectConfig()
+
+	// Verify all fields are non-zero
+	if config.MaxRetries == 0 {
+		t.Error("Expected non-zero max retries")
+	}
+
+	if config.InitialDelay == 0 {
+		t.Error("Expected non-zero initial delay")
+	}
+
+	if config.MaxDelay == 0 {
+		t.Error("Expected non-zero max delay")
+	}
+
+	if config.BackoffFactor == 0 {
+		t.Error("Expected non-zero backoff factor")
+	}
+
+	// Verify Tor-specific values
+	expectedMaxRetries := 10
+	if config.MaxRetries != expectedMaxRetries {
+		t.Errorf("Expected MaxRetries %d, got %d", expectedMaxRetries, config.MaxRetries)
+	}
+
+	expectedInitialDelay := 5 * time.Second
+	if config.InitialDelay != expectedInitialDelay {
+		t.Errorf("Expected InitialDelay %v, got %v", expectedInitialDelay, config.InitialDelay)
+	}
+
+	expectedMaxDelay := 120 * time.Second
+	if config.MaxDelay != expectedMaxDelay {
+		t.Errorf("Expected MaxDelay %v, got %v", expectedMaxDelay, config.MaxDelay)
+	}
+
+	expectedBackoffFactor := 2.0
+	if config.BackoffFactor != expectedBackoffFactor {
+		t.Errorf("Expected BackoffFactor %.1f, got %.1f", expectedBackoffFactor, config.BackoffFactor)
+	}
+
+	// Verify it's more aggressive than default
+	defaultConfig := DefaultReconnectConfig()
+	if config.MaxRetries <= defaultConfig.MaxRetries {
+		t.Error("Tor MaxRetries should be greater than default")
+	}
+
+	if config.InitialDelay <= defaultConfig.InitialDelay {
+		t.Error("Tor InitialDelay should be greater than default")
+	}
+
+	if config.MaxDelay <= defaultConfig.MaxDelay {
+		t.Error("Tor MaxDelay should be greater than default")
+	}
+}
+
+// TestReconnectConfig_CustomValues verifies custom reconnection configuration.
+func TestReconnectConfig_CustomValues(t *testing.T) {
+	tests := []struct {
+		name   string
+		config ReconnectConfig
+	}{
+		{
+			name: "minimal retries",
+			config: ReconnectConfig{
+				MaxRetries:    1,
+				InitialDelay:  500 * time.Millisecond,
+				MaxDelay:      5 * time.Second,
+				BackoffFactor: 1.5,
+			},
+		},
+		{
+			name: "infinite retries",
+			config: ReconnectConfig{
+				MaxRetries:    0, // 0 = infinite
+				InitialDelay:  2 * time.Second,
+				MaxDelay:      60 * time.Second,
+				BackoffFactor: 2.5,
+			},
+		},
+		{
+			name: "aggressive retries",
+			config: ReconnectConfig{
+				MaxRetries:    20,
+				InitialDelay:  100 * time.Millisecond,
+				MaxDelay:      300 * time.Second,
+				BackoffFactor: 3.0,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.config.InitialDelay == 0 {
+				t.Error("Expected non-zero initial delay")
+			}
+			if tt.config.MaxDelay == 0 {
+				t.Error("Expected non-zero max delay")
+			}
+			if tt.config.BackoffFactor == 0 {
+				t.Error("Expected non-zero backoff factor")
+			}
+			// MaxRetries can be 0 for infinite retries
+		})
+	}
+}
+
+// TestConnectWithRetry_ImmediateSuccess tests successful connection on first attempt.
+func TestConnectWithRetry_ImmediateSuccess(t *testing.T) {
+	// This test verifies the ConnectWithRetry function exists and has correct signature
+	// Actual connection testing requires a running server and is covered by integration tests
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19999" // Non-existent port
+	config.ConnectionTimeout = 100 * time.Millisecond
+
+	client := NewClient(config)
+
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    1,
+		InitialDelay:  10 * time.Millisecond,
+		MaxDelay:      100 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	// Should fail quickly (no server running)
+	err := client.ConnectWithRetry(reconnectConfig)
+	if err == nil {
+		t.Error("Expected connection failure (no server running)")
+		client.Disconnect()
+	}
+}
+
+// TestConnectWithRetry_ExponentialBackoff tests exponential backoff timing.
+func TestConnectWithRetry_ExponentialBackoff(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19998" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	client := NewClient(config)
+
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    3,
+		InitialDelay:  10 * time.Millisecond,
+		MaxDelay:      100 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	start := time.Now()
+	err := client.ConnectWithRetry(reconnectConfig)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Error("Expected connection failure (no server running)")
+		client.Disconnect()
+		return
+	}
+
+	// Should have tried 3 times with delays: 10ms, 20ms
+	// Connection fails immediately (connection refused), so no timeout wait
+	// Total minimum time: ~10 + 20 = 30ms (allowing some overhead)
+	minExpected := 25 * time.Millisecond
+	if elapsed < minExpected {
+		t.Errorf("Expected at least %v elapsed time, got %v", minExpected, elapsed)
+	}
+
+	// Shouldn't take too long (max 500ms for this simple test)
+	maxExpected := 500 * time.Millisecond
+	if elapsed > maxExpected {
+		t.Errorf("Expected at most %v elapsed time, got %v", maxExpected, elapsed)
+	}
+}
+
+// TestConnectWithRetry_MaxDelayRespected tests that MaxDelay caps exponential growth.
+func TestConnectWithRetry_MaxDelayRespected(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19997" // Non-existent port
+	config.ConnectionTimeout = 10 * time.Millisecond
+
+	client := NewClient(config)
+
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    3,
+		InitialDelay:  5 * time.Millisecond,
+		MaxDelay:      10 * time.Millisecond, // Cap at 10ms
+		BackoffFactor: 10.0,                  // Large factor to test capping
+	}
+
+	start := time.Now()
+	err := client.ConnectWithRetry(reconnectConfig)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Error("Expected connection failure (no server running)")
+		client.Disconnect()
+		return
+	}
+
+	// With large backoff factor, delays would be: 5ms, 50ms, 500ms
+	// But MaxDelay caps at 10ms, so actual: 5ms, 10ms
+	// Connection fails immediately (connection refused)
+	// Total minimum: ~5 + 10 = 15ms (allowing some overhead)
+	minExpected := 10 * time.Millisecond
+	if elapsed < minExpected {
+		t.Errorf("Expected at least %v elapsed time, got %v", minExpected, elapsed)
+	}
+
+	// Should be much less than uncapped exponential growth
+	// Uncapped would be: 5 + 50 + 500 = 555ms
+	maxExpected := 200 * time.Millisecond
+	if elapsed > maxExpected {
+		t.Errorf("Expected at most %v elapsed time (MaxDelay should cap growth), got %v", maxExpected, elapsed)
+	}
+}

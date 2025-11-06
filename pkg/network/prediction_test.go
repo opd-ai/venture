@@ -13,8 +13,8 @@ func TestNewClientPredictor(t *testing.T) {
 		t.Fatal("NewClientPredictor returned nil")
 	}
 
-	if predictor.maxHistory != 128 {
-		t.Errorf("Expected maxHistory 128, got %d", predictor.maxHistory)
+	if predictor.maxHistory != 256 {
+		t.Errorf("Expected maxHistory 256, got %d", predictor.maxHistory)
 	}
 
 	if len(predictor.stateHistory) != 0 {

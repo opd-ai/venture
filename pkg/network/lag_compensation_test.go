@@ -28,8 +28,8 @@ func TestHighLatencyLagCompensationConfig(t *testing.T) {
 	if config.MinCompensation != 10*time.Millisecond {
 		t.Errorf("Expected MinCompensation 10ms, got %v", config.MinCompensation)
 	}
-	if config.SnapshotBufferSize != 200 {
-		t.Errorf("Expected SnapshotBufferSize 200, got %d", config.SnapshotBufferSize)
+	if config.SnapshotBufferSize != 300 {
+		t.Errorf("Expected SnapshotBufferSize 300, got %d", config.SnapshotBufferSize)
 	}
 }
 

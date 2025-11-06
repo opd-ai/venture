@@ -1,6 +1,6 @@
 # Technical Specification
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Last Updated:** October 2025
 
 Technical architecture and implementation details for Venture.
@@ -48,7 +48,7 @@ pkg/
 ## Technology Stack
 
 **Language:** Go 1.24.5+  
-**Game Engine:** Ebiten 2.9.2 (2D, cross-platform)  
+**Game Engine:** Ebiten 2.9.3 (2D, cross-platform)  
 **Logging:** logrus 1.9.3 (structured JSON)  
 **Dialogs:** zenity 0.10.14 (native dialogs)  
 **Image:** golang.org/x/image 0.32.0 (extended image processing)

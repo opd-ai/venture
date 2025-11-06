@@ -23,7 +23,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 **Version:** 2.0 Beta (Phase 14 Complete) - Built on 1.1 Production Foundation ✅
 
-Core features implemented, tested, and production-ready. Version 2.0 (advanced features) complete. All 14 phases implemented. See [Development Roadmap](docs/ROADMAP.md) for detailed progress and milestones.
+Core features implemented, tested, and production-ready. Version 2.0 (advanced features) complete. All 14 phases implemented. See [Development Roadmap](docs/ROADMAP_V3.md) for detailed progress and milestones.
 
 ## Quick Start
 
@@ -127,7 +127,7 @@ Venture runs on multiple platforms:
   (see [Mobile Build Guide](docs/MOBILE_BUILD.md))
 
 **Touch Input:**
-The WebAssembly build fully supports touch input for mobile browsers and touch-capable devices. Virtual controls appear automatically when you touch the screen. See [Touch Input Testing Guide](docs/TESTING_TOUCH_INPUT.md) for details.
+The WebAssembly build fully supports touch input for mobile browsers and touch-capable devices. Virtual controls appear automatically when you touch the screen. See [Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md) for details.
 
 **WebAssembly Deployment:**
 The game automatically deploys to GitHub Pages on every push to main. See [GitHub Pages Guide](docs/GITHUB_PAGES.md) for details.
@@ -140,8 +140,7 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 **Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
 
 ### Project Information
-- **[Roadmap](docs/ROADMAP.md)** - Development roadmap and current status
-- **[Roadmap V2](docs/ROADMAP_V2.md)** - Extended Version 2.0 roadmap with enhanced mechanics
+- **[Roadmap V3](docs/ROADMAP_V3.md)** - Development roadmap and current status
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
 
@@ -154,7 +153,6 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 
 ### Testing & Quality
 - **[Testing Guide](docs/TESTING.md)** - Testing strategy and practices
-- **[Testing Touch Input](docs/TESTING_TOUCH_INPUT.md)** - Touch input testing procedures
 - **[Performance Guide](docs/PERFORMANCE.md)** - Performance optimization and profiling
 
 ### System Documentation
@@ -169,7 +167,6 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 - **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
 - **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
 - **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
-- **[WASM Touch Testing](docs/WASM_TOUCH_TESTING.md)** - WebAssembly touch testing guide
 - **[GAPS](docs/GAPS.md)** - Identified gaps and planned improvements
 - **[Release Notes V1.1](docs/RELEASE_NOTES_V1.1.md)** - Version 1.1 release notes
 

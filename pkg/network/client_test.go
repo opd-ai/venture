@@ -30,6 +30,71 @@ func TestDefaultClientConfig(t *testing.T) {
 	}
 }
 
+// TestTorClientConfig verifies Tor/high-latency client configuration.
+func TestTorClientConfig(t *testing.T) {
+	config := TorClientConfig()
+
+	// Verify all fields are non-zero
+	if config.ServerAddress == "" {
+		t.Error("Expected non-empty server address")
+	}
+
+	if config.ConnectionTimeout == 0 {
+		t.Error("Expected non-zero connection timeout")
+	}
+
+	if config.PingInterval == 0 {
+		t.Error("Expected non-zero ping interval")
+	}
+
+	if config.MaxLatency == 0 {
+		t.Error("Expected non-zero max latency")
+	}
+
+	if config.BufferSize == 0 {
+		t.Error("Expected non-zero buffer size")
+	}
+
+	// Verify Tor-specific values
+	expectedConnectionTimeout := 60 * time.Second
+	if config.ConnectionTimeout != expectedConnectionTimeout {
+		t.Errorf("Expected ConnectionTimeout %v, got %v", expectedConnectionTimeout, config.ConnectionTimeout)
+	}
+
+	expectedMaxLatency := 5000 * time.Millisecond
+	if config.MaxLatency != expectedMaxLatency {
+		t.Errorf("Expected MaxLatency %v, got %v", expectedMaxLatency, config.MaxLatency)
+	}
+
+	expectedPingInterval := 5 * time.Second
+	if config.PingInterval != expectedPingInterval {
+		t.Errorf("Expected PingInterval %v, got %v", expectedPingInterval, config.PingInterval)
+	}
+
+	expectedBufferSize := 512
+	if config.BufferSize != expectedBufferSize {
+		t.Errorf("Expected BufferSize %d, got %d", expectedBufferSize, config.BufferSize)
+	}
+
+	// Verify it's different from default
+	defaultConfig := DefaultClientConfig()
+	if config.ConnectionTimeout == defaultConfig.ConnectionTimeout {
+		t.Error("Tor ConnectionTimeout should differ from default")
+	}
+
+	if config.MaxLatency == defaultConfig.MaxLatency {
+		t.Error("Tor MaxLatency should differ from default")
+	}
+
+	if config.PingInterval == defaultConfig.PingInterval {
+		t.Error("Tor PingInterval should differ from default")
+	}
+
+	if config.BufferSize == defaultConfig.BufferSize {
+		t.Error("Tor BufferSize should differ from default")
+	}
+}
+
 // TestNewClient verifies client creation.
 func TestNewClient(t *testing.T) {
 	config := DefaultClientConfig()

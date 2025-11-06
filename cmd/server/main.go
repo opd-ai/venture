@@ -31,6 +31,7 @@ var (
 	tickRate      = flag.Int("tick-rate", 20, "Server update rate (updates per second)")
 	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
+	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
 )
 
 func main() {
@@ -134,7 +135,13 @@ func main() {
 	}
 
 	// Create server with configuration
-	serverConfig := network.DefaultServerConfig()
+	var serverConfig network.ServerConfig
+	if *highLatency {
+		serverConfig = network.HighLatencyServerConfig()
+		networkLogger.Info("using high-latency server configuration (Tor/onion service optimized)")
+	} else {
+		serverConfig = network.DefaultServerConfig()
+	}
 	serverConfig.Address = ":" + *port
 	serverConfig.MaxPlayers = *maxPlayers
 	serverConfig.UpdateRate = *tickRate
@@ -146,7 +153,13 @@ func main() {
 	snapshotManager := network.NewSnapshotManager(100)
 
 	// Create lag compensator
-	lagCompConfig := network.DefaultLagCompensationConfig()
+	var lagCompConfig network.LagCompensationConfig
+	if *highLatency {
+		lagCompConfig = network.HighLatencyLagCompensationConfig()
+		networkLogger.Info("using high-latency lag compensation configuration")
+	} else {
+		lagCompConfig = network.DefaultLagCompensationConfig()
+	}
 	lagCompensator := network.NewLagCompensator(lagCompConfig)
 
 	networkLogger.WithFields(logrus.Fields{

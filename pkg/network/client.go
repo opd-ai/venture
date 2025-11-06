@@ -32,6 +32,29 @@ func DefaultClientConfig() ClientConfig {
 	}
 }
 
+// TorClientConfig returns a client configuration optimized for Tor/onion service
+// connections and other high-latency networks (200-5000ms). This configuration uses
+// significantly longer timeouts and larger buffers to handle the characteristics of
+// anonymizing networks.
+//
+// Key differences from DefaultClientConfig:
+//   - ConnectionTimeout: 60s (6x increase) - allows time for Tor circuit building (15-30s)
+//   - MaxLatency: 5000ms (10x increase) - accepts extreme latency without warnings
+//   - PingInterval: 5s (5x increase) - reduces unnecessary traffic over slow links
+//   - BufferSize: 512 (2x increase) - buffers ~200 messages for 10s round-trip at 20Hz
+//
+// Use this configuration when connecting through Tor, I2P, or other high-latency networks
+// where round-trip times can exceed 5 seconds and connection establishment is slow.
+func TorClientConfig() ClientConfig {
+	return ClientConfig{
+		ServerAddress:     "localhost:8080",
+		ConnectionTimeout: 60 * time.Second,        // 60s for Tor circuit building
+		PingInterval:      5 * time.Second,         // Reduced ping frequency
+		MaxLatency:        5000 * time.Millisecond, // Accept up to 5s latency
+		BufferSize:        512,                     // Increased for buffering
+	}
+}
+
 // TCPClient handles client-side networking over TCP.
 // Implements ClientConnection interface.
 type TCPClient struct {
@@ -114,6 +137,23 @@ func (c *TCPClient) Connect() error {
 			c.logger.WithError(err).WithField("server", c.config.ServerAddress).Error("failed to connect")
 		}
 		return fmt.Errorf("failed to connect to %s: %w", c.config.ServerAddress, err)
+	}
+
+	// Enable TCP keepalive for long-duration connections
+	// This prevents silent disconnections at NAT/proxy boundaries (typical 5-15 min timeout)
+	// and helps detect dead connections when network fails without proper FIN/RST
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(true); err != nil {
+			if c.logger != nil {
+				c.logger.WithError(err).Warn("failed to enable TCP keepalive")
+			}
+		} else if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+			if c.logger != nil {
+				c.logger.WithError(err).Warn("failed to set TCP keepalive period")
+			}
+		} else if c.logger != nil {
+			c.logger.Debug("TCP keepalive enabled (30s period)")
+		}
 	}
 
 	c.conn = conn

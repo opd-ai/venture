@@ -50,6 +50,7 @@ Identify and implement the next incomplete task from docs/PLAN.md (short-term) o
 - [ ] No circular dependencies, follows pkg/ hierarchy
 - [ ] Deterministic generation verified (if applicable)
 - [ ] Update PLAN.md or ROADMAP.md with completion status
+- [ ] Do not create additional `*.md` or `docs/*.md` files
 
 ## OUTPUT FORMAT
 Provide brief status updates:

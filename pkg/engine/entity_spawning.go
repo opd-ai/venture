@@ -178,6 +178,7 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 			enemyAnim.Loop = true
 			enemyAnim.Playing = true
 			enemyAnim.FrameCount = 4
+			enemyAnim.Dirty = true // CRITICAL: Mark dirty to trigger initial frame generation
 			enemy.AddComponent(enemyAnim)
 
 			// GAP-012 REPAIR: Add visual feedback for hit flash
@@ -361,6 +362,7 @@ func SpawnEnemyFromTemplate(world *World, genEntity *entity.Entity, x, y float64
 	enemyAnim.Loop = true
 	enemyAnim.Playing = true
 	enemyAnim.FrameCount = 4
+	enemyAnim.Dirty = true // CRITICAL: Mark dirty to trigger initial frame generation
 	enemy.AddComponent(enemyAnim)
 
 	// Visual feedback (Phase 10)

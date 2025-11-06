@@ -227,6 +227,17 @@ func (r *EbitenRenderSystem) Update(entities []*Entity, deltaTime float64) {
 // This should be called from the game's Draw method.
 // The screen parameter should be *ebiten.Image in production.
 func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
+	// DEBUG: Count player entities
+	playerCount := 0
+	for _, e := range entities {
+		if e.HasComponent("input") {
+			playerCount++
+		}
+	}
+	if playerCount > 0 {
+		fmt.Printf("[DEBUG] Draw: Received %d total entities, %d players\n", len(entities), playerCount)
+	}
+
 	// Type assert to *ebiten.Image
 	ebitenScreen, ok := screen.(*ebiten.Image)
 	if !ok {
@@ -247,10 +258,33 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
 		visibleEntities = r.getVisibleEntities(entities)
 		r.spatialCullingUsed = true // Mark that spatial culling was used
+
+		// DEBUG: Check if player survived culling
+		playerInVisible := 0
+		for _, e := range visibleEntities {
+			if e.HasComponent("input") {
+				playerInVisible++
+			}
+		}
+		if playerCount > 0 {
+			fmt.Printf("[DEBUG] Draw: After spatial culling: %d visible entities, %d players\n", len(visibleEntities), playerInVisible)
+		}
 	}
 
 	// Sort entities by layer
 	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
+
+	// DEBUG: Check if player survived sorting
+	if playerCount > 0 {
+		playerInSorted := 0
+		for _, e := range sortedEntities {
+			if e.HasComponent("input") {
+				playerInSorted++
+			}
+		}
+		fmt.Printf("[DEBUG] Draw: After sorting: %d sorted entities, %d players, batching=%v\n",
+			len(sortedEntities), playerInSorted, r.enableBatching)
+	}
 
 	// Render using batching (if enabled) or individual draws
 	if r.enableBatching {
@@ -275,6 +309,17 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 // drawBatched renders entities using batch optimization to reduce GPU state changes.
 // Entities with the same sprite image are grouped together.
 func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
+	// DEBUG: Log entry
+	playerCount := 0
+	for _, e := range entities {
+		if e.HasComponent("input") {
+			playerCount++
+		}
+	}
+	if playerCount > 0 {
+		fmt.Printf("[DEBUG] drawBatched: Called with %d entities, %d players\n", len(entities), playerCount)
+	}
+
 	// Get or create batch map from pool
 	batches := r.getBatchMap()
 	defer r.returnBatchMap(batches)
@@ -364,6 +409,11 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		pos := posComp.(*PositionComponent)
 		sprite := spriteComp.(*EbitenSprite)
 
+		// DEBUG: Log sprite state for player
+		if entity.HasComponent("input") && sprite.Image == nil {
+			fmt.Printf("[DEBUG] RenderSystem: Player sprite.Image is NIL! Visible=%v\n", sprite.Visible)
+		}
+
 		if !sprite.Visible {
 			continue
 		}
@@ -392,6 +442,12 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 			}
 		} else {
 			actualSpriteImage = sprite.Image
+		}
+
+		// DEBUG: Log for player
+		if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] drawBatch: Player actualSpriteImage nil=%v, batchSpriteImage nil=%v, match=%v\n",
+				actualSpriteImage == nil, batchSpriteImage == nil, actualSpriteImage == batchSpriteImage)
 		}
 
 		// Skip if no image or image doesn't match batch
@@ -450,6 +506,11 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		imgBounds := batchSpriteImage.Bounds()
 		w, h := float32(imgBounds.Dx()), float32(imgBounds.Dy())
 
+		// DEBUG: Log texture size for player
+		if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] drawBatch: Player texture size w=%.0f, h=%.0f\n", w, h)
+		}
+
 		// Create color scale from flash and tint
 		colorR := float32((tintR + flashAlpha))
 		colorG := float32((tintG + flashAlpha))
@@ -496,9 +557,16 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 	// Draw all sprites in this batch with a single DrawTriangles call
 	if len(vertices) > 0 && len(indices) > 0 {
+		// DEBUG: Log when drawing batch
+		fmt.Printf("[DEBUG] drawBatch: Calling DrawTriangles with %d vertices, %d indices, %d entities\n",
+			len(vertices), len(indices), len(entities))
+
 		r.screen.DrawTriangles(vertices, indices, batchSpriteImage, &ebiten.DrawTrianglesOptions{
 			Filter: ebiten.FilterLinear,
 		})
+	} else {
+		fmt.Printf("[DEBUG] drawBatch: SKIPPED DrawTriangles (vertices=%d, indices=%d)\n",
+			len(vertices), len(indices))
 	}
 }
 
@@ -570,11 +638,19 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 
 // drawEntity renders a single entity.
 func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
+	// DEBUG: Log when drawing player
+	if entity.HasComponent("input") {
+		fmt.Printf("[DEBUG] drawEntity: Called for player entity\n")
+	}
+
 	// Get required components
 	posComp, hasPos := entity.GetComponent("position")
 	spriteComp, hasSprite := entity.GetComponent("sprite")
 
 	if !hasPos || !hasSprite {
+		if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] drawEntity: Player missing components (hasPos=%v, hasSprite=%v)\n", hasPos, hasSprite)
+		}
 		return
 	}
 
@@ -582,6 +658,9 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	sprite := spriteComp.(*EbitenSprite)
 
 	if !sprite.Visible {
+		if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] drawEntity: Player sprite.Visible=false\n")
+		}
 		return
 	}
 
@@ -675,6 +754,12 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		spriteImage = sprite.Image
 	}
 
+	// DEBUG: Log for player sprite
+	if entity.HasComponent("input") && spriteImage == nil {
+		fmt.Printf("[DEBUG] RenderSystem.drawEntity: Player spriteImage is NIL! sprite.Image=%v, DirectionalImages len=%d\n",
+			sprite.Image == nil, len(sprite.DirectionalImages))
+	}
+
 	if spriteImage != nil {
 		// Draw procedural sprite
 		opts := &ebiten.DrawImageOptions{}
@@ -733,6 +818,11 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 // drawHealthBar renders a health bar above an entity if appropriate.
 // GAP-013 REPAIR: Shows health status for enemies (when damaged) and bosses (always).
 func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spriteWidth, spriteHeight float64) {
+	// Safety check: ensure screen is available
+	if r.screen == nil {
+		return
+	}
+
 	// Only draw health bars for entities with health component
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
@@ -804,6 +894,11 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 
 // GAP-016 REPAIR: drawParticles renders all particle effects to the screen.
 func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
+	// Safety check: ensure screen is available
+	if r.screen == nil {
+		return
+	}
+
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("particle_emitter")
 		if !ok {
@@ -848,6 +943,18 @@ func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 
 // drawRect draws a filled rectangle at the given screen position.
 func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
+	// Safety check: ensure screen is available
+	if r.screen == nil {
+		return
+	}
+
+	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
+	defer func() {
+		if r := recover(); r != nil {
+			// Silently ignore - this can happen during Ebiten initialization
+		}
+	}()
+
 	// Convert color
 	red, green, blue, alpha := col.RGBA()
 	clr := color.RGBA{
@@ -864,6 +971,11 @@ func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Col
 
 // drawColliders draws collision bounds for debugging.
 func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
+	// Safety check: ensure screen is available
+	if r.screen == nil {
+		return
+	}
+
 	debugColor := color.RGBA{0, 255, 0, 128} // Semi-transparent green
 
 	for _, entity := range entities {

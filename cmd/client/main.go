@@ -1466,14 +1466,15 @@ func main() {
 
 	// Connect to render system for viewport culling
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
-	// Enable culling for performance optimization (Phase 4.3 complete)
-	game.RenderSystem.EnableCulling(true)
+	// BUGFIX: Disable culling temporarily - spatial partition is culling ALL entities
+	// TODO: Fix spatial partition bug, then re-enable with EnableCulling(true)
+	game.RenderSystem.EnableCulling(false)
 
 	clientLogger.WithFields(logrus.Fields{
 		"worldWidth":  worldWidth,
 		"worldHeight": worldHeight,
 		"cellSize":    8, // Quadtree capacity per node (8 entities before subdivision)
-	}).Info("spatial partition system initialized (culling temporarily disabled)")
+	}).Info("spatial partition system initialized (culling disabled due to bug)")
 
 	if *verbose {
 		clientLogger.WithFields(logrus.Fields{
@@ -1666,6 +1667,7 @@ func main() {
 	playerAnim.Loop = true
 	playerAnim.Playing = true
 	playerAnim.FrameCount = 4 // 4 frames per animation
+	playerAnim.Dirty = true   // CRITICAL: Mark dirty to trigger initial frame generation
 	player.AddComponent(playerAnim)
 
 	// Category 5.2: Add equipment visual component for showing equipped items on sprite

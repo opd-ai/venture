@@ -113,6 +113,9 @@ func (s *AnimationSystem) GetStats() AnimationStats {
 // Update processes all entities with animation components.
 // Updates frame timers, transitions states, and regenerates frames if needed.
 func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
+	// DEBUG: Log when system runs
+	fmt.Printf("[DEBUG] AnimationSystem.Update called with %d entities\n", len(entities))
+
 	// Phase 14.2: Reset statistics for this frame
 	s.stats = AnimationStats{
 		TotalEntities: len(entities),
@@ -217,10 +220,21 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 				}
 			}
 
+			// DEBUG: Always log for player
+			if entity.HasComponent("input") {
+				fmt.Printf("[DEBUG] AnimationSystem: Regenerating frames for player (state=%v)\n", animComp.CurrentState)
+			}
+
 			if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
 				return fmt.Errorf("failed to regenerate frames: %w", err)
 			}
 			animComp.Dirty = false
+
+			// DEBUG: Log result for player
+			if entity.HasComponent("input") {
+				fmt.Printf("[DEBUG] AnimationSystem: Player frames generated. Count=%d, FirstFrame nil=%v\n",
+					len(animComp.Frames), animComp.Frames == nil || len(animComp.Frames) == 0 || animComp.Frames[0] == nil)
+			}
 
 			// Verify frames were generated (debug level)
 			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -242,6 +256,14 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		// Update sprite component with current frame
 		if frame := animComp.CurrentFrame(); frame != nil {
 			spriteComp.Image = frame
+			// DEBUG: Log for player
+			if entity.HasComponent("input") {
+				fmt.Printf("[DEBUG] AnimationSystem: Updated player sprite.Image (frame %d, nil=%v)\n",
+					animComp.FrameIndex, frame == nil)
+			}
+		} else if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] AnimationSystem: WARNING - Player CurrentFrame() returned NIL (frameIndex=%d, frameCount=%d)\n",
+				animComp.FrameIndex, len(animComp.Frames))
 		}
 	}
 
@@ -477,9 +499,9 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		Custom:     make(map[string]interface{}),
 	}
 
-	// Phase 10.1: Enable aerial-view sprites for top-down perspective with 360° rotation
+	// Phase 10.1: Aerial-view sprites disabled until proportions verified
 	// Aerial templates use 35/50/15 proportions (head/torso/legs) optimized for overhead view
-	config.Custom["useAerial"] = true
+	// config.Custom["useAerial"] = true
 
 	// CRITICAL: Set entity type to trigger template-based generation
 	// Check if entity has input component (player) or team component (enemy/NPC)

@@ -79,14 +79,38 @@ build_aar() {
     # Ensure output directory exists
     mkdir -p "$BUILD_DIR/libs"
     
+    # Check if ebitenmobile is installed
+    if ! command -v ebitenmobile &> /dev/null; then
+        echo_error "ebitenmobile is not installed"
+        echo_info "Installing ebitenmobile..."
+        go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+        
+        if ! command -v ebitenmobile &> /dev/null; then
+            echo_error "Failed to install ebitenmobile. Please check your Go installation and PATH."
+            exit 1
+        fi
+    fi
+    
     # Build the AAR
+    echo_info "Running ebitenmobile bind..."
     ebitenmobile bind \
         -target android \
         -javapkg $PACKAGE_NAME \
         -o "$BUILD_DIR/libs/mobile.aar" \
         ./cmd/mobile
     
-    echo_info "AAR built successfully"
+    if [ ! -f "$BUILD_DIR/libs/mobile.aar" ]; then
+        echo_error "Failed to generate mobile.aar"
+        exit 1
+    fi
+    
+    echo_info "AAR built successfully: $BUILD_DIR/libs/mobile.aar"
+    
+    # Display AAR info
+    if command -v unzip &> /dev/null; then
+        echo_info "AAR contents:"
+        unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
+    fi
 }
 
 # Build APK

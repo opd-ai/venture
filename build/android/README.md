@@ -24,13 +24,51 @@ build/android/
 
 ## Building
 
+### Prerequisites
+
+Before building, ensure you have:
+1. Go 1.24+ installed
+2. Android SDK and NDK configured (see MOBILE_BUILD.md)
+3. ebitenmobile installed: `go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest`
+
+### Build Process
+
+The Android build requires two steps:
+
+1. **Build the AAR library** - This creates `libs/mobile.aar` containing the Go game code and GoNativeActivity
+2. **Build the APK** - This packages the AAR with Android resources into an installable app
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Android Build Process                        │
+└─────────────────────────────────────────────────────────────────┘
+
+Step 1: Build AAR (ebitenmobile bind)
+┌──────────────┐     ┌──────────────┐     ┌──────────────────┐
+│ cmd/mobile/  │ --> │ ebitenmobile │ --> │ libs/mobile.aar  │
+│  mobile.go   │     │     bind     │     │ (GoNativeActivity)│
+└──────────────┘     └──────────────┘     └──────────────────┘
+
+Step 2: Build APK (Gradle)
+┌──────────────────┐     ┌─────────────┐     ┌──────────────┐
+│ libs/mobile.aar  │     │  Gradle     │     │ Venture.apk  │
+│ AndroidManifest  │ --> │ assembleDebug│ --> │ (Installable)│
+│ Resources (res/) │     │             │     │              │
+└──────────────────┘     └─────────────┘     └──────────────┘
+
+The GoNativeActivity class bridge between Android and Go code:
+┌─────────────────────────────────────────────────────────────────┐
+│ Android OS → GoNativeActivity → libgojni.so → Your Go Code     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 Use the `scripts/build-android.sh` script to build the Android app:
 
 ```bash
 # Build AAR library only
 ./scripts/build-android.sh aar
 
-# Build debug APK
+# Build debug APK (includes AAR build)
 ./scripts/build-android.sh apk
 
 # Build release APK (requires signing configuration)
@@ -42,6 +80,20 @@ Use the `scripts/build-android.sh` script to build the Android app:
 # Build and install on connected device
 ./scripts/build-android.sh install
 ```
+
+**Important:** The AAR must be built before building the APK. The build script handles this automatically for most commands, but if you're building manually with Gradle, run `./scripts/build-android.sh aar` first.
+
+### Troubleshooting
+
+**Error: "Didn't find class org.golang.app.GoNativeActivity"**
+
+This error occurs when the `mobile.aar` file is missing or wasn't properly included in the APK. To fix:
+
+1. Ensure the AAR was built: `./scripts/build-android.sh aar`
+2. Verify the AAR exists: `ls -lh build/android/libs/mobile.aar`
+3. Rebuild the APK: `./scripts/build-android.sh apk`
+
+The AAR file contains the `GoNativeActivity` class required to run the Go-based game on Android.
 
 ## Resources
 

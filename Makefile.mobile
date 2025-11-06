@@ -1,6 +1,6 @@
 # Makefile for Venture mobile builds
 
-.PHONY: help mobile-deps android-aar android-apk android-apk-release android-aab android-install ios-xcframework ios-simulator ios-device ios-ipa ios-install clean-mobile
+.PHONY: help mobile-deps android-aar android-apk android-apk-release android-aab android-install android-verify ios-xcframework ios-simulator ios-device ios-ipa ios-install clean-mobile
 
 help:
 	@echo "Venture Mobile Build Commands:"
@@ -9,6 +9,7 @@ help:
 	@echo "  make mobile-deps          - Install mobile build dependencies"
 	@echo ""
 	@echo "Android:"
+	@echo "  make android-verify       - Verify Android build environment"
 	@echo "  make android-aar          - Build Android AAR library"
 	@echo "  make android-apk          - Build debug APK"
 	@echo "  make android-apk-release  - Build release APK (requires signing)"
@@ -32,6 +33,9 @@ mobile-deps:
 	@echo "Mobile dependencies installed"
 
 # Android targets
+android-verify:
+	./scripts/verify-android-build.sh
+
 android-aar:
 	./scripts/build-android.sh aar
 

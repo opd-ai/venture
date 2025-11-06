@@ -220,6 +220,93 @@ func HumanoidTemplate() AnatomicalTemplate {
 	}
 }
 
+// EnhancedHumanoidTemplate returns a Phase 15.1 enhanced humanoid template
+// with pixel-perfect dimensions for improved anatomical accuracy.
+// Uses exact pixel specifications: head 4×4, torso 4×6, legs 4×8 pixels.
+// Optimized for 28x28 pixel sprites with 40% more anatomical detail.
+//
+// This template demonstrates Phase 15.1 enhanced proportional scaling,
+// providing clearer silhouettes and better player recognition at a glance.
+func EnhancedHumanoidTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced_humanoid",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.93,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.12,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+				// Shadow doesn't use pixel dimensions - scales with sprite
+			},
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.75,
+				RelativeWidth:  0.286, // 8/28 for 8 pixel height on 28px sprite
+				RelativeHeight: 0.286,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 8, // Phase 15.1: 4×8 pixel legs
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.214, // 6/28 for 6 pixel height on 28px sprite
+				RelativeHeight: 0.214,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 6, // Phase 15.1: 4×6 pixel torso
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.214, // Arms proportional to torso
+				RelativeHeight: 0.179, // 5/28 for arm length
+				PreferredPixelSize: &PixelDimensions{
+					Width:  6, // Slightly wider for arm reach
+					Height: 5,
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
+				ZIndex:     8,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.25,
+				RelativeWidth:  0.143, // 4/28 for 4 pixel dimensions on 28px sprite
+				RelativeHeight: 0.143,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  4,
+					Height: 4, // Phase 15.1: 4×4 pixel head
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+		},
+	}
+}
+
 // QuadrupedTemplate returns a template for four-legged creatures.
 // Optimized for 32x32 pixels (standard enemy size).
 func QuadrupedTemplate() AnatomicalTemplate {

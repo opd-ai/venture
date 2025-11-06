@@ -61,6 +61,21 @@
 //	cyberpunkTemplate := sprites.CyberpunkHumanoidAerial()
 //	postapocTemplate := sprites.PostApocalypticHumanoidAerial()
 //
+//	// Phase 15.1 enhanced template with pixel-perfect dimensions
+//	enhancedTemplate := sprites.EnhancedHumanoidTemplate()
+//
+// # Enhanced Templates (Phase 15.1)
+//
+// Phase 15.1 introduces enhanced templates with pixel-perfect anatomical specifications:
+//
+//	// Use enhanced template for improved clarity and recognition
+//	template := sprites.EnhancedHumanoidTemplate()
+//	// Head: 4×4 pixels, Torso: 4×6 pixels, Legs: 4×8 pixels
+//	// 40% more anatomical detail, better silhouette scores
+//
+// Enhanced templates provide exact pixel dimensions that remain constant regardless
+// of sprite size, ensuring consistent visual quality and improved player recognition.
+//
 // # Boss Scaling
 //
 // Scale any aerial template for boss entities while preserving proportions:

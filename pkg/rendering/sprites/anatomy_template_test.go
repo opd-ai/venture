@@ -80,6 +80,127 @@ func TestHumanoidTemplate(t *testing.T) {
 	}
 }
 
+// TestEnhancedHumanoidTemplate tests the Phase 15.1 enhanced humanoid template.
+func TestEnhancedHumanoidTemplate(t *testing.T) {
+	template := EnhancedHumanoidTemplate()
+
+	if template.Name != "enhanced_humanoid" {
+		t.Errorf("Template name = %v, want 'enhanced_humanoid'", template.Name)
+	}
+
+	// Verify all expected body parts are present
+	expectedParts := []BodyPart{PartShadow, PartLegs, PartTorso, PartArms, PartHead}
+	for _, part := range expectedParts {
+		if _, exists := template.BodyPartLayout[part]; !exists {
+			t.Errorf("Missing body part: %v", part.String())
+		}
+	}
+
+	// Verify Z-index ordering (shadow < legs < arms < torso < head)
+	shadowZ := template.BodyPartLayout[PartShadow].ZIndex
+	legsZ := template.BodyPartLayout[PartLegs].ZIndex
+	armsZ := template.BodyPartLayout[PartArms].ZIndex
+	torsoZ := template.BodyPartLayout[PartTorso].ZIndex
+	headZ := template.BodyPartLayout[PartHead].ZIndex
+
+	if !(shadowZ < legsZ && legsZ < armsZ && armsZ < torsoZ && torsoZ < headZ) {
+		t.Errorf("Z-index ordering incorrect: shadow=%d, legs=%d, arms=%d, torso=%d, head=%d",
+			shadowZ, legsZ, armsZ, torsoZ, headZ)
+	}
+
+	// Verify Phase 15.1 pixel dimensions are set correctly
+	// Head should be 4×4 pixels
+	headSpec := template.BodyPartLayout[PartHead]
+	if headSpec.PreferredPixelSize == nil {
+		t.Fatal("Head PreferredPixelSize should not be nil")
+	}
+	if headSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Head width = %d, want 4", headSpec.PreferredPixelSize.Width)
+	}
+	if headSpec.PreferredPixelSize.Height != 4 {
+		t.Errorf("Head height = %d, want 4", headSpec.PreferredPixelSize.Height)
+	}
+
+	// Torso should be 4×6 pixels
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.PreferredPixelSize == nil {
+		t.Fatal("Torso PreferredPixelSize should not be nil")
+	}
+	if torsoSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Torso width = %d, want 4", torsoSpec.PreferredPixelSize.Width)
+	}
+	if torsoSpec.PreferredPixelSize.Height != 6 {
+		t.Errorf("Torso height = %d, want 6", torsoSpec.PreferredPixelSize.Height)
+	}
+
+	// Legs should be 4×8 pixels
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.PreferredPixelSize == nil {
+		t.Fatal("Legs PreferredPixelSize should not be nil")
+	}
+	if legsSpec.PreferredPixelSize.Width != 4 {
+		t.Errorf("Legs width = %d, want 4", legsSpec.PreferredPixelSize.Width)
+	}
+	if legsSpec.PreferredPixelSize.Height != 8 {
+		t.Errorf("Legs height = %d, want 8", legsSpec.PreferredPixelSize.Height)
+	}
+
+	// Arms should have pixel dimensions set
+	armsSpec := template.BodyPartLayout[PartArms]
+	if armsSpec.PreferredPixelSize == nil {
+		t.Fatal("Arms PreferredPixelSize should not be nil")
+	}
+	if armsSpec.PreferredPixelSize.Width < 1 || armsSpec.PreferredPixelSize.Height < 1 {
+		t.Errorf("Arms dimensions invalid: %dx%d", armsSpec.PreferredPixelSize.Width, armsSpec.PreferredPixelSize.Height)
+	}
+
+	// Shadow should not have pixel dimensions (scales with sprite)
+	shadowSpec := template.BodyPartLayout[PartShadow]
+	if shadowSpec.PreferredPixelSize != nil {
+		t.Error("Shadow should not have PreferredPixelSize (should scale with sprite)")
+	}
+
+	// Verify GetEffectiveWidth/Height return pixel dimensions
+	const spriteSize = 28
+	headWidth := headSpec.GetEffectiveWidth(spriteSize)
+	headHeight := headSpec.GetEffectiveHeight(spriteSize)
+	if headWidth != 4 {
+		t.Errorf("Head effective width = %d, want 4", headWidth)
+	}
+	if headHeight != 4 {
+		t.Errorf("Head effective height = %d, want 4", headHeight)
+	}
+
+	torsoWidth := torsoSpec.GetEffectiveWidth(spriteSize)
+	torsoHeight := torsoSpec.GetEffectiveHeight(spriteSize)
+	if torsoWidth != 4 {
+		t.Errorf("Torso effective width = %d, want 4", torsoWidth)
+	}
+	if torsoHeight != 6 {
+		t.Errorf("Torso effective height = %d, want 6", torsoHeight)
+	}
+
+	legsWidth := legsSpec.GetEffectiveWidth(spriteSize)
+	legsHeight := legsSpec.GetEffectiveHeight(spriteSize)
+	if legsWidth != 4 {
+		t.Errorf("Legs effective width = %d, want 4", legsWidth)
+	}
+	if legsHeight != 8 {
+		t.Errorf("Legs effective height = %d, want 8", legsHeight)
+	}
+
+	// Verify proportions remain constant across different sprite sizes
+	const largeSpriteSize = 64
+	headWidthLarge := headSpec.GetEffectiveWidth(largeSpriteSize)
+	headHeightLarge := headSpec.GetEffectiveHeight(largeSpriteSize)
+	if headWidthLarge != 4 {
+		t.Errorf("Head effective width at 64x64 = %d, want 4 (pixel-perfect should be constant)", headWidthLarge)
+	}
+	if headHeightLarge != 4 {
+		t.Errorf("Head effective height at 64x64 = %d, want 4 (pixel-perfect should be constant)", headHeightLarge)
+	}
+}
+
 // TestQuadrupedTemplate tests the quadruped template structure.
 func TestQuadrupedTemplate(t *testing.T) {
 	template := QuadrupedTemplate()

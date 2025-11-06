@@ -2,6 +2,8 @@
 
 This guide covers multiplayer networking in Venture, including standard and high-latency configurations for Tor/onion services.
 
+**For complete Tor/onion service setup instructions, see [TOR_SETUP.md](./TOR_SETUP.md).**
+
 ## Quick Start
 
 ### Standard Multiplayer (LAN/Internet)
@@ -26,7 +28,11 @@ This guide covers multiplayer networking in Venture, including standard and high
 **Connect clients through Tor:**
 ```bash
 # Configure client code to use TorClientConfig
-# See "Using Tor Configuration" section below
+# See TOR_SETUP.md for complete setup instructions including:
+# - Installing and configuring Tor
+# - Setting up hidden services
+# - SOCKS5 proxy configuration
+# - Security best practices
 ```
 
 ## Network Configurations

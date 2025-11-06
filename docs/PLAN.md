@@ -598,7 +598,17 @@ sudo tc qdisc del dev lo root
      - Tor circuit failure recovery
      - Real-time network statistics
 
-2. Create docs/TOR_SETUP.md
+2. ✅ **Create docs/TOR_SETUP.md** - **DONE**
+   - Comprehensive 934-line guide for Tor multiplayer setup
+   - Server setup with hidden service configuration
+   - Client setup with SOCKS5 proxy configuration
+   - Step-by-step installation and configuration instructions
+   - Testing and validation procedures
+   - Extensive troubleshooting section with 6 common issues
+   - Security considerations and best practices
+   - Performance expectations and optimization guidance
+   - Advanced configuration examples
+   - Cross-references to MULTIPLAYER.md
 3. ✅ **Document timeout formulas and buffer sizing** - **DONE** (completed in Task 1)
    - Included in MULTIPLAYER.md "Buffer Sizing Formulas" section
    - Message buffer calculation with examples
@@ -607,7 +617,7 @@ sudo tc qdisc del dev lo root
    - General formulas for custom latency configurations
 4. Manual validation over real Tor network
 
-**Deliverable Status:** ✅ **75% COMPLETE** - Tasks 1 & 3 done, Task 2 (TOR_SETUP.md) and Task 4 (manual validation) remain
+**Deliverable Status:** ✅ **87.5% COMPLETE** - Tasks 1, 2, & 3 done, Task 4 (manual validation over real Tor network) remains
 
 ---
 

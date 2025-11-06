@@ -40,19 +40,38 @@ type SnapshotManager struct {
 
 	// Current sequence number
 	currentSeq uint32
+
+	// DeltaCompressionEpsilon is the threshold for detecting entity changes
+	// in delta compression. Smaller values = more sensitive to changes = more
+	// bandwidth usage. Larger values = less sensitive = better compression but
+	// may miss small movements. Typical: 0.001 (default), 0.01 (high-latency).
+	DeltaCompressionEpsilon float64
 }
 
-// NewSnapshotManager creates a new snapshot manager
+// NewSnapshotManager creates a new snapshot manager with default epsilon (0.001).
+// For custom epsilon, use NewSnapshotManagerWithEpsilon.
 func NewSnapshotManager(maxSnapshots int) *SnapshotManager {
+	return NewSnapshotManagerWithEpsilon(maxSnapshots, 0.001)
+}
+
+// NewSnapshotManagerWithEpsilon creates a new snapshot manager with custom epsilon.
+// The epsilon parameter controls delta compression sensitivity:
+// - Smaller values (e.g., 0.001): More sensitive, higher bandwidth, accurate for low-latency
+// - Larger values (e.g., 0.01): Less sensitive, lower bandwidth, suitable for high-latency
+func NewSnapshotManagerWithEpsilon(maxSnapshots int, epsilon float64) *SnapshotManager {
 	if maxSnapshots < 2 {
 		maxSnapshots = 2
 	}
+	if epsilon <= 0 {
+		epsilon = 0.001 // Default to prevent division by zero or invalid values
+	}
 
 	return &SnapshotManager{
-		snapshots:    make([]WorldSnapshot, maxSnapshots),
-		currentIndex: -1,
-		maxSnapshots: maxSnapshots,
-		currentSeq:   0,
+		snapshots:               make([]WorldSnapshot, maxSnapshots),
+		currentIndex:            -1,
+		maxSnapshots:            maxSnapshots,
+		currentSeq:              0,
+		DeltaCompressionEpsilon: epsilon,
 	}
 }
 
@@ -273,7 +292,7 @@ func (sm *SnapshotManager) CreateDelta(fromSeq, toSeq uint32) *SnapshotDelta {
 		if !existed {
 			delta.Added = append(delta.Added, entityID)
 			delta.Changed[entityID] = toEntity
-		} else if !entityEquals(fromEntity, toEntity) {
+		} else if !sm.entityEquals(fromEntity, toEntity) {
 			delta.Changed[entityID] = toEntity
 		}
 	}
@@ -353,8 +372,10 @@ func lerp(a, b, t float64) float64 {
 	return a + (b-a)*t
 }
 
-func entityEquals(a, b EntitySnapshot) bool {
-	const epsilon = 0.001
+// entityEquals compares two entity snapshots using the configured epsilon threshold.
+// Returns true if the entities are considered equal (differences below epsilon).
+func (sm *SnapshotManager) entityEquals(a, b EntitySnapshot) bool {
+	epsilon := sm.DeltaCompressionEpsilon
 	return abs(a.Position.X-b.Position.X) < epsilon &&
 		abs(a.Position.Y-b.Position.Y) < epsilon &&
 		abs(a.Velocity.VX-b.Velocity.VX) < epsilon &&

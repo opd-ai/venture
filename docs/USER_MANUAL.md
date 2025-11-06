@@ -2,7 +2,7 @@
 
 Complete guide to gameplay mechanics, systems, and features.
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Last Updated:** October 2025
 
 **New to Venture?** Start with [Getting Started Guide](GETTING_STARTED.md).

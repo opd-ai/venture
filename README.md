@@ -7,6 +7,8 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten. Every aspect
 Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Anodyne.
 
 **Key Features:**
+
+### Core Gameplay (Version 1.1)
 - 🎮 Real-time action-RPG combat and exploration
 - 🌐 **Play in browser** - WebAssembly build available on [GitHub Pages](https://opd-ai.github.io/venture/)
 - 📱 **Native mobile support** - iOS and Android with touch-optimized controls
@@ -18,6 +20,20 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 🌐 Multiplayer co-op supporting high-latency connections (200-5000ms, onion services)
 - 🎭 Multiple genres (fantasy, sci-fi, post-apocalyptic, horror, cyberpunk)
 - 📦 Single binary distribution - no external asset files required
+
+### Advanced Features (Version 2.0)
+- 🎯 **360° Rotation & Mouse Aim** - Dual-stick shooter controls with independent aim direction
+- 💥 **Projectile Physics** - Realistic projectile trajectories with piercing, bouncing, and explosive effects
+- 📐 **Multi-Layer Terrain** - Platforms, bridges, pits, and diagonal walls for complex spatial puzzles
+- 🧩 **Procedural Puzzles** - Constraint-solving puzzles (pressure plates, lever sequences, block pushing)
+- 🤖 **Behavior Tree AI** - Intelligent enemies with squad tactics and coordinated behaviors
+- 🏛️ **Faction System** - Reputation-based relationships affecting NPC behavior and commerce
+- 📖 **Dynamic Narratives** - Procedurally generated story arcs that adapt to player actions
+- 🎼 **Adaptive Music** - Context-aware composition with character and location leitmotifs
+- ⚡ **Screen Shake & Impact** - Visceral combat feedback with hit-stop and visual effects
+- 🎬 **Animated Sprites** - Frame-by-frame animations with distance-based LOD optimization
+- 🌓 **Dynamic Shadows** - Real-time shadow casting with ambient occlusion for depth
+- 💥 **Environmental Destruction** - Destructible objects, carry/throw mechanics, and interactive hazards
 
 ## Project Status
 

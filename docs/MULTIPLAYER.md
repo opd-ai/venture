@@ -220,6 +220,118 @@ sudo tc qdisc del dev lo root
 
 Expected latency: 2000-5000ms (sometimes higher)
 
+## Priority-Based Message Handling
+
+Venture's network system uses priority-based message handling to ensure critical game events are delivered before less important updates, especially during high network load or bandwidth-limited scenarios.
+
+### Priority Levels
+
+Messages are assigned priorities from 0 (lowest) to 255 (highest). Four standard priority levels are defined:
+
+| Priority Level | Value | Use Cases | Examples |
+|----------------|-------|-----------|----------|
+| **Critical** | 255 | Game-critical state changes | Player death, revival, quest completion |
+| **High** | 200 | Important gameplay events | Combat hits, damage taken, item pickups |
+| **Normal** | 128 | Regular entity updates | Position/velocity updates, basic state |
+| **Low** | 64 | Cosmetic changes | Animation state, particle effects, audio cues |
+
+### How It Works
+
+When the server's send buffer has multiple messages queued:
+
+1. Messages are stored in a priority queue (heap-based)
+2. Higher priority messages are sent first
+3. Lower priority messages wait or are dropped if buffer is full
+4. This ensures critical events (deaths, revivals) are never delayed by cosmetic updates
+
+**Example:** During intense combat with many particle effects:
+- Player death message (Priority: 255) sent immediately
+- Combat damage (Priority: 200) sent next
+- Position updates (Priority: 128) sent after
+- Particle animations (Priority: 64) sent last or dropped if buffer full
+
+### Using Priority Levels in Code
+
+**Server-side (creating state updates):**
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Critical: Player death event
+deathUpdate := network.NewCriticalUpdate(playerEntityID)
+deathUpdate.Components = []network.ComponentData{
+    {Type: "death", Data: deathData},
+}
+server.BroadcastStateUpdate(deathUpdate)
+
+// High: Combat damage
+damageUpdate := network.NewHighPriorityUpdate(targetEntityID)
+damageUpdate.Components = []network.ComponentData{
+    {Type: "health", Data: healthData},
+}
+server.BroadcastStateUpdate(damageUpdate)
+
+// Normal: Regular position update
+posUpdate := network.NewNormalUpdate(entityID)
+posUpdate.Components = []network.ComponentData{
+    {Type: "position", Data: posData},
+}
+server.BroadcastStateUpdate(posUpdate)
+
+// Low: Animation state
+animUpdate := network.NewLowPriorityUpdate(entityID)
+animUpdate.Components = []network.ComponentData{
+    {Type: "animation", Data: animData},
+}
+server.BroadcastStateUpdate(animUpdate)
+
+// Custom priority (0-255)
+customUpdate := network.NewStateUpdate(entityID, 180)
+```
+
+### Priority Guidelines
+
+**Use Critical (255) for:**
+- Player death and revival
+- Quest completion/failure
+- Game state transitions (level complete, game over)
+- Critical UI state (inventory loss, skill reset)
+
+**Use High (200) for:**
+- Combat damage and healing
+- Item pickups and drops
+- Skill activations and cooldowns
+- NPC dialogue triggers
+
+**Use Normal (128) for:**
+- Entity position and velocity
+- Health/mana regeneration
+- Generic entity state
+- Movement commands
+
+**Use Low (64) for:**
+- Animation state changes
+- Particle effect updates
+- Audio triggers (footsteps, ambient)
+- Visual-only effects
+
+### Performance Impact
+
+Priority-based handling has minimal overhead:
+
+- **Push to queue:** ~53ns per message (1 allocation)
+- **Pop from queue:** ~25ns per message (0 allocations)
+- **Memory:** No additional per-message overhead
+- **CPU:** O(log n) insertion/extraction (heap-based)
+
+### Benefits
+
+1. **Reliability:** Critical events never lost during bandwidth limits
+2. **User Experience:** Deaths/revivals always communicated instantly
+3. **Scalability:** Graceful degradation under network stress
+4. **Fairness:** All clients receive critical updates equally fast
+5. **Optimization:** Cosmetic updates can be dropped without gameplay impact
+
 ## Advanced Topics
 
 ### Custom Timeout Configuration

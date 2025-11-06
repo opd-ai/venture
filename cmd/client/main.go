@@ -1464,17 +1464,23 @@ func main() {
 	// Register with ECS World for automatic updates every 60 frames
 	game.World.AddSystem(spatialSystem)
 
+	// BUGFIX: Force initial quadtree rebuild with all entities before enabling culling
+	// The spatial partition uses lazy rebuild and would be empty on first render frame
+	// This caused all entities (including player) to be culled until first rebuild
+	spatialSystem.Rebuild(game.World.GetEntities())
+
 	// Connect to render system for viewport culling
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
-	// BUGFIX: Disable culling temporarily - spatial partition is culling ALL entities
-	// TODO: Fix spatial partition bug, then re-enable with EnableCulling(true)
-	game.RenderSystem.EnableCulling(false)
+	// Now safe to enable culling since quadtree is populated
+	game.RenderSystem.EnableCulling(true)
 
 	clientLogger.WithFields(logrus.Fields{
-		"worldWidth":  worldWidth,
-		"worldHeight": worldHeight,
-		"cellSize":    8, // Quadtree capacity per node (8 entities before subdivision)
-	}).Info("spatial partition system initialized (culling disabled due to bug)")
+		"worldWidth":    worldWidth,
+		"worldHeight":   worldHeight,
+		"cellSize":      8, // Quadtree capacity per node (8 entities before subdivision)
+		"initialCount":  len(game.World.GetEntities()),
+		"cullingActive": true,
+	}).Info("spatial partition system initialized with initial rebuild and culling enabled")
 
 	if *verbose {
 		clientLogger.WithFields(logrus.Fields{

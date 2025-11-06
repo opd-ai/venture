@@ -1750,6 +1750,96 @@ func TestPhase151EnhancedProportionalScaling(t *testing.T) {
 	}
 }
 
+// TestNewPartSpecFromPixels_Validation tests input validation for pixel dimensions.
+func TestNewPartSpecFromPixels_Validation(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputWidth     int
+		inputHeight    int
+		expectedWidth  int
+		expectedHeight int
+	}{
+		{"zero width", 0, 4, 1, 4},
+		{"zero height", 4, 0, 4, 1},
+		{"both zero", 0, 0, 1, 1},
+		{"negative width", -5, 4, 1, 4},
+		{"negative height", 4, -3, 4, 1},
+		{"both negative", -2, -8, 1, 1},
+		{"valid dimensions", 4, 6, 4, 6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := NewPartSpecFromPixels(tt.inputWidth, tt.inputHeight, shapes.ShapeCircle, 15, "secondary")
+
+			if spec.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if spec.PreferredPixelSize.Width != tt.expectedWidth {
+				t.Errorf("Width = %d, want %d (input was %d)", spec.PreferredPixelSize.Width, tt.expectedWidth, tt.inputWidth)
+			}
+			if spec.PreferredPixelSize.Height != tt.expectedHeight {
+				t.Errorf("Height = %d, want %d (input was %d)", spec.PreferredPixelSize.Height, tt.expectedHeight, tt.inputHeight)
+			}
+		})
+	}
+}
+
+// TestPartSpec_WithPixelDimensions_Validation tests input validation for WithPixelDimensions.
+func TestPartSpec_WithPixelDimensions_Validation(t *testing.T) {
+	baseSpec := PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.25,
+		RelativeWidth:  0.35,
+		RelativeHeight: 0.35,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle},
+		ZIndex:         15,
+		ColorRole:      "secondary",
+		Opacity:        1.0,
+		Rotation:       0,
+	}
+
+	tests := []struct {
+		name           string
+		inputWidth     int
+		inputHeight    int
+		expectedWidth  int
+		expectedHeight int
+	}{
+		{"zero width", 0, 4, 1, 4},
+		{"zero height", 4, 0, 4, 1},
+		{"both zero", 0, 0, 1, 1},
+		{"negative width", -5, 4, 1, 4},
+		{"negative height", 4, -3, 4, 1},
+		{"both negative", -2, -8, 1, 1},
+		{"valid dimensions", 4, 6, 4, 6},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := baseSpec.WithPixelDimensions(tt.inputWidth, tt.inputHeight)
+
+			if spec.PreferredPixelSize == nil {
+				t.Fatal("PreferredPixelSize should not be nil")
+			}
+			if spec.PreferredPixelSize.Width != tt.expectedWidth {
+				t.Errorf("Width = %d, want %d (input was %d)", spec.PreferredPixelSize.Width, tt.expectedWidth, tt.inputWidth)
+			}
+			if spec.PreferredPixelSize.Height != tt.expectedHeight {
+				t.Errorf("Height = %d, want %d (input was %d)", spec.PreferredPixelSize.Height, tt.expectedHeight, tt.inputHeight)
+			}
+
+			// Verify other fields unchanged
+			if spec.RelativeX != baseSpec.RelativeX {
+				t.Errorf("RelativeX changed: got %f, want %f", spec.RelativeX, baseSpec.RelativeX)
+			}
+			if spec.ZIndex != baseSpec.ZIndex {
+				t.Errorf("ZIndex changed: got %d, want %d", spec.ZIndex, baseSpec.ZIndex)
+			}
+		})
+	}
+}
+
 // BenchmarkGetEffectiveWidth benchmarks effective width calculation.
 func BenchmarkGetEffectiveWidth(b *testing.B) {
 	spec := PartSpec{

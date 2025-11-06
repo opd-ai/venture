@@ -1514,7 +1514,16 @@ func (p *PartSpec) ToPixelDimensions(spriteWidth, spriteHeight int) PixelDimensi
 // WithPixelDimensions creates a new PartSpec with the specified pixel dimensions set.
 // This enables Phase 15.1 "head 4×4, torso 4×6, legs 4×8" style specifications.
 // Returns a new PartSpec with PreferredPixelSize set, keeping all other fields unchanged.
+// Width and height are clamped to minimum of 1 pixel to prevent rendering issues.
 func (p PartSpec) WithPixelDimensions(width, height int) PartSpec {
+	// Clamp to minimum 1 pixel to prevent rendering issues
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+
 	p.PreferredPixelSize = &PixelDimensions{
 		Width:  width,
 		Height: height,
@@ -1526,6 +1535,7 @@ func (p PartSpec) WithPixelDimensions(width, height int) PartSpec {
 // This is a convenience constructor for Phase 15.1 enhanced anatomical templates.
 // The relative dimensions are calculated based on typical sprite sizes for reference,
 // but PreferredPixelSize takes precedence during rendering.
+// Width and height are clamped to minimum of 1 pixel to prevent rendering issues.
 //
 // Example for Phase 15.1 humanoid:
 //
@@ -1533,6 +1543,14 @@ func (p PartSpec) WithPixelDimensions(width, height int) PartSpec {
 //	torso := NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
 //	legs := NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
 func NewPartSpecFromPixels(width, height int, shapeType shapes.ShapeType, zIndex int, colorRole string) PartSpec {
+	// Clamp to minimum 1 pixel to prevent rendering issues
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+
 	// Calculate relative dimensions assuming a typical 28x28 sprite size
 	// These are fallbacks if PreferredPixelSize is ignored
 	const typicalSize = 28.0

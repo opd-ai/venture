@@ -70,7 +70,7 @@
 
 ### 15.1: Advanced Anatomical Templates (3 weeks) - COMPLETE
 
-**Status:** All milestones complete - Enhanced templates, facial features, and anti-aliasing implemented (Nov 2025)
+**Status:** All milestones complete - Enhanced templates, facial features, anti-aliasing, and genre variations implemented (Nov 2025)
 
 **Deliverables:**
 - ✅ **Foundation**: Enhanced proportional scaling support (head 4×4, torso 4×6, legs 4×8)
@@ -104,7 +104,19 @@
   - All performance targets met (<5ms generation time)
   - Test coverage: 98.3% with determinism verified
   - 7 comprehensive test functions, 5 performance benchmarks
-- ⏳ **Pending**: Genre-specific anatomy variations (organic, geometric, distorted, augmented)
+- ✅ **Genre Variations**: Genre-specific anatomy variations (organic, geometric, distorted, augmented, weathered)
+  - Implemented 5 genre variation functions for all creature templates
+  - Fantasy (Organic): Softer shapes (prefer bean, ellipse, capsule over geometric)
+  - Sci-Fi (Geometric): Angular shapes (prefer hexagon, octagon, rectangle over organic)
+  - Horror (Distorted): Elongated proportions, reduced shadow opacity, irregular shapes
+  - Cyberpunk (Augmented): Tech overlays with neon glow, angular shapes
+  - Post-Apocalyptic (Weathered): Rough shapes, damaged appearance
+  - Added `SelectTemplateWithGenre()` for unified genre-aware template selection
+  - Applied to all 7 non-humanoid templates (Quadruped, Blob, Mechanical, Flying, Serpentine, Arachnid, Undead)
+  - Comprehensive test coverage (10 test functions covering determinism, shape preservation, edge cases)
+  - All tests passing with 68.1% coverage (exceeds 65% requirement)
+  - Performance: <1µs per variation (Fantasy: 671ns, SciFi: 760ns, Horror: 554ns)
+  - Documentation updated with usage examples and performance characteristics
 
 **Success Metrics:**
 - Silhouette scores increase 0.1 (e.g., 0.65→0.75)
@@ -129,7 +141,7 @@
 1. ✅ ~~Update existing humanoid templates to use pixel-perfect dimensions~~ - DONE
 2. ✅ ~~Add facial feature support (eyes, mouth) for detailed sprites~~ - DONE
 3. ✅ ~~Implement anti-aliasing in shape generator for diagonal edges~~ - DONE
-4. Create genre-specific anatomical variations (organic, geometric, distorted, augmented)
+4. ✅ ~~Create genre-specific anatomical variations (organic, geometric, distorted, augmented)~~ - DONE
 5. Apply enhanced templates to aerial-view templates
 6. Create enhanced versions of other creature templates
 

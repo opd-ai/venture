@@ -91,6 +91,31 @@
 //
 // No manual direction handling required - the integration is automatic!
 //
+// # Enhanced Proportional Scaling (Phase 15.1)
+//
+// The package supports pixel-perfect anatomical specifications for enhanced detail:
+//
+//	// Create body parts with exact pixel dimensions
+//	head := sprites.NewPartSpecFromPixels(4, 4, shapes.ShapeCircle, 15, "secondary")
+//	torso := sprites.NewPartSpecFromPixels(4, 6, shapes.ShapeRectangle, 10, "primary")
+//	legs := sprites.NewPartSpecFromPixels(4, 8, shapes.ShapeCapsule, 5, "primary")
+//
+//	// Dimensions are exact regardless of sprite size
+//	width := head.GetEffectiveWidth(28)   // Returns 4 pixels
+//	height := head.GetEffectiveHeight(32) // Returns 4 pixels
+//
+//	// Upgrade existing templates with pixel dimensions
+//	template := sprites.HumanoidTemplate()
+//	headSpec := template.BodyPartLayout[sprites.PartHead]
+//	enhancedHead := headSpec.WithPixelDimensions(4, 4)
+//
+// Pixel dimensions enable Phase 15.1 "head 4×4, torso 4×6, legs 4×8" specifications
+// for improved anatomical accuracy and visual clarity. When PreferredPixelSize is set,
+// it takes precedence over relative dimensions, enabling pixel-perfect control.
+//
+// Full backward compatibility maintained - existing templates using relative
+// dimensions continue to work unchanged.
+//
 // # Direction Enum
 //
 // Direction constants for 4-directional facing:

@@ -460,12 +460,17 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 			return
 
 		case <-client.updateSignal:
-			// Process all available updates from the priority queue
-			for {
+			// Process available updates from the priority queue
+			// Limit batch size to prevent blocking goroutine for too long
+			const maxBatchSize = 20
+			batchCount := 0
+			
+			for batchCount < maxBatchSize {
 				update := client.stateUpdateQueue.Pop()
 				if update == nil {
 					break // Queue is empty
 				}
+				batchCount++
 
 				client.stateUpdateStats.RecordReceive()
 
@@ -500,6 +505,16 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 						s.errors <- fmt.Errorf("player %d write data error: %w", client.playerID, err)
 					}
 					return
+				}
+			}
+			
+			// If we processed a full batch and there are more updates,
+			// re-signal to continue processing
+			if batchCount == maxBatchSize && !client.stateUpdateQueue.IsEmpty() {
+				select {
+				case client.updateSignal <- struct{}{}:
+				default:
+					// Already signaled
 				}
 			}
 		}
@@ -571,7 +586,7 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 		select {
 		case c.updateSignal <- struct{}{}:
 		default:
-			// Already signaled, no need to signal again
+			// Channel buffer full, goroutine will process existing signal
 		}
 	} else {
 		// Queue is full, drop the update

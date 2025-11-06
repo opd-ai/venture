@@ -34,6 +34,66 @@ func TestDefaultServerConfig(t *testing.T) {
 	}
 }
 
+// TestHighLatencyServerConfig verifies high-latency server configuration.
+func TestHighLatencyServerConfig(t *testing.T) {
+	config := HighLatencyServerConfig()
+
+	// Verify all fields are non-zero
+	if config.Address == "" {
+		t.Error("Expected non-empty address")
+	}
+
+	if config.MaxPlayers == 0 {
+		t.Error("Expected non-zero max players")
+	}
+
+	if config.ReadTimeout == 0 {
+		t.Error("Expected non-zero read timeout")
+	}
+
+	if config.WriteTimeout == 0 {
+		t.Error("Expected non-zero write timeout")
+	}
+
+	if config.UpdateRate == 0 {
+		t.Error("Expected non-zero update rate")
+	}
+
+	if config.BufferSize == 0 {
+		t.Error("Expected non-zero buffer size")
+	}
+
+	// Verify high-latency specific values
+	expectedReadTimeout := 60 * time.Second
+	if config.ReadTimeout != expectedReadTimeout {
+		t.Errorf("Expected ReadTimeout %v, got %v", expectedReadTimeout, config.ReadTimeout)
+	}
+
+	expectedWriteTimeout := 30 * time.Second
+	if config.WriteTimeout != expectedWriteTimeout {
+		t.Errorf("Expected WriteTimeout %v, got %v", expectedWriteTimeout, config.WriteTimeout)
+	}
+
+	expectedBufferSize := 512
+	if config.BufferSize != expectedBufferSize {
+		t.Errorf("Expected BufferSize %d, got %d", expectedBufferSize, config.BufferSize)
+	}
+
+	// Verify it's different from default
+	defaultConfig := DefaultServerConfig()
+	if config.ReadTimeout == defaultConfig.ReadTimeout {
+		t.Error("High-latency ReadTimeout should differ from default")
+	}
+
+	if config.WriteTimeout == defaultConfig.WriteTimeout {
+		t.Error("High-latency WriteTimeout should differ from default")
+	}
+
+	if config.BufferSize == defaultConfig.BufferSize {
+		t.Error("High-latency BufferSize should differ from default")
+	}
+}
+
 // TestNewServer verifies server creation.
 func TestNewServer(t *testing.T) {
 	config := DefaultServerConfig()

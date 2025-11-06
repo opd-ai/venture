@@ -34,6 +34,29 @@ func DefaultServerConfig() ServerConfig {
 	}
 }
 
+// HighLatencyServerConfig returns a server configuration optimized for high-latency
+// connections (200-5000ms), including Tor/onion services. This configuration uses
+// significantly longer timeouts and larger buffers to prevent premature disconnections
+// and message drops during latency spikes.
+//
+// Key differences from DefaultServerConfig:
+//   - ReadTimeout: 60s (6x increase) - prevents timeout during extreme latency
+//   - WriteTimeout: 30s (6x increase) - allows writes to complete over slow links
+//   - BufferSize: 512 (2x increase) - buffers 200+ messages for 10s round-trip at 20Hz
+//
+// Use this configuration when expecting connections with >1000ms latency or when
+// supporting Tor connections which can have 5000ms+ latency with high variance.
+func HighLatencyServerConfig() ServerConfig {
+	return ServerConfig{
+		Address:      ":8080",
+		MaxPlayers:   32,
+		ReadTimeout:  60 * time.Second, // 60s for extreme latency tolerance
+		WriteTimeout: 30 * time.Second, // 30s for write operations over slow links
+		UpdateRate:   20,               // 20 updates/second (unchanged)
+		BufferSize:   512,              // Increased for buffering during latency spikes
+	}
+}
+
 // TCPServer handles server-side networking for multiplayer over TCP.
 // Implements ServerConnection interface.
 type TCPServer struct {
@@ -272,6 +295,23 @@ func (s *TCPServer) acceptLoop() {
 			conn.Close()
 			s.errors <- fmt.Errorf("server full, rejected connection from %s", conn.RemoteAddr())
 			continue
+		}
+
+		// Enable TCP keepalive for long-duration connections
+		// This prevents silent disconnections at NAT/proxy boundaries (typical 5-15 min timeout)
+		// and helps detect dead connections when network fails without proper FIN/RST
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			if err := tcpConn.SetKeepAlive(true); err != nil {
+				if s.logger != nil {
+					s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to enable TCP keepalive")
+				}
+			} else if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+				if s.logger != nil {
+					s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to set TCP keepalive period")
+				}
+			} else if s.logger != nil {
+				s.logger.WithField("client", conn.RemoteAddr()).Debug("TCP keepalive enabled (30s period)")
+			}
 		}
 
 		// Create client connection

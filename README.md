@@ -104,9 +104,17 @@ go build -o venture-server ./cmd/server
 
 **Port Fallback:** If port 8080 is occupied, the system automatically tries ports 8081-8089. Use `-port <num>` to specify a different starting port.
 
+**High-Latency Networks (Tor/Onion Services):** For connections over Tor or other high-latency networks (200-5000ms), use the `--high-latency` flag when starting the server. This optimizes timeouts and buffers for extreme latency conditions. See [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md) for details.
+
+```bash
+# Server optimized for Tor/high-latency connections
+./venture-server --high-latency -port 8080
+```
+
 **For complete setup instructions, gameplay guide, and all features, see:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and first steps (5 minutes)
 - **[User Manual](docs/USER_MANUAL.md)** - Complete gameplay documentation
+- **[Multiplayer Guide](docs/MULTIPLAYER.md)** - Network configurations and Tor support
 
 ## Platform Support
 

@@ -78,6 +78,12 @@ type TCPServer struct {
 	playerLeaves  chan uint64 // Player disconnection events
 	errors        chan error
 
+	// Buffer monitoring
+	inputCommandStats *BufferStats
+	playerJoinStats   *BufferStats
+	playerLeaveStats  *BufferStats
+	errorStats        *BufferStats
+
 	// Shutdown
 	done chan struct{}
 	wg   sync.WaitGroup
@@ -101,6 +107,9 @@ type clientConnection struct {
 	// Channels
 	stateUpdates chan *StateUpdate
 
+	// Buffer monitoring
+	stateUpdateStats *BufferStats
+
 	// Thread safety
 	mu sync.RWMutex
 }
@@ -120,7 +129,7 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		})
 	}
 
-	return &TCPServer{
+	server := &TCPServer{
 		config:        config,
 		protocol:      NewBinaryProtocol(),
 		clients:       make(map[uint64]*clientConnection),
@@ -132,6 +141,14 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		done:          make(chan struct{}),
 		logger:        logEntry,
 	}
+
+	// Initialize buffer monitoring
+	server.inputCommandStats = NewBufferStats("server_input_commands", config.BufferSize*config.MaxPlayers, logEntry)
+	server.playerJoinStats = NewBufferStats("server_player_joins", config.MaxPlayers, logEntry)
+	server.playerLeaveStats = NewBufferStats("server_player_leaves", config.MaxPlayers, logEntry)
+	server.errorStats = NewBufferStats("server_errors", 64, logEntry)
+
+	return server
 }
 
 // Start begins listening for client connections.
@@ -319,13 +336,20 @@ func (s *TCPServer) acceptLoop() {
 		playerID := s.nextPlayerID
 		s.nextPlayerID++
 
+		// Initialize per-client buffer stats
+		var clientLogEntry *logrus.Entry
+		if s.logger != nil {
+			clientLogEntry = s.logger.WithField("player_id", playerID)
+		}
+
 		client := &clientConnection{
-			playerID:     playerID,
-			conn:         conn,
-			address:      conn.RemoteAddr().String(),
-			connected:    true,
-			lastActive:   time.Now(),
-			stateUpdates: make(chan *StateUpdate, s.config.BufferSize),
+			playerID:         playerID,
+			conn:             conn,
+			address:          conn.RemoteAddr().String(),
+			connected:        true,
+			lastActive:       time.Now(),
+			stateUpdates:     make(chan *StateUpdate, s.config.BufferSize),
+			stateUpdateStats: NewBufferStats(fmt.Sprintf("client_%d_state_updates", playerID), s.config.BufferSize, clientLogEntry),
 		}
 
 		s.clients[playerID] = client
@@ -334,16 +358,20 @@ func (s *TCPServer) acceptLoop() {
 		// Notify game logic of new player
 		select {
 		case s.playerJoins <- playerID:
+			s.playerJoinStats.RecordSend()
 		case <-s.done:
 			return
 		default:
 			// Non-blocking error send
+			s.playerJoinStats.RecordDrop()
 			select {
 			case s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID):
+				s.errorStats.RecordSend()
 			case <-s.done:
 				return
 			default:
 				// Both channels full - continue without notification
+				s.errorStats.RecordDrop()
 			}
 		}
 
@@ -408,10 +436,12 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 		// Send to game logic (non-blocking)
 		select {
 		case s.inputCommands <- cmd:
+			s.inputCommandStats.RecordSend()
 		case <-s.done:
 			return
 		default:
 			// Drop if full
+			s.inputCommandStats.RecordDrop()
 		}
 	}
 }
@@ -426,6 +456,8 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 			return
 
 		case update := <-client.stateUpdates:
+			client.stateUpdateStats.RecordReceive()
+			
 			// Encode state update
 			data, err := s.protocol.EncodeStateUpdate(update)
 			if err != nil {
@@ -476,10 +508,16 @@ func (s *TCPServer) disconnectClient(playerID uint64) {
 	if exists {
 		select {
 		case s.playerLeaves <- playerID:
+			s.playerLeaveStats.RecordSend()
 		case <-s.done:
 		default:
-			s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID)
-		}
+			s.playerLeaveStats.RecordDrop()
+			select {
+			case s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID):
+				s.errorStats.RecordSend()
+			default:
+				s.errorStats.RecordDrop()
+			}
 	}
 }
 
@@ -514,9 +552,32 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 
 	select {
 	case c.stateUpdates <- update:
+		c.stateUpdateStats.RecordSend()
 	default:
 		// Drop if full (prioritize fresh updates)
+		c.stateUpdateStats.RecordDrop()
 	}
+}
+
+// GetBufferStats returns snapshots of all server buffer statistics.
+// This provides visibility into channel utilization and potential congestion.
+func (s *TCPServer) GetBufferStats() map[string]BufferSnapshot {
+	stats := map[string]BufferSnapshot{
+		"input_commands": s.inputCommandStats.Snapshot(),
+		"player_joins":   s.playerJoinStats.Snapshot(),
+		"player_leaves":  s.playerLeaveStats.Snapshot(),
+		"errors":         s.errorStats.Snapshot(),
+	}
+
+	// Add per-client stats
+	s.clientsMu.RLock()
+	for playerID, client := range s.clients {
+		key := fmt.Sprintf("client_%d_state_updates", playerID)
+		stats[key] = client.stateUpdateStats.Snapshot()
+	}
+	s.clientsMu.RUnlock()
+
+	return stats
 }
 
 // Compile-time interface check

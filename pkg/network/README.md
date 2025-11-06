@@ -1,6 +1,6 @@
 # Network Package
 
-The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, state synchronization, client-side prediction, entity interpolation, and lag compensation. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
+The network package provides multiplayer networking functionality for Venture, including binary serialization, client-server communication, state synchronization, client-side prediction, entity interpolation, lag compensation, and comprehensive buffer monitoring. Designed to support high-latency connections (200-5000ms) with authoritative server architecture.
 
 ## Features
 
@@ -10,6 +10,7 @@ The network package provides multiplayer networking functionality for Venture, i
 - **Client-Side Prediction**: Immediate response to player input with server reconciliation
 - **Entity Interpolation**: Smooth remote entity movement between server snapshots
 - **Lag Compensation**: Server-side rewind for fair hit detection in high-latency environments
+- **Buffer Monitoring**: Real-time channel utilization tracking with automatic warnings
 - **Snapshot Management**: Efficient state history with delta compression
 - **Low Latency**: Optimized for real-time multiplayer (sub-millisecond serialization)
 - **High Bandwidth**: Minimal packet sizes (<100 bytes typical)
@@ -333,6 +334,84 @@ stats := lagComp.GetStats()
 log.Printf("Lag compensator has %d snapshots, oldest is %v old",
     stats.TotalSnapshots, stats.OldestSnapshotAge)
 ```
+
+### Buffer Monitoring
+
+The network package includes comprehensive buffer monitoring to detect channel congestion before it causes performance issues:
+
+```go
+import "github.com/opd-ai/venture/pkg/network"
+
+// Client monitoring
+client := network.NewClient(network.DefaultClientConfig())
+stats := client.GetBufferStats()
+
+for name, snapshot := range stats {
+    fmt.Printf("%s: %d/%d (%.1f%% full, %.2f%% dropped)\n",
+        name,
+        snapshot.CurrentSize,
+        snapshot.Capacity,
+        snapshot.Utilization * 100,
+        snapshot.DropRate * 100,
+    )
+}
+
+// Server monitoring (includes per-client buffers)
+server := network.NewServer(network.DefaultServerConfig())
+stats := server.GetBufferStats()
+
+for name, snapshot := range stats {
+    if snapshot.Utilization > 0.8 {
+        log.Warnf("Buffer %s is %.1f%% full", name, snapshot.Utilization * 100)
+    }
+    if snapshot.DropRate > 0.01 {
+        log.Errorf("Buffer %s dropping %.2f%% of messages", name, snapshot.DropRate * 100)
+    }
+}
+```
+
+**Monitored Buffers:**
+
+*Client:*
+- `state_updates`: State updates from server
+- `input_queue`: Input commands to server
+- `errors`: Error events
+
+*Server:*
+- `input_commands`: Input commands from all clients
+- `player_joins`: Player connection events
+- `player_leaves`: Player disconnection events
+- `errors`: Error events
+- `client_N_state_updates`: Per-client state update queues
+
+**Automatic Warnings:**
+
+Warnings are logged automatically at 80% utilization threshold:
+
+```
+level=warning msg="buffer utilization high" 
+  buffer=client_state_updates 
+  size=205 capacity=256 utilization=0.80
+  total_sent=1520 total_drops=32
+```
+
+**Production Monitoring Example:**
+
+```go
+// Periodic metrics collection
+ticker := time.NewTicker(30 * time.Second)
+for range ticker.C {
+    stats := server.GetBufferStats()
+    for name, snapshot := range stats {
+        metrics.RecordGauge("network.buffer.utilization", snapshot.Utilization, 
+            map[string]string{"buffer": name})
+        metrics.RecordCounter("network.buffer.drops", snapshot.Dropped,
+            map[string]string{"buffer": name})
+    }
+}
+```
+
+See [docs/BUFFER_MONITORING.md](../../docs/BUFFER_MONITORING.md) for complete documentation.
 
 ### Binary Protocol
 

@@ -824,9 +824,62 @@ Logs show:
 - Latency measurements
 - Connection/reconnection events
 
+## Load Testing
+
+### Multi-Client Load Testing Tool
+
+The `loadtest` tool validates server stability under realistic network conditions with multiple concurrent clients at varying latencies.
+
+**Basic Usage:**
+```bash
+# Build the tool
+go build -o build/loadtest ./cmd/loadtest
+
+# Run 20-minute test with 4 clients (50ms-5000ms latency range)
+./build/loadtest --server localhost:8080 --clients 4 --duration 20m
+```
+
+**Custom Configuration:**
+```bash
+# Test low-latency clients only
+./build/loadtest --server localhost:8080 --clients 4 --duration 10m \
+  --min-latency 50ms --max-latency 500ms
+
+# Test high-latency/Tor-like connections
+./build/loadtest --server localhost:8080 --clients 4 --duration 20m \
+  --min-latency 1000ms --max-latency 5000ms
+
+# Enable verbose logging
+./build/loadtest --server localhost:8080 --clients 4 --duration 5m --verbose
+```
+
+**Success Criteria:**
+- All clients successfully connect
+- ≥90% success rate (clients maintain ≥90% uptime)
+- <10% disconnect rate
+- Continuous message throughput
+
+**Example Output:**
+```
+=== Load Test Results ===
+Test Duration: 20m0s
+Total Clients: 4
+Successful Clients: 4 (100.0%)
+Total Reconnects: 3
+Premature Disconnects: 0
+Messages Sent: 48000
+Messages Received: 48000
+Total Errors: 3
+
+✅ LOAD TEST PASSED
+```
+
+**Documentation:** See [cmd/loadtest/README.md](../cmd/loadtest/README.md) for detailed usage and troubleshooting.
+
 ## See Also
 
 - [Network Package Documentation](../pkg/network/doc.go)
 - [PLAN.md Network Audit](PLAN.md) - Technical analysis and rationale
+- [Load Testing Tool](../cmd/loadtest/README.md) - Multi-client load testing
 - [Server CLI Reference](../cmd/server/main.go)
 - [Client CLI Reference](../cmd/client/main.go)

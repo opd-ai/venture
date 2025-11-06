@@ -107,6 +107,11 @@ type TCPClient struct {
 	inputQueue   chan *InputCommand
 	errors       chan error
 
+	// Buffer monitoring
+	stateUpdateStats *BufferStats
+	inputQueueStats  *BufferStats
+	errorStats       *BufferStats
+
 	// Latency tracking
 	latency  time.Duration
 	lastPing time.Time
@@ -138,7 +143,7 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 		})
 	}
 
-	return &TCPClient{
+	client := &TCPClient{
 		config:       config,
 		protocol:     NewBinaryProtocol(),
 		stateUpdates: make(chan *StateUpdate, config.BufferSize),
@@ -147,6 +152,13 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 		done:         make(chan struct{}),
 		logger:       logEntry,
 	}
+
+	// Initialize buffer monitoring
+	client.stateUpdateStats = NewBufferStats("client_state_updates", config.BufferSize, logEntry)
+	client.inputQueueStats = NewBufferStats("client_input_queue", config.BufferSize, logEntry)
+	client.errorStats = NewBufferStats("client_errors", 16, logEntry)
+
+	return client
 }
 
 // Connect establishes connection to the server.
@@ -337,10 +349,12 @@ func (c *TCPClient) SendInput(inputType string, data []byte) error {
 
 	select {
 	case c.inputQueue <- cmd:
+		c.inputQueueStats.RecordSend()
 		return nil
 	case <-c.done:
 		return fmt.Errorf("client shutting down")
 	default:
+		c.inputQueueStats.RecordDrop()
 		return fmt.Errorf("input queue full")
 	}
 }
@@ -375,10 +389,12 @@ func (c *TCPClient) receiveLoop() {
 			// Non-blocking error send with done channel check
 			select {
 			case c.errors <- fmt.Errorf("read length error: %w", err):
+				c.errorStats.RecordSend()
 			case <-c.done:
 				return
 			default:
 				// Error channel full - exit gracefully
+				c.errorStats.RecordDrop()
 			}
 			return
 		}
@@ -389,10 +405,12 @@ func (c *TCPClient) receiveLoop() {
 			// Non-blocking error send with done channel check
 			select {
 			case c.errors <- fmt.Errorf("message too large: %d bytes", msgLen):
+				c.errorStats.RecordSend()
 			case <-c.done:
 				return
 			default:
 				// Error channel full - exit gracefully
+				c.errorStats.RecordDrop()
 			}
 			return
 		}
@@ -402,10 +420,12 @@ func (c *TCPClient) receiveLoop() {
 			// Non-blocking error send with done channel check
 			select {
 			case c.errors <- fmt.Errorf("read data error: %w", err):
+				c.errorStats.RecordSend()
 			case <-c.done:
 				return
 			default:
 				// Error channel full - exit gracefully
+				c.errorStats.RecordDrop()
 			}
 			return
 		}
@@ -416,10 +436,12 @@ func (c *TCPClient) receiveLoop() {
 			// Non-blocking error send with done channel check
 			select {
 			case c.errors <- fmt.Errorf("decode error: %w", err):
+				c.errorStats.RecordSend()
 			case <-c.done:
 				return
 			default:
 				// Error channel full - continue processing
+				c.errorStats.RecordDrop()
 			}
 			continue
 		}
@@ -432,10 +454,12 @@ func (c *TCPClient) receiveLoop() {
 		// Send to channel (non-blocking)
 		select {
 		case c.stateUpdates <- update:
+			c.stateUpdateStats.RecordSend()
 		case <-c.done:
 			return
 		default:
 			// Drop if full (prioritize fresh updates)
+			c.stateUpdateStats.RecordDrop()
 		}
 	}
 }
@@ -464,6 +488,8 @@ func (c *TCPClient) sendLoop() {
 			c.mu.RUnlock()
 
 		case cmd := <-c.inputQueue:
+			c.inputQueueStats.RecordReceive()
+			
 			// Encode input
 			data, err := c.protocol.EncodeInputCommand(cmd)
 			if err != nil {
@@ -497,6 +523,16 @@ func (c *TCPClient) sendLoop() {
 				return
 			}
 		}
+	}
+}
+
+// GetBufferStats returns snapshots of all buffer statistics.
+// This provides visibility into channel utilization and potential congestion.
+func (c *TCPClient) GetBufferStats() map[string]BufferSnapshot {
+	return map[string]BufferSnapshot{
+		"state_updates": c.stateUpdateStats.Snapshot(),
+		"input_queue":   c.inputQueueStats.Snapshot(),
+		"errors":        c.errorStats.Snapshot(),
 	}
 }
 

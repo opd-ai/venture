@@ -440,10 +440,11 @@
 - Placement quality: 90% look natural
 
 **Technical Approach:**
-- Create `pkg/procgen/decorations/` package
-- Generate decorations based on room type and genre
-- Implement placement algorithms (avoid blocking paths)
-- Add visual variations (rotation, scale, color)
+- Enhance existing `pkg/procgen/environment/` package (already handles furniture, decorations, obstacles, hazards)
+- Expand decoration types and visual variations beyond current templates
+- Improve placement algorithms to ensure natural-looking arrangements
+- Add procedural visual variations (rotation, scale, color) to existing decoration system
+- Leverage existing `RoomTemplate.Decorations` field from `pkg/procgen/terrain/templates.go`
 
 ---
 
@@ -546,7 +547,6 @@
 
 **New Packages:**
 - `pkg/rendering/postprocess/` - Post-processing effects
-- `pkg/procgen/decorations/` - Room decoration generation
 - `pkg/rendering/quality/` - Quality tier management
 
 **Enhanced Packages:**
@@ -556,6 +556,7 @@
 - `pkg/rendering/particles/` - Weather, physics
 - `pkg/rendering/palette/` - Dynamic palettes, gradients
 - `pkg/rendering/ui/` - Visual hierarchy, decorations
+- `pkg/procgen/environment/` - Expanded decoration types and visual variations
 
 **New Components:**
 - `QualitySettingsComponent` - Per-entity quality overrides

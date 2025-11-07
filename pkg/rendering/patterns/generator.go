@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -94,7 +93,7 @@ type TextureConfig struct {
 }
 
 // Generate creates a texture pattern image from the configuration.
-func (g *Generator) Generate(config TextureConfig) (*ebiten.Image, error) {
+func (g *Generator) Generate(config TextureConfig) (*image.RGBA, error) {
 	if config.Width <= 0 || config.Height <= 0 {
 		return nil, fmt.Errorf("invalid dimensions: %dx%d", config.Width, config.Height)
 	}
@@ -149,7 +148,7 @@ func (g *Generator) Generate(config TextureConfig) (*ebiten.Image, error) {
 		}).Info("texture pattern generated")
 	}
 
-	return ebiten.NewImageFromImage(img), nil
+	return img, nil
 }
 
 // applyGenreVariations applies genre-specific style variations to the configuration.
@@ -578,7 +577,7 @@ func (g *Generator) luminance(c color.RGBA) float64 {
 }
 
 // Validate checks if the generated texture meets quality requirements.
-func (g *Generator) Validate(img *ebiten.Image) error {
+func (g *Generator) Validate(img *image.RGBA) error {
 	if img == nil {
 		return fmt.Errorf("texture image is nil")
 	}
@@ -592,13 +591,21 @@ func (g *Generator) Validate(img *ebiten.Image) error {
 	// Sample a few pixels to check variation
 	var sumR, sumG, sumB, sumA uint32
 	sampleCount := 0
-	for y := 0; y < bounds.Dy(); y += bounds.Dy() / 4 {
-		for x := 0; x < bounds.Dx(); x += bounds.Dx() / 4 {
-			rt, gt, bt, at := img.At(x, y).RGBA()
-			sumR += rt
-			sumG += gt
-			sumB += bt
-			sumA += at
+	step := bounds.Dy() / 4
+	if step == 0 {
+		step = 1
+	}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
+		stepX := bounds.Dx() / 4
+		if stepX == 0 {
+			stepX = 1
+		}
+		for x := bounds.Min.X; x < bounds.Max.X; x += stepX {
+			c := img.RGBAAt(x, y)
+			sumR += uint32(c.R)
+			sumG += uint32(c.G)
+			sumB += uint32(c.B)
+			sumA += uint32(c.A)
 			sampleCount++
 		}
 	}
@@ -608,19 +615,23 @@ func (g *Generator) Validate(img *ebiten.Image) error {
 	}
 
 	// Calculate average color
-	avgR := sumR / uint32(sampleCount)
-	avgG := sumG / uint32(sampleCount)
-	avgB := sumB / uint32(sampleCount)
+	avgR := uint8(sumR / uint32(sampleCount))
+	avgG := uint8(sumG / uint32(sampleCount))
+	avgB := uint8(sumB / uint32(sampleCount))
 
 	// Check if all sampled pixels are nearly identical (solid color)
 	allSame := true
-	for y := 0; y < bounds.Dy(); y += bounds.Dy() / 4 {
-		for x := 0; x < bounds.Dx(); x += bounds.Dx() / 4 {
-			rt, gt, bt, _ := img.At(x, y).RGBA()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
+		stepX := bounds.Dx() / 4
+		if stepX == 0 {
+			stepX = 1
+		}
+		for x := bounds.Min.X; x < bounds.Max.X; x += stepX {
+			c := img.RGBAAt(x, y)
 			// Allow 5% variation
-			if math.Abs(float64(rt)-float64(avgR)) > float64(avgR)*0.05 ||
-				math.Abs(float64(gt)-float64(avgG)) > float64(avgG)*0.05 ||
-				math.Abs(float64(bt)-float64(avgB)) > float64(avgB)*0.05 {
+			if math.Abs(float64(c.R)-float64(avgR)) > float64(avgR)*0.05 ||
+				math.Abs(float64(c.G)-float64(avgG)) > float64(avgG)*0.05 ||
+				math.Abs(float64(c.B)-float64(avgB)) > float64(avgB)*0.05 {
 				allSame = false
 				break
 			}

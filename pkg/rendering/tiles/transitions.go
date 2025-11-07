@@ -34,29 +34,29 @@ const (
 	TransitionNone TileTransitionType = iota
 	// TransitionFull - all neighbors present
 	TransitionFull
-	
+
 	// Single edge connections (4 types)
-	TransitionN  // North connection only
-	TransitionE  // East connection only
-	TransitionS  // South connection only
-	TransitionW  // West connection only
-	
+	TransitionN // North connection only
+	TransitionE // East connection only
+	TransitionS // South connection only
+	TransitionW // West connection only
+
 	// Opposite edge connections (2 types)
 	TransitionNS // North-South corridor
 	TransitionEW // East-West corridor
-	
+
 	// Adjacent edge connections (4 types)
 	TransitionNE // North-East corner
 	TransitionNW // North-West corner
 	TransitionSE // South-East corner
 	TransitionSW // South-West corner
-	
+
 	// Three edge connections (4 types)
 	TransitionNES // North, East, South (T-junction)
 	TransitionNEW // North, East, West (T-junction)
 	TransitionNSW // North, South, West (T-junction)
 	TransitionESW // East, South, West (T-junction)
-	
+
 	// Inner corner variants (4 types)
 	TransitionInnerNE // Inner corner Northeast
 	TransitionInnerNW // Inner corner Northwest
@@ -117,12 +117,12 @@ func (t TileTransitionType) String() string {
 func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	// Count cardinal direction connections
 	n, e, s, w := neighbors.N, neighbors.E, neighbors.S, neighbors.W
-	
+
 	// No connections
 	if !n && !e && !s && !w {
 		return TransitionNone
 	}
-	
+
 	// All four cardinal connections
 	if n && e && s && w {
 		// Check for inner corners (missing diagonal neighbors)
@@ -140,7 +140,7 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 		}
 		return TransitionFull
 	}
-	
+
 	// Three connections (T-junctions)
 	if n && e && s {
 		return TransitionNES
@@ -154,7 +154,7 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if e && s && w {
 		return TransitionESW
 	}
-	
+
 	// Two opposite connections (corridors)
 	if n && s && !e && !w {
 		return TransitionNS
@@ -162,7 +162,7 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if e && w && !n && !s {
 		return TransitionEW
 	}
-	
+
 	// Two adjacent connections (corners)
 	if n && e {
 		return TransitionNE
@@ -176,7 +176,7 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if s && w {
 		return TransitionSW
 	}
-	
+
 	// Single connections
 	if n {
 		return TransitionN
@@ -190,18 +190,18 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if w {
 		return TransitionW
 	}
-	
+
 	return TransitionNone
 }
 
 // TransitionConfig contains parameters for transition tile generation.
 type TransitionConfig struct {
-	BaseConfig   Config          // Base tile configuration
+	BaseConfig   Config             // Base tile configuration
 	Transition   TileTransitionType // Transition type
-	Neighbors    TileNeighbors   // Neighbor information
-	BlendRadius  float64         // Radius for edge blending (0.0-1.0)
-	CornerRadius float64         // Radius for corner rounding (0.0-1.0)
-	Smoothness   float64         // Edge smoothness factor (0.0-1.0)
+	Neighbors    TileNeighbors      // Neighbor information
+	BlendRadius  float64            // Radius for edge blending (0.0-1.0)
+	CornerRadius float64            // Radius for corner rounding (0.0-1.0)
+	Smoothness   float64            // Edge smoothness factor (0.0-1.0)
 }
 
 // DefaultTransitionConfig returns a default transition configuration.
@@ -221,22 +221,22 @@ func (g *Generator) GenerateWithTransition(config TransitionConfig) (*image.RGBA
 	if err := config.BaseConfig.Validate(); err != nil {
 		return nil, err
 	}
-	
+
 	// Generate base tile
 	img, err := g.Generate(config.BaseConfig)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Apply transitions based on type
 	rng := rand.New(rand.NewSource(config.BaseConfig.Seed))
 	pal, err := g.paletteGen.Generate(config.BaseConfig.GenreID, config.BaseConfig.Seed)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	g.applyTransitions(img, pal, rng, config)
-	
+
 	return img, nil
 }
 
@@ -245,94 +245,94 @@ func (g *Generator) applyTransitions(img *image.RGBA, pal *palette.Palette, rng 
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
-	
+
 	// Get transition color (different from base for blending)
 	transitionColor := g.pickColor(pal, "floor", rng)
-	
+
 	switch config.Transition {
 	case TransitionNone:
 		// Isolated tile - round all corners
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, true, true, true, true)
-		
+
 	case TransitionFull:
 		// No transitions needed
 		return
-		
+
 	case TransitionN:
 		// Connection to north only
 		g.applyEdgeBlend(img, transitionColor, config, "n")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, false, false, true, true)
-		
+
 	case TransitionE:
 		// Connection to east only
 		g.applyEdgeBlend(img, transitionColor, config, "e")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, false, true, false, true)
-		
+
 	case TransitionS:
 		// Connection to south only
 		g.applyEdgeBlend(img, transitionColor, config, "s")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, true, true, false, false)
-		
+
 	case TransitionW:
 		// Connection to west only
 		g.applyEdgeBlend(img, transitionColor, config, "w")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, true, false, true, false)
-		
+
 	case TransitionNS:
 		// North-south corridor
 		g.applyEdgeBlend(img, transitionColor, config, "e")
 		g.applyEdgeBlend(img, transitionColor, config, "w")
-		
+
 	case TransitionEW:
 		// East-west corridor
 		g.applyEdgeBlend(img, transitionColor, config, "n")
 		g.applyEdgeBlend(img, transitionColor, config, "s")
-		
+
 	case TransitionNE:
 		// Northeast corner
 		g.applyEdgeBlend(img, transitionColor, config, "s")
 		g.applyEdgeBlend(img, transitionColor, config, "w")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, false, false, true, true)
-		
+
 	case TransitionNW:
 		// Northwest corner
 		g.applyEdgeBlend(img, transitionColor, config, "s")
 		g.applyEdgeBlend(img, transitionColor, config, "e")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, false, true, false, true)
-		
+
 	case TransitionSE:
 		// Southeast corner
 		g.applyEdgeBlend(img, transitionColor, config, "n")
 		g.applyEdgeBlend(img, transitionColor, config, "w")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, true, false, true, false)
-		
+
 	case TransitionSW:
 		// Southwest corner
 		g.applyEdgeBlend(img, transitionColor, config, "n")
 		g.applyEdgeBlend(img, transitionColor, config, "e")
 		g.applyCornerRounding(img, transitionColor, config.CornerRadius, true, true, false, false)
-		
+
 	case TransitionNES:
 		// T-junction (missing west)
 		g.applyEdgeBlend(img, transitionColor, config, "w")
-		
+
 	case TransitionNEW:
 		// T-junction (missing south)
 		g.applyEdgeBlend(img, transitionColor, config, "s")
-		
+
 	case TransitionNSW:
 		// T-junction (missing east)
 		g.applyEdgeBlend(img, transitionColor, config, "e")
-		
+
 	case TransitionESW:
 		// T-junction (missing north)
 		g.applyEdgeBlend(img, transitionColor, config, "n")
-		
+
 	case TransitionInnerNE, TransitionInnerNW, TransitionInnerSE, TransitionInnerSW:
 		// Inner corners - add subtle concave rounding
 		g.applyInnerCorner(img, transitionColor, config)
 	}
-	
+
 	// Apply smoothing to all edges
 	if config.Smoothness > 0 {
 		g.applyEdgeSmoothing(img, config.Smoothness, width, height)
@@ -345,13 +345,13 @@ func (g *Generator) applyEdgeBlend(img *image.RGBA, transitionColor color.Color,
 	width := bounds.Dx()
 	height := bounds.Dy()
 	blendPixels := int(float64(min(width, height)) * config.BlendRadius)
-	
+
 	if blendPixels < 1 {
 		return
 	}
-	
+
 	tr, tg, tb, ta := transitionColor.RGBA()
-	
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			var dist int
@@ -367,25 +367,25 @@ func (g *Generator) applyEdgeBlend(img *image.RGBA, transitionColor color.Color,
 			default:
 				continue
 			}
-			
+
 			if dist >= blendPixels {
 				continue
 			}
-			
+
 			// Calculate blend factor (0.0 at edge, 1.0 at blendPixels)
 			blend := float64(dist) / float64(blendPixels)
 			blend = smoothstep(blend) // Use smoothstep for smooth gradient
-			
+
 			// Get current pixel color
 			currentColor := img.At(x, y)
 			cr, cg, cb, ca := currentColor.RGBA()
-			
+
 			// Blend colors
 			nr := uint8(lerp(float64(tr>>8), float64(cr>>8), blend))
 			ng := uint8(lerp(float64(tg>>8), float64(cg>>8), blend))
 			nb := uint8(lerp(float64(tb>>8), float64(cb>>8), blend))
 			na := uint8(lerp(float64(ta>>8), float64(ca>>8), blend))
-			
+
 			img.Set(x, y, color.RGBA{R: nr, G: ng, B: nb, A: na})
 		}
 	}
@@ -398,46 +398,46 @@ func (g *Generator) applyCornerRounding(img *image.RGBA, transitionColor color.C
 	width := bounds.Dx()
 	height := bounds.Dy()
 	cornerRadius := int(float64(min(width, height)) * radius)
-	
+
 	if cornerRadius < 1 {
 		return
 	}
-	
+
 	corners := []struct {
 		apply  bool
 		cx, cy int
 	}{
-		{nw, cornerRadius, cornerRadius},                   // Northwest
-		{ne, width - 1 - cornerRadius, cornerRadius},       // Northeast
-		{sw, cornerRadius, height - 1 - cornerRadius},      // Southwest
+		{nw, cornerRadius, cornerRadius},                          // Northwest
+		{ne, width - 1 - cornerRadius, cornerRadius},              // Northeast
+		{sw, cornerRadius, height - 1 - cornerRadius},             // Southwest
 		{se, width - 1 - cornerRadius, height - 1 - cornerRadius}, // Southeast
 	}
-	
+
 	for _, corner := range corners {
 		if !corner.apply {
 			continue
 		}
-		
+
 		// Round this corner
 		for dy := -cornerRadius; dy <= cornerRadius; dy++ {
 			for dx := -cornerRadius; dx <= cornerRadius; dx++ {
 				x := corner.cx + dx
 				y := corner.cy + dy
-				
+
 				if x < 0 || x >= width || y < 0 || y >= height {
 					continue
 				}
-				
+
 				// Calculate distance from corner center
 				dist := math.Sqrt(float64(dx*dx + dy*dy))
-				
+
 				// If outside corner radius, blend toward transition color
 				if dist > float64(cornerRadius) {
 					// Blend based on distance beyond radius
 					excess := dist - float64(cornerRadius)
 					blend := math.Min(1.0, excess/float64(cornerRadius))
 					blend = smoothstep(blend)
-					
+
 					currentColor := img.At(x, y)
 					blendedColor := blendColors(currentColor, transitionColor, blend)
 					img.Set(x, y, blendedColor)
@@ -453,11 +453,11 @@ func (g *Generator) applyInnerCorner(img *image.RGBA, accentColor color.Color, c
 	width := bounds.Dx()
 	height := bounds.Dy()
 	cornerRadius := int(float64(min(width, height)) * config.CornerRadius)
-	
+
 	if cornerRadius < 1 {
 		return
 	}
-	
+
 	// Determine which corner based on transition type
 	var cx, cy int
 	switch config.Transition {
@@ -472,7 +472,7 @@ func (g *Generator) applyInnerCorner(img *image.RGBA, accentColor color.Color, c
 	default:
 		return
 	}
-	
+
 	// Apply concave corner effect
 	for dy := 0; dy <= cornerRadius; dy++ {
 		for dx := 0; dx <= cornerRadius; dx++ {
@@ -487,19 +487,19 @@ func (g *Generator) applyInnerCorner(img *image.RGBA, accentColor color.Color, c
 			case TransitionInnerSW:
 				x, y = cx+dx, cy-dy
 			}
-			
+
 			if x < 0 || x >= width || y < 0 || y >= height {
 				continue
 			}
-			
+
 			// Calculate distance from corner
 			dist := math.Sqrt(float64(dx*dx + dy*dy))
-			
+
 			// If inside corner radius, darken slightly for concave effect
 			if dist <= float64(cornerRadius) {
 				blend := 1.0 - (dist / float64(cornerRadius))
 				blend = smoothstep(blend) * 0.3 // Subtle effect
-				
+
 				currentColor := img.At(x, y)
 				darkenedColor := blendColors(currentColor, accentColor, blend)
 				img.Set(x, y, darkenedColor)
@@ -513,7 +513,7 @@ func (g *Generator) applyEdgeSmoothing(img *image.RGBA, smoothness float64, widt
 	if smoothness <= 0 {
 		return
 	}
-	
+
 	// Create a temporary copy for sampling
 	temp := image.NewRGBA(img.Bounds())
 	for y := 0; y < height; y++ {
@@ -521,19 +521,19 @@ func (g *Generator) applyEdgeSmoothing(img *image.RGBA, smoothness float64, widt
 			temp.Set(x, y, img.At(x, y))
 		}
 	}
-	
+
 	// Apply 3x3 blur at edges (1 pixel from edge)
 	edgeWidth := 1
 	for y := edgeWidth; y < height-edgeWidth; y++ {
 		for x := edgeWidth; x < width-edgeWidth; x++ {
 			// Only apply to edge pixels
-			isEdge := x == edgeWidth || x == width-1-edgeWidth || 
-			          y == edgeWidth || y == height-1-edgeWidth
-			
+			isEdge := x == edgeWidth || x == width-1-edgeWidth ||
+				y == edgeWidth || y == height-1-edgeWidth
+
 			if !isEdge {
 				continue
 			}
-			
+
 			// Sample 3x3 neighborhood
 			var r, g, b, a uint32
 			count := 0
@@ -550,7 +550,7 @@ func (g *Generator) applyEdgeSmoothing(img *image.RGBA, smoothness float64, widt
 					}
 				}
 			}
-			
+
 			if count > 0 {
 				// Blend averaged color with original based on smoothness
 				avgColor := color.RGBA{
@@ -559,7 +559,7 @@ func (g *Generator) applyEdgeSmoothing(img *image.RGBA, smoothness float64, widt
 					B: uint8((b / uint32(count)) >> 8),
 					A: uint8((a / uint32(count)) >> 8),
 				}
-				
+
 				originalColor := temp.At(x, y)
 				blendedColor := blendColors(originalColor, avgColor, smoothness)
 				img.Set(x, y, blendedColor)
@@ -586,7 +586,7 @@ func lerp(a, b, t float64) float64 {
 func blendColors(c1, c2 color.Color, blend float64) color.Color {
 	r1, g1, b1, a1 := c1.RGBA()
 	r2, g2, b2, a2 := c2.RGBA()
-	
+
 	return color.RGBA{
 		R: uint8(lerp(float64(r1>>8), float64(r2>>8), blend)),
 		G: uint8(lerp(float64(g1>>8), float64(g2>>8), blend)),

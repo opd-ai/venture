@@ -50,7 +50,7 @@
 //
 //	neighbors := tiles.TileNeighbors{N: true, E: true, S: true}
 //	transitionType := tiles.DetermineTransition(neighbors)
-//	
+//
 //	transConfig := tiles.TransitionConfig{
 //	    BaseConfig:   config,
 //	    Transition:   transitionType,

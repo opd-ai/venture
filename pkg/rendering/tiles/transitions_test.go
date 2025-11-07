@@ -191,9 +191,9 @@ func TestGenerator_GenerateWithTransition(t *testing.T) {
 	gen := NewGenerator()
 
 	tests := []struct {
-		name       string
-		config     TransitionConfig
-		wantError  bool
+		name      string
+		config    TransitionConfig
+		wantError bool
 	}{
 		{
 			name: "Valid transition - none",
@@ -294,24 +294,24 @@ func TestGenerator_GenerateWithTransition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img, err := gen.GenerateWithTransition(tt.config)
-			
+
 			if tt.wantError {
 				if err == nil {
 					t.Error("GenerateWithTransition() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("GenerateWithTransition() unexpected error: %v", err)
 				return
 			}
-			
+
 			if img == nil {
 				t.Error("GenerateWithTransition() returned nil image")
 				return
 			}
-			
+
 			bounds := img.Bounds()
 			if bounds.Dx() != tt.config.BaseConfig.Width {
 				t.Errorf("GenerateWithTransition() width = %v, want %v", bounds.Dx(), tt.config.BaseConfig.Width)
@@ -360,10 +360,10 @@ func TestTransitionDeterminism(t *testing.T) {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			c1 := img1.At(x, y)
 			c2 := img2.At(x, y)
-			
+
 			r1, g1, b1, a1 := c1.RGBA()
 			r2, g2, b2, a2 := c2.RGBA()
-			
+
 			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
 				t.Errorf("Pixel (%d, %d) differs: got (%v, %v, %v, %v), want (%v, %v, %v, %v)",
 					x, y, r1, g1, b1, a1, r2, g2, b2, a2)
@@ -376,7 +376,7 @@ func TestTransitionDeterminism(t *testing.T) {
 // TestTransitionDifferentSeeds verifies different seeds produce different tiles.
 func TestTransitionDifferentSeeds(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	config1 := TransitionConfig{
 		BaseConfig: Config{
 			Type:    TileWall,
@@ -392,7 +392,7 @@ func TestTransitionDifferentSeeds(t *testing.T) {
 		CornerRadius: 0.25,
 		Smoothness:   0.5,
 	}
-	
+
 	config2 := config1
 	config2.BaseConfig.Seed = 67890
 
@@ -413,10 +413,10 @@ func TestTransitionDifferentSeeds(t *testing.T) {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			c1 := img1.At(x, y)
 			c2 := img2.At(x, y)
-			
+
 			r1, g1, b1, a1 := c1.RGBA()
 			r2, g2, b2, a2 := c2.RGBA()
-			
+
 			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
 				identical = false
 				break
@@ -432,7 +432,7 @@ func TestTransitionDifferentSeeds(t *testing.T) {
 // TestTransitionAllTypes tests all transition types generate successfully.
 func TestTransitionAllTypes(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	transitions := []TileTransitionType{
 		TransitionNone, TransitionFull,
 		TransitionN, TransitionE, TransitionS, TransitionW,
@@ -475,7 +475,7 @@ func TestTransitionAllTypes(t *testing.T) {
 // TestTransitionBlendRadius tests different blend radius values.
 func TestTransitionBlendRadius(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	radii := []float64{0.0, 0.1, 0.3, 0.5, 1.0}
 
 	for _, radius := range radii {
@@ -571,7 +571,7 @@ func TestBlendColors(t *testing.T) {
 	r, g, b, _ = result.RGBA()
 	expected := uint32(50)
 	if r>>8 != expected || g>>8 != expected || b>>8 != expected {
-		t.Errorf("blendColors(black, gray, 0.5) = (%v, %v, %v), want (%v, %v, %v)", 
+		t.Errorf("blendColors(black, gray, 0.5) = (%v, %v, %v), want (%v, %v, %v)",
 			r>>8, g>>8, b>>8, expected, expected, expected)
 	}
 }
@@ -658,7 +658,7 @@ func TestEdgeBlendVisual(t *testing.T) {
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	blendHeight := int(float64(bounds.Dy()) * config.BlendRadius)
-	
+
 	// Sample colors along vertical line in blend zone
 	var colors []uint32
 	x := width / 2
@@ -666,7 +666,7 @@ func TestEdgeBlendVisual(t *testing.T) {
 		r, _, _, _ := img.At(x, y).RGBA()
 		colors = append(colors, r)
 	}
-	
+
 	// Verify colors change (gradient effect)
 	allSame := true
 	firstColor := colors[0]
@@ -676,7 +676,7 @@ func TestEdgeBlendVisual(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if allSame && blendHeight > 2 {
 		t.Error("Expected gradient in blend zone, but all colors are identical")
 	}
@@ -708,12 +708,12 @@ func TestCornerRoundingVisual(t *testing.T) {
 
 	// Sample corners - they should differ from edges
 	bounds := img.Bounds()
-	cornerColor := img.At(0, 0) // Top-left corner
+	cornerColor := img.At(0, 0)           // Top-left corner
 	edgeColor := img.At(bounds.Dx()/2, 0) // Top edge center
-	
+
 	r1, g1, b1, _ := cornerColor.RGBA()
 	r2, g2, b2, _ := edgeColor.RGBA()
-	
+
 	// Corner should be modified (different from straight edge)
 	// Note: This is a weak test since colors may coincidentally match
 	if r1 == r2 && g1 == g2 && b1 == b2 {

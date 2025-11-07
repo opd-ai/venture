@@ -28,6 +28,10 @@ const (
 	WeatherSmog
 	// WeatherRadiation represents radioactive particles (post-apocalyptic)
 	WeatherRadiation
+	// WeatherSandstorm represents intense sandstorm (post-apocalyptic)
+	WeatherSandstorm
+	// WeatherBloodRain represents horror-themed blood rain
+	WeatherBloodRain
 )
 
 // String returns the string representation of a weather type.
@@ -49,6 +53,10 @@ func (w WeatherType) String() string {
 		return "Smog"
 	case WeatherRadiation:
 		return "Radiation"
+	case WeatherSandstorm:
+		return "Sandstorm"
+	case WeatherBloodRain:
+		return "BloodRain"
 	default:
 		return "Unknown"
 	}
@@ -158,15 +166,46 @@ func (c WeatherConfig) GetParticleCount() int {
 	}
 }
 
+// WeatherEffect represents environmental effects from weather.
+type WeatherEffect struct {
+	// Puddles tracks rain accumulation at tile positions
+	// Map key is "x,y" tile position, value is accumulation level (0.0-1.0)
+	Puddles map[string]float64
+
+	// SnowLevel tracks snow accumulation at tile positions
+	// Map key is "x,y" tile position, value is snow depth (0.0-1.0)
+	SnowLevel map[string]float64
+
+	// VisibilityModifier affects how far entities can see (1.0 = normal, 0.0 = blind)
+	// Fog and sandstorms reduce visibility
+	VisibilityModifier float64
+
+	// WindDrift tracks current wind drift direction and strength
+	WindDriftX float64
+	WindDriftY float64
+}
+
+// NewWeatherEffect creates a new weather effect tracker.
+func NewWeatherEffect() *WeatherEffect {
+	return &WeatherEffect{
+		Puddles:            make(map[string]float64),
+		SnowLevel:          make(map[string]float64),
+		VisibilityModifier: 1.0,
+		WindDriftX:         0.0,
+		WindDriftY:         0.0,
+	}
+}
+
 // WeatherSystem represents a weather particle system.
-// Future feature: This system is designed for weather effects (rain, snow, etc.) but not yet integrated.
-// Planned integration per roadmap category 5.4 for dynamic weather and environmental effects.
 type WeatherSystem struct {
 	// Configuration
 	Config WeatherConfig
 
 	// Active particles
 	Particles []Particle
+
+	// Environmental effects
+	Effects *WeatherEffect
 
 	// Elapsed time
 	ElapsedTime float64
@@ -209,20 +248,36 @@ func GenerateWeather(config WeatherConfig) (*WeatherSystem, error) {
 		generateSmogParticles(particles, config, rng)
 	case WeatherRadiation:
 		generateRadiationParticles(particles, config, rng)
+	case WeatherSandstorm:
+		generateSandstormParticles(particles, config, rng)
+	case WeatherBloodRain:
+		generateBloodRainParticles(particles, config, rng)
 	default:
 		generateRainParticles(particles, config, rng)
 	}
 
-	return &WeatherSystem{
+	ws := &WeatherSystem{
 		Config:    config,
 		Particles: particles,
+		Effects:   NewWeatherEffect(),
 		rng:       rng,
-	}, nil
+	}
+
+	// Initialize visibility modifier based on weather type
+	ws.updateVisibility()
+
+	return ws, nil
 }
 
 // Update updates the weather system.
 func (ws *WeatherSystem) Update(deltaTime float64) {
 	ws.ElapsedTime += deltaTime
+
+	// Update wind drift for snow
+	if ws.Config.Type == WeatherSnow {
+		ws.Effects.WindDriftX = ws.Config.WindX * 0.5
+		ws.Effects.WindDriftY = ws.Config.WindY * 0.5
+	}
 
 	for i := range ws.Particles {
 		p := &ws.Particles[i]
@@ -234,8 +289,11 @@ func (ws *WeatherSystem) Update(deltaTime float64) {
 		// Update rotation
 		p.Rotation += p.RotationVel * deltaTime
 
-		// Wrap particles around screen edges
-		if p.Y > float64(ws.Config.Height) {
+		// Check for ground impact and accumulation
+		if p.Y >= float64(ws.Config.Height) {
+			ws.handleParticleImpact(p)
+			
+			// Wrap particles around screen edges
 			p.Y = 0
 			p.X = float64(ws.rng.Intn(ws.Config.Width))
 		}
@@ -257,6 +315,104 @@ func (ws *WeatherSystem) Update(deltaTime float64) {
 			}
 		}
 	}
+}
+
+// updateVisibility sets the visibility modifier based on weather type and intensity.
+func (ws *WeatherSystem) updateVisibility() {
+	baseVisibility := 1.0
+
+	switch ws.Config.Type {
+	case WeatherFog:
+		// Fog reduces visibility 30-50% based on intensity
+		switch ws.Config.Intensity {
+		case IntensityLight:
+			baseVisibility = 0.85
+		case IntensityMedium:
+			baseVisibility = 0.65
+		case IntensityHeavy:
+			baseVisibility = 0.50
+		case IntensityExtreme:
+			baseVisibility = 0.35
+		}
+	case WeatherSmog:
+		// Smog similar to fog but slightly less severe
+		switch ws.Config.Intensity {
+		case IntensityLight:
+			baseVisibility = 0.90
+		case IntensityMedium:
+			baseVisibility = 0.75
+		case IntensityHeavy:
+			baseVisibility = 0.60
+		case IntensityExtreme:
+			baseVisibility = 0.45
+		}
+	case WeatherSandstorm:
+		// Sandstorm severely reduces visibility
+		switch ws.Config.Intensity {
+		case IntensityLight:
+			baseVisibility = 0.75
+		case IntensityMedium:
+			baseVisibility = 0.55
+		case IntensityHeavy:
+			baseVisibility = 0.35
+		case IntensityExtreme:
+			baseVisibility = 0.20
+		}
+	case WeatherBloodRain:
+		// Blood rain slightly obscures vision
+		switch ws.Config.Intensity {
+		case IntensityLight:
+			baseVisibility = 0.95
+		case IntensityMedium:
+			baseVisibility = 0.90
+		case IntensityHeavy:
+			baseVisibility = 0.85
+		case IntensityExtreme:
+			baseVisibility = 0.75
+		}
+	}
+
+	ws.Effects.VisibilityModifier = baseVisibility
+}
+
+// handleParticleImpact processes particle impacts for accumulation effects.
+func (ws *WeatherSystem) handleParticleImpact(p *Particle) {
+	// Convert world position to tile position (assuming 32x32 tiles)
+	tileSize := 32
+	tileX := int(p.X) / tileSize
+	tileY := int(ws.Config.Height) / tileSize
+	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+
+	switch ws.Config.Type {
+	case WeatherRain, WeatherBloodRain:
+		// Accumulate puddles
+		current := ws.Effects.Puddles[tileKey]
+		// Each impact adds a small amount, capped at 1.0
+		ws.Effects.Puddles[tileKey] = math.Min(current+0.001, 1.0)
+
+	case WeatherSnow:
+		// Accumulate snow
+		current := ws.Effects.SnowLevel[tileKey]
+		// Snow accumulates more slowly than rain
+		ws.Effects.SnowLevel[tileKey] = math.Min(current+0.0005, 1.0)
+	}
+}
+
+// GetPuddleLevel returns the puddle accumulation level at a tile position.
+func (ws *WeatherSystem) GetPuddleLevel(tileX, tileY int) float64 {
+	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+	return ws.Effects.Puddles[tileKey]
+}
+
+// GetSnowLevel returns the snow accumulation level at a tile position.
+func (ws *WeatherSystem) GetSnowLevel(tileX, tileY int) float64 {
+	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+	return ws.Effects.SnowLevel[tileKey]
+}
+
+// GetVisibilityModifier returns the current visibility modifier (1.0 = normal, 0.0 = blind).
+func (ws *WeatherSystem) GetVisibilityModifier() float64 {
+	return ws.Effects.VisibilityModifier
 }
 
 // Helper functions for generating different weather types
@@ -425,6 +581,56 @@ func generateRadiationParticles(particles []Particle, config WeatherConfig, rng 
 	}
 }
 
+func generateSandstormParticles(particles []Particle, config WeatherConfig, rng *rand.Rand) {
+	// Sandy browns and yellows
+	sandColors := []color.RGBA{
+		{194, 178, 128, 200}, // Sandy brown
+		{210, 180, 140, 200}, // Tan
+		{222, 184, 135, 200}, // Burlywood
+		{237, 201, 175, 200}, // Light sand
+	}
+
+	for i := range particles {
+		particles[i] = Particle{
+			X:           float64(rng.Intn(config.Width)),
+			Y:           float64(rng.Intn(config.Height)),
+			VX:          rng.Float64()*80 - 40,  // High horizontal velocity
+			VY:          rng.Float64()*30 - 15,  // Some vertical movement
+			Color:       sandColors[rng.Intn(len(sandColors))],
+			Size:        1 + rng.Float64()*4,
+			Life:        1.0,
+			InitialLife: 1.5 + rng.Float64()*2.5,
+			Rotation:    rng.Float64() * 2 * math.Pi,
+			RotationVel: (rng.Float64() - 0.5) * 4,
+		}
+	}
+}
+
+func generateBloodRainParticles(particles []Particle, config WeatherConfig, rng *rand.Rand) {
+	// Deep red colors for blood
+	bloodColors := []color.RGBA{
+		{139, 0, 0, 220},    // Dark red
+		{178, 34, 34, 220},  // Firebrick
+		{165, 42, 42, 220},  // Brown
+		{128, 0, 0, 220},    // Maroon
+	}
+
+	for i := range particles {
+		particles[i] = Particle{
+			X:           float64(rng.Intn(config.Width)),
+			Y:           float64(rng.Intn(config.Height)),
+			VX:          rng.Float64()*20 - 10,
+			VY:          180 + rng.Float64()*80,  // Similar to rain
+			Color:       bloodColors[rng.Intn(len(bloodColors))],
+			Size:        1 + rng.Float64()*3,     // Slightly larger drops
+			Life:        1.0,
+			InitialLife: 1.2 + rng.Float64()*2.5,
+			Rotation:    0,
+			RotationVel: 0,
+		}
+	}
+}
+
 // GetGenreWeather returns appropriate weather types for a genre.
 func GetGenreWeather(genreID string) []WeatherType {
 	switch genreID {
@@ -433,11 +639,11 @@ func GetGenreWeather(genreID string) []WeatherType {
 	case "scifi":
 		return []WeatherType{WeatherRain, WeatherDust, WeatherFog}
 	case "horror":
-		return []WeatherType{WeatherFog, WeatherRain, WeatherAsh}
+		return []WeatherType{WeatherFog, WeatherBloodRain, WeatherAsh}
 	case "cyberpunk":
 		return []WeatherType{WeatherNeonRain, WeatherSmog, WeatherFog}
 	case "postapoc":
-		return []WeatherType{WeatherDust, WeatherAsh, WeatherRadiation}
+		return []WeatherType{WeatherSandstorm, WeatherAsh, WeatherRadiation}
 	default:
 		return []WeatherType{WeatherRain, WeatherSnow, WeatherFog}
 	}

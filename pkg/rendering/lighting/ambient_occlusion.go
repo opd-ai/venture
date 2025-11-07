@@ -304,6 +304,14 @@ func enhanceEdges(img *image.RGBA, depthMap *image.RGBA, intensity float64) *ima
 	return result
 }
 
+const (
+	// CornerDetectionThreshold is the minimum depth difference to consider a neighbor significant
+	CornerDetectionThreshold = 0.1
+
+	// MinNeighborsForCorner is the minimum number of higher neighbors to detect a corner
+	MinNeighborsForCorner = 5
+)
+
 // detectCorner uses 3x3 convexity detection to find corners.
 func detectCorner(x, y int, depthMap *image.RGBA) float64 {
 	bounds := depthMap.Bounds()
@@ -331,7 +339,7 @@ func detectCorner(x, y int, depthMap *image.RGBA) float64 {
 			neighbor := float64(nr) / 65535.0
 
 			diff := neighbor - center
-			if diff > 0.1 { // Threshold for significant depth difference
+			if diff > CornerDetectionThreshold { // Threshold for significant depth difference
 				higherCount++
 				totalDiff += diff
 			}
@@ -339,7 +347,7 @@ func detectCorner(x, y int, depthMap *image.RGBA) float64 {
 	}
 
 	// Convex corners have many neighbors at higher depth
-	if higherCount >= 5 { // 5 or more neighbors higher
+	if higherCount >= MinNeighborsForCorner { // 5 or more neighbors higher
 		return clamp(totalDiff/float64(higherCount), 0, 1)
 	}
 

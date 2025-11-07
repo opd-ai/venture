@@ -279,6 +279,7 @@ func (s *System) ApplyAOToImage(img *image.RGBA, depthMap *image.RGBA) *image.RG
 // ApplyFullPostProcessing applies all post-processing effects (AO, bloom).
 // Order: AO first (darkens), then bloom (brightens highlights).
 // The depthMap can be nil to auto-generate from luminance.
+// Returns a new image; never modifies the input.
 func (s *System) ApplyFullPostProcessing(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
 	result := img
 
@@ -290,6 +291,18 @@ func (s *System) ApplyFullPostProcessing(img *image.RGBA, depthMap *image.RGBA) 
 	// Apply bloom last (brightening highlights)
 	if s.config.BloomConfig.Enabled {
 		result = s.ApplyBloomToImage(result)
+	}
+
+	// If no effects were applied, return a copy to avoid unintended mutations
+	if result == img {
+		bounds := img.Bounds()
+		copy := image.NewRGBA(bounds)
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				copy.Set(x, y, img.At(x, y))
+			}
+		}
+		return copy
 	}
 
 	return result

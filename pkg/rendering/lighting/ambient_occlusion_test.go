@@ -397,9 +397,14 @@ func TestSystem_ApplyFullPostProcessing_AllDisabled(t *testing.T) {
 
 	result := system.ApplyFullPostProcessing(img, nil)
 
-	// Should return original when all disabled
+	// Should return a copy (not same reference)
+	if result == img {
+		t.Error("All-disabled post-processing should return a copy, not original reference")
+	}
+
+	// But pixels should be identical
 	if !imagesEqual(result, img) {
-		t.Error("All-disabled post-processing should return original")
+		t.Error("All-disabled post-processing pixels should match original")
 	}
 }
 

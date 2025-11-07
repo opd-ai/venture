@@ -390,7 +390,6 @@ func TestGenerateLayeredTile(t *testing.T) {
 	}
 
 	bg, base, fg, err := gen.GenerateLayeredTile(baseConfig, 10.0, 5.0)
-
 	if err != nil {
 		t.Fatalf("GenerateLayeredTile() error = %v", err)
 	}
@@ -467,7 +466,6 @@ func TestGenerateAOMap(t *testing.T) {
 	}
 
 	aoMap, err := gen.GenerateAOMap(config, 0.5)
-
 	if err != nil {
 		t.Fatalf("GenerateAOMap() error = %v", err)
 	}

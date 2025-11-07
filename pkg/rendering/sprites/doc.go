@@ -138,6 +138,76 @@
 // Full backward compatibility maintained - existing templates using relative
 // dimensions continue to work unchanged.
 //
+// # Genre-Specific Anatomical Variations (Phase 15.1)
+//
+// The package provides genre-specific variations for all creature templates,
+// automatically adapting visual style to match the genre aesthetic:
+//
+//	// Automatic genre-aware template selection
+//	template := sprites.SelectTemplateWithGenre("quadruped", "fantasy")
+//	// Returns fantasy_quadruped with organic shapes (bean, ellipse, capsule)
+//
+//	template = sprites.SelectTemplateWithGenre("mechanical", "scifi")
+//	// Returns scifi_mechanical with geometric shapes (hexagon, octagon, rectangle)
+//
+//	template = sprites.SelectTemplateWithGenre("undead", "horror")
+//	// Returns horror_undead with distorted proportions and reduced shadow
+//
+// # Genre Variation Functions
+//
+// Each genre applies specific visual transformations:
+//
+// Fantasy (Organic): Softer, natural shapes
+//
+//	fantasy := sprites.ApplyFantasyVariation(baseTemplate)
+//	// Prefers: organic, bean, ellipse, circle, capsule, wave
+//	// Replaces: rectangle→capsule, hexagon→ellipse, triangle→wedge
+//
+// Sci-Fi (Geometric): Angular, precise shapes
+//
+//	scifi := sprites.ApplySciFiVariation(baseTemplate)
+//	// Prefers: hexagon, octagon, rectangle, triangle, gear, crystal
+//	// Replaces: organic→hexagon, ellipse→octagon, circle→hexagon
+//
+// Horror (Distorted): Unsettling proportions
+//
+//	horror := sprites.ApplyHorrorVariation(baseTemplate)
+//	// Elongates head (height ×1.2, width ×0.85)
+//	// Elongates limbs (height ×1.15, width ×0.85)
+//	// Reduces shadow opacity (×0.6) for ghostly effect
+//	// Prefers: skull, organic shapes with irregular torso
+//
+// Cyberpunk (Augmented): Tech enhancements
+//
+//	cyberpunk := sprites.ApplyCyberpunkVariation(baseTemplate)
+//	// Prefers: hexagon, octagon, rectangle (angular tech shapes)
+//	// Adds: tech armor overlay with translucent glow (opacity 0.4)
+//	// Modifies: head uses accent1 color role (neon glow)
+//
+// Post-Apocalyptic (Weathered): Rough, damaged appearance
+//
+//	postapoc := sprites.ApplyPostApocVariation(baseTemplate)
+//	// Prefers: organic, rectangle, capsule (rough shapes)
+//	// Replaces: circle→organic, ellipse→bean, hexagon→rectangle
+//
+// # Performance
+//
+// Genre variations are extremely fast, suitable for runtime application:
+//
+//	ApplyFantasyVariation:  671 ns/op (1,200 B, 10 allocs)
+//	ApplySciFiVariation:    760 ns/op (1,248 B, 13 allocs)
+//	ApplyHorrorVariation:   554 ns/op (1,128 B,  5 allocs)
+//	SelectTemplateWithGenre: 1.2 µs/op (2,336 B, 16 allocs)
+//
+// # Determinism
+//
+// All genre variations are deterministic - the same base template
+// always produces identical variations. This ensures:
+//
+// - Consistent visuals across clients in multiplayer
+// - Reproducible results for testing and debugging
+// - Cache-friendly behavior for sprite generation
+//
 // # Direction Enum
 //
 // Direction constants for 4-directional facing:

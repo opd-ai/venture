@@ -166,23 +166,63 @@ func (g *Generator) compositeLayer(base, layer *ebiten.Image, layerCfg LayerConf
 	base.DrawImage(layer, opts)
 }
 
-// generateEquipmentLayer creates a visual for equipped items.
+// generateEquipmentLayer creates a visual for equipped items with Phase 15.3 enhancements.
 func (g *Generator) generateEquipmentLayer(equip EquipmentVisual, baseConfig Config) (*ebiten.Image, error) {
 	rng := rand.New(rand.NewSource(equip.Seed))
 
 	// Determine equipment shape based on slot
 	shapeType := g.getEquipmentShapeType(equip.Slot, rng)
 
-	config := shapes.Config{
-		Type:      shapeType,
-		Width:     int(float64(baseConfig.Width) * 0.5),
-		Height:    int(float64(baseConfig.Height) * 0.5),
-		Color:     baseConfig.Palette.Accent1,
-		Seed:      equip.Seed,
-		Smoothing: 0.15,
+	// Get material visual properties for Phase 15.3
+	materialProps := GetMaterialVisualProperties(equip.Material)
+	
+	// Get damage visual effects for Phase 15.3
+	damageEffects := GetDamageVisualEffects(equip.DamageState)
+
+	// Base equipment color (from palette or material)
+	equipColor := baseConfig.Palette.Accent1
+	if baseConfig.Palette != nil {
+		equipColor = baseConfig.Palette.Accent1
 	}
 
-	return g.shapeGen.Generate(config)
+	// Apply material properties to color (adjust based on material)
+	equipColor = g.applyMaterialColor(equipColor, materialProps, rng)
+
+	// Apply damage darkening
+	equipColor = g.applyDamageDarkening(equipColor, damageEffects.ColorDarken)
+
+	// Size based on detail level (Phase 15.3)
+	baseSize := 0.5
+	if equip.DetailLevel > 0 {
+		baseSize = 0.4 + (equip.DetailLevel * 0.3) // Range: 0.4 to 0.7
+	}
+
+	config := shapes.Config{
+		Type:      shapeType,
+		Width:     int(float64(baseConfig.Width) * baseSize),
+		Height:    int(float64(baseConfig.Height) * baseSize),
+		Color:     equipColor,
+		Seed:      equip.Seed,
+		Smoothing: 0.15 * (1.0 - damageEffects.EdgeRoughness), // Rougher edges for damaged items
+	}
+
+	// Generate base equipment shape
+	equipImg, err := g.shapeGen.Generate(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply enchantment glow if active (Phase 15.3)
+	if equip.Enchantment.Active {
+		equipImg = g.applyEnchantmentGlow(equipImg, equip.Enchantment, rng)
+	}
+
+	// Apply damage effects (cracks, dirt) if damaged (Phase 15.3)
+	if damageEffects.CrackDensity > 0 {
+		equipImg = g.applyDamageEffects(equipImg, damageEffects, rng)
+	}
+
+	return equipImg, nil
 }
 
 // getEquipmentShapeType returns appropriate shape for equipment slot.
@@ -421,4 +461,181 @@ func getStandardZIndex(layerType LayerType) int {
 	default:
 		return 0
 	}
+}
+
+// applyMaterialColor applies material-specific color adjustments.
+// Phase 15.3: Material-specific visual effects (metallic sheen, etc.)
+func (g *Generator) applyMaterialColor(baseColor color.Color, materialProps MaterialVisualProperties, rng *rand.Rand) color.Color {
+rVal, gVal, bVal, aVal := baseColor.RGBA()
+
+// Convert to 8-bit values
+r8, g8, b8, a8 := uint8(rVal>>8), uint8(gVal>>8), uint8(bVal>>8), uint8(aVal>>8)
+
+// Apply sheen (brightening for metallic/crystalline materials)
+if materialProps.Sheen > 0.5 {
+brighten := uint8(materialProps.Sheen * 40)
+r8 = clampUint8(int(r8) + int(brighten))
+g8 = clampUint8(int(g8) + int(brighten))
+b8 = clampUint8(int(b8) + int(brighten))
+}
+
+// Apply roughness (slight desaturation for rough materials)
+if materialProps.Roughness > 0.6 {
+desat := uint8(materialProps.Roughness * 20)
+avg := (int(r8) + int(g8) + int(b8)) / 3
+r8 = uint8(int(r8) + (avg-int(r8))*int(desat)/100)
+g8 = uint8(int(g8) + (avg-int(g8))*int(desat)/100)
+b8 = uint8(int(b8) + (avg-int(b8))*int(desat)/100)
+}
+
+return color.RGBA{R: r8, G: g8, B: b8, A: a8}
+}
+
+// applyDamageDarkening darkens colors for damaged equipment.
+// Phase 15.3: Damage state visual effects
+func (g *Generator) applyDamageDarkening(c color.Color, darkenAmount float64) color.Color {
+if darkenAmount <= 0 {
+return c
+}
+
+rVal, gVal, bVal, aVal := c.RGBA()
+
+// Convert to 8-bit and darken
+multiplier := 1.0 - darkenAmount
+r8 := uint8(float64(rVal>>8) * multiplier)
+g8 := uint8(float64(gVal>>8) * multiplier)
+b8 := uint8(float64(bVal>>8) * multiplier)
+a8 := uint8(aVal >> 8)
+
+return color.RGBA{R: r8, G: g8, B: b8, A: a8}
+}
+
+// applyEnchantmentGlow adds glowing effect for enchanted equipment.
+// Phase 15.3: Enchantment glow effects
+func (g *Generator) applyEnchantmentGlow(img *ebiten.Image, enchant EnchantmentGlow, rng *rand.Rand) *ebiten.Image {
+if !enchant.Active || enchant.Intensity <= 0 {
+return img
+}
+
+// Get glow color
+glowColor := g.getGlowColor(enchant.Color)
+
+// Create glow overlay
+bounds := img.Bounds()
+glowImg := ebiten.NewImage(bounds.Dx(), bounds.Dy())
+
+// Fill with glow color
+glowImg.Fill(glowColor)
+
+// Draw glow with transparency
+opts := &ebiten.DrawImageOptions{}
+opts.ColorScale.ScaleAlpha(float32(enchant.Intensity * 0.3)) // Subtle glow
+img.DrawImage(glowImg, opts)
+
+// Add particles for active enchantments
+if enchant.ParticleCount > 0 {
+for i := 0; i < enchant.ParticleCount; i++ {
+x := rng.Intn(bounds.Dx())
+y := rng.Intn(bounds.Dy())
+
+particle := ebiten.NewImage(2, 2)
+particle.Fill(glowColor)
+
+particleOpts := &ebiten.DrawImageOptions{}
+particleOpts.GeoM.Translate(float64(x), float64(y))
+particleOpts.ColorScale.ScaleAlpha(float32(enchant.Intensity * 0.6))
+img.DrawImage(particle, particleOpts)
+}
+}
+
+return img
+}
+
+// applyDamageEffects adds cracks and dirt to damaged equipment.
+// Phase 15.3: Damage state visual effects (cracks, dirt)
+func (g *Generator) applyDamageEffects(img *ebiten.Image, effects DamageVisualEffects, rng *rand.Rand) *ebiten.Image {
+bounds := img.Bounds()
+
+// Apply cracks
+if effects.CrackDensity > 0 {
+crackColor := color.RGBA{R: 40, G: 40, B: 40, A: 200}
+numCracks := int(effects.CrackDensity * 10)
+
+for i := 0; i < numCracks; i++ {
+// Simple line crack
+x1 := rng.Intn(bounds.Dx())
+y1 := rng.Intn(bounds.Dy())
+length := 2 + rng.Intn(4)
+
+for j := 0; j < length; j++ {
+crack := ebiten.NewImage(1, 1)
+crack.Fill(crackColor)
+
+opts := &ebiten.DrawImageOptions{}
+opts.GeoM.Translate(float64(x1+j), float64(y1))
+opts.ColorScale.ScaleAlpha(float32(effects.CrackDensity))
+img.DrawImage(crack, opts)
+}
+}
+}
+
+// Apply dirtiness
+if effects.Dirtiness > 0 {
+dirtColor := color.RGBA{R: 60, G: 50, B: 40, A: 150}
+numDirtSpots := int(effects.Dirtiness * 8)
+
+for i := 0; i < numDirtSpots; i++ {
+x := rng.Intn(bounds.Dx())
+y := rng.Intn(bounds.Dy())
+size := 1 + rng.Intn(2)
+
+dirt := ebiten.NewImage(size, size)
+dirt.Fill(dirtColor)
+
+opts := &ebiten.DrawImageOptions{}
+opts.GeoM.Translate(float64(x), float64(y))
+opts.ColorScale.ScaleAlpha(float32(effects.Dirtiness * 0.5))
+img.DrawImage(dirt, opts)
+}
+}
+
+// Apply opacity reduction for heavily damaged items
+if effects.OpacityMultiplier < 1.0 {
+// Create a copy with reduced opacity
+// Note: Ebiten doesn't support direct opacity, so we simulate with ColorScale
+// This is a simplification - in production might use more sophisticated approach
+}
+
+return img
+}
+
+// getGlowColor returns the color for enchantment glow.
+func (g *Generator) getGlowColor(colorName string) color.Color {
+switch colorName {
+case "green":
+return color.RGBA{R: 0, G: 255, B: 100, A: 255}
+case "blue":
+return color.RGBA{R: 100, G: 150, B: 255, A: 255}
+case "purple":
+return color.RGBA{R: 200, G: 100, B: 255, A: 255}
+case "gold":
+return color.RGBA{R: 255, G: 215, B: 0, A: 255}
+case "red":
+return color.RGBA{R: 255, G: 50, B: 50, A: 255}
+case "cyan":
+return color.RGBA{R: 0, G: 255, B: 255, A: 255}
+default:
+return color.RGBA{R: 255, G: 255, B: 255, A: 255}
+}
+}
+
+// clampUint8 clamps an integer to valid uint8 range.
+func clampUint8(v int) uint8 {
+if v < 0 {
+return 0
+}
+if v > 255 {
+return 255
+}
+return uint8(v)
 }

@@ -14,6 +14,11 @@
 //   - Edge blending between different tile types
 //   - Corner rounding for organic feel
 //   - Edge smoothing for visual polish
+//   - Phase 16.3: Parallax depth effects for 3D perception
+//   - Multi-layer rendering (background, base, foreground)
+//   - Parallax scrolling based on camera position
+//   - Ambient occlusion for corners and edges
+//   - Height-based shadow casting
 //
 // Phase 16.2 Transition System:
 //
@@ -30,6 +35,25 @@
 // The system provides gradient blending at tile boundaries, corner rounding
 // for walls, and edge smoothing for organic appearance. All transitions are
 // deterministic and maintain performance targets (<3% frame time increase).
+//
+// Phase 16.3 Parallax Depth System:
+//
+// The parallax system creates depth perception through multi-layer rendering.
+// Three layers are supported:
+//   - Background: Furthest layer, moves slower (parallax depth 0.2-0.4)
+//   - Base: Main tile content, moves with camera (parallax depth 1.0)
+//   - Foreground: Closest layer, moves faster (parallax depth 1.2-1.5)
+//
+// Each layer can have ambient occlusion applied to darken corners and edges,
+// and height-based shadows for enhanced 3D effect. Parallax offset is calculated
+// based on camera position and layer-specific depth multipliers.
+//
+// Performance targets:
+//   - <5% frame time increase over base rendering
+//   - All effects maintain deterministic generation
+//   - Ambient occlusion: <1ms overhead
+//   - Shadow generation: <1ms overhead
+//   - Layer compositing: <0.5ms for 32x32 tile
 //
 // Example Usage:
 //
@@ -63,4 +87,30 @@
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
+//
+// Example with Parallax Depth:
+//
+//	parallaxConfig := tiles.ParallaxConfig{
+//	    BaseConfig:    config,
+//	    Layer:         tiles.LayerBase,
+//	    CameraX:       10.0,
+//	    CameraY:       5.0,
+//	    ParallaxDepth: 1.0,
+//	    AOIntensity:   0.5,
+//	    ShadowHeight:  0.3,
+//	    ShadowAngle:   math.Pi / 4,
+//	}
+//	parallaxTile, err := gen.GenerateWithParallax(parallaxConfig)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+// Example with All Three Layers:
+//
+//	bg, base, fg, err := gen.GenerateLayeredTile(config, cameraX, cameraY)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	// Render layers separately with parallax offsets, or composite:
+//	composite := tiles.CompositeLayers(bg, base, fg)
 package tiles

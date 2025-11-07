@@ -195,3 +195,69 @@ func DefaultOptions() GenerationOptions {
 		MinColors: 12,
 	}
 }
+
+// TimeOfDay defines time periods that affect palette color adjustments.
+// Phase 17.3: Time-of-Day Color Shifts
+type TimeOfDay int
+
+const (
+	// TimeOfDayDawn represents sunrise with warm, soft tones
+	TimeOfDayDawn TimeOfDay = iota
+	// TimeOfDayDay represents daytime with bright, saturated colors
+	TimeOfDayDay
+	// TimeOfDayDusk represents sunset with warm, rich tones
+	TimeOfDayDusk
+	// TimeOfDayNight represents nighttime with cool, desaturated colors
+	TimeOfDayNight
+)
+
+// String returns the string representation of TimeOfDay.
+func (t TimeOfDay) String() string {
+	switch t {
+	case TimeOfDayDawn:
+		return "Dawn"
+	case TimeOfDayDay:
+		return "Day"
+	case TimeOfDayDusk:
+		return "Dusk"
+	case TimeOfDayNight:
+		return "Night"
+	default:
+		return "Unknown"
+	}
+}
+
+// TimeConfig defines time-based color modulation parameters.
+// Phase 17.3: Time-of-Day Color Shifts
+type TimeConfig struct {
+	// CurrentTime is the current time of day
+	CurrentTime TimeOfDay
+	// TransitionProgress is interpolation factor (0.0-1.0) between current and next time state
+	// Used for smooth 5-second transitions
+	TransitionProgress float64
+	// IntensityMultiplier adjusts the strength of time-based effects (0.0-1.0, default 1.0)
+	IntensityMultiplier float64
+}
+
+// DefaultTimeConfig returns a default time configuration (Day, no transition).
+func DefaultTimeConfig() TimeConfig {
+	return TimeConfig{
+		CurrentTime:         TimeOfDayDay,
+		TransitionProgress:  0.0,
+		IntensityMultiplier: 1.0,
+	}
+}
+
+// ColorModulation defines color adjustments for a specific time of day.
+// Phase 17.3: Time-of-Day Color Shifts
+type ColorModulation struct {
+	// HueShift adjusts hue (in degrees, -180 to +180)
+	HueShift float64
+	// SaturationMultiplier scales saturation (0.0-2.0, 1.0 = no change)
+	SaturationMultiplier float64
+	// LightnessOffset adds to lightness (-0.3 to +0.3)
+	LightnessOffset float64
+	// TemperatureShift adjusts color temperature (negative = cooler, positive = warmer)
+	// -1.0 = very cool (blue), +1.0 = very warm (orange)
+	TemperatureShift float64
+}

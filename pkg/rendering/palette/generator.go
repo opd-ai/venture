@@ -459,3 +459,35 @@ func (g *Generator) applyRarity(scheme ColorScheme, rarity Rarity) ColorScheme {
 
 	return adjusted
 }
+
+// GenerateWithTime creates a palette for the given genre ID and seed,
+// with time-of-day color modulation applied.
+// Phase 17.3: Time-of-Day Color Shifts
+func (g *Generator) GenerateWithTime(genreID string, seed int64, timeConfig TimeConfig) (*Palette, error) {
+	return g.GenerateWithOptionsAndTime(genreID, seed, DefaultOptions(), timeConfig)
+}
+
+// GenerateWithOptionsAndTime creates a palette with both generation options
+// and time-of-day modulation applied.
+// Phase 17.3: Time-of-Day Color Shifts
+func (g *Generator) GenerateWithOptionsAndTime(genreID string, seed int64, opts GenerationOptions, timeConfig TimeConfig) (*Palette, error) {
+	// Generate base palette
+	basePalette, err := g.GenerateWithOptions(genreID, seed, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply time-of-day modulation
+	result := ApplyTimeModulation(basePalette, timeConfig)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"genreID":    genreID,
+			"seed":       seed,
+			"timeOfDay":  timeConfig.CurrentTime.String(),
+			"transition": timeConfig.TransitionProgress,
+		}).Info("time-modulated color palette generated")
+	}
+
+	return result, nil
+}

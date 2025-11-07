@@ -264,6 +264,37 @@ func (s *System) SetConfig(config LightingConfig) {
 	s.config = config
 }
 
+// ApplyBloomToImage applies bloom/glow effects to an already lit image.
+// This should be called after ApplyLighting for post-processing.
+func (s *System) ApplyBloomToImage(img *image.RGBA) *image.RGBA {
+	return ApplyBloom(img, s.config.BloomConfig)
+}
+
+// ApplyAOToImage applies ambient occlusion to an image.
+// The depthMap can be nil to auto-generate from luminance.
+func (s *System) ApplyAOToImage(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
+	return ApplyEnhancedAO(img, depthMap, s.config.AOConfig)
+}
+
+// ApplyFullPostProcessing applies all post-processing effects (AO, bloom).
+// Order: AO first (darkens), then bloom (brightens highlights).
+// The depthMap can be nil to auto-generate from luminance.
+func (s *System) ApplyFullPostProcessing(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
+	result := img
+
+	// Apply ambient occlusion first (darkening)
+	if s.config.AOConfig.Enabled {
+		result = s.ApplyAOToImage(result, depthMap)
+	}
+
+	// Apply bloom last (brightening highlights)
+	if s.config.BloomConfig.Enabled {
+		result = s.ApplyBloomToImage(result)
+	}
+
+	return result
+}
+
 // Helper functions
 
 func clamp(value, min, max float64) float64 {

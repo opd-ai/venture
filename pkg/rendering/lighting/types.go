@@ -105,6 +105,12 @@ type LightingConfig struct {
 
 	// EnableShadows enables shadow casting (not implemented yet)
 	EnableShadows bool
+
+	// BloomConfig configures bloom/glow effects (Phase 17.1)
+	BloomConfig BloomConfig
+
+	// AOConfig configures ambient occlusion (Phase 17.1)
+	AOConfig EnhancedAOConfig
 }
 
 // DefaultConfig returns a default lighting configuration.
@@ -115,6 +121,8 @@ func DefaultConfig() LightingConfig {
 		MaxLights:        32,
 		GammaCorrection:  2.2,
 		EnableShadows:    false,
+		BloomConfig:      DefaultBloomConfig(),
+		AOConfig:         DefaultEnhancedAOConfig(),
 	}
 }
 

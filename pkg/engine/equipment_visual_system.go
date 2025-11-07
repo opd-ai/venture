@@ -121,38 +121,51 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 		},
 	}
 
-	// Build equipment visuals
+	// Build equipment visuals with enhanced properties (Phase 15.3)
 	equipment := make([]sprites.EquipmentVisual, 0)
 
+	// Get equipment component for item data access
+	equipmentComp := s.getEquipmentComponent(entity)
+
 	if equipComp.HasWeapon() && equipComp.ShowWeapon {
-		equipment = append(equipment, sprites.EquipmentVisual{
-			Slot:   "weapon",
-			ItemID: equipComp.WeaponID,
-			Seed:   equipComp.WeaponSeed,
-			Layer:  sprites.LayerWeapon,
-			Params: make(map[string]interface{}),
-		})
+		weaponItem := s.getEquippedItem(equipmentComp, SlotMainHand)
+		equipment = append(equipment, s.buildEquipmentVisual(
+			"weapon",
+			equipComp.WeaponID,
+			equipComp.WeaponSeed,
+			sprites.LayerWeapon,
+			weaponItem,
+			genreID,
+		))
 	}
 
 	if equipComp.HasArmor() && equipComp.ShowArmor {
-		equipment = append(equipment, sprites.EquipmentVisual{
-			Slot:   "armor",
-			ItemID: equipComp.ArmorID,
-			Seed:   equipComp.ArmorSeed,
-			Layer:  sprites.LayerArmor,
-			Params: make(map[string]interface{}),
-		})
+		armorItem := s.getEquippedItem(equipmentComp, SlotChest)
+		equipment = append(equipment, s.buildEquipmentVisual(
+			"armor",
+			equipComp.ArmorID,
+			equipComp.ArmorSeed,
+			sprites.LayerArmor,
+			armorItem,
+			genreID,
+		))
 	}
 
 	if equipComp.HasAccessories() && equipComp.ShowAccessories {
+		accessorySlots := []EquipmentSlot{SlotAccessory1, SlotAccessory2, SlotAccessory3}
 		for i, accessoryID := range equipComp.AccessoryIDs {
-			equipment = append(equipment, sprites.EquipmentVisual{
-				Slot:   "accessory",
-				ItemID: accessoryID,
-				Seed:   equipComp.AccessorySeeds[i],
-				Layer:  sprites.LayerAccessory,
-				Params: make(map[string]interface{}),
-			})
+			var accessoryItem *item.Item
+			if equipmentComp != nil && i < len(accessorySlots) {
+				accessoryItem = s.getEquippedItem(equipmentComp, accessorySlots[i])
+			}
+			equipment = append(equipment, s.buildEquipmentVisual(
+				"accessory",
+				accessoryID,
+				equipComp.AccessorySeeds[i],
+				sprites.LayerAccessory,
+				accessoryItem,
+				genreID,
+			))
 		}
 	}
 
@@ -310,7 +323,80 @@ func (s *EquipmentVisualSystem) syncAccessories(equipComp *EquipmentComponent, e
 			equipVisualComp.AddAccessory(acc.ID, acc.Seed)
 		}
 	}
-} // Helper methods
+}
+
+// buildEquipmentVisual creates an EquipmentVisual with all Phase 15.3 properties.
+func (s *EquipmentVisualSystem) buildEquipmentVisual(slot, itemID string, seed int64, layer sprites.LayerType, itm *item.Item, genreID string) sprites.EquipmentVisual {
+	visual := sprites.EquipmentVisual{
+		Slot:        slot,
+		ItemID:      itemID,
+		Seed:        seed,
+		Layer:       layer,
+		Material:    sprites.MaterialMetal,
+		DamageState: sprites.DamageStatePristine,
+		Enchantment: sprites.EnchantmentGlow{Active: false},
+		DetailLevel: 0.5,
+		Params:      make(map[string]interface{}),
+	}
+
+	// If we have item data, populate enhanced properties
+	if itm != nil {
+		// Determine material type
+		visual.Material = s.getMaterialType(itm, slot, genreID)
+
+		// Calculate damage state from durability
+		visual.DamageState = sprites.GetDamageStateFromDurability(itm.Stats.Durability, itm.Stats.DurabilityMax)
+
+		// Add enchantment glow based on rarity
+		visual.Enchantment = sprites.GetEnchantmentFromRarity(itm.Rarity.String())
+
+		// Set detail level based on rarity
+		visual.DetailLevel = sprites.GetDetailLevelFromRarity(itm.Rarity.String())
+	}
+
+	return visual
+}
+
+// getMaterialType determines the material type for an item.
+func (s *EquipmentVisualSystem) getMaterialType(itm *item.Item, slot string, genreID string) sprites.MaterialType {
+	// First check tags for explicit material
+	material := sprites.GetMaterialTypeFromTags(itm.Tags, genreID)
+	
+	// If no tag match, use item type-based defaults
+	if material == sprites.MaterialMetal && len(itm.Tags) == 0 {
+		switch itm.Type {
+		case item.TypeWeapon:
+			material = sprites.GetMaterialTypeFromWeaponType(itm.WeaponType.String(), genreID)
+		case item.TypeArmor:
+			material = sprites.GetMaterialTypeFromArmorType(itm.ArmorType.String(), genreID)
+		}
+	}
+	
+	return material
+}
+
+// getEquipmentComponent retrieves the equipment component from an entity.
+func (s *EquipmentVisualSystem) getEquipmentComponent(entity *Entity) *EquipmentComponent {
+	comp, ok := entity.GetComponent("equipment")
+	if !ok || comp == nil {
+		return nil
+	}
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok {
+		return nil
+	}
+	return equipComp
+}
+
+// getEquippedItem gets an item from a specific equipment slot.
+func (s *EquipmentVisualSystem) getEquippedItem(equipComp *EquipmentComponent, slot EquipmentSlot) *item.Item {
+	if equipComp == nil {
+		return nil
+	}
+	return equipComp.GetEquipped(slot)
+}
+
+// Helper methods
 
 func (s *EquipmentVisualSystem) getEquipmentVisualComponent(entity *Entity) *EquipmentVisualComponent {
 	comp, ok := entity.GetComponent("equipment_visual")

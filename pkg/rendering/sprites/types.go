@@ -199,6 +199,92 @@ type CompositeConfig struct {
 	StatusEffects []StatusEffect
 }
 
+// MaterialType represents the material an equipment item is made from.
+type MaterialType int
+
+const (
+	// MaterialMetal represents metallic materials (iron, steel, silver, gold)
+	MaterialMetal MaterialType = iota
+	// MaterialLeather represents leather and hide materials
+	MaterialLeather
+	// MaterialCloth represents fabric and cloth materials
+	MaterialCloth
+	// MaterialWood represents wooden materials
+	MaterialWood
+	// MaterialCrystal represents crystalline materials (gems, glass)
+	MaterialCrystal
+	// MaterialEnergy represents energy-based or magical materials
+	MaterialEnergy
+)
+
+// String returns the string representation of a material type.
+func (m MaterialType) String() string {
+	switch m {
+	case MaterialMetal:
+		return "metal"
+	case MaterialLeather:
+		return "leather"
+	case MaterialCloth:
+		return "cloth"
+	case MaterialWood:
+		return "wood"
+	case MaterialCrystal:
+		return "crystal"
+	case MaterialEnergy:
+		return "energy"
+	default:
+		return "unknown"
+	}
+}
+
+// DamageState represents the condition/wear of an equipment item.
+type DamageState int
+
+const (
+	// DamageStatePristine represents perfect condition (100% durability)
+	DamageStatePristine DamageState = iota
+	// DamageStateWorn represents light wear (50-99% durability)
+	DamageStateWorn
+	// DamageStateDamaged represents heavy damage (25-49% durability)
+	DamageStateDamaged
+	// DamageStateBroken represents severely damaged (0-24% durability)
+	DamageStateBroken
+)
+
+// String returns the string representation of a damage state.
+func (d DamageState) String() string {
+	switch d {
+	case DamageStatePristine:
+		return "pristine"
+	case DamageStateWorn:
+		return "worn"
+	case DamageStateDamaged:
+		return "damaged"
+	case DamageStateBroken:
+		return "broken"
+	default:
+		return "unknown"
+	}
+}
+
+// EnchantmentGlow represents visual properties of magical enchantments.
+type EnchantmentGlow struct {
+	// Active indicates if enchantment glow is enabled
+	Active bool
+
+	// Color of the glow effect (e.g., "blue", "red", "purple", "gold")
+	Color string
+
+	// Intensity of the glow (0.0-1.0)
+	Intensity float64
+
+	// PulseSpeed controls animation speed (0.0 = static, 1.0 = normal)
+	PulseSpeed float64
+
+	// ParticleCount for magical particle effects
+	ParticleCount int
+}
+
 // EquipmentVisual represents visual properties of equipped items.
 type EquipmentVisual struct {
 	// Slot type (weapon, armor, accessory)
@@ -212,6 +298,18 @@ type EquipmentVisual struct {
 
 	// Layer to render on
 	Layer LayerType
+
+	// Material type for visual styling
+	Material MaterialType
+
+	// Damage state for wear/condition visuals
+	DamageState DamageState
+
+	// Enchantment glow effects
+	Enchantment EnchantmentGlow
+
+	// DetailLevel controls visual complexity (0.0-1.0, typically based on rarity)
+	DetailLevel float64
 
 	// Custom visual parameters
 	Params map[string]interface{}

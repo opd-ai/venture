@@ -47,7 +47,7 @@ func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
 			for i := 0; i < samples; i++ {
 				// Calculate offset for this sample
 				t := float64(i) / float64(samples-1) // 0 to 1
-				offset := (t - 0.5) * 2.0              // -1 to 1
+				offset := (t - 0.5) * 2.0            // -1 to 1
 
 				// Red channel - shift in direction
 				rx := float64(x) + config.DirectionX*aberrationStrength*offset

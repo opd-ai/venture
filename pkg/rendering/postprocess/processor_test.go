@@ -51,11 +51,11 @@ func TestProcessor_SetConfig(t *testing.T) {
 
 func TestClamp(t *testing.T) {
 	tests := []struct {
-		name       string
-		value      float64
-		min        float64
-		max        float64
-		want       float64
+		name  string
+		value float64
+		min   float64
+		max   float64
+		want  float64
 	}{
 		{"within range", 0.5, 0.0, 1.0, 0.5},
 		{"below min", -0.5, 0.0, 1.0, 0.0},
@@ -126,10 +126,10 @@ func TestLerp(t *testing.T) {
 
 func TestSmoothstep(t *testing.T) {
 	tests := []struct {
-		name        string
+		name         string
 		edge0, edge1 float64
-		x           float64
-		wantRange   [2]float64 // min, max
+		x            float64
+		wantRange    [2]float64 // min, max
 	}{
 		{"before edge0", 0.0, 1.0, -0.5, [2]float64{0.0, 0.0}},
 		{"at edge0", 0.0, 1.0, 0.0, [2]float64{0.0, 0.0}},
@@ -151,10 +151,10 @@ func TestSmoothstep(t *testing.T) {
 
 func TestRGBToHSL(t *testing.T) {
 	tests := []struct {
-		name       string
-		r, g, b    float64
+		name                string
+		r, g, b             float64
 		wantH, wantS, wantL float64
-		tolerance  float64
+		tolerance           float64
 	}{
 		{"red", 1.0, 0.0, 0.0, 0.0, 1.0, 0.5, 0.01},
 		{"green", 0.0, 1.0, 0.0, 0.333, 1.0, 0.5, 0.01},
@@ -186,10 +186,10 @@ func TestRGBToHSL(t *testing.T) {
 
 func TestHSLToRGB(t *testing.T) {
 	tests := []struct {
-		name       string
-		h, s, l    float64
+		name                string
+		h, s, l             float64
 		wantR, wantG, wantB float64
-		tolerance  float64
+		tolerance           float64
 	}{
 		{"red", 0.0, 1.0, 0.5, 1.0, 0.0, 0.0, 0.01},
 		{"green", 0.333, 1.0, 0.5, 0.0, 1.0, 0.0, 0.05},
@@ -221,9 +221,9 @@ func TestHSLToRGB(t *testing.T) {
 
 func TestLuminance(t *testing.T) {
 	tests := []struct {
-		name     string
-		r, g, b  float64
-		want     float64
+		name      string
+		r, g, b   float64
+		want      float64
 		tolerance float64
 	}{
 		{"white", 1.0, 1.0, 1.0, 1.0, 0.01},
@@ -303,7 +303,7 @@ func TestBoxBlur(t *testing.T) {
 
 	t.Run("radius 0", func(t *testing.T) {
 		result := boxBlur(img, 0)
-		
+
 		// Should return original image unchanged
 		for y := 0; y < 5; y++ {
 			for x := 0; x < 5; x++ {

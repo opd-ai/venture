@@ -24,10 +24,10 @@
 //
 // Effects can be applied individually or combined for cumulative impact. The recommended
 // order is:
-//   1. Motion blur or depth blur (mutually exclusive)
-//   2. Color grading
-//   3. Vignette
-//   4. Chromatic aberration
+//  1. Motion blur or depth blur (mutually exclusive)
+//  2. Color grading
+//  3. Vignette
+//  4. Chromatic aberration
 //
 // Example usage:
 //

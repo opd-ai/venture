@@ -45,8 +45,8 @@ func (p *Processor) ApplyMotionBlur(img *image.RGBA, velocityMap *VelocityMap) *
 
 			for i := 0; i < samples; i++ {
 				// Calculate sample position
-				t := float64(i) / float64(samples-1)         // 0 to 1
-				offset := (t - 0.5) * config.Intensity       // -0.5 to 0.5 scaled by intensity
+				t := float64(i) / float64(samples-1)   // 0 to 1
+				offset := (t - 0.5) * config.Intensity // -0.5 to 0.5 scaled by intensity
 				sx := float64(x) + vx*offset
 				sy := float64(y) + vy*offset
 

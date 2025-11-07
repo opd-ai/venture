@@ -240,7 +240,7 @@ func generateTestPattern(width, height int) *image.RGBA {
 			dx := float64(x - width/2)
 			dy := float64(y - height/2)
 			dist := dx*dx + dy*dy
-			maxDist := float64(width*width + height*height) / 16.0
+			maxDist := float64(width*width+height*height) / 16.0
 
 			if dist < maxDist {
 				// Bright center

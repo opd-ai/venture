@@ -53,7 +53,7 @@ func SciFiPreset() Preset {
 				Saturation:  1.15,
 				Contrast:    1.25,
 				Brightness:  0.0,
-				Temperature: -0.2, // Cool
+				Temperature: -0.2,  // Cool
 				Tint:        -0.05, // Slight green
 			},
 			Vignette: VignetteConfig{

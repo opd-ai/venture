@@ -20,6 +20,8 @@ func TestWeatherType_String(t *testing.T) {
 		{"neon_rain", WeatherNeonRain, "NeonRain"},
 		{"smog", WeatherSmog, "Smog"},
 		{"radiation", WeatherRadiation, "Radiation"},
+		{"sandstorm", WeatherSandstorm, "Sandstorm"},
+		{"blood_rain", WeatherBloodRain, "BloodRain"},
 		{"unknown", WeatherType(99), "Unknown"},
 	}
 
@@ -247,6 +249,8 @@ func TestGenerateWeather_AllTypes(t *testing.T) {
 		WeatherNeonRain,
 		WeatherSmog,
 		WeatherRadiation,
+		WeatherSandstorm,
+		WeatherBloodRain,
 	}
 
 	for _, weatherType := range weatherTypes {
@@ -273,6 +277,11 @@ func TestGenerateWeather_AllTypes(t *testing.T) {
 
 			if len(ws.Particles) == 0 {
 				t.Errorf("GenerateWeather(%v) created no particles", weatherType)
+			}
+
+			// Verify weather effects are initialized
+			if ws.Effects == nil {
+				t.Errorf("GenerateWeather(%v) has nil Effects", weatherType)
 			}
 		})
 	}
@@ -434,7 +443,7 @@ func TestGetGenreWeather(t *testing.T) {
 		{
 			name:            "horror",
 			genreID:         "horror",
-			expectedWeather: []WeatherType{WeatherFog, WeatherRain, WeatherAsh},
+			expectedWeather: []WeatherType{WeatherFog, WeatherBloodRain, WeatherAsh},
 		},
 		{
 			name:            "cyberpunk",
@@ -444,7 +453,7 @@ func TestGetGenreWeather(t *testing.T) {
 		{
 			name:            "postapoc",
 			genreID:         "postapoc",
-			expectedWeather: []WeatherType{WeatherDust, WeatherAsh, WeatherRadiation},
+			expectedWeather: []WeatherType{WeatherSandstorm, WeatherAsh, WeatherRadiation},
 		},
 		{
 			name:            "unknown",
@@ -596,6 +605,7 @@ func BenchmarkGenerateWeather_AllTypes(b *testing.B) {
 	weatherTypes := []WeatherType{
 		WeatherRain, WeatherSnow, WeatherFog, WeatherDust,
 		WeatherAsh, WeatherNeonRain, WeatherSmog, WeatherRadiation,
+		WeatherSandstorm, WeatherBloodRain,
 	}
 
 	b.ResetTimer()
@@ -619,4 +629,297 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// TestWeatherEffect_NewWeatherEffect tests weather effect initialization.
+func TestWeatherEffect_NewWeatherEffect(t *testing.T) {
+	effect := NewWeatherEffect()
+
+	if effect == nil {
+		t.Fatal("NewWeatherEffect returned nil")
+	}
+
+	if effect.Puddles == nil {
+		t.Error("Puddles map is nil")
+	}
+
+	if effect.SnowLevel == nil {
+		t.Error("SnowLevel map is nil")
+	}
+
+	if effect.VisibilityModifier != 1.0 {
+		t.Errorf("VisibilityModifier = %v, want 1.0", effect.VisibilityModifier)
+	}
+}
+
+// TestWeatherSystem_VisibilityModifier tests visibility reduction.
+func TestWeatherSystem_VisibilityModifier(t *testing.T) {
+	tests := []struct {
+		name              string
+		weatherType       WeatherType
+		intensity         WeatherIntensity
+		minVisibility     float64
+		maxVisibility     float64
+	}{
+		{"fog_light", WeatherFog, IntensityLight, 0.84, 0.86},
+		{"fog_heavy", WeatherFog, IntensityHeavy, 0.49, 0.51},
+		{"sandstorm_medium", WeatherSandstorm, IntensityMedium, 0.54, 0.56},
+		{"sandstorm_extreme", WeatherSandstorm, IntensityExtreme, 0.19, 0.21},
+		{"rain_medium", WeatherRain, IntensityMedium, 0.95, 1.05}, // No visibility impact
+		{"blood_rain_heavy", WeatherBloodRain, IntensityHeavy, 0.84, 0.86},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := WeatherConfig{
+				Type:      tt.weatherType,
+				Intensity: tt.intensity,
+				Width:     800,
+				Height:    600,
+				GenreID:   "fantasy",
+				Seed:      12345,
+			}
+
+			ws, err := GenerateWeather(config)
+			if err != nil {
+				t.Fatalf("GenerateWeather failed: %v", err)
+			}
+
+			visibility := ws.GetVisibilityModifier()
+			if visibility < tt.minVisibility || visibility > tt.maxVisibility {
+				t.Errorf("Visibility = %v, want range [%v, %v]",
+					visibility, tt.minVisibility, tt.maxVisibility)
+			}
+		})
+	}
+}
+
+// TestWeatherSystem_RainAccumulation tests puddle formation.
+func TestWeatherSystem_RainAccumulation(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityHeavy,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		t.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	// Simulate many updates to cause accumulation
+	for i := 0; i < 1000; i++ {
+		ws.Update(0.016)
+	}
+
+	// Check that some puddles have formed
+	puddleCount := len(ws.Effects.Puddles)
+	if puddleCount == 0 {
+		t.Error("No puddles formed after 1000 updates")
+	}
+
+	// Verify puddle levels are within valid range
+	for key, level := range ws.Effects.Puddles {
+		if level < 0 || level > 1.0 {
+			t.Errorf("Puddle %s has invalid level: %v", key, level)
+		}
+	}
+}
+
+// TestWeatherSystem_SnowAccumulation tests snow settling.
+func TestWeatherSystem_SnowAccumulation(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherSnow,
+		Intensity: IntensityHeavy,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		t.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	// Simulate many updates to cause accumulation
+	for i := 0; i < 2000; i++ {
+		ws.Update(0.016)
+	}
+
+	// Check that some snow has accumulated
+	snowCount := len(ws.Effects.SnowLevel)
+	if snowCount == 0 {
+		t.Error("No snow accumulated after 2000 updates")
+	}
+
+	// Verify snow levels are within valid range
+	for key, level := range ws.Effects.SnowLevel {
+		if level < 0 || level > 1.0 {
+			t.Errorf("Snow %s has invalid level: %v", key, level)
+		}
+	}
+
+	// Check wind drift is set for snow
+	if ws.Effects.WindDriftX == 0 && ws.Config.WindX != 0 {
+		t.Error("Wind drift not set for snow")
+	}
+}
+
+// TestWeatherSystem_GetPuddleLevel tests puddle level retrieval.
+func TestWeatherSystem_GetPuddleLevel(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityMedium,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		t.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	// Manually set a puddle level
+	ws.Effects.Puddles["5,10"] = 0.75
+
+	level := ws.GetPuddleLevel(5, 10)
+	if level != 0.75 {
+		t.Errorf("GetPuddleLevel(5, 10) = %v, want 0.75", level)
+	}
+
+	// Non-existent puddle should return 0
+	level = ws.GetPuddleLevel(100, 100)
+	if level != 0.0 {
+		t.Errorf("GetPuddleLevel(100, 100) = %v, want 0.0", level)
+	}
+}
+
+// TestWeatherSystem_GetSnowLevel tests snow level retrieval.
+func TestWeatherSystem_GetSnowLevel(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherSnow,
+		Intensity: IntensityMedium,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		t.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	// Manually set a snow level
+	ws.Effects.SnowLevel["3,7"] = 0.60
+
+	level := ws.GetSnowLevel(3, 7)
+	if level != 0.60 {
+		t.Errorf("GetSnowLevel(3, 7) = %v, want 0.60", level)
+	}
+
+	// Non-existent snow should return 0
+	level = ws.GetSnowLevel(200, 200)
+	if level != 0.0 {
+		t.Errorf("GetSnowLevel(200, 200) = %v, want 0.0", level)
+	}
+}
+
+// TestGetGenreWeather_UpdatedGenres tests updated genre weather assignments.
+func TestGetGenreWeather_UpdatedGenres(t *testing.T) {
+	tests := []struct {
+		name            string
+		genreID         string
+		expectedWeather []WeatherType
+	}{
+		{
+			name:            "horror_includes_blood_rain",
+			genreID:         "horror",
+			expectedWeather: []WeatherType{WeatherFog, WeatherBloodRain, WeatherAsh},
+		},
+		{
+			name:            "postapoc_includes_sandstorm",
+			genreID:         "postapoc",
+			expectedWeather: []WeatherType{WeatherSandstorm, WeatherAsh, WeatherRadiation},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			weather := GetGenreWeather(tt.genreID)
+
+			if len(weather) != len(tt.expectedWeather) {
+				t.Errorf("GetGenreWeather(%v) returned %d types, want %d",
+					tt.genreID, len(weather), len(tt.expectedWeather))
+				return
+			}
+
+			for i, w := range weather {
+				if w != tt.expectedWeather[i] {
+					t.Errorf("GetGenreWeather(%v)[%d] = %v, want %v",
+						tt.genreID, i, w, tt.expectedWeather[i])
+				}
+			}
+		})
+	}
+}
+
+// TestWeatherSystem_HighParticleCount tests performance with 500-1000 particles.
+func TestWeatherSystem_HighParticleCount(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityExtreme,
+		Width:     1000,
+		Height:    1000,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		t.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	particleCount := len(ws.Particles)
+	if particleCount < 500 {
+		t.Errorf("Particle count = %d, want >= 500", particleCount)
+	}
+
+	// Verify system can handle updates with many particles
+	for i := 0; i < 60; i++ {
+		ws.Update(0.016)
+	}
+
+	// System should still have particles
+	if len(ws.Particles) == 0 {
+		t.Error("All particles disappeared")
+	}
+}
+
+// BenchmarkWeatherSystem_Update_HighCount benchmarks with 1000 particles.
+func BenchmarkWeatherSystem_Update_HighCount(b *testing.B) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityExtreme,
+		Width:     1000,
+		Height:    1000,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeather(config)
+	if err != nil {
+		b.Fatalf("GenerateWeather failed: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ws.Update(0.016)
+	}
 }

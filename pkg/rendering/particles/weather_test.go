@@ -666,7 +666,7 @@ func TestWeatherSystem_VisibilityModifier(t *testing.T) {
 		{"sandstorm_medium", WeatherSandstorm, IntensityMedium, 0.5, 0.6},
 		{"sandstorm_extreme", WeatherSandstorm, IntensityExtreme, 0.1, 0.3},
 		{"rain_medium", WeatherRain, IntensityMedium, 0.95, 1.05}, // No visibility impact
-		{"blood_rain_heavy", WeatherBloodRain, IntensityHeavy, 0.8, 0.9},
+		{"blood_rain_heavy", WeatherBloodRain, IntensityHeavy, 0.84, 0.86},
 	}
 
 	for _, tt := range tests {

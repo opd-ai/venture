@@ -85,7 +85,7 @@ func calculateAnimationOffset(state string, frameIndex, frameCount int) struct{ 
 		// Phase 15.2: Subtle breathing animation
 		// Gentle vertical oscillation with slight horizontal sway
 		breathCycle := math.Sin(t * 2 * math.Pi)
-		offset.Y = breathCycle * 0.8 // Very subtle 0.8px vertical breathing
+		offset.Y = breathCycle * 0.8           // Very subtle 0.8px vertical breathing
 		offset.X = math.Sin(t*4*math.Pi) * 0.3 // Even more subtle horizontal sway
 
 	case "walk", "run":
@@ -106,7 +106,7 @@ func calculateAnimationOffset(state string, frameIndex, frameCount int) struct{ 
 		} else if t < 0.5 {
 			// Strike: rapid forward lunge
 			strikeT := (t - 0.2) / 0.3
-			offset.X = -2.0 + strikeT * 18.0 // From -2 to +16 pixels
+			offset.X = -2.0 + strikeT*18.0 // From -2 to +16 pixels
 		} else {
 			// Follow-through: gradual return with slight overextension
 			followT := (t - 0.5) / 0.5

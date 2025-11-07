@@ -830,3 +830,303 @@ func BenchmarkGenerate24Colors(b *testing.B) {
 		}
 	}
 }
+
+// Phase 17.3: Time-of-Day Color Shifts tests
+
+func TestGenerateWithTime(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name       string
+		genreID    string
+		seed       int64
+		timeConfig TimeConfig
+		wantErr    bool
+	}{
+		{
+			name:    "fantasy at dawn",
+			genreID: "fantasy",
+			seed:    12345,
+			timeConfig: TimeConfig{
+				CurrentTime:         TimeOfDayDawn,
+				TransitionProgress:  0.0,
+				IntensityMultiplier: 1.0,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "scifi at night",
+			genreID: "scifi",
+			seed:    54321,
+			timeConfig: TimeConfig{
+				CurrentTime:         TimeOfDayNight,
+				TransitionProgress:  0.0,
+				IntensityMultiplier: 1.0,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "horror at dusk with transition",
+			genreID: "horror",
+			seed:    11111,
+			timeConfig: TimeConfig{
+				CurrentTime:         TimeOfDayDusk,
+				TransitionProgress:  0.5,
+				IntensityMultiplier: 0.8,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "invalid genre",
+			genreID: "invalid",
+			seed:    99999,
+			timeConfig: TimeConfig{
+				CurrentTime:         TimeOfDayDay,
+				TransitionProgress:  0.0,
+				IntensityMultiplier: 1.0,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			palette, err := gen.GenerateWithTime(tt.genreID, tt.seed, tt.timeConfig)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if palette == nil {
+				t.Fatal("Generated palette is nil")
+			}
+
+			// Verify palette structure
+			if palette.Primary == nil {
+				t.Error("Primary color is nil")
+			}
+			if palette.Secondary == nil {
+				t.Error("Secondary color is nil")
+			}
+			if palette.Background == nil {
+				t.Error("Background color is nil")
+			}
+		})
+	}
+}
+
+func TestGenerateWithTime_Deterministic(t *testing.T) {
+	gen := NewGenerator()
+
+	timeConfig := TimeConfig{
+		CurrentTime:         TimeOfDayNight,
+		TransitionProgress:  0.3,
+		IntensityMultiplier: 1.0,
+	}
+
+	// Generate twice with same parameters
+	palette1, err1 := gen.GenerateWithTime("fantasy", 12345, timeConfig)
+	if err1 != nil {
+		t.Fatalf("First generation failed: %v", err1)
+	}
+
+	palette2, err2 := gen.GenerateWithTime("fantasy", 12345, timeConfig)
+	if err2 != nil {
+		t.Fatalf("Second generation failed: %v", err2)
+	}
+
+	// Compare colors
+	if !colorsEqual(palette1.Primary, palette2.Primary) {
+		t.Error("Primary colors differ between generations with same seed")
+	}
+	if !colorsEqual(palette1.Secondary, palette2.Secondary) {
+		t.Error("Secondary colors differ between generations with same seed")
+	}
+	if !colorsEqual(palette1.Background, palette2.Background) {
+		t.Error("Background colors differ between generations with same seed")
+	}
+}
+
+func TestGenerateWithTime_DifferentTimes(t *testing.T) {
+	gen := NewGenerator()
+	seed := int64(12345)
+
+	// Generate palettes for different times of day
+	dawn, _ := gen.GenerateWithTime("fantasy", seed, TimeConfig{
+		CurrentTime:         TimeOfDayDawn,
+		TransitionProgress:  0.0,
+		IntensityMultiplier: 1.0,
+	})
+
+	day, _ := gen.GenerateWithTime("fantasy", seed, TimeConfig{
+		CurrentTime:         TimeOfDayDay,
+		TransitionProgress:  0.0,
+		IntensityMultiplier: 1.0,
+	})
+
+	night, _ := gen.GenerateWithTime("fantasy", seed, TimeConfig{
+		CurrentTime:         TimeOfDayNight,
+		TransitionProgress:  0.0,
+		IntensityMultiplier: 1.0,
+	})
+
+	// Palettes should be different
+	if colorsEqual(dawn.Primary, day.Primary) {
+		t.Error("Dawn and day palettes should differ")
+	}
+	if colorsEqual(day.Primary, night.Primary) {
+		t.Error("Day and night palettes should differ")
+	}
+
+	// Night should be darker than day
+	_, _, _, dayA := day.Primary.RGBA()
+	_, _, _, nightA := night.Primary.RGBA()
+	dayL := getLuminance(day.Primary)
+	nightL := getLuminance(night.Primary)
+
+	if nightL >= dayL && dayA == nightA {
+		t.Errorf("Night palette should be darker than day: day=%v, night=%v", dayL, nightL)
+	}
+}
+
+func TestGenerateWithOptionsAndTime(t *testing.T) {
+	gen := NewGenerator()
+
+	opts := GenerationOptions{
+		Harmony:   HarmonyTriadic,
+		Mood:      MoodVibrant,
+		Rarity:    RarityEpic,
+		MinColors: 20,
+	}
+
+	timeConfig := TimeConfig{
+		CurrentTime:         TimeOfDayDusk,
+		TransitionProgress:  0.0,
+		IntensityMultiplier: 1.0,
+	}
+
+	palette, err := gen.GenerateWithOptionsAndTime("cyberpunk", 99999, opts, timeConfig)
+	if err != nil {
+		t.Fatalf("Generation failed: %v", err)
+	}
+
+	if palette == nil {
+		t.Fatal("Generated palette is nil")
+	}
+
+	if len(palette.Colors) < opts.MinColors {
+		t.Errorf("Generated %d colors, want at least %d", len(palette.Colors), opts.MinColors)
+	}
+}
+
+func TestGenerateWithTime_TransitionSmooth(t *testing.T) {
+	gen := NewGenerator()
+	seed := int64(12345)
+
+	// Generate palettes at different transition points
+	var palettes []*Palette
+	for progress := 0.0; progress <= 1.0; progress += 0.25 {
+		p, err := gen.GenerateWithTime("fantasy", seed, TimeConfig{
+			CurrentTime:         TimeOfDayDawn,
+			TransitionProgress:  progress,
+			IntensityMultiplier: 1.0,
+		})
+		if err != nil {
+			t.Fatalf("Generation at progress %v failed: %v", progress, err)
+		}
+		palettes = append(palettes, p)
+	}
+
+	// Verify gradual change
+	for i := 0; i < len(palettes)-1; i++ {
+		// Colors should change but not drastically
+		lum1 := getLuminance(palettes[i].Primary)
+		lum2 := getLuminance(palettes[i+1].Primary)
+		lumDiff := lum1 - lum2
+		if lumDiff < 0 {
+			lumDiff = -lumDiff
+		}
+
+		// Change should be gradual (not more than 0.3 luminance difference per 0.25 progress)
+		if lumDiff > 0.3 {
+			t.Errorf("Transition too abrupt between progress %v and %v: luminance diff = %v",
+				float64(i)*0.25, float64(i+1)*0.25, lumDiff)
+		}
+	}
+}
+
+// Helper function to get approximate luminance of a color
+func getLuminance(c color.Color) float64 {
+	r, g, b, _ := c.RGBA()
+	// Simple luminance calculation
+	return (0.299*float64(r>>8) + 0.587*float64(g>>8) + 0.114*float64(b>>8)) / 255.0
+}
+
+// Helper function to compare colors (allowing small rounding errors)
+func colorsEqual(c1, c2 color.Color) bool {
+	if c1 == nil && c2 == nil {
+		return true
+	}
+	if c1 == nil || c2 == nil {
+		return false
+	}
+	r1, g1, b1, a1 := c1.RGBA()
+	r2, g2, b2, a2 := c2.RGBA()
+	// Allow 1 bit difference for rounding
+	return absDiff(r1, r2) <= 256 && absDiff(g1, g2) <= 256 && absDiff(b1, b2) <= 256 && absDiff(a1, a2) <= 256
+}
+
+// Helper function to calculate absolute difference
+func absDiff(a, b uint32) uint32 {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+func BenchmarkGenerateWithTime(b *testing.B) {
+	gen := NewGenerator()
+	timeConfig := TimeConfig{
+		CurrentTime:         TimeOfDayNight,
+		TransitionProgress:  0.5,
+		IntensityMultiplier: 1.0,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := gen.GenerateWithTime("fantasy", 12345, timeConfig)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkGenerateWithOptionsAndTime(b *testing.B) {
+	gen := NewGenerator()
+	opts := GenerationOptions{
+		Harmony:   HarmonyTriadic,
+		Mood:      MoodVibrant,
+		Rarity:    RarityRare,
+		MinColors: 16,
+	}
+	timeConfig := TimeConfig{
+		CurrentTime:         TimeOfDayDusk,
+		TransitionProgress:  0.3,
+		IntensityMultiplier: 1.0,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := gen.GenerateWithOptionsAndTime("scifi", 54321, opts, timeConfig)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

@@ -117,7 +117,7 @@ func main() {
 		// Single transition type
 		var transType tiles.TileTransitionType
 		var neighbors tiles.TileNeighbors
-		
+
 		switch *transition {
 		case "none":
 			transType = tiles.TransitionNone
@@ -181,7 +181,7 @@ func main() {
 		default:
 			logger.WithField("transition", *transition).Fatal("unknown transition type")
 		}
-		
+
 		transitionsToTest = []struct {
 			name       string
 			transition tiles.TileTransitionType
@@ -197,12 +197,12 @@ func main() {
 		cols = len(transitionsToTest)
 	}
 	rows := (len(transitionsToTest) + cols - 1) / cols
-	
-	compositeWidth := cols * (*width + 4) // 4px spacing between tiles
+
+	compositeWidth := cols * (*width + 4)    // 4px spacing between tiles
 	compositeHeight := rows * (*height + 24) // 24px spacing for labels
-	
+
 	composite := image.NewRGBA(image.Rect(0, 0, compositeWidth, compositeHeight))
-	
+
 	// Fill background with dark gray
 	for y := 0; y < compositeHeight; y++ {
 		for x := 0; x < compositeWidth; x++ {
@@ -214,7 +214,7 @@ func main() {
 	for i, trans := range transitionsToTest {
 		row := i / cols
 		col := i % cols
-		
+
 		config := tiles.TransitionConfig{
 			BaseConfig: tiles.Config{
 				Type:    tileTypeEnum,
@@ -238,9 +238,9 @@ func main() {
 		}
 
 		// Calculate position in composite
-		x := col * (*width + 4) + 2
-		y := row * (*height + 24) + 20 // Leave space for label
-		
+		x := col*(*width+4) + 2
+		y := row*(*height+24) + 20 // Leave space for label
+
 		// Draw tile
 		draw.Draw(composite, image.Rect(x, y, x+*width, y+*height), img, image.Point{}, draw.Src)
 

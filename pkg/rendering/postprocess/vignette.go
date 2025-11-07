@@ -86,6 +86,8 @@ func (p *Processor) ApplyVignette(img *image.RGBA) *image.RGBA {
 
 // ApplyRadialGradient applies a radial gradient from center to edges.
 // This is similar to vignette but with customizable colors.
+// This is a standalone utility function rather than a Processor method since it
+// doesn't use the Processor's configuration.
 func ApplyRadialGradient(img *image.RGBA, centerColor, edgeColor color.Color, intensity float64) *image.RGBA {
 	bounds := img.Bounds()
 	result := image.NewRGBA(bounds)

@@ -7,6 +7,11 @@ import (
 	"math"
 )
 
+const (
+	// maxBlurRadiusPixels is the maximum blur radius in pixels for depth blur
+	maxBlurRadiusPixels = 10.0
+)
+
 // ApplyDepthBlur applies depth-of-field blur to an image based on a depth map.
 // The depth map should be an RGBA image where luminance represents depth (0=near, 1=far).
 // Objects at the focal distance remain sharp, while objects outside the focal range are blurred.
@@ -50,10 +55,10 @@ func (p *Processor) ApplyDepthBlur(img *image.RGBA, depthMap *image.RGBA) *image
 				continue
 			}
 
-			// Calculate blur radius (0 to 10 pixels based on blur amount)
-			blurRadius := blurAmount * 10.0
+			// Calculate blur radius (0 to maxBlurRadiusPixels based on blur amount)
+			blurRadius := blurAmount * maxBlurRadiusPixels
 
-			// Sample in a circle around the pixel
+			// Sample in a circle around the pixel with even spatial distribution
 			var r, g, b, a float64
 			samples := config.Samples
 			count := 0
@@ -61,7 +66,8 @@ func (p *Processor) ApplyDepthBlur(img *image.RGBA, depthMap *image.RGBA) *image
 			for i := 0; i < samples; i++ {
 				// Distribute samples evenly in a circle
 				angle := (float64(i) / float64(samples)) * 2.0 * math.Pi
-				radius := blurRadius * math.Sqrt(float64(i)/float64(samples)) // Square root for uniform distribution
+				// Square root for even spatial distribution (uniform area coverage)
+				radius := blurRadius * math.Sqrt(float64(i)/float64(samples))
 
 				sx := float64(x) + math.Cos(angle)*radius
 				sy := float64(y) + math.Sin(angle)*radius

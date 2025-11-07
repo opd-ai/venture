@@ -7,6 +7,14 @@ import (
 	"math"
 )
 
+const (
+	// chromaticAberrationScale is the base scaling factor for chromatic aberration effect
+	chromaticAberrationScale = 5.0
+
+	// prismaticAberrationScale is the scaling factor for prismatic aberration effect
+	prismaticAberrationScale = 8.0
+)
+
 // ApplyChromaticAberration applies chromatic aberration effect that separates color channels.
 // This simulates lens distortion found in analog cameras.
 func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
@@ -38,7 +46,7 @@ func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
 			dist := math.Sqrt(dx*dx+dy*dy) / maxRadius
 
 			// Aberration strength increases with distance from center
-			aberrationStrength := dist * config.Intensity * 5.0
+			aberrationStrength := dist * config.Intensity * chromaticAberrationScale
 
 			// Sample red channel with offset
 			var rTotal, gTotal, bTotal, aTotal float64
@@ -85,6 +93,8 @@ func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
 
 // ApplyPrismaticAberration applies prismatic aberration with rainbow-like color separation.
 // This creates a more artistic effect than standard chromatic aberration.
+// This is a standalone utility function rather than a Processor method since it
+// uses custom parameters not part of the standard ChromaticAberrationConfig.
 func ApplyPrismaticAberration(img *image.RGBA, intensity float64, angle float64) *image.RGBA {
 	if intensity <= 0 {
 		return img
@@ -113,7 +123,7 @@ func ApplyPrismaticAberration(img *image.RGBA, intensity float64, angle float64)
 			dist := math.Sqrt(dx*dx+dy*dy) / maxRadius
 
 			// Aberration strength increases with distance from center
-			aberrationStrength := dist * intensity * 8.0
+			aberrationStrength := dist * intensity * prismaticAberrationScale
 
 			// Sample each color channel with different offsets
 			// Red shifts most, blue shifts least (simulating refraction)

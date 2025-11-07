@@ -38,7 +38,8 @@ func (p *Processor) GetConfig() Config {
 
 // ApplyAll applies all enabled post-processing effects in the recommended order.
 // velocityMap is optional (for motion blur), depthMap is optional (for depth blur).
-// If both motion blur and depth blur are enabled, only motion blur is applied.
+// If both motion blur and depth blur are enabled, only motion blur is applied
+// since they are mutually exclusive blur effects.
 func (p *Processor) ApplyAll(img *image.RGBA, velocityMap *VelocityMap, depthMap *image.RGBA) *image.RGBA {
 	result := img
 

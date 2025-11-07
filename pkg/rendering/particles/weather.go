@@ -292,7 +292,7 @@ func (ws *WeatherSystem) Update(deltaTime float64) {
 		// Check for ground impact and accumulation
 		if p.Y >= float64(ws.Config.Height) {
 			ws.handleParticleImpact(p)
-			
+
 			// Wrap particles around screen edges
 			p.Y = 0
 			p.X = float64(ws.rng.Intn(ws.Config.Width))
@@ -594,8 +594,8 @@ func generateSandstormParticles(particles []Particle, config WeatherConfig, rng 
 		particles[i] = Particle{
 			X:           float64(rng.Intn(config.Width)),
 			Y:           float64(rng.Intn(config.Height)),
-			VX:          rng.Float64()*80 - 40,  // High horizontal velocity
-			VY:          rng.Float64()*30 - 15,  // Some vertical movement
+			VX:          rng.Float64()*80 - 40, // High horizontal velocity
+			VY:          rng.Float64()*30 - 15, // Some vertical movement
 			Color:       sandColors[rng.Intn(len(sandColors))],
 			Size:        1 + rng.Float64()*4,
 			Life:        1.0,
@@ -609,10 +609,10 @@ func generateSandstormParticles(particles []Particle, config WeatherConfig, rng 
 func generateBloodRainParticles(particles []Particle, config WeatherConfig, rng *rand.Rand) {
 	// Deep red colors for blood
 	bloodColors := []color.RGBA{
-		{139, 0, 0, 220},    // Dark red
-		{178, 34, 34, 220},  // Firebrick
-		{165, 42, 42, 220},  // Brown
-		{128, 0, 0, 220},    // Maroon
+		{139, 0, 0, 220},   // Dark red
+		{178, 34, 34, 220}, // Firebrick
+		{165, 42, 42, 220}, // Brown
+		{128, 0, 0, 220},   // Maroon
 	}
 
 	for i := range particles {
@@ -620,9 +620,9 @@ func generateBloodRainParticles(particles []Particle, config WeatherConfig, rng 
 			X:           float64(rng.Intn(config.Width)),
 			Y:           float64(rng.Intn(config.Height)),
 			VX:          rng.Float64()*20 - 10,
-			VY:          180 + rng.Float64()*80,  // Similar to rain
+			VY:          180 + rng.Float64()*80, // Similar to rain
 			Color:       bloodColors[rng.Intn(len(bloodColors))],
-			Size:        1 + rng.Float64()*3,     // Slightly larger drops
+			Size:        1 + rng.Float64()*3, // Slightly larger drops
 			Life:        1.0,
 			InitialLife: 1.2 + rng.Float64()*2.5,
 			Rotation:    0,

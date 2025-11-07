@@ -655,11 +655,11 @@ func TestWeatherEffect_NewWeatherEffect(t *testing.T) {
 // TestWeatherSystem_VisibilityModifier tests visibility reduction.
 func TestWeatherSystem_VisibilityModifier(t *testing.T) {
 	tests := []struct {
-		name              string
-		weatherType       WeatherType
-		intensity         WeatherIntensity
-		minVisibility     float64
-		maxVisibility     float64
+		name          string
+		weatherType   WeatherType
+		intensity     WeatherIntensity
+		minVisibility float64
+		maxVisibility float64
 	}{
 		{"fog_light", WeatherFog, IntensityLight, 0.84, 0.86},
 		{"fog_heavy", WeatherFog, IntensityHeavy, 0.49, 0.51},

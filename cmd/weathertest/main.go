@@ -102,7 +102,7 @@ func main() {
 	// Simulate weather for specified duration
 	deltaTime := 0.016 // ~60 FPS
 	steps := int(*duration / deltaTime)
-	
+
 	logrus.Infof("Simulating for %.1f seconds (%d steps at 60 FPS)", *duration, steps)
 
 	for i := 0; i < steps; i++ {
@@ -127,7 +127,7 @@ func main() {
 	if config.Type == particles.WeatherRain || config.Type == particles.WeatherBloodRain {
 		puddleCount := len(ws.Effects.Puddles)
 		fmt.Printf("Puddles Formed: %d locations\n", puddleCount)
-		
+
 		if puddleCount > 0 && *verbose {
 			// Show some sample puddle levels
 			count := 0
@@ -146,7 +146,7 @@ func main() {
 		snowCount := len(ws.Effects.SnowLevel)
 		fmt.Printf("Snow Accumulated: %d locations\n", snowCount)
 		fmt.Printf("Wind Drift: (%.2f, %.2f)\n", ws.Effects.WindDriftX, ws.Effects.WindDriftY)
-		
+
 		if snowCount > 0 && *verbose {
 			// Show some sample snow levels
 			count := 0
@@ -166,11 +166,11 @@ func main() {
 		fmt.Println("\n=== Particle Statistics ===")
 		var totalVelocity float64
 		var minLife, maxLife float64 = 1.0, 0.0
-		
+
 		for _, p := range ws.Particles {
 			vel := p.VX*p.VX + p.VY*p.VY
 			totalVelocity += vel
-			
+
 			if p.Life < minLife {
 				minLife = p.Life
 			}
@@ -178,7 +178,7 @@ func main() {
 				maxLife = p.Life
 			}
 		}
-		
+
 		avgVelocity := totalVelocity / float64(len(ws.Particles))
 		fmt.Printf("Average Velocity: %.2f\n", avgVelocity)
 		fmt.Printf("Life Range: [%.3f, %.3f]\n", minLife, maxLife)

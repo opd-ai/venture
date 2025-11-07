@@ -662,7 +662,7 @@ func TestWeatherSystem_VisibilityModifier(t *testing.T) {
 		maxVisibility     float64
 	}{
 		{"fog_light", WeatherFog, IntensityLight, 0.84, 0.86},
-		{"fog_heavy", WeatherFog, IntensityHeavy, 0.4, 0.6},
+		{"fog_heavy", WeatherFog, IntensityHeavy, 0.49, 0.51},
 		{"sandstorm_medium", WeatherSandstorm, IntensityMedium, 0.5, 0.6},
 		{"sandstorm_extreme", WeatherSandstorm, IntensityExtreme, 0.1, 0.3},
 		{"rain_medium", WeatherRain, IntensityMedium, 0.95, 1.05}, // No visibility impact

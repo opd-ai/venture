@@ -23,8 +23,8 @@ func TestAnimationComponent_NewAnimationComponent(t *testing.T) {
 		t.Errorf("Expected initial state %v, got %v", AnimationStateIdle, anim.CurrentState)
 	}
 
-	if anim.FrameTime != 0.1 {
-		t.Errorf("Expected frame time 0.1, got %f", anim.FrameTime)
+	if anim.FrameTime != 1.0/12.0 {
+		t.Errorf("Expected frame time 1/12 (0.083333), got %f", anim.FrameTime)
 	}
 
 	if !anim.Playing {

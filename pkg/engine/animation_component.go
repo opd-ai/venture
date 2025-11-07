@@ -216,7 +216,7 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 		PreviousState:   AnimationStateIdle,
 		Frames:          nil,
 		FrameIndex:      0,
-		FrameTime:       0.1, // 10 FPS default
+		FrameTime:       1.0 / 12.0, // Phase 15.2: 12 FPS for close range (0.083s per frame)
 		TimeAccumulator: 0.0,
 		Loop:            true,
 		Playing:         true,

@@ -38,10 +38,10 @@ func TestAnimationSystem_GetFrameCount(t *testing.T) {
 		state    AnimationState
 		expected int
 	}{
-		{AnimationStateIdle, 4},
+		{AnimationStateIdle, 8},     // Phase 15.2: Increased from 4 to 8
 		{AnimationStateWalk, 8},
 		{AnimationStateRun, 8},
-		{AnimationStateAttack, 6},
+		{AnimationStateAttack, 8},   // Phase 15.2: Increased from 6 to 8
 		{AnimationStateCast, 8},
 		{AnimationStateHit, 3},
 		{AnimationStateDeath, 6},

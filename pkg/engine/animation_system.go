@@ -182,7 +182,9 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		}
 
 		// Phase 14.2: Distance-based frame rate adjustment
+		// Phase 15.2: Enhanced LOD with explicit frame rates (12 FPS close, 6 FPS medium, 3 FPS far)
 		var effectiveDeltaTime float64 = deltaTime
+		var targetFrameTime float64 = animComp.FrameTime // Default frame time
 		if s.enableDistanceLOD && s.playerEntity != nil {
 			// Calculate distance from player
 			dx := pos.X - playerX
@@ -191,18 +193,24 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			dist := math.Sqrt(distSq)
 
 			if dist <= s.distanceCloseThresh {
-				// Close range: full animation rate
+				// Close range: 12 FPS (1/12 ≈ 0.083s per frame)
+				targetFrameTime = 1.0 / 12.0
 				effectiveDeltaTime = deltaTime
 				s.stats.FullRateEntities++
 			} else if dist <= s.distanceMidThresh {
-				// Mid range: half animation rate
-				effectiveDeltaTime = deltaTime * 0.5
+				// Mid range: 6 FPS (1/6 ≈ 0.167s per frame)
+				targetFrameTime = 1.0 / 6.0
+				effectiveDeltaTime = deltaTime
 				s.stats.HalfRateEntities++
 			} else {
-				// Far range: static pose (no animation updates)
-				effectiveDeltaTime = 0
+				// Far range: 3 FPS (1/3 ≈ 0.333s per frame) - very slow for distant entities
+				targetFrameTime = 1.0 / 3.0
+				effectiveDeltaTime = deltaTime
 				s.stats.StaticEntities++
 			}
+			
+			// Update component's frame time for this frame
+			animComp.FrameTime = targetFrameTime
 		}
 
 		// Regenerate frames if dirty (state changed)
@@ -402,6 +410,13 @@ func calculateAnimationOffset(state string, frameIndex, frameCount int) struct{ 
 	offset := struct{ X, Y float64 }{X: 0, Y: 0}
 
 	switch state {
+	case "idle":
+		// Phase 15.2: Subtle breathing animation
+		// Gentle vertical oscillation with slight horizontal sway
+		breathCycle := math.Sin(t * 2 * math.Pi)
+		offset.Y = breathCycle * 0.8 // Very subtle 0.8px vertical breathing
+		offset.X = math.Sin(t*4*math.Pi) * 0.3 // Even more subtle horizontal sway
+
 	case "walk", "run":
 		// Bobbing motion - SIGNIFICANTLY increased amplitude for visibility
 		cycle := math.Sin(t * 2 * math.Pi)
@@ -412,11 +427,19 @@ func calculateAnimationOffset(state string, frameIndex, frameCount int) struct{ 
 		offset.Y = -4.0 * (t - t*t) * 15.0 // Jump up and down
 
 	case "attack":
-		// Forward lunge - SIGNIFICANTLY increased amplitude for visibility
-		if t < 0.5 {
-			offset.X = t * 16.0 // Increased from 8.0 to 16.0 pixels (200% increase)
+		// Phase 15.2: Enhanced forward lunge with better follow-through
+		// Wind-up (0-0.2), strike (0.2-0.5), follow-through (0.5-1.0)
+		if t < 0.2 {
+			// Wind-up: slight backward movement
+			offset.X = -(t / 0.2) * 2.0
+		} else if t < 0.5 {
+			// Strike: rapid forward lunge
+			strikeT := (t - 0.2) / 0.3
+			offset.X = -2.0 + strikeT * 18.0 // From -2 to +16 pixels
 		} else {
-			offset.X = (1.0 - t) * 16.0
+			// Follow-through: gradual return with slight overextension
+			followT := (t - 0.5) / 0.5
+			offset.X = 16.0 - followT*followT*16.0 // Quadratic easing for smooth return
 		}
 
 	case "hit":
@@ -436,14 +459,27 @@ func calculateAnimationRotation(state string, frameIndex, frameCount int) float6
 	t := float64(frameIndex) / float64(frameCount)
 
 	switch state {
+	case "idle":
+		// Phase 15.2: Very subtle head tilt for breathing animation
+		return math.Sin(t*2*math.Pi) * 0.03 // Tiny oscillation (0.03 radians ≈ 1.7 degrees)
+
 	case "attack":
-		// Swing arc - SIGNIFICANTLY increased for visibility
-		if t < 0.3 {
-			return -t * 1.0 // Wind up (increased from 0.5 to 1.0 radians)
-		} else if t < 0.6 {
-			return (t - 0.3) * 3.0 // Swing through (increased from 1.5 to 3.0 radians)
+		// Phase 15.2: Enhanced swing arc with better follow-through
+		// Wind-up (0-0.2), strike (0.2-0.5), follow-through (0.5-1.0)
+		if t < 0.2 {
+			// Wind up: slight backward rotation
+			windupT := t / 0.2
+			return -windupT * 0.4 // -0.4 radians (~23 degrees)
+		} else if t < 0.5 {
+			// Swing through: rapid forward rotation
+			strikeT := (t - 0.2) / 0.3
+			return -0.4 + strikeT*1.8 // From -0.4 to +1.4 radians
 		} else {
-			return (1.0 - t) * 0.6 // Follow through (increased from 0.3 to 0.6 radians)
+			// Follow through: continued rotation with deceleration
+			followT := (t - 0.5) / 0.5
+			// Use sine easing for smooth deceleration
+			easedT := math.Sin(followT * math.Pi / 2)
+			return 1.4 - easedT*0.8 // From +1.4 to +0.6 radians, smooth follow-through
 		}
 
 	case "death":
@@ -463,6 +499,11 @@ func calculateAnimationScale(state string, frameIndex, frameCount int) float64 {
 	t := float64(frameIndex) / float64(frameCount)
 
 	switch state {
+	case "idle":
+		// Phase 15.2: Subtle breathing scale (chest expansion/contraction)
+		breathCycle := math.Sin(t * 2 * math.Pi)
+		return 1.0 + breathCycle*0.015 // Very subtle 1.5% scale change
+
 	case "jump":
 		// Squash and stretch - more dramatic
 		if t < 0.2 {
@@ -478,9 +519,19 @@ func calculateAnimationScale(state string, frameIndex, frameCount int) float64 {
 		return 1.0 - t*0.4 // Increased from 0.2 to 0.4
 
 	case "attack":
-		// Slight scale up during strike - more pronounced
-		if t > 0.3 && t < 0.6 {
-			return 1.0 + (t-0.3)*0.6 // Increased from 0.3 to 0.6
+		// Phase 15.2: Enhanced anticipation and follow-through scale
+		// Slight anticipation squat, then expansion during strike
+		if t < 0.2 {
+			// Anticipation: slight compression
+			return 1.0 - (t/0.2)*0.05
+		} else if t < 0.5 {
+			// Strike: expand for power
+			strikeT := (t - 0.2) / 0.3
+			return 0.95 + strikeT*0.15 // From 0.95 to 1.10
+		} else {
+			// Follow-through: gradual return to normal
+			followT := (t - 0.5) / 0.5
+			return 1.10 - followT*0.10 // From 1.10 to 1.00
 		}
 	}
 
@@ -625,13 +676,13 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 func (s *AnimationSystem) getFrameCount(state AnimationState) int {
 	switch state {
 	case AnimationStateIdle:
-		return 4
+		return 8 // Phase 15.2: Increased from 4 to 8 for smoother breathing animation
 	case AnimationStateWalk:
 		return 8 // 8-frame walk cycle
 	case AnimationStateRun:
 		return 8
 	case AnimationStateAttack:
-		return 6 // Wind-up, strike, follow-through
+		return 8 // Phase 15.2: Increased from 6 to 8 for better follow-through
 	case AnimationStateCast:
 		return 8 // Cast preparation, cast, recovery
 	case AnimationStateHit:

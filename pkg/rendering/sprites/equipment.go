@@ -2,7 +2,7 @@
 package sprites
 
 // GetMaterialTypeFromWeaponType determines material type based on weapon classification.
-func GetMaterialTypeFromWeaponType(weaponType string, genreID string) MaterialType {
+func GetMaterialTypeFromWeaponType(weaponType, genreID string) MaterialType {
 	// Default materials based on weapon type
 	switch weaponType {
 	case "sword", "axe", "spear":
@@ -21,7 +21,7 @@ func GetMaterialTypeFromWeaponType(weaponType string, genreID string) MaterialTy
 }
 
 // GetMaterialTypeFromArmorType determines material type based on armor classification.
-func GetMaterialTypeFromArmorType(armorType string, genreID string) MaterialType {
+func GetMaterialTypeFromArmorType(armorType, genreID string) MaterialType {
 	// Default materials based on armor type
 	switch armorType {
 	case "helmet", "chest", "boots", "gloves":

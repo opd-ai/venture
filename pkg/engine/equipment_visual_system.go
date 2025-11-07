@@ -358,10 +358,10 @@ func (s *EquipmentVisualSystem) buildEquipmentVisual(slot, itemID string, seed i
 }
 
 // getMaterialType determines the material type for an item.
-func (s *EquipmentVisualSystem) getMaterialType(itm *item.Item, slot string, genreID string) sprites.MaterialType {
+func (s *EquipmentVisualSystem) getMaterialType(itm *item.Item, slot, genreID string) sprites.MaterialType {
 	// First check tags for explicit material
 	material := sprites.GetMaterialTypeFromTags(itm.Tags, genreID)
-	
+
 	// If no tag match, use item type-based defaults
 	if material == sprites.MaterialMetal && len(itm.Tags) == 0 {
 		switch itm.Type {
@@ -371,7 +371,7 @@ func (s *EquipmentVisualSystem) getMaterialType(itm *item.Item, slot string, gen
 			material = sprites.GetMaterialTypeFromArmorType(itm.ArmorType.String(), genreID)
 		}
 	}
-	
+
 	return material
 }
 

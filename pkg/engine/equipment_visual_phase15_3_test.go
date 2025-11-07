@@ -182,10 +182,10 @@ func TestEquipmentVisual_Phase15_3_Integration(t *testing.T) {
 
 	// Create entity with equipment
 	entity := NewEntity(1)
-	
+
 	// Add genre component
 	genreComp := &GenreComponent{}
-	genreComp.GenreID =("fantasy")
+	genreComp.GenreID = ("fantasy")
 	entity.AddComponent(genreComp)
 
 	// Add sprite component
@@ -197,7 +197,7 @@ func TestEquipmentVisual_Phase15_3_Integration(t *testing.T) {
 
 	// Add equipment component with items
 	equipComp := NewEquipmentComponent()
-	
+
 	// Create legendary weapon with low durability (damaged but enchanted)
 	weapon := &item.Item{
 		ID:         "legendary-sword",
@@ -225,7 +225,7 @@ func TestEquipmentVisual_Phase15_3_Integration(t *testing.T) {
 
 	// Verify equipment visual was built with Phase 15.3 properties
 	config := sys.buildCompositeConfig(entity, equipVisualComp, spriteComp)
-	
+
 	if len(config.Equipment) != 1 {
 		t.Fatalf("Expected 1 equipment item, got %d", len(config.Equipment))
 	}
@@ -286,9 +286,9 @@ func TestEquipmentVisual_Phase15_3_MultipleItems(t *testing.T) {
 
 	// Create entity
 	entity := NewEntity(1)
-	
+
 	genreComp := &GenreComponent{}
-	genreComp.GenreID =("fantasy")
+	genreComp.GenreID = ("fantasy")
 	entity.AddComponent(genreComp)
 
 	spriteComp := &EbitenSprite{Width: 32, Height: 32}

@@ -380,7 +380,7 @@ func (ws *WeatherSystem) handleParticleImpact(p *Particle) {
 	// Convert world position to tile position (assuming 32x32 tiles)
 	tileSize := 32
 	tileX := int(p.X) / tileSize
-	tileY := int(ws.Config.Height) / tileSize
+	tileY := int(p.Y) / tileSize
 	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
 
 	switch ws.Config.Type {

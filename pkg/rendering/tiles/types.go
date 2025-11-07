@@ -4,6 +4,7 @@
 package tiles
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -174,3 +175,13 @@ func (p Pattern) String() string {
 		return "unknown"
 	}
 }
+
+// Phase 16.3: Parallax depth effect errors
+var (
+	// ErrInvalidParallaxDepth indicates the parallax depth is out of valid range (0.0-2.0)
+	ErrInvalidParallaxDepth = errors.New("parallax depth must be between 0.0 and 2.0")
+	// ErrInvalidAOIntensity indicates the AO intensity is out of valid range (0.0-1.0)
+	ErrInvalidAOIntensity = errors.New("AO intensity must be between 0.0 and 1.0")
+	// ErrInvalidShadowHeight indicates the shadow height is out of valid range (0.0-1.0)
+	ErrInvalidShadowHeight = errors.New("shadow height must be between 0.0 and 1.0")
+)

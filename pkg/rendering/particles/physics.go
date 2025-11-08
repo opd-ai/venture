@@ -91,16 +91,20 @@ type FireConfig struct {
 
 	// EmberChance probability of spawning ember particles (0.0-1.0)
 	EmberChance float64
+
+	// FuelConsumptionRate how fast fuel is consumed when ignited (per second)
+	FuelConsumptionRate float64
 }
 
 // DefaultFireConfig returns sensible defaults for fire simulation.
 func DefaultFireConfig() FireConfig {
 	return FireConfig{
-		HeatDissipation:  0.5,   // Moderate cooling
-		IgnitionTemp:     0.7,   // 70% heat to ignite
-		HeatTransferRate: 0.3,   // Moderate spread
-		BuoyancyStrength: 100.0, // Strong upward force
-		EmberChance:      0.05,  // 5% chance per frame
+		HeatDissipation:     0.5,   // Moderate cooling
+		IgnitionTemp:        0.7,   // 70% heat to ignite
+		HeatTransferRate:    0.3,   // Moderate spread
+		BuoyancyStrength:    100.0, // Strong upward force
+		EmberChance:         0.05,  // 5% chance per frame
+		FuelConsumptionRate: 0.2,   // Moderate fuel burn rate
 	}
 }
 
@@ -439,7 +443,7 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 
 		// Consume fuel if ignited
 		if p.Ignited && p.FuelRemain > 0 {
-			p.FuelRemain -= 0.2 * deltaTime // Burn fuel
+			p.FuelRemain -= config.FuelConsumptionRate * deltaTime
 			if p.FuelRemain <= 0 {
 				p.Ignited = false
 				p.Heat *= 0.5 // Reduce heat when fuel runs out

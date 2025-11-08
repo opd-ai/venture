@@ -241,12 +241,12 @@ func TestCalculateLinearGradient(t *testing.T) {
 
 func TestCalculateRadialGradient(t *testing.T) {
 	tests := []struct {
-		name          string
-		x, y          float64
-		cx, cy        float64
-		radius        float64
-		wantApprox    float64
-		tolerance     float64
+		name       string
+		x, y       float64
+		cx, cy     float64
+		radius     float64
+		wantApprox float64
+		tolerance  float64
 	}{
 		{"center", 0.5, 0.5, 0.5, 0.5, 0.0, 0.01},
 		{"edge", 1.0, 0.5, 0.5, 0.5, 0.5, 1.0, 0.01},
@@ -379,9 +379,9 @@ func TestInterpolateColors_TwoColors(t *testing.T) {
 
 func TestInterpolateColors_ThreeColors(t *testing.T) {
 	colors := []color.Color{
-		color.RGBA{255, 0, 0, 255},   // Red
-		color.RGBA{0, 255, 0, 255},   // Green
-		color.RGBA{0, 0, 255, 255},   // Blue
+		color.RGBA{255, 0, 0, 255}, // Red
+		color.RGBA{0, 255, 0, 255}, // Green
+		color.RGBA{0, 0, 255, 255}, // Blue
 	}
 
 	// Test at position 0.0 (should be red)

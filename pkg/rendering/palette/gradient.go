@@ -186,7 +186,7 @@ func calculateSpiralGradient(x, y, cx, cy, rotations float64) float64 {
 	dy := y - cy
 	dist := math.Sqrt(dx*dx + dy*dy)
 	angle := math.Atan2(dy, dx)
-	
+
 	// Combine distance and angle for spiral effect
 	t := math.Mod(dist*rotations+(angle/(2*math.Pi)), 1.0)
 	if t < 0 {
@@ -296,7 +296,7 @@ func CreateGradientPalette(colors []color.Color, steps int) *Palette {
 	palette.Primary = palette.Colors[0]
 	palette.Secondary = palette.Colors[steps/3]
 	palette.Background = palette.Colors[0]
-	
+
 	// Set text based on background brightness
 	r, g, b, _ := palette.Background.RGBA()
 	brightness := (float64(r>>8) + float64(g>>8) + float64(b>>8)) / 3.0

@@ -1133,161 +1133,161 @@ func BenchmarkGenerateWithOptionsAndTime(b *testing.B) {
 
 // Phase 19.2: Test new expanded mood types
 func TestGenerateWithOptions_ExpandedMoods(t *testing.T) {
-gen := NewGenerator()
-seed := int64(12345)
+	gen := NewGenerator()
+	seed := int64(12345)
 
-tests := []struct {
-name string
-mood MoodType
-}{
-{"tense", MoodTense},
-{"calm", MoodCalm},
-{"victorious", MoodVictorious},
-{"melancholic", MoodMelancholic},
-{"energetic", MoodEnergetic},
-{"mystical", MoodMystical},
-{"ominous", MoodOminous},
-{"serene", MoodSerene},
-{"aggressive", MoodAggressive},
-{"playful", MoodPlayful},
-{"somber", MoodSomber},
-{"ethereal", MoodEthereal},
-{"dangerous", MoodDangerous},
-{"peaceful", MoodPeaceful},
-{"chaotic", MoodChaotic},
-{"regal", MoodRegal},
-{"desolate", MoodDesolate},
-}
+	tests := []struct {
+		name string
+		mood MoodType
+	}{
+		{"tense", MoodTense},
+		{"calm", MoodCalm},
+		{"victorious", MoodVictorious},
+		{"melancholic", MoodMelancholic},
+		{"energetic", MoodEnergetic},
+		{"mystical", MoodMystical},
+		{"ominous", MoodOminous},
+		{"serene", MoodSerene},
+		{"aggressive", MoodAggressive},
+		{"playful", MoodPlayful},
+		{"somber", MoodSomber},
+		{"ethereal", MoodEthereal},
+		{"dangerous", MoodDangerous},
+		{"peaceful", MoodPeaceful},
+		{"chaotic", MoodChaotic},
+		{"regal", MoodRegal},
+		{"desolate", MoodDesolate},
+	}
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-opts := DefaultOptions()
-opts.Mood = tt.mood
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := DefaultOptions()
+			opts.Mood = tt.mood
 
-palette, err := gen.GenerateWithOptions("fantasy", seed, opts)
-if err != nil {
-t.Fatalf("GenerateWithOptions() error = %v", err)
-}
+			palette, err := gen.GenerateWithOptions("fantasy", seed, opts)
+			if err != nil {
+				t.Fatalf("GenerateWithOptions() error = %v", err)
+			}
 
-if palette == nil {
-t.Error("GenerateWithOptions() returned nil palette")
-}
+			if palette == nil {
+				t.Error("GenerateWithOptions() returned nil palette")
+			}
 
-// Verify palette has all required colors
-if palette.Primary == nil {
-t.Error("Primary color is nil")
-}
-if palette.Secondary == nil {
-t.Error("Secondary color is nil")
-}
-if palette.Background == nil {
-t.Error("Background color is nil")
-}
-if palette.Text == nil {
-t.Error("Text color is nil")
-}
-})
-}
+			// Verify palette has all required colors
+			if palette.Primary == nil {
+				t.Error("Primary color is nil")
+			}
+			if palette.Secondary == nil {
+				t.Error("Secondary color is nil")
+			}
+			if palette.Background == nil {
+				t.Error("Background color is nil")
+			}
+			if palette.Text == nil {
+				t.Error("Text color is nil")
+			}
+		})
+	}
 }
 
 // Phase 19.2: Test mood types with different genres
 func TestMoodType_GenreCombinations(t *testing.T) {
-gen := NewGenerator()
-seed := int64(54321)
+	gen := NewGenerator()
+	seed := int64(54321)
 
-genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
-moods := []MoodType{MoodCalm, MoodVictorious, MoodOminous, MoodPlayful, MoodRegal}
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	moods := []MoodType{MoodCalm, MoodVictorious, MoodOminous, MoodPlayful, MoodRegal}
 
-for _, genreID := range genres {
-for _, mood := range moods {
-t.Run(genreID+"_"+mood.String(), func(t *testing.T) {
-opts := DefaultOptions()
-opts.Mood = mood
+	for _, genreID := range genres {
+		for _, mood := range moods {
+			t.Run(genreID+"_"+mood.String(), func(t *testing.T) {
+				opts := DefaultOptions()
+				opts.Mood = mood
 
-palette, err := gen.GenerateWithOptions(genreID, seed, opts)
-if err != nil {
-t.Fatalf("GenerateWithOptions(%s, %s) error = %v", genreID, mood, err)
-}
+				palette, err := gen.GenerateWithOptions(genreID, seed, opts)
+				if err != nil {
+					t.Fatalf("GenerateWithOptions(%s, %s) error = %v", genreID, mood, err)
+				}
 
-if palette == nil {
-t.Error("GenerateWithOptions() returned nil palette")
-}
+				if palette == nil {
+					t.Error("GenerateWithOptions() returned nil palette")
+				}
 
-// Verify color count
-if len(palette.Colors) < 12 {
-t.Errorf("Palette has %d colors, want at least 12", len(palette.Colors))
-}
-})
-}
-}
+				// Verify color count
+				if len(palette.Colors) < 12 {
+					t.Errorf("Palette has %d colors, want at least 12", len(palette.Colors))
+				}
+			})
+		}
+	}
 }
 
 // Phase 19.2: Test mood type string representations
 func TestMoodType_String_Expanded(t *testing.T) {
-tests := []struct {
-name string
-mood MoodType
-want string
-}{
-{"Tense", MoodTense, "Tense"},
-{"Calm", MoodCalm, "Calm"},
-{"Victorious", MoodVictorious, "Victorious"},
-{"Melancholic", MoodMelancholic, "Melancholic"},
-{"Energetic", MoodEnergetic, "Energetic"},
-{"Mystical", MoodMystical, "Mystical"},
-{"Ominous", MoodOminous, "Ominous"},
-{"Serene", MoodSerene, "Serene"},
-{"Aggressive", MoodAggressive, "Aggressive"},
-{"Playful", MoodPlayful, "Playful"},
-{"Somber", MoodSomber, "Somber"},
-{"Ethereal", MoodEthereal, "Ethereal"},
-{"Dangerous", MoodDangerous, "Dangerous"},
-{"Peaceful", MoodPeaceful, "Peaceful"},
-{"Chaotic", MoodChaotic, "Chaotic"},
-{"Regal", MoodRegal, "Regal"},
-{"Desolate", MoodDesolate, "Desolate"},
-}
+	tests := []struct {
+		name string
+		mood MoodType
+		want string
+	}{
+		{"Tense", MoodTense, "Tense"},
+		{"Calm", MoodCalm, "Calm"},
+		{"Victorious", MoodVictorious, "Victorious"},
+		{"Melancholic", MoodMelancholic, "Melancholic"},
+		{"Energetic", MoodEnergetic, "Energetic"},
+		{"Mystical", MoodMystical, "Mystical"},
+		{"Ominous", MoodOminous, "Ominous"},
+		{"Serene", MoodSerene, "Serene"},
+		{"Aggressive", MoodAggressive, "Aggressive"},
+		{"Playful", MoodPlayful, "Playful"},
+		{"Somber", MoodSomber, "Somber"},
+		{"Ethereal", MoodEthereal, "Ethereal"},
+		{"Dangerous", MoodDangerous, "Dangerous"},
+		{"Peaceful", MoodPeaceful, "Peaceful"},
+		{"Chaotic", MoodChaotic, "Chaotic"},
+		{"Regal", MoodRegal, "Regal"},
+		{"Desolate", MoodDesolate, "Desolate"},
+	}
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-if got := tt.mood.String(); got != tt.want {
-t.Errorf("MoodType.String() = %v, want %v", got, tt.want)
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mood.String(); got != tt.want {
+				t.Errorf("MoodType.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 // Phase 19.2: Test determinism of mood-based generation
 func TestMoodGeneration_Determinism(t *testing.T) {
-gen := NewGenerator()
-seed := int64(98765)
+	gen := NewGenerator()
+	seed := int64(98765)
 
-moods := []MoodType{MoodVictorious, MoodMelancholic, MoodChaotic, MoodRegal}
+	moods := []MoodType{MoodVictorious, MoodMelancholic, MoodChaotic, MoodRegal}
 
-for _, mood := range moods {
-t.Run(mood.String(), func(t *testing.T) {
-opts := DefaultOptions()
-opts.Mood = mood
+	for _, mood := range moods {
+		t.Run(mood.String(), func(t *testing.T) {
+			opts := DefaultOptions()
+			opts.Mood = mood
 
-// Generate twice with same parameters
-palette1, err := gen.GenerateWithOptions("fantasy", seed, opts)
-if err != nil {
-t.Fatalf("First generation error = %v", err)
-}
+			// Generate twice with same parameters
+			palette1, err := gen.GenerateWithOptions("fantasy", seed, opts)
+			if err != nil {
+				t.Fatalf("First generation error = %v", err)
+			}
 
-palette2, err := gen.GenerateWithOptions("fantasy", seed, opts)
-if err != nil {
-t.Fatalf("Second generation error = %v", err)
-}
+			palette2, err := gen.GenerateWithOptions("fantasy", seed, opts)
+			if err != nil {
+				t.Fatalf("Second generation error = %v", err)
+			}
 
-// Compare primary colors (should be identical)
-r1, g1, b1, a1 := palette1.Primary.RGBA()
-r2, g2, b2, a2 := palette2.Primary.RGBA()
+			// Compare primary colors (should be identical)
+			r1, g1, b1, a1 := palette1.Primary.RGBA()
+			r2, g2, b2, a2 := palette2.Primary.RGBA()
 
-if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
-t.Errorf("Mood generation not deterministic: got (%d,%d,%d,%d) and (%d,%d,%d,%d)",
-r1>>8, g1>>8, b1>>8, a1>>8, r2>>8, g2>>8, b2>>8, a2>>8)
-}
-})
-}
+			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
+				t.Errorf("Mood generation not deterministic: got (%d,%d,%d,%d) and (%d,%d,%d,%d)",
+					r1>>8, g1>>8, b1>>8, a1>>8, r2>>8, g2>>8, b2>>8, a2>>8)
+			}
+		})
+	}
 }

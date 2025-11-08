@@ -238,10 +238,16 @@ func (g *Generator) GenerateSymbol(config Config, symbol IconSymbol) (*image.RGB
 		g.generateSwordSymbol(img, symbolColor, cx, cy, size)
 	case IconShield:
 		g.generateShieldSymbol(img, symbolColor, cx, cy, size)
+	case IconPotion:
+		g.generatePotionSymbol(img, symbolColor, cx, cy, size)
+	case IconCoin:
+		g.generateCoinSymbol(img, symbolColor, cx, cy, size)
 	case IconHeart:
 		g.generateHeartSymbol(img, symbolColor, cx, cy, size)
 	case IconStar:
 		g.generateStarSymbol(img, symbolColor, cx, cy, size)
+	case IconGear:
+		g.generateGearSymbol(img, symbolColor, cx, cy, size)
 	case IconCheckmark:
 		g.generateCheckmarkSymbol(img, symbolColor, cx, cy, size)
 	case IconX:
@@ -293,6 +299,65 @@ func (g *Generator) generateShieldSymbol(img *image.RGBA, col color.Color, cx, c
 	g.drawCircle(img, cx, cy, size/3, col, false)
 }
 
+func (g *Generator) generatePotionSymbol(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Bottle neck
+	for y := cy - size; y < cy-size/2 && y >= 0 && y < img.Bounds().Dy(); y++ {
+		for dx := -1; dx <= 1; dx++ {
+			if cx+dx >= 0 && cx+dx < img.Bounds().Dx() {
+				img.Set(cx+dx, y, col)
+			}
+		}
+	}
+	// Bottle body (simple rectangle)
+	for y := cy - size/2; y < cy+size && y >= 0 && y < img.Bounds().Dy(); y++ {
+		width := size / 2
+		for x := cx - width; x <= cx+width && x >= 0 && x < img.Bounds().Dx(); x++ {
+			if x == cx-width || x == cx+width || y == cy+size-1 || y == cy-size/2 {
+				img.Set(x, y, col)
+			}
+		}
+	}
+}
+
+func (g *Generator) generateCoinSymbol(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Outer circle
+	g.drawCircle(img, cx, cy, size, col, false)
+	// Inner circle
+	if size > 2 {
+		g.drawCircle(img, cx, cy, size-2, col, false)
+	}
+	// Center line (simplified currency symbol)
+	for y := cy - size/2; y <= cy+size/2 && y >= 0 && y < img.Bounds().Dy(); y++ {
+		if cx >= 0 && cx < img.Bounds().Dx() {
+			img.Set(cx, y, col)
+		}
+	}
+}
+
+func (g *Generator) generateGearSymbol(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Center circle
+	g.drawCircle(img, cx, cy, size/2, col, false)
+
+	// Gear teeth (8 teeth)
+	teeth := 8
+	for i := 0; i < teeth; i++ {
+		angle := float64(i) * 2.0 * math.Pi / float64(teeth)
+		// Outer point of tooth
+		x := cx + int(float64(size)*math.Cos(angle))
+		y := cy + int(float64(size)*math.Sin(angle))
+		// Draw tooth as small square
+		bounds := img.Bounds()
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				px, py := x+dx, y+dy
+				if px >= 0 && px < bounds.Dx() && py >= 0 && py < bounds.Dy() {
+					img.Set(px, py, col)
+				}
+			}
+		}
+	}
+}
+
 func (g *Generator) generateHeartSymbol(img *image.RGBA, col color.Color, cx, cy, size int) {
 	// Simple heart using circles and triangle
 	g.drawCircle(img, cx-size/2, cy-size/3, size/2, col, true)
@@ -307,13 +372,26 @@ func (g *Generator) generateHeartSymbol(img *image.RGBA, col color.Color, cx, cy
 }
 
 func (g *Generator) generateStarSymbol(img *image.RGBA, col color.Color, cx, cy, size int) {
-	// 5-pointed star
+	// 5-pointed star - simpler version that definitely draws pixels
 	points := 5
+
+	// Draw from center to each outer point
 	for i := 0; i < points; i++ {
 		angle := float64(i)*2.0*math.Pi/float64(points) - math.Pi/2
 		x := cx + int(float64(size)*math.Cos(angle))
 		y := cy + int(float64(size)*math.Sin(angle))
 		g.drawLine(img, cx, cy, x, y, col)
+
+		// Also draw to inner points (between outer points at half radius)
+		innerAngle := angle + math.Pi/float64(points)
+		ix := cx + int(float64(size/2)*math.Cos(innerAngle))
+		iy := cy + int(float64(size/2)*math.Sin(innerAngle))
+		g.drawLine(img, cx, cy, ix, iy, col)
+	}
+
+	// Draw center point to ensure something is visible
+	if cx >= 0 && cx < img.Bounds().Dx() && cy >= 0 && cy < img.Bounds().Dy() {
+		img.Set(cx, cy, col)
 	}
 }
 
@@ -445,11 +523,15 @@ func (g *Generator) GeneratePanelWithPattern(config Config) (*image.RGBA, error)
 	// Generate pattern texture
 	patGen := patterns.NewGenerator()
 	patternImg, err := patGen.Generate(patterns.TextureConfig{
-		Texture: patterns.TextureStone,
-		Width:   config.Width,
-		Height:  config.Height,
-		Seed:    config.Seed,
-		GenreID: config.GenreID,
+		Texture:     patterns.TextureStone,
+		Width:       config.Width,
+		Height:      config.Height,
+		Seed:        config.Seed,
+		GenreID:     config.GenreID,
+		Color1:      pal.Primary,
+		Color2:      pal.Secondary,
+		DetailLevel: 0.5,
+		Scale:       1.0,
 	})
 	if err != nil {
 		return nil, err

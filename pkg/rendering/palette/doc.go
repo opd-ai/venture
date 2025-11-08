@@ -13,10 +13,36 @@
 // Time transitions are smooth with configurable 5-second interpolation periods,
 // and intensity can be scaled from 0.0 (no effect) to 1.0 (full effect).
 //
+// # Phase 19.2: Dynamic Palette System
+//
+// Enhanced with gradient generation and expanded mood system:
+// - Gradient types: Linear, Radial, Angular, Diamond, Spiral, Conic
+// - 24 mood types for emotional color adjustments (tense, calm, victorious, etc.)
+// - Multi-color gradient interpolation with smooth transitions
+// - Procedural gradient palette creation
+//
 // # Basic Usage
 //
 //	gen := palette.NewGenerator()
 //	palette, _ := gen.Generate("fantasy", 12345)
+//
+// # Gradient Generation
+//
+//	config := palette.GradientConfig{
+//	    Type: palette.GradientRadial,
+//	    Colors: []color.Color{color.RGBA{255,0,0,255}, color.RGBA{0,0,255,255}},
+//	    CenterX: 0.5,
+//	    CenterY: 0.5,
+//	    Radius: 0.5,
+//	}
+//	img := palette.GenerateGradient(800, 600, config)
+//
+// # Mood-Based Palettes
+//
+//	opts := palette.GenerationOptions{
+//	    Mood: palette.MoodVictorious, // Or: Calm, Tense, Mystical, etc.
+//	}
+//	palette, _ := gen.GenerateWithOptions("fantasy", 12345, opts)
 //
 // # Time-of-Day Usage
 //
@@ -37,6 +63,13 @@
 //	palette, _ := gen.GenerateWithOptionsAndTime("scifi", 54321, opts, timeConfig)
 //
 // # Performance
+//
+// Phase 19.2 gradient generation performance (256×256):
+// - Linear gradient: ~4.1ms
+// - Radial gradient: ~2.8ms
+// - Angular gradient: ~4.2ms
+// - Color interpolation: ~22ns per color
+// - Palette creation: ~0.75µs
 //
 // Time-of-day modulation adds <1% frame time overhead:
 // - GetModulationForTime: ~2ns

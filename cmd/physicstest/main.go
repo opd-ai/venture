@@ -246,8 +246,8 @@ func renderParticles(ps []particles.PhysicsParticle, width, height int) *image.R
 					y := py + dy
 					if x >= 0 && x < width && y >= 0 && y < height {
 						// Blend with existing color
-						existing := img.At(x, y).(color.RGBA)
-						newCol := p.Color.(color.RGBA)
+						existing := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
+						newCol := color.RGBAModel.Convert(p.Color).(color.RGBA)
 
 						// Simple alpha blending
 						alpha := float64(newCol.A) / 255.0 * p.Life

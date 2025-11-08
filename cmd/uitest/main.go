@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(*outputDir, 0755); err != nil {
+	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create output directory: %v\n", err)
 		os.Exit(1)
 	}
@@ -336,7 +336,7 @@ func savePNG(img *image.RGBA, filename string) error {
 	return png.Encode(f, img)
 }
 
-func drawImage(dst *image.RGBA, src *image.RGBA, x, y int) {
+func drawImage(dst, src *image.RGBA, x, y int) {
 	bounds := src.Bounds()
 	for dy := 0; dy < bounds.Dy(); dy++ {
 		for dx := 0; dx < bounds.Dx(); dx++ {

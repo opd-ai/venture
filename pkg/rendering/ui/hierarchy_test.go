@@ -204,9 +204,9 @@ func TestGenerateGroupContainer(t *testing.T) {
 	gen := NewGenerator()
 
 	tests := []struct {
-		name           string
-		config         GroupConfig
-		expectBorder   bool
+		name             string
+		config           GroupConfig
+		expectBorder     bool
 		expectBackground bool
 	}{
 		{
@@ -221,7 +221,7 @@ func TestGenerateGroupContainer(t *testing.T) {
 				ShowBorder:     true,
 				ShowBackground: true,
 			},
-			expectBorder:   true,
+			expectBorder:     true,
 			expectBackground: true,
 		},
 		{
@@ -236,7 +236,7 @@ func TestGenerateGroupContainer(t *testing.T) {
 				ShowBorder:     true,
 				ShowBackground: false,
 			},
-			expectBorder:   true,
+			expectBorder:     true,
 			expectBackground: false,
 		},
 		{
@@ -251,7 +251,7 @@ func TestGenerateGroupContainer(t *testing.T) {
 				ShowBorder:     false,
 				ShowBackground: true,
 			},
-			expectBorder:   false,
+			expectBorder:     false,
 			expectBackground: true,
 		},
 	}

@@ -411,8 +411,8 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 			for dx := 0; dx < dashLength && x+dx < w; dx++ {
 				for t := 0; t < thickness; t++ {
 					if t < h {
-						img.Set(x+dx, t, col)          // Top
-						img.Set(x+dx, h-t-1, col)      // Bottom
+						img.Set(x+dx, t, col)     // Top
+						img.Set(x+dx, h-t-1, col) // Bottom
 					}
 				}
 			}
@@ -422,8 +422,8 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 			for dy := 0; dy < dashLength && y+dy < h; dy++ {
 				for t := 0; t < thickness; t++ {
 					if t < w {
-						img.Set(t, y+dy, col)          // Left
-						img.Set(w-t-1, y+dy, col)      // Right
+						img.Set(t, y+dy, col)     // Left
+						img.Set(w-t-1, y+dy, col) // Right
 					}
 				}
 			}
@@ -437,8 +437,8 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 		for x := 0; x < w; x += dotSize + gapSize {
 			for dx := 0; dx < dotSize && x+dx < w; dx++ {
 				for dy := 0; dy < dotSize && dy < h; dy++ {
-					img.Set(x+dx, dy, col)              // Top
-					img.Set(x+dx, h-dy-1, col)          // Bottom
+					img.Set(x+dx, dy, col)     // Top
+					img.Set(x+dx, h-dy-1, col) // Bottom
 				}
 			}
 		}
@@ -446,8 +446,8 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 		for y := 0; y < h; y += dotSize + gapSize {
 			for dy := 0; dy < dotSize && y+dy < h; dy++ {
 				for dx := 0; dx < dotSize && dx < w; dx++ {
-					img.Set(dx, y+dy, col)              // Left
-					img.Set(w-dx-1, y+dy, col)          // Right
+					img.Set(dx, y+dy, col)     // Left
+					img.Set(w-dx-1, y+dy, col) // Right
 				}
 			}
 		}

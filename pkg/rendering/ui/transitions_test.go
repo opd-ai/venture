@@ -406,10 +406,10 @@ func TestInterpolateTransition_NilImages(t *testing.T) {
 
 func TestTransitionConfig_UpdateProgress(t *testing.T) {
 	tests := []struct {
-		name           string
-		initialProgress float64
-		duration       float64
-		deltaTime      float64
+		name             string
+		initialProgress  float64
+		duration         float64
+		deltaTime        float64
 		expectedProgress float64
 	}{
 		{"NormalUpdate", 0.0, 300.0, 150.0, 0.5},

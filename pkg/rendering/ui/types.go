@@ -335,3 +335,107 @@ func (t TransitionConfig) Validate() error {
 	}
 	return nil
 }
+
+// FrameStyle represents different decorative frame styles for Phase 19.3.
+type FrameStyle int
+
+const (
+	// FrameAuto automatically selects style based on genre
+	FrameAuto FrameStyle = iota
+	// FrameOrnateCorners has decorative corner elements (fantasy/horror)
+	FrameOrnateCorners
+	// FrameTechAngular has angular, geometric patterns (scifi/cyberpunk)
+	FrameTechAngular
+	// FrameWeathered has damaged, worn appearance (postapoc)
+	FrameWeathered
+	// FrameCircuitPattern has circuit board patterns (scifi/cyberpunk)
+	FrameCircuitPattern
+	// FrameTribalPattern has geometric tribal patterns (horror/postapoc)
+	FrameTribalPattern
+)
+
+// String returns the string representation of a frame style.
+func (f FrameStyle) String() string {
+	switch f {
+	case FrameAuto:
+		return "auto"
+	case FrameOrnateCorners:
+		return "ornate-corners"
+	case FrameTechAngular:
+		return "tech-angular"
+	case FrameWeathered:
+		return "weathered"
+	case FrameCircuitPattern:
+		return "circuit-pattern"
+	case FrameTribalPattern:
+		return "tribal-pattern"
+	default:
+		return "unknown"
+	}
+}
+
+// IconSymbol represents procedurally generated UI symbols for Phase 19.3.
+type IconSymbol int
+
+const (
+	// IconSword represents a weapon/attack
+	IconSword IconSymbol = iota
+	// IconShield represents defense/armor
+	IconShield
+	// IconPotion represents consumables/health
+	IconPotion
+	// IconCoin represents currency
+	IconCoin
+	// IconHeart represents health
+	IconHeart
+	// IconStar represents power/special
+	IconStar
+	// IconGear represents settings/mechanics
+	IconGear
+	// IconCheckmark represents success/complete
+	IconCheckmark
+	// IconX represents failure/cancel
+	IconX
+	// IconArrowUp represents upward direction
+	IconArrowUp
+	// IconArrowDown represents downward direction
+	IconArrowDown
+	// IconArrowLeft represents left direction
+	IconArrowLeft
+	// IconArrowRight represents right direction
+	IconArrowRight
+)
+
+// String returns the string representation of an icon symbol.
+func (i IconSymbol) String() string {
+	switch i {
+	case IconSword:
+		return "sword"
+	case IconShield:
+		return "shield"
+	case IconPotion:
+		return "potion"
+	case IconCoin:
+		return "coin"
+	case IconHeart:
+		return "heart"
+	case IconStar:
+		return "star"
+	case IconGear:
+		return "gear"
+	case IconCheckmark:
+		return "checkmark"
+	case IconX:
+		return "x"
+	case IconArrowUp:
+		return "arrow-up"
+	case IconArrowDown:
+		return "arrow-down"
+	case IconArrowLeft:
+		return "arrow-left"
+	case IconArrowRight:
+		return "arrow-right"
+	default:
+		return "unknown"
+	}
+}

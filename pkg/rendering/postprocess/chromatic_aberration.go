@@ -95,7 +95,7 @@ func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
 // This creates a more artistic effect than standard chromatic aberration.
 // This is a standalone utility function rather than a Processor method since it
 // uses custom parameters not part of the standard ChromaticAberrationConfig.
-func ApplyPrismaticAberration(img *image.RGBA, intensity float64, angle float64) *image.RGBA {
+func ApplyPrismaticAberration(img *image.RGBA, intensity, angle float64) *image.RGBA {
 	if intensity <= 0 {
 		return img
 	}

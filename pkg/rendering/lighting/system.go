@@ -272,7 +272,7 @@ func (s *System) ApplyBloomToImage(img *image.RGBA) *image.RGBA {
 
 // ApplyAOToImage applies ambient occlusion to an image.
 // The depthMap can be nil to auto-generate from luminance.
-func (s *System) ApplyAOToImage(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
+func (s *System) ApplyAOToImage(img, depthMap *image.RGBA) *image.RGBA {
 	return ApplyEnhancedAO(img, depthMap, s.config.AOConfig)
 }
 
@@ -280,7 +280,7 @@ func (s *System) ApplyAOToImage(img *image.RGBA, depthMap *image.RGBA) *image.RG
 // Order: AO first (darkens), then bloom (brightens highlights).
 // The depthMap can be nil to auto-generate from luminance.
 // Returns a new image; never modifies the input.
-func (s *System) ApplyFullPostProcessing(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
+func (s *System) ApplyFullPostProcessing(img, depthMap *image.RGBA) *image.RGBA {
 	result := img
 
 	// Apply ambient occlusion first (darkening)

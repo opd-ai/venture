@@ -221,7 +221,7 @@ type SpatialHash struct {
 }
 
 // NewSpatialHash creates a spatial hash grid.
-func NewSpatialHash(cellSize float64, minX, minY, maxX, maxY float64) *SpatialHash {
+func NewSpatialHash(cellSize, minX, minY, maxX, maxY float64) *SpatialHash {
 	return &SpatialHash{
 		CellSize: cellSize,
 		Grid:     make(map[int64][]int),
@@ -496,7 +496,7 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 }
 
 // UpdateSmoke updates smoke particles with turbulence.
-func UpdateSmoke(particles []PhysicsParticle, config SmokeConfig, deltaTime float64, time float64) {
+func UpdateSmoke(particles []PhysicsParticle, config SmokeConfig, deltaTime, time float64) {
 	for i := range particles {
 		p := &particles[i]
 
@@ -527,7 +527,7 @@ func UpdateSmoke(particles []PhysicsParticle, config SmokeConfig, deltaTime floa
 }
 
 // UpdateDebris updates debris particles with collision detection.
-func UpdateDebris(particles []PhysicsParticle, config DebrisConfig, deltaTime float64, groundY float64) {
+func UpdateDebris(particles []PhysicsParticle, config DebrisConfig, deltaTime, groundY float64) {
 	if len(particles) == 0 {
 		return
 	}

@@ -92,8 +92,8 @@ func main() {
 
 	elapsed := time.Since(startTime)
 	logrus.WithFields(logrus.Fields{
-		"duration": elapsed,
-		"fps":      float64(*frames) / elapsed.Seconds(),
+		"duration":  elapsed,
+		"fps":       float64(*frames) / elapsed.Seconds(),
 		"per_frame": elapsed / time.Duration(*frames),
 	}).Info("Simulation complete")
 

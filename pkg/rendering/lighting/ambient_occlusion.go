@@ -51,7 +51,7 @@ func DefaultAOConfig() AOConfig {
 // Uses a simplified SSAO algorithm with random sampling for efficiency.
 // The depthMap should be a grayscale image where brightness indicates depth
 // (brighter = further from camera). If depthMap is nil, uses luminance as depth.
-func ApplyAmbientOcclusion(img *image.RGBA, depthMap *image.RGBA, config AOConfig) *image.RGBA {
+func ApplyAmbientOcclusion(img, depthMap *image.RGBA, config AOConfig) *image.RGBA {
 	if !config.Enabled || config.Intensity <= 0 {
 		return img
 	}
@@ -220,7 +220,7 @@ func DefaultEnhancedAOConfig() EnhancedAOConfig {
 }
 
 // ApplyEnhancedAO applies ambient occlusion with corner and edge enhancement.
-func ApplyEnhancedAO(img *image.RGBA, depthMap *image.RGBA, config EnhancedAOConfig) *image.RGBA {
+func ApplyEnhancedAO(img, depthMap *image.RGBA, config EnhancedAOConfig) *image.RGBA {
 	// Apply base AO
 	result := ApplyAmbientOcclusion(img, depthMap, config.AOConfig)
 
@@ -238,7 +238,7 @@ func ApplyEnhancedAO(img *image.RGBA, depthMap *image.RGBA, config EnhancedAOCon
 }
 
 // enhanceCorners adds extra darkening at corners using convexity detection.
-func enhanceCorners(img *image.RGBA, depthMap *image.RGBA, intensity float64) *image.RGBA {
+func enhanceCorners(img, depthMap *image.RGBA, intensity float64) *image.RGBA {
 	bounds := img.Bounds()
 	result := image.NewRGBA(bounds)
 
@@ -272,7 +272,7 @@ func enhanceCorners(img *image.RGBA, depthMap *image.RGBA, intensity float64) *i
 }
 
 // enhanceEdges adds extra darkening at edges using edge detection.
-func enhanceEdges(img *image.RGBA, depthMap *image.RGBA, intensity float64) *image.RGBA {
+func enhanceEdges(img, depthMap *image.RGBA, intensity float64) *image.RGBA {
 	bounds := img.Bounds()
 	result := image.NewRGBA(bounds)
 

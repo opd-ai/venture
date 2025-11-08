@@ -15,7 +15,7 @@ const (
 // ApplyDepthBlur applies depth-of-field blur to an image based on a depth map.
 // The depth map should be an RGBA image where luminance represents depth (0=near, 1=far).
 // Objects at the focal distance remain sharp, while objects outside the focal range are blurred.
-func (p *Processor) ApplyDepthBlur(img *image.RGBA, depthMap *image.RGBA) *image.RGBA {
+func (p *Processor) ApplyDepthBlur(img, depthMap *image.RGBA) *image.RGBA {
 	if !p.config.DepthBlur.Enabled || depthMap == nil {
 		return img
 	}

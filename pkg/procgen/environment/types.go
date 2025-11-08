@@ -79,6 +79,26 @@ const (
 	SubTypeCrystal
 	// SubTypeBook represents a book decoration.
 	SubTypeBook
+	// SubTypeSconce represents a wall sconce decoration (Phase 20.1).
+	SubTypeSconce
+	// SubTypeWallCrack represents a wall crack decoration (Phase 20.1).
+	SubTypeWallCrack
+	// SubTypeBloodstain represents a floor bloodstain decoration (Phase 20.1).
+	SubTypeBloodstain
+	// SubTypeGrass represents vegetation/grass decoration (Phase 20.1).
+	SubTypeGrass
+	// SubTypeMushroom represents mushroom decoration (Phase 20.1).
+	SubTypeMushroom
+	// SubTypeSkull represents a skull decoration (Phase 20.1).
+	SubTypeSkull
+	// SubTypeChain represents hanging chains decoration (Phase 20.1).
+	SubTypeChain
+	// SubTypeWeb represents spider web decoration (Phase 20.1).
+	SubTypeWeb
+	// SubTypeMoss represents wall moss decoration (Phase 20.1).
+	SubTypeMoss
+	// SubTypeGraffiti represents wall graffiti decoration (Phase 20.1).
+	SubTypeGraffiti
 )
 
 const (
@@ -161,6 +181,26 @@ func (s SubType) String() string {
 		return "Crystal"
 	case SubTypeBook:
 		return "Book"
+	case SubTypeSconce:
+		return "Sconce"
+	case SubTypeWallCrack:
+		return "WallCrack"
+	case SubTypeBloodstain:
+		return "Bloodstain"
+	case SubTypeGrass:
+		return "Grass"
+	case SubTypeMushroom:
+		return "Mushroom"
+	case SubTypeSkull:
+		return "Skull"
+	case SubTypeChain:
+		return "Chain"
+	case SubTypeWeb:
+		return "Web"
+	case SubTypeMoss:
+		return "Moss"
+	case SubTypeGraffiti:
+		return "Graffiti"
 
 	// Obstacles
 	case SubTypeBarrel:

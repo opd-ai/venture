@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
@@ -152,6 +153,27 @@ func (g *Generator) drawObjectSprite(img *image.RGBA, config Config, baseColor, 
 		g.drawCrystal(img, w, h, baseColor, accentColor, rng)
 	case SubTypeBook:
 		g.drawBook(img, w, h, baseColor, accentColor)
+	// Phase 20.1: New decoration types
+	case SubTypeSconce:
+		g.drawSconce(img, w, h, baseColor, accentColor)
+	case SubTypeWallCrack:
+		g.drawWallCrack(img, w, h, baseColor, accentColor, rng)
+	case SubTypeBloodstain:
+		g.drawBloodstain(img, w, h, baseColor, accentColor, rng)
+	case SubTypeGrass:
+		g.drawGrass(img, w, h, baseColor, accentColor, rng)
+	case SubTypeMushroom:
+		g.drawMushroom(img, w, h, baseColor, accentColor, rng)
+	case SubTypeSkull:
+		g.drawSkull(img, w, h, baseColor, accentColor)
+	case SubTypeChain:
+		g.drawChain(img, w, h, baseColor, accentColor)
+	case SubTypeWeb:
+		g.drawWeb(img, w, h, baseColor, accentColor, rng)
+	case SubTypeMoss:
+		g.drawMoss(img, w, h, baseColor, accentColor, rng)
+	case SubTypeGraffiti:
+		g.drawGraffiti(img, w, h, baseColor, accentColor, rng)
 	case SubTypeBarrel, SubTypeCrate:
 		g.drawBarrel(img, w, h, baseColor, accentColor)
 	case SubTypeRubble, SubTypeDebris:
@@ -734,6 +756,338 @@ func (g *Generator) generateName(subType SubType, genreID string, rng *rand.Rand
 	}
 
 	return baseName
+}
+
+// Helper functions
+
+// Phase 20.1: New decoration drawing functions
+
+func (g *Generator) drawSconce(img *image.RGBA, width, height int, base, accent color.Color) {
+	// Draw wall mount
+	for y := height / 3; y < height*2/3; y++ {
+		for x := width / 3; x < width*2/3; x++ {
+			img.Set(x, y, accent)
+		}
+	}
+	// Draw flame holder
+	for y := height / 6; y < height/3; y++ {
+		for x := width * 2 / 5; x < width*3/5; x++ {
+			img.Set(x, y, accent)
+		}
+	}
+	// Draw flame
+	centerX, centerY := width/2, height/10
+	for dy := -height / 12; dy <= height/12; dy++ {
+		for dx := -width / 12; dx <= width/12; dx++ {
+			if dx*dx+dy*dy <= (width/12)*(height/12) && centerX+dx >= 0 && centerX+dx < width && centerY+dy >= 0 && centerY+dy < height {
+				img.Set(centerX+dx, centerY+dy, base)
+			}
+		}
+	}
+}
+
+func (g *Generator) drawWallCrack(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw jagged crack line from top to bottom
+	x := width / 2
+	for y := 0; y < height; y++ {
+		// Draw crack line
+		for dx := -1; dx <= 1; dx++ {
+			if x+dx >= 0 && x+dx < width {
+				img.Set(x+dx, y, base)
+			}
+		}
+		// Random horizontal movement
+		if rng.Float64() < 0.3 {
+			x += rng.Intn(5) - 2
+			if x < width/4 {
+				x = width / 4
+			}
+			if x >= width*3/4 {
+				x = width*3/4 - 1
+			}
+		}
+		// Add side branches occasionally
+		if rng.Float64() < 0.1 {
+			branchLen := 2 + rng.Intn(4)
+			dir := 1
+			if rng.Float64() < 0.5 {
+				dir = -1
+			}
+			for i := 0; i < branchLen; i++ {
+				bx := x + i*dir
+				if bx >= 0 && bx < width && y+i < height {
+					img.Set(bx, y+i, accent)
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) drawBloodstain(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw irregular blood splatter
+	centerX, centerY := width/2, height/2
+
+	// Main stain (irregular circle)
+	radius := min(width, height) / 3
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			dx := x - centerX
+			dy := y - centerY
+			dist := dx*dx + dy*dy
+			// Irregular edge using noise
+			threshold := radius * radius
+			noise := rng.Intn(radius)
+			if dist <= threshold+noise*noise {
+				if rng.Float64() < 0.8 {
+					img.Set(x, y, base)
+				} else {
+					img.Set(x, y, accent)
+				}
+			}
+		}
+	}
+
+	// Add splatters
+	for i := 0; i < 5; i++ {
+		sx := centerX + rng.Intn(width/2) - width/4
+		sy := centerY + rng.Intn(height/2) - height/4
+		size := 2 + rng.Intn(4)
+		for dy := -size; dy <= size; dy++ {
+			for dx := -size; dx <= size; dx++ {
+				if sx+dx >= 0 && sx+dx < width && sy+dy >= 0 && sy+dy < height {
+					if dx*dx+dy*dy <= size*size {
+						img.Set(sx+dx, sy+dy, base)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) drawGrass(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw grass blades
+	numBlades := 8 + rng.Intn(8)
+	for i := 0; i < numBlades; i++ {
+		x := rng.Intn(width)
+		bladeHeight := height/2 + rng.Intn(height/4)
+
+		// Draw blade (curved line)
+		for y := height - 1; y >= height-bladeHeight && y >= 0; y-- {
+			offset := int(float64(height-y) * 0.2 * (rng.Float64() - 0.5))
+			bx := x + offset
+			if bx >= 0 && bx < width {
+				if rng.Float64() < 0.7 {
+					img.Set(bx, y, base)
+				} else {
+					img.Set(bx, y, accent)
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) drawMushroom(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw mushroom cap
+	capY := height / 3
+	capRadius := width / 3
+	for y := capY - capRadius; y <= capY; y++ {
+		for x := 0; x < width; x++ {
+			dx := x - width/2
+			dy := y - capY
+			dist := dx*dx + dy*dy
+			if dist <= capRadius*capRadius {
+				if rng.Float64() < 0.9 {
+					img.Set(x, y, base)
+				} else {
+					img.Set(x, y, accent) // Spots
+				}
+			}
+		}
+	}
+
+	// Draw stem
+	stemWidth := width / 6
+	for y := capY; y < height*5/6; y++ {
+		for x := width/2 - stemWidth; x <= width/2+stemWidth; x++ {
+			if x >= 0 && x < width {
+				img.Set(x, y, accent)
+			}
+		}
+	}
+}
+
+func (g *Generator) drawSkull(img *image.RGBA, width, height int, base, accent color.Color) {
+	// Draw cranium (large oval)
+	centerX, centerY := width/2, height/3
+	radiusX, radiusY := width/3, height/4
+	for y := 0; y < height*2/3; y++ {
+		for x := 0; x < width; x++ {
+			dx := float64(x - centerX)
+			dy := float64(y - centerY)
+			dist := (dx*dx)/float64(radiusX*radiusX) + (dy*dy)/float64(radiusY*radiusY)
+			if dist <= 1.0 {
+				img.Set(x, y, base)
+			}
+		}
+	}
+
+	// Draw eye sockets (two circles)
+	eyeY := height / 3
+	eyeRadius := width / 10
+	for _, eyeX := range []int{width / 3, width * 2 / 3} {
+		for y := eyeY - eyeRadius; y <= eyeY+eyeRadius; y++ {
+			for x := eyeX - eyeRadius; x <= eyeX+eyeRadius; x++ {
+				if x >= 0 && x < width && y >= 0 && y < height {
+					dx := x - eyeX
+					dy := y - eyeY
+					if dx*dx+dy*dy <= eyeRadius*eyeRadius {
+						img.Set(x, y, accent)
+					}
+				}
+			}
+		}
+	}
+
+	// Draw nasal cavity (small triangle)
+	noseY := height / 2
+	for y := noseY; y < noseY+height/8; y++ {
+		yOffset := y - noseY
+		for x := width/2 - yOffset/2; x <= width/2+yOffset/2; x++ {
+			if x >= 0 && x < width && y < height {
+				img.Set(x, y, accent)
+			}
+		}
+	}
+}
+
+func (g *Generator) drawChain(img *image.RGBA, width, height int, base, accent color.Color) {
+	// Draw chain links hanging down
+	numLinks := 4
+	linkHeight := height / (numLinks + 1)
+	linkWidth := width / 4
+
+	for i := 0; i < numLinks; i++ {
+		y := (i + 1) * linkHeight
+
+		// Draw link oval outline
+		centerX := width / 2
+		radiusX := linkWidth / 2
+		radiusY := linkHeight / 3
+
+		for dy := -radiusY; dy <= radiusY; dy++ {
+			for dx := -radiusX; dx <= radiusX; dx++ {
+				px := centerX + dx
+				py := y + dy
+				if px >= 0 && px < width && py >= 0 && py < height {
+					dist := float64(dx*dx)/float64(radiusX*radiusX) + float64(dy*dy)/float64(radiusY*radiusY)
+					// Only draw outline
+					if dist >= 0.6 && dist <= 1.0 {
+						if i%2 == 0 {
+							img.Set(px, py, base)
+						} else {
+							img.Set(px, py, accent)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) drawWeb(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	centerX, centerY := width/2, height/2
+
+	// Draw radial threads
+	numRadial := 8
+	for i := 0; i < numRadial; i++ {
+		angle := float64(i) * 2.0 * 3.14159 / float64(numRadial)
+		endX := centerX + int(float64(width/2)*math.Cos(angle))
+		endY := centerY + int(float64(height/2)*math.Sin(angle))
+		g.drawLine(img, centerX, centerY, endX, endY, base)
+	}
+
+	// Draw spiral threads
+	numSpirals := 4
+	for i := 1; i <= numSpirals; i++ {
+		radius := int(float64(min(width, height)) * float64(i) / float64(numSpirals*2))
+		steps := 32
+		for j := 0; j < steps; j++ {
+			angle := float64(j) * 2.0 * 3.14159 / float64(steps)
+			x := centerX + int(float64(radius)*math.Cos(angle))
+			y := centerY + int(float64(radius)*math.Sin(angle))
+			if x >= 0 && x < width && y >= 0 && y < height {
+				img.Set(x, y, accent)
+			}
+		}
+	}
+}
+
+func (g *Generator) drawMoss(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw patches of moss
+	numPatches := 10 + rng.Intn(10)
+	for i := 0; i < numPatches; i++ {
+		cx := rng.Intn(width)
+		cy := rng.Intn(height)
+		size := 2 + rng.Intn(4)
+
+		// Draw irregular patch
+		for dy := -size; dy <= size; dy++ {
+			for dx := -size; dx <= size; dx++ {
+				px := cx + dx
+				py := cy + dy
+				if px >= 0 && px < width && py >= 0 && py < height {
+					// Irregular edges
+					if rng.Float64() < 0.6 {
+						if rng.Float64() < 0.8 {
+							img.Set(px, py, base)
+						} else {
+							img.Set(px, py, accent)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func (g *Generator) drawGraffiti(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	// Draw random graffiti marks/tags
+	numMarks := 3 + rng.Intn(5)
+	for i := 0; i < numMarks; i++ {
+		// Random line or shape
+		if rng.Float64() < 0.5 {
+			// Draw line
+			x1 := rng.Intn(width)
+			y1 := rng.Intn(height)
+			x2 := x1 + rng.Intn(width/2) - width/4
+			y2 := y1 + rng.Intn(height/2) - height/4
+			if rng.Float64() < 0.5 {
+				g.drawLine(img, x1, y1, x2, y2, base)
+			} else {
+				g.drawLine(img, x1, y1, x2, y2, accent)
+			}
+		} else {
+			// Draw circle/blob
+			cx := rng.Intn(width)
+			cy := rng.Intn(height)
+			radius := 3 + rng.Intn(6)
+			for dy := -radius; dy <= radius; dy++ {
+				for dx := -radius; dx <= radius; dx++ {
+					if dx*dx+dy*dy <= radius*radius {
+						px := cx + dx
+						py := cy + dy
+						if px >= 0 && px < width && py >= 0 && py < height {
+							if rng.Float64() < 0.5 {
+								img.Set(px, py, base)
+							} else {
+								img.Set(px, py, accent)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 // Helper functions

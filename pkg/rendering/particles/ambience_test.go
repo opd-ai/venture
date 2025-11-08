@@ -467,7 +467,6 @@ func TestAmbienceSystem_EnvironmentBehaviors(t *testing.T) {
 
 	// Verify that at least velocities differ between environment types
 	// (indicating different behaviors are applied)
-	_ = systems[0].Particles[0].VY // dungeonVY
 	forestVY := systems[1].Particles[0].VY
 	lavaVY := systems[2].Particles[0].VY
 

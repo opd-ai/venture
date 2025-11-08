@@ -44,11 +44,12 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
-			"type":    config.Type,
-			"genreID": config.GenreID,
-			"seed":    config.Seed,
-			"width":   config.Width,
-			"height":  config.Height,
+			"type":           config.Type,
+			"genreID":        config.GenreID,
+			"seed":           config.Seed,
+			"width":          config.Width,
+			"height":         config.Height,
+			"hierarchyLevel": config.HierarchyLevel,
 		}).Debug("generating UI element")
 	}
 
@@ -57,6 +58,16 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 			g.logger.WithError(err).Error("invalid UI config")
 		}
 		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	// Validate transition config if present
+	if config.Transition != nil {
+		if err := config.Transition.Validate(); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("invalid transition config")
+			}
+			return nil, fmt.Errorf("invalid transition config: %w", err)
+		}
 	}
 
 	// Create RNG from seed
@@ -96,10 +107,16 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		return nil, err
 	}
 
+	// Apply transition if configured
+	if config.Transition != nil && config.Transition.Type != TransitionNone {
+		img = g.ApplyTransition(img, *config.Transition)
+	}
+
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"type": config.Type,
-			"seed": config.Seed,
+			"type":      config.Type,
+			"seed":      config.Seed,
+			"hierarchy": config.HierarchyLevel,
 		}).Info("UI element generated")
 	}
 
@@ -108,6 +125,9 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 
 // generateButton creates a button UI element.
 func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
+	// Get hierarchy style
+	style := GetHierarchyStyle(config.HierarchyLevel)
+
 	// Select colors based on state
 	var bgColor, borderColor color.Color
 
@@ -130,12 +150,15 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 		borderColor = g.lightenColor(pal.Background, 0.2)
 	}
 
+	// Apply hierarchy opacity
+	bgColor = ApplyHierarchyOpacity(bgColor, config.HierarchyLevel)
+
 	// Fill background
 	g.fillRect(img, 0, 0, config.Width, config.Height, bgColor)
 
 	// Draw border based on genre
 	borderStyle := g.selectBorderStyle(config.GenreID)
-	borderThickness := g.selectBorderThickness(config.GenreID, config.Type)
+	borderThickness := style.BorderThickness
 	g.drawBorder(img, borderColor, borderStyle, borderThickness)
 
 	// Add highlight if not disabled
@@ -376,6 +399,106 @@ func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderSty
 					img.Set(t, y, glowCol)
 					img.Set(w-t-1, y, glowCol)
 				}
+			}
+		}
+
+	case BorderDashed:
+		// Dashed border pattern
+		dashLength := 6
+		gapLength := 4
+		// Top and bottom borders
+		for x := 0; x < w; x += dashLength + gapLength {
+			for dx := 0; dx < dashLength && x+dx < w; dx++ {
+				for t := 0; t < thickness; t++ {
+					if t < h {
+						img.Set(x+dx, t, col)          // Top
+						img.Set(x+dx, h-t-1, col)      // Bottom
+					}
+				}
+			}
+		}
+		// Left and right borders
+		for y := 0; y < h; y += dashLength + gapLength {
+			for dy := 0; dy < dashLength && y+dy < h; dy++ {
+				for t := 0; t < thickness; t++ {
+					if t < w {
+						img.Set(t, y+dy, col)          // Left
+						img.Set(w-t-1, y+dy, col)      // Right
+					}
+				}
+			}
+		}
+
+	case BorderDotted:
+		// Dotted border pattern
+		dotSize := 2
+		gapSize := 3
+		// Top and bottom borders
+		for x := 0; x < w; x += dotSize + gapSize {
+			for dx := 0; dx < dotSize && x+dx < w; dx++ {
+				for dy := 0; dy < dotSize && dy < h; dy++ {
+					img.Set(x+dx, dy, col)              // Top
+					img.Set(x+dx, h-dy-1, col)          // Bottom
+				}
+			}
+		}
+		// Left and right borders
+		for y := 0; y < h; y += dotSize + gapSize {
+			for dy := 0; dy < dotSize && y+dy < h; dy++ {
+				for dx := 0; dx < dotSize && dx < w; dx++ {
+					img.Set(dx, y+dy, col)              // Left
+					img.Set(w-dx-1, y+dy, col)          // Right
+				}
+			}
+		}
+
+	case BorderEmbossed:
+		// 3D embossed effect with light/dark edges
+		lightCol := g.lightenColor(col, 0.3)
+		darkCol := g.darkenColor(col, 0.3)
+
+		// Light edges (top and left)
+		for t := 0; t < thickness; t++ {
+			for x := 0; x < w; x++ {
+				img.Set(x, t, lightCol)
+			}
+			for y := 0; y < h; y++ {
+				img.Set(t, y, lightCol)
+			}
+		}
+
+		// Dark edges (bottom and right)
+		for t := 0; t < thickness; t++ {
+			for x := 0; x < w; x++ {
+				img.Set(x, h-t-1, darkCol)
+			}
+			for y := 0; y < h; y++ {
+				img.Set(w-t-1, y, darkCol)
+			}
+		}
+
+	case BorderEngraved:
+		// 3D engraved effect (inverse of embossed)
+		lightCol := g.lightenColor(col, 0.3)
+		darkCol := g.darkenColor(col, 0.3)
+
+		// Dark edges (top and left)
+		for t := 0; t < thickness; t++ {
+			for x := 0; x < w; x++ {
+				img.Set(x, t, darkCol)
+			}
+			for y := 0; y < h; y++ {
+				img.Set(t, y, darkCol)
+			}
+		}
+
+		// Light edges (bottom and right)
+		for t := 0; t < thickness; t++ {
+			for x := 0; x < w; x++ {
+				img.Set(x, h-t-1, lightCol)
+			}
+			for y := 0; y < h; y++ {
+				img.Set(w-t-1, y, lightCol)
 			}
 		}
 	}

@@ -148,6 +148,9 @@ type AmbienceSystem struct {
 
 	// Random number generator
 	rng *rand.Rand
+
+	// Respawn counter for deterministic particle respawning
+	respawnCounter int64
 }
 
 // GenerateAmbience creates a new ambient particle system.
@@ -222,7 +225,9 @@ func (s *AmbienceSystem) Update(deltaTime float64) {
 // respawnParticle resets a particle to initial state with new random properties.
 func (s *AmbienceSystem) respawnParticle(p *Particle, index int) {
 	// Use a deterministic but varied seed for respawning
-	respawnSeed := s.Config.Seed + int64(index) + int64(s.ElapsedTime*1000)
+	// Increment counter to ensure determinism independent of elapsed time
+	s.respawnCounter++
+	respawnSeed := s.Config.Seed + int64(index*1000000) + s.respawnCounter
 	localRng := rand.New(rand.NewSource(respawnSeed))
 
 	// Reset to random position in area

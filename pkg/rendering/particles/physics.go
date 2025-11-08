@@ -333,7 +333,7 @@ func UpdateSPH(particles []PhysicsParticle, config SPHConfig, deltaTime float64)
 			dy := p.Y - n.Y
 			r := math.Sqrt(dx*dx + dy*dy)
 
-			if r > 0.0001 {
+			if r > 0.0001 && n.Density > 0.0001 {
 				// Pressure force (using Spiky kernel gradient)
 				pressureTerm := (p.Pressure + n.Pressure) / (2.0 * n.Density)
 				gradSpiky := spikyKernelGradient(r, config.SmoothingRadius)

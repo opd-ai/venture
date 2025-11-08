@@ -139,10 +139,10 @@ func TestAmbienceConfig_Validate(t *testing.T) {
 
 func TestAmbienceConfig_GetParticleCount(t *testing.T) {
 	tests := []struct {
-		name     string
-		config   AmbienceConfig
-		wantMin  int
-		wantMax  int
+		name    string
+		config  AmbienceConfig
+		wantMin int
+		wantMax int
 	}{
 		{
 			name: "standard area with medium density",
@@ -484,16 +484,16 @@ func TestAmbienceSystem_EnvironmentBehaviors(t *testing.T) {
 func TestEnvironmentBehaviorHelpers(t *testing.T) {
 	// Create a test particle with some age (Life < InitialLife)
 	p := &Particle{
-		X:             100,
-		Y:             100,
-		VX:            0,
-		VY:            0,
-		Size:          2.0,
-		Life:          8.0,
-		InitialLife:   10.0, // age = 2.0 seconds
-		Rotation:      0,
-		RotationVel:   0,
-		Color:         color.RGBA{R: 255, G: 255, B: 255, A: 255},
+		X:           100,
+		Y:           100,
+		VX:          0,
+		VY:          0,
+		Size:        2.0,
+		Life:        8.0,
+		InitialLife: 10.0, // age = 2.0 seconds
+		Rotation:    0,
+		RotationVel: 0,
+		Color:       color.RGBA{R: 255, G: 255, B: 255, A: 255},
 	}
 
 	deltaTime := 0.1
@@ -583,9 +583,9 @@ func TestEnvironmentBehaviorHelpers(t *testing.T) {
 
 func TestGetEnvironmentVelocity(t *testing.T) {
 	tests := []struct {
-		envType     EnvironmentType
-		wantMin     float64
-		wantMax     float64
+		envType EnvironmentType
+		wantMin float64
+		wantMax float64
 	}{
 		{EnvironmentDungeon, 4.0, 6.0},
 		{EnvironmentCave, 4.0, 6.0},

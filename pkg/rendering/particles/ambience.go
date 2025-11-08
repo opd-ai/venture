@@ -119,10 +119,10 @@ func (c AmbienceConfig) GetParticleCount() int {
 	// Base density: 50-100 particles for standard 800x600 area
 	area := float64(c.Width * c.Height)
 	standardArea := 800.0 * 600.0
-	
+
 	// Scale particles based on area and density
 	baseCount := 75.0 * (area / standardArea) * c.Density
-	
+
 	// Clamp between 10 and 100 particles
 	count := int(baseCount)
 	if count < 10 {
@@ -131,7 +131,7 @@ func (c AmbienceConfig) GetParticleCount() int {
 	if count > 100 {
 		count = 100
 	}
-	
+
 	return count
 }
 
@@ -284,26 +284,26 @@ func (s *AmbienceSystem) applyEnvironmentBehavior(p *Particle, deltaTime float64
 func generateDungeonAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		// Random position
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Very slow drifting motion
 		p.VX = (rng.Float64()*2.0 - 1.0) * 5.0
 		p.VY = (rng.Float64()*2.0 - 1.0) * 5.0
-		
+
 		// Subtle grey/brown dust color
 		brightness := uint8(80 + rng.Intn(100))
 		p.Color = color.RGBA{R: brightness, G: brightness - 10, B: brightness - 20, A: 80}
-		
+
 		// Small size (1-2 pixels)
 		p.Size = 1.0 + rng.Float64()
-		
+
 		// Long lifetime (10-30 seconds before respawn)
 		p.Life = 10.0 + rng.Float64()*20.0
 		p.InitialLife = p.Life
-		
+
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
 		p.RotationVel = (rng.Float64()*2.0 - 1.0) * 0.5
 	}
@@ -313,10 +313,10 @@ func generateDungeonAmbience(particles []Particle, config AmbienceConfig, rng *r
 func generateCaveAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Mix of floating dust and occasional drips
 		isDrip := rng.Float64() < 0.2
 		if isDrip {
@@ -326,7 +326,7 @@ func generateCaveAmbience(particles []Particle, config AmbienceConfig, rng *rand
 			p.VX = (rng.Float64()*2.0 - 1.0) * 3.0
 			p.VY = (rng.Float64()*2.0 - 1.0) * 3.0
 		}
-		
+
 		// Blue-grey cave colors
 		if isDrip {
 			// Water droplets - light blue
@@ -338,7 +338,7 @@ func generateCaveAmbience(particles []Particle, config AmbienceConfig, rng *rand
 			p.Color = color.RGBA{R: brightness, G: brightness + 10, B: brightness + 20, A: 60}
 			p.Size = 1.0 + rng.Float64()
 		}
-		
+
 		p.Life = 8.0 + rng.Float64()*12.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -350,14 +350,14 @@ func generateCaveAmbience(particles []Particle, config AmbienceConfig, rng *rand
 func generateForestAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Gentle falling motion with horizontal drift
 		p.VX = (rng.Float64()*2.0 - 1.0) * 10.0
 		p.VY = 8.0 + rng.Float64()*12.0
-		
+
 		// Green/brown/yellow leaf colors
 		colorType := rng.Intn(3)
 		switch colorType {
@@ -368,14 +368,14 @@ func generateForestAmbience(particles []Particle, config AmbienceConfig, rng *ra
 		case 2: // Yellow pollen
 			p.Color = color.RGBA{R: 220, G: 200 + uint8(rng.Intn(35)), B: 100, A: 80}
 		}
-		
+
 		// Varied sizes for leaves vs pollen
 		if colorType == 2 {
 			p.Size = 0.5 + rng.Float64()*0.5 // tiny pollen
 		} else {
 			p.Size = 2.0 + rng.Float64()*2.0 // larger leaves
 		}
-		
+
 		p.Life = 15.0 + rng.Float64()*10.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -387,20 +387,20 @@ func generateForestAmbience(particles []Particle, config AmbienceConfig, rng *ra
 func generateDesertAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Horizontal wind-blown motion
 		p.VX = 15.0 + rng.Float64()*25.0
 		p.VY = (rng.Float64()*2.0 - 1.0) * 5.0
-		
+
 		// Sandy yellow/tan colors
 		r := uint8(200 + rng.Intn(55))
 		g := uint8(160 + rng.Intn(60))
 		b := uint8(100 + rng.Intn(50))
 		p.Color = color.RGBA{R: r, G: g, B: b, A: 100}
-		
+
 		p.Size = 0.8 + rng.Float64()*1.5
 		p.Life = 5.0 + rng.Float64()*8.0
 		p.InitialLife = p.Life
@@ -413,18 +413,18 @@ func generateDesertAmbience(particles []Particle, config AmbienceConfig, rng *ra
 func generateSnowAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Slow falling with drift
 		p.VX = (rng.Float64()*2.0 - 1.0) * 8.0
 		p.VY = 5.0 + rng.Float64()*10.0
-		
+
 		// White/light blue colors
 		brightness := uint8(220 + rng.Intn(35))
 		p.Color = color.RGBA{R: brightness, G: brightness, B: 255, A: 150}
-		
+
 		p.Size = 1.0 + rng.Float64()*2.0
 		p.Life = 12.0 + rng.Float64()*15.0
 		p.InitialLife = p.Life
@@ -437,10 +437,10 @@ func generateSnowAmbience(particles []Particle, config AmbienceConfig, rng *rand
 func generateSwampAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Mix of mist and fireflies
 		isFirefly := rng.Float64() < 0.3
 		if isFirefly {
@@ -458,7 +458,7 @@ func generateSwampAmbience(particles []Particle, config AmbienceConfig, rng *ran
 			p.Color = color.RGBA{R: 120, G: 140, B: 120, A: 40}
 			p.Size = 3.0 + rng.Float64()*4.0
 		}
-		
+
 		p.Life = 10.0 + rng.Float64()*15.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -470,14 +470,14 @@ func generateSwampAmbience(particles []Particle, config AmbienceConfig, rng *ran
 func generateLavaAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Rising motion with turbulence
 		p.VX = (rng.Float64()*2.0 - 1.0) * 15.0
 		p.VY = -20.0 - rng.Float64()*30.0 // upward
-		
+
 		// Mix of ash and embers
 		isEmber := rng.Float64() < 0.2
 		if isEmber {
@@ -490,7 +490,7 @@ func generateLavaAmbience(particles []Particle, config AmbienceConfig, rng *rand
 			p.Color = color.RGBA{R: brightness, G: brightness - 10, B: brightness - 20, A: 100}
 			p.Size = 1.0 + rng.Float64()*1.0
 		}
-		
+
 		p.Life = 6.0 + rng.Float64()*10.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -502,10 +502,10 @@ func generateLavaAmbience(particles []Particle, config AmbienceConfig, rng *rand
 func generateCityAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Mix of floating paper and smoke
 		isPaper := rng.Float64() < 0.6
 		if isPaper {
@@ -527,7 +527,7 @@ func generateCityAmbience(particles []Particle, config AmbienceConfig, rng *rand
 			p.Size = 2.5 + rng.Float64()*3.5
 			p.RotationVel = (rng.Float64()*2.0 - 1.0) * 0.5
 		}
-		
+
 		p.Life = 8.0 + rng.Float64()*12.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -538,14 +538,14 @@ func generateCityAmbience(particles []Particle, config AmbienceConfig, rng *rand
 func generateLaboratoryAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Smooth orbital or linear motion
 		p.VX = (rng.Float64()*2.0 - 1.0) * 12.0
 		p.VY = (rng.Float64()*2.0 - 1.0) * 12.0
-		
+
 		// Cyan/blue energy colors with occasional sparks
 		isSpark := rng.Float64() < 0.15
 		if isSpark {
@@ -557,7 +557,7 @@ func generateLaboratoryAmbience(particles []Particle, config AmbienceConfig, rng
 			p.Color = color.RGBA{R: 80, G: 180 + uint8(rng.Intn(75)), B: 255, A: 150}
 			p.Size = 1.5 + rng.Float64()*1.5
 		}
-		
+
 		p.Life = 7.0 + rng.Float64()*10.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -569,10 +569,10 @@ func generateLaboratoryAmbience(particles []Particle, config AmbienceConfig, rng
 func generateRuinsAmbience(particles []Particle, config AmbienceConfig, rng *rand.Rand) {
 	for i := range particles {
 		p := &particles[i]
-		
+
 		p.X = rng.Float64() * float64(config.Width)
 		p.Y = rng.Float64() * float64(config.Height)
-		
+
 		// Mix of floating dust and occasionally falling debris
 		isFalling := rng.Float64() < 0.15
 		if isFalling {
@@ -592,7 +592,7 @@ func generateRuinsAmbience(particles []Particle, config AmbienceConfig, rng *ran
 			p.Color = color.RGBA{R: brightness, G: brightness - 5, B: brightness - 10, A: 70}
 			p.Size = 1.0 + rng.Float64()*1.5
 		}
-		
+
 		p.Life = 12.0 + rng.Float64()*18.0
 		p.InitialLife = p.Life
 		p.Rotation = rng.Float64() * 2.0 * math.Pi
@@ -635,7 +635,7 @@ func applyGustBehavior(p *Particle, deltaTime, strength, time float64) {
 func applySnowDriftBehavior(p *Particle, deltaTime, strength float64) {
 	// Gentle horizontal drift
 	age := p.InitialLife - p.Life
-	driftX := math.Sin(age*1.5 + p.X*0.01) * strength
+	driftX := math.Sin(age*1.5+p.X*0.01) * strength
 	p.VX += driftX * deltaTime * 10.0
 }
 
@@ -722,7 +722,7 @@ func getEnvironmentVelocity(envType EnvironmentType) float64 {
 func getEnvironmentLifetime(envType EnvironmentType, rng *rand.Rand) float64 {
 	base := 0.0
 	variation := 0.0
-	
+
 	switch envType {
 	case EnvironmentDungeon, EnvironmentCave, EnvironmentRuins:
 		base = 15.0
@@ -752,6 +752,6 @@ func getEnvironmentLifetime(envType EnvironmentType, rng *rand.Rand) float64 {
 		base = 10.0
 		variation = 10.0
 	}
-	
+
 	return base + rng.Float64()*variation
 }

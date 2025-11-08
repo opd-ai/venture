@@ -554,7 +554,7 @@ All gates must pass for code review completion:
 - [ ] **Build Success**: `go build ./cmd/client` and `go build ./cmd/server` complete without errors
 - [ ] **Test Pass**: `go test ./...` shows 100% pass rate
 - [ ] **Race Freedom**: `go test -race ./...` reports zero race conditions
-- [ ] **Code Coverage**: Package coverage ≥65% (excluding Ebiten initialization functions)
+- [ ] **Code Coverage**: Package coverage ≥65% (excluding Ebiten initialization functions—i.e., functions requiring `ebiten.NewImage()`, rendering operations, or audio playback; see [TESTING.md](../docs/TESTING.md) for details)
 - [ ] **Static Analysis**: `go vet ./...` reports zero issues
 - [ ] **Code Formatting**: `gofmt -l .` returns empty (all files formatted)
 - [ ] **Documentation Complete**: All exported identifiers have godoc comments

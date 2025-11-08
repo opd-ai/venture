@@ -248,7 +248,7 @@ func TestCalculateRadialGradient(t *testing.T) {
 		wantApprox float64
 		tolerance  float64
 	}{
-		{"center", 0.5, 0.5, 0.5, 0.5, 0.0, 0.01},
+		{"center", 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.01},
 		{"edge", 1.0, 0.5, 0.5, 0.5, 0.5, 1.0, 0.01},
 	}
 

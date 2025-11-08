@@ -154,7 +154,7 @@ func TestHSLToRGB_RoundTrip(t *testing.T) {
 			r2, g2, b2 := hslToRGB(h, s, l)
 
 			// Allow small rounding error
-			if abs(int(tt.r)-int(r2)) > 2 || abs(int(tt.g)-int(g2)) > 2 || abs(int(tt.b)-int(b2)) > 2 {
+			if absInt(int(tt.r)-int(r2)) > 2 || absInt(int(tt.g)-int(g2)) > 2 || absInt(int(tt.b)-int(b2)) > 2 {
 				t.Errorf("RGB->HSL->RGB roundtrip failed: (%d,%d,%d) -> (%f,%f,%f) -> (%d,%d,%d)",
 					tt.r, tt.g, tt.b, h, s, l, r2, g2, b2)
 			}
@@ -334,6 +334,15 @@ func createTestImage(width, height int) *image.RGBA {
 	}
 
 	return img
+}
+
+// absInt returns the absolute value of an integer.
+// This is a test helper function to avoid dependency on unexported functions.
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // Benchmark tests

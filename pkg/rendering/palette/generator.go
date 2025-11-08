@@ -394,6 +394,7 @@ func (g *Generator) getHarmonyHues(baseHue float64, harmony HarmonyType) []float
 }
 
 // applyMood adjusts color scheme based on mood type.
+// Phase 19.2: Extended to support 20+ moods
 func (g *Generator) applyMood(scheme ColorScheme, mood MoodType) ColorScheme {
 	adjusted := scheme
 
@@ -420,6 +421,87 @@ func (g *Generator) applyMood(scheme ColorScheme, mood MoodType) ColorScheme {
 		// High lightness with low saturation
 		adjusted.Lightness = clamp(adjusted.Lightness*1.5, 0.7, 0.95)
 		adjusted.Saturation = clamp(adjusted.Saturation*0.4, 0, 0.5)
+	case MoodTense:
+		// Anxiety with desaturated, dark colors
+		adjusted.Saturation = clamp(adjusted.Saturation*0.6, 0, 0.5)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.7, 0.2, 0.4)
+	case MoodCalm:
+		// Peace with soft, balanced colors
+		adjusted.Saturation = clamp(adjusted.Saturation*0.7, 0.3, 0.6)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.1, 0.5, 0.7)
+	case MoodVictorious:
+		// Triumph with bright, saturated golds (shift toward yellow)
+		adjusted.BaseHue = 45 // Gold hue
+		adjusted.Saturation = clamp(adjusted.Saturation*1.4, 0.7, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.3, 0.6, 0.8)
+	case MoodMelancholic:
+		// Sadness with desaturated blues
+		adjusted.BaseHue = 220 // Blue hue
+		adjusted.Saturation = clamp(adjusted.Saturation*0.5, 0.2, 0.4)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.8, 0.3, 0.5)
+	case MoodEnergetic:
+		// Excitement with bright, warm colors
+		adjusted.Saturation = clamp(adjusted.Saturation*1.3, 0.7, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.2, 0.5, 0.8)
+		adjusted.HueVariation *= 1.3
+	case MoodMystical:
+		// Wonder with purples and deep blues
+		adjusted.BaseHue = 270 // Purple hue
+		adjusted.Saturation = clamp(adjusted.Saturation*1.1, 0.5, 0.8)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.9, 0.3, 0.6)
+	case MoodOminous:
+		// Dread with dark reds and blacks
+		adjusted.BaseHue = 0 // Red hue
+		adjusted.Saturation = clamp(adjusted.Saturation*0.7, 0.3, 0.6)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.5, 0.1, 0.3)
+	case MoodSerene:
+		// Tranquility with soft blues and greens
+		adjusted.BaseHue = 180 // Cyan hue
+		adjusted.Saturation = clamp(adjusted.Saturation*0.6, 0.3, 0.5)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.2, 0.6, 0.8)
+	case MoodAggressive:
+		// Intensity with high saturation reds
+		adjusted.BaseHue = 0 // Red hue
+		adjusted.Saturation = clamp(adjusted.Saturation*1.6, 0.8, 1)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.0, 0.4, 0.6)
+	case MoodPlayful:
+		// Fun with varied bright colors
+		adjusted.Saturation = clamp(adjusted.Saturation*1.2, 0.6, 0.9)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.2, 0.5, 0.7)
+		adjusted.HueVariation *= 2.0
+	case MoodSomber:
+		// Gravity with dark, desaturated colors
+		adjusted.Saturation = clamp(adjusted.Saturation*0.4, 0.1, 0.3)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.6, 0.2, 0.4)
+	case MoodEthereal:
+		// Otherworldly with high lightness pastels
+		adjusted.Saturation = clamp(adjusted.Saturation*0.5, 0.2, 0.4)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.6, 0.8, 0.95)
+	case MoodDangerous:
+		// Threat with deep reds and oranges
+		adjusted.BaseHue = 15 // Orange-red hue
+		adjusted.Saturation = clamp(adjusted.Saturation*1.3, 0.7, 0.9)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.7, 0.3, 0.5)
+	case MoodPeaceful:
+		// Harmony with balanced greens
+		adjusted.BaseHue = 120 // Green hue
+		adjusted.Saturation = clamp(adjusted.Saturation*0.7, 0.4, 0.6)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.1, 0.5, 0.7)
+	case MoodChaotic:
+		// Disorder with high variation
+		adjusted.HueVariation *= 3.0
+		adjusted.SaturationVariation *= 2.0
+		adjusted.LightnessVariation *= 2.0
+	case MoodRegal:
+		// Majesty with purples and golds
+		adjusted.BaseHue = 280 // Purple hue
+		adjusted.Saturation = clamp(adjusted.Saturation*1.2, 0.6, 0.8)
+		adjusted.Lightness = clamp(adjusted.Lightness*1.0, 0.4, 0.6)
+	case MoodDesolate:
+		// Emptiness with grays and browns
+		adjusted.BaseHue = 30 // Brown hue
+		adjusted.Saturation = clamp(adjusted.Saturation*0.3, 0.1, 0.25)
+		adjusted.Lightness = clamp(adjusted.Lightness*0.8, 0.3, 0.5)
 	case MoodNormal:
 		// No adjustments
 	}

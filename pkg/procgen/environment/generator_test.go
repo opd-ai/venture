@@ -342,6 +342,10 @@ func TestGenerator_GenerateAllSubTypes(t *testing.T) {
 		SubTypePlant, SubTypeStatue, SubTypePainting, SubTypeBanner,
 		SubTypeTorch, SubTypeCandlestick, SubTypeVase, SubTypeTapestry,
 		SubTypeCrystal, SubTypeBook,
+		// Phase 20.1: New decorations
+		SubTypeSconce, SubTypeWallCrack, SubTypeBloodstain, SubTypeGrass,
+		SubTypeMushroom, SubTypeSkull, SubTypeChain, SubTypeWeb,
+		SubTypeMoss, SubTypeGraffiti,
 		// Obstacles
 		SubTypeBarrel, SubTypeCrate, SubTypeRubble, SubTypePillar,
 		SubTypeBoulder, SubTypeDebris, SubTypeWreckage, SubTypeColumn,

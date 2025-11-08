@@ -73,6 +73,29 @@
 //
 // Combined performance: All 4 simulations run in <5% of frame time (60 FPS).
 //
+// # Environmental Ambience (Phase 18.3)
+//
+// Ambient particle effects for environmental atmosphere with 10 distinct environment types:
+//   - Dungeon: Dust motes and moisture droplets (slow drifting)
+//   - Cave: Mineral dust and water drips (occasional falling drops)
+//   - Forest: Falling leaves and pollen (gentle swaying motion)
+//   - Desert: Sand particles and heat shimmer (wind-blown, gusting)
+//   - Snow: Drifting snow and ice crystals (gentle falling with drift)
+//   - Swamp: Mist and fireflies (slow floating with vertical oscillation)
+//   - Lava: Ash and embers (rising with turbulence)
+//   - City: Paper debris and smoke (tumbling, rising)
+//   - Laboratory: Energy particles and sparks (smooth orbital motion)
+//   - Ruins: Dust and falling debris (floating dust, occasional falling)
+//
+// Ambient systems provide:
+//   - 50-100 particles per environment (configurable density 0.0-1.0)
+//   - Area-specific effects (dripping water in caves, leaves in forests)
+//   - Biome-specific particles (forest leaves, desert sand)
+//   - Subtle background movement for atmosphere
+//   - Environment-specific behaviors (drift, sway, gust, rise, tumble, orbit)
+//   - Automatic particle respawning for infinite ambience
+//   - Performance: <2% frame time overhead (~333µs at 60 FPS)
+//
 // # Basic Usage
 //
 //	gen := particles.NewGenerator()
@@ -139,6 +162,31 @@
 //	// Debris collisions
 //	debrisConfig := DefaultDebrisConfig()
 //	UpdateDebris(particles, debrisConfig, 0.016, groundY)
+//
+// # Ambient Particle Usage
+//
+//	config := particles.AmbienceConfig{
+//	    Type:    particles.EnvironmentForest,
+//	    Width:   800,
+//	    Height:  600,
+//	    GenreID: "fantasy",
+//	    Seed:    12345,
+//	    Density: 0.5, // 0.0-1.0 scale
+//	}
+//	ambience, err := particles.GenerateAmbience(config)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	// Update ambience particles each frame
+//	for i := 0; i < 60; i++ {
+//	    ambience.Update(0.016) // 60 FPS
+//	}
+//
+//	// Access particle data for rendering
+//	for _, p := range ambience.Particles {
+//	    // Render particle at (p.X, p.Y) with color p.Color and size p.Size
+//	}
 //
 // # Determinism
 //

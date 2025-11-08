@@ -36,11 +36,35 @@ go install golang.org/x/tools/cmd/staticcheck@latest
 # Optional: golangci-lint for comprehensive linting
 ```
 
-### 2. Baseline Validation
+### 2. Install Build Dependencies
+**Rationale:** Install platform-specific dependencies required for building and testing Ebiten applications.
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
+                     libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev \
+                     pkg-config libx11-dev xvfb
+```
+
+**macOS:**
+```bash
+xcode-select --install
+```
+
+**Windows:**
+No additional dependencies required.
+
+**Note:** `xvfb` (X virtual framebuffer) is required on Linux for running tests in headless environments (CI/CD, servers without displays). Tests should be run with `xvfb-run` on Linux:
+```bash
+xvfb-run -s "-screen 0 1920x1080x24" go test ./...
+```
+
+### 3. Baseline Validation
 **Rationale:** Establish current state before reviewing changes.
 
 ```bash
-# Verify all tests pass
+# Verify all tests pass (use xvfb-run on Linux)
 go test ./...
 
 # Check code compiles without errors
@@ -56,7 +80,7 @@ go test -cover -coverprofile=coverage.out ./...
 go tool cover -func=coverage.out > coverage-baseline.txt
 ```
 
-### 3. Documentation Review
+### 4. Documentation Review
 **Rationale:** Understand project architecture, patterns, and constraints.
 
 **Required Reading:**
@@ -66,7 +90,7 @@ go tool cover -func=coverage.out > coverage-baseline.txt
 - `docs/CONTRIBUTING.md` - Code style, development workflow, quality standards
 - `.github/copilot-instructions.md` - Project-specific guidelines and patterns
 
-### 4. Review Scope Definition
+### 5. Review Scope Definition
 **Rationale:** Focus review effort on changed/new code.
 
 ```bash
@@ -604,7 +628,8 @@ All gates must pass for code review completion:
 
 **Before Review:**
 - [ ] Clone repo, run `go mod download`
-- [ ] Run baseline tests: `go test ./...`
+- [ ] Install build dependencies (see Pre-Review Setup step 2)
+- [ ] Run baseline tests: `go test ./...` (Linux: use `xvfb-run -s "-screen 0 1920x1080x24" go test ./...`)
 - [ ] Read ARCHITECTURE, TECHNICAL_SPEC, TESTING docs
 - [ ] Identify changed files with `git diff`
 

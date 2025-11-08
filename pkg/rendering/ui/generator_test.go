@@ -787,3 +787,196 @@ func TestButtonGeneration_AllGenres(t *testing.T) {
 		})
 	}
 }
+
+func TestBorderStyle_NewStyles_String(t *testing.T) {
+tests := []struct {
+name     string
+style    BorderStyle
+expected string
+}{
+{"Dashed", BorderDashed, "dashed"},
+{"Dotted", BorderDotted, "dotted"},
+{"Embossed", BorderEmbossed, "embossed"},
+{"Engraved", BorderEngraved, "engraved"},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+got := tt.style.String()
+if got != tt.expected {
+t.Errorf("BorderStyle.String() = %v, want %v", got, tt.expected)
+}
+})
+}
+}
+
+func TestGenerateWithHierarchy(t *testing.T) {
+gen := NewGenerator()
+
+tests := []struct {
+name  string
+level HierarchyLevel
+}{
+{"Primary", HierarchyPrimary},
+{"Secondary", HierarchySecondary},
+{"Tertiary", HierarchyTertiary},
+{"Quaternary", HierarchyQuaternary},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+config := Config{
+Type:           ElementButton,
+Width:          100,
+Height:         30,
+GenreID:        "fantasy",
+Seed:           12345,
+HierarchyLevel: tt.level,
+}
+
+img, err := gen.Generate(config)
+if err != nil {
+t.Fatalf("Generate() error = %v", err)
+}
+
+if img == nil {
+t.Fatal("Generate() returned nil image")
+}
+
+// Verify determinism
+img2, err := gen.Generate(config)
+if err != nil {
+t.Fatalf("Second Generate() error = %v", err)
+}
+
+bounds1 := img.Bounds()
+bounds2 := img2.Bounds()
+if bounds1 != bounds2 {
+t.Errorf("Images have different bounds: %v vs %v", bounds1, bounds2)
+}
+})
+}
+}
+
+func TestGenerateWithTransition(t *testing.T) {
+gen := NewGenerator()
+
+tests := []struct {
+name       string
+transition TransitionConfig
+}{
+{
+name: "Fade",
+transition: TransitionConfig{
+Type:     TransitionFade,
+Duration: 300,
+Easing:   EaseLinear,
+Progress: 0.5,
+},
+},
+{
+name: "SlideLeft",
+transition: TransitionConfig{
+Type:     TransitionSlideLeft,
+Duration: 300,
+Easing:   EaseInOutQuad,
+Progress: 0.7,
+},
+},
+{
+name: "Zoom",
+transition: TransitionConfig{
+Type:     TransitionZoom,
+Duration: 500,
+Easing:   EaseOutCubic,
+Progress: 0.3,
+},
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+config := Config{
+Type:       ElementButton,
+Width:      100,
+Height:     30,
+GenreID:    "scifi",
+Seed:       54321,
+Transition: &tt.transition,
+}
+
+img, err := gen.Generate(config)
+if err != nil {
+t.Fatalf("Generate() error = %v", err)
+}
+
+if img == nil {
+t.Fatal("Generate() returned nil image")
+}
+})
+}
+}
+
+func TestGenerateWithInvalidTransition(t *testing.T) {
+gen := NewGenerator()
+
+invalidTransition := TransitionConfig{
+Type:     TransitionFade,
+Duration: -100, // Invalid: negative duration
+Easing:   EaseLinear,
+Progress: 0.5,
+}
+
+config := Config{
+Type:       ElementButton,
+Width:      100,
+Height:     30,
+GenreID:    "fantasy",
+Seed:       12345,
+Transition: &invalidTransition,
+}
+
+_, err := gen.Generate(config)
+if err == nil {
+t.Error("Expected error for invalid transition config, got nil")
+}
+}
+
+func TestGenerateAllBorderStyles(t *testing.T) {
+gen := NewGenerator()
+
+borderStyles := []BorderStyle{
+BorderSolid, BorderDouble, BorderOrnate, BorderGlow,
+BorderDashed, BorderDotted, BorderEmbossed, BorderEngraved,
+}
+
+for _, style := range borderStyles {
+t.Run(style.String(), func(t *testing.T) {
+// Create a test image
+img := image.NewRGBA(image.Rect(0, 0, 100, 50))
+col := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+
+// Draw border
+gen.drawBorder(img, col, style, 2)
+
+// Verify image is not empty (at least some pixels are set)
+hasPixels := false
+for y := 0; y < 50; y++ {
+for x := 0; x < 100; x++ {
+c := img.RGBAAt(x, y)
+if c.A > 0 {
+hasPixels = true
+break
+}
+}
+if hasPixels {
+break
+}
+}
+
+if !hasPixels {
+t.Error("Border drawing produced empty image")
+}
+})
+}
+}

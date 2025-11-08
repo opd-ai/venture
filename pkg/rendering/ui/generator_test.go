@@ -790,24 +790,24 @@ func TestButtonGeneration_AllGenres(t *testing.T) {
 
 func TestBorderStyle_NewStyles_String(t *testing.T) {
 tests := []struct {
-name     string
-style    BorderStyle
-expected string
+	name     string
+	style    BorderStyle
+	expected string
 }{
-{"Dashed", BorderDashed, "dashed"},
-{"Dotted", BorderDotted, "dotted"},
-{"Embossed", BorderEmbossed, "embossed"},
-{"Engraved", BorderEngraved, "engraved"},
+	{"Dashed", BorderDashed, "dashed"},
+	{"Dotted", BorderDotted, "dotted"},
+	{"Embossed", BorderEmbossed, "embossed"},
+	{"Engraved", BorderEngraved, "engraved"},
 }
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-got := tt.style.String()
-if got != tt.expected {
-t.Errorf("BorderStyle.String() = %v, want %v", got, tt.expected)
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.style.String()
+			if got != tt.expected {
+				t.Errorf("BorderStyle.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
 }
 
 func TestGenerateWithHierarchy(t *testing.T) {

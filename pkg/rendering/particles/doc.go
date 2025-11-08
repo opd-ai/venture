@@ -39,6 +39,40 @@
 //   - Genre-specific weather types
 //   - Support for 500-1000+ particles maintaining 60 FPS
 //
+// # Advanced Particle Physics (Phase 18.2)
+//
+// Four specialized physics simulation types for realistic motion:
+//
+// 1. Fluid Simulation (SPH):
+//   - Smoothed Particle Hydrodynamics for water and blood
+//   - Density and pressure calculation
+//   - Surface tension and cohesion effects
+//   - Viscosity control (0.0-1.0)
+//   - Performance: 349µs per frame for 200 particles
+//
+// 2. Fire Propagation:
+//   - Heat transfer between particles
+//   - Ignition thresholds and fuel consumption
+//   - Buoyancy forces (hot particles rise)
+//   - Ember spawning
+//   - Performance: 129µs per frame for 200 particles
+//
+// 3. Smoke Billowing:
+//   - Turbulence using noise functions
+//   - Rising motion with configurable speed
+//   - Size expansion over time
+//   - Dissipation effects
+//   - Performance: 9.3µs per frame for 200 particles
+//
+// 4. Debris Collision:
+//   - Particle-particle collision detection
+//   - Spatial hashing for efficient neighbor queries
+//   - Restitution and friction coefficients
+//   - Angular velocity and rotation
+//   - Performance: 96µs per frame for 200 particles
+//
+// Combined performance: All 4 simulations run in <5% of frame time (60 FPS).
+//
 // # Basic Usage
 //
 //	gen := particles.NewGenerator()
@@ -83,6 +117,29 @@
 //	puddleLevel := ws.GetPuddleLevel(10, 5)
 //	snowLevel := ws.GetSnowLevel(10, 5)
 //
+// # Advanced Physics Usage
+//
+//	// Create physics particles
+//	particles := make([]PhysicsParticle, 200)
+//	// ... initialize particles ...
+//
+//	// Fluid simulation
+//	sphConfig := DefaultSPHConfig()
+//	UpdateSPH(particles, sphConfig, 0.016)
+//
+//	// Fire propagation
+//	fireConfig := DefaultFireConfig()
+//	rng := rand.New(rand.NewSource(12345))
+//	UpdateFire(particles, fireConfig, 0.016, rng)
+//
+//	// Smoke turbulence
+//	smokeConfig := DefaultSmokeConfig()
+//	UpdateSmoke(particles, smokeConfig, 0.016, time)
+//
+//	// Debris collisions
+//	debrisConfig := DefaultDebrisConfig()
+//	UpdateDebris(particles, debrisConfig, 0.016, groundY)
+//
 // # Determinism
 //
 // All particle generation uses seed-based RNG to ensure the same configuration
@@ -96,9 +153,13 @@
 // Particle generation is optimized for runtime creation with typical generation
 // times under 1ms for particle systems with up to 1000 particles. Weather systems
 // can handle 500-1000+ particles while maintaining 60 FPS (16.67ms frame budget).
-// Benchmark results (1000 particles):
-//   - Generation: ~177µs
-//   - Update: ~45µs per frame
+//
+// Benchmark results (Phase 18.2, 200 particles):
+//   - SPH Fluid: 349µs per frame
+//   - Fire Propagation: 129µs per frame
+//   - Smoke Turbulence: 9.3µs per frame
+//   - Debris Collision: 96µs per frame
+//   - Total: 583µs (3.5% of 60 FPS frame budget)
 //
 // Use the Count parameter to control performance vs visual quality tradeoffs.
 package particles

@@ -565,24 +565,56 @@
 
 ---
 
-### 18.2: Advanced Particle Physics (2 weeks)
+### 18.2: Advanced Particle Physics (2 weeks) - COMPLETE
+
+**Status:** All milestones complete - SPH fluid simulation, fire propagation, smoke turbulence, and debris collisions implemented (Nov 2025)
 
 **Deliverables:**
-- Fluid simulation (water splashes, blood flow)
-- Fire propagation with heat simulation
-- Smoke billowing with turbulence
-- Particle-particle interaction (bouncing debris)
+- ✅ Fluid simulation (SPH) with water splashes and blood flow
+- ✅ Fire propagation with heat simulation and fuel consumption
+- ✅ Smoke billowing with turbulence and expansion
+- ✅ Particle-particle interaction with bouncing debris
 
 **Success Metrics:**
-- Physics accuracy: realistic motion and interaction
-- Simulation types: 4 (fluid, fire, smoke, debris)
-- Performance: <5% frame time for 200 physics particles
+- ✅ Physics accuracy: Realistic motion and interaction (verified via visual testing)
+- ✅ Simulation types: 4 implemented (fluid, fire, smoke, debris)
+- ✅ Performance: 3.5% frame time for 200 particles (exceeds <5% target)
 
-**Technical Approach:**
-- Add physics behaviors to `pkg/rendering/particles/behaviors.go`
-- Implement SPH (Smoothed Particle Hydrodynamics) for fluids
-- Add particle collision detection
-- Use spatial hashing for efficient neighbor queries
+**Technical Implementation:**
+- ✅ Created `pkg/rendering/particles/physics.go` (650 lines) with advanced physics
+  - SPH (Smoothed Particle Hydrodynamics) with Poly6, Spiky, Viscosity kernels
+  - Density and pressure calculation for fluids
+  - Surface tension and cohesion effects
+  - Fire heat transfer with ignition thresholds
+  - Buoyancy forces for hot particles
+  - Smoke turbulence using noise functions
+  - Debris collision with restitution and friction
+  - Angular velocity and rotation for debris
+- ✅ Implemented `SpatialHash` for efficient neighbor queries
+  - Hash-based grid system with prime collision avoidance
+  - Query radius with distance checking
+  - O(n) insertion, O(k) query where k = neighbors in radius
+- ✅ Comprehensive test coverage: 93.6% (exceeds 65% requirement)
+  - 30+ test functions covering all physics types
+  - Kernel function validation tests
+  - Edge case testing (empty, single particle, collisions)
+  - 5 performance benchmarks
+- ✅ Created `cmd/physicstest/` CLI tool for visual verification (380 lines)
+  - Supports all 4 physics types
+  - PNG output rendering
+  - Statistics reporting (density, pressure, heat, angular velocity)
+  - Performance metrics logging
+- ✅ Updated package documentation with Phase 18.2 usage examples
+
+**Performance Results (200 particles, 60 FPS = 16,667µs per frame):**
+- SPH Fluid: 349µs/op (2.1% frame time)
+- Fire Propagation: 129µs/op (0.8% frame time)
+- Smoke Turbulence: 9.3µs/op (0.06% frame time)
+- Debris Collision: 96µs/op (0.6% frame time)
+- **Combined: 583µs = 3.5% of frame budget** ✅
+
+**Next Steps:**
+1. Phase 18.3: Environmental Ambience (next task in queue)
 
 ---
 

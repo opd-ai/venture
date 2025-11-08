@@ -94,17 +94,33 @@ type FireConfig struct {
 
 	// FuelConsumptionRate how fast fuel is consumed when ignited (per second)
 	FuelConsumptionRate float64
+
+	// HeatTransferRadius distance at which heat spreads to neighbors
+	HeatTransferRadius float64
+
+	// HeatTransferFraction fraction of heat transferred to neighbors
+	HeatTransferFraction float64
+
+	// ExtinguishHeatMultiplier heat reduction when fuel runs out
+	ExtinguishHeatMultiplier float64
+
+	// MinActiveHeat minimum heat threshold for buoyancy and heat transfer
+	MinActiveHeat float64
 }
 
 // DefaultFireConfig returns sensible defaults for fire simulation.
 func DefaultFireConfig() FireConfig {
 	return FireConfig{
-		HeatDissipation:     0.5,   // Moderate cooling
-		IgnitionTemp:        0.7,   // 70% heat to ignite
-		HeatTransferRate:    0.3,   // Moderate spread
-		BuoyancyStrength:    100.0, // Strong upward force
-		EmberChance:         0.05,  // 5% chance per frame
-		FuelConsumptionRate: 0.2,   // Moderate fuel burn rate
+		HeatDissipation:          0.5,   // Moderate cooling
+		IgnitionTemp:             0.7,   // 70% heat to ignite
+		HeatTransferRate:         0.3,   // Moderate spread
+		BuoyancyStrength:         100.0, // Strong upward force
+		EmberChance:              0.05,  // 5% chance per frame
+		FuelConsumptionRate:      0.2,   // Moderate fuel burn rate
+		HeatTransferRadius:       20.0,  // Heat spreads within 20 pixels
+		HeatTransferFraction:     0.5,   // Transfer 50% of heat to neighbors
+		ExtinguishHeatMultiplier: 0.5,   // Reduce to 50% when fuel runs out
+		MinActiveHeat:            0.1,   // Heat threshold for effects
 	}
 }
 
@@ -124,16 +140,20 @@ type SmokeConfig struct {
 
 	// ExpansionRate how fast smoke expands
 	ExpansionRate float64
+
+	// TurbulenceNoiseScale scaling factor for noise function (controls detail)
+	TurbulenceNoiseScale float64
 }
 
 // DefaultSmokeConfig returns sensible defaults for smoke simulation.
 func DefaultSmokeConfig() SmokeConfig {
 	return SmokeConfig{
-		TurbulenceStrength: 50.0, // Moderate turbulence
-		TurbulenceFreq:     2.0,  // 2 Hz turbulence
-		RiseSpeed:          30.0, // Slow rise
-		Dissipation:        0.3,  // Slow fade
-		ExpansionRate:      10.0, // Moderate expansion
+		TurbulenceStrength:   50.0, // Moderate turbulence
+		TurbulenceFreq:       2.0,  // 2 Hz turbulence
+		RiseSpeed:            30.0, // Slow rise
+		Dissipation:          0.3,  // Slow fade
+		ExpansionRate:        10.0, // Moderate expansion
+		TurbulenceNoiseScale: 0.1,  // Detail level for turbulence
 	}
 }
 
@@ -419,7 +439,7 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 	}
 
 	// Build spatial hash
-	hash := NewSpatialHash(20.0, -1000, -1000, 1000, 1000)
+	hash := NewSpatialHash(config.HeatTransferRadius, -1000, -1000, 1000, 1000)
 	for i := range particles {
 		if particles[i].Heat > 0 {
 			hash.Insert(i, particles[i].X, particles[i].Y)
@@ -446,25 +466,25 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 			p.FuelRemain -= config.FuelConsumptionRate * deltaTime
 			if p.FuelRemain <= 0 {
 				p.Ignited = false
-				p.Heat *= 0.5 // Reduce heat when fuel runs out
+				p.Heat *= config.ExtinguishHeatMultiplier
 			}
 		}
 
 		// Transfer heat to neighbors
-		if p.Heat > 0.1 {
-			neighbors := hash.GetNeighbors(particles, p.X, p.Y, 20.0)
+		if p.Heat > config.MinActiveHeat {
+			neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.HeatTransferRadius)
 			for _, nIdx := range neighbors {
 				if nIdx == i {
 					continue
 				}
 				n := &particles[nIdx]
 				heatTransfer := p.Heat * config.HeatTransferRate * deltaTime
-				n.Heat += heatTransfer * 0.5 // Transfer half to neighbor
+				n.Heat += heatTransfer * config.HeatTransferFraction
 			}
 		}
 
 		// Apply buoyancy (heat rises)
-		if p.Heat > 0.1 {
+		if p.Heat > config.MinActiveHeat {
 			p.VY -= config.BuoyancyStrength * p.Heat * deltaTime
 		}
 
@@ -485,8 +505,8 @@ func UpdateSmoke(particles []PhysicsParticle, config SmokeConfig, deltaTime floa
 
 		// Apply turbulence using Perlin-like noise approximation
 		// Use particle position and phase for deterministic turbulence
-		noiseX := math.Sin(p.X*0.1+p.TurbulencePhase) * math.Cos(p.Y*0.1)
-		noiseY := math.Cos(p.X*0.1) * math.Sin(p.Y*0.1+p.TurbulencePhase)
+		noiseX := math.Sin(p.X*config.TurbulenceNoiseScale+p.TurbulencePhase) * math.Cos(p.Y*config.TurbulenceNoiseScale)
+		noiseY := math.Cos(p.X*config.TurbulenceNoiseScale) * math.Sin(p.Y*config.TurbulenceNoiseScale+p.TurbulencePhase)
 
 		turbulenceX := noiseX * config.TurbulenceStrength
 		turbulenceY := noiseY * config.TurbulenceStrength

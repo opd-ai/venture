@@ -268,6 +268,10 @@ func renderParticles(ps []particles.PhysicsParticle, width, height int) *image.R
 }
 
 func printStatistics(ps []particles.PhysicsParticle) {
+	if len(ps) == 0 {
+		return
+	}
+
 	alive := 0
 	var avgVel, maxVel float64
 	var minX, maxX, minY, maxY float64 = 1e9, -1e9, 1e9, -1e9

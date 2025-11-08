@@ -99,6 +99,7 @@ func (h HarmonyType) String() string {
 }
 
 // MoodType defines emotional color adjustments.
+// Phase 19.2: Expanded to 20+ moods for variety
 type MoodType int
 
 const (
@@ -116,6 +117,40 @@ const (
 	MoodVibrant
 	// MoodPastel uses high lightness with low saturation
 	MoodPastel
+	// MoodTense creates anxiety with desaturated, dark colors
+	MoodTense
+	// MoodCalm creates peace with soft, balanced colors
+	MoodCalm
+	// MoodVictorious creates triumph with bright, saturated golds
+	MoodVictorious
+	// MoodMelancholic creates sadness with desaturated blues
+	MoodMelancholic
+	// MoodEnergetic creates excitement with bright, warm colors
+	MoodEnergetic
+	// MoodMystical creates wonder with purples and deep blues
+	MoodMystical
+	// MoodOminous creates dread with dark reds and blacks
+	MoodOminous
+	// MoodSerene creates tranquility with soft blues and greens
+	MoodSerene
+	// MoodAggressive creates intensity with high saturation reds
+	MoodAggressive
+	// MoodPlayful creates fun with varied bright colors
+	MoodPlayful
+	// MoodSomber creates gravity with dark, desaturated colors
+	MoodSomber
+	// MoodEthereal creates otherworldly feel with high lightness pastels
+	MoodEthereal
+	// MoodDangerous creates threat with deep reds and oranges
+	MoodDangerous
+	// MoodPeaceful creates harmony with balanced greens
+	MoodPeaceful
+	// MoodChaotic creates disorder with high variation
+	MoodChaotic
+	// MoodRegal creates majesty with purples and golds
+	MoodRegal
+	// MoodDesolate creates emptiness with grays and browns
+	MoodDesolate
 )
 
 // String returns the string representation of MoodType.
@@ -135,6 +170,40 @@ func (m MoodType) String() string {
 		return "Vibrant"
 	case MoodPastel:
 		return "Pastel"
+	case MoodTense:
+		return "Tense"
+	case MoodCalm:
+		return "Calm"
+	case MoodVictorious:
+		return "Victorious"
+	case MoodMelancholic:
+		return "Melancholic"
+	case MoodEnergetic:
+		return "Energetic"
+	case MoodMystical:
+		return "Mystical"
+	case MoodOminous:
+		return "Ominous"
+	case MoodSerene:
+		return "Serene"
+	case MoodAggressive:
+		return "Aggressive"
+	case MoodPlayful:
+		return "Playful"
+	case MoodSomber:
+		return "Somber"
+	case MoodEthereal:
+		return "Ethereal"
+	case MoodDangerous:
+		return "Dangerous"
+	case MoodPeaceful:
+		return "Peaceful"
+	case MoodChaotic:
+		return "Chaotic"
+	case MoodRegal:
+		return "Regal"
+	case MoodDesolate:
+		return "Desolate"
 	default:
 		return "Unknown"
 	}

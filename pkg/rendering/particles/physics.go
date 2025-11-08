@@ -170,10 +170,10 @@ type PhysicsParticle struct {
 	Pressure float64 // Current pressure (for fluids)
 
 	// Fire-specific fields
-	Heat        float64 // Current heat (0.0-1.0)
-	Ignited     bool    // Whether particle is on fire
-	FuelRemain  float64 // Remaining fuel (0.0-1.0)
-	EmberTimer  float64 // Time until next ember spawn
+	Heat       float64 // Current heat (0.0-1.0)
+	Ignited    bool    // Whether particle is on fire
+	FuelRemain float64 // Remaining fuel (0.0-1.0)
+	EmberTimer float64 // Time until next ember spawn
 
 	// Smoke-specific fields
 	TurbulencePhase float64 // Phase for turbulence noise

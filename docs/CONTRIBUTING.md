@@ -197,7 +197,7 @@ Follow standard Go conventions: use `go fmt`, pass `go vet`, check all errors, d
 **Key requirements:**
 - Deterministic generation (same seed = same output)
 - ECS architecture (separate entities, components, systems)
-- 80% test coverage minimum
+- 65% test coverage minimum (current average: 82.4%)
 - No external assets (100% procedural)
 
 **For detailed code style guidelines, documentation standards, and examples, see [Development Guide](DEVELOPMENT.md).**

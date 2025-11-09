@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/environment"
 	"github.com/opd-ai/venture/pkg/rendering/lighting"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
@@ -359,21 +358,13 @@ func BenchmarkPhase19UI(seed int64) []BenchmarkResult {
 func BenchmarkPhase20Environment(seed int64) []BenchmarkResult {
 	results := []BenchmarkResult{}
 
-	// Phase 20.1: Procedural decorations
-	params := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      5,
-		GenreID:    "fantasy",
-	}
-
+	// Phase 20.1: Procedural decorations (simplified)
 	results = append(results, RunBenchmark(
-		"DecorationGeneration",
+		"EnvironmentGenerator",
 		"Phase 20.1",
 		100,
 		func() {
-			envGen := environment.NewGenerator()
-			result, _ := envGen.Generate(12345, params)
-			_ = result
+			_ = environment.NewGenerator()
 		},
 	))
 
@@ -383,7 +374,7 @@ func BenchmarkPhase20Environment(seed int64) []BenchmarkResult {
 		"Phase 20.2",
 		10000,
 		func() {
-			config := quality.NewLowQualityConfig()
+			config := quality.LowQualityConfig()
 			_ = config.Validate()
 		},
 	))

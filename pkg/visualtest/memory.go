@@ -213,12 +213,11 @@ func formatBytes(bytes uint64) string {
 // formatBytesWithSign formats bytes with +/- sign for growth.
 func formatBytesWithSign(bytes int64) string {
 	sign := ""
+	absBytes := uint64(bytes)
 	if bytes > 0 {
 		sign = "+"
-	}
-
-	absBytes := uint64(bytes)
-	if bytes < 0 {
+	} else if bytes < 0 {
+		sign = "-"
 		absBytes = uint64(-bytes)
 	}
 

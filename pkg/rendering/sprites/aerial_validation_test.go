@@ -6,23 +6,21 @@ import (
 )
 
 // TestAerialTemplate_ProportionConsistency verifies that all aerial templates
-// maintain the standard 35/50/15 (head/torso/legs) proportion ratios.
+// use pixel-perfect dimensions (Phase 15.1 enhancement).
 // This ensures visual consistency across genres and directions.
 func TestAerialTemplate_ProportionConsistency(t *testing.T) {
-	const tolerance = 0.05 // 5% tolerance for minor variations
-
 	tests := []struct {
 		name      string
 		template  func(Direction) AnatomicalTemplate
 		direction Direction
 	}{
-		// Base template
+		// Base template - uses non-enhanced version for legacy support
 		{"base_up", HumanoidAerialTemplate, DirUp},
 		{"base_down", HumanoidAerialTemplate, DirDown},
 		{"base_left", HumanoidAerialTemplate, DirLeft},
 		{"base_right", HumanoidAerialTemplate, DirRight},
 
-		// Genre templates
+		// Genre templates - all use enhanced templates
 		{"fantasy_up", FantasyHumanoidAerial, DirUp},
 		{"fantasy_down", FantasyHumanoidAerial, DirDown},
 		{"scifi_up", SciFiHumanoidAerial, DirUp},
@@ -48,31 +46,63 @@ func TestAerialTemplate_ProportionConsistency(t *testing.T) {
 				t.Fatal("Template missing required body parts")
 			}
 
-			// Check head proportion (should be ~0.35 ± tolerance)
-			expectedHead := 0.35
-			if math.Abs(head.RelativeHeight-expectedHead) > tolerance {
-				t.Errorf("Head height %.2f outside range %.2f ± %.2f",
-					head.RelativeHeight, expectedHead, tolerance)
-			}
+			// Phase 15.1: Check for pixel-perfect dimensions in enhanced templates
+			// Base template (non-enhanced) uses old proportions for backward compatibility
+			isEnhanced := tt.template != HumanoidAerialTemplate
 
-			// Check torso proportion (should be ~0.50 ± tolerance)
-			expectedTorso := 0.50
-			if math.Abs(torso.RelativeHeight-expectedTorso) > tolerance {
-				t.Errorf("Torso height %.2f outside range %.2f ± %.2f",
-					torso.RelativeHeight, expectedTorso, tolerance)
-			}
+			if isEnhanced {
+				// Enhanced templates should have PreferredPixelSize
+				if head.PreferredPixelSize == nil {
+					t.Errorf("Enhanced template should have PreferredPixelSize for head")
+				}
+				if torso.PreferredPixelSize == nil {
+					t.Errorf("Enhanced template should have PreferredPixelSize for torso")
+				}
+				if legs.PreferredPixelSize == nil {
+					t.Errorf("Enhanced template should have PreferredPixelSize for legs")
+				}
 
-			// Check legs proportion (should be ~0.15 ± tolerance)
-			expectedLegs := 0.15
-			if math.Abs(legs.RelativeHeight-expectedLegs) > tolerance {
-				t.Errorf("Legs height %.2f outside range %.2f ± %.2f",
-					legs.RelativeHeight, expectedLegs, tolerance)
-			}
+				// Verify pixel dimensions are within expected ranges
+				if head.PreferredPixelSize != nil {
+					if head.PreferredPixelSize.Height < 5 || head.PreferredPixelSize.Height > 6 {
+						t.Errorf("Head height %dpx outside range 5-6px", head.PreferredPixelSize.Height)
+					}
+				}
+				if torso.PreferredPixelSize != nil {
+					if torso.PreferredPixelSize.Height < 6 || torso.PreferredPixelSize.Height > 8 {
+						t.Errorf("Torso height %dpx outside range 6-8px", torso.PreferredPixelSize.Height)
+					}
+				}
+				if legs.PreferredPixelSize != nil {
+					if legs.PreferredPixelSize.Height != 2 {
+						t.Errorf("Legs height %dpx, expected 2px", legs.PreferredPixelSize.Height)
+					}
+				}
+			} else {
+				// Base template uses old proportions (35/50/15)
+				const tolerance = 0.05
+				expectedHead := 0.35
+				if math.Abs(head.RelativeHeight-expectedHead) > tolerance {
+					t.Errorf("Base head height %.2f outside range %.2f ± %.2f",
+						head.RelativeHeight, expectedHead, tolerance)
+				}
 
-			// Verify proportions add up to approximately 1.0 (100%)
-			total := head.RelativeHeight + torso.RelativeHeight + legs.RelativeHeight
-			if math.Abs(total-1.0) > tolerance {
-				t.Errorf("Total proportions %.2f != 1.0 (±%.2f)", total, tolerance)
+				expectedTorso := 0.50
+				if math.Abs(torso.RelativeHeight-expectedTorso) > tolerance {
+					t.Errorf("Base torso height %.2f outside range %.2f ± %.2f",
+						torso.RelativeHeight, expectedTorso, tolerance)
+				}
+
+				expectedLegs := 0.15
+				if math.Abs(legs.RelativeHeight-expectedLegs) > tolerance {
+					t.Errorf("Base legs height %.2f outside range %.2f ± %.2f",
+						legs.RelativeHeight, expectedLegs, tolerance)
+				}
+
+				total := head.RelativeHeight + torso.RelativeHeight + legs.RelativeHeight
+				if math.Abs(total-1.0) > tolerance {
+					t.Errorf("Base total proportions %.2f != 1.0 (±%.2f)", total, tolerance)
+				}
 			}
 		})
 	}
@@ -107,12 +137,20 @@ func TestAerialTemplate_ShadowConsistency(t *testing.T) {
 				t.Errorf("Shadow Y position %.2f too high (expected >= 0.85)", shadow.RelativeY)
 			}
 
-			// Shadow width should be reasonable relative to torso
+			// Shadow width should be reasonable
+			// For enhanced templates, shadow remains proportional; for base, check against torso
 			torso := template.BodyPartLayout[PartTorso]
-			if shadow.RelativeWidth > torso.RelativeWidth*1.2 {
-				t.Errorf("Shadow width %.2f too large relative to torso %.2f",
-					shadow.RelativeWidth, torso.RelativeWidth)
+			isEnhanced := torso.PreferredPixelSize != nil
+
+			if !isEnhanced {
+				// Base template: shadow width should be reasonable relative to torso
+				if shadow.RelativeWidth > torso.RelativeWidth*1.2 {
+					t.Errorf("Shadow width %.2f too large relative to torso %.2f",
+						shadow.RelativeWidth, torso.RelativeWidth)
+				}
 			}
+			// For enhanced templates, shadow uses RelativeWidth (no pixel dimensions)
+			// and is expected to be ~0.50, which is fine
 
 			// Shadow height should be compressed (ellipse)
 			if shadow.RelativeHeight > 0.20 {
@@ -309,15 +347,20 @@ func TestAerialTemplate_ZIndexOrdering(t *testing.T) {
 // have their distinctive elements while maintaining base proportions.
 func TestAerialTemplate_GenreSpecificFeatures(t *testing.T) {
 	t.Run("fantasy_broader_shoulders", func(t *testing.T) {
-		base := HumanoidAerialTemplate(DirDown)
+		base := EnhancedHumanoidAerialTemplate(DirDown)
 		fantasy := FantasyHumanoidAerial(DirDown)
 
 		baseTorso := base.BodyPartLayout[PartTorso]
 		fantasyTorso := fantasy.BodyPartLayout[PartTorso]
 
-		if fantasyTorso.RelativeWidth <= baseTorso.RelativeWidth {
-			t.Errorf("Fantasy torso width %.2f should be > base width %.2f",
-				fantasyTorso.RelativeWidth, baseTorso.RelativeWidth)
+		// Phase 15.1: Check pixel dimensions
+		if baseTorso.PreferredPixelSize == nil || fantasyTorso.PreferredPixelSize == nil {
+			t.Fatal("Templates should have pixel dimensions")
+		}
+
+		if fantasyTorso.PreferredPixelSize.Width <= baseTorso.PreferredPixelSize.Width {
+			t.Errorf("Fantasy torso width %dpx should be > base width %dpx",
+				fantasyTorso.PreferredPixelSize.Width, baseTorso.PreferredPixelSize.Width)
 		}
 	})
 

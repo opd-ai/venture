@@ -1813,21 +1813,19 @@ func HorrorHumanoidAerial(direction Direction) AnatomicalTemplate {
 
 // CyberpunkHumanoidAerial returns a cyberpunk-themed aerial humanoid template.
 // Neon glow outlines, asymmetric tech implants, compact build.
+// Phase 15.1: Uses enhanced base with pixel-perfect dimensions.
 func CyberpunkHumanoidAerial(direction Direction) AnatomicalTemplate {
-	base := HumanoidAerialTemplate(direction)
+	base := EnhancedHumanoidAerialTemplate(direction)
 	base.Name = "cyberpunk_aerial_" + string(direction)
 
-	// Compact torso with angular shapes
+	// Compact torso with angular shapes (keep enhanced pixel dimensions)
 	torsoSpec := base.BodyPartLayout[PartTorso]
-	torsoSpec.RelativeWidth = 0.56
-	torsoSpec.RelativeHeight = 0.48
 	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeHexagon, shapes.ShapeRectangle}
 	base.BodyPartLayout[PartTorso] = torsoSpec
 
 	// Angular head with tech aesthetic
 	headSpec := base.BodyPartLayout[PartHead]
 	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOctagon, shapes.ShapeHexagon}
-	headSpec.RelativeWidth = 0.36
 	headSpec.ColorRole = "accent1" // Tech glow color
 	base.BodyPartLayout[PartHead] = headSpec
 
@@ -1835,13 +1833,17 @@ func CyberpunkHumanoidAerial(direction Direction) AnatomicalTemplate {
 	base.BodyPartLayout[PartArmor] = PartSpec{
 		RelativeX:      0.5,
 		RelativeY:      0.50,
-		RelativeWidth:  0.62,
-		RelativeHeight: 0.52,
-		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeHexagon},
-		ZIndex:         9, // Just below torso
-		ColorRole:      "accent1",
-		Opacity:        0.3, // Subtle glow effect
-		Rotation:       0,
+		RelativeWidth:  0.250, // 8/32 for 8 pixel width
+		RelativeHeight: 0.219, // 7/32 for 7 pixel height
+		PreferredPixelSize: &PixelDimensions{
+			Width:  8,
+			Height: 7, // Phase 15.1: 8×7 pixel neon glow
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeHexagon},
+		ZIndex:     9, // Just below torso
+		ColorRole:  "accent1",
+		Opacity:    0.3, // Subtle glow effect
+		Rotation:   0,
 	}
 
 	return base
@@ -1849,14 +1851,14 @@ func CyberpunkHumanoidAerial(direction Direction) AnatomicalTemplate {
 
 // PostApocHumanoidAerial returns a post-apocalyptic themed aerial humanoid template.
 // Ragged edges, makeshift armor, irregular shapes for survival aesthetic.
+// Phase 15.1: Uses enhanced base with pixel-perfect dimensions.
 func PostApocHumanoidAerial(direction Direction) AnatomicalTemplate {
-	base := HumanoidAerialTemplate(direction)
+	base := EnhancedHumanoidAerialTemplate(direction)
 	base.Name = "postapoc_aerial_" + string(direction)
 
-	// Irregular torso with ragged appearance
+	// Irregular torso with ragged appearance (keep enhanced pixel dimensions)
 	torsoSpec := base.BodyPartLayout[PartTorso]
 	torsoSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeBean, shapes.ShapeRectangle}
-	torsoSpec.RelativeWidth = 0.58
 	base.BodyPartLayout[PartTorso] = torsoSpec
 
 	// Covered head (masks, hoods, makeshift helmets)
@@ -1864,7 +1866,7 @@ func PostApocHumanoidAerial(direction Direction) AnatomicalTemplate {
 	headSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeOrganic, shapes.ShapeSkull}
 	base.BodyPartLayout[PartHead] = headSpec
 
-	// Rough, angular limbs
+	// Rough, angular limbs (keep enhanced pixel dimensions)
 	armsSpec := base.BodyPartLayout[PartArms]
 	armsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule}
 	base.BodyPartLayout[PartArms] = armsSpec
@@ -1905,7 +1907,8 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	case "postapoc", "post-apocalyptic":
 		return PostApocHumanoidAerial(direction)
 	default:
-		return HumanoidAerialTemplate(direction)
+		// Use enhanced template for unknown genres (Phase 15.1)
+		return EnhancedHumanoidAerialTemplate(direction)
 	}
 }
 

@@ -374,3 +374,230 @@ func BenchmarkVehicle_ToComponent(b *testing.B) {
 		_ = vehicle.ToComponent()
 	}
 }
+
+// Phase 21.3: Visual Variation Tests
+
+func TestVehicleGenerator_VisualVariation(t *testing.T) {
+	gen := NewVehicleGenerator()
+	params := procgen.GenerationParams{
+		GenreID:    "fantasy",
+		Depth:      5,
+		Difficulty: 0.5,
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	vehicles := result.([]*Vehicle)
+	if len(vehicles) == 0 {
+		t.Fatal("No vehicles generated")
+	}
+
+	for i, vehicle := range vehicles {
+		// Check decorations exist
+		if len(vehicle.Decorations) == 0 {
+			t.Errorf("Vehicle %d has no decorations", i)
+		}
+
+		// Check decorations are unique
+		decorationSet := make(map[string]bool)
+		for _, decoration := range vehicle.Decorations {
+			if decorationSet[decoration] {
+				t.Errorf("Vehicle %d has duplicate decoration: %s", i, decoration)
+			}
+			decorationSet[decoration] = true
+		}
+
+		// Check damage state is valid
+		if vehicle.DamageState < 0.0 || vehicle.DamageState > 1.0 {
+			t.Errorf("Vehicle %d has invalid DamageState: %f", i, vehicle.DamageState)
+		}
+
+		// Check secondary color exists
+		if vehicle.SecondaryColor == 0 {
+			t.Errorf("Vehicle %d has no secondary color", i)
+		}
+
+		// Check decal pattern exists
+		if vehicle.DecalPattern == "" {
+			t.Errorf("Vehicle %d has no decal pattern", i)
+		}
+	}
+}
+
+func TestVehicleGenerator_DecorationsScaleWithRarity(t *testing.T) {
+	gen := NewVehicleGenerator()
+
+	// Generate multiple times and track decoration counts by rarity
+	decorationCounts := make(map[Rarity][]int)
+
+	for i := 0; i < 100; i++ {
+		params := procgen.GenerationParams{
+			GenreID:    "fantasy",
+			Depth:      10, // Higher depth for more variety
+			Difficulty: 0.5,
+		}
+
+		result, _ := gen.Generate(int64(i*1000), params)
+		vehicles := result.([]*Vehicle)
+
+		for _, vehicle := range vehicles {
+			decorationCounts[vehicle.Rarity] = append(
+				decorationCounts[vehicle.Rarity],
+				len(vehicle.Decorations),
+			)
+		}
+	}
+
+	// Verify higher rarities have more decorations on average
+	avgCommon := calculateAvgInt(decorationCounts[RarityCommon])
+	avgLegendary := calculateAvgInt(decorationCounts[RarityLegendary])
+
+	if avgLegendary <= avgCommon {
+		t.Errorf("Legendary vehicles should have more decorations than common: %f vs %f",
+			avgLegendary, avgCommon)
+	}
+}
+
+func TestVehicleGenerator_DamageStateDistribution(t *testing.T) {
+	gen := NewVehicleGenerator()
+	params := procgen.GenerationParams{
+		GenreID:    "fantasy",
+		Depth:      5,
+		Difficulty: 0.5,
+		Custom: map[string]interface{}{
+			"count": 100,
+		},
+	}
+
+	result, _ := gen.Generate(55555, params)
+	vehicles := result.([]*Vehicle)
+
+	pristine := 0
+	worn := 0
+	damaged := 0
+
+	for _, vehicle := range vehicles {
+		if vehicle.DamageState < 0.1 {
+			pristine++
+		} else if vehicle.DamageState < 0.3 {
+			worn++
+		} else {
+			damaged++
+		}
+	}
+
+	// Verify distribution roughly matches expected (60/30/10)
+	// Allow some variance since it's random
+	if pristine < 45 || pristine > 75 {
+		t.Errorf("Pristine count %d outside expected range [45-75]", pristine)
+	}
+	if worn < 15 || worn > 45 {
+		t.Errorf("Worn count %d outside expected range [15-45]", worn)
+	}
+	if damaged < 0 || damaged > 25 {
+		t.Errorf("Damaged count %d outside expected range [0-25]", damaged)
+	}
+}
+
+func TestVehicleGenerator_DecalPatternsByGenre(t *testing.T) {
+	gen := NewVehicleGenerator()
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	for _, genre := range genres {
+		t.Run(genre, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				GenreID:    genre,
+				Depth:      5,
+				Difficulty: 0.5,
+				Custom: map[string]interface{}{
+					"count": 20,
+				},
+			}
+
+			result, err := gen.Generate(12345, params)
+			if err != nil {
+				t.Fatalf("Generate failed: %v", err)
+			}
+
+			vehicles := result.([]*Vehicle)
+			patterns := make(map[string]int)
+
+			for _, vehicle := range vehicles {
+				patterns[vehicle.DecalPattern]++
+			}
+
+			// Should have at least some variety in patterns
+			if len(patterns) < 2 {
+				t.Errorf("Genre %s has insufficient pattern variety: %d unique patterns",
+					genre, len(patterns))
+			}
+		})
+	}
+}
+
+func TestVehicleGenerator_VisualVariationDeterminism(t *testing.T) {
+	gen := NewVehicleGenerator()
+	params := procgen.GenerationParams{
+		GenreID:    "scifi",
+		Depth:      7,
+		Difficulty: 0.6,
+	}
+
+	seed := int64(99999)
+
+	// Generate twice with same seed
+	result1, _ := gen.Generate(seed, params)
+	result2, _ := gen.Generate(seed, params)
+
+	vehicles1 := result1.([]*Vehicle)
+	vehicles2 := result2.([]*Vehicle)
+
+	// Compare visual variation features
+	for i := range vehicles1 {
+		v1 := vehicles1[i]
+		v2 := vehicles2[i]
+
+		// Check decorations match
+		if len(v1.Decorations) != len(v2.Decorations) {
+			t.Errorf("Vehicle %d: decoration counts differ", i)
+		}
+		for j := range v1.Decorations {
+			if v1.Decorations[j] != v2.Decorations[j] {
+				t.Errorf("Vehicle %d: decorations differ at index %d", i, j)
+			}
+		}
+
+		// Check damage state matches
+		if v1.DamageState != v2.DamageState {
+			t.Errorf("Vehicle %d: damage states differ: %f vs %f",
+				i, v1.DamageState, v2.DamageState)
+		}
+
+		// Check secondary color matches
+		if v1.SecondaryColor != v2.SecondaryColor {
+			t.Errorf("Vehicle %d: secondary colors differ: 0x%X vs 0x%X",
+				i, v1.SecondaryColor, v2.SecondaryColor)
+		}
+
+		// Check decal pattern matches
+		if v1.DecalPattern != v2.DecalPattern {
+			t.Errorf("Vehicle %d: decal patterns differ: %s vs %s",
+				i, v1.DecalPattern, v2.DecalPattern)
+		}
+	}
+}
+
+// Helper function for averaging integers
+func calculateAvgInt(values []int) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	total := 0
+	for _, v := range values {
+		total += v
+	}
+	return float64(total) / float64(len(values))
+}

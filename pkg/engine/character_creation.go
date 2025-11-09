@@ -209,6 +209,12 @@ type EbitenCharacterCreation struct {
 
 	screenWidth  int
 	screenHeight int
+
+	// Panel layout cache (calculated in Draw, used in Update for hit detection)
+	panelX      int
+	panelY      int
+	panelWidth  int
+	panelHeight int
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -339,6 +345,49 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		cc.selectedClass = ClassRogue
+	}
+
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+
+		// Use cached panel dimensions from Draw method
+		// Class selection area starts at y+140 with 80px spacing
+		startY := cc.panelY + 140
+		classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
+
+		// Check if touch/click is within any class option area
+		for i, class := range classes {
+			classY := startY + i*80
+			// Each class box is from x+40 to x+w-40, and classY-5 to classY+65 (70px height)
+			if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
+				mouseY >= classY-5 && mouseY <= classY+65 {
+				// Clicked on this class - select it and proceed
+				cc.selectedClass = class
+				cc.characterData.Class = cc.selectedClass
+				cc.currentStep = stepPortraitSelection
+				return
+			}
+		}
+	}
+
+	// Update selection highlight on mouse/touch hover (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+
+	// Use cached panel dimensions from Draw method
+	// Class selection area starts at y+140 with 80px spacing
+	startY := cc.panelY + 140
+	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
+
+	// Check if hovering over any class option
+	for i, class := range classes {
+		classY := startY + i*80
+		if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
+			mouseY >= classY-5 && mouseY <= classY+65 {
+			// Hovering over this class - highlight it
+			cc.selectedClass = class
+			break
+		}
 	}
 
 	// Enter to proceed, Backspace to go back
@@ -510,38 +559,38 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 	vector.DrawFilledRect(screen, 0, 0, float32(cc.screenWidth), float32(cc.screenHeight),
 		color.RGBA{0, 0, 0, 200}, false)
 
-	// Calculate panel dimensions
-	panelWidth := 600
-	panelHeight := 400
-	panelX := cc.screenWidth/2 - panelWidth/2
-	panelY := cc.screenHeight/2 - panelHeight/2
+	// Calculate panel dimensions and cache for hit detection in Update
+	cc.panelWidth = 600
+	cc.panelHeight = 400
+	cc.panelX = cc.screenWidth/2 - cc.panelWidth/2
+	cc.panelY = cc.screenHeight/2 - cc.panelHeight/2
 
 	// Draw panel background
-	vector.DrawFilledRect(screen, float32(panelX), float32(panelY),
-		float32(panelWidth), float32(panelHeight),
+	vector.DrawFilledRect(screen, float32(cc.panelX), float32(cc.panelY),
+		float32(cc.panelWidth), float32(cc.panelHeight),
 		color.RGBA{20, 20, 30, 255}, false)
 
 	// Draw panel border
-	vector.StrokeRect(screen, float32(panelX), float32(panelY),
-		float32(panelWidth), float32(panelHeight), 2,
+	vector.StrokeRect(screen, float32(cc.panelX), float32(cc.panelY),
+		float32(cc.panelWidth), float32(cc.panelHeight), 2,
 		color.RGBA{100, 150, 200, 255}, false)
 
 	// Draw content based on current step
 	switch cc.currentStep {
 	case stepNameInput:
-		cc.drawNameInput(screen, panelX, panelY, panelWidth, panelHeight)
+		cc.drawNameInput(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepClassSelection:
-		cc.drawClassSelection(screen, panelX, panelY, panelWidth, panelHeight)
+		cc.drawClassSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepPortraitSelection:
-		cc.drawPortraitSelection(screen, panelX, panelY, panelWidth, panelHeight)
+		cc.drawPortraitSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepConfirmation:
-		cc.drawConfirmation(screen, panelX, panelY, panelWidth, panelHeight)
+		cc.drawConfirmation(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	}
 
 	// Draw error message if present
 	if cc.errorMsg != "" {
-		errorX := panelX + panelWidth/2 - len(cc.errorMsg)*3
-		errorY := panelY + panelHeight - 30
+		errorX := cc.panelX + cc.panelWidth/2 - len(cc.errorMsg)*3
+		errorY := cc.panelY + cc.panelHeight - 30
 		text.Draw(screen, cc.errorMsg, basicfont.Face7x13, errorX, errorY,
 			color.RGBA{255, 100, 100, 255})
 	}
@@ -659,16 +708,20 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 
 	// Help text
 	helpText1 := "Use ARROW KEYS or 1-3 to select"
-	helpText2 := "Press ENTER to continue | F2 to save as default"
-	helpText3 := "BACKSPACE to go back"
+	helpText2 := "TAP/CLICK a class to select and continue"
+	helpText3 := "Press ENTER to continue | F2 to save as default"
+	helpText4 := "BACKSPACE to go back"
 	helpX1 := x + w/2 - len(helpText1)*3
 	helpX2 := x + w/2 - len(helpText2)*3
 	helpX3 := x + w/2 - len(helpText3)*3
-	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-85,
+	helpX4 := x + w/2 - len(helpText4)*3
+	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-105,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-65,
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-85,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText3, basicfont.Face7x13, helpX3, y+h-45,
+	text.Draw(screen, helpText3, basicfont.Face7x13, helpX3, y+h-65,
+		color.RGBA{150, 200, 150, 255})
+	text.Draw(screen, helpText4, basicfont.Face7x13, helpX4, y+h-45,
 		color.RGBA{150, 200, 150, 255})
 }
 

@@ -1,7 +1,7 @@
 # Mobile Build Guide
 
-**Version:** 1.0  
-**Last Updated:** October 2025
+**Version:** 3.0  
+**Last Updated:** November 2025
 
 Guide for building and deploying Venture on iOS and Android platforms.
 

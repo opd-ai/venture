@@ -135,7 +135,7 @@ Currently in Phase 14 Complete (Version 2.0 Beta), the project has completed all
   - `web/` - WebAssembly deployment files for GitHub Pages
   - `.github/workflows/` - CI/CD pipelines for testing, building, and deployment
 
-- **Configuration**: Generators use `procgen.GenerationParams` struct with fields: `Difficulty` (0.0-1.0 scaling), `Depth` (dungeon level/progression), `GenreID` (theme selector), `Custom` (map[string]interface{} for generator-specific params). Client accepts command-line flags: `-width`, `-height`, `-seed`, `-genre`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`. Server accepts: `-port`, `-max-players`. Development dependencies: Go 1.24.5+; Linux requires X11 libraries (libc6-dev, libgl1-mesa-dev, libxcursor-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxxf86vm-dev, libasound2-dev, pkg-config, libx11-dev); macOS requires Xcode tools; Windows has no additional requirements.
+- **Configuration**: Generators use `procgen.GenerationParams` struct with fields: `Difficulty` (0.0-1.0 scaling), `Depth` (dungeon level/progression), `GenreID` (theme selector), `Custom` (map[string]interface{} for generator-specific params). Client accepts command-line flags: `-width`, `-height`, `-seed`, `-genre`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`. Server accepts: `-port`, `-max-players`. Development dependencies: Go 1.24.5+; Linux requires X11 libraries (libc6-dev, libgl1-mesa-dev, libxcursor-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxxf86vm-dev, libasound2-dev, pkg-config, libx11-dev); macOS requires Xcode tools; Windows has no additional requirements.
 
 ## Quality Standards
 

@@ -103,14 +103,14 @@ go build -o venture-server ./cmd/server
 #### Quick Start (LAN Party Mode)
 ```bash
 # Host player: start server and auto-connect (one command!)
-./venture-client --host-and-play
+./venture-client -host-and-play
 
 # Other players: join the host
 ./venture-client -multiplayer -server <host-ip>:8080
 ```
 
 **Host gets IP address:** `ip addr show` (Linux) / `ipconfig` (Windows) / `ifconfig` (macOS)  
-**For LAN access:** Add `--host-lan` flag to bind to all interfaces (default is localhost only)
+**For LAN access:** Add `-host-lan` flag to bind to all interfaces (default is localhost only)
 
 #### Traditional Setup
 ```bash
@@ -123,11 +123,11 @@ go build -o venture-server ./cmd/server
 
 **Port Fallback:** If port 8080 is occupied, the system automatically tries ports 8081-8089. Use `-port <num>` to specify a different starting port.
 
-**High-Latency Networks (Tor/Onion Services):** For connections over Tor or other high-latency networks (200-5000ms), use the `--high-latency` flag when starting the server. This optimizes timeouts and buffers for extreme latency conditions. See [docs/TOR_SETUP.md](docs/TOR_SETUP.md) for complete Tor setup instructions or [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md) for general network configuration details.
+**High-Latency Networks (Tor/Onion Services):** For connections over Tor or other high-latency networks (200-5000ms), use the `-high-latency` flag when starting the server. This optimizes timeouts and buffers for extreme latency conditions. See [docs/TOR_SETUP.md](docs/TOR_SETUP.md) for complete Tor setup instructions or [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md) for general network configuration details.
 
 ```bash
 # Server optimized for Tor/high-latency connections
-./venture-server --high-latency -port 8080
+./venture-server -high-latency -port 8080
 ```
 
 **For complete setup instructions, gameplay guide, and all features, see:**

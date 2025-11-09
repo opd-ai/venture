@@ -1,10 +1,10 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 34-36)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V6.md, AUDIT.md files.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 4-6)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V6.md, AUDIT.md files.
 
-**V6.0 Features (Phase 34-36):**
-P34: Post office, mail system, courier NPCs, async delivery | P35: Politics, factions, alliances, trade network, dynamic pricing | P36: Territory control, border zones, bounty board, server rankings
+**V6.0 Features (Phase 4-6):**
+P4: Post office, mail system, courier NPCs, async delivery | P5: Politics, factions, alliances, trade network, dynamic pricing | P6: Territory control, border zones, bounty board, server rankings
 
 **ALL** in pkg/engine/ (mail, politics, bounty), pkg/network/federation/market.go, pkg/world/territory.go, cmd/server/main.go.
 
@@ -17,7 +17,7 @@ P34: Post office, mail system, courier NPCs, async delivery | P35: Politics, fac
 Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
 
 ## PHASE 2: V6.0 COMPLETION
-**Audit:** P34-36 components/systems in pkg/engine/, pkg/network/federation/, pkg/world/, cmd/server/main.go.
+**Audit:** P4-6 components/systems in pkg/engine/, pkg/network/federation/, pkg/world/, cmd/server/main.go.
 **Implement:** Missing items (mail, politics, bounty, territory), test ≥65%, doc.
 **Remove:** Deprecated, legacy, pre-V6.0, shims.
 **Validate:** Determinism (per-server), targets, tests, run server federation.
@@ -39,16 +39,16 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 
 ## SUCCESS
 - Build/test/race pass, ≥65% coverage, gofmt
-- **P34-36 features complete, federation operational**
+- **P4-6 features complete, federation operational**
 - No deprecated, ECS OK, determinism (per-server), targets (60 FPS, <500MB per server, <2s)
 - Docs current, quality up, enhancement done
 
-## V6.0 CHECKLIST (Phase 34-36 Target)
-**Phase 34:** MailComponent, MailMessage, MailSystem, post office buildings, courier NPCs, delivery tracking in pkg/engine/mail_component.go
-**Phase 35:** ServerFaction, PoliticalEvent, PoliticalSystem, FederatedMarket, dynamic pricing, merchant caravans in pkg/engine/politics_component.go, pkg/network/federation/market.go
-**Phase 36:** BorderZone, ControlPoint, TerritorySystem, BountyContract, BountySystem, server leaderboards in pkg/world/territory.go, pkg/engine/bounty_component.go
+## V6.0 CHECKLIST (Phase 4-6 Target)
+**Phase 4:** MailComponent, MailMessage, MailSystem, post office buildings, courier NPCs, delivery tracking in pkg/engine/mail_component.go
+**Phase 5:** ServerFaction, PoliticalEvent, PoliticalSystem, FederatedMarket, dynamic pricing, merchant caravans in pkg/engine/politics_component.go, pkg/network/federation/market.go
+**Phase 6:** BorderZone, ControlPoint, TerritorySystem, BountyContract, BountySystem, server leaderboards in pkg/world/territory.go, pkg/engine/bounty_component.go
 
-**Integration:** cmd/server/main.go registers P34-36 systems, mail delivery functional, political events trigger, trade network operational, territory control active, bounty board accessible.
+**Integration:** cmd/server/main.go registers P4-6 systems, mail delivery functional, political events trigger, trade network operational, territory control active, bounty board accessible.
 
 Execute autonomously. Report comprehensive results for all 6 phases.
 

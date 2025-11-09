@@ -233,7 +233,11 @@ func GetNearbyMerchants(world *World, x, y, radius float64) []*Entity {
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance squared (avoid sqrt for performance)
 		dx := pos.X - x
@@ -264,7 +268,11 @@ func FindClosestMerchant(world *World, x, y, radius float64) (*Entity, float64) 
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		dx := pos.X - x
 		dy := pos.Y - y
@@ -305,6 +313,10 @@ func GetMerchantInteractionPrompt(merchant *Entity) string {
 		return ""
 	}
 
-	merchantData := merchComp.(*MerchantComponent)
+	// Type assert with safety check
+	merchantData, ok := merchComp.(*MerchantComponent)
+	if !ok {
+		return ""
+	}
 	return fmt.Sprintf("Press S to talk to %s", merchantData.MerchantName)
 }

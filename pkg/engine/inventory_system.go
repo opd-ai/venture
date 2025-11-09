@@ -253,7 +253,10 @@ func (s *InventorySystem) applyConsumableEffects(entityID uint64, itm *item.Item
 	comp, hasHealth := entity.GetComponent("health")
 	var healthComp *HealthComponent
 	if hasHealth {
-		healthComp, _ = comp.(*HealthComponent)
+		// Type assert with safety check
+		if hc, ok := comp.(*HealthComponent); ok {
+			healthComp = hc
+		}
 	}
 
 	// Apply effects based on consumable type
@@ -298,8 +301,9 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 	if !ok {
 		return
 	}
-	equipComp, _ := comp.(*EquipmentComponent)
-	if equipComp == nil {
+	// Type assert with safety check
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok || equipComp == nil {
 		return
 	}
 

@@ -61,7 +61,11 @@ func (q *Quadtree) Insert(entity *Entity) bool {
 	if !ok {
 		return false
 	}
-	pos := posComp.(*PositionComponent)
+	// Type assert with safety check
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return false
+	}
 
 	// Check if point is in bounds
 	if !q.bounds.Contains(pos.X, pos.Y) {
@@ -132,7 +136,11 @@ func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		if queryBounds.Contains(pos.X, pos.Y) {
 			*result = append(*result, entity)
@@ -169,7 +177,11 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		dx := pos.X - x
 		dy := pos.Y - y

@@ -204,12 +204,12 @@ func TestPrintResults(t *testing.T) {
 	suite := &BenchmarkSuite{
 		Results: []BenchmarkResult{
 			{
-				Name:        "Test",
-				Phase:       "Phase 15.1",
-				NsPerOp:     1000000,
-				BytesPerOp:  5000,
-				AllocsPerOp: 10,
-				TargetMetNs: true,
+				Name:           "Test",
+				Phase:          "Phase 15.1",
+				NsPerOp:        1000000,
+				BytesPerOp:     5000,
+				AllocsPerOp:    10,
+				TargetMetNs:    true,
 				TargetMetBytes: true,
 			},
 		},

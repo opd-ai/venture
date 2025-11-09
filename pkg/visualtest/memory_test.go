@@ -268,7 +268,7 @@ func TestLeakDetection(t *testing.T) {
 	// Add first snapshot with low allocation
 	profile.Snapshots = append(profile.Snapshots, MemorySnapshot{
 		Timestamp:   time.Now(),
-		Alloc:       1000000,  // 1MB
+		Alloc:       1000000, // 1MB
 		LiveObjects: 1000,
 	})
 
@@ -278,8 +278,8 @@ func TestLeakDetection(t *testing.T) {
 	// Add second snapshot with higher allocation (>10% growth)
 	profile.Snapshots = append(profile.Snapshots, MemorySnapshot{
 		Timestamp:   time.Now(),
-		Alloc:       1200000,  // 1.2MB (20% growth)
-		LiveObjects: 1300,     // 30% growth
+		Alloc:       1200000, // 1.2MB (20% growth)
+		LiveObjects: 1300,    // 30% growth
 	})
 
 	profile.EndTime = time.Now()
@@ -313,7 +313,7 @@ func TestNoLeakDetection(t *testing.T) {
 
 	profile.Snapshots = append(profile.Snapshots, MemorySnapshot{
 		Timestamp:   time.Now(),
-		Alloc:       1050000,  // 5% growth (below 10% threshold)
+		Alloc:       1050000, // 5% growth (below 10% threshold)
 		LiveObjects: 1050,
 	})
 

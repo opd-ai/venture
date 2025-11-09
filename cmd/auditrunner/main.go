@@ -17,36 +17,36 @@ type AuditResult struct {
 	PackageName string
 	Depth       string
 	Date        string
-	
+
 	// Quality Gates
-	BuildSuccess         bool
-	TestsPass            bool
-	RaceFree             bool
-	CoveragePass         bool
-	StaticAnalysisPass   bool
-	CodeFormatPass       bool
-	DocsComplete         bool
-	PackageDocsPresent   bool
-	NoDependencyCycles   bool
-	
+	BuildSuccess       bool
+	TestsPass          bool
+	RaceFree           bool
+	CoveragePass       bool
+	StaticAnalysisPass bool
+	CodeFormatPass     bool
+	DocsComplete       bool
+	PackageDocsPresent bool
+	NoDependencyCycles bool
+
 	// Metrics
-	CoveragePercent      float64
-	NumExportedTypes     int
-	NumExportedFuncs     int
-	NumTestFiles         int
-	NumGoFiles           int
-	LinesOfCode          int
-	
+	CoveragePercent  float64
+	NumExportedTypes int
+	NumExportedFuncs int
+	NumTestFiles     int
+	NumGoFiles       int
+	LinesOfCode      int
+
 	// Findings
-	CriticalFindings     []Finding
-	MajorFindings        []Finding
-	MinorFindings        []Finding
-	
+	CriticalFindings []Finding
+	MajorFindings    []Finding
+	MinorFindings    []Finding
+
 	// Additional info
-	Dependencies         []string
-	TestOutput           string
-	VetOutput            string
-	FmtOutput            string
+	Dependencies []string
+	TestOutput   string
+	VetOutput    string
+	FmtOutput    string
 }
 
 // Finding represents a code review finding
@@ -62,20 +62,20 @@ func main() {
 	pkgName := os.Getenv("AUDIT_PKG_NAME")
 	pkgPath := os.Getenv("AUDIT_PKG_PATH")
 	depth := os.Getenv("AUDIT_DEPTH")
-	
+
 	if pkgName == "" || pkgPath == "" {
 		fmt.Fprintf(os.Stderr, "Error: Environment variables not set\n")
 		os.Exit(1)
 	}
-	
+
 	fmt.Printf("Reviewing pkg/%s (depth: %s, no prior audit)\n\n", pkgName, depth)
-	
+
 	result := &AuditResult{
 		PackageName: pkgName,
 		Depth:       depth,
 		Date:        time.Now().Format("2006-01-02"),
 	}
-	
+
 	// Run all audit checks
 	runStaticAnalysis(result, pkgPath)
 	runTests(result, pkgPath)
@@ -83,45 +83,45 @@ func main() {
 	analyzeStructure(result, pkgPath)
 	analyzeDocumentation(result, pkgPath)
 	analyzeDependencies(result, pkgPath)
-	
+
 	// Generate findings based on results
 	generateFindings(result, pkgPath)
-	
+
 	// Write AUDIT.md
 	auditFile := filepath.Join(pkgPath, "AUDIT.md")
 	if err := writeAuditFile(result, auditFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing audit file: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	fmt.Printf("✓ Audit complete: %s\n", auditFile)
 }
 
 func runStaticAnalysis(result *AuditResult, pkgPath string) {
 	fmt.Println("Running static analysis...")
-	
+
 	// Get package import path
 	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
-	
+
 	// Run go vet
 	cmd := exec.Command("go", "vet", "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
 	result.VetOutput = string(output)
 	result.StaticAnalysisPass = err == nil
-	
+
 	// Run gofmt
 	cmd = exec.Command("gofmt", "-l", pkgPath)
 	output, err = cmd.CombinedOutput()
 	result.FmtOutput = string(output)
 	result.CodeFormatPass = len(strings.TrimSpace(string(output))) == 0
-	
+
 	if result.StaticAnalysisPass {
 		fmt.Println("  ✓ Static analysis passed")
 	} else {
 		fmt.Println("  ✗ Static analysis issues found")
 	}
-	
+
 	if result.CodeFormatPass {
 		fmt.Println("  ✓ Code formatting correct")
 	} else {
@@ -131,42 +131,42 @@ func runStaticAnalysis(result *AuditResult, pkgPath string) {
 
 func runTests(result *AuditResult, pkgPath string) {
 	fmt.Println("Running tests...")
-	
+
 	// Get package import path
 	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
-	
+
 	// Build check
 	cmd := exec.Command("go", "build", "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	err := cmd.Run()
 	result.BuildSuccess = err == nil
-	
+
 	if result.BuildSuccess {
 		fmt.Println("  ✓ Build successful")
 	} else {
 		fmt.Println("  ✗ Build failed")
 		return
 	}
-	
+
 	// Run tests
 	cmd = exec.Command("go", "test", "-v", "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
 	result.TestOutput = string(output)
 	result.TestsPass = err == nil
-	
+
 	if result.TestsPass {
 		fmt.Println("  ✓ All tests passed")
 	} else {
 		fmt.Println("  ✗ Some tests failed")
 	}
-	
+
 	// Run race detector
 	cmd = exec.Command("go", "test", "-race", "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	err = cmd.Run()
 	result.RaceFree = err == nil
-	
+
 	if result.RaceFree {
 		fmt.Println("  ✓ Race-free")
 	} else {
@@ -176,34 +176,34 @@ func runTests(result *AuditResult, pkgPath string) {
 
 func runCoverageAnalysis(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing test coverage...")
-	
+
 	// Get package import path
 	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
-	
+
 	coverFile := "/tmp/coverage-" + filepath.Base(pkgPath) + ".out"
 	defer os.Remove(coverFile)
-	
+
 	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
-	
+
 	if err != nil {
 		result.CoveragePercent = 0
 		result.CoveragePass = false
 		fmt.Println("  ✗ Coverage analysis failed")
 		return
 	}
-	
+
 	// Parse coverage output
 	coverageRegex := regexp.MustCompile(`coverage:\s+([\d.]+)%`)
 	matches := coverageRegex.FindStringSubmatch(string(output))
-	
+
 	if len(matches) > 1 {
 		fmt.Sscanf(matches[1], "%f", &result.CoveragePercent)
 	}
-	
+
 	result.CoveragePass = result.CoveragePercent >= 65.0
-	
+
 	fmt.Printf("  Coverage: %.1f%% ", result.CoveragePercent)
 	if result.CoveragePass {
 		fmt.Println("✓")
@@ -214,38 +214,38 @@ func runCoverageAnalysis(result *AuditResult, pkgPath string) {
 
 func analyzeStructure(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing package structure...")
-	
+
 	// Count files
 	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
 	testFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*_test.go"))
-	
+
 	result.NumGoFiles = len(goFiles) - len(testFiles)
 	result.NumTestFiles = len(testFiles)
-	
+
 	// Count lines of code
 	result.LinesOfCode = countLinesOfCode(pkgPath)
-	
-	fmt.Printf("  Go files: %d, Test files: %d, LOC: %d\n", 
+
+	fmt.Printf("  Go files: %d, Test files: %d, LOC: %d\n",
 		result.NumGoFiles, result.NumTestFiles, result.LinesOfCode)
 }
 
 func analyzeDocumentation(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing documentation...")
-	
+
 	// Check for doc.go
 	docFile := filepath.Join(pkgPath, "doc.go")
 	result.PackageDocsPresent = fileExists(docFile)
-	
+
 	if result.PackageDocsPresent {
 		fmt.Println("  ✓ doc.go present")
 	} else {
 		fmt.Println("  ✗ doc.go missing")
 	}
-	
+
 	// Count exported identifiers and check for godoc
-	result.NumExportedTypes, result.NumExportedFuncs, result.DocsComplete = 
+	result.NumExportedTypes, result.NumExportedFuncs, result.DocsComplete =
 		analyzeGodocCoverage(pkgPath)
-	
+
 	if result.DocsComplete {
 		fmt.Println("  ✓ All exports documented")
 	} else {
@@ -255,26 +255,26 @@ func analyzeDocumentation(result *AuditResult, pkgPath string) {
 
 func analyzeDependencies(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing dependencies...")
-	
+
 	// Find all Go files
 	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
-	
+
 	depMap := make(map[string]bool)
-	
+
 	for _, file := range goFiles {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		
+
 		content, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
-		
+
 		// Find imports
 		importRegex := regexp.MustCompile(`import\s+\(\s*([^)]+)\)`)
 		singleImportRegex := regexp.MustCompile(`import\s+"([^"]+)"`)
-		
+
 		matches := importRegex.FindAllStringSubmatch(string(content), -1)
 		for _, match := range matches {
 			if len(match) > 1 {
@@ -288,7 +288,7 @@ func analyzeDependencies(result *AuditResult, pkgPath string) {
 				}
 			}
 		}
-		
+
 		matches = singleImportRegex.FindAllStringSubmatch(string(content), -1)
 		for _, match := range matches {
 			if len(match) > 1 && strings.HasPrefix(match[1], "github.com/opd-ai/venture/pkg/") {
@@ -296,14 +296,14 @@ func analyzeDependencies(result *AuditResult, pkgPath string) {
 			}
 		}
 	}
-	
+
 	for dep := range depMap {
 		result.Dependencies = append(result.Dependencies, dep)
 	}
 	sort.Strings(result.Dependencies)
-	
+
 	result.NoDependencyCycles = true // Simplified - go build would fail if cycles exist
-	
+
 	fmt.Printf("  Internal dependencies: %d\n", len(result.Dependencies))
 }
 
@@ -316,7 +316,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Fix compilation errors before proceeding",
 		})
 	}
-	
+
 	if !result.TestsPass {
 		result.CriticalFindings = append(result.CriticalFindings, Finding{
 			File:  "tests",
@@ -324,7 +324,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Fix all failing tests",
 		})
 	}
-	
+
 	if !result.RaceFree {
 		result.CriticalFindings = append(result.CriticalFindings, Finding{
 			File:  "concurrency",
@@ -332,7 +332,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Fix race conditions with proper synchronization",
 		})
 	}
-	
+
 	// Major findings - should fix
 	if !result.StaticAnalysisPass {
 		result.MajorFindings = append(result.MajorFindings, Finding{
@@ -341,7 +341,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Address all go vet warnings:\n" + result.VetOutput,
 		})
 	}
-	
+
 	if !result.CodeFormatPass {
 		result.MajorFindings = append(result.MajorFindings, Finding{
 			File:  "formatting",
@@ -349,10 +349,10 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Run: gofmt -w " + pkgPath,
 		})
 	}
-	
+
 	// Check if this is an interface-only package (low LOC, zero coverage but tests pass)
 	isInterfaceOnly := result.LinesOfCode < 100 && result.CoveragePercent == 0.0 && result.TestsPass
-	
+
 	if !result.CoveragePass && !isInterfaceOnly {
 		result.MajorFindings = append(result.MajorFindings, Finding{
 			File:  "tests",
@@ -366,7 +366,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Note: Interface-only packages typically have low coverage. This is acceptable if all interfaces are documented and tested in implementation packages.",
 		})
 	}
-	
+
 	// Minor findings - nice to have
 	if !result.PackageDocsPresent {
 		result.MinorFindings = append(result.MinorFindings, Finding{
@@ -375,7 +375,7 @@ func generateFindings(result *AuditResult, pkgPath string) {
 			Fix:   "Create doc.go with package documentation",
 		})
 	}
-	
+
 	if !result.DocsComplete {
 		result.MinorFindings = append(result.MinorFindings, Finding{
 			File:  "documentation",
@@ -387,18 +387,18 @@ func generateFindings(result *AuditResult, pkgPath string) {
 
 func writeAuditFile(result *AuditResult, filename string) error {
 	var buf bytes.Buffer
-	
+
 	// Header
 	fmt.Fprintf(&buf, "# Code Review Audit: %s\n", result.PackageName)
 	fmt.Fprintf(&buf, "**Date:** %s\n", result.Date)
 	fmt.Fprintf(&buf, "**Reviewer:** GitHub Copilot\n")
 	fmt.Fprintf(&buf, "**Dependency Depth:** %s\n\n", result.Depth)
-	
+
 	// Executive Summary
 	fmt.Fprintf(&buf, "## Executive Summary\n")
 	allPassed := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0
 	hasOnlyMinorFindings := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0 && len(result.MinorFindings) > 0
-	
+
 	if allPassed && len(result.MinorFindings) == 0 {
 		fmt.Fprintf(&buf, "**Status: PASS** ✅\n\n")
 		fmt.Fprintf(&buf, "Package meets all quality standards with zero findings.\n\n")
@@ -409,7 +409,7 @@ func writeAuditFile(result *AuditResult, filename string) error {
 		fmt.Fprintf(&buf, "**Status: NEEDS WORK** ⚠️\n\n")
 		fmt.Fprintf(&buf, "Package has findings that should be addressed.\n\n")
 	}
-	
+
 	// Quality Gates
 	fmt.Fprintf(&buf, "## Quality Gates\n\n")
 	fmt.Fprintf(&buf, "### Build & Testing\n")
@@ -417,14 +417,14 @@ func writeAuditFile(result *AuditResult, filename string) error {
 	writeGate(&buf, "All Tests Pass", result.TestsPass)
 	writeGate(&buf, "Race-free", result.RaceFree)
 	writeGate(&buf, fmt.Sprintf("Coverage ≥65%% (actual: %.1f%%)", result.CoveragePercent), result.CoveragePass)
-	
+
 	fmt.Fprintf(&buf, "\n### Code Quality\n")
 	writeGate(&buf, "Static Analysis", result.StaticAnalysisPass)
 	writeGate(&buf, "Code Formatting", result.CodeFormatPass)
 	writeGate(&buf, "Documentation Complete", result.DocsComplete)
 	writeGate(&buf, "Package Docs Present", result.PackageDocsPresent)
 	writeGate(&buf, "No Circular Dependencies", result.NoDependencyCycles)
-	
+
 	// Metrics
 	fmt.Fprintf(&buf, "\n## Package Metrics\n\n")
 	fmt.Fprintf(&buf, "- **Go Files:** %d\n", result.NumGoFiles)
@@ -434,17 +434,17 @@ func writeAuditFile(result *AuditResult, filename string) error {
 	fmt.Fprintf(&buf, "- **Exported Types:** %d\n", result.NumExportedTypes)
 	fmt.Fprintf(&buf, "- **Exported Functions:** %d\n", result.NumExportedFuncs)
 	fmt.Fprintf(&buf, "- **Internal Dependencies:** %d\n", len(result.Dependencies))
-	
+
 	if len(result.Dependencies) > 0 {
 		fmt.Fprintf(&buf, "\n### Dependencies\n")
 		for _, dep := range result.Dependencies {
 			fmt.Fprintf(&buf, "- %s\n", dep)
 		}
 	}
-	
+
 	// Findings
 	fmt.Fprintf(&buf, "\n## Findings\n\n")
-	
+
 	fmt.Fprintf(&buf, "### Critical (blocks merge)\n")
 	if len(result.CriticalFindings) == 0 {
 		fmt.Fprintf(&buf, "None ✅\n\n")
@@ -462,7 +462,7 @@ func writeAuditFile(result *AuditResult, filename string) error {
 		}
 		fmt.Fprintf(&buf, "\n")
 	}
-	
+
 	fmt.Fprintf(&buf, "### Major (should fix)\n")
 	if len(result.MajorFindings) == 0 {
 		fmt.Fprintf(&buf, "None ✅\n\n")
@@ -480,7 +480,7 @@ func writeAuditFile(result *AuditResult, filename string) error {
 		}
 		fmt.Fprintf(&buf, "\n")
 	}
-	
+
 	fmt.Fprintf(&buf, "### Minor (nice-to-have)\n")
 	if len(result.MinorFindings) == 0 {
 		fmt.Fprintf(&buf, "None ✅\n\n")
@@ -498,7 +498,7 @@ func writeAuditFile(result *AuditResult, filename string) error {
 		}
 		fmt.Fprintf(&buf, "\n")
 	}
-	
+
 	// Recommendations
 	fmt.Fprintf(&buf, "## Recommendations\n\n")
 	if allPassed {
@@ -518,10 +518,10 @@ func writeAuditFile(result *AuditResult, filename string) error {
 		}
 		fmt.Fprintf(&buf, "3. **Review:** Re-run audit after fixes\n")
 	}
-	
+
 	fmt.Fprintf(&buf, "\n---\n\n")
 	fmt.Fprintf(&buf, "*This audit was generated automatically by the Venture Code Review System*\n")
-	
+
 	return os.WriteFile(filename, buf.Bytes(), 0644)
 }
 
@@ -538,17 +538,17 @@ func writeGate(buf *bytes.Buffer, name string, passed bool) {
 func countLinesOfCode(pkgPath string) int {
 	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
 	total := 0
-	
+
 	for _, file := range goFiles {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		
+
 		content, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
-		
+
 		lines := strings.Split(string(content), "\n")
 		for _, line := range lines {
 			trimmed := strings.TrimSpace(line)
@@ -557,7 +557,7 @@ func countLinesOfCode(pkgPath string) int {
 			}
 		}
 	}
-	
+
 	return total
 }
 
@@ -568,25 +568,25 @@ func fileExists(filename string) bool {
 
 func analyzeGodocCoverage(pkgPath string) (numTypes, numFuncs int, complete bool) {
 	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
-	
+
 	complete = true
 	exportedRegex := regexp.MustCompile(`^(type|func)\s+([A-Z]\w+)`)
 	commentRegex := regexp.MustCompile(`^//\s+([A-Z]\w+)`)
-	
+
 	for _, file := range goFiles {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		
+
 		content, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
-		
+
 		lines := strings.Split(string(content), "\n")
 		for i, line := range lines {
 			trimmed := strings.TrimSpace(line)
-			
+
 			matches := exportedRegex.FindStringSubmatch(trimmed)
 			if len(matches) > 2 {
 				if matches[1] == "type" {
@@ -594,7 +594,7 @@ func analyzeGodocCoverage(pkgPath string) (numTypes, numFuncs int, complete bool
 				} else {
 					numFuncs++
 				}
-				
+
 				// Check if previous line is a comment with the same name
 				if i > 0 {
 					prevLine := strings.TrimSpace(lines[i-1])
@@ -608,6 +608,6 @@ func analyzeGodocCoverage(pkgPath string) (numTypes, numFuncs int, complete bool
 			}
 		}
 	}
-	
+
 	return
 }

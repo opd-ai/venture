@@ -237,7 +237,7 @@ These scripts are designed to work in CI/CD environments:
 2. Excludes packages with existing `AUDIT.md` files
 3. Calculates dependency depth (counts internal imports)
 4. Selects package with lowest dependency depth
-5. Runs comprehensive audit via `audit-runner.go`
+5. Runs comprehensive audit via `cmd/auditrunner`
 6. Creates `AUDIT.md` in selected package directory
 
 **Package Selection Priority:**
@@ -273,7 +273,7 @@ Running tests...
 ✓ Audit complete: /home/runner/work/venture/venture/pkg/audio/AUDIT.md
 ```
 
-### audit-runner.go
+### cmd/auditrunner
 **Purpose:** Core audit execution engine called by `audit-package.sh`.
 
 **Automated Checks:**

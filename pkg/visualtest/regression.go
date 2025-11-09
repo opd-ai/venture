@@ -18,12 +18,12 @@ import (
 
 // RegressionTest represents a single visual regression test case.
 type RegressionTest struct {
-	Name        string          `json:"name"`
-	Phase       string          `json:"phase"`
-	Category    string          `json:"category"` // "sprite", "tile", "lighting", "particle", "ui", "palette"
-	Seed        int64           `json:"seed"`
-	GenreID     string          `json:"genre_id"`
-	Description string          `json:"description"`
+	Name        string                      `json:"name"`
+	Phase       string                      `json:"phase"`
+	Category    string                      `json:"category"` // "sprite", "tile", "lighting", "particle", "ui", "palette"
+	Seed        int64                       `json:"seed"`
+	GenreID     string                      `json:"genre_id"`
+	Description string                      `json:"description"`
 	TestFunc    func() (*image.RGBA, error) `json:"-"`
 }
 
@@ -33,7 +33,7 @@ type RegressionTestResult struct {
 	Passed       bool           `json:"passed"`
 	Error        error          `json:"error,omitempty"`
 	Hash         string         `json:"hash"`
-	Similarity   float64        `json:"similarity"`   // 0.0-1.0
+	Similarity   float64        `json:"similarity"`    // 0.0-1.0
 	GenerationMs int64          `json:"generation_ms"` // Time to generate
 }
 

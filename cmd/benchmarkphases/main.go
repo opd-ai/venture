@@ -8,14 +8,15 @@
 //	benchmarkphases [options]
 //
 // Options:
-//   -seed int
-//       Random seed for generation (default: 12345)
-//   -phase string
-//       Run benchmarks for specific phase only (e.g., "Phase 15", "Phase 16.1")
-//   -verbose
-//       Enable verbose output
-//   -profile-memory
-//       Enable memory profiling
+//
+//	-seed int
+//	    Random seed for generation (default: 12345)
+//	-phase string
+//	    Run benchmarks for specific phase only (e.g., "Phase 15", "Phase 16.1")
+//	-verbose
+//	    Enable verbose output
+//	-profile-memory
+//	    Enable memory profiling
 //
 // Examples:
 //

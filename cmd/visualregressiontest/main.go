@@ -9,16 +9,17 @@
 //	visualregressiontest [options]
 //
 // Options:
-//   -seed int
-//       Random seed for generation (default: 12345)
-//   -verbose
-//       Enable verbose output
-//   -category string
-//       Run only tests in specific category (sprite, tile, lighting, particle, ui, palette, environment)
-//   -phase string
-//       Run only tests for specific phase (e.g., "Phase 15.1")
-//   -output-dir string
-//       Directory to save test images (default: /tmp/visual_regression_tests)
+//
+//	-seed int
+//	    Random seed for generation (default: 12345)
+//	-verbose
+//	    Enable verbose output
+//	-category string
+//	    Run only tests in specific category (sprite, tile, lighting, particle, ui, palette, environment)
+//	-phase string
+//	    Run only tests for specific phase (e.g., "Phase 15.1")
+//	-output-dir string
+//	    Directory to save test images (default: /tmp/visual_regression_tests)
 //
 // Examples:
 //

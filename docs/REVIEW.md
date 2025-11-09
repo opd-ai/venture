@@ -9,6 +9,10 @@ Conduct automated code review of venture repository packages, prioritizing by de
 4. Select package with lowest dependency depth that hasn't been audited
 5. Prioritize foundational packages: `engine` → `procgen/*` → `rendering/*` → higher-level packages
 
+**Before You Begin(install dependencies):**
+- Install build dependencies from README.md and tests.yml using `sudo apt install`
+- Install xvfb using `sudo apt install`
+
 **Review Process (per CODE_REVIEW_PLAN.md):**
 1. **Static Analysis:** `go vet`, `gofmt -l`, compilation check
 2. **Structure:** Package docs, file organization, naming conventions

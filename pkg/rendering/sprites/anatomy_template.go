@@ -368,8 +368,6 @@ func DetailedHumanoidTemplate() AnatomicalTemplate {
 }
 
 // QuadrupedTemplate returns a template for four-legged creatures.
-// Optimized for 32x32 pixels (standard enemy size).
-// QuadrupedTemplate returns a template for four-legged creatures.
 // Optimized for 32x32 pixels. Phase 15.1: Enhanced with pixel-perfect dimensions.
 func QuadrupedTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{

@@ -83,7 +83,7 @@ The `pkg/combat` package successfully passes all quality gates with 100% code co
 
 3. **Stats** (struct) - Character/entity statistics
    - Documentation: ✅ Present
-   - Fields: 15 total covering health, mana, offense, defense, movement
+   - Fields: 13 total covering health, mana, offense, defense, movement
    - Design: Comprehensive combat statistics model
    - Resistances: Flexible map[DamageType]float64 design
    - Pure data structure (no methods beyond NewStats)

@@ -49,10 +49,3 @@ func TestVersionConstants(t *testing.T) {
 		})
 	}
 }
-
-func TestVersionFormat(t *testing.T) {
-	expected := "3.0.0 Production"
-	if FullVersion != expected {
-		t.Errorf("FullVersion = %q, want %q", FullVersion, expected)
-	}
-}

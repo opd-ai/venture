@@ -27,9 +27,9 @@ Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) import
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 4: ROADMAP
-**Priority:** (1) V2.0, (2) ROADMAP_V2.md, (3) GAPS.md, (4) TODOs.
+**Priority:** (1) V4.0, (2) ROADMAP_V*.md, (3), (4) TODOs.
 ECS changes, loop integration, test (≥65%, determinism), verify. Skip if done.
-Carry out `EXECUTE.md` instructions
+Carry out `EXECUTE.md` instructions against current ROADMAP_V*.md file.
 
 ## PHASE 5: QUALITY
 Scan complexity >15, nesting >4, length >200, violations, coverage <65%, TODOs, duplication. Pick ONE. Refactor, validate. Skip if good.

@@ -7,9 +7,9 @@
 // # Version Format
 //
 // Venture uses semantic versioning (MAJOR.MINOR.PATCH) with a release status:
-//   - Version: "3.0.0"
-//   - Release: "Production" (or "Beta", "Alpha")
-//   - FullVersion: "3.0.0 Production"
+//   - Version: semantic version string (e.g., "1.2.3")
+//   - Release: release status (e.g., "Production", "Beta", "Alpha")
+//   - FullVersion: combined version string (e.g., "1.2.3 Production")
 //
 // # Usage
 //

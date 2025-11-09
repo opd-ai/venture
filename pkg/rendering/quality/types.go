@@ -351,5 +351,8 @@ func (c *Config) ApplyLevel(level QualityLevel) {
 		*c = MediumQualityConfig()
 	case QualityHigh:
 		*c = HighQualityConfig()
+	default:
+		// Invalid level, apply safe default (Medium)
+		*c = MediumQualityConfig()
 	}
 }

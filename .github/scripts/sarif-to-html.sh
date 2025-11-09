@@ -324,8 +324,12 @@ NO_RESULTS_HTML
             const items = document.querySelectorAll('.result-item');
             const buttons = document.querySelectorAll('.filter-btn');
             
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(level) || (level === 'all' && btn.textContent === 'All')) {
+                    btn.classList.add('active');
+                }
+            });
             
             items.forEach(item => {
                 if (level === 'all' || item.dataset.level === level) {

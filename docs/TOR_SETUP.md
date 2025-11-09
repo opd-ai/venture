@@ -156,13 +156,13 @@ This is your server's onion address. Share this with clients (keep the private k
 Start the Venture server with high-latency configuration:
 
 ```bash
-./venture-server --high-latency --port 8080 --max-players 4
+./venture-server -high-latency -port 8080 -max-players 4
 ```
 
 **Server Configuration Details:**
-- `--high-latency`: Enables 60s read timeout, 30s write timeout, 512-message buffers
-- `--port 8080`: Must match the local port in Tor's HiddenServicePort configuration
-- `--max-players 4`: Adjust based on bandwidth capacity
+- `-high-latency`: Enables 60s read timeout, 30s write timeout, 512-message buffers
+- `-port 8080`: Must match the local port in Tor's HiddenServicePort configuration
+- `-max-players 4`: Adjust based on bandwidth capacity
 
 **Important:** The server binds to `127.0.0.1:8080` (localhost only). Tor forwards external onion connections to this local port. Do NOT use `0.0.0.0` as it would expose the server on your local network.
 
@@ -310,7 +310,7 @@ Error: connection timeout
 **Solutions:**
 1. Verify Tor is running: `systemctl status tor`
 2. Test SOCKS proxy: `curl --socks5-hostname localhost:9050 https://check.torproject.org/api/ip`
-3. Increase connection timeout in client config (already 60s with `--high-latency`)
+3. Increase connection timeout in client config (already 60s with `-high-latency`)
 4. Check server is running and accessible via onion address
 5. Verify onion address is correct (16-character v2 or 56-character v3)
 
@@ -333,7 +333,7 @@ Test server and client on the same machine before deploying remotely:
 
 **Terminal 1 - Start Server:**
 ```bash
-./venture-server --high-latency --port 8080
+./venture-server -high-latency -port 8080
 ```
 
 **Terminal 2 - Start Client:**
@@ -489,7 +489,7 @@ sudo journalctl -u tor -f
 **Solutions:**
 1. Verify high-latency mode is enabled on server:
    ```bash
-   ./venture-server --high-latency --port 8080
+   ./venture-server -high-latency -port 8080
    ```
 2. Check for network congestion:
    ```bash
@@ -920,7 +920,7 @@ Running Venture over Tor enables anonymous, censorship-resistant multiplayer gam
 **Quick Start Summary:**
 1. Install Tor on server and client
 2. Configure hidden service in `/etc/tor/torrc`
-3. Start Venture server with `--high-latency` flag
+3. Start Venture server with `-high-latency` flag
 4. Clients connect via SOCKS5 proxy using onion address
 5. Expect 1-5 second latencies, stable connections with automatic reconnection
 

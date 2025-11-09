@@ -10,7 +10,7 @@ This guide covers multiplayer networking in Venture, including standard and high
 
 **Start a server:**
 ```bash
-./venture-server --port 8080 --max-players 4
+./venture-server -port 8080 -max-players 4
 ```
 
 **Connect clients:**
@@ -22,7 +22,7 @@ This guide covers multiplayer networking in Venture, including standard and high
 
 **Start a server with high-latency support:**
 ```bash
-./venture-server --high-latency --port 8080 --max-players 4
+./venture-server -high-latency -port 8080 -max-players 4
 ```
 
 **Connect clients through Tor:**
@@ -175,12 +175,12 @@ predictionStates := int(float64(L) / 50 * 20 * 1.28) // Prediction history
 
 **Default server:**
 ```bash
-./venture-server --port 8080 --max-players 4
+./venture-server -port 8080 -max-players 4
 ```
 
 **High-latency server:**
 ```bash
-./venture-server --high-latency --port 8080 --max-players 4
+./venture-server -high-latency -port 8080 -max-players 4
 ```
 
 **Custom configuration in code:**
@@ -250,7 +250,7 @@ client := network.NewClient(config)
 **Symptoms:** Client disconnects every few minutes
 
 **Solutions:**
-1. Enable high-latency mode on server: `--high-latency`
+1. Enable high-latency mode on server: `-high-latency`
 2. Use TorClientConfig if connecting through Tor
 3. Enable automatic reconnection: `client.ConnectWithRetry(network.TorReconnectConfig())`
 4. Check firewall/NAT timeout settings (ensure >60s for TCP)
@@ -309,7 +309,7 @@ Simulate high latency on loopback interface:
 sudo tc qdisc add dev lo root netem delay 5000ms
 
 # Start high-latency server
-./venture-server --high-latency --port 8080
+./venture-server -high-latency -port 8080
 
 # Connect client
 ./venture-client -multiplayer -server localhost:8080
@@ -321,7 +321,7 @@ sudo tc qdisc del dev lo root
 ### Using Tor for Real-World Testing
 
 1. Set up a Tor hidden service pointing to your server port
-2. Start server with `--high-latency`
+2. Start server with `-high-latency`
 3. Configure client with TorClientConfig
 4. Connect through `.onion` address
 
@@ -457,7 +457,7 @@ config.BufferSize = 384                // Custom buffer size
 High-latency mode automatically uses extended lag compensation:
 
 ```go
-// Automatically selected when using --high-latency flag
+// Automatically selected when using -high-latency flag
 lagCompConfig := network.HighLatencyLagCompensationConfig()
 // MaxCompensation: 5000ms
 // SnapshotBufferSize: 300 (15s history at 20Hz)
@@ -688,7 +688,7 @@ Example: 100 entities on screen
 Enable verbose logging to monitor network performance:
 
 ```bash
-LOG_LEVEL=debug ./venture-server --high-latency --port 8080
+LOG_LEVEL=debug ./venture-server -high-latency -port 8080
 ```
 
 Logs will show:
@@ -714,7 +714,7 @@ Logs will show:
 ### Firewall Configuration
 
 **Required Ports:**
-- Default: TCP 8080 (or custom `--port`)
+- Default: TCP 8080 (or custom `-port`)
 - Must allow bidirectional TCP traffic
 - TCP keepalive packets (every 30s)
 

@@ -109,14 +109,14 @@ Perfect for LAN parties and local co-op! The host player starts both server and 
 
 ```bash
 # Host player: start server + client (one command!)
-./venture-client --host-and-play
+./venture-client -host-and-play
 
 # Other players on the same network: join the host
 ./venture-client -multiplayer -server <host-ip>:8080
 ```
 
 **Host Configuration:**
-- `--host-lan`: Allow LAN connections (default: localhost only for security)
+- `-host-lan`: Allow LAN connections (default: localhost only for security)
 - `-port 8080`: Starting port (auto-tries 8081-8089 if occupied)
 - `-max-players 4`: Maximum players (default: 4)
 - `-tick-rate 20`: Server update rate (default: 20 Hz)
@@ -126,17 +126,17 @@ Perfect for LAN parties and local co-op! The host player starts both server and 
 - **Windows:** `ipconfig`
 - **macOS:** `ifconfig | grep inet`
 
-**Security Note:** By default, `--host-and-play` binds to localhost only (127.0.0.1). To allow LAN connections, explicitly add `--host-lan`:
+**Security Note:** By default, `-host-and-play` binds to localhost only (127.0.0.1). To allow LAN connections, explicitly add `-host-lan`:
 
 ```bash
 # Allow LAN connections (other computers on local network can join)
-./venture-client --host-and-play --host-lan
+./venture-client -host-and-play -host-lan
 ```
 
 **Example LAN Party Setup:**
 ```bash
 # Host (192.168.1.100): start server accessible on LAN
-./venture-client --host-and-play --host-lan -max-players 4
+./venture-client -host-and-play -host-lan -max-players 4
 
 # Player 2: connect from another computer
 ./venture-client -multiplayer -server 192.168.1.100:8080
@@ -269,7 +269,7 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
 **Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
 
 **V3.0 Weather Options:**

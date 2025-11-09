@@ -1,7 +1,7 @@
 # Testing Guide
 
-**Version:** 1.0  
-**Last Updated:** October 2025
+**Version:** 3.0  
+**Last Updated:** November 2025
 
 Comprehensive testing strategy, infrastructure, and best practices.
 
@@ -27,7 +27,7 @@ Comprehensive testing strategy, infrastructure, and best practices.
 
 **Coverage Target:** ≥65% per package (excluding Ebiten initialization)
 
-**Current Coverage:** 82.4% average (engine 50%, procgen 73%, rendering 85%, audio high, saveload 67%, combat 100%, world 100%)
+**Current Coverage:** 82.4% average (engine 50%, procgen 73%, rendering 92%, audio high, saveload 71%, combat 100%, world 100%)
 
 ---
 

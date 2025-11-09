@@ -24,16 +24,16 @@ import (
 // BenchmarkResult contains timing and memory statistics for a benchmark.
 type BenchmarkResult struct {
 	Name           string        `json:"name"`
-	Phase          string        `json:"phase"`           // Phase 15-20
-	Duration       time.Duration `json:"duration"`        // Time taken
-	MemoryAlloc    uint64        `json:"memory_alloc"`    // Bytes allocated
-	MemoryTotal    uint64        `json:"memory_total"`    // Total bytes allocated
-	AllocCount     uint64        `json:"alloc_count"`     // Number of allocations
-	Iterations     int           `json:"iterations"`      // Number of iterations run
-	NsPerOp        int64         `json:"ns_per_op"`       // Nanoseconds per operation
-	BytesPerOp     int64         `json:"bytes_per_op"`    // Bytes allocated per operation
-	AllocsPerOp    int64         `json:"allocs_per_op"`   // Allocations per operation
-	TargetMetNs    bool          `json:"target_met_ns"`   // Whether target time was met
+	Phase          string        `json:"phase"`            // Phase 15-20
+	Duration       time.Duration `json:"duration"`         // Time taken
+	MemoryAlloc    uint64        `json:"memory_alloc"`     // Bytes allocated
+	MemoryTotal    uint64        `json:"memory_total"`     // Total bytes allocated
+	AllocCount     uint64        `json:"alloc_count"`      // Number of allocations
+	Iterations     int           `json:"iterations"`       // Number of iterations run
+	NsPerOp        int64         `json:"ns_per_op"`        // Nanoseconds per operation
+	BytesPerOp     int64         `json:"bytes_per_op"`     // Bytes allocated per operation
+	AllocsPerOp    int64         `json:"allocs_per_op"`    // Allocations per operation
+	TargetMetNs    bool          `json:"target_met_ns"`    // Whether target time was met
 	TargetMetBytes bool          `json:"target_met_bytes"` // Whether target memory was met
 }
 
@@ -48,31 +48,31 @@ type BenchmarkSuite struct {
 
 // PhaseTarget defines performance targets for a specific phase.
 type PhaseTarget struct {
-	Phase         string
-	MaxTimeNs     int64 // Maximum nanoseconds per operation
+	Phase          string
+	MaxTimeNs      int64 // Maximum nanoseconds per operation
 	MaxMemoryBytes int64 // Maximum bytes per operation
 }
 
 // GetPhaseTargets returns performance targets for all phases.
 func GetPhaseTargets() map[string]PhaseTarget {
 	return map[string]PhaseTarget{
-		"Phase 15.1": {Phase: "Phase 15.1", MaxTimeNs: 5_000_000, MaxMemoryBytes: 100_000},     // 5ms sprite generation
-		"Phase 15.2": {Phase: "Phase 15.2", MaxTimeNs: 8_000_000, MaxMemoryBytes: 50_000},      // 8ms animation
-		"Phase 15.3": {Phase: "Phase 15.3", MaxTimeNs: 200_000, MaxMemoryBytes: 10_000},        // 0.2ms equipment
-		"Phase 16.1": {Phase: "Phase 16.1", MaxTimeNs: 2_000_000, MaxMemoryBytes: 50_000},      // 2ms texture
-		"Phase 16.2": {Phase: "Phase 16.2", MaxTimeNs: 3_000_000, MaxMemoryBytes: 50_000},      // 3ms transitions
-		"Phase 16.3": {Phase: "Phase 16.3", MaxTimeNs: 305_000, MaxMemoryBytes: 100_000},       // 0.305ms parallax
-		"Phase 17.1": {Phase: "Phase 17.1", MaxTimeNs: 20_000_000, MaxMemoryBytes: 2_000_000},  // 20ms bloom/AO
-		"Phase 17.2": {Phase: "Phase 17.2", MaxTimeNs: 100_000_000, MaxMemoryBytes: 500_000},   // 100ms post-process
-		"Phase 17.3": {Phase: "Phase 17.3", MaxTimeNs: 1_000_000, MaxMemoryBytes: 1_000},       // 1ms time-of-day
-		"Phase 18.1": {Phase: "Phase 18.1", MaxTimeNs: 200_000, MaxMemoryBytes: 500_000},       // 0.2ms weather update
-		"Phase 18.2": {Phase: "Phase 18.2", MaxTimeNs: 1_000_000, MaxMemoryBytes: 50_000},      // 1ms particle physics
-		"Phase 18.3": {Phase: "Phase 18.3", MaxTimeNs: 20_000, MaxMemoryBytes: 500},            // 20µs ambience
-		"Phase 19.1": {Phase: "Phase 19.1", MaxTimeNs: 1_000_000, MaxMemoryBytes: 10_000},      // 1ms UI element
-		"Phase 19.2": {Phase: "Phase 19.2", MaxTimeNs: 1_000_000, MaxMemoryBytes: 1_000},       // 1ms palette
-		"Phase 19.3": {Phase: "Phase 19.3", MaxTimeNs: 1_000_000, MaxMemoryBytes: 10_000},      // 1ms UI decoration
-		"Phase 20.1": {Phase: "Phase 20.1", MaxTimeNs: 10_000_000, MaxMemoryBytes: 50_000},     // 10ms decorations
-		"Phase 20.2": {Phase: "Phase 20.2", MaxTimeNs: 10_000, MaxMemoryBytes: 500},            // 10µs quality check
+		"Phase 15.1": {Phase: "Phase 15.1", MaxTimeNs: 5_000_000, MaxMemoryBytes: 100_000},    // 5ms sprite generation
+		"Phase 15.2": {Phase: "Phase 15.2", MaxTimeNs: 8_000_000, MaxMemoryBytes: 50_000},     // 8ms animation
+		"Phase 15.3": {Phase: "Phase 15.3", MaxTimeNs: 200_000, MaxMemoryBytes: 10_000},       // 0.2ms equipment
+		"Phase 16.1": {Phase: "Phase 16.1", MaxTimeNs: 2_000_000, MaxMemoryBytes: 50_000},     // 2ms texture
+		"Phase 16.2": {Phase: "Phase 16.2", MaxTimeNs: 3_000_000, MaxMemoryBytes: 50_000},     // 3ms transitions
+		"Phase 16.3": {Phase: "Phase 16.3", MaxTimeNs: 305_000, MaxMemoryBytes: 100_000},      // 0.305ms parallax
+		"Phase 17.1": {Phase: "Phase 17.1", MaxTimeNs: 20_000_000, MaxMemoryBytes: 2_000_000}, // 20ms bloom/AO
+		"Phase 17.2": {Phase: "Phase 17.2", MaxTimeNs: 100_000_000, MaxMemoryBytes: 500_000},  // 100ms post-process
+		"Phase 17.3": {Phase: "Phase 17.3", MaxTimeNs: 1_000_000, MaxMemoryBytes: 1_000},      // 1ms time-of-day
+		"Phase 18.1": {Phase: "Phase 18.1", MaxTimeNs: 200_000, MaxMemoryBytes: 500_000},      // 0.2ms weather update
+		"Phase 18.2": {Phase: "Phase 18.2", MaxTimeNs: 1_000_000, MaxMemoryBytes: 50_000},     // 1ms particle physics
+		"Phase 18.3": {Phase: "Phase 18.3", MaxTimeNs: 20_000, MaxMemoryBytes: 500},           // 20µs ambience
+		"Phase 19.1": {Phase: "Phase 19.1", MaxTimeNs: 1_000_000, MaxMemoryBytes: 10_000},     // 1ms UI element
+		"Phase 19.2": {Phase: "Phase 19.2", MaxTimeNs: 1_000_000, MaxMemoryBytes: 1_000},      // 1ms palette
+		"Phase 19.3": {Phase: "Phase 19.3", MaxTimeNs: 1_000_000, MaxMemoryBytes: 10_000},     // 1ms UI decoration
+		"Phase 20.1": {Phase: "Phase 20.1", MaxTimeNs: 10_000_000, MaxMemoryBytes: 50_000},    // 10ms decorations
+		"Phase 20.2": {Phase: "Phase 20.2", MaxTimeNs: 10_000, MaxMemoryBytes: 500},           // 10µs quality check
 	}
 }
 

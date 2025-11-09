@@ -9,25 +9,25 @@ import (
 
 // MemorySnapshot captures memory statistics at a point in time.
 type MemorySnapshot struct {
-	Timestamp   time.Time `json:"timestamp"`
-	Alloc       uint64    `json:"alloc"`        // Bytes allocated and still in use
-	TotalAlloc  uint64    `json:"total_alloc"`  // Bytes allocated (cumulative)
-	Sys         uint64    `json:"sys"`          // Bytes obtained from system
-	Mallocs     uint64    `json:"mallocs"`      // Number of mallocs
-	Frees       uint64    `json:"frees"`        // Number of frees
-	LiveObjects uint64    `json:"live_objects"` // Number of live objects (Mallocs - Frees)
-	NumGC       uint32    `json:"num_gc"`       // Number of GC runs
-	PauseTotalNs uint64   `json:"pause_total_ns"` // Total GC pause time
+	Timestamp    time.Time `json:"timestamp"`
+	Alloc        uint64    `json:"alloc"`          // Bytes allocated and still in use
+	TotalAlloc   uint64    `json:"total_alloc"`    // Bytes allocated (cumulative)
+	Sys          uint64    `json:"sys"`            // Bytes obtained from system
+	Mallocs      uint64    `json:"mallocs"`        // Number of mallocs
+	Frees        uint64    `json:"frees"`          // Number of frees
+	LiveObjects  uint64    `json:"live_objects"`   // Number of live objects (Mallocs - Frees)
+	NumGC        uint32    `json:"num_gc"`         // Number of GC runs
+	PauseTotalNs uint64    `json:"pause_total_ns"` // Total GC pause time
 }
 
 // MemoryProfile tracks memory usage over time.
 type MemoryProfile struct {
-	Name        string           `json:"name"`
-	Snapshots   []MemorySnapshot `json:"snapshots"`
-	StartTime   time.Time        `json:"start_time"`
-	EndTime     time.Time        `json:"end_time"`
-	LeakDetected bool            `json:"leak_detected"`
-	LeakRate    float64          `json:"leak_rate"` // Bytes per second
+	Name         string           `json:"name"`
+	Snapshots    []MemorySnapshot `json:"snapshots"`
+	StartTime    time.Time        `json:"start_time"`
+	EndTime      time.Time        `json:"end_time"`
+	LeakDetected bool             `json:"leak_detected"`
+	LeakRate     float64          `json:"leak_rate"` // Bytes per second
 }
 
 // CaptureMemorySnapshot captures current memory statistics.
@@ -71,7 +71,7 @@ func (p *MemoryProfile) Snapshot() {
 
 // End finalizes the memory profile and performs leak detection.
 func (p *MemoryProfile) End() {
-	runtime.GC() // Collect garbage before final snapshot
+	runtime.GC()                      // Collect garbage before final snapshot
 	time.Sleep(10 * time.Millisecond) // Allow GC to complete
 
 	p.EndTime = time.Now()

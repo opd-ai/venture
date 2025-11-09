@@ -34,7 +34,7 @@
 //	// Create comprehensive regression test suite
 //	suite := visualtest.NewRegressionSuite()
 //	fmt.Printf("Total tests: %d\n", suite.Count())
-//	
+//
 //	// Count tests by phase
 //	phaseCounts := suite.CountByPhase()
 //	for phase, count := range phaseCounts {
@@ -46,7 +46,7 @@
 //	// Run all phase benchmarks
 //	suite := visualtest.RunAllBenchmarks(12345)
 //	suite.PrintResults()
-//	
+//
 //	// Run specific phase benchmarks
 //	results := visualtest.BenchmarkPhase15Sprites(12345)
 //	for _, result := range results {
@@ -60,7 +60,7 @@
 //	    // Code to profile
 //	})
 //	profile.PrintProfile()
-//	
+//
 //	// Detect memory leaks
 //	leaked := visualtest.DetectLeaksInBenchmark("test", 10, 100, func() {
 //	    // Code to test for leaks
@@ -74,12 +74,12 @@
 //	// Capture snapshots
 //	baseline := visualtest.CaptureSnapshot(seed, genreID)
 //	current := visualtest.CaptureSnapshot(seed, genreID)
-//	
+//
 //	// Compare for regressions
 //	result := visualtest.Compare(baseline, current, visualtest.DefaultOptions())
 //	if !result.Passed {
 //	    for _, diff := range result.Differences {
-//	        fmt.Printf("Regression: %s (%.2f%% similar)\n", 
+//	        fmt.Printf("Regression: %s (%.2f%% similar)\n",
 //	            diff.Description, diff.Similarity*100)
 //	    }
 //	}

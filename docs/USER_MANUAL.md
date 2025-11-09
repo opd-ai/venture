@@ -183,28 +183,11 @@ Each genre has unique themes, color palettes, entity types, and items.
 - Screen-space enhancements and visual polish
 - Genre-specific visual filters (warm fantasy, cool sci-fi, desaturated horror, high-contrast cyberpunk, washed-out post-apocalyptic)
 
-**Quality Settings:**
+**Performance Control:**
 ```bash
-# Anti-aliasing (sprite smoothness)
--aa-quality off      # No AA, fastest
--aa-quality low      # 2x2 super-sampling
--aa-quality medium   # 4x4 super-sampling (default)
--aa-quality high     # 8x8 super-sampling, best quality
-
-# Lighting quality
--lighting-quality low     # Basic lighting, hard shadows
--lighting-quality medium  # Soft shadows, colored lights (default)
--lighting-quality high    # Bloom effects, advanced ambient occlusion
-
-# Particle density (weather effects)
--particle-density low     # Fewer particles, better performance
--particle-density medium  # Balanced (default)
--particle-density high    # Maximum particles, best visuals
-
-# Overall preset
--preset performance  # Low quality settings, max FPS
--preset balanced     # Medium settings (default)
--preset quality      # High quality settings, best visuals
+# Enable/disable features for performance
+-enable-lighting=false  # Disable lighting system
+-enable-weather=false   # Disable weather effects
 ```
 
 **Performance (V3.0):**

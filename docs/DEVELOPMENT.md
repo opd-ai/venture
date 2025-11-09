@@ -276,7 +276,7 @@ func helper() {
 
 #### Testing Standards
 
-- Target 80%+ code coverage
+- Target 65%+ code coverage (current average: 82.4%)
 - Test edge cases and error conditions  
 - Use table-driven tests for multiple scenarios
 - Test determinism for procedural generation

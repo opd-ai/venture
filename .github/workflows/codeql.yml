@@ -1,0 +1,90 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Run every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'go' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.5'
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
+          libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config \
+          libx11-dev xvfb
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+        config: |
+          paths-ignore:
+            - examples/**
+            - cmd/*test/**
+
+    - name: Build project
+      run: |
+        go mod download
+        xvfb-run -s "-screen 0 1920x1080x24" go build -v ./cmd/client
+        xvfb-run -s "-screen 0 1920x1080x24" go build -v ./cmd/server
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{ matrix.language }}"
+        upload: true
+        output: sarif-results
+
+    - name: Upload SARIF results as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-sarif-results
+        path: sarif-results/**/*.sarif
+        retention-days: 30
+
+    - name: Convert SARIF to HTML
+      run: |
+        mkdir -p html-reports
+        chmod +x .github/scripts/sarif-to-html.sh
+        .github/scripts/sarif-to-html.sh sarif-results html-reports
+
+    - name: Upload HTML reports as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-html-reports
+        path: html-reports/
+        retention-days: 30
+
+  # Note: GitHub Pages deployment is handled by the pages.yml workflow
+  # This job makes security reports available as downloadable artifacts
+  # To publish to GitHub Pages, modify the pages.yml workflow to include security reports

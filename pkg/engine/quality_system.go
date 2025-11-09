@@ -75,11 +75,11 @@ func (qs *QualitySystem) Update(deltaTime float64) {
 	qs.adjuster.Update(frameTimeMS)
 }
 
-// GetConfig returns the current quality configuration.
-func (qs *QualitySystem) GetConfig() *quality.Config {
+// GetConfig returns a copy of the current quality configuration.
+func (qs *QualitySystem) GetConfig() quality.Config {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
-	return qs.config
+	return *qs.config
 }
 
 // SetConfig updates the quality configuration.

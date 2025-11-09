@@ -945,9 +945,9 @@
 **Quality Configuration Features:**
 - **Post-Processing:** 8 toggles (processing, bloom, AO, motion blur, depth blur, grading, vignette, chromatic aberration)
 - **Lighting:** 4 settings (soft shadows, colored lighting, dynamic lighting, sample count 1-5)
-- **Sprites:** 6 settings (detail 0.3-1.0, anti-aliasing, AA quality 0-3, cache, glow, damage states)
+- **Sprites:** 6 settings (detail 0.0-1.0, anti-aliasing, AA quality 0-3, cache, glow, damage states)
 - **Tiles:** 6 settings (patterns, transitions, parallax, layers 1-3, AO, normals)
-- **Particles:** 5 settings (multiplier 0.25-1.0, physics, weather, ambience, LOD distance)
+- **Particles:** 5 settings (multiplier 0.0-1.0, physics, weather, ambience, LOD distance)
 - **UI:** 4 toggles (decorations, transitions, hierarchy, patterns)
 - **Environment:** 3 settings (decorations, density 0.0-1.0, variations)
 - **Performance:** 7 settings (max particles, cache size, culling, batching, pooling)

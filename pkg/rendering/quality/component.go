@@ -44,8 +44,11 @@ func NewQualitySettingsComponent() QualitySettingsComponent {
 // WithSpriteDetail creates a component that overrides sprite detail.
 func WithSpriteDetail(detail float64) QualitySettingsComponent {
 	return QualitySettingsComponent{
-		Override:             true,
-		SpriteDetailOverride: detail,
+		Override:                        true,
+		SpriteDetailOverride:            detail,
+		EnableAntiAliasingOverride:      true,
+		ParticleCountMultiplierOverride: 1.0,
+		DisableEffects:                  false,
 	}
 }
 
@@ -53,7 +56,10 @@ func WithSpriteDetail(detail float64) QualitySettingsComponent {
 func WithParticleMultiplier(multiplier float64) QualitySettingsComponent {
 	return QualitySettingsComponent{
 		Override:                        true,
+		SpriteDetailOverride:            1.0,
+		EnableAntiAliasingOverride:      true,
 		ParticleCountMultiplierOverride: multiplier,
+		DisableEffects:                  false,
 	}
 }
 

@@ -1,6 +1,7 @@
 package quality
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -280,6 +281,22 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: true,
 			errMsg:  "CacheSizeMB",
 		},
+		{
+			name: "invalid particle LOD distance - negative",
+			config: Config{
+				SpriteDetailLevel:       0.5,
+				AntiAliasingQuality:     1,
+				TileLayerCount:          2,
+				ParticleCountMultiplier: 0.5,
+				DecorationDensity:       0.5,
+				ShadowSampleCount:       3,
+				MaxParticles:            1000,
+				CacheSizeMB:             50,
+				ParticleLODDistance:     -100.0,
+			},
+			wantErr: true,
+			errMsg:  "ParticleLODDistance",
+		},
 	}
 
 	for _, tt := range tests {
@@ -290,7 +307,7 @@ func TestConfig_Validate(t *testing.T) {
 				return
 			}
 			if tt.wantErr && err != nil {
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("Config.Validate() error = %v, want error containing %q", err, tt.errMsg)
 				}
 			}
@@ -415,20 +432,6 @@ func TestPerformanceOptimizations(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || containsMiddle(s, substr)))
-}
-
-func containsMiddle(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // Benchmarks

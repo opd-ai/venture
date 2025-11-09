@@ -64,7 +64,7 @@ type Config struct {
 	ShadowSampleCount     int // 1-5 samples for shadow softness
 
 	// Sprite rendering
-	SpriteDetailLevel    float64 // 0.3-1.0 (low to high detail)
+	SpriteDetailLevel    float64 // 0.0-1.0 (low to high detail)
 	EnableAntiAliasing   bool
 	AntiAliasingQuality  int // 0=off, 1=2x2, 2=4x4, 3=8x8
 	EnableSpriteCache    bool
@@ -80,7 +80,7 @@ type Config struct {
 	EnableTileNormals      bool
 
 	// Particle effects
-	ParticleCountMultiplier float64 // 0.25-1.0 (low to high particle count)
+	ParticleCountMultiplier float64 // 0.0-1.0 (low to high particle count)
 	EnableParticlePhysics   bool
 	EnableWeatherEffects    bool
 	EnableAmbienceParticles bool
@@ -337,6 +337,10 @@ func (c *Config) Validate() error {
 
 	if c.CacheSizeMB < 0 {
 		return fmt.Errorf("quality: CacheSizeMB must be non-negative, got %d", c.CacheSizeMB)
+	}
+
+	if c.ParticleLODDistance < 0.0 {
+		return fmt.Errorf("quality: ParticleLODDistance must be non-negative, got %f", c.ParticleLODDistance)
 	}
 
 	return nil

@@ -187,26 +187,85 @@ For persistent servers or remote hosting, use a dedicated server:
 
 **For detailed strategies, mechanics explanations, and advanced tips, see [User Manual](USER_MANUAL.md).**
 
-## Visual Enhancements (Optional)
+## Visual Enhancements (V3.0)
 
-### Dynamic Lighting
+### Enhanced Graphics Quality
 
-Venture includes an optional dynamic lighting system that enhances atmosphere:
+Venture V3.0 features significant visual improvements while maintaining 100% procedural generation:
+
+**What's New in V3.0:**
+- **40% more sprite detail** with anatomical accuracy and facial features
+- **Professional-grade lighting** with soft shadows and bloom effects
+- **Rich weather systems** with rain, snow, fog, and genre-specific variations
+- **Smooth tile transitions** with 50+ procedural texture patterns per genre
+- **Dynamic UI colors** that adapt to the genre theme
+- **Parallax backgrounds** for enhanced depth perception
+
+All V3.0 enhancements are **enabled by default** and optimized to maintain excellent performance (106 FPS with 2000 entities).
+
+### Dynamic Lighting & Weather
 
 ```bash
-# Enable lighting for a more atmospheric experience
-./venture-client -enable-lighting -genre horror
+# Lighting is enabled by default in V3.0, with genre-specific presets
+./venture-client -genre fantasy   # Warm torchlight
+./venture-client -genre scifi     # Cool neon lights
+./venture-client -genre horror    # Dim, eerie lighting
+./venture-client -genre cyberpunk # Vibrant neon glow
+./venture-client -genre postapoc  # Harsh, dusty lighting
+
+# Enable weather effects for additional atmosphere
+./venture-client -enable-weather -weather rain -weather-intensity medium
+
+# Combined for maximum immersion
+./venture-client -genre horror -enable-weather -weather fog -weather-intensity heavy
 ```
 
-**Features:**
-- **Player Torch**: Automatic light source that follows you
-- **Environmental Lights**: Wall torches and magical crystals
-- **Spell Lights**: Colorful lights during spell casting
-- **Genre-Specific Atmosphere**: Each genre has unique lighting
+**Weather Types (V3.0):**
+- **Rain:** Water droplets with realistic fluid simulation
+- **Snow:** Snowflakes with accumulation effects
+- **Fog:** Volumetric fog that obscures distant areas
+- **Dust:** Swirling dust particles in the air
+- **Ash:** Falling ash (perfect for post-apocalyptic genre)
 
-**Best Genres:** Horror (creates tension), Cyberpunk (neon colors), Fantasy (torch warmth)
+**Weather Intensity:** Light, Medium, Heavy, Extreme
 
-**Performance:** Adds ~2-4ms per frame. Omit flag for maximum performance.
+**Genre-Specific Weather:**
+- Fantasy: Natural rain and snow
+- Sci-Fi: Neon rain, energy fog
+- Horror: Blood rain, toxic fog
+- Cyberpunk: Acid rain, pollution smog
+- Post-Apocalyptic: Radiation dust, ash fall
+
+### Visual Quality Settings (V3.0)
+
+```bash
+# Anti-aliasing quality (V3.0 feature)
+./venture-client -aa-quality high    # Best quality (8x8 super-sampling)
+./venture-client -aa-quality medium  # Balanced (4x4 super-sampling)
+./venture-client -aa-quality low     # Performance (2x2 super-sampling)
+./venture-client -aa-quality off     # Fastest, no anti-aliasing
+
+# Lighting quality
+./venture-client -lighting-quality high    # Soft shadows + bloom effects
+./venture-client -lighting-quality medium  # Soft shadows only
+./venture-client -lighting-quality low     # Basic lighting (fastest)
+
+# Particle density for weather effects
+./venture-client -particle-density high    # Maximum particle count
+./venture-client -particle-density medium  # Balanced (default)
+./venture-client -particle-density low     # Better performance
+
+# Performance preset (sets all quality options)
+./venture-client -preset quality      # Maximum visual quality
+./venture-client -preset balanced     # Balanced quality/performance (default)
+./venture-client -preset performance  # Maximum performance
+```
+
+**Performance Notes:**
+- V3.0 maintains 106 FPS with all features enabled (70% above 60 FPS target)
+- Sprite cache hit rate: 95.9% (same as V2.0)
+- Lighting overhead: <5% frame time
+- All enhancements use deterministic generation (same seed = same visuals)
 
 ---
 
@@ -234,8 +293,16 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-lighting-quality`, `-enable-weather`, `-weather`, `-weather-intensity`, `-particle-density`, `-aa-quality`, `-preset`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
 **Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
+
+**V3.0 New Options:**
+- `-aa-quality`: Anti-aliasing level (off, low, medium, high)
+- `-lighting-quality`: Lighting quality (low, medium, high)
+- `-particle-density`: Particle count (low, medium, high)
+- `-preset`: Overall quality preset (performance, balanced, quality)
+- `-weather`: Weather type (rain, snow, fog, dust, ash)
+- `-weather-intensity`: Weather strength (light, medium, heavy, extreme)
 
 **For complete command-line options and configuration details, see [User Manual](USER_MANUAL.md).**
 

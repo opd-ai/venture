@@ -38,6 +38,8 @@ func main() {
 		config = quality.MediumQualityConfig()
 	case quality.QualityHigh:
 		config = quality.HighQualityConfig()
+	default:
+		config = quality.MediumQualityConfig() // Safe default
 	}
 
 	// Validate configuration

@@ -173,11 +173,28 @@ func formatVehicle(v *vehicle.Vehicle, verbose bool) string {
 		sb.WriteString(fmt.Sprintf("      Max Durability: %.1f\n", v.MaxDurability))
 		sb.WriteString(fmt.Sprintf("      Fuel Capacity:  %.1f (%s)\n", v.FuelCapacity, v.FuelType))
 		sb.WriteString(fmt.Sprintf("      Capacity:       %d passengers\n", v.Capacity))
-		sb.WriteString(fmt.Sprintf("      Color:          #%06X\n", v.Color))
+		sb.WriteString(fmt.Sprintf("    Visual (Phase 21.3):\n"))
+		sb.WriteString(fmt.Sprintf("      Primary Color:   #%06X\n", v.Color))
+		sb.WriteString(fmt.Sprintf("      Secondary Color: #%06X\n", v.SecondaryColor))
+		sb.WriteString(fmt.Sprintf("      Decal Pattern:   %s\n", v.DecalPattern))
+		sb.WriteString(fmt.Sprintf("      Damage State:    %.2f (%.0f%% worn)\n", v.DamageState, v.DamageState*100))
+		sb.WriteString(fmt.Sprintf("      Decorations:     %s\n", strings.Join(v.Decorations, ", ")))
+		if v.HasCombat {
+			sb.WriteString(fmt.Sprintf("    Combat:\n"))
+			sb.WriteString(fmt.Sprintf("      Has Weapon:     %v\n", v.HasWeapon))
+			if v.HasWeapon {
+				sb.WriteString(fmt.Sprintf("      Weapon Type:    %s\n", v.WeaponType))
+			}
+			sb.WriteString(fmt.Sprintf("      Cargo Slots:    %d\n", v.CargoSlots))
+			sb.WriteString(fmt.Sprintf("      Upgrade Slots:  %d\n", v.UpgradeSlots))
+		}
+		if v.SpecialAbility != "" {
+			sb.WriteString(fmt.Sprintf("    Special Ability: %s\n", v.SpecialAbility))
+		}
 		sb.WriteString(fmt.Sprintf("      Depth:          %d\n", v.Depth))
 	} else {
-		sb.WriteString(fmt.Sprintf("    Speed: %.0f | Durability: %.0f | Fuel: %.0f %s\n",
-			v.MaxSpeed, v.MaxDurability, v.FuelCapacity, v.FuelType))
+		sb.WriteString(fmt.Sprintf("    Speed: %.0f | Durability: %.0f | Fuel: %.0f %s | Pattern: %s\n",
+			v.MaxSpeed, v.MaxDurability, v.FuelCapacity, v.FuelType, v.DecalPattern))
 	}
 
 	return sb.String()

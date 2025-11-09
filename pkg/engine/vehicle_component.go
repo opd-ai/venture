@@ -234,16 +234,19 @@ func (v *VehicleComponent) GetFuelCost() float64 {
 }
 
 // ConsumeFuel reduces fuel by the specified amount.
-// Returns false if insufficient fuel.
+// Returns false if insufficient fuel available.
+// Consumes remaining fuel even if less than requested amount.
 func (v *VehicleComponent) ConsumeFuel(amount float64) bool {
-	if v.FuelAmount < amount {
+	if v.FuelAmount <= 0 {
 		return false
 	}
+	
+	hadEnough := v.FuelAmount >= amount
 	v.FuelAmount -= amount
 	if v.FuelAmount < 0 {
 		v.FuelAmount = 0
 	}
-	return true
+	return hadEnough
 }
 
 // RefillFuel adds fuel up to capacity.

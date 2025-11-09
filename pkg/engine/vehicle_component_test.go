@@ -188,21 +188,21 @@ func TestVehicleComponent_ConsumeFuel(t *testing.T) {
 		t.Errorf("FuelAmount = %f, want %f", vc.FuelAmount, initialFuel-10.0)
 	}
 
-	// Try to consume more than available
+	// Try to consume more than available - should consume what's left
 	vc.FuelAmount = 5.0
 	if vc.ConsumeFuel(10.0) {
-		t.Error("ConsumeFuel(10.0) with 5.0 fuel returned true, expected false")
-	}
-	if vc.FuelAmount != 5.0 {
-		t.Errorf("FuelAmount should remain 5.0, got %f", vc.FuelAmount)
-	}
-
-	// Consume all remaining fuel
-	if !vc.ConsumeFuel(5.0) {
-		t.Error("ConsumeFuel(5.0) returned false, expected true")
+		t.Error("ConsumeFuel(10.0) with 5.0 fuel returned true, expected false (insufficient)")
 	}
 	if vc.FuelAmount != 0.0 {
-		t.Errorf("FuelAmount = %f, want 0.0", vc.FuelAmount)
+		t.Errorf("FuelAmount should be 0.0 (consumed remaining), got %f", vc.FuelAmount)
+	}
+
+	// Try to consume from empty - should fail without change
+	if vc.ConsumeFuel(5.0) {
+		t.Error("ConsumeFuel(5.0) with 0.0 fuel returned true, expected false")
+	}
+	if vc.FuelAmount != 0.0 {
+		t.Errorf("FuelAmount should remain 0.0, got %f", vc.FuelAmount)
 	}
 }
 

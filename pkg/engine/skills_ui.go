@@ -126,7 +126,10 @@ func (ui *EbitenSkillsUI) loadSkillTree() {
 	}
 
 	if comp, ok := ui.playerEntity.GetComponent("skill_tree"); ok {
-		ui.skillTreeComp = comp.(*SkillTreeComponent)
+		// Type assert with safety check
+		if skillTree, ok := comp.(*SkillTreeComponent); ok {
+			ui.skillTreeComp = skillTree
+		}
 	}
 }
 
@@ -503,10 +506,12 @@ func (ui *EbitenSkillsUI) attemptPurchaseSkill(skillID string) {
 	if ui.skillTreeComp.LearnSkill(skillID, availablePoints) {
 		// Deduct skill points from experience component
 		if expComp, ok := ui.playerEntity.GetComponent("experience"); ok {
-			exp := expComp.(*ExperienceComponent)
-			skill := ui.skillTreeComp.Tree.GetSkillByID(skillID)
-			if skill != nil {
-				exp.SkillPoints -= skill.Requirements.SkillPoints
+			// Type assert with safety check
+			if exp, ok := expComp.(*ExperienceComponent); ok {
+				skill := ui.skillTreeComp.Tree.GetSkillByID(skillID)
+				if skill != nil {
+					exp.SkillPoints -= skill.Requirements.SkillPoints
+				}
 			}
 		}
 
@@ -530,8 +535,10 @@ func (ui *EbitenSkillsUI) attemptRefundSkill(skillID string) {
 	if pointsRefunded > 0 {
 		// Refund skill points to experience component
 		if expComp, ok := ui.playerEntity.GetComponent("experience"); ok {
-			exp := expComp.(*ExperienceComponent)
-			exp.SkillPoints += pointsRefunded
+			// Type assert with safety check
+			if exp, ok := expComp.(*ExperienceComponent); ok {
+				exp.SkillPoints += pointsRefunded
+			}
 		}
 
 		// GAP-008 REPAIR: Immediately recalculate skill bonuses after refunding
@@ -606,7 +613,10 @@ func (ui *EbitenSkillsUI) getAvailableSkillPoints() int {
 	}
 
 	if expComp, ok := ui.playerEntity.GetComponent("experience"); ok {
-		return expComp.(*ExperienceComponent).SkillPoints
+		// Type assert with safety check
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			return exp.SkillPoints
+		}
 	}
 
 	return 0
@@ -619,7 +629,10 @@ func (ui *EbitenSkillsUI) getPlayerLevel() int {
 	}
 
 	if expComp, ok := ui.playerEntity.GetComponent("experience"); ok {
-		return expComp.(*ExperienceComponent).Level
+		// Type assert with safety check
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			return exp.Level
+		}
 	}
 
 	return 1

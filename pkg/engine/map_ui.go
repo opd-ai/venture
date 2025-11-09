@@ -296,17 +296,19 @@ func (ui *EbitenMapUI) drawMinimap(screen *ebiten.Image) {
 
 	// Draw player icon
 	if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-		pos := posComp.(*PositionComponent)
-		// Convert world position to tile coordinates (assuming 32px tiles)
-		tileX := int(pos.X / 32)
-		tileY := int(pos.Y / 32)
+		// Type assert with safety check
+		if pos, ok := posComp.(*PositionComponent); ok {
+			// Convert world position to tile coordinates (assuming 32px tiles)
+			tileX := int(pos.X / 32)
+			tileY := int(pos.Y / 32)
 
-		if tileX >= 0 && tileX < ui.terrain.Width && tileY >= 0 && tileY < ui.terrain.Height {
-			pixelX := float32(mapX) + float32(float64(tileX)*tileScale)
-			pixelY := float32(mapY) + float32(float64(tileY)*tileScale)
+			if tileX >= 0 && tileX < ui.terrain.Width && tileY >= 0 && tileY < ui.terrain.Height {
+				pixelX := float32(mapX) + float32(float64(tileX)*tileScale)
+				pixelY := float32(mapY) + float32(float64(tileY)*tileScale)
 
-			// Draw player as blue circle
-			vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 150, 255, 255}, false)
+				// Draw player as blue circle
+				vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 150, 255, 255}, false)
+			}
 		}
 	}
 
@@ -424,7 +426,11 @@ func (ui *EbitenMapUI) updateFogOfWar() {
 		return
 	}
 
-	pos := posComp.(*PositionComponent)
+	// Type assert with safety check
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 	// Convert world position to tile coordinates (assuming 32px tiles)
 	centerX := int(pos.X / 32)
 	centerY := int(pos.Y / 32)
@@ -509,17 +515,19 @@ func (ui *EbitenMapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int
 
 	// Draw player icon
 	if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-		pos := posComp.(*PositionComponent)
-		tileX := int(pos.X / 32)
-		tileY := int(pos.Y / 32)
+		// Type assert with safety check
+		if pos, ok := posComp.(*PositionComponent); ok {
+			tileX := int(pos.X / 32)
+			tileY := int(pos.Y / 32)
 
-		if tileX >= startTileX && tileY >= startTileY {
-			screenX := float32(mapAreaX) + float32((float64(tileX)*tileSize)-(ui.offsetX))
-			screenY := float32(mapAreaY) + float32((float64(tileY)*tileSize)-(ui.offsetY))
+			if tileX >= startTileX && tileY >= startTileY {
+				screenX := float32(mapAreaX) + float32((float64(tileX)*tileSize)-(ui.offsetX))
+				screenY := float32(mapAreaY) + float32((float64(tileY)*tileSize)-(ui.offsetY))
 
-			// Draw player as blue circle
-			vector.DrawFilledCircle(screen, screenX+float32(tileSize)/2, screenY+float32(tileSize)/2,
-				float32(tileSize)/2, color.RGBA{100, 150, 255, 255}, false)
+				// Draw player as blue circle
+				vector.DrawFilledCircle(screen, screenX+float32(tileSize)/2, screenY+float32(tileSize)/2,
+					float32(tileSize)/2, color.RGBA{100, 150, 255, 255}, false)
+			}
 		}
 	}
 
@@ -534,7 +542,11 @@ func (ui *EbitenMapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 		tileX := int(pos.X / 32)
 		tileY := int(pos.Y / 32)
 
@@ -554,9 +566,11 @@ func (ui *EbitenMapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int
 
 		// Check if enemy
 		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
-			team := teamComp.(*TeamComponent)
-			if team.TeamID == 2 { // Enemy team
-				iconColor = color.RGBA{255, 100, 100, 255} // Red
+			// Type assert with safety check
+			if team, ok := teamComp.(*TeamComponent); ok {
+				if team.TeamID == 2 { // Enemy team
+					iconColor = color.RGBA{255, 100, 100, 255} // Red
+				}
 			}
 		}
 
@@ -633,7 +647,11 @@ func (ui *EbitenMapUI) centerOnPlayer() {
 		return
 	}
 
-	pos := posComp.(*PositionComponent)
+	// Type assert with safety check
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 	tileX := int(pos.X / 32)
 	tileY := int(pos.Y / 32)
 

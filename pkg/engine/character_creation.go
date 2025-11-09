@@ -1210,10 +1210,22 @@ func ApplyClassStats(player *Entity, class CharacterClass) error {
 		return fmt.Errorf("player missing attack component")
 	}
 
-	health := healthComp.(*HealthComponent)
-	mana := manaComp.(*ManaComponent)
-	stats := statsComp.(*StatsComponent)
-	attack := attackComp.(*AttackComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return fmt.Errorf("health component has wrong type")
+	}
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return fmt.Errorf("mana component has wrong type")
+	}
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return fmt.Errorf("stats component has wrong type")
+	}
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return fmt.Errorf("attack component has wrong type")
+	}
 
 	// Apply class-specific stats
 	switch class {

@@ -83,7 +83,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						pos := comp.(*PositionComponent)
+						pos, ok := comp.(*PositionComponent)
+						if !ok {
+							continue
+						}
 						// Simple distance check from origin (400, 300 typical spawn)
 						distFromStart := (pos.X-400)*(pos.X-400) + (pos.Y-300)*(pos.Y-300)
 						return distFromStart > 2500 // ~50 units
@@ -106,7 +109,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						attack := comp.(*AttackComponent)
+						attack, ok := comp.(*AttackComponent)
+						if !ok {
+							continue
+						}
 						// Check if attack cooldown is active (means they attacked)
 						return attack.CooldownTimer > 0 || attack.CooldownTimer < attack.Cooldown
 					}
@@ -128,7 +134,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						health := comp.(*HealthComponent)
+						health, ok := comp.(*HealthComponent)
+						if !ok {
+							continue
+						}
 						// Complete if health is damaged but still above 50%
 						return health.Current < health.Max && health.Current > health.Max/2
 					}
@@ -150,7 +159,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						inv := comp.(*InventoryComponent)
+						inv, ok := comp.(*InventoryComponent)
+						if !ok {
+							continue
+						}
 						return len(inv.Items) > 0
 					}
 				}
@@ -171,7 +183,10 @@ func createDefaultTutorialSteps() []TutorialStep {
 						if !ok {
 							continue
 						}
-						exp := comp.(*ExperienceComponent)
+						exp, ok := comp.(*ExperienceComponent)
+						if !ok {
+							continue
+						}
 						return exp.Level >= 2
 					}
 				}

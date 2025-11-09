@@ -38,7 +38,11 @@ var particleSlicePool = sync.Pool{
 //
 // Returns: Pooled ParticleSystem ready for use
 func NewParticleSystem(particles []Particle, pType ParticleType, config Config) *ParticleSystem {
-	ps := particleSystemPool.Get().(*ParticleSystem)
+	ps, ok := particleSystemPool.Get().(*ParticleSystem)
+	if !ok {
+		// Pool returned unexpected type, create new instance
+		ps = &ParticleSystem{}
+	}
 
 	// Clear previous state
 	ps.Particles = ps.Particles[:0]

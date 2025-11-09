@@ -52,7 +52,10 @@ func (s *CollisionSystem) WouldCollideWithTerrain(entity *Entity, newX, newY flo
 	}
 
 	colliderComp, _ := entity.GetComponent("collider")
-	collider := colliderComp.(*ColliderComponent)
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return false
+	}
 
 	// Only check solid colliders (triggers don't block movement)
 	if !collider.Solid || collider.IsTrigger {
@@ -81,8 +84,14 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 	// Get collider components
 	collider1Comp, _ := entity.GetComponent("collider")
 	collider2Comp, _ := other.GetComponent("collider")
-	collider1 := collider1Comp.(*ColliderComponent)
-	collider2 := collider2Comp.(*ColliderComponent)
+	collider1, ok := collider1Comp.(*ColliderComponent)
+	if !ok {
+		return false
+	}
+	collider2, ok := collider2Comp.(*ColliderComponent)
+	if !ok {
+		return false
+	}
 
 	// Skip trigger colliders (they don't block movement)
 	if collider1.IsTrigger || collider2.IsTrigger {
@@ -103,8 +112,14 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 	layer1Comp, hasLayer1 := entity.GetComponent("layer")
 	layer2Comp, hasLayer2 := other.GetComponent("layer")
 	if hasLayer1 && hasLayer2 {
-		l1 := layer1Comp.(*LayerComponent)
-		l2 := layer2Comp.(*LayerComponent)
+		l1, ok := layer1Comp.(*LayerComponent)
+		if !ok {
+			return false
+		}
+		l2, ok := layer2Comp.(*LayerComponent)
+		if !ok {
+			return false
+		}
 		// Flying entities collide with all layers
 		if !l1.CanFly && !l2.CanFly {
 			// Check if entities are on same effective terrain layer
@@ -116,7 +131,10 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 
 	// Get other entity's current position
 	pos2Comp, _ := other.GetComponent("position")
-	pos2 := pos2Comp.(*PositionComponent)
+	pos2, ok := pos2Comp.(*PositionComponent)
+	if !ok {
+		return false
+	}
 
 	// Issue #20: Check intersection at predicted position with rotation support
 	rot1Comp, hasRot1 := entity.GetComponent("rotation")
@@ -127,10 +145,14 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 		angle1 := 0.0
 		angle2 := 0.0
 		if hasRot1 {
-			angle1 = rot1Comp.(*RotationComponent).Angle
+			if rot1, ok := rot1Comp.(*RotationComponent); ok {
+				angle1 = rot1.Angle
+			}
 		}
 		if hasRot2 {
-			angle2 = rot2Comp.(*RotationComponent).Angle
+			if rot2, ok := rot2Comp.(*RotationComponent); ok {
+				angle2 = rot2.Angle
+			}
 		}
 		return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
 	}
@@ -218,8 +240,14 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 			layer1Comp, hasLayer1 := entity.GetComponent("layer")
 			layer2Comp, hasLayer2 := other.GetComponent("layer")
 			if hasLayer1 && hasLayer2 {
-				l1 := layer1Comp.(*LayerComponent)
-				l2 := layer2Comp.(*LayerComponent)
+				l1, ok := layer1Comp.(*LayerComponent)
+				if !ok {
+					continue
+				}
+				l2, ok := layer2Comp.(*LayerComponent)
+				if !ok {
+					continue
+				}
 				// Flying entities collide with all layers
 				if !l1.CanFly && !l2.CanFly {
 					// Check if entities are on same effective terrain layer
@@ -240,10 +268,14 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 				angle1 := 0.0
 				angle2 := 0.0
 				if hasRot1 {
-					angle1 = rot1Comp.(*RotationComponent).Angle
+					if rot1, ok := rot1Comp.(*RotationComponent); ok {
+						angle1 = rot1.Angle
+					}
 				}
 				if hasRot2 {
-					angle2 = rot2Comp.(*RotationComponent).Angle
+					if rot2, ok := rot2Comp.(*RotationComponent); ok {
+						angle2 = rot2.Angle
+					}
 				}
 				intersects = collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
 			} else {
@@ -429,8 +461,14 @@ func (s *CollisionSystem) resolveTerrainCollision(entity *Entity) {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
-	pos := posComp.(*PositionComponent)
-	collider := colliderComp.(*ColliderComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return
+	}
 
 	// Try to find a valid position by moving away from walls
 	// Check 8 directions around the entity
@@ -454,7 +492,10 @@ func (s *CollisionSystem) resolveTerrainCollision(entity *Entity) {
 			// Stop movement in the blocked direction
 			if entity.HasComponent("velocity") {
 				vel, _ := entity.GetComponent("velocity")
-				velocity := vel.(*VelocityComponent)
+				velocity, ok := vel.(*VelocityComponent)
+				if !ok {
+					return
+				}
 
 				// Stop velocity component that's moving into the wall
 				if dir.dx != 0 {
@@ -471,7 +512,10 @@ func (s *CollisionSystem) resolveTerrainCollision(entity *Entity) {
 	// If no direction works, stop all movement
 	if entity.HasComponent("velocity") {
 		vel, _ := entity.GetComponent("velocity")
-		velocity := vel.(*VelocityComponent)
+		velocity, ok := vel.(*VelocityComponent)
+		if !ok {
+			return
+		}
 		velocity.VX = 0
 		velocity.VY = 0
 	}

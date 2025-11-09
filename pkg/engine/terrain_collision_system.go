@@ -162,15 +162,23 @@ func (t *TerrainCollisionChecker) CheckEntityCollision(entity *Entity) bool {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
-	pos := posComp.(*PositionComponent)
-	collider := colliderComp.(*ColliderComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return false
+	}
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return false
+	}
 
 	// Get entity's layer (default to ground layer if no layer component)
 	layer := 0
 	if entity.HasComponent("layer") {
 		layerComp, _ := entity.GetComponent("layer")
-		layerComponent := layerComp.(*LayerComponent)
-		layer = layerComponent.GetEffectiveLayer()
+		layerComponent, ok := layerComp.(*LayerComponent)
+		if ok {
+			layer = layerComponent.GetEffectiveLayer()
+		}
 	}
 
 	return t.CheckCollisionWithLayer(pos.X, pos.Y, collider.Width, collider.Height, layer)

@@ -88,14 +88,20 @@ func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		camera := cameraComp.(*CameraComponent)
+		camera, ok := cameraComp.(*CameraComponent)
+		if !ok {
+			continue
+		}
 
 		// Get entity position
 		posComp, ok := entity.GetComponent("position")
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate target camera position (entity position + offset)
 		targetX := pos.X + camera.OffsetX
@@ -160,7 +166,10 @@ func (s *CameraSystem) calculateEffectiveDeltaTime(entities []*Entity, deltaTime
 			continue
 		}
 
-		hitStop := hitStopComp.(*HitStopComponent)
+		hitStop, ok := hitStopComp.(*HitStopComponent)
+		if !ok {
+			continue
+		}
 		if hitStop.IsActive() {
 			// Update hit-stop elapsed time with REAL delta time (not scaled)
 			hitStop.Elapsed += deltaTime
@@ -187,7 +196,10 @@ func (s *CameraSystem) updateAdvancedShake(entity *Entity, deltaTime float64) {
 		return
 	}
 
-	shake := shakeComp.(*ScreenShakeComponent)
+	shake, ok := shakeComp.(*ScreenShakeComponent)
+	if !ok {
+		return
+	}
 	if !shake.IsShaking() {
 		return
 	}
@@ -225,7 +237,10 @@ func (s *CameraSystem) WorldToScreen(worldX, worldY float64) (screenX, screenY f
 	if !ok {
 		return worldX, worldY
 	}
-	camera := cameraComp.(*CameraComponent)
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return worldX, worldY
+	}
 
 	// Apply camera transform
 	screenX = (worldX - camera.X) * camera.Zoom
@@ -252,7 +267,10 @@ func (s *CameraSystem) ScreenToWorld(screenX, screenY float64) (worldX, worldY f
 	if !ok {
 		return screenX, screenY
 	}
-	camera := cameraComp.(*CameraComponent)
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return screenX, screenY
+	}
 
 	// Remove screen centering
 	worldX = screenX - float64(s.ScreenWidth)/2
@@ -304,7 +322,10 @@ func (s *CameraSystem) GetPosition() (float64, float64) {
 	if !ok {
 		return 0, 0
 	}
-	camera := cameraComp.(*CameraComponent)
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return 0, 0
+	}
 
 	return camera.X, camera.Y
 }
@@ -328,7 +349,10 @@ func (s *CameraSystem) Shake(intensity float64) {
 	if !ok {
 		return
 	}
-	camera := cameraComp.(*CameraComponent)
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return
+	}
 
 	// Add to existing shake (allows stacking)
 	camera.ShakeIntensity += intensity
@@ -357,7 +381,12 @@ func (s *CameraSystem) ShakeAdvanced(intensity, duration float64) {
 	// Try advanced shake component first
 	shakeComp, ok := s.activeCamera.GetComponent("screenShake")
 	if ok {
-		advanced := shakeComp.(*ScreenShakeComponent)
+		advanced, ok := shakeComp.(*ScreenShakeComponent)
+		if !ok {
+			// Fall back to basic shake if type assertion fails
+			s.Shake(intensity)
+			return
+		}
 		advanced.TriggerShake(intensity, duration)
 		return
 	}
@@ -386,7 +415,10 @@ func (s *CameraSystem) TriggerHitStop(duration, timeScale float64) {
 		return // No hit-stop component, silently ignore
 	}
 
-	hitStop := hitStopComp.(*HitStopComponent)
+	hitStop, ok := hitStopComp.(*HitStopComponent)
+	if !ok {
+		return
+	}
 	hitStop.TriggerHitStop(duration, timeScale)
 }
 
@@ -402,7 +434,10 @@ func (s *CameraSystem) IsHitStopActive() bool {
 		return false
 	}
 
-	hitStop := hitStopComp.(*HitStopComponent)
+	hitStop, ok := hitStopComp.(*HitStopComponent)
+	if !ok {
+		return false
+	}
 	return hitStop.IsActive()
 }
 
@@ -419,6 +454,9 @@ func (s *CameraSystem) GetTimeScale() float64 {
 		return 1.0
 	}
 
-	hitStop := hitStopComp.(*HitStopComponent)
+	hitStop, ok := hitStopComp.(*HitStopComponent)
+	if !ok {
+		return 1.0
+	}
 	return hitStop.GetTimeScale()
 }

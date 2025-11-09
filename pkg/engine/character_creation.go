@@ -252,6 +252,10 @@ func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
 // Update handles input for character creation (keyboard/mouse navigation)
 // Returns true when character creation is complete
 func (cc *EbitenCharacterCreation) Update() bool {
+	// Calculate panel dimensions first (needed for touch hit detection)
+	// This must be done before processing input
+	cc.updatePanelDimensions()
+
 	switch cc.currentStep {
 	case stepNameInput:
 		cc.updateNameInput()
@@ -264,6 +268,15 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	}
 
 	return cc.confirmed
+}
+
+// updatePanelDimensions calculates the panel layout
+// Called from both Update (for hit detection) and Draw (for rendering)
+func (cc *EbitenCharacterCreation) updatePanelDimensions() {
+	cc.panelWidth = 600
+	cc.panelHeight = 400
+	cc.panelX = cc.screenWidth/2 - cc.panelWidth/2
+	cc.panelY = cc.screenHeight/2 - cc.panelHeight/2
 }
 
 // updateNameInput handles name input with keyboard
@@ -662,11 +675,8 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 	vector.DrawFilledRect(screen, 0, 0, float32(cc.screenWidth), float32(cc.screenHeight),
 		color.RGBA{0, 0, 0, 200}, false)
 
-	// Calculate panel dimensions and cache for hit detection in Update
-	cc.panelWidth = 600
-	cc.panelHeight = 400
-	cc.panelX = cc.screenWidth/2 - cc.panelWidth/2
-	cc.panelY = cc.screenHeight/2 - cc.panelHeight/2
+	// Ensure panel dimensions are calculated (Update already did this, but Draw might be called standalone)
+	cc.updatePanelDimensions()
 
 	// Draw panel background
 	vector.DrawFilledRect(screen, float32(cc.panelX), float32(cc.panelY),

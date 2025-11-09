@@ -241,19 +241,19 @@ const (
 func (d DamageType) String() string {
 	switch d {
 	case DamagePhysical:
-		return "Physical"
+		return "physical"
 	case DamageMagical:
-		return "Magical"
+		return "magical"
 	case DamageFire:
-		return "Fire"
+		return "fire"
 	case DamageIce:
-		return "Ice"
+		return "ice"
 	case DamageLightning:
-		return "Lightning"
+		return "lightning"
 	case DamagePoison:
-		return "Poison"
+		return "poison"
 	default:
-		return "Unknown"
+		return "unknown"
 	}
 }
 ```

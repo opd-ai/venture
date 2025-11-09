@@ -10,11 +10,11 @@ import (
 // V2SaveFormat represents the V2.0 save file format for compatibility testing.
 // This simulates the save format from Version 2.0 to test backward compatibility.
 type V2SaveFormat struct {
-	Version      string             `json:"version"`
-	SavedAt      string             `json:"saved_at"`
-	PlayerState  V2PlayerState      `json:"player_state"`
-	WorldState   V2WorldState       `json:"world_state"`
-	InventoryRaw []json.RawMessage  `json:"inventory,omitempty"`
+	Version      string                 `json:"version"`
+	SavedAt      string                 `json:"saved_at"`
+	PlayerState  V2PlayerState          `json:"player_state"`
+	WorldState   V2WorldState           `json:"world_state"`
+	InventoryRaw []json.RawMessage      `json:"inventory,omitempty"`
 	CustomData   map[string]interface{} `json:"custom_data,omitempty"`
 }
 
@@ -41,7 +41,7 @@ type V2WorldState struct {
 // NOTE: Currently skipped as V2 migration logic is not yet implemented in the save system.
 func TestSaveLoadV2Compatibility(t *testing.T) {
 	t.Skip("V2 migration logic not yet implemented - deferred to future release")
-	
+
 	tmpDir := t.TempDir()
 
 	// Create a V2.0 format save file
@@ -196,7 +196,7 @@ func TestSaveLoadV3Features(t *testing.T) {
 // NOTE: Currently skipped as V2 migration logic is not yet implemented in the save system.
 func TestSaveFormatMigration(t *testing.T) {
 	t.Skip("V2 migration logic not yet implemented - deferred to future release")
-	
+
 	tmpDir := t.TempDir()
 
 	// Create minimal V2.0 save (missing optional V3.0 fields)
@@ -300,7 +300,7 @@ func TestMultipleVersionSaves(t *testing.T) {
 		save.PlayerState.Y = 100.0
 		save.WorldState.Seed = 12345
 		save.WorldState.GenreID = "fantasy"
-		
+
 		// Store version info in settings (V3.0 feature)
 		save.Settings.MasterVolume = 0.7
 

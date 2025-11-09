@@ -32,6 +32,7 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/particles"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -817,7 +818,7 @@ func main() {
 		"seed":      *seed,
 	})
 
-	clientLogger.Info("Starting Venture - Procedural Action RPG")
+	clientLogger.Infof("Starting Venture %s", version.FullVersion)
 	clientLogger.WithFields(logrus.Fields{
 		"width":  *width,
 		"height": *height,
@@ -2468,7 +2469,8 @@ func main() {
 	}()
 
 	// Run the game loop
-	if err := game.Run("Venture - Procedural Action RPG"); err != nil {
+	windowTitle := fmt.Sprintf("Venture %s - Procedural Action RPG", version.Version)
+	if err := game.Run(windowTitle); err != nil {
 		clientLogger.WithError(err).Fatal("error running game")
 	}
 }

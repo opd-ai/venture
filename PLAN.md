@@ -21,8 +21,8 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [x] Remove all remaining ⏳ markers and update to ✅
 
 ### 1.3 Update go.mod / Version Constants
-- [ ] Update version constant in code (if exists)
-- [ ] Update module version tags
+- [x] Update version constant in code (if exists)
+- [x] Update module version tags
 
 ### 1.4 Create VERSION_3.0.md Release Notes
 - [ ] Summary of all V3.0 enhancements (Phases 15-20)

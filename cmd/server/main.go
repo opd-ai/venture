@@ -20,6 +20,7 @@ import (
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -59,7 +60,7 @@ func main() {
 		"genre":     *genreID,
 	})
 
-	serverLogger.Info("Starting Venture Game Server")
+	serverLogger.Infof("Starting Venture Game Server %s", version.FullVersion)
 	serverLogger.WithFields(logrus.Fields{
 		"port":          *port,
 		"maxPlayers":    *maxPlayers,

@@ -60,7 +60,7 @@ The `pkg/world` package successfully passes all quality gates with 100% code cov
 
 ### API Design (Phase 2)
 
-#### Exported Types (7 total)
+#### Exported Types (9 total)
 1. **TileType** (int) - Terrain tile enumeration
    - Documentation: ✅ Present
    - Constants: 8 distinct values (TileEmpty through TileStone)

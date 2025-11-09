@@ -1833,8 +1833,8 @@ func CyberpunkHumanoidAerial(direction Direction) AnatomicalTemplate {
 	base.BodyPartLayout[PartArmor] = PartSpec{
 		RelativeX:      0.5,
 		RelativeY:      0.50,
-		RelativeWidth:  0.250, // 8/32 for 8 pixel width
-		RelativeHeight: 0.219, // 7/32 for 7 pixel height
+		RelativeWidth:  0.286, // 8/28 for 8 pixel width (28×28 sprite)
+		RelativeHeight: 0.25,  // 7/28 for 7 pixel height (28×28 sprite)
 		PreferredPixelSize: &PixelDimensions{
 			Width:  8,
 			Height: 7, // Phase 15.1: 8×7 pixel neon glow

@@ -148,6 +148,21 @@ type Vehicle struct {
 
 	// SpecialAbility is a genre-specific special ability (epic+ only)
 	SpecialAbility string
+
+	// Phase 21.3: Visual Variation
+
+	// Decorations are visual ornaments applied to the vehicle
+	Decorations []string
+
+	// DamageState represents visual wear level (0.0 = pristine, 1.0 = heavily damaged)
+	// Affects visual appearance but not stats
+	DamageState float64
+
+	// SecondaryColor for two-tone paint schemes (0xRRGGBB)
+	SecondaryColor uint32
+
+	// DecalPattern identifies paint/decal pattern ("stripes", "flames", "camo", etc.)
+	DecalPattern string
 }
 
 // ToComponent converts this vehicle to an engine VehicleComponent.

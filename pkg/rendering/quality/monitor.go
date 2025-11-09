@@ -37,7 +37,7 @@ func NewPerformanceMonitor(targetFPS float64, sampleSize int) *PerformanceMonito
 		sampleCount:      0,
 		maxSamples:       sampleSize,
 		targetFPS:        targetFPS,
-		lowThreshold:     targetFPS * 0.92, // 5% below target (e.g., 55 FPS for 60 target)
+		lowThreshold:     targetFPS * 0.92, // 8% below target (e.g., 55 FPS for 60 target)
 		highThreshold:    targetFPS * 1.17, // 17% above target (e.g., 70 FPS for 60 target)
 		adjustmentDelay:  5 * time.Second,
 		lastAdjustment:   time.Now(),

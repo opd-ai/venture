@@ -200,14 +200,18 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.mode == ShopModeBuy {
 		// Show merchant inventory
 		if merchantComp, ok := ui.merchantEntity.GetComponent("merchant"); ok {
-			merchant := merchantComp.(*MerchantComponent)
-			currentInventory = merchant.Inventory
+			// Type assert with safety check
+			if merchant, ok := merchantComp.(*MerchantComponent); ok {
+				currentInventory = merchant.Inventory
+			}
 		}
 	} else {
 		// Show player inventory
 		if invComp, ok := ui.playerEntity.GetComponent("inventory"); ok {
-			inv := invComp.(*InventoryComponent)
-			currentInventory = inv.Items
+			// Type assert with safety check
+			if inv, ok := invComp.(*InventoryComponent); ok {
+				currentInventory = inv.Items
+			}
 		}
 	}
 
@@ -346,8 +350,15 @@ func (ui *ShopUI) Draw(screen interface{}) {
 		return
 	}
 
-	playerInv := playerInvComp.(*InventoryComponent)
-	merchant := merchantComp.(*MerchantComponent)
+	// Type assert with safety check
+	playerInv, ok := playerInvComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
+	merchant, ok := merchantComp.(*MerchantComponent)
+	if !ok {
+		return
+	}
 
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)

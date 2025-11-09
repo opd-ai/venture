@@ -110,7 +110,7 @@ func TestVehicleMovementSystem_FuelDepletion(t *testing.T) {
 
 	// Should have stopped when fuel depleted
 	if !depleted {
-		t.Errorf("Fuel should be depleted: started with %f, now have %f, speed %f", 
+		t.Errorf("Fuel should be depleted: started with %f, now have %f, speed %f",
 			initialFuel, vehicleComp.FuelAmount, vehicleComp.Speed)
 	}
 	if vehicleComp.Speed != 0 {

@@ -240,7 +240,7 @@ func (v *VehicleComponent) ConsumeFuel(amount float64) bool {
 	if v.FuelAmount <= 0 {
 		return false
 	}
-	
+
 	hadEnough := v.FuelAmount >= amount
 	v.FuelAmount -= amount
 	if v.FuelAmount < 0 {

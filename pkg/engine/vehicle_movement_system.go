@@ -67,7 +67,7 @@ func (vms *VehicleMovementSystem) Update(entities []*Entity, deltaTime float64) 
 
 		// Check if entity is being controlled (has input or is mounted)
 		hasControl := vms.hasControlInput(entity)
-		
+
 		// Get input for acceleration/turning
 		if hasControl {
 			inputComp, hasInput := entity.GetComponent("input")

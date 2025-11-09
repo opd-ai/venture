@@ -111,10 +111,10 @@ func TestVehicleComponent_Getters(t *testing.T) {
 
 func TestVehicleComponent_CanTraverse(t *testing.T) {
 	tests := []struct {
-		name         string
-		vehicleType  VehicleType
-		terrainType  terrain.TileType
-		canTraverse  bool
+		name        string
+		vehicleType VehicleType
+		terrainType terrain.TileType
+		canTraverse bool
 	}{
 		// Mount can traverse most ground terrain
 		{"Mount on floor", VehicleMount, terrain.TileFloor, true},
@@ -158,7 +158,7 @@ func TestVehicleComponent_CanTraverse(t *testing.T) {
 
 func TestVehicleComponent_GetFuelCost(t *testing.T) {
 	vc := NewVehicleComponent(VehicleMount)
-	
+
 	// Test fuel cost scales with speed
 	vc.Speed = 0.0
 	if cost := vc.GetFuelCost(); cost != 0.0 {

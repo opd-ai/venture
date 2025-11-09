@@ -40,7 +40,13 @@ func NewProjectilePool() *ProjectilePool {
 // Get acquires a projectile component from the pool.
 // Returns a zeroed component ready for initialization.
 func (p *ProjectilePool) Get() *ProjectileComponent {
-	proj := p.pool.Get().(*ProjectileComponent)
+	// Type assert with safety check (defensive programming)
+	poolObj := p.pool.Get()
+	proj, ok := poolObj.(*ProjectileComponent)
+	if !ok {
+		// Fallback: create new component if pool returned wrong type
+		proj = &ProjectileComponent{}
+	}
 	// Reset all fields to zero values
 	proj.Damage = 0.0
 	proj.Speed = 0.0
@@ -84,7 +90,13 @@ func NewVelocityPool() *VelocityPool {
 
 // Get acquires a velocity component from the pool.
 func (p *VelocityPool) Get() *VelocityComponent {
-	vel := p.pool.Get().(*VelocityComponent)
+	// Type assert with safety check (defensive programming)
+	poolObj := p.pool.Get()
+	vel, ok := poolObj.(*VelocityComponent)
+	if !ok {
+		// Fallback: create new component if pool returned wrong type
+		vel = &VelocityComponent{}
+	}
 	vel.VX = 0.0
 	vel.VY = 0.0
 	return vel
@@ -117,7 +129,13 @@ func NewPositionPool() *PositionPool {
 
 // Get acquires a position component from the pool.
 func (p *PositionPool) Get() *PositionComponent {
-	pos := p.pool.Get().(*PositionComponent)
+	// Type assert with safety check (defensive programming)
+	poolObj := p.pool.Get()
+	pos, ok := poolObj.(*PositionComponent)
+	if !ok {
+		// Fallback: create new component if pool returned wrong type
+		pos = &PositionComponent{}
+	}
 	pos.X = 0.0
 	pos.Y = 0.0
 	return pos

@@ -75,7 +75,10 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		hazard := hazComp.(*HazardComponent)
+		hazard, ok := hazComp.(*HazardComponent)
+		if !ok {
+			continue
+		}
 
 		// Update hazard duration
 		hazard.Update(deltaTime)
@@ -94,7 +97,10 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		hazPos := hazPosComp.(*PositionComponent)
+		hazPos, ok := hazPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Sync zone tracker with current hazard state
 		zone, exists := s.zoneTracker.GetZone(hazardEntity.ID)
@@ -142,7 +148,10 @@ func (s *HazardSystem) applyZoneEffects(deltaTime float64) {
 		if !ok {
 			continue
 		}
-		entPos := entPosComp.(*PositionComponent)
+		entPos, ok := entPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Query zones at entity position
 		zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
@@ -229,7 +238,10 @@ func (s *HazardSystem) applyHazardEffects(hazard *HazardComponent, hazPos *Posit
 		if !ok {
 			continue
 		}
-		entPos := entPosComp.(*PositionComponent)
+		entPos, ok := entPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance to hazard
 		dx := entPos.X - hazPos.X
@@ -288,7 +300,10 @@ func (s *HazardSystem) applyMovementModifier(entity *Entity, hazard *HazardCompo
 	if !ok {
 		return
 	}
-	entPos := entPosComp.(*PositionComponent)
+	entPos, ok := entPosComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
 	for _, zone := range zones {
@@ -347,14 +362,20 @@ func (s *HazardSystem) GetHazardsAt(x, y float64) []*Entity {
 		if !ok {
 			continue
 		}
-		hazard := hazComp.(*HazardComponent)
+		hazard, ok := hazComp.(*HazardComponent)
+		if !ok {
+			continue
+		}
 
 		// Get hazard position
 		hazPosComp, ok := hazardEntity.GetComponent("position")
 		if !ok {
 			continue
 		}
-		hazPos := hazPosComp.(*PositionComponent)
+		hazPos, ok := hazPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := x - hazPos.X

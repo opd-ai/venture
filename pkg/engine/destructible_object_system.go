@@ -93,7 +93,10 @@ func (s *DestructibleObjectSystem) processDestroyedObject(entity *Entity, destru
 	if !ok {
 		return
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -137,7 +140,10 @@ func (s *DestructibleObjectSystem) createExplosion(x, y float64, destructibleObj
 		if !ok {
 			continue
 		}
-		entityPos := posComp.(*PositionComponent)
+		entityPos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := entityPos.X - x
@@ -283,7 +289,10 @@ func (s *DestructibleObjectSystem) ApplyDamageToObject(x, y, damage, radius floa
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Check if within damage radius
 		dx := pos.X - x
@@ -296,7 +305,10 @@ func (s *DestructibleObjectSystem) ApplyDamageToObject(x, y, damage, radius floa
 			if !ok {
 				continue
 			}
-			destructibleObj := objComp.(*DestructibleObjectComponent)
+			destructibleObj, ok := objComp.(*DestructibleObjectComponent)
+			if !ok {
+				continue
+			}
 
 			// Apply damage
 			destroyed := destructibleObj.TakeDamage(damage)

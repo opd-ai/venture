@@ -2,8 +2,8 @@
 
 Complete guide to gameplay mechanics, systems, and features.
 
-**Version:** 2.0  
-**Last Updated:** October 2025
+**Version:** 3.0  
+**Last Updated:** November 2025
 
 **New to Venture?** Start with [Getting Started Guide](GETTING_STARTED.md).
 
@@ -138,6 +138,81 @@ Each genre has unique themes, color palettes, entity types, and items.
 
 ## Advanced Features
 
+### Visual Quality (V3.0)
+
+**Enhanced Graphics:**
+- **Sprite Detail:** 40% increase with anatomical accuracy, facial features (eyes, mouth)
+- **Silhouette Quality:** Improved from 0.65 to 0.75 average score
+- **Anti-Aliasing:** 4 quality levels (Off, Low, Medium, High) with 2x2 to 8x8 super-sampling
+- **Genre Variations:** Each genre has unique visual style (organic, geometric, distorted, augmented, weathered)
+
+**Lighting System (V3.0 Enhanced):**
+- Soft shadows with gradient edges (no harsh pixels)
+- Colored lighting matching light sources (red fire, blue magic, neon colors)
+- Bloom effects for magical and technological lights
+- Advanced ambient occlusion for depth perception
+- Dynamic flickering torches and environmental lights
+- Genre-specific lighting presets (warm fantasy, cool sci-fi, dim horror, neon cyberpunk, harsh post-apocalyptic)
+- Performance: <5% frame time overhead
+
+**Weather Systems (V3.0 New):**
+- Comprehensive weather types: rain, snow, fog, dust, ash
+- Genre-specific variations (neon rain in cyberpunk, blood rain in horror, radiation dust in post-apocalyptic)
+- Fluid simulation for realistic particle behavior
+- Intensity levels: light, medium, heavy, extreme
+- Environmental interactions (particles affected by wind and gravity)
+- Weather transitions between types
+
+**Tile Rendering (V3.0 Enhanced):**
+- Procedural texture patterns: stone (granite, marble, cobblestone), wood (oak, rough logs, weathered boards), metal (steel, rusted iron, tech plating), organic (grass, dirt, moss, coral)
+- 50+ unique patterns per genre via seed-based generation
+- Smooth transitions with automated edge detection
+- Multi-layer depth effects for visual richness
+- Detail layers for texture complexity
+- Normal mapping simulation for depth perception
+
+**UI Enhancements (V3.0):**
+- Dynamic color palettes that adapt to genre theme
+- Improved visual hierarchy for better readability
+- Smooth menu transitions and animations
+- Procedural UI decorations matching genre style
+
+**Post-Processing (V3.0 New):**
+- Parallax backgrounds with multi-layer depth (2-5 layers)
+- Time-of-day system with dynamic lighting shifts (optional day/night cycles)
+- Screen-space enhancements and visual polish
+- Genre-specific visual filters (warm fantasy, cool sci-fi, desaturated horror, high-contrast cyberpunk, washed-out post-apocalyptic)
+
+**Quality Settings:**
+```bash
+# Anti-aliasing (sprite smoothness)
+-aa-quality off      # No AA, fastest
+-aa-quality low      # 2x2 super-sampling
+-aa-quality medium   # 4x4 super-sampling (default)
+-aa-quality high     # 8x8 super-sampling, best quality
+
+# Lighting quality
+-lighting-quality low     # Basic lighting, hard shadows
+-lighting-quality medium  # Soft shadows, colored lights (default)
+-lighting-quality high    # Bloom effects, advanced ambient occlusion
+
+# Particle density (weather effects)
+-particle-density low     # Fewer particles, better performance
+-particle-density medium  # Balanced (default)
+-particle-density high    # Maximum particles, best visuals
+
+# Overall preset
+-preset performance  # Low quality settings, max FPS
+-preset balanced     # Medium settings (default)
+-preset quality      # High quality settings, best visuals
+```
+
+**Performance (V3.0):**
+- 106 FPS maintained with 2000 entities (70% above 60 FPS target)
+- 73MB memory usage (86% below 500MB budget)
+- Sprite generation: 3-5ms per sprite (with 40% more detail)
+- Cache hit rate: 95.9% (maintained from V2.0)
+
 ### Crafting System
 
 **Stations:** Forge, Alchemy Lab, Enchanting Table, Workbench  
@@ -149,9 +224,9 @@ Each genre has unique themes, color palettes, entity types, and items.
 **Rotation:** Q/E keys for 360° view  
 **Camera:** Follow player, scroll to zoom, shake on impacts
 
-### Lighting & Shadows
+### Lighting & Shadows (V3.0 Enhanced)
 
-Dynamic lighting with intensity/color, shadow projection from entities/terrain.
+Dynamic lighting with soft shadows, colored lights, and bloom effects. Genre-specific lighting presets create appropriate atmosphere for each theme.
 
 ### Save System
 
@@ -160,6 +235,8 @@ Dynamic lighting with intensity/color, shadow projection from entities/terrain.
 **Format:** JSON files in `saves/` directory
 
 **Cloud Sync:** Not currently supported (local saves only).
+
+**V3.0 Compatibility:** V2.0 save files load with enhanced V3.0 visuals automatically.
 
 ---
 
@@ -187,6 +264,6 @@ Dynamic lighting with intensity/color, shadow projection from entities/terrain.
 
 ---
 
-**Version:** 2.0  
-**Last Updated:** October 2025  
+**Version:** 3.0  
+**Last Updated:** November 2025  
 **Maintained By:** Venture Development Team

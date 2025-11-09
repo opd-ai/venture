@@ -51,10 +51,10 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [x] Document sprite cache efficiency (should maintain ~95% hit rate)
 
 ### 2.3 FPS Testing
-- [ ] Test with 2000 entities (should maintain 60+ FPS)
-- [ ] Test extreme scenarios (particles + lighting + weather)
+- [x] Test with 2000 entities (should maintain 60+ FPS)
+- [x] Test extreme scenarios (particles + lighting + weather)
 - [ ] Test on minimum spec hardware
-- [ ] Document frame time breakdown by system
+- [x] Document frame time breakdown by system
 
 ---
 

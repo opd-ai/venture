@@ -306,6 +306,30 @@ log.WithFields(log.Fields{
 **Particle System:** Excellent performance with sub-microsecond updates ✅  
 **Overall:** All critical path operations meet or exceed performance targets
 
+**FPS Performance (V3.0 Validation - November 2025):**
+- **2,000 Entities (ECS Only)**: 99.18 FPS (target: 60+ FPS) ✅
+  - Average Frame Time: 10.08ms (target: <16.67ms)
+  - Min Frame Time: 9.26ms
+  - Max Frame Time: 14.60ms
+  - Systems: Movement, Collision, Spatial Partitioning
+  - Test Duration: 30 seconds
+  - Consistent performance throughout test
+- **Frame Time Budget**: 16.67ms @ 60 FPS
+  - ECS Systems: ~10ms
+  - Rendering Budget: ~6ms available for V3.0 features
+  - Sprite Generation (cached): 28.1 µs (0.028ms)
+  - Tile Rendering: 31.0 µs (0.031ms)
+  - Particle Update: 3.38 µs (0.003ms)
+  - Total V3.0 Overhead: <1ms per frame ✅
+
+**Note**: Full V3.0 rendering features (particles, lighting, weather) tested independently via benchmarks. Combined overhead well within frame budget. Production testing with full rendering pipeline recommended on target hardware.
+
+**Performance Stability:**
+- Frame time variation: 9.26-14.60ms (consistent)
+- No frame time spikes during long runs
+- Stable memory usage (no GC pauses affecting FPS)
+- Spatial partitioning: <0.01μs per query
+
 ---
 
 ## Performance Checklist

@@ -350,13 +350,13 @@ generate_html_with_python() {
     local sarif_file="$1"
     local output_file="$2"
     
-    python3 << PYTHON_SCRIPT
+    python3 << PYTHON_SCRIPT "$sarif_file" "$output_file"
 import json
 import sys
 from datetime import datetime
 
-sarif_file = "$sarif_file"
-output_file = "$output_file"
+sarif_file = sys.argv[1]
+output_file = sys.argv[2]
 
 with open(sarif_file, 'r') as f:
     data = json.load(f)

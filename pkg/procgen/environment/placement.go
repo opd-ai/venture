@@ -339,8 +339,8 @@ func (p *Placer) selectPlacementType(subType SubType, config PlacementConfig, rn
 
 // selectPosition finds a valid position for the placement type.
 func (p *Placer) selectPosition(placement PlacementType, config PlacementConfig,
-	occupied map[int]map[int]bool, rng *rand.Rand) (int, int) {
-
+	occupied map[int]map[int]bool, rng *rand.Rand,
+) (int, int) {
 	maxAttempts := 50
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		var x, y int

@@ -367,7 +367,7 @@ func TestQualitySystem_UpdateWhenAutoAdjustDisabled(t *testing.T) {
 
 	// Update should still record stats but not adjust
 	initialLevel := qs.GetQualityLevel()
-	
+
 	// Record poor performance
 	for i := 0; i < 120; i++ {
 		qs.Update(0.05) // ~20 FPS

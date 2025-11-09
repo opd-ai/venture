@@ -357,7 +357,7 @@ func TestPerformanceMonitor_AdjustmentDelay(t *testing.T) {
 
 	// Wait a bit to ensure we're past initialization time
 	time.Sleep(10 * time.Millisecond)
-	
+
 	// Reset lastAdjustment to now for testing
 	pm.mu.Lock()
 	pm.lastAdjustment = time.Now().Add(-200 * time.Millisecond) // Set to past

@@ -64,20 +64,20 @@ type Config struct {
 	ShadowSampleCount     int // 1-5 samples for shadow softness
 
 	// Sprite rendering
-	SpriteDetailLevel    float64 // 0.0-1.0 (low to high detail)
-	EnableAntiAliasing   bool
-	AntiAliasingQuality  int // 0=off, 1=2x2, 2=4x4, 3=8x8
-	EnableSpriteCache    bool
-	EnableEquipmentGlow  bool
-	EnableDamageStates   bool
+	SpriteDetailLevel   float64 // 0.0-1.0 (low to high detail)
+	EnableAntiAliasing  bool
+	AntiAliasingQuality int // 0=off, 1=2x2, 2=4x4, 3=8x8
+	EnableSpriteCache   bool
+	EnableEquipmentGlow bool
+	EnableDamageStates  bool
 
 	// Tile rendering
-	EnableTexturePatterns  bool
-	EnableTileTransitions  bool
-	EnableParallaxDepth    bool
-	TileLayerCount         int     // 1-3 layers
-	EnableTileAO           bool
-	EnableTileNormals      bool
+	EnableTexturePatterns bool
+	EnableTileTransitions bool
+	EnableParallaxDepth   bool
+	TileLayerCount        int // 1-3 layers
+	EnableTileAO          bool
+	EnableTileNormals     bool
 
 	// Particle effects
 	ParticleCountMultiplier float64 // 0.0-1.0 (low to high particle count)
@@ -87,10 +87,10 @@ type Config struct {
 	ParticleLODDistance     float64 // Distance at which LOD reduces particles
 
 	// UI rendering
-	EnableUIDecor          bool
-	EnableUITransitions    bool
-	EnableUIHierarchy      bool
-	EnableUIPatterns       bool
+	EnableUIDecor       bool
+	EnableUITransitions bool
+	EnableUIHierarchy   bool
+	EnableUIPatterns    bool
 
 	// Environmental effects
 	EnableDecorations      bool
@@ -98,11 +98,11 @@ type Config struct {
 	EnableVisualVariations bool
 
 	// Performance settings
-	MaxParticles           int     // Hard cap on particle count
-	CacheSizeMB            int     // Sprite cache size limit
-	ViewportCulling        bool    // Enable spatial culling
-	BatchRendering         bool    // Enable render batching
-	ObjectPooling          bool    // Enable object pooling
+	MaxParticles    int  // Hard cap on particle count
+	CacheSizeMB     int  // Sprite cache size limit
+	ViewportCulling bool // Enable spatial culling
+	BatchRendering  bool // Enable render batching
+	ObjectPooling   bool // Enable object pooling
 }
 
 // DefaultConfig returns a sensible default quality configuration (Medium quality).

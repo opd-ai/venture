@@ -429,7 +429,7 @@ func (g *Generator) generateXSymbol(img *image.RGBA, col color.Color, cx, cy, si
 	}
 }
 
-func (g *Generator) generateArrowSymbol(img *image.RGBA, col color.Color, cx, cy, size int, direction int) {
+func (g *Generator) generateArrowSymbol(img *image.RGBA, col color.Color, cx, cy, size, direction int) {
 	// direction: 0=up, 1=right, 2=down, 3=left
 	switch direction {
 	case 0: // Up

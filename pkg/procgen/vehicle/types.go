@@ -125,9 +125,33 @@ type Vehicle struct {
 
 	// Color represents the primary vehicle color (0xRRGGBB)
 	Color uint32
+
+	// Phase 21.2: Advanced Vehicle Features
+
+	// HasCombat indicates if vehicle has combat capabilities
+	HasCombat bool
+
+	// HasWeapon indicates if vehicle has mounted weapon
+	HasWeapon bool
+
+	// WeaponType is the mounted weapon system type
+	WeaponType string
+
+	// CargoSlots is the number of item slots
+	CargoSlots int
+
+	// CargoWeight is the maximum cargo weight capacity (kg)
+	CargoWeight float64
+
+	// UpgradeSlots is the number of upgrade slots
+	UpgradeSlots int
+
+	// SpecialAbility is a genre-specific special ability (epic+ only)
+	SpecialAbility string
 }
 
 // ToComponent converts this vehicle to an engine VehicleComponent.
+// Phase 21.2: Returns vehicle component only. Use ToComponents() for all components.
 func (v *Vehicle) ToComponent() *engine.VehicleComponent {
 	// Map VehicleType to engine.VehicleType
 	var engineType engine.VehicleType
@@ -145,7 +169,7 @@ func (v *Vehicle) ToComponent() *engine.VehicleComponent {
 	}
 
 	comp := engine.NewVehicleComponent(engineType)
-	
+
 	// Override with generated stats
 	comp.MaxSpeed = v.MaxSpeed
 	comp.Acceleration = v.Acceleration
@@ -160,6 +184,45 @@ func (v *Vehicle) ToComponent() *engine.VehicleComponent {
 	return comp
 }
 
+// ToComponents converts this vehicle to all relevant engine components.
+// Phase 21.2: Returns vehicle, combat, cargo, and upgrade components.
+func (v *Vehicle) ToComponents() []engine.Component {
+	components := []engine.Component{
+		v.ToComponent(),
+	}
+
+	// Add combat component if vehicle has combat capabilities
+	if v.HasCombat {
+		combat := engine.NewVehicleCombatComponent()
+		combat.WeaponMounted = v.HasWeapon
+		combat.WeaponType = v.WeaponType
+
+		// Scale combat stats based on vehicle stats
+		combat.RammingDamage = v.MaxSpeed * 0.2   // 20% of max speed as base ramming damage
+		combat.MinRammingSpeed = v.MaxSpeed * 0.3 // Need 30% of max speed to ram
+
+		if v.HasWeapon {
+			combat.WeaponDamage = 15.0 * v.Rarity.GetMultiplier()
+			combat.WeaponRange = 200.0
+		}
+
+		// Scale armor with durability
+		combat.ArmorRating = v.MaxDurability * 0.05
+
+		components = append(components, combat)
+	}
+
+	// Add cargo component
+	cargo := engine.NewCargoComponent(v.CargoSlots, v.CargoWeight)
+	components = append(components, cargo)
+
+	// Add upgrade slots component
+	upgrades := engine.NewUpgradeSlotComponent(v.UpgradeSlots)
+	components = append(components, upgrades)
+
+	return components
+}
+
 // VehicleTemplate defines base parameters for vehicle generation.
 type VehicleTemplate struct {
 	// NamePrefix is used in name generation
@@ -172,12 +235,12 @@ type VehicleTemplate struct {
 	VehicleType VehicleType
 
 	// BaseStats define the starting stats before scaling
-	BaseMaxSpeed      float64
-	BaseAcceleration  float64
-	BaseHandling      float64
-	BaseDurability    float64
-	BaseFuelCapacity  float64
-	BaseCapacity      int
+	BaseMaxSpeed     float64
+	BaseAcceleration float64
+	BaseHandling     float64
+	BaseDurability   float64
+	BaseFuelCapacity float64
+	BaseCapacity     int
 
 	// FuelType identifies resource consumed
 	FuelType string

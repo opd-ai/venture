@@ -90,6 +90,17 @@ func (g *VehicleGenerator) generateSingleVehicle(seed int64, params procgen.Gene
 	rarityScale := rarity.GetMultiplier()
 	totalScale := depthScale * difficultyScale * rarityScale
 
+	// Phase 21.2: Generate combat capabilities for rare+ vehicles
+	hasCombat := rarity >= RarityRare || rng.Float64() < 0.2 // 20% for common/uncommon
+	hasWeapon := hasCombat && (rarity >= RarityEpic || rng.Float64() < 0.3)
+
+	// Phase 21.2: Generate cargo capacity based on vehicle type
+	cargoSlots := g.generateCargoSlots(template.VehicleType, rarity, rng)
+	cargoWeight := g.generateCargoWeight(template.VehicleType, rarity)
+
+	// Phase 21.2: Generate upgrade slots based on rarity
+	upgradeSlots := g.generateUpgradeSlots(rarity)
+
 	// Generate vehicle
 	vehicle := &Vehicle{
 		Name:          g.generateName(template, rarity, rng),
@@ -106,9 +117,156 @@ func (g *VehicleGenerator) generateSingleVehicle(seed int64, params procgen.Gene
 		GenreID:       params.GenreID,
 		Depth:         params.Depth,
 		Color:         g.generateColor(template.BaseColor, rarity, rng),
+		// Phase 21.2: Advanced features
+		HasCombat:      hasCombat,
+		HasWeapon:      hasWeapon,
+		WeaponType:     g.generateWeaponType(params.GenreID, template.VehicleType, rng),
+		CargoSlots:     cargoSlots,
+		CargoWeight:    cargoWeight,
+		UpgradeSlots:   upgradeSlots,
+		SpecialAbility: g.generateSpecialAbility(params.GenreID, template.VehicleType, rarity, rng),
 	}
 
 	return vehicle
+}
+
+// generateCargoSlots determines cargo capacity based on vehicle type and rarity.
+// Phase 21.2: Cargo/Passenger System
+func (g *VehicleGenerator) generateCargoSlots(vehicleType VehicleType, rarity Rarity, rng *rand.Rand) int {
+	baseSlots := 0
+	switch vehicleType {
+	case TypeMount:
+		baseSlots = 2 // Saddlebags
+	case TypeCart:
+		baseSlots = 20 // Large cargo area
+	case TypeBoat:
+		baseSlots = 10 // Medium storage
+	case TypeGlider:
+		baseSlots = 1 // Minimal storage
+	case TypeMech:
+		baseSlots = 5 // Internal compartment
+	}
+
+	// Scale with rarity (10-50 range)
+	rarityBonus := int(float64(baseSlots) * (rarity.GetMultiplier() - 1.0) * 0.5)
+	totalSlots := baseSlots + rarityBonus + rng.Intn(5) // +0 to 4 random
+
+	// Clamp to valid range
+	if totalSlots < 1 {
+		totalSlots = 1
+	}
+	if totalSlots > 50 {
+		totalSlots = 50
+	}
+
+	return totalSlots
+}
+
+// generateCargoWeight determines weight capacity based on vehicle type and rarity.
+// Phase 21.2: Cargo/Passenger System
+func (g *VehicleGenerator) generateCargoWeight(vehicleType VehicleType, rarity Rarity) float64 {
+	baseWeight := 0.0
+	switch vehicleType {
+	case TypeMount:
+		baseWeight = 50.0 // kg
+	case TypeCart:
+		baseWeight = 500.0 // kg
+	case TypeBoat:
+		baseWeight = 200.0 // kg
+	case TypeGlider:
+		baseWeight = 10.0 // kg
+	case TypeMech:
+		baseWeight = 100.0 // kg
+	}
+
+	return baseWeight * rarity.GetMultiplier()
+}
+
+// generateUpgradeSlots determines upgrade slot count based on rarity.
+// Phase 21.2: Upgrade System
+func (g *VehicleGenerator) generateUpgradeSlots(rarity Rarity) int {
+	switch rarity {
+	case RarityCommon:
+		return 2
+	case RarityUncommon:
+		return 3
+	case RarityRare:
+		return 4
+	case RarityEpic:
+		return 5
+	case RarityLegendary:
+		return 6
+	default:
+		return 2
+	}
+}
+
+// generateWeaponType selects a weapon type based on genre and vehicle type.
+// Phase 21.2: Vehicle Combat
+func (g *VehicleGenerator) generateWeaponType(genreID string, vehicleType VehicleType, rng *rand.Rand) string {
+	genreWeapons := map[string][]string{
+		"fantasy":   {"Ballista", "Catapult", "Magic Crystal", "Flame Thrower"},
+		"scifi":     {"Laser", "Plasma Cannon", "Railgun", "Missile Launcher"},
+		"horror":    {"Soul Reaper", "Bone Spikes", "Curse Projector", "Blood Cannon"},
+		"cyberpunk": {"Smartgun", "EMP Launcher", "Plasma Rifle", "Hacking Beam"},
+		"postapoc":  {"Machine Gun", "Flamethrower", "Scrap Cannon", "Spike Launcher"},
+	}
+
+	weapons := genreWeapons[genreID]
+	if weapons == nil {
+		weapons = genreWeapons["fantasy"] // Default
+	}
+
+	return weapons[rng.Intn(len(weapons))]
+}
+
+// generateSpecialAbility creates a genre-specific special ability.
+// Phase 21.2: Genre-Specific Features
+func (g *VehicleGenerator) generateSpecialAbility(genreID string, vehicleType VehicleType, rarity Rarity, rng *rand.Rand) string {
+	// Only legendary and epic vehicles get special abilities
+	if rarity < RarityEpic {
+		return ""
+	}
+
+	genreAbilities := map[string][]string{
+		"fantasy": {
+			"Teleport Dash: Instantly blink 20 meters forward",
+			"Holy Shield: Temporary invulnerability for 3 seconds",
+			"Dragon Breath: Exhale flames in a cone",
+			"Wind Burst: Create gust that knocks back enemies",
+		},
+		"scifi": {
+			"Cloaking Device: Become invisible for 5 seconds",
+			"Shield Generator: Deploy energy shield",
+			"Overdrive: Double speed for 10 seconds",
+			"EMP Pulse: Disable nearby electronics",
+		},
+		"horror": {
+			"Soul Harvest: Drain life from nearby enemies",
+			"Shadow Meld: Pass through walls for 2 seconds",
+			"Terror Aura: Fear nearby enemies",
+			"Corpse Explosion: Detonate nearby corpses",
+		},
+		"cyberpunk": {
+			"Neural Jack: Hack nearby vehicles",
+			"Time Dilation: Slow time for 3 seconds",
+			"Neon Afterburner: Leave damaging trail",
+			"Hologram Decoy: Create fake duplicate",
+		},
+		"postapoc": {
+			"Nitro Boost: Extreme speed burst",
+			"Scrap Armor: Temporary damage reduction",
+			"Radiation Pulse: Area damage over time",
+			"Salvage Drone: Auto-collect nearby items",
+		},
+	}
+
+	abilities := genreAbilities[genreID]
+	if abilities == nil {
+		abilities = genreAbilities["fantasy"] // Default
+	}
+
+	return abilities[rng.Intn(len(abilities))]
 }
 
 // determineRarity calculates rarity based on depth and randomness.

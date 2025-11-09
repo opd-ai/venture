@@ -218,3 +218,109 @@ These scripts are designed to work in CI/CD environments:
 - [CROSS_PLATFORM_BUILDS.md](../docs/CROSS_PLATFORM_BUILDS.md) - Cross-platform build guide
 - [MOBILE_BUILD.md](../docs/MOBILE_BUILD.md) - Mobile build guide
 - [GITHUB_PAGES.md](../docs/GITHUB_PAGES.md) - WebAssembly deployment guide
+
+---
+
+## Automated Package Code Review
+
+### audit-package.sh
+**Purpose:** Automated package-by-package code review system following CODE_REVIEW_PLAN.md methodology.
+
+**Usage:**
+```bash
+# Run automated audit on next unaudited package
+./scripts/audit-package.sh
+```
+
+**Process:**
+1. Scans all packages in `pkg/` directory recursively
+2. Excludes packages with existing `AUDIT.md` files
+3. Calculates dependency depth (counts internal imports)
+4. Selects package with lowest dependency depth
+5. Runs comprehensive audit via `audit-runner.go`
+6. Creates `AUDIT.md` in selected package directory
+
+**Package Selection Priority:**
+- **Depth 0** (zero internal dependencies): Foundational packages like `audio`, `combat`, `logging`, `procgen`, `rendering`
+- **Depth 1+**: Higher-level packages with internal dependencies
+- Alphabetical within same depth
+
+**Example Output:**
+```
+=== Venture Package Audit System ===
+Date: 2025-11-09
+
+Scanning pkg/ directory for audit candidates...
+  [SCAN] audio (depth: 0)
+  [SCAN] combat (depth: 0)
+  [SKIP] world (already audited)
+
+=== SELECTED PACKAGE ===
+Package: pkg/audio
+Dependency Depth: 0
+Path: /home/runner/work/venture/venture/pkg/audio
+
+Reviewing pkg/audio (depth: 0, no prior audit)
+
+Running static analysis...
+  ✓ Static analysis passed
+  ✓ Code formatting correct
+Running tests...
+  ✓ Build successful
+  ✓ All tests passed
+  ✓ Race-free
+...
+✓ Audit complete: /home/runner/work/venture/venture/pkg/audio/AUDIT.md
+```
+
+### audit-runner.go
+**Purpose:** Core audit execution engine called by `audit-package.sh`.
+
+**Automated Checks:**
+- ✓ Static Analysis (`go vet`, `gofmt -l`)
+- ✓ Build Success (`go build`)
+- ✓ Test Pass (`go test`)
+- ✓ Race Freedom (`go test -race`)
+- ✓ Coverage Analysis (≥65% threshold, with interface-only exceptions)
+- ✓ Package Structure (file counts, LOC)
+- ✓ Documentation Review (doc.go, godoc comments)
+- ✓ Dependency Analysis (internal imports)
+
+**Output Format (`pkg/[PACKAGE]/AUDIT.md`):**
+```markdown
+# Code Review Audit: [package name]
+**Date:** YYYY-MM-DD
+**Reviewer:** GitHub Copilot
+**Dependency Depth:** N
+
+## Executive Summary
+[PASS/NEEDS WORK status]
+
+## Quality Gates
+[18 quality gates with checkboxes]
+
+## Package Metrics
+[Files, LOC, coverage, dependencies]
+
+## Findings
+### Critical (blocks merge)
+### Major (should fix)
+### Minor (nice-to-have)
+
+## Recommendations
+[Actionable next steps]
+```
+
+**Special Handling:**
+- **Interface-Only Packages**: Low coverage acceptable if package only defines interfaces (flagged as minor finding with explanation)
+- **Ebiten Dependencies**: Functions requiring Ebiten initialization are known to be difficult to test (per TESTING.md)
+- **Finding Categories**:
+  - **Critical**: Blocks merge (build failures, failing tests, race conditions)
+  - **Major**: Should fix (vet issues, low coverage, missing docs)
+  - **Minor**: Nice-to-have (enhancements, optimizations)
+
+**Integration with Workflow:**
+1. Run before merge to audit changed packages
+2. Reference `AUDIT.md` during code review
+3. Re-run after addressing findings to verify fixes
+4. Periodically audit all packages to track quality trends

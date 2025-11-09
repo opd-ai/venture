@@ -125,9 +125,10 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 	var playerX, playerY float64
 	if s.playerEntity != nil {
 		if posComp, ok := s.playerEntity.GetComponent("position"); ok {
-			pos := posComp.(*PositionComponent)
-			playerX = pos.X
-			playerY = pos.Y
+			if pos, ok := posComp.(*PositionComponent); ok {
+				playerX = pos.X
+				playerY = pos.Y
+			}
 		}
 	}
 
@@ -136,16 +137,17 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 	hasViewport := false
 	if s.enableViewportCull && s.cameraSystem != nil && s.cameraSystem.activeCamera != nil {
 		if camComp, ok := s.cameraSystem.activeCamera.GetComponent("camera"); ok {
-			camera := camComp.(*CameraComponent)
-			// Calculate viewport bounds with margin for sprites
-			margin := 100.0 // Extra margin to start animating before entity enters view
-			halfWidth := float64(s.cameraSystem.ScreenWidth) / (2.0 * camera.Zoom)
-			halfHeight := float64(s.cameraSystem.ScreenHeight) / (2.0 * camera.Zoom)
-			viewportMinX = camera.X - halfWidth - margin
-			viewportMinY = camera.Y - halfHeight - margin
-			viewportMaxX = camera.X + halfWidth + margin
-			viewportMaxY = camera.Y + halfHeight + margin
-			hasViewport = true
+			if camera, ok := camComp.(*CameraComponent); ok {
+				// Calculate viewport bounds with margin for sprites
+				margin := 100.0 // Extra margin to start animating before entity enters view
+				halfWidth := float64(s.cameraSystem.ScreenWidth) / (2.0 * camera.Zoom)
+				halfHeight := float64(s.cameraSystem.ScreenHeight) / (2.0 * camera.Zoom)
+				viewportMinX = camera.X - halfWidth - margin
+				viewportMinY = camera.Y - halfHeight - margin
+				viewportMaxX = camera.X + halfWidth + margin
+				viewportMaxY = camera.Y + halfHeight + margin
+				hasViewport = true
+			}
 		}
 	}
 
@@ -169,7 +171,10 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		if !hasPos {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Phase 14.2: Viewport culling check
 		if hasViewport {
@@ -563,68 +568,7 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		// GAP FIX: Determine facing direction based on velocity
 		facing := "down" // Default
 		if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-			vel := velComp.(*VelocityComponent)
-			// Use velocity direction if moving, otherwise keep last facing
-			if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
-				if math.Abs(vel.VX) > math.Abs(vel.VY) {
-					if vel.VX > 0 {
-						facing = "right"
-					} else {
-						facing = "left"
-					}
-				} else {
-					if vel.VY > 0 {
-						facing = "down"
-					} else {
-						facing = "up"
-					}
-				}
-				// Store facing for idle state
-				anim.LastFacing = facing
-			} else if anim.LastFacing != "" {
-				// Use last facing direction when idle
-				facing = anim.LastFacing
-			}
-		}
-		config.Custom["facing"] = facing
-
-		// Check for equipment to show on sprite
-		if entity.HasComponent("equipment") {
-			config.Custom["hasWeapon"] = true
-			config.Custom["hasShield"] = false // Could be enhanced to check actual equipment
-		}
-	} else if teamComp, ok := entity.GetComponent("team"); ok {
-		team := teamComp.(*TeamComponent)
-		if team.TeamID == 2 { // Enemy team
-			// Determine monster type based on entity characteristics
-			entityType := "humanoid" // Default
-
-			// Check if it's a boss (high damage indicates boss)
-			if attackComp, ok := entity.GetComponent("attack"); ok {
-				attack := attackComp.(*AttackComponent)
-				if attack.Damage > 20 {
-					entityType = "boss"
-					config.Custom["isBoss"] = true
-					config.Custom["bossScale"] = 1.5
-				}
-			}
-
-			// Check size based on collider
-			if colliderComp, ok := entity.GetComponent("collider"); ok {
-				collider := colliderComp.(*ColliderComponent)
-				if collider.Width > 48 {
-					entityType = "monster" // Large monster
-				} else if collider.Width < 24 {
-					entityType = "minion" // Small creature
-				}
-			}
-
-			config.Custom["entityType"] = entityType
-
-			// GAP FIX: Determine facing direction based on velocity
-			facing := "down" // Default
-			if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-				vel := velComp.(*VelocityComponent)
+			if vel, ok := velComp.(*VelocityComponent); ok {
 				// Use velocity direction if moving, otherwise keep last facing
 				if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
 					if math.Abs(vel.VX) > math.Abs(vel.VY) {
@@ -647,7 +591,73 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 					facing = anim.LastFacing
 				}
 			}
-			config.Custom["facing"] = facing
+		}
+		config.Custom["facing"] = facing
+
+		// Check for equipment to show on sprite
+		if entity.HasComponent("equipment") {
+			config.Custom["hasWeapon"] = true
+			config.Custom["hasShield"] = false // Could be enhanced to check actual equipment
+		}
+	} else if teamComp, ok := entity.GetComponent("team"); ok {
+		if team, ok := teamComp.(*TeamComponent); ok {
+			if team.TeamID == 2 { // Enemy team
+				// Determine monster type based on entity characteristics
+				entityType := "humanoid" // Default
+
+				// Check if it's a boss (high damage indicates boss)
+				if attackComp, ok := entity.GetComponent("attack"); ok {
+					if attack, ok := attackComp.(*AttackComponent); ok {
+						if attack.Damage > 20 {
+							entityType = "boss"
+							config.Custom["isBoss"] = true
+							config.Custom["bossScale"] = 1.5
+						}
+					}
+				}
+
+				// Check size based on collider
+				if colliderComp, ok := entity.GetComponent("collider"); ok {
+					if collider, ok := colliderComp.(*ColliderComponent); ok {
+						if collider.Width > 48 {
+							entityType = "monster" // Large monster
+						} else if collider.Width < 24 {
+							entityType = "minion" // Small creature
+						}
+					}
+				}
+
+				config.Custom["entityType"] = entityType
+
+				// GAP FIX: Determine facing direction based on velocity
+				facing := "down" // Default
+				if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
+					if vel, ok := velComp.(*VelocityComponent); ok {
+						// Use velocity direction if moving, otherwise keep last facing
+						if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
+							if math.Abs(vel.VX) > math.Abs(vel.VY) {
+								if vel.VX > 0 {
+									facing = "right"
+								} else {
+									facing = "left"
+								}
+							} else {
+								if vel.VY > 0 {
+									facing = "down"
+								} else {
+									facing = "up"
+								}
+							}
+							// Store facing for idle state
+							anim.LastFacing = facing
+						} else if anim.LastFacing != "" {
+							// Use last facing direction when idle
+							facing = anim.LastFacing
+						}
+					}
+				}
+				config.Custom["facing"] = facing
+			}
 		}
 	}
 

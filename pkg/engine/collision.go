@@ -424,11 +424,15 @@ func (s *CollisionSystem) resolveCollision(e1, e2 *Entity) {
 		// Stop horizontal velocity
 		if e1.HasComponent("velocity") {
 			vel1, _ := e1.GetComponent("velocity")
-			vel1.(*VelocityComponent).VX = 0
+			if v, ok := vel1.(*VelocityComponent); ok {
+				v.VX = 0
+			}
 		}
 		if e2.HasComponent("velocity") {
 			vel2, _ := e2.GetComponent("velocity")
-			vel2.(*VelocityComponent).VX = 0
+			if v, ok := vel2.(*VelocityComponent); ok {
+				v.VX = 0
+			}
 		}
 	} else {
 		// Separate vertically
@@ -443,11 +447,15 @@ func (s *CollisionSystem) resolveCollision(e1, e2 *Entity) {
 		// Stop vertical velocity
 		if e1.HasComponent("velocity") {
 			vel1, _ := e1.GetComponent("velocity")
-			vel1.(*VelocityComponent).VY = 0
+			if v, ok := vel1.(*VelocityComponent); ok {
+				v.VY = 0
+			}
 		}
 		if e2.HasComponent("velocity") {
 			vel2, _ := e2.GetComponent("velocity")
-			vel2.(*VelocityComponent).VY = 0
+			if v, ok := vel2.(*VelocityComponent); ok {
+				v.VY = 0
+			}
 		}
 	}
 }

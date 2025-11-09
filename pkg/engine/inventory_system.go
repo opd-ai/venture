@@ -378,7 +378,10 @@ func (s *InventorySystem) DropItem(entityID uint64, inventoryIndex int) error {
 		// Entity has no position - can't drop item in world
 		return fmt.Errorf("entity %d has no position component, cannot drop item", entityID)
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return fmt.Errorf("entity %d has invalid position component type", entityID)
+	}
 
 	// Remove item from inventory (only after we know we can drop it)
 	itm := invComp.RemoveItem(inventoryIndex)
@@ -569,7 +572,10 @@ func (s *InventorySystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		equipment := equipComp.(*EquipmentComponent)
+		equipment, ok := equipComp.(*EquipmentComponent)
+		if !ok {
+			continue
+		}
 
 		// Recalculate equipment stats if dirty
 		// This ensures CachedStats is up-to-date for CharacterUI display

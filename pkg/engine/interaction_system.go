@@ -68,7 +68,10 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 	if !ok {
 		return
 	}
-	playerPos := playerPosComp.(*PositionComponent)
+	playerPos, ok := playerPosComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Priority order for interactions:
 	// 1. Context actions (doors, levers, etc.)
@@ -100,14 +103,20 @@ func (s *InteractionSystem) tryContextActions(player *Entity, playerPos *Positio
 		if !ok {
 			continue
 		}
-		entPos := entPosComp.(*PositionComponent)
+		entPos, ok := entPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Get context action component
 		ctxComp, ok := entity.GetComponent("contextAction")
 		if !ok {
 			continue
 		}
-		contextAction := ctxComp.(*ContextActionComponent)
+		contextAction, ok := ctxComp.(*ContextActionComponent)
+		if !ok {
+			continue
+		}
 
 		// Skip if not available or on cooldown
 		if !contextAction.CanInteract() {
@@ -238,14 +247,20 @@ func (s *InteractionSystem) tryPuzzleInteraction(player *Entity, playerPos *Posi
 		if !ok {
 			continue
 		}
-		elemPos := elemPosComp.(*PositionComponent)
+		elemPos, ok := elemPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Get puzzle element component
 		elemComp, ok := element.GetComponent("puzzleElement")
 		if !ok {
 			continue
 		}
-		puzzleElem := elemComp.(*PuzzleElementComponent)
+		puzzleElem, ok := elemComp.(*PuzzleElementComponent)
+		if !ok {
+			continue
+		}
 
 		// Skip if not interactable or on cooldown
 		if !puzzleElem.IsInteractable || puzzleElem.CooldownElapsed > 0 {
@@ -284,7 +299,10 @@ func (s *InteractionSystem) activatePuzzleElement(player, element *Entity, puzzl
 			continue
 		}
 
-		puzzle := puzzleComp.(*PuzzleComponent)
+		puzzle, ok := puzzleComp.(*PuzzleComponent)
+		if !ok {
+			continue
+		}
 		if puzzle.PuzzleID == puzzleElem.PuzzleID {
 			// Record progress
 			puzzle.RecordProgress(puzzleElem.ElementName)

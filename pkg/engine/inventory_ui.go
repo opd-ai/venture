@@ -110,7 +110,10 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	if !ok {
 		return
 	}
-	inventory := invComp.(*InventoryComponent)
+	inventory, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
 
 	// Calculate inventory window position
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
@@ -228,7 +231,10 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	if !ok {
 		return
 	}
-	inventory := invComp.(*InventoryComponent)
+	inventory, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
 
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
@@ -346,7 +352,10 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 
 		// Show equipped item if present
 		if hasEquipment {
-			equipment := equipComp.(*EquipmentComponent)
+			equipment, ok := equipComp.(*EquipmentComponent)
+			if !ok {
+				continue
+			}
 			equipped := equipment.GetEquipped(slotInfo.slot)
 			if equipped != nil {
 				itemName := equipped.Name

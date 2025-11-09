@@ -33,6 +33,9 @@ go.work.sum
 # .idea/
 # .vscode/
 
+# Code review artifacts
+.code_review_results
+
 # Built binaries (in project root)
 /client*
 /server*

@@ -298,6 +298,19 @@ log.WithFields(log.Fields{
 - Memory footprint well within production targets
 - Efficient GC performance with minimal overhead
 
+**Test Coverage (November 2025):**
+- **Overall Average**: 88.1% across 38 packages ✅
+- **Target**: ≥65% per package
+- **Packages Below Target**: 3 of 38
+  - pkg/engine: 56.5% (Ebiten-dependent rendering/audio)
+  - pkg/mobile: 59.8% (Platform-specific touch input)
+  - pkg/network: 62.5% (Integration tests)
+- **Packages Above Target**: 35 of 38 (92.1%)
+- **100% Coverage**: 4 packages (combat, genre, pool, world)
+- **90%+ Coverage**: 27 packages (71.1%)
+- **Race Conditions**: None detected (go test -race)
+- **Note**: Packages below 65% contain Ebiten-dependent code (rendering, audio, platform-specific) that cannot be tested in CI without display/hardware initialization
+
 ### V3.0 Performance Summary
 
 **Sprite Generation:** All operations well under 5ms target ✅  

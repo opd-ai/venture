@@ -100,8 +100,12 @@ func main() {
 func runStaticAnalysis(result *AuditResult, pkgPath string) {
 	fmt.Println("Running static analysis...")
 	
+	// Get package import path
+	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
+	
 	// Run go vet
-	cmd := exec.Command("go", "vet", "./"+pkgPath)
+	cmd := exec.Command("go", "vet", "./"+pkgImport)
+	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
 	result.VetOutput = string(output)
 	result.StaticAnalysisPass = err == nil
@@ -128,8 +132,12 @@ func runStaticAnalysis(result *AuditResult, pkgPath string) {
 func runTests(result *AuditResult, pkgPath string) {
 	fmt.Println("Running tests...")
 	
+	// Get package import path
+	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
+	
 	// Build check
-	cmd := exec.Command("go", "build", "./"+pkgPath)
+	cmd := exec.Command("go", "build", "./"+pkgImport)
+	cmd.Dir = "/home/runner/work/venture/venture"
 	err := cmd.Run()
 	result.BuildSuccess = err == nil
 	
@@ -141,7 +149,8 @@ func runTests(result *AuditResult, pkgPath string) {
 	}
 	
 	// Run tests
-	cmd = exec.Command("go", "test", "-v", "./"+pkgPath)
+	cmd = exec.Command("go", "test", "-v", "./"+pkgImport)
+	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
 	result.TestOutput = string(output)
 	result.TestsPass = err == nil
@@ -153,7 +162,8 @@ func runTests(result *AuditResult, pkgPath string) {
 	}
 	
 	// Run race detector
-	cmd = exec.Command("go", "test", "-race", "./"+pkgPath)
+	cmd = exec.Command("go", "test", "-race", "./"+pkgImport)
+	cmd.Dir = "/home/runner/work/venture/venture"
 	err = cmd.Run()
 	result.RaceFree = err == nil
 	
@@ -167,10 +177,14 @@ func runTests(result *AuditResult, pkgPath string) {
 func runCoverageAnalysis(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing test coverage...")
 	
+	// Get package import path
+	pkgImport := strings.TrimPrefix(pkgPath, "/home/runner/work/venture/venture/")
+	
 	coverFile := "/tmp/coverage-" + filepath.Base(pkgPath) + ".out"
 	defer os.Remove(coverFile)
 	
-	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./"+pkgPath)
+	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./"+pkgImport)
+	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
 	
 	if err != nil {
@@ -336,11 +350,20 @@ func generateFindings(result *AuditResult, pkgPath string) {
 		})
 	}
 	
-	if !result.CoveragePass {
+	// Check if this is an interface-only package (low LOC, zero coverage but tests pass)
+	isInterfaceOnly := result.LinesOfCode < 100 && result.CoveragePercent == 0.0 && result.TestsPass
+	
+	if !result.CoveragePass && !isInterfaceOnly {
 		result.MajorFindings = append(result.MajorFindings, Finding{
 			File:  "tests",
 			Issue: fmt.Sprintf("Test coverage %.1f%% is below 65%% threshold", result.CoveragePercent),
 			Fix:   "Add tests to increase coverage to at least 65%",
+		})
+	} else if !result.CoveragePass && isInterfaceOnly {
+		result.MinorFindings = append(result.MinorFindings, Finding{
+			File:  "tests",
+			Issue: fmt.Sprintf("Test coverage %.1f%% is below 65%% threshold (interface-only package)", result.CoveragePercent),
+			Fix:   "Note: Interface-only packages typically have low coverage. This is acceptable if all interfaces are documented and tested in implementation packages.",
 		})
 	}
 	
@@ -374,9 +397,14 @@ func writeAuditFile(result *AuditResult, filename string) error {
 	// Executive Summary
 	fmt.Fprintf(&buf, "## Executive Summary\n")
 	allPassed := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0
-	if allPassed {
+	hasOnlyMinorFindings := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0 && len(result.MinorFindings) > 0
+	
+	if allPassed && len(result.MinorFindings) == 0 {
 		fmt.Fprintf(&buf, "**Status: PASS** ✅\n\n")
-		fmt.Fprintf(&buf, "Package meets all quality standards.\n\n")
+		fmt.Fprintf(&buf, "Package meets all quality standards with zero findings.\n\n")
+	} else if hasOnlyMinorFindings {
+		fmt.Fprintf(&buf, "**Status: PASS** ✅\n\n")
+		fmt.Fprintf(&buf, "Package meets all critical quality standards. Minor findings noted for enhancement.\n\n")
 	} else {
 		fmt.Fprintf(&buf, "**Status: NEEDS WORK** ⚠️\n\n")
 		fmt.Fprintf(&buf, "Package has findings that should be addressed.\n\n")

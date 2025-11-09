@@ -252,3 +252,50 @@ type UISystem interface {
 	// interface. Individual UI systems can implement it if they need direct input handling.
 	// Return value indicates whether the UI consumed the input (blocking lower layers).
 }
+
+// Vehicle provides behavior interface for mounted vehicles and mounts.
+// This interface abstracts vehicle physics and capabilities for different vehicle types
+// (mounts, carts, boats, gliders, mechs).
+//
+// Phase 21.1: Vehicle Foundation
+type Vehicle interface {
+	// GetSpeed returns the current speed of the vehicle
+	GetSpeed() float64
+
+	// GetMaxSpeed returns the maximum speed the vehicle can achieve
+	GetMaxSpeed() float64
+
+	// GetAcceleration returns the acceleration rate
+	GetAcceleration() float64
+
+	// GetHandling returns the turn rate/handling ability
+	GetHandling() float64
+
+	// CanTraverse checks if the vehicle can move on a specific terrain type
+	// Uses terrain.TileType from pkg/procgen/terrain
+	CanTraverse(terrainType int) bool
+
+	// GetFuelCost returns resource consumption per tile traveled
+	GetFuelCost() float64
+}
+
+// VehicleController manages mounting/dismounting interactions with vehicles.
+// This interface enables player and NPC entities to enter and exit vehicles.
+//
+// Phase 21.1: Vehicle Foundation
+type VehicleController interface {
+	// Mount attempts to mount a rider entity onto a vehicle entity
+	// Returns error if mounting fails (vehicle full, incompatible, etc.)
+	Mount(rider *Entity, vehicle *Entity) error
+
+	// Dismount removes a rider entity from their current vehicle
+	// Returns error if rider is not mounted
+	Dismount(rider *Entity) error
+
+	// IsMounted checks if an entity is currently riding a vehicle
+	IsMounted(rider *Entity) bool
+
+	// GetMountedVehicle returns the vehicle entity the rider is on
+	// Returns nil if rider is not mounted
+	GetMountedVehicle(rider *Entity) *Entity
+}

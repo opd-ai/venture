@@ -1,12 +1,12 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 20-x)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V*.md, AUDIT.md files.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete current roadmap**, (3) align docs, (4) next roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V*.md, AUDIT.md files.
 
-**V2.0 Features:**
-P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzzles, Destructibles, Carry, Context, Hazards | P12: L-System, Narrative, Adaptive music | P13: Behavior trees, Squads, Factions | P14: Shadows, Animation LOD, Enhanced particles/audio
+**V3.0 Features (Complete):**
+P15: Enhanced sprites, anatomical detail, genre variations | P16: Advanced tiles, textures, transitions | P17: Lighting, shadows, bloom, ambient | P18: Particles, weather, fluid simulation | P19: UI polish, dynamic palettes | P20: Environmental detail, post-processing
 
-**ALL** in pkg/engine/, cmd/client/main.go loop, entities spawn with V6.0.
+**ALL** in pkg/rendering/, pkg/procgen/environment/, cmd/client/main.go.
 
 ## CONSTRAINTS
 - Seed RNG only (no time.Now()), ECS: entities=IDs, components=data, systems=logic
@@ -16,20 +16,20 @@ P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzz
 ## PHASE 1: BUILD/TEST
 Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
 
-## PHASE 2: V6.0 COMPLETION
-**Audit:** All P10-14 components/systems in pkg/engine/, cmd/client/main.go, entity spawning.
-**Implement:** Missing items (ECS), integrate loop, spawn logic, test ≥65%, doc.
-**Remove:** Deprecated, legacy, pre-V6.0, shims.
-**Validate:** Determinism, targets, tests, run client.
+## PHASE 2: ROADMAP COMPLETION
+**Audit:** Current ROADMAP_V*.md for incomplete features in pkg/, cmd/client/main.go.
+**Implement:** Missing items (ECS), integrate loop, test ≥65%, doc.
+**Remove:** Deprecated, legacy, pre-current version, shims.
+**Validate:** Determinism, targets (60 FPS, <500MB, <2s gen), tests, run client.
 **Skip:** Only if ALL done.
 
 ## PHASE 3: DOCS
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 4: ROADMAP
-**Priority:** (1) V6.0, (2) ROADMAP_V*.md, (3), (4) TODOs.
+**Priority:** (1) Current ROADMAP_V*.md (V3→V4→V5→V6), (2) TODOs, (3) EXECUTE.md.
 ECS changes, loop integration, test (≥65%, determinism), verify. Skip if done.
-Carry out `EXECUTE.md` instructions against current ROADMAP_V*.md file.
+Pick next incomplete roadmap: V3 (complete) → V4 → V5 → V6.
 
 ## PHASE 5: QUALITY
 Scan complexity >15, nesting >4, length >200, violations, coverage <65%, TODOs, duplication. Pick ONE. Refactor, validate. Skip if good.
@@ -39,18 +39,19 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 
 ## SUCCESS
 - Build/test/race pass, ≥65% coverage, gofmt
-- **ALL P10-14 in loop, V6.0 entity spawning**
+- **Current roadmap complete, all systems integrated**
 - No deprecated, ECS OK, determinism, targets (60 FPS, <500MB, <2s)
 - Docs current, quality up, enhancement done
 
-## V2.0 CHECKLIST (Before Phase 4/completion)
-**Phase 10:** RotationComponent, AimComponent, ProjectileComponent, ScreenShakeComponent + systems in pkg/engine/, registered in cmd/client/main.go
-**Phase 11:** LayerComponent, layer-aware collision, diagonal walls, PuzzleComponent/System, DestructibleComponent/System, CarryComponent/System, ContextActionComponent/System, HazardComponent/System
-**Phase 12:** pkg/procgen/lsys/, NarrativeComponent, pkg/procgen/narrative/, NarrativeSystem, pkg/audio/music/adaptive.go, motif.go
-**Phase 13:** BehaviorTreeComponent, pkg/engine/ai/behavior_tree.go, BehaviorTreeSystem, archetypes, SquadComponent/System, FactionComponent/System, pkg/procgen/faction/
-**Phase 14:** ShadowComponent, pkg/rendering/lighting/shadows.go, AnimationComponent w/LOD, pkg/rendering/sprites/animation.go, enhanced particles/audio
+## V3.0 CHECKLIST (Current Status - All Complete ✅)
+**Phase 15:** Enhanced sprite templates, anatomical detail, facial features, genre variations - pkg/rendering/sprites/
+**Phase 16:** Advanced tile textures, smooth transitions, multi-layer depth - pkg/rendering/tiles/
+**Phase 17:** Soft shadows, colored lighting, bloom effects, ambient occlusion - pkg/rendering/lighting/
+**Phase 18:** Weather systems (rain/snow/fog), fluid simulation, particles - pkg/rendering/particles/, pkg/procgen/environment/
+**Phase 19:** Dynamic UI palettes, visual hierarchy, procedural decorations - pkg/rendering/ui/
+**Phase 20:** Parallax backgrounds, time-of-day, post-processing, environmental polish - pkg/rendering/
 
-**Integration:** cmd/client/main.go registers all systems, entities spawn with V6.0 components, world uses L-System layouts, combat uses projectiles/shake, audio plays adaptive music, rendering shows shadows/LOD/particles.
+**Next Versions:** V4.0 (Phases 21-30: Gameplay expansion), V5.0 (Phases 31-36: Social systems), V6.0 (Phases 37+: Server federation)
 
 Execute autonomously. Report comprehensive results for all 6 phases.
 

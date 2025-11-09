@@ -70,7 +70,11 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue // Entity can't attack
 		}
-		attack := attackComp.(*AttackComponent)
+		// Type assert with safety check
+		attack, ok := attackComp.(*AttackComponent)
+		if !ok {
+			continue
+		}
 
 		// Check if attack is ready (cooldown)
 		if !attack.CanAttack() {
@@ -96,18 +100,22 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		// ALWAYS trigger attack animation, even if no target
 		// This provides visual feedback that the attack button was pressed
 		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-			anim := animComp.(*AnimationComponent)
-			anim.SetState(AnimationStateAttack)
+			// Type assert with safety check
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				anim.SetState(AnimationStateAttack)
 
-			// Set OnComplete callback to return to idle/walk
-			anim.OnComplete = func() {
-				if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-					vel := velComp.(*VelocityComponent)
-					speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-					if speed > 0.1 {
-						anim.SetState(AnimationStateWalk)
-					} else {
-						anim.SetState(AnimationStateIdle)
+				// Set OnComplete callback to return to idle/walk
+				anim.OnComplete = func() {
+					if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
+						// Type assert with safety check
+						if vel, ok := velComp.(*VelocityComponent); ok {
+							speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+							if speed > 0.1 {
+								anim.SetState(AnimationStateWalk)
+							} else {
+								anim.SetState(AnimationStateIdle)
+							}
+						}
 					}
 				}
 			}
@@ -120,23 +128,25 @@ func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check if entity has aim component (Phase 10.1)
 		if aimComp, hasAim := entity.GetComponent("aim"); hasAim {
-			aim := aimComp.(*AimComponent)
-			// Use aim direction for target selection with default aim cone (forgiving aim)
-			target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
+			// Type assert with safety check
+			if aim, ok := aimComp.(*AimComponent); ok {
+				// Use aim direction for target selection with default aim cone (forgiving aim)
+				target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
 
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				targetID := uint64(0)
-				if target != nil {
-					targetID = target.ID
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					targetID := uint64(0)
+					if target != nil {
+						targetID = target.ID
+					}
+					s.logger.WithFields(logrus.Fields{
+						"entityID":  entity.ID,
+						"aimAngle":  aim.AimAngle,
+						"aimDegree": aim.AimAngle * 180 / math.Pi,
+						"range":     maxRange,
+						"aimCone":   DefaultAimCone * 180 / math.Pi,
+						"targetID":  targetID,
+					}).Debug("aim-based attack target selection")
 				}
-				s.logger.WithFields(logrus.Fields{
-					"entityID":  entity.ID,
-					"aimAngle":  aim.AimAngle,
-					"aimDegree": aim.AimAngle * 180 / math.Pi,
-					"range":     maxRange,
-					"aimCone":   DefaultAimCone * 180 / math.Pi,
-					"targetID":  targetID,
-				}).Debug("aim-based attack target selection")
 			}
 		} else {
 			// Fallback: use nearest enemy for entities without aim component (NPCs, AI)

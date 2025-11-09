@@ -36,19 +36,32 @@ func (e *Entity) AddComponent(c Component) {
 	e.Components[c.Type()] = c
 
 	// Update fast-path cache for hot components
+	// Type assertions here are safe because we control the type based on c.Type()
 	switch c.Type() {
 	case "position":
-		e.position = c.(*PositionComponent)
+		if pos, ok := c.(*PositionComponent); ok {
+			e.position = pos
+		}
 	case "velocity":
-		e.velocity = c.(*VelocityComponent)
+		if vel, ok := c.(*VelocityComponent); ok {
+			e.velocity = vel
+		}
 	case "health":
-		e.health = c.(*HealthComponent)
+		if health, ok := c.(*HealthComponent); ok {
+			e.health = health
+		}
 	case "collider":
-		e.collider = c.(*ColliderComponent)
+		if collider, ok := c.(*ColliderComponent); ok {
+			e.collider = collider
+		}
 	case "inventory":
-		e.inventory = c.(*InventoryComponent)
+		if inv, ok := c.(*InventoryComponent); ok {
+			e.inventory = inv
+		}
 	case "stats":
-		e.stats = c.(*StatsComponent)
+		if stats, ok := c.(*StatsComponent); ok {
+			e.stats = stats
+		}
 	}
 }
 

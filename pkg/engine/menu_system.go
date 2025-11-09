@@ -104,14 +104,16 @@ func (ms *EbitenMenuSystem) Toggle() {
 		ms.world.Update(0) // Process entity addition
 	} else {
 		if menu, ok := ms.menuEntity.GetComponent("menu"); ok {
-			menuComp := menu.(*MenuComponent)
-			menuComp.Active = !menuComp.Active
+			// Type assert with safety check
+			if menuComp, ok := menu.(*MenuComponent); ok {
+				menuComp.Active = !menuComp.Active
 
-			// Rebuild main menu when opening
-			if menuComp.Active {
-				menuComp.CurrentMenu = MenuTypeMain
-				menuComp.MenuStack = nil
-				ms.buildMainMenu(menuComp)
+				// Rebuild main menu when opening
+				if menuComp.Active {
+					menuComp.CurrentMenu = MenuTypeMain
+					menuComp.MenuStack = nil
+					ms.buildMainMenu(menuComp)
+				}
 			}
 		}
 	}
@@ -123,7 +125,10 @@ func (ms *EbitenMenuSystem) IsActive() bool {
 		return false
 	}
 	if menu, ok := ms.menuEntity.GetComponent("menu"); ok {
-		return menu.(*MenuComponent).Active
+		// Type assert with safety check
+		if menuComp, ok := menu.(*MenuComponent); ok {
+			return menuComp.Active
+		}
 	}
 	return false
 }
@@ -135,11 +140,15 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	menu, ok := ms.menuEntity.GetComponent("menu")
-	if !ok || !menu.(*MenuComponent).Active {
+	if !ok {
 		return
 	}
 
-	menuComp := menu.(*MenuComponent)
+	// Type assert with safety check
+	menuComp, ok := menu.(*MenuComponent)
+	if !ok || !menuComp.Active {
+		return
+	}
 
 	// Update error message timeout
 	if menuComp.ErrorTimeout > 0 {
@@ -478,11 +487,15 @@ func (ms *EbitenMenuSystem) Draw(screen interface{}) {
 	}
 
 	menu, ok := ms.menuEntity.GetComponent("menu")
-	if !ok || !menu.(*MenuComponent).Active {
+	if !ok {
 		return
 	}
 
-	menuComp := menu.(*MenuComponent)
+	// Type assert with safety check
+	menuComp, ok := menu.(*MenuComponent)
+	if !ok || !menuComp.Active {
+		return
+	}
 
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ms.screenWidth, ms.screenHeight)

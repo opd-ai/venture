@@ -69,21 +69,30 @@ func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue // Entity has no inventory
 		}
-		inventory := invComp.(*InventoryComponent)
+		// Type assert with safety check
+		inventory, ok := invComp.(*InventoryComponent)
+		if !ok {
+			continue
+		}
 
 		// Get hotbar component for selected item (if available)
 		var selectedIndex int
 		if hotbarComp, hasHotbar := entity.GetComponent("hotbar"); hasHotbar {
-			hotbar := hotbarComp.(*HotbarComponent)
-			selectedIndex = hotbar.LastUsedIndex
-			// Check if the slot has an item
-			if selectedIndex == -1 || hotbar.GetSlot(selectedIndex) == nil {
-				// No selected item, fall back to first consumable
-				selectedIndex = s.findFirstUsableItem(inventory)
+			// Type assert with safety check
+			if hotbar, ok := hotbarComp.(*HotbarComponent); ok {
+				selectedIndex = hotbar.LastUsedIndex
+				// Check if the slot has an item
+				if selectedIndex == -1 || hotbar.GetSlot(selectedIndex) == nil {
+					// No selected item, fall back to first consumable
+					selectedIndex = s.findFirstUsableItem(inventory)
+				} else {
+					// Find the hotbar item in inventory
+					targetItem := hotbar.GetSlot(selectedIndex)
+					selectedIndex = s.findItemInInventory(inventory, targetItem)
+				}
 			} else {
-				// Find the hotbar item in inventory
-				targetItem := hotbar.GetSlot(selectedIndex)
-				selectedIndex = s.findItemInInventory(inventory, targetItem)
+				// Type assertion failed, fall back to first consumable
+				selectedIndex = s.findFirstUsableItem(inventory)
 			}
 		} else {
 			// No hotbar, use first consumable
@@ -166,6 +175,10 @@ func (s *PlayerItemUseSystem) SetSelectedItem(entity *Entity, slotIndex int) {
 	if !hasHotbar {
 		return
 	}
-	hotbar := hotbarComp.(*HotbarComponent)
+	// Type assert with safety check
+	hotbar, ok := hotbarComp.(*HotbarComponent)
+	if !ok {
+		return
+	}
 	hotbar.LastUsedIndex = slotIndex
 }

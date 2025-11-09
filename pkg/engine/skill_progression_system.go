@@ -51,14 +51,22 @@ func (s *SkillProgressionSystem) applySkillBonuses(entity *Entity) {
 	if !ok {
 		return
 	}
-	treeComp := comp.(*SkillTreeComponent)
+	// Type assert with safety check
+	treeComp, ok := comp.(*SkillTreeComponent)
+	if !ok {
+		return
+	}
 
 	// Get stats component
 	statsComp, ok := entity.GetComponent("stats")
 	if !ok {
 		return // No stats to modify
 	}
-	stats := statsComp.(*StatsComponent)
+	// Type assert with safety check
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return
+	}
 
 	// Reset bonus stats (we'll recalculate from scratch)
 	bonuses := &SkillBonuses{
@@ -185,13 +193,19 @@ func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *Stat
 	// Apply attack/defense/magic bonuses using base stats
 	baseStatsComp, hasBaseStats := entity.GetComponent("base_stats")
 	if hasBaseStats {
-		baseStats := baseStatsComp.(*BaseStatsComponent)
+		// Type assert with safety check
+		baseStats, ok := baseStatsComp.(*BaseStatsComponent)
+		if !ok {
+			return
+		}
 
 		// Apply attack bonus
 		if bonuses.DamageBonus != 0 {
 			if attackComp, ok := entity.GetComponent("attack"); ok {
-				attack := attackComp.(*AttackComponent)
-				attack.Damage = baseStats.BaseAttack * (1.0 + bonuses.DamageBonus)
+				// Type assert with safety check
+				if attack, ok := attackComp.(*AttackComponent); ok {
+					attack.Damage = baseStats.BaseAttack * (1.0 + bonuses.DamageBonus)
+				}
 			}
 		}
 
@@ -208,12 +222,14 @@ func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *Stat
 		// Apply health bonus
 		if bonuses.HealthBonus != 0 {
 			if healthComp, ok := entity.GetComponent("health"); ok {
-				health := healthComp.(*HealthComponent)
-				oldMax := health.Max
-				health.Max = baseStats.BaseMaxHealth * (1.0 + bonuses.HealthBonus)
-				// Scale current health proportionally
-				if oldMax > 0 {
-					health.Current = health.Current * (health.Max / oldMax)
+				// Type assert with safety check
+				if health, ok := healthComp.(*HealthComponent); ok {
+					oldMax := health.Max
+					health.Max = baseStats.BaseMaxHealth * (1.0 + bonuses.HealthBonus)
+					// Scale current health proportionally
+					if oldMax > 0 {
+						health.Current = health.Current * (health.Max / oldMax)
+					}
 				}
 			}
 		}
@@ -221,8 +237,10 @@ func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *Stat
 		// Apply mana regen bonus
 		if bonuses.ManaRegenBonus != 0 {
 			if manaComp, ok := entity.GetComponent("mana"); ok {
-				mana := manaComp.(*ManaComponent)
-				mana.Regen = baseStats.BaseManaRegen * (1.0 + bonuses.ManaRegenBonus)
+				// Type assert with safety check
+				if mana, ok := manaComp.(*ManaComponent); ok {
+					mana.Regen = baseStats.BaseManaRegen * (1.0 + bonuses.ManaRegenBonus)
+				}
 			}
 		}
 	}

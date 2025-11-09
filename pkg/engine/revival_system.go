@@ -45,9 +45,11 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
 		if entity.HasComponent("input") && !entity.HasComponent("dead") {
 			if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
-				health := healthComp.(*HealthComponent)
-				if health.IsAlive() {
-					livingPlayers = append(livingPlayers, entity)
+				// Type assert with safety check
+				if health, ok := healthComp.(*HealthComponent); ok {
+					if health.IsAlive() {
+						livingPlayers = append(livingPlayers, entity)
+					}
 				}
 			}
 		}
@@ -69,8 +71,15 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 	// Check each living player for revival input
 	for _, livingPlayer := range livingPlayers {
 		// Check for revival input (E key or interact button)
-		inputComp, _ := livingPlayer.GetComponent("input")
-		input := inputComp.(*EbitenInput)
+		inputComp, ok := livingPlayer.GetComponent("input")
+		if !ok {
+			continue
+		}
+		// Type assert with safety check
+		input, ok := inputComp.(*EbitenInput)
+		if !ok {
+			continue
+		}
 
 		// Check if revival action key is pressed (E key = UseItemPressed)
 		// In this context, E key serves dual purpose: use item / interact / revive
@@ -83,7 +92,11 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 		if !hasLivingPos {
 			continue
 		}
-		livingPos := livingPosComp.(*PositionComponent)
+		// Type assert with safety check
+		livingPos, ok := livingPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Find closest dead player within range
 		var closestDeadPlayer *Entity
@@ -95,7 +108,11 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 			if !hasDeadPos {
 				continue
 			}
-			deadPos := deadPosComp.(*PositionComponent)
+			// Type assert with safety check
+			deadPos, ok := deadPosComp.(*PositionComponent)
+			if !ok {
+				continue
+			}
 
 			// Calculate distance
 			dx := deadPos.X - livingPos.X
@@ -123,7 +140,11 @@ func (s *RevivalSystem) revivePlayer(deadPlayer *Entity) {
 	if !hasHealth {
 		return
 	}
-	health := healthComp.(*HealthComponent)
+	// Type assert with safety check
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 
 	// Restore health (20% of max by default)
 	restoredHealth := health.Max * s.RevivalAmount
@@ -165,7 +186,11 @@ func FindRevivablePlayersInRange(world *World, livingPlayer *Entity, maxRange fl
 	if !hasPos {
 		return nil
 	}
-	livingPos := livingPosComp.(*PositionComponent)
+	// Type assert with safety check
+	livingPos, ok := livingPosComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
 
 	var revivablePlayers []*Entity
 
@@ -180,7 +205,11 @@ func FindRevivablePlayersInRange(world *World, livingPlayer *Entity, maxRange fl
 		if !hasDeadPos {
 			continue
 		}
-		deadPos := deadPosComp.(*PositionComponent)
+		// Type assert with safety check
+		deadPos, ok := deadPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := deadPos.X - livingPos.X

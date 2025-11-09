@@ -44,7 +44,11 @@ func (vms *VehicleMovementSystem) Update(entities []*Entity, deltaTime float64) 
 			continue
 		}
 
-		vehicle := vehicleComp.(*VehicleComponent)
+		// Type assert with safety check
+		vehicle, ok := vehicleComp.(*VehicleComponent)
+		if !ok {
+			continue
+		}
 
 		// Skip if vehicle is destroyed or out of fuel
 		if vehicle.IsDestroyed() || vehicle.IsFuelDepleted() {
@@ -57,13 +61,21 @@ func (vms *VehicleMovementSystem) Update(entities []*Entity, deltaTime float64) 
 		if !hasPos {
 			continue // Can't move without position
 		}
-		pos := posComp.(*PositionComponent)
+		// Type assert with safety check
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		rotComp, hasRot := entity.GetComponent("rotation")
 		if !hasRot {
 			continue // Need rotation for direction
 		}
-		rot := rotComp.(*RotationComponent)
+		// Type assert with safety check
+		rot, ok := rotComp.(*RotationComponent)
+		if !ok {
+			continue
+		}
 
 		// Check if entity is being controlled (has input or is mounted)
 		hasControl := vms.hasControlInput(entity)
@@ -108,8 +120,15 @@ func (vms *VehicleMovementSystem) hasControlInput(entity *Entity) bool {
 	}
 
 	// Check if any entity is mounted on this vehicle
-	vehicleComp, _ := entity.GetComponent("vehicle")
-	vehicle := vehicleComp.(*VehicleComponent)
+	vehicleComp, ok := entity.GetComponent("vehicle")
+	if !ok {
+		return false
+	}
+	// Type assert with safety check
+	vehicle, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return false
+	}
 	return vehicle.CurrentPassengers > 0
 }
 

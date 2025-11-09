@@ -56,8 +56,9 @@ func LoadPlayerSkillTree(player *Entity, seed int64, genreID string, depth int) 
 		// Update existing component with new tree
 		comp, ok := player.GetComponent("skill_tree")
 		if ok {
-			treeComp := comp.(*SkillTreeComponent)
-			treeComp.Tree = mainTree
+			if treeComp, ok := comp.(*SkillTreeComponent); ok {
+				treeComp.Tree = mainTree
+			}
 		}
 	}
 

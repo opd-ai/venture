@@ -32,7 +32,10 @@ func (ps *ParticleSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		emitter := comp.(*ParticleEmitterComponent)
+		emitter, ok := comp.(*ParticleEmitterComponent)
+		if !ok {
+			continue
+		}
 
 		// Update elapsed time for time-limited emitters
 		if emitter.EmissionTime > 0 {
@@ -68,8 +71,9 @@ func (ps *ParticleSystem) Update(entities []*Entity, deltaTime float64) {
 
 				// Position particles at entity's position
 				if posComp, ok := entity.GetComponent("position"); ok {
-					pos := posComp.(*PositionComponent)
-					ps.offsetParticles(system, pos.X, pos.Y)
+					if pos, ok := posComp.(*PositionComponent); ok {
+						ps.offsetParticles(system, pos.X, pos.Y)
+					}
 				}
 
 				// Add to emitter (with capacity check)

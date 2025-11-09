@@ -54,7 +54,10 @@ func (s *PlayerSpellCastingSystem) Update(entities []*Entity, deltaTime float64)
 
 	// Get spell slots
 	slotsComp, _ := player.GetComponent("spell_slots")
-	slots := slotsComp.(*SpellSlotComponent)
+	slots, ok := slotsComp.(*SpellSlotComponent)
+	if !ok {
+		return
+	}
 
 	// If currently casting, don't start new cast
 	if slots.IsCasting() {

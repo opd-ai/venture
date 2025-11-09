@@ -40,7 +40,11 @@ func (vds *VehicleDurabilitySystem) Update(entities []*Entity, deltaTime float64
 			continue
 		}
 
-		vehicle := vehicleComp.(*VehicleComponent)
+		// Type assert with safety check
+		vehicle, ok := vehicleComp.(*VehicleComponent)
+		if !ok {
+			continue
+		}
 
 		// Skip if already destroyed
 		if vehicle.IsDestroyed() {
@@ -64,7 +68,11 @@ func (vds *VehicleDurabilitySystem) checkCollisionDamage(entity *Entity, vehicle
 		return
 	}
 
-	collider := collComp.(*ColliderComponent)
+	// Type assert with safety check
+	collider, ok := collComp.(*ColliderComponent)
+	if !ok {
+		return
+	}
 
 	// In a full implementation, this would check if the collider
 	// recently hit a solid object and apply damage based on speed.
@@ -111,7 +119,11 @@ func (vds *VehicleDurabilitySystem) ApplyDamage(entity *Entity, damage float64) 
 		return false
 	}
 
-	vehicle := vehicleComp.(*VehicleComponent)
+	// Type assert with safety check
+	vehicle, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return false
+	}
 	destroyed := vehicle.TakeDamage(damage)
 
 	if destroyed {
@@ -128,7 +140,11 @@ func (vds *VehicleDurabilitySystem) RepairVehicle(entity *Entity, amount float64
 		return false
 	}
 
-	vehicle := vehicleComp.(*VehicleComponent)
+	// Type assert with safety check
+	vehicle, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return false
+	}
 	vehicle.Repair(amount)
 	return true
 }

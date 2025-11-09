@@ -321,7 +321,10 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 			if !ok {
 				continue
 			}
-			health := comp.(*HealthComponent)
+			health, ok := comp.(*HealthComponent)
+			if !ok {
+				continue
+			}
 			if health.Current < health.Max*0.25 && !hs.ShowQuickHint {
 				hs.ShowQuickHintFor("low_health")
 			}
@@ -333,7 +336,10 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 			if !ok {
 				continue
 			}
-			inv := comp.(*InventoryComponent)
+			inv, ok := comp.(*InventoryComponent)
+			if !ok {
+				continue
+			}
 			if len(inv.Items) >= inv.MaxItems && !hs.ShowQuickHint {
 				hs.ShowQuickHintFor("inventory_full")
 			}

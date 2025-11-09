@@ -94,7 +94,10 @@ func (h *EbitenHUDSystem) drawHealthBar() {
 	if !ok {
 		return
 	}
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 
 	// Health bar dimensions
 	barX := float32(20)
@@ -146,20 +149,28 @@ func (h *EbitenHUDSystem) drawStatsPanel() {
 
 	// Draw level if available
 	if hasExp {
-		exp := expComp.(*ExperienceComponent)
-		levelText := fmt.Sprintf("Level: %d", exp.Level)
-		h.drawText(levelText, x, y, color.White)
-		y += lineHeight
+		exp, ok := expComp.(*ExperienceComponent)
+		if !ok {
+			hasExp = false
+		} else {
+			levelText := fmt.Sprintf("Level: %d", exp.Level)
+			h.drawText(levelText, x, y, color.White)
+			y += lineHeight
+		}
 	}
 
 	// Draw stats if available
 	if hasStats {
-		stats := statsComp.(*StatsComponent)
-		h.drawText(fmt.Sprintf("ATK: %.0f", stats.Attack), x, y, color.RGBA{255, 200, 200, 255})
-		y += lineHeight
-		h.drawText(fmt.Sprintf("DEF: %.0f", stats.Defense), x, y, color.RGBA{200, 200, 255, 255})
-		y += lineHeight
-		h.drawText(fmt.Sprintf("MAG: %.0f", stats.MagicPower), x, y, color.RGBA{200, 255, 200, 255})
+		stats, ok := statsComp.(*StatsComponent)
+		if !ok {
+			hasStats = false
+		} else {
+			h.drawText(fmt.Sprintf("ATK: %.0f", stats.Attack), x, y, color.RGBA{255, 200, 200, 255})
+			y += lineHeight
+			h.drawText(fmt.Sprintf("DEF: %.0f", stats.Defense), x, y, color.RGBA{200, 200, 255, 255})
+			y += lineHeight
+			h.drawText(fmt.Sprintf("MAG: %.0f", stats.MagicPower), x, y, color.RGBA{200, 255, 200, 255})
+		}
 	}
 }
 
@@ -169,7 +180,10 @@ func (h *EbitenHUDSystem) drawExperienceBar() {
 	if !ok {
 		return
 	}
-	exp := expComp.(*ExperienceComponent)
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return
+	}
 
 	// Experience bar dimensions
 	barX := float32(20)
@@ -240,13 +254,17 @@ func (h *EbitenHUDSystem) drawAimIndicator() {
 	if !ok {
 		return // No aim component, skip indicator
 	}
-	aim := aimComp.(*AimComponent)
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return
+	}
 
 	// DEBUG: Compare aim vs rotation components
 	if rotComp, ok := h.playerEntity.GetComponent("rotation"); ok {
-		rotation := rotComp.(*RotationComponent)
-		fmt.Printf("[DEBUG] HUD: AimAngle=%.4f, RotationAngle=%.4f, RotationTarget=%.4f\n",
-			aim.AimAngle, rotation.Angle, rotation.TargetAngle)
+		if rotation, ok := rotComp.(*RotationComponent); ok {
+			fmt.Printf("[DEBUG] HUD: AimAngle=%.4f, RotationAngle=%.4f, RotationTarget=%.4f\n",
+				aim.AimAngle, rotation.Angle, rotation.TargetAngle)
+		}
 	}
 
 	// Draw direction arrow from player center (screen center since camera follows player)

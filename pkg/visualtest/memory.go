@@ -105,7 +105,9 @@ func (p *MemoryProfile) detectLeaks() {
 	// 2. Growth is sustained (not just a spike)
 	if allocGrowthPercent > 10.0 && objectGrowthPercent > 10.0 {
 		p.LeakDetected = true
-		p.LeakRate = float64(allocGrowth) / duration.Seconds()
+		if duration.Seconds() > 0 {
+			p.LeakRate = float64(allocGrowth) / duration.Seconds()
+		}
 	}
 }
 

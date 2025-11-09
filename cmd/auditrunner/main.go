@@ -186,7 +186,6 @@ func runCoverageAnalysis(result *AuditResult, pkgPath string) {
 	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./"+pkgImport)
 	cmd.Dir = "/home/runner/work/venture/venture"
 	output, err := cmd.CombinedOutput()
-
 	if err != nil {
 		result.CoveragePercent = 0
 		result.CoveragePass = false
@@ -243,8 +242,7 @@ func analyzeDocumentation(result *AuditResult, pkgPath string) {
 	}
 
 	// Count exported identifiers and check for godoc
-	result.NumExportedTypes, result.NumExportedFuncs, result.DocsComplete =
-		analyzeGodocCoverage(pkgPath)
+	result.NumExportedTypes, result.NumExportedFuncs, result.DocsComplete = analyzeGodocCoverage(pkgPath)
 
 	if result.DocsComplete {
 		fmt.Println("  ✓ All exports documented")
@@ -522,7 +520,7 @@ func writeAuditFile(result *AuditResult, filename string) error {
 	fmt.Fprintf(&buf, "\n---\n\n")
 	fmt.Fprintf(&buf, "*This audit was generated automatically by the Venture Code Review System*\n")
 
-	return os.WriteFile(filename, buf.Bytes(), 0644)
+	return os.WriteFile(filename, buf.Bytes(), 0o644)
 }
 
 func writeGate(buf *bytes.Buffer, name string, passed bool) {
@@ -609,5 +607,5 @@ func analyzeGodocCoverage(pkgPath string) (numTypes, numFuncs int, complete bool
 		}
 	}
 
-	return
+	return numTypes, numFuncs, complete
 }

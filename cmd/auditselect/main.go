@@ -17,11 +17,11 @@ import (
 
 // PackageInfo holds metadata about a package for audit selection
 type PackageInfo struct {
-	Path          string   // Relative path from repo root
-	Name          string   // Package name
-	HasAudit      bool     // Whether AUDIT.md exists
-	Dependencies  []string // Internal package dependencies
-	DependencyCount int    // Count of internal dependencies (depth metric)
+	Path            string   // Relative path from repo root
+	Name            string   // Package name
+	HasAudit        bool     // Whether AUDIT.md exists
+	Dependencies    []string // Internal package dependencies
+	DependencyCount int      // Count of internal dependencies (depth metric)
 }
 
 func main() {
@@ -77,17 +77,17 @@ func main() {
 		if unaudited[i].DependencyCount != unaudited[j].DependencyCount {
 			return unaudited[i].DependencyCount < unaudited[j].DependencyCount
 		}
-		
+
 		// If equal, prioritize by path: engine > procgen > rendering > others
 		return getPriority(unaudited[i].Path) < getPriority(unaudited[j].Path)
 	})
 
 	// Select the first package (lowest depth)
 	selected := unaudited[0]
-	
+
 	// Output selection
 	fmt.Printf("%s\n", selected.Path)
-	
+
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "Selected: %s (depth: %d dependencies)\n", selected.Path, selected.DependencyCount)
 		if len(selected.Dependencies) > 0 {
@@ -99,12 +99,12 @@ func main() {
 // findPackages recursively finds all Go packages in the given directory
 func findPackages(root string) ([]PackageInfo, error) {
 	var packages []PackageInfo
-	
+
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip hidden directories and vendor
 		if d.IsDir() {
 			name := d.Name()
@@ -112,14 +112,14 @@ func findPackages(root string) ([]PackageInfo, error) {
 				return filepath.SkipDir
 			}
 		}
-		
+
 		// Check if this directory contains Go files
 		if d.IsDir() {
 			hasGo, err := hasGoFiles(path)
 			if err != nil {
 				return err
 			}
-			
+
 			if hasGo {
 				// Check for AUDIT.md
 				auditPath := filepath.Join(path, "AUDIT.md")
@@ -127,13 +127,13 @@ func findPackages(root string) ([]PackageInfo, error) {
 				if _, err := os.Stat(auditPath); err == nil {
 					hasAudit = true
 				}
-				
+
 				// Get package name
 				pkgName, err := getPackageName(path)
 				if err != nil {
 					pkgName = filepath.Base(path)
 				}
-				
+
 				packages = append(packages, PackageInfo{
 					Path:     path,
 					Name:     pkgName,
@@ -141,10 +141,10 @@ func findPackages(root string) ([]PackageInfo, error) {
 				})
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	return packages, err
 }
 
@@ -154,13 +154,13 @@ func hasGoFiles(dir string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") {
 			return true, nil
 		}
 	}
-	
+
 	return false, nil
 }
 
@@ -170,7 +170,7 @@ func getPackageName(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") && !strings.HasSuffix(entry.Name(), "_test.go") {
 			fset := token.NewFileSet()
@@ -181,34 +181,34 @@ func getPackageName(dir string) (string, error) {
 			return file.Name.Name, nil
 		}
 	}
-	
+
 	return "", fmt.Errorf("no package name found")
 }
 
 // analyzePackageDependencies finds internal package dependencies
 func analyzePackageDependencies(repoRoot, pkgPath string) ([]string, error) {
 	deps := make(map[string]bool)
-	
+
 	entries, err := os.ReadDir(pkgPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	fset := token.NewFileSet()
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
-		
+
 		filePath := filepath.Join(pkgPath, entry.Name())
 		file, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
 		if err != nil {
 			continue
 		}
-		
+
 		for _, imp := range file.Imports {
 			importPath := strings.Trim(imp.Path.Value, `"`)
-			
+
 			// Only count internal dependencies (venture packages)
 			if strings.HasPrefix(importPath, "github.com/opd-ai/venture/pkg/") {
 				// Extract package path relative to repo
@@ -217,14 +217,14 @@ func analyzePackageDependencies(repoRoot, pkgPath string) ([]string, error) {
 			}
 		}
 	}
-	
+
 	// Convert to sorted slice
 	result := make([]string, 0, len(deps))
 	for dep := range deps {
 		result = append(result, dep)
 	}
 	sort.Strings(result)
-	
+
 	return result, nil
 }
 
@@ -233,7 +233,7 @@ func analyzePackageDependencies(repoRoot, pkgPath string) ([]string, error) {
 func getPriority(path string) int {
 	// Normalize path separators
 	path = filepath.ToSlash(path)
-	
+
 	// Extract package path relative to pkg/
 	parts := strings.Split(path, "/")
 	for i, part := range parts {
@@ -242,7 +242,7 @@ func getPriority(path string) int {
 			break
 		}
 	}
-	
+
 	// Priority order: engine > procgen > rendering > others
 	if path == "engine" || strings.HasPrefix(path, "engine/") {
 		return 1
@@ -253,7 +253,7 @@ func getPriority(path string) int {
 	if path == "rendering" || strings.HasPrefix(path, "rendering/") {
 		return 3
 	}
-	
+
 	// All others have lower priority
 	return 4
 }

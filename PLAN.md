@@ -96,7 +96,7 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [ ] Update ARCHITECTURE.md with V3.0 rendering pipeline
 - [ ] Update TECHNICAL_SPEC.md with new sprite/tile/lighting specs
 - [ ] Update API_REFERENCE.md with new functions/interfaces
-- [ ] Update PERFORMANCE.md with V3.0 metrics
+- [x] Update PERFORMANCE.md with V3.0 metrics
 
 ### 4.2 Update User Documentation
 - [ ] Update GETTING_STARTED.md with V3.0 features

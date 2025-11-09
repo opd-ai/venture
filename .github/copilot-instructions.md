@@ -261,6 +261,17 @@ Run examples with: `go run ./examples/<example_name>` or build with `go build ./
 
 - **Uncached Generation in Hot Paths**: Don't generate sprites, sounds, or other content in the game loop. Use caching systems (pkg/rendering/cache, object pooling). Generation should happen once during initialization or loading, not every frame.
 
+## Networking Best Practices (for Go projects)
+
+When declaring network variables, always use interface types:
+- Never use `net.UDPAddr`, `net.IPAddr`, or `net.TCPAddr`. Use `net.Addr` only instead.
+- Never use `net.UDPConn`, use `net.PacketConn` instead
+- Never use `net.TCPConn`, use `net.Conn` instead
+- Never use `net.UDPListener` or `net.TCPListener`, use `net.Listener` instead
+- Never use a type switch or type assertion to convert from an interface type to a concrete type. Use the interface methods instead.
+
+This approach enhances testability and flexibility when working with different network implementations or mocks.
+
 ## Future Phase Awareness
 
 - **Phase 15 (Upcoming)**: Enhanced Sprite Generation - Advanced anatomical templates, animation fluidity, genre-specific styles

@@ -296,7 +296,7 @@ NO_RESULTS_HTML
             echo "                    <div class=\"result-title\">$rule_id</div>" >> "$output_file"
             echo "                    <span class=\"severity-badge severity-$level\">$level</span>" >> "$output_file"
             echo "                </div>" >> "$output_file"
-            echo "                <div class=\"result-message\">$(echo "$message" | sed 's/</\&lt;/g; s/>/\&gt;/g')</div>" >> "$output_file"
+            echo "                <div class=\"result-message\">$(echo "$message" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/\"/\&quot;/g')</div>" >> "$output_file"
             
             if [ "$file" != "unknown" ]; then
                 echo "                <div class=\"result-location\">" >> "$output_file"

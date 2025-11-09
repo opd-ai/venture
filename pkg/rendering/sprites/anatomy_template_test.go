@@ -1340,14 +1340,26 @@ func TestAerialGenreVariants(t *testing.T) {
 			templateFunc: HorrorHumanoidAerial,
 			expectedName: "horror_aerial_down",
 			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
-				// Horror should maintain 35% head height for proportion consistency
+				// Phase 15.1: Horror uses enhanced template with pixel dimensions
 				headSpec := template.BodyPartLayout[PartHead]
-				if headSpec.RelativeHeight < 0.30 || headSpec.RelativeHeight > 0.40 {
-					t.Errorf("Horror aerial head height should be ~0.35 (±0.05), got %f", headSpec.RelativeHeight)
+				if headSpec.PreferredPixelSize == nil {
+					t.Error("Horror aerial should have pixel dimensions")
+				} else {
+					// Horror should have 5×5 pixel head (enhanced template)
+					if headSpec.PreferredPixelSize.Height != 5 {
+						t.Errorf("Horror aerial head height should be 5px, got %d", headSpec.PreferredPixelSize.Height)
+					}
 				}
-				// Horror aesthetic achieved through narrow width (elongated visual effect)
-				if headSpec.RelativeWidth > 0.30 {
-					t.Errorf("Horror aerial head should be narrow (width <= 0.30), got %f", headSpec.RelativeWidth)
+				// Horror aesthetic achieved through skull shapes
+				hasSkullShape := false
+				for _, shape := range headSpec.ShapeTypes {
+					if shape == shapes.ShapeSkull {
+						hasSkullShape = true
+						break
+					}
+				}
+				if !hasSkullShape {
+					t.Error("Horror aerial head should include skull shape")
 				}
 				// Check for reduced shadow opacity (ghostly effect)
 				shadowSpec := template.BodyPartLayout[PartShadow]
@@ -1431,7 +1443,7 @@ func TestSelectAerialTemplate(t *testing.T) {
 		{"humanoid_horror", "warrior", "horror", DirLeft, "horror_aerial_left", true},
 		{"humanoid_cyberpunk", "knight", "cyberpunk", DirRight, "cyberpunk_aerial_right", true},
 		{"humanoid_postapoc", "npc", "postapoc", DirDown, "postapoc_aerial_down", true},
-		{"humanoid_unknown_genre", "player", "unknown", DirDown, "humanoid_aerial_down", true},
+		{"humanoid_unknown_genre", "player", "unknown", DirDown, "enhanced_humanoid_aerial_down", true}, // Phase 15.1: Uses enhanced template
 		{"non_humanoid_blob", "blob", "fantasy", DirDown, "blob", false},
 		{"non_humanoid_quadruped", "wolf", "scifi", DirUp, "quadruped", false},
 	}
@@ -1510,7 +1522,7 @@ func TestAerialProportions_Standard(t *testing.T) {
 		name         string
 		templateFunc func(Direction) AnatomicalTemplate
 	}{
-		{"base", HumanoidAerialTemplate},
+		{"base", EnhancedHumanoidAerialTemplate}, // Phase 15.1: Use enhanced template
 		{"fantasy", FantasyHumanoidAerial},
 		{"scifi", SciFiHumanoidAerial},
 		{"horror", HorrorHumanoidAerial},

@@ -142,8 +142,8 @@
 2. ✅ ~~Add facial feature support (eyes, mouth) for detailed sprites~~ - DONE
 3. ✅ ~~Implement anti-aliasing in shape generator for diagonal edges~~ - DONE
 4. ✅ ~~Create genre-specific anatomical variations (organic, geometric, distorted, augmented)~~ - DONE
-5. Apply enhanced templates to aerial-view templates
-6. Create enhanced versions of other creature templates
+5. ✅ ~~Apply enhanced templates to aerial-view templates~~ - DONE
+6. ✅ ~~Create enhanced versions of other creature templates~~ - DONE
 
 ---
 

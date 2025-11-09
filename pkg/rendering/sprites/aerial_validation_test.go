@@ -48,7 +48,7 @@ func TestAerialTemplate_ProportionConsistency(t *testing.T) {
 
 			// Phase 15.1: Check for pixel-perfect dimensions in enhanced templates
 			// Base template (non-enhanced) uses old proportions for backward compatibility
-			isEnhanced := tt.template != HumanoidAerialTemplate
+			isEnhanced := tt.name != "base_up" && tt.name != "base_down" && tt.name != "base_left" && tt.name != "base_right"
 
 			if isEnhanced {
 				// Enhanced templates should have PreferredPixelSize

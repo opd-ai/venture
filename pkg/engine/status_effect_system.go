@@ -182,28 +182,28 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 		// Add to existing shield
 		shield, ok := shieldComp.(*ShieldComponent)
 		if !ok {
-			// Create new shield if type assertion fails
+			// Create new shield if type assertion fails (fall through)
 		} else {
-		shield.Amount += amount
-		if shield.Amount > shield.MaxAmount {
-			shield.MaxAmount = shield.Amount
-		}
-		if duration > shield.Duration {
-			shield.Duration = duration
-			shield.MaxDuration = duration
-		}
-		return
+			shield.Amount += amount
+			if shield.Amount > shield.MaxAmount {
+				shield.MaxAmount = shield.Amount
+			}
+			if duration > shield.Duration {
+				shield.Duration = duration
+				shield.MaxDuration = duration
+			}
+			return
 		}
 	}
-		// Create new shield
-		shield := &ShieldComponent{
-			Amount:      amount,
-			MaxAmount:   amount,
-			Duration:    duration,
-			MaxDuration: duration,
-		}
-		entity.AddComponent(shield)
+	
+	// Create new shield
+	shield := &ShieldComponent{
+		Amount:      amount,
+		MaxAmount:   amount,
+		Duration:    duration,
+		MaxDuration: duration,
 	}
+	entity.AddComponent(shield)
 }
 
 // ChainLightning applies chain lightning damage to nearby enemies.

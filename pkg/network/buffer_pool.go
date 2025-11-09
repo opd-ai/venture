@@ -30,7 +30,15 @@ var bufferPool = sync.Pool{
 //	defer ReleaseBuffer(buf)
 //	*buf = append(*buf, data...)
 func AcquireBuffer() *[]byte {
-	return bufferPool.Get().(*[]byte)
+	// Safe type assertion - pool always returns *[]byte from New func
+	buf, ok := bufferPool.Get().(*[]byte)
+	if !ok {
+		// This should never happen given our pool's New function,
+		// but we defend against it anyway to prevent panics
+		newBuf := make([]byte, 0, DefaultBufferSize)
+		return &newBuf
+	}
+	return buf
 }
 
 // ReleaseBuffer returns a buffer to the pool for reuse.

@@ -46,7 +46,10 @@ func (ns *NarrativeSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		narrative := narComp.(*NarrativeComponent)
+		narrative, ok := narComp.(*NarrativeComponent)
+		if !ok {
+			continue
+		}
 
 		// Check for triggered events
 		triggeredEvents := narrative.CheckTriggerConditions()
@@ -125,10 +128,11 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 	if enemyEntity != nil {
 		// Check for boss or elite status
 		if aiComp, ok := enemyEntity.GetComponent("ai"); ok {
-			ai := aiComp.(*AIComponent)
-			// Boss entities typically have high detection range
-			if ai.DetectionRange > BossDetectionRange {
-				importance = 0.8 // Boss fight
+			if ai, ok := aiComp.(*AIComponent); ok {
+				// Boss entities typically have high detection range
+				if ai.DetectionRange > BossDetectionRange {
+					importance = 0.8 // Boss fight
+				}
 			}
 		}
 	}

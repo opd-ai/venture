@@ -99,7 +99,10 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.playerEntity != nil {
 		trackerComp, ok := ui.playerEntity.GetComponent("questtracker")
 		if ok {
-			tracker := trackerComp.(*QuestTrackerComponent)
+			tracker, ok := trackerComp.(*QuestTrackerComponent)
+			if !ok {
+				return
+			}
 			var quests []*TrackedQuest
 			if ui.currentTab == 0 {
 				quests = tracker.ActiveQuests
@@ -183,7 +186,10 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	if !ok {
 		return
 	}
-	tracker := trackerComp.(*QuestTrackerComponent)
+	tracker, ok := trackerComp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)

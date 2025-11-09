@@ -47,7 +47,10 @@ func (s *LifetimeSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		lifetime := lifetimeComp.(*LifetimeComponent)
+		lifetime, ok := lifetimeComp.(*LifetimeComponent)
+		if !ok {
+			continue
+		}
 		lifetime.Elapsed += deltaTime
 
 		// Check if lifetime expired

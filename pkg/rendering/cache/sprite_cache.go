@@ -86,7 +86,14 @@ func (c *SpriteCache) Get(key CacheKey) (*ebiten.Image, bool) {
 		// Move to front (most recently used)
 		c.lru.MoveToFront(elem)
 		c.stats.Hits++
-		return elem.Value.(*entry).image, true
+		// Safe type assertion for cache entry
+		if e, ok := elem.Value.(*entry); ok {
+			return e.image, true
+		}
+		// If type assertion fails, treat as cache miss
+		c.stats.Hits--
+		c.stats.Misses++
+		return nil, false
 	}
 
 	c.stats.Misses++
@@ -103,7 +110,10 @@ func (c *SpriteCache) Put(key CacheKey, img *ebiten.Image) {
 	if elem, ok := c.cache[key]; ok {
 		// Update existing entry and move to front
 		c.lru.MoveToFront(elem)
-		elem.Value.(*entry).image = img
+		// Safe type assertion for cache entry
+		if e, ok := elem.Value.(*entry); ok {
+			e.image = img
+		}
 		return
 	}
 

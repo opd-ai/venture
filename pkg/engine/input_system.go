@@ -504,7 +504,10 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		input := inputComp.(*EbitenInput)
+		input, ok := inputComp.(*EbitenInput)
+		if !ok {
+			continue
+		}
 		s.processInput(entity, input, deltaTime)
 	}
 }
@@ -655,7 +658,10 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 	if entity.HasComponent("aim") && s.cameraSystem != nil {
 		aimComp, ok := entity.GetComponent("aim")
 		if ok {
-			aim := aimComp.(*AimComponent)
+			aim, ok := aimComp.(*AimComponent)
+			if !ok {
+				return
+			}
 
 			// Convert screen coordinates to world coordinates
 			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
@@ -673,13 +679,19 @@ func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime
 
 	// Apply movement to velocity component if it exists
 	if velComp, ok := entity.GetComponent("velocity"); ok {
-		velocity := velComp.(*VelocityComponent)
+		velocity, ok := velComp.(*VelocityComponent)
+		if !ok {
+			return
+		}
 		velocity.VX = input.MoveX * s.MoveSpeed
 		velocity.VY = input.MoveY * s.MoveSpeed
 
 		// GAP-018 REPAIR: Update player animation based on movement
 		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim := animComp.(*AnimationComponent)
+			anim, ok := animComp.(*AnimationComponent)
+			if !ok {
+				return
+			}
 			// Check if player is moving
 			isMoving := (velocity.VX != 0 || velocity.VY != 0)
 

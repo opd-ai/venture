@@ -48,8 +48,14 @@ func (h priorityHeap) Swap(i, j int) {
 }
 
 func (h *priorityHeap) Push(x interface{}) {
+	// Safe type assertion - caller always passes *priorityItem
+	item, ok := x.(*priorityItem)
+	if !ok {
+		// This should never happen given heap.Push always receives
+		// *priorityItem from our code, but defend against it
+		return
+	}
 	n := len(*h)
-	item := x.(*priorityItem)
 	item.index = n
 	*h = append(*h, item)
 }
@@ -110,7 +116,13 @@ func (pq *StateUpdatePriorityQueue) Pop() *StateUpdate {
 		return nil
 	}
 
-	item := heap.Pop(&pq.heap).(*priorityItem)
+	// Safe type assertion - heap.Pop returns interface{} but we know the type
+	popped := heap.Pop(&pq.heap)
+	item, ok := popped.(*priorityItem)
+	if !ok {
+		// This should never happen given our heap only contains *priorityItem
+		return nil
+	}
 	return item.update
 }
 

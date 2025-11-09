@@ -139,7 +139,12 @@ func (sm *ServerManager) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate terrain: %w", err)
 	}
-	sm.generatedTerrain = terrainResult.(*terrain.Terrain)
+	// Safe type assertion with error handling
+	terrain, ok := terrainResult.(*terrain.Terrain)
+	if !ok {
+		return fmt.Errorf("terrain generator returned unexpected type: %T", terrainResult)
+	}
+	sm.generatedTerrain = terrain
 
 	sm.logger.WithFields(logrus.Fields{
 		"width":     sm.generatedTerrain.Width,
@@ -315,7 +320,11 @@ func (sm *ServerManager) removePlayer(playerID uint64) {
 	for _, entity := range sm.world.GetEntities() {
 		netComp, exists := entity.GetComponent("network")
 		if exists && netComp != nil {
-			nc := netComp.(*engine.NetworkComponent)
+			// Safe type assertion with comma-ok idiom
+			nc, ok := netComp.(*engine.NetworkComponent)
+			if !ok {
+				continue // Skip if component is wrong type
+			}
 			if nc.PlayerID == playerID {
 				sm.world.RemoveEntity(entity.ID)
 				sm.logger.WithFields(logrus.Fields{

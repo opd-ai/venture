@@ -275,11 +275,11 @@ func (aa *AutoAdjuster) Update(frameTimeMS float64) bool {
 	return false
 }
 
-// GetConfig returns the current quality configuration.
-func (aa *AutoAdjuster) GetConfig() *Config {
+// GetConfig returns a copy of the current quality configuration.
+func (aa *AutoAdjuster) GetConfig() Config {
 	aa.mu.RLock()
 	defer aa.mu.RUnlock()
-	return aa.config
+	return *aa.config
 }
 
 // GetStats returns current performance statistics.

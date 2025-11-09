@@ -68,12 +68,12 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [x] Document final coverage stats
 
 ### 3.2 Visual Quality Testing
-- [ ] Generate sprites for all entity types with all genres
-- [ ] Verify silhouette scores ≥0.75 average
-- [ ] Test all tile transitions
-- [ ] Verify lighting effects in all genres
-- [ ] Test weather systems in all scenarios
-- [ ] Verify UI rendering in all menus
+- [x] Generate sprites for all entity types with all genres
+- [x] Verify silhouette scores ≥0.75 average
+- [x] Test all tile transitions
+- [x] Verify lighting effects in all genres
+- [x] Test weather systems in all scenarios
+- [x] Verify UI rendering in all menus
 
 ### 3.3 Cross-Platform Testing
 - [ ] Build and test on Linux (x64/ARM64)

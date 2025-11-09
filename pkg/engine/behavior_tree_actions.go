@@ -83,7 +83,10 @@ func NewHealthBelowCondition(threshold float64) *ConditionNode {
 		if !ok {
 			return false
 		}
-		health := healthComp.(*HealthComponent)
+		health, ok := healthComp.(*HealthComponent)
+		if !ok {
+			return false
+		}
 		return float64(health.Current)/float64(health.Max) < threshold
 	})
 }
@@ -101,13 +104,19 @@ func NewTargetInRangeCondition(range_ float64) *ConditionNode {
 		if !ok {
 			return false
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return false
+		}
 
 		targetPos, ok := target.GetComponent("position")
 		if !ok {
 			return false
 		}
-		tPos := targetPos.(*PositionComponent)
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			return false
+		}
 
 		dx := tPos.X - pos.X
 		dy := tPos.Y - pos.Y
@@ -126,13 +135,18 @@ func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Get team component to identify enemies
 		teamComp, hasTeam := entity.GetComponent("team")
 		var teamID int
 		if hasTeam {
-			teamID = teamComp.(*TeamComponent).TeamID
+			if team, ok := teamComp.(*TeamComponent); ok {
+				teamID = team.TeamID
+			}
 		}
 
 		// Find nearest enemy
@@ -153,9 +167,13 @@ func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 				if !hasOtherTeam {
 					continue
 				}
-				otherTeamID := otherTeamComp.(*TeamComponent).TeamID
-				if otherTeamID == teamID {
-					continue // Same team
+				if otherTeam, ok := otherTeamComp.(*TeamComponent); ok {
+					otherTeamID := otherTeam.TeamID
+					if otherTeamID == teamID {
+						continue // Same team
+					}
+				} else {
+					continue
 				}
 
 				// Check distance
@@ -163,7 +181,10 @@ func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 				if !ok {
 					continue
 				}
-				oPos := otherPos.(*PositionComponent)
+				oPos, ok := otherPos.(*PositionComponent)
+				if !ok {
+					continue
+				}
 
 				dx := oPos.X - pos.X
 				dy := oPos.Y - pos.Y
@@ -198,13 +219,19 @@ func NewMoveToTargetAction(speed float64) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		targetPos, ok := target.GetComponent("position")
 		if !ok {
 			return NodeFailure
 		}
-		tPos := targetPos.(*PositionComponent)
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Calculate direction
 		dx := tPos.X - pos.X
@@ -224,7 +251,10 @@ func NewMoveToTargetAction(speed float64) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		vel := velComp.(*VelocityComponent)
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			return NodeFailure
+		}
 		vel.VX = dx
 		vel.VY = dy
 
@@ -245,7 +275,10 @@ func NewAttackTargetAction() *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		attack := attackComp.(*AttackComponent)
+		attack, ok := attackComp.(*AttackComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Check attack cooldown
 		if attack.CooldownTimer > 0 {
@@ -275,13 +308,19 @@ func NewFleeFromTargetAction(speed float64) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		targetPos, ok := target.GetComponent("position")
 		if !ok {
 			return NodeFailure
 		}
-		tPos := targetPos.(*PositionComponent)
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Calculate direction (away from target)
 		dx := pos.X - tPos.X
@@ -304,7 +343,10 @@ func NewFleeFromTargetAction(speed float64) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		vel := velComp.(*VelocityComponent)
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			return NodeFailure
+		}
 		vel.VX = dx
 		vel.VY = dy
 
@@ -339,9 +381,10 @@ func NewWanderAction(speed float64) *ActionNode {
 			blackboard.Set("hasWanderTarget", false)
 			velComp, ok := entity.GetComponent("velocity")
 			if ok {
-				vel := velComp.(*VelocityComponent)
-				vel.VX = 0
-				vel.VY = 0
+				if vel, ok := velComp.(*VelocityComponent); ok {
+					vel.VX = 0
+					vel.VY = 0
+				}
 			}
 			return NodeSuccess
 		}
@@ -354,7 +397,10 @@ func NewWanderAction(speed float64) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		vel := velComp.(*VelocityComponent)
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			return NodeFailure
+		}
 		vel.VX = dx
 		vel.VY = dy
 

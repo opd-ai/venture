@@ -36,7 +36,10 @@ func (bt *BehaviorTreeSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		btComp := treeComp.(*BehaviorTreeComponent)
+		btComp, ok := treeComp.(*BehaviorTreeComponent)
+		if !ok {
+			continue
+		}
 		if !btComp.Enabled {
 			continue
 		}

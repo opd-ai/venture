@@ -24,17 +24,17 @@ func TestHighLatencySimulation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Simulate network message with latency
 			sendTime := time.Now()
-			
+
 			// Simulate network delay
 			time.Sleep(time.Duration(tc.delayMs) * time.Millisecond)
-			
+
 			receiveTime := time.Now()
 			actualLatency := receiveTime.Sub(sendTime).Milliseconds()
 
 			// Verify latency is within expected range (±50ms tolerance)
 			expectedMin := int64(tc.delayMs - 50)
 			expectedMax := int64(tc.delayMs + 50)
-			
+
 			if actualLatency < expectedMin || actualLatency > expectedMax {
 				t.Errorf("%s: latency %dms outside expected range [%d-%d]ms",
 					tc.desc, actualLatency, expectedMin, expectedMax)
@@ -58,11 +58,11 @@ func TestClientPredictionWithLatency(t *testing.T) {
 
 	// Client applies input immediately (prediction)
 	clientState := GameState{PlayerX: 100, PlayerY: 100, Tick: 0}
-	
+
 	// Simulate player moving right (+10 units)
 	clientState.PlayerX += 10
 	clientState.Tick++
-	
+
 	predictedX := clientState.PlayerX
 	predictedTick := clientState.Tick
 
@@ -96,7 +96,7 @@ func TestLagCompensationWithHighLatency(t *testing.T) {
 	}
 
 	baseTime := time.Now()
-	
+
 	// Server maintains snapshot history
 	snapshots := []Snapshot{
 		{Tick: 0, EnemyX: 100, EnemyY: 100, Recorded: baseTime.Add(-1000 * time.Millisecond)},
@@ -114,14 +114,14 @@ func TestLagCompensationWithHighLatency(t *testing.T) {
 	// Server receives the fire command now, but rewinds to client's viewpoint
 	var rewindSnapshot *Snapshot
 	bestTimeDiff := time.Duration(1000 * time.Second) // Start with large value
-	
+
 	for i := range snapshots {
 		// Find snapshot closest to when client fired (within tolerance)
 		timeDiff := snapshots[i].Recorded.Sub(clientFireTime)
 		if timeDiff < 0 {
 			timeDiff = -timeDiff
 		}
-		
+
 		if timeDiff < bestTimeDiff {
 			bestTimeDiff = timeDiff
 			rewindSnapshot = &snapshots[i]
@@ -134,14 +134,14 @@ func TestLagCompensationWithHighLatency(t *testing.T) {
 
 	// With 500ms latency, we should find snapshot at tick 2 (closest to -500ms)
 	if rewindSnapshot.Tick != 2 {
-		t.Logf("Warning: Expected tick 2, got tick %d (time diff: %v)", 
+		t.Logf("Warning: Expected tick 2, got tick %d (time diff: %v)",
 			rewindSnapshot.Tick, bestTimeDiff)
 	}
 
 	// Verify server rewound to correct position (or close enough)
 	if rewindSnapshot.EnemyX != clientTargetX {
 		// Allow for adjacent snapshot if timing is slightly off
-		if (rewindSnapshot.EnemyX - clientTargetX) > 20 && (clientTargetX - rewindSnapshot.EnemyX) > 20 {
+		if (rewindSnapshot.EnemyX-clientTargetX) > 20 && (clientTargetX-rewindSnapshot.EnemyX) > 20 {
 			t.Errorf("Lag compensation failed: server rewound to X=%f, client aimed at X=%f",
 				rewindSnapshot.EnemyX, clientTargetX)
 		}
@@ -156,7 +156,7 @@ func TestLagCompensationWithHighLatency(t *testing.T) {
 func TestNetworkJitterSimulation(t *testing.T) {
 	// Simulate messages with varying latency
 	latencies := []int{100, 150, 80, 200, 120, 90, 180, 110}
-	
+
 	var totalLatency int64
 	minLatency := int64(1000000)
 	maxLatency := int64(0)
@@ -165,10 +165,10 @@ func TestNetworkJitterSimulation(t *testing.T) {
 		sendTime := time.Now()
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 		receiveTime := time.Now()
-		
+
 		actualLatency := receiveTime.Sub(sendTime).Milliseconds()
 		totalLatency += actualLatency
-		
+
 		if actualLatency < minLatency {
 			minLatency = actualLatency
 		}
@@ -205,7 +205,7 @@ func TestPacketLossSimulation(t *testing.T) {
 
 	for i := 0; i < totalPackets; i++ {
 		sentPackets++
-		
+
 		// Simulate packet loss deterministically
 		// In real implementation, this would be random, but we use deterministic
 		// approach for testing
@@ -254,7 +254,7 @@ func TestBufferUnderrunWithLatency(t *testing.T) {
 
 	// Simulate interpolation: get state 100ms in the past
 	interpolateTime := currentTime.Add(100 * time.Millisecond)
-	
+
 	// Find two snapshots to interpolate between
 	var before, after *Snapshot
 	for i := range buffer {
@@ -287,13 +287,13 @@ func TestSnapshotInterpolation(t *testing.T) {
 	// Two server snapshots 50ms apart
 	snapshot1 := Position{X: 100, Y: 100}
 	snapshot2 := Position{X: 110, Y: 105}
-	
+
 	time1 := time.Now()
 	time2 := time1.Add(50 * time.Millisecond)
 
 	// Interpolate at 25ms (halfway)
 	interpolateTime := time1.Add(25 * time.Millisecond)
-	
+
 	// Calculate alpha (0.0 to 1.0)
 	totalTime := time2.Sub(time1).Milliseconds()
 	elapsedTime := interpolateTime.Sub(time1).Milliseconds()

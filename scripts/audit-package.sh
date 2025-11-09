@@ -107,7 +107,7 @@ export AUDIT_DEPTH="$DEPTH"
 
 # Run the actual audit
 cd "$REPO_ROOT"
-go run "$REPO_ROOT/scripts/audit-runner.go"
+go run "$REPO_ROOT/cmd/auditrunner/main.go"
 
 echo ""
 echo -e "${GREEN}=== AUDIT COMPLETE ===${NC}"

@@ -80,7 +80,7 @@ func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 
 // Mount attempts to mount a rider entity onto a vehicle entity.
 // Implements VehicleController interface.
-func (ms *MountingSystem) Mount(rider *Entity, vehicle *Entity) error {
+func (ms *MountingSystem) Mount(rider, vehicle *Entity) error {
 	if rider == nil {
 		return fmt.Errorf("rider entity is nil")
 	}

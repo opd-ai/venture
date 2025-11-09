@@ -77,7 +77,7 @@ func TestSaveLoadV2Compatibility(t *testing.T) {
 		t.Fatalf("Failed to marshal V2 save: %v", err)
 	}
 
-	err = os.WriteFile(v2SavePath, v2Data, 0644)
+	err = os.WriteFile(v2SavePath, v2Data, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write V2 save file: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestSaveFormatMigration(t *testing.T) {
 		t.Fatalf("Failed to marshal V2 save: %v", err)
 	}
 
-	err = os.WriteFile(v2SavePath, v2Data, 0644)
+	err = os.WriteFile(v2SavePath, v2Data, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write V2 save: %v", err)
 	}

@@ -195,7 +195,7 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 			return
 		}
 	}
-	
+
 	// Create new shield
 	shield := &ShieldComponent{
 		Amount:      amount,

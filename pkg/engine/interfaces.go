@@ -286,7 +286,7 @@ type Vehicle interface {
 type VehicleController interface {
 	// Mount attempts to mount a rider entity onto a vehicle entity
 	// Returns error if mounting fails (vehicle full, incompatible, etc.)
-	Mount(rider *Entity, vehicle *Entity) error
+	Mount(rider, vehicle *Entity) error
 
 	// Dismount removes a rider entity from their current vehicle
 	// Returns error if rider is not mounted

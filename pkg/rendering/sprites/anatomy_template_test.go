@@ -1285,10 +1285,10 @@ func TestAerialGenreVariants(t *testing.T) {
 			templateFunc: FantasyHumanoidAerial,
 			expectedName: "fantasy_aerial_down",
 			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
-				// Fantasy should have broader shoulders (wider torso)
+				// Fantasy should have broader shoulders (8 pixels vs base 7 pixels)
 				torsoSpec := template.BodyPartLayout[PartTorso]
-				if torsoSpec.RelativeWidth < 0.64 {
-					t.Errorf("Fantasy aerial should have broad shoulders (torso width >= 0.64), got %f", torsoSpec.RelativeWidth)
+				if torsoSpec.PreferredPixelSize == nil || torsoSpec.PreferredPixelSize.Width < 8 {
+					t.Errorf("Fantasy aerial should have broad shoulders (torso width >= 8px), got %v", torsoSpec.PreferredPixelSize)
 				}
 				// Check for helmet shape in head
 				headSpec := template.BodyPartLayout[PartHead]
@@ -1340,14 +1340,26 @@ func TestAerialGenreVariants(t *testing.T) {
 			templateFunc: HorrorHumanoidAerial,
 			expectedName: "horror_aerial_down",
 			checkFeatures: func(t *testing.T, template AnatomicalTemplate) {
-				// Horror should maintain 35% head height for proportion consistency
+				// Phase 15.1: Horror uses enhanced template with pixel dimensions
 				headSpec := template.BodyPartLayout[PartHead]
-				if headSpec.RelativeHeight < 0.30 || headSpec.RelativeHeight > 0.40 {
-					t.Errorf("Horror aerial head height should be ~0.35 (±0.05), got %f", headSpec.RelativeHeight)
+				if headSpec.PreferredPixelSize == nil {
+					t.Error("Horror aerial should have pixel dimensions")
+				} else {
+					// Horror should have 5×5 pixel head (enhanced template)
+					if headSpec.PreferredPixelSize.Height != 5 {
+						t.Errorf("Horror aerial head height should be 5px, got %d", headSpec.PreferredPixelSize.Height)
+					}
 				}
-				// Horror aesthetic achieved through narrow width (elongated visual effect)
-				if headSpec.RelativeWidth > 0.30 {
-					t.Errorf("Horror aerial head should be narrow (width <= 0.30), got %f", headSpec.RelativeWidth)
+				// Horror aesthetic achieved through skull shapes
+				hasSkullShape := false
+				for _, shape := range headSpec.ShapeTypes {
+					if shape == shapes.ShapeSkull {
+						hasSkullShape = true
+						break
+					}
+				}
+				if !hasSkullShape {
+					t.Error("Horror aerial head should include skull shape")
 				}
 				// Check for reduced shadow opacity (ghostly effect)
 				shadowSpec := template.BodyPartLayout[PartShadow]
@@ -1431,7 +1443,7 @@ func TestSelectAerialTemplate(t *testing.T) {
 		{"humanoid_horror", "warrior", "horror", DirLeft, "horror_aerial_left", true},
 		{"humanoid_cyberpunk", "knight", "cyberpunk", DirRight, "cyberpunk_aerial_right", true},
 		{"humanoid_postapoc", "npc", "postapoc", DirDown, "postapoc_aerial_down", true},
-		{"humanoid_unknown_genre", "player", "unknown", DirDown, "humanoid_aerial_down", true},
+		{"humanoid_unknown_genre", "player", "unknown", DirDown, "enhanced_humanoid_aerial_down", true}, // Phase 15.1: Uses enhanced template
 		{"non_humanoid_blob", "blob", "fantasy", DirDown, "blob", false},
 		{"non_humanoid_quadruped", "wolf", "scifi", DirUp, "quadruped", false},
 	}
@@ -1444,12 +1456,14 @@ func TestSelectAerialTemplate(t *testing.T) {
 				t.Errorf("Template name = %s, want %s", template.Name, tt.expectedName)
 			}
 
-			// Verify aerial templates have proper proportions
+			// Verify aerial templates have proper pixel dimensions
 			if tt.shouldBeAerial {
 				torsoSpec := template.BodyPartLayout[PartTorso]
-				// Aerial torsos should be ~50% height
-				if torsoSpec.RelativeHeight < 0.45 || torsoSpec.RelativeHeight > 0.55 {
-					t.Errorf("Aerial torso height should be ~50%%, got %f", torsoSpec.RelativeHeight)
+				// Aerial torsos should have pixel dimensions (6-8 pixels for height)
+				if torsoSpec.PreferredPixelSize == nil {
+					t.Errorf("Aerial torso should have PreferredPixelSize")
+				} else if torsoSpec.PreferredPixelSize.Height < 6 || torsoSpec.PreferredPixelSize.Height > 8 {
+					t.Errorf("Aerial torso height should be 6-8px, got %d", torsoSpec.PreferredPixelSize.Height)
 				}
 			}
 		})
@@ -1508,7 +1522,7 @@ func TestAerialProportions_Standard(t *testing.T) {
 		name         string
 		templateFunc func(Direction) AnatomicalTemplate
 	}{
-		{"base", HumanoidAerialTemplate},
+		{"base", EnhancedHumanoidAerialTemplate}, // Phase 15.1: Use enhanced template
 		{"fantasy", FantasyHumanoidAerial},
 		{"scifi", SciFiHumanoidAerial},
 		{"horror", HorrorHumanoidAerial},
@@ -1520,22 +1534,28 @@ func TestAerialProportions_Standard(t *testing.T) {
 		t.Run(g.name, func(t *testing.T) {
 			template := g.templateFunc(DirDown)
 
-			// Head: 35% ± 5% tolerance (allow genre variation)
+			// Head: 5×5 or 6×6 pixels (depending on genre)
 			headSpec := template.BodyPartLayout[PartHead]
-			if headSpec.RelativeHeight < 0.28 || headSpec.RelativeHeight > 0.42 {
-				t.Errorf("%s head height = %f, want 0.28-0.42 (35%% ±7%%)", g.name, headSpec.RelativeHeight)
+			if headSpec.PreferredPixelSize == nil {
+				t.Errorf("%s head should have PreferredPixelSize", g.name)
+			} else if headSpec.PreferredPixelSize.Width < 5 || headSpec.PreferredPixelSize.Width > 6 {
+				t.Errorf("%s head width = %dpx, want 5-6px", g.name, headSpec.PreferredPixelSize.Width)
 			}
 
-			// Torso: 50% ± 5% tolerance
+			// Torso: 6-8 pixels height (depending on genre)
 			torsoSpec := template.BodyPartLayout[PartTorso]
-			if torsoSpec.RelativeHeight < 0.45 || torsoSpec.RelativeHeight > 0.55 {
-				t.Errorf("%s torso height = %f, want 0.45-0.55 (50%% ±5%%)", g.name, torsoSpec.RelativeHeight)
+			if torsoSpec.PreferredPixelSize == nil {
+				t.Errorf("%s torso should have PreferredPixelSize", g.name)
+			} else if torsoSpec.PreferredPixelSize.Height < 6 || torsoSpec.PreferredPixelSize.Height > 8 {
+				t.Errorf("%s torso height = %dpx, want 6-8px", g.name, torsoSpec.PreferredPixelSize.Height)
 			}
 
-			// Legs: 15% ± 3% tolerance (minimal from aerial view)
+			// Legs: 2 pixels height (minimal from aerial view)
 			legsSpec := template.BodyPartLayout[PartLegs]
-			if legsSpec.RelativeHeight < 0.12 || legsSpec.RelativeHeight > 0.18 {
-				t.Errorf("%s legs height = %f, want 0.12-0.18 (15%% ±3%%)", g.name, legsSpec.RelativeHeight)
+			if legsSpec.PreferredPixelSize == nil {
+				t.Errorf("%s legs should have PreferredPixelSize", g.name)
+			} else if legsSpec.PreferredPixelSize.Height != 2 {
+				t.Errorf("%s legs height = %dpx, want 2px", g.name, legsSpec.PreferredPixelSize.Height)
 			}
 
 			// Verify reduced leg opacity for aerial perspective

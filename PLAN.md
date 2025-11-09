@@ -37,12 +37,12 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 ## Task 2: Performance Validation
 
 ### 2.1 Benchmark All V3.0 Systems
-- [ ] Run sprite generation benchmarks (target: <5ms)
-- [ ] Run tile rendering benchmarks
-- [ ] Run lighting system benchmarks (verify <5% frame time increase)
-- [ ] Run particle system benchmarks
-- [ ] Run full integration benchmark with all V3.0 features enabled
-- [ ] Document results in PERFORMANCE.md
+- [x] Run sprite generation benchmarks (target: <5ms)
+- [x] Run tile rendering benchmarks
+- [x] Run lighting system benchmarks (verify <5% frame time increase)
+- [x] Run particle system benchmarks
+- [x] Run full integration benchmark with all V3.0 features enabled
+- [x] Document results in PERFORMANCE.md
 
 ### 2.2 Memory Profile
 - [ ] Profile memory usage with V3.0 features

@@ -1,12 +1,12 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 4-6)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V6.md, AUDIT.md files.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V4.0, V5.0, V6.0 → 6.0 readiness**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V4.md, ROADMAP_V5.md, ROADMAP_V6.md, AUDIT.md files.
 
-**V6.0 Features (Phase 4-6):**
-P4: Post office, mail system, courier NPCs, async delivery | P5: Politics, factions, alliances, trade network, dynamic pricing | P6: Territory control, border zones, bounty board, server rankings
+**Target: 6.0 Readiness (V4→V5→V6):**
+V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-games, reputation, adaptive music, storytelling | V5 (6 phases): Chat, NPC dialog, image sharing, item trading, social systems | V6 (P31-36): Persistent worlds, federation, cross-server travel, post office, politics/trade, territory control
 
-**ALL** in pkg/engine/ (mail, politics, bounty), pkg/network/federation/market.go, pkg/world/territory.go, cmd/server/main.go.
+**ALL** in pkg/engine/, pkg/procgen/, pkg/network/, pkg/world/, pkg/audio/, cmd/client/, cmd/server/.
 
 ## CONSTRAINTS
 - Seed RNG only (no time.Now()), ECS: entities=IDs, components=data, systems=logic
@@ -16,20 +16,20 @@ P4: Post office, mail system, courier NPCs, async delivery | P5: Politics, facti
 ## PHASE 1: BUILD/TEST
 Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
 
-## PHASE 2: V6.0 COMPLETION
-**Audit:** P4-6 components/systems in pkg/engine/, pkg/network/federation/, pkg/world/, cmd/server/main.go.
-**Implement:** Missing items (mail, politics, bounty, territory), test ≥65%, doc.
-**Remove:** Deprecated, legacy, pre-V6.0, shims.
-**Validate:** Determinism (per-server), targets, tests, run server federation.
-**Skip:** Only if ALL done.
+## PHASE 2: V4-V6 COMPLETION
+**Audit:** V4 (P21-30), V5 (social), V6 (P31-36) components/systems in pkg/, cmd/.
+**Implement:** Missing features (vehicles, pets, chat, federation, etc.), test ≥65%, doc.
+**Remove:** Deprecated, legacy, pre-V4/V5/V6, shims.
+**Validate:** Determinism, targets (60 FPS, <500MB, <2s gen), tests, run client/server.
+**Skip:** Only if ALL V4+V5+V6 done.
 
 ## PHASE 3: DOCS
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 4: ROADMAP
-**Priority:** (1) V6.0, (2) ROADMAP_V*.md, (3), (4) TODOs.
+**Priority:** (1) ROADMAP_V4.md → V5.md → V6.md (sequential), (2) TODOs, (3) EXECUTE.md.
 ECS changes, loop integration, test (≥65%, determinism), verify. Skip if done.
-Carry out `EXECUTE.md` instructions against current ROADMAP_V*.md file.
+Complete V4 (Phases 21-30), then V5 (social), then V6 (Phases 31-36) for 6.0 readiness.
 
 ## PHASE 5: QUALITY
 Scan complexity >15, nesting >4, length >200, violations, coverage <65%, TODOs, duplication. Pick ONE. Refactor, validate. Skip if good.
@@ -39,16 +39,16 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 
 ## SUCCESS
 - Build/test/race pass, ≥65% coverage, gofmt
-- **P4-6 features complete, federation operational**
-- No deprecated, ECS OK, determinism (per-server), targets (60 FPS, <500MB per server, <2s)
+- **V4+V5+V6 complete, 6.0 ready**
+- No deprecated, ECS OK, determinism, targets (60 FPS, <500MB, <2s)
 - Docs current, quality up, enhancement done
 
-## V6.0 CHECKLIST (Phase 4-6 Target)
-**Phase 4:** MailComponent, MailMessage, MailSystem, post office buildings, courier NPCs, delivery tracking in pkg/engine/mail_component.go
-**Phase 5:** ServerFaction, PoliticalEvent, PoliticalSystem, FederatedMarket, dynamic pricing, merchant caravans in pkg/engine/politics_component.go, pkg/network/federation/market.go
-**Phase 6:** BorderZone, ControlPoint, TerritorySystem, BountyContract, BountySystem, server leaderboards in pkg/world/territory.go, pkg/engine/bounty_component.go
+## 6.0 READINESS CHECKLIST (V4→V5→V6)
+**V4.0 (P21-30):** VehicleSystem, PetSystem, BookSystem, ExpandedMagicSystem, CharacterClassSystem, ExpressionSystem, MiniGameSystem, ReputationSystem, AdaptiveSoundtrackSystem, EnvironmentalStorytellingSystem in pkg/engine/, pkg/procgen/, pkg/audio/
+**V5.0 (Social):** ChatComponent, DialogSystem, ImageSharingSystem, ItemTradingSystem, E2E encryption, social UI in pkg/engine/social_components.go, pkg/network/
+**V6.0 (P31-36):** WorldPersistence, FederationProtocol, PortalSystem, MailSystem, PoliticalSystem, TerritorySystem in pkg/world/, pkg/network/federation/, pkg/engine/
 
-**Integration:** cmd/server/main.go registers P4-6 systems, mail delivery functional, political events trigger, trade network operational, territory control active, bounty board accessible.
+**Integration:** All V4-V6 systems registered in cmd/client/main.go and cmd/server/main.go, features accessible in-game, multiplayer functional, tests pass, docs complete.
 
 Execute autonomously. Report comprehensive results for all 6 phases.
 

@@ -97,7 +97,7 @@ Start the client directly to play solo:
 - `-seed`: Set world seed (default: random)
 - `-genre`: Choose theme (fantasy, scifi, horror, cyberpunk, postapoc)
 - `-width`/`-height`: Set screen resolution
-- `-enable-lighting`: Enable dynamic lighting system (experimental, enhances atmosphere)
+- `-enable-lighting`: Enable/disable dynamic lighting system (enabled by default, enhances atmosphere)
 - `-verbose`: Enable detailed logging
 - `-profile`: Enable performance profiling
 
@@ -236,36 +236,12 @@ All V3.0 enhancements are **enabled by default** and optimized to maintain excel
 - Cyberpunk: Acid rain, pollution smog
 - Post-Apocalyptic: Radiation dust, ash fall
 
-### Visual Quality Settings (V3.0)
-
-```bash
-# Anti-aliasing quality (V3.0 feature)
-./venture-client -aa-quality high    # Best quality (8x8 super-sampling)
-./venture-client -aa-quality medium  # Balanced (4x4 super-sampling)
-./venture-client -aa-quality low     # Performance (2x2 super-sampling)
-./venture-client -aa-quality off     # Fastest, no anti-aliasing
-
-# Lighting quality
-./venture-client -lighting-quality high    # Soft shadows + bloom effects
-./venture-client -lighting-quality medium  # Soft shadows only
-./venture-client -lighting-quality low     # Basic lighting (fastest)
-
-# Particle density for weather effects
-./venture-client -particle-density high    # Maximum particle count
-./venture-client -particle-density medium  # Balanced (default)
-./venture-client -particle-density low     # Better performance
-
-# Performance preset (sets all quality options)
-./venture-client -preset quality      # Maximum visual quality
-./venture-client -preset balanced     # Balanced quality/performance (default)
-./venture-client -preset performance  # Maximum performance
-```
-
 **Performance Notes:**
 - V3.0 maintains 106 FPS with all features enabled (70% above 60 FPS target)
 - Sprite cache hit rate: 95.9% (same as V2.0)
 - Lighting overhead: <5% frame time
 - All enhancements use deterministic generation (same seed = same visuals)
+- To disable features for better performance: use `-enable-lighting=false` or `-enable-weather=false`
 
 ---
 
@@ -293,15 +269,11 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-lighting-quality`, `-enable-weather`, `-weather`, `-weather-intensity`, `-particle-density`, `-aa-quality`, `-preset`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
+**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `--host-and-play`, `--host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
 **Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
 
-**V3.0 New Options:**
-- `-aa-quality`: Anti-aliasing level (off, low, medium, high)
-- `-lighting-quality`: Lighting quality (low, medium, high)
-- `-particle-density`: Particle count (low, medium, high)
-- `-preset`: Overall quality preset (performance, balanced, quality)
-- `-weather`: Weather type (rain, snow, fog, dust, ash)
+**V3.0 Weather Options:**
+- `-weather`: Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation)
 - `-weather-intensity`: Weather strength (light, medium, heavy, extreme)
 
 **For complete command-line options and configuration details, see [User Manual](USER_MANUAL.md).**

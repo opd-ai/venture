@@ -159,7 +159,7 @@ type GenerationParams struct {
 **Package:** `pkg/procgen/terrain`
 
 ```go
-gen := terrain.NewGenerator()
+gen := terrain.NewBSPGenerator()
 result, _ := gen.Generate(12345, procgen.GenerationParams{
     Difficulty: 0.5,
     Depth: 5,
@@ -177,7 +177,7 @@ t := result.(*terrain.Terrain)
 Generates monsters, NPCs, bosses with genre-themed names and stats.
 
 ```go
-gen := entity.NewGenerator()
+gen := entity.NewEntityGenerator()
 result, _ := gen.Generate(seed, params)
 e := result.(*entity.Entity) // Type, Stats, Behavior
 ```
@@ -189,7 +189,7 @@ e := result.(*entity.Entity) // Type, Stats, Behavior
 Weapons, armor, consumables with rarity system (Common, Uncommon, Rare, Epic, Legendary).
 
 ```go
-gen := item.NewGenerator()
+gen := item.NewItemGenerator()
 result, _ := gen.Generate(seed, params)
 item := result.(*item.Item)
 ```
@@ -218,36 +218,28 @@ Quest objectives/rewards, environmental effects/ambience.
 
 **V3.0 Enhancements:**
 - Enhanced anatomical templates with pixel-perfect dimensions
-- Anti-aliasing with 4 quality levels (Off, Low, Medium, High)
 - Genre-specific variations (organic, geometric, distorted, augmented, weathered)
 - Facial features for close-up views (eyes, mouth)
 - 40% more anatomical detail
 
 ```go
+// Create sprite generator
+gen := sprites.NewGenerator()
+
 // Basic sprite generation
-sprite := sprites.Generate(width, height, color, seed, entityType)
+config := sprites.Config{
+    Type:       sprites.SpriteEntity,
+    Width:      32,
+    Height:     32,
+    Seed:       12345,
+    GenreID:    "fantasy",
+    Complexity: 0.8,
+}
+sprite, err := gen.Generate(config)
 
-// V3.0: Enhanced anatomical template
-template := sprites.EnhancedHumanoidTemplate()
-// Head: 4×4 pixels, Torso: 4×6 pixels, Legs: 4×8 pixels, Arms: 6×5 pixels
-
-// V3.0: Detailed template with facial features
-detailedTemplate := sprites.DetailedHumanoidTemplate()
-// Includes eyes (2×1 pixels) and mouth (2×1 pixels)
-
-// V3.0: Anti-aliasing support
-antiAliasedSprite := sprites.GenerateWithAntiAliasing(
-    width, height, color, seed, 
-    quality, // quality.Off, quality.Low, quality.Medium, quality.High
-)
-
-// V3.0: Genre variation
-genreSprite := sprites.GenerateWithGenreStyle(
-    width, height, color, seed, genreID,
-    // genreID: "fantasy" (organic), "scifi" (geometric), 
-    //          "horror" (distorted), "cyberpunk" (augmented), 
-    //          "postapoc" (weathered)
-)
+// Generate directional sprites (for 8-way movement)
+directions, err := gen.GenerateDirectionalSprites(config)
+// Returns map[int]*ebiten.Image with sprites for 8 directions
 ```
 
 **Performance:**
@@ -267,38 +259,28 @@ genreSprite := sprites.GenerateWithGenreStyle(
 - Detail layers and normal mapping simulation
 
 ```go
-// V3.0: Generate tile with texture pattern
-tile := tiles.GenerateWithPattern(
-    tileType, genreID, seed,
-    pattern, // patterns.Stone, patterns.Wood, patterns.Metal, patterns.Organic
-)
+// Create tile generator
+gen := tiles.NewGenerator()
 
-// V3.0: Smooth tile transitions
-transitionTile := tiles.GenerateTransition(
-    fromType, toType, transitionDirection, seed,
-)
-
-// V3.0: Multi-layer depth effects
-layeredTile := tiles.GenerateWithDepth(
-    tileType, genreID, seed,
-    detailLayers, // Number of detail layers (1-3)
-)
-
-// V3.0: Normal mapping simulation
-normalMappedTile := tiles.GenerateWithNormalMap(
-    tileType, genreID, seed,
-)
+// Generate tile with pattern
+config := tiles.Config{
+    Type:       tiles.TypeFloor,
+    Size:       32,
+    Seed:       12345,
+    GenreID:    "fantasy",
+    Complexity: 0.7,
+}
+tile, err := gen.Generate(config)
 ```
 
+**Tile Types:** Floor, Wall, Door, Corridor, Water, Lava, Trap, Stairs
+
 **Pattern Types (V3.0):**
-- Stone: Granite, marble, cobblestone, rough stone
-- Wood: Oak planks, rough logs, polished wood, weathered boards
-- Metal: Steel panels, rusted iron, tech plating, circuitry
-- Organic: Grass, dirt, moss, coral, flesh
+- Solid, Checkerboard, Dots, Lines, Brick, Grain (procedurally varied per tile)
 
 #### Lighting System (V3.0 Enhanced)
 
-**Package:** `pkg/rendering/lighting`
+**Package:** `pkg/engine` (system), `pkg/rendering/lighting` (utilities)
 
 **V3.0 Enhancements:**
 - Soft shadows with gradient edges
@@ -310,44 +292,25 @@ normalMappedTile := tiles.GenerateWithNormalMap(
 - <5% frame time overhead
 
 ```go
-// V3.0: Create light with soft shadows
-light := lighting.NewLightWithSoftShadows(
-    x, y, intensity, color,
-    shadowSoftness, // 0.0 (hard) to 1.0 (very soft)
-)
+// Lighting system in engine
+lightingSystem := engine.NewLightingSystem(world)
 
-// V3.0: Colored lighting
-coloredLight := lighting.NewColoredLight(
-    x, y, intensity,
-    red, green, blue, // Color components (0.0-1.0)
-)
+// Add light source to an entity
+lightComp := &engine.LightComponent{
+    Color:     color.RGBA{255, 200, 150, 255}, // Warm torch color
+    Intensity: 1.0,
+    Radius:    150.0,
+    Flicker:   true, // Dynamic flickering
+}
+entity.AddComponent(lightComp)
 
-// V3.0: Light with bloom effect
-bloomLight := lighting.NewLightWithBloom(
-    x, y, intensity, color,
-    bloomRadius, bloomIntensity,
-)
+// Ambient occlusion (rendering/lighting package)
+config := lighting.DefaultAOConfig()
+config.Intensity = 0.8
+enhancedImage := lighting.ApplyAmbientOcclusion(img, depthMap, config)
 
-// V3.0: Dynamic flickering torch
-torch := lighting.NewFlickeringTorch(
-    x, y, baseIntensity,
-    flickerSpeed, flickerAmount, // Animation parameters
-)
-
-// V3.0: Genre-specific lighting preset
-genreLight := lighting.NewGenrePreset(
-    genreID, lightType, x, y,
-    // Fantasy: warm torch, magical glow
-    // Sci-Fi: cool neon, energy beams
-    // Horror: dim flickering, eerie glow
-    // Cyberpunk: neon colors, holographic
-    // Post-Apocalyptic: dirty firelight, radiation glow
-)
-
-// V3.0: Ambient occlusion
-ambientOcclusion := lighting.CalculateAmbientOcclusion(
-    worldMap, x, y, radius,
-)
+// Bloom effects
+bloomImage := lighting.ApplyBloom(img, bloomRadius, bloomIntensity)
 ```
 
 **Performance:**
@@ -360,41 +323,39 @@ ambientOcclusion := lighting.CalculateAmbientOcclusion(
 **Package:** `pkg/rendering/particles`
 
 **V3.0 Weather System:**
-- Comprehensive weather types: rain, snow, fog, dust, ash
-- Genre-specific variations
+- Comprehensive weather types: rain, snow, fog, dust, ash, and genre-specific variations
 - Fluid simulation for realistic behavior
 - Intensity levels: light, medium, heavy, extreme
-- Environmental interactions
+- Environmental interactions (puddles, snow accumulation, visibility)
 
 ```go
-// V3.0: Create weather system
-weather := particles.NewWeatherSystem(
-    weatherType, // particles.Rain, Snow, Fog, Dust, Ash
-    intensity,   // particles.Light, Medium, Heavy, Extreme
-    genreID,
-)
+// Generate weather system
+config := particles.WeatherConfig{
+    Type:      particles.WeatherRain,
+    Intensity: particles.IntensityMedium,
+    GenreID:   "fantasy",
+    Width:     800,
+    Height:    600,
+    Seed:      12345,
+}
+weatherSystem, err := particles.GenerateWeather(config)
 
-// V3.0: Genre-specific weather
-genreWeather := particles.NewGenreWeather(genreID)
-// Fantasy: Natural rain, snow
-// Sci-Fi: Neon rain, energy fog
-// Horror: Blood rain, toxic fog
-// Cyberpunk: Acid rain, smog
-// Post-Apocalyptic: Ash fall, radiation dust
+// Update weather each frame
+weatherSystem.Update(deltaTime)
 
-// V3.0: Fluid simulation
-fluidParticle := particles.NewFluidParticle(
-    x, y, velocityX, velocityY,
-    density, viscosity, // Fluid properties
-)
+// Get genre-specific weather types
+genreWeathers := particles.GetGenreWeather("scifi")
+// Returns: [WeatherNeonRain, WeatherSmog, WeatherRadiation]
 
-// V3.0: Environmental interaction
-particles.ApplyWind(particleSystem, windX, windY)
-particles.ApplyGravity(particleSystem, gravity)
-
-// V3.0: Weather transitions
-weather.TransitionTo(newWeatherType, transitionDuration)
+// Check environmental effects
+puddleLevel := weatherSystem.GetPuddleLevel(tileX, tileY)
+snowLevel := weatherSystem.GetSnowLevel(tileX, tileY)
+visibility := weatherSystem.GetVisibilityModifier()
 ```
+
+**Weather Types:**
+- Standard: Rain, Snow, Fog, Dust, Ash, Sandstorm
+- Genre-specific: NeonRain (sci-fi), Smog (cyberpunk), Radiation (post-apocalyptic), BloodRain (horror)
 
 **Weather Types:**
 - **Rain:** Water droplets with splash effects

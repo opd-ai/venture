@@ -27,7 +27,7 @@ Comprehensive testing strategy, infrastructure, and best practices.
 
 **Coverage Target:** ≥65% per package (excluding Ebiten initialization)
 
-**Current Coverage:** 82.4% average (engine 50%, procgen 100%, rendering 85%, audio high, saveload 67%, combat 100%, world 100%)
+**Current Coverage:** 82.4% average (engine 50%, procgen 73%, rendering 85%, audio high, saveload 67%, combat 100%, world 100%)
 
 ---
 
@@ -214,14 +214,33 @@ make bench          # Run benchmarks
 | Package | Coverage | Notes |
 |---------|----------|-------|
 | engine | 50.0% | Ebiten-dependent code excluded |
-| procgen | 100% | Full coverage |
-| procgen/* | 85-100% | High coverage across subpackages |
-| rendering/sprites | 63.8% | Ebiten initialization excluded |
-| rendering/tiles | 92.2% | Excellent coverage |
-| audio/* | High | Implicit via music/sfx tests |
-| saveload | 66.9% | Core functionality covered |
+| procgen | 73.1% | Core generation package |
+| procgen/entity | 92.1% | High coverage |
+| procgen/environment | 95.0% | High coverage |
+| procgen/genre | 100% | Full coverage |
+| procgen/item | 91.2% | High coverage |
+| procgen/magic | 89.1% | High coverage |
+| procgen/narrative | 93.7% | High coverage |
+| procgen/puzzle | 93.4% | High coverage |
+| procgen/quest | 91.3% | High coverage |
+| procgen/skills | 86.1% | High coverage |
+| procgen/station | 94.2% | High coverage |
+| procgen/terrain | 93.3% | High coverage |
+| rendering/lighting | 96.7% | Excellent coverage |
+| rendering/palette | 97.0% | Excellent coverage |
+| rendering/particles | 94.4% | High coverage |
+| rendering/patterns | 78.7% | Good coverage |
+| rendering/postprocess | 84.4% | Good coverage |
+| rendering/quality | 96.6% | Excellent coverage |
+| rendering/tiles | 92.5% | High coverage |
+| rendering/ui | 94.9% | High coverage |
+| audio/music | 96.6% | Excellent coverage |
+| audio/sfx | 89.3% | High coverage |
+| audio/synthesis | 94.2% | High coverage |
+| saveload | 70.9% | Core functionality covered |
 | combat | 100% | Full coverage |
 | world | 100% | Full coverage |
+| logging | 77.8% | Good coverage |
 | **Average** | **82.4%** | Exceeds 65% target |
 
 ### Excluded from Coverage

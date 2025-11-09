@@ -1,12 +1,12 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 20-x)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V*.md, AUDIT.md files.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 34-36)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V6.md, AUDIT.md files.
 
-**V2.0 Features:**
-P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzzles, Destructibles, Carry, Context, Hazards | P12: L-System, Narrative, Adaptive music | P13: Behavior trees, Squads, Factions | P14: Shadows, Animation LOD, Enhanced particles/audio
+**V6.0 Features (Phase 34-36):**
+P34: Post office, mail system, courier NPCs, async delivery | P35: Politics, factions, alliances, trade network, dynamic pricing | P36: Territory control, border zones, bounty board, server rankings
 
-**ALL** in pkg/engine/, cmd/client/main.go loop, entities spawn with V6.0.
+**ALL** in pkg/engine/ (mail, politics, bounty), pkg/network/federation/market.go, pkg/world/territory.go, cmd/server/main.go.
 
 ## CONSTRAINTS
 - Seed RNG only (no time.Now()), ECS: entities=IDs, components=data, systems=logic
@@ -17,10 +17,10 @@ P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzz
 Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
 
 ## PHASE 2: V6.0 COMPLETION
-**Audit:** All P10-14 components/systems in pkg/engine/, cmd/client/main.go, entity spawning.
-**Implement:** Missing items (ECS), integrate loop, spawn logic, test ≥65%, doc.
+**Audit:** P34-36 components/systems in pkg/engine/, pkg/network/federation/, pkg/world/, cmd/server/main.go.
+**Implement:** Missing items (mail, politics, bounty, territory), test ≥65%, doc.
 **Remove:** Deprecated, legacy, pre-V6.0, shims.
-**Validate:** Determinism, targets, tests, run client.
+**Validate:** Determinism (per-server), targets, tests, run server federation.
 **Skip:** Only if ALL done.
 
 ## PHASE 3: DOCS
@@ -39,18 +39,16 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 
 ## SUCCESS
 - Build/test/race pass, ≥65% coverage, gofmt
-- **ALL P10-14 in loop, V6.0 entity spawning**
-- No deprecated, ECS OK, determinism, targets (60 FPS, <500MB, <2s)
+- **P34-36 features complete, federation operational**
+- No deprecated, ECS OK, determinism (per-server), targets (60 FPS, <500MB per server, <2s)
 - Docs current, quality up, enhancement done
 
-## V2.0 CHECKLIST (Before Phase 4/completion)
-**Phase 10:** RotationComponent, AimComponent, ProjectileComponent, ScreenShakeComponent + systems in pkg/engine/, registered in cmd/client/main.go
-**Phase 11:** LayerComponent, layer-aware collision, diagonal walls, PuzzleComponent/System, DestructibleComponent/System, CarryComponent/System, ContextActionComponent/System, HazardComponent/System
-**Phase 12:** pkg/procgen/lsys/, NarrativeComponent, pkg/procgen/narrative/, NarrativeSystem, pkg/audio/music/adaptive.go, motif.go
-**Phase 13:** BehaviorTreeComponent, pkg/engine/ai/behavior_tree.go, BehaviorTreeSystem, archetypes, SquadComponent/System, FactionComponent/System, pkg/procgen/faction/
-**Phase 14:** ShadowComponent, pkg/rendering/lighting/shadows.go, AnimationComponent w/LOD, pkg/rendering/sprites/animation.go, enhanced particles/audio
+## V6.0 CHECKLIST (Phase 34-36 Target)
+**Phase 34:** MailComponent, MailMessage, MailSystem, post office buildings, courier NPCs, delivery tracking in pkg/engine/mail_component.go
+**Phase 35:** ServerFaction, PoliticalEvent, PoliticalSystem, FederatedMarket, dynamic pricing, merchant caravans in pkg/engine/politics_component.go, pkg/network/federation/market.go
+**Phase 36:** BorderZone, ControlPoint, TerritorySystem, BountyContract, BountySystem, server leaderboards in pkg/world/territory.go, pkg/engine/bounty_component.go
 
-**Integration:** cmd/client/main.go registers all systems, entities spawn with V6.0 components, world uses L-System layouts, combat uses projectiles/shake, audio plays adaptive music, rendering shows shadows/LOD/particles.
+**Integration:** cmd/server/main.go registers P34-36 systems, mail delivery functional, political events trigger, trade network operational, territory control active, bounty board accessible.
 
 Execute autonomously. Report comprehensive results for all 6 phases.
 

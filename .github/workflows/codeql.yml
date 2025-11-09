@@ -19,7 +19,7 @@ jobs:
   analyze:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 120  # Reduced from 360 to a more reasonable timeout
 
     strategy:
       fail-fast: false
@@ -47,15 +47,14 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
-        config: |
-          paths-ignore:
-            - examples/**
-            - cmd/*test/**
+        config-file: .github/codeql/codeql-config.yml
 
     - name: Build project
       run: |
         go mod download
+        # Client build requires xvfb because Ebiten initializes graphics context during compilation
         xvfb-run -s "-screen 0 1920x1080x24" go build -v ./cmd/client
+        # Server build also uses xvfb for consistency, though it may not strictly require graphics
         xvfb-run -s "-screen 0 1920x1080x24" go build -v ./cmd/server
 
     - name: Perform CodeQL Analysis

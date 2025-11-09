@@ -39,6 +39,7 @@ jobs:
           cp $(go env GOROOT)/lib/wasm/wasm_exec.js build/wasm/
 
       - name: Download latest CodeQL reports (if available)
+        id: download-reports
         continue-on-error: true
         uses: dawidd6/action-download-artifact@v3
         with:
@@ -46,6 +47,18 @@ jobs:
           name: codeql-html-reports
           path: build/wasm/security
           if_no_artifact_found: warn
+
+      - name: Log artifact download status
+        run: |
+          if [ "${{ steps.download-reports.outcome }}" = "failure" ]; then
+            echo "⚠️ Warning: Failed to download CodeQL reports. This may be due to:"
+            echo "  - No CodeQL workflow has run yet"
+            echo "  - Artifact has expired (30-day retention)"
+            echo "  - Permission issues"
+            echo "Proceeding with placeholder security page."
+          else
+            echo "✓ Successfully downloaded CodeQL reports or no artifacts available"
+          fi
 
       - name: Create security index page
         run: |

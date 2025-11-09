@@ -284,12 +284,12 @@ NO_RESULTS_HTML
         jq -r '.runs[0].results[] | 
             @json' "$sarif_file" | while IFS= read -r result; do
             
-            local rule_id=$(echo "$result" | jq -r '.ruleId // "unknown"')
-            local message=$(echo "$result" | jq -r '.message.text // "No message"')
-            local level=$(echo "$result" | jq -r '.level // "warning"')
-            local file=$(echo "$result" | jq -r '.locations[0].physicalLocation.artifactLocation.uri // "unknown"')
-            local start_line=$(echo "$result" | jq -r '.locations[0].physicalLocation.region.startLine // "0"')
-            local end_line=$(echo "$result" | jq -r '.locations[0].physicalLocation.region.endLine // "0"')
+            rule_id=$(echo "$result" | jq -r '.ruleId // "unknown"')
+            message=$(echo "$result" | jq -r '.message.text // "No message"')
+            level=$(echo "$result" | jq -r '.level // "warning"')
+            file=$(echo "$result" | jq -r '.locations[0].physicalLocation.artifactLocation.uri // "unknown"')
+            start_line=$(echo "$result" | jq -r '.locations[0].physicalLocation.region.startLine // "0"')
+            end_line=$(echo "$result" | jq -r '.locations[0].physicalLocation.region.endLine // "0"')
             
             echo "            <div class=\"result-item $level\" data-level=\"$level\">" >> "$output_file"
             echo "                <div class=\"result-header\">" >> "$output_file"
@@ -353,6 +353,7 @@ generate_html_with_python() {
     python3 << PYTHON_SCRIPT "$sarif_file" "$output_file"
 import json
 import sys
+import html
 from datetime import datetime
 
 sarif_file = sys.argv[1]
@@ -419,10 +420,10 @@ else:
             line = 0
         
         html += f'''
-        <div class="result {level}">
-            <h3>{rule_id}</h3>
-            <p>{message}</p>
-            <p><small>📁 {file_path}:{line}</small></p>
+        <div class="result {html.escape(level)}">
+            <h3>{html.escape(rule_id)}</h3>
+            <p>{html.escape(message)}</p>
+            <p><small>📁 {html.escape(file_path)}:{line}</small></p>
         </div>
 '''
 

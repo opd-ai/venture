@@ -80,7 +80,10 @@ func (g *LevelGenerator) GenerateMultiLevel(numLevels int, seed int64, params pr
 			return nil, fmt.Errorf("failed to generate level %d: %w", i, err)
 		}
 
-		terrain := result.(*Terrain)
+		terrain, ok := result.(*Terrain)
+		if !ok {
+			return nil, fmt.Errorf("generator returned non-Terrain result for level %d", i)
+		}
 		terrain.Level = i
 		levels[i] = terrain
 	}

@@ -40,7 +40,11 @@ func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		aiState := aiComp.(*AIComponent)
+		// Type assert with safety check
+		aiState, ok := aiComp.(*AIComponent)
+		if !ok {
+			continue
+		}
 
 		// Update timers
 		aiState.UpdateStateTimer(deltaTime)
@@ -62,7 +66,10 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 	if !ok {
 		return // Can't do AI without position
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Check health for flee condition
 	shouldFlee := ai.shouldFlee(entity, aiComp)
@@ -138,9 +145,10 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 	if aiComp.IsWaitingAtWaypoint(deltaTime) {
 		// Stop movement while waiting
 		if velComp, ok := entity.GetComponent("velocity"); ok {
-			vel := velComp.(*VelocityComponent)
-			vel.VX = 0
-			vel.VY = 0
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				vel.VX = 0
+				vel.VY = 0
+			}
 		}
 		return
 	}
@@ -158,19 +166,19 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// Move towards waypoint
 	if velComp, ok := entity.GetComponent("velocity"); ok {
-		vel := velComp.(*VelocityComponent)
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			// Use default base speed (velocity component doesn't store speed)
+			baseSpeed := 100.0 // Default pixels per second
 
-		// Use default base speed (velocity component doesn't store speed)
-		baseSpeed := 100.0 // Default pixels per second
+			// Normalize direction and apply patrol speed multiplier
+			if distToWaypoint > 0 {
+				dirX := dx / distToWaypoint
+				dirY := dy / distToWaypoint
+				speed := baseSpeed * aiComp.GetSpeedMultiplier()
 
-		// Normalize direction and apply patrol speed multiplier
-		if distToWaypoint > 0 {
-			dirX := dx / distToWaypoint
-			dirY := dy / distToWaypoint
-			speed := baseSpeed * aiComp.GetSpeedMultiplier()
-
-			vel.VX = dirX * speed
-			vel.VY = dirY * speed
+				vel.VX = dirX * speed
+				vel.VY = dirY * speed
+			}
 		}
 	}
 }
@@ -211,7 +219,10 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 	if !ok {
 		return
 	}
-	attack := attackComp.(*AttackComponent)
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return
+	}
 
 	// Check if in attack range
 	targetPos, ok := aiComp.Target.GetComponent("position")
@@ -220,7 +231,12 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		aiComp.ChangeState(AIStateIdle)
 		return
 	}
-	targetP := targetPos.(*PositionComponent)
+	targetP, ok := targetPos.(*PositionComponent)
+	if !ok {
+		aiComp.ClearTarget()
+		aiComp.ChangeState(AIStateIdle)
+		return
+	}
 
 	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
 
@@ -247,7 +263,10 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 	if !ok {
 		return
 	}
-	attack := attackComp.(*AttackComponent)
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return
+	}
 
 	// Check if in attack range
 	targetPos, ok := aiComp.Target.GetComponent("position")
@@ -256,7 +275,12 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 		aiComp.ChangeState(AIStateIdle)
 		return
 	}
-	targetP := targetPos.(*PositionComponent)
+	targetP, ok := targetPos.(*PositionComponent)
+	if !ok {
+		aiComp.ClearTarget()
+		aiComp.ChangeState(AIStateIdle)
+		return
+	}
 
 	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
 
@@ -270,9 +294,10 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 	if attack.CanAttack() {
 		// GAP-018 REPAIR: Set animation to attack when attacking
 		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim := animComp.(*AnimationComponent)
-			if anim.CurrentState != AnimationStateAttack {
-				anim.SetState(AnimationStateAttack)
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				if anim.CurrentState != AnimationStateAttack {
+					anim.SetState(AnimationStateAttack)
+				}
 			}
 		}
 
@@ -312,16 +337,18 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 		// Stop movement
 		velComp, ok := entity.GetComponent("velocity")
 		if ok {
-			vel := velComp.(*VelocityComponent)
-			vel.VX = 0
-			vel.VY = 0
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				vel.VX = 0
+				vel.VY = 0
+			}
 		}
 
 		// GAP-018 REPAIR: Set animation to idle when stopped
 		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim := animComp.(*AnimationComponent)
-			if anim.CurrentState != AnimationStateIdle {
-				anim.SetState(AnimationStateIdle)
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				if anim.CurrentState != AnimationStateIdle {
+					anim.SetState(AnimationStateIdle)
+				}
 			}
 		}
 		return
@@ -343,7 +370,10 @@ func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 		return false
 	}
 
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return false
+	}
 	if health.Max <= 0 {
 		return false
 	}
@@ -358,7 +388,10 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 	if !ok {
 		return nil // No team component, can't determine enemies
 	}
-	team := teamComp.(*TeamComponent)
+	team, ok := teamComp.(*TeamComponent)
+	if !ok {
+		return nil
+	}
 
 	var nearest *Entity
 	nearestDist := detectionRange
@@ -373,7 +406,10 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 		if !ok {
 			continue
 		}
-		otherT := otherTeam.(*TeamComponent)
+		otherT, ok := otherTeam.(*TeamComponent)
+		if !ok {
+			continue
+		}
 
 		if !team.IsEnemy(otherT.TeamID) {
 			continue
@@ -382,9 +418,10 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 		// Check if alive
 		otherHealth, ok := other.GetComponent("health")
 		if ok {
-			h := otherHealth.(*HealthComponent)
-			if h.IsDead() {
-				continue
+			if h, ok := otherHealth.(*HealthComponent); ok {
+				if h.IsDead() {
+					continue
+				}
 			}
 		}
 
@@ -393,7 +430,10 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 		if !ok {
 			continue
 		}
-		otherP := otherPos.(*PositionComponent)
+		otherP, ok := otherPos.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		dist := ai.getDistance(pos.X, pos.Y, otherP.X, otherP.Y)
 		if dist < nearestDist {
@@ -414,9 +454,10 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 	// Check if target is alive
 	targetHealth, ok := target.GetComponent("health")
 	if ok {
-		h := targetHealth.(*HealthComponent)
-		if h.IsDead() {
-			return false
+		if h, ok := targetHealth.(*HealthComponent); ok {
+			if h.IsDead() {
+				return false
+			}
 		}
 	}
 
@@ -425,7 +466,10 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 	if !ok {
 		return false
 	}
-	targetP := targetPos.(*PositionComponent)
+	targetP, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return false
+	}
 
 	dist := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
 	return dist <= maxRange
@@ -437,7 +481,10 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 	if !ok {
 		return // No velocity component, can't move
 	}
-	vel := velComp.(*VelocityComponent)
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
 
 	// Calculate direction
 	dx := targetX - pos.X
@@ -453,15 +500,17 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 		// Phase 10.1: Update aim component to face movement direction
 		// This makes enemies visibly rotate towards their target
 		if aimComp, ok := entity.GetComponent("aim"); ok {
-			aim := aimComp.(*AimComponent)
-			aim.SetAimTarget(targetX, targetY)
+			if aim, ok := aimComp.(*AimComponent); ok {
+				aim.SetAimTarget(targetX, targetY)
+			}
 		}
 
 		// GAP-018 REPAIR: Update animation state to walk when moving
 		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim := animComp.(*AnimationComponent)
-			if anim.CurrentState != AnimationStateWalk {
-				anim.SetState(AnimationStateWalk)
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				if anim.CurrentState != AnimationStateWalk {
+					anim.SetState(AnimationStateWalk)
+				}
 			}
 		}
 	}
@@ -478,8 +527,9 @@ func (ai *AISystem) getDistance(x1, y1, x2, y2 float64) float64 {
 func (ai *AISystem) SetDetectionRange(entity *Entity, detectionRange float64) {
 	aiComp, ok := entity.GetComponent("ai")
 	if ok {
-		aiC := aiComp.(*AIComponent)
-		aiC.DetectionRange = detectionRange
+		if aiC, ok := aiComp.(*AIComponent); ok {
+			aiC.DetectionRange = detectionRange
+		}
 	}
 }
 
@@ -489,5 +539,8 @@ func (ai *AISystem) GetState(entity *Entity) AIState {
 	if !ok {
 		return AIStateIdle
 	}
-	return aiComp.(*AIComponent).State
+	if aiC, ok := aiComp.(*AIComponent); ok {
+		return aiC.State
+	}
+	return AIStateIdle
 }

@@ -140,10 +140,15 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 		return // Need stats at minimum
 	}
 
-	stats := statsComp.(*StatsComponent)
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return
+	}
 	var equipment *EquipmentComponent
 	if hasEquip {
-		equipment = equipComp.(*EquipmentComponent)
+		if eq, ok := equipComp.(*EquipmentComponent); ok {
+			equipment = eq
+		}
 	}
 
 	// Draw semi-transparent overlay
@@ -182,17 +187,19 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 
 	// Level and Gold info
 	if hasExp {
-		exp := expComp.(*ExperienceComponent)
-		levelText := fmt.Sprintf("Level %d", exp.Level)
-		text.Draw(img, levelText, basicfont.Face7x13, panelX+20, titleY+13,
-			color.RGBA{100, 255, 100, 255})
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			levelText := fmt.Sprintf("Level %d", exp.Level)
+			text.Draw(img, levelText, basicfont.Face7x13, panelX+20, titleY+13,
+				color.RGBA{100, 255, 100, 255})
+		}
 	}
 
 	if hasInv {
-		inv := invComp.(*InventoryComponent)
-		goldText := fmt.Sprintf("Gold: %d", inv.Gold)
-		text.Draw(img, goldText, basicfont.Face7x13, panelX+panelWidth-120, titleY+13,
-			color.RGBA{255, 215, 0, 255})
+		if inv, ok := invComp.(*InventoryComponent); ok {
+			goldText := fmt.Sprintf("Gold: %d", inv.Gold)
+			text.Draw(img, goldText, basicfont.Face7x13, panelX+panelWidth-120, titleY+13,
+				color.RGBA{255, 215, 0, 255})
+		}
 	}
 
 	// Draw three panels

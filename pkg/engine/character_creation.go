@@ -417,6 +417,69 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// If they do start typing, the keyboard will appear automatically via browser behavior.
 	// This prevents unnecessary keyboard popup that blocks the UI.
 
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+
+		// Define button areas (matching drawPortraitSelection layout)
+		helpY := cc.panelY + cc.panelHeight - 100
+		buttonY := helpY - 10
+		buttonX := cc.panelX + 50
+		buttonW := cc.panelWidth - 100
+		buttonH := 25
+
+		// Browse button area
+		browseButtonY := buttonY
+
+		// Skip button area
+		skipButtonY := browseButtonY + 35
+
+		// Back button area
+		backButtonY := skipButtonY + 35
+
+		// Check browse button click
+		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+			mouseY >= browseButtonY && mouseY <= browseButtonY+buttonH {
+			// Trigger file browser dialog
+			go func() {
+				filename, err := OpenPortraitDialog()
+				if err != nil {
+					cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)
+					return
+				}
+				if filename != "" {
+					cc.portraitInput = filename
+				}
+			}()
+			return
+		}
+
+		// Check skip button click
+		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+			mouseY >= skipButtonY && mouseY <= skipButtonY+buttonH {
+			cc.characterData.PortraitPath = ""
+			cc.characterData.Portrait = nil
+			cc.currentStep = stepConfirmation
+			cc.errorMsg = ""
+			if cc.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				cc.keyboardShown = false
+			}
+			return
+		}
+
+		// Check back button click
+		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+			mouseY >= backButtonY && mouseY <= backButtonY+buttonH {
+			cc.currentStep = stepClassSelection
+			if cc.keyboardShown && mobile.IsWASM() {
+				mobile.HideKeyboard()
+				cc.keyboardShown = false
+			}
+			return
+		}
+	}
+
 	// SPACE or B key to open file browser dialog
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
 		// Open file dialog (this will block until user selects or cancels)
@@ -532,6 +595,46 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 
 // updateConfirmation handles final confirmation
 func (cc *EbitenCharacterCreation) updateConfirmation() {
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+
+		// Define button areas (matching drawConfirmation layout)
+		buttonX := cc.panelX + 50
+		buttonW := cc.panelWidth - 100
+		buttonH := 30
+
+		// Confirm button area
+		confirmButtonY := cc.panelY + cc.panelHeight - 85
+
+		// Back button area
+		backButtonY := confirmButtonY + 40
+
+		// Check confirm button click
+		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+			mouseY >= confirmButtonY && mouseY <= confirmButtonY+buttonH {
+			// Validate before confirming
+			if err := cc.characterData.Validate(); err != nil {
+				cc.errorMsg = err.Error()
+				cc.currentStep = stepNameInput // Go back to fix
+				// Reset keyboard shown flag so it will be shown again when entering name input
+				cc.keyboardShown = false
+			} else {
+				cc.confirmed = true
+			}
+			return
+		}
+
+		// Check back button click
+		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+			mouseY >= backButtonY && mouseY <= backButtonY+buttonH {
+			cc.currentStep = stepPortraitSelection
+			// Reset keyboard shown flag so it will be shown again when entering portrait path
+			cc.keyboardShown = false
+			return
+		}
+	}
+
 	// Enter/Space to confirm
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		// Validate before confirming
@@ -803,14 +906,51 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 
 	// Help text
 	helpY := y + h - 100
-	helpText1 := "Press SPACE/B to browse | ENTER to load | TAB to skip"
-	helpText2 := "F2 to save as default | BACKSPACE to go back"
-	helpX1 := x + w/2 - len(helpText1)*3
-	helpX2 := x + w/2 - len(helpText2)*3
-	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, helpY,
-		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, helpY+20,
-		color.RGBA{150, 200, 150, 255})
+
+	// Draw clickable button areas for touch support
+	buttonY := helpY - 10
+	buttonX := x + 50
+	buttonW := w - 100
+	buttonH := 25
+
+	// Browse button
+	browseButtonY := buttonY
+	vector.DrawFilledRect(screen, float32(buttonX), float32(browseButtonY),
+		float32(buttonW), float32(buttonH),
+		color.RGBA{50, 80, 120, 255}, false)
+	vector.StrokeRect(screen, float32(buttonX), float32(browseButtonY),
+		float32(buttonW), float32(buttonH), 2,
+		color.RGBA{100, 150, 200, 255}, false)
+	browseText := "Browse for Portrait (SPACE/B)"
+	browseTextX := buttonX + buttonW/2 - len(browseText)*3
+	text.Draw(screen, browseText, basicfont.Face7x13, browseTextX, browseButtonY+17,
+		color.RGBA{255, 255, 255, 255})
+
+	// Skip button
+	skipButtonY := browseButtonY + 35
+	vector.DrawFilledRect(screen, float32(buttonX), float32(skipButtonY),
+		float32(buttonW), float32(buttonH),
+		color.RGBA{50, 80, 120, 255}, false)
+	vector.StrokeRect(screen, float32(buttonX), float32(skipButtonY),
+		float32(buttonW), float32(buttonH), 2,
+		color.RGBA{100, 150, 200, 255}, false)
+	skipText := "Skip Portrait (TAB)"
+	skipTextX := buttonX + buttonW/2 - len(skipText)*3
+	text.Draw(screen, skipText, basicfont.Face7x13, skipTextX, skipButtonY+17,
+		color.RGBA{255, 255, 255, 255})
+
+	// Back button
+	backButtonY := skipButtonY + 35
+	vector.DrawFilledRect(screen, float32(buttonX), float32(backButtonY),
+		float32(buttonW), float32(buttonH),
+		color.RGBA{80, 50, 50, 255}, false)
+	vector.StrokeRect(screen, float32(buttonX), float32(backButtonY),
+		float32(buttonW), float32(buttonH), 2,
+		color.RGBA{150, 100, 100, 255}, false)
+	backText := "Back to Class Selection (BACKSPACE)"
+	backTextX := buttonX + buttonW/2 - len(backText)*3
+	text.Draw(screen, backText, basicfont.Face7x13, backTextX, backButtonY+17,
+		color.RGBA{255, 255, 255, 255})
 }
 
 // drawConfirmation renders the confirmation screen
@@ -882,15 +1022,36 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 		statY += 20
 	}
 
-	// Help text
-	helpText1 := "Press ENTER to begin your adventure"
-	helpText2 := "Press BACKSPACE to change class"
-	helpX1 := x + w/2 - len(helpText1)*3
-	helpX2 := x + w/2 - len(helpText2)*3
-	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-75,
-		color.RGBA{100, 255, 100, 255})
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-55,
-		color.RGBA{150, 200, 150, 255})
+	// Draw clickable buttons for touch support
+	buttonX := x + 50
+	buttonW := w - 100
+	buttonH := 30
+
+	// Confirm button (green/positive action)
+	confirmButtonY := y + h - 85
+	vector.DrawFilledRect(screen, float32(buttonX), float32(confirmButtonY),
+		float32(buttonW), float32(buttonH),
+		color.RGBA{50, 120, 50, 255}, false)
+	vector.StrokeRect(screen, float32(buttonX), float32(confirmButtonY),
+		float32(buttonW), float32(buttonH), 2,
+		color.RGBA{100, 200, 100, 255}, false)
+	confirmText := "BEGIN ADVENTURE (ENTER)"
+	confirmTextX := buttonX + buttonW/2 - len(confirmText)*3
+	text.Draw(screen, confirmText, basicfont.Face7x13, confirmTextX, confirmButtonY+20,
+		color.RGBA{255, 255, 255, 255})
+
+	// Back button
+	backButtonY := confirmButtonY + 40
+	vector.DrawFilledRect(screen, float32(buttonX), float32(backButtonY),
+		float32(buttonW), float32(buttonH),
+		color.RGBA{80, 50, 50, 255}, false)
+	vector.StrokeRect(screen, float32(buttonX), float32(backButtonY),
+		float32(buttonW), float32(buttonH), 2,
+		color.RGBA{150, 100, 100, 255}, false)
+	backText := "Go Back (BACKSPACE)"
+	backTextX := buttonX + buttonW/2 - len(backText)*3
+	text.Draw(screen, backText, basicfont.Face7x13, backTextX, backButtonY+20,
+		color.RGBA{255, 255, 255, 255})
 }
 
 // getClassStats returns stat descriptions for the selected class

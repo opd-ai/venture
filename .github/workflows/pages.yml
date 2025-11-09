@@ -197,7 +197,7 @@ jobs:
                               Access detailed security findings with code locations,
                               data flow analysis, and remediation guidance.
                           </p>
-                          <a href="https://github.com/opd-ai/venture/security/code-scanning" 
+                          <a href="https://github.com/${GITHUB_REPOSITORY}/security/code-scanning" 
                              class="report-link" target="_blank">View on GitHub →</a>
                       </div>
 

@@ -51,7 +51,10 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Update shield duration
 		if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
-			shield := shieldComp.(*ShieldComponent)
+			shield, ok := shieldComp.(*ShieldComponent)
+			if !ok {
+				continue
+			}
 			shield.Update(deltaTime)
 
 			// Remove depleted shields
@@ -68,7 +71,10 @@ func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusE
 	if !hasHealth {
 		return
 	}
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 
 	switch effect.EffectType {
 	case "burning":
@@ -91,7 +97,10 @@ func (s *StatusEffectSystem) removeEffectModifiers(entity *Entity, effect *Statu
 	if !hasStats {
 		return
 	}
-	stats := statsComp.(*StatsComponent)
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return
+	}
 
 	switch effect.EffectType {
 	case "strength":
@@ -142,7 +151,10 @@ func (s *StatusEffectSystem) applyEffectModifiers(entity *Entity, effect *Status
 	if !hasStats {
 		return
 	}
-	stats := statsComp.(*StatsComponent)
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return
+	}
 
 	switch effect.EffectType {
 	case "strength":
@@ -168,7 +180,10 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 	// Check if shield already exists
 	if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
 		// Add to existing shield
-		shield := shieldComp.(*ShieldComponent)
+		shield, ok := shieldComp.(*ShieldComponent)
+		if !ok {
+			// Create new shield if type assertion fails
+		} else {
 		shield.Amount += amount
 		if shield.Amount > shield.MaxAmount {
 			shield.MaxAmount = shield.Amount
@@ -177,7 +192,9 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 			shield.Duration = duration
 			shield.MaxDuration = duration
 		}
-	} else {
+		return
+		}
+	}
 		// Create new shield
 		shield := &ShieldComponent{
 			Amount:      amount,
@@ -197,7 +214,10 @@ func (s *StatusEffectSystem) ChainLightning(source, initialTarget *Entity, damag
 
 	// Apply damage to initial target
 	if healthComp, hasHealth := initialTarget.GetComponent("health"); hasHealth {
-		health := healthComp.(*HealthComponent)
+		health, ok := healthComp.(*HealthComponent)
+		if !ok {
+			return
+		}
 		health.TakeDamage(damage)
 
 		// Apply shocked effect
@@ -252,8 +272,14 @@ func isEnemyTarget(caster, target *Entity) bool {
 	// Check team if available
 	if casterTeam, hasCasterTeam := caster.GetComponent("team"); hasCasterTeam {
 		if targetTeam, hasTargetTeam := target.GetComponent("team"); hasTargetTeam {
-			ct := casterTeam.(*TeamComponent)
-			tt := targetTeam.(*TeamComponent)
+			ct, ok := casterTeam.(*TeamComponent)
+			if !ok {
+				return true // Default to enemy if type assertion fails
+			}
+			tt, ok := targetTeam.(*TeamComponent)
+			if !ok {
+				return true
+			}
 			return ct.IsEnemy(tt.TeamID)
 		}
 	}

@@ -278,7 +278,10 @@ func GetNearbyStations(entities []Entity, centerX, centerY, radius float64) []*E
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate squared distance (avoid sqrt for performance)
 		dx := pos.X - centerX
@@ -324,7 +327,10 @@ func FindClosestStation(entities []Entity, centerX, centerY, maxDistance float64
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := pos.X - centerX
@@ -358,7 +364,10 @@ func GetStationInteractionPrompt(stationEntity *Entity) string {
 		return ""
 	}
 
-	station := stationComp.(*CraftingStationComponent)
+	station, ok := stationComp.(*CraftingStationComponent)
+	if !ok {
+		return ""
+	}
 
 	recipeTypeName := ""
 	switch station.StationType {

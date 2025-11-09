@@ -76,11 +76,11 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [x] Verify UI rendering in all menus
 
 ### 3.3 Cross-Platform Testing
-- [ ] Build and test on Linux (x64/ARM64)
-- [ ] Build and test on macOS (x64/ARM64)
-- [ ] Build and test on Windows (x64)
-- [ ] Build and test WebAssembly version
-- [ ] Build and test mobile (Android/iOS)
+- [x] Build and test on Linux (x64/ARM64)
+- [x] Build and test on macOS (x64/ARM64)
+- [x] Build and test on Windows (x64)
+- [x] Build and test WebAssembly version
+- [x] Build and test mobile (Android/iOS)
 
 ### 3.4 Multiplayer Testing
 - [x] Test deterministic generation across clients

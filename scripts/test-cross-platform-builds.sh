@@ -72,10 +72,11 @@ echo "--- Testing Key Packages ---"
 # - engine: Uses ebiten.Game and ebiten.Image types
 # - mobile: Direct ebiten usage for touch controls
 # - network, hostplay: Import engine which imports ebiten
-# - procgen/recipe: Imports engine for recipe types
+# - procgen/recipe, procgen/faction: Import engine for types
 # - rendering (root): Uses ebiten.Image directly
 # - rendering/sprites, cache, pool, shapes: Use ebiten.Image for rendering
-EXCLUDED_PACKAGES="(engine|rendering$|rendering/(sprites|cache|pool|shapes)|procgen/recipe|network|hostplay|mobile)"
+# - visualtest: Imports rendering/sprites which uses ebiten.Image
+EXCLUDED_PACKAGES="(engine|rendering$|rendering/(sprites|cache|pool|shapes)|procgen/recipe|procgen/faction|network|hostplay|mobile|visualtest)"
 
 # Note: We test packages only against Android arm64 as a representative platform.
 # These packages are pure Go with no platform-specific code, so if they build

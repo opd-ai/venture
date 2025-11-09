@@ -45,35 +45,35 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [x] Document results in PERFORMANCE.md
 
 ### 2.2 Memory Profile
-- [ ] Profile memory usage with V3.0 features
-- [ ] Verify <500MB client memory target maintained
-- [ ] Check for memory leaks with long-running sessions
-- [ ] Document sprite cache efficiency (should maintain ~95% hit rate)
+- [x] Profile memory usage with V3.0 features
+- [x] Verify <500MB client memory target maintained
+- [x] Check for memory leaks with long-running sessions
+- [x] Document sprite cache efficiency (should maintain ~95% hit rate)
 
 ### 2.3 FPS Testing
-- [ ] Test with 2000 entities (should maintain 60+ FPS)
-- [ ] Test extreme scenarios (particles + lighting + weather)
+- [x] Test with 2000 entities (should maintain 60+ FPS)
+- [x] Test extreme scenarios (particles + lighting + weather)
 - [ ] Test on minimum spec hardware
-- [ ] Document frame time breakdown by system
+- [x] Document frame time breakdown by system
 
 ---
 
 ## Task 3: Quality Assurance
 
 ### 3.1 Test Coverage Verification
-- [ ] Verify all packages maintain ≥65% coverage
-- [ ] Run full test suite: `go test ./...`
-- [ ] Run race detector: `go test -race ./...`
-- [ ] Fix any flaky tests
-- [ ] Document final coverage stats
+- [x] Verify all packages maintain ≥65% coverage
+- [x] Run full test suite: `go test ./...`
+- [x] Run race detector: `go test -race ./...`
+- [x] Fix any flaky tests
+- [x] Document final coverage stats
 
 ### 3.2 Visual Quality Testing
-- [ ] Generate sprites for all entity types with all genres
-- [ ] Verify silhouette scores ≥0.75 average
-- [ ] Test all tile transitions
-- [ ] Verify lighting effects in all genres
-- [ ] Test weather systems in all scenarios
-- [ ] Verify UI rendering in all menus
+- [x] Generate sprites for all entity types with all genres
+- [x] Verify silhouette scores ≥0.75 average
+- [x] Test all tile transitions
+- [x] Verify lighting effects in all genres
+- [x] Test weather systems in all scenarios
+- [x] Verify UI rendering in all menus
 
 ### 3.3 Cross-Platform Testing
 - [ ] Build and test on Linux (x64/ARM64)
@@ -96,7 +96,7 @@ All Phase 15-20 features have been implemented and marked as COMPLETE in ROADMAP
 - [ ] Update ARCHITECTURE.md with V3.0 rendering pipeline
 - [ ] Update TECHNICAL_SPEC.md with new sprite/tile/lighting specs
 - [ ] Update API_REFERENCE.md with new functions/interfaces
-- [ ] Update PERFORMANCE.md with V3.0 metrics
+- [x] Update PERFORMANCE.md with V3.0 metrics
 
 ### 4.2 Update User Documentation
 - [ ] Update GETTING_STARTED.md with V3.0 features

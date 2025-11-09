@@ -78,7 +78,16 @@ go fmt ./...
 # Generate coverage baseline
 go test -cover -coverprofile=coverage.out ./...
 go tool cover -func=coverage.out > coverage-baseline.txt
+
+# Run automated quality gates validation
+make validate-code-review
+# Or directly:
+./scripts/validate-code-review.sh
 ```
+
+**Note:** The `validate-code-review.sh` script automates verification of the first 9 quality gates.
+Use `SKIP_RACE=true` and `SKIP_COVERAGE=true` environment variables to skip time-consuming checks during
+initial validation.
 
 ### 4. Documentation Review
 **Rationale:** Understand project architecture, patterns, and constraints.
@@ -630,6 +639,7 @@ All gates must pass for code review completion:
 - [ ] Clone repo, run `go mod download`
 - [ ] Install build dependencies (see Pre-Review Setup step 2)
 - [ ] Run baseline tests: `go test ./...` (Linux: use `xvfb-run -s "-screen 0 1920x1080x24" go test ./...`)
+- [ ] Run automated validation: `make validate-code-review` or `./scripts/validate-code-review.sh`
 - [ ] Read ARCHITECTURE, TECHNICAL_SPEC, TESTING docs
 - [ ] Identify changed files with `git diff`
 

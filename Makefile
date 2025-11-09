@@ -4,7 +4,8 @@
         build-linux build-windows build-macos \
         build-server build-client build-wasm \
         android ios mobile-deps \
-        run-client run-server serve-wasm
+        run-client run-server serve-wasm \
+        validate-code-review
 
 # Default target
 .DEFAULT_GOAL := help
@@ -97,6 +98,10 @@ fmt: ## Format code
 	@echo "Formatting code..."
 	go install mvdan.cc/gofumpt@latest
 	find . -name '*.go' -exec gofumpt -w -s -extra {} +
+
+validate-code-review: ## Validate code against quality gates (CODE_REVIEW_PLAN.md)
+	@echo "Validating code review quality gates..."
+	@./scripts/validate-code-review.sh
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."

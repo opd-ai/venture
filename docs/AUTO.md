@@ -1,12 +1,12 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V2.0 (Phase 10-14)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V2.md, GAPS.md.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete V6.0 (Phase 20-x)**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V*.md, AUDIT.md files.
 
 **V2.0 Features:**
 P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzzles, Destructibles, Carry, Context, Hazards | P12: L-System, Narrative, Adaptive music | P13: Behavior trees, Squads, Factions | P14: Shadows, Animation LOD, Enhanced particles/audio
 
-**ALL** in pkg/engine/, cmd/client/main.go loop, entities spawn with V2.0.
+**ALL** in pkg/engine/, cmd/client/main.go loop, entities spawn with V6.0.
 
 ## CONSTRAINTS
 - Seed RNG only (no time.Now()), ECS: entities=IDs, components=data, systems=logic
@@ -16,10 +16,10 @@ P10: Rotation, Aim, Projectiles, ScreenShake | P11: Multi-layer, Diagonals, Puzz
 ## PHASE 1: BUILD/TEST
 Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
 
-## PHASE 2: V2.0 COMPLETION
+## PHASE 2: V6.0 COMPLETION
 **Audit:** All P10-14 components/systems in pkg/engine/, cmd/client/main.go, entity spawning.
 **Implement:** Missing items (ECS), integrate loop, spawn logic, test ≥65%, doc.
-**Remove:** Deprecated, legacy, pre-V2.0, shims.
+**Remove:** Deprecated, legacy, pre-V6.0, shims.
 **Validate:** Determinism, targets, tests, run client.
 **Skip:** Only if ALL done.
 
@@ -27,7 +27,7 @@ Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) import
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 4: ROADMAP
-**Priority:** (1) V4.0, (2) ROADMAP_V*.md, (3), (4) TODOs.
+**Priority:** (1) V6.0, (2) ROADMAP_V*.md, (3), (4) TODOs.
 ECS changes, loop integration, test (≥65%, determinism), verify. Skip if done.
 Carry out `EXECUTE.md` instructions against current ROADMAP_V*.md file.
 
@@ -39,7 +39,7 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 
 ## SUCCESS
 - Build/test/race pass, ≥65% coverage, gofmt
-- **ALL P10-14 in loop, V2.0 entity spawning**
+- **ALL P10-14 in loop, V6.0 entity spawning**
 - No deprecated, ECS OK, determinism, targets (60 FPS, <500MB, <2s)
 - Docs current, quality up, enhancement done
 
@@ -50,7 +50,7 @@ Pick ONE: graphics/gameplay/perf/QoL. High impact, low risk, <100 LOC. ECS, dete
 **Phase 13:** BehaviorTreeComponent, pkg/engine/ai/behavior_tree.go, BehaviorTreeSystem, archetypes, SquadComponent/System, FactionComponent/System, pkg/procgen/faction/
 **Phase 14:** ShadowComponent, pkg/rendering/lighting/shadows.go, AnimationComponent w/LOD, pkg/rendering/sprites/animation.go, enhanced particles/audio
 
-**Integration:** cmd/client/main.go registers all systems, entities spawn with V2.0 components, world uses L-System layouts, combat uses projectiles/shake, audio plays adaptive music, rendering shows shadows/LOD/particles.
+**Integration:** cmd/client/main.go registers all systems, entities spawn with V6.0 components, world uses L-System layouts, combat uses projectiles/shake, audio plays adaptive music, rendering shows shadows/LOD/particles.
 
 Execute autonomously. Report comprehensive results for all 6 phases.
 

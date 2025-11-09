@@ -76,7 +76,10 @@ func (s *CarrySystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		playerPos := playerPosComp.(*PositionComponent)
+		playerPos, ok := playerPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Get object entity
 		object, ok := s.world.GetEntity(objectID)
@@ -91,7 +94,10 @@ func (s *CarrySystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		objPos := objPosComp.(*PositionComponent)
+		objPos, ok := objPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Update object position to follow player (slightly offset above/in front)
 		objPos.X = playerPos.X
@@ -125,7 +131,10 @@ func (s *CarrySystem) TryPickup(playerID, objectID uint64) bool {
 	if !ok {
 		return false
 	}
-	carriable := carrComp.(*CarriableComponent)
+	carriable, ok := carrComp.(*CarriableComponent)
+	if !ok {
+		return false
+	}
 
 	// Check if object can be picked up
 	if !carriable.CanPickUp || carriable.IsCarried {
@@ -138,7 +147,10 @@ func (s *CarrySystem) TryPickup(playerID, objectID uint64) bool {
 
 	// Remove velocity if object was moving
 	if velComp, ok := object.GetComponent("velocity"); ok {
-		vel := velComp.(*VelocityComponent)
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			return true // Object picked up, velocity just won't be zeroed
+		}
 		vel.VX = 0
 		vel.VY = 0
 	}
@@ -194,7 +206,10 @@ func (s *CarrySystem) ThrowObject(playerID uint64, aimX, aimY float64) {
 	if !ok {
 		return
 	}
-	carriable := carrComp.(*CarriableComponent)
+	carriable, ok := carrComp.(*CarriableComponent)
+	if !ok {
+		return
+	}
 
 	// Calculate throw velocity based on weight
 	baseVelocity := 300.0 // pixels per second
@@ -213,7 +228,16 @@ func (s *CarrySystem) ThrowObject(playerID uint64, aimX, aimY float64) {
 
 	// Set velocity
 	if velComp, ok := object.GetComponent("velocity"); ok {
-		vel := velComp.(*VelocityComponent)
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			// Add velocity component if type assertion fails
+			velComp := &VelocityComponent{
+				VX: aimX * throwVel,
+				VY: aimY * throwVel,
+			}
+			object.AddComponent(velComp)
+			return
+		}
 		vel.VX = aimX * throwVel
 		vel.VY = aimY * throwVel
 	} else {
@@ -255,7 +279,10 @@ func (s *CarrySystem) dropObject(objectID uint64) {
 	if !ok {
 		return
 	}
-	carriable := carrComp.(*CarriableComponent)
+	carriable, ok := carrComp.(*CarriableComponent)
+	if !ok {
+		return
+	}
 
 	// Mark as not carried
 	carriable.Drop()
@@ -294,7 +321,10 @@ func (s *CarrySystem) FindNearbyCarriableObject(x, y, maxDistance float64) (uint
 		if !ok {
 			continue
 		}
-		carriable := carrComp.(*CarriableComponent)
+		carriable, ok := carrComp.(*CarriableComponent)
+		if !ok {
+			continue
+		}
 
 		// Skip if already carried or not pickupable
 		if carriable.IsCarried || !carriable.CanPickUp {
@@ -306,7 +336,10 @@ func (s *CarrySystem) FindNearbyCarriableObject(x, y, maxDistance float64) (uint
 		if !ok {
 			continue
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := pos.X - x

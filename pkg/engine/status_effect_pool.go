@@ -32,7 +32,11 @@ var statusEffectPool = sync.Pool{
 //	// ... later when effect expires ...
 //	ReleaseStatusEffect(effect)
 func NewStatusEffectComponent(effectType string, magnitude, duration, tickInterval float64) *StatusEffectComponent {
-	effect := statusEffectPool.Get().(*StatusEffectComponent)
+	effect, ok := statusEffectPool.Get().(*StatusEffectComponent)
+	if !ok {
+		// Pool returned unexpected type, create new instance
+		effect = &StatusEffectComponent{}
+	}
 
 	// Initialize with provided values
 	effect.EffectType = effectType

@@ -89,7 +89,10 @@ func (s *VisualFeedbackSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		feedback := feedbackComp.(*VisualFeedbackComponent)
+		feedback, ok := feedbackComp.(*VisualFeedbackComponent)
+		if !ok {
+			continue
+		}
 
 		// Update flash timer
 		if feedback.FlashTimer > 0 {

@@ -174,7 +174,8 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 
 // Attack performs an attack from attacker to target.
 // Returns true if the attack hit, false if it missed or was invalid.
-func (s *CombatSystem) Attack(attacker, target *Entity) bool {
+// validateAttackEntities checks if attacker and target entities are in a valid state for combat.
+func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
 	// Priority 1.3: Dead entities cannot attack
 	if attacker.HasComponent("dead") {
 		return false
@@ -184,22 +185,38 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	if target.HasComponent("dead") {
 		return false
 	}
+	return true
+}
 
-	// Validate entities have required components
+// getAttackComponent retrieves and validates the attack component from an entity.
+func (s *CombatSystem) getAttackComponent(attacker *Entity) (*AttackComponent, bool) {
 	attackComp, ok := attacker.GetComponent("attack")
 	if !ok {
-		return false
+		return nil, false
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
-		return false
+		return nil, false
 	}
+	return attack, true
+}
 
-	// Check cooldown
-	if !attack.CanAttack() {
-		return false
+// validateAttackRange checks if the target is within attack range.
+func (s *CombatSystem) validateAttackRange(attacker, target *Entity, attackRange float64) bool {
+	_, attackerHasPos := attacker.GetComponent("position")
+	_, targetHasPos := target.GetComponent("position")
+	if attackerHasPos && targetHasPos {
+		distance := GetDistance(attacker, target)
+		if distance > attackRange {
+			return false
+		}
 	}
+	return true
+}
 
+// tryProjectileAttack attempts to perform a projectile-based attack if the attacker has a ranged weapon.
+// Returns (success, isProjectile) where isProjectile indicates if this was a projectile attack attempt.
+func (s *CombatSystem) tryProjectileAttack(attacker, target *Entity, attack *AttackComponent) (bool, bool) {
 	// Phase 10.2: Check if attacker has a projectile weapon equipped
 	// If so, spawn a projectile instead of doing instant damage
 	if equipComp, hasEquip := attacker.GetComponent("equipment"); hasEquip {
@@ -211,51 +228,126 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 					if success {
 						attack.ResetCooldown()
 					}
-					return success
+					return success, true
 				}
 			}
 		}
 	}
+	return false, false
+}
 
+// getTargetHealth retrieves and validates the health component from the target entity.
+func (s *CombatSystem) getTargetHealth(target *Entity) (*HealthComponent, bool) {
 	targetHealth, ok := target.GetComponent("health")
 	if !ok {
-		return false
+		return nil, false
 	}
 	health, ok := targetHealth.(*HealthComponent)
 	if !ok {
-		return false
+		return nil, false
 	}
 
 	// Check if target is already dead
 	if health.IsDead() {
+		return nil, false
+	}
+	return health, true
+}
+
+func (s *CombatSystem) Attack(attacker, target *Entity) bool {
+	// Validate entities are in valid state for combat
+	if !s.validateAttackEntities(attacker, target) {
+		return false
+	}
+
+	// Validate entities have required components
+	attack, ok := s.getAttackComponent(attacker)
+	if !ok {
+		return false
+	}
+
+	// Check cooldown
+	if !attack.CanAttack() {
+		return false
+	}
+
+	// Try projectile attack first (for ranged weapons)
+	success, isProjectile := s.tryProjectileAttack(attacker, target, attack)
+	if isProjectile {
+		return success
+	}
+
+	// Get and validate target health
+	health, ok := s.getTargetHealth(target)
+	if !ok {
 		return false
 	}
 
 	// Check range
-	_, attackerHasPos := attacker.GetComponent("position")
-	_, targetHasPos := target.GetComponent("position")
-	if attackerHasPos && targetHasPos {
-		distance := GetDistance(attacker, target)
-		if distance > attack.Range {
-			return false
-		}
+	if !s.validateAttackRange(attacker, target, attack.Range) {
+		return false
 	}
 
-	// Get attacker stats
-	attackerStatsComp, _ := attacker.GetComponent("stats")
-	var attackerStats *StatsComponent
-	if attackerStatsComp != nil {
-		attackerStats = attackerStatsComp.(*StatsComponent)
-	}
-
-	// Get target stats
-	targetStatsComp, _ := target.GetComponent("stats")
-	var targetStats *StatsComponent
-	if targetStatsComp != nil {
-		targetStats = targetStatsComp.(*StatsComponent)
-	}
+	// Get attacker and target stats
+	attackerStats := s.getEntityStats(attacker)
+	targetStats := s.getEntityStats(target)
 
 	// Check for evasion
+	if s.checkEvasion(attacker, target, targetStats) {
+		attack.ResetCooldown()
+		return false
+	}
+
+	// Calculate damage
+	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
+
+	// Apply target defense and resistances
+	finalDamage := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
+
+	// Minimum damage
+	if finalDamage < 1.0 {
+		finalDamage = 1.0
+	}
+
+	// Check for shield first
+	finalDamage = s.applyShieldAbsorption(target, finalDamage, attack)
+	if finalDamage <= 0 {
+		return true // Attack succeeded but damage fully absorbed
+	}
+
+	// Apply remaining damage to health
+	health.TakeDamage(finalDamage)
+
+	// Trigger animations and visual feedback
+	s.triggerAttackAnimation(attacker)
+	s.triggerHurtAnimation(target)
+	s.logDamageEvent(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
+	s.spawnHitParticles(target)
+	s.applyVisualFeedback(target, finalDamage)
+	s.triggerScreenShake(target, finalDamage, isCrit)
+
+	// Reset cooldown
+	attack.ResetCooldown()
+
+	// Trigger callback
+	if s.onDamageCallback != nil {
+		s.onDamageCallback(attacker, target, finalDamage)
+	}
+
+	return true
+}
+
+// getEntityStats retrieves the stats component from an entity, returns nil if not present.
+func (s *CombatSystem) getEntityStats(entity *Entity) *StatsComponent {
+	statsComp, _ := entity.GetComponent("stats")
+	if statsComp != nil {
+		return statsComp.(*StatsComponent)
+	}
+	return nil
+}
+
+// checkEvasion determines if an attack is evaded based on target evasion stats.
+func (s *CombatSystem) checkEvasion(attacker, target *Entity, targetStats *StatsComponent) bool {
 	if targetStats != nil && s.rollChance(targetStats.Evasion) {
 		// Attack missed
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -265,13 +357,15 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 				"evasion":    targetStats.Evasion,
 			}).Debug("attack evaded")
 		}
-		attack.ResetCooldown()
-		return false
+		return true
 	}
+	return false
+}
 
-	// Calculate damage
+// calculateDamage computes the base damage and determines if the attack is a critical hit.
+func (s *CombatSystem) calculateDamage(attack *AttackComponent, attackerStats *StatsComponent) (damage float64, isCrit bool) {
 	baseDamage := attack.Damage
-	isCrit := false
+	isCrit = false
 
 	// Apply attacker stats
 	if attackerStats != nil {
@@ -288,47 +382,44 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		}
 	}
 
-	// Apply target defense and resistances
+	return baseDamage, isCrit
+}
+
+// applyDefenseAndResistance reduces damage based on target's defense and resistances.
+func (s *CombatSystem) applyDefenseAndResistance(baseDamage float64, damageType combat.DamageType, targetStats *StatsComponent) float64 {
 	finalDamage := baseDamage
 	if targetStats != nil {
 		// Apply defense
-		if attack.DamageType == combat.DamageMagical {
+		if damageType == combat.DamageMagical {
 			finalDamage -= targetStats.MagicDefense
 		} else {
 			finalDamage -= targetStats.Defense
 		}
 
 		// Apply resistance
-		resistance := targetStats.GetResistance(attack.DamageType)
+		resistance := targetStats.GetResistance(damageType)
 		finalDamage *= (1.0 - resistance)
 	}
+	return finalDamage
+}
 
-	// Minimum damage
-	if finalDamage < 1.0 {
-		finalDamage = 1.0
-	}
-
-	// Check for shield first
+// applyShieldAbsorption reduces damage by shield absorption, returns remaining damage.
+func (s *CombatSystem) applyShieldAbsorption(target *Entity, damage float64, attack *AttackComponent) float64 {
+	finalDamage := damage
 	if shieldComp, hasShield := target.GetComponent("shield"); hasShield {
 		if shield, ok := shieldComp.(*ShieldComponent); ok {
 			if shield.IsActive() {
 				// Shield absorbs damage
 				absorbed := shield.AbsorbDamage(finalDamage)
 				finalDamage -= absorbed
-
-				// If shield absorbed all damage, no health damage
-				if finalDamage <= 0 {
-					attack.ResetCooldown()
-					return true
-				}
 			}
 		}
 	}
+	return finalDamage
+}
 
-	// Apply remaining damage to health
-	health.TakeDamage(finalDamage)
-
-	// Trigger attack animation for attacker
+// triggerAttackAnimation triggers the attack animation for the attacker entity.
+func (s *CombatSystem) triggerAttackAnimation(attacker *Entity) {
 	if animComp, hasAnim := attacker.GetComponent("animation"); hasAnim {
 		if anim, ok := animComp.(*AnimationComponent); ok {
 			// Log animation trigger for player when debugging
@@ -363,8 +454,10 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			}
 		}
 	}
+}
 
-	// Trigger hurt animation for target
+// triggerHurtAnimation triggers the hurt animation for the target entity.
+func (s *CombatSystem) triggerHurtAnimation(target *Entity) {
 	if animComp, hasAnim := target.GetComponent("animation"); hasAnim {
 		if anim, ok := animComp.(*AnimationComponent); ok {
 			anim.SetState(AnimationStateHit)
@@ -386,20 +479,25 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			}
 		}
 	}
+}
 
-	// Log damage event
+// logDamageEvent logs information about the damage dealt.
+func (s *CombatSystem) logDamageEvent(attacker, target *Entity, finalDamage, baseDamage float64, damageType combat.DamageType, isCrit bool, targetHealth float64) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 		s.logger.WithFields(logrus.Fields{
 			"attackerID":   attacker.ID,
 			"targetID":     target.ID,
 			"damage":       finalDamage,
 			"baseDamage":   baseDamage,
-			"damageType":   attack.DamageType,
+			"damageType":   damageType,
 			"critical":     isCrit,
-			"targetHealth": health.Current,
+			"targetHealth": targetHealth,
 		}).Info("damage dealt")
 	}
+}
 
+// spawnHitParticles creates particle effects at the target's position.
+func (s *CombatSystem) spawnHitParticles(target *Entity) {
 	// GAP-016 REPAIR: Spawn hit particles at target position
 	if s.particleSystem != nil && s.world != nil {
 		if posComp, ok := target.GetComponent("position"); ok {
@@ -410,7 +508,10 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			}
 		}
 	}
+}
 
+// applyVisualFeedback triggers visual hit flash on the target entity.
+func (s *CombatSystem) applyVisualFeedback(target *Entity, finalDamage float64) {
 	// GAP-012 REPAIR: Trigger hit flash on damage
 	// Phase 10.3: Respects accessibility settings via camera
 	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {
@@ -426,7 +527,10 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 			}
 		}
 	}
+}
 
+// triggerScreenShake applies camera shake based on damage dealt.
+func (s *CombatSystem) triggerScreenShake(target *Entity, finalDamage float64, isCrit bool) {
 	// GAP-012 REPAIR: Trigger screen shake on damage
 	// Phase 10.3: Enhanced shake with procedural intensity and duration
 	if s.camera != nil {
@@ -455,16 +559,6 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		// Use advanced shake if available, fallback to basic
 		s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
 	}
-
-	// Reset cooldown
-	attack.ResetCooldown()
-
-	// Trigger callback
-	if s.onDamageCallback != nil {
-		s.onDamageCallback(attacker, target, finalDamage)
-	}
-
-	return true
 }
 
 // rollChance returns true if a random roll succeeds based on the given chance (0.0 to 1.0).

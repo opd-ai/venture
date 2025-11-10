@@ -183,42 +183,21 @@ func (e *Entity) GetStats() *StatsComponent {
 }
 
 // GetExperience retrieves the ExperienceComponent if present.
+// Uses cached pointer for zero-overhead access.
 func (e *Entity) GetExperience() *ExperienceComponent {
-	if comp, ok := e.Components["experience"]; ok {
-		if exp, ok := comp.(*ExperienceComponent); ok {
-			return exp
-		}
-		// Type mismatch - component registered with wrong type
-		// This indicates a serious bug in component registration
-		return nil
-	}
-	return nil
+	return e.experience
 }
 
 // GetAttack retrieves the AttackComponent if present.
+// Uses cached pointer for zero-overhead access.
 func (e *Entity) GetAttack() *AttackComponent {
-	if comp, ok := e.Components["attack"]; ok {
-		if atk, ok := comp.(*AttackComponent); ok {
-			return atk
-		}
-		// Type mismatch - component registered with wrong type
-		// This indicates a serious bug in component registration
-		return nil
-	}
-	return nil
+	return e.attack
 }
 
 // GetAnimation retrieves the AnimationComponent if present.
+// Uses cached pointer for zero-overhead access.
 func (e *Entity) GetAnimation() *AnimationComponent {
-	if comp, ok := e.Components["animation"]; ok {
-		if anim, ok := comp.(*AnimationComponent); ok {
-			return anim
-		}
-		// Type mismatch - component registered with wrong type
-		// This indicates a serious bug in component registration
-		return nil
-	}
-	return nil
+	return e.animation
 }
 
 // World manages all entities and systems in the game.

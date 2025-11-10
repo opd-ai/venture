@@ -427,68 +427,84 @@ func (g *BSPGenerator) addWaterFeatures(terrain *Terrain, rng *rand.Rand) {
 
 // chamferRoomCorners adds diagonal walls to room corners (Phase 11.1).
 // This creates 45° angle cuts on corners, making rooms more visually interesting.
-func (g *BSPGenerator) chamferRoomCorners(terrain *Terrain, room *Room, rng *rand.Rand) {
-	// Determine chamfer size (2-3 tiles for better visibility)
-	chamferSize := 2 + rng.Intn(2) // 2-3 tiles (was 1-2)
-
-	// Track which corners to chamfer (at least 1, up to all 4)
-	numCorners := 1 + rng.Intn(4) // 1-4 corners
+// selectRandomCorners randomly selects which corners to chamfer.
+// Returns a boolean array indicating which of the 4 corners are selected.
+func (g *BSPGenerator) selectRandomCorners(numCorners int, rng *rand.Rand) []bool {
 	corners := []bool{false, false, false, false}
-
-	// Use Fisher-Yates shuffle to select unique corners
 	cornerIndices := []int{0, 1, 2, 3}
+
 	for i := len(cornerIndices) - 1; i > 0; i-- {
 		j := rng.Intn(i + 1)
 		cornerIndices[i], cornerIndices[j] = cornerIndices[j], cornerIndices[i]
 	}
 
-	// Mark the first numCorners corners as selected
 	for i := 0; i < numCorners; i++ {
 		corners[cornerIndices[i]] = true
 	}
 
-	// Top-left corner (NW) - use TileWallSE (\ shape)
+	return corners
+}
+
+// chamferTopLeft applies chamfer to the top-left corner.
+func (g *BSPGenerator) chamferTopLeft(terrain *Terrain, room *Room, chamferSize int) {
+	for i := 0; i < chamferSize; i++ {
+		x := room.X + i
+		y := room.Y + i
+		if terrain.IsInBounds(x, y) {
+			terrain.SetTile(x, y, TileWallSE)
+		}
+	}
+}
+
+// chamferTopRight applies chamfer to the top-right corner.
+func (g *BSPGenerator) chamferTopRight(terrain *Terrain, room *Room, chamferSize int) {
+	for i := 0; i < chamferSize; i++ {
+		x := room.X + room.Width - 1 - i
+		y := room.Y + i
+		if terrain.IsInBounds(x, y) {
+			terrain.SetTile(x, y, TileWallSW)
+		}
+	}
+}
+
+// chamferBottomLeft applies chamfer to the bottom-left corner.
+func (g *BSPGenerator) chamferBottomLeft(terrain *Terrain, room *Room, chamferSize int) {
+	for i := 0; i < chamferSize; i++ {
+		x := room.X + i
+		y := room.Y + room.Height - 1 - i
+		if terrain.IsInBounds(x, y) {
+			terrain.SetTile(x, y, TileWallNE)
+		}
+	}
+}
+
+// chamferBottomRight applies chamfer to the bottom-right corner.
+func (g *BSPGenerator) chamferBottomRight(terrain *Terrain, room *Room, chamferSize int) {
+	for i := 0; i < chamferSize; i++ {
+		x := room.X + room.Width - 1 - i
+		y := room.Y + room.Height - 1 - i
+		if terrain.IsInBounds(x, y) {
+			terrain.SetTile(x, y, TileWallNW)
+		}
+	}
+}
+
+func (g *BSPGenerator) chamferRoomCorners(terrain *Terrain, room *Room, rng *rand.Rand) {
+	chamferSize := 2 + rng.Intn(2)
+	numCorners := 1 + rng.Intn(4)
+	corners := g.selectRandomCorners(numCorners, rng)
+
 	if corners[0] {
-		for i := 0; i < chamferSize; i++ {
-			x := room.X + i
-			y := room.Y + i
-			if terrain.IsInBounds(x, y) {
-				terrain.SetTile(x, y, TileWallSE)
-			}
-		}
+		g.chamferTopLeft(terrain, room, chamferSize)
 	}
-
-	// Top-right corner (NE) - use TileWallSW (/ shape)
 	if corners[1] {
-		for i := 0; i < chamferSize; i++ {
-			x := room.X + room.Width - 1 - i
-			y := room.Y + i
-			if terrain.IsInBounds(x, y) {
-				terrain.SetTile(x, y, TileWallSW)
-			}
-		}
+		g.chamferTopRight(terrain, room, chamferSize)
 	}
-
-	// Bottom-left corner (SW) - use TileWallNE (/ shape)
 	if corners[2] {
-		for i := 0; i < chamferSize; i++ {
-			x := room.X + i
-			y := room.Y + room.Height - 1 - i
-			if terrain.IsInBounds(x, y) {
-				terrain.SetTile(x, y, TileWallNE)
-			}
-		}
+		g.chamferBottomLeft(terrain, room, chamferSize)
 	}
-
-	// Bottom-right corner (SE) - use TileWallNW (\ shape)
 	if corners[3] {
-		for i := 0; i < chamferSize; i++ {
-			x := room.X + room.Width - 1 - i
-			y := room.Y + room.Height - 1 - i
-			if terrain.IsInBounds(x, y) {
-				terrain.SetTile(x, y, TileWallNW)
-			}
-		}
+		g.chamferBottomRight(terrain, room, chamferSize)
 	}
 }
 

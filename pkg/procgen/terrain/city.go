@@ -74,6 +74,75 @@ func (r Rect) Center() (int, int) {
 }
 
 // Generate creates a city environment with buildings, streets, and public spaces.
+// extractDimensions extracts width and height from custom parameters.
+func (g *CityGenerator) extractDimensions(params procgen.GenerationParams) (int, int) {
+	width := 80
+	height := 50
+
+	if params.Custom != nil {
+		if w, ok := params.Custom["width"].(int); ok {
+			width = w
+		}
+		if h, ok := params.Custom["height"].(int); ok {
+			height = h
+		}
+	}
+
+	return width, height
+}
+
+// extractCitySettings extracts city-specific settings from custom parameters.
+func (g *CityGenerator) extractCitySettings(params procgen.GenerationParams) {
+	if params.Custom == nil {
+		return
+	}
+
+	if bs, ok := params.Custom["blockSize"].(int); ok {
+		g.blockSize = bs
+	}
+	if sw, ok := params.Custom["streetWidth"].(int); ok {
+		g.streetWidth = sw
+	}
+	if bd, ok := params.Custom["buildingDensity"].(float64); ok {
+		g.buildingDensity = bd
+	}
+	if pd, ok := params.Custom["plazaDensity"].(float64); ok {
+		g.plazaDensity = pd
+	}
+}
+
+// validateCityParameters validates city generation parameters.
+func (g *CityGenerator) validateCityParameters(width, height int) error {
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+	}
+
+	if width > 1000 || height > 1000 {
+		return fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
+	}
+
+	if g.blockSize < 4 || g.blockSize > 30 {
+		return fmt.Errorf("invalid block size: %d (must be 4-30)", g.blockSize)
+	}
+
+	if g.streetWidth < 1 || g.streetWidth > 5 {
+		return fmt.Errorf("invalid street width: %d (must be 1-5)", g.streetWidth)
+	}
+
+	return nil
+}
+
+// initializeCityTerrain creates and initializes terrain with walls.
+func (g *CityGenerator) initializeCityTerrain(width, height int, seed int64) *Terrain {
+	terrain := NewTerrain(width, height, seed)
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			terrain.SetTile(x, y, TileWall)
+		}
+	}
+	return terrain
+}
+
 func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
@@ -84,75 +153,21 @@ func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		}).Debug("starting city terrain generation")
 	}
 
-	// Use custom parameters if provided
-	width := 80
-	height := 50
-	if params.Custom != nil {
-		if w, ok := params.Custom["width"].(int); ok {
-			width = w
-		}
-		if h, ok := params.Custom["height"].(int); ok {
-			height = h
-		}
-		if bs, ok := params.Custom["blockSize"].(int); ok {
-			g.blockSize = bs
-		}
-		if sw, ok := params.Custom["streetWidth"].(int); ok {
-			g.streetWidth = sw
-		}
-		if bd, ok := params.Custom["buildingDensity"].(float64); ok {
-			g.buildingDensity = bd
-		}
-		if pd, ok := params.Custom["plazaDensity"].(float64); ok {
-			g.plazaDensity = pd
-		}
+	width, height := g.extractDimensions(params)
+	g.extractCitySettings(params)
+
+	if err := g.validateCityParameters(width, height); err != nil {
+		return nil, err
 	}
 
-	// Validate dimensions
-	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
-	}
-
-	if width > 1000 || height > 1000 {
-		return nil, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
-	}
-
-	// Validate block size and street width
-	if g.blockSize < 4 || g.blockSize > 30 {
-		return nil, fmt.Errorf("invalid block size: %d (must be 4-30)", g.blockSize)
-	}
-
-	if g.streetWidth < 1 || g.streetWidth > 5 {
-		return nil, fmt.Errorf("invalid street width: %d (must be 1-5)", g.streetWidth)
-	}
-
-	// Create RNG with seed
 	rng := rand.New(rand.NewSource(seed))
+	terrain := g.initializeCityTerrain(width, height, seed)
 
-	// Create terrain (starts with all walls)
-	terrain := NewTerrain(width, height, seed)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			terrain.SetTile(x, y, TileWall)
-		}
-	}
-
-	// Subdivide into city blocks
 	blocks := g.subdivideGrid(terrain, rng)
-
-	// Create street network first (before buildings)
 	g.createStreetNetwork(blocks, terrain)
-
-	// Determine block types
 	g.assignBlockTypes(blocks, rng)
-
-	// Place buildings, plazas, and parks
 	g.placeBuildings(blocks, terrain, rng)
-
-	// Add alleys between some buildings
 	g.addAlleys(blocks, terrain, rng)
-
-	// Place stairs in central plaza or large building
 	g.placeStairs(blocks, terrain, rng)
 
 	if g.logger != nil {
@@ -524,75 +539,88 @@ func (g *CityGenerator) addAlleys(blocks []*CityBlock, terrain *Terrain, rng *ra
 }
 
 // placeStairs places stairs in the largest plaza or a large building.
-func (g *CityGenerator) placeStairs(blocks []*CityBlock, terrain *Terrain, rng *rand.Rand) {
-	// Find all plazas
+// findPlazaBlocks returns all plaza blocks from the given blocks.
+func (g *CityGenerator) findPlazaBlocks(blocks []*CityBlock) []*CityBlock {
 	plazas := make([]*CityBlock, 0)
 	for _, block := range blocks {
 		if block.BlockType == BlockPlaza {
 			plazas = append(plazas, block)
 		}
 	}
+	return plazas
+}
 
-	// Place stairs in plazas if available
-	if len(plazas) > 0 {
-		// Sort by area (largest first)
-		for i := 0; i < len(plazas); i++ {
-			for j := i + 1; j < len(plazas); j++ {
-				area1 := plazas[i].Rect.Width * plazas[i].Rect.Height
-				area2 := plazas[j].Rect.Width * plazas[j].Rect.Height
-				if area2 > area1 {
-					plazas[i], plazas[j] = plazas[j], plazas[i]
-				}
+// sortPlazasByArea sorts plazas by area (largest first) using bubble sort.
+func (g *CityGenerator) sortPlazasByArea(plazas []*CityBlock) {
+	for i := 0; i < len(plazas); i++ {
+		for j := i + 1; j < len(plazas); j++ {
+			area1 := plazas[i].Rect.Width * plazas[i].Rect.Height
+			area2 := plazas[j].Rect.Width * plazas[j].Rect.Height
+			if area2 > area1 {
+				plazas[i], plazas[j] = plazas[j], plazas[i]
 			}
 		}
+	}
+}
 
-		// Place stairs up in largest plaza
-		cx, cy := plazas[0].Rect.Center()
-		terrain.AddStairs(cx, cy, true)
+// placeStairsInPlazas places stairs up and down in plaza blocks.
+func (g *CityGenerator) placeStairsInPlazas(plazas []*CityBlock, terrain *Terrain) {
+	g.sortPlazasByArea(plazas)
 
-		// Place stairs down in second plaza or opposite corner of same plaza
-		if len(plazas) > 1 {
-			cx, cy = plazas[1].Rect.Center()
-			terrain.AddStairs(cx, cy, false)
-		} else {
-			// Use opposite corner of same plaza
-			rect := plazas[0].Rect
-			x := rect.X + 1
-			y := rect.Y + 1
+	cx, cy := plazas[0].Rect.Center()
+	terrain.AddStairs(cx, cy, true)
+
+	if len(plazas) > 1 {
+		cx, cy = plazas[1].Rect.Center()
+		terrain.AddStairs(cx, cy, false)
+	} else {
+		rect := plazas[0].Rect
+		x := rect.X + 1
+		y := rect.Y + 1
+		terrain.AddStairs(x, y, false)
+	}
+}
+
+// findWalkableNearCenter finds a walkable position near the given center coordinates.
+func (g *CityGenerator) findWalkableNearCenter(cx, cy int, terrain *Terrain) (int, int, bool) {
+	for dy := 0; dy < 3; dy++ {
+		for dx := 0; dx < 3; dx++ {
+			x := cx + dx - 1
+			y := cy + dy - 1
+			if terrain.IsWalkable(x, y) {
+				return x, y, true
+			}
+		}
+	}
+	return cx, cy, false
+}
+
+// placeStairsInBlocks places stairs in first and last block centers.
+func (g *CityGenerator) placeStairsInBlocks(blocks []*CityBlock, terrain *Terrain) {
+	if len(blocks) == 0 {
+		return
+	}
+
+	cx, cy := blocks[0].Rect.Center()
+	if x, y, found := g.findWalkableNearCenter(cx, cy, terrain); found {
+		terrain.AddStairs(x, y, true)
+	}
+
+	if len(blocks) > 1 {
+		cx, cy = blocks[len(blocks)-1].Rect.Center()
+		if x, y, found := g.findWalkableNearCenter(cx, cy, terrain); found {
 			terrain.AddStairs(x, y, false)
 		}
-	} else {
-		// No plazas, place in first and last block centers
-		if len(blocks) > 0 {
-			cx, cy := blocks[0].Rect.Center()
-			// Find walkable spot near center
-			for dy := 0; dy < 3; dy++ {
-				for dx := 0; dx < 3; dx++ {
-					x := cx + dx - 1
-					y := cy + dy - 1
-					if terrain.IsWalkable(x, y) {
-						terrain.AddStairs(x, y, true)
-						goto foundUp
-					}
-				}
-			}
-		foundUp:
+	}
+}
 
-			if len(blocks) > 1 {
-				cx, cy := blocks[len(blocks)-1].Rect.Center()
-				for dy := 0; dy < 3; dy++ {
-					for dx := 0; dx < 3; dx++ {
-						x := cx + dx - 1
-						y := cy + dy - 1
-						if terrain.IsWalkable(x, y) {
-							terrain.AddStairs(x, y, false)
-							goto foundDown
-						}
-					}
-				}
-			foundDown:
-			}
-		}
+func (g *CityGenerator) placeStairs(blocks []*CityBlock, terrain *Terrain, rng *rand.Rand) {
+	plazas := g.findPlazaBlocks(blocks)
+
+	if len(plazas) > 0 {
+		g.placeStairsInPlazas(plazas, terrain)
+	} else {
+		g.placeStairsInBlocks(blocks, terrain)
 	}
 }
 

@@ -54,22 +54,12 @@ type BiomeRegionInfo struct {
 	Bounds        *VoronoiRegion // Region tiles and bounds
 }
 
-// Generate creates composite terrain by combining multiple biome generators.
-func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":       seed,
-			"genreID":    params.GenreID,
-			"depth":      params.Depth,
-			"difficulty": params.Difficulty,
-		}).Debug("starting composite terrain generation")
-	}
-
-	// Extract custom parameters
+// extractParameters extracts generation parameters from custom params.
+func (g *CompositeGenerator) extractParameters(params procgen.GenerationParams) (int, int, int, int) {
 	width := 80
 	height := 50
-	biomeCount := g.biomeCount           // Use local copy
-	transitionWidth := g.transitionWidth // Use local copy
+	biomeCount := g.biomeCount
+	transitionWidth := g.transitionWidth
 
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok {
@@ -86,36 +76,33 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 		}
 	}
 
-	// Validate parameters
+	return width, height, biomeCount, transitionWidth
+}
+
+// validateAndClampParameters validates dimensions and clamps biome/transition values.
+func (g *CompositeGenerator) validateAndClampParameters(width, height, biomeCount, transitionWidth int) (int, int, int, int, error) {
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+		return 0, 0, 0, 0, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
 	}
 	if width < 60 || height < 40 {
-		return nil, fmt.Errorf("dimensions too small for composite generation: width=%d, height=%d (min 60x40)", width, height)
+		return 0, 0, 0, 0, fmt.Errorf("dimensions too small for composite generation: width=%d, height=%d (min 60x40)", width, height)
 	}
 	if width > 500 || height > 500 {
-		return nil, fmt.Errorf("dimensions too large: width=%d, height=%d (max 500x500)", width, height)
+		return 0, 0, 0, 0, fmt.Errorf("dimensions too large: width=%d, height=%d (max 500x500)", width, height)
 	}
+
 	if biomeCount < 2 || biomeCount > 4 {
-		biomeCount = 3 // Clamp to valid range
+		biomeCount = 3
 	}
 	if transitionWidth < 1 || transitionWidth > 5 {
-		transitionWidth = 3 // Clamp to valid range
+		transitionWidth = 3
 	}
 
-	// Create RNG
-	rng := rand.New(rand.NewSource(seed))
+	return width, height, biomeCount, transitionWidth, nil
+}
 
-	// Create base terrain
-	terrain := NewTerrain(width, height, seed)
-
-	// Create Voronoi diagram for biome partitioning
-	diagram := GenerateVoronoiDiagram(width, height, biomeCount, rng)
-
-	// Select generators for each region
-	generatorNames := g.selectGenerators(params.GenreID, biomeCount, rng)
-
-	// Create biome region info
+// createBiomeRegions creates biome region information structures.
+func (g *CompositeGenerator) createBiomeRegions(seed int64, biomeCount int, generatorNames []string, diagram *VoronoiDiagram) []*BiomeRegionInfo {
 	biomeRegions := make([]*BiomeRegionInfo, biomeCount)
 	seedGen := procgen.NewSeedGenerator(seed)
 
@@ -128,34 +115,62 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 			Bounds:        diagram.Regions[i],
 		}
 	}
+	return biomeRegions
+}
 
-	// Generate each biome region
+// applyPostProcessing applies transitions, connectivity, and stairs to the terrain.
+func (g *CompositeGenerator) applyPostProcessing(terrain *Terrain, diagram *VoronoiDiagram, biomeRegions []*BiomeRegionInfo, transitionWidth int, depth int, rng *rand.Rand) error {
+	biomeTypes := make(map[int]BiomeType)
+	for _, region := range biomeRegions {
+		biomeTypes[region.ID] = region.BiomeType
+	}
+
+	BlendTransitionZones(terrain, diagram, biomeTypes, transitionWidth, rng)
+
+	if err := g.ensureConnectivity(terrain, diagram, biomeRegions, rng); err != nil {
+		return fmt.Errorf("failed to ensure connectivity: %w", err)
+	}
+
+	if depth > 0 {
+		g.placeStairs(terrain, diagram, biomeRegions, rng)
+	}
+
+	return nil
+}
+
+// Generate creates composite terrain by combining multiple biome generators.
+func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting composite terrain generation")
+	}
+
+	width, height, biomeCount, transitionWidth := g.extractParameters(params)
+	width, height, biomeCount, transitionWidth, err := g.validateAndClampParameters(width, height, biomeCount, transitionWidth)
+	if err != nil {
+		return nil, err
+	}
+
+	rng := rand.New(rand.NewSource(seed))
+	terrain := NewTerrain(width, height, seed)
+	diagram := GenerateVoronoiDiagram(width, height, biomeCount, rng)
+	generatorNames := g.selectGenerators(params.GenreID, biomeCount, rng)
+	biomeRegions := g.createBiomeRegions(seed, biomeCount, generatorNames, diagram)
+
 	for _, region := range biomeRegions {
 		if err := g.generateBiomeRegion(terrain, region, diagram, params, rng); err != nil {
 			return nil, fmt.Errorf("failed to generate biome %d (%s): %w", region.ID, region.GeneratorName, err)
 		}
 	}
 
-	// Create biome type mapping
-	biomeTypes := make(map[int]BiomeType)
-	for _, region := range biomeRegions {
-		biomeTypes[region.ID] = region.BiomeType
+	if err := g.applyPostProcessing(terrain, diagram, biomeRegions, transitionWidth, params.Depth, rng); err != nil {
+		return nil, err
 	}
 
-	// Apply transition zones
-	BlendTransitionZones(terrain, diagram, biomeTypes, transitionWidth, rng)
-
-	// Ensure connectivity between all regions
-	if err := g.ensureConnectivity(terrain, diagram, biomeRegions, rng); err != nil {
-		return nil, fmt.Errorf("failed to ensure connectivity: %w", err)
-	}
-
-	// Place stairs (if multi-level)
-	if params.Depth > 0 {
-		g.placeStairs(terrain, diagram, biomeRegions, rng)
-	}
-
-	// Store biome region info in terrain (for debugging/visualization)
 	terrain.Rooms = make([]*Room, 0)
 
 	if g.logger != nil {

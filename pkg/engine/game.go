@@ -860,7 +860,7 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 		if g.sceneBuffer == nil {
 			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 		}
-		
+
 		// Clear and reuse scene buffer (avoid per-frame allocation)
 		g.sceneBuffer.Clear()
 

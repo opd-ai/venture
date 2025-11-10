@@ -328,8 +328,11 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	batches := r.getBatchMap()
 	defer r.returnBatchMap(batches)
 
-	// Collect entities without sprite images (will draw individually with colored rectangles)
-	nonSpriteEntities := make([]*Entity, 0)
+	// Reuse non-sprite buffer instead of allocating each frame
+	r.nonSpriteBuffer = r.nonSpriteBuffer[:0]
+	if cap(r.nonSpriteBuffer) < len(entities) {
+		r.nonSpriteBuffer = make([]*Entity, 0, len(entities))
+	}
 
 	// Group entities by sprite image
 	for _, entity := range entities {
@@ -348,7 +351,7 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 
 		// Entities without sprite images need individual rendering
 		if sprite.Image == nil {
-			nonSpriteEntities = append(nonSpriteEntities, entity)
+			r.nonSpriteBuffer = append(r.nonSpriteBuffer, entity)
 			continue
 		}
 
@@ -364,7 +367,7 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	}
 
 	// Draw non-sprite entities individually (colored rectangles)
-	for _, entity := range nonSpriteEntities {
+	for _, entity := range r.nonSpriteBuffer {
 		r.drawEntity(entity)
 		r.stats.RenderedEntities++
 	}

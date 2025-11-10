@@ -97,34 +97,35 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !isDead {
 			// Update attack cooldowns only for living entities
 			if attackComp, ok := entity.GetComponent("attack"); ok {
-				attack := attackComp.(*AttackComponent)
-				beforeCooldown := attack.CooldownTimer
-				attack.UpdateCooldown(deltaTime)
+				if attack, ok := attackComp.(*AttackComponent); ok {
+					beforeCooldown := attack.CooldownTimer
+					attack.UpdateCooldown(deltaTime)
 
-				// Log cooldown updates for player when debugging
-				if entity.HasComponent("input") && beforeCooldown > 0 && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entityID":       entity.ID,
-						"cooldownBefore": beforeCooldown,
-						"cooldownAfter":  attack.CooldownTimer,
-						"deltaTime":      deltaTime,
-					}).Debug("player attack cooldown updated")
+					// Log cooldown updates for player when debugging
+					if entity.HasComponent("input") && beforeCooldown > 0 && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+						s.logger.WithFields(logrus.Fields{
+							"entityID":       entity.ID,
+							"cooldownBefore": beforeCooldown,
+							"cooldownAfter":  attack.CooldownTimer,
+							"deltaTime":      deltaTime,
+						}).Debug("player attack cooldown updated")
+					}
 				}
 			}
 		}
 
 		// Process status effects (for both living and dead entities)
 		if statusComp, ok := entity.GetComponent("status_effect"); ok {
-			status := statusComp.(*StatusEffectComponent)
+			if status, ok := statusComp.(*StatusEffectComponent); ok {
+				// Update status effect
+				if ticked := status.Update(deltaTime); ticked {
+					s.applyStatusEffectTick(entity, status)
+				}
 
-			// Update status effect
-			if ticked := status.Update(deltaTime); ticked {
-				s.applyStatusEffectTick(entity, status)
-			}
-
-			// Remove expired effects
-			if status.IsExpired() {
-				entity.RemoveComponent("status_effect")
+				// Remove expired effects
+				if status.IsExpired() {
+					entity.RemoveComponent("status_effect")
+				}
 			}
 		}
 	}
@@ -132,17 +133,17 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 	// Clean up dead entities
 	for _, entity := range entities {
 		if healthComp, ok := entity.GetComponent("health"); ok {
-			health := healthComp.(*HealthComponent)
-			if health.IsDead() {
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entityID":      entity.ID,
-						"currentHealth": health.Current,
-					}).Info("entity death")
-				}
-				if s.onDeathCallback != nil {
-					s.onDeathCallback(entity)
-				}
+			if health, ok := healthComp.(*HealthComponent); ok {
+				if health.IsDead() {
+					if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+						s.logger.WithFields(logrus.Fields{
+							"entityID":      entity.ID,
+							"currentHealth": health.Current,
+						}).Info("entity death")
+					}
+					if s.onDeathCallback != nil {
+						s.onDeathCallback(entity)
+					}
 			}
 		}
 	}
@@ -155,7 +156,10 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 		return
 	}
 
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 
 	switch effect.EffectType {
 	case "poison", "burn":
@@ -185,7 +189,10 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	if !ok {
 		return false
 	}
-	attack := attackComp.(*AttackComponent)
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return false
+	}
 
 	// Check cooldown
 	if !attack.CanAttack() {
@@ -195,15 +202,16 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Phase 10.2: Check if attacker has a projectile weapon equipped
 	// If so, spawn a projectile instead of doing instant damage
 	if equipComp, hasEquip := attacker.GetComponent("equipment"); hasEquip {
-		equipment := equipComp.(*EquipmentComponent)
-		if weapon, hasWeapon := equipment.Slots[SlotMainHand]; hasWeapon && weapon != nil {
-			if weapon.Stats.IsProjectile {
-				// Spawn projectile for ranged weapon
-				success := s.spawnProjectile(attacker, target, weapon, attack)
-				if success {
-					attack.ResetCooldown()
+		if equipment, ok := equipComp.(*EquipmentComponent); ok {
+			if weapon, hasWeapon := equipment.Slots[SlotMainHand]; hasWeapon && weapon != nil {
+				if weapon.Stats.IsProjectile {
+					// Spawn projectile for ranged weapon
+					success := s.spawnProjectile(attacker, target, weapon, attack)
+					if success {
+						attack.ResetCooldown()
+					}
+					return success
 				}
-				return success
 			}
 		}
 	}
@@ -212,7 +220,10 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	if !ok {
 		return false
 	}
-	health := targetHealth.(*HealthComponent)
+	health, ok := targetHealth.(*HealthComponent)
+	if !ok {
+		return false
+	}
 
 	// Check if target is already dead
 	if health.IsDead() {
@@ -298,16 +309,17 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Check for shield first
 	if shieldComp, hasShield := target.GetComponent("shield"); hasShield {
-		shield := shieldComp.(*ShieldComponent)
-		if shield.IsActive() {
-			// Shield absorbs damage
-			absorbed := shield.AbsorbDamage(finalDamage)
-			finalDamage -= absorbed
+		if shield, ok := shieldComp.(*ShieldComponent); ok {
+			if shield.IsActive() {
+				// Shield absorbs damage
+				absorbed := shield.AbsorbDamage(finalDamage)
+				finalDamage -= absorbed
 
-			// If shield absorbed all damage, no health damage
-			if finalDamage <= 0 {
-				attack.ResetCooldown()
-				return true
+				// If shield absorbed all damage, no health damage
+				if finalDamage <= 0 {
+					attack.ResetCooldown()
+					return true
+				}
 			}
 		}
 	}
@@ -317,56 +329,59 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Trigger attack animation for attacker
 	if animComp, hasAnim := attacker.GetComponent("animation"); hasAnim {
-		anim := animComp.(*AnimationComponent)
+		if anim, ok := animComp.(*AnimationComponent); ok {
+			// Log animation trigger for player when debugging
+			if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithFields(logrus.Fields{
+					"attackerID":    attacker.ID,
+					"previousState": anim.CurrentState,
+					"newState":      "ATTACK",
+				}).Debug("player attack animation triggered")
+			}
 
-		// Log animation trigger for player when debugging
-		if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"attackerID":    attacker.ID,
-				"previousState": anim.CurrentState,
-				"newState":      "ATTACK",
-			}).Debug("player attack animation triggered")
-		}
-
-		anim.SetState(AnimationStateAttack)
-		// Set callback to return to idle after attack animation completes
-		anim.OnComplete = func() {
-			// Check if entity is moving to set appropriate idle/walk state
-			if velComp, hasVel := attacker.GetComponent("velocity"); hasVel {
-				vel := velComp.(*VelocityComponent)
-				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-				if speed > 0.1 {
-					anim.SetState(AnimationStateWalk)
+			anim.SetState(AnimationStateAttack)
+			// Set callback to return to idle after attack animation completes
+			anim.OnComplete = func() {
+				// Check if entity is moving to set appropriate idle/walk state
+				if velComp, hasVel := attacker.GetComponent("velocity"); hasVel {
+					if vel, ok := velComp.(*VelocityComponent); ok {
+						speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+						if speed > 0.1 {
+							anim.SetState(AnimationStateWalk)
+						} else {
+							anim.SetState(AnimationStateIdle)
+						}
+					}
 				} else {
 					anim.SetState(AnimationStateIdle)
 				}
-			} else {
-				anim.SetState(AnimationStateIdle)
-			}
 
-			if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithField("attackerID", attacker.ID).Debug("player attack animation complete")
+				if attacker.HasComponent("input") && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithField("attackerID", attacker.ID).Debug("player attack animation complete")
+				}
 			}
 		}
 	}
 
 	// Trigger hurt animation for target
 	if animComp, hasAnim := target.GetComponent("animation"); hasAnim {
-		anim := animComp.(*AnimationComponent)
-		anim.SetState(AnimationStateHit)
-		// Set a callback to return to idle after hurt animation
-		anim.OnComplete = func() {
-			// Check if entity is moving to set appropriate idle/walk state
-			if velComp, hasVel := target.GetComponent("velocity"); hasVel {
-				vel := velComp.(*VelocityComponent)
-				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-				if speed > 0.1 {
-					anim.SetState(AnimationStateWalk)
+		if anim, ok := animComp.(*AnimationComponent); ok {
+			anim.SetState(AnimationStateHit)
+			// Set a callback to return to idle after hurt animation
+			anim.OnComplete = func() {
+				// Check if entity is moving to set appropriate idle/walk state
+				if velComp, hasVel := target.GetComponent("velocity"); hasVel {
+					if vel, ok := velComp.(*VelocityComponent); ok {
+						speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+						if speed > 0.1 {
+							anim.SetState(AnimationStateWalk)
+						} else {
+							anim.SetState(AnimationStateIdle)
+						}
+					}
 				} else {
 					anim.SetState(AnimationStateIdle)
 				}
-			} else {
-				anim.SetState(AnimationStateIdle)
 			}
 		}
 	}
@@ -387,10 +402,11 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// GAP-016 REPAIR: Spawn hit particles at target position
 	if s.particleSystem != nil && s.world != nil {
 		if posComp, ok := target.GetComponent("position"); ok {
-			pos := posComp.(*PositionComponent)
-			// Use timestamp for particle seed variation
-			particleSeed := s.seed + int64(pos.X*1000) + int64(pos.Y*1000)
-			s.particleSystem.SpawnHitSparks(s.world, pos.X, pos.Y, particleSeed, s.genreID)
+			if pos, ok := posComp.(*PositionComponent); ok {
+				// Use timestamp for particle seed variation
+				particleSeed := s.seed + int64(pos.X*1000) + int64(pos.Y*1000)
+				s.particleSystem.SpawnHitSparks(s.world, pos.X, pos.Y, particleSeed, s.genreID)
+			}
 		}
 	}
 
@@ -399,13 +415,14 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {
 		// Check accessibility settings for visual flash
 		if s.camera != nil && s.camera.Accessibility.ShouldApplyVisualFlash() {
-			feedback := feedbackComp.(*VisualFeedbackComponent)
-			// Flash intensity scales with damage (0.3-1.0 range)
-			flashIntensity := 0.3 + (finalDamage / 100.0)
-			if flashIntensity > 1.0 {
-				flashIntensity = 1.0
+			if feedback, ok := feedbackComp.(*VisualFeedbackComponent); ok {
+				// Flash intensity scales with damage (0.3-1.0 range)
+				flashIntensity := 0.3 + (finalDamage / 100.0)
+				if flashIntensity > 1.0 {
+					flashIntensity = 1.0
+				}
+				feedback.TriggerFlash(flashIntensity)
 			}
-			feedback.TriggerFlash(flashIntensity)
 		}
 	}
 
@@ -466,14 +483,24 @@ func (s *CombatSystem) CanAttackTarget(attacker, target *Entity) bool {
 	if !ok {
 		return false
 	}
-	attack := attackComp.(*AttackComponent)
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return false
+	}
 
 	if !attack.CanAttack() {
 		return false
 	}
 
 	targetHealth, ok := target.GetComponent("health")
-	if !ok || targetHealth.(*HealthComponent).IsDead() {
+	if !ok {
+		return false
+	}
+	if health, ok := targetHealth.(*HealthComponent); ok {
+		if health.IsDead() {
+			return false
+		}
+	} else {
 		return false
 	}
 
@@ -506,7 +533,10 @@ func (s *CombatSystem) Heal(target *Entity, amount float64) {
 		return
 	}
 
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 	health.Heal(amount)
 }
 
@@ -530,7 +560,9 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 	attackerTeam, _ := attacker.GetComponent("team")
 	var attackerTeamID int
 	if attackerTeam != nil {
-		attackerTeamID = attackerTeam.(*TeamComponent).TeamID
+		if team, ok := attackerTeam.(*TeamComponent); ok {
+			attackerTeamID = team.TeamID
+		}
 	}
 
 	enemies := make([]*Entity, 0)
@@ -614,7 +646,10 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 	if !hasPos {
 		return nil
 	}
-	pos := attackerPos.(*PositionComponent)
+	pos, ok := attackerPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
 
 	// Filter enemies by aim cone and find closest
 	var bestEnemy *Entity
@@ -626,7 +661,10 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 		if !hasEnemyPos {
 			continue
 		}
-		ePos := enemyPos.(*PositionComponent)
+		ePos, ok := enemyPos.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate angle from attacker to enemy
 		dx := ePos.X - pos.X
@@ -669,20 +707,35 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 	if !hasPos {
 		return false
 	}
-	attackerPos := attackerPosComp.(*PositionComponent)
+	attackerPos, ok := attackerPosComp.(*PositionComponent)
+	if !ok {
+		return false
+	}
 
 	// Get aim direction
 	var aimAngle float64
 	if aimComp, hasAim := attacker.GetComponent("aim"); hasAim {
-		aim := aimComp.(*AimComponent)
-		aimAngle = aim.AimAngle
+		if aim, ok := aimComp.(*AimComponent); ok {
+			aimAngle = aim.AimAngle
+		}
 	} else if rotComp, hasRot := attacker.GetComponent("rotation"); hasRot {
-		rot := rotComp.(*RotationComponent)
-		aimAngle = rot.Angle
+		if rot, ok := rotComp.(*RotationComponent); ok {
+			aimAngle = rot.Angle
+		}
 	} else {
 		// Fallback: aim at target
 		targetPosComp, hasTargetPos := target.GetComponent("position")
 		if !hasTargetPos {
+			return false
+		}
+		if targetPos, ok := targetPosComp.(*PositionComponent); ok {
+			dx := targetPos.X - attackerPos.X
+			dy := targetPos.Y - attackerPos.Y
+			aimAngle = math.Atan2(dy, dx)
+		} else {
+			return false
+		}
+	}
 			return false
 		}
 		targetPos := targetPosComp.(*PositionComponent)

@@ -17,12 +17,15 @@ type Entity struct {
 
 	// Fast-path cache for frequently accessed components
 	// These eliminate map lookups in hot paths
-	position  *PositionComponent
-	velocity  *VelocityComponent
-	health    *HealthComponent
-	collider  *ColliderComponent
-	inventory *InventoryComponent
-	stats     *StatsComponent
+	position   *PositionComponent
+	velocity   *VelocityComponent
+	health     *HealthComponent
+	collider   *ColliderComponent
+	inventory  *InventoryComponent
+	stats      *StatsComponent
+	animation  *AnimationComponent
+	attack     *AttackComponent
+	experience *ExperienceComponent
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -64,6 +67,18 @@ func (e *Entity) AddComponent(c Component) {
 		if stats, ok := c.(*StatsComponent); ok {
 			e.stats = stats
 		}
+	case "animation":
+		if anim, ok := c.(*AnimationComponent); ok {
+			e.animation = anim
+		}
+	case "attack":
+		if atk, ok := c.(*AttackComponent); ok {
+			e.attack = atk
+		}
+	case "experience":
+		if exp, ok := c.(*ExperienceComponent); ok {
+			e.experience = exp
+		}
 	}
 }
 
@@ -102,6 +117,12 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.inventory = nil
 	case "stats":
 		e.stats = nil
+	case "animation":
+		e.animation = nil
+	case "attack":
+		e.attack = nil
+	case "experience":
+		e.experience = nil
 	}
 }
 

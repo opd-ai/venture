@@ -377,16 +377,17 @@ func (w *World) GetEntities() []*Entity {
 // GetEntitiesWith returns all entities that have all of the specified component types.
 // Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
 func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
-	// Generate cache key from component types
-	// Use strings.Builder to avoid allocations from string concatenation
-	var keyBuilder strings.Builder
+	// Generate cache key from component types using pooled builder
+	builder := w.builderPool.Get().(*strings.Builder)
+	builder.Reset() // Clear any previous content
 	for i, compType := range componentTypes {
 		if i > 0 {
-			keyBuilder.WriteByte('|')
+			builder.WriteByte('|')
 		}
-		keyBuilder.WriteString(compType)
+		builder.WriteString(compType)
 	}
-	key := keyBuilder.String()
+	key := builder.String()
+	w.builderPool.Put(builder) // Return builder to pool
 
 	// Check if cache is valid
 	if !w.queryCacheDirty[key] {

@@ -153,6 +153,9 @@ type EbitenRenderSystem struct {
 	batches        map[*ebiten.Image][]*Entity // Group entities by sprite image
 	batchPool      []map[*ebiten.Image][]*Entity
 
+	// Reusable buffer for non-sprite entities to reduce allocations
+	nonSpriteBuffer []*Entity
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -183,6 +186,7 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		enableBatching:   true, // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
+		nonSpriteBuffer:  make([]*Entity, 0, 64), // Pre-allocate for typical non-sprite entity count
 		ShowColliders:    false,
 		ShowGrid:         false,
 	}

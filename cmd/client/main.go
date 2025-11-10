@@ -892,6 +892,202 @@ func startEmbeddedServer(logger *logrus.Logger, seed int64, genreID string) (str
 	return serverAddr, cleanup, nil
 }
 
+// dropInventoryItems drops all items from an entity's inventory with scatter physics.
+// Returns true if items were dropped.
+func dropInventoryItems(
+	game *engine.EbitenGame,
+	enemy *engine.Entity,
+	pos *engine.PositionComponent,
+	deadComp *engine.DeadComponent,
+) {
+	invComp, hasInv := enemy.GetComponent("inventory")
+	if !hasInv {
+		return
+	}
+	inventory := invComp.(*engine.InventoryComponent)
+
+	// Spawn each item in the inventory with scatter physics
+	for i, itm := range inventory.Items {
+		if itm == nil {
+			continue
+		}
+
+		// Calculate scatter offset using circular distribution
+		angle := float64(i) * 6.28318 / float64(len(inventory.Items)) // 2*PI radians
+		scatterDist := 20.0 + float64(i)*5.0                          // Items spread 20-50 pixels out
+		offsetX := scatterDist * math.Cos(angle)
+		offsetY := scatterDist * math.Sin(angle)
+
+		// Spawn item entity at scattered position
+		itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
+		if itemEntity != nil {
+			// Add physics velocity for scatter effect (items fly outward then slow down)
+			velocityX := offsetX * 3.0 // Initial velocity proportional to offset
+			velocityY := offsetY * 3.0
+			itemEntity.AddComponent(&engine.VelocityComponent{
+				VX: velocityX,
+				VY: velocityY,
+			})
+
+			// Add friction to slow down items over time
+			itemEntity.AddComponent(engine.NewFrictionComponent(0.12)) // 12% friction per frame (at 60 FPS)
+
+			// Track dropped item in DeadComponent
+			deadComp.AddDroppedItem(itemEntity.ID)
+		}
+	}
+
+	// Clear inventory after dropping all items
+	inventory.Clear()
+}
+
+// dropEquippedItems drops all equipped items from an entity with scatter physics.
+func dropEquippedItems(
+	game *engine.EbitenGame,
+	enemy *engine.Entity,
+	pos *engine.PositionComponent,
+	deadComp *engine.DeadComponent,
+) {
+	equipComp, hasEquip := enemy.GetComponent("equipment")
+	if !hasEquip {
+		return
+	}
+	equipment := equipComp.(*engine.EquipmentComponent)
+	equippedItems := equipment.UnequipAll()
+
+	// Spawn equipped items with additional scatter
+	for i, itm := range equippedItems {
+		if itm == nil {
+			continue
+		}
+
+		// Use different angle range for equipped items (opposite side)
+		angle := (float64(i) * 6.28318 / float64(len(equippedItems))) + 3.14159 // Offset by PI
+		scatterDist := 30.0 + float64(i)*5.0
+		offsetX := scatterDist * math.Cos(angle)
+		offsetY := scatterDist * math.Sin(angle)
+
+		itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
+		if itemEntity != nil {
+			velocityX := offsetX * 3.0
+			velocityY := offsetY * 3.0
+			itemEntity.AddComponent(&engine.VelocityComponent{
+				VX: velocityX,
+				VY: velocityY,
+			})
+
+			// Add friction for smooth deceleration
+			itemEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+			deadComp.AddDroppedItem(itemEntity.ID)
+		}
+	}
+}
+
+// spawnProceduralLoot generates and spawns procedural loot drops for non-player entities.
+func spawnProceduralLoot(
+	game *engine.EbitenGame,
+	enemy *engine.Entity,
+	pos *engine.PositionComponent,
+	deadComp *engine.DeadComponent,
+	recipeGen *recipe.RecipeGenerator,
+	seed int64,
+	genreID string,
+	playerEntity *engine.Entity,
+	objectiveTracker *engine.ObjectiveTrackerSystem,
+) {
+	// Only for NPCs/enemies, not players
+	if enemy.HasComponent("input") {
+		return
+	}
+
+	lootEntity := engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, seed, genreID)
+	if lootEntity != nil {
+		// Add physics to procedural loot too
+		lootEntity.AddComponent(&engine.VelocityComponent{
+			VX: (rand.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
+			VY: (rand.Float64()*2.0 - 1.0) * 30.0,
+		})
+		// Add friction for smooth deceleration
+		lootEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+		deadComp.AddDroppedItem(lootEntity.ID)
+	}
+
+	// Generate and spawn recipe drops (rarer than item drops)
+	recipeEntity := engine.GenerateRecipeDrop(recipeGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	if recipeEntity != nil {
+		// Add physics to recipe drops
+		recipeEntity.AddComponent(&engine.VelocityComponent{
+			VX: (rand.Float64()*2.0 - 1.0) * 25.0, // Slightly slower velocity for recipes
+			VY: (rand.Float64()*2.0 - 1.0) * 25.0,
+		})
+		// Add friction for smooth deceleration
+		recipeEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+		deadComp.AddDroppedItem(recipeEntity.ID)
+	}
+
+	// Track enemy kill for quest objectives
+	if playerEntity != nil {
+		objectiveTracker.OnEnemyKilled(playerEntity, enemy)
+	}
+}
+
+// createDeathCallback creates the death callback function for the combat system.
+// This callback handles entity death by:
+// - Dropping inventory and equipped items with scatter physics
+// - Generating procedural loot drops for non-player entities
+// - Playing death sound effects
+// - Tracking quest objectives
+func createDeathCallback(
+	game *engine.EbitenGame,
+	playerEntity **engine.Entity,
+	objectiveTracker *engine.ObjectiveTrackerSystem,
+	audioManager **engine.AudioManager,
+	recipeGen *recipe.RecipeGenerator,
+	seed int64,
+	genreID string,
+	logger *logrus.Logger,
+) func(*engine.Entity) {
+	return func(enemy *engine.Entity) {
+		// Priority 1.4: Only process death once (callback called every frame while entity is dead)
+		if enemy.HasComponent("dead") {
+			return
+		}
+
+		// Get enemy position
+		posComp, hasPos := enemy.GetComponent("position")
+		if !hasPos {
+			return
+		}
+		pos := posComp.(*engine.PositionComponent)
+
+		// Priority 1.4: Add DeadComponent to mark entity as dead
+		gameTime := float64(time.Now().Unix()) // Use game time if available
+		deadComp := engine.NewDeadComponent(gameTime)
+		enemy.AddComponent(deadComp)
+
+		// Priority 1.4: Drop all items from entity's inventory
+		dropInventoryItems(game, enemy, pos, deadComp)
+
+		// Priority 1.4: Also drop equipped items
+		dropEquippedItems(game, enemy, pos, deadComp)
+
+		// Generate and spawn procedural loot drop (in addition to inventory items)
+		spawnProceduralLoot(game, enemy, pos, deadComp, recipeGen, seed, genreID, *playerEntity, objectiveTracker)
+
+		// GAP-010 REPAIR: Play death sound effect
+		if *audioManager != nil {
+			if err := (*audioManager).PlaySFX("death", time.Now().UnixNano()); err != nil {
+				if logger.GetLevel() >= logrus.WarnLevel {
+					logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to play death SFX")
+				}
+			}
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -999,140 +1195,10 @@ func main() {
 	})
 
 	// GAP-001 & GAP-004 REPAIR: Set death callback for loot drops and quest tracking
-	combatSystem.SetDeathCallback(func(enemy *engine.Entity) {
-		// Priority 1.4: Only process death once (callback called every frame while entity is dead)
-		if enemy.HasComponent("dead") {
-			return
-		}
-
-		// Get enemy position
-		posComp, hasPos := enemy.GetComponent("position")
-		if !hasPos {
-			return
-		}
-		pos := posComp.(*engine.PositionComponent)
-
-		// Priority 1.4: Add DeadComponent to mark entity as dead
-		gameTime := float64(time.Now().Unix()) // Use game time if available
-		deadComp := engine.NewDeadComponent(gameTime)
-		enemy.AddComponent(deadComp)
-
-		// Priority 1.4: Drop all items from entity's inventory
-		if invComp, hasInv := enemy.GetComponent("inventory"); hasInv {
-			inventory := invComp.(*engine.InventoryComponent)
-
-			// Spawn each item in the inventory with scatter physics
-			for i, itm := range inventory.Items {
-				if itm == nil {
-					continue
-				}
-
-				// Calculate scatter offset using circular distribution
-				angle := float64(i) * 6.28318 / float64(len(inventory.Items)) // 2*PI radians
-				scatterDist := 20.0 + float64(i)*5.0                          // Items spread 20-50 pixels out
-				offsetX := scatterDist * math.Cos(angle)
-				offsetY := scatterDist * math.Sin(angle)
-
-				// Spawn item entity at scattered position
-				itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
-				if itemEntity != nil {
-					// Add physics velocity for scatter effect (items fly outward then slow down)
-					velocityX := offsetX * 3.0 // Initial velocity proportional to offset
-					velocityY := offsetY * 3.0
-					itemEntity.AddComponent(&engine.VelocityComponent{
-						VX: velocityX,
-						VY: velocityY,
-					})
-
-					// Add friction to slow down items over time
-					itemEntity.AddComponent(engine.NewFrictionComponent(0.12)) // 12% friction per frame (at 60 FPS)
-
-					// Track dropped item in DeadComponent
-					deadComp.AddDroppedItem(itemEntity.ID)
-				}
-			}
-
-			// Clear inventory after dropping all items
-			inventory.Clear()
-		}
-
-		// Priority 1.4: Also drop equipped items
-		if equipComp, hasEquip := enemy.GetComponent("equipment"); hasEquip {
-			equipment := equipComp.(*engine.EquipmentComponent)
-			equippedItems := equipment.UnequipAll()
-
-			// Spawn equipped items with additional scatter
-			for i, itm := range equippedItems {
-				if itm == nil {
-					continue
-				}
-
-				// Use different angle range for equipped items (opposite side)
-				angle := (float64(i) * 6.28318 / float64(len(equippedItems))) + 3.14159 // Offset by PI
-				scatterDist := 30.0 + float64(i)*5.0
-				offsetX := scatterDist * math.Cos(angle)
-				offsetY := scatterDist * math.Sin(angle)
-
-				itemEntity := engine.SpawnItemInWorld(game.World, itm, pos.X+offsetX, pos.Y+offsetY)
-				if itemEntity != nil {
-					velocityX := offsetX * 3.0
-					velocityY := offsetY * 3.0
-					itemEntity.AddComponent(&engine.VelocityComponent{
-						VX: velocityX,
-						VY: velocityY,
-					})
-
-					// Add friction for smooth deceleration
-					itemEntity.AddComponent(engine.NewFrictionComponent(0.12))
-
-					deadComp.AddDroppedItem(itemEntity.ID)
-				}
-			}
-		}
-
-		// Generate and spawn procedural loot drop (in addition to inventory items)
-		// This is for enemies that don't have inventory but should drop random loot
-		if !enemy.HasComponent("input") { // Only for NPCs/enemies, not players
-			lootEntity := engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, *seed, *genreID)
-			if lootEntity != nil {
-				// Add physics to procedural loot too
-				lootEntity.AddComponent(&engine.VelocityComponent{
-					VX: (rand.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
-					VY: (rand.Float64()*2.0 - 1.0) * 30.0,
-				})
-				// Add friction for smooth deceleration
-				lootEntity.AddComponent(engine.NewFrictionComponent(0.12))
-
-				deadComp.AddDroppedItem(lootEntity.ID)
-			}
-
-			// Generate and spawn recipe drops (rarer than item drops)
-			recipeEntity := engine.GenerateRecipeDrop(recipeGen, game.World, enemy, pos.X, pos.Y, *seed, *genreID)
-			if recipeEntity != nil {
-				// Add physics to recipe drops
-				recipeEntity.AddComponent(&engine.VelocityComponent{
-					VX: (rand.Float64()*2.0 - 1.0) * 25.0, // Slightly slower velocity for recipes
-					VY: (rand.Float64()*2.0 - 1.0) * 25.0,
-				})
-				// Add friction for smooth deceleration
-				recipeEntity.AddComponent(engine.NewFrictionComponent(0.12))
-
-				deadComp.AddDroppedItem(recipeEntity.ID)
-			}
-
-			// Track enemy kill for quest objectives
-			if playerEntity != nil {
-				objectiveTracker.OnEnemyKilled(playerEntity, enemy)
-			}
-		}
-
-		// GAP-010 REPAIR: Play death sound effect
-		if err := audioManager.PlaySFX("death", time.Now().UnixNano()); err != nil {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to play death SFX")
-			}
-		}
-	})
+	combatSystem.SetDeathCallback(createDeathCallback(
+		game, &playerEntity, objectiveTracker, &audioManager,
+		recipeGen, *seed, *genreID, logger,
+	))
 
 	aiSystem := engine.NewAISystem(game.World)
 	progressionSystem := engine.NewProgressionSystem(game.World)

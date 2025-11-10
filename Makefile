@@ -199,12 +199,13 @@ docs: ## Generate documentation
 
 # WebAssembly build
 build-wasm: ## Build WebAssembly version for web browsers
-	@echo "Building WebAssembly..."
+	@echo "Building WebAssembly with optimizations..."
 	@mkdir -p build/wasm
 	GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
 	@echo "Copying wasm_exec.js..."
 	cp $$(go env GOROOT)/lib/wasm/wasm_exec.js build/wasm/
 	@echo "WebAssembly build complete: build/wasm/venture.wasm"
+	@echo "Optimizations enabled: viewport culling, batch rendering, sprite caching (300 sequences)"
 	@echo "Run 'make serve-wasm' to test locally"
 
 serve-wasm: build-wasm ## Build and serve WebAssembly version locally

@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"strings"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -367,14 +369,15 @@ func (w *World) GetEntities() []*Entity {
 // Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
 func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 	// Generate cache key from component types
-	// Use a simple string concatenation with separator
-	key := ""
+	// Use strings.Builder to avoid allocations from string concatenation
+	var keyBuilder strings.Builder
 	for i, compType := range componentTypes {
 		if i > 0 {
-			key += "|"
+			keyBuilder.WriteByte('|')
 		}
-		key += compType
+		keyBuilder.WriteString(compType)
 	}
+	key := keyBuilder.String()
 
 	// Check if cache is valid
 	if !w.queryCacheDirty[key] {

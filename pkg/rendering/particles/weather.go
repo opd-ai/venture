@@ -8,6 +8,16 @@ import (
 	"math/rand"
 )
 
+// TileKey represents a tile coordinate encoded as a single int64.
+// This avoids fmt.Sprintf allocations for tile coordinate map keys.
+type TileKey int64
+
+// makeTileKey creates a composite key from tile coordinates.
+// Encodes x and y as a single int64 (x in upper 32 bits, y in lower 32 bits).
+func makeTileKey(x, y int) TileKey {
+	return TileKey(int64(x)<<32 | int64(uint32(y)))
+}
+
 // WeatherType represents different types of weather effects.
 type WeatherType int
 
@@ -169,12 +179,12 @@ func (c WeatherConfig) GetParticleCount() int {
 // WeatherEffect represents environmental effects from weather.
 type WeatherEffect struct {
 	// Puddles tracks rain accumulation at tile positions
-	// Map key is "x,y" tile position, value is accumulation level (0.0-1.0)
-	Puddles map[string]float64
+	// Map key is TileKey (composite int64), value is accumulation level (0.0-1.0)
+	Puddles map[TileKey]float64
 
 	// SnowLevel tracks snow accumulation at tile positions
-	// Map key is "x,y" tile position, value is snow depth (0.0-1.0)
-	SnowLevel map[string]float64
+	// Map key is TileKey (composite int64), value is snow depth (0.0-1.0)
+	SnowLevel map[TileKey]float64
 
 	// VisibilityModifier affects how far entities can see (1.0 = normal, 0.0 = blind)
 	// Fog and sandstorms reduce visibility
@@ -188,8 +198,8 @@ type WeatherEffect struct {
 // NewWeatherEffect creates a new weather effect tracker.
 func NewWeatherEffect() *WeatherEffect {
 	return &WeatherEffect{
-		Puddles:            make(map[string]float64),
-		SnowLevel:          make(map[string]float64),
+		Puddles:            make(map[TileKey]float64),
+		SnowLevel:          make(map[TileKey]float64),
 		VisibilityModifier: 1.0,
 		WindDriftX:         0.0,
 		WindDriftY:         0.0,
@@ -381,7 +391,7 @@ func (ws *WeatherSystem) handleParticleImpact(p *Particle) {
 	tileSize := 32
 	tileX := int(p.X) / tileSize
 	tileY := int(p.Y) / tileSize
-	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+	tileKey := makeTileKey(tileX, tileY)
 
 	switch ws.Config.Type {
 	case WeatherRain, WeatherBloodRain:
@@ -400,13 +410,13 @@ func (ws *WeatherSystem) handleParticleImpact(p *Particle) {
 
 // GetPuddleLevel returns the puddle accumulation level at a tile position.
 func (ws *WeatherSystem) GetPuddleLevel(tileX, tileY int) float64 {
-	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+	tileKey := makeTileKey(tileX, tileY)
 	return ws.Effects.Puddles[tileKey]
 }
 
 // GetSnowLevel returns the snow accumulation level at a tile position.
 func (ws *WeatherSystem) GetSnowLevel(tileX, tileY int) float64 {
-	tileKey := fmt.Sprintf("%d,%d", tileX, tileY)
+	tileKey := makeTileKey(tileX, tileY)
 	return ws.Effects.SnowLevel[tileKey]
 }
 

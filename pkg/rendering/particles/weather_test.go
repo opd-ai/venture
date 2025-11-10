@@ -724,7 +724,7 @@ func TestWeatherSystem_RainAccumulation(t *testing.T) {
 	// Verify puddle levels are within valid range
 	for key, level := range ws.Effects.Puddles {
 		if level < 0 || level > 1.0 {
-			t.Errorf("Puddle %s has invalid level: %v", key, level)
+			t.Errorf("Puddle %v has invalid level: %v", key, level)
 		}
 	}
 }
@@ -759,7 +759,7 @@ func TestWeatherSystem_SnowAccumulation(t *testing.T) {
 	// Verify snow levels are within valid range
 	for key, level := range ws.Effects.SnowLevel {
 		if level < 0 || level > 1.0 {
-			t.Errorf("Snow %s has invalid level: %v", key, level)
+			t.Errorf("Snow %v has invalid level: %v", key, level)
 		}
 	}
 
@@ -786,7 +786,7 @@ func TestWeatherSystem_GetPuddleLevel(t *testing.T) {
 	}
 
 	// Manually set a puddle level
-	ws.Effects.Puddles["5,10"] = 0.75
+	ws.Effects.Puddles[makeTileKey(5, 10)] = 0.75
 
 	level := ws.GetPuddleLevel(5, 10)
 	if level != 0.75 {
@@ -817,7 +817,7 @@ func TestWeatherSystem_GetSnowLevel(t *testing.T) {
 	}
 
 	// Manually set a snow level
-	ws.Effects.SnowLevel["3,7"] = 0.60
+	ws.Effects.SnowLevel[makeTileKey(3, 7)] = 0.60
 
 	level := ws.GetSnowLevel(3, 7)
 	if level != 0.60 {

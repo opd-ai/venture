@@ -183,7 +183,9 @@ func (g *EntityGenerator) generateMerchantName(genreID string, rng *rand.Rand) s
 func (g *EntityGenerator) generateMerchantInventory(seed int64, params procgen.GenerationParams, count int, rng *rand.Rand) ([]*item.Item, error) {
 	itemGen := item.NewItemGenerator()
 
-	inventory := make([]*item.Item, 0, count)
+	// Pre-allocate inventory to exact size and use direct index assignment
+	inventory := make([]*item.Item, count)
+	actualCount := 0
 
 	for i := 0; i < count; i++ {
 		// Use different seed for each item
@@ -225,8 +227,12 @@ func (g *EntityGenerator) generateMerchantInventory(seed int64, params procgen.G
 			continue
 		}
 
-		inventory = append(inventory, items[0])
+		inventory[actualCount] = items[0]
+		actualCount++
 	}
+
+	// Trim to actual count if some items failed to generate
+	inventory = inventory[:actualCount]
 
 	return inventory, nil
 }

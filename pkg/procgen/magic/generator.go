@@ -111,12 +111,12 @@ func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, 
 
 // generateSpells generates the specified count of spells from templates.
 func (g *SpellGenerator) generateSpells(rng *rand.Rand, templates []SpellTemplate, params procgen.GenerationParams, seed int64, count int) []*Spell {
-	spells := make([]*Spell, 0, count)
+	spells := make([]*Spell, count)
 	for i := 0; i < count; i++ {
 		template := templates[rng.Intn(len(templates))]
 		spell := g.generateFromTemplate(rng, template, params)
 		spell.Seed = seed + int64(i)
-		spells = append(spells, spell)
+		spells[i] = spell
 	}
 	return spells
 }

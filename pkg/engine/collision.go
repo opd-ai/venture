@@ -32,6 +32,11 @@ func NewCollisionSystem(cellSize float64) *CollisionSystem {
 	return &CollisionSystem{
 		CellSize: cellSize,
 		grid:     make(map[int]map[int][]*Entity),
+		checkedMapPool: sync.Pool{
+			New: func() interface{} {
+				return make(map[uint64]map[uint64]bool)
+			},
+		},
 	}
 }
 
@@ -187,7 +192,14 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Check collisions (narrow phase)
-	checked := make(map[uint64]map[uint64]bool)
+	// Get checked map from pool to reduce allocations
+	checked := s.checkedMapPool.Get().(map[uint64]map[uint64]bool)
+	// Clear the map before use
+	for k := range checked {
+		delete(checked, k)
+	}
+	// Return to pool when done
+	defer s.checkedMapPool.Put(checked)
 
 	for _, entity := range collidableEntities {
 		posComp, _ := entity.GetComponent("position")

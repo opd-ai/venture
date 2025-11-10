@@ -103,7 +103,7 @@ func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	}
 
 	// Generate quests
-	quests := make([]*Quest, 0, count)
+	quests := make([]*Quest, count)
 	for i := 0; i < count; i++ {
 		// Select random template
 		template := templates[rng.Intn(len(templates))]
@@ -112,7 +112,7 @@ func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (
 		quest := g.generateFromTemplate(rng, template, params, i)
 		quest.Seed = seed + int64(i)
 
-		quests = append(quests, quest)
+		quests[i] = quest
 
 		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			g.logger.WithFields(logrus.Fields{

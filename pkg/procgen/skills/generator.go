@@ -97,14 +97,14 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 	}
 
 	// Generate skill trees
-	trees := make([]*SkillTree, 0, count)
+	trees := make([]*SkillTree, count)
 	for i := 0; i < count; i++ {
 		// Select template
 		template := templates[i%len(templates)]
 
 		// Generate tree from template
 		tree := g.generateTree(rng, template, params, seed+int64(i))
-		trees = append(trees, tree)
+		trees[i] = tree
 
 		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			g.logger.WithFields(logrus.Fields{

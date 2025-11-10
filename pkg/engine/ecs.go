@@ -5,6 +5,7 @@ package engine
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 )
@@ -219,6 +220,9 @@ type World struct {
 	queryCache      map[string][]*Entity
 	queryCacheDirty map[string]bool
 
+	// Pool for strings.Builder instances to reduce query key allocations
+	builderPool sync.Pool
+
 	// Logger for ECS operations
 	logger *logrus.Entry
 }
@@ -246,6 +250,11 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		queryCacheDirty:  make(map[string]bool),
 		entityListDirty:  true,
 		logger:           logEntry,
+		builderPool: sync.Pool{
+			New: func() interface{} {
+				return &strings.Builder{}
+			},
+		},
 	}
 
 	if w.logger != nil {

@@ -176,22 +176,20 @@ func randomGenre() string {
 // spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.
 // Spawns wall torches, magical crystals, and genre-specific lights based on the world seed.
 // This function is part of Phase 5.3: Dynamic Lighting System Integration.
-func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
-	rng := rand.New(rand.NewSource(seed))
-	lightCount := 0
+// lightConfig defines lighting configuration per genre.
+type lightConfig struct {
+	torchInterval int // Every N tiles along walls/corridors
+	crystalChance float64
+	torchColor    color.RGBA
+	crystalColor  color.RGBA
+	torchRadius   float64
+	crystalRadius float64
+	torchFlicker  bool
+	crystalPulse  bool
+}
 
-	// Genre-specific light configurations
-	type lightConfig struct {
-		torchInterval int // Every N tiles along walls/corridors
-		crystalChance float64
-		torchColor    color.RGBA
-		crystalColor  color.RGBA
-		torchRadius   float64
-		crystalRadius float64
-		torchFlicker  bool
-		crystalPulse  bool
-	}
-
+// getLightConfig returns the lighting configuration for the given genre.
+func getLightConfig(genreID string) lightConfig {
 	configs := map[string]lightConfig{
 		"fantasy": {
 			torchInterval: 5,
@@ -250,6 +248,62 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 	if !ok {
 		config = configs["fantasy"]
 	}
+	return config
+}
+
+// spawnWallTorches spawns torch lights along the perimeter walls of a room.
+func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfig, rng *rand.Rand) int {
+	count := 0
+	const tileSize = 32
+	const spawnChance = 0.6 // 60% chance per position
+
+	// Top and bottom walls
+	for x := room.X; x < room.X+room.Width; x++ {
+		if x%config.torchInterval == 0 {
+			// Top wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(x * tileSize)
+				worldY := float64(room.Y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+			// Bottom wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(x * tileSize)
+				worldY := float64((room.Y + room.Height - 1) * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+		}
+	}
+
+	// Left and right walls
+	for y := room.Y; y < room.Y+room.Height; y++ {
+		if y%config.torchInterval == 0 {
+			// Left wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(room.X * tileSize)
+				worldY := float64(y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+			// Right wall
+			if rng.Float64() < spawnChance {
+				worldX := float64((room.X + room.Width - 1) * tileSize)
+				worldY := float64(y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+		}
+	}
+
+	return count
+}
+
+func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
+	rng := rand.New(rand.NewSource(seed))
+	lightCount := 0
+	config := getLightConfig(genreID)
 
 	// Spawn lights in each room
 	for _, room := range terrain.Rooms {
@@ -259,45 +313,7 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 		}
 
 		// Spawn wall torches around room perimeter
-		// Top and bottom walls
-		for x := room.X; x < room.X+room.Width; x++ {
-			if x%config.torchInterval == 0 {
-				// Top wall
-				if rng.Float64() < 0.6 { // 60% chance per position
-					worldX := float64(x * 32)
-					worldY := float64(room.Y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-				// Bottom wall
-				if rng.Float64() < 0.6 {
-					worldX := float64(x * 32)
-					worldY := float64((room.Y + room.Height - 1) * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-			}
-		}
-
-		// Left and right walls
-		for y := room.Y; y < room.Y+room.Height; y++ {
-			if y%config.torchInterval == 0 {
-				// Left wall
-				if rng.Float64() < 0.6 {
-					worldX := float64(room.X * 32)
-					worldY := float64(y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-				// Right wall
-				if rng.Float64() < 0.6 {
-					worldX := float64((room.X + room.Width - 1) * 32)
-					worldY := float64(y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-			}
-		}
+		lightCount += spawnWallTorches(world, room, config, rng)
 
 		// Spawn magical crystals in room centers (boss rooms, treasure rooms)
 		if rng.Float64() < config.crystalChance {

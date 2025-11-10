@@ -144,6 +144,7 @@ func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
 					if s.onDeathCallback != nil {
 						s.onDeathCallback(entity)
 					}
+				}
 			}
 		}
 	}
@@ -580,15 +581,23 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 		// Check team
 		targetTeam, hasTeam := entity.GetComponent("team")
 		if hasTeam {
-			team := targetTeam.(*TeamComponent)
-			if !team.IsEnemy(attackerTeamID) {
-				continue
+			if team, ok := targetTeam.(*TeamComponent); ok {
+				if !team.IsEnemy(attackerTeamID) {
+					continue
+				}
 			}
 		}
 
 		// Check health
 		healthComp, hasHealth := entity.GetComponent("health")
-		if !hasHealth || healthComp.(*HealthComponent).IsDead() {
+		if !hasHealth {
+			continue
+		}
+		if health, ok := healthComp.(*HealthComponent); ok {
+			if health.IsDead() {
+				continue
+			}
+		} else {
 			continue
 		}
 
@@ -736,13 +745,6 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 			return false
 		}
 	}
-			return false
-		}
-		targetPos := targetPosComp.(*PositionComponent)
-		dx := targetPos.X - attackerPos.X
-		dy := targetPos.Y - attackerPos.Y
-		aimAngle = math.Atan2(dy, dx)
-	}
 
 	// Calculate projectile spawn position (offset from attacker in aim direction)
 	spawnOffset := 20.0 // pixels in front of attacker
@@ -762,16 +764,17 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 
 	// Get attacker stats for bonus damage
 	if attackerStatsComp, hasStats := attacker.GetComponent("stats"); hasStats {
-		attackerStats := attackerStatsComp.(*StatsComponent)
-		if attack.DamageType == combat.DamageMagical {
-			baseDamage += attackerStats.MagicPower
-		} else {
-			baseDamage += attackerStats.Attack
-		}
+		if attackerStats, ok := attackerStatsComp.(*StatsComponent); ok {
+			if attack.DamageType == combat.DamageMagical {
+				baseDamage += attackerStats.MagicPower
+			} else {
+				baseDamage += attackerStats.Attack
+			}
 
-		// Check for critical hit
-		if s.rollChance(attackerStats.CritChance) {
-			baseDamage *= attackerStats.CritDamage
+			// Check for critical hit
+			if s.rollChance(attackerStats.CritChance) {
+				baseDamage *= attackerStats.CritDamage
+			}
 		}
 	}
 

@@ -96,118 +96,159 @@ func (d *MusicContextDetector) DetectContext(entities []*Entity, playerEntity *E
 		return MusicContextExploration
 	}
 
-	// Check if player is dead
 	if playerEntity.HasComponent("dead") {
 		return MusicContextDeath
 	}
 
-	// Get player position
-	playerPosComp, hasPos := playerEntity.GetComponent("position")
-	if !hasPos {
-		return MusicContextExploration
-	}
-	playerPos, ok := playerPosComp.(*PositionComponent)
+	playerPos, ok := d.validatePlayerState(playerEntity)
 	if !ok {
 		return MusicContextExploration
 	}
 
-	// Check player health for danger state
-	if healthComp, hasHealth := playerEntity.GetComponent("health"); hasHealth {
-		if health, ok := healthComp.(*HealthComponent); ok {
-			healthPercent := float64(health.Current) / float64(health.Max)
-			if healthPercent <= d.DangerHealthPercent && healthPercent > 0 {
-				// Danger state active, but continue checking for combat/boss
-				// (boss/combat takes priority over danger)
-			}
-		}
+	hasBoss, hasCombat, allEnemiesDead := d.scanEnemyThreats(entities, playerEntity, playerPos)
+	return d.resolveContext(playerEntity, hasBoss, hasCombat, allEnemiesDead)
+}
+
+// validatePlayerState checks if player exists and has position.
+// Returns player position and true if valid, nil and false otherwise.
+func (d *MusicContextDetector) validatePlayerState(playerEntity *Entity) (*PositionComponent, bool) {
+	if playerEntity == nil {
+		return nil, false
 	}
 
-	// Scan for nearby enemies
+	playerPosComp, hasPos := playerEntity.GetComponent("position")
+	if !hasPos {
+		return nil, false
+	}
+
+	playerPos, ok := playerPosComp.(*PositionComponent)
+	if !ok {
+		return nil, false
+	}
+
+	return playerPos, true
+}
+
+// scanEnemyThreats scans entities for nearby enemies and boss threats.
+// Returns hasBoss, hasCombat, and allEnemiesDead flags.
+func (d *MusicContextDetector) scanEnemyThreats(entities []*Entity, playerEntity *Entity, playerPos *PositionComponent) (bool, bool, bool) {
 	hasBoss := false
 	hasCombat := false
 	allEnemiesDead := true
 
+	playerTeam := d.getPlayerTeam(playerEntity)
+
 	for _, entity := range entities {
-		// Skip player entities (have input component)
-		if entity.HasComponent("input") {
+		if !d.isValidEnemy(entity, playerTeam) {
 			continue
 		}
 
-		// Skip dead entities
-		if entity.HasComponent("dead") {
-			continue
-		}
-
-		// Check if entity is an enemy (has health + team different from player)
-		if !entity.HasComponent("health") {
-			continue
-		}
-
-		// Check team (enemies are on different team than player)
-		playerTeam := 1 // Default player team
-		if teamComp, hasTeam := playerEntity.GetComponent("team"); hasTeam {
-			if team, ok := teamComp.(*TeamComponent); ok {
-				playerTeam = team.TeamID
-			}
-		}
-
-		entityTeam := 0 // Default enemy team
-		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
-			if team, ok := teamComp.(*TeamComponent); ok {
-				entityTeam = team.TeamID
-			}
-		}
-
-		if entityTeam == playerTeam {
-			continue // Same team, not an enemy
-		}
-
-		// Found a living enemy
 		allEnemiesDead = false
 
-		// Check proximity to player
-		if posComp, hasPos := entity.GetComponent("position"); hasPos {
-			if entityPos, ok := posComp.(*PositionComponent); ok {
-				distance := d.calculateDistance(playerPos.X, playerPos.Y, entityPos.X, entityPos.Y)
-
-				if distance <= d.CombatRadius {
-					hasCombat = true
-
-					// Check if it's a boss (high attack stat)
-					if statsComp, hasStats := entity.GetComponent("stats"); hasStats {
-						if stats, ok := statsComp.(*StatsComponent); ok {
-							if stats.Attack >= d.BossAttackThreshold {
-								hasBoss = true
-							}
-						}
-					}
-				}
+		if d.isEnemyNearby(entity, playerPos) {
+			hasCombat = true
+			if d.isBoss(entity) {
+				hasBoss = true
 			}
 		}
 	}
 
-	// Return highest priority context
+	return hasBoss, hasCombat, allEnemiesDead
+}
+
+// getPlayerTeam returns the player's team ID (default 1).
+func (d *MusicContextDetector) getPlayerTeam(playerEntity *Entity) int {
+	playerTeam := 1
+	if teamComp, hasTeam := playerEntity.GetComponent("team"); hasTeam {
+		if team, ok := teamComp.(*TeamComponent); ok {
+			playerTeam = team.TeamID
+		}
+	}
+	return playerTeam
+}
+
+// isValidEnemy checks if an entity is a valid living enemy.
+func (d *MusicContextDetector) isValidEnemy(entity *Entity, playerTeam int) bool {
+	if entity.HasComponent("input") || entity.HasComponent("dead") || !entity.HasComponent("health") {
+		return false
+	}
+
+	entityTeam := 0
+	if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
+		if team, ok := teamComp.(*TeamComponent); ok {
+			entityTeam = team.TeamID
+		}
+	}
+
+	return entityTeam != playerTeam
+}
+
+// isEnemyNearby checks if an enemy is within combat radius.
+func (d *MusicContextDetector) isEnemyNearby(entity *Entity, playerPos *PositionComponent) bool {
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return false
+	}
+
+	entityPos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return false
+	}
+
+	distance := d.calculateDistance(playerPos.X, playerPos.Y, entityPos.X, entityPos.Y)
+	return distance <= d.CombatRadius
+}
+
+// isBoss checks if an entity is a boss based on attack threshold.
+func (d *MusicContextDetector) isBoss(entity *Entity) bool {
+	statsComp, hasStats := entity.GetComponent("stats")
+	if !hasStats {
+		return false
+	}
+
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return false
+	}
+
+	return stats.Attack >= d.BossAttackThreshold
+}
+
+// resolveContext determines the final music context based on threats and player state.
+func (d *MusicContextDetector) resolveContext(playerEntity *Entity, hasBoss, hasCombat, allEnemiesDead bool) MusicContext {
 	if hasBoss {
 		return MusicContextBoss
 	}
+
 	if hasCombat {
 		return MusicContextCombat
 	}
+
 	if allEnemiesDead && playerEntity.HasComponent("victory") {
 		return MusicContextVictory
 	}
 
-	// Check danger state last (lowest priority of active contexts)
-	if healthComp, hasHealth := playerEntity.GetComponent("health"); hasHealth {
-		if health, ok := healthComp.(*HealthComponent); ok {
-			healthPercent := float64(health.Current) / float64(health.Max)
-			if healthPercent <= d.DangerHealthPercent && healthPercent > 0 {
-				return MusicContextDanger
-			}
-		}
+	if d.isPlayerInDanger(playerEntity) {
+		return MusicContextDanger
 	}
 
 	return MusicContextExploration
+}
+
+// isPlayerInDanger checks if player health is below danger threshold.
+func (d *MusicContextDetector) isPlayerInDanger(playerEntity *Entity) bool {
+	healthComp, hasHealth := playerEntity.GetComponent("health")
+	if !hasHealth {
+		return false
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return false
+	}
+
+	healthPercent := float64(health.Current) / float64(health.Max)
+	return healthPercent <= d.DangerHealthPercent && healthPercent > 0
 }
 
 // calculateDistance computes Euclidean distance between two points

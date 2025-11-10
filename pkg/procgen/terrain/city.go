@@ -74,6 +74,75 @@ func (r Rect) Center() (int, int) {
 }
 
 // Generate creates a city environment with buildings, streets, and public spaces.
+// extractDimensions extracts width and height from custom parameters.
+func (g *CityGenerator) extractDimensions(params procgen.GenerationParams) (int, int) {
+	width := 80
+	height := 50
+
+	if params.Custom != nil {
+		if w, ok := params.Custom["width"].(int); ok {
+			width = w
+		}
+		if h, ok := params.Custom["height"].(int); ok {
+			height = h
+		}
+	}
+
+	return width, height
+}
+
+// extractCitySettings extracts city-specific settings from custom parameters.
+func (g *CityGenerator) extractCitySettings(params procgen.GenerationParams) {
+	if params.Custom == nil {
+		return
+	}
+
+	if bs, ok := params.Custom["blockSize"].(int); ok {
+		g.blockSize = bs
+	}
+	if sw, ok := params.Custom["streetWidth"].(int); ok {
+		g.streetWidth = sw
+	}
+	if bd, ok := params.Custom["buildingDensity"].(float64); ok {
+		g.buildingDensity = bd
+	}
+	if pd, ok := params.Custom["plazaDensity"].(float64); ok {
+		g.plazaDensity = pd
+	}
+}
+
+// validateCityParameters validates city generation parameters.
+func (g *CityGenerator) validateCityParameters(width, height int) error {
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+	}
+
+	if width > 1000 || height > 1000 {
+		return fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
+	}
+
+	if g.blockSize < 4 || g.blockSize > 30 {
+		return fmt.Errorf("invalid block size: %d (must be 4-30)", g.blockSize)
+	}
+
+	if g.streetWidth < 1 || g.streetWidth > 5 {
+		return fmt.Errorf("invalid street width: %d (must be 1-5)", g.streetWidth)
+	}
+
+	return nil
+}
+
+// initializeCityTerrain creates and initializes terrain with walls.
+func (g *CityGenerator) initializeCityTerrain(width, height int, seed int64) *Terrain {
+	terrain := NewTerrain(width, height, seed)
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			terrain.SetTile(x, y, TileWall)
+		}
+	}
+	return terrain
+}
+
 func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
@@ -84,75 +153,21 @@ func (g *CityGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		}).Debug("starting city terrain generation")
 	}
 
-	// Use custom parameters if provided
-	width := 80
-	height := 50
-	if params.Custom != nil {
-		if w, ok := params.Custom["width"].(int); ok {
-			width = w
-		}
-		if h, ok := params.Custom["height"].(int); ok {
-			height = h
-		}
-		if bs, ok := params.Custom["blockSize"].(int); ok {
-			g.blockSize = bs
-		}
-		if sw, ok := params.Custom["streetWidth"].(int); ok {
-			g.streetWidth = sw
-		}
-		if bd, ok := params.Custom["buildingDensity"].(float64); ok {
-			g.buildingDensity = bd
-		}
-		if pd, ok := params.Custom["plazaDensity"].(float64); ok {
-			g.plazaDensity = pd
-		}
+	width, height := g.extractDimensions(params)
+	g.extractCitySettings(params)
+
+	if err := g.validateCityParameters(width, height); err != nil {
+		return nil, err
 	}
 
-	// Validate dimensions
-	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
-	}
-
-	if width > 1000 || height > 1000 {
-		return nil, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
-	}
-
-	// Validate block size and street width
-	if g.blockSize < 4 || g.blockSize > 30 {
-		return nil, fmt.Errorf("invalid block size: %d (must be 4-30)", g.blockSize)
-	}
-
-	if g.streetWidth < 1 || g.streetWidth > 5 {
-		return nil, fmt.Errorf("invalid street width: %d (must be 1-5)", g.streetWidth)
-	}
-
-	// Create RNG with seed
 	rng := rand.New(rand.NewSource(seed))
+	terrain := g.initializeCityTerrain(width, height, seed)
 
-	// Create terrain (starts with all walls)
-	terrain := NewTerrain(width, height, seed)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			terrain.SetTile(x, y, TileWall)
-		}
-	}
-
-	// Subdivide into city blocks
 	blocks := g.subdivideGrid(terrain, rng)
-
-	// Create street network first (before buildings)
 	g.createStreetNetwork(blocks, terrain)
-
-	// Determine block types
 	g.assignBlockTypes(blocks, rng)
-
-	// Place buildings, plazas, and parks
 	g.placeBuildings(blocks, terrain, rng)
-
-	// Add alleys between some buildings
 	g.addAlleys(blocks, terrain, rng)
-
-	// Place stairs in central plaza or large building
 	g.placeStairs(blocks, terrain, rng)
 
 	if g.logger != nil {

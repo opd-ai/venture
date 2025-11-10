@@ -963,7 +963,7 @@ func main() {
 	// GAP-017 REPAIR: Initialize animation system for animated sprites
 	spriteGenerator := sprites.NewGenerator()
 	animationSystem := engine.NewAnimationSystem(spriteGenerator)
-	
+
 	// WASM OPTIMIZATION: Increase animation cache size for better performance
 	// Larger cache (300 vs default 100) reduces sprite regeneration in browser environments
 	// Each sequence ~100-400KB, total cache ~30-120MB which is acceptable for modern browsers
@@ -1528,7 +1528,7 @@ func main() {
 	game.RenderSystem.SetSpatialPartition(spatialSystem)
 	// Now safe to enable culling since quadtree is populated
 	game.RenderSystem.EnableCulling(true)
-	
+
 	// WASM OPTIMIZATION: Enable batch rendering to reduce GPU state changes
 	// Groups entities with same sprite image before drawing (1,667x speedup potential)
 	// Particularly beneficial for WASM where GPU state changes are expensive

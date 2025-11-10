@@ -119,7 +119,7 @@ func (g *CompositeGenerator) createBiomeRegions(seed int64, biomeCount int, gene
 }
 
 // applyPostProcessing applies transitions, connectivity, and stairs to the terrain.
-func (g *CompositeGenerator) applyPostProcessing(terrain *Terrain, diagram *VoronoiDiagram, biomeRegions []*BiomeRegionInfo, transitionWidth int, depth int, rng *rand.Rand) error {
+func (g *CompositeGenerator) applyPostProcessing(terrain *Terrain, diagram *VoronoiDiagram, biomeRegions []*BiomeRegionInfo, transitionWidth, depth int, rng *rand.Rand) error {
 	biomeTypes := make(map[int]BiomeType)
 	for _, region := range biomeRegions {
 		biomeTypes[region.ID] = region.BiomeType

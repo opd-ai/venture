@@ -111,9 +111,9 @@ func (s *AnimationSystem) SetDistanceThresholds(closeThreshold, midThreshold flo
 func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-	
+
 	s.maxCacheSize = maxSize
-	
+
 	// If new size is smaller than current cache, trigger eviction
 	if len(s.frameCache) > maxSize {
 		// Evict oldest entries until within limit

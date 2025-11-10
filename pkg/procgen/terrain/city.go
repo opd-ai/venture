@@ -524,75 +524,88 @@ func (g *CityGenerator) addAlleys(blocks []*CityBlock, terrain *Terrain, rng *ra
 }
 
 // placeStairs places stairs in the largest plaza or a large building.
-func (g *CityGenerator) placeStairs(blocks []*CityBlock, terrain *Terrain, rng *rand.Rand) {
-	// Find all plazas
+// findPlazaBlocks returns all plaza blocks from the given blocks.
+func (g *CityGenerator) findPlazaBlocks(blocks []*CityBlock) []*CityBlock {
 	plazas := make([]*CityBlock, 0)
 	for _, block := range blocks {
 		if block.BlockType == BlockPlaza {
 			plazas = append(plazas, block)
 		}
 	}
+	return plazas
+}
 
-	// Place stairs in plazas if available
-	if len(plazas) > 0 {
-		// Sort by area (largest first)
-		for i := 0; i < len(plazas); i++ {
-			for j := i + 1; j < len(plazas); j++ {
-				area1 := plazas[i].Rect.Width * plazas[i].Rect.Height
-				area2 := plazas[j].Rect.Width * plazas[j].Rect.Height
-				if area2 > area1 {
-					plazas[i], plazas[j] = plazas[j], plazas[i]
-				}
+// sortPlazasByArea sorts plazas by area (largest first) using bubble sort.
+func (g *CityGenerator) sortPlazasByArea(plazas []*CityBlock) {
+	for i := 0; i < len(plazas); i++ {
+		for j := i + 1; j < len(plazas); j++ {
+			area1 := plazas[i].Rect.Width * plazas[i].Rect.Height
+			area2 := plazas[j].Rect.Width * plazas[j].Rect.Height
+			if area2 > area1 {
+				plazas[i], plazas[j] = plazas[j], plazas[i]
 			}
 		}
+	}
+}
 
-		// Place stairs up in largest plaza
-		cx, cy := plazas[0].Rect.Center()
-		terrain.AddStairs(cx, cy, true)
+// placeStairsInPlazas places stairs up and down in plaza blocks.
+func (g *CityGenerator) placeStairsInPlazas(plazas []*CityBlock, terrain *Terrain) {
+	g.sortPlazasByArea(plazas)
 
-		// Place stairs down in second plaza or opposite corner of same plaza
-		if len(plazas) > 1 {
-			cx, cy = plazas[1].Rect.Center()
-			terrain.AddStairs(cx, cy, false)
-		} else {
-			// Use opposite corner of same plaza
-			rect := plazas[0].Rect
-			x := rect.X + 1
-			y := rect.Y + 1
+	cx, cy := plazas[0].Rect.Center()
+	terrain.AddStairs(cx, cy, true)
+
+	if len(plazas) > 1 {
+		cx, cy = plazas[1].Rect.Center()
+		terrain.AddStairs(cx, cy, false)
+	} else {
+		rect := plazas[0].Rect
+		x := rect.X + 1
+		y := rect.Y + 1
+		terrain.AddStairs(x, y, false)
+	}
+}
+
+// findWalkableNearCenter finds a walkable position near the given center coordinates.
+func (g *CityGenerator) findWalkableNearCenter(cx, cy int, terrain *Terrain) (int, int, bool) {
+	for dy := 0; dy < 3; dy++ {
+		for dx := 0; dx < 3; dx++ {
+			x := cx + dx - 1
+			y := cy + dy - 1
+			if terrain.IsWalkable(x, y) {
+				return x, y, true
+			}
+		}
+	}
+	return cx, cy, false
+}
+
+// placeStairsInBlocks places stairs in first and last block centers.
+func (g *CityGenerator) placeStairsInBlocks(blocks []*CityBlock, terrain *Terrain) {
+	if len(blocks) == 0 {
+		return
+	}
+
+	cx, cy := blocks[0].Rect.Center()
+	if x, y, found := g.findWalkableNearCenter(cx, cy, terrain); found {
+		terrain.AddStairs(x, y, true)
+	}
+
+	if len(blocks) > 1 {
+		cx, cy = blocks[len(blocks)-1].Rect.Center()
+		if x, y, found := g.findWalkableNearCenter(cx, cy, terrain); found {
 			terrain.AddStairs(x, y, false)
 		}
-	} else {
-		// No plazas, place in first and last block centers
-		if len(blocks) > 0 {
-			cx, cy := blocks[0].Rect.Center()
-			// Find walkable spot near center
-			for dy := 0; dy < 3; dy++ {
-				for dx := 0; dx < 3; dx++ {
-					x := cx + dx - 1
-					y := cy + dy - 1
-					if terrain.IsWalkable(x, y) {
-						terrain.AddStairs(x, y, true)
-						goto foundUp
-					}
-				}
-			}
-		foundUp:
+	}
+}
 
-			if len(blocks) > 1 {
-				cx, cy := blocks[len(blocks)-1].Rect.Center()
-				for dy := 0; dy < 3; dy++ {
-					for dx := 0; dx < 3; dx++ {
-						x := cx + dx - 1
-						y := cy + dy - 1
-						if terrain.IsWalkable(x, y) {
-							terrain.AddStairs(x, y, false)
-							goto foundDown
-						}
-					}
-				}
-			foundDown:
-			}
-		}
+func (g *CityGenerator) placeStairs(blocks []*CityBlock, terrain *Terrain, rng *rand.Rand) {
+	plazas := g.findPlazaBlocks(blocks)
+
+	if len(plazas) > 0 {
+		g.placeStairsInPlazas(plazas, terrain)
+	} else {
+		g.placeStairsInBlocks(blocks, terrain)
 	}
 }
 

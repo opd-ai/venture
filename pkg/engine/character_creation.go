@@ -219,7 +219,7 @@ type EbitenCharacterCreation struct {
 	// WASM FIX: Lazy portrait loading
 	// Store portrait path to load and defer actual image loading until Draw()
 	// This prevents ebiten.NewImageFromImage() calls before graphics context is ready
-	pendingPortraitPath string
+	pendingPortraitPath   string
 	portraitLoadAttempted bool
 }
 
@@ -687,7 +687,7 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 			// Portrait loaded successfully
 			cc.characterData.Portrait = portrait
 			cc.pendingPortraitPath = "" // Clear pending path
-			cc.errorMsg = "" // Clear any previous errors
+			cc.errorMsg = ""            // Clear any previous errors
 		}
 	}
 

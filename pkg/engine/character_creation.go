@@ -215,6 +215,12 @@ type EbitenCharacterCreation struct {
 	panelY      int
 	panelWidth  int
 	panelHeight int
+
+	// WASM FIX: Lazy portrait loading
+	// Store portrait path to load and defer actual image loading until Draw()
+	// This prevents ebiten.NewImageFromImage() calls before graphics context is ready
+	pendingPortraitPath string
+	portraitLoadAttempted bool
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -578,16 +584,12 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 			return
 		}
 
-		// Try to load the portrait
-		portrait, err := LoadPortrait(portraitPath)
-		if err != nil {
-			cc.errorMsg = fmt.Sprintf("Failed to load portrait: %v", err)
-			return
-		}
-
-		// Success - save portrait and proceed
+		// WASM FIX: Defer portrait loading until Draw() to ensure graphics context is ready
+		// Store the path for lazy loading instead of loading immediately
 		cc.characterData.PortraitPath = portraitPath
-		cc.characterData.Portrait = portrait
+		cc.pendingPortraitPath = portraitPath
+		cc.portraitLoadAttempted = false
+		cc.characterData.Portrait = nil // Will be loaded lazily in Draw()
 		cc.currentStep = stepConfirmation
 		cc.errorMsg = ""
 		// MOBILE/WASM: Ensure keyboard is hidden when completing
@@ -671,6 +673,24 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 
 // Draw renders the character creation UI
 func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
+	// WASM FIX: Lazy load pending portrait if graphics context is now ready
+	// This ensures ebiten.NewImageFromImage() is only called during Draw cycle
+	if cc.pendingPortraitPath != "" && !cc.portraitLoadAttempted {
+		cc.portraitLoadAttempted = true
+		portrait, err := LoadPortrait(cc.pendingPortraitPath)
+		if err != nil {
+			// Portrait load failed - clear pending path and show error
+			cc.pendingPortraitPath = ""
+			cc.errorMsg = fmt.Sprintf("Failed to load portrait: %v", err)
+			cc.characterData.Portrait = nil
+		} else {
+			// Portrait loaded successfully
+			cc.characterData.Portrait = portrait
+			cc.pendingPortraitPath = "" // Clear pending path
+			cc.errorMsg = "" // Clear any previous errors
+		}
+	}
+
 	// Draw semi-transparent overlay
 	vector.DrawFilledRect(screen, 0, 0, float32(cc.screenWidth), float32(cc.screenHeight),
 		color.RGBA{0, 0, 0, 200}, false)
@@ -1147,15 +1167,18 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.characterData.Class = cc.defaults.DefaultClass
 
 	// Apply portrait default
+	// WASM FIX: Defer portrait loading until Draw() to ensure graphics context is ready
 	if cc.defaults.DefaultPortraitPath != "" {
 		cc.portraitInput = cc.defaults.DefaultPortraitPath
-		// Try to load the default portrait
-		if portrait, err := LoadPortrait(cc.defaults.DefaultPortraitPath); err == nil {
-			cc.characterData.PortraitPath = cc.defaults.DefaultPortraitPath
-			cc.characterData.Portrait = portrait
-		}
+		cc.characterData.PortraitPath = cc.defaults.DefaultPortraitPath
+		cc.pendingPortraitPath = cc.defaults.DefaultPortraitPath
+		cc.portraitLoadAttempted = false
+		cc.characterData.Portrait = nil // Will be loaded lazily in Draw()
 	} else {
 		cc.portraitInput = ""
+		cc.pendingPortraitPath = ""
+		cc.portraitLoadAttempted = false
+		cc.characterData.Portrait = nil
 	}
 }
 

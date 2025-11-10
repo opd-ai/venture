@@ -429,22 +429,18 @@ func (g *GraphGrammarGenerator) getRoomDimensions(roomType RoomType) (int, int) 
 }
 
 // identifyCriticalPath identifies the main path from start to boss.
-func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
-	if graph.StartRoom == nil {
-		return
-	}
-
-	// Build critical path using breadth-first search to boss room
+// findBossOrDeepestRoom performs BFS to locate the boss room or deepest room in the dungeon graph.
+// Returns the boss room, deepest room, and parent mapping for path reconstruction.
+func (g *GraphGrammarGenerator) findBossOrDeepestRoom(startRoom *RoomNode) (*RoomNode, *RoomNode, map[int]*RoomNode) {
 	visited := make(map[int]bool)
 	parent := make(map[int]*RoomNode)
-	queue := []*RoomNode{graph.StartRoom}
-	visited[graph.StartRoom.ID] = true
+	queue := []*RoomNode{startRoom}
+	visited[startRoom.ID] = true
 
 	var bossRoom *RoomNode
 	var deepestRoom *RoomNode
 	maxDepth := 0
 
-	// BFS to find boss room (and track deepest room as fallback)
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
@@ -454,7 +450,6 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 			break
 		}
 
-		// Track deepest room as fallback if no boss exists
 		if current.Depth > maxDepth {
 			maxDepth = current.Depth
 			deepestRoom = current
@@ -469,70 +464,89 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 		}
 	}
 
-	// Build path from boss (or deepest room) back to start
+	return bossRoom, deepestRoom, parent
+}
+
+// buildPathToStart constructs the path from the target room back to the start room.
+// Returns the complete path from start to target.
+func (g *GraphGrammarGenerator) buildPathToStart(targetRoom, startRoom *RoomNode, parent map[int]*RoomNode) []*RoomNode {
+	if targetRoom == nil || targetRoom == startRoom {
+		return []*RoomNode{startRoom}
+	}
+
+	path := []*RoomNode{targetRoom}
+	current := targetRoom
+	for current.ID != startRoom.ID {
+		prev := parent[current.ID]
+		if prev == nil {
+			break
+		}
+		path = append([]*RoomNode{prev}, path...)
+		current = prev
+	}
+	return path
+}
+
+// identifyOptionalBranches finds rooms that branch off from the critical path.
+// Returns a list of branch paths.
+func (g *GraphGrammarGenerator) identifyOptionalBranches(graph *DungeonGraph, criticalPath []*RoomNode) [][]*RoomNode {
+	criticalSet := make(map[int]bool)
+	for _, room := range criticalPath {
+		criticalSet[room.ID] = true
+	}
+
+	var branches [][]*RoomNode
+	for _, room := range graph.Rooms {
+		if criticalSet[room.ID] {
+			continue
+		}
+
+		if g.connectsToCriticalPath(room, criticalPath, criticalSet) {
+			branch := []*RoomNode{room}
+			branches = append(branches, branch)
+		}
+	}
+	return branches
+}
+
+// connectsToCriticalPath checks if a room connects to any room on the critical path.
+func (g *GraphGrammarGenerator) connectsToCriticalPath(room *RoomNode, criticalPath []*RoomNode, criticalSet map[int]bool) bool {
+	for _, conn := range room.Connections {
+		if criticalSet[conn.To.ID] {
+			return true
+		}
+	}
+
+	for _, critRoom := range criticalPath {
+		for _, conn := range critRoom.Connections {
+			if conn.To.ID == room.ID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
+	if graph.StartRoom == nil {
+		return
+	}
+
+	// Find boss room or deepest room using BFS
+	bossRoom, deepestRoom, parent := g.findBossOrDeepestRoom(graph.StartRoom)
+
+	// Select target room (boss if available, otherwise deepest)
 	targetRoom := bossRoom
 	if targetRoom == nil {
 		targetRoom = deepestRoom
 	}
 
-	if targetRoom != nil && targetRoom != graph.StartRoom {
-		path := []*RoomNode{targetRoom}
-		current := targetRoom
-		for current.ID != graph.StartRoom.ID {
-			prev := parent[current.ID]
-			if prev == nil {
-				break
-			}
-			path = append([]*RoomNode{prev}, path...)
-			current = prev
-		}
-		graph.CriticalPath = path
-		graph.BossRoom = bossRoom // Update BossRoom reference
-	} else {
-		// If only start room exists, critical path should still have at least 2 rooms
-		// In this case, we need at least 2 rooms for a valid graph
-		graph.CriticalPath = []*RoomNode{graph.StartRoom}
-	}
+	// Build critical path from start to target
+	graph.CriticalPath = g.buildPathToStart(targetRoom, graph.StartRoom, parent)
+	graph.BossRoom = bossRoom
 
-	// Identify optional branches (rooms not on critical path)
-	criticalSet := make(map[int]bool)
-	for _, room := range graph.CriticalPath {
-		criticalSet[room.ID] = true
-	}
-
-	// Find all rooms that branch off from the critical path
-	for _, room := range graph.Rooms {
-		if !criticalSet[room.ID] {
-			// Check if this room connects to any room on the critical path
-			connectsToCritical := false
-			for _, conn := range room.Connections {
-				if criticalSet[conn.To.ID] {
-					connectsToCritical = true
-					break
-				}
-			}
-			// Also check reverse connections (rooms that connect to this one)
-			if !connectsToCritical {
-				for _, critRoom := range graph.CriticalPath {
-					for _, conn := range critRoom.Connections {
-						if conn.To.ID == room.ID {
-							connectsToCritical = true
-							break
-						}
-					}
-					if connectsToCritical {
-						break
-					}
-				}
-			}
-
-			if connectsToCritical {
-				// This is a branch room - add it as a single-room branch
-				branch := []*RoomNode{room}
-				graph.OptionalBranches = append(graph.OptionalBranches, branch)
-			}
-		}
-	}
+	// Identify optional branches
+	graph.OptionalBranches = g.identifyOptionalBranches(graph, graph.CriticalPath)
 }
 
 // validateGraph ensures the graph meets quality requirements.

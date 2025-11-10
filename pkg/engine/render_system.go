@@ -333,7 +333,10 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 		if !hasSprite {
 			continue
 		}
-		sprite := spriteComp.(*EbitenSprite)
+		sprite, ok := spriteComp.(*EbitenSprite)
+		if !ok {
+			continue
+		}
 
 		if !sprite.Visible {
 			continue
@@ -406,8 +409,14 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
-		sprite := spriteComp.(*EbitenSprite)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
+		sprite, ok := spriteComp.(*EbitenSprite)
+		if !ok {
+			continue
+		}
 
 		// DEBUG: Log sprite state for player
 		if entity.HasComponent("input") && sprite.Image == nil {
@@ -420,16 +429,18 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 		// Phase 4: Sync CurrentDirection from AnimationComponent.Facing
 		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-			anim := animComp.(*AnimationComponent)
-			sprite.CurrentDirection = int(anim.GetFacing())
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				sprite.CurrentDirection = int(anim.GetFacing())
+			}
 		}
 
 		// Phase 10.1: Sync sprite rotation from RotationComponent if present
 		// This enables 360° visual rotation for entities with rotation component
 		// CRITICAL: Must sync here for batch rendering path (drawEntity has its own sync)
 		if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
-			rotation := rotComp.(*RotationComponent)
-			sprite.Rotation = rotation.Angle
+			if rotation, ok := rotComp.(*RotationComponent); ok {
+				sprite.Rotation = rotation.Angle
+			}
 		}
 
 		// Get the actual sprite image (directional or single)
@@ -471,9 +482,10 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 		var flashAlpha float64
 		var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
 		if feedbackComp, ok := entity.GetComponent("visual_feedback"); ok {
-			feedback := feedbackComp.(*VisualFeedbackComponent)
-			flashAlpha = feedback.GetFlashAlpha()
-			tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+			if feedback, ok := feedbackComp.(*VisualFeedbackComponent); ok {
+				flashAlpha = feedback.GetFlashAlpha()
+				tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+			}
 		}
 
 		// Calculate sprite corners in screen space
@@ -608,7 +620,10 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	if !ok {
 		return entities
 	}
-	camera := camComp.(*CameraComponent)
+	camera, ok := camComp.(*CameraComponent)
+	if !ok {
+		return entities
+	}
 
 	// Calculate viewport bounds in world space with margin for sprites
 	margin := 100.0 // Extra space to render sprites partially off-screen
@@ -654,8 +669,14 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		return
 	}
 
-	pos := posComp.(*PositionComponent)
-	sprite := spriteComp.(*EbitenSprite)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+	sprite, ok := spriteComp.(*EbitenSprite)
+	if !ok {
+		return
+	}
 
 	if !sprite.Visible {
 		if entity.HasComponent("input") {
@@ -666,19 +687,21 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	// Phase 4: Sync CurrentDirection from AnimationComponent.Facing
 	if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-		anim := animComp.(*AnimationComponent)
-		sprite.CurrentDirection = int(anim.GetFacing())
+		if anim, ok := animComp.(*AnimationComponent); ok {
+			sprite.CurrentDirection = int(anim.GetFacing())
+		}
 	}
 
 	// Phase 10.1: Sync sprite rotation from RotationComponent if present
 	// This enables 360° visual rotation for entities with rotation component
 	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
-		rotation := rotComp.(*RotationComponent)
-		sprite.Rotation = rotation.Angle
+		if rotation, ok := rotComp.(*RotationComponent); ok {
+			sprite.Rotation = rotation.Angle
 
-		// DEBUG: Log rotation values for player entity (entity ID 1)
-		if entity.ID == 1 && sprite.Rotation != 0 {
-			fmt.Printf("[DEBUG] Player sprite.Rotation = %.4f rad (%.1f deg)\n", sprite.Rotation, sprite.Rotation*180/math.Pi)
+			// DEBUG: Log rotation values for player entity (entity ID 1)
+			if entity.ID == 1 && sprite.Rotation != 0 {
+				fmt.Printf("[DEBUG] Player sprite.Rotation = %.4f rad (%.1f deg)\n", sprite.Rotation, sprite.Rotation*180/math.Pi)
+			}
 		}
 	}
 
@@ -697,30 +720,31 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	var layerTransitionYOffset float64
 	var layerTransitionAlpha float64 = 1.0
 	if layerComp, hasLayer := entity.GetComponent("layer"); hasLayer {
-		layer := layerComp.(*LayerComponent)
-		if layer.IsTransitioning() {
-			// Calculate depth offset based on transition progress
-			// Moving up to higher layer (platform): negative offset (entity rises)
-			// Moving down to lower layer: positive offset (entity descends)
-			const maxDepthOffset = 16.0 // Maximum vertical offset in pixels
-			depthOffset := layer.TransitionProgress * maxDepthOffset
+		if layer, ok := layerComp.(*LayerComponent); ok {
+			if layer.IsTransitioning() {
+				// Calculate depth offset based on transition progress
+				// Moving up to higher layer (platform): negative offset (entity rises)
+				// Moving down to lower layer: positive offset (entity descends)
+				const maxDepthOffset = 16.0 // Maximum vertical offset in pixels
+				depthOffset := layer.TransitionProgress * maxDepthOffset
 
-			if layer.TargetLayer > layer.CurrentLayer {
-				// Moving up to higher layer
-				layerTransitionYOffset = -depthOffset
-			} else {
-				// Moving down to lower layer
-				layerTransitionYOffset = depthOffset
-			}
+				if layer.TargetLayer > layer.CurrentLayer {
+					// Moving up to higher layer
+					layerTransitionYOffset = -depthOffset
+				} else {
+					// Moving down to lower layer
+					layerTransitionYOffset = depthOffset
+				}
 
-			// Apply subtle transparency during transition edges for smooth visual flow
-			// Fade at start (0.0-0.3) and end (0.7-1.0) of transition
-			if layer.TransitionProgress < 0.3 {
-				// Fade in at start: 0.7 at progress=0, 1.0 at progress=0.3
-				layerTransitionAlpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
-			} else if layer.TransitionProgress > 0.7 {
-				// Fade out at end: 1.0 at progress=0.7, 0.7 at progress=1.0
-				layerTransitionAlpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
+				// Apply subtle transparency during transition edges for smooth visual flow
+				// Fade at start (0.0-0.3) and end (0.7-1.0) of transition
+				if layer.TransitionProgress < 0.3 {
+					// Fade in at start: 0.7 at progress=0, 1.0 at progress=0.3
+					layerTransitionAlpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
+				} else if layer.TransitionProgress > 0.7 {
+					// Fade out at end: 1.0 at progress=0.7, 0.7 at progress=1.0
+					layerTransitionAlpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
+				}
 			}
 		}
 	}
@@ -729,9 +753,10 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	var flashAlpha float64
 	var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
 	if feedbackComp, ok := entity.GetComponent("visual_feedback"); ok {
-		feedback := feedbackComp.(*VisualFeedbackComponent)
-		flashAlpha = feedback.GetFlashAlpha()
-		tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+		if feedback, ok := feedbackComp.(*VisualFeedbackComponent); ok {
+			flashAlpha = feedback.GetFlashAlpha()
+			tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+		}
 	}
 
 	// Issue #4 FIX: Apply layer transition alpha to tint alpha
@@ -829,7 +854,10 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 		return
 	}
 
-	health := healthComp.(*HealthComponent)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
 
 	// Don't draw health bar for player (has HUD display)
 	if entity.HasComponent("input") {
@@ -839,8 +867,9 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 	// Check if entity is a boss (high attack indicates boss)
 	isBoss := false
 	if attackComp, ok := entity.GetComponent("attack"); ok {
-		attack := attackComp.(*AttackComponent)
-		isBoss = attack.Damage > 20 // Boss threshold
+		if attack, ok := attackComp.(*AttackComponent); ok {
+			isBoss = attack.Damage > 20 // Boss threshold
+		}
 	}
 
 	// Only show health bar if: (1) damaged, or (2) is boss
@@ -905,7 +934,10 @@ func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 			continue
 		}
 
-		emitter := comp.(*ParticleEmitterComponent)
+		emitter, ok := comp.(*ParticleEmitterComponent)
+		if !ok {
+			continue
+		}
 
 		// Render each particle system
 		for _, system := range emitter.Systems {
@@ -986,8 +1018,14 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
-		collider := colliderComp.(*ColliderComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
+		collider, ok := colliderComp.(*ColliderComponent)
+		if !ok {
+			continue
+		}
 
 		// Get collider bounds
 		minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
@@ -1022,12 +1060,13 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 	// Collect entities with sprites and cache their sprite components
 	for _, entity := range entities {
 		if sprite, ok := entity.GetComponent("sprite"); ok {
-			ebitenSprite := sprite.(*EbitenSprite)
-			cache = append(cache, entitySprite{
-				entity: entity,
-				sprite: ebitenSprite,
-				layer:  ebitenSprite.Layer,
-			})
+			if ebitenSprite, ok := sprite.(*EbitenSprite); ok {
+				cache = append(cache, entitySprite{
+					entity: entity,
+					sprite: ebitenSprite,
+					layer:  ebitenSprite.Layer,
+				})
+			}
 		}
 	}
 

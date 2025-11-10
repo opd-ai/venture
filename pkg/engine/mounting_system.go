@@ -42,7 +42,10 @@ func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		mount := mountComp.(*MountComponent)
+		mount, ok := mountComp.(*MountComponent)
+		if !ok {
+			continue
+		}
 
 		// Find the vehicle entity
 		vehicle := ms.findEntity(entities, mount.MountedEntityID)
@@ -57,23 +60,29 @@ func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 		if !hasVehiclePos {
 			continue
 		}
-		vehiclePos := vehiclePosComp.(*PositionComponent)
+		vehiclePos, ok := vehiclePosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Update rider position to match vehicle + offset
 		riderPosComp, hasRiderPos := entity.GetComponent("position")
 		if hasRiderPos {
-			riderPos := riderPosComp.(*PositionComponent)
-			riderPos.X = vehiclePos.X + mount.MountOffset.X
-			riderPos.Y = vehiclePos.Y + mount.MountOffset.Y
+			if riderPos, ok := riderPosComp.(*PositionComponent); ok {
+				riderPos.X = vehiclePos.X + mount.MountOffset.X
+				riderPos.Y = vehiclePos.Y + mount.MountOffset.Y
+			}
 		}
 
 		// Synchronize rider rotation with vehicle
 		vehicleRotComp, hasVehicleRot := vehicle.GetComponent("rotation")
 		riderRotComp, hasRiderRot := entity.GetComponent("rotation")
 		if hasVehicleRot && hasRiderRot {
-			vehicleRot := vehicleRotComp.(*RotationComponent)
-			riderRot := riderRotComp.(*RotationComponent)
-			riderRot.Angle = vehicleRot.Angle
+			if vehicleRot, ok := vehicleRotComp.(*RotationComponent); ok {
+				if riderRot, ok := riderRotComp.(*RotationComponent); ok {
+					riderRot.Angle = vehicleRot.Angle
+				}
+			}
 		}
 	}
 }
@@ -99,7 +108,10 @@ func (ms *MountingSystem) Mount(rider, vehicle *Entity) error {
 		return fmt.Errorf("entity is not a vehicle")
 	}
 
-	vehicleData := vehicleComp.(*VehicleComponent)
+	vehicleData, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return fmt.Errorf("invalid vehicle component type")
+	}
 
 	// Check if vehicle has capacity
 	if !vehicleData.CanAddPassenger() {
@@ -118,8 +130,14 @@ func (ms *MountingSystem) Mount(rider, vehicle *Entity) error {
 		return fmt.Errorf("missing position component")
 	}
 
-	riderPos := riderPosComp.(*PositionComponent)
-	vehiclePos := vehiclePosComp.(*PositionComponent)
+	riderPos, ok := riderPosComp.(*PositionComponent)
+	if !ok {
+		return fmt.Errorf("invalid rider position component type")
+	}
+	vehiclePos, ok := vehiclePosComp.(*PositionComponent)
+	if !ok {
+		return fmt.Errorf("invalid vehicle position component type")
+	}
 
 	// Calculate offset (preserve relative position)
 	offsetX := riderPos.X - vehiclePos.X
@@ -155,15 +173,19 @@ func (ms *MountingSystem) Dismount(rider *Entity) error {
 		return fmt.Errorf("rider is not mounted")
 	}
 
-	mount := mountComp.(*MountComponent)
+	mount, ok := mountComp.(*MountComponent)
+	if !ok {
+		return fmt.Errorf("invalid mount component type")
+	}
 
 	// Find vehicle and update passenger count
 	if ms.world != nil {
 		vehicle, exists := ms.world.GetEntity(mount.MountedEntityID)
 		if exists && vehicle != nil {
 			if vehicleComp, hasVehicle := vehicle.GetComponent("vehicle"); hasVehicle {
-				vehicleData := vehicleComp.(*VehicleComponent)
-				vehicleData.RemovePassenger()
+				if vehicleData, ok := vehicleComp.(*VehicleComponent); ok {
+					vehicleData.RemovePassenger()
+				}
 			}
 		}
 	}
@@ -204,7 +226,10 @@ func (ms *MountingSystem) GetMountedVehicle(rider *Entity) *Entity {
 		return nil
 	}
 
-	mount := mountComp.(*MountComponent)
+	mount, ok := mountComp.(*MountComponent)
+	if !ok {
+		return nil
+	}
 
 	if ms.world != nil {
 		vehicle, exists := ms.world.GetEntity(mount.MountedEntityID)

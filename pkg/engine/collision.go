@@ -3,7 +3,10 @@
 // broad-phase collision detection using a grid-based approach.
 package engine
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 // CollisionSystem handles collision detection and resolution.
 // Uses spatial partitioning (grid-based) for efficient broad-phase detection.
@@ -19,6 +22,9 @@ type CollisionSystem struct {
 
 	// Terrain collision checker for efficient wall collision
 	terrainChecker *TerrainCollisionChecker
+
+	// Pool for collision pair tracking maps to reduce allocations
+	checkedMapPool sync.Pool
 }
 
 // NewCollisionSystem creates a new collision system.
@@ -167,7 +173,8 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 	s.grid = make(map[int]map[int][]*Entity)
 
 	// Collect entities with colliders
-	collidableEntities := make([]*Entity, 0)
+	// Pre-allocate to worst-case capacity to avoid reallocations during append
+	collidableEntities := make([]*Entity, 0, len(entities))
 	for _, entity := range entities {
 		if entity.HasComponent("collider") && entity.HasComponent("position") {
 			collidableEntities = append(collidableEntities, entity)

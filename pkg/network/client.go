@@ -381,86 +381,85 @@ func (c *TCPClient) receiveLoop() {
 		default:
 		}
 
-		// Set read deadline
 		c.conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
 
-		// Read message length (4 bytes)
-		if _, err := c.conn.Read(buf[:4]); err != nil {
-			// Non-blocking error send with done channel check
-			select {
-			case c.errors <- fmt.Errorf("read length error: %w", err):
-				c.errorStats.RecordSend()
-			case <-c.done:
-				return
-			default:
-				// Error channel full - exit gracefully
-				c.errorStats.RecordDrop()
-			}
+		msgLen, ok := c.readMessageLength(buf)
+		if !ok {
 			return
 		}
 
-		// Decode length
-		msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
-		if msgLen > uint32(len(buf)) {
-			// Non-blocking error send with done channel check
-			select {
-			case c.errors <- fmt.Errorf("message too large: %d bytes", msgLen):
-				c.errorStats.RecordSend()
-			case <-c.done:
-				return
-			default:
-				// Error channel full - exit gracefully
-				c.errorStats.RecordDrop()
-			}
+		if !c.readMessageData(buf, msgLen) {
 			return
 		}
 
-		// Read message data
-		if _, err := c.conn.Read(buf[:msgLen]); err != nil {
-			// Non-blocking error send with done channel check
-			select {
-			case c.errors <- fmt.Errorf("read data error: %w", err):
-				c.errorStats.RecordSend()
-			case <-c.done:
-				return
-			default:
-				// Error channel full - exit gracefully
-				c.errorStats.RecordDrop()
-			}
-			return
-		}
-
-		// Decode state update
-		update, err := c.protocol.DecodeStateUpdate(buf[:msgLen])
-		if err != nil {
-			// Non-blocking error send with done channel check
-			select {
-			case c.errors <- fmt.Errorf("decode error: %w", err):
-				c.errorStats.RecordSend()
-			case <-c.done:
-				return
-			default:
-				// Error channel full - continue processing
-				c.errorStats.RecordDrop()
-			}
+		if !c.processStateUpdate(buf[:msgLen]) {
 			continue
 		}
+	}
+}
 
-		// Update sequence number
-		c.mu.Lock()
-		c.stateSeq = update.SequenceNumber
-		c.mu.Unlock()
+// readMessageLength reads and validates the message length prefix.
+// Returns the message length and true if successful, 0 and false otherwise.
+func (c *TCPClient) readMessageLength(buf []byte) (uint32, bool) {
+	if _, err := c.conn.Read(buf[:4]); err != nil {
+		c.sendNonBlockingError(fmt.Errorf("read length error: %w", err), true)
+		return 0, false
+	}
 
-		// Send to channel (non-blocking)
-		select {
-		case c.stateUpdates <- update:
-			c.stateUpdateStats.RecordSend()
-		case <-c.done:
-			return
-		default:
-			// Drop if full (prioritize fresh updates)
-			c.stateUpdateStats.RecordDrop()
-		}
+	msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
+	if msgLen > uint32(len(buf)) {
+		c.sendNonBlockingError(fmt.Errorf("message too large: %d bytes", msgLen), true)
+		return 0, false
+	}
+
+	return msgLen, true
+}
+
+// readMessageData reads the message data from the connection.
+// Returns true if successful, false if an error occurred.
+func (c *TCPClient) readMessageData(buf []byte, msgLen uint32) bool {
+	if _, err := c.conn.Read(buf[:msgLen]); err != nil {
+		c.sendNonBlockingError(fmt.Errorf("read data error: %w", err), true)
+		return false
+	}
+	return true
+}
+
+// processStateUpdate decodes and processes a state update message.
+// Returns true to continue processing, false to stop the receive loop.
+func (c *TCPClient) processStateUpdate(data []byte) bool {
+	update, err := c.protocol.DecodeStateUpdate(data)
+	if err != nil {
+		c.sendNonBlockingError(fmt.Errorf("decode error: %w", err), false)
+		return false
+	}
+
+	c.mu.Lock()
+	c.stateSeq = update.SequenceNumber
+	c.mu.Unlock()
+
+	select {
+	case c.stateUpdates <- update:
+		c.stateUpdateStats.RecordSend()
+	case <-c.done:
+		return false
+	default:
+		c.stateUpdateStats.RecordDrop()
+	}
+
+	return true
+}
+
+// sendNonBlockingError sends an error to the error channel without blocking.
+// If exitOnError is true, it signals the loop should terminate by returning from done channel.
+func (c *TCPClient) sendNonBlockingError(err error, exitOnError bool) {
+	select {
+	case c.errors <- err:
+		c.errorStats.RecordSend()
+	case <-c.done:
+		// Already shutting down
+	default:
+		c.errorStats.RecordDrop()
 	}
 }
 

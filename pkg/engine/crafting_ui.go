@@ -179,10 +179,11 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 
 	// Check if player is currently crafting
 	if progressComp, ok := ui.playerEntity.GetComponent("crafting_progress"); ok {
-		progress := progressComp.(*CraftingProgressComponent)
-		if progress != nil {
-			ui.showingProgress = true
-			return // Don't allow new crafts while one is in progress
+		if progress, ok := progressComp.(*CraftingProgressComponent); ok {
+			if progress != nil {
+				ui.showingProgress = true
+				return // Don't allow new crafts while one is in progress
+			}
 		}
 	}
 	ui.showingProgress = false
@@ -193,7 +194,10 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 		ui.showMessage("You don't know any recipes yet")
 		return
 	}
-	knowledge := knowledgeComp.(*RecipeKnowledgeComponent)
+	knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
+	if !ok {
+		return
+	}
 
 	// Convert map to slice for ordered iteration
 	var recipeList []*Recipe
@@ -400,9 +404,18 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		return
 	}
 
-	knowledge := knowledgeComp.(*RecipeKnowledgeComponent)
-	skill := skillComp.(*CraftingSkillComponent)
-	inv := invComp.(*InventoryComponent)
+	knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
+	if !ok {
+		return
+	}
+	skill, ok := skillComp.(*CraftingSkillComponent)
+	if !ok {
+		return
+	}
+	inv, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
 	recipes := knowledge.KnownRecipes
 
 	// Draw semi-transparent overlay
@@ -427,8 +440,9 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	titleText := "CRAFTING RECIPES"
 	if ui.stationEntity != nil {
 		if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
-			station := stationComp.(*CraftingStationComponent)
-			titleText = fmt.Sprintf("CRAFTING - %s Station (+5%% success, 25%% faster)", station.StationType.String())
+			if station, ok := stationComp.(*CraftingStationComponent); ok {
+				titleText = fmt.Sprintf("CRAFTING - %s Station (+5%% success, 25%% faster)", station.StationType.String())
+			}
 		}
 	}
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
@@ -462,11 +476,14 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	instructionY := windowY + 90
 	if ui.showingProgress {
 		progressComp, _ := ui.playerEntity.GetComponent("crafting_progress")
-		progress := progressComp.(*CraftingProgressComponent)
-		if progress != nil {
-			progressPercent := (progress.ElapsedTimeSec / progress.RequiredTimeSec) * 100
-			ebitenutil.DebugPrintAt(img, fmt.Sprintf("Crafting in progress... %.0f%%", progressPercent),
-				windowX+10, instructionY)
+		if progressComp != nil {
+			if progress, ok := progressComp.(*CraftingProgressComponent); ok {
+				if progress != nil {
+					progressPercent := (progress.ElapsedTimeSec / progress.RequiredTimeSec) * 100
+					ebitenutil.DebugPrintAt(img, fmt.Sprintf("Crafting in progress... %.0f%%", progressPercent),
+						windowX+10, instructionY)
+				}
+			}
 		}
 	} else {
 		ebitenutil.DebugPrintAt(img, "Select recipe and press ENTER/SPACE to craft", windowX+10, instructionY)
@@ -613,15 +630,16 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		// Show station bonus in success chance
 		if ui.stationEntity != nil {
 			if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
-				station := stationComp.(*CraftingStationComponent)
-				// Check if station type matches recipe type
-				if station.StationType == recipe.Type {
-					bonusChance := successChance + station.BonusSuccessChance
-					if bonusChance > 0.95 {
-						bonusChance = 0.95 // Cap at 95%
+				if station, ok := stationComp.(*CraftingStationComponent); ok {
+					// Check if station type matches recipe type
+					if station.StationType == recipe.Type {
+						bonusChance := successChance + station.BonusSuccessChance
+						if bonusChance > 0.95 {
+							bonusChance = 0.95 // Cap at 95%
+						}
+						successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)",
+							successChance*100, bonusChance*100, station.BonusSuccessChance*100)
 					}
-					successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)",
-						successChance*100, bonusChance*100, station.BonusSuccessChance*100)
 				}
 			}
 		}
@@ -689,15 +707,17 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	// Draw nearby station hint if not at a station
 	if ui.stationEntity == nil && ui.playerEntity != nil {
 		if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-			pos := posComp.(*PositionComponent)
-			// Find nearest station within 100 pixels
-			nearestStation, distance := ui.findNearestStation(pos.X, pos.Y, 100)
-			if nearestStation != nil {
-				if stationComp, ok := nearestStation.GetComponent("crafting_station"); ok {
-					station := stationComp.(*CraftingStationComponent)
-					stationHint := fmt.Sprintf("Nearby: %s (%.0f units away) - Move closer to use station bonuses",
-						station.StationType.String(), distance)
-					ebitenutil.DebugPrintAt(img, stationHint, windowX+10, footerY-20)
+			if pos, ok := posComp.(*PositionComponent); ok {
+				// Find nearest station within 100 pixels
+				nearestStation, distance := ui.findNearestStation(pos.X, pos.Y, 100)
+				if nearestStation != nil {
+					if stationComp, ok := nearestStation.GetComponent("crafting_station"); ok {
+						if station, ok := stationComp.(*CraftingStationComponent); ok {
+							stationHint := fmt.Sprintf("Nearby: %s (%.0f units away) - Move closer to use station bonuses",
+								station.StationType.String(), distance)
+							ebitenutil.DebugPrintAt(img, stationHint, windowX+10, footerY-20)
+						}
+					}
 				}
 			}
 		}
@@ -818,7 +838,10 @@ func (ui *CraftingUI) canCraftRecipe(recipe *Recipe) bool {
 	if !hasInv {
 		return false
 	}
-	inventory := invComp.(*InventoryComponent)
+	inventory, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return false
+	}
 
 	// Check if player has all required materials
 	for _, mat := range recipe.Materials {

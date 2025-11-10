@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/hostplay"
@@ -1657,8 +1656,10 @@ func main() {
 	player.AddComponent(engine.NewAimComponent(0)) // Start aiming right
 
 	// GAP-017 REPAIR: Add animated sprite instead of static sprite
+	// WASM FIX: Set Image to nil initially; animation system will create it on first update
+	// In WASM, ebiten.NewImage() can only be called after graphics context is ready
 	playerSprite := &engine.EbitenSprite{
-		Image:   ebiten.NewImage(28, 28), // Initial image (will be replaced by animation)
+		Image:   nil, // Will be created by animation system on first update
 		Width:   28,
 		Height:  28,
 		Visible: true,

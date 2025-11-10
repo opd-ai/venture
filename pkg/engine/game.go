@@ -147,9 +147,10 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 	lightingConfig.Enabled = false // Disabled by default, enable via flag
 	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
 
-	// Create reusable scene buffer for lighting post-processing
-	// Allocated once to avoid per-frame allocations (60+ FPS)
-	sceneBuffer := ebiten.NewImage(screenWidth, screenHeight)
+	// WASM FIX: Scene buffer will be lazily initialized on first Draw() call
+	// Cannot call ebiten.NewImage() during initialization in WASM builds
+	// The graphics context is not available until the first Update/Draw cycle
+	var sceneBuffer *ebiten.Image = nil
 
 	game := &EbitenGame{
 		World:              world,
@@ -854,6 +855,12 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 
 	// If lighting is enabled, use post-processing pipeline
 	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
+		// WASM FIX: Lazy initialization of scene buffer on first use
+		// In WASM, ebiten.NewImage() can only be called after graphics context is ready
+		if g.sceneBuffer == nil {
+			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+		}
+		
 		// Clear and reuse scene buffer (avoid per-frame allocation)
 		g.sceneBuffer.Clear()
 

@@ -433,3 +433,70 @@ func BenchmarkAnimationSystem_DistanceLOD(b *testing.B) {
 		sys.Update(entities, 0.016)
 	}
 }
+
+// TestAnimationSystem_SetMaxCacheSize tests cache size configuration and eviction.
+func TestAnimationSystem_SetMaxCacheSize(t *testing.T) {
+spriteGen := sprites.NewGenerator()
+sys := NewAnimationSystem(spriteGen)
+
+// Verify default size
+if sys.maxCacheSize != 100 {
+t.Errorf("Expected default cache size 100, got %d", sys.maxCacheSize)
+}
+
+// Test increasing cache size
+sys.SetMaxCacheSize(200)
+if sys.maxCacheSize != 200 {
+t.Errorf("Expected cache size 200, got %d", sys.maxCacheSize)
+}
+
+// Add test entries to cache
+for i := 0; i < 150; i++ {
+key := sys.getCacheKey(int64(i), AnimationStateWalk)
+frames := []*ebiten.Image{ebiten.NewImage(28, 28)}
+sys.cacheFrames(key, frames)
+}
+
+// Verify cache has 150 entries
+sys.cacheMutex.RLock()
+cacheSize := len(sys.frameCache)
+sys.cacheMutex.RUnlock()
+
+if cacheSize != 150 {
+t.Errorf("Expected cache to have 150 entries, got %d", cacheSize)
+}
+
+// Test decreasing cache size triggers eviction
+sys.SetMaxCacheSize(50)
+
+sys.cacheMutex.RLock()
+cacheSize = len(sys.frameCache)
+keyCount := len(sys.cacheKeys)
+sys.cacheMutex.RUnlock()
+
+if sys.maxCacheSize != 50 {
+t.Errorf("Expected cache size 50, got %d", sys.maxCacheSize)
+}
+
+if cacheSize != 50 {
+t.Errorf("Expected cache to be evicted to 50 entries, got %d", cacheSize)
+}
+
+if keyCount != 50 {
+t.Errorf("Expected 50 cache keys after eviction, got %d", keyCount)
+}
+
+// Verify cache still works after eviction
+sys.SetMaxCacheSize(100)
+key := sys.getCacheKey(99999, AnimationStateRun)
+frames := []*ebiten.Image{ebiten.NewImage(28, 28)}
+sys.cacheFrames(key, frames)
+
+sys.cacheMutex.RLock()
+_, exists := sys.frameCache[key]
+sys.cacheMutex.RUnlock()
+
+if !exists {
+t.Error("Cache should work after eviction")
+}
+}

@@ -104,6 +104,28 @@ func (s *AnimationSystem) SetDistanceThresholds(closeThreshold, midThreshold flo
 	s.distanceMidThresh = midThreshold
 }
 
+// SetMaxCacheSize sets the maximum number of animation sequences to cache.
+// Larger cache reduces regeneration overhead but uses more memory.
+// Default is 100. For WASM/browser environments, consider 200-500 for better performance.
+// Each cached sequence typically uses 100-400KB depending on sprite size and frame count.
+func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+	
+	s.maxCacheSize = maxSize
+	
+	// If new size is smaller than current cache, trigger eviction
+	if len(s.frameCache) > maxSize {
+		// Evict oldest entries until within limit
+		toEvict := len(s.frameCache) - maxSize
+		for i := 0; i < toEvict && len(s.cacheKeys) > 0; i++ {
+			oldestKey := s.cacheKeys[0]
+			delete(s.frameCache, oldestKey)
+			s.cacheKeys = s.cacheKeys[1:]
+		}
+	}
+}
+
 // GetStats returns current animation performance statistics.
 // Useful for monitoring and debugging performance.
 func (s *AnimationSystem) GetStats() AnimationStats {

@@ -88,6 +88,76 @@ var (
 	noTutorial       = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
 )
 
+// initializeLogger creates and configures the logger based on environment variables and flags.
+func initializeLogger() (*logrus.Logger, *logrus.Entry) {
+	logConfig := logging.DefaultConfig()
+
+	// Check for JSON format from environment (default to text for client)
+	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
+		logConfig.Format = logging.JSONFormat
+	} else {
+		logConfig.Format = logging.TextFormat
+		logConfig.EnableColor = true
+	}
+
+	// Set log level from environment or use Info as default
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		logConfig.Level = logging.LogLevel(logLevel)
+	} else if *verbose {
+		logConfig.Level = logging.DebugLevel
+	} else {
+		logConfig.Level = logging.InfoLevel
+	}
+
+	logger := logging.NewLogger(logConfig)
+	clientLogger := logger.WithFields(logrus.Fields{
+		"component": "client",
+		"genre":     *genreID,
+		"seed":      *seed,
+	})
+
+	clientLogger.Infof("Starting Venture %s", version.FullVersion)
+	clientLogger.WithFields(logrus.Fields{
+		"width":  *width,
+		"height": *height,
+		"seed":   *seed,
+		"genre":  *genreID,
+	}).Info("client configuration")
+
+	return logger, clientLogger
+}
+
+// initializeNetworkClient sets up network connection if multiplayer mode is enabled.
+// Returns the network client or nil for single-player mode.
+func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
+	if !*multiplayer {
+		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
+		return nil
+	}
+
+	clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
+
+	clientConfig := network.DefaultClientConfig()
+	clientConfig.ServerAddress = *server
+	networkClient := network.NewClientWithLogger(clientConfig, logger)
+
+	// Connect to server
+	if err := networkClient.Connect(); err != nil {
+		clientLogger.WithError(err).Fatal("failed to connect to server")
+	}
+
+	clientLogger.Info("connected to server successfully")
+
+	// Handle network errors in background
+	go func() {
+		for err := range networkClient.ReceiveError() {
+			clientLogger.WithError(err).Error("network error")
+		}
+	}()
+
+	return networkClient
+}
+
 // return a random seed
 func seededRandom() int64 {
 	time := time.Now().UnixNano()
@@ -791,39 +861,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize structured logger
-	logConfig := logging.DefaultConfig()
-
-	// Check for JSON format from environment (default to text for client)
-	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
-		logConfig.Format = logging.JSONFormat
-	} else {
-		logConfig.Format = logging.TextFormat
-		logConfig.EnableColor = true
-	}
-
-	// Set log level from environment or use Info as default
-	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
-		logConfig.Level = logging.LogLevel(logLevel)
-	} else if *verbose {
-		logConfig.Level = logging.DebugLevel
-	} else {
-		logConfig.Level = logging.InfoLevel
-	}
-
-	logger := logging.NewLogger(logConfig)
-	clientLogger := logger.WithFields(logrus.Fields{
-		"component": "client",
-		"genre":     *genreID,
-		"seed":      *seed,
-	})
-
-	clientLogger.Infof("Starting Venture %s", version.FullVersion)
-	clientLogger.WithFields(logrus.Fields{
-		"width":  *width,
-		"height": *height,
-		"seed":   *seed,
-		"genre":  *genreID,
-	}).Info("client configuration")
+	logger, clientLogger := initializeLogger()
 
 	// Handle host-and-play mode: start embedded server before client
 	if *hostAndPlay {
@@ -844,30 +882,7 @@ func main() {
 	}
 
 	// Initialize network client if multiplayer mode is enabled
-	var networkClient network.ClientConnection
-	if *multiplayer {
-		clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
-
-		clientConfig := network.DefaultClientConfig()
-		clientConfig.ServerAddress = *server
-		networkClient = network.NewClientWithLogger(clientConfig, logger)
-
-		// Connect to server
-		if err := networkClient.Connect(); err != nil {
-			clientLogger.WithError(err).Fatal("failed to connect to server")
-		}
-
-		clientLogger.Info("connected to server successfully")
-
-		// Handle network errors in background
-		go func() {
-			for err := range networkClient.ReceiveError() {
-				clientLogger.WithError(err).Error("network error")
-			}
-		}()
-	} else {
-		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
-	}
+	networkClient := initializeNetworkClient(logger, clientLogger)
 
 	// Create the game instance
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)

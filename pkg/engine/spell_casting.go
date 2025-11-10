@@ -326,19 +326,20 @@ func (s *SpellCastingSystem) healTarget(target *Entity, spell *magic.Spell) {
 		if hasPos {
 			if pos, ok := targetPos.(*PositionComponent); ok {
 				config := particles.Config{
-				Type:     particles.ParticleMagic,
-				Count:    20,
-				GenreID:  "fantasy",
-				Seed:     int64(target.ID),
-				Duration: 1.0,
-				SpreadX:  60.0,
-				SpreadY:  60.0,
-				Gravity:  -80.0, // Rise upward for healing
-				MinSize:  4.0,
-				MaxSize:  8.0,
-				Custom:   map[string]interface{}{"color": "healing"},
+					Type:     particles.ParticleMagic,
+					Count:    20,
+					GenreID:  "fantasy",
+					Seed:     int64(target.ID),
+					Duration: 1.0,
+					SpreadX:  60.0,
+					SpreadY:  60.0,
+					Gravity:  -80.0, // Rise upward for healing
+					MinSize:  4.0,
+					MaxSize:  8.0,
+					Custom:   map[string]interface{}{"color": "healing"},
+				}
+				s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
 			}
-			s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
 		}
 	}
 
@@ -357,7 +358,9 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 	// Get caster's team
 	var casterTeamID int
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
-		casterTeamID = teamComp.(*TeamComponent).TeamID
+		if team, ok := teamComp.(*TeamComponent); ok {
+			casterTeamID = team.TeamID
+		}
 	}
 
 	for _, entity := range entities {
@@ -912,7 +915,10 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 		if !hasCasterPos {
 			break
 		}
-		casterPosComp := casterPos.(*PositionComponent)
+		casterPosComp, ok := casterPos.(*PositionComponent)
+		if !ok {
+			break
+		}
 
 		// Get caster's facing direction (use velocity or mouse aim)
 		dirX, dirY := s.getCasterDirection(caster, x, y)
@@ -937,7 +943,10 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 			if !hasPos {
 				continue
 			}
-			entityPosComp := entityPos.(*PositionComponent)
+			entityPosComp, ok := entityPos.(*PositionComponent)
+			if !ok {
+				continue
+			}
 
 			// Vector from caster to entity
 			toEntityX := entityPosComp.X - casterPosComp.X
@@ -969,7 +978,10 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 		if !hasCasterPos {
 			break
 		}
-		casterPosComp := casterPos.(*PositionComponent)
+		casterPosComp, ok := casterPos.(*PositionComponent)
+		if !ok {
+			break
+		}
 
 		// Get caster's facing direction (use velocity or mouse aim)
 		dirX, dirY := s.getCasterDirection(caster, x, y)
@@ -994,7 +1006,10 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 			if !hasPos {
 				continue
 			}
-			entityPosComp := entityPos.(*PositionComponent)
+			entityPosComp, ok := entityPos.(*PositionComponent)
+			if !ok {
+				continue
+			}
 
 			// Vector from caster to entity
 			toEntityX := entityPosComp.X - casterPosComp.X
@@ -1033,18 +1048,20 @@ func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, 
 func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY float64) (dirX, dirY float64) {
 	// Try to use velocity for moving entities
 	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
-		vel := velComp.(*VelocityComponent)
-		if vel.VX != 0 || vel.VY != 0 {
-			return vel.VX, vel.VY
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			if vel.VX != 0 || vel.VY != 0 {
+				return vel.VX, vel.VY
+			}
 		}
 	}
 
 	// Fall back to direction towards target point
 	if posComp, hasPos := caster.GetComponent("position"); hasPos {
-		pos := posComp.(*PositionComponent)
-		dirX = targetX - pos.X
-		dirY = targetY - pos.Y
-		return dirX, dirY
+		if pos, ok := posComp.(*PositionComponent); ok {
+			dirX = targetX - pos.X
+			dirY = targetY - pos.Y
+			return dirX, dirY
+		}
 	}
 
 	// Default to facing right if no position
@@ -1057,7 +1074,10 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 	if !hasSpells {
 		return false
 	}
-	slots := spellComp.(*SpellSlotComponent)
+	slots, ok := spellComp.(*SpellSlotComponent)
+	if !ok {
+		return false
+	}
 
 	// Check if already casting
 	if slots.IsCasting() {
@@ -1080,7 +1100,10 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 	if !hasMana {
 		return false
 	}
-	mana := manaComp.(*ManaComponent)
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return false
+	}
 	if mana.Current < spell.Stats.ManaCost {
 		return false
 	}
@@ -1098,7 +1121,10 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 	if !hasSpells {
 		return
 	}
-	slots := spellComp.(*SpellSlotComponent)
+	slots, ok := spellComp.(*SpellSlotComponent)
+	if !ok {
+		return
+	}
 
 	slots.Casting = -1
 	slots.CastingBar = 0
@@ -1254,7 +1280,10 @@ func (s *ManaRegenSystem) Update(entities []*Entity, deltaTime float64) {
 		if !hasMana {
 			continue
 		}
-		mana := manaComp.(*ManaComponent)
+		mana, ok := manaComp.(*ManaComponent)
+		if !ok {
+			continue
+		}
 
 		// Regenerate mana
 		mana.Current += int(mana.Regen * deltaTime)

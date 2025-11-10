@@ -2,8 +2,8 @@
 
 ## AUDIT SUMMARY
 **Total Issues:** 465
-**Resolved:** 52
-**Remaining:** 413
+**Resolved:** 77
+**Remaining:** 388
 **By Category:** CRITICAL BUG: 465
 **By Severity:** High: 465 | Medium: 0 | Low: 0
 
@@ -47,11 +47,21 @@
   - Tests passing with xvfb
 
 ### 2025-01-09 - Batch 5: Movement System
-**Commit:** (pending)
+**Commit:** 7fa9cf1
 **Files Fixed:** 1
 **Issues Resolved:** 10
 
 - `pkg/engine/movement.go` - 10 issues - ✅ RESOLVED
+  - All type assertions now use comma-ok idiom
+  - Tests passing with xvfb
+
+### 2025-01-09 - Batch 6: Music Context and Squad Behaviors
+**Commit:** (pending)
+**Files Fixed:** 2
+**Issues Resolved:** 25
+
+- `pkg/engine/music_context.go` - 5 issues - ✅ RESOLVED
+- `pkg/engine/squad_behaviors.go` - 20 issues - ✅ RESOLVED
   - All type assertions now use comma-ok idiom
   - Tests passing with xvfb
 

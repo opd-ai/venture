@@ -2,8 +2,8 @@
 
 ## AUDIT SUMMARY
 **Total Issues:** 465
-**Resolved:** 42
-**Remaining:** 423
+**Resolved:** 52
+**Remaining:** 413
 **By Category:** CRITICAL BUG: 465
 **By Severity:** High: 465 | Medium: 0 | Low: 0
 
@@ -38,11 +38,20 @@
   - Tests passing with xvfb
 
 ### 2025-01-09 - Batch 4: Progression System
-**Commit:** (pending)
+**Commit:** 416d26a
 **Files Fixed:** 1
 **Issues Resolved:** 6
 
 - `pkg/engine/progression_system.go` - 6 issues - ✅ RESOLVED
+  - All type assertions now use comma-ok idiom
+  - Tests passing with xvfb
+
+### 2025-01-09 - Batch 5: Movement System
+**Commit:** (pending)
+**Files Fixed:** 1
+**Issues Resolved:** 10
+
+- `pkg/engine/movement.go` - 10 issues - ✅ RESOLVED
   - All type assertions now use comma-ok idiom
   - Tests passing with xvfb
 

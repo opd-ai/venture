@@ -429,69 +429,98 @@ func (g *Generator) generateXSymbol(img *image.RGBA, col color.Color, cx, cy, si
 	}
 }
 
+// generateArrowSymbol generates an arrow symbol in the specified direction.
+// direction: 0=up, 1=right, 2=down, 3=left
 func (g *Generator) generateArrowSymbol(img *image.RGBA, col color.Color, cx, cy, size, direction int) {
-	// direction: 0=up, 1=right, 2=down, 3=left
 	switch direction {
-	case 0: // Up
-		for y := cy - size; y <= cy; y++ {
-			if y >= 0 && y < img.Bounds().Dy() {
-				img.Set(cx, y, col)
-			}
-		}
-		for i := 1; i <= size/2; i++ {
-			y := cy - size + i
-			if y >= 0 && y < img.Bounds().Dy() {
-				if cx-i >= 0 {
-					img.Set(cx-i, y, col)
-				}
-				if cx+i < img.Bounds().Dx() {
-					img.Set(cx+i, y, col)
-				}
-			}
-		}
-	case 1: // Right
-		for x := cx; x <= cx+size && x >= 0 && x < img.Bounds().Dx(); x++ {
-			img.Set(x, cy, col)
-		}
-		for i := 1; i <= size/2; i++ {
-			x := cx + size - i
-			if x >= 0 && x < img.Bounds().Dx() {
-				if cy-i >= 0 {
-					img.Set(x, cy-i, col)
-				}
-				if cy+i < img.Bounds().Dy() {
-					img.Set(x, cy+i, col)
-				}
-			}
-		}
-	case 2: // Down
-		for y := cy; y <= cy+size && y >= 0 && y < img.Bounds().Dy(); y++ {
+	case 0:
+		g.generateArrowUp(img, col, cx, cy, size)
+	case 1:
+		g.generateArrowRight(img, col, cx, cy, size)
+	case 2:
+		g.generateArrowDown(img, col, cx, cy, size)
+	case 3:
+		g.generateArrowLeft(img, col, cx, cy, size)
+	}
+}
+
+// generateArrowUp draws an upward-pointing arrow.
+func (g *Generator) generateArrowUp(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Vertical shaft
+	for y := cy - size; y <= cy; y++ {
+		if y >= 0 && y < img.Bounds().Dy() {
 			img.Set(cx, y, col)
 		}
-		for i := 1; i <= size/2; i++ {
-			y := cy + size - i
-			if y >= 0 && y < img.Bounds().Dy() {
-				if cx-i >= 0 {
-					img.Set(cx-i, y, col)
-				}
-				if cx+i < img.Bounds().Dx() {
-					img.Set(cx+i, y, col)
-				}
+	}
+	// Arrowhead
+	for i := 1; i <= size/2; i++ {
+		y := cy - size + i
+		if y >= 0 && y < img.Bounds().Dy() {
+			if cx-i >= 0 {
+				img.Set(cx-i, y, col)
+			}
+			if cx+i < img.Bounds().Dx() {
+				img.Set(cx+i, y, col)
 			}
 		}
-	case 3: // Left
-		for x := cx - size; x <= cx && x >= 0 && x < img.Bounds().Dx(); x++ {
-			img.Set(x, cy, col)
+	}
+}
+
+// generateArrowRight draws a rightward-pointing arrow.
+func (g *Generator) generateArrowRight(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Horizontal shaft
+	for x := cx; x <= cx+size && x >= 0 && x < img.Bounds().Dx(); x++ {
+		img.Set(x, cy, col)
+	}
+	// Arrowhead
+	for i := 1; i <= size/2; i++ {
+		x := cx + size - i
+		if x >= 0 && x < img.Bounds().Dx() {
+			if cy-i >= 0 {
+				img.Set(x, cy-i, col)
+			}
+			if cy+i < img.Bounds().Dy() {
+				img.Set(x, cy+i, col)
+			}
 		}
-		for i := 1; i <= size/2; i++ {
-			x := cx - size + i
-			if x >= 0 && x < img.Bounds().Dx() {
-				if cy-i >= 0 {
-					img.Set(x, cy-i, col)
-				}
-				if cy+i < img.Bounds().Dy() {
-					img.Set(x, cy+i, col)
-				}
+	}
+}
+
+// generateArrowDown draws a downward-pointing arrow.
+func (g *Generator) generateArrowDown(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Vertical shaft
+	for y := cy; y <= cy+size && y >= 0 && y < img.Bounds().Dy(); y++ {
+		img.Set(cx, y, col)
+	}
+	// Arrowhead
+	for i := 1; i <= size/2; i++ {
+		y := cy + size - i
+		if y >= 0 && y < img.Bounds().Dy() {
+			if cx-i >= 0 {
+				img.Set(cx-i, y, col)
+			}
+			if cx+i < img.Bounds().Dx() {
+				img.Set(cx+i, y, col)
+			}
+		}
+	}
+}
+
+// generateArrowLeft draws a leftward-pointing arrow.
+func (g *Generator) generateArrowLeft(img *image.RGBA, col color.Color, cx, cy, size int) {
+	// Horizontal shaft
+	for x := cx - size; x <= cx && x >= 0 && x < img.Bounds().Dx(); x++ {
+		img.Set(x, cy, col)
+	}
+	// Arrowhead
+	for i := 1; i <= size/2; i++ {
+		x := cx - size + i
+		if x >= 0 && x < img.Bounds().Dx() {
+			if cy-i >= 0 {
+				img.Set(x, cy-i, col)
+			}
+			if cy+i < img.Bounds().Dy() {
+				img.Set(x, cy+i, col)
 			}
 		}
 	}

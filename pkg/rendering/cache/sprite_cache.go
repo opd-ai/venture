@@ -150,11 +150,12 @@ func (c *SpriteCache) evictIfNeeded(requiredSize int64) {
 // removeElement removes a specific element from the cache.
 func (c *SpriteCache) removeElement(elem *list.Element) {
 	c.lru.Remove(elem)
-	e := elem.Value.(*entry)
-	delete(c.cache, e.key)
-	c.stats.TotalSize -= e.size
-	c.stats.EntryCount--
-	c.stats.Evictions++
+	if e, ok := elem.Value.(*entry); ok {
+		delete(c.cache, e.key)
+		c.stats.TotalSize -= e.size
+		c.stats.EntryCount--
+		c.stats.Evictions++
+	}
 }
 
 // Clear removes all entries from the cache.

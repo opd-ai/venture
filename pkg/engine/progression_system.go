@@ -107,7 +107,10 @@ func (ps *ProgressionSystem) AwardXP(entity *Entity, xp int) error {
 		return fmt.Errorf("entity does not have experience component")
 	}
 
-	exp := expComp.(*ExperienceComponent)
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return fmt.Errorf("invalid experience component type")
+	}
 
 	if ps.logger != nil && ps.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		ps.logger.WithFields(logrus.Fields{
@@ -169,26 +172,31 @@ func (ps *ProgressionSystem) updateStatsForLevel(entity *Entity, level int) {
 	if !ok {
 		return // No scaling defined
 	}
-	scaling := scalingComp.(*LevelScalingComponent)
+	scaling, ok := scalingComp.(*LevelScalingComponent)
+	if !ok {
+		return
+	}
 
 	// Update health component
 	healthComp, ok := entity.GetComponent("health")
 	if ok {
-		health := healthComp.(*HealthComponent)
-		oldMax := health.Max
-		health.Max = scaling.CalculateHealthForLevel(level)
-		// Increase current health by the same amount
-		health.Current += (health.Max - oldMax)
+		if health, ok := healthComp.(*HealthComponent); ok {
+			oldMax := health.Max
+			health.Max = scaling.CalculateHealthForLevel(level)
+			// Increase current health by the same amount
+			health.Current += (health.Max - oldMax)
+		}
 	}
 
 	// Update stats component
 	statsComp, ok := entity.GetComponent("stats")
 	if ok {
-		stats := statsComp.(*StatsComponent)
-		stats.Attack = scaling.CalculateAttackForLevel(level)
-		stats.Defense = scaling.CalculateDefenseForLevel(level)
-		stats.MagicPower = scaling.CalculateMagicPowerForLevel(level)
-		stats.MagicDefense = scaling.CalculateMagicDefenseForLevel(level)
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			stats.Attack = scaling.CalculateAttackForLevel(level)
+			stats.Defense = scaling.CalculateDefenseForLevel(level)
+			stats.MagicPower = scaling.CalculateMagicPowerForLevel(level)
+			stats.MagicDefense = scaling.CalculateMagicDefenseForLevel(level)
+		}
 	}
 }
 
@@ -202,7 +210,10 @@ func (ps *ProgressionSystem) CalculateXPReward(defeatedEntity *Entity) int {
 		return 10
 	}
 
-	exp := expComp.(*ExperienceComponent)
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return 10
+	}
 	level := exp.Level
 
 	// Base XP = 10 * level
@@ -256,7 +267,10 @@ func (ps *ProgressionSystem) SpendSkillPoint(entity *Entity) error {
 		return fmt.Errorf("entity does not have experience component")
 	}
 
-	exp := expComp.(*ExperienceComponent)
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return fmt.Errorf("invalid experience component type")
+	}
 	if exp.SkillPoints <= 0 {
 		return fmt.Errorf("entity has no skill points to spend")
 	}

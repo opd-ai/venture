@@ -31,7 +31,12 @@ func NewImagePool(width, height int) *ImagePool {
 // Get retrieves an image from the pool or creates a new one.
 // The returned image will be cleared (transparent).
 func (p *ImagePool) Get() *ebiten.Image {
-	img := p.pool.Get().(*ebiten.Image)
+	obj := p.pool.Get()
+	img, ok := obj.(*ebiten.Image)
+	if !ok {
+		// Should not happen but create new image if type assertion fails
+		return ebiten.NewImage(p.width, p.height)
+	}
 	// Clear the image for reuse
 	img.Clear()
 	return img

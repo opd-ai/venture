@@ -68,7 +68,10 @@ func (s *ObjectiveTrackerSystem) OnEnemyKilled(killer, enemy *Entity) {
 	if !ok {
 		return
 	}
-	tracker := comp.(*QuestTrackerComponent)
+	tracker, ok := comp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// For now, all enemies count as "enemy" or "monster"
 	// In future, could extract type from entity components
@@ -99,7 +102,10 @@ func (s *ObjectiveTrackerSystem) OnItemCollected(collector *Entity, itemName str
 	if !ok {
 		return
 	}
-	tracker := comp.(*QuestTrackerComponent)
+	tracker, ok := comp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// Update collect objectives
 	for _, tracked := range tracker.ActiveQuests {
@@ -132,7 +138,10 @@ func (s *ObjectiveTrackerSystem) OnUIOpened(entity *Entity, uiName string) {
 	if !ok {
 		return
 	}
-	tracker := comp.(*QuestTrackerComponent)
+	tracker, ok := comp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// Update UI interaction objectives (used in tutorial quests)
 	for _, tracked := range tracker.ActiveQuests {
@@ -166,7 +175,10 @@ func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 	if !ok {
 		return
 	}
-	tracker := comp.(*QuestTrackerComponent)
+	tracker, ok := comp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// Update explore objectives
 	for _, tracked := range tracker.ActiveQuests {
@@ -191,7 +203,10 @@ func (s *ObjectiveTrackerSystem) updateExplorationObjectives(entity *Entity) {
 	if !ok {
 		return
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Convert world coordinates to tile coordinates (assuming 32-pixel tiles)
 	tileX := int(pos.X / 32)
@@ -206,7 +221,10 @@ func (s *ObjectiveTrackerSystem) checkQuestCompletion(entity *Entity) {
 	if !ok {
 		return
 	}
-	tracker := comp.(*QuestTrackerComponent)
+	tracker, ok := comp.(*QuestTrackerComponent)
+	if !ok {
+		return
+	}
 
 	// Check each active quest
 	for _, tracked := range tracker.ActiveQuests {
@@ -325,7 +343,10 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 	if !ok {
 		return // No inventory to receive items
 	}
-	inv := invComp.(*InventoryComponent)
+	inv, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
 
 	// Get genre for item generation
 	genreID := "fantasy" // Default genre

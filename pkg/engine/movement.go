@@ -63,8 +63,14 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
-		vel := velComp.(*VelocityComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
+		vel, ok := velComp.(*VelocityComponent)
+		if !ok {
+			continue
+		}
 
 		// Apply speed limit if configured
 		if s.MaxSpeed > 0 {
@@ -84,7 +90,13 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 		// If collision system is set, validate position before moving
 		if s.collisionSystem != nil && entity.HasComponent("collider") {
 			colliderComp, _ := entity.GetComponent("collider")
-			collider := colliderComp.(*ColliderComponent)
+			if colliderComp == nil {
+				goto skipCollision
+			}
+			collider, ok := colliderComp.(*ColliderComponent)
+			if !ok {
+				goto skipCollision
+			}
 
 			// Only check solid, non-trigger colliders
 			if collider.Solid && !collider.IsTrigger {
@@ -142,6 +154,7 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				}
 			}
 		}
+	skipCollision:
 
 		// Update position (only if validated or no collision checking)
 		oldX, oldY := pos.X, pos.Y
@@ -161,53 +174,54 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Apply bounds if entity has them
 		if boundsComp, hasBounds := entity.GetComponent("bounds"); hasBounds {
-			bounds := boundsComp.(*BoundsComponent)
-			pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
+			if bounds, ok := boundsComp.(*BoundsComponent); ok {
+				pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
 
-			// Stop movement at boundaries if not wrapping
-			if !bounds.Wrap {
-				if pos.X <= bounds.MinX || pos.X >= bounds.MaxX {
-					vel.VX = 0
-				}
-				if pos.Y <= bounds.MinY || pos.Y >= bounds.MaxY {
-					vel.VY = 0
+				// Stop movement at boundaries if not wrapping
+				if !bounds.Wrap {
+					if pos.X <= bounds.MinX || pos.X >= bounds.MaxX {
+						vel.VX = 0
+					}
+					if pos.Y <= bounds.MinY || pos.Y >= bounds.MaxY {
+						vel.VY = 0
+					}
 				}
 			}
 		}
 
 		// Priority 1.4: Apply friction/drag to slow down entities
 		if frictionComp, hasFriction := entity.GetComponent("friction"); hasFriction {
-			friction := frictionComp.(*FrictionComponent)
+			if friction, ok := frictionComp.(*FrictionComponent); ok {
+				// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
+				// For small deltaTime and coefficient, this approximates: v *= (1 - coefficient * deltaTime)
+				decayFactor := math.Pow(1.0-friction.Coefficient, deltaTime*60.0) // Normalize to 60 FPS
+				vel.VX *= decayFactor
+				vel.VY *= decayFactor
 
-			// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
-			// For small deltaTime and coefficient, this approximates: v *= (1 - coefficient * deltaTime)
-			decayFactor := math.Pow(1.0-friction.Coefficient, deltaTime*60.0) // Normalize to 60 FPS
-			vel.VX *= decayFactor
-			vel.VY *= decayFactor
-
-			// Stop completely if velocity is very small (optimization)
-			if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
-				vel.VX = 0
-				vel.VY = 0
+				// Stop completely if velocity is very small (optimization)
+				if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
+					vel.VX = 0
+					vel.VY = 0
+				}
 			}
 		}
 
 		// Update animation state based on movement
 		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-			anim := animComp.(*AnimationComponent)
-			speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+			if anim, ok := animComp.(*AnimationComponent); ok {
+				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
 
-			// DON'T override attack/hit/death/cast animations - let them finish
-			if anim.CurrentState == AnimationStateAttack ||
-				anim.CurrentState == AnimationStateHit ||
-				anim.CurrentState == AnimationStateDeath ||
-				anim.CurrentState == AnimationStateCast {
-				// Animation is in action state, don't override with movement
-				continue
-			}
+				// DON'T override attack/hit/death/cast animations - let them finish
+				if anim.CurrentState == AnimationStateAttack ||
+					anim.CurrentState == AnimationStateHit ||
+					anim.CurrentState == AnimationStateDeath ||
+					anim.CurrentState == AnimationStateCast {
+					// Animation is in action state, don't override with movement
+					continue
+				}
 
-			// Determine animation state based on velocity
-			if speed > 0.1 {
+				// Determine animation state based on velocity
+				if speed > 0.1 {
 				// Moving - determine if walking or running
 				if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
 					// Fast movement - running
@@ -259,6 +273,7 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 				}
 				// When idle, preserve facing direction (don't reset)
 			}
+			}
 		}
 	}
 
@@ -287,17 +302,19 @@ func (s *MovementSystem) anyEntityBlocking(entity *Entity, x, y float64, entitie
 } // SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-		vel := velComp.(*VelocityComponent)
-		vel.VX = vx
-		vel.VY = vy
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			vel.VX = vx
+			vel.VY = vy
+		}
 	}
 }
 
 // GetPosition is a helper to get entity position.
 func GetPosition(entity *Entity) (x, y float64, ok bool) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
-		pos := posComp.(*PositionComponent)
-		return pos.X, pos.Y, true
+		if pos, ok := posComp.(*PositionComponent); ok {
+			return pos.X, pos.Y, true
+		}
 	}
 	return 0, 0, false
 }
@@ -305,9 +322,10 @@ func GetPosition(entity *Entity) (x, y float64, ok bool) {
 // SetPosition is a helper to set entity position.
 func SetPosition(entity *Entity, x, y float64) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
-		pos := posComp.(*PositionComponent)
-		pos.X = x
-		pos.Y = y
+		if pos, ok := posComp.(*PositionComponent); ok {
+			pos.X = x
+			pos.Y = y
+		}
 	}
 }
 
@@ -379,7 +397,10 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 	if !hasCollider {
 		return
 	}
-	collider := colliderComp.(*ColliderComponent)
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return
+	}
 
 	// Calculate tile coordinates from entity position using helper method
 	tileX, tileY := terrainChecker.worldToTileCoords(pos.X, pos.Y)

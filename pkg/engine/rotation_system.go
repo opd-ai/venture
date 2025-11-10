@@ -39,30 +39,34 @@ func (s *RotationSystem) Update(deltaTime float64) {
 		if !ok {
 			continue
 		}
-		rotation := rotComp.(*RotationComponent)
+		rotation, ok := rotComp.(*RotationComponent)
+		if !ok {
+			continue
+		}
 
 		// Sync rotation target with aim component if present
 		if entity.HasComponent("aim") {
 			aimComp, ok := entity.GetComponent("aim")
 			if ok {
-				aim := aimComp.(*AimComponent)
-
-				// Update aim angle from position if target-based
-				if entity.HasComponent("position") {
-					posComp, ok := entity.GetComponent("position")
-					if ok {
-						pos := posComp.(*PositionComponent)
-						aim.UpdateAimAngle(pos.X, pos.Y)
+				if aim, ok := aimComp.(*AimComponent); ok {
+					// Update aim angle from position if target-based
+					if entity.HasComponent("position") {
+						posComp, ok := entity.GetComponent("position")
+						if ok {
+							if pos, ok := posComp.(*PositionComponent); ok {
+								aim.UpdateAimAngle(pos.X, pos.Y)
+							}
+						}
 					}
-				}
 
-				// Set rotation target to match aim
-				rotation.SetTargetAngle(aim.AimAngle)
+					// Set rotation target to match aim
+					rotation.SetTargetAngle(aim.AimAngle)
 
-				// DEBUG: Log rotation updates for player (entity ID 1)
-				if entity.ID == 1 && aim.AimAngle != 0 {
-					fmt.Printf("[DEBUG] RotationSystem: Player aim=%.4f, target=%.4f, current=%.4f\n",
-						aim.AimAngle, rotation.TargetAngle, rotation.Angle)
+					// DEBUG: Log rotation updates for player (entity ID 1)
+					if entity.ID == 1 && aim.AimAngle != 0 {
+						fmt.Printf("[DEBUG] RotationSystem: Player aim=%.4f, target=%.4f, current=%.4f\n",
+							aim.AimAngle, rotation.TargetAngle, rotation.Angle)
+					}
 				}
 			}
 		}
@@ -93,10 +97,22 @@ func (s *RotationSystem) SyncRotationToAim(entityID uint64) bool {
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
-	rotation := rotComp.(*RotationComponent)
+	if rotComp == nil {
+		return false
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return false
+	}
 
 	aimComp, _ := entity.GetComponent("aim")
-	aim := aimComp.(*AimComponent)
+	if aimComp == nil {
+		return false
+	}
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return false
+	}
 
 	rotation.SetAngleImmediate(aim.AimAngle)
 	return true
@@ -117,7 +133,13 @@ func (s *RotationSystem) SetEntityRotation(entityID uint64, angle float64) bool 
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
-	rotation := rotComp.(*RotationComponent)
+	if rotComp == nil {
+		return false
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return false
+	}
 
 	rotation.SetAngleImmediate(angle)
 	return true
@@ -137,7 +159,13 @@ func (s *RotationSystem) GetEntityRotation(entityID uint64) (float64, bool) {
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
-	rotation := rotComp.(*RotationComponent)
+	if rotComp == nil {
+		return 0, false
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return 0, false
+	}
 
 	return rotation.Angle, true
 }
@@ -158,7 +186,13 @@ func (s *RotationSystem) EnableSmoothRotation(entityID uint64, enabled bool) boo
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
-	rotation := rotComp.(*RotationComponent)
+	if rotComp == nil {
+		return false
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return false
+	}
 
 	rotation.SmoothRotation = enabled
 	return true
@@ -179,7 +213,13 @@ func (s *RotationSystem) SetRotationSpeed(entityID uint64, speed float64) bool {
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
-	rotation := rotComp.(*RotationComponent)
+	if rotComp == nil {
+		return false
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return false
+	}
 
 	rotation.RotationSpeed = speed
 	return true

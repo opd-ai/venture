@@ -75,9 +75,10 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 
 	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
-		stats := statsComp.(*StatsComponent)
-		if stats.Attack > 20 || stats.Defense > 20 {
-			dropChance = 0.7 // 70% for strong enemies
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			if stats.Attack > 20 || stats.Defense > 20 {
+				dropChance = 0.7 // 70% for strong enemies
+			}
 		}
 	}
 
@@ -90,8 +91,9 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 	// Determine item depth from enemy stats
 	depth := 1
 	if expComp, ok := enemy.GetComponent("experience"); ok {
-		exp := expComp.(*ExperienceComponent)
-		depth = exp.Level
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			depth = exp.Level
+		}
 	}
 
 	// Generate item
@@ -130,9 +132,10 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 
 	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
-		stats := statsComp.(*StatsComponent)
-		if stats.Attack > 20 || stats.Defense > 20 {
-			dropChance = 0.2 // 20% for strong enemies
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			if stats.Attack > 20 || stats.Defense > 20 {
+				dropChance = 0.2 // 20% for strong enemies
+			}
 		}
 	}
 
@@ -147,9 +150,10 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 	difficulty := 0.3 // Start lower for common recipes
 
 	if expComp, ok := enemy.GetComponent("experience"); ok {
-		exp := expComp.(*ExperienceComponent)
-		depth = exp.Level
-		difficulty = 0.3 + float64(depth)*0.05 // Scale with depth
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			depth = exp.Level
+			difficulty = 0.3 + float64(depth)*0.05 // Scale with depth
+		}
 	}
 
 	// Generate recipe
@@ -318,7 +322,10 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		inventory := playerInventory.(*InventoryComponent)
+		inventory, ok := playerInventory.(*InventoryComponent)
+		if !ok {
+			continue
+		}
 
 		for _, itemEntity := range items {
 			_, hasItemPos := itemEntity.GetComponent("position")
@@ -331,7 +338,10 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 				continue
 			}
 
-			itemData := itemEntityComp.(*ItemEntityComponent)
+			itemData, ok := itemEntityComp.(*ItemEntityComponent)
+			if !ok {
+				continue
+			}
 
 			// Check distance for pickup (32 pixels = 1 tile)
 			distance := GetDistance(player, itemEntity)
@@ -387,7 +397,10 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 				continue
 			}
 
-			recipeData := recipeEntityComp.(*RecipeEntityComponent)
+			recipeData, ok := recipeEntityComp.(*RecipeEntityComponent)
+			if !ok {
+				continue
+			}
 
 			// Check distance for pickup (32 pixels = 1 tile)
 			distance := GetDistance(player, recipeEntity)
@@ -400,7 +413,10 @@ func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
 					player.AddComponent(knowledgeComp)
 				}
 
-				knowledge := knowledgeComp.(*RecipeKnowledgeComponent)
+				knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
+				if !ok {
+					continue
+				}
 
 				// Check if player already knows this recipe
 				if knowledge.KnowsRecipe(recipeData.Recipe.ID) {

@@ -21,7 +21,10 @@ func NewMaintainFormationAction() *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Calculate distance to formation position
 		dx := targetX - pos.X
@@ -32,21 +35,23 @@ func NewMaintainFormationAction() *ActionNode {
 		if distance < 5.0 {
 			// Stop movement
 			if velComp, ok := entity.GetComponent("velocity"); ok {
-				vel := velComp.(*VelocityComponent)
-				vel.VX = 0
-				vel.VY = 0
+				if vel, ok := velComp.(*VelocityComponent); ok {
+					vel.VX = 0
+					vel.VY = 0
+				}
 			}
 			return NodeSuccess
 		}
 
 		// Move towards formation position
 		if velComp, ok := entity.GetComponent("velocity"); ok {
-			vel := velComp.(*VelocityComponent)
-			speed := 80.0 // Formation movement speed
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				speed := 80.0 // Formation movement speed
 
-			// Normalize direction
-			vel.VX = (dx / distance) * speed
-			vel.VY = (dy / distance) * speed
+				// Normalize direction
+				vel.VX = (dx / distance) * speed
+				vel.VY = (dy / distance) * speed
+			}
 		}
 
 		return NodeRunning
@@ -67,20 +72,29 @@ func NewFlankTargetAction(world *World) *ActionNode {
 		if !ok {
 			return NodeFailure // Not in a squad
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Get positions
 		posComp, ok := entity.GetComponent("position")
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		targetPosComp, ok := target.GetComponent("position")
 		if !ok {
 			return NodeFailure
 		}
-		targetPos := targetPosComp.(*PositionComponent)
+		targetPos, ok := targetPosComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Determine flanking position based on squad position index
 		// Even indices flank left, odd indices flank right
@@ -108,10 +122,11 @@ func NewFlankTargetAction(world *World) *ActionNode {
 		}
 
 		if velComp, ok := entity.GetComponent("velocity"); ok {
-			vel := velComp.(*VelocityComponent)
-			speed := 90.0
-			vel.VX = (dx / distance) * speed
-			vel.VY = (dy / distance) * speed
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				speed := 90.0
+				vel.VX = (dx / distance) * speed
+				vel.VY = (dy / distance) * speed
+			}
 		}
 
 		return NodeRunning
@@ -126,7 +141,10 @@ func NewFocusFireAction() *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Check if squad has a shared priority target
 		priorityTarget, ok := squad.SharedBlackboard.GetEntity("priority_target")
@@ -148,7 +166,10 @@ func NewCallForHelpAction(world *World) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Check if we can alert (cooldown)
 		currentTime, _ := blackboard.GetFloat64("game_time")
@@ -161,7 +182,10 @@ func NewCallForHelpAction(world *World) *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		pos := posComp.(*PositionComponent)
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Find nearby squads within alert range (500 pixels)
 		alertRange := 500.0
@@ -173,7 +197,13 @@ func NewCallForHelpAction(world *World) *ActionNode {
 			}
 
 			otherSquadComp, _ := other.GetComponent("squad")
-			otherSquad := otherSquadComp.(*SquadComponent)
+			if otherSquadComp == nil {
+				continue
+			}
+			otherSquad, ok := otherSquadComp.(*SquadComponent)
+			if !ok {
+				continue
+			}
 
 			// Skip same squad
 			if otherSquad.SquadID == squad.SquadID {
@@ -181,7 +211,13 @@ func NewCallForHelpAction(world *World) *ActionNode {
 			}
 
 			otherPosComp, _ := other.GetComponent("position")
-			otherPos := otherPosComp.(*PositionComponent)
+			if otherPosComp == nil {
+				continue
+			}
+			otherPos, ok := otherPosComp.(*PositionComponent)
+			if !ok {
+				continue
+			}
 
 			// Check distance
 			dx := otherPos.X - pos.X
@@ -212,7 +248,10 @@ func NewCoordinatedRetreatAction() *ActionNode {
 		if !ok {
 			return NodeFailure
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return NodeFailure
+		}
 
 		// Check if squad leader ordered retreat
 		shouldRetreat, ok := squad.SharedBlackboard.GetBool("retreat_ordered")
@@ -230,14 +269,15 @@ func NewCoordinatedRetreatAction() *ActionNode {
 
 		// Move in retreat direction
 		if velComp, ok := entity.GetComponent("velocity"); ok {
-			vel := velComp.(*VelocityComponent)
-			speed := 120.0 // Retreat faster
+			if vel, ok := velComp.(*VelocityComponent); ok {
+				speed := 120.0 // Retreat faster
 
-			// Normalize direction
-			length := math.Sqrt(retreatX*retreatX + retreatY*retreatY)
-			if length > 0 {
-				vel.VX = (retreatX / length) * speed
-				vel.VY = (retreatY / length) * speed
+				// Normalize direction
+				length := math.Sqrt(retreatX*retreatX + retreatY*retreatY)
+				if length > 0 {
+					vel.VX = (retreatX / length) * speed
+					vel.VY = (retreatY / length) * speed
+				}
 			}
 		}
 
@@ -250,38 +290,45 @@ func NewSquadLeaderDecisionAction() *ActionNode {
 	return NewActionNode("SquadLeaderDecision", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
 		// Get squad component
 		squadComp, ok := entity.GetComponent("squad")
-		if !ok || !squadComp.(*SquadComponent).IsLeader() {
+		if !ok {
 			return NodeFailure
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok || !squad.IsLeader() {
+			return NodeFailure
+		}
 
 		// Leader makes tactical decisions for the squad
 		// Check if squad should retreat (simple heuristic: if leader health low)
 		healthComp, ok := entity.GetComponent("health")
 		if ok {
-			health := healthComp.(*HealthComponent)
-			healthPercent := float64(health.Current) / float64(health.Max)
+			if health, ok := healthComp.(*HealthComponent); ok {
+				healthPercent := float64(health.Current) / float64(health.Max)
 
-			if healthPercent < 0.3 {
-				// Order retreat
-				squad.SharedBlackboard.Set("retreat_ordered", true)
+				if healthPercent < 0.3 {
+					// Order retreat
+					squad.SharedBlackboard.Set("retreat_ordered", true)
 
-				// Calculate retreat direction (away from current target)
-				if target, ok := blackboard.GetEntity("target"); ok {
-					posComp, _ := entity.GetComponent("position")
-					pos := posComp.(*PositionComponent)
-					targetPosComp, _ := target.GetComponent("position")
-					targetPos := targetPosComp.(*PositionComponent)
-
-					// Retreat direction is away from target
-					dx := pos.X - targetPos.X
-					dy := pos.Y - targetPos.Y
-					squad.SharedBlackboard.Set("retreat_dir_x", dx)
-					squad.SharedBlackboard.Set("retreat_dir_y", dy)
+					// Calculate retreat direction (away from current target)
+					if target, ok := blackboard.GetEntity("target"); ok {
+						posComp, _ := entity.GetComponent("position")
+						targetPosComp, _ := target.GetComponent("position")
+						if posComp != nil && targetPosComp != nil {
+							if pos, ok := posComp.(*PositionComponent); ok {
+								if targetPos, ok := targetPosComp.(*PositionComponent); ok {
+									// Retreat direction is away from target
+									dx := pos.X - targetPos.X
+									dy := pos.Y - targetPos.Y
+									squad.SharedBlackboard.Set("retreat_dir_x", dx)
+									squad.SharedBlackboard.Set("retreat_dir_y", dy)
+								}
+							}
+						}
+					}
+				} else {
+					// Continue fighting
+					squad.SharedBlackboard.Set("retreat_ordered", false)
 				}
-			} else {
-				// Continue fighting
-				squad.SharedBlackboard.Set("retreat_ordered", false)
 			}
 		}
 
@@ -314,7 +361,10 @@ func NewSquadHasPriorityTargetCondition() *ConditionNode {
 		if !ok {
 			return false
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return false
+		}
 
 		target, ok := squad.SharedBlackboard.GetEntity("priority_target")
 		return ok && target != nil
@@ -328,7 +378,10 @@ func NewRetreatOrderedCondition() *ConditionNode {
 		if !ok {
 			return false
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			return false
+		}
 
 		retreat, ok := squad.SharedBlackboard.GetBool("retreat_ordered")
 		return ok && retreat

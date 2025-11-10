@@ -42,7 +42,10 @@ func (s *SquadSystem) organizeSquads(entities []*Entity) map[int][]*Entity {
 		if !ok {
 			continue
 		}
-		squad := squadComp.(*SquadComponent)
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			continue
+		}
 		squads[squad.SquadID] = append(squads[squad.SquadID], entity)
 	}
 	return squads
@@ -59,7 +62,13 @@ func (s *SquadSystem) updateSquad(members []*Entity, deltaTime float64) {
 	var leaderSquad *SquadComponent
 	for _, member := range members {
 		squadComp, _ := member.GetComponent("squad")
-		squad := squadComp.(*SquadComponent)
+		if squadComp == nil {
+			continue
+		}
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			continue
+		}
 		if squad.IsLeader() {
 			leader = member
 			leaderSquad = squad
@@ -86,13 +95,17 @@ func (s *SquadSystem) updateFormation(leader *Entity, leaderSquad *SquadComponen
 	if !ok {
 		return
 	}
-	leaderPos := leaderPosComp.(*PositionComponent)
+	leaderPos, ok := leaderPosComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Get leader's rotation for oriented formations
 	leaderAngle := 0.0
 	if rotComp, ok := leader.GetComponent("rotation"); ok {
-		rot := rotComp.(*RotationComponent)
-		leaderAngle = rot.Angle
+		if rot, ok := rotComp.(*RotationComponent); ok {
+			leaderAngle = rot.Angle
+		}
 	}
 
 	// Calculate formation positions for each member
@@ -103,7 +116,13 @@ func (s *SquadSystem) updateFormation(leader *Entity, leaderSquad *SquadComponen
 		}
 
 		squadComp, _ := member.GetComponent("squad")
-		squad := squadComp.(*SquadComponent)
+		if squadComp == nil {
+			continue
+		}
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate target position based on formation type
 		targetX, targetY := s.calculateFormationPosition(
@@ -117,9 +136,10 @@ func (s *SquadSystem) updateFormation(leader *Entity, leaderSquad *SquadComponen
 
 		// Store target position in member's blackboard
 		if btComp, ok := member.GetComponent("behaviortree"); ok {
-			bt := btComp.(*BehaviorTreeComponent)
-			bt.Blackboard.Set("formation_target_x", targetX)
-			bt.Blackboard.Set("formation_target_y", targetY)
+			if bt, ok := btComp.(*BehaviorTreeComponent); ok {
+				bt.Blackboard.Set("formation_target_x", targetX)
+				bt.Blackboard.Set("formation_target_y", targetY)
+			}
 		}
 
 		memberIndex++
@@ -186,7 +206,13 @@ func (s *SquadSystem) synchronizeBlackboards(members []*Entity) {
 	var sharedBlackboard *Blackboard
 	for _, member := range members {
 		squadComp, _ := member.GetComponent("squad")
-		squad := squadComp.(*SquadComponent)
+		if squadComp == nil {
+			continue
+		}
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			continue
+		}
 		if squad.SharedBlackboard != nil {
 			sharedBlackboard = squad.SharedBlackboard
 			break
@@ -200,7 +226,13 @@ func (s *SquadSystem) synchronizeBlackboards(members []*Entity) {
 	// Ensure all members reference the same shared blackboard
 	for _, member := range members {
 		squadComp, _ := member.GetComponent("squad")
-		squad := squadComp.(*SquadComponent)
+		if squadComp == nil {
+			continue
+		}
+		squad, ok := squadComp.(*SquadComponent)
+		if !ok {
+			continue
+		}
 		squad.SharedBlackboard = sharedBlackboard
 	}
 }

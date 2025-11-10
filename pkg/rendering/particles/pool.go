@@ -87,7 +87,13 @@ func ReleaseParticleSystem(ps *ParticleSystem) {
 //
 // Returns: Pointer to slice with 0 length, 100 capacity
 func AcquireParticleSlice() *[]Particle {
-	particles := particleSlicePool.Get().(*[]Particle)
+	obj := particleSlicePool.Get()
+	particles, ok := obj.(*[]Particle)
+	if !ok {
+		// Should not happen but create new slice if type assertion fails
+		newSlice := make([]Particle, 0, 100)
+		return &newSlice
+	}
 	*particles = (*particles)[:0] // Reset length, keep capacity
 	return particles
 }

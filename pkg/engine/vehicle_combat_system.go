@@ -58,7 +58,10 @@ func (vcs *VehicleCombatSystem) Update(entities []*Entity, deltaTime float64) {
 		if !hasCombat {
 			continue
 		}
-		combat := combatComp.(*VehicleCombatComponent)
+		combat, ok := combatComp.(*VehicleCombatComponent)
+		if !ok {
+			continue
+		}
 
 		// Update cooldowns
 		combat.UpdateCooldowns(deltaTime)
@@ -78,7 +81,10 @@ func (vcs *VehicleCombatSystem) processRamming(vehicle *Entity, combat *VehicleC
 	if !hasVehicle {
 		return
 	}
-	v := vehicleComp.(*VehicleComponent)
+	v, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return
+	}
 
 	// Check if can ram (cooldown ready and sufficient speed)
 	if !combat.CanRam(v.Speed) {
@@ -89,7 +95,10 @@ func (vcs *VehicleCombatSystem) processRamming(vehicle *Entity, combat *VehicleC
 	if !hasPos {
 		return
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Check for entities in ramming range (small radius around vehicle)
 	rammingRadius := 20.0 // pixels
@@ -109,7 +118,10 @@ func (vcs *VehicleCombatSystem) processRamming(vehicle *Entity, combat *VehicleC
 		if !hasTargetPos {
 			continue
 		}
-		tPos := targetPos.(*PositionComponent)
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := tPos.X - pos.X
@@ -122,8 +134,11 @@ func (vcs *VehicleCombatSystem) processRamming(vehicle *Entity, combat *VehicleC
 			damage := combat.CalculateRammingDamage(v.Speed)
 
 			// Apply damage to target
-			health := targetHealth.(*HealthComponent)
-			health.TakeDamage(damage)
+			if health, ok := targetHealth.(*HealthComponent); ok {
+				health.TakeDamage(damage)
+			} else {
+				continue
+			}
 
 			// Execute ramming attack (set cooldown)
 			combat.ExecuteRam()
@@ -159,7 +174,10 @@ func (vcs *VehicleCombatSystem) processMountedWeapons(vehicle *Entity, combat *V
 	if !hasPos {
 		return
 	}
-	pos := posComp.(*PositionComponent)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
 
 	// Check if vehicle is player-controlled or has AI targeting
 	hasControl := vcs.hasTargetInput(vehicle)
@@ -177,7 +195,13 @@ func (vcs *VehicleCombatSystem) processMountedWeapons(vehicle *Entity, combat *V
 	if vcs.projectileSystem != nil {
 		// Calculate direction to target
 		targetPos, _ := target.GetComponent("position")
-		tPos := targetPos.(*PositionComponent)
+		if targetPos == nil {
+			return
+		}
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			return
+		}
 		dx := tPos.X - pos.X
 		dy := tPos.Y - pos.Y
 		targetAngle := math.Atan2(dy, dx)
@@ -190,8 +214,9 @@ func (vcs *VehicleCombatSystem) processMountedWeapons(vehicle *Entity, combat *V
 		// Direct damage application (fallback if no projectile system)
 		targetHealth, hasHealth := target.GetComponent("health")
 		if hasHealth {
-			health := targetHealth.(*HealthComponent)
-			health.TakeDamage(combat.WeaponDamage)
+			if health, ok := targetHealth.(*HealthComponent); ok {
+				health.TakeDamage(combat.WeaponDamage)
+			}
 		}
 	}
 
@@ -219,9 +244,10 @@ func (vcs *VehicleCombatSystem) hasTargetInput(vehicle *Entity) bool {
 	// Check if mounted by player
 	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
 	if hasVehicle {
-		v := vehicleComp.(*VehicleComponent)
-		if v.CurrentPassengers > 0 {
-			return true
+		if v, ok := vehicleComp.(*VehicleComponent); ok {
+			if v.CurrentPassengers > 0 {
+				return true
+			}
 		}
 	}
 
@@ -253,7 +279,10 @@ func (vcs *VehicleCombatSystem) findNearestTarget(vehicle *Entity, pos *Position
 		if !hasTargetPos {
 			continue
 		}
-		tPos := targetPos.(*PositionComponent)
+		tPos, ok := targetPos.(*PositionComponent)
+		if !ok {
+			continue
+		}
 
 		// Calculate distance
 		dx := tPos.X - pos.X

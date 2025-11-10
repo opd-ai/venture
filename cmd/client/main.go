@@ -88,6 +88,76 @@ var (
 	noTutorial       = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
 )
 
+// initializeLogger creates and configures the logger based on environment variables and flags.
+func initializeLogger() (*logrus.Logger, *logrus.Entry) {
+	logConfig := logging.DefaultConfig()
+
+	// Check for JSON format from environment (default to text for client)
+	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
+		logConfig.Format = logging.JSONFormat
+	} else {
+		logConfig.Format = logging.TextFormat
+		logConfig.EnableColor = true
+	}
+
+	// Set log level from environment or use Info as default
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		logConfig.Level = logging.LogLevel(logLevel)
+	} else if *verbose {
+		logConfig.Level = logging.DebugLevel
+	} else {
+		logConfig.Level = logging.InfoLevel
+	}
+
+	logger := logging.NewLogger(logConfig)
+	clientLogger := logger.WithFields(logrus.Fields{
+		"component": "client",
+		"genre":     *genreID,
+		"seed":      *seed,
+	})
+
+	clientLogger.Infof("Starting Venture %s", version.FullVersion)
+	clientLogger.WithFields(logrus.Fields{
+		"width":  *width,
+		"height": *height,
+		"seed":   *seed,
+		"genre":  *genreID,
+	}).Info("client configuration")
+
+	return logger, clientLogger
+}
+
+// initializeNetworkClient sets up network connection if multiplayer mode is enabled.
+// Returns the network client or nil for single-player mode.
+func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
+	if !*multiplayer {
+		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
+		return nil
+	}
+
+	clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
+
+	clientConfig := network.DefaultClientConfig()
+	clientConfig.ServerAddress = *server
+	networkClient := network.NewClientWithLogger(clientConfig, logger)
+
+	// Connect to server
+	if err := networkClient.Connect(); err != nil {
+		clientLogger.WithError(err).Fatal("failed to connect to server")
+	}
+
+	clientLogger.Info("connected to server successfully")
+
+	// Handle network errors in background
+	go func() {
+		for err := range networkClient.ReceiveError() {
+			clientLogger.WithError(err).Error("network error")
+		}
+	}()
+
+	return networkClient
+}
+
 // return a random seed
 func seededRandom() int64 {
 	time := time.Now().UnixNano()
@@ -106,22 +176,20 @@ func randomGenre() string {
 // spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.
 // Spawns wall torches, magical crystals, and genre-specific lights based on the world seed.
 // This function is part of Phase 5.3: Dynamic Lighting System Integration.
-func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
-	rng := rand.New(rand.NewSource(seed))
-	lightCount := 0
+// lightConfig defines lighting configuration per genre.
+type lightConfig struct {
+	torchInterval int // Every N tiles along walls/corridors
+	crystalChance float64
+	torchColor    color.RGBA
+	crystalColor  color.RGBA
+	torchRadius   float64
+	crystalRadius float64
+	torchFlicker  bool
+	crystalPulse  bool
+}
 
-	// Genre-specific light configurations
-	type lightConfig struct {
-		torchInterval int // Every N tiles along walls/corridors
-		crystalChance float64
-		torchColor    color.RGBA
-		crystalColor  color.RGBA
-		torchRadius   float64
-		crystalRadius float64
-		torchFlicker  bool
-		crystalPulse  bool
-	}
-
+// getLightConfig returns the lighting configuration for the given genre.
+func getLightConfig(genreID string) lightConfig {
 	configs := map[string]lightConfig{
 		"fantasy": {
 			torchInterval: 5,
@@ -180,6 +248,62 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 	if !ok {
 		config = configs["fantasy"]
 	}
+	return config
+}
+
+// spawnWallTorches spawns torch lights along the perimeter walls of a room.
+func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfig, rng *rand.Rand) int {
+	count := 0
+	const tileSize = 32
+	const spawnChance = 0.6 // 60% chance per position
+
+	// Top and bottom walls
+	for x := room.X; x < room.X+room.Width; x++ {
+		if x%config.torchInterval == 0 {
+			// Top wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(x * tileSize)
+				worldY := float64(room.Y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+			// Bottom wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(x * tileSize)
+				worldY := float64((room.Y + room.Height - 1) * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+		}
+	}
+
+	// Left and right walls
+	for y := room.Y; y < room.Y+room.Height; y++ {
+		if y%config.torchInterval == 0 {
+			// Left wall
+			if rng.Float64() < spawnChance {
+				worldX := float64(room.X * tileSize)
+				worldY := float64(y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+			// Right wall
+			if rng.Float64() < spawnChance {
+				worldX := float64((room.X + room.Width - 1) * tileSize)
+				worldY := float64(y * tileSize)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				count++
+			}
+		}
+	}
+
+	return count
+}
+
+func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string) int {
+	rng := rand.New(rand.NewSource(seed))
+	lightCount := 0
+	config := getLightConfig(genreID)
 
 	// Spawn lights in each room
 	for _, room := range terrain.Rooms {
@@ -189,45 +313,7 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 		}
 
 		// Spawn wall torches around room perimeter
-		// Top and bottom walls
-		for x := room.X; x < room.X+room.Width; x++ {
-			if x%config.torchInterval == 0 {
-				// Top wall
-				if rng.Float64() < 0.6 { // 60% chance per position
-					worldX := float64(x * 32)
-					worldY := float64(room.Y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-				// Bottom wall
-				if rng.Float64() < 0.6 {
-					worldX := float64(x * 32)
-					worldY := float64((room.Y + room.Height - 1) * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-			}
-		}
-
-		// Left and right walls
-		for y := room.Y; y < room.Y+room.Height; y++ {
-			if y%config.torchInterval == 0 {
-				// Left wall
-				if rng.Float64() < 0.6 {
-					worldX := float64(room.X * 32)
-					worldY := float64(y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-				// Right wall
-				if rng.Float64() < 0.6 {
-					worldX := float64((room.X + room.Width - 1) * 32)
-					worldY := float64(y * 32)
-					spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
-					lightCount++
-				}
-			}
-		}
+		lightCount += spawnWallTorches(world, room, config, rng)
 
 		// Spawn magical crystals in room centers (boss rooms, treasure rooms)
 		if rng.Float64() < config.crystalChance {
@@ -359,21 +445,18 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 
 // spawnDestructibleObjects spawns destructible objects (crates, barrels, furniture) in dungeon rooms.
 // Phase 11.3: Environmental Destruction & Manipulation
-func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, seed int64, genreID string, logger *logrus.Logger) int {
-	rng := rand.New(rand.NewSource(seed))
-	objectCount := 0
-	tileSize := 32
+// objectConfig defines spawn probabilities and counts for destructible objects per genre.
+type objectConfig struct {
+	crateChance           float64 // Probability of crate spawn per suitable room
+	barrelChance          float64 // Probability of barrel spawn per suitable room
+	furnitureChance       float64 // Probability of furniture spawn per suitable room
+	explosiveBarrelChance float64 // Probability of explosive barrel (vs regular barrel)
+	poisonContainerChance float64 // Probability of poison container spawn
+	objectsPerRoom        int     // Number of objects to spawn in each eligible room
+}
 
-	// Object spawning configuration per genre
-	type objectConfig struct {
-		crateChance           float64 // Probability of crate spawn per suitable room
-		barrelChance          float64 // Probability of barrel spawn per suitable room
-		furnitureChance       float64 // Probability of furniture spawn per suitable room
-		explosiveBarrelChance float64 // Probability of explosive barrel (vs regular barrel)
-		poisonContainerChance float64 // Probability of poison container spawn
-		objectsPerRoom        int     // Number of objects to spawn in each eligible room
-	}
-
+// getObjectConfig returns the spawning configuration for the given genre.
+func getObjectConfig(genreID string) objectConfig {
 	configs := map[string]objectConfig{
 		"fantasy": {
 			crateChance:           0.6,
@@ -422,6 +505,128 @@ func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, 
 	if genreConfig, ok := configs[genreID]; ok {
 		config = genreConfig
 	}
+	return config
+}
+
+// selectObjectType randomly selects an object type based on configuration probabilities.
+func selectObjectType(rng *rand.Rand, config objectConfig) (engine.ObjectType, bool) {
+	roll := rng.Float64()
+
+	if roll < config.crateChance {
+		return engine.ObjectCrate, true
+	} else if roll < config.crateChance+config.barrelChance {
+		// Decide between regular and explosive barrel
+		if rng.Float64() < config.explosiveBarrelChance {
+			return engine.ObjectExplosiveBarrel, true
+		}
+		return engine.ObjectBarrel, true
+	} else if roll < config.crateChance+config.barrelChance+config.furnitureChance {
+		return engine.ObjectFurniture, true
+	} else if roll < config.crateChance+config.barrelChance+config.furnitureChance+config.poisonContainerChance {
+		return engine.ObjectPoisonContainer, true
+	}
+
+	return engine.ObjectCrate, false // No spawn
+}
+
+// findValidSpawnLocation attempts to find a valid spawn location within the given room.
+func findValidSpawnLocation(room *terrain.Room, terrainMap *terrain.Terrain, world *engine.World, rng *rand.Rand, tileSize int) (float64, float64, bool) {
+	maxAttempts := 10
+	for attempts := 0; attempts < maxAttempts; attempts++ {
+		// Random position within room (leave 1-tile border)
+		tx := room.X + 1 + rng.Intn(room.Width-2)
+		ty := room.Y + 1 + rng.Intn(room.Height-2)
+
+		// Check if tile is walkable
+		tile := terrainMap.GetTile(tx, ty)
+		if tile == terrain.TileWall || tile == terrain.TileWallNE ||
+			tile == terrain.TileWallNW || tile == terrain.TileWallSE ||
+			tile == terrain.TileWallSW {
+			continue
+		}
+
+		// Convert tile coordinates to world coordinates (center of tile)
+		worldX := float64(tx*tileSize + tileSize/2)
+		worldY := float64(ty*tileSize + tileSize/2)
+
+		// Check if position is clear of other entities
+		entities := world.GetEntities()
+		tooClose := false
+		for _, entity := range entities {
+			if posComp, ok := entity.GetComponent("position"); ok {
+				pos := posComp.(*engine.PositionComponent)
+				dx := pos.X - worldX
+				dy := pos.Y - worldY
+				dist := math.Sqrt(dx*dx + dy*dy)
+				if dist < float64(tileSize) { // Objects must be at least 1 tile apart
+					tooClose = true
+					break
+				}
+			}
+		}
+
+		if !tooClose {
+			return worldX, worldY, true
+		}
+	}
+	return 0, 0, false
+}
+
+// createDestructibleObject creates and configures a destructible object entity.
+func createDestructibleObject(world *engine.World, objectType engine.ObjectType, worldX, worldY float64, logger *logrus.Logger, roomIndex int) {
+	objectEntity := world.CreateEntity()
+
+	// Add position component
+	posComp := &engine.PositionComponent{
+		X: worldX,
+		Y: worldY,
+	}
+	objectEntity.AddComponent(posComp)
+
+	// Add destructible object component
+	destructibleComp := engine.NewDestructibleObjectComponent(objectType)
+	objectEntity.AddComponent(destructibleComp)
+
+	// Add carriable component (lighter objects can be picked up)
+	weight := 0.5 // Default medium weight
+	if objectType == engine.ObjectCrate {
+		weight = 0.3 // Light crate
+	} else if objectType == engine.ObjectBarrel || objectType == engine.ObjectExplosiveBarrel {
+		weight = 0.7 // Heavy barrel
+	} else if objectType == engine.ObjectFurniture {
+		weight = 0.6 // Medium furniture
+	} else if objectType == engine.ObjectPoisonContainer {
+		weight = 0.4 // Light container
+	}
+	carriableComp := engine.NewCarriableComponent(weight)
+	objectEntity.AddComponent(carriableComp)
+
+	// Add context action component for interaction prompts
+	actionType := engine.ActionPickup
+	actionText := "Pickup"
+	if objectType == engine.ObjectCrate {
+		actionText = "Open Crate"
+		actionType = engine.ActionOpen
+	}
+	contextComp := engine.NewContextActionComponent(actionType, actionText)
+	objectEntity.AddComponent(contextComp)
+
+	if logger != nil && logger.GetLevel() >= logrus.DebugLevel {
+		logger.WithFields(logrus.Fields{
+			"objectType": objectType.String(),
+			"x":          worldX,
+			"y":          worldY,
+			"roomIndex":  roomIndex,
+		}).Debug("spawned destructible object")
+	}
+}
+
+func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, seed int64, genreID string, logger *logrus.Logger) int {
+	rng := rand.New(rand.NewSource(seed))
+	objectCount := 0
+	tileSize := 32
+
+	config := getObjectConfig(genreID)
 
 	// Iterate through rooms (skip entrance room at index 0)
 	for i := 1; i < len(terrainMap.Rooms); i++ {
@@ -433,136 +638,22 @@ func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, 
 		}
 
 		// Spawn objects in this room based on configuration
-		objectsSpawned := 0
-		for objectsSpawned < config.objectsPerRoom {
+		for objectsSpawned := 0; objectsSpawned < config.objectsPerRoom; objectsSpawned++ {
 			// Randomly select object type
-			roll := rng.Float64()
-
-			var objectType engine.ObjectType
-			var shouldSpawn bool
-
-			if roll < config.crateChance {
-				objectType = engine.ObjectCrate
-				shouldSpawn = true
-			} else if roll < config.crateChance+config.barrelChance {
-				// Decide between regular and explosive barrel
-				if rng.Float64() < config.explosiveBarrelChance {
-					objectType = engine.ObjectExplosiveBarrel
-				} else {
-					objectType = engine.ObjectBarrel
-				}
-				shouldSpawn = true
-			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance {
-				objectType = engine.ObjectFurniture
-				shouldSpawn = true
-			} else if roll < config.crateChance+config.barrelChance+config.furnitureChance+config.poisonContainerChance {
-				objectType = engine.ObjectPoisonContainer
-				shouldSpawn = true
-			}
-
+			objectType, shouldSpawn := selectObjectType(rng, config)
 			if !shouldSpawn {
 				break // Move to next room
 			}
 
-			// Find a valid spawn location within room (not on walls, not on other objects)
-			attempts := 0
-			maxAttempts := 10
-			for attempts < maxAttempts {
-				// Random position within room (leave 1-tile border)
-				tx := room.X + 1 + rng.Intn(room.Width-2)
-				ty := room.Y + 1 + rng.Intn(room.Height-2)
-
-				// Check if tile is walkable
-				tile := terrainMap.GetTile(tx, ty)
-				if tile == terrain.TileWall || tile == terrain.TileWallNE ||
-					tile == terrain.TileWallNW || tile == terrain.TileWallSE ||
-					tile == terrain.TileWallSW {
-					attempts++
-					continue
-				}
-
-				// Convert tile coordinates to world coordinates (center of tile)
-				worldX := float64(tx*tileSize + tileSize/2)
-				worldY := float64(ty*tileSize + tileSize/2)
-
-				// Check if position is clear of other entities
-				entities := world.GetEntities()
-				tooClose := false
-				for _, entity := range entities {
-					if posComp, ok := entity.GetComponent("position"); ok {
-						pos := posComp.(*engine.PositionComponent)
-						dx := pos.X - worldX
-						dy := pos.Y - worldY
-						dist := math.Sqrt(dx*dx + dy*dy)
-						if dist < float64(tileSize) { // Objects must be at least 1 tile apart
-							tooClose = true
-							break
-						}
-					}
-				}
-
-				if tooClose {
-					attempts++
-					continue
-				}
-
-				// Valid location found, spawn object
-				objectEntity := world.CreateEntity()
-
-				// Add position component
-				posComp := &engine.PositionComponent{
-					X: worldX,
-					Y: worldY,
-				}
-				objectEntity.AddComponent(posComp)
-
-				// Add destructible object component
-				destructibleComp := engine.NewDestructibleObjectComponent(objectType)
-				objectEntity.AddComponent(destructibleComp)
-
-				// Add carriable component (lighter objects can be picked up)
-				weight := 0.5 // Default medium weight
-				if objectType == engine.ObjectCrate {
-					weight = 0.3 // Light crate
-				} else if objectType == engine.ObjectBarrel || objectType == engine.ObjectExplosiveBarrel {
-					weight = 0.7 // Heavy barrel
-				} else if objectType == engine.ObjectFurniture {
-					weight = 0.6 // Medium furniture
-				} else if objectType == engine.ObjectPoisonContainer {
-					weight = 0.4 // Light container
-				}
-				carriableComp := engine.NewCarriableComponent(weight)
-				objectEntity.AddComponent(carriableComp)
-
-				// Add context action component for interaction prompts
-				actionType := engine.ActionPickup
-				actionText := "Pickup"
-				if objectType == engine.ObjectCrate {
-					actionText = "Open Crate"
-					actionType = engine.ActionOpen
-				}
-				contextComp := engine.NewContextActionComponent(actionType, actionText)
-				objectEntity.AddComponent(contextComp)
-
-				objectCount++
-				objectsSpawned++
-
-				if logger != nil && logger.GetLevel() >= logrus.DebugLevel {
-					logger.WithFields(logrus.Fields{
-						"objectType": objectType.String(),
-						"x":          worldX,
-						"y":          worldY,
-						"roomIndex":  i,
-					}).Debug("spawned destructible object")
-				}
-
-				break // Spawned successfully, move to next object
+			// Find a valid spawn location within room
+			worldX, worldY, found := findValidSpawnLocation(room, terrainMap, world, rng, tileSize)
+			if !found {
+				break // Couldn't find valid location, stop trying for this room
 			}
 
-			if attempts >= maxAttempts {
-				// Couldn't find valid location, stop trying for this room
-				break
-			}
+			// Create and configure the object entity
+			createDestructibleObject(world, objectType, worldX, worldY, logger, i)
+			objectCount++
 		}
 	}
 
@@ -570,11 +661,8 @@ func spawnDestructibleObjects(world *engine.World, terrainMap *terrain.Terrain, 
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.
-func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, logger *logrus.Logger) {
-	itemGen := item.NewItemGenerator()
-	itemLogger := logging.GeneratorLogger(logger, "item", seed, genreID)
-
-	// Generate a starting weapon (1 weapon, common)
+// generateStarterWeapon creates a rusty starter weapon for new players.
+func generateStarterWeapon(inventory *engine.InventoryComponent, itemGen *item.ItemGenerator, seed int64, genreID string, logger *logrus.Entry) {
 	weaponParams := procgen.GenerationParams{
 		Difficulty: 0.0, // Easy starter weapon
 		Depth:      1,
@@ -587,24 +675,27 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	weaponResult, err := itemGen.Generate(seed+1, weaponParams)
 	if err != nil {
-		itemLogger.WithError(err).Warn("failed to generate starter weapon")
-	} else {
-		weapons := weaponResult.([]*item.Item)
-		if len(weapons) > 0 {
-			weapon := weapons[0]
-			weapon.Name = "Rusty " + weapon.Name // Make it clearly a starter item
-			weapon.Stats.Value = 5               // Low value
-			inventory.Items = append(inventory.Items, weapon)
-			if logger.GetLevel() >= logrus.InfoLevel {
-				itemLogger.WithFields(logrus.Fields{
-					"weaponName": weapon.Name,
-					"damage":     weapon.Stats.Damage,
-				}).Info("added starter weapon")
-			}
-		}
+		logger.WithError(err).Warn("failed to generate starter weapon")
+		return
 	}
 
-	// Generate 2 healing potions
+	weapons := weaponResult.([]*item.Item)
+	if len(weapons) > 0 {
+		weapon := weapons[0]
+		weapon.Name = "Rusty " + weapon.Name // Make it clearly a starter item
+		weapon.Stats.Value = 5               // Low value
+		inventory.Items = append(inventory.Items, weapon)
+		if logger.Logger.GetLevel() >= logrus.InfoLevel {
+			logger.WithFields(logrus.Fields{
+				"weaponName": weapon.Name,
+				"damage":     weapon.Stats.Damage,
+			}).Info("added starter weapon")
+		}
+	}
+}
+
+// generateStarterPotions creates minor healing potions for new players.
+func generateStarterPotions(inventory *engine.InventoryComponent, itemGen *item.ItemGenerator, seed int64, genreID string, logger *logrus.Entry) {
 	potionParams := procgen.GenerationParams{
 		Difficulty: 0.0,
 		Depth:      1,
@@ -617,21 +708,24 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	potionResult, err := itemGen.Generate(seed+2, potionParams)
 	if err != nil {
-		itemLogger.WithError(err).Warn("failed to generate healing potions")
-	} else {
-		potions := potionResult.([]*item.Item)
-		for _, potion := range potions {
-			potion.Name = "Minor Health Potion"
-			potion.Stats.Value = 10
-			potion.Stats.Weight = 0.2
-			inventory.Items = append(inventory.Items, potion)
-		}
-		if logger.GetLevel() >= logrus.InfoLevel && len(potions) > 0 {
-			itemLogger.WithField("count", len(potions)).Info("added healing potions")
-		}
+		logger.WithError(err).Warn("failed to generate healing potions")
+		return
 	}
 
-	// Generate a piece of armor (1 armor, common)
+	potions := potionResult.([]*item.Item)
+	for _, potion := range potions {
+		potion.Name = "Minor Health Potion"
+		potion.Stats.Value = 10
+		potion.Stats.Weight = 0.2
+		inventory.Items = append(inventory.Items, potion)
+	}
+	if logger.Logger.GetLevel() >= logrus.InfoLevel && len(potions) > 0 {
+		logger.WithField("count", len(potions)).Info("added healing potions")
+	}
+}
+
+// generateStarterArmor creates worn starter armor for new players.
+func generateStarterArmor(inventory *engine.InventoryComponent, itemGen *item.ItemGenerator, seed int64, genreID string, logger *logrus.Entry) {
 	armorParams := procgen.GenerationParams{
 		Difficulty: 0.0,
 		Depth:      1,
@@ -644,22 +738,33 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 
 	armorResult, err := itemGen.Generate(seed+100, armorParams)
 	if err != nil {
-		itemLogger.WithError(err).Warn("failed to generate starter armor")
-	} else {
-		armors := armorResult.([]*item.Item)
-		if len(armors) > 0 {
-			armor := armors[0]
-			armor.Name = "Worn " + armor.Name
-			armor.Stats.Value = 8
-			inventory.Items = append(inventory.Items, armor)
-			if logger.GetLevel() >= logrus.InfoLevel {
-				itemLogger.WithFields(logrus.Fields{
-					"armorName": armor.Name,
-					"defense":   armor.Stats.Defense,
-				}).Info("added starter armor")
-			}
+		logger.WithError(err).Warn("failed to generate starter armor")
+		return
+	}
+
+	armors := armorResult.([]*item.Item)
+	if len(armors) > 0 {
+		armor := armors[0]
+		armor.Name = "Worn " + armor.Name
+		armor.Stats.Value = 8
+		inventory.Items = append(inventory.Items, armor)
+		if logger.Logger.GetLevel() >= logrus.InfoLevel {
+			logger.WithFields(logrus.Fields{
+				"armorName": armor.Name,
+				"defense":   armor.Stats.Defense,
+			}).Info("added starter armor")
 		}
 	}
+}
+
+func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID string, logger *logrus.Logger) {
+	itemGen := item.NewItemGenerator()
+	itemLogger := logging.GeneratorLogger(logger, "item", seed, genreID)
+
+	// Generate starting equipment
+	generateStarterWeapon(inventory, itemGen, seed, genreID, itemLogger)
+	generateStarterPotions(inventory, itemGen, seed, genreID, itemLogger)
+	generateStarterArmor(inventory, itemGen, seed, genreID, itemLogger)
 
 	if logger.GetLevel() >= logrus.InfoLevel {
 		itemLogger.WithField("itemCount", len(inventory.Items)).Info("starter items added")
@@ -791,39 +896,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize structured logger
-	logConfig := logging.DefaultConfig()
-
-	// Check for JSON format from environment (default to text for client)
-	if logFormat := os.Getenv("LOG_FORMAT"); logFormat == "json" {
-		logConfig.Format = logging.JSONFormat
-	} else {
-		logConfig.Format = logging.TextFormat
-		logConfig.EnableColor = true
-	}
-
-	// Set log level from environment or use Info as default
-	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
-		logConfig.Level = logging.LogLevel(logLevel)
-	} else if *verbose {
-		logConfig.Level = logging.DebugLevel
-	} else {
-		logConfig.Level = logging.InfoLevel
-	}
-
-	logger := logging.NewLogger(logConfig)
-	clientLogger := logger.WithFields(logrus.Fields{
-		"component": "client",
-		"genre":     *genreID,
-		"seed":      *seed,
-	})
-
-	clientLogger.Infof("Starting Venture %s", version.FullVersion)
-	clientLogger.WithFields(logrus.Fields{
-		"width":  *width,
-		"height": *height,
-		"seed":   *seed,
-		"genre":  *genreID,
-	}).Info("client configuration")
+	logger, clientLogger := initializeLogger()
 
 	// Handle host-and-play mode: start embedded server before client
 	if *hostAndPlay {
@@ -844,30 +917,7 @@ func main() {
 	}
 
 	// Initialize network client if multiplayer mode is enabled
-	var networkClient network.ClientConnection
-	if *multiplayer {
-		clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
-
-		clientConfig := network.DefaultClientConfig()
-		clientConfig.ServerAddress = *server
-		networkClient = network.NewClientWithLogger(clientConfig, logger)
-
-		// Connect to server
-		if err := networkClient.Connect(); err != nil {
-			clientLogger.WithError(err).Fatal("failed to connect to server")
-		}
-
-		clientLogger.Info("connected to server successfully")
-
-		// Handle network errors in background
-		go func() {
-			for err := range networkClient.ReceiveError() {
-				clientLogger.WithError(err).Error("network error")
-			}
-		}()
-	} else {
-		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
-	}
+	networkClient := initializeNetworkClient(logger, clientLogger)
 
 	// Create the game instance
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)

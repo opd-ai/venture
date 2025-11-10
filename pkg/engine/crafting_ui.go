@@ -385,39 +385,50 @@ func (ui *CraftingUI) showMessage(message string) {
 
 // Draw renders the crafting UI.
 // Displays recipe list with material requirements, skill levels, and success chances.
-func (ui *CraftingUI) Draw(screen interface{}) {
-	img, ok := screen.(*ebiten.Image)
-	if !ok {
-		return
+// craftingComponents holds the player's crafting-related components.
+type craftingComponents struct {
+	knowledge *RecipeKnowledgeComponent
+	skill     *CraftingSkillComponent
+	inv       *InventoryComponent
+}
+
+// getPlayerCraftingComponents retrieves and validates the player's crafting components.
+func (ui *CraftingUI) getPlayerCraftingComponents() (*craftingComponents, bool) {
+	if ui.playerEntity == nil {
+		return nil, false
 	}
 
-	if !ui.visible || ui.playerEntity == nil {
-		return
-	}
-
-	// Get components
 	knowledgeComp, hasKnowledge := ui.playerEntity.GetComponent("recipe_knowledge")
 	skillComp, hasSkill := ui.playerEntity.GetComponent("crafting_skill")
 	invComp, hasInv := ui.playerEntity.GetComponent("inventory")
 
 	if !hasKnowledge || !hasSkill || !hasInv {
-		return
+		return nil, false
 	}
 
 	knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
 	if !ok {
-		return
+		return nil, false
 	}
 	skill, ok := skillComp.(*CraftingSkillComponent)
 	if !ok {
-		return
+		return nil, false
 	}
 	inv, ok := invComp.(*InventoryComponent)
 	if !ok {
-		return
+		return nil, false
 	}
-	recipes := knowledge.KnownRecipes
 
+	return &craftingComponents{
+		knowledge: knowledge,
+		skill:     skill,
+		inv:       inv,
+	}, true
+}
+
+// drawWindowBackground draws the semi-transparent overlay and window background.
+// Returns the window X and Y coordinates.
+func (ui *CraftingUI) drawWindowBackground(img *ebiten.Image) (int, int) {
 	// Draw semi-transparent overlay
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 200})
@@ -436,7 +447,11 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	img.DrawImage(windowBg, opts)
 
-	// Draw title
+	return windowX, windowY
+}
+
+// drawTitleBar draws the title text and exit hint.
+func (ui *CraftingUI) drawTitleBar(img *ebiten.Image, windowX, windowY int) {
 	titleText := "CRAFTING RECIPES"
 	if ui.stationEntity != nil {
 		if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
@@ -450,29 +465,37 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	// Draw exit hint (standardized dual-exit navigation)
 	exitHint := GetExitHint(MenuKeys.Crafting)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
+}
 
-	// Draw player stats
+// drawPlayerStats draws the player's crafting stats (skill, gold, XP).
+func (ui *CraftingUI) drawPlayerStats(img *ebiten.Image, components *craftingComponents, windowX, windowY int) {
 	statsText := fmt.Sprintf("Crafting Skill: %d | Gold: %d | XP: %d/%d",
-		skill.SkillLevel, inv.Gold, skill.Experience, skill.ExperienceToNextLevel)
+		components.skill.SkillLevel, components.inv.Gold, components.skill.Experience, components.skill.ExperienceToNextLevel)
 	ebitenutil.DebugPrintAt(img, statsText, windowX+10, windowY+50)
+}
 
-	// Draw crafting message if active
-	if ui.craftingMessageTime > 0 && ui.craftingMessage != "" {
-		// Determine message color based on content
-		msgColor := color.RGBA{100, 255, 100, 255} // Green for success
-		if strings.Contains(ui.craftingMessage, "failed") ||
-			strings.Contains(ui.craftingMessage, "cannot") ||
-			strings.Contains(ui.craftingMessage, "not available") {
-			msgColor = color.RGBA{255, 100, 100, 255} // Red for errors
-		} else if strings.Contains(ui.craftingMessage, "progress") {
-			msgColor = color.RGBA{255, 255, 100, 255} // Yellow for in-progress
-		}
-
-		// Use text.Draw with colored font instead of DebugPrintAt
-		text.Draw(img, ui.craftingMessage, basicfont.Face7x13, windowX+10, windowY+80, msgColor)
+// drawCraftingMessage draws the active crafting message with appropriate color.
+func (ui *CraftingUI) drawCraftingMessage(img *ebiten.Image, windowX, windowY int) {
+	if ui.craftingMessageTime <= 0 || ui.craftingMessage == "" {
+		return
 	}
 
-	// Draw instructions
+	// Determine message color based on content
+	msgColor := color.RGBA{100, 255, 100, 255} // Green for success
+	if strings.Contains(ui.craftingMessage, "failed") ||
+		strings.Contains(ui.craftingMessage, "cannot") ||
+		strings.Contains(ui.craftingMessage, "not available") {
+		msgColor = color.RGBA{255, 100, 100, 255} // Red for errors
+	} else if strings.Contains(ui.craftingMessage, "progress") {
+		msgColor = color.RGBA{255, 255, 100, 255} // Yellow for in-progress
+	}
+
+	// Use text.Draw with colored font instead of DebugPrintAt
+	text.Draw(img, ui.craftingMessage, basicfont.Face7x13, windowX+10, windowY+80, msgColor)
+}
+
+// drawInstructions draws the crafting instructions or progress indicator.
+func (ui *CraftingUI) drawInstructions(img *ebiten.Image, windowX, windowY int) {
 	instructionY := windowY + 90
 	if ui.showingProgress {
 		progressComp, _ := ui.playerEntity.GetComponent("crafting_progress")
@@ -488,8 +511,10 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	} else {
 		ebitenutil.DebugPrintAt(img, "Select recipe and press ENTER/SPACE to craft", windowX+10, instructionY)
 	}
+}
 
-	// Issue #12 FIX: Draw search/filter UI
+// drawSearchFilterUI draws the search bar and filter controls.
+func (ui *CraftingUI) drawSearchFilterUI(img *ebiten.Image, windowX, windowY int) {
 	filterY := windowY + 110
 
 	// Search bar
@@ -527,9 +552,11 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		craftableText = "[C] Only Craftable"
 	}
 	ebitenutil.DebugPrintAt(img, craftableText, windowX+620, filterY)
+}
 
-	// Draw recipe list
-	listAreaY := windowY + 140 // Adjusted down to make room for filters
+// drawRecipeList draws the list of recipes with all their details.
+func (ui *CraftingUI) drawRecipeList(img *ebiten.Image, recipes map[string]*Recipe, components *craftingComponents, windowX, windowY, windowWidth, windowHeight int) {
+	listAreaY := windowY + 140
 	listAreaHeight := windowHeight - 200
 	maxVisibleRecipes := listAreaHeight / ui.listItemHeight
 
@@ -539,8 +566,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		return
 	}
 
-	// Draw visible recipes
-	// Convert map to slice and apply filters/sorting (Issue #12)
+	// Convert map to slice and apply filters/sorting
 	var recipeList []*Recipe
 	for _, recipe := range recipes {
 		recipeList = append(recipeList, recipe)
@@ -550,147 +576,184 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 	recipeList = ui.filterAndSortRecipes(recipeList)
 
 	if len(recipeList) == 0 {
-		// Enhanced empty state message with context
-		emptyMsg := "No recipes match your search/filter criteria"
-		if ui.searchQuery != "" {
-			emptyMsg = fmt.Sprintf("No recipes match search: \"%s\"", ui.searchQuery)
-		} else if ui.filterCategory != -1 {
-			emptyMsg = fmt.Sprintf("No %s recipes available", ui.filterCategory.String())
-		} else if ui.showOnlyCrafted {
-			emptyMsg = "No craftable recipes (missing materials or gold)"
-		}
-
-		// Center the message
-		msgLen := len(emptyMsg)
-		msgX := windowX + (windowWidth-msgLen*7)/2
-		ebitenutil.DebugPrintAt(img, emptyMsg, msgX, windowY+windowHeight/2)
-
-		// Show hint about clearing filters
-		hintMsg := "Press [Backspace] to clear search or [C] to show all recipes"
-		hintX := windowX + (windowWidth-len(hintMsg)*7)/2
-		ebitenutil.DebugPrintAt(img, hintMsg, hintX, windowY+windowHeight/2+20)
+		ui.drawEmptyRecipeListMessage(img, windowX, windowY, windowWidth, windowHeight)
 		return
 	}
 
+	// Draw each visible recipe
 	for i := 0; i < maxVisibleRecipes && (ui.scrollOffset+i) < len(recipeList); i++ {
 		recipeIndex := ui.scrollOffset + i
 		recipe := recipeList[recipeIndex]
-
 		itemY := listAreaY + i*ui.listItemHeight
-		itemX := windowX + ui.padding
-
-		// Draw recipe background with selection/hover highlighting
-		// Issue #12: Green tint for craftable recipes
-		isCraftable := ui.canCraftRecipe(recipe)
-		itemColor := color.RGBA{50, 50, 60, 255}
-		if isCraftable {
-			itemColor = color.RGBA{50, 70, 50, 255} // Green tint for craftable
-		}
-		if recipeIndex == ui.hoveredRecipeIndex {
-			itemColor = color.RGBA{70, 70, 90, 255}
-			if isCraftable {
-				itemColor = color.RGBA{70, 90, 70, 255} // Green-tinted hover
-			}
-		}
-		if recipeIndex == ui.selectedRecipeIndex {
-			itemColor = color.RGBA{90, 90, 120, 255}
-			if isCraftable {
-				itemColor = color.RGBA{90, 120, 90, 255} // Green-tinted selection
-			}
-		}
-
-		itemBg := ebiten.NewImage(windowWidth-ui.padding*2, ui.listItemHeight-5)
-		itemBg.Fill(itemColor)
-		itemOpts := &ebiten.DrawImageOptions{}
-		itemOpts.GeoM.Translate(float64(itemX), float64(itemY))
-		img.DrawImage(itemBg, itemOpts)
-
-		// Draw recipe name and type
-		nameText := fmt.Sprintf("%s [%s]", recipe.Name, recipe.Rarity.String())
-		ebitenutil.DebugPrintAt(img, nameText, itemX+5, itemY+5)
-
-		// Draw recipe description (truncated if too long)
-		descText := recipe.Description
-		if len(descText) > 60 {
-			descText = descText[:57] + "..."
-		}
-		ebitenutil.DebugPrintAt(img, descText, itemX+5, itemY+20)
-
-		// Draw skill requirement
-		skillText := fmt.Sprintf("Skill Required: %d", recipe.SkillRequired)
-		if skill.SkillLevel < recipe.SkillRequired {
-			skillText += " (TOO LOW)"
-		}
-		ebitenutil.DebugPrintAt(img, skillText, itemX+5, itemY+35)
-
-		// Draw success chance
-		successChance := recipe.GetEffectiveSuccessChance(skill.SkillLevel)
-		successText := fmt.Sprintf("Success: %.0f%%", successChance*100)
-
-		// Show station bonus in success chance
-		if ui.stationEntity != nil {
-			if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
-				if station, ok := stationComp.(*CraftingStationComponent); ok {
-					// Check if station type matches recipe type
-					if station.StationType == recipe.Type {
-						bonusChance := successChance + station.BonusSuccessChance
-						if bonusChance > 0.95 {
-							bonusChance = 0.95 // Cap at 95%
-						}
-						successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)",
-							successChance*100, bonusChance*100, station.BonusSuccessChance*100)
-					}
-				}
-			}
-		}
-
-		if successChance == 0 {
-			successText = "Success: Impossible (low skill)"
-		}
-		ebitenutil.DebugPrintAt(img, successText, itemX+200, itemY+35)
-
-		// Draw gold cost
-		goldText := fmt.Sprintf("Gold: %d", recipe.GoldCost)
-		if inv.Gold < recipe.GoldCost {
-			goldText += " (NOT ENOUGH)"
-		}
-		ebitenutil.DebugPrintAt(img, goldText, itemX+350, itemY+35)
-
-		// Draw materials requirements
-		materialsText := "Materials: "
-		for j, mat := range recipe.Materials {
-			// Count available materials
-			available := 0
-			for _, invItem := range inv.Items {
-				if invItem != nil && invItem.Name == mat.ItemName {
-					available++
-				}
-			}
-
-			matText := fmt.Sprintf("%s (%d/%d)", mat.ItemName, available, mat.Quantity)
-			if available < mat.Quantity {
-				matText += "!"
-			}
-			materialsText += matText
-			if j < len(recipe.Materials)-1 {
-				materialsText += ", "
-			}
-		}
-		// Truncate if too long
-		if len(materialsText) > 75 {
-			materialsText = materialsText[:72] + "..."
-		}
-		ebitenutil.DebugPrintAt(img, materialsText, itemX+5, itemY+50)
-
-		// Draw craft time
-		craftTimeText := fmt.Sprintf("Time: %.1fs", recipe.CraftTimeSec)
-		if ui.stationEntity != nil {
-			craftTimeText = fmt.Sprintf("Time: %.1fs (station bonus)", recipe.CraftTimeSec*0.75)
-		}
-		ebitenutil.DebugPrintAt(img, craftTimeText, itemX+5, itemY+65)
+		ui.drawRecipeItem(img, recipe, recipeIndex, components, windowX, itemY, windowWidth)
 	}
 
-	// Draw scroll indicator if needed
+	// Draw scroll indicator and footer
+	ui.drawRecipeListFooter(img, recipeList, maxVisibleRecipes, windowX, windowY, windowWidth, windowHeight)
+}
+
+// drawEmptyRecipeListMessage draws a message when the recipe list is empty due to filters.
+func (ui *CraftingUI) drawEmptyRecipeListMessage(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
+	emptyMsg := "No recipes match your search/filter criteria"
+	if ui.searchQuery != "" {
+		emptyMsg = fmt.Sprintf("No recipes match search: \"%s\"", ui.searchQuery)
+	} else if ui.filterCategory != -1 {
+		emptyMsg = fmt.Sprintf("No %s recipes available", ui.filterCategory.String())
+	} else if ui.showOnlyCrafted {
+		emptyMsg = "No craftable recipes (missing materials or gold)"
+	}
+
+	// Center the message
+	msgLen := len(emptyMsg)
+	msgX := windowX + (windowWidth-msgLen*7)/2
+	ebitenutil.DebugPrintAt(img, emptyMsg, msgX, windowY+windowHeight/2)
+
+	// Show hint about clearing filters
+	hintMsg := "Press [Backspace] to clear search or [C] to show all recipes"
+	hintX := windowX + (windowWidth-len(hintMsg)*7)/2
+	ebitenutil.DebugPrintAt(img, hintMsg, hintX, windowY+windowHeight/2+20)
+}
+
+// drawRecipeItem draws a single recipe item in the list.
+func (ui *CraftingUI) drawRecipeItem(img *ebiten.Image, recipe *Recipe, recipeIndex int, components *craftingComponents, windowX, itemY, windowWidth int) {
+	itemX := windowX + ui.padding
+
+	// Draw recipe background with highlighting
+	isCraftable := ui.canCraftRecipe(recipe)
+	itemColor := ui.getRecipeItemColor(recipeIndex, isCraftable)
+
+	itemBg := ebiten.NewImage(windowWidth-ui.padding*2, ui.listItemHeight-5)
+	itemBg.Fill(itemColor)
+	itemOpts := &ebiten.DrawImageOptions{}
+	itemOpts.GeoM.Translate(float64(itemX), float64(itemY))
+	img.DrawImage(itemBg, itemOpts)
+
+	// Draw recipe details
+	ui.drawRecipeItemDetails(img, recipe, components, itemX, itemY)
+}
+
+// getRecipeItemColor determines the background color for a recipe item.
+func (ui *CraftingUI) getRecipeItemColor(recipeIndex int, isCraftable bool) color.RGBA {
+	itemColor := color.RGBA{50, 50, 60, 255}
+	if isCraftable {
+		itemColor = color.RGBA{50, 70, 50, 255} // Green tint for craftable
+	}
+	if recipeIndex == ui.hoveredRecipeIndex {
+		itemColor = color.RGBA{70, 70, 90, 255}
+		if isCraftable {
+			itemColor = color.RGBA{70, 90, 70, 255} // Green-tinted hover
+		}
+	}
+	if recipeIndex == ui.selectedRecipeIndex {
+		itemColor = color.RGBA{90, 90, 120, 255}
+		if isCraftable {
+			itemColor = color.RGBA{90, 120, 90, 255} // Green-tinted selection
+		}
+	}
+	return itemColor
+}
+
+// drawRecipeItemDetails draws all the text details for a recipe item.
+func (ui *CraftingUI) drawRecipeItemDetails(img *ebiten.Image, recipe *Recipe, components *craftingComponents, itemX, itemY int) {
+	// Recipe name and rarity
+	nameText := fmt.Sprintf("%s [%s]", recipe.Name, recipe.Rarity.String())
+	ebitenutil.DebugPrintAt(img, nameText, itemX+5, itemY+5)
+
+	// Recipe description
+	descText := recipe.Description
+	if len(descText) > 60 {
+		descText = descText[:57] + "..."
+	}
+	ebitenutil.DebugPrintAt(img, descText, itemX+5, itemY+20)
+
+	// Skill requirement
+	skillText := fmt.Sprintf("Skill Required: %d", recipe.SkillRequired)
+	if components.skill.SkillLevel < recipe.SkillRequired {
+		skillText += " (TOO LOW)"
+	}
+	ebitenutil.DebugPrintAt(img, skillText, itemX+5, itemY+35)
+
+	// Success chance
+	successText := ui.getSuccessChanceText(recipe, components.skill)
+	ebitenutil.DebugPrintAt(img, successText, itemX+200, itemY+35)
+
+	// Gold cost
+	goldText := fmt.Sprintf("Gold: %d", recipe.GoldCost)
+	if components.inv.Gold < recipe.GoldCost {
+		goldText += " (NOT ENOUGH)"
+	}
+	ebitenutil.DebugPrintAt(img, goldText, itemX+350, itemY+35)
+
+	// Materials
+	materialsText := ui.getMaterialsText(recipe, components.inv)
+	ebitenutil.DebugPrintAt(img, materialsText, itemX+5, itemY+50)
+
+	// Craft time
+	craftTimeText := fmt.Sprintf("Time: %.1fs", recipe.CraftTimeSec)
+	if ui.stationEntity != nil {
+		craftTimeText = fmt.Sprintf("Time: %.1fs (station bonus)", recipe.CraftTimeSec*0.75)
+	}
+	ebitenutil.DebugPrintAt(img, craftTimeText, itemX+5, itemY+65)
+}
+
+// getSuccessChanceText calculates and formats the success chance text.
+func (ui *CraftingUI) getSuccessChanceText(recipe *Recipe, skill *CraftingSkillComponent) string {
+	successChance := recipe.GetEffectiveSuccessChance(skill.SkillLevel)
+	successText := fmt.Sprintf("Success: %.0f%%", successChance*100)
+
+	// Show station bonus if applicable
+	if ui.stationEntity != nil {
+		if stationComp, ok := ui.stationEntity.GetComponent("crafting_station"); ok {
+			if station, ok := stationComp.(*CraftingStationComponent); ok {
+				if station.StationType == recipe.Type {
+					bonusChance := successChance + station.BonusSuccessChance
+					if bonusChance > 0.95 {
+						bonusChance = 0.95 // Cap at 95%
+					}
+					successText = fmt.Sprintf("Success: %.0f%% → %.0f%% (station +%.0f%%)",
+						successChance*100, bonusChance*100, station.BonusSuccessChance*100)
+				}
+			}
+		}
+	}
+
+	if successChance == 0 {
+		successText = "Success: Impossible (low skill)"
+	}
+	return successText
+}
+
+// getMaterialsText formats the materials requirements text.
+func (ui *CraftingUI) getMaterialsText(recipe *Recipe, inv *InventoryComponent) string {
+	materialsText := "Materials: "
+	for j, mat := range recipe.Materials {
+		// Count available materials
+		available := 0
+		for _, invItem := range inv.Items {
+			if invItem != nil && invItem.Name == mat.ItemName {
+				available++
+			}
+		}
+
+		matText := fmt.Sprintf("%s (%d/%d)", mat.ItemName, available, mat.Quantity)
+		if available < mat.Quantity {
+			matText += "!"
+		}
+		materialsText += matText
+		if j < len(recipe.Materials)-1 {
+			materialsText += ", "
+		}
+	}
+	// Truncate if too long
+	if len(materialsText) > 75 {
+		materialsText = materialsText[:72] + "..."
+	}
+	return materialsText
+}
+
+// drawRecipeListFooter draws the scroll indicator and footer hints.
+func (ui *CraftingUI) drawRecipeListFooter(img *ebiten.Image, recipeList []*Recipe, maxVisibleRecipes, windowX, windowY, windowWidth, windowHeight int) {
+	// Scroll indicator
 	if len(recipeList) > maxVisibleRecipes {
 		scrollText := fmt.Sprintf("Scroll: %d-%d / %d recipes",
 			ui.scrollOffset+1,
@@ -699,29 +762,89 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 		ebitenutil.DebugPrintAt(img, scrollText, windowX+windowWidth-200, windowY+windowHeight-30)
 	}
 
-	// Draw footer hints
+	// Footer hints
 	footerY := windowY + windowHeight - 30
 	ebitenutil.DebugPrintAt(img, "Arrow Keys: Navigate | ENTER/SPACE: Craft | Mouse Wheel: Scroll",
 		windowX+10, footerY)
 
-	// Draw nearby station hint if not at a station
-	if ui.stationEntity == nil && ui.playerEntity != nil {
-		if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-			if pos, ok := posComp.(*PositionComponent); ok {
-				// Find nearest station within 100 pixels
-				nearestStation, distance := ui.findNearestStation(pos.X, pos.Y, 100)
-				if nearestStation != nil {
-					if stationComp, ok := nearestStation.GetComponent("crafting_station"); ok {
-						if station, ok := stationComp.(*CraftingStationComponent); ok {
-							stationHint := fmt.Sprintf("Nearby: %s (%.0f units away) - Move closer to use station bonuses",
-								station.StationType.String(), distance)
-							ebitenutil.DebugPrintAt(img, stationHint, windowX+10, footerY-20)
-						}
-					}
-				}
-			}
-		}
+	// Nearby station hint
+	ui.drawNearbyStationHint(img, windowX, footerY)
+}
+
+// drawNearbyStationHint draws a hint about nearby crafting stations.
+func (ui *CraftingUI) drawNearbyStationHint(img *ebiten.Image, windowX, footerY int) {
+	if ui.stationEntity != nil || ui.playerEntity == nil {
+		return
 	}
+
+	posComp, ok := ui.playerEntity.GetComponent("position")
+	if !ok {
+		return
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	// Find nearest station within 100 pixels
+	nearestStation, distance := ui.findNearestStation(pos.X, pos.Y, 100)
+	if nearestStation == nil {
+		return
+	}
+
+	stationComp, ok := nearestStation.GetComponent("crafting_station")
+	if !ok {
+		return
+	}
+	station, ok := stationComp.(*CraftingStationComponent)
+	if !ok {
+		return
+	}
+
+	stationHint := fmt.Sprintf("Nearby: %s (%.0f units away) - Move closer to use station bonuses",
+		station.StationType.String(), distance)
+	ebitenutil.DebugPrintAt(img, stationHint, windowX+10, footerY-20)
+}
+
+func (ui *CraftingUI) Draw(screen interface{}) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return
+	}
+
+	if !ui.visible {
+		return
+	}
+
+	components, ok := ui.getPlayerCraftingComponents()
+	if !ok {
+		return
+	}
+
+	recipes := components.knowledge.KnownRecipes
+
+	// Draw overlay and window background
+	windowX, windowY := ui.drawWindowBackground(img)
+
+	// Draw title bar
+	ui.drawTitleBar(img, windowX, windowY)
+
+	// Draw player stats
+	ui.drawPlayerStats(img, components, windowX, windowY)
+
+	// Draw crafting message if active
+	ui.drawCraftingMessage(img, windowX, windowY)
+
+	// Draw instructions
+	ui.drawInstructions(img, windowX, windowY)
+
+	// Draw search/filter UI
+	ui.drawSearchFilterUI(img, windowX, windowY)
+
+	// Draw recipe list
+	windowWidth := 800
+	windowHeight := 600
+	ui.drawRecipeList(img, recipes, components, windowX, windowY, windowWidth, windowHeight)
 
 	// H-002 FIX: Draw error feedback
 	ui.errorState.DrawError(img)

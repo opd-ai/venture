@@ -299,3 +299,28 @@ type VehicleController interface {
 	// Returns nil if rider is not mounted
 	GetMountedVehicle(rider *Entity) *Entity
 }
+
+// CharacterClassInfo provides metadata and mechanics for character classes.
+// This interface abstracts class-specific information and stat calculations
+// for the character class system.
+//
+// Phase 25.1: Character Classes Foundation
+type CharacterClassInfo interface {
+	// GetName returns the human-readable class name
+	GetName() string
+
+	// GetDescription returns a description of the class playstyle
+	GetDescription() string
+
+	// GetStartingStats returns base stats for a new character of this class
+	// Returns values for HP, Mana, Attack, Defense, Magic Power, Speed
+	GetStartingStats() map[string]float64
+
+	// GetClassAbilities returns the list of ability IDs available to this class
+	// Returns at least 8 base abilities per class
+	GetClassAbilities() []string
+
+	// GetStatGrowth returns the per-level stat scaling configuration
+	// Defines how stats increase as the character levels up
+	GetStatGrowth() *StatGrowth
+}

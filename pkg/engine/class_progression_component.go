@@ -82,20 +82,75 @@ func (s SpecializationType) String() string {
 }
 
 // GetClassAbilities returns starting abilities for a character class.
+// Phase 25.1: Extended to 8+ abilities per class (previously 4).
 func GetClassAbilities(class CharacterClass) []string {
 	switch class {
 	case ClassWarrior:
-		return []string{"power_strike", "shield_bash", "battle_cry", "cleave"}
+		return []string{
+			"power_strike",     // Basic heavy attack
+			"shield_bash",      // Stun attack
+			"battle_cry",       // AOE buff
+			"cleave",           // Multi-target attack
+			"charge",           // Gap closer
+			"defensive_stance", // Defense buff
+			"execute",          // Finishing move
+			"taunt",            // Threat generation
+		}
 	case ClassRogue:
-		return []string{"backstab", "dual_wield", "stealth", "poison_blade"}
+		return []string{
+			"backstab",     // High damage from behind
+			"dual_wield",   // Attack with both weapons
+			"stealth",      // Invisibility
+			"poison_blade", // DOT attack
+			"evade",        // Dodge attacks
+			"ambush",       // Surprise attack from stealth
+			"shadow_step",  // Blink behind enemy
+			"disarm",       // Remove enemy weapon
+		}
 	case ClassMage:
-		return []string{"fireball", "ice_shard", "magic_missile", "mana_shield"}
+		return []string{
+			"fireball",       // Fire damage spell
+			"ice_shard",      // Slow + damage
+			"magic_missile",  // Auto-hit projectile
+			"mana_shield",    // Absorb damage with mana
+			"lightning_bolt", // Chain lightning
+			"frost_nova",     // AOE freeze
+			"teleport",       // Blink away
+			"arcane_barrage", // Rapid fire spells
+		}
 	case ClassRanger:
-		return []string{"aimed_shot", "rapid_fire", "tame_beast", "track"}
+		return []string{
+			"aimed_shot",     // High damage ranged
+			"rapid_fire",     // Multiple shots
+			"tame_beast",     // Recruit companion
+			"track",          // Reveal enemies
+			"explosive_shot", // AOE ranged
+			"multi_shot",     // Hit multiple targets
+			"camouflage",     // Stealth in nature
+			"hunters_mark",   // Increase damage on target
+		}
 	case ClassCleric:
-		return []string{"heal", "smite", "divine_shield", "prayer"}
+		return []string{
+			"heal",          // Restore HP
+			"smite",         // Holy damage
+			"divine_shield", // Damage immunity
+			"prayer",        // HP regeneration buff
+			"resurrection",  // Revive dead ally
+			"holy_light",    // AOE heal
+			"purify",        // Remove debuffs
+			"blessing",      // All stats buff
+		}
 	case ClassNecromancer:
-		return []string{"raise_dead", "life_drain", "curse", "bone_armor"}
+		return []string{
+			"raise_dead",       // Summon skeleton
+			"life_drain",       // Steal HP
+			"curse",            // Debuff enemy
+			"bone_armor",       // Shield
+			"death_coil",       // Damage or heal
+			"fear",             // Make enemy flee
+			"corpse_explosion", // AOE from corpse
+			"soul_harvest",     // Gain power from kills
+		}
 	default:
 		return []string{}
 	}

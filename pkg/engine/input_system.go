@@ -247,9 +247,10 @@ type InputSystem struct {
 	KeyCycleTargets ebiten.Key // Tab key for cycling targets
 
 	// References to game systems for special key handling
-	helpSystem     *EbitenHelpSystem
-	tutorialSystem *EbitenTutorialSystem
-	cameraSystem   *CameraSystem // Phase 10.1: For screen-to-world coordinate conversion
+	helpSystem       *EbitenHelpSystem
+	tutorialSystem   *EbitenTutorialSystem
+	cameraSystem     *CameraSystem     // Phase 10.1: For screen-to-world coordinate conversion
+	expressionSystem *ExpressionSystem // Phase 26.1: For expression/emote handling
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -465,6 +466,46 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyCrafting) && s.onCraftingOpen != nil {
 		s.onCraftingOpen()
+	}
+
+	// Phase 26.1: Handle expression/emote hotkeys (Shift+1 through Shift+=)
+	// These are mapped to the 12 expression types
+	if s.expressionSystem != nil && ebiten.IsKeyPressed(ebiten.KeyShift) {
+		// Find player entity
+		var playerEntity *Entity
+		for _, entity := range entities {
+			if inputComp, ok := entity.GetComponent("input"); ok && inputComp != nil {
+				playerEntity = entity
+				break
+			}
+		}
+
+		if playerEntity != nil {
+			expressionKeys := []struct {
+				key     ebiten.Key
+				expType ExpressionType
+			}{
+				{ebiten.Key1, ExpressionWave},
+				{ebiten.Key2, ExpressionCheer},
+				{ebiten.Key3, ExpressionDance},
+				{ebiten.Key4, ExpressionLaugh},
+				{ebiten.Key5, ExpressionCry},
+				{ebiten.Key6, ExpressionSit},
+				{ebiten.Key7, ExpressionPoint},
+				{ebiten.Key8, ExpressionSalute},
+				{ebiten.Key9, ExpressionShrug},
+				{ebiten.Key0, ExpressionThumbsUp},
+				{ebiten.KeyMinus, ExpressionFacepalm},
+				{ebiten.KeyEqual, ExpressionSleep},
+			}
+
+			for _, binding := range expressionKeys {
+				if inpututil.IsKeyJustPressed(binding.key) {
+					s.expressionSystem.TriggerExpression(playerEntity.ID, binding.expType)
+					break // Only process one expression per frame
+				}
+			}
+		}
 	}
 
 	// Handle NPC/merchant interaction (F key)
@@ -728,6 +769,12 @@ func (s *InputSystem) SetTutorialSystem(tutorialSystem *EbitenTutorialSystem) {
 // Phase 10.1: Required for mouse aim to convert cursor position to world coordinates.
 func (s *InputSystem) SetCameraSystem(cameraSystem *CameraSystem) {
 	s.cameraSystem = cameraSystem
+}
+
+// SetExpressionSystem connects the expression system for expression/emote handling.
+// Phase 26.1: Required for hotkey-triggered expressions (Shift+1 through Shift+=).
+func (s *InputSystem) SetExpressionSystem(expressionSystem *ExpressionSystem) {
+	s.expressionSystem = expressionSystem
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

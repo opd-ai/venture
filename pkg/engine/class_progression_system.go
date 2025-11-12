@@ -192,3 +192,167 @@ func (cps *ClassProgressionSystem) GetClassAbilitiesForEntity(entity *Entity) []
 	progression := classComp.(*ClassProgressionComponent)
 	return progression.Abilities
 }
+
+// UnlockSecondClass enables dual-classing for an entity at level 20+.
+// Phase 25.2: Dual-classing system.
+func (cps *ClassProgressionSystem) UnlockSecondClass(entity *Entity, secondClass CharacterClass) bool {
+	classComp, ok := entity.GetComponent("class_progression")
+	if !ok || classComp == nil {
+		return false
+	}
+
+	progression := classComp.(*ClassProgressionComponent)
+
+	// Check level requirement (level 20+)
+	if progression.Level < 20 {
+		return false
+	}
+
+	// Check not already dual-classed
+	if progression.SecondaryClass != nil {
+		return false
+	}
+
+	// Cannot dual-class into the same class
+	if progression.Class == secondClass {
+		return false
+	}
+
+	// Unlock secondary class
+	progression.SecondaryClass = &secondClass
+	progression.SecondaryLevel = 1
+	progression.SecondarySpec = SpecializationNone
+
+	// Add starting abilities from secondary class
+	secondaryAbilities := GetClassAbilities(secondClass)
+	progression.Abilities = append(progression.Abilities, secondaryAbilities...)
+
+	return true
+}
+
+// LevelUpSecondaryClass increases the secondary class level.
+// Phase 25.2: Dual-classing progression.
+func (cps *ClassProgressionSystem) LevelUpSecondaryClass(entity *Entity) bool {
+	classComp, ok := entity.GetComponent("class_progression")
+	if !ok || classComp == nil {
+		return false
+	}
+
+	progression := classComp.(*ClassProgressionComponent)
+
+	// Must have a secondary class
+	if progression.SecondaryClass == nil {
+		return false
+	}
+
+	progression.SecondaryLevel++
+
+	// Apply stat growth from secondary class (scaled by 50% to avoid overpowered builds)
+	growth := GetClassStatGrowth(*progression.SecondaryClass)
+	if growth != nil {
+		// Get current stats
+		var baseHP, baseMana, baseAttack, baseDefense, baseMagicPower float64
+		if healthComp, ok := entity.GetComponent("health"); ok {
+			if health, ok := healthComp.(*HealthComponent); ok {
+				baseHP = health.Max
+			}
+		}
+		if manaComp, ok := entity.GetComponent("mana"); ok {
+			if mana, ok := manaComp.(*ManaComponent); ok {
+				baseMana = float64(mana.Max)
+			}
+		}
+		if statsComp, ok := entity.GetComponent("stats"); ok {
+			if stats, ok := statsComp.(*StatsComponent); ok {
+				baseAttack = stats.Attack
+				baseDefense = stats.Defense
+				baseMagicPower = stats.MagicPower
+			}
+		}
+
+		// Calculate growth at 50% effectiveness
+		hpGrowth := (growth.CalculateHP(baseHP, progression.SecondaryLevel) - baseHP) * 0.5
+		manaGrowth := (growth.CalculateMana(baseMana, progression.SecondaryLevel) - baseMana) * 0.5
+		attackGrowth := (growth.CalculateAttack(baseAttack, progression.SecondaryLevel) - baseAttack) * 0.5
+		defenseGrowth := (growth.CalculateDefense(baseDefense, progression.SecondaryLevel) - baseDefense) * 0.5
+		magicGrowth := (growth.CalculateMagicPower(baseMagicPower, progression.SecondaryLevel) - baseMagicPower) * 0.5
+
+		// Apply growth
+		if healthComp, ok := entity.GetComponent("health"); ok {
+			if health, ok := healthComp.(*HealthComponent); ok {
+				healthPercent := health.Current / health.Max
+				health.Max += hpGrowth
+				health.Current = health.Max * healthPercent
+			}
+		}
+		if manaComp, ok := entity.GetComponent("mana"); ok {
+			if mana, ok := manaComp.(*ManaComponent); ok {
+				if mana.Max > 0 {
+					manaPercent := float64(mana.Current) / float64(mana.Max)
+					mana.Max += int(manaGrowth)
+					mana.Current = int(float64(mana.Max) * manaPercent)
+				}
+			}
+		}
+		if statsComp, ok := entity.GetComponent("stats"); ok {
+			if stats, ok := statsComp.(*StatsComponent); ok {
+				stats.Attack += attackGrowth
+				stats.Defense += defenseGrowth
+				stats.MagicPower += magicGrowth
+			}
+		}
+		if attackComp, ok := entity.GetComponent("attack"); ok {
+			if attack, ok := attackComp.(*AttackComponent); ok {
+				attack.Damage += attackGrowth
+			}
+		}
+	}
+
+	return true
+}
+
+// ChooseSecondarySpecialization sets the secondary class specialization.
+// Phase 25.2: Dual-classing specialization.
+func (cps *ClassProgressionSystem) ChooseSecondarySpecialization(entity *Entity, spec SpecializationType) bool {
+	classComp, ok := entity.GetComponent("class_progression")
+	if !ok || classComp == nil {
+		return false
+	}
+
+	progression := classComp.(*ClassProgressionComponent)
+
+	// Must have a secondary class
+	if progression.SecondaryClass == nil {
+		return false
+	}
+
+	// Check level requirement (level 10+ in secondary class)
+	if progression.SecondaryLevel < 10 {
+		return false
+	}
+
+	// Check not already specialized in secondary
+	if progression.SecondarySpec != SpecializationNone {
+		return false
+	}
+
+	// Validate specialization matches secondary class
+	validSpecs := GetAvailableSpecializations(*progression.SecondaryClass)
+	valid := false
+	for _, validSpec := range validSpecs {
+		if validSpec == spec {
+			valid = true
+			break
+		}
+	}
+
+	if !valid {
+		return false
+	}
+
+	// Apply secondary specialization
+	progression.SecondarySpec = spec
+	progression.Abilities = append(progression.Abilities, GetSpecializationAbilities(spec)...)
+
+	return true
+}

@@ -247,6 +247,10 @@ type Item struct {
 	Tags []string
 	// Description is a generated flavor text
 	Description string
+	// ClassRestrictions lists classes that can use this item (empty = any class)
+	// Valid values: "warrior", "mage", "rogue", "ranger", "cleric", "necromancer"
+	// Phase 25.2: Class-specific equipment restrictions
+	ClassRestrictions []string
 }
 
 // IsEquippable returns true if the item can be equipped.
@@ -267,6 +271,25 @@ func (i *Item) GetValue() int {
 	// Reduce value based on damage
 	condition := float64(i.Stats.Durability) / float64(i.Stats.DurabilityMax)
 	return int(float64(i.Stats.Value) * condition)
+}
+
+// CanBeUsedByClass checks if an item can be used by a specific character class.
+// Phase 25.2: Class-specific equipment restrictions.
+// Returns true if the item has no restrictions or if the class is in the allowed list.
+func (i *Item) CanBeUsedByClass(className string) bool {
+	// No restrictions means any class can use it
+	if len(i.ClassRestrictions) == 0 {
+		return true
+	}
+	
+	// Check if the class is in the allowed list
+	for _, allowedClass := range i.ClassRestrictions {
+		if allowedClass == className {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // ItemTemplate defines a template for generating items.

@@ -211,8 +211,8 @@ func TestGetAllPresets(t *testing.T) {
 	gen := NewClassGenerator()
 	presets := gen.GetAllPresets()
 
-	if len(presets) != 6 {
-		t.Errorf("GetAllPresets() returned %d presets, want 6", len(presets))
+	if len(presets) != 21 {
+		t.Errorf("GetAllPresets() returned %d presets, want 21 (6 base + 15 hybrid)", len(presets))
 	}
 
 	// Check all class types are present

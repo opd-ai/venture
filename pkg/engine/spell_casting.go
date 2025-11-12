@@ -67,9 +67,10 @@ func (s *SpellSlotComponent) IsCasting() bool {
 type SpellCastingSystem struct {
 	world           *World
 	statusEffectSys *StatusEffectSystem
-	particleSys     *ParticleSystem       // For visual effects
-	audioMgr        *AudioManager         // For sound effects
-	tutorialSys     *EbitenTutorialSystem // For notifications
+	particleSys     *ParticleSystem          // For visual effects
+	audioMgr        *AudioManager            // For sound effects
+	tutorialSys     *EbitenTutorialSystem    // For notifications
+	comboSys        *SpellCombinationSystem  // For combo detection
 	logger          *logrus.Entry
 }
 

@@ -57,10 +57,8 @@ func (s *SpellCombinationSystem) Update(entities []*Entity, deltaTime float64) {
 			s.detectAndTriggerCombo(entity, combo, currentTime)
 		}
 		
-		// Update active combo duration
-		if combo.IsComboActive(currentTime) {
-			// Combo effects are applied by modifying spell power when casting
-			// The active combo is automatically cleared when expired
+		// Update active combo duration - clear if expired
+		if combo.ActiveCombo != nil {
 			if currentTime >= combo.ActiveCombo.StartTime+combo.ActiveCombo.Duration {
 				if s.logger != nil {
 					s.logger.WithFields(logrus.Fields{

@@ -177,6 +177,7 @@ func GetAdvancedSupportTemplates() []SpellTemplate {
 			NamePrefixes:  []string{"Time", "Temporal", "Chrono", "Slow", "Stasis"},
 			NameSuffixes:  []string{"Dilation", "Field", "Freeze", "Stop", "Lock"},
 			Tags:          []string{"time", "slow", "debuff"},
+			DamageRange:   [2]int{5, 20}, // Temporal damage
 			ManaCostRange: [2]int{35, 70},
 			CooldownRange: [2]float64{15.0, 30.0},
 			CastTimeRange: [2]float64{1.2, 2.5},

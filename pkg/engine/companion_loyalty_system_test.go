@@ -62,7 +62,7 @@ func TestCompanionLoyaltySystem_ModifyLoyalty(t *testing.T) {
 		Level:         1,
 	})
 	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
-	
+
 	// Process pending entity additions
 	world.Update(0.0)
 
@@ -138,7 +138,7 @@ func TestCompanionLoyaltySystem_PassiveLoyaltyGain(t *testing.T) {
 	// Create owner entity
 	owner := world.CreateEntity()
 	owner.AddComponent(&PositionComponent{X: 0, Y: 0})
-	
+
 	// Process pending entity additions
 	world.Update(0.0)
 
@@ -183,7 +183,7 @@ func TestCompanionLoyaltySystem_PassiveLoyaltyGain(t *testing.T) {
 				Level:         1,
 			})
 			companion.AddComponent(&tt.companionPos)
-			
+
 			// Process pending entity additions
 			world.Update(0.0)
 
@@ -257,7 +257,7 @@ func TestCompanionLoyaltySystem_Disobedience(t *testing.T) {
 				Level:         1,
 				Behavior:      tt.initialBehavior,
 			})
-			
+
 			// Process pending entity additions
 			world.Update(0.0)
 
@@ -287,7 +287,7 @@ func TestCompanionLoyaltySystem_GetLoyalty(t *testing.T) {
 		Loyalty:       75.5,
 		Level:         1,
 	})
-	
+
 	// Process pending entity additions
 	world.Update(0.0)
 

@@ -72,6 +72,9 @@ func TestSimpleAnimationSequence(t *testing.T) {
 			if seq.ShouldLoop() != tt.loop {
 				t.Errorf("Expected loop %t, got %t", tt.loop, seq.ShouldLoop())
 			}
+
+			// Test that interface methods work correctly
+			var _ AnimationSequence = seq
 		})
 	}
 }
@@ -102,6 +105,9 @@ func TestBaseExpression(t *testing.T) {
 		t.Run(tt.expType.String(), func(t *testing.T) {
 			expr := NewBaseExpression(tt.expType)
 
+			// Test Expression interface methods
+			var _ Expression = expr
+
 			// Check sound effect
 			if expr.GetSoundEffect() != tt.expectedSound {
 				t.Errorf("Expected sound %q, got %q", tt.expectedSound, expr.GetSoundEffect())
@@ -120,6 +126,8 @@ func TestBaseExpression(t *testing.T) {
 				if anim.GetFrameTime() <= 0 {
 					t.Error("Expected positive frame time")
 				}
+				// Call ShouldLoop to test interface
+				_ = anim.ShouldLoop()
 			}
 
 			// Check duration
@@ -227,6 +235,7 @@ func TestExpressionSystem_Update(t *testing.T) {
 
 	// Create entity with expression
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	sys.TriggerExpression(entity.ID, ExpressionWave)
 
 	expCompRaw, _ := entity.GetComponent("expression")
@@ -264,6 +273,7 @@ func TestExpressionSystem_Update_InfiniteDuration(t *testing.T) {
 
 	// Create entity with sit expression (infinite duration)
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	sys.TriggerExpression(entity.ID, ExpressionSit)
 
 	expCompRaw, _ := entity.GetComponent("expression")
@@ -292,6 +302,7 @@ func TestExpressionSystem_CancelExpression(t *testing.T) {
 
 	// Create entity with infinite expression
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	sys.TriggerExpression(entity.ID, ExpressionSleep)
 
 	expCompRaw, _ := entity.GetComponent("expression")
@@ -326,6 +337,7 @@ func TestExpressionSystem_IsOnCooldown(t *testing.T) {
 	sys := NewExpressionSystem(world, nil)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Should not be on cooldown initially
 	if sys.IsOnCooldown(entity.ID) {
@@ -357,6 +369,7 @@ func TestExpressionSystem_GetActiveExpression(t *testing.T) {
 	sys := NewExpressionSystem(world, nil)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Should return nil when no expression active
 	active := sys.GetActiveExpression(entity.ID)
@@ -425,6 +438,7 @@ func TestExpressionSystem_CooldownPreventsSpam(t *testing.T) {
 	sys := NewExpressionSystem(world, nil)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Trigger first expression
 	success := sys.TriggerExpression(entity.ID, ExpressionWave)
@@ -464,6 +478,7 @@ func TestExpressionSystem_MultipleEntities(t *testing.T) {
 	entity1 := world.CreateEntity()
 	entity2 := world.CreateEntity()
 	entity3 := world.CreateEntity()
+	world.Update(0) // Process entity additions
 
 	sys.TriggerExpression(entity1.ID, ExpressionWave)
 	sys.TriggerExpression(entity2.ID, ExpressionDance)

@@ -57,7 +57,7 @@ func (s *ExpressionSystem) Update(deltaTime float64) {
 		// Update expression timer
 		if expComp.ExpressionTime > 0 && !math.IsInf(expComp.ExpressionTime, 1) {
 			expComp.ExpressionTime -= deltaTime
-			
+
 			// If expression finished, clear it
 			if expComp.ExpressionTime <= 0 {
 				expComp.ExpressionTime = 0
@@ -121,7 +121,7 @@ func (s *ExpressionSystem) TriggerExpression(entityID uint64, expressionType Exp
 	// Get or create expression component
 	expCompRaw, ok := entity.GetComponent("expression")
 	var expComp *ExpressionComponent
-	
+
 	if !ok {
 		// Create new component
 		expComp = &ExpressionComponent{
@@ -133,12 +133,12 @@ func (s *ExpressionSystem) TriggerExpression(entityID uint64, expressionType Exp
 	} else {
 		// Use existing component
 		expComp = expCompRaw.(*ExpressionComponent)
-		
+
 		// Check cooldown (3 second spam prevention)
 		if expComp.Cooldown > 0 {
 			return false
 		}
-		
+
 		// Set new expression
 		expComp.ActiveExpression = expressionType
 		expComp.ExpressionTime = expr.GetDuration()

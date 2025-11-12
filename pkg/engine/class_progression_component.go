@@ -3,11 +3,14 @@ package engine
 // ClassProgressionComponent tracks character class level and specialization.
 // This extends the basic CharacterClass with progression mechanics for V4 Phase 25.
 type ClassProgressionComponent struct {
-	Class          CharacterClass
-	Level          int
-	Experience     float64
-	Specialization SpecializationType
-	Abilities      []string // Unlocked ability IDs
+	Class           CharacterClass
+	Level           int
+	Experience      float64
+	Specialization  SpecializationType
+	Abilities       []string // Unlocked ability IDs
+	SecondaryClass  *CharacterClass // Phase 25.2: Dual-classing (unlocked at level 20)
+	SecondaryLevel  int             // Level in secondary class
+	SecondarySpec   SpecializationType
 }
 
 // Type returns the component type identifier.

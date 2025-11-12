@@ -107,6 +107,27 @@ func (c CharacterClass) Description() string {
 	}
 }
 
+// LowerName returns the lowercase name of the class for matching with item restrictions.
+// Phase 25.2: Used for class-specific equipment restrictions.
+func (c CharacterClass) LowerName() string {
+	switch c {
+	case ClassWarrior:
+		return "warrior"
+	case ClassMage:
+		return "mage"
+	case ClassRogue:
+		return "rogue"
+	case ClassRanger:
+		return "ranger"
+	case ClassCleric:
+		return "cleric"
+	case ClassNecromancer:
+		return "necromancer"
+	default:
+		return "unknown"
+	}
+}
+
 // CharacterData holds the player's character creation choices
 type CharacterData struct {
 	Name         string

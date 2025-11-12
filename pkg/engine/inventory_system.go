@@ -121,6 +121,25 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 	}
 	itm := invComp.Items[inventoryIndex]
 
+	// Phase 25.2: Check class restrictions
+	if comp3, ok := entity.GetComponent("class_progression"); ok {
+		if classComp, ok := comp3.(*ClassProgressionComponent); ok {
+			// Check if the item can be used by the primary class
+			primaryClassName := classComp.Class.LowerName()
+			canUse := itm.CanBeUsedByClass(primaryClassName)
+			
+			// If not usable by primary class, check secondary class (dual-classing)
+			if !canUse && classComp.SecondaryClass != nil {
+				secondaryClassName := classComp.SecondaryClass.LowerName()
+				canUse = itm.CanBeUsedByClass(secondaryClassName)
+			}
+			
+			if !canUse {
+				return fmt.Errorf("item %s cannot be equipped by %s", itm.Name, classComp.Class.String())
+			}
+		}
+	}
+
 	// Check if item can be equipped
 	slot, canEquip := equipComp.GetSlotForItem(itm)
 	if !canEquip {

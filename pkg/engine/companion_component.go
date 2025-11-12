@@ -44,11 +44,71 @@ type CompanionComponent struct {
 	Level         int
 	Behavior      BehaviorMode
 	Commands      []CommandType
+	Permadeath    bool          // If true, companion dies permanently
+	BondingPerks  []BondingPerk // Unlocked perks based on loyalty
+	TimeWithOwner float64       // Total time spent near owner (for bonding)
+}
+
+// BondingPerk represents a perk unlocked through bonding
+type BondingPerk int
+
+const (
+	// PerkNone is a placeholder for no perk
+	PerkNone BondingPerk = iota
+	// PerkExtraHealth increases companion max HP by 20%
+	PerkExtraHealth
+	// PerkExtraDamage increases companion attack by 15%
+	PerkExtraDamage
+	// PerkFasterLearning doubles skill learning rate
+	PerkFasterLearning
+	// PerkLoyalGuard gives companion 30% damage reduction
+	PerkLoyalGuard
+	// PerkSharedExperience gives owner 10% of companion's XP
+	PerkSharedExperience
+	// PerkAutoRevive allows companion to revive once per day
+	PerkAutoRevive
+)
+
+// String returns the perk name
+func (p BondingPerk) String() string {
+	switch p {
+	case PerkExtraHealth:
+		return "Extra Health"
+	case PerkExtraDamage:
+		return "Extra Damage"
+	case PerkFasterLearning:
+		return "Faster Learning"
+	case PerkLoyalGuard:
+		return "Loyal Guard"
+	case PerkSharedExperience:
+		return "Shared Experience"
+	case PerkAutoRevive:
+		return "Auto Revive"
+	default:
+		return "None"
+	}
 }
 
 // Type returns the component type
 func (c CompanionComponent) Type() string {
 	return "companion"
+}
+
+// HasPerk checks if companion has a specific bonding perk
+func (c *CompanionComponent) HasPerk(perk BondingPerk) bool {
+	for _, p := range c.BondingPerks {
+		if p == perk {
+			return true
+		}
+	}
+	return false
+}
+
+// AddPerk adds a bonding perk if not already present
+func (c *CompanionComponent) AddPerk(perk BondingPerk) {
+	if !c.HasPerk(perk) {
+		c.BondingPerks = append(c.BondingPerks, perk)
+	}
 }
 
 // CompanionStatsComponent holds companion-specific stats

@@ -59,6 +59,12 @@ const (
 	ClassMage
 	// ClassRogue is a balanced, agility-focused class
 	ClassRogue
+	// ClassRanger is a ranged combat class with pet bonding abilities (V4 Phase 25)
+	ClassRanger
+	// ClassCleric is a support class with healing and buffs (V4 Phase 25)
+	ClassCleric
+	// ClassNecromancer is a summoning class with life drain and debuffs (V4 Phase 25)
+	ClassNecromancer
 )
 
 // String returns the human-readable class name
@@ -70,6 +76,12 @@ func (c CharacterClass) String() string {
 		return "Mage"
 	case ClassRogue:
 		return "Rogue"
+	case ClassRanger:
+		return "Ranger"
+	case ClassCleric:
+		return "Cleric"
+	case ClassNecromancer:
+		return "Necromancer"
 	default:
 		return "Unknown"
 	}
@@ -84,6 +96,12 @@ func (c CharacterClass) Description() string {
 		return "Wielders of arcane magic with powerful spells. Press 1-5 to cast spells. Low HP, high mana."
 	case ClassRogue:
 		return "Agile fighters with balanced stats and critical strikes. Quick attacks and evasion."
+	case ClassRanger:
+		return "Skilled archer and beast tamer. Excels at ranged combat and can bond with companions."
+	case ClassCleric:
+		return "Divine caster who heals allies and smites enemies. Balances support with holy combat."
+	case ClassNecromancer:
+		return "Dark mage who commands the undead. Summons minions and drains life force."
 	default:
 		return ""
 	}
@@ -115,7 +133,7 @@ func (cd *CharacterData) Validate() error {
 	if len(cd.Name) > 20 {
 		return fmt.Errorf("character name too long (max 20 characters)")
 	}
-	if cd.Class < ClassWarrior || cd.Class > ClassRogue {
+	if cd.Class < ClassWarrior || cd.Class > ClassNecromancer {
 		return fmt.Errorf("invalid character class")
 	}
 	return nil

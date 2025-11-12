@@ -97,6 +97,30 @@
 // This ensures spells remain balanced while becoming more powerful
 // as the player progresses through the game.
 //
+// # Balance System (Phase 24.3)
+//
+// The balance system ensures consistent power levels across all spell types:
+//   - Mana costs scale with spell power and target type
+//   - Cooldowns are proportional to power and cast time
+//   - DPS/HPS targets ensure combat pacing is balanced
+//   - Level scaling provides smooth power progression
+//
+// Balance formulas:
+//   - Offensive: Base 0.4 mana per damage point
+//   - Healing: Base 0.35 mana per healing point
+//   - Area spells: 30% mana cost increase
+//   - Buffs/Debuffs: 0.6 mana per power point
+//   - Cooldown minimum: 2x cast time
+//   - Power per level: 5% increase per level
+//
+// Target metrics (level 1):
+//   - DPS: 15 ± 40% (9-21 DPS)
+//   - HPS: 12 ± 40% (7.2-16.8 HPS)
+//   - Mana efficiency: 1.0-4.5 power per mana point
+//
+// The balance system validates generated spells and logs warnings
+// for spells that deviate significantly from target metrics.
+//
 // # Genre Differences
 //
 // Fantasy spells use traditional magical themes:

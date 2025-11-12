@@ -78,7 +78,7 @@ func (s *CompanionAISystem) passiveBehavior(entity *Entity, pos *PositionCompone
 	s.followOwner(entity, pos, ownerPos, deltaTime)
 }
 
-func (s *CompanionAISystem) followOwner(entity *Entity, pos *PositionComponent, ownerPos *PositionComponent, deltaTime float64) {
+func (s *CompanionAISystem) followOwner(entity *Entity, pos, ownerPos *PositionComponent, deltaTime float64) {
 	dist := s.distance(pos, ownerPos)
 	if dist > 30.0 {
 		// Move towards owner
@@ -116,7 +116,7 @@ func (s *CompanionAISystem) findNearbyEnemies(pos *PositionComponent, radius flo
 	return enemies
 }
 
-func (s *CompanionAISystem) attackEnemy(companion *Entity, enemy *Entity) {
+func (s *CompanionAISystem) attackEnemy(companion, enemy *Entity) {
 	// Attack logic handled by combat system
 	// This just sets the target
 	if aiCompRaw, ok := companion.GetComponent("ai"); ok {
@@ -124,7 +124,7 @@ func (s *CompanionAISystem) attackEnemy(companion *Entity, enemy *Entity) {
 	}
 }
 
-func (s *CompanionAISystem) distance(pos1 *PositionComponent, pos2 *PositionComponent) float64 {
+func (s *CompanionAISystem) distance(pos1, pos2 *PositionComponent) float64 {
 	dx := pos1.X - pos2.X
 	dy := pos1.Y - pos2.Y
 	return math.Sqrt(dx*dx + dy*dy)

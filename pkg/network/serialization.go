@@ -106,7 +106,7 @@ func (p *BinaryProtocol) DecodeStateUpdate(data []byte) (*StateUpdate, error) {
 	if err := binary.Read(buf, binary.LittleEndian, &componentCount); err != nil {
 		return nil, fmt.Errorf("failed to read component count: %w", err)
 	}
-	
+
 	// Validate component count to prevent DoS attacks
 	const maxComponentCount = 1000 // Reasonable maximum
 	if componentCount > maxComponentCount {

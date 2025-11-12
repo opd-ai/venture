@@ -22,7 +22,7 @@ func (s *ReputationSystem) ModifyReputation(entityID uint64, faction string, del
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	repCompRaw, ok := entity.GetComponent("reputation")
 	if !ok {
 		// Create new reputation component
@@ -37,9 +37,9 @@ func (s *ReputationSystem) ModifyReputation(entityID uint64, faction string, del
 		entity.AddComponent(repComp)
 		repCompRaw, _ = entity.GetComponent("reputation")
 	}
-	
+
 	repComp := repCompRaw.(*ReputationComponent)
-	
+
 	// Modify reputation (clamped to -100 to +100)
 	current := repComp.Factions[faction]
 	repComp.Factions[faction] = clamp(current+delta, -100.0, 100.0)
@@ -51,14 +51,14 @@ func (s *ReputationSystem) ShiftAlignment(entityID uint64, lawDelta, goodDelta f
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	repCompRaw, ok := entity.GetComponent("reputation")
 	if !ok {
 		return
 	}
-	
+
 	repComp := repCompRaw.(*ReputationComponent)
-	
+
 	// Shift alignment (clamped to -1 to +1)
 	repComp.Alignment.LawAxis = clamp(repComp.Alignment.LawAxis+lawDelta, -1.0, 1.0)
 	repComp.Alignment.GoodAxis = clamp(repComp.Alignment.GoodAxis+goodDelta, -1.0, 1.0)
@@ -70,22 +70,22 @@ func (s *ReputationSystem) RecordDeed(entityID uint64, action string, alignmentC
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	repCompRaw, ok := entity.GetComponent("reputation")
 	if !ok {
 		return
 	}
-	
+
 	repComp := repCompRaw.(*ReputationComponent)
-	
+
 	deed := Deed{
 		Action:          action,
 		Timestamp:       0, // TODO: Get current timestamp
 		AlignmentChange: alignmentChange,
 	}
-	
+
 	repComp.KarmaDeed = append(repComp.KarmaDeed, deed)
-	
+
 	// Apply alignment change
 	repComp.Alignment.LawAxis = clamp(repComp.Alignment.LawAxis+alignmentChange.LawAxis, -1.0, 1.0)
 	repComp.Alignment.GoodAxis = clamp(repComp.Alignment.GoodAxis+alignmentChange.GoodAxis, -1.0, 1.0)

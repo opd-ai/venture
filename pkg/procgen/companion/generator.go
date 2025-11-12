@@ -5,7 +5,7 @@ package companion
 import (
 	"fmt"
 	"math/rand"
-	
+
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
 )
@@ -26,8 +26,7 @@ type Companion struct {
 }
 
 // Generator creates procedural companions
-type Generator struct {
-}
+type Generator struct{}
 
 // NewGenerator creates a new companion generator
 func NewGenerator() *Generator {
@@ -37,21 +36,21 @@ func NewGenerator() *Generator {
 // Generate creates a new companion
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	// Validate parameters
 	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
 		return nil, fmt.Errorf("difficulty must be between 0.0 and 1.0, got %f", params.Difficulty)
 	}
-	
+
 	// Determine companion type based on genre
 	companionType := g.selectCompanionType(rng, params.GenreID)
-	
+
 	// Generate stats scaled with depth and difficulty
 	baseLevel := params.Depth
 	if baseLevel < 1 {
 		baseLevel = 1
 	}
-	
+
 	companion := &Companion{
 		Name:     g.generateName(rng, companionType, params.GenreID),
 		Type:     companionType,
@@ -59,19 +58,19 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 		Loyalty:  50.0 + rng.Float64()*30.0, // 50-80 starting loyalty
 		Commands: g.generateCommands(rng),
 	}
-	
+
 	// Calculate stats
 	levelMultiplier := 1.0 + 0.15*float64(baseLevel-1)
 	difficultyMultiplier := 0.5 + params.Difficulty*1.5
-	
+
 	companion.Attack = (10.0 + rng.Float64()*15.0) * levelMultiplier * difficultyMultiplier
 	companion.Defense = (8.0 + rng.Float64()*12.0) * levelMultiplier * difficultyMultiplier
 	companion.Speed = 80.0 + rng.Float64()*40.0
 	companion.MaxHP = (50.0 + rng.Float64()*50.0) * levelMultiplier * difficultyMultiplier
 	companion.HP = companion.MaxHP
-	
+
 	companion.SpritePattern = g.generateSpritePattern(companionType, params.GenreID)
-	
+
 	return companion, nil
 }
 
@@ -81,23 +80,23 @@ func (g *Generator) Validate(result interface{}) error {
 	if !ok {
 		return fmt.Errorf("result is not a Companion")
 	}
-	
+
 	if companion.Attack <= 0 {
 		return fmt.Errorf("companion has invalid attack: %f", companion.Attack)
 	}
-	
+
 	if companion.MaxHP <= 0 {
 		return fmt.Errorf("companion has invalid max HP: %f", companion.MaxHP)
 	}
-	
+
 	if companion.Loyalty < 0 || companion.Loyalty > 100 {
 		return fmt.Errorf("companion has invalid loyalty: %f", companion.Loyalty)
 	}
-	
+
 	if len(companion.Commands) == 0 {
 		return fmt.Errorf("companion has no commands")
 	}
-	
+
 	return nil
 }
 
@@ -144,7 +143,7 @@ func (g *Generator) generateName(rng *rand.Rand, companionType engine.CompanionT
 		"cyberpunk":        {"Neo", "Cyber", "Tech", "Data", "Ghost"},
 		"post-apocalyptic": {"Rust", "Scrap", "Ash", "Rad", "Dust"},
 	}
-	
+
 	suffixes := map[engine.CompanionType][]string{
 		engine.CompanionTypePet:       {"paw", "fang", "claw", "tail"},
 		engine.CompanionTypeSummon:    {"born", "called", "formed"},
@@ -155,20 +154,20 @@ func (g *Generator) generateName(rng *rand.Rand, companionType engine.CompanionT
 		engine.CompanionTypeSpirit:    {"soul", "wisp", "ghost"},
 		engine.CompanionTypeInsect:    {"swarm", "hive", "crawler"},
 	}
-	
+
 	prefixList := prefixes["fantasy"]
 	if list, ok := prefixes[genreID]; ok {
 		prefixList = list
 	}
-	
+
 	suffixList := suffixes[companionType]
 	if len(suffixList) == 0 {
 		suffixList = []string{"one", "two", "three"}
 	}
-	
+
 	prefix := prefixList[rng.Intn(len(prefixList))]
 	suffix := suffixList[rng.Intn(len(suffixList))]
-	
+
 	return prefix + suffix
 }
 
@@ -179,7 +178,7 @@ func (g *Generator) generateCommands(rng *rand.Rand) []engine.CommandType {
 		engine.CommandStay,
 		engine.CommandAttack,
 	}
-	
+
 	// Add additional commands randomly
 	if rng.Float64() > 0.5 {
 		commands = append(commands, engine.CommandDefend)
@@ -190,7 +189,7 @@ func (g *Generator) generateCommands(rng *rand.Rand) []engine.CommandType {
 	if rng.Float64() > 0.8 {
 		commands = append(commands, engine.CommandScout)
 	}
-	
+
 	return commands
 }
 

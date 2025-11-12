@@ -3,7 +3,7 @@ package federation
 
 import (
 	"fmt"
-	
+
 	"github.com/opd-ai/venture/pkg/engine"
 )
 
@@ -15,11 +15,11 @@ type FederationProtocol struct {
 
 // PeerServer represents a connected peer server
 type PeerServer struct {
-	ID           string
-	Name         string
-	Address      string
-	TrustLevel   string
-	Connected    bool
+	ID            string
+	Name          string
+	Address       string
+	TrustLevel    string
+	Connected     bool
 	LastHeartbeat int64
 }
 
@@ -65,14 +65,14 @@ func NewPortalSystem(world *engine.World, federation *FederationProtocol) *Porta
 func (s *PortalSystem) Update(deltaTime float64) {
 	// Check for players entering portals
 	portals := s.world.GetEntitiesWith("portal", "position")
-	
+
 	for _, portal := range portals {
 		portalCompRaw, ok := portal.GetComponent("portal")
 		if !ok {
 			continue
 		}
 		portalComp := portalCompRaw.(*engine.PortalComponent)
-		
+
 		// TODO: Check for players in range
 		// TODO: Initiate transfer if portal activated
 		_ = portalComp
@@ -80,24 +80,24 @@ func (s *PortalSystem) Update(deltaTime float64) {
 }
 
 // ActivatePortal transfers a player through a portal
-func (s *PortalSystem) ActivatePortal(playerID uint64, portalID uint64) error {
+func (s *PortalSystem) ActivatePortal(playerID, portalID uint64) error {
 	portal, ok := s.world.GetEntity(portalID)
 	if !ok || portal == nil {
 		return fmt.Errorf("portal not found")
 	}
-	
+
 	portalCompRaw, ok := portal.GetComponent("portal")
 	if !ok {
 		return fmt.Errorf("entity is not a portal")
 	}
-	
+
 	portalComp := portalCompRaw.(*engine.PortalComponent)
-	
+
 	if portalComp.DestinationServer == "local" {
 		// Local teleport
 		return s.localTeleport(playerID, portalComp.DestinationX, portalComp.DestinationY)
 	}
-	
+
 	// Cross-server transfer
 	return s.federation.TransferPlayer(playerID, portalComp.DestinationServer)
 }
@@ -107,15 +107,15 @@ func (s *PortalSystem) localTeleport(playerID uint64, destX, destY float64) erro
 	if !ok || player == nil {
 		return fmt.Errorf("player not found")
 	}
-	
+
 	posCompRaw, ok := player.GetComponent("position")
 	if !ok {
 		return fmt.Errorf("player has no position")
 	}
-	
+
 	posComp := posCompRaw.(*engine.PositionComponent)
 	posComp.X = destX
 	posComp.Y = destY
-	
+
 	return nil
 }

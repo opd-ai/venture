@@ -8,8 +8,8 @@ type Alignment struct {
 
 // Deed represents a significant action
 type Deed struct {
-	Action      string
-	Timestamp   int64
+	Action          string
+	Timestamp       int64
 	AlignmentChange Alignment
 }
 

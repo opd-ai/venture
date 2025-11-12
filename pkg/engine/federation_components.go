@@ -71,9 +71,9 @@ func (p PoliticsComponent) Type() string {
 
 // TerritoryComponent tracks territory control
 type TerritoryComponent struct {
-	ZoneID           string
+	ZoneID             string
 	ControllingFaction string
-	CaptureProgress  float64
+	CaptureProgress    float64
 }
 
 // Type returns the component type

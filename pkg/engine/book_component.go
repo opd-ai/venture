@@ -13,13 +13,13 @@ const (
 
 // BookComponent represents an in-game book
 type BookComponent struct {
-	Title       string
-	Author      string
-	BookType    BookType
-	Content     []string // Pages of text
-	IsRead      bool
-	SkillBonus  map[string]float64 // Skill books grant bonuses
-	RecipeID    string             // Recipe books unlock crafting
+	Title      string
+	Author     string
+	BookType   BookType
+	Content    []string // Pages of text
+	IsRead     bool
+	SkillBonus map[string]float64 // Skill books grant bonuses
+	RecipeID   string             // Recipe books unlock crafting
 }
 
 // Type returns the component type
@@ -29,8 +29,8 @@ func (b BookComponent) Type() string {
 
 // LibraryComponent tracks collected books
 type LibraryComponent struct {
-	Books       []uint64           // Book entity IDs
-	Completions map[string]bool    // Series tracking
+	Books       []uint64        // Book entity IDs
+	Completions map[string]bool // Series tracking
 }
 
 // Type returns the component type

@@ -17,21 +17,21 @@ func NewMiniGameSystem(world *World) *MiniGameSystem {
 // Update processes active mini-games
 func (s *MiniGameSystem) Update(deltaTime float64) {
 	entities := s.world.GetEntitiesWith("minigame")
-	
+
 	for _, entity := range entities {
 		gameCompRaw, ok := entity.GetComponent("minigame")
 		if !ok {
 			continue
 		}
 		gameComp := gameCompRaw.(*MiniGameComponent)
-		
+
 		if !gameComp.Active {
 			continue
 		}
-		
+
 		// Update time elapsed
 		gameComp.TimeElapsed += deltaTime
-		
+
 		// Check for timeout
 		if gameComp.TimeLimit > 0 && gameComp.TimeElapsed >= gameComp.TimeLimit {
 			s.EndGame(entity.ID, false)
@@ -45,7 +45,7 @@ func (s *MiniGameSystem) StartGame(entityID uint64, gameType MiniGameType, diffi
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	// Create or update mini-game component
 	gameComp := &MiniGameComponent{
 		GameType:    gameType,
@@ -56,7 +56,7 @@ func (s *MiniGameSystem) StartGame(entityID uint64, gameType MiniGameType, diffi
 		TimeElapsed: 0,
 		Reward:      s.generateReward(gameType, difficulty),
 	}
-	
+
 	entity.AddComponent(gameComp)
 }
 
@@ -66,15 +66,15 @@ func (s *MiniGameSystem) EndGame(entityID uint64, success bool) {
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	gameCompRaw, ok := entity.GetComponent("minigame")
 	if !ok {
 		return
 	}
-	
+
 	gameComp := gameCompRaw.(*MiniGameComponent)
 	gameComp.Active = false
-	
+
 	// Award rewards if successful
 	if success && gameComp.Reward != nil {
 		s.awardReward(entityID, gameComp.Reward)
@@ -105,7 +105,7 @@ func (s *MiniGameSystem) getTimeLimit(gameType MiniGameType) float64 {
 func (s *MiniGameSystem) generateReward(gameType MiniGameType, difficulty float64) *Reward {
 	baseGold := 50
 	baseXP := 100.0
-	
+
 	return &Reward{
 		Gold:  int(float64(baseGold) * difficulty * 2.0),
 		XP:    baseXP * difficulty * 1.5,
@@ -118,19 +118,19 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 	if !ok || entity == nil {
 		return
 	}
-	
+
 	// Award gold
 	if invCompRaw, ok := entity.GetComponent("inventory"); ok {
 		invComp := invCompRaw.(*InventoryComponent)
 		invComp.Gold += reward.Gold
 	}
-	
+
 	// Award XP
 	if expCompRaw, ok := entity.GetComponent("experience"); ok {
 		expComp := expCompRaw.(*ExperienceComponent)
 		expComp.CurrentXP += int(reward.XP)
 	}
-	
+
 	// Award items
 	// TODO: Add items to inventory
 	_ = time.Now() // Placeholder to avoid unused import

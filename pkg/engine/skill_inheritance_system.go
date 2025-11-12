@@ -99,7 +99,7 @@ func (s *SkillInheritanceSystem) Update(deltaTime float64) {
 }
 
 // processLearning applies skill learning based on recent owner skill usage.
-func (s *SkillInheritanceSystem) processLearning(companion *Entity, companionComp *CompanionComponent, skillComp *SkillInheritanceComponent, ownerID uint64, distance float64, deltaTime float64) {
+func (s *SkillInheritanceSystem) processLearning(companion *Entity, companionComp *CompanionComponent, skillComp *SkillInheritanceComponent, ownerID uint64, distance, deltaTime float64) {
 	// Get recent skill usage for owner
 	recentSkills, ok := s.recentSkillUsage[ownerID]
 	if !ok || len(recentSkills) == 0 {

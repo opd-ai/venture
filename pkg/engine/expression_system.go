@@ -17,19 +17,19 @@ func NewExpressionSystem(world *World) *ExpressionSystem {
 // Update processes active expressions
 func (s *ExpressionSystem) Update(deltaTime float64) {
 	entities := s.world.GetEntitiesWith("expression")
-	
+
 	for _, entity := range entities {
 		expCompRaw, ok := entity.GetComponent("expression")
 		if !ok {
 			continue
 		}
 		expComp := expCompRaw.(*ExpressionComponent)
-		
+
 		// Update expression timer
 		if expComp.ExpressionTime > 0 {
 			expComp.ExpressionTime -= deltaTime
 		}
-		
+
 		// Update cooldown
 		if expComp.Cooldown > 0 {
 			expComp.Cooldown -= deltaTime
@@ -43,7 +43,7 @@ func (s *ExpressionSystem) TriggerExpression(entityID uint64, expressionType Exp
 	if !ok || entity == nil {
 		return false
 	}
-	
+
 	expCompRaw, ok := entity.GetComponent("expression")
 	if !ok {
 		// Add component if it doesn't exist
@@ -55,19 +55,19 @@ func (s *ExpressionSystem) TriggerExpression(entityID uint64, expressionType Exp
 		entity.AddComponent(expComp)
 		return true
 	}
-	
+
 	expComp := expCompRaw.(*ExpressionComponent)
-	
+
 	// Check cooldown
 	if expComp.Cooldown > 0 {
 		return false
 	}
-	
+
 	// Set new expression
 	expComp.ActiveExpression = expressionType
 	expComp.ExpressionTime = 3.0
 	expComp.Cooldown = 3.0
-	
+
 	return true
 }
 

@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	
+
 	"github.com/opd-ai/venture/pkg/engine"
 )
 
@@ -31,23 +31,23 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	if err != nil {
 		return fmt.Errorf("failed to generate message ID: %w", err)
 	}
-	
+
 	// Create message
 	message := engine.ChatMessage{
 		ID:        msgID,
 		SenderID:  senderID,
 		Channel:   channel,
 		Content:   content,
-		Timestamp: 0, // TODO: Get current timestamp
+		Timestamp: 0,     // TODO: Get current timestamp
 		Encrypted: false, // TODO: Implement E2E encryption
 	}
-	
+
 	// Add to sender's chat component
 	sender, ok := s.world.GetEntity(senderID)
 	if !ok || sender == nil {
 		return fmt.Errorf("sender entity not found")
 	}
-	
+
 	chatCompRaw, ok := sender.GetComponent("chat")
 	if !ok {
 		// Create chat component
@@ -59,14 +59,14 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		sender.AddComponent(chatComp)
 		chatCompRaw, _ = sender.GetComponent("chat")
 	}
-	
+
 	chatComp := chatCompRaw.(*engine.ChatComponent)
 	chatComp.Messages = append(chatComp.Messages, message)
-	
+
 	// TODO: Broadcast to recipients based on channel
 	// TODO: Implement rate limiting
 	// TODO: Implement E2E encryption
-	
+
 	return nil
 }
 

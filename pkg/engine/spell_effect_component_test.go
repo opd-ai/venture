@@ -239,7 +239,7 @@ func TestSpellEffectComponent_ElementalFusion(t *testing.T) {
 func TestSpellEffectComponent_LifeDrain(t *testing.T) {
 	effect := &SpellEffectComponent{
 		EffectType: EffectLifeDrain,
-		Duration:   3.0, // 3 second drain
+		Duration:   3.0,  // 3 second drain
 		Magnitude:  10.0, // 10 HP per second
 		TargetType: TargetEntity,
 		CasterID:   100,

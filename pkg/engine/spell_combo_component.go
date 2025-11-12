@@ -7,13 +7,13 @@ import "time"
 type SpellComboComponent struct {
 	// RecentCasts tracks spells cast in the last second for combo detection
 	RecentCasts []RecentCast
-	
+
 	// KnownRecipes stores discovered combo recipes (spell1+spell2 -> result)
 	KnownRecipes []ComboRecipe
-	
+
 	// ActiveCombo is the currently active combo effect (nil if none)
 	ActiveCombo *ActiveCombo
-	
+
 	// ComboWindow is the time window for combo detection (default 1.0 second)
 	ComboWindow float64
 }
@@ -27,13 +27,13 @@ func (s *SpellComboComponent) Type() string {
 type RecentCast struct {
 	// SpellName is the name of the cast spell
 	SpellName string
-	
+
 	// Element is the elemental type of the spell
 	Element string
-	
+
 	// CastTime is when the spell was cast (Unix timestamp in seconds)
 	CastTime float64
-	
+
 	// SlotIndex is which spell slot was used (0-4)
 	SlotIndex int
 }
@@ -42,22 +42,22 @@ type RecentCast struct {
 type ComboRecipe struct {
 	// Spell1Name is the name of the first spell
 	Spell1Name string
-	
+
 	// Spell2Name is the name of the second spell
 	Spell2Name string
-	
+
 	// Element1 is the element of the first spell
 	Element1 string
-	
+
 	// Element2 is the element of the second spell
 	Element2 string
-	
+
 	// ResultEffect describes the combined effect
 	ResultEffect string
-	
+
 	// PowerMultiplier is the damage/effect boost (1.0 = no change, 2.0 = double)
 	PowerMultiplier float64
-	
+
 	// IsSymmetric indicates if order matters (true = A+B same as B+A)
 	IsSymmetric bool
 }
@@ -66,19 +66,19 @@ type ComboRecipe struct {
 type ActiveCombo struct {
 	// Spell1Name is the first spell in the combo
 	Spell1Name string
-	
+
 	// Spell2Name is the second spell in the combo
 	Spell2Name string
-	
+
 	// PowerMultiplier is the active bonus multiplier
 	PowerMultiplier float64
-	
+
 	// EffectDescription describes what's happening
 	EffectDescription string
-	
+
 	// StartTime is when the combo was triggered (Unix timestamp)
 	StartTime float64
-	
+
 	// Duration is how long the combo effect lasts
 	Duration float64
 }
@@ -96,7 +96,7 @@ func (s *SpellComboComponent) AddRecentCast(spellName, element string, castTime 
 // CleanOldCasts removes casts outside the combo window.
 func (s *SpellComboComponent) CleanOldCasts(currentTime float64) {
 	cutoff := currentTime - s.ComboWindow
-	
+
 	// Keep only recent casts within the window
 	validCasts := make([]RecentCast, 0, len(s.RecentCasts))
 	for _, cast := range s.RecentCasts {

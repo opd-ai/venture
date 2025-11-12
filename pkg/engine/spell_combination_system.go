@@ -37,7 +37,7 @@ func NewSpellCombinationSystemWithLogger(world *World, rng *rand.Rand, logger *l
 // Update processes combo detection and active combo effects.
 func (s *SpellCombinationSystem) Update(entities []*Entity, deltaTime float64) {
 	currentTime := GetCurrentTime()
-	
+
 	for _, entity := range entities {
 		// Only process entities with combo tracking
 		comboComp, hasCombo := entity.GetComponent("spell_combo")
@@ -48,15 +48,15 @@ func (s *SpellCombinationSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
-		
+
 		// Clean old casts
 		combo.CleanOldCasts(currentTime)
-		
+
 		// Check for combo opportunities
 		if combo.GetRecentCastsCount(currentTime) >= 2 {
 			s.detectAndTriggerCombo(entity, combo, currentTime)
 		}
-		
+
 		// Update active combo duration - clear if expired
 		if combo.ActiveCombo != nil {
 			if currentTime >= combo.ActiveCombo.StartTime+combo.ActiveCombo.Duration {
@@ -78,28 +78,28 @@ func (s *SpellCombinationSystem) detectAndTriggerCombo(entity *Entity, combo *Sp
 	if len(combo.RecentCasts) < 2 {
 		return
 	}
-	
+
 	// Check the last two casts
 	cast1 := combo.RecentCasts[len(combo.RecentCasts)-2]
 	cast2 := combo.RecentCasts[len(combo.RecentCasts)-1]
-	
+
 	// Check if they're within the combo window
 	if cast2.CastTime-cast1.CastTime > combo.ComboWindow {
 		return
 	}
-	
+
 	// Try element-based synergy first (automatic)
 	if synergy := s.checkElementalSynergy(cast1.Element, cast2.Element); synergy != nil {
 		s.triggerCombo(entity, combo, cast1, cast2, synergy, currentTime)
 		return
 	}
-	
+
 	// Try known recipes (discovered combinations)
 	if recipe := combo.GetRecipe(cast1.SpellName, cast2.SpellName); recipe != nil {
 		s.triggerRecipeCombo(entity, combo, cast1, cast2, recipe, currentTime)
 		return
 	}
-	
+
 	// Check for incompatible combo (backlash)
 	if s.checkIncompatibleCombo(cast1.Element, cast2.Element) {
 		s.triggerBacklash(entity, combo, cast1, cast2, currentTime)
@@ -129,7 +129,7 @@ func (s *SpellCombinationSystem) checkElementalSynergy(elem1, elem2 string) *Ele
 		{Element1: "light", Element2: "dark", PowerMultiplier: 2.0, EffectName: "Eclipse", Description: "Light and dark collide in cosmic power!", Duration: 2.0},
 		{Element1: "arcane", Element2: "arcane", PowerMultiplier: 1.8, EffectName: "Arcane Resonance", Description: "Pure magic resonates and amplifies!", Duration: 3.0},
 	}
-	
+
 	// Check for matching synergy (supports both orders)
 	for _, syn := range synergies {
 		if (syn.Element1 == elem1 && syn.Element2 == elem2) ||
@@ -137,7 +137,7 @@ func (s *SpellCombinationSystem) checkElementalSynergy(elem1, elem2 string) *Ele
 			return &syn
 		}
 	}
-	
+
 	return nil
 }
 
@@ -151,7 +151,7 @@ func (s *SpellCombinationSystem) checkIncompatibleCombo(elem1, elem2 string) boo
 		"dark":      {"dark"},  // Too much dark is consuming
 		"lightning": {"wind"},  // Lightning disperses in wind
 	}
-	
+
 	// Check if elem2 is incompatible with elem1
 	if incompList, exists := incompatible[elem1]; exists {
 		for _, incomp := range incompList {
@@ -161,7 +161,7 @@ func (s *SpellCombinationSystem) checkIncompatibleCombo(elem1, elem2 string) boo
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -175,7 +175,7 @@ func (s *SpellCombinationSystem) triggerCombo(entity *Entity, combo *SpellComboC
 		StartTime:         currentTime,
 		Duration:          synergy.Duration,
 	}
-	
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  entity.ID,
@@ -185,10 +185,10 @@ func (s *SpellCombinationSystem) triggerCombo(entity *Entity, combo *SpellComboC
 			"spell2":     cast2.SpellName,
 		}).Info("Spell combo triggered")
 	}
-	
+
 	// Apply visual/audio feedback if systems are available
 	s.createComboFeedback(entity, synergy.EffectName, synergy.PowerMultiplier)
-	
+
 	// Clear recent casts to prevent re-triggering
 	combo.RecentCasts = []RecentCast{}
 }
@@ -203,7 +203,7 @@ func (s *SpellCombinationSystem) triggerRecipeCombo(entity *Entity, combo *Spell
 		StartTime:         currentTime,
 		Duration:          3.0, // Default recipe duration
 	}
-	
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  entity.ID,
@@ -213,10 +213,10 @@ func (s *SpellCombinationSystem) triggerRecipeCombo(entity *Entity, combo *Spell
 			"spell2":     cast2.SpellName,
 		}).Info("Recipe combo triggered")
 	}
-	
+
 	// Apply visual/audio feedback
 	s.createComboFeedback(entity, recipe.ResultEffect, recipe.PowerMultiplier)
-	
+
 	// Clear recent casts
 	combo.RecentCasts = []RecentCast{}
 }
@@ -225,7 +225,7 @@ func (s *SpellCombinationSystem) triggerRecipeCombo(entity *Entity, combo *Spell
 func (s *SpellCombinationSystem) triggerBacklash(entity *Entity, combo *SpellComboComponent, cast1, cast2 RecentCast, currentTime float64) {
 	// Backlash reduces effectiveness instead of boosting
 	backlashMultiplier := 0.5 // 50% power reduction
-	
+
 	combo.ActiveCombo = &ActiveCombo{
 		Spell1Name:        cast1.SpellName,
 		Spell2Name:        cast2.SpellName,
@@ -234,7 +234,7 @@ func (s *SpellCombinationSystem) triggerBacklash(entity *Entity, combo *SpellCom
 		StartTime:         currentTime,
 		Duration:          2.0,
 	}
-	
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entity.ID,
@@ -242,7 +242,7 @@ func (s *SpellCombinationSystem) triggerBacklash(entity *Entity, combo *SpellCom
 			"spell2":    cast2.SpellName,
 		}).Warn("Spell backlash triggered")
 	}
-	
+
 	// Apply backlash damage to caster (10% of max health)
 	if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
 		if health, ok := healthComp.(*HealthComponent); ok {
@@ -251,7 +251,7 @@ func (s *SpellCombinationSystem) triggerBacklash(entity *Entity, combo *SpellCom
 			if health.Current < 0 {
 				health.Current = 0
 			}
-			
+
 			if s.logger != nil {
 				s.logger.WithFields(logrus.Fields{
 					"entity_id": entity.ID,
@@ -260,7 +260,7 @@ func (s *SpellCombinationSystem) triggerBacklash(entity *Entity, combo *SpellCom
 			}
 		}
 	}
-	
+
 	// Clear recent casts
 	combo.RecentCasts = []RecentCast{}
 }
@@ -276,7 +276,7 @@ func (s *SpellCombinationSystem) createComboFeedback(entity *Entity, effectName 
 	if !ok {
 		return
 	}
-	
+
 	// Create particle burst effect at entity position
 	// This would integrate with the particle system
 	// For now, we just log it
@@ -304,16 +304,16 @@ func (s *SpellCombinationSystem) OnSpellCast(entity *Entity, spell *magic.Spell,
 		entity.AddComponent(combo)
 		comboComp = combo
 	}
-	
+
 	combo, ok := comboComp.(*SpellComboComponent)
 	if !ok {
 		return
 	}
-	
+
 	// Add this cast to recent history
 	currentTime := GetCurrentTime()
 	combo.AddRecentCast(spell.Name, spell.Element.String(), currentTime, slotIndex)
-	
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  entity.ID,
@@ -331,17 +331,17 @@ func (s *SpellCombinationSystem) GetActiveComboMultiplier(entity *Entity) float6
 	if !hasCombo {
 		return 1.0
 	}
-	
+
 	combo, ok := comboComp.(*SpellComboComponent)
 	if !ok {
 		return 1.0
 	}
-	
+
 	currentTime := GetCurrentTime()
 	if combo.IsComboActive(currentTime) {
 		return combo.ActiveCombo.PowerMultiplier
 	}
-	
+
 	return 1.0
 }
 
@@ -359,12 +359,12 @@ func (s *SpellCombinationSystem) DiscoverRecipe(entity *Entity, spell1Name, spel
 		entity.AddComponent(combo)
 		comboComp = combo
 	}
-	
+
 	combo, ok := comboComp.(*SpellComboComponent)
 	if !ok {
 		return
 	}
-	
+
 	recipe := ComboRecipe{
 		Spell1Name:      spell1Name,
 		Spell2Name:      spell2Name,
@@ -374,16 +374,16 @@ func (s *SpellCombinationSystem) DiscoverRecipe(entity *Entity, spell1Name, spel
 		PowerMultiplier: multiplier,
 		IsSymmetric:     symmetric,
 	}
-	
+
 	combo.AddRecipe(recipe)
-	
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
-			"spell1":      spell1Name,
-			"spell2":      spell2Name,
-			"effect":      resultEffect,
-			"multiplier":  multiplier,
+			"entity_id":    entity.ID,
+			"spell1":       spell1Name,
+			"spell2":       spell2Name,
+			"effect":       resultEffect,
+			"multiplier":   multiplier,
 			"is_symmetric": symmetric,
 		}).Info("Combo recipe discovered")
 	}

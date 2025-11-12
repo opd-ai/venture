@@ -67,10 +67,10 @@ func (s *SpellSlotComponent) IsCasting() bool {
 type SpellCastingSystem struct {
 	world           *World
 	statusEffectSys *StatusEffectSystem
-	particleSys     *ParticleSystem          // For visual effects
-	audioMgr        *AudioManager            // For sound effects
-	tutorialSys     *EbitenTutorialSystem    // For notifications
-	comboSys        *SpellCombinationSystem  // For combo detection
+	particleSys     *ParticleSystem         // For visual effects
+	audioMgr        *AudioManager           // For sound effects
+	tutorialSys     *EbitenTutorialSystem   // For notifications
+	comboSys        *SpellCombinationSystem // For combo detection
 	logger          *logrus.Entry
 }
 
@@ -110,6 +110,12 @@ func (s *SpellCastingSystem) SetParticleSystem(particleSys *ParticleSystem) {
 // This allows displaying feedback messages to the player.
 func (s *SpellCastingSystem) SetTutorialSystem(tutorialSys *EbitenTutorialSystem) {
 	s.tutorialSys = tutorialSys
+}
+
+// SetComboSystem sets the spell combination system for combo detection.
+// This allows using a shared combo system if desired.
+func (s *SpellCastingSystem) SetComboSystem(comboSys *SpellCombinationSystem) {
+	s.comboSys = comboSys
 }
 
 // Update processes spell casting and cooldowns.
@@ -238,6 +244,11 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 	// Phase 5.3: Spawn spell light for dynamic lighting
 	// Light duration matches typical spell effect duration (2-3 seconds)
 	s.spawnSpellLight(pos.X, pos.Y, spell, 2.5)
+
+	// Phase 24.2: Track spell cast for combo detection
+	if s.comboSys != nil {
+		s.comboSys.OnSpellCast(caster, spell, slotIndex)
+	}
 }
 
 // castOffensiveSpell deals damage to enemies in range.
@@ -256,7 +267,14 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 			continue
 		}
 
-		health.Current -= float64(spell.Stats.Damage)
+		// Calculate damage with combo multiplier (Phase 24.2)
+		damage := float64(spell.Stats.Damage)
+		if s.comboSys != nil {
+			comboMultiplier := s.comboSys.GetActiveComboMultiplier(caster)
+			damage *= comboMultiplier
+		}
+
+		health.Current -= damage
 		if health.Current < 0 {
 			health.Current = 0
 		}
@@ -297,16 +315,16 @@ func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell
 		// Heal multiple allies
 		allies := s.findAlliesInRange(caster, spell.Stats.AreaSize)
 		for _, ally := range allies {
-			s.healTarget(ally, spell)
+			s.healTarget(caster, ally, spell)
 		}
 		return
 	}
 
-	s.healTarget(target, spell)
+	s.healTarget(caster, target, spell)
 }
 
 // healTarget applies healing to a single target.
-func (s *SpellCastingSystem) healTarget(target *Entity, spell *magic.Spell) {
+func (s *SpellCastingSystem) healTarget(caster *Entity, target *Entity, spell *magic.Spell) {
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
 		return
@@ -316,7 +334,14 @@ func (s *SpellCastingSystem) healTarget(target *Entity, spell *magic.Spell) {
 		return
 	}
 
-	health.Current += float64(spell.Stats.Healing)
+	// Calculate healing with combo multiplier (Phase 24.2)
+	healing := float64(spell.Stats.Healing)
+	if s.comboSys != nil {
+		comboMultiplier := s.comboSys.GetActiveComboMultiplier(caster)
+		healing *= comboMultiplier
+	}
+
+	health.Current += healing
 	if health.Current > health.Max {
 		health.Current = health.Max
 	}

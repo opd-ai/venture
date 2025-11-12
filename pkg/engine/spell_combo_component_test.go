@@ -13,13 +13,13 @@ func TestSpellComboComponent_Type(t *testing.T) {
 
 func TestSpellComboComponent_AddRecentCast(t *testing.T) {
 	comp := &SpellComboComponent{ComboWindow: 1.0}
-	
+
 	comp.AddRecentCast("Fireball", "fire", 100.0, 0)
-	
+
 	if len(comp.RecentCasts) != 1 {
 		t.Errorf("Expected 1 recent cast, got %d", len(comp.RecentCasts))
 	}
-	
+
 	cast := comp.RecentCasts[0]
 	if cast.SpellName != "Fireball" {
 		t.Errorf("Expected spell name 'Fireball', got %s", cast.SpellName)
@@ -81,16 +81,16 @@ func TestSpellComboComponent_CleanOldCasts(t *testing.T) {
 			wantCount:   0,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := &SpellComboComponent{
 				ComboWindow: tt.comboWindow,
 				RecentCasts: tt.casts,
 			}
-			
+
 			comp.CleanOldCasts(tt.currentTime)
-			
+
 			if len(comp.RecentCasts) != tt.wantCount {
 				t.Errorf("CleanOldCasts() resulted in %d casts, want %d", len(comp.RecentCasts), tt.wantCount)
 			}
@@ -132,14 +132,14 @@ func TestSpellComboComponent_HasRecentCasts(t *testing.T) {
 			want:        false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := &SpellComboComponent{
 				ComboWindow: tt.comboWindow,
 				RecentCasts: tt.casts,
 			}
-			
+
 			if got := comp.HasRecentCasts(tt.currentTime); got != tt.want {
 				t.Errorf("HasRecentCasts() = %v, want %v", got, tt.want)
 			}
@@ -156,7 +156,7 @@ func TestSpellComboComponent_GetRecentCastsCount(t *testing.T) {
 			{SpellName: "Lightning", CastTime: 99.8},
 		},
 	}
-	
+
 	// At time 100.0, only casts at 99.0+ are valid (within 1s window)
 	count := comp.GetRecentCastsCount(100.0)
 	if count != 2 {
@@ -216,13 +216,13 @@ func TestSpellComboComponent_HasRecipe(t *testing.T) {
 			want:    false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := &SpellComboComponent{
 				KnownRecipes: tt.recipes,
 			}
-			
+
 			if got := comp.HasRecipe(tt.spell1, tt.spell2); got != tt.want {
 				t.Errorf("HasRecipe() = %v, want %v", got, tt.want)
 			}
@@ -234,7 +234,7 @@ func TestSpellComboComponent_AddRecipe(t *testing.T) {
 	comp := &SpellComboComponent{
 		KnownRecipes: []ComboRecipe{},
 	}
-	
+
 	// Add first recipe
 	recipe1 := ComboRecipe{
 		Spell1Name:      "Fireball",
@@ -243,18 +243,18 @@ func TestSpellComboComponent_AddRecipe(t *testing.T) {
 		IsSymmetric:     true,
 	}
 	comp.AddRecipe(recipe1)
-	
+
 	if len(comp.KnownRecipes) != 1 {
 		t.Errorf("Expected 1 recipe after first add, got %d", len(comp.KnownRecipes))
 	}
-	
+
 	// Try to add duplicate (should be ignored)
 	comp.AddRecipe(recipe1)
-	
+
 	if len(comp.KnownRecipes) != 1 {
 		t.Errorf("Expected 1 recipe after duplicate add, got %d", len(comp.KnownRecipes))
 	}
-	
+
 	// Add second different recipe
 	recipe2 := ComboRecipe{
 		Spell1Name:      "Lightning",
@@ -263,7 +263,7 @@ func TestSpellComboComponent_AddRecipe(t *testing.T) {
 		IsSymmetric:     false,
 	}
 	comp.AddRecipe(recipe2)
-	
+
 	if len(comp.KnownRecipes) != 2 {
 		t.Errorf("Expected 2 recipes after second add, got %d", len(comp.KnownRecipes))
 	}
@@ -282,11 +282,11 @@ func TestSpellComboComponent_GetRecipe(t *testing.T) {
 		PowerMultiplier: 2.0,
 		IsSymmetric:     false,
 	}
-	
+
 	comp := &SpellComboComponent{
 		KnownRecipes: []ComboRecipe{recipe1, recipe2},
 	}
-	
+
 	// Test symmetric match
 	got := comp.GetRecipe("Fireball", "Ice Shard")
 	if got == nil {
@@ -294,13 +294,13 @@ func TestSpellComboComponent_GetRecipe(t *testing.T) {
 	} else if got.PowerMultiplier != 1.5 {
 		t.Errorf("Expected multiplier 1.5, got %f", got.PowerMultiplier)
 	}
-	
+
 	// Test symmetric reverse match
 	got = comp.GetRecipe("Ice Shard", "Fireball")
 	if got == nil {
 		t.Error("Expected recipe (symmetric), got nil")
 	}
-	
+
 	// Test asymmetric match
 	got = comp.GetRecipe("Lightning", "Earth")
 	if got == nil {
@@ -308,13 +308,13 @@ func TestSpellComboComponent_GetRecipe(t *testing.T) {
 	} else if got.PowerMultiplier != 2.0 {
 		t.Errorf("Expected multiplier 2.0, got %f", got.PowerMultiplier)
 	}
-	
+
 	// Test asymmetric no reverse
 	got = comp.GetRecipe("Earth", "Lightning")
 	if got != nil {
 		t.Error("Expected nil (asymmetric reverse), got recipe")
 	}
-	
+
 	// Test non-existent
 	got = comp.GetRecipe("Wind", "Water")
 	if got != nil {
@@ -363,13 +363,13 @@ func TestSpellComboComponent_IsComboActive(t *testing.T) {
 			want:        false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := &SpellComboComponent{
 				ActiveCombo: tt.activeCombo,
 			}
-			
+
 			if got := comp.IsComboActive(tt.currentTime); got != tt.want {
 				t.Errorf("IsComboActive() = %v, want %v", got, tt.want)
 			}
@@ -381,15 +381,15 @@ func TestGetCurrentTime(t *testing.T) {
 	// Just verify it returns a reasonable timestamp
 	time1 := GetCurrentTime()
 	time2 := GetCurrentTime()
-	
+
 	if time1 <= 0 {
 		t.Error("GetCurrentTime() returned non-positive value")
 	}
-	
+
 	if time2 < time1 {
 		t.Error("GetCurrentTime() should be monotonically increasing")
 	}
-	
+
 	// Should be within a reasonable range (after year 2000, before year 2100)
 	if time1 < 946684800 || time1 > 4102444800 {
 		t.Errorf("GetCurrentTime() returned unreasonable value: %f", time1)

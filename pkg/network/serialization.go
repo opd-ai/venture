@@ -38,26 +38,40 @@ func (p *BinaryProtocol) EncodeStateUpdate(update *StateUpdate) ([]byte, error) 
 	buf := new(bytes.Buffer)
 
 	// Write fixed-size header
-	binary.Write(buf, binary.LittleEndian, update.Timestamp)
-	binary.Write(buf, binary.LittleEndian, update.EntityID)
-	binary.Write(buf, binary.LittleEndian, update.Priority)
-	binary.Write(buf, binary.LittleEndian, update.SequenceNumber)
+	if err := binary.Write(buf, binary.LittleEndian, update.Timestamp); err != nil {
+		return nil, fmt.Errorf("failed to write timestamp: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.EntityID); err != nil {
+		return nil, fmt.Errorf("failed to write entity ID: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.Priority); err != nil {
+		return nil, fmt.Errorf("failed to write priority: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.SequenceNumber); err != nil {
+		return nil, fmt.Errorf("failed to write sequence number: %w", err)
+	}
 
 	// Write component count
 	componentCount := uint16(len(update.Components))
-	binary.Write(buf, binary.LittleEndian, componentCount)
+	if err := binary.Write(buf, binary.LittleEndian, componentCount); err != nil {
+		return nil, fmt.Errorf("failed to write component count: %w", err)
+	}
 
 	// Write each component
 	for _, comp := range update.Components {
 		// Write type string
 		typeBytes := []byte(comp.Type)
 		typeLength := uint16(len(typeBytes))
-		binary.Write(buf, binary.LittleEndian, typeLength)
+		if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
+			return nil, fmt.Errorf("failed to write type length: %w", err)
+		}
 		buf.Write(typeBytes)
 
 		// Write data
 		dataLength := uint32(len(comp.Data))
-		binary.Write(buf, binary.LittleEndian, dataLength)
+		if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
+			return nil, fmt.Errorf("failed to write data length: %w", err)
+		}
 		buf.Write(comp.Data)
 	}
 
@@ -91,6 +105,12 @@ func (p *BinaryProtocol) DecodeStateUpdate(data []byte) (*StateUpdate, error) {
 	var componentCount uint16
 	if err := binary.Read(buf, binary.LittleEndian, &componentCount); err != nil {
 		return nil, fmt.Errorf("failed to read component count: %w", err)
+	}
+	
+	// Validate component count to prevent DoS attacks
+	const maxComponentCount = 1000 // Reasonable maximum
+	if componentCount > maxComponentCount {
+		return nil, fmt.Errorf("component count too large: %d (max %d)", componentCount, maxComponentCount)
 	}
 
 	// Read components
@@ -143,19 +163,29 @@ func (p *BinaryProtocol) EncodeInputCommand(cmd *InputCommand) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// Write fixed-size fields
-	binary.Write(buf, binary.LittleEndian, cmd.PlayerID)
-	binary.Write(buf, binary.LittleEndian, cmd.Timestamp)
-	binary.Write(buf, binary.LittleEndian, cmd.SequenceNumber)
+	if err := binary.Write(buf, binary.LittleEndian, cmd.PlayerID); err != nil {
+		return nil, fmt.Errorf("failed to write player ID: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, cmd.Timestamp); err != nil {
+		return nil, fmt.Errorf("failed to write timestamp: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, cmd.SequenceNumber); err != nil {
+		return nil, fmt.Errorf("failed to write sequence number: %w", err)
+	}
 
 	// Write input type
 	typeBytes := []byte(cmd.InputType)
 	typeLength := uint16(len(typeBytes))
-	binary.Write(buf, binary.LittleEndian, typeLength)
+	if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
+		return nil, fmt.Errorf("failed to write type length: %w", err)
+	}
 	buf.Write(typeBytes)
 
 	// Write data
 	dataLength := uint32(len(cmd.Data))
-	binary.Write(buf, binary.LittleEndian, dataLength)
+	if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
+		return nil, fmt.Errorf("failed to write data length: %w", err)
+	}
 	buf.Write(cmd.Data)
 
 	return buf.Bytes(), nil

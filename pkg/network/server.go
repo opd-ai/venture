@@ -564,7 +564,9 @@ func (c *clientConnection) disconnect() {
 	if c.connected {
 		c.connected = false
 		if c.conn != nil {
-			c.conn.Close()
+			if err := c.conn.Close(); err != nil {
+				logrus.WithError(err).Warn("error closing client connection")
+			}
 		}
 		close(c.updateSignal)
 	}

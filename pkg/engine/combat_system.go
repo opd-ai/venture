@@ -172,8 +172,6 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 	}
 }
 
-// Attack performs an attack from attacker to target.
-// Returns true if the attack hit, false if it missed or was invalid.
 // validateAttackEntities checks if attacker and target entities are in a valid state for combat.
 func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
 	// Priority 1.3: Dead entities cannot attack
@@ -254,6 +252,8 @@ func (s *CombatSystem) getTargetHealth(target *Entity) (*HealthComponent, bool) 
 	return health, true
 }
 
+// Attack performs an attack from attacker to target.
+// Returns true if the attack hit, false if it missed or was invalid.
 func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Validate entities are in valid state for combat
 	if !s.validateAttackEntities(attacker, target) {
@@ -277,14 +277,14 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 		return success
 	}
 
-	// Get and validate target health
-	health, ok := s.getTargetHealth(target)
-	if !ok {
+	// Check range
+	if !s.validateAttackRange(attacker, target, attack.Range) {
 		return false
 	}
 
-	// Check range
-	if !s.validateAttackRange(attacker, target, attack.Range) {
+	// Get and validate target health
+	health, ok := s.getTargetHealth(target)
+	if !ok {
 		return false
 	}
 
@@ -310,8 +310,9 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	}
 
 	// Check for shield first
-	finalDamage = s.applyShieldAbsorption(target, finalDamage, attack)
+	finalDamage = s.applyShieldAbsorption(target, finalDamage)
 	if finalDamage <= 0 {
+		attack.ResetCooldown()
 		return true // Attack succeeded but damage fully absorbed
 	}
 
@@ -404,7 +405,7 @@ func (s *CombatSystem) applyDefenseAndResistance(baseDamage float64, damageType 
 }
 
 // applyShieldAbsorption reduces damage by shield absorption, returns remaining damage.
-func (s *CombatSystem) applyShieldAbsorption(target *Entity, damage float64, attack *AttackComponent) float64 {
+func (s *CombatSystem) applyShieldAbsorption(target *Entity, damage float64) float64 {
 	finalDamage := damage
 	if shieldComp, hasShield := target.GetComponent("shield"); hasShield {
 		if shield, ok := shieldComp.(*ShieldComponent); ok {

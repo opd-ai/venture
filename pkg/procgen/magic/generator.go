@@ -13,7 +13,8 @@ import (
 
 // SpellGenerator implements the Generator interface for procedural spell creation.
 type SpellGenerator struct {
-	logger *logrus.Entry
+	logger        *logrus.Entry
+	balanceConfig BalanceConfig
 }
 
 // NewSpellGenerator creates a new spell generator.
@@ -29,7 +30,8 @@ func NewSpellGeneratorWithLogger(logger *logrus.Logger) *SpellGenerator {
 		logEntry.Debug("spell generator initialized")
 	}
 	return &SpellGenerator{
-		logger: logEntry,
+		logger:        logEntry,
+		balanceConfig: DefaultBalanceConfig(),
 	}
 }
 
@@ -168,6 +170,9 @@ func (g *SpellGenerator) generateFromTemplate(rng *rand.Rand, template SpellTemp
 
 	spell.Stats = g.generateStats(rng, template, depthScale, difficultyScale, rarityScale)
 	spell.Stats.RequiredLevel = 1 + params.Depth + int(spell.Rarity)*2
+
+	// Apply balance formulas to ensure consistent power levels
+	g.balanceConfig.BalanceStats(&spell.Stats, spell.Type, spell.Target, spell.Stats.RequiredLevel)
 
 	// Generate description
 	spell.Description = g.generateDescription(spell)
@@ -401,6 +406,18 @@ func (g *SpellGenerator) Validate(result interface{}) error {
 		}
 		if spell.Type == TypeHealing && spell.Stats.Healing <= 0 {
 			return fmt.Errorf("healing spell %d has no healing", i)
+		}
+		
+		// Balance validation
+		if err := g.balanceConfig.ValidateDPS(spell); err != nil {
+			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+			// Don't fail on balance warnings, just log them
+		}
+		if err := g.balanceConfig.ValidateHPS(spell); err != nil {
+			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+		}
+		if err := g.balanceConfig.ValidateManaCostEfficiency(spell); err != nil {
+			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
 		}
 	}
 

@@ -3,14 +3,14 @@ package engine
 // ClassProgressionComponent tracks character class level and specialization.
 // This extends the basic CharacterClass with progression mechanics for V4 Phase 25.
 type ClassProgressionComponent struct {
-	Class           CharacterClass
-	Level           int
-	Experience      float64
-	Specialization  SpecializationType
-	Abilities       []string // Unlocked ability IDs
-	SecondaryClass  *CharacterClass // Phase 25.2: Dual-classing (unlocked at level 20)
-	SecondaryLevel  int             // Level in secondary class
-	SecondarySpec   SpecializationType
+	Class          CharacterClass
+	Level          int
+	Experience     float64
+	Specialization SpecializationType
+	Abilities      []string        // Unlocked ability IDs
+	SecondaryClass *CharacterClass // Phase 25.2: Dual-classing (unlocked at level 20)
+	SecondaryLevel int             // Level in secondary class
+	SecondarySpec  SpecializationType
 }
 
 // Type returns the component type identifier.
@@ -51,40 +51,40 @@ const (
 
 	// Hybrid class specializations (2 per class)
 	// Battlemage specializations
-	SpecializationSpellsword  // Melee-focused battlemage
-	SpecializationWarmage     // Magic-focused battlemage
+	SpecializationSpellsword // Melee-focused battlemage
+	SpecializationWarmage    // Magic-focused battlemage
 
 	// Spellblade specializations
-	SpecializationTrickster   // Illusion-focused spellblade
-	SpecializationDuelist     // Combat-focused spellblade
+	SpecializationTrickster // Illusion-focused spellblade
+	SpecializationDuelist   // Combat-focused spellblade
 
 	// Paladin specializations
-	SpecializationCrusader    // Offensive paladin
-	SpecializationGuardian    // Defensive paladin
+	SpecializationCrusader // Offensive paladin
+	SpecializationGuardian // Defensive paladin
 
 	// Monk specializations
-	SpecializationWindwalker  // Speed-focused monk
-	SpecializationBrewmaster  // Tank-focused monk
+	SpecializationWindwalker // Speed-focused monk
+	SpecializationBrewmaster // Tank-focused monk
 
 	// DeathKnight specializations (reused name, different context)
-	SpecializationUnholy      // Disease and pets
-	SpecializationFrost       // Frost magic and dual-wield
+	SpecializationUnholy // Disease and pets
+	SpecializationFrost  // Frost magic and dual-wield
 
 	// WitchHunter specializations
-	SpecializationExorcist    // Demon hunter
-	SpecializationPurifier    // Undead hunter
+	SpecializationExorcist // Demon hunter
+	SpecializationPurifier // Undead hunter
 
 	// Beastlord specializations
-	SpecializationFeralRage   // Savage melee
-	SpecializationPackLeader  // Multi-pet commander
+	SpecializationFeralRage  // Savage melee
+	SpecializationPackLeader // Multi-pet commander
 
 	// ArcaneArcher specializations
-	SpecializationSpellshot   // Magic arrow specialist
-	SpecializationSeeker      // Homing projectiles
+	SpecializationSpellshot // Magic arrow specialist
+	SpecializationSeeker    // Homing projectiles
 
 	// ShadowPriest specializations
-	SpecializationVoidcaller  // Shadow damage
-	SpecializationSoulweaver  // Drain and heal
+	SpecializationVoidcaller // Shadow damage
+	SpecializationSoulweaver // Drain and heal
 
 	// Druid specializations
 	SpecializationShapeshifter // Animal forms
@@ -99,16 +99,16 @@ const (
 	SpecializationHemomancer   // Blood magic caster
 
 	// Mystic specializations
-	SpecializationOracle       // Foresight and divination
-	SpecializationTheurgist    // Divine arcane fusion
+	SpecializationOracle    // Foresight and divination
+	SpecializationTheurgist // Divine arcane fusion
 
 	// Warlock specializations
 	SpecializationDemonologist // Demon summoning
 	SpecializationAffliction   // Curses and DoTs
 
 	// Ninja specializations
-	SpecializationShinobi      // Pure stealth assassin
-	SpecializationStriker      // Ranged thrown weapons
+	SpecializationShinobi // Pure stealth assassin
+	SpecializationStriker // Ranged thrown weapons
 )
 
 // String returns the string representation of a SpecializationType.
@@ -280,11 +280,11 @@ func GetClassAbilities(class CharacterClass) []string {
 	// Hybrid classes (6 abilities each - 3 from each parent)
 	case ClassBattlemage: // Warrior + Mage
 		return []string{
-			"power_strike",  // From Warrior
-			"shield_bash",   // From Warrior
-			"battle_cry",    // From Warrior
-			"fireball",      // From Mage
-			"mana_shield",   // From Mage
+			"power_strike",   // From Warrior
+			"shield_bash",    // From Warrior
+			"battle_cry",     // From Warrior
+			"fireball",       // From Mage
+			"mana_shield",    // From Mage
 			"arcane_barrage", // From Mage
 		}
 	case ClassSpellblade: // Rogue + Mage
@@ -298,12 +298,12 @@ func GetClassAbilities(class CharacterClass) []string {
 		}
 	case ClassPaladin: // Warrior + Cleric
 		return []string{
-			"power_strike",   // From Warrior
+			"power_strike",     // From Warrior
 			"defensive_stance", // From Warrior
-			"taunt",          // From Warrior
-			"heal",           // From Cleric
-			"smite",          // From Cleric
-			"divine_shield",  // From Cleric
+			"taunt",            // From Warrior
+			"heal",             // From Cleric
+			"smite",            // From Cleric
+			"divine_shield",    // From Cleric
 		}
 	case ClassMonk: // Rogue + Cleric
 		return []string{
@@ -325,12 +325,12 @@ func GetClassAbilities(class CharacterClass) []string {
 		}
 	case ClassWitchHunter: // Ranger + Cleric
 		return []string{
-			"aimed_shot",   // From Ranger
-			"rapid_fire",   // From Ranger
-			"track",        // From Ranger
-			"smite",        // From Cleric
-			"purify",       // From Cleric
-			"holy_light",   // From Cleric
+			"aimed_shot", // From Ranger
+			"rapid_fire", // From Ranger
+			"track",      // From Ranger
+			"smite",      // From Cleric
+			"purify",     // From Cleric
+			"holy_light", // From Cleric
 		}
 	case ClassBeastlord: // Warrior + Ranger
 		return []string{
@@ -352,30 +352,30 @@ func GetClassAbilities(class CharacterClass) []string {
 		}
 	case ClassShadowPriest: // Rogue + Necromancer
 		return []string{
-			"backstab",         // From Rogue
-			"stealth",          // From Rogue
-			"poison_blade",     // From Rogue
-			"life_drain",       // From Necromancer
-			"curse",            // From Necromancer
-			"fear",             // From Necromancer
+			"backstab",     // From Rogue
+			"stealth",      // From Rogue
+			"poison_blade", // From Rogue
+			"life_drain",   // From Necromancer
+			"curse",        // From Necromancer
+			"fear",         // From Necromancer
 		}
 	case ClassDruid: // Ranger + Mage
 		return []string{
-			"tame_beast",   // From Ranger
-			"camouflage",   // From Ranger
-			"track",        // From Ranger
-			"ice_shard",    // From Mage (nature element)
+			"tame_beast",     // From Ranger
+			"camouflage",     // From Ranger
+			"track",          // From Ranger
+			"ice_shard",      // From Mage (nature element)
 			"lightning_bolt", // From Mage (storm element)
-			"teleport",     // From Mage (wild shape)
+			"teleport",       // From Mage (wild shape)
 		}
 	case ClassInquisitor: // Cleric + Rogue
 		return []string{
-			"smite",       // From Cleric
-			"purify",      // From Cleric
-			"blessing",    // From Cleric
-			"backstab",    // From Rogue
-			"stealth",     // From Rogue
-			"disarm",      // From Rogue
+			"smite",    // From Cleric
+			"purify",   // From Cleric
+			"blessing", // From Cleric
+			"backstab", // From Rogue
+			"stealth",  // From Rogue
+			"disarm",   // From Rogue
 		}
 	case ClassBloodKnight: // Warrior + Necromancer
 		return []string{
@@ -388,12 +388,12 @@ func GetClassAbilities(class CharacterClass) []string {
 		}
 	case ClassMystic: // Mage + Cleric
 		return []string{
-			"magic_missile", // From Mage
-			"mana_shield",   // From Mage
+			"magic_missile",  // From Mage
+			"mana_shield",    // From Mage
 			"arcane_barrage", // From Mage
-			"heal",          // From Cleric
-			"prayer",        // From Cleric
-			"resurrection",  // From Cleric
+			"heal",           // From Cleric
+			"prayer",         // From Cleric
+			"resurrection",   // From Cleric
 		}
 	case ClassWarlock: // Mage + Necromancer
 		return []string{

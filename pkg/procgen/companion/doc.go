@@ -93,4 +93,3 @@
 // All tests pass with race detection enabled
 // CLI test tool available: cmd/companiontest
 package companion
-

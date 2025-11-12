@@ -225,7 +225,7 @@ func (g *Generator) generateHistoricalContent(genre string, difficulty float64, 
 }
 
 // loadSkillGrammar loads grammar rules for skill books.
-func (g *Generator) loadSkillGrammar(grammar *Grammar, genre string, skillName string) {
+func (g *Generator) loadSkillGrammar(grammar *Grammar, genre, skillName string) {
 	switch genre {
 	case "fantasy":
 		grammar.AddRule("skill_paragraph", []string{

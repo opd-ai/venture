@@ -324,7 +324,7 @@ func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell
 }
 
 // healTarget applies healing to a single target.
-func (s *SpellCastingSystem) healTarget(caster *Entity, target *Entity, spell *magic.Spell) {
+func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spell) {
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
 		return

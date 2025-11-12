@@ -3,20 +3,20 @@ package magic
 import (
 	"math"
 	"testing"
-	
+
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 // TestBalanceConfig_BalanceStats verifies the balance system applies correct formulas.
 func TestBalanceConfig_BalanceStats(t *testing.T) {
 	config := DefaultBalanceConfig()
-	
+
 	tests := []struct {
-		name       string
-		stats      Stats
-		spellType  SpellType
-		target     TargetType
-		level      int
+		name        string
+		stats       Stats
+		spellType   SpellType
+		target      TargetType
+		level       int
 		wantMinMana int
 		wantMaxMana int
 	}{
@@ -70,18 +70,18 @@ func TestBalanceConfig_BalanceStats(t *testing.T) {
 			wantMaxMana: 210,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Apply balance
 			config.BalanceStats(&tt.stats, tt.spellType, tt.target, tt.level)
-			
+
 			// Check mana cost is in expected range
 			if tt.stats.ManaCost < tt.wantMinMana || tt.stats.ManaCost > tt.wantMaxMana {
-				t.Errorf("ManaCost = %d, want in range [%d, %d]", 
+				t.Errorf("ManaCost = %d, want in range [%d, %d]",
 					tt.stats.ManaCost, tt.wantMinMana, tt.wantMaxMana)
 			}
-			
+
 			// Check cooldown is reasonable
 			if tt.stats.Cooldown < config.MinCooldown {
 				t.Errorf("Cooldown = %.2f, want >= %.2f", tt.stats.Cooldown, config.MinCooldown)
@@ -89,11 +89,11 @@ func TestBalanceConfig_BalanceStats(t *testing.T) {
 			if tt.stats.Cooldown > config.MaxCooldown {
 				t.Errorf("Cooldown = %.2f, want <= %.2f", tt.stats.Cooldown, config.MaxCooldown)
 			}
-			
+
 			// Check cooldown is at least 2x cast time
 			minCooldown := tt.stats.CastTime * config.CooldownCastTimeRatio
 			if tt.stats.Cooldown < minCooldown {
-				t.Errorf("Cooldown = %.2f, want >= %.2f (2x cast time)", 
+				t.Errorf("Cooldown = %.2f, want >= %.2f (2x cast time)",
 					tt.stats.Cooldown, minCooldown)
 			}
 		})
@@ -103,7 +103,7 @@ func TestBalanceConfig_BalanceStats(t *testing.T) {
 // TestBalanceConfig_ScalePowerWithLevel verifies level scaling works correctly.
 func TestBalanceConfig_ScalePowerWithLevel(t *testing.T) {
 	config := DefaultBalanceConfig()
-	
+
 	tests := []struct {
 		name      string
 		stats     Stats
@@ -122,7 +122,7 @@ func TestBalanceConfig_ScalePowerWithLevel(t *testing.T) {
 				expectedScale := 1.0 + float64(10-1)*config.PowerPerLevel
 				expected := int(math.Round(float64(original.Damage) * expectedScale))
 				if scaled.Damage != expected {
-					t.Errorf("Damage = %d, want %d (scale: %.2f)", 
+					t.Errorf("Damage = %d, want %d (scale: %.2f)",
 						scaled.Damage, expected, expectedScale)
 				}
 			},
@@ -138,7 +138,7 @@ func TestBalanceConfig_ScalePowerWithLevel(t *testing.T) {
 				expectedScale := 1.0 + float64(5-1)*config.PowerPerLevel
 				expected := int(math.Round(float64(original.Healing) * expectedScale))
 				if scaled.Healing != expected {
-					t.Errorf("Healing = %d, want %d (scale: %.2f)", 
+					t.Errorf("Healing = %d, want %d (scale: %.2f)",
 						scaled.Healing, expected, expectedScale)
 				}
 			},
@@ -152,15 +152,15 @@ func TestBalanceConfig_ScalePowerWithLevel(t *testing.T) {
 			level:     8,
 			checkFunc: func(t *testing.T, original, scaled Stats) {
 				expectedScale := 1.0 + float64(8-1)*config.PowerPerLevel
-				expected := math.Round(original.Duration * expectedScale * 10) / 10
+				expected := math.Round(original.Duration*expectedScale*10) / 10
 				if scaled.Duration != expected {
-					t.Errorf("Duration = %.2f, want %.2f (scale: %.2f)", 
+					t.Errorf("Duration = %.2f, want %.2f (scale: %.2f)",
 						scaled.Duration, expected, expectedScale)
 				}
 			},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := tt.stats
@@ -173,7 +173,7 @@ func TestBalanceConfig_ScalePowerWithLevel(t *testing.T) {
 // TestBalanceConfig_ValidateDPS verifies DPS validation catches imbalanced spells.
 func TestBalanceConfig_ValidateDPS(t *testing.T) {
 	config := DefaultBalanceConfig()
-	
+
 	tests := []struct {
 		name    string
 		spell   *Spell
@@ -234,7 +234,7 @@ func TestBalanceConfig_ValidateDPS(t *testing.T) {
 			wantErr: false, // Healing spells use ValidateHPS, not ValidateDPS
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := config.ValidateDPS(tt.spell)
@@ -248,7 +248,7 @@ func TestBalanceConfig_ValidateDPS(t *testing.T) {
 // TestBalanceConfig_ValidateHPS verifies HPS validation for healing spells.
 func TestBalanceConfig_ValidateHPS(t *testing.T) {
 	config := DefaultBalanceConfig()
-	
+
 	tests := []struct {
 		name    string
 		spell   *Spell
@@ -295,7 +295,7 @@ func TestBalanceConfig_ValidateHPS(t *testing.T) {
 			wantErr: false, // Offensive spells use ValidateDPS, not ValidateHPS
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := config.ValidateHPS(tt.spell)
@@ -309,7 +309,7 @@ func TestBalanceConfig_ValidateHPS(t *testing.T) {
 // TestBalanceConfig_ValidateManaCostEfficiency checks mana cost efficiency validation.
 func TestBalanceConfig_ValidateManaCostEfficiency(t *testing.T) {
 	config := DefaultBalanceConfig()
-	
+
 	tests := []struct {
 		name    string
 		spell   *Spell
@@ -351,7 +351,7 @@ func TestBalanceConfig_ValidateManaCostEfficiency(t *testing.T) {
 			wantErr: true, // 200/30 = 6.67 power per mana (above 4.5 maximum)
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := config.ValidateManaCostEfficiency(tt.spell)
@@ -365,11 +365,11 @@ func TestBalanceConfig_ValidateManaCostEfficiency(t *testing.T) {
 // TestSpellGenerator_BalancedGeneration verifies generated spells pass balance checks.
 func TestSpellGenerator_BalancedGeneration(t *testing.T) {
 	gen := NewSpellGenerator()
-	
+
 	tests := []struct {
-		name     string
-		seed     int64
-		params   procgen.GenerationParams
+		name      string
+		seed      int64
+		params    procgen.GenerationParams
 		minSpells int
 	}{
 		{
@@ -406,23 +406,23 @@ func TestSpellGenerator_BalancedGeneration(t *testing.T) {
 			minSpells: 20,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := gen.Generate(tt.seed, tt.params)
 			if err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
-			
+
 			spells, ok := result.([]*Spell)
 			if !ok {
 				t.Fatalf("Generate() returned wrong type")
 			}
-			
+
 			if len(spells) < tt.minSpells {
 				t.Errorf("Generated %d spells, want at least %d", len(spells), tt.minSpells)
 			}
-			
+
 			// Count balance warnings
 			balanceIssues := 0
 			for _, spell := range spells {
@@ -439,12 +439,12 @@ func TestSpellGenerator_BalancedGeneration(t *testing.T) {
 					t.Logf("Balance issue in %s: %v", spell.Name, err)
 				}
 			}
-			
+
 			// Allow up to 50% of spells to have balance warnings
 			// (some edge cases are acceptable with retroactive balancing)
 			maxIssues := len(spells) / 2
 			if balanceIssues > maxIssues {
-				t.Errorf("Too many balance issues: %d/%d (max %d allowed)", 
+				t.Errorf("Too many balance issues: %d/%d (max %d allowed)",
 					balanceIssues, len(spells), maxIssues)
 			}
 		})
@@ -460,27 +460,27 @@ func TestBalancedSpellComparison(t *testing.T) {
 		Difficulty: 0.5,
 		Custom:     map[string]interface{}{"count": 50},
 	}
-	
+
 	result, err := gen.Generate(12345, params)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	
+
 	spells := result.([]*Spell)
-	
+
 	// Group spells by type
 	byType := make(map[SpellType][]*Spell)
 	for _, spell := range spells {
 		byType[spell.Type] = append(byType[spell.Type], spell)
 	}
-	
+
 	// Calculate average power rating per type
 	avgRating := make(map[SpellType]float64)
 	for spellType, typeSpells := range byType {
 		if len(typeSpells) == 0 {
 			continue
 		}
-		
+
 		total := 0
 		for _, spell := range typeSpells {
 			rating := gen.balanceConfig.CalculatePowerRating(spell)
@@ -488,12 +488,12 @@ func TestBalancedSpellComparison(t *testing.T) {
 		}
 		avgRating[spellType] = float64(total) / float64(len(typeSpells))
 	}
-	
+
 	// Log average ratings
 	for spellType, rating := range avgRating {
 		t.Logf("%s spells: average power rating = %.2f", spellType.String(), rating)
 	}
-	
+
 	// Verify offensive and healing spells have similar ratings
 	// (they should be balanced against each other)
 	if offRating, ok := avgRating[TypeOffensive]; ok {
@@ -501,7 +501,7 @@ func TestBalancedSpellComparison(t *testing.T) {
 			diff := math.Abs(offRating - healRating)
 			maxDiff := 15.0 // Allow 15 point difference
 			if diff > maxDiff {
-				t.Errorf("Offensive and healing ratings too different: %.2f vs %.2f (diff: %.2f > %.2f)", 
+				t.Errorf("Offensive and healing ratings too different: %.2f vs %.2f (diff: %.2f > %.2f)",
 					offRating, healRating, diff, maxDiff)
 			}
 		}
@@ -515,7 +515,7 @@ func BenchmarkBalanceStats(b *testing.B) {
 		Damage:   50,
 		CastTime: 1.0,
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testStats := stats // Copy
@@ -535,7 +535,7 @@ func BenchmarkValidateDPS(b *testing.B) {
 			RequiredLevel: 1,
 		},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = config.ValidateDPS(spell)

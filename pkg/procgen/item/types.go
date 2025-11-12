@@ -281,14 +281,14 @@ func (i *Item) CanBeUsedByClass(className string) bool {
 	if len(i.ClassRestrictions) == 0 {
 		return true
 	}
-	
+
 	// Check if the class is in the allowed list
 	for _, allowedClass := range i.ClassRestrictions {
 		if allowedClass == className {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

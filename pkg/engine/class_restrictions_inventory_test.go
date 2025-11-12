@@ -13,52 +13,52 @@ func TestInventorySystem_ClassRestrictions(t *testing.T) {
 	system := NewInventorySystem(world)
 
 	tests := []struct {
-		name              string
-		class             CharacterClass
-		itemRestrictions  []string
-		wantCanEquip      bool
+		name             string
+		class            CharacterClass
+		itemRestrictions []string
+		wantCanEquip     bool
 	}{
 		{
-			name:              "warrior can equip warrior item",
-			class:             ClassWarrior,
-			itemRestrictions:  []string{"warrior"},
-			wantCanEquip:      true,
+			name:             "warrior can equip warrior item",
+			class:            ClassWarrior,
+			itemRestrictions: []string{"warrior"},
+			wantCanEquip:     true,
 		},
 		{
-			name:              "warrior cannot equip mage item",
-			class:             ClassWarrior,
-			itemRestrictions:  []string{"mage"},
-			wantCanEquip:      false,
+			name:             "warrior cannot equip mage item",
+			class:            ClassWarrior,
+			itemRestrictions: []string{"mage"},
+			wantCanEquip:     false,
 		},
 		{
-			name:              "mage can equip mage item",
-			class:             ClassMage,
-			itemRestrictions:  []string{"mage"},
-			wantCanEquip:      true,
+			name:             "mage can equip mage item",
+			class:            ClassMage,
+			itemRestrictions: []string{"mage"},
+			wantCanEquip:     true,
 		},
 		{
-			name:              "mage cannot equip warrior item",
-			class:             ClassMage,
-			itemRestrictions:  []string{"warrior"},
-			wantCanEquip:      false,
+			name:             "mage cannot equip warrior item",
+			class:            ClassMage,
+			itemRestrictions: []string{"warrior"},
+			wantCanEquip:     false,
 		},
 		{
-			name:              "rogue can equip no-restriction item",
-			class:             ClassRogue,
-			itemRestrictions:  []string{},
-			wantCanEquip:      true,
+			name:             "rogue can equip no-restriction item",
+			class:            ClassRogue,
+			itemRestrictions: []string{},
+			wantCanEquip:     true,
 		},
 		{
-			name:              "ranger can equip multi-class item (includes ranger)",
-			class:             ClassRanger,
-			itemRestrictions:  []string{"warrior", "ranger", "rogue"},
-			wantCanEquip:      true,
+			name:             "ranger can equip multi-class item (includes ranger)",
+			class:            ClassRanger,
+			itemRestrictions: []string{"warrior", "ranger", "rogue"},
+			wantCanEquip:     true,
 		},
 		{
-			name:              "cleric cannot equip fighter-only item",
-			class:             ClassCleric,
-			itemRestrictions:  []string{"warrior", "ranger", "rogue"},
-			wantCanEquip:      false,
+			name:             "cleric cannot equip fighter-only item",
+			class:            ClassCleric,
+			itemRestrictions: []string{"warrior", "ranger", "rogue"},
+			wantCanEquip:     false,
 		},
 	}
 
@@ -159,34 +159,34 @@ func TestInventorySystem_DualClassRestrictions(t *testing.T) {
 	world.Update(0.0) // Process entity additions
 
 	tests := []struct {
-		name              string
-		itemRestrictions  []string
-		wantCanEquip      bool
-		reason            string
+		name             string
+		itemRestrictions []string
+		wantCanEquip     bool
+		reason           string
 	}{
 		{
-			name:              "can equip warrior item (primary class)",
-			itemRestrictions:  []string{"warrior"},
-			wantCanEquip:      true,
-			reason:            "primary class",
+			name:             "can equip warrior item (primary class)",
+			itemRestrictions: []string{"warrior"},
+			wantCanEquip:     true,
+			reason:           "primary class",
 		},
 		{
-			name:              "can equip mage item (secondary class)",
-			itemRestrictions:  []string{"mage"},
-			wantCanEquip:      true,
-			reason:            "secondary class",
+			name:             "can equip mage item (secondary class)",
+			itemRestrictions: []string{"mage"},
+			wantCanEquip:     true,
+			reason:           "secondary class",
 		},
 		{
-			name:              "cannot equip rogue-only item",
-			itemRestrictions:  []string{"rogue"},
-			wantCanEquip:      false,
-			reason:            "not primary or secondary",
+			name:             "cannot equip rogue-only item",
+			itemRestrictions: []string{"rogue"},
+			wantCanEquip:     false,
+			reason:           "not primary or secondary",
 		},
 		{
-			name:              "can equip no-restriction item",
-			itemRestrictions:  []string{},
-			wantCanEquip:      true,
-			reason:            "no restrictions",
+			name:             "can equip no-restriction item",
+			itemRestrictions: []string{},
+			wantCanEquip:     true,
+			reason:           "no restrictions",
 		},
 	}
 
@@ -198,13 +198,13 @@ func TestInventorySystem_DualClassRestrictions(t *testing.T) {
 				t.Fatal("Failed to get inventory component")
 			}
 			inv := comp1.(*InventoryComponent)
-			
+
 			comp2, ok := entity.GetComponent("equipment")
 			if !ok {
 				t.Fatal("Failed to get equipment component")
 			}
 			equip := comp2.(*EquipmentComponent)
-			
+
 			inv.Items = []*item.Item{}
 			equip.Slots = make(map[EquipmentSlot]*item.Item)
 

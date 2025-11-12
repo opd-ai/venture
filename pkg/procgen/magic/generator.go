@@ -407,7 +407,7 @@ func (g *SpellGenerator) Validate(result interface{}) error {
 		if spell.Type == TypeHealing && spell.Stats.Healing <= 0 {
 			return fmt.Errorf("healing spell %d has no healing", i)
 		}
-		
+
 		// Balance validation
 		if err := g.balanceConfig.ValidateDPS(spell); err != nil {
 			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})

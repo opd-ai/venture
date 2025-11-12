@@ -277,7 +277,7 @@ func (g *Generator) loadRecipeGrammar(grammar *Grammar, genre string) {
 }
 
 // loadHistoryGrammar loads grammar rules for historical texts.
-func (g *Generator) loadHistoryGrammar(grammar *Grammar, genre string, location string) {
+func (g *Generator) loadHistoryGrammar(grammar *Grammar, genre, location string) {
 	switch genre {
 	case "fantasy":
 		grammar.AddRule("history_paragraph", []string{

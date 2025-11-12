@@ -127,13 +127,13 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 			// Check if the item can be used by the primary class
 			primaryClassName := classComp.Class.LowerName()
 			canUse := itm.CanBeUsedByClass(primaryClassName)
-			
+
 			// If not usable by primary class, check secondary class (dual-classing)
 			if !canUse && classComp.SecondaryClass != nil {
 				secondaryClassName := classComp.SecondaryClass.LowerName()
 				canUse = itm.CanBeUsedByClass(secondaryClassName)
 			}
-			
+
 			if !canUse {
 				return fmt.Errorf("item %s cannot be equipped by %s", itm.Name, classComp.Class.String())
 			}

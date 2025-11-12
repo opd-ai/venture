@@ -159,6 +159,8 @@ func (s *InteractionSystem) activateContextAction(player, entity *Entity, contex
 		s.handleCloseAction(entity)
 	case ActionActivate:
 		s.handleActivateAction(entity)
+	case ActionRead:
+		s.handleReadAction(player, entity)
 		// Other actions can be added here
 	}
 }
@@ -327,3 +329,67 @@ func (s *InteractionSystem) activatePuzzleElement(player, element *Entity, puzzl
 		}
 	}
 }
+
+// handleReadAction handles reading books from bookshelves or direct book entities.
+func (s *InteractionSystem) handleReadAction(player, entity *Entity) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID": player.ID,
+			"entityID": entity.ID,
+		}).Debug("read action initiated")
+	}
+
+	// Check if entity is a bookshelf
+	if bookshelfComp, ok := entity.GetComponent("bookshelf"); ok {
+		if bookshelf, ok := bookshelfComp.(*BookshelfComponent); ok {
+			s.handleBookshelfRead(player, entity, bookshelf)
+			return
+		}
+	}
+
+	// Check if entity is a book directly
+	if bookComp, ok := entity.GetComponent("book"); ok {
+		if _, ok := bookComp.(*BookComponent); ok {
+			// For direct book reading, we would trigger a UI to display the book
+			// This would be handled by a BookReadingUI system
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"playerID": player.ID,
+					"bookID":   entity.ID,
+				}).Info("player interacting with book")
+			}
+			return
+		}
+	}
+}
+
+// handleBookshelfRead handles reading books from a bookshelf.
+func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity, bookshelf *BookshelfComponent) {
+	// Check if bookshelf is locked
+	if bookshelf.IsLocked {
+		if s.logger != nil {
+			s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked")
+		}
+		// TODO: Check player inventory for key if bookshelf.RequiresKey
+		return
+	}
+
+	// Check if bookshelf is empty
+	if bookshelf.IsEmpty() {
+		if s.logger != nil {
+			s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is empty")
+		}
+		return
+	}
+
+	// For now, just log that the player can browse the bookshelf
+	// A full implementation would open a BookshelfUI showing available books
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID":    player.ID,
+			"bookshelfID": bookshelfEntity.ID,
+			"bookCount":   bookshelf.GetBookCount(),
+		}).Info("player browsing bookshelf")
+	}
+}
+

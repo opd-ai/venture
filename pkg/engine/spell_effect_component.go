@@ -90,44 +90,44 @@ func (t TargetType) String() string {
 type SpellEffectComponent struct {
 	// EffectType identifies the kind of effect
 	EffectType EffectType
-	
+
 	// Duration is how long the effect lasts in seconds (0 = instant)
 	Duration float64
-	
+
 	// Magnitude is the effect strength (meaning depends on effect type)
 	Magnitude float64
-	
+
 	// TargetType indicates what the effect can target
 	TargetType TargetType
-	
+
 	// TerrainModifier specifies terrain changes (for terrain manipulation)
 	TerrainModifier int
-	
+
 	// SummonTemplate specifies what to summon (for summoning effects)
 	SummonTemplate string
-	
+
 	// FusionElements stores element IDs for fusion effects (comma-separated)
 	FusionElements string
-	
+
 	// MetamagicMultiplier is the damage/effect multiplier (for metamagic)
 	MetamagicMultiplier float64
-	
+
 	// CasterID is the entity that cast this effect
 	CasterID uint64
-	
+
 	// TargetID is the entity being affected (0 = area effect)
 	TargetID uint64
-	
+
 	// TargetX and TargetY are the world coordinates of the effect center
 	TargetX float64
 	TargetY float64
-	
+
 	// Radius is the effect area size (for area effects)
 	Radius float64
-	
+
 	// Active indicates if the effect is currently executing
 	Active bool
-	
+
 	// ElapsedTime tracks how long the effect has been active
 	ElapsedTime float64
 }

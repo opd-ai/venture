@@ -109,10 +109,10 @@ func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectCompon
 	// This is a placeholder for terrain system integration
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"x":               effect.TargetX,
-			"y":               effect.TargetY,
-			"radius":          effect.Radius,
-			"terrain_type":    effect.TerrainModifier,
+			"x":            effect.TargetX,
+			"y":            effect.TargetY,
+			"radius":       effect.Radius,
+			"terrain_type": effect.TerrainModifier,
 		}).Debug("Terrain manipulation executed")
 	}
 }
@@ -123,10 +123,10 @@ func (s *SpellEffectSystem) executeTransmutation(effect *SpellEffectComponent) {
 	// This is a placeholder for material system integration
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"x":            effect.TargetX,
-			"y":            effect.TargetY,
-			"radius":       effect.Radius,
-			"target_type":  effect.TerrainModifier,
+			"x":           effect.TargetX,
+			"y":           effect.TargetY,
+			"radius":      effect.Radius,
+			"target_type": effect.TerrainModifier,
 		}).Debug("Transmutation executed")
 	}
 }
@@ -154,7 +154,7 @@ func (s *SpellEffectSystem) executeSummoning(effect *SpellEffectComponent) {
 func (s *SpellEffectSystem) executeIllusion(entity *Entity, effect *SpellEffectComponent) {
 	// Illusion effects modify rendering and AI perception
 	// This is a placeholder for rendering/AI system integration
-	
+
 	// For invisibility, we could add/modify components
 	if effect.Magnitude >= 0.9 { // Full invisibility threshold
 		// Add invisibility marker (would be used by rendering system)
@@ -177,7 +177,7 @@ func (s *SpellEffectSystem) executeIllusion(entity *Entity, effect *SpellEffectC
 // executeTimeManipulation slows, hastes, or rewinds positions.
 func (s *SpellEffectSystem) executeTimeManipulation(entity *Entity, effect *SpellEffectComponent, deltaTime float64) {
 	// Time manipulation affects movement and action speeds
-	
+
 	// Get velocity component if it exists
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		if vel, ok := velComp.(*VelocityComponent); ok {
@@ -207,7 +207,7 @@ func (s *SpellEffectSystem) executeTimeManipulation(entity *Entity, effect *Spel
 // executeGravityControl levitation, increased weight, orbital effects.
 func (s *SpellEffectSystem) executeGravityControl(entity *Entity, effect *SpellEffectComponent, deltaTime float64) {
 	// Gravity control affects physics and movement
-	
+
 	// Add or modify gravity component
 	if !entity.HasComponent("gravity_modified") {
 		entity.AddComponent(&GenericComponent{

@@ -2,7 +2,7 @@ package engine
 
 import (
 	"testing"
-	
+
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
@@ -15,7 +15,7 @@ func TestCompanionInventoryComponent_Type(t *testing.T) {
 
 func TestNewCompanionInventoryComponent(t *testing.T) {
 	comp := NewCompanionInventoryComponent(10, 100.0)
-	
+
 	if comp.MaxItems != 10 {
 		t.Errorf("expected MaxItems 10, got %d", comp.MaxItems)
 	}
@@ -81,15 +81,15 @@ func TestCompanionInventoryComponent_AddItem(t *testing.T) {
 			wantCount: 2,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := NewCompanionInventoryComponent(tt.maxItems, tt.maxWeight)
-			
+
 			for _, itm := range tt.items {
 				comp.AddItem(itm)
 			}
-			
+
 			if comp.GetItemCount() != tt.wantCount {
 				t.Errorf("expected %d items, got %d", tt.wantCount, comp.GetItemCount())
 			}
@@ -99,14 +99,14 @@ func TestCompanionInventoryComponent_AddItem(t *testing.T) {
 
 func TestCompanionInventoryComponent_GetCurrentWeight(t *testing.T) {
 	comp := NewCompanionInventoryComponent(10, 100.0)
-	
+
 	comp.AddItem(&item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.5}})
 	comp.AddItem(&item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.3}})
 	comp.AddItem(&item.Item{Name: "Item3", Stats: item.Stats{Weight: 3.2}})
-	
+
 	expected := 19.0
 	actual := comp.GetCurrentWeight()
-	
+
 	if actual < expected-0.01 || actual > expected+0.01 {
 		t.Errorf("expected weight ~%f, got %f", expected, actual)
 	}
@@ -126,19 +126,19 @@ func TestCompanionInventoryComponent_CanAddItem(t *testing.T) {
 		{"cannot add at max items", 10, 10, 100.0, 5.0, false},
 		{"cannot add exceeding weight", 0, 10, 20.0, 25.0, false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := NewCompanionInventoryComponent(tt.maxItems, tt.maxWeight)
-			
+
 			// Fill inventory to current load
 			for i := 0; i < tt.currentLoad; i++ {
 				comp.AddItem(&item.Item{Name: "Filler", Stats: item.Stats{Weight: 1.0}})
 			}
-			
+
 			newItem := &item.Item{Name: "Test", Stats: item.Stats{Weight: tt.itemWeight}}
 			got := comp.CanAddItem(newItem)
-			
+
 			if got != tt.want {
 				t.Errorf("CanAddItem() = %v, want %v", got, tt.want)
 			}
@@ -148,15 +148,15 @@ func TestCompanionInventoryComponent_CanAddItem(t *testing.T) {
 
 func TestCompanionInventoryComponent_RemoveItem(t *testing.T) {
 	comp := NewCompanionInventoryComponent(10, 100.0)
-	
+
 	item1 := &item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.0}}
 	item2 := &item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.0}}
 	item3 := &item.Item{Name: "Item3", Stats: item.Stats{Weight: 3.0}}
-	
+
 	comp.AddItem(item1)
 	comp.AddItem(item2)
 	comp.AddItem(item3)
-	
+
 	// Remove middle item
 	removed := comp.RemoveItem(1)
 	if removed != item2 {
@@ -165,7 +165,7 @@ func TestCompanionInventoryComponent_RemoveItem(t *testing.T) {
 	if comp.GetItemCount() != 2 {
 		t.Errorf("expected 2 items after removal, got %d", comp.GetItemCount())
 	}
-	
+
 	// Try to remove invalid index
 	removed = comp.RemoveItem(10)
 	if removed != nil {
@@ -175,16 +175,16 @@ func TestCompanionInventoryComponent_RemoveItem(t *testing.T) {
 
 func TestCompanionInventoryComponent_RemoveItemByReference(t *testing.T) {
 	comp := NewCompanionInventoryComponent(10, 100.0)
-	
+
 	item1 := &item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.0}}
 	item2 := &item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.0}}
 	item3 := &item.Item{Name: "Item3", Stats: item.Stats{Weight: 3.0}}
 	notAdded := &item.Item{Name: "NotAdded", Stats: item.Stats{Weight: 1.0}}
-	
+
 	comp.AddItem(item1)
 	comp.AddItem(item2)
 	comp.AddItem(item3)
-	
+
 	// Remove by reference
 	if !comp.RemoveItemByReference(item2) {
 		t.Errorf("expected successful removal of item2")
@@ -192,7 +192,7 @@ func TestCompanionInventoryComponent_RemoveItemByReference(t *testing.T) {
 	if comp.GetItemCount() != 2 {
 		t.Errorf("expected 2 items after removal, got %d", comp.GetItemCount())
 	}
-	
+
 	// Try to remove non-existent item
 	if comp.RemoveItemByReference(notAdded) {
 		t.Errorf("expected false for non-existent item")
@@ -202,15 +202,15 @@ func TestCompanionInventoryComponent_RemoveItemByReference(t *testing.T) {
 func TestCompanionInventoryComponent_TransferToOwner(t *testing.T) {
 	companion := NewCompanionInventoryComponent(10, 100.0)
 	owner := NewInventoryComponent(5, 50.0)
-	
+
 	// Add items to companion
 	companion.AddItem(&item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.0}})
 	companion.AddItem(&item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.0}})
 	companion.AddItem(&item.Item{Name: "Item3", Stats: item.Stats{Weight: 3.0}})
-	
+
 	// Transfer to owner
 	untransferred := companion.TransferToOwner(owner)
-	
+
 	if len(untransferred) != 0 {
 		t.Errorf("expected 0 untransferred items, got %d", len(untransferred))
 	}
@@ -225,15 +225,15 @@ func TestCompanionInventoryComponent_TransferToOwner(t *testing.T) {
 func TestCompanionInventoryComponent_TransferToOwner_OwnerFull(t *testing.T) {
 	companion := NewCompanionInventoryComponent(10, 100.0)
 	owner := NewInventoryComponent(2, 100.0)
-	
+
 	// Add items to companion
 	companion.AddItem(&item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.0}})
 	companion.AddItem(&item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.0}})
 	companion.AddItem(&item.Item{Name: "Item3", Stats: item.Stats{Weight: 3.0}})
-	
+
 	// Transfer to owner (who can only hold 2 items)
 	untransferred := companion.TransferToOwner(owner)
-	
+
 	if len(untransferred) != 1 {
 		t.Errorf("expected 1 untransferred item, got %d", len(untransferred))
 	}
@@ -289,14 +289,14 @@ func TestCompanionInventoryComponent_IsFull(t *testing.T) {
 			want: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := NewCompanionInventoryComponent(tt.maxItems, tt.maxWeight)
 			for _, itm := range tt.items {
 				comp.AddItem(itm)
 			}
-			
+
 			if got := comp.IsFull(); got != tt.want {
 				t.Errorf("IsFull() = %v, want %v", got, tt.want)
 			}
@@ -306,12 +306,12 @@ func TestCompanionInventoryComponent_IsFull(t *testing.T) {
 
 func TestCompanionInventoryComponent_Clear(t *testing.T) {
 	comp := NewCompanionInventoryComponent(10, 100.0)
-	
+
 	comp.AddItem(&item.Item{Name: "Item1", Stats: item.Stats{Weight: 5.0}})
 	comp.AddItem(&item.Item{Name: "Item2", Stats: item.Stats{Weight: 10.0}})
-	
+
 	comp.Clear()
-	
+
 	if comp.GetItemCount() != 0 {
 		t.Errorf("expected 0 items after clear, got %d", comp.GetItemCount())
 	}

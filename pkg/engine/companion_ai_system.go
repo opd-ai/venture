@@ -17,32 +17,32 @@ func NewCompanionAISystem(world *World) *CompanionAISystem {
 // Update processes companion AI behavior
 func (s *CompanionAISystem) Update(deltaTime float64) {
 	entities := s.world.GetEntitiesWith("companion", "position")
-	
+
 	for _, entity := range entities {
 		companionCompRaw, ok := entity.GetComponent("companion")
 		if !ok {
 			continue
 		}
 		companionComp := companionCompRaw.(*CompanionComponent)
-		
+
 		posCompRaw, ok := entity.GetComponent("position")
 		if !ok {
 			continue
 		}
 		posComp := posCompRaw.(*PositionComponent)
-		
+
 		// Get owner entity
 		owner, ok := s.world.GetEntity(companionComp.OwnerID)
 		if !ok || owner == nil {
 			continue
 		}
-		
+
 		ownerPosRaw, ok := owner.GetComponent("position")
 		if !ok {
 			continue
 		}
 		ownerPos := ownerPosRaw.(*PositionComponent)
-		
+
 		// Execute behavior based on mode
 		switch companionComp.Behavior {
 		case BehaviorAggressive:
@@ -91,7 +91,7 @@ func (s *CompanionAISystem) followOwner(entity *Entity, pos *PositionComponent, 
 			if statsCompRaw, ok := entity.GetComponent("companionstats"); ok {
 				speed = statsCompRaw.(*CompanionStatsComponent).Speed
 			}
-			
+
 			pos.X += (dx / mag) * speed * deltaTime
 			pos.Y += (dy / mag) * speed * deltaTime
 		}
@@ -101,7 +101,7 @@ func (s *CompanionAISystem) followOwner(entity *Entity, pos *PositionComponent, 
 func (s *CompanionAISystem) findNearbyEnemies(pos *PositionComponent, radius float64) []*Entity {
 	enemies := []*Entity{}
 	entities := s.world.GetEntitiesWith("ai", "position")
-	
+
 	for _, entity := range entities {
 		enemyPosRaw, ok := entity.GetComponent("position")
 		if !ok {
@@ -112,7 +112,7 @@ func (s *CompanionAISystem) findNearbyEnemies(pos *PositionComponent, radius flo
 			enemies = append(enemies, entity)
 		}
 	}
-	
+
 	return enemies
 }
 

@@ -5,16 +5,16 @@ package engine
 type SkillInheritanceComponent struct {
 	// LearnedSkills maps skill IDs to learning progress (0.0-1.0)
 	LearnedSkills map[string]float64
-	
+
 	// MaxSkills is the maximum number of skills companion can learn
 	MaxSkills int
-	
+
 	// LearningRate affects how fast companion learns (0.0-1.0)
 	LearningRate float64
-	
+
 	// RequiredLoyalty is minimum loyalty needed to learn skills
 	RequiredLoyalty float64
-	
+
 	// ActiveSkills are skills the companion can currently use
 	ActiveSkills []string
 }
@@ -41,7 +41,7 @@ func (s *SkillInheritanceComponent) CanLearnSkill(skillID string) bool {
 	if _, exists := s.LearnedSkills[skillID]; exists {
 		return true // Can continue learning
 	}
-	
+
 	// Check if max skills reached
 	return len(s.LearnedSkills) < s.MaxSkills
 }
@@ -60,23 +60,23 @@ func (s *SkillInheritanceComponent) AddSkillProgress(skillID string, amount floa
 	if !s.CanLearnSkill(skillID) {
 		return false
 	}
-	
+
 	current := s.GetSkillProgress(skillID)
 	current += amount
-	
+
 	// Clamp to 1.0
 	if current > 1.0 {
 		current = 1.0
 	}
-	
+
 	s.LearnedSkills[skillID] = current
-	
+
 	// Activate skill if fully learned and not already active
 	if current >= 1.0 {
 		s.activateSkill(skillID)
 		return true
 	}
-	
+
 	return false
 }
 

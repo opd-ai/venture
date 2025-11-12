@@ -44,9 +44,9 @@ type CompanionComponent struct {
 	Level         int
 	Behavior      BehaviorMode
 	Commands      []CommandType
-	Permadeath    bool            // If true, companion dies permanently
-	BondingPerks  []BondingPerk   // Unlocked perks based on loyalty
-	TimeWithOwner float64         // Total time spent near owner (for bonding)
+	Permadeath    bool          // If true, companion dies permanently
+	BondingPerks  []BondingPerk // Unlocked perks based on loyalty
+	TimeWithOwner float64       // Total time spent near owner (for bonding)
 }
 
 // BondingPerk represents a perk unlocked through bonding

@@ -9,16 +9,16 @@ import (
 type CompanionInventoryComponent struct {
 	// Items stored in companion's inventory
 	Items []*item.Item
-	
+
 	// MaxItems is the maximum number of items companion can carry
 	MaxItems int
-	
+
 	// MaxWeight is the maximum weight companion can carry
 	MaxWeight float64
-	
+
 	// AutoFetch enables automatic item pickup when near items
 	AutoFetch bool
-	
+
 	// FetchRadius is the distance within which companion can fetch items
 	FetchRadius float64
 }
@@ -54,12 +54,12 @@ func (c *CompanionInventoryComponent) CanAddItem(itm *item.Item) bool {
 	if len(c.Items) >= c.MaxItems {
 		return false
 	}
-	
+
 	// Check weight limit
 	if c.GetCurrentWeight()+itm.Stats.Weight > c.MaxWeight {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -69,7 +69,7 @@ func (c *CompanionInventoryComponent) AddItem(itm *item.Item) bool {
 	if !c.CanAddItem(itm) {
 		return false
 	}
-	
+
 	c.Items = append(c.Items, itm)
 	return true
 }
@@ -80,7 +80,7 @@ func (c *CompanionInventoryComponent) RemoveItem(index int) *item.Item {
 	if index < 0 || index >= len(c.Items) {
 		return nil
 	}
-	
+
 	itm := c.Items[index]
 	c.Items = append(c.Items[:index], c.Items[index+1:]...)
 	return itm
@@ -102,7 +102,7 @@ func (c *CompanionInventoryComponent) RemoveItemByReference(itm *item.Item) bool
 // Returns the items that couldn't be transferred due to owner inventory limits.
 func (c *CompanionInventoryComponent) TransferToOwner(ownerInventory *InventoryComponent) []*item.Item {
 	untransferred := make([]*item.Item, 0)
-	
+
 	for len(c.Items) > 0 {
 		itm := c.RemoveItem(0)
 		if itm != nil {
@@ -111,12 +111,12 @@ func (c *CompanionInventoryComponent) TransferToOwner(ownerInventory *InventoryC
 			}
 		}
 	}
-	
+
 	// Add back items that couldn't be transferred
 	for _, itm := range untransferred {
 		c.AddItem(itm)
 	}
-	
+
 	return untransferred
 }
 

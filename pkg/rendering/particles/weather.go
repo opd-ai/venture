@@ -18,6 +18,13 @@ func makeTileKey(x, y int) TileKey {
 	return TileKey(int64(x)<<32 | int64(uint32(y)))
 }
 
+// String returns the string representation of a TileKey for debugging.
+func (tk TileKey) String() string {
+	x := int(int64(tk) >> 32)
+	y := int(int32(tk))
+	return fmt.Sprintf("(%d,%d)", x, y)
+}
+
 // WeatherType represents different types of weather effects.
 type WeatherType int
 

@@ -165,3 +165,20 @@ func TestGenerator_Determinism(t *testing.T) {
 		t.Errorf("Type differs: %v vs %v", comp1.Type, comp2.Type)
 	}
 }
+
+func BenchmarkGenerator_Generate(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := gen.Generate(int64(i), params)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

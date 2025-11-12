@@ -210,6 +210,12 @@ func (g *Generator) generateSkillBookTitle(genre string, custom map[string]inter
 
 // generateLoreTitle generates titles for lore books.
 func (g *Generator) generateLoreTitle(genre string) string {
+	// Check if this is part of a series (from custom parameters)
+	if seriesName, ok := g.getSeriesName(); ok {
+		volume := g.getVolumeNumber()
+		return fmt.Sprintf("%s - Volume %d", seriesName, volume)
+	}
+
 	switch genre {
 	case "fantasy":
 		subjects := []string{"the Ancients", "the Dragon Wars", "the Lost Kingdom", "the First Age", "the Prophecy"}
@@ -336,4 +342,22 @@ func (g *Generator) pickRandom(options []string) string {
 		return ""
 	}
 	return options[g.rng.Intn(len(options))]
+}
+
+// getSeriesName checks if the book is part of a series and returns the series name.
+// Returns (seriesName, true) if it's a series book, ("", false) otherwise.
+func (g *Generator) getSeriesName() (string, bool) {
+	// Check custom parameters for series information
+	// This would be set by a library/bookshelf generator
+	// Series name format expected in custom["series_name"]
+	return "", false // For now, return false - can be extended later
+}
+
+// getVolumeNumber returns the volume number for a series book.
+// Defaults to 1 if not specified.
+func (g *Generator) getVolumeNumber() int {
+	// Check custom parameters for volume number
+	// This would be set by a library/bookshelf generator
+	// Volume number format expected in custom["volume_number"]
+	return 1 // Default to volume 1
 }

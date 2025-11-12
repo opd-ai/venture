@@ -168,6 +168,202 @@ func GetClassStatGrowth(class CharacterClass) *StatGrowth {
 			AttackPercentPerLevel: 0.02,
 		}
 
+	// Hybrid classes - balanced between parent classes
+	case ClassBattlemage: // Warrior + Mage
+		return &StatGrowth{
+			HPPerLevel:            10.5, // Average of Warrior and Mage
+			ManaPerLevel:          7.0,
+			AttackPerLevel:        1.0,
+			DefensePerLevel:       0.85,
+			MagicPowerPerLevel:    1.4,
+			SpeedPerLevel:         0.65,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.05,
+			AttackPercentPerLevel: 0.02,
+		}
+
+	case ClassSpellblade: // Rogue + Mage
+		return &StatGrowth{
+			HPPerLevel:            8.0,
+			ManaPerLevel:          8.0,
+			AttackPerLevel:        1.25,
+			DefensePerLevel:       0.65,
+			MagicPowerPerLevel:    1.5,
+			SpeedPerLevel:         1.15,
+			HPPercentPerLevel:     0.025,
+			ManaPercentPerLevel:   0.055,
+			AttackPercentPerLevel: 0.03,
+		}
+
+	case ClassPaladin: // Warrior + Cleric
+		return &StatGrowth{
+			HPPerLevel:            14.0,
+			ManaPerLevel:          6.0,
+			AttackPerLevel:        1.25,
+			DefensePerLevel:       1.15,
+			MagicPowerPerLevel:    1.15,
+			SpeedPerLevel:         0.65,
+			HPPercentPerLevel:     0.045,
+			ManaPercentPerLevel:   0.04,
+			AttackPercentPerLevel: 0.025,
+		}
+
+	case ClassMonk: // Rogue + Cleric
+		return &StatGrowth{
+			HPPerLevel:            11.5,
+			ManaPerLevel:          7.0,
+			AttackPerLevel:        1.5,
+			DefensePerLevel:       0.95,
+			MagicPowerPerLevel:    1.25,
+			SpeedPerLevel:         1.15,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.045,
+			AttackPercentPerLevel: 0.035,
+		}
+
+	case ClassDeathKnight: // Warrior + Necromancer
+		return &StatGrowth{
+			HPPerLevel:            11.0,
+			ManaPerLevel:          6.5,
+			AttackPerLevel:        1.15,
+			DefensePerLevel:       0.9,
+			MagicPowerPerLevel:    1.25,
+			SpeedPerLevel:         0.6,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.045,
+			AttackPercentPerLevel: 0.025,
+		}
+
+	case ClassWitchHunter: // Ranger + Cleric
+		return &StatGrowth{
+			HPPerLevel:            12.5,
+			ManaPerLevel:          7.5,
+			AttackPerLevel:        1.4,
+			DefensePerLevel:       1.05,
+			MagicPowerPerLevel:    1.4,
+			SpeedPerLevel:         1.0,
+			HPPercentPerLevel:     0.04,
+			ManaPercentPerLevel:   0.05,
+			AttackPercentPerLevel: 0.03,
+		}
+
+	case ClassBeastlord: // Warrior + Ranger
+		return &StatGrowth{
+			HPPerLevel:            13.5,
+			ManaPerLevel:          3.5,
+			AttackPerLevel:        1.65,
+			DefensePerLevel:       1.1,
+			MagicPowerPerLevel:    0.55,
+			SpeedPerLevel:         0.85,
+			HPPercentPerLevel:     0.045,
+			ManaPercentPerLevel:   0.03,
+			AttackPercentPerLevel: 0.035,
+		}
+
+	case ClassArcaneArcher: // Ranger + Mage
+		return &StatGrowth{
+			HPPerLevel:            9.0,
+			ManaPerLevel:          8.5,
+			AttackPerLevel:        1.15,
+			DefensePerLevel:       0.75,
+			MagicPowerPerLevel:    1.65,
+			SpeedPerLevel:         1.0,
+			HPPercentPerLevel:     0.03,
+			ManaPercentPerLevel:   0.06,
+			AttackPercentPerLevel: 0.025,
+		}
+
+	case ClassShadowPriest: // Rogue + Necromancer
+		return &StatGrowth{
+			HPPerLevel:            8.5,
+			ManaPerLevel:          7.5,
+			AttackPerLevel:        1.4,
+			DefensePerLevel:       0.7,
+			MagicPowerPerLevel:    1.35,
+			SpeedPerLevel:         1.1,
+			HPPercentPerLevel:     0.025,
+			ManaPercentPerLevel:   0.05,
+			AttackPercentPerLevel: 0.035,
+		}
+
+	case ClassDruid: // Ranger + Mage (nature themed)
+		return &StatGrowth{
+			HPPerLevel:            9.0,
+			ManaPerLevel:          8.5,
+			AttackPerLevel:        1.15,
+			DefensePerLevel:       0.75,
+			MagicPowerPerLevel:    1.65,
+			SpeedPerLevel:         1.0,
+			HPPercentPerLevel:     0.03,
+			ManaPercentPerLevel:   0.06,
+			AttackPercentPerLevel: 0.025,
+		}
+
+	case ClassInquisitor: // Cleric + Rogue
+		return &StatGrowth{
+			HPPerLevel:            11.5,
+			ManaPerLevel:          7.0,
+			AttackPerLevel:        1.5,
+			DefensePerLevel:       0.95,
+			MagicPowerPerLevel:    1.25,
+			SpeedPerLevel:         1.15,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.045,
+			AttackPercentPerLevel: 0.035,
+		}
+
+	case ClassBloodKnight: // Warrior + Necromancer (blood themed)
+		return &StatGrowth{
+			HPPerLevel:            11.0,
+			ManaPerLevel:          6.5,
+			AttackPerLevel:        1.15,
+			DefensePerLevel:       0.9,
+			MagicPowerPerLevel:    1.25,
+			SpeedPerLevel:         0.6,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.045,
+			AttackPercentPerLevel: 0.025,
+		}
+
+	case ClassMystic: // Mage + Cleric
+		return &StatGrowth{
+			HPPerLevel:            9.5,
+			ManaPerLevel:          11.0,
+			AttackPerLevel:        0.75,
+			DefensePerLevel:       0.8,
+			MagicPowerPerLevel:    2.25,
+			SpeedPerLevel:         0.8,
+			HPPercentPerLevel:     0.03,
+			ManaPercentPerLevel:   0.07,
+			AttackPercentPerLevel: 0.015,
+		}
+
+	case ClassWarlock: // Mage + Necromancer
+		return &StatGrowth{
+			HPPerLevel:            6.5,
+			ManaPerLevel:          11.5,
+			AttackPerLevel:        0.65,
+			DefensePerLevel:       0.55,
+			MagicPowerPerLevel:    2.35,
+			SpeedPerLevel:         0.75,
+			HPPercentPerLevel:     0.02,
+			ManaPercentPerLevel:   0.075,
+			AttackPercentPerLevel: 0.015,
+		}
+
+	case ClassNinja: // Rogue + Ranger
+		return &StatGrowth{
+			HPPerLevel:            11.0,
+			ManaPerLevel:          4.5,
+			AttackPerLevel:        1.9,
+			DefensePerLevel:       0.9,
+			MagicPowerPerLevel:    0.65,
+			SpeedPerLevel:         1.35,
+			HPPercentPerLevel:     0.035,
+			ManaPercentPerLevel:   0.035,
+			AttackPercentPerLevel: 0.045,
+		}
+
 	default:
 		// Generic balanced growth
 		return &StatGrowth{

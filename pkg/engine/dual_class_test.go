@@ -304,3 +304,109 @@ func TestCharacterClass_LowerName(t *testing.T) {
 		})
 	}
 }
+
+// TestHybridClasses tests all 15 hybrid classes.
+// Phase 25.2 Extension: Verify hybrid class configuration.
+func TestHybridClasses(t *testing.T) {
+hybridClasses := []struct {
+class           CharacterClass
+expectedName    string
+expectedLower   string
+minAbilities    int
+expectedSpecs   int
+}{
+{ClassBattlemage, "Battlemage", "battlemage", 6, 2},
+{ClassSpellblade, "Spellblade", "spellblade", 6, 2},
+{ClassPaladin, "Paladin", "paladin", 6, 2},
+{ClassMonk, "Monk", "monk", 6, 2},
+{ClassDeathKnight, "Death Knight", "deathknight", 6, 2},
+{ClassWitchHunter, "Witch Hunter", "witchhunter", 6, 2},
+{ClassBeastlord, "Beastlord", "beastlord", 6, 2},
+{ClassArcaneArcher, "Arcane Archer", "arcanearcher", 6, 2},
+{ClassShadowPriest, "Shadow Priest", "shadowpriest", 6, 2},
+{ClassDruid, "Druid", "druid", 6, 2},
+{ClassInquisitor, "Inquisitor", "inquisitor", 6, 2},
+{ClassBloodKnight, "Blood Knight", "bloodknight", 6, 2},
+{ClassMystic, "Mystic", "mystic", 6, 2},
+{ClassWarlock, "Warlock", "warlock", 6, 2},
+{ClassNinja, "Ninja", "ninja", 6, 2},
+}
+
+for _, tc := range hybridClasses {
+t.Run(tc.expectedName, func(t *testing.T) {
+// Test String() method
+if got := tc.class.String(); got != tc.expectedName {
+t.Errorf("String() = %q, want %q", got, tc.expectedName)
+}
+
+// Test LowerName() method
+if got := tc.class.LowerName(); got != tc.expectedLower {
+t.Errorf("LowerName() = %q, want %q", got, tc.expectedLower)
+}
+
+// Test abilities count
+abilities := GetClassAbilities(tc.class)
+if len(abilities) < tc.minAbilities {
+t.Errorf("GetClassAbilities() returned %d abilities, want at least %d",
+len(abilities), tc.minAbilities)
+}
+
+// Test specializations count
+specs := GetAvailableSpecializations(tc.class)
+if len(specs) != tc.expectedSpecs {
+t.Errorf("GetAvailableSpecializations() returned %d specs, want %d",
+len(specs), tc.expectedSpecs)
+}
+
+// Test stat growth exists
+growth := GetClassStatGrowth(tc.class)
+if growth == nil {
+t.Errorf("GetClassStatGrowth() returned nil for %s", tc.expectedName)
+}
+})
+}
+}
+
+// TestHybridClassBalance tests that hybrid classes have balanced stats.
+func TestHybridClassBalance(t *testing.T) {
+allClasses := []CharacterClass{
+ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassCleric, ClassNecromancer,
+ClassBattlemage, ClassSpellblade, ClassPaladin, ClassMonk, ClassDeathKnight,
+ClassWitchHunter, ClassBeastlord, ClassArcaneArcher, ClassShadowPriest,
+ClassDruid, ClassInquisitor, ClassBloodKnight, ClassMystic, ClassWarlock, ClassNinja,
+}
+
+for _, class := range allClasses {
+t.Run(class.String(), func(t *testing.T) {
+growth := GetClassStatGrowth(class)
+if growth == nil {
+t.Fatal("GetClassStatGrowth returned nil")
+}
+
+// Verify stat growth is positive
+if growth.HPPerLevel <= 0 {
+t.Errorf("HPPerLevel = %f, want > 0", growth.HPPerLevel)
+}
+if growth.ManaPerLevel < 0 {
+t.Errorf("ManaPerLevel = %f, want >= 0", growth.ManaPerLevel)
+}
+if growth.AttackPerLevel < 0 {
+t.Errorf("AttackPerLevel = %f, want >= 0", growth.AttackPerLevel)
+}
+if growth.DefensePerLevel < 0 {
+t.Errorf("DefensePerLevel = %f, want >= 0", growth.DefensePerLevel)
+}
+
+// Verify reasonable ranges (not too overpowered)
+if growth.HPPerLevel > 20 {
+t.Errorf("HPPerLevel = %f, seems too high (max 20)", growth.HPPerLevel)
+}
+if growth.ManaPerLevel > 15 {
+t.Errorf("ManaPerLevel = %f, seems too high (max 15)", growth.ManaPerLevel)
+}
+if growth.AttackPerLevel > 2.5 {
+t.Errorf("AttackPerLevel = %f, seems too high (max 2.5)", growth.AttackPerLevel)
+}
+})
+}
+}

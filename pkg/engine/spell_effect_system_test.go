@@ -57,12 +57,12 @@ func TestSpellEffectSystem_ApplySpellEffect(t *testing.T) {
 	system.ApplySpellEffect(
 		entity,
 		EffectIllusion,
-		0.9,   // magnitude
-		10.0,  // duration
+		0.9,  // magnitude
+		10.0, // duration
 		TargetSelf,
-		100,   // caster ID
-		0, 0,  // target position
-		0,     // radius
+		100,  // caster ID
+		0, 0, // target position
+		0, // radius
 	)
 
 	if !entity.HasComponent("spell_effect") {
@@ -332,10 +332,10 @@ func TestSpellEffectSystem_GetAngleBetweenPoints(t *testing.T) {
 		minAngle float64
 		maxAngle float64
 	}{
-		{"right", 0, 0, 10, 0, -0.1, 0.1},       // ~0 radians
-		{"up", 0, 0, 0, 10, 1.47, 1.67},         // ~pi/2 radians
-		{"left", 0, 0, -10, 0, 3.04, 3.24},      // ~pi radians
-		{"down", 0, 0, 0, -10, -1.67, -1.47},    // ~-pi/2 radians
+		{"right", 0, 0, 10, 0, -0.1, 0.1},    // ~0 radians
+		{"up", 0, 0, 0, 10, 1.47, 1.67},      // ~pi/2 radians
+		{"left", 0, 0, -10, 0, 3.04, 3.24},   // ~pi radians
+		{"down", 0, 0, 0, -10, -1.67, -1.47}, // ~-pi/2 radians
 	}
 
 	for _, tt := range tests {
@@ -364,7 +364,7 @@ func TestSpellEffectSystem_ExecuteMetamagic(t *testing.T) {
 		Active:      true,
 		ElapsedTime: 0,
 	}
-	
+
 	// Add metamagic effect
 	metamagicEffect := &SpellEffectComponent{
 		EffectType:          EffectMetamagic,
@@ -375,11 +375,11 @@ func TestSpellEffectSystem_ExecuteMetamagic(t *testing.T) {
 		Active:              true,
 		ElapsedTime:         0,
 	}
-	
+
 	// Manually add both to test (in real game, would need better multi-effect handling)
 	// For now, just verify executeMetamagic doesn't crash and has the basic logic
 	entity.AddComponent(metamagicEffect)
-	
+
 	// Add the regular effect using a different type
 	entity.Components["test_effect"] = regularEffect
 
@@ -394,12 +394,12 @@ func TestSpellEffectSystem_ExecuteMetamagic(t *testing.T) {
 	if metamagicEffect.EffectType != EffectMetamagic {
 		t.Errorf("EffectType should still be EffectMetamagic")
 	}
-	
+
 	// Verify the method ran by checking elapsed time updated
 	if metamagicEffect.ElapsedTime == 0 {
 		t.Errorf("ElapsedTime should have been updated")
 	}
-	
+
 	// Note: We can't properly test multi-effect interaction without
 	// refactoring the component system to support multiple spell effects
 	_ = initialMagnitude // Silence unused warning

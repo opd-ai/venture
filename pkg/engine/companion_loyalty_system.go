@@ -161,8 +161,14 @@ func (s *CompanionLoyaltySystem) applyPassiveLoyaltyGain() {
 
 		// Only apply if companion is near owner
 		if s.isNearOwner(entity, comp.OwnerID) {
+			// Track time spent together (1 minute)
+			comp.TimeWithOwner += 60.0
+			
 			// Small passive gain (0.5 loyalty per minute)
 			comp.Loyalty = math.Min(100.0, comp.Loyalty+0.5)
+			
+			// Check for bonding perk unlocks
+			s.checkBondingPerks(comp)
 		}
 	}
 }
@@ -258,4 +264,58 @@ func (s *CompanionLoyaltySystem) GetLoyaltyThreshold(loyalty float64) string {
 		return "Distant"
 	}
 	return "Rebellious"
+}
+
+// checkBondingPerks unlocks bonding perks based on loyalty and time together
+func (s *CompanionLoyaltySystem) checkBondingPerks(comp *CompanionComponent) {
+	// Perks unlock at specific thresholds of loyalty and time together
+	// Time is measured in seconds
+	
+	// Extra Health: 60 loyalty + 1 hour (3600s)
+	if comp.Loyalty >= 60.0 && comp.TimeWithOwner >= 3600.0 && !comp.HasPerk(PerkExtraHealth) {
+		comp.AddPerk(PerkExtraHealth)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Extra Health",
+		}).Info("Companion unlocked bonding perk")
+	}
+	
+	// Extra Damage: 65 loyalty + 2 hours (7200s)
+	if comp.Loyalty >= 65.0 && comp.TimeWithOwner >= 7200.0 && !comp.HasPerk(PerkExtraDamage) {
+		comp.AddPerk(PerkExtraDamage)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Extra Damage",
+		}).Info("Companion unlocked bonding perk")
+	}
+	
+	// Faster Learning: 70 loyalty + 3 hours (10800s)
+	if comp.Loyalty >= 70.0 && comp.TimeWithOwner >= 10800.0 && !comp.HasPerk(PerkFasterLearning) {
+		comp.AddPerk(PerkFasterLearning)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Faster Learning",
+		}).Info("Companion unlocked bonding perk")
+	}
+	
+	// Loyal Guard: 75 loyalty + 5 hours (18000s)
+	if comp.Loyalty >= 75.0 && comp.TimeWithOwner >= 18000.0 && !comp.HasPerk(PerkLoyalGuard) {
+		comp.AddPerk(PerkLoyalGuard)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Loyal Guard",
+		}).Info("Companion unlocked bonding perk")
+	}
+	
+	// Shared Experience: 80 loyalty + 8 hours (28800s)
+	if comp.Loyalty >= 80.0 && comp.TimeWithOwner >= 28800.0 && !comp.HasPerk(PerkSharedExperience) {
+		comp.AddPerk(PerkSharedExperience)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Shared Experience",
+		}).Info("Companion unlocked bonding perk")
+	}
+	
+	// Auto Revive: 90 loyalty + 12 hours (43200s)
+	if comp.Loyalty >= 90.0 && comp.TimeWithOwner >= 43200.0 && !comp.HasPerk(PerkAutoRevive) {
+		comp.AddPerk(PerkAutoRevive)
+		s.logger.WithFields(logrus.Fields{
+			"perk": "Auto Revive",
+		}).Info("Companion unlocked bonding perk")
+	}
 }

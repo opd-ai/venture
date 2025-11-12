@@ -170,13 +170,13 @@ func (g *Generator) generateRecipeContent(genre string, difficulty float64, cust
 	for i := 0; i < pageCount; i++ {
 		if i == 0 {
 			// First page: introduction and requirements (more content)
-			pages[i] = grammar.Expand("#recipe_intro#") + "\n\n" + 
+			pages[i] = grammar.Expand("#recipe_intro#") + "\n\n" +
 				grammar.Expand("#recipe_requirements#") + "\n\n" +
 				grammar.Expand("#recipe_requirements#") + "\n\n" +
 				grammar.Expand("#recipe_intro#")
 		} else if i == pageCount-1 {
 			// Last page: final steps and notes (more content)
-			pages[i] = grammar.Expand("#recipe_steps#") + "\n\n" + 
+			pages[i] = grammar.Expand("#recipe_steps#") + "\n\n" +
 				grammar.Expand("#recipe_steps#") + "\n\n" +
 				grammar.Expand("#recipe_notes#") + "\n\n" +
 				grammar.Expand("#recipe_notes#")

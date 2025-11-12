@@ -442,9 +442,9 @@ func TestWordCount(t *testing.T) {
 
 func TestSkillBonusCalculation(t *testing.T) {
 	tests := []struct {
-		name       string
-		depth      int
-		wantBonus  float64
+		name        string
+		depth       int
+		wantBonus   float64
 		customBonus *float64
 	}{
 		{
@@ -583,7 +583,7 @@ func (r *testRng) Intn(n int) int {
 func TestGrammarExpansion(t *testing.T) {
 	// Create a simple grammar
 	rng := &testRng{value: 0}
-	
+
 	grammar := NewGrammar(rng)
 	grammar.AddRule("greeting", []string{"Hello", "Hi", "Hey"})
 	grammar.AddRule("name", []string{"World", "Friend"})

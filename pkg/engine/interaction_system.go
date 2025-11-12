@@ -392,4 +392,3 @@ func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity,
 		}).Info("player browsing bookshelf")
 	}
 }
-

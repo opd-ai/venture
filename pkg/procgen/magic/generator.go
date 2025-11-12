@@ -94,11 +94,25 @@ func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, 
 	case "scifi":
 		templates = append(templates, GetSciFiOffensiveTemplates()...)
 		templates = append(templates, GetSciFiSupportTemplates()...)
+		templates = append(templates, GetSciFiAdvancedTemplates()...)
+		templates = append(templates, GetAdvancedOffensiveTemplates()...)
+		templates = append(templates, GetAdvancedUtilityTemplates()...)
+		templates = append(templates, GetAdvancedSupportTemplates()...)
+	case "horror":
+		templates = append(templates, GetFantasyOffensiveTemplates()...)
+		templates = append(templates, GetFantasySupportTemplates()...)
+		templates = append(templates, GetHorrorAdvancedTemplates()...)
+		templates = append(templates, GetAdvancedOffensiveTemplates()...)
+		templates = append(templates, GetAdvancedUtilityTemplates()...)
+		templates = append(templates, GetAdvancedSupportTemplates()...)
 	case "fantasy":
 		fallthrough
 	default:
 		templates = append(templates, GetFantasyOffensiveTemplates()...)
 		templates = append(templates, GetFantasySupportTemplates()...)
+		templates = append(templates, GetAdvancedOffensiveTemplates()...)
+		templates = append(templates, GetAdvancedUtilityTemplates()...)
+		templates = append(templates, GetAdvancedSupportTemplates()...)
 	}
 
 	if len(templates) == 0 {

@@ -11,17 +11,17 @@ import (
 func TestNewMoralChoiceSystem(t *testing.T) {
 	world := NewWorld()
 	logger := logrus.New()
-	
+
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	if sys == nil {
 		t.Fatal("NewMoralChoiceSystem returned nil")
 	}
-	
+
 	if sys.world != world {
 		t.Error("World not set correctly")
 	}
-	
+
 	if sys.logger != logger {
 		t.Error("Logger not set correctly")
 	}
@@ -29,13 +29,13 @@ func TestNewMoralChoiceSystem(t *testing.T) {
 
 func TestNewMoralChoiceSystem_NilLogger(t *testing.T) {
 	world := NewWorld()
-	
+
 	sys := NewMoralChoiceSystem(world, nil)
-	
+
 	if sys == nil {
 		t.Fatal("NewMoralChoiceSystem returned nil")
 	}
-	
+
 	if sys.logger == nil {
 		t.Error("Logger should be created if nil passed")
 	}
@@ -46,10 +46,10 @@ func TestMoralChoiceSystem_Update_RemovesExpiredChoices(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel) // Suppress logs during test
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	moralChoice := NewMoralChoiceComponent()
-	
+
 	// Add expired choice
 	expiredChoice := MoralChoice{
 		ID:          "expired",
@@ -57,7 +57,7 @@ func TestMoralChoiceSystem_Update_RemovesExpiredChoices(t *testing.T) {
 		ExpiresAt:   time.Now().Add(-1 * time.Hour),
 	}
 	moralChoice.AddChoice(expiredChoice)
-	
+
 	// Add valid choice
 	validChoice := MoralChoice{
 		ID:          "valid",
@@ -65,17 +65,32 @@ func TestMoralChoiceSystem_Update_RemovesExpiredChoices(t *testing.T) {
 		ExpiresAt:   time.Now().Add(1 * time.Hour),
 	}
 	moralChoice.AddChoice(validChoice)
-	
+
 	entity.AddComponent(moralChoice)
-	
+
+	// Debug: Check expiry status before update
+	// t.Logf("Before update: len=%d, expired=%v, valid=%v",
+	//	len(moralChoice.PendingChoices),
+	//	moralChoice.PendingChoices[0].IsExpired(),
+	//	moralChoice.PendingChoices[1].IsExpired())
+
 	// Update system
 	sys.Update(0.016)
-	
+
+	// Debug: Check what remains
+	//for i, ch := range moralChoice.PendingChoices {
+	//	t.Logf("After update [%d]: ID=%s, Expired=%v", i, ch.ID, ch.IsExpired())
+	//}
+
 	// Check that expired choice was removed
 	if len(moralChoice.PendingChoices) != 1 {
+		// Show what we actually have
+		for i, ch := range moralChoice.PendingChoices {
+			t.Logf("Choice [%d]: ID=%s, ExpiresAt=%v, IsExpired=%v", i, ch.ID, ch.ExpiresAt, ch.IsExpired())
+		}
 		t.Errorf("Expected 1 pending choice, got %d", len(moralChoice.PendingChoices))
 	}
-	
+
 	if moralChoice.PendingChoices[0].ID != "valid" {
 		t.Error("Wrong choice removed")
 	}
@@ -86,32 +101,33 @@ func TestMoralChoiceSystem_Update_CompletesRedemptionArcs(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	moralChoice := NewMoralChoiceComponent()
 	reputation := NewReputationComponent()
 	reputation.SetReputation("TestFaction", 50.0)
-	
-	// Add completed redemption arc
+
+	// Add completed redemption arc (all actions complete)
 	arc := RedemptionArc{
 		FactionName:        "TestFaction",
 		StartingReputation: -30.0,
 		TargetReputation:   10.0,
 		CurrentReputation:  50.0,
 		RequiredActions: []RedemptionAction{
-			{Quantity: 5, Progress: 5},
+			{Quantity: 5, Progress: 5}, // Complete
+			{Quantity: 3, Progress: 3}, // Complete
 		},
-		CompletedActions: 1,
+		CompletedActions: 2, // All actions complete
 		StartTime:        time.Now(),
 	}
 	moralChoice.StartRedemption(arc)
-	
+
 	entity.AddComponent(moralChoice)
 	entity.AddComponent(reputation)
-	
+
 	// Update system
 	sys.Update(0.016)
-	
+
 	// Check that completed arc was removed
 	if len(moralChoice.ActiveRedemptions) != 0 {
 		t.Errorf("Expected 0 active redemptions, got %d", len(moralChoice.ActiveRedemptions))
@@ -123,14 +139,14 @@ func TestMoralChoiceSystem_MakeChoice_Success(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	moralChoice := NewMoralChoiceComponent()
 	reputation := NewReputationComponent()
 	experience := NewExperienceComponent()
 	inventory := NewInventoryComponent(20, 100.0)
 	position := &PositionComponent{X: 100, Y: 100}
-	
+
 	choice := MoralChoice{
 		ID:          "test_choice",
 		Description: "Help or harm?",
@@ -164,19 +180,19 @@ func TestMoralChoiceSystem_MakeChoice_Success(t *testing.T) {
 		},
 	}
 	moralChoice.AddChoice(choice)
-	
+
 	entity.AddComponent(moralChoice)
 	entity.AddComponent(reputation)
 	entity.AddComponent(experience)
 	entity.AddComponent(inventory)
 	entity.AddComponent(position)
-	
+
 	// Make choice (option 0 = Help)
 	err := sys.MakeChoice(entity, "test_choice", 0)
 	if err != nil {
 		t.Fatalf("MakeChoice failed: %v", err)
 	}
-	
+
 	// Verify alignment changed
 	if reputation.Alignment.LawAxis != 0.05 {
 		t.Errorf("Expected LawAxis 0.05, got %.2f", reputation.Alignment.LawAxis)
@@ -184,27 +200,27 @@ func TestMoralChoiceSystem_MakeChoice_Success(t *testing.T) {
 	if reputation.Alignment.GoodAxis != 0.1 {
 		t.Errorf("Expected GoodAxis 0.1, got %.2f", reputation.Alignment.GoodAxis)
 	}
-	
+
 	// Verify reputation changed
 	if reputation.GetReputation("Villagers") != 20.0 {
 		t.Errorf("Expected Villagers reputation 20.0, got %.2f", reputation.GetReputation("Villagers"))
 	}
-	
+
 	// Verify XP granted
 	if experience.TotalXP != 100 {
 		t.Errorf("Expected 100 XP, got %d", experience.TotalXP)
 	}
-	
+
 	// Verify gold granted
 	if inventory.Gold != 50 {
 		t.Errorf("Expected 50 gold, got %d", inventory.Gold)
 	}
-	
+
 	// Verify choice recorded in history
 	if len(moralChoice.ChoiceHistory) != 1 {
 		t.Fatalf("Expected 1 history entry, got %d", len(moralChoice.ChoiceHistory))
 	}
-	
+
 	completed := moralChoice.ChoiceHistory[0]
 	if completed.ChoiceID != "test_choice" {
 		t.Errorf("Expected ChoiceID 'test_choice', got '%s'", completed.ChoiceID)
@@ -215,12 +231,12 @@ func TestMoralChoiceSystem_MakeChoice_Success(t *testing.T) {
 	if completed.OptionLabel != "Help" {
 		t.Errorf("Expected OptionLabel 'Help', got '%s'", completed.OptionLabel)
 	}
-	
+
 	// Verify choice removed from pending
 	if len(moralChoice.PendingChoices) != 0 {
 		t.Errorf("Expected 0 pending choices, got %d", len(moralChoice.PendingChoices))
 	}
-	
+
 	// Verify deed recorded
 	if len(reputation.KarmaDeeds) != 1 {
 		t.Errorf("Expected 1 deed, got %d", len(reputation.KarmaDeeds))
@@ -232,7 +248,7 @@ func TestMoralChoiceSystem_MakeChoice_Errors(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	tests := []struct {
 		name          string
 		setupEntity   func() *Entity
@@ -313,7 +329,7 @@ func TestMoralChoiceSystem_MakeChoice_Errors(t *testing.T) {
 			expectedError: "has no reputation component",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			entity := tt.setupEntity()
@@ -333,12 +349,12 @@ func TestMoralChoiceSystem_StartRedemption(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	reputation := NewReputationComponent()
 	reputation.SetReputation("Bandits", -60.0)
 	entity.AddComponent(reputation)
-	
+
 	actions := []RedemptionAction{
 		{
 			Type:           "Kill",
@@ -355,28 +371,28 @@ func TestMoralChoiceSystem_StartRedemption(t *testing.T) {
 			ReputationGain: 10.0,
 		},
 	}
-	
+
 	err := sys.StartRedemption(entity, "Bandits", -20.0, actions)
 	if err != nil {
 		t.Fatalf("StartRedemption failed: %v", err)
 	}
-	
+
 	// Verify moral choice component was created
 	comp, ok := entity.GetComponent("moral_choice")
 	if !ok {
 		t.Fatal("Moral choice component should be created")
 	}
-	
+
 	moralChoice, ok := comp.(*MoralChoiceComponent)
 	if !ok {
 		t.Fatal("Invalid component type")
 	}
-	
+
 	// Verify redemption arc was added
 	if len(moralChoice.ActiveRedemptions) != 1 {
 		t.Fatalf("Expected 1 redemption, got %d", len(moralChoice.ActiveRedemptions))
 	}
-	
+
 	arc := moralChoice.ActiveRedemptions[0]
 	if arc.FactionName != "Bandits" {
 		t.Errorf("Expected faction 'Bandits', got '%s'", arc.FactionName)
@@ -397,18 +413,18 @@ func TestMoralChoiceSystem_StartRedemption_Errors(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	t.Run("Already active", func(t *testing.T) {
 		entity := world.CreateEntity()
 		moralChoice := NewMoralChoiceComponent()
 		reputation := NewReputationComponent()
-		
+
 		// Start first redemption
 		moralChoice.StartRedemption(RedemptionArc{FactionName: "TestFaction"})
-		
+
 		entity.AddComponent(moralChoice)
 		entity.AddComponent(reputation)
-		
+
 		// Try to start second redemption for same faction
 		err := sys.StartRedemption(entity, "TestFaction", 10.0, []RedemptionAction{})
 		if err == nil {
@@ -418,12 +434,12 @@ func TestMoralChoiceSystem_StartRedemption_Errors(t *testing.T) {
 			t.Errorf("Expected 'already active' error, got: %v", err)
 		}
 	})
-	
+
 	t.Run("No reputation component", func(t *testing.T) {
 		entity := world.CreateEntity()
 		moralChoice := NewMoralChoiceComponent()
 		entity.AddComponent(moralChoice)
-		
+
 		err := sys.StartRedemption(entity, "TestFaction", 10.0, []RedemptionAction{})
 		if err == nil {
 			t.Fatal("Expected error for missing reputation component")
@@ -439,12 +455,12 @@ func TestMoralChoiceSystem_UpdateRedemptionProgress(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	moralChoice := NewMoralChoiceComponent()
 	reputation := NewReputationComponent()
 	reputation.SetReputation("TestFaction", -50.0)
-	
+
 	arc := RedemptionArc{
 		FactionName:        "TestFaction",
 		StartingReputation: -50.0,
@@ -460,27 +476,27 @@ func TestMoralChoiceSystem_UpdateRedemptionProgress(t *testing.T) {
 		CompletedActions: 0,
 	}
 	moralChoice.StartRedemption(arc)
-	
+
 	entity.AddComponent(moralChoice)
 	entity.AddComponent(reputation)
-	
+
 	// Update progress (complete the action)
 	err := sys.UpdateRedemptionProgress(entity, "TestFaction", 0, 5)
 	if err != nil {
 		t.Fatalf("UpdateRedemptionProgress failed: %v", err)
 	}
-	
+
 	// Verify progress updated
 	updatedArc := moralChoice.GetRedemptionArc("TestFaction")
 	if updatedArc.RequiredActions[0].Progress != 10 {
 		t.Errorf("Expected progress 10, got %d", updatedArc.RequiredActions[0].Progress)
 	}
-	
+
 	// Verify completed actions incremented
 	if updatedArc.CompletedActions != 1 {
 		t.Errorf("Expected 1 completed action, got %d", updatedArc.CompletedActions)
 	}
-	
+
 	// Verify reputation increased
 	if reputation.GetReputation("TestFaction") != -30.0 {
 		t.Errorf("Expected reputation -30.0, got %.2f", reputation.GetReputation("TestFaction"))
@@ -492,7 +508,7 @@ func TestMoralChoiceSystem_UpdateRedemptionProgress_Errors(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	tests := []struct {
 		name          string
 		setupEntity   func() *Entity
@@ -537,7 +553,7 @@ func TestMoralChoiceSystem_UpdateRedemptionProgress_Errors(t *testing.T) {
 			expectedError: "invalid action index",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			entity := tt.setupEntity()
@@ -557,37 +573,37 @@ func TestMoralChoiceSystem_OfferFactionConflictChoice(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
-	
+
 	err := sys.OfferFactionConflictChoice(entity, "Merchants", "Thieves", "The merchants accuse the thieves of stealing")
 	if err != nil {
 		t.Fatalf("OfferFactionConflictChoice failed: %v", err)
 	}
-	
+
 	// Verify moral choice component was created
 	comp, ok := entity.GetComponent("moral_choice")
 	if !ok {
 		t.Fatal("Moral choice component should be created")
 	}
-	
+
 	moralChoice, ok := comp.(*MoralChoiceComponent)
 	if !ok {
 		t.Fatal("Invalid component type")
 	}
-	
+
 	// Verify choice was added
 	if len(moralChoice.PendingChoices) != 1 {
 		t.Fatalf("Expected 1 pending choice, got %d", len(moralChoice.PendingChoices))
 	}
-	
+
 	choice := moralChoice.PendingChoices[0]
-	
+
 	// Verify 3 options (support faction1, support faction2, stay neutral)
 	if len(choice.Options) != 3 {
 		t.Fatalf("Expected 3 options, got %d", len(choice.Options))
 	}
-	
+
 	// Verify option 0 supports Merchants
 	opt0 := choice.Options[0]
 	if opt0.ReputationImpact["Merchants"] != 20.0 {
@@ -596,7 +612,7 @@ func TestMoralChoiceSystem_OfferFactionConflictChoice(t *testing.T) {
 	if opt0.ReputationImpact["Thieves"] != -30.0 {
 		t.Errorf("Expected Thieves -30, got %.2f", opt0.ReputationImpact["Thieves"])
 	}
-	
+
 	// Verify option 1 supports Thieves
 	opt1 := choice.Options[1]
 	if opt1.ReputationImpact["Merchants"] != -30.0 {
@@ -605,7 +621,7 @@ func TestMoralChoiceSystem_OfferFactionConflictChoice(t *testing.T) {
 	if opt1.ReputationImpact["Thieves"] != 20.0 {
 		t.Errorf("Expected Thieves +20, got %.2f", opt1.ReputationImpact["Thieves"])
 	}
-	
+
 	// Verify option 2 is neutral
 	opt2 := choice.Options[2]
 	if opt2.Label != "Stay neutral" {
@@ -624,7 +640,7 @@ func TestMoralChoiceSystem_ApplyConsequences(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.FatalLevel)
 	sys := NewMoralChoiceSystem(world, logger)
-	
+
 	entity := world.CreateEntity()
 	reputation := NewReputationComponent()
 	inventory := NewInventoryComponent(20, 100.0)
@@ -634,23 +650,23 @@ func TestMoralChoiceSystem_ApplyConsequences(t *testing.T) {
 		{ID: "item3", Name: "Keep This Too"},
 	}
 	position := &PositionComponent{X: 50, Y: 50}
-	
+
 	entity.AddComponent(reputation)
 	entity.AddComponent(inventory)
 	entity.AddComponent(position)
-	
+
 	consequences := &ChoiceConsequences{
 		HostileFactions: []string{"Guards", "Merchants"},
 		LoseItems:       []string{"item2"},
 		LoseQuests:      []string{"quest1"},
 		SpawnEnemies:    5,
 	}
-	
+
 	err := sys.applyConsequences(entity, consequences)
 	if err != nil {
 		t.Fatalf("applyConsequences failed: %v", err)
 	}
-	
+
 	// Verify factions are hostile
 	if reputation.GetReputation("Guards") != -50.0 {
 		t.Errorf("Expected Guards reputation -50.0, got %.2f", reputation.GetReputation("Guards"))
@@ -658,7 +674,7 @@ func TestMoralChoiceSystem_ApplyConsequences(t *testing.T) {
 	if reputation.GetReputation("Merchants") != -50.0 {
 		t.Errorf("Expected Merchants reputation -50.0, got %.2f", reputation.GetReputation("Merchants"))
 	}
-	
+
 	// Verify item was removed
 	if len(inventory.Items) != 2 {
 		t.Errorf("Expected 2 items remaining, got %d", len(inventory.Items))
@@ -672,7 +688,7 @@ func TestMoralChoiceSystem_ApplyConsequences(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
 }
 

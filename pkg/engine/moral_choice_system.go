@@ -39,7 +39,9 @@ func (s *MoralChoiceSystem) Update(deltaTime float64) {
 		moralChoice, ok := comp.(*MoralChoiceComponent)
 		if !ok {
 			continue
-		} // Remove expired choices
+		}
+
+		// Remove expired choices
 		s.removeExpiredChoices(entity, moralChoice)
 
 		// Update redemption arcs
@@ -53,10 +55,11 @@ func (s *MoralChoiceSystem) removeExpiredChoices(entity *Entity, moralChoice *Mo
 	for i := len(moralChoice.PendingChoices) - 1; i >= 0; i-- {
 		choice := moralChoice.PendingChoices[i]
 		if choice.IsExpired() {
-			s.logger.Info("Moral choice expired",
-				"entity", entity.ID,
-				"choice", choice.ID,
-				"description", choice.Description)
+			s.logger.WithFields(map[string]interface{}{
+				"entity":      entity.ID,
+				"choice":      choice.ID,
+				"description": choice.Description,
+			}).Info("Moral choice expired")
 
 			// Remove the expired choice
 			moralChoice.PendingChoices = append(
@@ -143,16 +146,6 @@ func (s *MoralChoiceSystem) MakeChoice(entity *Entity, choiceID string, optionIn
 
 	option := choice.Options[optionIndex]
 
-	// Apply alignment changes
-	if err := s.applyAlignmentImpact(entity, option.AlignmentImpact); err != nil {
-		return fmt.Errorf("failed to apply alignment impact: %w", err)
-	}
-
-	// Apply reputation changes
-	if err := s.applyReputationImpact(entity, option.ReputationImpact); err != nil {
-		return fmt.Errorf("failed to apply reputation impact: %w", err)
-	}
-
 	// Apply rewards
 	if option.Rewards != nil {
 		if err := s.applyRewards(entity, option.Rewards); err != nil {
@@ -167,6 +160,9 @@ func (s *MoralChoiceSystem) MakeChoice(entity *Entity, choiceID string, optionIn
 		}
 	}
 
+	// Record as a deed in reputation component (this applies alignment and reputation changes)
+	s.recordChoiceAsDeed(entity, choice, option)
+
 	// Record the choice in history
 	completed := CompletedChoice{
 		ChoiceID:          choiceID,
@@ -178,12 +174,7 @@ func (s *MoralChoiceSystem) MakeChoice(entity *Entity, choiceID string, optionIn
 		ReputationChanges: option.ReputationImpact,
 		QuestID:           choice.QuestID,
 	}
-	moralChoice.RecordChoice(completed)
-
-	// Record as a deed in reputation component
-	s.recordChoiceAsDeed(entity, choice, option)
-
-	// Remove from pending choices
+	moralChoice.RecordChoice(completed) // Remove from pending choices
 	moralChoice.RemovePendingChoice(choiceID)
 
 	s.logger.Info("Moral choice made",
@@ -192,45 +183,6 @@ func (s *MoralChoiceSystem) MakeChoice(entity *Entity, choiceID string, optionIn
 		"option", option.Label,
 		"alignmentImpact", option.AlignmentImpact,
 		"reputationImpact", option.ReputationImpact)
-
-	return nil
-}
-
-// applyAlignmentImpact applies alignment changes to the entity's reputation component.
-func (s *MoralChoiceSystem) applyAlignmentImpact(entity *Entity, impact AlignmentDelta) error {
-	repComp, ok := entity.GetComponent("reputation")
-	if repComp == nil {
-		return fmt.Errorf("entity has no reputation component")
-	}
-
-	reputation, ok := repComp.(*ReputationComponent)
-	if !ok {
-		return fmt.Errorf("invalid reputation component type")
-	}
-
-	reputation.AdjustAlignment(impact.LawDelta, impact.GoodDelta)
-	return nil
-}
-
-// applyReputationImpact applies faction reputation changes to the entity's reputation component.
-func (s *MoralChoiceSystem) applyReputationImpact(entity *Entity, impact map[string]float64) error {
-	if len(impact) == 0 {
-		return nil
-	}
-
-	repComp, ok := entity.GetComponent("reputation")
-	if repComp == nil {
-		return fmt.Errorf("entity has no reputation component")
-	}
-
-	reputation, ok := repComp.(*ReputationComponent)
-	if !ok {
-		return fmt.Errorf("invalid reputation component type")
-	}
-
-	for faction, delta := range impact {
-		reputation.AdjustReputation(faction, delta)
-	}
 
 	return nil
 }
@@ -457,7 +409,7 @@ func (s *MoralChoiceSystem) StartRedemption(entity *Entity, factionName string, 
 
 // UpdateRedemptionProgress updates progress on a specific redemption action.
 // Returns an error if the redemption arc or action doesn't exist.
-func (s *MoralChoiceSystem) UpdateRedemptionProgress(entity *Entity, factionName string, actionIndex int, progressDelta int) error {
+func (s *MoralChoiceSystem) UpdateRedemptionProgress(entity *Entity, factionName string, actionIndex, progressDelta int) error {
 	comp, ok := entity.GetComponent("moral_choice")
 	if comp == nil {
 		return fmt.Errorf("entity has no moral choice component")
@@ -507,7 +459,7 @@ func (s *MoralChoiceSystem) UpdateRedemptionProgress(entity *Entity, factionName
 }
 
 // OfferFactionConflictChoice presents a choice where the player must pick sides in a faction conflict.
-func (s *MoralChoiceSystem) OfferFactionConflictChoice(entity *Entity, faction1, faction2 string, context string) error {
+func (s *MoralChoiceSystem) OfferFactionConflictChoice(entity *Entity, faction1, faction2, context string) error {
 	comp, ok := entity.GetComponent("moral_choice")
 	if comp == nil {
 		// Create component if it doesn't exist

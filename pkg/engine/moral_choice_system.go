@@ -29,22 +29,25 @@ func NewMoralChoiceSystem(world *World, logger *logrus.Logger) *MoralChoiceSyste
 func (s *MoralChoiceSystem) Update(deltaTime float64) {
 	// Process all entities with moral choice components
 	entities := s.world.GetEntitiesWith("moral_choice")
+	s.logger.Infof("MoralChoiceSystem.Update: processing %d entities", len(entities))
 
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("moral_choice")
 		if !ok {
+			s.logger.Warn("Entity has moral_choice in query but GetComponent returned !ok", "entity", entity.ID)
 			continue
 		}
 
 		moralChoice, ok := comp.(*MoralChoiceComponent)
 		if !ok {
+			s.logger.Warn("Component is not MoralChoiceComponent", "entity", entity.ID)
 			continue
 		}
-
+		
+		s.logger.Infof("Processing entity %d with %d pending choices", entity.ID, len(moralChoice.PendingChoices))
+		
 		// Remove expired choices
-		s.removeExpiredChoices(entity, moralChoice)
-
-		// Update redemption arcs
+		s.removeExpiredChoices(entity, moralChoice)		// Update redemption arcs
 		s.updateRedemptionArcs(entity, moralChoice, deltaTime)
 	}
 }

@@ -44,7 +44,7 @@ func TestNewMoralChoiceSystem_NilLogger(t *testing.T) {
 func TestMoralChoiceSystem_Update_RemovesExpiredChoices(t *testing.T) {
 	world := NewWorld()
 	logger := logrus.New()
-	logger.SetLevel(logrus.FatalLevel) // Suppress logs during test
+	//logger.SetLevel(logrus.FatalLevel) // Suppress logs during test
 	sys := NewMoralChoiceSystem(world, logger)
 
 	entity := world.CreateEntity()

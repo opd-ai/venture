@@ -57,8 +57,11 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 
 	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem)
 
-	registerAllSystems(game, sys)
+	// CRITICAL: Initialize environmental systems BEFORE registering them
 	initializeEnvironmentalSystems(game, sys, clientLogger)
+
+	// Now register all systems (including environmental systems that are now initialized)
+	registerAllSystems(game, sys)
 
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)

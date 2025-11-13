@@ -28,6 +28,13 @@ func NewPuzzleSystem(world *World) *PuzzleSystem {
 
 // Update processes puzzle state, timing, and solution checking.
 func (s *PuzzleSystem) Update(entities []*Entity, deltaTime float64) {
+	// Defensive check: ensure system is properly initialized
+	// This should not happen after fixing initialization order,
+	// but provides safety against future refactoring issues
+	if s == nil || s.world == nil {
+		return
+	}
+
 	// Update puzzle element cooldowns
 	s.updateElementCooldowns(deltaTime)
 

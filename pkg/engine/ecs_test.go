@@ -100,6 +100,35 @@ func TestWorldSystems(t *testing.T) {
 	}
 }
 
+func TestWorldAddNilSystem(t *testing.T) {
+	world := NewWorld()
+
+	// Attempt to add nil system - should be prevented
+	world.AddSystem(nil)
+
+	// Create a test entity
+	entity := world.CreateEntity()
+	entity.AddComponent(&MockComponent{Value: "test"})
+
+	// Update should not panic even though we tried to add a nil system
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Update panicked after attempting to add nil system: %v", r)
+		}
+	}()
+
+	world.Update(0.016)
+
+	// Verify entity was processed correctly
+	retrieved, ok := world.GetEntity(entity.ID)
+	if !ok {
+		t.Error("Expected to retrieve created entity")
+	}
+	if !retrieved.HasComponent("mock") {
+		t.Error("Expected entity to have mock component")
+	}
+}
+
 func TestGetEntitiesWith(t *testing.T) {
 	world := NewWorld()
 

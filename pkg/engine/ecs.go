@@ -304,6 +304,16 @@ func (w *World) GetEntity(entityID uint64) (*Entity, bool) {
 
 // AddSystem adds a system to the world.
 func (w *World) AddSystem(system System) {
+	// Defensive check: prevent nil systems from being added
+	// This should not happen in normal operation, but provides safety
+	// in case of initialization order issues or programming errors
+	if system == nil {
+		if w.logger != nil {
+			w.logger.Error("attempted to add nil system to world")
+		}
+		return
+	}
+
 	w.systems = append(w.systems, system)
 
 	if w.logger != nil {

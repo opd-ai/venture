@@ -243,7 +243,7 @@ func (g *Generator) generateMemoryGame(rng *rand.Rand, params procgen.Generation
 }
 
 func (g *Generator) generateLockPickingGame(rng *rand.Rand, params procgen.GenerationParams) *MiniGame {
-	numPins := 3 + int(params.Difficulty*4) // 3-7 pins
+	numPins := 3 + int(params.Difficulty*4)     // 3-7 pins
 	timingWindow := 0.5 - params.Difficulty*0.3 // 0.5s (easy) to 0.2s (hard)
 
 	state := &LockPickingGameState{
@@ -268,7 +268,7 @@ func (g *Generator) generateLockPickingGame(rng *rand.Rand, params procgen.Gener
 }
 
 func (g *Generator) generateHackingGame(rng *rand.Rand, params procgen.GenerationParams) *MiniGame {
-	codeLength := 4 + int(params.Difficulty*4) // 4-8 digits
+	codeLength := 4 + int(params.Difficulty*4)  // 4-8 digits
 	maxAttempts := 5 + int(params.Difficulty*5) // 5-10 attempts
 
 	state := &HackingGameState{
@@ -293,7 +293,7 @@ func (g *Generator) generateHackingGame(rng *rand.Rand, params procgen.Generatio
 }
 
 func (g *Generator) generateRitualGame(rng *rand.Rand, params procgen.GenerationParams) *MiniGame {
-	numSymbols := 3 + int(params.Difficulty*4) // 3-7 symbols
+	numSymbols := 3 + int(params.Difficulty*4)  // 3-7 symbols
 	drawAccuracy := 0.7 - params.Difficulty*0.2 // 70% (easy) to 50% (hard)
 
 	state := &RitualGameState{

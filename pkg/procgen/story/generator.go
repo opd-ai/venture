@@ -58,12 +58,12 @@ type Vector2 struct {
 
 // StorySequence represents a complete story told through fragments
 type StorySequence struct {
-	SeriesID   string
-	Title      string
-	Genre      string
-	Fragments  []StoryFragment
-	Theme      string // Main theme: tragedy, mystery, horror, adventure, etc.
-	Coherence  float64 // Quality metric (0.0-1.0)
+	SeriesID  string
+	Title     string
+	Genre     string
+	Fragments []StoryFragment
+	Theme     string  // Main theme: tragedy, mystery, horror, adventure, etc.
+	Coherence float64 // Quality metric (0.0-1.0)
 }
 
 // FragmentGenerator generates environmental story fragments
@@ -102,7 +102,7 @@ func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams
 	for i := 0; i < numFragments; i++ {
 		fragType := g.selectFragmentType(rng, params.GenreID, i, numFragments)
 		content := storyContent[i]
-		
+
 		fragments[i] = StoryFragment{
 			Type:        fragType,
 			Content:     content,
@@ -216,7 +216,7 @@ func (g *FragmentGenerator) generateBeginningFragment(rng *rand.Rand, theme stri
 	}
 
 	template := templates[rng.Intn(len(templates))]
-	
+
 	adjectives := []string{"normal", "quiet", "strange", "peaceful", "ominous"}
 	counts := []int{5, 7, 10, 12, 15}
 	discoveries := []string{"danger", "treasure", "secrets", "life", "death"}
@@ -233,7 +233,7 @@ func (g *FragmentGenerator) generateMiddleFragment(rng *rand.Rand, theme string,
 	}
 
 	template := templates[rng.Intn(len(templates))]
-	
+
 	losses := []string{"contact", "hope", "supplies", "three people", "our leader"}
 	threats := []string{"infection", "madness", "corruption", "fear", "darkness"}
 	revelations := []string{"the ruins", "the source", "their plan", "the curse", "this place"}
@@ -252,7 +252,7 @@ func (g *FragmentGenerator) generateEndFragment(rng *rand.Rand, theme string, ge
 	}
 
 	template := templates[rng.Intn(len(templates))]
-	
+
 	warnings := []string{"leave immediately", "destroy it", "seal the entrance", "warn the others"}
 	goals := []string{"stop it", "find the cure", "escape", "understand the truth"}
 	threats := []string{"The end", "Darkness", "They", "Death", "Doom"}
@@ -284,7 +284,7 @@ func (g *FragmentGenerator) generateLocation(rng *rand.Rand, index, total int) V
 	// Distribute fragments throughout dungeon
 	// Assuming 100x100 dungeon space
 	progress := float64(index) / float64(total)
-	
+
 	x := 10.0 + progress*80.0 + (rng.Float64()-0.5)*20.0
 	y := 10.0 + rng.Float64()*80.0
 
@@ -350,7 +350,7 @@ func (g *FragmentGenerator) calculateCoherence(storyContent []string) float64 {
 	}
 
 	coherence := float64(commonWords) / float64(totalWords)
-	
+
 	// Normalize to 0.5-1.0 range (stories always have some coherence)
 	return 0.5 + coherence*0.5
 }

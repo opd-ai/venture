@@ -2,21 +2,21 @@ package minigame
 
 // CardGameState represents the state of a card game
 type CardGameState struct {
-	DeckSize   int
-	HandSize   int
-	TargetWins int
-	PlayerWins int
+	DeckSize     int
+	HandSize     int
+	TargetWins   int
+	PlayerWins   int
 	OpponentWins int
 	CurrentRound int
 }
 
 // DiceGameState represents the state of a dice game
 type DiceGameState struct {
-	NumDice    int
-	DiceSides  int
-	BetAmount  int
-	TargetRoll int
-	PlayerRoll int
+	NumDice      int
+	DiceSides    int
+	BetAmount    int
+	TargetRoll   int
+	PlayerRoll   int
 	OpponentRoll int
 }
 

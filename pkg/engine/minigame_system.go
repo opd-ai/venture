@@ -136,5 +136,5 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 	// the Item entities and add them to inventory. This is left as a TODO for
 	// integration with the item system.
 	_ = reward.Items // TODO: Properly integrate with item system
-	_ = time.Now()  // Keep time import for potential future use
+	_ = time.Now()   // Keep time import for potential future use
 }

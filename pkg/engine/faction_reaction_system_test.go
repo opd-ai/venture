@@ -7,7 +7,7 @@ import (
 func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
 		Factions: map[string]float64{
@@ -44,7 +44,7 @@ func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 func TestFactionReactionSystem_GetPriceModifier(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
 		Factions:  make(map[string]float64),
@@ -79,7 +79,7 @@ func TestFactionReactionSystem_GetPriceModifier(t *testing.T) {
 func TestFactionReactionSystem_ShouldAttackOnSight(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
 		Factions:  make(map[string]float64),
@@ -113,7 +113,7 @@ func TestFactionReactionSystem_ShouldAttackOnSight(t *testing.T) {
 func TestFactionReactionSystem_CanAcceptQuest(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
 		Factions:  map[string]float64{"Test": 30},
@@ -145,7 +145,7 @@ func TestFactionReactionSystem_CanAcceptQuest(t *testing.T) {
 func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
 		Factions:  make(map[string]float64),
@@ -170,11 +170,11 @@ func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repComp.Factions["Test"] = tt.reputation
 			options := system.GetDialogOptions(entity.ID, "Test")
-			
+
 			if len(options) < tt.minOptions {
 				t.Errorf("GetDialogOptions() len = %d, want >= %d", len(options), tt.minOptions)
 			}
-			
+
 			hasQuests := false
 			for _, opt := range options {
 				if opt == "Quests" {
@@ -182,7 +182,7 @@ func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if hasQuests != tt.hasQuests {
 				t.Errorf("GetDialogOptions() has quests = %v, want %v", hasQuests, tt.hasQuests)
 			}
@@ -193,7 +193,7 @@ func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	tests := []struct {
 		name     string
 		lawAxis  float64
@@ -219,7 +219,7 @@ func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 				KarmaDeed: []Deed{},
 			}
 			entity.AddComponent(repComp)
-			
+
 			result := system.GetAlignmentDescription(entity.ID)
 			if result != tt.expected {
 				t.Errorf("GetAlignmentDescription() = %v, want %v", result, tt.expected)
@@ -231,7 +231,7 @@ func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 func TestFactionReactionSystem_GetReputationThreshold(t *testing.T) {
 	world := NewWorld()
 	system := NewFactionReactionSystem(world)
-	
+
 	tests := []struct {
 		level    string
 		expected float64

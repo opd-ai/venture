@@ -126,7 +126,7 @@ func (s *FactionReactionSystem) GetAlignmentDescription(entityID uint64) string 
 	}
 
 	repComp := repCompRaw.(*ReputationComponent)
-	
+
 	lawDesc := s.getLawAxisDescription(repComp.Alignment.LawAxis)
 	goodDesc := s.getGoodAxisDescription(repComp.Alignment.GoodAxis)
 

@@ -1205,6 +1205,101 @@ Version 4.0 establishes Venture as a complete action-RPG experience with gamepla
 
 ---
 
+---
+
+## Next Steps (v4.1 Planning)
+
+Based on the comprehensive integration audit completed after Phase 21 (Vehicle System) implementation, the following recommendations guide the transition from v4.0 beta to v4.1 stable release.
+
+### Immediate Actions (v4.0 → v4.1)
+
+**1. Complete V4 Network Synchronization** ⏱️ 2-4 hours
+- **Status:** Network serialization methods exist but not fully integrated in snapshot system
+- **Action:** Extend `EntitySnapshot` struct in `pkg/network/protocol.go` to include V4 components
+- **Impact:** Ensures vehicle state, companion AI, book reading progress, mini-game state, and achievements sync properly in multiplayer
+- **Priority:** High (multiplayer feature completeness)
+- **Code Location:** `pkg/network/snapshot.go` lines 45-70 (builder method has placeholder comments)
+
+**2. Add Server Entity Spawning** ⏱️ 4-8 hours
+- **Status:** Client has spawning utility functions (`spawnVehicle`, `spawnCompanion`, `spawnBookshelf`); server lacks equivalents
+- **Action:** Port client spawning functions from `cmd/client/util.go` to server context
+- **Impact:** Enables server-authoritative entity creation for multiplayer consistency
+- **Priority:** High (multiplayer integrity)
+- **Code Location:** Create `cmd/server/entity_spawning.go` based on `cmd/client/util.go`
+
+**3. Remove Outdated TODO Comments** ⏱️ 30 minutes
+- **Status:** 31 TODO markers found, mostly representing future features rather than incomplete work
+- **Action:** Review and either implement trivial TODOs or convert to GitHub issues
+- **Impact:** Improves code clarity and distinguishes real debt from future work
+- **Priority:** Medium (code quality)
+- **Code Locations:** Distributed across codebase (full list in integration audit)
+
+**4. Add V4 Performance Benchmarks** ⏱️ 2-4 hours
+- **Status:** V4 systems operational but lack dedicated benchmark tests
+- **Action:** Create `pkg/engine/v4_bench_test.go` with benchmarks for all V4 systems
+- **Impact:** Validates 60 FPS target with new features, identifies optimization opportunities
+- **Priority:** Medium (performance validation)
+- **Tests:** VehicleCombat, CompanionAI, BookReading, MiniGame, Achievement systems
+
+### Documentation Updates
+
+**5. Update ARCHITECTURE.md** ⏱️ 1 hour
+- **Status:** Current architecture docs don't reflect v4.0 systems
+- **Action:** Add sections for V4 systems, updated system interaction diagrams
+- **Priority:** Medium (developer onboarding)
+- **Sections to Add:** Vehicle System, Companion AI System, Book Reading System, Mini-Game System, Achievement System
+
+**6. Update MULTIPLAYER.md** ⏱️ 1 hour
+- **Status:** Multiplayer docs don't cover V4 component synchronization
+- **Action:** Document V4 network sync strategy, component serialization approach
+- **Priority:** Medium (multiplayer development)
+- **Topics:** V4 component sync, entity snapshot extensions, server-side spawning
+
+### Quality Assurance Checklist
+
+Before v4.1 release, verify:
+- [ ] All 89 systems (14 procgen + 75 game + 15 rendering + 3 audio + 7 network) operational
+- [ ] Server initializes all 11 systems (6 core + 5 V4)
+- [ ] Client initializes all 89 systems properly
+- [ ] V4 components serialize correctly for network transmission
+- [ ] Performance maintains 60+ FPS with all V4 features active
+- [ ] Multiplayer supports vehicles, companions, books, mini-games, achievements
+- [ ] No blocking TODO comments remain in production code
+- [ ] Benchmarks validate V4 system performance targets
+- [ ] Documentation reflects v4.0 architecture accurately
+
+### Success Criteria (v4.1 Stable)
+
+**Technical Completeness:**
+- ✅ Zero blocking integration gaps
+- ✅ Full network synchronization for all V4 features
+- ✅ Server-authoritative entity spawning implemented
+- ✅ Performance benchmarks passing (60+ FPS minimum)
+- ✅ Code quality: No stale TODOs, comprehensive tests
+
+**Documentation Completeness:**
+- ✅ ARCHITECTURE.md includes V4 systems
+- ✅ MULTIPLAYER.md covers V4 networking
+- ✅ API_REFERENCE.md documents V4 components and systems
+- ✅ USER_MANUAL.md explains V4 gameplay features
+
+**Multiplayer Validation:**
+- ✅ 2-4 player testing with all V4 features active
+- ✅ Vehicle combat synchronized across clients
+- ✅ Companion AI behaviors replicate correctly
+- ✅ Book reading progress persists in multiplayer
+- ✅ Mini-game state synchronizes properly
+- ✅ Achievements trigger and display for all players
+
+### Estimated Timeline
+
+- **v4.0 Beta → v4.1 Stable:** 2-3 weeks
+- **Critical Path:** Network sync (2-4 hours) + Server spawning (4-8 hours) + Testing (1 week)
+- **Parallel Work:** Documentation updates, TODO cleanup, benchmarks
+- **Buffer:** 1 week for unexpected issues, additional testing
+
+---
+
 **Document Version:** 1.0  
 **Created:** November 2025  
 **Status:** Planning Phase  

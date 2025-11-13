@@ -436,7 +436,7 @@ func TestAdaptiveComposer_UpdateIntensity(t *testing.T) {
 		{"medium_intensity", 0.5, 0.15, 0.3},
 		{"high_intensity", 0.75, 0.25, 0.4},
 		{"max_intensity", 1.0, 0.35, 0.6},
-		{"above_max_clamped", 1.5, 0.35, 0.6}, // Should clamp to 1.0
+		{"above_max_clamped", 1.5, 0.35, 0.6},  // Should clamp to 1.0
 		{"below_min_clamped", -0.5, 0.0, 0.01}, // Should clamp to 0.0
 	}
 
@@ -445,7 +445,7 @@ func TestAdaptiveComposer_UpdateIntensity(t *testing.T) {
 			// Reset intensity layer
 			composer.layers["intensity"].Volume = 0.0
 			composer.layers["intensity"].TargetVolume = 0.0
-			
+
 			err := composer.UpdateIntensity(tt.intensity)
 			if err != nil {
 				t.Fatalf("UpdateIntensity() error = %v", err)
@@ -470,16 +470,16 @@ func TestAdaptiveComposer_AddLayer(t *testing.T) {
 
 	// Start with minimal layers (exploration context)
 	composer.SetContext("exploration")
-	
+
 	// Update to stabilize
 	for i := 0; i < 10; i++ {
 		composer.Update(0.1)
 	}
 
 	layers := []audio.MusicLayer{
-		audio.MusicLayerHarmony,      // Not active in exploration
-		audio.MusicLayerPercussion,   // Not active in exploration
-		audio.MusicLayerIntensity,    // Not active in exploration
+		audio.MusicLayerHarmony,    // Not active in exploration
+		audio.MusicLayerPercussion, // Not active in exploration
+		audio.MusicLayerIntensity,  // Not active in exploration
 	}
 
 	for _, layer := range layers {
@@ -698,7 +698,6 @@ func TestAdaptiveMusicManager_Interface(t *testing.T) {
 	}
 }
 
-
 func BenchmarkAdaptiveComposer_Update(b *testing.B) {
 	composer := NewAdaptiveComposer(44100, 12345)
 	composer.Initialize("fantasy", 60)
@@ -720,4 +719,3 @@ func BenchmarkAdaptiveComposer_GenerateTrack(b *testing.B) {
 		composer.GenerateTrack(1.0)
 	}
 }
-

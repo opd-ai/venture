@@ -22,7 +22,7 @@ func main() {
 	duration := flag.Float64("duration", 2.0, "Duration of generated tracks in seconds")
 	sampleRate := flag.Int("sample-rate", 44100, "Audio sample rate")
 	verbose := flag.Bool("verbose", false, "Enable verbose output")
-	
+
 	flag.Parse()
 
 	fmt.Printf("Adaptive Music System Test Tool\n")
@@ -79,15 +79,15 @@ func testContexts(composer *music.AdaptiveComposer, duration float64, verbose bo
 
 	for _, ctx := range contexts {
 		fmt.Printf("\n%s: %s\n", ctx.name, ctx.description)
-		
+
 		composer.SetContext(ctx.name)
-		
+
 		if verbose {
 			printLayerStates(composer)
 		}
 
 		track := composer.GenerateAdaptiveTrack(duration)
-		
+
 		stats := analyzeTrack(track)
 		fmt.Printf("  Samples:     %d\n", len(track.Data))
 		fmt.Printf("  Max Amp:     %.4f\n", stats.maxAmplitude)
@@ -113,41 +113,41 @@ func testLayers(composer *music.AdaptiveComposer, duration float64, verbose bool
 
 	for _, layer := range layers {
 		fmt.Printf("\nTesting layer: %s\n", layer.String())
-		
+
 		// Reset composer
 		composer.Initialize("fantasy", 60)
-		
+
 		// Add only this layer
 		err := composer.AddLayer(layer)
 		if err != nil {
 			fmt.Printf("  Error adding layer: %v\n", err)
 			continue
 		}
-		
+
 		// Update to activate layer
 		composer.Update(1.0)
-		
+
 		if verbose {
 			printLayerStates(composer)
 		}
-		
+
 		track := composer.GenerateAdaptiveTrack(duration)
 		stats := analyzeTrack(track)
-		
+
 		fmt.Printf("  Max Amp:       %.4f\n", stats.maxAmplitude)
 		fmt.Printf("  Active Layers: %d\n", composer.GetActiveLayerCount())
-		
+
 		// Test removal
 		err = composer.RemoveLayer(layer)
 		if err != nil {
 			fmt.Printf("  Error removing layer: %v\n", err)
 		}
-		
+
 		// Update to deactivate
 		for i := 0; i < 10; i++ {
 			composer.Update(0.1)
 		}
-		
+
 		afterRemoval := composer.GetActiveLayerCount()
 		fmt.Printf("  After removal: %d layers\n", afterRemoval)
 	}
@@ -170,26 +170,26 @@ func testTransitions(composer *music.AdaptiveComposer, duration float64, verbose
 
 	for _, trans := range transitions {
 		fmt.Printf("\nTransition: %s → %s\n", trans.from, trans.to)
-		
+
 		// Set initial context
 		composer.SetContext(trans.from)
-		
+
 		// Update to stabilize
 		for i := 0; i < 10; i++ {
 			composer.Update(0.1)
 		}
-		
+
 		initialLayers := composer.GetActiveLayerCount()
 		fmt.Printf("  Initial layers: %d\n", initialLayers)
-		
+
 		if verbose {
 			fmt.Println("  Initial state:")
 			printLayerStates(composer)
 		}
-		
+
 		// Change context
 		composer.SetContext(trans.to)
-		
+
 		// Simulate gradual transition
 		start := time.Now()
 		steps := 10
@@ -198,11 +198,11 @@ func testTransitions(composer *music.AdaptiveComposer, duration float64, verbose
 			time.Sleep(10 * time.Millisecond) // Small delay to simulate real-time
 		}
 		elapsed := time.Since(start)
-		
+
 		finalLayers := composer.GetActiveLayerCount()
 		fmt.Printf("  Final layers:   %d\n", finalLayers)
 		fmt.Printf("  Transition time: %v\n", elapsed)
-		
+
 		if verbose {
 			fmt.Println("  Final state:")
 			printLayerStates(composer)
@@ -216,30 +216,30 @@ func testIntensity(composer *music.AdaptiveComposer, duration float64, verbose b
 	fmt.Println("=========================")
 
 	composer.SetContext("combat")
-	
+
 	intensities := []float64{0.0, 0.25, 0.5, 0.75, 1.0}
-	
+
 	for _, intensity := range intensities {
 		fmt.Printf("\nIntensity: %.2f\n", intensity)
-		
+
 		err := composer.UpdateIntensity(intensity)
 		if err != nil {
 			fmt.Printf("  Error setting intensity: %v\n", err)
 			continue
 		}
-		
+
 		// Update to apply intensity change
 		for i := 0; i < 10; i++ {
 			composer.Update(0.1)
 		}
-		
+
 		intensityVolume := composer.GetLayerVolume("intensity")
 		fmt.Printf("  Intensity layer volume: %.4f\n", intensityVolume)
-		
+
 		track := composer.GenerateAdaptiveTrack(duration)
 		stats := analyzeTrack(track)
 		fmt.Printf("  Max amplitude: %.4f\n", stats.maxAmplitude)
-		
+
 		if verbose {
 			printLayerStates(composer)
 		}
@@ -249,7 +249,7 @@ func testIntensity(composer *music.AdaptiveComposer, duration float64, verbose b
 // printLayerStates prints the current state of all layers
 func printLayerStates(composer *music.AdaptiveComposer) {
 	layers := []string{"ambient", "melody", "harmony", "percussion", "intensity"}
-	
+
 	for _, layerName := range layers {
 		volume := composer.GetLayerVolume(layerName)
 		if volume > 0.01 {
@@ -269,34 +269,34 @@ type trackStats struct {
 // analyzeTrack computes statistics for an audio track
 func analyzeTrack(track *audio.AudioSample) trackStats {
 	stats := trackStats{}
-	
+
 	if len(track.Data) == 0 {
 		return stats
 	}
-	
+
 	sum := 0.0
 	for _, sample := range track.Data {
 		abs := sample
 		if abs < 0 {
 			abs = -abs
 		}
-		
+
 		if abs > stats.maxAmplitude {
 			stats.maxAmplitude = abs
 		}
-		
+
 		if abs > 1.0 {
 			stats.hasClipping = true
 		}
-		
+
 		if sample != 0.0 {
 			stats.hasAudio = true
 		}
-		
+
 		sum += abs
 	}
-	
+
 	stats.avgAmplitude = sum / float64(len(track.Data))
-	
+
 	return stats
 }

@@ -318,12 +318,12 @@ func (r *RedemptionArc) GetProgress() float64 {
 	if len(r.RequiredActions) == 0 {
 		return 1.0
 	}
-	
+
 	totalProgress := 0.0
 	for _, action := range r.RequiredActions {
 		totalProgress += action.GetProgress()
 	}
-	
+
 	progress := totalProgress / float64(len(r.RequiredActions))
 	if progress > 1.0 {
 		return 1.0

@@ -1340,37 +1340,40 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 	}
 
 	// Shadow - ellipse at base for depth perception
+	// VISIBILITY FIX: Make shadow larger and more visible
 	template.BodyPartLayout[PartShadow] = PartSpec{
 		RelativeX:      0.5,
 		RelativeY:      0.90,
-		RelativeWidth:  0.50,
-		RelativeHeight: 0.15,
+		RelativeWidth:  0.70, // Increased from 0.50 to 0.70
+		RelativeHeight: 0.20, // Increased from 0.15 to 0.20
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 		ZIndex:         0,
 		ColorRole:      "shadow",
-		Opacity:        0.35,
+		Opacity:        0.50, // Increased from 0.35 to 0.50 for more visible shadow
 		Rotation:       0,
 	}
 
 	// Legs - minimal visibility from top-down, compressed
+	// VISIBILITY FIX: Make legs larger for aerial view
 	template.BodyPartLayout[PartLegs] = PartSpec{
 		RelativeX:      0.5,
-		RelativeY:      0.80,
-		RelativeWidth:  0.35,
-		RelativeHeight: 0.15,
+		RelativeY:      0.75, // Moved up slightly from 0.80
+		RelativeWidth:  0.50, // Increased from 0.35 to 0.50
+		RelativeHeight: 0.25, // Increased from 0.15 to 0.25
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
 		ZIndex:         5,
 		ColorRole:      "primary",
-		Opacity:        0.8,
+		Opacity:        1.0, // Increased from 0.8 to 1.0
 		Rotation:       0,
 	}
 
 	// Torso - wider horizontally, compressed vertically for aerial view
+	// VISIBILITY FIX: Increase torso size to fill more of the sprite bounds
 	template.BodyPartLayout[PartTorso] = PartSpec{
 		RelativeX:      0.5,
 		RelativeY:      0.50,
-		RelativeWidth:  0.60,
-		RelativeHeight: 0.50,
+		RelativeWidth:  0.75, // Increased from 0.60 to 0.75 for better visibility
+		RelativeHeight: 0.65, // Increased from 0.50 to 0.65 for better visibility
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeRectangle},
 		ZIndex:         10,
 		ColorRole:      "primary",
@@ -1382,11 +1385,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 	switch direction {
 	case DirUp:
 		// Facing away - head centered, arms symmetrical
+		// VISIBILITY FIX: Larger head and arms
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.20,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.35,
+			RelativeY:      0.25, // Moved down from 0.20
+			RelativeWidth:  0.45, // Increased from 0.35
+			RelativeHeight: 0.45, // Increased from 0.35
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1395,9 +1399,9 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 		}
 		template.BodyPartLayout[PartArms] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.50,
-			RelativeWidth:  0.70,
-			RelativeHeight: 0.25,
+			RelativeY:      0.55,
+			RelativeWidth:  0.80, // Increased from 0.70
+			RelativeHeight: 0.30, // Increased from 0.25
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
 			ZIndex:         8, // Arms behind torso when facing up
 			ColorRole:      "secondary",
@@ -1407,11 +1411,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirDown:
 		// Facing toward viewer - head centered, arms asymmetric (forward reach)
+		// VISIBILITY FIX: Larger head and arms
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.20,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.35,
+			RelativeY:      0.25, // Moved down from 0.20
+			RelativeWidth:  0.45, // Increased from 0.35
+			RelativeHeight: 0.45, // Increased from 0.35
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1420,9 +1425,9 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 		}
 		template.BodyPartLayout[PartArms] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.52,
-			RelativeWidth:  0.65,
-			RelativeHeight: 0.30,
+			RelativeY:      0.57, // Adjusted from 0.52
+			RelativeWidth:  0.75, // Increased from 0.65
+			RelativeHeight: 0.35, // Increased from 0.30
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
 			ZIndex:         12, // Arms in front of torso when facing down
 			ColorRole:      "secondary",
@@ -1432,11 +1437,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirLeft:
 		// Facing left - head shifted left, left arm visible
+		// VISIBILITY FIX: Larger head and arms
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.42,
-			RelativeY:      0.20,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.35,
+			RelativeY:      0.25, // Moved down from 0.20
+			RelativeWidth:  0.45, // Increased from 0.35
+			RelativeHeight: 0.45, // Increased from 0.35
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1444,10 +1450,10 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 			Rotation:       0,
 		}
 		template.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.35,
-			RelativeY:      0.50,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.28,
+			RelativeX:      0.30, // Moved left from 0.35
+			RelativeY:      0.55, // Adjusted from 0.50
+			RelativeWidth:  0.40, // Increased from 0.35
+			RelativeHeight: 0.33, // Increased from 0.28
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
 			ZIndex:         8,
 			ColorRole:      "secondary",
@@ -1457,11 +1463,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirRight:
 		// Facing right - head shifted right, right arm visible
+		// VISIBILITY FIX: Larger head and arms
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.58,
-			RelativeY:      0.20,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.35,
+			RelativeY:      0.25, // Moved down from 0.20
+			RelativeWidth:  0.45, // Increased from 0.35
+			RelativeHeight: 0.45, // Increased from 0.35
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1469,10 +1476,10 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 			Rotation:       0,
 		}
 		template.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.65,
-			RelativeY:      0.50,
-			RelativeWidth:  0.35,
-			RelativeHeight: 0.28,
+			RelativeX:      0.70, // Moved right from 0.65
+			RelativeY:      0.55, // Adjusted from 0.50
+			RelativeWidth:  0.40, // Increased from 0.35
+			RelativeHeight: 0.33, // Increased from 0.28
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
 			ZIndex:         8,
 			ColorRole:      "secondary",

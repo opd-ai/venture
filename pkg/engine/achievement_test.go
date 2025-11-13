@@ -145,7 +145,7 @@ func TestAchievementSystem_OnComboCompleted_ComboStarter(t *testing.T) {
 
 	entity := world.CreateEntity()
 	world.Update(0) // Process entity addition
-	
+
 	// Add combo component with 1 combo
 	comboComp := &ExpressionComboComponent{
 		TotalCombos: 1,
@@ -175,7 +175,7 @@ func TestAchievementSystem_OnComboCompleted_ComboExpert(t *testing.T) {
 
 	entity := world.CreateEntity()
 	world.Update(0) // Process entity addition
-	
+
 	// Add combo component with 10 combos
 	comboComp := &ExpressionComboComponent{
 		TotalCombos: 10,
@@ -205,7 +205,7 @@ func TestAchievementSystem_OnComboCompleted_ComboLegend(t *testing.T) {
 
 	entity := world.CreateEntity()
 	world.Update(0) // Process entity addition
-	
+
 	// Add combo component with 100 combos
 	comboComp := &ExpressionComboComponent{
 		TotalCombos: 100,
@@ -235,7 +235,7 @@ func TestAchievementSystem_OnComboCompleted_GroupPerformer(t *testing.T) {
 
 	entity := world.CreateEntity()
 	world.Update(0) // Process entity addition
-	
+
 	// Add combo component
 	comboComp := &ExpressionComboComponent{
 		TotalCombos: 1,
@@ -299,11 +299,11 @@ func TestAchievementSystem_NoDoubleUnlock(t *testing.T) {
 	// Use expression twice
 	system.OnExpressionUsed(entity.ID, ExpressionWave)
 	system.OnExpressionUsed(entity.ID, ExpressionCheer)
-	
+
 	// Should only have First Expression once
 	achCompRaw, _ := entity.GetComponent("achievement")
 	achComp := achCompRaw.(*AchievementComponent)
-	
+
 	firstExpCount := 0
 	for _, ach := range achComp.Achievements {
 		if ach.Type == AchievementFirstExpression {

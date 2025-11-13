@@ -482,9 +482,9 @@ func TestComponentSerializer_Expression_InvalidData(t *testing.T) {
 // TestComponentSerializer_Expression_SizeRequirement verifies <50 byte requirement.
 func TestComponentSerializer_Expression_SizeRequirement(t *testing.T) {
 	s := NewComponentSerializer()
-	
+
 	data := s.SerializeExpression(5, 3.0, 1.0)
-	
+
 	if len(data) >= 50 {
 		t.Errorf("Expression serialization = %d bytes, want < 50 bytes", len(data))
 	}
@@ -502,7 +502,7 @@ func BenchmarkSerializeExpression(b *testing.B) {
 func BenchmarkDeserializeExpression(b *testing.B) {
 	s := NewComponentSerializer()
 	data := s.SerializeExpression(2, 3.0, 1.5)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, _, _ = s.DeserializeExpression(data)

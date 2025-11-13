@@ -61,7 +61,7 @@ func TestMiniGameSystem_StartGame(t *testing.T) {
 			world := NewWorld()
 			sys := NewMiniGameSystem(world)
 			entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+			world.Update(0) // Process entity addition
 
 			err := sys.StartGame(entity.ID, tt.gameType, tt.difficulty)
 			if (err != nil) != tt.wantErr {
@@ -121,7 +121,7 @@ func TestMiniGameSystem_Update_TimeElapsed(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	err := sys.StartGame(entity.ID, MiniGameCard, 0.5)
 	if err != nil {
@@ -149,7 +149,7 @@ func TestMiniGameSystem_Update_Timeout(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// Start a lock-picking game (2 minute timeout)
 	err := sys.StartGame(entity.ID, MiniGameLockPicking, 0.5)
@@ -188,7 +188,7 @@ func TestMiniGameSystem_Update_WithGameInstance(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// Start game
 	err := sys.StartGame(entity.ID, MiniGamePuzzle, 0.5)
@@ -249,7 +249,7 @@ func TestMiniGameSystem_Update_WithGameInstanceError(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	err := sys.StartGame(entity.ID, MiniGamePuzzle, 0.5)
 	if err != nil {
@@ -278,12 +278,12 @@ world.Update(0) // Process entity addition
 
 func TestMiniGameSystem_EndGame(t *testing.T) {
 	tests := []struct {
-		name         string
-		success      bool
-		wantGold     int
-		wantXP       int
-		initialGold  int
-		initialXP    int
+		name        string
+		success     bool
+		wantGold    int
+		wantXP      int
+		initialGold int
+		initialXP   int
 	}{
 		{"success awards reward", true, 100, 50, 0, 0},
 		{"failure no reward", false, 0, 0, 0, 0},
@@ -295,7 +295,7 @@ func TestMiniGameSystem_EndGame(t *testing.T) {
 			world := NewWorld()
 			sys := NewMiniGameSystem(world)
 			entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+			world.Update(0) // Process entity addition
 
 			// Add components
 			entity.AddComponent(&InventoryComponent{Gold: tt.initialGold})
@@ -353,7 +353,7 @@ func TestMiniGameSystem_EndGame_NoComponent(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	err := sys.EndGame(entity.ID, true)
 	if err == nil {
@@ -365,7 +365,7 @@ func TestMiniGameSystem_IsGameActive(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// Not active initially
 	if sys.IsGameActive(entity.ID) {
@@ -394,7 +394,7 @@ func TestMiniGameSystem_GetGameComponent(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// No component initially
 	comp := sys.GetGameComponent(entity.ID)
@@ -423,7 +423,7 @@ func TestMiniGameSystem_SetGameInstance(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// Start game
 	sys.StartGame(entity.ID, MiniGamePuzzle, 0.5)
@@ -458,7 +458,7 @@ func TestMiniGameSystem_SetGameInstance_Errors(t *testing.T) {
 
 	// Entity without component
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 	err = sys.SetGameInstance(entity.ID, stub)
 	if err == nil {
 		t.Error("SetGameInstance should fail when entity has no component")
@@ -555,7 +555,7 @@ func TestMiniGameSystem_Update_InactiveGames(t *testing.T) {
 	world := NewWorld()
 	sys := NewMiniGameSystem(world)
 	entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+	world.Update(0) // Process entity addition
 
 	// Start and immediately end game
 	sys.StartGame(entity.ID, MiniGameCard, 0.5)
@@ -639,7 +639,7 @@ func BenchmarkMiniGameSystem_Update(b *testing.B) {
 	// Create 100 active mini-games
 	for i := 0; i < 100; i++ {
 		entity := world.CreateEntity()
-world.Update(0) // Process entity addition
+		world.Update(0) // Process entity addition
 		sys.StartGame(entity.ID, MiniGameCard, 0.5)
 	}
 

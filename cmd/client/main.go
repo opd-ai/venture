@@ -67,6 +67,33 @@ func (w *squadSystemWrapper) Update(entities []*engine.Entity, deltaTime float64
 	w.system.Update(deltaTime)
 }
 
+// reputationSystemWrapper adapts ReputationSystem to System interface
+type reputationSystemWrapper struct {
+	system *engine.ReputationSystem
+}
+
+func (w *reputationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// alignmentSystemWrapper adapts AlignmentSystem to System interface
+type alignmentSystemWrapper struct {
+	system *engine.AlignmentSystem
+}
+
+func (w *alignmentSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// factionReactionSystemWrapper adapts FactionReactionSystem to System interface
+type factionReactionSystemWrapper struct {
+	system *engine.FactionReactionSystem
+}
+
+func (w *factionReactionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 800, "Screen width")
 	height           = flag.Int("height", 600, "Screen height")
@@ -1335,6 +1362,17 @@ func main() {
 	// Manages NPC faction allegiances and player reputation with different groups
 	factionSystem := engine.NewFactionSystem(game.World, logger)
 	game.World.AddSystem(factionSystem)
+
+	// Phase 28: Add reputation and alignment systems for moral choices
+	// Manages player reputation with factions and moral alignment tracking
+	reputationSystem := engine.NewReputationSystem(game.World)
+	game.World.AddSystem(&reputationSystemWrapper{system: reputationSystem})
+
+	alignmentSystem := engine.NewAlignmentSystem(game.World)
+	game.World.AddSystem(&alignmentSystemWrapper{system: alignmentSystem})
+
+	factionReactionSystem := engine.NewFactionReactionSystem(game.World)
+	game.World.AddSystem(&factionReactionSystemWrapper{system: factionReactionSystem})
 
 	// Add skill progression system
 	skillProgressionSystem := engine.NewSkillProgressionSystem()

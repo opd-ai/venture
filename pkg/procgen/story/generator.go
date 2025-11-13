@@ -183,7 +183,7 @@ func (g *FragmentGenerator) getThemesForGenre(genreID string) []string {
 	}
 }
 
-func (g *FragmentGenerator) generateStoryContent(rng *rand.Rand, theme string, genreID string, numFragments int) []string {
+func (g *FragmentGenerator) generateStoryContent(rng *rand.Rand, theme, genreID string, numFragments int) []string {
 	content := make([]string, numFragments)
 
 	// Beginning (first 1/3 of fragments)
@@ -207,7 +207,7 @@ func (g *FragmentGenerator) generateStoryContent(rng *rand.Rand, theme string, g
 	return content
 }
 
-func (g *FragmentGenerator) generateBeginningFragment(rng *rand.Rand, theme string, genreID string, index int) string {
+func (g *FragmentGenerator) generateBeginningFragment(rng *rand.Rand, theme, genreID string, index int) string {
 	templates := []string{
 		"Day %d: We arrived at this place. Everything seems %s.",
 		"Entry %d: The expedition begins. We are %d strong.",
@@ -224,7 +224,7 @@ func (g *FragmentGenerator) generateBeginningFragment(rng *rand.Rand, theme stri
 	return fmt.Sprintf(template, index+1, adjectives[rng.Intn(len(adjectives))], counts[rng.Intn(len(counts))], discoveries[rng.Intn(len(discoveries))])
 }
 
-func (g *FragmentGenerator) generateMiddleFragment(rng *rand.Rand, theme string, genreID string, index int) string {
+func (g *FragmentGenerator) generateMiddleFragment(rng *rand.Rand, theme, genreID string, index int) string {
 	templates := []string{
 		"Day %d: Things are getting worse. We lost %s today.",
 		"Entry %d: The %s is spreading. No one is safe.",
@@ -243,7 +243,7 @@ func (g *FragmentGenerator) generateMiddleFragment(rng *rand.Rand, theme string,
 	return fmt.Sprintf(template, index+5, losses[rng.Intn(len(losses))], threats[rng.Intn(len(threats))], revelations[rng.Intn(len(revelations))], attackers[rng.Intn(len(attackers))], survivors[rng.Intn(len(survivors))])
 }
 
-func (g *FragmentGenerator) generateEndFragment(rng *rand.Rand, theme string, genreID string, index int) string {
+func (g *FragmentGenerator) generateEndFragment(rng *rand.Rand, theme, genreID string, index int) string {
 	templates := []string{
 		"Final entry: If you find this, %s. Don't make our mistakes.",
 		"Last words: We failed to %s. May you succeed where we couldn't.",
@@ -291,7 +291,7 @@ func (g *FragmentGenerator) generateLocation(rng *rand.Rand, index, total int) V
 	return Vector2{X: x, Y: y}
 }
 
-func (g *FragmentGenerator) generateTitle(rng *rand.Rand, theme string, genreID string) string {
+func (g *FragmentGenerator) generateTitle(rng *rand.Rand, theme, genreID string) string {
 	prefixes := []string{"The", "Mystery of", "Tale of", "Legend of", "Story of"}
 	suffixes := g.getTitleSuffixes(genreID)
 

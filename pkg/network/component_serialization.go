@@ -193,3 +193,129 @@ func (s *ComponentSerializer) DeserializeExpression(data []byte) (expressionType
 	cooldown = math.Float64frombits(binary.LittleEndian.Uint64(data[9:17]))
 	return expressionType, expressionTime, cooldown, nil
 }
+
+// SerializeVehicle serializes a vehicle component (V4.0).
+// Format: 1 byte VehicleType, 8 bytes Speed, 8 bytes MaxSpeed, 8 bytes Durability, 8 bytes FuelAmount, 1 byte Occupied.
+// Total: 34 bytes.
+func (s *ComponentSerializer) SerializeVehicle(vehicleType uint8, speed, maxSpeed, durability, fuelAmount float64, occupied bool) []byte {
+	buf := make([]byte, 34)
+	buf[0] = vehicleType
+	binary.LittleEndian.PutUint64(buf[1:9], math.Float64bits(speed))
+	binary.LittleEndian.PutUint64(buf[9:17], math.Float64bits(maxSpeed))
+	binary.LittleEndian.PutUint64(buf[17:25], math.Float64bits(durability))
+	binary.LittleEndian.PutUint64(buf[25:33], math.Float64bits(fuelAmount))
+	if occupied {
+		buf[33] = 1
+	} else {
+		buf[33] = 0
+	}
+	return buf
+}
+
+// DeserializeVehicle deserializes a vehicle component (V4.0).
+func (s *ComponentSerializer) DeserializeVehicle(data []byte) (vehicleType uint8, speed, maxSpeed, durability, fuelAmount float64, occupied bool, err error) {
+	if len(data) != 34 {
+		return 0, 0, 0, 0, 0, false, fmt.Errorf("invalid vehicle data length: %d (expected 34)", len(data))
+	}
+	vehicleType = data[0]
+	speed = math.Float64frombits(binary.LittleEndian.Uint64(data[1:9]))
+	maxSpeed = math.Float64frombits(binary.LittleEndian.Uint64(data[9:17]))
+	durability = math.Float64frombits(binary.LittleEndian.Uint64(data[17:25]))
+	fuelAmount = math.Float64frombits(binary.LittleEndian.Uint64(data[25:33]))
+	occupied = data[33] == 1
+	return vehicleType, speed, maxSpeed, durability, fuelAmount, occupied, nil
+}
+
+// SerializeCompanion serializes a companion component (V4.0).
+// Format: 8 bytes OwnerID, 1 byte CompanionType, 8 bytes Loyalty, 4 bytes Level, 1 byte Behavior.
+// Total: 22 bytes.
+func (s *ComponentSerializer) SerializeCompanion(ownerID uint64, companionType uint8, loyalty float64, level uint32, behavior uint8) []byte {
+	buf := make([]byte, 22)
+	binary.LittleEndian.PutUint64(buf[0:8], ownerID)
+	buf[8] = companionType
+	binary.LittleEndian.PutUint64(buf[9:17], math.Float64bits(loyalty))
+	binary.LittleEndian.PutUint32(buf[17:21], level)
+	buf[21] = behavior
+	return buf
+}
+
+// DeserializeCompanion deserializes a companion component (V4.0).
+func (s *ComponentSerializer) DeserializeCompanion(data []byte) (ownerID uint64, companionType uint8, loyalty float64, level uint32, behavior uint8, err error) {
+	if len(data) != 22 {
+		return 0, 0, 0, 0, 0, fmt.Errorf("invalid companion data length: %d (expected 22)", len(data))
+	}
+	ownerID = binary.LittleEndian.Uint64(data[0:8])
+	companionType = data[8]
+	loyalty = math.Float64frombits(binary.LittleEndian.Uint64(data[9:17]))
+	level = binary.LittleEndian.Uint32(data[17:21])
+	behavior = data[21]
+	return ownerID, companionType, loyalty, level, behavior, nil
+}
+
+// SerializeMount serializes a mount component (V4.0).
+// Format: 8 bytes MountedEntityID, 8 bytes MountTime, 8 bytes Stamina.
+// Total: 24 bytes.
+func (s *ComponentSerializer) SerializeMount(mountedEntityID uint64, mountTime, stamina float64) []byte {
+	buf := make([]byte, 24)
+	binary.LittleEndian.PutUint64(buf[0:8], mountedEntityID)
+	binary.LittleEndian.PutUint64(buf[8:16], math.Float64bits(mountTime))
+	binary.LittleEndian.PutUint64(buf[16:24], math.Float64bits(stamina))
+	return buf
+}
+
+// DeserializeMount deserializes a mount component (V4.0).
+func (s *ComponentSerializer) DeserializeMount(data []byte) (mountedEntityID uint64, mountTime, stamina float64, err error) {
+	if len(data) != 24 {
+		return 0, 0, 0, fmt.Errorf("invalid mount data length: %d (expected 24)", len(data))
+	}
+	mountedEntityID = binary.LittleEndian.Uint64(data[0:8])
+	mountTime = math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
+	stamina = math.Float64frombits(binary.LittleEndian.Uint64(data[16:24]))
+	return mountedEntityID, mountTime, stamina, nil
+}
+
+// SerializeMiniGame serializes a mini-game component (V4.0).
+// Format: 1 byte GameType, 1 byte State, 4 bytes Score, 4 bytes HighScore, 8 bytes TimeRemaining.
+// Total: 18 bytes.
+func (s *ComponentSerializer) SerializeMiniGame(gameType, state uint8, score, highScore uint32, timeRemaining float64) []byte {
+	buf := make([]byte, 18)
+	buf[0] = gameType
+	buf[1] = state
+	binary.LittleEndian.PutUint32(buf[2:6], score)
+	binary.LittleEndian.PutUint32(buf[6:10], highScore)
+	binary.LittleEndian.PutUint64(buf[10:18], math.Float64bits(timeRemaining))
+	return buf
+}
+
+// DeserializeMiniGame deserializes a mini-game component (V4.0).
+func (s *ComponentSerializer) DeserializeMiniGame(data []byte) (gameType, state uint8, score, highScore uint32, timeRemaining float64, err error) {
+	if len(data) != 18 {
+		return 0, 0, 0, 0, 0, fmt.Errorf("invalid mini-game data length: %d (expected 18)", len(data))
+	}
+	gameType = data[0]
+	state = data[1]
+	score = binary.LittleEndian.Uint32(data[2:6])
+	highScore = binary.LittleEndian.Uint32(data[6:10])
+	timeRemaining = math.Float64frombits(binary.LittleEndian.Uint64(data[10:18]))
+	return gameType, state, score, highScore, timeRemaining, nil
+}
+
+// SerializeAchievement serializes an achievement component (V4.0).
+// Format: 4 bytes UnlockedCount, 4 bytes TotalPoints.
+// Total: 8 bytes.
+func (s *ComponentSerializer) SerializeAchievement(unlockedCount, totalPoints uint32) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint32(buf[0:4], unlockedCount)
+	binary.LittleEndian.PutUint32(buf[4:8], totalPoints)
+	return buf
+}
+
+// DeserializeAchievement deserializes an achievement component (V4.0).
+func (s *ComponentSerializer) DeserializeAchievement(data []byte) (unlockedCount, totalPoints uint32, err error) {
+	if len(data) != 8 {
+		return 0, 0, fmt.Errorf("invalid achievement data length: %d (expected 8)", len(data))
+	}
+	unlockedCount = binary.LittleEndian.Uint32(data[0:4])
+	totalPoints = binary.LittleEndian.Uint32(data[4:8])
+	return unlockedCount, totalPoints, nil
+}

@@ -1340,40 +1340,40 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 	}
 
 	// Shadow - ellipse at base for depth perception
-	// VISIBILITY FIX: Make shadow larger and more visible
+	// Phase 15.1: Shadow for aerial view with proper opacity
 	template.BodyPartLayout[PartShadow] = PartSpec{
 		RelativeX:      0.5,
 		RelativeY:      0.90,
-		RelativeWidth:  0.70, // Increased from 0.50 to 0.70
-		RelativeHeight: 0.20, // Increased from 0.15 to 0.20
+		RelativeWidth:  0.70,
+		RelativeHeight: 0.20,
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 		ZIndex:         0,
 		ColorRole:      "shadow",
-		Opacity:        0.50, // Increased from 0.35 to 0.50 for more visible shadow
+		Opacity:        0.40, // Phase 15.1: Within valid range [0.15, 0.45]
 		Rotation:       0,
 	}
 
 	// Legs - minimal visibility from top-down, compressed
-	// VISIBILITY FIX: Make legs larger for aerial view
+	// Phase 15.1: Aerial view proportions - legs 15% (±2%)
 	template.BodyPartLayout[PartLegs] = PartSpec{
 		RelativeX:      0.5,
-		RelativeY:      0.75, // Moved up slightly from 0.80
-		RelativeWidth:  0.50, // Increased from 0.35 to 0.50
-		RelativeHeight: 0.25, // Increased from 0.15 to 0.25
+		RelativeY:      0.825, // Positioned at bottom (15% height)
+		RelativeWidth:  0.50,
+		RelativeHeight: 0.15, // Phase 15.1: 15% for aerial view
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
 		ZIndex:         5,
 		ColorRole:      "primary",
-		Opacity:        1.0, // Increased from 0.8 to 1.0
+		Opacity:        1.0,
 		Rotation:       0,
 	}
 
 	// Torso - wider horizontally, compressed vertically for aerial view
-	// VISIBILITY FIX: Increase torso size to fill more of the sprite bounds
+	// Phase 15.1: Aerial view proportions - torso 50% (±3%)
 	template.BodyPartLayout[PartTorso] = PartSpec{
 		RelativeX:      0.5,
-		RelativeY:      0.50,
-		RelativeWidth:  0.75, // Increased from 0.60 to 0.75 for better visibility
-		RelativeHeight: 0.65, // Increased from 0.50 to 0.65 for better visibility
+		RelativeY:      0.50, // Centered vertically
+		RelativeWidth:  0.75,
+		RelativeHeight: 0.50, // Phase 15.1: 50% for aerial view
 		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeRectangle},
 		ZIndex:         10,
 		ColorRole:      "primary",
@@ -1385,12 +1385,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 	switch direction {
 	case DirUp:
 		// Facing away - head centered, arms symmetrical
-		// VISIBILITY FIX: Larger head and arms
+		// Phase 15.1: Aerial view proportions - head 35% (±2%)
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.25, // Moved down from 0.20
-			RelativeWidth:  0.45, // Increased from 0.35
-			RelativeHeight: 0.45, // Increased from 0.35
+			RelativeY:      0.175, // Positioned for 35% height
+			RelativeWidth:  0.45,
+			RelativeHeight: 0.35, // Phase 15.1: 35% for aerial view
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1411,12 +1411,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirDown:
 		// Facing toward viewer - head centered, arms asymmetric (forward reach)
-		// VISIBILITY FIX: Larger head and arms
+		// Phase 15.1: Aerial view proportions - head 35% (±2%)
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.5,
-			RelativeY:      0.25, // Moved down from 0.20
-			RelativeWidth:  0.45, // Increased from 0.35
-			RelativeHeight: 0.45, // Increased from 0.35
+			RelativeY:      0.175, // Positioned for 35% height
+			RelativeWidth:  0.45,
+			RelativeHeight: 0.35, // Phase 15.1: 35% for aerial view
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1437,12 +1437,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirLeft:
 		// Facing left - head shifted left, left arm visible
-		// VISIBILITY FIX: Larger head and arms
+		// Phase 15.1: Aerial view proportions - head 35% (±2%)
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.42,
-			RelativeY:      0.25, // Moved down from 0.20
-			RelativeWidth:  0.45, // Increased from 0.35
-			RelativeHeight: 0.45, // Increased from 0.35
+			RelativeY:      0.175, // Positioned for 35% height
+			RelativeWidth:  0.45,
+			RelativeHeight: 0.35, // Phase 15.1: 35% for aerial view
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",
@@ -1463,12 +1463,12 @@ func HumanoidAerialTemplate(direction Direction) AnatomicalTemplate {
 
 	case DirRight:
 		// Facing right - head shifted right, right arm visible
-		// VISIBILITY FIX: Larger head and arms
+		// Phase 15.1: Aerial view proportions - head 35% (±2%)
 		template.BodyPartLayout[PartHead] = PartSpec{
 			RelativeX:      0.58,
-			RelativeY:      0.25, // Moved down from 0.20
-			RelativeWidth:  0.45, // Increased from 0.35
-			RelativeHeight: 0.45, // Increased from 0.35
+			RelativeY:      0.175, // Positioned for 35% height
+			RelativeWidth:  0.45,
+			RelativeHeight: 0.35, // Phase 15.1: 35% for aerial view
 			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 			ZIndex:         15,
 			ColorRole:      "secondary",

@@ -89,6 +89,80 @@ func (w *factionReactionSystemWrapper) Update(entities []*engine.Entity, deltaTi
 	w.system.Update(deltaTime)
 }
 
+// V4.0 System Wrappers (Phase 21-27)
+
+// companionAISystemWrapper adapts CompanionAISystem to System interface
+type companionAISystemWrapper struct {
+	system *engine.CompanionAISystem
+}
+
+func (w *companionAISystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// companionProgressionSystemWrapper adapts CompanionProgressionSystem to System interface
+type companionProgressionSystemWrapper struct {
+	system *engine.CompanionProgressionSystem
+}
+
+func (w *companionProgressionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// companionLoyaltySystemWrapper adapts CompanionLoyaltySystem to System interface
+type companionLoyaltySystemWrapper struct {
+	system *engine.CompanionLoyaltySystem
+}
+
+func (w *companionLoyaltySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// companionInventorySystemWrapper adapts CompanionInventorySystem to System interface
+type companionInventorySystemWrapper struct {
+	system *engine.CompanionInventorySystem
+}
+
+func (w *companionInventorySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// skillInheritanceSystemWrapper adapts SkillInheritanceSystem to System interface
+type skillInheritanceSystemWrapper struct {
+	system *engine.SkillInheritanceSystem
+}
+
+func (w *skillInheritanceSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// expressionSystemWrapper adapts ExpressionSystem to System interface
+type expressionSystemWrapper struct {
+	system *engine.ExpressionSystem
+}
+
+func (w *expressionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// expressionComboSystemWrapper adapts ExpressionComboSystem to System interface
+type expressionComboSystemWrapper struct {
+	system *engine.ExpressionComboSystem
+}
+
+func (w *expressionComboSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// miniGameSystemWrapper adapts MiniGameSystem to System interface
+type miniGameSystemWrapper struct {
+	system *engine.MiniGameSystem
+}
+
+func (w *miniGameSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 800, "Screen width")
 	height           = flag.Int("height", 600, "Screen height")

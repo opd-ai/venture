@@ -70,6 +70,9 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// CRITICAL: Initialize environmental systems BEFORE registering them
 	initializeEnvironmentalSystems(game, sys, clientLogger)
 
+	// CRITICAL: Initialize V4.0 systems (Phase 21-27) BEFORE registering them
+	initializeV4Systems(game, sys, clientLogger)
+
 	// Now register all systems (including environmental systems that are now initialized)
 	registerAllSystems(game, sys)
 

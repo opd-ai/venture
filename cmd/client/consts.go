@@ -67,6 +67,7 @@ const (
 	seedOffsetWeather         = 3000 // offset for weather generation
 	seedOffsetFirePropagation = 1090 // offset for fire propagation system
 	seedOffsetDestructible    = 1100 // offset for destructible object system
+	seedOffsetSpellEffects    = 1200 // offset for spell effect system (V4.0)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

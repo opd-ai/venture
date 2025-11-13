@@ -75,6 +75,23 @@ type systemsContainer struct {
 	itemGen                *item.ItemGenerator
 	recipeGen              *recipe.RecipeGenerator
 	statusEffectRNG        *rand.Rand
+	// V4.0 Systems (Phase 21-27)
+	vehicleMovementSys      *engine.VehicleMovementSystem
+	vehicleDurabilitySys    *engine.VehicleDurabilitySystem
+	mountingSystem          *engine.MountingSystem
+	vehicleCombatSystem     *engine.VehicleCombatSystem
+	companionAISystem       *engine.CompanionAISystem
+	companionProgressionSys *engine.CompanionProgressionSystem
+	companionLoyaltySys     *engine.CompanionLoyaltySystem
+	companionInventorySys   *engine.CompanionInventorySystem
+	skillInheritanceSys     *engine.SkillInheritanceSystem
+	bookReadingSystem       *engine.BookReadingSystem
+	spellEffectSystem       *engine.SpellEffectSystem
+	spellCombinationSys     *engine.SpellCombinationSystem
+	classProgressionSys     *engine.ClassProgressionSystem
+	expressionSystem        *engine.ExpressionSystem
+	expressionComboSys      *engine.ExpressionComboSystem
+	miniGameSystem          *engine.MiniGameSystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -195,6 +212,44 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.shadowSystem = engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
 }
 
+// initializeV4Systems initializes Version 4.0 systems (Phase 21-27).
+func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 21: Vehicle systems
+	sys.vehicleMovementSys = engine.NewVehicleMovementSystem(game.World)
+	sys.vehicleDurabilitySys = engine.NewVehicleDurabilitySystem(game.World)
+	sys.mountingSystem = engine.NewMountingSystem(game.World)
+	sys.vehicleCombatSystem = engine.NewVehicleCombatSystem(game.World)
+
+	// Phase 22: Companion systems
+	sys.companionAISystem = engine.NewCompanionAISystem(game.World)
+	sys.companionProgressionSys = engine.NewCompanionProgressionSystem(game.World)
+	sys.companionLoyaltySys = engine.NewCompanionLoyaltySystem(game.World, clientLogger.Logger)
+	sys.companionInventorySys = engine.NewCompanionInventorySystem(game.World)
+	sys.skillInheritanceSys = engine.NewSkillInheritanceSystem(game.World)
+
+	// Phase 23: Book system
+	sys.bookReadingSystem = engine.NewBookReadingSystem(game.World)
+
+	// Phase 24: Expanded magic systems (reuse statusEffectRNG for consistency)
+	spellRNG := rand.New(rand.NewSource(*seed + seedOffsetSpellEffects))
+	sys.spellEffectSystem = engine.NewSpellEffectSystem(game.World, spellRNG)
+	sys.spellCombinationSys = engine.NewSpellCombinationSystem(game.World, spellRNG)
+
+	// Phase 25: Class progression system
+	sys.classProgressionSys = engine.NewClassProgressionSystem()
+
+	// Phase 26: Expression systems (requires audio manager)
+	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
+	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)
+
+	// Phase 27: Mini-game system
+	sys.miniGameSystem = engine.NewMiniGameSystem(game.World)
+
+	if *verbose {
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games)")
+	}
+}
+
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inputSystem)
@@ -273,6 +328,37 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.hazardSystem)
 	game.World.AddSystem(sys.narrativeSystem)
 	game.World.AddSystem(sys.shadowSystem)
+
+	// V4.0 System Registrations (Phase 21-27)
+	// Phase 21: Vehicle systems
+	game.World.AddSystem(sys.vehicleMovementSys)
+	game.World.AddSystem(sys.vehicleDurabilitySys)
+	game.World.AddSystem(sys.mountingSystem)
+	game.World.AddSystem(sys.vehicleCombatSystem)
+
+	// Phase 22: Companion systems (use wrappers for incompatible signatures)
+	game.World.AddSystem(&companionAISystemWrapper{system: sys.companionAISystem})
+	game.World.AddSystem(&companionProgressionSystemWrapper{system: sys.companionProgressionSys})
+	game.World.AddSystem(&companionLoyaltySystemWrapper{system: sys.companionLoyaltySys})
+	game.World.AddSystem(&companionInventorySystemWrapper{system: sys.companionInventorySys})
+	game.World.AddSystem(&skillInheritanceSystemWrapper{system: sys.skillInheritanceSys})
+
+	// Phase 23: Book system
+	game.World.AddSystem(sys.bookReadingSystem)
+
+	// Phase 24: Expanded magic systems
+	game.World.AddSystem(sys.spellEffectSystem)
+	game.World.AddSystem(sys.spellCombinationSys)
+
+	// Phase 25: Class progression
+	game.World.AddSystem(sys.classProgressionSys)
+
+	// Phase 26: Expression systems (use wrappers)
+	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})
+	game.World.AddSystem(&expressionComboSystemWrapper{system: sys.expressionComboSys})
+
+	// Phase 27: Mini-game system (use wrapper)
+	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
 }
 
 // configureSystemConnections wires up interdependent systems.

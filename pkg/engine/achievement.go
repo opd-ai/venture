@@ -9,14 +9,14 @@ type AchievementType int
 
 const (
 	// Expression-related achievements
-	AchievementFirstExpression AchievementType = iota
-	AchievementExpressionMaster                // Use all 12 expressions
-	AchievementComboStarter                    // Start first combo
-	AchievementComboExpert                     // Participate in 10 combos
-	AchievementComboLegend                     // Participate in 100 combos
-	AchievementSocialButterfly                 // Use 50 different expressions
-	AchievementRareExpression                  // Use a rare expression variant
-	AchievementGroupPerformer                  // Combo with 5+ people
+	AchievementFirstExpression  AchievementType = iota
+	AchievementExpressionMaster                 // Use all 12 expressions
+	AchievementComboStarter                     // Start first combo
+	AchievementComboExpert                      // Participate in 10 combos
+	AchievementComboLegend                      // Participate in 100 combos
+	AchievementSocialButterfly                  // Use 50 different expressions
+	AchievementRareExpression                   // Use a rare expression variant
+	AchievementGroupPerformer                   // Combo with 5+ people
 )
 
 // String returns the achievement name
@@ -47,7 +47,7 @@ type Achievement struct {
 // AchievementComponent tracks unlocked achievements for an entity
 type AchievementComponent struct {
 	Achievements     []Achievement
-	ExpressionCount  int // Total expressions performed
+	ExpressionCount  int                    // Total expressions performed
 	UniqueExpression map[ExpressionType]int // Count per expression type
 }
 

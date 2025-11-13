@@ -20,7 +20,7 @@ type EmoteASCII struct {
 // Uses seed for deterministic generation so same seed produces same art.
 func GenerateASCIIEmote(expressionType ExpressionType, seed int64) *EmoteASCII {
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	switch expressionType {
 	case ExpressionWave:
 		return generateWaveEmote(rng)

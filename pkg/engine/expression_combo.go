@@ -68,7 +68,7 @@ type ComboRecord struct {
 // Detects when multiple entities perform the same expression within a time window
 // and creates combo bonuses/achievements.
 type ExpressionComboSystem struct {
-	world       *World
+	world         *World
 	pendingCombos map[ExpressionType]*ExpressionCombo
 	comboWindow   float64 // Time window for joining a combo (seconds)
 	currentTime   float64 // Tracks game time for combo timing
@@ -90,7 +90,7 @@ func (s *ExpressionComboSystem) Update(deltaTime float64) {
 
 	// Check for new expressions that could start or join combos
 	entities := s.world.GetEntitiesWith("expression")
-	
+
 	for _, entity := range entities {
 		expCompRaw, ok := entity.GetComponent("expression")
 		if !ok {
@@ -124,7 +124,7 @@ func (s *ExpressionComboSystem) Update(deltaTime float64) {
 func (s *ExpressionComboSystem) checkForComboJoin(entityID uint64, expressionType ExpressionType, currentTime float64) {
 	// Get or create pending combo for this expression type
 	combo, exists := s.pendingCombos[expressionType]
-	
+
 	if !exists {
 		// Create new pending combo
 		combo = &ExpressionCombo{
@@ -150,7 +150,7 @@ func (s *ExpressionComboSystem) checkForComboJoin(entityID uint64, expressionTyp
 	if currentTime-combo.StartTime <= combo.SyncWindow {
 		// Add to combo
 		combo.ParticipantIDs = append(combo.ParticipantIDs, entityID)
-		
+
 		// Activate combo if we have 2+ participants
 		if len(combo.ParticipantIDs) >= 2 && !combo.Active {
 			combo.Active = true
@@ -183,7 +183,7 @@ func (s *ExpressionComboSystem) finalizeCombo(combo *ExpressionCombo) {
 		// Get or create combo component
 		comboCompRaw, ok := entity.GetComponent("expressioncombo")
 		var comboComp *ExpressionComboComponent
-		
+
 		if !ok {
 			comboComp = &ExpressionComboComponent{
 				ComboHistory: []ComboRecord{},
@@ -215,7 +215,7 @@ func (s *ExpressionComboSystem) notifyComboStart(combo *ExpressionCombo) {
 		// Get or create combo component
 		comboCompRaw, ok := entity.GetComponent("expressioncombo")
 		var comboComp *ExpressionComboComponent
-		
+
 		if !ok {
 			comboComp = &ExpressionComboComponent{
 				ComboHistory: []ComboRecord{},

@@ -68,6 +68,9 @@ const (
 	seedOffsetFirePropagation = 1090 // offset for fire propagation system
 	seedOffsetDestructible    = 1100 // offset for destructible object system
 	seedOffsetSpellEffects    = 1200 // offset for spell effect system (V4.0)
+	seedOffsetVehicle         = 4000 // offset for vehicle generation (V4.0)
+	seedOffsetCompanion       = 5000 // offset for companion generation (V4.0)
+	seedOffsetBook            = 6000 // offset for book/bookshelf generation (V4.0)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

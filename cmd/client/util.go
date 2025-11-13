@@ -20,10 +20,13 @@ import (
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/book"
+	"github.com/opd-ai/venture/pkg/procgen/companion"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/version"
@@ -1431,5 +1434,405 @@ func loadGameSave(player *engine.Entity, gameSave *saveload.GameSave, game *engi
 	// Restore fog of war
 	if game.MapUI != nil && gameSave.WorldState != nil && gameSave.WorldState.FogOfWar != nil {
 		game.MapUI.SetFogOfWar(gameSave.WorldState.FogOfWar)
+	}
+}
+
+// spawnVehicles generates and spawns vehicles in terrain rooms (V4.0).
+func spawnVehicles(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	// Import vehicle generator
+	vehicleGen := vehicle.NewVehicleGenerator()
+
+	// Determine number of vehicles based on room count (2-5 vehicles per level)
+	roomCount := len(terrainMap.Rooms)
+	if roomCount < 2 {
+		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+	}
+
+	vehicleCount := 2 + (roomCount-2)/4 // Start with 2, +1 per 4 additional rooms
+	if vehicleCount > 5 {
+		vehicleCount = 5 // Cap at 5 vehicles
+	}
+
+	// Generate vehicles
+	vehicleResult, err := vehicleGen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate vehicles: %w", err)
+	}
+
+	vehicles, ok := vehicleResult.([]*vehicle.Vehicle)
+	if !ok || len(vehicles) == 0 {
+		return 0, fmt.Errorf("vehicle generator returned invalid result")
+	}
+
+	// Limit to vehicleCount
+	if len(vehicles) > vehicleCount {
+		vehicles = vehicles[:vehicleCount]
+	}
+
+	// Convert vehicles to VehicleSpawnData
+	vehicleSpawnData := make([]engine.VehicleSpawnData, len(vehicles))
+	for i, v := range vehicles {
+		// Convert vehicle.VehicleType to engine.VehicleType
+		var engineType engine.VehicleType
+		switch v.VehicleType {
+		case vehicle.TypeMount:
+			engineType = engine.VehicleMount
+		case vehicle.TypeCart:
+			engineType = engine.VehicleCart
+		case vehicle.TypeBoat:
+			engineType = engine.VehicleBoat
+		case vehicle.TypeGlider:
+			engineType = engine.VehicleGlider
+		case vehicle.TypeMech:
+			engineType = engine.VehicleMech
+		}
+
+		// Convert uint32 color to color.RGBA
+		r := uint8((v.Color >> 16) & 0xFF)
+		g := uint8((v.Color >> 8) & 0xFF)
+		b := uint8(v.Color & 0xFF)
+		colorRGBA := color.RGBA{R: r, G: g, B: b, A: 255}
+
+		// Determine sprite size based on vehicle type
+		var size int
+		var colliderSize float64
+		switch v.VehicleType {
+		case vehicle.TypeMount:
+			size = 32
+			colliderSize = 28.0
+		case vehicle.TypeCart:
+			size = 40
+			colliderSize = 36.0
+		case vehicle.TypeBoat:
+			size = 48
+			colliderSize = 44.0
+		case vehicle.TypeGlider:
+			size = 36
+			colliderSize = 32.0
+		case vehicle.TypeMech:
+			size = 44
+			colliderSize = 40.0
+		default:
+			size = 32
+			colliderSize = 28.0
+		}
+
+		vehicleSpawnData[i] = engine.VehicleSpawnData{
+			Name:         v.Name,
+			VehicleType:  engineType,
+			Components:   v.ToComponents(), // Generate components from vehicle
+			Color:        colorRGBA,
+			Size:         size,
+			ColliderSize: colliderSize,
+		}
+	}
+
+	// Spawn vehicles in terrain
+	spawned, err := engine.SpawnVehiclesInTerrain(world, terrainMap, vehicleSpawnData, seed)
+	if err != nil {
+		return 0, fmt.Errorf("failed to spawn vehicles in terrain: %w", err)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"requested": vehicleCount,
+		"generated": len(vehicles),
+		"spawned":   spawned,
+	}).Debug("vehicle spawning complete")
+
+	return spawned, nil
+}
+
+// spawnCompanions generates and spawns companions in terrain rooms (V4.0).
+func spawnCompanions(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	// Import companion generator
+	companionGen := companion.NewGenerator()
+
+	// Determine number of companions based on room count (1-3 companions per level)
+	roomCount := len(terrainMap.Rooms)
+	if roomCount < 2 {
+		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+	}
+
+	companionCount := 1 + (roomCount-2)/5 // Start with 1, +1 per 5 additional rooms
+	if companionCount > 3 {
+		companionCount = 3 // Cap at 3 companions
+	}
+
+	// Generate companions
+	companionSpawnData := make([]engine.CompanionSpawnData, 0, companionCount)
+	for i := 0; i < companionCount; i++ {
+		companionSeed := seed + int64(i*1000) // Unique seed per companion
+
+		companionResult, err := companionGen.Generate(companionSeed, params)
+		if err != nil {
+			logger.WithError(err).Warn("failed to generate companion")
+			continue
+		}
+
+		comp, ok := companionResult.(*companion.Companion)
+		if !ok {
+			logger.Warn("companion generator returned invalid result")
+			continue
+		}
+
+		// Convert companion.Type (engine.CompanionType) to spawn data
+		// Generate color based on companion type and genre
+		companionColor := generateCompanionColor(comp.Type, params.GenreID, companionSeed)
+
+		// Determine sprite size based on companion type
+		var size int
+		var colliderSize float64
+		switch comp.Type {
+		case engine.CompanionTypePet:
+			size = 24
+			colliderSize = 20.0
+		case engine.CompanionTypeSummon:
+			size = 28
+			colliderSize = 24.0
+		case engine.CompanionTypeHireling:
+			size = 28
+			colliderSize = 24.0
+		case engine.CompanionTypeElemental:
+			size = 32
+			colliderSize = 28.0
+		case engine.CompanionTypeUndead:
+			size = 30
+			colliderSize = 26.0
+		case engine.CompanionTypeRobot:
+			size = 30
+			colliderSize = 26.0
+		case engine.CompanionTypeSpirit:
+			size = 26
+			colliderSize = 22.0
+		case engine.CompanionTypeInsect:
+			size = 22
+			colliderSize = 18.0
+		default:
+			size = 28
+			colliderSize = 24.0
+		}
+
+		companionSpawnData = append(companionSpawnData, engine.CompanionSpawnData{
+			Name:          comp.Name,
+			CompanionType: comp.Type,
+			Level:         comp.Level,
+			Attack:        comp.Attack,
+			Defense:       comp.Defense,
+			Speed:         comp.Speed,
+			HP:            comp.HP,
+			MaxHP:         comp.MaxHP,
+			Loyalty:       comp.Loyalty,
+			Commands:      comp.Commands,
+			Color:         companionColor,
+			Size:          size,
+			ColliderSize:  colliderSize,
+		})
+	}
+
+	if len(companionSpawnData) == 0 {
+		return 0, nil // No companions generated
+	}
+
+	// Spawn companions in terrain
+	spawned, err := engine.SpawnCompanionsInTerrain(world, terrainMap, companionSpawnData, seed)
+	if err != nil {
+		return 0, fmt.Errorf("failed to spawn companions in terrain: %w", err)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"requested": companionCount,
+		"generated": len(companionSpawnData),
+		"spawned":   spawned,
+	}).Debug("companion spawning complete")
+
+	return spawned, nil
+}
+
+// generateCompanionColor generates a color for a companion based on type and genre.
+func generateCompanionColor(companionType engine.CompanionType, genreID string, seed int64) color.RGBA {
+	rng := rand.New(rand.NewSource(seed))
+
+	// Base colors per companion type
+	var baseR, baseG, baseB uint8
+	switch companionType {
+	case engine.CompanionTypePet:
+		baseR, baseG, baseB = 180, 140, 100 // Brown tones
+	case engine.CompanionTypeSummon:
+		baseR, baseG, baseB = 120, 100, 200 // Purple/magical
+	case engine.CompanionTypeHireling:
+		baseR, baseG, baseB = 160, 160, 140 // Earthy/armor tones
+	case engine.CompanionTypeElemental:
+		baseR, baseG, baseB = 100, 180, 220 // Elemental blue
+	case engine.CompanionTypeUndead:
+		baseR, baseG, baseB = 140, 160, 140 // Pale/decayed
+	case engine.CompanionTypeRobot:
+		baseR, baseG, baseB = 180, 180, 200 // Metallic
+	case engine.CompanionTypeSpirit:
+		baseR, baseG, baseB = 200, 200, 240 // Ethereal white/blue
+	case engine.CompanionTypeInsect:
+		baseR, baseG, baseB = 100, 160, 80 // Green/chitinous
+	default:
+		baseR, baseG, baseB = 150, 150, 150 // Gray default
+	}
+
+	// Add genre-based color variation
+	genreVariation := func(base uint8, variance int) uint8 {
+		offset := rng.Intn(variance*2+1) - variance
+		result := int(base) + offset
+		if result < 0 {
+			result = 0
+		}
+		if result > 255 {
+			result = 255
+		}
+		return uint8(result)
+	}
+
+	return color.RGBA{
+		R: genreVariation(baseR, 30),
+		G: genreVariation(baseG, 30),
+		B: genreVariation(baseB, 30),
+		A: 255,
+	}
+}
+
+// spawnBookshelves generates and spawns bookshelves with books in terrain rooms (V4.0).
+func spawnBookshelves(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	bookGen := book.NewGenerator()
+
+	// Determine number of bookshelves based on room count (1-2 bookshelves per level)
+	roomCount := len(terrainMap.Rooms)
+	if roomCount < 2 {
+		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+	}
+
+	bookshelfCount := 1
+	if roomCount >= 8 {
+		bookshelfCount = 2 // 2 bookshelves for larger dungeons
+	}
+
+	// Generate bookshelves with books
+	bookshelfSpawnData := make([]engine.BookshelfSpawnData, 0, bookshelfCount)
+	for i := 0; i < bookshelfCount; i++ {
+		bookshelfSeed := seed + int64(i*10000) // Unique seed per bookshelf
+
+		// Generate 3-8 books per bookshelf
+		booksPerShelf := 3 + (i % 6) // Varies between 3-8
+		books := make([]*engine.BookComponent, 0, booksPerShelf)
+
+		for j := 0; j < booksPerShelf; j++ {
+			bookSeed := bookshelfSeed + int64(j*100)
+
+			// Randomly select book type
+			bookTypes := []engine.BookType{
+				engine.BookTypeSkill,
+				engine.BookTypeLore,
+				engine.BookTypeRecipe,
+				engine.BookTypeHistory,
+			}
+			rng := rand.New(rand.NewSource(bookSeed))
+			bookType := bookTypes[rng.Intn(len(bookTypes))]
+
+			// Generate book
+			bookParams := params
+			bookParams.Custom = map[string]interface{}{
+				"book_type": bookType,
+			}
+
+			// Add skill-specific params for skill books
+			if bookType == engine.BookTypeSkill {
+				skills := []string{"Combat", "Magic", "Crafting", "Stealth", "Survival"}
+				bookParams.Custom["skill_name"] = skills[rng.Intn(len(skills))]
+				bookParams.Custom["skill_bonus"] = float64(params.Depth) * 0.1
+			}
+
+			bookResult, err := bookGen.Generate(bookSeed, bookParams)
+			if err != nil {
+				logger.WithError(err).Warn("failed to generate book")
+				continue
+			}
+
+			bookComp, ok := bookResult.(*engine.BookComponent)
+			if !ok {
+				logger.Warn("book generator returned invalid result")
+				continue
+			}
+
+			books = append(books, bookComp)
+		}
+
+		if len(books) == 0 {
+			continue // Skip empty bookshelves
+		}
+
+		// Generate bookshelf color based on genre
+		shelfColor := generateBookshelfColor(params.GenreID, bookshelfSeed)
+
+		bookshelfSpawnData = append(bookshelfSpawnData, engine.BookshelfSpawnData{
+			Books:        books,
+			ShelfColor:   shelfColor,
+			ShelfSize:    32, // Standard bookshelf size
+			ColliderSize: 28.0,
+		})
+	}
+
+	if len(bookshelfSpawnData) == 0 {
+		return 0, nil // No bookshelves generated
+	}
+
+	// Spawn bookshelves in terrain
+	spawned, err := engine.SpawnBookshelvesInTerrain(world, terrainMap, bookshelfSpawnData, seed)
+	if err != nil {
+		return 0, fmt.Errorf("failed to spawn bookshelves in terrain: %w", err)
+	}
+
+	logger.WithFields(logrus.Fields{
+		"requested": bookshelfCount,
+		"generated": len(bookshelfSpawnData),
+		"spawned":   spawned,
+	}).Debug("bookshelf spawning complete")
+
+	return spawned, nil
+}
+
+// generateBookshelfColor generates a color for a bookshelf based on genre.
+func generateBookshelfColor(genreID string, seed int64) color.RGBA {
+	rng := rand.New(rand.NewSource(seed))
+
+	// Base colors per genre
+	var baseR, baseG, baseB uint8
+	switch genreID {
+	case "fantasy":
+		baseR, baseG, baseB = 101, 67, 33 // Dark wood brown
+	case "sci-fi":
+		baseR, baseG, baseB = 120, 130, 140 // Metallic gray
+	case "horror":
+		baseR, baseG, baseB = 60, 50, 45 // Very dark brown
+	case "cyberpunk":
+		baseR, baseG, baseB = 80, 80, 100 // Dark bluish
+	case "post-apocalyptic":
+		baseR, baseG, baseB = 90, 85, 70 // Weathered brown
+	default:
+		baseR, baseG, baseB = 100, 80, 60 // Default wood
+	}
+
+	// Add random variation
+	genreVariation := func(base uint8, variance int) uint8 {
+		offset := rng.Intn(variance*2+1) - variance
+		result := int(base) + offset
+		if result < 0 {
+			result = 0
+		}
+		if result > 255 {
+			result = 255
+		}
+		return uint8(result)
+	}
+
+	return color.RGBA{
+		R: genreVariation(baseR, 20),
+		G: genreVariation(baseG, 20),
+		B: genreVariation(baseB, 20),
+		A: 255,
 	}
 }

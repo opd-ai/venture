@@ -624,6 +624,39 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 		"roomCount":   len(generatedTerrain.Rooms) - 1,
 		"genre":       *genreID,
 	}).Info("spawned destructible objects")
+
+	// Spawn vehicles (V4.0)
+	if *verbose {
+		clientLogger.Info("spawning vehicles in dungeon")
+	}
+	vehicleCount, err := spawnVehicles(game.World, generatedTerrain, *seed+seedOffsetVehicle, params, clientLogger)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn vehicles")
+	} else if *verbose {
+		clientLogger.WithField("vehicleCount", vehicleCount).Info("spawned vehicles")
+	}
+
+	// Spawn companions (V4.0)
+	if *verbose {
+		clientLogger.Info("spawning companions in dungeon")
+	}
+	companionCount, err := spawnCompanions(game.World, generatedTerrain, *seed+seedOffsetCompanion, params, clientLogger)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn companions")
+	} else if *verbose {
+		clientLogger.WithField("companionCount", companionCount).Info("spawned companions")
+	}
+
+	// Spawn bookshelves with books (V4.0)
+	if *verbose {
+		clientLogger.Info("spawning bookshelves in dungeon")
+	}
+	bookshelfCount, err := spawnBookshelves(game.World, generatedTerrain, *seed+seedOffsetBook, params, clientLogger)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn bookshelves")
+	} else if *verbose {
+		clientLogger.WithField("bookshelfCount", bookshelfCount).Info("spawned bookshelves")
+	}
 }
 
 // spawnEnvironmentalEffects spawns lights and weather effects.

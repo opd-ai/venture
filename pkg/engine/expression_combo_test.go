@@ -58,6 +58,7 @@ func TestExpressionComboSystem_SingleEntity(t *testing.T) {
 
 	// Create entity with expression
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
@@ -86,6 +87,7 @@ func TestExpressionComboSystem_TwoEntitiesSynchronized(t *testing.T) {
 
 	// Create first entity with expression
 	entity1 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp1 := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
@@ -98,6 +100,7 @@ func TestExpressionComboSystem_TwoEntitiesSynchronized(t *testing.T) {
 
 	// Create second entity with same expression (within sync window)
 	entity2 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp2 := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
@@ -142,6 +145,7 @@ func TestExpressionComboSystem_DifferentExpressions(t *testing.T) {
 
 	// Create entity with Wave expression
 	entity1 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp1 := &ExpressionComponent{
 		ActiveExpression: ExpressionWave,
 		ExpressionTime:   3.0,
@@ -151,6 +155,7 @@ func TestExpressionComboSystem_DifferentExpressions(t *testing.T) {
 
 	// Create entity with Dance expression
 	entity2 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp2 := &ExpressionComponent{
 		ActiveExpression: ExpressionDance,
 		ExpressionTime:   3.0,
@@ -184,6 +189,7 @@ func TestExpressionComboSystem_ComboExpiration(t *testing.T) {
 
 	// Create entity with expression
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp := &ExpressionComponent{
 		ActiveExpression: ExpressionCheer,
 		ExpressionTime:   3.0,
@@ -214,6 +220,7 @@ func TestExpressionComboSystem_ComboFinalization(t *testing.T) {
 
 	// Create two entities with same expression
 	entity1 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp1 := &ExpressionComponent{
 		ActiveExpression: ExpressionLaugh,
 		ExpressionTime:   3.0,
@@ -222,6 +229,7 @@ func TestExpressionComboSystem_ComboFinalization(t *testing.T) {
 	entity1.AddComponent(expComp1)
 
 	entity2 := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	expComp2 := &ExpressionComponent{
 		ActiveExpression: ExpressionLaugh,
 		ExpressionTime:   3.0,
@@ -254,6 +262,7 @@ func TestExpressionComboSystem_GetComboCount_NoComponent(t *testing.T) {
 
 	// Create entity without combo component
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	count := system.GetComboCount(entity.ID)
 	if count != 0 {
@@ -278,6 +287,7 @@ func BenchmarkExpressionComboSystem_Update(b *testing.B) {
 	// Create 10 entities with expressions
 	for i := 0; i < 10; i++ {
 		entity := world.CreateEntity()
+		world.Update(0) // Process entity addition
 		expComp := &ExpressionComponent{
 			ActiveExpression: ExpressionDance,
 			ExpressionTime:   3.0,

@@ -75,25 +75,13 @@ func TestAchievementSystem_OnExpressionUsed_FirstExpression(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Use first expression
 	system.OnExpressionUsed(entity.ID, ExpressionWave)
 
-	// Check component was added
-	achCompRaw, ok := entity.GetComponent("achievement")
-	if !ok {
-		t.Fatal("Achievement component not added to entity")
-	}
-	achComp := achCompRaw.(*AchievementComponent)
-	
-	t.Logf("ExpressionCount: %d, UniqueExpressions: %d, Achievements: %d", 
-		achComp.ExpressionCount, len(achComp.UniqueExpression), len(achComp.Achievements))
-
 	// Check achievement unlocked
 	achievements := system.GetAchievements(entity.ID)
-	if achievements == nil {
-		t.Fatal("GetAchievements returned nil")
-	}
 	if len(achievements) != 1 {
 		t.Errorf("Should have 1 achievement, got %d", len(achievements))
 		return
@@ -108,6 +96,7 @@ func TestAchievementSystem_OnExpressionUsed_ExpressionMaster(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Use all 12 expressions
 	expressions := []ExpressionType{
@@ -134,6 +123,7 @@ func TestAchievementSystem_OnExpressionUsed_SocialButterfly(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Use 50 expressions
 	for i := 0; i < 50; i++ {
@@ -154,6 +144,7 @@ func TestAchievementSystem_OnComboCompleted_ComboStarter(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	
 	// Add combo component with 1 combo
 	comboComp := &ExpressionComboComponent{
@@ -183,6 +174,7 @@ func TestAchievementSystem_OnComboCompleted_ComboExpert(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	
 	// Add combo component with 10 combos
 	comboComp := &ExpressionComboComponent{
@@ -212,6 +204,7 @@ func TestAchievementSystem_OnComboCompleted_ComboLegend(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	
 	// Add combo component with 100 combos
 	comboComp := &ExpressionComboComponent{
@@ -241,6 +234,7 @@ func TestAchievementSystem_OnComboCompleted_GroupPerformer(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 	
 	// Add combo component
 	comboComp := &ExpressionComboComponent{
@@ -270,6 +264,7 @@ func TestAchievementSystem_GetAchievements_NoComponent(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	achievements := system.GetAchievements(entity.ID)
 	if achievements != nil {
@@ -282,6 +277,7 @@ func TestAchievementSystem_GetAchievementCount(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Add some achievements
 	system.OnExpressionUsed(entity.ID, ExpressionWave)
@@ -298,6 +294,7 @@ func TestAchievementSystem_NoDoubleUnlock(t *testing.T) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	// Use expression twice
 	system.OnExpressionUsed(entity.ID, ExpressionWave)
@@ -324,6 +321,7 @@ func BenchmarkAchievementSystem_OnExpressionUsed(b *testing.B) {
 	system := NewAchievementSystem(world)
 
 	entity := world.CreateEntity()
+	world.Update(0) // Process entity addition
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

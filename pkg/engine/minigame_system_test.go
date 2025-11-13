@@ -62,7 +62,6 @@ func TestMiniGameSystem_StartGame(t *testing.T) {
 			sys := NewMiniGameSystem(world)
 			entity := world.CreateEntity()
 world.Update(0) // Process entity addition
-			world.Update(0) // Process entity addition
 
 			err := sys.StartGame(entity.ID, tt.gameType, tt.difficulty)
 			if (err != nil) != tt.wantErr {

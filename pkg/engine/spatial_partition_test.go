@@ -259,13 +259,14 @@ func TestSpatialPartitionSystemPeriodicRebuild(t *testing.T) {
 	}
 
 	// Update multiple frames
+	forcedRebuildsStart := sps.forcedRebuilds
 	for frame := 0; frame < 10; frame++ {
 		sps.Update(entities, 0.016)
 	}
 
-	// Should have rebuilt at least once
-	if sps.frameCount >= sps.rebuildEvery {
-		t.Error("Frame count should reset after rebuild")
+	// Should have rebuilt at least once (after 5 and 10 frames)
+	if sps.forcedRebuilds <= forcedRebuildsStart {
+		t.Errorf("Expected at least one periodic rebuild, got %d rebuilds", sps.forcedRebuilds-forcedRebuildsStart)
 	}
 }
 

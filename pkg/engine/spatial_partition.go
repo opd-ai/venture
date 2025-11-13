@@ -319,24 +319,17 @@ func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 	// 3. OR we're marked as dirty (entities moved)
 	shouldRebuild := false
 
-	if s.frameCount >= s.rebuildEvery {
-		if s.isDirty {
-			// Entities moved, need to rebuild
-			if framesSinceRebuild >= s.minRebuildFrames {
-				shouldRebuild = true
-				s.lazyRebuilds++
-			}
-		} else {
-			// No movement detected, skip rebuild
-			s.skippedRebuilds++
-		}
-		s.frameCount = 0
-	}
-
-	// Force rebuild if too much time has passed (safety fallback)
-	if framesSinceRebuild >= s.rebuildEvery*2 {
+	// CRITICAL FIX: Always rebuild periodically even if not dirty
+	// This ensures new entities that spawned are added to the quadtree
+	// The original logic only rebuilt if dirty, which meant stationary
+	// entities that were newly spawned would never be added
+	if framesSinceRebuild >= s.rebuildEvery {
 		shouldRebuild = true
-		s.forcedRebuilds++
+		if s.isDirty {
+			s.lazyRebuilds++
+		} else {
+			s.forcedRebuilds++ // Periodic forced rebuild
+		}
 	}
 
 	if shouldRebuild {
@@ -344,9 +337,7 @@ func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 		s.lastRebuildFrame = s.frameCount
 		s.isDirty = false // Clear dirty flag after rebuild
 	}
-}
-
-// MarkDirty marks the spatial partition as needing a rebuild.
+} // MarkDirty marks the spatial partition as needing a rebuild.
 // Should be called when entities move significantly.
 func (s *SpatialPartitionSystem) MarkDirty() {
 	s.isDirty = true

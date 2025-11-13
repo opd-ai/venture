@@ -4,7 +4,6 @@
 package engine
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	"sort"
@@ -244,7 +243,6 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 		}
 	}
 	if playerCount > 0 {
-		fmt.Printf("[DEBUG] Draw: Received %d total entities, %d players\n", len(entities), playerCount)
 	}
 
 	// Type assert to *ebiten.Image
@@ -276,7 +274,6 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 			}
 		}
 		if playerCount > 0 {
-			fmt.Printf("[DEBUG] Draw: After spatial culling: %d visible entities, %d players\n", len(visibleEntities), playerInVisible)
 		}
 	}
 
@@ -291,8 +288,6 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 				playerInSorted++
 			}
 		}
-		fmt.Printf("[DEBUG] Draw: After sorting: %d sorted entities, %d players, batching=%v\n",
-			len(sortedEntities), playerInSorted, r.enableBatching)
 	}
 
 	// Render using batching (if enabled) or individual draws
@@ -326,7 +321,6 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 		}
 	}
 	if playerCount > 0 {
-		fmt.Printf("[DEBUG] drawBatched: Called with %d entities, %d players\n", len(entities), playerCount)
 	}
 
 	// Get or create batch map from pool
@@ -432,7 +426,6 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 		// DEBUG: Log sprite state for player
 		if entity.HasComponent("input") && sprite.Image == nil {
-			fmt.Printf("[DEBUG] RenderSystem: Player sprite.Image is NIL! Visible=%v\n", sprite.Visible)
 		}
 
 		if !sprite.Visible {
@@ -469,8 +462,6 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 		// DEBUG: Log for player
 		if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] drawBatch: Player actualSpriteImage nil=%v, batchSpriteImage nil=%v, match=%v\n",
-				actualSpriteImage == nil, batchSpriteImage == nil, actualSpriteImage == batchSpriteImage)
 		}
 
 		// Skip if no image or image doesn't match batch
@@ -513,8 +504,6 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 			// DEBUG: Log when rotating player sprite
 			if entity.ID == 1 {
-				fmt.Printf("[DEBUG] Batch rendering player with rotation=%.4f, cos=%.4f, sin=%.4f\n",
-					sprite.Rotation, cos, sin)
 			}
 		}
 
@@ -532,7 +521,6 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 
 		// DEBUG: Log texture size for player
 		if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] drawBatch: Player texture size w=%.0f, h=%.0f\n", w, h)
 		}
 
 		// Create color scale from flash and tint
@@ -582,15 +570,11 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 	// Draw all sprites in this batch with a single DrawTriangles call
 	if len(vertices) > 0 && len(indices) > 0 {
 		// DEBUG: Log when drawing batch
-		fmt.Printf("[DEBUG] drawBatch: Calling DrawTriangles with %d vertices, %d indices, %d entities\n",
-			len(vertices), len(indices), len(entities))
 
 		r.screen.DrawTriangles(vertices, indices, batchSpriteImage, &ebiten.DrawTrianglesOptions{
 			Filter: ebiten.FilterLinear,
 		})
 	} else {
-		fmt.Printf("[DEBUG] drawBatch: SKIPPED DrawTriangles (vertices=%d, indices=%d)\n",
-			len(vertices), len(indices))
 	}
 }
 
@@ -692,7 +676,6 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	// DEBUG: Log when drawing player
 	if entity.HasComponent("input") {
-		fmt.Printf("[DEBUG] drawEntity: Called for player entity\n")
 	}
 
 	// Get required components
@@ -701,7 +684,6 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	if !hasPos || !hasSprite {
 		if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] drawEntity: Player missing components (hasPos=%v, hasSprite=%v)\n", hasPos, hasSprite)
 		}
 		return
 	}
@@ -717,7 +699,6 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	if !sprite.Visible {
 		if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] drawEntity: Player sprite.Visible=false\n")
 		}
 		return
 	}
@@ -737,7 +718,6 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 			// DEBUG: Log rotation values for player entity (entity ID 1)
 			if entity.ID == 1 && sprite.Rotation != 0 {
-				fmt.Printf("[DEBUG] Player sprite.Rotation = %.4f rad (%.1f deg)\n", sprite.Rotation, sprite.Rotation*180/math.Pi)
 			}
 		}
 	}
@@ -818,8 +798,6 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	// DEBUG: Log for player sprite
 	if entity.HasComponent("input") && spriteImage == nil {
-		fmt.Printf("[DEBUG] RenderSystem.drawEntity: Player spriteImage is NIL! sprite.Image=%v, DirectionalImages len=%d\n",
-			sprite.Image == nil, len(sprite.DirectionalImages))
 	}
 
 	if spriteImage != nil {

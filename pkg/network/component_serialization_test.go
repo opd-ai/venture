@@ -411,3 +411,100 @@ func BenchmarkSerializeStats(b *testing.B) {
 		_ = s.SerializeStats(50, 75, 100)
 	}
 }
+
+// TestComponentSerializer_Expression verifies expression serialization.
+func TestComponentSerializer_Expression(t *testing.T) {
+	s := NewComponentSerializer()
+
+	tests := []struct {
+		name           string
+		expressionType uint8
+		expressionTime float64
+		cooldown       float64
+	}{
+		{"Wave", 0, 3.0, 0.0},
+		{"Dance", 2, 5.5, 1.5},
+		{"Sleep", 11, 999.0, 3.0},
+		{"Zero values", 0, 0.0, 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Serialize
+			data := s.SerializeExpression(tt.expressionType, tt.expressionTime, tt.cooldown)
+			if len(data) != 17 {
+				t.Errorf("Expected 17 bytes, got %d", len(data))
+			}
+
+			// Deserialize
+			expType, expTime, cd, err := s.DeserializeExpression(data)
+			if err != nil {
+				t.Errorf("Deserialize failed: %v", err)
+			}
+
+			// Verify
+			if expType != tt.expressionType {
+				t.Errorf("ExpressionType mismatch: got %d, want %d", expType, tt.expressionType)
+			}
+			if expTime != tt.expressionTime {
+				t.Errorf("ExpressionTime mismatch: got %.2f, want %.2f", expTime, tt.expressionTime)
+			}
+			if cd != tt.cooldown {
+				t.Errorf("Cooldown mismatch: got %.2f, want %.2f", cd, tt.cooldown)
+			}
+		})
+	}
+}
+
+// TestComponentSerializer_Expression_InvalidData verifies error handling.
+func TestComponentSerializer_Expression_InvalidData(t *testing.T) {
+	s := NewComponentSerializer()
+
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"empty", []byte{}},
+		{"too short", []byte{1, 2, 3}},
+		{"too long", make([]byte, 20)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, err := s.DeserializeExpression(tt.data)
+			if err == nil {
+				t.Error("Expected error for invalid data, got nil")
+			}
+		})
+	}
+}
+
+// TestComponentSerializer_Expression_SizeRequirement verifies <50 byte requirement.
+func TestComponentSerializer_Expression_SizeRequirement(t *testing.T) {
+	s := NewComponentSerializer()
+	
+	data := s.SerializeExpression(5, 3.0, 1.0)
+	
+	if len(data) >= 50 {
+		t.Errorf("Expression serialization = %d bytes, want < 50 bytes", len(data))
+	}
+}
+
+// BenchmarkSerializeExpression measures expression serialization performance.
+func BenchmarkSerializeExpression(b *testing.B) {
+	s := NewComponentSerializer()
+	for i := 0; i < b.N; i++ {
+		_ = s.SerializeExpression(2, 3.0, 1.5)
+	}
+}
+
+// BenchmarkDeserializeExpression measures expression deserialization performance.
+func BenchmarkDeserializeExpression(b *testing.B) {
+	s := NewComponentSerializer()
+	data := s.SerializeExpression(2, 3.0, 1.5)
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _, _ = s.DeserializeExpression(data)
+	}
+}

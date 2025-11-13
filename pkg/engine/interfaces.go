@@ -324,3 +324,36 @@ type CharacterClassInfo interface {
 	// Defines how stats increase as the character levels up
 	GetStatGrowth() *StatGrowth
 }
+
+// Expression represents a player emote or gesture with associated visual and audio effects.
+// Expressions enable non-verbal communication between players in multiplayer mode.
+//
+// Phase 26.1: Expression Framework
+type Expression interface {
+	// GetAnimation returns the procedural animation sequence for this expression
+	// The animation modifies sprite frames over time to create the gesture
+	GetAnimation() AnimationSequence
+
+	// GetSoundEffect returns the audio effect ID to play when expression triggers
+	// Empty string means no sound effect
+	GetSoundEffect() string
+
+	// GetDuration returns how long the expression animation lasts in seconds
+	// Returns math.Inf(1) for expressions that last until canceled (Sit, Sleep)
+	GetDuration() float64
+}
+
+// AnimationSequence represents a procedural animation for expressions and other effects.
+// The sequence defines keyframes and interpolation for sprite transformations.
+//
+// Phase 26.1: Expression Framework
+type AnimationSequence interface {
+	// GetFrameCount returns the number of animation frames
+	GetFrameCount() int
+
+	// GetFrameTime returns the duration of each frame in seconds
+	GetFrameTime() float64
+
+	// ShouldLoop returns whether the animation repeats
+	ShouldLoop() bool
+}

@@ -171,3 +171,25 @@ func (s *ComponentSerializer) DeserializeItem(data []byte) (itemID uint64, err e
 	itemID = binary.LittleEndian.Uint64(data)
 	return itemID, nil
 }
+
+// SerializeExpression serializes an expression component.
+// Format: 1 byte for ExpressionType, 8 bytes for ExpressionTime, 8 bytes for Cooldown.
+// Total: 17 bytes (well under 50 byte budget).
+func (s *ComponentSerializer) SerializeExpression(expressionType uint8, expressionTime, cooldown float64) []byte {
+	buf := make([]byte, 17)
+	buf[0] = expressionType
+	binary.LittleEndian.PutUint64(buf[1:9], math.Float64bits(expressionTime))
+	binary.LittleEndian.PutUint64(buf[9:17], math.Float64bits(cooldown))
+	return buf
+}
+
+// DeserializeExpression deserializes an expression component.
+func (s *ComponentSerializer) DeserializeExpression(data []byte) (expressionType uint8, expressionTime, cooldown float64, err error) {
+	if len(data) != 17 {
+		return 0, 0, 0, fmt.Errorf("invalid expression data length: %d (expected 17)", len(data))
+	}
+	expressionType = data[0]
+	expressionTime = math.Float64frombits(binary.LittleEndian.Uint64(data[1:9]))
+	cooldown = math.Float64frombits(binary.LittleEndian.Uint64(data[9:17]))
+	return expressionType, expressionTime, cooldown, nil
+}

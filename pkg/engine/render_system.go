@@ -660,6 +660,31 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	// Query spatial partition for entities in viewport
 	visible := r.spatialPartition.QueryBounds(viewportBounds)
 
+	// CRITICAL FIX: Always include local player(s) regardless of viewport culling
+	// Player entities have input component and should never be culled
+	playerEntities := make([]*Entity, 0, 4) // Pre-allocate for up to 4 players
+	for _, entity := range entities {
+		if entity.HasComponent("input") {
+			// Check if player is already in visible list
+			alreadyVisible := false
+			for _, visibleEntity := range visible {
+				if visibleEntity.ID == entity.ID {
+					alreadyVisible = true
+					break
+				}
+			}
+			// Add player if not already visible
+			if !alreadyVisible {
+				playerEntities = append(playerEntities, entity)
+			}
+		}
+	}
+
+	// Append player entities to visible list
+	if len(playerEntities) > 0 {
+		visible = append(visible, playerEntities...)
+	}
+
 	return visible
 }
 

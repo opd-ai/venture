@@ -199,7 +199,9 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 		}
 
 		// Phase 14.2: Viewport culling check
-		if hasViewport {
+		// CRITICAL FIX: Always animate local player (has input component), never cull
+		isLocalPlayer := entity.HasComponent("input")
+		if hasViewport && !isLocalPlayer {
 			if pos.X < viewportMinX || pos.X > viewportMaxX ||
 				pos.Y < viewportMinY || pos.Y > viewportMaxY {
 				// Entity is outside viewport - skip animation update but keep current frame

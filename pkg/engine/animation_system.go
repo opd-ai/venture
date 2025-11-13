@@ -577,9 +577,9 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		Custom:     make(map[string]interface{}),
 	}
 
-	// Phase 10.1: Aerial-view sprites disabled until proportions verified
+	// Phase 10.1: Enable aerial-view sprites for top-down gameplay
 	// Aerial templates use 35/50/15 proportions (head/torso/legs) optimized for overhead view
-	// config.Custom["useAerial"] = true
+	config.Custom["useAerial"] = true
 
 	// CRITICAL: Set entity type to trigger template-based generation
 	// Check if entity has input component (player) or team component (enemy/NPC)

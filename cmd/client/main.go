@@ -37,6 +37,16 @@ func main() {
 	player := setupCompletePlayerEntity(game, generatedTerrain, sys, logger, clientLogger)
 	setupGameUI(game, player, generatedTerrain, sys, clientLogger)
 
+	// CRITICAL FIX: Rebuild spatial partition after ALL entities are created
+	// The initial rebuild happens before player and enemies are spawned,
+	// so we need to rebuild again to include them in the quadtree for culling
+	if spatialSystem := game.RenderSystem.GetSpatialPartition(); spatialSystem != nil {
+		spatialSystem.Rebuild(game.World.GetEntities())
+		if *verbose {
+			clientLogger.WithField("entityCount", len(game.World.GetEntities())).Info("spatial partition rebuilt after all entities spawned")
+		}
+	}
+
 	finalizeGameInitialization(game, player, networkClient, clientLogger)
 	runGameLoop(game, clientLogger)
 }

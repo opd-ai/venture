@@ -203,6 +203,11 @@ func (r *EbitenRenderSystem) SetSpatialPartition(partition *SpatialPartitionSyst
 	r.spatialPartition = partition
 }
 
+// GetSpatialPartition returns the spatial partition system.
+func (r *EbitenRenderSystem) GetSpatialPartition() *SpatialPartitionSystem {
+	return r.spatialPartition
+}
+
 // EnableCulling enables or disables viewport culling.
 // When disabled, all entities are rendered (useful for debugging).
 func (r *EbitenRenderSystem) EnableCulling(enable bool) {

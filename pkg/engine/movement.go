@@ -46,19 +46,17 @@ func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionS
 
 // Update applies velocity to position for all entities with both components.
 func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
-	s.entitiesMoved = false // Reset movement flag
+	s.entitiesMoved = false
 
 	for _, entity := range entities {
 		// Skip dead entities - they cannot move (Priority 1.2)
-		// Dead entities are immobilized until revived or removed from the world
 		if entity.HasComponent("dead") {
 			continue
 		}
 
-		// Check if entity has required components
+		// Get required components
 		posComp, hasPos := entity.GetComponent("position")
 		velComp, hasVel := entity.GetComponent("velocity")
-
 		if !hasPos || !hasVel {
 			continue
 		}
@@ -73,208 +71,37 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 
 		// Apply speed limit if configured
-		if s.MaxSpeed > 0 {
-			speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-			if speed > s.MaxSpeed {
-				scale := s.MaxSpeed / speed
-				vel.VX *= scale
-				vel.VY *= scale
-			}
-		}
+		s.applySpeedLimit(vel)
 
 		// Calculate new position
 		newX := pos.X + vel.VX*deltaTime
 		newY := pos.Y + vel.VY*deltaTime
 
-		// GAP-001 REPAIR: Predictive collision checking before updating position
-		// If collision system is set, validate position before moving
-		if s.collisionSystem != nil && entity.HasComponent("collider") {
-			colliderComp, _ := entity.GetComponent("collider")
-			if colliderComp == nil {
-				goto skipCollision
-			}
-			collider, ok := colliderComp.(*ColliderComponent)
-			if !ok {
-				goto skipCollision
-			}
+		// Validate position with collision checking and wall sliding
+		newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
 
-			// Only check solid, non-trigger colliders
-			if collider.Solid && !collider.IsTrigger {
-				// Check terrain collision at new position
-				if s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
-					// Collision detected - try sliding along walls
-					// Try X movement only
-					if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
-						newY = pos.Y // Keep Y, allow X movement (slide horizontally)
-						vel.VY = 0
-					} else if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
-						// Try Y movement only
-						newX = pos.X // Keep X, allow Y movement (slide vertically)
-						vel.VX = 0
-					} else {
-						// Completely blocked - don't move at all
-						newX = pos.X
-						newY = pos.Y
-						vel.VX = 0
-						vel.VY = 0
-					}
-				}
-
-				// Check entity-to-entity collisions at new position
-				// Only if we're still planning to move
-				if newX != pos.X || newY != pos.Y {
-					blocked := false
-					for _, other := range entities {
-						if other.ID == entity.ID {
-							continue
-						}
-						if s.collisionSystem.WouldCollideWithEntity(entity, newX, newY, other) {
-							// Blocked by another entity - stop movement
-							blocked = true
-							break
-						}
-					}
-
-					if blocked {
-						// Try sliding along the blocking entity
-						if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
-							newY = pos.Y // Slide horizontally
-							vel.VY = 0
-						} else if !s.anyEntityBlocking(entity, pos.X, newY, entities) {
-							newX = pos.X // Slide vertically
-							vel.VX = 0
-						} else {
-							// Completely blocked
-							newX = pos.X
-							newY = pos.Y
-							vel.VX = 0
-							vel.VY = 0
-						}
-					}
-				}
-			}
-		}
-	skipCollision:
-
-		// Update position (only if validated or no collision checking)
+		// Update position and track movement
 		oldX, oldY := pos.X, pos.Y
 		pos.X = newX
 		pos.Y = newY
 
-		// Track if entity actually moved
 		if pos.X != oldX || pos.Y != oldY {
 			s.entitiesMoved = true
 
-			// Phase 11.1 Week 3: Check for layer transitions via ramps
-			// If entity has collider and moved, check if they're on a ramp tile
+			// Check for layer transitions via ramps
 			if s.collisionSystem != nil && entity.HasComponent("collider") {
 				s.checkLayerTransition(entity, pos)
 			}
 		}
 
-		// Apply bounds if entity has them
-		if boundsComp, hasBounds := entity.GetComponent("bounds"); hasBounds {
-			if bounds, ok := boundsComp.(*BoundsComponent); ok {
-				pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
+		// Apply bounds constraints
+		s.applyBoundsConstraints(entity, pos, vel)
 
-				// Stop movement at boundaries if not wrapping
-				if !bounds.Wrap {
-					if pos.X <= bounds.MinX || pos.X >= bounds.MaxX {
-						vel.VX = 0
-					}
-					if pos.Y <= bounds.MinY || pos.Y >= bounds.MaxY {
-						vel.VY = 0
-					}
-				}
-			}
-		}
-
-		// Priority 1.4: Apply friction/drag to slow down entities
-		if frictionComp, hasFriction := entity.GetComponent("friction"); hasFriction {
-			if friction, ok := frictionComp.(*FrictionComponent); ok {
-				// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
-				// For small deltaTime and coefficient, this approximates: v *= (1 - coefficient * deltaTime)
-				decayFactor := math.Pow(1.0-friction.Coefficient, deltaTime*60.0) // Normalize to 60 FPS
-				vel.VX *= decayFactor
-				vel.VY *= decayFactor
-
-				// Stop completely if velocity is very small (optimization)
-				if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
-					vel.VX = 0
-					vel.VY = 0
-				}
-			}
-		}
+		// Apply friction to slow down entities
+		s.applyFriction(entity, vel, deltaTime)
 
 		// Update animation state based on movement
-		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-			if anim, ok := animComp.(*AnimationComponent); ok {
-				speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-
-				// DON'T override attack/hit/death/cast animations - let them finish
-				if anim.CurrentState == AnimationStateAttack ||
-					anim.CurrentState == AnimationStateHit ||
-					anim.CurrentState == AnimationStateDeath ||
-					anim.CurrentState == AnimationStateCast {
-					// Animation is in action state, don't override with movement
-					continue
-				}
-
-				// Determine animation state based on velocity
-				if speed > 0.1 {
-					// Moving - determine if walking or running
-					if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
-						// Fast movement - running
-						if anim.CurrentState != AnimationStateRun {
-							anim.SetState(AnimationStateRun)
-						}
-					} else {
-						// Normal movement - walking
-						if anim.CurrentState != AnimationStateWalk {
-							anim.SetState(AnimationStateWalk)
-						}
-					}
-
-					// Phase 10.1: Only update facing direction from velocity if entity doesn't have rotation component
-					// Entities with RotationComponent use 360° rotation from aim input instead of 4-directional velocity-based facing
-					if !entity.HasComponent("rotation") {
-						// Phase 3: Update facing direction based on velocity
-						// Apply 0.1 threshold to filter input jitter and noise
-						absVX := math.Abs(vel.VX)
-						absVY := math.Abs(vel.VY)
-
-						if absVX > 0.1 || absVY > 0.1 {
-							// Prioritize horizontal movement for diagonal directions
-							// This provides clearer visual feedback for player control
-							// For perfect diagonals (absVX == absVY), horizontal takes priority
-							if absVX >= absVY {
-								// Moving horizontally (or perfect diagonal)
-								if vel.VX > 0 {
-									anim.SetFacing(DirRight)
-								} else {
-									anim.SetFacing(DirLeft)
-								}
-							} else {
-								// Moving vertically
-								if vel.VY > 0 {
-									anim.SetFacing(DirDown)
-								} else {
-									anim.SetFacing(DirUp)
-								}
-							}
-						}
-						// If velocity is below threshold, preserve current facing
-					}
-					// Phase 10.1: If entity has rotation component, facing is determined by RotationComponent.Angle
-				} else {
-					// Not moving - idle (only if currently in a movement state)
-					if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
-						anim.SetState(AnimationStateIdle)
-					}
-					// When idle, preserve facing direction (don't reset)
-				}
-			}
-		}
+		s.updateAnimationState(entity, vel)
 	}
 
 	// Mark spatial partition as dirty if any entities moved
@@ -299,6 +126,227 @@ func (s *MovementSystem) anyEntityBlocking(entity *Entity, x, y float64, entitie
 		}
 	}
 	return false
+}
+
+// applySpeedLimit clamps entity velocity to MaxSpeed if configured.
+// Returns true if speed was limited.
+func (s *MovementSystem) applySpeedLimit(vel *VelocityComponent) bool {
+	if s.MaxSpeed <= 0 {
+		return false
+	}
+
+	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+	if speed > s.MaxSpeed {
+		scale := s.MaxSpeed / speed
+		vel.VX *= scale
+		vel.VY *= scale
+		return true
+	}
+	return false
+}
+
+// calculateValidPosition determines the valid new position after collision checking.
+// Implements wall sliding by trying X-only and Y-only movement when diagonal movement is blocked.
+// Returns the validated newX, newY coordinates.
+func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
+	// No collision system means no validation needed
+	if s.collisionSystem == nil || !entity.HasComponent("collider") {
+		return newX, newY
+	}
+
+	colliderComp, _ := entity.GetComponent("collider")
+	if colliderComp == nil {
+		return newX, newY
+	}
+
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return newX, newY
+	}
+
+	// Only check solid, non-trigger colliders
+	if !collider.Solid || collider.IsTrigger {
+		return newX, newY
+	}
+
+	// Check terrain collision at new position
+	if s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
+		// Collision detected - try sliding along walls
+		if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
+			// Allow X movement, block Y (slide horizontally)
+			vel.VY = 0
+			return newX, pos.Y
+		} else if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
+			// Allow Y movement, block X (slide vertically)
+			vel.VX = 0
+			return pos.X, newY
+		}
+		// Completely blocked - don't move at all
+		vel.VX = 0
+		vel.VY = 0
+		return pos.X, pos.Y
+	}
+
+	// Check entity-to-entity collisions (only if still planning to move)
+	if newX == pos.X && newY == pos.Y {
+		return newX, newY
+	}
+
+	// Check if blocked by another entity
+	for _, other := range entities {
+		if other.ID == entity.ID {
+			continue
+		}
+		if s.collisionSystem.WouldCollideWithEntity(entity, newX, newY, other) {
+			// Blocked - try sliding
+			if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
+				vel.VY = 0
+				return newX, pos.Y
+			} else if !s.anyEntityBlocking(entity, pos.X, newY, entities) {
+				vel.VX = 0
+				return pos.X, newY
+			}
+			// Completely blocked
+			vel.VX = 0
+			vel.VY = 0
+			return pos.X, pos.Y
+		}
+	}
+
+	return newX, newY
+}
+
+// applyBoundsConstraints clamps position to bounds and stops velocity at boundaries.
+func (s *MovementSystem) applyBoundsConstraints(entity *Entity, pos *PositionComponent, vel *VelocityComponent) {
+	boundsComp, hasBounds := entity.GetComponent("bounds")
+	if !hasBounds {
+		return
+	}
+
+	bounds, ok := boundsComp.(*BoundsComponent)
+	if !ok {
+		return
+	}
+
+	pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
+
+	// Stop movement at boundaries if not wrapping
+	if !bounds.Wrap {
+		if pos.X <= bounds.MinX || pos.X >= bounds.MaxX {
+			vel.VX = 0
+		}
+		if pos.Y <= bounds.MinY || pos.Y >= bounds.MaxY {
+			vel.VY = 0
+		}
+	}
+}
+
+// applyFriction applies exponential decay friction to slow down entity movement.
+// Stops velocity completely when it falls below a threshold.
+func (s *MovementSystem) applyFriction(entity *Entity, vel *VelocityComponent, deltaTime float64) {
+	frictionComp, hasFriction := entity.GetComponent("friction")
+	if !hasFriction {
+		return
+	}
+
+	friction, ok := frictionComp.(*FrictionComponent)
+	if !ok {
+		return
+	}
+
+	// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
+	// Normalize to 60 FPS for consistent behavior
+	decayFactor := math.Pow(1.0-friction.Coefficient, deltaTime*60.0)
+	vel.VX *= decayFactor
+	vel.VY *= decayFactor
+
+	// Stop completely if velocity is very small (optimization)
+	if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
+		vel.VX = 0
+		vel.VY = 0
+	}
+}
+
+// updateAnimationState updates entity animation based on velocity and movement state.
+// Handles idle/walk/run state transitions and facing direction updates.
+func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityComponent) {
+	animComp, hasAnim := entity.GetComponent("animation")
+	if !hasAnim {
+		return
+	}
+
+	anim, ok := animComp.(*AnimationComponent)
+	if !ok {
+		return
+	}
+
+	// DON'T override attack/hit/death/cast animations - let them finish
+	if anim.CurrentState == AnimationStateAttack ||
+		anim.CurrentState == AnimationStateHit ||
+		anim.CurrentState == AnimationStateDeath ||
+		anim.CurrentState == AnimationStateCast {
+		return
+	}
+
+	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+
+	if speed > 0.1 {
+		// Moving - determine if walking or running
+		if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
+			// Fast movement - running
+			if anim.CurrentState != AnimationStateRun {
+				anim.SetState(AnimationStateRun)
+			}
+		} else {
+			// Normal movement - walking
+			if anim.CurrentState != AnimationStateWalk {
+				anim.SetState(AnimationStateWalk)
+			}
+		}
+
+		// Phase 10.1: Only update facing direction from velocity if entity doesn't have rotation component
+		// Entities with RotationComponent use 360° rotation from aim input instead of 4-directional velocity-based facing
+		if !entity.HasComponent("rotation") {
+			s.updateFacingDirection(anim, vel)
+		}
+	} else {
+		// Not moving - idle (only if currently in a movement state)
+		if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
+			anim.SetState(AnimationStateIdle)
+		}
+		// When idle, preserve facing direction (don't reset)
+	}
+}
+
+// updateFacingDirection updates animation facing based on velocity direction.
+// Applies threshold filtering to prevent jitter from input noise.
+func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *VelocityComponent) {
+	absVX := math.Abs(vel.VX)
+	absVY := math.Abs(vel.VY)
+
+	// Apply 0.1 threshold to filter input jitter and noise
+	if absVX <= 0.1 && absVY <= 0.1 {
+		// Velocity below threshold, preserve current facing
+		return
+	}
+
+	// Prioritize horizontal movement for diagonal directions
+	// For perfect diagonals (absVX == absVY), horizontal takes priority
+	if absVX >= absVY {
+		// Moving horizontally (or perfect diagonal)
+		if vel.VX > 0 {
+			anim.SetFacing(DirRight)
+		} else {
+			anim.SetFacing(DirLeft)
+		}
+	} else {
+		// Moving vertically
+		if vel.VY > 0 {
+			anim.SetFacing(DirDown)
+		} else {
+			anim.SetFacing(DirUp)
+		}
+	}
 } // SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {

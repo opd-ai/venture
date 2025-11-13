@@ -357,3 +357,28 @@ type AnimationSequence interface {
 	// ShouldLoop returns whether the animation repeats
 	ShouldLoop() bool
 }
+
+// MiniGame represents an embedded procedural mini-game that can be played within Venture.
+// Mini-games are deterministically generated using a seed and provide rewards upon completion.
+//
+// Phase 27.1: Mini-Game Framework
+type MiniGame interface {
+	// Initialize sets up the mini-game with the given seed and difficulty
+	// Returns an error if initialization fails (invalid parameters, etc.)
+	Initialize(seed int64, difficulty float64) error
+
+	// Update advances the mini-game state by deltaTime seconds
+	// Returns an error if the update fails
+	Update(deltaTime float64) error
+
+	// Render draws the mini-game to the provided screen
+	// Returns an error if rendering fails
+	Render(screen ImageProvider) error
+
+	// IsComplete returns true when the mini-game has finished (won or lost)
+	IsComplete() bool
+
+	// GetReward returns the reward earned from completing the mini-game
+	// Returns nil if the game is not complete or if the player lost
+	GetReward() *Reward
+}

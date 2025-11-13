@@ -95,6 +95,11 @@ type ContextActionComponent struct {
 	RequiresKey bool
 	KeyItemID   string
 
+	// RequiresLockPicking for doors/chests that need lock-picking mini-game (Phase 27.3)
+	RequiresLockPicking bool
+	// LockDifficulty is the difficulty of the lock-picking mini-game (0.0-1.0)
+	LockDifficulty float64
+
 	// CooldownTime prevents rapid re-activation (seconds)
 	CooldownTime float64
 
@@ -122,6 +127,8 @@ const (
 	ActionPickup
 	// ActionRead for signs, books
 	ActionRead
+	// ActionPlayGame for mini-game stations (Phase 27.3)
+	ActionPlayGame
 )
 
 // String returns the string representation of an action type.
@@ -143,6 +150,8 @@ func (a ContextActionType) String() string {
 		return "Pickup"
 	case ActionRead:
 		return "Read"
+	case ActionPlayGame:
+		return "Play"
 	default:
 		return "Interact"
 	}
@@ -156,13 +165,15 @@ func (c *ContextActionComponent) Type() string {
 // NewContextActionComponent creates a context action component.
 func NewContextActionComponent(actionType ContextActionType, actionText string) *ContextActionComponent {
 	return &ContextActionComponent{
-		ActionText:       actionText,
-		ActionType:       actionType,
-		InteractionRange: 48.0, // Default: 1.5 tiles
-		IsAvailable:      true,
-		RequiresKey:      false,
-		CooldownTime:     0.5, // Default: 0.5 second cooldown
-		CooldownElapsed:  0,
+		ActionText:          actionText,
+		ActionType:          actionType,
+		InteractionRange:    48.0, // Default: 1.5 tiles
+		IsAvailable:         true,
+		RequiresKey:         false,
+		RequiresLockPicking: false,
+		LockDifficulty:      0.5, // Default medium difficulty
+		CooldownTime:        0.5, // Default: 0.5 second cooldown
+		CooldownElapsed:     0,
 	}
 }
 

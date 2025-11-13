@@ -161,19 +161,44 @@ func (s *InteractionSystem) activateContextAction(player, entity *Entity, contex
 		s.handleActivateAction(entity)
 	case ActionRead:
 		s.handleReadAction(player, entity)
+	case ActionPlayGame:
+		s.handlePlayGameAction(player, entity)
 		// Other actions can be added here
 	}
 }
 
 // handleOpenAction handles opening doors, chests, etc.
+// Phase 27.3: Added lock-picking mini-game requirement check
 func (s *InteractionSystem) handleOpenAction(entity *Entity) {
-	// Update action text to "Close" if it's a door
-	if ctxComp, ok := entity.GetComponent("contextAction"); ok {
-		if ctx, ok := ctxComp.(*ContextActionComponent); ok {
-			ctx.ActionType = ActionClose
-			ctx.ActionText = "Close"
-		}
+	// Get context action to check for lock-picking requirement
+	ctxCompRaw, ok := entity.GetComponent("contextAction")
+	if !ok {
+		return
 	}
+	ctx, ok := ctxCompRaw.(*ContextActionComponent)
+	if !ok {
+		return
+	}
+
+	// Check if lock-picking is required
+	if ctx.RequiresLockPicking {
+		// TODO: Start lock-picking mini-game via MiniGameSystem
+		// For now, just log that lock-picking would be required
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entityID":       entity.ID,
+				"lockDifficulty": ctx.LockDifficulty,
+			}).Debug("lock-picking mini-game required (not implemented yet)")
+		}
+		// In full implementation, would call:
+		// s.world.GetSystem("minigame").StartGame(playerID, MiniGameLockPicking, ctx.LockDifficulty)
+		// and only proceed to open if mini-game succeeds
+		return
+	}
+
+	// Normal door opening (no lock-picking required)
+	ctx.ActionType = ActionClose
+	ctx.ActionText = "Close"
 
 	if s.logger != nil {
 		s.logger.WithField("entityID", entity.ID).Debug("door opened")
@@ -391,4 +416,93 @@ func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity,
 			"bookCount":   bookshelf.GetBookCount(),
 		}).Info("player browsing bookshelf")
 	}
+}
+
+// handlePlayGameAction handles interaction with mini-game stations (Phase 27.3).
+// Validates entry cost/requirements and starts the mini-game if allowed.
+func (s *InteractionSystem) handlePlayGameAction(player, stationEntity *Entity) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID":  player.ID,
+			"stationID": stationEntity.ID,
+		}).Debug("play game action initiated")
+	}
+
+	// Get mini-game station component
+	stationCompRaw, ok := stationEntity.GetComponent("minigameStation")
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("stationID", stationEntity.ID).Warn("entity missing minigameStation component")
+		}
+		return
+	}
+
+	station, ok := stationCompRaw.(*MiniGameStationComponent)
+	if !ok {
+		return
+	}
+
+	// Check if station is already occupied
+	if station.IsOccupied {
+		if s.logger != nil {
+			s.logger.WithField("stationID", stationEntity.ID).Debug("station is occupied")
+		}
+		return
+	}
+
+	// Get player level and gold
+	playerLevel := 1
+	playerGold := 0
+
+	if expComp, ok := player.GetComponent("experience"); ok {
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			playerLevel = exp.Level
+		}
+	}
+
+	if invComp, ok := player.GetComponent("inventory"); ok {
+		if inv, ok := invComp.(*InventoryComponent); ok {
+			playerGold = inv.Gold
+		}
+	}
+
+	// Check if player meets requirements
+	if !station.CanPlay(playerLevel, playerGold) {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"playerLevel":   playerLevel,
+				"playerGold":    playerGold,
+				"requiredLevel": station.RequiresLevel,
+				"entryCost":     station.EntryCost,
+			}).Debug("player does not meet station requirements")
+		}
+		return
+	}
+
+	// Deduct entry cost if applicable
+	if station.EntryCost > 0 {
+		if invComp, ok := player.GetComponent("inventory"); ok {
+			if inv, ok := invComp.(*InventoryComponent); ok {
+				inv.Gold -= station.EntryCost
+			}
+		}
+	}
+
+	// Mark station as occupied
+	station.StartGame(player.ID)
+
+	// Create mini-game instance (this would be handled by MiniGameSystem)
+	// For now, just log the start
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID":   player.ID,
+			"stationID":  stationEntity.ID,
+			"gameType":   station.GameType.String(),
+			"difficulty": station.Difficulty,
+			"entryCost":  station.EntryCost,
+		}).Info("player started mini-game")
+	}
+
+	// The actual mini-game would be started by MiniGameSystem.StartGame()
+	// and integrated with the game factory from pkg/procgen/minigame/factory.go
 }

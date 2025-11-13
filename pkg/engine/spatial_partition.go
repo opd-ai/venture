@@ -142,35 +142,30 @@ func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 			continue
 		}
 
-		// BUG FIX: Check if entity position is within query bounds
-		// Original code only checked point containment, but should also consider
-		// entities that are partially within bounds or have a sprite size
-		if queryBounds.Contains(pos.X, pos.Y) {
+		// BUG FIX: Check if entity intersects query bounds
+		// Need to consider entity size, not just center point position
+
+		// Get sprite size if available (default to 32x32 if no sprite)
+		spriteWidth, spriteHeight := 32.0, 32.0
+		if spriteComp, ok := entity.GetComponent("sprite"); ok {
+			if sprite, ok := spriteComp.(interface {
+				GetSize() (width, height float64)
+			}); ok {
+				spriteWidth, spriteHeight = sprite.GetSize()
+			}
+		}
+
+		// Create entity bounds (centered on position)
+		entityBounds := Bounds{
+			X:      pos.X - spriteWidth/2,
+			Y:      pos.Y - spriteHeight/2,
+			Width:  spriteWidth,
+			Height: spriteHeight,
+		}
+
+		// Check if entity bounds intersect query bounds
+		if entityBounds.Intersects(queryBounds) {
 			*result = append(*result, entity)
-		} else {
-			// Also check if entity with sprite size intersects query bounds
-			// Get sprite size if available (default to 32x32 if no sprite)
-			spriteWidth, spriteHeight := 32.0, 32.0
-			if spriteComp, ok := entity.GetComponent("sprite"); ok {
-				if sprite, ok := spriteComp.(interface {
-					GetSize() (width, height float64)
-				}); ok {
-					spriteWidth, spriteHeight = sprite.GetSize()
-				}
-			}
-
-			// Create entity bounds (centered on position)
-			entityBounds := Bounds{
-				X:      pos.X - spriteWidth/2,
-				Y:      pos.Y - spriteHeight/2,
-				Width:  spriteWidth,
-				Height: spriteHeight,
-			}
-
-			// Check if entity bounds intersect query bounds
-			if entityBounds.Intersects(queryBounds) {
-				*result = append(*result, entity)
-			}
 		}
 	}
 

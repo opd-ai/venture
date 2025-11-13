@@ -93,6 +93,9 @@ func main() {
 	world.AddSystem(progressionSystem)
 	world.AddSystem(inventorySystem)
 
+	// Initialize V4.0 systems (Phase 21-27: Vehicles, Companions, Books, Mini-Games, Achievements)
+	initializeV4Systems(world, *seed, logger)
+
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
 	}

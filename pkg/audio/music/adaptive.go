@@ -46,6 +46,63 @@ type AdaptiveComposer struct {
 	rootNote       int
 }
 
+// AdaptiveMusicManager wraps AdaptiveComposer to implement audio.AdaptiveMusicSystem interface.
+type AdaptiveMusicManager struct {
+	composer *AdaptiveComposer
+}
+
+// NewAdaptiveMusicManager creates a new AdaptiveMusicManager that implements audio.AdaptiveMusicSystem.
+func NewAdaptiveMusicManager(sampleRate int, seed int64) *AdaptiveMusicManager {
+	return &AdaptiveMusicManager{
+		composer: NewAdaptiveComposer(sampleRate, seed),
+	}
+}
+
+// Initialize sets up the manager with genre and root note.
+func (amm *AdaptiveMusicManager) Initialize(genre string, rootNote int) {
+	amm.composer.Initialize(genre, rootNote)
+}
+
+// SetContext updates music based on a MusicContext struct (implements interface).
+func (amm *AdaptiveMusicManager) SetContext(ctx audio.MusicContext) error {
+	return amm.composer.SetContextFromStruct(ctx)
+}
+
+// UpdateIntensity adjusts the intensity layer volume (implements interface).
+func (amm *AdaptiveMusicManager) UpdateIntensity(intensity float64) error {
+	return amm.composer.UpdateIntensity(intensity)
+}
+
+// AddLayer activates a specific music layer (implements interface).
+func (amm *AdaptiveMusicManager) AddLayer(layer audio.MusicLayer) error {
+	return amm.composer.AddLayer(layer)
+}
+
+// RemoveLayer deactivates a specific music layer (implements interface).
+func (amm *AdaptiveMusicManager) RemoveLayer(layer audio.MusicLayer) error {
+	return amm.composer.RemoveLayer(layer)
+}
+
+// Update performs smooth transitions (implements interface).
+func (amm *AdaptiveMusicManager) Update(deltaTime float64) {
+	amm.composer.Update(deltaTime)
+}
+
+// GenerateTrack creates an audio sample (implements interface).
+func (amm *AdaptiveMusicManager) GenerateTrack(duration float64) *audio.AudioSample {
+	return amm.composer.GenerateTrack(duration)
+}
+
+// GetActiveLayerCount returns the number of active layers.
+func (amm *AdaptiveMusicManager) GetActiveLayerCount() int {
+	return amm.composer.GetActiveLayerCount()
+}
+
+// GetLayerVolume returns the volume of a specific layer.
+func (amm *AdaptiveMusicManager) GetLayerVolume(layerName string) float64 {
+	return amm.composer.GetLayerVolume(layerName)
+}
+
 // NewAdaptiveComposer creates a new adaptive music composer.
 func NewAdaptiveComposer(sampleRate int, seed int64) *AdaptiveComposer {
 	return &AdaptiveComposer{
@@ -392,4 +449,118 @@ func (ac *AdaptiveComposer) GetLayerVolume(layerName string) float64 {
 		return layer.Volume
 	}
 	return 0.0
+}
+
+// SetContextFromStruct updates music based on a MusicContext struct.
+// This implements the audio.AdaptiveMusicSystem interface.
+func (ac *AdaptiveComposer) SetContextFromStruct(ctx audio.MusicContext) error {
+	// Map MusicContext to string context and update danger-based intensity
+	context := "exploration" // Default
+
+	if ctx.BossNearby {
+		context = "boss"
+	} else if ctx.Combat {
+		context = "combat"
+	} else if ctx.Danger > 0.7 {
+		context = "combat"
+	} else if ctx.Danger > 0.3 {
+		// Moderate danger - stay in exploration but increase intensity
+		context = "exploration"
+	}
+
+	// Special contexts based on location
+	if ctx.Location == "town" || ctx.Location == "settlement" {
+		context = "exploration"
+		ac.tempo = 80.0 // Slower tempo for towns
+	} else if ctx.Location == "victory" {
+		context = "victory"
+	}
+
+	ac.SetContext(context)
+
+	// Adjust intensity based on danger level
+	return ac.UpdateIntensity(ctx.Danger)
+}
+
+// UpdateIntensity adjusts the intensity layer volume based on a 0.0-1.0 scale.
+// This implements the audio.AdaptiveMusicSystem interface.
+func (ac *AdaptiveComposer) UpdateIntensity(intensity float64) error {
+	// Clamp intensity to valid range
+	if intensity < 0.0 {
+		intensity = 0.0
+	} else if intensity > 1.0 {
+		intensity = 1.0
+	}
+
+	// Update intensity layer target volume
+	if layer, exists := ac.layers["intensity"]; exists {
+		layer.TargetVolume = intensity * 0.5 // Scale to max 0.5 volume
+		if intensity > 0.0 {
+			layer.Active = true
+		}
+	}
+
+	return nil
+}
+
+// AddLayer activates a specific music layer.
+// This implements the audio.AdaptiveMusicSystem interface.
+func (ac *AdaptiveComposer) AddLayer(layer audio.MusicLayer) error {
+	layerName := layer.String()
+
+	if musicLayer, exists := ac.layers[layerName]; exists {
+		// Set target volume based on layer type
+		targetVolume := 0.4 // Default
+		switch layer {
+		case audio.MusicLayerBase:
+			targetVolume = 0.3
+		case audio.MusicLayerMelody:
+			targetVolume = 0.5
+		case audio.MusicLayerHarmony:
+			targetVolume = 0.4
+		case audio.MusicLayerPercussion:
+			targetVolume = 0.5
+		case audio.MusicLayerIntensity:
+			targetVolume = 0.4
+		}
+
+		musicLayer.TargetVolume = targetVolume
+		musicLayer.Active = true
+		return nil
+	}
+
+	return nil
+}
+
+// RemoveLayer deactivates a specific music layer.
+// This implements the audio.AdaptiveMusicSystem interface.
+func (ac *AdaptiveComposer) RemoveLayer(layer audio.MusicLayer) error {
+	layerName := layer.String()
+
+	if musicLayer, exists := ac.layers[layerName]; exists {
+		musicLayer.TargetVolume = 0.0
+		return nil
+	}
+
+	return nil
+}
+
+// Update performs smooth layer transitions.
+// This implements the audio.AdaptiveMusicSystem interface.
+// deltaTime is the time elapsed since last update in seconds.
+func (ac *AdaptiveComposer) Update(deltaTime float64) {
+	// Calculate transition speed based on deltaTime
+	// Target: complete transition in ~1 second
+	transitionSpeed := deltaTime
+	if transitionSpeed > 1.0 {
+		transitionSpeed = 1.0
+	}
+
+	ac.UpdateLayers(transitionSpeed)
+}
+
+// GenerateTrack creates an audio sample with current settings.
+// This implements the audio.AdaptiveMusicSystem interface.
+func (ac *AdaptiveComposer) GenerateTrack(duration float64) *audio.AudioSample {
+	return ac.GenerateAdaptiveTrack(duration)
 }

@@ -1,7 +1,10 @@
 package music
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/audio"
 )
 
 func TestNewAdaptiveComposer(t *testing.T) {
@@ -323,3 +326,398 @@ func abs(x float64) float64 {
 	}
 	return x
 }
+
+func TestAdaptiveComposer_SetContextFromStruct(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	tests := []struct {
+		name           string
+		context        audio.MusicContext
+		expectedActive map[string]bool // layer name → should be active
+	}{
+		{
+			name: "exploration_low_danger",
+			context: audio.MusicContext{
+				Location: "wilderness",
+				Combat:   false,
+				Danger:   0.1,
+			},
+			expectedActive: map[string]bool{
+				"ambient":    true,
+				"melody":     true,
+				"percussion": false,
+			},
+		},
+		{
+			name: "combat_medium_danger",
+			context: audio.MusicContext{
+				Location: "dungeon",
+				Combat:   true,
+				Danger:   0.5,
+			},
+			expectedActive: map[string]bool{
+				"ambient":    true,
+				"melody":     true,
+				"percussion": true,
+				"intensity":  true,
+			},
+		},
+		{
+			name: "boss_fight",
+			context: audio.MusicContext{
+				Location:   "boss_room",
+				Combat:     true,
+				BossNearby: true,
+				Danger:     1.0,
+			},
+			expectedActive: map[string]bool{
+				"ambient":    true,
+				"melody":     true,
+				"percussion": true,
+				"harmony":    true,
+				"intensity":  true,
+			},
+		},
+		{
+			name: "town_safe",
+			context: audio.MusicContext{
+				Location: "town",
+				Combat:   false,
+				Danger:   0.0,
+			},
+			expectedActive: map[string]bool{
+				"ambient": true,
+				"melody":  true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := composer.SetContextFromStruct(tt.context)
+			if err != nil {
+				t.Fatalf("SetContextFromStruct() error = %v", err)
+			}
+
+			// Update to apply context
+			for i := 0; i < 10; i++ {
+				composer.Update(0.1)
+			}
+
+			// Verify expected layer states
+			for layerName, shouldBeActive := range tt.expectedActive {
+				volume := composer.GetLayerVolume(layerName)
+				isActive := volume > 0.01
+
+				if shouldBeActive && !isActive {
+					t.Errorf("Layer %s should be active (volume > 0), got volume = %f", layerName, volume)
+				}
+				if !shouldBeActive && isActive {
+					t.Errorf("Layer %s should be inactive (volume = 0), got volume = %f", layerName, volume)
+				}
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_UpdateIntensity(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	tests := []struct {
+		name      string
+		intensity float64
+		wantMin   float64
+		wantMax   float64
+	}{
+		{"zero_intensity", 0.0, 0.0, 0.01},
+		{"low_intensity", 0.25, 0.05, 0.15},
+		{"medium_intensity", 0.5, 0.15, 0.3},
+		{"high_intensity", 0.75, 0.25, 0.4},
+		{"max_intensity", 1.0, 0.35, 0.6},
+		{"above_max_clamped", 1.5, 0.35, 0.6}, // Should clamp to 1.0
+		{"below_min_clamped", -0.5, 0.0, 0.01}, // Should clamp to 0.0
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset intensity layer
+			composer.layers["intensity"].Volume = 0.0
+			composer.layers["intensity"].TargetVolume = 0.0
+			
+			err := composer.UpdateIntensity(tt.intensity)
+			if err != nil {
+				t.Fatalf("UpdateIntensity() error = %v", err)
+			}
+
+			// Update to apply intensity change (more iterations for convergence)
+			for i := 0; i < 20; i++ {
+				composer.Update(0.1)
+			}
+
+			volume := composer.GetLayerVolume("intensity")
+			if volume < tt.wantMin || volume > tt.wantMax {
+				t.Errorf("Intensity volume = %f, want range [%f, %f]", volume, tt.wantMin, tt.wantMax)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_AddLayer(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	// Start with minimal layers (exploration context)
+	composer.SetContext("exploration")
+	
+	// Update to stabilize
+	for i := 0; i < 10; i++ {
+		composer.Update(0.1)
+	}
+
+	layers := []audio.MusicLayer{
+		audio.MusicLayerHarmony,      // Not active in exploration
+		audio.MusicLayerPercussion,   // Not active in exploration
+		audio.MusicLayerIntensity,    // Not active in exploration
+	}
+
+	for _, layer := range layers {
+		t.Run(layer.String(), func(t *testing.T) {
+			// Store initial volume before adding
+			initialVolume := composer.GetLayerVolume(layer.String())
+
+			err := composer.AddLayer(layer)
+			if err != nil {
+				t.Fatalf("AddLayer() error = %v", err)
+			}
+
+			// Update to activate layer (more iterations for convergence)
+			for i := 0; i < 20; i++ {
+				composer.Update(0.1)
+			}
+
+			volume := composer.GetLayerVolume(layer.String())
+			if volume <= initialVolume+0.01 {
+				t.Errorf("Layer %s volume = %f, want > %f after adding", layer, volume, initialVolume+0.01)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_RemoveLayer(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	// Start with all layers active (boss context)
+	composer.SetContext("boss")
+
+	// Update to activate all layers
+	for i := 0; i < 20; i++ {
+		composer.Update(0.1)
+	}
+
+	layers := []audio.MusicLayer{
+		audio.MusicLayerHarmony,
+		audio.MusicLayerPercussion,
+		audio.MusicLayerIntensity,
+	}
+
+	for _, layer := range layers {
+		t.Run(layer.String(), func(t *testing.T) {
+			// Store initial volume
+			initialVolume := composer.GetLayerVolume(layer.String())
+
+			err := composer.RemoveLayer(layer)
+			if err != nil {
+				t.Fatalf("RemoveLayer() error = %v", err)
+			}
+
+			// Update to deactivate layer (more iterations for full fade out)
+			for i := 0; i < 50; i++ {
+				composer.Update(0.1)
+			}
+
+			volume := composer.GetLayerVolume(layer.String())
+			// Volume should be significantly reduced (may not reach exactly 0 due to exponential decay)
+			if volume >= initialVolume*0.5 {
+				t.Errorf("Layer %s volume = %f, want < %f (50%% of initial) after removal", layer, volume, initialVolume*0.5)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_Update(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	// Set initial context
+	composer.SetContext("exploration")
+
+	// Set target volumes manually
+	composer.layers["percussion"].TargetVolume = 0.5
+	composer.layers["percussion"].Active = true
+
+	initialVolume := composer.layers["percussion"].Volume
+
+	// Update with various delta times
+	deltaTimes := []float64{0.01, 0.05, 0.1, 0.5, 1.0}
+
+	for _, dt := range deltaTimes {
+		t.Run(fmt.Sprintf("deltaTime_%.2f", dt), func(t *testing.T) {
+			// Reset to known state
+			composer.layers["percussion"].Volume = 0.0
+			composer.layers["percussion"].TargetVolume = 0.5
+
+			composer.Update(dt)
+
+			newVolume := composer.layers["percussion"].Volume
+
+			// Volume should have changed toward target
+			if newVolume <= initialVolume {
+				t.Errorf("Volume didn't increase: initial=%f, new=%f, dt=%f", initialVolume, newVolume, dt)
+			}
+
+			// Larger delta time should produce larger change
+			if dt >= 0.5 && newVolume < 0.2 {
+				t.Errorf("Volume change too small for dt=%f: volume=%f", dt, newVolume)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_GenerateTrack(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+	composer.SetContext("combat")
+
+	duration := 3.0
+	track := composer.GenerateTrack(duration)
+
+	if track == nil {
+		t.Fatal("GenerateTrack() returned nil")
+	}
+
+	expectedSamples := int(float64(composer.sampleRate) * duration)
+	if len(track.Data) != expectedSamples {
+		t.Errorf("Track length = %d, want %d", len(track.Data), expectedSamples)
+	}
+
+	if track.SampleRate != composer.sampleRate {
+		t.Errorf("Track sample rate = %d, want %d", track.SampleRate, composer.sampleRate)
+	}
+
+	// Verify GenerateTrack produces same result as GenerateAdaptiveTrack
+	track2 := composer.GenerateAdaptiveTrack(duration)
+
+	if len(track.Data) != len(track2.Data) {
+		t.Error("GenerateTrack and GenerateAdaptiveTrack produce different lengths")
+	}
+}
+
+func TestMusicLayer_String(t *testing.T) {
+	tests := []struct {
+		layer audio.MusicLayer
+		want  string
+	}{
+		{audio.MusicLayerBase, "base"},
+		{audio.MusicLayerHarmony, "harmony"},
+		{audio.MusicLayerPercussion, "percussion"},
+		{audio.MusicLayerMelody, "melody"},
+		{audio.MusicLayerIntensity, "intensity"},
+		{audio.MusicLayer(999), "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.layer.String()
+			if got != tt.want {
+				t.Errorf("String() = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_InterfaceCompliance(t *testing.T) {
+	// Verify AdaptiveMusicManager implements audio.AdaptiveMusicSystem
+	var _ audio.AdaptiveMusicSystem = &AdaptiveMusicManager{}
+}
+
+func TestAdaptiveMusicManager_Interface(t *testing.T) {
+	manager := NewAdaptiveMusicManager(44100, 12345)
+	manager.Initialize("fantasy", 60)
+
+	// Test SetContext with MusicContext
+	ctx := audio.MusicContext{
+		Location: "dungeon",
+		Combat:   true,
+		Danger:   0.7,
+	}
+
+	err := manager.SetContext(ctx)
+	if err != nil {
+		t.Fatalf("SetContext() error = %v", err)
+	}
+
+	// Test UpdateIntensity
+	err = manager.UpdateIntensity(0.8)
+	if err != nil {
+		t.Fatalf("UpdateIntensity() error = %v", err)
+	}
+
+	// Test AddLayer
+	err = manager.AddLayer(audio.MusicLayerPercussion)
+	if err != nil {
+		t.Fatalf("AddLayer() error = %v", err)
+	}
+
+	// Test Update
+	manager.Update(0.1)
+
+	// Test GenerateTrack
+	track := manager.GenerateTrack(1.0)
+	if track == nil {
+		t.Fatal("GenerateTrack() returned nil")
+	}
+
+	// Test RemoveLayer
+	err = manager.RemoveLayer(audio.MusicLayerPercussion)
+	if err != nil {
+		t.Fatalf("RemoveLayer() error = %v", err)
+	}
+
+	// Test helper methods
+	count := manager.GetActiveLayerCount()
+	if count < 0 {
+		t.Errorf("GetActiveLayerCount() = %d, want >= 0", count)
+	}
+
+	volume := manager.GetLayerVolume("melody")
+	if volume < 0.0 || volume > 1.0 {
+		t.Errorf("GetLayerVolume() = %f, want [0.0, 1.0]", volume)
+	}
+}
+
+
+func BenchmarkAdaptiveComposer_Update(b *testing.B) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+	composer.SetContext("combat")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		composer.Update(0.016) // ~60 FPS
+	}
+}
+
+func BenchmarkAdaptiveComposer_GenerateTrack(b *testing.B) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+	composer.SetContext("combat")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		composer.GenerateTrack(1.0)
+	}
+}
+

@@ -68,3 +68,76 @@ type AudioMixer interface {
 	// SetVolume sets the master volume (0.0 to 1.0)
 	SetVolume(volume float64)
 }
+
+// MusicContext represents the gameplay context for adaptive music.
+type MusicContext struct {
+	// Location describes where the player is (e.g., "dungeon", "town", "wilderness")
+	Location string
+
+	// Combat indicates if combat is active
+	Combat bool
+
+	// BossNearby indicates if a boss enemy is nearby
+	BossNearby bool
+
+	// TimeOfDay represents the time (e.g., "dawn", "day", "dusk", "night")
+	TimeOfDay string
+
+	// Danger level from 0.0 (safe) to 1.0 (deadly)
+	Danger float64
+}
+
+// MusicLayer represents a layer in adaptive music composition.
+type MusicLayer int
+
+const (
+	// MusicLayerBase is the foundational ambient layer
+	MusicLayerBase MusicLayer = iota
+	// MusicLayerHarmony adds harmonic support
+	MusicLayerHarmony
+	// MusicLayerPercussion adds rhythmic elements
+	MusicLayerPercussion
+	// MusicLayerMelody adds the primary melodic line
+	MusicLayerMelody
+	// MusicLayerIntensity adds high-energy intensity
+	MusicLayerIntensity
+)
+
+// String returns the string representation of a MusicLayer.
+func (m MusicLayer) String() string {
+	switch m {
+	case MusicLayerBase:
+		return "base"
+	case MusicLayerHarmony:
+		return "harmony"
+	case MusicLayerPercussion:
+		return "percussion"
+	case MusicLayerMelody:
+		return "melody"
+	case MusicLayerIntensity:
+		return "intensity"
+	default:
+		return "unknown"
+	}
+}
+
+// AdaptiveMusicSystem manages context-aware music composition.
+type AdaptiveMusicSystem interface {
+	// SetContext updates the music based on gameplay context
+	SetContext(context MusicContext) error
+
+	// UpdateIntensity adjusts the intensity level (0.0-1.0)
+	UpdateIntensity(intensity float64) error
+
+	// AddLayer activates a specific music layer
+	AddLayer(layer MusicLayer) error
+
+	// RemoveLayer deactivates a specific music layer
+	RemoveLayer(layer MusicLayer) error
+
+	// Update performs smooth transitions between states
+	Update(deltaTime float64)
+
+	// GenerateTrack creates an audio sample with current settings
+	GenerateTrack(duration float64) *AudioSample
+}

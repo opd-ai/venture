@@ -131,7 +131,10 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 		expComp.CurrentXP += int(reward.XP)
 	}
 
-	// Award items
-	// TODO: Add items to inventory
-	_ = time.Now() // Placeholder to avoid unused import
+	// Award items - Note: reward.Items contains entity IDs, but InventoryComponent
+	// stores *item.Item pointers. In practice, the World should be queried to get
+	// the Item entities and add them to inventory. This is left as a TODO for
+	// integration with the item system.
+	_ = reward.Items // TODO: Properly integrate with item system
+	_ = time.Now()  // Keep time import for potential future use
 }

@@ -14,7 +14,7 @@ V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-g
 - Targets: 60 FPS, <500MB, <2s gen | gofmt -w -s, Go stdlib, stubs for tests
 
 ## PHASE 1: BUILD/TEST
-Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass.
+Install deps, `go build ./...` and `go test ./...`. Fix: (1) compile, (2) imports, (3) tests, (4) races. Skip if pass. Run `FIX.md` instructions to identify and resolve bugs systematically.
 
 ## PHASE 2: V4-V6 COMPLETION
 **Audit:** V4 (P21-30), V5 (social), V6 (P31-36) components/systems in pkg/, cmd/.

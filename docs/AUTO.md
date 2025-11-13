@@ -1,7 +1,7 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete item toward V4.0, V5.0, V6.0 → 6.0 readiness**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V4.md, ROADMAP_V5.md, ROADMAP_V6.md, AUDIT.md files. Work sequentially where possible, with v4 features first, v5 features next, v6 featurss last.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 6 phases: (1) fix build/tests, (2) **complete item toward V4.0, V5.0, V6.0 → 6.0 readiness**, (3) align docs, (4) roadmap, (5) refactor, (6) enhance. Use xvfb for tests. Ref: ROADMAP_V4.md, ROADMAP_V5.md, ROADMAP_V6.md, AUDIT.md files. Work sequentially where possible, with v4 features first, v5 features next, v6 featurss last. Pick a reasonable workload if the roadmap is too long.
 
 **Target: 6.0 Readiness (V4→V5→V6):**
 V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-games, reputation, adaptive music, storytelling | V5 (6 phases): Chat, NPC dialog, image sharing, item trading, social systems | V6 (P31-36): Persistent worlds, federation, cross-server travel, post office, politics/trade, territory control

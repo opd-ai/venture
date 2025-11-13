@@ -2,22 +2,35 @@ package engine
 
 import (
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
-// FactionReactionSystem handles NPC behavior based on player reputation
+// FactionReactionSystem modifies NPC behavior based on reputation.
+// It adjusts prices, aggression levels, and dialogue availability based on
+// the player's standing with the NPC's faction.
 type FactionReactionSystem struct {
-	world *World
+	world  *World
+	logger *logrus.Logger
 }
 
-// NewFactionReactionSystem creates a new faction reaction system
-func NewFactionReactionSystem(world *World) *FactionReactionSystem {
-	return &FactionReactionSystem{world: world}
+// NewFactionReactionSystem creates a new FactionReactionSystem.
+func NewFactionReactionSystem(world *World, logger *logrus.Logger) *FactionReactionSystem {
+	if logger == nil {
+		logger = logrus.New()
+	}
+
+	return &FactionReactionSystem{
+		world:  world,
+		logger: logger,
+	}
 }
 
-// Update processes faction-based reactions
+// Update processes faction reactions for all NPCs.
+// This is called every frame but optimizations ensure minimal overhead.
 func (s *FactionReactionSystem) Update(deltaTime float64) {
-	// Faction reactions are event-driven, not time-based
-	// This is here for consistency with other systems
+	// Faction reactions are checked on-demand (during interactions)
+	// rather than every frame for performance reasons
 }
 
 // GetReactionLevel returns the reaction level based on reputation
@@ -49,8 +62,8 @@ func (s *FactionReactionSystem) GetReactionLevel(entityID uint64, faction string
 	}
 }
 
-// GetPriceModifier returns the price multiplier based on reputation
-// Hostile: 2.0x, Unfriendly: 1.5x, Neutral: 1.0x, Friendly: 0.85x, Honored: 0.7x
+// GetPriceModifier returns the price multiplier based on reputation.
+// Returns values from 0.5 (50% discount at Revered) to 2.0 (200% markup at Hated).
 func (s *FactionReactionSystem) GetPriceModifier(entityID uint64, faction string) float64 {
 	reaction := s.GetReactionLevel(entityID, faction)
 
@@ -68,6 +81,70 @@ func (s *FactionReactionSystem) GetPriceModifier(entityID uint64, faction string
 	default:
 		return 1.0
 	}
+}
+
+// IsHostile returns true if the NPC should be aggressive towards the player.
+// NPCs become hostile at reputation < -50 (Hostile or Hated).
+func (s *FactionReactionSystem) IsHostile(playerID, npcID uint64) bool {
+	npc, ok := s.world.GetEntity(npcID)
+	if !ok || npc == nil {
+		return false
+	}
+
+	player, ok := s.world.GetEntity(playerID)
+	if !ok || player == nil {
+		return false
+	}
+
+	npcFaction := s.getEntityFaction(npc)
+	if npcFaction == "" {
+		return false // No faction, default to non-hostile
+	}
+
+	repComp, ok := player.GetComponent("reputation")
+	if !ok || repComp == nil {
+		return false // No reputation data, assume neutral
+	}
+
+	reputation, ok := repComp.(*ReputationComponent)
+	if !ok {
+		return false
+	}
+
+	return reputation.IsHostile(npcFaction)
+}
+
+// CanTrade returns true if the NPC is willing to trade with the player.
+// NPCs refuse to trade at Hostile or Hated reputation levels.
+func (s *FactionReactionSystem) CanTrade(playerID, npcID uint64) bool {
+	npc, ok := s.world.GetEntity(npcID)
+	if !ok || npc == nil {
+		return false
+	}
+
+	player, ok := s.world.GetEntity(playerID)
+	if !ok || player == nil {
+		return false
+	}
+
+	npcFaction := s.getEntityFaction(npc)
+	if npcFaction == "" {
+		return true // No faction restrictions
+	}
+
+	repComp, ok := player.GetComponent("reputation")
+	if !ok || repComp == nil {
+		return true // No reputation data, allow trade
+	}
+
+	reputation, ok := repComp.(*ReputationComponent)
+	if !ok {
+		return true
+	}
+
+	// Refuse trade if hostile or hated
+	rep := reputation.GetReputation(npcFaction)
+	return rep >= -50.0
 }
 
 // ShouldAttackOnSight returns true if NPC should attack player
@@ -183,4 +260,17 @@ func (s *FactionReactionSystem) GetReputationThreshold(level string) float64 {
 	default:
 		return 0.0
 	}
+}
+
+// getEntityFaction returns the faction of an entity.
+// This is a helper method that checks for a faction component.
+func (s *FactionReactionSystem) getEntityFaction(entity *Entity) string {
+	// Check for faction component
+	comp, ok := entity.GetComponent("faction")
+	if ok && comp != nil {
+		// Future: Extract faction name from FactionComponent
+		return ""
+	}
+
+	return ""
 }

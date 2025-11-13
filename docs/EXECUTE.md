@@ -1,10 +1,10 @@
-# TASK: Execute Next Planned Task
+# Phase: Execute Next Planned Phase
 
 ## OBJECTIVE
-Identify and implement the next incomplete task from docs/PLAN.md (short-term) or docs/ROADMAP.md (long-term). Prioritize PLAN.md tasks. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE task following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass.
+Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass.
 
 ## EXECUTION MODE
-**Autonomous Action** - Implement the task immediately with full testing and documentation.
+**Autonomous Action** - Implement the Phase immediately with full testing and documentation.
 
 ## CONTEXT
 - **Project**: Venture (Go 1.24+, Ebiten 2.9) - Procedural action-RPG with ECS architecture
@@ -14,7 +14,7 @@ Identify and implement the next incomplete task from docs/PLAN.md (short-term) o
 ## IMPLEMENTATION WORKFLOW
 
 ### 1. Analysis (Read First)
-- Check `docs/PLAN.md` for next incomplete task
+- Check `docs/PLAN.md` for next incomplete Phase
 - If PLAN.md doesn't exist or is complete, check `docs/ROADMAP.md` 
 - Extract clear acceptance criteria and affected systems
 
@@ -51,16 +51,18 @@ Identify and implement the next incomplete task from docs/PLAN.md (short-term) o
 - [ ] No circular dependencies, follows pkg/ hierarchy
 - [ ] Deterministic generation verified (if applicable)
 - [ ] Update PLAN.md or ROADMAP.md with completion status, avoid extra detail
-- [ ] Do not create additional `*.md` or `docs/*.md` files, they just clutter things. Write excellent godoc instead.
+- [ ] Do not create unnecessary new `*.md` or `docs/*.md` files—update existing documentation as required by the workflow, and write excellent godoc instead.
+
+> **Checklist convention:** Mark completed items with `[x]` and incomplete items with `[ ]` for consistency.
 
 ## OUTPUT FORMAT
 Provide brief status updates:
-1. **Task Identified**: "[Task name from PLAN.md/ROADMAP.md]"
+1. **Phase Identified**: "[Phase name from PLAN.md/ROADMAP.md]"
 2. **Implementation**: Concise progress during work
-3. **Completion**: "✅ [Task] complete. Coverage: X%. Tests passing."
+3. **Completion**: "✅ [Phase] complete. Coverage: X%. Tests passing."
 
 ## SUCCESS CRITERIA
-- Exactly one task completed with zero regressions
+- Exactly one Phase completed with zero regressions
 - All tests pass: `go test ./...`
 - Code follows Venture conventions (see copilot-instructions.md)
 - Planning document updated to reflect completion
@@ -73,3 +75,4 @@ Provide brief status updates:
 - **Logging**: Use structured logging with logrus (see pkg/logging/)
 - **No Asset Files**: All content procedurally generated at runtime
 - **Replace, Don't Accumulate**: When a system/technique is completely replaced (e.g., improved sprites, better generation algorithms), remove the old implementation entirely without backward compatibility concerns. Only keep code that still serves a purpose.
+	- *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.

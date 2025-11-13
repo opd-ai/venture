@@ -47,35 +47,22 @@ func (s *AlignmentSystem) RecordDeed(entityID uint64, action string, lawDelta, g
 	var repComp *ReputationComponent
 	comp, ok := entity.GetComponent("reputation")
 	if !ok {
-		repComp = &ReputationComponent{
-			Factions:  make(map[string]float64),
-			Alignment: Alignment{LawAxis: 0, GoodAxis: 0},
-			KarmaDeed: []Deed{},
-		}
+		repComp = NewReputationComponent()
 		entity.AddComponent(repComp)
 	} else {
 		repComp = comp.(*ReputationComponent)
 	}
 
-	// Apply alignment change (clamped to -1.0 to +1.0)
-	repComp.Alignment.LawAxis = math.Max(-1.0, math.Min(1.0, repComp.Alignment.LawAxis+lawDelta))
-	repComp.Alignment.GoodAxis = math.Max(-1.0, math.Min(1.0, repComp.Alignment.GoodAxis+goodDelta))
+	// Apply alignment change using component's method (which includes clamping)
+	repComp.AdjustAlignment(lawDelta, goodDelta)
 
-	// Record deed in history
+	// Record deed in history using component's method
 	deed := Deed{
-		Action:    action,
-		Timestamp: 0, // TODO: Add timestamp when time system is available
-		AlignmentChange: Alignment{
-			LawAxis:  lawDelta,
-			GoodAxis: goodDelta,
-		},
+		Description: action,
+		LawImpact:   lawDelta,
+		GoodImpact:  goodDelta,
 	}
-	repComp.KarmaDeed = append(repComp.KarmaDeed, deed)
-
-	// Keep deed history limited to last 100 actions
-	if len(repComp.KarmaDeed) > 100 {
-		repComp.KarmaDeed = repComp.KarmaDeed[len(repComp.KarmaDeed)-100:]
-	}
+	repComp.RecordDeed(deed)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

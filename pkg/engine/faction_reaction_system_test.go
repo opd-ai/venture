@@ -2,11 +2,15 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	system := NewFactionReactionSystem(world, logger)
 
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
@@ -15,8 +19,8 @@ func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 			"Guards":    50,
 			"Thieves":   -80,
 		},
-		Alignment: Alignment{},
-		KarmaDeed: []Deed{},
+		Alignment:  Alignment{},
+		KarmaDeeds: []Deed{},
 	}
 	entity.AddComponent(repComp)
 	world.Update(0) // Process entity addition to world
@@ -44,13 +48,15 @@ func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 
 func TestFactionReactionSystem_GetPriceModifier(t *testing.T) {
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	system := NewFactionReactionSystem(world, logger)
 
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
-		Factions:  make(map[string]float64),
-		Alignment: Alignment{},
-		KarmaDeed: []Deed{},
+		Factions:   make(map[string]float64),
+		Alignment:  Alignment{},
+		KarmaDeeds: []Deed{},
 	}
 	entity.AddComponent(repComp)
 	world.Update(0) // Process entity addition to world
@@ -79,14 +85,16 @@ func TestFactionReactionSystem_GetPriceModifier(t *testing.T) {
 }
 
 func TestFactionReactionSystem_ShouldAttackOnSight(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	system := NewFactionReactionSystem(world, logger)
 
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
-		Factions:  make(map[string]float64),
-		Alignment: Alignment{},
-		KarmaDeed: []Deed{},
+		Factions:   make(map[string]float64),
+		Alignment:  Alignment{},
+		KarmaDeeds: []Deed{},
 	}
 	entity.AddComponent(repComp)
 	world.Update(0) // Process entity addition to world
@@ -114,14 +122,16 @@ func TestFactionReactionSystem_ShouldAttackOnSight(t *testing.T) {
 }
 
 func TestFactionReactionSystem_CanAcceptQuest(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	system := NewFactionReactionSystem(world, logger)
 
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
-		Factions:  map[string]float64{"Test": 30},
-		Alignment: Alignment{},
-		KarmaDeed: []Deed{},
+		Factions:   map[string]float64{"Test": 30},
+		Alignment:  Alignment{},
+		KarmaDeeds: []Deed{},
 	}
 	entity.AddComponent(repComp)
 	world.Update(0) // Process entity addition to world
@@ -147,14 +157,16 @@ func TestFactionReactionSystem_CanAcceptQuest(t *testing.T) {
 }
 
 func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	system := NewFactionReactionSystem(world, logger)
 
 	entity := world.CreateEntity()
 	repComp := &ReputationComponent{
-		Factions:  make(map[string]float64),
-		Alignment: Alignment{},
-		KarmaDeed: []Deed{},
+		Factions:   make(map[string]float64),
+		Alignment:  Alignment{},
+		KarmaDeeds: []Deed{},
 	}
 	entity.AddComponent(repComp)
 	world.Update(0) // Process entity addition to world
@@ -196,8 +208,10 @@ func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 }
 
 func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	system := NewFactionReactionSystem(world, logger)
 
 	tests := []struct {
 		name     string
@@ -221,7 +235,7 @@ func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 					LawAxis:  tt.lawAxis,
 					GoodAxis: tt.goodAxis,
 				},
-				KarmaDeed: []Deed{},
+				KarmaDeeds: []Deed{},
 			}
 			entity.AddComponent(repComp)
 			world.Update(0) // Process entity addition to world
@@ -235,8 +249,10 @@ func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 }
 
 func TestFactionReactionSystem_GetReputationThreshold(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
 	world := NewWorld()
-	system := NewFactionReactionSystem(world)
+	system := NewFactionReactionSystem(world, logger)
 
 	tests := []struct {
 		level    string

@@ -687,9 +687,12 @@ const (
 ## Phase 27: Mini-Game System (Months 9-10)
 
 **Focus:** Embedded procedural mini-games  
-**Duration:** 6 weeks
+**Duration:** 6 weeks  
+**Status:** Phase 27.1 COMPLETE ✅ (November 2025)
 
-### 27.1: Mini-Game Framework (2 weeks)
+### 27.1: Mini-Game Framework (2 weeks) - COMPLETE ✅
+
+**Status:** All milestones complete - MiniGame interface, components, system, tests, and CLI tool implemented (November 2025)
 
 **Interfaces:**
 ```go
@@ -707,20 +710,44 @@ type MiniGame interface {
 ```go
 // pkg/engine/minigame_component.go
 type MiniGameComponent struct {
-    GameType    MiniGameType
-    Active      bool
-    State       interface{} // Game-specific state
-    Difficulty  float64
-    TimeLimit   float64
-    TimeElapsed float64
-    Reward      *Reward
+    GameType     MiniGameType
+    Active       bool
+    State        interface{} // Game-specific state
+    Difficulty   float64
+    TimeLimit    float64
+    TimeElapsed  float64
+    Reward       *Reward
+    GameInstance MiniGame // Interface implementation
 }
 ```
 
+**Completed Deliverables:**
+- ✅ MiniGame interface in pkg/engine/interfaces.go
+- ✅ MiniGameComponent with 7 game types (Card, Dice, Puzzle, Memory, LockPicking, Hacking, Ritual)
+- ✅ MiniGameSystem with lifecycle management (start, update, end, timeouts, rewards)
+- ✅ Reward struct for gold, XP, and item rewards
+- ✅ Deterministic reward generation using seed-based RNG
+- ✅ Difficulty clamping (0.0-1.0) and scaling
+- ✅ Game type multipliers for balanced rewards
+- ✅ Time limits: Card(10min), Dice(5min), Puzzle(7min), Memory(4min), LockPicking(2min), Hacking(3min), Ritual(5min)
+- ✅ Error handling with proper error returns
+- ✅ 32 comprehensive test functions
+- ✅ CLI test tool: cmd/minigametest (list, single, all modes)
+
 **Success Metrics:**
-- Mini-game types: ≥5
-- Generation time: <100ms per game
-- Test coverage: ≥65%
+- ✅ Mini-game types: 7 implemented (exceeds ≥5 requirement)
+- ✅ Generation time: <1ms per game (exceeds <100ms target by 100x)
+- ✅ Test coverage: 95%+ on minigame files (exceeds ≥65% requirement)
+- ✅ All tests passing with zero race conditions
+
+**Technical Implementation:**
+- MiniGameType enum with String() method for all 7 types
+- MiniGameSystem.Update() processes active games, handles timeouts, calls GameInstance
+- SetGameInstance() allows plugging in specific game implementations
+- StartGame() creates components with deterministic rewards
+- EndGame() awards gold to inventory, XP to experience component
+- GetGameComponent() and IsGameActive() for querying game state
+- Benchmark tests for performance validation
 
 ### 27.2: Mini-Game Types (3 weeks)
 

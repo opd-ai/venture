@@ -19,6 +19,10 @@ const (
 	TypeTalk
 	// TypeBoss represents quests to defeat specific bosses
 	TypeBoss
+	// TypeMoralChoice represents quests with moral decisions
+	TypeMoralChoice
+	// TypeFactionConflict represents quests involving faction choices
+	TypeFactionConflict
 )
 
 // String returns the string representation of a quest type.
@@ -36,6 +40,10 @@ func (t QuestType) String() string {
 		return "talk"
 	case TypeBoss:
 		return "boss"
+	case TypeMoralChoice:
+		return "moral_choice"
+	case TypeFactionConflict:
+		return "faction_conflict"
 	default:
 		return "unknown"
 	}
@@ -182,6 +190,14 @@ type Quest struct {
 	GiverNPC string
 	// Location is where the quest takes place (optional)
 	Location string
+	// MoralChoiceID links this quest to a moral choice (optional)
+	MoralChoiceID string
+	// FactionA is the first faction in a faction conflict quest (optional)
+	FactionA string
+	// FactionB is the second faction in a faction conflict quest (optional)
+	FactionB string
+	// HasMoralConsequences indicates if completing this quest triggers moral choices
+	HasMoralConsequences bool
 }
 
 // IsComplete returns true if all objectives are met.

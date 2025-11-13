@@ -47,7 +47,9 @@ func (s *MoralChoiceSystem) Update(deltaTime float64) {
 		s.logger.Infof("Processing entity %d with %d pending choices", entity.ID, len(moralChoice.PendingChoices))
 
 		// Remove expired choices
-		s.removeExpiredChoices(entity, moralChoice) // Update redemption arcs
+		s.removeExpiredChoices(entity, moralChoice)
+
+		// Update redemption arcs
 		s.updateRedemptionArcs(entity, moralChoice, deltaTime)
 	}
 }

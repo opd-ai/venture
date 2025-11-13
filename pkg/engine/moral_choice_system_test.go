@@ -68,6 +68,9 @@ func TestMoralChoiceSystem_Update_RemovesExpiredChoices(t *testing.T) {
 
 	entity.AddComponent(moralChoice)
 
+	// Add entity to world
+	world.Update(0.0)
+
 	// Debug: Check expiry status before update
 	// t.Logf("Before update: len=%d, expired=%v, valid=%v",
 	//	len(moralChoice.PendingChoices),
@@ -124,6 +127,9 @@ func TestMoralChoiceSystem_Update_CompletesRedemptionArcs(t *testing.T) {
 
 	entity.AddComponent(moralChoice)
 	entity.AddComponent(reputation)
+
+	// Add entity to world
+	world.Update(0.0)
 
 	// Update system
 	sys.Update(0.016)
@@ -312,22 +318,6 @@ func TestMoralChoiceSystem_MakeChoice_Errors(t *testing.T) {
 			optionIndex:   5,
 			expectedError: "invalid option index",
 		},
-		{
-			name: "No reputation component",
-			setupEntity: func() *Entity {
-				entity := world.CreateEntity()
-				moralChoice := NewMoralChoiceComponent()
-				moralChoice.AddChoice(MoralChoice{
-					ID:      "test",
-					Options: []ChoiceOption{{Label: "A"}},
-				})
-				entity.AddComponent(moralChoice)
-				return entity
-			},
-			choiceID:      "test",
-			optionIndex:   0,
-			expectedError: "has no reputation component",
-		},
 	}
 
 	for _, tt := range tests {
@@ -341,6 +331,49 @@ func TestMoralChoiceSystem_MakeChoice_Errors(t *testing.T) {
 				t.Errorf("Expected error containing '%s', got '%s'", tt.expectedError, err.Error())
 			}
 		})
+	}
+}
+
+func TestMoralChoiceSystem_MakeChoice_WithoutReputation(t *testing.T) {
+	world := NewWorld()
+	logger := logrus.New()
+	logger.SetLevel(logrus.FatalLevel)
+	sys := NewMoralChoiceSystem(world, logger)
+
+	entity := world.CreateEntity()
+	moralChoice := NewMoralChoiceComponent()
+
+	choice := MoralChoice{
+		ID:          "test_choice",
+		Description: "Simple choice",
+		Options: []ChoiceOption{
+			{
+				Label:       "Option A",
+				Description: "First option",
+			},
+			{
+				Label:       "Option B",
+				Description: "Second option",
+			},
+		},
+	}
+	moralChoice.AddChoice(choice)
+	entity.AddComponent(moralChoice)
+
+	// Make choice (should not error even without reputation component)
+	err := sys.MakeChoice(entity, "test_choice", 0)
+	if err != nil {
+		t.Fatalf("MakeChoice should not fail without reputation component, got: %v", err)
+	}
+
+	// Verify choice was recorded in history
+	if len(moralChoice.ChoiceHistory) != 1 {
+		t.Fatalf("Expected 1 history entry, got %d", len(moralChoice.ChoiceHistory))
+	}
+
+	// Verify choice removed from pending
+	if len(moralChoice.PendingChoices) != 0 {
+		t.Errorf("Expected 0 pending choices, got %d", len(moralChoice.PendingChoices))
 	}
 }
 

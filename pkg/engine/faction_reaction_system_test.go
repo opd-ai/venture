@@ -19,6 +19,7 @@ func TestFactionReactionSystem_GetReactionLevel(t *testing.T) {
 		KarmaDeed: []Deed{},
 	}
 	entity.AddComponent(repComp)
+	world.Update(0) // Process entity addition to world
 
 	tests := []struct {
 		name     string
@@ -52,6 +53,7 @@ func TestFactionReactionSystem_GetPriceModifier(t *testing.T) {
 		KarmaDeed: []Deed{},
 	}
 	entity.AddComponent(repComp)
+	world.Update(0) // Process entity addition to world
 
 	tests := []struct {
 		name       string
@@ -87,6 +89,7 @@ func TestFactionReactionSystem_ShouldAttackOnSight(t *testing.T) {
 		KarmaDeed: []Deed{},
 	}
 	entity.AddComponent(repComp)
+	world.Update(0) // Process entity addition to world
 
 	tests := []struct {
 		name       string
@@ -121,6 +124,7 @@ func TestFactionReactionSystem_CanAcceptQuest(t *testing.T) {
 		KarmaDeed: []Deed{},
 	}
 	entity.AddComponent(repComp)
+	world.Update(0) // Process entity addition to world
 
 	tests := []struct {
 		name          string
@@ -153,6 +157,7 @@ func TestFactionReactionSystem_GetDialogOptions(t *testing.T) {
 		KarmaDeed: []Deed{},
 	}
 	entity.AddComponent(repComp)
+	world.Update(0) // Process entity addition to world
 
 	tests := []struct {
 		name       string
@@ -219,6 +224,7 @@ func TestFactionReactionSystem_GetAlignmentDescription(t *testing.T) {
 				KarmaDeed: []Deed{},
 			}
 			entity.AddComponent(repComp)
+			world.Update(0) // Process entity addition to world
 
 			result := system.GetAlignmentDescription(entity.ID)
 			if result != tt.expected {

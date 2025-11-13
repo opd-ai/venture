@@ -92,6 +92,7 @@ type systemsContainer struct {
 	expressionSystem        *engine.ExpressionSystem
 	expressionComboSys      *engine.ExpressionComboSystem
 	miniGameSystem          *engine.MiniGameSystem
+	achievementSystem       *engine.AchievementSystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -245,8 +246,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 27: Mini-game system
 	sys.miniGameSystem = engine.NewMiniGameSystem(game.World)
 
+	// Phase 26.2: Achievement system (social features)
+	sys.achievementSystem = engine.NewAchievementSystem(game.World)
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements)")
 	}
 }
 
@@ -356,6 +360,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})
 	game.World.AddSystem(&expressionComboSystemWrapper{system: sys.expressionComboSys})
+
+	// Phase 26.2: Achievement system (social features, use wrapper)
+	game.World.AddSystem(&achievementSystemWrapper{system: sys.achievementSystem})
 
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
@@ -847,6 +854,13 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 
 	// Add visual feedback
 	player.AddComponent(engine.NewVisualFeedbackComponent())
+
+	// Add achievement tracking (Phase 26.2)
+	player.AddComponent(&engine.AchievementComponent{
+		Achievements:     []engine.Achievement{},
+		ExpressionCount:  0,
+		UniqueExpression: make(map[engine.ExpressionType]int),
+	})
 
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")

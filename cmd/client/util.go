@@ -163,6 +163,15 @@ func (w *miniGameSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 	w.system.Update(deltaTime)
 }
 
+// achievementSystemWrapper adapts AchievementSystem to System interface
+type achievementSystemWrapper struct {
+	system *engine.AchievementSystem
+}
+
+func (w *achievementSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 800, "Screen width")
 	height           = flag.Int("height", 600, "Screen height")

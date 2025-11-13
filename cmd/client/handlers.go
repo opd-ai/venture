@@ -4,12 +4,14 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/item"
@@ -18,6 +20,8 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -767,4 +771,332 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	addTutorialQuest(questTracker, *seed, *genreID, logger)
 
 	return playerInventory, questTracker
+}
+
+// initializeTutorialAndHelp creates and configures tutorial and help systems.
+func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem) {
+	tutorialSystem := engine.NewTutorialSystem()
+	if *noTutorial {
+		tutorialSystem.Enabled = false
+		tutorialSystem.ShowUI = false
+	}
+	helpSystem := engine.NewHelpSystem()
+
+	inputSystem.SetHelpSystem(helpSystem)
+	inputSystem.SetTutorialSystem(tutorialSystem)
+	inputSystem.SetCameraSystem(cameraSystem)
+
+	return tutorialSystem, helpSystem
+}
+
+// configureSaveLoadSystem initializes the save/load manager and registers callbacks.
+func configureSaveLoadSystem(player *engine.Entity, game *engine.EbitenGame, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, clientLogger *logrus.Entry) *saveload.SaveManager {
+	clientLogger.Info("initializing save/load system")
+
+	saveManager, err := saveload.NewSaveManager("./saves")
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to initialize save manager, save/load functionality will be unavailable")
+		return nil
+	}
+
+	if *verbose {
+		clientLogger.Info("save/load system initialized")
+	}
+
+	inputSystem.SetQuickSaveCallback(func() error {
+		clientLogger.Info("quick save (F5 pressed)")
+		gameSave := createGameSave(player, game, generatedTerrain)
+		if err := saveManager.SaveGame("quicksave", gameSave); err != nil {
+			clientLogger.WithError(err).Error("failed to save game")
+			return err
+		}
+		clientLogger.Info("game saved successfully")
+		return nil
+	})
+
+	inputSystem.SetQuickLoadCallback(func() error {
+		clientLogger.Info("quick load (F9 pressed)")
+		gameSave, err := saveManager.LoadGame("quicksave")
+		if err != nil {
+			clientLogger.WithError(err).Error("failed to load game")
+			return err
+		}
+		loadGameSave(player, gameSave, game)
+		clientLogger.Info("game loaded successfully")
+		return nil
+	})
+
+	if *verbose {
+		clientLogger.Info("quick save/load callbacks registered (F5/F9)")
+	}
+
+	return saveManager
+}
+
+// setupUICallbacks configures all UI input callbacks and menu system integrations.
+func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, objectiveTracker *engine.ObjectiveTrackerSystem, dialogSystem *engine.DialogSystem, shopUI *engine.ShopUI, saveManager *saveload.SaveManager, clientLogger *logrus.Entry) error {
+	if *verbose {
+		clientLogger.Info("setting up UI input callbacks")
+	}
+
+	if err := game.SetupInputCallbacks(inputSystem, objectiveTracker); err != nil {
+		return err
+	}
+
+	if *verbose {
+		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
+		clientLogger.Info("inventory actions: E to equip/use, D to drop")
+	}
+
+	if err := setupMerchantInteraction(player, game, dialogSystem, shopUI, inputSystem, clientLogger); err != nil {
+		return err
+	}
+
+	if *verbose {
+		clientLogger.Info("merchant interaction registered (F key when near merchant)")
+	}
+
+	if err := connectMenuSaveLoad(game, player, generatedTerrain, saveManager, clientLogger); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setupMerchantInteraction configures the F key interaction callback for merchants.
+func setupMerchantInteraction(player *engine.Entity, game *engine.EbitenGame, dialogSystem *engine.DialogSystem, shopUI *engine.ShopUI, inputSystem *engine.InputSystem, clientLogger *logrus.Entry) error {
+	return inputSystem.SetInteractCallback(func() {
+		if player == nil {
+			return
+		}
+		posComp, ok := player.GetComponent("position")
+		if !ok {
+			return
+		}
+		pos := posComp.(*engine.PositionComponent)
+
+		merchant, dist := engine.FindClosestMerchant(game.World, pos.X, pos.Y, merchantInteractionRange)
+		if merchant == nil {
+			if *verbose {
+				clientLogger.Debug("no merchant nearby to interact with")
+			}
+			return
+		}
+
+		success, err := dialogSystem.StartDialog(player.ID, merchant.ID)
+		if err != nil {
+			clientLogger.WithError(err).Warn("failed to start dialog")
+			return
+		}
+
+		if !success {
+			if *verbose {
+				clientLogger.Debug("dialog could not be started")
+			}
+			return
+		}
+
+		shopUI.Open(merchant)
+
+		if *verbose {
+			clientLogger.WithField("distance", dist).Debug("opened shop with merchant")
+		}
+	})
+}
+
+// connectMenuSaveLoad wires save/load callbacks to the menu system.
+func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, saveManager *saveload.SaveManager, clientLogger *logrus.Entry) error {
+	if game.MenuSystem == nil || saveManager == nil {
+		return nil
+	}
+
+	if *verbose {
+		clientLogger.Info("connecting save/load callbacks to menu system")
+	}
+
+	saveCallback := func(saveName string) error {
+		if *verbose {
+			clientLogger.WithField("saveName", saveName).Info("menu save")
+		}
+		gameSave := createGameSave(player, game, generatedTerrain)
+		if err := saveManager.SaveGame(saveName, gameSave); err != nil {
+			clientLogger.WithError(err).WithField("saveName", saveName).Error("failed to save game")
+			return err
+		}
+		clientLogger.WithField("saveName", saveName).Info("game saved successfully")
+		return nil
+	}
+
+	loadCallback := func(saveName string) error {
+		if *verbose {
+			clientLogger.WithField("saveName", saveName).Info("menu load")
+		}
+		gameSave, err := saveManager.LoadGame(saveName)
+		if err != nil {
+			clientLogger.WithError(err).WithField("saveName", saveName).Error("failed to load game")
+			return err
+		}
+		loadGameSave(player, gameSave, game)
+		clientLogger.WithField("saveName", saveName).Info("game loaded successfully")
+		return nil
+	}
+
+	game.MenuSystem.SetSaveCallback(saveCallback)
+	game.MenuSystem.SetLoadCallback(loadCallback)
+
+	if *verbose {
+		clientLogger.Info("save/load callbacks connected to menu system")
+	}
+
+	return nil
+}
+
+// initializeUIIntegration sets up shop UI, crafting UI, and connects them to game systems.
+func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
+	shopUI := engine.NewShopUI(*width, *height)
+	shopUI.SetPlayerEntity(player)
+	shopUI.SetCommerceSystem(commerceSystem)
+	shopUI.SetDialogSystem(dialogSystem)
+	game.ShopUI = shopUI
+
+	if *verbose {
+		clientLogger.Info("shop UI initialized and connected to commerce/dialog systems")
+	}
+
+	craftingUI := engine.NewCraftingUI(*width, *height)
+	craftingUI.SetPlayerEntity(player)
+	craftingUI.SetCraftingSystem(craftingSystem)
+	game.CraftingUI = craftingUI
+
+	if *verbose {
+		clientLogger.Info("crafting UI initialized and connected to crafting system")
+	}
+
+	game.SetInventorySystem(inventorySystem)
+
+	return shopUI, craftingUI
+}
+
+// applyCharacterClass applies character class stats if character data is pending.
+func applyCharacterClass(player *engine.Entity, game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	charData := game.GetPendingCharacterData()
+	if charData == nil {
+		return
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		"name":  charData.Name,
+		"class": charData.Class.String(),
+	}).Info("applying character class stats")
+
+	if err := engine.ApplyClassStats(player, charData.Class); err != nil {
+		clientLogger.WithError(err).Fatal("failed to apply character class stats")
+	}
+}
+
+// finalizeGameInitialization processes initial entity updates and logs game start info.
+func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, networkClient interface{}, clientLogger *logrus.Entry) {
+	game.World.Update(0)
+
+	clientLogger.Info("game initialized successfully")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
+	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
+
+	if *multiplayer {
+		clientLogger.WithField("server", *server).Info("multiplayer connected")
+	}
+}
+
+// handleHostAndPlay starts embedded server if host-and-play mode is enabled.
+func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
+	if !*hostAndPlay {
+		return
+	}
+
+	clientLogger.Info("host-and-play mode enabled - starting embedded server")
+
+	serverAddr, cleanup, err := startEmbeddedServer(logger, *seed, *genreID)
+	if err != nil {
+		clientLogger.WithError(err).Fatal("failed to start embedded server")
+	}
+	defer cleanup()
+
+	*server = serverAddr
+	*multiplayer = true
+
+	clientLogger.WithField("serverAddr", serverAddr).Info("embedded server started, connecting client")
+}
+
+// createGameInstance initializes the main game instance with logging and profiling.
+func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engine.EbitenGame {
+	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
+
+	if *profile {
+		game.EnableFrameTimeProfiling()
+		clientLogger.Info("performance profiling enabled - frame time stats will be logged every 5 seconds")
+	}
+
+	return game
+}
+
+// initializeVirtualControls sets up touch controls for mobile/web platforms.
+func initializeVirtualControls(inputSystem *engine.InputSystem, clientLogger *logrus.Entry) {
+	if !mobile.IsTouchCapable() {
+		return
+	}
+
+	inputSystem.InitializeVirtualControls(*width, *height)
+	clientLogger.WithFields(logrus.Fields{
+		"platform": mobile.GetPlatform().String(),
+		"width":    *width,
+		"height":   *height,
+	}).Info("virtual controls initialized for touch-capable platform")
+}
+
+// configureDeathCallback sets up the death callback for combat system.
+func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logger *logrus.Logger) {
+	var playerEntity *engine.Entity
+	sys.combatSystem.SetDeathCallback(createDeathCallback(
+		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
+		sys.recipeGen, *seed, *genreID, logger,
+	))
+}
+
+// createGenerationParams creates standard generation parameters for world content.
+func createGenerationParams() procgen.GenerationParams {
+	return procgen.GenerationParams{
+		Difficulty: defaultDifficulty,
+		Depth:      defaultDepth,
+		GenreID:    *genreID,
+		Custom: map[string]interface{}{
+			"width":  defaultTerrainWidth,
+			"height": defaultTerrainHeight,
+		},
+	}
+}
+
+// cleanupNetworkClient disconnects the network client on shutdown.
+func cleanupNetworkClient(networkClient interface{}, clientLogger *logrus.Entry) {
+	if networkClient == nil {
+		return
+	}
+
+	type disconnector interface {
+		Disconnect() error
+	}
+
+	if dc, ok := networkClient.(disconnector); ok {
+		clientLogger.Info("disconnecting from server")
+		if err := dc.Disconnect(); err != nil {
+			clientLogger.WithError(err).Warn("error disconnecting")
+		}
+	}
+}
+
+// runGameLoop starts the main game loop.
+func runGameLoop(game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	windowTitle := fmt.Sprintf("Venture %s - Procedural Action RPG", version.Version)
+	if err := game.Run(windowTitle); err != nil {
+		clientLogger.WithError(err).Fatal("error running game")
+	}
 }

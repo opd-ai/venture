@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -578,4 +579,192 @@ func calculatePlayerSpawnPosition(generatedTerrain *terrain.Terrain, clientLogge
 
 	clientLogger.Warn("no rooms in terrain, using default spawn position")
 	return fallbackPlayerX, fallbackPlayerY
+}
+
+// createPlayerEntity creates the player entity with all necessary components.
+func createPlayerEntity(game *engine.EbitenGame, playerX, playerY float64, animationSystem *engine.AnimationSystem, clientLogger *logrus.Entry) *engine.Entity {
+	if *verbose {
+		clientLogger.Info("creating player entity")
+	}
+
+	player := game.World.CreateEntity()
+
+	// Add player components
+	player.AddComponent(&engine.PositionComponent{X: playerX, Y: playerY})
+	player.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
+	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&engine.TeamComponent{TeamID: 1}) // Player team
+
+	// Add input component for player control
+	player.AddComponent(&engine.EbitenInput{})
+
+	// Phase 10.1: Add rotation and aim components for 360° rotation and mouse aim
+	player.AddComponent(engine.NewRotationComponent(0, 3.0)) // Start facing right
+	player.AddComponent(engine.NewAimComponent(0))           // Start aiming right
+
+	// Add animated sprite
+	playerSprite := &engine.EbitenSprite{
+		Image:   nil, // Will be created by animation system
+		Width:   28,
+		Height:  28,
+		Visible: true,
+		Layer:   10,
+	}
+	player.AddComponent(playerSprite)
+
+	// Add animation component
+	playerAnim := engine.NewAnimationComponent(*seed + int64(player.ID*1000))
+	playerAnim.CurrentState = engine.AnimationStateIdle
+	playerAnim.FrameTime = 0.15
+	playerAnim.Loop = true
+	playerAnim.Playing = true
+	playerAnim.FrameCount = 4
+	playerAnim.Dirty = true
+	player.AddComponent(playerAnim)
+
+	// Add equipment visual component
+	player.AddComponent(engine.NewEquipmentVisualComponent())
+
+	// Add camera components
+	camera := engine.NewCameraComponent()
+	camera.Smoothing = 0.1
+	player.AddComponent(camera)
+
+	player.AddComponent(engine.NewScreenShakeComponent())
+	player.AddComponent(engine.NewHitStopComponent())
+
+	// Add layer component
+	layerComp := engine.NewLayerComponent()
+	layerComp.CurrentLayer = 0
+	player.AddComponent(&layerComp)
+
+	// Add shadow component
+	playerShadow := engine.NewShadowComponent(28)
+	playerShadow.CastsShadow = true
+	playerShadow.ShadowType = engine.ShadowTypeSoft
+	player.AddComponent(playerShadow)
+
+	// Add player torch if lighting enabled
+	if *enableLighting {
+		playerTorch := engine.NewTorchLight(200)
+		playerTorch.Enabled = true
+		player.AddComponent(playerTorch)
+
+		if *verbose {
+			clientLogger.WithFields(logrus.Fields{
+				"radius":    200,
+				"intensity": playerTorch.Intensity,
+			}).Info("player torch added")
+		}
+	}
+
+	// Configure camera and animation systems
+	game.CameraSystem.SetActiveCamera(player)
+	animationSystem.SetCameraSystem(game.CameraSystem)
+	animationSystem.SetPlayerEntity(player)
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"viewportCulling": true,
+			"distanceLOD":     true,
+			"closeThreshold":  200.0,
+			"midThreshold":    400.0,
+		}).Info("animation system configured with performance optimizations")
+	}
+
+	// Set player for UI systems
+	game.HUDSystem.SetPlayerEntity(player)
+	game.SetPlayerEntity(player)
+
+	clientLogger.WithField("entityID", player.ID).Info("player entity created")
+	return player
+}
+
+// addPlayerComponents adds gameplay components to the player entity.
+func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLogger *logrus.Entry) (*engine.InventoryComponent, *engine.QuestTrackerComponent) {
+	// Add player stats
+	playerStats := engine.NewStatsComponent()
+	playerStats.Attack = 10
+	playerStats.Defense = 5
+	playerStats.CritChance = 0.05
+	playerStats.CritDamage = 1.5
+	playerStats.Evasion = 0.05
+	player.AddComponent(playerStats)
+
+	// Add player experience/progression
+	player.AddComponent(engine.NewExperienceComponent())
+
+	// Add player inventory
+	playerInventory := engine.NewInventoryComponent(20, 100.0)
+	playerInventory.Gold = 100
+	player.AddComponent(playerInventory)
+
+	// Add player equipment
+	player.AddComponent(engine.NewEquipmentComponent())
+
+	// Add mana component
+	playerMana := &engine.ManaComponent{
+		Current: 100,
+		Max:     100,
+		Regen:   5.0,
+	}
+	player.AddComponent(playerMana)
+
+	// Load spells
+	if err := engine.LoadPlayerSpells(player, *seed, *genreID, 1); err != nil {
+		clientLogger.WithError(err).Fatal("failed to load player spells")
+	}
+	if *verbose {
+		clientLogger.Info("player spells loaded (keys 1-5)")
+	}
+
+	// Load skill tree
+	if err := engine.LoadPlayerSkillTree(player, *seed, *genreID, 0); err != nil {
+		clientLogger.WithError(err).Fatal("failed to load skill tree")
+	}
+	if *verbose {
+		if comp, ok := player.GetComponent("skill_tree"); ok {
+			treeComp := comp.(*engine.SkillTreeComponent)
+			clientLogger.WithFields(logrus.Fields{
+				"treeName":   treeComp.Tree.Name,
+				"skillCount": len(treeComp.Tree.Nodes),
+			}).Info("skill tree loaded (press K)")
+		}
+	}
+
+	// Add quest tracker
+	questTracker := engine.NewQuestTrackerComponent(5)
+	player.AddComponent(questTracker)
+
+	// Add attack capability
+	player.AddComponent(&engine.AttackComponent{
+		Damage:     15,
+		DamageType: combat.DamagePhysical,
+		Range:      50,
+		Cooldown:   0.5,
+	})
+
+	// Add collision
+	player.AddComponent(&engine.ColliderComponent{
+		Width:     28,
+		Height:    28,
+		Solid:     true,
+		IsTrigger: false,
+		Layer:     1,
+		OffsetX:   -14,
+		OffsetY:   -14,
+	})
+
+	// Add visual feedback
+	player.AddComponent(engine.NewVisualFeedbackComponent())
+
+	// Add starter items
+	clientLogger.Info("adding starter items to inventory")
+	addStarterItems(playerInventory, *seed, *genreID, logger)
+
+	// Add tutorial quest
+	clientLogger.Info("creating tutorial quest")
+	addTutorialQuest(questTracker, *seed, *genreID, logger)
+
+	return playerInventory, questTracker
 }

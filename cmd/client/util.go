@@ -25,6 +25,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
+	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
@@ -1106,5 +1107,246 @@ func createDeathCallback(
 				}
 			}
 		}
+	}
+}
+
+// serializePlayerState extracts all player state for saving.
+func serializePlayerState(player *engine.Entity, game *engine.EbitenGame) *saveload.PlayerState {
+	playerState := &saveload.PlayerState{
+		EntityID: player.ID,
+	}
+
+	// Get player position
+	if posComp, ok := player.GetComponent("position"); ok {
+		pos := posComp.(*engine.PositionComponent)
+		playerState.X, playerState.Y = pos.X, pos.Y
+	}
+
+	// Get player health
+	if healthComp, ok := player.GetComponent("health"); ok {
+		health := healthComp.(*engine.HealthComponent)
+		playerState.CurrentHealth, playerState.MaxHealth = health.Current, health.Max
+	}
+
+	// Get player stats
+	if statsComp, ok := player.GetComponent("stats"); ok {
+		stats := statsComp.(*engine.StatsComponent)
+		playerState.Attack = stats.Attack
+		playerState.Defense = stats.Defense
+		playerState.MagicPower = stats.MagicPower
+	}
+
+	// Get player level and XP
+	if expComp, ok := player.GetComponent("experience"); ok {
+		exp := expComp.(*engine.ExperienceComponent)
+		playerState.Level = exp.Level
+		playerState.Experience = exp.CurrentXP
+	}
+
+	// Get inventory data
+	if invComp, ok := player.GetComponent("inventory"); ok {
+		inv := invComp.(*engine.InventoryComponent)
+		playerState.Gold = inv.Gold
+		playerState.Items = make([]saveload.ItemData, 0, len(inv.Items))
+		for _, itm := range inv.Items {
+			playerState.Items = append(playerState.Items, saveload.ItemToData(itm))
+		}
+	}
+
+	// Serialize equipped items
+	if equip, hasEquip := player.GetComponent("equipment"); hasEquip {
+		equipment := equip.(*engine.EquipmentComponent)
+		if weapon := equipment.Slots[engine.SlotMainHand]; weapon != nil {
+			weaponData := saveload.ItemToData(weapon)
+			playerState.EquippedItems.Weapon = &weaponData
+		}
+		if armor := equipment.Slots[engine.SlotChest]; armor != nil {
+			armorData := saveload.ItemToData(armor)
+			playerState.EquippedItems.Armor = &armorData
+		}
+		if accessory := equipment.Slots[engine.SlotAccessory1]; accessory != nil {
+			accessoryData := saveload.ItemToData(accessory)
+			playerState.EquippedItems.Accessory = &accessoryData
+		}
+	}
+
+	// Serialize mana
+	if manaComp, hasMana := player.GetComponent("mana"); hasMana {
+		mana := manaComp.(*engine.ManaComponent)
+		playerState.CurrentMana = mana.Current
+		playerState.MaxMana = mana.Max
+	}
+
+	// Serialize spells
+	if slotsComp, hasSlots := player.GetComponent("spell_slots"); hasSlots {
+		slots := slotsComp.(*engine.SpellSlotComponent)
+		playerState.Spells = make([]saveload.SpellData, 0, 5)
+		for i := 0; i < 5; i++ {
+			if spell := slots.GetSlot(i); spell != nil {
+				playerState.Spells = append(playerState.Spells, saveload.SpellToData(spell))
+			}
+		}
+	}
+
+	// Serialize fog of war
+	if game.MapUI != nil {
+		// FogOfWar stored in WorldState, not PlayerState
+		// Left here for reference but not set in PlayerState
+	}
+
+	// Serialize tutorial state
+	if game.TutorialSystem != nil {
+		enabled, showUI, currentStep, completed := game.TutorialSystem.ExportState()
+		playerState.TutorialState = &saveload.TutorialStateData{
+			Enabled:        enabled,
+			ShowUI:         showUI,
+			CurrentStepIdx: currentStep,
+			CompletedSteps: completed,
+		}
+	}
+
+	// Default speed
+	playerState.Speed = 1.0
+
+	return playerState
+}
+
+// deserializePlayerState restores all player state from a save.
+func deserializePlayerState(player *engine.Entity, playerState *saveload.PlayerState, game *engine.EbitenGame) {
+	// Restore player position
+	if posComp, ok := player.GetComponent("position"); ok {
+		pos := posComp.(*engine.PositionComponent)
+		pos.X, pos.Y = playerState.X, playerState.Y
+	}
+
+	// Restore player health
+	if healthComp, ok := player.GetComponent("health"); ok {
+		health := healthComp.(*engine.HealthComponent)
+		health.Current, health.Max = playerState.CurrentHealth, playerState.MaxHealth
+	}
+
+	// Restore player stats
+	if statsComp, ok := player.GetComponent("stats"); ok {
+		stats := statsComp.(*engine.StatsComponent)
+		stats.Attack = playerState.Attack
+		stats.Defense = playerState.Defense
+		stats.MagicPower = playerState.MagicPower
+	}
+
+	// Restore player level and XP
+	if expComp, ok := player.GetComponent("experience"); ok {
+		exp := expComp.(*engine.ExperienceComponent)
+		exp.Level = playerState.Level
+		exp.CurrentXP = playerState.Experience
+	}
+
+	// Restore inventory
+	if invComp, ok := player.GetComponent("inventory"); ok {
+		inv := invComp.(*engine.InventoryComponent)
+		inv.Items = make([]*item.Item, 0, len(playerState.Items))
+		for _, itemData := range playerState.Items {
+			restoredItem := saveload.DataToItem(itemData)
+			inv.Items = append(inv.Items, restoredItem)
+		}
+		inv.Gold = playerState.Gold
+	}
+
+	// Restore equipped items
+	if equipComp, ok := player.GetComponent("equipment"); ok {
+		equipment := equipComp.(*engine.EquipmentComponent)
+		equipment.Slots = make(map[engine.EquipmentSlot]*item.Item)
+
+		if playerState.EquippedItems.Weapon != nil {
+			weapon := saveload.DataToItem(*playerState.EquippedItems.Weapon)
+			equipment.Slots[engine.SlotMainHand] = weapon
+		}
+		if playerState.EquippedItems.Armor != nil {
+			armor := saveload.DataToItem(*playerState.EquippedItems.Armor)
+			equipment.Slots[engine.SlotChest] = armor
+		}
+		if playerState.EquippedItems.Accessory != nil {
+			accessory := saveload.DataToItem(*playerState.EquippedItems.Accessory)
+			equipment.Slots[engine.SlotAccessory1] = accessory
+		}
+		equipment.StatsDirty = true
+	}
+
+	// Restore mana
+	if manaComp, ok := player.GetComponent("mana"); ok {
+		mana := manaComp.(*engine.ManaComponent)
+		mana.Current, mana.Max = playerState.CurrentMana, playerState.MaxMana
+	}
+
+	// Restore spells
+	if slotsComp, ok := player.GetComponent("spell_slots"); ok {
+		slots := slotsComp.(*engine.SpellSlotComponent)
+		for i := 0; i < 5; i++ {
+			slots.Slots[i] = nil
+		}
+		for i, spellData := range playerState.Spells {
+			if i < 5 {
+				restoredSpell := saveload.DataToSpell(spellData)
+				slots.SetSlot(i, restoredSpell)
+			}
+		}
+	}
+
+	// Restore fog of war
+	// This is handled separately in createGameSave/loadGameSave
+
+	// Restore tutorial state
+	if game.TutorialSystem != nil && playerState.TutorialState != nil {
+		tutState := playerState.TutorialState
+		game.TutorialSystem.ImportState(
+			tutState.Enabled,
+			tutState.ShowUI,
+			tutState.CurrentStepIdx,
+			tutState.CompletedSteps,
+		)
+	}
+}
+
+// createGameSave creates a complete game save from current game state.
+func createGameSave(player *engine.Entity, game *engine.EbitenGame, generatedTerrain *terrain.Terrain) *saveload.GameSave {
+	playerState := serializePlayerState(player, game)
+
+	// Get fog of war data
+	var fogOfWar [][]bool
+	if game.MapUI != nil {
+		fogOfWar = game.MapUI.GetFogOfWar()
+	}
+
+	return &saveload.GameSave{
+		Version:     saveload.SaveVersion,
+		PlayerState: playerState,
+		WorldState: &saveload.WorldState{
+			Seed:       *seed,
+			GenreID:    *genreID,
+			Width:      generatedTerrain.Width,
+			Height:     generatedTerrain.Height,
+			Difficulty: 0.5,
+			Depth:      1,
+			FogOfWar:   fogOfWar,
+		},
+		Settings: &saveload.GameSettings{
+			ScreenWidth:  *width,
+			ScreenHeight: *height,
+			Fullscreen:   false,
+			VSync:        true,
+			MasterVolume: 1.0,
+			MusicVolume:  0.7,
+			SFXVolume:    0.8,
+			KeyBindings:  make(map[string]string),
+		},
+	}
+}
+
+// loadGameSave restores game state from a saved game.
+func loadGameSave(player *engine.Entity, gameSave *saveload.GameSave, game *engine.EbitenGame) {
+	deserializePlayerState(player, gameSave.PlayerState, game)
+
+	// Restore fog of war
+	if game.MapUI != nil && gameSave.WorldState != nil && gameSave.WorldState.FogOfWar != nil {
+		game.MapUI.SetFogOfWar(gameSave.WorldState.FogOfWar)
 	}
 }

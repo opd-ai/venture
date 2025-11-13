@@ -1,0 +1,193 @@
+{
+  "metadata": {
+    "repository": "/home/user/go/src/github.com/opd-ai/venture/cmd/client",
+    "generated_at": "2025-11-13T12:06:13.068400762-05:00",
+    "analysis_time": 1922412,
+    "files_processed": 1,
+    "tool_version": "1.0.0",
+    "go_version": ""
+  },
+  "overview": {
+    "total_lines_of_code": 0,
+    "total_functions": 1,
+    "total_methods": 0,
+    "total_structs": 0,
+    "total_interfaces": 0,
+    "total_packages": 1,
+    "total_files": 1
+  },
+  "functions": [
+    {
+      "name": "main",
+      "package": "main",
+      "file": "cmd/client/main.go",
+      "line": 30,
+      "is_exported": false,
+      "is_method": false,
+      "lines": {
+        "total": 1299,
+        "code": 889,
+        "comments": 208,
+        "blank": 202
+      },
+      "signature": {
+        "parameter_count": 0,
+        "return_count": 0,
+        "has_variadic": false,
+        "returns_error": false,
+        "interface_parameters": 0,
+        "generic_parameters": null,
+        "signature_complexity": 0
+      },
+      "complexity": {
+        "cyclomatic": 128,
+        "cognitive": 128,
+        "nesting_depth": 4,
+        "overall": 168.4
+      },
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    }
+  ],
+  "structs": null,
+  "interfaces": null,
+  "packages": [
+    {
+      "name": "main",
+      "path": "main",
+      "files": [
+        "/home/user/go/src/github.com/opd-ai/venture/cmd/client/main.go"
+      ],
+      "lines": {
+        "total": 1325,
+        "code": 1325,
+        "comments": 0,
+        "blank": 0
+      },
+      "functions": 1,
+      "structs": 0,
+      "interfaces": 0,
+      "dependencies": [
+        "github.com/opd-ai/venture/pkg/engine",
+        "github.com/opd-ai/venture/pkg/logging",
+        "github.com/opd-ai/venture/pkg/mobile",
+        "github.com/opd-ai/venture/pkg/procgen",
+        "github.com/opd-ai/venture/pkg/procgen/faction",
+        "github.com/opd-ai/venture/pkg/procgen/item",
+        "github.com/opd-ai/venture/pkg/procgen/quest",
+        "github.com/opd-ai/venture/pkg/procgen/recipe",
+        "github.com/opd-ai/venture/pkg/procgen/station",
+        "github.com/opd-ai/venture/pkg/procgen/terrain",
+        "github.com/opd-ai/venture/pkg/rendering/sprites",
+        "github.com/opd-ai/venture/pkg/saveload",
+        "github.com/opd-ai/venture/pkg/version",
+        "github.com/sirupsen/logrus"
+      ],
+      "dependents": null,
+      "cohesion_score": 0.2,
+      "coupling_score": 7,
+      "documentation": {
+        "has_comment": false,
+        "comment_length": 0,
+        "has_example": false,
+        "quality_score": 0
+      }
+    }
+  ],
+  "patterns": {
+    "design_patterns": {
+      "singleton": null,
+      "factory": null,
+      "builder": null,
+      "observer": null,
+      "strategy": null
+    },
+    "concurrency_patterns": {
+      "worker_pools": [],
+      "pipelines": [],
+      "fan_out": [],
+      "fan_in": [],
+      "semaphores": [],
+      "goroutines": {
+        "total_count": 1,
+        "anonymous_count": 1,
+        "named_count": 0,
+        "potential_leaks": [],
+        "instances": [
+          {
+            "file": "main",
+            "line": 406,
+            "function": "anonymous",
+            "is_anonymous": true,
+            "has_defer": false,
+            "context": "anonymous function"
+          }
+        ]
+      },
+      "channels": {
+        "total_count": 0,
+        "buffered_count": 0,
+        "unbuffered_count": 0,
+        "directional_count": 0,
+        "instances": []
+      },
+      "sync_primitives": {
+        "mutexes": [],
+        "rw_mutexes": [],
+        "wait_groups": [],
+        "once": [],
+        "cond": [],
+        "atomic": []
+      }
+    },
+    "anti_patterns": {
+      "god_objects": null,
+      "long_methods": null,
+      "deep_nesting": null,
+      "magic_numbers": null
+    }
+  },
+  "complexity": {
+    "average_function_complexity": 0,
+    "average_struct_complexity": 0,
+    "highest_complexity": null,
+    "complexity_distribution": null
+  },
+  "documentation": {
+    "coverage": {
+      "packages": 0,
+      "functions": 0,
+      "types": 0,
+      "methods": 0,
+      "overall": 0
+    },
+    "quality": {
+      "average_length": 0,
+      "code_examples": 0,
+      "inline_comments": 0,
+      "block_comments": 0,
+      "quality_score": 0
+    },
+    "todo_comments": null,
+    "fixme_comments": null,
+    "hack_comments": null
+  },
+  "generics": {
+    "type_parameters": {
+      "count": 0,
+      "constraints": null,
+      "complexity": null
+    },
+    "instantiations": {
+      "functions": null,
+      "types": null,
+      "methods": null
+    },
+    "constraint_usage": null,
+    "complexity_score": 0
+  }
+}

@@ -290,13 +290,13 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	sys.factionSystem = engine.NewFactionSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(sys.factionSystem)
 
-	sys.reputationSystem = engine.NewReputationSystem(game.World)
+	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})
 
 	sys.alignmentSystem = engine.NewAlignmentSystem(game.World)
 	game.World.AddSystem(&alignmentSystemWrapper{system: sys.alignmentSystem})
 
-	sys.factionReactionSystem = engine.NewFactionReactionSystem(game.World)
+	sys.factionReactionSystem = engine.NewFactionReactionSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&factionReactionSystemWrapper{system: sys.factionReactionSystem})
 
 	sys.skillProgressionSystem = engine.NewSkillProgressionSystem()

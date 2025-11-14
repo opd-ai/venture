@@ -35,6 +35,13 @@ type QuestTrackerComponent struct {
 
 	// MaxActiveQuests is the maximum number of concurrent active quests
 	MaxActiveQuests int
+
+	// StoryUnlockedQuests tracks quests that become available after completing story series.
+	// Key format: "seriesID" → quest IDs unlocked by that series
+	StoryUnlockedQuests map[string][]string
+
+	// PendingStoryQuests are quests that have been unlocked but not yet presented to the player.
+	PendingStoryQuests []*quest.Quest
 }
 
 // Type returns the component type identifier.
@@ -45,10 +52,12 @@ func (q *QuestTrackerComponent) Type() string {
 // NewQuestTrackerComponent creates a new quest tracker.
 func NewQuestTrackerComponent(maxActive int) *QuestTrackerComponent {
 	return &QuestTrackerComponent{
-		ActiveQuests:    make([]*TrackedQuest, 0),
-		CompletedQuests: make([]*TrackedQuest, 0),
-		FailedQuests:    make([]*TrackedQuest, 0),
-		MaxActiveQuests: maxActive,
+		ActiveQuests:        make([]*TrackedQuest, 0),
+		CompletedQuests:     make([]*TrackedQuest, 0),
+		FailedQuests:        make([]*TrackedQuest, 0),
+		MaxActiveQuests:     maxActive,
+		StoryUnlockedQuests: make(map[string][]string),
+		PendingStoryQuests:  make([]*quest.Quest, 0),
 	}
 }
 
@@ -182,6 +191,67 @@ func (q *QuestTrackerComponent) GetQuestProgress(questID string, objectiveIndex 
 		}
 	}
 	return 0
+}
+
+// RegisterStoryQuest registers a quest that should be unlocked when a story series is completed.
+// seriesID is the story series that unlocks this quest.
+// questID is the quest to unlock when the series is completed.
+func (q *QuestTrackerComponent) RegisterStoryQuest(seriesID, questID string) {
+	q.StoryUnlockedQuests[seriesID] = append(q.StoryUnlockedQuests[seriesID], questID)
+}
+
+// UnlockStoryQuests checks if a completed story series unlocks any quests and adds them to pending.
+// Returns the number of quests unlocked.
+func (q *QuestTrackerComponent) UnlockStoryQuests(seriesID string, questGenerator func(questID string) *quest.Quest) int {
+	questIDs, exists := q.StoryUnlockedQuests[seriesID]
+	if !exists || len(questIDs) == 0 {
+		return 0
+	}
+
+	unlockedCount := 0
+	for _, questID := range questIDs {
+		// Check if already unlocked
+		alreadyPending := false
+		for _, pending := range q.PendingStoryQuests {
+			if pending.ID == questID {
+				alreadyPending = true
+				break
+			}
+		}
+
+		if alreadyPending {
+			continue
+		}
+
+		// Generate the quest
+		qst := questGenerator(questID)
+		if qst != nil {
+			q.PendingStoryQuests = append(q.PendingStoryQuests, qst)
+			unlockedCount++
+		}
+	}
+
+	return unlockedCount
+}
+
+// GetPendingStoryQuests returns all pending story-unlocked quests.
+func (q *QuestTrackerComponent) GetPendingStoryQuests() []*quest.Quest {
+	return q.PendingStoryQuests
+}
+
+// ClearPendingStoryQuest removes a quest from the pending list (called when player accepts or dismisses it).
+func (q *QuestTrackerComponent) ClearPendingStoryQuest(questID string) {
+	for i, qst := range q.PendingStoryQuests {
+		if qst.ID == questID {
+			q.PendingStoryQuests = append(q.PendingStoryQuests[:i], q.PendingStoryQuests[i+1:]...)
+			return
+		}
+	}
+}
+
+// HasPendingStoryQuests returns true if there are any pending story-unlocked quests.
+func (q *QuestTrackerComponent) HasPendingStoryQuests() bool {
+	return len(q.PendingStoryQuests) > 0
 }
 
 // AbandonQuest removes a quest from active quests without completing it.

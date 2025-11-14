@@ -42,12 +42,13 @@ func (f FragmentType) String() string {
 
 // StoryFragment represents a single discoverable story element
 type StoryFragment struct {
-	Type        FragmentType
-	Content     string
-	Location    Vector2
-	DiscoveryXP float64
-	SeriesID    string // Related fragments share series ID
-	SequenceNum int    // Order within series (0-based)
+	Type          FragmentType
+	Content       string
+	Location      Vector2
+	DiscoveryXP   float64
+	SeriesID      string // Related fragments share series ID
+	SequenceNum   int    // Order within series (0-based)
+	SpritePattern string // Visual representation pattern for rendering
 }
 
 // Vector2 represents a 2D position
@@ -104,12 +105,13 @@ func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams
 		content := storyContent[i]
 
 		fragments[i] = StoryFragment{
-			Type:        fragType,
-			Content:     content,
-			Location:    g.generateLocation(rng, i, numFragments),
-			DiscoveryXP: 10.0 + float64(i)*5.0,
-			SeriesID:    seriesID,
-			SequenceNum: i,
+			Type:          fragType,
+			Content:       content,
+			Location:      g.generateLocation(rng, i, numFragments),
+			DiscoveryXP:   10.0 + float64(i)*5.0,
+			SeriesID:      seriesID,
+			SequenceNum:   i,
+			SpritePattern: g.generateSpritePattern(fragType, params.GenreID, rng),
 		}
 	}
 
@@ -353,4 +355,62 @@ func (g *FragmentGenerator) calculateCoherence(storyContent []string) float64 {
 
 	// Normalize to 0.5-1.0 range (stories always have some coherence)
 	return 0.5 + coherence*0.5
+}
+
+// generateSpritePattern generates a visual pattern description for rendering.
+// This returns a simple string identifier that can be used by the sprite
+// generator to create appropriate visuals for each fragment type.
+func (g *FragmentGenerator) generateSpritePattern(fragType FragmentType, genreID string, rng *rand.Rand) string {
+	switch fragType {
+	case FragmentNote:
+		// Paper/scroll patterns
+		patterns := []string{"scroll", "paper", "parchment", "journal"}
+		return patterns[rng.Intn(len(patterns))]
+
+	case FragmentCarving:
+		// Wall inscription patterns
+		patterns := []string{"wall_runes", "stone_script", "wall_etching", "carved_text"}
+		return patterns[rng.Intn(len(patterns))]
+
+	case FragmentCorpse:
+		// Body/skeleton patterns based on genre
+		if genreID == "scifi" {
+			patterns := []string{"android_remains", "human_corpse", "alien_body"}
+			return patterns[rng.Intn(len(patterns))]
+		} else if genreID == "horror" {
+			patterns := []string{"twisted_corpse", "skeletal_remains", "decayed_body"}
+			return patterns[rng.Intn(len(patterns))]
+		}
+		patterns := []string{"skeleton", "body", "remains"}
+		return patterns[rng.Intn(len(patterns))]
+
+	case FragmentRelic:
+		// Artifact patterns based on genre
+		if genreID == "fantasy" {
+			patterns := []string{"ancient_amulet", "magic_relic", "enchanted_item"}
+			return patterns[rng.Intn(len(patterns))]
+		} else if genreID == "scifi" {
+			patterns := []string{"tech_artifact", "data_crystal", "alien_device"}
+			return patterns[rng.Intn(len(patterns))]
+		}
+		patterns := []string{"artifact", "relic", "ancient_object"}
+		return patterns[rng.Intn(len(patterns))]
+
+	case FragmentGraffiti:
+		// Markings based on genre
+		if genreID == "cyberpunk" {
+			patterns := []string{"neon_tag", "spray_paint", "holo_graffiti"}
+			return patterns[rng.Intn(len(patterns))]
+		}
+		patterns := []string{"graffiti", "wall_marking", "painted_message"}
+		return patterns[rng.Intn(len(patterns))]
+
+	case FragmentBlood:
+		// Blood/fluid trails
+		patterns := []string{"blood_trail", "blood_splatter", "blood_pool"}
+		return patterns[rng.Intn(len(patterns))]
+
+	default:
+		return "unknown_fragment"
+	}
 }

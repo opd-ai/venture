@@ -129,6 +129,8 @@ const (
 	ActionRead
 	// ActionPlayGame for mini-game stations (Phase 27.3)
 	ActionPlayGame
+	// ActionInvestigate for environmental investigation (Phase 30.2)
+	ActionInvestigate
 )
 
 // String returns the string representation of an action type.
@@ -152,6 +154,8 @@ func (a ContextActionType) String() string {
 		return "Read"
 	case ActionPlayGame:
 		return "Play"
+	case ActionInvestigate:
+		return "Investigate"
 	default:
 		return "Interact"
 	}

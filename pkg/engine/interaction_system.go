@@ -163,6 +163,8 @@ func (s *InteractionSystem) activateContextAction(player, entity *Entity, contex
 		s.handleReadAction(player, entity)
 	case ActionPlayGame:
 		s.handlePlayGameAction(player, entity)
+	case ActionInvestigate:
+		s.handleInvestigateAction(player)
 		// Other actions can be added here
 	}
 }
@@ -505,4 +507,44 @@ func (s *InteractionSystem) handlePlayGameAction(player, stationEntity *Entity) 
 
 	// The actual mini-game would be started by MiniGameSystem.StartGame()
 	// and integrated with the game factory from pkg/procgen/minigame/factory.go
+}
+
+// handleInvestigateAction initiates environmental investigation (Phase 30.2).
+// Starts an investigation action to reveal hidden story fragments and clues.
+func (s *InteractionSystem) handleInvestigateAction(player *Entity) {
+	if s.logger != nil {
+		s.logger.WithField("playerID", player.ID).Debug("investigate action initiated")
+	}
+
+	// Get investigation component
+	invComp, ok := player.GetComponent("investigation")
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("playerID", player.ID).Debug("player has no investigation component")
+		}
+		return
+	}
+
+	investigation, ok := invComp.(*InvestigationComponent)
+	if !ok {
+		return
+	}
+
+	// Try to start investigation
+	if !investigation.StartInvestigation() {
+		if s.logger != nil {
+			s.logger.WithField("playerID", player.ID).Debug("investigation on cooldown")
+		}
+		return
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID": player.ID,
+			"radius":   investigation.GetEffectiveRadius(),
+			"duration": investigation.InvestigationDuration,
+		}).Info("player started investigation")
+	}
+
+	// The actual investigation processing is handled by InvestigationSystem.Update()
 }

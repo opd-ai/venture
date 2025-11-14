@@ -8,10 +8,8 @@ import (
 	"math"
 )
 
-var (
-	// ErrInvalidComponentData is returned when deserialization encounters invalid data
-	ErrInvalidComponentData = errors.New("invalid component data")
-)
+// ErrInvalidComponentData is returned when deserialization encounters invalid data
+var ErrInvalidComponentData = errors.New("invalid component data")
 
 // writeFloat64 writes a float64 to the buffer in little-endian format.
 func writeFloat64(buf []byte, v float64) {

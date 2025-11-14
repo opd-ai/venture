@@ -147,7 +147,6 @@ func TestInvestigationSystem_GetInvestigationProgress(t *testing.T) {
 	entity.AddComponent(invComp)
 
 	total, revealed, err := system.GetInvestigationProgress(entity)
-
 	if err != nil {
 		t.Fatalf("GetInvestigationProgress failed: %v", err)
 	}

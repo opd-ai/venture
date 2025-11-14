@@ -134,7 +134,7 @@ func main() {
 
 	// Spawn V4.0 entities (vehicles, companions, bookshelves)
 	v4Logger := logging.GeneratorLogger(logger, "v4-spawning", *seed, *genreID)
-	
+
 	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn vehicles")

@@ -76,9 +76,13 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	bookReadingSystem := engine.NewBookReadingSystem(world)
 	world.AddSystem(bookReadingSystem)
 
-	// Phase 26: Expression Systems
-	// Note: ExpressionSystem requires AudioManager which servers don't have
-	// Skipping expression systems on server (client-only for now)
+	// Phase 26: Expression Systems (headless mode - no audio)
+	// ExpressionSystem works with nil AudioManager for server use
+	expressionSystem := engine.NewExpressionSystem(world, nil)
+	world.AddSystem(&expressionSystemWrapper{system: expressionSystem})
+
+	expressionComboSystem := engine.NewExpressionComboSystem(world)
+	world.AddSystem(&expressionComboSystemWrapper{system: expressionComboSystem})
 
 	// Phase 27: Mini-Game Systems
 	miniGameSystem := engine.NewMiniGameSystem(world)
@@ -88,15 +92,16 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	achievementSystem := engine.NewAchievementSystem(world)
 	world.AddSystem(&achievementSystemWrapper{system: achievementSystem})
 
-	systemCount := 5 // VehicleCombat, CompanionAI, BookReading, MiniGame, Achievement
+	systemCount := 7 // VehicleCombat, CompanionAI, BookReading, Expression, ExpressionCombo, MiniGame, Achievement
 
 	serverLogger.WithFields(logrus.Fields{
 		"vehicleSystems":     1, // VehicleCombat
 		"companionSystems":   1, // CompanionAI
 		"bookSystems":        1, // BookReading
+		"expressionSystems":  2, // Expression, ExpressionCombo
 		"miniGameSystems":    1, // MiniGame
 		"achievementSystems": 1, // Achievement
 		"totalV4Systems":     systemCount,
-		"note":               "Expression systems skipped (require AudioManager, client-only)",
+		"note":               "Expression systems running in headless mode (no audio playback)",
 	}).Info("V4.0 systems initialized on server")
 }

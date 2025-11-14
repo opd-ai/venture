@@ -349,15 +349,117 @@ func TestMusicTriggerSystem_OnQuestComplete(t *testing.T) {
 	}
 }
 
+func TestMusicTriggerSystem_OnCombatEnd(t *testing.T) {
+	world := NewWorld()
+	manager := music.NewAdaptiveMusicManager(44100, 12345)
+	manager.Initialize("fantasy", 60)
+	system := NewMusicTriggerSystem(world, manager)
+
+	entity := world.CreateEntity()
+	comp := NewMusicTriggerComponent()
+	entity.AddComponent(comp)
+	world.Update(0.0)
+
+	// Start combat first
+	comp.TriggerCombat(true)
+	if !comp.CombatActive {
+		t.Fatal("Combat should be active")
+	}
+
+	// End combat
+	system.OnCombatEnd(entity.ID)
+	system.Update(0.001)
+
+	if comp.CombatActive {
+		t.Error("CombatActive should be false after combat end")
+	}
+
+	if comp.CurrentContext.Danger == 0.0 {
+		t.Error("Danger should be slightly elevated after combat ends")
+	}
+}
+
+func TestMusicTriggerSystem_OnBossDefeated(t *testing.T) {
+	world := NewWorld()
+	manager := music.NewAdaptiveMusicManager(44100, 12345)
+	manager.Initialize("fantasy", 60)
+	system := NewMusicTriggerSystem(world, manager)
+
+	entity := world.CreateEntity()
+	comp := NewMusicTriggerComponent()
+	entity.AddComponent(comp)
+	world.Update(0.0)
+
+	// Start boss fight
+	comp.TriggerBoss(true)
+	if !comp.BossNearby {
+		t.Fatal("Boss should be nearby")
+	}
+
+	// Defeat boss
+	system.OnBossDefeated(entity.ID)
+	system.Update(0.001)
+
+	if comp.BossNearby {
+		t.Error("BossNearby should be false after boss defeated")
+	}
+
+	if comp.PendingContext == nil {
+		t.Error("PendingContext should be set for victory music")
+	}
+}
+
+func TestMusicTriggerSystem_OnExplorationMilestone(t *testing.T) {
+	world := NewWorld()
+	manager := music.NewAdaptiveMusicManager(44100, 12345)
+	manager.Initialize("fantasy", 60)
+	system := NewMusicTriggerSystem(world, manager)
+
+	entity := world.CreateEntity()
+	comp := NewMusicTriggerComponent()
+	entity.AddComponent(comp)
+	world.Update(0.0)
+
+	initialMilestones := comp.ExplorationMilestones
+
+	// Trigger exploration milestone (new area)
+	system.OnExplorationMilestone(entity.ID, true)
+	system.Update(0.001)
+
+	if comp.ExplorationMilestones != initialMilestones+1 {
+		t.Errorf("ExplorationMilestones = %d, want %d", comp.ExplorationMilestones, initialMilestones+1)
+	}
+}
+
+func TestMusicTriggerSystem_OnReputationChange(t *testing.T) {
+	world := NewWorld()
+	manager := music.NewAdaptiveMusicManager(44100, 12345)
+	manager.Initialize("fantasy", 60)
+	system := NewMusicTriggerSystem(world, manager)
+
+	entity := world.CreateEntity()
+	comp := NewMusicTriggerComponent()
+	entity.AddComponent(comp)
+	world.Update(0.0)
+
+	// Change to revered reputation
+	system.OnReputationChange(entity.ID, "revered")
+	system.Update(0.001)
+
+	if comp.ReputationTier != "revered" {
+		t.Errorf("ReputationTier = %s, want revered", comp.ReputationTier)
+	}
+}
+
 func TestMusicTriggerSystem_SetMusicManager(t *testing.T) {
 	world := NewWorld()
 	manager1 := music.NewAdaptiveMusicManager(44100, 12345)
 	system := NewMusicTriggerSystem(world, manager1)
 
-	manager2 := music.NewAdaptiveMusicManager(44100, 54321)
+	manager2 := music.NewAdaptiveMusicManager(44100, 67890)
 	system.SetMusicManager(manager2)
 
 	if system.musicManager != manager2 {
-		t.Error("SetMusicManager did not update manager reference")
+		t.Error("Music manager not updated correctly")
 	}
 }

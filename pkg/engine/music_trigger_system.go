@@ -41,7 +41,7 @@ func (mts *MusicTriggerSystem) Update(deltaTime float64) {
 	// Process at regular intervals to avoid excessive updates,
 	// but force an update if we just processed events
 	shouldUpdate := mts.timeSinceUpdate >= mts.updateInterval || hadEvents
-	
+
 	if !shouldUpdate {
 		// Still update music manager even if not checking entities
 		mts.musicManager.Update(deltaTime)

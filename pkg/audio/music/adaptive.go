@@ -308,76 +308,324 @@ func (ac *AdaptiveComposer) generateLayer(layer *MusicLayer, duration float64) [
 	return data
 }
 
-// generateMelodyLayer creates a melodic line.
+// MelodyPattern defines melodic movement patterns.
+type MelodyPattern int
+
+const (
+	PatternAscending MelodyPattern = iota // Upward motion
+	PatternDescending                     // Downward motion
+	PatternArpeggio                       // Chord arpeggiation
+	PatternWave                           // Wave-like contour
+	PatternRepeat                         // Repeated motif
+)
+
+// generateMelodyLayer creates a melodic line with patterns and variation.
 func (ac *AdaptiveComposer) generateMelodyLayer(data []float64, scale Scale, beatDuration float64) {
 	samplePos := 0
 	noteDuration := beatDuration * 0.5 // Eighth notes
+	
+	// Choose melodic pattern based on context and genre
+	pattern := ac.chooseMelodyPattern()
+	motifLength := 4 // 4-note motifs
+	scalePos := ac.rng.Intn(len(scale.Intervals))
+	direction := 1
 
 	for samplePos < len(data) {
-		// Choose note from scale
-		scaleIndex := ac.rng.Intn(len(scale.Intervals))
-		note := ac.rootNote + scale.Intervals[scaleIndex] + 12 // One octave above root
-		freq := NoteToFrequency(note)
+		// Generate motif (4-note phrase)
+		for i := 0; i < motifLength && samplePos < len(data); i++ {
+			// Apply pattern to choose next note
+			switch pattern {
+			case PatternAscending:
+				scalePos = (scalePos + 1) % len(scale.Intervals)
+			case PatternDescending:
+				scalePos = (scalePos - 1 + len(scale.Intervals)) % len(scale.Intervals)
+			case PatternArpeggio:
+				scalePos = (scalePos + 2) % len(scale.Intervals) // Skip notes (thirds)
+			case PatternWave:
+				scalePos = scalePos + direction
+				// Handle wrap-around for both positive and negative
+				if scalePos < 0 {
+					scalePos = len(scale.Intervals) - 1
+				} else if scalePos >= len(scale.Intervals) {
+					scalePos = 0
+				}
+				if i%2 == 1 {
+					direction = -direction // Reverse direction every other note
+				}
+			case PatternRepeat:
+				// Keep same position for repetition
+			}
 
-		// Generate note
-		noteLen := int(float64(ac.sampleRate) * noteDuration)
-		noteSample := ac.osc.Generate(audio.WaveformTriangle, freq, noteDuration)
+			note := ac.rootNote + scale.Intervals[scalePos] + 12 // One octave above root
+			
+			// Add occasional octave jumps for interest
+			if ac.rng.Float64() < 0.15 {
+				note += 12
+			}
+			
+			freq := NoteToFrequency(note)
 
-		// Apply ADSR envelope
-		env := synthesis.Envelope{Attack: 0.01, Decay: 0.1, Sustain: 0.6, Release: 0.2}
-		env.Apply(noteSample.Data, noteSample.SampleRate)
+			// Vary note duration for rhythm
+			noteDur := noteDuration
+			if i%4 == 3 && ac.rng.Float64() < 0.3 { // Occasional longer notes
+				noteDur *= 1.5
+			}
 
-		// Mix into data
-		for i := 0; i < noteLen && samplePos+i < len(data); i++ {
-			data[samplePos+i] += noteSample.Data[i] * 0.5
+			// Generate note
+			noteLen := int(float64(ac.sampleRate) * noteDur)
+			noteSample := ac.osc.Generate(audio.WaveformTriangle, freq, noteDur)
+
+			// Apply ADSR envelope with variation
+			attack := 0.01
+			if ac.currentContext == "combat" || ac.currentContext == "boss" {
+				attack = 0.005 // Sharper attack in combat
+			}
+			env := synthesis.Envelope{Attack: attack, Decay: 0.1, Sustain: 0.6, Release: 0.2}
+			env.Apply(noteSample.Data, noteSample.SampleRate)
+
+			// Mix into data with dynamic volume
+			volume := 0.5
+			if i == 0 { // Accent first note of motif
+				volume = 0.6
+			}
+			
+			for j := 0; j < noteLen && samplePos+j < len(data); j++ {
+				data[samplePos+j] += noteSample.Data[j] * volume
+			}
+
+			samplePos += noteLen
 		}
 
-		samplePos += noteLen
+		// Occasional rests between motifs for phrasing
+		if ac.rng.Float64() < 0.2 {
+			restLen := int(float64(ac.sampleRate) * noteDuration)
+			samplePos += restLen
+		}
+
+		// Vary pattern occasionally
+		if ac.rng.Float64() < 0.25 {
+			pattern = ac.chooseMelodyPattern()
+		}
 	}
 }
 
-// generateHarmonyLayer creates harmonic support.
+// chooseMelodyPattern selects a melodic pattern based on context and genre.
+func (ac *AdaptiveComposer) chooseMelodyPattern() MelodyPattern {
+	// Context influences pattern choice
+	if ac.currentContext == "combat" || ac.currentContext == "boss" {
+		// More aggressive patterns in combat
+		patterns := []MelodyPattern{PatternAscending, PatternArpeggio, PatternWave}
+		return patterns[ac.rng.Intn(len(patterns))]
+	} else if ac.currentContext == "exploration" {
+		// Calmer patterns for exploration
+		patterns := []MelodyPattern{PatternWave, PatternRepeat, PatternDescending}
+		return patterns[ac.rng.Intn(len(patterns))]
+	}
+	
+	// Default: any pattern
+	return MelodyPattern(ac.rng.Intn(5))
+}
+
+// ChordProgression defines common chord progressions.
+type ChordProgression [][]int
+
+var (
+	// Common progressions (intervals from root)
+	ProgressionPopular    = ChordProgression{{0, 4, 7}, {5, 9, 12}, {7, 11, 14}, {0, 4, 7}}         // I-IV-V-I
+	ProgressionJazz       = ChordProgression{{2, 5, 9}, {7, 10, 14}, {0, 4, 7}}                      // ii-V-I
+	ProgressionMinor      = ChordProgression{{0, 3, 7}, {5, 8, 12}, {7, 10, 14}, {0, 3, 7}}         // i-iv-V-i
+	ProgressionTense      = ChordProgression{{0, 4, 7}, {1, 5, 8}, {7, 11, 14}, {0, 4, 7}}          // I-bII-V-I (tension)
+	ProgressionDescending = ChordProgression{{0, 4, 7}, {10, 14, 17}, {7, 11, 14}, {5, 9, 12}}      // I-bVII-V-IV
+)
+
+// generateHarmonyLayer creates harmonic support with chord progressions.
 func (ac *AdaptiveComposer) generateHarmonyLayer(data []float64, scale Scale, beatDuration float64) {
-	// Generate sustained chords
-	chordDuration := beatDuration * 4.0 // Whole notes
+	// Choose progression based on context and genre
+	progression := ac.chooseChordProgression()
+	chordDuration := beatDuration * 4.0 // Whole notes per chord
 	samplePos := 0
+	chordIndex := 0
 
 	for samplePos < len(data) {
-		// Generate major triad from root
-		chord := []int{0, 4, 7} // Major triad intervals
+		// Get current chord from progression
+		chord := progression[chordIndex%len(progression)]
 		chordLen := int(float64(ac.sampleRate) * chordDuration)
 
+		// Generate each note in the chord
 		for _, interval := range chord {
 			note := ac.rootNote + interval
 			freq := NoteToFrequency(note)
+			
+			// Use sine for smooth harmony
 			noteSample := ac.osc.Generate(audio.WaveformSine, freq, chordDuration)
 
-			// Mix chord note
+			// Apply gentle envelope for chord
+			env := synthesis.Envelope{Attack: 0.05, Decay: 0.2, Sustain: 0.7, Release: 0.5}
+			env.Apply(noteSample.Data, noteSample.SampleRate)
+
+			// Mix chord note with reduced volume for subtlety
+			volume := 0.25
+			if interval == chord[0] { // Root note slightly louder
+				volume = 0.3
+			}
+
 			for i := 0; i < chordLen && samplePos+i < len(data); i++ {
-				data[samplePos+i] += noteSample.Data[i] * 0.3
+				data[samplePos+i] += noteSample.Data[i] * volume
 			}
 		}
 
 		samplePos += chordLen
+		chordIndex++
 	}
 }
 
-// generatePercussionLayer creates rhythmic percussion.
-func (ac *AdaptiveComposer) generatePercussionLayer(data []float64, beatDuration float64) {
-	beatSamples := int(float64(ac.sampleRate) * beatDuration)
-
-	for i := 0; i < len(data); i += beatSamples {
-		// Generate kick drum sound using low-frequency pulse
-		kickDuration := 0.1
-		kickSamples := int(float64(ac.sampleRate) * kickDuration)
-
-		for j := 0; j < kickSamples && i+j < len(data); j++ {
-			t := float64(j) / float64(ac.sampleRate)
-			// Exponential decay envelope
-			env := math.Exp(-t * 20.0)
-			// Low sine wave for kick
-			data[i+j] += math.Sin(2.0*math.Pi*60.0*t) * env * 0.4
+// chooseChordProgression selects a progression based on context and genre.
+func (ac *AdaptiveComposer) chooseChordProgression() ChordProgression {
+	// Context influences progression choice
+	switch ac.currentContext {
+	case "combat", "boss":
+		// Tense progressions for combat
+		if ac.rng.Float64() < 0.6 {
+			return ProgressionTense
 		}
+		return ProgressionMinor
+	case "exploration":
+		// Pleasant progressions for exploration
+		return ProgressionPopular
+	case "puzzle":
+		// Jazz-influenced for puzzle thinking
+		return ProgressionJazz
+	case "victory":
+		// Triumphant ascending progression
+		return ProgressionDescending
+	}
+
+	// Genre influences progression choice
+	switch ac.currentGenre {
+	case "fantasy":
+		return ProgressionPopular
+	case "horror":
+		return ProgressionMinor
+	case "sci-fi", "cyberpunk":
+		return ProgressionJazz
+	default:
+		return ProgressionPopular
+	}
+}
+
+// DrumPattern defines when different drum sounds play in a measure.
+type DrumPattern struct {
+	Kick   []float64 // Beat positions for kick drum (0.0-1.0 in measure)
+	Snare  []float64 // Beat positions for snare
+	HiHat  []float64 // Beat positions for hi-hat
+}
+
+var (
+	// Genre-specific drum patterns
+	PatternRock      = DrumPattern{Kick: []float64{0.0, 0.5}, Snare: []float64{0.25, 0.75}, HiHat: []float64{0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875}}
+	PatternElectronic = DrumPattern{Kick: []float64{0.0, 0.25, 0.5, 0.75}, Snare: []float64{0.5}, HiHat: []float64{0.125, 0.375, 0.625, 0.875}}
+	PatternOrchestral = DrumPattern{Kick: []float64{0.0}, Snare: []float64{0.5}, HiHat: []float64{0.25, 0.75}}
+	PatternIndustrial = DrumPattern{Kick: []float64{0.0, 0.33, 0.66}, Snare: []float64{0.25, 0.75}, HiHat: []float64{0.16, 0.5, 0.83}}
+	PatternMinimal    = DrumPattern{Kick: []float64{0.0, 0.5}, Snare: []float64{}, HiHat: []float64{0.25, 0.75}}
+)
+
+// generatePercussionLayer creates rhythmic percussion with genre-specific patterns.
+func (ac *AdaptiveComposer) generatePercussionLayer(data []float64, beatDuration float64) {
+	// Choose pattern based on genre
+	pattern := ac.chooseDrumPattern()
+	measureDuration := beatDuration * 4.0 // 4 beats per measure
+	measureSamples := int(float64(ac.sampleRate) * measureDuration)
+	
+	measurePos := 0
+	for measurePos < len(data) {
+		// Generate kick drum hits
+		for _, pos := range pattern.Kick {
+			hitSample := int(measurePos) + int(pos*float64(measureSamples))
+			if hitSample < len(data) {
+				ac.generateKickDrum(data, hitSample)
+			}
+		}
+		
+		// Generate snare drum hits
+		for _, pos := range pattern.Snare {
+			hitSample := int(measurePos) + int(pos*float64(measureSamples))
+			if hitSample < len(data) {
+				ac.generateSnareDrum(data, hitSample)
+			}
+		}
+		
+		// Generate hi-hat hits
+		for _, pos := range pattern.HiHat {
+			hitSample := int(measurePos) + int(pos*float64(measureSamples))
+			if hitSample < len(data) {
+				ac.generateHiHat(data, hitSample)
+			}
+		}
+		
+		measurePos += measureSamples
+	}
+}
+
+// chooseDrumPattern selects a drum pattern based on genre.
+func (ac *AdaptiveComposer) chooseDrumPattern() DrumPattern {
+	switch ac.currentGenre {
+	case "fantasy":
+		return PatternOrchestral
+	case "sci-fi", "cyberpunk":
+		return PatternElectronic
+	case "horror":
+		return PatternIndustrial
+	case "post-apocalyptic":
+		return PatternMinimal
+	default:
+		return PatternRock
+	}
+}
+
+// generateKickDrum creates a kick drum sound.
+func (ac *AdaptiveComposer) generateKickDrum(data []float64, startPos int) {
+	duration := 0.15
+	samples := int(float64(ac.sampleRate) * duration)
+	
+	for i := 0; i < samples && startPos+i < len(data); i++ {
+		t := float64(i) / float64(ac.sampleRate)
+		// Exponential pitch sweep from 150Hz to 50Hz
+		freq := 150.0 * math.Exp(-t*15.0) + 50.0
+		// Exponential decay envelope
+		env := math.Exp(-t * 25.0)
+		// Generate sine wave with envelope
+		data[startPos+i] += math.Sin(2.0*math.Pi*freq*t) * env * 0.5
+	}
+}
+
+// generateSnareDrum creates a snare drum sound.
+func (ac *AdaptiveComposer) generateSnareDrum(data []float64, startPos int) {
+	duration := 0.1
+	samples := int(float64(ac.sampleRate) * duration)
+	
+	for i := 0; i < samples && startPos+i < len(data); i++ {
+		t := float64(i) / float64(ac.sampleRate)
+		// Exponential decay
+		env := math.Exp(-t * 30.0)
+		// Mix of tone (200Hz) and noise for snare character
+		tone := math.Sin(2.0 * math.Pi * 200.0 * t) * 0.3
+		noise := (ac.rng.Float64()*2.0 - 1.0) * 0.7 // White noise
+		data[startPos+i] += (tone + noise) * env * 0.3
+	}
+}
+
+// generateHiHat creates a hi-hat sound.
+func (ac *AdaptiveComposer) generateHiHat(data []float64, startPos int) {
+	duration := 0.05
+	samples := int(float64(ac.sampleRate) * duration)
+	
+	for i := 0; i < samples && startPos+i < len(data); i++ {
+		t := float64(i) / float64(ac.sampleRate)
+		// Very fast exponential decay
+		env := math.Exp(-t * 50.0)
+		// High-frequency noise for metallic sound
+		noise := (ac.rng.Float64()*2.0 - 1.0)
+		data[startPos+i] += noise * env * 0.15
 	}
 }
 

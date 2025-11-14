@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Command line flags
-	mode := flag.String("mode", "list", "Mode: list, single, all")
+	mode := flag.String("mode", "list", "Mode: list, single, all, branching, crossdungeon, timeline, archaeology")
 	seed := flag.Int64("seed", 12345, "Random seed for generation")
 	genre := flag.String("genre", "fantasy", "Genre: fantasy, scifi, horror, cyberpunk, postapocalyptic")
 	depth := flag.Int("depth", 5, "Dungeon depth level")
@@ -52,6 +52,14 @@ func main() {
 		generateSingle(gen, *seed, params, *seriesID, *verbose)
 	case "all":
 		generateAll(gen, *seed, params, *verbose)
+	case "branching":
+		testBranchingNarrative(*seed, params)
+	case "crossdungeon":
+		testCrossDungeonStory(*seed, params)
+	case "timeline":
+		testTimeline(*seed, params)
+	case "archaeology":
+		testArchaeology(*seed, params)
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown mode '%s'\n", *mode)
 		os.Exit(1)
@@ -183,5 +191,190 @@ func printSequence(seq *story.StorySequence, verbose bool) {
 	}
 	for pattern, count := range patternCounts {
 		fmt.Printf("  %s: %d\n", pattern, count)
+	}
+}
+
+func testBranchingNarrative(seed int64, params procgen.GenerationParams) {
+	fmt.Printf("=== Branching Narrative Test ===\n")
+	fmt.Printf("Seed: %d | Genre: %s | Difficulty: %.2f | Depth: %d\n\n", seed, params.GenreID, params.Difficulty, params.Depth)
+
+	gen := story.NewBranchingNarrativeGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Generation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	bn := result.(*story.BranchingNarrative)
+	if err := gen.Validate(bn); err != nil {
+		fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Series ID: %s | Theme: %s\n", bn.SeriesID, bn.Theme)
+	fmt.Printf("Choice Points: %d | Total Paths: %d\n\n", len(bn.ChoicePoints), len(bn.Paths))
+
+	fmt.Println("Choice Points:")
+	for i, cp := range bn.ChoicePoints {
+		fmt.Printf("  [%d] %s\n", i+1, cp.Description)
+		for j, opt := range cp.Options {
+			fmt.Printf("      %c: %s\n", 'A'+rune(j), opt)
+		}
+	}
+
+	fmt.Printf("\nSimulating Path (all choice A):\n")
+	for i := range bn.ChoicePoints {
+		if err := bn.MakeChoice(i, 0); err != nil {
+			fmt.Fprintf(os.Stderr, "Choice error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	path := bn.GetActivePath()
+	if path != nil {
+		fmt.Printf("  Path ID: %d | Fragments: %d | Coherence: %.2f\n", path.PathID, len(path.Fragments), path.CoherenceScore)
+		for i, frag := range path.Fragments {
+			content := frag.Content
+			if len(content) > 60 {
+				content = content[:57] + "..."
+			}
+			fmt.Printf("  [%d] %s\n", i+1, content)
+		}
+	}
+}
+
+func testCrossDungeonStory(seed int64, params procgen.GenerationParams) {
+	fmt.Printf("=== Cross-Dungeon Story Test ===\n")
+	fmt.Printf("Seed: %d | Genre: %s | Difficulty: %.2f | Depth: %d\n\n", seed, params.GenreID, params.Difficulty, params.Depth)
+
+	gen := story.NewCrossDungeonGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Generation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	cd := result.(*story.CrossDungeonStory)
+	if err := gen.Validate(cd); err != nil {
+		fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Title: %s\n", cd.Title)
+	fmt.Printf("Level Span: %d-%d | Fragments: %d | Continuity: %.2f\n\n", cd.StartLevel, cd.EndLevel, len(cd.Fragments), cd.ContinuityScore)
+
+	fmt.Println("Level Distribution:")
+	levels := cd.GetRequiredLevels()
+	for _, lvl := range levels {
+		frags := cd.GetFragmentsForLevel(lvl)
+		fmt.Printf("  Level %d: %d fragments\n", lvl, len(frags))
+	}
+
+	fmt.Printf("\nFragment Chain:\n")
+	for i, frag := range cd.Fragments {
+		prereqs := ""
+		if len(frag.Prerequisites) > 0 {
+			prereqs = fmt.Sprintf(" [requires: %v]", frag.Prerequisites)
+		}
+		content := frag.Content
+		if len(content) > 60 {
+			content = content[:57] + "..."
+		}
+		fmt.Printf("  [%d] Level %d%s\n      %s\n", i+1, frag.DungeonLevel, prereqs, content)
+	}
+}
+
+func testTimeline(seed int64, params procgen.GenerationParams) {
+	fmt.Printf("=== Historical Timeline Test ===\n")
+	fmt.Printf("Seed: %d | Genre: %s | Difficulty: %.2f | Depth: %d\n\n", seed, params.GenreID, params.Difficulty, params.Depth)
+
+	gen := story.NewTimelineGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Generation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	tl := result.(*story.Timeline)
+	if err := gen.Validate(tl); err != nil {
+		fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Timespan: %d-%d | Eras: %d | Events: %d | Consistency: %.2f\n\n", tl.StartYear, tl.EndYear, len(tl.Eras), len(tl.Events), tl.ConsistencyScore)
+
+	fmt.Println("Historical Eras:")
+	for i, era := range tl.Eras {
+		desc := era.Description
+		if len(desc) > 60 {
+			desc = desc[:57] + "..."
+		}
+		fmt.Printf("  [%d] %s (%d-%d)\n      %s\n", i+1, era.Name, era.StartYear, era.EndYear, desc)
+	}
+
+	fmt.Printf("\nMajor Events:\n")
+	for i, evt := range tl.Events {
+		desc := evt.Description
+		if len(desc) > 60 {
+			desc = desc[:57] + "..."
+		}
+		fmt.Printf("  [%d] Year %d: %s (%s)\n      %s\n", i+1, evt.Year, evt.Name, evt.EventType, desc)
+	}
+
+	currentEra := tl.GetCurrentEra()
+	if currentEra != nil {
+		fmt.Printf("\nCurrent Era: %s (%d-%d)\n", currentEra.Name, currentEra.StartYear, currentEra.EndYear)
+	}
+}
+
+func testArchaeology(seed int64, params procgen.GenerationParams) {
+	fmt.Printf("=== Archaeological Site Test ===\n")
+	fmt.Printf("Seed: %d | Genre: %s | Difficulty: %.2f | Depth: %d\n\n", seed, params.GenreID, params.Difficulty, params.Depth)
+
+	gen := story.NewArchaeologyGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Generation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	site := result.(*story.ArchaeologicalSite)
+	if err := gen.Validate(site); err != nil {
+		fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Name: %s\n", site.Name)
+	fmt.Printf("Era: %s | Danger: %.2f\n", site.Era, site.DangerLevel)
+	fmt.Printf("Description: %s\n\n", site.Description)
+
+	fmt.Printf("Artifacts (%d total):\n", len(site.Artifacts))
+	for i, artifact := range site.Artifacts {
+		desc := artifact.Description
+		if len(desc) > 60 {
+			desc = desc[:57] + "..."
+		}
+		fmt.Printf("  [%d] %s (%s)\n", i+1, artifact.Name, artifact.Type)
+		fmt.Printf("      Condition: %.0f%% | Power: %.2f\n", artifact.Condition*100, artifact.PowerLevel)
+		fmt.Printf("      %s\n", desc)
+	}
+
+	if site.Curse != "" {
+		fmt.Printf("\nCurse: %s\n", site.Curse)
+	}
+	if site.Trap != "" {
+		fmt.Printf("Trap: %s\n", site.Trap)
+	}
+
+	fmt.Printf("\nExcavation Simulation:\n")
+	for step := 0; step < 4; step++ {
+		site.Excavate(0.25)
+		excavated := 0
+		for _, recovered := range site.ExcavatedArtifacts {
+			if recovered {
+				excavated++
+			}
+		}
+		fmt.Printf("  %.0f%% - Recovered %d/%d artifacts\n", site.GetExcavationProgress()*100, excavated, len(site.Artifacts))
 	}
 }

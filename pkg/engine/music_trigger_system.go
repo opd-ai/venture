@@ -9,10 +9,10 @@ import (
 // MusicTriggerSystem manages music context changes based on gameplay events.
 // This system monitors game state and triggers adaptive music responses.
 type MusicTriggerSystem struct {
-	world          *World
-	musicManager   audio.AdaptiveMusicSystem
-	eventQueue     []MusicTriggerEvent
-	updateInterval float64
+	world           *World
+	musicManager    audio.AdaptiveMusicSystem
+	eventQueue      []MusicTriggerEvent
+	updateInterval  float64
 	timeSinceUpdate float64
 }
 
@@ -32,13 +32,17 @@ func (mts *MusicTriggerSystem) Update(deltaTime float64) {
 		return
 	}
 
-	// Process queued events immediately
+	// Process queued events immediately and track if any were processed
+	hadEvents := len(mts.eventQueue) > 0
 	mts.processEventQueue()
 
 	mts.timeSinceUpdate += deltaTime
 
-	// Process at regular intervals to avoid excessive updates
-	if mts.timeSinceUpdate < mts.updateInterval {
+	// Process at regular intervals to avoid excessive updates,
+	// but force an update if we just processed events
+	shouldUpdate := mts.timeSinceUpdate >= mts.updateInterval || hadEvents
+	
+	if !shouldUpdate {
 		// Still update music manager even if not checking entities
 		mts.musicManager.Update(deltaTime)
 		return

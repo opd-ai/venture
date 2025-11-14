@@ -135,8 +135,8 @@ func TestMusicTriggerComponent_TriggerReputationChange(t *testing.T) {
 	comp := NewMusicTriggerComponent()
 
 	tests := []struct {
-		tier        string
-		maxDanger   float64
+		tier      string
+		maxDanger float64
 	}{
 		{"hated", 0.5},
 		{"hostile", 0.4},
@@ -270,6 +270,14 @@ func TestMusicTriggerSystem_OnCombatStart(t *testing.T) {
 	comp := NewMusicTriggerComponent()
 	entity.AddComponent(comp)
 
+	// Process pending entity additions
+	world.Update(0.0)
+
+	// Verify initial state
+	if comp.CombatActive {
+		t.Fatal("CombatActive should be false initially")
+	}
+
 	// Queue event
 	system.OnCombatStart(entity.ID)
 
@@ -280,18 +288,13 @@ func TestMusicTriggerSystem_OnCombatStart(t *testing.T) {
 	// Process events (processes immediately now)
 	system.Update(0.001)
 
+	// Check queue was cleared
+	if system.GetEventQueueLength() != 0 {
+		t.Errorf("Event queue should be empty after Update(), got %d", system.GetEventQueueLength())
+	}
+
 	// Check that combat was triggered
-	retrievedComp, ok := entity.GetComponent("music_trigger")
-	if !ok {
-		t.Fatal("Failed to retrieve music_trigger component")
-	}
-
-	triggerComp, ok := retrievedComp.(*MusicTriggerComponent)
-	if !ok {
-		t.Fatal("Component is not a MusicTriggerComponent")
-	}
-
-	if !triggerComp.CombatActive {
+	if !comp.CombatActive {
 		t.Error("CombatActive should be true after processing combat start event")
 	}
 }
@@ -306,22 +309,18 @@ func TestMusicTriggerSystem_OnBossAppear(t *testing.T) {
 	comp := NewMusicTriggerComponent()
 	entity.AddComponent(comp)
 
+	// Process pending entity additions
+	world.Update(0.0)
+
 	system.OnBossAppear(entity.ID)
 	system.Update(0.001)
 
-	retrievedComp, ok := entity.GetComponent("music_trigger")
-	if !ok {
-		t.Fatal("Failed to retrieve music_trigger component")
-	}
-
-	triggerComp := retrievedComp.(*MusicTriggerComponent)
-
-	if !triggerComp.BossNearby {
+	if !comp.BossNearby {
 		t.Error("BossNearby should be true after processing boss appear event")
 	}
 
-	if triggerComp.CurrentContext.Danger != 1.0 {
-		t.Errorf("Danger = %f, want 1.0", triggerComp.CurrentContext.Danger)
+	if comp.CurrentContext.Danger != 1.0 {
+		t.Errorf("Danger = %f, want 1.0", comp.CurrentContext.Danger)
 	}
 }
 
@@ -335,22 +334,18 @@ func TestMusicTriggerSystem_OnQuestComplete(t *testing.T) {
 	comp := NewMusicTriggerComponent()
 	entity.AddComponent(comp)
 
+	// Process pending entity additions
+	world.Update(0.0)
+
 	system.OnQuestComplete(entity.ID)
 	system.Update(0.001)
 
-	retrievedComp, ok := entity.GetComponent("music_trigger")
-	if !ok {
-		t.Fatal("Failed to retrieve music_trigger component")
-	}
-
-	triggerComp := retrievedComp.(*MusicTriggerComponent)
-
-	if triggerComp.PendingContext == nil {
+	if comp.PendingContext == nil {
 		t.Error("PendingContext should be set after quest completion")
 	}
 
-	if triggerComp.PendingContext != nil && triggerComp.PendingContext.Location != "victory" {
-		t.Errorf("PendingContext.Location = %s, want victory", triggerComp.PendingContext.Location)
+	if comp.PendingContext != nil && comp.PendingContext.Location != "victory" {
+		t.Errorf("PendingContext.Location = %s, want victory", comp.PendingContext.Location)
 	}
 }
 

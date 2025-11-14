@@ -15,7 +15,7 @@ func main() {
 	genreFlag := flag.String("genre", "fantasy", "Music genre (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)")
 	contextFlag := flag.String("context", "exploration", "Music context (exploration, combat, boss, puzzle, victory)")
 	durationFlag := flag.Float64("duration", 4.0, "Track duration in seconds")
-	
+
 	flag.Parse()
 
 	fmt.Printf("Enhanced Composition Test\n")
@@ -40,7 +40,7 @@ func main() {
 		TimeOfDay:  "day",
 		Danger:     0.0,
 	}
-	
+
 	if *contextFlag == "combat" {
 		ctx.Danger = 0.6
 	} else if *contextFlag == "boss" {
@@ -69,7 +69,7 @@ func main() {
 		fmt.Printf("Sample Rate: %d Hz\n", track.SampleRate)
 		fmt.Printf("Samples: %d\n", len(track.Data))
 		fmt.Printf("Duration: %.2f seconds\n", float64(len(track.Data))/float64(track.SampleRate))
-		
+
 		// Calculate RMS amplitude
 		var sumSquares float64
 		for _, sample := range track.Data {
@@ -80,7 +80,7 @@ func main() {
 			rms = sumSquares / float64(len(track.Data))
 		}
 		fmt.Printf("RMS Amplitude: %.4f\n", rms)
-		
+
 		// Find peak amplitude
 		peak := 0.0
 		for _, sample := range track.Data {
@@ -91,7 +91,7 @@ func main() {
 			}
 		}
 		fmt.Printf("Peak Amplitude: %.4f\n", peak)
-		
+
 		// Check for clipping
 		if peak > 0.99 {
 			fmt.Println("\n⚠️  Warning: Track may be clipping!")

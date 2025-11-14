@@ -67,7 +67,18 @@ func main() {
 }
 
 func listFragmentTypes() {
-	fmt.Println("Available Story Fragment Types:")
+	fmt.Println("=== Story Generation Test Tool ===")
+	fmt.Println()
+	fmt.Println("Available Modes:")
+	fmt.Println("  list          - Show this help message")
+	fmt.Println("  single        - Generate a single story fragment sequence")
+	fmt.Println("  all           - Generate fragment sequences for all genres")
+	fmt.Println("  branching     - Generate a branching narrative with choice points")
+	fmt.Println("  crossdungeon  - Generate a cross-dungeon story arc")
+	fmt.Println("  timeline      - Generate a historical timeline")
+	fmt.Println("  archaeology   - Generate an archaeological site with artifacts")
+	fmt.Println()
+	fmt.Println("Story Fragment Types:")
 	fmt.Println("  0: Note      - Written notes, journals, papers")
 	fmt.Println("  1: Carving   - Wall inscriptions and etchings")
 	fmt.Println("  2: Corpse    - Bodies with clues")
@@ -77,10 +88,14 @@ func listFragmentTypes() {
 	fmt.Println()
 	fmt.Println("Genres: fantasy, scifi, horror, cyberpunk, postapocalyptic")
 	fmt.Println()
-	fmt.Println("Usage:")
+	fmt.Println("Usage Examples:")
 	fmt.Println("  storytest -mode list")
 	fmt.Println("  storytest -mode single -seed 12345 -genre fantasy")
 	fmt.Println("  storytest -mode all -seed 54321 -genre scifi -verbose")
+	fmt.Println("  storytest -mode branching -seed 999 -genre horror -depth 7")
+	fmt.Println("  storytest -mode crossdungeon -seed 777 -genre cyberpunk")
+	fmt.Println("  storytest -mode timeline -seed 12345 -genre scifi")
+	fmt.Println("  storytest -mode archaeology -seed 888 -genre fantasy -depth 10")
 }
 
 func generateSingle(gen *story.FragmentGenerator, seed int64, params procgen.GenerationParams, seriesID string, verbose bool) {

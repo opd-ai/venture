@@ -331,41 +331,41 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 			}
 
 			entitySnapshot := network.EntitySnapshot{
-				EntityID: entity.ID,
-				Position: network.Position{X: pos.X, Y: pos.Y},
-				Velocity: network.Velocity{VX: velX, VY: velY},
+				EntityID:   entity.ID,
+				Position:   network.Position{X: pos.X, Y: pos.Y},
+				Velocity:   network.Velocity{VX: velX, VY: velY},
+				Components: make(map[string][]byte), // Initialize component data map
 			}
 
-			// Add V4.0 component data if present
-			// Note: This is a simplified approach - full implementation would use
-			// the ComponentSerializer methods for efficient binary serialization
-
-			// Check for vehicle component
+			// Serialize V4.0 component data for network transmission
+			// Vehicle component
 			if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
 				vehicle := vehicleComp.(*engine.VehicleComponent)
-				// Store basic vehicle state (would be serialized in production)
-				_ = vehicle // Placeholder - actual serialization would use SerializeVehicle
+				entitySnapshot.Components["vehicle"] = vehicle.Serialize()
 			}
 
-			// Check for companion component
+			// Companion component
 			if companionComp, ok := entity.GetComponent("companion"); ok {
 				companion := companionComp.(*engine.CompanionComponent)
-				// Store basic companion state (would be serialized in production)
-				_ = companion // Placeholder - actual serialization would use SerializeCompanion
+				entitySnapshot.Components["companion"] = companion.Serialize()
 			}
 
-			// Check for mount component
+			// Mount component (rider-vehicle relationship)
 			if mountComp, ok := entity.GetComponent("mount"); ok {
 				mount := mountComp.(*engine.MountComponent)
-				// Store mount state (would be serialized in production)
-				_ = mount // Placeholder - actual serialization would use SerializeMount
+				entitySnapshot.Components["mount"] = mount.Serialize()
 			}
 
-			// Check for achievement component
+			// Achievement component
 			if achievementComp, ok := entity.GetComponent("achievement"); ok {
 				achievement := achievementComp.(*engine.AchievementComponent)
-				// Store achievement state (would be serialized in production)
-				_ = achievement // Placeholder - actual serialization would use SerializeAchievement
+				entitySnapshot.Components["achievement"] = achievement.Serialize()
+			}
+
+			// Bookshelf component
+			if bookshelfComp, ok := entity.GetComponent("bookshelf"); ok {
+				bookshelf := bookshelfComp.(*engine.BookshelfComponent)
+				entitySnapshot.Components["bookshelf"] = bookshelf.Serialize()
 			}
 
 			snapshot.Entities[entity.ID] = entitySnapshot

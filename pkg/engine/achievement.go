@@ -56,6 +56,90 @@ func (a AchievementComponent) Type() string {
 	return "achievement"
 }
 
+// Serialize converts AchievementComponent to bytes for network transmission.
+// Format: achievementCount(4) + achievements(N*9) + expressionCount(4) + uniqueCount(4) + uniqueExprs(N*5)
+func (a *AchievementComponent) Serialize() []byte {
+	// Calculate size
+	achCount := len(a.Achievements)
+	uniqueCount := len(a.UniqueExpression)
+	size := 12 + (achCount * 9) + (uniqueCount * 5)
+
+	buf := make([]byte, size)
+	offset := 0
+
+	// Achievement count (4 bytes)
+	writeInt32(buf[offset:], int32(achCount))
+	offset += 4
+
+	// Achievements (9 bytes each: type(1) + unlockedAt(8))
+	for _, ach := range a.Achievements {
+		buf[offset] = byte(ach.Type)
+		offset++
+		writeUint64(buf[offset:], uint64(ach.UnlockedAt))
+		offset += 8
+	}
+
+	// ExpressionCount (4 bytes)
+	writeInt32(buf[offset:], int32(a.ExpressionCount))
+	offset += 4
+
+	// UniqueExpression count (4 bytes)
+	writeInt32(buf[offset:], int32(uniqueCount))
+	offset += 4
+
+	// UniqueExpression map (5 bytes each: type(1) + count(4))
+	for exprType, count := range a.UniqueExpression {
+		buf[offset] = byte(exprType)
+		offset++
+		writeInt32(buf[offset:], int32(count))
+		offset += 4
+	}
+
+	return buf
+}
+
+// Deserialize restores AchievementComponent from bytes.
+func (a *AchievementComponent) Deserialize(data []byte) error {
+	if len(data) < 12 {
+		return ErrInvalidComponentData
+	}
+
+	offset := 0
+
+	// Achievement count
+	achCount := int(readInt32(data[offset:]))
+	offset += 4
+
+	// Achievements
+	a.Achievements = make([]Achievement, achCount)
+	for i := 0; i < achCount; i++ {
+		a.Achievements[i].Type = AchievementType(data[offset])
+		offset++
+		// Skip timestamp reconstruction for now (use zero time)
+		offset += 8
+	}
+
+	// ExpressionCount
+	a.ExpressionCount = int(readInt32(data[offset:]))
+	offset += 4
+
+	// UniqueExpression count
+	uniqueCount := int(readInt32(data[offset:]))
+	offset += 4
+
+	// UniqueExpression map
+	a.UniqueExpression = make(map[ExpressionType]int, uniqueCount)
+	for i := 0; i < uniqueCount; i++ {
+		exprType := ExpressionType(data[offset])
+		offset++
+		count := int(readInt32(data[offset:]))
+		offset += 4
+		a.UniqueExpression[exprType] = count
+	}
+
+	return nil
+}
+
 // HasAchievement checks if an achievement is unlocked
 func (a *AchievementComponent) HasAchievement(achievementType AchievementType) bool {
 	for _, achievement := range a.Achievements {

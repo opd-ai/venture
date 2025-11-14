@@ -124,3 +124,125 @@ type CompanionStatsComponent struct {
 func (c CompanionStatsComponent) Type() string {
 	return "companionstats"
 }
+
+// Serialize converts CompanionComponent to bytes for network transmission.
+// Format: ownerID(8) + type(1) + loyalty(8) + exp(8) + level(4) + behavior(1) +
+// commandCount(4) + commands(4*N) + permadeath(1) + perkCount(4) + perks(1*N) + timeWithOwner(8)
+func (c *CompanionComponent) Serialize() []byte {
+	// Calculate size: 8+1+8+8+4+1+4+(4*cmdCount)+1+4+(1*perkCount)+8
+	cmdCount := len(c.Commands)
+	perkCount := len(c.BondingPerks)
+	size := 47 + (4 * cmdCount) + perkCount
+
+	buf := make([]byte, size)
+	offset := 0
+
+	// OwnerID (8 bytes)
+	writeUint64(buf[offset:], c.OwnerID)
+	offset += 8
+
+	// CompanionType (1 byte)
+	buf[offset] = byte(c.CompanionType)
+	offset++
+
+	// Loyalty (8 bytes)
+	writeFloat64(buf[offset:], c.Loyalty)
+	offset += 8
+
+	// Experience (8 bytes)
+	writeFloat64(buf[offset:], c.Experience)
+	offset += 8
+
+	// Level (4 bytes)
+	writeInt32(buf[offset:], int32(c.Level))
+	offset += 4
+
+	// Behavior (1 byte)
+	buf[offset] = byte(c.Behavior)
+	offset++
+
+	// Commands (4 bytes count + 4 bytes per command)
+	writeInt32(buf[offset:], int32(cmdCount))
+	offset += 4
+	for _, cmd := range c.Commands {
+		writeInt32(buf[offset:], int32(cmd))
+		offset += 4
+	}
+
+	// Permadeath (1 byte)
+	writeBool(buf[offset:], c.Permadeath)
+	offset++
+
+	// BondingPerks (4 bytes count + 1 byte per perk)
+	writeInt32(buf[offset:], int32(perkCount))
+	offset += 4
+	for _, perk := range c.BondingPerks {
+		buf[offset] = byte(perk)
+		offset++
+	}
+
+	// TimeWithOwner (8 bytes)
+	writeFloat64(buf[offset:], c.TimeWithOwner)
+
+	return buf
+}
+
+// Deserialize restores CompanionComponent from bytes.
+func (c *CompanionComponent) Deserialize(data []byte) error {
+	if len(data) < 47 {
+		return ErrInvalidComponentData
+	}
+
+	offset := 0
+
+	// OwnerID
+	c.OwnerID = readUint64(data[offset:])
+	offset += 8
+
+	// CompanionType
+	c.CompanionType = CompanionType(data[offset])
+	offset++
+
+	// Loyalty
+	c.Loyalty = readFloat64(data[offset:])
+	offset += 8
+
+	// Experience
+	c.Experience = readFloat64(data[offset:])
+	offset += 8
+
+	// Level
+	c.Level = int(readInt32(data[offset:]))
+	offset += 4
+
+	// Behavior
+	c.Behavior = BehaviorMode(data[offset])
+	offset++
+
+	// Commands
+	cmdCount := int(readInt32(data[offset:]))
+	offset += 4
+	c.Commands = make([]CommandType, cmdCount)
+	for i := 0; i < cmdCount; i++ {
+		c.Commands[i] = CommandType(readInt32(data[offset:]))
+		offset += 4
+	}
+
+	// Permadeath
+	c.Permadeath = readBool(data[offset:])
+	offset++
+
+	// BondingPerks
+	perkCount := int(readInt32(data[offset:]))
+	offset += 4
+	c.BondingPerks = make([]BondingPerk, perkCount)
+	for i := 0; i < perkCount; i++ {
+		c.BondingPerks[i] = BondingPerk(data[offset])
+		offset++
+	}
+
+	// TimeWithOwner
+	c.TimeWithOwner = readFloat64(data[offset:])
+
+	return nil
+}

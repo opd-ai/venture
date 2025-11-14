@@ -90,3 +90,80 @@ func (b *BookshelfComponent) IsEmpty() bool {
 func (b *BookshelfComponent) GetBookCount() int {
 	return len(b.Books)
 }
+
+// Serialize converts BookshelfComponent to bytes for network transmission.
+// Format: bookCount(4) + books(8*N) + capacity(4) + requiresKey(1) + isLocked(1) + genreIDLen(4) + genreID(N)
+func (b *BookshelfComponent) Serialize() []byte {
+	bookCount := len(b.Books)
+	genreLen := len(b.GenreID)
+	size := 14 + (bookCount * 8) + genreLen
+
+	buf := make([]byte, size)
+	offset := 0
+
+	// Book count (4 bytes)
+	writeInt32(buf[offset:], int32(bookCount))
+	offset += 4
+
+	// Book IDs (8 bytes each)
+	for _, bookID := range b.Books {
+		writeUint64(buf[offset:], bookID)
+		offset += 8
+	}
+
+	// Capacity (4 bytes)
+	writeInt32(buf[offset:], int32(b.Capacity))
+	offset += 4
+
+	// RequiresKey (1 byte)
+	writeBool(buf[offset:], b.RequiresKey)
+	offset++
+
+	// IsLocked (1 byte)
+	writeBool(buf[offset:], b.IsLocked)
+	offset++
+
+	// GenreID (4 bytes length + data)
+	offset += writeString(buf[offset:], b.GenreID)
+
+	return buf
+}
+
+// Deserialize restores BookshelfComponent from bytes.
+func (b *BookshelfComponent) Deserialize(data []byte) error {
+	if len(data) < 14 {
+		return ErrInvalidComponentData
+	}
+
+	offset := 0
+
+	// Book count
+	bookCount := int(readInt32(data[offset:]))
+	offset += 4
+
+	// Book IDs
+	b.Books = make([]uint64, bookCount)
+	for i := 0; i < bookCount; i++ {
+		b.Books[i] = readUint64(data[offset:])
+		offset += 8
+	}
+
+	// Capacity
+	b.Capacity = int(readInt32(data[offset:]))
+	offset += 4
+
+	// RequiresKey
+	b.RequiresKey = readBool(data[offset:])
+	offset++
+
+	// IsLocked
+	b.IsLocked = readBool(data[offset:])
+	offset++
+
+	// GenreID
+	genreID, consumed := readString(data[offset:])
+	b.GenreID = genreID
+	offset += consumed
+
+	return nil
+}

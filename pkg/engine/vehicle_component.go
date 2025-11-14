@@ -333,3 +333,131 @@ func NewMountComponent(vehicleID uint64, offsetX, offsetY float64) *MountCompone
 		},
 	}
 }
+
+// Serialize converts MountComponent to bytes for network transmission.
+// Format: vehicleID(8) + offsetX(8) + offsetY(8) = 24 bytes
+func (m *MountComponent) Serialize() []byte {
+	buf := make([]byte, 24)
+
+	// MountedEntityID (8 bytes)
+	writeUint64(buf[0:], m.MountedEntityID)
+
+	// MountOffset.X (8 bytes)
+	writeFloat64(buf[8:], m.MountOffset.X)
+
+	// MountOffset.Y (8 bytes)
+	writeFloat64(buf[16:], m.MountOffset.Y)
+
+	return buf
+}
+
+// Deserialize restores MountComponent from bytes.
+func (m *MountComponent) Deserialize(data []byte) error {
+	if len(data) < 24 {
+		return ErrInvalidComponentData
+	}
+
+	// MountedEntityID
+	m.MountedEntityID = readUint64(data[0:])
+
+	// MountOffset.X
+	m.MountOffset.X = readFloat64(data[8:])
+
+	// MountOffset.Y
+	m.MountOffset.Y = readFloat64(data[16:])
+
+	return nil
+}
+
+// Serialize converts VehicleComponent to bytes for network transmission.
+// Binary format: type(1) + speed(8) + maxSpeed(8) + accel(8) + handling(8) +
+// durability(8) + maxDur(8) + fuelAmt(8) + fuelCap(8) + capacity(4) + passengers(4) = 69 bytes
+// (excluding variable-length terrainTypes)
+func (v *VehicleComponent) Serialize() []byte {
+	// Allocate buffer: 1 + 8*8 + 4*2 = 73 bytes base + terrain types
+	buf := make([]byte, 73+len(v.TerrainTypes)*4)
+
+	// Vehicle type (1 byte)
+	buf[0] = byte(v.VehicleType)
+
+	// Float64 values (8 bytes each)
+	offset := 1
+	writeFloat64(buf[offset:], v.Speed)
+	offset += 8
+	writeFloat64(buf[offset:], v.MaxSpeed)
+	offset += 8
+	writeFloat64(buf[offset:], v.Acceleration)
+	offset += 8
+	writeFloat64(buf[offset:], v.Handling)
+	offset += 8
+	writeFloat64(buf[offset:], v.Durability)
+	offset += 8
+	writeFloat64(buf[offset:], v.MaxDurability)
+	offset += 8
+	writeFloat64(buf[offset:], v.FuelAmount)
+	offset += 8
+	writeFloat64(buf[offset:], v.FuelCapacity)
+	offset += 8
+
+	// Int32 values (4 bytes each)
+	writeInt32(buf[offset:], int32(v.Capacity))
+	offset += 4
+	writeInt32(buf[offset:], int32(v.CurrentPassengers))
+	offset += 4
+
+	// Terrain types count (4 bytes) + each type (4 bytes)
+	writeInt32(buf[offset:], int32(len(v.TerrainTypes)))
+	offset += 4
+	for _, tt := range v.TerrainTypes {
+		writeInt32(buf[offset:], int32(tt))
+		offset += 4
+	}
+
+	return buf
+}
+
+// Deserialize restores VehicleComponent from bytes.
+func (v *VehicleComponent) Deserialize(data []byte) error {
+	if len(data) < 73 {
+		return ErrInvalidComponentData
+	}
+
+	// Vehicle type
+	v.VehicleType = VehicleType(data[0])
+
+	// Float64 values
+	offset := 1
+	v.Speed = readFloat64(data[offset:])
+	offset += 8
+	v.MaxSpeed = readFloat64(data[offset:])
+	offset += 8
+	v.Acceleration = readFloat64(data[offset:])
+	offset += 8
+	v.Handling = readFloat64(data[offset:])
+	offset += 8
+	v.Durability = readFloat64(data[offset:])
+	offset += 8
+	v.MaxDurability = readFloat64(data[offset:])
+	offset += 8
+	v.FuelAmount = readFloat64(data[offset:])
+	offset += 8
+	v.FuelCapacity = readFloat64(data[offset:])
+	offset += 8
+
+	// Int32 values
+	v.Capacity = int(readInt32(data[offset:]))
+	offset += 4
+	v.CurrentPassengers = int(readInt32(data[offset:]))
+	offset += 4
+
+	// Terrain types
+	terrainCount := int(readInt32(data[offset:]))
+	offset += 4
+	v.TerrainTypes = make([]terrain.TileType, terrainCount)
+	for i := 0; i < terrainCount; i++ {
+		v.TerrainTypes[i] = terrain.TileType(readInt32(data[offset:]))
+		offset += 4
+	}
+
+	return nil
+}

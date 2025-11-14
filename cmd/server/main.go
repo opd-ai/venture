@@ -132,6 +132,30 @@ func main() {
 		"roomCount": len(generatedTerrain.Rooms),
 	}).Info("world terrain generated")
 
+	// Spawn V4.0 entities (vehicles, companions, bookshelves)
+	v4Logger := logging.GeneratorLogger(logger, "v4-spawning", *seed, *genreID)
+	
+	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn vehicles")
+	} else if vehicleCount > 0 {
+		v4Logger.WithField("count", vehicleCount).Info("vehicles spawned")
+	}
+
+	companionCount, err := spawnCompanionsInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn companions")
+	} else if companionCount > 0 {
+		v4Logger.WithField("count", companionCount).Info("companions spawned")
+	}
+
+	bookshelfCount, err := spawnBookshelvesInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn bookshelves")
+	} else if bookshelfCount > 0 {
+		v4Logger.WithField("count", bookshelfCount).Info("bookshelves spawned")
+	}
+
 	// Initialize network components
 	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
 	if logger.GetLevel() >= logrus.DebugLevel {

@@ -303,34 +303,34 @@ func TestExcavate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		amount          float64
-		wantExcavation  float64
-		wantUncovered   int
+		name           string
+		amount         float64
+		wantExcavation float64
+		wantUncovered  int
 	}{
 		{
-			name:            "small progress",
-			amount:          0.2,
-			wantExcavation:  0.2,
-			wantUncovered:   0, // First artifact requires 0.33 progress
+			name:           "small progress",
+			amount:         0.2,
+			wantExcavation: 0.2,
+			wantUncovered:  0, // First artifact requires 0.33 progress
 		},
 		{
-			name:            "first artifact",
-			amount:          0.2, // Total 0.4
-			wantExcavation:  0.4,
-			wantUncovered:   1,
+			name:           "first artifact",
+			amount:         0.2, // Total 0.4
+			wantExcavation: 0.4,
+			wantUncovered:  1,
 		},
 		{
-			name:            "second artifact",
-			amount:          0.3, // Total 0.7
-			wantExcavation:  0.7,
-			wantUncovered:   2,
+			name:           "second artifact",
+			amount:         0.3, // Total 0.7
+			wantExcavation: 0.7,
+			wantUncovered:  2,
 		},
 		{
-			name:            "complete excavation",
-			amount:          0.5, // Total 1.2 -> clamped to 1.0
-			wantExcavation:  1.0,
-			wantUncovered:   3,
+			name:           "complete excavation",
+			amount:         0.5, // Total 1.2 -> clamped to 1.0
+			wantExcavation: 1.0,
+			wantUncovered:  3,
 		},
 	}
 
@@ -450,7 +450,7 @@ func BenchmarkArchaeologyGenerate(b *testing.B) {
 
 func BenchmarkExcavate(b *testing.B) {
 	site := &ArchaeologicalSite{
-		Artifacts: make([]Artifact, 6),
+		Artifacts:  make([]Artifact, 6),
 		Excavation: 0.0,
 	}
 

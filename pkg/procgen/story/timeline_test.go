@@ -11,11 +11,11 @@ func TestTimelineGenerate(t *testing.T) {
 	seed := int64(99999)
 
 	tests := []struct {
-		name     string
-		params   procgen.GenerationParams
-		wantErr  bool
-		minEras  int
-		maxEras  int
+		name      string
+		params    procgen.GenerationParams
+		wantErr   bool
+		minEras   int
+		maxEras   int
 		minEvents int
 	}{
 		{

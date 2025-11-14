@@ -23,7 +23,7 @@ type HistoricalEvent struct {
 type EventType int
 
 const (
-	EventFoundation EventType = iota // Founding of civilizations/factions
+	EventFoundation  EventType = iota // Founding of civilizations/factions
 	EventWar                          // Conflicts and battles
 	EventDiscovery                    // Scientific/magical discoveries
 	EventCatastrophe                  // Disasters and calamities
@@ -70,10 +70,10 @@ type Timeline struct {
 
 // Era represents a major period in history
 type Era struct {
-	Name        string  // Era name
-	StartYear   int64   // When era began
-	EndYear     int64   // When era ended
-	Description string  // What defined this era
+	Name            string // Era name
+	StartYear       int64  // When era began
+	EndYear         int64  // When era ended
+	Description     string // What defined this era
 	DominantFaction string // Primary power during this era
 }
 

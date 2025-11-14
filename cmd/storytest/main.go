@@ -232,7 +232,7 @@ func testBranchingNarrative(seed int64, params procgen.GenerationParams) {
 
 	path := bn.GetActivePath()
 	if path != nil {
-		fmt.Printf("  Path ID: %d | Fragments: %d | Coherence: %.2f\n", path.PathID, len(path.Fragments), path.CoherenceScore)
+		fmt.Printf("  Path ID: %s | Fragments: %d | Title: %s\n", path.PathID, len(path.Fragments), path.Title)
 		for i, frag := range path.Fragments {
 			content := frag.Content
 			if len(content) > 60 {
@@ -261,7 +261,7 @@ func testCrossDungeonStory(seed int64, params procgen.GenerationParams) {
 	}
 
 	fmt.Printf("Title: %s\n", cd.Title)
-	fmt.Printf("Level Span: %d-%d | Fragments: %d | Continuity: %.2f\n\n", cd.StartLevel, cd.EndLevel, len(cd.Fragments), cd.ContinuityScore)
+	fmt.Printf("Level Span: %d-%d | Fragments: %d | Continuity: %.2f\n\n", cd.MinDepth, cd.MaxDepth, len(cd.Fragments), cd.Continuity)
 
 	fmt.Println("Level Distribution:")
 	levels := cd.GetRequiredLevels()
@@ -273,14 +273,14 @@ func testCrossDungeonStory(seed int64, params procgen.GenerationParams) {
 	fmt.Printf("\nFragment Chain:\n")
 	for i, frag := range cd.Fragments {
 		prereqs := ""
-		if len(frag.Prerequisites) > 0 {
-			prereqs = fmt.Sprintf(" [requires: %v]", frag.Prerequisites)
+		if len(frag.Prerequisite) > 0 {
+			prereqs = fmt.Sprintf(" [requires: %v]", frag.Prerequisite)
 		}
 		content := frag.Content
 		if len(content) > 60 {
 			content = content[:57] + "..."
 		}
-		fmt.Printf("  [%d] Level %d%s\n      %s\n", i+1, frag.DungeonLevel, prereqs, content)
+		fmt.Printf("  [%d] Level %d%s\n      %s\n", i+1, frag.Level.Depth, prereqs, content)
 	}
 }
 
@@ -301,7 +301,7 @@ func testTimeline(seed int64, params procgen.GenerationParams) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Timespan: %d-%d | Eras: %d | Events: %d | Consistency: %.2f\n\n", tl.StartYear, tl.EndYear, len(tl.Eras), len(tl.Events), tl.ConsistencyScore)
+	fmt.Printf("Timespan: %d-%d | Eras: %d | Events: %d | Consistency: %.2f\n\n", tl.StartYear, tl.CurrentYear, len(tl.Eras), len(tl.Events), tl.Consistency)
 
 	fmt.Println("Historical Eras:")
 	for i, era := range tl.Eras {
@@ -318,7 +318,7 @@ func testTimeline(seed int64, params procgen.GenerationParams) {
 		if len(desc) > 60 {
 			desc = desc[:57] + "..."
 		}
-		fmt.Printf("  [%d] Year %d: %s (%s)\n      %s\n", i+1, evt.Year, evt.Name, evt.EventType, desc)
+		fmt.Printf("  [%d] Year %d: %s (%s)\n      %s\n", i+1, evt.Timestamp, evt.Title, evt.EventType, desc)
 	}
 
 	currentEra := tl.GetCurrentEra()
@@ -345,7 +345,7 @@ func testArchaeology(seed int64, params procgen.GenerationParams) {
 	}
 
 	fmt.Printf("Name: %s\n", site.Name)
-	fmt.Printf("Era: %s | Danger: %.2f\n", site.Era, site.DangerLevel)
+	fmt.Printf("Era: %s | Danger: %.2f\n", site.Era, site.Danger)
 	fmt.Printf("Description: %s\n\n", site.Description)
 
 	fmt.Printf("Artifacts (%d total):\n", len(site.Artifacts))
@@ -359,22 +359,21 @@ func testArchaeology(seed int64, params procgen.GenerationParams) {
 		fmt.Printf("      %s\n", desc)
 	}
 
-	if site.Curse != "" {
-		fmt.Printf("\nCurse: %s\n", site.Curse)
-	}
-	if site.Trap != "" {
-		fmt.Printf("Trap: %s\n", site.Trap)
-	}
-
 	fmt.Printf("\nExcavation Simulation:\n")
 	for step := 0; step < 4; step++ {
 		site.Excavate(0.25)
 		excavated := 0
-		for _, recovered := range site.ExcavatedArtifacts {
-			if recovered {
+		// Count excavated artifacts by checking progress
+		progress := site.GetExcavationProgress()
+		thresholds := make([]float64, len(site.Artifacts))
+		for j := range thresholds {
+			thresholds[j] = float64(j+1) / float64(len(site.Artifacts))
+		}
+		for _, threshold := range thresholds {
+			if progress >= threshold {
 				excavated++
 			}
 		}
-		fmt.Printf("  %.0f%% - Recovered %d/%d artifacts\n", site.GetExcavationProgress()*100, excavated, len(site.Artifacts))
+		fmt.Printf("  %.0f%% - Recovered %d/%d artifacts\n", progress*100, excavated, len(site.Artifacts))
 	}
 }

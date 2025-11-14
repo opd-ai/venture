@@ -26,14 +26,14 @@ type NarrativePath struct {
 
 // BranchingNarrative represents a story with multiple possible paths
 type BranchingNarrative struct {
-	SeriesID      string          // Base series identifier
-	Genre         string          // Genre of the narrative
-	Theme         string          // Overall theme
-	ChoicePoints  []ChoicePoint   // Decision points in the narrative
-	Paths         []NarrativePath // All possible story paths
-	ActivePathID  string          // Currently active path (empty if undecided)
-	CommonFrags   []StoryFragment // Fragments shared by all paths
-	Coherence     float64         // Overall story quality (0.0-1.0)
+	SeriesID     string          // Base series identifier
+	Genre        string          // Genre of the narrative
+	Theme        string          // Overall theme
+	ChoicePoints []ChoicePoint   // Decision points in the narrative
+	Paths        []NarrativePath // All possible story paths
+	ActivePathID string          // Currently active path (empty if undecided)
+	CommonFrags  []StoryFragment // Fragments shared by all paths
+	Coherence    float64         // Overall story quality (0.0-1.0)
 }
 
 // BranchingNarrativeGenerator creates stories with multiple paths

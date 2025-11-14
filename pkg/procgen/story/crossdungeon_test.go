@@ -298,10 +298,10 @@ func TestCrossDungeonDeterminism(t *testing.T) {
 func TestIsFragmentAccessible(t *testing.T) {
 	story := &CrossDungeonStory{
 		Fragments: []CrossDungeonFragment{
-			{Prerequisite: []int{}},                  // Fragment 0, no prerequisites
-			{Prerequisite: []int{0}},                 // Fragment 1, requires 0
-			{Prerequisite: []int{0, 1}},              // Fragment 2, requires 0 and 1
-			{Prerequisite: []int{1}},                 // Fragment 3, requires 1
+			{Prerequisite: []int{}},     // Fragment 0, no prerequisites
+			{Prerequisite: []int{0}},    // Fragment 1, requires 0
+			{Prerequisite: []int{0, 1}}, // Fragment 2, requires 0 and 1
+			{Prerequisite: []int{1}},    // Fragment 3, requires 1
 		},
 	}
 

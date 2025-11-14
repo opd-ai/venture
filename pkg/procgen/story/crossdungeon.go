@@ -9,9 +9,9 @@ import (
 
 // DungeonLevel represents which dungeon level contains a fragment
 type DungeonLevel struct {
-	Depth     int    // Dungeon depth (1, 2, 3, etc.)
-	ZoneName  string // Optional zone identifier
-	Required  bool   // Must this level be visited for story completion?
+	Depth    int    // Dungeon depth (1, 2, 3, etc.)
+	ZoneName string // Optional zone identifier
+	Required bool   // Must this level be visited for story completion?
 }
 
 // CrossDungeonFragment extends StoryFragment with level information
@@ -24,17 +24,17 @@ type CrossDungeonFragment struct {
 
 // CrossDungeonStory represents a narrative that spans multiple dungeon levels
 type CrossDungeonStory struct {
-	SeriesID        string                  // Unique story identifier
-	Title           string                  // Story title
-	Genre           string                  // Genre
-	Theme           string                  // Story theme
-	Fragments       []CrossDungeonFragment  // All fragments across all levels
-	MinDepth        int                     // Minimum depth to start story
-	MaxDepth        int                     // Maximum depth for final fragments
-	LevelSpan       int                     // How many levels the story spans
-	CompletionBonus float64                 // XP bonus for completing entire story
-	Coherence       float64                 // Story quality metric (0.0-1.0)
-	Continuity      float64                 // How well story flows across levels (0.0-1.0)
+	SeriesID        string                 // Unique story identifier
+	Title           string                 // Story title
+	Genre           string                 // Genre
+	Theme           string                 // Story theme
+	Fragments       []CrossDungeonFragment // All fragments across all levels
+	MinDepth        int                    // Minimum depth to start story
+	MaxDepth        int                    // Maximum depth for final fragments
+	LevelSpan       int                    // How many levels the story spans
+	CompletionBonus float64                // XP bonus for completing entire story
+	Coherence       float64                // Story quality metric (0.0-1.0)
+	Continuity      float64                // How well story flows across levels (0.0-1.0)
 }
 
 // CrossDungeonGenerator creates stories spanning multiple dungeon levels
@@ -173,7 +173,7 @@ func (g *CrossDungeonGenerator) generateCrossDungeonFragment(rng *rand.Rand, the
 	fragType := fragGen.selectFragmentType(rng, genreID, index, total)
 
 	// Mark key fragments as level-required
-	required := (index % (total/levelSpan) == 0) // First fragment of each level is required
+	required := (index%(total/levelSpan) == 0) // First fragment of each level is required
 
 	// Some fragments unlock secrets (10% chance for non-first fragments)
 	unlocksSecret := !required && rng.Float64() < 0.1

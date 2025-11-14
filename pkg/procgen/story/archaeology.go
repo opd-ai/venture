@@ -12,11 +12,11 @@ type ArtifactType int
 
 const (
 	ArtifactMagical ArtifactType = iota // Fantasy: magical items, enchantments
-	ArtifactTech                         // Sci-Fi: alien/ancient technology
-	ArtifactRitual                       // Horror: cursed objects, ritual items
-	ArtifactData                         // Cyberpunk: data crystals, memory chips
-	ArtifactPreWar                       // Post-Apocalyptic: pre-fall artifacts
-	ArtifactRelic                        // Generic: historical relics
+	ArtifactTech                        // Sci-Fi: alien/ancient technology
+	ArtifactRitual                      // Horror: cursed objects, ritual items
+	ArtifactData                        // Cyberpunk: data crystals, memory chips
+	ArtifactPreWar                      // Post-Apocalyptic: pre-fall artifacts
+	ArtifactRelic                       // Generic: historical relics
 )
 
 // String returns the string representation of ArtifactType
@@ -41,17 +41,17 @@ func (a ArtifactType) String() string {
 
 // ArchaeologicalSite represents a location with artifacts
 type ArchaeologicalSite struct {
-	Name         string
-	Genre        string
-	Location     Vector2
-	Era          string           // Which historical era it's from
-	Artifacts    []Artifact       // Discoverable artifacts
-	Danger       float64          // 0.0-1.0, how hazardous excavation is
-	Depth        int              // Dungeon depth where site is found
-	Discovered   bool             // Has player found this site?
-	Excavation   float64          // 0.0-1.0, excavation progress
-	Description  string           // Site description
-	SpritePattern string          // Visual representation
+	Name          string
+	Genre         string
+	Location      Vector2
+	Era           string     // Which historical era it's from
+	Artifacts     []Artifact // Discoverable artifacts
+	Danger        float64    // 0.0-1.0, how hazardous excavation is
+	Depth         int        // Dungeon depth where site is found
+	Discovered    bool       // Has player found this site?
+	Excavation    float64    // 0.0-1.0, excavation progress
+	Description   string     // Site description
+	SpritePattern string     // Visual representation
 }
 
 // Artifact represents a single archaeological find
@@ -59,14 +59,14 @@ type Artifact struct {
 	Name          string
 	Type          ArtifactType
 	Description   string
-	Age           int64           // Years old
-	Condition     float64         // 0.0-1.0, how intact it is
-	Value         float64         // Monetary/XP value
-	PowerLevel    float64         // Magical/tech power (if applicable)
-	Curse         string          // Curse description (if cursed)
-	LoreText      string          // Historical information
-	SpritePattern string          // Visual pattern
-	Functional    bool            // Can it still be used?
+	Age           int64   // Years old
+	Condition     float64 // 0.0-1.0, how intact it is
+	Value         float64 // Monetary/XP value
+	PowerLevel    float64 // Magical/tech power (if applicable)
+	Curse         string  // Curse description (if cursed)
+	LoreText      string  // Historical information
+	SpritePattern string  // Visual pattern
+	Functional    bool    // Can it still be used?
 }
 
 // ArchaeologyGenerator creates genre-specific archaeological sites

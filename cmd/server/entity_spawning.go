@@ -88,6 +88,7 @@ func spawnVehiclesInTerrain(world *engine.World, terrainMap *terrain.Terrain, se
 		vehicleSpawnData[i] = engine.VehicleSpawnData{
 			Name:         v.Name,
 			VehicleType:  engineType,
+			Components:   v.ToComponents(), // Generate components from vehicle
 			Color:        colorRGBA,
 			Size:         size,
 			ColliderSize: colliderSize,

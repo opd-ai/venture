@@ -133,8 +133,8 @@ func (cs *ChatSystem) deliverToAll(msg ChatMessage, senderID uint64) {
 
 // deliverToLocal delivers a message to entities within range.
 func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat *ChatComponent) {
-	senderPos := sender.GetComponent("position")
-	if senderPos == nil {
+	senderPos, exists := sender.GetComponent("position")
+	if !exists {
 		return // Cannot deliver local message without position
 	}
 
@@ -146,13 +146,13 @@ func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat
 	radius := senderChat.GetEffectiveRadius()
 	radiusSquared := radius * radius
 
-	for _, entity := range cs.world.Entities {
+	for _, entity := range cs.world.GetEntities() {
 		if entity.ID == sender.ID {
 			continue
 		}
 
-		chatComp := entity.GetComponent("chat")
-		if chatComp == nil {
+		chatComp, exists := entity.GetComponent("chat")
+		if !exists {
 			continue
 		}
 
@@ -162,8 +162,8 @@ func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat
 		}
 
 		// Check range
-		recipientPos := entity.GetComponent("position")
-		if recipientPos == nil {
+		recipientPos, exists := entity.GetComponent("position")
+		if !exists {
 			continue
 		}
 
@@ -197,13 +197,13 @@ func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat
 func (cs *ChatSystem) deliverToParty(msg ChatMessage, sender *Entity) {
 	// TODO: Implement party system integration when party component exists
 	// For now, deliver to all subscribed entities (placeholder)
-	for _, entity := range cs.world.Entities {
+	for _, entity := range cs.world.GetEntities() {
 		if entity.ID == sender.ID {
 			continue
 		}
 
-		chatComp := entity.GetComponent("chat")
-		if chatComp == nil {
+		chatComp, exists := entity.GetComponent("chat")
+		if !exists {
 			continue
 		}
 
@@ -220,13 +220,13 @@ func (cs *ChatSystem) deliverToParty(msg ChatMessage, sender *Entity) {
 
 // deliverToRecipient delivers a whisper to a specific recipient.
 func (cs *ChatSystem) deliverToRecipient(msg ChatMessage, recipientID uint64) {
-	recipient := cs.world.GetEntity(recipientID)
-	if recipient == nil {
+	recipient, exists := cs.world.GetEntity(recipientID)
+	if !exists {
 		return
 	}
 
-	chatComp := recipient.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := recipient.GetComponent("chat")
+	if !exists {
 		// Create chat component for recipient
 		chatComp = NewChatComponent()
 		recipient.AddComponent(chatComp)
@@ -250,27 +250,19 @@ func (cs *ChatSystem) generateMessageID() string {
 
 // getSenderName retrieves the sender's display name from the entity.
 func (cs *ChatSystem) getSenderName(entity *Entity) string {
-	// Try to get name from NameComponent (if it exists)
-	nameComp := entity.GetComponent("name")
-	if nameComp != nil {
-		if name, ok := nameComp.(*NameComponent); ok {
-			return name.Name
-		}
-	}
-
-	// Fallback to entity ID
+	// Fallback to entity ID as name
 	return fmt.Sprintf("Entity_%d", entity.ID)
 }
 
 // ApplyMute mutes an entity for the specified duration.
 func (cs *ChatSystem) ApplyMute(entityID uint64, duration time.Duration) error {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return fmt.Errorf("entity not found")
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		chatComp = NewChatComponent()
 		entity.AddComponent(chatComp)
 	}
@@ -286,13 +278,13 @@ func (cs *ChatSystem) ApplyMute(entityID uint64, duration time.Duration) error {
 
 // IsMuted checks if an entity is currently muted.
 func (cs *ChatSystem) IsMuted(entityID uint64) bool {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return false
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		return false
 	}
 
@@ -306,13 +298,13 @@ func (cs *ChatSystem) IsMuted(entityID uint64) bool {
 
 // GetMessageHistory retrieves the message history for an entity.
 func (cs *ChatSystem) GetMessageHistory(entityID uint64) ([]ChatMessage, error) {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return nil, fmt.Errorf("entity not found")
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		return []ChatMessage{}, nil
 	}
 
@@ -326,13 +318,13 @@ func (cs *ChatSystem) GetMessageHistory(entityID uint64) ([]ChatMessage, error) 
 
 // MarkMessagesRead marks all messages as read for an entity.
 func (cs *ChatSystem) MarkMessagesRead(entityID uint64) error {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return fmt.Errorf("entity not found")
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		return nil // No messages to mark
 	}
 
@@ -347,13 +339,13 @@ func (cs *ChatSystem) MarkMessagesRead(entityID uint64) error {
 
 // SubscribeChannel subscribes an entity to a chat channel.
 func (cs *ChatSystem) SubscribeChannel(entityID uint64, channel ChatChannel) error {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return fmt.Errorf("entity not found")
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		chatComp = NewChatComponent()
 		entity.AddComponent(chatComp)
 	}
@@ -369,13 +361,13 @@ func (cs *ChatSystem) SubscribeChannel(entityID uint64, channel ChatChannel) err
 
 // UnsubscribeChannel unsubscribes an entity from a chat channel.
 func (cs *ChatSystem) UnsubscribeChannel(entityID uint64, channel ChatChannel) error {
-	entity := cs.world.GetEntity(entityID)
-	if entity == nil {
+	entity, exists := cs.world.GetEntity(entityID)
+	if !exists {
 		return fmt.Errorf("entity not found")
 	}
 
-	chatComp := entity.GetComponent("chat")
-	if chatComp == nil {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
 		return nil // Not subscribed to anything
 	}
 

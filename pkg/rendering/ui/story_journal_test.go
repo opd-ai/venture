@@ -400,9 +400,9 @@ func TestTruncateText(t *testing.T) {
 // TestWrapText tests text wrapping.
 func TestWrapText(t *testing.T) {
 	tests := []struct {
-		name     string
-		text     string
-		maxWidth int
+		name      string
+		text      string
+		maxWidth  int
 		wantLines int
 	}{
 		{"Short text", "Hello", 20, 1},

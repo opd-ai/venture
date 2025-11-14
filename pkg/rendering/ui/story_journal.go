@@ -15,16 +15,16 @@ type StoryJournalUI struct {
 	X, Y          int
 	Width, Height int
 	GenreID       string
-	
+
 	// Navigation state
-	SelectedSeriesIndex  int
+	SelectedSeriesIndex   int
 	SelectedFragmentIndex int
-	ViewMode             JournalViewMode // 0=series list, 1=fragment list for series, 2=fragment detail
-	
+	ViewMode              JournalViewMode // 0=series list, 1=fragment list for series, 2=fragment detail
+
 	// Content
-	SeriesList     []SeriesEntry
+	SeriesList       []SeriesEntry
 	VisibleFragments []FragmentEntry
-	
+
 	// Colors
 	BackgroundColor color.Color
 	TextColor       color.Color
@@ -64,12 +64,12 @@ type FragmentEntry struct {
 // NewStoryJournalUI creates a new story journal UI.
 func NewStoryJournalUI(x, y, width, height int, genreID string) *StoryJournalUI {
 	// Determine colors based on genre
-	bgColor := color.RGBA{20, 15, 10, 230}    // Dark parchment
-	textColor := color.RGBA{220, 210, 190, 255} // Light text
-	highlightColor := color.RGBA{255, 200, 100, 255} // Gold highlight
-	completeColor := color.RGBA{100, 255, 100, 255}  // Green for complete
+	bgColor := color.RGBA{20, 15, 10, 230}            // Dark parchment
+	textColor := color.RGBA{220, 210, 190, 255}       // Light text
+	highlightColor := color.RGBA{255, 200, 100, 255}  // Gold highlight
+	completeColor := color.RGBA{100, 255, 100, 255}   // Green for complete
 	incompleteColor := color.RGBA{150, 150, 150, 255} // Gray for incomplete
-	
+
 	if genreID == "scifi" {
 		bgColor = color.RGBA{10, 15, 25, 230}
 		textColor = color.RGBA{100, 200, 255, 255}
@@ -79,7 +79,7 @@ func NewStoryJournalUI(x, y, width, height int, genreID string) *StoryJournalUI 
 		textColor = color.RGBA{200, 180, 180, 255}
 		highlightColor = color.RGBA{200, 50, 50, 255}
 	}
-	
+
 	return &StoryJournalUI{
 		X:               x,
 		Y:               y,
@@ -99,59 +99,59 @@ func NewStoryJournalUI(x, y, width, height int, genreID string) *StoryJournalUI 
 func (j *StoryJournalUI) LoadFromJournal(journal *engine.StoryJournalComponent, world *engine.World) {
 	// Clear existing data
 	j.SeriesList = []SeriesEntry{}
-	
+
 	// Track series and their fragments
 	seriesMap := make(map[string]*SeriesEntry)
-	
+
 	// Get all story fragments from the world
 	fragments := world.GetEntitiesWith("storyfragment")
-	
+
 	for _, fragEntity := range fragments {
 		fragComp, ok := fragEntity.GetComponent("storyfragment")
 		if !ok {
 			continue
 		}
-		
+
 		storyFrag, ok := fragComp.(*engine.StoryFragmentComponent)
 		if !ok {
 			continue
 		}
-		
+
 		seriesID := storyFrag.SeriesID
-		
+
 		// Create or update series entry
 		series, exists := seriesMap[seriesID]
 		if !exists {
 			series = &SeriesEntry{
-				SeriesID:      seriesID,
-				SeriesName:    formatSeriesName(seriesID),
-				FragmentCount: 0,
+				SeriesID:        seriesID,
+				SeriesName:      formatSeriesName(seriesID),
+				FragmentCount:   0,
 				DiscoveredCount: 0,
-				IsComplete:    false,
+				IsComplete:      false,
 			}
 			seriesMap[seriesID] = series
 		}
-		
+
 		series.FragmentCount++
-		
+
 		// Check if discovered using journal's IsDiscovered method
 		if journal.IsDiscovered(seriesID, storyFrag.SequenceNum) {
 			series.DiscoveredCount++
 		}
 	}
-	
+
 	// Check for completed series
 	for seriesID, series := range seriesMap {
 		if journal.CompletedSeries[seriesID] {
 			series.IsComplete = true
 		}
 	}
-	
+
 	// Convert map to sorted slice
 	for _, series := range seriesMap {
 		j.SeriesList = append(j.SeriesList, *series)
 	}
-	
+
 	// Sort by completion status (complete first), then by name
 	sort.Slice(j.SeriesList, func(i, k int) bool {
 		if j.SeriesList[i].IsComplete != j.SeriesList[k].IsComplete {
@@ -166,31 +166,31 @@ func (j *StoryJournalUI) LoadFragmentsForSeries(journal *engine.StoryJournalComp
 	if j.SelectedSeriesIndex >= len(j.SeriesList) {
 		return
 	}
-	
+
 	seriesID := j.SeriesList[j.SelectedSeriesIndex].SeriesID
 	j.VisibleFragments = []FragmentEntry{}
-	
+
 	// Get all fragments for this series
 	fragments := world.GetEntitiesWith("storyfragment")
-	
+
 	for _, fragEntity := range fragments {
 		fragComp, ok := fragEntity.GetComponent("storyfragment")
 		if !ok {
 			continue
 		}
-		
+
 		storyFrag, ok := fragComp.(*engine.StoryFragmentComponent)
 		if !ok {
 			continue
 		}
-		
+
 		if storyFrag.SeriesID != seriesID {
 			continue
 		}
-		
+
 		// Check if discovered using journal's IsDiscovered method
 		isDiscovered := journal.IsDiscovered(seriesID, storyFrag.SequenceNum)
-		
+
 		entry := FragmentEntry{
 			SeriesID:      seriesID,
 			SequenceNum:   storyFrag.SequenceNum,
@@ -199,10 +199,10 @@ func (j *StoryJournalUI) LoadFragmentsForSeries(journal *engine.StoryJournalComp
 			SpritePattern: storyFrag.Fragment.SpritePattern,
 			IsDiscovered:  isDiscovered,
 		}
-		
+
 		j.VisibleFragments = append(j.VisibleFragments, entry)
 	}
-	
+
 	// Sort by sequence number
 	sort.Slice(j.VisibleFragments, func(i, k int) bool {
 		return j.VisibleFragments[i].SequenceNum < j.VisibleFragments[k].SequenceNum
@@ -270,10 +270,10 @@ func (j *StoryJournalUI) NavigateBack() {
 // Returns an image that can be drawn to the screen.
 func (j *StoryJournalUI) Render() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, j.Width, j.Height))
-	
+
 	// Fill background
 	j.fillBackground(img)
-	
+
 	// Render based on view mode
 	switch j.ViewMode {
 	case ViewSeriesList:
@@ -283,7 +283,7 @@ func (j *StoryJournalUI) Render() *image.RGBA {
 	case ViewFragmentDetail:
 		j.renderFragmentDetail(img)
 	}
-	
+
 	return img
 }
 
@@ -301,19 +301,19 @@ func (j *StoryJournalUI) fillBackground(img *image.RGBA) {
 func (j *StoryJournalUI) renderSeriesList(img *image.RGBA) {
 	// Title
 	j.drawText(img, 20, 20, "STORY JOURNAL", j.HighlightColor)
-	
+
 	// Series list
 	startY := 60
 	lineHeight := 30
-	
+
 	for i, series := range j.SeriesList {
 		y := startY + i*lineHeight
-		
+
 		// Skip if off screen
 		if y > j.Height-40 {
 			break
 		}
-		
+
 		// Determine color
 		col := j.TextColor
 		if i == j.SelectedSeriesIndex {
@@ -323,16 +323,16 @@ func (j *StoryJournalUI) renderSeriesList(img *image.RGBA) {
 		} else {
 			col = j.IncompleteColor
 		}
-		
+
 		// Format text: "Series Name (2/5)"
 		text := fmt.Sprintf("%s (%d/%d)", series.SeriesName, series.DiscoveredCount, series.FragmentCount)
 		if series.IsComplete {
 			text += " ✓"
 		}
-		
+
 		j.drawText(img, 40, y, text, col)
 	}
-	
+
 	// Instructions
 	j.drawText(img, 20, j.Height-30, "↑↓: Navigate  Enter: Select  Esc: Close", j.TextColor)
 }
@@ -342,24 +342,24 @@ func (j *StoryJournalUI) renderFragmentList(img *image.RGBA) {
 	if j.SelectedSeriesIndex >= len(j.SeriesList) {
 		return
 	}
-	
+
 	series := j.SeriesList[j.SelectedSeriesIndex]
-	
+
 	// Title
 	title := fmt.Sprintf("%s - Fragments", series.SeriesName)
 	j.drawText(img, 20, 20, title, j.HighlightColor)
-	
+
 	// Fragment list
 	startY := 60
 	lineHeight := 25
-	
+
 	for i, frag := range j.VisibleFragments {
 		y := startY + i*lineHeight
-		
+
 		if y > j.Height-60 {
 			break
 		}
-		
+
 		// Determine color
 		col := j.TextColor
 		if i == j.SelectedFragmentIndex {
@@ -367,7 +367,7 @@ func (j *StoryJournalUI) renderFragmentList(img *image.RGBA) {
 		} else if !frag.IsDiscovered {
 			col = j.IncompleteColor
 		}
-		
+
 		// Format text
 		text := fmt.Sprintf("%d. ", frag.SequenceNum)
 		if frag.IsDiscovered {
@@ -375,10 +375,10 @@ func (j *StoryJournalUI) renderFragmentList(img *image.RGBA) {
 		} else {
 			text += "??? (Not discovered)"
 		}
-		
+
 		j.drawText(img, 40, y, text, col)
 	}
-	
+
 	// Instructions
 	j.drawText(img, 20, j.Height-30, "↑↓: Navigate  Enter: Read  Esc: Back", j.TextColor)
 }
@@ -388,20 +388,20 @@ func (j *StoryJournalUI) renderFragmentDetail(img *image.RGBA) {
 	if j.SelectedFragmentIndex >= len(j.VisibleFragments) {
 		return
 	}
-	
+
 	frag := j.VisibleFragments[j.SelectedFragmentIndex]
-	
+
 	// Title
 	title := fmt.Sprintf("%s - Fragment %d", frag.FragmentType, frag.SequenceNum)
 	j.drawText(img, 20, 20, title, j.HighlightColor)
-	
+
 	// Content (word-wrapped)
 	startY := 60
 	lineHeight := 20
 	maxCharsPerLine := 60
-	
+
 	lines := wrapText(frag.Content, maxCharsPerLine)
-	
+
 	for i, line := range lines {
 		y := startY + i*lineHeight
 		if y > j.Height-60 {
@@ -409,7 +409,7 @@ func (j *StoryJournalUI) renderFragmentDetail(img *image.RGBA) {
 		}
 		j.drawText(img, 30, y, line, j.TextColor)
 	}
-	
+
 	// Instructions
 	j.drawText(img, 20, j.Height-30, "Esc: Back", j.TextColor)
 }
@@ -457,7 +457,7 @@ func wrapText(text string, maxWidth int) []string {
 	words := strings.Fields(text)
 	lines := []string{}
 	currentLine := ""
-	
+
 	for _, word := range words {
 		if len(currentLine)+len(word)+1 <= maxWidth {
 			if currentLine == "" {
@@ -472,10 +472,10 @@ func wrapText(text string, maxWidth int) []string {
 			currentLine = word
 		}
 	}
-	
+
 	if currentLine != "" {
 		lines = append(lines, currentLine)
 	}
-	
+
 	return lines
 }

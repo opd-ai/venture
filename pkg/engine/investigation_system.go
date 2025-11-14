@@ -14,7 +14,7 @@ import (
 // scans the nearby area, revealing fragments and marking areas as explored.
 type InvestigationSystem struct {
 	world          *World
-	rng            *rand.Rand // For detection chance rolls
+	rng            *rand.Rand      // For detection chance rolls
 	fragmentHidden map[uint64]bool // Fragment entity ID → is hidden (revealed through investigation)
 }
 

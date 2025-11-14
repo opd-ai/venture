@@ -55,15 +55,15 @@ func (c *InvestigationComponent) Type() string {
 // NewInvestigationComponent creates a new investigation component with default values.
 func NewInvestigationComponent() *InvestigationComponent {
 	return &InvestigationComponent{
-		InvestigationRadius:    3.0,  // 3 tile radius
-		IsInvestigating:        false,
-		InvestigationDuration:  2.0,  // 2 seconds to complete
-		DiscoveredAreas:        make(map[string]bool),
-		InvestigationCooldown:  1.0,  // 1 second cooldown
-		CooldownElapsed:        1.0,  // Start with cooldown ready
-		RevealedFragments:      make(map[uint64]bool),
+		InvestigationRadius:     3.0, // 3 tile radius
+		IsInvestigating:         false,
+		InvestigationDuration:   2.0, // 2 seconds to complete
+		DiscoveredAreas:         make(map[string]bool),
+		InvestigationCooldown:   1.0, // 1 second cooldown
+		CooldownElapsed:         1.0, // Start with cooldown ready
+		RevealedFragments:       make(map[uint64]bool),
 		InvestigationSkillBonus: 0.0,
-		TotalInvestigations:    0,
+		TotalInvestigations:     0,
 	}
 }
 

@@ -45,9 +45,9 @@ func TestNewInvestigationComponent(t *testing.T) {
 // TestInvestigationComponent_StartInvestigation tests starting an investigation.
 func TestInvestigationComponent_StartInvestigation(t *testing.T) {
 	tests := []struct {
-		name           string
+		name            string
 		cooldownElapsed float64
-		wantSuccess    bool
+		wantSuccess     bool
 	}{
 		{"No cooldown", 1.0, true},
 		{"Cooldown elapsed", 1.5, true},
@@ -104,8 +104,8 @@ func TestInvestigationComponent_StopInvestigation(t *testing.T) {
 // TestInvestigationComponent_IsInvestigationComplete tests completion checking.
 func TestInvestigationComponent_IsInvestigationComplete(t *testing.T) {
 	tests := []struct {
-		name        string
-		setupFunc   func(*InvestigationComponent)
+		name         string
+		setupFunc    func(*InvestigationComponent)
 		wantComplete bool
 	}{
 		{
@@ -255,15 +255,15 @@ func TestInvestigationComponent_FragmentRevealed(t *testing.T) {
 // TestInvestigationComponent_GetDetectionChance tests detection probability calculation.
 func TestInvestigationComponent_GetDetectionChance(t *testing.T) {
 	tests := []struct {
-		name        string
-		skillBonus  float64
-		wantChance  float64
+		name       string
+		skillBonus float64
+		wantChance float64
 	}{
 		{"No skill", 0.0, 0.6},
-		{"25% skill", 0.25, 0.7},  // 0.6 + (0.4 * 0.25)
-		{"50% skill", 0.5, 0.8},   // 0.6 + (0.4 * 0.5)
-		{"75% skill", 0.75, 0.9},  // 0.6 + (0.4 * 0.75)
-		{"100% skill", 1.0, 1.0},  // 0.6 + (0.4 * 1.0)
+		{"25% skill", 0.25, 0.7}, // 0.6 + (0.4 * 0.25)
+		{"50% skill", 0.5, 0.8},  // 0.6 + (0.4 * 0.5)
+		{"75% skill", 0.75, 0.9}, // 0.6 + (0.4 * 0.75)
+		{"100% skill", 1.0, 1.0}, // 0.6 + (0.4 * 1.0)
 	}
 
 	for _, tt := range tests {
@@ -290,7 +290,7 @@ func TestInvestigationComponent_MultipleInvestigations(t *testing.T) {
 	}
 
 	// Try starting again (should fail - already investigating)
-	comp.CooldownElapsed = 2.0 // Reset cooldown manually for test
+	comp.CooldownElapsed = 2.0  // Reset cooldown manually for test
 	comp.IsInvestigating = true // Still investigating
 	time.Sleep(10 * time.Millisecond)
 

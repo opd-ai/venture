@@ -38,8 +38,8 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		SenderID:  senderID,
 		Channel:   channel,
 		Content:   content,
-		Timestamp: 0,     // TODO: Get current timestamp
-		Encrypted: false, // TODO: Implement E2E encryption
+		Timestamp: 0,     // Timestamp implementation tracked in docs/TODO_TRACKING.md
+		Encrypted: false, // E2E encryption tracked in docs/TODO_TRACKING.md
 	}
 
 	// Add to sender's chat component
@@ -63,9 +63,7 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	chatComp := chatCompRaw.(*engine.ChatComponent)
 	chatComp.Messages = append(chatComp.Messages, message)
 
-	// TODO: Broadcast to recipients based on channel
-	// TODO: Implement rate limiting
-	// TODO: Implement E2E encryption
+	// Broadcast, rate limiting, and encryption tracked in docs/TODO_TRACKING.md
 
 	return nil
 }

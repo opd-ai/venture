@@ -62,11 +62,7 @@ func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItems,
 
 	tradeComp.ActiveTrade = proposal
 
-	// TODO: Notify recipient
-	// TODO: Implement two-phase commit
-	// TODO: Validate ownership
-	// TODO: Check trust score
-
+	// Trade system implementation tracked in docs/TODO_TRACKING.md
 	return nil
 }
 

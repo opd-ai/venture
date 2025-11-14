@@ -9,11 +9,11 @@ type Corpus struct {
 // GetCorpus returns training sentences for a specific genre.
 //
 // Supported genres:
-//  - "fantasy": Medieval fantasy with magic, dungeons, dragons
-//  - "scifi": Futuristic technology and space themes
-//  - "horror": Dark, ominous, scary atmosphere
-//  - "cyberpunk": Urban future with hacking and neon
-//  - "postapocalyptic": Survival in wasteland
+//   - "fantasy": Medieval fantasy with magic, dungeons, dragons
+//   - "scifi": Futuristic technology and space themes
+//   - "horror": Dark, ominous, scary atmosphere
+//   - "cyberpunk": Urban future with hacking and neon
+//   - "postapocalyptic": Survival in wasteland
 //
 // Returns nil if genreID is not recognized.
 func GetCorpus(genreID string) *Corpus {

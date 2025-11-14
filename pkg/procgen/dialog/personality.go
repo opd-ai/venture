@@ -159,9 +159,9 @@ func GenerateRandomPersonality(rng *rand.Rand) *Personality {
 //
 // This adjusts temperature, min/max words, and other parameters to match
 // the NPC's personality traits. For example:
-//  - High verbosity → longer responses
-//  - High friendliness → warmer temperature (more variation)
-//  - High knowledge → longer, more detailed responses
+//   - High verbosity → longer responses
+//   - High friendliness → warmer temperature (more variation)
+//   - High knowledge → longer, more detailed responses
 func (p *Personality) ApplyToGenerator(params *GenerateParams) {
 	// Verbosity affects word count
 	if p.Verbosity < 0.3 {

@@ -50,9 +50,9 @@ func TestNewPersonality(t *testing.T) {
 // TestNewPersonalityDefaults verifies default trait values.
 func TestNewPersonalityDefaults(t *testing.T) {
 	tests := []struct {
-		ptype       PersonalityType
-		expectHigh  string // Trait that should be high (>0.6)
-		expectLow   string // Trait that should be low (<0.4)
+		ptype      PersonalityType
+		expectHigh string // Trait that should be high (>0.6)
+		expectLow  string // Trait that should be low (<0.4)
 	}{
 		{PersonalityHelpful, "Friendliness", ""},
 		{PersonalityHostile, "", "Friendliness"},
@@ -305,11 +305,11 @@ func TestClamp(t *testing.T) {
 		max   float64
 		want  float64
 	}{
-		{0.5, 0.0, 1.0, 0.5},   // Within range
-		{-0.5, 0.0, 1.0, 0.0},  // Below min
-		{1.5, 0.0, 1.0, 1.0},   // Above max
-		{0.0, 0.0, 1.0, 0.0},   // At min
-		{1.0, 0.0, 1.0, 1.0},   // At max
+		{0.5, 0.0, 1.0, 0.5},    // Within range
+		{-0.5, 0.0, 1.0, 0.0},   // Below min
+		{1.5, 0.0, 1.0, 1.0},    // Above max
+		{0.0, 0.0, 1.0, 0.0},    // At min
+		{1.0, 0.0, 1.0, 1.0},    // At max
 		{5.0, 10.0, 20.0, 10.0}, // Below min
 	}
 

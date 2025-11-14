@@ -30,7 +30,7 @@
 //
 //	gen := dialog.NewMarkovGenerator(seed, genreID, order)
 //	gen.TrainFromCorpus(corpus)
-//	
+//
 //	response := gen.Generate(dialog.GenerateParams{
 //	    PlayerInput:    "Where is the dungeon?",
 //	    ConversationID: "merchant-12345",
@@ -51,21 +51,21 @@
 //
 // Dialog generation is optimized for runtime use:
 //
-//  - Response generation: <50ms (target for real-time conversation)
-//  - Memory footprint: ~2-5MB per trained generator (corpus + chain state)
-//  - Training: One-time cost, <100ms for typical corpus (1000-5000 words)
+//   - Response generation: <50ms (target for real-time conversation)
+//   - Memory footprint: ~2-5MB per trained generator (corpus + chain state)
+//   - Training: One-time cost, <100ms for typical corpus (1000-5000 words)
 //
 // # Non-Determinism Scope
 //
 // **Non-Deterministic Elements:**
-//  - Dialog text content (varies with player input, conversation history)
-//  - Response variation for same input (enhances replayability)
+//   - Dialog text content (varies with player input, conversation history)
+//   - Response variation for same input (enhances replayability)
 //
 // **Deterministic Elements:**
-//  - NPC behavior (hostility, trading, quest offering)
-//  - Quest objectives (goals, rewards, requirements)
-//  - Item generation (stats, rarity, types)
-//  - Combat outcomes (damage, status effects)
+//   - NPC behavior (hostility, trading, quest offering)
+//   - Quest objectives (goals, rewards, requirements)
+//   - Item generation (stats, rarity, types)
+//   - Combat outcomes (damage, status effects)
 //
 // # Testing
 //
@@ -95,7 +95,7 @@
 //	corpus := dialog.GetCorpus("fantasy")
 //	gen := dialog.NewMarkovGenerator(worldSeed, "fantasy", 2)
 //	gen.TrainFromCorpus(corpus)
-//	
+//
 //	// Configure NPC personality
 //	personality := dialog.Personality{
 //	    Type:        dialog.PersonalityMerchant,
@@ -103,14 +103,14 @@
 //	    Verbosity:    0.5,
 //	    Formality:    0.6,
 //	}
-//	
+//
 //	// Generate response to player greeting
 //	response := gen.GenerateWithPersonality(dialog.GenerateParams{
 //	    PlayerInput:    "Hello, merchant!",
 //	    ConversationID: "npc-merchant-001",
 //	    MaxWords:       20,
 //	}, personality)
-//	
+//
 //	// Expected output (example):
 //	// "Greetings, traveler. I have fine wares if you have coin. What interests you?"
 package dialog

@@ -7,9 +7,9 @@ import (
 // TestGetCorpus verifies corpus retrieval for all genres.
 func TestGetCorpus(t *testing.T) {
 	tests := []struct {
-		genreID        string
-		wantNil        bool
-		minSentences   int
+		genreID      string
+		wantNil      bool
+		minSentences int
 	}{
 		{"fantasy", false, 50},
 		{"scifi", false, 50},

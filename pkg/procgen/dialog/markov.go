@@ -57,8 +57,8 @@ type MarkovGenerator struct {
 // NewMarkovGenerator creates a new Markov chain text generator.
 //
 // The seed parameter is used for:
-//  - Deterministic mode: Seed is used directly for reproducible generation
-//  - Non-deterministic mode: Seed is combined with runtime entropy
+//   - Deterministic mode: Seed is used directly for reproducible generation
+//   - Non-deterministic mode: Seed is combined with runtime entropy
 //
 // The genreID parameter should match one of the supported genres:
 // "fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"
@@ -247,9 +247,9 @@ func (m *MarkovGenerator) generateSequence(rng *rand.Rand, maxWords int, tempera
 // selectNextWord chooses the next word from candidates with temperature-adjusted randomness.
 //
 // Temperature effects:
-//  - 0.0: Always select most common word (deterministic)
-//  - 0.5: Bias toward common words, allow some variation
-//  - 1.0: Uniform random selection (maximum variation)
+//   - 0.0: Always select most common word (deterministic)
+//   - 0.5: Bias toward common words, allow some variation
+//   - 1.0: Uniform random selection (maximum variation)
 func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, temperature float64) string {
 	if len(candidates) == 0 {
 		return ""
@@ -323,8 +323,8 @@ func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, te
 // deriveRuntimeSeed creates a seed from player input, conversation ID, and timestamp.
 //
 // This introduces controlled non-determinism:
-//  - Same conversation with same input at different times = different responses
-//  - Different conversations with same input = different responses
+//   - Same conversation with same input at different times = different responses
+//   - Different conversations with same input = different responses
 //
 // The hash combines:
 //  1. Base seed (world consistency)

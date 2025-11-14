@@ -371,11 +371,11 @@ func (m *MountComponent) Deserialize(data []byte) error {
 
 // Serialize converts VehicleComponent to bytes for network transmission.
 // Binary format: type(1) + speed(8) + maxSpeed(8) + accel(8) + handling(8) +
-// durability(8) + maxDur(8) + fuelAmt(8) + fuelCap(8) + capacity(4) + passengers(4) = 69 bytes
+// durability(8) + maxDur(8) + fuelAmt(8) + fuelCap(8) + capacity(4) + passengers(4) + terrainCount(4) = 77 bytes
 // (excluding variable-length terrainTypes)
 func (v *VehicleComponent) Serialize() []byte {
-	// Allocate buffer: 1 + 8*8 + 4*2 = 73 bytes base + terrain types
-	buf := make([]byte, 73+len(v.TerrainTypes)*4)
+	// Allocate buffer: 1 + 8*8 + 4*3 = 77 bytes base + terrain types (4 bytes each)
+	buf := make([]byte, 77+len(v.TerrainTypes)*4)
 
 	// Vehicle type (1 byte)
 	buf[0] = byte(v.VehicleType)

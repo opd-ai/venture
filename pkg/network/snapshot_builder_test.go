@@ -11,7 +11,7 @@ import (
 // TestBuildEntitySnapshot_CoreComponents tests snapshot building with core components.
 func TestBuildEntitySnapshot_CoreComponents(t *testing.T) {
 	builder := NewSnapshotBuilder()
-	entity := &engine.Entity{ID: 42}
+	entity := engine.NewEntity(42)
 
 	// Add core components
 	entity.AddComponent(&engine.PositionComponent{X: 100.5, Y: 200.5})
@@ -52,7 +52,7 @@ func TestBuildEntitySnapshot_CoreComponents(t *testing.T) {
 // TestBuildEntitySnapshot_V4Components tests snapshot building with V4.0 components.
 func TestBuildEntitySnapshot_V4Components(t *testing.T) {
 	builder := NewSnapshotBuilder()
-	entity := &engine.Entity{ID: 99}
+	entity := engine.NewEntity(99)
 
 	// Add position (required for snapshot)
 	entity.AddComponent(&engine.PositionComponent{X: 50.0, Y: 75.0})
@@ -112,7 +112,7 @@ func TestApplySnapshotToEntity_CoreComponents(t *testing.T) {
 	builder := NewSnapshotBuilder()
 
 	// Create entity with components
-	entity := &engine.Entity{ID: 42}
+	entity := engine.NewEntity(42)
 	entity.AddComponent(&engine.PositionComponent{X: 0.0, Y: 0.0})
 	entity.AddComponent(&engine.VelocityComponent{VX: 0.0, VY: 0.0})
 	entity.AddComponent(&engine.HealthComponent{Current: 50.0, Max: 100.0})
@@ -186,7 +186,7 @@ func TestApplySnapshotToEntity_V4Components(t *testing.T) {
 	builder := NewSnapshotBuilder()
 
 	// Create source entity with V4 components
-	sourceEntity := &engine.Entity{ID: 100}
+	sourceEntity := engine.NewEntity(100)
 	sourceEntity.AddComponent(&engine.PositionComponent{X: 50.0, Y: 75.0})
 
 	vehicleComp := engine.NewVehicleComponent(engine.VehicleCart)
@@ -207,7 +207,7 @@ func TestApplySnapshotToEntity_V4Components(t *testing.T) {
 	snapshot := builder.BuildEntitySnapshot(sourceEntity, time.Now(), 999)
 
 	// Create target entity with default V4 components
-	targetEntity := &engine.Entity{ID: 100}
+	targetEntity := engine.NewEntity(100)
 	targetEntity.AddComponent(&engine.PositionComponent{X: 0.0, Y: 0.0})
 	targetEntity.AddComponent(engine.NewVehicleComponent(engine.VehicleMount))
 	targetEntity.AddComponent(&engine.CompanionComponent{})
@@ -254,9 +254,9 @@ func TestBuildWorldSnapshot(t *testing.T) {
 
 	// Create multiple entities
 	entities := []*engine.Entity{
-		{ID: 1},
-		{ID: 2},
-		{ID: 3},
+		engine.NewEntity(1),
+		engine.NewEntity(2),
+		engine.NewEntity(3),
 	}
 
 	for _, entity := range entities {
@@ -295,7 +295,7 @@ func TestBuildWorldSnapshot(t *testing.T) {
 // BenchmarkBuildEntitySnapshot benchmarks snapshot creation.
 func BenchmarkBuildEntitySnapshot(b *testing.B) {
 	builder := NewSnapshotBuilder()
-	entity := &engine.Entity{ID: 42}
+	entity := engine.NewEntity(42)
 	entity.AddComponent(&engine.PositionComponent{X: 100.5, Y: 200.5})
 	entity.AddComponent(&engine.VelocityComponent{VX: 10.0, VY: -5.0})
 	entity.AddComponent(&engine.HealthComponent{Current: 80.0, Max: 100.0})
@@ -315,7 +315,7 @@ func BenchmarkBuildEntitySnapshot(b *testing.B) {
 func BenchmarkApplySnapshotToEntity(b *testing.B) {
 	builder := NewSnapshotBuilder()
 
-	entity := &engine.Entity{ID: 42}
+	entity := engine.NewEntity(42)
 	entity.AddComponent(&engine.PositionComponent{X: 0.0, Y: 0.0})
 	entity.AddComponent(&engine.VelocityComponent{VX: 0.0, VY: 0.0})
 	entity.AddComponent(&engine.HealthComponent{Current: 50.0, Max: 100.0})

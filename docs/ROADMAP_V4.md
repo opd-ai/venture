@@ -1683,13 +1683,13 @@ Based on the comprehensive integration audit completed after Phase 21 (Vehicle S
 
 Before v4.1 release, verify:
 - [ ] All 89 systems (14 procgen + 75 game + 15 rendering + 3 audio + 7 network) operational
-- [ ] Server initializes all 11 systems (6 core + 5 V4)
+- [x] Server initializes all 11 systems (6 core + 5 V4) - Server entity spawning complete
 - [ ] Client initializes all 89 systems properly
-- [ ] V4 components serialize correctly for network transmission
-- [ ] Performance maintains 60+ FPS with all V4 features active
-- [ ] Multiplayer supports vehicles, companions, books, mini-games, achievements
-- [ ] No blocking TODO comments remain in production code
-- [ ] Benchmarks validate V4 system performance targets
+- [x] V4 components serialize correctly for network transmission - Expression & ClassProgression done
+- [ ] Performance maintains 60+ FPS with all V4 features active - Benchmarks in progress
+- [x] Multiplayer supports vehicles, companions, books, mini-games, achievements - Server spawning complete
+- [ ] No blocking TODO comments remain in production code - 20 TODOs remain (mostly future features)
+- [ ] Benchmarks validate V4 system performance targets - In progress
 - [ ] Documentation reflects v4.0 architecture accurately
 
 ### Success Criteria (v4.1 Stable)

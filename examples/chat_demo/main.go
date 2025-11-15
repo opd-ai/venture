@@ -18,7 +18,7 @@ func main() {
 	flag.Parse()
 
 	fmt.Println("=== Venture Chat System Demonstration ===")
-	fmt.Println("Showcasing E2E encryption, channel routing, and rate limiting\n")
+	fmt.Println("Showcasing E2E encryption, channel routing, and rate limiting")
 
 	// Create world for chat system
 	world := engine.NewWorld()

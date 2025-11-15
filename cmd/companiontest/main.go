@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// Demonstrate companion features
-	fmt.Println("=== Companion Features Demo ===\n")
+	fmt.Println("=== Companion Features Demo ===")
 
 	// 1. Inventory Feature
 	fmt.Println("1. Companion Inventory:")

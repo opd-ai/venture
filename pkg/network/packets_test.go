@@ -161,13 +161,13 @@ func TestEstimatePacketSize(t *testing.T) {
 			name:          "short uncompressed",
 			messageLen:    50,
 			compressed:    false,
-			expectedRange: [2]int{90, 100}, // 37 base + 50 msg + ~12+16 encryption
+			expectedRange: [2]int{110, 120}, // 37 base + 50 msg + 28 encryption overhead
 		},
 		{
 			name:          "short compressed",
 			messageLen:    50,
 			compressed:    true,
-			expectedRange: [2]int{60, 70}, // 37 base + ~25 compressed + ~12+16 encryption
+			expectedRange: [2]int{85, 95}, // 37 base + ~25 compressed + 28 encryption overhead
 		},
 		{
 			name:          "long uncompressed",

@@ -1,7 +1,7 @@
 # Phase: Execute Next Planned Phase
 
 ## OBJECTIVE
-Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP_V4.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass.
+Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP_V4.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass. We have multiple `ROADMAP_V*.md` files in the codebase, choose the first unfinished item from the lowest-numbered unfinished roadmap to complete.
 
 ## EXECUTION MODE
 **Autonomous Action** - Implement the Phase immediately with full testing and documentation.
@@ -75,4 +75,4 @@ Provide brief status updates:
 - **Logging**: Use structured logging with logrus (see pkg/logging/)
 - **No Asset Files**: All content procedurally generated at runtime
 - **Replace, Don't Accumulate**: When a system/technique is completely replaced (e.g., improved sprites, better generation algorithms), remove the old implementation entirely without backward compatibility concerns. Only keep code that still serves a purpose.
-	- *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.
+    - *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.

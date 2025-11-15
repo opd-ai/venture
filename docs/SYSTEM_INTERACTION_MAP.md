@@ -1,345 +1,160 @@
 # System Interaction Map
 
-This document visualizes how Venture's game systems interact and depend on each other.
+System categories, execution flow, and dependencies in Venture's ECS architecture.
 
-## System Categories
+## System Categories (38 Total)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        VENTURE GAME SYSTEMS                      │
-│                         (38 Total Systems)                       │
-└─────────────────────────────────────────────────────────────────┘
-        │
-        ├── Core ECS (3) ──────────────────────── Movement, Collision, Spatial
-        │
-        ├── Combat (4) ───────────────────────── Combat, Player Combat, Status, Revival
-        │
-        ├── AI & Behavior (2) ────────────────── AI, Fire Propagation*
-        │
-        ├── Progression (3) ──────────────────── XP, Skills, Objectives
-        │
-        ├── Inventory & Items (4) ────────────── Inventory, Pickup, Use, Visuals*
-        │
-        ├── Magic & Spells (3) ───────────────── Casting, Player Casting, Mana
-        │
-        ├── Input (1) ────────────────────────── Input System
-        │
-        ├── Rendering (5) ────────────────────── Render, Terrain, Animation, Particles, Feedback
-        │
-        ├── Camera (1) ───────────────────────── Camera System
-        │
-        ├── Audio (1) ────────────────────────── Audio Manager
-        │
-        ├── UI (4) ───────────────────────────── HUD, Menu, Tutorial, Help
-        │
-        ├── Terrain (2) ──────────────────────── Construction*, Modification*
-        │
-        ├── Commerce (2) ─────────────────────── Commerce, Dialog
-        │
-        ├── Crafting (1) ─────────────────────── Crafting*
-        │
-        ├── Lighting (1) ─────────────────────── Dynamic Lighting*
-        │
-        └── Weather (1) ──────────────────────── Weather Effects*
+**Core ECS (3):** Movement, Collision, Spatial  
+**Combat (4):** Combat, Player Combat, Status, Revival  
+**AI (2):** AI, Fire Propagation*  
+**Progression (3):** XP, Skills, Objectives  
+**Inventory (4):** Inventory, Pickup, Use, Visuals*  
+**Magic (3):** Casting, Player Casting, Mana  
+**Input (1):** Input System  
+**Rendering (5):** Render, Terrain, Animation, Particles, Feedback  
+**Camera (1):** Camera System  
+**Audio (1):** Audio Manager  
+**UI (4):** HUD, Menu, Tutorial, Help  
+**Terrain (2):** Construction*, Modification*  
+**Commerce (2):** Commerce, Dialog  
+**Crafting (1):** Crafting*  
+**Lighting (1):** Dynamic Lighting*  
+**Weather (1):** Weather Effects*
 
-* = Future feature (implemented but not yet integrated)
-```
+\* = Future feature (implemented but not integrated)
 
-## System Execution Flow
+## Execution Order (Per Frame)
 
-### Game Loop Execution Order
+1. **Input:** Keyboard/mouse capture
+2. **Player Actions:** Attack/item use/spell cast
+3. **Physics:** Movement → collision detection
+4. **Combat:** Damage calculation, status effects
+5. **AI:** Revival, enemy decisions
+6. **Progression:** XP, skill bonuses
+7. **Visual:** Hit flash, tints
+8. **Audio:** Music context updates
+9. **Quests:** Quest progress, item pickup
+10. **Magic:** Spell effects, mana regen
+11. **Inventory:** Item management
+12. **Animation:** Sprite frame updates
+13. **UI:** Tutorial, help, dialog
+14. **Particles:** Effect rendering
+15. **Spatial:** Quadtree updates (every 60 frames)
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                      FRAME START                                │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 1: INPUT PROCESSING                                       │
-│   └─ InputSystem: Captures keyboard/mouse input                │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 2: PLAYER ACTIONS                                         │
-│   ├─ PlayerCombatSystem: Space key → attack                    │
-│   ├─ PlayerItemUseSystem: E key → use item                     │
-│   └─ PlayerSpellCastingSystem: 1-5 keys → cast spell           │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 3: PHYSICS                                                │
-│   ├─ MovementSystem: velocity → position                       │
-│   └─ CollisionSystem: AABB collision detection                 │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 4: COMBAT RESOLUTION                                      │
-│   ├─ CombatSystem: Damage calculation                          │
-│   └─ StatusEffectSystem: DoT, buffs, debuffs                   │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 5: AI & BEHAVIOR                                          │
-│   ├─ RevivalSystem: Player revival mechanics                   │
-│   └─ AISystem: Enemy decision making                           │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 6: PROGRESSION                                            │
-│   ├─ ProgressionSystem: XP and leveling                        │
-│   └─ SkillProgressionSystem: Skill bonuses                     │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 7: VISUAL EFFECTS                                         │
-│   └─ VisualFeedbackSystem: Hit flash, tints                    │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 8: AUDIO                                                  │
-│   └─ AudioManagerSystem: Music context updates                 │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 9: QUESTS & ITEMS                                         │
-│   ├─ ObjectiveTrackerSystem: Quest progress                    │
-│   └─ ItemPickupSystem: Auto-pickup items                       │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 10: MAGIC                                                 │
-│   ├─ SpellCastingSystem: Execute spell effects                 │
-│   └─ ManaRegenSystem: Regenerate mana                          │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 11: INVENTORY                                             │
-│   └─ InventorySystem: Item management                          │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 12: ANIMATION                                             │
-│   └─ AnimationSystem: Update sprite frames                     │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 13: UI OVERLAYS                                           │
-│   ├─ TutorialSystem: Tutorial steps                            │
-│   ├─ HelpSystem: Help screen                                   │
-│   └─ DialogSystem: Dialog state (FIXED in audit)               │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 14: PARTICLES                                             │
-│   └─ ParticleSystem: Particle effects                          │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 15: SPATIAL OPTIMIZATION                                  │
-│   └─ SpatialPartitionSystem: Quadtree updates (every 60 frames)│
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────────┐
-│                      FRAME END                                  │
-└────────────────────────────────────────────────────────────────┘
+## Critical Dependencies
+
+**Movement ↔ Collision (Bidirectional):**
+```go
+MovementSystem.SetCollisionSystem(collisionSystem)
+// Enables predictive collision detection
 ```
 
-## System Dependencies
-
-### Critical Dependencies
-
+**Collision → Terrain:**
+```go
+collisionSystem.SetTerrainChecker(NewTerrainCollisionChecker())
+// Entity-terrain collision
 ```
-┌──────────────────────────────────────────────────────────┐
-│                  MOVEMENT ↔ COLLISION                     │
-│                 (Bidirectional Reference)                 │
-│                                                           │
-│  MovementSystem.SetCollisionSystem(collisionSystem)      │
-│  → Enables predictive collision detection                │
-└──────────────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────┐
-│           COLLISION → TERRAIN COLLISION CHECKER           │
-│                                                           │
-│  terrainChecker := NewTerrainCollisionChecker()          │
-│  collisionSystem.SetTerrainChecker(terrainChecker)       │
-│  → Enables entity-terrain collision                      │
-└──────────────────────────────────────────────────────────┘
+**Combat → Camera + Particles:**
+```go
+combatSystem.SetCamera(cameraSystem)           // Screen shake
+combatSystem.SetParticleSystem(particleSystem) // Hit effects
+```
 
-┌──────────────────────────────────────────────────────────┐
-│                COMBAT → CAMERA, PARTICLES                 │
-│                                                           │
-│  combatSystem.SetCamera(cameraSystem)                    │
-│  → Enables screen shake on hit                           │
-│                                                           │
-│  combatSystem.SetParticleSystem(particleSystem)          │
-│  → Enables hit effect particles                          │
-└──────────────────────────────────────────────────────────┘
+**Render → Spatial (Culling):**
+```go
+renderSystem.SetSpatialPartition(spatialSystem)
+renderSystem.EnableCulling(true)  // Viewport optimization
+```
 
-┌──────────────────────────────────────────────────────────┐
-│          RENDER → SPATIAL PARTITION (Culling)             │
-│                                                           │
-│  renderSystem.SetSpatialPartition(spatialSystem)         │
-│  renderSystem.EnableCulling(true)                        │
-│  → Viewport culling optimization                         │
-└──────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────┐
-│              INPUT → UI SYSTEMS & CALLBACKS               │
-│                                                           │
-│  inputSystem.SetHelpSystem(helpSystem)                   │
-│  inputSystem.SetTutorialSystem(tutorialSystem)           │
-│  inputSystem.SetQuickSaveCallback(saveFunc)              │
-│  inputSystem.SetQuickLoadCallback(loadFunc)              │
-│  inputSystem.SetInteractCallback(merchantFunc)           │
-│  → Hotkey dispatch to various systems                    │
-└──────────────────────────────────────────────────────────┘
+**Input → UI + Callbacks:**
+```go
+inputSystem.SetHelpSystem(helpSystem)
+inputSystem.SetTutorialSystem(tutorialSystem)
+inputSystem.SetQuickSaveCallback(saveFunc)
+inputSystem.SetInteractCallback(merchantFunc)
+// Hotkey dispatch
 ```
 
 ## Component Query Patterns
 
-### Pattern 1: Simple Component Query
+**Pattern 1: Simple Query**
 ```go
-// Get all entities with position and velocity
 entities := world.GetEntitiesWith("position", "velocity")
+// Used by: Movement, Collision, AI
 ```
 
-**Used by**: MovementSystem, CollisionSystem, AISystem
-
-### Pattern 2: Component Filtering
+**Pattern 2: Component Filtering**
 ```go
-// Process entities with specific components
 for _, entity := range entities {
-    if posComp, ok := entity.GetComponent("position"); ok {
-        if velComp, ok := entity.GetComponent("velocity"); ok {
-            pos := posComp.(*PositionComponent)
-            vel := velComp.(*VelocityComponent)
+    if pos, ok := entity.GetComponent("position"); ok {
+        if vel, ok := entity.GetComponent("velocity"); ok {
             // Process movement
         }
     }
 }
+// Used by: Most ECS systems
 ```
 
-**Used by**: Most ECS systems
-
-### Pattern 3: Component Type Checking
+**Pattern 3: Type Checking**
 ```go
-// Check if entity has required components
 if !entity.HasComponent("input") {
-    continue // Skip non-player entities
+    continue  // Skip non-player entities
 }
+// Used by: Player-specific systems
 ```
 
-**Used by**: Player-specific systems (PlayerCombatSystem, PlayerItemUseSystem)
+## System Integration
 
-### Pattern 4: Service Pattern (No Component Query)
-```go
-// Direct method calls, no Update() loop
-result, err := commerceSystem.BuyItem(playerID, merchantID, itemIndex)
+**Add New System:**
+1. Implement `Update(deltaTime float64)` method
+2. Query entities with required components
+3. Operate on component data only (no entity logic)
+4. Register in world: `world.RegisterSystem(system)`
+5. Set dependencies via setter methods
+
+**System Registration Order:**
+Critical systems (movement, collision) → Gameplay systems (combat, AI) → Rendering systems (particles, animation)
+
+## Data Flow
+
+**Input → Game State:**
+```
+Keyboard/Mouse → InputComponent → Player*Systems → Components → World State
 ```
 
-**Used by**: CommerceSystem (called from UI, not World.Update)
-
-## Client vs Server Distribution
-
-### Client-Only Systems (20 systems)
+**Game State → Rendering:**
 ```
-Input Processing:
-  • InputSystem
-  • PlayerCombatSystem
-  • PlayerItemUseSystem
-  • PlayerSpellCastingSystem
-
-Rendering:
-  • EbitenRenderSystem
-  • TerrainRenderSystem
-  • AnimationSystem
-  • ParticleSystem
-  • VisualFeedbackSystem
-  • CameraSystem
-
-UI:
-  • EbitenHUDSystem
-  • EbitenMenuSystem
-  • EbitenTutorialSystem
-  • EbitenHelpSystem
-
-Game Features:
-  • AudioManagerSystem
-  • ObjectiveTrackerSystem
-  • ItemPickupSystem
-  • SpellCastingSystem
-  • ManaRegenSystem
-  • StatusEffectSystem
-  • RevivalSystem
-  • SkillProgressionSystem
-  • SpatialPartitionSystem
-  • DialogSystem
-  • CommerceSystem
+Components → RenderSystem → SpriteCache → Screen
+           → ParticleSystem → Effects
+           → AnimationSystem → Frames
 ```
 
-### Shared Systems (6 systems)
+**Multiplayer Sync:**
 ```
-Both Client and Server:
-  • MovementSystem
-  • CollisionSystem
-  • CombatSystem
-  • AISystem
-  • ProgressionSystem
-  • InventorySystem
+Server: World State → Snapshots → Network
+Client: Network → Snapshots → Interpolation → Prediction → Render
 ```
 
-**Rationale**: Server needs authoritative gameplay logic. Client needs local prediction and rendering.
+## Performance Characteristics
 
-## Integration Issue Found (FIXED)
+**Quadtree Spatial Partition:**
+- Update frequency: Every 60 frames (~1s at 60 FPS)
+- Query time: O(log n) for collision/culling
+- Entities per query: ~5-50 (typical viewport)
 
-### Before Audit
-```
-DialogSystem instantiated ✅
-    ↓
-DialogSystem.StartDialog() called ✅
-    ↓
-DialogSystem.Update() ❌ NEVER CALLED
-    │
-    └─ Not registered with World.AddSystem()
-```
+**Viewport Culling:**
+- Speedup: 1,635x over naive rendering
+- Entities rendered: ~200 of 2000 (10% typical)
 
-### After Fix
-```
-DialogSystem instantiated ✅
-    ↓
-World.AddSystem(dialogSystem) ✅ FIXED
-    ↓
-DialogSystem.Update() called every frame ✅
-    │
-    └─ Enables timed dialogs, dynamic content
-```
+**Batch Rendering:**
+- Speedup: 1,667x over individual draws
+- Batches per frame: <50 (from ~500 unbatched)
 
-## System Status Summary
-
-| Status | Count | Systems |
-|--------|-------|---------|
-| ✅ Fully Integrated | 32 | All core gameplay, rendering, and UI systems |
-| 🔧 Fixed During Audit | 1 | DialogSystem |
-| ⚠️ Future Features | 6 | Crafting, Terrain Mod, Equipment Visual, Fire, Lighting, Weather |
+**Sprite Cache:**
+- Hit rate: 95.9%
+- Miss penalty: ~1-2ms generation time
 
 ---
 
-**Last Updated**: 2025-10-27  
-**Audit Completion**: 100%  
-**Critical Issues**: 0 remaining (1 fixed)
+**Last Updated:** November 14, 2025

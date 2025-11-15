@@ -59,6 +59,58 @@
 //	pf.Enable()
 //	filtered := pf.Filter("Message text")
 //
+// # Image Sharing System (V5.0 Phase 23)
+//
+// The image sharing system enables players to upload and share images with:
+//
+// - Chunked transfer (64KB chunks, resume on disconnect)
+// - Automatic thumbnail generation (128×128 JPEG, quality 75)
+// - Size/type validation (<500KB, PNG/JPEG/GIF only, <2048×2048 pixels)
+// - Rate limiting (1 image per 60 seconds per player)
+// - Moderation hooks for server-side content filtering
+// - Automatic expiry (10 minutes timeout OR sender disconnect)
+// - Channel-based distribution (global, local, party, whisper)
+//
+// Example image sharing usage:
+//
+//	// Create image manager
+//	im := network.NewImageManager()
+//
+//	// Set moderation hook (optional)
+//	im.SetModerationHook(func(metadata *network.ImageMetadata, data []byte) error {
+//		// Return error to reject image
+//		return nil
+//	})
+//
+//	// Set thumbnail relay callback
+//	im.SetThumbnailRelayCallback(func(metadata *network.ImageMetadata, thumbnail []byte) {
+//		// Relay thumbnail to recipients
+//	})
+//
+//	// Upload image
+//	req := &network.ImageUploadRequest{
+//		SenderID: playerID,
+//		Channel:  0,
+//		Format:   "png",
+//		Data:     imageData,
+//	}
+//	metadata, err := im.UploadImage(req)
+//
+//	// Download image (chunked)
+//	totalChunks, _ := im.StartChunkedDownload(requesterID, metadata.ImageID)
+//	for i := 0; i < totalChunks; i++ {
+//		chunk, _ := im.GetNextChunk(requesterID, metadata.ImageID)
+//		// Process chunk
+//	}
+//
+// Constraints (Phase 23 spec):
+//
+// - Max size: 500KB, Max dimensions: 2048×2048
+// - Supported formats: PNG, JPEG, GIF (non-animated)
+// - Rate limit: 1 upload per 60 seconds per player
+// - Expiry: 10 minutes OR sender disconnect
+// - Bandwidth: <2MB/s upload, <25KB/s overhead per player
+//
 // # Usage
 //
 // Start a server with high-latency support:
@@ -80,6 +132,7 @@
 // - Lag compensation for fair hit detection
 // - Delta compression for bandwidth efficiency
 // - TCP keepalive for long-duration connections
-// - E2E encrypted chat with ACK/NACK reliability
-// - Profanity filtering (client-side, opt-in)
+// - E2E encrypted chat with ACK/NACK reliability (Phase 21)
+// - Profanity filtering - client-side, opt-in (Phase 21)
+// - Image sharing with chunked transfer and moderation (Phase 23)
 package network

@@ -1,33 +1,8 @@
-// Command tradetest is a CLI utility for testing the item trading system.
-// It demonstrates trade proposals, acceptance, rejection, trust mechanics,
-// proximity validation, and atomic ownership transfer.
-//
-// Usage:
-//
-//	tradetest [-verbose]
-//
-// Examples:
-//
-//	tradetest          # Run basic trade scenarios
-//	tradetest -verbose # Run with detailed logging
-package main
+//go:build ignore
+// +build ignore
 
-import (
-	"flag"
-	"fmt"
-	"log"
+// This file has been replaced by the corrected main.go and is excluded from builds
 
-	"github.com/opd-ai/venture/pkg/engine"
-	"github.com/opd-ai/venture/pkg/network/trade"
-	"github.com/opd-ai/venture/pkg/procgen/item"
-	"github.com/sirupsen/logrus"
-)
-
-var (
-	verbose = flag.Bool("verbose", false, "enable verbose logging")
-)
-
-func main() {
 	flag.Parse()
 
 	if *verbose {
@@ -71,10 +46,10 @@ func testSimpleTrade() {
 		createItem("shield1", "Wooden Shield", item.RarityCommon),
 	})
 
-	fmt.Printf("  Alice has: Iron Sword, Health Potion\\n")
-	fmt.Printf("  Bob has: Wooden Shield\\n")
-	fmt.Printf("  Alice offers: Iron Sword\\n")
-	fmt.Printf("  Alice wants: Wooden Shield\\n")
+	fmt.Printf("  Alice has: Iron Sword, Health Potion\n")
+	fmt.Printf("  Bob has: Wooden Shield\n")
+	fmt.Printf("  Alice offers: Iron Sword\n")
+	fmt.Printf("  Alice wants: Wooden Shield\n")
 
 	// Propose trade
 	err := ts.ProposeTrade(player1, player2, []string{"sword1"}, []string{"shield1"})
@@ -173,7 +148,7 @@ func testProximityValidation() {
 	if err == nil {
 		log.Fatal("  ❌ Trade should fail due to distance")
 	}
-	fmt.Printf("  ✓ Trade rejected due to distance: %v\\n", err)
+	fmt.Printf("  ✓ Trade rejected due to distance: %v\n", err)
 }
 
 // Helper functions

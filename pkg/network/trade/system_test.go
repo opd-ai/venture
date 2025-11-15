@@ -311,7 +311,7 @@ func TestAcceptTrade(t *testing.T) {
 	proposerEntity, _ := world.GetEntity(proposer)
 	proposerInvRaw, _ := proposerEntity.GetComponent("inventory")
 	proposerInv := proposerInvRaw.(*engine.InventoryComponent)
-	
+
 	// Proposer should now have item2
 	found := false
 	for _, itm := range proposerInv.Items {
@@ -353,7 +353,7 @@ func TestRejectTrade(t *testing.T) {
 	recipientEntity, _ := world.GetEntity(recipient)
 	tradeCompRaw, _ := recipientEntity.GetComponent("trade")
 	tradeComp := tradeCompRaw.(*engine.TradeComponent)
-	
+
 	if tradeComp.ActiveTrade != nil {
 		t.Error("active trade should be cleared after rejection")
 	}
@@ -415,7 +415,7 @@ func TestTradeWithLargeItemLists(t *testing.T) {
 	var requestedItemsData []*item.Item
 	offeredItems := make([]string, 20)
 	requestedItems := make([]string, 20)
-	
+
 	for i := 0; i < 20; i++ {
 		offeredItems[i] = fmt.Sprintf("offered_%d", i)
 		requestedItems[i] = fmt.Sprintf("requested_%d", i)
@@ -495,7 +495,7 @@ func BenchmarkProposeTradeWithExistingComponent(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		proposers[i] = createTestPlayer(world, float64(i*10), 0, []*item.Item{item1, item2})
 		recipients[i] = createTestPlayer(world, float64(i*10)+1, 0, []*item.Item{item3})
-		
+
 		entity, _ := world.GetEntity(proposers[i])
 		entity.AddComponent(&engine.TradeComponent{
 			ActiveTrade:  nil,
@@ -524,7 +524,7 @@ func BenchmarkAcceptTrade(b *testing.B) {
 
 	recipients := make([]uint64, b.N)
 	proposers := make([]uint64, b.N)
-	
+
 	for i := 0; i < b.N; i++ {
 		proposers[i] = createTestPlayer(world, float64(i*10), 0, []*item.Item{item1})
 		recipients[i] = createTestPlayer(world, float64(i*10)+1, 0, []*item.Item{item2})

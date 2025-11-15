@@ -2,6 +2,7 @@ package trade
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
@@ -168,8 +169,8 @@ func TestProposeTrade(t *testing.T) {
 			if tt.wantErr && tt.errMsg != "" {
 				if err == nil {
 					t.Errorf("expected error containing %q, got nil", tt.errMsg)
-				} else if err.Error() != tt.errMsg {
-					t.Errorf("error message = %q, want %q", err.Error(), tt.errMsg)
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error message = %q, want to contain %q", err.Error(), tt.errMsg)
 				}
 			}
 

@@ -70,7 +70,7 @@ func SpawnCompanionsInTerrain(world *World, terr *terrain.Terrain, companions []
 
 	// Shuffle rooms
 	rng.Shuffle(len(settlementRooms), func(i, j int) {
-		settlementRooms[i], settlementRooms[j] = settlementRooms[i], settlementRooms[j]
+		settlementRooms[i], settlementRooms[j] = settlementRooms[j], settlementRooms[i]
 	})
 
 	spawned := 0

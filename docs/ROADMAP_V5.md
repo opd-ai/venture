@@ -761,7 +761,7 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 - [x] `README.md` - Feature updates (social systems section) ✅
 
 **Examples:**
-- [ ] `examples/chat_demo/` - Chat system demonstration (E2E encryption, channels)
+- [x] `examples/chat_demo/` - Chat system demonstration (E2E encryption, channels) ✅
 - [ ] `examples/trade_demo/` - Trading system demonstration (two-phase commit)
 - [ ] `examples/dialog_demo/` - NPC dialog demonstration (Markov generation)
 

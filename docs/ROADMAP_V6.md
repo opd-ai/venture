@@ -1,12 +1,20 @@
 # Development Roadmap - Version 6.0: Persistent Worlds & Server Federation
 
+## Current Status
+
+**Status:** PLANNING - Not Yet Started  
+**Prerequisites:** V4.0 Phase 30 completion, V5.0 Phase 26 completion  
+**Projected Start:** 2027  
+
+This is a future planning document. No V6.0 features have been implemented yet.
+
 ## Overview
 
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Version:** 6.0 - Persistent Worlds & Server Federation  
-**Previous Version:** 5.0 Complete (Phase 36 - Projected 2027)  
+**Previous Version:** V5.0 (Phases 21-25 complete, Phase 26 in progress)  
 **Timeline:** 10-12 months (6 phases)  
-**Date:** November 2025  
+**Date:** November 2025 (Planning Document)  
 **Focus:** Persistent world state, server federation, cross-server mechanics
 
 ---

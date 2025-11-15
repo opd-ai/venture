@@ -1,8 +1,16 @@
 # Development Roadmap - Version 7.0: Advanced Visual Improvements
 
+## Current Status
+
+**Status:** PLANNING - Not Yet Started  
+**Prerequisites:** V6.0 completion  
+**Projected Start:** Post-2027  
+
+This is a future planning document. No V7.0 features have been implemented yet.
+
 ## Overview
 
-**Version:** 7.0 (Previous: 6.0)  
+**Version:** 7.0 (Previous: 6.0 - Planning)  
 **Timeline:** 8-10 months (6 phases)  
 **Focus:** Display scaling, enhanced sprites, smoothed walls, pixel-perfect collision
 

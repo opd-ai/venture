@@ -34,8 +34,8 @@ type ChatUI struct {
 	Channels      []ChatChannel
 
 	// Scrolling
-	ScrollOffset  int
-	MaxMessages   int
+	ScrollOffset int
+	MaxMessages  int
 
 	// Visual settings
 	BackgroundColor color.Color
@@ -149,7 +149,7 @@ func (ui *ChatUI) drawChannelTabs(screen *ebiten.Image) {
 
 	for i, channel := range ui.Channels {
 		tabX := ui.X + i*tabWidth
-		
+
 		// Tab background (highlight active channel)
 		tabColor := ui.InputBGColor
 		if i == ui.ActiveChannel {
@@ -189,7 +189,7 @@ func (ui *ChatUI) drawMessages(screen *ebiten.Image, y, height int) {
 	drawY := y + ui.Padding
 	for i := startIdx; i < endIdx; i++ {
 		msg := ui.Messages[i]
-		
+
 		// Skip messages from other channels (unless system message)
 		if !msg.IsSystem && msg.Channel != ui.ActiveChannel {
 			continue
@@ -215,7 +215,7 @@ func (ui *ChatUI) formatMessage(msg ChatMessage) string {
 	if msg.IsSystem {
 		return fmt.Sprintf("[SYSTEM] %s", msg.Content)
 	}
-	
+
 	// Format: [HH:MM] SenderName: Content
 	timestamp := msg.Timestamp.Format("15:04")
 	return fmt.Sprintf("[%s] %s: %s", timestamp, msg.SenderName, msg.Content)

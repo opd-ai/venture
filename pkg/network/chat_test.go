@@ -146,7 +146,7 @@ func TestSendMessageEncryption(t *testing.T) {
 	cm := NewChatManager()
 	senderID := uint64(111)
 	position := Vector2{X: 0.0, Y: 0.0}
-	
+
 	// Generate encryption key
 	params := DefaultDHParams()
 	keyPair, _ := GenerateKeyPair(params)
@@ -204,7 +204,7 @@ func TestSendMessageRateLimit(t *testing.T) {
 func TestSendMessageUnregisteredSender(t *testing.T) {
 	cm := NewChatManager()
 	_, err := cm.SendMessage(uint64(999), 0, "Test", 0, -1)
-	
+
 	if err == nil {
 		t.Error("Expected error for unregistered sender, got nil")
 	}
@@ -218,16 +218,16 @@ func TestValidateLocalRange(t *testing.T) {
 	sender := uint64(1)
 	recipient1 := uint64(2) // Within range
 	recipient2 := uint64(3) // Out of range
-	
+
 	cm.AddPlayer(sender, Vector2{X: 0, Y: 0}, encKey)
-	cm.AddPlayer(recipient1, Vector2{X: 5, Y: 0}, encKey) // Distance = 5
+	cm.AddPlayer(recipient1, Vector2{X: 5, Y: 0}, encKey)  // Distance = 5
 	cm.AddPlayer(recipient2, Vector2{X: 20, Y: 0}, encKey) // Distance = 20
 
 	tests := []struct {
-		name         string
-		senderID     uint64
-		recipientID  uint64
-		localRadius  float64
+		name          string
+		senderID      uint64
+		recipientID   uint64
+		localRadius   float64
 		expectInRange bool
 	}{
 		{"within range", sender, recipient1, 10.0, true},
@@ -497,7 +497,7 @@ func TestPendingACKLimit(t *testing.T) {
 	// Send messages up to limit
 	for i := 0; i < 10; i++ {
 		cm.SendMessage(senderID, 0, "Test message", 0, -1)
-		
+
 		// Temporarily allow by clearing rate limit
 		cm.mu.Lock()
 		if state, exists := cm.players[senderID]; exists {

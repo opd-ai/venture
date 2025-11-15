@@ -38,17 +38,17 @@
 //
 //	// Create chat manager
 //	cm := network.NewChatManager()
-//	
+//
 //	// Register player with encryption key
 //	params := network.DefaultDHParams()
 //	keyPair, _ := network.GenerateKeyPair(params)
 //	secret, _ := network.ComputeSharedSecret(keyPair.PrivateKey, peerPublicKey, params)
 //	encKey := network.DeriveAESKey(secret)
 //	cm.AddPlayer(playerID, position, encKey)
-//	
+//
 //	// Send message
 //	packet, err := cm.SendMessage(playerID, 0, "Hello!", recipientID, -1)
-//	
+//
 //	// Process ACK
 //	ack := &network.MessageACK{MessageID: packet.MessageID, Success: true}
 //	cm.ProcessACK(ack)

@@ -68,7 +68,7 @@ func (pf *ProfanityFilter) AddWord(word string) {
 func (pf *ProfanityFilter) RemoveWord(word string) {
 	pf.mu.Lock()
 	defer pf.mu.Unlock()
-	
+
 	filtered := make([]string, 0, len(pf.wordList))
 	for _, w := range pf.wordList {
 		if !strings.EqualFold(w, word) {
@@ -83,7 +83,7 @@ func (pf *ProfanityFilter) RemoveWord(word string) {
 func (pf *ProfanityFilter) GetWordList() []string {
 	pf.mu.RLock()
 	defer pf.mu.RUnlock()
-	
+
 	words := make([]string, len(pf.wordList))
 	copy(words, pf.wordList)
 	return words
@@ -134,12 +134,12 @@ func (pf *ProfanityFilter) ContainsProfanity(text string) bool {
 // Must be called with lock held.
 func (pf *ProfanityFilter) compilePatterns() {
 	pf.patterns = make([]*regexp.Regexp, 0, len(pf.wordList))
-	
+
 	for _, word := range pf.wordList {
 		if word == "" {
 			continue
 		}
-		
+
 		// Create case-insensitive pattern with word boundaries
 		// Pattern: \b<word>\b with common character substitutions
 		pattern := buildPattern(word)
@@ -166,7 +166,7 @@ func buildPattern(word string) string {
 
 	var pattern strings.Builder
 	pattern.WriteString(`\b`)
-	
+
 	for _, char := range strings.ToLower(word) {
 		if sub, ok := substitutions[char]; ok {
 			pattern.WriteString(sub)
@@ -174,7 +174,7 @@ func buildPattern(word string) string {
 			pattern.WriteString(regexp.QuoteMeta(string(char)))
 		}
 	}
-	
+
 	pattern.WriteString(`\b`)
 	return pattern.String()
 }

@@ -82,7 +82,7 @@ func TestFilterEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered := pf.Filter(tt.input)
-			
+
 			// Filtered text should not contain the profanity
 			if strings.Contains(strings.ToLower(filtered), strings.ToLower(tt.contains)) {
 				t.Errorf("Filtered text still contains %q: %q", tt.contains, filtered)
@@ -113,7 +113,7 @@ func TestFilterLeetSpeak(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered := pf.Filter(tt.input)
-			
+
 			// Should contain replacement (filter detected leet speak)
 			if !strings.Contains(filtered, "***") {
 				t.Errorf("Leet speak not filtered: input=%q, output=%q", tt.input, filtered)
@@ -162,7 +162,7 @@ func TestContainsProfanityDisabled(t *testing.T) {
 // TestSetWordList tests custom word list setting
 func TestSetWordList(t *testing.T) {
 	pf := NewProfanityFilter()
-	
+
 	customWords := []string{"badword", "nasty", "rude"}
 	pf.SetWordList(customWords)
 
@@ -183,10 +183,10 @@ func TestSetWordList(t *testing.T) {
 func TestAddWord(t *testing.T) {
 	pf := NewProfanityFilter()
 	pf.Enable()
-	
+
 	initialCount := len(pf.GetWordList())
 	pf.AddWord("newbadword")
-	
+
 	newCount := len(pf.GetWordList())
 	if newCount != initialCount+1 {
 		t.Errorf("Expected word list size %d, got %d", initialCount+1, newCount)
@@ -206,7 +206,7 @@ func TestRemoveWord(t *testing.T) {
 	pf.Enable()
 
 	pf.RemoveWord("worse")
-	
+
 	wordList := pf.GetWordList()
 	if len(wordList) != 2 {
 		t.Errorf("Expected 2 words after removal, got %d", len(wordList))
@@ -247,9 +247,9 @@ func TestWordBoundaries(t *testing.T) {
 	pf.Enable()
 
 	tests := []struct {
-		name          string
-		text          string
-		shouldFilter  bool
+		name         string
+		text         string
+		shouldFilter bool
 	}{
 		{"standalone word", "Go to hell", true},
 		{"part of word", "Hello world", false},
@@ -262,7 +262,7 @@ func TestWordBoundaries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered := pf.Filter(tt.text)
 			containsReplacement := strings.Contains(filtered, "***")
-			
+
 			if tt.shouldFilter && !containsReplacement {
 				t.Errorf("Expected filtering but got: %q", filtered)
 			}
@@ -291,8 +291,8 @@ func TestEmptyWordList(t *testing.T) {
 	}
 }
 
-// TestConcurrentAccess tests thread-safe access
-func TestConcurrentAccess(t *testing.T) {
+// TestProfanityFilterConcurrentAccess tests thread-safe access to profanity filter
+func TestProfanityFilterConcurrentAccess(t *testing.T) {
 	pf := NewProfanityFilter()
 	pf.Enable()
 
@@ -339,7 +339,7 @@ func BenchmarkFilter(b *testing.B) {
 func BenchmarkFilterLongText(b *testing.B) {
 	pf := NewProfanityFilter()
 	pf.Enable()
-	
+
 	// Build long text
 	var sb strings.Builder
 	for i := 0; i < 100; i++ {

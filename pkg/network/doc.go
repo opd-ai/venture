@@ -1,5 +1,6 @@
 // Package network provides multiplayer networking functionality including
-// client-server communication, state synchronization, and lag compensation.
+// client-server communication, state synchronization, lag compensation, and
+// player-to-player chat with end-to-end encryption.
 //
 // The network package supports high-latency connections (200-5000ms) through
 // client-side prediction, server reconciliation, entity interpolation, and
@@ -22,6 +23,42 @@
 //   - Supports Tor/onion services and slow networks
 //   - Includes TCP keepalive configuration (30s period)
 //
+// # Chat System (V5.0 Phase 21)
+//
+// The chat system provides encrypted player-to-player messaging with:
+//
+// - Four channels: Global, Local (range-limited), Party, Whisper
+// - End-to-end encryption using Diffie-Hellman key exchange and AES-256-GCM
+// - ACK/NACK protocol with automatic retries for reliability
+// - Rate limiting and mute enforcement (30s base, doubles per violation)
+// - Client-side profanity filter (opt-in, user-configurable)
+// - Range validation for local chat (default 10 tiles, extendable with items)
+//
+// Example chat usage:
+//
+//	// Create chat manager
+//	cm := network.NewChatManager()
+//	
+//	// Register player with encryption key
+//	params := network.DefaultDHParams()
+//	keyPair, _ := network.GenerateKeyPair(params)
+//	secret, _ := network.ComputeSharedSecret(keyPair.PrivateKey, peerPublicKey, params)
+//	encKey := network.DeriveAESKey(secret)
+//	cm.AddPlayer(playerID, position, encKey)
+//	
+//	// Send message
+//	packet, err := cm.SendMessage(playerID, 0, "Hello!", recipientID, -1)
+//	
+//	// Process ACK
+//	ack := &network.MessageACK{MessageID: packet.MessageID, Success: true}
+//	cm.ProcessACK(ack)
+//
+// Profanity filter:
+//
+//	pf := network.NewProfanityFilter()
+//	pf.Enable()
+//	filtered := pf.Filter("Message text")
+//
 // # Usage
 //
 // Start a server with high-latency support:
@@ -43,4 +80,6 @@
 // - Lag compensation for fair hit detection
 // - Delta compression for bandwidth efficiency
 // - TCP keepalive for long-duration connections
+// - E2E encrypted chat with ACK/NACK reliability
+// - Profanity filtering (client-side, opt-in)
 package network

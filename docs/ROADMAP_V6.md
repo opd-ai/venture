@@ -13,7 +13,6 @@ This is a future planning document. No V6.0 features have been implemented yet.
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Version:** 6.0 - Persistent Worlds & Server Federation  
 **Previous Version:** V5.0 (Phases 21-25 complete, Phase 26 in progress)  
-**Timeline:** 10-12 months (6 phases)  
 **Date:** November 2025 (Planning Document)  
 **Focus:** Persistent world state, server federation, cross-server mechanics
 
@@ -150,12 +149,11 @@ type Chunk struct {
 
 ---
 
-## Phase 31: Persistent World Foundation (Months 1-2)
+## Phase 37: Persistent World Foundation
 
-**Duration:** 8 weeks  
 **Focus:** Save/load complete world state, chunk streaming
 
-### 31.1: World State Serialization (3 weeks)
+### 31.1: World State Serialization
 
 **Components:**
 ```go
@@ -178,7 +176,7 @@ func (w *WorldPersistence) LoadWorld(seed int64) (*PersistentWorldState, error)
 
 **Performance Budget:** <2s save time per 100 modified chunks, <50MB disk space per server
 
-### 31.2: Chunk Streaming (3 weeks)
+### 31.2: Chunk Streaming
 
 **Systems:**
 - ChunkLoaderSystem: Load/unload chunks based on player proximity (5 chunk radius)
@@ -190,7 +188,7 @@ func (w *WorldPersistence) LoadWorld(seed int64) (*PersistentWorldState, error)
 - Memory: <1MB per loaded chunk
 - Auto-save: <100ms pause (non-blocking preferred)
 
-### 31.3: Entity Persistence (2 weeks)
+### 31.3: Entity Persistence
 
 **Components:**
 ```go
@@ -209,12 +207,11 @@ type EntityState struct {
 
 ---
 
-## Phase 32: Server Federation Protocol (Months 3-4)
+## Phase 38: Server Federation Protocol
 
-**Duration:** 6 weeks  
 **Focus:** Server discovery, handshake, state synchronization
 
-### 32.1: Federation Handshake (2 weeks)
+### 32.1: Federation Handshake
 
 **Protocol:**
 ```go
@@ -237,7 +234,7 @@ type FederationHandshake struct {
 
 **Security:** ed25519 certificates, TOFU model, manual fingerprint verification
 
-### 32.2: State Synchronization (2 weeks)
+### 32.2: State Synchronization
 
 **Components:**
 ```go
@@ -254,7 +251,7 @@ type FederationState struct {
 - Market prices: 60 seconds
 - Political events: Immediate (event-driven)
 
-### 32.3: Discovery & Relay (2 weeks)
+### 32.3: Discovery & Relay
 
 **Features:**
 - Peer discovery via LAN broadcast (UDP port 8090)
@@ -266,12 +263,11 @@ type FederationState struct {
 
 ---
 
-## Phase 33: Cross-Server Travel (Months 4-5)
+## Phase 39: Cross-Server Travel
 
-**Duration:** 6 weeks  
 **Focus:** Portals, player state transfer, authentication
 
-### 33.1: Portal System (2 weeks)
+### 33.1: Portal System
 
 **Components:**
 ```go
@@ -290,7 +286,7 @@ type PortalComponent struct {
 - Visual effects (swirling procedural animations)
 - Activation requirements (item keys, reputation thresholds)
 
-### 33.2: Player Transfer Protocol (3 weeks)
+### 33.2: Player Transfer Protocol
 
 **Transfer Phases:**
 ```go
@@ -312,7 +308,7 @@ type PlayerTransfer struct {
 - Transfer time: <5s at 200ms latency, <30s at 5000ms
 - Rollback rate: <1% (excluding timeouts)
 
-### 33.3: Authentication (1 week)
+### 33.3: Authentication
 
 **Session Management:**
 - Player session tokens (UUID v4, expires after 1 hour)
@@ -321,12 +317,11 @@ type PlayerTransfer struct {
 
 ---
 
-## Phase 34: Post Office System (Months 5-6)
+## Phase 40: Post Office System
 
-**Duration:** 5 weeks  
 **Focus:** Async item/message delivery via courier NPCs
 
-### 34.1: Mail System (2 weeks)
+### 34.1: Mail System
 
 **Components:**
 ```go
@@ -355,7 +350,7 @@ type MailMessage struct {
 - NPC clerks handle mail send/receive
 - Postage calculation: 10 gold + (1 gold × hops between servers)
 
-### 34.2: Courier NPCs (2 weeks)
+### 34.2: Courier NPCs
 
 **Behavior:**
 - Courier NPCs travel between servers carrying mail
@@ -367,7 +362,7 @@ type MailMessage struct {
 - Server-to-server mail relay (sender server → recipient server)
 - Courier position tracked but not synchronized to clients (invisible)
 
-### 34.3: Integration (1 week)
+### 34.3: Integration
 
 **UI:**
 - Mailbox UI (inbox, outbox, compose)
@@ -378,12 +373,11 @@ type MailMessage struct {
 
 ---
 
-## Phase 35: Political & Trade Systems (Months 7-9)
+## Phase 41: Political & Trade Systems
 
-**Duration:** 10 weeks  
 **Focus:** Factions, alliances, cross-server marketplace
 
-### 35.1: Political System (4 weeks)
+### 35.1: Political System
 
 **Components:**
 ```go
@@ -416,7 +410,7 @@ type PoliticalEvent struct {
 - Political events: ≥5 types (alliance, war, treaty, embargo, trade pact)
 - Event duration: 1-7 days (configurable)
 
-### 35.2: Trade Network (4 weeks)
+### 35.2: Trade Network
 
 **Components:**
 ```go
@@ -450,7 +444,7 @@ type PriceHistory struct {
 - Price update interval: 60 seconds
 - Transaction latency: <10s for same-server, <60s cross-server
 
-### 35.3: Integration & Balance (2 weeks)
+### 35.3: Integration & Balance
 
 **Balancing:**
 - Prevent price manipulation (rate limits on trades)
@@ -459,12 +453,11 @@ type PriceHistory struct {
 
 ---
 
-## Phase 36: Territory Control & Meta-Game (Months 10-12)
+## Phase 42: Territory Control & Meta-Game
 
-**Duration:** 8 weeks  
 **Focus:** Contested zones, bounty board, server rankings
 
-### 36.1: Territory System (3 weeks)
+### 36.1: Territory System
 
 **Components:**
 ```go
@@ -495,7 +488,7 @@ type ControlPoint struct {
 - Control points per zone: 3-5
 - Capture time: 60 seconds uncontested, +30s per defender present
 
-### 36.2: Bounty Board (3 weeks)
+### 36.2: Bounty Board
 
 **Components:**
 ```go
@@ -521,7 +514,7 @@ type BountyContract struct {
 - Bounty types: ≥5 (kill, delivery, escort, exploration, crafting)
 - Completion rate: ≥60% of accepted bounties
 
-### 36.3: Server Rankings & Meta-Game (2 weeks)
+### 36.3: Server Rankings & Meta-Game
 
 **Leaderboards:**
 - Server population (active players)
@@ -626,6 +619,5 @@ type BountyContract struct {
 
 Version 6.0 transforms Venture from isolated multiplayer servers into a federated network of persistent worlds. Players experience a living, breathing multiverse where their actions persist, economies evolve, and servers cooperate or compete. All while maintaining the project's core principles: zero external assets, 60+ FPS performance, high-latency support, and zero external dependencies.
 
-**Timeline:** 10-12 months (Phases 31-36)  
 **Completion:** Projected Q3 2028  
 **Prerequisites:** v5.0 complete (Phases 25-30, projected Q2 2027)

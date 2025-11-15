@@ -11,7 +11,6 @@ This is a future planning document. No V7.0 features have been implemented yet.
 ## Overview
 
 **Version:** 7.0 (Previous: 6.0 - Planning)  
-**Timeline:** 8-10 months (6 phases)  
 **Focus:** Display scaling, enhanced sprites, smoothed walls, pixel-perfect collision
 
 ## Deliverables
@@ -34,7 +33,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 **Walls:** `pkg/rendering/tiles/` + patterns for anti-aliasing + corner blending (L/T/cross joints)  
 **Collision:** `pkg/engine/collision.go` + sub-pixel precision + quadtree optimization
 
-## Phase 37: Display Foundation (Weeks 1-4)
+## Phase 43: Display Foundation
 
 **Deliverables:**
 - [ ] Create `pkg/rendering/display/` (manager, scaler, config)
@@ -47,7 +46,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Phase 38: Viewport Optimization (Weeks 5-8)
+## Phase 44: Viewport Optimization
 
 **Deliverables:**
 - [ ] Update viewport culling for 2.25x larger screen (1920x1080)
@@ -59,7 +58,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Phase 39: Enhanced Sprites (Weeks 9-13)
+## Phase 45: Enhanced Sprites
 
 **Deliverables:**
 - [ ] 64x64 sprite templates (head 12%, torso 40%, legs 48%)
@@ -71,7 +70,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Phase 40: Animation Fluidity (Weeks 14-17)
+## Phase 46: Animation Fluidity
 
 **Deliverables:**
 - [ ] 8-frame animations (from 4), 8-direction support
@@ -83,7 +82,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Phase 41: Wall Rendering (Weeks 18-21)
+## Phase 47: Wall Rendering
 
 **Deliverables:**
 - [ ] Edge anti-aliasing with 2x2 super-sampling
@@ -95,7 +94,7 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Phase 42: Pixel-Perfect Collision (Weeks 22-26)
+## Phase 48: Pixel-Perfect Collision
 
 **Deliverables:**
 - [ ] 0.1-pixel precision (Float64 positions)
@@ -129,7 +128,6 @@ This is a future planning document. No V7.0 features have been implemented yet.
 **Performance:** Early viewport culling, CPU/GPU profiling, quality settings (Low/Med/High), auto-reduce if FPS <60  
 **Memory:** LRU eviction, monitoring + trimming, lazy generation, LOD for distant entities  
 **Visual Quality:** User testing at week 11, A/B comparison, iterate on templates, keep 32x32 fallback  
-**Timeline:** Prioritize Phase 37-38 (foundation), parallelize 39-40 with 41-42, 2-week buffer  
 **API Changes:** Maintain v6.0 compatibility via wrappers, version methods (GenerateV6/V7), gradual migration
 
 ---
@@ -144,14 +142,6 @@ This is a future planning document. No V7.0 features have been implemented yet.
 
 ---
 
-## Timeline
-
-**Month 1-2 (Weeks 1-8):** Phases 37-38 (display, optimization) → **Milestone 1:** 1920x1080 at 60 FPS  
-**Month 3-4 (Weeks 9-17):** Phases 39-40 (sprites, animation) → **Milestone 2:** 0.85 silhouette, smooth animation  
-**Month 5-7 (Weeks 18-26):** Phases 41-42 (walls, collision) → **Milestone 3:** Smooth walls, pixel-perfect collision  
-**Month 8-10 (Weeks 27-40):** Testing, bugs, docs, release → **Milestone 4:** V7.0 release
-
----
 
 ## Completion Checklist
 

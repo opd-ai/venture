@@ -23,7 +23,6 @@
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Version:** 4.0 - Gameplay Depth & Content Expansion  
 **Previous Version:** 3.0 Complete (Phase 20 - November 2025)  
-**Timeline:** 10-14 months (10 phases)  
 **Focus:** Complete existing systems and extend gameplay with vehicles, pets, books, expanded magic, classes, expressions, mini-games, and advanced systems
 
 **Current State (v3.0):** All Phase 15-20 visual enhancements complete. 106 FPS with 2000 entities, 73MB memory, 82.4% test coverage. Production-ready visual systems including enhanced sprites, advanced tiles, sophisticated lighting, weather/particles, polished UI, and environmental detail.
@@ -39,9 +38,8 @@
 
 ---
 
-## Prerequisites: v3.0 Verification (Month 0)
+## Prerequisites: v3.0 Verification
 
-**Duration:** 2 weeks  
 **Goal:** Validate Phase 15-20 completion before gameplay expansion
 
 ### Validation Checklist
@@ -65,13 +63,12 @@
 
 ---
 
-## Phase 21: Vehicle System (Months 1-2)
+## Phase 21: Vehicle System
 
 **Focus:** Mounts and vehicles with physics, generation, and multiplayer sync  
-**Duration:** 8 weeks  
 **Status:** Phase 21.1 COMPLETE ✅
 
-### 21.1: Vehicle Foundation (3 weeks) - COMPLETE ✅
+### 21.1: Vehicle Foundation - COMPLETE ✅
 
 **Interfaces:**
 ```go
@@ -146,7 +143,7 @@ type MountComponent struct {
 - ✅ 5 rarity tiers (Common to Legendary)
 - ✅ All tests passing
 
-### 21.2: Advanced Vehicle Features (3 weeks) - COMPLETE ✅
+### 21.2: Advanced Vehicle Features - COMPLETE ✅
 
 **Status:** All features implemented (November 2025)
 
@@ -183,7 +180,7 @@ type MountComponent struct {
 - Terrain effects: color and type mapping for water, sand, leaves, dust
 - Component integration via Vehicle.ToComponents() method
 
-### 21.3: Vehicle Generation & Balance (2 weeks) - COMPLETE ✅
+### 21.3: Vehicle Generation & Balance - COMPLETE ✅
 
 **Status:** All milestones complete - Visual variation system implemented with decorations, damage states, color schemes, and decal patterns (Nov 2025)
 
@@ -204,19 +201,17 @@ type MountComponent struct {
 - All tests passing with zero race conditions
 
 **Phase 21 Summary:**
-- **Duration:** 8 weeks (21.1: 3 weeks, 21.2: 3 weeks, 21.3: 2 weeks)
 - **Performance:** Exceeded all targets
 - **Status:** Phase 21 COMPLETE - Ready for Phase 22
 
 ---
 
-## Phase 22: Pet/Companion System (Months 3-4)
+## Phase 22: Pet/Companion System
 
 **Focus:** AI followers with progression and commands  
-**Duration:** 6 weeks  
 **Status:** Phase 22 COMPLETE ✅ - All subsections implemented (November 2025)
 
-### 22.1: Companion Foundation (2 weeks)
+### 22.1: Companion Foundation
 
 **Interfaces:**
 ```go
@@ -274,7 +269,7 @@ type CompanionStatsComponent struct {
 - ✅ Test coverage: 89.1% (exceeds 65% requirement)
 - ✅ All tests passing with no race conditions
 
-### 22.2: Companion Features (2 weeks) - COMPLETE ✅
+### 22.2: Companion Features - COMPLETE ✅
 
 **Status:** All features implemented (November 2025)
 
@@ -294,7 +289,7 @@ type CompanionStatsComponent struct {
 - ✅ Test coverage: >80% for companion features
 - ✅ All tests passing with race detection
 
-### 22.3: Companion Generation (2 weeks) - COMPLETE ✅
+### 22.3: Companion Generation - COMPLETE ✅
 
 **Status:** All deliverables implemented (November 2025)
 
@@ -312,13 +307,12 @@ type CompanionStatsComponent struct {
 
 ---
 
-## Phase 23: In-Game Books & Lore (Months 4-5)
+## Phase 23: In-Game Books & Lore
 
 **Focus:** Procedural text content for world-building  
-**Duration:** 4 weeks  
 **Status:** Phase 23.1 COMPLETE ✅
 
-### 23.1: Text Generation System (2 weeks) - COMPLETE ✅
+### 23.1: Text Generation System - COMPLETE ✅
 
 **Status:** All milestones complete - Grammar-based book generation with 5 book types implemented (Nov 2025)
 
@@ -357,7 +351,7 @@ type CompanionStatsComponent struct {
 - pkg/procgen/book/doc.go: Comprehensive package documentation
 - pkg/procgen/book/generator_test.go: 13 test functions + 2 benchmarks
 
-### 23.2: Lore Integration (2 weeks) - COMPLETE ✅
+### 23.2: Lore Integration - COMPLETE ✅
 
 **Status:** All milestones complete - Book reading system, series tracking, bookshelf interaction implemented (Nov 2025)
 
@@ -382,13 +376,12 @@ type CompanionStatsComponent struct {
 
 ---
 
-## Phase 24: Expanded Magic System (Months 5-6)
+## Phase 24: Expanded Magic System
 
 **Focus:** 10+ new spell effects and combination mechanics  
-**Duration:** 6 weeks  
 **Status:** Phase 24.1 COMPLETE ✅
 
-### 24.1: New Spell Effects (3 weeks) - COMPLETE ✅
+### 24.1: New Spell Effects - COMPLETE ✅
 
 **Status:** All milestones complete - 10 new spell effect types implemented with ECS integration (November 2025)
 
@@ -428,7 +421,7 @@ type CompanionStatsComponent struct {
 - ✅ New effect types: 10 implemented (meets ≥10 target)
 - ⏳ Spell combinations: Pending 24.2 implementation
 
-### 24.2: Spell Combination System (2 weeks) - COMPLETE ✅
+### 24.2: Spell Combination System - COMPLETE ✅
 
 **Status:** All milestones complete - Spell combination system with automatic synergies and recipe discovery implemented (November 2025)
 
@@ -459,7 +452,7 @@ type CompanionStatsComponent struct {
 - ✅ Backlash chance: 30% for incompatible combos
 - ✅ Recipe system: Full symmetric/asymmetric support
 
-### 24.3: Magic Balance (1 week) - COMPLETE ✅
+### 24.3: Magic Balance - COMPLETE ✅
 
 **Status:** All deliverables complete (November 2025)
 
@@ -484,7 +477,6 @@ type CompanionStatsComponent struct {
 - No performance degradation from balance system
 
 **Phase 24 Summary:**
-- **Duration:** 6 weeks (24.1: 3 weeks, 24.2: 2 weeks, 24.3: 1 week)
 - **Performance:** All targets exceeded
 - **Status:** Phase 24 COMPLETE - Ready for Phase 25
 
@@ -492,13 +484,12 @@ type CompanionStatsComponent struct {
 
 ---
 
-## Phase 25: Character Classes (Months 7-8)
+## Phase 25: Character Classes
 
 **Focus:** 5+ classes with unique playstyles  
-**Duration:** 6 weeks  
 **Status:** Phase 25 COMPLETE ✅ (November 2025)
 
-### 25.1: Class System Foundation (2 weeks) - COMPLETE ✅
+### 25.1: Class System Foundation - COMPLETE ✅
 
 **Status:** All milestones complete - StatGrowth system, extended abilities (8 per class), CharacterClassInfo interface, and enhanced ClassProgressionSystem implemented (November 2025)
 
@@ -547,7 +538,7 @@ const (
 - Unique abilities per class: ≥8
 - Test coverage: ≥65%
 
-### 25.2: Class Abilities & Progression (3 weeks) - COMPLETE ✅
+### 25.2: Class Abilities & Progression - COMPLETE ✅
 
 **Status:** All deliverables complete (November 2025)
 
@@ -578,7 +569,7 @@ const (
 - Dual-class stat calculations: <0.1ms
 - All operations well under <1ms budget
 
-### 25.3: Balance & Integration (1 week) - COMPLETE ✅
+### 25.3: Balance & Integration - COMPLETE ✅
 
 **Status:** Core implementation complete, balance ongoing (November 2025)
 
@@ -597,13 +588,12 @@ const (
 
 ---
 
-## Phase 26: Expression System (Months 8-9)
+## Phase 26: Expression System
 
 **Focus:** Multiplayer emotes and gestures  
-**Duration:** 4 weeks  
 **Status:** Phase 26.1 COMPLETE ✅ (November 2025)
 
-### 26.1: Expression Framework (2 weeks) - COMPLETE ✅
+### 26.1: Expression Framework - COMPLETE ✅
 
 **Status:** All milestones complete - Expression framework with animation, audio, and input integration (November 2025)
 
@@ -667,7 +657,7 @@ const (
 - ✅ Comprehensive tests: 15 test functions, >90% coverage
 - ✅ CLI test tool: cmd/expressiontest
 
-### 26.2: Social Features (2 weeks) - COMPLETE ✅
+### 26.2: Social Features - COMPLETE ✅
 
 **Status:** All milestones complete - Text chat emotes, expression combos, achievements, and multiplayer sync implemented (November 2025)
 
@@ -696,19 +686,17 @@ const (
 **Performance Budget:** <0.1ms per expression update ✅, <50 bytes network sync ✅
 
 **Phase 26 Summary:**
-- **Duration:** 4 weeks (26.1: 2 weeks, 26.2: 2 weeks)
 - **Performance:** All targets exceeded
 - **Status:** Phase 26 COMPLETE - Ready for Phase 27
 
 ---
 
-## Phase 27: Mini-Game System (Months 9-10)
+## Phase 27: Mini-Game System
 
 **Focus:** Embedded procedural mini-games  
-**Duration:** 6 weeks  
 **Status:** Phase 27.1 COMPLETE ✅ (November 2025)
 
-### 27.1: Mini-Game Framework (2 weeks) - COMPLETE ✅
+### 27.1: Mini-Game Framework - COMPLETE ✅
 
 **Status:** All milestones complete - MiniGame interface, components, system, tests, and CLI tool implemented (November 2025)
 
@@ -767,7 +755,7 @@ type MiniGameComponent struct {
 - GetGameComponent() and IsGameActive() for querying game state
 - Benchmark tests for performance validation
 
-### 27.2: Mini-Game Types (3 weeks) - COMPLETE ✅
+### 27.2: Mini-Game Types - COMPLETE ✅
 
 **Status:** All milestones complete - 7 playable mini-game implementations with engine.MiniGame interface (November 2025)
 
@@ -804,7 +792,7 @@ type MiniGameComponent struct {
 - ✅ Test coverage: 91.6% and 80.6% (exceeds ≥65% requirement)
 - ✅ All tests passing with race detection
 
-### 27.3: Integration (1 week) - COMPLETE ✅
+### 27.3: Integration - COMPLETE ✅
 
 **Status:** All deliverables complete (November 2025)
 
@@ -828,7 +816,6 @@ type MiniGameComponent struct {
 - All operations well under performance budget
 
 **Phase 27 Summary:**
-- **Duration:** 6 weeks (27.1: 2 weeks, 27.2: 3 weeks, 27.3: 1 week)
 - **Performance:** All targets exceeded
 - **Status:** Phase 27 COMPLETE ✅ - Ready for Phase 28
 
@@ -836,12 +823,11 @@ type MiniGameComponent struct {
 
 ---
 
-## Phase 28: Reputation & Alignment (Months 10-11)
+## Phase 28: Reputation & Alignment
 
 **Focus:** Dynamic faction relationships and moral choices  
-**Duration:** 5 weeks
 
-### 28.1: Reputation System (2 weeks) ✅ COMPLETE
+### 28.1: Reputation System ✅ COMPLETE
 
 **Status:** Completed November 2025  
 **Test Coverage:** ReputationComponent 98.96%, ReputationSystem 80.24%, FactionReactionSystem 62.03%  
@@ -893,7 +879,7 @@ type Deed struct {
 - ✅ Reputation affects: NPC prices (0.5-2.0x), quest availability, dialogue options, aggression ranges
 - ✅ Test coverage: 98.96% ReputationComponent, 80.24% ReputationSystem, 62.03% FactionReactionSystem (all >65%)
 
-### 28.2: Moral Choice System (2 weeks) ✅ COMPLETE
+### 28.2: Moral Choice System ✅ COMPLETE
 
 **Status:** Completed November 2025  
 **Test Coverage:** MoralChoiceComponent 100%, MoralChoiceSystem 84.9%  
@@ -963,7 +949,7 @@ type RedemptionArc struct {
 - ✅ Quest integration: Added TypeMoralChoice and TypeFactionConflict quest types
 - ✅ Performance: <1ms per choice processing
 
-### 28.3: Faction Generation (1 week) ✅ COMPLETE
+### 28.3: Faction Generation ✅ COMPLETE
 
 **Status:** Completed November 2025  
 **Test Coverage:** 93.0% (exceeds 65% requirement)  
@@ -1034,19 +1020,17 @@ const (
 **Performance Budget:** <2ms per faction network generation ✅
 
 **Phase 28 Summary:**
-- **Duration:** 5 weeks (28.1: 2 weeks, 28.2: 2 weeks, 28.3: 1 week)
 - **Performance:** All targets exceeded
 - **Status:** Phase 28 COMPLETE - Ready for Phase 29
 
 ---
 
-## Phase 29: Adaptive Soundtrack (Months 11-12)
+## Phase 29: Adaptive Soundtrack
 
 **Focus:** Music that responds to gameplay  
-**Duration:** 5 weeks  
 **Status:** Phase 29.1 COMPLETE ✅ (November 2025)
 
-### 29.1: Dynamic Music System (2 weeks) - COMPLETE ✅
+### 29.1: Dynamic Music System - COMPLETE ✅
 
 **Status:** All milestones complete - Dynamic layered music system with context adaptation, intensity scaling, and smooth transitions implemented (November 2025)
 
@@ -1113,7 +1097,7 @@ type AdaptiveMusicSystem interface {
 - ✅ CLI test tool with 4 modes
 - ✅ Enhanced package documentation
 
-### 29.2: Music Triggers (2 weeks) - COMPLETE ✅
+### 29.2: Music Triggers - COMPLETE ✅
 
 **Status:** All milestones complete - Music trigger system with 7 event types and ECS integration implemented (November 2025)
 
@@ -1200,7 +1184,7 @@ const (
 4. **Pending Contexts**: Temporary music changes (victory) auto-revert after duration
 5. **Entity Lifecycle**: Tests call world.Update(0.0) before triggering events to commit entities
 
-### 29.3: Composition Enhancement (1 week) - COMPLETE ✅
+### 29.3: Composition Enhancement - COMPLETE ✅
 
 **Status:** All milestones complete - Enhanced melody patterns, chord progressions, and genre-specific percussion implemented (November 2025)
 
@@ -1281,13 +1265,12 @@ const (
 
 ---
 
-## Phase 30: Environmental Storytelling (Months 12-13)
+## Phase 30: Environmental Storytelling
 
 **Focus:** Discoverable narratives and procedural archaeology  
-**Duration:** 6 weeks  
 **Status:** Phase 30 COMPLETE ✅ (November 2025)
 
-### 30.1: Story Fragment System (2 weeks) - COMPLETE ✅
+### 30.1: Story Fragment System - COMPLETE ✅
 
 **Status:** All milestones complete - Story fragment generation with 6 fragment types, grammar-based content, and comprehensive validation (November 2025)
 
@@ -1319,7 +1302,7 @@ const (
 - Memory: 14.1 KB per fragment (3.5x better than 50KB budget)
 - Determinism: 100% verified (same seed = identical output)
 
-### 30.2: Discovery System (2 weeks) - COMPLETE ✅
+### 30.2: Discovery System - COMPLETE ✅
 
 **Status:** All features implemented (November 2025)
 
@@ -1353,7 +1336,7 @@ const (
 - ✅ Test coverage: 100% for components, all tests passing
 - ✅ Client integration: Player spawns with StoryJournalComponent
 
-### 30.3: Advanced Narratives (2 weeks) - COMPLETE ✅
+### 30.3: Advanced Narratives - COMPLETE ✅
 
 **Status:** All deliverables implemented (November 2025)
 
@@ -1398,7 +1381,7 @@ const (
 **Performance Results:**
 - Branching: 0.0176 ms (1136x faster than 20ms budget)
 - Cross-dungeon: 0.0165 ms (1212x faster)
-- Timeline: 0.0315 ms (635x faster)
+
 - Archaeology: 0.0130 ms (1538x faster)
 
 **CLI Tools:**
@@ -1408,7 +1391,6 @@ const (
 **Performance Budget:** <20ms per story generation ✅, <50KB per fragment ✅
 
 **Phase 30 Summary:**
-- **Duration:** 6 weeks (30.1: 2 weeks, 30.2: 2 weeks, 30.3: 2 weeks)
 - **Performance:** All targets exceeded (0.03ms avg vs 20ms budget, 14KB vs 50KB budget)
 - **Test Coverage:** 88.6% (exceeds 65% requirement)
 - **Status:** Phase 30 COMPLETE - V4.0 Roadmap fully implemented
@@ -1503,31 +1485,6 @@ const (
 
 ---
 
-## Phase Timeline
-
-| Phase | Feature | Duration | Dependencies | Validation |
-|-------|---------|----------|--------------|------------|
-| **Month 0** | Prerequisites | 2 weeks | Phase 15-20 complete | All v3.0 tests passing |
-| **Phase 21** | Vehicles | 8 weeks | Prerequisites | 5+ vehicle types, 65% coverage |
-| **Phase 22** | Companions | 6 weeks | Phase 21 (mount AI reuse) | 8+ pet types, command system |
-| **Phase 23** | Books/Lore | 4 weeks | None (parallel) | 5+ book types, readable text |
-| **Phase 24** | Expanded Magic | 6 weeks | Phase 23 (spell books) | 10+ effects, combos |
-| **Phase 25** | Classes | 6 weeks | Phase 24 (class abilities) | 6+ classes, specializations |
-| **Phase 26** | Expressions | 4 weeks | None (parallel) | 12+ emotes, multiplayer sync |
-| **Phase 27** | Mini-Games | 6 weeks | Phase 23 (card lore) | 5+ games, tavern integration |
-| **Phase 28** | Reputation | 5 weeks | Phase 25 (class quests) | 10+ factions, alignment system |
-| **Phase 29** | Adaptive Music | 5 weeks | Phase 28 (context triggers) | 8+ contexts, smooth transitions |
-| **Phase 30** | Environmental Story | 6 weeks | Phase 23 (text system) | 6+ fragment types, story coherence |
-
-**Total Duration:** 10-14 months (56 weeks nominal, +10% buffer for integration/polish)
-
-**Milestones:**
-- **Month 3:** Alpha (Phases 21-22 complete) - Vehicles and companions playable
-- **Month 6:** Beta (Phases 21-25 complete) - Core gameplay systems operational
-- **Month 10:** Release Candidate (Phases 21-29 complete) - Feature complete
-- **Month 13:** v4.0 Release (Phase 30 complete) - Final polish and environmental storytelling
-
----
 
 ## Success Criteria
 
@@ -1738,14 +1695,6 @@ Before v4.1 release, verify:
 - ✅ Mini-game state synchronizes properly
 - ✅ Achievements trigger and display for all players
 
-### Estimated Timeline
-
-- **v4.0 Beta → v4.1 Stable:** 2-3 weeks
-- **Critical Path:** Network sync (2-4 hours) + Server spawning (4-8 hours) + Testing (1 week)
-- **Parallel Work:** Documentation updates, TODO cleanup, benchmarks
-- **Buffer:** 1 week for unexpected issues, additional testing
-
----
 
 **Document Version:** 1.0  
 **Created:** November 2025  

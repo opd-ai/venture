@@ -7,12 +7,12 @@
 **Status:** V5.0 production-ready with all planned features operational
 
 **Completed Phases (V5.0):**
-- ✅ Phase 21: Chat System Foundation (E2E encryption, ACK/NACK, profanity filtering, chat UI)
-- ✅ Phase 22: NPC Dialog System (Markov chains, genre corpora, personality traits)
-- ✅ Phase 23: Image Sharing System (chunked transfer, thumbnails, moderation hooks)
-- ✅ Phase 24: Item Trading System (two-phase commit, proximity validation, trust mechanics)
-- ✅ Phase 25: Concurrency & Integration (multi-party conversations, message ordering)
-- ✅ Phase 26: Polish & Beta Release (trade UI, documentation, integration complete)
+- ✅ Phase 31: Chat System Foundation (E2E encryption, ACK/NACK, profanity filtering, chat UI)
+- ✅ Phase 32: NPC Dialog System (Markov chains, genre corpora, personality traits)
+- ✅ Phase 33: Image Sharing System (chunked transfer, thumbnails, moderation hooks)
+- ✅ Phase 34: Item Trading System (two-phase commit, proximity validation, trust mechanics)
+- ✅ Phase 35: Concurrency & Integration (multi-party conversations, message ordering)
+- ✅ Phase 36: Polish & Beta Release (trade UI, documentation, integration complete)
 
 **Note:** V5.0 uses separate phase numbering from V4.0. Both versions are in active development.
 
@@ -21,7 +21,6 @@
 **Project:** Venture - Fully Procedural Multiplayer Action-RPG  
 **Version:** 5.0 - Social Systems & Multiplayer Messaging  
 **Previous Version:** 4.0 In Progress (Phases 21-29 complete, Phase 30 planning)  
-**Timeline:** 8-10 months (6 phases)  
 **Date:** November 2025  
 **Focus:** Player communication, NPC dialog, item trading, and multiplayer social interaction
 
@@ -613,7 +612,7 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 
 ### Opt-In Beta
 
-**Beta Phase (Months 1-6):**
+**Beta Phase:**
 - Social features available with `-social-beta=true` flag
 - Beta servers separate from stable servers (port 8081 vs. 8080)
 - Beta warning: "Social features experimental, expect bugs and wipes"
@@ -720,121 +719,11 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 
 ---
 
-## Milestones & Timeline
-
-### Month 1-2: Phase 21 - Chat System Foundation ✅ COMPLETE
-**Status:** All deliverables implemented (November 2025)
-
-**Completed:**
-- ✅ Chat components, systems, UI (global, local, party, whisper channels)
-- ✅ E2E encryption (Diffie-Hellman, AES-256-GCM) in `pkg/network/crypto.go`
-- ✅ Rate limiting, spam filters, client-side profanity filter in `pkg/network/profanity.go`
-- ✅ ACK/NACK protocol with retries in `pkg/network/chat.go`
-- ✅ Chat UI rendering in `pkg/rendering/ui/chat.go`
-- ✅ Comprehensive tests: `chat_test.go`, `chat_integration_test.go`, `profanity_test.go`, `chat_test.go` (UI)
-- ✅ Test coverage: >65% for all new packages
-- ✅ Latency simulation tests (200ms, 500ms, 2000ms, 5000ms)
-- ✅ Packet loss tests (5%, 10%, 20%)
-- ✅ Multi-player integration tests (50 players)
-- ✅ Throughput benchmarks (500 messages/min target achieved)
-
-### Month 3: Phase 22 - NPC Dialog System ✅ COMPLETE
-**Status:** All deliverables implemented (November 2025)
-
-**Completed:**
-- ✅ Markov chain generator (order 2-3) in `pkg/procgen/dialog/markov.go`
-- ✅ Genre-specific text corpora (5 genres) in `pkg/procgen/dialog/corpus.go`
-- ✅ NPC personality traits system in `pkg/procgen/dialog/personality.go`
-- ✅ Dialog state management in `pkg/engine/npcdialog_component.go`
-- ✅ NPCDialogSystem integration in `pkg/engine/npcdialog_system.go`
-- ✅ Deterministic fallback mode with `-deterministic-dialog` flag support
-- ✅ Comprehensive tests: `markov_test.go`, `corpus_test.go`, `personality_test.go`, `npcdialog_component_test.go`, `npcdialog_system_test.go`
-- ✅ Variation tests (>50% unique responses verified)
-- ✅ Determinism tests (identical output with same seed)
-- ✅ Corpus validation tests
-- ✅ Performance benchmarks (<50ms per response, <5s for 1000 generations)
-- ✅ CLI tool: `cmd/dialogtest/main.go` for interactive testing
-- ✅ Test coverage: >65% for all new packages
-- ✅ Genre-appropriate vocabulary validation
-- ✅ Graceful fallback to templates on generation failure
-
-### Month 4-5: Phase 23 - Image Sharing System ✅ COMPLETE
-**Status:** All deliverables implemented (November 2025)
-
-**Completed:**
-- ✅ Image upload/download with chunked transfer (64KB chunks)
-- ✅ Thumbnail generation (128×128 JPEG, quality 75) in `pkg/network/images.go`
-- ✅ Size/type validation (<500KB, PNG/JPEG/GIF, <2048×2048)
-- ✅ Moderation hooks with callback interface
-- ✅ Image expiry (10 min timeout + disconnect-based expiry)
-- ✅ Rate limiting (1 image per 60 seconds per player)
-- ✅ Comprehensive tests: `images_test.go` with 20+ test functions, 7 benchmarks
-- ✅ Upload tests (various sizes and formats)
-- ✅ Disconnect/expiry tests
-- ✅ Moderation hook tests
-- ✅ Chunked transfer tests (upload and download)
-- ✅ CLI tool: `cmd/imagetest/main.go` with 6 test modes
-- ✅ Test coverage: >65% for new package
-- ✅ Performance benchmarks (validation, thumbnail, upload, chunked transfer)
-
-### Month 6: Phase 24 - Item Trading System ✅ COMPLETE
-**Status:** All deliverables implemented (November 2025)
-
-**Completed:**
-- ✅ Two-phase commit protocol for atomic item transfer in `pkg/network/trade/system.go`
-- ✅ Proximity validation with lag compensation (5 tiles proposal, 10 tiles active trade)
-- ✅ Trust score mechanics (0.0-1.0) with rarity and quantity limits
-- ✅ Rollback on disconnect/conflict with best-effort item restoration
-- ✅ Automatic timeout handling (30-second proposal timeout)
-- ✅ Trade proposal, acceptance, and rejection API
-- ✅ Comprehensive validation (ownership, inventory space, tradability, trust)
-- ✅ Trust score updates (+0.05 success, -0.10 failure)
-- ✅ Trade history tracking in `engine.TradeComponent`
-- ✅ Extended `engine.TradeProposal` with status, timestamp, failure reason
-- ✅ Comprehensive tests: `system_test.go` with 10+ test functions, 4 benchmarks
-- ✅ Test coverage: Atomicity tests, proximity tests, trust validation tests
-- ✅ Package documentation in `doc.go` with usage examples
-- ✅ Helper functions for inventory operations, distance calculation, component management
-- ✅ Trade status tracking (pending, accepted, rejected, committed, cancelled, failed)
-
-### Month 7: Phase 25 - Concurrency & Integration ✅ COMPLETE
-**Status:** All deliverables implemented (November 2025)
-
-**Completed:**
-- ✅ Multi-party conversation support (NPC + players) in `pkg/engine/conversation_manager.go`
-- ✅ Message ordering, conflict resolution, turn-taking
-- ✅ FIFO dialog queue with configurable max size (default 5)
-- ✅ Automatic timeout handling (30-second default with auto-completion)
-- ✅ Conversation management with timestamp-based message ordering
-- ✅ Integration tests (50 players, dialog queues, multi-party scenarios)
-- ✅ Performance benchmarks (<10% frame budget usage)
-- ✅ Comprehensive tests: `conversation_manager_test.go`, `multiparty_conversation_test.go`, `high_throughput_test.go`
-- ✅ Package documentation in `conversation_doc.go`
-- ✅ Thread-safe concurrent access with RWMutex protection
-- ✅ Stale conversation cleanup (>1 hour inactivity)
-- ✅ Test coverage: >65% for all new packages
-
-### Month 8: Phase 26 - Polish & Beta Release
-**Deliverables:**
-- UI polish (chat bubbles, trade confirmation dialogs, image preview)
-- Error handling, user feedback (notifications, error messages)
-- Beta deployment (separate servers, `-social-beta=true` flag)
-- Documentation (user manual, API reference, migration guide)
-- Acceptance tests (all must pass)
-
-### Month 9-10: Stable Release & Post-Launch
-**Deliverables:**
-- Stable release (social features enabled by default)
-- Performance monitoring, bug fixes
-- Telemetry analysis, feature tuning
-- v5.1 planning (ML image moderation, advanced spam filters)
-
----
 
 ## Deliverables Checklist
 
 **Code:**
-- [x] `pkg/procgen/dialog/` - Markov generator, corpora, personality system (Phase 22) ✅
+- [x] `pkg/procgen/dialog/` - Markov generator, corpora, personality system (Phase 32) ✅
 - [x] `pkg/network/chat.go` - E2E encryption, ACK/NACK, message routing ✅
 - [x] `pkg/network/crypto.go` - Diffie-Hellman, AES-256-GCM ✅
 - [x] `pkg/network/profanity.go` - Client-side profanity filter (opt-in, configurable) ✅
@@ -843,22 +732,22 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 - [x] `pkg/network/profanity_test.go` - 14 test functions, 4 benchmarks ✅
 - [x] `pkg/rendering/ui/chat.go` - Chat UI rendering with 4 channels ✅
 - [x] `pkg/rendering/ui/chat_test.go` - 16 test functions, 3 benchmarks ✅
-- [x] `pkg/network/images.go` - Upload/download, chunked transfer, thumbnails (Phase 23) ✅
-- [x] `pkg/network/trade/system.go` - Two-phase commit, proximity, trust validation (Phase 24) ✅
+- [x] `pkg/network/images.go` - Upload/download, chunked transfer, thumbnails (Phase 33) ✅
+- [x] `pkg/network/trade/system.go` - Two-phase commit, proximity, trust validation (Phase 34) ✅
 - [x] `pkg/engine/chat_trade_components.go` - Chat and trade components combined ✅
-- [x] `pkg/engine/npcdialog_system.go` - NPC response generation (Phase 22) ✅
+- [x] `pkg/engine/npcdialog_system.go` - NPC response generation (Phase 32) ✅
 - [x] `pkg/rendering/ui/trade.go` - Trade UI (proposal, review, confirm) ✅
 - [x] `pkg/rendering/ui/trade_test.go` - 13 test functions, 3 benchmarks ✅
 
 **Tests:**
-- [x] `pkg/procgen/dialog/markov_test.go` - Variation, determinism, corpus tests (Phase 22) ✅
+- [x] `pkg/procgen/dialog/markov_test.go` - Variation, determinism, corpus tests (Phase 32) ✅
 - [x] `pkg/network/chat_test.go` - Encryption, ACK/NACK, latency simulation ✅
 - [x] `pkg/network/crypto_test.go` - Key exchange, encryption/decryption ✅
 - [x] `pkg/network/profanity_test.go` - Filter behavior, leet speak detection ✅
 - [x] `pkg/network/chat_integration_test.go` - E2E flow, packet loss, multi-player ✅
 - [x] `pkg/rendering/ui/chat_test.go` - UI behavior, message display, input handling ✅
-- [x] `pkg/network/images_test.go` - Upload/download, resume, validation (Phase 23) ✅
-- [x] `pkg/network/trade/system_test.go` - Two-phase commit, atomicity, proximity, trust (Phase 24) ✅
+- [x] `pkg/network/images_test.go` - Upload/download, resume, validation (Phase 33) ✅
+- [x] `pkg/network/trade/system_test.go` - Two-phase commit, atomicity, proximity, trust (Phase 34) ✅
 - [x] `pkg/rendering/ui/trade_test.go` - UI behavior, proposal display, button handling ✅
 - [x] Integration tests: Multi-player scenarios, packet loss, concurrency ✅
 - [x] Benchmarks: Dialog generation, chat throughput, trade validation ✅
@@ -879,7 +768,7 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 **Tools:**
 - [x] `cmd/chattest/` - Chat system CLI testing tool ✅
 - [x] `cmd/dialogtest/` - Dialog generation CLI testing tool ✅
-- [x] `cmd/imagetest/` - Image sharing CLI testing tool (Phase 23) ✅
+- [x] `cmd/imagetest/` - Image sharing CLI testing tool (Phase 33) ✅
 - [ ] `cmd/tradetest/` - Trading system CLI testing tool
 
 ---

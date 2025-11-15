@@ -93,6 +93,8 @@ type systemsContainer struct {
 	expressionComboSys      *engine.ExpressionComboSystem
 	miniGameSystem          *engine.MiniGameSystem
 	achievementSystem       *engine.AchievementSystem
+	// Phase 28: Reputation & Moral Choices
+	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
 }
@@ -251,11 +253,17 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
 
+	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem
+	// Gap: MoralChoiceSystem implemented but never initialized or registered
+	// Fix: Added system initialization for moral decision tracking and consequences
+	// Roadmap: ROADMAP_V4.md Phase 28
+	sys.moralChoiceSystem = engine.NewMoralChoiceSystem(game.World, clientLogger.Logger)
+
 	// Phase 30: Environmental Storytelling - Discovery System
 	sys.discoverySystem = engine.NewDiscoverySystem(game.World)
 
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, story discovery)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, moral choices, story discovery)")
 	}
 }
 
@@ -368,6 +376,12 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 26.2: Achievement system (social features, use wrapper)
 	game.World.AddSystem(&achievementSystemWrapper{system: sys.achievementSystem})
+
+	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem registration
+	// Gap: MoralChoiceSystem created but never added to world update loop
+	// Fix: Registered system with wrapper for quest-driven moral decisions
+	// Roadmap: ROADMAP_V4.md Phase 28.2
+	game.World.AddSystem(&moralChoiceSystemWrapper{system: sys.moralChoiceSystem})
 
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
@@ -1248,12 +1262,26 @@ func cleanupNetworkClient(networkClient interface{}, clientLogger *logrus.Entry)
 	}
 }
 
+// INTEGRATION FIX [Category A]: System Wrappers for Client V4.0+
+// Gap: Missing wrappers prevented proper system registration
+// Fix: Added wrappers to adapt Update() signatures to ECS interface
+// Roadmap: ROADMAP_V4.md Phases 28, 30
+
 // discoverySystemWrapper adapts DiscoverySystem to the System interface.
 type discoverySystemWrapper struct {
 	system *engine.DiscoverySystem
 }
 
 func (w *discoverySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// moralChoiceSystemWrapper adapts MoralChoiceSystem to the System interface.
+type moralChoiceSystemWrapper struct {
+	system *engine.MoralChoiceSystem
+}
+
+func (w *moralChoiceSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

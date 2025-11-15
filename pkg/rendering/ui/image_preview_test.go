@@ -67,7 +67,7 @@ func TestShowFullImage(t *testing.T) {
 	expiry := time.Now().Add(10 * time.Minute)
 
 	ui.ShowThumbnail("Alice", time.Now(), thumbnail, 1024, 768, 512000, expiry)
-	ui.ShowFullImage(fullImage)
+	ui.DisplayFullImage(fullImage)
 
 	if ui.FullImage != fullImage {
 		t.Error("Expected full image to be set")
@@ -80,7 +80,7 @@ func TestShowFullImage(t *testing.T) {
 	}
 }
 
-func TestHide(t *testing.T) {
+func TestImagePreviewHide(t *testing.T) {
 	ui := NewImagePreviewUI(0, 0, 500, 400)
 
 	thumbnail := ebiten.NewImage(128, 128)
@@ -104,7 +104,7 @@ func TestHide(t *testing.T) {
 	}
 }
 
-func TestToggleSelection(t *testing.T) {
+func TestImagePreviewToggleSelection(t *testing.T) {
 	ui := NewImagePreviewUI(0, 0, 500, 400)
 
 	if !ui.ConfirmSelected {
@@ -122,7 +122,7 @@ func TestToggleSelection(t *testing.T) {
 	}
 }
 
-func TestGetSelectedAction(t *testing.T) {
+func TestImagePreviewGetSelectedAction(t *testing.T) {
 	ui := NewImagePreviewUI(0, 0, 500, 400)
 
 	action := ui.GetSelectedAction()
@@ -230,7 +230,7 @@ func TestUpdateNoAutoHideFullImage(t *testing.T) {
 	pastExpiry := time.Now().Add(-1 * time.Second)
 
 	ui.ShowThumbnail("Alice", time.Now(), thumbnail, 1024, 768, 512000, pastExpiry)
-	ui.ShowFullImage(fullImage)
+	ui.DisplayFullImage(fullImage)
 
 	ui.Update(0.016)
 
@@ -304,7 +304,7 @@ func TestNilImages(t *testing.T) {
 	}
 
 	// Show full image with nil
-	ui.ShowFullImage(nil)
+	ui.DisplayFullImage(nil)
 
 	if ui.FullImage != nil {
 		t.Error("Expected full image to be nil")
@@ -331,11 +331,11 @@ func BenchmarkShowFullImage(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ui.ShowFullImage(fullImage)
+		ui.DisplayFullImage(fullImage)
 	}
 }
 
-func BenchmarkUpdate(b *testing.B) {
+func BenchmarkImagePreviewUpdate(b *testing.B) {
 	ui := NewImagePreviewUI(0, 0, 500, 400)
 	thumbnail := ebiten.NewImage(128, 128)
 	expiry := time.Now().Add(10 * time.Minute)

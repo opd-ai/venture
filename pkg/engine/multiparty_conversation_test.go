@@ -15,6 +15,9 @@ func TestMultiPartyConversation_Integration(t *testing.T) {
 	npc := world.CreateEntity()
 	npc.ID = 1
 
+	// Update world to flush entity to entities map
+	world.Update(0)
+
 	// Initialize NPC dialog
 	err := dialogSys.InitializeNPCDialog(npc, "fantasy", nil, 12345)
 	if err != nil {

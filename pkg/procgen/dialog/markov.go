@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"time"
 )
@@ -287,12 +288,20 @@ func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, te
 		freq[word]++
 	}
 
+	// Sort keys for deterministic iteration order
+	sortedWords := make([]string, 0, len(freq))
+	for word := range freq {
+		sortedWords = append(sortedWords, word)
+	}
+	sort.Strings(sortedWords)
+
 	// Apply temperature to frequencies (higher temp = more uniform)
 	weights := make([]float64, 0, len(freq))
 	words := make([]string, 0, len(freq))
 	totalWeight := 0.0
 
-	for word, count := range freq {
+	for _, word := range sortedWords {
+		count := freq[word]
 		// Weight = count^(1/temperature)
 		// Higher temperature reduces weight differences
 		weight := 1.0

@@ -59,9 +59,17 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	// Get or create NPCDialogComponent
 	dialogComp := s.getOrCreateDialogComponent(entity, genreID, personality, seed)
 
-	// Check if generator already exists
+	// Check if generator already exists in component
 	if dialogComp.Generator != nil {
 		return nil // Already initialized
+	}
+
+	// Check if generator exists in cache
+	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
+	if cachedGen, exists := s.generatorCache[cacheKey]; exists {
+		// Use cached generator
+		dialogComp.Generator = cachedGen
+		return nil
 	}
 
 	// Get corpus for genre
@@ -75,7 +83,6 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	gen.TrainFromCorpus(corpus.Sentences)
 
 	// Cache generator
-	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
 	s.generatorCache[cacheKey] = gen
 
 	// Assign to component

@@ -1,10 +1,10 @@
 # Performance Optimization Task
 
 ## Objective
-Identify and implement ONE safe, high-impact performance optimization in the Venture codebase.
+Identify and implement ONE safe, high-impact performance optimization in the Venture codebase. If no safe optimization can be found, do nothing.
 
 ## Execution Mode
-**Autonomous Action** - Implement the optimization directly after analysis.
+**Autonomous Action** - Implement the optimization directly after analysis. If no safe optimization can be found, do nothing.
 
 ## Scope & Constraints
 - **Target**: Focus on hot paths: game loop, rendering (viewport culling, batch rendering, sprite caching, pooling), entity queries, or network serialization
@@ -13,6 +13,7 @@ Identify and implement ONE safe, high-impact performance optimization in the Ven
   - No behavioral regressions (output must remain identical)
   - Maintain deterministic generation (preserve seed-based reproducibility)
   - Preserve test coverage (all existing tests must pass)
+  - If no safe optimization can be found, do nothing.
 - **Priority Areas** (in order):
   1. Allocation reduction in game loop/render paths
   2. Redundant computation elimination (caching opportunities)
@@ -51,3 +52,4 @@ Provide:
 - Current performance: 106 FPS with 2000 entities, 73MB memory
 - Existing optimizations: viewport culling (1,635x), batch rendering (1,667x), sprite caching (37x), pooling (2x)
 - Avoid premature optimization - profile before acting
+- If no safe optimization can be found, do nothing.

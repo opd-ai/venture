@@ -71,6 +71,7 @@ const (
 	seedOffsetVehicle         = 4000 // offset for vehicle generation (V4.0)
 	seedOffsetCompanion       = 5000 // offset for companion generation (V4.0)
 	seedOffsetBook            = 6000 // offset for book/bookshelf generation (V4.0)
+	seedOffsetStory           = 7000 // offset for story fragment generation (Phase 30)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

@@ -16,7 +16,7 @@ func TestDialogQueue_HighThroughput_50Players(t *testing.T) {
 
 	world := NewWorld()
 	dialogSys := NewNPCDialogSystem(world, 12345)
-	dialogSys.conversationManager.maxQueueSize = 100
+	dialogSys.conversationManager.maxQueueSize = 300 // Increased from 100 to accommodate 250 requests
 
 	// Create NPC
 	npc := world.CreateEntity()

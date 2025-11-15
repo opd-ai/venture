@@ -328,11 +328,16 @@ func TestGetTextColor(t *testing.T) {
 	}
 
 	// Test with different alpha values
-	for alpha := uint8(0); alpha <= 255; alpha += 50 {
+	for alpha := uint8(0); alpha < 255; alpha += 50 {
 		color = nm.getTextColor(alpha)
 		if color == nil {
 			t.Errorf("Expected non-nil text color for alpha %d", alpha)
 		}
+	}
+	// Test alpha = 255 separately to avoid overflow
+	color = nm.getTextColor(255)
+	if color == nil {
+		t.Error("Expected non-nil text color for alpha 255")
 	}
 }
 

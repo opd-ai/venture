@@ -65,7 +65,7 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 
 	// Shuffle rooms
 	rng.Shuffle(len(libraryRooms), func(i, j int) {
-		libraryRooms[i], libraryRooms[j] = libraryRooms[i], libraryRooms[j]
+		libraryRooms[i], libraryRooms[j] = libraryRooms[j], libraryRooms[i]
 	})
 
 	spawned := 0

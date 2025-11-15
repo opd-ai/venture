@@ -408,7 +408,7 @@ func TestWrapText(t *testing.T) {
 		{"Short text", "Hello", 20, 1},
 		{"Exact width", "Hello World", 11, 1},
 		{"Two lines", "Hello World Test", 11, 2},
-		{"Multiple lines", "The quick brown fox jumps over the lazy dog", 15, 6},
+		{"Multiple lines", "The quick brown fox jumps over the lazy dog", 15, 3},
 		{"Empty", "", 10, 0},
 	}
 

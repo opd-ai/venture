@@ -466,7 +466,7 @@ func (im *ImageManager) GetMetadata(imageID string) (*ImageMetadata, error) {
 
 // StartChunkedUpload initiates a chunked upload for large images.
 // Returns the upload state or error.
-func (im *ImageManager) StartChunkedUpload(senderID uint64, channel int, format string, totalSize int, totalChunks int) (string, error) {
+func (im *ImageManager) StartChunkedUpload(senderID uint64, channel int, format string, totalSize, totalChunks int) (string, error) {
 	// Check rate limit
 	if !im.CheckRateLimit(senderID) {
 		return "", ErrRateLimitExceeded

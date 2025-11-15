@@ -23,9 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	verbose = flag.Bool("verbose", false, "enable verbose logging")
-)
+var verbose = flag.Bool("verbose", false, "enable verbose logging")
 
 func main() {
 	flag.Parse()

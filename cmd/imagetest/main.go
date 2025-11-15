@@ -185,7 +185,7 @@ func testThumbnail() {
 	logrus.Info("Testing thumbnail generation...")
 
 	// Create output directory
-	if err := os.MkdirAll(*outputDir, 0755); err != nil {
+	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
 		logrus.Fatalf("Failed to create output directory: %v", err)
 	}
 
@@ -217,7 +217,7 @@ func testThumbnail() {
 
 	// Save thumbnail to file
 	thumbPath := filepath.Join(*outputDir, fmt.Sprintf("thumbnail_%dx%d.jpg", *width, *height))
-	if err := os.WriteFile(thumbPath, thumbnail, 0644); err != nil {
+	if err := os.WriteFile(thumbPath, thumbnail, 0o644); err != nil {
 		logrus.Errorf("Failed to save thumbnail: %v", err)
 	} else {
 		logrus.Infof("Thumbnail saved to: %s", thumbPath)

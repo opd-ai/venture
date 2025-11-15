@@ -270,7 +270,7 @@ animationSystem.SetMaxCacheSize(100)     # Line ~920
 - [Viewport Culling Benchmarks](../pkg/engine/VIEWPORT_CULLING.md)
 - [Batch Rendering Benchmarks](../pkg/engine/BATCH_RENDERING.md)
 - [Performance Guide](PERFORMANCE.md)
-- [WASM Testing Guide](../TESTING_WASM.md)
+- [Testing Guide](TESTING.md)
 
 ## Changelog
 

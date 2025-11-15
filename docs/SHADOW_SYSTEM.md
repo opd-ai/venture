@@ -308,7 +308,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 ## References
 
 - LIGHTING_SYSTEM.md - Lighting system documentation
-- ROADMAP.md - Phase 14.1 specification
+- ROADMAP_V3.md - Phase 17 specification (Sophisticated Lighting)
 - pkg/engine/shadow_components.go - Component definitions
 - pkg/engine/shadow_system.go - System implementation
 - pkg/engine/lighting_system.go - Lighting integration

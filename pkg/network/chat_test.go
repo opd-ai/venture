@@ -385,8 +385,14 @@ func TestRateLimiterCheckRateLimit(t *testing.T) {
 	playerID := uint64(123)
 	channel := 0
 
+	// Create dummy player state
+	state := &PlayerChatState{
+		PlayerID:       playerID,
+		RateLimitState: make(map[int]time.Time),
+	}
+
 	// First check should pass
-	if !rl.CheckRateLimit(playerID, channel) {
+	if !rl.CheckRateLimit(playerID, channel, state) {
 		t.Error("First rate limit check failed")
 	}
 
@@ -394,7 +400,7 @@ func TestRateLimiterCheckRateLimit(t *testing.T) {
 	rl.RecordViolation(playerID)
 
 	// Next check should fail (muted)
-	if rl.CheckRateLimit(playerID, channel) {
+	if rl.CheckRateLimit(playerID, channel, state) {
 		t.Error("Rate limit check passed when player should be muted")
 	}
 }
@@ -554,9 +560,15 @@ func BenchmarkRateLimitCheck(b *testing.B) {
 	playerID := uint64(123)
 	channel := 0
 
+	// Create dummy player state
+	state := &PlayerChatState{
+		PlayerID:       playerID,
+		RateLimitState: make(map[int]time.Time),
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		rl.CheckRateLimit(playerID, channel)
+		rl.CheckRateLimit(playerID, channel, state)
 	}
 }
 

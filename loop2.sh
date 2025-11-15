@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=30
+ITER=100
 
 
 echo "iteration $i started."
@@ -40,7 +40,7 @@ for i in $(seq 1 $ITER); do
     echo "Fix checkin completed, sleeping for 1 minute..."
     sleep 1m
 
-    if [ $((i % 5)) -eq 0 ]; then
+    if [ $((i % 20)) -eq 0 ]; then
         echo "iteration $i started."
         copilot -p "/delegate $(cat docs/AUTO.md)" --allow-all-tools --deny-tool sudo
         make fmt

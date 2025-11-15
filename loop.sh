@@ -15,6 +15,7 @@ for i in $(seq 1 $ITER); do
     echo "iteration $i in progress."
     echo "Fix checkin completed, sleeping for 1 minute..."
     sleep 1m
+    
     copilot -p "/delegate $(cat docs/EXECUTE.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "iteration $i in progress."

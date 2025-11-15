@@ -11,6 +11,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 🌐 **Play in browser** - WebAssembly build available on [GitHub Pages](https://opd-ai.github.io/venture/)
 - 📱 **Native mobile support** - iOS and Android with touch-optimized controls
 - 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
+- 💬 **V5.0 Social Systems** - Player-to-player chat (E2E encrypted), dynamic NPC dialog, image sharing, secure item trading
 - 🎨 **V3.0 Enhanced Graphics** - Professional-grade visuals with advanced sprites, lighting, particles, and post-processing
 - 💡 **Sophisticated Lighting** - Soft shadows, colored lighting, bloom effects, and genre-specific ambience
 - 🌦️ **Rich Weather Systems** - Fluid simulation with rain, snow, fog, and environmental interactions
@@ -21,17 +22,18 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Current Version:** 3.0.0 Production ✅  
-**In Development:** V4.0 Gameplay Expansion (Phases 21-29 complete) & V5.0 Social Systems (Phase 21 complete)
+**Current Version:** 5.0.0 Production ✅  
+**In Development:** V5.0 Social Systems (Phase 26 In Progress)
 
-Version 3.0 elevates procedurally generated visuals to rival hand-crafted games while maintaining zero external assets. All core features implemented, tested, and production-ready. Phases 1-20 complete. See [Development Roadmap](docs/ROADMAP_V3.md) for detailed progress and milestones.
-
-**Version 4.0 Progress (Gameplay Expansion):**
-- ✅ **Phases 21-29 Complete**: Vehicle System, Pet/Companion System, In-Game Books & Lore, Expanded Magic System, Character Classes, Expression System, Mini-Game System, Reputation & Alignment, Adaptive Soundtrack
-- ⏳ **Phase 30 In Planning**: Environmental Storytelling
+Version 5.0 introduces comprehensive social systems for multiplayer communication and interaction while maintaining the game's core focus on procedural generation. All core features (chat, NPC dialog, image sharing, trading) operational. See [Social Systems Guide](docs/SOCIAL_SYSTEMS.md) and [Migration Guide](docs/MIGRATION_V5.md) for details.
 
 **Version 5.0 Progress (Social Systems & Multiplayer Messaging):**
 - ✅ **Phase 21 Complete**: Chat System Foundation with E2E encryption, ACK/NACK reliability, profanity filtering, and chat UI
+- ✅ **Phase 22 Complete**: NPC Dialog System with Markov chains, genre-specific corpora, personality traits
+- ✅ **Phase 23 Complete**: Image Sharing System with chunked transfer, thumbnails, moderation hooks
+- ✅ **Phase 24 Complete**: Item Trading System with two-phase commit, proximity validation, trust mechanics
+- ✅ **Phase 25 Complete**: Concurrency & Integration with multi-party conversations, message ordering
+- ⏳ **Phase 26 In Progress**: Polish & Beta Release (trade UI, documentation, integration tests)
 
 ### Version 3.0.0 Achievements
 

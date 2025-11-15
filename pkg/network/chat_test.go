@@ -158,7 +158,6 @@ func TestSendMessageEncryption(t *testing.T) {
 	// Send message
 	plaintext := "Hello, encrypted world!"
 	packet, err := cm.SendMessage(senderID, 0, plaintext, 0, -1) // ChatGlobal, unlimited range
-
 	if err != nil {
 		t.Fatalf("SendMessage failed: %v", err)
 	}

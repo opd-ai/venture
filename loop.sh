@@ -27,7 +27,7 @@ for i in $(seq 1 $ITER); do
     sleep 1m
     echo "iteration $i in complete."
 
-    copilot -p "/delegate $(cat docs/INTEGRATE.md)" --allow-all-tools --deny-tool sudo
+    copilot -p "/delegate $(cat docs/INTEGRATION.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "iteration $i in progress."
     echo "Integrate completed, sleeping for 1 minute..."

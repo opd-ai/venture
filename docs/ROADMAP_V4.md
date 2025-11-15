@@ -1624,12 +1624,21 @@ Based on the comprehensive integration audit completed after Phase 21 (Vehicle S
   - StoryFragmentComponent (client-side discovery tracking)
   - MiniGameComponent (has interface{} State field, complex to serialize)
 
-**2. Add Server Entity Spawning** ⏱️ 4-8 hours
-- **Status:** Client has spawning utility functions (`spawnVehicle`, `spawnCompanion`, `spawnBookshelf`); server lacks equivalents
+**2. Add Server Entity Spawning** ⏱️ 4-8 hours ✅ COMPLETE
+- **Status:** COMPLETE (November 2025) - Server entity spawning fully implemented
 - **Action:** Port client spawning functions from `cmd/client/util.go` to server context
 - **Impact:** Enables server-authoritative entity creation for multiplayer consistency
 - **Priority:** High (multiplayer integrity)
-- **Code Location:** Create `cmd/server/entity_spawning.go` based on `cmd/client/util.go`
+- **Implementation Details:**
+  - Created `cmd/server/entity_spawning.go` with three spawning functions:
+    - `spawnVehiclesInTerrain()` - Generates and spawns vehicles with full component setup
+    - `spawnCompanionsInTerrain()` - Generates and spawns companions with AI
+    - `spawnBookshelvesInTerrain()` - Generates and spawns bookshelves with books
+  - Integrated into `cmd/server/main.go` during world initialization
+  - All spawning functions use same deterministic seed-based generation as client
+  - Simplified color generation for server (no palette dependencies)
+  - All functions handle errors gracefully with logging
+- **Code Location:** `cmd/server/entity_spawning.go` (287 lines)
 
 **3. Remove Outdated TODO Comments** ⏱️ 30 minutes
 - **Status:** 31 TODO markers found, mostly representing future features rather than incomplete work
@@ -1638,12 +1647,23 @@ Based on the comprehensive integration audit completed after Phase 21 (Vehicle S
 - **Priority:** Medium (code quality)
 - **Code Locations:** Distributed across codebase (full list in integration audit)
 
-**4. Add V4 Performance Benchmarks** ⏱️ 2-4 hours
-- **Status:** V4 systems operational but lack dedicated benchmark tests
+**4. Add V4 Performance Benchmarks** ⏱️ 2-4 hours ⏳ IN PROGRESS
+- **Status:** IN PROGRESS - Benchmark infrastructure started but needs completion
 - **Action:** Create `pkg/engine/v4_bench_test.go` with benchmarks for all V4 systems
 - **Impact:** Validates 60 FPS target with new features, identifies optimization opportunities
 - **Priority:** Medium (performance validation)
-- **Tests:** VehicleCombat, CompanionAI, BookReading, MiniGame, Achievement systems
+- **Tests Needed:** VehicleCombat, CompanionAI, CompanionProgression, BookReading, MiniGame, Achievement, Expression, ClassProgression, Reputation systems
+- **Challenge:** V4 systems have complex initialization requirements:
+  - ExpressionSystem requires AudioManager parameter
+  - ClassProgressionSystem takes no World parameter
+  - ReputationSystem requires World and Logger
+  - Achievement/Expression components need investigation for proper constructors
+- **Next Steps:**
+  1. Map all V4 system constructor signatures
+  2. Create proper initialization helpers for benchmarks
+  3. Add individual system benchmarks (7 systems)
+  4. Add integrated scenario benchmark (all systems together)
+  5. Document performance baselines for each system
 
 ### Documentation Updates
 

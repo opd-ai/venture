@@ -53,12 +53,12 @@ func TestTradeUISetProposalNonPending(t *testing.T) {
 	ui := NewTradeUI(0, 0, 400, 500)
 
 	proposal := &TradeProposal{
-		ProposerName:  "Alice",
-		RecipientName: "Bob",
-		OfferedItems:  []TradeItem{},
+		ProposerName:   "Alice",
+		RecipientName:  "Bob",
+		OfferedItems:   []TradeItem{},
 		RequestedItems: []TradeItem{},
-		Status:        "accepted", // Non-pending
-		ProposalTime:  time.Now(),
+		Status:         "accepted", // Non-pending
+		ProposalTime:   time.Now(),
 	}
 
 	ui.SetProposal(proposal)

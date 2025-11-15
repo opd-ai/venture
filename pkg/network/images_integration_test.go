@@ -9,11 +9,11 @@ import (
 // Acceptance: 500KB image uploads in <5 seconds at 200ms latency
 func TestImageUpload_LatencySimulation(t *testing.T) {
 	tests := []struct {
-		name           string
-		latency        time.Duration
-		imageSize      int // approximate image dimensions
-		maxUploadTime  time.Duration
-		expectSuccess  bool
+		name          string
+		latency       time.Duration
+		imageSize     int // approximate image dimensions
+		maxUploadTime time.Duration
+		expectSuccess bool
 	}{
 		{
 			name:          "200ms latency - should succeed within 5s",
@@ -52,7 +52,7 @@ func TestImageUpload_LatencySimulation(t *testing.T) {
 
 			// Simulate chunked upload with latency
 			totalChunks := (len(data) + MaxChunkSize - 1) / MaxChunkSize
-			
+
 			startTime := time.Now()
 
 			imageID, err := manager.StartChunkedUpload(1, 0, ImageFormatPNG, len(data), totalChunks)

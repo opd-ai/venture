@@ -564,7 +564,9 @@ func GetAvailableSpecializations(class CharacterClass) []SpecializationType {
 
 // Serialize converts ClassProgressionComponent to bytes for network transmission.
 // Format: [Class:1][Level:4][Experience:8][Specialization:1][HasSecondary:1]
-//         [SecondaryClass:1][SecondaryLevel:4][SecondarySpec:1] = 29 bytes
+//
+//	[SecondaryClass:1][SecondaryLevel:4][SecondarySpec:1] = 29 bytes
+//
 // Note: Abilities array is not synchronized; it can be regenerated from Class+Level on client
 func (c *ClassProgressionComponent) Serialize() []byte {
 	buf := make([]byte, 29)
@@ -584,7 +586,7 @@ func (c *ClassProgressionComponent) Serialize() []byte {
 	hasSecondary := c.SecondaryClass != nil
 	writeBool(buf[offset:], hasSecondary)
 	offset++
-	
+
 	if hasSecondary {
 		buf[offset] = byte(*c.SecondaryClass)
 		offset++
@@ -592,11 +594,11 @@ func (c *ClassProgressionComponent) Serialize() []byte {
 		offset += 4
 		buf[offset] = byte(c.SecondarySpec)
 	} else {
-		buf[offset] = 0   // SecondaryClass placeholder
+		buf[offset] = 0 // SecondaryClass placeholder
 		offset++
 		writeInt32(buf[offset:], 0) // SecondaryLevel placeholder
 		offset += 4
-		buf[offset] = 0   // SecondarySpec placeholder
+		buf[offset] = 0 // SecondarySpec placeholder
 	}
 
 	return buf

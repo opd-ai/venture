@@ -23,15 +23,15 @@ type BandwidthMonitor struct {
 
 // PlayerBandwidthStats tracks bandwidth for a single player.
 type PlayerBandwidthStats struct {
-	PlayerID       uint64
-	BytesSent      uint64
-	BytesReceived  uint64
-	MessagesSent   uint64
-	MessagesRecv   uint64
-	LastActivity   time.Time
-	WindowStart    time.Time
-	CurrentRate    float64 // Bytes per second
-	PeakRate       float64 // Peak bytes per second observed
+	PlayerID      uint64
+	BytesSent     uint64
+	BytesReceived uint64
+	MessagesSent  uint64
+	MessagesRecv  uint64
+	LastActivity  time.Time
+	WindowStart   time.Time
+	CurrentRate   float64 // Bytes per second
+	PeakRate      float64 // Peak bytes per second observed
 }
 
 // NewBandwidthMonitor creates a new bandwidth monitor.

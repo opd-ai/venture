@@ -128,10 +128,10 @@ func TestBandwidthMonitor_GetAllPlayerStats(t *testing.T) {
 
 func TestCalculateBandwidthKBps(t *testing.T) {
 	tests := []struct {
-		name     string
-		bytes    uint64
-		duration time.Duration
-		expected float64
+		name      string
+		bytes     uint64
+		duration  time.Duration
+		expected  float64
 		tolerance float64
 	}{
 		{

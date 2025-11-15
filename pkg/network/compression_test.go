@@ -139,8 +139,8 @@ func TestEstimateCompressionRatio(t *testing.T) {
 func TestCompressionBandwidthSavings(t *testing.T) {
 	// Test typical chat messages for bandwidth savings
 	messages := []string{
-		"Hey, how are you doing?",                                                      // Short
-		strings.Repeat("This is a longer message with some repetitive content. ", 5),  // Medium
+		"Hey, how are you doing?", // Short
+		strings.Repeat("This is a longer message with some repetitive content. ", 5),   // Medium
 		strings.Repeat("The quick brown fox jumps over the lazy dog repeatedly. ", 10), // Long
 	}
 

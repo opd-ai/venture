@@ -102,11 +102,13 @@ func (b *SnapshotBuilder) BuildEntitySnapshot(entity *engine.Entity, timestamp t
 	// Expression component (Phase 26)
 	if expressionComp, ok := entity.GetComponent("expression"); ok {
 		expression := expressionComp.(*engine.ExpressionComponent)
-		snapshot.Components["expression"] = b.serializer.SerializeExpression(
-			uint8(expression.ActiveExpression),
-			expression.ExpressionTime,
-			expression.Cooldown,
-		)
+		snapshot.Components["expression"] = expression.Serialize()
+	}
+
+	// Class progression component (Phase 25)
+	if classComp, ok := entity.GetComponent("class_progression"); ok {
+		class := classComp.(*engine.ClassProgressionComponent)
+		snapshot.Components["class_progression"] = class.Serialize()
 	}
 
 	return snapshot
@@ -239,15 +241,20 @@ func (b *SnapshotBuilder) ApplySnapshotToEntity(entity *engine.Entity, snapshot 
 	}
 
 	if expressionData, ok := snapshot.Components["expression"]; ok {
-		expressionType, expressionTime, cooldown, err := b.serializer.DeserializeExpression(expressionData)
-		if err != nil {
-			return err
-		}
 		if expressionComp, ok := entity.GetComponent("expression"); ok {
 			expression := expressionComp.(*engine.ExpressionComponent)
-			expression.ActiveExpression = engine.ExpressionType(expressionType)
-			expression.ExpressionTime = expressionTime
-			expression.Cooldown = cooldown
+			if err := expression.Deserialize(expressionData); err != nil {
+				return err
+			}
+		}
+	}
+
+	if classData, ok := snapshot.Components["class_progression"]; ok {
+		if classComp, ok := entity.GetComponent("class_progression"); ok {
+			class := classComp.(*engine.ClassProgressionComponent)
+			if err := class.Deserialize(classData); err != nil {
+				return err
+			}
 		}
 	}
 

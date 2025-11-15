@@ -1642,12 +1642,30 @@ Based on the comprehensive integration audit completed after Phase 21 (Vehicle S
 
 ### Immediate Actions (v4.0 → v4.1)
 
-**1. Complete V4 Network Synchronization** ⏱️ 2-4 hours
-- **Status:** Network serialization methods exist but not fully integrated in snapshot system
-- **Action:** Extend `EntitySnapshot` struct in `pkg/network/protocol.go` to include V4 components
+**1. Complete V4 Network Synchronization** ⏱️ 2-4 hours ✅ COMPLETE
+- **Status:** COMPLETE (November 2025) - Expression and ClassProgression components now synchronized
+- **Action:** Extended `EntitySnapshot` struct in snapshot_builder.go to include V4 components
 - **Impact:** Ensures vehicle state, companion AI, book reading progress, mini-game state, and achievements sync properly in multiplayer
 - **Priority:** High (multiplayer feature completeness)
-- **Code Location:** `pkg/network/snapshot.go` lines 45-70 (builder method has placeholder comments)
+- **Implementation Details:**
+  - Added Serialize/Deserialize methods to ExpressionComponent (17 bytes)
+  - Added Serialize/Deserialize methods to ClassProgressionComponent (29 bytes)
+  - Updated snapshot_builder.go to call component.Serialize() for V4 components
+  - Updated ApplySnapshotToEntity to call component.Deserialize() for V4 components
+  - Created comprehensive test suite in snapshot_builder_v4_test.go
+  - All tests passing with zero race conditions
+- **Components Now Synchronized:**
+  - ✅ VehicleComponent (existing)
+  - ✅ CompanionComponent (existing)
+  - ✅ MountComponent (existing)
+  - ✅ AchievementComponent (existing)
+  - ✅ ExpressionComponent (NEW)
+  - ✅ ClassProgressionComponent (NEW)
+- **Components Deferred (Not Critical for Multiplayer):**
+  - ReputationComponent (mostly client-side, complex maps/timestamps)
+  - MusicTriggerComponent (client-side audio state, regenerated from gameplay events)
+  - StoryFragmentComponent (client-side discovery tracking)
+  - MiniGameComponent (has interface{} State field, complex to serialize)
 
 **2. Add Server Entity Spawning** ⏱️ 4-8 hours
 - **Status:** Client has spawning utility functions (`spawnVehicle`, `spawnCompanion`, `spawnBookshelf`); server lacks equivalents

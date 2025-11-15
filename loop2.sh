@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=300
+ITER=30
 
 
 echo "iteration $i started."
@@ -28,16 +28,18 @@ for i in $(seq 1 $ITER); do
     echo "Auto fix checkin completed, sleeping for 1 minute..."
     sleep 1m
 
-    copilot -p "/delegate $(cat docs/PERFORMANCE.md)" --allow-all-tools --deny-tool sudo
-    make fmt
-    echo "iteration $i in progress."
-    echo "Performance completed, sleeping for 1 minute..."
-    sleep 1m
-    copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
-    echo "iteration $i in progress."
-    echo "Performance checkin completed, sleeping for 1 minute..."
-    sleep 1m
-    echo "iteration $i in complete."
+    if [ $((i % 5)) -eq 0 ]; then
+        copilot -p "/delegate $(cat docs/PERFORMANCE.md)" --allow-all-tools --deny-tool sudo
+        make fmt
+        echo "iteration $i in progress."
+        echo "Performance completed, sleeping for 1 minute..."
+        sleep 1m
+        copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
+        echo "iteration $i in progress."
+        echo "Performance checkin completed, sleeping for 1 minute..."
+        sleep 1m
+        echo "iteration $i in complete."
+    fi
 
     copilot -p "/delegate $(cat docs/BREAKDOWN.md)" --allow-all-tools --deny-tool sudo
     make fmt

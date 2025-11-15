@@ -228,15 +228,27 @@ func ValidateImageData(data []byte, format string) (image.Image, string, error) 
 }
 
 // GenerateThumbnail creates a 128x128 JPEG thumbnail from an image.
+// Images smaller than 128x128 are not upscaled.
 func GenerateThumbnail(img image.Image) ([]byte, error) {
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
 	// Calculate scaling to fit within 128x128 while preserving aspect ratio
-	scale := float64(ThumbnailSize) / float64(max(width, height))
-	newWidth := int(float64(width) * scale)
-	newHeight := int(float64(height) * scale)
+	// Don't upscale images that are already smaller
+	maxDimension := max(width, height)
+	var newWidth, newHeight int
+
+	if maxDimension <= ThumbnailSize {
+		// Image is already small enough, don't upscale
+		newWidth = width
+		newHeight = height
+	} else {
+		// Scale down to fit within ThumbnailSize
+		scale := float64(ThumbnailSize) / float64(maxDimension)
+		newWidth = int(float64(width) * scale)
+		newHeight = int(float64(height) * scale)
+	}
 
 	// Create thumbnail image
 	thumbnail := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
@@ -568,9 +580,9 @@ func (im *ImageManager) ReceiveChunk(chunk *ImageChunk) (bool, error) {
 	}
 
 	// Note: This will check rate limit again, but we already checked at start
-	// We update the last upload time to the upload start time to avoid double-counting
+	// We update the last upload time to before the rate limit window to avoid double-counting
 	im.mu.Lock()
-	im.playerLastUpload[metadata.SenderID] = upload.StartTime
+	im.playerLastUpload[metadata.SenderID] = time.Now().Add(-ImageRateLimit - time.Second)
 	im.mu.Unlock()
 
 	_, err := im.UploadImage(req)

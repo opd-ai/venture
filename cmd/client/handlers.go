@@ -94,7 +94,7 @@ type systemsContainer struct {
 	miniGameSystem          *engine.MiniGameSystem
 	achievementSystem       *engine.AchievementSystem
 	// Phase 30: Environmental Storytelling
-	discoverySystem         *engine.DiscoverySystem
+	discoverySystem *engine.DiscoverySystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.

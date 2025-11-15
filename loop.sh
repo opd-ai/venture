@@ -15,7 +15,7 @@ for i in $(seq 1 $ITER); do
     echo "iteration $i in progress."
     echo "Fix checkin completed, sleeping for 1 minute..."
     sleep 1m
-    
+
     copilot -p "/delegate $(cat docs/EXECUTE.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "iteration $i in progress."
@@ -24,6 +24,17 @@ for i in $(seq 1 $ITER); do
     copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
     echo "iteration $i in progress."
     echo "Execute checkin completed, sleeping for 1 minute..."
+    sleep 1m
+    echo "iteration $i in complete."
+
+    copilot -p "/delegate $(cat docs/INTEGRATE.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "iteration $i in progress."
+    echo "Integrate completed, sleeping for 1 minute..."
+    sleep 1m
+    copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
+    echo "iteration $i in progress."
+    echo "Integrate checkin completed, sleeping for 1 minute..."
     sleep 1m
     echo "iteration $i in complete."
 done

@@ -13,7 +13,7 @@ for i in $(seq 1 $ITER); do
     sleep 1m
     copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
     echo "iteration $i in progress."
-    echo "Fix checkin completed, sleeping for 1 minute..."
+    echo "Auto fix checkin completed, sleeping for 1 minute..."
     sleep 1m
 
     copilot -p "/delegate $(cat docs/PERFORMANCE.md)" --allow-all-tools --deny-tool sudo

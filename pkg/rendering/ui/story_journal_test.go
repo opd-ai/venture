@@ -398,7 +398,7 @@ func TestTruncateText(t *testing.T) {
 }
 
 // TestWrapText tests text wrapping.
-func TestWrapText(t *testing.T) {
+func TestStoryJournalWrapText(t *testing.T) {
 	tests := []struct {
 		name      string
 		text      string

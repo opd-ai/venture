@@ -60,7 +60,7 @@ func TestShowProposal(t *testing.T) {
 	}
 }
 
-func TestHide(t *testing.T) {
+func TestTradeDialogHide(t *testing.T) {
 	ui := NewTradeDialogUI(0, 0, 400, 300)
 	ui.ShowProposal("Alice", "Bob", nil, nil, false)
 
@@ -75,7 +75,7 @@ func TestHide(t *testing.T) {
 	}
 }
 
-func TestToggleSelection(t *testing.T) {
+func TestTradeDialogToggleSelection(t *testing.T) {
 	ui := NewTradeDialogUI(0, 0, 400, 300)
 	ui.ShowProposal("Alice", "Bob", nil, nil, false)
 
@@ -94,7 +94,7 @@ func TestToggleSelection(t *testing.T) {
 	}
 }
 
-func TestGetSelectedAction(t *testing.T) {
+func TestTradeDialogGetSelectedAction(t *testing.T) {
 	ui := NewTradeDialogUI(0, 0, 400, 300)
 	ui.ShowProposal("Alice", "Bob", nil, nil, false)
 
@@ -289,7 +289,7 @@ func BenchmarkShowProposal(b *testing.B) {
 	}
 }
 
-func BenchmarkUpdate(b *testing.B) {
+func BenchmarkTradeDialogUpdate(b *testing.B) {
 	ui := NewTradeDialogUI(0, 0, 400, 300)
 	ui.ShowProposal("Alice", "Bob", nil, nil, false)
 

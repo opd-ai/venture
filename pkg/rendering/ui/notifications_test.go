@@ -270,7 +270,7 @@ func TestSplitWords(t *testing.T) {
 	}
 }
 
-func TestWrapText(t *testing.T) {
+func TestNotificationWrapText(t *testing.T) {
 	nm := NewNotificationManager(0, 0, 300)
 
 	tests := []struct {
@@ -347,7 +347,7 @@ func BenchmarkAddNotification(b *testing.B) {
 	}
 }
 
-func BenchmarkUpdate(b *testing.B) {
+func BenchmarkNotificationUpdate(b *testing.B) {
 	nm := NewNotificationManager(0, 0, 300)
 	for i := 0; i < 5; i++ {
 		nm.AddInfo("Test message")

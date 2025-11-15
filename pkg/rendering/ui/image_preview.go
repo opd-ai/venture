@@ -86,8 +86,8 @@ func (ui *ImagePreviewUI) ShowThumbnail(senderName string, timestamp time.Time, 
 	ui.ConfirmSelected = true
 }
 
-// ShowFullImage displays the downloaded full image.
-func (ui *ImagePreviewUI) ShowFullImage(fullImage *ebiten.Image) {
+// DisplayFullImage displays the downloaded full image.
+func (ui *ImagePreviewUI) DisplayFullImage(fullImage *ebiten.Image) {
 	ui.FullImage = fullImage
 	ui.ShowFullImage = true
 	ui.DownloadProgress = 1.0

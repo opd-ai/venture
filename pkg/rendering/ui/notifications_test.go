@@ -387,6 +387,3 @@ func BenchmarkSplitWords(b *testing.B) {
 		_ = splitWords(message)
 	}
 }
-
-
-

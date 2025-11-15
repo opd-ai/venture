@@ -7,9 +7,29 @@ import (
 	"time"
 )
 
+// startMessageConsumer starts a goroutine to consume messages from the chat manager's queue.
+// This simulates the network layer processing and sending messages.
+// Returns a done channel that should be closed when the test completes.
+func startMessageConsumer(cm *ChatManager) chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-cm.messageQueue:
+				// Consume message (simulating network layer sending it)
+			case <-done:
+				return
+			}
+		}
+	}()
+	return done
+}
+
 // TestChatIntegrationE2E tests end-to-end chat message flow with encryption
 func TestChatIntegrationE2E(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 
 	// Setup two players with encryption
 	params := DefaultDHParams()
@@ -78,6 +98,8 @@ func TestChatIntegrationLatencySimulation(t *testing.T) {
 	for _, latency := range latencies {
 		t.Run(latency.String(), func(t *testing.T) {
 			cm := NewChatManager()
+			done := startMessageConsumer(cm)
+			defer close(done)
 			cm.ackTimeout = latency + 1*time.Second // Timeout longer than latency
 
 			encKey := DeriveAESKey(big.NewInt(123))
@@ -215,6 +237,8 @@ func TestChatIntegrationPacketLoss(t *testing.T) {
 // TestChatIntegrationReorderinghandling tests message reordering tolerance
 func TestChatIntegrationMessageReordering(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	encKey := DeriveAESKey(big.NewInt(789))
 	cm.AddPlayer(1, Vector2{}, encKey)
 
@@ -254,6 +278,8 @@ func TestChatIntegrationMessageReordering(t *testing.T) {
 // TestChatIntegrationDuplicateDetection tests duplicate message handling
 func TestChatIntegrationDuplicateDetection(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	encKey := DeriveAESKey(big.NewInt(101112))
 	cm.AddPlayer(1, Vector2{}, encKey)
 
@@ -282,6 +308,8 @@ func TestChatIntegrationDuplicateDetection(t *testing.T) {
 // TestChatIntegrationRangeValidation tests local chat range enforcement
 func TestChatIntegrationRangeValidation(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	encKey := DeriveAESKey(big.NewInt(131415))
 
 	// Setup players at different distances
@@ -324,6 +352,8 @@ func TestChatIntegrationRangeValidation(t *testing.T) {
 // TestChatIntegrationMultiplePlayers tests chat with multiple concurrent players
 func TestChatIntegrationMultiplePlayers(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	playerCount := 50
 
 	// Register 50 players
@@ -360,6 +390,21 @@ func TestChatIntegrationMultiplePlayers(t *testing.T) {
 // TestChatIntegrationThroughput tests message throughput
 func TestChatIntegrationThroughput(t *testing.T) {
 	cm := NewChatManager()
+
+	// Start goroutine to consume messages from the queue
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-cm.messageQueue:
+				// Consume message (simulating network layer sending it)
+			case <-done:
+				return
+			}
+		}
+	}()
+	defer close(done)
+
 	encKey := DeriveAESKey(big.NewInt(161718))
 	cm.AddPlayer(1, Vector2{}, encKey)
 
@@ -399,6 +444,8 @@ func TestChatIntegrationThroughput(t *testing.T) {
 // TestChatIntegrationProfanityFiltering tests profanity filter integration
 func TestChatIntegrationProfanityFiltering(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	pf := NewProfanityFilter()
 	pf.Enable()
 
@@ -427,6 +474,8 @@ func TestChatIntegrationProfanityFiltering(t *testing.T) {
 // TestChatIntegrationMaxRetryFailure tests message failure after max retries
 func TestChatIntegrationMaxRetryFailure(t *testing.T) {
 	cm := NewChatManager()
+	done := startMessageConsumer(cm)
+	defer close(done)
 	cm.maxRetries = 2
 
 	encKey := DeriveAESKey(big.NewInt(222324))

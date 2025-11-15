@@ -257,9 +257,11 @@ func (c *ChatComponent) GetEffectiveRadius() float64 {
 type TradeProposal struct {
 	ProposerID     uint64
 	RecipientID    uint64
-	OfferedItems   []uint64
-	RequestedItems []uint64
-	Status         string // "pending", "accepted", "rejected"
+	OfferedItems   []string // Item IDs (strings, not uint64)
+	RequestedItems []string // Item IDs (strings, not uint64)
+	Status         string   // "pending", "accepted", "rejected", "committed", "cancelled", "failed"
+	ProposalTime   int64    // Unix timestamp when proposed
+	FailureReason  string   // Reason for failure/cancellation
 }
 
 // TradeRecord represents a completed trade

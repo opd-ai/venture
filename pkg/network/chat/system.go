@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
 )
@@ -38,8 +39,8 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		SenderID:  senderID,
 		Channel:   channel,
 		Content:   content,
-		Timestamp: 0,     // Timestamp implementation tracked in docs/TODO_TRACKING.md
-		Encrypted: false, // E2E encryption tracked in docs/TODO_TRACKING.md
+		Timestamp: time.Time{}, // Timestamp implementation tracked in docs/TODO_TRACKING.md
+		Encrypted: nil,         // E2E encryption tracked in docs/TODO_TRACKING.md
 	}
 
 	// Add to sender's chat component

@@ -51,7 +51,7 @@ func SpawnVehiclesInTerrain(world *World, terr *terrain.Terrain, vehicles []Vehi
 
 	// Shuffle rooms
 	rng.Shuffle(len(availableRooms), func(i, j int) {
-		availableRooms[i], availableRooms[j] = availableRooms[i], availableRooms[j]
+		availableRooms[i], availableRooms[j] = availableRooms[j], availableRooms[i]
 	})
 
 	spawned := 0

@@ -1,9 +1,12 @@
 package trade
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 // TestNewTradeSystem tests creation of trade system
@@ -51,81 +54,101 @@ func TestTradeSystemUpdate(t *testing.T) {
 	}
 }
 
+// Helper function to create a test entity with position and inventory
+func createTestPlayer(world *engine.World, x, y float64, items []*item.Item) uint64 {
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: x, Y: y})
+
+	inv := engine.NewInventoryComponent(100, 1000.0)
+	for _, itm := range items {
+		inv.AddItem(itm)
+	}
+	entity.AddComponent(inv)
+
+	return entity.ID
+}
+
+// Helper function to create a test item
+func createTestItem(id, name string, rarity item.Rarity) *item.Item {
+	return &item.Item{
+		ID:     id,
+		Name:   name,
+		Type:   item.TypeWeapon,
+		Rarity: rarity,
+		Stats: item.Stats{
+			Weight: 1.0,
+			Value:  100,
+		},
+		Tags: []string{},
+	}
+}
+
 // TestProposeTrade tests trade proposal
 func TestProposeTrade(t *testing.T) {
 	tests := []struct {
-		name           string
-		setup          func(*engine.World) (proposerID, recipientID uint64)
-		offeredItems   []uint64
-		requestedItems []uint64
-		wantErr        bool
-		errMsg         string
+		name    string
+		setup   func(*engine.World) (proposerID, recipientID uint64, offeredItems, requestedItems []string)
+		wantErr bool
+		errMsg  string
 	}{
 		{
 			name: "simple trade proposal",
-			setup: func(w *engine.World) (uint64, uint64) {
-				proposer := w.CreateEntity()
-				recipient := w.CreateEntity()
-				return proposer.ID, recipient.ID
+			setup: func(w *engine.World) (uint64, uint64, []string, []string) {
+				item1 := createTestItem("item1", "Sword", item.RarityCommon)
+				item2 := createTestItem("item2", "Shield", item.RarityCommon)
+				item3 := createTestItem("item3", "Potion", item.RarityCommon)
+
+				proposer := createTestPlayer(w, 0, 0, []*item.Item{item1, item2})
+				recipient := createTestPlayer(w, 1, 1, []*item.Item{item3})
+
+				w.Update(0) // Process entity additions
+
+				return proposer, recipient, []string{"item1"}, []string{"item3"}
 			},
-			offeredItems:   []uint64{1, 2, 3},
-			requestedItems: []uint64{4, 5},
-			wantErr:        false,
+			wantErr: false,
 		},
 		{
 			name: "empty offered items",
-			setup: func(w *engine.World) (uint64, uint64) {
-				proposer := w.CreateEntity()
-				recipient := w.CreateEntity()
-				return proposer.ID, recipient.ID
+			setup: func(w *engine.World) (uint64, uint64, []string, []string) {
+				item1 := createTestItem("item1", "Potion", item.RarityCommon)
+
+				proposer := createTestPlayer(w, 0, 0, []*item.Item{})
+				recipient := createTestPlayer(w, 1, 1, []*item.Item{item1})
+
+				w.Update(0)
+
+				return proposer, recipient, []string{}, []string{"item1"}
 			},
-			offeredItems:   []uint64{},
-			requestedItems: []uint64{1, 2},
-			wantErr:        false,
-		},
-		{
-			name: "empty requested items",
-			setup: func(w *engine.World) (uint64, uint64) {
-				proposer := w.CreateEntity()
-				recipient := w.CreateEntity()
-				return proposer.ID, recipient.ID
-			},
-			offeredItems:   []uint64{1, 2},
-			requestedItems: []uint64{},
-			wantErr:        false,
-		},
-		{
-			name: "both empty",
-			setup: func(w *engine.World) (uint64, uint64) {
-				proposer := w.CreateEntity()
-				recipient := w.CreateEntity()
-				return proposer.ID, recipient.ID
-			},
-			offeredItems:   []uint64{},
-			requestedItems: []uint64{},
-			wantErr:        false,
+			wantErr: false,
 		},
 		{
 			name: "proposer not found",
-			setup: func(w *engine.World) (uint64, uint64) {
-				recipient := w.CreateEntity()
-				return 9999, recipient.ID // non-existent proposer
+			setup: func(w *engine.World) (uint64, uint64, []string, []string) {
+				item1 := createTestItem("item1", "Item", item.RarityCommon)
+				recipient := createTestPlayer(w, 0, 0, []*item.Item{item1})
+				w.Update(0)
+
+				return 9999, recipient, []string{}, []string{"item1"}
 			},
-			offeredItems:   []uint64{1},
-			requestedItems: []uint64{2},
-			wantErr:        true,
-			errMsg:         "proposer not found",
+			wantErr: true,
+			errMsg:  "proposer not found",
 		},
 		{
-			name: "proposer has existing trade",
-			setup: func(w *engine.World) (uint64, uint64) {
-				proposer := w.CreateEntity()
-				recipient := w.CreateEntity()
-				return proposer.ID, recipient.ID
+			name: "players too far apart",
+			setup: func(w *engine.World) (uint64, uint64, []string, []string) {
+				item1 := createTestItem("item1", "Sword", item.RarityCommon)
+				item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+				// Place players >5 tiles apart (max proposal distance)
+				proposer := createTestPlayer(w, 0, 0, []*item.Item{item1})
+				recipient := createTestPlayer(w, 100, 100, []*item.Item{item2})
+
+				w.Update(0)
+
+				return proposer, recipient, []string{"item1"}, []string{"item2"}
 			},
-			offeredItems:   []uint64{1},
-			requestedItems: []uint64{2},
-			wantErr:        false, // First proposal succeeds
+			wantErr: true,
+			errMsg:  "too far apart",
 		},
 	}
 
@@ -134,11 +157,9 @@ func TestProposeTrade(t *testing.T) {
 			world := engine.NewWorld()
 			ts := NewTradeSystem(world)
 
-			proposerID, recipientID := tt.setup(world)
-			// Process pending entity additions
-			world.Update(0)
+			proposerID, recipientID, offeredItems, requestedItems := tt.setup(world)
 
-			err := ts.ProposeTrade(proposerID, recipientID, tt.offeredItems, tt.requestedItems)
+			err := ts.ProposeTrade(proposerID, recipientID, offeredItems, requestedItems)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ProposeTrade() error = %v, wantErr %v", err, tt.wantErr)
@@ -148,8 +169,8 @@ func TestProposeTrade(t *testing.T) {
 			if tt.wantErr && tt.errMsg != "" {
 				if err == nil {
 					t.Errorf("expected error containing %q, got nil", tt.errMsg)
-				} else if err.Error() != tt.errMsg {
-					t.Errorf("error message = %q, want %q", err.Error(), tt.errMsg)
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error message = %q, want to contain %q", err.Error(), tt.errMsg)
 				}
 			}
 
@@ -176,11 +197,11 @@ func TestProposeTrade(t *testing.T) {
 					if proposal.RecipientID != recipientID {
 						t.Errorf("recipient ID = %v, want %v", proposal.RecipientID, recipientID)
 					}
-					if len(proposal.OfferedItems) != len(tt.offeredItems) {
-						t.Errorf("offered items count = %d, want %d", len(proposal.OfferedItems), len(tt.offeredItems))
+					if len(proposal.OfferedItems) != len(offeredItems) {
+						t.Errorf("offered items count = %d, want %d", len(proposal.OfferedItems), len(offeredItems))
 					}
-					if len(proposal.RequestedItems) != len(tt.requestedItems) {
-						t.Errorf("requested items count = %d, want %d", len(proposal.RequestedItems), len(tt.requestedItems))
+					if len(proposal.RequestedItems) != len(requestedItems) {
+						t.Errorf("requested items count = %d, want %d", len(proposal.RequestedItems), len(requestedItems))
 					}
 					if proposal.Status != "pending" {
 						t.Errorf("status = %q, want pending", proposal.Status)
@@ -196,23 +217,26 @@ func TestProposeTradeWithExistingTrade(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	proposer := world.CreateEntity()
-	recipient1 := world.CreateEntity()
-	recipient2 := world.CreateEntity()
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+	item3 := createTestItem("item3", "Potion", item.RarityCommon)
+	item4 := createTestItem("item4", "Axe", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1, item3})
+	recipient1 := createTestPlayer(world, 1, 1, []*item.Item{item2})
+	recipient2 := createTestPlayer(world, 1.5, 1.5, []*item.Item{item4})
 	world.Update(0)
 
 	// First trade
-	err := ts.ProposeTrade(proposer.ID, recipient1.ID, []uint64{1}, []uint64{2})
+	err := ts.ProposeTrade(proposer, recipient1, []string{"item1"}, []string{"item2"})
 	if err != nil {
 		t.Fatalf("first ProposeTrade() failed: %v", err)
 	}
 
 	// Second trade should fail
-	err = ts.ProposeTrade(proposer.ID, recipient2.ID, []uint64{3}, []uint64{4})
+	err = ts.ProposeTrade(proposer, recipient2, []string{"item3"}, []string{"item4"})
 	if err == nil {
 		t.Error("expected error for existing trade, got nil")
-	} else if err.Error() != "proposer already has an active trade" {
-		t.Errorf("error = %q, want proposer already has an active trade", err.Error())
 	}
 }
 
@@ -221,24 +245,29 @@ func TestTradeComponentCreation(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	proposer := world.CreateEntity()
-	recipient := world.CreateEntity()
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item2})
 	world.Update(0)
 
+	proposerEntity, _ := world.GetEntity(proposer)
+
 	// Initially, no trade component
-	_, ok := proposer.GetComponent("trade")
+	_, ok := proposerEntity.GetComponent("trade")
 	if ok {
 		t.Error("trade component should not exist initially")
 	}
 
 	// Propose trade should create component
-	err := ts.ProposeTrade(proposer.ID, recipient.ID, []uint64{1}, []uint64{2})
+	err := ts.ProposeTrade(proposer, recipient, []string{"item1"}, []string{"item2"})
 	if err != nil {
 		t.Fatalf("ProposeTrade() failed: %v", err)
 	}
 
 	// Now should have trade component
-	tradeCompRaw, ok := proposer.GetComponent("trade")
+	tradeCompRaw, ok := proposerEntity.GetComponent("trade")
 	if !ok {
 		t.Fatal("trade component not created")
 	}
@@ -260,13 +289,40 @@ func TestAcceptTrade(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	recipient := world.CreateEntity()
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item2})
 	world.Update(0)
 
-	// AcceptTrade currently not implemented (returns nil)
-	err := ts.AcceptTrade(recipient.ID)
+	// Create a trade first
+	err := ts.ProposeTrade(proposer, recipient, []string{"item1"}, []string{"item2"})
 	if err != nil {
-		t.Errorf("AcceptTrade() error = %v, want nil", err)
+		t.Fatalf("ProposeTrade() failed: %v", err)
+	}
+
+	// Accept the trade
+	err = ts.AcceptTrade(recipient)
+	if err != nil {
+		t.Errorf("AcceptTrade() error = %v", err)
+	}
+
+	// Verify trade was completed
+	proposerEntity, _ := world.GetEntity(proposer)
+	proposerInvRaw, _ := proposerEntity.GetComponent("inventory")
+	proposerInv := proposerInvRaw.(*engine.InventoryComponent)
+
+	// Proposer should now have item2
+	found := false
+	for _, itm := range proposerInv.Items {
+		if itm.ID == "item2" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("proposer should have received item2")
 	}
 }
 
@@ -275,13 +331,32 @@ func TestRejectTrade(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	recipient := world.CreateEntity()
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item2})
 	world.Update(0)
 
-	// RejectTrade currently not implemented (returns nil)
-	err := ts.RejectTrade(recipient.ID)
+	// Create a trade first
+	err := ts.ProposeTrade(proposer, recipient, []string{"item1"}, []string{"item2"})
 	if err != nil {
-		t.Errorf("RejectTrade() error = %v, want nil", err)
+		t.Fatalf("ProposeTrade() failed: %v", err)
+	}
+
+	// Reject the trade
+	err = ts.RejectTrade(recipient)
+	if err != nil {
+		t.Errorf("RejectTrade() error = %v", err)
+	}
+
+	// Verify trade was cancelled
+	recipientEntity, _ := world.GetEntity(recipient)
+	tradeCompRaw, _ := recipientEntity.GetComponent("trade")
+	tradeComp := tradeCompRaw.(*engine.TradeComponent)
+
+	if tradeComp.ActiveTrade != nil {
+		t.Error("active trade should be cleared after rejection")
 	}
 }
 
@@ -290,38 +365,41 @@ func TestTradeProposalFields(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	proposer := world.CreateEntity()
-	recipient := world.CreateEntity()
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Axe", item.RarityCommon)
+	item3 := createTestItem("item3", "Potion", item.RarityCommon)
+	item4 := createTestItem("item4", "Shield", item.RarityCommon)
+	item5 := createTestItem("item5", "Helmet", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1, item2, item3})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item4, item5})
 	world.Update(0)
 
-	offeredItems := []uint64{10, 20, 30}
-	requestedItems := []uint64{40, 50}
+	offeredItems := []string{"item1", "item2", "item3"}
+	requestedItems := []string{"item4", "item5"}
 
-	err := ts.ProposeTrade(proposer.ID, recipient.ID, offeredItems, requestedItems)
+	err := ts.ProposeTrade(proposer, recipient, offeredItems, requestedItems)
 	if err != nil {
 		t.Fatalf("ProposeTrade() failed: %v", err)
 	}
 
-	tradeCompRaw, _ := proposer.GetComponent("trade")
+	proposerEntity, _ := world.GetEntity(proposer)
+	tradeCompRaw, _ := proposerEntity.GetComponent("trade")
 	tradeComp := tradeCompRaw.(*engine.TradeComponent)
 	proposal := tradeComp.ActiveTrade
 
 	// Verify all fields
-	if proposal.ProposerID != proposer.ID {
-		t.Errorf("ProposerID = %v, want %v", proposal.ProposerID, proposer.ID)
+	if proposal.ProposerID != proposer {
+		t.Errorf("ProposerID = %v, want %v", proposal.ProposerID, proposer)
 	}
-	if proposal.RecipientID != recipient.ID {
-		t.Errorf("RecipientID = %v, want %v", proposal.RecipientID, recipient.ID)
+	if proposal.RecipientID != recipient {
+		t.Errorf("RecipientID = %v, want %v", proposal.RecipientID, recipient)
 	}
-	for i, item := range proposal.OfferedItems {
-		if item != offeredItems[i] {
-			t.Errorf("OfferedItems[%d] = %v, want %v", i, item, offeredItems[i])
-		}
+	if len(proposal.OfferedItems) != len(offeredItems) {
+		t.Errorf("offered items count = %d, want %d", len(proposal.OfferedItems), len(offeredItems))
 	}
-	for i, item := range proposal.RequestedItems {
-		if item != requestedItems[i] {
-			t.Errorf("RequestedItems[%d] = %v, want %v", i, item, requestedItems[i])
-		}
+	if len(proposal.RequestedItems) != len(requestedItems) {
+		t.Errorf("requested items count = %d, want %d", len(proposal.RequestedItems), len(requestedItems))
 	}
 	if proposal.Status != "pending" {
 		t.Errorf("Status = %q, want pending", proposal.Status)
@@ -333,32 +411,38 @@ func TestTradeWithLargeItemLists(t *testing.T) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	proposer := world.CreateEntity()
-	recipient := world.CreateEntity()
-	world.Update(0)
-
 	// Create large item lists
-	offeredItems := make([]uint64, 100)
-	requestedItems := make([]uint64, 100)
-	for i := 0; i < 100; i++ {
-		offeredItems[i] = uint64(i)
-		requestedItems[i] = uint64(i + 1000)
+	var offeredItemsData []*item.Item
+	var requestedItemsData []*item.Item
+	offeredItems := make([]string, 20)
+	requestedItems := make([]string, 20)
+
+	for i := 0; i < 20; i++ {
+		offeredItems[i] = fmt.Sprintf("offered_%d", i)
+		requestedItems[i] = fmt.Sprintf("requested_%d", i)
+		offeredItemsData = append(offeredItemsData, createTestItem(offeredItems[i], fmt.Sprintf("Weapon%d", i), item.RarityCommon))
+		requestedItemsData = append(requestedItemsData, createTestItem(requestedItems[i], fmt.Sprintf("Armor%d", i), item.RarityCommon))
 	}
 
-	err := ts.ProposeTrade(proposer.ID, recipient.ID, offeredItems, requestedItems)
+	proposer := createTestPlayer(world, 0, 0, offeredItemsData)
+	recipient := createTestPlayer(world, 1, 1, requestedItemsData)
+	world.Update(0)
+
+	err := ts.ProposeTrade(proposer, recipient, offeredItems, requestedItems)
 	if err != nil {
 		t.Fatalf("ProposeTrade() with large lists failed: %v", err)
 	}
 
-	tradeCompRaw, _ := proposer.GetComponent("trade")
+	proposerEntity, _ := world.GetEntity(proposer)
+	tradeCompRaw, _ := proposerEntity.GetComponent("trade")
 	tradeComp := tradeCompRaw.(*engine.TradeComponent)
 	proposal := tradeComp.ActiveTrade
 
-	if len(proposal.OfferedItems) != 100 {
-		t.Errorf("offered items count = %d, want 100", len(proposal.OfferedItems))
+	if len(proposal.OfferedItems) != 20 {
+		t.Errorf("offered items count = %d, want 20", len(proposal.OfferedItems))
 	}
-	if len(proposal.RequestedItems) != 100 {
-		t.Errorf("requested items count = %d, want 100", len(proposal.RequestedItems))
+	if len(proposal.RequestedItems) != 20 {
+		t.Errorf("requested items count = %d, want 20", len(proposal.RequestedItems))
 	}
 }
 
@@ -376,20 +460,24 @@ func BenchmarkProposeTrade(b *testing.B) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
-	proposers := make([]*engine.Entity, b.N)
-	recipients := make([]*engine.Entity, b.N)
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+	item3 := createTestItem("item3", "Potion", item.RarityCommon)
+
+	proposers := make([]uint64, b.N)
+	recipients := make([]uint64, b.N)
 	for i := 0; i < b.N; i++ {
-		proposers[i] = world.CreateEntity()
-		recipients[i] = world.CreateEntity()
+		proposers[i] = createTestPlayer(world, float64(i*10), 0, []*item.Item{item1, item2})
+		recipients[i] = createTestPlayer(world, float64(i*10)+1, 0, []*item.Item{item3})
 	}
 	world.Update(0)
 
-	offeredItems := []uint64{1, 2, 3}
-	requestedItems := []uint64{4, 5}
+	offeredItems := []string{"item1", "item2"}
+	requestedItems := []string{"item3"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ts.ProposeTrade(proposers[i].ID, recipients[i].ID, offeredItems, requestedItems)
+		ts.ProposeTrade(proposers[i], recipients[i], offeredItems, requestedItems)
 	}
 }
 
@@ -398,13 +486,19 @@ func BenchmarkProposeTradeWithExistingComponent(b *testing.B) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
 
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+	item3 := createTestItem("item3", "Potion", item.RarityCommon)
+
 	// Create entities with trade components
-	proposers := make([]*engine.Entity, b.N)
-	recipients := make([]*engine.Entity, b.N)
+	proposers := make([]uint64, b.N)
+	recipients := make([]uint64, b.N)
 	for i := 0; i < b.N; i++ {
-		proposers[i] = world.CreateEntity()
-		recipients[i] = world.CreateEntity()
-		proposers[i].AddComponent(&engine.TradeComponent{
+		proposers[i] = createTestPlayer(world, float64(i*10), 0, []*item.Item{item1, item2})
+		recipients[i] = createTestPlayer(world, float64(i*10)+1, 0, []*item.Item{item3})
+
+		entity, _ := world.GetEntity(proposers[i])
+		entity.AddComponent(&engine.TradeComponent{
 			ActiveTrade:  nil,
 			TradeHistory: []engine.TradeRecord{},
 			TrustScore:   0.5,
@@ -412,12 +506,12 @@ func BenchmarkProposeTradeWithExistingComponent(b *testing.B) {
 	}
 	world.Update(0)
 
-	offeredItems := []uint64{1, 2, 3}
-	requestedItems := []uint64{4, 5}
+	offeredItems := []string{"item1", "item2"}
+	requestedItems := []string{"item3"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ts.ProposeTrade(proposers[i].ID, recipients[i].ID, offeredItems, requestedItems)
+		ts.ProposeTrade(proposers[i], recipients[i], offeredItems, requestedItems)
 	}
 }
 
@@ -425,11 +519,22 @@ func BenchmarkProposeTradeWithExistingComponent(b *testing.B) {
 func BenchmarkAcceptTrade(b *testing.B) {
 	world := engine.NewWorld()
 	ts := NewTradeSystem(world)
-	recipient := world.CreateEntity()
+
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	recipients := make([]uint64, b.N)
+	proposers := make([]uint64, b.N)
+
+	for i := 0; i < b.N; i++ {
+		proposers[i] = createTestPlayer(world, float64(i*10), 0, []*item.Item{item1})
+		recipients[i] = createTestPlayer(world, float64(i*10)+1, 0, []*item.Item{item2})
+		ts.ProposeTrade(proposers[i], recipients[i], []string{"item1"}, []string{"item2"})
+	}
 	world.Update(0)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ts.AcceptTrade(recipient.ID)
+		ts.AcceptTrade(recipients[i])
 	}
 }

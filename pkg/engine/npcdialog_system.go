@@ -9,6 +9,7 @@ import (
 
 // NPCDialogSystem manages NPC conversations using Markov chain dialog generation.
 // This system initializes generators, processes player inputs, and generates responses.
+// It integrates with ConversationManager for multi-party conversation support.
 type NPCDialogSystem struct {
 	world *World
 
@@ -23,16 +24,20 @@ type NPCDialogSystem struct {
 
 	// worldSeed is the base seed for deterministic generation
 	worldSeed int64
+
+	// conversationManager handles multi-party conversations and turn-taking
+	conversationManager *ConversationManager
 }
 
 // NewNPCDialogSystem creates an NPC dialog system.
 func NewNPCDialogSystem(world *World, worldSeed int64) *NPCDialogSystem {
 	return &NPCDialogSystem{
-		world:          world,
-		corpusCache:    make(map[string]*dialog.Corpus),
-		generatorCache: make(map[string]*dialog.MarkovGenerator),
-		defaultOrder:   dialog.Order2, // Default to order 2 for good balance
-		worldSeed:      worldSeed,
+		world:               world,
+		corpusCache:         make(map[string]*dialog.Corpus),
+		generatorCache:      make(map[string]*dialog.MarkovGenerator),
+		defaultOrder:        dialog.Order2, // Default to order 2 for good balance
+		worldSeed:           worldSeed,
+		conversationManager: NewConversationManager(world),
 	}
 }
 
@@ -54,9 +59,17 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	// Get or create NPCDialogComponent
 	dialogComp := s.getOrCreateDialogComponent(entity, genreID, personality, seed)
 
-	// Check if generator already exists
+	// Check if generator already exists in component
 	if dialogComp.Generator != nil {
 		return nil // Already initialized
+	}
+
+	// Check if generator exists in cache
+	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
+	if cachedGen, exists := s.generatorCache[cacheKey]; exists {
+		// Use cached generator
+		dialogComp.Generator = cachedGen
+		return nil
 	}
 
 	// Get corpus for genre
@@ -70,7 +83,6 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	gen.TrainFromCorpus(corpus.Sentences)
 
 	// Cache generator
-	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
 	s.generatorCache[cacheKey] = gen
 
 	// Assign to component
@@ -299,4 +311,79 @@ func (s *NPCDialogSystem) GetResponseHistory(entity *Entity, n int) ([]string, e
 	}
 
 	return dialogComp.ResponseHistory[start:], nil
+}
+
+// StartMultiPartyConversation initializes a conversation with multiple players and an NPC.
+// Returns the conversation ID for tracking.
+func (s *NPCDialogSystem) StartMultiPartyConversation(npcID uint64, playerIDs []uint64) (string, error) {
+	conv, err := s.conversationManager.StartConversation(npcID, playerIDs)
+	if err != nil {
+		return "", fmt.Errorf("failed to start conversation: %w", err)
+	}
+
+	return conv.ID, nil
+}
+
+// QueuePlayerInput queues a player's dialog request to an NPC.
+// Returns a channel that will receive the NPC's response asynchronously.
+func (s *NPCDialogSystem) QueuePlayerInput(npcID uint64, playerID uint64, input string) (<-chan *DialogResponse, error) {
+	req, err := s.conversationManager.QueueDialogRequest(npcID, playerID, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return req.ResponseChan, nil
+}
+
+// ProcessQueuedDialogs processes pending dialog requests for all NPCs.
+// This should be called periodically (e.g., in Update loop).
+func (s *NPCDialogSystem) ProcessQueuedDialogs(deltaTime float64) {
+	// Get all NPCs with dialog queues
+	s.conversationManager.mu.RLock()
+	npcIDs := make([]uint64, 0, len(s.conversationManager.npcQueues))
+	for npcID := range s.conversationManager.npcQueues {
+		npcIDs = append(npcIDs, npcID)
+	}
+	s.conversationManager.mu.RUnlock()
+
+	// Process each NPC's queue
+	for _, npcID := range npcIDs {
+		req, err := s.conversationManager.ProcessNextDialogRequest(npcID)
+		if err != nil || req == nil {
+			continue
+		}
+
+		// Get NPC entity
+		npcEntity, ok := s.world.GetEntity(npcID)
+		if !ok || npcEntity == nil {
+			s.conversationManager.CompleteDialogRequest(npcID, req.RequestID, "", fmt.Errorf("NPC entity not found"))
+			continue
+		}
+
+		// Generate response
+		response, err := s.GenerateResponse(npcEntity, req.PlayerInput)
+
+		// Complete request
+		s.conversationManager.CompleteDialogRequest(npcID, req.RequestID, response, err)
+	}
+}
+
+// GetDialogQueueStatus returns the status of an NPC's dialog queue.
+func (s *NPCDialogSystem) GetDialogQueueStatus(npcID uint64) (queueSize int, hasActive bool, err error) {
+	return s.conversationManager.GetDialogQueueStatus(npcID)
+}
+
+// GetConversationMessages retrieves all messages in a conversation.
+func (s *NPCDialogSystem) GetConversationMessages(convID string) ([]ConversationMessage, error) {
+	return s.conversationManager.GetConversationMessages(convID)
+}
+
+// AddConversationMessage adds a message to a conversation (for tracking multi-party chat).
+func (s *NPCDialogSystem) AddConversationMessage(convID string, senderID uint64, senderName string, content string) error {
+	return s.conversationManager.AddMessage(convID, senderID, senderName, content)
+}
+
+// CleanupStaleConversations removes inactive conversations (called periodically).
+func (s *NPCDialogSystem) CleanupStaleConversations() int {
+	return s.conversationManager.CleanupStaleConversations()
 }

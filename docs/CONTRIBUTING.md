@@ -390,7 +390,7 @@ When contributing performance improvements, always profile first and focus on co
 - [API Reference](API_REFERENCE.md) - API documentation with code examples
 - [Architecture](ARCHITECTURE.md) - Architectural decisions and patterns
 - [Technical Specification](TECHNICAL_SPEC.md) - Complete technical details
-- [Roadmap](ROADMAP.md) - Development phases and progress
+- [Roadmap V4](ROADMAP_V4.md) - Current development phases and progress (V4.0 Gameplay Expansion)
 
 ---
 

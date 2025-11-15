@@ -93,6 +93,8 @@ type systemsContainer struct {
 	expressionComboSys      *engine.ExpressionComboSystem
 	miniGameSystem          *engine.MiniGameSystem
 	achievementSystem       *engine.AchievementSystem
+	// Phase 30: Environmental Storytelling
+	discoverySystem         *engine.DiscoverySystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -249,8 +251,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
 
+	// Phase 30: Environmental Storytelling - Discovery System
+	sys.discoverySystem = engine.NewDiscoverySystem(game.World)
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, story discovery)")
 	}
 }
 
@@ -366,6 +371,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
+
+	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
+	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})
 }
 
 // configureSystemConnections wires up interdependent systems.
@@ -657,6 +665,17 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	} else if *verbose {
 		clientLogger.WithField("bookshelfCount", bookshelfCount).Info("spawned bookshelves")
 	}
+
+	// Spawn story fragments (Phase 30: Environmental Storytelling)
+	if *verbose {
+		clientLogger.Info("spawning story fragments in dungeon")
+	}
+	fragmentCount, err := spawnStoryFragments(game.World, generatedTerrain, *seed+seedOffsetStory, params, clientLogger)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn story fragments")
+	} else if *verbose {
+		clientLogger.WithField("fragmentCount", fragmentCount).Info("spawned story fragments")
+	}
 }
 
 // spawnEnvironmentalEffects spawns lights and weather effects.
@@ -894,6 +913,9 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 		ExpressionCount:  0,
 		UniqueExpression: make(map[engine.ExpressionType]int),
 	})
+
+	// Add story journal for fragment discovery (Phase 30)
+	player.AddComponent(engine.NewStoryJournalComponent())
 
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")
@@ -1224,6 +1246,15 @@ func cleanupNetworkClient(networkClient interface{}, clientLogger *logrus.Entry)
 			clientLogger.WithError(err).Warn("error disconnecting")
 		}
 	}
+}
+
+// discoverySystemWrapper adapts DiscoverySystem to the System interface.
+type discoverySystemWrapper struct {
+	system *engine.DiscoverySystem
+}
+
+func (w *discoverySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
 }
 
 // runGameLoop starts the main game loop.

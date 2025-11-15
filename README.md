@@ -21,9 +21,17 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Version:** 3.0.0 Production ✅
+**Current Version:** 3.0.0 Production ✅  
+**In Development:** V4.0 Gameplay Expansion (Phases 21-29 complete) & V5.0 Social Systems (Phase 21 complete)
 
 Version 3.0 elevates procedurally generated visuals to rival hand-crafted games while maintaining zero external assets. All core features implemented, tested, and production-ready. Phases 1-20 complete. See [Development Roadmap](docs/ROADMAP_V3.md) for detailed progress and milestones.
+
+**Version 4.0 Progress (Gameplay Expansion):**
+- ✅ **Phases 21-29 Complete**: Vehicle System, Pet/Companion System, In-Game Books & Lore, Expanded Magic System, Character Classes, Expression System, Mini-Game System, Reputation & Alignment, Adaptive Soundtrack
+- ⏳ **Phase 30 In Planning**: Environmental Storytelling
+
+**Version 5.0 Progress (Social Systems & Multiplayer Messaging):**
+- ✅ **Phase 21 Complete**: Chat System Foundation with E2E encryption, ACK/NACK reliability, profanity filtering, and chat UI
 
 ### Version 3.0.0 Achievements
 
@@ -187,7 +195,6 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 - **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
 - **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
 - **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
-- **[GAPS](docs/GAPS.md)** - Identified gaps and planned improvements
 - **[Release Notes V1.1](docs/RELEASE_NOTES_V1.1.md)** - Version 1.1 release notes
 
 ## Contributing

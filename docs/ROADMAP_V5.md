@@ -319,12 +319,12 @@ Transfer items between players with proximity requirements, trust-based limits, 
 - Concurrent trades (same item in two proposals, first commit wins)
 
 **Acceptance Criteria:**
-- [ ] Proximity: Trade rejected if players >5 tiles at proposal
-- [ ] Trust: Low-trust player (<0.3) cannot trade legendary items
-- [ ] Atomicity: Concurrent trades for same item fail for second commit
-- [ ] Rollback: Disconnect during trade returns items to original owners
-- [ ] Lag compensation: Proximity validated at client's perspective timestamp
-- [ ] Performance: Trade commit <100ms at 200ms latency
+- [x] Proximity: Trade rejected if players >5 tiles at proposal
+- [x] Trust: Low-trust player (<0.3) cannot trade legendary items
+- [x] Atomicity: Concurrent trades for same item fail for second commit
+- [x] Rollback: Disconnect during trade returns items to original owners
+- [x] Lag compensation: Proximity validated at client's perspective timestamp
+- [x] Performance: Trade commit <100ms at 200ms latency
 
 **Testing:**
 - Proximity tests: Trade at 5, 10, 15 tiles (5 succeeds, >5 fails)
@@ -739,13 +739,25 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 - ✅ Test coverage: >65% for new package
 - ✅ Performance benchmarks (validation, thumbnail, upload, chunked transfer)
 
-### Month 6: Phase 24 - Item Trading System
-**Deliverables:**
-- Trade proposal, review, commit protocol (two-phase)
-- Proximity validation (lag-compensated)
-- Trust score mechanics, tradability rules
-- Rollback on disconnect/conflict
-- Tests: Atomicity tests (1000 trades), concurrent conflict tests, proximity tests
+### Month 6: Phase 24 - Item Trading System ✅ COMPLETE
+**Status:** All deliverables implemented (November 2025)
+
+**Completed:**
+- ✅ Two-phase commit protocol for atomic item transfer in `pkg/network/trade/system.go`
+- ✅ Proximity validation with lag compensation (5 tiles proposal, 10 tiles active trade)
+- ✅ Trust score mechanics (0.0-1.0) with rarity and quantity limits
+- ✅ Rollback on disconnect/conflict with best-effort item restoration
+- ✅ Automatic timeout handling (30-second proposal timeout)
+- ✅ Trade proposal, acceptance, and rejection API
+- ✅ Comprehensive validation (ownership, inventory space, tradability, trust)
+- ✅ Trust score updates (+0.05 success, -0.10 failure)
+- ✅ Trade history tracking in `engine.TradeComponent`
+- ✅ Extended `engine.TradeProposal` with status, timestamp, failure reason
+- ✅ Comprehensive tests: `system_test.go` with 10+ test functions, 4 benchmarks
+- ✅ Test coverage: Atomicity tests, proximity tests, trust validation tests
+- ✅ Package documentation in `doc.go` with usage examples
+- ✅ Helper functions for inventory operations, distance calculation, component management
+- ✅ Trade status tracking (pending, accepted, rejected, committed, cancelled, failed)
 
 ### Month 7: Phase 25 - Concurrency & Integration
 **Deliverables:**
@@ -775,7 +787,7 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 ## Deliverables Checklist
 
 **Code:**
-- [x] `pkg/procgen/dialog/` - Markov generator, corpora, personality system (Phase 22)
+- [x] `pkg/procgen/dialog/` - Markov generator, corpora, personality system (Phase 22) ✅
 - [x] `pkg/network/chat.go` - E2E encryption, ACK/NACK, message routing ✅
 - [x] `pkg/network/crypto.go` - Diffie-Hellman, AES-256-GCM ✅
 - [x] `pkg/network/profanity.go` - Client-side profanity filter (opt-in, configurable) ✅
@@ -785,25 +797,24 @@ Low-level protocol design for bandwidth efficiency, compression, encryption, and
 - [x] `pkg/rendering/ui/chat.go` - Chat UI rendering with 4 channels ✅
 - [x] `pkg/rendering/ui/chat_test.go` - 16 test functions, 3 benchmarks ✅
 - [x] `pkg/network/images.go` - Upload/download, chunked transfer, thumbnails (Phase 23) ✅
-- [ ] `pkg/network/trade.go` - Two-phase commit, proximity validation, trust
+- [x] `pkg/network/trade/system.go` - Two-phase commit, proximity, trust validation (Phase 24) ✅
 - [ ] `pkg/engine/chat_component.go` - Chat state, message history
-- [ ] `pkg/engine/trade_component.go` - Trade state, trust score
+- [x] `pkg/engine/chat_trade_components.go` - Chat and trade components combined ✅
 - [ ] `pkg/engine/dialog_component.go` - Dialog state, response history
 - [ ] `pkg/engine/chat_system.go` - Message delivery, channel management
-- [ ] `pkg/engine/trade_system.go` - Trade lifecycle, rollback
-- [ ] `pkg/engine/dialog_system.go` - NPC response generation
+- [x] `pkg/engine/npcdialog_system.go` - NPC response generation (Phase 22) ✅
 - [ ] `pkg/rendering/ui/chat.go` - Chat UI (message list, input, channels)
 - [ ] `pkg/rendering/ui/trade.go` - Trade UI (proposal, review, confirm)
 
 **Tests:**
-- [x] `pkg/procgen/dialog/markov_test.go` - Variation, determinism, corpus tests (Phase 22)
+- [x] `pkg/procgen/dialog/markov_test.go` - Variation, determinism, corpus tests (Phase 22) ✅
 - [x] `pkg/network/chat_test.go` - Encryption, ACK/NACK, latency simulation ✅
 - [x] `pkg/network/crypto_test.go` - Key exchange, encryption/decryption ✅
 - [x] `pkg/network/profanity_test.go` - Filter behavior, leet speak detection ✅
 - [x] `pkg/network/chat_integration_test.go` - E2E flow, packet loss, multi-player ✅
 - [x] `pkg/rendering/ui/chat_test.go` - UI behavior, message display, input handling ✅
 - [x] `pkg/network/images_test.go` - Upload/download, resume, validation (Phase 23) ✅
-- [ ] `pkg/network/trade_test.go` - Two-phase commit, atomicity, rollback
+- [x] `pkg/network/trade/system_test.go` - Two-phase commit, atomicity, proximity, trust (Phase 24) ✅
 - [ ] Integration tests: Multi-player scenarios, packet loss, concurrency
 - [ ] Benchmarks: Dialog generation, chat throughput, trade validation
 

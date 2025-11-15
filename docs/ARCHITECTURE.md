@@ -180,6 +180,83 @@ Implement comprehensive visual enhancement system across six phases (15-20):
 
 ---
 
+## ADR-007: V4.0 Gameplay Expansion Systems
+
+**Status:** Accepted
+
+**Context:**
+V3.0 delivered polished visual and audio systems. V4.0 expands gameplay depth with ten major systems (Phases 21-30) that add procedural vehicles, companions, books, advanced magic, character classes, social features, mini-games, reputation mechanics, adaptive music, and environmental storytelling.
+
+**Decision:**
+Implement comprehensive gameplay expansion across ten phases (21-30):
+- **Phase 21:** Vehicle System - Procedural vehicles with physics, fuel, durability, and combat
+- **Phase 22:** Companion System - AI companions with loyalty, inventory, progression, and skill inheritance
+- **Phase 23:** Book System - Procedural books with genre-specific content and reading mechanics
+- **Phase 24:** Expanded Magic System - Spell effects and combination system for diverse spellcasting
+- **Phase 25:** Class Progression - Character classes with specializations and unique abilities
+- **Phase 26:** Expression System - Player emotes, gestures, and achievement tracking
+- **Phase 27:** Mini-Game System - Embedded games (puzzles, dice, card games) within the world
+- **Phase 28:** Reputation System - Faction reputation with moral choices and alignment tracking
+- **Phase 29:** Adaptive Music System - Context-aware music that responds to gameplay events
+- **Phase 30:** Environmental Storytelling - Discoverable story fragments, branching narratives, and procedural archaeology
+
+**Implementation:**
+- **System Count:** 65 active systems in client (63 via registerAllSystems + 2 in main.go)
+- **Performance:** All V4 systems combined add <24% FPS impact (106 → ~80 FPS, well above 60 FPS minimum)
+- **Memory:** +48MB for V4 features (73MB → 121MB, <500MB budget with 379MB margin)
+- **Network:** +63KB/s per player (<100KB/s target)
+- **Coverage:** All V4 packages maintain ≥65% test coverage
+- **Determinism:** Vehicle/companion/book generation fully deterministic (seed-based), with controlled non-determinism for NPC dialog in V5.0
+
+**Key Systems:**
+1. **VehicleMovementSystem:** Physics-based vehicle movement with fuel consumption and terrain interaction
+2. **VehicleDurabilitySystem:** Damage tracking and repair mechanics
+3. **MountingSystem:** Player/NPC mounting and dismounting logic
+4. **VehicleCombatSystem:** Vehicle-mounted weapons and combat
+5. **CompanionAISystem:** Companion pathfinding, commands, and behavior
+6. **CompanionProgressionSystem:** Level-up and stat advancement for companions
+7. **CompanionLoyaltySystem:** Loyalty mechanics affecting companion behavior
+8. **CompanionInventorySystem:** Companion-specific inventory management
+9. **SkillInheritanceSystem:** Skill transfer from companion to player
+10. **BookReadingSystem:** Interactive book reading with progress tracking
+11. **SpellEffectSystem:** Visual and gameplay effects for spells
+12. **SpellCombinationSystem:** Combining spells for enhanced effects
+13. **ClassProgressionSystem:** Class-based abilities and progression paths
+14. **ExpressionSystem:** Player emote execution and display
+15. **MiniGameSystem:** Embedded game state management
+16. **ReputationSystem:** Faction standing and reputation tracking
+17. **MusicTriggerSystem:** Context-aware music transitions
+18. **DiscoverySystem:** Story fragment discovery and journal tracking
+
+**Multiplayer Integration:**
+- **V4 Components Synchronized:** VehicleComponent, CompanionComponent, MountComponent, AchievementComponent, ExpressionComponent, ClassProgressionComponent
+- **Serialization:** All synced components implement Serialize/Deserialize methods (17-29 bytes per component)
+- **Server Entity Spawning:** Server independently spawns vehicles, companions, and bookshelves for authoritative state
+- **Snapshot Extensions:** EntitySnapshot struct extended to include V4 component data
+- **Network Overhead:** Measured at 63KB/s per player (37KB/s margin under 100KB/s budget)
+
+**Performance Benchmarks:**
+- **VehicleCombatSystem:** 64.7µs per update (100 vehicles) = 15,445 ops/sec
+- **CompanionAISystem:** 1.88µs per update (50 companions) = 532,340 ops/sec  
+- **CompanionProgressionSystem:** 3.55µs per update (100 companions) = 281,768 ops/sec
+- **MiniGameSystem:** 0.22µs per update (20 games) = 4,595,018 ops/sec
+- **ExpressionSystem:** 0.89µs per update (100 expressions) = 1,121,076 ops/sec
+- **V4 Integrated Scenario:** 3.35µs per frame (30 vehicles + 10 companions + 5 games + 5 expressions) = 4,970x faster than 16.67ms budget
+
+**Consequences:**
+- **Positive:** Transforms Venture from action-RPG into deep gameplay experience with diverse systems
+- **Positive:** All V4 features maintain deterministic seed-based generation (except dialog in V5.0)
+- **Positive:** Performance targets exceeded (80+ FPS vs 60 FPS minimum, 4,970x headroom)
+- **Positive:** Multiplayer-compatible design with full network synchronization
+- **Positive:** Backward compatible with V3.0 saves (default values for new components)
+- **Positive:** 100% procedural content across all new features (zero external assets)
+- **Negative:** System complexity increased (41 → 65 systems in client)
+- **Mitigation:** Comprehensive testing (≥65% coverage), clear system boundaries, extensive documentation
+- **Negative:** Memory footprint increased (+48MB for V4 features)
+- **Mitigation:** Object pooling, sprite caching, lazy initialization where appropriate
+
+---
+
 ## Related Documentation
 
 For implementation details, development workflows, testing strategies, and code quality standards, see:

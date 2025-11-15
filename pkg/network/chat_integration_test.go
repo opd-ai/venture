@@ -138,6 +138,20 @@ func TestChatIntegrationPacketLoss(t *testing.T) {
 			cm := NewChatManager()
 			cm.ackTimeout = 200 * time.Millisecond
 
+			// Start goroutine to consume messages from the queue
+			done := make(chan struct{})
+			go func() {
+				for {
+					select {
+					case <-cm.messageQueue:
+						// Consume message (simulating network layer sending it)
+					case <-done:
+						return
+					}
+				}
+			}()
+			defer close(done)
+
 			encKey := DeriveAESKey(big.NewInt(456))
 			cm.AddPlayer(1, Vector2{}, encKey)
 

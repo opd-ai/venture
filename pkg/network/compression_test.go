@@ -10,7 +10,6 @@ func TestCompressMessage_BelowThreshold(t *testing.T) {
 	// Message below 100 bytes should not be compressed
 	shortMsg := []byte("Hello, world!")
 	compressed, wasCompressed, err := CompressMessage(shortMsg)
-
 	if err != nil {
 		t.Fatalf("CompressMessage failed: %v", err)
 	}

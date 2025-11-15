@@ -44,7 +44,7 @@ func NewBandwidthMonitor(windowSize time.Duration) *BandwidthMonitor {
 }
 
 // RecordSent records bytes sent for a player.
-func (bm *BandwidthMonitor) RecordSent(playerID uint64, bytes uint64) {
+func (bm *BandwidthMonitor) RecordSent(playerID, bytes uint64) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 
@@ -57,7 +57,7 @@ func (bm *BandwidthMonitor) RecordSent(playerID uint64, bytes uint64) {
 }
 
 // RecordReceived records bytes received for a player.
-func (bm *BandwidthMonitor) RecordReceived(playerID uint64, bytes uint64) {
+func (bm *BandwidthMonitor) RecordReceived(playerID, bytes uint64) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 

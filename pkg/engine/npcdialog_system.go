@@ -326,7 +326,7 @@ func (s *NPCDialogSystem) StartMultiPartyConversation(npcID uint64, playerIDs []
 
 // QueuePlayerInput queues a player's dialog request to an NPC.
 // Returns a channel that will receive the NPC's response asynchronously.
-func (s *NPCDialogSystem) QueuePlayerInput(npcID uint64, playerID uint64, input string) (<-chan *DialogResponse, error) {
+func (s *NPCDialogSystem) QueuePlayerInput(npcID, playerID uint64, input string) (<-chan *DialogResponse, error) {
 	req, err := s.conversationManager.QueueDialogRequest(npcID, playerID, input)
 	if err != nil {
 		return nil, err
@@ -379,7 +379,7 @@ func (s *NPCDialogSystem) GetConversationMessages(convID string) ([]Conversation
 }
 
 // AddConversationMessage adds a message to a conversation (for tracking multi-party chat).
-func (s *NPCDialogSystem) AddConversationMessage(convID string, senderID uint64, senderName string, content string) error {
+func (s *NPCDialogSystem) AddConversationMessage(convID string, senderID uint64, senderName, content string) error {
 	return s.conversationManager.AddMessage(convID, senderID, senderName, content)
 }
 

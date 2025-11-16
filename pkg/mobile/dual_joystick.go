@@ -329,6 +329,106 @@ func (j *VirtualJoystick) GetMagnitude() float64 {
 	return j.Magnitude
 }
 
+// Platform parity fix: Input normalization utilities for cross-platform consistency
+
+// NormalizeWASDInput converts digital WASD input to analog joystick equivalent.
+// Platform parity fix: Provides consistent movement feel between keyboard and joystick
+// Returns normalized direction vector matching joystick output
+func NormalizeWASDInput(up, down, left, right bool) (float64, float64) {
+	var x, y float64
+	
+	if right {
+		x = 1.0
+	} else if left {
+		x = -1.0
+	}
+	
+	if down {
+		y = 1.0
+	} else if up {
+		y = -1.0
+	}
+	
+	// Platform parity fix: Diagonal normalization
+	// WASD diagonal movement (e.g., W+D) should match joystick diagonal
+	// Without normalization, diagonal is 1.414x faster (√2)
+	if x != 0 && y != 0 {
+		// Normalize to unit circle (magnitude 1.0)
+		magnitude := math.Sqrt(x*x + y*y)
+		x /= magnitude
+		y /= magnitude
+	}
+	
+	return x, y
+}
+
+// ApplyInputResponseCurve applies a response curve to analog input.
+// Platform parity fix: Matches console controller feel across all input types
+// curvePower: 1.0 = linear, >1.0 = more precision near center, <1.0 = more responsive
+func ApplyInputResponseCurve(value, curvePower float64) float64 {
+	sign := 1.0
+	if value < 0 {
+		sign = -1.0
+		value = -value
+	}
+	
+	// Apply curve to magnitude only
+	result := math.Pow(value, curvePower)
+	
+	return result * sign
+}
+
+// ClampAnalogInput clamps analog input to valid range with optional dead zone.
+// Platform parity fix: Consistent input bounds across all platforms
+func ClampAnalogInput(value, deadZone, maxValue float64) float64 {
+	// Apply dead zone
+	if value > -deadZone && value < deadZone {
+		return 0
+	}
+	
+	// Clamp to range
+	if value > maxValue {
+		return maxValue
+	} else if value < -maxValue {
+		return -maxValue
+	}
+	
+	return value
+}
+
+// ConvertMouseToJoystick converts mouse delta movement to joystick-like analog input.
+// Platform parity fix: Provides analog aiming feel with mouse on desktop
+// deltaSensitivity: higher = more responsive (typical: 0.01 - 0.05)
+func ConvertMouseToJoystick(deltaX, deltaY, deltaSensitivity float64) (float64, float64) {
+	x := deltaX * deltaSensitivity
+	y := deltaY * deltaSensitivity
+	
+	// Clamp to analog range
+	x = math.Max(-1.0, math.Min(1.0, x))
+	y = math.Max(-1.0, math.Min(1.0, y))
+	
+	return x, y
+}
+
+// InputAcceleration applies acceleration to input for precision aiming.
+// Platform parity fix: Enables fine control at low speeds, fast movement at high speeds
+// Similar to console aim assist acceleration
+func InputAcceleration(currentValue, targetValue, acceleration, maxSpeed float64) float64 {
+	delta := targetValue - currentValue
+	
+	// Apply acceleration
+	if delta > 0 {
+		currentValue += math.Min(delta, acceleration)
+	} else if delta < 0 {
+		currentValue += math.Max(delta, -acceleration)
+	}
+	
+	// Clamp to max speed
+	currentValue = math.Max(-maxSpeed, math.Min(maxSpeed, currentValue))
+	
+	return currentValue
+}
+
 // IsActive returns true if the joystick is currently being touched.
 func (j *VirtualJoystick) IsActive() bool {
 	return j.Active

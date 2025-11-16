@@ -13,6 +13,110 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+// Platform parity fix: Input rate limiting and spam prevention
+
+// InputRateLimiter prevents rapid input spam across all platforms.
+// Platform parity fix: Addresses button mashing, accidental double-taps, lag-induced duplicates
+type InputRateLimiter struct {
+	lastInputTime map[string]time.Time
+	cooldowns     map[string]time.Duration
+	inputCounts   map[string]int // Platform parity fix: Track rapid inputs for anti-spam
+	timeWindow    time.Duration  // Time window for counting rapid inputs
+	maxInputs     int            // Maximum inputs allowed in time window
+}
+
+// NewInputRateLimiter creates a new input rate limiter.
+// Platform parity fix: Configurable per-action cooldowns and spam detection
+func NewInputRateLimiter() *InputRateLimiter {
+	return &InputRateLimiter{
+		lastInputTime: make(map[string]time.Time),
+		cooldowns:     make(map[string]time.Duration),
+		inputCounts:   make(map[string]int),
+		timeWindow:    1 * time.Second,  // 1 second window for spam detection
+		maxInputs:     10,                // Max 10 inputs per second (prevents spam)
+	}
+}
+
+// SetCooldown configures cooldown period for a specific action.
+// Platform parity fix: Prevents double-tap on laggy connections or fat-finger errors
+func (l *InputRateLimiter) SetCooldown(actionID string, cooldown time.Duration) {
+	l.cooldowns[actionID] = cooldown
+}
+
+// CanExecute checks if an action can be executed (not on cooldown).
+// Platform parity fix: Returns false if action is on cooldown or exceeds spam threshold
+func (l *InputRateLimiter) CanExecute(actionID string) bool {
+	now := time.Now()
+	
+	// Platform parity fix: Check cooldown
+	if lastTime, exists := l.lastInputTime[actionID]; exists {
+		cooldown := l.cooldowns[actionID]
+		if cooldown == 0 {
+			cooldown = 100 * time.Millisecond // Default 100ms cooldown
+		}
+		
+		if now.Sub(lastTime) < cooldown {
+			return false // Still on cooldown
+		}
+	}
+	
+	// Platform parity fix: Check spam threshold
+	count := l.inputCounts[actionID]
+	if count >= l.maxInputs {
+		// Too many inputs in time window - likely spam or lag
+		return false
+	}
+	
+	return true
+}
+
+// RecordInput records that an action was executed.
+// Platform parity fix: Updates cooldown and spam counter
+func (l *InputRateLimiter) RecordInput(actionID string) {
+	now := time.Now()
+	l.lastInputTime[actionID] = now
+	
+	// Platform parity fix: Increment spam counter
+	l.inputCounts[actionID]++
+}
+
+// Update cleans up old input counts from spam detection.
+// Platform parity fix: Call every frame to reset spam counters after time window
+func (l *InputRateLimiter) Update() {
+	now := time.Now()
+	
+	// Platform parity fix: Reset spam counters for actions outside time window
+	for actionID, lastTime := range l.lastInputTime {
+		if now.Sub(lastTime) > l.timeWindow {
+			l.inputCounts[actionID] = 0
+		}
+	}
+}
+
+// GetRemainingCooldown returns remaining cooldown time for an action.
+// Platform parity fix: Allows UI to show cooldown indicators
+func (l *InputRateLimiter) GetRemainingCooldown(actionID string) time.Duration {
+	if lastTime, exists := l.lastInputTime[actionID]; exists {
+		cooldown := l.cooldowns[actionID]
+		if cooldown == 0 {
+			cooldown = 100 * time.Millisecond
+		}
+		
+		elapsed := time.Since(lastTime)
+		if elapsed < cooldown {
+			return cooldown - elapsed
+		}
+	}
+	
+	return 0
+}
+
+// GetSpamCount returns current spam input count for an action.
+// Platform parity fix: Diagnostic tool for detecting input issues
+func (l *InputRateLimiter) GetSpamCount(actionID string) int {
+	return l.inputCounts[actionID]
+}
+
 // Haptic feedback settings for mobile controls.
 // These values provide tactile responsiveness without being intrusive.
 const (
@@ -379,3 +483,113 @@ func (l *VirtualControlsLayout) IsMenuPressed() bool {
 func (l *VirtualControlsLayout) SetVisible(visible bool) {
 	l.Visible = visible
 }
+
+// Platform parity fix: Cancel/undo gesture patterns for consistent UX
+
+// CancelGesture represents a cancel/undo gesture pattern.
+// Platform parity fix: Standardizes cancel actions across mouse/touch/keyboard
+type CancelGesture int
+
+const (
+	// GestureTwoFingerTap - Two fingers tap simultaneously (touch)
+	// Platform parity fix: Equivalent to Ctrl+Z or right-click cancel
+	GestureTwoFingerTap CancelGesture = iota
+	
+	// GestureSwipeDown - Quick downward swipe (touch)
+	// Platform parity fix: Common mobile pattern for dismiss/close
+	GestureSwipeDown
+	
+	// GestureEdgeSwipe - Swipe from screen edge (touch)
+	// Platform parity fix: iOS/Android back gesture equivalent
+	GestureEdgeSwipe
+	
+	// GestureEscape - Escape key press (keyboard)
+	// Platform parity fix: Standard desktop cancel
+	GestureEscape
+	
+	// GestureRightClick - Right mouse button (mouse)
+	// Platform parity fix: Standard desktop context menu/cancel
+	GestureRightClick
+)
+
+// String returns human-readable gesture name.
+func (g CancelGesture) String() string {
+	switch g {
+	case GestureTwoFingerTap:
+		return "TwoFingerTap"
+	case GestureSwipeDown:
+		return "SwipeDown"
+	case GestureEdgeSwipe:
+		return "EdgeSwipe"
+	case GestureEscape:
+		return "Escape"
+	case GestureRightClick:
+		return "RightClick"
+	default:
+		return "Unknown"
+	}
+}
+
+// SelectionState tracks selection state across input methods.
+// Platform parity fix: Unified selection/deselection for mouse/touch/keyboard
+type SelectionState struct {
+	selectedItems map[int]bool
+	lastSelected  int
+	multiSelect   bool
+}
+
+// NewSelectionState creates a new selection state tracker.
+func NewSelectionState(multiSelect bool) *SelectionState {
+	return &SelectionState{
+		selectedItems: make(map[int]bool),
+		lastSelected:  -1,
+		multiSelect:   multiSelect,
+	}
+}
+
+// Select selects an item.
+// Platform parity fix: Works for click, tap, or keyboard selection
+func (s *SelectionState) Select(itemID int, isMultiSelectGesture bool) {
+	if s.multiSelect && isMultiSelectGesture {
+		// Platform parity fix: Multi-select (Ctrl+Click, Shift+Tap, etc.)
+		s.selectedItems[itemID] = true
+	} else {
+		// Platform parity fix: Single select - clear others
+		s.selectedItems = make(map[int]bool)
+		s.selectedItems[itemID] = true
+	}
+	s.lastSelected = itemID
+}
+
+// Deselect deselects an item.
+// Platform parity fix: Works for click-away, tap-away, or keyboard deselection
+func (s *SelectionState) Deselect(itemID int) {
+	delete(s.selectedItems, itemID)
+}
+
+// DeselectAll clears all selections.
+// Platform parity fix: Escape key, tap empty space, click away all do this
+func (s *SelectionState) DeselectAll() {
+	s.selectedItems = make(map[int]bool)
+	s.lastSelected = -1
+}
+
+// IsSelected checks if an item is selected.
+func (s *SelectionState) IsSelected(itemID int) bool {
+	return s.selectedItems[itemID]
+}
+
+// GetSelectedItems returns all selected item IDs.
+func (s *SelectionState) GetSelectedItems() []int {
+	items := make([]int, 0, len(s.selectedItems))
+	for id := range s.selectedItems {
+		items = append(items, id)
+	}
+	return items
+}
+
+// GetSelectionCount returns number of selected items.
+func (s *SelectionState) GetSelectionCount() int {
+	return len(s.selectedItems)
+}
+

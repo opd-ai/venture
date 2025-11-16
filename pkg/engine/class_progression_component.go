@@ -594,11 +594,14 @@ func (c *ClassProgressionComponent) Serialize() []byte {
 		offset += 4
 		buf[offset] = byte(c.SecondarySpec)
 	} else {
-		buf[offset] = 0 // SecondaryClass placeholder
+		buf[offset] = 0 // INTEGRATION FIX [Category D]: SecondaryClass Serialization
+		// Gap: No secondary class - serialize as 0 (valid state, not a missing feature)
+		// Fix: Already correct - dual-classing is optional, 0 indicates no secondary class
+		// Roadmap: ROADMAP_V4.md Phase 25.2 - Dual-classing complete, serialization functional
 		offset++
-		writeInt32(buf[offset:], 0) // SecondaryLevel placeholder
+		writeInt32(buf[offset:], 0) // SecondaryLevel = 0 (no secondary class)
 		offset += 4
-		buf[offset] = 0 // SecondarySpec placeholder
+		buf[offset] = 0 // SecondarySpec = 0 (no secondary specialization)
 	}
 
 	return buf

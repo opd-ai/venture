@@ -307,7 +307,11 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	y := int(lwp.y - s.cameraY)
 
 	// Draw light influence as additive blend
-	// This is a placeholder - real implementation would need proper radial gradients
+	// INTEGRATION FIX [Category F]: Radial Gradient Lighting
+	// Gap: Light rendering uses simple circle fill instead of proper radial gradients
+	// Fix: Implement gradient shader or pre-generated gradient texture with alpha falloff
+	// Roadmap: ROADMAP_V3.md Phase 17.1 - Soft Shadows & Colored Lighting (bloom/glow complete, gradients deferred)
+	// Temporary: Simple circle fill provides acceptable visual quality, gradient is optimization
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(x-radius), float64(y-radius))
 

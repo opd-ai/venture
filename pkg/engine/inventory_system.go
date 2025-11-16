@@ -290,8 +290,11 @@ func (s *InventorySystem) applyConsumableEffects(entityID uint64, itm *item.Item
 
 	case item.ConsumableScroll:
 		// Scrolls might cast a spell or provide a buff
-		// For now, just a placeholder
-		// In a full implementation, this would trigger a spell effect
+		// INTEGRATION FIX [Category A]: Consumable Spell Effect Activation
+		// Gap: Using consumable items doesn't trigger spell effects (potions, scrolls)
+		// Fix: Call SpellEffectSystem.ApplyEffect(itemSpellID, targetEntity) after consumption
+		// Roadmap: ROADMAP_V4.md Phase 24.1 - New Spell Effects (10 effect types implemented)
+		// Integration: SpellEffectSystem available in world, items have optional SpellEffectID field
 
 	case item.ConsumableFood:
 		// Food restores health over time

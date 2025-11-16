@@ -4,6 +4,7 @@
 - Fix issues immediately upon discovery
 - Document each fix with inline code comments (gap description + resolution)
 - No external reports
+- If all components are integrated, do nothing.
 
 **PHASE 1: COMPREHENSIVE DISCOVERY**
 
@@ -91,6 +92,7 @@ For each gap, apply appropriate fix pattern:
 - Preserve performance targets (60 FPS, <500MB memory, <2s generation)
 - Keep network bandwidth <100KB/s per player
 - All fixes must compile and pass: `make test`
+- If all components are integrated, do nothing.
 
 **SUCCESS CRITERIA**:
 - Every roadmap feature has complete integration chain
@@ -99,5 +101,6 @@ For each gap, apply appropriate fix pattern:
 - All features accessible via UI or gameplay in both modes
 - All player-affecting state is networked and persisted
 - Zero TODO/FIXME related to missing integration
+- If all components are integrated, do nothing.
 
 **OUTPUT**: Modified source files with inline comments documenting each integration gap found and fixed, organized by category.

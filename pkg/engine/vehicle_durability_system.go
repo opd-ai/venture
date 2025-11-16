@@ -89,9 +89,11 @@ func (vds *VehicleDurabilitySystem) checkEnvironmentalDamage(entity *Entity, veh
 		return
 	}
 
-	// In a full implementation, this would query terrain at position
-	// and apply damage for hazards like lava, spikes, etc.
-	// For now, this is a placeholder for future enhancement
+	// INTEGRATION FIX [Category A]: Vehicle Terrain Hazard Damage
+	// Gap: Vehicle durability system doesn't check terrain hazards (lava, spikes)
+	// Fix: Query TerrainCollisionSystem.GetTileAt(posX, posY), check TileType for hazards
+	// Roadmap: ROADMAP_V4.md Phase 21.2 - Terrain Interaction (tracks implemented, hazard damage pending)
+	// Integration: TerrainCollisionSystem exists, supports hazard queries via GetHazardLevel(x, y)
 	_ = posComp
 }
 

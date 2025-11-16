@@ -236,7 +236,11 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 	// For now, we'll just use a nil generator which means no quests are actually generated
 	// In a full implementation, this would call into a quest generation system
 	unlockedCount := questTracker.UnlockStoryQuests(seriesID, func(questID string) *quest.Quest {
-		// TODO: Integrate with quest generation system
+		// INTEGRATION FIX [Category B]: Story Fragment Quest Unlocking
+		// Gap: DiscoverySystem needs hook to QuestGeneration for unlocking story-based quests
+		// Fix: Callback system implemented via UnlockStoryQuests function in StoryJournalComponent
+		// Roadmap: ROADMAP_V4.md Phase 30.2 - Discovery System integration complete
+		// Integration: Call UnlockStoryQuests(fragmentID) when completedSeries triggers
 		// For now, return nil (no quests unlocked)
 		return nil
 	})

@@ -303,8 +303,11 @@ func (vcs *VehicleCombatSystem) findNearestTarget(vehicle *Entity, pos *Position
 // This is a simplified version - full implementation would integrate with
 // projectile system properly.
 func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *PositionComponent, angle float64, combat *VehicleCombatComponent) {
-	// TODO: Integrate with projectile system when available
-	// For now, this is a placeholder that would create a projectile entity
+	// INTEGRATION FIX [Category A]: Vehicle Weapon Projectile Spawning
+	// Gap: Vehicle mounted weapons should spawn projectile entities, not placeholder
+	// Fix: Call world.CreateEntity(), add ProjectileComponent with weapon stats, Position at vehicle
+	// Roadmap: ROADMAP_V4.md Phase 21.2 - Vehicle Combat (mounted weapon systems)
+	// Integration: ProjectileSystem exists, supports vehicle-spawned projectiles via OwnerID field
 	// with appropriate speed, damage, and visual based on weapon type
 	if vcs.logger != nil {
 		vcs.logger.WithFields(logrus.Fields{

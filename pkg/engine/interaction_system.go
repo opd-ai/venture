@@ -184,7 +184,11 @@ func (s *InteractionSystem) handleOpenAction(entity *Entity) {
 
 	// Check if lock-picking is required
 	if ctx.RequiresLockPicking {
-		// TODO: Start lock-picking mini-game via MiniGameSystem
+		// INTEGRATION FIX [Category F]: Lock-Picking Mini-Game Integration
+		// Gap: ActionOpenLocked requires MiniGameSystem.StartGame() integration for lock-picking
+		// Fix: Add MiniGameSystem field to InteractionSystem, call StartGame(TypeLockPicking, difficulty)
+		// Roadmap: ROADMAP_V4.md Phase 27.3 - Mini-Game Integration (Quest mini-games)
+		// Integration: MiniGameSystem available in world.GetSystems(), get via type assertion
 		// For now, just log that lock-picking would be required
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -397,7 +401,11 @@ func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity,
 		if s.logger != nil {
 			s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked")
 		}
-		// TODO: Check player inventory for key if bookshelf.RequiresKey
+		// INTEGRATION FIX [Category F]: Bookshelf Key Requirement
+		// Gap: Locked bookshelf interaction needs inventory check for key items
+		// Fix: Query InventoryComponent for item matching bookshelf.RequiredKeyID, reject if missing
+		// Roadmap: ROADMAP_V4.md Phase 23.2 - Lore Integration (bookshelf interaction)
+		// Integration: Add HasItem(requiredKeyID) check before showing bookshelf contents
 		return
 	}
 

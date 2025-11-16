@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Federation Discovery System Demo ===\n")
+	fmt.Println("=== Federation Discovery System Demo ===")
 
 	// Create three server identities
 	server1, _ := federation.NewServerIdentity("FantasyServer")

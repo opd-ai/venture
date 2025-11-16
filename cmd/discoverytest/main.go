@@ -99,7 +99,7 @@ func main() {
 	}
 
 	fmt.Println("\n=== Discovery System Active ===")
-	fmt.Println("Press Ctrl+C to stop\n")
+	fmt.Println("Press Ctrl+C to stop")
 
 	// Main loop
 	for {

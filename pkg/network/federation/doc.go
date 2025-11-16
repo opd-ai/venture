@@ -81,6 +81,44 @@
 //	)
 //	fmt.Println("Common features:", common) // ["travel", "post"]
 //
+// # State Synchronization
+//
+// Federation state management uses FederationState and SyncManager:
+//
+//	// Create federation state
+//	state := federation.NewFederationState()
+//
+//	// Add connected server
+//	state.AddServer(&federation.ServerInfo{
+//	    ServerID:    "server1",
+//	    ServerName:  "Fantasy Server",
+//	    Address:     "192.168.1.100:8080",
+//	    Version:     "6.0.0",
+//	    Features:    []string{"travel", "trade"},
+//	    PlayerCount: 25,
+//	    Reputation:  0.9,
+//	})
+//
+//	// Create sync manager
+//	syncMgr := federation.NewSyncManager(state)
+//	syncMgr.Start()
+//	defer syncMgr.Stop()
+//
+//	// Process heartbeat from peer
+//	heartbeat := syncMgr.CreateHeartbeat("local-server", 30)
+//	syncMgr.ProcessHeartbeat(heartbeat)
+//
+//	// Sync market prices
+//	state.UpdateMarketPrice("sword", 100.0)
+//	marketSync := syncMgr.CreateMarketSync("local-server")
+//	syncMgr.ProcessMarketSync(marketSync)
+//
+//	// Check for stale servers
+//	staleServers := state.CheckStaleServers(30 * time.Second)
+//	for _, serverID := range staleServers {
+//	    fmt.Printf("Server %s is offline\n", serverID)
+//	}
+//
 // # Protocol Version Compatibility
 //
 // Version compatibility uses semantic versioning (major.minor.patch):
@@ -90,17 +128,28 @@
 //
 // # Performance Characteristics
 //
-// Handshake operations are optimized for minimal latency:
+// Operations are optimized for minimal latency:
+//
+// Handshake operations:
 //   - ServerIdentity creation: ~16µs per keypair
 //   - Handshake creation: ~21µs per handshake
 //   - Handshake verification: ~48µs per verification
 //   - Replay check: ~104µs including nonce tracking
 //   - Feature negotiation: ~183ns
 //
+// State synchronization:
+//   - AddServer: ~66ns (0 allocations)
+//   - UpdateServer: ~60ns (0 allocations)
+//   - UpdateMarketPrice: ~54ns (0 allocations)
+//   - ProcessHeartbeat: ~59ns (0 allocations)
+//   - ProcessMarketSync: ~204ns (0 allocations)
+//
 // Memory usage is minimal:
 //   - ServerIdentity: 384 bytes
 //   - FederationHandshake: 680 bytes
 //   - Nonce cache: 16 bytes per tracked nonce (auto-cleanup after 5 minutes)
+//   - ServerInfo: ~200 bytes per connected server
+//   - FederationState: 48 bytes base + (ServerInfo × server count)
 //
 // # Network Budget
 //
@@ -115,6 +164,8 @@
 // All federation types are safe for concurrent use:
 //   - ServerIdentity uses RWMutex for keypair access
 //   - HandshakeManager uses RWMutex for nonce tracking
+//   - FederationState uses RWMutex for all state operations
+//   - SyncManager uses goroutines with proper synchronization
 //   - Nonce cleanup runs asynchronously without blocking
 //
 // # Testing

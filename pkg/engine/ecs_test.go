@@ -55,8 +55,8 @@ func TestWorld(t *testing.T) {
 
 	// Test entity creation
 	entity := world.CreateEntity()
-	if entity.ID != 0 {
-		t.Errorf("Expected first entity ID to be 0, got %d", entity.ID)
+	if entity.ID != 1 {
+		t.Errorf("Expected first entity ID to be 1, got %d", entity.ID)
 	}
 
 	// Ensure entity is added after update

@@ -93,6 +93,7 @@ func TestPrepareTransfer(t *testing.T) {
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(&engine.InventoryComponent{Items: nil, MaxItems: 20})
 
+	world.Update(0) // Ensure entity is in world
 	transfer, err := tm.PrepareTransfer(player.ID, world, "server-2")
 	if err != nil {
 		t.Fatalf("PrepareTransfer() error = %v", err)
@@ -132,14 +133,17 @@ func TestPrepareTransfer_AlreadyInProgress(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
 	// First transfer
+	world.Update(0) // Ensure entity is in world
 	_, err := tm.PrepareTransfer(player.ID, world, "server-2")
 	if err != nil {
 		t.Fatalf("First PrepareTransfer() error = %v", err)
 	}
 
 	// Second transfer should fail
+	world.Update(0) // Ensure entity is in world
 	_, err = tm.PrepareTransfer(player.ID, world, "server-3")
 	if err == nil {
 		t.Error("Expected error for duplicate transfer, got nil")
@@ -150,6 +154,7 @@ func TestPrepareTransfer_InvalidPlayer(t *testing.T) {
 	tm := NewTransferManager()
 	world := engine.NewWorld()
 
+	world.Update(0) // Ensure entity is in world
 	_, err := tm.PrepareTransfer(99999, world, "server-2")
 	if err == nil {
 		t.Error("Expected error for invalid player, got nil")
@@ -164,7 +169,9 @@ func TestBeginTransfer(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	_, err := tm.PrepareTransfer(player.ID, world, "server-2")
 	if err != nil {
 		t.Fatalf("PrepareTransfer() error = %v", err)
@@ -206,7 +213,9 @@ func TestConfirmTransfer(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	tm.PrepareTransfer(player.ID, world, "server-2")
 	tm.BeginTransfer(player.ID, "server-1")
 
@@ -245,7 +254,9 @@ func TestRollbackTransfer(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	tm.PrepareTransfer(player.ID, world, "server-2")
 	tm.BeginTransfer(player.ID, "server-1")
 
@@ -281,7 +292,9 @@ func TestRestorePlayerState(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	tm.PrepareTransfer(player.ID, world, "server-2")
 
 	// Modify player state
@@ -327,7 +340,9 @@ func TestGetTransfer(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	tm.PrepareTransfer(player.ID, world, "server-2")
 
 	transfer, exists := tm.GetTransfer(player.ID)
@@ -354,18 +369,20 @@ func TestCheckTimeouts(t *testing.T) {
 	world := engine.NewWorld()
 
 	// Set short timeout
-	tm.SetTransferTimeout(100 * time.Millisecond)
+	tm.SetTransferTimeout(1 * time.Second)
 
 	player := world.CreateEntity()
 
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
+	world.Update(0) // Ensure entity is in world
 	tm.PrepareTransfer(player.ID, world, "server-2")
 
 	// Wait for timeout
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	expired := tm.CheckTimeouts()
 	if len(expired) != 1 {
@@ -560,6 +577,7 @@ func BenchmarkPrepareTransfer(b *testing.B) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -569,6 +587,7 @@ func BenchmarkPrepareTransfer(b *testing.B) {
 		delete(tm.stateBackups, player.ID)
 		tm.mu.Unlock()
 
+		world.Update(0) // Ensure entity is in world
 		tm.PrepareTransfer(player.ID, world, "server-2")
 	}
 }
@@ -582,6 +601,7 @@ func BenchmarkBeginTransfer(b *testing.B) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -590,6 +610,7 @@ func BenchmarkBeginTransfer(b *testing.B) {
 		delete(tm.activeTransfers, player.ID)
 		delete(tm.stateBackups, player.ID)
 		tm.mu.Unlock()
+		world.Update(0) // Ensure entity is in world
 		tm.PrepareTransfer(player.ID, world, "server-2")
 		b.StartTimer()
 

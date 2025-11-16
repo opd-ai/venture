@@ -43,8 +43,11 @@ func TestPortalSystem_LocalTeleport(t *testing.T) {
 		DestinationX:      500,
 		DestinationY:      600,
 	})
+portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+world.Update(0) // Process entity addition
 
 	// Activate portal
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	if err != nil {
 		t.Fatalf("ActivatePortal() error = %v", err)
@@ -72,12 +75,15 @@ func TestPortalSystem_LocalTeleport_NoPosition(t *testing.T) {
 	// Create portal
 	portal := world.CreateEntity()
 	portal.AddComponent(&engine.PortalComponent{
+portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+world.Update(0) // Process entity addition
 		DestinationServer: "local",
 		DestinationX:      500,
 		DestinationY:      600,
 	})
 
 	// Should fail
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	if err == nil {
 		t.Error("Expected error for player without position, got nil")
@@ -96,16 +102,20 @@ func TestPortalSystem_CrossServerTransfer(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+world.Update(0) // Process entity addition
 
 	// Create cross-server portal
 	portal := world.CreateEntity()
 	portal.AddComponent(&engine.PortalComponent{
 		DestinationServer: "server-2",
 		DestinationX:      500,
+portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+world.Update(0) // Process entity addition
 		DestinationY:      600,
 	})
 
 	// Activate portal
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	if err != nil {
 		t.Fatalf("ActivatePortal() error = %v", err)
@@ -141,6 +151,8 @@ func TestPortalSystem_RequiredItem_Present(t *testing.T) {
 
 	// Create portal requiring key
 	portal := world.CreateEntity()
+portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+world.Update(0) // Process entity addition
 	portal.AddComponent(&engine.PortalComponent{
 		DestinationServer: "local",
 		DestinationX:      500,
@@ -149,6 +161,7 @@ func TestPortalSystem_RequiredItem_Present(t *testing.T) {
 	})
 
 	// Should succeed
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	if err != nil {
 		t.Errorf("ActivatePortal() error = %v", err)
@@ -166,7 +179,9 @@ func TestPortalSystem_RequiredItem_Missing(t *testing.T) {
 	player := world.CreateEntity()
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+world.Update(0) // Process entity addition
 
+world.Update(0) // Process entity addition
 	// Create portal requiring key
 	portal := world.CreateEntity()
 	portal.AddComponent(&engine.PortalComponent{
@@ -177,6 +192,7 @@ func TestPortalSystem_RequiredItem_Missing(t *testing.T) {
 	})
 
 	// Should fail
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	if err == nil {
 		t.Error("Expected error for missing required item, got nil")
@@ -192,6 +208,7 @@ func TestPortalSystem_PortalNotFound(t *testing.T) {
 
 	player := world.CreateEntity()
 
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, 99999, authMgr, transferMgr)
 	if err == nil {
 		t.Error("Expected error for portal not found, got nil")
@@ -210,6 +227,7 @@ func TestPortalSystem_NotAPortal(t *testing.T) {
 	// Create entity without portal component
 	entity := world.CreateEntity()
 
+world.Update(0) // Ensure entities are in world
 	err := ps.ActivatePortal(player.ID, entity.ID, authMgr, transferMgr)
 	if err == nil {
 		t.Error("Expected error for non-portal entity, got nil")
@@ -221,6 +239,7 @@ func TestPortalSystem_Update(t *testing.T) {
 	federation := NewFederationProtocol("server-1")
 	ps := NewPortalSystem(world, federation)
 
+world.Update(0) // Process entity addition
 	// Create portal
 	portal := world.CreateEntity()
 	portal.AddComponent(&engine.PortalComponent{
@@ -267,6 +286,8 @@ func BenchmarkPortalSystem_LocalTeleport(b *testing.B) {
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
 
+portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+world.Update(0) // Process entity addition
 	player := world.CreateEntity()
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
 
@@ -279,6 +300,7 @@ func BenchmarkPortalSystem_LocalTeleport(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+world.Update(0) // Ensure entities are in world
 		ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	}
 }

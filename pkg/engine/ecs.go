@@ -244,6 +244,7 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 	w := &World{
 		entities:         make(map[uint64]*Entity),
 		systems:          make([]System, 0),
+		nextEntityID:     1,                       // Start entity IDs at 1 (0 reserved as invalid ID)
 		cachedEntityList: make([]*Entity, 0, 256), // Pre-allocate for 256 entities
 		queryBuffer:      make([]*Entity, 0, 256), // Pre-allocate query buffer
 		queryCache:       make(map[string][]*Entity),

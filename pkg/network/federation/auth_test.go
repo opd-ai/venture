@@ -114,11 +114,11 @@ func TestValidateToken_NotFound(t *testing.T) {
 
 func TestValidateToken_Expired(t *testing.T) {
 	am := NewAuthManager()
-	am.SetTTL(100 * time.Millisecond)
+	am.SetTTL(1 * time.Second)
 
 	token, _ := am.CreateSessionToken(123, "server-1")
 
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	_, err := am.ValidateToken(token.Token)
 	if err == nil {
@@ -200,11 +200,11 @@ func TestValidateNonce_NotFound(t *testing.T) {
 
 func TestValidateNonce_Expired(t *testing.T) {
 	am := NewAuthManager()
-	am.nonceTTL = 100 * time.Millisecond
+	am.nonceTTL = 1 * time.Second
 
 	token, _ := am.CreateSessionToken(123, "server-1")
 
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	err := am.ValidateNonce(token.Nonce)
 	if err == nil {
@@ -240,14 +240,14 @@ func TestMarkNonceUsed_NotFound(t *testing.T) {
 
 func TestCleanupExpired(t *testing.T) {
 	am := NewAuthManager()
-	am.SetTTL(100 * time.Millisecond)
-	am.nonceTTL = 100 * time.Millisecond
+	am.SetTTL(1 * time.Second)
+	am.nonceTTL = 1 * time.Second
 
 	// Create some tokens
 	am.CreateSessionToken(123, "server-1")
 	am.CreateSessionToken(456, "server-2")
 
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	// Create one more token that won't be expired
 	am.CreateSessionToken(789, "server-3")

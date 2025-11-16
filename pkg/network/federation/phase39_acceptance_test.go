@@ -17,6 +17,7 @@ func TestAcceptance_TransferTime(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
 	start := time.Now()
 
@@ -59,6 +60,7 @@ func TestAcceptance_RollbackRate(t *testing.T) {
 		player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 		player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 		player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+		world.Update(0) // Process entity addition
 
 		// Prepare transfer
 		_, err := tm.PrepareTransfer(player.ID, world, "server-2")
@@ -156,7 +158,7 @@ func TestAcceptance_StateValidation(t *testing.T) {
 // TestAcceptance_SessionTokenExpiry verifies token lifecycle
 func TestAcceptance_SessionTokenExpiry(t *testing.T) {
 	am := NewAuthManager()
-	am.SetTTL(500 * time.Millisecond)
+	am.SetTTL(1 * time.Second)
 
 	// Create token
 	token, err := am.CreateSessionToken(123, "server-1")
@@ -171,7 +173,7 @@ func TestAcceptance_SessionTokenExpiry(t *testing.T) {
 	}
 
 	// Wait for expiry
-	time.Sleep(600 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	// Should be invalid after expiry
 	_, err = am.ValidateToken(token.Token)
@@ -221,6 +223,7 @@ func TestAcceptance_PortalActivation(t *testing.T) {
 	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
 	player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
+	world.Update(0) // Process entity addition
 
 	// Test local portal
 	t.Run("local teleport", func(t *testing.T) {
@@ -230,6 +233,8 @@ func TestAcceptance_PortalActivation(t *testing.T) {
 			DestinationX:      500,
 			DestinationY:      600,
 		})
+		portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+		world.Update(0) // Process portal addition
 
 		err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 		if err != nil {
@@ -251,6 +256,8 @@ func TestAcceptance_PortalActivation(t *testing.T) {
 			DestinationX:      700,
 			DestinationY:      800,
 		})
+		portal.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+		world.Update(0) // Process portal addition
 
 		err := ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 		if err != nil {
@@ -260,6 +267,11 @@ func TestAcceptance_PortalActivation(t *testing.T) {
 		transfer, exists := transferMgr.GetTransfer(player.ID)
 		if !exists {
 			t.Error("Transfer not found")
+			return
+		}
+		if transfer == nil {
+			t.Error("Transfer is nil")
+			return
 		}
 
 		if transfer.Phase != TransferPhaseTransfer {
@@ -271,7 +283,7 @@ func TestAcceptance_PortalActivation(t *testing.T) {
 // TestAcceptance_TransferTimeout verifies timeout detection
 func TestAcceptance_TransferTimeout(t *testing.T) {
 	tm := NewTransferManager()
-	tm.SetTransferTimeout(100 * time.Millisecond)
+	tm.SetTransferTimeout(1 * time.Second)
 	world := engine.NewWorld()
 
 	// Create multiple players
@@ -281,13 +293,16 @@ func TestAcceptance_TransferTimeout(t *testing.T) {
 		player.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
 		player.AddComponent(&engine.HealthComponent{Current: 80, Max: 100})
 		player.AddComponent(engine.NewInventoryComponent(20, 100.0))
-
-		tm.PrepareTransfer(player.ID, world, "server-2")
 		playerIDs[i] = player.ID
+	}
+	world.Update(0) // Process all entity additions
+
+	for _, playerID := range playerIDs {
+		tm.PrepareTransfer(playerID, world, "server-2")
 	}
 
 	// Wait for timeout
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	// Check for timeouts
 	expired := tm.CheckTimeouts()
@@ -310,6 +325,7 @@ func TestAcceptance_ConcurrentTransfers(t *testing.T) {
 		player.AddComponent(engine.NewInventoryComponent(20, 100.0))
 		players[i] = player.ID
 	}
+	world.Update(0) // Process all entity additions
 
 	// Prepare all transfers concurrently
 	done := make(chan bool)

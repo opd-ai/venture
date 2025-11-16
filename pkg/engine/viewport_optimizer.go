@@ -54,8 +54,13 @@ func (v *ViewportOptimizer) SetMarginTiles(tiles int) {
 // Returns Bounds struct suitable for quadtree queries.
 func (v *ViewportOptimizer) CalculateViewportBounds(cameraX, cameraY, viewportWidth, viewportHeight, zoom float64) Bounds {
 	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.calculateViewportBoundsUnlocked(cameraX, cameraY, viewportWidth, viewportHeight, zoom)
+}
+
+// calculateViewportBoundsUnlocked is the unlocked version for internal use.
+func (v *ViewportOptimizer) calculateViewportBoundsUnlocked(cameraX, cameraY, viewportWidth, viewportHeight, zoom float64) Bounds {
 	margin := v.tileSize * float64(v.marginTiles)
-	v.mu.RUnlock()
 
 	// Scale viewport by zoom (higher zoom = smaller world area visible)
 	worldWidth := viewportWidth / zoom
@@ -106,7 +111,7 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 	}
 
 	// Calculate viewport bounds
-	viewportBounds := v.CalculateViewportBounds(
+	viewportBounds := v.calculateViewportBoundsUnlocked(
 		camera.X, camera.Y,
 		float64(screenWidth), float64(screenHeight),
 		camera.Zoom,

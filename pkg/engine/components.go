@@ -15,6 +15,24 @@ func (p *PositionComponent) Type() string {
 	return "position"
 }
 
+// Serialize encodes the component to bytes for persistence
+func (p *PositionComponent) Serialize() ([]byte, error) {
+	buf := make([]byte, 16) // 2 float64s = 16 bytes
+	writeFloat64(buf[0:8], p.X)
+	writeFloat64(buf[8:16], p.Y)
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (p *PositionComponent) Deserialize(data []byte) error {
+	if len(data) < 16 {
+		return ErrInvalidComponentData
+	}
+	p.X = readFloat64(data[0:8])
+	p.Y = readFloat64(data[8:16])
+	return nil
+}
+
 // VelocityComponent represents an entity's velocity in 2D space.
 type VelocityComponent struct {
 	VX, VY float64
@@ -23,6 +41,24 @@ type VelocityComponent struct {
 // Type returns the component type identifier.
 func (v *VelocityComponent) Type() string {
 	return "velocity"
+}
+
+// Serialize encodes the component to bytes for persistence
+func (v *VelocityComponent) Serialize() ([]byte, error) {
+	buf := make([]byte, 16) // 2 float64s = 16 bytes
+	writeFloat64(buf[0:8], v.VX)
+	writeFloat64(buf[8:16], v.VY)
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (v *VelocityComponent) Deserialize(data []byte) error {
+	if len(data) < 16 {
+		return ErrInvalidComponentData
+	}
+	v.VX = readFloat64(data[0:8])
+	v.VY = readFloat64(data[8:16])
+	return nil
 }
 
 // ColliderComponent represents an entity's collision bounds.
@@ -47,6 +83,34 @@ type ColliderComponent struct {
 // Type returns the component type identifier.
 func (c *ColliderComponent) Type() string {
 	return "collider"
+}
+
+// Serialize encodes the component to bytes for persistence
+func (c *ColliderComponent) Serialize() ([]byte, error) {
+	buf := make([]byte, 38) // 4 float64s (32 bytes) + 2 bools (2 bytes) + 1 int32 (4 bytes) = 38 bytes
+	writeFloat64(buf[0:8], c.Width)
+	writeFloat64(buf[8:16], c.Height)
+	writeBool(buf[16:17], c.Solid)
+	writeBool(buf[17:18], c.IsTrigger)
+	writeInt32(buf[18:22], int32(c.Layer))
+	writeFloat64(buf[22:30], c.OffsetX)
+	writeFloat64(buf[30:38], c.OffsetY)
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (c *ColliderComponent) Deserialize(data []byte) error {
+	if len(data) < 38 {
+		return ErrInvalidComponentData
+	}
+	c.Width = readFloat64(data[0:8])
+	c.Height = readFloat64(data[8:16])
+	c.Solid = readBool(data[16:17])
+	c.IsTrigger = readBool(data[17:18])
+	c.Layer = int(readInt32(data[18:22]))
+	c.OffsetX = readFloat64(data[22:30])
+	c.OffsetY = readFloat64(data[30:38])
+	return nil
 }
 
 // GetBounds returns the axis-aligned bounding box for this collider.

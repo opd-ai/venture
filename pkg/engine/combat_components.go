@@ -16,6 +16,24 @@ func (h *HealthComponent) Type() string {
 	return "health"
 }
 
+// Serialize encodes the component to bytes for persistence
+func (h *HealthComponent) Serialize() ([]byte, error) {
+	buf := make([]byte, 16) // 2 float64s = 16 bytes
+	writeFloat64(buf[0:8], h.Current)
+	writeFloat64(buf[8:16], h.Max)
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (h *HealthComponent) Deserialize(data []byte) error {
+	if len(data) < 16 {
+		return ErrInvalidComponentData
+	}
+	h.Current = readFloat64(data[0:8])
+	h.Max = readFloat64(data[8:16])
+	return nil
+}
+
 // IsAlive returns true if the entity has health remaining.
 func (h *HealthComponent) IsAlive() bool {
 	return h.Current > 0

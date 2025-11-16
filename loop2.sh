@@ -64,6 +64,18 @@ for i in $(seq 1 $ITER); do
         sleep 1m
         echo "iteration $i in complete."
     fi
+    if [ $((i % 10)) -eq 0 ]; then
+        copilot -p "/delegate $(cat docs/PARITY.md)" --allow-all-tools --deny-tool sudo
+        make fmt
+        echo "iteration $i in progress."
+        echo "Parity completed, sleeping for 1 minute..."
+        sleep 1m
+        copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
+        echo "iteration $i in progress."
+        echo "Parity checkin completed, sleeping for 1 minute..."
+        sleep 1m
+        echo "iteration $i in complete."
+    fi
 done
 
 echo "iteration $i started."

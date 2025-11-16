@@ -572,166 +572,181 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 
 // applyInputCommand applies a network input command to a player entity
 func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
-	// Get velocity component
 	velComp, hasVel := entity.GetComponent("velocity")
 	if !hasVel {
 		return
 	}
 	velocity := velComp.(*engine.VelocityComponent)
 
-	// Process input based on type
 	switch cmd.InputType {
 	case "move":
-		// Apply movement input to velocity
-		if len(cmd.Data) >= 2 {
-			moveX := float64(int8(cmd.Data[0])) // Convert byte to signed value (-128 to 127)
-			moveY := float64(int8(cmd.Data[1]))
-
-			// Normalize to -1.0 to 1.0 range
-			moveX /= 127.0
-			moveY /= 127.0
-
-			// Normalize diagonal movement
-			if moveX != 0 && moveY != 0 {
-				moveX *= 0.707
-				moveY *= 0.707
-			}
-
-			// Apply movement speed (100 pixels/second)
-			velocity.VX = moveX * 100.0
-			velocity.VY = moveY * 100.0
-
-			if logger.GetLevel() >= logrus.DebugLevel && (moveX != 0 || moveY != 0) {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":  cmd.PlayerID,
-					"velocityX": velocity.VX,
-					"velocityY": velocity.VY,
-				}).Debug("player moving")
-			}
-		}
-
+		applyMovement(velocity, cmd, logger)
 	case "attack":
-		// Trigger attack
-		if logger.GetLevel() >= logrus.DebugLevel {
-			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player attacking")
+		applyAttack(entity, cmd, logger)
+	case "use_item":
+		applyItemUse(entity, cmd, logger)
+	default:
+		logUnknownInput(cmd, logger)
+	}
+}
+
+// applyMovement processes movement input and updates entity velocity.
+func applyMovement(velocity *engine.VelocityComponent, cmd *network.InputCommand, logger *logrus.Logger) {
+	if len(cmd.Data) < 2 {
+		return
+	}
+
+	moveX := float64(int8(cmd.Data[0])) / 127.0
+	moveY := float64(int8(cmd.Data[1])) / 127.0
+
+	if moveX != 0 && moveY != 0 {
+		moveX *= 0.707
+		moveY *= 0.707
+	}
+
+	velocity.VX = moveX * 100.0
+	velocity.VY = moveY * 100.0
+
+	if logger.GetLevel() >= logrus.DebugLevel && (moveX != 0 || moveY != 0) {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":  cmd.PlayerID,
+			"velocityX": velocity.VX,
+			"velocityY": velocity.VY,
+		}).Debug("player moving")
+	}
+}
+
+// applyAttack processes attack input and triggers entity attack if cooldown permits.
+func applyAttack(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player attacking")
+	}
+
+	attackComp, hasAttack := entity.GetComponent("attack")
+	if !hasAttack {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no attack component")
 		}
+		return
+	}
+	attack := attackComp.(*engine.AttackComponent)
 
-		// Get attack component
-		attackComp, hasAttack := entity.GetComponent("attack")
-		if !hasAttack {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no attack component")
-			}
-			return
-		}
-		attack := attackComp.(*engine.AttackComponent)
-
-		// Check cooldown using CanAttack method
-		if !attack.CanAttack() {
-			if logger.GetLevel() >= logrus.DebugLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":       cmd.PlayerID,
-					"cooldownRemain": attack.CooldownTimer,
-				}).Debug("player attack on cooldown")
-			}
-			return
-		}
-
-		// Trigger attack by resetting cooldown
-		attack.ResetCooldown()
-
+	if !attack.CanAttack() {
 		if logger.GetLevel() >= logrus.DebugLevel {
 			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-				"playerID": cmd.PlayerID,
-				"damage":   attack.Damage,
-				"range":    attack.Range,
-			}).Debug("player attack triggered")
+				"playerID":       cmd.PlayerID,
+				"cooldownRemain": attack.CooldownTimer,
+			}).Debug("player attack on cooldown")
 		}
+		return
+	}
 
-	case "use_item":
-		// Use item from inventory
-		if logger.GetLevel() >= logrus.DebugLevel {
-			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player using item")
+	attack.ResetCooldown()
+
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID": cmd.PlayerID,
+			"damage":   attack.Damage,
+			"range":    attack.Range,
+		}).Debug("player attack triggered")
+	}
+}
+
+// applyItemUse processes item usage from inventory and applies effects.
+func applyItemUse(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player using item")
+	}
+
+	invComp, hasInv := entity.GetComponent("inventory")
+	if !hasInv {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no inventory component")
 		}
+		return
+	}
+	inventory := invComp.(*engine.InventoryComponent)
 
-		// Get inventory component
-		invComp, hasInv := entity.GetComponent("inventory")
-		if !hasInv {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no inventory component")
-			}
-			return
+	item, itemIndex, ok := validateItemUse(inventory, cmd, logger)
+	if !ok {
+		return
+	}
+
+	consumeItem(entity, inventory, item, itemIndex, cmd.PlayerID, logger)
+}
+
+// validateItemUse validates item index and type for usage.
+func validateItemUse(inventory *engine.InventoryComponent, cmd *network.InputCommand, logger *logrus.Logger) (*itemgen.Item, int, bool) {
+	if len(cmd.Data) < 1 {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("use_item command missing item index")
 		}
-		inventory := invComp.(*engine.InventoryComponent)
+		return nil, 0, false
+	}
+	itemIndex := int(cmd.Data[0])
 
-		// Parse item index from command data
-		if len(cmd.Data) < 1 {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("use_item command missing item index")
-			}
-			return
-		}
-		itemIndex := int(cmd.Data[0])
-
-		// Validate item index
-		if itemIndex < 0 || itemIndex >= len(inventory.Items) {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":      cmd.PlayerID,
-					"itemIndex":     itemIndex,
-					"inventorySize": len(inventory.Items),
-				}).Warn("invalid item index")
-			}
-			return
-		}
-
-		// Get item
-		item := inventory.Items[itemIndex]
-
-		// Check if item is consumable (using imported item package constant)
-		if item.Type != itemgen.TypeConsumable {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID": cmd.PlayerID,
-					"itemName": item.Name,
-				}).Warn("attempted to use non-consumable item")
-			}
-			return
-		}
-
-		// Apply item effect (health restoration for now)
-		if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
-			health := healthComp.(*engine.HealthComponent)
-
-			// Restore health based on item power
-			healAmount := float64(item.Stats.Defense) // Use defense stat as heal power
-			if healAmount > 0 {
-				health.Current += healAmount
-				if health.Current > health.Max {
-					health.Current = health.Max
-				}
-
-				if logger.GetLevel() >= logrus.InfoLevel {
-					logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-						"playerID":      cmd.PlayerID,
-						"itemName":      item.Name,
-						"healAmount":    healAmount,
-						"currentHealth": health.Current,
-						"maxHealth":     health.Max,
-					}).Info("player used item")
-				}
-
-				// Remove consumed item from inventory
-				inventory.Items = append(inventory.Items[:itemIndex], inventory.Items[itemIndex+1:]...)
-			}
-		}
-
-	default:
+	if itemIndex < 0 || itemIndex >= len(inventory.Items) {
 		if logger.GetLevel() >= logrus.WarnLevel {
 			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-				"playerID":  cmd.PlayerID,
-				"inputType": cmd.InputType,
-			}).Warn("unknown input type")
+				"playerID":      cmd.PlayerID,
+				"itemIndex":     itemIndex,
+				"inventorySize": len(inventory.Items),
+			}).Warn("invalid item index")
 		}
+		return nil, 0, false
+	}
+
+	item := inventory.Items[itemIndex]
+	if item.Type != itemgen.TypeConsumable {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+				"playerID": cmd.PlayerID,
+				"itemName": item.Name,
+			}).Warn("attempted to use non-consumable item")
+		}
+		return nil, 0, false
+	}
+
+	return item, itemIndex, true
+}
+
+// consumeItem applies consumable item effects and removes it from inventory.
+func consumeItem(entity *engine.Entity, inventory *engine.InventoryComponent, item *itemgen.Item, itemIndex int, playerID uint64, logger *logrus.Logger) {
+	healthComp, hasHealth := entity.GetComponent("health")
+	if !hasHealth {
+		return
+	}
+	health := healthComp.(*engine.HealthComponent)
+
+	healAmount := float64(item.Stats.Defense)
+	if healAmount <= 0 {
+		return
+	}
+
+	health.Current += healAmount
+	if health.Current > health.Max {
+		health.Current = health.Max
+	}
+
+	if logger.GetLevel() >= logrus.InfoLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":      playerID,
+			"itemName":      item.Name,
+			"healAmount":    healAmount,
+			"currentHealth": health.Current,
+			"maxHealth":     health.Max,
+		}).Info("player used item")
+	}
+
+	inventory.Items = append(inventory.Items[:itemIndex], inventory.Items[itemIndex+1:]...)
+}
+
+// logUnknownInput logs warning for unknown input types.
+func logUnknownInput(cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.WarnLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":  cmd.PlayerID,
+			"inputType": cmd.InputType,
+		}).Warn("unknown input type")
 	}
 }

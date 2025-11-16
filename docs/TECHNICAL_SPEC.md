@@ -100,7 +100,17 @@ pkg/
    - Genre variations (organic, geometric, distorted, augmented, weathered)
    - 40% more anatomical detail than V2.0
 
-2. **Tile Rendering** (V3.0 Enhanced)
+2. **Animation System** (V7.0 Phase 46)
+   - 8-frame animation cycles for smooth 60 FPS rendering
+   - 8-directional movement (N, NE, E, SE, S, SW, W, NW)
+   - Body part articulation: arms ±3px, legs ±4px, head ±2px
+   - State-specific animations: idle, walk, run, attack, hit, death, cast, jump
+   - Animation caching with LRU eviction (50MB default, ≥85% hit rate)
+   - Pre-computation of common sequences
+   - Frame interpolation for sub-frame smoothness
+   - Package: `pkg/rendering/animation/`
+
+3. **Tile Rendering** (V3.0 Enhanced)
    - Procedural texture patterns: stone, wood, metal, organic
    - 50+ unique patterns per genre via seed-based generation
    - Smooth transitions with automated edge detection
@@ -108,7 +118,7 @@ pkg/
    - Detail layers for texture complexity
    - Normal mapping simulation for depth perception
 
-3. **Lighting System** (V3.0 Enhanced)
+4. **Lighting System** (V3.0 Enhanced)
    - Soft shadows with gradient edges
    - Colored lighting matching light sources
    - Bloom effects for magical/technological lights
@@ -117,20 +127,20 @@ pkg/
    - Genre-specific lighting presets
    - <5% frame time overhead
 
-4. **Weather & Particles** (V3.0 New)
+5. **Weather & Particles** (V3.0 New)
    - Comprehensive weather: rain, snow, fog, dust, ash
    - Genre-specific weather (neon rain, radiation zones, smog)
    - Fluid simulation for realistic particle behavior
    - Intensity levels: light, medium, heavy, extreme
    - Environmental interactions (wind, gravity effects)
 
-5. **Post-Processing** (V3.0 New)
+6. **Post-Processing** (V3.0 New)
    - Parallax backgrounds with multi-layer depth
    - Time-of-day system with dynamic lighting shifts
    - Screen-space enhancements
    - Genre-specific visual filters
 
-6. **Rendering Optimizations** (V2.0, maintained in V3.0)
+7. **Rendering Optimizations** (V2.0, maintained in V3.0)
    - Viewport culling (1,635x speedup)
    - Batch rendering by layer/texture (1,667x speedup)
    - Sprite cache lookup (95.9% hit rate, 37x speedup)

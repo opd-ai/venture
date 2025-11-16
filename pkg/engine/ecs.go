@@ -223,6 +223,12 @@ type World struct {
 	// Pool for strings.Builder instances to reduce query key allocations
 	builderPool sync.Pool
 
+	// Pre-computed cache keys for common queries (zero-allocation fast path)
+	keyPosition         string
+	keyPositionVelocity string
+	keyPositionHealth   string
+	keyPositionCollider string
+
 	// Logger for ECS operations
 	logger *logrus.Entry
 }
@@ -256,6 +262,11 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 				return &strings.Builder{}
 			},
 		},
+		// Pre-compute common query keys
+		keyPosition:         "position",
+		keyPositionVelocity: "position|velocity",
+		keyPositionHealth:   "position|health",
+		keyPositionCollider: "position|collider",
 	}
 
 	if w.logger != nil {
@@ -387,18 +398,41 @@ func (w *World) GetEntities() []*Entity {
 
 // GetEntitiesWith returns all entities that have all of the specified component types.
 // Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
+// Fast-path optimization for common queries eliminates all allocations on cache hits.
 func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
-	// Generate cache key from component types using pooled builder
-	builder := w.builderPool.Get().(*strings.Builder)
-	builder.Reset() // Clear any previous content
-	for i, compType := range componentTypes {
-		if i > 0 {
-			builder.WriteByte('|')
+	// Fast-path for most common queries (zero allocations on cache hit)
+	var key string
+	switch len(componentTypes) {
+	case 1:
+		if componentTypes[0] == "position" {
+			key = w.keyPosition
 		}
-		builder.WriteString(compType)
+	case 2:
+		if componentTypes[0] == "position" {
+			switch componentTypes[1] {
+			case "velocity":
+				key = w.keyPositionVelocity
+			case "health":
+				key = w.keyPositionHealth
+			case "collider":
+				key = w.keyPositionCollider
+			}
+		}
 	}
-	key := builder.String()
-	w.builderPool.Put(builder) // Return builder to pool
+
+	// If not a common pattern, generate key using pooled builder
+	if key == "" {
+		builder := w.builderPool.Get().(*strings.Builder)
+		builder.Reset()
+		for i, compType := range componentTypes {
+			if i > 0 {
+				builder.WriteByte('|')
+			}
+			builder.WriteString(compType)
+		}
+		key = builder.String()
+		w.builderPool.Put(builder)
+	}
 
 	// Check if cache is valid
 	if !w.queryCacheDirty[key] {

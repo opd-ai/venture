@@ -129,3 +129,36 @@ func BenchmarkGetEntitiesWithCacheHit(b *testing.B) {
 		_ = world.GetEntitiesWith("position", "velocity")
 	}
 }
+
+// BenchmarkGetEntitiesWithCacheHitOptimized tests zero-allocation fast path.
+func BenchmarkGetEntitiesWithCacheHitOptimized(b *testing.B) {
+	world := NewWorld()
+
+	// Create 2000 entities
+	for i := 0; i < 2000; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		if i%2 == 0 {
+			entity.AddComponent(&VelocityComponent{VX: 1.0, VY: 1.0})
+		}
+	}
+
+	world.Update(0)
+
+	// Prime the cache for all common patterns
+	_ = world.GetEntitiesWith("position")
+	_ = world.GetEntitiesWith("position", "velocity")
+	_ = world.GetEntitiesWith("position", "health")
+	_ = world.GetEntitiesWith("position", "collider")
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// All of these should hit fast path (zero allocations)
+		_ = world.GetEntitiesWith("position", "velocity")
+		_ = world.GetEntitiesWith("position", "health")
+		_ = world.GetEntitiesWith("position", "collider")
+		_ = world.GetEntitiesWith("position")
+	}
+}

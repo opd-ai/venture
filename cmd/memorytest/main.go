@@ -78,12 +78,56 @@ func formatBytes(bytes uint64) string {
 func main() {
 	flag.Parse()
 
-	// Initialize logger
+	logger := initializeLogger()
+	logTestConfiguration(logger)
+
+	initialStats := captureInitialMemory(logger)
+	memorySamples := []MemoryStats{initialStats}
+
+	spriteCache := createSpriteCache(logger)
+	world := setupWorld(logger)
+	generators := initializeGenerators(logger)
+
+	seed := int64(12345)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	}
+
+	generateTerrain(generators.terrainGen, seed, params, logger)
+	generateEntities(world, generators.entityGen, generators.spriteGen, spriteCache, seed, params, logger)
+	generateItems(generators.itemGen, seed, params, logger)
+	generateMagic(generators.magicGen, seed, params, logger)
+
+	afterGenerationStats := capturePostGenerationMemory(logger)
+	memorySamples = append(memorySamples, afterGenerationStats)
+	logCacheStatistics(spriteCache, logger)
+
+	if *checkLeaks {
+		runLeakDetectionTest(world, initialStats, &memorySamples, logger)
+	}
+
+	finalStats := captureFinalMemory(logger)
+	memorySamples = append(memorySamples, finalStats)
+
+	printMemoryReport(initialStats, afterGenerationStats, finalStats, memorySamples, spriteCache)
+	writeOptionalOutputs(logger, initialStats, afterGenerationStats, finalStats, spriteCache.Stats(), memorySamples)
+
+	logger.Info("memory profiling complete!")
+}
+
+// initializeLogger creates and configures the logger based on verbose flag.
+func initializeLogger() *logrus.Logger {
 	logger := logging.TestUtilityLogger("memorytest")
 	if *verbose {
 		logger.SetLevel(logrus.DebugLevel)
 	}
+	return logger
+}
 
+// logTestConfiguration logs the test parameters and configuration.
+func logTestConfiguration(logger *logrus.Logger) {
 	logger.Info("=== V3.0 Memory Profiling Test ===")
 	logger.WithFields(logrus.Fields{
 		"entities":     *entityCount,
@@ -91,12 +135,13 @@ func main() {
 		"targetMemory": *targetMemory,
 		"checkLeaks":   *checkLeaks,
 	}).Info("test configuration")
+}
 
-	// Force GC before starting
+// captureInitialMemory forces GC and captures the initial memory state.
+func captureInitialMemory(logger *logrus.Logger) MemoryStats {
 	runtime.GC()
 	time.Sleep(100 * time.Millisecond)
 
-	// Initial memory snapshot
 	initialStats := collectMemoryStats()
 	logger.WithFields(logrus.Fields{
 		"alloc":     formatBytes(initialStats.Alloc),
@@ -105,18 +150,29 @@ func main() {
 		"numGC":     initialStats.NumGC,
 	}).Info("initial memory state")
 
-	// Track memory samples over time
-	var memorySamples []MemoryStats
-	memorySamples = append(memorySamples, initialStats)
+	return initialStats
+}
 
-	// Create sprite cache and track its efficiency
-	spriteCache := cache.NewSpriteCache(100 * 1024 * 1024) // 100 MB cache
+// createSpriteCache initializes the sprite cache with a 100 MB limit.
+func createSpriteCache(logger *logrus.Logger) *cache.SpriteCache {
+	spriteCache := cache.NewSpriteCache(100 * 1024 * 1024)
 	logger.Info("sprite cache initialized (100 MB)")
+	return spriteCache
+}
 
-	// Create world with V3.0 features
+// generatorSet holds all procedural content generators.
+type generatorSet struct {
+	terrainGen *terrain.BSPGenerator
+	entityGen  *entity.EntityGenerator
+	itemGen    *item.ItemGenerator
+	magicGen   *magic.SpellGenerator
+	spriteGen  *sprites.Generator
+}
+
+// setupWorld creates and initializes the ECS world with all required systems.
+func setupWorld(logger *logrus.Logger) *engine.World {
 	world := engine.NewWorld()
 
-	// Add systems
 	movementSystem := &engine.MovementSystem{}
 	collisionSystem := &engine.CollisionSystem{}
 	spatialSystem := engine.NewSpatialPartitionSystem(10000, 10000)
@@ -126,27 +182,26 @@ func main() {
 	world.AddSystem(spatialSystem)
 
 	logger.Info("ECS systems initialized")
+	return world
+}
 
-	// Initialize generators (V3.0 features)
-	terrainGen := terrain.NewBSPGenerator()
-	entityGen := entity.NewEntityGenerator()
-	itemGen := item.NewItemGenerator()
-	magicGen := magic.NewSpellGenerator()
-	spriteGen := sprites.NewGenerator()
-
-	logger.Info("V3.0 generators initialized")
-
-	// Generate V3.0 content
-	logger.Info("generating V3.0 procedural content...")
-
-	seed := int64(12345)
-	params := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      5,
-		GenreID:    "fantasy",
+// initializeGenerators creates all V3.0 procedural generators.
+func initializeGenerators(logger *logrus.Logger) generatorSet {
+	gens := generatorSet{
+		terrainGen: terrain.NewBSPGenerator(),
+		entityGen:  entity.NewEntityGenerator(),
+		itemGen:    item.NewItemGenerator(),
+		magicGen:   magic.NewSpellGenerator(),
+		spriteGen:  sprites.NewGenerator(),
 	}
 
-	// Generate terrain
+	logger.Info("V3.0 generators initialized")
+	logger.Info("generating V3.0 procedural content...")
+	return gens
+}
+
+// generateTerrain generates and logs terrain data.
+func generateTerrain(terrainGen *terrain.BSPGenerator, seed int64, params procgen.GenerationParams, logger *logrus.Logger) {
 	logger.Info("generating terrain...")
 	terrainResult, err := terrainGen.Generate(seed, params)
 	if err != nil {
@@ -158,13 +213,14 @@ func main() {
 		"height": terrain.Height,
 		"rooms":  len(terrain.Rooms),
 	}).Info("terrain generated")
+}
 
-	// Generate entities
+// generateEntities creates entities with components and tests sprite caching.
+func generateEntities(world *engine.World, entityGen *entity.EntityGenerator, spriteGen *sprites.Generator, spriteCache *cache.SpriteCache, seed int64, params procgen.GenerationParams, logger *logrus.Logger) {
 	logger.WithField("count", *entityCount).Info("generating entities...")
 	entityStartTime := time.Now()
 
 	for i := 0; i < *entityCount; i++ {
-		// Generate entity
 		entitySeed := seed + int64(i)
 		entityResult, err := entityGen.Generate(entitySeed, params)
 		if err != nil {
@@ -178,10 +234,7 @@ func main() {
 		}
 		entityData := entities[0]
 
-		// Create ECS entity
 		e := world.CreateEntity()
-
-		// Add components
 		x := float64(i%100) * 10.0
 		y := float64(i/100) * 10.0
 
@@ -195,32 +248,8 @@ func main() {
 			Max:     float64(entityData.Stats.Health),
 		})
 
-		// Test sprite generation and caching
-		if i%10 == 0 { // Generate sprites for 10% of entities
-			// Generate same sprite 20 times to test caching (first miss, then 19 hits = 95% hit rate)
-			for repeat := 0; repeat < 20; repeat++ {
-				// Use consistent cache key
-				cacheKey := cache.GenerateKey(entitySeed, "idle", 0)
-				_, hit := spriteCache.Get(cacheKey)
-
-				if !hit {
-					// Generate sprite (V3.0 enhanced sprites)
-					spriteConfig := sprites.Config{
-						Type:       sprites.SpriteEntity,
-						Width:      32,
-						Height:     32,
-						Seed:       entitySeed,
-						GenreID:    "fantasy",
-						Complexity: 0.7,
-						Variation:  0,
-					}
-
-					spriteImg, err := spriteGen.Generate(spriteConfig)
-					if err == nil {
-						spriteCache.Put(cacheKey, spriteImg)
-					}
-				}
-			}
+		if i%10 == 0 {
+			testSpriteCaching(spriteGen, spriteCache, entitySeed)
 		}
 	}
 
@@ -229,8 +258,35 @@ func main() {
 		"count":    *entityCount,
 		"duration": float64(entityDuration.Milliseconds()),
 	}).Info("entities generated")
+}
 
-	// Generate items (V3.0 features)
+// testSpriteCaching generates sprites 20 times to validate cache hit rate.
+func testSpriteCaching(spriteGen *sprites.Generator, spriteCache *cache.SpriteCache, entitySeed int64) {
+	for repeat := 0; repeat < 20; repeat++ {
+		cacheKey := cache.GenerateKey(entitySeed, "idle", 0)
+		_, hit := spriteCache.Get(cacheKey)
+
+		if !hit {
+			spriteConfig := sprites.Config{
+				Type:       sprites.SpriteEntity,
+				Width:      32,
+				Height:     32,
+				Seed:       entitySeed,
+				GenreID:    "fantasy",
+				Complexity: 0.7,
+				Variation:  0,
+			}
+
+			spriteImg, err := spriteGen.Generate(spriteConfig)
+			if err == nil {
+				spriteCache.Put(cacheKey, spriteImg)
+			}
+		}
+	}
+}
+
+// generateItems generates item content and logs results.
+func generateItems(itemGen *item.ItemGenerator, seed int64, params procgen.GenerationParams, logger *logrus.Logger) {
 	logger.Info("generating items...")
 	itemCount := 100
 	for i := 0; i < itemCount; i++ {
@@ -241,8 +297,10 @@ func main() {
 		}
 	}
 	logger.WithField("count", itemCount).Info("items generated")
+}
 
-	// Generate magic spells (V3.0 features)
+// generateMagic generates magic spell content and logs results.
+func generateMagic(magicGen *magic.SpellGenerator, seed int64, params procgen.GenerationParams, logger *logrus.Logger) {
 	logger.Info("generating magic spells...")
 	spellCount := 50
 	for i := 0; i < spellCount; i++ {
@@ -253,12 +311,13 @@ func main() {
 		}
 	}
 	logger.WithField("count", spellCount).Info("spells generated")
+}
 
-	// Capture memory after content generation
+// capturePostGenerationMemory captures and logs memory state after content generation.
+func capturePostGenerationMemory(logger *logrus.Logger) MemoryStats {
 	runtime.GC()
 	time.Sleep(100 * time.Millisecond)
 	afterGenerationStats := collectMemoryStats()
-	memorySamples = append(memorySamples, afterGenerationStats)
 
 	logger.WithFields(logrus.Fields{
 		"alloc":     formatBytes(afterGenerationStats.Alloc),
@@ -267,7 +326,11 @@ func main() {
 		"numGC":     afterGenerationStats.NumGC,
 	}).Info("memory after content generation")
 
-	// Check sprite cache statistics
+	return afterGenerationStats
+}
+
+// logCacheStatistics logs sprite cache performance metrics.
+func logCacheStatistics(spriteCache *cache.SpriteCache, logger *logrus.Logger) {
 	cacheStats := spriteCache.Stats()
 	logger.WithFields(logrus.Fields{
 		"hits":      cacheStats.Hits,
@@ -277,62 +340,76 @@ func main() {
 		"totalSize": formatBytes(uint64(cacheStats.TotalSize)),
 		"evictions": cacheStats.Evictions,
 	}).Info("sprite cache statistics")
+}
 
-	// Run simulation for leak detection
-	if *checkLeaks {
-		logger.WithField("duration", *duration).Info("starting memory leak detection test")
+// runLeakDetectionTest runs the simulation loop to detect memory leaks.
+func runLeakDetectionTest(world *engine.World, initialStats MemoryStats, memorySamples *[]MemoryStats, logger *logrus.Logger) {
+	logger.WithField("duration", *duration).Info("starting memory leak detection test")
 
-		endTime := time.Now().Add(time.Duration(*duration) * time.Second)
-		sampleInterval := 10 * time.Second
-		lastSample := time.Now()
-		frameCount := 0
+	endTime := time.Now().Add(time.Duration(*duration) * time.Second)
+	sampleInterval := 10 * time.Second
+	lastSample := time.Now()
+	frameCount := 0
 
-		ticker := time.NewTicker(16 * time.Millisecond) // ~60 FPS
-		defer ticker.Stop()
+	ticker := time.NewTicker(16 * time.Millisecond)
+	defer ticker.Stop()
 
-		for time.Now().Before(endTime) {
-			<-ticker.C
+	for time.Now().Before(endTime) {
+		<-ticker.C
+		world.Update(0.016)
+		frameCount++
 
-			// Update world
-			world.Update(0.016)
-			frameCount++
-
-			// Periodic memory sampling
-			if time.Since(lastSample) >= sampleInterval {
-				runtime.GC()
-				time.Sleep(50 * time.Millisecond)
-
-				currentStats := collectMemoryStats()
-				memorySamples = append(memorySamples, currentStats)
-
-				elapsed := currentStats.Timestamp.Sub(initialStats.Timestamp)
-
-				logger.WithFields(logrus.Fields{
-					"elapsed":   elapsed.Seconds(),
-					"alloc":     formatBytes(currentStats.Alloc),
-					"heapAlloc": formatBytes(currentStats.HeapAlloc),
-					"sys":       formatBytes(currentStats.Sys),
-					"heapObjs":  currentStats.HeapObjects,
-					"numGC":     currentStats.NumGC,
-					"frames":    frameCount,
-				}).Info("memory sample")
-
-				lastSample = time.Now()
-			}
+		if time.Since(lastSample) >= sampleInterval {
+			sampleMemory(initialStats, memorySamples, logger, frameCount)
+			lastSample = time.Now()
 		}
-
-		logger.WithField("frames", frameCount).Info("simulation complete")
 	}
 
-	// Final memory snapshot
+	logger.WithField("frames", frameCount).Info("simulation complete")
+}
+
+// sampleMemory collects and logs a memory sample during leak detection.
+func sampleMemory(initialStats MemoryStats, memorySamples *[]MemoryStats, logger *logrus.Logger, frameCount int) {
+	runtime.GC()
+	time.Sleep(50 * time.Millisecond)
+
+	currentStats := collectMemoryStats()
+	*memorySamples = append(*memorySamples, currentStats)
+
+	elapsed := currentStats.Timestamp.Sub(initialStats.Timestamp)
+
+	logger.WithFields(logrus.Fields{
+		"elapsed":   elapsed.Seconds(),
+		"alloc":     formatBytes(currentStats.Alloc),
+		"heapAlloc": formatBytes(currentStats.HeapAlloc),
+		"sys":       formatBytes(currentStats.Sys),
+		"heapObjs":  currentStats.HeapObjects,
+		"numGC":     currentStats.NumGC,
+		"frames":    frameCount,
+	}).Info("memory sample")
+}
+
+// captureFinalMemory captures and logs the final memory state.
+func captureFinalMemory(logger *logrus.Logger) MemoryStats {
 	runtime.GC()
 	time.Sleep(100 * time.Millisecond)
 	finalStats := collectMemoryStats()
-	memorySamples = append(memorySamples, finalStats)
 
 	logger.Info("=== Final Memory Report ===")
+	return finalStats
+}
 
-	// Memory usage
+// printMemoryReport prints the complete memory profiling report to stdout.
+func printMemoryReport(initialStats, afterGenerationStats, finalStats MemoryStats, memorySamples []MemoryStats, spriteCache *cache.SpriteCache) {
+	printMemoryUsage(initialStats, afterGenerationStats, finalStats)
+	printMemoryGrowth(initialStats, finalStats)
+	printLeakAnalysis(memorySamples)
+	printCacheEfficiency(spriteCache)
+	printPerformanceTargets(finalStats, spriteCache)
+}
+
+// printMemoryUsage prints memory usage at different stages.
+func printMemoryUsage(initialStats, afterGenerationStats, finalStats MemoryStats) {
 	fmt.Printf("\n=== Memory Usage ===\n")
 	fmt.Printf("Initial Memory:\n")
 	fmt.Printf("  Allocated: %s\n", formatBytes(initialStats.Alloc))
@@ -351,8 +428,10 @@ func main() {
 	fmt.Printf("  Heap Objects: %d\n", finalStats.HeapObjects)
 	fmt.Printf("  Stack In Use: %s\n", formatBytes(finalStats.StackInuse))
 	fmt.Printf("  GC Runs:   %d\n", finalStats.NumGC)
+}
 
-	// Memory growth analysis
+// printMemoryGrowth prints memory growth analysis.
+func printMemoryGrowth(initialStats, finalStats MemoryStats) {
 	fmt.Printf("\n=== Memory Growth ===\n")
 	allocGrowth := int64(finalStats.Alloc) - int64(initialStats.Alloc)
 	heapGrowth := int64(finalStats.HeapAlloc) - int64(initialStats.HeapAlloc)
@@ -361,39 +440,44 @@ func main() {
 	fmt.Printf("  Allocated Growth: %s\n", formatBytes(uint64(allocGrowth)))
 	fmt.Printf("  Heap Growth:      %s\n", formatBytes(uint64(heapGrowth)))
 	fmt.Printf("  System Growth:    %s\n", formatBytes(uint64(sysGrowth)))
+}
 
-	// Check for memory leaks
-	if *checkLeaks && len(memorySamples) > 2 {
-		fmt.Printf("\n=== Memory Leak Analysis ===\n")
-
-		// Compare memory samples over time
-		startRunIdx := 2 // After content generation
-		endRunIdx := len(memorySamples) - 1
-
-		if endRunIdx > startRunIdx {
-			runStartMem := memorySamples[startRunIdx].Alloc
-			runEndMem := memorySamples[endRunIdx].Alloc
-			runDuration := memorySamples[endRunIdx].Timestamp.Sub(memorySamples[startRunIdx].Timestamp)
-
-			memGrowth := int64(runEndMem) - int64(runStartMem)
-			growthRate := float64(memGrowth) / runDuration.Seconds() // bytes per second
-
-			fmt.Printf("  Runtime Duration: %.1f seconds\n", runDuration.Seconds())
-			fmt.Printf("  Memory Growth:    %s\n", formatBytes(uint64(memGrowth)))
-			fmt.Printf("  Growth Rate:      %.2f KB/s\n", growthRate/1024)
-
-			// Determine if leak is present
-			// Allow small growth due to normal allocations
-			maxGrowthRate := 10.0 * 1024 // 10 KB/s threshold
-			if growthRate > maxGrowthRate {
-				fmt.Printf("  Status: ⚠️  POTENTIAL LEAK (growth rate > %.1f KB/s)\n", maxGrowthRate/1024)
-			} else {
-				fmt.Printf("  Status: ✅ NO LEAK DETECTED\n")
-			}
-		}
+// printLeakAnalysis analyzes memory samples for potential leaks.
+func printLeakAnalysis(memorySamples []MemoryStats) {
+	if !*checkLeaks || len(memorySamples) <= 2 {
+		return
 	}
 
-	// Sprite cache efficiency
+	fmt.Printf("\n=== Memory Leak Analysis ===\n")
+
+	startRunIdx := 2
+	endRunIdx := len(memorySamples) - 1
+
+	if endRunIdx <= startRunIdx {
+		return
+	}
+
+	runStartMem := memorySamples[startRunIdx].Alloc
+	runEndMem := memorySamples[endRunIdx].Alloc
+	runDuration := memorySamples[endRunIdx].Timestamp.Sub(memorySamples[startRunIdx].Timestamp)
+
+	memGrowth := int64(runEndMem) - int64(runStartMem)
+	growthRate := float64(memGrowth) / runDuration.Seconds()
+
+	fmt.Printf("  Runtime Duration: %.1f seconds\n", runDuration.Seconds())
+	fmt.Printf("  Memory Growth:    %s\n", formatBytes(uint64(memGrowth)))
+	fmt.Printf("  Growth Rate:      %.2f KB/s\n", growthRate/1024)
+
+	maxGrowthRate := 10.0 * 1024
+	if growthRate > maxGrowthRate {
+		fmt.Printf("  Status: ⚠️  POTENTIAL LEAK (growth rate > %.1f KB/s)\n", maxGrowthRate/1024)
+	} else {
+		fmt.Printf("  Status: ✅ NO LEAK DETECTED\n")
+	}
+}
+
+// printCacheEfficiency prints sprite cache statistics.
+func printCacheEfficiency(spriteCache *cache.SpriteCache) {
 	fmt.Printf("\n=== Sprite Cache Efficiency ===\n")
 	finalCacheStats := spriteCache.Stats()
 	fmt.Printf("  Total Accesses: %d\n", finalCacheStats.Hits+finalCacheStats.Misses)
@@ -405,12 +489,15 @@ func main() {
 		formatBytes(uint64(finalCacheStats.TotalSize)),
 		formatBytes(uint64(spriteCache.MaxSize())))
 	fmt.Printf("  Evictions:      %d\n", finalCacheStats.Evictions)
+}
 
-	// Target validation
+// printPerformanceTargets validates and prints performance target results.
+func printPerformanceTargets(finalStats MemoryStats, spriteCache *cache.SpriteCache) {
 	fmt.Printf("\n=== Performance Targets ===\n")
 	targetMemoryBytes := uint64(*targetMemory) * 1024 * 1024
-	targetCacheHitRate := 0.95 // 95%
+	targetCacheHitRate := 0.95
 
+	finalCacheStats := spriteCache.Stats()
 	memoryMet := finalStats.Alloc < targetMemoryBytes
 	cacheEfficiencyMet := finalCacheStats.HitRate() >= targetCacheHitRate
 
@@ -431,38 +518,49 @@ func main() {
 			finalCacheStats.HitRate()*100,
 			(targetCacheHitRate-finalCacheStats.HitRate())*100)
 	}
+}
 
-	// Write memory profile if requested
+// writeOptionalOutputs writes memory profile and report files if requested.
+func writeOptionalOutputs(logger *logrus.Logger, initialStats, afterGenerationStats, finalStats MemoryStats, cacheStats cache.Statistics, memorySamples []MemoryStats) {
 	if *memProfile != "" {
-		logger.WithField("path", *memProfile).Info("writing memory profile")
-		f, err := os.Create(*memProfile)
-		if err != nil {
-			logger.WithError(err).Error("failed to create memory profile")
-		} else {
-			runtime.GC()
-			if err := pprof.WriteHeapProfile(f); err != nil {
-				logger.WithError(err).Error("failed to write memory profile")
-			}
-			f.Close()
-			logger.Info("memory profile written")
-		}
+		writeMemoryProfile(logger)
 	}
 
-	// Write detailed report if requested
 	if *outputReport != "" {
-		reportContent := generateReport(
-			initialStats, afterGenerationStats, finalStats,
-			finalCacheStats, *entityCount, memorySamples,
-		)
-
-		if err := os.WriteFile(*outputReport, []byte(reportContent), 0o644); err != nil {
-			logger.WithError(err).Error("failed to write report")
-		} else {
-			logger.WithField("path", *outputReport).Info("memory report written")
-		}
+		writeMemoryReport(logger, initialStats, afterGenerationStats, finalStats, cacheStats, memorySamples)
 	}
+}
 
-	logger.Info("memory profiling complete!")
+// writeMemoryProfile writes the heap profile to the specified file.
+func writeMemoryProfile(logger *logrus.Logger) {
+	logger.WithField("path", *memProfile).Info("writing memory profile")
+	f, err := os.Create(*memProfile)
+	if err != nil {
+		logger.WithError(err).Error("failed to create memory profile")
+		return
+	}
+	defer f.Close()
+
+	runtime.GC()
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		logger.WithError(err).Error("failed to write memory profile")
+		return
+	}
+	logger.Info("memory profile written")
+}
+
+// writeMemoryReport generates and writes the detailed memory report.
+func writeMemoryReport(logger *logrus.Logger, initialStats, afterGenerationStats, finalStats MemoryStats, cacheStats cache.Statistics, memorySamples []MemoryStats) {
+	reportContent := generateReport(
+		initialStats, afterGenerationStats, finalStats,
+		cacheStats, *entityCount, memorySamples,
+	)
+
+	if err := os.WriteFile(*outputReport, []byte(reportContent), 0o644); err != nil {
+		logger.WithError(err).Error("failed to write report")
+	} else {
+		logger.WithField("path", *outputReport).Info("memory report written")
+	}
 }
 
 // generateReport creates a detailed text report

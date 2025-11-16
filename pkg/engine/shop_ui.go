@@ -343,197 +343,246 @@ func (ui *ShopUI) Draw(screen interface{}) {
 		return
 	}
 
-	// Get components
+	playerInv, merchant, ok := ui.getComponents()
+	if !ok {
+		return
+	}
+
+	windowX, windowY, windowWidth := ui.drawWindowBackground(img)
+	ui.drawHeader(img, playerInv, merchant, windowX, windowY, windowWidth)
+	ui.drawModeInstructions(img, windowX, windowY)
+
+	currentInventory := ui.getCurrentInventory(merchant, playerInv)
+	gridStartY := windowY + 100
+	ui.drawItemGrid(img, currentInventory, merchant, playerInv, windowX, windowY, gridStartY)
+
+	ui.errorState.DrawError(img)
+}
+
+// getComponents retrieves and validates the player inventory and merchant components.
+// Returns the inventory component, merchant component, and a boolean indicating success.
+func (ui *ShopUI) getComponents() (*InventoryComponent, *MerchantComponent, bool) {
 	playerInvComp, hasPlayerInv := ui.playerEntity.GetComponent("inventory")
 	merchantComp, hasMerchant := ui.merchantEntity.GetComponent("merchant")
 	if !hasPlayerInv || !hasMerchant {
-		return
+		return nil, nil, false
 	}
 
-	// Type assert with safety check
 	playerInv, ok := playerInvComp.(*InventoryComponent)
 	if !ok {
-		return
+		return nil, nil, false
 	}
 	merchant, ok := merchantComp.(*MerchantComponent)
 	if !ok {
-		return
+		return nil, nil, false
 	}
 
-	// Draw semi-transparent overlay
+	return playerInv, merchant, true
+}
+
+// drawWindowBackground renders the semi-transparent overlay and window background.
+// Returns the window position (x, y) and width for use in subsequent rendering.
+func (ui *ShopUI) drawWindowBackground(img *ebiten.Image) (int, int, int) {
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 200})
 	img.DrawImage(overlay, nil)
 
-	// Calculate window position
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
 	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 150
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Draw window background
 	windowBg := ebiten.NewImage(windowWidth, windowHeight)
 	windowBg.Fill(color.RGBA{30, 30, 40, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	img.DrawImage(windowBg, opts)
 
-	// Draw title and merchant name
+	return windowX, windowY, windowWidth
+}
+
+// drawHeader renders the shop title, player gold, exit hint, mode indicator, and transaction message.
+// Displays all header information including merchant name, player resources, and navigation hints.
+func (ui *ShopUI) drawHeader(img *ebiten.Image, playerInv *InventoryComponent, merchant *MerchantComponent, windowX, windowY, windowWidth int) {
 	titleText := fmt.Sprintf("SHOP - %s", merchant.MerchantName)
 	if merchant.MerchantName == "" {
 		titleText = "SHOP"
 	}
 	ebitenutil.DebugPrintAt(img, titleText, windowX+10, windowY+10)
 
-	// Issue #26 FIX: Display player gold prominently in header
 	goldText := fmt.Sprintf("Your Gold: %d", playerInv.Gold)
 	ebitenutil.DebugPrintAt(img, goldText, windowX+10, windowY+30)
 
-	// Draw exit hint (standardized dual-exit navigation)
 	exitHint := GetExitHint(MenuKeys.Shop)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+windowWidth-200, windowY+10)
 
-	// Draw mode indicator and switch hint
 	modeText := fmt.Sprintf("Mode: %s (TAB to switch)", ui.mode.String())
 	ebitenutil.DebugPrintAt(img, modeText, windowX+windowWidth-200, windowY+30)
 
-	// Draw transaction message if active
 	if ui.transactionMessageTime > 0 && ui.lastTransactionMessage != "" {
 		ebitenutil.DebugPrintAt(img, ui.lastTransactionMessage, windowX+10, windowY+50)
 	}
+}
 
-	// Draw mode-specific instructions
+// drawModeInstructions renders the mode-specific instruction text for buying or selling.
+// Provides clear user guidance on current interaction mode.
+func (ui *ShopUI) drawModeInstructions(img *ebiten.Image, windowX, windowY int) {
 	instructionY := windowY + 70
 	if ui.mode == ShopModeBuy {
 		ebitenutil.DebugPrintAt(img, "Select item to purchase (ENTER to confirm)", windowX+10, instructionY)
 	} else {
 		ebitenutil.DebugPrintAt(img, "Select item to sell (ENTER to confirm)", windowX+10, instructionY)
 	}
+}
 
-	// Draw item grid
-	var currentInventory []*item.Item
+// getCurrentInventory returns the appropriate inventory based on the current shop mode.
+// Returns merchant inventory for buy mode and player inventory for sell mode.
+func (ui *ShopUI) getCurrentInventory(merchant *MerchantComponent, playerInv *InventoryComponent) []*item.Item {
 	if ui.mode == ShopModeBuy {
-		currentInventory = merchant.Inventory
-	} else {
-		currentInventory = playerInv.Items
+		return merchant.Inventory
 	}
+	return playerInv.Items
+}
 
-	gridStartY := windowY + 100
+// drawItemGrid renders the complete item grid with slots, items, prices, and tooltips.
+// Handles affordability color-coding, hover/selection states, and tooltip display.
+func (ui *ShopUI) drawItemGrid(img *ebiten.Image, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, windowX, windowY, gridStartY int) {
 	for row := 0; row < ui.gridRows; row++ {
 		for col := 0; col < ui.gridCols; col++ {
 			slotIndex := row*ui.gridCols + col
 			slotX := windowX + ui.padding + col*ui.slotSize
 			slotY := gridStartY + row*ui.slotSize
 
-			// Draw slot background with selection/hover highlighting
-			// Issue #26: Color-code affordability (red tint for too expensive)
-			slotColor := color.RGBA{50, 50, 60, 255}
+			ui.drawItemSlot(img, slotIndex, slotX, slotY, currentInventory, merchant, playerInv, windowY)
+		}
+	}
+}
 
-			// Check affordability in buy mode
-			if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
-				itm := currentInventory[slotIndex]
-				if itm != nil {
-					price := merchant.GetSellPrice(itm)
-					if price > playerInv.Gold {
-						// Red tint for unaffordable items
-						slotColor = color.RGBA{80, 40, 40, 255}
-					} else {
-						// Green tint for affordable items
-						slotColor = color.RGBA{40, 70, 40, 255}
-					}
-				}
-			}
+// drawItemSlot renders a single inventory slot including background, item, price, and tooltip.
+// Applies color-coding based on affordability and hover/selection states.
+func (ui *ShopUI) drawItemSlot(img *ebiten.Image, slotIndex, slotX, slotY int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, windowY int) {
+	slotColor := ui.calculateSlotColor(slotIndex, currentInventory, merchant, playerInv)
 
-			// Override with hover/selection highlighting
-			if slotIndex == ui.hoveredSlot {
-				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
-					itm := currentInventory[slotIndex]
-					if itm != nil {
-						price := merchant.GetSellPrice(itm)
-						if price > playerInv.Gold {
-							slotColor = color.RGBA{100, 60, 60, 255} // Red-tinted hover
-						} else {
-							slotColor = color.RGBA{60, 100, 60, 255} // Green-tinted hover
-						}
-					}
-				} else {
-					slotColor = color.RGBA{70, 70, 90, 255}
-				}
-			}
-			if slotIndex == ui.selectedSlot {
-				if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
-					itm := currentInventory[slotIndex]
-					if itm != nil {
-						price := merchant.GetSellPrice(itm)
-						if price > playerInv.Gold {
-							slotColor = color.RGBA{120, 70, 70, 255} // Red-tinted selection
-						} else {
-							slotColor = color.RGBA{70, 120, 70, 255} // Green-tinted selection
-						}
-					}
-				} else {
-					slotColor = color.RGBA{90, 90, 120, 255}
-				}
-			}
+	slot := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
+	slot.Fill(slotColor)
+	slotOpts := &ebiten.DrawImageOptions{}
+	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
+	img.DrawImage(slot, slotOpts)
 
-			slot := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
-			slot.Fill(slotColor)
-			slotOpts := &ebiten.DrawImageOptions{}
-			slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-			img.DrawImage(slot, slotOpts)
+	if slotIndex < len(currentInventory) {
+		itm := currentInventory[slotIndex]
+		if itm != nil {
+			ui.drawItemContent(img, itm, merchant, playerInv, slotIndex, slotX, slotY, windowY)
+		}
+	}
+}
 
-			// Draw item if present
-			if slotIndex < len(currentInventory) {
-				itm := currentInventory[slotIndex]
-				if itm != nil {
-					// Draw item icon (first letter of name - simplified)
-					itemText := string(itm.Name[0])
-					ebitenutil.DebugPrintAt(img, itemText, slotX+24, slotY+24)
+// calculateSlotColor determines the slot background color based on affordability and selection state.
+// Returns appropriate color for default, hover, selection, affordable, and unaffordable states.
+func (ui *ShopUI) calculateSlotColor(slotIndex int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent) color.RGBA {
+	slotColor := color.RGBA{50, 50, 60, 255}
 
-					// Calculate and draw price
-					var price int
-					if ui.mode == ShopModeBuy {
-						price = merchant.GetSellPrice(itm)
-					} else {
-						price = merchant.GetBuyPrice(itm)
-					}
-					priceText := fmt.Sprintf("%dg", price)
-					ebitenutil.DebugPrintAt(img, priceText, slotX+5, slotY+ui.slotSize-15)
-
-					// Draw tooltip on hover
-					if slotIndex == ui.hoveredSlot {
-						tooltipX := slotX
-						tooltipY := slotY - 60
-						if tooltipY < windowY {
-							tooltipY = slotY + ui.slotSize + 5
-						}
-
-						tooltipBg := ebiten.NewImage(220, 50)
-						tooltipBg.Fill(color.RGBA{20, 20, 30, 250})
-						tooltipOpts := &ebiten.DrawImageOptions{}
-						tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
-						img.DrawImage(tooltipBg, tooltipOpts)
-
-						ebitenutil.DebugPrintAt(img, itm.Name, tooltipX+5, tooltipY+5)
-						ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", itm.Stats.Value), tooltipX+5, tooltipY+20)
-						if ui.mode == ShopModeBuy {
-							// Issue #26: Show affordability indicator
-							priceText := fmt.Sprintf("Buy Price: %d gold", price)
-							if price > playerInv.Gold {
-								priceText += " (TOO EXPENSIVE)"
-							} else {
-								priceText += " (CAN AFFORD)"
-							}
-							ebitenutil.DebugPrintAt(img, priceText, tooltipX+5, tooltipY+35)
-						} else {
-							ebitenutil.DebugPrintAt(img, fmt.Sprintf("Sell Price: %d gold", price), tooltipX+5, tooltipY+35)
-						}
-					}
-				}
+	if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+		itm := currentInventory[slotIndex]
+		if itm != nil {
+			price := merchant.GetSellPrice(itm)
+			if price > playerInv.Gold {
+				slotColor = color.RGBA{80, 40, 40, 255}
+			} else {
+				slotColor = color.RGBA{40, 70, 40, 255}
 			}
 		}
 	}
 
-	// H-002 FIX: Draw error feedback
-	ui.errorState.DrawError(img)
+	if slotIndex == ui.hoveredSlot {
+		slotColor = ui.getHoverColor(slotIndex, currentInventory, merchant, playerInv)
+	}
+	if slotIndex == ui.selectedSlot {
+		slotColor = ui.getSelectionColor(slotIndex, currentInventory, merchant, playerInv)
+	}
+
+	return slotColor
+}
+
+// getHoverColor returns the appropriate color for a hovered slot based on affordability.
+// Provides visual feedback for item affordability on hover in buy mode.
+func (ui *ShopUI) getHoverColor(slotIndex int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent) color.RGBA {
+	if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+		itm := currentInventory[slotIndex]
+		if itm != nil {
+			price := merchant.GetSellPrice(itm)
+			if price > playerInv.Gold {
+				return color.RGBA{100, 60, 60, 255}
+			}
+			return color.RGBA{60, 100, 60, 255}
+		}
+	}
+	return color.RGBA{70, 70, 90, 255}
+}
+
+// getSelectionColor returns the appropriate color for a selected slot based on affordability.
+// Provides strong visual feedback for item affordability on selection in buy mode.
+func (ui *ShopUI) getSelectionColor(slotIndex int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent) color.RGBA {
+	if ui.mode == ShopModeBuy && slotIndex < len(currentInventory) {
+		itm := currentInventory[slotIndex]
+		if itm != nil {
+			price := merchant.GetSellPrice(itm)
+			if price > playerInv.Gold {
+				return color.RGBA{120, 70, 70, 255}
+			}
+			return color.RGBA{70, 120, 70, 255}
+		}
+	}
+	return color.RGBA{90, 90, 120, 255}
+}
+
+// drawItemContent renders the item icon, price label, and tooltip for a populated slot.
+// Handles mode-specific pricing and affordability indicators.
+func (ui *ShopUI) drawItemContent(img *ebiten.Image, itm *item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, slotIndex, slotX, slotY, windowY int) {
+	itemText := string(itm.Name[0])
+	ebitenutil.DebugPrintAt(img, itemText, slotX+24, slotY+24)
+
+	var price int
+	if ui.mode == ShopModeBuy {
+		price = merchant.GetSellPrice(itm)
+	} else {
+		price = merchant.GetBuyPrice(itm)
+	}
+	priceText := fmt.Sprintf("%dg", price)
+	ebitenutil.DebugPrintAt(img, priceText, slotX+5, slotY+ui.slotSize-15)
+
+	if slotIndex == ui.hoveredSlot {
+		ui.drawTooltip(img, itm, price, playerInv, slotX, slotY, windowY)
+	}
+}
+
+// drawTooltip renders a detailed tooltip showing item name, value, and purchase/sell price.
+// Displays affordability indicators in buy mode and adjusts position to stay within window bounds.
+func (ui *ShopUI) drawTooltip(img *ebiten.Image, itm *item.Item, price int, playerInv *InventoryComponent, slotX, slotY, windowY int) {
+	tooltipX := slotX
+	tooltipY := slotY - 60
+	if tooltipY < windowY {
+		tooltipY = slotY + ui.slotSize + 5
+	}
+
+	tooltipBg := ebiten.NewImage(220, 50)
+	tooltipBg.Fill(color.RGBA{20, 20, 30, 250})
+	tooltipOpts := &ebiten.DrawImageOptions{}
+	tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
+	img.DrawImage(tooltipBg, tooltipOpts)
+
+	ebitenutil.DebugPrintAt(img, itm.Name, tooltipX+5, tooltipY+5)
+	ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", itm.Stats.Value), tooltipX+5, tooltipY+20)
+
+	if ui.mode == ShopModeBuy {
+		priceText := fmt.Sprintf("Buy Price: %d gold", price)
+		if price > playerInv.Gold {
+			priceText += " (TOO EXPENSIVE)"
+		} else {
+			priceText += " (CAN AFFORD)"
+		}
+		ebitenutil.DebugPrintAt(img, priceText, tooltipX+5, tooltipY+35)
+	} else {
+		ebitenutil.DebugPrintAt(img, fmt.Sprintf("Sell Price: %d gold", price), tooltipX+5, tooltipY+35)
+	}
 }

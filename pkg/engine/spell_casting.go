@@ -867,202 +867,215 @@ func containsTag(tags []string, tag string) bool {
 
 // findTargets returns entities affected by the spell.
 func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
-	var targets []*Entity
-
-	entities := s.world.GetEntities()
-
-	// Helper to check if entity is valid enemy target
-	isEnemyTarget := func(entity *Entity) bool {
-		if entity == caster {
-			return false
-		}
-		// Player has input component
-		if entity.HasComponent("input") {
-			return false
-		}
-		// Must have health to be a valid target
-		if !entity.HasComponent("health") {
-			return false
-		}
-		return true
-	}
-
 	switch spell.Target {
 	case magic.TargetSelf:
-		targets = append(targets, caster)
-
+		return []*Entity{caster}
 	case magic.TargetSingle:
-		// Find nearest enemy in range
-		var nearest *Entity
-		nearestDist := spell.Stats.Range
-
-		for _, entity := range entities {
-			if !isEnemyTarget(entity) {
-				continue
-			}
-
-			dist := GetDistance(caster, entity)
-			if dist <= nearestDist {
-				nearest = entity
-				nearestDist = dist
-			}
-		}
-
-		if nearest != nil {
-			targets = append(targets, nearest)
-		}
-
+		return s.findNearestEnemyTarget(caster, spell.Stats.Range)
 	case magic.TargetArea:
-		// Find all enemies in area
-		for _, entity := range entities {
-			if !isEnemyTarget(entity) {
-				continue
-			}
+		return s.findAreaTargets(caster, spell.Stats.AreaSize)
+	case magic.TargetAllEnemies:
+		return s.findAllEnemyTargets(caster)
+	case magic.TargetCone:
+		return s.findConeTargets(caster, spell, x, y)
+	case magic.TargetLine:
+		return s.findLineTargets(caster, spell, x, y)
+	default:
+		return nil
+	}
+}
 
-			dist := GetDistance(caster, entity)
-			if dist <= spell.Stats.AreaSize {
-				targets = append(targets, entity)
-			}
+// isEnemyTarget checks if an entity is a valid enemy target for spell effects.
+func (s *SpellCastingSystem) isEnemyTarget(caster, entity *Entity) bool {
+	if entity == caster {
+		return false
+	}
+	// Player has input component
+	if entity.HasComponent("input") {
+		return false
+	}
+	// Must have health to be a valid target
+	if !entity.HasComponent("health") {
+		return false
+	}
+	return true
+}
+
+// findNearestEnemyTarget finds the nearest enemy within range.
+func (s *SpellCastingSystem) findNearestEnemyTarget(caster *Entity, maxRange float64) []*Entity {
+	entities := s.world.GetEntities()
+	var nearest *Entity
+	nearestDist := maxRange
+
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
 		}
 
-	case magic.TargetAllEnemies:
-		// All enemies regardless of distance
-		for _, entity := range entities {
-			if !isEnemyTarget(entity) {
-				continue
-			}
+		dist := GetDistance(caster, entity)
+		if dist <= nearestDist {
+			nearest = entity
+			nearestDist = dist
+		}
+	}
 
+	if nearest != nil {
+		return []*Entity{nearest}
+	}
+	return nil
+}
+
+// findAreaTargets finds all enemies within area range.
+func (s *SpellCastingSystem) findAreaTargets(caster *Entity, areaSize float64) []*Entity {
+	entities := s.world.GetEntities()
+	var targets []*Entity
+
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
+		}
+
+		dist := GetDistance(caster, entity)
+		if dist <= areaSize {
 			targets = append(targets, entity)
 		}
+	}
 
-	case magic.TargetCone:
-		// Cone targeting: entities within angle from caster's facing direction
-		casterPos, hasCasterPos := caster.GetComponent("position")
-		if !hasCasterPos {
-			break
+	return targets
+}
+
+// findAllEnemyTargets finds all enemies regardless of distance.
+func (s *SpellCastingSystem) findAllEnemyTargets(caster *Entity) []*Entity {
+	entities := s.world.GetEntities()
+	var targets []*Entity
+
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
 		}
-		casterPosComp, ok := casterPos.(*PositionComponent)
+		targets = append(targets, entity)
+	}
+
+	return targets
+}
+
+// findConeTargets finds entities within a cone-shaped area from the caster.
+func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	casterPos, hasCasterPos := caster.GetComponent("position")
+	if !hasCasterPos {
+		return nil
+	}
+	casterPosComp, ok := casterPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+
+	dirX, dirY := s.getCasterDirection(caster, x, y)
+	if dirX == 0 && dirY == 0 {
+		dirX = 1.0
+	}
+
+	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
+	dirX /= dirLength
+	dirY /= dirLength
+
+	coneAngle := 45.0 * math.Pi / 180.0
+	entities := s.world.GetEntities()
+	var targets []*Entity
+
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
+		}
+
+		entityPos, hasPos := entity.GetComponent("position")
+		if !hasPos {
+			continue
+		}
+		entityPosComp, ok := entityPos.(*PositionComponent)
 		if !ok {
-			break
+			continue
 		}
 
-		// Get caster's facing direction (use velocity or mouse aim)
-		dirX, dirY := s.getCasterDirection(caster, x, y)
-		if dirX == 0 && dirY == 0 {
-			dirX = 1.0 // Default to facing right
+		toEntityX := entityPosComp.X - casterPosComp.X
+		toEntityY := entityPosComp.Y - casterPosComp.Y
+		dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+		if dist > spell.Stats.Range || dist < 0.1 {
+			continue
 		}
 
-		// Normalize direction
-		dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
-		dirX /= dirLength
-		dirY /= dirLength
+		toEntityX /= dist
+		toEntityY /= dist
 
-		// Cone parameters
-		coneAngle := 45.0 * math.Pi / 180.0 // 45-degree cone (adjustable)
+		dotProduct := dirX*toEntityX + dirY*toEntityY
+		angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
 
-		for _, entity := range entities {
-			if !isEnemyTarget(entity) {
-				continue
-			}
+		if angle <= coneAngle {
+			targets = append(targets, entity)
+		}
+	}
 
-			entityPos, hasPos := entity.GetComponent("position")
-			if !hasPos {
-				continue
-			}
-			entityPosComp, ok := entityPos.(*PositionComponent)
-			if !ok {
-				continue
-			}
+	return targets
+}
 
-			// Vector from caster to entity
-			toEntityX := entityPosComp.X - casterPosComp.X
-			toEntityY := entityPosComp.Y - casterPosComp.Y
-			dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+// findLineTargets finds entities along a line from the caster in the facing direction.
+func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	casterPos, hasCasterPos := caster.GetComponent("position")
+	if !hasCasterPos {
+		return nil
+	}
+	casterPosComp, ok := casterPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
 
-			// Check if within range
-			if dist > spell.Stats.Range || dist < 0.1 {
-				continue
-			}
+	dirX, dirY := s.getCasterDirection(caster, x, y)
+	if dirX == 0 && dirY == 0 {
+		dirX = 1.0
+	}
 
-			// Normalize to entity vector
-			toEntityX /= dist
-			toEntityY /= dist
+	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
+	dirX /= dirLength
+	dirY /= dirLength
 
-			// Calculate angle between direction and to-entity vector
-			dotProduct := dirX*toEntityX + dirY*toEntityY
-			angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
+	lineWidth := 32.0
+	entities := s.world.GetEntities()
+	var targets []*Entity
 
-			// Check if within cone angle
-			if angle <= coneAngle {
-				targets = append(targets, entity)
-			}
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
 		}
 
-	case magic.TargetLine:
-		// Line targeting: entities along a line from caster in facing direction
-		casterPos, hasCasterPos := caster.GetComponent("position")
-		if !hasCasterPos {
-			break
+		entityPos, hasPos := entity.GetComponent("position")
+		if !hasPos {
+			continue
 		}
-		casterPosComp, ok := casterPos.(*PositionComponent)
+		entityPosComp, ok := entityPos.(*PositionComponent)
 		if !ok {
-			break
+			continue
 		}
 
-		// Get caster's facing direction (use velocity or mouse aim)
-		dirX, dirY := s.getCasterDirection(caster, x, y)
-		if dirX == 0 && dirY == 0 {
-			dirX = 1.0 // Default to facing right
+		toEntityX := entityPosComp.X - casterPosComp.X
+		toEntityY := entityPosComp.Y - casterPosComp.Y
+		dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+		if dist > spell.Stats.Range || dist < 0.1 {
+			continue
 		}
 
-		// Normalize direction
-		dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
-		dirX /= dirLength
-		dirY /= dirLength
+		projection := toEntityX*dirX + toEntityY*dirY
+		if projection < 0 {
+			continue
+		}
 
-		// Line width tolerance (in pixels)
-		lineWidth := 32.0
+		perpX := toEntityX - projection*dirX
+		perpY := toEntityY - projection*dirY
+		perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
 
-		for _, entity := range entities {
-			if !isEnemyTarget(entity) {
-				continue
-			}
-
-			entityPos, hasPos := entity.GetComponent("position")
-			if !hasPos {
-				continue
-			}
-			entityPosComp, ok := entityPos.(*PositionComponent)
-			if !ok {
-				continue
-			}
-
-			// Vector from caster to entity
-			toEntityX := entityPosComp.X - casterPosComp.X
-			toEntityY := entityPosComp.Y - casterPosComp.Y
-			dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
-
-			// Check if within range
-			if dist > spell.Stats.Range || dist < 0.1 {
-				continue
-			}
-
-			// Calculate perpendicular distance from line
-			// Project entity position onto line direction
-			projection := toEntityX*dirX + toEntityY*dirY
-			if projection < 0 {
-				continue // Behind caster
-			}
-
-			// Calculate perpendicular distance
-			perpX := toEntityX - projection*dirX
-			perpY := toEntityY - projection*dirY
-			perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
-
-			// Check if within line width
-			if perpDist <= lineWidth {
-				targets = append(targets, entity)
-			}
+		if perpDist <= lineWidth {
+			targets = append(targets, entity)
 		}
 	}
 

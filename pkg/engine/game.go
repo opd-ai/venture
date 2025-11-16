@@ -817,154 +817,152 @@ func (g *EbitenGame) Update() error {
 
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
-	// If in main menu state, only draw main menu
-	if g.StateManager.CurrentState() == AppStateMainMenu {
-		g.MainMenuUI.Draw(screen)
+	if g.drawMenuState(screen) {
 		return
 	}
 
-	// If in single-player menu state, only draw single-player menu
-	if g.StateManager.CurrentState() == AppStateSinglePlayerMenu {
+	g.drawGameplayScene(screen)
+	g.drawOverlays(screen)
+	g.drawVirtualControls(screen)
+}
+
+// drawMenuState renders the appropriate menu based on current application state.
+// Returns true if a menu was drawn, false if gameplay should be rendered.
+func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
+	switch g.StateManager.CurrentState() {
+	case AppStateMainMenu:
+		g.MainMenuUI.Draw(screen)
+		return true
+	case AppStateSinglePlayerMenu:
 		if g.SinglePlayerMenu != nil {
 			g.SinglePlayerMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in genre selection state, only draw genre selection menu
-	if g.StateManager.CurrentState() == AppStateGenreSelection {
+		return true
+	case AppStateGenreSelection:
 		if g.GenreSelectionMenu != nil {
 			g.GenreSelectionMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in multiplayer menu state, only draw multiplayer menu
-	if g.StateManager.CurrentState() == AppStateMultiPlayerMenu {
+		return true
+	case AppStateMultiPlayerMenu:
 		if g.MultiplayerMenu != nil {
 			g.MultiplayerMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in server address input state, only draw server address input
-	if g.StateManager.CurrentState() == AppStateServerAddressInput {
+		return true
+	case AppStateServerAddressInput:
 		if g.ServerAddressInput != nil {
 			g.ServerAddressInput.Draw(screen)
 		}
-		return
-	}
-
-	// If in settings state, only draw settings
-	if g.StateManager.CurrentState() == AppStateSettings {
+		return true
+	case AppStateSettings:
 		g.SettingsUI.Draw(screen)
-		return
-	}
-
-	// If in character creation state, only draw character creation
-	if g.StateManager.CurrentState() == AppStateCharacterCreation {
+		return true
+	case AppStateCharacterCreation:
 		g.CharacterCreation.Draw(screen)
-		return
+		return true
 	}
 
-	// If in any other menu state, draw main menu
 	if g.StateManager.IsInMenu() {
 		g.MainMenuUI.Draw(screen)
-		return
+		return true
 	}
 
-	// From here on, we're in gameplay state and render the full game
+	return false
+}
 
-	// If lighting is enabled, use post-processing pipeline
+// drawGameplayScene renders the main game scene with terrain, entities, and lighting effects.
+func (g *EbitenGame) drawGameplayScene(screen *ebiten.Image) {
 	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
-		// WASM FIX: Lazy initialization of scene buffer on first use
-		// In WASM, ebiten.NewImage() can only be called after graphics context is ready
-		if g.sceneBuffer == nil {
-			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-		}
-
-		// Clear and reuse scene buffer (avoid per-frame allocation)
-		g.sceneBuffer.Clear()
-
-		// Render terrain to buffer (if available)
-		if g.TerrainRenderSystem != nil {
-			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
-		}
-
-		// Render all entities to buffer
-		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
-
-		// Update lighting system viewport based on camera
-		if g.CameraSystem != nil {
-			camX, camY := g.CameraSystem.GetPosition()
-			g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
-		}
-
-		// Apply lighting as post-processing (renders sceneBuffer with lighting to screen)
-		entities := g.World.GetEntities()
-		g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
+		g.drawLitScene(screen)
 	} else {
-		// Standard rendering pipeline (no lighting)
-		// Render terrain (if available)
-		if g.TerrainRenderSystem != nil {
-			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
-		}
+		g.drawStandardScene(screen)
+	}
+}
 
-		// Render all entities
-		g.RenderSystem.Draw(screen, g.World.GetEntities())
+// drawLitScene renders the game scene with dynamic lighting using post-processing pipeline.
+func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
+	if g.sceneBuffer == nil {
+		g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 	}
 
-	// Render HUD overlay
+	g.sceneBuffer.Clear()
+
+	if g.TerrainRenderSystem != nil {
+		g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
+	}
+
+	g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+
+	if g.CameraSystem != nil {
+		camX, camY := g.CameraSystem.GetPosition()
+		g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
+	}
+
+	entities := g.World.GetEntities()
+	g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
+}
+
+// drawStandardScene renders the game scene without lighting effects.
+func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
+	if g.TerrainRenderSystem != nil {
+		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+	}
+
+	g.RenderSystem.Draw(screen, g.World.GetEntities())
+}
+
+// drawOverlays renders all UI overlays including HUD, menus, inventory, and other interfaces.
+func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	g.HUDSystem.Draw(screen)
 
-	// Render tutorial overlay (if active)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Draw(screen)
 	}
 
-	// Render help overlay (if visible)
 	if g.HelpSystem != nil && g.HelpSystem.Visible {
 		g.HelpSystem.Draw(screen)
 	}
 
-	// Render menu overlay (if active)
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
 		g.MenuSystem.Draw(screen)
 	}
 
-	// Render UI overlays (drawn last so they're on top)
 	g.InventoryUI.Draw(screen)
 	g.QuestUI.Draw(screen)
 	g.CharacterUI.Draw(screen)
 	g.SkillsUI.Draw(screen)
-	g.MapUI.Draw(screen) // Map UI draws last to be on top of everything
+	g.MapUI.Draw(screen)
 
-	// Render shop UI (if initialized)
 	if g.ShopUI != nil {
 		g.ShopUI.Draw(screen)
 	}
 
-	// Render crafting UI (if initialized)
 	if g.CraftingUI != nil {
 		g.CraftingUI.Draw(screen)
 	}
 
-	// Render mailbox UI (Phase 40.3)
-	if g.MailboxUI != nil && g.MailboxUI.IsOpen() {
-		// Load latest mail from player's MailComponent
-		if g.PlayerEntity != nil {
-			if mailComp, ok := g.PlayerEntity.GetComponent("mail"); ok {
-				g.MailboxUI.LoadFromMailComponent(mailComp.(*MailComponent))
-			}
-		}
-		// Render to image then draw
-		mailImg := g.MailboxUI.Render()
-		if mailImg != nil {
-			screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
+	g.drawMailboxUI(screen)
+}
+
+// drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
+func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
+	if g.MailboxUI == nil || !g.MailboxUI.IsOpen() {
+		return
+	}
+
+	if g.PlayerEntity != nil {
+		if mailComp, ok := g.PlayerEntity.GetComponent("mail"); ok {
+			g.MailboxUI.LoadFromMailComponent(mailComp.(*MailComponent))
 		}
 	}
 
-	// Render virtual controls (mobile only, drawn last to be on top of everything)
+	mailImg := g.MailboxUI.Render()
+	if mailImg != nil {
+		screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
+	}
+}
+
+// drawVirtualControls renders mobile touch controls on top of all other elements.
+func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
 	for _, system := range g.World.GetSystems() {
 		if inputSys, ok := system.(*InputSystem); ok {
 			inputSys.DrawVirtualControls(screen)

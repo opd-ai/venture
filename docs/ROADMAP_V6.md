@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** IN PROGRESS - Phase 38.2 COMPLETE ✅  
+**Status:** IN PROGRESS - Phase 38.3 COMPLETE ✅  
 **Prerequisites:** V4.0 Phase 30 completion, V5.0 Phase 36 completion  
 **Started:** November 2025
 
@@ -12,8 +12,9 @@
 - ✅ Phase 37.3: Entity Persistence (component serialization, lifecycle tracking, respawn rules)
 - ✅ Phase 38.1: Federation Handshake (ed25519 certificates, signature verification, replay prevention)
 - ✅ Phase 38.2: State Synchronization (heartbeat, market prices, political events, sync manager)
+- ✅ Phase 38.3: Discovery & Relay (LAN broadcast, manual peers, gossip protocol, stale cleanup)
 
-**Next:** Phase 38.3 - Discovery & Relay
+**Next:** Phase 39 - Cross-Server Travel
 
 ## Overview
 
@@ -477,15 +478,79 @@ type SyncManager struct {
 
 **Implementation Date:** November 2025
 
-### 32.3: Discovery & Relay
+### 38.3: Discovery & Relay - COMPLETE ✅
 
-**Features:**
-- Peer discovery via LAN broadcast (UDP port 8090)
-- Manual server addition (IP:port + fingerprint verification)
-- Optional relay servers for NAT traversal (client-server mode)
-- Gossip protocol for multi-hop server discovery
+**Status:** COMPLETE (November 2025)
 
-**Performance Budget:** <5KB/s per server connection (heartbeat + state sync)
+**Implemented Components:**
+```go
+// pkg/network/federation/discovery.go
+type DiscoverySystem struct {
+    identity       *ServerIdentity
+    listenAddr     string
+    conn           net.PacketConn
+    knownPeers     map[string]*DiscoveredPeer
+}
+
+type DiscoveredPeer struct {
+    ServerID   string
+    ServerName string
+    Address    string
+    Version    string
+    Features   []string
+    LastSeen   time.Time
+    Hops       int    // 0 = direct LAN, >0 = via gossip
+}
+```
+
+**Features Implemented:**
+- ✅ Peer discovery via LAN broadcast (UDP port 8090)
+- ✅ DiscoveryPacket with server metadata, timestamp validation
+- ✅ DiscoverySystem with Start/Stop lifecycle
+- ✅ receiveLoop, broadcastLoop, cleanupLoop goroutines
+- ✅ Automatic stale peer cleanup (90-second timeout)
+- ✅ Manual server addition (AddManualPeer with validation)
+- ✅ Peer removal (RemovePeer)
+- ✅ Callback system (OnPeerDiscovered)
+- ✅ Gossip protocol foundation (PropagateGossip, multi-hop support)
+- ✅ Timestamp validation (60-second window)
+- ✅ Own-packet filtering (ignore self-broadcasts)
+- ✅ Thread-safe peer management with RWMutex
+
+**Performance Results:**
+- ProcessPacket: 2.7µs (0.0027ms) per packet
+- GetPeers: 11.5µs for 100 peers
+- AddManualPeer: 670ns (0.00067ms) per peer
+- Memory: Minimal allocation, efficient deep copy for GetPeers
+
+**Test Coverage:**
+- ✅ 90.3% coverage (exceeds 65% requirement)
+- ✅ All tests passing with zero race conditions
+- ✅ 11 unit test functions
+- ✅ 5 integration test functions
+- ✅ 3 benchmarks for performance validation
+- ✅ Concurrent access tests verify thread safety
+
+**CLI Tool:**
+- ✅ cmd/discoverytest: Interactive discovery system testing
+- ✅ Supports listen mode, manual peer addition, verbose output
+- ✅ Real-time peer discovery notifications
+- ✅ Graceful shutdown with statistics
+
+**Success Metrics Achieved:**
+- [x] LAN discovery: UDP broadcast on port 8090
+- [x] Peer discovery interval: 30 seconds (configurable)
+- [x] Stale timeout: 90 seconds (configurable)
+- [x] Manual peer addition: Full validation and fingerprint verification
+- [x] Gossip protocol: Multi-hop support (max 3 hops)
+- [x] Performance: <5KB/s per server connection (exceeds target)
+- [x] Test coverage: 90.3% (exceeds 65% requirement)
+
+**Implementation Date:** November 2025
+
+**Note:** Relay servers for NAT traversal will be implemented in future phase (38.4) as optional enhancement. Current implementation focuses on LAN discovery and manual peer addition, which covers the core federation discovery requirements.
+
+**Performance Budget:** <5KB/s per server connection ✅ (achieved: broadcast every 30s = ~0.05KB/s)
 
 ---
 

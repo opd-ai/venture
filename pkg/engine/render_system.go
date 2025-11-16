@@ -674,185 +674,180 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 
 // drawEntity renders a single entity.
 func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
-	// DEBUG: Log when drawing player
-	if entity.HasComponent("input") {
+	pos, sprite := r.validateEntityComponents(entity)
+	if pos == nil || sprite == nil {
+		return
 	}
 
-	// Get required components
+	r.syncSpriteState(entity, sprite)
+
+	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+
+	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
+		return
+	}
+
+	layerYOffset, layerAlpha := r.calculateLayerTransition(entity)
+	flashAlpha, tintR, tintG, tintB, tintA := r.extractVisualFeedback(entity)
+	tintA *= layerAlpha
+
+	spriteImage := r.selectSpriteImage(sprite)
+
+	if spriteImage != nil {
+		r.drawSpriteImage(spriteImage, sprite, screenX, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA)
+	} else {
+		r.drawFallbackRect(sprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha)
+	}
+
+	r.drawHealthBar(entity, screenX, screenY, sprite.Width, sprite.Height)
+}
+
+// validateEntityComponents retrieves and validates position and sprite components.
+func (r *EbitenRenderSystem) validateEntityComponents(entity *Entity) (*PositionComponent, *EbitenSprite) {
 	posComp, hasPos := entity.GetComponent("position")
 	spriteComp, hasSprite := entity.GetComponent("sprite")
 
 	if !hasPos || !hasSprite {
-		if entity.HasComponent("input") {
-		}
-		return
+		return nil, nil
 	}
 
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
 	sprite, ok := spriteComp.(*EbitenSprite)
 	if !ok {
-		return
+		return nil, nil
 	}
 
 	if !sprite.Visible {
-		if entity.HasComponent("input") {
-		}
-		return
+		return nil, nil
 	}
 
-	// Phase 4: Sync CurrentDirection from AnimationComponent.Facing
+	return pos, sprite
+}
+
+// syncSpriteState synchronizes sprite direction and rotation from entity components.
+func (r *EbitenRenderSystem) syncSpriteState(entity *Entity, sprite *EbitenSprite) {
 	if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
 		if anim, ok := animComp.(*AnimationComponent); ok {
 			sprite.CurrentDirection = int(anim.GetFacing())
 		}
 	}
 
-	// Phase 10.1: Sync sprite rotation from RotationComponent if present
-	// This enables 360° visual rotation for entities with rotation component
 	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
 		if rotation, ok := rotComp.(*RotationComponent); ok {
 			sprite.Rotation = rotation.Angle
-
-			// DEBUG: Log rotation values for player entity (entity ID 1)
-			if entity.ID == 1 && sprite.Rotation != 0 {
-			}
 		}
 	}
+}
 
-	// Convert world position to screen position
-	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
-
-	// Check if entity is visible on screen (per-entity culling)
-	// Skip per-entity culling if spatial partition already culled entities
-	// to avoid redundant double-culling that could incorrectly hide sprites
-	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
-		return
+// calculateLayerTransition computes depth offset and transparency for layer transitions.
+func (r *EbitenRenderSystem) calculateLayerTransition(entity *Entity) (yOffset, alpha float64) {
+	alpha = 1.0
+	layerComp, hasLayer := entity.GetComponent("layer")
+	if !hasLayer {
+		return yOffset, alpha
 	}
 
-	// Issue #4 FIX: Apply layer transition visual feedback
-	// When entity transitions between terrain layers, apply depth offset and transparency
-	var layerTransitionYOffset float64
-	var layerTransitionAlpha float64 = 1.0
-	if layerComp, hasLayer := entity.GetComponent("layer"); hasLayer {
-		if layer, ok := layerComp.(*LayerComponent); ok {
-			if layer.IsTransitioning() {
-				// Calculate depth offset based on transition progress
-				// Moving up to higher layer (platform): negative offset (entity rises)
-				// Moving down to lower layer: positive offset (entity descends)
-				const maxDepthOffset = 16.0 // Maximum vertical offset in pixels
-				depthOffset := layer.TransitionProgress * maxDepthOffset
-
-				if layer.TargetLayer > layer.CurrentLayer {
-					// Moving up to higher layer
-					layerTransitionYOffset = -depthOffset
-				} else {
-					// Moving down to lower layer
-					layerTransitionYOffset = depthOffset
-				}
-
-				// Apply subtle transparency during transition edges for smooth visual flow
-				// Fade at start (0.0-0.3) and end (0.7-1.0) of transition
-				if layer.TransitionProgress < 0.3 {
-					// Fade in at start: 0.7 at progress=0, 1.0 at progress=0.3
-					layerTransitionAlpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
-				} else if layer.TransitionProgress > 0.7 {
-					// Fade out at end: 1.0 at progress=0.7, 0.7 at progress=1.0
-					layerTransitionAlpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
-				}
-			}
-		}
+	layer, ok := layerComp.(*LayerComponent)
+	if !ok || !layer.IsTransitioning() {
+		return yOffset, alpha
 	}
 
-	// GAP-012 REPAIR: Apply visual feedback effects (hit flash, tints)
-	var flashAlpha float64
-	var tintR, tintG, tintB, tintA float64 = 1.0, 1.0, 1.0, 1.0
-	if feedbackComp, ok := entity.GetComponent("visual_feedback"); ok {
-		if feedback, ok := feedbackComp.(*VisualFeedbackComponent); ok {
-			flashAlpha = feedback.GetFlashAlpha()
-			tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
-		}
+	const maxDepthOffset = 16.0
+	depthOffset := layer.TransitionProgress * maxDepthOffset
+
+	if layer.TargetLayer > layer.CurrentLayer {
+		yOffset = -depthOffset
+	} else {
+		yOffset = depthOffset
 	}
 
-	// Issue #4 FIX: Apply layer transition alpha to tint alpha
-	// Combine layer transition transparency with visual feedback tint
-	tintA *= layerTransitionAlpha
+	if layer.TransitionProgress < 0.3 {
+		alpha = 0.7 + (layer.TransitionProgress / 0.3 * 0.3)
+	} else if layer.TransitionProgress > 0.7 {
+		alpha = 1.0 - ((layer.TransitionProgress - 0.7) / 0.3 * 0.3)
+	}
 
-	// Draw sprite or colored rectangle
-	// Phase 2: Support directional sprites with fallback to single image
-	var spriteImage *ebiten.Image
+	return yOffset, alpha
+}
+
+// extractVisualFeedback retrieves flash and tint values from visual feedback component.
+func (r *EbitenRenderSystem) extractVisualFeedback(entity *Entity) (flashAlpha, tintR, tintG, tintB, tintA float64) {
+	tintR, tintG, tintB, tintA = 1.0, 1.0, 1.0, 1.0
+
+	feedbackComp, ok := entity.GetComponent("visual_feedback")
+	if !ok {
+		return flashAlpha, tintR, tintG, tintB, tintA
+	}
+
+	feedback, ok := feedbackComp.(*VisualFeedbackComponent)
+	if !ok {
+		return flashAlpha, tintR, tintG, tintB, tintA
+	}
+
+	flashAlpha = feedback.GetFlashAlpha()
+	tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+	return flashAlpha, tintR, tintG, tintB, tintA
+}
+
+// selectSpriteImage chooses the appropriate sprite image based on direction.
+func (r *EbitenRenderSystem) selectSpriteImage(sprite *EbitenSprite) *ebiten.Image {
 	if len(sprite.DirectionalImages) > 0 {
-		// Use directional sprite if available
 		if dirImg, exists := sprite.DirectionalImages[sprite.CurrentDirection]; exists && dirImg != nil {
-			spriteImage = dirImg
-		} else {
-			// Fallback to default direction or single image
-			spriteImage = sprite.Image
+			return dirImg
 		}
-	} else {
-		// Use single image (backward compatibility)
-		spriteImage = sprite.Image
+		return sprite.Image
+	}
+	return sprite.Image
+}
+
+// drawSpriteImage renders a sprite image with visual effects applied.
+func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSprite, screenX, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA float64) {
+	opts := &ebiten.DrawImageOptions{}
+
+	if flashAlpha > 0 || tintR != 1.0 || tintG != 1.0 || tintB != 1.0 || tintA != 1.0 {
+		opts.ColorScale.ScaleWithColor(color.RGBA{
+			R: uint8((tintR + flashAlpha) * 255),
+			G: uint8((tintG + flashAlpha) * 255),
+			B: uint8((tintB + flashAlpha) * 255),
+			A: uint8(tintA * 255),
+		})
 	}
 
-	// DEBUG: Log for player sprite
-	if entity.HasComponent("input") && spriteImage == nil {
+	opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2)
+	opts.GeoM.Rotate(sprite.Rotation)
+	opts.GeoM.Translate(screenX, screenY+layerYOffset)
+	r.screen.DrawImage(img, opts)
+}
+
+// drawFallbackRect renders a colored rectangle when no sprite image exists.
+func (r *EbitenRenderSystem) drawFallbackRect(sprite *EbitenSprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha float64) {
+	col := sprite.Color
+
+	if flashAlpha > 0 {
+		red, green, blue, alpha := col.RGBA()
+		col = color.RGBA{
+			R: uint8((float64(red>>8) + flashAlpha*255) / 2),
+			G: uint8((float64(green>>8) + flashAlpha*255) / 2),
+			B: uint8((float64(blue>>8) + flashAlpha*255) / 2),
+			A: uint8(alpha >> 8),
+		}
 	}
 
-	if spriteImage != nil {
-		// Draw procedural sprite
-		opts := &ebiten.DrawImageOptions{}
-
-		// GAP-012 REPAIR: Apply color effects
-		if flashAlpha > 0 || tintR != 1.0 || tintG != 1.0 || tintB != 1.0 || tintA != 1.0 {
-			// Apply flash (additive white) and tint (multiplicative color)
-			opts.ColorScale.ScaleWithColor(color.RGBA{
-				R: uint8((tintR + flashAlpha) * 255),
-				G: uint8((tintG + flashAlpha) * 255),
-				B: uint8((tintB + flashAlpha) * 255),
-				A: uint8(tintA * 255),
-			})
+	if layerAlpha < 1.0 {
+		red, green, blue, alpha := col.RGBA()
+		col = color.RGBA{
+			R: uint8(red >> 8),
+			G: uint8(green >> 8),
+			B: uint8(blue >> 8),
+			A: uint8(float64(alpha>>8) * layerAlpha),
 		}
-
-		opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2) // Center
-		opts.GeoM.Rotate(sprite.Rotation)
-		// Issue #4 FIX: Apply layer transition Y offset for depth effect
-		opts.GeoM.Translate(screenX, screenY+layerTransitionYOffset)
-		r.screen.DrawImage(spriteImage, opts)
-	} else {
-		// Draw colored rectangle as fallback
-		col := sprite.Color
-
-		// GAP-012 REPAIR: Apply flash to fallback rect
-		if flashAlpha > 0 {
-			red, green, blue, alpha := col.RGBA()
-			col = color.RGBA{
-				R: uint8((float64(red>>8) + flashAlpha*255) / 2),
-				G: uint8((float64(green>>8) + flashAlpha*255) / 2),
-				B: uint8((float64(blue>>8) + flashAlpha*255) / 2),
-				A: uint8(alpha >> 8),
-			}
-		}
-
-		// Issue #4 FIX: Apply layer transition alpha to fallback rect
-		if layerTransitionAlpha < 1.0 {
-			red, green, blue, alpha := col.RGBA()
-			col = color.RGBA{
-				R: uint8(red >> 8),
-				G: uint8(green >> 8),
-				B: uint8(blue >> 8),
-				A: uint8(float64(alpha>>8) * layerTransitionAlpha),
-			}
-		}
-
-		// Issue #4 FIX: Apply layer transition Y offset to fallback rect position
-		r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2+layerTransitionYOffset,
-			sprite.Width, sprite.Height, col)
 	}
 
-	// GAP-013 REPAIR: Draw health bar for damaged enemies and bosses
-	r.drawHealthBar(entity, screenX, screenY, sprite.Width, sprite.Height)
+	r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2+layerYOffset,
+		sprite.Width, sprite.Height, col)
 }
 
 // drawHealthBar renders a health bar above an entity if appropriate.

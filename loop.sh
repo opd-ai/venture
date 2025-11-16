@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=30
+ITER=6
 
 echo "iteration $i started."
 copilot -p "/delegate $(cat docs/FIX.md)" --allow-all-tools --deny-tool sudo

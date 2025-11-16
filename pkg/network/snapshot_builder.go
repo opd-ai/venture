@@ -133,130 +133,249 @@ func (b *SnapshotBuilder) BuildWorldSnapshot(entities []*engine.Entity, timestam
 // ApplySnapshotToEntity updates an entity's components from a snapshot.
 // Deserializes all network-synced components and applies them to the entity.
 func (b *SnapshotBuilder) ApplySnapshotToEntity(entity *engine.Entity, snapshot EntitySnapshot) error {
-	// Core components
-	if posData, ok := snapshot.Components["position"]; ok {
-		x, y, err := b.serializer.DeserializePosition(posData)
-		if err != nil {
+	if err := b.applyCoreComponents(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyV4Components(entity, snapshot); err != nil {
+		return err
+	}
+	return nil
+}
+
+// applyCoreComponents applies core component snapshots to an entity.
+func (b *SnapshotBuilder) applyCoreComponents(entity *engine.Entity, snapshot EntitySnapshot) error {
+	if err := b.applyPositionComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyVelocityComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyHealthComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyStatsComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyTeamComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyLevelComponent(entity, snapshot); err != nil {
+		return err
+	}
+	return nil
+}
+
+// applyV4Components applies V4.0 component snapshots to an entity.
+func (b *SnapshotBuilder) applyV4Components(entity *engine.Entity, snapshot EntitySnapshot) error {
+	if err := b.applyVehicleComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyCompanionComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyMountComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyAchievementComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyExpressionComponent(entity, snapshot); err != nil {
+		return err
+	}
+	if err := b.applyClassProgressionComponent(entity, snapshot); err != nil {
+		return err
+	}
+	return nil
+}
+
+// applyPositionComponent updates position component from snapshot data.
+func (b *SnapshotBuilder) applyPositionComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	posData, ok := snapshot.Components["position"]
+	if !ok {
+		return nil
+	}
+	x, y, err := b.serializer.DeserializePosition(posData)
+	if err != nil {
+		return err
+	}
+	if posComp, ok := entity.GetComponent("position"); ok {
+		pos := posComp.(*engine.PositionComponent)
+		pos.X, pos.Y = x, y
+	}
+	return nil
+}
+
+// applyVelocityComponent updates velocity component from snapshot data.
+func (b *SnapshotBuilder) applyVelocityComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	velData, ok := snapshot.Components["velocity"]
+	if !ok {
+		return nil
+	}
+	vx, vy, err := b.serializer.DeserializeVelocity(velData)
+	if err != nil {
+		return err
+	}
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		vel := velComp.(*engine.VelocityComponent)
+		vel.VX, vel.VY = vx, vy
+	}
+	return nil
+}
+
+// applyHealthComponent updates health component from snapshot data.
+func (b *SnapshotBuilder) applyHealthComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	healthData, ok := snapshot.Components["health"]
+	if !ok {
+		return nil
+	}
+	current, max, err := b.serializer.DeserializeHealth(healthData)
+	if err != nil {
+		return err
+	}
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		health := healthComp.(*engine.HealthComponent)
+		health.Current, health.Max = current, max
+	}
+	return nil
+}
+
+// applyStatsComponent updates stats component from snapshot data.
+func (b *SnapshotBuilder) applyStatsComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	statsData, ok := snapshot.Components["stats"]
+	if !ok {
+		return nil
+	}
+	attack, defense, magicPower, err := b.serializer.DeserializeStats(statsData)
+	if err != nil {
+		return err
+	}
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		stats := statsComp.(*engine.StatsComponent)
+		stats.Attack, stats.Defense, stats.MagicPower = attack, defense, magicPower
+	}
+	return nil
+}
+
+// applyTeamComponent updates team component from snapshot data.
+func (b *SnapshotBuilder) applyTeamComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	teamData, ok := snapshot.Components["team"]
+	if !ok {
+		return nil
+	}
+	teamID, err := b.serializer.DeserializeTeam(teamData)
+	if err != nil {
+		return err
+	}
+	if teamComp, ok := entity.GetComponent("team"); ok {
+		team := teamComp.(*engine.TeamComponent)
+		team.TeamID = int(teamID)
+	}
+	return nil
+}
+
+// applyLevelComponent updates experience component from snapshot data.
+func (b *SnapshotBuilder) applyLevelComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	levelData, ok := snapshot.Components["level"]
+	if !ok {
+		return nil
+	}
+	level, xp, err := b.serializer.DeserializeLevel(levelData)
+	if err != nil {
+		return err
+	}
+	if expComp, ok := entity.GetComponent("experience"); ok {
+		exp := expComp.(*engine.ExperienceComponent)
+		exp.Level, exp.CurrentXP = int(level), int(xp)
+	}
+	return nil
+}
+
+// applyVehicleComponent updates vehicle component from snapshot data.
+func (b *SnapshotBuilder) applyVehicleComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	vehicleData, ok := snapshot.Components["vehicle"]
+	if !ok {
+		return nil
+	}
+	if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
+		vehicle := vehicleComp.(*engine.VehicleComponent)
+		if err := vehicle.Deserialize(vehicleData); err != nil {
 			return err
 		}
-		if posComp, ok := entity.GetComponent("position"); ok {
-			pos := posComp.(*engine.PositionComponent)
-			pos.X, pos.Y = x, y
-		}
 	}
+	return nil
+}
 
-	if velData, ok := snapshot.Components["velocity"]; ok {
-		vx, vy, err := b.serializer.DeserializeVelocity(velData)
-		if err != nil {
+// applyCompanionComponent updates companion component from snapshot data.
+func (b *SnapshotBuilder) applyCompanionComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	companionData, ok := snapshot.Components["companion"]
+	if !ok {
+		return nil
+	}
+	if companionComp, ok := entity.GetComponent("companion"); ok {
+		companion := companionComp.(*engine.CompanionComponent)
+		if err := companion.Deserialize(companionData); err != nil {
 			return err
 		}
-		if velComp, ok := entity.GetComponent("velocity"); ok {
-			vel := velComp.(*engine.VelocityComponent)
-			vel.VX, vel.VY = vx, vy
-		}
 	}
+	return nil
+}
 
-	if healthData, ok := snapshot.Components["health"]; ok {
-		current, max, err := b.serializer.DeserializeHealth(healthData)
-		if err != nil {
+// applyMountComponent updates mount component from snapshot data.
+func (b *SnapshotBuilder) applyMountComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	mountData, ok := snapshot.Components["mount"]
+	if !ok {
+		return nil
+	}
+	if mountComp, ok := entity.GetComponent("mount"); ok {
+		mount := mountComp.(*engine.MountComponent)
+		if err := mount.Deserialize(mountData); err != nil {
 			return err
 		}
-		if healthComp, ok := entity.GetComponent("health"); ok {
-			health := healthComp.(*engine.HealthComponent)
-			health.Current, health.Max = current, max
-		}
 	}
+	return nil
+}
 
-	if statsData, ok := snapshot.Components["stats"]; ok {
-		attack, defense, magicPower, err := b.serializer.DeserializeStats(statsData)
-		if err != nil {
+// applyAchievementComponent updates achievement component from snapshot data.
+func (b *SnapshotBuilder) applyAchievementComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	achievementData, ok := snapshot.Components["achievement"]
+	if !ok {
+		return nil
+	}
+	if achievementComp, ok := entity.GetComponent("achievement"); ok {
+		achievement := achievementComp.(*engine.AchievementComponent)
+		if err := achievement.Deserialize(achievementData); err != nil {
 			return err
 		}
-		if statsComp, ok := entity.GetComponent("stats"); ok {
-			stats := statsComp.(*engine.StatsComponent)
-			stats.Attack, stats.Defense, stats.MagicPower = attack, defense, magicPower
-		}
 	}
+	return nil
+}
 
-	if teamData, ok := snapshot.Components["team"]; ok {
-		teamID, err := b.serializer.DeserializeTeam(teamData)
-		if err != nil {
+// applyExpressionComponent updates expression component from snapshot data.
+func (b *SnapshotBuilder) applyExpressionComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	expressionData, ok := snapshot.Components["expression"]
+	if !ok {
+		return nil
+	}
+	if expressionComp, ok := entity.GetComponent("expression"); ok {
+		expression := expressionComp.(*engine.ExpressionComponent)
+		if err := expression.Deserialize(expressionData); err != nil {
 			return err
 		}
-		if teamComp, ok := entity.GetComponent("team"); ok {
-			team := teamComp.(*engine.TeamComponent)
-			team.TeamID = int(teamID)
-		}
 	}
+	return nil
+}
 
-	if levelData, ok := snapshot.Components["level"]; ok {
-		level, xp, err := b.serializer.DeserializeLevel(levelData)
-		if err != nil {
+// applyClassProgressionComponent updates class progression component from snapshot data.
+func (b *SnapshotBuilder) applyClassProgressionComponent(entity *engine.Entity, snapshot EntitySnapshot) error {
+	classData, ok := snapshot.Components["class_progression"]
+	if !ok {
+		return nil
+	}
+	if classComp, ok := entity.GetComponent("class_progression"); ok {
+		class := classComp.(*engine.ClassProgressionComponent)
+		if err := class.Deserialize(classData); err != nil {
 			return err
 		}
-		if expComp, ok := entity.GetComponent("experience"); ok {
-			exp := expComp.(*engine.ExperienceComponent)
-			exp.Level, exp.CurrentXP = int(level), int(xp)
-		}
 	}
-
-	// V4.0 Components - use their built-in Deserialize methods
-
-	if vehicleData, ok := snapshot.Components["vehicle"]; ok {
-		if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
-			vehicle := vehicleComp.(*engine.VehicleComponent)
-			if err := vehicle.Deserialize(vehicleData); err != nil {
-				return err
-			}
-		}
-	}
-
-	if companionData, ok := snapshot.Components["companion"]; ok {
-		if companionComp, ok := entity.GetComponent("companion"); ok {
-			companion := companionComp.(*engine.CompanionComponent)
-			if err := companion.Deserialize(companionData); err != nil {
-				return err
-			}
-		}
-	}
-
-	if mountData, ok := snapshot.Components["mount"]; ok {
-		if mountComp, ok := entity.GetComponent("mount"); ok {
-			mount := mountComp.(*engine.MountComponent)
-			if err := mount.Deserialize(mountData); err != nil {
-				return err
-			}
-		}
-	}
-
-	// MiniGame component - skipped (see note in BuildEntitySnapshot)
-
-	if achievementData, ok := snapshot.Components["achievement"]; ok {
-		if achievementComp, ok := entity.GetComponent("achievement"); ok {
-			achievement := achievementComp.(*engine.AchievementComponent)
-			if err := achievement.Deserialize(achievementData); err != nil {
-				return err
-			}
-		}
-	}
-
-	if expressionData, ok := snapshot.Components["expression"]; ok {
-		if expressionComp, ok := entity.GetComponent("expression"); ok {
-			expression := expressionComp.(*engine.ExpressionComponent)
-			if err := expression.Deserialize(expressionData); err != nil {
-				return err
-			}
-		}
-	}
-
-	if classData, ok := snapshot.Components["class_progression"]; ok {
-		if classComp, ok := entity.GetComponent("class_progression"); ok {
-			class := classComp.(*engine.ClassProgressionComponent)
-			if err := class.Deserialize(classData); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }

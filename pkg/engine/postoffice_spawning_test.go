@@ -52,6 +52,9 @@ func TestPostOfficeSpawner_SpawnInCity(t *testing.T) {
 		t.Fatalf("SpawnInCity failed: %v", err)
 	}
 
+	// Process entity creation
+	world.Update(0)
+
 	if result.BuildingID == 0 {
 		t.Error("BuildingID is zero")
 	}

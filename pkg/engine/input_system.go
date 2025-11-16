@@ -375,83 +375,108 @@ func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
-	// BUG-023 fix: Validate touch input initialization
-	// Initialize virtual controls for any touch-capable platform if not already done
-	if s.useTouchInput && s.virtualControls == nil {
-		// Auto-initialize with default screen size if not explicitly initialized
-		// This prevents silent input failure on touch-capable platforms (mobile/WASM)
-		s.InitializeVirtualControls(800, 600)
+	s.ensureTouchInputInitialized()
+	s.updateMousePosition()
+	s.updateTouchInput()
+	s.handleEscapeKey()
+	s.handleQuickSaveLoad()
+	s.handleUIShortcuts()
+	s.handleExpressionHotkeys(entities)
+	s.handleInteractionKeys()
+
+	if s.handleHelpTopics() {
+		return
 	}
 
-	// BUG-010 fix: Track mouse position for delta calculation
+	s.processEntityInputs(entities, deltaTime)
+}
+
+// ensureTouchInputInitialized validates and initializes touch input controls if needed.
+func (s *InputSystem) ensureTouchInputInitialized() {
+	if s.useTouchInput && s.virtualControls == nil {
+		s.InitializeVirtualControls(800, 600)
+	}
+}
+
+// updateMousePosition tracks mouse position for delta calculation.
+func (s *InputSystem) updateMousePosition() {
 	currentMouseX, currentMouseY := ebiten.CursorPosition()
 	s.mouseDeltaX = currentMouseX - s.lastMouseX
 	s.mouseDeltaY = currentMouseY - s.lastMouseY
 	s.lastMouseX = currentMouseX
 	s.lastMouseY = currentMouseY
+}
 
-	// Update touch input for all touch-capable platforms (mobile/WASM)
+// updateTouchInput processes touch handler and virtual controls updates.
+func (s *InputSystem) updateTouchInput() {
 	if s.useTouchInput && s.touchHandler != nil {
 		s.touchHandler.Update()
 
-		// Update virtual controls
 		if s.virtualControls != nil {
 			s.virtualControls.Update()
 
-			// Handle menu button on virtual controls
 			if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
 				s.onMenuToggle()
 			}
 		}
 	}
+}
 
-	// Handle global keys first (help menu, save/load, etc.)
-	// ESC key handling - context-aware priority: tutorial > help > pause menu
+// handleEscapeKey processes ESC key with priority: tutorial > help > pause menu.
+func (s *InputSystem) handleEscapeKey() {
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
-		// Priority 1: Check if tutorial is active and should handle the ESC key
 		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
-			// Skip current tutorial step
 			s.tutorialSystem.Skip()
 		} else if s.helpSystem != nil && s.helpSystem.Visible {
-			// Priority 2: If help system is visible, close it
 			s.helpSystem.Toggle()
 		} else if s.onMenuToggle != nil {
-			// Priority 3: Otherwise toggle pause menu
 			s.onMenuToggle()
 		}
 	}
+}
 
-	// Handle quick save (F5)
+// handleQuickSaveLoad processes F5 quick save and F9 quick load operations.
+func (s *InputSystem) handleQuickSaveLoad() {
 	if inpututil.IsKeyJustPressed(s.KeyQuickSave) && s.onQuickSave != nil {
-		if err := s.onQuickSave(); err != nil {
-			// Show error notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Save Failed: "+err.Error(), 3.0)
-			}
-		} else {
-			// Show success notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Game Saved!", 2.0)
-			}
-		}
+		s.executeQuickSave()
 	}
 
-	// Handle quick load (F9)
 	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
-		if err := s.onQuickLoad(); err != nil {
-			// Show error notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Load Failed: "+err.Error(), 3.0)
-			}
-		} else {
-			// Show success notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Game Loaded!", 2.0)
-			}
-		}
+		s.executeQuickLoad()
 	}
+}
 
-	// Handle UI shortcuts
+// executeQuickSave performs quick save operation with notification feedback.
+func (s *InputSystem) executeQuickSave() {
+	if err := s.onQuickSave(); err != nil {
+		s.showNotification("Save Failed: " + err.Error())
+	} else {
+		s.showNotification("Game Saved!")
+	}
+}
+
+// executeQuickLoad performs quick load operation with notification feedback.
+func (s *InputSystem) executeQuickLoad() {
+	if err := s.onQuickLoad(); err != nil {
+		s.showNotification("Load Failed: " + err.Error())
+	} else {
+		s.showNotification("Game Loaded!")
+	}
+}
+
+// showNotification displays a notification message through the tutorial system.
+func (s *InputSystem) showNotification(message string) {
+	if s.tutorialSystem != nil {
+		duration := 2.0
+		if len(message) > 20 {
+			duration = 3.0
+		}
+		s.tutorialSystem.ShowNotification(message, duration)
+	}
+}
+
+// handleUIShortcuts processes keyboard shortcuts for opening UI panels.
+func (s *InputSystem) handleUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyInventory) && s.onInventoryOpen != nil {
 		s.onInventoryOpen()
 	}
@@ -473,78 +498,98 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
 		s.onMailboxOpen()
 	}
+}
 
-	// Phase 26.1: Handle expression/emote hotkeys (Shift+1 through Shift+=)
-	// These are mapped to the 12 expression types
-	if s.expressionSystem != nil && ebiten.IsKeyPressed(ebiten.KeyShift) {
-		// Find player entity
-		var playerEntity *Entity
-		for _, entity := range entities {
-			if inputComp, ok := entity.GetComponent("input"); ok && inputComp != nil {
-				playerEntity = entity
-				break
-			}
-		}
-
-		if playerEntity != nil {
-			expressionKeys := []struct {
-				key     ebiten.Key
-				expType ExpressionType
-			}{
-				{ebiten.Key1, ExpressionWave},
-				{ebiten.Key2, ExpressionCheer},
-				{ebiten.Key3, ExpressionDance},
-				{ebiten.Key4, ExpressionLaugh},
-				{ebiten.Key5, ExpressionCry},
-				{ebiten.Key6, ExpressionSit},
-				{ebiten.Key7, ExpressionPoint},
-				{ebiten.Key8, ExpressionSalute},
-				{ebiten.Key9, ExpressionShrug},
-				{ebiten.Key0, ExpressionThumbsUp},
-				{ebiten.KeyMinus, ExpressionFacepalm},
-				{ebiten.KeyEqual, ExpressionSleep},
-			}
-
-			for _, binding := range expressionKeys {
-				if inpututil.IsKeyJustPressed(binding.key) {
-					s.expressionSystem.TriggerExpression(playerEntity.ID, binding.expType)
-					break // Only process one expression per frame
-				}
-			}
-		}
+// handleExpressionHotkeys processes Shift+number key combinations for player expressions.
+func (s *InputSystem) handleExpressionHotkeys(entities []*Entity) {
+	if s.expressionSystem == nil || !ebiten.IsKeyPressed(ebiten.KeyShift) {
+		return
 	}
 
-	// Handle NPC/merchant interaction (F key)
+	playerEntity := s.findPlayerEntity(entities)
+	if playerEntity == nil {
+		return
+	}
+
+	s.processExpressionKeys(playerEntity)
+}
+
+// findPlayerEntity locates the player-controlled entity from the entity list.
+func (s *InputSystem) findPlayerEntity(entities []*Entity) *Entity {
+	for _, entity := range entities {
+		if inputComp, ok := entity.GetComponent("input"); ok && inputComp != nil {
+			return entity
+		}
+	}
+	return nil
+}
+
+// processExpressionKeys checks expression key bindings and triggers expressions.
+func (s *InputSystem) processExpressionKeys(playerEntity *Entity) {
+	expressionKeys := []struct {
+		key     ebiten.Key
+		expType ExpressionType
+	}{
+		{ebiten.Key1, ExpressionWave},
+		{ebiten.Key2, ExpressionCheer},
+		{ebiten.Key3, ExpressionDance},
+		{ebiten.Key4, ExpressionLaugh},
+		{ebiten.Key5, ExpressionCry},
+		{ebiten.Key6, ExpressionSit},
+		{ebiten.Key7, ExpressionPoint},
+		{ebiten.Key8, ExpressionSalute},
+		{ebiten.Key9, ExpressionShrug},
+		{ebiten.Key0, ExpressionThumbsUp},
+		{ebiten.KeyMinus, ExpressionFacepalm},
+		{ebiten.KeyEqual, ExpressionSleep},
+	}
+
+	for _, binding := range expressionKeys {
+		if inpututil.IsKeyJustPressed(binding.key) {
+			s.expressionSystem.TriggerExpression(playerEntity.ID, binding.expType)
+			break
+		}
+	}
+}
+
+// handleInteractionKeys processes NPC interaction and target cycling keys.
+func (s *InputSystem) handleInteractionKeys() {
 	if inpututil.IsKeyJustPressed(s.KeyInteract) && s.onInteract != nil {
 		s.onInteract()
 	}
 
-	// Handle target cycling
 	if inpututil.IsKeyJustPressed(s.KeyCycleTargets) && s.onCycleTargets != nil {
 		s.onCycleTargets()
 	}
+}
 
-	// Handle help topic switching with number keys 1-6 (when help is visible)
-	// GAP-004 REPAIR: Return early after handling help keys to prevent spell casting
-	if s.helpSystem != nil && s.helpSystem.Visible {
-		topicKeys := []ebiten.Key{
-			ebiten.Key1, ebiten.Key2, ebiten.Key3,
-			ebiten.Key4, ebiten.Key5, ebiten.Key6,
-		}
-		topicIDs := []string{
-			"controls", "combat", "inventory",
-			"progression", "world", "multiplayer",
-		}
+// handleHelpTopics processes help topic switching and returns true if handled.
+func (s *InputSystem) handleHelpTopics() bool {
+	if s.helpSystem == nil || !s.helpSystem.Visible {
+		return false
+	}
 
-		for i, key := range topicKeys {
-			if inpututil.IsKeyJustPressed(key) {
-				s.helpSystem.ShowTopic(topicIDs[i])
-				// GAP-004 REPAIR: Early return to prevent number keys from casting spells
-				return
-			}
+	topicKeys := []ebiten.Key{
+		ebiten.Key1, ebiten.Key2, ebiten.Key3,
+		ebiten.Key4, ebiten.Key5, ebiten.Key6,
+	}
+	topicIDs := []string{
+		"controls", "combat", "inventory",
+		"progression", "world", "multiplayer",
+	}
+
+	for i, key := range topicKeys {
+		if inpututil.IsKeyJustPressed(key) {
+			s.helpSystem.ShowTopic(topicIDs[i])
+			return true
 		}
 	}
 
+	return false
+}
+
+// processEntityInputs iterates through entities and processes their input components.
+func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {

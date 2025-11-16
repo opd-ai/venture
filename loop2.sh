@@ -16,6 +16,17 @@ echo "iteration $i in progress."
 echo "Fix checkin completed, sleeping for 1 minute..."
 sleep 1m
 
+echo "iteration $i started."
+copilot -p "/delegate $(cat docs/DOCS.md)" --allow-all-tools --deny-tool sudo
+make fmt
+echo "iteration $i in progress."
+echo "Docs completed, sleeping for 1 minute..."
+sleep 1m
+copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
+echo "iteration $i in progress."
+echo "Docs checkin completed, sleeping for 1 minute..."
+sleep 1m
+
 for i in $(seq 1 $ITER); do
 
     copilot -p "/delegate $(cat docs/BREAKDOWN.md)" --allow-all-tools --deny-tool sudo

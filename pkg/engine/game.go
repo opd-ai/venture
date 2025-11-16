@@ -1238,6 +1238,11 @@ func (g *EbitenGame) Run(title string) error {
 	return nil
 }
 
+// SetFullscreen sets fullscreen mode.
+func (g *EbitenGame) SetFullscreen(fullscreen bool) {
+	ebiten.SetFullscreen(fullscreen)
+}
+
 // Compile-time interface checks
 var (
 	_ GameRunner  = (*EbitenGame)(nil)

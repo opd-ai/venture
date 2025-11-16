@@ -70,14 +70,17 @@ go build -o venture-server ./cmd/server
 ### 2. First Game
 
 ```bash
-# Start playing
+# Start playing (default 1920x1080)
 ./venture-client
 
 # Or with custom settings
-./venture-client -width 1024 -height 768 -seed 12345 -genre fantasy
+./venture-client -width 2560 -height 1440 -fullscreen -seed 12345 -genre fantasy
+
+# Supported resolutions: 1280x720 (HD), 1920x1080 (Full HD), 2560x1440 (QHD), 3840x2160 (4K)
 ```
 
-**Visual Features (V3.0 Enhanced Graphics):**
+**Visual Features (V3.0 Enhanced Graphics, V7.0 Display Foundation):**
+- **Display Scaling (V7.0)**: Dynamic resolution support (1280x720 to 3840x2160) with UI scaling and fullscreen mode
 - **Enhanced Sprites**: 40% more detail with anatomical accuracy, facial features, anti-aliasing, and genre variations
 - **Advanced Tiles**: Rich procedural textures with smooth transitions and depth effects
 - **Sophisticated Lighting**: Soft shadows, colored lighting, bloom effects, and advanced ambient occlusion (disable with `-enable-lighting=false`)

@@ -203,8 +203,9 @@ func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float
 }
 
 var (
-	width            = flag.Int("width", 800, "Screen width")
-	height           = flag.Int("height", 600, "Screen height")
+	width            = flag.Int("width", 1920, "Screen width (1280, 1920, 2560, 3840)")
+	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")
+	fullscreen       = flag.Bool("fullscreen", false, "Start in fullscreen mode")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting   = flag.Bool("enable-lighting", true, "Enable dynamic lighting system")

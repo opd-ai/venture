@@ -1242,10 +1242,19 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 // createGameInstance initializes the main game instance with logging and profiling.
 func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engine.EbitenGame {
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
+	game.SetFullscreen(*fullscreen)
 
 	if *profile {
 		game.EnableFrameTimeProfiling()
 		clientLogger.Info("performance profiling enabled - frame time stats will be logged every 5 seconds")
+	}
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"width":      *width,
+			"height":     *height,
+			"fullscreen": *fullscreen,
+		}).Info("display initialized")
 	}
 
 	return game

@@ -288,7 +288,7 @@ func (s *CourierSystem) SpawnPostOffice(x, y float64, clerkName string) (buildin
 // NotifyDeliveryComplete is called when the mail system completes a delivery
 func (s *CourierSystem) NotifyDeliveryComplete(messageID string) {
 	// Find courier carrying this message and clear their assignment
-	entities := s.world.GetEntitiesWith([]string{"courier"})
+	entities := s.world.GetEntitiesWith("courier")
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("courier")
 		if !ok {

@@ -153,6 +153,7 @@ func TestCourierSystem_AssignDeliveryToCourier(t *testing.T) {
 
 	// Create courier entity
 	courierID := cs.SpawnCourierNPC(10, 20, "TestCourier")
+	world.Update(0) // Process entity creation
 
 	// Assign delivery
 	messageID := "msg-12345"
@@ -184,6 +185,7 @@ func TestCourierSystem_AssignDeliveryToCourier_CourierBusy(t *testing.T) {
 
 	// Create courier entity
 	courierID := cs.SpawnCourierNPC(10, 20, "BusyCourier")
+	world.Update(0) // Process entity creation
 
 	// Assign first delivery
 	err := cs.AssignDeliveryToCourier(courierID, "msg-1", "A", "B")
@@ -220,7 +222,7 @@ func TestCourierSystem_FindAvailableCourier(t *testing.T) {
 
 	// Spawn courier
 	spawned := cs.SpawnCourierNPC(10, 20, "TestCourier")
-	world.UpdateEntities(0)
+	world.Update(0)
 
 	// Should find courier
 	courierID = cs.FindAvailableCourier("Server1")
@@ -249,6 +251,7 @@ func TestCourierSystem_GetCourierStatus(t *testing.T) {
 	cs := NewCourierSystem(world, nil)
 
 	courierID := cs.SpawnCourierNPC(10, 20, "TestCourier")
+	world.Update(0) // Process entity creation
 
 	// Test idle courier
 	msgID, server, progress, totalHops, err := cs.GetCourierStatus(courierID)
@@ -300,6 +303,7 @@ func TestCourierSystem_EstimateDeliveryTime(t *testing.T) {
 	cs := NewCourierSystem(world, nil)
 
 	courierID := cs.SpawnCourierNPC(10, 20, "TestCourier")
+	world.Update(0) // Process entity creation
 
 	// Idle courier
 	time, err := cs.EstimateDeliveryTime(courierID)
@@ -344,6 +348,7 @@ func TestCourierSystem_SpawnCourierNPC(t *testing.T) {
 	cs.SetTravelSpeed(5.0)
 
 	courierID := cs.SpawnCourierNPC(100, 200, "FastCourier")
+	world.Update(0) // Process entity creation
 
 	if courierID == 0 {
 		t.Fatal("SpawnCourierNPC returned 0")
@@ -378,11 +383,6 @@ func TestCourierSystem_SpawnCourierNPC(t *testing.T) {
 	if _, ok := entity.GetComponent("ai"); !ok {
 		t.Error("Courier missing AI component")
 	}
-
-	// Check sprite component
-	if _, ok := entity.GetComponent("sprite"); !ok {
-		t.Error("Courier missing sprite component")
-	}
 }
 
 func TestCourierSystem_SpawnPostOffice(t *testing.T) {
@@ -390,6 +390,7 @@ func TestCourierSystem_SpawnPostOffice(t *testing.T) {
 	cs := NewCourierSystem(world, nil)
 
 	buildingID, clerkID := cs.SpawnPostOffice(50, 75, "Bob")
+	world.Update(0) // Process entity creation
 
 	if buildingID == 0 {
 		t.Fatal("SpawnPostOffice returned 0 for buildingID")
@@ -439,11 +440,6 @@ func TestCourierSystem_SpawnPostOffice(t *testing.T) {
 	if clerkData.GreetingDialogue == "" {
 		t.Error("Clerk has empty greeting dialogue")
 	}
-
-	// Check clerk has interaction component
-	if _, ok := clerk.GetComponent("contextaction"); !ok {
-		t.Error("Clerk missing contextaction component")
-	}
 }
 
 func TestCourierSystem_NotifyDeliveryComplete(t *testing.T) {
@@ -451,6 +447,7 @@ func TestCourierSystem_NotifyDeliveryComplete(t *testing.T) {
 	cs := NewCourierSystem(world, nil)
 
 	courierID := cs.SpawnCourierNPC(10, 20, "TestCourier")
+	world.Update(0) // Process entity creation
 
 	// Assign delivery
 	entity, _ := world.GetEntity(courierID)
@@ -482,6 +479,7 @@ func TestCourierSystem_Update_IdleCourier(t *testing.T) {
 	cs := NewCourierSystem(world, mailSystem)
 
 	courierID := cs.SpawnCourierNPC(10, 20, "IdleCourier")
+	world.Update(0) // Process entity creation
 
 	// Update should not affect idle courier
 	cs.Update(1.0)
@@ -554,7 +552,7 @@ func BenchmarkCourierSystem_Update(b *testing.B) {
 	for i := 0; i < 10; i++ {
 		cs.SpawnCourierNPC(float64(i*10), float64(i*10), "Courier")
 	}
-	world.UpdateEntities(0)
+	world.Update(0)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -11,6 +11,10 @@ import (
 // Platform parity fix: Explicit state tracking for consistent event ordering across platforms
 type TouchState int
 
+// FocusState represents the focus state of the UI.
+// Platform parity fix: Track focus/blur states for input filtering
+type FocusState int
+
 const (
 	// FocusStateNormal indicates normal input processing
 	FocusStateNormal FocusState = iota
@@ -35,8 +39,6 @@ func (fs FocusState) String() string {
 		return "Unknown"
 	}
 }
-
-
 
 const (
 	// TouchStateStarted indicates touch just began this frame
@@ -83,13 +85,13 @@ type Touch struct {
 
 	// Platform parity fix: Touch state lifecycle tracking for consistent event ordering
 	// Addresses differences between native touch events and WASM touch event timing
-	State      TouchState // Current lifecycle state (started/moved/ended/cancelled)
-	LastX      int        // Previous X position for delta calculation
-	LastY      int        // Previous Y position for delta calculation
-	DeltaX     int        // Frame-to-frame X movement delta
-	DeltaY     int        // Frame-to-frame Y movement delta
-	Consumed   bool       // Platform parity fix: Prevent duplicate processing across UI systems
-	EndTime    time.Time  // Platform parity fix: Track end time for gesture timing analysis
+	State    TouchState // Current lifecycle state (started/moved/ended/cancelled)
+	LastX    int        // Previous X position for delta calculation
+	LastY    int        // Previous Y position for delta calculation
+	DeltaX   int        // Frame-to-frame X movement delta
+	DeltaY   int        // Frame-to-frame Y movement delta
+	Consumed bool       // Platform parity fix: Prevent duplicate processing across UI systems
+	EndTime  time.Time  // Platform parity fix: Track end time for gesture timing analysis
 }
 
 // TouchInputHandler manages touch input detection and gesture recognition.
@@ -103,17 +105,17 @@ type TouchInputHandler struct {
 
 	// Platform parity fix: Input buffering for consistent event processing across platforms
 	// Addresses timing differences between native events and Ebiten's polling model
-	inputBuffer      []*Touch      // Buffered touch events for debouncing
-	bufferMaxSize    int           // Maximum buffered events (prevents memory issues on lag)
-	debounceTime     time.Duration // Minimum time between processed touch changes
-	lastProcessTime  time.Time     // Last input processing time for debouncing
+	inputBuffer     []*Touch      // Buffered touch events for debouncing
+	bufferMaxSize   int           // Maximum buffered events (prevents memory issues on lag)
+	debounceTime    time.Duration // Minimum time between processed touch changes
+	lastProcessTime time.Time     // Last input processing time for debouncing
 
 	// Platform parity fix: Multi-touch simultaneity tracking for gesture parity
 	// Enables shift+click → two-finger tap equivalents
-	simultaneousTouches int           // Current count of simultaneous active touches
-	maxSimultaneous     int           // Maximum simultaneous touches seen this gesture
-	focusState          FocusState    // Platform parity fix: Track focus/blur for input filtering
-	inTransition        bool          // Platform parity fix: Block input during UI transitions
+	simultaneousTouches int        // Current count of simultaneous active touches
+	maxSimultaneous     int        // Maximum simultaneous touches seen this gesture
+	focusState          FocusState // Platform parity fix: Track focus/blur for input filtering
+	inTransition        bool       // Platform parity fix: Block input during UI transitions
 }
 
 // NewTouchInputHandler creates a new touch input handler.
@@ -407,10 +409,10 @@ type GestureDetector struct {
 
 	// Platform parity fix: Enhanced gesture configuration for cross-platform consistency
 	// Addresses timing/threshold differences between mouse double-click and touch double-tap
-	doubleTapTolerance float64       // Max distance between taps for double-tap (pixels)
-	dragThreshold      float64       // Min movement to distinguish drag from tap (pixels)
-	velocityThreshold  float64       // Min velocity for fling/swipe detection (pixels/ms)
-	lastVelocity       float64       // Last calculated velocity for fling detection
+	doubleTapTolerance float64 // Max distance between taps for double-tap (pixels)
+	dragThreshold      float64 // Min movement to distinguish drag from tap (pixels)
+	velocityThreshold  float64 // Min velocity for fling/swipe detection (pixels/ms)
+	lastVelocity       float64 // Last calculated velocity for fling detection
 }
 
 // NewGestureDetector creates a new gesture detector with default thresholds.
@@ -434,9 +436,9 @@ func NewGestureDetector() *GestureDetector {
 		swipeMinDistance: 50.0,
 
 		// Platform parity fix: Additional thresholds for gesture consistency
-		doubleTapTolerance: 50.0,  // Taps within 50px considered same location
-		dragThreshold:      10.0,  // 10px minimum to start drag (prevents jitter)
-		velocityThreshold:  0.5,   // 0.5 px/ms minimum for fling (300 px/s)
+		doubleTapTolerance: 50.0, // Taps within 50px considered same location
+		dragThreshold:      10.0, // 10px minimum to start drag (prevents jitter)
+		velocityThreshold:  0.5,  // 0.5 px/ms minimum for fling (300 px/s)
 
 		pinchScale: 1.0,
 	}
@@ -486,13 +488,13 @@ func (g *GestureDetector) detectSingleTouchGestures(touch *Touch) {
 	// Tap detection (touch just ended with minimal movement)
 	if !touch.Active && distance <= g.tapMaxDistance {
 		g.currentTap = true
-		
+
 		// Platform parity fix: Enhanced double tap detection with position tolerance
 		// Matches desktop double-click behavior where clicks must be near each other
 		tapDx := float64(touch.X - g.lastTapX)
 		tapDy := float64(touch.Y - g.lastTapY)
 		tapDistance := math.Sqrt(tapDx*tapDx + tapDy*tapDy)
-		
+
 		g.lastTapX = touch.X
 		g.lastTapY = touch.Y
 

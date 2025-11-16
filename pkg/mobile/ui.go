@@ -25,9 +25,9 @@ type MobileMenu struct {
 	scrollOffset float64
 
 	// Platform parity fix: Momentum scrolling for smooth touch UX like mobile OS
-	scrollVelocity    float64 // Current scroll velocity (pixels/frame)
+	scrollVelocity     float64 // Current scroll velocity (pixels/frame)
 	scrollDeceleration float64 // Deceleration rate for momentum scrolling
-	isScrolling       bool    // Platform parity fix: Prevents interaction during momentum scroll
+	isScrolling        bool    // Platform parity fix: Prevents interaction during momentum scroll
 
 	// Platform parity fix: Long-press context menu support (right-click alternative)
 	longPressItem     int       // Index of item being long-pressed (-1 if none)
@@ -49,10 +49,10 @@ type MenuItem struct {
 	Label           string
 	Enabled         bool
 	OnSelect        func()
-	OnLongPress     func() // Platform parity fix: Right-click alternative for touch (context menu)
-	OnDragStart     func() // Platform parity fix: Drag-and-drop support for reordering/organizing
-	OnDragEnd       func() // Platform parity fix: Drop handler for drag-and-drop
-	Draggable       bool   // Platform parity fix: Whether this item supports drag-and-drop
+	OnLongPress     func()  // Platform parity fix: Right-click alternative for touch (context menu)
+	OnDragStart     func()  // Platform parity fix: Drag-and-drop support for reordering/organizing
+	OnDragEnd       func()  // Platform parity fix: Drop handler for drag-and-drop
+	Draggable       bool    // Platform parity fix: Whether this item supports drag-and-drop
 	MinTouchTargetH float64 // Platform parity fix: Minimum touch target height (44pt iOS, 48pt Android)
 }
 
@@ -60,17 +60,17 @@ type MenuItem struct {
 // Platform parity fix: Enhanced with momentum scrolling and touch target validation
 func NewMobileMenu(x, y, width, height float64) *MobileMenu {
 	return &MobileMenu{
-		X:                 x,
-		Y:                 y,
-		Width:             width,
-		Height:            height,
-		Items:             make([]MenuItem, 0),
-		touchHandler:      NewTouchInputHandler(),
-		BackgroundColor:   color.RGBA{20, 20, 30, 230},
-		ItemColor:         color.RGBA{50, 50, 70, 255},
-		SelectedColor:     color.RGBA{100, 150, 255, 255},
-		TextColor:         color.RGBA{255, 255, 255, 255},
-		
+		X:               x,
+		Y:               y,
+		Width:           width,
+		Height:          height,
+		Items:           make([]MenuItem, 0),
+		touchHandler:    NewTouchInputHandler(),
+		BackgroundColor: color.RGBA{20, 20, 30, 230},
+		ItemColor:       color.RGBA{50, 50, 70, 255},
+		SelectedColor:   color.RGBA{100, 150, 255, 255},
+		TextColor:       color.RGBA{255, 255, 255, 255},
+
 		// Platform parity fix: Momentum scrolling configuration
 		scrollDeceleration: 0.95, // 5% velocity loss per frame (~60 FPS)
 		longPressItem:      -1,
@@ -83,7 +83,7 @@ func NewMobileMenu(x, y, width, height float64) *MobileMenu {
 func (m *MobileMenu) AddItem(label string, enabled bool, onSelect func()) {
 	// Platform parity fix: Calculate appropriate item height
 	itemHeight := m.Height / float64(len(m.Items)+1)
-	
+
 	// Platform parity fix: Touch target size validation
 	// iOS: 44pt minimum (44px at 1x scale)
 	// Android: 48dp minimum (48px at 1x density)
@@ -138,7 +138,7 @@ func (m *MobileMenu) Update() {
 
 	// Platform parity fix: Handle long-press for context menu (right-click alternative)
 	if m.touchHandler.IsLongPress() {
-		longX, longY := m.touchHandler.GetLongPressPosition()
+		longX, longY := m.touchHandler.gestureDetector.GetLongPressPosition()
 		itemHeight := m.Height / float64(len(m.Items))
 
 		for i := range m.Items {
@@ -166,11 +166,11 @@ func (m *MobileMenu) Update() {
 	if len(touches) > 0 {
 		touch := touches[0]
 		itemHeight := m.Height / float64(len(m.Items))
-		
+
 		m.pressedItemIndex = -1
 		for i := range m.Items {
 			itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
-			
+
 			if float64(touch.X) >= m.X && float64(touch.X) <= m.X+m.Width &&
 				float64(touch.Y) >= itemY && float64(touch.Y) <= itemY+itemHeight {
 				m.pressedItemIndex = i
@@ -182,15 +182,15 @@ func (m *MobileMenu) Update() {
 	}
 
 	// Platform parity fix: Handle swipe with velocity-based momentum scrolling
-	if direction, distance, detected := m.touchHandler.GetSwipe(); detected {
+	if direction, _, detected := m.touchHandler.GetSwipe(); detected {
 		// Calculate swipe direction (vertical swipes for scrolling)
 		// direction is in radians: -π/2 (up) to π/2 (down)
 		isVertical := (direction > 1.0 || direction < -1.0)
-		
+
 		if isVertical {
 			// Platform parity fix: Initiate momentum scrolling with velocity
 			velocity := m.touchHandler.gestureDetector.GetLastVelocity()
-			
+
 			// Convert velocity to scroll offset change
 			// Negative velocity = swipe down = scroll up (reveal top items)
 			// Positive velocity = swipe up = scroll down (reveal bottom items)

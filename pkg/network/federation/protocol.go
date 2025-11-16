@@ -67,7 +67,7 @@ func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World
 
 	// TODO: Send transfer request to target server via network
 	// TODO: Wait for confirmation or timeout
-	// For now, simulate success
+	// For now, preparation succeeds but actual network send is not implemented
 	_ = token
 
 	return nil

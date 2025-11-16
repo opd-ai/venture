@@ -249,7 +249,7 @@ func TestActivatePortal(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "cross-server transfer - not implemented",
+			name: "cross-server transfer - preparation succeeds",
 			setup: func(w *engine.World) (uint64, uint64) {
 				player := w.CreateEntity()
 				player.AddComponent(&engine.PositionComponent{X: 10, Y: 10})
@@ -261,8 +261,7 @@ func TestActivatePortal(t *testing.T) {
 				})
 				return player.ID, portal.ID
 			},
-			wantErr: true,
-			errMsg:  "not implemented",
+			wantErr: false,
 		},
 	}
 

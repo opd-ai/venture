@@ -21,246 +21,289 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 	}
 
 	if len(terr.Rooms) == 0 {
-		return 0, nil // No rooms to spawn in
+		return 0, nil
 	}
 
-	// Skip first room (player spawn room)
-	spawnRooms := terr.Rooms
-	if len(spawnRooms) > 1 {
-		spawnRooms = spawnRooms[1:]
-	}
-
-	// Generate entities for rooms
-	entityGen := entity.NewEntityGenerator()
-
-	// Set count based on number of rooms (1-3 enemies per room)
+	spawnRooms := selectSpawnRooms(terr.Rooms)
 	rng := rand.New(rand.NewSource(seed))
-	totalEnemies := 0
-	for range spawnRooms {
-		totalEnemies += 1 + rng.Intn(3) // 1-3 enemies per room
-	}
 
-	// Update params with entity count
-	params.Custom = make(map[string]interface{})
-	params.Custom["count"] = totalEnemies
-
-	// Generate entities
-	result, err := entityGen.Generate(seed+1000, params)
+	generatedEntities, err := generateEnemyEntities(seed, params, spawnRooms, rng)
 	if err != nil {
-		return 0, fmt.Errorf("failed to generate entities: %w", err)
+		return 0, err
 	}
-
-	generatedEntities := result.([]*entity.Entity)
 	if len(generatedEntities) == 0 {
 		return 0, nil
 	}
 
-	// Spawn entities in rooms
+	return spawnEntitiesInRooms(world, spawnRooms, generatedEntities, seed, rng), nil
+}
+
+// selectSpawnRooms returns rooms for enemy spawning, excluding the first room (player spawn).
+func selectSpawnRooms(rooms []*terrain.Room) []*terrain.Room {
+	if len(rooms) > 1 {
+		return rooms[1:]
+	}
+	return rooms
+}
+
+// generateEnemyEntities creates procedurally generated enemy entities for the given rooms.
+func generateEnemyEntities(seed int64, params procgen.GenerationParams, rooms []*terrain.Room, rng *rand.Rand) ([]*entity.Entity, error) {
+	totalEnemies := calculateTotalEnemies(rooms, rng)
+
+	params.Custom = make(map[string]interface{})
+	params.Custom["count"] = totalEnemies
+
+	entityGen := entity.NewEntityGenerator()
+	result, err := entityGen.Generate(seed+1000, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate entities: %w", err)
+	}
+
+	return result.([]*entity.Entity), nil
+}
+
+// calculateTotalEnemies determines the total number of enemies to spawn (1-3 per room).
+func calculateTotalEnemies(rooms []*terrain.Room, rng *rand.Rand) int {
+	total := 0
+	for range rooms {
+		total += 1 + rng.Intn(3)
+	}
+	return total
+}
+
+// spawnEntitiesInRooms creates and configures ECS entities in each room.
+func spawnEntitiesInRooms(world *World, rooms []*terrain.Room, entities []*entity.Entity, seed int64, rng *rand.Rand) int {
 	entityIndex := 0
 	spawned := 0
 
-	for _, room := range spawnRooms {
-		if entityIndex >= len(generatedEntities) {
+	for roomIdx, room := range rooms {
+		if entityIndex >= len(entities) {
 			break
 		}
 
-		// Number of enemies for this room (1-3)
-		roomEnemyCount := 1 + rng.Intn(3)
-		if roomEnemyCount > len(generatedEntities)-entityIndex {
-			roomEnemyCount = len(generatedEntities) - entityIndex
-		}
+		roomEnemyCount := calculateRoomEnemyCount(rng, len(entities)-entityIndex)
 
 		for i := 0; i < roomEnemyCount; i++ {
-			if entityIndex >= len(generatedEntities) {
+			if entityIndex >= len(entities) {
 				break
 			}
 
-			genEntity := generatedEntities[entityIndex]
+			genEntity := entities[entityIndex]
 			entityIndex++
 
-			// Calculate spawn position (room center with slight offset)
-			cx, cy := room.Center()
-			offsetX := rng.Float64()*20 - 10 // -10 to +10
-			offsetY := rng.Float64()*20 - 10
-			spawnX := float64(cx*32) + offsetX
-			spawnY := float64(cy*32) + offsetY
+			spawnX, spawnY := calculateSpawnPosition(room, rng)
+			enemy := createConfiguredEnemy(world, genEntity, spawnX, spawnY, seed, roomIdx, i, len(rooms), rng)
 
-			// Create ECS entity
-			enemy := world.CreateEntity()
-
-			// Position
-			enemy.AddComponent(&PositionComponent{
-				X: spawnX,
-				Y: spawnY,
-			})
-
-			// Health (scale from procgen entity stats)
-			maxHealth := float64(genEntity.Stats.Health)
-			enemy.AddComponent(&HealthComponent{
-				Current: maxHealth,
-				Max:     maxHealth,
-			})
-
-			// Stats
-			stats := NewStatsComponent()
-			stats.Attack = float64(genEntity.Stats.Damage)
-			stats.Defense = float64(genEntity.Stats.Defense)
-			enemy.AddComponent(stats)
-
-			// Team (enemy team = 2, player team = 1)
-			enemy.AddComponent(&TeamComponent{TeamID: 2})
-
-			// Velocity (required for movement)
-			enemy.AddComponent(&VelocityComponent{VX: 0, VY: 0})
-
-			// Attack capability
-			attackRange := 50.0 // Base melee range
-			if genEntity.Size == entity.SizeLarge || genEntity.Size == entity.SizeHuge {
-				attackRange = 70.0 // Larger enemies have longer reach
+			if enemy != nil {
+				spawned++
 			}
-
-			enemy.AddComponent(&AttackComponent{
-				Damage:     float64(genEntity.Stats.Damage),
-				DamageType: 0, // Physical damage
-				Range:      attackRange,
-				Cooldown:   1.0, // 1 second between attacks
-			})
-
-			// AI behavior
-			aiComp := NewAIComponent(spawnX, spawnY)
-			aiComp.DetectionRange = 200.0 // Can detect player from 200 pixels
-
-			// Boss entities are more aggressive with wider detection
-			if genEntity.Type == entity.TypeBoss {
-				aiComp.DetectionRange = 300.0
-				aiComp.ChaseSpeed = 0.8 // Slower but tankier
-			} else if genEntity.Type == entity.TypeMinion {
-				aiComp.ChaseSpeed = 1.2 // Faster but weaker
-			}
-
-			enemy.AddComponent(aiComp)
-
-			// Collision
-			enemySize := 32.0
-			if genEntity.Size == entity.SizeTiny {
-				enemySize = 16.0
-			} else if genEntity.Size == entity.SizeSmall {
-				enemySize = 24.0
-			} else if genEntity.Size == entity.SizeLarge {
-				enemySize = 48.0
-			} else if genEntity.Size == entity.SizeHuge {
-				enemySize = 64.0
-			}
-
-			enemy.AddComponent(&ColliderComponent{
-				Width:     enemySize,
-				Height:    enemySize,
-				Solid:     true,
-				IsTrigger: false,
-				Layer:     1,
-				OffsetX:   -enemySize / 2,
-				OffsetY:   -enemySize / 2,
-			})
-
-			// Visual sprite (procedurally generated, animated)
-			enemySprite := &EbitenSprite{
-				Width:   enemySize,
-				Height:  enemySize,
-				Visible: true,
-				Layer:   5, // Enemies drawn below player (layer 10)
-			}
-			enemy.AddComponent(enemySprite)
-
-			// GAP-018 REPAIR: Add animation component for enemy animations
-			enemyAnim := NewAnimationComponent(seed + int64(enemy.ID))
-			enemyAnim.CurrentState = AnimationStateIdle
-			enemyAnim.FrameTime = 0.2 // Slightly slower than player (~5 FPS)
-			enemyAnim.Loop = true
-			enemyAnim.Playing = true
-			enemyAnim.FrameCount = 4
-			enemyAnim.Dirty = true // CRITICAL: Mark dirty to trigger initial frame generation
-			enemy.AddComponent(enemyAnim)
-
-			// GAP-012 REPAIR: Add visual feedback for hit flash
-			enemy.AddComponent(NewVisualFeedbackComponent())
-
-			// Phase 10.1: Add rotation component for 360° rotation and facing direction
-			enemy.AddComponent(NewRotationComponent(0, 2.0)) // Enemies face right initially, slower turn speed
-
-			// Phase 11.1: Add layer component for multi-layer collision
-			layerComp := NewLayerComponent()
-			layerComp.CurrentLayer = 0 // Ground layer
-			enemy.AddComponent(&layerComp)
-
-			// Phase 14: Add shadow component for enhanced lighting
-			shadowComp := NewShadowComponent(enemySize)
-			shadowComp.CastsShadow = true
-			shadowComp.ShadowType = ShadowTypeHard
-			enemy.AddComponent(shadowComp)
-
-			// Phase 13.1: Add behavior tree component for intelligent AI
-			// Select archetype based on entity properties
-			var archetype EnemyArchetype
-			if genEntity.Type == entity.TypeBoss {
-				archetype = ArchetypeTank // Bosses are tanky
-			} else if genEntity.Size == entity.SizeTiny || genEntity.Size == entity.SizeSmall {
-				archetype = ArchetypeStealth // Small enemies use stealth
-			} else if genEntity.Stats.Damage > genEntity.Stats.Defense {
-				archetype = ArchetypeMelee // High damage = melee
-			} else {
-				// Distribute other archetypes
-				archetypeRoll := rng.Intn(3)
-				switch archetypeRoll {
-				case 0:
-					archetype = ArchetypeMelee
-				case 1:
-					archetype = ArchetypeRanged
-				case 2:
-					archetype = ArchetypeSupport
-				default:
-					archetype = ArchetypeMelee
-				}
-			}
-			behaviorTree := BuildBehaviorTree(archetype, world)
-			enemy.AddComponent(behaviorTree)
-
-			// Phase 13.2: Add squad component for coordinated tactics
-			// Assign to squads based on room (enemies in same room form squads)
-			squadID := int(len(spawnRooms) - len(spawnRooms[i:]))
-			var role SquadRole
-			if i == 0 {
-				// First enemy in room is leader
-				role = SquadRoleLeader
-			} else {
-				// Others are members
-				role = SquadRoleMember
-			}
-			squadComp := NewSquadComponent(squadID, role, 0)
-			enemy.AddComponent(squadComp)
-
-			// Phase 13.3: Add faction component for reputation system
-			// Assign faction based on genre and entity type
-			var factionID string
-			if genEntity.Type == entity.TypeBoss {
-				factionID = "boss_faction"
-			} else if genEntity.Type == entity.TypeNPC {
-				factionID = "neutral_faction"
-			} else {
-				// Regular enemies belong to hostile faction
-				factionID = "enemy_faction"
-			}
-			factionComp := &FactionComponent{
-				FactionID:       factionID,
-				Reputation:      0,
-				IsPlayerFaction: false,
-			}
-			enemy.AddComponent(factionComp)
-
-			spawned++
 		}
 	}
 
-	return spawned, nil
+	return spawned
+}
+
+// calculateRoomEnemyCount determines how many enemies to spawn in a room (1-3, capped by available).
+func calculateRoomEnemyCount(rng *rand.Rand, remainingEntities int) int {
+	count := 1 + rng.Intn(3)
+	if count > remainingEntities {
+		count = remainingEntities
+	}
+	return count
+}
+
+// calculateSpawnPosition determines the spawn location within a room with random offset.
+func calculateSpawnPosition(room *terrain.Room, rng *rand.Rand) (float64, float64) {
+	cx, cy := room.Center()
+	offsetX := rng.Float64()*20 - 10
+	offsetY := rng.Float64()*20 - 10
+	return float64(cx*32) + offsetX, float64(cy*32) + offsetY
+}
+
+// createConfiguredEnemy creates an ECS entity with all necessary components for an enemy.
+func createConfiguredEnemy(world *World, genEntity *entity.Entity, x, y float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand) *Entity {
+	enemy := world.CreateEntity()
+
+	addCoreComponents(enemy, genEntity, x, y)
+	addCombatComponents(enemy, genEntity, x, y)
+	enemySize := addVisualComponents(enemy, genEntity, seed)
+	addAdvancedComponents(enemy, genEntity, enemySize, seed, roomIdx, enemyIdx, totalRooms, rng, world)
+
+	return enemy
+}
+
+// addCoreComponents adds position, health, stats, team, and velocity components.
+func addCoreComponents(enemy *Entity, genEntity *entity.Entity, x, y float64) {
+	enemy.AddComponent(&PositionComponent{X: x, Y: y})
+
+	maxHealth := float64(genEntity.Stats.Health)
+	enemy.AddComponent(&HealthComponent{Current: maxHealth, Max: maxHealth})
+
+	stats := NewStatsComponent()
+	stats.Attack = float64(genEntity.Stats.Damage)
+	stats.Defense = float64(genEntity.Stats.Defense)
+	enemy.AddComponent(stats)
+
+	enemy.AddComponent(&TeamComponent{TeamID: 2})
+	enemy.AddComponent(&VelocityComponent{VX: 0, VY: 0})
+}
+
+// addCombatComponents adds attack and AI components based on entity properties.
+func addCombatComponents(enemy *Entity, genEntity *entity.Entity, x, y float64) {
+	attackRange := calculateAttackRange(genEntity.Size)
+	enemy.AddComponent(&AttackComponent{
+		Damage:     float64(genEntity.Stats.Damage),
+		DamageType: 0,
+		Range:      attackRange,
+		Cooldown:   1.0,
+	})
+
+	aiComp := configureAIComponent(genEntity, x, y)
+	enemy.AddComponent(aiComp)
+}
+
+// calculateAttackRange returns the attack range based on entity size.
+func calculateAttackRange(size entity.EntitySize) float64 {
+	if size == entity.SizeLarge || size == entity.SizeHuge {
+		return 70.0
+	}
+	return 50.0
+}
+
+// configureAIComponent creates an AI component with detection and speed based on entity type.
+func configureAIComponent(genEntity *entity.Entity, x, y float64) *AIComponent {
+	aiComp := NewAIComponent(x, y)
+	aiComp.DetectionRange = 200.0
+
+	if genEntity.Type == entity.TypeBoss {
+		aiComp.DetectionRange = 300.0
+		aiComp.ChaseSpeed = 0.8
+	} else if genEntity.Type == entity.TypeMinion {
+		aiComp.ChaseSpeed = 1.2
+	}
+
+	return aiComp
+}
+
+// addVisualComponents adds collision, sprite, and animation components, returning enemy size.
+func addVisualComponents(enemy *Entity, genEntity *entity.Entity, seed int64) float64 {
+	enemySize := calculateEnemySize(genEntity.Size)
+
+	enemy.AddComponent(&ColliderComponent{
+		Width:     enemySize,
+		Height:    enemySize,
+		Solid:     true,
+		IsTrigger: false,
+		Layer:     1,
+		OffsetX:   -enemySize / 2,
+		OffsetY:   -enemySize / 2,
+	})
+
+	enemy.AddComponent(&EbitenSprite{
+		Width:   enemySize,
+		Height:  enemySize,
+		Visible: true,
+		Layer:   5,
+	})
+
+	enemyAnim := NewAnimationComponent(seed + int64(enemy.ID))
+	enemyAnim.CurrentState = AnimationStateIdle
+	enemyAnim.FrameTime = 0.2
+	enemyAnim.Loop = true
+	enemyAnim.Playing = true
+	enemyAnim.FrameCount = 4
+	enemyAnim.Dirty = true
+	enemy.AddComponent(enemyAnim)
+
+	return enemySize
+}
+
+// calculateEnemySize returns the visual size based on entity size category.
+func calculateEnemySize(size entity.EntitySize) float64 {
+	switch size {
+	case entity.SizeTiny:
+		return 16.0
+	case entity.SizeSmall:
+		return 24.0
+	case entity.SizeLarge:
+		return 48.0
+	case entity.SizeHuge:
+		return 64.0
+	default:
+		return 32.0
+	}
+}
+
+// addAdvancedComponents adds feedback, rotation, layer, shadow, behavior, squad, and faction components.
+func addAdvancedComponents(enemy *Entity, genEntity *entity.Entity, enemySize float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand, world *World) {
+	enemy.AddComponent(NewVisualFeedbackComponent())
+	enemy.AddComponent(NewRotationComponent(0, 2.0))
+
+	layerComp := NewLayerComponent()
+	layerComp.CurrentLayer = 0
+	enemy.AddComponent(&layerComp)
+
+	shadowComp := NewShadowComponent(enemySize)
+	shadowComp.CastsShadow = true
+	shadowComp.ShadowType = ShadowTypeHard
+	enemy.AddComponent(shadowComp)
+
+	archetype := selectEnemyArchetype(genEntity, rng)
+	enemy.AddComponent(BuildBehaviorTree(archetype, world))
+
+	squadID := totalRooms - (totalRooms - roomIdx)
+	role := selectSquadRole(enemyIdx)
+	enemy.AddComponent(NewSquadComponent(squadID, role, 0))
+
+	factionID := selectFactionID(genEntity)
+	enemy.AddComponent(&FactionComponent{
+		FactionID:       factionID,
+		Reputation:      0,
+		IsPlayerFaction: false,
+	})
+}
+
+// selectEnemyArchetype determines the AI archetype based on entity properties.
+func selectEnemyArchetype(genEntity *entity.Entity, rng *rand.Rand) EnemyArchetype {
+	if genEntity.Type == entity.TypeBoss {
+		return ArchetypeTank
+	}
+	if genEntity.Size == entity.SizeTiny || genEntity.Size == entity.SizeSmall {
+		return ArchetypeStealth
+	}
+	if genEntity.Stats.Damage > genEntity.Stats.Defense {
+		return ArchetypeMelee
+	}
+
+	switch rng.Intn(3) {
+	case 0:
+		return ArchetypeMelee
+	case 1:
+		return ArchetypeRanged
+	case 2:
+		return ArchetypeSupport
+	default:
+		return ArchetypeMelee
+	}
+}
+
+// selectSquadRole returns the squad role based on position in room (first is leader).
+func selectSquadRole(enemyIdx int) SquadRole {
+	if enemyIdx == 0 {
+		return SquadRoleLeader
+	}
+	return SquadRoleMember
+}
+
+// selectFactionID determines the faction based on entity type.
+func selectFactionID(genEntity *entity.Entity) string {
+	if genEntity.Type == entity.TypeBoss {
+		return "boss_faction"
+	}
+	if genEntity.Type == entity.TypeNPC {
+		return "neutral_faction"
+	}
+	return "enemy_faction"
 }
 
 // getEnemyColor determines sprite color based on entity properties.

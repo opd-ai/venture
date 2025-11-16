@@ -422,23 +422,26 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 	maxCellX := int(math.Floor(maxX / s.CellSize))
 	maxCellY := int(math.Floor(maxY / s.CellSize))
 
-	// Collect unique entities from cells
-	seen := make(map[uint64]bool)
-	result := make([]*Entity, 0)
+	// Use pooled resources to reduce allocations
+	nr := getNearbyResult()
+	defer putNearbyResult(nr)
 
 	for x := minCellX; x <= maxCellX; x++ {
 		for y := minCellY; y <= maxCellY; y++ {
 			if s.grid[x] != nil && s.grid[x][y] != nil {
 				for _, e := range s.grid[x][y] {
-					if !seen[e.ID] {
-						seen[e.ID] = true
-						result = append(result, e)
+					if !nr.seen[e.ID] {
+						nr.seen[e.ID] = true
+						nr.result = append(nr.result, e)
 					}
 				}
 			}
 		}
 	}
 
+	// Copy result before returning (pool will be reused)
+	result := make([]*Entity, len(nr.result))
+	copy(result, nr.result)
 	return result
 }
 

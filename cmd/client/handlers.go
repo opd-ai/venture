@@ -931,6 +931,13 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	// Add story journal for fragment discovery (Phase 30)
 	player.AddComponent(engine.NewStoryJournalComponent())
 
+	// Add mail component for mailbox system (Phase 40.3)
+	player.AddComponent(&engine.MailComponent{
+		Inbox:    []*engine.MailMessage{},
+		Outbox:   []*engine.MailMessage{},
+		MaxInbox: 50,
+	})
+
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")
 	addStarterItems(playerInventory, *seed, *genreID, logger)
@@ -1120,7 +1127,7 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 	return nil
 }
 
-// initializeUIIntegration sets up shop UI, crafting UI, and connects them to game systems.
+// initializeUIIntegration sets up shop UI, crafting UI, mailbox UI, and connects them to game systems.
 func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
 	shopUI := engine.NewShopUI(*width, *height)
 	shopUI.SetPlayerEntity(player)
@@ -1139,6 +1146,14 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 
 	if *verbose {
 		clientLogger.Info("crafting UI initialized and connected to crafting system")
+	}
+
+	// Phase 40.3: Initialize mailbox UI
+	mailboxUI := engine.NewMailboxUI(0, 0, *width, *height, *genreID)
+	game.MailboxUI = mailboxUI
+
+	if *verbose {
+		clientLogger.Info("mailbox UI initialized (Phase 40.3)")
 	}
 
 	game.SetInventorySystem(inventorySystem)
@@ -1168,7 +1183,7 @@ func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, 
 	game.World.Update(0)
 
 	clientLogger.Info("game initialized successfully")
-	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
 	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
 
 	if *multiplayer {

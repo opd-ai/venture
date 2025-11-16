@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
-	"github.com/opd-ai/venture/pkg/rendering/ui"
 )
 
 func main() {
@@ -33,7 +32,7 @@ func main() {
 	}
 
 	// Create mailbox UI
-	mailboxUI := ui.NewMailboxUI(0, 0, *width, *height, *genreID)
+	mailboxUI := engine.NewMailboxUI(0, 0, *width, *height, *genreID)
 
 	// Create sample mail data
 	mailComp := createSampleMailData()
@@ -44,11 +43,11 @@ func main() {
 	// Set view mode
 	switch *mode {
 	case "inbox":
-		mailboxUI.SwitchView(ui.ViewInbox)
+		mailboxUI.SwitchView(engine.ViewInbox)
 	case "outbox":
-		mailboxUI.SwitchView(ui.ViewOutbox)
+		mailboxUI.SwitchView(engine.ViewOutbox)
 	case "compose":
-		mailboxUI.SwitchView(ui.ViewCompose)
+		mailboxUI.SwitchView(engine.ViewCompose)
 		// Pre-fill compose form for demo
 		mailboxUI.ComposeRecipient = "player2"
 		mailboxUI.ComposeSubject = "Greetings from the test tool"
@@ -56,7 +55,7 @@ func main() {
 		mailboxUI.AddAttachment(100)
 		mailboxUI.AddAttachment(101)
 	case "detail":
-		mailboxUI.SwitchView(ui.ViewInbox)
+		mailboxUI.SwitchView(engine.ViewInbox)
 		if len(mailboxUI.InboxMessages) > 0 {
 			mailboxUI.OpenSelectedMessage()
 		}

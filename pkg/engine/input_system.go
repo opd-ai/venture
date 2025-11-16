@@ -239,6 +239,7 @@ type InputSystem struct {
 	KeyQuests    ebiten.Key // J key for quest log
 	KeyMap       ebiten.Key // M key for map
 	KeyCrafting  ebiten.Key // R key for crafting
+	KeyMailbox   ebiten.Key // L key for mailbox
 
 	// Key bindings - System
 	KeyHelp         ebiten.Key // ESC key for help menu
@@ -271,6 +272,7 @@ type InputSystem struct {
 	onQuestsOpen    func()
 	onMapOpen       func()
 	onCraftingOpen  func() // Callback for crafting UI toggle
+	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -312,6 +314,7 @@ func NewInputSystem() *InputSystem {
 		KeyQuests:    ebiten.KeyJ,
 		KeyMap:       ebiten.KeyM,
 		KeyCrafting:  ebiten.KeyR,
+		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 
 		// System keys
 		KeyHelp:         ebiten.KeyEscape,
@@ -466,6 +469,9 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyCrafting) && s.onCraftingOpen != nil {
 		s.onCraftingOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
+		s.onMailboxOpen()
 	}
 
 	// Phase 26.1: Handle expression/emote hotkeys (Shift+1 through Shift+=)
@@ -844,6 +850,15 @@ func (s *InputSystem) SetCraftingCallback(callback func()) error {
 		return fmt.Errorf("crafting callback cannot be nil")
 	}
 	s.onCraftingOpen = callback
+	return nil
+}
+
+// SetMailboxCallback sets the callback function for opening mailbox UI (L key).
+func (s *InputSystem) SetMailboxCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("mailbox callback cannot be nil")
+	}
+	s.onMailboxOpen = callback
 	return nil
 }
 

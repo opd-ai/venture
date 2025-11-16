@@ -56,6 +56,7 @@ type EbitenGame struct {
 	MapUI       *EbitenMapUI
 	ShopUI      *ShopUI     // Commerce and merchant interaction UI
 	CraftingUI  *CraftingUI // Crafting and recipe UI
+	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
@@ -927,6 +928,21 @@ func (g *EbitenGame) Draw(screen *ebiten.Image) {
 		g.CraftingUI.Draw(screen)
 	}
 
+	// Render mailbox UI (Phase 40.3)
+	if g.MailboxUI != nil && g.MailboxUI.IsOpen() {
+		// Load latest mail from player's MailComponent
+		if g.PlayerEntity != nil {
+			if mailComp, ok := g.PlayerEntity.GetComponent("mail"); ok {
+				g.MailboxUI.LoadFromMailComponent(mailComp.(*MailComponent))
+			}
+		}
+		// Render to image then draw
+		mailImg := g.MailboxUI.Render()
+		if mailImg != nil {
+			screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
+		}
+	}
+
 	// Render virtual controls (mobile only, drawn last to be on top of everything)
 	for _, system := range g.World.GetSystems() {
 		if inputSys, ok := system.(*InputSystem); ok {
@@ -1064,6 +1080,19 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 		}
 	}); err != nil {
 		return fmt.Errorf("failed to set crafting callback: %w", err)
+	}
+
+	// Connect mailbox toggle (Phase 40.3: Mail System Integration)
+	if err := inputSystem.SetMailboxCallback(func() {
+		if g.MailboxUI != nil {
+			g.MailboxUI.Toggle()
+			// Track mailbox UI opens for tutorial objectives
+			if objectiveTracker != nil && g.PlayerEntity != nil {
+				objectiveTracker.OnUIOpened(g.PlayerEntity, "mailbox")
+			}
+		}
+	}); err != nil {
+		return fmt.Errorf("failed to set mailbox callback: %w", err)
 	}
 
 	// Connect pause menu toggle (ESC key)

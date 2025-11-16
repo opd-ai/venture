@@ -561,3 +561,92 @@ func GetAvailableSpecializations(class CharacterClass) []SpecializationType {
 		return []SpecializationType{}
 	}
 }
+
+// Serialize converts ClassProgressionComponent to bytes for network transmission.
+// Format: [Class:1][Level:4][Experience:8][Specialization:1][HasSecondary:1]
+//
+//	[SecondaryClass:1][SecondaryLevel:4][SecondarySpec:1] = 29 bytes
+//
+// Note: Abilities array is not synchronized; it can be regenerated from Class+Level on client
+func (c *ClassProgressionComponent) Serialize() []byte {
+	buf := make([]byte, 29)
+	offset := 0
+
+	// Primary class data
+	buf[offset] = byte(c.Class)
+	offset++
+	writeInt32(buf[offset:], int32(c.Level))
+	offset += 4
+	writeFloat64(buf[offset:], c.Experience)
+	offset += 8
+	buf[offset] = byte(c.Specialization)
+	offset++
+
+	// Secondary class (dual-classing)
+	hasSecondary := c.SecondaryClass != nil
+	writeBool(buf[offset:], hasSecondary)
+	offset++
+
+	if hasSecondary {
+		buf[offset] = byte(*c.SecondaryClass)
+		offset++
+		writeInt32(buf[offset:], int32(c.SecondaryLevel))
+		offset += 4
+		buf[offset] = byte(c.SecondarySpec)
+	} else {
+		buf[offset] = 0 // INTEGRATION FIX [Category D]: SecondaryClass Serialization
+		// Gap: No secondary class - serialize as 0 (valid state, not a missing feature)
+		// Fix: Already correct - dual-classing is optional, 0 indicates no secondary class
+		// Roadmap: ROADMAP_V4.md Phase 25.2 - Dual-classing complete, serialization functional
+		offset++
+		writeInt32(buf[offset:], 0) // SecondaryLevel = 0 (no secondary class)
+		offset += 4
+		buf[offset] = 0 // SecondarySpec = 0 (no secondary specialization)
+	}
+
+	return buf
+}
+
+// Deserialize reads ClassProgressionComponent from bytes.
+func (c *ClassProgressionComponent) Deserialize(data []byte) error {
+	if len(data) < 29 {
+		return ErrInvalidComponentData
+	}
+
+	offset := 0
+
+	// Primary class data
+	c.Class = CharacterClass(data[offset])
+	offset++
+	c.Level = int(readInt32(data[offset:]))
+	offset += 4
+	c.Experience = readFloat64(data[offset:])
+	offset += 8
+	c.Specialization = SpecializationType(data[offset])
+	offset++
+
+	// Secondary class
+	hasSecondary := readBool(data[offset:])
+	offset++
+
+	if hasSecondary {
+		secondaryClass := CharacterClass(data[offset])
+		c.SecondaryClass = &secondaryClass
+		offset++
+		c.SecondaryLevel = int(readInt32(data[offset:]))
+		offset += 4
+		c.SecondarySpec = SpecializationType(data[offset])
+	} else {
+		c.SecondaryClass = nil
+		c.SecondaryLevel = 0
+		c.SecondarySpec = SpecializationNone
+	}
+
+	// Abilities array should be regenerated on client from Class+Level+Specialization
+	c.Abilities = GetClassAbilities(c.Class)
+	if c.Specialization != SpecializationNone {
+		c.Abilities = append(c.Abilities, GetSpecializationAbilities(c.Specialization)...)
+	}
+
+	return nil
+}

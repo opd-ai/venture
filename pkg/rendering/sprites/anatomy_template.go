@@ -2178,6 +2178,70 @@ func ApplyPostApocVariation(template AnatomicalTemplate) AnatomicalTemplate {
 	return postapoc
 }
 
+// SelectTemplate64 chooses an enhanced 64x64 template based on entity type and genre.
+// This implements Phase 45 enhanced sprite templates with improved detail (head 12%, torso 40%, legs 48%).
+// Returns Enhanced64 variants when spriteSize >= 48, otherwise returns standard 32x32 templates.
+//
+// Parameters:
+// - entityType: "humanoid", "quadruped", "blob", "mechanical", etc.
+// - genre: "fantasy", "scifi", "horror", "cyberpunk", "postapoc"
+// - spriteSize: target sprite size in pixels (typically 32, 48, or 64)
+// - detailed: if true, returns Detailed64 variants with facial features (for spriteSize >= 64)
+//
+// Target silhouette recognition: 0.85+ (up from 0.75 for 32x32 sprites).
+func SelectTemplate64(entityType, genre string, spriteSize int, detailed bool) AnatomicalTemplate {
+	// Use Phase 45 64x64 templates for larger sprites
+	if spriteSize >= 64 {
+		switch entityType {
+		case "humanoid", "player", "npc", "knight", "mage", "warrior":
+			if detailed {
+				template := Detailed64HumanoidTemplate()
+				return applyGenreVariation64(template, genre)
+			}
+			template := Enhanced64HumanoidTemplate()
+			return applyGenreVariation64(template, genre)
+		case "quadruped", "wolf", "bear", "animal", "beast":
+			template := Enhanced64QuadrupedTemplate()
+			return applyGenreVariation64(template, genre)
+		case "blob", "slime", "amoeba", "ooze":
+			template := Enhanced64BlobTemplate()
+			return applyGenreVariation64(template, genre)
+		case "mechanical", "robot", "golem", "construct", "android":
+			template := Enhanced64MechanicalTemplate()
+			return applyGenreVariation64(template, genre)
+		default:
+			// Default to enhanced humanoid for unknown types
+			template := Enhanced64HumanoidTemplate()
+			return applyGenreVariation64(template, genre)
+		}
+	} else if spriteSize >= 48 {
+		// Use enhanced 28x28 templates for medium sprites, scaled up
+		return SelectTemplateWithGenre(entityType, genre)
+	} else {
+		// Use standard 32x32 templates for smaller sprites
+		return SelectTemplateWithGenre(entityType, genre)
+	}
+}
+
+// applyGenreVariation64 applies genre-specific variations to Phase 45 64x64 templates.
+// Modifies templates to match genre themes while preserving Phase 45 proportions.
+func applyGenreVariation64(template AnatomicalTemplate, genre string) AnatomicalTemplate {
+	switch genre {
+	case "fantasy":
+		return ApplyFantasyVariation(template)
+	case "scifi", "sci-fi":
+		return ApplySciFiVariation(template)
+	case "horror":
+		return ApplyHorrorVariation(template)
+	case "cyberpunk":
+		return ApplyCyberpunkVariation(template)
+	case "postapoc", "post-apocalyptic":
+		return ApplyPostApocVariation(template)
+	default:
+		return template
+	}
+}
+
 // SelectTemplateWithGenre chooses an appropriate template with genre-specific styling.
 // This replaces SelectTemplate for genre-aware template selection.
 // Applies genre variations to non-humanoid creature types.
@@ -2366,5 +2430,401 @@ func NewPartSpecFromPixels(width, height int, shapeType shapes.ShapeType, zIndex
 		ColorRole:  colorRole,
 		Opacity:    1.0,
 		Rotation:   0,
+	}
+}
+
+// --- Phase 45: Enhanced 64x64 Sprite Templates ---
+
+// Enhanced64HumanoidTemplate returns a high-detail humanoid template for 64x64 sprites.
+// Implements Phase 45 enhanced proportions: head 12%, torso 40%, legs 48% of sprite height.
+// Includes secondary details (shoulders, neck, feet) for improved anatomical accuracy.
+// Target silhouette score: 0.85+ (up from 0.75).
+//
+// Body part breakdown:
+// - Head: 8×8 pixels (12% of 64px height)
+// - Neck: 4×2 pixels (connector detail)
+// - Shoulders: 12×4 pixels (broadens upper body)
+// - Torso: 10×14 pixels (40% height proportion)
+// - Arms: 12×10 pixels (reach and articulation)
+// - Legs: 8×16 pixels (48% height proportion)
+// - Feet: 6×3 pixels (grounding detail)
+//
+// Use this template for:
+// - Player characters at 1920x1080 resolution
+// - Close-up entity views
+// - High-detail sprite rendering modes
+// - Genre-specific humanoid variations
+func Enhanced64HumanoidTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced64_humanoid",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.93,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.08,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+			},
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.72, // Positioned for 48% height proportion
+				RelativeWidth:  0.125,
+				RelativeHeight: 0.25, // 16/64 = 48% proportion
+				PreferredPixelSize: &PixelDimensions{
+					Width:  8,
+					Height: 16, // Phase 45: 8×16 pixel legs (48%)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.40, // Centered in upper body
+				RelativeWidth:  0.156,
+				RelativeHeight: 0.219, // 14/64 = 40% proportion
+				PreferredPixelSize: &PixelDimensions{
+					Width:  10,
+					Height: 14, // Phase 45: 10×14 pixel torso (40%)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.42, // Shoulder level
+				RelativeWidth:  0.188,
+				RelativeHeight: 0.156,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  12,
+					Height: 10, // Phase 45: 12×10 pixel arms (wider reach)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
+				ZIndex:     8,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.18, // Upper 12%
+				RelativeWidth:  0.125,
+				RelativeHeight: 0.125, // 8/64 = 12% proportion
+				PreferredPixelSize: &PixelDimensions{
+					Width:  8,
+					Height: 8, // Phase 45: 8×8 pixel head (12%)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+		},
+	}
+}
+
+// Detailed64HumanoidTemplate returns Enhanced64HumanoidTemplate with facial features
+// and secondary anatomical details (shoulders, neck, feet).
+// Includes eyes, mouth, neck connector, shoulder broadening, and foot grounding details.
+// This achieves maximum silhouette recognition (target: 0.85+) for player characters.
+//
+// Secondary details:
+// - Eyes: 4×2 pixels (clear facial features)
+// - Mouth: 4×2 pixels (expression capability)
+// - Neck: 4×2 pixels (head-torso connector)
+// - Shoulders: 12×4 pixels (upper body width)
+// - Feet: 6×3 pixels (grounding and stance)
+//
+// Use this template for:
+// - Primary player characters
+// - Important NPCs with dialog
+// - Genre-specific humanoid heroes
+// - Character creation preview sprites
+func Detailed64HumanoidTemplate() AnatomicalTemplate {
+	// Start with enhanced 64x64 base
+	base := Enhanced64HumanoidTemplate()
+	base.Name = "detailed64_humanoid"
+
+	// Add facial features
+	base.BodyPartLayout[PartEyes] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.17, // Upper head region
+		RelativeWidth:  0.063,
+		RelativeHeight: 0.031,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  4,
+			Height: 2, // Phase 45: 4×2 pixel eyes (clear detail)
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:     16, // Above head
+		ColorRole:  "accent1",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	base.BodyPartLayout[PartMouth] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.20, // Lower head region
+		RelativeWidth:  0.063,
+		RelativeHeight: 0.031,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  4,
+			Height: 2, // Phase 45: 4×2 pixel mouth
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:     16,
+		ColorRole:  "accent2",
+		Opacity:    1.0,
+		Rotation:   0,
+	}
+
+	return base
+}
+
+// Enhanced64QuadrupedTemplate returns a high-detail quadruped template for 64x64 sprites.
+// Implements Phase 45 enhanced proportions for four-legged creatures.
+// Improved anatomical accuracy with longer body, distinct head, and visible legs.
+//
+// Body part breakdown:
+// - Head: 10×12 pixels (prominent snout/muzzle)
+// - Torso: 20×14 pixels (horizontal elongated body)
+// - Legs: 20×8 pixels (four-legged stance, horizontal orientation)
+// - Tail: 8×16 pixels (optional, adds character)
+//
+// Use for: wolves, dogs, cats, bears, horses, and other four-legged creatures.
+func Enhanced64QuadrupedTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced64_quadruped",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.90,
+				RelativeWidth:  0.625,
+				RelativeHeight: 0.10,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+			},
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.72,
+				RelativeWidth:  0.313, // 20/64
+				RelativeHeight: 0.125, // 8/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  20,
+					Height: 8, // Phase 45: 20×8 pixel legs (horizontal)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   90, // Horizontal legs
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.313, // 20/64
+				RelativeHeight: 0.219, // 14/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  20,
+					Height: 14, // Phase 45: 20×14 pixel torso (elongated)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   90, // Horizontal body
+			},
+			PartHead: {
+				RelativeX:      0.22, // Forward position
+				RelativeY:      0.38,
+				RelativeWidth:  0.156, // 10/64
+				RelativeHeight: 0.188, // 12/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  10,
+					Height: 12, // Phase 45: 10×12 pixel head
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeEllipse, shapes.ShapeCircle},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   270, // Face left
+			},
+			PartTail: {
+				RelativeX:      0.78, // Rear position
+				RelativeY:      0.48,
+				RelativeWidth:  0.125, // 8/64
+				RelativeHeight: 0.25,  // 16/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  8,
+					Height: 16, // Phase 45: 8×16 pixel tail
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeWedge},
+				ZIndex:     4, // Behind legs
+				ColorRole:  "primary",
+				Opacity:    0.9,
+				Rotation:   45, // Curved upward
+			},
+		},
+	}
+}
+
+// Enhanced64BlobTemplate returns a high-detail blob/slime template for 64x64 sprites.
+// Implements Phase 45 amorphous creature proportions with organic shapes.
+// Enhanced with visible nucleus and translucent outer membrane.
+//
+// Body part breakdown:
+// - Torso (main body): 32×28 pixels (large amorphous mass)
+// - Eyes (nucleus): 6×4 pixels (visible core detail)
+//
+// Use for: slimes, amoebas, jellies, oozes, and other amorphous creatures.
+func Enhanced64BlobTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced64_blob",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.85,
+				RelativeWidth:  0.70,
+				RelativeHeight: 0.15,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.4,
+				Rotation:       0,
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.52,
+				RelativeWidth:  0.50,  // 32/64
+				RelativeHeight: 0.438, // 28/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  32,
+					Height: 28, // Phase 45: 32×28 pixel blob (large mass)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeCircle, shapes.ShapeBean},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    0.85, // Translucent
+				Rotation:   0,
+			},
+			PartEyes: {
+				RelativeX:      0.5,
+				RelativeY:      0.50,
+				RelativeWidth:  0.094, // 6/64
+				RelativeHeight: 0.063, // 4/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  6,
+					Height: 4, // Phase 45: 6×4 pixel nucleus/eyes
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+				ZIndex:     12, // Visible through translucent body
+				ColorRole:  "accent1",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+		},
+	}
+}
+
+// Enhanced64MechanicalTemplate returns a high-detail robot/construct template for 64x64 sprites.
+// Implements Phase 45 geometric proportions with angular shapes.
+// Enhanced with visible joints, plating, and mechanical details.
+//
+// Body part breakdown:
+// - Head: 10×10 pixels (cubic or spherical sensor unit)
+// - Torso: 12×18 pixels (central chassis)
+// - Arms: 14×10 pixels (articulated limbs)
+// - Legs: 10×14 pixels (stable mechanical supports)
+//
+// Use for: robots, golems, constructs, mechanized enemies in sci-fi/cyberpunk genres.
+func Enhanced64MechanicalTemplate() AnatomicalTemplate {
+	return AnatomicalTemplate{
+		Name: "enhanced64_mechanical",
+		BodyPartLayout: map[BodyPart]PartSpec{
+			PartShadow: {
+				RelativeX:      0.5,
+				RelativeY:      0.93,
+				RelativeWidth:  0.40,
+				RelativeHeight: 0.08,
+				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+				ZIndex:         0,
+				ColorRole:      "shadow",
+				Opacity:        0.3,
+				Rotation:       0,
+			},
+			PartLegs: {
+				RelativeX:      0.5,
+				RelativeY:      0.75,
+				RelativeWidth:  0.156, // 10/64
+				RelativeHeight: 0.219, // 14/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  10,
+					Height: 14, // Phase 45: 10×14 pixel mechanical legs
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeHexagon, shapes.ShapeOctagon},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartTorso: {
+				RelativeX:      0.5,
+				RelativeY:      0.48,
+				RelativeWidth:  0.188, // 12/64
+				RelativeHeight: 0.281, // 18/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  12,
+					Height: 18, // Phase 45: 12×18 pixel chassis
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeHexagon, shapes.ShapeOctagon},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartArms: {
+				RelativeX:      0.5,
+				RelativeY:      0.48,
+				RelativeWidth:  0.219, // 14/64
+				RelativeHeight: 0.156, // 10/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  14,
+					Height: 10, // Phase 45: 14×10 pixel arms
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     8,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.22,
+				RelativeWidth:  0.156, // 10/64
+				RelativeHeight: 0.156, // 10/64
+				PreferredPixelSize: &PixelDimensions{
+					Width:  10,
+					Height: 10, // Phase 45: 10×10 pixel head (cubic sensor)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeRectangle, shapes.ShapeHexagon},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
+		},
 	}
 }

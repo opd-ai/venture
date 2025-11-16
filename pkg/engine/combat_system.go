@@ -661,7 +661,7 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 		}
 	}
 
-	enemies := make([]*Entity, 0)
+	enemies := make([]*Entity, 0, 16)
 
 	for _, entity := range world.GetEntities() {
 		if entity.ID == attacker.ID {

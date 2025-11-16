@@ -68,7 +68,7 @@ func TestTransferPlayer(t *testing.T) {
 		targetServer string
 		wantErr      bool
 	}{
-		{"valid transfer", 1, "target-server", true}, // true because not implemented
+		{"valid transfer", 1, "target-server", true}, // true because stub not fully implemented
 		{"zero player ID", 0, "target-server", true},
 		{"empty target", 1, "", true},
 	}
@@ -76,7 +76,11 @@ func TestTransferPlayer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fp := NewFederationProtocol("test-server")
-			err := fp.TransferPlayer(tt.playerID, tt.targetServer)
+			world := engine.NewWorld()
+			authMgr := NewAuthManager()
+			transferMgr := NewTransferManager()
+
+			err := fp.TransferPlayer(tt.playerID, world, tt.targetServer, authMgr, transferMgr)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TransferPlayer() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -84,8 +88,8 @@ func TestTransferPlayer(t *testing.T) {
 	}
 }
 
-// TestNewPortalSystem tests creation of portal system
-func TestNewPortalSystem(t *testing.T) {
+// TestNewPortalSystem_TableDriven tests creation of portal system with various parameter combinations
+func TestNewPortalSystem_TableDriven(t *testing.T) {
 	world := engine.NewWorld()
 	fp := NewFederationProtocol("test-server")
 
@@ -245,7 +249,7 @@ func TestActivatePortal(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "cross-server transfer - not implemented",
+			name: "cross-server transfer - preparation succeeds",
 			setup: func(w *engine.World) (uint64, uint64) {
 				player := w.CreateEntity()
 				player.AddComponent(&engine.PositionComponent{X: 10, Y: 10})
@@ -257,8 +261,7 @@ func TestActivatePortal(t *testing.T) {
 				})
 				return player.ID, portal.ID
 			},
-			wantErr: true,
-			errMsg:  "not implemented",
+			wantErr: false,
 		},
 	}
 
@@ -267,11 +270,13 @@ func TestActivatePortal(t *testing.T) {
 			world := engine.NewWorld()
 			fp := NewFederationProtocol("test-server")
 			ps := NewPortalSystem(world, fp)
+			authMgr := NewAuthManager()
+			transferMgr := NewTransferManager()
 
 			playerID, portalID := tt.setup(world)
 			// Process pending entity additions
 			world.Update(0)
-			err := ps.ActivatePortal(playerID, portalID)
+			err := ps.ActivatePortal(playerID, portalID, authMgr, transferMgr)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActivatePortal() error = %v, wantErr %v", err, tt.wantErr)

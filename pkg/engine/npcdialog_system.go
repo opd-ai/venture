@@ -59,9 +59,17 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	// Get or create NPCDialogComponent
 	dialogComp := s.getOrCreateDialogComponent(entity, genreID, personality, seed)
 
-	// Check if generator already exists
+	// Check if generator already exists in component
 	if dialogComp.Generator != nil {
 		return nil // Already initialized
+	}
+
+	// Check if generator exists in cache
+	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
+	if cachedGen, exists := s.generatorCache[cacheKey]; exists {
+		// Use cached generator
+		dialogComp.Generator = cachedGen
+		return nil
 	}
 
 	// Get corpus for genre
@@ -75,7 +83,6 @@ func (s *NPCDialogSystem) InitializeNPCDialog(entity *Entity, genreID string, pe
 	gen.TrainFromCorpus(corpus.Sentences)
 
 	// Cache generator
-	cacheKey := fmt.Sprintf("%s-%d", genreID, seed)
 	s.generatorCache[cacheKey] = gen
 
 	// Assign to component
@@ -319,7 +326,7 @@ func (s *NPCDialogSystem) StartMultiPartyConversation(npcID uint64, playerIDs []
 
 // QueuePlayerInput queues a player's dialog request to an NPC.
 // Returns a channel that will receive the NPC's response asynchronously.
-func (s *NPCDialogSystem) QueuePlayerInput(npcID uint64, playerID uint64, input string) (<-chan *DialogResponse, error) {
+func (s *NPCDialogSystem) QueuePlayerInput(npcID, playerID uint64, input string) (<-chan *DialogResponse, error) {
 	req, err := s.conversationManager.QueueDialogRequest(npcID, playerID, input)
 	if err != nil {
 		return nil, err
@@ -372,7 +379,7 @@ func (s *NPCDialogSystem) GetConversationMessages(convID string) ([]Conversation
 }
 
 // AddConversationMessage adds a message to a conversation (for tracking multi-party chat).
-func (s *NPCDialogSystem) AddConversationMessage(convID string, senderID uint64, senderName string, content string) error {
+func (s *NPCDialogSystem) AddConversationMessage(convID string, senderID uint64, senderName, content string) error {
 	return s.conversationManager.AddMessage(convID, senderID, senderName, content)
 }
 

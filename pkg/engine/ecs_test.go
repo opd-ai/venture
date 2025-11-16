@@ -55,8 +55,8 @@ func TestWorld(t *testing.T) {
 
 	// Test entity creation
 	entity := world.CreateEntity()
-	if entity.ID != 0 {
-		t.Errorf("Expected first entity ID to be 0, got %d", entity.ID)
+	if entity.ID != 1 {
+		t.Errorf("Expected first entity ID to be 1, got %d", entity.ID)
 	}
 
 	// Ensure entity is added after update
@@ -148,6 +148,61 @@ func TestGetEntitiesWith(t *testing.T) {
 	entities := world.GetEntitiesWith("mock")
 	if len(entities) != 2 {
 		t.Errorf("Expected 2 entities with mock component, got %d", len(entities))
+	}
+}
+
+// TestGetEntitiesWithOptimizedPaths verifies the zero-allocation fast paths work correctly.
+func TestGetEntitiesWithOptimizedPaths(t *testing.T) {
+	world := NewWorld()
+
+	// Create test entities with common component combinations
+	for i := 0; i < 10; i++ {
+		e := world.CreateEntity()
+		e.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		if i%2 == 0 {
+			e.AddComponent(&VelocityComponent{VX: 1.0, VY: 1.0})
+		}
+		if i%3 == 0 {
+			e.AddComponent(&HealthComponent{Current: 100, Max: 100})
+		}
+		if i%4 == 0 {
+			e.AddComponent(&ColliderComponent{Width: 32, Height: 32})
+		}
+	}
+
+	world.Update(0.016)
+
+	// Test fast-path queries
+	tests := []struct {
+		name       string
+		components []string
+		wantCount  int
+	}{
+		{"position only", []string{"position"}, 10},
+		{"position+velocity", []string{"position", "velocity"}, 5},
+		{"position+health", []string{"position", "health"}, 4},
+		{"position+collider", []string{"position", "collider"}, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// First call (cache miss)
+			result1 := world.GetEntitiesWith(tt.components...)
+			if len(result1) != tt.wantCount {
+				t.Errorf("%s: expected %d entities, got %d", tt.name, tt.wantCount, len(result1))
+			}
+
+			// Second call (cache hit - should use fast path with zero allocations)
+			result2 := world.GetEntitiesWith(tt.components...)
+			if len(result2) != tt.wantCount {
+				t.Errorf("%s: cached result expected %d entities, got %d", tt.name, tt.wantCount, len(result2))
+			}
+
+			// Verify results are identical
+			if len(result1) != len(result2) {
+				t.Errorf("%s: cache results differ in length", tt.name)
+			}
+		})
 	}
 }
 

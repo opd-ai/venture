@@ -38,22 +38,7 @@ var (
 func main() {
 	flag.Parse()
 
-	// Initialize structured logger with JSON format for server (log aggregation)
-	logConfig := logging.Config{
-		Level:       logging.InfoLevel,
-		Format:      logging.JSONFormat, // Always JSON for server
-		AddCaller:   true,
-		EnableColor: false,
-	}
-
-	// Override log level from environment variable
-	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
-		logConfig.Level = logging.LogLevel(logLevel)
-	} else if *verbose {
-		logConfig.Level = logging.DebugLevel
-	}
-
-	logger := logging.NewLogger(logConfig)
+	logger := initializeLogger()
 	serverLogger := logger.WithFields(logrus.Fields{
 		"component": "server",
 		"seed":      *seed,
@@ -70,131 +55,11 @@ func main() {
 		"aerialSprites": *aerialSprites,
 	}).Info("server configuration")
 
-	// Create game world
-	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
-	if logger.GetLevel() >= logrus.DebugLevel {
-		worldLogger.Debug("creating game world")
-	}
+	world := createGameWorld(logger)
+	generatedTerrain := generateWorldTerrain(logger, serverLogger)
+	spawnV4Entities(world, generatedTerrain, logger)
 
-	world := engine.NewWorldWithLogger(logger)
-
-	// Add gameplay systems with proper constructors
-	movementSystem := engine.NewMovementSystem(200.0)  // 200 units/second max speed
-	collisionSystem := engine.NewCollisionSystem(64.0) // 64-unit grid cells for spatial partitioning
-	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
-	aiSystem := engine.NewAISystem(world)
-	progressionSystem := engine.NewProgressionSystem(world)
-	inventorySystem := engine.NewInventorySystem(world)
-
-	world.AddSystem(movementSystem)
-	world.AddSystem(collisionSystem)
-	world.AddSystem(combatSystem)
-	world.AddSystem(aiSystem)
-	world.AddSystem(progressionSystem)
-	world.AddSystem(inventorySystem)
-
-	// Initialize V4.0 systems (Phase 21-27: Vehicles, Companions, Books, Mini-Games, Achievements)
-	initializeV4Systems(world, *seed, logger)
-
-	if logger.GetLevel() >= logrus.DebugLevel {
-		worldLogger.Debug("game systems initialized")
-	}
-
-	// Generate initial world terrain
-	terrainLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genreID)
-	if logger.GetLevel() >= logrus.DebugLevel {
-		terrainLogger.WithFields(logrus.Fields{
-			"width":  100,
-			"height": 100,
-		}).Debug("generating world terrain")
-	}
-
-	terrainGen := terrain.NewBSPGeneratorWithLogger(logger) // Use BSP algorithm with logging
-	params := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      1,
-		GenreID:    *genreID,
-		Custom: map[string]interface{}{
-			"width":  100,
-			"height": 100,
-		},
-	}
-
-	terrainResult, err := terrainGen.Generate(*seed, params)
-	if err != nil {
-		serverLogger.WithError(err).Fatal("failed to generate terrain")
-	}
-
-	generatedTerrain := terrainResult.(*terrain.Terrain)
-	terrainLogger.WithFields(logrus.Fields{
-		"width":     generatedTerrain.Width,
-		"height":    generatedTerrain.Height,
-		"roomCount": len(generatedTerrain.Rooms),
-	}).Info("world terrain generated")
-
-	// Spawn V4.0 entities (vehicles, companions, bookshelves)
-	v4Logger := logging.GeneratorLogger(logger, "v4-spawning", *seed, *genreID)
-
-	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
-	if err != nil {
-		v4Logger.WithError(err).Warn("failed to spawn vehicles")
-	} else if vehicleCount > 0 {
-		v4Logger.WithField("count", vehicleCount).Info("vehicles spawned")
-	}
-
-	companionCount, err := spawnCompanionsInTerrain(world, generatedTerrain, *seed, params, logger)
-	if err != nil {
-		v4Logger.WithError(err).Warn("failed to spawn companions")
-	} else if companionCount > 0 {
-		v4Logger.WithField("count", companionCount).Info("companions spawned")
-	}
-
-	bookshelfCount, err := spawnBookshelvesInTerrain(world, generatedTerrain, *seed, params, logger)
-	if err != nil {
-		v4Logger.WithError(err).Warn("failed to spawn bookshelves")
-	} else if bookshelfCount > 0 {
-		v4Logger.WithField("count", bookshelfCount).Info("bookshelves spawned")
-	}
-
-	// Initialize network components
-	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
-	if logger.GetLevel() >= logrus.DebugLevel {
-		networkLogger.Debug("initializing network systems")
-	}
-
-	// Create server with configuration
-	var serverConfig network.ServerConfig
-	if *highLatency {
-		serverConfig = network.HighLatencyServerConfig()
-		networkLogger.Info("using high-latency server configuration (Tor/onion service optimized)")
-	} else {
-		serverConfig = network.DefaultServerConfig()
-	}
-	serverConfig.Address = ":" + *port
-	serverConfig.MaxPlayers = *maxPlayers
-	serverConfig.UpdateRate = *tickRate
-
-	// Create network server with logging
-	server := network.NewServerWithLogger(serverConfig, logger)
-
-	// Create snapshot manager for state synchronization
-	snapshotManager := network.NewSnapshotManager(100)
-
-	// Create lag compensator
-	var lagCompConfig network.LagCompensationConfig
-	if *highLatency {
-		lagCompConfig = network.HighLatencyLagCompensationConfig()
-		networkLogger.Info("using high-latency lag compensation configuration")
-	} else {
-		lagCompConfig = network.DefaultLagCompensationConfig()
-	}
-	lagCompensator := network.NewLagCompensator(lagCompConfig)
-
-	networkLogger.WithFields(logrus.Fields{
-		"address":    serverConfig.Address,
-		"maxPlayers": serverConfig.MaxPlayers,
-		"updateRate": serverConfig.UpdateRate,
-	}).Info("network systems initialized")
+	server, snapshotManager, lagCompensator := initializeNetworkSystems(logger)
 
 	// Start network server
 	if err := server.Start(); err != nil {
@@ -226,103 +91,271 @@ func main() {
 
 	serverLogger.WithField("tickRate", *tickRate).Info("starting authoritative game loop")
 
-	// Handle server errors in background
+	startErrorHandler(server, logger)
+	startPlayerManagementHandlers(server, world, generatedTerrain, logger)
+
+	runGameLoop(world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
+}
+
+// initializeLogger creates and configures the server logger with appropriate settings.
+func initializeLogger() *logrus.Logger {
+	logConfig := logging.Config{
+		Level:       logging.InfoLevel,
+		Format:      logging.JSONFormat,
+		AddCaller:   true,
+		EnableColor: false,
+	}
+
+	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
+		logConfig.Level = logging.LogLevel(logLevel)
+	} else if *verbose {
+		logConfig.Level = logging.DebugLevel
+	}
+
+	return logging.NewLogger(logConfig)
+}
+
+// createGameWorld initializes the game world with all required systems.
+func createGameWorld(logger *logrus.Logger) *engine.World {
+	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
+	if logger.GetLevel() >= logrus.DebugLevel {
+		worldLogger.Debug("creating game world")
+	}
+
+	world := engine.NewWorldWithLogger(logger)
+
+	movementSystem := engine.NewMovementSystem(200.0)
+	collisionSystem := engine.NewCollisionSystem(64.0)
+	combatSystem := engine.NewCombatSystemWithLogger(*seed, logger)
+	aiSystem := engine.NewAISystem(world)
+	progressionSystem := engine.NewProgressionSystem(world)
+	inventorySystem := engine.NewInventorySystem(world)
+
+	world.AddSystem(movementSystem)
+	world.AddSystem(collisionSystem)
+	world.AddSystem(combatSystem)
+	world.AddSystem(aiSystem)
+	world.AddSystem(progressionSystem)
+	world.AddSystem(inventorySystem)
+
+	initializeV4Systems(world, *seed, logger)
+	initializeV5SystemsServer(world, logger)
+
+	if logger.GetLevel() >= logrus.DebugLevel {
+		worldLogger.Debug("game systems initialized")
+	}
+
+	return world
+}
+
+// generateWorldTerrain creates the initial terrain and spawns V4 entities.
+func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *terrain.Terrain {
+	terrainLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genreID)
+	if logger.GetLevel() >= logrus.DebugLevel {
+		terrainLogger.WithFields(logrus.Fields{
+			"width":  100,
+			"height": 100,
+		}).Debug("generating world terrain")
+	}
+
+	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+		Custom: map[string]interface{}{
+			"width":  100,
+			"height": 100,
+		},
+	}
+
+	terrainResult, err := terrainGen.Generate(*seed, params)
+	if err != nil {
+		serverLogger.WithError(err).Fatal("failed to generate terrain")
+	}
+
+	generatedTerrain := terrainResult.(*terrain.Terrain)
+	terrainLogger.WithFields(logrus.Fields{
+		"width":     generatedTerrain.Width,
+		"height":    generatedTerrain.Height,
+		"roomCount": len(generatedTerrain.Rooms),
+	}).Info("world terrain generated")
+
+	return generatedTerrain
+}
+
+// spawnV4Entities spawns vehicles, companions, and bookshelves in the terrain.
+func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, logger *logrus.Logger) {
+	v4Logger := logging.GeneratorLogger(logger, "v4-spawning", *seed, *genreID)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    *genreID,
+		Custom: map[string]interface{}{
+			"width":  100,
+			"height": 100,
+		},
+	}
+
+	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn vehicles")
+	} else if vehicleCount > 0 {
+		v4Logger.WithField("count", vehicleCount).Info("vehicles spawned")
+	}
+
+	companionCount, err := spawnCompanionsInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn companions")
+	} else if companionCount > 0 {
+		v4Logger.WithField("count", companionCount).Info("companions spawned")
+	}
+
+	bookshelfCount, err := spawnBookshelvesInTerrain(world, generatedTerrain, *seed, params, logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn bookshelves")
+	} else if bookshelfCount > 0 {
+		v4Logger.WithField("count", bookshelfCount).Info("bookshelves spawned")
+	}
+}
+
+// initializeNetworkSystems configures network server, snapshot manager, and lag compensator.
+func initializeNetworkSystems(logger *logrus.Logger) (*network.TCPServer, *network.SnapshotManager, *network.LagCompensator) {
+	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
+	if logger.GetLevel() >= logrus.DebugLevel {
+		networkLogger.Debug("initializing network systems")
+	}
+
+	var serverConfig network.ServerConfig
+	if *highLatency {
+		serverConfig = network.HighLatencyServerConfig()
+		networkLogger.Info("using high-latency server configuration (Tor/onion service optimized)")
+	} else {
+		serverConfig = network.DefaultServerConfig()
+	}
+	serverConfig.Address = ":" + *port
+	serverConfig.MaxPlayers = *maxPlayers
+	serverConfig.UpdateRate = *tickRate
+
+	server := network.NewServerWithLogger(serverConfig, logger)
+	snapshotManager := network.NewSnapshotManager(100)
+
+	var lagCompConfig network.LagCompensationConfig
+	if *highLatency {
+		lagCompConfig = network.HighLatencyLagCompensationConfig()
+		networkLogger.Info("using high-latency lag compensation configuration")
+	} else {
+		lagCompConfig = network.DefaultLagCompensationConfig()
+	}
+	lagCompensator := network.NewLagCompensator(lagCompConfig)
+
+	networkLogger.WithFields(logrus.Fields{
+		"address":    serverConfig.Address,
+		"maxPlayers": serverConfig.MaxPlayers,
+		"updateRate": serverConfig.UpdateRate,
+	}).Info("network systems initialized")
+
+	return server, snapshotManager, lagCompensator
+}
+
+// startErrorHandler starts a goroutine to handle network errors.
+func startErrorHandler(server *network.TCPServer, logger *logrus.Logger) {
+	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
 	go func() {
 		for err := range server.ReceiveError() {
 			networkLogger.WithError(err).Error("network error")
 		}
 	}()
+}
 
-	// Track player entities
+// startPlayerManagementHandlers starts goroutines for player join, leave, and input handling.
+func startPlayerManagementHandlers(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, logger *logrus.Logger) {
 	playerEntities := make(map[uint64]*engine.Entity)
 	playerEntitiesMu := &sync.RWMutex{}
+	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
 
-	// Handle new player connections in background
-	go func() {
-		for playerID := range server.ReceivePlayerJoin() {
-			playerLogger := logging.NetworkLogger(logger, "", "connected").WithField("playerID", playerID)
-			playerLogger.Info("player joined - creating entity")
+	go handlePlayerJoins(server, world, generatedTerrain, playerEntities, playerEntitiesMu, logger)
+	go handlePlayerLeaves(server, world, playerEntities, playerEntitiesMu, logger)
+	go handleInputCommands(server, playerEntities, playerEntitiesMu, networkLogger, logger)
+}
 
-			// Create player entity for new connection
-			entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, *aerialSprites, logger)
+// handlePlayerJoins processes new player connections and creates entities.
+func handlePlayerJoins(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+	for playerID := range server.ReceivePlayerJoin() {
+		playerLogger := logging.NetworkLogger(logger, "", "connected").WithField("playerID", playerID)
+		playerLogger.Info("player joined - creating entity")
 
-			// Store player entity mapping
-			playerEntitiesMu.Lock()
-			playerEntities[playerID] = entity
-			playerEntitiesMu.Unlock()
+		entity := createPlayerEntity(world, generatedTerrain, playerID, *seed, *genreID, *aerialSprites, logger)
 
-			playerLogger.WithField("entityID", entity.ID).Debug("player entity created")
+		playerEntitiesMu.Lock()
+		playerEntities[playerID] = entity
+		playerEntitiesMu.Unlock()
+
+		playerLogger.WithField("entityID", entity.ID).Debug("player entity created")
+	}
+}
+
+// handlePlayerLeaves processes player disconnections and removes entities.
+func handlePlayerLeaves(server *network.TCPServer, world *engine.World, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+	for playerID := range server.ReceivePlayerLeave() {
+		playerLogger := logging.NetworkLogger(logger, "", "disconnected").WithField("playerID", playerID)
+		playerLogger.Info("player left - removing entity")
+
+		playerEntitiesMu.Lock()
+		if entity, exists := playerEntities[playerID]; exists {
+			world.RemoveEntity(entity.ID)
+			delete(playerEntities, playerID)
+			playerLogger.WithField("entityID", entity.ID).Debug("player entity removed")
 		}
-	}()
+		playerEntitiesMu.Unlock()
+	}
+}
 
-	// Handle player disconnections in background
-	go func() {
-		for playerID := range server.ReceivePlayerLeave() {
-			playerLogger := logging.NetworkLogger(logger, "", "disconnected").WithField("playerID", playerID)
-			playerLogger.Info("player left - removing entity")
-
-			// Remove player entity
-			playerEntitiesMu.Lock()
-			if entity, exists := playerEntities[playerID]; exists {
-				world.RemoveEntity(entity.ID)
-				delete(playerEntities, playerID)
-				playerLogger.WithField("entityID", entity.ID).Debug("player entity removed")
-			}
-			playerEntitiesMu.Unlock()
+// handleInputCommands processes client input and applies it to player entities.
+func handleInputCommands(server *network.TCPServer, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, networkLogger *logrus.Entry, logger *logrus.Logger) {
+	for cmd := range server.ReceiveInputCommand() {
+		if logger.GetLevel() >= logrus.DebugLevel {
+			networkLogger.WithFields(logrus.Fields{
+				"playerID":       cmd.PlayerID,
+				"inputType":      cmd.InputType,
+				"sequenceNumber": cmd.SequenceNumber,
+			}).Debug("received input command")
 		}
-	}()
 
-	// Handle client input commands in background
-	go func() {
-		for cmd := range server.ReceiveInputCommand() {
-			if logger.GetLevel() >= logrus.DebugLevel {
-				networkLogger.WithFields(logrus.Fields{
-					"playerID":       cmd.PlayerID,
-					"inputType":      cmd.InputType,
-					"sequenceNumber": cmd.SequenceNumber,
-				}).Debug("received input command")
+		playerEntitiesMu.RLock()
+		entity, exists := playerEntities[cmd.PlayerID]
+		playerEntitiesMu.RUnlock()
+
+		if !exists {
+			if logger.GetLevel() >= logrus.WarnLevel {
+				networkLogger.WithField("playerID", cmd.PlayerID).Warn("no entity for player")
 			}
-
-			// Get player entity
-			playerEntitiesMu.RLock()
-			entity, exists := playerEntities[cmd.PlayerID]
-			playerEntitiesMu.RUnlock()
-
-			if !exists {
-				if logger.GetLevel() >= logrus.WarnLevel {
-					networkLogger.WithField("playerID", cmd.PlayerID).Warn("no entity for player")
-				}
-				continue
-			}
-
-			// Apply input to entity
-			applyInputCommand(entity, cmd, logger)
+			continue
 		}
-	}()
 
+		applyInputCommand(entity, cmd, logger)
+	}
+}
+
+// runGameLoop executes the authoritative server game loop.
+func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, ticker *time.Ticker, logger *logrus.Logger, serverLogger *logrus.Entry, lastUpdate *time.Time) {
 	for {
 		select {
 		case <-ticker.C:
-			// Calculate delta time
 			now := time.Now()
-			deltaTime := now.Sub(lastUpdate).Seconds()
-			lastUpdate = now
+			deltaTime := now.Sub(*lastUpdate).Seconds()
+			*lastUpdate = now
 
-			// Update game world
 			world.Update(deltaTime)
 
-			// Record snapshot for lag compensation and state sync
 			snapshot := buildWorldSnapshot(world, now)
 			snapshotManager.AddSnapshot(snapshot)
 			lagCompensator.RecordSnapshot(snapshot)
 
-			// Broadcast state to connected clients
 			stateUpdate := convertSnapshotToStateUpdate(snapshot)
 			server.BroadcastStateUpdate(stateUpdate)
 
-			// Periodic server metrics logging
 			if logger.GetLevel() >= logrus.DebugLevel && int(now.Unix())%10 == 0 {
-				// Log every 10 seconds
 				playerCount := server.GetPlayerCount()
 				serverLogger.WithFields(logrus.Fields{
 					"entityCount": len(world.GetEntities()),
@@ -539,166 +572,181 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 
 // applyInputCommand applies a network input command to a player entity
 func applyInputCommand(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
-	// Get velocity component
 	velComp, hasVel := entity.GetComponent("velocity")
 	if !hasVel {
 		return
 	}
 	velocity := velComp.(*engine.VelocityComponent)
 
-	// Process input based on type
 	switch cmd.InputType {
 	case "move":
-		// Apply movement input to velocity
-		if len(cmd.Data) >= 2 {
-			moveX := float64(int8(cmd.Data[0])) // Convert byte to signed value (-128 to 127)
-			moveY := float64(int8(cmd.Data[1]))
-
-			// Normalize to -1.0 to 1.0 range
-			moveX /= 127.0
-			moveY /= 127.0
-
-			// Normalize diagonal movement
-			if moveX != 0 && moveY != 0 {
-				moveX *= 0.707
-				moveY *= 0.707
-			}
-
-			// Apply movement speed (100 pixels/second)
-			velocity.VX = moveX * 100.0
-			velocity.VY = moveY * 100.0
-
-			if logger.GetLevel() >= logrus.DebugLevel && (moveX != 0 || moveY != 0) {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":  cmd.PlayerID,
-					"velocityX": velocity.VX,
-					"velocityY": velocity.VY,
-				}).Debug("player moving")
-			}
-		}
-
+		applyMovement(velocity, cmd, logger)
 	case "attack":
-		// Trigger attack
-		if logger.GetLevel() >= logrus.DebugLevel {
-			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player attacking")
+		applyAttack(entity, cmd, logger)
+	case "use_item":
+		applyItemUse(entity, cmd, logger)
+	default:
+		logUnknownInput(cmd, logger)
+	}
+}
+
+// applyMovement processes movement input and updates entity velocity.
+func applyMovement(velocity *engine.VelocityComponent, cmd *network.InputCommand, logger *logrus.Logger) {
+	if len(cmd.Data) < 2 {
+		return
+	}
+
+	moveX := float64(int8(cmd.Data[0])) / 127.0
+	moveY := float64(int8(cmd.Data[1])) / 127.0
+
+	if moveX != 0 && moveY != 0 {
+		moveX *= 0.707
+		moveY *= 0.707
+	}
+
+	velocity.VX = moveX * 100.0
+	velocity.VY = moveY * 100.0
+
+	if logger.GetLevel() >= logrus.DebugLevel && (moveX != 0 || moveY != 0) {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":  cmd.PlayerID,
+			"velocityX": velocity.VX,
+			"velocityY": velocity.VY,
+		}).Debug("player moving")
+	}
+}
+
+// applyAttack processes attack input and triggers entity attack if cooldown permits.
+func applyAttack(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player attacking")
+	}
+
+	attackComp, hasAttack := entity.GetComponent("attack")
+	if !hasAttack {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no attack component")
 		}
+		return
+	}
+	attack := attackComp.(*engine.AttackComponent)
 
-		// Get attack component
-		attackComp, hasAttack := entity.GetComponent("attack")
-		if !hasAttack {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no attack component")
-			}
-			return
-		}
-		attack := attackComp.(*engine.AttackComponent)
-
-		// Check cooldown using CanAttack method
-		if !attack.CanAttack() {
-			if logger.GetLevel() >= logrus.DebugLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":       cmd.PlayerID,
-					"cooldownRemain": attack.CooldownTimer,
-				}).Debug("player attack on cooldown")
-			}
-			return
-		}
-
-		// Trigger attack by resetting cooldown
-		attack.ResetCooldown()
-
+	if !attack.CanAttack() {
 		if logger.GetLevel() >= logrus.DebugLevel {
 			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-				"playerID": cmd.PlayerID,
-				"damage":   attack.Damage,
-				"range":    attack.Range,
-			}).Debug("player attack triggered")
+				"playerID":       cmd.PlayerID,
+				"cooldownRemain": attack.CooldownTimer,
+			}).Debug("player attack on cooldown")
 		}
+		return
+	}
 
-	case "use_item":
-		// Use item from inventory
-		if logger.GetLevel() >= logrus.DebugLevel {
-			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player using item")
+	attack.ResetCooldown()
+
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID": cmd.PlayerID,
+			"damage":   attack.Damage,
+			"range":    attack.Range,
+		}).Debug("player attack triggered")
+	}
+}
+
+// applyItemUse processes item usage from inventory and applies effects.
+func applyItemUse(entity *engine.Entity, cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.DebugLevel {
+		logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Debug("player using item")
+	}
+
+	invComp, hasInv := entity.GetComponent("inventory")
+	if !hasInv {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no inventory component")
 		}
+		return
+	}
+	inventory := invComp.(*engine.InventoryComponent)
 
-		// Get inventory component
-		invComp, hasInv := entity.GetComponent("inventory")
-		if !hasInv {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("player has no inventory component")
-			}
-			return
+	item, itemIndex, ok := validateItemUse(inventory, cmd, logger)
+	if !ok {
+		return
+	}
+
+	consumeItem(entity, inventory, item, itemIndex, cmd.PlayerID, logger)
+}
+
+// validateItemUse validates item index and type for usage.
+func validateItemUse(inventory *engine.InventoryComponent, cmd *network.InputCommand, logger *logrus.Logger) (*itemgen.Item, int, bool) {
+	if len(cmd.Data) < 1 {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("use_item command missing item index")
 		}
-		inventory := invComp.(*engine.InventoryComponent)
+		return nil, 0, false
+	}
+	itemIndex := int(cmd.Data[0])
 
-		// Parse item index from command data
-		if len(cmd.Data) < 1 {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithField("playerID", cmd.PlayerID).Warn("use_item command missing item index")
-			}
-			return
-		}
-		itemIndex := int(cmd.Data[0])
-
-		// Validate item index
-		if itemIndex < 0 || itemIndex >= len(inventory.Items) {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID":      cmd.PlayerID,
-					"itemIndex":     itemIndex,
-					"inventorySize": len(inventory.Items),
-				}).Warn("invalid item index")
-			}
-			return
-		}
-
-		// Get item
-		item := inventory.Items[itemIndex]
-
-		// Check if item is consumable (using imported item package constant)
-		if item.Type != itemgen.TypeConsumable {
-			if logger.GetLevel() >= logrus.WarnLevel {
-				logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-					"playerID": cmd.PlayerID,
-					"itemName": item.Name,
-				}).Warn("attempted to use non-consumable item")
-			}
-			return
-		}
-
-		// Apply item effect (health restoration for now)
-		if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
-			health := healthComp.(*engine.HealthComponent)
-
-			// Restore health based on item power
-			healAmount := float64(item.Stats.Defense) // Use defense stat as heal power
-			if healAmount > 0 {
-				health.Current += healAmount
-				if health.Current > health.Max {
-					health.Current = health.Max
-				}
-
-				if logger.GetLevel() >= logrus.InfoLevel {
-					logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-						"playerID":      cmd.PlayerID,
-						"itemName":      item.Name,
-						"healAmount":    healAmount,
-						"currentHealth": health.Current,
-						"maxHealth":     health.Max,
-					}).Info("player used item")
-				}
-
-				// Remove consumed item from inventory
-				inventory.Items = append(inventory.Items[:itemIndex], inventory.Items[itemIndex+1:]...)
-			}
-		}
-
-	default:
+	if itemIndex < 0 || itemIndex >= len(inventory.Items) {
 		if logger.GetLevel() >= logrus.WarnLevel {
 			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
-				"playerID":  cmd.PlayerID,
-				"inputType": cmd.InputType,
-			}).Warn("unknown input type")
+				"playerID":      cmd.PlayerID,
+				"itemIndex":     itemIndex,
+				"inventorySize": len(inventory.Items),
+			}).Warn("invalid item index")
 		}
+		return nil, 0, false
+	}
+
+	item := inventory.Items[itemIndex]
+	if item.Type != itemgen.TypeConsumable {
+		if logger.GetLevel() >= logrus.WarnLevel {
+			logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+				"playerID": cmd.PlayerID,
+				"itemName": item.Name,
+			}).Warn("attempted to use non-consumable item")
+		}
+		return nil, 0, false
+	}
+
+	return item, itemIndex, true
+}
+
+// consumeItem applies consumable item effects and removes it from inventory.
+func consumeItem(entity *engine.Entity, inventory *engine.InventoryComponent, item *itemgen.Item, itemIndex int, playerID uint64, logger *logrus.Logger) {
+	healthComp, hasHealth := entity.GetComponent("health")
+	if !hasHealth {
+		return
+	}
+	health := healthComp.(*engine.HealthComponent)
+
+	healAmount := float64(item.Stats.Defense)
+	if healAmount <= 0 {
+		return
+	}
+
+	health.Current += healAmount
+	if health.Current > health.Max {
+		health.Current = health.Max
+	}
+
+	if logger.GetLevel() >= logrus.InfoLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":      playerID,
+			"itemName":      item.Name,
+			"healAmount":    healAmount,
+			"currentHealth": health.Current,
+			"maxHealth":     health.Max,
+		}).Info("player used item")
+	}
+
+	inventory.Items = append(inventory.Items[:itemIndex], inventory.Items[itemIndex+1:]...)
+}
+
+// logUnknownInput logs warning for unknown input types.
+func logUnknownInput(cmd *network.InputCommand, logger *logrus.Logger) {
+	if logger.GetLevel() >= logrus.WarnLevel {
+		logging.NetworkLogger(logger, "", "").WithFields(logrus.Fields{
+			"playerID":  cmd.PlayerID,
+			"inputType": cmd.InputType,
+		}).Warn("unknown input type")
 	}
 }

@@ -270,7 +270,7 @@ func TestSplitWords(t *testing.T) {
 	}
 }
 
-func TestWrapText(t *testing.T) {
+func TestNotificationWrapText(t *testing.T) {
 	nm := NewNotificationManager(0, 0, 300)
 
 	tests := []struct {
@@ -322,14 +322,10 @@ func TestGetBorderColor(t *testing.T) {
 func TestGetTextColor(t *testing.T) {
 	nm := NewNotificationManager(0, 0, 300)
 
-	color := nm.getTextColor(255)
-	if color == nil {
-		t.Error("Expected non-nil text color")
-	}
-
-	// Test with different alpha values
-	for alpha := uint8(0); alpha <= 255; alpha += 50 {
-		color = nm.getTextColor(alpha)
+	// Test a few alpha values without loops
+	testAlphas := []uint8{0, 50, 100, 150, 200, 255}
+	for _, alpha := range testAlphas {
+		color := nm.getTextColor(alpha)
 		if color == nil {
 			t.Errorf("Expected non-nil text color for alpha %d", alpha)
 		}
@@ -347,7 +343,7 @@ func BenchmarkAddNotification(b *testing.B) {
 	}
 }
 
-func BenchmarkUpdate(b *testing.B) {
+func BenchmarkNotificationUpdate(b *testing.B) {
 	nm := NewNotificationManager(0, 0, 300)
 	for i := 0; i < 5; i++ {
 		nm.AddInfo("Test message")

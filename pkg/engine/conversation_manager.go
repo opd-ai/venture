@@ -138,7 +138,7 @@ func (cm *ConversationManager) StartConversation(npcID uint64, playerIDs []uint6
 }
 
 // AddMessage adds a message to a conversation with timestamp-based ordering.
-func (cm *ConversationManager) AddMessage(convID string, senderID uint64, senderName string, content string) error {
+func (cm *ConversationManager) AddMessage(convID string, senderID uint64, senderName, content string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -194,7 +194,7 @@ func (cm *ConversationManager) GetConversationMessages(convID string) ([]Convers
 
 // QueueDialogRequest queues a dialog request for an NPC.
 // Returns error if queue is full or NPC is not found.
-func (cm *ConversationManager) QueueDialogRequest(npcID uint64, playerID uint64, playerInput string) (*DialogRequest, error) {
+func (cm *ConversationManager) QueueDialogRequest(npcID, playerID uint64, playerInput string) (*DialogRequest, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -278,7 +278,7 @@ func (cm *ConversationManager) ProcessNextDialogRequest(npcID uint64) (*DialogRe
 }
 
 // CompleteDialogRequest marks an active request as complete and sends response.
-func (cm *ConversationManager) CompleteDialogRequest(npcID uint64, requestID string, response string, err error) error {
+func (cm *ConversationManager) CompleteDialogRequest(npcID uint64, requestID, response string, err error) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 

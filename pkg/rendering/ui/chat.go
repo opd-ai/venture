@@ -359,7 +359,8 @@ func (ui *ChatUI) GetBounds() image.Rectangle {
 
 // ContainsPoint checks if a point is within the UI bounds.
 func (ui *ChatUI) ContainsPoint(x, y int) bool {
-	return ui.GetBounds().In(image.Rect(x, y, x+1, y+1))
+	bounds := ui.GetBounds()
+	return x >= bounds.Min.X && x < bounds.Max.X && y >= bounds.Min.Y && y < bounds.Max.Y
 }
 
 // HandleClick handles a mouse click event.

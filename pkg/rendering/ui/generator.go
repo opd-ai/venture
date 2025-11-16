@@ -319,187 +319,238 @@ func (g *Generator) fillRect(img *image.RGBA, x, y, w, h int, col color.Color) {
 }
 
 func (g *Generator) drawBorder(img *image.RGBA, col color.Color, style BorderStyle, thickness int) {
+	switch style {
+	case BorderSolid:
+		g.drawSolidBorder(img, col, thickness)
+	case BorderDouble:
+		g.drawDoubleBorder(img, col)
+	case BorderOrnate:
+		g.drawOrnateBorder(img, col, thickness)
+	case BorderGlow:
+		g.drawGlowBorder(img, col)
+	case BorderDashed:
+		g.drawDashedBorder(img, col, thickness)
+	case BorderDotted:
+		g.drawDottedBorder(img, col)
+	case BorderEmbossed:
+		g.drawEmbossedBorder(img, col, thickness)
+	case BorderEngraved:
+		g.drawEngravedBorder(img, col, thickness)
+	}
+}
+
+// drawSolidBorder draws a simple solid rectangular border.
+func (g *Generator) drawSolidBorder(img *image.RGBA, col color.Color, thickness int) {
 	bounds := img.Bounds()
 	w := bounds.Dx()
 	h := bounds.Dy()
 
-	switch style {
-	case BorderSolid:
-		// Simple solid rectangular border
-		for t := 0; t < thickness; t++ {
-			// Top and bottom
-			for x := 0; x < w; x++ {
-				img.Set(x, t, col)
-				img.Set(x, h-t-1, col)
+	for t := 0; t < thickness; t++ {
+		// Top and bottom
+		for x := 0; x < w; x++ {
+			img.Set(x, t, col)
+			img.Set(x, h-t-1, col)
+		}
+		// Left and right
+		for y := 0; y < h; y++ {
+			img.Set(t, y, col)
+			img.Set(w-t-1, y, col)
+		}
+	}
+}
+
+// drawDoubleBorder draws two parallel lines with 2px gap.
+func (g *Generator) drawDoubleBorder(img *image.RGBA, col color.Color) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	for x := 0; x < w; x++ {
+		img.Set(x, 0, col)
+		img.Set(x, 2, col)
+		img.Set(x, h-3, col)
+		img.Set(x, h-1, col)
+	}
+	for y := 0; y < h; y++ {
+		img.Set(0, y, col)
+		img.Set(2, y, col)
+		img.Set(w-3, y, col)
+		img.Set(w-1, y, col)
+	}
+}
+
+// drawOrnateBorder draws a solid border with corner decorations.
+func (g *Generator) drawOrnateBorder(img *image.RGBA, col color.Color, thickness int) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	g.drawSolidBorder(img, col, thickness)
+	cornerSize := 4
+	for dy := 0; dy < cornerSize; dy++ {
+		for dx := 0; dx < cornerSize; dx++ {
+			if dx < w && dy < h {
+				img.Set(dx, dy, col) // Top-left
 			}
-			// Left and right
-			for y := 0; y < h; y++ {
-				img.Set(t, y, col)
-				img.Set(w-t-1, y, col)
+			if w-cornerSize+dx < w && dy < h {
+				img.Set(w-cornerSize+dx, dy, col) // Top-right
+			}
+			if dx < w && h-cornerSize+dy < h {
+				img.Set(dx, h-cornerSize+dy, col) // Bottom-left
+			}
+			if w-cornerSize+dx < w && h-cornerSize+dy < h {
+				img.Set(w-cornerSize+dx, h-cornerSize+dy, col) // Bottom-right
 			}
 		}
+	}
+}
 
-	case BorderDouble:
-		// Two parallel lines with 2px gap
+// drawGlowBorder draws a gradient fade from opaque to transparent over 5 pixels.
+func (g *Generator) drawGlowBorder(img *image.RGBA, col color.Color) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	r, gr, b, _ := col.RGBA()
+	for t := 0; t < 5; t++ {
+		alpha := uint8(255 - t*51) // Fade: 255, 204, 153, 102, 51
+		glowCol := color.RGBA{
+			R: uint8(r >> 8),
+			G: uint8(gr >> 8),
+			B: uint8(b >> 8),
+			A: alpha,
+		}
 		for x := 0; x < w; x++ {
-			img.Set(x, 0, col)
-			img.Set(x, 2, col)
-			img.Set(x, h-3, col)
-			img.Set(x, h-1, col)
+			if t < h {
+				img.Set(x, t, glowCol)
+				img.Set(x, h-t-1, glowCol)
+			}
 		}
 		for y := 0; y < h; y++ {
-			img.Set(0, y, col)
-			img.Set(2, y, col)
-			img.Set(w-3, y, col)
-			img.Set(w-1, y, col)
-		}
-
-	case BorderOrnate:
-		// Solid border plus corner decorations
-		g.drawBorder(img, col, BorderSolid, thickness)
-		// Add corner embellishments (4x4 squares at corners)
-		cornerSize := 4
-		for dy := 0; dy < cornerSize; dy++ {
-			for dx := 0; dx < cornerSize; dx++ {
-				if dx < w && dy < h {
-					img.Set(dx, dy, col) // Top-left
-				}
-				if w-cornerSize+dx < w && dy < h {
-					img.Set(w-cornerSize+dx, dy, col) // Top-right
-				}
-				if dx < w && h-cornerSize+dy < h {
-					img.Set(dx, h-cornerSize+dy, col) // Bottom-left
-				}
-				if w-cornerSize+dx < w && h-cornerSize+dy < h {
-					img.Set(w-cornerSize+dx, h-cornerSize+dy, col) // Bottom-right
-				}
+			if t < w {
+				img.Set(t, y, glowCol)
+				img.Set(w-t-1, y, glowCol)
 			}
 		}
+	}
+}
 
-	case BorderGlow:
-		// Gradient fade from opaque to transparent over 5 pixels
-		r, gr, b, _ := col.RGBA()
-		for t := 0; t < 5; t++ {
-			alpha := uint8(255 - t*51) // Fade: 255, 204, 153, 102, 51
-			glowCol := color.RGBA{
-				R: uint8(r >> 8),
-				G: uint8(gr >> 8),
-				B: uint8(b >> 8),
-				A: alpha,
-			}
-			// Draw progressively fainter borders
-			for x := 0; x < w; x++ {
+// drawDashedBorder draws a dashed border pattern.
+func (g *Generator) drawDashedBorder(img *image.RGBA, col color.Color, thickness int) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	dashLength := 6
+	gapLength := 4
+	// Top and bottom borders
+	for x := 0; x < w; x += dashLength + gapLength {
+		for dx := 0; dx < dashLength && x+dx < w; dx++ {
+			for t := 0; t < thickness; t++ {
 				if t < h {
-					img.Set(x, t, glowCol)
-					img.Set(x, h-t-1, glowCol)
+					img.Set(x+dx, t, col)     // Top
+					img.Set(x+dx, h-t-1, col) // Bottom
 				}
 			}
-			for y := 0; y < h; y++ {
+		}
+	}
+	// Left and right borders
+	for y := 0; y < h; y += dashLength + gapLength {
+		for dy := 0; dy < dashLength && y+dy < h; dy++ {
+			for t := 0; t < thickness; t++ {
 				if t < w {
-					img.Set(t, y, glowCol)
-					img.Set(w-t-1, y, glowCol)
+					img.Set(t, y+dy, col)     // Left
+					img.Set(w-t-1, y+dy, col) // Right
 				}
 			}
 		}
+	}
+}
 
-	case BorderDashed:
-		// Dashed border pattern
-		dashLength := 6
-		gapLength := 4
-		// Top and bottom borders
-		for x := 0; x < w; x += dashLength + gapLength {
-			for dx := 0; dx < dashLength && x+dx < w; dx++ {
-				for t := 0; t < thickness; t++ {
-					if t < h {
-						img.Set(x+dx, t, col)     // Top
-						img.Set(x+dx, h-t-1, col) // Bottom
-					}
-				}
+// drawDottedBorder draws a dotted border pattern.
+func (g *Generator) drawDottedBorder(img *image.RGBA, col color.Color) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	dotSize := 2
+	gapSize := 3
+	// Top and bottom borders
+	for x := 0; x < w; x += dotSize + gapSize {
+		for dx := 0; dx < dotSize && x+dx < w; dx++ {
+			for dy := 0; dy < dotSize && dy < h; dy++ {
+				img.Set(x+dx, dy, col)     // Top
+				img.Set(x+dx, h-dy-1, col) // Bottom
 			}
 		}
-		// Left and right borders
-		for y := 0; y < h; y += dashLength + gapLength {
-			for dy := 0; dy < dashLength && y+dy < h; dy++ {
-				for t := 0; t < thickness; t++ {
-					if t < w {
-						img.Set(t, y+dy, col)     // Left
-						img.Set(w-t-1, y+dy, col) // Right
-					}
-				}
+	}
+	// Left and right borders
+	for y := 0; y < h; y += dotSize + gapSize {
+		for dy := 0; dy < dotSize && y+dy < h; dy++ {
+			for dx := 0; dx < dotSize && dx < w; dx++ {
+				img.Set(dx, y+dy, col)     // Left
+				img.Set(w-dx-1, y+dy, col) // Right
 			}
 		}
+	}
+}
 
-	case BorderDotted:
-		// Dotted border pattern
-		dotSize := 2
-		gapSize := 3
-		// Top and bottom borders
-		for x := 0; x < w; x += dotSize + gapSize {
-			for dx := 0; dx < dotSize && x+dx < w; dx++ {
-				for dy := 0; dy < dotSize && dy < h; dy++ {
-					img.Set(x+dx, dy, col)     // Top
-					img.Set(x+dx, h-dy-1, col) // Bottom
-				}
-			}
+// drawEmbossedBorder draws a 3D embossed effect with light and dark edges.
+func (g *Generator) drawEmbossedBorder(img *image.RGBA, col color.Color, thickness int) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	lightCol := g.lightenColor(col, 0.3)
+	darkCol := g.darkenColor(col, 0.3)
+
+	// Light edges (top and left)
+	for t := 0; t < thickness; t++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, t, lightCol)
 		}
-		// Left and right borders
-		for y := 0; y < h; y += dotSize + gapSize {
-			for dy := 0; dy < dotSize && y+dy < h; dy++ {
-				for dx := 0; dx < dotSize && dx < w; dx++ {
-					img.Set(dx, y+dy, col)     // Left
-					img.Set(w-dx-1, y+dy, col) // Right
-				}
-			}
+		for y := 0; y < h; y++ {
+			img.Set(t, y, lightCol)
 		}
+	}
 
-	case BorderEmbossed:
-		// 3D embossed effect with light/dark edges
-		lightCol := g.lightenColor(col, 0.3)
-		darkCol := g.darkenColor(col, 0.3)
-
-		// Light edges (top and left)
-		for t := 0; t < thickness; t++ {
-			for x := 0; x < w; x++ {
-				img.Set(x, t, lightCol)
-			}
-			for y := 0; y < h; y++ {
-				img.Set(t, y, lightCol)
-			}
+	// Dark edges (bottom and right)
+	for t := 0; t < thickness; t++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, h-t-1, darkCol)
 		}
-
-		// Dark edges (bottom and right)
-		for t := 0; t < thickness; t++ {
-			for x := 0; x < w; x++ {
-				img.Set(x, h-t-1, darkCol)
-			}
-			for y := 0; y < h; y++ {
-				img.Set(w-t-1, y, darkCol)
-			}
+		for y := 0; y < h; y++ {
+			img.Set(w-t-1, y, darkCol)
 		}
+	}
+}
 
-	case BorderEngraved:
-		// 3D engraved effect (inverse of embossed)
-		lightCol := g.lightenColor(col, 0.3)
-		darkCol := g.darkenColor(col, 0.3)
+// drawEngravedBorder draws a 3D engraved effect (inverse of embossed).
+func (g *Generator) drawEngravedBorder(img *image.RGBA, col color.Color, thickness int) {
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
 
-		// Dark edges (top and left)
-		for t := 0; t < thickness; t++ {
-			for x := 0; x < w; x++ {
-				img.Set(x, t, darkCol)
-			}
-			for y := 0; y < h; y++ {
-				img.Set(t, y, darkCol)
-			}
+	lightCol := g.lightenColor(col, 0.3)
+	darkCol := g.darkenColor(col, 0.3)
+
+	// Dark edges (top and left)
+	for t := 0; t < thickness; t++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, t, darkCol)
 		}
+		for y := 0; y < h; y++ {
+			img.Set(t, y, darkCol)
+		}
+	}
 
-		// Light edges (bottom and right)
-		for t := 0; t < thickness; t++ {
-			for x := 0; x < w; x++ {
-				img.Set(x, h-t-1, lightCol)
-			}
-			for y := 0; y < h; y++ {
-				img.Set(w-t-1, y, lightCol)
-			}
+	// Light edges (bottom and right)
+	for t := 0; t < thickness; t++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, h-t-1, lightCol)
+		}
+		for y := 0; y < h; y++ {
+			img.Set(w-t-1, y, lightCol)
 		}
 	}
 }

@@ -56,6 +56,7 @@ type EbitenGame struct {
 	MapUI       *EbitenMapUI
 	ShopUI      *ShopUI     // Commerce and merchant interaction UI
 	CraftingUI  *CraftingUI // Crafting and recipe UI
+	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
@@ -588,170 +589,214 @@ func (g *EbitenGame) IsInMainMenu() bool {
 }
 
 // Update implements ebiten.Game interface. Called every frame.
-func (g *EbitenGame) Update() error {
-	// Track frame time for performance monitoring
-	frameStart := time.Now()
-	defer func() {
-		if g.profilingEnabled && g.frameTimeTracker != nil {
-			g.frameTimeTracker.RecordFrame(time.Since(frameStart))
-			g.frameCount++
+// trackFramePerformance records frame timing metrics and logs performance statistics.
+func (g *EbitenGame) trackFramePerformance(frameStart time.Time) {
+	if !g.profilingEnabled || g.frameTimeTracker == nil {
+		return
+	}
 
-			// Log stats every 300 frames (5 seconds at 60 FPS)
-			if g.frameCount%300 == 0 && g.logger != nil {
-				stats := g.frameTimeTracker.GetStats()
-				fields := logrus.Fields{
-					"avg_ms":      stats.Average.Milliseconds(),
-					"min_ms":      stats.Min.Milliseconds(),
-					"max_ms":      stats.Max.Milliseconds(),
-					"1pct_low_ms": stats.Percentile1.Milliseconds(),
-					"avg_fps":     stats.GetFPS(),
-					"worst_fps":   stats.GetWorstFPS(),
-					"samples":     stats.SampleCount,
-				}
+	g.frameTimeTracker.RecordFrame(time.Since(frameStart))
+	g.frameCount++
 
-				// Warn if stuttering detected
-				if stats.IsStuttering() {
-					fields["stuttering"] = true
-					g.logger.WithFields(fields).Warn("frame time stuttering detected")
-				} else {
-					g.logger.WithFields(fields).Info("frame time stats")
-				}
-			}
-		}
-	}()
+	if g.frameCount%300 == 0 && g.logger != nil {
+		g.logFrameStats()
+	}
+}
 
-	// Calculate delta time
+// logFrameStats logs current frame time statistics with stuttering detection.
+func (g *EbitenGame) logFrameStats() {
+	stats := g.frameTimeTracker.GetStats()
+	fields := logrus.Fields{
+		"avg_ms":      stats.Average.Milliseconds(),
+		"min_ms":      stats.Min.Milliseconds(),
+		"max_ms":      stats.Max.Milliseconds(),
+		"1pct_low_ms": stats.Percentile1.Milliseconds(),
+		"avg_fps":     stats.GetFPS(),
+		"worst_fps":   stats.GetWorstFPS(),
+		"samples":     stats.SampleCount,
+	}
+
+	if stats.IsStuttering() {
+		fields["stuttering"] = true
+		g.logger.WithFields(fields).Warn("frame time stuttering detected")
+	} else {
+		g.logger.WithFields(fields).Info("frame time stats")
+	}
+}
+
+// calculateDeltaTime computes time elapsed since last update with capping to prevent spiral of death.
+func (g *EbitenGame) calculateDeltaTime() float64 {
 	now := time.Now()
 	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
 	g.lastUpdateTime = now
 
-	// Cap delta time to prevent spiral of death
 	if deltaTime > 0.1 {
 		deltaTime = 0.1
 	}
+	return deltaTime
+}
 
-	// If in main menu state, only update main menu
-	if g.StateManager.CurrentState() == AppStateMainMenu {
+// updateMenuState handles updates for all menu-related application states.
+func (g *EbitenGame) updateMenuState() (handled bool) {
+	switch g.StateManager.CurrentState() {
+	case AppStateMainMenu:
 		g.MainMenuUI.Update()
-		return nil
-	}
-
-	// If in single-player menu state, only update single-player menu
-	if g.StateManager.CurrentState() == AppStateSinglePlayerMenu {
+		return true
+	case AppStateSinglePlayerMenu:
 		if g.SinglePlayerMenu != nil {
 			g.SinglePlayerMenu.Update()
 		}
-		return nil
-	}
-
-	// If in genre selection state, only update genre selection menu
-	if g.StateManager.CurrentState() == AppStateGenreSelection {
+		return true
+	case AppStateGenreSelection:
 		if g.GenreSelectionMenu != nil {
 			g.GenreSelectionMenu.Update()
 		}
-		return nil
-	}
-
-	// If in multiplayer menu state, only update multiplayer menu
-	if g.StateManager.CurrentState() == AppStateMultiPlayerMenu {
+		return true
+	case AppStateMultiPlayerMenu:
 		if g.MultiplayerMenu != nil {
 			g.MultiplayerMenu.Update()
 		}
-		return nil
-	}
-
-	// If in server address input state, only update server address input
-	if g.StateManager.CurrentState() == AppStateServerAddressInput {
+		return true
+	case AppStateServerAddressInput:
 		if g.ServerAddressInput != nil {
 			g.ServerAddressInput.Update()
 		}
-		return nil
-	}
-
-	// If in settings state, only update settings
-	if g.StateManager.CurrentState() == AppStateSettings {
+		return true
+	case AppStateSettings:
 		g.SettingsUI.Update()
-		return nil
+		return true
 	}
 
-	// If in character creation state, update character creation
-	if g.StateManager.CurrentState() == AppStateCharacterCreation {
-		completed := g.CharacterCreation.Update()
-		if completed {
-			// Character creation finished, store data and transition to gameplay
-			charData := g.CharacterCreation.GetCharacterData()
-			g.pendingCharData = &charData
-
-			// MOBILE/WASM FIX: Clean up character creation UI (hide keyboard)
-			g.CharacterCreation.Cleanup()
-
-			if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
-				if g.logger != nil {
-					g.logger.WithError(err).Error("failed to transition to gameplay after character creation")
-				}
-				return err
-			}
-
-			// Trigger appropriate callback based on mode
-			if g.isMultiplayerMode {
-				// Multiplayer: connect to server with character data
-				if g.onMultiplayerConnect != nil {
-					if err := g.onMultiplayerConnect(""); err != nil {
-						if g.logger != nil {
-							g.logger.WithError(err).Error("multiplayer connect callback failed")
-						}
-						// Transition back to menu on error
-						_ = g.StateManager.TransitionTo(AppStateMainMenu)
-						g.pendingCharData = nil
-						return err
-					}
-				}
-
-				if g.logger != nil {
-					g.logger.WithFields(logrus.Fields{
-						"name":  charData.Name,
-						"class": charData.Class.String(),
-						"mode":  "multiplayer",
-					}).Info("character created, connecting to server")
-				}
-			} else {
-				// Single-player: start new game
-				if g.onNewGame != nil {
-					if err := g.onNewGame(); err != nil {
-						if g.logger != nil {
-							g.logger.WithError(err).Error("new game callback failed")
-						}
-						// Transition back to menu on error
-						_ = g.StateManager.TransitionTo(AppStateMainMenu)
-						g.pendingCharData = nil
-						return err
-					}
-				}
-
-				if g.logger != nil {
-					g.logger.WithFields(logrus.Fields{
-						"name":  charData.Name,
-						"class": charData.Class.String(),
-						"mode":  "single-player",
-					}).Info("character created, starting game")
-				}
-			}
-		}
-		return nil
-	}
-
-	// If in any other menu state, only update menu
 	if g.StateManager.IsInMenu() {
 		g.MainMenuUI.Update()
+		return true
+	}
+	return false
+}
+
+// handleCharacterCreation processes character creation updates and transitions to gameplay.
+func (g *EbitenGame) handleCharacterCreation() error {
+	completed := g.CharacterCreation.Update()
+	if !completed {
 		return nil
 	}
 
-	// From here on, we're in gameplay state
+	charData := g.CharacterCreation.GetCharacterData()
+	g.pendingCharData = &charData
+	g.CharacterCreation.Cleanup()
 
-	// If menu is visible, pause game world (but allow menu input)
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to gameplay after character creation")
+		}
+		return err
+	}
+
+	return g.triggerGameStartCallback(charData)
+}
+
+// triggerGameStartCallback invokes the appropriate callback for multiplayer or single-player mode.
+func (g *EbitenGame) triggerGameStartCallback(charData CharacterData) error {
+	if g.isMultiplayerMode {
+		return g.startMultiplayerGame(charData)
+	}
+	return g.startSinglePlayerGame(charData)
+}
+
+// startMultiplayerGame connects to multiplayer server with character data.
+func (g *EbitenGame) startMultiplayerGame(charData CharacterData) error {
+	if g.onMultiplayerConnect != nil {
+		if err := g.onMultiplayerConnect(""); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("multiplayer connect callback failed")
+			}
+			_ = g.StateManager.TransitionTo(AppStateMainMenu)
+			g.pendingCharData = nil
+			return err
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"name":  charData.Name,
+			"class": charData.Class.String(),
+			"mode":  "multiplayer",
+		}).Info("character created, connecting to server")
+	}
+	return nil
+}
+
+// startSinglePlayerGame starts a new single-player game session.
+func (g *EbitenGame) startSinglePlayerGame(charData CharacterData) error {
+	if g.onNewGame != nil {
+		if err := g.onNewGame(); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("new game callback failed")
+			}
+			_ = g.StateManager.TransitionTo(AppStateMainMenu)
+			g.pendingCharData = nil
+			return err
+		}
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"name":  charData.Name,
+			"class": charData.Class.String(),
+			"mode":  "single-player",
+		}).Info("character created, starting game")
+	}
+	return nil
+}
+
+// updateGameplayUI updates all UI systems during active gameplay.
+func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
+	g.InventoryUI.Update(nil, deltaTime)
+	g.QuestUI.Update(nil, deltaTime)
+	g.CharacterUI.Update(nil, deltaTime)
+	g.SkillsUI.Update(nil, deltaTime)
+	g.MapUI.Update(nil, deltaTime)
+
+	if g.ShopUI != nil {
+		g.ShopUI.Update(g.World.GetEntities(), deltaTime)
+	}
+
+	if g.CraftingUI != nil {
+		g.CraftingUI.Update(nil, deltaTime)
+	}
+
+	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
+		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
+	}
+}
+
+// shouldUpdateWorld checks if world updates should proceed based on UI visibility.
+func (g *EbitenGame) shouldUpdateWorld() bool {
+	return !g.InventoryUI.IsVisible() &&
+		!g.QuestUI.IsVisible() &&
+		!g.CharacterUI.IsVisible() &&
+		!g.SkillsUI.IsVisible() &&
+		!g.MapUI.IsFullScreen() &&
+		(g.ShopUI == nil || !g.ShopUI.IsVisible()) &&
+		(g.CraftingUI == nil || !g.CraftingUI.IsVisible())
+}
+
+func (g *EbitenGame) Update() error {
+	frameStart := time.Now()
+	defer func() { g.trackFramePerformance(frameStart) }()
+
+	deltaTime := g.calculateDeltaTime()
+
+	if g.updateMenuState() {
+		return nil
+	}
+
+	if g.StateManager.CurrentState() == AppStateCharacterCreation {
+		return g.handleCharacterCreation()
+	}
+
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
 		g.Paused = true
-		// Update menu even when paused
 		g.MenuSystem.Update(g.World.GetEntities(), deltaTime)
 		return nil
 	}
@@ -760,174 +805,164 @@ func (g *EbitenGame) Update() error {
 		return nil
 	}
 
-	// Update UI systems first (they capture input if visible)
-	g.InventoryUI.Update(nil, deltaTime)
-	g.QuestUI.Update(nil, deltaTime)
-	g.CharacterUI.Update(nil, deltaTime)
-	g.SkillsUI.Update(nil, deltaTime)
-	g.MapUI.Update(nil, deltaTime)
+	g.updateGameplayUI(deltaTime)
 
-	// Update shop UI (if initialized)
-	if g.ShopUI != nil {
-		g.ShopUI.Update(g.World.GetEntities(), deltaTime)
-	}
-
-	// Update crafting UI (if initialized)
-	if g.CraftingUI != nil {
-		g.CraftingUI.Update(nil, deltaTime)
-	}
-
-	// Gap #6: Always update tutorial system for progress tracking (even when UI visible)
-	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
-		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
-	}
-
-	// Update the world (unless UI is blocking input)
-	if !g.InventoryUI.IsVisible() && !g.QuestUI.IsVisible() && !g.CharacterUI.IsVisible() && !g.SkillsUI.IsVisible() && !g.MapUI.IsFullScreen() && (g.ShopUI == nil || !g.ShopUI.IsVisible()) && (g.CraftingUI == nil || !g.CraftingUI.IsVisible()) {
+	if g.shouldUpdateWorld() {
 		g.World.Update(deltaTime)
 	}
 
-	// Update camera system
 	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
-
 	return nil
 }
 
 // Draw implements ebiten.Game interface. Called every frame.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
-	// If in main menu state, only draw main menu
-	if g.StateManager.CurrentState() == AppStateMainMenu {
-		g.MainMenuUI.Draw(screen)
+	if g.drawMenuState(screen) {
 		return
 	}
 
-	// If in single-player menu state, only draw single-player menu
-	if g.StateManager.CurrentState() == AppStateSinglePlayerMenu {
+	g.drawGameplayScene(screen)
+	g.drawOverlays(screen)
+	g.drawVirtualControls(screen)
+}
+
+// drawMenuState renders the appropriate menu based on current application state.
+// Returns true if a menu was drawn, false if gameplay should be rendered.
+func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
+	switch g.StateManager.CurrentState() {
+	case AppStateMainMenu:
+		g.MainMenuUI.Draw(screen)
+		return true
+	case AppStateSinglePlayerMenu:
 		if g.SinglePlayerMenu != nil {
 			g.SinglePlayerMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in genre selection state, only draw genre selection menu
-	if g.StateManager.CurrentState() == AppStateGenreSelection {
+		return true
+	case AppStateGenreSelection:
 		if g.GenreSelectionMenu != nil {
 			g.GenreSelectionMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in multiplayer menu state, only draw multiplayer menu
-	if g.StateManager.CurrentState() == AppStateMultiPlayerMenu {
+		return true
+	case AppStateMultiPlayerMenu:
 		if g.MultiplayerMenu != nil {
 			g.MultiplayerMenu.Draw(screen)
 		}
-		return
-	}
-
-	// If in server address input state, only draw server address input
-	if g.StateManager.CurrentState() == AppStateServerAddressInput {
+		return true
+	case AppStateServerAddressInput:
 		if g.ServerAddressInput != nil {
 			g.ServerAddressInput.Draw(screen)
 		}
-		return
-	}
-
-	// If in settings state, only draw settings
-	if g.StateManager.CurrentState() == AppStateSettings {
+		return true
+	case AppStateSettings:
 		g.SettingsUI.Draw(screen)
-		return
-	}
-
-	// If in character creation state, only draw character creation
-	if g.StateManager.CurrentState() == AppStateCharacterCreation {
+		return true
+	case AppStateCharacterCreation:
 		g.CharacterCreation.Draw(screen)
-		return
+		return true
 	}
 
-	// If in any other menu state, draw main menu
 	if g.StateManager.IsInMenu() {
 		g.MainMenuUI.Draw(screen)
-		return
+		return true
 	}
 
-	// From here on, we're in gameplay state and render the full game
+	return false
+}
 
-	// If lighting is enabled, use post-processing pipeline
+// drawGameplayScene renders the main game scene with terrain, entities, and lighting effects.
+func (g *EbitenGame) drawGameplayScene(screen *ebiten.Image) {
 	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
-		// WASM FIX: Lazy initialization of scene buffer on first use
-		// In WASM, ebiten.NewImage() can only be called after graphics context is ready
-		if g.sceneBuffer == nil {
-			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-		}
-
-		// Clear and reuse scene buffer (avoid per-frame allocation)
-		g.sceneBuffer.Clear()
-
-		// Render terrain to buffer (if available)
-		if g.TerrainRenderSystem != nil {
-			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
-		}
-
-		// Render all entities to buffer
-		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
-
-		// Update lighting system viewport based on camera
-		if g.CameraSystem != nil {
-			camX, camY := g.CameraSystem.GetPosition()
-			g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
-		}
-
-		// Apply lighting as post-processing (renders sceneBuffer with lighting to screen)
-		entities := g.World.GetEntities()
-		g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
+		g.drawLitScene(screen)
 	} else {
-		// Standard rendering pipeline (no lighting)
-		// Render terrain (if available)
-		if g.TerrainRenderSystem != nil {
-			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
-		}
+		g.drawStandardScene(screen)
+	}
+}
 
-		// Render all entities
-		g.RenderSystem.Draw(screen, g.World.GetEntities())
+// drawLitScene renders the game scene with dynamic lighting using post-processing pipeline.
+func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
+	if g.sceneBuffer == nil {
+		g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 	}
 
-	// Render HUD overlay
+	g.sceneBuffer.Clear()
+
+	if g.TerrainRenderSystem != nil {
+		g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
+	}
+
+	g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+
+	if g.CameraSystem != nil {
+		camX, camY := g.CameraSystem.GetPosition()
+		g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
+	}
+
+	entities := g.World.GetEntities()
+	g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
+}
+
+// drawStandardScene renders the game scene without lighting effects.
+func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
+	if g.TerrainRenderSystem != nil {
+		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+	}
+
+	g.RenderSystem.Draw(screen, g.World.GetEntities())
+}
+
+// drawOverlays renders all UI overlays including HUD, menus, inventory, and other interfaces.
+func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	g.HUDSystem.Draw(screen)
 
-	// Render tutorial overlay (if active)
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Draw(screen)
 	}
 
-	// Render help overlay (if visible)
 	if g.HelpSystem != nil && g.HelpSystem.Visible {
 		g.HelpSystem.Draw(screen)
 	}
 
-	// Render menu overlay (if active)
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
 		g.MenuSystem.Draw(screen)
 	}
 
-	// Render UI overlays (drawn last so they're on top)
 	g.InventoryUI.Draw(screen)
 	g.QuestUI.Draw(screen)
 	g.CharacterUI.Draw(screen)
 	g.SkillsUI.Draw(screen)
-	g.MapUI.Draw(screen) // Map UI draws last to be on top of everything
+	g.MapUI.Draw(screen)
 
-	// Render shop UI (if initialized)
 	if g.ShopUI != nil {
 		g.ShopUI.Draw(screen)
 	}
 
-	// Render crafting UI (if initialized)
 	if g.CraftingUI != nil {
 		g.CraftingUI.Draw(screen)
 	}
 
-	// Render virtual controls (mobile only, drawn last to be on top of everything)
+	g.drawMailboxUI(screen)
+}
+
+// drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
+func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
+	if g.MailboxUI == nil || !g.MailboxUI.IsOpen() {
+		return
+	}
+
+	if g.PlayerEntity != nil {
+		if mailComp, ok := g.PlayerEntity.GetComponent("mail"); ok {
+			g.MailboxUI.LoadFromMailComponent(mailComp.(*MailComponent))
+		}
+	}
+
+	mailImg := g.MailboxUI.Render()
+	if mailImg != nil {
+		screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
+	}
+}
+
+// drawVirtualControls renders mobile touch controls on top of all other elements.
+func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
 	for _, system := range g.World.GetSystems() {
 		if inputSys, ok := system.(*InputSystem); ok {
 			inputSys.DrawVirtualControls(screen)
@@ -1066,6 +1101,19 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 		return fmt.Errorf("failed to set crafting callback: %w", err)
 	}
 
+	// Connect mailbox toggle (Phase 40.3: Mail System Integration)
+	if err := inputSystem.SetMailboxCallback(func() {
+		if g.MailboxUI != nil {
+			g.MailboxUI.Toggle()
+			// Track mailbox UI opens for tutorial objectives
+			if objectiveTracker != nil && g.PlayerEntity != nil {
+				objectiveTracker.OnUIOpened(g.PlayerEntity, "mailbox")
+			}
+		}
+	}); err != nil {
+		return fmt.Errorf("failed to set mailbox callback: %w", err)
+	}
+
 	// Connect pause menu toggle (ESC key)
 	if g.MenuSystem != nil {
 		if err := inputSystem.SetMenuToggleCallback(func() {
@@ -1188,6 +1236,11 @@ func (g *EbitenGame) Run(title string) error {
 	}
 
 	return nil
+}
+
+// SetFullscreen sets fullscreen mode.
+func (g *EbitenGame) SetFullscreen(fullscreen bool) {
+	ebiten.SetFullscreen(fullscreen)
 }
 
 // Compile-time interface checks

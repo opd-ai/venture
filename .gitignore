@@ -65,3 +65,4 @@ go.work.sum
 /complete_dungeon_generation
 /terrain_entity_integration
 build/
+*.backup

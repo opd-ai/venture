@@ -601,72 +601,67 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 	// If they do start typing, the keyboard will appear automatically via browser behavior.
 	// This prevents unnecessary keyboard popup that blocks the UI.
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-
-		// Define button areas (matching drawPortraitSelection layout)
-		helpY := cc.panelY + cc.panelHeight - 100
-		buttonY := helpY - 10
-		buttonX := cc.panelX + 50
-		buttonW := cc.panelWidth - 100
-		buttonH := 25
-
-		// Browse button area
-		browseButtonY := buttonY
-
-		// Skip button area
-		skipButtonY := browseButtonY + 35
-
-		// Back button area
-		backButtonY := skipButtonY + 35
-
-		// Check browse button click
-		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
-			mouseY >= browseButtonY && mouseY <= browseButtonY+buttonH {
-			// Trigger file browser dialog
-			go func() {
-				filename, err := OpenPortraitDialog()
-				if err != nil {
-					cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)
-					return
-				}
-				if filename != "" {
-					cc.portraitInput = filename
-				}
-			}()
-			return
-		}
-
-		// Check skip button click
-		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
-			mouseY >= skipButtonY && mouseY <= skipButtonY+buttonH {
-			cc.characterData.PortraitPath = ""
-			cc.characterData.Portrait = nil
-			cc.currentStep = stepConfirmation
-			cc.errorMsg = ""
-			if cc.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				cc.keyboardShown = false
-			}
-			return
-		}
-
-		// Check back button click
-		if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
-			mouseY >= backButtonY && mouseY <= backButtonY+buttonH {
-			cc.currentStep = stepClassSelection
-			if cc.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				cc.keyboardShown = false
-			}
-			return
-		}
+	if cc.handlePortraitTouchInput() {
+		return
 	}
 
-	// SPACE or B key to open file browser dialog
-	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
-		// Open file dialog (this will block until user selects or cancels)
+	if cc.handlePortraitKeyboardShortcuts() {
+		return
+	}
+
+	cc.handlePortraitTextInput()
+
+	if cc.handlePortraitBackspace() {
+		return
+	}
+
+	if cc.handlePortraitNavigation() {
+		return
+	}
+
+	if cc.handlePortraitConfirmation() {
+		return
+	}
+
+	cc.handlePortraitDefaults()
+}
+
+// handlePortraitTouchInput processes mouse and touch input for portrait selection buttons.
+func (cc *EbitenCharacterCreation) handlePortraitTouchInput() bool {
+	if !IsTouchOrMouseJustPressed() {
+		return false
+	}
+
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	helpY := cc.panelY + cc.panelHeight - 100
+	buttonY := helpY - 10
+	buttonX := cc.panelX + 50
+	buttonW := cc.panelWidth - 100
+	buttonH := 25
+
+	browseButtonY := buttonY
+	skipButtonY := browseButtonY + 35
+	backButtonY := skipButtonY + 35
+
+	if cc.checkPortraitBrowseButton(mouseX, mouseY, buttonX, browseButtonY, buttonW, buttonH) {
+		return true
+	}
+
+	if cc.checkPortraitSkipButton(mouseX, mouseY, buttonX, skipButtonY, buttonW, buttonH) {
+		return true
+	}
+
+	if cc.checkPortraitBackButton(mouseX, mouseY, buttonX, backButtonY, buttonW, buttonH) {
+		return true
+	}
+
+	return false
+}
+
+// checkPortraitBrowseButton checks if browse button was clicked and triggers file dialog.
+func (cc *EbitenCharacterCreation) checkPortraitBrowseButton(mouseX, mouseY, buttonX, buttonY, buttonW, buttonH int) bool {
+	if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+		mouseY >= buttonY && mouseY <= buttonY+buttonH {
 		go func() {
 			filename, err := OpenPortraitDialog()
 			if err != nil {
@@ -677,99 +672,142 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 				cc.portraitInput = filename
 			}
 		}()
-		return
+		return true
 	}
+	return false
+}
 
-	// Manual text input for file path (fallback for advanced users)
+// checkPortraitSkipButton checks if skip button was clicked and advances to confirmation.
+func (cc *EbitenCharacterCreation) checkPortraitSkipButton(mouseX, mouseY, buttonX, buttonY, buttonW, buttonH int) bool {
+	if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+		mouseY >= buttonY && mouseY <= buttonY+buttonH {
+		cc.skipPortrait()
+		return true
+	}
+	return false
+}
+
+// checkPortraitBackButton checks if back button was clicked and returns to class selection.
+func (cc *EbitenCharacterCreation) checkPortraitBackButton(mouseX, mouseY, buttonX, buttonY, buttonW, buttonH int) bool {
+	if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
+		mouseY >= buttonY && mouseY <= buttonY+buttonH {
+		cc.returnToClassSelection()
+		return true
+	}
+	return false
+}
+
+// handlePortraitKeyboardShortcuts processes keyboard shortcuts for opening file browser.
+func (cc *EbitenCharacterCreation) handlePortraitKeyboardShortcuts() bool {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
+		go func() {
+			filename, err := OpenPortraitDialog()
+			if err != nil {
+				cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)
+				return
+			}
+			if filename != "" {
+				cc.portraitInput = filename
+			}
+		}()
+		return true
+	}
+	return false
+}
+
+// handlePortraitTextInput processes manual text input for file path entry.
+func (cc *EbitenCharacterCreation) handlePortraitTextInput() {
 	cc.inputBuffer = ebiten.AppendInputChars(cc.inputBuffer[:0])
 	for _, r := range cc.inputBuffer {
-		// Allow printable characters for file paths
 		if r >= 32 && r <= 126 {
 			cc.portraitInput += string(r)
 		}
 	}
+}
 
-	// Handle backspace
-	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
-		if len(cc.portraitInput) > 0 {
-			cc.portraitInput = cc.portraitInput[:len(cc.portraitInput)-1]
-		} else {
-			// Empty backspace goes back to class selection
-			cc.currentStep = stepClassSelection
-			// MOBILE/WASM: Ensure keyboard is hidden when going back
-			// (it should already be hidden since we don't show it on portrait step now)
-			if cc.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				cc.keyboardShown = false
-			}
-			return
-		}
+// handlePortraitBackspace processes backspace key for text deletion or navigation.
+func (cc *EbitenCharacterCreation) handlePortraitBackspace() bool {
+	if !inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
+		return false
 	}
 
-	// ESC to go back
+	if len(cc.portraitInput) > 0 {
+		cc.portraitInput = cc.portraitInput[:len(cc.portraitInput)-1]
+		return false
+	}
+
+	cc.returnToClassSelection()
+	return true
+}
+
+// handlePortraitNavigation processes ESC and Tab keys for navigation.
+func (cc *EbitenCharacterCreation) handlePortraitNavigation() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		cc.currentStep = stepClassSelection
-		// MOBILE/WASM: Ensure keyboard is hidden when cancelling
-		if cc.keyboardShown && mobile.IsWASM() {
-			mobile.HideKeyboard()
-			cc.keyboardShown = false
-		}
-		return
+		cc.returnToClassSelection()
+		return true
 	}
 
-	// Tab to skip portrait (optional)
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		cc.characterData.PortraitPath = ""
-		cc.characterData.Portrait = nil
-		cc.currentStep = stepConfirmation
-		cc.errorMsg = ""
-		// MOBILE/WASM: Ensure keyboard is hidden when skipping
-		if cc.keyboardShown && mobile.IsWASM() {
-			mobile.HideKeyboard()
-			cc.keyboardShown = false
-		}
-		return
+		cc.skipPortrait()
+		return true
 	}
 
-	// Enter to load portrait and proceed
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-		portraitPath := strings.TrimSpace(cc.portraitInput)
+	return false
+}
 
-		if portraitPath == "" {
-			// Empty path is valid (no portrait)
-			cc.characterData.PortraitPath = ""
-			cc.characterData.Portrait = nil
-			cc.currentStep = stepConfirmation
-			cc.errorMsg = ""
-			// MOBILE/WASM: Ensure keyboard is hidden when completing
-			if cc.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				cc.keyboardShown = false
-			}
-			return
-		}
-
-		// WASM FIX: Defer portrait loading until Draw() to ensure graphics context is ready
-		// Store the path for lazy loading instead of loading immediately
-		cc.characterData.PortraitPath = portraitPath
-		cc.pendingPortraitPath = portraitPath
-		cc.portraitLoadAttempted = false
-		cc.characterData.Portrait = nil // Will be loaded lazily in Draw()
-		cc.currentStep = stepConfirmation
-		cc.errorMsg = ""
-		// MOBILE/WASM: Ensure keyboard is hidden when completing
-		if cc.keyboardShown && mobile.IsWASM() {
-			mobile.HideKeyboard()
-			cc.keyboardShown = false
-		}
+// handlePortraitConfirmation processes Enter key for portrait confirmation and loading.
+func (cc *EbitenCharacterCreation) handlePortraitConfirmation() bool {
+	if !inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		return false
 	}
 
-	// F2 to save current portrait path as default
+	portraitPath := strings.TrimSpace(cc.portraitInput)
+
+	if portraitPath == "" {
+		cc.skipPortrait()
+		return true
+	}
+
+	cc.characterData.PortraitPath = portraitPath
+	cc.pendingPortraitPath = portraitPath
+	cc.portraitLoadAttempted = false
+	cc.characterData.Portrait = nil
+	cc.currentStep = stepConfirmation
+	cc.errorMsg = ""
+	cc.hideKeyboardIfNeeded()
+	return true
+}
+
+// handlePortraitDefaults processes F2 key for saving default portrait path.
+func (cc *EbitenCharacterCreation) handlePortraitDefaults() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		if len(strings.TrimSpace(cc.portraitInput)) > 0 {
 			cc.defaults.DefaultPortraitPath = strings.TrimSpace(cc.portraitInput)
 			cc.errorMsg = "Default portrait path saved!"
 		}
+	}
+}
+
+// skipPortrait clears portrait data and advances to confirmation step.
+func (cc *EbitenCharacterCreation) skipPortrait() {
+	cc.characterData.PortraitPath = ""
+	cc.characterData.Portrait = nil
+	cc.currentStep = stepConfirmation
+	cc.errorMsg = ""
+	cc.hideKeyboardIfNeeded()
+}
+
+// returnToClassSelection navigates back to class selection step.
+func (cc *EbitenCharacterCreation) returnToClassSelection() {
+	cc.currentStep = stepClassSelection
+	cc.hideKeyboardIfNeeded()
+}
+
+// hideKeyboardIfNeeded hides mobile keyboard if shown on WASM platform.
+func (cc *EbitenCharacterCreation) hideKeyboardIfNeeded() {
+	if cc.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		cc.keyboardShown = false
 	}
 }
 

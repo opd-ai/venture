@@ -135,15 +135,30 @@ func (s *AnimationSystem) GetStats() AnimationStats {
 // Update processes all entities with animation components.
 // Updates frame timers, transitions states, and regenerates frames if needed.
 func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
-	// DEBUG: Log when system runs
 	fmt.Printf("[DEBUG] AnimationSystem.Update called with %d entities\n", len(entities))
 
-	// Phase 14.2: Reset statistics for this frame
-	s.stats = AnimationStats{
-		TotalEntities: len(entities),
+	s.resetStatistics(len(entities))
+	playerX, playerY := s.getPlayerPosition()
+	viewportBounds, hasViewport := s.calculateViewportBounds()
+
+	for _, entity := range entities {
+		if err := s.updateEntityAnimation(entity, deltaTime, playerX, playerY, viewportBounds, hasViewport); err != nil {
+			return err
+		}
 	}
 
-	// Phase 14.2: Get player position for distance calculations
+	return nil
+}
+
+// resetStatistics resets animation statistics for the current frame.
+func (s *AnimationSystem) resetStatistics(entityCount int) {
+	s.stats = AnimationStats{
+		TotalEntities: entityCount,
+	}
+}
+
+// getPlayerPosition retrieves the current player position for distance calculations.
+func (s *AnimationSystem) getPlayerPosition() (float64, float64) {
 	var playerX, playerY float64
 	if s.playerEntity != nil {
 		if posComp, ok := s.playerEntity.GetComponent("position"); ok {
@@ -153,158 +168,203 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			}
 		}
 	}
+	return playerX, playerY
+}
 
-	// Phase 14.2: Get viewport bounds for culling
-	var viewportMinX, viewportMinY, viewportMaxX, viewportMaxY float64
-	hasViewport := false
-	if s.enableViewportCull && s.cameraSystem != nil && s.cameraSystem.activeCamera != nil {
-		if camComp, ok := s.cameraSystem.activeCamera.GetComponent("camera"); ok {
-			if camera, ok := camComp.(*CameraComponent); ok {
-				// Calculate viewport bounds with margin for sprites
-				margin := 100.0 // Extra margin to start animating before entity enters view
-				halfWidth := float64(s.cameraSystem.ScreenWidth) / (2.0 * camera.Zoom)
-				halfHeight := float64(s.cameraSystem.ScreenHeight) / (2.0 * camera.Zoom)
-				viewportMinX = camera.X - halfWidth - margin
-				viewportMinY = camera.Y - halfHeight - margin
-				viewportMaxX = camera.X + halfWidth + margin
-				viewportMaxY = camera.Y + halfHeight + margin
-				hasViewport = true
-			}
-		}
+// viewportBounds holds calculated viewport boundaries for culling.
+type viewportBounds struct {
+	minX, minY, maxX, maxY float64
+}
+
+// calculateViewportBounds computes viewport boundaries for culling optimization.
+func (s *AnimationSystem) calculateViewportBounds() (viewportBounds, bool) {
+	var bounds viewportBounds
+	if !s.enableViewportCull || s.cameraSystem == nil || s.cameraSystem.activeCamera == nil {
+		return bounds, false
 	}
 
-	for _, entity := range entities {
-		// Get animation component
-		animComp := s.getAnimationComponent(entity)
-		if animComp == nil {
-			continue
-		}
-
-		s.stats.AnimatedEntities++
-
-		// Get sprite component for size information
-		spriteComp := s.getSpriteComponent(entity)
-		if spriteComp == nil {
-			continue
-		}
-
-		// Get entity position for viewport and distance checks
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Phase 14.2: Viewport culling check
-		// CRITICAL FIX: Always animate local player (has input component), never cull
-		isLocalPlayer := entity.HasComponent("input")
-		if hasViewport && !isLocalPlayer {
-			if pos.X < viewportMinX || pos.X > viewportMaxX ||
-				pos.Y < viewportMinY || pos.Y > viewportMaxY {
-				// Entity is outside viewport - skip animation update but keep current frame
-				s.stats.CulledByViewport++
-				continue
-			}
-		}
-
-		// Phase 14.2: Distance-based frame rate adjustment
-		// Phase 15.2: Enhanced LOD with explicit frame rates (12 FPS close, 6 FPS medium, 3 FPS far)
-		var effectiveDeltaTime float64 = deltaTime
-		var targetFrameTime float64 = animComp.FrameTime // Default frame time
-		if s.enableDistanceLOD && s.playerEntity != nil {
-			// Calculate distance from player
-			dx := pos.X - playerX
-			dy := pos.Y - playerY
-			distSq := dx*dx + dy*dy
-			dist := math.Sqrt(distSq)
-
-			if dist <= s.distanceCloseThresh {
-				// Close range: 12 FPS (1/12 ≈ 0.083s per frame)
-				targetFrameTime = 1.0 / 12.0
-				effectiveDeltaTime = deltaTime
-				s.stats.FullRateEntities++
-			} else if dist <= s.distanceMidThresh {
-				// Mid range: 6 FPS (1/6 ≈ 0.167s per frame)
-				targetFrameTime = 1.0 / 6.0
-				effectiveDeltaTime = deltaTime
-				s.stats.HalfRateEntities++
-			} else {
-				// Far range: 3 FPS (1/3 ≈ 0.333s per frame) - very slow for distant entities
-				targetFrameTime = 1.0 / 3.0
-				effectiveDeltaTime = deltaTime
-				s.stats.StaticEntities++
-			}
-
-			// Update component's frame time for this frame
-			animComp.FrameTime = targetFrameTime
-		}
-
-		// Regenerate frames if dirty (state changed)
-		if animComp.Dirty {
-			// Only log for player entities at debug level
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				if entity.HasComponent("input") {
-					s.logger.WithFields(logrus.Fields{
-						"entityID":   entity.ID,
-						"state":      animComp.CurrentState,
-						"frameCount": s.getFrameCount(animComp.CurrentState),
-						"width":      int(spriteComp.Width),
-						"height":     int(spriteComp.Height),
-					}).Debug("generating animation frames")
-				}
-			}
-
-			// DEBUG: Always log for player
-			if entity.HasComponent("input") {
-				fmt.Printf("[DEBUG] AnimationSystem: Regenerating frames for player (state=%v)\n", animComp.CurrentState)
-			}
-
-			if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
-				return fmt.Errorf("failed to regenerate frames: %w", err)
-			}
-			animComp.Dirty = false
-
-			// DEBUG: Log result for player
-			if entity.HasComponent("input") {
-				fmt.Printf("[DEBUG] AnimationSystem: Player frames generated. Count=%d, FirstFrame nil=%v\n",
-					len(animComp.Frames), animComp.Frames == nil || len(animComp.Frames) == 0 || animComp.Frames[0] == nil)
-			}
-
-			// Verify frames were generated (debug level)
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				if entity.HasComponent("input") && len(animComp.Frames) > 0 {
-					s.logger.WithFields(logrus.Fields{
-						"entityID":        entity.ID,
-						"framesGenerated": len(animComp.Frames),
-						"currentFrame":    animComp.FrameIndex,
-					}).Debug("animation frames generated successfully")
-				}
-			}
-		}
-
-		// Update animation if playing and not static (far away)
-		if animComp.Playing && len(animComp.Frames) > 0 && effectiveDeltaTime > 0 {
-			s.updateFrame(animComp, effectiveDeltaTime)
-		}
-
-		// Update sprite component with current frame
-		if frame := animComp.CurrentFrame(); frame != nil {
-			spriteComp.Image = frame
-			// DEBUG: Log for player
-			if entity.HasComponent("input") {
-				fmt.Printf("[DEBUG] AnimationSystem: Updated player sprite.Image (frame %d, nil=%v)\n",
-					animComp.FrameIndex, frame == nil)
-			}
-		} else if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] AnimationSystem: WARNING - Player CurrentFrame() returned NIL (frameIndex=%d, frameCount=%d)\n",
-				animComp.FrameIndex, len(animComp.Frames))
-		}
+	camComp, ok := s.cameraSystem.activeCamera.GetComponent("camera")
+	if !ok {
+		return bounds, false
 	}
+
+	camera, ok := camComp.(*CameraComponent)
+	if !ok {
+		return bounds, false
+	}
+
+	margin := 100.0
+	halfWidth := float64(s.cameraSystem.ScreenWidth) / (2.0 * camera.Zoom)
+	halfHeight := float64(s.cameraSystem.ScreenHeight) / (2.0 * camera.Zoom)
+	bounds.minX = camera.X - halfWidth - margin
+	bounds.minY = camera.Y - halfHeight - margin
+	bounds.maxX = camera.X + halfWidth + margin
+	bounds.maxY = camera.Y + halfHeight + margin
+
+	return bounds, true
+}
+
+// updateEntityAnimation updates animation for a single entity.
+func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playerX, playerY float64, viewport viewportBounds, hasViewport bool) error {
+	animComp := s.getAnimationComponent(entity)
+	if animComp == nil {
+		return nil
+	}
+
+	s.stats.AnimatedEntities++
+
+	spriteComp := s.getSpriteComponent(entity)
+	if spriteComp == nil {
+		return nil
+	}
+
+	pos, ok := s.getEntityPosition(entity)
+	if !ok {
+		return nil
+	}
+
+	if s.shouldCullEntity(entity, pos, viewport, hasViewport) {
+		s.stats.CulledByViewport++
+		return nil
+	}
+
+	effectiveDeltaTime := s.applyDistanceLOD(animComp, pos, playerX, playerY, deltaTime)
+
+	if err := s.regenerateFramesIfDirty(entity, animComp, spriteComp); err != nil {
+		return err
+	}
+
+	s.updateAnimationFrame(animComp, effectiveDeltaTime)
+	s.syncSpriteFrame(entity, animComp, spriteComp)
 
 	return nil
+}
+
+// getEntityPosition retrieves entity position component.
+func (s *AnimationSystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	return pos, ok
+}
+
+// shouldCullEntity determines if entity should be culled from animation updates.
+func (s *AnimationSystem) shouldCullEntity(entity *Entity, pos *PositionComponent, viewport viewportBounds, hasViewport bool) bool {
+	if !hasViewport {
+		return false
+	}
+
+	isLocalPlayer := entity.HasComponent("input")
+	if isLocalPlayer {
+		return false
+	}
+
+	return pos.X < viewport.minX || pos.X > viewport.maxX ||
+		pos.Y < viewport.minY || pos.Y > viewport.maxY
+}
+
+// applyDistanceLOD applies distance-based level-of-detail adjustments.
+func (s *AnimationSystem) applyDistanceLOD(animComp *AnimationComponent, pos *PositionComponent, playerX, playerY, deltaTime float64) float64 {
+	if !s.enableDistanceLOD || s.playerEntity == nil {
+		return deltaTime
+	}
+
+	dx := pos.X - playerX
+	dy := pos.Y - playerY
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	var targetFrameTime float64
+	if dist <= s.distanceCloseThresh {
+		targetFrameTime = 1.0 / 12.0
+		s.stats.FullRateEntities++
+	} else if dist <= s.distanceMidThresh {
+		targetFrameTime = 1.0 / 6.0
+		s.stats.HalfRateEntities++
+	} else {
+		targetFrameTime = 1.0 / 3.0
+		s.stats.StaticEntities++
+	}
+
+	animComp.FrameTime = targetFrameTime
+	return deltaTime
+}
+
+// regenerateFramesIfDirty regenerates animation frames if component state changed.
+func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite) error {
+	if !animComp.Dirty {
+		return nil
+	}
+
+	s.logFrameGeneration(entity, animComp, spriteComp)
+
+	if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
+		return fmt.Errorf("failed to regenerate frames: %w", err)
+	}
+
+	animComp.Dirty = false
+	s.logGenerationResult(entity, animComp)
+
+	return nil
+}
+
+// logFrameGeneration logs animation frame generation at debug level.
+func (s *AnimationSystem) logFrameGeneration(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		if entity.HasComponent("input") {
+			s.logger.WithFields(logrus.Fields{
+				"entityID":   entity.ID,
+				"state":      animComp.CurrentState,
+				"frameCount": s.getFrameCount(animComp.CurrentState),
+				"width":      int(spriteComp.Width),
+				"height":     int(spriteComp.Height),
+			}).Debug("generating animation frames")
+		}
+	}
+
+	if entity.HasComponent("input") {
+		fmt.Printf("[DEBUG] AnimationSystem: Regenerating frames for player (state=%v)\n", animComp.CurrentState)
+	}
+}
+
+// logGenerationResult logs the result of frame generation.
+func (s *AnimationSystem) logGenerationResult(entity *Entity, animComp *AnimationComponent) {
+	if entity.HasComponent("input") {
+		fmt.Printf("[DEBUG] AnimationSystem: Player frames generated. Count=%d, FirstFrame nil=%v\n",
+			len(animComp.Frames), animComp.Frames == nil || len(animComp.Frames) == 0 || animComp.Frames[0] == nil)
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		if entity.HasComponent("input") && len(animComp.Frames) > 0 {
+			s.logger.WithFields(logrus.Fields{
+				"entityID":        entity.ID,
+				"framesGenerated": len(animComp.Frames),
+				"currentFrame":    animComp.FrameIndex,
+			}).Debug("animation frames generated successfully")
+		}
+	}
+}
+
+// updateAnimationFrame advances animation frame if playing.
+func (s *AnimationSystem) updateAnimationFrame(animComp *AnimationComponent, effectiveDeltaTime float64) {
+	if animComp.Playing && len(animComp.Frames) > 0 && effectiveDeltaTime > 0 {
+		s.updateFrame(animComp, effectiveDeltaTime)
+	}
+}
+
+// syncSpriteFrame synchronizes sprite component with current animation frame.
+func (s *AnimationSystem) syncSpriteFrame(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite) {
+	if frame := animComp.CurrentFrame(); frame != nil {
+		spriteComp.Image = frame
+		if entity.HasComponent("input") {
+			fmt.Printf("[DEBUG] AnimationSystem: Updated player sprite.Image (frame %d, nil=%v)\n",
+				animComp.FrameIndex, frame == nil)
+		}
+	} else if entity.HasComponent("input") {
+		fmt.Printf("[DEBUG] AnimationSystem: WARNING - Player CurrentFrame() returned NIL (frameIndex=%d, frameCount=%d)\n",
+			animComp.FrameIndex, len(animComp.Frames))
+	}
 }
 
 // updateFrame advances the animation frame based on delta time.
@@ -574,136 +634,131 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 		Width:      int(sprite.Width),
 		Height:     int(sprite.Height),
 		Seed:       anim.Seed,
-		Complexity: 0.7, // Higher complexity for better detail (was 0.5)
-		Palette:    nil, // Will be generated by sprite generator if nil
+		Complexity: 0.7,
+		Palette:    nil,
 		Custom:     make(map[string]interface{}),
 	}
 
-	// Phase 10.1: Enable aerial-view sprites for top-down gameplay
-	// Aerial templates use 35/50/15 proportions (head/torso/legs) optimized for overhead view
 	config.Custom["useAerial"] = true
 
-	// CRITICAL: Set entity type to trigger template-based generation
-	// Check if entity has input component (player) or team component (enemy/NPC)
 	if entity.HasComponent("input") {
-		// Player character - use humanoid template
-		config.Custom["entityType"] = "humanoid"
-
-		// GAP FIX: Determine facing direction based on velocity
-		facing := "down" // Default
-		if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-			if vel, ok := velComp.(*VelocityComponent); ok {
-				// Use velocity direction if moving, otherwise keep last facing
-				if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
-					if math.Abs(vel.VX) > math.Abs(vel.VY) {
-						if vel.VX > 0 {
-							facing = "right"
-						} else {
-							facing = "left"
-						}
-					} else {
-						if vel.VY > 0 {
-							facing = "down"
-						} else {
-							facing = "up"
-						}
-					}
-					// Store facing for idle state
-					anim.LastFacing = facing
-				} else if anim.LastFacing != "" {
-					// Use last facing direction when idle
-					facing = anim.LastFacing
-				}
-			}
-		}
-		config.Custom["facing"] = facing
-
-		// Check for equipment to show on sprite
-		if entity.HasComponent("equipment") {
-			config.Custom["hasWeapon"] = true
-			config.Custom["hasShield"] = false // Could be enhanced to check actual equipment
-		}
+		s.configurePlayerSprite(&config, entity, anim)
 	} else if teamComp, ok := entity.GetComponent("team"); ok {
 		if team, ok := teamComp.(*TeamComponent); ok {
-			if team.TeamID == 2 { // Enemy team
-				// Determine monster type based on entity characteristics
-				entityType := "humanoid" // Default
-
-				// Check if it's a boss (high damage indicates boss)
-				if attackComp, ok := entity.GetComponent("attack"); ok {
-					if attack, ok := attackComp.(*AttackComponent); ok {
-						if attack.Damage > 20 {
-							entityType = "boss"
-							config.Custom["isBoss"] = true
-							config.Custom["bossScale"] = 1.5
-						}
-					}
-				}
-
-				// Check size based on collider
-				if colliderComp, ok := entity.GetComponent("collider"); ok {
-					if collider, ok := colliderComp.(*ColliderComponent); ok {
-						if collider.Width > 48 {
-							entityType = "monster" // Large monster
-						} else if collider.Width < 24 {
-							entityType = "minion" // Small creature
-						}
-					}
-				}
-
-				config.Custom["entityType"] = entityType
-
-				// GAP FIX: Determine facing direction based on velocity
-				facing := "down" // Default
-				if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-					if vel, ok := velComp.(*VelocityComponent); ok {
-						// Use velocity direction if moving, otherwise keep last facing
-						if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
-							if math.Abs(vel.VX) > math.Abs(vel.VY) {
-								if vel.VX > 0 {
-									facing = "right"
-								} else {
-									facing = "left"
-								}
-							} else {
-								if vel.VY > 0 {
-									facing = "down"
-								} else {
-									facing = "up"
-								}
-							}
-							// Store facing for idle state
-							anim.LastFacing = facing
-						} else if anim.LastFacing != "" {
-							// Use last facing direction when idle
-							facing = anim.LastFacing
-						}
-					}
-				}
-				config.Custom["facing"] = facing
+			if team.TeamID == 2 {
+				s.configureEnemySprite(&config, entity, anim)
 			}
 		}
 	}
 
-	// Get genre from entity if available
+	s.applyGenreConfig(&config, entity)
+	config.Custom["useAerial"] = true
+
+	return config
+}
+
+// configurePlayerSprite configures sprite settings for player entities.
+func (s *AnimationSystem) configurePlayerSprite(config *sprites.Config, entity *Entity, anim *AnimationComponent) {
+	config.Custom["entityType"] = "humanoid"
+	config.Custom["facing"] = s.determineFacingDirection(entity, anim)
+
+	if entity.HasComponent("equipment") {
+		config.Custom["hasWeapon"] = true
+		config.Custom["hasShield"] = false
+	}
+}
+
+// configureEnemySprite configures sprite settings for enemy entities.
+func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *Entity, anim *AnimationComponent) {
+	entityType := s.determineEnemyType(entity, config)
+	config.Custom["entityType"] = entityType
+	config.Custom["facing"] = s.determineFacingDirection(entity, anim)
+}
+
+// determineEnemyType analyzes entity components to determine monster type.
+func (s *AnimationSystem) determineEnemyType(entity *Entity, config *sprites.Config) string {
+	entityType := "humanoid"
+
+	if attackComp, ok := entity.GetComponent("attack"); ok {
+		if attack, ok := attackComp.(*AttackComponent); ok {
+			if attack.Damage > 20 {
+				entityType = "boss"
+				config.Custom["isBoss"] = true
+				config.Custom["bossScale"] = 1.5
+				return entityType
+			}
+		}
+	}
+
+	if colliderComp, ok := entity.GetComponent("collider"); ok {
+		if collider, ok := colliderComp.(*ColliderComponent); ok {
+			if collider.Width > 48 {
+				return "monster"
+			} else if collider.Width < 24 {
+				return "minion"
+			}
+		}
+	}
+
+	return entityType
+}
+
+// determineFacingDirection calculates entity facing direction from velocity.
+func (s *AnimationSystem) determineFacingDirection(entity *Entity, anim *AnimationComponent) string {
+	facing := "down"
+
+	velComp, hasVel := entity.GetComponent("velocity")
+	if !hasVel {
+		if anim.LastFacing != "" {
+			return anim.LastFacing
+		}
+		return facing
+	}
+
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return facing
+	}
+
+	if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
+		facing = s.calculateFacingFromVelocity(vel)
+		anim.LastFacing = facing
+	} else if anim.LastFacing != "" {
+		facing = anim.LastFacing
+	}
+
+	return facing
+}
+
+// calculateFacingFromVelocity determines facing direction from velocity vector.
+func (s *AnimationSystem) calculateFacingFromVelocity(vel *VelocityComponent) string {
+	if math.Abs(vel.VX) > math.Abs(vel.VY) {
+		if vel.VX > 0 {
+			return "right"
+		}
+		return "left"
+	}
+
+	if vel.VY > 0 {
+		return "down"
+	}
+	return "up"
+}
+
+// applyGenreConfig applies genre configuration to sprite config.
+func (s *AnimationSystem) applyGenreConfig(config *sprites.Config, entity *Entity) {
 	if genreComp, ok := entity.GetComponent("genre"); ok && genreComp != nil {
 		if gc, ok := genreComp.(interface{ GetGenreID() string }); ok {
 			config.GenreID = gc.GetGenreID()
 			config.Custom["genre"] = gc.GetGenreID()
+			return
 		}
 	}
 
-	// Try to get genreID from world or use default
 	if config.GenreID == "" {
-		config.GenreID = "fantasy" // Default genre
+		config.GenreID = "fantasy"
 		config.Custom["genre"] = "fantasy"
 	}
-
-	// Enable aerial/top-down view for all animated sprites by default
-	// Provides better perspective for action-RPG gameplay
-	config.Custom["useAerial"] = true
-
-	return config
 }
 
 // getFrameCount returns the number of frames for an animation state.

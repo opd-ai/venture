@@ -174,152 +174,192 @@ func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY floa
 
 // Update detects and resolves collisions between entities.
 func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
-	// Clear the grid
-	s.grid = make(map[int]map[int][]*Entity)
+	collidableEntities := s.collectAndGridCollidableEntities(entities)
+	checked := s.acquireCheckedMap()
+	defer s.checkedMapPool.Put(checked)
 
-	// Collect entities with colliders
-	// Pre-allocate to worst-case capacity to avoid reallocations during append
+	for _, entity := range collidableEntities {
+		s.processEntityCollisions(entity, collidableEntities, checked)
+	}
+}
+
+// collectAndGridCollidableEntities filters entities with colliders and builds the spatial grid.
+func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) []*Entity {
+	s.grid = make(map[int]map[int][]*Entity)
 	collidableEntities := make([]*Entity, 0, len(entities))
+
 	for _, entity := range entities {
 		if entity.HasComponent("collider") && entity.HasComponent("position") {
 			collidableEntities = append(collidableEntities, entity)
 		}
 	}
 
-	// Build spatial grid (broad phase)
 	for _, entity := range collidableEntities {
 		s.addToGrid(entity)
 	}
 
-	// Check collisions (narrow phase)
-	// Get checked map from pool to reduce allocations
+	return collidableEntities
+}
+
+// acquireCheckedMap obtains a cleaned collision tracking map from the pool.
+func (s *CollisionSystem) acquireCheckedMap() map[uint64]map[uint64]bool {
 	checked := s.checkedMapPool.Get().(map[uint64]map[uint64]bool)
-	// Clear the map before use
 	for k := range checked {
 		delete(checked, k)
 	}
-	// Return to pool when done
-	defer s.checkedMapPool.Put(checked)
+	return checked
+}
 
-	for _, entity := range collidableEntities {
-		posComp, _ := entity.GetComponent("position")
-		colliderComp, _ := entity.GetComponent("collider")
+// processEntityCollisions handles collision detection and resolution for a single entity.
+func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEntities []*Entity, checked map[uint64]map[uint64]bool) {
+	posComp, _ := entity.GetComponent("position")
+	colliderComp, _ := entity.GetComponent("collider")
 
-		// Safe type assertions with nil checks
-		pos, ok1 := posComp.(*PositionComponent)
-		collider, ok2 := colliderComp.(*ColliderComponent)
+	pos, ok1 := posComp.(*PositionComponent)
+	collider, ok2 := colliderComp.(*ColliderComponent)
 
-		if !ok1 || !ok2 {
+	if !ok1 || !ok2 {
+		return
+	}
+
+	candidates := s.getNearbyEntities(entity)
+	for _, other := range candidates {
+		if entity.ID == other.ID {
 			continue
 		}
 
-		// Get potential collision candidates from nearby cells
-		candidates := s.getNearbyEntities(entity)
-
-		for _, other := range candidates {
-			// Skip self
-			if entity.ID == other.ID {
-				continue
-			}
-
-			// Skip if already checked this pair
-			if checked[entity.ID] != nil && checked[entity.ID][other.ID] {
-				continue
-			}
-
-			// Mark as checked
-			if checked[entity.ID] == nil {
-				checked[entity.ID] = make(map[uint64]bool)
-			}
-			if checked[other.ID] == nil {
-				checked[other.ID] = make(map[uint64]bool)
-			}
-			checked[entity.ID][other.ID] = true
-			checked[other.ID][entity.ID] = true
-
-			// Get other entity components
-			otherPosComp, _ := other.GetComponent("position")
-			otherColliderComp, _ := other.GetComponent("collider")
-
-			// Safe type assertions with nil checks
-			otherPos, ok1 := otherPosComp.(*PositionComponent)
-			otherCollider, ok2 := otherColliderComp.(*ColliderComponent)
-
-			if !ok1 || !ok2 {
-				continue
-			}
-
-			// Check layer compatibility (0 = all layers)
-			if collider.Layer != 0 && otherCollider.Layer != 0 && collider.Layer != otherCollider.Layer {
-				continue
-			}
-
-			// Check terrain layer compatibility (Phase 11.1 multi-layer support)
-			// Entities on different terrain layers should not collide unless one can fly
-			layer1Comp, hasLayer1 := entity.GetComponent("layer")
-			layer2Comp, hasLayer2 := other.GetComponent("layer")
-			if hasLayer1 && hasLayer2 {
-				l1, ok := layer1Comp.(*LayerComponent)
-				if !ok {
-					continue
-				}
-				l2, ok := layer2Comp.(*LayerComponent)
-				if !ok {
-					continue
-				}
-				// Flying entities collide with all layers
-				if !l1.CanFly && !l2.CanFly {
-					// Check if entities are on same effective terrain layer
-					if !OnSameLayer(l1, l2) {
-						continue // Skip collision for entities on different terrain layers
-					}
-				}
-			}
-
-			// Check intersection (Issue #20: Account for rotation if present)
-			// Query rotation components for both entities
-			rot1Comp, hasRot1 := entity.GetComponent("rotation")
-			rot2Comp, hasRot2 := other.GetComponent("rotation")
-
-			var intersects bool
-			if hasRot1 || hasRot2 {
-				// At least one entity is rotated, use rotation-aware collision
-				angle1 := 0.0
-				angle2 := 0.0
-				if hasRot1 {
-					if rot1, ok := rot1Comp.(*RotationComponent); ok {
-						angle1 = rot1.Angle
-					}
-				}
-				if hasRot2 {
-					if rot2, ok := rot2Comp.(*RotationComponent); ok {
-						angle2 = rot2.Angle
-					}
-				}
-				intersects = collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
-			} else {
-				// Neither entity is rotated, use faster AABB collision
-				intersects = collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y)
-			}
-
-			if intersects {
-				// Call collision callback if set
-				if s.onCollision != nil {
-					s.onCollision(entity, other)
-				}
-
-				// Resolve collision if both are solid
-				if collider.Solid && otherCollider.Solid && !collider.IsTrigger && !otherCollider.IsTrigger {
-					s.resolveCollision(entity, other)
-				}
-			}
+		if s.isCollisionPairChecked(entity.ID, other.ID, checked) {
+			continue
 		}
 
-		// Check terrain collision for solid entities
-		if s.terrainChecker != nil && collider.Solid && !collider.IsTrigger {
-			if s.terrainChecker.CheckEntityCollision(entity) {
-				s.resolveTerrainCollision(entity)
-			}
+		s.markCollisionPairChecked(entity.ID, other.ID, checked)
+
+		if s.checkAndResolveEntityPair(entity, pos, collider, other) {
+			continue
+		}
+	}
+
+	s.checkTerrainCollision(entity, collider)
+}
+
+// isCollisionPairChecked returns true if the entity pair has already been checked.
+func (s *CollisionSystem) isCollisionPairChecked(id1, id2 uint64, checked map[uint64]map[uint64]bool) bool {
+	return checked[id1] != nil && checked[id1][id2]
+}
+
+// markCollisionPairChecked marks an entity pair as checked in both directions.
+func (s *CollisionSystem) markCollisionPairChecked(id1, id2 uint64, checked map[uint64]map[uint64]bool) {
+	if checked[id1] == nil {
+		checked[id1] = make(map[uint64]bool)
+	}
+	if checked[id2] == nil {
+		checked[id2] = make(map[uint64]bool)
+	}
+	checked[id1][id2] = true
+	checked[id2][id1] = true
+}
+
+// checkAndResolveEntityPair checks if two entities collide and resolves the collision.
+// Returns true if processing should skip this pair (invalid components or incompatible layers).
+func (s *CollisionSystem) checkAndResolveEntityPair(entity *Entity, pos *PositionComponent, collider *ColliderComponent, other *Entity) bool {
+	otherPosComp, _ := other.GetComponent("position")
+	otherColliderComp, _ := other.GetComponent("collider")
+
+	otherPos, ok1 := otherPosComp.(*PositionComponent)
+	otherCollider, ok2 := otherColliderComp.(*ColliderComponent)
+
+	if !ok1 || !ok2 {
+		return true
+	}
+
+	if !s.areLayersCompatible(entity, collider, other, otherCollider) {
+		return true
+	}
+
+	if s.detectIntersection(entity, pos, collider, other, otherPos, otherCollider) {
+		s.handleCollision(entity, collider, other, otherCollider)
+	}
+
+	return false
+}
+
+// areLayersCompatible checks if two entities can collide based on their layer settings.
+func (s *CollisionSystem) areLayersCompatible(entity *Entity, collider *ColliderComponent, other *Entity, otherCollider *ColliderComponent) bool {
+	if collider.Layer != 0 && otherCollider.Layer != 0 && collider.Layer != otherCollider.Layer {
+		return false
+	}
+
+	layer1Comp, hasLayer1 := entity.GetComponent("layer")
+	layer2Comp, hasLayer2 := other.GetComponent("layer")
+
+	if !hasLayer1 || !hasLayer2 {
+		return true
+	}
+
+	l1, ok := layer1Comp.(*LayerComponent)
+	if !ok {
+		return false
+	}
+	l2, ok := layer2Comp.(*LayerComponent)
+	if !ok {
+		return false
+	}
+
+	if l1.CanFly || l2.CanFly {
+		return true
+	}
+
+	return OnSameLayer(l1, l2)
+}
+
+// detectIntersection determines if two entities intersect, accounting for rotation.
+func (s *CollisionSystem) detectIntersection(entity *Entity, pos *PositionComponent, collider *ColliderComponent, other *Entity, otherPos *PositionComponent, otherCollider *ColliderComponent) bool {
+	rot1Comp, hasRot1 := entity.GetComponent("rotation")
+	rot2Comp, hasRot2 := other.GetComponent("rotation")
+
+	if !hasRot1 && !hasRot2 {
+		return collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y)
+	}
+
+	angle1, angle2 := s.extractRotationAngles(rot1Comp, hasRot1, rot2Comp, hasRot2)
+	return collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
+}
+
+// extractRotationAngles retrieves rotation angles from rotation components.
+func (s *CollisionSystem) extractRotationAngles(rot1Comp Component, hasRot1 bool, rot2Comp Component, hasRot2 bool) (float64, float64) {
+	angle1 := 0.0
+	angle2 := 0.0
+
+	if hasRot1 {
+		if rot1, ok := rot1Comp.(*RotationComponent); ok {
+			angle1 = rot1.Angle
+		}
+	}
+	if hasRot2 {
+		if rot2, ok := rot2Comp.(*RotationComponent); ok {
+			angle2 = rot2.Angle
+		}
+	}
+
+	return angle1, angle2
+}
+
+// handleCollision processes a detected collision between two entities.
+func (s *CollisionSystem) handleCollision(entity *Entity, collider *ColliderComponent, other *Entity, otherCollider *ColliderComponent) {
+	if s.onCollision != nil {
+		s.onCollision(entity, other)
+	}
+
+	if collider.Solid && otherCollider.Solid && !collider.IsTrigger && !otherCollider.IsTrigger {
+		s.resolveCollision(entity, other)
+	}
+}
+
+// checkTerrainCollision checks and resolves terrain collision for an entity.
+func (s *CollisionSystem) checkTerrainCollision(entity *Entity, collider *ColliderComponent) {
+	if s.terrainChecker != nil && collider.Solid && !collider.IsTrigger {
+		if s.terrainChecker.CheckEntityCollision(entity) {
+			s.resolveTerrainCollision(entity)
 		}
 	}
 }
@@ -382,23 +422,26 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 	maxCellX := int(math.Floor(maxX / s.CellSize))
 	maxCellY := int(math.Floor(maxY / s.CellSize))
 
-	// Collect unique entities from cells
-	seen := make(map[uint64]bool)
-	result := make([]*Entity, 0)
+	// Use pooled resources to reduce allocations
+	nr := getNearbyResult()
+	defer putNearbyResult(nr)
 
 	for x := minCellX; x <= maxCellX; x++ {
 		for y := minCellY; y <= maxCellY; y++ {
 			if s.grid[x] != nil && s.grid[x][y] != nil {
 				for _, e := range s.grid[x][y] {
-					if !seen[e.ID] {
-						seen[e.ID] = true
-						result = append(result, e)
+					if !nr.seen[e.ID] {
+						nr.seen[e.ID] = true
+						nr.result = append(nr.result, e)
 					}
 				}
 			}
 		}
 	}
 
+	// Copy result before returning (pool will be reused)
+	result := make([]*Entity, len(nr.result))
+	copy(result, nr.result)
 	return result
 }
 

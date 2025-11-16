@@ -290,173 +290,256 @@ func (s *ItemPickupSystem) getTutorialSystem() *EbitenTutorialSystem {
 
 // Update checks for item-player collisions and handles pickup.
 func (s *ItemPickupSystem) Update(entities []*Entity, deltaTime float64) {
-	// Find player entities (those with input component)
+	players := s.findPlayers(entities)
+	if len(players) == 0 {
+		return
+	}
+
+	items := s.findItems(entities)
+	recipes := s.findRecipes(entities)
+
+	for _, player := range players {
+		s.processPlayerPickups(player, items, recipes)
+	}
+}
+
+// findPlayers returns all entities with input component.
+func (s *ItemPickupSystem) findPlayers(entities []*Entity) []*Entity {
 	var players []*Entity
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
 			players = append(players, entity)
 		}
 	}
+	return players
+}
 
-	if len(players) == 0 {
-		return
-	}
-
-	// Find item entities
+// findItems returns all entities with item_entity component.
+func (s *ItemPickupSystem) findItems(entities []*Entity) []*Entity {
 	var items []*Entity
 	for _, entity := range entities {
 		if entity.HasComponent("item_entity") {
 			items = append(items, entity)
 		}
 	}
+	return items
+}
 
-	// Check each player against each item
-	for _, player := range players {
-		_, hasPos := player.GetComponent("position")
-		if !hasPos {
+// findRecipes returns all entities with recipe_entity component.
+func (s *ItemPickupSystem) findRecipes(entities []*Entity) []*Entity {
+	var recipes []*Entity
+	for _, entity := range entities {
+		if entity.HasComponent("recipe_entity") {
+			recipes = append(recipes, entity)
+		}
+	}
+	return recipes
+}
+
+// processPlayerPickups handles item and recipe pickup for a single player.
+func (s *ItemPickupSystem) processPlayerPickups(player *Entity, items, recipes []*Entity) {
+	if !s.validatePlayerComponents(player) {
+		return
+	}
+
+	inventory := s.getPlayerInventory(player)
+	if inventory == nil {
+		return
+	}
+
+	s.processItemPickups(player, inventory, items)
+	s.processRecipePickups(player, recipes)
+}
+
+// validatePlayerComponents checks if player has required components.
+func (s *ItemPickupSystem) validatePlayerComponents(player *Entity) bool {
+	_, hasPos := player.GetComponent("position")
+	if !hasPos {
+		return false
+	}
+
+	_, hasInv := player.GetComponent("inventory")
+	return hasInv
+}
+
+// getPlayerInventory retrieves and validates player's inventory component.
+func (s *ItemPickupSystem) getPlayerInventory(player *Entity) *InventoryComponent {
+	playerInventory, _ := player.GetComponent("inventory")
+	inventory, ok := playerInventory.(*InventoryComponent)
+	if !ok {
+		return nil
+	}
+	return inventory
+}
+
+// processItemPickups handles item pickup attempts for a player.
+func (s *ItemPickupSystem) processItemPickups(player *Entity, inventory *InventoryComponent, items []*Entity) {
+	for _, itemEntity := range items {
+		if !s.isEntityInRange(player, itemEntity) {
 			continue
 		}
 
-		playerInventory, hasInv := player.GetComponent("inventory")
-		if !hasInv {
+		itemData := s.getItemEntityData(itemEntity)
+		if itemData == nil {
 			continue
 		}
 
-		inventory, ok := playerInventory.(*InventoryComponent)
-		if !ok {
+		s.attemptItemPickup(player, inventory, itemEntity, itemData)
+	}
+}
+
+// isEntityInRange checks if two entities are within pickup distance.
+func (s *ItemPickupSystem) isEntityInRange(player, target *Entity) bool {
+	_, hasPos := target.GetComponent("position")
+	if !hasPos {
+		return false
+	}
+
+	distance := GetDistance(player, target)
+	return distance <= 32.0
+}
+
+// getItemEntityData retrieves and validates item entity component data.
+func (s *ItemPickupSystem) getItemEntityData(itemEntity *Entity) *ItemEntityComponent {
+	itemEntityComp, hasItemData := itemEntity.GetComponent("item_entity")
+	if !hasItemData {
+		return nil
+	}
+
+	itemData, ok := itemEntityComp.(*ItemEntityComponent)
+	if !ok {
+		return nil
+	}
+	return itemData
+}
+
+// attemptItemPickup tries to add item to inventory and handles feedback.
+func (s *ItemPickupSystem) attemptItemPickup(player *Entity, inventory *InventoryComponent, itemEntity *Entity, itemData *ItemEntityComponent) {
+	if inventory.CanAddItem(itemData.Item) {
+		inventory.Items = append(inventory.Items, itemData.Item)
+		s.world.RemoveEntity(itemEntity.ID)
+		s.playItemPickupFeedback(itemEntity, itemData)
+	} else {
+		s.showInventoryFullMessage()
+	}
+}
+
+// playItemPickupFeedback provides audio and visual feedback for successful item pickup.
+func (s *ItemPickupSystem) playItemPickupFeedback(itemEntity *Entity, itemData *ItemEntityComponent) {
+	if audioSys := s.getAudioManager(); audioSys != nil {
+		if err := audioSys.PlaySFX("pickup", int64(itemEntity.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.Debugf("Failed to play item pickup sound: %v", err)
+			}
+		}
+	}
+
+	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+		notifText := fmt.Sprintf("Picked up: %s", itemData.Item.Name)
+		tutorialSys.ShowNotification(notifText, 2.0)
+	}
+}
+
+// showInventoryFullMessage displays notification when inventory is full.
+func (s *ItemPickupSystem) showInventoryFullMessage() {
+	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+		tutorialSys.ShowNotification("Inventory full!", 2.0)
+	}
+}
+
+// processRecipePickups handles recipe learning attempts for a player.
+func (s *ItemPickupSystem) processRecipePickups(player *Entity, recipes []*Entity) {
+	for _, recipeEntity := range recipes {
+		if !s.isEntityInRange(player, recipeEntity) {
 			continue
 		}
 
-		for _, itemEntity := range items {
-			_, hasItemPos := itemEntity.GetComponent("position")
-			if !hasItemPos {
-				continue
-			}
-
-			itemEntityComp, hasItemData := itemEntity.GetComponent("item_entity")
-			if !hasItemData {
-				continue
-			}
-
-			itemData, ok := itemEntityComp.(*ItemEntityComponent)
-			if !ok {
-				continue
-			}
-
-			// Check distance for pickup (32 pixels = 1 tile)
-			distance := GetDistance(player, itemEntity)
-			if distance <= 32.0 {
-				// Attempt to add item to inventory
-				if inventory.CanAddItem(itemData.Item) {
-					inventory.Items = append(inventory.Items, itemData.Item)
-
-					// Remove item entity from world
-					s.world.RemoveEntity(itemEntity.ID)
-
-					// GAP-015 REPAIR: Play pickup sound effect
-					if audioSys := s.getAudioManager(); audioSys != nil {
-						if err := audioSys.PlaySFX("pickup", int64(itemEntity.ID)); err != nil {
-							// Audio failure is non-critical, log and continue
-							if s.logger != nil {
-								s.logger.Debugf("Failed to play item pickup sound: %v", err)
-							}
-						}
-					}
-
-					// GAP-015 REPAIR: Show pickup notification
-					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
-						notifText := fmt.Sprintf("Picked up: %s", itemData.Item.Name)
-						tutorialSys.ShowNotification(notifText, 2.0)
-					}
-				} else {
-					// GAP-015 REPAIR: Show "inventory full" message
-					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
-						tutorialSys.ShowNotification("Inventory full!", 2.0)
-					}
-				}
-			}
+		recipeData := s.getRecipeEntityData(recipeEntity)
+		if recipeData == nil {
+			continue
 		}
 
-		// Check for recipe entities
-		var recipes []*Entity
-		for _, entity := range entities {
-			if entity.HasComponent("recipe_entity") {
-				recipes = append(recipes, entity)
+		s.attemptRecipeLearn(player, recipeEntity, recipeData)
+	}
+}
+
+// getRecipeEntityData retrieves and validates recipe entity component data.
+func (s *ItemPickupSystem) getRecipeEntityData(recipeEntity *Entity) *RecipeEntityComponent {
+	recipeEntityComp, hasRecipeData := recipeEntity.GetComponent("recipe_entity")
+	if !hasRecipeData {
+		return nil
+	}
+
+	recipeData, ok := recipeEntityComp.(*RecipeEntityComponent)
+	if !ok {
+		return nil
+	}
+	return recipeData
+}
+
+// attemptRecipeLearn tries to learn recipe and handles all possible outcomes.
+func (s *ItemPickupSystem) attemptRecipeLearn(player, recipeEntity *Entity, recipeData *RecipeEntityComponent) {
+	knowledge := s.ensureRecipeKnowledge(player)
+	if knowledge == nil {
+		return
+	}
+
+	if knowledge.KnowsRecipe(recipeData.Recipe.ID) {
+		s.showRecipeAlreadyKnownMessage()
+		return
+	}
+
+	if !knowledge.LearnRecipe(recipeData.Recipe) {
+		s.showRecipeLimitReachedMessage()
+		return
+	}
+
+	s.world.RemoveEntity(recipeEntity.ID)
+	s.playRecipeLearnFeedback(recipeEntity, recipeData)
+}
+
+// ensureRecipeKnowledge gets or creates recipe knowledge component for player.
+func (s *ItemPickupSystem) ensureRecipeKnowledge(player *Entity) *RecipeKnowledgeComponent {
+	knowledgeComp, hasKnowledge := player.GetComponent("recipe_knowledge")
+	if !hasKnowledge {
+		knowledgeComp = NewRecipeKnowledgeComponent(0)
+		player.AddComponent(knowledgeComp)
+	}
+
+	knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
+	if !ok {
+		return nil
+	}
+	return knowledge
+}
+
+// showRecipeAlreadyKnownMessage displays notification for duplicate recipe.
+func (s *ItemPickupSystem) showRecipeAlreadyKnownMessage() {
+	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+		tutorialSys.ShowNotification("Recipe already known!", 1.5)
+	}
+}
+
+// showRecipeLimitReachedMessage displays notification when recipe limit reached.
+func (s *ItemPickupSystem) showRecipeLimitReachedMessage() {
+	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+		tutorialSys.ShowNotification("Cannot learn more recipes!", 2.0)
+	}
+}
+
+// playRecipeLearnFeedback provides audio and visual feedback for successful recipe learning.
+func (s *ItemPickupSystem) playRecipeLearnFeedback(recipeEntity *Entity, recipeData *RecipeEntityComponent) {
+	if audioSys := s.getAudioManager(); audioSys != nil {
+		if err := audioSys.PlaySFX("spell", int64(recipeEntity.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.Debugf("Failed to play recipe pickup sound: %v", err)
 			}
 		}
+	}
 
-		// Check each player against each recipe
-		for _, recipeEntity := range recipes {
-			_, hasRecipePos := recipeEntity.GetComponent("position")
-			if !hasRecipePos {
-				continue
-			}
-
-			recipeEntityComp, hasRecipeData := recipeEntity.GetComponent("recipe_entity")
-			if !hasRecipeData {
-				continue
-			}
-
-			recipeData, ok := recipeEntityComp.(*RecipeEntityComponent)
-			if !ok {
-				continue
-			}
-
-			// Check distance for pickup (32 pixels = 1 tile)
-			distance := GetDistance(player, recipeEntity)
-			if distance <= 32.0 {
-				// Get player's recipe knowledge component
-				knowledgeComp, hasKnowledge := player.GetComponent("recipe_knowledge")
-				if !hasKnowledge {
-					// Player doesn't have recipe knowledge component, create one
-					knowledgeComp = NewRecipeKnowledgeComponent(0) // Unlimited recipes
-					player.AddComponent(knowledgeComp)
-				}
-
-				knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
-				if !ok {
-					continue
-				}
-
-				// Check if player already knows this recipe
-				if knowledge.KnowsRecipe(recipeData.Recipe.ID) {
-					// Already known, show message
-					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
-						tutorialSys.ShowNotification("Recipe already known!", 1.5)
-					}
-					continue
-				}
-
-				// Learn the recipe
-				if !knowledge.LearnRecipe(recipeData.Recipe) {
-					// Failed to learn (recipe limit reached?)
-					if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
-						tutorialSys.ShowNotification("Cannot learn more recipes!", 2.0)
-					}
-					continue
-				}
-
-				// Successfully learned
-				// Remove recipe entity from world
-				s.world.RemoveEntity(recipeEntity.ID)
-
-				// GAP-015 REPAIR: Play pickup sound effect (different from item pickup)
-				if audioSys := s.getAudioManager(); audioSys != nil {
-					if err := audioSys.PlaySFX("spell", int64(recipeEntity.ID)); err != nil {
-						// Audio failure is non-critical, log and continue
-						if s.logger != nil {
-							s.logger.Debugf("Failed to play recipe pickup sound: %v", err)
-						}
-					}
-				}
-
-				// GAP-015 REPAIR: Show recipe learned notification
-				if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
-					notifText := fmt.Sprintf("Learned Recipe: %s", recipeData.Recipe.Name)
-					tutorialSys.ShowNotification(notifText, 3.0)
-				}
-			}
-		}
+	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
+		notifText := fmt.Sprintf("Learned Recipe: %s", recipeData.Recipe.Name)
+		tutorialSys.ShowNotification(notifText, 3.0)
 	}
 }
 

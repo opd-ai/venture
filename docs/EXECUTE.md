@@ -1,21 +1,21 @@
 # Phase: Execute Next Planned Phase
 
 ## OBJECTIVE
-Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass.
+Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP_ V7.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass. We have multiple `ROADMAP_V*.md` files in the codebase, choose the first unfinished item from the lowest-numbered unfinished roadmap to complete.
 
 ## EXECUTION MODE
 **Autonomous Action** - Implement the Phase immediately with full testing and documentation.
 
 ## CONTEXT
 - **Project**: Venture (Go 1.24+, Ebiten 2.9) - Procedural action-RPG with ECS architecture
-- **Current Phase**: Phase 9 Post-Beta Enhancement (see docs/ROADMAP.md)
+- **Current Version**: 3.0.0 Production (Phases 15-20 complete);  V7.0 in progress (Phases 21-29 complete, Phase 30 status: planning)
 - **Key Constraints**: Deterministic generation (seed-based), 60 FPS target, >65% test coverage per package
 
 ## IMPLEMENTATION WORKFLOW
 
 ### 1. Analysis (Read First)
 - Check `docs/PLAN.md` for next incomplete Phase
-- If PLAN.md doesn't exist or is complete, check `docs/ROADMAP.md` 
+- If PLAN.md doesn't exist or is complete, check `docs/ROADMAP_ V7.md` for current development phases
 - Extract clear acceptance criteria and affected systems
 
 ### 2. Design (Before Coding)
@@ -50,14 +50,14 @@ Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) 
 - [ ] Test coverage >65% for affected packages
 - [ ] No circular dependencies, follows pkg/ hierarchy
 - [ ] Deterministic generation verified (if applicable)
-- [ ] Update PLAN.md or ROADMAP.md with completion status, avoid extra detail
+- [ ] Update PLAN.md or ROADMAP_ V7.md with completion status, avoid extra detail
 - [ ] Do not create unnecessary new `*.md` or `docs/*.md` files—update existing documentation as required by the workflow, and write excellent godoc instead.
 
 > **Checklist convention:** Mark completed items with `[x]` and incomplete items with `[ ]` for consistency.
 
 ## OUTPUT FORMAT
 Provide brief status updates:
-1. **Phase Identified**: "[Phase name from PLAN.md/ROADMAP.md]"
+1. **Phase Identified**: "[Phase name from PLAN.md/ROADMAP_ V7.md]"
 2. **Implementation**: Concise progress during work
 3. **Completion**: "✅ [Phase] complete. Coverage: X%. Tests passing."
 
@@ -75,4 +75,4 @@ Provide brief status updates:
 - **Logging**: Use structured logging with logrus (see pkg/logging/)
 - **No Asset Files**: All content procedurally generated at runtime
 - **Replace, Don't Accumulate**: When a system/technique is completely replaced (e.g., improved sprites, better generation algorithms), remove the old implementation entirely without backward compatibility concerns. Only keep code that still serves a purpose.
-	- *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.
+    - *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.

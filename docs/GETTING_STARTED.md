@@ -96,7 +96,8 @@ Start the client directly to play solo:
 **Options:**
 - `-seed`: Set world seed (default: random)
 - `-genre`: Choose theme (fantasy, scifi, horror, cyberpunk, postapoc)
-- `-width`/`-height`: Set screen resolution
+- `-width`/`-height`: Set screen resolution (default: 1920x1080, supported: 1280x720, 1920x1080, 2560x1440, 3840x2160)
+- `-fullscreen`: Start in fullscreen mode (default: windowed)
 - `-enable-lighting`: Enable/disable dynamic lighting system (enabled by default, enhances atmosphere)
 - `-verbose`: Enable detailed logging
 - `-profile`: Enable performance profiling
@@ -170,8 +171,11 @@ For persistent servers or remote hosting, use a dedicated server:
 # Set world seed and genre
 ./venture-client -seed 42 -genre fantasy
 
-# Adjust screen size
-./venture-client -width 1280 -height 720
+# Adjust screen size and fullscreen mode
+./venture-client -width 2560 -height 1440 -fullscreen
+
+# Use 4K resolution
+./venture-client -width 3840 -height 2160
 
 # Enable verbose logging
 ./venture-client -verbose
@@ -269,7 +273,7 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
+**Client:** `-width`, `-height`, `-fullscreen`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
 **Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
 
 **V3.0 Weather Options:**

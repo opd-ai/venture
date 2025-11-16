@@ -193,13 +193,13 @@ This release is 100% backward compatible:
 - Updated `docs/USER_MANUAL.md` with commerce and crafting sections
 - Updated `README.md` with new control bindings
 - Created `docs/RELEASE_NOTES_V1.1.md` (this file)
-- Updated `docs/ROADMAP.md` to reflect Phase 9 completion
+- Updated development roadmap documentation
 
 ---
 
 ## 🙏 Acknowledgments
 
-- Community beta testers for feedback on Phase 9 features
+- Community beta testers for Phase 9 features
 - GitHub Copilot for code assistance and analysis
 - Ebiten contributors for the solid game engine foundation
 

@@ -79,6 +79,39 @@
 //	// Eyes: 2×1 pixels, Mouth: 2×1 pixels
 //	// Perfect for player characters and important NPCs
 //
+// # Phase 45: Enhanced 64x64 Sprite Templates
+//
+// Phase 45 introduces high-detail 64x64 sprite templates for 1920x1080 resolution.
+// These templates provide superior anatomical accuracy with improved proportions:
+// head 12%, torso 40%, legs 48% (vs 30%/40%/30% for 32x32 sprites).
+// Target silhouette recognition: 0.85+ (up from 0.75).
+//
+//	// Automatically select appropriate template based on sprite size
+//	template := sprites.SelectTemplate64("humanoid", "fantasy", 64, true)
+//	// Returns Enhanced64HumanoidTemplate with detailed facial features
+//
+//	// Manual selection for specific needs
+//	template := sprites.Enhanced64HumanoidTemplate()
+//	// Head: 8×8 pixels (12%), Torso: 10×14 pixels (40%), Legs: 8×16 pixels (48%)
+//	// Arms: 12×10 pixels for wider reach and articulation
+//
+//	// Detailed variant with facial features and secondary details
+//	detailedTemplate := sprites.Detailed64HumanoidTemplate()
+//	// Includes all enhanced features PLUS:
+//	// Eyes: 4×2 pixels, Mouth: 4×2 pixels
+//	// Perfect for player characters at high resolution
+//
+//	// Other 64x64 creature templates
+//	quadruped := sprites.Enhanced64QuadrupedTemplate()
+//	// Head: 10×12 pixels, Torso: 20×14 pixels, Legs: 20×8 pixels, Tail: 8×16 pixels
+//
+//	blob := sprites.Enhanced64BlobTemplate()
+//	// Torso: 32×28 pixels (large amorphous mass), Eyes: 6×4 pixels (nucleus)
+//
+//	mechanical := sprites.Enhanced64MechanicalTemplate()
+//	// Head: 10×10 pixels (cubic sensor), Torso: 12×18 pixels (chassis)
+//	// Arms: 14×10 pixels, Legs: 10×14 pixels
+//
 // Enhanced templates provide exact pixel dimensions that remain constant regardless
 // of sprite size, ensuring consistent visual quality and improved player recognition.
 // Detailed templates add facial features for emotional expression and close-up clarity.

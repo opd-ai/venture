@@ -161,7 +161,7 @@ func (cm *ChatManager) SendMessage(senderID uint64, channel int, plaintext strin
 	}
 
 	// Check rate limit
-	if !cm.rateLimiter.CheckRateLimit(senderID, channel) {
+	if !cm.rateLimiter.CheckRateLimit(senderID, channel, state) {
 		cm.rateLimiter.RecordViolation(senderID)
 		return nil, fmt.Errorf("rate limit exceeded")
 	}
@@ -308,7 +308,8 @@ func (cm *ChatManager) validateLocalRange(senderID, recipientID uint64, localRad
 }
 
 // CheckRateLimit checks if a player can send to a channel.
-func (rl *RateLimiter) CheckRateLimit(playerID uint64, channel int) bool {
+// It checks both mute status and message rate limiting (1 message per second per channel).
+func (rl *RateLimiter) CheckRateLimit(playerID uint64, channel int, state *PlayerChatState) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -320,6 +321,14 @@ func (rl *RateLimiter) CheckRateLimit(playerID uint64, channel int) bool {
 		// Mute expired
 		delete(rl.muteExpiry, playerID)
 		delete(rl.violations, playerID)
+	}
+
+	// Check rate limit (1 message per second per channel)
+	if lastSent, exists := state.RateLimitState[channel]; exists {
+		elapsed := time.Since(lastSent)
+		if elapsed < time.Second {
+			return false
+		}
 	}
 
 	return true

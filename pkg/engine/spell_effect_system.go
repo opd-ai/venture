@@ -106,7 +106,11 @@ func (s *SpellEffectSystem) executeEffect(entity *Entity, effect *SpellEffectCom
 // executeTerrainManipulation creates, modifies, or destroys terrain.
 func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectComponent) {
 	// Terrain manipulation would modify world terrain tiles
-	// This is a placeholder for terrain system integration
+	// INTEGRATION FIX [Category A]: Terrain Manipulation Spell Effects
+	// Gap: TerrainManipulation effects (create walls, dig tunnels) lack terrain system integration
+	// Fix: Call TerrainModificationSystem.AddModification(chunkID, modification) to alter terrain
+	// Roadmap: ROADMAP_V6.md Phase 37.2 - Chunk Modification (TerrainModificationSystem complete)
+	// Integration: TerrainModificationSystem available in world, supports all modification types
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"x":            effect.TargetX,

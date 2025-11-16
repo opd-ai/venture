@@ -40,11 +40,37 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 }
 
 // TransferPlayer initiates player transfer to another server
-func (f *FederationProtocol) TransferPlayer(playerID uint64, targetServer string) error {
-	// TODO: Serialize player state
-	// TODO: Two-phase commit
-	// TODO: Rollback on failure
-	return fmt.Errorf("not implemented")
+func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) error {
+	// Create session token for authentication
+	token, err := authMgr.CreateSessionToken(playerID, f.serverID)
+	if err != nil {
+		return fmt.Errorf("failed to create session token: %w", err)
+	}
+
+	// Prepare transfer
+	transfer, err := transferMgr.PrepareTransfer(playerID, world, targetServer)
+	if err != nil {
+		return fmt.Errorf("failed to prepare transfer: %w", err)
+	}
+
+	// Validate state
+	if err := transferMgr.ValidatePlayerState(transfer.PlayerState); err != nil {
+		transferMgr.RollbackTransfer(playerID, "validation failed")
+		return fmt.Errorf("invalid player state: %w", err)
+	}
+
+	// Begin transfer phase
+	if err := transferMgr.BeginTransfer(playerID, f.serverID); err != nil {
+		transferMgr.RollbackTransfer(playerID, "begin transfer failed")
+		return fmt.Errorf("failed to begin transfer: %w", err)
+	}
+
+	// TODO: Send transfer request to target server via network
+	// TODO: Wait for confirmation or timeout
+	// For now, preparation succeeds but actual network send is not implemented
+	_ = token
+
+	return nil
 }
 
 // PortalSystem manages cross-server portals
@@ -80,7 +106,7 @@ func (s *PortalSystem) Update(deltaTime float64) {
 }
 
 // ActivatePortal transfers a player through a portal
-func (s *PortalSystem) ActivatePortal(playerID, portalID uint64) error {
+func (s *PortalSystem) ActivatePortal(playerID, portalID uint64, authMgr *AuthManager, transferMgr *TransferManager) error {
 	portal, ok := s.world.GetEntity(portalID)
 	if !ok || portal == nil {
 		return fmt.Errorf("portal not found")
@@ -93,13 +119,20 @@ func (s *PortalSystem) ActivatePortal(playerID, portalID uint64) error {
 
 	portalComp := portalCompRaw.(*engine.PortalComponent)
 
+	// Check if player meets requirements
+	if portalComp.RequiredItem != "" {
+		if err := s.checkRequiredItem(playerID, portalComp.RequiredItem); err != nil {
+			return fmt.Errorf("portal requirement not met: %w", err)
+		}
+	}
+
 	if portalComp.DestinationServer == "local" {
 		// Local teleport
 		return s.localTeleport(playerID, portalComp.DestinationX, portalComp.DestinationY)
 	}
 
 	// Cross-server transfer
-	return s.federation.TransferPlayer(playerID, portalComp.DestinationServer)
+	return s.federation.TransferPlayer(playerID, s.world, portalComp.DestinationServer, authMgr, transferMgr)
 }
 
 func (s *PortalSystem) localTeleport(playerID uint64, destX, destY float64) error {
@@ -118,4 +151,25 @@ func (s *PortalSystem) localTeleport(playerID uint64, destX, destY float64) erro
 	posComp.Y = destY
 
 	return nil
+}
+
+func (s *PortalSystem) checkRequiredItem(playerID uint64, itemName string) error {
+	player, ok := s.world.GetEntity(playerID)
+	if !ok || player == nil {
+		return fmt.Errorf("player not found")
+	}
+
+	invCompRaw, ok := player.GetComponent("inventory")
+	if !ok {
+		return fmt.Errorf("player has no inventory")
+	}
+
+	inv := invCompRaw.(*engine.InventoryComponent)
+	for _, item := range inv.Items {
+		if item.Name == itemName {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("required item not found: %s", itemName)
 }

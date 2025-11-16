@@ -2,7 +2,7 @@
 
 Developer documentation for the Venture procedural action-RPG engine.
 
-**Version:** 3.0  
+**Version:** 5.0  
 **Last Updated:** November 2025
 
 **New to development?** Start with [Development Guide](DEVELOPMENT.md) and [Contributing Guide](CONTRIBUTING.md).
@@ -19,6 +19,7 @@ Developer documentation for the Venture procedural action-RPG engine.
 6. [Networking](#networking)
 7. [Save/Load System](#saveload-system)
 8. [UI Systems](#ui-systems)
+9. [Social Systems (v5.0)](#social-systems-v50)
 
 ---
 
@@ -643,5 +644,354 @@ See `examples/` directory for standalone demos:
 - [User Manual](USER_MANUAL.md) - Gameplay guide
 - [Performance Guide](PERFORMANCE.md) - Optimization
 - [Testing Guide](TESTING.md) - Test infrastructure
+- [Social Systems Guide](SOCIAL_SYSTEMS.md) - Chat, NPC dialog, trading (v5.0)
+- [Migration Guide v5.0](MIGRATION_V5.md) - Upgrade from v4.0
 
 **Repository:** https://github.com/opd-ai/venture
+
+---
+
+## Social Systems (v5.0)
+
+### Package: `github.com/opd-ai/venture/pkg/network`
+
+Multiplayer communication and E2E encryption.
+
+#### Chat System
+
+**ChatComponent** tracks chat state for player entities.
+
+```go
+// Create chat component
+chat := engine.NewChatComponent()
+
+// Add message
+msg := engine.ChatMessage{
+    ID:         "msg-uuid",
+    SenderID:   playerEntity.ID,
+    SenderName: "Alice",
+    Channel:    engine.ChatGlobal,
+    Content:    "Hello world!",
+    Timestamp:  time.Now(),
+}
+chat.AddMessage(msg)
+
+// Check rate limiting
+canSend := chat.CanSendMessage(engine.ChatGlobal, time.Now())
+
+// Apply mute for rate limit violation
+chat.ApplyMute(time.Now(), 3) // 3 violations = 120s mute
+```
+
+**Key Methods:**
+- `NewChatComponent()` - Create with default settings
+- `AddMessage(msg)` - Add message to history (max 100)
+- `MarkAllRead()` - Clear unread count
+- `CanSendMessage(channel, now)` - Check rate limit
+- `ApplyMute(now, count)` - Apply progressive mute (30s → 60s → 120s)
+- `IsMuted(now)` - Check if currently muted
+- `ActivateMegaphone()` - Extend local radius to 30 tiles
+- `ActivateWalkieTalkie()` - Unlimited range for local chat
+
+**Chat Channels:**
+```go
+engine.ChatGlobal   // All players, 3s cooldown
+engine.ChatLocal    // 10-tile radius, 1s cooldown
+engine.ChatParty    // Party members, 0.5s cooldown
+engine.ChatWhisper  // Direct message, 0.5s cooldown
+```
+
+#### Encryption System
+
+**E2E encryption** using Diffie-Hellman + AES-256-GCM.
+
+```go
+// Generate key pair (2048-bit DH)
+keyPair := crypto.GenerateKeyPair()
+
+// Perform key exchange
+sharedSecret := crypto.ComputeSharedSecret(keyPair.Private, partnerPublicKey)
+
+// Encrypt message
+ciphertext, err := crypto.EncryptMessage(plaintext, sharedSecret)
+
+// Decrypt message
+plaintext, err := crypto.DecryptMessage(ciphertext, sharedSecret)
+```
+
+**Performance:**
+- Key generation: ~50ms (one-time per connection)
+- Encryption: ~50µs per message
+- Decryption: ~40µs per message
+
+**Security:**
+- 2048-bit DH modulus (RFC 3526 Group 14)
+- AES-256-GCM authenticated encryption
+- Random 12-byte IV per message
+- SHA-256 for key derivation
+
+#### ChatSystem
+
+Processes chat messages and enforces rate limits.
+
+```go
+// Create chat system
+chatSystem := engine.NewChatSystem(world)
+
+// Enable/disable system
+chatSystem.Enable()
+chatSystem.Disable()
+
+// Update (called every frame)
+chatSystem.Update(deltaTime)
+```
+
+**Responsibilities:**
+- Message delivery (global, local, party, whisper)
+- Range checking for local chat
+- Rate limit enforcement
+- Mute application
+- Message encryption/decryption coordination
+
+### Package: `github.com/opd-ai/venture/pkg/procgen/dialog`
+
+NPC dialog generation using Markov chains.
+
+#### NPCDialogComponent
+
+Tracks conversation state for NPCs.
+
+```go
+// Create NPC dialog component
+npcDialog := &engine.NPCDialogComponent{
+    NPCPersonality: &dialog.Personality{
+        Friendliness: 0.7,
+        Formality:    0.5,
+        Verbosity:    0.8,
+    },
+    GenreID:           "fantasy",
+    DeterministicMode: false,
+}
+
+// Component methods
+npcDialog.Type() // Returns "npcdialog"
+```
+
+**Key Fields:**
+- `NPCPersonality` - Personality traits (friendliness, formality, verbosity)
+- `ConversationHistory` - Last 10 player inputs
+- `ResponseHistory` - Last 10 NPC responses
+- `DialogState` - Current state ("greeting", "trading", "questing", etc.)
+- `TopicMemory` - Topics discussed (avoid repetition)
+- `Generator` - Cached Markov generator
+- `DeterministicMode` - Use templates instead of Markov
+
+#### Markov Generator
+
+**MarkovGenerator** creates dynamic dialog responses.
+
+```go
+// Create generator
+gen := dialog.NewMarkovGenerator(genreID, order)
+
+// Train on corpus (automatic on creation)
+// Corpus loaded from pkg/procgen/dialog/corpora/<genre>.txt
+
+// Generate response
+response, err := gen.Generate(seed, playerInput, personality)
+```
+
+**Configuration:**
+- `order` - Markov chain order (2-3 recommended)
+- `genreID` - Determines corpus ("fantasy", "scifi", "horror", etc.)
+- `personality` - Influences word selection probabilities
+
+**Performance:**
+- Generation: <50ms per response
+- Corpus loading: ~100ms (one-time per genre)
+- Memory: ~50KB per trained generator
+
+#### NPCDialogSystem
+
+Generates NPC responses and manages conversation state.
+
+```go
+// Create dialog system
+dialogSystem := engine.NewNPCDialogSystem()
+
+// Update (processes dialog requests)
+dialogSystem.Update(deltaTime)
+```
+
+**Features:**
+- Automatic Markov generator creation
+- Personality-based response variation
+- Conversation history tracking
+- Genre-appropriate vocabulary
+- Fallback to templates on failure
+
+### Package: `github.com/opd-ai/venture/pkg/network/trade`
+
+Item trading with two-phase commit protocol.
+
+#### TradeComponent
+
+Tracks trading state and history.
+
+```go
+// TradeComponent fields
+type TradeComponent struct {
+    ActiveTrade  *TradeProposal // Current trade (nil if none)
+    TradeHistory []TradeRecord  // Completed trades
+    TrustScore   float64        // 0.0-1.0 (default 0.5)
+}
+
+// Component method
+component.Type() // Returns "trade"
+```
+
+#### TradeProposal
+
+Represents an active trade proposal.
+
+```go
+type TradeProposal struct {
+    ProposerID     uint64   // Entity proposing trade
+    RecipientID    uint64   // Entity receiving proposal
+    OfferedItems   []string // Item IDs offered
+    RequestedItems []string // Item IDs requested
+    Status         string   // "pending", "accepted", "rejected", etc.
+    ProposalTime   int64    // Unix timestamp
+    FailureReason  string   // Reason if failed
+}
+```
+
+**Statuses:**
+- `"pending"` - Awaiting recipient response
+- `"accepted"` - Recipient accepted, awaiting server validation
+- `"rejected"` - Recipient declined
+- `"committed"` - Server completed transfer
+- `"cancelled"` - Proposer cancelled
+- `"failed"` - Validation failed (proximity, trust, ownership)
+
+#### Trade System
+
+**Two-phase commit protocol:**
+1. **Propose**: `CreateProposal(proposer, recipient, offered, requested)`
+2. **Review**: `AcceptProposal()` / `RejectProposal()`
+3. **Validate**: Server checks proximity, trust, ownership
+4. **Commit**: `CommitTrade()` atomically transfers items
+5. **Rollback**: `RollbackTrade(reason)` if any failure
+
+**Trust Mechanics:**
+```go
+// Update trust after trade
+UpdateTrust(success bool) {
+    if success {
+        trustScore += 0.05 // Max 1.0
+    } else {
+        trustScore -= 0.1  // Min 0.0
+    }
+}
+
+// Check trust requirements
+CanTradeItem(rarity string) bool {
+    if trustScore > 0.8 {
+        return true // Can trade any rarity
+    }
+    if trustScore < 0.3 {
+        return rarity == "Common" || rarity == "Uncommon"
+    }
+    return rarity != "Legendary"
+}
+```
+
+**Proximity Validation:**
+- Initiate: Within 5 tiles
+- During trade: Max 10 tiles
+- Server uses lag compensation for fair checks
+
+### Package: `github.com/opd-ai/venture/pkg/rendering/ui`
+
+Social UI components.
+
+#### ChatUI
+
+Renders chat interface with message history and input field.
+
+```go
+// Create chat UI
+chatUI := ui.NewChatUI(x, y, width, height)
+
+// Set colors
+chatUI.SetColors(bg, text, inputBG, border)
+
+// Add message
+msg := ui.ChatMessage{
+    SenderName: "Bob",
+    Content:    "Hello!",
+    Channel:    0, // Global
+    Timestamp:  time.Now(),
+    IsSystem:   false,
+}
+chatUI.AddMessage(msg)
+
+// Update and draw
+chatUI.Update() // Handle input
+chatUI.Draw(screen) // Render
+
+// Input handling
+if chatUI.IsInputActive() {
+    text := chatUI.GetInputText()
+    // Process text
+}
+```
+
+**Features:**
+- 4 channel tabs (Global, Local, Party, Whisper)
+- Message history (last 100 messages)
+- Scrolling support
+- Unread count indicators
+- Cursor blinking for input field
+- Keyboard shortcuts
+
+#### TradeUI
+
+Renders trade proposal and acceptance interface.
+
+```go
+// Create trade UI
+tradeUI := ui.NewTradeUI(x, y, width, height)
+
+// Set proposal
+proposal := &ui.TradeProposal{
+    ProposerName:   "Alice",
+    RecipientName:  "Bob",
+    OfferedItems:   []ui.TradeItem{...},
+    RequestedItems: []ui.TradeItem{...},
+    Status:         "pending",
+    ProposalTime:   time.Now(),
+}
+tradeUI.SetProposal(proposal)
+
+// Update and draw
+tradeUI.Update()
+tradeUI.Draw(screen)
+
+// Check for button clicks
+if tradeUI.GetClickedButton() == "accept" {
+    // Accept trade
+}
+```
+
+**Features:**
+- Two-panel item display (offered vs. requested)
+- Rarity color indicators
+- Accept/Reject buttons
+- Status messages (accepted, rejected, failed, etc.)
+- Hover effects
+- Automatic visibility management
+
+---
+
+## Additional Resources

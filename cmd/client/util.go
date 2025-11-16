@@ -25,6 +25,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
+	"github.com/opd-ai/venture/pkg/procgen/story"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
@@ -175,9 +176,36 @@ func (w *achievementSystemWrapper) Update(entities []*engine.Entity, deltaTime f
 	w.system.Update(deltaTime)
 }
 
+// V5.0 System Wrappers (Social & Communication)
+
+type chatSystemWrapper struct {
+	system *engine.ChatSystem
+}
+
+func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type mailSystemWrapper struct {
+	system *engine.MailSystem
+}
+
+func (w *mailSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type courierSystemWrapper struct {
+	system *engine.CourierSystem
+}
+
+func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
-	width            = flag.Int("width", 800, "Screen width")
-	height           = flag.Int("height", 600, "Screen height")
+	width            = flag.Int("width", 1920, "Screen width (1280, 1920, 2560, 3840)")
+	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")
+	fullscreen       = flag.Bool("fullscreen", false, "Start in fullscreen mode")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	enableLighting   = flag.Bool("enable-lighting", true, "Enable dynamic lighting system")
@@ -1835,4 +1863,80 @@ func generateBookshelfColor(genreID string, seed int64) color.RGBA {
 		B: genreVariation(baseB, 20),
 		A: 255,
 	}
+}
+
+// spawnStoryFragments generates and spawns story fragments in the terrain (Phase 30).
+func spawnStoryFragments(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	storyGen := story.NewFragmentGenerator()
+
+	// Generate story sequence
+	storyResult, err := storyGen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate story: %w", err)
+	}
+
+	sequence, ok := storyResult.(*story.StorySequence)
+	if !ok {
+		return 0, fmt.Errorf("story generator returned invalid result type")
+	}
+
+	// Validate story quality
+	if err := storyGen.Validate(sequence); err != nil {
+		logger.WithError(err).Warn("generated story failed validation, using anyway")
+	}
+
+	// Register story series with discovery system if available
+	// We'll set this after system initialization when it's available
+	// For now, the discovery system will auto-detect series by counting fragments
+
+	// Spawn fragment entities in terrain
+	spawned := 0
+	for _, fragment := range sequence.Fragments {
+		// Create entity for fragment
+		entity := world.CreateEntity()
+
+		// Add position component (fragment.Location is already set)
+		posComp := &engine.PositionComponent{
+			X: fragment.Location.X,
+			Y: fragment.Location.Y,
+		}
+		entity.AddComponent(posComp)
+
+		// Add story fragment component
+		fragComp := &engine.StoryFragmentComponent{
+			Fragment:    fragment,
+			Discovered:  false,
+			SeriesID:    sequence.SeriesID,
+			SequenceNum: fragment.SequenceNum,
+		}
+		entity.AddComponent(fragComp)
+
+		// Add sprite component for visual representation
+		spriteComp := &engine.EbitenSprite{
+			Image:   nil, // Will be created by rendering system
+			Width:   16,  // Small sprite for fragments
+			Height:  16,
+			Visible: true,
+			Layer:   5, // Lower layer than player
+		}
+		entity.AddComponent(spriteComp)
+
+		// Add collider for interaction detection
+		colliderComp := &engine.ColliderComponent{
+			Width:  16.0,
+			Height: 16.0,
+		}
+		entity.AddComponent(colliderComp)
+
+		spawned++
+	}
+
+	logger.WithFields(logrus.Fields{
+		"seriesID":      sequence.SeriesID,
+		"theme":         sequence.Theme,
+		"fragmentCount": len(sequence.Fragments),
+		"spawned":       spawned,
+	}).Debug("spawned story fragments")
+
+	return spawned, nil
 }

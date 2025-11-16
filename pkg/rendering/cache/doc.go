@@ -4,16 +4,23 @@
 // specifically designed for caching procedurally generated sprites, animation frames,
 // and composite images. This reduces redundant generation and improves performance.
 //
+// Phase 44 enhancements:
+//   - Support for 64x64 sprites (16KB each)
+//   - MemoryMonitor for automatic cleanup (<300MB limit)
+//   - PreGenerator for batch sprite pre-generation
+//   - Enhanced statistics and monitoring
+//
 // Key features:
 //   - LRU eviction policy to manage memory usage
 //   - Size-based limits (configurable max cache size in bytes)
 //   - Thread-safe operations with fine-grained locking
 //   - Cache hit/miss statistics for monitoring
-//   - Configurable eviction callbacks for cleanup
+//   - Memory monitoring with soft/hard limits
+//   - Batch pre-generation for cache warming
 //
-// Usage:
+// Basic Usage:
 //
-//	cache := cache.NewSpriteCache(200 * 1024 * 1024) // 200MB limit
+//	cache := cache.NewSpriteCache(300 * 1024 * 1024) // 300MB limit
 //	key := cache.GenerateKey(seed, "idle", 0)
 //
 //	// Try to get from cache
@@ -28,4 +35,32 @@
 //	// Check statistics
 //	stats := cache.Stats()
 //	fmt.Printf("Hit rate: %.2f%%\n", stats.HitRate()*100)
+//
+// Memory Monitoring (Phase 44):
+//
+//	monitor := cache.NewMemoryMonitor(cache)
+//	monitor.SetLimits(250*1024*1024, 300*1024*1024) // 250MB soft, 300MB hard
+//	monitor.Start()
+//	defer monitor.Stop()
+//
+//	// Check health
+//	if monitor.IsHealthy() {
+//	    fmt.Printf("Cache usage: %.1f%%\n", monitor.UsagePercentage())
+//	}
+//
+// Pre-Generation (Phase 44):
+//
+//	pregen := cache.NewPreGenerator(cache)
+//
+//	// Queue sprites for pre-generation
+//	for i := 0; i < 100; i++ {
+//	    key := cache.GenerateKey(int64(i), "idle", 0)
+//	    pregen.Queue(key, func() (*ebiten.Image, error) {
+//	        return generateSprite(i), nil
+//	    })
+//	}
+//
+//	// Generate in batch
+//	count := pregen.Generate()
+//	fmt.Printf("Pre-generated %d sprites\n", count)
 package cache

@@ -119,7 +119,7 @@ func main() {
 
 	// Display content
 	if *verbose {
-		fmt.Println("\n=== BOOK CONTENT ===\n")
+		fmt.Println("\n=== BOOK CONTENT ===")
 		for i, page := range bookComp.Content {
 			fmt.Printf("\n--- Page %d ---\n\n", i+1)
 			fmt.Println(page)

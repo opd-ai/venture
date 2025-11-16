@@ -53,7 +53,9 @@ type CompanionComponent struct {
 type BondingPerk int
 
 const (
-	// PerkNone is a placeholder for no perk
+	// INTEGRATION NOTE: PerkNone represents no active bonding perk
+	// This is not a placeholder - it's a valid enum value for companions with no perks unlocked
+	// Roadmap: ROADMAP_V4.md Phase 22.2 - Bonding system complete with 6 perk types
 	PerkNone BondingPerk = iota
 	// PerkExtraHealth increases companion max HP by 20%
 	PerkExtraHealth

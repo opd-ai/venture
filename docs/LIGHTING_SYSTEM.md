@@ -318,7 +318,7 @@ if *enableLighting {
 - **Components**: `pkg/engine/lighting_components.go`
 - **System**: `pkg/engine/lighting_system.go`
 - **Tests**: `pkg/engine/lighting_components_test.go`, `pkg/engine/lighting_system_test.go`
-- **Roadmap**: `docs/ROADMAP.md` (Section 5.3)
+- **Roadmap**: `docs/ROADMAP_V3.md` (Phase 17 - Lighting & Visual Effects)
 - **Architecture**: `docs/ARCHITECTURE.md`
 
 ---

@@ -66,7 +66,7 @@ Create `/AUDIT.md` in the project root with this structure:
 
 ```markdown
 # Venture UI Audit Report
-**Game**: Venture v[Phase 9] - Procedural Multiplayer Action-RPG
+**Game**: Venture v3.0.0 Production - Procedural Multiplayer Action-RPG
 **Audit Date**: [ISO 8601 format]
 **Auditor**: GitHub Copilot
 **Technology**: Go 1.24+ / Ebiten 2.9.3 / ECS Architecture

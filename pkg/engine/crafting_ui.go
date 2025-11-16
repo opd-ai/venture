@@ -154,7 +154,47 @@ func (ui *CraftingUI) Toggle() {
 // Handles dual-exit navigation (R key + ESC), recipe selection (mouse/keyboard),
 // and crafting initiation (ENTER/click).
 func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
-	// Update crafting message timer
+	ui.updateMessageTimer(deltaTime)
+
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Close()
+		}
+		return
+	}
+
+	if !ui.visible || ui.playerEntity == nil {
+		return
+	}
+
+	if ui.checkCraftingInProgress() {
+		return
+	}
+
+	recipeList, ok := ui.getPlayerRecipes()
+	if !ok {
+		return
+	}
+
+	ui.handleSearchFilterInput()
+
+	recipeList = ui.filterAndSortRecipes(recipeList)
+	if len(recipeList) == 0 {
+		ui.showMessage("No recipes match your search/filter")
+		return
+	}
+
+	windowWidth, windowHeight, maxVisibleRecipes := ui.calculateVisibleArea()
+	ui.handleMouseInput(recipeList, windowWidth, windowHeight, maxVisibleRecipes)
+	ui.handleKeyboardNavigation(recipeList, maxVisibleRecipes)
+	ui.handleMouseWheelScrolling(recipeList, maxVisibleRecipes)
+	ui.handleCraftingInitiation(recipeList)
+}
+
+// updateMessageTimer decrements the crafting message timer and clears the message when expired.
+func (ui *CraftingUI) updateMessageTimer(deltaTime float64) {
 	if ui.craftingMessageTime > 0 {
 		ui.craftingMessageTime -= deltaTime
 		if ui.craftingMessageTime < 0 {
@@ -162,44 +202,34 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 			ui.craftingMessage = ""
 		}
 	}
+}
 
-	// Standardized dual-exit menu navigation: toggle key (R) OR Escape
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
-		if shouldToggle {
-			ui.Toggle()
-		} else {
-			ui.Close()
-		}
-		return // Don't process other input on the same frame as toggle/close
-	}
-
-	if !ui.visible || ui.playerEntity == nil {
-		return
-	}
-
-	// Check if player is currently crafting
+// checkCraftingInProgress checks if player is currently crafting and updates progress state.
+func (ui *CraftingUI) checkCraftingInProgress() bool {
 	if progressComp, ok := ui.playerEntity.GetComponent("crafting_progress"); ok {
 		if progress, ok := progressComp.(*CraftingProgressComponent); ok {
 			if progress != nil {
 				ui.showingProgress = true
-				return // Don't allow new crafts while one is in progress
+				return true
 			}
 		}
 	}
 	ui.showingProgress = false
+	return false
+}
 
-	// Get player's known recipes
+// getPlayerRecipes retrieves and validates the player's known recipes.
+func (ui *CraftingUI) getPlayerRecipes() ([]*Recipe, bool) {
 	knowledgeComp, hasKnowledge := ui.playerEntity.GetComponent("recipe_knowledge")
 	if !hasKnowledge {
 		ui.showMessage("You don't know any recipes yet")
-		return
+		return nil, false
 	}
 	knowledge, ok := knowledgeComp.(*RecipeKnowledgeComponent)
 	if !ok {
-		return
+		return nil, false
 	}
 
-	// Convert map to slice for ordered iteration
 	var recipeList []*Recipe
 	for _, recipe := range knowledge.KnownRecipes {
 		recipeList = append(recipeList, recipe)
@@ -207,89 +237,105 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 
 	if len(recipeList) == 0 {
 		ui.showMessage("You don't know any recipes yet")
-		return
+		return nil, false
 	}
 
-	// Issue #12 FIX: Handle search/filter input
-	// Tab key cycles through categories: All -> Potion -> Enchanting -> MagicItem -> All
+	return recipeList, true
+}
+
+// handleSearchFilterInput processes keyboard input for search and filter controls.
+func (ui *CraftingUI) handleSearchFilterInput() {
+	ui.handleCategoryFilter()
+	ui.handleSortMode()
+	ui.handleCraftableFilter()
+	ui.handleBackspace()
+	ui.handleTextInput()
+}
+
+// handleCategoryFilter cycles through recipe category filters.
+func (ui *CraftingUI) handleCategoryFilter() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 		ui.filterCategory++
 		if ui.filterCategory > RecipeMagicItem {
-			ui.filterCategory = -1 // Back to "All"
+			ui.filterCategory = -1
 		}
 		ui.scrollOffset = 0
 		ui.selectedRecipeIndex = -1
 	}
+}
 
-	// F key cycles sort modes: Name -> Tier -> Craftable -> Name
+// handleSortMode cycles through recipe sort modes.
+func (ui *CraftingUI) handleSortMode() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		ui.sortMode = (ui.sortMode + 1) % 3
 		ui.scrollOffset = 0
 	}
+}
 
-	// C key toggles craftable-only filter
+// handleCraftableFilter toggles craftable-only recipe filter.
+func (ui *CraftingUI) handleCraftableFilter() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		ui.showOnlyCrafted = !ui.showOnlyCrafted
 		ui.scrollOffset = 0
 		ui.selectedRecipeIndex = -1
 	}
+}
 
-	// Backspace removes last character from search
+// handleBackspace removes last character from search query.
+func (ui *CraftingUI) handleBackspace() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
 		if len(ui.searchQuery) > 0 {
 			ui.searchQuery = ui.searchQuery[:len(ui.searchQuery)-1]
 			ui.scrollOffset = 0
 		}
 	}
+}
 
-	// Handle text input for search (only letters, numbers, spaces)
+// handleTextInput processes text input for recipe search.
+func (ui *CraftingUI) handleTextInput() {
 	inputChars := ebiten.AppendInputChars(nil)
 	for _, char := range inputChars {
-		// Allow alphanumeric and space
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == ' ' {
-			if len(ui.searchQuery) < 30 { // Max 30 chars
-				ui.searchQuery += string(char)
-				ui.scrollOffset = 0
-			}
+		if ui.isValidSearchChar(char) && len(ui.searchQuery) < 30 {
+			ui.searchQuery += string(char)
+			ui.scrollOffset = 0
 		}
 	}
+}
 
-	// Apply search/filter/sort to get filtered recipe list
-	recipeList = ui.filterAndSortRecipes(recipeList)
+// isValidSearchChar checks if a character is valid for search input.
+func (ui *CraftingUI) isValidSearchChar(char rune) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+		(char >= '0' && char <= '9') || char == ' '
+}
 
-	if len(recipeList) == 0 {
-		ui.showMessage("No recipes match your search/filter")
-		return
-	}
-
-	// Calculate visible area
+// calculateVisibleArea computes the window dimensions and maximum visible recipes.
+func (ui *CraftingUI) calculateVisibleArea() (int, int, int) {
 	windowWidth := 800
 	windowHeight := 600
-	windowX := (ui.screenWidth - windowWidth) / 2
-	windowY := (ui.screenHeight - windowHeight) / 2
-
-	listAreaY := windowY + 120           // Below header
-	listAreaHeight := windowHeight - 180 // Leave space for footer
+	listAreaHeight := windowHeight - 180
 	maxVisibleRecipes := listAreaHeight / ui.listItemHeight
+	return windowWidth, windowHeight, maxVisibleRecipes
+}
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
+// handleMouseInput processes mouse and touch input for recipe selection.
+func (ui *CraftingUI) handleMouseInput(recipeList []*Recipe, windowWidth, windowHeight, maxVisibleRecipes int) {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	mousePressed := IsTouchOrMouseJustPressed()
 
-	// Check if mouse is over recipe list
+	windowX := (ui.screenWidth - windowWidth) / 2
+	windowY := (ui.screenHeight - windowHeight) / 2
+	listAreaY := windowY + 120
+	listAreaHeight := windowHeight - 180
+
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
 		mouseY >= listAreaY && mouseY < listAreaY+listAreaHeight {
 
-		// Calculate which recipe is hovered
 		relY := mouseY - listAreaY
 		listIndex := relY / ui.listItemHeight
 		recipeIndex := ui.scrollOffset + listIndex
 
 		if recipeIndex >= 0 && recipeIndex < len(recipeList) {
 			ui.hoveredRecipeIndex = recipeIndex
-
-			// Select recipe on click
 			if mousePressed {
 				ui.selectedRecipeIndex = recipeIndex
 			}
@@ -297,44 +343,55 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	} else {
 		ui.hoveredRecipeIndex = -1
 	}
+}
 
-	// Handle keyboard navigation
+// handleKeyboardNavigation processes arrow key input for recipe list navigation.
+func (ui *CraftingUI) handleKeyboardNavigation(recipeList []*Recipe, maxVisibleRecipes int) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
-		if ui.selectedRecipeIndex > 0 {
-			ui.selectedRecipeIndex--
-			// Scroll up if needed
-			if ui.selectedRecipeIndex < ui.scrollOffset {
-				ui.scrollOffset = ui.selectedRecipeIndex
-			}
-		}
+		ui.handleArrowUp()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
-		if ui.selectedRecipeIndex < len(recipeList)-1 {
-			ui.selectedRecipeIndex++
-			// Scroll down if needed
-			if ui.selectedRecipeIndex >= ui.scrollOffset+maxVisibleRecipes {
-				ui.scrollOffset = ui.selectedRecipeIndex - maxVisibleRecipes + 1
-			}
-		} else if ui.selectedRecipeIndex == -1 && len(recipeList) > 0 {
-			// Start selection at first recipe
-			ui.selectedRecipeIndex = 0
+		ui.handleArrowDown(recipeList, maxVisibleRecipes)
+	}
+}
+
+// handleArrowUp moves selection up and adjusts scroll position.
+func (ui *CraftingUI) handleArrowUp() {
+	if ui.selectedRecipeIndex > 0 {
+		ui.selectedRecipeIndex--
+		if ui.selectedRecipeIndex < ui.scrollOffset {
+			ui.scrollOffset = ui.selectedRecipeIndex
 		}
 	}
+}
 
-	// Handle scrolling with mouse wheel
+// handleArrowDown moves selection down and adjusts scroll position.
+func (ui *CraftingUI) handleArrowDown(recipeList []*Recipe, maxVisibleRecipes int) {
+	if ui.selectedRecipeIndex < len(recipeList)-1 {
+		ui.selectedRecipeIndex++
+		if ui.selectedRecipeIndex >= ui.scrollOffset+maxVisibleRecipes {
+			ui.scrollOffset = ui.selectedRecipeIndex - maxVisibleRecipes + 1
+		}
+	} else if ui.selectedRecipeIndex == -1 && len(recipeList) > 0 {
+		ui.selectedRecipeIndex = 0
+	}
+}
+
+// handleMouseWheelScrolling processes mouse wheel input for list scrolling.
+func (ui *CraftingUI) handleMouseWheelScrolling(recipeList []*Recipe, maxVisibleRecipes int) {
 	_, wheelY := ebiten.Wheel()
 	if wheelY > 0 && ui.scrollOffset > 0 {
 		ui.scrollOffset--
 	} else if wheelY < 0 && ui.scrollOffset < len(recipeList)-maxVisibleRecipes {
 		ui.scrollOffset++
 	}
+}
 
-	// Handle crafting initiation (ENTER key or double-click)
-	if ui.selectedRecipeIndex >= 0 {
-		if ui.selectedRecipeIndex < len(recipeList) {
-			if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-				ui.attemptCraft(recipeList[ui.selectedRecipeIndex])
-			}
+// handleCraftingInitiation processes Enter/Space key input to initiate crafting.
+func (ui *CraftingUI) handleCraftingInitiation(recipeList []*Recipe) {
+	if ui.selectedRecipeIndex >= 0 && ui.selectedRecipeIndex < len(recipeList) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			ui.attemptCraft(recipeList[ui.selectedRecipeIndex])
 		}
 	}
 }

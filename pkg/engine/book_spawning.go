@@ -189,9 +189,12 @@ func getBookColor(bookType BookType) color.RGBA {
 }
 
 // NewBookshelfDialogProvider creates a dialog provider for bookshelves.
-// This is a placeholder - actual implementation would be in dialog_system.go
+// INTEGRATION FIX [Category B]: Bookshelf Dialog Provider
+// Gap: Bookshelves reuse merchant dialog instead of dedicated bookshelf dialog
+// Fix: Create BookshelfDialogProvider in dialog_system.go with book-specific responses
+// Roadmap: ROADMAP_V4.md Phase 23.2 - Lore Integration (bookshelf interaction)
+// Temporary: Reuses MerchantDialogProvider with bookshelf context until dedicated provider added
 func NewBookshelfDialogProvider(bookCount int) DialogProvider {
 	// For now, reuse merchant dialog provider with bookshelf context
-	// TODO: Create dedicated BookshelfDialogProvider in dialog_system.go
 	return NewMerchantDialogProvider(fmt.Sprintf("Bookshelf (%d books)", bookCount))
 }

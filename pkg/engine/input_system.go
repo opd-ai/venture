@@ -239,6 +239,7 @@ type InputSystem struct {
 	KeyQuests    ebiten.Key // J key for quest log
 	KeyMap       ebiten.Key // M key for map
 	KeyCrafting  ebiten.Key // R key for crafting
+	KeyMailbox   ebiten.Key // L key for mailbox
 
 	// Key bindings - System
 	KeyHelp         ebiten.Key // ESC key for help menu
@@ -271,6 +272,7 @@ type InputSystem struct {
 	onQuestsOpen    func()
 	onMapOpen       func()
 	onCraftingOpen  func() // Callback for crafting UI toggle
+	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -312,6 +314,7 @@ func NewInputSystem() *InputSystem {
 		KeyQuests:    ebiten.KeyJ,
 		KeyMap:       ebiten.KeyM,
 		KeyCrafting:  ebiten.KeyR,
+		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 
 		// System keys
 		KeyHelp:         ebiten.KeyEscape,
@@ -372,83 +375,108 @@ func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 
 // Update processes input for all entities with input components.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
-	// BUG-023 fix: Validate touch input initialization
-	// Initialize virtual controls for any touch-capable platform if not already done
-	if s.useTouchInput && s.virtualControls == nil {
-		// Auto-initialize with default screen size if not explicitly initialized
-		// This prevents silent input failure on touch-capable platforms (mobile/WASM)
-		s.InitializeVirtualControls(800, 600)
+	s.ensureTouchInputInitialized()
+	s.updateMousePosition()
+	s.updateTouchInput()
+	s.handleEscapeKey()
+	s.handleQuickSaveLoad()
+	s.handleUIShortcuts()
+	s.handleExpressionHotkeys(entities)
+	s.handleInteractionKeys()
+
+	if s.handleHelpTopics() {
+		return
 	}
 
-	// BUG-010 fix: Track mouse position for delta calculation
+	s.processEntityInputs(entities, deltaTime)
+}
+
+// ensureTouchInputInitialized validates and initializes touch input controls if needed.
+func (s *InputSystem) ensureTouchInputInitialized() {
+	if s.useTouchInput && s.virtualControls == nil {
+		s.InitializeVirtualControls(800, 600)
+	}
+}
+
+// updateMousePosition tracks mouse position for delta calculation.
+func (s *InputSystem) updateMousePosition() {
 	currentMouseX, currentMouseY := ebiten.CursorPosition()
 	s.mouseDeltaX = currentMouseX - s.lastMouseX
 	s.mouseDeltaY = currentMouseY - s.lastMouseY
 	s.lastMouseX = currentMouseX
 	s.lastMouseY = currentMouseY
+}
 
-	// Update touch input for all touch-capable platforms (mobile/WASM)
+// updateTouchInput processes touch handler and virtual controls updates.
+func (s *InputSystem) updateTouchInput() {
 	if s.useTouchInput && s.touchHandler != nil {
 		s.touchHandler.Update()
 
-		// Update virtual controls
 		if s.virtualControls != nil {
 			s.virtualControls.Update()
 
-			// Handle menu button on virtual controls
 			if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
 				s.onMenuToggle()
 			}
 		}
 	}
+}
 
-	// Handle global keys first (help menu, save/load, etc.)
-	// ESC key handling - context-aware priority: tutorial > help > pause menu
+// handleEscapeKey processes ESC key with priority: tutorial > help > pause menu.
+func (s *InputSystem) handleEscapeKey() {
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
-		// Priority 1: Check if tutorial is active and should handle the ESC key
 		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
-			// Skip current tutorial step
 			s.tutorialSystem.Skip()
 		} else if s.helpSystem != nil && s.helpSystem.Visible {
-			// Priority 2: If help system is visible, close it
 			s.helpSystem.Toggle()
 		} else if s.onMenuToggle != nil {
-			// Priority 3: Otherwise toggle pause menu
 			s.onMenuToggle()
 		}
 	}
+}
 
-	// Handle quick save (F5)
+// handleQuickSaveLoad processes F5 quick save and F9 quick load operations.
+func (s *InputSystem) handleQuickSaveLoad() {
 	if inpututil.IsKeyJustPressed(s.KeyQuickSave) && s.onQuickSave != nil {
-		if err := s.onQuickSave(); err != nil {
-			// Show error notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Save Failed: "+err.Error(), 3.0)
-			}
-		} else {
-			// Show success notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Game Saved!", 2.0)
-			}
-		}
+		s.executeQuickSave()
 	}
 
-	// Handle quick load (F9)
 	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
-		if err := s.onQuickLoad(); err != nil {
-			// Show error notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Load Failed: "+err.Error(), 3.0)
-			}
-		} else {
-			// Show success notification
-			if s.tutorialSystem != nil {
-				s.tutorialSystem.ShowNotification("Game Loaded!", 2.0)
-			}
-		}
+		s.executeQuickLoad()
 	}
+}
 
-	// Handle UI shortcuts
+// executeQuickSave performs quick save operation with notification feedback.
+func (s *InputSystem) executeQuickSave() {
+	if err := s.onQuickSave(); err != nil {
+		s.showNotification("Save Failed: " + err.Error())
+	} else {
+		s.showNotification("Game Saved!")
+	}
+}
+
+// executeQuickLoad performs quick load operation with notification feedback.
+func (s *InputSystem) executeQuickLoad() {
+	if err := s.onQuickLoad(); err != nil {
+		s.showNotification("Load Failed: " + err.Error())
+	} else {
+		s.showNotification("Game Loaded!")
+	}
+}
+
+// showNotification displays a notification message through the tutorial system.
+func (s *InputSystem) showNotification(message string) {
+	if s.tutorialSystem != nil {
+		duration := 2.0
+		if len(message) > 20 {
+			duration = 3.0
+		}
+		s.tutorialSystem.ShowNotification(message, duration)
+	}
+}
+
+// handleUIShortcuts processes keyboard shortcuts for opening UI panels.
+func (s *InputSystem) handleUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyInventory) && s.onInventoryOpen != nil {
 		s.onInventoryOpen()
 	}
@@ -467,78 +495,101 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	if inpututil.IsKeyJustPressed(s.KeyCrafting) && s.onCraftingOpen != nil {
 		s.onCraftingOpen()
 	}
+	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
+		s.onMailboxOpen()
+	}
+}
 
-	// Phase 26.1: Handle expression/emote hotkeys (Shift+1 through Shift+=)
-	// These are mapped to the 12 expression types
-	if s.expressionSystem != nil && ebiten.IsKeyPressed(ebiten.KeyShift) {
-		// Find player entity
-		var playerEntity *Entity
-		for _, entity := range entities {
-			if inputComp, ok := entity.GetComponent("input"); ok && inputComp != nil {
-				playerEntity = entity
-				break
-			}
-		}
-
-		if playerEntity != nil {
-			expressionKeys := []struct {
-				key     ebiten.Key
-				expType ExpressionType
-			}{
-				{ebiten.Key1, ExpressionWave},
-				{ebiten.Key2, ExpressionCheer},
-				{ebiten.Key3, ExpressionDance},
-				{ebiten.Key4, ExpressionLaugh},
-				{ebiten.Key5, ExpressionCry},
-				{ebiten.Key6, ExpressionSit},
-				{ebiten.Key7, ExpressionPoint},
-				{ebiten.Key8, ExpressionSalute},
-				{ebiten.Key9, ExpressionShrug},
-				{ebiten.Key0, ExpressionThumbsUp},
-				{ebiten.KeyMinus, ExpressionFacepalm},
-				{ebiten.KeyEqual, ExpressionSleep},
-			}
-
-			for _, binding := range expressionKeys {
-				if inpututil.IsKeyJustPressed(binding.key) {
-					s.expressionSystem.TriggerExpression(playerEntity.ID, binding.expType)
-					break // Only process one expression per frame
-				}
-			}
-		}
+// handleExpressionHotkeys processes Shift+number key combinations for player expressions.
+func (s *InputSystem) handleExpressionHotkeys(entities []*Entity) {
+	if s.expressionSystem == nil || !ebiten.IsKeyPressed(ebiten.KeyShift) {
+		return
 	}
 
-	// Handle NPC/merchant interaction (F key)
+	playerEntity := s.findPlayerEntity(entities)
+	if playerEntity == nil {
+		return
+	}
+
+	s.processExpressionKeys(playerEntity)
+}
+
+// findPlayerEntity locates the player-controlled entity from the entity list.
+func (s *InputSystem) findPlayerEntity(entities []*Entity) *Entity {
+	for _, entity := range entities {
+		if inputComp, ok := entity.GetComponent("input"); ok && inputComp != nil {
+			return entity
+		}
+	}
+	return nil
+}
+
+// processExpressionKeys checks expression key bindings and triggers expressions.
+func (s *InputSystem) processExpressionKeys(playerEntity *Entity) {
+	expressionKeys := []struct {
+		key     ebiten.Key
+		expType ExpressionType
+	}{
+		{ebiten.Key1, ExpressionWave},
+		{ebiten.Key2, ExpressionCheer},
+		{ebiten.Key3, ExpressionDance},
+		{ebiten.Key4, ExpressionLaugh},
+		{ebiten.Key5, ExpressionCry},
+		{ebiten.Key6, ExpressionSit},
+		{ebiten.Key7, ExpressionPoint},
+		{ebiten.Key8, ExpressionSalute},
+		{ebiten.Key9, ExpressionShrug},
+		{ebiten.Key0, ExpressionThumbsUp},
+		{ebiten.KeyMinus, ExpressionFacepalm},
+		{ebiten.KeyEqual, ExpressionSleep},
+	}
+
+	for _, binding := range expressionKeys {
+		if inpututil.IsKeyJustPressed(binding.key) {
+			s.expressionSystem.TriggerExpression(playerEntity.ID, binding.expType)
+			break
+		}
+	}
+}
+
+// handleInteractionKeys processes NPC interaction and target cycling keys.
+func (s *InputSystem) handleInteractionKeys() {
 	if inpututil.IsKeyJustPressed(s.KeyInteract) && s.onInteract != nil {
 		s.onInteract()
 	}
 
-	// Handle target cycling
 	if inpututil.IsKeyJustPressed(s.KeyCycleTargets) && s.onCycleTargets != nil {
 		s.onCycleTargets()
 	}
+}
 
-	// Handle help topic switching with number keys 1-6 (when help is visible)
-	// GAP-004 REPAIR: Return early after handling help keys to prevent spell casting
-	if s.helpSystem != nil && s.helpSystem.Visible {
-		topicKeys := []ebiten.Key{
-			ebiten.Key1, ebiten.Key2, ebiten.Key3,
-			ebiten.Key4, ebiten.Key5, ebiten.Key6,
-		}
-		topicIDs := []string{
-			"controls", "combat", "inventory",
-			"progression", "world", "multiplayer",
-		}
+// handleHelpTopics processes help topic switching and returns true if handled.
+func (s *InputSystem) handleHelpTopics() bool {
+	if s.helpSystem == nil || !s.helpSystem.Visible {
+		return false
+	}
 
-		for i, key := range topicKeys {
-			if inpututil.IsKeyJustPressed(key) {
-				s.helpSystem.ShowTopic(topicIDs[i])
-				// GAP-004 REPAIR: Early return to prevent number keys from casting spells
-				return
-			}
+	topicKeys := []ebiten.Key{
+		ebiten.Key1, ebiten.Key2, ebiten.Key3,
+		ebiten.Key4, ebiten.Key5, ebiten.Key6,
+	}
+	topicIDs := []string{
+		"controls", "combat", "inventory",
+		"progression", "world", "multiplayer",
+	}
+
+	for i, key := range topicKeys {
+		if inpututil.IsKeyJustPressed(key) {
+			s.helpSystem.ShowTopic(topicIDs[i])
+			return true
 		}
 	}
 
+	return false
+}
+
+// processEntityInputs iterates through entities and processes their input components.
+func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
 		inputComp, ok := entity.GetComponent("input")
 		if !ok {
@@ -555,193 +606,237 @@ func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 
 // processInput handles input processing for a single entity.
 func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime float64) {
-	// GAP-001/GAP-002 REPAIR: Reset immediate-consumption flags but preserve frame-persistent flags
+	s.resetInputFlags(input)
+	s.detectInputMethod()
+	s.updateInputFromSource(input)
+	s.updateEntityAim(entity, input)
+	s.applyInputToVelocity(entity, input)
+}
+
+// resetInputFlags clears all input flags at the start of each frame.
+func (s *InputSystem) resetInputFlags(input *EbitenInput) {
 	input.MoveX = 0
 	input.MoveY = 0
 	input.ActionPressed = false
 	input.UseItemPressed = false
-	// GAP-002 REPAIR: Reset spell input flags
 	input.Spell1Pressed = false
 	input.Spell2Pressed = false
 	input.Spell3Pressed = false
 	input.Spell4Pressed = false
 	input.Spell5Pressed = false
-
-	// GAP-001/GAP-005 REPAIR: Reset frame-persistent detection flags at start of new frame
-	// These will be set again if keys are pressed this frame
 	input.ActionJustPressed = false
 	input.UseItemJustPressed = false
 	input.AnyKeyPressed = false
+}
 
-	// Auto-detect input method: if touch input is detected, switch to touch mode
-	// This works for WASM/browser as well as native mobile platforms
+// detectInputMethod auto-detects whether to use touch or keyboard/mouse input.
+func (s *InputSystem) detectInputMethod() {
 	if len(ebiten.TouchIDs()) > 0 {
 		s.useTouchInput = true
-		// Ensure virtual controls are initialized when touch is first detected
 		if s.virtualControls == nil && mobile.IsTouchCapable() {
-			// Get screen size for virtual controls initialization
 			screenW, screenH := ebiten.WindowSize()
 			s.InitializeVirtualControls(screenW, screenH)
 		}
 	} else if !s.mobileEnabled && len(ebiten.TouchIDs()) == 0 {
-		// Allow falling back to keyboard if no touches (e.g., tablet with keyboard)
-		// Only disable touch input on non-mobile platforms to preserve mobile behavior
 		s.useTouchInput = false
 	}
+}
 
-	// Process touch input (priority on mobile)
+// updateInputFromSource processes input from either touch or keyboard/mouse.
+func (s *InputSystem) updateInputFromSource(input *EbitenInput) {
 	if s.useTouchInput && s.virtualControls != nil {
-		// Get movement from virtual D-pad
-		moveX, moveY := s.virtualControls.GetMovementInput()
-		input.MoveX = moveX
-		input.MoveY = moveY
-
-		// Get action button presses
-		if s.virtualControls.IsActionPressed() {
-			input.ActionPressed = true
-		}
-		if s.virtualControls.IsSecondaryPressed() {
-			input.UseItemPressed = true
-		}
-
-		// Use first touch outside controls as "mouse" position
-		if s.touchHandler != nil {
-			touches := s.touchHandler.GetActiveTouches()
-			for _, touch := range touches {
-				// Check if touch is outside virtual controls
-				// (simple heuristic: use center-screen touches)
-				screenW, _ := ebiten.WindowSize()
-				if touch.X > 200 && touch.X < screenW-200 {
-					input.MouseX = touch.X
-					input.MouseY = touch.Y
-					input.MousePressed = true
-					break
-				}
-			}
-		}
+		s.processTouchInput(input)
 	} else {
-		// Process keyboard movement (desktop mode)
-		// Priority 2.3: Only allow movement in appropriate game states
-		if s.currentState.AllowsMovement() {
-			if ebiten.IsKeyPressed(s.KeyUp) {
-				input.MoveY = -1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyDown) {
-				input.MoveY = 1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyLeft) {
-				input.MoveX = -1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyRight) {
-				input.MoveX = 1.0
-			}
+		s.processKeyboardInput(input)
+	}
+}
 
-			// Normalize diagonal movement
-			if input.MoveX != 0 && input.MoveY != 0 {
-				// Divide by sqrt(2) to maintain constant speed in all directions
-				input.MoveX *= 0.707
-				input.MoveY *= 0.707
-			}
-		}
+// processTouchInput handles touch input from virtual controls.
+func (s *InputSystem) processTouchInput(input *EbitenInput) {
+	moveX, moveY := s.virtualControls.GetMovementInput()
+	input.MoveX = moveX
+	input.MoveY = moveY
 
-		// Process action keys
-		// Priority 2.3: Only allow combat actions in appropriate game states
-		if s.currentState.AllowsCombat() {
-			if inpututil.IsKeyJustPressed(s.KeyAction) {
-				input.ActionPressed = true
-				input.ActionJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-				input.AnyKeyPressed = true     // GAP-005 REPAIR: Any key detection
-			}
-			if inpututil.IsKeyJustPressed(s.KeyUseItem) {
-				input.UseItemPressed = true
-				input.UseItemJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-				input.AnyKeyPressed = true      // GAP-005 REPAIR: Any key detection
-			}
-
-			// GAP-002 REPAIR: Process spell casting keys (1-5)
-			if inpututil.IsKeyJustPressed(s.KeySpell1) {
-				input.Spell1Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell2) {
-				input.Spell2Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell3) {
-				input.Spell3Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell4) {
-				input.Spell4Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell5) {
-				input.Spell5Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-		}
-
-		// GAP-005 REPAIR: Detect any key press for tutorial "press any key" prompts
-		if !input.AnyKeyPressed {
-			pressedKeys := inpututil.AppendPressedKeys(nil)
-			if len(pressedKeys) > 0 {
-				input.AnyKeyPressed = true
-			}
-		}
-
-		// Process mouse input
-		input.MouseX, input.MouseY = ebiten.CursorPosition()
-		input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	if s.virtualControls.IsActionPressed() {
+		input.ActionPressed = true
+	}
+	if s.virtualControls.IsSecondaryPressed() {
+		input.UseItemPressed = true
 	}
 
-	// Phase 10.1: Update aim component with mouse position (world coordinates)
-	// This enables mouse-aim for 360° rotation independent of movement direction
-	if entity.HasComponent("aim") && s.cameraSystem != nil {
-		aimComp, ok := entity.GetComponent("aim")
-		if ok {
-			aim, ok := aimComp.(*AimComponent)
-			if !ok {
-				return
-			}
+	s.processTouchMousePosition(input)
+}
 
-			// Convert screen coordinates to world coordinates
-			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
-
-			// Set aim target in world space (this updates aim.AimAngle internally)
-			oldAngle := aim.AimAngle
-			aim.SetAimTarget(worldX, worldY)
-
-			// DEBUG: Log aim updates when angle changes significantly
-			if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
-				fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
-			}
-		}
+// processTouchMousePosition maps touch position outside controls to mouse position.
+func (s *InputSystem) processTouchMousePosition(input *EbitenInput) {
+	if s.touchHandler == nil {
+		return
 	}
 
-	// Apply movement to velocity component if it exists
-	if velComp, ok := entity.GetComponent("velocity"); ok {
-		velocity, ok := velComp.(*VelocityComponent)
-		if !ok {
-			return
-		}
-		velocity.VX = input.MoveX * s.MoveSpeed
-		velocity.VY = input.MoveY * s.MoveSpeed
+	touches := s.touchHandler.GetActiveTouches()
+	screenW, _ := ebiten.WindowSize()
 
-		// GAP-018 REPAIR: Update player animation based on movement
-		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim, ok := animComp.(*AnimationComponent)
-			if !ok {
-				return
-			}
-			// Check if player is moving
-			isMoving := (velocity.VX != 0 || velocity.VY != 0)
-
-			if isMoving && anim.CurrentState == AnimationStateIdle {
-				anim.SetState(AnimationStateWalk)
-			} else if !isMoving && anim.CurrentState == AnimationStateWalk {
-				anim.SetState(AnimationStateIdle)
-			}
+	for _, touch := range touches {
+		if touch.X > 200 && touch.X < screenW-200 {
+			input.MouseX = touch.X
+			input.MouseY = touch.Y
+			input.MousePressed = true
+			break
 		}
+	}
+}
+
+// processKeyboardInput handles keyboard and mouse input.
+func (s *InputSystem) processKeyboardInput(input *EbitenInput) {
+	s.processMovementKeys(input)
+	s.processActionKeys(input)
+	s.detectAnyKeyPress(input)
+	s.processMouseState(input)
+}
+
+// processMovementKeys handles WASD movement with diagonal normalization.
+func (s *InputSystem) processMovementKeys(input *EbitenInput) {
+	if !s.currentState.AllowsMovement() {
+		return
+	}
+
+	if ebiten.IsKeyPressed(s.KeyUp) {
+		input.MoveY = -1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyDown) {
+		input.MoveY = 1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyLeft) {
+		input.MoveX = -1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyRight) {
+		input.MoveX = 1.0
+	}
+
+	if input.MoveX != 0 && input.MoveY != 0 {
+		input.MoveX *= 0.707
+		input.MoveY *= 0.707
+	}
+}
+
+// processActionKeys handles combat action and spell casting keys.
+func (s *InputSystem) processActionKeys(input *EbitenInput) {
+	if !s.currentState.AllowsCombat() {
+		return
+	}
+
+	if inpututil.IsKeyJustPressed(s.KeyAction) {
+		input.ActionPressed = true
+		input.ActionJustPressed = true
+		input.AnyKeyPressed = true
+	}
+	if inpututil.IsKeyJustPressed(s.KeyUseItem) {
+		input.UseItemPressed = true
+		input.UseItemJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	s.processSpellKeys(input)
+}
+
+// processSpellKeys handles spell casting keys 1-5.
+func (s *InputSystem) processSpellKeys(input *EbitenInput) {
+	spellKeys := []struct {
+		key     ebiten.Key
+		pressed *bool
+	}{
+		{s.KeySpell1, &input.Spell1Pressed},
+		{s.KeySpell2, &input.Spell2Pressed},
+		{s.KeySpell3, &input.Spell3Pressed},
+		{s.KeySpell4, &input.Spell4Pressed},
+		{s.KeySpell5, &input.Spell5Pressed},
+	}
+
+	for _, spell := range spellKeys {
+		if inpututil.IsKeyJustPressed(spell.key) {
+			*spell.pressed = true
+			input.AnyKeyPressed = true
+		}
+	}
+}
+
+// detectAnyKeyPress sets AnyKeyPressed flag if any key is pressed.
+func (s *InputSystem) detectAnyKeyPress(input *EbitenInput) {
+	if !input.AnyKeyPressed {
+		pressedKeys := inpututil.AppendPressedKeys(nil)
+		if len(pressedKeys) > 0 {
+			input.AnyKeyPressed = true
+		}
+	}
+}
+
+// processMouseState updates mouse position and button state.
+func (s *InputSystem) processMouseState(input *EbitenInput) {
+	input.MouseX, input.MouseY = ebiten.CursorPosition()
+	input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
+// updateEntityAim updates the aim component with mouse position in world coordinates.
+func (s *InputSystem) updateEntityAim(entity *Entity, input *EbitenInput) {
+	if !entity.HasComponent("aim") || s.cameraSystem == nil {
+		return
+	}
+
+	aimComp, ok := entity.GetComponent("aim")
+	if !ok {
+		return
+	}
+
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return
+	}
+
+	worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
+	oldAngle := aim.AimAngle
+	aim.SetAimTarget(worldX, worldY)
+
+	if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
+		fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
+	}
+}
+
+// applyInputToVelocity converts movement input to velocity and updates animation.
+func (s *InputSystem) applyInputToVelocity(entity *Entity, input *EbitenInput) {
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return
+	}
+
+	velocity, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
+
+	velocity.VX = input.MoveX * s.MoveSpeed
+	velocity.VY = input.MoveY * s.MoveSpeed
+
+	s.updateMovementAnimation(entity, velocity)
+}
+
+// updateMovementAnimation switches between idle and walk animations based on movement.
+func (s *InputSystem) updateMovementAnimation(entity *Entity, velocity *VelocityComponent) {
+	animComp, ok := entity.GetComponent("animation")
+	if !ok {
+		return
+	}
+
+	anim, ok := animComp.(*AnimationComponent)
+	if !ok {
+		return
+	}
+
+	isMoving := velocity.VX != 0 || velocity.VY != 0
+
+	if isMoving && anim.CurrentState == AnimationStateIdle {
+		anim.SetState(AnimationStateWalk)
+	} else if !isMoving && anim.CurrentState == AnimationStateWalk {
+		anim.SetState(AnimationStateIdle)
 	}
 }
 
@@ -844,6 +939,15 @@ func (s *InputSystem) SetCraftingCallback(callback func()) error {
 		return fmt.Errorf("crafting callback cannot be nil")
 	}
 	s.onCraftingOpen = callback
+	return nil
+}
+
+// SetMailboxCallback sets the callback function for opening mailbox UI (L key).
+func (s *InputSystem) SetMailboxCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("mailbox callback cannot be nil")
+	}
+	s.onMailboxOpen = callback
 	return nil
 }
 

@@ -244,7 +244,11 @@ func (s *MiniGameSystem) generateReward(gameType MiniGameType, difficulty float6
 	return &Reward{
 		Gold:  gold,
 		XP:    xp,
-		Items: []uint64{}, // TODO: Generate items based on game type
+		Items: []uint64{}, // INTEGRATION FIX [Category E]: Mini-Game Reward Items
+		// Gap: Mini-game rewards should include procedurally generated items, not just gold/XP
+		// Fix: Call ItemGenerator with difficulty-scaled rarity, add 1-3 items to Items array
+		// Roadmap: ROADMAP_V4.md Phase 27.1 - Mini-Game Rewards
+		// Integration: Requires itemgen.Generator instance, generate based on game type (puzzle=scroll, combat=weapon)
 	}
 }
 
@@ -272,5 +276,9 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 	// queried to get the Item entities and add them to inventory through the
 	// InventorySystem. This integration is left for Phase 27.3 when mini-games
 	// are connected to the item system.
-	_ = reward.Items // TODO: Integrate with InventorySystem.AddItem() in Phase 27.3
+	_ = reward.Items // INTEGRATION FIX [Category A]: Mini-Game Item Rewards
+	// Gap: EndGame() doesn't add reward.Items to player inventory, only gold/XP awarded
+	// Fix: Iterate reward.Items, call inventorySystem.AddItem(playerID, itemID) for each
+	// Roadmap: ROADMAP_V4.md Phase 27.3 - Integration complete
+	// Integration: Get InventorySystem from world.GetSystems(), call AddItem for each reward item
 }

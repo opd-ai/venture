@@ -93,6 +93,14 @@ type systemsContainer struct {
 	expressionComboSys      *engine.ExpressionComboSystem
 	miniGameSystem          *engine.MiniGameSystem
 	achievementSystem       *engine.AchievementSystem
+	// Phase 28: Reputation & Moral Choices
+	moralChoiceSystem *engine.MoralChoiceSystem
+	// Phase 30: Environmental Storytelling
+	discoverySystem *engine.DiscoverySystem
+	// V5.0 Systems (Social & Communication)
+	chatSystem    *engine.ChatSystem
+	mailSystem    *engine.MailSystem
+	courierSystem *engine.CourierSystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -249,8 +257,33 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
 
+	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem
+	// Gap: MoralChoiceSystem implemented but never initialized or registered
+	// Fix: Added system initialization for moral decision tracking and consequences
+	// Roadmap: ROADMAP_V4.md Phase 28
+	sys.moralChoiceSystem = engine.NewMoralChoiceSystem(game.World, clientLogger.Logger)
+
+	// Phase 30: Environmental Storytelling - Discovery System
+	sys.discoverySystem = engine.NewDiscoverySystem(game.World)
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, moral choices, story discovery)")
+	}
+}
+
+// initializeV5Systems initializes Version 5.0 social and communication systems.
+func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 32: Chat system for player-to-player communication
+	sys.chatSystem = engine.NewChatSystem(game.World)
+
+	// Phase 40: Mail system for asynchronous messaging
+	sys.mailSystem = engine.NewMailSystem(game.World)
+
+	// Phase 40: Courier system for mail delivery simulation (depends on MailSystem)
+	sys.courierSystem = engine.NewCourierSystem(game.World, sys.mailSystem)
+
+	if *verbose {
+		clientLogger.Info("V5.0 systems initialized (chat, mail, courier)")
 	}
 }
 
@@ -364,8 +397,25 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 26.2: Achievement system (social features, use wrapper)
 	game.World.AddSystem(&achievementSystemWrapper{system: sys.achievementSystem})
 
+	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem registration
+	// Gap: MoralChoiceSystem created but never added to world update loop
+	// Fix: Registered system with wrapper for quest-driven moral decisions
+	// Roadmap: ROADMAP_V4.md Phase 28.2
+	game.World.AddSystem(&moralChoiceSystemWrapper{system: sys.moralChoiceSystem})
+
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
+
+	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
+	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})
+
+	// V5.0 System Registrations (Social & Communication)
+	// Phase 32: Chat system for player communication
+	game.World.AddSystem(&chatSystemWrapper{system: sys.chatSystem})
+
+	// Phase 40: Mail and courier systems for asynchronous messaging
+	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
+	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
 }
 
 // configureSystemConnections wires up interdependent systems.
@@ -657,6 +707,17 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	} else if *verbose {
 		clientLogger.WithField("bookshelfCount", bookshelfCount).Info("spawned bookshelves")
 	}
+
+	// Spawn story fragments (Phase 30: Environmental Storytelling)
+	if *verbose {
+		clientLogger.Info("spawning story fragments in dungeon")
+	}
+	fragmentCount, err := spawnStoryFragments(game.World, generatedTerrain, *seed+seedOffsetStory, params, clientLogger)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn story fragments")
+	} else if *verbose {
+		clientLogger.WithField("fragmentCount", fragmentCount).Info("spawned story fragments")
+	}
 }
 
 // spawnEnvironmentalEffects spawns lights and weather effects.
@@ -895,6 +956,16 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 		UniqueExpression: make(map[engine.ExpressionType]int),
 	})
 
+	// Add story journal for fragment discovery (Phase 30)
+	player.AddComponent(engine.NewStoryJournalComponent())
+
+	// Add mail component for mailbox system (Phase 40.3)
+	player.AddComponent(&engine.MailComponent{
+		Inbox:    []*engine.MailMessage{},
+		Outbox:   []*engine.MailMessage{},
+		MaxInbox: 50,
+	})
+
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")
 	addStarterItems(playerInventory, *seed, *genreID, logger)
@@ -1084,7 +1155,7 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 	return nil
 }
 
-// initializeUIIntegration sets up shop UI, crafting UI, and connects them to game systems.
+// initializeUIIntegration sets up shop UI, crafting UI, mailbox UI, and connects them to game systems.
 func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
 	shopUI := engine.NewShopUI(*width, *height)
 	shopUI.SetPlayerEntity(player)
@@ -1103,6 +1174,14 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 
 	if *verbose {
 		clientLogger.Info("crafting UI initialized and connected to crafting system")
+	}
+
+	// Phase 40.3: Initialize mailbox UI
+	mailboxUI := engine.NewMailboxUI(0, 0, *width, *height, *genreID)
+	game.MailboxUI = mailboxUI
+
+	if *verbose {
+		clientLogger.Info("mailbox UI initialized (Phase 40.3)")
 	}
 
 	game.SetInventorySystem(inventorySystem)
@@ -1132,7 +1211,7 @@ func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, 
 	game.World.Update(0)
 
 	clientLogger.Info("game initialized successfully")
-	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
 	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
 
 	if *multiplayer {
@@ -1163,10 +1242,19 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 // createGameInstance initializes the main game instance with logging and profiling.
 func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engine.EbitenGame {
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
+	game.SetFullscreen(*fullscreen)
 
 	if *profile {
 		game.EnableFrameTimeProfiling()
 		clientLogger.Info("performance profiling enabled - frame time stats will be logged every 5 seconds")
+	}
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"width":      *width,
+			"height":     *height,
+			"fullscreen": *fullscreen,
+		}).Info("display initialized")
 	}
 
 	return game
@@ -1224,6 +1312,29 @@ func cleanupNetworkClient(networkClient interface{}, clientLogger *logrus.Entry)
 			clientLogger.WithError(err).Warn("error disconnecting")
 		}
 	}
+}
+
+// INTEGRATION FIX [Category A]: System Wrappers for Client V4.0+
+// Gap: Missing wrappers prevented proper system registration
+// Fix: Added wrappers to adapt Update() signatures to ECS interface
+// Roadmap: ROADMAP_V4.md Phases 28, 30
+
+// discoverySystemWrapper adapts DiscoverySystem to the System interface.
+type discoverySystemWrapper struct {
+	system *engine.DiscoverySystem
+}
+
+func (w *discoverySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// moralChoiceSystemWrapper adapts MoralChoiceSystem to the System interface.
+type moralChoiceSystemWrapper struct {
+	system *engine.MoralChoiceSystem
+}
+
+func (w *moralChoiceSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
 }
 
 // runGameLoop starts the main game loop.

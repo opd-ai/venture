@@ -146,6 +146,32 @@ func (w *npcDialogSystemWrapper) Update(entities []*engine.Entity, deltaTime flo
 	w.system.Update(deltaTime)
 }
 
+// V5.0 System Wrappers (Social & Communication)
+
+type chatSystemWrapper struct {
+	system *engine.ChatSystem
+}
+
+func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type mailSystemWrapper struct {
+	system *engine.MailSystem
+}
+
+func (w *mailSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type courierSystemWrapper struct {
+	system *engine.CourierSystem
+}
+
+func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 // INTEGRATION FIX [Category A]: Complete V4.0 Server Systems
 // Gap: Server was missing critical gameplay systems from Phases 21-30
 // Fix: Added all 23 missing systems for complete multiplayer feature parity
@@ -290,4 +316,28 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"note":               "All systems running in server-authoritative mode (no audio/graphics)",
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",
 	}).Info("V4.0+ systems initialized on server (Phases 21-31)")
+}
+
+// initializeV5SystemsServer initializes Version 5.0 social and communication systems on the server.
+func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
+	serverLogger := logger.WithField("component", "v5_systems")
+
+	// Phase 32: Chat system for player-to-player communication (server-authoritative)
+	chatSystem := engine.NewChatSystem(world)
+	world.AddSystem(&chatSystemWrapper{system: chatSystem})
+
+	// Phase 40: Mail system for asynchronous messaging (server-authoritative)
+	mailSystem := engine.NewMailSystem(world)
+	world.AddSystem(&mailSystemWrapper{system: mailSystem})
+
+	// Phase 40: Courier system for mail delivery simulation (depends on MailSystem)
+	courierSystem := engine.NewCourierSystem(world, mailSystem)
+	world.AddSystem(&courierSystemWrapper{system: courierSystem})
+
+	serverLogger.WithFields(logrus.Fields{
+		"chatSystems":    1, // ChatSystem
+		"mailSystems":    2, // MailSystem, CourierSystem
+		"totalV5Systems": 3,
+		"note":           "Social systems for V5.0 multiplayer communication",
+	}).Info("V5.0 social systems initialized on server (chat, mail, courier)")
 }

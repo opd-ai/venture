@@ -176,6 +176,32 @@ func (w *achievementSystemWrapper) Update(entities []*engine.Entity, deltaTime f
 	w.system.Update(deltaTime)
 }
 
+// V5.0 System Wrappers (Social & Communication)
+
+type chatSystemWrapper struct {
+	system *engine.ChatSystem
+}
+
+func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type mailSystemWrapper struct {
+	system *engine.MailSystem
+}
+
+func (w *mailSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type courierSystemWrapper struct {
+	system *engine.CourierSystem
+}
+
+func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 800, "Screen width")
 	height           = flag.Int("height", 600, "Screen height")

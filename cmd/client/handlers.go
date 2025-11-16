@@ -97,6 +97,10 @@ type systemsContainer struct {
 	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
+	// V5.0 Systems (Social & Communication)
+	chatSystem    *engine.ChatSystem
+	mailSystem    *engine.MailSystem
+	courierSystem *engine.CourierSystem
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -267,6 +271,22 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 }
 
+// initializeV5Systems initializes Version 5.0 social and communication systems.
+func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 32: Chat system for player-to-player communication
+	sys.chatSystem = engine.NewChatSystem(game.World)
+
+	// Phase 40: Mail system for asynchronous messaging
+	sys.mailSystem = engine.NewMailSystem(game.World)
+
+	// Phase 40: Courier system for mail delivery simulation (depends on MailSystem)
+	sys.courierSystem = engine.NewCourierSystem(game.World, sys.mailSystem)
+
+	if *verbose {
+		clientLogger.Info("V5.0 systems initialized (chat, mail, courier)")
+	}
+}
+
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inputSystem)
@@ -388,6 +408,14 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})
+
+	// V5.0 System Registrations (Social & Communication)
+	// Phase 32: Chat system for player communication
+	game.World.AddSystem(&chatSystemWrapper{system: sys.chatSystem})
+
+	// Phase 40: Mail and courier systems for asynchronous messaging
+	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
+	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
 }
 
 // configureSystemConnections wires up interdependent systems.

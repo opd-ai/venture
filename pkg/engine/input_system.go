@@ -606,193 +606,237 @@ func (s *InputSystem) processEntityInputs(entities []*Entity, deltaTime float64)
 
 // processInput handles input processing for a single entity.
 func (s *InputSystem) processInput(entity *Entity, input *EbitenInput, deltaTime float64) {
-	// GAP-001/GAP-002 REPAIR: Reset immediate-consumption flags but preserve frame-persistent flags
+	s.resetInputFlags(input)
+	s.detectInputMethod()
+	s.updateInputFromSource(input)
+	s.updateEntityAim(entity, input)
+	s.applyInputToVelocity(entity, input)
+}
+
+// resetInputFlags clears all input flags at the start of each frame.
+func (s *InputSystem) resetInputFlags(input *EbitenInput) {
 	input.MoveX = 0
 	input.MoveY = 0
 	input.ActionPressed = false
 	input.UseItemPressed = false
-	// GAP-002 REPAIR: Reset spell input flags
 	input.Spell1Pressed = false
 	input.Spell2Pressed = false
 	input.Spell3Pressed = false
 	input.Spell4Pressed = false
 	input.Spell5Pressed = false
-
-	// GAP-001/GAP-005 REPAIR: Reset frame-persistent detection flags at start of new frame
-	// These will be set again if keys are pressed this frame
 	input.ActionJustPressed = false
 	input.UseItemJustPressed = false
 	input.AnyKeyPressed = false
+}
 
-	// Auto-detect input method: if touch input is detected, switch to touch mode
-	// This works for WASM/browser as well as native mobile platforms
+// detectInputMethod auto-detects whether to use touch or keyboard/mouse input.
+func (s *InputSystem) detectInputMethod() {
 	if len(ebiten.TouchIDs()) > 0 {
 		s.useTouchInput = true
-		// Ensure virtual controls are initialized when touch is first detected
 		if s.virtualControls == nil && mobile.IsTouchCapable() {
-			// Get screen size for virtual controls initialization
 			screenW, screenH := ebiten.WindowSize()
 			s.InitializeVirtualControls(screenW, screenH)
 		}
 	} else if !s.mobileEnabled && len(ebiten.TouchIDs()) == 0 {
-		// Allow falling back to keyboard if no touches (e.g., tablet with keyboard)
-		// Only disable touch input on non-mobile platforms to preserve mobile behavior
 		s.useTouchInput = false
 	}
+}
 
-	// Process touch input (priority on mobile)
+// updateInputFromSource processes input from either touch or keyboard/mouse.
+func (s *InputSystem) updateInputFromSource(input *EbitenInput) {
 	if s.useTouchInput && s.virtualControls != nil {
-		// Get movement from virtual D-pad
-		moveX, moveY := s.virtualControls.GetMovementInput()
-		input.MoveX = moveX
-		input.MoveY = moveY
-
-		// Get action button presses
-		if s.virtualControls.IsActionPressed() {
-			input.ActionPressed = true
-		}
-		if s.virtualControls.IsSecondaryPressed() {
-			input.UseItemPressed = true
-		}
-
-		// Use first touch outside controls as "mouse" position
-		if s.touchHandler != nil {
-			touches := s.touchHandler.GetActiveTouches()
-			for _, touch := range touches {
-				// Check if touch is outside virtual controls
-				// (simple heuristic: use center-screen touches)
-				screenW, _ := ebiten.WindowSize()
-				if touch.X > 200 && touch.X < screenW-200 {
-					input.MouseX = touch.X
-					input.MouseY = touch.Y
-					input.MousePressed = true
-					break
-				}
-			}
-		}
+		s.processTouchInput(input)
 	} else {
-		// Process keyboard movement (desktop mode)
-		// Priority 2.3: Only allow movement in appropriate game states
-		if s.currentState.AllowsMovement() {
-			if ebiten.IsKeyPressed(s.KeyUp) {
-				input.MoveY = -1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyDown) {
-				input.MoveY = 1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyLeft) {
-				input.MoveX = -1.0
-			}
-			if ebiten.IsKeyPressed(s.KeyRight) {
-				input.MoveX = 1.0
-			}
+		s.processKeyboardInput(input)
+	}
+}
 
-			// Normalize diagonal movement
-			if input.MoveX != 0 && input.MoveY != 0 {
-				// Divide by sqrt(2) to maintain constant speed in all directions
-				input.MoveX *= 0.707
-				input.MoveY *= 0.707
-			}
-		}
+// processTouchInput handles touch input from virtual controls.
+func (s *InputSystem) processTouchInput(input *EbitenInput) {
+	moveX, moveY := s.virtualControls.GetMovementInput()
+	input.MoveX = moveX
+	input.MoveY = moveY
 
-		// Process action keys
-		// Priority 2.3: Only allow combat actions in appropriate game states
-		if s.currentState.AllowsCombat() {
-			if inpututil.IsKeyJustPressed(s.KeyAction) {
-				input.ActionPressed = true
-				input.ActionJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-				input.AnyKeyPressed = true     // GAP-005 REPAIR: Any key detection
-			}
-			if inpututil.IsKeyJustPressed(s.KeyUseItem) {
-				input.UseItemPressed = true
-				input.UseItemJustPressed = true // GAP-001 REPAIR: Frame-persistent flag
-				input.AnyKeyPressed = true      // GAP-005 REPAIR: Any key detection
-			}
-
-			// GAP-002 REPAIR: Process spell casting keys (1-5)
-			if inpututil.IsKeyJustPressed(s.KeySpell1) {
-				input.Spell1Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell2) {
-				input.Spell2Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell3) {
-				input.Spell3Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell4) {
-				input.Spell4Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-			if inpututil.IsKeyJustPressed(s.KeySpell5) {
-				input.Spell5Pressed = true
-				input.AnyKeyPressed = true // GAP-005 REPAIR
-			}
-		}
-
-		// GAP-005 REPAIR: Detect any key press for tutorial "press any key" prompts
-		if !input.AnyKeyPressed {
-			pressedKeys := inpututil.AppendPressedKeys(nil)
-			if len(pressedKeys) > 0 {
-				input.AnyKeyPressed = true
-			}
-		}
-
-		// Process mouse input
-		input.MouseX, input.MouseY = ebiten.CursorPosition()
-		input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	if s.virtualControls.IsActionPressed() {
+		input.ActionPressed = true
+	}
+	if s.virtualControls.IsSecondaryPressed() {
+		input.UseItemPressed = true
 	}
 
-	// Phase 10.1: Update aim component with mouse position (world coordinates)
-	// This enables mouse-aim for 360° rotation independent of movement direction
-	if entity.HasComponent("aim") && s.cameraSystem != nil {
-		aimComp, ok := entity.GetComponent("aim")
-		if ok {
-			aim, ok := aimComp.(*AimComponent)
-			if !ok {
-				return
-			}
+	s.processTouchMousePosition(input)
+}
 
-			// Convert screen coordinates to world coordinates
-			worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
-
-			// Set aim target in world space (this updates aim.AimAngle internally)
-			oldAngle := aim.AimAngle
-			aim.SetAimTarget(worldX, worldY)
-
-			// DEBUG: Log aim updates when angle changes significantly
-			if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
-				fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
-			}
-		}
+// processTouchMousePosition maps touch position outside controls to mouse position.
+func (s *InputSystem) processTouchMousePosition(input *EbitenInput) {
+	if s.touchHandler == nil {
+		return
 	}
 
-	// Apply movement to velocity component if it exists
-	if velComp, ok := entity.GetComponent("velocity"); ok {
-		velocity, ok := velComp.(*VelocityComponent)
-		if !ok {
-			return
-		}
-		velocity.VX = input.MoveX * s.MoveSpeed
-		velocity.VY = input.MoveY * s.MoveSpeed
+	touches := s.touchHandler.GetActiveTouches()
+	screenW, _ := ebiten.WindowSize()
 
-		// GAP-018 REPAIR: Update player animation based on movement
-		if animComp, ok := entity.GetComponent("animation"); ok {
-			anim, ok := animComp.(*AnimationComponent)
-			if !ok {
-				return
-			}
-			// Check if player is moving
-			isMoving := (velocity.VX != 0 || velocity.VY != 0)
-
-			if isMoving && anim.CurrentState == AnimationStateIdle {
-				anim.SetState(AnimationStateWalk)
-			} else if !isMoving && anim.CurrentState == AnimationStateWalk {
-				anim.SetState(AnimationStateIdle)
-			}
+	for _, touch := range touches {
+		if touch.X > 200 && touch.X < screenW-200 {
+			input.MouseX = touch.X
+			input.MouseY = touch.Y
+			input.MousePressed = true
+			break
 		}
+	}
+}
+
+// processKeyboardInput handles keyboard and mouse input.
+func (s *InputSystem) processKeyboardInput(input *EbitenInput) {
+	s.processMovementKeys(input)
+	s.processActionKeys(input)
+	s.detectAnyKeyPress(input)
+	s.processMouseState(input)
+}
+
+// processMovementKeys handles WASD movement with diagonal normalization.
+func (s *InputSystem) processMovementKeys(input *EbitenInput) {
+	if !s.currentState.AllowsMovement() {
+		return
+	}
+
+	if ebiten.IsKeyPressed(s.KeyUp) {
+		input.MoveY = -1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyDown) {
+		input.MoveY = 1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyLeft) {
+		input.MoveX = -1.0
+	}
+	if ebiten.IsKeyPressed(s.KeyRight) {
+		input.MoveX = 1.0
+	}
+
+	if input.MoveX != 0 && input.MoveY != 0 {
+		input.MoveX *= 0.707
+		input.MoveY *= 0.707
+	}
+}
+
+// processActionKeys handles combat action and spell casting keys.
+func (s *InputSystem) processActionKeys(input *EbitenInput) {
+	if !s.currentState.AllowsCombat() {
+		return
+	}
+
+	if inpututil.IsKeyJustPressed(s.KeyAction) {
+		input.ActionPressed = true
+		input.ActionJustPressed = true
+		input.AnyKeyPressed = true
+	}
+	if inpututil.IsKeyJustPressed(s.KeyUseItem) {
+		input.UseItemPressed = true
+		input.UseItemJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	s.processSpellKeys(input)
+}
+
+// processSpellKeys handles spell casting keys 1-5.
+func (s *InputSystem) processSpellKeys(input *EbitenInput) {
+	spellKeys := []struct {
+		key     ebiten.Key
+		pressed *bool
+	}{
+		{s.KeySpell1, &input.Spell1Pressed},
+		{s.KeySpell2, &input.Spell2Pressed},
+		{s.KeySpell3, &input.Spell3Pressed},
+		{s.KeySpell4, &input.Spell4Pressed},
+		{s.KeySpell5, &input.Spell5Pressed},
+	}
+
+	for _, spell := range spellKeys {
+		if inpututil.IsKeyJustPressed(spell.key) {
+			*spell.pressed = true
+			input.AnyKeyPressed = true
+		}
+	}
+}
+
+// detectAnyKeyPress sets AnyKeyPressed flag if any key is pressed.
+func (s *InputSystem) detectAnyKeyPress(input *EbitenInput) {
+	if !input.AnyKeyPressed {
+		pressedKeys := inpututil.AppendPressedKeys(nil)
+		if len(pressedKeys) > 0 {
+			input.AnyKeyPressed = true
+		}
+	}
+}
+
+// processMouseState updates mouse position and button state.
+func (s *InputSystem) processMouseState(input *EbitenInput) {
+	input.MouseX, input.MouseY = ebiten.CursorPosition()
+	input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+}
+
+// updateEntityAim updates the aim component with mouse position in world coordinates.
+func (s *InputSystem) updateEntityAim(entity *Entity, input *EbitenInput) {
+	if !entity.HasComponent("aim") || s.cameraSystem == nil {
+		return
+	}
+
+	aimComp, ok := entity.GetComponent("aim")
+	if !ok {
+		return
+	}
+
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return
+	}
+
+	worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
+	oldAngle := aim.AimAngle
+	aim.SetAimTarget(worldX, worldY)
+
+	if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
+		fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
+	}
+}
+
+// applyInputToVelocity converts movement input to velocity and updates animation.
+func (s *InputSystem) applyInputToVelocity(entity *Entity, input *EbitenInput) {
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return
+	}
+
+	velocity, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
+
+	velocity.VX = input.MoveX * s.MoveSpeed
+	velocity.VY = input.MoveY * s.MoveSpeed
+
+	s.updateMovementAnimation(entity, velocity)
+}
+
+// updateMovementAnimation switches between idle and walk animations based on movement.
+func (s *InputSystem) updateMovementAnimation(entity *Entity, velocity *VelocityComponent) {
+	animComp, ok := entity.GetComponent("animation")
+	if !ok {
+		return
+	}
+
+	anim, ok := animComp.(*AnimationComponent)
+	if !ok {
+		return
+	}
+
+	isMoving := velocity.VX != 0 || velocity.VY != 0
+
+	if isMoving && anim.CurrentState == AnimationStateIdle {
+		anim.SetState(AnimationStateWalk)
+	} else if !isMoving && anim.CurrentState == AnimationStateWalk {
+		anim.SetState(AnimationStateIdle)
 	}
 }
 

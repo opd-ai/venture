@@ -119,6 +119,94 @@
 //	    fmt.Printf("Server %s is offline\n", serverID)
 //	}
 //
+// # Trade Network
+//
+// The trade network provides dynamic cross-server item trading with market-driven pricing:
+//
+//	// Create federated market
+//	market := federation.NewFederatedMarket()
+//	market.Start() // Begin 60-second price updates
+//	defer market.Stop()
+//
+//	// Register items
+//	market.RegisterItem("sword", "server1", 100.0)
+//	market.RegisterItem("potion", "server1", 25.0)
+//
+//	// Update supply and demand
+//	market.UpdateSupply("sword", 50)  // 50 swords available
+//	market.UpdateDemand("sword", 75)  // 75 buy orders
+//
+//	// Calculate price (dynamic based on supply/demand)
+//	price := market.CalculatePrice("sword", 1.0) // serverMultiplier = 1.0
+//	fmt.Printf("Sword price: %.2f gold (%.1fx base)\n", price, price/100.0)
+//
+//	// Calculate shipping cost
+//	shipping := federation.CalculateShippingCost(price, 3) // 3 server hops
+//	totalCost := price + shipping
+//	fmt.Printf("Total cost with shipping: %.2f gold\n", totalCost)
+//
+//	// Get price history
+//	history, _ := market.GetPriceHistory("sword")
+//	fmt.Printf("Current: %.2f, Base: %.2f, History: %d points\n",
+//	    history.CurrentPrice, history.BasePrice, len(history.History))
+//
+//	// Market statistics
+//	stats := market.GetStats()
+//	fmt.Printf("Market: %d items, %d total supply, %d total demand\n",
+//	    stats.TotalItems, stats.TotalSupply, stats.TotalDemand)
+//
+// Pricing formula: Price = BasePrice × (Demand / Supply) × ServerMultiplier
+//   - Ratio clamped to 0.2x-5.0x (prevents extreme price swings)
+//   - Zero supply triggers 3x base price (scarcity premium)
+//   - ServerMultiplier from political system (0.8x ally, 1.0x neutral, 1.5x enemy)
+//   - Shipping adds 10% per server hop
+//
+// Price history tracks 288 data points (24 hours at 5-minute intervals).
+// Market updates run every 60 seconds to recalculate prices based on current supply/demand.
+//
+// # Merchant Caravans
+//
+// Merchant caravans are NPC traders that travel between servers carrying goods:
+//
+//	// Create caravan system (in engine package)
+//	import "github.com/opd-ai/venture/pkg/engine"
+//
+//	world := engine.NewWorld()
+//	caravanSys := engine.NewMerchantCaravanSystem(world)
+//	caravanSys.SetHopDuration(300.0) // 5 minutes per server hop
+//
+//	// Create caravan inventory
+//	inventory := []engine.CaravanItem{
+//	    {ItemID: "sword", Quantity: 10, PurchasePrice: 100, SalePrice: 120},
+//	    {ItemID: "potion", Quantity: 50, PurchasePrice: 25, SalePrice: 30},
+//	}
+//
+//	// Spawn caravan
+//	caravan := caravanSys.CreateCaravan("server1", "server3", inventory)
+//
+//	// Update travel (called each frame)
+//	caravanSys.Update(deltaTime)
+//
+//	// Check arrival time
+//	eta := caravanSys.EstimateArrivalTime(caravan)
+//	fmt.Printf("ETA: %s\n", time.Unix(eta, 0))
+//
+//	// Get caravans at a server
+//	caravansAtServer := caravanSys.GetCaravansAtServer("server2")
+//	fmt.Printf("Caravans at server2: %d\n", len(caravansAtServer))
+//
+//	// Calculate sale price with markup
+//	salePrice := caravanSys.CalculateSalePrice(100.0, 3) // 3 hops
+//	fmt.Printf("Sale price: %.2f (markup from distance)\n", salePrice)
+//
+// Merchant markup formula: 10% minimum + distance-based scaling up to 50% maximum
+//   - 0 hops: 10% markup (local trade)
+//   - 5 hops: ~30% markup
+//   - 10+ hops: 50% markup (capped)
+//
+// Caravans rest at destinations for 10 minutes before returning. Travel time is
+// 5 minutes per server hop by default (configurable).
+//
 // # Protocol Version Compatibility
 //
 // Version compatibility uses semantic versioning (major.minor.patch):

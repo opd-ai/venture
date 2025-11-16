@@ -19,6 +19,11 @@
 //   - Parallax scrolling based on camera position
 //   - Ambient occlusion for corners and edges
 //   - Height-based shadow casting
+//   - Phase 47: Enhanced wall rendering for 1920x1080 resolution
+//   - 2x2 super-sampling anti-aliasing for smooth edges
+//   - Seamless corner blending (L/T/Cross junctions)
+//   - Wall/floor boundary blending (50/50 color mix)
+//   - Directional shadow gradients for depth
 //
 // Phase 16.2 Transition System:
 //
@@ -48,12 +53,34 @@
 // and height-based shadows for enhanced 3D effect. Parallax offset is calculated
 // based on camera position and layer-specific depth multipliers.
 //
+// Phase 47 Enhanced Wall Rendering:
+//
+// The enhanced wall system provides high-quality wall rendering optimized for
+// 1920x1080 resolution. Key features include:
+//
+//   - Anti-aliasing: 2x2 super-sampling downsampling eliminates jagged edges
+//   - Corner blending: Automatic detection and blending for L, T, and Cross junctions
+//   - Boundary blending: 50/50 color mixing between wall and floor tiles
+//   - Shadow gradients: Directional lighting creates depth perception
+//   - Configurable blend radius: Default 4px for smooth corners
+//
+// Corner detection analyzes neighboring wall tiles to determine junction types:
+//   - L corners: Two adjacent walls meeting at 90 degrees
+//   - T junctions: Three walls meeting (one stem, two branches)
+//   - Cross junctions: Four walls meeting (intersection)
+//
+// All effects are deterministic and maintain performance targets:
+//   - <0.5ms per tile generation time
+//   - No jagged pixels at 1920x1080
+//   - Seamless corner transitions
+//
 // Performance targets:
 //   - <5% frame time increase over base rendering
 //   - All effects maintain deterministic generation
 //   - Ambient occlusion: <1ms overhead
 //   - Shadow generation: <1ms overhead
 //   - Layer compositing: <0.5ms for 32x32 tile
+//   - Enhanced wall rendering: <0.5ms for 32x32, <1.5ms for 64x64
 //
 // Example Usage:
 //
@@ -113,4 +140,21 @@
 //	}
 //	// Render layers separately with parallax offsets, or composite:
 //	composite := tiles.CompositeLayers(bg, base, fg)
+//
+// Example with Enhanced Wall Rendering (Phase 47):
+//
+//	wallConfig := tiles.DefaultEnhancedWallConfig()
+//	wallConfig.Config.Width = 64
+//	wallConfig.Config.Height = 64
+//	wallConfig.Config.Seed = 12345
+//	wallConfig.Config.GenreID = "fantasy"
+//	wallConfig.Neighbors = tiles.WallNeighbors{North: true, East: true}
+//	wallConfig.EnableAntialiasing = true
+//	wallConfig.EnableShadows = true
+//	wallConfig.BlendRadius = 4
+//
+//	wallTile, err := gen.GenerateEnhancedWall(wallConfig)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
 package tiles

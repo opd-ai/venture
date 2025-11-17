@@ -762,30 +762,30 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)
 
 	// Draw label text (centered)
-	if b.Label != "" || b.Icon != "" {
-		textColor := b.TextColor
-		if !b.Enabled {
-			textColor = color.RGBA{100, 100, 100, 255}
-		}
+	textColor := b.TextColor
+	if !b.Enabled {
+		textColor = color.RGBA{100, 100, 100, 255}
+	}
 
-		displayText := b.Label
-		if b.Icon != "" && b.Label != "" {
-			displayText = b.Icon + " " + b.Label
-		} else if b.Icon != "" {
-			displayText = b.Icon
-		}
-
-		// Calculate text position (centered) - use character width estimation
-		// basicfont.Face7x13 is 7 pixels wide per character, 13 pixels tall
+	displayText := b.Label
+	if b.Icon != "" && b.Label != "" {
+		displayText = b.Icon + " " + b.Label
+	} else if b.Icon != "" {
+		displayText = b.Icon
+	}
+	
+	// Ensure we always have text to render
+	if displayText != "" {
+		// Calculate text position (centered)
+		// basicfont.Face7x13 is approximately 7 pixels wide per character
 		textWidth := len(displayText) * 7
 
 		// Center horizontally
 		textX := int(b.X + (b.Width-float64(textWidth))/2)
 
-		// Center vertically - text.Draw uses baseline, not top
-		// For basicfont.Face7x13, baseline is about 10 pixels from top of the 13px height
-		// So we need to position at center + half of font height - descent
-		textY := int(b.Y + b.Height/2 + 4) // Empirically centered for 7x13 font
+		// Center vertically - text.Draw Y is the baseline
+		// For 7x13 font in a 44px button, center is around Y + 28
+		textY := int(b.Y + b.Height/2 + 5)
 
 		text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
 	}

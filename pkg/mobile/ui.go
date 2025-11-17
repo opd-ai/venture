@@ -789,7 +789,7 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	// DEBUG: Force bright yellow text and add red dot marker
 	debugColor := color.RGBA{255, 255, 0, 255} // Bright yellow
 	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, debugColor)
-	
+
 	// Draw red dot at text position to verify Draw is being called
 	vector.DrawFilledCircle(screen, float32(textX), float32(textY), 3, color.RGBA{255, 0, 0, 255}, true)
 }

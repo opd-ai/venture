@@ -66,3 +66,4 @@ go.work.sum
 /terrain_entity_integration
 build/
 *.backup
+*.gz

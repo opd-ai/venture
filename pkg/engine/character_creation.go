@@ -424,6 +424,10 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Next",
 		func() { cc.handleNextButton() },
 	)
+	// Make Next button more visible with brighter colors
+	cc.nextButton.BackgroundColor = color.RGBA{50, 100, 200, 255}
+	cc.nextButton.PressedColor = color.RGBA{70, 140, 255, 255}
+	cc.nextButton.BorderColor = color.RGBA{100, 150, 255, 255}
 
 	// Back button (bottom-left) - returns to previous step
 	cc.backButton = mobile.NewTouchButton(
@@ -432,6 +436,10 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Back",
 		func() { cc.handleBackButton() },
 	)
+	// Make Back button visible with distinct colors
+	cc.backButton.BackgroundColor = color.RGBA{120, 60, 60, 255}
+	cc.backButton.PressedColor = color.RGBA{180, 90, 90, 255}
+	cc.backButton.BorderColor = color.RGBA{200, 100, 100, 255}
 
 	// Skip button (bottom-center) - skips portrait selection
 	cc.skipButton = mobile.NewTouchButton(
@@ -440,6 +448,10 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Skip",
 		func() { cc.handleSkipButton() },
 	)
+	// Make Skip button visible
+	cc.skipButton.BackgroundColor = color.RGBA{100, 100, 50, 255}
+	cc.skipButton.PressedColor = color.RGBA{150, 150, 70, 255}
+	cc.skipButton.BorderColor = color.RGBA{180, 180, 100, 255}
 
 	// Create preset name buttons (for WASM/mobile fallback)
 	presetNames := []string{"Warrior", "Mage", "Rogue", "Ranger", "Auto"}

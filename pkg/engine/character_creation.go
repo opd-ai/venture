@@ -1192,11 +1192,19 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 
 // drawTouchButtons renders the appropriate touch buttons for current step
 func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
+	// Ensure Next button has correct label for current step
+	if cc.nextButton != nil {
+		if cc.currentStep == stepConfirmation {
+			cc.nextButton.Label = "Done"
+		} else {
+			cc.nextButton.Label = "Next"
+		}
+	}
+
 	switch cc.currentStep {
 	case stepNameInput:
 		// Show Next button and preset name buttons for name input
 		if cc.nextButton != nil {
-			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		// Draw preset name buttons (WASM/mobile fallback)
@@ -1208,7 +1216,6 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepClassSelection:
 		// Show Next and Back buttons for class selection
 		if cc.nextButton != nil {
-			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		if cc.backButton != nil {
@@ -1217,7 +1224,6 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepPortraitSelection:
 		// Show Next, Skip, and Back buttons for portrait selection
 		if cc.nextButton != nil {
-			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		if cc.skipButton != nil {
@@ -1229,7 +1235,6 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepConfirmation:
 		// Show Done and Back buttons for confirmation
 		if cc.nextButton != nil {
-			cc.nextButton.Label = "Done" // Change label for final step
 			cc.nextButton.Draw(screen)
 		}
 		if cc.backButton != nil {

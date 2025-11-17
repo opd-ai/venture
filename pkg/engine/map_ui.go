@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"golang.org/x/image/font/basicfont"
 )
@@ -34,6 +35,13 @@ type EbitenMapUI struct {
 	// Minimap settings
 	minimapSize    int // Size in pixels (square)
 	minimapPadding int // Distance from screen edge
+	
+	// Touch support
+	touchHandler     *mobile.TouchInputHandler
+	closeButton      *mobile.TouchButton
+	centerButton     *mobile.TouchButton
+	lastPinchScale   float64 // Track pinch zoom
+	lastPanX, lastPanY int   // Track pan gestures
 }
 
 // NewMapUI creates a new map UI system.
@@ -45,7 +53,7 @@ type EbitenMapUI struct {
 // Returns: Initialized MapUI
 // Called by: Game.NewGame()
 func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
-	return &EbitenMapUI{
+	ui := &EbitenMapUI{
 		visible:        false,
 		fullScreen:     false,
 		world:          world,
@@ -55,7 +63,29 @@ func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
 		minimapSize:    150,
 		minimapPadding: 10,
 		mapNeedsUpdate: true,
+		touchHandler:   mobile.NewTouchInputHandler(),
+		lastPinchScale: 1.0,
 	}
+	
+	// Create close button (top-right)
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.HideFullScreen() },
+	)
+	
+	// Create center button (bottom-right, below close button)
+	ui.centerButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		64,
+		44, 44,
+		"⊙", // Center/target icon
+		func() { ui.centerOnPlayer() },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity whose position to track.
@@ -162,6 +192,21 @@ func (ui *EbitenMapUI) HideFullScreen() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update touch buttons
+	if ui.fullScreen {
+		if ui.closeButton != nil {
+			ui.closeButton.Update()
+		}
+		if ui.centerButton != nil {
+			ui.centerButton.Update()
+		}
+	}
+	
 	// Always update fog of war (even when not visible)
 	ui.updateFogOfWar()
 
@@ -187,7 +232,37 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 
 	// Handle input for full-screen mode
 	if ui.fullScreen {
-		// Pan with arrow keys
+		// Touch: Pan with drag gesture
+		if ui.touchHandler != nil {
+			touches := ui.touchHandler.GetActiveTouches()
+			if len(touches) == 1 {
+				// Single touch - pan map
+				touch := touches[0]
+				if ui.lastPanX != 0 || ui.lastPanY != 0 {
+					deltaX := float64(touch.X - ui.lastPanX)
+					deltaY := float64(touch.Y - ui.lastPanY)
+					ui.panMap(deltaX, deltaY)
+				}
+				ui.lastPanX = touch.X
+				ui.lastPanY = touch.Y
+			} else if len(touches) == 0 {
+				// Reset pan tracking when no touches
+				ui.lastPanX = 0
+				ui.lastPanY = 0
+			}
+			
+			// Touch: Pinch to zoom
+			pinchScale := ui.touchHandler.GetPinch()
+			if pinchScale != 1.0 {
+				scaleDelta := pinchScale - ui.lastPinchScale
+				ui.zoomMap(scaleDelta * 2.0) // Scale factor for sensitivity
+				ui.lastPinchScale = pinchScale
+			} else {
+				ui.lastPinchScale = 1.0
+			}
+		}
+		
+		// Keyboard: Pan with arrow keys
 		panSpeed := 200.0 * deltaTime
 		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 			ui.panMap(-panSpeed, 0)
@@ -202,13 +277,13 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 			ui.panMap(0, panSpeed)
 		}
 
-		// Zoom with mouse wheel
+		// Keyboard: Zoom with mouse wheel
 		_, wheelY := ebiten.Wheel()
 		if wheelY != 0 {
 			ui.zoomMap(wheelY * 0.1)
 		}
 
-		// Center on player with Space key
+		// Keyboard: Center on player with Space key
 		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			ui.centerOnPlayer()
 		}
@@ -405,6 +480,14 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 
 	// Draw legend
 	ui.drawLegend(screen, panelX+10, panelY+panelHeight-60)
+
+	// Draw touch buttons for mobile/WASM
+	if ui.closeButton != nil {
+		ui.closeButton.Draw(screen)
+	}
+	if ui.centerButton != nil {
+		ui.centerButton.Draw(screen)
+	}
 
 	// Draw controls (standardized menu navigation)
 	exitHint := GetExitHint(MenuKeys.Map)

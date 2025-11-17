@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -32,16 +33,51 @@ type EbitenTutorialSystem struct {
 	ShowUI          bool
 	NotificationMsg string
 	NotificationTTL float64 // Time-to-live for notification (seconds)
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	nextButton   *mobile.TouchButton
+	skipButton   *mobile.TouchButton
+	screenWidth  int
+	screenHeight int
 }
 
 // NewTutorialSystem creates a new tutorial system with default steps.
 func NewTutorialSystem() *EbitenTutorialSystem {
-	return &EbitenTutorialSystem{
+	return NewTutorialSystemWithSize(800, 600) // Default screen size
+}
+
+// NewTutorialSystemWithSize creates a new tutorial system with specified screen dimensions.
+func NewTutorialSystemWithSize(screenWidth, screenHeight int) *EbitenTutorialSystem {
+	ts := &EbitenTutorialSystem{
 		Enabled:        true,
 		ShowUI:         true,
 		Steps:          createDefaultTutorialSteps(),
 		CurrentStepIdx: 0,
+		touchHandler:   mobile.NewTouchInputHandler(),
+		screenWidth:    screenWidth,
+		screenHeight:   screenHeight,
 	}
+	
+	// Create next button (bottom-right)
+	ts.nextButton = mobile.NewTouchButton(
+		float64(screenWidth-164),
+		float64(screenHeight-64),
+		120, 44,
+		"Next",
+		func() { ts.advanceToNextStep() },
+	)
+	
+	// Create skip button (bottom-left)
+	ts.skipButton = mobile.NewTouchButton(
+		44,
+		float64(screenHeight-64),
+		120, 44,
+		"Skip Tutorial",
+		func() { ts.DisableTutorial() },
+	)
+	
+	return ts
 }
 
 // createDefaultTutorialSteps generates the default tutorial sequence
@@ -211,6 +247,19 @@ func createDefaultTutorialSteps() []TutorialStep {
 func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	if !ts.Enabled || ts.CurrentStepIdx >= len(ts.Steps) {
 		return
+	}
+
+	// Update touch handler
+	if ts.touchHandler != nil {
+		ts.touchHandler.Update()
+	}
+	
+	// Update touch buttons
+	if ts.nextButton != nil {
+		ts.nextButton.Update()
+	}
+	if ts.skipButton != nil {
+		ts.skipButton.Update()
 	}
 
 	// Create temporary world for condition checking
@@ -387,6 +436,31 @@ func (ts *EbitenTutorialSystem) ImportState(enabled, showUI bool, currentStepIdx
 	}
 }
 
+// advanceToNextStep manually advances to the next tutorial step.
+// Called by the Next button.
+func (ts *EbitenTutorialSystem) advanceToNextStep() {
+	if ts.Enabled && ts.CurrentStepIdx < len(ts.Steps) {
+		// Mark current step as complete and move to next
+		ts.Steps[ts.CurrentStepIdx].Completed = true
+		ts.CurrentStepIdx++
+		
+		if ts.CurrentStepIdx >= len(ts.Steps) {
+			ts.NotificationMsg = "Tutorial Complete!"
+			ts.NotificationTTL = 3.0
+			ts.Enabled = false
+		}
+	}
+}
+
+// DisableTutorial completely disables the tutorial system.
+// Called by the Skip Tutorial button.
+func (ts *EbitenTutorialSystem) DisableTutorial() {
+	ts.Enabled = false
+	ts.ShowUI = false
+	ts.NotificationMsg = "Tutorial skipped"
+	ts.NotificationTTL = 2.0
+}
+
 // ShowNotification displays a notification message for the specified duration.
 // This can be used to show feedback for game actions like saving/loading.
 func (ts *EbitenTutorialSystem) ShowNotification(msg string, duration float64) {
@@ -490,6 +564,14 @@ func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
 	// Skip hint
 	hintColor := color.RGBA{150, 150, 150, 255}
 	text.Draw(ebitenScreen, "Press ESC to skip current step", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
+
+	// Draw touch buttons
+	if ts.nextButton != nil {
+		ts.nextButton.Draw(ebitenScreen)
+	}
+	if ts.skipButton != nil {
+		ts.skipButton.Draw(ebitenScreen)
+	}
 
 	// Show notification if available
 	if ts.NotificationTTL > 0 {

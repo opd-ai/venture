@@ -1184,6 +1184,7 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepNameInput:
 		// Show Next button and preset name buttons for name input
 		if cc.nextButton != nil {
+			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		// Draw preset name buttons (WASM/mobile fallback)
@@ -1195,6 +1196,7 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepClassSelection:
 		// Show Next and Back buttons for class selection
 		if cc.nextButton != nil {
+			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		if cc.backButton != nil {
@@ -1203,6 +1205,7 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	case stepPortraitSelection:
 		// Show Next, Skip, and Back buttons for portrait selection
 		if cc.nextButton != nil {
+			cc.nextButton.Label = "Next" // Ensure label is Next
 			cc.nextButton.Draw(screen)
 		}
 		if cc.skipButton != nil {
@@ -1212,7 +1215,7 @@ func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 			cc.backButton.Draw(screen)
 		}
 	case stepConfirmation:
-		// Show Next (as "Done") and Back buttons for confirmation
+		// Show Done and Back buttons for confirmation
 		if cc.nextButton != nil {
 			cc.nextButton.Label = "Done" // Change label for final step
 			cc.nextButton.Draw(screen)
@@ -1274,9 +1277,13 @@ func (cc *EbitenCharacterCreation) drawNameInput(screen *ebiten.Image, x, y, w, 
 	}
 
 	// Help text
-	helpText1 := "Press ENTER to continue | F2 to save as default"
+	helpText1 := "Press ENTER or click NEXT to continue"
+	helpText2 := "F2 to save as default"
 	helpX1 := x + w/2 - len(helpText1)*3
-	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-60,
+	helpX2 := x + w/2 - len(helpText2)*3
+	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-75,
+		color.RGBA{150, 200, 150, 255})
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-60,
 		color.RGBA{150, 200, 150, 255})
 }
 
@@ -1344,8 +1351,8 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 	// Help text
 	helpText1 := "Use ARROW KEYS or 1-3 to select"
 	helpText2 := "TAP/CLICK a class to select and continue"
-	helpText3 := "Press ENTER to continue | F2 to save as default"
-	helpText4 := "BACKSPACE to go back"
+	helpText3 := "Press ENTER or click NEXT to continue"
+	helpText4 := "BACKSPACE or click BACK to go back | F2 to save default"
 	helpX1 := x + w/2 - len(helpText1)*3
 	helpX2 := x + w/2 - len(helpText2)*3
 	helpX3 := x + w/2 - len(helpText3)*3

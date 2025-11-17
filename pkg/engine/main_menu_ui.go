@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 )
 
 // MainMenuOption represents a selectable option in the main menu.
@@ -50,11 +51,15 @@ type MainMenuUI struct {
 
 	// Callback for when an option is selected
 	onSelect func(option MainMenuOption)
+	
+	// Touch support
+	touchHandler  *mobile.TouchInputHandler
+	optionButtons []*mobile.TouchButton
 }
 
 // NewMainMenuUI creates a new main menu UI.
 func NewMainMenuUI(screenWidth, screenHeight int) *MainMenuUI {
-	return &MainMenuUI{
+	ui := &MainMenuUI{
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 		selectedIdx:  0,
@@ -64,7 +69,34 @@ func NewMainMenuUI(screenWidth, screenHeight int) *MainMenuUI {
 			MainMenuOptionSettings,
 			MainMenuOptionQuit,
 		},
+		touchHandler:  mobile.NewTouchInputHandler(),
+		optionButtons: make([]*mobile.TouchButton, 4),
 	}
+	
+	// Create touch buttons for each menu option
+	startY := screenHeight / 2
+	spacing := 40
+	
+	for i, option := range ui.options {
+		optionText := option.String()
+		buttonWidth := len(optionText)*8 + 40  // Text width + padding
+		buttonX := float64(screenWidth/2 - buttonWidth/2)
+		buttonY := float64(startY + i*spacing - 5)
+		
+		idx := i // Capture for closure
+		ui.optionButtons[i] = mobile.NewTouchButton(
+			buttonX, buttonY,
+			float64(buttonWidth), 44,
+			optionText,
+			func() {
+				if ui.onSelect != nil {
+					ui.onSelect(ui.options[idx])
+				}
+			},
+		)
+	}
+	
+	return ui
 }
 
 // SetSelectCallback sets the callback function called when an option is selected.
@@ -75,6 +107,18 @@ func (m *MainMenuUI) SetSelectCallback(callback func(option MainMenuOption)) {
 // Update processes input for the main menu.
 // Returns true if an option was selected.
 func (m *MainMenuUI) Update() bool {
+	// Update touch handler
+	if m.touchHandler != nil {
+		m.touchHandler.Update()
+	}
+	
+	// Update touch buttons
+	for _, btn := range m.optionButtons {
+		if btn != nil {
+			btn.Update()
+		}
+	}
+	
 	// Handle up/down arrow keys for navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIdx--
@@ -161,8 +205,21 @@ func (m *MainMenuUI) Draw(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, optionText, x, y)
 	}
 
+	// Draw touch buttons
+	for i, btn := range m.optionButtons {
+		if btn != nil {
+			// Update button colors based on selection
+			if i == m.selectedIdx {
+				btn.BackgroundColor = color.RGBA{100, 100, 200, 255}
+			} else {
+				btn.BackgroundColor = color.RGBA{50, 50, 70, 255}
+			}
+			btn.Draw(screen)
+		}
+	}
+
 	// Draw controls hint
-	controlsText := "Use Arrow Keys / WASD to navigate, Enter/Space to select"
+	controlsText := "Use Arrow Keys / WASD to navigate, Enter/Space to select, or tap buttons"
 	controlsX := m.screenWidth/2 - len(controlsText)*3
 	controlsY := m.screenHeight - 50
 	ebitenutil.DebugPrintAt(screen, controlsText, controlsX, controlsY)

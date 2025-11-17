@@ -445,7 +445,14 @@ func ShowKeyboard() {
 		// before calling focus(). This gives the browser a chance to reflow/repaint.
 		// On some mobile browsers, immediate focus() after style changes may fail.
 		requestAnimationFrame := js.Global().Get("requestAnimationFrame")
-		focusCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		
+		// Create callback that will be called once by requestAnimationFrame
+		var focusCallback js.Func
+		focusCallback = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			// CRITICAL: Release callback after execution to prevent memory leak
+			// This is safe because requestAnimationFrame calls the callback exactly once
+			defer focusCallback.Release()
+			
 			// Focus the input element to trigger keyboard
 			// Mobile browsers will show the native keyboard when an input is focused
 			// (especially if this focus happens during/after a user touch event)
@@ -464,7 +471,6 @@ func ShowKeyboard() {
 				logInfo("Input position: bottom-center, opacity: 0.05, size: 200x50px")
 			}
 			
-			// Cleanup: Don't release callback yet - will be called only once by browser
 			return nil
 		})
 		

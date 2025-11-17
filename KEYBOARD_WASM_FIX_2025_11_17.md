@@ -34,7 +34,7 @@ if body.IsUndefined() || body.IsNull() {
 }
 ```
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:72-78, 211-218`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:82-87, 224-231`
 
 ---
 
@@ -56,7 +56,7 @@ if canvasList.Get("length").Int() == 0 {
 }
 ```
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:220-227`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:233-241`
 
 ---
 
@@ -80,7 +80,7 @@ canvasStyle.Set("zIndex", "1")          // Below input element (999)
 - Input: z-index 999 (above canvas)
 - Loading overlay: z-index 1000+ (if present)
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:229-233`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:243-249`
 
 ---
 
@@ -112,7 +112,7 @@ if !initializationAttempted {
 - Keeps retrying until DOM/canvas ready
 - Once initialized, no more attempts needed
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:48-50, 67-74`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:48-50, 71-77`
 
 ---
 
@@ -154,7 +154,7 @@ requestAnimationFrame.Call("call", js.Global(), focusCallback)
 - THEN focus is called, on a properly positioned and rendered element
 - Mobile browsers more likely to honor focus when element is visible
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:445-467`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:444-478`
 
 ---
 
@@ -183,7 +183,7 @@ style.Set("opacity", "0.01") // Reset when hidden
 - Size: 200x50px (large tap target)
 - Position: Bottom-center, 80px from bottom
 
-**Lines Changed**: `pkg/mobile/keyboard_wasm.go:441-444, 498`
+**Lines Changed**: `pkg/mobile/keyboard_wasm.go:442, 500`
 
 ---
 

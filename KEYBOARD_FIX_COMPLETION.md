@@ -25,37 +25,37 @@ The WebAssembly virtual keyboard system failed to appear on touch devices (iOS S
 ### 1. DOM Readiness Checks (CRITICAL)
 **Issue**: Silent initialization failure if called before DOM ready  
 **Fix**: Added defensive checks for document and body existence  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 72-78, 211-218  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 82-87, 224-231  
 **Impact**: Prevents crashes, enables retry mechanism  
 
 ### 2. Canvas Existence Check (CRITICAL)
 **Issue**: Event forwarding setup failed without canvas element  
 **Fix**: Verify Ebiten canvas exists before completing initialization  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 220-227  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 233-241  
 **Impact**: Ensures event forwarding chain is valid  
 
 ### 3. Z-Index Stacking Fix (HIGH)
 **Issue**: Canvas potentially covering input element  
 **Fix**: Set canvas z-index=1, input z-index=999 explicitly  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 229-233  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 243-249  
 **Impact**: Input element guaranteed tappable when on-screen  
 
 ### 4. Retry Mechanism (MEDIUM)
 **Issue**: Failed initialization permanent until page reload  
 **Fix**: Auto-retry on each `ShowKeyboard()` call until successful  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 48-50, 67-74  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 48-50, 71-77  
 **Impact**: Automatic recovery from timing issues  
 
 ### 5. Focus Timing Fix (HIGH)
 **Issue**: Programmatic focus failed on mobile browsers  
 **Fix**: Use requestAnimationFrame to delay focus until after reflow  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 445-467  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 444-478  
 **Impact**: Better mobile browser compatibility  
 
 ### 6. Input Visibility Enhancement (MEDIUM)
 **Issue**: Opacity 0.01 made input impossible to find  
 **Fix**: Increase opacity to 0.05 when shown (5x more visible)  
-**Code**: `pkg/mobile/keyboard_wasm.go` lines 441-444, 498  
+**Code**: `pkg/mobile/keyboard_wasm.go` lines 442, 500  
 **Impact**: Users can find tap target as fallback  
 
 ---

@@ -747,16 +747,10 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Determine button color
-	bgColor := b.BackgroundColor
-	if !b.Enabled {
-		bgColor = b.DisabledColor
-	} else if b.pressed {
-		bgColor = b.PressedColor
-	}
-
-	// Draw button background
-	vector.DrawFilledRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), bgColor, true)
+	// DEBUG: Draw a huge bright magenta rectangle to show actual button bounds
+	// This will make it impossible to miss and show the real width/height
+	vector.DrawFilledRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height),
+		color.RGBA{255, 0, 255, 255}, true)
 
 	// Draw border
 	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)

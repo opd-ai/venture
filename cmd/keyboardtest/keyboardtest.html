@@ -18,7 +18,7 @@
             min-height: 100vh;
             font-family: monospace;
             color: #fff;
-            touch-action: none;
+            /* KEYBOARD FIX: Don't block touch-action globally - input needs focus! */
             -webkit-user-select: none;
             user-select: none;
         }
@@ -26,6 +26,11 @@
             border: 2px solid #4CAF50;
             border-radius: 8px;
             touch-action: none;
+        }
+        /* KEYBOARD FIX: Ensure input elements can receive touch for focus */
+        input {
+            touch-action: auto !important;
+            pointer-events: auto !important;
         }
         #status {
             margin-top: 20px;
@@ -175,15 +180,17 @@
                 document.getElementById('loading').style.color = '#f44336';
             });
             
-        // Prevent default touch behaviors
+        // KEYBOARD FIX: Prevent default touch behaviors but allow INPUT elements
         document.addEventListener('touchstart', (e) => {
-            if (e.target.tagName !== 'CANVAS') {
+            // Allow INPUT elements to receive touches for keyboard focus
+            if (e.target.tagName !== 'CANVAS' && e.target.tagName !== 'INPUT') {
                 e.preventDefault();
             }
         }, { passive: false });
         
         document.addEventListener('touchmove', (e) => {
-            if (e.target.tagName !== 'CANVAS') {
+            // Allow touch move on INPUT for selection
+            if (e.target.tagName !== 'CANVAS' && e.target.tagName !== 'INPUT') {
                 e.preventDefault();
             }
         }, { passive: false });

@@ -5,6 +5,8 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -692,26 +694,49 @@ func (b *TouchButton) Update() {
 
 	b.touchHandler.Update()
 
-	// Check if button is being touched
-	touches := b.touchHandler.GetActiveTouches()
+	// Get mouse/cursor position
+	mouseX, mouseY := ebiten.CursorPosition()
 	b.pressed = false
 
-	for _, touch := range touches {
-		if float64(touch.X) >= b.X && float64(touch.X) <= b.X+b.Width &&
-			float64(touch.Y) >= b.Y && float64(touch.Y) <= b.Y+b.Height {
+	// Check if button is being pressed via mouse
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		if float64(mouseX) >= b.X && float64(mouseX) <= b.X+b.Width &&
+			float64(mouseY) >= b.Y && float64(mouseY) <= b.Y+b.Height {
+			b.pressed = true
+		}
+	}
+
+	// Check if button is being touched (native touch events)
+	touchIDs := ebiten.TouchIDs()
+	for _, id := range touchIDs {
+		x, y := ebiten.TouchPosition(id)
+		if float64(x) >= b.X && float64(x) <= b.X+b.Width &&
+			float64(y) >= b.Y && float64(y) <= b.Y+b.Height {
 			b.pressed = true
 			break
 		}
 	}
 
-	// Handle tap on button
-	if b.touchHandler.IsTapping() {
-		tapX, tapY := b.touchHandler.GetTapPosition()
-		if float64(tapX) >= b.X && float64(tapX) <= b.X+b.Width &&
-			float64(tapY) >= b.Y && float64(tapY) <= b.Y+b.Height {
+	// Handle mouse click (works in WASM with mouse)
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if float64(mouseX) >= b.X && float64(mouseX) <= b.X+b.Width &&
+			float64(mouseY) >= b.Y && float64(mouseY) <= b.Y+b.Height {
 			if b.OnTap != nil {
 				b.OnTap()
 			}
+		}
+	}
+
+	// Handle native touch tap (works in WASM with actual touch devices)
+	justPressedTouchIDs := inpututil.AppendJustPressedTouchIDs(nil)
+	for _, id := range justPressedTouchIDs {
+		x, y := ebiten.TouchPosition(id)
+		if float64(x) >= b.X && float64(x) <= b.X+b.Width &&
+			float64(y) >= b.Y && float64(y) <= b.Y+b.Height {
+			if b.OnTap != nil {
+				b.OnTap()
+			}
+			break
 		}
 	}
 }
@@ -750,21 +775,15 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 			displayText = b.Icon
 		}
 
-		// Calculate text position (centered)
-		bounds, _ := font.BoundString(basicfont.Face7x13, displayText)
-		textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
-		textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
+		// Calculate text position (centered) - use character width estimation
+		// basicfont.Face7x13 is 7 pixels wide per character
+		textWidth := len(displayText) * 7
+		textHeight := 13
 
 		textX := int(b.X + (b.Width-float64(textWidth))/2)
 		textY := int(b.Y + (b.Height+float64(textHeight))/2)
 
-		d := &font.Drawer{
-			Dst:  screen,
-			Src:  &image.Uniform{textColor},
-			Face: basicfont.Face7x13,
-			Dot:  fixed.P(textX, textY),
-		}
-		d.DrawString(displayText)
+		text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
 	}
 }
 

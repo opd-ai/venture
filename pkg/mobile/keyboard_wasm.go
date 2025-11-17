@@ -435,23 +435,41 @@ func ShowKeyboard() {
 		style.Set("transform", "translateX(-50%)") // Center horizontally
 		style.Set("bottom", "80px")                // Above mobile keyboard area
 		style.Set("top", "auto")                   // Clear the off-screen top value
+		
+		// MOBILE FIX: Make input slightly more visible when active to help users find it
+		// Increase opacity from 0.01 to 0.05 when keyboard is requested
+		// Still mostly invisible but easier to tap
+		style.Set("opacity", "0.05")
 
-		// Focus the input element to trigger keyboard
-		// Mobile browsers will show the native keyboard when an input is focused
-		// (especially if this focus happens during/after a user touch event)
-		keyboardElement.Call("focus")
+		// MOBILE FIX: Use requestAnimationFrame to ensure style changes are processed
+		// before calling focus(). This gives the browser a chance to reflow/repaint.
+		// On some mobile browsers, immediate focus() after style changes may fail.
+		requestAnimationFrame := js.Global().Get("requestAnimationFrame")
+		focusCallback := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			// Focus the input element to trigger keyboard
+			// Mobile browsers will show the native keyboard when an input is focused
+			// (especially if this focus happens during/after a user touch event)
+			keyboardElement.Call("focus")
 
-		logInfo("Keyboard element moved on-screen and focused")
+			logInfo("Keyboard element moved on-screen and focused")
 
-		// Verify focus was successful
-		doc := js.Global().Get("document")
-		activeElement := doc.Get("activeElement")
-		if activeElement.Get("id").String() == "venture-keyboard-input" {
-			logInfo("Focus successful - active element is venture-keyboard-input")
-		} else {
-			logError("Focus failed - active element is: " + activeElement.Get("tagName").String())
-			logInfo("User may need to tap the screen to trigger keyboard")
-		}
+			// Verify focus was successful
+			doc := js.Global().Get("document")
+			activeElement := doc.Get("activeElement")
+			if activeElement.Get("id").String() == "venture-keyboard-input" {
+				logInfo("Focus successful - active element is venture-keyboard-input")
+			} else {
+				logError("Focus failed - active element is: " + activeElement.Get("tagName").String())
+				logInfo("User may need to tap the screen to trigger keyboard")
+				logInfo("Input position: bottom-center, opacity: 0.05, size: 200x50px")
+			}
+			
+			// Cleanup: Don't release callback yet - will be called only once by browser
+			return nil
+		})
+		
+		// Schedule focus for next animation frame
+		requestAnimationFrame.Call("call", js.Global(), focusCallback)
 	} else {
 		logError("Keyboard element is undefined - initialization failed")
 	}
@@ -477,8 +495,9 @@ func HideKeyboard() {
 		style := keyboardElement.Get("style")
 		style.Set("left", "-9999px")
 		style.Set("top", "-9999px")
-		style.Set("bottom", "auto")    // Clear bottom positioning
-		style.Set("transform", "none") // Clear transform
+		style.Set("bottom", "auto")     // Clear bottom positioning
+		style.Set("transform", "none")  // Clear transform
+		style.Set("opacity", "0.01")    // Reset opacity to nearly invisible
 
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")

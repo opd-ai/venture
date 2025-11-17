@@ -7,6 +7,19 @@ import (
 	"syscall/js"
 )
 
+// Console logging helper for debugging keyboard issues
+var console = js.Global().Get("console")
+
+// logInfo logs an informational message to browser console
+func logInfo(msg string) {
+	console.Call("log", "[VentureKeyboard] "+msg)
+}
+
+// logError logs an error message to browser console
+func logError(msg string) {
+	console.Call("error", "[VentureKeyboard] "+msg)
+}
+
 // keyboardElement holds a reference to the hidden input element used to trigger
 // the native mobile keyboard. This element is created lazily on first use.
 var keyboardElement js.Value
@@ -47,9 +60,11 @@ var keyCodeMap = map[string]int{
 // the game.
 func initKeyboardElement() {
 	if !keyboardElement.IsUndefined() {
+		logInfo("Keyboard element already initialized, skipping")
 		return // Already initialized
 	}
 
+	logInfo("Initializing virtual keyboard element")
 	doc := js.Global().Get("document")
 	input := doc.Call("createElement", "input")
 
@@ -99,6 +114,7 @@ func initKeyboardElement() {
 		if len(currentValue) > len(lastInputValue) {
 			// New characters added - dispatch them to document
 			newChars := currentValue[len(lastInputValue):]
+			logInfo("Input event: new chars added: '" + newChars + "'")
 			for _, ch := range newChars {
 				dispatchKeyboardEvent(doc, string(ch))
 			}
@@ -108,7 +124,9 @@ func initKeyboardElement() {
 			input.Call("focus")
 		} else if len(currentValue) < len(lastInputValue) {
 			// Characters deleted (backspace) - dispatch backspace event
-			for i := 0; i < len(lastInputValue)-len(currentValue); i++ {
+			deletedCount := len(lastInputValue) - len(currentValue)
+			logInfo("Input event: backspace pressed (" + string(rune('0'+deletedCount)) + " chars deleted)")
+			for i := 0; i < deletedCount; i++ {
 				dispatchBackspaceEvent(doc)
 			}
 
@@ -173,6 +191,9 @@ func initKeyboardElement() {
 
 	keyboardElement = input
 	lastInputValue = ""
+	
+	logInfo("Virtual keyboard element created and added to DOM")
+	logInfo("Element ID: venture-keyboard-input, Type: text, InputMode: text")
 }
 
 // dispatchKeyboardEvent dispatches a synthetic keyboard event to the canvas element
@@ -331,6 +352,8 @@ func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 //
 // This is a no-op on desktop browsers where keyboard is always available.
 func ShowKeyboard() {
+	logInfo("ShowKeyboard() called")
+	
 	// Ensure keyboard element exists (with event forwarding)
 	initKeyboardElement()
 
@@ -342,6 +365,19 @@ func ShowKeyboard() {
 		// Focus the input element to trigger keyboard
 		// Mobile browsers will show the native keyboard when an input is focused
 		keyboardElement.Call("focus")
+		
+		logInfo("Keyboard element focused - mobile keyboard should appear")
+		
+		// Verify focus was successful
+		doc := js.Global().Get("document")
+		activeElement := doc.Get("activeElement")
+		if activeElement.Get("id").String() == "venture-keyboard-input" {
+			logInfo("Focus successful - active element is venture-keyboard-input")
+		} else {
+			logError("Focus failed - active element is: " + activeElement.Get("tagName").String())
+		}
+	} else {
+		logError("Keyboard element is undefined - initialization failed")
 	}
 }
 
@@ -356,6 +392,8 @@ func ShowKeyboard() {
 //
 // This is a no-op on desktop browsers.
 func HideKeyboard() {
+	logInfo("HideKeyboard() called")
+	
 	// Blur the input element to dismiss keyboard
 	if !keyboardElement.IsUndefined() {
 		keyboardElement.Call("blur")
@@ -363,6 +401,10 @@ func HideKeyboard() {
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")
 		lastInputValue = ""
+		
+		logInfo("Keyboard element blurred and cleared")
+	} else {
+		logInfo("HideKeyboard() called but keyboard element not initialized")
 	}
 }
 

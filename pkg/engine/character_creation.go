@@ -392,6 +392,9 @@ type EbitenCharacterCreation struct {
 	nextButton   *mobile.TouchButton
 	backButton   *mobile.TouchButton
 	skipButton   *mobile.TouchButton // For skipping portrait selection
+	
+	// Preset name buttons for WASM/mobile fallback
+	presetNameButtons []*mobile.TouchButton
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -433,6 +436,19 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Skip",
 		func() { cc.handleSkipButton() },
 	)
+	
+	// Create preset name buttons (for WASM/mobile fallback)
+	presetNames := []string{"Warrior", "Mage", "Rogue", "Ranger", "Auto"}
+	cc.presetNameButtons = make([]*mobile.TouchButton, len(presetNames))
+	for i, name := range presetNames {
+		presetName := name // Capture for closure
+		cc.presetNameButtons[i] = mobile.NewTouchButton(
+			0, 0, // Position updated dynamically
+			100, 36,
+			presetName,
+			func() { cc.handlePresetName(presetName) },
+		)
+	}
 	
 	return cc
 }
@@ -479,6 +495,15 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	if cc.skipButton != nil {
 		cc.skipButton.Update()
 	}
+	
+	// Update preset name buttons (only in name input step)
+	if cc.currentStep == stepNameInput {
+		for _, btn := range cc.presetNameButtons {
+			if btn != nil {
+				btn.Update()
+			}
+		}
+	}
 
 	switch cc.currentStep {
 	case stepNameInput:
@@ -518,6 +543,25 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 			float64(cc.panelX+cc.panelWidth/2-60),
 			float64(cc.panelY+cc.panelHeight-60),
 		)
+	}
+	
+	// Position preset name buttons (only in name input step)
+	// Arrange horizontally below the input field
+	if cc.currentStep == stepNameInput {
+		buttonSpacing := 10
+		buttonWidth := 100
+		totalWidth := len(cc.presetNameButtons)*buttonWidth + (len(cc.presetNameButtons)-1)*buttonSpacing
+		startX := cc.panelX + cc.panelWidth/2 - totalWidth/2
+		buttonY := cc.panelY + 200 // Below the input box
+		
+		for i, btn := range cc.presetNameButtons {
+			if btn != nil {
+				btn.SetPosition(
+					float64(startX+i*(buttonWidth+buttonSpacing)),
+					float64(buttonY),
+				)
+			}
+		}
 	}
 }
 
@@ -891,6 +935,34 @@ func (cc *EbitenCharacterCreation) hideKeyboardIfNeeded() {
 	}
 }
 
+// handlePresetName handles preset name button presses
+// Provides quick name options for WASM/mobile users if keyboard doesn't work
+func (cc *EbitenCharacterCreation) handlePresetName(preset string) {
+	if preset == "Auto" {
+		// Auto-generate a random name based on current class
+		cc.nameInput = cc.generateRandomName()
+	} else {
+		// Use preset name directly
+		cc.nameInput = preset
+	}
+	cc.errorMsg = "Name set to: " + cc.nameInput
+}
+
+// generateRandomName generates a random character name based on selected class
+// Provides fallback for WASM/mobile if keyboard isn't working
+func (cc *EbitenCharacterCreation) generateRandomName() string {
+	// Simple name generation - combine prefix and suffix
+	prefixes := []string{"Brave", "Swift", "Dark", "Elder", "Noble", "Shadow", "Storm", "Iron", "Silver", "Golden"}
+	suffixes := []string{"blade", "heart", "fist", "eye", "soul", "wind", "fire", "steel", "wing", "star"}
+	
+	// Use simple randomization based on current time-like value
+	// For true randomness, would need proper seeding
+	prefix := prefixes[len(cc.nameInput)%len(prefixes)]
+	suffix := suffixes[cc.selectedClass%CharacterClass(len(suffixes))]
+	
+	return prefix + suffix
+}
+
 // handleNextButton processes the Next touch button press
 // Advances to the next step in character creation
 func (cc *EbitenCharacterCreation) handleNextButton() {
@@ -1085,9 +1157,15 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
 	switch cc.currentStep {
 	case stepNameInput:
-		// Only show Next button for name input
+		// Show Next button and preset name buttons for name input
 		if cc.nextButton != nil {
 			cc.nextButton.Draw(screen)
+		}
+		// Draw preset name buttons (WASM/mobile fallback)
+		for _, btn := range cc.presetNameButtons {
+			if btn != nil {
+				btn.Draw(screen)
+			}
 		}
 	case stepClassSelection:
 		// Show Next and Back buttons for class selection
@@ -1154,11 +1232,19 @@ func (cc *EbitenCharacterCreation) drawNameInput(screen *ebiten.Image, x, y, w, 
 	text.Draw(screen, displayText, basicfont.Face7x13, textX, inputBoxY+20,
 		color.RGBA{255, 255, 255, 255})
 
+	// Preset name buttons hint (for WASM/mobile)
+	if mobile.IsWASM() {
+		hintText := "Or tap a preset name below:"
+		hintX := x + w/2 - len(hintText)*3
+		text.Draw(screen, hintText, basicfont.Face7x13, hintX, y+185,
+			color.RGBA{100, 200, 100, 255})
+	}
+
 	// Show current default if set
 	if cc.defaults.DefaultName != "" {
 		defaultText := fmt.Sprintf("Current default: %s", cc.defaults.DefaultName)
 		defaultX := x + w/2 - len(defaultText)*3
-		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+200,
+		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+245,
 			color.RGBA{150, 150, 150, 255})
 	}
 

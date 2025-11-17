@@ -1047,6 +1047,12 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 		return err
 	}
 
+	// BUG FIX: Menu Trap - Connect mailbox UI to input system for ESC key handling
+	// Resolution: Enables dual-exit pattern (L key toggle + ESC key close) for mailbox UI
+	if game.MailboxUI != nil {
+		inputSystem.SetMailboxUI(game.MailboxUI)
+	}
+
 	if *verbose {
 		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
 		clientLogger.Info("inventory actions: E to equip/use, D to drop")

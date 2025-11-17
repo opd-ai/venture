@@ -631,6 +631,162 @@ func (m *MinimapWidget) getTileColorForType(tileType int) color.Color {
 	}
 }
 
+// TouchButton represents a touch-friendly button widget.
+// Platform parity fix: Ensures minimum touch target size per platform guidelines
+type TouchButton struct {
+	X, Y            float64
+	Width, Height   float64
+	Label           string
+	Icon            string // Icon character/emoji (optional)
+	Enabled         bool
+	Visible         bool
+	OnTap           func()
+	
+	// Touch handling
+	touchHandler    *TouchInputHandler
+	pressed         bool // Visual feedback for active touch
+	
+	// Visual settings
+	BackgroundColor color.Color
+	PressedColor    color.Color
+	DisabledColor   color.Color
+	TextColor       color.Color
+	BorderColor     color.Color
+}
+
+// NewTouchButton creates a new touch button with minimum size validation.
+// Platform parity fix: Enforces 44px minimum per iOS/Android guidelines
+func NewTouchButton(x, y, width, height float64, label string, onTap func()) *TouchButton {
+	// Platform parity fix: Ensure minimum touch target size
+	minSize := 44.0
+	if width < minSize {
+		width = minSize
+	}
+	if height < minSize {
+		height = minSize
+	}
+	
+	return &TouchButton{
+		X:               x,
+		Y:               y,
+		Width:           width,
+		Height:          height,
+		Label:           label,
+		Enabled:         true,
+		Visible:         true,
+		OnTap:           onTap,
+		touchHandler:    NewTouchInputHandler(),
+		BackgroundColor: color.RGBA{50, 50, 70, 255},
+		PressedColor:    color.RGBA{80, 120, 200, 255},
+		DisabledColor:   color.RGBA{30, 30, 40, 255},
+		TextColor:       color.RGBA{255, 255, 255, 255},
+		BorderColor:     color.RGBA{100, 100, 100, 255},
+	}
+}
+
+// Update processes touch input for the button.
+func (b *TouchButton) Update() {
+	if !b.Visible || !b.Enabled {
+		return
+	}
+	
+	b.touchHandler.Update()
+	
+	// Check if button is being touched
+	touches := b.touchHandler.GetActiveTouches()
+	b.pressed = false
+	
+	for _, touch := range touches {
+		if float64(touch.X) >= b.X && float64(touch.X) <= b.X+b.Width &&
+			float64(touch.Y) >= b.Y && float64(touch.Y) <= b.Y+b.Height {
+			b.pressed = true
+			break
+		}
+	}
+	
+	// Handle tap on button
+	if b.touchHandler.IsTapping() {
+		tapX, tapY := b.touchHandler.GetTapPosition()
+		if float64(tapX) >= b.X && float64(tapX) <= b.X+b.Width &&
+			float64(tapY) >= b.Y && float64(tapY) <= b.Y+b.Height {
+			if b.OnTap != nil {
+				b.OnTap()
+			}
+		}
+	}
+}
+
+// Draw renders the button.
+func (b *TouchButton) Draw(screen *ebiten.Image) {
+	if !b.Visible {
+		return
+	}
+	
+	// Determine button color
+	bgColor := b.BackgroundColor
+	if !b.Enabled {
+		bgColor = b.DisabledColor
+	} else if b.pressed {
+		bgColor = b.PressedColor
+	}
+	
+	// Draw button background
+	vector.DrawFilledRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), bgColor, true)
+	
+	// Draw border
+	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)
+	
+	// Draw label text (centered)
+	if b.Label != "" || b.Icon != "" {
+		textColor := b.TextColor
+		if !b.Enabled {
+			textColor = color.RGBA{100, 100, 100, 255}
+		}
+		
+		displayText := b.Label
+		if b.Icon != "" && b.Label != "" {
+			displayText = b.Icon + " " + b.Label
+		} else if b.Icon != "" {
+			displayText = b.Icon
+		}
+		
+		// Calculate text position (centered)
+		bounds, _ := font.BoundString(basicfont.Face7x13, displayText)
+		textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+		textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
+		
+		textX := int(b.X + (b.Width-float64(textWidth))/2)
+		textY := int(b.Y + (b.Height+float64(textHeight))/2)
+		
+		d := &font.Drawer{
+			Dst:  screen,
+			Src:  &image.Uniform{textColor},
+			Face: basicfont.Face7x13,
+			Dot:  fixed.P(textX, textY),
+		}
+		d.DrawString(displayText)
+	}
+}
+
+// SetPosition sets the button position.
+func (b *TouchButton) SetPosition(x, y float64) {
+	b.X = x
+	b.Y = y
+}
+
+// SetSize sets the button size (enforcing minimum).
+func (b *TouchButton) SetSize(width, height float64) {
+	minSize := 44.0
+	if width < minSize {
+		width = minSize
+	}
+	if height < minSize {
+		height = minSize
+	}
+	b.Width = width
+	b.Height = height
+}
+
 // NotificationWidget displays temporary notifications.
 type NotificationWidget struct {
 	X, Y            float64

@@ -78,14 +78,14 @@ func initKeyboardElement() {
 
 	logInfo("Initializing virtual keyboard element")
 	doc := js.Global().Get("document")
-	
+
 	// CRITICAL FIX: Verify document is available
 	if doc.IsUndefined() || doc.IsNull() {
 		logError("Document is undefined or null - DOM not ready")
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
 		return
 	}
-	
+
 	input := doc.Call("createElement", "input")
 
 	// Set input type to text for general text input
@@ -229,7 +229,7 @@ func initKeyboardElement() {
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
 		return
 	}
-	
+
 	// CRITICAL FIX: Ensure the canvas element exists before setting up keyboard
 	// This prevents issues where keyboard is initialized before Ebiten creates its canvas
 	canvasList := doc.Call("getElementsByTagName", "canvas")
@@ -239,7 +239,7 @@ func initKeyboardElement() {
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
 		return
 	}
-	
+
 	// CRITICAL FIX: Ensure input element is above canvas in z-index stacking
 	// Set canvas z-index to a lower value than input (input is 999)
 	canvas := canvasList.Index(0)
@@ -247,7 +247,7 @@ func initKeyboardElement() {
 	canvasStyle.Set("position", "relative") // Need position for z-index to work
 	canvasStyle.Set("zIndex", "1")          // Below input element (999)
 	logInfo("Canvas z-index set to 1 (input is 999)")
-	
+
 	body.Call("appendChild", input)
 
 	keyboardElement = input
@@ -435,7 +435,7 @@ func ShowKeyboard() {
 		style.Set("transform", "translateX(-50%)") // Center horizontally
 		style.Set("bottom", "80px")                // Above mobile keyboard area
 		style.Set("top", "auto")                   // Clear the off-screen top value
-		
+
 		// MOBILE FIX: Make input slightly more visible when active to help users find it
 		// Increase opacity from 0.01 to 0.05 when keyboard is requested
 		// Still mostly invisible but easier to tap
@@ -445,14 +445,14 @@ func ShowKeyboard() {
 		// before calling focus(). This gives the browser a chance to reflow/repaint.
 		// On some mobile browsers, immediate focus() after style changes may fail.
 		requestAnimationFrame := js.Global().Get("requestAnimationFrame")
-		
+
 		// Create callback that will be called once by requestAnimationFrame
 		var focusCallback js.Func
 		focusCallback = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			// CRITICAL: Release callback after execution to prevent memory leak
 			// This is safe because requestAnimationFrame calls the callback exactly once
 			defer focusCallback.Release()
-			
+
 			// Focus the input element to trigger keyboard
 			// Mobile browsers will show the native keyboard when an input is focused
 			// (especially if this focus happens during/after a user touch event)
@@ -470,10 +470,10 @@ func ShowKeyboard() {
 				logInfo("User may need to tap the screen to trigger keyboard")
 				logInfo("Input position: bottom-center, opacity: 0.05, size: 200x50px")
 			}
-			
+
 			return nil
 		})
-		
+
 		// Schedule focus for next animation frame
 		requestAnimationFrame.Call("call", js.Global(), focusCallback)
 	} else {
@@ -501,9 +501,9 @@ func HideKeyboard() {
 		style := keyboardElement.Get("style")
 		style.Set("left", "-9999px")
 		style.Set("top", "-9999px")
-		style.Set("bottom", "auto")     // Clear bottom positioning
-		style.Set("transform", "none")  // Clear transform
-		style.Set("opacity", "0.01")    // Reset opacity to nearly invisible
+		style.Set("bottom", "auto")    // Clear bottom positioning
+		style.Set("transform", "none") // Clear transform
+		style.Set("opacity", "0.01")   // Reset opacity to nearly invisible
 
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")

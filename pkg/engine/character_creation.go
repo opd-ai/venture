@@ -386,11 +386,17 @@ type EbitenCharacterCreation struct {
 	// This prevents ebiten.NewImageFromImage() calls before graphics context is ready
 	pendingPortraitPath   string
 	portraitLoadAttempted bool
+
+	// Touch support - WASM/mobile touch navigation
+	touchHandler *mobile.TouchInputHandler
+	nextButton   *mobile.TouchButton
+	backButton   *mobile.TouchButton
+	skipButton   *mobile.TouchButton // For skipping portrait selection
 }
 
 // NewCharacterCreation creates a new character creation system
 func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreation {
-	return &EbitenCharacterCreation{
+	cc := &EbitenCharacterCreation{
 		currentStep:   stepNameInput,
 		selectedClass: ClassWarrior, // Default selection
 		screenWidth:   screenWidth,
@@ -400,7 +406,35 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 			DefaultName:  "", // No default initially
 			DefaultClass: ClassWarrior,
 		},
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Create touch buttons (positioned dynamically in updatePanelDimensions)
+	// Next button (bottom-right) - advances to next step
+	cc.nextButton = mobile.NewTouchButton(
+		0, 0, // Position updated dynamically
+		120, 44,
+		"Next",
+		func() { cc.handleNextButton() },
+	)
+	
+	// Back button (bottom-left) - returns to previous step
+	cc.backButton = mobile.NewTouchButton(
+		0, 0, // Position updated dynamically
+		120, 44,
+		"Back",
+		func() { cc.handleBackButton() },
+	)
+	
+	// Skip button (bottom-center) - skips portrait selection
+	cc.skipButton = mobile.NewTouchButton(
+		0, 0, // Position updated dynamically
+		120, 44,
+		"Skip",
+		func() { cc.handleSkipButton() },
+	)
+	
+	return cc
 }
 
 // SetDefaults sets custom default values for character creation
@@ -426,6 +460,25 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	// Calculate panel dimensions first (needed for touch hit detection)
 	// This must be done before processing input
 	cc.updatePanelDimensions()
+	
+	// Update touch handler and buttons
+	if cc.touchHandler != nil {
+		cc.touchHandler.Update()
+	}
+	
+	// Update touch button positions based on panel layout
+	cc.updateTouchButtonPositions()
+	
+	// Update touch buttons
+	if cc.nextButton != nil {
+		cc.nextButton.Update()
+	}
+	if cc.backButton != nil {
+		cc.backButton.Update()
+	}
+	if cc.skipButton != nil {
+		cc.skipButton.Update()
+	}
 
 	switch cc.currentStep {
 	case stepNameInput:
@@ -439,6 +492,33 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	}
 
 	return cc.confirmed
+}
+
+// updateTouchButtonPositions positions touch buttons based on panel layout
+func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
+	// Next button (bottom-right of panel)
+	if cc.nextButton != nil {
+		cc.nextButton.SetPosition(
+			float64(cc.panelX+cc.panelWidth-140),
+			float64(cc.panelY+cc.panelHeight-60),
+		)
+	}
+	
+	// Back button (bottom-left of panel)
+	if cc.backButton != nil {
+		cc.backButton.SetPosition(
+			float64(cc.panelX+20),
+			float64(cc.panelY+cc.panelHeight-60),
+		)
+	}
+	
+	// Skip button (bottom-center of panel)
+	if cc.skipButton != nil {
+		cc.skipButton.SetPosition(
+			float64(cc.panelX+cc.panelWidth/2-60),
+			float64(cc.panelY+cc.panelHeight-60),
+		)
+	}
 }
 
 // updatePanelDimensions calculates the panel layout
@@ -811,6 +891,72 @@ func (cc *EbitenCharacterCreation) hideKeyboardIfNeeded() {
 	}
 }
 
+// handleNextButton processes the Next touch button press
+// Advances to the next step in character creation
+func (cc *EbitenCharacterCreation) handleNextButton() {
+	switch cc.currentStep {
+	case stepNameInput:
+		// Validate name and proceed to class selection
+		if len(strings.TrimSpace(cc.nameInput)) > 0 {
+			cc.characterData.Name = cc.nameInput
+			cc.currentStep = stepClassSelection
+			cc.errorMsg = ""
+			cc.hideKeyboardIfNeeded()
+		} else {
+			cc.errorMsg = "Name cannot be empty"
+		}
+	case stepClassSelection:
+		// Proceed to portrait selection
+		cc.characterData.Class = cc.selectedClass
+		cc.currentStep = stepPortraitSelection
+		cc.errorMsg = ""
+	case stepPortraitSelection:
+		// Proceed to confirmation (same as Enter key)
+		if cc.portraitInput != "" {
+			cc.characterData.PortraitPath = strings.TrimSpace(cc.portraitInput)
+			// WASM FIX: Store path for lazy loading in Draw()
+			cc.pendingPortraitPath = cc.characterData.PortraitPath
+			cc.portraitLoadAttempted = false
+		}
+		cc.currentStep = stepConfirmation
+		cc.errorMsg = ""
+		cc.hideKeyboardIfNeeded()
+	case stepConfirmation:
+		// Confirm character creation
+		if err := cc.characterData.Validate(); err != nil {
+			cc.errorMsg = err.Error()
+			cc.currentStep = stepNameInput
+			cc.keyboardShown = false
+		} else {
+			cc.confirmed = true
+		}
+	}
+}
+
+// handleBackButton processes the Back touch button press
+// Returns to the previous step in character creation
+func (cc *EbitenCharacterCreation) handleBackButton() {
+	switch cc.currentStep {
+	case stepClassSelection:
+		cc.currentStep = stepNameInput
+		cc.keyboardShown = false // Will trigger keyboard on re-entry
+	case stepPortraitSelection:
+		cc.currentStep = stepClassSelection
+		cc.hideKeyboardIfNeeded()
+	case stepConfirmation:
+		cc.currentStep = stepPortraitSelection
+		cc.keyboardShown = false
+	}
+}
+
+// handleSkipButton processes the Skip touch button press
+// Skips optional portrait selection step
+func (cc *EbitenCharacterCreation) handleSkipButton() {
+	if cc.currentStep == stepPortraitSelection {
+		cc.skipPortrait()
+	}
+}
+
 // updateConfirmation handles final confirmation
 func (cc *EbitenCharacterCreation) updateConfirmation() {
 	// Handle mouse and touch input (Touch support for WASM/mobile)
@@ -922,6 +1068,9 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 	case stepConfirmation:
 		cc.drawConfirmation(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	}
+	
+	// Draw touch buttons (WASM/mobile support)
+	cc.drawTouchButtons(screen)
 
 	// Draw error message if present
 	if cc.errorMsg != "" {
@@ -929,6 +1078,45 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 		errorY := cc.panelY + cc.panelHeight - 30
 		text.Draw(screen, cc.errorMsg, basicfont.Face7x13, errorX, errorY,
 			color.RGBA{255, 100, 100, 255})
+	}
+}
+
+// drawTouchButtons renders the appropriate touch buttons for current step
+func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
+	switch cc.currentStep {
+	case stepNameInput:
+		// Only show Next button for name input
+		if cc.nextButton != nil {
+			cc.nextButton.Draw(screen)
+		}
+	case stepClassSelection:
+		// Show Next and Back buttons for class selection
+		if cc.nextButton != nil {
+			cc.nextButton.Draw(screen)
+		}
+		if cc.backButton != nil {
+			cc.backButton.Draw(screen)
+		}
+	case stepPortraitSelection:
+		// Show Next, Skip, and Back buttons for portrait selection
+		if cc.nextButton != nil {
+			cc.nextButton.Draw(screen)
+		}
+		if cc.skipButton != nil {
+			cc.skipButton.Draw(screen)
+		}
+		if cc.backButton != nil {
+			cc.backButton.Draw(screen)
+		}
+	case stepConfirmation:
+		// Show Next (as "Done") and Back buttons for confirmation
+		if cc.nextButton != nil {
+			cc.nextButton.Label = "Done" // Change label for final step
+			cc.nextButton.Draw(screen)
+		}
+		if cc.backButton != nil {
+			cc.backButton.Draw(screen)
+		}
 	}
 }
 

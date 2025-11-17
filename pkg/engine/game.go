@@ -768,6 +768,41 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
+	
+	// WASM/Mobile: Auto-hide virtual controls when any UI menu is open
+	// This prevents D-pad/buttons from overlapping with UI elements
+	g.updateVirtualControlsVisibility()
+}
+
+// updateVirtualControlsVisibility manages virtual control visibility based on UI state.
+// Hides virtual controls (D-pad, action buttons) when any menu is open to prevent overlay.
+// Shows virtual controls during active gameplay when no blocking UI is visible.
+func (g *EbitenGame) updateVirtualControlsVisibility() {
+	// Check if we're in menu states (main menu, settings, character creation, etc.)
+	inMenuState := g.StateManager.CurrentState() != AppStateGameplay
+	
+	// Check if any gameplay UI is open
+	anyUIOpen := g.InventoryUI.IsVisible() ||
+		g.QuestUI.IsVisible() ||
+		g.CharacterUI.IsVisible() ||
+		g.SkillsUI.IsVisible() ||
+		g.MapUI.IsFullScreen() ||
+		(g.ShopUI != nil && g.ShopUI.IsVisible()) ||
+		(g.CraftingUI != nil && g.CraftingUI.IsVisible()) ||
+		(g.MenuSystem != nil && g.MenuSystem.IsActive())
+	
+	// Virtual controls should be hidden if:
+	// 1. In a menu state (not gameplay)
+	// 2. Any gameplay UI is open
+	shouldHide := inMenuState || anyUIOpen
+	
+	// Update virtual controls visibility for all input systems
+	for _, system := range g.World.GetSystems() {
+		if inputSys, ok := system.(*InputSystem); ok {
+			inputSys.SetVirtualControlsVisible(!shouldHide)
+			break
+		}
+	}
 }
 
 // shouldUpdateWorld checks if world updates should proceed based on UI visibility.

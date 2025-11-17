@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 )
 
 // SettingsOption represents a configurable setting in the settings menu.
@@ -74,11 +75,18 @@ type SettingsUI struct {
 
 	// Visibility flag
 	visible bool
+	
+	// Touch support - WASM/mobile touch navigation
+	touchHandler    *mobile.TouchInputHandler
+	closeButton     *mobile.TouchButton
+	decreaseButtons []*mobile.TouchButton // One per setting option
+	increaseButtons []*mobile.TouchButton // One per setting option
+	toggleButtons   []*mobile.TouchButton // For boolean options
 }
 
 // NewSettingsUI creates a new settings UI with the provided settings manager.
 func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManager) *SettingsUI {
-	return &SettingsUI{
+	s := &SettingsUI{
 		screenWidth:     screenWidth,
 		screenHeight:    screenHeight,
 		selectedIdx:     0,
@@ -95,8 +103,59 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			SettingsOptionShowTutorials, // H-004: Tutorial option
 			SettingsOptionBack,
 		},
-		visible: false,
+		visible:      false,
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button (top-right)
+	s.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { s.Hide(); if s.onBack != nil { s.onBack() } },
+	)
+	
+	// Create decrease/increase buttons for each option
+	numOptions := len(s.options)
+	s.decreaseButtons = make([]*mobile.TouchButton, numOptions)
+	s.increaseButtons = make([]*mobile.TouchButton, numOptions)
+	s.toggleButtons = make([]*mobile.TouchButton, numOptions)
+	
+	for i, option := range s.options {
+		idx := i // Capture for closure
+		opt := option
+		
+		// Decrease button ("-")
+		s.decreaseButtons[i] = mobile.NewTouchButton(
+			0, 0, // Position set dynamically in Draw
+			44, 44,
+			"-",
+			func() { s.decreaseValue(opt) },
+		)
+		
+		// Increase button ("+")
+		s.increaseButtons[i] = mobile.NewTouchButton(
+			0, 0, // Position set dynamically in Draw
+			44, 44,
+			"+",
+			func() { s.increaseValue(opt) },
+		)
+		
+		// Toggle button (for booleans and Back option)
+		label := "Toggle"
+		if opt == SettingsOptionBack {
+			label = "Back"
+		}
+		s.toggleButtons[i] = mobile.NewTouchButton(
+			0, 0, // Position set dynamically in Draw
+			100, 44,
+			label,
+			func() { s.activateOption(s.options[idx]) },
+		)
+	}
+	
+	return s
 }
 
 // SetBackCallback sets the callback function called when "Back" is selected.
@@ -140,8 +199,31 @@ func (s *SettingsUI) Update() bool {
 	if !s.visible {
 		return false
 	}
+	
+	// Update touch handler and buttons
+	if s.touchHandler != nil {
+		s.touchHandler.Update()
+	}
+	
+	// Update close button
+	if s.closeButton != nil {
+		s.closeButton.Update()
+	}
+	
+	// Update decrease/increase/toggle buttons for each option
+	for i := range s.options {
+		if s.decreaseButtons[i] != nil {
+			s.decreaseButtons[i].Update()
+		}
+		if s.increaseButtons[i] != nil {
+			s.increaseButtons[i].Update()
+		}
+		if s.toggleButtons[i] != nil {
+			s.toggleButtons[i].Update()
+		}
+	}
 
-	// Handle up/down navigation
+	// Handle up/down navigation (keyboard)
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		s.selectedIdx--
 		if s.selectedIdx < 0 {
@@ -293,6 +375,11 @@ func (s *SettingsUI) Draw(screen *ebiten.Image) {
 	titleX := float64(s.screenWidth/2 - 100)
 	titleY := 50.0
 	ebitenutil.DebugPrintAt(screen, "=== SETTINGS ===", int(titleX), int(titleY))
+	
+	// Draw close button (top-right)
+	if s.closeButton != nil {
+		s.closeButton.Draw(screen)
+	}
 
 	// Draw options
 	startY := 120
@@ -321,6 +408,9 @@ func (s *SettingsUI) Draw(screen *ebiten.Image) {
 			}
 		}
 		ebitenutil.DebugPrintAt(screen, valueStr, valueX, y)
+		
+		// Position and draw touch buttons for this option
+		s.drawTouchButtonsForOption(screen, i, option, y)
 	}
 
 	// Draw controls hint at bottom
@@ -328,6 +418,41 @@ func (s *SettingsUI) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, "Controls: Up/Down - Navigate", s.screenWidth/2-120, hintY)
 	ebitenutil.DebugPrintAt(screen, "Left/Right - Adjust | Enter/Space - Toggle", s.screenWidth/2-180, hintY+20)
 	ebitenutil.DebugPrintAt(screen, "ESC - Back and Save", s.screenWidth/2-80, hintY+40)
+}
+
+// drawTouchButtonsForOption renders touch buttons for a specific option
+func (s *SettingsUI) drawTouchButtonsForOption(screen *ebiten.Image, index int, option SettingsOption, y int) {
+	// Base X position for buttons (right side of value)
+	buttonX := float64(s.screenWidth/2 + 200)
+	buttonY := float64(y - 10) // Center buttons vertically with text
+	
+	// Different button layout based on option type
+	if option == SettingsOptionBack {
+		// Back option - show toggle button as "Back"
+		if s.toggleButtons[index] != nil {
+			s.toggleButtons[index].SetPosition(buttonX, buttonY)
+			s.toggleButtons[index].Label = "Back"
+			s.toggleButtons[index].Draw(screen)
+		}
+	} else if s.isAdjustable(option) {
+		// Numeric/enum options - show decrease and increase buttons
+		if s.decreaseButtons[index] != nil {
+			s.decreaseButtons[index].SetPosition(buttonX, buttonY)
+			s.decreaseButtons[index].Draw(screen)
+		}
+		if s.increaseButtons[index] != nil {
+			s.increaseButtons[index].SetPosition(buttonX+54, buttonY) // 44px button + 10px margin
+			s.increaseButtons[index].Draw(screen)
+		}
+	} else {
+		// Boolean options - show toggle button
+		if s.toggleButtons[index] != nil {
+			s.toggleButtons[index].SetPosition(buttonX, buttonY)
+			onOff := s.getValueString(option)
+			s.toggleButtons[index].Label = onOff
+			s.toggleButtons[index].Draw(screen)
+		}
+	}
 }
 
 // getValueString returns the current value of a setting as a string.

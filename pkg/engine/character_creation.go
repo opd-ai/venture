@@ -370,6 +370,9 @@ type EbitenCharacterCreation struct {
 	// Input state
 	inputBuffer []rune
 
+	// Step transition state - prevents same key press from being processed by multiple steps
+	stepChangedThisFrame bool
+
 	// Mobile keyboard state (WASM/mobile platforms)
 	keyboardShown bool // Tracks whether mobile keyboard is currently shown
 
@@ -485,6 +488,9 @@ func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
 // Update handles input for character creation (keyboard/mouse navigation)
 // Returns true when character creation is complete
 func (cc *EbitenCharacterCreation) Update() bool {
+	// Reset step change flag at start of frame
+	cc.stepChangedThisFrame = false
+
 	// Calculate panel dimensions first (needed for touch hit detection)
 	// This must be done before processing input
 	cc.updatePanelDimensions()
@@ -615,10 +621,11 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 	}
 
 	// Handle enter to proceed
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		if len(strings.TrimSpace(cc.nameInput)) > 0 {
 			cc.characterData.Name = cc.nameInput
 			cc.currentStep = stepClassSelection
+			cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 			cc.errorMsg = ""
 
 			// MOBILE/WASM: Hide keyboard when leaving name input
@@ -711,9 +718,10 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	}
 
 	// Enter to proceed, Backspace to go back
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		cc.characterData.Class = cc.selectedClass
 		cc.currentStep = stepPortraitSelection
+		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
@@ -893,7 +901,7 @@ func (cc *EbitenCharacterCreation) handlePortraitNavigation() bool {
 
 // handlePortraitConfirmation processes Enter key for portrait confirmation and loading.
 func (cc *EbitenCharacterCreation) handlePortraitConfirmation() bool {
-	if !inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if !inpututil.IsKeyJustPressed(ebiten.KeyEnter) || cc.stepChangedThisFrame {
 		return false
 	}
 
@@ -909,6 +917,7 @@ func (cc *EbitenCharacterCreation) handlePortraitConfirmation() bool {
 	cc.portraitLoadAttempted = false
 	cc.characterData.Portrait = nil
 	cc.currentStep = stepConfirmation
+	cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 	cc.errorMsg = ""
 	cc.hideKeyboardIfNeeded()
 	return true
@@ -929,6 +938,7 @@ func (cc *EbitenCharacterCreation) skipPortrait() {
 	cc.characterData.PortraitPath = ""
 	cc.characterData.Portrait = nil
 	cc.currentStep = stepConfirmation
+	cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 	cc.errorMsg = ""
 	cc.hideKeyboardIfNeeded()
 }
@@ -984,6 +994,7 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 		if len(strings.TrimSpace(cc.nameInput)) > 0 {
 			cc.characterData.Name = cc.nameInput
 			cc.currentStep = stepClassSelection
+			cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 			cc.errorMsg = ""
 			cc.hideKeyboardIfNeeded()
 		} else {
@@ -993,6 +1004,7 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 		// Proceed to portrait selection
 		cc.characterData.Class = cc.selectedClass
 		cc.currentStep = stepPortraitSelection
+		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 		cc.errorMsg = ""
 	case stepPortraitSelection:
 		// Proceed to confirmation (same as Enter key)
@@ -1003,6 +1015,7 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 			cc.portraitLoadAttempted = false
 		}
 		cc.currentStep = stepConfirmation
+		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 		cc.errorMsg = ""
 		cc.hideKeyboardIfNeeded()
 	case stepConfirmation:
@@ -1084,7 +1097,7 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 	}
 
 	// Enter/Space to confirm
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+	if (inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace)) && !cc.stepChangedThisFrame {
 		// Validate before confirming
 		if err := cc.characterData.Validate(); err != nil {
 			cc.errorMsg = err.Error()

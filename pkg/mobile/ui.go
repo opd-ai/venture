@@ -776,12 +776,16 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 		}
 
 		// Calculate text position (centered) - use character width estimation
-		// basicfont.Face7x13 is 7 pixels wide per character
+		// basicfont.Face7x13 is 7 pixels wide per character, 13 pixels tall
 		textWidth := len(displayText) * 7
-		textHeight := 13
 
+		// Center horizontally
 		textX := int(b.X + (b.Width-float64(textWidth))/2)
-		textY := int(b.Y + (b.Height+float64(textHeight))/2)
+
+		// Center vertically - text.Draw uses baseline, not top
+		// For basicfont.Face7x13, baseline is about 10 pixels from top of the 13px height
+		// So we need to position at center + half of font height - descent
+		textY := int(b.Y + b.Height/2 + 4) // Empirically centered for 7x13 font
 
 		text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
 	}

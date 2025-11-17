@@ -67,3 +67,5 @@ go.work.sum
 build/
 *.backup
 *.gz
+/*.md
+/*.log

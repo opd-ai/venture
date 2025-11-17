@@ -4,18 +4,24 @@
 # (must be a positive integer)
 ITER=1
 
-echo "iteration $i started."
-copilot -p "/delegate $(cat docs/FIX.md)" --allow-all-tools --deny-tool sudo
-make fmt
-echo "iteration $i in progress."
-echo "Fix completed, sleeping for 1 minute..."
-sleep 1m
-copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
-echo "iteration $i in progress."
-echo "Fix checkin completed, sleeping for 1 minute..."
-sleep 1m
+fix() { 
+    go test -race ./...
+    # if the tests failed, run this script only once to attempt to fix the issues
+    if [ $? -ne 0 ]; then
+        echo "iteration $i started."
+        copilot -p "/delegate $(cat docs/FIX.md)" --allow-all-tools --deny-tool sudo
+        make fmt
+        echo "iteration $i in progress."
+        echo "Fix completed, sleeping for 1 minute..."
+        sleep 1m
+        copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
+        echo "iteration $i in progress."
+        echo "Fix checkin completed, sleeping for 1 minute..."
+        sleep 1m
+    fi
+}
 
-for i in $(seq 1 $ITER); do
+dev() {
     copilot -p "/delegate $(cat docs/EXECUTE.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "iteration $i in progress."
@@ -37,26 +43,12 @@ for i in $(seq 1 $ITER); do
     echo "Integrate checkin completed, sleeping for 1 minute..."
     sleep 1m
     echo "iteration $i in complete."
+}
 
-    echo "iteration $i started."
-    copilot -p "/delegate $(cat docs/FIX.md)" --allow-all-tools --deny-tool sudo
-    make fmt
-    echo "iteration $i in progress."
-    echo "Fix completed, sleeping for 1 minute..."
-    sleep 1m
-    copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
-    echo "iteration $i in progress."
-    echo "Fix checkin completed, sleeping for 1 minute..."
-    sleep 1m
+fix
+for i in $(seq 1 $ITER); do
+    dev
+    fix
 done
 
-echo "iteration $i started."
-copilot -p "/delegate $(cat docs/FIX.md)" --allow-all-tools --deny-tool sudo
-make fmt
-echo "iteration $i in progress."
-echo "Fix completed, sleeping for 1 minute..."
-sleep 1m
-copilot -p "/delegate $(cat docs/CHECKIN.md)" --allow-all-tools --deny-tool sudo
-echo "iteration $i in progress."
-echo "Fix checkin completed, sleeping for 1 minute..."
-sleep 1m
+fix

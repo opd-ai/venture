@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
@@ -65,12 +66,20 @@ type ShopUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
+	
+	// Touch support
+	touchHandler  *mobile.TouchInputHandler
+	closeButton   *mobile.TouchButton
+	buyTabButton  *mobile.TouchButton
+	sellTabButton *mobile.TouchButton
+	buyButton     *mobile.TouchButton
+	sellButton    *mobile.TouchButton
 }
 
 // NewShopUI creates a new shop UI.
 // Parameters match the pattern used by NewEbitenInventoryUI.
 func NewShopUI(screenWidth, screenHeight int) *ShopUI {
-	return &ShopUI{
+	ui := &ShopUI{
 		visible:      false,
 		mode:         ShopModeBuy,
 		screenWidth:  screenWidth,
@@ -82,7 +91,57 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		selectedSlot: -1,
 		hoveredSlot:  -1,
 		errorState:   NewUIErrorState(), // H-002 FIX
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Window dimensions for button positioning
+	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2 + 200 // Extra for info panel
+	windowX := (screenWidth - windowWidth) / 2
+	
+	// Create close button (top-right)
+	ui.closeButton = mobile.NewTouchButton(
+		float64(windowX+windowWidth-54),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Close() },
+	)
+	
+	// Create Buy/Sell tab buttons (top of window)
+	ui.buyTabButton = mobile.NewTouchButton(
+		float64(windowX+20),
+		60,
+		100, 44,
+		"Buy",
+		func() { ui.mode = ShopModeBuy; ui.selectedSlot = -1 },
+	)
+	
+	ui.sellTabButton = mobile.NewTouchButton(
+		float64(windowX+130),
+		60,
+		100, 44,
+		"Sell",
+		func() { ui.mode = ShopModeSell; ui.selectedSlot = -1 },
+	)
+	
+	// Create Buy/Sell action buttons (bottom-right)
+	ui.buyButton = mobile.NewTouchButton(
+		float64(screenWidth-164),
+		float64(screenHeight-64),
+		120, 44,
+		"Buy Item",
+		func() { ui.attemptBuy() },
+	)
+	
+	ui.sellButton = mobile.NewTouchButton(
+		float64(screenWidth-164),
+		float64(screenHeight-64),
+		120, 44,
+		"Sell Item",
+		func() { ui.attemptSell() },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity for transactions.
@@ -163,6 +222,28 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 			ui.transactionMessageTime = 0
 			ui.lastTransactionMessage = ""
 		}
+	}
+
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update all touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	if ui.buyTabButton != nil {
+		ui.buyTabButton.Update()
+	}
+	if ui.sellTabButton != nil {
+		ui.sellTabButton.Update()
+	}
+	if ui.mode == ShopModeBuy && ui.buyButton != nil {
+		ui.buyButton.Update()
+	}
+	if ui.mode == ShopModeSell && ui.sellButton != nil {
+		ui.sellButton.Update()
 	}
 
 	// Dual-exit navigation: F key (toggle) OR ESC (close only)
@@ -331,6 +412,22 @@ func (ui *ShopUI) showMessage(message string) {
 	ui.transactionMessageTime = 3.0
 }
 
+// attemptBuy is called by the buy button to purchase the selected item.
+func (ui *ShopUI) attemptBuy() {
+	if ui.mode != ShopModeBuy || ui.selectedSlot < 0 {
+		return
+	}
+	ui.executeTransaction()
+}
+
+// attemptSell is called by the sell button to sell the selected item.
+func (ui *ShopUI) attemptSell() {
+	if ui.mode != ShopModeSell || ui.selectedSlot < 0 {
+		return
+	}
+	ui.executeTransaction()
+}
+
 // Draw renders the shop UI.
 // Displays merchant/player inventory grid, prices, gold, and transaction feedback.
 func (ui *ShopUI) Draw(screen interface{}) {
@@ -357,6 +454,26 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	ui.drawItemGrid(img, currentInventory, merchant, playerInv, windowX, windowY, gridStartY)
 
 	ui.errorState.DrawError(img)
+	
+	// Draw touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Draw(img)
+	}
+	if ui.buyTabButton != nil {
+		ui.buyTabButton.Draw(img)
+	}
+	if ui.sellTabButton != nil {
+		ui.sellTabButton.Draw(img)
+	}
+	
+	// Draw action button only when item is selected
+	if ui.selectedSlot >= 0 {
+		if ui.mode == ShopModeBuy && ui.buyButton != nil {
+			ui.buyButton.Draw(img)
+		} else if ui.mode == ShopModeSell && ui.sellButton != nil {
+			ui.sellButton.Draw(img)
+		}
+	}
 }
 
 // getComponents retrieves and validates the player inventory and merchant components.

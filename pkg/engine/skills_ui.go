@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/skills"
 	"golang.org/x/image/font/basicfont"
 )
@@ -50,6 +51,11 @@ type EbitenSkillsUI struct {
 	treeOffsetX   int              // X offset for centering
 	treeOffsetY   int              // Y offset for header
 	nodePositions map[string]Point // Cache of node screen positions
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	scrollOffset Point // For touch panning
 }
 
 // NewSkillsUI creates a new skills UI system.
@@ -61,7 +67,7 @@ type EbitenSkillsUI struct {
 // Returns: Initialized SkillsUI
 // Called by: Game.NewGame() during initialization
 func NewEbitenSkillsUI(world *World, screenWidth, screenHeight int) *EbitenSkillsUI {
-	return &EbitenSkillsUI{
+	ui := &EbitenSkillsUI{
 		visible:       false,
 		world:         world,
 		screenWidth:   screenWidth,
@@ -71,7 +77,19 @@ func NewEbitenSkillsUI(world *World, screenWidth, screenHeight int) *EbitenSkill
 		treeOffsetX:   100, // Left margin
 		treeOffsetY:   100, // Top margin (below header)
 		nodePositions: make(map[string]Point),
+		touchHandler:  mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Hide() },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity whose skill tree to display.

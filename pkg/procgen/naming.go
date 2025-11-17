@@ -13,23 +13,23 @@ var DefaultNames = [100]string{
 	"Alexander", "Amelia", "Benjamin", "Charlotte", "Daniel", "Elizabeth", "Frederick", "Grace",
 	"Henry", "Isabella", "James", "Katherine", "Lucas", "Margaret", "Nicholas", "Olivia",
 	"Patrick", "Rachel", "Samuel", "Sophia",
-	
+
 	// Eastern names (16)
 	"Akira", "Mei", "Hiroshi", "Yuki", "Chen", "Lin", "Ryu", "Sakura",
 	"Jin", "Hana", "Kenji", "Aiko", "Wei", "Feng", "Taro", "Emi",
-	
+
 	// Middle Eastern names (16)
 	"Ali", "Fatima", "Hassan", "Layla", "Omar", "Zara", "Malik", "Amira",
 	"Khalid", "Nora", "Tariq", "Salma", "Rashid", "Yasmin", "Karim", "Leila",
-	
+
 	// African names (16)
 	"Kwame", "Ama", "Kofi", "Abena", "Nia", "Jabari", "Zuri", "Kendi",
 	"Amani", "Bakari", "Imani", "Jafari", "Makena", "Thabo", "Zahara", "Akil",
-	
+
 	// Latin American names (16)
 	"Diego", "Sofia", "Miguel", "Lucia", "Carlos", "Carmen", "Pablo", "Elena",
 	"Rafael", "Valentina", "Marco", "Gabriela", "Antonio", "Marina", "Roberto", "Rosa",
-	
+
 	// Celtic/Nordic names (16)
 	"Alistair", "Fiona", "Magnus", "Astrid", "Ronan", "Freya", "Erik", "Ingrid",
 	"Finn", "Brenna", "Bjorn", "Signe", "Declan", "Moira", "Soren", "Isla",
@@ -45,13 +45,14 @@ var DefaultNames = [100]string{
 //   - A name from the DefaultNames list, selected deterministically based on the seed
 //
 // Example:
-//   name := SelectDefaultName(12345) // Always returns the same name for seed 12345
+//
+//	name := SelectDefaultName(12345) // Always returns the same name for seed 12345
 func SelectDefaultName(seed int64) string {
 	// Create a seeded random number generator for deterministic selection
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	// Select an index from the name list
 	index := rng.Intn(len(DefaultNames))
-	
+
 	return DefaultNames[index]
 }

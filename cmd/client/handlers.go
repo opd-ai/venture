@@ -1243,7 +1243,7 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engine.EbitenGame {
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
 	game.SetFullscreen(*fullscreen)
-	
+
 	// Set world seed for deterministic character naming
 	game.SetWorldSeed(*seed)
 

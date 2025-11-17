@@ -40,7 +40,7 @@ type EbitenInventoryUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
@@ -64,13 +64,13 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		errorState:   NewUIErrorState(), // H-002 FIX
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create close button (top-right of window)
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
 	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 100
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
-	
+
 	ui.closeButton = mobile.NewTouchButton(
 		float64(windowX+windowWidth-54),
 		float64(windowY+10),
@@ -78,7 +78,7 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		"✕",
 		func() { ui.Hide() },
 	)
-	
+
 	return ui
 }
 
@@ -118,12 +118,12 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update close button
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
 	}
-	
+
 	// Standardized dual-exit menu navigation: toggle key (I) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
 		if shouldToggle {
@@ -158,7 +158,7 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	mousePressed := IsTouchOrMouseJustPressed()
 	mouseReleased := IsTouchOrMouseJustReleased()
-	
+
 	// Handle touch scrolling
 	if ui.touchHandler != nil {
 		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
@@ -434,7 +434,7 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 		previewOpts.ColorScale.ScaleAlpha(0.7)
 		img.DrawImage(ui.dragPreview, previewOpts)
 	}
-	
+
 	// Draw close button (touch-friendly)
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(img)

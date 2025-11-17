@@ -66,7 +66,7 @@ type ShopUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
-	
+
 	// Touch support
 	touchHandler  *mobile.TouchInputHandler
 	closeButton   *mobile.TouchButton
@@ -93,11 +93,11 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		errorState:   NewUIErrorState(), // H-002 FIX
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Window dimensions for button positioning
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2 + 200 // Extra for info panel
 	windowX := (screenWidth - windowWidth) / 2
-	
+
 	// Create close button (top-right)
 	ui.closeButton = mobile.NewTouchButton(
 		float64(windowX+windowWidth-54),
@@ -106,7 +106,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		"✕",
 		func() { ui.Close() },
 	)
-	
+
 	// Create Buy/Sell tab buttons (top of window)
 	ui.buyTabButton = mobile.NewTouchButton(
 		float64(windowX+20),
@@ -115,7 +115,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		"Buy",
 		func() { ui.mode = ShopModeBuy; ui.selectedSlot = -1 },
 	)
-	
+
 	ui.sellTabButton = mobile.NewTouchButton(
 		float64(windowX+130),
 		60,
@@ -123,7 +123,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		"Sell",
 		func() { ui.mode = ShopModeSell; ui.selectedSlot = -1 },
 	)
-	
+
 	// Create Buy/Sell action buttons (bottom-right)
 	ui.buyButton = mobile.NewTouchButton(
 		float64(screenWidth-164),
@@ -132,7 +132,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		"Buy Item",
 		func() { ui.attemptBuy() },
 	)
-	
+
 	ui.sellButton = mobile.NewTouchButton(
 		float64(screenWidth-164),
 		float64(screenHeight-64),
@@ -140,7 +140,7 @@ func NewShopUI(screenWidth, screenHeight int) *ShopUI {
 		"Sell Item",
 		func() { ui.attemptSell() },
 	)
-	
+
 	return ui
 }
 
@@ -228,7 +228,7 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update all touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
@@ -454,7 +454,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	ui.drawItemGrid(img, currentInventory, merchant, playerInv, windowX, windowY, gridStartY)
 
 	ui.errorState.DrawError(img)
-	
+
 	// Draw touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(img)
@@ -465,7 +465,7 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	if ui.sellTabButton != nil {
 		ui.sellTabButton.Draw(img)
 	}
-	
+
 	// Draw action button only when item is selected
 	if ui.selectedSlot >= 0 {
 		if ui.mode == ShopModeBuy && ui.buyButton != nil {

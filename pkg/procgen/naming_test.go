@@ -113,7 +113,7 @@ func TestDefaultNames_NotEmpty(t *testing.T) {
 func TestSelectDefaultName_Coverage(t *testing.T) {
 	// Collect names from different seeds
 	uniqueNames := make(map[string]bool)
-	
+
 	// Try a range of seeds
 	for seed := int64(0); seed < 100; seed++ {
 		name := SelectDefaultName(seed)

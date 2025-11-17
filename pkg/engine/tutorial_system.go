@@ -33,7 +33,7 @@ type EbitenTutorialSystem struct {
 	ShowUI          bool
 	NotificationMsg string
 	NotificationTTL float64 // Time-to-live for notification (seconds)
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	nextButton   *mobile.TouchButton
@@ -58,7 +58,7 @@ func NewTutorialSystemWithSize(screenWidth, screenHeight int) *EbitenTutorialSys
 		screenWidth:    screenWidth,
 		screenHeight:   screenHeight,
 	}
-	
+
 	// Create next button (bottom-right)
 	ts.nextButton = mobile.NewTouchButton(
 		float64(screenWidth-164),
@@ -67,7 +67,7 @@ func NewTutorialSystemWithSize(screenWidth, screenHeight int) *EbitenTutorialSys
 		"Next",
 		func() { ts.advanceToNextStep() },
 	)
-	
+
 	// Create skip button (bottom-left)
 	ts.skipButton = mobile.NewTouchButton(
 		44,
@@ -76,7 +76,7 @@ func NewTutorialSystemWithSize(screenWidth, screenHeight int) *EbitenTutorialSys
 		"Skip Tutorial",
 		func() { ts.DisableTutorial() },
 	)
-	
+
 	return ts
 }
 
@@ -253,7 +253,7 @@ func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	if ts.touchHandler != nil {
 		ts.touchHandler.Update()
 	}
-	
+
 	// Update touch buttons
 	if ts.nextButton != nil {
 		ts.nextButton.Update()
@@ -443,7 +443,7 @@ func (ts *EbitenTutorialSystem) advanceToNextStep() {
 		// Mark current step as complete and move to next
 		ts.Steps[ts.CurrentStepIdx].Completed = true
 		ts.CurrentStepIdx++
-		
+
 		if ts.CurrentStepIdx >= len(ts.Steps) {
 			ts.NotificationMsg = "Tutorial Complete!"
 			ts.NotificationTTL = 3.0

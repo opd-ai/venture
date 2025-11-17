@@ -55,7 +55,7 @@ type CraftingUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
@@ -81,7 +81,7 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 		errorState:          NewUIErrorState(), // H-002 FIX
 		touchHandler:        mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create close button (top-right)
 	ui.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -90,14 +90,14 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 		"✕",
 		func() { ui.Close() },
 	)
-	
+
 	// Create craft button (bottom-right)
 	ui.craftButton = mobile.NewTouchButton(
 		float64(screenWidth-164),
 		float64(screenHeight-64),
 		120, 44,
 		"Craft",
-		func() { 
+		func() {
 			// Craft button callback - craft selected recipe if any
 			if ui.selectedRecipeIndex >= 0 {
 				recipeList, ok := ui.getPlayerRecipes()
@@ -107,7 +107,7 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 			}
 		},
 	)
-	
+
 	return ui
 }
 
@@ -194,7 +194,7 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
@@ -234,7 +234,7 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	windowWidth, windowHeight, maxVisibleRecipes := ui.calculateVisibleArea()
-	
+
 	// Handle touch scrolling
 	if ui.touchHandler != nil {
 		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
@@ -260,7 +260,7 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 	}
-	
+
 	ui.handleMouseInput(recipeList, windowWidth, windowHeight, maxVisibleRecipes)
 	ui.handleKeyboardNavigation(recipeList, maxVisibleRecipes)
 	ui.handleMouseWheelScrolling(recipeList, maxVisibleRecipes)
@@ -979,7 +979,7 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 
 	// H-002 FIX: Draw error feedback
 	ui.errorState.DrawError(img)
-	
+
 	// Draw touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(img)

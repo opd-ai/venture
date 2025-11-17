@@ -25,12 +25,12 @@ const (
 
 // Game implements the minimal keyboard test game.
 type Game struct {
-	inputText      string
-	inputBuffer    []rune
-	keyboardShown  bool
-	tapCount       int
-	eventLog       []string
-	maxLogEntries  int
+	inputText     string
+	inputBuffer   []rune
+	keyboardShown bool
+	tapCount      int
+	eventLog      []string
+	maxLogEntries int
 }
 
 // NewGame creates a new keyboard test game.
@@ -48,7 +48,7 @@ func (g *Game) Update() error {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		g.tapCount++
 		g.addLog(fmt.Sprintf("Tap detected (count: %d)", g.tapCount))
-		
+
 		if !g.keyboardShown && mobile.IsWASM() {
 			g.addLog("Calling mobile.ShowKeyboard()")
 			mobile.ShowKeyboard()

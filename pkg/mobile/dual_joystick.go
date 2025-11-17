@@ -336,19 +336,19 @@ func (j *VirtualJoystick) GetMagnitude() float64 {
 // Returns normalized direction vector matching joystick output
 func NormalizeWASDInput(up, down, left, right bool) (float64, float64) {
 	var x, y float64
-	
+
 	if right {
 		x = 1.0
 	} else if left {
 		x = -1.0
 	}
-	
+
 	if down {
 		y = 1.0
 	} else if up {
 		y = -1.0
 	}
-	
+
 	// Platform parity fix: Diagonal normalization
 	// WASD diagonal movement (e.g., W+D) should match joystick diagonal
 	// Without normalization, diagonal is 1.414x faster (√2)
@@ -358,7 +358,7 @@ func NormalizeWASDInput(up, down, left, right bool) (float64, float64) {
 		x /= magnitude
 		y /= magnitude
 	}
-	
+
 	return x, y
 }
 
@@ -371,10 +371,10 @@ func ApplyInputResponseCurve(value, curvePower float64) float64 {
 		sign = -1.0
 		value = -value
 	}
-	
+
 	// Apply curve to magnitude only
 	result := math.Pow(value, curvePower)
-	
+
 	return result * sign
 }
 
@@ -385,14 +385,14 @@ func ClampAnalogInput(value, deadZone, maxValue float64) float64 {
 	if value > -deadZone && value < deadZone {
 		return 0
 	}
-	
+
 	// Clamp to range
 	if value > maxValue {
 		return maxValue
 	} else if value < -maxValue {
 		return -maxValue
 	}
-	
+
 	return value
 }
 
@@ -402,11 +402,11 @@ func ClampAnalogInput(value, deadZone, maxValue float64) float64 {
 func ConvertMouseToJoystick(deltaX, deltaY, deltaSensitivity float64) (float64, float64) {
 	x := deltaX * deltaSensitivity
 	y := deltaY * deltaSensitivity
-	
+
 	// Clamp to analog range
 	x = math.Max(-1.0, math.Min(1.0, x))
 	y = math.Max(-1.0, math.Min(1.0, y))
-	
+
 	return x, y
 }
 
@@ -415,17 +415,17 @@ func ConvertMouseToJoystick(deltaX, deltaY, deltaSensitivity float64) (float64, 
 // Similar to console aim assist acceleration
 func InputAcceleration(currentValue, targetValue, acceleration, maxSpeed float64) float64 {
 	delta := targetValue - currentValue
-	
+
 	// Apply acceleration
 	if delta > 0 {
 		currentValue += math.Min(delta, acceleration)
 	} else if delta < 0 {
 		currentValue += math.Max(delta, -acceleration)
 	}
-	
+
 	// Clamp to max speed
 	currentValue = math.Max(-maxSpeed, math.Min(maxSpeed, currentValue))
-	
+
 	return currentValue
 }
 

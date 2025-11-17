@@ -35,13 +35,13 @@ type EbitenMapUI struct {
 	// Minimap settings
 	minimapSize    int // Size in pixels (square)
 	minimapPadding int // Distance from screen edge
-	
+
 	// Touch support
-	touchHandler     *mobile.TouchInputHandler
-	closeButton      *mobile.TouchButton
-	centerButton     *mobile.TouchButton
-	lastPinchScale   float64 // Track pinch zoom
-	lastPanX, lastPanY int   // Track pan gestures
+	touchHandler       *mobile.TouchInputHandler
+	closeButton        *mobile.TouchButton
+	centerButton       *mobile.TouchButton
+	lastPinchScale     float64 // Track pinch zoom
+	lastPanX, lastPanY int     // Track pan gestures
 }
 
 // NewMapUI creates a new map UI system.
@@ -66,7 +66,7 @@ func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
 		touchHandler:   mobile.NewTouchInputHandler(),
 		lastPinchScale: 1.0,
 	}
-	
+
 	// Create close button (top-right)
 	ui.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -75,7 +75,7 @@ func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
 		"✕",
 		func() { ui.HideFullScreen() },
 	)
-	
+
 	// Create center button (bottom-right, below close button)
 	ui.centerButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -84,7 +84,7 @@ func NewEbitenMapUI(world *World, screenWidth, screenHeight int) *EbitenMapUI {
 		"⊙", // Center/target icon
 		func() { ui.centerOnPlayer() },
 	)
-	
+
 	return ui
 }
 
@@ -196,7 +196,7 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update touch buttons
 	if ui.fullScreen {
 		if ui.closeButton != nil {
@@ -206,7 +206,7 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 			ui.centerButton.Update()
 		}
 	}
-	
+
 	// Always update fog of war (even when not visible)
 	ui.updateFogOfWar()
 
@@ -250,7 +250,7 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 				ui.lastPanX = 0
 				ui.lastPanY = 0
 			}
-			
+
 			// Touch: Pinch to zoom
 			pinchScale := ui.touchHandler.GetPinch()
 			if pinchScale != 1.0 {
@@ -261,7 +261,7 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 				ui.lastPinchScale = 1.0
 			}
 		}
-		
+
 		// Keyboard: Pan with arrow keys
 		panSpeed := 200.0 * deltaTime
 		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {

@@ -158,6 +158,30 @@ func (ui *EbitenSkillsUI) loadSkillTree() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	
+	// Handle touch pan gestures for scrolling the skill tree
+	if ui.touchHandler != nil {
+		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for Y scrolling
+			if direction > 1.0 || direction < -1.0 {
+				// Vertical swipe
+				ui.scrollOffset.Y += int(distance * 0.5)
+			} else {
+				// Horizontal swipe
+				ui.scrollOffset.X += int(distance * 0.5)
+			}
+		}
+	}
+
 	// Standardized dual-exit menu navigation: toggle key (K) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Skills, ui.visible); shouldClose {
 		if shouldToggle {
@@ -176,8 +200,8 @@ func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 	// Get mouse/touch position (Touch support for WASM/mobile)
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 
-	// Find hovered node
-	ui.hoveredNode = ui.findNodeAtPosition(mouseX, mouseY)
+	// Find hovered node (adjust for scroll offset)
+	ui.hoveredNode = ui.findNodeAtPosition(mouseX-ui.scrollOffset.X, mouseY-ui.scrollOffset.Y)
 
 	// Handle left click or touch to purchase skill (Touch support for WASM/mobile)
 	if IsTouchOrMouseJustPressed() && ui.hoveredNode != nil {
@@ -264,8 +288,14 @@ func (ui *EbitenSkillsUI) Draw(screen interface{}) {
 		ui.drawSkillTooltip(img, ui.hoveredNode, mouseX, mouseY)
 	}
 
+	// Draw close button (positioned in top-right of panel)
+	if ui.closeButton != nil {
+		ui.closeButton.SetPosition(float64(panelX+panelWidth-54), float64(panelY+10))
+		ui.closeButton.Draw(img)
+	}
+
 	// Draw controls hint
-	controlsText := "[Left Click] Purchase | [Right Click] Refund | [ESC] or [K] Close"
+	controlsText := "[Tap] Purchase | [Swipe] Pan | [ESC] or [K] Close"
 	controlsX := panelX + 10
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
@@ -319,12 +349,12 @@ func (ui *EbitenSkillsUI) drawSkillTree(screen *ebiten.Image, panelX, panelY, pa
 		return
 	}
 
-	// First pass: draw connections
+	// First pass: draw connections (with scroll offset)
 	for _, node := range ui.skillTreeComp.Tree.Nodes {
 		ui.drawNodeConnections(screen, node, ui.nodePositions)
 	}
 
-	// Second pass: draw nodes
+	// Second pass: draw nodes (with scroll offset)
 	availablePoints := ui.getAvailableSkillPoints()
 	playerLevel := ui.getPlayerLevel()
 
@@ -334,8 +364,12 @@ func (ui *EbitenSkillsUI) drawSkillTree(screen *ebiten.Image, panelX, panelY, pa
 			continue
 		}
 
+		// Apply scroll offset
+		adjustedX := pos.X + ui.scrollOffset.X
+		adjustedY := pos.Y + ui.scrollOffset.Y
+
 		state := ui.getNodeState(node, playerLevel, availablePoints)
-		ui.drawSkillNode(screen, node, pos.X, pos.Y, state)
+		ui.drawSkillNode(screen, node, adjustedX, adjustedY, state)
 	}
 }
 
@@ -403,12 +437,20 @@ func (ui *EbitenSkillsUI) drawNodeConnections(screen *ebiten.Image, node *skills
 		return
 	}
 
+	// Apply scroll offset to current position
+	adjustedCurrentX := currentPos.X + ui.scrollOffset.X
+	adjustedCurrentY := currentPos.Y + ui.scrollOffset.Y
+
 	// Draw lines to prerequisites
 	for _, prereqID := range node.Skill.Requirements.PrerequisiteIDs {
 		prereqPos, prereqExists := nodePositions[prereqID]
 		if !prereqExists {
 			continue
 		}
+
+		// Apply scroll offset to prerequisite position
+		adjustedPrereqX := prereqPos.X + ui.scrollOffset.X
+		adjustedPrereqY := prereqPos.Y + ui.scrollOffset.Y
 
 		// Determine line color based on learning state
 		lineColor := color.RGBA{100, 100, 100, 255} // Gray for locked
@@ -418,8 +460,8 @@ func (ui *EbitenSkillsUI) drawNodeConnections(screen *ebiten.Image, node *skills
 
 		// Draw line from prerequisite to current node
 		vector.StrokeLine(screen,
-			float32(prereqPos.X), float32(prereqPos.Y),
-			float32(currentPos.X), float32(currentPos.Y),
+			float32(adjustedPrereqX), float32(adjustedPrereqY),
+			float32(adjustedCurrentX), float32(adjustedCurrentY),
 			2, lineColor, false)
 	}
 }

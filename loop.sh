@@ -44,6 +44,13 @@ dev() {
     echo "Integration completed, sleeping for 1 minute..."
     sleep 1m
     checkin
+
+    echo "iteration started - Resolution phase."
+    copilot -p "/delegate $(cat docs/PLAY.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Resolution phase completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
 }
 
 fix

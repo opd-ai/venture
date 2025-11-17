@@ -45,6 +45,10 @@ var keyCodeMap = map[string]int{
 	"Escape": 27,
 }
 
+// initializationAttempted tracks whether we've tried to initialize the keyboard
+// to avoid excessive retry attempts
+var initializationAttempted bool
+
 // initKeyboardElement creates a hidden HTML input element that can trigger
 // the native mobile keyboard when focused. This is necessary because canvas
 // elements don't automatically trigger the keyboard on mobile browsers.
@@ -64,8 +68,24 @@ func initKeyboardElement() {
 		return // Already initialized
 	}
 
+	// Mark that we've attempted initialization
+	if !initializationAttempted {
+		initializationAttempted = true
+		logInfo("First keyboard initialization attempt")
+	} else {
+		logInfo("Retrying keyboard initialization")
+	}
+
 	logInfo("Initializing virtual keyboard element")
 	doc := js.Global().Get("document")
+	
+	// CRITICAL FIX: Verify document is available
+	if doc.IsUndefined() || doc.IsNull() {
+		logError("Document is undefined or null - DOM not ready")
+		logInfo("Initialization will be retried on next ShowKeyboard() call")
+		return
+	}
+	
 	input := doc.Call("createElement", "input")
 
 	// Set input type to text for general text input
@@ -201,7 +221,33 @@ func initKeyboardElement() {
 	doc.Call("addEventListener", "focusin", focusGuard, true) // Use capture phase
 
 	// Add to DOM
+	// CRITICAL FIX: Verify body is available before appending
 	body := doc.Get("body")
+	if body.IsUndefined() || body.IsNull() {
+		logError("Document body is undefined or null - DOM not ready")
+		logInfo("This may occur if ShowKeyboard() is called too early")
+		logInfo("Initialization will be retried on next ShowKeyboard() call")
+		return
+	}
+	
+	// CRITICAL FIX: Ensure the canvas element exists before setting up keyboard
+	// This prevents issues where keyboard is initialized before Ebiten creates its canvas
+	canvasList := doc.Call("getElementsByTagName", "canvas")
+	if canvasList.Get("length").Int() == 0 {
+		logError("No canvas element found - Ebiten not fully initialized")
+		logInfo("Waiting for Ebiten to create canvas element")
+		logInfo("Initialization will be retried on next ShowKeyboard() call")
+		return
+	}
+	
+	// CRITICAL FIX: Ensure input element is above canvas in z-index stacking
+	// Set canvas z-index to a lower value than input (input is 999)
+	canvas := canvasList.Index(0)
+	canvasStyle := canvas.Get("style")
+	canvasStyle.Set("position", "relative") // Need position for z-index to work
+	canvasStyle.Set("zIndex", "1")          // Below input element (999)
+	logInfo("Canvas z-index set to 1 (input is 999)")
+	
 	body.Call("appendChild", input)
 
 	keyboardElement = input
@@ -209,6 +255,7 @@ func initKeyboardElement() {
 
 	logInfo("Virtual keyboard element created and added to DOM")
 	logInfo("Element ID: venture-keyboard-input, Type: text, InputMode: text")
+	logInfo("Canvas element detected - keyboard ready for use")
 }
 
 // dispatchKeyboardEvent dispatches a synthetic keyboard event to the canvas element

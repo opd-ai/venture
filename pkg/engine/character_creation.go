@@ -18,6 +18,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"github.com/opd-ai/venture/pkg/procgen"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
@@ -462,6 +463,17 @@ func (cc *EbitenCharacterCreation) SetDefaults(defaults CharacterCreationDefault
 	}
 	if cc.currentStep == stepClassSelection {
 		cc.selectedClass = cc.defaults.DefaultClass
+	}
+}
+
+// SetDefaultNameFromSeed sets the default character name based on world seed.
+// Uses deterministic selection to ensure the same seed always produces the same name.
+func (cc *EbitenCharacterCreation) SetDefaultNameFromSeed(seed int64) {
+	defaultName := procgen.SelectDefaultName(seed)
+	cc.defaults.DefaultName = defaultName
+	// Apply to current state if we're in name input step
+	if cc.currentStep == stepNameInput {
+		cc.nameInput = defaultName
 	}
 }
 

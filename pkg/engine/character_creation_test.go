@@ -865,3 +865,78 @@ func TestCharacterCreation_KeyboardFlagConsistency(t *testing.T) {
 		t.Error("Cleanup() must always set keyboardShown to false")
 	}
 }
+
+// TestSetDefaultNameFromSeed verifies that default name is set deterministically from world seed.
+func TestSetDefaultNameFromSeed(t *testing.T) {
+	tests := []struct {
+		name string
+		seed int64
+	}{
+		{"seed 12345", 12345},
+		{"seed 98765", 98765},
+		{"seed 0", 0},
+		{"seed 1", 1},
+		{"negative seed", -999999},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cc := NewCharacterCreation(800, 600)
+
+			// Set default name from seed
+			cc.SetDefaultNameFromSeed(tt.seed)
+
+			// Verify name is set in defaults
+			if cc.defaults.DefaultName == "" {
+				t.Error("SetDefaultNameFromSeed() did not set DefaultName")
+			}
+
+			// Verify name is applied to nameInput when in name input step
+			if cc.currentStep == stepNameInput && cc.nameInput == "" {
+				t.Error("SetDefaultNameFromSeed() did not apply name to nameInput in stepNameInput")
+			}
+
+			// Verify determinism: same seed should produce same name
+			cc2 := NewCharacterCreation(800, 600)
+			cc2.SetDefaultNameFromSeed(tt.seed)
+
+			if cc.defaults.DefaultName != cc2.defaults.DefaultName {
+				t.Errorf("SetDefaultNameFromSeed(%d) not deterministic: got %s and %s",
+					tt.seed, cc.defaults.DefaultName, cc2.defaults.DefaultName)
+			}
+
+			// Verify name is applied when reset
+			cc.Reset()
+			if cc.nameInput != cc.defaults.DefaultName {
+				t.Errorf("After Reset(), nameInput = %q, want %q", cc.nameInput, cc.defaults.DefaultName)
+			}
+		})
+	}
+}
+
+// TestSetDefaultNameFromSeed_Integration tests that default names work with the full character creation flow.
+func TestSetDefaultNameFromSeed_Integration(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+	seed := int64(12345)
+
+	// Set default name from seed
+	cc.SetDefaultNameFromSeed(seed)
+	defaultName := cc.defaults.DefaultName
+
+	// Should be applied to nameInput initially
+	if cc.nameInput != defaultName {
+		t.Errorf("Initial nameInput = %q, want %q", cc.nameInput, defaultName)
+	}
+
+	// User can still modify the name
+	cc.nameInput = "CustomName"
+	if cc.nameInput == defaultName {
+		t.Error("User should be able to modify default name")
+	}
+
+	// Reset should restore default
+	cc.Reset()
+	if cc.nameInput != defaultName {
+		t.Errorf("After Reset(), nameInput = %q, want default %q", cc.nameInput, defaultName)
+	}
+}

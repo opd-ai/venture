@@ -36,6 +36,7 @@ type EbitenGame struct {
 	isMultiplayerMode    bool   // Track if character creation is for multiplayer
 	selectedGenreID      string // Selected genre for world generation
 	pendingServerAddress string // Server address for Join option
+	worldSeed            int64  // World generation seed for deterministic content
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -246,6 +247,15 @@ func (g *EbitenGame) SetMultiplayerConnectCallback(callback func(serverAddr stri
 // SetQuitToMenuCallback sets the callback function called when quitting to main menu.
 func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
 	g.onQuitToMenu = callback
+}
+
+// SetWorldSeed sets the world generation seed and applies it to character creation defaults.
+// This ensures deterministic default character naming based on the world seed.
+func (g *EbitenGame) SetWorldSeed(seed int64) {
+	g.worldSeed = seed
+	if g.CharacterCreation != nil {
+		g.CharacterCreation.SetDefaultNameFromSeed(seed)
+	}
 }
 
 // handleMainMenuSelection processes main menu option selections and triggers state transitions.

@@ -1243,6 +1243,9 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engine.EbitenGame {
 	game := engine.NewEbitenGameWithLogger(*width, *height, logger)
 	game.SetFullscreen(*fullscreen)
+	
+	// Set world seed for deterministic character naming
+	game.SetWorldSeed(*seed)
 
 	if *profile {
 		game.EnableFrameTimeProfiling()
@@ -1254,6 +1257,7 @@ func createGameInstance(logger *logrus.Logger, clientLogger *logrus.Entry) *engi
 			"width":      *width,
 			"height":     *height,
 			"fullscreen": *fullscreen,
+			"seed":       *seed,
 		}).Info("display initialized")
 	}
 

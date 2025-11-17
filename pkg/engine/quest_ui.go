@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"golang.org/x/image/font/basicfont"
 )
@@ -36,11 +37,17 @@ type EbitenQuestUI struct {
 	cachedQuestListHeight int  // Cached total content height
 	cacheValid            bool // Whether cache is valid
 	lastQuestCount        int  // Quest count when cache was built
+	
+	// Touch support
+	touchHandler    *mobile.TouchInputHandler
+	closeButton     *mobile.TouchButton
+	activeTabButton *mobile.TouchButton
+	doneTabButton   *mobile.TouchButton
 }
 
 // NewQuestUI creates a new quest UI.
 func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestUI {
-	return &EbitenQuestUI{
+	ui := &EbitenQuestUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -48,7 +55,42 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		currentTab:   0,
 		errorState:   NewUIErrorState(), // H-002 FIX
 		cacheValid:   false,             // M-003 FIX
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Hide() },
+	)
+	
+	// Create tab buttons
+	windowWidth := 800
+	if screenWidth < 800 {
+		windowWidth = screenWidth - 40
+	}
+	windowX := (screenWidth - windowWidth) / 2
+	
+	ui.activeTabButton = mobile.NewTouchButton(
+		float64(windowX+20),
+		60,
+		120, 44,
+		"Active",
+		func() { ui.currentTab = 0; ui.scrollOffset = 0 },
+	)
+	
+	ui.doneTabButton = mobile.NewTouchButton(
+		float64(windowX+150),
+		60,
+		120, 44,
+		"Completed",
+		func() { ui.currentTab = 1; ui.scrollOffset = 0 },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity whose quests to display.

@@ -773,25 +773,26 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	} else if b.Icon != "" {
 		displayText = b.Icon
 	}
-
-	// Ensure we always have text to render
-	if displayText != "" {
-		// Calculate text position (centered)
-		// basicfont.Face7x13 is approximately 7 pixels wide per character
-		textWidth := len(displayText) * 7
-
-		// Center horizontally
-		textX := int(b.X + (b.Width-float64(textWidth))/2)
-
-		// Center vertically - text.Draw Y is the baseline
-		// For 7x13 font in a 44px button, center is around Y + 28
-		textY := int(b.Y + b.Height/2 + 5)
-
-		text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
+	
+	// DEBUG: Force text to be visible for testing
+	if displayText == "" {
+		displayText = "BTN"
 	}
-}
+	
+	// Always render text
+	// Calculate text position (centered)
+	// basicfont.Face7x13 is approximately 7 pixels wide per character
+	textWidth := len(displayText) * 7
 
-// SetPosition sets the button position.
+	// Center horizontally
+	textX := int(b.X + (b.Width-float64(textWidth))/2)
+
+	// Center vertically - text.Draw Y is the baseline
+	// For 7x13 font in a 44px button, center is around Y + 28
+	textY := int(b.Y + b.Height/2 + 5)
+
+	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
+}// SetPosition sets the button position.
 func (b *TouchButton) SetPosition(x, y float64) {
 	b.X = x
 	b.Y = y

@@ -55,12 +55,17 @@ type CraftingUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	craftButton  *mobile.TouchButton
 }
 
 // NewCraftingUI creates a new crafting UI.
 // Parameters match the pattern used by NewShopUI and NewEbitenInventoryUI.
 func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
-	return &CraftingUI{
+	ui := &CraftingUI{
 		visible:             false,
 		screenWidth:         screenWidth,
 		screenHeight:        screenHeight,
@@ -74,7 +79,36 @@ func NewCraftingUI(screenWidth, screenHeight int) *CraftingUI {
 		sortMode:            0,  // 0=Name (default)
 		showOnlyCrafted:     false,
 		errorState:          NewUIErrorState(), // H-002 FIX
+		touchHandler:        mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button (top-right)
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Close() },
+	)
+	
+	// Create craft button (bottom-right)
+	ui.craftButton = mobile.NewTouchButton(
+		float64(screenWidth-164),
+		float64(screenHeight-64),
+		120, 44,
+		"Craft",
+		func() { 
+			// Craft button callback - craft selected recipe if any
+			if ui.selectedRecipeIndex >= 0 {
+				recipeList, ok := ui.getPlayerRecipes()
+				if ok && ui.selectedRecipeIndex < len(recipeList) {
+					ui.attemptCraft(recipeList[ui.selectedRecipeIndex])
+				}
+			}
+		},
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity for crafting.
@@ -156,6 +190,19 @@ func (ui *CraftingUI) Toggle() {
 func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	ui.updateMessageTimer(deltaTime)
 
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	if ui.craftButton != nil {
+		ui.craftButton.Update()
+	}
+
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
@@ -187,6 +234,33 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	windowWidth, windowHeight, maxVisibleRecipes := ui.calculateVisibleArea()
+	
+	// Handle touch scrolling
+	if ui.touchHandler != nil {
+		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for scrolling
+			if direction > 1.0 || direction < -1.0 {
+				scrollDelta := int(distance * 0.1)
+				if direction < 0 {
+					ui.scrollOffset += scrollDelta
+				} else {
+					ui.scrollOffset -= scrollDelta
+				}
+				// Clamp scroll
+				if ui.scrollOffset < 0 {
+					ui.scrollOffset = 0
+				}
+				maxScroll := len(recipeList) - maxVisibleRecipes
+				if maxScroll < 0 {
+					maxScroll = 0
+				}
+				if ui.scrollOffset > maxScroll {
+					ui.scrollOffset = maxScroll
+				}
+			}
+		}
+	}
+	
 	ui.handleMouseInput(recipeList, windowWidth, windowHeight, maxVisibleRecipes)
 	ui.handleKeyboardNavigation(recipeList, maxVisibleRecipes)
 	ui.handleMouseWheelScrolling(recipeList, maxVisibleRecipes)
@@ -905,6 +979,14 @@ func (ui *CraftingUI) Draw(screen interface{}) {
 
 	// H-002 FIX: Draw error feedback
 	ui.errorState.DrawError(img)
+	
+	// Draw touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Draw(img)
+	}
+	if ui.craftButton != nil && ui.selectedRecipeIndex >= 0 {
+		ui.craftButton.Draw(img)
+	}
 }
 
 // findNearestStation finds the nearest crafting station within maxDistance.

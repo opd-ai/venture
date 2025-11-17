@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -31,16 +32,42 @@ type EbitenHelpSystem struct {
 	QuickHints    map[string]string // Context -> Hint text
 	ShowQuickHint bool
 	CurrentHint   string
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	scrollOffset float64
+	screenWidth  int
+	screenHeight int
 }
 
 // NewHelpSystem creates a new help system with default topics.
 func NewHelpSystem() *EbitenHelpSystem {
-	return &EbitenHelpSystem{
-		Enabled:    true,
-		Visible:    false,
-		Topics:     createDefaultHelpTopics(),
-		QuickHints: createDefaultQuickHints(),
+	return NewHelpSystemWithSize(800, 600) // Default screen size
+}
+
+// NewHelpSystemWithSize creates a new help system with specified screen dimensions.
+func NewHelpSystemWithSize(screenWidth, screenHeight int) *EbitenHelpSystem {
+	hs := &EbitenHelpSystem{
+		Enabled:      true,
+		Visible:      false,
+		Topics:       createDefaultHelpTopics(),
+		QuickHints:   createDefaultQuickHints(),
+		touchHandler: mobile.NewTouchInputHandler(),
+		screenWidth:  screenWidth,
+		screenHeight: screenHeight,
 	}
+	
+	// Create close button (top-right)
+	hs.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { hs.Hide() },
+	)
+	
+	return hs
 }
 
 // createDefaultHelpTopics generates the default help topics
@@ -275,6 +302,16 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
+	// Update touch handler
+	if hs.touchHandler != nil {
+		hs.touchHandler.Update()
+	}
+	
+	// Update close button
+	if hs.closeButton != nil {
+		hs.closeButton.Update()
+	}
+
 	// Standardized dual-exit menu navigation: H or F1 key OR Escape
 	// GAP-004 REPAIR: All menus use toggle key + ESC for consistent UX
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) || inpututil.IsKeyJustPressed(ebiten.KeyF1) {
@@ -284,6 +321,24 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 	if hs.Visible && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		hs.Hide()
 		return
+	}
+
+	// Touch: Handle swipe for scrolling
+	if hs.Visible && hs.touchHandler != nil {
+		if direction, distance, detected := hs.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for scrolling
+			if direction > 1.0 || direction < -1.0 {
+				if direction < 0 {
+					hs.scrollOffset += distance * 0.5
+				} else {
+					hs.scrollOffset -= distance * 0.5
+				}
+				// Clamp scroll offset
+				if hs.scrollOffset < 0 {
+					hs.scrollOffset = 0
+				}
+			}
+		}
 	}
 
 	// Topic switching with number keys (when help visible)
@@ -455,6 +510,11 @@ func (hs *EbitenHelpSystem) drawHelpPanel(screen *ebiten.Image) {
 
 	topicList := "Topics: [1]Controls [2]Combat [3]Inventory [4]Progression [5]World [6]Multiplayer"
 	text.Draw(screen, topicList, basicfont.Face7x13, panelX+20, selectorY, selectorColor)
+	
+	// Draw close button for touch
+	if hs.closeButton != nil {
+		hs.closeButton.Draw(screen)
+	}
 }
 
 // GetTopicList returns all available topic IDs

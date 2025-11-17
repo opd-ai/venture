@@ -762,24 +762,19 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)
 
 	// Draw label text (centered)
-	textColor := b.TextColor
-	if !b.Enabled {
-		textColor = color.RGBA{100, 100, 100, 255}
-	}
-
 	displayText := b.Label
 	if b.Icon != "" && b.Label != "" {
 		displayText = b.Icon + " " + b.Label
 	} else if b.Icon != "" {
 		displayText = b.Icon
 	}
-	
-	// DEBUG: Force text to be visible for testing
+
+	// DEBUG: Always show SOMETHING to diagnose the issue
 	if displayText == "" {
-		displayText = "BTN"
+		displayText = "EMPTY"
 	}
-	
-	// Always render text
+
+	// Always render text - removed the conditional check
 	// Calculate text position (centered)
 	// basicfont.Face7x13 is approximately 7 pixels wide per character
 	textWidth := len(displayText) * 7
@@ -791,8 +786,15 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	// For 7x13 font in a 44px button, center is around Y + 28
 	textY := int(b.Y + b.Height/2 + 5)
 
-	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, textColor)
-}// SetPosition sets the button position.
+	// DEBUG: Force bright yellow text and add red dot marker
+	debugColor := color.RGBA{255, 255, 0, 255} // Bright yellow
+	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, debugColor)
+	
+	// Draw red dot at text position to verify Draw is being called
+	vector.DrawFilledCircle(screen, float32(textX), float32(textY), 3, color.RGBA{255, 0, 0, 255}, true)
+}
+
+// SetPosition sets the button position.
 func (b *TouchButton) SetPosition(x, y float64) {
 	b.X = x
 	b.Y = y

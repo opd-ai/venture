@@ -773,7 +773,7 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	} else if b.Icon != "" {
 		displayText = b.Icon
 	}
-	
+
 	// Ensure we always have text to render
 	if displayText != "" {
 		// Calculate text position (centered)

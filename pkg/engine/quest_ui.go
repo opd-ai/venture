@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"golang.org/x/image/font/basicfont"
 )
@@ -36,11 +37,17 @@ type EbitenQuestUI struct {
 	cachedQuestListHeight int  // Cached total content height
 	cacheValid            bool // Whether cache is valid
 	lastQuestCount        int  // Quest count when cache was built
+	
+	// Touch support
+	touchHandler    *mobile.TouchInputHandler
+	closeButton     *mobile.TouchButton
+	activeTabButton *mobile.TouchButton
+	doneTabButton   *mobile.TouchButton
 }
 
 // NewQuestUI creates a new quest UI.
 func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestUI {
-	return &EbitenQuestUI{
+	ui := &EbitenQuestUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -48,7 +55,42 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		currentTab:   0,
 		errorState:   NewUIErrorState(), // H-002 FIX
 		cacheValid:   false,             // M-003 FIX
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Hide() },
+	)
+	
+	// Create tab buttons
+	windowWidth := 800
+	if screenWidth < 800 {
+		windowWidth = screenWidth - 40
+	}
+	windowX := (screenWidth - windowWidth) / 2
+	
+	ui.activeTabButton = mobile.NewTouchButton(
+		float64(windowX+20),
+		60,
+		120, 44,
+		"Active",
+		func() { ui.currentTab = 0; ui.scrollOffset = 0 },
+	)
+	
+	ui.doneTabButton = mobile.NewTouchButton(
+		float64(windowX+150),
+		60,
+		120, 44,
+		"Completed",
+		func() { ui.currentTab = 1; ui.scrollOffset = 0 },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity whose quests to display.
@@ -79,6 +121,22 @@ func (ui *EbitenQuestUI) Hide() {
 // Update processes input for the quest UI.
 // Calculates scroll bounds based on current quest list content.
 func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update all touch buttons
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	if ui.activeTabButton != nil {
+		ui.activeTabButton.Update()
+	}
+	if ui.doneTabButton != nil {
+		ui.doneTabButton.Update()
+	}
+	
 	// Standardized dual-exit menu navigation: toggle key (J) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
 		if shouldToggle {
@@ -126,6 +184,30 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 			ui.maxScroll = estimatedHeight - contentHeight
 			if ui.maxScroll < 0 {
 				ui.maxScroll = 0
+			}
+		}
+	}
+	
+	// Handle touch scrolling
+	if ui.touchHandler != nil {
+		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for scrolling
+			if direction > 1.0 || direction < -1.0 {
+				scrollSpeed := int(distance * 0.5)
+				if direction < 0 {
+					// Swipe down = scroll up
+					ui.scrollOffset -= scrollSpeed
+				} else {
+					// Swipe up = scroll down
+					ui.scrollOffset += scrollSpeed
+				}
+				// Clamp scroll offset
+				if ui.scrollOffset < 0 {
+					ui.scrollOffset = 0
+				}
+				if ui.scrollOffset > ui.maxScroll {
+					ui.scrollOffset = ui.maxScroll
+				}
 			}
 		}
 	}
@@ -209,6 +291,37 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	}
 
 	ui.drawControlsHint(img, windowX, windowY, windowHeight)
+	
+	// Draw touch buttons
+	if ui.closeButton != nil {
+		// Position close button at top-right of window
+		ui.closeButton.SetPosition(float64(windowX+windowWidth-54), float64(windowY+10))
+		ui.closeButton.Draw(img)
+	}
+	
+	// Draw tab buttons at correct position
+	if ui.activeTabButton != nil {
+		// Highlight active tab
+		if ui.currentTab == 0 {
+			ui.activeTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
+		} else {
+			ui.activeTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
+		}
+		ui.activeTabButton.SetPosition(float64(windowX+20), 60)
+		ui.activeTabButton.Draw(img)
+	}
+	
+	if ui.doneTabButton != nil {
+		// Highlight active tab
+		if ui.currentTab == 1 {
+			ui.doneTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
+		} else {
+			ui.doneTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
+		}
+		ui.doneTabButton.SetPosition(float64(windowX+150), 60)
+		ui.doneTabButton.Draw(img)
+	}
+	
 	ui.errorState.DrawError(img)
 }
 

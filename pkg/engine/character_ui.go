@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/combat"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -35,6 +36,11 @@ type EbitenCharacterUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	scrollOffset float64
 }
 
 // NewCharacterUI creates a new character UI system.
@@ -52,8 +58,19 @@ func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCh
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 		errorState:   NewUIErrorState(), // H-002 FIX
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
 	ui.calculateLayout()
+	
+	// Create close button (will be positioned in calculateLayout)
+	ui.closeButton = mobile.NewTouchButton(
+		float64(screenWidth-64),
+		10,
+		44, 44,
+		"✕",
+		func() { ui.Hide() },
+	)
+	
 	return ui
 }
 
@@ -104,6 +121,16 @@ func (ui *EbitenCharacterUI) Hide() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update close button
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	
 	// Standardized dual-exit menu navigation: toggle key (C) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Character, ui.visible); shouldClose {
 		if shouldToggle {
@@ -116,6 +143,24 @@ func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
 
 	if !ui.visible {
 		return
+	}
+	
+	// Handle touch scrolling
+	if ui.touchHandler != nil {
+		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for scrolling
+			if direction > 1.0 || direction < -1.0 {
+				if direction < 0 {
+					ui.scrollOffset += distance * 0.5
+				} else {
+					ui.scrollOffset -= distance * 0.5
+				}
+				// Clamp scroll offset
+				if ui.scrollOffset < 0 {
+					ui.scrollOffset = 0
+				}
+			}
+		}
 	}
 }
 
@@ -213,6 +258,13 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
+	
+	// Draw close button (touch-friendly)
+	if ui.closeButton != nil {
+		// Position button at top-right of panel
+		ui.closeButton.SetPosition(float64(panelX+panelWidth-54), float64(panelY+10))
+		ui.closeButton.Draw(img)
+	}
 
 	// H-002 FIX: Draw error feedback
 	ui.errorState.DrawError(img)

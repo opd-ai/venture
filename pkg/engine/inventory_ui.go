@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
@@ -39,11 +40,16 @@ type EbitenInventoryUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
+	
+	// Touch support
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	scrollOffset float64 // For touch scrolling
 }
 
 // NewInventoryUI creates a new inventory UI.
 func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenInventoryUI {
-	return &EbitenInventoryUI{
+	ui := &EbitenInventoryUI{
 		visible:      false,
 		world:        world,
 		screenWidth:  screenWidth,
@@ -56,7 +62,24 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		hoveredSlot:  -1,
 		draggedIndex: -1,
 		errorState:   NewUIErrorState(), // H-002 FIX
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
+	
+	// Create close button (top-right of window)
+	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
+	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 100
+	windowX := (ui.screenWidth - windowWidth) / 2
+	windowY := (ui.screenHeight - windowHeight) / 2
+	
+	ui.closeButton = mobile.NewTouchButton(
+		float64(windowX+windowWidth-54),
+		float64(windowY+10),
+		44, 44,
+		"✕",
+		func() { ui.Hide() },
+	)
+	
+	return ui
 }
 
 // SetPlayerEntity sets the player entity whose inventory to display.
@@ -91,6 +114,16 @@ func (ui *EbitenInventoryUI) Hide() {
 
 // Update processes input for the inventory UI.
 func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
+	// Update touch handler
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	
+	// Update close button
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	
 	// Standardized dual-exit menu navigation: toggle key (I) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
 		if shouldToggle {
@@ -125,6 +158,26 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	mousePressed := IsTouchOrMouseJustPressed()
 	mouseReleased := IsTouchOrMouseJustReleased()
+	
+	// Handle touch scrolling
+	if ui.touchHandler != nil {
+		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+			// Vertical swipe for scrolling
+			if direction > 1.0 || direction < -1.0 {
+				// Swipe detected - update scroll offset
+				// Positive distance = swipe down = scroll up
+				if direction < 0 {
+					ui.scrollOffset += distance * 0.5
+				} else {
+					ui.scrollOffset -= distance * 0.5
+				}
+				// Clamp scroll offset
+				if ui.scrollOffset < 0 {
+					ui.scrollOffset = 0
+				}
+			}
+		}
+	}
 
 	// Check if mouse is over inventory grid
 	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
@@ -380,6 +433,11 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 		// Make slightly transparent to show it's being dragged
 		previewOpts.ColorScale.ScaleAlpha(0.7)
 		img.DrawImage(ui.dragPreview, previewOpts)
+	}
+	
+	// Draw close button (touch-friendly)
+	if ui.closeButton != nil {
+		ui.closeButton.Draw(img)
 	}
 
 	// H-002 FIX: Draw error feedback

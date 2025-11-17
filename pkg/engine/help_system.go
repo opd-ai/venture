@@ -32,7 +32,7 @@ type EbitenHelpSystem struct {
 	QuickHints    map[string]string // Context -> Hint text
 	ShowQuickHint bool
 	CurrentHint   string
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
@@ -57,7 +57,7 @@ func NewHelpSystemWithSize(screenWidth, screenHeight int) *EbitenHelpSystem {
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 	}
-	
+
 	// Create close button (top-right)
 	hs.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -66,7 +66,7 @@ func NewHelpSystemWithSize(screenWidth, screenHeight int) *EbitenHelpSystem {
 		"✕",
 		func() { hs.Hide() },
 	)
-	
+
 	return hs
 }
 
@@ -306,7 +306,7 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 	if hs.touchHandler != nil {
 		hs.touchHandler.Update()
 	}
-	
+
 	// Update close button
 	if hs.closeButton != nil {
 		hs.closeButton.Update()
@@ -510,7 +510,7 @@ func (hs *EbitenHelpSystem) drawHelpPanel(screen *ebiten.Image) {
 
 	topicList := "Topics: [1]Controls [2]Combat [3]Inventory [4]Progression [5]World [6]Multiplayer"
 	text.Draw(screen, topicList, basicfont.Face7x13, panelX+20, selectorY, selectorColor)
-	
+
 	// Draw close button for touch
 	if hs.closeButton != nil {
 		hs.closeButton.Draw(screen)

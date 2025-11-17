@@ -36,7 +36,7 @@ type EbitenCharacterUI struct {
 
 	// H-002 FIX: Error feedback
 	errorState *UIErrorState
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
@@ -61,7 +61,7 @@ func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCh
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
 	ui.calculateLayout()
-	
+
 	// Create close button (will be positioned in calculateLayout)
 	ui.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -70,7 +70,7 @@ func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCh
 		"✕",
 		func() { ui.Hide() },
 	)
-	
+
 	return ui
 }
 
@@ -125,12 +125,12 @@ func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update close button
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
 	}
-	
+
 	// Standardized dual-exit menu navigation: toggle key (C) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Character, ui.visible); shouldClose {
 		if shouldToggle {
@@ -144,7 +144,7 @@ func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
 	if !ui.visible {
 		return
 	}
-	
+
 	// Handle touch scrolling
 	if ui.touchHandler != nil {
 		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
@@ -258,7 +258,7 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
-	
+
 	// Draw close button (touch-friendly)
 	if ui.closeButton != nil {
 		// Position button at top-right of panel

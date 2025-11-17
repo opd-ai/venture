@@ -32,8 +32,8 @@ func NewInputRateLimiter() *InputRateLimiter {
 		lastInputTime: make(map[string]time.Time),
 		cooldowns:     make(map[string]time.Duration),
 		inputCounts:   make(map[string]int),
-		timeWindow:    1 * time.Second,  // 1 second window for spam detection
-		maxInputs:     10,                // Max 10 inputs per second (prevents spam)
+		timeWindow:    1 * time.Second, // 1 second window for spam detection
+		maxInputs:     10,              // Max 10 inputs per second (prevents spam)
 	}
 }
 
@@ -47,26 +47,26 @@ func (l *InputRateLimiter) SetCooldown(actionID string, cooldown time.Duration) 
 // Platform parity fix: Returns false if action is on cooldown or exceeds spam threshold
 func (l *InputRateLimiter) CanExecute(actionID string) bool {
 	now := time.Now()
-	
+
 	// Platform parity fix: Check cooldown
 	if lastTime, exists := l.lastInputTime[actionID]; exists {
 		cooldown := l.cooldowns[actionID]
 		if cooldown == 0 {
 			cooldown = 100 * time.Millisecond // Default 100ms cooldown
 		}
-		
+
 		if now.Sub(lastTime) < cooldown {
 			return false // Still on cooldown
 		}
 	}
-	
+
 	// Platform parity fix: Check spam threshold
 	count := l.inputCounts[actionID]
 	if count >= l.maxInputs {
 		// Too many inputs in time window - likely spam or lag
 		return false
 	}
-	
+
 	return true
 }
 
@@ -75,7 +75,7 @@ func (l *InputRateLimiter) CanExecute(actionID string) bool {
 func (l *InputRateLimiter) RecordInput(actionID string) {
 	now := time.Now()
 	l.lastInputTime[actionID] = now
-	
+
 	// Platform parity fix: Increment spam counter
 	l.inputCounts[actionID]++
 }
@@ -84,7 +84,7 @@ func (l *InputRateLimiter) RecordInput(actionID string) {
 // Platform parity fix: Call every frame to reset spam counters after time window
 func (l *InputRateLimiter) Update() {
 	now := time.Now()
-	
+
 	// Platform parity fix: Reset spam counters for actions outside time window
 	for actionID, lastTime := range l.lastInputTime {
 		if now.Sub(lastTime) > l.timeWindow {
@@ -101,13 +101,13 @@ func (l *InputRateLimiter) GetRemainingCooldown(actionID string) time.Duration {
 		if cooldown == 0 {
 			cooldown = 100 * time.Millisecond
 		}
-		
+
 		elapsed := time.Since(lastTime)
 		if elapsed < cooldown {
 			return cooldown - elapsed
 		}
 	}
-	
+
 	return 0
 }
 
@@ -494,19 +494,19 @@ const (
 	// GestureTwoFingerTap - Two fingers tap simultaneously (touch)
 	// Platform parity fix: Equivalent to Ctrl+Z or right-click cancel
 	GestureTwoFingerTap CancelGesture = iota
-	
+
 	// GestureSwipeDown - Quick downward swipe (touch)
 	// Platform parity fix: Common mobile pattern for dismiss/close
 	GestureSwipeDown
-	
+
 	// GestureEdgeSwipe - Swipe from screen edge (touch)
 	// Platform parity fix: iOS/Android back gesture equivalent
 	GestureEdgeSwipe
-	
+
 	// GestureEscape - Escape key press (keyboard)
 	// Platform parity fix: Standard desktop cancel
 	GestureEscape
-	
+
 	// GestureRightClick - Right mouse button (mouse)
 	// Platform parity fix: Standard desktop context menu/cancel
 	GestureRightClick
@@ -592,4 +592,3 @@ func (s *SelectionState) GetSelectedItems() []int {
 func (s *SelectionState) GetSelectionCount() int {
 	return len(s.selectedItems)
 }
-

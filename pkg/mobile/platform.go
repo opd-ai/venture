@@ -81,13 +81,13 @@ func IsAndroid() bool {
 // Returns 0 if keyboard is not visible or on desktop platforms
 func KeyboardObscuresUI() int {
 	platform := GetPlatform()
-	
+
 	// Platform parity fix: Mobile keyboard height estimates
 	// iOS: ~264px portrait (iPhone), ~194px landscape
 	// Android: varies by device/keyboard, ~280px portrait typical
 	// WASM: varies by browser/device, ~300px mobile browsers
 	// Desktop: 0 (no on-screen keyboard)
-	
+
 	switch platform {
 	case PlatformIOS:
 		// Platform parity fix: iOS keyboard heights
@@ -113,7 +113,7 @@ func KeyboardObscuresUI() int {
 // Platform parity fix: iOS Human Interface Guidelines: 44pt, Android Material: 48dp
 func GetMinimumTouchTargetSize() int {
 	platform := GetPlatform()
-	
+
 	switch platform {
 	case PlatformIOS:
 		// Platform parity fix: iOS HIG minimum touch target
@@ -279,8 +279,8 @@ func (t SystemInterruptionType) String() string {
 // AppLifecycleHandler manages application lifecycle events.
 // Platform parity fix: Centralizes platform-specific lifecycle handling
 type AppLifecycleHandler struct {
-	currentState AppLifecycleState
-	onStateChange func(AppLifecycleState)
+	currentState   AppLifecycleState
+	onStateChange  func(AppLifecycleState)
 	onInterruption func(SystemInterruptionType)
 }
 
@@ -309,9 +309,9 @@ func (h *AppLifecycleHandler) NotifyStateChange(newState AppLifecycleState) {
 	if h.currentState == newState {
 		return
 	}
-	
+
 	h.currentState = newState
-	
+
 	if h.onStateChange != nil {
 		h.onStateChange(newState)
 	}
@@ -350,23 +350,23 @@ const (
 	// RestrictionClipboard - WASM cannot access clipboard without user gesture
 	// Platform parity fix: navigator.clipboard requires user interaction (click/tap)
 	RestrictionClipboard WASMSecurityRestriction = iota
-	
+
 	// RestrictionFullscreen - WASM fullscreen requires user gesture
 	// Platform parity fix: element.requestFullscreen() must be in event handler
 	RestrictionFullscreen
-	
+
 	// RestrictionAutoplay - WASM cannot autoplay audio without user interaction
 	// Platform parity fix: Browser autoplay policies require user gesture for audio
 	RestrictionAutoplay
-	
+
 	// RestrictionPointerLock - WASM pointer lock requires user gesture
 	// Platform parity fix: element.requestPointerLock() must be in event handler
 	RestrictionPointerLock
-	
+
 	// RestrictionLocalStorage - WASM localStorage may be blocked in private mode
 	// Platform parity fix: Safari private browsing blocks localStorage
 	RestrictionLocalStorage
-	
+
 	// RestrictionWebGL - WASM WebGL context may fail on some devices
 	// Platform parity fix: Mobile browsers may have limited WebGL support
 	RestrictionWebGL
@@ -398,22 +398,22 @@ func GetWASMRestrictionMessage(restriction WASMSecurityRestriction) string {
 	switch restriction {
 	case RestrictionClipboard:
 		return "Clipboard access requires clicking a button or menu item. " +
-		       "Browser security prevents automatic clipboard access."
+			"Browser security prevents automatic clipboard access."
 	case RestrictionFullscreen:
 		return "Fullscreen requires clicking a button or pressing a key. " +
-		       "Browser security prevents automatic fullscreen."
+			"Browser security prevents automatic fullscreen."
 	case RestrictionAutoplay:
 		return "Audio autoplay blocked by browser. Click anywhere to enable sound. " +
-		       "This is a browser security policy to prevent unwanted audio."
+			"This is a browser security policy to prevent unwanted audio."
 	case RestrictionPointerLock:
 		return "Pointer lock requires clicking in the game area. " +
-		       "Browser security prevents automatic mouse capture."
+			"Browser security prevents automatic mouse capture."
 	case RestrictionLocalStorage:
 		return "Save data unavailable in private browsing mode. " +
-		       "Use regular browsing to enable game saves."
+			"Use regular browsing to enable game saves."
 	case RestrictionWebGL:
 		return "Graphics acceleration unavailable on this device. " +
-		       "Game may run slowly or not display correctly."
+			"Game may run slowly or not display correctly."
 	default:
 		return "Browser security restriction detected."
 	}
@@ -447,5 +447,3 @@ func GetWASMWorkaroundMessage(restriction WASMSecurityRestriction) string {
 		return "Please interact with the game to enable this feature."
 	}
 }
-
-

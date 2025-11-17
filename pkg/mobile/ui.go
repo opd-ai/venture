@@ -634,18 +634,18 @@ func (m *MinimapWidget) getTileColorForType(tileType int) color.Color {
 // TouchButton represents a touch-friendly button widget.
 // Platform parity fix: Ensures minimum touch target size per platform guidelines
 type TouchButton struct {
-	X, Y            float64
-	Width, Height   float64
-	Label           string
-	Icon            string // Icon character/emoji (optional)
-	Enabled         bool
-	Visible         bool
-	OnTap           func()
-	
+	X, Y          float64
+	Width, Height float64
+	Label         string
+	Icon          string // Icon character/emoji (optional)
+	Enabled       bool
+	Visible       bool
+	OnTap         func()
+
 	// Touch handling
-	touchHandler    *TouchInputHandler
-	pressed         bool // Visual feedback for active touch
-	
+	touchHandler *TouchInputHandler
+	pressed      bool // Visual feedback for active touch
+
 	// Visual settings
 	BackgroundColor color.Color
 	PressedColor    color.Color
@@ -665,7 +665,7 @@ func NewTouchButton(x, y, width, height float64, label string, onTap func()) *To
 	if height < minSize {
 		height = minSize
 	}
-	
+
 	return &TouchButton{
 		X:               x,
 		Y:               y,
@@ -689,13 +689,13 @@ func (b *TouchButton) Update() {
 	if !b.Visible || !b.Enabled {
 		return
 	}
-	
+
 	b.touchHandler.Update()
-	
+
 	// Check if button is being touched
 	touches := b.touchHandler.GetActiveTouches()
 	b.pressed = false
-	
+
 	for _, touch := range touches {
 		if float64(touch.X) >= b.X && float64(touch.X) <= b.X+b.Width &&
 			float64(touch.Y) >= b.Y && float64(touch.Y) <= b.Y+b.Height {
@@ -703,7 +703,7 @@ func (b *TouchButton) Update() {
 			break
 		}
 	}
-	
+
 	// Handle tap on button
 	if b.touchHandler.IsTapping() {
 		tapX, tapY := b.touchHandler.GetTapPosition()
@@ -718,10 +718,10 @@ func (b *TouchButton) Update() {
 
 // Draw renders the button.
 func (b *TouchButton) Draw(screen *ebiten.Image) {
-	if !b.Visible {
+	if screen == nil || !b.Visible {
 		return
 	}
-	
+
 	// Determine button color
 	bgColor := b.BackgroundColor
 	if !b.Enabled {
@@ -729,35 +729,35 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	} else if b.pressed {
 		bgColor = b.PressedColor
 	}
-	
+
 	// Draw button background
 	vector.DrawFilledRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), bgColor, true)
-	
+
 	// Draw border
 	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)
-	
+
 	// Draw label text (centered)
 	if b.Label != "" || b.Icon != "" {
 		textColor := b.TextColor
 		if !b.Enabled {
 			textColor = color.RGBA{100, 100, 100, 255}
 		}
-		
+
 		displayText := b.Label
 		if b.Icon != "" && b.Label != "" {
 			displayText = b.Icon + " " + b.Label
 		} else if b.Icon != "" {
 			displayText = b.Icon
 		}
-		
+
 		// Calculate text position (centered)
 		bounds, _ := font.BoundString(basicfont.Face7x13, displayText)
 		textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
 		textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
-		
+
 		textX := int(b.X + (b.Width-float64(textWidth))/2)
 		textY := int(b.Y + (b.Height+float64(textHeight))/2)
-		
+
 		d := &font.Drawer{
 			Dst:  screen,
 			Src:  &image.Uniform{textColor},

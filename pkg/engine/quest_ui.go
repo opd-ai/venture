@@ -37,7 +37,7 @@ type EbitenQuestUI struct {
 	cachedQuestListHeight int  // Cached total content height
 	cacheValid            bool // Whether cache is valid
 	lastQuestCount        int  // Quest count when cache was built
-	
+
 	// Touch support
 	touchHandler    *mobile.TouchInputHandler
 	closeButton     *mobile.TouchButton
@@ -57,7 +57,7 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		cacheValid:   false,             // M-003 FIX
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create close button
 	ui.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -66,14 +66,14 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		"✕",
 		func() { ui.Hide() },
 	)
-	
+
 	// Create tab buttons
 	windowWidth := 800
 	if screenWidth < 800 {
 		windowWidth = screenWidth - 40
 	}
 	windowX := (screenWidth - windowWidth) / 2
-	
+
 	ui.activeTabButton = mobile.NewTouchButton(
 		float64(windowX+20),
 		60,
@@ -81,7 +81,7 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		"Active",
 		func() { ui.currentTab = 0; ui.scrollOffset = 0 },
 	)
-	
+
 	ui.doneTabButton = mobile.NewTouchButton(
 		float64(windowX+150),
 		60,
@@ -89,7 +89,7 @@ func NewEbitenQuestUI(world *World, screenWidth, screenHeight int) *EbitenQuestU
 		"Completed",
 		func() { ui.currentTab = 1; ui.scrollOffset = 0 },
 	)
-	
+
 	return ui
 }
 
@@ -125,7 +125,7 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update all touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
@@ -136,7 +136,7 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.doneTabButton != nil {
 		ui.doneTabButton.Update()
 	}
-	
+
 	// Standardized dual-exit menu navigation: toggle key (J) OR Escape
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
 		if shouldToggle {
@@ -187,7 +187,7 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 	}
-	
+
 	// Handle touch scrolling
 	if ui.touchHandler != nil {
 		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
@@ -291,14 +291,14 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 	}
 
 	ui.drawControlsHint(img, windowX, windowY, windowHeight)
-	
+
 	// Draw touch buttons
 	if ui.closeButton != nil {
 		// Position close button at top-right of window
 		ui.closeButton.SetPosition(float64(windowX+windowWidth-54), float64(windowY+10))
 		ui.closeButton.Draw(img)
 	}
-	
+
 	// Draw tab buttons at correct position
 	if ui.activeTabButton != nil {
 		// Highlight active tab
@@ -310,7 +310,7 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 		ui.activeTabButton.SetPosition(float64(windowX+20), 60)
 		ui.activeTabButton.Draw(img)
 	}
-	
+
 	if ui.doneTabButton != nil {
 		// Highlight active tab
 		if ui.currentTab == 1 {
@@ -321,7 +321,7 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 		ui.doneTabButton.SetPosition(float64(windowX+150), 60)
 		ui.doneTabButton.Draw(img)
 	}
-	
+
 	ui.errorState.DrawError(img)
 }
 

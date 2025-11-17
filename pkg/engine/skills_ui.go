@@ -51,7 +51,7 @@ type EbitenSkillsUI struct {
 	treeOffsetX   int              // X offset for centering
 	treeOffsetY   int              // Y offset for header
 	nodePositions map[string]Point // Cache of node screen positions
-	
+
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
@@ -79,7 +79,7 @@ func NewEbitenSkillsUI(world *World, screenWidth, screenHeight int) *EbitenSkill
 		nodePositions: make(map[string]Point),
 		touchHandler:  mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create close button
 	ui.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
@@ -88,7 +88,7 @@ func NewEbitenSkillsUI(world *World, screenWidth, screenHeight int) *EbitenSkill
 		"✕",
 		func() { ui.Hide() },
 	)
-	
+
 	return ui
 }
 
@@ -162,12 +162,12 @@ func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
-	
+
 	// Update touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
 	}
-	
+
 	// Handle touch pan gestures for scrolling the skill tree
 	if ui.touchHandler != nil {
 		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {

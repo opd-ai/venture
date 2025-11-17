@@ -393,7 +393,7 @@ type EbitenCharacterCreation struct {
 	nextButton   *mobile.TouchButton
 	backButton   *mobile.TouchButton
 	skipButton   *mobile.TouchButton // For skipping portrait selection
-	
+
 	// Preset name buttons for WASM/mobile fallback
 	presetNameButtons []*mobile.TouchButton
 }
@@ -412,7 +412,7 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		},
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create touch buttons (positioned dynamically in updatePanelDimensions)
 	// Next button (bottom-right) - advances to next step
 	cc.nextButton = mobile.NewTouchButton(
@@ -421,7 +421,7 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Next",
 		func() { cc.handleNextButton() },
 	)
-	
+
 	// Back button (bottom-left) - returns to previous step
 	cc.backButton = mobile.NewTouchButton(
 		0, 0, // Position updated dynamically
@@ -429,7 +429,7 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Back",
 		func() { cc.handleBackButton() },
 	)
-	
+
 	// Skip button (bottom-center) - skips portrait selection
 	cc.skipButton = mobile.NewTouchButton(
 		0, 0, // Position updated dynamically
@@ -437,7 +437,7 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 		"Skip",
 		func() { cc.handleSkipButton() },
 	)
-	
+
 	// Create preset name buttons (for WASM/mobile fallback)
 	presetNames := []string{"Warrior", "Mage", "Rogue", "Ranger", "Auto"}
 	cc.presetNameButtons = make([]*mobile.TouchButton, len(presetNames))
@@ -450,7 +450,7 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 			func() { cc.handlePresetName(presetName) },
 		)
 	}
-	
+
 	return cc
 }
 
@@ -488,15 +488,15 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	// Calculate panel dimensions first (needed for touch hit detection)
 	// This must be done before processing input
 	cc.updatePanelDimensions()
-	
+
 	// Update touch handler and buttons
 	if cc.touchHandler != nil {
 		cc.touchHandler.Update()
 	}
-	
+
 	// Update touch button positions based on panel layout
 	cc.updateTouchButtonPositions()
-	
+
 	// Update touch buttons
 	if cc.nextButton != nil {
 		cc.nextButton.Update()
@@ -507,7 +507,7 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	if cc.skipButton != nil {
 		cc.skipButton.Update()
 	}
-	
+
 	// Update preset name buttons (only in name input step)
 	if cc.currentStep == stepNameInput {
 		for _, btn := range cc.presetNameButtons {
@@ -540,7 +540,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 			float64(cc.panelY+cc.panelHeight-60),
 		)
 	}
-	
+
 	// Back button (bottom-left of panel)
 	if cc.backButton != nil {
 		cc.backButton.SetPosition(
@@ -548,7 +548,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 			float64(cc.panelY+cc.panelHeight-60),
 		)
 	}
-	
+
 	// Skip button (bottom-center of panel)
 	if cc.skipButton != nil {
 		cc.skipButton.SetPosition(
@@ -556,7 +556,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 			float64(cc.panelY+cc.panelHeight-60),
 		)
 	}
-	
+
 	// Position preset name buttons (only in name input step)
 	// Arrange horizontally below the input field
 	if cc.currentStep == stepNameInput {
@@ -565,7 +565,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 		totalWidth := len(cc.presetNameButtons)*buttonWidth + (len(cc.presetNameButtons)-1)*buttonSpacing
 		startX := cc.panelX + cc.panelWidth/2 - totalWidth/2
 		buttonY := cc.panelY + 200 // Below the input box
-		
+
 		for i, btn := range cc.presetNameButtons {
 			if btn != nil {
 				btn.SetPosition(
@@ -966,12 +966,12 @@ func (cc *EbitenCharacterCreation) generateRandomName() string {
 	// Simple name generation - combine prefix and suffix
 	prefixes := []string{"Brave", "Swift", "Dark", "Elder", "Noble", "Shadow", "Storm", "Iron", "Silver", "Golden"}
 	suffixes := []string{"blade", "heart", "fist", "eye", "soul", "wind", "fire", "steel", "wing", "star"}
-	
+
 	// Use simple randomization based on current time-like value
 	// For true randomness, would need proper seeding
 	prefix := prefixes[len(cc.nameInput)%len(prefixes)]
 	suffix := suffixes[cc.selectedClass%CharacterClass(len(suffixes))]
-	
+
 	return prefix + suffix
 }
 
@@ -1152,7 +1152,7 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 	case stepConfirmation:
 		cc.drawConfirmation(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	}
-	
+
 	// Draw touch buttons (WASM/mobile support)
 	cc.drawTouchButtons(screen)
 

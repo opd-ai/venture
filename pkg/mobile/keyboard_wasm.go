@@ -87,11 +87,11 @@ func initKeyboardElement() {
 	input.Set("enterkeyhint", "done")
 
 	// CRITICAL FIX: Style the input for mobile keyboard interaction
-	// 
+	//
 	// MOBILE KEYBOARD CHALLENGE:
 	// Many mobile browsers (iOS Safari especially) require a user gesture (touch)
 	// to show the keyboard - programmatic focus() alone may not work.
-	// 
+	//
 	// SOLUTION:
 	// The input starts OFF-SCREEN. When ShowKeyboard() is called, we move it ON-SCREEN
 	// to a tappable position. When HideKeyboard() is called, we move it back OFF-SCREEN.
@@ -100,18 +100,18 @@ func initKeyboardElement() {
 	// DEFAULT POSITIONING: Off-screen (hidden until ShowKeyboard() moves it on-screen)
 	style := input.Get("style")
 	style.Set("position", "fixed")
-	style.Set("left", "-9999px")    // Off-screen initially
-	style.Set("top", "-9999px")     // Off-screen initially
-	style.Set("width", "200px")     // Will be visible when moved on-screen
-	style.Set("height", "50px")     // Tall enough for easy tap
-	style.Set("opacity", "0.01")    // Nearly invisible when on-screen (0.01 instead of 0 for interaction)
-	style.Set("zIndex", "999")      // Below loading overlay but above canvas
-	style.Set("border", "none")     
+	style.Set("left", "-9999px") // Off-screen initially
+	style.Set("top", "-9999px")  // Off-screen initially
+	style.Set("width", "200px")  // Will be visible when moved on-screen
+	style.Set("height", "50px")  // Tall enough for easy tap
+	style.Set("opacity", "0.01") // Nearly invisible when on-screen (0.01 instead of 0 for interaction)
+	style.Set("zIndex", "999")   // Below loading overlay but above canvas
+	style.Set("border", "none")
 	style.Set("background", "transparent")
 	style.Set("color", "transparent") // Invisible text
-	style.Set("fontSize", "16px")   // Prevents zoom on iOS
-	style.Set("outline", "none")    // No focus outline
-	
+	style.Set("fontSize", "16px")     // Prevents zoom on iOS
+	style.Set("outline", "none")      // No focus outline
+
 	// CRITICAL: Ensure input can receive touch events and focus
 	// DO NOT set pointerEvents: none - we need touches when on-screen!
 	input.Set("tabIndex", 0)     // Make focusable
@@ -206,7 +206,7 @@ func initKeyboardElement() {
 
 	keyboardElement = input
 	lastInputValue = ""
-	
+
 	logInfo("Virtual keyboard element created and added to DOM")
 	logInfo("Element ID: venture-keyboard-input, Type: text, InputMode: text")
 }
@@ -370,7 +370,7 @@ func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 // name entry, server address input).
 func ShowKeyboard() {
 	logInfo("ShowKeyboard() called")
-	
+
 	// Ensure keyboard element exists (with event forwarding)
 	initKeyboardElement()
 
@@ -386,16 +386,16 @@ func ShowKeyboard() {
 		style := keyboardElement.Get("style")
 		style.Set("left", "50%")
 		style.Set("transform", "translateX(-50%)") // Center horizontally
-		style.Set("bottom", "80px")  // Above mobile keyboard area
-		style.Set("top", "auto")     // Clear the off-screen top value
-		
+		style.Set("bottom", "80px")                // Above mobile keyboard area
+		style.Set("top", "auto")                   // Clear the off-screen top value
+
 		// Focus the input element to trigger keyboard
 		// Mobile browsers will show the native keyboard when an input is focused
 		// (especially if this focus happens during/after a user touch event)
 		keyboardElement.Call("focus")
-		
+
 		logInfo("Keyboard element moved on-screen and focused")
-		
+
 		// Verify focus was successful
 		doc := js.Global().Get("document")
 		activeElement := doc.Get("activeElement")
@@ -420,7 +420,7 @@ func ShowKeyboard() {
 // This function should be called when text input is complete or cancelled.
 func HideKeyboard() {
 	logInfo("HideKeyboard() called")
-	
+
 	// Blur the input element to dismiss keyboard
 	if !keyboardElement.IsUndefined() {
 		keyboardElement.Call("blur")
@@ -430,13 +430,13 @@ func HideKeyboard() {
 		style := keyboardElement.Get("style")
 		style.Set("left", "-9999px")
 		style.Set("top", "-9999px")
-		style.Set("bottom", "auto") // Clear bottom positioning
+		style.Set("bottom", "auto")    // Clear bottom positioning
 		style.Set("transform", "none") // Clear transform
 
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")
 		lastInputValue = ""
-		
+
 		logInfo("Keyboard element blurred, cleared, and moved off-screen")
 	} else {
 		logInfo("HideKeyboard() called but keyboard element not initialized")

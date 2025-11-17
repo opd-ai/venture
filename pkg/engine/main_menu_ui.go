@@ -51,7 +51,7 @@ type MainMenuUI struct {
 
 	// Callback for when an option is selected
 	onSelect func(option MainMenuOption)
-	
+
 	// Touch support
 	touchHandler  *mobile.TouchInputHandler
 	optionButtons []*mobile.TouchButton
@@ -72,17 +72,17 @@ func NewMainMenuUI(screenWidth, screenHeight int) *MainMenuUI {
 		touchHandler:  mobile.NewTouchInputHandler(),
 		optionButtons: make([]*mobile.TouchButton, 4),
 	}
-	
+
 	// Create touch buttons for each menu option
 	startY := screenHeight / 2
 	spacing := 40
-	
+
 	for i, option := range ui.options {
 		optionText := option.String()
-		buttonWidth := len(optionText)*8 + 40  // Text width + padding
+		buttonWidth := len(optionText)*8 + 40 // Text width + padding
 		buttonX := float64(screenWidth/2 - buttonWidth/2)
 		buttonY := float64(startY + i*spacing - 5)
-		
+
 		idx := i // Capture for closure
 		ui.optionButtons[i] = mobile.NewTouchButton(
 			buttonX, buttonY,
@@ -95,7 +95,7 @@ func NewMainMenuUI(screenWidth, screenHeight int) *MainMenuUI {
 			},
 		)
 	}
-	
+
 	return ui
 }
 
@@ -111,14 +111,14 @@ func (m *MainMenuUI) Update() bool {
 	if m.touchHandler != nil {
 		m.touchHandler.Update()
 	}
-	
+
 	// Update touch buttons
 	for _, btn := range m.optionButtons {
 		if btn != nil {
 			btn.Update()
 		}
 	}
-	
+
 	// Handle up/down arrow keys for navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIdx--

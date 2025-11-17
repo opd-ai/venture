@@ -75,7 +75,7 @@ type SettingsUI struct {
 
 	// Visibility flag
 	visible bool
-	
+
 	// Touch support - WASM/mobile touch navigation
 	touchHandler    *mobile.TouchInputHandler
 	closeButton     *mobile.TouchButton
@@ -106,26 +106,31 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 		visible:      false,
 		touchHandler: mobile.NewTouchInputHandler(),
 	}
-	
+
 	// Create close button (top-right)
 	s.closeButton = mobile.NewTouchButton(
 		float64(screenWidth-64),
 		10,
 		44, 44,
 		"✕",
-		func() { s.Hide(); if s.onBack != nil { s.onBack() } },
+		func() {
+			s.Hide()
+			if s.onBack != nil {
+				s.onBack()
+			}
+		},
 	)
-	
+
 	// Create decrease/increase buttons for each option
 	numOptions := len(s.options)
 	s.decreaseButtons = make([]*mobile.TouchButton, numOptions)
 	s.increaseButtons = make([]*mobile.TouchButton, numOptions)
 	s.toggleButtons = make([]*mobile.TouchButton, numOptions)
-	
+
 	for i, option := range s.options {
 		idx := i // Capture for closure
 		opt := option
-		
+
 		// Decrease button ("-")
 		s.decreaseButtons[i] = mobile.NewTouchButton(
 			0, 0, // Position set dynamically in Draw
@@ -133,7 +138,7 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			"-",
 			func() { s.decreaseValue(opt) },
 		)
-		
+
 		// Increase button ("+")
 		s.increaseButtons[i] = mobile.NewTouchButton(
 			0, 0, // Position set dynamically in Draw
@@ -141,7 +146,7 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			"+",
 			func() { s.increaseValue(opt) },
 		)
-		
+
 		// Toggle button (for booleans and Back option)
 		label := "Toggle"
 		if opt == SettingsOptionBack {
@@ -154,7 +159,7 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			func() { s.activateOption(s.options[idx]) },
 		)
 	}
-	
+
 	return s
 }
 
@@ -199,17 +204,17 @@ func (s *SettingsUI) Update() bool {
 	if !s.visible {
 		return false
 	}
-	
+
 	// Update touch handler and buttons
 	if s.touchHandler != nil {
 		s.touchHandler.Update()
 	}
-	
+
 	// Update close button
 	if s.closeButton != nil {
 		s.closeButton.Update()
 	}
-	
+
 	// Update decrease/increase/toggle buttons for each option
 	for i := range s.options {
 		if s.decreaseButtons[i] != nil {
@@ -375,7 +380,7 @@ func (s *SettingsUI) Draw(screen *ebiten.Image) {
 	titleX := float64(s.screenWidth/2 - 100)
 	titleY := 50.0
 	ebitenutil.DebugPrintAt(screen, "=== SETTINGS ===", int(titleX), int(titleY))
-	
+
 	// Draw close button (top-right)
 	if s.closeButton != nil {
 		s.closeButton.Draw(screen)
@@ -408,7 +413,7 @@ func (s *SettingsUI) Draw(screen *ebiten.Image) {
 			}
 		}
 		ebitenutil.DebugPrintAt(screen, valueStr, valueX, y)
-		
+
 		// Position and draw touch buttons for this option
 		s.drawTouchButtonsForOption(screen, i, option, y)
 	}
@@ -425,7 +430,7 @@ func (s *SettingsUI) drawTouchButtonsForOption(screen *ebiten.Image, index int, 
 	// Base X position for buttons (right side of value)
 	buttonX := float64(s.screenWidth/2 + 200)
 	buttonY := float64(y - 10) // Center buttons vertically with text
-	
+
 	// Different button layout based on option type
 	if option == SettingsOptionBack {
 		// Back option - show toggle button as "Back"

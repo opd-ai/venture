@@ -252,6 +252,7 @@ type InputSystem struct {
 	tutorialSystem   *EbitenTutorialSystem
 	cameraSystem     *CameraSystem     // Phase 10.1: For screen-to-world coordinate conversion
 	expressionSystem *ExpressionSystem // Phase 26.1: For expression/emote handling
+	mailboxUI        *MailboxUI        // BUG FIX: Reference for ESC key handling
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -422,13 +423,18 @@ func (s *InputSystem) updateTouchInput() {
 	}
 }
 
-// handleEscapeKey processes ESC key with priority: tutorial > help > pause menu.
+// handleEscapeKey processes ESC key with priority: tutorial > help > mailbox > pause menu.
+// BUG FIX: Menu Trap - Added mailbox UI check to ESC key priority chain.
+// Resolution: ESC now closes mailbox UI before opening pause menu, implementing dual-exit pattern.
 func (s *InputSystem) handleEscapeKey() {
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
 		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
 			s.tutorialSystem.Skip()
 		} else if s.helpSystem != nil && s.helpSystem.Visible {
 			s.helpSystem.Toggle()
+		} else if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
+			// BUG FIX: Close mailbox UI when ESC is pressed
+			s.mailboxUI.Close()
 		} else if s.onMenuToggle != nil {
 			s.onMenuToggle()
 		}
@@ -870,6 +876,13 @@ func (s *InputSystem) SetCameraSystem(cameraSystem *CameraSystem) {
 // Phase 26.1: Required for hotkey-triggered expressions (Shift+1 through Shift+=).
 func (s *InputSystem) SetExpressionSystem(expressionSystem *ExpressionSystem) {
 	s.expressionSystem = expressionSystem
+}
+
+// SetMailboxUI connects the mailbox UI for ESC key handling.
+// BUG FIX: Menu Trap - Allows ESC key to close mailbox UI (dual-exit pattern).
+// Resolution: Mailbox UI can now be closed with ESC key in addition to L key toggle.
+func (s *InputSystem) SetMailboxUI(mailboxUI *MailboxUI) {
+	s.mailboxUI = mailboxUI
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

@@ -16,8 +16,11 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            /* Prevent touch actions that interfere with gameplay */
-            touch-action: none;
+            /* CRITICAL FIX: Don't block touch-action globally - input elements need touch to focus!
+             * Setting touch-action: none on body prevents hidden input from receiving focus on mobile.
+             * Instead, we apply touch-action: none only to specific elements (canvas).
+             * This allows the hidden keyboard input to receive touch/focus while preventing
+             * unwanted gestures on the game canvas. */
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -26,8 +29,15 @@
         #gameCanvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            /* Prevent canvas-specific touch behaviors */
+            /* Prevent canvas-specific touch behaviors like pinch-zoom, but allow touches through */
             touch-action: none;
+        }
+        /* KEYBOARD FIX: Ensure the hidden keyboard input can receive focus via touch.
+         * The input element is positioned off-screen but must remain focusable.
+         * Explicitly allow touch-action on input elements so mobile keyboards can trigger. */
+        input {
+            touch-action: auto !important;
+            pointer-events: auto !important;
         }
         #loading {
             position: absolute;
@@ -63,21 +73,26 @@
             errorDiv.textContent = message;
         }
         
-        // Prevent default touch behaviors (zoom, scroll, pull-to-refresh) only on document,
-        // but allow touch events to reach the game canvas for game controls.
-        // Touch events will naturally propagate to Ebiten's canvas for game input handling.
+        // KEYBOARD FIX: Prevent default touch behaviors (zoom, scroll, pull-to-refresh),
+        // BUT allow touch events on INPUT elements so the hidden keyboard input can receive focus.
+        // Without this, mobile browsers won't trigger focus on the hidden input when tapped
+        // (even though it's programmatically focused, touch-action:none prevents the initial focus).
         document.addEventListener('touchstart', function(e) {
-            // Only prevent default for non-interactive elements (links, buttons)
-            // Canvas touches are allowed through for game input
-            if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'CANVAS') {
+            // CRITICAL: Allow INPUT elements to receive touch events for focus/keyboard
+            // Also allow touches on canvas for game controls, and buttons/links for UI
+            if (e.target.tagName !== 'A' && 
+                e.target.tagName !== 'BUTTON' && 
+                e.target.tagName !== 'CANVAS' &&
+                e.target.tagName !== 'INPUT') {
                 e.preventDefault();
             }
         }, { passive: false });
         
         document.addEventListener('touchmove', function(e) {
             // Allow touch move on canvas for game controls (movement, gestures)
+            // Allow touch move on INPUT for selection/cursor positioning
             // Prevent on document to avoid scrolling
-            if (e.target.tagName !== 'CANVAS') {
+            if (e.target.tagName !== 'CANVAS' && e.target.tagName !== 'INPUT') {
                 e.preventDefault();
             }
         }, { passive: false });

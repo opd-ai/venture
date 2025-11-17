@@ -86,19 +86,34 @@ func initKeyboardElement() {
 	// "done" shows a "Done" button which is intuitive for completing input
 	input.Set("enterkeyhint", "done")
 
-	// Style the input to be invisible but functional
-	// Position it off-screen but keep it in the DOM so keyboard triggers work
+	// CRITICAL FIX: Style the input for mobile keyboard interaction
+	// 
+	// MOBILE KEYBOARD CHALLENGE:
+	// Many mobile browsers (iOS Safari especially) require a user gesture (touch)
+	// to show the keyboard - programmatic focus() alone may not work.
+	// 
+	// SOLUTION:
+	// The input starts OFF-SCREEN. When ShowKeyboard() is called, we move it ON-SCREEN
+	// to a tappable position. When HideKeyboard() is called, we move it back OFF-SCREEN.
+	// This way it only intercepts touches when we actually want keyboard input.
+	//
+	// DEFAULT POSITIONING: Off-screen (hidden until ShowKeyboard() moves it on-screen)
 	style := input.Get("style")
-	style.Set("position", "absolute")
-	style.Set("left", "-9999px")
-	style.Set("top", "-9999px")
-	style.Set("width", "1px")
-	style.Set("height", "1px")
-	style.Set("opacity", "0")
-	style.Set("pointerEvents", "none")
-
-	// CRITICAL: Ensure input can receive and maintain focus
-	// Without this, some browsers may dismiss keyboard when input is "invisible"
+	style.Set("position", "fixed")
+	style.Set("left", "-9999px")    // Off-screen initially
+	style.Set("top", "-9999px")     // Off-screen initially
+	style.Set("width", "200px")     // Will be visible when moved on-screen
+	style.Set("height", "50px")     // Tall enough for easy tap
+	style.Set("opacity", "0.01")    // Nearly invisible when on-screen (0.01 instead of 0 for interaction)
+	style.Set("zIndex", "999")      // Below loading overlay but above canvas
+	style.Set("border", "none")     
+	style.Set("background", "transparent")
+	style.Set("color", "transparent") // Invisible text
+	style.Set("fontSize", "16px")   // Prevents zoom on iOS
+	style.Set("outline", "none")    // No focus outline
+	
+	// CRITICAL: Ensure input can receive touch events and focus
+	// DO NOT set pointerEvents: none - we need touches when on-screen!
 	input.Set("tabIndex", 0)     // Make focusable
 	input.Set("readOnly", false) // Ensure it's editable
 
@@ -340,17 +355,19 @@ func dispatchSpecialKeyEvent(doc js.Value, key string, originalEvent js.Value) {
 	doc.Call("dispatchEvent", keydownEvent)
 }
 
-// ShowKeyboard displays the native mobile keyboard by focusing the hidden input element.
+// ShowKeyboard displays the native mobile keyboard by focusing the hidden input element
+// and moving it to a tappable on-screen position.
+//
+// MOBILE FIX: The input element is moved from off-screen to on-screen (bottom-center)
+// so users can tap it to trigger the keyboard. Many mobile browsers require a user
+// gesture (touch) to show the keyboard, not just programmatic focus().
+//
+// The input is nearly invisible (opacity 0.01) but positioned where users naturally
+// tap during text input screens. Programmatic focus() is also attempted, but the
+// on-screen position provides a fallback tap target.
+//
 // This function should be called when the game enters a text input state (e.g., character
 // name entry, server address input).
-//
-// On mobile browsers, focusing an input element triggers the native keyboard to appear.
-// The input element is hidden from view but remains functional.
-//
-// MOBILE FIX: The hidden input captures keyboard events and forwards them to Ebiten
-// via synthetic keyboard events dispatched to the document.
-//
-// This is a no-op on desktop browsers where keyboard is always available.
 func ShowKeyboard() {
 	logInfo("ShowKeyboard() called")
 	
@@ -362,11 +379,22 @@ func ShowKeyboard() {
 		keyboardElement.Set("value", "")
 		lastInputValue = ""
 
+		// CRITICAL FIX: Move input ON-SCREEN to a tappable position
+		// Position at bottom-center where users naturally tap for text input
+		// This is required because mobile browsers may not show keyboard for
+		// programmatic focus() alone - they often require a user gesture (touch)
+		style := keyboardElement.Get("style")
+		style.Set("left", "50%")
+		style.Set("transform", "translateX(-50%)") // Center horizontally
+		style.Set("bottom", "80px")  // Above mobile keyboard area
+		style.Set("top", "auto")     // Clear the off-screen top value
+		
 		// Focus the input element to trigger keyboard
 		// Mobile browsers will show the native keyboard when an input is focused
+		// (especially if this focus happens during/after a user touch event)
 		keyboardElement.Call("focus")
 		
-		logInfo("Keyboard element focused - mobile keyboard should appear")
+		logInfo("Keyboard element moved on-screen and focused")
 		
 		// Verify focus was successful
 		doc := js.Global().Get("document")
@@ -375,22 +403,21 @@ func ShowKeyboard() {
 			logInfo("Focus successful - active element is venture-keyboard-input")
 		} else {
 			logError("Focus failed - active element is: " + activeElement.Get("tagName").String())
+			logInfo("User may need to tap the screen to trigger keyboard")
 		}
 	} else {
 		logError("Keyboard element is undefined - initialization failed")
 	}
 }
 
-// HideKeyboard dismisses the native mobile keyboard by blurring the hidden input element.
+// HideKeyboard dismisses the native mobile keyboard by blurring the hidden input element
+// and moving it back off-screen.
+//
+// MOBILE FIX: The input element is moved back off-screen after blurring to ensure it
+// doesn't intercept touch events meant for game controls. The input value is cleared
+// to reset state for the next keyboard session.
+//
 // This function should be called when text input is complete or cancelled.
-//
-// On mobile browsers, blurring an input element signals that text input is complete
-// and the keyboard can be dismissed.
-//
-// MOBILE FIX: Clears the input value and resets state tracking to ensure clean state
-// for the next time keyboard is shown.
-//
-// This is a no-op on desktop browsers.
 func HideKeyboard() {
 	logInfo("HideKeyboard() called")
 	
@@ -398,11 +425,19 @@ func HideKeyboard() {
 	if !keyboardElement.IsUndefined() {
 		keyboardElement.Call("blur")
 
+		// CRITICAL FIX: Move input back OFF-SCREEN
+		// This ensures it doesn't intercept touch events during gameplay
+		style := keyboardElement.Get("style")
+		style.Set("left", "-9999px")
+		style.Set("top", "-9999px")
+		style.Set("bottom", "auto") // Clear bottom positioning
+		style.Set("transform", "none") // Clear transform
+
 		// Clear the hidden input value (game manages its own text state)
 		keyboardElement.Set("value", "")
 		lastInputValue = ""
 		
-		logInfo("Keyboard element blurred and cleared")
+		logInfo("Keyboard element blurred, cleared, and moved off-screen")
 	} else {
 		logInfo("HideKeyboard() called but keyboard element not initialized")
 	}

@@ -520,12 +520,12 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	if cc.nextButton != nil {
 		cc.nextButton.Update()
 	}
-	
+
 	// Back button only on steps after nameInput
 	if cc.backButton != nil && cc.currentStep != stepNameInput {
 		cc.backButton.Update()
 	}
-	
+
 	// Skip button only on portrait selection step
 	if cc.skipButton != nil && cc.currentStep == stepPortraitSelection {
 		cc.skipButton.Update()

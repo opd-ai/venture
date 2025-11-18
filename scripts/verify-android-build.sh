@@ -70,7 +70,7 @@ if [ -f "$BUILD_DIR/AndroidManifest.xml" ]; then
     pass "AndroidManifest.xml found"
     
     # Verify meta-data element exists
-    if grep -q '<meta-data android:name="android.app.lib_name"' "$BUILD_DIR/AndroidManifest.xml"; then
+    if grep -q '<meta-data android:name="android.app.lib_name" android:value="mobile"' "$BUILD_DIR/AndroidManifest.xml"; then
         pass "AndroidManifest.xml contains required meta-data element"
     else
         fail "AndroidManifest.xml missing required meta-data element"

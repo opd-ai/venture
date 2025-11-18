@@ -675,6 +675,10 @@ func (g *EbitenGame) updateMenuState() (handled bool) {
 	case AppStateSettings:
 		g.SettingsUI.Update()
 		return true
+	case AppStateCharacterCreation:
+		// Character creation is handled separately in Update()
+		// Don't update main menu or other menus during character creation
+		return true
 	}
 
 	if g.StateManager.IsInMenu() {

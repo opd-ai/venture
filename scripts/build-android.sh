@@ -91,12 +91,13 @@ build_aar() {
         fi
     fi
     
-    # Build the AAR
+    # Build the AAR - Note: for CI builds, ebitenmobile bind creates the AAR with GoNativeActivity
     echo_info "Running ebitenmobile bind..."
     ebitenmobile bind \
         -target android \
         -javapkg $PACKAGE_NAME \
         -o "$BUILD_DIR/libs/mobile.aar" \
+        -androidapi 21 \
         ./cmd/mobile
     
     if [ ! -f "$BUILD_DIR/libs/mobile.aar" ]; then
@@ -110,6 +111,15 @@ build_aar() {
     if command -v unzip &> /dev/null; then
         echo_info "AAR contents:"
         unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
+        
+        # Verify GoNativeActivity exists
+        if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "GoNativeActivity"; then
+            echo_info "✓ GoNativeActivity found in AAR"
+        else
+            echo_warn "⚠ GoNativeActivity NOT found in AAR - APK may crash"
+            echo_warn "This usually means ebitenmobile bind didn't include it"
+            echo_warn "Check ebitenmobile version: $(ebitenmobile version 2>&1 || echo 'unknown')"
+        fi
     fi
 }
 

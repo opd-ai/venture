@@ -35,11 +35,13 @@ func init() {
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	rng := rand.New(rand.NewSource(worldSeed))
 	genreID = genres[rng.Intn(len(genres))]
+	
+	// Initialize the game immediately for ebitenmobile
+	initializeGame()
 }
 
-// Init initializes the game for mobile platforms.
-// This must be called before any other functions.
-func Init() {
+// initializeGame initializes the game for mobile platforms.
+func initializeGame() {
 	if gameInstance != nil {
 		return // Already initialized
 	}
@@ -343,7 +345,7 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 // This is called automatically by the mobile platform.
 func Start() {
 	if gameInstance == nil {
-		Init()
+		initializeGame()
 	}
 }
 

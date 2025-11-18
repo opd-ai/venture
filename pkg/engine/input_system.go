@@ -5,7 +5,6 @@ package engine
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -799,12 +798,7 @@ func (s *InputSystem) updateEntityAim(entity *Entity, input *EbitenInput) {
 	}
 
 	worldX, worldY := s.cameraSystem.ScreenToWorld(float64(input.MouseX), float64(input.MouseY))
-	oldAngle := aim.AimAngle
 	aim.SetAimTarget(worldX, worldY)
-
-	if math.Abs(aim.AimAngle-oldAngle) > 0.1 {
-		fmt.Printf("[DEBUG] InputSystem: AimAngle changed from %.4f to %.4f\n", oldAngle, aim.AimAngle)
-	}
 }
 
 // applyInputToVelocity converts movement input to velocity and updates animation.

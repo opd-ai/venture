@@ -259,14 +259,6 @@ func (h *EbitenHUDSystem) drawAimIndicator() {
 		return
 	}
 
-	// DEBUG: Compare aim vs rotation components
-	if rotComp, ok := h.playerEntity.GetComponent("rotation"); ok {
-		if rotation, ok := rotComp.(*RotationComponent); ok {
-			fmt.Printf("[DEBUG] HUD: AimAngle=%.4f, RotationAngle=%.4f, RotationTarget=%.4f\n",
-				aim.AimAngle, rotation.Angle, rotation.TargetAngle)
-		}
-	}
-
 	// Draw direction arrow from player center (screen center since camera follows player)
 	// Calculate endpoint 60 pixels away in aim direction
 	dirX, dirY := aim.GetAimDirection()

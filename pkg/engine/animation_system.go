@@ -135,8 +135,6 @@ func (s *AnimationSystem) GetStats() AnimationStats {
 // Update processes all entities with animation components.
 // Updates frame timers, transitions states, and regenerates frames if needed.
 func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
-	fmt.Printf("[DEBUG] AnimationSystem.Update called with %d entities\n", len(entities))
-
 	s.resetStatistics(len(entities))
 	playerX, playerY := s.getPlayerPosition()
 	viewportBounds, hasViewport := s.calculateViewportBounds()
@@ -323,18 +321,11 @@ func (s *AnimationSystem) logFrameGeneration(entity *Entity, animComp *Animation
 		}
 	}
 
-	if entity.HasComponent("input") {
-		fmt.Printf("[DEBUG] AnimationSystem: Regenerating frames for player (state=%v)\n", animComp.CurrentState)
-	}
+	// Player frame regeneration logged via logger if debug level enabled
 }
 
 // logGenerationResult logs the result of frame generation.
 func (s *AnimationSystem) logGenerationResult(entity *Entity, animComp *AnimationComponent) {
-	if entity.HasComponent("input") {
-		fmt.Printf("[DEBUG] AnimationSystem: Player frames generated. Count=%d, FirstFrame nil=%v\n",
-			len(animComp.Frames), animComp.Frames == nil || len(animComp.Frames) == 0 || animComp.Frames[0] == nil)
-	}
-
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		if entity.HasComponent("input") && len(animComp.Frames) > 0 {
 			s.logger.WithFields(logrus.Fields{
@@ -357,13 +348,12 @@ func (s *AnimationSystem) updateAnimationFrame(animComp *AnimationComponent, eff
 func (s *AnimationSystem) syncSpriteFrame(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite) {
 	if frame := animComp.CurrentFrame(); frame != nil {
 		spriteComp.Image = frame
-		if entity.HasComponent("input") {
-			fmt.Printf("[DEBUG] AnimationSystem: Updated player sprite.Image (frame %d, nil=%v)\n",
-				animComp.FrameIndex, frame == nil)
-		}
-	} else if entity.HasComponent("input") {
-		fmt.Printf("[DEBUG] AnimationSystem: WARNING - Player CurrentFrame() returned NIL (frameIndex=%d, frameCount=%d)\n",
-			animComp.FrameIndex, len(animComp.Frames))
+	} else if entity.HasComponent("input") && s.logger != nil {
+		// Log warning if player frame is missing (unexpected condition)
+		s.logger.WithFields(logrus.Fields{
+			"frameIndex": animComp.FrameIndex,
+			"frameCount": len(animComp.Frames),
+		}).Warn("player animation frame is nil - regeneration may be needed")
 	}
 }
 

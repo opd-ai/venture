@@ -140,6 +140,7 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 
 	initializeV4Systems(world, *seed, logger)
 	initializeV5SystemsServer(world, logger)
+	initializeV6SystemsServer(world, *seed, logger)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

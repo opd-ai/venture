@@ -12,6 +12,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/item"
@@ -22,6 +23,7 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/version"
+	"github.com/opd-ai/venture/pkg/world"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,6 +103,14 @@ type systemsContainer struct {
 	chatSystem    *engine.ChatSystem
 	mailSystem    *engine.MailSystem
 	courierSystem *engine.CourierSystem
+	// V6.0 Systems (Persistent Worlds & Federation)
+	portalSystem       *federation.PortalSystem
+	bountySystem       *engine.BountySystem
+	politicsSystem     *engine.PoliticsSystem
+	territoryManager   *world.TerritoryManager
+	rankingManager     *world.RankingManager
+	eventManager       *world.EventManager
+	federationProtocol *federation.FederationProtocol
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -287,6 +297,36 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 }
 
+// initializeV6Systems initializes Version 6.0 persistent world and federation systems.
+func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 38: Federation protocol for server-to-server communication
+	// Use server name from hostname or default to "venture-client"
+	serverID := fmt.Sprintf("client-%d", time.Now().Unix())
+	sys.federationProtocol = federation.NewFederationProtocol(serverID)
+
+	// Phase 39: Portal system for cross-server travel
+	sys.portalSystem = federation.NewPortalSystem(game.World, sys.federationProtocol)
+
+	// Phase 40: Bounty system for cross-server quests
+	sys.bountySystem = engine.NewBountySystem(game.World, game.World.GetLogger().Logger)
+
+	// Phase 41: Politics system for server diplomacy
+	sys.politicsSystem = engine.NewPoliticsSystem(game.World)
+
+	// Phase 42: Territory control system
+	sys.territoryManager = world.NewTerritoryManager()
+
+	// Phase 42: Server ranking system
+	sys.rankingManager = world.NewRankingManager()
+
+	// Phase 42: Meta-game event system
+	sys.eventManager = world.NewEventManager(*seed)
+
+	if *verbose {
+		clientLogger.Info("V6.0 systems initialized (federation, portals, bounties, politics, territories, rankings, events)")
+	}
+}
+
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inputSystem)
@@ -416,6 +456,16 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 40: Mail and courier systems for asynchronous messaging
 	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
 	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
+
+	// V6.0 System Registrations (Persistent Worlds & Federation)
+	// Phase 39: Portal system for cross-server travel
+	game.World.AddSystem(&portalSystemWrapper{system: sys.portalSystem})
+
+	// Phase 40: Bounty system for cross-server quests
+	game.World.AddSystem(&bountySystemWrapper{system: sys.bountySystem})
+
+	// Phase 41: Politics system for server diplomacy
+	game.World.AddSystem(&politicsSystemWrapper{system: sys.politicsSystem})
 }
 
 // configureSystemConnections wires up interdependent systems.
@@ -1344,6 +1394,36 @@ type moralChoiceSystemWrapper struct {
 }
 
 func (w *moralChoiceSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// V6.0 System Wrappers (Persistent Worlds & Federation)
+// Roadmap: ROADMAP_V6.md Phases 39-42
+
+// portalSystemWrapper adapts PortalSystem to the System interface.
+type portalSystemWrapper struct {
+	system *federation.PortalSystem
+}
+
+func (w *portalSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// bountySystemWrapper adapts BountySystem to the System interface.
+type bountySystemWrapper struct {
+	system *engine.BountySystem
+}
+
+func (w *bountySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// politicsSystemWrapper adapts PoliticsSystem to the System interface.
+type politicsSystemWrapper struct {
+	system *engine.PoliticsSystem
+}
+
+func (w *politicsSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

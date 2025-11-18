@@ -7,6 +7,7 @@ package main
 
 import (
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/sirupsen/logrus"
 )
 
@@ -169,6 +170,32 @@ type courierSystemWrapper struct {
 }
 
 func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// V6.0 System Wrappers (Persistent Worlds & Federation)
+
+type portalSystemWrapper struct {
+	system *federation.PortalSystem
+}
+
+func (w *portalSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type bountySystemWrapper struct {
+	system *engine.BountySystem
+}
+
+func (w *bountySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type politicsSystemWrapper struct {
+	system *engine.PoliticsSystem
+}
+
+func (w *politicsSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 
@@ -340,4 +367,37 @@ func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
 		"totalV5Systems": 3,
 		"note":           "Social systems for V5.0 multiplayer communication",
 	}).Info("V5.0 social systems initialized on server (chat, mail, courier)")
+}
+
+// initializeV6SystemsServer initializes Version 6.0 persistent world and federation systems on the server.
+// ROADMAP_V6.md Phases 39-42: Cross-server travel, bounties, politics, territories, rankings, events
+func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
+	serverLogger := logger.WithField("component", "v6_systems")
+
+	// Phase 38: Federation protocol for server-to-server communication
+	serverID := "venture-server" // TODO: Use actual server identity from config
+	federationProtocol := federation.NewFederationProtocol(serverID)
+
+	// Phase 39: Portal system for cross-server travel (server-authoritative)
+	portalSystem := federation.NewPortalSystem(world, federationProtocol)
+	world.AddSystem(&portalSystemWrapper{system: portalSystem})
+
+	// Phase 40: Bounty system for cross-server quests (server-authoritative)
+	bountySystem := engine.NewBountySystem(world, logger)
+	world.AddSystem(&bountySystemWrapper{system: bountySystem})
+
+	// Phase 41: Politics system for server diplomacy (server-authoritative)
+	politicsSystem := engine.NewPoliticsSystem(world)
+	world.AddSystem(&politicsSystemWrapper{system: politicsSystem})
+
+	// Note: TerritoryManager, RankingManager, and EventManager are world-level managers
+	// that don't need system wrappers. They're accessed directly by server logic.
+
+	serverLogger.WithFields(logrus.Fields{
+		"federationSystems": 1, // PortalSystem
+		"bountySystem":      1, // BountySystem
+		"politicsSystems":   1, // PoliticsSystem
+		"totalV6Systems":    3,
+		"note":              "Persistent world & federation systems for V6.0",
+	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics)")
 }

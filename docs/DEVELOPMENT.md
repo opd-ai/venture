@@ -103,14 +103,14 @@ go tool cover -html=coverage.out
 ### 3. Running
 
 ```bash
-# Run client in single-player mode
+# Run client (automatically starts localhost server)
 ./venture-client -width 1024 -height 768 -seed 12345
 
-# Run server
+# Run standalone server
 ./venture-server -port 8080 -max-players 4
 
-# Run client connecting to server (when implemented)
-./venture-client -server localhost:8080
+# Run client connecting to remote server
+./venture-client --multiplayer --server localhost:8080
 ```
 
 ### 4. Code Quality

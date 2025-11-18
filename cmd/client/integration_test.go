@@ -101,7 +101,8 @@ func TestHostAndPlayStartup(t *testing.T) {
 	// We expect it to fail due to no display, but server should attempt to start
 	// Look for evidence of server initialization in output
 	if !strings.Contains(outputStr, "host-and-play mode enabled") &&
-		!strings.Contains(outputStr, "starting embedded server") &&
+		!strings.Contains(outputStr, "starting localhost server") &&
+		!strings.Contains(outputStr, "starting LAN-accessible server") &&
 		!strings.Contains(outputStr, "embedded-server") {
 		t.Logf("Output: %s", outputStr)
 		t.Skip("could not verify server startup (expected without graphics context)")
@@ -116,6 +117,60 @@ func TestHostAndPlayStartup(t *testing.T) {
 	}
 
 	t.Logf("Verified host-and-play initialization logic (graphics context required for full test)")
+}
+
+// TestDefaultBehaviorAutoEnablesHostAndPlay verifies that running without flags auto-enables host-and-play
+func TestDefaultBehaviorAutoEnablesHostAndPlay(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	// Build the client binary
+	buildCmd := exec.Command("go", "build", "-o", "venture-client-test", ".")
+	buildCmd.Dir = "."
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build client: %v", err)
+	}
+	defer os.Remove("venture-client-test")
+
+	// Start client WITHOUT any flags - should auto-enable host-and-play
+	cmd := exec.Command("./venture-client-test")
+	cmd.Env = append(os.Environ(), "LOG_LEVEL=info")
+
+	// Run with timeout since the command may hang
+	done := make(chan struct{})
+	var output []byte
+	go func() {
+		output, _ = cmd.CombinedOutput()
+		close(done)
+	}()
+
+	// Wait for command to complete or timeout
+	select {
+	case <-done:
+		// Command completed
+	case <-time.After(5 * time.Second):
+		// Timeout - kill the process
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		<-done // Wait for goroutine to finish
+	}
+
+	outputStr := string(output)
+
+	// Verify the auto-enable log message appears
+	if !strings.Contains(outputStr, "no server specified - defaulting to local host-and-play mode") {
+		t.Logf("Output: %s", outputStr)
+		t.Skip("could not verify auto-enable message (expected without graphics context)")
+	}
+
+	// Verify localhost server message (not LAN)
+	if strings.Contains(outputStr, "starting LAN-accessible server") {
+		t.Error("auto-enabled mode should use localhost, not LAN binding")
+	}
+
+	t.Logf("Verified default behavior auto-enables host-and-play with localhost binding")
 }
 
 // TestPortFallbackFlags verifies port configuration flags work

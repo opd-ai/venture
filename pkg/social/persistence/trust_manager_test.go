@@ -109,10 +109,10 @@ func TestTrustManagerGetTrustLevel(t *testing.T) {
 		delta     float64
 		wantLevel TrustLevel
 	}{
-		{"stranger", -0.3, TrustLevelStranger},       // 0.5 - 0.3 = 0.2
+		{"stranger", -0.3, TrustLevelStranger},        // 0.5 - 0.3 = 0.2
 		{"acquaintance", 0.0, TrustLevelAcquaintance}, // 0.5 + 0.0 = 0.5
-		{"friend", 0.2, TrustLevelFriend},            // 0.5 + 0.2 = 0.7
-		{"trusted", 0.4, TrustLevelTrusted},          // 0.5 + 0.4 = 0.9
+		{"friend", 0.2, TrustLevelFriend},             // 0.5 + 0.2 = 0.7
+		{"trusted", 0.4, TrustLevelTrusted},           // 0.5 + 0.4 = 0.9
 	}
 
 	for _, tt := range tests {
@@ -175,9 +175,9 @@ func TestApplyDecay(t *testing.T) {
 	baseTime := time.Now()
 
 	// Create multiple records with different ages
-	tm.UpdateTrust("alice", "bob", 0.3, baseTime.Add(-10*24*time.Hour)) // 10 days old
-	tm.UpdateTrust("alice", "charlie", 0.3, baseTime.Add(-5*24*time.Hour))  // 5 days old
-	tm.UpdateTrust("alice", "david", 0.3, baseTime)                      // Fresh
+	tm.UpdateTrust("alice", "bob", 0.3, baseTime.Add(-10*24*time.Hour))    // 10 days old
+	tm.UpdateTrust("alice", "charlie", 0.3, baseTime.Add(-5*24*time.Hour)) // 5 days old
+	tm.UpdateTrust("alice", "david", 0.3, baseTime)                        // Fresh
 
 	// Apply decay
 	decayed := tm.ApplyDecay(baseTime)
@@ -187,7 +187,7 @@ func TestApplyDecay(t *testing.T) {
 
 	// Verify decay amounts (with tolerance for float precision)
 	tolerance := 0.000001
-	
+
 	trustBob := tm.GetTrust("alice", "bob")
 	expectedBob := 0.8 - (DecayRatePerDay * 10) // 0.5 + 0.3 - 0.1 = 0.7
 	if diff := trustBob - expectedBob; diff < -tolerance || diff > tolerance {
@@ -378,7 +378,7 @@ func TestConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			playerA := "player_a"
 			playerB := "player_b"
-			
+
 			// Mix of reads and writes
 			for j := 0; j < 100; j++ {
 				if j%2 == 0 {
@@ -408,7 +408,7 @@ func TestConcurrentAccess(t *testing.T) {
 func BenchmarkUpdateTrust(b *testing.B) {
 	tm := NewTrustManager()
 	now := time.Now()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tm.UpdateTrust("alice", "bob", 0.01, now)
@@ -419,7 +419,7 @@ func BenchmarkGetTrust(b *testing.B) {
 	tm := NewTrustManager()
 	now := time.Now()
 	tm.UpdateTrust("alice", "bob", 0.1, now)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = tm.GetTrust("alice", "bob")
@@ -429,14 +429,14 @@ func BenchmarkGetTrust(b *testing.B) {
 func BenchmarkApplyDecay(b *testing.B) {
 	tm := NewTrustManager()
 	baseTime := time.Now()
-	
+
 	// Create 10,000 trust records
 	for i := 0; i < 10000; i++ {
 		playerA := "player_" + string(rune(i/100))
 		playerB := "player_" + string(rune(i%100))
 		tm.UpdateTrust(playerA, playerB, 0.1, baseTime.Add(-10*24*time.Hour))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tm.ApplyDecay(baseTime)
@@ -446,14 +446,14 @@ func BenchmarkApplyDecay(b *testing.B) {
 func BenchmarkSave(b *testing.B) {
 	tm := NewTrustManager()
 	now := time.Now()
-	
+
 	// Create 1000 records
 	for i := 0; i < 1000; i++ {
 		playerA := "player_" + string(rune(i/10))
 		playerB := "player_" + string(rune(i%10))
 		tm.UpdateTrust(playerA, playerB, 0.1, now)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := tm.Save()

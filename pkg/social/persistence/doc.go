@@ -23,19 +23,19 @@
 // # Usage Example
 //
 //	manager := persistence.NewTrustManager()
-//	
+//
 //	// Update trust after successful trade
 //	manager.UpdateTrust("player1", "player2", 0.05, time.Now())
-//	
+//
 //	// Check trust level
 //	level := manager.GetTrustLevel("player1", "player2")
 //	if level >= persistence.TrustLevelFriend {
 //	    // Allow rare item trade
 //	}
-//	
+//
 //	// Apply daily decay
 //	manager.ApplyDecay(time.Now())
-//	
+//
 //	// Save persistent data
 //	data, _ := manager.Save()
 //	ioutil.WriteFile("trust.json.gz", data, 0644)

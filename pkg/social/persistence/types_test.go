@@ -66,32 +66,32 @@ func TestCanTradeRarity(t *testing.T) {
 		{"stranger rare", TrustLevelStranger, "rare", false},
 		{"stranger epic", TrustLevelStranger, "epic", false},
 		{"stranger legendary", TrustLevelStranger, "legendary", false},
-		
+
 		// Acquaintance (common + uncommon)
 		{"acquaintance common", TrustLevelAcquaintance, "common", true},
 		{"acquaintance uncommon", TrustLevelAcquaintance, "uncommon", true},
 		{"acquaintance rare", TrustLevelAcquaintance, "rare", false},
 		{"acquaintance epic", TrustLevelAcquaintance, "epic", false},
 		{"acquaintance legendary", TrustLevelAcquaintance, "legendary", false},
-		
+
 		// Friend (up to rare)
 		{"friend common", TrustLevelFriend, "common", true},
 		{"friend uncommon", TrustLevelFriend, "uncommon", true},
 		{"friend rare", TrustLevelFriend, "rare", true},
 		{"friend epic", TrustLevelFriend, "epic", false},
 		{"friend legendary", TrustLevelFriend, "legendary", false},
-		
+
 		// Trusted (all items)
 		{"trusted common", TrustLevelTrusted, "common", true},
 		{"trusted uncommon", TrustLevelTrusted, "uncommon", true},
 		{"trusted rare", TrustLevelTrusted, "rare", true},
 		{"trusted epic", TrustLevelTrusted, "epic", true},
 		{"trusted legendary", TrustLevelTrusted, "legendary", true},
-		
+
 		// Invalid rarity
 		{"invalid rarity", TrustLevelTrusted, "invalid", false},
 		{"empty rarity", TrustLevelStranger, "", false},
-		
+
 		// Invalid trust level
 		{"invalid level", TrustLevel(99), "common", false},
 	}
@@ -162,12 +162,12 @@ func TestTrustLevelProgression(t *testing.T) {
 func TestTradeLimitsByTrustLevel(t *testing.T) {
 	// Test that trade limits increase with trust level
 	rarities := []string{"common", "uncommon", "rare", "epic", "legendary"}
-	
+
 	for i, rarity := range rarities {
 		// Each trust level should allow i or fewer rarity levels
 		for level := TrustLevelStranger; level <= TrustLevelTrusted; level++ {
 			canTrade := CanTradeRarity(level, rarity)
-			
+
 			// Calculate expected result based on trust level and rarity index
 			maxRarityForLevel := map[TrustLevel]int{
 				TrustLevelStranger:     0,
@@ -175,7 +175,7 @@ func TestTradeLimitsByTrustLevel(t *testing.T) {
 				TrustLevelFriend:       2,
 				TrustLevelTrusted:      4,
 			}
-			
+
 			expected := i <= maxRarityForLevel[level]
 			if canTrade != expected {
 				t.Errorf("Level %s, rarity %s: got %v, want %v", level, rarity, canTrade, expected)
@@ -187,7 +187,7 @@ func TestTradeLimitsByTrustLevel(t *testing.T) {
 // Benchmark trust level computation
 func BenchmarkGetTrustLevel(b *testing.B) {
 	scores := []float64{0.1, 0.4, 0.7, 0.9}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = GetTrustLevel(scores[i%len(scores)])
@@ -198,7 +198,7 @@ func BenchmarkGetTrustLevel(b *testing.B) {
 func BenchmarkCanTradeRarity(b *testing.B) {
 	levels := []TrustLevel{TrustLevelStranger, TrustLevelAcquaintance, TrustLevelFriend, TrustLevelTrusted}
 	rarities := []string{"common", "uncommon", "rare", "epic", "legendary"}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		level := levels[i%len(levels)]

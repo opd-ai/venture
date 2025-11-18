@@ -67,7 +67,7 @@ func TestGetReputation(t *testing.T) {
 	rm.UpdateReputation("alice", ReputationCombat, 20.0, now)
 	repTrade := rm.GetReputation("alice", ReputationTrade)
 	repCombat := rm.GetReputation("alice", ReputationCombat)
-	
+
 	if repTrade != 10.0 {
 		t.Errorf("Expected trade reputation 10.0, got %f", repTrade)
 	}
@@ -113,7 +113,7 @@ func TestGetReputationRecord(t *testing.T) {
 	// Create record with multiple categories
 	rm.UpdateReputation("alice", ReputationTrade, 10.0, now)
 	rm.UpdateReputation("alice", ReputationCombat, 20.0, now)
-	
+
 	record = rm.GetReputationRecord("alice")
 	if record == nil {
 		t.Fatal("Expected record, got nil")
@@ -204,8 +204,8 @@ func TestReputationDecayTotalRecalculation(t *testing.T) {
 
 	// Verify total recalculated correctly
 	expectedPerCategory := 100.0 - (DecayRatePerDay * 10) // 99.9
-	expectedTotal := expectedPerCategory // Both categories have same value
-	
+	expectedTotal := expectedPerCategory                  // Both categories have same value
+
 	total := rm.GetTotalReputation("alice")
 	if total != expectedTotal {
 		t.Errorf("Expected total %f, got %f", expectedTotal, total)
@@ -359,7 +359,7 @@ func TestReputationConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			playerID := "player"
 			category := ReputationTrade
-			
+
 			// Mix of reads and writes
 			for j := 0; j < 100; j++ {
 				if j%2 == 0 {
@@ -407,7 +407,7 @@ func TestReputationCategoryString(t *testing.T) {
 func BenchmarkUpdateReputation(b *testing.B) {
 	rm := NewReputationManager()
 	now := time.Now()
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		rm.UpdateReputation("alice", ReputationTrade, 1.0, now)
@@ -418,7 +418,7 @@ func BenchmarkGetReputation(b *testing.B) {
 	rm := NewReputationManager()
 	now := time.Now()
 	rm.UpdateReputation("alice", ReputationTrade, 100.0, now)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = rm.GetReputation("alice", ReputationTrade)
@@ -428,12 +428,12 @@ func BenchmarkGetReputation(b *testing.B) {
 func BenchmarkGetTotalReputation(b *testing.B) {
 	rm := NewReputationManager()
 	now := time.Now()
-	
+
 	categories := []ReputationCategory{ReputationTrade, ReputationCombat, ReputationSocial, ReputationQuest}
 	for _, category := range categories {
 		rm.UpdateReputation("alice", category, 100.0, now)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = rm.GetTotalReputation("alice")
@@ -443,7 +443,7 @@ func BenchmarkGetTotalReputation(b *testing.B) {
 func BenchmarkReputationApplyDecay(b *testing.B) {
 	rm := NewReputationManager()
 	baseTime := time.Now()
-	
+
 	// Create 10,000 reputation scores (2,500 players × 4 categories)
 	for i := 0; i < 2500; i++ {
 		playerID := "player_" + string(rune(i))
@@ -452,7 +452,7 @@ func BenchmarkReputationApplyDecay(b *testing.B) {
 			rm.UpdateReputation(playerID, category, 100.0, baseTime.Add(-10*24*time.Hour))
 		}
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		rm.ApplyDecay(baseTime)
@@ -462,7 +462,7 @@ func BenchmarkReputationApplyDecay(b *testing.B) {
 func BenchmarkReputationSave(b *testing.B) {
 	rm := NewReputationManager()
 	now := time.Now()
-	
+
 	// Create 1000 players with 4 categories each
 	for i := 0; i < 1000; i++ {
 		playerID := "player_" + string(rune(i))
@@ -471,7 +471,7 @@ func BenchmarkReputationSave(b *testing.B) {
 			rm.UpdateReputation(playerID, category, 100.0, now)
 		}
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := rm.Save()

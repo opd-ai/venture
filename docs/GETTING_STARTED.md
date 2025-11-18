@@ -86,12 +86,24 @@ You'll explore unique dungeons, fight generated enemies, collect randomized loot
 
 ## Game Modes
 
-### Single Player
+### Solo Play (Default Behavior)
 
-Start the client directly to play solo:
+**New in V6.0:** Starting the client automatically runs a local server for a seamless single-player experience:
+
 ```bash
+# Simply run the client - server starts automatically on 127.0.0.1
 ./venture-client -seed 12345 -genre fantasy
 ```
+
+The client now **automatically starts a localhost server** when no explicit server connection is specified. This provides:
+- ✅ Consistent multiplayer architecture (same code paths for solo and co-op)
+- ✅ Easy transition to multiplayer (friends can connect to your game anytime)
+- ✅ Better performance through client-server architecture
+
+**What This Means:**
+- Running `./venture-client` starts both a server (localhost:8080) and client
+- The server is bound to 127.0.0.1 by default (not accessible from other computers)
+- To allow others to join, see "Multiplayer Co-op" section below
 
 **Options:**
 - `-seed`: Set world seed (default: random)
@@ -104,16 +116,28 @@ Start the client directly to play solo:
 
 ### Multiplayer Co-op
 
-#### Quick Start - Host-and-Play (LAN Party Mode)
+#### Quick Start - Host-and-Play (Now Default!)
 
-Perfect for LAN parties and local co-op! The host player starts both server and client with a single command:
+**Host-and-play is now the default behavior** when running the client. To allow other players to join your game:
 
 ```bash
-# Host player: start server + client (one command!)
-./venture-client -host-and-play
+# Default behavior - starts localhost server (only you can connect)
+./venture-client
+
+# To allow LAN connections - use --host-lan flag
+./venture-client --host-lan
 
 # Other players on the same network: join the host
-./venture-client -multiplayer -server <host-ip>:8080
+./venture-client --multiplayer --server <host-ip>:8080
+```
+
+**For Explicit Control:**
+```bash
+# Explicitly enable host-and-play (same as default now)
+./venture-client --host-and-play
+
+# Explicitly enable with LAN access
+./venture-client --host-and-play --host-lan
 ```
 
 **Host Configuration:**
@@ -127,36 +151,40 @@ Perfect for LAN parties and local co-op! The host player starts both server and 
 - **Windows:** `ipconfig`
 - **macOS:** `ifconfig | grep inet`
 
-**Security Note:** By default, `-host-and-play` binds to localhost only (127.0.0.1). To allow LAN connections, explicitly add `-host-lan`:
+**Security Note:** The embedded server always binds to localhost (127.0.0.1) by default for security. To allow LAN connections, explicitly add `--host-lan`:
 
 ```bash
 # Allow LAN connections (other computers on local network can join)
-./venture-client -host-and-play -host-lan
+./venture-client --host-lan
 ```
 
 **Example LAN Party Setup:**
 ```bash
-# Host (192.168.1.100): start server accessible on LAN
-./venture-client -host-and-play -host-lan -max-players 4
+# Host (192.168.1.100): start client with LAN-accessible server
+./venture-client --host-lan -max-players 4
 
 # Player 2: connect from another computer
-./venture-client -multiplayer -server 192.168.1.100:8080
+./venture-client --multiplayer --server 192.168.1.100:8080
 
 # Player 3: connect
-./venture-client -multiplayer -server 192.168.1.100:8080
+./venture-client --multiplayer --server 192.168.1.100:8080
 ```
 
 #### Traditional Setup - Dedicated Server
 
+**When to use:** For 24/7 servers, headless hosting, or when you don't want to play on the hosting machine.
+
 For persistent servers or remote hosting, use a dedicated server:
 
 ```bash
-# Start server
+# Start dedicated server (no client/graphics needed)
 ./venture-server -port 8080 -max-players 4
 
-# Connect clients
-./venture-client -multiplayer -server localhost:8080
+# Connect clients (use --multiplayer to skip auto-starting local server)
+./venture-client --multiplayer --server <server-address>:8080
 ```
+
+**Note:** Using `--multiplayer` tells the client to connect to a remote server instead of starting its own local server.
 
 **Multiplayer Features:**
 - Up to 4 players cooperative (configurable)

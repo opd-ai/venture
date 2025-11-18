@@ -35,7 +35,7 @@ func init() {
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	rng := rand.New(rand.NewSource(worldSeed))
 	genreID = genres[rng.Intn(len(genres))]
-	
+
 	// Initialize the game immediately for ebitenmobile
 	initializeGame()
 }

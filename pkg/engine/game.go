@@ -363,10 +363,10 @@ func (g *EbitenGame) handleGenreSelection(genreID string) {
 
 	// Reset character creation UI for new game
 	g.CharacterCreation.Reset()
-	
+
 	// Set default name from world seed so user has a starting name
 	g.CharacterCreation.SetDefaultNameFromSeed(g.worldSeed)
-	
+
 	g.isMultiplayerMode = false // Single-player mode
 
 	// Hide genre selection menu

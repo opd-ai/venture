@@ -1,0 +1,697 @@
+package persistence
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestNewChatHistory(t *testing.T) {
+	playerID := "player123"
+	history := NewChatHistory(playerID)
+
+	if history == nil {
+		t.Fatal("NewChatHistory returned nil")
+	}
+	if history.PlayerID != playerID {
+		t.Errorf("expected PlayerID %q, got %q", playerID, history.PlayerID)
+	}
+	if len(history.Messages) != 0 {
+		t.Errorf("expected 0 messages, got %d", len(history.Messages))
+	}
+	if history.Version != 1 {
+		t.Errorf("expected version 1, got %d", history.Version)
+	}
+}
+
+func TestAddMessage(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	tests := []struct {
+		name    string
+		msg     *Message
+		wantErr bool
+	}{
+		{
+			name: "valid message",
+			msg: &Message{
+				ID:        "msg1",
+				Sender:    "player1",
+				Recipient: "player2",
+				Channel:   "whisper",
+				Content:   "Hello",
+				Timestamp: time.Now(),
+			},
+			wantErr: false,
+		},
+		{
+			name:    "nil message",
+			msg:     nil,
+			wantErr: true,
+		},
+		{
+			name: "empty ID",
+			msg: &Message{
+				ID:      "",
+				Sender:  "player1",
+				Content: "Hello",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty sender",
+			msg: &Message{
+				ID:      "msg2",
+				Sender:  "",
+				Content: "Hello",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty content (not deleted)",
+			msg: &Message{
+				ID:      "msg3",
+				Sender:  "player1",
+				Content: "",
+				Deleted: false,
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty content (deleted)",
+			msg: &Message{
+				ID:      "msg4",
+				Sender:  "player1",
+				Content: "",
+				Deleted: true,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := history.AddMessage(tt.msg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddMessage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAddMessage_Deduplication(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	msg := &Message{
+		ID:        "msg1",
+		Sender:    "player1",
+		Content:   "Hello",
+		Timestamp: time.Now(),
+	}
+
+	// Add message twice
+	if err := history.AddMessage(msg); err != nil {
+		t.Fatalf("first AddMessage failed: %v", err)
+	}
+	if err := history.AddMessage(msg); err != nil {
+		t.Fatalf("second AddMessage failed: %v", err)
+	}
+
+	messages := history.GetMessages(nil)
+	if len(messages) != 1 {
+		t.Errorf("expected 1 message after deduplication, got %d", len(messages))
+	}
+}
+
+func TestAddMessage_MaxLimit(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add more than MaxMessagesPerPlayer
+	for i := 0; i < MaxMessagesPerPlayer+100; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now().Add(time.Duration(i) * time.Second),
+		}
+		if err := history.AddMessage(msg); err != nil {
+			t.Fatalf("AddMessage %d failed: %v", i, err)
+		}
+	}
+
+	messages := history.GetMessages(nil)
+	if len(messages) != MaxMessagesPerPlayer {
+		t.Errorf("expected %d messages, got %d", MaxMessagesPerPlayer, len(messages))
+	}
+
+	// Verify oldest messages were removed (LRU)
+	firstMsg := messages[0]
+	expectedID := fmt.Sprintf("msg%d", 100) // Should start at msg100
+	if firstMsg.ID != expectedID {
+		t.Errorf("expected first message ID %q, got %q", expectedID, firstMsg.ID)
+	}
+}
+
+func TestGetMessages_NoFilter(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add test messages
+	for i := 0; i < 10; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    fmt.Sprintf("player%d", i%3),
+			Content:   fmt.Sprintf("Content %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	messages := history.GetMessages(nil)
+	if len(messages) != 10 {
+		t.Errorf("expected 10 messages, got %d", len(messages))
+	}
+}
+
+func TestGetMessages_WithFilter(t *testing.T) {
+	history := NewChatHistory("player1")
+	now := time.Now()
+
+	messages := []*Message{
+		{ID: "msg1", Sender: "alice", Recipient: "bob", Channel: "whisper", Content: "Hi", Timestamp: now.Add(-2 * time.Hour)},
+		{ID: "msg2", Sender: "bob", Recipient: "alice", Channel: "whisper", Content: "Hello", Timestamp: now.Add(-1 * time.Hour)},
+		{ID: "msg3", Sender: "alice", Recipient: "", Channel: "global", Content: "Anyone?", Timestamp: now},
+		{ID: "msg4", Sender: "charlie", Recipient: "", Channel: "guild", Content: "Raid?", Timestamp: now.Add(1 * time.Hour)},
+	}
+
+	for _, msg := range messages {
+		history.AddMessage(msg)
+	}
+
+	tests := []struct {
+		name    string
+		filter  *MessageFilter
+		wantIDs []string
+	}{
+		{
+			name:    "filter by sender",
+			filter:  &MessageFilter{Sender: "alice"},
+			wantIDs: []string{"msg1", "msg3"},
+		},
+		{
+			name:    "filter by channel",
+			filter:  &MessageFilter{Channel: "whisper"},
+			wantIDs: []string{"msg1", "msg2"},
+		},
+		{
+			name:    "filter by time (after)",
+			filter:  &MessageFilter{After: now.Add(-90 * time.Minute)},
+			wantIDs: []string{"msg2", "msg3", "msg4"},
+		},
+		{
+			name:    "filter by time (before)",
+			filter:  &MessageFilter{Before: now.Add(-30 * time.Minute)},
+			wantIDs: []string{"msg1", "msg2"},
+		},
+		{
+			name:    "combined filter",
+			filter:  &MessageFilter{Sender: "alice", Channel: "whisper"},
+			wantIDs: []string{"msg1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := history.GetMessages(tt.filter)
+			if len(results) != len(tt.wantIDs) {
+				t.Errorf("expected %d results, got %d", len(tt.wantIDs), len(results))
+				return
+			}
+			for i, msg := range results {
+				if msg.ID != tt.wantIDs[i] {
+					t.Errorf("result[%d]: expected ID %q, got %q", i, tt.wantIDs[i], msg.ID)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteOldMessages(t *testing.T) {
+	history := NewChatHistory("player1")
+	now := time.Now()
+
+	messages := []*Message{
+		{ID: "msg1", Sender: "alice", Content: "Old", Timestamp: now.Add(-40 * 24 * time.Hour)},  // 40 days old
+		{ID: "msg2", Sender: "bob", Content: "Recent", Timestamp: now.Add(-10 * 24 * time.Hour)}, // 10 days old
+		{ID: "msg3", Sender: "charlie", Content: "New", Timestamp: now},                          // Now
+	}
+
+	for _, msg := range messages {
+		history.AddMessage(msg)
+	}
+
+	deleted := history.DeleteOldMessages(now)
+	if deleted != 1 {
+		t.Errorf("expected 1 deleted message, got %d", deleted)
+	}
+
+	remaining := history.GetMessages(nil)
+	if len(remaining) != 2 {
+		t.Errorf("expected 2 remaining messages, got %d", len(remaining))
+	}
+
+	// Verify old message was removed
+	for _, msg := range remaining {
+		if msg.ID == "msg1" {
+			t.Error("old message was not deleted")
+		}
+	}
+}
+
+func TestChatHistory_SaveLoad(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add test messages
+	for i := 0; i < 50; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Recipient: "player2",
+			Channel:   "whisper",
+			Content:   strings.Repeat("x", 100), // 100 chars per message
+			Timestamp: time.Now().Add(time.Duration(i) * time.Second),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Save
+	data, err := history.Save()
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	// Verify compression occurred
+	if len(data) == 0 {
+		t.Error("saved data is empty")
+	}
+
+	// Load into new history
+	loaded := NewChatHistory("player1")
+	if err := loaded.Load(data); err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify data integrity
+	if loaded.PlayerID != history.PlayerID {
+		t.Errorf("PlayerID mismatch: expected %q, got %q", history.PlayerID, loaded.PlayerID)
+	}
+	if len(loaded.Messages) != len(history.Messages) {
+		t.Errorf("message count mismatch: expected %d, got %d", len(history.Messages), len(loaded.Messages))
+	}
+	if loaded.Version != history.Version {
+		t.Errorf("version mismatch: expected %d, got %d", history.Version, loaded.Version)
+	}
+
+	// Verify messages
+	for i, msg := range loaded.Messages {
+		original := history.Messages[i]
+		if msg.ID != original.ID {
+			t.Errorf("message[%d] ID mismatch: expected %q, got %q", i, original.ID, msg.ID)
+		}
+		if msg.Content != original.Content {
+			t.Errorf("message[%d] content mismatch", i)
+		}
+	}
+
+	t.Logf("Saved %d messages in %d bytes (%.1fx compression)", len(history.Messages), len(data),
+		float64(len(history.Messages)*100)/float64(len(data)))
+}
+
+func TestGetDelta(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add messages to create versions
+	for i := 0; i < 10; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	currentVersion := history.GetVersion()
+
+	tests := []struct {
+		name        string
+		fromVersion int
+		wantDelta   bool
+	}{
+		{
+			name:        "delta from version 0",
+			fromVersion: 0,
+			wantDelta:   true,
+		},
+		{
+			name:        "delta from old version",
+			fromVersion: 5,
+			wantDelta:   true,
+		},
+		{
+			name:        "no delta (current version)",
+			fromVersion: currentVersion,
+			wantDelta:   false,
+		},
+		{
+			name:        "no delta (future version)",
+			fromVersion: currentVersion + 1,
+			wantDelta:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			delta := history.GetDelta(tt.fromVersion)
+			hasDelta := delta != nil && len(delta) > 0
+			if hasDelta != tt.wantDelta {
+				t.Errorf("GetDelta(%d) returned delta=%v, want delta=%v", tt.fromVersion, hasDelta, tt.wantDelta)
+			}
+		})
+	}
+}
+
+func TestApplyDelta(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add initial messages
+	for i := 0; i < 5; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Create delta with new messages
+	delta := []*Message{
+		{ID: "msg5", Sender: "player2", Content: "New 1", Timestamp: time.Now()},
+		{ID: "msg6", Sender: "player2", Content: "New 2", Timestamp: time.Now()},
+		{ID: "msg1", Sender: "player1", Content: "Duplicate", Timestamp: time.Now()}, // Duplicate
+	}
+
+	initialVersion := history.GetVersion()
+	if err := history.ApplyDelta(delta); err != nil {
+		t.Fatalf("ApplyDelta failed: %v", err)
+	}
+
+	messages := history.GetMessages(nil)
+	expectedCount := 7 // 5 original + 2 new (1 duplicate ignored)
+	if len(messages) != expectedCount {
+		t.Errorf("expected %d messages after delta, got %d", expectedCount, len(messages))
+	}
+
+	// Verify version increased
+	if history.GetVersion() <= initialVersion {
+		t.Error("version did not increase after applying delta")
+	}
+
+	// Verify new messages exist
+	hasMsg5 := false
+	hasMsg6 := false
+	for _, msg := range messages {
+		if msg.ID == "msg5" {
+			hasMsg5 = true
+		}
+		if msg.ID == "msg6" {
+			hasMsg6 = true
+		}
+	}
+	if !hasMsg5 || !hasMsg6 {
+		t.Error("new messages from delta not found")
+	}
+}
+
+func TestApplyDelta_Empty(t *testing.T) {
+	history := NewChatHistory("player1")
+	initialVersion := history.GetVersion()
+
+	if err := history.ApplyDelta(nil); err != nil {
+		t.Errorf("ApplyDelta(nil) failed: %v", err)
+	}
+
+	if err := history.ApplyDelta([]*Message{}); err != nil {
+		t.Errorf("ApplyDelta([]) failed: %v", err)
+	}
+
+	// Verify version didn't change
+	if history.GetVersion() != initialVersion {
+		t.Error("version changed after applying empty delta")
+	}
+}
+
+func TestMessageFilter_Matches(t *testing.T) {
+	now := time.Now()
+	msg := &Message{
+		ID:        "msg1",
+		Sender:    "alice",
+		Recipient: "bob",
+		Channel:   "whisper",
+		Content:   "Hello",
+		Timestamp: now,
+	}
+
+	tests := []struct {
+		name   string
+		filter *MessageFilter
+		want   bool
+	}{
+		{
+			name:   "no filter",
+			filter: &MessageFilter{},
+			want:   true,
+		},
+		{
+			name:   "matching sender",
+			filter: &MessageFilter{Sender: "alice"},
+			want:   true,
+		},
+		{
+			name:   "non-matching sender",
+			filter: &MessageFilter{Sender: "charlie"},
+			want:   false,
+		},
+		{
+			name:   "matching recipient",
+			filter: &MessageFilter{Recipient: "bob"},
+			want:   true,
+		},
+		{
+			name:   "matching channel",
+			filter: &MessageFilter{Channel: "whisper"},
+			want:   true,
+		},
+		{
+			name:   "after timestamp",
+			filter: &MessageFilter{After: now.Add(-1 * time.Hour)},
+			want:   true,
+		},
+		{
+			name:   "before timestamp",
+			filter: &MessageFilter{Before: now.Add(1 * time.Hour)},
+			want:   true,
+		},
+		{
+			name:   "combined match",
+			filter: &MessageFilter{Sender: "alice", Channel: "whisper"},
+			want:   true,
+		},
+		{
+			name:   "combined no match",
+			filter: &MessageFilter{Sender: "alice", Channel: "global"},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.Matches(msg); got != tt.want {
+				t.Errorf("Matches() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConcurrency(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Concurrent writes
+	done := make(chan bool)
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			for j := 0; j < 100; j++ {
+				msg := &Message{
+					ID:        fmt.Sprintf("msg-%d-%d", id, j),
+					Sender:    fmt.Sprintf("player%d", id),
+					Content:   fmt.Sprintf("Content %d", j),
+					Timestamp: time.Now(),
+				}
+				history.AddMessage(msg)
+			}
+			done <- true
+		}(i)
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+
+	// Verify no data corruption
+	messages := history.GetMessages(nil)
+	if len(messages) == 0 {
+		t.Error("no messages after concurrent writes")
+	}
+	if len(messages) > MaxMessagesPerPlayer {
+		t.Errorf("exceeded max messages: %d > %d", len(messages), MaxMessagesPerPlayer)
+	}
+}
+
+// Benchmarks
+
+func BenchmarkAddMessage(b *testing.B) {
+	history := NewChatHistory("player1")
+	msg := &Message{
+		ID:        "msg1",
+		Sender:    "player1",
+		Content:   "Hello world",
+		Timestamp: time.Now(),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		msg.ID = fmt.Sprintf("msg%d", i)
+		history.AddMessage(msg)
+	}
+}
+
+func BenchmarkGetMessages_NoFilter(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   "Hello",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.GetMessages(nil)
+	}
+}
+
+func BenchmarkGetMessages_WithFilter(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    fmt.Sprintf("player%d", i%10),
+			Channel:   "global",
+			Content:   "Hello",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	filter := &MessageFilter{Sender: "player1"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.GetMessages(filter)
+	}
+}
+
+func BenchmarkChatHistory_Save(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   strings.Repeat("x", 100),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.Save()
+	}
+}
+
+func BenchmarkChatHistory_Load(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   strings.Repeat("x", 100),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	data, _ := history.Save()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		loaded := NewChatHistory("player1")
+		loaded.Load(data)
+	}
+}
+
+func BenchmarkGetDelta(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   "Hello",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.GetDelta(500)
+	}
+}
+
+func BenchmarkApplyDelta(b *testing.B) {
+	history := NewChatHistory("player1")
+	for i := 0; i < 500; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   "Hello",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	delta := []*Message{
+		{ID: "new1", Sender: "player2", Content: "New", Timestamp: time.Now()},
+		{ID: "new2", Sender: "player2", Content: "New", Timestamp: time.Now()},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.ApplyDelta(delta)
+	}
+}

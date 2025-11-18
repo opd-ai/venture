@@ -9,6 +9,9 @@
 //   - Chat history with delta compression and message filtering
 //   - Automatic message cleanup (30-day retention)
 //   - LRU eviction (1000 messages per player maximum)
+//   - Persistent image storage with gallery management
+//   - Image deduplication and LRU eviction (100 images, 50MB max per player)
+//   - Support for PNG and JPEG formats with automatic compression
 //
 // # Trust Levels
 //
@@ -62,9 +65,22 @@
 //	delta := history.GetDelta(lastKnownVersion)
 //	// Send delta to client for efficient sync
 //
+//	// Image gallery
+//	gallery := persistence.NewImageGallery("player1")
+//	img := createSomeImage() // Your image.Image
+//	stored, _ := gallery.AddImage(img, "My Screenshot", persistence.ImageFormatJPEG, []string{"screenshot"})
+//
+//	// Retrieve images by tag
+//	screenshots := gallery.GetImagesByTag("screenshot")
+//
+//	// Get lightweight metadata without image data
+//	thumbnails := gallery.GetThumbnails()
+//
 //	// Save persistent data
 //	data, _ := manager.Save()
 //	ioutil.WriteFile("trust.json.gz", data, 0644)
 //	chatData, _ := history.Save()
 //	ioutil.WriteFile("chat.json.gz", chatData, 0644)
+//	galleryData, _ := gallery.Save()
+//	ioutil.WriteFile("gallery.json.gz", galleryData, 0644)
 package persistence

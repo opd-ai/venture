@@ -775,6 +775,9 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.CraftingUI.Update(nil, deltaTime)
 	}
 
+	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
+	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -792,6 +795,8 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 	inMenuState := g.StateManager.CurrentState() != AppStateGameplay
 
 	// Check if any gameplay UI is open
+	// BUG FIX: Phase 3.7 - MailboxUI missing from virtual controls visibility check
+	// Resolution: Added MailboxUI.IsOpen() check to hide virtual controls when mailbox is open
 	anyUIOpen := g.InventoryUI.IsVisible() ||
 		g.QuestUI.IsVisible() ||
 		g.CharacterUI.IsVisible() ||
@@ -799,6 +804,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		g.MapUI.IsFullScreen() ||
 		(g.ShopUI != nil && g.ShopUI.IsVisible()) ||
 		(g.CraftingUI != nil && g.CraftingUI.IsVisible()) ||
+		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -816,6 +822,8 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 }
 
 // shouldUpdateWorld checks if world updates should proceed based on UI visibility.
+// BUG FIX: Phase 3.7 - MailboxUI missing from world update check
+// Resolution: Added MailboxUI.IsOpen() check to pause world when mailbox is open
 func (g *EbitenGame) shouldUpdateWorld() bool {
 	return !g.InventoryUI.IsVisible() &&
 		!g.QuestUI.IsVisible() &&
@@ -823,7 +831,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		!g.SkillsUI.IsVisible() &&
 		!g.MapUI.IsFullScreen() &&
 		(g.ShopUI == nil || !g.ShopUI.IsVisible()) &&
-		(g.CraftingUI == nil || !g.CraftingUI.IsVisible())
+		(g.CraftingUI == nil || !g.CraftingUI.IsVisible()) &&
+		(g.MailboxUI == nil || !g.MailboxUI.IsOpen())
 }
 
 func (g *EbitenGame) Update() error {

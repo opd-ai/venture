@@ -121,12 +121,29 @@ func (ui *EbitenQuestUI) Hide() {
 // Update processes input for the quest UI.
 // Calculates scroll bounds based on current quest list content.
 func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
-	// Update touch handler
+	ui.updateTouchInputs()
+
+	if ui.handleMenuNavigation() {
+		return
+	}
+
+	if !ui.visible || ui.playerEntity == nil {
+		return
+	}
+
+	ui.calculateMaxScroll()
+	ui.handleTouchScrolling()
+	ui.handleTabSwitching()
+	ui.handleKeyboardScrolling()
+	ui.handleMouseWheelScrolling()
+}
+
+// updateTouchInputs updates all touch-related UI elements.
+func (ui *EbitenQuestUI) updateTouchInputs() {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
 
-	// Update all touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
 	}
@@ -136,121 +153,136 @@ func (ui *EbitenQuestUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.doneTabButton != nil {
 		ui.doneTabButton.Update()
 	}
+}
 
-	// Standardized dual-exit menu navigation: toggle key (J) OR Escape
+// handleMenuNavigation processes menu open/close input.
+// Returns true if menu was closed and further input processing should stop.
+func (ui *EbitenQuestUI) handleMenuNavigation() bool {
 	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {
 			ui.Hide()
 		}
-		// Reset scroll when closing
 		ui.scrollOffset = 0
-		return // Don't process other input on the same frame as toggle/close
+		return true
 	}
+	return false
+}
 
-	if !ui.visible || ui.playerEntity == nil {
+// calculateMaxScroll computes the maximum scroll offset based on current quest list.
+func (ui *EbitenQuestUI) calculateMaxScroll() {
+	if ui.playerEntity == nil {
 		return
 	}
 
-	// Calculate max scroll based on current quest list
-	// M-003 FIX: Calculate maxScroll in Update() before input processing
-	if ui.playerEntity != nil {
-		trackerComp, ok := ui.playerEntity.GetComponent("questtracker")
-		if ok {
-			tracker, ok := trackerComp.(*QuestTrackerComponent)
-			if !ok {
-				return
-			}
-			var quests []*TrackedQuest
-			if ui.currentTab == 0 {
-				quests = tracker.ActiveQuests
-			} else {
-				quests = tracker.CompletedQuests
-			}
-
-			// Estimate total content height (each quest ~120px base + variable content)
-			// This is approximate but sufficient for scroll bounds
-			estimatedHeight := 0
-			for _, tracked := range quests {
-				baseHeight := 120 // Base height per quest
-				// Add extra height for objectives
-				baseHeight += len(tracked.Quest.Objectives) * 20
-				estimatedHeight += baseHeight
-			}
-
-			// Content area height (window height minus header/footer)
-			contentHeight := 500 - 90 - 40 // windowHeight - header - footer
-			ui.maxScroll = estimatedHeight - contentHeight
-			if ui.maxScroll < 0 {
-				ui.maxScroll = 0
-			}
-		}
+	trackerComp, ok := ui.playerEntity.GetComponent("questtracker")
+	if !ok {
+		return
 	}
 
-	// Handle touch scrolling
-	if ui.touchHandler != nil {
-		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for scrolling
-			if direction > 1.0 || direction < -1.0 {
-				scrollSpeed := int(distance * 0.5)
-				if direction < 0 {
-					// Swipe down = scroll up
-					ui.scrollOffset -= scrollSpeed
-				} else {
-					// Swipe up = scroll down
-					ui.scrollOffset += scrollSpeed
-				}
-				// Clamp scroll offset
-				if ui.scrollOffset < 0 {
-					ui.scrollOffset = 0
-				}
-				if ui.scrollOffset > ui.maxScroll {
-					ui.scrollOffset = ui.maxScroll
-				}
-			}
-		}
+	tracker, ok := trackerComp.(*QuestTrackerComponent)
+	if !ok {
+		return
 	}
 
-	// Handle tab switching
+	quests := ui.getQuestsForCurrentTab(tracker)
+	estimatedHeight := ui.estimateContentHeight(quests)
+	contentHeight := 500 - 90 - 40
+	ui.maxScroll = estimatedHeight - contentHeight
+	if ui.maxScroll < 0 {
+		ui.maxScroll = 0
+	}
+}
+
+// getQuestsForCurrentTab returns the quest list for the active tab.
+func (ui *EbitenQuestUI) getQuestsForCurrentTab(tracker *QuestTrackerComponent) []*TrackedQuest {
+	if ui.currentTab == 0 {
+		return tracker.ActiveQuests
+	}
+	return tracker.CompletedQuests
+}
+
+// estimateContentHeight calculates total pixel height for quest list.
+func (ui *EbitenQuestUI) estimateContentHeight(quests []*TrackedQuest) int {
+	estimatedHeight := 0
+	for _, tracked := range quests {
+		baseHeight := 120
+		baseHeight += len(tracked.Quest.Objectives) * 20
+		estimatedHeight += baseHeight
+	}
+	return estimatedHeight
+}
+
+// handleTouchScrolling processes touch swipe gestures for scrolling.
+func (ui *EbitenQuestUI) handleTouchScrolling() {
+	if ui.touchHandler == nil {
+		return
+	}
+
+	direction, distance, detected := ui.touchHandler.GetSwipe()
+	if !detected {
+		return
+	}
+
+	if direction > 1.0 || direction < -1.0 {
+		scrollSpeed := int(distance * 0.5)
+		if direction < 0 {
+			ui.scrollOffset -= scrollSpeed
+		} else {
+			ui.scrollOffset += scrollSpeed
+		}
+		ui.clampScrollOffset()
+	}
+}
+
+// handleTabSwitching processes tab change input.
+func (ui *EbitenQuestUI) handleTabSwitching() {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		ui.currentTab = 0     // Active
-		ui.scrollOffset = 0   // Reset scroll on tab change
-		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
+		ui.switchToTab(0)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		ui.currentTab = 1     // Completed
-		ui.scrollOffset = 0   // Reset scroll on tab change
-		ui.cacheValid = false // M-003 FIX: Invalidate cache on tab change
+		ui.switchToTab(1)
 	}
+}
 
-	// Handle scrolling with arrow keys and mouse wheel
-	scrollSpeed := 20 // Pixels per scroll
+// switchToTab changes the current tab and resets scroll state.
+func (ui *EbitenQuestUI) switchToTab(tabIndex int) {
+	ui.currentTab = tabIndex
+	ui.scrollOffset = 0
+	ui.cacheValid = false
+}
+
+// handleKeyboardScrolling processes arrow key scrolling input.
+func (ui *EbitenQuestUI) handleKeyboardScrolling() {
+	scrollSpeed := 20
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		ui.scrollOffset -= scrollSpeed
-		if ui.scrollOffset < 0 {
-			ui.scrollOffset = 0
-		}
+		ui.clampScrollOffset()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		ui.scrollOffset += scrollSpeed
-		// M-003 FIX: Proper bounds checking using calculated maxScroll
-		if ui.scrollOffset > ui.maxScroll {
-			ui.scrollOffset = ui.maxScroll
-		}
+		ui.clampScrollOffset()
 	}
+}
 
-	// Mouse wheel scrolling
+// handleMouseWheelScrolling processes mouse wheel scrolling input.
+func (ui *EbitenQuestUI) handleMouseWheelScrolling() {
 	_, wheelY := ebiten.Wheel()
 	if wheelY != 0 {
+		scrollSpeed := 20
 		ui.scrollOffset -= int(wheelY * float64(scrollSpeed))
-		// M-003 FIX: Clamp to valid range
-		if ui.scrollOffset < 0 {
-			ui.scrollOffset = 0
-		}
-		if ui.scrollOffset > ui.maxScroll {
-			ui.scrollOffset = ui.maxScroll
-		}
+		ui.clampScrollOffset()
+	}
+}
+
+// clampScrollOffset ensures scroll offset stays within valid bounds.
+func (ui *EbitenQuestUI) clampScrollOffset() {
+	if ui.scrollOffset < 0 {
+		ui.scrollOffset = 0
+	}
+	if ui.scrollOffset > ui.maxScroll {
+		ui.scrollOffset = ui.maxScroll
 	}
 }
 
@@ -382,14 +414,6 @@ func (ui *EbitenQuestUI) drawTabs(img *ebiten.Image, windowX, windowY int) int {
 		ebitenutil.DebugPrintAt(img, tabName, tabX+10, tabY+10)
 	}
 	return tabY
-}
-
-// getQuestsForCurrentTab retrieves the appropriate quest list based on the current tab.
-func (ui *EbitenQuestUI) getQuestsForCurrentTab(tracker *QuestTrackerComponent) []*TrackedQuest {
-	if ui.currentTab == 0 {
-		return tracker.ActiveQuests
-	}
-	return tracker.CompletedQuests
 }
 
 // getCachedQuestListHeight returns the total height of the quest list, using cache when valid.

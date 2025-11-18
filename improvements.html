@@ -174,9 +174,9 @@ section h2 {
         <header>
             <h1>Go Source Code Complexity Diff Report</h1>
             <div class="metadata">
-                <p><strong>Baseline:</strong> baseline (2025-11-18 05:29:21)</p>
-                <p><strong>Current:</strong> current (2025-11-18 05:34:05)</p>
-                <p><strong>Comparison:</strong> 2025-11-18 05:34:52</p>
+                <p><strong>Baseline:</strong> baseline (2025-11-18 06:44:46)</p>
+                <p><strong>Current:</strong> current (2025-11-18 06:50:36)</p>
+                <p><strong>Comparison:</strong> 2025-11-18 06:51:21</p>
             </div>
         </header>
 
@@ -184,15 +184,15 @@ section h2 {
             <h2>Summary</h2>
             <div class="summary-grid">
                 <div class="summary-card">
-                    <h3>60</h3>
+                    <h3>72</h3>
                     <p>Total Changes</p>
                 </div>
                 <div class="summary-card regressions">
-                    <h3>26</h3>
+                    <h3>23</h3>
                     <p>Regressions</p>
                 </div>
                 <div class="summary-card improvements">
-                    <h3>27</h3>
+                    <h3>40</h3>
                     <p>Improvements</p>
                 </div>
                 <div class="summary-card trend-improving">
@@ -204,7 +204,7 @@ section h2 {
 
         
         <section class="regressions">
-            <h2>Regressions (26)</h2>
+            <h2>Regressions (23)</h2>
             <table class="data-table">
                 <thead>
                     <tr>
@@ -221,27 +221,17 @@ section h2 {
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>main.generateWorldTerrain</td>
+                        <td>terrain.Generate</td>
                         <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>4.40</td>
-                        <td class="increase">&#43;41.9%</td>
-                        <td class="severity-error">error</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.wrapText</td>
-                        <td>Overall function complexity changed</td>
-                        <td>6.20</td>
-                        <td>11.90</td>
-                        <td class="increase">&#43;91.9%</td>
+                        <td>5.70</td>
+                        <td>10.10</td>
+                        <td class="increase">&#43;77.2%</td>
                         <td class="severity-critical">critical</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.SetPlayerEntity</td>
+                        <td>main.initializeV4Systems</td>
                         <td>Overall function complexity changed</td>
                         <td>1.30</td>
                         <td>3.10</td>
@@ -251,57 +241,77 @@ section h2 {
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.CanTrade</td>
+                        <td>games.Update</td>
                         <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>8.30</td>
-                        <td class="increase">&#43;538.5%</td>
-                        <td class="severity-critical">critical</td>
+                        <td>5.70</td>
+                        <td>7.50</td>
+                        <td class="increase">&#43;31.6%</td>
+                        <td class="severity-error">error</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.handleKeyboardNavigation</td>
-                        <td>Overall function complexity changed</td>
-                        <td>4.40</td>
-                        <td>7.00</td>
-                        <td class="increase">&#43;59.1%</td>
-                        <td class="severity-critical">critical</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.GetReputation</td>
+                        <td>network.GetStats</td>
                         <td>Overall function complexity changed</td>
                         <td>3.10</td>
-                        <td>5.70</td>
-                        <td class="increase">&#43;83.9%</td>
+                        <td>8.50</td>
+                        <td class="increase">&#43;174.2%</td>
                         <td class="severity-critical">critical</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.Draw</td>
+                        <td>engine.drawStatsPanel</td>
                         <td>Overall function complexity changed</td>
-                        <td>16.60</td>
-                        <td>21.00</td>
+                        <td>3.10</td>
+                        <td>8.80</td>
+                        <td class="increase">&#43;183.9%</td>
+                        <td class="severity-critical">critical</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>main.initializeLogger</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>6.20</td>
                         <td class="increase">&#43;26.5%</td>
                         <td class="severity-error">error</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>main.runGameLoop</td>
+                        <td>engine.drawHeader</td>
                         <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>8.00</td>
-                        <td class="increase">&#43;158.1%</td>
+                        <td>1.30</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;238.5%</td>
                         <td class="severity-critical">critical</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>world.Update</td>
+                        <td>games.GetReward</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;41.9%</td>
+                        <td class="severity-error">error</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>terrain.placeStairs</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>10.60</td>
+                        <td class="increase">&#43;241.9%</td>
+                        <td class="severity-critical">critical</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>sprites.Get</td>
                         <td>Overall function complexity changed</td>
                         <td>3.10</td>
                         <td>4.90</td>
@@ -311,107 +321,57 @@ section h2 {
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.GetDuration</td>
+                        <td>terrain.Validate</td>
                         <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>3.10</td>
-                        <td class="increase">&#43;138.5%</td>
-                        <td class="severity-critical">critical</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>main.createPlayerEntity</td>
-                        <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>7.50</td>
-                        <td class="increase">&#43;476.9%</td>
-                        <td class="severity-critical">critical</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>terrain.Generate</td>
-                        <td>Overall function complexity changed</td>
-                        <td>5.70</td>
-                        <td>16.60</td>
-                        <td class="increase">&#43;191.2%</td>
-                        <td class="severity-critical">critical</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>ui.Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>4.40</td>
-                        <td class="increase">&#43;41.9%</td>
+                        <td>11.90</td>
+                        <td>15.80</td>
+                        <td class="increase">&#43;32.8%</td>
                         <td class="severity-error">error</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>world.Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>3</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="severity-warning">warning</td>
+                        <td>sprites.Generate</td>
+                        <td>Overall function complexity changed</td>
+                        <td>7.50</td>
+                        <td>13.20</td>
+                        <td class="increase">&#43;76.0%</td>
+                        <td class="severity-critical">critical</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>ui.Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>3</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>main.createPlayerEntity</td>
+                        <td>engine.drawHeader</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>1</td>
-                        <td>5</td>
-                        <td class="increase">&#43;400.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>terrain.Generate</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>4</td>
-                        <td>12</td>
+                        <td>3</td>
                         <td class="increase">&#43;200.0%</td>
                         <td class="severity-warning">warning</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.wrapText</td>
+                        <td>sprites.Generate</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>9</td>
+                        <td class="increase">&#43;80.0%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>terrain.Generate</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>4</td>
-                        <td>8</td>
-                        <td class="increase">&#43;100.0%</td>
+                        <td>7</td>
+                        <td class="increase">&#43;75.0%</td>
                         <td class="severity-warning">warning</td>
                     </tr>
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.GetDuration</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>2</td>
-                        <td class="increase">&#43;100.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>main.generateWorldTerrain</td>
+                        <td>sprites.Get</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>2</td>
                         <td>3</td>
@@ -421,7 +381,37 @@ section h2 {
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>main.runGameLoop</td>
+                        <td>games.GetReward</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>terrain.placeStairs</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>7</td>
+                        <td class="increase">&#43;250.0%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>main.initializeV4Systems</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td class="increase">&#43;100.0%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>network.GetStats</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>2</td>
                         <td>5</td>
@@ -431,51 +421,31 @@ section h2 {
                     
                     <tr class="regression-row">
                         <td>complexity_increase</td>
-                        <td>engine.handleKeyboardNavigation</td>
+                        <td>engine.drawStatsPanel</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>6</td>
+                        <td class="increase">&#43;200.0%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>terrain.Validate</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>8</td>
+                        <td>11</td>
+                        <td class="increase">&#43;37.5%</td>
+                        <td class="severity-warning">warning</td>
+                    </tr>
+                    
+                    <tr class="regression-row">
+                        <td>complexity_increase</td>
+                        <td>main.initializeLogger</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>3</td>
-                        <td>5</td>
-                        <td class="increase">&#43;66.7%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.GetReputation</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
                         <td>4</td>
-                        <td class="increase">&#43;100.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.SetPlayerEntity</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>2</td>
-                        <td class="increase">&#43;100.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.CanTrade</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>6</td>
-                        <td class="increase">&#43;500.0%</td>
-                        <td class="severity-warning">warning</td>
-                    </tr>
-                    
-                    <tr class="regression-row">
-                        <td>complexity_increase</td>
-                        <td>engine.Draw</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>12</td>
-                        <td>15</td>
-                        <td class="increase">&#43;25.0%</td>
+                        <td class="increase">&#43;33.3%</td>
                         <td class="severity-warning">warning</td>
                     </tr>
                     
@@ -486,7 +456,7 @@ section h2 {
 
         
         <section class="improvements">
-            <h2>Improvements (27)</h2>
+            <h2>Improvements (40)</h2>
             <table class="data-table">
                 <thead>
                     <tr>
@@ -503,21 +473,11 @@ section h2 {
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>engine.drawTitleBar</td>
-                        <td>Overall function complexity changed</td>
-                        <td>6.70</td>
-                        <td>6.20</td>
-                        <td class="increase">&#43;7.5%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
                         <td>main.main</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>14</td>
+                        <td>3</td>
                         <td>1</td>
-                        <td class="increase">&#43;92.9%</td>
+                        <td class="increase">&#43;66.7%</td>
                         <td>low</td>
                     </tr>
                     
@@ -525,15 +485,215 @@ section h2 {
                         <td>complexity_decrease</td>
                         <td>main.main</td>
                         <td>Overall function complexity changed</td>
-                        <td>19.20</td>
+                        <td>4.40</td>
                         <td>1.30</td>
-                        <td class="increase">&#43;93.2%</td>
+                        <td class="increase">&#43;70.5%</td>
                         <td>critical</td>
                     </tr>
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>main.drawUI</td>
+                        <td>network.Connect</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>12</td>
+                        <td>3</td>
+                        <td class="increase">&#43;75.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.Connect</td>
+                        <td>Overall function complexity changed</td>
+                        <td>17.60</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;75.0%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.Disconnect</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>3</td>
+                        <td class="increase">&#43;40.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.Disconnect</td>
+                        <td>Overall function complexity changed</td>
+                        <td>7.00</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;37.1%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.SendInput</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>6</td>
+                        <td>3</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.SendInput</td>
+                        <td>Overall function complexity changed</td>
+                        <td>8.30</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;47.0%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.GetSelectedOption</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.GetSelectedOption</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;58.1%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.ApplyMute</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>4</td>
+                        <td>3</td>
+                        <td class="increase">&#43;25.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.ApplyMute</td>
+                        <td>Overall function complexity changed</td>
+                        <td>5.70</td>
+                        <td>4.90</td>
+                        <td class="increase">&#43;14.0%</td>
+                        <td>medium</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.handleMouseWheelScrolling</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.handleMouseWheelScrolling</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;36.7%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>11</td>
+                        <td>3</td>
+                        <td class="increase">&#43;72.7%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>15.80</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;72.2%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.RecordSnapshot</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>network.RecordSnapshot</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;58.1%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.generateWorldTerrain</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.generateWorldTerrain</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.40</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;29.5%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>sprites.Put</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>4</td>
+                        <td>3</td>
+                        <td class="increase">&#43;25.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>sprites.Put</td>
+                        <td>Overall function complexity changed</td>
+                        <td>5.70</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;22.8%</td>
+                        <td>medium</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.SubscribeChannel</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>4</td>
                         <td>2</td>
@@ -543,11 +703,111 @@ section h2 {
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>main.drawUI</td>
+                        <td>engine.SubscribeChannel</td>
                         <td>Overall function complexity changed</td>
-                        <td>6.20</td>
+                        <td>5.70</td>
                         <td>3.10</td>
-                        <td class="increase">&#43;50.0%</td>
+                        <td class="increase">&#43;45.6%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.runGameLoop</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>2</td>
+                        <td class="increase">&#43;60.0%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.runGameLoop</td>
+                        <td>Overall function complexity changed</td>
+                        <td>8.00</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;61.3%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>world.Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>world.Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;36.7%</td>
+                        <td>high</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.handleTouchScrolling</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>6</td>
+                        <td>5</td>
+                        <td class="increase">&#43;16.7%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.handleTouchScrolling</td>
+                        <td>Overall function complexity changed</td>
+                        <td>8.80</td>
+                        <td>7.50</td>
+                        <td class="increase">&#43;14.8%</td>
+                        <td>medium</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.OpenPortraitDialog</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td class="increase">&#43;66.7%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>engine.OpenPortraitDialog</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;73.5%</td>
+                        <td>critical</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td class="increase">&#43;66.7%</td>
+                        <td>low</td>
+                    </tr>
+                    
+                    <tr class="improvement-row">
+                        <td>complexity_decrease</td>
+                        <td>main.Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.40</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;70.5%</td>
                         <td>critical</td>
                     </tr>
                     
@@ -573,201 +833,41 @@ section h2 {
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>main.NewGame</td>
+                        <td>engine.UnsubscribeChannel</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>main.NewGame</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td>critical</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>terrain.ensureConnectivity</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>8</td>
-                        <td>6</td>
+                        <td>4</td>
+                        <td>3</td>
                         <td class="increase">&#43;25.0%</td>
                         <td>low</td>
                     </tr>
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>terrain.ensureConnectivity</td>
+                        <td>engine.UnsubscribeChannel</td>
                         <td>Overall function complexity changed</td>
-                        <td>11.90</td>
-                        <td>8.80</td>
-                        <td class="increase">&#43;26.1%</td>
-                        <td>high</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>engine.Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>5</td>
-                        <td>1</td>
-                        <td class="increase">&#43;80.0%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>engine.Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>7.50</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;82.7%</td>
-                        <td>critical</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>engine.handleMouseInput</td>
-                        <td>Overall function complexity changed</td>
-                        <td>6.70</td>
-                        <td>6.20</td>
-                        <td class="increase">&#43;7.5%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>federation.Start</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>5</td>
-                        <td>1</td>
-                        <td class="increase">&#43;80.0%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>federation.Start</td>
-                        <td>Overall function complexity changed</td>
-                        <td>7.50</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;82.7%</td>
-                        <td>critical</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>main.Draw</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>7</td>
-                        <td>4</td>
-                        <td class="increase">&#43;42.9%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>main.Draw</td>
-                        <td>Overall function complexity changed</td>
-                        <td>10.60</td>
-                        <td>6.70</td>
-                        <td class="increase">&#43;36.8%</td>
-                        <td>high</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>games.Initialize</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>3</td>
-                        <td>2</td>
-                        <td class="increase">&#43;33.3%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>games.Initialize</td>
-                        <td>Overall function complexity changed</td>
-                        <td>4.40</td>
-                        <td>3.10</td>
-                        <td class="increase">&#43;29.5%</td>
-                        <td>high</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>main.Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>21</td>
-                        <td>15</td>
-                        <td class="increase">&#43;28.6%</td>
-                        <td>high</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>main.Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>28.30</td>
-                        <td>21.50</td>
-                        <td class="increase">&#43;24.0%</td>
+                        <td>5.70</td>
+                        <td>4.90</td>
+                        <td class="increase">&#43;14.0%</td>
                         <td>medium</td>
                     </tr>
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>federation.Stop</td>
+                        <td>engine.IsMuted</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
+                        <td>4</td>
                         <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
+                        <td class="increase">&#43;75.0%</td>
                         <td>low</td>
                     </tr>
                     
                     <tr class="improvement-row">
                         <td>complexity_decrease</td>
-                        <td>federation.Stop</td>
+                        <td>engine.IsMuted</td>
                         <td>Overall function complexity changed</td>
-                        <td>3.10</td>
+                        <td>5.70</td>
                         <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td>critical</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>ui.Render</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td>low</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>complexity_decrease</td>
-                        <td>ui.Render</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td>critical</td>
-                    </tr>
-                    
-                    <tr class="improvement-row">
-                        <td>size_decrease</td>
-                        <td>main.Game</td>
-                        <td>Struct field count changed</td>
-                        <td>14</td>
-                        <td>5</td>
-                        <td class="increase">&#43;64.3%</td>
+                        <td class="increase">&#43;77.2%</td>
                         <td>critical</td>
                     </tr>
                     
@@ -778,7 +878,7 @@ section h2 {
 
         
         <section class="all-changes">
-            <h2>All Changes (60)</h2>
+            <h2>All Changes (72)</h2>
             <table class="data-table">
                 <thead>
                     <tr>
@@ -795,10 +895,10 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>wrapText</td>
+                        <td>initializeV4Systems</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>4</td>
-                        <td>8</td>
+                        <td>1</td>
+                        <td>2</td>
                         <td class="increase">&#43;100.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
@@ -807,47 +907,11 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>wrapText</td>
+                        <td>initializeV4Systems</td>
                         <td>Overall function complexity changed</td>
-                        <td>6.20</td>
-                        <td>11.90</td>
-                        <td class="increase">&#43;91.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>drawTitleBar</td>
-                        <td>Overall function complexity changed</td>
-                        <td>6.70</td>
-                        <td>6.20</td>
-                        <td class="increase">&#43;7.5%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>main</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>14</td>
-                        <td>1</td>
-                        <td class="increase">&#43;92.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>main</td>
-                        <td>Overall function complexity changed</td>
-                        <td>19.20</td>
                         <td>1.30</td>
-                        <td class="increase">&#43;93.2%</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;138.5%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -855,11 +919,107 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>CanTrade</td>
+                        <td>main</td>
                         <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
                         <td>1</td>
+                        <td class="increase">&#43;66.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>main</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.40</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;70.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Connect</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>12</td>
+                        <td>3</td>
+                        <td class="increase">&#43;75.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Connect</td>
+                        <td>Overall function complexity changed</td>
+                        <td>17.60</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;75.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Disconnect</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>3</td>
+                        <td class="increase">&#43;40.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Disconnect</td>
+                        <td>Overall function complexity changed</td>
+                        <td>7.00</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;37.1%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>4</td>
+                        <td>5</td>
+                        <td class="increase">&#43;25.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>5.70</td>
+                        <td>7.50</td>
+                        <td class="increase">&#43;31.6%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>SendInput</td>
+                        <td>Cyclomatic complexity changed</td>
                         <td>6</td>
-                        <td class="increase">&#43;500.0%</td>
+                        <td>3</td>
+                        <td class="increase">&#43;50.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -867,11 +1027,35 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>CanTrade</td>
+                        <td>SendInput</td>
                         <td>Overall function complexity changed</td>
-                        <td>1.30</td>
                         <td>8.30</td>
-                        <td class="increase">&#43;538.5%</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;47.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>GetSelectedOption</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>GetSelectedOption</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;58.1%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -879,10 +1063,10 @@ section h2 {
                     
                     <tr>
                         <td>function</td>
-                        <td>handleExitInput</td>
+                        <td>switchToTab</td>
                         <td>Function added</td>
                         <td>N/A</td>
-                        <td>5.70</td>
+                        <td>1.30</td>
                         <td class="neutral">0.0%</td>
                         <td class="threshold-ok">
                             OK
@@ -891,11 +1075,11 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>GetReputation</td>
+                        <td>ApplyMute</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
                         <td>4</td>
-                        <td class="increase">&#43;100.0%</td>
+                        <td>3</td>
+                        <td class="increase">&#43;25.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -903,11 +1087,11 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>GetReputation</td>
+                        <td>ApplyMute</td>
                         <td>Overall function complexity changed</td>
-                        <td>3.10</td>
                         <td>5.70</td>
-                        <td class="increase">&#43;83.9%</td>
+                        <td>4.90</td>
+                        <td class="increase">&#43;14.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -915,7 +1099,259 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>drawUI</td>
+                        <td>handleMouseWheelScrolling</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>handleMouseWheelScrolling</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;36.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>drawStatsPanel</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>6</td>
+                        <td class="increase">&#43;200.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>drawStatsPanel</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>8.80</td>
+                        <td class="increase">&#43;183.9%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>drawHeader</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>1</td>
+                        <td>3</td>
+                        <td class="increase">&#43;200.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>drawHeader</td>
+                        <td>Overall function complexity changed</td>
+                        <td>1.30</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;238.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>11</td>
+                        <td>3</td>
+                        <td class="increase">&#43;72.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>15.80</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;72.2%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function</td>
+                        <td>handleKeyboardScrolling</td>
+                        <td>Function added</td>
+                        <td>N/A</td>
+                        <td>4.40</td>
+                        <td class="neutral">0.0%</td>
+                        <td class="threshold-ok">
+                            OK
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function</td>
+                        <td>calculateMaxScroll</td>
+                        <td>Function added</td>
+                        <td>N/A</td>
+                        <td>7.00</td>
+                        <td class="neutral">0.0%</td>
+                        <td class="threshold-ok">
+                            OK
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>RecordSnapshot</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>RecordSnapshot</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;58.1%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>generateWorldTerrain</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>generateWorldTerrain</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.40</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;29.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>placeStairs</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>7</td>
+                        <td class="increase">&#43;250.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>placeStairs</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>10.60</td>
+                        <td class="increase">&#43;241.9%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Put</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>4</td>
+                        <td>3</td>
+                        <td class="increase">&#43;25.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Put</td>
+                        <td>Overall function complexity changed</td>
+                        <td>5.70</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;22.8%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Validate</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>8</td>
+                        <td>11</td>
+                        <td class="increase">&#43;37.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Validate</td>
+                        <td>Overall function complexity changed</td>
+                        <td>11.90</td>
+                        <td>15.80</td>
+                        <td class="increase">&#43;32.8%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function</td>
+                        <td>estimateContentHeight</td>
+                        <td>Function added</td>
+                        <td>N/A</td>
+                        <td>3.10</td>
+                        <td class="neutral">0.0%</td>
+                        <td class="threshold-ok">
+                            OK
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>SubscribeChannel</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>4</td>
                         <td>2</td>
@@ -927,11 +1363,59 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>drawUI</td>
+                        <td>SubscribeChannel</td>
                         <td>Overall function complexity changed</td>
-                        <td>6.20</td>
+                        <td>5.70</td>
                         <td>3.10</td>
-                        <td class="increase">&#43;50.0%</td>
+                        <td class="increase">&#43;45.6%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Generate</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>4</td>
+                        <td>7</td>
+                        <td class="increase">&#43;75.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Generate</td>
+                        <td>Overall function complexity changed</td>
+                        <td>5.70</td>
+                        <td>10.10</td>
+                        <td class="increase">&#43;77.2%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Generate</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>9</td>
+                        <td class="increase">&#43;80.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Generate</td>
+                        <td>Overall function complexity changed</td>
+                        <td>7.50</td>
+                        <td>13.20</td>
+                        <td class="increase">&#43;76.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -939,10 +1423,46 @@ section h2 {
                     
                     <tr>
                         <td>function</td>
-                        <td>calculateWindowPosition</td>
+                        <td>handleTabSwitching</td>
                         <td>Function added</td>
                         <td>N/A</td>
-                        <td>1.30</td>
+                        <td>4.40</td>
+                        <td class="neutral">0.0%</td>
+                        <td class="threshold-ok">
+                            OK
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Get</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Get</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>4.90</td>
+                        <td class="increase">&#43;58.1%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function</td>
+                        <td>updateTouchInputs</td>
+                        <td>Function added</td>
+                        <td>N/A</td>
+                        <td>7.00</td>
                         <td class="neutral">0.0%</td>
                         <td class="threshold-ok">
                             OK
@@ -952,6 +1472,126 @@ section h2 {
                     <tr>
                         <td>function_complexity</td>
                         <td>runGameLoop</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>5</td>
+                        <td>2</td>
+                        <td class="increase">&#43;60.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>runGameLoop</td>
+                        <td>Overall function complexity changed</td>
+                        <td>8.00</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;61.3%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>2</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>3.10</td>
+                        <td class="increase">&#43;36.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>GetReward</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>2</td>
+                        <td>3</td>
+                        <td class="increase">&#43;50.0%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>GetReward</td>
+                        <td>Overall function complexity changed</td>
+                        <td>3.10</td>
+                        <td>4.40</td>
+                        <td class="increase">&#43;41.9%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>initializeLogger</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>4</td>
+                        <td class="increase">&#43;33.3%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>initializeLogger</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>6.20</td>
+                        <td class="increase">&#43;26.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>handleTouchScrolling</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>6</td>
+                        <td>5</td>
+                        <td class="increase">&#43;16.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>handleTouchScrolling</td>
+                        <td>Overall function complexity changed</td>
+                        <td>8.80</td>
+                        <td>7.50</td>
+                        <td class="increase">&#43;14.8%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>GetStats</td>
                         <td>Cyclomatic complexity changed</td>
                         <td>2</td>
                         <td>5</td>
@@ -963,11 +1603,71 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>runGameLoop</td>
+                        <td>GetStats</td>
                         <td>Overall function complexity changed</td>
                         <td>3.10</td>
-                        <td>8.00</td>
-                        <td class="increase">&#43;158.1%</td>
+                        <td>8.50</td>
+                        <td class="increase">&#43;174.2%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>OpenPortraitDialog</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td class="increase">&#43;66.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>OpenPortraitDialog</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.90</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;73.5%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function</td>
+                        <td>clampScrollOffset</td>
+                        <td>Function added</td>
+                        <td>N/A</td>
+                        <td>4.40</td>
+                        <td class="neutral">0.0%</td>
+                        <td class="threshold-ok">
+                            OK
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_complexity</td>
+                        <td>Update</td>
+                        <td>Cyclomatic complexity changed</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td class="increase">&#43;66.7%</td>
+                        <td class="threshold-exceeded">
+                            Exceeded
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>function_overall_complexity</td>
+                        <td>Update</td>
+                        <td>Overall function complexity changed</td>
+                        <td>4.40</td>
+                        <td>1.30</td>
+                        <td class="increase">&#43;70.5%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -999,58 +1699,10 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>GetDuration</td>
+                        <td>UnsubscribeChannel</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>2</td>
-                        <td class="increase">&#43;100.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>GetDuration</td>
-                        <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>3.10</td>
-                        <td class="increase">&#43;138.5%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>NewGame</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>NewGame</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>ensureConnectivity</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>8</td>
-                        <td>6</td>
+                        <td>4</td>
+                        <td>3</td>
                         <td class="increase">&#43;25.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
@@ -1059,179 +1711,11 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>ensureConnectivity</td>
-                        <td>Overall function complexity changed</td>
-                        <td>11.90</td>
-                        <td>8.80</td>
-                        <td class="increase">&#43;26.1%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Generate</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>4</td>
-                        <td>12</td>
-                        <td class="increase">&#43;200.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Generate</td>
+                        <td>UnsubscribeChannel</td>
                         <td>Overall function complexity changed</td>
                         <td>5.70</td>
-                        <td>16.60</td>
-                        <td class="increase">&#43;191.2%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>5</td>
-                        <td>1</td>
-                        <td class="increase">&#43;80.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>7.50</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;82.7%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function</td>
-                        <td>updateTimersAndTouchHandlers</td>
-                        <td>Function added</td>
-                        <td>N/A</td>
-                        <td>12.70</td>
-                        <td class="neutral">0.0%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Draw</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>12</td>
-                        <td>15</td>
-                        <td class="increase">&#43;25.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Draw</td>
-                        <td>Overall function complexity changed</td>
-                        <td>16.60</td>
-                        <td>21.00</td>
-                        <td class="increase">&#43;26.5%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>handleMouseInput</td>
-                        <td>Overall function complexity changed</td>
-                        <td>6.70</td>
-                        <td>6.20</td>
-                        <td class="increase">&#43;7.5%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>3</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>4.40</td>
-                        <td class="increase">&#43;41.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>createPlayerEntity</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>5</td>
-                        <td class="increase">&#43;400.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>createPlayerEntity</td>
-                        <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>7.50</td>
-                        <td class="increase">&#43;476.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>3</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
                         <td>4.90</td>
-                        <td class="increase">&#43;58.1%</td>
+                        <td class="increase">&#43;14.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -1239,179 +1723,11 @@ section h2 {
                     
                     <tr>
                         <td>function_complexity</td>
-                        <td>Start</td>
+                        <td>IsMuted</td>
                         <td>Cyclomatic complexity changed</td>
-                        <td>5</td>
-                        <td>1</td>
-                        <td class="increase">&#43;80.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Start</td>
-                        <td>Overall function complexity changed</td>
-                        <td>7.50</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;82.7%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function</td>
-                        <td>handleModeSwitching</td>
-                        <td>Function added</td>
-                        <td>N/A</td>
-                        <td>4.40</td>
-                        <td class="neutral">0.0%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Draw</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>7</td>
                         <td>4</td>
-                        <td class="increase">&#43;42.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Draw</td>
-                        <td>Overall function complexity changed</td>
-                        <td>10.60</td>
-                        <td>6.70</td>
-                        <td class="increase">&#43;36.8%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function</td>
-                        <td>handleTransactionConfirmation</td>
-                        <td>Function added</td>
-                        <td>N/A</td>
-                        <td>3.10</td>
-                        <td class="neutral">0.0%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>generateWorldTerrain</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>3</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>generateWorldTerrain</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>4.40</td>
-                        <td class="increase">&#43;41.9%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>handleKeyboardNavigation</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>3</td>
-                        <td>5</td>
-                        <td class="increase">&#43;66.7%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>handleKeyboardNavigation</td>
-                        <td>Overall function complexity changed</td>
-                        <td>4.40</td>
-                        <td>7.00</td>
-                        <td class="increase">&#43;59.1%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Initialize</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>3</td>
-                        <td>2</td>
-                        <td class="increase">&#43;33.3%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Initialize</td>
-                        <td>Overall function complexity changed</td>
-                        <td>4.40</td>
-                        <td>3.10</td>
-                        <td class="increase">&#43;29.5%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Update</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>21</td>
-                        <td>15</td>
-                        <td class="increase">&#43;28.6%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Update</td>
-                        <td>Overall function complexity changed</td>
-                        <td>28.30</td>
-                        <td>21.50</td>
-                        <td class="increase">&#43;24.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Stop</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
                         <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
+                        <td class="increase">&#43;75.0%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -1419,83 +1735,11 @@ section h2 {
                     
                     <tr>
                         <td>function_overall_complexity</td>
-                        <td>Stop</td>
+                        <td>IsMuted</td>
                         <td>Overall function complexity changed</td>
-                        <td>3.10</td>
+                        <td>5.70</td>
                         <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function</td>
-                        <td>getCurrentInventoryForMode</td>
-                        <td>Function added</td>
-                        <td>N/A</td>
-                        <td>9.30</td>
-                        <td class="neutral">0.0%</td>
-                        <td class="threshold-ok">
-                            OK
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>Render</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>2</td>
-                        <td>1</td>
-                        <td class="increase">&#43;50.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>Render</td>
-                        <td>Overall function complexity changed</td>
-                        <td>3.10</td>
-                        <td>1.30</td>
-                        <td class="increase">&#43;58.1%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_complexity</td>
-                        <td>SetPlayerEntity</td>
-                        <td>Cyclomatic complexity changed</td>
-                        <td>1</td>
-                        <td>2</td>
-                        <td class="increase">&#43;100.0%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>function_overall_complexity</td>
-                        <td>SetPlayerEntity</td>
-                        <td>Overall function complexity changed</td>
-                        <td>1.30</td>
-                        <td>3.10</td>
-                        <td class="increase">&#43;138.5%</td>
-                        <td class="threshold-exceeded">
-                            Exceeded
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>struct_fields</td>
-                        <td>Game</td>
-                        <td>Struct field count changed</td>
-                        <td>14</td>
-                        <td>5</td>
-                        <td class="increase">&#43;64.3%</td>
+                        <td class="increase">&#43;77.2%</td>
                         <td class="threshold-exceeded">
                             Exceeded
                         </td>
@@ -1506,8 +1750,8 @@ section h2 {
                         <td>engine</td>
                         <td>Package cohesion changed</td>
                         <td>3.12</td>
-                        <td>3.12</td>
-                        <td class="increase">&#43;0.2%</td>
+                        <td>3.13</td>
+                        <td class="increase">&#43;0.3%</td>
                         <td class="threshold-ok">
                             OK
                         </td>

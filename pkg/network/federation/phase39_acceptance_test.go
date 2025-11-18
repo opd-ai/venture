@@ -213,7 +213,7 @@ func TestAcceptance_NonceReplayPrevention(t *testing.T) {
 // TestAcceptance_PortalActivation verifies portal activation workflow
 func TestAcceptance_PortalActivation(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -375,7 +375,7 @@ func BenchmarkAcceptance_FullTransferCycle(b *testing.B) {
 
 func BenchmarkAcceptance_PortalActivation(b *testing.B) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -394,4 +394,9 @@ func BenchmarkAcceptance_PortalActivation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ps.ActivatePortal(player.ID, portal.ID, authMgr, transferMgr)
 	}
+}
+
+func testIdentity() *ServerIdentity {
+	id, _ := NewServerIdentity("test-server")
+	return id
 }

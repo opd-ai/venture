@@ -375,8 +375,13 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	serverLogger := logger.WithField("component", "v6_systems")
 
 	// Phase 38: Federation protocol for server-to-server communication
-	serverID := "venture-server" // TODO: Use actual server identity from config
-	federationProtocol := federation.NewFederationProtocol(serverID)
+	serverID := "venture-server"
+	serverIdentity, err := federation.NewServerIdentity(serverID)
+	if err != nil {
+		serverLogger.WithError(err).Warn("Failed to create server identity, using basic identity")
+		serverIdentity, _ = federation.NewServerIdentity("fallback-server")
+	}
+	federationProtocol := federation.NewFederationProtocol(serverID, serverIdentity)
 
 	// Phase 39: Portal system for cross-server travel (server-authoritative)
 	portalSystem := federation.NewPortalSystem(world, federationProtocol)

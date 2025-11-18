@@ -300,9 +300,13 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 // initializeV6Systems initializes Version 6.0 persistent world and federation systems.
 func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Phase 38: Federation protocol for server-to-server communication
-	// Use server name from hostname or default to "venture-client"
 	serverID := fmt.Sprintf("client-%d", time.Now().Unix())
-	sys.federationProtocol = federation.NewFederationProtocol(serverID)
+	clientIdentity, err := federation.NewServerIdentity(serverID)
+	if err != nil {
+		clientLogger.WithError(err).Warn("Failed to create client identity")
+		clientIdentity, _ = federation.NewServerIdentity("fallback-client")
+	}
+	sys.federationProtocol = federation.NewFederationProtocol(serverID, clientIdentity)
 
 	// Phase 39: Portal system for cross-server travel
 	sys.portalSystem = federation.NewPortalSystem(game.World, sys.federationProtocol)

@@ -2,11 +2,12 @@ package engine
 
 // PortalComponent represents a cross-server portal
 type PortalComponent struct {
-	DestinationServer string // Server ID or "local" for same-server
-	DestinationX      float64
-	DestinationY      float64
-	RequiredItem      string // Optional key item
-	TrustRequired     string // Trust level required
+	DestinationServer  string // Server ID or "local" for same-server
+	DestinationX       float64
+	DestinationY       float64
+	RequiredItem       string // Optional key item
+	TrustRequired      string // Trust level required
+	RequiresActivation bool   // Whether portal needs manual activation
 }
 
 // Type returns the component type

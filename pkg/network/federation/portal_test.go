@@ -9,7 +9,7 @@ import (
 
 func TestNewPortalSystem(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 
 	if ps == nil {
@@ -27,7 +27,7 @@ func TestNewPortalSystem(t *testing.T) {
 
 func TestPortalSystem_LocalTeleport(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -63,7 +63,7 @@ func TestPortalSystem_LocalTeleport(t *testing.T) {
 
 func TestPortalSystem_LocalTeleport_NoPosition(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -90,7 +90,7 @@ func TestPortalSystem_LocalTeleport_NoPosition(t *testing.T) {
 
 func TestPortalSystem_CrossServerTransfer(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -131,7 +131,7 @@ func TestPortalSystem_CrossServerTransfer(t *testing.T) {
 
 func TestPortalSystem_RequiredItem_Present(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -166,7 +166,7 @@ func TestPortalSystem_RequiredItem_Present(t *testing.T) {
 
 func TestPortalSystem_RequiredItem_Missing(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -196,7 +196,7 @@ func TestPortalSystem_RequiredItem_Missing(t *testing.T) {
 
 func TestPortalSystem_PortalNotFound(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -212,7 +212,7 @@ func TestPortalSystem_PortalNotFound(t *testing.T) {
 
 func TestPortalSystem_NotAPortal(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -231,7 +231,7 @@ func TestPortalSystem_NotAPortal(t *testing.T) {
 
 func TestPortalSystem_Update(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 
 	// Create portal
@@ -250,7 +250,7 @@ func TestPortalSystem_Update(t *testing.T) {
 
 func TestCheckRequiredItem_NoInventory(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 
 	player := world.CreateEntity()
@@ -263,7 +263,7 @@ func TestCheckRequiredItem_NoInventory(t *testing.T) {
 
 func TestCheckRequiredItem_PlayerNotFound(t *testing.T) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 
 	err := ps.checkRequiredItem(99999, "Portal Key")
@@ -276,7 +276,7 @@ func TestCheckRequiredItem_PlayerNotFound(t *testing.T) {
 
 func BenchmarkPortalSystem_LocalTeleport(b *testing.B) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 	authMgr := NewAuthManager()
 	transferMgr := NewTransferManager()
@@ -301,7 +301,7 @@ func BenchmarkPortalSystem_LocalTeleport(b *testing.B) {
 
 func BenchmarkPortalSystem_CheckRequiredItem(b *testing.B) {
 	world := engine.NewWorld()
-	federation := NewFederationProtocol("server-1")
+	federation := NewFederationProtocol("server-1", testIdentity())
 	ps := NewPortalSystem(world, federation)
 
 	player := world.CreateEntity()

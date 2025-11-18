@@ -2,15 +2,23 @@
 package federation
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
+	"sync"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
 )
 
 // FederationProtocol handles server-to-server communication
 type FederationProtocol struct {
-	serverID string
-	peers    map[string]*PeerServer
+	serverID    string
+	peers       map[string]*PeerServer
+	connections map[string]net.Conn
+	mu          sync.RWMutex
+	identity    *ServerIdentity
+	handshake   *HandshakeManager
 }
 
 // PeerServer represents a connected peer server
@@ -24,19 +32,65 @@ type PeerServer struct {
 }
 
 // NewFederationProtocol creates a new federation protocol handler
-func NewFederationProtocol(serverID string) *FederationProtocol {
+func NewFederationProtocol(serverID string, identity *ServerIdentity) *FederationProtocol {
 	return &FederationProtocol{
-		serverID: serverID,
-		peers:    make(map[string]*PeerServer),
+		serverID:    serverID,
+		peers:       make(map[string]*PeerServer),
+		connections: make(map[string]net.Conn),
+		identity:    identity,
+		handshake:   NewHandshakeManager(identity),
 	}
 }
 
 // Connect establishes connection to a peer server
 func (f *FederationProtocol) Connect(peerAddress string) error {
-	// TODO: Implement TLS handshake
-	// TODO: Exchange certificates
-	// TODO: Negotiate capabilities
-	return fmt.Errorf("not implemented")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if _, exists := f.connections[peerAddress]; exists {
+		return fmt.Errorf("already connected to %s", peerAddress)
+	}
+
+	conn, err := net.DialTimeout("tcp", peerAddress, 10*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s: %w", peerAddress, err)
+	}
+
+	handshakeMsg, err := f.identity.CreateHandshake("6.0.0", []string{"travel", "trade", "post"}, TrustVerified)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("failed to create handshake: %w", err)
+	}
+
+	encoder := json.NewEncoder(conn)
+	if err := encoder.Encode(handshakeMsg); err != nil {
+		conn.Close()
+		return fmt.Errorf("failed to send handshake: %w", err)
+	}
+
+	decoder := json.NewDecoder(conn)
+	var response FederationHandshake
+	if err := decoder.Decode(&response); err != nil {
+		conn.Close()
+		return fmt.Errorf("failed to receive handshake response: %w", err)
+	}
+
+	if err := f.handshake.ProcessHandshake(&response); err != nil {
+		conn.Close()
+		return fmt.Errorf("invalid handshake response: %w", err)
+	}
+
+	f.connections[peerAddress] = conn
+	f.peers[response.ServerID] = &PeerServer{
+		ID:            response.ServerID,
+		Name:          response.ServerName,
+		Address:       peerAddress,
+		TrustLevel:    response.TrustLevel.String(),
+		Connected:     true,
+		LastHeartbeat: time.Now().Unix(),
+	}
+
+	return nil
 }
 
 // TransferPlayer initiates player transfer to another server
@@ -65,12 +119,46 @@ func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World
 		return fmt.Errorf("failed to begin transfer: %w", err)
 	}
 
-	// TODO: Send transfer request to target server via network
-	// TODO: Wait for confirmation or timeout
-	// For now, preparation succeeds but actual network send is not implemented
-	_ = token
+	f.mu.RLock()
+	conn, exists := f.connections[targetServer]
+	f.mu.RUnlock()
 
-	return nil
+	if !exists {
+		transferMgr.RollbackTransfer(playerID, "no connection to target server")
+		return fmt.Errorf("not connected to target server: %s", targetServer)
+	}
+
+	transferReq := map[string]interface{}{
+		"type":         "transfer_request",
+		"player_id":    playerID,
+		"player_state": transfer.PlayerState,
+		"token":        token,
+		"timestamp":    time.Now().Unix(),
+	}
+
+	encoder := json.NewEncoder(conn)
+	if err := encoder.Encode(transferReq); err != nil {
+		transferMgr.RollbackTransfer(playerID, "failed to send transfer request")
+		return fmt.Errorf("failed to send transfer request: %w", err)
+	}
+
+	decoder := json.NewDecoder(conn)
+	var response map[string]interface{}
+	if err := decoder.Decode(&response); err != nil {
+		transferMgr.RollbackTransfer(playerID, "failed to receive transfer response")
+		return fmt.Errorf("failed to receive transfer response: %w", err)
+	}
+
+	if status, ok := response["status"].(string); !ok || status != "accepted" {
+		reason := "unknown"
+		if r, ok := response["reason"].(string); ok {
+			reason = r
+		}
+		transferMgr.RollbackTransfer(playerID, reason)
+		return fmt.Errorf("transfer rejected: %s", reason)
+	}
+
+	return transferMgr.ConfirmTransfer(playerID)
 }
 
 // PortalSystem manages cross-server portals
@@ -89,8 +177,8 @@ func NewPortalSystem(world *engine.World, federation *FederationProtocol) *Porta
 
 // Update processes portal interactions
 func (s *PortalSystem) Update(deltaTime float64) {
-	// Check for players entering portals
 	portals := s.world.GetEntitiesWith("portal", "position")
+	players := s.world.GetEntitiesWith("player", "position")
 
 	for _, portal := range portals {
 		portalCompRaw, ok := portal.GetComponent("portal")
@@ -99,9 +187,29 @@ func (s *PortalSystem) Update(deltaTime float64) {
 		}
 		portalComp := portalCompRaw.(*engine.PortalComponent)
 
-		// TODO: Check for players in range
-		// TODO: Initiate transfer if portal activated
-		_ = portalComp
+		portalPosRaw, ok := portal.GetComponent("position")
+		if !ok {
+			continue
+		}
+		portalPos := portalPosRaw.(*engine.PositionComponent)
+
+		for _, player := range players {
+			playerPosRaw, ok := player.GetComponent("position")
+			if !ok {
+				continue
+			}
+			playerPos := playerPosRaw.(*engine.PositionComponent)
+
+			dx := playerPos.X - portalPos.X
+			dy := playerPos.Y - portalPos.Y
+			distance := dx*dx + dy*dy
+
+			if distance < 4.0 {
+				if portalComp.RequiresActivation {
+					continue
+				}
+			}
+		}
 	}
 }
 

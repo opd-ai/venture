@@ -19,7 +19,7 @@ func TestNewFederationProtocol(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fp := NewFederationProtocol(tt.serverID)
+			fp := NewFederationProtocol(tt.serverID, testIdentity())
 			if fp == nil {
 				t.Fatal("NewFederationProtocol returned nil")
 			}
@@ -51,7 +51,7 @@ func TestConnect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fp := NewFederationProtocol("test-server")
+			fp := NewFederationProtocol("test-server", testIdentity())
 			err := fp.Connect(tt.peerAddress)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Connect() error = %v, wantErr %v", err, tt.wantErr)
@@ -75,7 +75,7 @@ func TestTransferPlayer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fp := NewFederationProtocol("test-server")
+			fp := NewFederationProtocol("test-server", testIdentity())
 			world := engine.NewWorld()
 			authMgr := NewAuthManager()
 			transferMgr := NewTransferManager()
@@ -91,7 +91,7 @@ func TestTransferPlayer(t *testing.T) {
 // TestNewPortalSystem_TableDriven tests creation of portal system with various parameter combinations
 func TestNewPortalSystem_TableDriven(t *testing.T) {
 	world := engine.NewWorld()
-	fp := NewFederationProtocol("test-server")
+	fp := NewFederationProtocol("test-server", testIdentity())
 
 	tests := []struct {
 		name       string
@@ -123,7 +123,7 @@ func TestNewPortalSystem_TableDriven(t *testing.T) {
 // TestPortalSystemUpdate tests portal system update loop
 func TestPortalSystemUpdate(t *testing.T) {
 	world := engine.NewWorld()
-	fp := NewFederationProtocol("test-server")
+	fp := NewFederationProtocol("test-server", testIdentity())
 	ps := NewPortalSystem(world, fp)
 
 	tests := []struct {
@@ -268,7 +268,7 @@ func TestActivatePortal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			world := engine.NewWorld()
-			fp := NewFederationProtocol("test-server")
+			fp := NewFederationProtocol("test-server", testIdentity())
 			ps := NewPortalSystem(world, fp)
 			authMgr := NewAuthManager()
 			transferMgr := NewTransferManager()
@@ -374,7 +374,7 @@ func TestLocalTeleport(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			world := engine.NewWorld()
-			fp := NewFederationProtocol("test-server")
+			fp := NewFederationProtocol("test-server", testIdentity())
 			ps := NewPortalSystem(world, fp)
 
 			playerID, destX, destY := tt.setup(world)
@@ -439,14 +439,14 @@ func TestPeerServerFields(t *testing.T) {
 // BenchmarkNewFederationProtocol benchmarks federation protocol creation
 func BenchmarkNewFederationProtocol(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewFederationProtocol("test-server")
+		NewFederationProtocol("test-server", testIdentity())
 	}
 }
 
 // BenchmarkNewPortalSystem benchmarks portal system creation
 func BenchmarkNewPortalSystem(b *testing.B) {
 	world := engine.NewWorld()
-	fp := NewFederationProtocol("test-server")
+	fp := NewFederationProtocol("test-server", testIdentity())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -457,7 +457,7 @@ func BenchmarkNewPortalSystem(b *testing.B) {
 // BenchmarkLocalTeleport benchmarks local teleportation
 func BenchmarkLocalTeleport(b *testing.B) {
 	world := engine.NewWorld()
-	fp := NewFederationProtocol("test-server")
+	fp := NewFederationProtocol("test-server", testIdentity())
 	ps := NewPortalSystem(world, fp)
 
 	player := world.CreateEntity()
@@ -472,7 +472,7 @@ func BenchmarkLocalTeleport(b *testing.B) {
 // BenchmarkPortalSystemUpdate benchmarks portal system update
 func BenchmarkPortalSystemUpdate(b *testing.B) {
 	world := engine.NewWorld()
-	fp := NewFederationProtocol("test-server")
+	fp := NewFederationProtocol("test-server", testIdentity())
 	ps := NewPortalSystem(world, fp)
 
 	// Create some portals

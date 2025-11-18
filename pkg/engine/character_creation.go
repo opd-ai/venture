@@ -515,14 +515,19 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	// Update touch button positions based on panel layout
 	cc.updateTouchButtonPositions()
 
-	// Update touch buttons
+	// Update touch buttons (conditionally based on current step)
+	// Next button is always visible
 	if cc.nextButton != nil {
 		cc.nextButton.Update()
 	}
-	if cc.backButton != nil {
+	
+	// Back button only on steps after nameInput
+	if cc.backButton != nil && cc.currentStep != stepNameInput {
 		cc.backButton.Update()
 	}
-	if cc.skipButton != nil {
+	
+	// Skip button only on portrait selection step
+	if cc.skipButton != nil && cc.currentStep == stepPortraitSelection {
 		cc.skipButton.Update()
 	}
 
@@ -1046,6 +1051,9 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 // Returns to the previous step in character creation
 func (cc *EbitenCharacterCreation) handleBackButton() {
 	switch cc.currentStep {
+	case stepNameInput:
+		// No back navigation from first step - do nothing
+		return
 	case stepClassSelection:
 		cc.currentStep = stepNameInput
 		cc.keyboardShown = false // Will trigger keyboard on re-entry

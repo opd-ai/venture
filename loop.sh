@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=1
+ITER=4
 
 fix() { 
     go test -race ./...

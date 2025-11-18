@@ -58,7 +58,14 @@ dev() {
         echo "All directories have AUDIT.md files. Skipping Audit phase."
     fi
 
-    echo "iteration started - Maintenance Phase 3: Resolution check."
+    echo "iteration started - Maintenance Phase 3: Auto check."
+    copilot -p "/delegate $(cat docs/AUTO.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Auto check completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+
+    echo "iteration started - Maintenance Phase 4: Resolution check."
     copilot -p "/delegate $(cat docs/PLAY.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "Resolution check completed, sleeping for 1 minute..."

@@ -1276,9 +1276,10 @@ func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, 
 }
 
 // handleHostAndPlay starts embedded server if host-and-play mode is enabled.
-func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
+// Returns cleanup function that should be deferred by caller.
+func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) func() {
 	if !*hostAndPlay {
-		return
+		return func() {} // Return no-op cleanup
 	}
 
 	// Log message depends on whether this was explicitly requested or auto-enabled
@@ -1295,12 +1296,13 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 	if err != nil {
 		clientLogger.WithError(err).Fatal("failed to start embedded server")
 	}
-	defer cleanup()
 
 	*server = serverAddr
 	*multiplayer = true
 
 	clientLogger.WithField("serverAddr", serverAddr).Info("embedded server started, connecting client")
+	
+	return cleanup // Return cleanup to be deferred by caller
 }
 
 // createGameInstance initializes the main game instance with logging and profiling.

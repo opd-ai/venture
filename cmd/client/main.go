@@ -30,7 +30,9 @@ func main() {
 		clientLogger.Info("no server specified - defaulting to local host-and-play mode on 127.0.0.1")
 	}
 
-	handleHostAndPlay(logger, clientLogger)
+	serverCleanup := handleHostAndPlay(logger, clientLogger)
+	defer serverCleanup() // Cleanup server when application exits
+	
 	networkClient := initializeNetworkClient(logger, clientLogger)
 	defer cleanupNetworkClient(networkClient, clientLogger)
 

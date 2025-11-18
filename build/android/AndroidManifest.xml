@@ -40,6 +40,7 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="sensorLandscape"
             android:windowSoftInputMode="adjustResize">
+            <meta-data android:name="android.app.lib_name" android:value="mobile" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

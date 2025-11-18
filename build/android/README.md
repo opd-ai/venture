@@ -87,13 +87,24 @@ Use the `scripts/build-android.sh` script to build the Android app:
 
 **Error: "Didn't find class org.golang.app.GoNativeActivity"**
 
-This error occurs when the `mobile.aar` file is missing or wasn't properly included in the APK. To fix:
+This error occurs when:
+1. The `mobile.aar` file is missing or wasn't properly included in the APK
+2. The AndroidManifest.xml is missing the required `<meta-data>` element
+
+To fix:
 
 1. Ensure the AAR was built: `./scripts/build-android.sh aar`
 2. Verify the AAR exists: `ls -lh build/android/libs/mobile.aar`
-3. Rebuild the APK: `./scripts/build-android.sh apk`
+3. Verify the AndroidManifest.xml contains the meta-data element:
+   ```xml
+   <activity android:name="org.golang.app.GoNativeActivity" ...>
+       <meta-data android:name="android.app.lib_name" android:value="mobile" />
+       ...
+   </activity>
+   ```
+4. Rebuild the APK: `./scripts/build-android.sh apk`
 
-The AAR file contains the `GoNativeActivity` class required to run the Go-based game on Android.
+The AAR file contains the `GoNativeActivity` class and native libraries required to run the Go-based game on Android. The `<meta-data>` element tells the activity which native library to load.
 
 ## Resources
 

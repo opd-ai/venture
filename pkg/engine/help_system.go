@@ -302,103 +302,140 @@ func (hs *EbitenHelpSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Update touch handler
+	hs.updateTouchInputs()
+
+	if hs.handleKeyboardNavigation() {
+		return
+	}
+
+	hs.handleTouchScrolling()
+	hs.handleTopicSwitching()
+	hs.updateContextHints(entities)
+}
+
+// updateTouchInputs updates touch handler and close button state.
+func (hs *EbitenHelpSystem) updateTouchInputs() {
 	if hs.touchHandler != nil {
 		hs.touchHandler.Update()
 	}
-
-	// Update close button
 	if hs.closeButton != nil {
 		hs.closeButton.Update()
 	}
+}
 
-	// Standardized dual-exit menu navigation: H or F1 key OR Escape
-	// GAP-004 REPAIR: All menus use toggle key + ESC for consistent UX
+// handleKeyboardNavigation processes keyboard input for help menu navigation.
+// Returns true if help visibility changed, requiring early return.
+func (hs *EbitenHelpSystem) handleKeyboardNavigation() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) || inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		hs.Toggle()
-		return
+		return true
 	}
 	if hs.Visible && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		hs.Hide()
+		return true
+	}
+	return false
+}
+
+// handleTouchScrolling processes touch swipe gestures for content scrolling.
+func (hs *EbitenHelpSystem) handleTouchScrolling() {
+	if !hs.Visible || hs.touchHandler == nil {
 		return
 	}
 
-	// Touch: Handle swipe for scrolling
-	if hs.Visible && hs.touchHandler != nil {
-		if direction, distance, detected := hs.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for scrolling
-			if direction > 1.0 || direction < -1.0 {
-				if direction < 0 {
-					hs.scrollOffset += distance * 0.5
-				} else {
-					hs.scrollOffset -= distance * 0.5
-				}
-				// Clamp scroll offset
-				if hs.scrollOffset < 0 {
-					hs.scrollOffset = 0
-				}
-			}
-		}
+	direction, distance, detected := hs.touchHandler.GetSwipe()
+	if !detected {
+		return
 	}
 
-	// Topic switching with number keys (when help visible)
-	if hs.Visible {
-		if inpututil.IsKeyJustPressed(ebiten.Key1) {
-			hs.ShowTopic("controls")
+	if direction > 1.0 || direction < -1.0 {
+		if direction < 0 {
+			hs.scrollOffset += distance * 0.5
+		} else {
+			hs.scrollOffset -= distance * 0.5
 		}
-		if inpututil.IsKeyJustPressed(ebiten.Key2) {
-			hs.ShowTopic("combat")
-		}
-		if inpututil.IsKeyJustPressed(ebiten.Key3) {
-			hs.ShowTopic("inventory")
-		}
-		if inpututil.IsKeyJustPressed(ebiten.Key4) {
-			hs.ShowTopic("progression")
-		}
-		if inpututil.IsKeyJustPressed(ebiten.Key5) {
-			hs.ShowTopic("world")
-		}
-		if inpututil.IsKeyJustPressed(ebiten.Key6) {
-			hs.ShowTopic("multiplayer")
+		if hs.scrollOffset < 0 {
+			hs.scrollOffset = 0
 		}
 	}
+}
 
-	// Auto-detect contexts and show hints
+// handleTopicSwitching processes number key input for switching help topics.
+func (hs *EbitenHelpSystem) handleTopicSwitching() {
+	if !hs.Visible {
+		return
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
+		hs.ShowTopic("controls")
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key2) {
+		hs.ShowTopic("combat")
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key3) {
+		hs.ShowTopic("inventory")
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key4) {
+		hs.ShowTopic("progression")
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key5) {
+		hs.ShowTopic("world")
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key6) {
+		hs.ShowTopic("multiplayer")
+	}
+}
+
+// updateContextHints detects player entity state and displays relevant hints.
+func (hs *EbitenHelpSystem) updateContextHints(entities []*Entity) {
 	for _, entity := range entities {
-		// Check for player entity
 		if !entity.HasComponent("input") {
 			continue
 		}
+		hs.checkHealthHint(entity)
+		hs.checkInventoryHint(entity)
+	}
+}
 
-		// Check health
-		if entity.HasComponent("health") {
-			comp, ok := entity.GetComponent("health")
-			if !ok {
-				continue
-			}
-			health, ok := comp.(*HealthComponent)
-			if !ok {
-				continue
-			}
-			if health.Current < health.Max*0.25 && !hs.ShowQuickHint {
-				hs.ShowQuickHintFor("low_health")
-			}
-		}
+// checkHealthHint displays low health hint when player health is critical.
+func (hs *EbitenHelpSystem) checkHealthHint(entity *Entity) {
+	if !entity.HasComponent("health") {
+		return
+	}
 
-		// Check inventory
-		if entity.HasComponent("inventory") {
-			comp, ok := entity.GetComponent("inventory")
-			if !ok {
-				continue
-			}
-			inv, ok := comp.(*InventoryComponent)
-			if !ok {
-				continue
-			}
-			if len(inv.Items) >= inv.MaxItems && !hs.ShowQuickHint {
-				hs.ShowQuickHintFor("inventory_full")
-			}
-		}
+	comp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+
+	health, ok := comp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	if health.Current < health.Max*0.25 && !hs.ShowQuickHint {
+		hs.ShowQuickHintFor("low_health")
+	}
+}
+
+// checkInventoryHint displays inventory full hint when player inventory is at capacity.
+func (hs *EbitenHelpSystem) checkInventoryHint(entity *Entity) {
+	if !entity.HasComponent("inventory") {
+		return
+	}
+
+	comp, ok := entity.GetComponent("inventory")
+	if !ok {
+		return
+	}
+
+	inv, ok := comp.(*InventoryComponent)
+	if !ok {
+		return
+	}
+
+	if len(inv.Items) >= inv.MaxItems && !hs.ShowQuickHint {
+		hs.ShowQuickHintFor("inventory_full")
 	}
 }
 

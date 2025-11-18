@@ -1285,7 +1285,12 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 		return
 	}
 
-	clientLogger.Info("host-and-play mode enabled - starting embedded server")
+	// Log message depends on whether this was explicitly requested or auto-enabled
+	if *hostLAN {
+		clientLogger.Info("host-and-play mode enabled (explicit) - starting LAN-accessible server")
+	} else {
+		clientLogger.Info("host-and-play mode enabled - starting localhost server")
+	}
 
 	serverAddr, cleanup, err := startEmbeddedServer(logger, *seed, *genreID)
 	if err != nil {

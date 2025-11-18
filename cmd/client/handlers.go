@@ -1286,10 +1286,13 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 	}
 
 	// Log message depends on whether this was explicitly requested or auto-enabled
-	if *hostLAN {
-		clientLogger.Info("host-and-play mode enabled (explicit) - starting LAN-accessible server")
-	} else {
-		clientLogger.Info("host-and-play mode enabled - starting localhost server")
+	// Auto-enabled case already logged in main.go, so we skip redundant logging here
+	if !autoEnabledHostAndPlay {
+		if *hostLAN {
+			clientLogger.Info("host-and-play mode - starting LAN-accessible server on 0.0.0.0")
+		} else {
+			clientLogger.Info("host-and-play mode - starting localhost server on 127.0.0.1")
+		}
 	}
 
 	serverAddr, cleanup, err := startEmbeddedServer(logger, *seed, *genreID)

@@ -88,7 +88,7 @@ You'll explore unique dungeons, fight generated enemies, collect randomized loot
 
 ### Solo Play (Default Behavior)
 
-**New in V6.0:** Starting the client automatically runs a local server for a seamless single-player experience:
+**New in V6.0:** Starting the client automatically runs a local server for a seamless solo play experience:
 
 ```bash
 # Simply run the client - server starts automatically on 127.0.0.1

@@ -13,16 +13,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// autoEnabledHostAndPlay tracks whether host-and-play was auto-enabled (vs explicitly requested).
+var autoEnabledHostAndPlay bool
+
 func main() {
 	flag.Parse()
 
 	logger, clientLogger := initializeLogger()
 
 	// Auto-enable host-and-play when no explicit server connection is specified
-	// This makes localhost server the default behavior instead of standalone single-player
+	// This makes localhost server the default behavior instead of single-player mode
 	if !*multiplayer && !*hostAndPlay {
 		*hostAndPlay = true
 		*hostLAN = false // Force localhost binding for implicit mode
+		autoEnabledHostAndPlay = true
 		clientLogger.Info("no server specified - defaulting to local host-and-play mode on 127.0.0.1")
 	}
 

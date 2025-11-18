@@ -1272,11 +1272,7 @@ func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, 
 
 	clientLogger.Info("game initialized successfully")
 	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
-	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
-
-	if *multiplayer {
-		clientLogger.WithField("server", *server).Info("multiplayer connected")
-	}
+	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed, "server": *server}).Info("game settings")
 }
 
 // handleHostAndPlay starts embedded server if host-and-play mode is enabled.
@@ -1286,10 +1282,13 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) {
 	}
 
 	// Log message depends on whether this was explicitly requested or auto-enabled
-	if *hostLAN {
-		clientLogger.Info("host-and-play mode enabled (explicit) - starting LAN-accessible server")
-	} else {
-		clientLogger.Info("host-and-play mode enabled - starting localhost server")
+	// Auto-enabled case already logged in main.go, so we skip redundant logging here
+	if !autoEnabledHostAndPlay {
+		if *hostLAN {
+			clientLogger.Info("host-and-play mode - starting LAN-accessible server on 0.0.0.0")
+		} else {
+			clientLogger.Info("host-and-play mode - starting localhost server on 127.0.0.1")
+		}
 	}
 
 	serverAddr, cleanup, err := startEmbeddedServer(logger, *seed, *genreID)

@@ -214,10 +214,10 @@ var (
 	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
 	verbose          = flag.Bool("verbose", false, "Enable verbose logging")
 	profile          = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
-	multiplayer      = flag.Bool("multiplayer", false, "Connect to remote server (use with --server). Default: starts local server on 127.0.0.1")
+	multiplayer      = flag.Bool("multiplayer", false, "Connect to remote multiplayer server (default: starts local server)")
 	server           = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
-	hostAndPlay      = flag.Bool("host-and-play", false, "Explicitly host server and auto-connect (now default behavior when no server specified)")
-	hostLAN          = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access (use with --host-and-play, default is localhost only)")
+	hostAndPlay      = flag.Bool("host-and-play", false, "Explicitly enable host-and-play mode (default behavior when --multiplayer not specified)")
+	hostLAN          = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access instead of 127.0.0.1 (requires host-and-play mode)")
 	serverPort       = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers    = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick       = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
@@ -264,15 +264,11 @@ func initializeLogger() (*logrus.Logger, *logrus.Entry) {
 	return logger, clientLogger
 }
 
-// initializeNetworkClient sets up network connection if multiplayer mode is enabled.
-// Returns the network client or nil for single-player mode.
+// initializeNetworkClient sets up network connection for multiplayer.
+// With auto-enable logic, host-and-play always sets *multiplayer=true before this is called,
+// so this function always creates a network client (either to embedded or remote server).
 func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
-	if !*multiplayer {
-		clientLogger.Info("single-player mode (use -multiplayer flag to connect to server)")
-		return nil
-	}
-
-	clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
+	clientLogger.WithField("server", *server).Info("connecting to server")
 
 	clientConfig := network.DefaultClientConfig()
 	clientConfig.ServerAddress = *server

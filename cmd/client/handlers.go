@@ -1272,11 +1272,7 @@ func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, 
 
 	clientLogger.Info("game initialized successfully")
 	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
-	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed}).Info("game settings")
-
-	if *multiplayer {
-		clientLogger.WithField("server", *server).Info("multiplayer connected")
-	}
+	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed, "server": *server}).Info("game settings")
 }
 
 // handleHostAndPlay starts embedded server if host-and-play mode is enabled.

@@ -264,16 +264,11 @@ func initializeLogger() (*logrus.Logger, *logrus.Entry) {
 	return logger, clientLogger
 }
 
-// initializeNetworkClient sets up network connection if multiplayer mode is enabled.
-// Returns the network client or nil if host-and-play hasn't been initialized yet.
-// Note: With auto-enable logic, host-and-play sets *multiplayer=true before this is called.
+// initializeNetworkClient sets up network connection for multiplayer.
+// With auto-enable logic, host-and-play always sets *multiplayer=true before this is called,
+// so this function always creates a network client (either to embedded or remote server).
 func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
-	if !*multiplayer {
-		clientLogger.Info("localhost multiplayer mode - connecting to embedded server")
-		return nil
-	}
-
-	clientLogger.WithField("server", *server).Info("multiplayer mode enabled - connecting to server")
+	clientLogger.WithField("server", *server).Info("connecting to server")
 
 	clientConfig := network.DefaultClientConfig()
 	clientConfig.ServerAddress = *server

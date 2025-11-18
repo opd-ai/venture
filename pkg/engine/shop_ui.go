@@ -215,7 +215,30 @@ func (ui *ShopUI) SetMode(mode ShopMode) {
 // Handles dual-exit navigation (F key + ESC), mode switching (TAB),
 // item selection (mouse/keyboard), and transaction confirmation (ENTER/click).
 func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
-	// Update transaction message timer
+	ui.updateTimersAndTouchHandlers(deltaTime)
+
+	if ui.handleExitInput() {
+		return
+	}
+
+	if !ui.visible || ui.playerEntity == nil || ui.merchantEntity == nil {
+		return
+	}
+
+	if ui.handleModeSwitching() {
+		return
+	}
+
+	currentInventory := ui.getCurrentInventoryForMode()
+	windowX, windowY, windowWidth := ui.calculateWindowPosition()
+
+	ui.handleMouseInput(currentInventory, windowX, windowY, windowWidth)
+	ui.handleKeyboardNavigation(currentInventory)
+	ui.handleTransactionConfirmation(currentInventory)
+}
+
+// updateTimersAndTouchHandlers updates transaction message timers and all touch UI elements.
+func (ui *ShopUI) updateTimersAndTouchHandlers(deltaTime float64) {
 	if ui.transactionMessageTime > 0 {
 		ui.transactionMessageTime -= deltaTime
 		if ui.transactionMessageTime < 0 {
@@ -224,12 +247,10 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// Update touch handler
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
 
-	// Update all touch buttons
 	if ui.closeButton != nil {
 		ui.closeButton.Update()
 	}
@@ -245,115 +266,124 @@ func (ui *ShopUI) Update(entities []*Entity, deltaTime float64) {
 	if ui.mode == ShopModeSell && ui.sellButton != nil {
 		ui.sellButton.Update()
 	}
+}
 
-	// Dual-exit navigation: F key (toggle) OR ESC (close only)
-	// Note: Shop uses F key to match merchant interaction semantics
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Shop, ui.visible); shouldClose {
-		if shouldToggle {
-			ui.Toggle()
-		} else {
-			ui.Close()
-		}
-		// Also end dialog if dialog system is set
-		if ui.dialogSystem != nil {
-			ui.dialogSystem.EndDialog()
-		}
-		return
+// handleExitInput processes dual-exit navigation (F key toggle or ESC close).
+// Returns true if the UI should exit early from the update loop.
+func (ui *ShopUI) handleExitInput() bool {
+	shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Shop, ui.visible)
+	if !shouldClose {
+		return false
 	}
 
-	if !ui.visible || ui.playerEntity == nil || ui.merchantEntity == nil {
-		return
+	if shouldToggle {
+		ui.Toggle()
+	} else {
+		ui.Close()
 	}
 
-	// Handle mode switching (TAB key)
-	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		if ui.mode == ShopModeBuy {
-			ui.mode = ShopModeSell
-		} else {
-			ui.mode = ShopModeBuy
-		}
-		ui.selectedSlot = -1
-		return
+	if ui.dialogSystem != nil {
+		ui.dialogSystem.EndDialog()
+	}
+	return true
+}
+
+// handleModeSwitching processes TAB key to switch between buy and sell modes.
+// Returns true if mode was switched (indicating early exit from update loop).
+func (ui *ShopUI) handleModeSwitching() bool {
+	if !inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		return false
 	}
 
-	// Get current inventory based on mode
-	var currentInventory []*item.Item
 	if ui.mode == ShopModeBuy {
-		// Show merchant inventory
+		ui.mode = ShopModeSell
+	} else {
+		ui.mode = ShopModeBuy
+	}
+	ui.selectedSlot = -1
+	return true
+}
+
+// getCurrentInventoryForMode retrieves the appropriate inventory based on current shop mode.
+// Returns merchant inventory for buy mode and player inventory for sell mode.
+func (ui *ShopUI) getCurrentInventoryForMode() []*item.Item {
+	if ui.mode == ShopModeBuy {
 		if merchantComp, ok := ui.merchantEntity.GetComponent("merchant"); ok {
-			// Type assert with safety check
 			if merchant, ok := merchantComp.(*MerchantComponent); ok {
-				currentInventory = merchant.Inventory
+				return merchant.Inventory
 			}
 		}
 	} else {
-		// Show player inventory
 		if invComp, ok := ui.playerEntity.GetComponent("inventory"); ok {
-			// Type assert with safety check
 			if inv, ok := invComp.(*InventoryComponent); ok {
-				currentInventory = inv.Items
+				return inv.Items
 			}
 		}
 	}
+	return nil
+}
 
-	// Calculate shop window position
+// calculateWindowPosition computes the shop window position and dimensions.
+// Returns window X position, Y position, and width for use in rendering and input handling.
+func (ui *ShopUI) calculateWindowPosition() (int, int, int) {
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
-	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 150 // Extra for header/footer
+	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 150
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
+	return windowX, windowY, windowWidth
+}
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
+// handleMouseInput processes mouse and touch input for item slot selection.
+// Updates hoveredSlot and selectedSlot based on mouse position and clicks.
+func (ui *ShopUI) handleMouseInput(currentInventory []*item.Item, windowX, windowY, windowWidth int) {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	mousePressed := IsTouchOrMouseJustPressed()
 
-	// Check if mouse is over item grid
-	gridStartY := windowY + 100 // Below header
-	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
-		mouseY >= gridStartY && mouseY < gridStartY+ui.gridRows*ui.slotSize {
-
-		// Calculate which slot is hovered
-		relX := mouseX - (windowX + ui.padding)
-		relY := mouseY - gridStartY
-		col := relX / ui.slotSize
-		row := relY / ui.slotSize
-
-		if col >= 0 && col < ui.gridCols && row >= 0 && row < ui.gridRows {
-			slotIndex := row*ui.gridCols + col
-			ui.hoveredSlot = slotIndex
-
-			// Select slot on click
-			if mousePressed && slotIndex < len(currentInventory) {
-				ui.selectedSlot = slotIndex
-			}
-		}
-	} else {
+	gridStartY := windowY + 100
+	if mouseX < windowX+ui.padding || mouseX >= windowX+windowWidth-ui.padding ||
+		mouseY < gridStartY || mouseY >= gridStartY+ui.gridRows*ui.slotSize {
 		ui.hoveredSlot = -1
+		return
 	}
 
-	// Handle keyboard navigation
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowLeft) {
-		if ui.selectedSlot > 0 {
-			ui.selectedSlot--
-		}
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowRight) {
-		if ui.selectedSlot < len(currentInventory)-1 {
-			ui.selectedSlot++
-		}
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
-		if ui.selectedSlot >= ui.gridCols {
-			ui.selectedSlot -= ui.gridCols
-		}
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
-		if ui.selectedSlot+ui.gridCols < len(currentInventory) {
-			ui.selectedSlot += ui.gridCols
-		}
-	}
+	relX := mouseX - (windowX + ui.padding)
+	relY := mouseY - gridStartY
+	col := relX / ui.slotSize
+	row := relY / ui.slotSize
 
-	// Handle transaction confirmation (ENTER or double-click)
+	if col >= 0 && col < ui.gridCols && row >= 0 && row < ui.gridRows {
+		slotIndex := row*ui.gridCols + col
+		ui.hoveredSlot = slotIndex
+
+		if mousePressed && slotIndex < len(currentInventory) {
+			ui.selectedSlot = slotIndex
+		}
+	}
+}
+
+// handleKeyboardNavigation processes arrow key input for item slot navigation.
+// Updates selectedSlot based on arrow key presses within inventory bounds.
+func (ui *ShopUI) handleKeyboardNavigation(currentInventory []*item.Item) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowLeft) && ui.selectedSlot > 0 {
+		ui.selectedSlot--
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowRight) && ui.selectedSlot < len(currentInventory)-1 {
+		ui.selectedSlot++
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) && ui.selectedSlot >= ui.gridCols {
+		ui.selectedSlot -= ui.gridCols
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) && ui.selectedSlot+ui.gridCols < len(currentInventory) {
+		ui.selectedSlot += ui.gridCols
+	}
+}
+
+// handleTransactionConfirmation processes ENTER key or mouse click to confirm transactions.
+// Executes the buy or sell transaction when a valid item slot is selected.
+func (ui *ShopUI) handleTransactionConfirmation(currentInventory []*item.Item) {
 	confirmPressed := inpututil.IsKeyJustPressed(ebiten.KeyEnter)
+	mousePressed := IsTouchOrMouseJustPressed()
+
 	if (confirmPressed || mousePressed) && ui.selectedSlot >= 0 && ui.selectedSlot < len(currentInventory) {
 		ui.executeTransaction()
 	}

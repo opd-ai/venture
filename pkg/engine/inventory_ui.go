@@ -114,31 +114,211 @@ func (ui *EbitenInventoryUI) Hide() {
 
 // Update processes input for the inventory UI.
 func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
-	// Update touch handler
-	if ui.touchHandler != nil {
-		ui.touchHandler.Update()
-	}
+	ui.updateTouchComponents()
 
-	// Update close button
-	if ui.closeButton != nil {
-		ui.closeButton.Update()
-	}
-
-	// Standardized dual-exit menu navigation: toggle key (I) OR Escape
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
-		if shouldToggle {
-			ui.Toggle()
-		} else {
-			ui.Hide()
-		}
-		return // Don't process other input on the same frame as toggle/close
+	if ui.handleMenuNavigation() {
+		return
 	}
 
 	if !ui.visible || ui.playerEntity == nil {
 		return
 	}
 
-	// Get inventory component
+	inventory := ui.getInventoryComponent()
+	if inventory == nil {
+		return
+	}
+
+	windowX, windowY, windowWidth, windowHeight := ui.calculateWindowBounds()
+	ui.handleTouchScrolling()
+
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	mousePressed := IsTouchOrMouseJustPressed()
+	mouseReleased := IsTouchOrMouseJustReleased()
+
+	ui.handleMouseHover(mouseX, mouseY, windowX, windowY, windowWidth, windowHeight, inventory, mousePressed)
+	ui.handleDragRelease(mouseReleased, inventory)
+	ui.handleKeyboardShortcuts(inventory)
+}
+
+// updateTouchComponents updates touch-related UI components.
+func (ui *EbitenInventoryUI) updateTouchComponents() {
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+}
+
+// handleMenuNavigation processes menu navigation input and returns whether to exit early.
+func (ui *EbitenInventoryUI) handleMenuNavigation() bool {
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Hide()
+		}
+		return true
+	}
+	return false
+}
+
+// getInventoryComponent retrieves and validates the inventory component.
+func (ui *EbitenInventoryUI) getInventoryComponent() *InventoryComponent {
+	invComp, ok := ui.playerEntity.GetComponent("inventory")
+	if !ok {
+		return nil
+	}
+	inventory, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return nil
+	}
+	return inventory
+}
+
+// calculateWindowBounds computes the inventory window dimensions and position.
+func (ui *EbitenInventoryUI) calculateWindowBounds() (windowX, windowY, windowWidth, windowHeight int) {
+	windowWidth = ui.gridCols*ui.slotSize + ui.padding*2
+	windowHeight = ui.gridRows*ui.slotSize + ui.padding*2 + 100
+	windowX = (ui.screenWidth - windowWidth) / 2
+	windowY = (ui.screenHeight - windowHeight) / 2
+	return windowX, windowY, windowWidth, windowHeight
+}
+
+// handleTouchScrolling processes touch swipe gestures for scrolling.
+func (ui *EbitenInventoryUI) handleTouchScrolling() {
+	if ui.touchHandler == nil {
+		return
+	}
+
+	direction, distance, detected := ui.touchHandler.GetSwipe()
+	if !detected {
+		return
+	}
+
+	if direction > 1.0 || direction < -1.0 {
+		if direction < 0 {
+			ui.scrollOffset += distance * 0.5
+		} else {
+			ui.scrollOffset -= distance * 0.5
+		}
+		if ui.scrollOffset < 0 {
+			ui.scrollOffset = 0
+		}
+	}
+}
+
+// handleMouseHover processes mouse hover and click events on inventory slots.
+func (ui *EbitenInventoryUI) handleMouseHover(mouseX, mouseY, windowX, windowY, windowWidth, windowHeight int, inventory *InventoryComponent, mousePressed bool) {
+	if !ui.isMouseOverGrid(mouseX, mouseY, windowX, windowY, windowWidth, windowHeight) {
+		ui.hoveredSlot = -1
+		return
+	}
+
+	slotIndex := ui.calculateHoveredSlot(mouseX, mouseY, windowX, windowY)
+	if slotIndex < 0 {
+		ui.hoveredSlot = -1
+		return
+	}
+
+	ui.hoveredSlot = slotIndex
+
+	if mousePressed {
+		ui.handleSlotClick(slotIndex, inventory)
+	}
+}
+
+// isMouseOverGrid checks if the mouse is within the inventory grid area.
+func (ui *EbitenInventoryUI) isMouseOverGrid(mouseX, mouseY, windowX, windowY, windowWidth, windowHeight int) bool {
+	return mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
+		mouseY >= windowY+ui.padding+60 && mouseY < windowY+windowHeight-ui.padding
+}
+
+// calculateHoveredSlot determines which inventory slot is under the mouse cursor.
+func (ui *EbitenInventoryUI) calculateHoveredSlot(mouseX, mouseY, windowX, windowY int) int {
+	relX := mouseX - (windowX + ui.padding)
+	relY := mouseY - (windowY + ui.padding + 60)
+	col := relX / ui.slotSize
+	row := relY / ui.slotSize
+
+	if col >= 0 && col < ui.gridCols && row >= 0 && row < ui.gridRows {
+		return row*ui.gridCols + col
+	}
+	return -1
+}
+
+// handleSlotClick initiates drag-and-drop for the clicked inventory slot.
+func (ui *EbitenInventoryUI) handleSlotClick(slotIndex int, inventory *InventoryComponent) {
+	if slotIndex >= len(inventory.Items) {
+		return
+	}
+
+	item := inventory.Items[slotIndex]
+	if item != nil {
+		ui.dragging = true
+		ui.draggedIndex = slotIndex
+		ui.selectedSlot = slotIndex
+		ui.dragPreview = ui.generateItemPreview(item)
+	}
+}
+
+// handleDragRelease completes drag-and-drop operations when mouse is released.
+func (ui *EbitenInventoryUI) handleDragRelease(mouseReleased bool, inventory *InventoryComponent) {
+	if !mouseReleased || !ui.dragging {
+		return
+	}
+
+	if ui.hoveredSlot >= 0 && ui.hoveredSlot != ui.draggedIndex {
+		if ui.hoveredSlot < len(inventory.Items) && ui.draggedIndex < len(inventory.Items) {
+			inventory.Items[ui.hoveredSlot], inventory.Items[ui.draggedIndex] = inventory.Items[ui.draggedIndex], inventory.Items[ui.hoveredSlot]
+		}
+	}
+
+	ui.dragging = false
+	ui.draggedIndex = -1
+	ui.dragPreview = nil
+}
+
+// handleKeyboardShortcuts processes keyboard input for item actions.
+func (ui *EbitenInventoryUI) handleKeyboardShortcuts(inventory *InventoryComponent) {
+	if ui.selectedSlot < 0 || ui.inventorySystem == nil {
+		return
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
+		ui.handleEquipOrUseKey(inventory)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		ui.handleDropKey()
+	}
+}
+
+// handleEquipOrUseKey processes the E key to equip or use an item.
+func (ui *EbitenInventoryUI) handleEquipOrUseKey(inventory *InventoryComponent) {
+	if ui.selectedSlot >= len(inventory.Items) {
+		return
+	}
+
+	item := inventory.Items[ui.selectedSlot]
+	if item == nil {
+		return
+	}
+
+	if item.IsEquippable() {
+		if err := ui.inventorySystem.EquipItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
+			ui.errorState.ShowError(fmt.Sprintf("Cannot equip: %v", err))
+		}
+	} else if item.IsConsumable() {
+		if err := ui.inventorySystem.UseConsumable(ui.playerEntity.ID, ui.selectedSlot); err != nil {
+			ui.errorState.ShowError(fmt.Sprintf("Cannot use: %v", err))
+		}
+	}
+}
+
+// handleDropKey processes the D key to drop an item.
+func (ui *EbitenInventoryUI) handleDropKey() {
 	invComp, ok := ui.playerEntity.GetComponent("inventory")
 	if !ok {
 		return
@@ -148,125 +328,14 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Calculate inventory window position
-	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
-	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 100 // Extra for equipment/stats
-	windowX := (ui.screenWidth - windowWidth) / 2
-	windowY := (ui.screenHeight - windowHeight) / 2
-
-	// Handle mouse and touch input (Touch support for WASM/mobile)
-	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	mousePressed := IsTouchOrMouseJustPressed()
-	mouseReleased := IsTouchOrMouseJustReleased()
-
-	// Handle touch scrolling
-	if ui.touchHandler != nil {
-		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for scrolling
-			if direction > 1.0 || direction < -1.0 {
-				// Swipe detected - update scroll offset
-				// Positive distance = swipe down = scroll up
-				if direction < 0 {
-					ui.scrollOffset += distance * 0.5
-				} else {
-					ui.scrollOffset -= distance * 0.5
-				}
-				// Clamp scroll offset
-				if ui.scrollOffset < 0 {
-					ui.scrollOffset = 0
-				}
-			}
-		}
+	if ui.selectedSlot >= len(inventory.Items) {
+		return
 	}
 
-	// Check if mouse is over inventory grid
-	if mouseX >= windowX+ui.padding && mouseX < windowX+windowWidth-ui.padding &&
-		mouseY >= windowY+ui.padding+60 && mouseY < windowY+windowHeight-ui.padding {
-
-		// Calculate which slot is hovered
-		relX := mouseX - (windowX + ui.padding)
-		relY := mouseY - (windowY + ui.padding + 60)
-		col := relX / ui.slotSize
-		row := relY / ui.slotSize
-
-		if col >= 0 && col < ui.gridCols && row >= 0 && row < ui.gridRows {
-			slotIndex := row*ui.gridCols + col
-			ui.hoveredSlot = slotIndex
-
-			// Handle click
-			if mousePressed {
-				if slotIndex < len(inventory.Items) {
-					item := inventory.Items[slotIndex]
-					if item != nil {
-						// Start dragging
-						ui.dragging = true
-						ui.draggedIndex = slotIndex
-						ui.selectedSlot = slotIndex
-
-						// Generate drag preview
-						ui.dragPreview = ui.generateItemPreview(item)
-					}
-				}
-			}
-		} else {
-			ui.hoveredSlot = -1
-		}
-	} else {
-		ui.hoveredSlot = -1
+	if err := ui.inventorySystem.DropItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
+		ui.errorState.ShowError(fmt.Sprintf("Cannot drop: %v", err))
 	}
-
-	// Handle drag release
-	if mouseReleased && ui.dragging {
-		if ui.hoveredSlot >= 0 && ui.hoveredSlot != ui.draggedIndex {
-			// Check if hovering over equipment slot (future enhancement)
-			// For now, only handle inventory-to-inventory swaps
-
-			// Swap items (simple implementation)
-			// In full implementation, would use InventorySystem methods
-			if ui.hoveredSlot < len(inventory.Items) && ui.draggedIndex < len(inventory.Items) {
-				// Swap
-				inventory.Items[ui.hoveredSlot], inventory.Items[ui.draggedIndex] = inventory.Items[ui.draggedIndex], inventory.Items[ui.hoveredSlot]
-			}
-		}
-		ui.dragging = false
-		ui.draggedIndex = -1
-		ui.dragPreview = nil // Clear preview
-	}
-
-	// Handle keyboard shortcuts
-	if inpututil.IsKeyJustPressed(ebiten.KeyE) && ui.selectedSlot >= 0 && ui.inventorySystem != nil {
-		// Use/equip selected item
-		if ui.selectedSlot < len(inventory.Items) {
-			item := inventory.Items[ui.selectedSlot]
-			if item != nil {
-				if item.IsEquippable() {
-					// Try to equip the item
-					if err := ui.inventorySystem.EquipItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// H-002 FIX: Show error to user instead of logging
-						ui.errorState.ShowError(fmt.Sprintf("Cannot equip: %v", err))
-					}
-				} else if item.IsConsumable() {
-					// Try to use consumable
-					if err := ui.inventorySystem.UseConsumable(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-						// H-002 FIX: Show error to user instead of logging
-						ui.errorState.ShowError(fmt.Sprintf("Cannot use: %v", err))
-					}
-				}
-			}
-		}
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyD) && ui.selectedSlot >= 0 && ui.inventorySystem != nil {
-		// Drop selected item
-		if ui.selectedSlot < len(inventory.Items) {
-			if err := ui.inventorySystem.DropItem(ui.playerEntity.ID, ui.selectedSlot); err != nil {
-				// H-002 FIX: Show error to user instead of logging
-				ui.errorState.ShowError(fmt.Sprintf("Cannot drop: %v", err))
-			}
-			// Deselect after dropping
-			ui.selectedSlot = -1
-		}
-	}
+	ui.selectedSlot = -1
 }
 
 // Draw renders the inventory UI.

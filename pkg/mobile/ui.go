@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -721,6 +722,8 @@ func (b *TouchButton) Update() {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if float64(mouseX) >= b.X && float64(mouseX) <= b.X+b.Width &&
 			float64(mouseY) >= b.Y && float64(mouseY) <= b.Y+b.Height {
+			fmt.Printf("DEBUG: TouchButton '%s' clicked at (%d, %d), bounds: (%.0f, %.0f, %.0f, %.0f)\n", 
+				b.Label, mouseX, mouseY, b.X, b.Y, b.X+b.Width, b.Y+b.Height)
 			if b.OnTap != nil {
 				b.OnTap()
 			}

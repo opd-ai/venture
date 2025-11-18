@@ -363,6 +363,10 @@ func (g *EbitenGame) handleGenreSelection(genreID string) {
 
 	// Reset character creation UI for new game
 	g.CharacterCreation.Reset()
+	
+	// Set default name from world seed so user has a starting name
+	g.CharacterCreation.SetDefaultNameFromSeed(g.worldSeed)
+	
 	g.isMultiplayerMode = false // Single-player mode
 
 	// Hide genre selection menu
@@ -675,10 +679,6 @@ func (g *EbitenGame) updateMenuState() (handled bool) {
 	case AppStateSettings:
 		g.SettingsUI.Update()
 		return true
-	case AppStateCharacterCreation:
-		// Character creation is handled separately in Update()
-		// Don't update main menu or other menus during character creation
-		return true
 	}
 
 	if g.StateManager.IsInMenu() {
@@ -693,6 +693,10 @@ func (g *EbitenGame) handleCharacterCreation() error {
 	completed := g.CharacterCreation.Update()
 	if !completed {
 		return nil
+	}
+
+	if g.logger != nil {
+		g.logger.Info("character creation completed, transitioning to gameplay")
 	}
 
 	charData := g.CharacterCreation.GetCharacterData()
@@ -845,12 +849,13 @@ func (g *EbitenGame) Update() error {
 
 	deltaTime := g.calculateDeltaTime()
 
-	if g.updateMenuState() {
-		return nil
-	}
-
+	// Handle character creation BEFORE updateMenuState to prevent main menu from consuming input
 	if g.StateManager.CurrentState() == AppStateCharacterCreation {
 		return g.handleCharacterCreation()
+	}
+
+	if g.updateMenuState() {
+		return nil
 	}
 
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {

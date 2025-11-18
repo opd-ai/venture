@@ -558,9 +558,11 @@ func (cc *EbitenCharacterCreation) Update() bool {
 func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 	// Next button (bottom-right of panel)
 	if cc.nextButton != nil {
+		nextX := cc.panelX + cc.panelWidth - 140
+		nextY := cc.panelY + cc.panelHeight - 60
 		cc.nextButton.SetPosition(
-			float64(cc.panelX+cc.panelWidth-140),
-			float64(cc.panelY+cc.panelHeight-60),
+			float64(nextX),
+			float64(nextY),
 		)
 	}
 

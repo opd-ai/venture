@@ -2,6 +2,7 @@ package hostplay
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
@@ -263,13 +264,12 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 			sm.world.Update(dt)
 
 			// Broadcast state updates to clients
-			data, shouldBroadcast, err := sm.stateBroadcaster.Broadcast()
+			snapshot, err := sm.stateBroadcaster.CreateSnapshot()
 			if err != nil {
-				sm.logger.Error("Failed to broadcast state", "error", err)
-			} else if shouldBroadcast && len(data) > 0 {
-				// Send broadcast data through server's network layer
-				// Note: Actual network sending would be handled by network.TCPServer
-				sm.logger.Debug("State broadcast", "size", len(data))
+				sm.logger.Error("Failed to create snapshot", "error", err)
+			} else if sm.stateBroadcaster.ShouldBroadcast() {
+				// Send entity state updates through TCPServer
+				sm.broadcastEntityStates(snapshot)
 			}
 		}
 	}
@@ -337,6 +337,96 @@ func (sm *ServerManager) removePlayer(playerID uint64) {
 	}
 
 	sm.logger.Warn("Could not find entity for player", "player_id", playerID)
+}
+
+// broadcastEntityStates sends entity state updates to all connected clients.
+func (sm *ServerManager) broadcastEntityStates(snapshot *WorldState) {
+	if snapshot == nil || len(snapshot.Entities) == 0 {
+		return
+	}
+
+	// Convert each entity state to network StateUpdate and broadcast
+	for _, entityState := range snapshot.Entities {
+		update := sm.convertToStateUpdate(entityState)
+		if update != nil {
+			sm.server.BroadcastStateUpdate(update)
+		}
+	}
+}
+
+// convertToStateUpdate converts a WorldState EntityState to a network StateUpdate.
+func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.StateUpdate {
+	update := &network.StateUpdate{
+		Timestamp: uint64(time.Now().UnixNano()),
+		EntityID:  entityState.ID,
+		Priority:  network.PriorityNormal,
+	}
+
+	// Add position component
+	if entityState.Position != nil {
+		posComp := &engine.PositionComponent{
+			X: entityState.Position.X,
+			Y: entityState.Position.Y,
+		}
+		posData, err := json.Marshal(posComp)
+		if err == nil {
+			update.Components = append(update.Components, network.ComponentData{
+				Type: "position",
+				Data: posData,
+			})
+		}
+	}
+
+	// Add velocity component
+	if entityState.Velocity != nil {
+		velComp := &engine.VelocityComponent{
+			VX: entityState.Velocity.VX,
+			VY: entityState.Velocity.VY,
+		}
+		velData, err := json.Marshal(velComp)
+		if err == nil {
+			update.Components = append(update.Components, network.ComponentData{
+				Type: "velocity",
+				Data: velData,
+			})
+		}
+	}
+
+	// Add health component
+	if entityState.Health != nil {
+		healthComp := &engine.HealthComponent{
+			Current: entityState.Health.Current,
+			Max:     entityState.Health.Max,
+		}
+		healthData, err := json.Marshal(healthComp)
+		if err == nil {
+			update.Components = append(update.Components, network.ComponentData{
+				Type: "health",
+				Data: healthData,
+			})
+		}
+	}
+
+	// Add rotation component
+	if entityState.Rotation != nil {
+		rotComp := &engine.RotationComponent{
+			Angle: entityState.Rotation.Angle,
+		}
+		rotData, err := json.Marshal(rotComp)
+		if err == nil {
+			update.Components = append(update.Components, network.ComponentData{
+				Type: "rotation",
+				Data: rotData,
+			})
+		}
+	}
+
+	// Only send if we have components
+	if len(update.Components) == 0 {
+		return nil
+	}
+
+	return update
 }
 
 // Stop gracefully stops the server and waits for the goroutine to exit.

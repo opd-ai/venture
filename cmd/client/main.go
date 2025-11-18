@@ -32,7 +32,7 @@ func main() {
 
 	serverCleanup := handleHostAndPlay(logger, clientLogger)
 	defer serverCleanup() // Cleanup server when application exits
-	
+
 	networkClient := initializeNetworkClient(logger, clientLogger)
 	defer cleanupNetworkClient(networkClient, clientLogger)
 

@@ -1301,7 +1301,7 @@ func handleHostAndPlay(logger *logrus.Logger, clientLogger *logrus.Entry) func()
 	*multiplayer = true
 
 	clientLogger.WithField("serverAddr", serverAddr).Info("embedded server started, connecting client")
-	
+
 	return cleanup // Return cleanup to be deferred by caller
 }
 

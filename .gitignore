@@ -69,3 +69,8 @@ build/
 *.gz
 /*.md
 /*.log
+/*.txt
+.DS_Store
+.idea/
+.vscode/
+/auditrunner

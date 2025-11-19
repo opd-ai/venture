@@ -1,0 +1,478 @@
+package learning
+
+import (
+	"testing"
+	"time"
+)
+
+func TestNewManager(t *testing.T) {
+	manager := NewManager()
+	if manager == nil {
+		t.Fatal("NewManager returned nil")
+	}
+	if manager.companions == nil {
+		t.Error("companions map not initialized")
+	}
+}
+
+func TestAddCompanion(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test_companion", 1.5)
+
+	if comp == nil {
+		t.Fatal("AddCompanion returned nil")
+	}
+	if comp.CompanionID != "test_companion" {
+		t.Errorf("expected ID 'test_companion', got '%s'", comp.CompanionID)
+	}
+	if comp.LearningRate != 1.5 {
+		t.Errorf("expected learning rate 1.5, got %f", comp.LearningRate)
+	}
+	if comp.SkillTree == nil {
+		t.Error("SkillTree not initialized")
+	}
+	if comp.Personality == nil {
+		t.Error("Personality not initialized")
+	}
+	if comp.Memory == nil {
+		t.Error("Memory not initialized")
+	}
+}
+
+func TestAddCompanionDefaultLearningRate(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test_companion", 0)
+
+	if comp.LearningRate != 1.0 {
+		t.Errorf("expected default learning rate 1.0, got %f", comp.LearningRate)
+	}
+}
+
+func TestGetCompanion(t *testing.T) {
+	manager := NewManager()
+	manager.AddCompanion("test_companion", 1.0)
+
+	comp, ok := manager.GetCompanion("test_companion")
+	if !ok {
+		t.Fatal("GetCompanion returned false")
+	}
+	if comp.CompanionID != "test_companion" {
+		t.Errorf("expected ID 'test_companion', got '%s'", comp.CompanionID)
+	}
+
+	_, ok = manager.GetCompanion("nonexistent")
+	if ok {
+		t.Error("GetCompanion returned true for nonexistent companion")
+	}
+}
+
+func TestRemoveCompanion(t *testing.T) {
+	manager := NewManager()
+	manager.AddCompanion("test_companion", 1.0)
+	manager.RemoveCompanion("test_companion")
+
+	_, ok := manager.GetCompanion("test_companion")
+	if ok {
+		t.Error("companion still exists after removal")
+	}
+}
+
+func TestSkillProgression(t *testing.T) {
+	sp := NewSkillProgression()
+
+	if sp.Skills == nil {
+		t.Fatal("Skills map not initialized")
+	}
+	if sp.SkillTree == nil {
+		t.Fatal("SkillTree map not initialized")
+	}
+	if len(sp.Skills) == 0 {
+		t.Error("Skills map is empty after initialization")
+	}
+}
+
+func TestAddExperience(t *testing.T) {
+	sp := NewSkillProgression()
+
+	err := sp.AddExperience("Basic Attack", 50.0, 1.0)
+	if err != nil {
+		t.Fatalf("AddExperience failed: %v", err)
+	}
+
+	skill := sp.Skills["Basic Attack"]
+	if skill.Experience != 50.0 {
+		t.Errorf("expected XP 50.0, got %f", skill.Experience)
+	}
+}
+
+func TestAddExperienceLevelUp(t *testing.T) {
+	sp := NewSkillProgression()
+
+	err := sp.AddExperience("Basic Attack", 150.0, 1.0)
+	if err != nil {
+		t.Fatalf("AddExperience failed: %v", err)
+	}
+
+	skill := sp.Skills["Basic Attack"]
+	if skill.Level != 1 {
+		t.Errorf("expected level 1, got %d", skill.Level)
+	}
+	if sp.AvailablePoints != 1 {
+		t.Errorf("expected 1 skill point, got %d", sp.AvailablePoints)
+	}
+}
+
+func TestAddExperienceWithLearningRate(t *testing.T) {
+	sp := NewSkillProgression()
+
+	err := sp.AddExperience("Basic Attack", 50.0, 2.0)
+	if err != nil {
+		t.Fatalf("AddExperience failed: %v", err)
+	}
+
+	skill := sp.Skills["Basic Attack"]
+	// 50 * 2.0 = 100 XP, which exactly levels up from 0→1, leaving 0 XP
+	if skill.Level != 1 {
+		t.Errorf("expected level 1, got %d", skill.Level)
+	}
+	if skill.Experience != 0.0 {
+		t.Errorf("expected 0 XP after level-up, got %f", skill.Experience)
+	}
+}
+
+func TestAddExperienceMaxLevel(t *testing.T) {
+	sp := NewSkillProgression()
+	skill := sp.Skills["Basic Attack"]
+	skill.Level = skill.MaxLevel
+
+	err := sp.AddExperience("Basic Attack", 100.0, 1.0)
+	if err != nil {
+		t.Fatalf("AddExperience failed: %v", err)
+	}
+
+	if skill.Experience != 0.0 {
+		t.Errorf("expected no XP gain at max level, got %f", skill.Experience)
+	}
+}
+
+func TestAddExperienceInvalidSkill(t *testing.T) {
+	sp := NewSkillProgression()
+
+	err := sp.AddExperience("Invalid Skill", 50.0, 1.0)
+	if err == nil {
+		t.Error("expected error for invalid skill, got nil")
+	}
+}
+
+func TestCanLearnSkill(t *testing.T) {
+	sp := NewSkillProgression()
+	sp.AvailablePoints = 5
+
+	canLearn, err := sp.CanLearnSkill("Basic Attack")
+	if err != nil {
+		t.Fatalf("CanLearnSkill failed: %v", err)
+	}
+	if !canLearn {
+		t.Error("expected to be able to learn Basic Attack")
+	}
+}
+
+func TestCanLearnSkillInsufficientPoints(t *testing.T) {
+	sp := NewSkillProgression()
+	sp.AvailablePoints = 0
+
+	canLearn, err := sp.CanLearnSkill("Basic Attack")
+	if canLearn {
+		t.Error("expected cannot learn with 0 points")
+	}
+	if err == nil {
+		t.Error("expected error for insufficient points")
+	}
+}
+
+func TestCanLearnSkillPrerequisiteNotMet(t *testing.T) {
+	sp := NewSkillProgression()
+	sp.AvailablePoints = 5
+
+	canLearn, err := sp.CanLearnSkill("Power Strike")
+	if canLearn {
+		t.Error("expected cannot learn without prerequisite")
+	}
+	if err == nil {
+		t.Error("expected error for prerequisite not met")
+	}
+}
+
+func TestLearnSkill(t *testing.T) {
+	sp := NewSkillProgression()
+	sp.AvailablePoints = 5
+
+	err := sp.LearnSkill("Basic Attack")
+	if err != nil {
+		t.Fatalf("LearnSkill failed: %v", err)
+	}
+
+	if sp.AvailablePoints != 4 {
+		t.Errorf("expected 4 points remaining, got %d", sp.AvailablePoints)
+	}
+}
+
+func TestPersonalityEvolution(t *testing.T) {
+	pe := NewPersonalityEvolution()
+
+	if pe.Traits == nil {
+		t.Fatal("Traits map not initialized")
+	}
+	if len(pe.Traits) != 10 {
+		t.Errorf("expected 10 traits, got %d", len(pe.Traits))
+	}
+
+	for trait, value := range pe.Traits {
+		if value != 0.5 {
+			t.Errorf("expected neutral value 0.5 for %s, got %f", trait.String(), value)
+		}
+	}
+}
+
+func TestAdjustTrait(t *testing.T) {
+	pe := NewPersonalityEvolution()
+
+	pe.AdjustTrait(TraitBrave, 0.2, "test reason")
+
+	if pe.Traits[TraitBrave] != 0.7 {
+		t.Errorf("expected 0.7, got %f", pe.Traits[TraitBrave])
+	}
+
+	if len(pe.Changes) != 1 {
+		t.Errorf("expected 1 change record, got %d", len(pe.Changes))
+	}
+}
+
+func TestAdjustTraitClamping(t *testing.T) {
+	pe := NewPersonalityEvolution()
+
+	pe.AdjustTrait(TraitBrave, 1.0, "max test")
+	if pe.Traits[TraitBrave] != 1.0 {
+		t.Errorf("expected clamped to 1.0, got %f", pe.Traits[TraitBrave])
+	}
+
+	pe.AdjustTrait(TraitBrave, -2.0, "min test")
+	if pe.Traits[TraitBrave] != 0.0 {
+		t.Errorf("expected clamped to 0.0, got %f", pe.Traits[TraitBrave])
+	}
+}
+
+func TestGetDominantTrait(t *testing.T) {
+	pe := NewPersonalityEvolution()
+	pe.Traits[TraitBrave] = 0.9
+	pe.Traits[TraitCautious] = 0.1
+
+	dominant := pe.GetDominantTrait()
+	if dominant != TraitBrave {
+		t.Errorf("expected TraitBrave, got %s", dominant.String())
+	}
+}
+
+func TestEventMemory(t *testing.T) {
+	em := NewEventMemory(1000)
+
+	if em.Events == nil {
+		t.Fatal("Events slice not initialized")
+	}
+	if em.MaxEvents != 1000 {
+		t.Errorf("expected MaxEvents 1000, got %d", em.MaxEvents)
+	}
+}
+
+func TestAddEvent(t *testing.T) {
+	em := NewEventMemory(1000)
+
+	event := MemorableEvent{
+		Type:        EventCombat,
+		Description: "test combat",
+		Timestamp:   time.Now(),
+		Importance:  0.5,
+	}
+
+	em.AddEvent(event)
+
+	if em.TotalEvents != 1 {
+		t.Errorf("expected TotalEvents 1, got %d", em.TotalEvents)
+	}
+	if len(em.Events) != 1 {
+		t.Errorf("expected 1 event, got %d", len(em.Events))
+	}
+}
+
+func TestAddEventLRUEviction(t *testing.T) {
+	em := NewEventMemory(10)
+
+	for i := 0; i < 15; i++ {
+		event := MemorableEvent{
+			Type:        EventCombat,
+			Description: "test event",
+			Timestamp:   time.Now(),
+			Importance:  0.5,
+		}
+		em.AddEvent(event)
+	}
+
+	if em.TotalEvents != 15 {
+		t.Errorf("expected TotalEvents 15, got %d", em.TotalEvents)
+	}
+	if len(em.Events) != 10 {
+		t.Errorf("expected 10 events (LRU), got %d", len(em.Events))
+	}
+}
+
+func TestGetRecentEvents(t *testing.T) {
+	em := NewEventMemory(1000)
+
+	for i := 0; i < 10; i++ {
+		event := MemorableEvent{
+			Type:        EventCombat,
+			Description: "test event",
+			Timestamp:   time.Now(),
+			Importance:  0.5,
+		}
+		em.AddEvent(event)
+	}
+
+	recent := em.GetRecentEvents(5)
+	if len(recent) != 5 {
+		t.Errorf("expected 5 recent events, got %d", len(recent))
+	}
+}
+
+func TestGetEventsByType(t *testing.T) {
+	em := NewEventMemory(1000)
+
+	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: time.Now()})
+	em.AddEvent(MemorableEvent{Type: EventDialog, Timestamp: time.Now()})
+	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: time.Now()})
+
+	combatEvents := em.GetEventsByType(EventCombat)
+	if len(combatEvents) != 2 {
+		t.Errorf("expected 2 combat events, got %d", len(combatEvents))
+	}
+}
+
+func TestProcessCombatAction(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	ProcessCombatAction(comp, true, true)
+
+	if comp.SkillTree.TotalXP == 0 {
+		t.Error("expected XP gain from combat action")
+	}
+	if len(comp.Memory.Events) == 0 {
+		t.Error("expected combat event in memory")
+	}
+}
+
+func TestProcessSocialInteraction(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	ProcessSocialInteraction(comp, "player123", true)
+
+	if comp.SkillTree.TotalXP == 0 {
+		t.Error("expected XP gain from social interaction")
+	}
+	if len(comp.Memory.Events) == 0 {
+		t.Error("expected social event in memory")
+	}
+}
+
+func TestProcessExploration(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	ProcessExploration(comp, true)
+
+	if comp.SkillTree.TotalXP == 0 {
+		t.Error("expected XP gain from exploration")
+	}
+	if len(comp.Memory.Events) == 0 {
+		t.Error("expected exploration event in memory")
+	}
+}
+
+func TestGeneratePersonalityDescription(t *testing.T) {
+	pe := NewPersonalityEvolution()
+	pe.Traits[TraitBrave] = 0.9
+
+	desc := GeneratePersonalityDescription(pe)
+	if len(desc) == 0 {
+		t.Error("expected non-empty personality description")
+	}
+}
+
+func TestAdaptBehaviorToCombatStyle(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	// Add some combat events
+	for i := 0; i < 10; i++ {
+		comp.Memory.AddEvent(MemorableEvent{
+			Type:      EventCombat,
+			Timestamp: time.Now(),
+		})
+	}
+
+	initialBrave := comp.Personality.Traits[TraitBrave]
+
+	AdaptBehaviorToCombatStyle(comp, 12345)
+
+	// Traits should have changed
+	finalBrave := comp.Personality.Traits[TraitBrave]
+	if initialBrave == finalBrave && comp.Personality.Traits[TraitCautious] == 0.5 {
+		t.Error("expected personality traits to change after adaptation")
+	}
+}
+
+// Benchmarks
+
+func BenchmarkAddExperience(b *testing.B) {
+	sp := NewSkillProgression()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = sp.AddExperience("Basic Attack", 10.0, 1.0)
+	}
+}
+
+func BenchmarkAdjustTrait(b *testing.B) {
+	pe := NewPersonalityEvolution()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		pe.AdjustTrait(TraitBrave, 0.01, "benchmark test")
+	}
+}
+
+func BenchmarkAddEvent(b *testing.B) {
+	em := NewEventMemory(1000)
+	event := MemorableEvent{
+		Type:        EventCombat,
+		Description: "benchmark event",
+		Timestamp:   time.Now(),
+		Importance:  0.5,
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		em.AddEvent(event)
+	}
+}
+
+func BenchmarkProcessCombatAction(b *testing.B) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		ProcessCombatAction(comp, true, true)
+	}
+}

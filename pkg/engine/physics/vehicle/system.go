@@ -43,7 +43,6 @@ func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(
 	state VehicleState,
 	deltaTime float64,
 ) VehicleState {
-	
 	if !evs.enabled {
 		return state
 	}
@@ -51,12 +50,12 @@ func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(
 	// Step 1: Update weight transfer based on vehicle dynamics
 	if weightTransfer != nil {
 		weightTransfer.Update(state.VelocityX, state.VelocityY, state.AngularVel, deltaTime)
-		
+
 		// Apply weight distribution to suspension
 		if suspension != nil {
 			weights := weightTransfer.GetWheelWeights()
 			totalMass := suspension.TotalMass
-			
+
 			// Distribute mass to wheels based on weight transfer
 			// Assuming 4-wheel layout: [FL, FR, RL, RR]
 			for i := 0; i < len(suspension.Wheels) && i < 4; i++ {
@@ -70,7 +69,7 @@ func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(
 	// Step 2: Update suspension physics
 	if suspension != nil && len(state.TerrainHeight) == len(suspension.Wheels) {
 		_ = suspension.Update(deltaTime, state.TerrainHeight) // Returns vertical offset for rendering
-		
+
 		// Check if vehicle is grounded (at least 2 wheels touching)
 		groundedCount := suspension.GetGroundedWheelCount()
 		state.IsGrounded = groundedCount >= 2
@@ -83,24 +82,24 @@ func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(
 			for i := range suspension.Wheels {
 				if suspension.IsWheelGrounded(i) {
 					wheel := &suspension.Wheels[i]
-					
+
 					// Calculate world position of wheel
 					wheelWorldX := state.PositionX + wheel.LocalX*math.Cos(state.Rotation) - wheel.LocalY*math.Sin(state.Rotation)
 					wheelWorldY := state.PositionY + wheel.LocalX*math.Sin(state.Rotation) + wheel.LocalY*math.Cos(state.Rotation)
-					
+
 					// Get terrain type at wheel
 					terrainType := TerrainFirm // Default
 					if i < len(state.TerrainTypes) {
 						terrainType = state.TerrainTypes[i]
 					}
-					
+
 					// Add track with wheel load
 					wheelLoad := suspension.GetWheelLoad(i)
 					deformation.AddTrack(wheelWorldX, wheelWorldY, state.Rotation, wheelLoad, terrainType)
 				}
 			}
 		}
-		
+
 		// Update existing tracks (aging and removal)
 		deformation.Update(deltaTime)
 	}
@@ -109,11 +108,11 @@ func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(
 	// This makes the vehicle body move up/down based on suspension compression
 	// (In a real implementation, this would be applied to rendering, not actual position)
 	// For now, we just track it in the state
-	
+
 	// Step 5: Apply damage multiplier to vehicle performance
 	if collision != nil && !collision.IsDestroyed() {
 		damageMultiplier := collision.GetDamageMultiplier()
-		
+
 		// Reduce speed if damaged
 		if damageMultiplier < 1.0 {
 			// Scale down speed based on damage
@@ -133,7 +132,6 @@ func (evs *EnhancedVehicleSystem) ProcessVehicleCollision(
 	state VehicleState,
 	normalX, normalY float64,
 ) (newVelX, newVelY, damage float64) {
-	
 	if collision == nil {
 		return state.VelocityX, state.VelocityY, 0.0
 	}

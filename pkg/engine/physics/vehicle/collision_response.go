@@ -8,21 +8,21 @@ import (
 // CollisionResponseComponent handles realistic vehicle damage from impacts.
 type CollisionResponseComponent struct {
 	// Impact tracking
-	LastImpactVelocity   float64 // Speed at last collision (pixels/s)
-	LastImpactForce      float64 // Force of last impact (approximated)
-	LastImpactAngle      float64 // Angle of impact (radians)
-	TotalImpactDamage    float64 // Cumulative damage from all impacts
-	
+	LastImpactVelocity float64 // Speed at last collision (pixels/s)
+	LastImpactForce    float64 // Force of last impact (approximated)
+	LastImpactAngle    float64 // Angle of impact (radians)
+	TotalImpactDamage  float64 // Cumulative damage from all impacts
+
 	// Collision parameters
-	DamageThreshold      float64 // Minimum velocity for damage (pixels/s)
-	MassForCalculation   float64 // Vehicle mass for force calculation (kg)
-	StructuralIntegrity  float64 // 0.0 = destroyed, 1.0 = pristine
-	
+	DamageThreshold     float64 // Minimum velocity for damage (pixels/s)
+	MassForCalculation  float64 // Vehicle mass for force calculation (kg)
+	StructuralIntegrity float64 // 0.0 = destroyed, 1.0 = pristine
+
 	// Bounce/restitution
-	Restitution          float64 // Bounciness [0.0, 1.0], typically 0.1-0.3 for vehicles
-	
+	Restitution float64 // Bounciness [0.0, 1.0], typically 0.1-0.3 for vehicles
+
 	// Performance tracking
-	CollisionCount       int
+	CollisionCount int
 }
 
 // Type returns the component type identifier.
@@ -33,10 +33,10 @@ func (c *CollisionResponseComponent) Type() string {
 // NewCollisionResponseComponent creates a collision response component.
 func NewCollisionResponseComponent(mass float64) *CollisionResponseComponent {
 	return &CollisionResponseComponent{
-		DamageThreshold:     50.0,  // 50 pixels/s minimum for damage
+		DamageThreshold:     50.0, // 50 pixels/s minimum for damage
 		MassForCalculation:  mass,
-		StructuralIntegrity: 1.0,   // Start pristine
-		Restitution:         0.2,   // Low bounce (20% energy retained)
+		StructuralIntegrity: 1.0, // Start pristine
+		Restitution:         0.2, // Low bounce (20% energy retained)
 		CollisionCount:      0,
 	}
 }
@@ -59,7 +59,7 @@ func (c *CollisionResponseComponent) ProcessCollision(velocityX, velocityY, norm
 	impactSpeed := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
 	c.LastImpactVelocity = impactSpeed
 	c.CollisionCount++
-	
+
 	// No damage below threshold
 	if impactSpeed < c.DamageThreshold {
 		// Just reflect velocity with restitution
@@ -72,57 +72,57 @@ func (c *CollisionResponseComponent) ProcessCollision(velocityX, velocityY, norm
 			IntegrityLoss:     0.0,
 		}
 	}
-	
+
 	// Calculate impact force (F = m * Δv)
 	// Approximate collision time as 0.1 seconds
 	collisionTime := 0.1
 	deltaV := impactSpeed // Assuming full stop then bounce
 	force := (c.MassForCalculation * deltaV) / collisionTime
 	c.LastImpactForce = force
-	
+
 	// Calculate angle of impact (affects damage)
 	// Head-on collision = max damage, glancing blow = less damage
 	velocityMag := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
 	if velocityMag == 0 {
 		velocityMag = 1.0 // Avoid division by zero
 	}
-	
+
 	// Dot product gives cosine of angle between velocity and normal
 	// cos(0°) = 1.0 (head-on), cos(90°) = 0.0 (glancing)
 	dotProduct := (velocityX*normalX + velocityY*normalY) / velocityMag
 	dotProduct = math.Abs(dotProduct) // Magnitude only
 	c.LastImpactAngle = math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
-	
+
 	// Damage scales with impact speed and angle
 	// Formula: damage = (speed - threshold)² * angleFactor * damageCoeff
 	speedFactor := (impactSpeed - c.DamageThreshold) / 100.0 // Normalize
-	angleFactor := dotProduct // More damage for head-on (closer to 1.0)
-	damageCoeff := 0.5 // Base damage coefficient
-	
+	angleFactor := dotProduct                                // More damage for head-on (closer to 1.0)
+	damageCoeff := 0.5                                       // Base damage coefficient
+
 	damage := speedFactor * speedFactor * angleFactor * damageCoeff
 	damage = math.Max(0.0, math.Min(damage, 100.0)) // Clamp to [0, 100]
-	
+
 	c.TotalImpactDamage += damage
-	
+
 	// Structural integrity loss (permanent)
 	integrityLoss := damage * 0.01 // 1% per point of damage
 	c.StructuralIntegrity -= integrityLoss
 	if c.StructuralIntegrity < 0.0 {
 		c.StructuralIntegrity = 0.0
 	}
-	
+
 	// Calculate bounce velocity (reflect and apply restitution)
 	reflectedVel := c.reflectVelocity(velocityX, velocityY, normalX, normalY)
-	
+
 	// Apply restitution (scaled by structural integrity)
 	// Damaged vehicles bounce less
 	effectiveRestitution := c.Restitution * c.StructuralIntegrity
 	bounceVelX := reflectedVel[0] * effectiveRestitution
 	bounceVelY := reflectedVel[1] * effectiveRestitution
-	
+
 	// Velocity reduction is difference between original and bounce
-	velocityReduction := impactSpeed - math.Sqrt(bounceVelX*bounceVelX + bounceVelY*bounceVelY)
-	
+	velocityReduction := impactSpeed - math.Sqrt(bounceVelX*bounceVelX+bounceVelY*bounceVelY)
+
 	return ImpactResult{
 		DamageDealt:       damage,
 		VelocityReduction: velocityReduction,
@@ -141,14 +141,14 @@ func (c *CollisionResponseComponent) reflectVelocity(vx, vy, nx, ny float64) [2]
 		nx /= nMag
 		ny /= nMag
 	}
-	
+
 	// Dot product: v · n
 	dotProduct := vx*nx + vy*ny
-	
+
 	// Reflection: v - 2(v·n)n
 	reflectX := vx - 2.0*dotProduct*nx
 	reflectY := vy - 2.0*dotProduct*ny
-	
+
 	return [2]float64{reflectX, reflectY}
 }
 

@@ -12,8 +12,8 @@ type Wheel struct {
 	LocalY float64
 
 	// Suspension parameters
-	RestLength   float64 // Natural length of suspension spring (pixels)
-	Compression  float64 // Current compression amount (0.0 = fully extended, 1.0 = fully compressed)
+	RestLength      float64 // Natural length of suspension spring (pixels)
+	Compression     float64 // Current compression amount (0.0 = fully extended, 1.0 = fully compressed)
 	CompressionRate float64 // Rate of compression change
 
 	// Spring-damper model parameters
@@ -64,9 +64,9 @@ func NewSuspensionComponent(wheelCount int) *SuspensionComponent {
 		wheels[1] = Wheel{LocalX: 16, LocalY: 0}  // Rear
 	case 3:
 		// Three wheels (trike)
-		wheels[0] = Wheel{LocalX: -16, LocalY: 0}  // Front
-		wheels[1] = Wheel{LocalX: 12, LocalY: -8}  // Rear left
-		wheels[2] = Wheel{LocalX: 12, LocalY: 8}   // Rear right
+		wheels[0] = Wheel{LocalX: -16, LocalY: 0} // Front
+		wheels[1] = Wheel{LocalX: 12, LocalY: -8} // Rear left
+		wheels[2] = Wheel{LocalX: 12, LocalY: 8}  // Rear right
 	case 4:
 		// Four wheels (car/cart) - most common
 		wheels[0] = Wheel{LocalX: -16, LocalY: -8} // Front left

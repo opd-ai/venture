@@ -10,7 +10,7 @@ import (
 type TerrainType int
 
 const (
-	TerrainHard TerrainType = iota // Stone, concrete - no deformation
+	TerrainHard  TerrainType = iota // Stone, concrete - no deformation
 	TerrainFirm                     // Packed dirt - minimal deformation
 	TerrainSoft                     // Mud, sand - significant deformation
 	TerrainSnow                     // Snow - deep tracks
@@ -37,14 +37,14 @@ func (t TerrainType) String() string {
 
 // TrackMark represents a single tire track deformation in terrain.
 type TrackMark struct {
-	X            float64 // World position
-	Y            float64
-	Angle        float64     // Track orientation (radians)
-	Depth        float64     // Deformation depth (0.0 = none, 1.0 = max)
-	Width        float64     // Track width (pixels)
-	Age          float64     // Time since creation (seconds)
-	TerrainType  TerrainType // Terrain surface type
-	FadeTime     float64     // Time to fade completely (seconds)
+	X           float64 // World position
+	Y           float64
+	Angle       float64     // Track orientation (radians)
+	Depth       float64     // Deformation depth (0.0 = none, 1.0 = max)
+	Width       float64     // Track width (pixels)
+	Age         float64     // Time since creation (seconds)
+	TerrainType TerrainType // Terrain surface type
+	FadeTime    float64     // Time to fade completely (seconds)
 }
 
 // TerrainDeformationComponent manages tire tracks and terrain deformation.
@@ -53,15 +53,15 @@ type TerrainDeformationComponent struct {
 	Tracks []TrackMark
 
 	// Configuration
-	MaxTracks         int     // Maximum number of track marks to store
-	MinTrackSpacing   float64 // Minimum distance between track marks (pixels)
-	LastTrackX        float64 // Position of last track mark
-	LastTrackY        float64
-	
+	MaxTracks       int     // Maximum number of track marks to store
+	MinTrackSpacing float64 // Minimum distance between track marks (pixels)
+	LastTrackX      float64 // Position of last track mark
+	LastTrackY      float64
+
 	// Deformation parameters per terrain type
-	DeformationDepth  map[TerrainType]float64 // How deep tracks are
-	FadeTime          map[TerrainType]float64 // How long tracks last
-	
+	DeformationDepth map[TerrainType]float64 // How deep tracks are
+	FadeTime         map[TerrainType]float64 // How long tracks last
+
 	// Seed for deterministic noise in track patterns
 	Seed int64
 	rng  *rand.Rand
@@ -75,7 +75,7 @@ func (t *TerrainDeformationComponent) Type() string {
 // NewTerrainDeformationComponent creates a terrain deformation component.
 func NewTerrainDeformationComponent(seed int64) *TerrainDeformationComponent {
 	rng := rand.New(rand.NewSource(seed))
-	
+
 	return &TerrainDeformationComponent{
 		Tracks:          make([]TrackMark, 0, 200),
 		MaxTracks:       200,
@@ -83,11 +83,11 @@ func NewTerrainDeformationComponent(seed int64) *TerrainDeformationComponent {
 		Seed:            seed,
 		rng:             rng,
 		DeformationDepth: map[TerrainType]float64{
-			TerrainHard:  0.0,  // No deformation on hard surfaces
-			TerrainFirm:  0.2,  // Slight tracks
-			TerrainSoft:  0.8,  // Deep tracks in mud/sand
-			TerrainSnow:  1.0,  // Maximum deformation in snow
-			TerrainWater: 0.0,  // No permanent tracks in water
+			TerrainHard:  0.0, // No deformation on hard surfaces
+			TerrainFirm:  0.2, // Slight tracks
+			TerrainSoft:  0.8, // Deep tracks in mud/sand
+			TerrainSnow:  1.0, // Maximum deformation in snow
+			TerrainWater: 0.0, // No permanent tracks in water
 		},
 		FadeTime: map[TerrainType]float64{
 			TerrainHard:  0.0,   // Instant fade (no tracks)
@@ -106,19 +106,19 @@ func (t *TerrainDeformationComponent) AddTrack(x, y, vehicleAngle, wheelLoad flo
 	dx := x - t.LastTrackX
 	dy := y - t.LastTrackY
 	distance := math.Sqrt(dx*dx + dy*dy)
-	
+
 	if distance < t.MinTrackSpacing {
 		return // Too close to last track
 	}
-	
+
 	// Get deformation parameters for this terrain
 	baseDepth := t.DeformationDepth[terrainType]
 	fadeTime := t.FadeTime[terrainType]
-	
+
 	if baseDepth <= 0 || fadeTime <= 0 {
 		return // No tracks on this terrain
 	}
-	
+
 	// Calculate depth based on wheel load
 	// Higher load = deeper tracks
 	// Normalize load to reasonable range (assume 0-10000 N)
@@ -127,14 +127,14 @@ func (t *TerrainDeformationComponent) AddTrack(x, y, vehicleAngle, wheelLoad flo
 	if depth > 1.0 {
 		depth = 1.0
 	}
-	
+
 	// Add some noise to depth for realism
 	depthNoise := t.rng.Float64()*0.1 - 0.05 // ±5%
 	depth = math.Max(0.0, math.Min(1.0, depth+depthNoise))
-	
+
 	// Track width varies slightly (8-12 pixels)
 	width := 10.0 + t.rng.Float64()*4.0 - 2.0
-	
+
 	// Create track mark
 	track := TrackMark{
 		X:           x,
@@ -146,14 +146,14 @@ func (t *TerrainDeformationComponent) AddTrack(x, y, vehicleAngle, wheelLoad flo
 		TerrainType: terrainType,
 		FadeTime:    fadeTime,
 	}
-	
+
 	// Add to collection
 	t.Tracks = append(t.Tracks, track)
-	
+
 	// Update last track position
 	t.LastTrackX = x
 	t.LastTrackY = y
-	
+
 	// Enforce max tracks limit (remove oldest)
 	if len(t.Tracks) > t.MaxTracks {
 		// Remove oldest 10% to avoid frequent reallocations
@@ -171,7 +171,7 @@ func (t *TerrainDeformationComponent) Update(deltaTime float64) {
 	for i := range t.Tracks {
 		t.Tracks[i].Age += deltaTime
 	}
-	
+
 	// Remove fully faded tracks
 	// Work backwards to safely remove elements
 	for i := len(t.Tracks) - 1; i >= 0; i-- {
@@ -187,16 +187,16 @@ func (t *TerrainDeformationComponent) Update(deltaTime float64) {
 // minX, minY, maxX, maxY: viewport bounds for culling
 func (t *TerrainDeformationComponent) GetVisibleTracks(minX, minY, maxX, maxY float64) []TrackMark {
 	visible := make([]TrackMark, 0, len(t.Tracks))
-	
+
 	for i := range t.Tracks {
 		track := &t.Tracks[i]
-		
+
 		// Simple AABB culling
 		if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
 			visible = append(visible, *track)
 		}
 	}
-	
+
 	return visible
 }
 
@@ -206,13 +206,13 @@ func (t *TerrainDeformationComponent) GetTrackAlpha(track *TrackMark) float64 {
 	if track.FadeTime <= 0 {
 		return 0.0
 	}
-	
+
 	// Linear fade
 	alpha := 1.0 - (track.Age / track.FadeTime)
 	if alpha < 0.0 {
 		alpha = 0.0
 	}
-	
+
 	return alpha
 }
 

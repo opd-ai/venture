@@ -50,7 +50,7 @@ func TestWeightTransferComponent_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := NewWeightTransferComponent()
-			
+
 			// Run update twice to calculate acceleration
 			comp.Update(0, 0, 0, tt.deltaTime)
 			comp.Update(tt.velX, tt.velY, tt.angularVel, tt.deltaTime)

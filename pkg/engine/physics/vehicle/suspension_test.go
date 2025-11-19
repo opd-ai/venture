@@ -70,7 +70,7 @@ func TestSuspensionComponent_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp := NewSuspensionComponent(tt.wheelCount)
-			
+
 			// Run multiple frames to stabilize
 			var offset float64
 			for i := 0; i < 10; i++ {
@@ -87,7 +87,7 @@ func TestSuspensionComponent_Update(t *testing.T) {
 func TestSuspensionComponent_GetWheelLoad(t *testing.T) {
 	comp := NewSuspensionComponent(4)
 	terrainHeights := []float64{0, 0, 0, 0}
-	
+
 	// Update to calculate loads
 	comp.Update(0.016, terrainHeights)
 
@@ -115,7 +115,7 @@ func TestSuspensionComponent_GetWheelLoad(t *testing.T) {
 
 func TestSuspensionComponent_GetWheelCompression(t *testing.T) {
 	comp := NewSuspensionComponent(4)
-	
+
 	tests := []struct {
 		name       string
 		wheelIndex int
@@ -190,7 +190,7 @@ func TestSuspensionComponent_SetWheelLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp.SetWheelLoad(tt.wheelIndex, tt.load)
-			
+
 			if tt.wantSet {
 				actualLoad := comp.GetWheelLoad(tt.wheelIndex)
 				if math.Abs(actualLoad-tt.load) > 0.01 {

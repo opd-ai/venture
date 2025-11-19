@@ -19,7 +19,7 @@ type WeightTransferComponent struct {
 	CenterOfMassHeight float64
 
 	// Wheelbase dimensions (pixels)
-	Wheelbase float64 // Front-to-rear distance
+	Wheelbase  float64 // Front-to-rear distance
 	TrackWidth float64 // Left-to-right distance
 
 	// Weight distribution percentages [0.0, 1.0]
@@ -33,8 +33,8 @@ type WeightTransferComponent struct {
 	StaticFrontWeight float64 // Percentage of weight on front axle (0.0-1.0)
 
 	// Previous velocity for acceleration calculation
-	PrevVelocityX float64
-	PrevVelocityY float64
+	PrevVelocityX  float64
+	PrevVelocityY  float64
 	PrevAngularVel float64
 
 	// Performance tracking
@@ -49,11 +49,11 @@ func (w *WeightTransferComponent) Type() string {
 // NewWeightTransferComponent creates a weight transfer component with default parameters.
 func NewWeightTransferComponent() *WeightTransferComponent {
 	return &WeightTransferComponent{
-		CenterOfMassHeight: 15.0,  // 15 pixels above axles
-		Wheelbase:          32.0,  // 32 pixels front-to-rear
-		TrackWidth:         16.0,  // 16 pixels left-to-right
-		StaticFrontWeight:  0.5,   // 50% front, 50% rear (balanced)
-		FrontLeftWeight:    0.25,  // 25% per wheel
+		CenterOfMassHeight: 15.0, // 15 pixels above axles
+		Wheelbase:          32.0, // 32 pixels front-to-rear
+		TrackWidth:         16.0, // 16 pixels left-to-right
+		StaticFrontWeight:  0.5,  // 50% front, 50% rear (balanced)
+		FrontLeftWeight:    0.25, // 25% per wheel
 		FrontRightWeight:   0.25,
 		RearLeftWeight:     0.25,
 		RearRightWeight:    0.25,
@@ -114,7 +114,7 @@ func (w *WeightTransferComponent) calculateLongitudinalTransfer() float64 {
 	//   L = wheelbase
 	//
 	// Simplified: transfer = (a * h) / L
-	
+
 	// Determine if accelerating or braking based on velocity change
 	isAccelerating := w.AccelerationX > 0 || w.AccelerationY > 0
 

@@ -1,178 +1,130 @@
-// Package main provides a CLI tool for testing companion generation and features.
-// This tool demonstrates Phase 22 companion system features including
-// companion generation, inventory, skill inheritance, and bonding perks.
 package main
 
 import (
 	"flag"
 	"fmt"
-	"os"
+	"time"
 
-	"github.com/opd-ai/venture/pkg/engine"
-	"github.com/opd-ai/venture/pkg/procgen"
-	"github.com/opd-ai/venture/pkg/procgen/companion"
+	"github.com/opd-ai/venture/pkg/companion/learning"
 )
 
 func main() {
-	// Command-line flags
-	seed := flag.Int64("seed", 12345, "Random seed for generation")
-	depth := flag.Int("depth", 5, "Dungeon depth/level")
-	difficulty := flag.Float64("difficulty", 0.5, "Difficulty (0.0-1.0)")
-	genre := flag.String("genre", "fantasy", "Genre (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)")
-	count := flag.Int("count", 5, "Number of companions to generate")
-
+	var (
+		companionID  = flag.String("companion", "companion_001", "Companion ID")
+		learningRate = flag.Float64("learning-rate", 1.0, "Learning rate multiplier")
+		seed         = flag.Int64("seed", 12345, "Random seed for behavior adaptation")
+		demo         = flag.String("demo", "full", "Demo mode: full, skills, personality, memory")
+	)
 	flag.Parse()
 
-	fmt.Println("=== Venture Companion System Test ===")
-	fmt.Printf("Seed: %d, Depth: %d, Difficulty: %.2f, Genre: %s\n\n", *seed, *depth, *difficulty, *genre)
+	fmt.Println("=== Venture Companion Learning System Demo ===")
+	fmt.Printf("Companion: %s (Learning Rate: %.2f)\n\n", *companionID, *learningRate)
 
-	// Create generator
-	gen := companion.NewGenerator()
+	manager := learning.NewManager()
+	comp := manager.AddCompanion(*companionID, *learningRate)
 
-	// Generation parameters
-	params := procgen.GenerationParams{
-		Difficulty: *difficulty,
-		Depth:      *depth,
-		GenreID:    *genre,
-	}
-
-	// Generate companions
-	for i := 0; i < *count; i++ {
-		companionSeed := *seed + int64(i)
-
-		result, err := gen.Generate(companionSeed, params)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating companion %d: %v\n", i+1, err)
-			continue
-		}
-
-		// Validate
-		if err := gen.Validate(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Validation failed for companion %d: %v\n", i+1, err)
-			continue
-		}
-
-		comp := result.(*companion.Companion)
-
-		// Display companion info
-		fmt.Printf("Companion %d: %s\n", i+1, comp.Name)
-		fmt.Printf("  Type: %s\n", getTypeName(comp.Type))
-		fmt.Printf("  Level: %d\n", comp.Level)
-		fmt.Printf("  Loyalty: %.1f/100\n", comp.Loyalty)
-		fmt.Printf("  Stats:\n")
-		fmt.Printf("    HP: %.0f/%.0f\n", comp.HP, comp.MaxHP)
-		fmt.Printf("    Attack: %.1f\n", comp.Attack)
-		fmt.Printf("    Defense: %.1f\n", comp.Defense)
-		fmt.Printf("    Speed: %.1f\n", comp.Speed)
-		fmt.Printf("  Commands: %d available\n", len(comp.Commands))
-		for _, cmd := range comp.Commands {
-			fmt.Printf("    - %s\n", getCommandName(cmd))
-		}
-		fmt.Println()
-	}
-
-	// Demonstrate companion features
-	fmt.Println("=== Companion Features Demo ===")
-
-	// 1. Inventory Feature
-	fmt.Println("1. Companion Inventory:")
-	inventory := engine.NewCompanionInventoryComponent(10, 50.0)
-	inventory.AutoFetch = true
-	inventory.FetchRadius = 100.0
-	fmt.Printf("   Max Items: %d\n", inventory.MaxItems)
-	fmt.Printf("   Max Weight: %.1f\n", inventory.MaxWeight)
-	fmt.Printf("   Auto-Fetch: %v (radius: %.1f)\n", inventory.AutoFetch, inventory.FetchRadius)
-	fmt.Println()
-
-	// 2. Skill Inheritance Feature
-	fmt.Println("2. Skill Inheritance:")
-	skillInheritance := engine.NewSkillInheritanceComponent(5, 0.15)
-	fmt.Printf("   Max Skills: %d\n", skillInheritance.MaxSkills)
-	fmt.Printf("   Learning Rate: %.2f\n", skillInheritance.LearningRate)
-	fmt.Printf("   Required Loyalty: %.1f\n", skillInheritance.RequiredLoyalty)
-
-	// Simulate learning
-	skillInheritance.AddSkillProgress("fireball", 0.3)
-	skillInheritance.AddSkillProgress("ice_shard", 0.7)
-	skillInheritance.AddSkillProgress("lightning", 1.0)
-
-	fmt.Printf("   Skills Learning:\n")
-	fmt.Printf("     - Fireball: %.0f%%\n", skillInheritance.GetSkillProgress("fireball")*100)
-	fmt.Printf("     - Ice Shard: %.0f%%\n", skillInheritance.GetSkillProgress("ice_shard")*100)
-	fmt.Printf("     - Lightning: %.0f%% (ACTIVE)\n", skillInheritance.GetSkillProgress("lightning")*100)
-	fmt.Println()
-
-	// 3. Bonding Perks Feature
-	fmt.Println("3. Bonding Perks:")
-	companionComp := &engine.CompanionComponent{
-		Loyalty:       85.0,
-		TimeWithOwner: 10000.0,
-		BondingPerks:  []engine.BondingPerk{},
-	}
-
-	// Simulate perk unlocks
-	companionComp.AddPerk(engine.PerkExtraHealth)
-	companionComp.AddPerk(engine.PerkExtraDamage)
-	companionComp.AddPerk(engine.PerkFasterLearning)
-
-	fmt.Printf("   Loyalty: %.1f/100\n", companionComp.Loyalty)
-	fmt.Printf("   Time Together: %.0f seconds (%.1f hours)\n", companionComp.TimeWithOwner, companionComp.TimeWithOwner/3600.0)
-	fmt.Printf("   Unlocked Perks (%d):\n", len(companionComp.BondingPerks))
-	for _, perk := range companionComp.BondingPerks {
-		fmt.Printf("     - %s\n", perk.String())
-	}
-	fmt.Println()
-
-	// 4. Permadeath Mode
-	fmt.Println("4. Permadeath Mode:")
-	revivableComp := &engine.CompanionComponent{Permadeath: false}
-	permadeathComp := &engine.CompanionComponent{Permadeath: true}
-	fmt.Printf("   Revivable Companion: Permadeath=%v (can be revived)\n", revivableComp.Permadeath)
-	fmt.Printf("   Permadeath Companion: Permadeath=%v (dies permanently)\n", permadeathComp.Permadeath)
-	fmt.Println()
-
-	fmt.Println("=== Phase 22.2 Complete ===")
-	fmt.Println("All companion features implemented and tested!")
-}
-
-func getTypeName(t engine.CompanionType) string {
-	switch t {
-	case engine.CompanionTypePet:
-		return "Pet"
-	case engine.CompanionTypeSummon:
-		return "Summon"
-	case engine.CompanionTypeHireling:
-		return "Hireling"
-	case engine.CompanionTypeElemental:
-		return "Elemental"
-	case engine.CompanionTypeUndead:
-		return "Undead"
-	case engine.CompanionTypeRobot:
-		return "Robot"
-	case engine.CompanionTypeSpirit:
-		return "Spirit"
-	case engine.CompanionTypeInsect:
-		return "Insect"
+	switch *demo {
+	case "skills":
+		demoSkills(comp)
+	case "personality":
+		demoPersonality(comp)
+	case "memory":
+		demoMemory(comp)
+	case "full":
+		demoFull(comp, *seed)
 	default:
-		return "Unknown"
+		fmt.Printf("Unknown demo mode: %s\n", *demo)
+		fmt.Println("Available modes: full, skills, personality, memory")
 	}
 }
 
-func getCommandName(cmd engine.CommandType) string {
-	switch cmd {
-	case engine.CommandFollow:
-		return "Follow"
-	case engine.CommandStay:
-		return "Stay"
-	case engine.CommandAttack:
-		return "Attack"
-	case engine.CommandDefend:
-		return "Defend"
-	case engine.CommandGather:
-		return "Gather"
-	case engine.CommandScout:
-		return "Scout"
-	default:
-		return "Unknown"
+func demoSkills(comp *learning.CompanionLearningComponent) {
+	fmt.Println("--- Skill Progression Demo ---")
+	fmt.Println("\nInitial Skills: (none learned)")
+
+	fmt.Println("\n[Simulating 10 aggressive combat actions...]")
+	for i := 0; i < 10; i++ {
+		learning.ProcessCombatAction(comp, true, i%3 == 0)
+	}
+
+	fmt.Println("\nSkills after combat:")
+	printActiveSkills(comp)
+
+	fmt.Printf("\nAvailable Skill Points: %d\n", comp.SkillTree.AvailablePoints)
+	fmt.Printf("Total XP Earned: %.1f\n", comp.SkillTree.TotalXP)
+}
+
+func demoPersonality(comp *learning.CompanionLearningComponent) {
+	fmt.Println("--- Personality Evolution Demo ---")
+	fmt.Println("\nInitial Personality: All traits at 50%")
+
+	fmt.Println("\n[Simulating aggressive combat...]")
+	for i := 0; i < 20; i++ {
+		learning.ProcessCombatAction(comp, true, true)
+	}
+
+	printPersonality(comp)
+	fmt.Printf("\nDominant Trait: %s\n", comp.Personality.GetDominantTrait().String())
+}
+
+func demoMemory(comp *learning.CompanionLearningComponent) {
+	fmt.Println("--- Event Memory Demo ---")
+	fmt.Println("\n[Generating diverse events...]")
+
+	for i := 0; i < 5; i++ {
+		learning.ProcessCombatAction(comp, i%2 == 0, i%3 == 0)
+		time.Sleep(time.Millisecond)
+	}
+	for i := 0; i < 3; i++ {
+		learning.ProcessSocialInteraction(comp, fmt.Sprintf("player_%d", i), i%2 == 0)
+		time.Sleep(time.Millisecond)
+	}
+
+	fmt.Println("\nMemory Summary:")
+	fmt.Println(learning.GetMemorySummary(comp))
+}
+
+func demoFull(comp *learning.CompanionLearningComponent, seed int64) {
+	fmt.Println("--- Full Companion Learning Demo ---")
+	fmt.Println("\n[Simulating gameplay session...]")
+
+	for i := 0; i < 10; i++ {
+		learning.ProcessCombatAction(comp, i%2 == 0, i%4 == 0)
+	}
+	for i := 0; i < 8; i++ {
+		learning.ProcessSocialInteraction(comp, "player_main", i%3 != 0)
+	}
+	for i := 0; i < 6; i++ {
+		learning.ProcessExploration(comp, i%2 == 0)
+	}
+
+	learning.AdaptBehaviorToCombatStyle(comp, seed)
+
+	fmt.Println("\n=== Final State ===")
+	printActiveSkills(comp)
+	fmt.Println()
+	printPersonality(comp)
+	fmt.Printf("\nLearning Progress: %.1f%%\n", learning.CalculateLearningProgress(comp)*100)
+	fmt.Printf("Dominant Personality: %s\n", comp.Personality.GetDominantTrait().String())
+}
+
+func printActiveSkills(comp *learning.CompanionLearningComponent) {
+	for _, skill := range comp.SkillTree.Skills {
+		if skill.Level > 0 || skill.Experience > 0 {
+			fmt.Printf("  %s: Level %d (%.1f XP)\n", skill.Name, skill.Level, skill.Experience)
+		}
+	}
+}
+
+func printPersonality(comp *learning.CompanionLearningComponent) {
+	fmt.Println("Personality Traits:")
+	traits := []learning.PersonalityTrait{
+		learning.TraitBrave, learning.TraitCautious,
+		learning.TraitOutgoing, learning.TraitShy,
+		learning.TraitAggressive, learning.TraitPacifist,
+	}
+	for _, trait := range traits {
+		value := comp.Personality.Traits[trait]
+		fmt.Printf("  %-12s %.1f%%\n", trait.String(), value*100)
 	}
 }

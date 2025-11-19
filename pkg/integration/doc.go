@@ -8,5 +8,5 @@
 // - Network latency simulation and lag compensation
 //
 // Integration tests use real generators and systems, unlike unit tests which may use mocks.
-// These tests are critical for ensuring multiplayer synchronization and backward compatibility.
+// These tests are critical for ensuring multiplayer synchronization and feature stability.
 package integration

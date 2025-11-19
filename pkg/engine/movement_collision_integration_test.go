@@ -231,8 +231,8 @@ func TestMovementBlockedByEntity(t *testing.T) {
 	t.Logf("Entities correctly blocked. Start distance=%.2f, Final distance=%.2f", startDistance, finalDistance)
 }
 
-// TestMovementWithoutCollisionSystem verifies backward compatibility.
-// When collision system is not set, movement should work as before.
+// TestMovementWithoutCollisionSystem verifies default movement behavior.
+// When collision system is not set, movement should work without collision detection.
 func TestMovementWithoutCollisionSystem(t *testing.T) {
 	world := NewWorld()
 

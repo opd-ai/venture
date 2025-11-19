@@ -202,6 +202,91 @@ func (w *courierSystemWrapper) Update(entities []*engine.Entity, deltaTime float
 	w.system.Update(deltaTime)
 }
 
+// INTEGRATION FIX [Category A]: System Wrapper Types
+// Gap: New systems need adapter wrappers to match World.System interface
+// Fix: Added wrapper types for all newly integrated systems
+// Roadmap: ROADMAP_V4.md (Phase 14, 30-31) and ROADMAP_V5.md (Phase 32-36)
+
+type investigationSystemWrapper struct {
+	system *engine.InvestigationSystem
+}
+
+func (w *investigationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type npcDialogSystemWrapper struct {
+	system *engine.NPCDialogSystem
+}
+
+func (w *npcDialogSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type musicTriggerSystemWrapper struct {
+	system *engine.MusicTriggerSystem
+}
+
+func (w *musicTriggerSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type positionalAudioSystemWrapper struct {
+	system *engine.PositionalAudioSystem
+}
+
+func (w *positionalAudioSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type reverbSystemWrapper struct {
+	system *engine.ReverbSystem
+}
+
+func (w *reverbSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type qualitySystemWrapper struct {
+	system *engine.QualitySystem
+}
+
+func (w *qualitySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type tradeSystemWrapper struct {
+	system *engine.TradeSystem
+}
+
+func (w *tradeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type terrainConstructionSystemWrapper struct {
+	system *engine.TerrainConstructionSystem
+}
+
+func (w *terrainConstructionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(entities, deltaTime)
+}
+
+type terrainModificationSystemWrapper struct {
+	system *engine.TerrainModificationSystem
+}
+
+func (w *terrainModificationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(entities, deltaTime)
+}
+
+type merchantCaravanSystemWrapper struct {
+	system *engine.MerchantCaravanSystem
+}
+
+func (w *merchantCaravanSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 var (
 	width            = flag.Int("width", 1920, "Screen width (1280, 1920, 2560, 3840)")
 	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")

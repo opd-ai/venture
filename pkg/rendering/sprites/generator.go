@@ -410,7 +410,7 @@ func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, 
 		return g.generateItemWithTemplate(config, itemType, rarity, rng)
 	}
 
-	// Fallback to original random generation for backward compatibility
+	// Fallback to procedural random generation when no item type specified
 	numShapes := 1 + int(config.Complexity*2)
 
 	for i := 0; i < numShapes; i++ {

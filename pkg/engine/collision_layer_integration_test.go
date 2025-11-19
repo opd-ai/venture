@@ -179,7 +179,8 @@ func TestCollisionSystem_WouldCollideWithEntity_SameLayer(t *testing.T) {
 	}
 }
 
-// TestCollisionSystem_NoLayerComponent verifies backward compatibility.
+// TestCollisionSystem_NoLayerComponent verifies default collision behavior.
+// Entities without LayerComponent should collide with all other entities.
 func TestCollisionSystem_NoLayerComponent(t *testing.T) {
 	world := NewWorld()
 	system := NewCollisionSystem(32.0)
@@ -203,8 +204,8 @@ func TestCollisionSystem_NoLayerComponent(t *testing.T) {
 
 	system.Update(world.GetEntities(), 0.016)
 
-	// Entities without LayerComponent should still collide normally
+	// Entities without LayerComponent should still collide normally (default behavior)
 	if collisionCount == 0 {
-		t.Error("Expected collision between entities without LayerComponent (backward compatibility)")
+		t.Error("Expected collision between entities without LayerComponent (default behavior)")
 	}
 }

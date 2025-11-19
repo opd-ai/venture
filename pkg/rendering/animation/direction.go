@@ -114,7 +114,7 @@ func FromVelocity(vx, vy float64) Direction8 {
 	}
 }
 
-// To4Direction converts 8-direction to legacy 4-direction for compatibility.
+// To4Direction converts 8-direction to simplified 4-direction.
 // Diagonal directions are mapped to their primary components.
 func (d Direction8) To4Direction() string {
 	switch d {

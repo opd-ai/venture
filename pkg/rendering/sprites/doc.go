@@ -168,7 +168,7 @@
 // for improved anatomical accuracy and visual clarity. When PreferredPixelSize is set,
 // it takes precedence over relative dimensions, enabling pixel-perfect control.
 //
-// Full backward compatibility maintained - existing templates using relative
+// Both relative and absolute sizing are supported - existing templates using relative
 // dimensions continue to work unchanged.
 //
 // # Genre-Specific Anatomical Variations (Phase 15.1)
@@ -255,8 +255,8 @@
 // The UseAerial flag in GenerationConfig controls perspective mode:
 //
 //	config := sprites.GenerationConfig{
-//	    UseAerial: true,   // Top-down aerial view (recommended)
-//	    UseAerial: false,  // Side-view (legacy, default)
+//	    UseAerial: true,   // Top-down aerial view (recommended for top-down gameplay)
+//	    UseAerial: false,  // Side-view profile (default, traditional roguelike style)
 //	}
 //
 // When UseAerial is true:

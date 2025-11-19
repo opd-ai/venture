@@ -8,7 +8,7 @@
 // coverage, producing partial alpha values at shape boundaries.
 //
 // Quality Levels:
-//   - AntiAliasOff: Hard edges (fastest, legacy behavior)
+//   - AntiAliasOff: Hard edges (fastest, no anti-aliasing)
 //   - AntiAliasLow: 2x2 super-sampling (4 samples per pixel)
 //   - AntiAliasMedium: 4x4 super-sampling (16 samples per pixel)
 //   - AntiAliasHigh: 8x8 super-sampling (64 samples per pixel)

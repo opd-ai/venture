@@ -20,6 +20,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/quality"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/version"
@@ -111,6 +112,21 @@ type systemsContainer struct {
 	rankingManager     *world.RankingManager
 	eventManager       *world.EventManager
 	federationProtocol *federation.FederationProtocol
+
+	// INTEGRATION FIX [Category A]: Missing Systems (Phase 14+)
+	// Gap: Systems implemented but never instantiated or registered in game loop
+	// Fix: Added system fields for investigation, audio enhancements, quality, trade, terrain modification, merchant caravans, NPC dialog
+	// Roadmap: ROADMAP_V4.md (Phase 14, 30-31) and ROADMAP_V5.md (Phase 32-36)
+	investigationSystem    *engine.InvestigationSystem       // Phase 30: Environmental Storytelling - investigation mechanics
+	musicTriggerSystem     *engine.MusicTriggerSystem        // Phase 14.4: Adaptive music context switching
+	positionalAudioSystem  *engine.PositionalAudioSystem     // Phase 14.4: 3D positional audio with panning/occlusion
+	reverbSystem           *engine.ReverbSystem              // Phase 14.4: Room-based reverb effects
+	qualitySystem          *engine.QualitySystem             // Phase 14: Performance-based quality settings
+	tradeSystem            *engine.TradeSystem               // Phase 33: Player-to-player trading with trust limits
+	terrainConstructionSys *engine.TerrainConstructionSystem // Phase 35: Buildable walls from materials
+	terrainModificationSys *engine.TerrainModificationSystem // Phase 35: Destructible terrain
+	merchantCaravanSystem  *engine.MerchantCaravanSystem     // Phase 36: Traveling merchants between servers
+	npcDialogSystem        *engine.NPCDialogSystem           // Phase 31: Markov-chain NPC conversations
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -135,6 +151,24 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	sys.animationSystem.SetMaxCacheSize(animationCacheSize)
 
 	sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
+
+	// INTEGRATION FIX [Category A]: Phase 14 - QualitySystem
+	// Gap: QualitySystem implemented for performance-based quality adjustment but never initialized
+	// Fix: Added system initialization for automatic quality settings based on frame rate
+	// Roadmap: ROADMAP_V4.md Phase 14
+	qualityConfig := &quality.Config{
+		Level:                 quality.QualityMedium,
+		EnablePostProcessing:  true,
+		EnableBloom:           false,
+		EnableSoftShadows:     true,
+		SpriteDetailLevel:     0.7,
+		EnableAntiAliasing:    true,
+		AntiAliasingQuality:   1, // 2x2 sampling
+		EnableSpriteCache:     true,
+		EnableDynamicLighting: true,
+		ShadowSampleCount:     2,
+	}
+	sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
 
 	return sys
 }
@@ -184,15 +218,25 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	game.SetAudioManager(sys.audioManager)
 	sys.audioManager.EnableAdaptiveMusic(true)
 
+	// INTEGRATION FIX [Category A]: Phase 14.4 - Audio Enhancement Systems
+	// Gap: MusicTriggerSystem, PositionalAudioSystem, and ReverbSystem implemented but never initialized
+	// Fix: Added system initialization for adaptive music triggers, 3D positional audio, and reverb effects
+	// Roadmap: ROADMAP_V4.md Phase 14.4
+	// Note: MusicTriggerSystem requires AdaptiveMusicSystem interface, AudioManager needs to implement it
+	// For now, create without music manager integration - will be connected when interface is implemented
+	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, nil) // TODO: Pass adaptive music system when interface is ready
+	sys.positionalAudioSystem = engine.NewPositionalAudioSystem(game.World)
+	sys.reverbSystem = engine.NewReverbSystemWithLogger(game.World, *seed+seedOffsetReverb, clientLogger.Logger)
+
 	if *verbose {
-		clientLogger.Info("adaptive music composition enabled with motif system")
+		clientLogger.Info("adaptive music composition enabled with motif system, music triggers, positional audio, and reverb")
 	}
 
 	if err := sys.audioManager.PlayMusic(*genreID, "exploration"); err != nil {
 		logging.ComponentLogger(clientLogger.Logger, "audio").WithError(err).Warn("failed to start background music")
 	}
 
-	logging.ComponentLogger(clientLogger.Logger, "audio").Info("audio system initialized (music and SFX generators)")
+	logging.ComponentLogger(clientLogger.Logger, "audio").Info("audio system initialized (music and SFX generators, triggers, 3D audio, reverb)")
 }
 
 // initializeCombatSystems creates spell casting and player combat systems.
@@ -276,8 +320,20 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 30: Environmental Storytelling - Discovery System
 	sys.discoverySystem = engine.NewDiscoverySystem(game.World)
 
+	// INTEGRATION FIX [Category A]: Phase 30 - InvestigationSystem
+	// Gap: InvestigationSystem implemented but never initialized
+	// Fix: Added system initialization for investigating environment and revealing hidden clues
+	// Roadmap: ROADMAP_V4.md Phase 30.2
+	sys.investigationSystem = engine.NewInvestigationSystem(game.World, *seed+seedOffsetInvestigation)
+
+	// INTEGRATION FIX [Category A]: Phase 31 - NPCDialogSystem
+	// Gap: NPCDialogSystem implemented but never initialized
+	// Fix: Added system initialization for Markov-chain NPC conversations
+	// Roadmap: ROADMAP_V5.md Phase 31
+	sys.npcDialogSystem = engine.NewNPCDialogSystem(game.World, *seed+seedOffsetNPCDialog)
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, moral choices, story discovery)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, moral choices, story discovery, investigation, NPC dialog)")
 	}
 }
 
@@ -286,6 +342,25 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 32: Chat system for player-to-player communication
 	sys.chatSystem = engine.NewChatSystem(game.World)
 
+	// INTEGRATION FIX [Category A]: Phase 33 - TradeSystem
+	// Gap: TradeSystem implemented but never initialized
+	// Fix: Added system initialization for player-to-player trading with trust-based limits
+	// Roadmap: ROADMAP_V5.md Phase 33
+	sys.tradeSystem = engine.NewTradeSystem(game.World)
+
+	// INTEGRATION FIX [Category A]: Phase 35 - Terrain Modification Systems
+	// Gap: TerrainConstructionSystem and TerrainModificationSystem implemented but never initialized
+	// Fix: Added system initialization for buildable walls and destructible terrain
+	// Roadmap: ROADMAP_V5.md Phase 35
+	sys.terrainConstructionSys = engine.NewTerrainConstructionSystemWithLogger(tileSize, clientLogger.Logger)
+	sys.terrainModificationSys = engine.NewTerrainModificationSystemWithLogger(tileSize, clientLogger.Logger)
+
+	// INTEGRATION FIX [Category A]: Phase 36 - MerchantCaravanSystem
+	// Gap: MerchantCaravanSystem implemented but never initialized
+	// Fix: Added system initialization for traveling merchants between servers
+	// Roadmap: ROADMAP_V5.md Phase 36
+	sys.merchantCaravanSystem = engine.NewMerchantCaravanSystem(game.World)
+
 	// Phase 40: Mail system for asynchronous messaging
 	sys.mailSystem = engine.NewMailSystem(game.World)
 
@@ -293,7 +368,7 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.courierSystem = engine.NewCourierSystem(game.World, sys.mailSystem)
 
 	if *verbose {
-		clientLogger.Info("V5.0 systems initialized (chat, mail, courier)")
+		clientLogger.Info("V5.0 systems initialized (chat, trade, terrain construction/modification, merchant caravans, mail, courier)")
 	}
 }
 
@@ -470,6 +545,33 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 41: Politics system for server diplomacy
 	game.World.AddSystem(&politicsSystemWrapper{system: sys.politicsSystem})
+
+	// INTEGRATION FIX [Category A]: Missing System Registrations
+	// Gap: Systems initialized but never added to World update loop
+	// Fix: Registered all missing systems with appropriate wrappers
+	// Roadmap: ROADMAP_V4.md (Phase 14, 30-31) and ROADMAP_V5.md (Phase 32-36)
+
+	// Phase 30-31: Environmental Storytelling and NPC Dialog
+	game.World.AddSystem(&investigationSystemWrapper{system: sys.investigationSystem})
+	game.World.AddSystem(&npcDialogSystemWrapper{system: sys.npcDialogSystem})
+
+	// Phase 14.4: Audio Enhancement Systems
+	game.World.AddSystem(&musicTriggerSystemWrapper{system: sys.musicTriggerSystem})
+	game.World.AddSystem(&positionalAudioSystemWrapper{system: sys.positionalAudioSystem})
+	game.World.AddSystem(&reverbSystemWrapper{system: sys.reverbSystem})
+
+	// Phase 14: Quality System
+	game.World.AddSystem(&qualitySystemWrapper{system: sys.qualitySystem})
+
+	// Phase 33: Player-to-Player Trading
+	game.World.AddSystem(&tradeSystemWrapper{system: sys.tradeSystem})
+
+	// Phase 35: Terrain Modification
+	game.World.AddSystem(&terrainConstructionSystemWrapper{system: sys.terrainConstructionSys})
+	game.World.AddSystem(&terrainModificationSystemWrapper{system: sys.terrainModificationSys})
+
+	// Phase 36: Merchant Caravans
+	game.World.AddSystem(&merchantCaravanSystemWrapper{system: sys.merchantCaravanSystem})
 }
 
 // configureSystemConnections wires up interdependent systems.

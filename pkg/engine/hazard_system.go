@@ -222,97 +222,12 @@ func (s *HazardSystem) applyZoneMovementModifier(entity *Entity, zone *HazardZon
 	velocity.VY *= multiplier
 }
 
-// applyHazardEffects applies hazard effects to entities in range (legacy method).
-// This is kept for backward compatibility but delegates to zone-based system.
-func (s *HazardSystem) applyHazardEffects(hazard *HazardComponent, hazPos *PositionComponent, deltaTime float64) {
-	if s.world == nil {
-		return
-	}
-
-	// Find all entities
-	entities := s.world.GetEntities()
-
-	for _, entity := range entities {
-		// Get entity position
-		entPosComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		entPos, ok := entPosComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Calculate distance to hazard
-		dx := entPos.X - hazPos.X
-		dy := entPos.Y - hazPos.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
-
-		// Check if entity is in hazard radius
-		if dist <= hazard.Radius {
-			// Apply damage if hazard is damaging
-			if hazard.IsDamaging() {
-				s.applyDamage(entity, hazard, deltaTime)
-			}
-
-			// Apply movement speed modifier if hazard affects movement
-			if hazard.AffectsMovement() {
-				s.applyMovementModifier(entity, hazard)
-			}
-		}
-	}
-}
-
-// applyDamage applies hazard damage to an entity.
-func (s *HazardSystem) applyDamage(entity *Entity, hazard *HazardComponent, deltaTime float64) {
-	// Get health component
-	healthComp, ok := entity.GetComponent("health")
-	if !ok {
-		return // Entity has no health
-	}
-
-	health, ok := healthComp.(*HealthComponent)
-	if !ok {
-		return
-	}
-
-	// Calculate damage for this frame
-	damage := hazard.DamagePerSecond * deltaTime
-
-	// Apply damage
-	health.TakeDamage(damage)
-
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entityID":   entity.ID,
-			"hazardType": hazard.HazardType.String(),
-			"damage":     damage,
-		}).Debug("hazard damage applied")
-	}
-}
-
-// applyMovementModifier applies movement speed modifier to an entity.
-// Legacy method maintained for backward compatibility.
-func (s *HazardSystem) applyMovementModifier(entity *Entity, hazard *HazardComponent) {
-	// Delegate to zone-based system by checking zone tracker
-	// This ensures consistent behavior with new zone tracking
-	entPosComp, ok := entity.GetComponent("position")
-	if !ok {
-		return
-	}
-	entPos, ok := entPosComp.(*PositionComponent)
-	if !ok {
-		return
-	}
-
-	zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
-	for _, zone := range zones {
-		if zone.MovementMultiplier != 1.0 {
-			s.applyZoneMovementModifier(entity, zone)
-			break // Apply only strongest effect
-		}
-	}
-}
+// OBSOLETE CODE REMOVED: Legacy hazard effect application methods
+// Replaced by: Zone-based tracking system in applyZoneEffects() and applyZoneDamage()
+// Removed: applyHazardEffects(), applyDamage(), applyMovementModifier() - these methods
+// used entity-by-entity distance checking which was replaced by efficient zone-based
+// spatial queries in the zone tracker system. The zone system provides better performance
+// and cleaner separation of concerns.
 
 // CreateHazard creates a hazard entity at the specified position.
 // This is a helper method for external systems (e.g., destructible objects, spells).

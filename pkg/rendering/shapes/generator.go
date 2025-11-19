@@ -49,7 +49,7 @@ func (g *Generator) generateShape(config Config) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-// generateWithoutAntiAlias generates shapes with hard edges (legacy behavior).
+// generateWithoutAntiAlias generates shapes with hard edges (fastest rendering mode).
 func (g *Generator) generateWithoutAntiAlias(img *image.RGBA, config Config, centerX, centerY float64) {
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {

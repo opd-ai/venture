@@ -89,21 +89,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Welcome to the world of procedural adventure. Every dungeon, enemy, and item is unique!",
 			Objective:   "Press any key",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// H-005 FIX: Use InputProvider interface exclusively for platform-agnostic input
-				// Works with production (Ebiten), test (StubInput), and mobile (TouchInput)
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") {
-						if comp, ok := entity.GetComponent("input"); ok {
-							if inputProvider, ok := comp.(InputProvider); ok {
-								return inputProvider.IsAnyKeyPressed()
-							}
-						}
-					}
-				}
-				// If no input provider found, step is not complete
-				return false
-			},
+			Condition:   checkWelcomeCondition,
 		},
 		{
 			ID:          "movement",
@@ -111,25 +97,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Use WASD keys to move your character around the dungeon.",
 			Objective:   "Move at least 50 units in any direction",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Check if player has moved sufficiently
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("position") {
-						comp, ok := entity.GetComponent("position")
-						if !ok {
-							continue
-						}
-						pos, ok := comp.(*PositionComponent)
-						if !ok {
-							continue
-						}
-						// Simple distance check from origin (400, 300 typical spawn)
-						distFromStart := (pos.X-400)*(pos.X-400) + (pos.Y-300)*(pos.Y-300)
-						return distFromStart > 2500 // ~50 units
-					}
-				}
-				return false
-			},
+			Condition:   checkMovementCondition,
 		},
 		{
 			ID:          "combat",
@@ -137,24 +105,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Press SPACE near an enemy to attack. Enemies appear as red sprites.",
 			Objective:   "Defeat your first enemy",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Check if player has the "attack" component and has used it
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("attack") {
-						comp, ok := entity.GetComponent("attack")
-						if !ok {
-							continue
-						}
-						attack, ok := comp.(*AttackComponent)
-						if !ok {
-							continue
-						}
-						// Check if attack cooldown is active (means they attacked)
-						return attack.CooldownTimer > 0 || attack.CooldownTimer < attack.Cooldown
-					}
-				}
-				return false
-			},
+			Condition:   checkCombatCondition,
 		},
 		{
 			ID:          "health",
@@ -162,24 +113,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Watch your health bar in the top-left corner. Don't let it reach zero!",
 			Objective:   "Survive combat and maintain health above 50%",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Check player health after taking damage
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("health") {
-						comp, ok := entity.GetComponent("health")
-						if !ok {
-							continue
-						}
-						health, ok := comp.(*HealthComponent)
-						if !ok {
-							continue
-						}
-						// Complete if health is damaged but still above 50%
-						return health.Current < health.Max && health.Current > health.Max/2
-					}
-				}
-				return false
-			},
+			Condition:   checkHealthCondition,
 		},
 		{
 			ID:          "inventory",
@@ -187,23 +121,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Press I to open your inventory. Collect items dropped by enemies.",
 			Objective:   "Pick up an item and open inventory",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Check if player has items in inventory
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("inventory") {
-						comp, ok := entity.GetComponent("inventory")
-						if !ok {
-							continue
-						}
-						inv, ok := comp.(*InventoryComponent)
-						if !ok {
-							continue
-						}
-						return len(inv.Items) > 0
-					}
-				}
-				return false
-			},
+			Condition:   checkInventoryCondition,
 		},
 		{
 			ID:          "skills",
@@ -211,23 +129,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Defeat enemies to gain XP. Level up to become stronger and unlock new abilities!",
 			Objective:   "Reach level 2",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Check if player has leveled up
-				for _, entity := range world.GetEntities() {
-					if entity.HasComponent("input") && entity.HasComponent("experience") {
-						comp, ok := entity.GetComponent("experience")
-						if !ok {
-							continue
-						}
-						exp, ok := comp.(*ExperienceComponent)
-						if !ok {
-							continue
-						}
-						return exp.Level >= 2
-					}
-				}
-				return false
-			},
+			Condition:   checkSkillsCondition,
 		},
 		{
 			ID:          "exploration",
@@ -235,12 +137,127 @@ func createDefaultTutorialSteps() []TutorialStep {
 			Description: "Explore the dungeon to find treasure, secrets, and the stairs to deeper levels.",
 			Objective:   "Continue your adventure! Tutorial complete.",
 			Completed:   false,
-			Condition: func(world *World) bool {
-				// Tutorial complete after player has basic understanding
-				return true // Always marked complete once reached
-			},
+			Condition:   checkExplorationCondition,
 		},
 	}
+}
+
+// findPlayerEntity returns the first entity with an input component (the player).
+func findPlayerEntity(world *World) *Entity {
+	for _, entity := range world.GetEntities() {
+		if entity.HasComponent("input") {
+			return entity
+		}
+	}
+	return nil
+}
+
+// checkWelcomeCondition verifies any key has been pressed.
+func checkWelcomeCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil {
+		return false
+	}
+	comp, ok := player.GetComponent("input")
+	if !ok {
+		return false
+	}
+	inputProvider, ok := comp.(InputProvider)
+	if !ok {
+		return false
+	}
+	return inputProvider.IsAnyKeyPressed()
+}
+
+// checkMovementCondition verifies the player has moved at least 50 units from spawn.
+func checkMovementCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("position") {
+		return false
+	}
+	comp, ok := player.GetComponent("position")
+	if !ok {
+		return false
+	}
+	pos, ok := comp.(*PositionComponent)
+	if !ok {
+		return false
+	}
+	distFromStart := (pos.X-400)*(pos.X-400) + (pos.Y-300)*(pos.Y-300)
+	return distFromStart > 2500
+}
+
+// checkCombatCondition verifies the player has attacked at least once.
+func checkCombatCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("attack") {
+		return false
+	}
+	comp, ok := player.GetComponent("attack")
+	if !ok {
+		return false
+	}
+	attack, ok := comp.(*AttackComponent)
+	if !ok {
+		return false
+	}
+	return attack.CooldownTimer > 0 || attack.CooldownTimer < attack.Cooldown
+}
+
+// checkHealthCondition verifies the player has taken damage but remains above 50% health.
+func checkHealthCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("health") {
+		return false
+	}
+	comp, ok := player.GetComponent("health")
+	if !ok {
+		return false
+	}
+	health, ok := comp.(*HealthComponent)
+	if !ok {
+		return false
+	}
+	return health.Current < health.Max && health.Current > health.Max/2
+}
+
+// checkInventoryCondition verifies the player has collected at least one item.
+func checkInventoryCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("inventory") {
+		return false
+	}
+	comp, ok := player.GetComponent("inventory")
+	if !ok {
+		return false
+	}
+	inv, ok := comp.(*InventoryComponent)
+	if !ok {
+		return false
+	}
+	return len(inv.Items) > 0
+}
+
+// checkSkillsCondition verifies the player has reached level 2.
+func checkSkillsCondition(world *World) bool {
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("experience") {
+		return false
+	}
+	comp, ok := player.GetComponent("experience")
+	if !ok {
+		return false
+	}
+	exp, ok := comp.(*ExperienceComponent)
+	if !ok {
+		return false
+	}
+	return exp.Level >= 2
+}
+
+// checkExplorationCondition marks tutorial as complete.
+func checkExplorationCondition(world *World) bool {
+	return true
 }
 
 // Update processes the tutorial system each frame

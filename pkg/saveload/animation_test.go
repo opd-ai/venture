@@ -158,37 +158,10 @@ func TestModifiedEntityAnimationSerialization(t *testing.T) {
 	}
 }
 
-// TestBackwardCompatibility tests loading saves without animation data.
-func TestBackwardCompatibility(t *testing.T) {
-	// Simulate old save format without animation_state field
-	oldSaveJSON := `{
-		"entity_id": 12345,
-		"x": 100.0,
-		"y": 200.0,
-		"level": 5,
-		"current_health": 100.0,
-		"max_health": 100.0
-	}`
-
-	var player PlayerState
-	err := json.Unmarshal([]byte(oldSaveJSON), &player)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal old format: %v", err)
-	}
-
-	// Verify animation state is nil (backward compatible)
-	if player.AnimationState != nil {
-		t.Errorf("Expected nil animation state for old save format, got %+v", player.AnimationState)
-	}
-
-	// Verify basic fields loaded correctly
-	if player.EntityID != 12345 {
-		t.Errorf("EntityID = %d, want 12345", player.EntityID)
-	}
-	if player.Level != 5 {
-		t.Errorf("Level = %d, want 5", player.Level)
-	}
-}
+// OBSOLETE CODE REMOVED: TestBackwardCompatibility
+// Replaced by: Pre-1.0 policy - only current save format supported
+// Removed: Backward compatibility test for old save formats without animation_state
+// Roadmap: No backward compatibility required before version 1.0
 
 // TestGameSaveAnimationSerialization tests full GameSave with animation data.
 func TestGameSaveAnimationSerialization(t *testing.T) {

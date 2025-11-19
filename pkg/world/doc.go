@@ -96,11 +96,14 @@
 //
 // If the current save is corrupted, LoadWorld automatically tries backups.
 //
-// # Migration System
+// # Save Format Versioning (PRE-1.0)
 //
-// Save files include a version field for automatic migration on load.
-// When loading an old save format, the system automatically upgrades it
-// to the current schema version while preserving data.
+// OBSOLETE CODE REMOVED: Automatic save migration
+// Replaced by: Pre-1.0 policy - incompatible saves are rejected with clear error
+// Removed: Automatic migration logic, backward compatibility code
+//
+// Save files include a version field. Pre-version 1.0, only the current schema
+// version is supported. Incompatible saves are rejected with an error message.
 //
 // Current schema version: 1
 //

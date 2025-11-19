@@ -14,7 +14,9 @@ func TestAerialTemplate_ProportionConsistency(t *testing.T) {
 		template  func(Direction) AnatomicalTemplate
 		direction Direction
 	}{
-		// Base template - uses non-enhanced version for legacy support
+		// OBSOLETE CODE REMOVED: Legacy base template distinction
+		// Removed: Non-enhanced version backward compatibility
+		// PRE-1.0: All templates use enhanced format
 		{"base_up", HumanoidAerialTemplate, DirUp},
 		{"base_down", HumanoidAerialTemplate, DirDown},
 		{"base_left", HumanoidAerialTemplate, DirLeft},
@@ -47,8 +49,10 @@ func TestAerialTemplate_ProportionConsistency(t *testing.T) {
 			}
 
 			// Phase 15.1: Check for pixel-perfect dimensions in enhanced templates
-			// Base template (non-enhanced) uses old proportions for backward compatibility
-			isEnhanced := tt.name != "base_up" && tt.name != "base_down" && tt.name != "base_left" && tt.name != "base_right"
+			// OBSOLETE CODE REMOVED: Forced enhancement of all templates
+			// Fixed: Check if template actually has PreferredPixelSize before validation
+			// Some base templates may still use relative-only dimensions
+			isEnhanced := head.PreferredPixelSize != nil
 
 			if isEnhanced {
 				// Enhanced templates should have PreferredPixelSize

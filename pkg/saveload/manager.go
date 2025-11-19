@@ -290,17 +290,12 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 		return fmt.Errorf("save file has no version")
 	}
 
-	// For now, we only support the current version
-	// Future versions can add migration logic here
+	// OBSOLETE CODE REMOVED: Save format migration logic
+	// Replaced by: Pre-1.0 policy - incompatible saves rejected with error
+	// Removed: Migration logic placeholder comments
+	// PRE-1.0: Only current save version supported
 	if save.Version != SaveVersion {
-		// Example migration logic (not needed yet):
-		// if save.Version == "0.9.0" {
-		//     migrateSaveFrom090To100(save)
-		// }
-
-		// For now, just warn about version mismatch
-		// In production, you might want to reject or migrate
-		return fmt.Errorf("save file version %s is not supported (current version: %s)", save.Version, SaveVersion)
+		return fmt.Errorf("save file version %s is not supported (current version: %s) - no migration before v1.0", save.Version, SaveVersion)
 	}
 
 	// Validate required fields

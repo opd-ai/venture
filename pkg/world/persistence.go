@@ -275,41 +275,16 @@ func (w *WorldPersistence) loadFromPath(path string, seed int64) (*PersistentWor
 		state.ModifiedChunks = make(map[string]bool)
 	}
 
-	// Migrate if needed
-	if state.Version < CurrentSchemaVersion {
-		if err := w.migrateState(&state); err != nil {
-			return nil, fmt.Errorf("failed to migrate state: %w", err)
-		}
+	// OBSOLETE CODE REMOVED: Save format migration (migrateState function)
+	// Replaced by: Pre-1.0 policy - only latest save format supported, no backward compatibility
+	// Removed: migrateState() function and all migration logic
+	// Roadmap: ROADMAP_V6.md Phase 37 - persistence without legacy support
+	// PRE-1.0: Only CurrentSchemaVersion is supported
+	if state.Version != CurrentSchemaVersion {
+		return nil, fmt.Errorf("incompatible save version %d (expected %d) - no migration support before v1.0", state.Version, CurrentSchemaVersion)
 	}
 
 	return &state, nil
-}
-
-// migrateState migrates old save format to current schema version
-func (w *WorldPersistence) migrateState(state *PersistentWorldState) error {
-	// Migration from version 0 to 1 (initial version had no version field)
-	if state.Version == 0 {
-		state.Version = 1
-		// Ensure all required fields exist
-		if state.ChunkData == nil {
-			state.ChunkData = make(map[string]*Chunk)
-		}
-		if state.Entities == nil {
-			state.Entities = []*EntityState{}
-		}
-		if state.WorldEvents == nil {
-			state.WorldEvents = []WorldEvent{}
-		}
-	}
-
-	// Future migrations would go here
-	// Example:
-	// if state.Version == 1 {
-	//     // Migrate v1 -> v2
-	//     state.Version = 2
-	// }
-
-	return nil
 }
 
 // CleanupBackups removes backup files

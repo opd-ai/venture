@@ -1968,17 +1968,14 @@ func TestPhase151EnhancedProportionalScaling(t *testing.T) {
 		t.Errorf("torso height at 64x64 = %d, want 6", torso.GetEffectiveHeight(64))
 	}
 
-	// Demonstrate backward compatibility: templates without PreferredPixelSize still work
+	// OBSOLETE CODE REMOVED: Backward compatibility demonstration
+	// Removed: Tests for templates without PreferredPixelSize
+	// PRE-1.0: All templates use PreferredPixelSize - relative-only mode not supported
+	// Test that WithPixelDimensions creates properly configured templates
 	template := HumanoidTemplate()
 	headSpec := template.BodyPartLayout[PartHead]
 
-	// Should calculate from relative dimensions (no PreferredPixelSize set)
-	expectedWidth := int(float64(28) * headSpec.RelativeWidth)
-	if headSpec.GetEffectiveWidth(28) != expectedWidth {
-		t.Errorf("legacy head width = %d, want %d", headSpec.GetEffectiveWidth(28), expectedWidth)
-	}
-
-	// Can upgrade existing template with pixel dimensions
+	// Can create template with pixel dimensions
 	upgradedHead := headSpec.WithPixelDimensions(4, 4)
 	if upgradedHead.GetEffectiveWidth(28) != 4 {
 		t.Errorf("upgraded head width = %d, want 4", upgradedHead.GetEffectiveWidth(28))

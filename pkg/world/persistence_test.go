@@ -218,57 +218,10 @@ func TestBackupRotationMultiple(t *testing.T) {
 	}
 }
 
-func TestMigration(t *testing.T) {
-	tmpDir := t.TempDir()
-	savePath := filepath.Join(tmpDir, "test.world")
-
-	wp := NewWorldPersistence(savePath)
-
-	// Create old version state (version 0)
-	oldState := &PersistentWorldState{
-		Version:        0,
-		WorldSeed:      99999,
-		ChunkData:      make(map[string]*Chunk),
-		ModifiedChunks: make(map[string]bool),
-	}
-
-	// Manually save without version update to simulate old save
-	f, err := os.Create(savePath)
-	if err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-	defer f.Close()
-
-	// Save old format
-	if err := wp.SaveWorld(oldState); err != nil {
-		t.Fatalf("Failed to save: %v", err)
-	}
-
-	// Load should migrate automatically
-	loadedState, err := wp.LoadWorld(99999)
-	if err != nil {
-		t.Fatalf("LoadWorld failed: %v", err)
-	}
-
-	// Version should be updated
-	if loadedState.Version != CurrentSchemaVersion {
-		t.Errorf("Version = %d, want %d (migration failed)", loadedState.Version, CurrentSchemaVersion)
-	}
-
-	// Data should be preserved
-	if loadedState.WorldSeed != 99999 {
-		t.Errorf("WorldSeed = %d, want 99999", loadedState.WorldSeed)
-	}
-
-	// New fields should be initialized
-	if loadedState.Entities == nil {
-		t.Errorf("Entities should be initialized after migration")
-	}
-
-	if loadedState.WorldEvents == nil {
-		t.Errorf("WorldEvents should be initialized after migration")
-	}
-}
+// OBSOLETE CODE REMOVED: TestMigration
+// Replaced by: Pre-1.0 policy - incompatible saves are rejected with error
+// Removed: Migration test for upgrading version 0 to version 1
+// PRE-1.0: Only current schema version supported, old saves are rejected
 
 func TestIncrementalSave(t *testing.T) {
 	tmpDir := t.TempDir()

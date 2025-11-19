@@ -96,6 +96,7 @@ func NewGame() *Game {
 	}
 }
 
+// Update processes input and updates game state each frame.
 func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
@@ -105,25 +106,29 @@ func (g *Game) Update() error {
 		g.showMetrics = !g.showMetrics
 	}
 
-	// Handle animation state changes
+	g.handleAnimationInput()
+	g.handleMovementInput()
+	g.constrainPositionToScreen()
+	g.updateDirectionAndState()
+	g.updateAnimationFrame()
+
+	return nil
+}
+
+// handleAnimationInput processes key inputs for animation state changes.
+func (g *Game) handleAnimationInput() {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		g.currentState = "attack"
-		g.frameIndex = 0
+		g.setAnimationState("attack")
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyC) {
-		g.currentState = "cast"
-		g.frameIndex = 0
+		g.setAnimationState("cast")
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyJ) {
-		g.currentState = "jump"
-		g.frameIndex = 0
+		g.setAnimationState("jump")
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyH) {
-		g.currentState = "hit"
-		g.frameIndex = 0
+		g.setAnimationState("hit")
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-		g.currentState = "death"
-		g.frameIndex = 0
+		g.setAnimationState("death")
 	}
 
-	// Test keys for specific states
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		g.currentState = "idle"
 	} else if inpututil.IsKeyJustPressed(ebiten.Key2) {
@@ -131,8 +136,16 @@ func (g *Game) Update() error {
 	} else if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		g.currentState = "run"
 	}
+}
 
-	// Handle movement (8-directional)
+// setAnimationState changes the current animation state and resets the frame index.
+func (g *Game) setAnimationState(state string) {
+	g.currentState = state
+	g.frameIndex = 0
+}
+
+// handleMovementInput processes arrow key inputs and updates velocity.
+func (g *Game) handleMovementInput() {
 	g.vx, g.vy = 0, 0
 	speed := 2.0
 
@@ -149,11 +162,12 @@ func (g *Game) Update() error {
 		g.vx = speed
 	}
 
-	// Update position
 	g.x += g.vx
 	g.y += g.vy
+}
 
-	// Keep on screen
+// constrainPositionToScreen ensures the character stays within screen bounds.
+func (g *Game) constrainPositionToScreen() {
 	if g.x < spriteSize/2 {
 		g.x = spriteSize / 2
 	}
@@ -166,8 +180,10 @@ func (g *Game) Update() error {
 	if g.y > screenHeight-spriteSize/2 {
 		g.y = screenHeight - spriteSize/2
 	}
+}
 
-	// Update direction based on movement
+// updateDirectionAndState updates the character's direction and animation state based on movement.
+func (g *Game) updateDirectionAndState() {
 	if g.vx != 0 || g.vy != 0 {
 		g.currentDir = animation.CalculateDirection8(g.vx, g.vy)
 		if g.currentState == "idle" {
@@ -178,8 +194,10 @@ func (g *Game) Update() error {
 			g.currentState = "idle"
 		}
 	}
+}
 
-	// Update animation frame
+// updateAnimationFrame advances the animation frame based on elapsed time.
+func (g *Game) updateAnimationFrame() {
 	deltaTime := time.Since(g.lastUpdate).Seconds()
 	g.lastUpdate = time.Now()
 
@@ -191,8 +209,6 @@ func (g *Game) Update() error {
 		frameCount := animation.GetFrameCount(g.currentState)
 		g.frameIndex = (g.frameIndex + 1) % frameCount
 	}
-
-	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {

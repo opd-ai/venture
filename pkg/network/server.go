@@ -301,93 +301,140 @@ func (s *TCPServer) acceptLoop() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			select {
-			case <-s.done:
+			if s.handleAcceptError(err) {
 				return
-			default:
-				s.errors <- fmt.Errorf("accept error: %w", err)
-				continue
 			}
-		}
-
-		// Check player limit
-		s.clientsMu.RLock()
-		playerCount := len(s.clients)
-		s.clientsMu.RUnlock()
-
-		if playerCount >= s.config.MaxPlayers {
-			conn.Close()
-			s.errors <- fmt.Errorf("server full, rejected connection from %s", conn.RemoteAddr())
 			continue
 		}
 
-		// Enable TCP keepalive for long-duration connections
-		// This prevents silent disconnections at NAT/proxy boundaries (typical 5-15 min timeout)
-		// and helps detect dead connections when network fails without proper FIN/RST
-		if tcpConn, ok := conn.(*net.TCPConn); ok {
-			if err := tcpConn.SetKeepAlive(true); err != nil {
-				if s.logger != nil {
-					s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to enable TCP keepalive")
-				}
-			} else if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
-				if s.logger != nil {
-					s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to set TCP keepalive period")
-				}
-			} else if s.logger != nil {
-				s.logger.WithField("client", conn.RemoteAddr()).Debug("TCP keepalive enabled (30s period)")
-			}
+		if s.isServerFull(conn) {
+			continue
 		}
 
-		// Create client connection
-		s.clientsMu.Lock()
-		playerID := s.nextPlayerID
-		s.nextPlayerID++
+		s.configureTCPKeepalive(conn)
 
-		// Initialize per-client buffer stats
-		var clientLogEntry *logrus.Entry
-		if s.logger != nil {
-			clientLogEntry = s.logger.WithField("player_id", playerID)
-		}
+		client := s.createClientConnection(conn)
 
-		client := &clientConnection{
-			playerID:         playerID,
-			conn:             conn,
-			address:          conn.RemoteAddr().String(),
-			connected:        true,
-			lastActive:       time.Now(),
-			stateUpdateQueue: NewStateUpdatePriorityQueue(s.config.BufferSize),
-			updateSignal:     make(chan struct{}, 1), // Buffered to avoid blocking
-			stateUpdateStats: NewBufferStats(fmt.Sprintf("client_%d_state_updates", playerID), s.config.BufferSize, clientLogEntry),
-		}
-
-		s.clients[playerID] = client
-		s.clientsMu.Unlock()
-
-		// Notify game logic of new player
-		select {
-		case s.playerJoins <- playerID:
-			s.playerJoinStats.RecordSend()
-		case <-s.done:
+		if s.notifyPlayerJoin(client.playerID) {
 			return
-		default:
-			// Non-blocking error send
-			s.playerJoinStats.RecordDrop()
-			select {
-			case s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID):
-				s.errorStats.RecordSend()
-			case <-s.done:
-				return
-			default:
-				// Both channels full - continue without notification
-				s.errorStats.RecordDrop()
-			}
 		}
 
-		// Start client handlers
-		s.wg.Add(2)
-		go s.handleClientReceive(client)
-		go s.handleClientSend(client)
+		s.startClientHandlers(client)
 	}
+}
+
+// handleAcceptError processes errors from the accept loop and returns true if the loop should exit.
+func (s *TCPServer) handleAcceptError(err error) bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+		s.errors <- fmt.Errorf("accept error: %w", err)
+		return false
+	}
+}
+
+// isServerFull checks if the server has reached max player capacity and rejects the connection if so.
+func (s *TCPServer) isServerFull(conn net.Conn) bool {
+	s.clientsMu.RLock()
+	playerCount := len(s.clients)
+	s.clientsMu.RUnlock()
+
+	if playerCount >= s.config.MaxPlayers {
+		conn.Close()
+		s.errors <- fmt.Errorf("server full, rejected connection from %s", conn.RemoteAddr())
+		return true
+	}
+	return false
+}
+
+// configureTCPKeepalive enables TCP keepalive for long-duration connections to prevent silent disconnections.
+func (s *TCPServer) configureTCPKeepalive(conn net.Conn) {
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		return
+	}
+
+	if err := tcpConn.SetKeepAlive(true); err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to enable TCP keepalive")
+		}
+		return
+	}
+
+	if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to set TCP keepalive period")
+		}
+		return
+	}
+
+	if s.logger != nil {
+		s.logger.WithField("client", conn.RemoteAddr()).Debug("TCP keepalive enabled (30s period)")
+	}
+}
+
+// createClientConnection creates and registers a new client connection with the server.
+func (s *TCPServer) createClientConnection(conn net.Conn) *clientConnection {
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+
+	playerID := s.nextPlayerID
+	s.nextPlayerID++
+
+	var clientLogEntry *logrus.Entry
+	if s.logger != nil {
+		clientLogEntry = s.logger.WithField("player_id", playerID)
+	}
+
+	client := &clientConnection{
+		playerID:         playerID,
+		conn:             conn,
+		address:          conn.RemoteAddr().String(),
+		connected:        true,
+		lastActive:       time.Now(),
+		stateUpdateQueue: NewStateUpdatePriorityQueue(s.config.BufferSize),
+		updateSignal:     make(chan struct{}, 1),
+		stateUpdateStats: NewBufferStats(fmt.Sprintf("client_%d_state_updates", playerID), s.config.BufferSize, clientLogEntry),
+	}
+
+	s.clients[playerID] = client
+	return client
+}
+
+// notifyPlayerJoin notifies the game logic of a new player join and returns true if the server should exit.
+func (s *TCPServer) notifyPlayerJoin(playerID uint64) bool {
+	select {
+	case s.playerJoins <- playerID:
+		s.playerJoinStats.RecordSend()
+		return false
+	case <-s.done:
+		return true
+	default:
+		return s.handlePlayerJoinDrop(playerID)
+	}
+}
+
+// handlePlayerJoinDrop handles the case where the player join channel is full.
+func (s *TCPServer) handlePlayerJoinDrop(playerID uint64) bool {
+	s.playerJoinStats.RecordDrop()
+	select {
+	case s.errors <- fmt.Errorf("player join channel full, dropped event for player %d", playerID):
+		s.errorStats.RecordSend()
+		return false
+	case <-s.done:
+		return true
+	default:
+		s.errorStats.RecordDrop()
+		return false
+	}
+}
+
+// startClientHandlers starts the receive and send goroutines for a client connection.
+func (s *TCPServer) startClientHandlers(client *clientConnection) {
+	s.wg.Add(2)
+	go s.handleClientReceive(client)
+	go s.handleClientSend(client)
 }
 
 // handleClientReceive receives data from a client.

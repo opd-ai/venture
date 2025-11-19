@@ -192,7 +192,24 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 func (g *Generator) generateEntityWithTemplate(config Config, entityType string, rng *rand.Rand) (*ebiten.Image, error) {
 	img := ebiten.NewImage(config.Width, config.Height)
 
-	// Extract direction from config (Phase 5.2)
+	direction, genre := extractDirectionAndGenre(config)
+	hasWeapon, hasShield := extractEquipmentFlags(config)
+	isBoss, bossScale := extractBossConfig(config)
+	useAerial := extractAerialFlag(config)
+
+	template := selectEntityTemplate(entityType, genre, direction, hasWeapon, hasShield, useAerial)
+
+	if isBoss {
+		template = applyBossModifications(template, bossScale, config.Complexity)
+	}
+
+	g.renderTemplateParts(img, template, config, rng)
+
+	return img, nil
+}
+
+// extractDirectionAndGenre extracts direction and genre from the config.
+func extractDirectionAndGenre(config Config) (Direction, string) {
 	direction := DirDown // Default facing down
 	if config.Custom != nil {
 		if dir, ok := config.Custom["facing"].(string); ok {
@@ -200,7 +217,6 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		}
 	}
 
-	// Extract genre from config (Phase 5.2)
 	genre := ""
 	if config.Custom != nil {
 		if g, ok := config.Custom["genre"].(string); ok {
@@ -208,7 +224,11 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		}
 	}
 
-	// Extract equipment flags (Phase 5.2)
+	return direction, genre
+}
+
+// extractEquipmentFlags extracts equipment flags from the config.
+func extractEquipmentFlags(config Config) (bool, bool) {
 	hasWeapon := false
 	hasShield := false
 	if config.Custom != nil {
@@ -219,8 +239,11 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 			hasShield = s
 		}
 	}
+	return hasWeapon, hasShield
+}
 
-	// Extract boss flag and scale (Phase 5.3)
+// extractBossConfig extracts boss configuration from the config.
+func extractBossConfig(config Config) (bool, float64) {
 	isBoss := false
 	bossScale := 2.5 // Default boss scale
 	if config.Custom != nil {
@@ -231,111 +254,107 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 			bossScale = scale
 		}
 	}
+	return isBoss, bossScale
+}
 
-	// Extract useAerial flag (Phase 4)
-	useAerial := false
+// extractAerialFlag extracts the aerial flag from the config.
+func extractAerialFlag(config Config) bool {
 	if config.Custom != nil {
 		if aerial, ok := config.Custom["useAerial"].(bool); ok {
-			useAerial = aerial
+			return aerial
 		}
 	}
+	return false
+}
 
-	// Select appropriate template based on entity type, genre, direction, and equipment
-	var template AnatomicalTemplate
+// selectEntityTemplate selects the appropriate anatomical template based on entity type and configuration.
+func selectEntityTemplate(entityType, genre string, direction Direction, hasWeapon, hasShield, useAerial bool) AnatomicalTemplate {
+	isHumanoid := isHumanoidType(entityType)
 
-	// Check if humanoid with equipment
-	isHumanoid := false
+	if useAerial && isHumanoid {
+		return SelectAerialTemplate(entityType, genre, direction)
+	} else if isHumanoid && (hasWeapon || hasShield) {
+		return HumanoidWithEquipment(direction, hasWeapon, hasShield)
+	} else if isHumanoid && genre != "" {
+		return SelectHumanoidTemplate(genre, entityType, direction)
+	} else if isHumanoid {
+		return HumanoidDirectionalTemplate(direction)
+	}
+	return SelectTemplate(entityType)
+}
+
+// isHumanoidType checks if the entity type is humanoid.
+func isHumanoidType(entityType string) bool {
 	switch entityType {
 	case "humanoid", "player", "npc", "knight", "mage", "warrior":
-		isHumanoid = true
+		return true
 	}
+	return false
+}
 
-	// Phase 4: Use aerial template if useAerial flag is set
-	if useAerial && isHumanoid {
-		// Use SelectAerialTemplate which provides 35/50/15 proportions
-		template = SelectAerialTemplate(entityType, genre, direction)
-	} else if isHumanoid && (hasWeapon || hasShield) {
-		// Use equipment template
-		template = HumanoidWithEquipment(direction, hasWeapon, hasShield)
-	} else if isHumanoid && genre != "" {
-		// Use genre-specific humanoid template
-		template = SelectHumanoidTemplate(genre, entityType, direction)
-	} else if isHumanoid {
-		// Use directional template
-		template = HumanoidDirectionalTemplate(direction)
-	} else {
-		// Use basic template for non-humanoids
-		template = SelectTemplate(entityType)
+// applyBossModifications applies boss scaling and enhancements to the template.
+func applyBossModifications(template AnatomicalTemplate, bossScale, complexity float64) AnatomicalTemplate {
+	template = BossTemplate(template, bossScale)
+	if complexity > 0.6 {
+		template = ApplyBossEnhancements(template)
 	}
+	return template
+}
 
-	// Apply boss scaling if needed (Phase 5.3)
-	if isBoss {
-		template = BossTemplate(template, bossScale)
-		// Optionally add boss enhancements
-		if config.Complexity > 0.6 {
-			template = ApplyBossEnhancements(template)
-		}
-	}
-
-	// Get sorted parts for correct rendering order (Z-index)
+// renderTemplateParts renders all parts of the anatomical template to the image.
+func (g *Generator) renderTemplateParts(img *ebiten.Image, template AnatomicalTemplate, config Config, rng *rand.Rand) {
 	parts := template.GetSortedParts()
 
 	for _, partData := range parts {
-		spec := partData.Spec
+		g.renderTemplatePart(img, partData.Spec, config, rng)
+	}
+}
 
-		// Calculate actual dimensions and position from relative values
-		partWidth := int(float64(config.Width) * spec.RelativeWidth)
-		partHeight := int(float64(config.Height) * spec.RelativeHeight)
+// renderTemplatePart renders a single template part to the image.
+func (g *Generator) renderTemplatePart(img *ebiten.Image, spec PartSpec, config Config, rng *rand.Rand) {
+	partWidth := int(float64(config.Width) * spec.RelativeWidth)
+	partHeight := int(float64(config.Height) * spec.RelativeHeight)
 
-		// Skip parts with invalid dimensions
-		if partWidth <= 0 || partHeight <= 0 {
-			continue
-		}
-
-		// Select shape type for this part (randomly from allowed shapes)
-		var shapeType shapes.ShapeType
-		if len(spec.ShapeTypes) > 0 {
-			shapeType = spec.ShapeTypes[rng.Intn(len(spec.ShapeTypes))]
-		} else {
-			shapeType = shapes.ShapeCircle // Default fallback
-		}
-
-		// Get color based on color role
-		partColor := g.getColorForRole(spec.ColorRole, config.Palette)
-
-		// Generate shape for this body part
-		shapeConfig := shapes.Config{
-			Type:      shapeType,
-			Width:     partWidth,
-			Height:    partHeight,
-			Color:     partColor,
-			Seed:      config.Seed + int64(spec.ZIndex),
-			Smoothing: 0.2,
-			Rotation:  spec.Rotation,
-		}
-
-		shape, err := g.shapeGen.Generate(shapeConfig)
-		if err != nil {
-			continue // Skip on error
-		}
-
-		// Position shape according to template
-		opts := &ebiten.DrawImageOptions{}
-
-		// Calculate position (relative to sprite center)
-		x := float64(config.Width)*spec.RelativeX - float64(partWidth)/2
-		y := float64(config.Height)*spec.RelativeY - float64(partHeight)/2
-		opts.GeoM.Translate(x, y)
-
-		// Apply opacity
-		if spec.Opacity < 1.0 {
-			opts.ColorScale.ScaleAlpha(float32(spec.Opacity))
-		}
-
-		img.DrawImage(shape, opts)
+	if partWidth <= 0 || partHeight <= 0 {
+		return
 	}
 
-	return img, nil
+	shapeType := selectShapeType(spec.ShapeTypes, rng)
+	partColor := g.getColorForRole(spec.ColorRole, config.Palette)
+
+	shapeConfig := shapes.Config{
+		Type:      shapeType,
+		Width:     partWidth,
+		Height:    partHeight,
+		Color:     partColor,
+		Seed:      config.Seed + int64(spec.ZIndex),
+		Smoothing: 0.2,
+		Rotation:  spec.Rotation,
+	}
+
+	shape, err := g.shapeGen.Generate(shapeConfig)
+	if err != nil {
+		return
+	}
+
+	opts := &ebiten.DrawImageOptions{}
+	x := float64(config.Width)*spec.RelativeX - float64(partWidth)/2
+	y := float64(config.Height)*spec.RelativeY - float64(partHeight)/2
+	opts.GeoM.Translate(x, y)
+
+	if spec.Opacity < 1.0 {
+		opts.ColorScale.ScaleAlpha(float32(spec.Opacity))
+	}
+
+	img.DrawImage(shape, opts)
+}
+
+// selectShapeType selects a shape type from the allowed types.
+func selectShapeType(shapeTypes []shapes.ShapeType, rng *rand.Rand) shapes.ShapeType {
+	if len(shapeTypes) > 0 {
+		return shapeTypes[rng.Intn(len(shapeTypes))]
+	}
+	return shapes.ShapeCircle
 }
 
 // getColorForRole returns the appropriate color based on the role string.

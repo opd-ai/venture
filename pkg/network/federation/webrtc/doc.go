@@ -37,6 +37,44 @@
 //   - TURN relay fallback for symmetric NAT (configurable TURN server)
 //   - Success rate >95% in typical home/corporate networks
 //
+// # P2P Relay Network
+//
+// The relay system provides TURN relay servers for NAT traversal:
+//
+//  1. RelayManager: Manages pool of TURN relays with health checks and load balancing
+//  2. STUNClient: Discovers public IP/port and detects NAT type
+//  3. NATTraversal: Coordinates connection attempts (Direct → STUN → TURN)
+//  4. RelayNode: Individual TURN server with statistics and capacity management
+//
+// Relay selection strategies:
+//   - LowestLatency: Best for real-time gameplay (<50ms preferred)
+//   - HighestBandwidth: Best for large world transfers (>5 MB/s preferred)
+//   - LowestUtilization: Balances load across relay pool
+//   - RoundRobin: Simple rotation for testing
+//
+// Example NAT traversal:
+//
+//	// Create relay manager with TURN servers
+//	rm := webrtc.NewRelayManager(webrtc.StrategyLowestLatency)
+//	relay := webrtc.NewRelayNode("relay1", "turn:relay.example.com:3478", "user", "pass", "us-east", 100)
+//	rm.AddRelay(relay)
+//
+//	// Create NAT traversal coordinator
+//	nt := webrtc.NewNATTraversal([]string{"stun:stun.l.google.com:19302"}, rm)
+//
+//	// Attempt connection (tries Direct → STUN → TURN automatically)
+//	result, err := nt.EstablishConnection(ctx)
+//	if err != nil {
+//	    log.Fatalf("NAT traversal failed: %v", err)
+//	}
+//
+//	log.Printf("Connected via %s (setup time: %v)", result.Method, result.SetupTime)
+//
+// NAT type detection helps optimize connection strategy:
+//   - Full Cone / Restricted Cone: STUN usually sufficient
+//   - Port Restricted Cone: STUN with port prediction
+//   - Symmetric NAT: Requires TURN relay (10-15% of connections)
+//
 // # Fallback Behavior
 //
 // If WebRTC is unavailable (old browsers, restrictive firewalls):
@@ -83,8 +121,11 @@
 //
 //   - Signaling latency: <500ms for peer discovery
 //   - Connection establishment: <2s (including ICE)
+//   - NAT traversal success rate: >95% (Direct: 5-10%, STUN: 75-85%, TURN: 10-15%)
+//   - TURN relay overhead: <50ms additional latency
 //   - Data channel bandwidth: 1-10 MB/s (network-dependent)
-//   - Zero server infrastructure cost (P2P only)
+//   - Relay capacity: 100-1000 concurrent connections per TURN server
+//   - Zero server infrastructure cost for P2P (TURN relay costs apply for 10-15% of connections)
 //   - Fallback WebSocket: 100-500 KB/s
 //
 // # Security

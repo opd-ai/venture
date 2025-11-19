@@ -46,56 +46,82 @@ func (cps *ClassProgressionSystem) ApplyStatGrowth(entity *Entity, class Charact
 		return
 	}
 
-	// Get base stats (if available)
-	var baseHP, baseMana, baseAttack, baseDefense, baseMagicPower float64
+	baseStats := cps.extractBaseStats(entity)
+	newStats := cps.calculateNewStats(growth, baseStats, level)
+	cps.applyNewStats(entity, newStats, baseStats)
+}
+
+// extractBaseStats retrieves base stats from an entity.
+// Returns base HP, mana, attack, defense, and magic power values.
+func (cps *ClassProgressionSystem) extractBaseStats(entity *Entity) statValues {
+	stats := statValues{}
+
 	if baseStatsComp, ok := entity.GetComponent("base_stats"); ok {
 		if baseStats, ok := baseStatsComp.(*BaseStatsComponent); ok {
-			baseHP = baseStats.BaseMaxHealth
-			baseMana = 0 // BaseStatsComponent doesn't store base mana
-			baseAttack = baseStats.BaseAttack
-			baseDefense = baseStats.BaseDefense
-			baseMagicPower = baseStats.BaseMagicPower
+			stats.hp = baseStats.BaseMaxHealth
+			stats.attack = baseStats.BaseAttack
+			stats.defense = baseStats.BaseDefense
+			stats.magicPower = baseStats.BaseMagicPower
 		}
 	}
 
-	// If no base stats component, use current values as base
-	if baseHP == 0 {
+	cps.fillMissingBaseStats(entity, &stats)
+	return stats
+}
+
+// fillMissingBaseStats fills in base stats from current values if not set.
+func (cps *ClassProgressionSystem) fillMissingBaseStats(entity *Entity, stats *statValues) {
+	if stats.hp == 0 {
 		if healthComp, ok := entity.GetComponent("health"); ok {
 			if health, ok := healthComp.(*HealthComponent); ok {
-				baseHP = health.Max
+				stats.hp = health.Max
 			}
 		}
 	}
-	if baseMana == 0 {
+	if stats.mana == 0 {
 		if manaComp, ok := entity.GetComponent("mana"); ok {
 			if mana, ok := manaComp.(*ManaComponent); ok {
-				baseMana = float64(mana.Max)
+				stats.mana = float64(mana.Max)
 			}
 		}
 	}
+}
 
-	// Apply growth calculations
-	newHP := growth.CalculateHP(baseHP, level)
-	newMana := growth.CalculateMana(baseMana, level)
-	newAttack := growth.CalculateAttack(baseAttack, level)
-	newDefense := growth.CalculateDefense(baseDefense, level)
-	newMagicPower := growth.CalculateMagicPower(baseMagicPower, level)
-	// Note: Speed growth calculation exists but VelocityComponent doesn't support max speed
+// calculateNewStats computes new stat values using class growth formulas.
+func (cps *ClassProgressionSystem) calculateNewStats(growth *StatGrowth, base statValues, level int) statValues {
+	return statValues{
+		hp:         growth.CalculateHP(base.hp, level),
+		mana:       growth.CalculateMana(base.mana, level),
+		attack:     growth.CalculateAttack(base.attack, level),
+		defense:    growth.CalculateDefense(base.defense, level),
+		magicPower: growth.CalculateMagicPower(base.magicPower, level),
+	}
+}
 
-	// Update health component
+// applyNewStats updates entity components with new stat values.
+func (cps *ClassProgressionSystem) applyNewStats(entity *Entity, newStats, baseStats statValues) {
+	cps.updateHealthComponent(entity, newStats.hp)
+	cps.updateManaComponent(entity, newStats.mana)
+	cps.updateStatsComponent(entity, newStats)
+	cps.updateAttackComponent(entity, newStats.attack)
+}
+
+// updateHealthComponent applies new max health while preserving health percentage.
+func (cps *ClassProgressionSystem) updateHealthComponent(entity *Entity, newHP float64) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*HealthComponent); ok {
-			// Preserve health percentage
 			healthPercent := health.Current / health.Max
 			health.Max = newHP
 			health.Current = newHP * healthPercent
 			if health.Current < 1 && healthPercent > 0 {
-				health.Current = 1 // Ensure at least 1 HP if was alive
+				health.Current = 1
 			}
 		}
 	}
+}
 
-	// Update mana component
+// updateManaComponent applies new max mana while preserving mana percentage.
+func (cps *ClassProgressionSystem) updateManaComponent(entity *Entity, newMana float64) {
 	if manaComp, ok := entity.GetComponent("mana"); ok {
 		if mana, ok := manaComp.(*ManaComponent); ok {
 			if mana.Max > 0 {
@@ -108,25 +134,35 @@ func (cps *ClassProgressionSystem) ApplyStatGrowth(entity *Entity, class Charact
 			}
 		}
 	}
+}
 
-	// Update stats component
+// updateStatsComponent applies new attack, defense, and magic power values.
+func (cps *ClassProgressionSystem) updateStatsComponent(entity *Entity, stats statValues) {
 	if statsComp, ok := entity.GetComponent("stats"); ok {
-		if stats, ok := statsComp.(*StatsComponent); ok {
-			stats.Attack = newAttack
-			stats.Defense = newDefense
-			stats.MagicPower = newMagicPower
+		if s, ok := statsComp.(*StatsComponent); ok {
+			s.Attack = stats.attack
+			s.Defense = stats.defense
+			s.MagicPower = stats.magicPower
 		}
 	}
+}
 
-	// Update attack component
+// updateAttackComponent applies new attack damage value.
+func (cps *ClassProgressionSystem) updateAttackComponent(entity *Entity, attackDamage float64) {
 	if attackComp, ok := entity.GetComponent("attack"); ok {
 		if attack, ok := attackComp.(*AttackComponent); ok {
-			attack.Damage = newAttack
+			attack.Damage = attackDamage
 		}
 	}
+}
 
-	// Note: VelocityComponent does not have MaxSpeed field
-	// Speed scaling would need to be handled differently if needed
+// statValues holds stat values for calculations.
+type statValues struct {
+	hp         float64
+	mana       float64
+	attack     float64
+	defense    float64
+	magicPower float64
 }
 
 // ChooseSpecialization sets a character's specialization at level 10+.

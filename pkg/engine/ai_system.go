@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/sirupsen/logrus"
@@ -33,6 +34,13 @@ func NewAISystem(world *World) *AISystem {
 
 // Update processes AI behavior for all entities with AI components.
 func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_count": len(entities),
+			"delta_time":   deltaTime,
+		}).Debug("AI system update started")
+	}
+
 	for _, entity := range entities {
 		// Check if entity has AI component
 		aiComp, ok := entity.GetComponent("ai")
@@ -43,6 +51,12 @@ func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
 		// Type assert with safety check
 		aiState, ok := aiComp.(*AIComponent)
 		if !ok {
+			if ai.logger != nil {
+				ai.logger.WithFields(logrus.Fields{
+					"entity_id":      entity.ID,
+					"component_type": "ai",
+				}).Warn("Failed to type assert AI component")
+			}
 			continue
 		}
 
@@ -64,6 +78,12 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 	// Get position component
 	posComp, ok := entity.GetComponent("position")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "position",
+			}).Debug("Entity missing position component for AI processing")
+		}
 		return // Can't do AI without position
 	}
 	pos, ok := posComp.(*PositionComponent)
@@ -73,6 +93,16 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 
 	// Check health for flee condition
 	shouldFlee := ai.shouldFlee(entity, aiComp)
+
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":     entity.ID,
+			"current_state": aiComp.State.String(),
+			"should_flee":   shouldFlee,
+			"x":             pos.X,
+			"y":             pos.Y,
+		}).Debug("Processing AI decision")
+	}
 
 	// State machine logic
 	switch aiComp.State {
@@ -113,6 +143,14 @@ func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *Positi
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
 
 	if target != nil {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_id":        target.ID,
+				"detection_range":  aiComp.DetectionRange,
+				"state_transition": "Idle->Detect",
+			}).Info("AI detected enemy target")
+		}
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
 	}
@@ -160,6 +198,15 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// Check if reached waypoint
 	if distToWaypoint <= aiComp.WaypointReachDistance {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"waypoint_index": aiComp.CurrentWaypointIndex,
+				"waypoint_x":     waypoint.X,
+				"waypoint_y":     waypoint.Y,
+				"reach_distance": aiComp.WaypointReachDistance,
+			}).Debug("AI reached waypoint")
+		}
 		aiComp.AdvanceToNextWaypoint()
 		return
 	}
@@ -187,6 +234,13 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	// Check if target is still valid and in range
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.2) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Detect->Idle",
+				"reason":           "target_invalid",
+			}).Debug("AI lost target during detection")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateIdle)
 		return
@@ -194,6 +248,14 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// Transition to chase after brief detection period
 	if aiComp.StateTimer > 0.3 {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_id":        aiComp.Target.ID,
+				"state_transition": "Detect->Chase",
+				"detection_time":   aiComp.StateTimer,
+			}).Info("AI confirmed target, starting chase")
+		}
 		aiComp.ChangeState(AIStateChase)
 	}
 }
@@ -202,6 +264,13 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	// Verify target is still valid
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.5) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Chase->Return",
+				"reason":           "target_invalid",
+			}).Debug("AI lost target during chase")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
 		return
@@ -209,6 +278,17 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 
 	// Check if too far from spawn
 	if aiComp.ShouldReturnToSpawn(pos.X, pos.Y) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Chase->Return",
+				"reason":           "too_far_from_spawn",
+				"spawn_x":          aiComp.SpawnX,
+				"spawn_y":          aiComp.SpawnY,
+				"current_x":        pos.X,
+				"current_y":        pos.Y,
+			}).Debug("AI returning to spawn, exceeded leash range")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
 		return
@@ -241,6 +321,15 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
 
 	if distance <= attack.Range {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_id":        aiComp.Target.ID,
+				"distance":         distance,
+				"attack_range":     attack.Range,
+				"state_transition": "Chase->Attack",
+			}).Info("AI in attack range")
+		}
 		aiComp.ChangeState(AIStateAttack)
 		return
 	}
@@ -286,12 +375,28 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// If target moved out of range, chase again
 	if distance > attack.Range {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_id":        aiComp.Target.ID,
+				"distance":         distance,
+				"attack_range":     attack.Range,
+				"state_transition": "Attack->Chase",
+			}).Debug("Target moved out of attack range")
+		}
 		aiComp.ChangeState(AIStateChase)
 		return
 	}
 
 	// Attack if cooldown is ready
 	if attack.CanAttack() {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"target_id": aiComp.Target.ID,
+				"distance":  distance,
+			}).Info("AI executing attack")
+		}
 		// GAP-018 REPAIR: Set animation to attack when attacking
 		if animComp, ok := entity.GetComponent("animation"); ok {
 			if anim, ok := animComp.(*AnimationComponent); ok {
@@ -312,6 +417,13 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	// Check if health has recovered enough
 	if !ai.shouldFlee(entity, aiComp) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Flee->Return",
+				"reason":           "health_recovered",
+			}).Info("AI health recovered, stopping flee")
+		}
 		// Health recovered, go back to idle
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
@@ -323,6 +435,13 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 
 	// If close to spawn, switch to return state
 	if aiComp.GetDistanceFromSpawn(pos.X, pos.Y) < 20.0 {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Flee->Return",
+				"reason":           "reached_spawn",
+			}).Debug("AI reached spawn while fleeing")
+		}
 		aiComp.ChangeState(AIStateReturn)
 	}
 }
@@ -333,6 +452,13 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 
 	// If close enough to spawn, go idle
 	if distance < 10.0 {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"state_transition": "Return->Idle",
+				"distance":         distance,
+			}).Debug("AI returned to spawn")
+		}
 		aiComp.ChangeState(AIStateIdle)
 		// Stop movement
 		velComp, ok := entity.GetComponent("velocity")
@@ -360,6 +486,13 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 
 // transitionToFlee switches to flee state and sets up retreat.
 func (ai *AISystem) transitionToFlee(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":        entity.ID,
+			"state_transition": fmt.Sprintf("%s->Flee", aiComp.State.String()),
+			"reason":           "low_health",
+		}).Warn("AI fleeing due to low health")
+	}
 	aiComp.ChangeState(AIStateFlee)
 }
 
@@ -379,13 +512,31 @@ func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 	}
 
 	healthPercent := health.Current / health.Max
-	return healthPercent < aiComp.FleeHealthThreshold
+	shouldFlee := healthPercent < aiComp.FleeHealthThreshold
+
+	if shouldFlee && ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"health_percent": healthPercent,
+			"flee_threshold": aiComp.FleeHealthThreshold,
+			"current_health": health.Current,
+			"max_health":     health.Max,
+		}).Debug("AI health check for flee condition")
+	}
+
+	return shouldFlee
 }
 
 // findNearestEnemy finds the closest enemy within the detection range.
 func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, detectionRange float64) *Entity {
 	teamComp, ok := entity.GetComponent("team")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "team",
+			}).Debug("Entity missing team component for enemy detection")
+		}
 		return nil // No team component, can't determine enemies
 	}
 	team, ok := teamComp.(*TeamComponent)
@@ -395,8 +546,10 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 
 	var nearest *Entity
 	nearestDist := detectionRange
+	candidatesChecked := 0
 
 	for _, other := range ai.world.entities {
+		candidatesChecked++
 		if other == entity {
 			continue
 		}
@@ -442,6 +595,16 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 		}
 	}
 
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":          entity.ID,
+			"detection_range":    detectionRange,
+			"candidates_checked": candidatesChecked,
+			"enemy_found":        nearest != nil,
+			"nearest_distance":   nearestDist,
+		}).Debug("Enemy detection scan completed")
+	}
+
 	return nearest
 }
 
@@ -456,6 +619,13 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 	if ok {
 		if h, ok := targetHealth.(*HealthComponent); ok {
 			if h.IsDead() {
+				if ai.logger != nil {
+					ai.logger.WithFields(logrus.Fields{
+						"entity_id": entity.ID,
+						"target_id": target.ID,
+						"reason":    "target_dead",
+					}).Debug("Target validation failed")
+				}
 				return false
 			}
 		}
@@ -472,7 +642,19 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 	}
 
 	dist := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
-	return dist <= maxRange
+	isValid := dist <= maxRange
+
+	if !isValid && ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"target_id": target.ID,
+			"distance":  dist,
+			"max_range": maxRange,
+			"reason":    "out_of_range",
+		}).Debug("Target validation failed")
+	}
+
+	return isValid
 }
 
 // moveTowards moves an entity towards a target position.
@@ -528,6 +710,14 @@ func (ai *AISystem) SetDetectionRange(entity *Entity, detectionRange float64) {
 	aiComp, ok := entity.GetComponent("ai")
 	if ok {
 		if aiC, ok := aiComp.(*AIComponent); ok {
+			if ai.logger != nil {
+				ai.logger.WithFields(logrus.Fields{
+					"entity_id": entity.ID,
+					"old_range": aiC.DetectionRange,
+					"new_range": detectionRange,
+					"operation": "set_detection_range",
+				}).Debug("AI detection range updated")
+			}
 			aiC.DetectionRange = detectionRange
 		}
 	}

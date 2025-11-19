@@ -68,7 +68,7 @@ dev() {
 
     #check if any directories do not contain an AUDIT.md file, if so, set NEED_AUDIT to true
     NEED_AUDIT=false
-    for dir in */; do
+    for dir in pkg/*/; do
         if [ ! -f "$dir/AUDIT.md" ]; then
             NEED_AUDIT=true
             break

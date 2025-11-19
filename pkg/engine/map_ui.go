@@ -192,12 +192,33 @@ func (ui *EbitenMapUI) HideFullScreen() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
-	// Update touch handler
+	ui.updateTouchHandlers()
+	ui.updateFogOfWar()
+
+	if !ui.visible {
+		return
+	}
+
+	if ui.handleMenuNavigation() {
+		return
+	}
+
+	if ui.fullScreen {
+		ui.handleTouchInput()
+		ui.handleKeyboardInput(deltaTime)
+	}
+
+	if ui.mapNeedsUpdate {
+		ui.regenerateMapImage()
+	}
+}
+
+// updateTouchHandlers updates touch-related UI components.
+func (ui *EbitenMapUI) updateTouchHandlers() {
 	if ui.touchHandler != nil {
 		ui.touchHandler.Update()
 	}
 
-	// Update touch buttons
 	if ui.fullScreen {
 		if ui.closeButton != nil {
 			ui.closeButton.Update()
@@ -206,92 +227,100 @@ func (ui *EbitenMapUI) Update(entities []*Entity, deltaTime float64) {
 			ui.centerButton.Update()
 		}
 	}
+}
 
-	// Always update fog of war (even when not visible)
-	ui.updateFogOfWar()
+// handleMenuNavigation processes menu navigation input and returns true if Update should exit early.
+func (ui *EbitenMapUI) handleMenuNavigation() bool {
+	if ui.fullScreen {
+		if shouldClose, _ := HandleMenuInput(MenuKeys.Map, true); shouldClose {
+			ui.HideFullScreen()
+			return true
+		}
+	} else {
+		if IsKeyJustPressed(MenuKeys.Map) {
+			ui.ShowFullScreen()
+			return true
+		}
+	}
+	return false
+}
 
-	if !ui.visible {
+// handleTouchInput processes touch gestures for panning and zooming the map.
+func (ui *EbitenMapUI) handleTouchInput() {
+	if ui.touchHandler == nil {
 		return
 	}
 
-	// Standardized dual-exit menu navigation: toggle key (M) OR Escape
-	// Note: For map, we toggle between minimap and full-screen, then close full-screen
-	if ui.fullScreen {
-		// When in full-screen mode, both M and Escape should close full-screen
-		if shouldClose, _ := HandleMenuInput(MenuKeys.Map, true); shouldClose {
-			ui.HideFullScreen()
-			return
+	ui.processTouchPan()
+	ui.processTouchZoom()
+}
+
+// processTouchPan handles single-touch drag gestures for map panning.
+func (ui *EbitenMapUI) processTouchPan() {
+	touches := ui.touchHandler.GetActiveTouches()
+	if len(touches) == 1 {
+		touch := touches[0]
+		if ui.lastPanX != 0 || ui.lastPanY != 0 {
+			deltaX := float64(touch.X - ui.lastPanX)
+			deltaY := float64(touch.Y - ui.lastPanY)
+			ui.panMap(deltaX, deltaY)
 		}
+		ui.lastPanX = touch.X
+		ui.lastPanY = touch.Y
+	} else if len(touches) == 0 {
+		ui.lastPanX = 0
+		ui.lastPanY = 0
+	}
+}
+
+// processTouchZoom handles pinch gestures for map zooming.
+func (ui *EbitenMapUI) processTouchZoom() {
+	pinchScale := ui.touchHandler.GetPinch()
+	if pinchScale != 1.0 {
+		scaleDelta := pinchScale - ui.lastPinchScale
+		ui.zoomMap(scaleDelta * 2.0)
+		ui.lastPinchScale = pinchScale
 	} else {
-		// When showing minimap, M key should open full-screen
-		if IsKeyJustPressed(MenuKeys.Map) {
-			ui.ShowFullScreen()
-			return
-		}
+		ui.lastPinchScale = 1.0
 	}
+}
 
-	// Handle input for full-screen mode
-	if ui.fullScreen {
-		// Touch: Pan with drag gesture
-		if ui.touchHandler != nil {
-			touches := ui.touchHandler.GetActiveTouches()
-			if len(touches) == 1 {
-				// Single touch - pan map
-				touch := touches[0]
-				if ui.lastPanX != 0 || ui.lastPanY != 0 {
-					deltaX := float64(touch.X - ui.lastPanX)
-					deltaY := float64(touch.Y - ui.lastPanY)
-					ui.panMap(deltaX, deltaY)
-				}
-				ui.lastPanX = touch.X
-				ui.lastPanY = touch.Y
-			} else if len(touches) == 0 {
-				// Reset pan tracking when no touches
-				ui.lastPanX = 0
-				ui.lastPanY = 0
-			}
+// handleKeyboardInput processes keyboard input for map navigation.
+func (ui *EbitenMapUI) handleKeyboardInput(deltaTime float64) {
+	ui.handleKeyboardPan(deltaTime)
+	ui.handleKeyboardZoom()
+	ui.handleKeyboardCenter()
+}
 
-			// Touch: Pinch to zoom
-			pinchScale := ui.touchHandler.GetPinch()
-			if pinchScale != 1.0 {
-				scaleDelta := pinchScale - ui.lastPinchScale
-				ui.zoomMap(scaleDelta * 2.0) // Scale factor for sensitivity
-				ui.lastPinchScale = pinchScale
-			} else {
-				ui.lastPinchScale = 1.0
-			}
-		}
-
-		// Keyboard: Pan with arrow keys
-		panSpeed := 200.0 * deltaTime
-		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-			ui.panMap(-panSpeed, 0)
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-			ui.panMap(panSpeed, 0)
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-			ui.panMap(0, -panSpeed)
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-			ui.panMap(0, panSpeed)
-		}
-
-		// Keyboard: Zoom with mouse wheel
-		_, wheelY := ebiten.Wheel()
-		if wheelY != 0 {
-			ui.zoomMap(wheelY * 0.1)
-		}
-
-		// Keyboard: Center on player with Space key
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-			ui.centerOnPlayer()
-		}
+// handleKeyboardPan processes arrow key input for map panning.
+func (ui *EbitenMapUI) handleKeyboardPan(deltaTime float64) {
+	panSpeed := 200.0 * deltaTime
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		ui.panMap(-panSpeed, 0)
 	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		ui.panMap(panSpeed, 0)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+		ui.panMap(0, -panSpeed)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+		ui.panMap(0, panSpeed)
+	}
+}
 
-	// Regenerate map if needed
-	if ui.mapNeedsUpdate {
-		ui.regenerateMapImage()
+// handleKeyboardZoom processes mouse wheel input for map zooming.
+func (ui *EbitenMapUI) handleKeyboardZoom() {
+	_, wheelY := ebiten.Wheel()
+	if wheelY != 0 {
+		ui.zoomMap(wheelY * 0.1)
+	}
+}
+
+// handleKeyboardCenter processes space key input to center the map on the player.
+func (ui *EbitenMapUI) handleKeyboardCenter() {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		ui.centerOnPlayer()
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
+	log "github.com/sirupsen/logrus"
 )
 
 // ObjectiveTrackerSystem monitors game events and updates quest objectives.
@@ -31,24 +32,54 @@ type ObjectiveTrackerSystem struct {
 
 // NewObjectiveTrackerSystem creates a new objective tracker.
 func NewObjectiveTrackerSystem() *ObjectiveTrackerSystem {
-	return &ObjectiveTrackerSystem{
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+	}).Debug("Creating new objective tracker system")
+
+	s := &ObjectiveTrackerSystem{
 		exploredTiles: make(map[uint64]map[string]bool),
 		itemGenerator: item.NewItemGenerator(),
 	}
+
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+	}).Info("Objective tracker system initialized")
+
+	return s
 }
 
 // SetQuestCompleteCallback sets the function called when a quest completes.
 func (s *ObjectiveTrackerSystem) SetQuestCompleteCallback(callback func(entity *Entity, qst *quest.Quest)) {
+	log.WithFields(log.Fields{
+		"system_name":  "objective_tracker",
+		"callback_set": callback != nil,
+	}).Debug("Setting quest complete callback")
+
 	s.onQuestComplete = callback
 }
 
 // Update processes quest objectives based on game state.
 func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
+	log.WithFields(log.Fields{
+		"system_name":   "objective_tracker",
+		"entity_count":  len(entities),
+		"delta_time_ms": deltaTime * 1000,
+	}).Debug("Updating objective tracker system")
+
+	entitiesProcessed := 0
+
 	// Update exploration objectives for entities with position
 	for _, entity := range entities {
 		if !entity.HasComponent("questtracker") {
 			continue
 		}
+
+		entitiesProcessed++
+
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+		}).Debug("Processing entity objectives")
 
 		// Track exploration
 		s.updateExplorationObjectives(entity)
@@ -56,26 +87,52 @@ func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
 		// Check for newly completed quests
 		s.checkQuestCompletion(entity)
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":        "objective_tracker",
+		"entities_processed": entitiesProcessed,
+	}).Debug("Objective tracker system update complete")
 }
 
 // OnEnemyKilled should be called by combat system when an enemy dies.
 func (s *ObjectiveTrackerSystem) OnEnemyKilled(killer, enemy *Entity) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"killer_id":   killer.ID,
+		"enemy_id":    enemy.ID,
+	}).Debug("Processing enemy kill event")
+
 	if !killer.HasComponent("questtracker") {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"killer_id":   killer.ID,
+		}).Debug("Killer has no quest tracker component")
 		return
 	}
 
 	comp, ok := killer.GetComponent("questtracker")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"killer_id":   killer.ID,
+		}).Warn("Failed to retrieve quest tracker component")
 		return
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"killer_id":      killer.ID,
+			"component_type": fmt.Sprintf("%T", comp),
+		}).Error("Quest tracker component has invalid type")
 		return
 	}
 
 	// For now, all enemies count as "enemy" or "monster"
 	// In future, could extract type from entity components
 	enemyName := "enemy"
+
+	objectivesUpdated := 0
 
 	// Update kill objectives
 	for _, tracked := range tracker.ActiveQuests {
@@ -86,26 +143,63 @@ func (s *ObjectiveTrackerSystem) OnEnemyKilled(killer, enemy *Entity) {
 		for i, obj := range tracked.Quest.Objectives {
 			// Check if objective targets this enemy type
 			if s.matchesTarget(obj.Target, enemyName, "kill") {
+				log.WithFields(log.Fields{
+					"system_name":     "objective_tracker",
+					"entity_id":       killer.ID,
+					"quest_id":        tracked.Quest.ID,
+					"objective_index": i,
+					"target":          obj.Target,
+					"enemy_name":      enemyName,
+				}).Debug("Incrementing kill objective progress")
+
 				tracker.IncrementProgress(tracked.Quest.ID, i, 1)
+				objectivesUpdated++
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":        "objective_tracker",
+		"entity_id":          killer.ID,
+		"objectives_updated": objectivesUpdated,
+	}).Debug("Enemy kill event processing complete")
 }
 
 // OnItemCollected should be called by inventory system when player picks up item.
 func (s *ObjectiveTrackerSystem) OnItemCollected(collector *Entity, itemName string) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   collector.ID,
+		"item_name":   itemName,
+	}).Debug("Processing item collection event")
+
 	if !collector.HasComponent("questtracker") {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   collector.ID,
+		}).Debug("Collector has no quest tracker component")
 		return
 	}
 
 	comp, ok := collector.GetComponent("questtracker")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   collector.ID,
+		}).Warn("Failed to retrieve quest tracker component")
 		return
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      collector.ID,
+			"component_type": fmt.Sprintf("%T", comp),
+		}).Error("Quest tracker component has invalid type")
 		return
 	}
+
+	objectivesUpdated := 0
 
 	// Update collect objectives
 	for _, tracked := range tracker.ActiveQuests {
@@ -116,10 +210,26 @@ func (s *ObjectiveTrackerSystem) OnItemCollected(collector *Entity, itemName str
 		for i, obj := range tracked.Quest.Objectives {
 			// Check if objective targets this item
 			if s.matchesTarget(obj.Target, itemName, "collect") {
+				log.WithFields(log.Fields{
+					"system_name":     "objective_tracker",
+					"entity_id":       collector.ID,
+					"quest_id":        tracked.Quest.ID,
+					"objective_index": i,
+					"target":          obj.Target,
+					"item_name":       itemName,
+				}).Debug("Incrementing collect objective progress")
+
 				tracker.IncrementProgress(tracked.Quest.ID, i, 1)
+				objectivesUpdated++
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":        "objective_tracker",
+		"entity_id":          collector.ID,
+		"objectives_updated": objectivesUpdated,
+	}).Debug("Item collection event processing complete")
 }
 
 // GAP-014 REPAIR: OnUIOpened should be called when player opens a UI screen.
@@ -130,55 +240,132 @@ func (s *ObjectiveTrackerSystem) OnItemCollected(collector *Entity, itemName str
 //
 // Called by: InputSystem callbacks when UI toggle keys are pressed
 func (s *ObjectiveTrackerSystem) OnUIOpened(entity *Entity, uiName string) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+		"ui_name":     uiName,
+	}).Debug("Processing UI opened event")
+
 	if !entity.HasComponent("questtracker") {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+		}).Debug("Entity has no quest tracker component")
 		return
 	}
 
 	comp, ok := entity.GetComponent("questtracker")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+		}).Warn("Failed to retrieve quest tracker component")
 		return
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      entity.ID,
+			"component_type": fmt.Sprintf("%T", comp),
+		}).Error("Quest tracker component has invalid type")
 		return
 	}
+
+	objectivesUpdated := 0
 
 	// Update UI interaction objectives (used in tutorial quests)
 	for _, tracked := range tracker.ActiveQuests {
 		for i, obj := range tracked.Quest.Objectives {
 			// Check if objective targets this UI
 			if s.matchesTarget(obj.Target, uiName, "ui") {
+				log.WithFields(log.Fields{
+					"system_name":     "objective_tracker",
+					"entity_id":       entity.ID,
+					"quest_id":        tracked.Quest.ID,
+					"objective_index": i,
+					"target":          obj.Target,
+					"ui_name":         uiName,
+				}).Debug("Incrementing UI interaction objective progress")
+
 				tracker.IncrementProgress(tracked.Quest.ID, i, 1)
+				objectivesUpdated++
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":        "objective_tracker",
+		"entity_id":          entity.ID,
+		"objectives_updated": objectivesUpdated,
+	}).Debug("UI opened event processing complete")
 }
 
 // OnTileExplored should be called by movement system when player enters new tile.
 func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   explorer.ID,
+		"tile_x":      x,
+		"tile_y":      y,
+	}).Debug("Processing tile exploration event")
+
 	if !explorer.HasComponent("questtracker") {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   explorer.ID,
+		}).Debug("Explorer has no quest tracker component")
 		return
 	}
 
 	// Track unique tiles
 	if s.exploredTiles[explorer.ID] == nil {
 		s.exploredTiles[explorer.ID] = make(map[string]bool)
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   explorer.ID,
+		}).Debug("Initialized exploration tracking for entity")
 	}
 
 	tileKey := tileKeyFromCoords(x, y)
 	if s.exploredTiles[explorer.ID][tileKey] {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   explorer.ID,
+			"tile_key":    tileKey,
+		}).Debug("Tile already explored")
 		return // Already explored
 	}
 	s.exploredTiles[explorer.ID][tileKey] = true
 
+	totalExplored := len(s.exploredTiles[explorer.ID])
+
+	log.WithFields(log.Fields{
+		"system_name":    "objective_tracker",
+		"entity_id":      explorer.ID,
+		"tile_key":       tileKey,
+		"total_explored": totalExplored,
+	}).Debug("New tile explored")
+
 	comp, ok := explorer.GetComponent("questtracker")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   explorer.ID,
+		}).Warn("Failed to retrieve quest tracker component")
 		return
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      explorer.ID,
+			"component_type": fmt.Sprintf("%T", comp),
+		}).Error("Quest tracker component has invalid type")
 		return
 	}
+
+	objectivesUpdated := 0
 
 	// Update explore objectives
 	for _, tracked := range tracker.ActiveQuests {
@@ -191,20 +378,50 @@ func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 			if strings.Contains(strings.ToLower(obj.Target), "tile") ||
 				strings.Contains(strings.ToLower(obj.Target), "dungeon") ||
 				strings.Contains(strings.ToLower(obj.Target), "explore") {
-				tracker.UpdateProgress(tracked.Quest.ID, i, len(s.exploredTiles[explorer.ID]))
+				log.WithFields(log.Fields{
+					"system_name":     "objective_tracker",
+					"entity_id":       explorer.ID,
+					"quest_id":        tracked.Quest.ID,
+					"objective_index": i,
+					"target":          obj.Target,
+					"explored_count":  totalExplored,
+				}).Debug("Updating explore objective progress")
+
+				tracker.UpdateProgress(tracked.Quest.ID, i, totalExplored)
+				objectivesUpdated++
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":        "objective_tracker",
+		"entity_id":          explorer.ID,
+		"objectives_updated": objectivesUpdated,
+	}).Debug("Tile exploration event processing complete")
 }
 
 // updateExplorationObjectives updates exploration progress based on current position.
 func (s *ObjectiveTrackerSystem) updateExplorationObjectives(entity *Entity) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+	}).Debug("Updating exploration objectives")
+
 	posComp, ok := entity.GetComponent("position")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+		}).Debug("Entity has no position component")
 		return
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      entity.ID,
+			"component_type": fmt.Sprintf("%T", posComp),
+		}).Error("Position component has invalid type")
 		return
 	}
 
@@ -217,14 +434,30 @@ func (s *ObjectiveTrackerSystem) updateExplorationObjectives(entity *Entity) {
 
 // checkQuestCompletion checks if any active quests have been completed.
 func (s *ObjectiveTrackerSystem) checkQuestCompletion(entity *Entity) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+	}).Debug("Checking quest completion")
+
 	comp, ok := entity.GetComponent("questtracker")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+		}).Debug("Entity has no quest tracker component")
 		return
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      entity.ID,
+			"component_type": fmt.Sprintf("%T", comp),
+		}).Error("Quest tracker component has invalid type")
 		return
 	}
+
+	completedQuests := 0
 
 	// Check each active quest
 	for _, tracked := range tracker.ActiveQuests {
@@ -236,64 +469,132 @@ func (s *ObjectiveTrackerSystem) checkQuestCompletion(entity *Entity) {
 		if tracked.Quest.IsComplete() {
 			// Mark quest as complete with current timestamp
 			timestamp := time.Now().Unix()
+
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+				"quest_id":    tracked.Quest.ID,
+				"quest_name":  tracked.Quest.Name,
+				"timestamp":   timestamp,
+			}).Info("Quest completed")
+
 			tracker.CompleteQuest(tracked.Quest.ID, timestamp)
+			completedQuests++
 
 			// Trigger completion callback for rewards
 			if s.onQuestComplete != nil {
+				log.WithFields(log.Fields{
+					"system_name": "objective_tracker",
+					"entity_id":   entity.ID,
+					"quest_id":    tracked.Quest.ID,
+				}).Debug("Triggering quest completion callback")
+
 				s.onQuestComplete(entity, tracked.Quest)
+			} else {
+				log.WithFields(log.Fields{
+					"system_name": "objective_tracker",
+					"entity_id":   entity.ID,
+					"quest_id":    tracked.Quest.ID,
+				}).Warn("No quest completion callback set")
 			}
 		}
+	}
+
+	if completedQuests > 0 {
+		log.WithFields(log.Fields{
+			"system_name":      "objective_tracker",
+			"entity_id":        entity.ID,
+			"quests_completed": completedQuests,
+		}).Info("Quest completion check complete")
 	}
 }
 
 // matchesTarget checks if an item/enemy name matches a quest objective target.
 func (s *ObjectiveTrackerSystem) matchesTarget(target, name, context string) bool {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"target":      target,
+		"name":        name,
+		"context":     context,
+	}).Debug("Checking target match")
+
 	targetLower := strings.ToLower(target)
 	nameLower := strings.ToLower(name)
 
 	// Exact match
 	if targetLower == nameLower {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"target":      target,
+			"name":        name,
+			"match_type":  "exact",
+		}).Debug("Target matched")
 		return true
 	}
 
 	// Partial match (target contains name or vice versa)
 	if strings.Contains(targetLower, nameLower) || strings.Contains(nameLower, targetLower) {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"target":      target,
+			"name":        name,
+			"match_type":  "partial",
+		}).Debug("Target matched")
 		return true
 	}
 
 	// Context-specific matching
+	matched := false
+	matchType := ""
+
 	switch context {
 	case "kill":
 		// Generic kill objectives match any enemy
 		if targetLower == "enemy" || targetLower == "enemies" || targetLower == "monster" {
-			return true
+			matched = true
+			matchType = "generic_kill"
 		}
 	case "collect":
 		// Generic collect objectives match any item
 		if targetLower == "item" || targetLower == "items" {
-			return true
+			matched = true
+			matchType = "generic_collect"
 		}
 	case "ui":
 		// GAP-014 REPAIR: UI objective matching (for tutorial)
 		// Handle variations in objective naming
 		if targetLower == "inventory" && nameLower == "inventory" {
-			return true
+			matched = true
+			matchType = "ui_inventory"
 		}
 		if targetLower == "quest_log" && nameLower == "quest_log" {
-			return true
+			matched = true
+			matchType = "ui_quest_log"
 		}
 		if strings.Contains(targetLower, "character") && nameLower == "character" {
-			return true
+			matched = true
+			matchType = "ui_character"
 		}
 		if strings.Contains(targetLower, "skill") && nameLower == "skills" {
-			return true
+			matched = true
+			matchType = "ui_skills"
 		}
 		if strings.Contains(targetLower, "map") && nameLower == "map" {
-			return true
+			matched = true
+			matchType = "ui_map"
 		}
 	}
 
-	return false
+	if matched {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"target":      target,
+			"name":        name,
+			"match_type":  matchType,
+		}).Debug("Target matched")
+	}
+
+	return matched
 }
 
 // tileKeyFromCoords creates a unique key for a tile position.
@@ -304,10 +605,27 @@ func tileKeyFromCoords(x, y int) string {
 
 // AwardQuestRewards distributes rewards from a completed quest.
 func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Quest) {
+	log.WithFields(log.Fields{
+		"system_name":         "objective_tracker",
+		"entity_id":           entity.ID,
+		"quest_id":            qst.ID,
+		"quest_name":          qst.Name,
+		"xp_reward":           qst.Reward.XP,
+		"gold_reward":         qst.Reward.Gold,
+		"skill_points_reward": qst.Reward.SkillPoints,
+		"item_count":          len(qst.Reward.Items),
+	}).Info("Awarding quest rewards")
+
 	// Award XP
 	if qst.Reward.XP > 0 {
 		if expComp, ok := entity.GetComponent("experience"); ok {
 			if exp, ok := expComp.(*ExperienceComponent); ok {
+				log.WithFields(log.Fields{
+					"system_name": "objective_tracker",
+					"entity_id":   entity.ID,
+					"quest_id":    qst.ID,
+					"xp_awarded":  qst.Reward.XP,
+				}).Debug("Awarded XP reward")
 				exp.AddXP(qst.Reward.XP)
 			}
 		}
@@ -317,6 +635,12 @@ func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Qu
 	if qst.Reward.Gold > 0 {
 		if invComp, ok := entity.GetComponent("inventory"); ok {
 			if inv, ok := invComp.(*InventoryComponent); ok {
+				log.WithFields(log.Fields{
+					"system_name":  "objective_tracker",
+					"entity_id":    entity.ID,
+					"quest_id":     qst.ID,
+					"gold_awarded": qst.Reward.Gold,
+				}).Debug("Awarded gold reward")
 				inv.Gold += qst.Reward.Gold
 			}
 		}
@@ -326,6 +650,12 @@ func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Qu
 	if qst.Reward.SkillPoints > 0 {
 		if expComp, ok := entity.GetComponent("experience"); ok {
 			if exp, ok := expComp.(*ExperienceComponent); ok {
+				log.WithFields(log.Fields{
+					"system_name":          "objective_tracker",
+					"entity_id":            entity.ID,
+					"quest_id":             qst.ID,
+					"skill_points_awarded": qst.Reward.SkillPoints,
+				}).Debug("Awarded skill points reward")
 				exp.SkillPoints += qst.Reward.SkillPoints
 			}
 		}
@@ -333,18 +663,48 @@ func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Qu
 
 	// Award items
 	if len(qst.Reward.Items) > 0 {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+			"quest_id":    qst.ID,
+			"item_count":  len(qst.Reward.Items),
+		}).Debug("Awarding item rewards")
 		s.awardQuestItems(entity, qst)
 	}
+
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+		"quest_id":    qst.ID,
+	}).Info("Quest rewards awarded")
 }
 
 // awardQuestItems generates and awards items from quest rewards.
 func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Quest) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+		"quest_id":    qst.ID,
+		"item_count":  len(qst.Reward.Items),
+	}).Debug("Generating quest item rewards")
+
 	invComp, ok := entity.GetComponent("inventory")
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+			"quest_id":    qst.ID,
+		}).Warn("Entity has no inventory component for item rewards")
 		return // No inventory to receive items
 	}
 	inv, ok := invComp.(*InventoryComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "objective_tracker",
+			"entity_id":      entity.ID,
+			"quest_id":       qst.ID,
+			"component_type": fmt.Sprintf("%T", invComp),
+		}).Error("Inventory component has invalid type")
 		return
 	}
 
@@ -356,6 +716,15 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 		}
 	}
 
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+		"quest_id":    qst.ID,
+		"genre_id":    genreID,
+	}).Debug("Using genre for item generation")
+
+	itemsAwarded := 0
+
 	// Generate items based on quest reward item names
 	for i, itemName := range qst.Reward.Items {
 		// Create generation seed from quest seed and item index
@@ -363,6 +732,16 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 
 		// Determine item type from name
 		itemType := s.inferItemTypeFromName(itemName)
+
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entity.ID,
+			"quest_id":    qst.ID,
+			"item_index":  i,
+			"item_name":   itemName,
+			"item_type":   itemType,
+			"seed":        itemSeed,
+		}).Debug("Generating quest item reward")
 
 		// Set up generation parameters
 		params := procgen.GenerationParams{
@@ -378,31 +757,80 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 		// Generate item
 		result, err := s.itemGenerator.Generate(itemSeed, params)
 		if err != nil {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+				"quest_id":    qst.ID,
+				"item_index":  i,
+				"item_name":   itemName,
+				"error":       err.Error(),
+			}).Error("Failed to generate quest item reward")
 			continue // Skip items that fail to generate
 		}
 
 		items, ok := result.([]*item.Item)
 		if !ok || len(items) == 0 {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+				"quest_id":    qst.ID,
+				"item_index":  i,
+			}).Warn("Item generation returned invalid or empty result")
 			continue
 		}
 
 		// Add item to inventory
 		generatedItem := items[0]
 		if inv.CanAddItem(generatedItem) {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+				"quest_id":    qst.ID,
+				"item_index":  i,
+				"item_name":   generatedItem.Name,
+				"item_rarity": generatedItem.Rarity,
+			}).Debug("Added quest item to inventory")
 			inv.AddItem(generatedItem)
+			itemsAwarded++
+		} else {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+				"quest_id":    qst.ID,
+				"item_name":   generatedItem.Name,
+			}).Warn("Inventory full, cannot add quest item reward")
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":   "objective_tracker",
+		"entity_id":     entity.ID,
+		"quest_id":      qst.ID,
+		"items_awarded": itemsAwarded,
+		"items_total":   len(qst.Reward.Items),
+	}).Info("Quest item rewards processing complete")
 }
 
 // inferItemTypeFromName attempts to determine item type from the item name string.
 // Quest item names are descriptive (e.g., "healing potion", "iron sword", "leather armor").
 func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"item_name":   itemName,
+	}).Debug("Inferring item type from name")
+
 	nameLower := strings.ToLower(itemName)
 
 	// Check for weapon keywords
 	weaponKeywords := []string{"sword", "axe", "bow", "staff", "dagger", "mace", "spear", "hammer"}
 	for _, keyword := range weaponKeywords {
 		if strings.Contains(nameLower, keyword) {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"item_name":   itemName,
+				"item_type":   "weapon",
+				"keyword":     keyword,
+			}).Debug("Inferred item type")
 			return "weapon"
 		}
 	}
@@ -411,6 +839,12 @@ func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
 	armorKeywords := []string{"armor", "helm", "helmet", "boots", "gloves", "shield", "chest", "plate", "mail"}
 	for _, keyword := range armorKeywords {
 		if strings.Contains(nameLower, keyword) {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"item_name":   itemName,
+				"item_type":   "armor",
+				"keyword":     keyword,
+			}).Debug("Inferred item type")
 			return "armor"
 		}
 	}
@@ -419,11 +853,26 @@ func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
 	consumableKeywords := []string{"potion", "elixir", "scroll", "food", "drink", "medicine"}
 	for _, keyword := range consumableKeywords {
 		if strings.Contains(nameLower, keyword) {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"item_name":   itemName,
+				"item_type":   "consumable",
+				"keyword":     keyword,
+			}).Debug("Inferred item type")
 			return "consumable"
 		}
 	}
 
 	// Default to random item type
 	itemTypes := []string{"weapon", "armor", "consumable"}
-	return itemTypes[rand.Intn(len(itemTypes))]
+	selectedType := itemTypes[rand.Intn(len(itemTypes))]
+
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"item_name":   itemName,
+		"item_type":   selectedType,
+		"method":      "random_fallback",
+	}).Debug("Inferred item type using fallback")
+
+	return selectedType
 }

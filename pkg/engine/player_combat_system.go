@@ -45,137 +45,168 @@ func NewPlayerCombatSystemWithLogger(combatSystem *CombatSystem, world *World, l
 // This system must run AFTER InputSystem but BEFORE MovementSystem.
 func (s *PlayerCombatSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Skip dead entities - they cannot attack (Category 1.1)
 		if entity.HasComponent("dead") {
 			continue
 		}
 
-		// Check for input component (player-controlled entities only)
-		inputComp, ok := entity.GetComponent("input")
-		if !ok {
+		input, attack := s.validateCombatComponents(entity)
+		if input == nil || attack == nil {
 			continue
 		}
-		input, ok := inputComp.(InputProvider)
-		if !ok {
-			continue // Not an InputProvider
-		}
 
-		// Check if player pressed attack button
 		if !input.IsActionPressed() {
 			continue
 		}
 
-		// Get attack component
-		attackComp, ok := entity.GetComponent("attack")
-		if !ok {
-			continue // Entity can't attack
-		}
-		// Type assert with safety check
-		attack, ok := attackComp.(*AttackComponent)
-		if !ok {
+		if !s.checkAttackReadiness(entity, attack) {
 			continue
 		}
 
-		// Check if attack is ready (cooldown)
-		if !attack.CanAttack() {
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithFields(logrus.Fields{
-					"entityID":          entity.ID,
-					"cooldownRemaining": attack.CooldownTimer,
-				}).Debug("attack on cooldown")
-			}
-			continue // Still on cooldown
-		}
-
-		// Consume the input immediately to prevent multiple triggers
 		input.SetActionPressed(false)
+		s.logAttackTriggered(entity, attack)
+		s.triggerAttackAnimation(entity)
 
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entityID": entity.ID,
-				"cooldown": attack.Cooldown,
-			}).Debug("attack triggered")
-		}
-
-		// ALWAYS trigger attack animation, even if no target
-		// This provides visual feedback that the attack button was pressed
-		if animComp, hasAnim := entity.GetComponent("animation"); hasAnim {
-			// Type assert with safety check
-			if anim, ok := animComp.(*AnimationComponent); ok {
-				anim.SetState(AnimationStateAttack)
-
-				// Set OnComplete callback to return to idle/walk
-				anim.OnComplete = func() {
-					if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
-						// Type assert with safety check
-						if vel, ok := velComp.(*VelocityComponent); ok {
-							speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-							if speed > 0.1 {
-								anim.SetState(AnimationStateWalk)
-							} else {
-								anim.SetState(AnimationStateIdle)
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Phase 10.1: Find enemy in aim direction instead of nearest enemy
-		// This enables dual-stick shooter mechanics where players aim at specific targets
-		maxRange := attack.Range
-		var target *Entity
-
-		// Check if entity has aim component (Phase 10.1)
-		if aimComp, hasAim := entity.GetComponent("aim"); hasAim {
-			// Type assert with safety check
-			if aim, ok := aimComp.(*AimComponent); ok {
-				// Use aim direction for target selection with default aim cone (forgiving aim)
-				target = FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
-
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					targetID := uint64(0)
-					if target != nil {
-						targetID = target.ID
-					}
-					s.logger.WithFields(logrus.Fields{
-						"entityID":  entity.ID,
-						"aimAngle":  aim.AimAngle,
-						"aimDegree": aim.AimAngle * 180 / math.Pi,
-						"range":     maxRange,
-						"aimCone":   DefaultAimCone * 180 / math.Pi,
-						"targetID":  targetID,
-					}).Debug("aim-based attack target selection")
-				}
-			}
-		} else {
-			// Fallback: use nearest enemy for entities without aim component (NPCs, AI)
-			target = FindNearestEnemy(s.world, entity, maxRange)
-		}
-
+		target := s.findAttackTarget(entity, attack)
 		if target == nil {
-			// No enemy in range or aim cone - attack animation plays but no damage
-			// Start cooldown even if no target (player swung at air)
 			attack.ResetCooldown()
 			continue
 		}
 
-		// Perform attack through combat system (only if target exists)
-		// Note: CombatSystem.Attack() handles cooldown reset internally
 		hit := s.combatSystem.Attack(entity, target)
+		s.logAttackHit(entity, target, hit)
+	}
+}
 
-		if hit && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+// validateCombatComponents checks if entity has required components for combat and returns them.
+func (s *PlayerCombatSystem) validateCombatComponents(entity *Entity) (InputProvider, *AttackComponent) {
+	inputComp, ok := entity.GetComponent("input")
+	if !ok {
+		return nil, nil
+	}
+	input, ok := inputComp.(InputProvider)
+	if !ok {
+		return nil, nil
+	}
+
+	attackComp, ok := entity.GetComponent("attack")
+	if !ok {
+		return nil, nil
+	}
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	return input, attack
+}
+
+// checkAttackReadiness verifies if the attack can proceed based on cooldown status.
+func (s *PlayerCombatSystem) checkAttackReadiness(entity *Entity, attack *AttackComponent) bool {
+	if !attack.CanAttack() {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
-				"entityID": entity.ID,
-				"targetID": target.ID,
-			}).Debug("attack hit target")
+				"entityID":          entity.ID,
+				"cooldownRemaining": attack.CooldownTimer,
+			}).Debug("attack on cooldown")
 		}
+		return false
+	}
+	return true
+}
 
-		if hit {
-			// Attack successful - could trigger effects here
-			// - Hit sound effect
-			// - Screen shake
-			// - Tutorial progress tracking
-		}
+// logAttackTriggered logs when an attack is successfully triggered.
+func (s *PlayerCombatSystem) logAttackTriggered(entity *Entity, attack *AttackComponent) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entityID": entity.ID,
+			"cooldown": attack.Cooldown,
+		}).Debug("attack triggered")
+	}
+}
+
+// triggerAttackAnimation starts the attack animation and sets up the completion callback.
+func (s *PlayerCombatSystem) triggerAttackAnimation(entity *Entity) {
+	animComp, hasAnim := entity.GetComponent("animation")
+	if !hasAnim {
+		return
+	}
+
+	anim, ok := animComp.(*AnimationComponent)
+	if !ok {
+		return
+	}
+
+	anim.SetState(AnimationStateAttack)
+	anim.OnComplete = func() {
+		s.setPostAttackAnimation(entity, anim)
+	}
+}
+
+// setPostAttackAnimation determines the animation state after attack completes.
+func (s *PlayerCombatSystem) setPostAttackAnimation(entity *Entity, anim *AnimationComponent) {
+	velComp, hasVel := entity.GetComponent("velocity")
+	if !hasVel {
+		return
+	}
+
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
+	}
+
+	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+	if speed > 0.1 {
+		anim.SetState(AnimationStateWalk)
+	} else {
+		anim.SetState(AnimationStateIdle)
+	}
+}
+
+// findAttackTarget locates an enemy target using aim-based or proximity-based selection.
+func (s *PlayerCombatSystem) findAttackTarget(entity *Entity, attack *AttackComponent) *Entity {
+	maxRange := attack.Range
+	aimComp, hasAim := entity.GetComponent("aim")
+	if !hasAim {
+		return FindNearestEnemy(s.world, entity, maxRange)
+	}
+
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return FindNearestEnemy(s.world, entity, maxRange)
+	}
+
+	target := FindEnemyInAimDirection(s.world, entity, aim.AimAngle, maxRange, DefaultAimCone)
+	s.logAimTargetSelection(entity, aim, maxRange, target)
+	return target
+}
+
+// logAimTargetSelection logs the aim-based target selection process.
+func (s *PlayerCombatSystem) logAimTargetSelection(entity *Entity, aim *AimComponent, maxRange float64, target *Entity) {
+	if s.logger == nil || s.logger.Logger.GetLevel() < logrus.DebugLevel {
+		return
+	}
+
+	targetID := uint64(0)
+	if target != nil {
+		targetID = target.ID
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"entityID":  entity.ID,
+		"aimAngle":  aim.AimAngle,
+		"aimDegree": aim.AimAngle * 180 / math.Pi,
+		"range":     maxRange,
+		"aimCone":   DefaultAimCone * 180 / math.Pi,
+		"targetID":  targetID,
+	}).Debug("aim-based attack target selection")
+}
+
+// logAttackHit logs when an attack successfully hits a target.
+func (s *PlayerCombatSystem) logAttackHit(entity, target *Entity, hit bool) {
+	if hit && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entityID": entity.ID,
+			"targetID": target.ID,
+		}).Debug("attack hit target")
 	}
 }

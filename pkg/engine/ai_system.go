@@ -139,6 +139,16 @@ func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime flo
 
 // processIdle handles the idle state - look for targets.
 func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":       entity.ID,
+			"state":           aiComp.State.String(),
+			"detection_range": aiComp.DetectionRange,
+			"x":               pos.X,
+			"y":               pos.Y,
+		}).Debug("Processing idle state")
+	}
+
 	// Look for enemies in range
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
 
@@ -153,22 +163,67 @@ func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *Positi
 		}
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"target_id":  target.ID,
+				"new_state":  AIStateDetect.String(),
+				"prev_state": AIStateIdle.String(),
+			}).Debug("State transition completed")
+		}
+	} else {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":       entity.ID,
+				"detection_range": aiComp.DetectionRange,
+			}).Debug("No target detected in idle state")
+		}
 	}
 }
 
 // processPatrol handles the patrol state - move between waypoints.
 func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *PositionComponent, deltaTime float64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":       entity.ID,
+			"state":           aiComp.State.String(),
+			"waypoint_index":  aiComp.CurrentWaypointIndex,
+			"detection_range": aiComp.DetectionRange,
+			"x":               pos.X,
+			"y":               pos.Y,
+		}).Debug("Processing patrol state")
+	}
+
 	// Look for enemies in range
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
 
 	if target != nil {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_id":        target.ID,
+				"state_transition": "Patrol->Detect",
+			}).Info("AI detected enemy during patrol")
+		}
 		aiComp.Target = target
 		aiComp.ChangeState(AIStateDetect)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateDetect.String(),
+				"prev_state": AIStatePatrol.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
 	// Check if patrol route is configured
 	if !aiComp.HasPatrolRoute() {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("No patrol route configured, behaving like idle")
+		}
 		// No patrol route, behave like idle
 		return
 	}
@@ -176,11 +231,25 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 	// Get current waypoint
 	waypoint := aiComp.GetCurrentWaypoint()
 	if waypoint == nil {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"waypoint_index": aiComp.CurrentWaypointIndex,
+			}).Warn("Invalid waypoint index during patrol")
+		}
 		return
 	}
 
 	// Check if waiting at waypoint
 	if aiComp.IsWaitingAtWaypoint(deltaTime) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"waypoint_index": aiComp.CurrentWaypointIndex,
+				"waypoint_x":     waypoint.X,
+				"waypoint_y":     waypoint.Y,
+			}).Debug("Waiting at waypoint")
+		}
 		// Stop movement while waiting
 		if velComp, ok := entity.GetComponent("velocity"); ok {
 			if vel, ok := velComp.(*VelocityComponent); ok {
@@ -232,6 +301,16 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 
 // processDetect handles the detect state - confirm target and start chase.
 func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":    entity.ID,
+			"state":        aiComp.State.String(),
+			"target_id":    aiComp.Target.ID,
+			"state_timer":  aiComp.StateTimer,
+			"detect_range": aiComp.DetectionRange * 1.2,
+		}).Debug("Processing detect state")
+	}
+
 	// Check if target is still valid and in range
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.2) {
 		if ai.logger != nil {
@@ -243,6 +322,13 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateIdle)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateIdle.String(),
+				"prev_state": AIStateDetect.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -257,11 +343,29 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 			}).Info("AI confirmed target, starting chase")
 		}
 		aiComp.ChangeState(AIStateChase)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateChase.String(),
+				"prev_state": AIStateDetect.String(),
+			}).Debug("State transition completed")
+		}
 	}
 }
 
 // processChase handles the chase state - pursue the target.
 func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":    entity.ID,
+			"state":        aiComp.State.String(),
+			"target_id":    aiComp.Target.ID,
+			"detect_range": aiComp.DetectionRange * 1.5,
+			"x":            pos.X,
+			"y":            pos.Y,
+		}).Debug("Processing chase state")
+	}
+
 	// Verify target is still valid
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.5) {
 		if ai.logger != nil {
@@ -273,6 +377,13 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateReturn.String(),
+				"prev_state": AIStateChase.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -291,12 +402,25 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateReturn.String(),
+				"prev_state": AIStateChase.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
 	// Get attack component to check range
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "attack",
+			}).Debug("Entity missing attack component during chase")
+		}
 		return
 	}
 	attack, ok := attackComp.(*AttackComponent)
@@ -331,6 +455,13 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 			}).Info("AI in attack range")
 		}
 		aiComp.ChangeState(AIStateAttack)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateAttack.String(),
+				"prev_state": AIStateChase.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -340,34 +471,98 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 
 // processAttack handles the attack state - attack the target.
 func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"state":     aiComp.State.String(),
+			"target_id": aiComp.Target.ID,
+			"x":         pos.X,
+			"y":         pos.Y,
+		}).Debug("Processing attack state")
+	}
+
 	// Verify target is still valid
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.5) {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"target_id": aiComp.Target.ID,
+				"reason":    "target_invalid",
+			}).Debug("Target invalid during attack")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateReturn.String(),
+				"prev_state": AIStateAttack.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
 	// Get attack component
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "attack",
+			}).Debug("Entity missing attack component")
+		}
 		return
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "attack",
+			}).Warn("Failed to type assert attack component")
+		}
 		return
 	}
 
 	// Check if in attack range
 	targetPos, ok := aiComp.Target.GetComponent("position")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"target_id":      aiComp.Target.ID,
+				"component_type": "position",
+			}).Debug("Target missing position component")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateIdle)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateIdle.String(),
+				"prev_state": AIStateAttack.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 	targetP, ok := targetPos.(*PositionComponent)
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"target_id":      aiComp.Target.ID,
+				"component_type": "position",
+			}).Warn("Failed to type assert target position component")
+		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateIdle)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateIdle.String(),
+				"prev_state": AIStateAttack.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -385,6 +580,13 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 			}).Debug("Target moved out of attack range")
 		}
 		aiComp.ChangeState(AIStateChase)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateChase.String(),
+				"prev_state": AIStateAttack.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -410,11 +612,37 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 		// In a real game, this would be a separate system call
 		combatSystem := NewCombatSystem(12345) // Use fixed seed for now
 		combatSystem.Attack(entity, aiComp.Target)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"target_id": aiComp.Target.ID,
+			}).Debug("Attack executed")
+		}
+	} else {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"target_id": aiComp.Target.ID,
+				"cooldown":  attack.Cooldown,
+			}).Debug("Attack on cooldown")
+		}
 	}
 }
 
 // processFlee handles the flee state - run away from target.
 func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":         entity.ID,
+			"state":             aiComp.State.String(),
+			"spawn_x":           aiComp.SpawnX,
+			"spawn_y":           aiComp.SpawnY,
+			"distance_to_spawn": aiComp.GetDistanceFromSpawn(pos.X, pos.Y),
+			"x":                 pos.X,
+			"y":                 pos.Y,
+		}).Debug("Processing flee state")
+	}
+
 	// Check if health has recovered enough
 	if !ai.shouldFlee(entity, aiComp) {
 		if ai.logger != nil {
@@ -427,6 +655,13 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 		// Health recovered, go back to idle
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateReturn.String(),
+				"prev_state": AIStateFlee.String(),
+			}).Debug("State transition completed")
+		}
 		return
 	}
 
@@ -443,12 +678,31 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 			}).Debug("AI reached spawn while fleeing")
 		}
 		aiComp.ChangeState(AIStateReturn)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateReturn.String(),
+				"prev_state": AIStateFlee.String(),
+			}).Debug("State transition completed")
+		}
 	}
 }
 
 // processReturn handles the return state - go back to spawn point.
 func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	distance := aiComp.GetDistanceFromSpawn(pos.X, pos.Y)
+
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"state":     aiComp.State.String(),
+			"distance":  distance,
+			"spawn_x":   aiComp.SpawnX,
+			"spawn_y":   aiComp.SpawnY,
+			"current_x": pos.X,
+			"current_y": pos.Y,
+		}).Debug("Processing return state")
+	}
 
 	// If close enough to spawn, go idle
 	if distance < 10.0 {
@@ -460,6 +714,13 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 			}).Debug("AI returned to spawn")
 		}
 		aiComp.ChangeState(AIStateIdle)
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"new_state":  AIStateIdle.String(),
+				"prev_state": AIStateReturn.String(),
+			}).Debug("State transition completed")
+		}
 		// Stop movement
 		velComp, ok := entity.GetComponent("velocity")
 		if ok {
@@ -494,20 +755,45 @@ func (ai *AISystem) transitionToFlee(entity *Entity, aiComp *AIComponent, pos *P
 		}).Warn("AI fleeing due to low health")
 	}
 	aiComp.ChangeState(AIStateFlee)
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"new_state":  AIStateFlee.String(),
+			"prev_state": aiComp.State.String(),
+		}).Debug("State transition completed")
+	}
 }
 
 // shouldFlee checks if the entity should flee based on health.
 func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 	healthComp, ok := entity.GetComponent("health")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "health",
+			}).Debug("Entity missing health component for flee check")
+		}
 		return false
 	}
 
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "health",
+			}).Warn("Failed to type assert health component for flee check")
+		}
 		return false
 	}
 	if health.Max <= 0 {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"max_health": health.Max,
+			}).Warn("Invalid max health for flee check")
+		}
 		return false
 	}
 
@@ -661,10 +947,22 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX, targetY, speedMultiplier float64) {
 	velComp, ok := entity.GetComponent("velocity")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "velocity",
+			}).Debug("Entity missing velocity component for movement")
+		}
 		return // No velocity component, can't move
 	}
 	vel, ok := velComp.(*VelocityComponent)
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "velocity",
+			}).Warn("Failed to type assert velocity component")
+		}
 		return
 	}
 
@@ -678,6 +976,19 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 		speed := 100.0 * speedMultiplier // Default speed
 		vel.VX = (dx / dist) * speed
 		vel.VY = (dy / dist) * speed
+
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":        entity.ID,
+				"target_x":         targetX,
+				"target_y":         targetY,
+				"distance":         dist,
+				"speed":            speed,
+				"speed_multiplier": speedMultiplier,
+				"vx":               vel.VX,
+				"vy":               vel.VY,
+			}).Debug("Entity moving towards target")
+		}
 
 		// Phase 10.1: Update aim component to face movement direction
 		// This makes enemies visibly rotate towards their target
@@ -727,10 +1038,28 @@ func (ai *AISystem) SetDetectionRange(entity *Entity, detectionRange float64) {
 func (ai *AISystem) GetState(entity *Entity) AIState {
 	aiComp, ok := entity.GetComponent("ai")
 	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "ai",
+			}).Debug("Entity missing AI component for state query")
+		}
 		return AIStateIdle
 	}
 	if aiC, ok := aiComp.(*AIComponent); ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"state":     aiC.State.String(),
+			}).Debug("AI state retrieved")
+		}
 		return aiC.State
+	}
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "ai",
+		}).Warn("Failed to type assert AI component for state query")
 	}
 	return AIStateIdle
 }

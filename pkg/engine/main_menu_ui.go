@@ -8,7 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/opd-ai/venture/pkg/mobile"
+	log "github.com/sirupsen/logrus"
 )
 
 // MainMenuOption represents a selectable option in the main menu.
@@ -51,10 +51,6 @@ type MainMenuUI struct {
 
 	// Callback for when an option is selected
 	onSelect func(option MainMenuOption)
-
-	// Touch support
-	touchHandler  *mobile.TouchInputHandler
-	optionButtons []*mobile.TouchButton
 }
 
 // NewMainMenuUI creates a new main menu UI.
@@ -69,31 +65,6 @@ func NewMainMenuUI(screenWidth, screenHeight int) *MainMenuUI {
 			MainMenuOptionSettings,
 			MainMenuOptionQuit,
 		},
-		touchHandler:  mobile.NewTouchInputHandler(),
-		optionButtons: make([]*mobile.TouchButton, 4),
-	}
-
-	// Create touch buttons for each menu option
-	startY := screenHeight / 2
-	spacing := 40
-
-	for i, option := range ui.options {
-		optionText := option.String()
-		buttonWidth := len(optionText)*8 + 40 // Text width + padding
-		buttonX := float64(screenWidth/2 - buttonWidth/2)
-		buttonY := float64(startY + i*spacing - 5)
-
-		idx := i // Capture for closure
-		ui.optionButtons[i] = mobile.NewTouchButton(
-			buttonX, buttonY,
-			float64(buttonWidth), 44,
-			optionText,
-			func() {
-				if ui.onSelect != nil {
-					ui.onSelect(ui.options[idx])
-				}
-			},
-		)
 	}
 
 	return ui
@@ -107,17 +78,8 @@ func (m *MainMenuUI) SetSelectCallback(callback func(option MainMenuOption)) {
 // Update processes input for the main menu.
 // Returns true if an option was selected.
 func (m *MainMenuUI) Update() bool {
-	// Update touch handler
-	if m.touchHandler != nil {
-		m.touchHandler.Update()
-	}
-
-	// Update touch buttons
-	for _, btn := range m.optionButtons {
-		if btn != nil {
-			btn.Update()
-		}
-	}
+	// BUG FIX: Removed duplicate TouchButton handling - menu already handles touch via GetTouchOrMousePosition
+	// Root cause: Both text-based menu AND TouchButtons were processing same input, causing duplicate triggers
 
 	// Handle up/down arrow keys for navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
@@ -136,6 +98,12 @@ func (m *MainMenuUI) Update() bool {
 
 	// Handle Enter key for selection
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		log.WithFields(log.Fields{
+			"option":      m.options[m.selectedIdx].String(),
+			"index":       m.selectedIdx,
+			"inputMethod": "keyboard",
+		}).Debug("Main menu option selected")
+
 		if m.onSelect != nil {
 			m.onSelect(m.options[m.selectedIdx])
 		}
@@ -143,9 +111,23 @@ func (m *MainMenuUI) Update() bool {
 	}
 
 	// Handle mouse and touch input (Touch support for WASM/mobile)
+	// BUG FIX: Unified input handling - GetTouchOrMousePosition handles both mouse and touch
 	if IsTouchOrMouseJustPressed() {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
 		if clickedOption := m.getOptionAtPosition(mouseX, mouseY); clickedOption != -1 {
+			inputMethod := "mouse"
+			if len(ebiten.TouchIDs()) > 0 {
+				inputMethod = "touch"
+			}
+
+			log.WithFields(log.Fields{
+				"option":      m.options[clickedOption].String(),
+				"index":       clickedOption,
+				"inputMethod": inputMethod,
+				"x":           mouseX,
+				"y":           mouseY,
+			}).Debug("Main menu option selected")
+
 			m.selectedIdx = clickedOption
 			if m.onSelect != nil {
 				m.onSelect(m.options[m.selectedIdx])
@@ -203,19 +185,6 @@ func (m *MainMenuUI) Draw(screen *ebiten.Image) {
 
 		// Draw option text
 		ebitenutil.DebugPrintAt(screen, optionText, x, y)
-	}
-
-	// Draw touch buttons
-	for i, btn := range m.optionButtons {
-		if btn != nil {
-			// Update button colors based on selection
-			if i == m.selectedIdx {
-				btn.BackgroundColor = color.RGBA{100, 100, 200, 255}
-			} else {
-				btn.BackgroundColor = color.RGBA{50, 50, 70, 255}
-			}
-			btn.Draw(screen)
-		}
 	}
 
 	// Draw controls hint

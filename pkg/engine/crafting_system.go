@@ -213,12 +213,36 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 		}).Debug("completing craft attempt")
 	}
 
+	entity, recipe := s.validateCraftCompletion(entityID, progressComp)
+	if entity == nil || recipe == nil {
+		return
+	}
+
+	skillLevel := s.getCraftingSkillLevel(entity)
+	stationBonus := s.extractStationBonus(progressComp.UsingStationID)
+	finalChance := s.calculateFinalSuccessChance(recipe, skillLevel, stationBonus)
+
+	rng := rand.New(rand.NewSource(recipe.OutputItemSeed + int64(entityID)))
+	success := s.rollForCraftSuccess(entityID, recipe.ID, rng, finalChance)
+
+	xpGained := s.calculateXPGained(recipe.Rarity, success)
+	s.addCraftingExperience(entity, xpGained)
+
+	if success {
+		s.handleCraftSuccess(entityID, entity, recipe, rng, xpGained, finalChance)
+	} else {
+		s.handleCraftFailure(entityID, recipe.ID, xpGained, finalChance)
+	}
+}
+
+// validateCraftCompletion validates entity and recipe exist for craft completion.
+func (s *CraftingSystem) validateCraftCompletion(entityID uint64, progressComp *CraftingProgressComponent) (*Entity, *Recipe) {
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
 		if s.logger != nil {
 			s.logger.WithField("entity_id", entityID).Warn("entity not found when completing craft")
 		}
-		return
+		return nil, nil
 	}
 
 	recipe := progressComp.CurrentRecipe
@@ -226,104 +250,134 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 		if s.logger != nil {
 			s.logger.WithField("entity_id", entityID).Warn("recipe is nil in progress component")
 		}
-		return
+		return nil, nil
 	}
 
-	// Get skill level
-	skillLevel := s.getCraftingSkillLevel(entity)
+	return entity, recipe
+}
 
-	// Get station bonus
-	stationBonus := 0.0
-	if progressComp.UsingStationID != 0 {
-		if station, ok := s.world.GetEntity(progressComp.UsingStationID); ok {
-			if stationComp, err := s.getCraftingStationComponent(station); err == nil {
-				stationBonus = stationComp.BonusSuccessChance
-			}
-		}
+// extractStationBonus retrieves the success bonus from a crafting station.
+func (s *CraftingSystem) extractStationBonus(stationID uint64) float64 {
+	if stationID == 0 {
+		return 0.0
 	}
 
-	// Calculate final success chance
+	station, ok := s.world.GetEntity(stationID)
+	if !ok {
+		return 0.0
+	}
+
+	stationComp, err := s.getCraftingStationComponent(station)
+	if err != nil {
+		return 0.0
+	}
+
+	return stationComp.BonusSuccessChance
+}
+
+// calculateFinalSuccessChance computes the total success chance with all bonuses applied.
+func (s *CraftingSystem) calculateFinalSuccessChance(recipe *Recipe, skillLevel int, stationBonus float64) float64 {
 	baseChance := recipe.GetEffectiveSuccessChance(skillLevel)
 	finalChance := baseChance + stationBonus
 	if finalChance > 0.95 {
-		finalChance = 0.95 // Cap at 95%
+		return 0.95
 	}
+	return finalChance
+}
 
-	// Roll for success (use recipe seed + entity ID for determinism)
-	rng := rand.New(rand.NewSource(recipe.OutputItemSeed + int64(entityID)))
-	success := rng.Float64() < finalChance
+// rollForCraftSuccess performs the deterministic success roll for crafting.
+func (s *CraftingSystem) rollForCraftSuccess(entityID uint64, recipeID string, rng *rand.Rand, successChance float64) bool {
+	success := rng.Float64() < successChance
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":      entityID,
-			"recipe_id":      recipe.ID,
-			"success_chance": finalChance,
+			"recipe_id":      recipeID,
+			"success_chance": successChance,
 			"roll_succeeded": success,
 		}).Debug("craft success roll performed")
 	}
 
-	// Calculate XP gained (more XP for higher rarity recipes)
-	xpGained := 10 * (int(recipe.Rarity) + 1)
+	return success
+}
+
+// calculateXPGained determines experience points gained from a crafting attempt.
+func (s *CraftingSystem) calculateXPGained(rarity RecipeRarity, success bool) int {
+	xpGained := 10 * (int(rarity) + 1)
 	if !success {
-		xpGained = xpGained / 2 // Half XP on failure
+		return xpGained / 2
+	}
+	return xpGained
+}
+
+// handleCraftSuccess processes a successful crafting attempt.
+func (s *CraftingSystem) handleCraftSuccess(entityID uint64, entity *Entity, recipe *Recipe, rng *rand.Rand, xpGained int, successChance float64) {
+	outputItem := s.generateOutputItem(recipe, rng)
+
+	if !s.addItemToInventory(entityID, entity, outputItem, recipe.ID) {
+		return
 	}
 
-	// Add XP to crafting skill
-	s.addCraftingExperience(entity, xpGained)
+	s.logSuccessfulCraft(entityID, recipe.ID, outputItem.Name, xpGained, successChance)
+}
 
-	if success {
-		// Generate output item
-		outputItem := s.generateOutputItem(recipe, rng)
-
-		// Add to inventory
-		invComp, err := s.getInventoryComponent(entity)
-		if err == nil {
-			if !invComp.AddItem(outputItem) {
-				// Inventory full (shouldn't happen, we validated), drop item near entity
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id": entityID,
-						"item_name": outputItem.Name,
-						"recipe_id": recipe.ID,
-					}).Warn("inventory full after craft, item lost")
-				}
-			} else {
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id": entityID,
-						"item_name": outputItem.Name,
-						"recipe_id": recipe.ID,
-					}).Debug("crafted item added to inventory")
-				}
-			}
-		} else {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": entityID,
-					"error":     err.Error(),
-				}).Error("failed to get inventory after craft completion")
-			}
-		}
-
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+// addItemToInventory attempts to add a crafted item to the entity's inventory.
+func (s *CraftingSystem) addItemToInventory(entityID uint64, entity *Entity, outputItem *item.Item, recipeID string) bool {
+	invComp, err := s.getInventoryComponent(entity)
+	if err != nil {
+		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entityID,
-				"recipe_id":      recipe.ID,
-				"item_name":      outputItem.Name,
-				"xp_gained":      xpGained,
-				"success_chance": finalChance,
-			}).Info("crafting succeeded")
+				"entity_id": entityID,
+				"error":     err.Error(),
+			}).Error("failed to get inventory after craft completion")
 		}
-	} else {
-		// Failure - materials already consumed, no output
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		return false
+	}
+
+	if !invComp.AddItem(outputItem) {
+		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entityID,
-				"recipe_id":      recipe.ID,
-				"xp_gained":      xpGained,
-				"success_chance": finalChance,
-			}).Info("crafting failed")
+				"entity_id": entityID,
+				"item_name": outputItem.Name,
+				"recipe_id": recipeID,
+			}).Warn("inventory full after craft, item lost")
 		}
+		return false
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"item_name": outputItem.Name,
+			"recipe_id": recipeID,
+		}).Debug("crafted item added to inventory")
+	}
+
+	return true
+}
+
+// logSuccessfulCraft logs information about a successful crafting operation.
+func (s *CraftingSystem) logSuccessfulCraft(entityID uint64, recipeID, itemName string, xpGained int, successChance float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipeID,
+			"item_name":      itemName,
+			"xp_gained":      xpGained,
+			"success_chance": successChance,
+		}).Info("crafting succeeded")
+	}
+}
+
+// handleCraftFailure processes a failed crafting attempt.
+func (s *CraftingSystem) handleCraftFailure(entityID uint64, recipeID string, xpGained int, successChance float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipeID,
+			"xp_gained":      xpGained,
+			"success_chance": successChance,
+		}).Info("crafting failed")
 	}
 }
 

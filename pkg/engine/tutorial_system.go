@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
@@ -279,6 +280,14 @@ func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 		ts.skipButton.Update()
 	}
 
+	// BUG FIX: Phase 2 - Tutorial ESC key not handled
+	// Resolution: Added ESC key check to hide tutorial UI (dual-exit pattern)
+	// Players can now press ESC to hide the tutorial overlay while keeping progression enabled
+	if ts.ShowUI && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		ts.HideTutorialUI()
+		return
+	}
+
 	// Create temporary world for condition checking
 	world := &World{entities: make(map[uint64]*Entity), entityListDirty: true}
 	for _, entity := range entities {
@@ -476,6 +485,15 @@ func (ts *EbitenTutorialSystem) DisableTutorial() {
 	ts.ShowUI = false
 	ts.NotificationMsg = "Tutorial skipped"
 	ts.NotificationTTL = 2.0
+}
+
+// HideTutorialUI hides the tutorial overlay without disabling progression.
+// BUG FIX: Phase 2 - Allows ESC key to hide tutorial UI while keeping tutorial active
+// Players can continue completing tutorial objectives without the overlay visible
+func (ts *EbitenTutorialSystem) HideTutorialUI() {
+	ts.ShowUI = false
+	ts.NotificationMsg = "Tutorial minimized (press H to see controls)"
+	ts.NotificationTTL = 3.0
 }
 
 // ShowNotification displays a notification message for the specified duration.

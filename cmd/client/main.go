@@ -94,6 +94,12 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// CRITICAL: Initialize V6.0 systems (federation, persistent worlds) BEFORE registering them
 	initializeV6Systems(game, sys, clientLogger)
 
+	// INTEGRATION FIX [Category A]: Initialize V8.0 systems (housing, physics, social persistence)
+	// Gap: V8.0 features fully implemented but never initialized in game client
+	// Fix: Added V8.0 system initialization call before registration
+	// Roadmap: ROADMAP_V8.md (Phase 49-51)
+	initializeV8Systems(game, sys, clientLogger)
+
 	// Now register all systems (including environmental systems that are now initialized)
 	registerAllSystems(game, sys)
 

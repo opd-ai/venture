@@ -4,7 +4,9 @@ Package `saveload` provides persistent game state management through file-based 
 
 ## Overview
 
-The save/load system allows players to save their progress and resume gameplay later. It uses JSON format for human-readable save files and supports version migration for backward compatibility across game updates.
+The save/load system allows players to save their progress and resume gameplay later. It uses JSON format for human-readable save files.
+
+**NOTE**: Pre-version 1.0, this system supports ONLY the latest save format. No backward compatibility or migration is provided.
 
 ## Features
 
@@ -249,21 +251,15 @@ Save names are validated to prevent directory traversal attacks:
 
 Save files are created with permissions `0644` (readable by all, writable by owner only).
 
-## Version Migration
+## Version Tracking
 
-The save format uses semantic versioning (currently `1.0.0`). Future versions can implement migration:
+The save format uses semantic versioning (currently `1.0.0`). 
 
-```go
-// Example migration (not yet implemented)
-func migrateSaveFrom100To110(save *GameSave) error {
-    // Add new field with default value
-    if save.PlayerState.NewField == 0 {
-        save.PlayerState.NewField = 100
-    }
-    save.Version = "1.1.0"
-    return nil
-}
-```
+**OBSOLETE CODE REMOVED**: Version migration system
+**Replaced by**: Single version support (pre-1.0 policy)
+**Removed**: Migration functions, compatibility tests, legacy format handling
+
+Pre-version 1.0, only the latest save format is supported. Save files from older versions will NOT load.
 
 ## Performance
 

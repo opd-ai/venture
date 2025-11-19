@@ -10,11 +10,15 @@ import (
 
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	"github.com/opd-ai/venture/pkg/engine/physics/vehicle"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
+	"github.com/opd-ai/venture/pkg/procgen/furniture"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
@@ -23,8 +27,10 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/quality"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/opd-ai/venture/pkg/social/persistence"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
+	"github.com/opd-ai/venture/pkg/world/housing"
 	"github.com/sirupsen/logrus"
 )
 
@@ -127,6 +133,24 @@ type systemsContainer struct {
 	terrainModificationSys *engine.TerrainModificationSystem // Phase 35: Destructible terrain
 	merchantCaravanSystem  *engine.MerchantCaravanSystem     // Phase 36: Traveling merchants between servers
 	npcDialogSystem        *engine.NPCDialogSystem           // Phase 31: Markov-chain NPC conversations
+
+	// INTEGRATION FIX [Category A]: V8.0 Systems (Phase 49-51)
+	// Gap: V8.0 systems fully implemented but never instantiated or registered
+	// Fix: Added system fields for housing, social persistence, physics, territory, building/furniture generation
+	// Roadmap: ROADMAP_V8.md (Phase 49-51)
+	housingManager     *housing.Manager               // Phase 49.1: Player housing with plot placement
+	trustManager       *persistence.TrustManager      // Phase 49.2: Persistent trust scores cross-server
+	reputationManager  *persistence.ReputationManager // Phase 49.2: Reputation tracking (trade, combat, social, quest)
+	chatHistory        *persistence.ChatHistory       // Phase 49.3: Chat history with delta compression
+	imageGallery       *persistence.ImageGallery      // Phase 49.4: Persistent image storage
+	guildHallManager   *housing.GuildHallManager      // Phase 51.2: Guild hall construction system
+	enhancedVehicleSys *vehicle.EnhancedVehicleSystem // Phase 50.3: Vehicle physics (suspension, weight, deformation)
+	fluidSimulator     *fluids.Simulator              // Phase 50.4: Fluid dynamics simulation
+	buoyancyCalculator *fluids.BuoyancyCalculator     // Phase 50.4: Buoyancy and swimming
+	swimmingManager    *fluids.SwimmingManager        // Phase 50.4: Swimming mechanics
+	floodingManager    *fluids.FloodingManager        // Phase 50.4: Flooding system
+	buildingGenerator  *building.Generator            // Phase 51.1: Procedural building generation
+	furnitureGenerator *furniture.Generator           // Phase 51.3: Furniture generation and placement
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -403,6 +427,62 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 	if *verbose {
 		clientLogger.Info("V6.0 systems initialized (federation, portals, bounties, politics, territories, rankings, events)")
+	}
+}
+
+// INTEGRATION FIX [Category A]: initializeV8Systems initializes Version 8.0 housing, physics, and social persistence systems.
+// Gap: V8.0 systems fully implemented but never initialized in client
+// Fix: Added complete V8.0 system initialization (housing, trust, physics, building/furniture)
+// Roadmap: ROADMAP_V8.md (Phase 49-51)
+func initializeV8Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 49.1: Housing Core Infrastructure
+	sys.housingManager = housing.NewManager()
+
+	// Phase 49.2: Persistent Trust & Reputation System
+	sys.trustManager = persistence.NewTrustManager()
+	sys.reputationManager = persistence.NewReputationManager()
+
+	// Phase 49.3: Chat History with Delta Compression
+	// Note: ChatHistory is created per-player, this is a global placeholder for the system
+	// Actual player-specific instances will be created when player entity is spawned
+	sys.chatHistory = persistence.NewChatHistory("system")
+
+	// Phase 49.4: Persistent Image Storage & Gallery
+	// Note: ImageGallery is created per-player, this is a global placeholder for the system
+	// Actual player-specific instances will be created when player entity is spawned
+	sys.imageGallery = persistence.NewImageGallery("system")
+
+	// Phase 50.3: Enhanced Vehicle Physics
+	sys.enhancedVehicleSys = vehicle.NewEnhancedVehicleSystem()
+
+	// Phase 50.4: Fluid Dynamics & Swimming
+	fluidConfig := fluids.SimulationConfig{
+		GridWidth:       100,
+		GridHeight:      100,
+		CellSize:        1.0,
+		UpdateRate:      30.0,
+		Gravity:         9.8,
+		PressureFactor:  0.8,
+		ViscosityFactor: 0.01,
+		MaxIterations:   10,
+		Convergence:     0.001,
+	}
+	sys.fluidSimulator = fluids.NewSimulator(fluidConfig)
+	sys.buoyancyCalculator = fluids.NewBuoyancyCalculator(fluidConfig.Gravity)
+	sys.swimmingManager = fluids.NewSwimmingManager(fluidConfig.Gravity)
+	sys.floodingManager = fluids.NewFloodingManager(sys.fluidSimulator)
+
+	// Phase 51.1: Procedural Building Generation
+	sys.buildingGenerator = building.NewGenerator()
+
+	// Phase 51.2: Guild Hall Construction
+	sys.guildHallManager = housing.NewGuildHallManager()
+
+	// Phase 51.3: Furniture Generation & Placement
+	sys.furnitureGenerator = furniture.NewGenerator()
+
+	if *verbose {
+		clientLogger.Info("V8.0 systems initialized (housing, trust, reputation, chat history, images, vehicle physics, fluid dynamics, buildings, guild halls, furniture)")
 	}
 }
 

@@ -61,6 +61,13 @@ func NewCraftingSystemWithLogger(world *World, inventorySystem *InventorySystem,
 // Update processes crafting progress for all entities with CraftingProgressComponent.
 // Call this each game tick with deltaTime in seconds.
 func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": len(entities),
+			"delta_time":   deltaTime,
+		}).Debug("crafting system update started")
+	}
+
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("crafting_progress")
 		if !ok {
@@ -69,6 +76,12 @@ func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
 
 		progressComp, ok := comp.(*CraftingProgressComponent)
 		if !ok {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":      entity.ID,
+					"component_type": "crafting_progress",
+				}).Warn("crafting_progress component has wrong type")
+			}
 			continue
 		}
 
@@ -77,6 +90,15 @@ func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Check if crafting is complete
 		if progressComp.IsComplete() {
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  entity.ID,
+					"recipe_id":  progressComp.CurrentRecipe.ID,
+					"elapsed":    progressComp.ElapsedTimeSec,
+					"total_time": progressComp.RequiredTimeSec,
+				}).Debug("crafting complete, processing result")
+			}
+
 			// Complete the craft
 			s.completeCraft(entity.ID, progressComp)
 			// Remove crafting progress component
@@ -94,13 +116,34 @@ func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
 // Validates recipe knowledge, materials, skill, and station requirements.
 // Consumes materials and gold, creates CraftingProgressComponent.
 func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID uint64) (*CraftingResult, error) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"recipe_id":   recipe.ID,
+			"recipe_name": recipe.Name,
+			"station_id":  stationID,
+		}).Debug("start craft requested")
+	}
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+			}).Error("entity not found for crafting")
+		}
 		return nil, fmt.Errorf("entity %d not found", entityID)
 	}
 
 	// Validate recipe knowledge
 	if !s.hasRecipeKnowledge(entity, recipe) {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":   entityID,
+				"recipe_id":   recipe.ID,
+				"recipe_name": recipe.Name,
+			}).Debug("recipe unknown to entity")
+		}
 		return &CraftingResult{
 			Success:      false,
 			RecipeName:   recipe.Name,
@@ -111,6 +154,14 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	// Get crafting skill
 	skillLevel := s.getCraftingSkillLevel(entity)
 	if skillLevel < recipe.SkillRequired {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entityID,
+				"recipe_id":      recipe.ID,
+				"skill_level":    skillLevel,
+				"required_level": recipe.SkillRequired,
+			}).Debug("insufficient crafting skill")
+		}
 		return &CraftingResult{
 			Success:      false,
 			RecipeName:   recipe.Name,
@@ -121,12 +172,25 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	// Get inventory component
 	invComp, err := s.getInventoryComponent(entity)
 	if err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+				"error":     err.Error(),
+			}).Error("failed to get inventory component")
+		}
 		return nil, err
 	}
 
 	// Validate materials and gold
 	canCraft, missing := s.validateMaterials(invComp, recipe)
 	if !canCraft {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+				"recipe_id": recipe.ID,
+				"missing":   missing,
+			}).Debug("insufficient materials for crafting")
+		}
 		return &CraftingResult{
 			Success:      false,
 			RecipeName:   recipe.Name,
@@ -136,6 +200,12 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 
 	// Check if inventory has space for output
 	if invComp.IsFull() {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+				"recipe_id": recipe.ID,
+			}).Debug("inventory full, cannot craft")
+		}
 		return &CraftingResult{
 			Success:      false,
 			RecipeName:   recipe.Name,
@@ -147,8 +217,23 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	stationBonus := 0.0
 	craftTimeMultiplier := 1.0
 	if stationID != 0 {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":   entityID,
+				"station_id":  stationID,
+				"recipe_type": recipe.Type.String(),
+			}).Debug("validating crafting station")
+		}
+
 		bonus, timeMultiplier, err := s.validateAndReserveStation(stationID, recipe.Type)
 		if err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  entityID,
+					"station_id": stationID,
+					"error":      err.Error(),
+				}).Warn("station validation failed")
+			}
 			return &CraftingResult{
 				Success:      false,
 				RecipeName:   recipe.Name,
@@ -164,7 +249,20 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	if err != nil {
 		// Rollback station reservation
 		if stationID != 0 {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  entityID,
+					"station_id": stationID,
+				}).Debug("rolling back station reservation due to material consumption failure")
+			}
 			s.releaseStation(stationID)
+		}
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+				"recipe_id": recipe.ID,
+				"error":     err.Error(),
+			}).Error("failed to consume materials")
 		}
 		return nil, fmt.Errorf("failed to consume materials: %w", err)
 	}
@@ -179,13 +277,13 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entityID":      entityID,
-			"recipeID":      recipe.ID,
-			"recipeName":    recipe.Name,
-			"skillLevel":    skillLevel,
-			"stationBonus":  stationBonus,
-			"craftTime":     actualCraftTime,
-			"materialsUsed": len(consumed),
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"recipe_name":    recipe.Name,
+			"skill_level":    skillLevel,
+			"station_bonus":  stationBonus,
+			"craft_time":     actualCraftTime,
+			"materials_used": len(consumed),
 		}).Debug("started crafting")
 	}
 
@@ -198,10 +296,16 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 
 // completeCraft finishes a craft attempt, rolling for success and generating output.
 func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingProgressComponent) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Debug("completing craft attempt")
+	}
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
 		if s.logger != nil {
-			s.logger.WithField("entityID", entityID).Warn("entity not found when completing craft")
+			s.logger.WithField("entity_id", entityID).Warn("entity not found when completing craft")
 		}
 		return
 	}
@@ -209,7 +313,7 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 	recipe := progressComp.CurrentRecipe
 	if recipe == nil {
 		if s.logger != nil {
-			s.logger.WithField("entityID", entityID).Warn("recipe is nil in progress component")
+			s.logger.WithField("entity_id", entityID).Warn("recipe is nil in progress component")
 		}
 		return
 	}
@@ -238,6 +342,15 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 	rng := rand.New(rand.NewSource(recipe.OutputItemSeed + int64(entityID)))
 	success := rng.Float64() < finalChance
 
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"success_chance": finalChance,
+			"roll_succeeded": success,
+		}).Debug("craft success roll performed")
+	}
+
 	// Calculate XP gained (more XP for higher rarity recipes)
 	xpGained := 10 * (int(recipe.Rarity) + 1)
 	if !success {
@@ -258,31 +371,46 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 				// Inventory full (shouldn't happen, we validated), drop item near entity
 				if s.logger != nil {
 					s.logger.WithFields(logrus.Fields{
-						"entityID": entityID,
-						"itemName": outputItem.Name,
-						"recipeID": recipe.ID,
+						"entity_id": entityID,
+						"item_name": outputItem.Name,
+						"recipe_id": recipe.ID,
 					}).Warn("inventory full after craft, item lost")
 				}
+			} else {
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id": entityID,
+						"item_name": outputItem.Name,
+						"recipe_id": recipe.ID,
+					}).Debug("crafted item added to inventory")
+				}
+			}
+		} else {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": entityID,
+					"error":     err.Error(),
+				}).Error("failed to get inventory after craft completion")
 			}
 		}
 
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 			s.logger.WithFields(logrus.Fields{
-				"entityID":      entityID,
-				"recipeID":      recipe.ID,
-				"itemName":      outputItem.Name,
-				"xpGained":      xpGained,
-				"successChance": finalChance,
+				"entity_id":      entityID,
+				"recipe_id":      recipe.ID,
+				"item_name":      outputItem.Name,
+				"xp_gained":      xpGained,
+				"success_chance": finalChance,
 			}).Info("crafting succeeded")
 		}
 	} else {
 		// Failure - materials already consumed, no output
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
 			s.logger.WithFields(logrus.Fields{
-				"entityID":      entityID,
-				"recipeID":      recipe.ID,
-				"xpGained":      xpGained,
-				"successChance": finalChance,
+				"entity_id":      entityID,
+				"recipe_id":      recipe.ID,
+				"xp_gained":      xpGained,
+				"success_chance": finalChance,
 			}).Info("crafting failed")
 		}
 	}
@@ -290,6 +418,15 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 
 // generateOutputItem creates the crafted item using the item generator.
 func (s *CraftingSystem) generateOutputItem(recipe *Recipe, rng *rand.Rand) *item.Item {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"recipe_id":   recipe.ID,
+			"item_type":   recipe.OutputItemType.String(),
+			"genre_id":    recipe.GenreID,
+			"skill_level": recipe.SkillRequired,
+		}).Debug("generating crafted item")
+	}
+
 	// Build generation parameters
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,                  // Medium difficulty for crafted items
@@ -307,8 +444,8 @@ func (s *CraftingSystem) generateOutputItem(recipe *Recipe, rng *rand.Rand) *ite
 		// Fallback: create basic item
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
-				"recipeID": recipe.ID,
-				"error":    err.Error(),
+				"recipe_id": recipe.ID,
+				"error":     err.Error(),
 			}).Warn("failed to generate crafted item, using fallback")
 		}
 		return s.createFallbackItem(recipe)
@@ -316,6 +453,11 @@ func (s *CraftingSystem) generateOutputItem(recipe *Recipe, rng *rand.Rand) *ite
 
 	items := result.([]*item.Item)
 	if len(items) == 0 {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"recipe_id": recipe.ID,
+			}).Warn("item generation returned empty result, using fallback")
+		}
 		return s.createFallbackItem(recipe)
 	}
 
@@ -363,24 +505,46 @@ func (s *CraftingSystem) getCraftingSkillLevel(entity *Entity) int {
 
 // addCraftingExperience adds XP to entity's crafting skill.
 func (s *CraftingSystem) addCraftingExperience(entity *Entity, xp int) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"xp":        xp,
+		}).Debug("adding crafting experience")
+	}
+
 	comp, ok := entity.GetComponent("crafting_skill")
 	if !ok {
 		// Create skill component if not present
 		skillComp := NewCraftingSkillComponent()
 		entity.AddComponent(skillComp)
 		comp = skillComp
+
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "crafting_skill",
+			}).Debug("created crafting skill component")
+		}
 	}
 
 	skillComp, ok := comp.(*CraftingSkillComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "crafting_skill",
+			}).Warn("crafting_skill component has wrong type")
+		}
 		return
 	}
 
+	oldLevel := skillComp.SkillLevel
 	leveledUp := skillComp.AddExperience(xp)
 	if leveledUp && s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entityID":      entity.ID,
-			"newSkillLevel": skillComp.SkillLevel,
+			"entity_id":       entity.ID,
+			"old_skill_level": oldLevel,
+			"new_skill_level": skillComp.SkillLevel,
 		}).Info("crafting skill leveled up")
 	}
 }
@@ -388,6 +552,15 @@ func (s *CraftingSystem) addCraftingExperience(entity *Entity, xp int) {
 // validateMaterials checks if inventory contains required materials and gold.
 // Returns (canCraft, missingDescription).
 func (s *CraftingSystem) validateMaterials(invComp *InventoryComponent, recipe *Recipe) (bool, string) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"recipe_id": recipe.ID,
+			"gold_cost": recipe.GoldCost,
+			"gold_have": invComp.Gold,
+			"materials": len(recipe.Materials),
+		}).Debug("validating materials for crafting")
+	}
+
 	// Check gold
 	if invComp.Gold < recipe.GoldCost {
 		return false, fmt.Sprintf("%d gold", recipe.GoldCost-invComp.Gold)
@@ -427,6 +600,15 @@ func (s *CraftingSystem) countMaterialInInventory(invComp *InventoryComponent, r
 // consumeMaterials removes materials and gold from inventory.
 // Returns list of consumed material names.
 func (s *CraftingSystem) consumeMaterials(entityID uint64, invComp *InventoryComponent, recipe *Recipe) ([]string, error) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"recipe_id": recipe.ID,
+			"gold_cost": recipe.GoldCost,
+			"materials": len(recipe.Materials),
+		}).Debug("consuming materials for crafting")
+	}
+
 	consumed := []string{}
 
 	// Deduct gold
@@ -460,8 +642,25 @@ func (s *CraftingSystem) consumeMaterials(entityID uint64, invComp *InventoryCom
 
 		// Verify we removed enough
 		if removed < req.Quantity {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": entityID,
+					"recipe_id": recipe.ID,
+					"material":  req.ItemName,
+					"needed":    req.Quantity,
+					"found":     removed,
+				}).Error("insufficient materials during consumption")
+			}
 			return nil, fmt.Errorf("insufficient %s: needed %d, found %d", req.ItemName, req.Quantity, removed)
 		}
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"items_consumed": len(consumed),
+		}).Debug("materials consumed successfully")
 	}
 
 	return consumed, nil
@@ -470,28 +669,66 @@ func (s *CraftingSystem) consumeMaterials(entityID uint64, invComp *InventoryCom
 // validateAndReserveStation checks if station is valid and marks it as in-use.
 // Returns (bonusSuccessChance, craftTimeMultiplier, error).
 func (s *CraftingSystem) validateAndReserveStation(stationID uint64, recipeType RecipeType) (float64, float64, error) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id":  stationID,
+			"recipe_type": recipeType.String(),
+		}).Debug("validating and reserving station")
+	}
+
 	station, ok := s.world.GetEntity(stationID)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+			}).Warn("station entity not found")
+		}
 		return 0, 1.0, fmt.Errorf("station not found")
 	}
 
 	stationComp, err := s.getCraftingStationComponent(station)
 	if err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+				"error":      err.Error(),
+			}).Warn("failed to get crafting station component")
+		}
 		return 0, 1.0, err
 	}
 
 	// Check station type matches recipe
 	if stationComp.StationType != recipeType {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"station_id":   stationID,
+				"station_type": stationComp.StationType.String(),
+				"recipe_type":  recipeType.String(),
+			}).Debug("station type mismatch")
+		}
 		return 0, 1.0, fmt.Errorf("wrong station type: need %s station", recipeType.String())
 	}
 
 	// Check availability
 	if !stationComp.Available {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+			}).Debug("station already in use")
+		}
 		return 0, 1.0, fmt.Errorf("station in use")
 	}
 
 	// Reserve station
 	stationComp.Available = false
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id":      stationID,
+			"bonus_chance":    stationComp.BonusSuccessChance,
+			"time_multiplier": stationComp.CraftTimeMultiplier,
+		}).Debug("station reserved successfully")
+	}
 
 	return stationComp.BonusSuccessChance, stationComp.CraftTimeMultiplier, nil
 }
@@ -502,17 +739,40 @@ func (s *CraftingSystem) releaseStation(stationID uint64) {
 		return
 	}
 
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+		}).Debug("releasing station")
+	}
+
 	station, ok := s.world.GetEntity(stationID)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+			}).Warn("station entity not found when releasing")
+		}
 		return
 	}
 
 	stationComp, err := s.getCraftingStationComponent(station)
 	if err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+				"error":      err.Error(),
+			}).Warn("failed to get station component when releasing")
+		}
 		return
 	}
 
 	stationComp.Available = true
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+		}).Debug("station released successfully")
+	}
 }
 
 // Helper methods for component access

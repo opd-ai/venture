@@ -203,6 +203,24 @@ func (s *SpellCastingSystem) Update(entities []*Entity, deltaTime float64) {
 
 // executeCast performs the spell effect.
 func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slotIndex int) {
+	s.logSpellExecution(caster, spell, slotIndex)
+
+	mana := s.validateAndConsumeMana(caster, spell)
+	if mana == nil {
+		return
+	}
+
+	pos := s.getCasterPosition(caster, spell)
+	if pos == nil {
+		return
+	}
+
+	s.dispatchSpellByType(caster, spell, pos)
+	s.applySpellEffects(caster, spell, pos, slotIndex)
+}
+
+// logSpellExecution logs the initial spell cast event with relevant details.
+func (s *SpellCastingSystem) logSpellExecution(caster *Entity, spell *magic.Spell, slotIndex int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  caster.ID,
@@ -212,8 +230,11 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 			"slot_index": slotIndex,
 		}).Debug("Executing spell cast")
 	}
+}
 
-	// Check mana cost
+// validateAndConsumeMana checks if the caster has sufficient mana and deducts the spell cost.
+// Returns the ManaComponent if successful, nil otherwise.
+func (s *SpellCastingSystem) validateAndConsumeMana(caster *Entity, spell *magic.Spell) *ManaComponent {
 	manaComp, hasMana := caster.GetComponent("mana")
 	if !hasMana {
 		if s.logger != nil {
@@ -222,7 +243,7 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 				"spell_name": spell.Name,
 			}).Warn("Entity has no mana component, cannot cast spell")
 		}
-		return
+		return nil
 	}
 	mana, ok := manaComp.(*ManaComponent)
 	if !ok {
@@ -232,7 +253,7 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 				"component_type": "mana",
 			}).Error("Failed to cast mana component to ManaComponent")
 		}
-		return
+		return nil
 	}
 
 	if mana.Current < spell.Stats.ManaCost {
@@ -244,14 +265,12 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 				"mana_required": spell.Stats.ManaCost,
 			}).Debug("Insufficient mana for spell cast")
 		}
-		// Not enough mana - show notification to player
 		if s.tutorialSys != nil {
 			s.tutorialSys.ShowNotification("Not enough mana!", 1.5)
 		}
-		return
+		return nil
 	}
 
-	// Deduct mana cost
 	mana.Current -= spell.Stats.ManaCost
 	if mana.Current < 0 {
 		mana.Current = 0
@@ -265,7 +284,12 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 		}).Debug("Mana cost deducted")
 	}
 
-	// Get caster position for targeting
+	return mana
+}
+
+// getCasterPosition retrieves and validates the caster's position component.
+// Returns the PositionComponent if successful, nil otherwise.
+func (s *SpellCastingSystem) getCasterPosition(caster *Entity, spell *magic.Spell) *PositionComponent {
 	posComp, hasPos := caster.GetComponent("position")
 	if !hasPos {
 		if s.logger != nil {
@@ -274,7 +298,7 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 				"spell_name": spell.Name,
 			}).Warn("Caster has no position component")
 		}
-		return
+		return nil
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
@@ -284,10 +308,13 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 				"component_type": "position",
 			}).Error("Failed to cast position component to PositionComponent")
 		}
-		return
+		return nil
 	}
+	return pos
+}
 
-	// Apply spell effects based on type
+// dispatchSpellByType routes the spell to the appropriate casting method based on spell type.
+func (s *SpellCastingSystem) dispatchSpellByType(caster *Entity, spell *magic.Spell, pos *PositionComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  caster.ID,
@@ -312,28 +339,25 @@ func (s *SpellCastingSystem) executeCast(caster *Entity, spell *magic.Spell, slo
 	case magic.TypeUtility:
 		s.castUtilitySpell(caster, spell)
 	}
+}
 
-	// Play cast sound effect (genre-aware)
+// applySpellEffects handles audio, visual particles, lighting, and combo tracking after spell dispatch.
+func (s *SpellCastingSystem) applySpellEffects(caster *Entity, spell *magic.Spell, pos *PositionComponent, slotIndex int) {
 	if s.audioMgr != nil {
-		effectType := "magic" // Generic magic sound
+		effectType := "magic"
 		if err := s.audioMgr.PlaySFX(effectType, int64(caster.ID)); err != nil {
-			// Audio failure is non-critical, continue
 			if s.logger != nil {
 				s.logger.Debugf("Failed to play spell cast sound: %v", err)
 			}
 		}
 	}
 
-	// Spawn cast visual effect (magic particles at caster position)
 	if s.particleSys != nil {
 		s.particleSys.SpawnMagicParticles(s.world, pos.X, pos.Y, int64(caster.ID), "fantasy")
 	}
 
-	// Phase 5.3: Spawn spell light for dynamic lighting
-	// Light duration matches typical spell effect duration (2-3 seconds)
 	s.spawnSpellLight(pos.X, pos.Y, spell, 2.5)
 
-	// Phase 24.2: Track spell cast for combo detection
 	if s.comboSys != nil {
 		s.comboSys.OnSpellCast(caster, spell, slotIndex)
 	}

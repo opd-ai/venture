@@ -64,10 +64,16 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 	var logEntry *logrus.Entry
 	if logger != nil {
 		logEntry = logger.WithField("system", "lighting")
+		logEntry.WithFields(logrus.Fields{
+			"has_config": config != nil,
+		}).Debug("Creating lighting system")
 	}
 
 	if config == nil {
 		config = NewLightingConfig()
+		if logEntry != nil {
+			logEntry.Debug("Using default lighting configuration")
+		}
 	}
 
 	system := &LightingSystem{
@@ -79,9 +85,23 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 
 	// Initialize shadow system if shadows are enabled
 	if config.ShadowsEnabled {
+		if logEntry != nil {
+			logEntry.WithFields(logrus.Fields{
+				"max_shadows":    config.MaxShadows,
+				"shadow_quality": config.ShadowQuality,
+			}).Debug("Initializing shadow system")
+		}
 		system.shadowSystem = NewShadowSystemWithLogger(world, logger)
 		system.shadowSystem.SetMaxShadows(config.MaxShadows)
 		system.shadowSystem.SetRenderQuality(config.ShadowQuality)
+	}
+
+	if logEntry != nil {
+		logEntry.WithFields(logrus.Fields{
+			"max_lights":        config.MaxLights,
+			"shadows_enabled":   config.ShadowsEnabled,
+			"ambient_intensity": config.AmbientIntensity,
+		}).Info("Lighting system created")
 	}
 
 	return system
@@ -89,6 +109,15 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 
 // SetViewport updates the camera position and viewport size for culling.
 func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"camera_x": cameraX,
+			"camera_y": cameraY,
+			"width":    width,
+			"height":   height,
+		}).Debug("Setting viewport")
+	}
+
 	s.cameraX = cameraX
 	s.cameraY = cameraY
 	s.viewportW = width
@@ -103,17 +132,34 @@ func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int
 
 // EnableShadows enables or disables shadow rendering.
 func (s *LightingSystem) EnableShadows(enabled bool) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"enabled":              enabled,
+			"shadow_system_exists": s.shadowSystem != nil,
+		}).Debug("Toggling shadows")
+	}
+
 	s.config.ShadowsEnabled = enabled
 	if s.shadowSystem != nil {
 		s.shadowSystem.SetEnabled(enabled)
 	} else if enabled {
 		// Create shadow system if it doesn't exist
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"max_shadows":    s.config.MaxShadows,
+				"shadow_quality": s.config.ShadowQuality,
+			}).Info("Creating shadow system on-demand")
+		}
 		s.shadowSystem = NewShadowSystem(s.world)
 		s.shadowSystem.SetMaxShadows(s.config.MaxShadows)
 		s.shadowSystem.SetRenderQuality(s.config.ShadowQuality)
 		if s.viewportSet {
 			s.shadowSystem.SetViewport(s.cameraX, s.cameraY, s.viewportW, s.viewportH)
 		}
+	}
+
+	if s.logger != nil {
+		s.logger.WithField("enabled", enabled).Info("Shadows toggled")
 	}
 }
 
@@ -130,6 +176,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Update animation times for flickering/pulsing lights
+	updatedLights := 0
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("light")
 		if !ok {
@@ -142,6 +189,14 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 
 		light.internalTime += deltaTime
+		updatedLights++
+	}
+
+	if s.logger != nil && updatedLights > 0 {
+		s.logger.WithFields(logrus.Fields{
+			"updated_lights": updatedLights,
+			"delta_time":     deltaTime,
+		}).Debug("Updated light animations")
 	}
 }
 
@@ -154,6 +209,9 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPo
 		return s.visibleLights
 	}
 
+	totalLights := 0
+	culledLights := 0
+
 	for _, entity := range entities {
 		// Get light component
 		lightComp, hasLight := entity.GetComponent("light")
@@ -165,6 +223,8 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPo
 		if !ok || !light.Enabled {
 			continue
 		}
+
+		totalLights++
 
 		// Get position
 		posComp, hasPos := entity.GetComponent("position")
@@ -180,6 +240,7 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPo
 		// Viewport culling (if viewport is set)
 		if s.viewportSet {
 			if !s.isLightInViewport(pos.X, pos.Y, light.Radius) {
+				culledLights++
 				continue
 			}
 		}
@@ -193,8 +254,24 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPo
 
 		// Limit to MaxLights
 		if len(s.visibleLights) >= s.config.MaxLights {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"max_lights":     s.config.MaxLights,
+					"total_lights":   totalLights,
+					"culled_lights":  culledLights,
+					"visible_lights": len(s.visibleLights),
+				}).Warn("Reached maximum light limit")
+			}
 			break
 		}
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"total_lights":   totalLights,
+			"culled_lights":  culledLights,
+			"visible_lights": len(s.visibleLights),
+		}).Debug("Collected visible lights")
 	}
 
 	return s.visibleLights
@@ -215,6 +292,13 @@ func (s *LightingSystem) isLightInViewport(x, y, radius float64) bool {
 // This should be called when creating or changing the ambient light entity
 // to avoid O(n) iteration on every frame.
 func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"previous_cache": s.ambientLightCached,
+		}).Debug("Setting ambient light entity cache")
+	}
+
 	s.ambientLightEntityID = entityID
 	s.ambientLightCached = true
 }
@@ -222,6 +306,10 @@ func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
 // ClearAmbientLightCache clears the cached ambient light entity.
 // Call this if the ambient light entity is removed from the world.
 func (s *LightingSystem) ClearAmbientLightCache() {
+	if s.logger != nil {
+		s.logger.WithField("previous_entity_id", s.ambientLightEntityID).Debug("Clearing ambient light cache")
+	}
+
 	s.ambientLightEntityID = 0
 	s.ambientLightCached = false
 }
@@ -242,6 +330,7 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 	// Get ambient light from cache or config defaults
 	ambientIntensity := s.config.AmbientIntensity
 	ambientColor := s.config.AmbientColor
+	usedCachedAmbient := false
 
 	// Try cached ambient light entity first
 	if s.ambientLightCached {
@@ -250,6 +339,7 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 				if ambient, ok := ambComp.(*AmbientLightComponent); ok {
 					ambientIntensity = ambient.Intensity
 					ambientColor = ambient.Color
+					usedCachedAmbient = true
 				}
 			}
 		}
@@ -257,14 +347,28 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 
 	// If no lights and high ambient, just draw normally
 	if len(lights) == 0 && ambientIntensity > 0.8 {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"ambient_intensity": ambientIntensity,
+				"light_count":       0,
+			}).Debug("Skipping lighting (high ambient, no lights)")
+		}
 		screen.DrawImage(renderedScene, nil)
 		return
 	}
 
 	// Create lighting buffer if needed
 	w, h := renderedScene.Size()
+	bufferResized := false
 	if s.lightingBuffer == nil || s.lightingBuffer.Bounds().Dx() != w || s.lightingBuffer.Bounds().Dy() != h {
 		s.lightingBuffer = ebiten.NewImage(w, h)
+		bufferResized = true
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"width":  w,
+				"height": h,
+			}).Debug("Created/resized lighting buffer")
+		}
 	}
 
 	// Calculate lighting (simplified version - full per-pixel lighting would be more complex)
@@ -275,6 +379,15 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 	ambR := float64(ambientColor.R) / 255.0 * ambientIntensity
 	ambG := float64(ambientColor.G) / 255.0 * ambientIntensity
 	ambB := float64(ambientColor.B) / 255.0 * ambientIntensity
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"light_count":       len(lights),
+			"ambient_intensity": ambientIntensity,
+			"cached_ambient":    usedCachedAmbient,
+			"buffer_resized":    bufferResized,
+		}).Debug("Applying lighting")
+	}
 
 	// Draw rendered scene with ambient modulation
 	opts := &ebiten.DrawImageOptions{}
@@ -297,6 +410,13 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *lightWithPosition) {
 	intensity := lwp.light.GetCurrentIntensity()
 	if intensity <= 0 {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"x":         lwp.x,
+				"y":         lwp.y,
+				"intensity": intensity,
+			}).Debug("Skipping light with zero intensity")
+		}
 		return
 	}
 
@@ -326,6 +446,14 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	// Minimal implementation: draw a filled white circle as the light influence
 	diameter := 2 * radius
 	if diameter <= 0 {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"radius":   radius,
+				"diameter": diameter,
+				"x":        lwp.x,
+				"y":        lwp.y,
+			}).Warn("Invalid light diameter")
+		}
 		return
 	}
 	lightImg := ebiten.NewImage(diameter, diameter)
@@ -341,22 +469,48 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 		}
 	}
 	lightBuffer.DrawImage(lightImg, opts)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"x":         lwp.x,
+			"y":         lwp.y,
+			"radius":    radius,
+			"intensity": intensity,
+			"color_r":   lwp.light.Color.R,
+			"color_g":   lwp.light.Color.G,
+			"color_b":   lwp.light.Color.B,
+		}).Debug("Applied point light")
+	}
 }
 
 // CalculateLightIntensityAt calculates the total light intensity at a point.
 // This can be used for gameplay mechanics (e.g., stealth, vision).
 func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Entity) float64 {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"x": x,
+			"y": y,
+		}).Debug("Calculating light intensity at point")
+	}
+
 	if !s.config.Enabled {
 		return 1.0 // Full brightness if lighting disabled
 	}
 
 	totalIntensity := s.config.AmbientIntensity
+	contributingLights := 0
 
 	// Check for ambient light component in entities first
 	for _, entity := range entities {
 		if ambComp, hasAmb := entity.GetComponent("ambient_light"); hasAmb {
 			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
 				totalIntensity = ambient.Intensity
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":         entity.ID,
+						"ambient_intensity": ambient.Intensity,
+					}).Debug("Found ambient light component")
+				}
 				break // Only use first ambient light found
 			}
 		}
@@ -399,11 +553,21 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 		// Add light contribution
 		intensity := light.GetCurrentIntensity() * falloff
 		totalIntensity += intensity
+		contributingLights++
 	}
 
 	// Clamp to [0, 1]
 	if totalIntensity > 1.0 {
 		totalIntensity = 1.0
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"x":                   x,
+			"y":                   y,
+			"total_intensity":     totalIntensity,
+			"contributing_lights": contributingLights,
+		}).Debug("Calculated light intensity")
 	}
 
 	return totalIntensity
@@ -458,5 +622,17 @@ func (s *LightingSystem) GetConfig() *LightingConfig {
 
 // SetConfig updates the lighting configuration.
 func (s *LightingSystem) SetConfig(config *LightingConfig) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"max_lights":        config.MaxLights,
+			"ambient_intensity": config.AmbientIntensity,
+			"shadows_enabled":   config.ShadowsEnabled,
+		}).Debug("Updating lighting configuration")
+	}
+
 	s.config = config
+
+	if s.logger != nil {
+		s.logger.Info("Lighting configuration updated")
+	}
 }

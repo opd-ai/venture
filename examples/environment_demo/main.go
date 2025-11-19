@@ -250,7 +250,27 @@ func (d *Demo) spawnObjectAt(pos image.Point) error {
 
 // Update handles input and updates game state.
 func (d *Demo) Update() error {
-	// Genre switching
+	if err := d.handleGenreSwitching(); err != nil {
+		return err
+	}
+	d.handleLightMovement()
+	d.handleWeatherToggle()
+	d.handleWeatherIntensity()
+	d.handleLightFalloffCycle()
+	d.handleObjectSpawning()
+	if err := d.handleReset(); err != nil {
+		return err
+	}
+	d.handleFPSToggle()
+	if err := d.handleExit(); err != nil {
+		return err
+	}
+	d.updateWeatherSystem()
+	return nil
+}
+
+// handleGenreSwitching processes genre switching input.
+func (d *Demo) handleGenreSwitching() error {
 	for i := 0; i < 5; i++ {
 		if inpututil.IsKeyJustPressed(ebiten.Key(int(ebiten.Key1) + i)) {
 			d.genreIndex = i
@@ -259,58 +279,67 @@ func (d *Demo) Update() error {
 			return d.regenerate()
 		}
 	}
+	return nil
+}
 
-	// Get current light for movement
+// handleLightMovement processes arrow key input to move the light source.
+func (d *Demo) handleLightMovement() {
 	light, err := d.lightSys.GetLight(d.lightIndex)
-	if err == nil {
-		moved := false
-		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-			light.Position.X -= 5
-			moved = true
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-			light.Position.X += 5
-			moved = true
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-			light.Position.Y -= 5
-			moved = true
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-			light.Position.Y += 5
-			moved = true
-		}
-		if moved {
-			_ = d.lightSys.UpdateLight(d.lightIndex, light)
-		}
+	if err != nil {
+		return
 	}
+	moved := false
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		light.Position.X -= 5
+		moved = true
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		light.Position.X += 5
+		moved = true
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		light.Position.Y -= 5
+		moved = true
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		light.Position.Y += 5
+		moved = true
+	}
+	if moved {
+		_ = d.lightSys.UpdateLight(d.lightIndex, light)
+	}
+}
 
-	// Toggle weather
+// handleWeatherToggle processes weather enable/disable input.
+func (d *Demo) handleWeatherToggle() {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		d.weatherEnabled = !d.weatherEnabled
 	}
+}
 
-	// Weather intensity
+// handleWeatherIntensity processes weather intensity adjustment input.
+func (d *Demo) handleWeatherIntensity() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) {
-		d.weatherIntensity = (d.weatherIntensity + 1) % 4
-		config := d.weatherSystem.Config
-		config.Intensity = d.weatherIntensity
-		newWeather, err := particles.GenerateWeather(config)
-		if err == nil {
-			d.weatherSystem = newWeather
-		}
+		d.adjustWeatherIntensity(1)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		d.weatherIntensity = (d.weatherIntensity + 3) % 4
-		config := d.weatherSystem.Config
-		config.Intensity = d.weatherIntensity
-		newWeather, err := particles.GenerateWeather(config)
-		if err == nil {
-			d.weatherSystem = newWeather
-		}
+		d.adjustWeatherIntensity(3)
 	}
+}
 
-	// Cycle light falloff
+// adjustWeatherIntensity adjusts the weather intensity by the specified delta.
+func (d *Demo) adjustWeatherIntensity(delta particles.WeatherIntensity) {
+	d.weatherIntensity = (d.weatherIntensity + delta) % 4
+	config := d.weatherSystem.Config
+	config.Intensity = d.weatherIntensity
+	newWeather, err := particles.GenerateWeather(config)
+	if err == nil {
+		d.weatherSystem = newWeather
+	}
+}
+
+// handleLightFalloffCycle processes light falloff type cycling input.
+func (d *Demo) handleLightFalloffCycle() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyL) {
 		d.falloffType = (d.falloffType + 1) % 4
 		if light, err := d.lightSys.GetLight(d.lightIndex); err == nil {
@@ -318,35 +347,45 @@ func (d *Demo) Update() error {
 			_ = d.lightSys.UpdateLight(d.lightIndex, light)
 		}
 	}
+}
 
-	// Spawn object at mouse
+// handleObjectSpawning processes object spawning input at mouse position.
+func (d *Demo) handleObjectSpawning() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyO) {
 		mx, my := ebiten.CursorPosition()
 		_ = d.spawnObjectAt(image.Point{X: mx, Y: my})
 	}
+}
 
-	// Reset
+// handleReset processes demo reset input.
+func (d *Demo) handleReset() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		d.seed = time.Now().UnixNano()
 		return d.regenerate()
 	}
+	return nil
+}
 
-	// Toggle FPS
+// handleFPSToggle processes FPS display toggle input.
+func (d *Demo) handleFPSToggle() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		d.showFPS = !d.showFPS
 	}
+}
 
-	// Exit
+// handleExit processes exit input.
+func (d *Demo) handleExit() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return fmt.Errorf("exit requested")
 	}
+	return nil
+}
 
-	// Update weather
+// updateWeatherSystem updates the weather particle system.
+func (d *Demo) updateWeatherSystem() {
 	if d.weatherEnabled {
 		d.weatherSystem.Update(1.0 / 60.0)
 	}
-
-	return nil
 }
 
 // Draw renders the demo.

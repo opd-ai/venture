@@ -84,92 +84,66 @@ func (s *CollisionSystem) WouldCollideWithTerrain(entity *Entity, newX, newY flo
 // This is a predictive check that doesn't modify entity state.
 // Returns true if the entity would collide with the other entity at the specified position.
 func (s *CollisionSystem) WouldCollideWithEntity(entity *Entity, newX, newY float64, other *Entity) bool {
-	if !entity.HasComponent("collider") || !other.HasComponent("collider") {
+	collider1, collider2, pos2, ok := s.validatePredictiveCollisionComponents(entity, other)
+	if !ok {
 		return false
 	}
 
-	if !other.HasComponent("position") {
+	if !s.canCollidePredictive(entity, collider1, other, collider2) {
 		return false
 	}
 
-	// Get collider components
+	return s.checkPredictiveIntersection(entity, collider1, newX, newY, other, collider2, pos2)
+}
+
+// validatePredictiveCollisionComponents retrieves and validates collision components for predictive checks.
+// Returns collider1, collider2, pos2, and ok status.
+func (s *CollisionSystem) validatePredictiveCollisionComponents(entity, other *Entity) (*ColliderComponent, *ColliderComponent, *PositionComponent, bool) {
+	if !entity.HasComponent("collider") || !other.HasComponent("collider") || !other.HasComponent("position") {
+		return nil, nil, nil, false
+	}
+
 	collider1Comp, _ := entity.GetComponent("collider")
 	collider2Comp, _ := other.GetComponent("collider")
-	collider1, ok := collider1Comp.(*ColliderComponent)
-	if !ok {
-		return false
-	}
-	collider2, ok := collider2Comp.(*ColliderComponent)
-	if !ok {
-		return false
+	collider1, ok1 := collider1Comp.(*ColliderComponent)
+	collider2, ok2 := collider2Comp.(*ColliderComponent)
+	if !ok1 || !ok2 {
+		return nil, nil, nil, false
 	}
 
-	// Skip trigger colliders (they don't block movement)
+	pos2Comp, _ := other.GetComponent("position")
+	pos2, ok := pos2Comp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	return collider1, collider2, pos2, true
+}
+
+// canCollidePredictive checks if two entities can collide based on solidity, triggers, and layer compatibility.
+func (s *CollisionSystem) canCollidePredictive(entity *Entity, collider1 *ColliderComponent, other *Entity, collider2 *ColliderComponent) bool {
 	if collider1.IsTrigger || collider2.IsTrigger {
 		return false
 	}
 
-	// Skip if either is not solid
 	if !collider1.Solid || !collider2.Solid {
 		return false
 	}
 
-	// Check layer compatibility (0 = all layers)
-	if collider1.Layer != 0 && collider2.Layer != 0 && collider1.Layer != collider2.Layer {
-		return false
-	}
+	return s.areLayersCompatible(entity, collider1, other, collider2)
+}
 
-	// Check terrain layer compatibility for prediction (Phase 11.1 multi-layer support)
-	layer1Comp, hasLayer1 := entity.GetComponent("layer")
-	layer2Comp, hasLayer2 := other.GetComponent("layer")
-	if hasLayer1 && hasLayer2 {
-		l1, ok := layer1Comp.(*LayerComponent)
-		if !ok {
-			return false
-		}
-		l2, ok := layer2Comp.(*LayerComponent)
-		if !ok {
-			return false
-		}
-		// Flying entities collide with all layers
-		if !l1.CanFly && !l2.CanFly {
-			// Check if entities are on same effective terrain layer
-			if !OnSameLayer(l1, l2) {
-				return false // No collision across terrain layers
-			}
-		}
-	}
-
-	// Get other entity's current position
-	pos2Comp, _ := other.GetComponent("position")
-	pos2, ok := pos2Comp.(*PositionComponent)
-	if !ok {
-		return false
-	}
-
-	// Issue #20: Check intersection at predicted position with rotation support
+// checkPredictiveIntersection performs intersection check at predicted position with rotation support.
+func (s *CollisionSystem) checkPredictiveIntersection(entity *Entity, collider1 *ColliderComponent, newX, newY float64, other *Entity, collider2 *ColliderComponent, pos2 *PositionComponent) bool {
 	rot1Comp, hasRot1 := entity.GetComponent("rotation")
 	rot2Comp, hasRot2 := other.GetComponent("rotation")
 
-	if hasRot1 || hasRot2 {
-		// Use rotation-aware collision for rotated entities
-		angle1 := 0.0
-		angle2 := 0.0
-		if hasRot1 {
-			if rot1, ok := rot1Comp.(*RotationComponent); ok {
-				angle1 = rot1.Angle
-			}
-		}
-		if hasRot2 {
-			if rot2, ok := rot2Comp.(*RotationComponent); ok {
-				angle2 = rot2.Angle
-			}
-		}
-		return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
+	if !hasRot1 && !hasRot2 {
+		return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
 	}
 
-	// Check intersection at predicted position (no rotation)
-	return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
+	angle1, angle2 := s.extractRotationAngles(rot1Comp, hasRot1, rot2Comp, hasRot2)
+	return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
 }
 
 // Update detects and resolves collisions between entities.

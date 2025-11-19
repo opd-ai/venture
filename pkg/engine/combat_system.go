@@ -801,135 +801,186 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 // spawnProjectile creates a projectile entity for ranged weapon attacks (Phase 10.2).
 // Returns true if projectile was successfully spawned, false otherwise.
 func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.Item, attack *AttackComponent) bool {
-	// Check if projectile system is available
 	if s.projectileSystem == nil || s.world == nil {
 		return false
 	}
 
-	// Get attacker position
-	attackerPosComp, hasPos := attacker.GetComponent("position")
-	if !hasPos {
-		return false
-	}
-	attackerPos, ok := attackerPosComp.(*PositionComponent)
+	attackerPos, ok := s.getAttackerPosition(attacker)
 	if !ok {
 		return false
 	}
 
-	// Get aim direction
-	var aimAngle float64
+	aimAngle, ok := s.calculateAimAngle(attacker, target, attackerPos)
+	if !ok {
+		return false
+	}
+
+	spawnX, spawnY := s.calculateSpawnPosition(attackerPos, aimAngle)
+	velocityX, velocityY := s.calculateProjectileVelocity(weapon, aimAngle)
+	baseDamage := s.calculateProjectileDamage(attacker, attack)
+	projComp := s.createProjectileComponent(weapon, baseDamage, attacker.ID)
+
+	projectile := s.spawnProjectileEntity(spawnX, spawnY, velocityX, velocityY, aimAngle, projComp)
+	s.addProjectileSprite(projectile, projComp, aimAngle)
+	s.logProjectileSpawn(attacker, projectile, baseDamage, projComp)
+
+	return true
+}
+
+// getAttackerPosition retrieves the position component from the attacker entity.
+func (s *CombatSystem) getAttackerPosition(attacker *Entity) (*PositionComponent, bool) {
+	attackerPosComp, hasPos := attacker.GetComponent("position")
+	if !hasPos {
+		return nil, false
+	}
+	attackerPos, ok := attackerPosComp.(*PositionComponent)
+	if !ok {
+		return nil, false
+	}
+	return attackerPos, true
+}
+
+// calculateAimAngle determines the aim angle from aim component, rotation component, or target position.
+func (s *CombatSystem) calculateAimAngle(attacker, target *Entity, attackerPos *PositionComponent) (float64, bool) {
 	if aimComp, hasAim := attacker.GetComponent("aim"); hasAim {
 		if aim, ok := aimComp.(*AimComponent); ok {
-			aimAngle = aim.AimAngle
-		}
-	} else if rotComp, hasRot := attacker.GetComponent("rotation"); hasRot {
-		if rot, ok := rotComp.(*RotationComponent); ok {
-			aimAngle = rot.Angle
-		}
-	} else {
-		// Fallback: aim at target
-		targetPosComp, hasTargetPos := target.GetComponent("position")
-		if !hasTargetPos {
-			return false
-		}
-		if targetPos, ok := targetPosComp.(*PositionComponent); ok {
-			dx := targetPos.X - attackerPos.X
-			dy := targetPos.Y - attackerPos.Y
-			aimAngle = math.Atan2(dy, dx)
-		} else {
-			return false
+			return aim.AimAngle, true
 		}
 	}
 
-	// Calculate projectile spawn position (offset from attacker in aim direction)
-	spawnOffset := 20.0 // pixels in front of attacker
+	if rotComp, hasRot := attacker.GetComponent("rotation"); hasRot {
+		if rot, ok := rotComp.(*RotationComponent); ok {
+			return rot.Angle, true
+		}
+	}
+
+	return s.calculateAngleToTarget(target, attackerPos)
+}
+
+// calculateAngleToTarget calculates the angle from attacker to target position.
+func (s *CombatSystem) calculateAngleToTarget(target *Entity, attackerPos *PositionComponent) (float64, bool) {
+	targetPosComp, hasTargetPos := target.GetComponent("position")
+	if !hasTargetPos {
+		return 0, false
+	}
+	targetPos, ok := targetPosComp.(*PositionComponent)
+	if !ok {
+		return 0, false
+	}
+	dx := targetPos.X - attackerPos.X
+	dy := targetPos.Y - attackerPos.Y
+	return math.Atan2(dy, dx), true
+}
+
+// calculateSpawnPosition computes the projectile spawn position offset from the attacker.
+func (s *CombatSystem) calculateSpawnPosition(attackerPos *PositionComponent, aimAngle float64) (float64, float64) {
+	spawnOffset := 20.0
 	spawnX := attackerPos.X + math.Cos(aimAngle)*spawnOffset
 	spawnY := attackerPos.Y + math.Sin(aimAngle)*spawnOffset
+	return spawnX, spawnY
+}
 
-	// Calculate projectile velocity
+// calculateProjectileVelocity computes the projectile velocity components from weapon speed and aim angle.
+func (s *CombatSystem) calculateProjectileVelocity(weapon *item.Item, aimAngle float64) (float64, float64) {
 	speed := weapon.Stats.ProjectileSpeed
 	if speed <= 0 {
-		speed = 400.0 // Default speed if not specified
+		speed = 400.0
 	}
 	velocityX := math.Cos(aimAngle) * speed
 	velocityY := math.Sin(aimAngle) * speed
+	return velocityX, velocityY
+}
 
-	// Calculate damage (same as melee, includes stats bonuses)
+// calculateProjectileDamage computes the projectile damage including attacker stats and critical hits.
+func (s *CombatSystem) calculateProjectileDamage(attacker *Entity, attack *AttackComponent) float64 {
 	baseDamage := attack.Damage
 
-	// Get attacker stats for bonus damage
-	if attackerStatsComp, hasStats := attacker.GetComponent("stats"); hasStats {
-		if attackerStats, ok := attackerStatsComp.(*StatsComponent); ok {
-			if attack.DamageType == combat.DamageMagical {
-				baseDamage += attackerStats.MagicPower
-			} else {
-				baseDamage += attackerStats.Attack
-			}
-
-			// Check for critical hit
-			if s.rollChance(attackerStats.CritChance) {
-				baseDamage *= attackerStats.CritDamage
-			}
-		}
+	attackerStatsComp, hasStats := attacker.GetComponent("stats")
+	if !hasStats {
+		return baseDamage
+	}
+	attackerStats, ok := attackerStatsComp.(*StatsComponent)
+	if !ok {
+		return baseDamage
 	}
 
-	// Create projectile component
+	if attack.DamageType == combat.DamageMagical {
+		baseDamage += attackerStats.MagicPower
+	} else {
+		baseDamage += attackerStats.Attack
+	}
+
+	if s.rollChance(attackerStats.CritChance) {
+		baseDamage *= attackerStats.CritDamage
+	}
+
+	return baseDamage
+}
+
+// createProjectileComponent creates and configures a projectile component with weapon properties.
+func (s *CombatSystem) createProjectileComponent(weapon *item.Item, baseDamage float64, attackerID uint64) *ProjectileComponent {
 	lifetime := weapon.Stats.ProjectileLifetime
 	if lifetime <= 0 {
-		lifetime = 3.0 // Default 3 seconds
+		lifetime = 3.0
 	}
 
 	projectileType := weapon.Stats.ProjectileType
 	if projectileType == "" {
-		projectileType = "arrow" // Default
+		projectileType = "arrow"
 	}
 
-	projComp := NewProjectileComponent(baseDamage, speed, lifetime, projectileType, attacker.ID)
+	speed := weapon.Stats.ProjectileSpeed
+	if speed <= 0 {
+		speed = 400.0
+	}
 
-	// Apply special properties from weapon stats
+	projComp := NewProjectileComponent(baseDamage, speed, lifetime, projectileType, attackerID)
 	projComp.Pierce = weapon.Stats.Pierce
 	projComp.Bounce = weapon.Stats.Bounce
 	projComp.Explosive = weapon.Stats.Explosive
 	projComp.ExplosionRadius = weapon.Stats.ExplosionRadius
 
-	// Spawn the projectile entity
+	return projComp
+}
+
+// spawnProjectileEntity creates the projectile entity with position, velocity, and projectile components.
+func (s *CombatSystem) spawnProjectileEntity(spawnX, spawnY, velocityX, velocityY, aimAngle float64, projComp *ProjectileComponent) *Entity {
 	projectile := s.world.CreateEntity()
 	projectile.AddComponent(&PositionComponent{X: spawnX, Y: spawnY})
 	projectile.AddComponent(&VelocityComponent{VX: velocityX, VY: velocityY})
 	projectile.AddComponent(projComp)
-
-	// Add rotation component for projectile orientation (visual only)
 	projectile.AddComponent(&RotationComponent{Angle: aimAngle})
+	return projectile
+}
 
-	// Generate projectile sprite (Phase 10.2)
-	spriteSize := 12 // Standard projectile sprite size
+// addProjectileSprite generates and adds the sprite component to the projectile entity.
+func (s *CombatSystem) addProjectileSprite(projectile *Entity, projComp *ProjectileComponent, aimAngle float64) {
+	spriteSize := 12
 	if projComp.Explosive {
-		spriteSize = 16 // Larger for explosive projectiles
+		spriteSize = 16
 	}
 
-	// Generate procedural sprite using seed for deterministic generation
 	spriteSeed := s.seed + int64(projectile.ID)
-	spriteImage := sprites.GenerateProjectileSprite(spriteSeed, projectileType, s.genreID, spriteSize)
+	spriteImage := sprites.GenerateProjectileSprite(spriteSeed, projComp.ProjectileType, s.genreID, spriteSize)
 
-	// Create sprite component with generated image
 	spriteComp := NewSpriteComponent(float64(spriteSize), float64(spriteSize), color.RGBA{255, 255, 255, 255})
 	spriteComp.Image = spriteImage
 	spriteComp.Rotation = aimAngle
 	projectile.AddComponent(spriteComp)
+}
 
-	// Log projectile spawn
+// logProjectileSpawn logs debug information about the spawned projectile.
+func (s *CombatSystem) logProjectileSpawn(attacker, projectile *Entity, baseDamage float64, projComp *ProjectileComponent) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"attackerID":     attacker.ID,
 			"projectileID":   projectile.ID,
 			"damage":         baseDamage,
-			"speed":          speed,
-			"projectileType": projectileType,
+			"speed":          projComp.Speed,
+			"projectileType": projComp.ProjectileType,
 			"pierce":         projComp.Pierce,
 			"bounce":         projComp.Bounce,
 			"explosive":      projComp.Explosive,
 		}).Debug("projectile spawned")
 	}
-
-	return true
 }

@@ -538,13 +538,24 @@ func getTileColorPostApoc(tile terrain.TileType) string {
 // renderStats generates detailed statistics about the terrain
 func renderStats(terr *terrain.Terrain) string {
 	var builder strings.Builder
+	tileCounts := countTileTypes(terr)
+	totalTiles := terr.Width * terr.Height
 
-	// Header
-	builder.WriteString("=== TERRAIN STATISTICS ===\n\n")
-	builder.WriteString(fmt.Sprintf("Dimensions: %dx%d (%d total tiles)\n", terr.Width, terr.Height, terr.Width*terr.Height))
-	builder.WriteString(fmt.Sprintf("Seed: %d, Level: %d\n\n", terr.Seed, terr.Level))
+	writeStatsHeader(&builder, terr, totalTiles)
+	writeTileDistribution(&builder, tileCounts, totalTiles)
+	writeWalkabilityMetrics(&builder, terr, totalTiles)
+	writeRoomInformation(&builder, terr)
+	writeStairsInformation(&builder, terr)
+	writeWaterFeatures(&builder, tileCounts, totalTiles)
+	writeNaturalFeatures(&builder, tileCounts, totalTiles)
+	writeUrbanFeatures(&builder, tileCounts, totalTiles)
+	writeSpecialTiles(&builder, tileCounts)
 
-	// Tile type distribution
+	return builder.String()
+}
+
+// countTileTypes counts occurrences of each tile type in the terrain.
+func countTileTypes(terr *terrain.Terrain) map[terrain.TileType]int {
 	tileCounts := make(map[terrain.TileType]int)
 	for y := 0; y < terr.Height; y++ {
 		for x := 0; x < terr.Width; x++ {
@@ -552,9 +563,19 @@ func renderStats(terr *terrain.Terrain) string {
 			tileCounts[tile]++
 		}
 	}
+	return tileCounts
+}
 
+// writeStatsHeader writes the header section of terrain statistics.
+func writeStatsHeader(builder *strings.Builder, terr *terrain.Terrain, totalTiles int) {
+	builder.WriteString("=== TERRAIN STATISTICS ===\n\n")
+	builder.WriteString(fmt.Sprintf("Dimensions: %dx%d (%d total tiles)\n", terr.Width, terr.Height, totalTiles))
+	builder.WriteString(fmt.Sprintf("Seed: %d, Level: %d\n\n", terr.Seed, terr.Level))
+}
+
+// writeTileDistribution writes tile type distribution statistics.
+func writeTileDistribution(builder *strings.Builder, tileCounts map[terrain.TileType]int, totalTiles int) {
 	builder.WriteString("Tile Distribution:\n")
-	totalTiles := terr.Width * terr.Height
 	tileTypes := []terrain.TileType{
 		terrain.TileWall,
 		terrain.TileFloor,
@@ -578,8 +599,10 @@ func renderStats(terr *terrain.Terrain) string {
 			builder.WriteString(fmt.Sprintf("  %-15s: %5d tiles (%.1f%%)\n", tileType.String(), count, pct))
 		}
 	}
+}
 
-	// Walkability metrics
+// writeWalkabilityMetrics writes walkability statistics for the terrain.
+func writeWalkabilityMetrics(builder *strings.Builder, terr *terrain.Terrain, totalTiles int) {
 	walkable := 0
 	for y := 0; y < terr.Height; y++ {
 		for x := 0; x < terr.Width; x++ {
@@ -592,93 +615,119 @@ func renderStats(terr *terrain.Terrain) string {
 	builder.WriteString(fmt.Sprintf("\nWalkability:\n"))
 	builder.WriteString(fmt.Sprintf("  Walkable tiles: %d/%d (%.1f%%)\n", walkable, totalTiles, float64(walkable)/float64(totalTiles)*100))
 	builder.WriteString(fmt.Sprintf("  Non-walkable:   %d/%d (%.1f%%)\n", totalTiles-walkable, totalTiles, float64(totalTiles-walkable)/float64(totalTiles)*100))
+}
 
-	// Room information
+// writeRoomInformation writes room statistics including types and sizes.
+func writeRoomInformation(builder *strings.Builder, terr *terrain.Terrain) {
 	builder.WriteString(fmt.Sprintf("\nRooms: %d\n", len(terr.Rooms)))
-	if len(terr.Rooms) > 0 {
-		roomTypeCounts := make(map[terrain.RoomType]int)
-		totalRoomArea := 0
-		minRoomArea := terr.Width * terr.Height
-		maxRoomArea := 0
-
-		for _, room := range terr.Rooms {
-			roomTypeCounts[room.Type]++
-			area := room.Width * room.Height
-			totalRoomArea += area
-			if area < minRoomArea {
-				minRoomArea = area
-			}
-			if area > maxRoomArea {
-				maxRoomArea = area
-			}
-		}
-
-		// Room types
-		builder.WriteString("  Room Types:\n")
-		roomTypes := []terrain.RoomType{
-			terrain.RoomSpawn,
-			terrain.RoomNormal,
-			terrain.RoomTreasure,
-			terrain.RoomBoss,
-			terrain.RoomTrap,
-			terrain.RoomExit,
-		}
-		for _, roomType := range roomTypes {
-			count := roomTypeCounts[roomType]
-			if count > 0 {
-				builder.WriteString(fmt.Sprintf("    %-10s: %d\n", roomType.String(), count))
-			}
-		}
-
-		avgRoomArea := float64(totalRoomArea) / float64(len(terr.Rooms))
-		builder.WriteString(fmt.Sprintf("  Room Size: min=%d, max=%d, avg=%.1f tiles\n", minRoomArea, maxRoomArea, avgRoomArea))
+	if len(terr.Rooms) == 0 {
+		return
 	}
 
-	// Stairs information
+	roomTypeCounts, totalRoomArea, minRoomArea, maxRoomArea := analyzeRooms(terr)
+	writeRoomTypes(builder, roomTypeCounts)
+
+	avgRoomArea := float64(totalRoomArea) / float64(len(terr.Rooms))
+	builder.WriteString(fmt.Sprintf("  Room Size: min=%d, max=%d, avg=%.1f tiles\n", minRoomArea, maxRoomArea, avgRoomArea))
+}
+
+// analyzeRooms computes room statistics including type counts and size metrics.
+func analyzeRooms(terr *terrain.Terrain) (map[terrain.RoomType]int, int, int, int) {
+	roomTypeCounts := make(map[terrain.RoomType]int)
+	totalRoomArea := 0
+	minRoomArea := terr.Width * terr.Height
+	maxRoomArea := 0
+
+	for _, room := range terr.Rooms {
+		roomTypeCounts[room.Type]++
+		area := room.Width * room.Height
+		totalRoomArea += area
+		if area < minRoomArea {
+			minRoomArea = area
+		}
+		if area > maxRoomArea {
+			maxRoomArea = area
+		}
+	}
+
+	return roomTypeCounts, totalRoomArea, minRoomArea, maxRoomArea
+}
+
+// writeRoomTypes writes room type distribution to the builder.
+func writeRoomTypes(builder *strings.Builder, roomTypeCounts map[terrain.RoomType]int) {
+	builder.WriteString("  Room Types:\n")
+	roomTypes := []terrain.RoomType{
+		terrain.RoomSpawn,
+		terrain.RoomNormal,
+		terrain.RoomTreasure,
+		terrain.RoomBoss,
+		terrain.RoomTrap,
+		terrain.RoomExit,
+	}
+	for _, roomType := range roomTypes {
+		count := roomTypeCounts[roomType]
+		if count > 0 {
+			builder.WriteString(fmt.Sprintf("    %-10s: %d\n", roomType.String(), count))
+		}
+	}
+}
+
+// writeStairsInformation writes stairs count information.
+func writeStairsInformation(builder *strings.Builder, terr *terrain.Terrain) {
 	builder.WriteString(fmt.Sprintf("\nStairs:\n"))
 	builder.WriteString(fmt.Sprintf("  Up:   %d\n", len(terr.StairsUp)))
 	builder.WriteString(fmt.Sprintf("  Down: %d\n", len(terr.StairsDown)))
+}
 
-	// Water coverage
+// writeWaterFeatures writes water-related feature statistics.
+func writeWaterFeatures(builder *strings.Builder, tileCounts map[terrain.TileType]int, totalTiles int) {
 	waterShallow := tileCounts[terrain.TileWaterShallow]
 	waterDeep := tileCounts[terrain.TileWaterDeep]
 	totalWater := waterShallow + waterDeep
-	if totalWater > 0 {
-		builder.WriteString(fmt.Sprintf("\nWater Features:\n"))
-		builder.WriteString(fmt.Sprintf("  Total water: %d tiles (%.1f%%)\n", totalWater, float64(totalWater)/float64(totalTiles)*100))
-		builder.WriteString(fmt.Sprintf("  Shallow:     %d tiles\n", waterShallow))
-		builder.WriteString(fmt.Sprintf("  Deep:        %d tiles\n", waterDeep))
-		if tileCounts[terrain.TileBridge] > 0 {
-			builder.WriteString(fmt.Sprintf("  Bridges:     %d\n", tileCounts[terrain.TileBridge]))
-		}
+	if totalWater == 0 {
+		return
 	}
 
-	// Natural features
+	builder.WriteString(fmt.Sprintf("\nWater Features:\n"))
+	builder.WriteString(fmt.Sprintf("  Total water: %d tiles (%.1f%%)\n", totalWater, float64(totalWater)/float64(totalTiles)*100))
+	builder.WriteString(fmt.Sprintf("  Shallow:     %d tiles\n", waterShallow))
+	builder.WriteString(fmt.Sprintf("  Deep:        %d tiles\n", waterDeep))
+	if tileCounts[terrain.TileBridge] > 0 {
+		builder.WriteString(fmt.Sprintf("  Bridges:     %d\n", tileCounts[terrain.TileBridge]))
+	}
+}
+
+// writeNaturalFeatures writes natural feature statistics like trees.
+func writeNaturalFeatures(builder *strings.Builder, tileCounts map[terrain.TileType]int, totalTiles int) {
 	trees := tileCounts[terrain.TileTree]
 	if trees > 0 {
 		builder.WriteString(fmt.Sprintf("\nNatural Features:\n"))
 		builder.WriteString(fmt.Sprintf("  Trees: %d (%.1f%%)\n", trees, float64(trees)/float64(totalTiles)*100))
 	}
+}
 
-	// Urban features
+// writeUrbanFeatures writes urban feature statistics like structures.
+func writeUrbanFeatures(builder *strings.Builder, tileCounts map[terrain.TileType]int, totalTiles int) {
 	structures := tileCounts[terrain.TileStructure]
 	if structures > 0 {
 		builder.WriteString(fmt.Sprintf("\nUrban Features:\n"))
 		builder.WriteString(fmt.Sprintf("  Structures: %d (%.1f%%)\n", structures, float64(structures)/float64(totalTiles)*100))
 	}
+}
 
-	// Special tiles
+// writeSpecialTiles writes special tile statistics like trap doors and secret doors.
+func writeSpecialTiles(builder *strings.Builder, tileCounts map[terrain.TileType]int) {
 	trapDoors := tileCounts[terrain.TileTrapDoor]
 	secretDoors := tileCounts[terrain.TileSecretDoor]
-	if trapDoors > 0 || secretDoors > 0 {
-		builder.WriteString(fmt.Sprintf("\nSpecial Tiles:\n"))
-		if trapDoors > 0 {
-			builder.WriteString(fmt.Sprintf("  Trap doors:   %d\n", trapDoors))
-		}
-		if secretDoors > 0 {
-			builder.WriteString(fmt.Sprintf("  Secret doors: %d\n", secretDoors))
-		}
+	if trapDoors == 0 && secretDoors == 0 {
+		return
 	}
 
-	return builder.String()
+	builder.WriteString(fmt.Sprintf("\nSpecial Tiles:\n"))
+	if trapDoors > 0 {
+		builder.WriteString(fmt.Sprintf("  Trap doors:   %d\n", trapDoors))
+	}
+	if secretDoors > 0 {
+		builder.WriteString(fmt.Sprintf("  Secret doors: %d\n", secretDoors))
+	}
 }

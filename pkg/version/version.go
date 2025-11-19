@@ -3,7 +3,7 @@ package version
 
 const (
 	// Version is the current version of Venture.
-	Version = "3.0.0"
+	Version = "7.0.0"
 
 	// Release indicates the release status.
 	Release = "Production"

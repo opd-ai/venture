@@ -115,33 +115,63 @@ func (t TileTransitionType) String() string {
 // DetermineTransition analyzes neighbors and returns the appropriate transition type.
 // Implements simplified Marching Squares algorithm for tile edge detection.
 func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
-	// Count cardinal direction connections
 	n, e, s, w := neighbors.N, neighbors.E, neighbors.S, neighbors.W
 
-	// No connections
-	if !n && !e && !s && !w {
+	if hasNoConnections(n, e, s, w) {
 		return TransitionNone
 	}
 
-	// All four cardinal connections
-	if n && e && s && w {
-		// Check for inner corners (missing diagonal neighbors)
-		if !neighbors.NE {
-			return TransitionInnerNE
-		}
-		if !neighbors.NW {
-			return TransitionInnerNW
-		}
-		if !neighbors.SE {
-			return TransitionInnerSE
-		}
-		if !neighbors.SW {
-			return TransitionInnerSW
-		}
-		return TransitionFull
+	if fullType := checkFullConnection(neighbors, n, e, s, w); fullType != TransitionNone {
+		return fullType
 	}
 
-	// Three connections (T-junctions)
+	if tjType := checkTJunctions(n, e, s, w); tjType != TransitionNone {
+		return tjType
+	}
+
+	if corrType := checkCorridors(n, e, s, w); corrType != TransitionNone {
+		return corrType
+	}
+
+	if cornType := checkCorners(n, e, s, w); cornType != TransitionNone {
+		return cornType
+	}
+
+	if singleType := checkSingleConnections(n, e, s, w); singleType != TransitionNone {
+		return singleType
+	}
+
+	return TransitionNone
+}
+
+// hasNoConnections checks if there are no cardinal direction connections.
+func hasNoConnections(n, e, s, w bool) bool {
+	return !n && !e && !s && !w
+}
+
+// checkFullConnection checks for all four cardinal connections and inner corners.
+func checkFullConnection(neighbors TileNeighbors, n, e, s, w bool) TileTransitionType {
+	if !n || !e || !s || !w {
+		return TransitionNone
+	}
+
+	if !neighbors.NE {
+		return TransitionInnerNE
+	}
+	if !neighbors.NW {
+		return TransitionInnerNW
+	}
+	if !neighbors.SE {
+		return TransitionInnerSE
+	}
+	if !neighbors.SW {
+		return TransitionInnerSW
+	}
+	return TransitionFull
+}
+
+// checkTJunctions checks for three-connection T-junction patterns.
+func checkTJunctions(n, e, s, w bool) TileTransitionType {
 	if n && e && s {
 		return TransitionNES
 	}
@@ -154,16 +184,22 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if e && s && w {
 		return TransitionESW
 	}
+	return TransitionNone
+}
 
-	// Two opposite connections (corridors)
+// checkCorridors checks for two opposite connection corridor patterns.
+func checkCorridors(n, e, s, w bool) TileTransitionType {
 	if n && s && !e && !w {
 		return TransitionNS
 	}
 	if e && w && !n && !s {
 		return TransitionEW
 	}
+	return TransitionNone
+}
 
-	// Two adjacent connections (corners)
+// checkCorners checks for two adjacent connection corner patterns.
+func checkCorners(n, e, s, w bool) TileTransitionType {
 	if n && e {
 		return TransitionNE
 	}
@@ -176,8 +212,11 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if s && w {
 		return TransitionSW
 	}
+	return TransitionNone
+}
 
-	// Single connections
+// checkSingleConnections checks for single cardinal direction connections.
+func checkSingleConnections(n, e, s, w bool) TileTransitionType {
 	if n {
 		return TransitionN
 	}
@@ -190,7 +229,6 @@ func DetermineTransition(neighbors TileNeighbors) TileTransitionType {
 	if w {
 		return TransitionW
 	}
-
 	return TransitionNone
 }
 

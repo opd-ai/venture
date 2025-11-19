@@ -62,4 +62,5 @@ for i in $(seq 1 $ITER); do
     fix
 done
 
+git clean -fdx .
 fix

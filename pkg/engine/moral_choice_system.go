@@ -255,74 +255,100 @@ func (s *MoralChoiceSystem) applyRewards(entity *Entity, rewards *ChoiceRewards)
 
 // applyConsequences applies negative outcomes to the entity.
 func (s *MoralChoiceSystem) applyConsequences(entity *Entity, consequences *ChoiceConsequences) error {
-	// Make factions hostile
-	if len(consequences.HostileFactions) > 0 {
-		repComp, ok := entity.GetComponent("reputation")
-		if ok {
-			if repComp != nil {
-				if rep, ok := repComp.(*ReputationComponent); ok {
-					for _, faction := range consequences.HostileFactions {
-						// Set to hostile threshold (-50)
-						rep.SetReputation(faction, -50.0)
-						s.logger.Warn("Faction now hostile",
-							"entity", entity.ID,
-							"faction", faction)
-					}
-				}
-			}
-		}
-	}
-
-	// Lose quests (handled by quest system)
-	if len(consequences.LoseQuests) > 0 {
-		for _, questID := range consequences.LoseQuests {
-			s.logger.Warn("Quest lost",
-				"entity", entity.ID,
-				"quest", questID)
-			// Quest system would handle this in integration
-		}
-	}
-
-	// Lose items
-	if len(consequences.LoseItems) > 0 {
-		invComp, ok := entity.GetComponent("inventory")
-		if ok {
-			if invComp != nil {
-				if inv, ok := invComp.(*InventoryComponent); ok {
-					for _, itemID := range consequences.LoseItems {
-						// Find and remove item
-						for i, item := range inv.Items {
-							if item.ID == itemID {
-								inv.Items = append(inv.Items[:i], inv.Items[i+1:]...)
-								s.logger.Warn("Item lost",
-									"entity", entity.ID,
-									"item", itemID)
-								break
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Spawn enemies
-	if consequences.SpawnEnemies > 0 {
-		posComp, ok := entity.GetComponent("position")
-		if ok {
-			if posComp != nil {
-				if pos, ok := posComp.(*PositionComponent); ok {
-					s.logger.Warn("Enemies spawned",
-						"entity", entity.ID,
-						"count", consequences.SpawnEnemies,
-						"position", fmt.Sprintf("%.1f,%.1f", pos.X, pos.Y))
-					// Enemy spawning would be handled by entity spawner in integration
-				}
-			}
-		}
-	}
-
+	s.makeFactionsHostile(entity, consequences.HostileFactions)
+	s.logLostQuests(entity, consequences.LoseQuests)
+	s.removeItemsFromInventory(entity, consequences.LoseItems)
+	s.logEnemySpawn(entity, consequences.SpawnEnemies)
 	return nil
+}
+
+// makeFactionsHostile sets specified factions to hostile reputation level.
+func (s *MoralChoiceSystem) makeFactionsHostile(entity *Entity, hostileFactions []string) {
+	if len(hostileFactions) == 0 {
+		return
+	}
+
+	repComp, ok := entity.GetComponent("reputation")
+	if !ok || repComp == nil {
+		return
+	}
+
+	rep, ok := repComp.(*ReputationComponent)
+	if !ok {
+		return
+	}
+
+	for _, faction := range hostileFactions {
+		rep.SetReputation(faction, -50.0)
+		s.logger.Warn("Faction now hostile",
+			"entity", entity.ID,
+			"faction", faction)
+	}
+}
+
+// logLostQuests logs quests that are lost as a consequence.
+func (s *MoralChoiceSystem) logLostQuests(entity *Entity, loseQuests []string) {
+	for _, questID := range loseQuests {
+		s.logger.Warn("Quest lost",
+			"entity", entity.ID,
+			"quest", questID)
+	}
+}
+
+// removeItemsFromInventory removes specified items from entity's inventory.
+func (s *MoralChoiceSystem) removeItemsFromInventory(entity *Entity, loseItems []string) {
+	if len(loseItems) == 0 {
+		return
+	}
+
+	invComp, ok := entity.GetComponent("inventory")
+	if !ok || invComp == nil {
+		return
+	}
+
+	inv, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
+
+	for _, itemID := range loseItems {
+		s.removeItemByID(entity, inv, itemID)
+	}
+}
+
+// removeItemByID removes a single item from inventory by ID.
+func (s *MoralChoiceSystem) removeItemByID(entity *Entity, inv *InventoryComponent, itemID string) {
+	for i, item := range inv.Items {
+		if item.ID == itemID {
+			inv.Items = append(inv.Items[:i], inv.Items[i+1:]...)
+			s.logger.Warn("Item lost",
+				"entity", entity.ID,
+				"item", itemID)
+			break
+		}
+	}
+}
+
+// logEnemySpawn logs enemy spawn events as a consequence.
+func (s *MoralChoiceSystem) logEnemySpawn(entity *Entity, spawnCount int) {
+	if spawnCount == 0 {
+		return
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok || posComp == nil {
+		return
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	s.logger.Warn("Enemies spawned",
+		"entity", entity.ID,
+		"count", spawnCount,
+		"position", fmt.Sprintf("%.1f,%.1f", pos.X, pos.Y))
 }
 
 // recordChoiceAsDeed records the moral choice as a deed in the reputation component.

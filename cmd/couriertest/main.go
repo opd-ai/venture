@@ -282,12 +282,26 @@ func testSpawning(verbose bool) {
 func testIntegration(verbose bool) {
 	fmt.Println("=== Testing Full Mail + Courier Integration ===")
 
+	world, mailSys, courierSys := setupIntegrationTest()
+	servers := []string{"Hub", "North", "South", "East", "West"}
+
+	setupPostOffices(courierSys, world, servers, verbose)
+	spawnCourierFleet(courierSys, world, verbose)
+	players := createTestPlayers(world)
+	sentMessages := sendCrossServerMail(mailSys, players, servers, verbose)
+	duration := processDeliveries(courierSys, mailSys, world, verbose)
+	deliveredCount := countDeliveredMessages(players, verbose)
+
+	printIntegrationResults(sentMessages, deliveredCount, duration)
+}
+
+// setupIntegrationTest creates and configures the world and systems for integration testing.
+func setupIntegrationTest() (*engine.World, *engine.MailSystem, *engine.CourierSystem) {
 	world := engine.NewWorld()
 	mailSys := engine.NewMailSystem(world)
-	mailSys.SetDeliveryTime(0.5) // Fast delivery for testing
+	mailSys.SetDeliveryTime(0.5)
 	courierSys := engine.NewCourierSystem(world, mailSys)
 
-	// Set up multi-server network
 	graph := map[string][]string{
 		"Hub":   {"North", "South", "East", "West"},
 		"North": {"Hub"},
@@ -297,9 +311,12 @@ func testIntegration(verbose bool) {
 	}
 	courierSys.SetServerGraph(graph)
 
-	// Create post offices in each server
+	return world, mailSys, courierSys
+}
+
+// setupPostOffices creates post offices in each server location.
+func setupPostOffices(courierSys *engine.CourierSystem, world *engine.World, servers []string, verbose bool) {
 	fmt.Println("\n1. Setting up post offices:")
-	servers := []string{"Hub", "North", "South", "East", "West"}
 	for i, server := range servers {
 		buildingID, clerkID := courierSys.SpawnPostOffice(float64(i*30), float64(i*30), fmt.Sprintf("Clerk_%s", server))
 		world.Update(0.0)
@@ -309,8 +326,10 @@ func testIntegration(verbose bool) {
 			fmt.Printf("  ✓ Post office in %s\n", server)
 		}
 	}
+}
 
-	// Spawn couriers
+// spawnCourierFleet spawns multiple courier NPCs for delivery testing.
+func spawnCourierFleet(courierSys *engine.CourierSystem, world *engine.World, verbose bool) {
 	fmt.Println("\n2. Spawning courier fleet:")
 	courierCount := 5
 	for i := 0; i < courierCount; i++ {
@@ -323,8 +342,10 @@ func testIntegration(verbose bool) {
 	if !verbose {
 		fmt.Printf("  ✓ %d couriers spawned\n", courierCount)
 	}
+}
 
-	// Create players
+// createTestPlayers creates player entities with mail components.
+func createTestPlayers(world *engine.World) []*engine.Entity {
 	fmt.Println("\n3. Creating players:")
 	playerCount := 10
 	players := make([]*engine.Entity, playerCount)
@@ -335,15 +356,19 @@ func testIntegration(verbose bool) {
 	}
 	world.Update(0.0)
 	fmt.Printf("  ✓ %d players created\n", playerCount)
+	return players
+}
 
-	// Send mail between servers
+// sendCrossServerMail sends test messages between players across different servers.
+func sendCrossServerMail(mailSys *engine.MailSystem, players []*engine.Entity, servers []string, verbose bool) int {
 	fmt.Println("\n4. Sending cross-server mail:")
 	messageCount := 20
 	sentMessages := 0
+	playerCount := len(players)
+
 	for i := 0; i < messageCount; i++ {
 		senderIdx := i % playerCount
 		recipientIdx := (i + 1) % playerCount
-
 		fromServer := servers[i%len(servers)]
 		toServer := servers[(i+1)%len(servers)]
 
@@ -372,34 +397,47 @@ func testIntegration(verbose bool) {
 		}
 	}
 	fmt.Printf("  ✓ Sent %d/%d messages\n", sentMessages, messageCount)
+	return sentMessages
+}
 
-	// Process deliveries
+// processDeliveries runs the delivery simulation and monitors courier activity.
+func processDeliveries(courierSys *engine.CourierSystem, mailSys *engine.MailSystem, world *engine.World, verbose bool) time.Duration {
 	fmt.Println("\n5. Processing deliveries:")
 	start := time.Now()
 	updateCount := 20
+
 	for i := 0; i < updateCount; i++ {
 		courierSys.Update(0.05)
 		mailSys.Update(0.05)
 		time.Sleep(50 * time.Millisecond)
 
 		if verbose && i%5 == 0 {
-			activeCouriers := 0
-			entities := world.GetEntitiesWith("courier")
-			for _, entity := range entities {
-				comp, ok := entity.GetComponent("courier")
-				if ok {
-					courier := comp.(*engine.CourierComponent)
-					if courier.IsCarryingMail() {
-						activeCouriers++
-					}
-				}
-			}
+			activeCouriers := countActiveCouriers(world)
 			fmt.Printf("  Update %d: Active couriers=%d\n", i+1, activeCouriers)
 		}
 	}
-	duration := time.Since(start)
 
-	// Count delivered messages
+	return time.Since(start)
+}
+
+// countActiveCouriers returns the number of couriers currently carrying mail.
+func countActiveCouriers(world *engine.World) int {
+	activeCouriers := 0
+	entities := world.GetEntitiesWith("courier")
+	for _, entity := range entities {
+		comp, ok := entity.GetComponent("courier")
+		if ok {
+			courier := comp.(*engine.CourierComponent)
+			if courier.IsCarryingMail() {
+				activeCouriers++
+			}
+		}
+	}
+	return activeCouriers
+}
+
+// countDeliveredMessages counts messages delivered to players and optionally prints details.
+func countDeliveredMessages(players []*engine.Entity, verbose bool) int {
 	fmt.Println("\n6. Checking delivery results:")
 	deliveredCount := 0
 	for i, player := range players {
@@ -414,7 +452,11 @@ func testIntegration(verbose bool) {
 			}
 		}
 	}
+	return deliveredCount
+}
 
+// printIntegrationResults displays the final test results and statistics.
+func printIntegrationResults(sentMessages, deliveredCount int, duration time.Duration) {
 	fmt.Printf("\n=== Results ===\n")
 	fmt.Printf("Messages sent: %d\n", sentMessages)
 	fmt.Printf("Messages delivered: %d\n", deliveredCount)

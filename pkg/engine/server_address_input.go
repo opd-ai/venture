@@ -103,99 +103,153 @@ func (s *ServerAddressInput) Update() {
 		return
 	}
 
-	// Update cursor blink (30 FPS blink rate = 15 frames per state)
+	s.updateCursorBlink()
+	s.handleTextInput()
+	s.handleEditingKeys()
+	s.handleNavigationKeys()
+	s.handleActionKeys()
+}
+
+// updateCursorBlink updates the cursor blink animation state.
+func (s *ServerAddressInput) updateCursorBlink() {
 	s.blinkTimer++
 	if s.blinkTimer >= 15 {
 		s.blinkTimer = 0
 		s.showCursor = !s.showCursor
 	}
+}
 
-	// Handle text input
+// handleTextInput processes character input and inserts printable ASCII characters.
+func (s *ServerAddressInput) handleTextInput() {
 	runes := ebiten.AppendInputChars(nil)
 	for _, r := range runes {
-		// Only accept printable ASCII characters
 		if r >= 32 && r <= 126 && len(s.address) < s.maxLength {
-			// Insert character at cursor position
-			before := s.address[:s.cursorPos]
-			after := s.address[s.cursorPos:]
-			s.address = before + string(r) + after
-			s.cursorPos++
-			s.resetCursorBlink()
+			s.insertCharacterAtCursor(r)
 		}
 	}
+}
 
-	// Backspace
+// insertCharacterAtCursor inserts a character at the current cursor position.
+func (s *ServerAddressInput) insertCharacterAtCursor(r rune) {
+	before := s.address[:s.cursorPos]
+	after := s.address[s.cursorPos:]
+	s.address = before + string(r) + after
+	s.cursorPos++
+	s.resetCursorBlink()
+}
+
+// handleEditingKeys processes backspace and delete key inputs.
+func (s *ServerAddressInput) handleEditingKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
-		if s.cursorPos > 0 {
-			before := s.address[:s.cursorPos-1]
-			after := s.address[s.cursorPos:]
-			s.address = before + after
-			s.cursorPos--
-			s.resetCursorBlink()
-		}
+		s.deleteCharacterBeforeCursor()
 	}
 
-	// Delete key
 	if inpututil.IsKeyJustPressed(ebiten.KeyDelete) {
-		if s.cursorPos < len(s.address) {
-			before := s.address[:s.cursorPos]
-			after := s.address[s.cursorPos+1:]
-			s.address = before + after
-			s.resetCursorBlink()
-		}
+		s.deleteCharacterAtCursor()
 	}
+}
 
-	// Left arrow
+// deleteCharacterBeforeCursor removes the character before the cursor position.
+func (s *ServerAddressInput) deleteCharacterBeforeCursor() {
+	if s.cursorPos > 0 {
+		before := s.address[:s.cursorPos-1]
+		after := s.address[s.cursorPos:]
+		s.address = before + after
+		s.cursorPos--
+		s.resetCursorBlink()
+	}
+}
+
+// deleteCharacterAtCursor removes the character at the cursor position.
+func (s *ServerAddressInput) deleteCharacterAtCursor() {
+	if s.cursorPos < len(s.address) {
+		before := s.address[:s.cursorPos]
+		after := s.address[s.cursorPos+1:]
+		s.address = before + after
+		s.resetCursorBlink()
+	}
+}
+
+// handleNavigationKeys processes arrow keys, Home, and End for cursor navigation.
+func (s *ServerAddressInput) handleNavigationKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
-		if s.cursorPos > 0 {
-			s.cursorPos--
-			s.resetCursorBlink()
-		}
+		s.moveCursorLeft()
 	}
 
-	// Right arrow
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
-		if s.cursorPos < len(s.address) {
-			s.cursorPos++
-			s.resetCursorBlink()
-		}
+		s.moveCursorRight()
 	}
 
-	// Home key
 	if inpututil.IsKeyJustPressed(ebiten.KeyHome) {
-		s.cursorPos = 0
-		s.resetCursorBlink()
+		s.moveCursorToStart()
 	}
 
-	// End key
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnd) {
-		s.cursorPos = len(s.address)
+		s.moveCursorToEnd()
+	}
+}
+
+// moveCursorLeft moves the cursor one position to the left.
+func (s *ServerAddressInput) moveCursorLeft() {
+	if s.cursorPos > 0 {
+		s.cursorPos--
 		s.resetCursorBlink()
 	}
+}
 
-	// Enter to connect
+// moveCursorRight moves the cursor one position to the right.
+func (s *ServerAddressInput) moveCursorRight() {
+	if s.cursorPos < len(s.address) {
+		s.cursorPos++
+		s.resetCursorBlink()
+	}
+}
+
+// moveCursorToStart moves the cursor to the beginning of the address.
+func (s *ServerAddressInput) moveCursorToStart() {
+	s.cursorPos = 0
+	s.resetCursorBlink()
+}
+
+// moveCursorToEnd moves the cursor to the end of the address.
+func (s *ServerAddressInput) moveCursorToEnd() {
+	s.cursorPos = len(s.address)
+	s.resetCursorBlink()
+}
+
+// handleActionKeys processes Enter and Escape keys for connect and cancel actions.
+func (s *ServerAddressInput) handleActionKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-		address := strings.TrimSpace(s.address)
-		if address != "" && s.onConnect != nil {
-			// MOBILE/WASM: Hide keyboard before connecting
-			if s.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				s.keyboardShown = false
-			}
-			s.onConnect(address)
-		}
+		s.handleConnectAction()
 	}
 
-	// Escape to cancel
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		// MOBILE/WASM: Hide keyboard before cancelling
-		if s.keyboardShown && mobile.IsWASM() {
-			mobile.HideKeyboard()
-			s.keyboardShown = false
-		}
-		if s.onCancel != nil {
-			s.onCancel()
-		}
+		s.handleCancelAction()
+	}
+}
+
+// handleConnectAction processes the connect action when Enter is pressed.
+func (s *ServerAddressInput) handleConnectAction() {
+	address := strings.TrimSpace(s.address)
+	if address != "" && s.onConnect != nil {
+		s.hideMobileKeyboard()
+		s.onConnect(address)
+	}
+}
+
+// handleCancelAction processes the cancel action when Escape is pressed.
+func (s *ServerAddressInput) handleCancelAction() {
+	s.hideMobileKeyboard()
+	if s.onCancel != nil {
+		s.onCancel()
+	}
+}
+
+// hideMobileKeyboard hides the mobile keyboard on WASM platforms.
+func (s *ServerAddressInput) hideMobileKeyboard() {
+	if s.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		s.keyboardShown = false
 	}
 }
 

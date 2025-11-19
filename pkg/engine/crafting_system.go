@@ -47,6 +47,7 @@ func NewCraftingSystem(world *World, inventorySystem *InventorySystem, itemGen *
 func NewCraftingSystemWithLogger(world *World, inventorySystem *InventorySystem, itemGen *item.ItemGenerator, logger *logrus.Logger) *CraftingSystem {
 	var logEntry *logrus.Entry
 	if logger != nil {
+		logger.SetReportCaller(true)
 		logEntry = logger.WithField("system", "crafting")
 	}
 
@@ -259,17 +260,40 @@ func (s *CraftingSystem) validateCraftCompletion(entityID uint64, progressComp *
 // extractStationBonus retrieves the success bonus from a crafting station.
 func (s *CraftingSystem) extractStationBonus(stationID uint64) float64 {
 	if stationID == 0 {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.Debug("no station specified, bonus is 0")
+		}
 		return 0.0
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithField("station_id", stationID).Debug("extracting station bonus")
 	}
 
 	station, ok := s.world.GetEntity(stationID)
 	if !ok {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithField("station_id", stationID).Debug("station not found, bonus is 0")
+		}
 		return 0.0
 	}
 
 	stationComp, err := s.getCraftingStationComponent(station)
 	if err != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"station_id": stationID,
+				"error":      err.Error(),
+			}).Debug("failed to get station component, bonus is 0")
+		}
 		return 0.0
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+			"bonus":      stationComp.BonusSuccessChance,
+		}).Debug("station bonus extracted")
 	}
 
 	return stationComp.BonusSuccessChance
@@ -280,8 +304,20 @@ func (s *CraftingSystem) calculateFinalSuccessChance(recipe *Recipe, skillLevel 
 	baseChance := recipe.GetEffectiveSuccessChance(skillLevel)
 	finalChance := baseChance + stationBonus
 	if finalChance > 0.95 {
-		return 0.95
+		finalChance = 0.95
 	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"recipe_id":       recipe.ID,
+			"skill_level":     skillLevel,
+			"base_chance":     baseChance,
+			"station_bonus":   stationBonus,
+			"final_chance":    finalChance,
+			"capped_at_95pct": finalChance == 0.95 && (baseChance+stationBonus) > 0.95,
+		}).Debug("calculated final success chance")
+	}
+
 	return finalChance
 }
 
@@ -305,16 +341,40 @@ func (s *CraftingSystem) rollForCraftSuccess(entityID uint64, recipeID string, r
 func (s *CraftingSystem) calculateXPGained(rarity RecipeRarity, success bool) int {
 	xpGained := 10 * (int(rarity) + 1)
 	if !success {
-		return xpGained / 2
+		xpGained = xpGained / 2
 	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"rarity":    rarity.String(),
+			"success":   success,
+			"xp_gained": xpGained,
+		}).Debug("calculated crafting XP")
+	}
+
 	return xpGained
 }
 
 // handleCraftSuccess processes a successful crafting attempt.
 func (s *CraftingSystem) handleCraftSuccess(entityID uint64, entity *Entity, recipe *Recipe, rng *rand.Rand, xpGained int, successChance float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"xp_gained":      xpGained,
+			"success_chance": successChance,
+		}).Debug("handling successful craft")
+	}
+
 	outputItem := s.generateOutputItem(recipe, rng)
 
 	if !s.addItemToInventory(entityID, entity, outputItem, recipe.ID) {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entityID,
+				"recipe_id": recipe.ID,
+			}).Warn("craft succeeded but item could not be added to inventory")
+		}
 		return
 	}
 

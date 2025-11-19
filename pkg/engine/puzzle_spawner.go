@@ -28,45 +28,59 @@ import (
 // Puzzles are placed in rooms with sufficient space (at least 5x5 tiles).
 // Each puzzle spawns a main puzzle entity and multiple puzzle element entities.
 func SpawnPuzzlesInTerrain(world *World, terrainData *terrain.Terrain, seed int64, params procgen.GenerationParams, targetCount int) (int, error) {
-	if world == nil {
-		return 0, fmt.Errorf("world cannot be nil")
-	}
-	if terrainData == nil {
-		return 0, fmt.Errorf("terrain cannot be nil")
-	}
-	if targetCount <= 0 {
-		return 0, nil // No puzzles to spawn
+	if err := validateSpawnInputs(world, terrainData, targetCount); err != nil {
+		return 0, err
 	}
 
 	logger := world.GetLogger()
-
-	// Create puzzle generator
 	puzzleGen := puzzle.NewGenerator()
-
-	// Create RNG for deterministic room selection
 	rng := rand.New(rand.NewSource(seed))
 
-	// Find suitable rooms for puzzles (exclude starting room at index 0)
+	suitableRooms := findSuitableRooms(terrainData.Rooms)
+	if len(suitableRooms) == 0 {
+		logNoSuitableRooms(logger)
+		return 0, nil
+	}
+
+	actualCount := calculatePuzzleCount(suitableRooms, targetCount, rng)
+	shuffleRooms(suitableRooms, rng)
+
+	puzzlesSpawned := spawnPuzzlesInRooms(world, puzzleGen, suitableRooms, actualCount, seed, params, rng, logger)
+
+	logSpawningComplete(logger, puzzlesSpawned, actualCount, len(suitableRooms))
+	return puzzlesSpawned, nil
+}
+
+// validateSpawnInputs checks that world and terrain are valid and targetCount is positive.
+func validateSpawnInputs(world *World, terrainData *terrain.Terrain, targetCount int) error {
+	if world == nil {
+		return fmt.Errorf("world cannot be nil")
+	}
+	if terrainData == nil {
+		return fmt.Errorf("terrain cannot be nil")
+	}
+	if targetCount <= 0 {
+		return nil // No puzzles to spawn, not an error
+	}
+	return nil
+}
+
+// findSuitableRooms returns rooms that are at least 5x5 tiles, excluding the starting room.
+func findSuitableRooms(rooms []*terrain.Room) []*terrain.Room {
 	suitableRooms := make([]*terrain.Room, 0)
-	for i, room := range terrainData.Rooms {
+	for i, room := range rooms {
 		if i == 0 {
 			continue // Skip starting room
 		}
-
-		// Room must be at least 5x5 to accommodate puzzle elements
 		if room.Width >= 5 && room.Height >= 5 {
 			suitableRooms = append(suitableRooms, room)
 		}
 	}
+	return suitableRooms
+}
 
-	if len(suitableRooms) == 0 {
-		if logger != nil {
-			logger.Warn("no suitable rooms found for puzzle spawning")
-		}
-		return 0, nil
-	}
-
-	// Calculate actual puzzle count (40-60% of suitable rooms)
+// calculatePuzzleCount determines how many puzzles to spawn based on room availability.
+func calculatePuzzleCount(suitableRooms []*terrain.Room, targetCount int, rng *rand.Rand) int {
 	minPuzzles := int(float64(len(suitableRooms)) * 0.4)
 	maxPuzzles := int(float64(len(suitableRooms)) * 0.6)
 	if maxPuzzles < minPuzzles {
@@ -80,74 +94,118 @@ func SpawnPuzzlesInTerrain(world *World, terrainData *terrain.Terrain, seed int6
 	if actualCount > len(suitableRooms) {
 		actualCount = len(suitableRooms)
 	}
+	return actualCount
+}
 
-	// Shuffle rooms for random selection
-	rng.Shuffle(len(suitableRooms), func(i, j int) {
-		suitableRooms[i], suitableRooms[j] = suitableRooms[j], suitableRooms[i]
+// shuffleRooms randomizes room order for puzzle placement.
+func shuffleRooms(rooms []*terrain.Room, rng *rand.Rand) {
+	rng.Shuffle(len(rooms), func(i, j int) {
+		rooms[i], rooms[j] = rooms[j], rooms[i]
 	})
+}
 
-	// Spawn puzzles in selected rooms
+// spawnPuzzlesInRooms generates and spawns puzzles in selected rooms.
+func spawnPuzzlesInRooms(world *World, puzzleGen *puzzle.Generator, rooms []*terrain.Room, count int, seed int64, params procgen.GenerationParams, rng *rand.Rand, logger *logrus.Entry) int {
 	puzzlesSpawned := 0
-	for i := 0; i < actualCount && i < len(suitableRooms); i++ {
-		room := suitableRooms[i]
-
-		// Generate puzzle with unique seed per room
-		puzzleSeed := seed + int64(i)*1000 + int64(room.X)*100 + int64(room.Y)*10
-		result, err := puzzleGen.Generate(puzzleSeed, params)
-		if err != nil {
-			if logger != nil {
-				logger.WithError(err).WithField("roomIndex", i).Warn("failed to generate puzzle")
-			}
+	for i := 0; i < count && i < len(rooms); i++ {
+		room := rooms[i]
+		puz := generateAndValidatePuzzle(puzzleGen, seed, i, room, params, logger)
+		if puz == nil {
 			continue
 		}
 
-		puz, ok := result.(*puzzle.Puzzle)
-		if !ok {
-			if logger != nil {
-				logger.WithField("roomIndex", i).Warn("puzzle generation returned invalid type")
-			}
-			continue
-		}
-
-		// Validate puzzle
-		if err := puzzleGen.Validate(puz); err != nil {
-			if logger != nil {
-				logger.WithError(err).WithField("puzzleID", puz.ID).Warn("puzzle validation failed")
-			}
-			continue
-		}
-
-		// Spawn puzzle entity and elements in the room
 		if err := spawnPuzzleInRoom(world, puz, room, rng); err != nil {
-			if logger != nil {
-				logger.WithError(err).WithField("puzzleID", puz.ID).Warn("failed to spawn puzzle in room")
-			}
+			logSpawnError(logger, err, puz.ID)
 			continue
 		}
 
 		puzzlesSpawned++
+		logPuzzleSpawned(logger, puz, room)
+	}
+	return puzzlesSpawned
+}
 
-		if logger != nil {
-			logger.WithFields(logrus.Fields{
-				"puzzleID":   puz.ID,
-				"puzzleType": puz.Type,
-				"difficulty": puz.Difficulty,
-				"roomX":      room.X,
-				"roomY":      room.Y,
-				"elements":   puz.ElementCount,
-			}).Debug("spawned puzzle in room")
-		}
+// generateAndValidatePuzzle creates and validates a puzzle, returning nil on failure.
+func generateAndValidatePuzzle(puzzleGen *puzzle.Generator, seed int64, roomIndex int, room *terrain.Room, params procgen.GenerationParams, logger *logrus.Entry) *puzzle.Puzzle {
+	puzzleSeed := seed + int64(roomIndex)*1000 + int64(room.X)*100 + int64(room.Y)*10
+	result, err := puzzleGen.Generate(puzzleSeed, params)
+	if err != nil {
+		logGenerationError(logger, err, roomIndex)
+		return nil
 	}
 
+	puz, ok := result.(*puzzle.Puzzle)
+	if !ok {
+		logInvalidType(logger, roomIndex)
+		return nil
+	}
+
+	if err := puzzleGen.Validate(puz); err != nil {
+		logValidationError(logger, err, puz.ID)
+		return nil
+	}
+
+	return puz
+}
+
+// logNoSuitableRooms logs a warning when no suitable rooms are found.
+func logNoSuitableRooms(logger *logrus.Entry) {
+	if logger != nil {
+		logger.Warn("no suitable rooms found for puzzle spawning")
+	}
+}
+
+// logGenerationError logs puzzle generation failures.
+func logGenerationError(logger *logrus.Entry, err error, roomIndex int) {
+	if logger != nil {
+		logger.WithError(err).WithField("roomIndex", roomIndex).Warn("failed to generate puzzle")
+	}
+}
+
+// logInvalidType logs when puzzle generation returns wrong type.
+func logInvalidType(logger *logrus.Entry, roomIndex int) {
+	if logger != nil {
+		logger.WithField("roomIndex", roomIndex).Warn("puzzle generation returned invalid type")
+	}
+}
+
+// logValidationError logs puzzle validation failures.
+func logValidationError(logger *logrus.Entry, err error, puzzleID string) {
+	if logger != nil {
+		logger.WithError(err).WithField("puzzleID", puzzleID).Warn("puzzle validation failed")
+	}
+}
+
+// logSpawnError logs errors spawning puzzles in rooms.
+func logSpawnError(logger *logrus.Entry, err error, puzzleID string) {
+	if logger != nil {
+		logger.WithError(err).WithField("puzzleID", puzzleID).Warn("failed to spawn puzzle in room")
+	}
+}
+
+// logPuzzleSpawned logs successful puzzle spawning with details.
+func logPuzzleSpawned(logger *logrus.Entry, puz *puzzle.Puzzle, room *terrain.Room) {
 	if logger != nil {
 		logger.WithFields(logrus.Fields{
-			"puzzlesSpawned": puzzlesSpawned,
-			"puzzlesAttempt": actualCount,
-			"suitableRooms":  len(suitableRooms),
+			"puzzleID":   puz.ID,
+			"puzzleType": puz.Type,
+			"difficulty": puz.Difficulty,
+			"roomX":      room.X,
+			"roomY":      room.Y,
+			"elements":   puz.ElementCount,
+		}).Debug("spawned puzzle in room")
+	}
+}
+
+// logSpawningComplete logs the final summary of puzzle spawning.
+func logSpawningComplete(logger *logrus.Entry, spawned, attempted, suitableCount int) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"puzzlesSpawned": spawned,
+			"puzzlesAttempt": attempted,
+			"suitableRooms":  suitableCount,
 		}).Info("puzzle spawning complete")
 	}
-
-	return puzzlesSpawned, nil
 }
 
 // spawnPuzzleInRoom creates the puzzle entity and all element entities in the specified room.

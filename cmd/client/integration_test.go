@@ -5,6 +5,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -72,28 +73,47 @@ func TestHostAndPlayStartup(t *testing.T) {
 	}
 	defer os.Remove("venture-client-test")
 
+	// BUG FIX: Phase 6 - Race condition in integration test
+	// Resolution: Use StdoutPipe/StderrPipe instead of CombinedOutput to avoid race
 	// Start client with --host-and-play (will fail due to no graphics context, but we can check logs)
 	cmd := exec.Command("./venture-client-test", "--host-and-play", "-port", "9500")
 	cmd.Env = append(os.Environ(), "LOG_LEVEL=debug")
 
+	// Capture output streams
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("failed to create stdout pipe: %v", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		t.Fatalf("failed to create stderr pipe: %v", err)
+	}
+
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("failed to start client: %v", err)
+	}
+
 	// Run with timeout since the command may hang
-	done := make(chan struct{})
-	var output []byte
+	done := make(chan []byte)
 	go func() {
-		output, _ = cmd.CombinedOutput()
-		close(done)
+		// Read output streams
+		stdoutBytes, _ := io.ReadAll(stdout)
+		stderrBytes, _ := io.ReadAll(stderr)
+		combined := append(stdoutBytes, stderrBytes...)
+		cmd.Wait()
+		done <- combined
 	}()
 
 	// Wait for command to complete or timeout
+	var output []byte
 	select {
-	case <-done:
+	case output = <-done:
 		// Command completed
 	case <-time.After(5 * time.Second):
 		// Timeout - kill the process
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-		<-done // Wait for goroutine to finish
+		cmd.Process.Kill()
+		output = <-done // Wait for goroutine to finish and get partial output
 	}
 
 	outputStr := string(output)
@@ -133,28 +153,47 @@ func TestDefaultBehaviorAutoEnablesHostAndPlay(t *testing.T) {
 	}
 	defer os.Remove("venture-client-test")
 
+	// BUG FIX: Phase 6 - Race condition in integration test (same as TestHostAndPlayStartup)
+	// Resolution: Use StdoutPipe/StderrPipe instead of CombinedOutput to avoid race
 	// Start client WITHOUT any flags - should auto-enable host-and-play
 	cmd := exec.Command("./venture-client-test")
 	cmd.Env = append(os.Environ(), "LOG_LEVEL=info")
 
+	// Capture output streams
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("failed to create stdout pipe: %v", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		t.Fatalf("failed to create stderr pipe: %v", err)
+	}
+
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("failed to start client: %v", err)
+	}
+
 	// Run with timeout since the command may hang
-	done := make(chan struct{})
-	var output []byte
+	done := make(chan []byte)
 	go func() {
-		output, _ = cmd.CombinedOutput()
-		close(done)
+		// Read output streams
+		stdoutBytes, _ := io.ReadAll(stdout)
+		stderrBytes, _ := io.ReadAll(stderr)
+		combined := append(stdoutBytes, stderrBytes...)
+		cmd.Wait()
+		done <- combined
 	}()
 
 	// Wait for command to complete or timeout
+	var output []byte
 	select {
-	case <-done:
+	case output = <-done:
 		// Command completed
 	case <-time.After(5 * time.Second):
 		// Timeout - kill the process
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-		<-done // Wait for goroutine to finish
+		cmd.Process.Kill()
+		output = <-done // Wait for goroutine to finish and get partial output
 	}
 
 	outputStr := string(output)

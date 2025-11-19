@@ -73,12 +73,26 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 		}).Debug("RevivalSystem update started")
 	}
 
-	// Find all living player entities (have input and not dead)
+	livingPlayers := s.findLivingPlayers(entities)
+	deadPlayers := s.findDeadPlayers(entities)
+
+	if !s.canRevive(livingPlayers, deadPlayers, len(entities)) {
+		return
+	}
+
+	s.processRevivalInputs(livingPlayers, deadPlayers)
+
+	if s.logger != nil {
+		s.logger.Debug("RevivalSystem update completed")
+	}
+}
+
+// findLivingPlayers extracts all living player entities from the entity list.
+func (s *RevivalSystem) findLivingPlayers(entities []*Entity) []*Entity {
 	var livingPlayers []*Entity
 	for _, entity := range entities {
 		if entity.HasComponent("input") && !entity.HasComponent("dead") {
 			if healthComp, hasHealth := entity.GetComponent("health"); hasHealth {
-				// Type assert with safety check
 				if health, ok := healthComp.(*HealthComponent); ok {
 					if health.IsAlive() {
 						livingPlayers = append(livingPlayers, entity)
@@ -94,7 +108,11 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 		}).Debug("Found living players")
 	}
 
-	// Find all dead player entities
+	return livingPlayers
+}
+
+// findDeadPlayers extracts all dead player entities from the entity list.
+func (s *RevivalSystem) findDeadPlayers(entities []*Entity) []*Entity {
 	var deadPlayers []*Entity
 	for _, entity := range entities {
 		if entity.HasComponent("input") && entity.HasComponent("dead") {
@@ -108,18 +126,25 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 		}).Debug("Found dead players")
 	}
 
-	// No revival possible if no living or dead players
+	return deadPlayers
+}
+
+// canRevive checks if revival is possible based on available players.
+func (s *RevivalSystem) canRevive(livingPlayers, deadPlayers []*Entity, entityCount int) bool {
 	if len(livingPlayers) == 0 || len(deadPlayers) == 0 {
-		if s.logger != nil && len(entities) > 0 {
+		if s.logger != nil && entityCount > 0 {
 			s.logger.WithFields(logrus.Fields{
 				"living_players": len(livingPlayers),
 				"dead_players":   len(deadPlayers),
 			}).Debug("No revival possible - missing living or dead players")
 		}
-		return
+		return false
 	}
+	return true
+}
 
-	// Check each living player for revival input
+// processRevivalInputs checks each living player for revival input and processes revivals.
+func (s *RevivalSystem) processRevivalInputs(livingPlayers, deadPlayers []*Entity) {
 	for _, livingPlayer := range livingPlayers {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -127,31 +152,8 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 			}).Debug("Checking living player for revival input")
 		}
 
-		// Check for revival input (E key or interact button)
-		inputComp, ok := livingPlayer.GetComponent("input")
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": livingPlayer.ID,
-				}).Warn("Living player missing input component")
-			}
-			continue
-		}
-		// Type assert with safety check
-		input, ok := inputComp.(*EbitenInput)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      livingPlayer.ID,
-					"component_type": "input",
-				}).Warn("Failed to cast input component to EbitenInput")
-			}
-			continue
-		}
-
-		// Check if revival action key is pressed (E key = UseItemPressed)
-		// In this context, E key serves dual purpose: use item / interact / revive
-		if !input.UseItemPressed {
+		input := s.getRevivalInput(livingPlayer)
+		if input == nil || !input.UseItemPressed {
 			continue
 		}
 
@@ -161,99 +163,126 @@ func (s *RevivalSystem) Update(entities []*Entity, deltaTime float64) {
 			}).Debug("Living player pressed revival key")
 		}
 
-		// Get living player position
-		livingPosComp, hasLivingPos := livingPlayer.GetComponent("position")
-		if !hasLivingPos {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": livingPlayer.ID,
-				}).Warn("Living player missing position component")
-			}
+		s.attemptRevival(livingPlayer, deadPlayers)
+	}
+}
+
+// getRevivalInput retrieves and validates the input component from a living player.
+func (s *RevivalSystem) getRevivalInput(livingPlayer *Entity) *EbitenInput {
+	inputComp, ok := livingPlayer.GetComponent("input")
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": livingPlayer.ID,
+			}).Warn("Living player missing input component")
+		}
+		return nil
+	}
+
+	input, ok := inputComp.(*EbitenInput)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      livingPlayer.ID,
+				"component_type": "input",
+			}).Warn("Failed to cast input component to EbitenInput")
+		}
+		return nil
+	}
+
+	return input
+}
+
+// attemptRevival finds the closest dead player and attempts revival.
+func (s *RevivalSystem) attemptRevival(livingPlayer *Entity, deadPlayers []*Entity) {
+	livingPos := s.getPlayerPosition(livingPlayer)
+	if livingPos == nil {
+		return
+	}
+
+	closestDeadPlayer, closestDistance := s.findClosestDeadPlayer(livingPlayer, livingPos, deadPlayers)
+
+	if closestDeadPlayer != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"living_entity_id": livingPlayer.ID,
+				"dead_entity_id":   closestDeadPlayer.ID,
+				"distance":         closestDistance,
+			}).Info("Attempting to revive dead player")
+		}
+		s.revivePlayer(closestDeadPlayer)
+	} else {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"living_entity_id": livingPlayer.ID,
+				"revival_range":    s.RevivalRange,
+			}).Debug("No dead players within revival range")
+		}
+	}
+}
+
+// getPlayerPosition retrieves and validates the position component from a player entity.
+func (s *RevivalSystem) getPlayerPosition(player *Entity) *PositionComponent {
+	posComp, hasPos := player.GetComponent("position")
+	if !hasPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": player.ID,
+			}).Warn("Player missing position component")
+		}
+		return nil
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      player.ID,
+				"component_type": "position",
+			}).Warn("Failed to cast position component to PositionComponent")
+		}
+		return nil
+	}
+
+	return pos
+}
+
+// findClosestDeadPlayer searches for the nearest dead player within revival range.
+func (s *RevivalSystem) findClosestDeadPlayer(livingPlayer *Entity, livingPos *PositionComponent, deadPlayers []*Entity) (*Entity, float64) {
+	var closestDeadPlayer *Entity
+	closestDistance := math.MaxFloat64
+
+	for _, deadPlayer := range deadPlayers {
+		deadPos := s.getPlayerPosition(deadPlayer)
+		if deadPos == nil {
 			continue
 		}
-		// Type assert with safety check
-		livingPos, ok := livingPosComp.(*PositionComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      livingPlayer.ID,
-					"component_type": "position",
-				}).Warn("Failed to cast position component to PositionComponent")
-			}
-			continue
+
+		distance := s.calculateDistance(livingPos, deadPos)
+
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"living_entity_id": livingPlayer.ID,
+				"dead_entity_id":   deadPlayer.ID,
+				"distance":         distance,
+				"revival_range":    s.RevivalRange,
+			}).Debug("Calculated distance between players")
 		}
 
-		// Find closest dead player within range
-		var closestDeadPlayer *Entity
-		closestDistance := math.MaxFloat64
-
-		for _, deadPlayer := range deadPlayers {
-			// Get dead player position
-			deadPosComp, hasDeadPos := deadPlayer.GetComponent("position")
-			if !hasDeadPos {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id": deadPlayer.ID,
-					}).Debug("Dead player missing position component")
-				}
-				continue
-			}
-			// Type assert with safety check
-			deadPos, ok := deadPosComp.(*PositionComponent)
-			if !ok {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":      deadPlayer.ID,
-						"component_type": "position",
-					}).Warn("Failed to cast position component to PositionComponent")
-				}
-				continue
-			}
-
-			// Calculate distance
-			dx := deadPos.X - livingPos.X
-			dy := deadPos.Y - livingPos.Y
-			distance := math.Sqrt(dx*dx + dy*dy)
-
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"living_entity_id": livingPlayer.ID,
-					"dead_entity_id":   deadPlayer.ID,
-					"distance":         distance,
-					"revival_range":    s.RevivalRange,
-				}).Debug("Calculated distance between players")
-			}
-
-			// Check if within revival range and closest so far
-			if distance <= s.RevivalRange && distance < closestDistance {
-				closestDistance = distance
-				closestDeadPlayer = deadPlayer
-			}
-		}
-
-		// Revive the closest dead player if found
-		if closestDeadPlayer != nil {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"living_entity_id": livingPlayer.ID,
-					"dead_entity_id":   closestDeadPlayer.ID,
-					"distance":         closestDistance,
-				}).Info("Attempting to revive dead player")
-			}
-			s.revivePlayer(closestDeadPlayer)
-		} else {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"living_entity_id": livingPlayer.ID,
-					"revival_range":    s.RevivalRange,
-				}).Debug("No dead players within revival range")
-			}
+		if distance <= s.RevivalRange && distance < closestDistance {
+			closestDistance = distance
+			closestDeadPlayer = deadPlayer
 		}
 	}
 
-	if s.logger != nil {
-		s.logger.Debug("RevivalSystem update completed")
-	}
+	return closestDeadPlayer, closestDistance
+}
+
+// calculateDistance computes the Euclidean distance between two positions.
+func (s *RevivalSystem) calculateDistance(pos1, pos2 *PositionComponent) float64 {
+	dx := pos2.X - pos1.X
+	dy := pos2.Y - pos1.Y
+	return math.Sqrt(dx*dx + dy*dy)
 }
 
 // revivePlayer performs the actual revival, restoring health and removing dead state.

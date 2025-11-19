@@ -3,18 +3,38 @@
 // based on aim input, supporting smooth rotation interpolation.
 package engine
 
+import (
+	"github.com/sirupsen/logrus"
+)
+
+var rotationLog *logrus.Logger
+
+func init() {
+	rotationLog = logrus.New()
+	rotationLog.SetReportCaller(true)
+	rotationLog.SetLevel(logrus.InfoLevel)
+}
+
 // RotationSystem manages entity rotation and orientation.
 // Updates RotationComponent based on AimComponent input, enabling
 // smooth transitions between facing directions. Works in conjunction
 // with InputSystem (sets aim) and RenderSystem (renders rotated sprites).
 type RotationSystem struct {
-	world *World
+	world  *World
+	logger *logrus.Entry
 }
 
 // NewRotationSystem creates a new rotation system.
 func NewRotationSystem(world *World) *RotationSystem {
+	logger := rotationLog.WithFields(logrus.Fields{
+		"system_name": "rotation",
+	})
+
+	logger.Info("Initializing rotation system")
+
 	return &RotationSystem{
-		world: world,
+		world:  world,
+		logger: logger,
 	}
 }
 
@@ -27,16 +47,31 @@ func NewRotationSystem(world *World) *RotationSystem {
 // 3. Interpolate rotation towards target angle
 // 4. Clamp rotation to valid range [0, 2π)
 func (s *RotationSystem) Update(deltaTime float64) {
+	s.logger.WithFields(logrus.Fields{
+		"delta_time": deltaTime,
+	}).Debug("Starting rotation system update")
+
 	entities := s.world.GetEntitiesWith("rotation")
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_count": len(entities),
+	}).Debug("Processing entities with rotation component")
 
 	for _, entity := range entities {
 		// Get rotation component
 		rotComp, ok := entity.GetComponent("rotation")
 		if !ok {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("Entity has rotation in query but component retrieval failed")
 			continue
 		}
 		rotation, ok := rotComp.(*RotationComponent)
 		if !ok {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "rotation",
+			}).Error("Failed to cast rotation component")
 			continue
 		}
 
@@ -45,25 +80,63 @@ func (s *RotationSystem) Update(deltaTime float64) {
 			aimComp, ok := entity.GetComponent("aim")
 			if ok {
 				if aim, ok := aimComp.(*AimComponent); ok {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":    entity.ID,
+						"aim_angle":    aim.AimAngle,
+						"has_position": entity.HasComponent("position"),
+					}).Debug("Syncing rotation with aim component")
+
 					// Update aim angle from position if target-based
 					if entity.HasComponent("position") {
 						posComp, ok := entity.GetComponent("position")
 						if ok {
 							if pos, ok := posComp.(*PositionComponent); ok {
 								aim.UpdateAimAngle(pos.X, pos.Y)
+								s.logger.WithFields(logrus.Fields{
+									"entity_id":     entity.ID,
+									"position_x":    pos.X,
+									"position_y":    pos.Y,
+									"updated_angle": aim.AimAngle,
+								}).Debug("Updated aim angle from position")
 							}
 						}
 					}
 
 					// Set rotation target to match aim
+					oldTarget := rotation.TargetAngle
 					rotation.SetTargetAngle(aim.AimAngle)
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":     entity.ID,
+						"old_target":    oldTarget,
+						"new_target":    aim.AimAngle,
+						"current_angle": rotation.Angle,
+					}).Debug("Set rotation target from aim")
+				} else {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":      entity.ID,
+						"component_type": "aim",
+					}).Warn("Failed to cast aim component")
 				}
 			}
 		}
 
 		// Perform smooth rotation update
+		oldAngle := rotation.Angle
 		rotation.Update(deltaTime)
+
+		if oldAngle != rotation.Angle {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"old_angle":      oldAngle,
+				"new_angle":      rotation.Angle,
+				"target_angle":   rotation.TargetAngle,
+				"smooth_enabled": rotation.SmoothRotation,
+				"rotation_speed": rotation.RotationSpeed,
+			}).Debug("Entity rotation updated")
+		}
 	}
+
+	s.logger.Debug("Rotation system update complete")
 }
 
 // SyncRotationToAim immediately sets an entity's rotation to match aim.
@@ -71,34 +144,71 @@ func (s *RotationSystem) Update(deltaTime float64) {
 // entityID: ID of entity to sync
 // Returns true if sync was successful, false if entity or components not found
 func (s *RotationSystem) SyncRotationToAim(entityID uint64) bool {
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"operation": "sync_rotation_to_aim",
+	}).Debug("Syncing rotation to aim")
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity not found for rotation sync")
 		return false
 	}
 
 	if !entity.HasComponent("rotation") || !entity.HasComponent("aim") {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":    entityID,
+			"has_rotation": entity.HasComponent("rotation"),
+			"has_aim":      entity.HasComponent("aim"),
+		}).Warn("Missing required components for rotation sync")
 		return false
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
 	if rotComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Rotation component is nil")
 		return false
 	}
 	rotation, ok := rotComp.(*RotationComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
 		return false
 	}
 
 	aimComp, _ := entity.GetComponent("aim")
 	if aimComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "aim",
+		}).Error("Aim component is nil")
 		return false
 	}
 	aim, ok := aimComp.(*AimComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "aim",
+		}).Error("Failed to cast aim component")
 		return false
 	}
 
+	oldAngle := rotation.Angle
 	rotation.SetAngleImmediate(aim.AimAngle)
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"old_angle": oldAngle,
+		"new_angle": aim.AimAngle,
+	}).Info("Synced rotation to aim angle")
+
 	return true
 }
 
@@ -107,25 +217,53 @@ func (s *RotationSystem) SyncRotationToAim(entityID uint64) bool {
 // angle: rotation angle in radians
 // Returns true if successful, false if entity or component not found
 func (s *RotationSystem) SetEntityRotation(entityID uint64, angle float64) bool {
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"angle":     angle,
+		"operation": "set_entity_rotation",
+	}).Debug("Setting entity rotation")
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity not found for rotation set")
 		return false
 	}
 
 	if !entity.HasComponent("rotation") {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity missing rotation component")
 		return false
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
 	if rotComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Rotation component is nil")
 		return false
 	}
 	rotation, ok := rotComp.(*RotationComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
 		return false
 	}
 
+	oldAngle := rotation.Angle
 	rotation.SetAngleImmediate(angle)
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"old_angle": oldAngle,
+		"new_angle": angle,
+	}).Info("Set entity rotation angle")
+
 	return true
 }
 
@@ -133,23 +271,47 @@ func (s *RotationSystem) SetEntityRotation(entityID uint64, angle float64) bool 
 // entityID: ID of entity to query
 // Returns angle in radians and ok status (false if entity or component not found)
 func (s *RotationSystem) GetEntityRotation(entityID uint64) (float64, bool) {
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"operation": "get_entity_rotation",
+	}).Debug("Getting entity rotation")
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity not found for rotation query")
 		return 0, false
 	}
 
 	if !entity.HasComponent("rotation") {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Debug("Entity missing rotation component")
 		return 0, false
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
 	if rotComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Rotation component is nil")
 		return 0, false
 	}
 	rotation, ok := rotComp.(*RotationComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
 		return 0, false
 	}
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"angle":     rotation.Angle,
+	}).Debug("Retrieved entity rotation")
 
 	return rotation.Angle, true
 }
@@ -160,25 +322,53 @@ func (s *RotationSystem) GetEntityRotation(entityID uint64) (float64, bool) {
 // enabled: true for smooth rotation, false for instant
 // Returns true if successful, false if entity or component not found
 func (s *RotationSystem) EnableSmoothRotation(entityID uint64, enabled bool) bool {
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"enabled":   enabled,
+		"operation": "enable_smooth_rotation",
+	}).Debug("Configuring smooth rotation")
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity not found for smooth rotation config")
 		return false
 	}
 
 	if !entity.HasComponent("rotation") {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity missing rotation component")
 		return false
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
 	if rotComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Rotation component is nil")
 		return false
 	}
 	rotation, ok := rotComp.(*RotationComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
 		return false
 	}
 
+	oldValue := rotation.SmoothRotation
 	rotation.SmoothRotation = enabled
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"old_value": oldValue,
+		"new_value": enabled,
+	}).Info("Updated smooth rotation setting")
+
 	return true
 }
 
@@ -187,24 +377,52 @@ func (s *RotationSystem) EnableSmoothRotation(entityID uint64, enabled bool) boo
 // speed: rotation speed in radians per second
 // Returns true if successful, false if entity or component not found
 func (s *RotationSystem) SetRotationSpeed(entityID uint64, speed float64) bool {
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"speed":     speed,
+		"operation": "set_rotation_speed",
+	}).Debug("Setting rotation speed")
+
 	entity, ok := s.world.GetEntity(entityID)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity not found for rotation speed config")
 		return false
 	}
 
 	if !entity.HasComponent("rotation") {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("Entity missing rotation component")
 		return false
 	}
 
 	rotComp, _ := entity.GetComponent("rotation")
 	if rotComp == nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Rotation component is nil")
 		return false
 	}
 	rotation, ok := rotComp.(*RotationComponent)
 	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
 		return false
 	}
 
+	oldSpeed := rotation.RotationSpeed
 	rotation.RotationSpeed = speed
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id": entityID,
+		"old_speed": oldSpeed,
+		"new_speed": speed,
+	}).Info("Updated rotation speed")
+
 	return true
 }

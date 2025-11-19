@@ -668,11 +668,23 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 		GenreID:    *genreID,
 	}
 
-	// Spawn enemies
+	spawnEnemiesWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnMerchantsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnStationsWithLogging(game.World, generatedTerrain, clientLogger)
+	spawnPuzzlesWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnObjectsWithLogging(game.World, generatedTerrain, clientLogger)
+	spawnVehiclesWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnBookshelvesWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnStoryFragmentsWithLogging(game.World, generatedTerrain, params, clientLogger)
+}
+
+// spawnEnemiesWithLogging spawns enemies in terrain with optional verbose logging.
+func spawnEnemiesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning enemies in dungeon rooms")
 	}
-	enemyCount, err := engine.SpawnEnemiesInTerrain(game.World, generatedTerrain, *seed, params)
+	enemyCount, err := engine.SpawnEnemiesInTerrain(w, generatedTerrain, *seed, params)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn enemies")
 	} else if *verbose {
@@ -681,33 +693,39 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 			"roomCount":  len(generatedTerrain.Rooms) - 1,
 		}).Info("spawned enemies")
 	}
+}
 
-	// Spawn merchants
+// spawnMerchantsWithLogging spawns merchants in terrain with optional verbose logging.
+func spawnMerchantsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning merchants in dungeon")
 	}
-	merchantCount, err := engine.SpawnMerchantsInTerrain(game.World, generatedTerrain, *seed, params, defaultMerchantCount)
+	merchantCount, err := engine.SpawnMerchantsInTerrain(w, generatedTerrain, *seed, params, defaultMerchantCount)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn merchants")
 	} else if *verbose {
 		clientLogger.WithField("merchantCount", merchantCount).Info("spawned merchants")
 	}
+}
 
-	// Spawn crafting stations
+// spawnStationsWithLogging spawns crafting stations in terrain with optional verbose logging.
+func spawnStationsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning crafting stations in dungeon")
 	}
 	stationGen := station.NewStationGenerator()
-	stationCount := engine.SpawnStationsInTerrain(game.World, stationGen, generatedTerrain, tileSize, *seed+seedOffsetStation, *genreID)
+	stationCount := engine.SpawnStationsInTerrain(w, stationGen, generatedTerrain, tileSize, *seed+seedOffsetStation, *genreID)
 	if *verbose {
 		clientLogger.WithField("stationCount", stationCount).Info("spawned crafting stations")
 	}
+}
 
-	// Spawn puzzles
+// spawnPuzzlesWithLogging spawns procedural puzzles in terrain with optional verbose logging.
+func spawnPuzzlesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning procedural puzzles in dungeon")
 	}
-	puzzleCount, err := engine.SpawnPuzzlesInTerrain(game.World, generatedTerrain, *seed+seedOffsetPuzzle, params, defaultPuzzleCount)
+	puzzleCount, err := engine.SpawnPuzzlesInTerrain(w, generatedTerrain, *seed+seedOffsetPuzzle, params, defaultPuzzleCount)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn puzzles")
 	} else {
@@ -717,56 +735,66 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 			"roomCount":   len(generatedTerrain.Rooms) - 1,
 		}).Info("spawned procedural puzzles")
 	}
+}
 
-	// Spawn destructible objects
+// spawnObjectsWithLogging spawns destructible objects in terrain with logging.
+func spawnObjectsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning destructible objects in dungeon")
 	}
-	objectCount := spawnDestructibleObjects(game.World, generatedTerrain, *seed+seedOffsetObject, *genreID, clientLogger.Logger)
+	objectCount := spawnDestructibleObjects(w, generatedTerrain, *seed+seedOffsetObject, *genreID, clientLogger.Logger)
 	clientLogger.WithFields(logrus.Fields{
 		"objectCount": objectCount,
 		"roomCount":   len(generatedTerrain.Rooms) - 1,
 		"genre":       *genreID,
 	}).Info("spawned destructible objects")
+}
 
-	// Spawn vehicles (V4.0)
+// spawnVehiclesWithLogging spawns vehicles in terrain with optional verbose logging.
+func spawnVehiclesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning vehicles in dungeon")
 	}
-	vehicleCount, err := spawnVehicles(game.World, generatedTerrain, *seed+seedOffsetVehicle, params, clientLogger)
+	vehicleCount, err := spawnVehicles(w, generatedTerrain, *seed+seedOffsetVehicle, params, clientLogger)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn vehicles")
 	} else if *verbose {
 		clientLogger.WithField("vehicleCount", vehicleCount).Info("spawned vehicles")
 	}
+}
 
-	// Spawn companions (V4.0)
+// spawnCompanionsWithLogging spawns companions in terrain with optional verbose logging.
+func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning companions in dungeon")
 	}
-	companionCount, err := spawnCompanions(game.World, generatedTerrain, *seed+seedOffsetCompanion, params, clientLogger)
+	companionCount, err := spawnCompanions(w, generatedTerrain, *seed+seedOffsetCompanion, params, clientLogger)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn companions")
 	} else if *verbose {
 		clientLogger.WithField("companionCount", companionCount).Info("spawned companions")
 	}
+}
 
-	// Spawn bookshelves with books (V4.0)
+// spawnBookshelvesWithLogging spawns bookshelves with books in terrain with optional verbose logging.
+func spawnBookshelvesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning bookshelves in dungeon")
 	}
-	bookshelfCount, err := spawnBookshelves(game.World, generatedTerrain, *seed+seedOffsetBook, params, clientLogger)
+	bookshelfCount, err := spawnBookshelves(w, generatedTerrain, *seed+seedOffsetBook, params, clientLogger)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn bookshelves")
 	} else if *verbose {
 		clientLogger.WithField("bookshelfCount", bookshelfCount).Info("spawned bookshelves")
 	}
+}
 
-	// Spawn story fragments (Phase 30: Environmental Storytelling)
+// spawnStoryFragmentsWithLogging spawns story fragments in terrain with optional verbose logging.
+func spawnStoryFragmentsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning story fragments in dungeon")
 	}
-	fragmentCount, err := spawnStoryFragments(game.World, generatedTerrain, *seed+seedOffsetStory, params, clientLogger)
+	fragmentCount, err := spawnStoryFragments(w, generatedTerrain, *seed+seedOffsetStory, params, clientLogger)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn story fragments")
 	} else if *verbose {

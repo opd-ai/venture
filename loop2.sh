@@ -99,6 +99,7 @@ for i in $(seq 1 $ITER); do
     dev
     review
     fix
+    git clean -fdx .
 done
 
 fix

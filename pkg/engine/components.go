@@ -3,7 +3,19 @@
 // ColliderComponent, and BoundsComponent used across all game systems.
 package engine
 
-import "math"
+import (
+	"math"
+
+	"github.com/sirupsen/logrus"
+)
+
+var componentsLog *logrus.Logger
+
+func init() {
+	componentsLog = logrus.New()
+	componentsLog.SetReportCaller(true)
+	componentsLog.SetLevel(logrus.InfoLevel)
+}
 
 // PositionComponent represents an entity's position in 2D space.
 type PositionComponent struct {
@@ -17,19 +29,48 @@ func (p *PositionComponent) Type() string {
 
 // Serialize encodes the component to bytes for persistence
 func (p *PositionComponent) Serialize() ([]byte, error) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "position",
+		"x":              p.X,
+		"y":              p.Y,
+	}).Debug("Serializing position component")
+
 	buf := make([]byte, 16) // 2 float64s = 16 bytes
 	writeFloat64(buf[0:8], p.X)
 	writeFloat64(buf[8:16], p.Y)
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "position",
+		"bytes":          len(buf),
+	}).Debug("Position component serialized successfully")
+
 	return buf, nil
 }
 
 // Deserialize decodes the component from bytes
 func (p *PositionComponent) Deserialize(data []byte) error {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "position",
+		"bytes":          len(data),
+	}).Debug("Deserializing position component")
+
 	if len(data) < 16 {
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "position",
+			"expected_bytes": 16,
+			"received_bytes": len(data),
+		}).Error("Insufficient data for position component deserialization")
 		return ErrInvalidComponentData
 	}
 	p.X = readFloat64(data[0:8])
 	p.Y = readFloat64(data[8:16])
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "position",
+		"x":              p.X,
+		"y":              p.Y,
+	}).Debug("Position component deserialized successfully")
+
 	return nil
 }
 
@@ -45,19 +86,48 @@ func (v *VelocityComponent) Type() string {
 
 // Serialize encodes the component to bytes for persistence
 func (v *VelocityComponent) Serialize() ([]byte, error) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "velocity",
+		"vx":             v.VX,
+		"vy":             v.VY,
+	}).Debug("Serializing velocity component")
+
 	buf := make([]byte, 16) // 2 float64s = 16 bytes
 	writeFloat64(buf[0:8], v.VX)
 	writeFloat64(buf[8:16], v.VY)
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "velocity",
+		"bytes":          len(buf),
+	}).Debug("Velocity component serialized successfully")
+
 	return buf, nil
 }
 
 // Deserialize decodes the component from bytes
 func (v *VelocityComponent) Deserialize(data []byte) error {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "velocity",
+		"bytes":          len(data),
+	}).Debug("Deserializing velocity component")
+
 	if len(data) < 16 {
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "velocity",
+			"expected_bytes": 16,
+			"received_bytes": len(data),
+		}).Error("Insufficient data for velocity component deserialization")
 		return ErrInvalidComponentData
 	}
 	v.VX = readFloat64(data[0:8])
 	v.VY = readFloat64(data[8:16])
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "velocity",
+		"vx":             v.VX,
+		"vy":             v.VY,
+	}).Debug("Velocity component deserialized successfully")
+
 	return nil
 }
 
@@ -87,6 +157,17 @@ func (c *ColliderComponent) Type() string {
 
 // Serialize encodes the component to bytes for persistence
 func (c *ColliderComponent) Serialize() ([]byte, error) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"width":          c.Width,
+		"height":         c.Height,
+		"solid":          c.Solid,
+		"is_trigger":     c.IsTrigger,
+		"layer":          c.Layer,
+		"offset_x":       c.OffsetX,
+		"offset_y":       c.OffsetY,
+	}).Debug("Serializing collider component")
+
 	buf := make([]byte, 38) // 4 float64s (32 bytes) + 2 bools (2 bytes) + 1 int32 (4 bytes) = 38 bytes
 	writeFloat64(buf[0:8], c.Width)
 	writeFloat64(buf[8:16], c.Height)
@@ -95,12 +176,28 @@ func (c *ColliderComponent) Serialize() ([]byte, error) {
 	writeInt32(buf[18:22], int32(c.Layer))
 	writeFloat64(buf[22:30], c.OffsetX)
 	writeFloat64(buf[30:38], c.OffsetY)
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"bytes":          len(buf),
+	}).Debug("Collider component serialized successfully")
+
 	return buf, nil
 }
 
 // Deserialize decodes the component from bytes
 func (c *ColliderComponent) Deserialize(data []byte) error {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"bytes":          len(data),
+	}).Debug("Deserializing collider component")
+
 	if len(data) < 38 {
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "collider",
+			"expected_bytes": 38,
+			"received_bytes": len(data),
+		}).Error("Insufficient data for collider component deserialization")
 		return ErrInvalidComponentData
 	}
 	c.Width = readFloat64(data[0:8])
@@ -110,6 +207,18 @@ func (c *ColliderComponent) Deserialize(data []byte) error {
 	c.Layer = int(readInt32(data[18:22]))
 	c.OffsetX = readFloat64(data[22:30])
 	c.OffsetY = readFloat64(data[30:38])
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"width":          c.Width,
+		"height":         c.Height,
+		"solid":          c.Solid,
+		"is_trigger":     c.IsTrigger,
+		"layer":          c.Layer,
+		"offset_x":       c.OffsetX,
+		"offset_y":       c.OffsetY,
+	}).Debug("Collider component deserialized successfully")
+
 	return nil
 }
 
@@ -117,10 +226,29 @@ func (c *ColliderComponent) Deserialize(data []byte) error {
 // Returns min and max coordinates.
 // Note: Does not account for rotation. Use GetRotatedBounds() for rotated entities.
 func (c *ColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY float64) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"x":              x,
+		"y":              y,
+		"width":          c.Width,
+		"height":         c.Height,
+		"offset_x":       c.OffsetX,
+		"offset_y":       c.OffsetY,
+	}).Debug("Calculating collider bounds")
+
 	minX = x + c.OffsetX
 	minY = y + c.OffsetY
 	maxX = minX + c.Width
 	maxY = minY + c.Height
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"min_x":          minX,
+		"min_y":          minY,
+		"max_x":          maxX,
+		"max_y":          maxY,
+	}).Debug("Collider bounds calculated")
+
 	return minX, minY, maxX, maxY
 }
 
@@ -134,8 +262,21 @@ func (c *ColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY floa
 //
 // Returns the min/max coordinates of the AABB that contains the rotated collider.
 func (c *ColliderComponent) GetRotatedBounds(x, y, angle float64) (minX, minY, maxX, maxY float64) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"x":              x,
+		"y":              y,
+		"angle":          angle,
+		"width":          c.Width,
+		"height":         c.Height,
+	}).Debug("Calculating rotated collider bounds")
+
 	// If no rotation, use regular bounds for efficiency
 	if angle == 0 {
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "collider",
+			"optimization":   "no_rotation",
+		}).Debug("Using non-rotated bounds optimization")
 		return c.GetBounds(x, y)
 	}
 
@@ -184,16 +325,42 @@ func (c *ColliderComponent) GetRotatedBounds(x, y, angle float64) (minX, minY, m
 		}
 	}
 
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"min_x":          minX,
+		"min_y":          minY,
+		"max_x":          maxX,
+		"max_y":          maxY,
+		"rotation":       angle,
+	}).Debug("Rotated collider bounds calculated")
+
 	return minX, minY, maxX, maxY
 }
 
 // Intersects checks if this collider intersects with another collider.
 // Uses axis-aligned bounding boxes without rotation.
 func (c *ColliderComponent) Intersects(x1, y1 float64, other *ColliderComponent, x2, y2 float64) bool {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"operation":      "intersects",
+		"x1":             x1,
+		"y1":             y1,
+		"x2":             x2,
+		"y2":             y2,
+	}).Debug("Checking collider intersection")
+
 	minX1, minY1, maxX1, maxY1 := c.GetBounds(x1, y1)
 	minX2, minY2, maxX2, maxY2 := other.GetBounds(x2, y2)
 
-	return !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
+	intersects := !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"operation":      "intersects",
+		"result":         intersects,
+	}).Debug("Collider intersection check completed")
+
+	return intersects
 }
 
 // Issue #20 FIX: IntersectsRotated checks intersection accounting for rotation angles.
@@ -209,10 +376,29 @@ func (c *ColliderComponent) Intersects(x1, y1 float64, other *ColliderComponent,
 //
 // Returns true if the rotated bounding boxes intersect.
 func (c *ColliderComponent) IntersectsRotated(x1, y1, angle1 float64, other *ColliderComponent, x2, y2, angle2 float64) bool {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"operation":      "intersects_rotated",
+		"x1":             x1,
+		"y1":             y1,
+		"angle1":         angle1,
+		"x2":             x2,
+		"y2":             y2,
+		"angle2":         angle2,
+	}).Debug("Checking rotated collider intersection")
+
 	minX1, minY1, maxX1, maxY1 := c.GetRotatedBounds(x1, y1, angle1)
 	minX2, minY2, maxX2, maxY2 := other.GetRotatedBounds(x2, y2, angle2)
 
-	return !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
+	intersects := !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
+
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "collider",
+		"operation":      "intersects_rotated",
+		"result":         intersects,
+	}).Debug("Rotated collider intersection check completed")
+
+	return intersects
 }
 
 // BoundsComponent represents world boundaries for an entity.
@@ -232,6 +418,18 @@ func (b *BoundsComponent) Type() string {
 
 // Clamp restricts a position to within the bounds.
 func (b *BoundsComponent) Clamp(x, y float64) (float64, float64) {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "bounds",
+		"operation":      "clamp",
+		"input_x":        x,
+		"input_y":        y,
+		"wrap":           b.Wrap,
+		"min_x":          b.MinX,
+		"min_y":          b.MinY,
+		"max_x":          b.MaxX,
+		"max_y":          b.MaxY,
+	}).Debug("Clamping position to bounds")
+
 	if b.Wrap {
 		// Wrap around
 		if x < b.MinX {
@@ -244,10 +442,26 @@ func (b *BoundsComponent) Clamp(x, y float64) (float64, float64) {
 		} else if y > b.MaxY {
 			y = b.MinY + (y - b.MaxY)
 		}
+
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "bounds",
+			"operation":      "clamp",
+			"mode":           "wrap",
+			"output_x":       x,
+			"output_y":       y,
+		}).Debug("Position wrapped to bounds")
 	} else {
 		// Clamp to bounds
 		x = math.Max(b.MinX, math.Min(b.MaxX, x))
 		y = math.Max(b.MinY, math.Min(b.MaxY, y))
+
+		componentsLog.WithFields(logrus.Fields{
+			"component_type": "bounds",
+			"operation":      "clamp",
+			"mode":           "clamp",
+			"output_x":       x,
+			"output_y":       y,
+		}).Debug("Position clamped to bounds")
 	}
 	return x, y
 }
@@ -268,6 +482,11 @@ func (f *FrictionComponent) Type() string {
 
 // NewFrictionComponent creates a friction component with the specified coefficient.
 func NewFrictionComponent(coefficient float64) *FrictionComponent {
+	componentsLog.WithFields(logrus.Fields{
+		"component_type": "friction",
+		"coefficient":    coefficient,
+	}).Debug("Creating friction component")
+
 	return &FrictionComponent{
 		Coefficient: coefficient,
 	}

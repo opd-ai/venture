@@ -65,19 +65,23 @@ dev() {
     echo "Implementation completed, sleeping for 1 minute..."
     sleep 1m
     checkin
+}
 
+review() {
     #check if any directories do not contain an AUDIT.md file, if so, set NEED_AUDIT to true
     NEED_AUDIT=false
+    DIR="pkg/"
     for dir in pkg/*/; do
         if [ ! -f "$dir/AUDIT.md" ]; then
             NEED_AUDIT=true
+            DIR="$dir"
             break
         fi
     done
 
     if [ "$NEED_AUDIT" = true ]; then
         echo "iteration started - Maintenance phase 2: General components."
-        copilot -p "/delegate $(cat docs/REVIEW.md)" --allow-all-tools --deny-tool sudo
+        copilot -p "/delegate The \`$DIR\` is known to be un-audited. $(cat docs/REVIEW.md)" --allow-all-tools --deny-tool sudo
         echo "Review in progress."
         make fmt
         echo "Review completed, sleeping for 1 minute..."
@@ -93,6 +97,7 @@ fix
 for i in $(seq 1 $ITER); do
     log
     dev
+    review
     fix
 done
 

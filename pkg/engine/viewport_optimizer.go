@@ -2,6 +2,8 @@ package engine
 
 import (
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ViewportOptimizer provides enhanced viewport culling for larger display resolutions.
@@ -17,6 +19,9 @@ type ViewportOptimizer struct {
 
 	// Statistics
 	stats ViewportStats
+
+	// Logger for structured logging
+	logger *logrus.Entry
 }
 
 // ViewportStats tracks viewport optimization metrics.
@@ -30,24 +35,49 @@ type ViewportStats struct {
 
 // NewViewportOptimizer creates viewport optimizer with default settings.
 func NewViewportOptimizer() *ViewportOptimizer {
-	return &ViewportOptimizer{
+	logger := logrus.New()
+	logger.SetReportCaller(true)
+
+	vo := &ViewportOptimizer{
 		tileSize:    32.0,
 		marginTiles: 1, // 1-tile margin as per Phase 44
+		logger:      logger.WithField("system_name", "viewport_optimizer"),
 	}
+
+	vo.logger.WithFields(logrus.Fields{
+		"tile_size":    vo.tileSize,
+		"margin_tiles": vo.marginTiles,
+	}).Debug("ViewportOptimizer created with default settings")
+
+	return vo
 }
 
 // SetTileSize configures tile size for margin calculation.
 func (v *ViewportOptimizer) SetTileSize(size float64) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+
+	oldSize := v.tileSize
 	v.tileSize = size
+
+	v.logger.WithFields(logrus.Fields{
+		"old_tile_size": oldSize,
+		"new_tile_size": size,
+	}).Debug("Tile size updated")
 }
 
 // SetMarginTiles configures margin in tiles.
 func (v *ViewportOptimizer) SetMarginTiles(tiles int) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+
+	oldMargin := v.marginTiles
 	v.marginTiles = tiles
+
+	v.logger.WithFields(logrus.Fields{
+		"old_margin_tiles": oldMargin,
+		"new_margin_tiles": tiles,
+	}).Debug("Margin tiles updated")
 }
 
 // CalculateViewportBounds computes viewport bounds in world space with margin.
@@ -55,7 +85,25 @@ func (v *ViewportOptimizer) SetMarginTiles(tiles int) {
 func (v *ViewportOptimizer) CalculateViewportBounds(cameraX, cameraY, viewportWidth, viewportHeight, zoom float64) Bounds {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return v.calculateViewportBoundsUnlocked(cameraX, cameraY, viewportWidth, viewportHeight, zoom)
+
+	v.logger.WithFields(logrus.Fields{
+		"camera_x":        cameraX,
+		"camera_y":        cameraY,
+		"viewport_width":  viewportWidth,
+		"viewport_height": viewportHeight,
+		"zoom":            zoom,
+	}).Debug("Calculating viewport bounds")
+
+	bounds := v.calculateViewportBoundsUnlocked(cameraX, cameraY, viewportWidth, viewportHeight, zoom)
+
+	v.logger.WithFields(logrus.Fields{
+		"bounds_x":      bounds.X,
+		"bounds_y":      bounds.Y,
+		"bounds_width":  bounds.Width,
+		"bounds_height": bounds.Height,
+	}).Debug("Viewport bounds calculated")
+
+	return bounds
 }
 
 // calculateViewportBoundsUnlocked is the unlocked version for internal use.
@@ -77,6 +125,13 @@ func (v *ViewportOptimizer) calculateViewportBoundsUnlocked(cameraX, cameraY, vi
 // FrustumCull performs frustum culling check on entity.
 // Returns true if entity is within frustum (should be rendered).
 func (v *ViewportOptimizer) FrustumCull(entityX, entityY, entityWidth, entityHeight float64, viewportBounds Bounds) bool {
+	v.logger.WithFields(logrus.Fields{
+		"entity_x":      entityX,
+		"entity_y":      entityY,
+		"entity_width":  entityWidth,
+		"entity_height": entityHeight,
+	}).Debug("Performing frustum cull check")
+
 	// Create entity bounds (centered on position)
 	entityBounds := Bounds{
 		X:      entityX - entityWidth/2,
@@ -86,7 +141,17 @@ func (v *ViewportOptimizer) FrustumCull(entityX, entityY, entityWidth, entityHei
 	}
 
 	// Check intersection with viewport
-	return entityBounds.Intersects(viewportBounds)
+	result := entityBounds.Intersects(viewportBounds)
+
+	v.logger.WithFields(logrus.Fields{
+		"entity_bounds_x":      entityBounds.X,
+		"entity_bounds_y":      entityBounds.Y,
+		"entity_bounds_width":  entityBounds.Width,
+		"entity_bounds_height": entityBounds.Height,
+		"intersects":           result,
+	}).Debug("Frustum cull check completed")
+
+	return result
 }
 
 // OptimizeVisibleSet filters entities to visible set using spatial partition.
@@ -100,12 +165,25 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
+	v.logger.WithFields(logrus.Fields{
+		"total_entities":  len(allEntities),
+		"screen_width":    screenWidth,
+		"screen_height":   screenHeight,
+		"camera_provided": camera != nil,
+		"spatial_enabled": spatialPartition != nil,
+	}).Debug("Starting visible set optimization")
+
 	// Reset stats
 	v.stats = ViewportStats{
 		TotalEntities: len(allEntities),
 	}
 
 	if camera == nil || spatialPartition == nil {
+		v.logger.WithFields(logrus.Fields{
+			"camera_nil":            camera == nil,
+			"spatial_partition_nil": spatialPartition == nil,
+		}).Warn("Camera or spatial partition not available, returning all entities")
+
 		v.stats.VisibleEntities = len(allEntities)
 		return allEntities
 	}
@@ -117,13 +195,27 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		camera.Zoom,
 	)
 
+	v.logger.WithFields(logrus.Fields{
+		"camera_x":        camera.X,
+		"camera_y":        camera.Y,
+		"camera_zoom":     camera.Zoom,
+		"viewport_bounds": viewportBounds,
+	}).Debug("Viewport bounds calculated for optimization")
+
 	// Query spatial partition
 	visible := spatialPartition.QueryBounds(viewportBounds)
+
+	v.logger.WithFields(logrus.Fields{
+		"spatial_query_results": len(visible),
+	}).Debug("Spatial partition query completed")
 
 	// Always include player entities (input component)
 	playerEntities := v.extractPlayerEntities(allEntities, visible)
 	if len(playerEntities) > 0 {
 		visible = append(visible, playerEntities...)
+		v.logger.WithFields(logrus.Fields{
+			"player_entities_added": len(playerEntities),
+		}).Debug("Added player entities to visible set")
 	}
 
 	// Update stats
@@ -137,6 +229,10 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		Width:  float64(screenWidth) / camera.Zoom,
 		Height: float64(screenHeight) / camera.Zoom,
 	}
+
+	v.logger.WithFields(logrus.Fields{
+		"core_viewport_bounds": coreViewportBounds,
+	}).Debug("Calculating off-screen rendered count")
 
 	for _, entity := range visible {
 		posComp, ok := entity.GetComponent("position")
@@ -169,11 +265,25 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		}
 	}
 
+	v.logger.WithFields(logrus.Fields{
+		"total_entities":       v.stats.TotalEntities,
+		"visible_entities":     v.stats.VisibleEntities,
+		"culled_entities":      v.stats.CulledEntities,
+		"offscreen_rendered":   v.stats.OffScreenRendered,
+		"culling_efficiency":   v.CullingEfficiency(),
+		"offscreen_percentage": v.OffScreenPercentage(),
+	}).Info("Visible set optimization completed")
+
 	return visible
 }
 
 // extractPlayerEntities finds player entities not already in visible set.
 func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity) []*Entity {
+	v.logger.WithFields(logrus.Fields{
+		"total_entities":   len(allEntities),
+		"visible_entities": len(visible),
+	}).Debug("Extracting player entities")
+
 	playerEntities := make([]*Entity, 0, 4)
 
 	for _, entity := range allEntities {
@@ -192,8 +302,15 @@ func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity
 
 		if !alreadyVisible {
 			playerEntities = append(playerEntities, entity)
+			v.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Added player entity not in visible set")
 		}
 	}
+
+	v.logger.WithFields(logrus.Fields{
+		"player_entities_count": len(playerEntities),
+	}).Debug("Player entity extraction completed")
 
 	return playerEntities
 }
@@ -202,6 +319,14 @@ func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity
 func (v *ViewportOptimizer) Stats() ViewportStats {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
+
+	v.logger.WithFields(logrus.Fields{
+		"total_entities":     v.stats.TotalEntities,
+		"visible_entities":   v.stats.VisibleEntities,
+		"culled_entities":    v.stats.CulledEntities,
+		"offscreen_rendered": v.stats.OffScreenRendered,
+	}).Debug("Returning viewport statistics")
+
 	return v.stats
 }
 
@@ -211,9 +336,19 @@ func (v *ViewportOptimizer) OffScreenPercentage() float64 {
 	defer v.mu.RUnlock()
 
 	if v.stats.VisibleEntities == 0 {
+		v.logger.Debug("No visible entities, returning 0% off-screen percentage")
 		return 0.0
 	}
-	return float64(v.stats.OffScreenRendered) / float64(v.stats.VisibleEntities) * 100.0
+
+	percentage := float64(v.stats.OffScreenRendered) / float64(v.stats.VisibleEntities) * 100.0
+
+	v.logger.WithFields(logrus.Fields{
+		"offscreen_rendered": v.stats.OffScreenRendered,
+		"visible_entities":   v.stats.VisibleEntities,
+		"percentage":         percentage,
+	}).Debug("Calculated off-screen percentage")
+
+	return percentage
 }
 
 // CullingEfficiency returns culling efficiency (0.0 to 1.0).
@@ -223,13 +358,39 @@ func (v *ViewportOptimizer) CullingEfficiency() float64 {
 	defer v.mu.RUnlock()
 
 	if v.stats.TotalEntities == 0 {
+		v.logger.Debug("No total entities, returning 1.0 culling efficiency")
 		return 1.0
 	}
-	return float64(v.stats.CulledEntities) / float64(v.stats.TotalEntities)
+
+	efficiency := float64(v.stats.CulledEntities) / float64(v.stats.TotalEntities)
+
+	v.logger.WithFields(logrus.Fields{
+		"culled_entities": v.stats.CulledEntities,
+		"total_entities":  v.stats.TotalEntities,
+		"efficiency":      efficiency,
+	}).Debug("Calculated culling efficiency")
+
+	return efficiency
 }
 
 // ValidateMetrics checks if optimization meets Phase 44 targets.
 // Target: <5% entities rendered off-screen.
 func (v *ViewportOptimizer) ValidateMetrics() bool {
-	return v.OffScreenPercentage() < 5.0
+	offscreenPct := v.OffScreenPercentage()
+	valid := offscreenPct < 5.0
+
+	v.logger.WithFields(logrus.Fields{
+		"offscreen_percentage": offscreenPct,
+		"target_threshold":     5.0,
+		"metrics_valid":        valid,
+	}).Info("Validated optimization metrics against Phase 44 targets")
+
+	if !valid {
+		v.logger.WithFields(logrus.Fields{
+			"offscreen_percentage": offscreenPct,
+			"threshold_exceeded":   offscreenPct - 5.0,
+		}).Warn("Off-screen percentage exceeds Phase 44 target of 5%")
+	}
+
+	return valid
 }

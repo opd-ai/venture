@@ -14,6 +14,7 @@ const (
 	TypeStorage
 	TypeTower
 	TypeManor
+	TypeGuildHall
 )
 
 // String returns the string representation of BuildingType
@@ -29,6 +30,8 @@ func (t BuildingType) String() string {
 		return "Tower"
 	case TypeManor:
 		return "Manor"
+	case TypeGuildHall:
+		return "GuildHall"
 	default:
 		return "Unknown"
 	}
@@ -268,15 +271,17 @@ func (r RoofType) String() string {
 
 // Building represents a complete building with floor plan
 type Building struct {
-	Type     BuildingType
-	Style    ArchitecturalStyle
-	GenreID  string
-	Width    int
-	Height   int
-	Rooms    []Room
-	Doors    []Door
-	Windows  []Window
-	RoofType RoofType
+	Type       BuildingType
+	Style      ArchitecturalStyle
+	GenreID    string
+	Width      int
+	Height     int
+	Floors     int      // Number of floors (1-5)
+	Rooms      []Room   // Rooms on all floors
+	Doors      []Door   // Doors on all floors
+	Windows    []Window // Windows on all floors
+	RoofType   RoofType
+	FloorRooms map[int][]Room // Rooms per floor (floor index -> rooms)
 }
 
 // GetRoomCount returns the number of rooms
@@ -415,12 +420,23 @@ func (b *Building) Validate() error {
 		return fmt.Errorf("building too large: %dx%d (maximum 64x64)", b.Width, b.Height)
 	}
 
-	// Check room count
+	// Check room count (varies by building type)
 	if len(b.Rooms) < 1 {
 		return fmt.Errorf("building has no rooms")
 	}
-	if len(b.Rooms) > 8 {
-		return fmt.Errorf("building has too many rooms: %d (maximum 8)", len(b.Rooms))
+
+	maxRooms := 8 // Default for houses/workshops/storage
+	switch b.Type {
+	case TypeManor:
+		maxRooms = 20
+	case TypeGuildHall:
+		maxRooms = 100 // Guild halls can be very large
+	case TypeTower:
+		maxRooms = 12
+	}
+
+	if len(b.Rooms) > maxRooms {
+		return fmt.Errorf("building has too many rooms: %d (maximum %d for %s)", len(b.Rooms), maxRooms, b.Type)
 	}
 
 	// Check for entrance room

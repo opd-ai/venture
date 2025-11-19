@@ -17,6 +17,7 @@ func TestBuildingTypeString(t *testing.T) {
 		{"Storage", TypeStorage, "Storage"},
 		{"Tower", TypeTower, "Tower"},
 		{"Manor", TypeManor, "Manor"},
+		{"GuildHall", TypeGuildHall, "GuildHall"},
 		{"Unknown", BuildingType(99), "Unknown"},
 	}
 
@@ -544,5 +545,177 @@ func BenchmarkIsNavigable(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		building.IsNavigable()
+	}
+}
+
+func TestGenerateGuildHall(t *testing.T) {
+	gen := NewGenerator()
+	tests := []struct {
+		name    string
+		seed    int64
+		genreID string
+		floors  int
+		wantErr bool
+	}{
+		{"fantasy 1 floor", 12345, "fantasy", 1, false},
+		{"scifi 3 floors", 67890, "scifi", 3, false},
+		{"horror 5 floors", 11111, "horror", 5, false},
+		{"cyberpunk 2 floors", 22222, "cyberpunk", 2, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				GenreID: tt.genreID,
+				Custom: map[string]interface{}{
+					"buildingType": TypeGuildHall,
+					"floors":       tt.floors,
+				},
+			}
+
+			result, err := gen.Generate(tt.seed, params)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+
+			building, ok := result.(*Building)
+			if !ok {
+				t.Fatalf("result is not *Building")
+			}
+
+			if building.Type != TypeGuildHall {
+				t.Errorf("Type = %v, want %v", building.Type, TypeGuildHall)
+			}
+
+			if building.Floors != tt.floors {
+				t.Errorf("Floors = %d, want %d", building.Floors, tt.floors)
+			}
+
+			if building.Width < 32 || building.Width > 64 {
+				t.Errorf("Width = %d, want 32-64", building.Width)
+			}
+
+			if building.Height < 32 || building.Height > 64 {
+				t.Errorf("Height = %d, want 32-64", building.Height)
+			}
+
+			// Verify multi-floor rooms
+			if len(building.FloorRooms) != tt.floors {
+				t.Errorf("FloorRooms count = %d, want %d", len(building.FloorRooms), tt.floors)
+			}
+
+			// Verify each floor has rooms
+			for floor := 0; floor < tt.floors; floor++ {
+				rooms, ok := building.FloorRooms[floor]
+				if !ok {
+					t.Errorf("Floor %d not found in FloorRooms", floor)
+					continue
+				}
+				if len(rooms) == 0 {
+					t.Errorf("Floor %d has no rooms", floor)
+				}
+			}
+
+			// Guild halls should have many rooms
+			// Main Rooms list contains ground floor (for validation)
+			// FloorRooms contains all floors
+			if len(building.Rooms) < 2 {
+				t.Errorf("Ground floor (Rooms) count = %d, want >=2", len(building.Rooms))
+			}
+
+			// Total rooms across all floors should be many
+			totalRooms := 0
+			for _, floorRooms := range building.FloorRooms {
+				totalRooms += len(floorRooms)
+			}
+			if totalRooms < 10 {
+				t.Errorf("Total rooms across all floors = %d, want >=10", totalRooms)
+			}
+		})
+	}
+}
+
+func TestGuildHallDeterminism(t *testing.T) {
+	gen := NewGenerator()
+	seed := int64(42424)
+	params := procgen.GenerationParams{
+		GenreID: "fantasy",
+		Custom: map[string]interface{}{
+			"buildingType": TypeGuildHall,
+			"floors":       3,
+		},
+	}
+
+	// Generate twice with same seed
+	result1, err := gen.Generate(seed, params)
+	if err != nil {
+		t.Fatalf("first generation failed: %v", err)
+	}
+
+	result2, err := gen.Generate(seed, params)
+	if err != nil {
+		t.Fatalf("second generation failed: %v", err)
+	}
+
+	b1 := result1.(*Building)
+	b2 := result2.(*Building)
+
+	// Verify identical results
+	if b1.Width != b2.Width || b1.Height != b2.Height {
+		t.Errorf("Dimensions differ: (%d,%d) vs (%d,%d)", b1.Width, b1.Height, b2.Width, b2.Height)
+	}
+
+	if len(b1.Rooms) != len(b2.Rooms) {
+		t.Errorf("Room count differs: %d vs %d", len(b1.Rooms), len(b2.Rooms))
+	}
+
+	if len(b1.Doors) != len(b2.Doors) {
+		t.Errorf("Door count differs: %d vs %d", len(b1.Doors), len(b2.Doors))
+	}
+
+	if b1.Floors != b2.Floors {
+		t.Errorf("Floor count differs: %d vs %d", b1.Floors, b2.Floors)
+	}
+}
+
+func TestGuildHallValidation(t *testing.T) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		GenreID: "fantasy",
+		Custom: map[string]interface{}{
+			"buildingType": TypeGuildHall,
+			"floors":       4,
+		},
+	}
+
+	result, err := gen.Generate(54321, params)
+	if err != nil {
+		t.Fatalf("generation failed: %v", err)
+	}
+
+	// Validate should pass
+	err = gen.Validate(result)
+	if err != nil {
+		t.Errorf("Validate() failed: %v", err)
+	}
+}
+
+func BenchmarkGenerateGuildHall(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		GenreID: "fantasy",
+		Custom: map[string]interface{}{
+			"buildingType": TypeGuildHall,
+			"floors":       3,
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		gen.Generate(int64(i), params)
 	}
 }

@@ -29,6 +29,14 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 		}
 	}
 
+	// Extract floor count for multi-floor buildings
+	floors := 1
+	if val, ok := params.Custom["floors"]; ok {
+		if f, ok := val.(int); ok && f >= 1 && f <= 5 {
+			floors = f
+		}
+	}
+
 	// Determine architectural style based on genre and building type
 	style := GetStyleForGenreAndType(params.GenreID, buildingType, rng)
 
@@ -37,17 +45,19 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	// Create building
 	building := &Building{
-		Type:    buildingType,
-		Style:   style,
-		GenreID: params.GenreID,
-		Width:   width,
-		Height:  height,
-		Rooms:   []Room{},
-		Doors:   []Door{},
-		Windows: []Window{},
+		Type:       buildingType,
+		Style:      style,
+		GenreID:    params.GenreID,
+		Width:      width,
+		Height:     height,
+		Floors:     floors,
+		Rooms:      []Room{},
+		Doors:      []Door{},
+		Windows:    []Window{},
+		FloorRooms: make(map[int][]Room),
 	}
 
-	// Generate floor plan
+	// Generate floor plan (potentially multi-floor)
 	if err := g.generateFloorPlan(building, rng); err != nil {
 		return nil, fmt.Errorf("floor plan generation failed: %w", err)
 	}
@@ -89,6 +99,9 @@ func (g *Generator) generateDimensions(buildingType BuildingType, rng *rand.Rand
 	case TypeManor:
 		// Large and grand
 		return 20 + rng.Intn(20), 16 + rng.Intn(16) // 20-39 x 16-31 tiles
+	case TypeGuildHall:
+		// Very large: 32-64 tiles square
+		return 32 + rng.Intn(33), 32 + rng.Intn(33) // 32-64 tiles
 	default:
 		return 10, 10
 	}
@@ -111,6 +124,8 @@ func (g *Generator) generateFloorPlan(building *Building, rng *rand.Rand) error 
 		return g.generateTowerLayout(building, roomCount, rng)
 	case TypeManor:
 		return g.generateManorLayout(building, roomCount, rng)
+	case TypeGuildHall:
+		return g.generateGuildHallLayout(building, roomCount, rng)
 	default:
 		return g.generateHouseLayout(building, roomCount, rng)
 	}
@@ -149,6 +164,18 @@ func (g *Generator) calculateRoomCount(building *Building, rng *rand.Rand) int {
 		}
 		if bonusRooms > 4 {
 			bonusRooms = 4
+		}
+		return baseRooms + bonusRooms
+	case TypeGuildHall:
+		// 10-20 rooms per floor for guild halls
+		baseRooms := 10 * building.Floors
+		bonusRooms := (area - 1024) / 200 // Add room per 200 tiles above minimum
+		if bonusRooms < 0 {
+			bonusRooms = 0
+		}
+		maxBonus := 10 * building.Floors
+		if bonusRooms > maxBonus {
+			bonusRooms = maxBonus
 		}
 		return baseRooms + bonusRooms
 	default:
@@ -389,6 +416,102 @@ func (g *Generator) generateManorLayout(building *Building, roomCount int, rng *
 	return nil
 }
 
+// generateGuildHallLayout creates a multi-floor layout for guild halls
+func (g *Generator) generateGuildHallLayout(building *Building, roomCount int, rng *rand.Rand) error {
+	// Guild halls have multiple floors (1-5)
+	floorsCount := building.Floors
+	if floorsCount < 1 {
+		floorsCount = 1
+	}
+
+	// Distribute rooms across floors
+	roomsPerFloor := roomCount / floorsCount
+	if roomsPerFloor < 2 {
+		roomsPerFloor = 2
+	}
+
+	// Each floor uses a grid layout similar to manor
+	cols := 3 + rng.Intn(2) // 3-4 columns for guild halls
+	rows := (roomsPerFloor + cols - 1) / cols
+
+	roomWidth := building.Width / cols
+	roomHeight := building.Height / rows
+
+	// Generate rooms for each floor
+	for floor := 0; floor < floorsCount; floor++ {
+		floorRooms := []Room{}
+		roomIdx := 0
+
+		for row := 0; row < rows && roomIdx < roomsPerFloor; row++ {
+			for col := 0; col < cols && roomIdx < roomsPerFloor; col++ {
+				// Determine room type based on floor
+				roomType := RoomLiving
+				if floor == 0 && roomIdx == 0 {
+					// Ground floor entrance
+					roomType = RoomEntrance
+				} else if floor == floorsCount-1 {
+					// Top floor: meeting rooms and special rooms
+					roomType = RoomLiving
+				} else {
+					// Middle floors: varied rooms
+					switch roomIdx % 4 {
+					case 0:
+						roomType = RoomStorage
+					case 1:
+						roomType = RoomWorkshop
+					case 2:
+						roomType = RoomLiving
+					case 3:
+						roomType = RoomBedroom
+					}
+				}
+
+				room := Room{
+					X:      col * roomWidth,
+					Y:      row * roomHeight,
+					Width:  roomWidth,
+					Height: roomHeight,
+					Type:   roomType,
+				}
+
+				// For multi-floor buildings, only add ground floor to main Rooms list
+				// All floors go into FloorRooms for completeness
+				if floor == 0 {
+					building.Rooms = append(building.Rooms, room)
+				}
+				floorRooms = append(floorRooms, room)
+
+				// Add horizontal door (only to ground floor for validation)
+				if floor == 0 && col < cols-1 && roomIdx+1 < roomsPerFloor {
+					door := Door{
+						X:    (col + 1) * roomWidth,
+						Y:    row*roomHeight + roomHeight/2,
+						Type: DoorMetal, // Guild halls use metal doors
+					}
+					building.Doors = append(building.Doors, door)
+				}
+
+				// Add vertical door (only to ground floor for validation)
+				if floor == 0 && row < rows-1 && roomIdx+cols < roomsPerFloor {
+					door := Door{
+						X:    col*roomWidth + roomWidth/2,
+						Y:    (row + 1) * roomHeight,
+						Type: DoorMetal,
+					}
+					building.Doors = append(building.Doors, door)
+				}
+
+				roomIdx++
+			}
+		}
+
+		// Store rooms per floor
+		building.FloorRooms[floor] = floorRooms
+	}
+
+	return nil
+}
+
 // generateRoof selects an appropriate roof type
 func (g *Generator) generateRoof(buildingType BuildingType, style ArchitecturalStyle, rng *rand.Rand) RoofType {
 	switch buildingType {
@@ -397,6 +520,15 @@ func (g *Generator) generateRoof(buildingType BuildingType, style ArchitecturalS
 	case TypeManor:
 		if style == StyleMedieval || style == StyleGothic {
 			return RoofGabled
+		}
+		return RoofHipped
+	case TypeGuildHall:
+		// Guild halls use imposing roofs
+		if style == StyleMedieval || style == StyleGothic || style == StyleElven {
+			return RoofGabled
+		}
+		if style == StyleCrystalline || style == StyleGeometric {
+			return RoofDomed
 		}
 		return RoofHipped
 	case TypeStorage:

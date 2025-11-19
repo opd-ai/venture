@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=30
+ITER=200
 
 fix() { 
     go test -race ./...
@@ -89,6 +89,7 @@ dev() {
 fix
 
 for i in $(seq 1 $ITER); do
+    log
     dev
     fix
 done

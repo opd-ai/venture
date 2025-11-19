@@ -28,6 +28,33 @@ checkin() {
     fi
 }
 
+auto() {
+    echo "iteration started - Maintenance Phase 3: Auto check."
+    copilot -p "/delegate $(cat docs/AUTO.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Auto check completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
+play() {
+    echo "iteration started - Maintenance Phase 4: Resolution check."
+    copilot -p "/delegate $(cat docs/PLAY.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Resolution check completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
+log() {
+    echo "iteration started - Maintenance Phase 5: Logging."
+    copilot -p "/delegate $(cat docs/LOG.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Logging completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
 dev() {
     echo "iteration started - Maintenance phase 1: Functional Breakdown."
     copilot -p "/delegate $(cat docs/BREAKDOWN.md)" --allow-all-tools --deny-tool sudo
@@ -57,20 +84,6 @@ dev() {
     else
         echo "All directories have AUDIT.md files. Skipping Audit phase."
     fi
-
-    echo "iteration started - Maintenance Phase 3: Auto check."
-    copilot -p "/delegate $(cat docs/AUTO.md)" --allow-all-tools --deny-tool sudo
-    make fmt
-    echo "Auto check completed, sleeping for 1 minute..."
-    sleep 1m
-    checkin
-
-    echo "iteration started - Maintenance Phase 4: Resolution check."
-    copilot -p "/delegate $(cat docs/PLAY.md)" --allow-all-tools --deny-tool sudo
-    make fmt
-    echo "Resolution check completed, sleeping for 1 minute..."
-    sleep 1m
-    checkin
 }
 
 fix

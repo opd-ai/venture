@@ -264,12 +264,30 @@ func triangleAABBIntersection(
 	minX, minY, maxX, maxY float64, // AABB bounds
 ) bool {
 	// Check if AABB is degenerate (zero or near-zero size)
-	// For points or very small AABBs, use inclusive checks
 	epsilon := 1e-10
 	isPoint := (maxX-minX < epsilon) && (maxY-minY < epsilon)
 
-	// Test 1: Check if any triangle vertex is strictly inside the AABB (not just touching boundary)
-	// Phase 11.1 Week 3: Use strict inequality to exclude adjacent (touching) shapes
+	// Test 1: Check if any triangle vertex is inside the AABB
+	if checkTriangleVerticesInAABB(t1X, t1Y, t2X, t2Y, t3X, t3Y, minX, minY, maxX, maxY) {
+		return true
+	}
+
+	// Test 2: Check if any AABB corner is inside the triangle
+	if checkAABBCornersInTriangle(isPoint, minX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+
+	// Test 3: Check if any triangle edge intersects any AABB edge
+	if checkTriangleAABBEdgeIntersections(minX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+
+	return false
+}
+
+// checkTriangleVerticesInAABB checks if any triangle vertex is strictly inside the AABB.
+// Phase 11.1 Week 3: Use strict inequality to exclude adjacent (touching) shapes.
+func checkTriangleVerticesInAABB(t1X, t1Y, t2X, t2Y, t3X, t3Y, minX, minY, maxX, maxY float64) bool {
 	if pointInAABBStrict(t1X, t1Y, minX, minY, maxX, maxY) {
 		return true
 	}
@@ -279,81 +297,73 @@ func triangleAABBIntersection(
 	if pointInAABBStrict(t3X, t3Y, minX, minY, maxX, maxY) {
 		return true
 	}
+	return false
+}
 
-	// Test 2: Check if any AABB corner is inside the triangle
-	// For points (zero-size AABBs), use non-strict to catch points on edges
-	// For regular AABBs, use strict to exclude adjacent touching
+// checkAABBCornersInTriangle checks if any AABB corner is inside the triangle.
+// For point AABBs, uses non-strict checks to catch points on edges.
+// For regular AABBs, uses strict checks to exclude adjacent touching shapes.
+func checkAABBCornersInTriangle(isPoint bool, minX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y float64) bool {
 	if isPoint {
 		// Point AABB: check if point is in triangle (including boundary)
-		if pointInTriangle(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-			return true
-		}
-	} else {
-		// Regular AABB: check if corners are strictly inside triangle
-		if pointInTriangleStrict(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-			return true
-		}
-		if pointInTriangleStrict(maxX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-			return true
-		}
-		if pointInTriangleStrict(minX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-			return true
-		}
-		if pointInTriangleStrict(maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
-			return true
-		}
+		return pointInTriangle(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y)
 	}
 
-	// Test 3: Check if any triangle edge intersects any AABB edge
-	// Phase 11.1 Week 3: Use strict intersection to exclude adjacent (touching) shapes
-	// AABB edges: top, right, bottom, left
-	// Triangle edges: (t1-t2), (t2-t3), (t3-t1)
+	// Regular AABB: check if corners are strictly inside triangle
+	if pointInTriangleStrict(minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if pointInTriangleStrict(maxX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if pointInTriangleStrict(minX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if pointInTriangleStrict(maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	return false
+}
 
+// checkTriangleAABBEdgeIntersections checks if any triangle edge intersects any AABB edge.
+// Phase 11.1 Week 3: Use strict intersection to exclude adjacent (touching) shapes.
+// Tests all 12 combinations (4 AABB edges × 3 triangle edges).
+func checkTriangleAABBEdgeIntersections(minX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y float64) bool {
 	// Top edge of AABB vs all triangle edges
-	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t1X, t1Y, t2X, t2Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(minX, minY, maxX, minY, t3X, t3Y, t1X, t1Y) {
+	if checkAABBEdgeVsTriangleEdges(minX, minY, maxX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
 
 	// Right edge of AABB vs all triangle edges
-	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(maxX, minY, maxX, maxY, t3X, t3Y, t1X, t1Y) {
+	if checkAABBEdgeVsTriangleEdges(maxX, minY, maxX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
 
 	// Bottom edge of AABB vs all triangle edges
-	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t1X, t1Y, t2X, t2Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(maxX, maxY, minX, maxY, t3X, t3Y, t1X, t1Y) {
+	if checkAABBEdgeVsTriangleEdges(maxX, maxY, minX, maxY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
 
 	// Left edge of AABB vs all triangle edges
-	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t1X, t1Y, t2X, t2Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t2X, t2Y, t3X, t3Y) {
-		return true
-	}
-	if lineSegmentsIntersectStrict(minX, maxY, minX, minY, t3X, t3Y, t1X, t1Y) {
+	if checkAABBEdgeVsTriangleEdges(minX, maxY, minX, minY, t1X, t1Y, t2X, t2Y, t3X, t3Y) {
 		return true
 	}
 
-	// No intersection found
+	return false
+}
+
+// checkAABBEdgeVsTriangleEdges checks if a single AABB edge intersects any triangle edge.
+// Tests the given AABB edge against all three triangle edges.
+func checkAABBEdgeVsTriangleEdges(edgeX1, edgeY1, edgeX2, edgeY2, t1X, t1Y, t2X, t2Y, t3X, t3Y float64) bool {
+	if lineSegmentsIntersectStrict(edgeX1, edgeY1, edgeX2, edgeY2, t1X, t1Y, t2X, t2Y) {
+		return true
+	}
+	if lineSegmentsIntersectStrict(edgeX1, edgeY1, edgeX2, edgeY2, t2X, t2Y, t3X, t3Y) {
+		return true
+	}
+	if lineSegmentsIntersectStrict(edgeX1, edgeY1, edgeX2, edgeY2, t3X, t3Y, t1X, t1Y) {
+		return true
+	}
 	return false
 }
 

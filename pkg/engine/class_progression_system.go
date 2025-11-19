@@ -269,82 +269,125 @@ func (cps *ClassProgressionSystem) UnlockSecondClass(entity *Entity, secondClass
 // LevelUpSecondaryClass increases the secondary class level.
 // Phase 25.2: Dual-classing progression.
 func (cps *ClassProgressionSystem) LevelUpSecondaryClass(entity *Entity) bool {
-	classComp, ok := entity.GetComponent("class_progression")
-	if !ok || classComp == nil {
-		return false
-	}
-
-	progression := classComp.(*ClassProgressionComponent)
-
-	// Must have a secondary class
-	if progression.SecondaryClass == nil {
+	progression, ok := cps.validateSecondaryClassProgression(entity)
+	if !ok {
 		return false
 	}
 
 	progression.SecondaryLevel++
 
-	// Apply stat growth from secondary class (scaled by 50% to avoid overpowered builds)
 	growth := GetClassStatGrowth(*progression.SecondaryClass)
 	if growth != nil {
-		// Get current stats
-		var baseHP, baseMana, baseAttack, baseDefense, baseMagicPower float64
-		if healthComp, ok := entity.GetComponent("health"); ok {
-			if health, ok := healthComp.(*HealthComponent); ok {
-				baseHP = health.Max
-			}
-		}
-		if manaComp, ok := entity.GetComponent("mana"); ok {
-			if mana, ok := manaComp.(*ManaComponent); ok {
-				baseMana = float64(mana.Max)
-			}
-		}
-		if statsComp, ok := entity.GetComponent("stats"); ok {
-			if stats, ok := statsComp.(*StatsComponent); ok {
-				baseAttack = stats.Attack
-				baseDefense = stats.Defense
-				baseMagicPower = stats.MagicPower
-			}
-		}
-
-		// Calculate growth at 50% effectiveness
-		hpGrowth := (growth.CalculateHP(baseHP, progression.SecondaryLevel) - baseHP) * 0.5
-		manaGrowth := (growth.CalculateMana(baseMana, progression.SecondaryLevel) - baseMana) * 0.5
-		attackGrowth := (growth.CalculateAttack(baseAttack, progression.SecondaryLevel) - baseAttack) * 0.5
-		defenseGrowth := (growth.CalculateDefense(baseDefense, progression.SecondaryLevel) - baseDefense) * 0.5
-		magicGrowth := (growth.CalculateMagicPower(baseMagicPower, progression.SecondaryLevel) - baseMagicPower) * 0.5
-
-		// Apply growth
-		if healthComp, ok := entity.GetComponent("health"); ok {
-			if health, ok := healthComp.(*HealthComponent); ok {
-				healthPercent := health.Current / health.Max
-				health.Max += hpGrowth
-				health.Current = health.Max * healthPercent
-			}
-		}
-		if manaComp, ok := entity.GetComponent("mana"); ok {
-			if mana, ok := manaComp.(*ManaComponent); ok {
-				if mana.Max > 0 {
-					manaPercent := float64(mana.Current) / float64(mana.Max)
-					mana.Max += int(manaGrowth)
-					mana.Current = int(float64(mana.Max) * manaPercent)
-				}
-			}
-		}
-		if statsComp, ok := entity.GetComponent("stats"); ok {
-			if stats, ok := statsComp.(*StatsComponent); ok {
-				stats.Attack += attackGrowth
-				stats.Defense += defenseGrowth
-				stats.MagicPower += magicGrowth
-			}
-		}
-		if attackComp, ok := entity.GetComponent("attack"); ok {
-			if attack, ok := attackComp.(*AttackComponent); ok {
-				attack.Damage += attackGrowth
-			}
-		}
+		baseStats := cps.extractCurrentStats(entity)
+		statGrowth := cps.calculateSecondaryGrowth(growth, baseStats, progression.SecondaryLevel)
+		cps.applySecondaryGrowth(entity, statGrowth)
 	}
 
 	return true
+}
+
+// validateSecondaryClassProgression checks if entity can level up secondary class.
+// Returns the progression component if valid, or false if validation fails.
+func (cps *ClassProgressionSystem) validateSecondaryClassProgression(entity *Entity) (*ClassProgressionComponent, bool) {
+	classComp, ok := entity.GetComponent("class_progression")
+	if !ok || classComp == nil {
+		return nil, false
+	}
+
+	progression := classComp.(*ClassProgressionComponent)
+	if progression.SecondaryClass == nil {
+		return nil, false
+	}
+
+	return progression, true
+}
+
+// extractCurrentStats retrieves current stat values from entity components.
+func (cps *ClassProgressionSystem) extractCurrentStats(entity *Entity) statValues {
+	stats := statValues{}
+
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			stats.hp = health.Max
+		}
+	}
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			stats.mana = float64(mana.Max)
+		}
+	}
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if s, ok := statsComp.(*StatsComponent); ok {
+			stats.attack = s.Attack
+			stats.defense = s.Defense
+			stats.magicPower = s.MagicPower
+		}
+	}
+
+	return stats
+}
+
+// calculateSecondaryGrowth computes stat growth at 50% effectiveness for secondary class.
+func (cps *ClassProgressionSystem) calculateSecondaryGrowth(growth *StatGrowth, base statValues, level int) statValues {
+	return statValues{
+		hp:         (growth.CalculateHP(base.hp, level) - base.hp) * 0.5,
+		mana:       (growth.CalculateMana(base.mana, level) - base.mana) * 0.5,
+		attack:     (growth.CalculateAttack(base.attack, level) - base.attack) * 0.5,
+		defense:    (growth.CalculateDefense(base.defense, level) - base.defense) * 0.5,
+		magicPower: (growth.CalculateMagicPower(base.magicPower, level) - base.magicPower) * 0.5,
+	}
+}
+
+// applySecondaryGrowth applies stat growth increases to entity components.
+func (cps *ClassProgressionSystem) applySecondaryGrowth(entity *Entity, growth statValues) {
+	cps.applyHealthGrowth(entity, growth.hp)
+	cps.applyManaGrowth(entity, growth.mana)
+	cps.applyStatGrowth(entity, growth)
+	cps.applyAttackGrowth(entity, growth.attack)
+}
+
+// applyHealthGrowth increases max health while preserving current health percentage.
+func (cps *ClassProgressionSystem) applyHealthGrowth(entity *Entity, hpGrowth float64) {
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			healthPercent := health.Current / health.Max
+			health.Max += hpGrowth
+			health.Current = health.Max * healthPercent
+		}
+	}
+}
+
+// applyManaGrowth increases max mana while preserving current mana percentage.
+func (cps *ClassProgressionSystem) applyManaGrowth(entity *Entity, manaGrowth float64) {
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			if mana.Max > 0 {
+				manaPercent := float64(mana.Current) / float64(mana.Max)
+				mana.Max += int(manaGrowth)
+				mana.Current = int(float64(mana.Max) * manaPercent)
+			}
+		}
+	}
+}
+
+// applyStatGrowth increases attack, defense, and magic power stats.
+func (cps *ClassProgressionSystem) applyStatGrowth(entity *Entity, growth statValues) {
+	if statsComp, ok := entity.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			stats.Attack += growth.attack
+			stats.Defense += growth.defense
+			stats.MagicPower += growth.magicPower
+		}
+	}
+}
+
+// applyAttackGrowth increases attack component damage.
+func (cps *ClassProgressionSystem) applyAttackGrowth(entity *Entity, attackGrowth float64) {
+	if attackComp, ok := entity.GetComponent("attack"); ok {
+		if attack, ok := attackComp.(*AttackComponent); ok {
+			attack.Damage += attackGrowth
+		}
+	}
 }
 
 // ChooseSecondarySpecialization sets the secondary class specialization.

@@ -39,91 +39,117 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	for _, entity := range entities {
-		// Collect all status effect components
-		var effectsToRemove []Component
-
-		for _, comp := range entity.Components {
-			if effect, ok := comp.(*StatusEffectComponent); ok {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":     entity.ID,
-						"effect_type":   effect.EffectType,
-						"magnitude":     effect.Magnitude,
-						"duration":      effect.Duration,
-						"tick_interval": effect.TickInterval,
-					}).Debug("Processing status effect")
-				}
-
-				// Update effect duration and check for ticks
-				ticked := effect.Update(deltaTime)
-
-				if effect.IsExpired() {
-					if s.logger != nil {
-						s.logger.WithFields(logrus.Fields{
-							"entity_id":   entity.ID,
-							"effect_type": effect.EffectType,
-						}).Debug("Status effect expired")
-					}
-					// Remove expired effects
-					effectsToRemove = append(effectsToRemove, effect)
-					s.removeEffectModifiers(entity, effect)
-				} else if ticked {
-					if s.logger != nil {
-						s.logger.WithFields(logrus.Fields{
-							"entity_id":   entity.ID,
-							"effect_type": effect.EffectType,
-							"magnitude":   effect.Magnitude,
-						}).Debug("Applying periodic effect")
-					}
-					// Apply periodic effect
-					s.applyPeriodicEffect(entity, effect)
-				}
-			}
-		}
-
-		// Remove expired effects and return to pool
-		for _, effect := range effectsToRemove {
-			entity.RemoveComponent(effect.Type())
-			// Return to pool to reduce GC pressure
-			if statusEffect, ok := effect.(*StatusEffectComponent); ok {
-				ReleaseStatusEffect(statusEffect)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":   entity.ID,
-						"effect_type": statusEffect.EffectType,
-					}).Debug("Status effect removed and returned to pool")
-				}
-			}
-		}
-
-		// Update shield duration
-		if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
-			shield, ok := shieldComp.(*ShieldComponent)
-			if !ok {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":      entity.ID,
-						"component_type": "shield",
-					}).Warn("Failed to type assert shield component")
-				}
-				continue
-			}
-			shield.Update(deltaTime)
-
-			// Remove depleted shields
-			if !shield.IsActive() {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id": entity.ID,
-					}).Debug("Shield depleted, removing component")
-				}
-				entity.RemoveComponent("shield")
-			}
-		}
+		effectsToRemove := s.processStatusEffects(entity, deltaTime)
+		s.removeExpiredEffects(entity, effectsToRemove)
+		s.updateShieldComponent(entity, deltaTime)
 	}
 
 	if s.logger != nil {
 		s.logger.Debug("Status effect system update completed")
+	}
+}
+
+// processStatusEffects processes status effects for an entity and returns expired effects.
+func (s *StatusEffectSystem) processStatusEffects(entity *Entity, deltaTime float64) []Component {
+	var effectsToRemove []Component
+
+	for _, comp := range entity.Components {
+		effect, ok := comp.(*StatusEffectComponent)
+		if !ok {
+			continue
+		}
+
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":     entity.ID,
+				"effect_type":   effect.EffectType,
+				"magnitude":     effect.Magnitude,
+				"duration":      effect.Duration,
+				"tick_interval": effect.TickInterval,
+			}).Debug("Processing status effect")
+		}
+
+		ticked := effect.Update(deltaTime)
+
+		if effect.IsExpired() {
+			s.handleExpiredEffect(entity, effect, &effectsToRemove)
+		} else if ticked {
+			s.handleTickedEffect(entity, effect)
+		}
+	}
+
+	return effectsToRemove
+}
+
+// handleExpiredEffect handles an expired status effect.
+func (s *StatusEffectSystem) handleExpiredEffect(entity *Entity, effect *StatusEffectComponent, effectsToRemove *[]Component) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"effect_type": effect.EffectType,
+		}).Debug("Status effect expired")
+	}
+	*effectsToRemove = append(*effectsToRemove, effect)
+	s.removeEffectModifiers(entity, effect)
+}
+
+// handleTickedEffect handles a ticked status effect.
+func (s *StatusEffectSystem) handleTickedEffect(entity *Entity, effect *StatusEffectComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"effect_type": effect.EffectType,
+			"magnitude":   effect.Magnitude,
+		}).Debug("Applying periodic effect")
+	}
+	s.applyPeriodicEffect(entity, effect)
+}
+
+// removeExpiredEffects removes expired effects from entity and returns them to pool.
+func (s *StatusEffectSystem) removeExpiredEffects(entity *Entity, effectsToRemove []Component) {
+	for _, effect := range effectsToRemove {
+		entity.RemoveComponent(effect.Type())
+		statusEffect, ok := effect.(*StatusEffectComponent)
+		if !ok {
+			continue
+		}
+		ReleaseStatusEffect(statusEffect)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":   entity.ID,
+				"effect_type": statusEffect.EffectType,
+			}).Debug("Status effect removed and returned to pool")
+		}
+	}
+}
+
+// updateShieldComponent updates the shield component for an entity.
+func (s *StatusEffectSystem) updateShieldComponent(entity *Entity, deltaTime float64) {
+	shieldComp, hasShield := entity.GetComponent("shield")
+	if !hasShield {
+		return
+	}
+
+	shield, ok := shieldComp.(*ShieldComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "shield",
+			}).Warn("Failed to type assert shield component")
+		}
+		return
+	}
+
+	shield.Update(deltaTime)
+
+	if !shield.IsActive() {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Shield depleted, removing component")
+		}
+		entity.RemoveComponent("shield")
 	}
 }
 

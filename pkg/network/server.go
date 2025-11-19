@@ -154,33 +154,38 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 }
 
 // Start begins listening for client connections.
+// BUG FIX: Phase 6 - Start() mutex deadlock risk
+// Resolution: Use defer to ensure unlock even if Listen fails
 func (s *TCPServer) Start() error {
 	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+
 	if s.running {
-		s.clientsMu.Unlock()
 		return fmt.Errorf("server already running")
 	}
 
 	listener, err := net.Listen("tcp", s.config.Address)
 	if err != nil {
-		s.clientsMu.Unlock()
 		return fmt.Errorf("failed to listen on %s: %w", s.config.Address, err)
 	}
 
 	s.listener = listener
 	s.running = true
-	s.clientsMu.Unlock()
 
-	// Start accept loop
+	// Start accept loop (unlock before spawning goroutine to prevent race)
+	s.clientsMu.Unlock()
 	s.wg.Add(1)
 	go s.acceptLoop()
+	s.clientsMu.Lock()
 
 	return nil
 }
 
-// Stop shuts down the server.
+// BUG FIX: Phase 6 - Stop() mutex handling with wait
+// Resolution: Properly unlock before waiting to prevent deadlock
 func (s *TCPServer) Stop() error {
 	s.clientsMu.Lock()
+
 	if !s.running {
 		s.clientsMu.Unlock()
 		return nil

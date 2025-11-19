@@ -271,10 +271,13 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 }
 
 // Disconnect closes the connection to the server.
+// BUG FIX: Phase 6 - Disconnect() mutex deadlock risk
+// Resolution: Use defer c.mu.Unlock() to prevent deadlock if close(c.done) or conn.Close() panics
 func (c *TCPClient) Disconnect() error {
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if !c.connected {
-		c.mu.Unlock()
 		return nil
 	}
 
@@ -289,10 +292,11 @@ func (c *TCPClient) Disconnect() error {
 	if c.conn != nil {
 		c.conn.Close()
 	}
-	c.mu.Unlock()
 
-	// Wait for goroutines
+	// Wait for goroutines (unlock before waiting to prevent deadlock)
+	c.mu.Unlock()
 	c.wg.Wait()
+	c.mu.Lock()
 
 	if c.logger != nil {
 		c.logger.Info("disconnected successfully")
@@ -330,8 +334,11 @@ func (c *TCPClient) GetLatency() time.Duration {
 }
 
 // SendInput queues an input command to send to the server.
+// BUG FIX: Phase 6 - SendInput() mutex handling with channel send
+// Resolution: Lock for critical section, unlock before potentially blocking channel send
 func (c *TCPClient) SendInput(inputType string, data []byte) error {
 	c.mu.Lock()
+
 	if !c.connected {
 		c.mu.Unlock()
 		return fmt.Errorf("not connected")

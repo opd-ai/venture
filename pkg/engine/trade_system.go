@@ -163,44 +163,79 @@ func (ts *TradeSystem) RejectTrade(recipientID uint64) error {
 // CommitTrade executes an accepted trade with full validation and atomic transfer.
 // This is the server-authoritative commit phase.
 func (ts *TradeSystem) CommitTrade(proposalEntityID uint64) error {
+	proposal, err := ts.validateTradeCommit(proposalEntityID)
+	if err != nil {
+		return err
+	}
+
+	proposer, recipient, proposerInv, recipientInv, err := ts.validateTradeParticipants(proposal)
+	if err != nil {
+		return err
+	}
+
+	offeredItems, requestedItems, err := ts.executeAtomicTransfer(proposal, proposerInv, recipientInv)
+	if err != nil {
+		return err
+	}
+
+	ts.transferItemsToNewOwners(offeredItems, requestedItems, proposerInv, recipientInv)
+	ts.updateTradeRecords(proposal, proposer, recipient)
+
+	proposal.Status = "committed"
+	ts.clearTrade(proposal.ProposerID, proposal.RecipientID)
+
+	return nil
+}
+
+// validateTradeCommit validates the initial trade proposal and returns it if valid.
+func (ts *TradeSystem) validateTradeCommit(proposalEntityID uint64) (*TradeProposal, error) {
 	entity, _ := ts.world.GetEntity(proposalEntityID)
 	if entity == nil {
-		return fmt.Errorf("invalid entity ID")
+		return nil, fmt.Errorf("invalid entity ID")
 	}
 
 	tradeComp := ts.getOrCreateTradeComponent(entity)
 	if tradeComp.ActiveTrade == nil {
-		return fmt.Errorf("no active trade")
+		return nil, fmt.Errorf("no active trade")
 	}
 
 	proposal := tradeComp.ActiveTrade
-
 	if proposal.Status != "accepted" {
-		return fmt.Errorf("trade not accepted: %s", proposal.Status)
+		return nil, fmt.Errorf("trade not accepted: %s", proposal.Status)
 	}
 
-	// Get both entities
+	return proposal, nil
+}
+
+// validateTradeParticipants validates entities, proximity, inventories, and item ownership.
+func (ts *TradeSystem) validateTradeParticipants(proposal *TradeProposal) (*Entity, *Entity, *InventoryComponent, *InventoryComponent, error) {
 	proposer, _ := ts.world.GetEntity(proposal.ProposerID)
 	recipient, _ := ts.world.GetEntity(proposal.RecipientID)
 
 	if proposer == nil || recipient == nil {
-		return ts.rollbackTrade(proposal, "entity no longer exists")
+		return nil, nil, nil, nil, ts.rollbackTrade(proposal, "entity no longer exists")
 	}
 
-	// Revalidate proximity
 	if !ts.checkProximity(proposer, recipient, ActiveProximity) {
-		return ts.rollbackTrade(proposal, fmt.Sprintf("proximity violated (>%.1f tiles)", ActiveProximity))
+		return nil, nil, nil, nil, ts.rollbackTrade(proposal, fmt.Sprintf("proximity violated (>%.1f tiles)", ActiveProximity))
 	}
 
-	// Get inventories
 	proposerInv := ts.getInventoryComponent(proposer)
 	recipientInv := ts.getInventoryComponent(recipient)
 
 	if proposerInv == nil || recipientInv == nil {
-		return ts.rollbackTrade(proposal, "inventory missing")
+		return nil, nil, nil, nil, ts.rollbackTrade(proposal, "inventory missing")
 	}
 
-	// Revalidate ownership
+	if err := ts.validateItemOwnership(proposal, proposerInv, recipientInv); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return proposer, recipient, proposerInv, recipientInv, nil
+}
+
+// validateItemOwnership verifies that both parties still own their items.
+func (ts *TradeSystem) validateItemOwnership(proposal *TradeProposal, proposerInv, recipientInv *InventoryComponent) error {
 	for _, itemID := range proposal.OfferedItems {
 		if !ts.ownsItem(proposerInv, itemID) {
 			return ts.rollbackTrade(proposal, fmt.Sprintf("proposer no longer owns: %s", itemID))
@@ -213,62 +248,66 @@ func (ts *TradeSystem) CommitTrade(proposalEntityID uint64) error {
 		}
 	}
 
-	// Atomic transfer: Remove all items first, then add
-	// This prevents duplication if the transfer fails partway
+	return nil
+}
+
+// executeAtomicTransfer removes items from both inventories atomically with rollback on failure.
+func (ts *TradeSystem) executeAtomicTransfer(proposal *TradeProposal, proposerInv, recipientInv *InventoryComponent) ([]*item.Item, []*item.Item, error) {
 	var offeredItems []*item.Item
 	var requestedItems []*item.Item
 
-	// Remove offered items from proposer
 	for _, itemID := range proposal.OfferedItems {
 		itm := ts.removeItemByID(proposerInv, itemID)
 		if itm == nil {
-			// Rollback: re-add previously removed items
-			for _, prevItem := range offeredItems {
-				proposerInv.AddItem(prevItem)
-			}
-			return ts.rollbackTrade(proposal, fmt.Sprintf("failed to remove offered item: %s", itemID))
+			ts.rollbackItemRemoval(offeredItems, proposerInv)
+			return nil, nil, ts.rollbackTrade(proposal, fmt.Sprintf("failed to remove offered item: %s", itemID))
 		}
 		offeredItems = append(offeredItems, itm)
 	}
 
-	// Remove requested items from recipient
 	for _, itemID := range proposal.RequestedItems {
 		itm := ts.removeItemByID(recipientInv, itemID)
 		if itm == nil {
-			// Rollback: re-add all removed items
-			for _, prevItem := range offeredItems {
-				proposerInv.AddItem(prevItem)
-			}
-			for _, prevItem := range requestedItems {
-				recipientInv.AddItem(prevItem)
-			}
-			return ts.rollbackTrade(proposal, fmt.Sprintf("failed to remove requested item: %s", itemID))
+			ts.rollbackItemRemoval(offeredItems, proposerInv)
+			ts.rollbackItemRemoval(requestedItems, recipientInv)
+			return nil, nil, ts.rollbackTrade(proposal, fmt.Sprintf("failed to remove requested item: %s", itemID))
 		}
 		requestedItems = append(requestedItems, itm)
 	}
 
-	// Add items to new owners
+	return offeredItems, requestedItems, nil
+}
+
+// rollbackItemRemoval restores items to an inventory during rollback.
+func (ts *TradeSystem) rollbackItemRemoval(items []*item.Item, inv *InventoryComponent) {
+	for _, prevItem := range items {
+		inv.AddItem(prevItem)
+	}
+}
+
+// transferItemsToNewOwners adds items to their new owners' inventories.
+func (ts *TradeSystem) transferItemsToNewOwners(offeredItems, requestedItems []*item.Item, proposerInv, recipientInv *InventoryComponent) {
 	for _, itm := range offeredItems {
 		if !recipientInv.AddItem(itm) {
-			// This should not happen if validation passed, but handle it
-			proposerInv.AddItem(itm) // Return to original owner
+			proposerInv.AddItem(itm)
 		}
 	}
 
 	for _, itm := range requestedItems {
 		if !proposerInv.AddItem(itm) {
-			recipientInv.AddItem(itm) // Return to original owner
+			recipientInv.AddItem(itm)
 		}
 	}
+}
 
-	// Update trust scores
+// updateTradeRecords updates trust scores and trade history for both participants.
+func (ts *TradeSystem) updateTradeRecords(proposal *TradeProposal, proposer, recipient *Entity) {
 	proposerTrade := ts.getOrCreateTradeComponent(proposer)
 	recipientTrade := ts.getOrCreateTradeComponent(recipient)
 
 	proposerTrade.TrustScore = clamp(proposerTrade.TrustScore+TrustIncrement, 0.0, 1.0)
 	recipientTrade.TrustScore = clamp(recipientTrade.TrustScore+TrustIncrement, 0.0, 1.0)
 
-	// Record trade history
 	record := TradeRecord{
 		Timestamp: time.Now().Unix(),
 		PartnerID: proposal.RecipientID,
@@ -282,12 +321,6 @@ func (ts *TradeSystem) CommitTrade(proposalEntityID uint64) error {
 		Success:   true,
 	}
 	recipientTrade.TradeHistory = append(recipientTrade.TradeHistory, recipientRecord)
-
-	// Mark as committed and clear
-	proposal.Status = "committed"
-	ts.clearTrade(proposal.ProposerID, proposal.RecipientID)
-
-	return nil
 }
 
 // CancelTrade cancels an active trade (can be called by either party).

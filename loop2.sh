@@ -4,6 +4,8 @@
 # (must be a positive integer)
 ITER=200
 
+alias copilot="yes n | copilot"
+
 fix() { 
     go test -race ./...
     # if the tests failed, run this script only once to attempt to fix the issues

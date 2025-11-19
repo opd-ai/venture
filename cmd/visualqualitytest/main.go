@@ -37,12 +37,41 @@ type QualityMetrics struct {
 func main() {
 	flag.Parse()
 
-	// Initialize logger
+	logger := initializeLogger()
+	metrics := initializeMetrics()
+	genreList := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	logTestConfiguration(logger)
+
+	spriteGen, tileGen, paletteGen := initializeGenerators(logger)
+
+	testSpriteGeneration(logger, metrics, spriteGen, paletteGen, genreList)
+	testTileGeneration(logger, metrics, tileGen, genreList)
+	calculateAverageGenTime(metrics)
+
+	displayResults(logger, metrics, genreList)
+}
+
+// initializeLogger creates and configures the logger instance
+func initializeLogger() *logrus.Logger {
 	logger := logging.TestUtilityLogger("visualqualitytest")
 	if *verbose {
 		logger.SetLevel(logrus.DebugLevel)
 	}
+	return logger
+}
 
+// initializeMetrics creates a new QualityMetrics instance with initialized maps
+func initializeMetrics() *QualityMetrics {
+	return &QualityMetrics{
+		SpritesByGenre:  make(map[string]int),
+		TilesByType:     make(map[tiles.TileType]int),
+		PalettesByGenre: make(map[string]int),
+	}
+}
+
+// logTestConfiguration logs the test configuration details
+func logTestConfiguration(logger *logrus.Logger) {
 	logger.Info("=== V3.0 Visual Quality Validation ===")
 	logger.WithFields(logrus.Fields{
 		"sprites": *spriteCount,
@@ -50,24 +79,19 @@ func main() {
 		"genres":  *genres,
 		"seed":    *seed,
 	}).Info("test configuration")
+}
 
-	metrics := &QualityMetrics{
-		SpritesByGenre:  make(map[string]int),
-		TilesByType:     make(map[tiles.TileType]int),
-		PalettesByGenre: make(map[string]int),
-	}
-
-	// Initialize generators
+// initializeGenerators creates all required generator instances
+func initializeGenerators(logger *logrus.Logger) (*sprites.Generator, *tiles.Generator, *palette.Generator) {
 	spriteGen := sprites.NewGenerator()
 	tileGen := tiles.NewGenerator()
 	paletteGen := palette.NewGenerator()
-
 	logger.Info("generators initialized")
+	return spriteGen, tileGen, paletteGen
+}
 
-	// Parse genres
-	genreList := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
-
-	// Test sprite generation for all genres and entity types
+// testSpriteGeneration tests sprite generation for all genres and types
+func testSpriteGeneration(logger *logrus.Logger, metrics *QualityMetrics, spriteGen *sprites.Generator, paletteGen *palette.Generator, genreList []string) {
 	logger.Info("=== Testing Sprite Generation ===")
 	spriteTypes := []sprites.SpriteType{
 		sprites.SpriteEntity,
@@ -79,57 +103,68 @@ func main() {
 
 	for _, genre := range genreList {
 		logger.WithField("genre", genre).Info("testing sprite generation")
+		testPaletteForGenre(logger, metrics, paletteGen, genre)
+		testSpritesForGenre(logger, metrics, spriteGen, genre, spriteTypes)
+	}
+}
 
-		// Test palette generation
-		startTime := time.Now()
-		_, err := paletteGen.Generate(genre, *seed)
-		genTime := time.Since(startTime)
-		metrics.TotalGenTime += genTime
+// testPaletteForGenre tests palette generation for a specific genre
+func testPaletteForGenre(logger *logrus.Logger, metrics *QualityMetrics, paletteGen *palette.Generator, genre string) {
+	startTime := time.Now()
+	_, err := paletteGen.Generate(genre, *seed)
+	genTime := time.Since(startTime)
+	metrics.TotalGenTime += genTime
 
-		if err != nil {
-			logger.WithError(err).WithField("genre", genre).Warn("palette generation failed")
-			metrics.GenerationErrors++
-		} else {
-			metrics.PalettesByGenre[genre]++
-		}
+	if err != nil {
+		logger.WithError(err).WithField("genre", genre).Warn("palette generation failed")
+		metrics.GenerationErrors++
+	} else {
+		metrics.PalettesByGenre[genre]++
+	}
+}
 
-		// Test sprite generation for each type
-		for _, spriteType := range spriteTypes {
-			typeName := spriteType.String()
-
-			for i := 0; i < *spriteCount/len(spriteTypes); i++ {
-				spriteSeed := *seed + int64(i*1000)
-
-				config := sprites.Config{
-					Type:       spriteType,
-					Width:      32,
-					Height:     32,
-					Seed:       spriteSeed,
-					GenreID:    genre,
-					Complexity: 0.7,
-					Variation:  i % 10,
-				}
-
-				startTime := time.Now()
-				_, err := spriteGen.Generate(config)
-				genTime := time.Since(startTime)
-				metrics.TotalGenTime += genTime
-
-				if err != nil {
-					logger.WithError(err).WithFields(logrus.Fields{
-						"genre": genre,
-						"type":  typeName,
-					}).Warn("sprite generation failed")
-					metrics.GenerationErrors++
-				} else {
-					metrics.TotalSprites++
-					metrics.SpritesByGenre[genre]++
-				}
-			}
+// testSpritesForGenre tests sprite generation for all types within a genre
+func testSpritesForGenre(logger *logrus.Logger, metrics *QualityMetrics, spriteGen *sprites.Generator, genre string, spriteTypes []sprites.SpriteType) {
+	for _, spriteType := range spriteTypes {
+		typeName := spriteType.String()
+		for i := 0; i < *spriteCount/len(spriteTypes); i++ {
+			generateAndRecordSprite(logger, metrics, spriteGen, genre, spriteType, typeName, i)
 		}
 	}
+}
 
-	// Test tile generation for all types
+// generateAndRecordSprite generates a single sprite and records the results
+func generateAndRecordSprite(logger *logrus.Logger, metrics *QualityMetrics, spriteGen *sprites.Generator, genre string, spriteType sprites.SpriteType, typeName string, index int) {
+	spriteSeed := *seed + int64(index*1000)
+	config := sprites.Config{
+		Type:       spriteType,
+		Width:      32,
+		Height:     32,
+		Seed:       spriteSeed,
+		GenreID:    genre,
+		Complexity: 0.7,
+		Variation:  index % 10,
+	}
+
+	startTime := time.Now()
+	_, err := spriteGen.Generate(config)
+	genTime := time.Since(startTime)
+	metrics.TotalGenTime += genTime
+
+	if err != nil {
+		logger.WithError(err).WithFields(logrus.Fields{
+			"genre": genre,
+			"type":  typeName,
+		}).Warn("sprite generation failed")
+		metrics.GenerationErrors++
+	} else {
+		metrics.TotalSprites++
+		metrics.SpritesByGenre[genre]++
+	}
+}
+
+// testTileGeneration tests tile generation for all genres and types
+func testTileGeneration(logger *logrus.Logger, metrics *QualityMetrics, tileGen *tiles.Generator, genreList []string) {
 	logger.Info("=== Testing Tile Generation ===")
 	tileTypes := []tiles.TileType{
 		tiles.TileFloor,
@@ -144,77 +179,123 @@ func main() {
 
 	for _, genre := range genreList {
 		logger.WithField("genre", genre).Info("testing tile generation")
+		testTilesForGenre(logger, metrics, tileGen, genre, tileTypes)
+	}
+}
 
-		for _, tileType := range tileTypes {
-			for i := 0; i < *tileCount/len(tileTypes); i++ {
-				tileSeed := *seed + int64(i*2000)
-
-				config := tiles.Config{
-					Type:    tileType,
-					Width:   32,
-					Height:  32,
-					Seed:    tileSeed,
-					GenreID: genre,
-				}
-
-				startTime := time.Now()
-				_, err := tileGen.Generate(config)
-				genTime := time.Since(startTime)
-				metrics.TotalGenTime += genTime
-
-				if err != nil {
-					logger.WithError(err).WithFields(logrus.Fields{
-						"genre": genre,
-						"type":  tileType,
-					}).Warn("tile generation failed")
-					metrics.GenerationErrors++
-				} else {
-					metrics.TotalTiles++
-					metrics.TilesByType[tileType]++
-				}
-			}
+// testTilesForGenre tests tile generation for all types within a genre
+func testTilesForGenre(logger *logrus.Logger, metrics *QualityMetrics, tileGen *tiles.Generator, genre string, tileTypes []tiles.TileType) {
+	for _, tileType := range tileTypes {
+		for i := 0; i < *tileCount/len(tileTypes); i++ {
+			generateAndRecordTile(logger, metrics, tileGen, genre, tileType, i)
 		}
 	}
+}
 
-	// Calculate average generation time
+// generateAndRecordTile generates a single tile and records the results
+func generateAndRecordTile(logger *logrus.Logger, metrics *QualityMetrics, tileGen *tiles.Generator, genre string, tileType tiles.TileType, index int) {
+	tileSeed := *seed + int64(index*2000)
+	config := tiles.Config{
+		Type:    tileType,
+		Width:   32,
+		Height:  32,
+		Seed:    tileSeed,
+		GenreID: genre,
+	}
+
+	startTime := time.Now()
+	_, err := tileGen.Generate(config)
+	genTime := time.Since(startTime)
+	metrics.TotalGenTime += genTime
+
+	if err != nil {
+		logger.WithError(err).WithFields(logrus.Fields{
+			"genre": genre,
+			"type":  tileType,
+		}).Warn("tile generation failed")
+		metrics.GenerationErrors++
+	} else {
+		metrics.TotalTiles++
+		metrics.TilesByType[tileType]++
+	}
+}
+
+// calculateAverageGenTime computes the average generation time from metrics
+func calculateAverageGenTime(metrics *QualityMetrics) {
 	totalOperations := metrics.TotalSprites + metrics.TotalTiles + len(metrics.PalettesByGenre)
 	if totalOperations > 0 {
 		metrics.AverageGenTime = metrics.TotalGenTime / time.Duration(totalOperations)
 	}
+}
 
-	// Print results
+// displayResults prints test results and optionally writes a report file
+func displayResults(logger *logrus.Logger, metrics *QualityMetrics, genreList []string) {
 	logger.Info("=== Visual Quality Test Results ===")
 
+	printResultsSummary(metrics)
+	writeReportIfRequested(logger, metrics, genreList)
+
+	logger.Info("visual quality test complete!")
+}
+
+// printResultsSummary prints formatted test results to stdout
+func printResultsSummary(metrics *QualityMetrics) {
 	fmt.Printf("\n=== Visual Quality Test Results ===\n")
 	fmt.Printf("Generated: %s\n\n", time.Now().Format(time.RFC3339))
 
+	printSpriteResults(metrics)
+	printTileResults(metrics)
+	printPaletteResults(metrics)
+	printPerformanceMetrics(metrics)
+	printQualityTargets(metrics)
+}
+
+// printSpriteResults prints sprite generation results
+func printSpriteResults(metrics *QualityMetrics) {
 	fmt.Printf("=== Sprite Generation ===\n")
 	fmt.Printf("Total Sprites Generated: %d\n", metrics.TotalSprites)
 	fmt.Printf("Sprites by Genre:\n")
 	for genre, count := range metrics.SpritesByGenre {
 		fmt.Printf("  %s: %d\n", genre, count)
 	}
+	fmt.Println()
+}
 
-	fmt.Printf("\n=== Tile Generation ===\n")
+// printTileResults prints tile generation results
+func printTileResults(metrics *QualityMetrics) {
+	fmt.Printf("=== Tile Generation ===\n")
 	fmt.Printf("Total Tiles Generated: %d\n", metrics.TotalTiles)
 	fmt.Printf("Tiles by Type:\n")
 	for tileType, count := range metrics.TilesByType {
 		fmt.Printf("  %s: %d\n", tileType, count)
 	}
+	fmt.Println()
+}
 
-	fmt.Printf("\n=== Palette Generation ===\n")
+// printPaletteResults prints palette generation results
+func printPaletteResults(metrics *QualityMetrics) {
+	fmt.Printf("=== Palette Generation ===\n")
 	fmt.Printf("Palettes Generated:\n")
 	for genre, count := range metrics.PalettesByGenre {
 		fmt.Printf("  %s: %d\n", genre, count)
 	}
+	fmt.Println()
+}
 
-	fmt.Printf("\n=== Performance ===\n")
+// printPerformanceMetrics prints performance statistics
+func printPerformanceMetrics(metrics *QualityMetrics) {
+	fmt.Printf("=== Performance ===\n")
 	fmt.Printf("Total Generation Time: %v\n", metrics.TotalGenTime)
 	fmt.Printf("Average Generation Time: %v\n", metrics.AverageGenTime)
-	fmt.Printf("Generation Errors: %d\n", metrics.GenerationErrors)
+	fmt.Printf("Generation Errors: %d\n\n", metrics.GenerationErrors)
+}
 
-	fmt.Printf("\n=== Quality Targets ===\n")
+// printQualityTargets prints quality target assessments
+func printQualityTargets(metrics *QualityMetrics) {
+	totalOperations := metrics.TotalSprites + metrics.TotalTiles + len(metrics.PalettesByGenre)
 	successRate := float64(metrics.TotalSprites+metrics.TotalTiles) / float64(totalOperations) * 100
+
+	fmt.Printf("=== Quality Targets ===\n")
 	fmt.Printf("Success Rate: %.2f%% (target: 100%%)\n", successRate)
 
 	if metrics.GenerationErrors == 0 {
@@ -223,7 +304,6 @@ func main() {
 		fmt.Printf("Generation Errors: ❌ %d (target: 0)\n", metrics.GenerationErrors)
 	}
 
-	// Average generation time target: <5ms for sprites, <1ms for tiles
 	avgGenTimeMs := float64(metrics.AverageGenTime.Microseconds()) / 1000.0
 	fmt.Printf("Average Generation Time: ")
 	if avgGenTimeMs < 5.0 {
@@ -231,8 +311,10 @@ func main() {
 	} else {
 		fmt.Printf("⚠️  %.3fms (target: <5ms)\n", avgGenTimeMs)
 	}
+}
 
-	// Write report if requested
+// writeReportIfRequested writes a report file if output flag is set
+func writeReportIfRequested(logger *logrus.Logger, metrics *QualityMetrics, genreList []string) {
 	if *output != "" {
 		report := generateReport(metrics, genreList)
 		if err := os.WriteFile(*output, []byte(report), 0o644); err != nil {
@@ -241,8 +323,6 @@ func main() {
 			logger.WithField("path", *output).Info("report written")
 		}
 	}
-
-	logger.Info("visual quality test complete!")
 }
 
 func generateReport(metrics *QualityMetrics, genres []string) string {

@@ -131,8 +131,18 @@ func (g *ForestGenerator) createClearings(terrain *Terrain, rng *rand.Rand) []*R
 		// Random position and size
 		width := 8 + rng.Intn(10)  // 8-17 tiles wide
 		height := 8 + rng.Intn(10) // 8-17 tiles tall
-		x := 2 + rng.Intn(terrain.Width-width-4)
-		y := 2 + rng.Intn(terrain.Height-height-4)
+
+		// BUG FIX: Phase 1 - Forest clearing panic with small terrain/regions
+		// Resolution: Guard against negative/zero range in Intn() when terrain is too small for clearing
+		// This occurs in composite generation when biome regions are smaller than clearing size
+		maxX := terrain.Width - width - 4
+		maxY := terrain.Height - height - 4
+		if maxX <= 0 || maxY <= 0 {
+			continue // Skip this clearing if terrain is too small
+		}
+
+		x := 2 + rng.Intn(maxX)
+		y := 2 + rng.Intn(maxY)
 
 		// Create clearing
 		clearing := &Room{
@@ -336,6 +346,12 @@ func (g *ForestGenerator) createLake(terrain *Terrain, clearings []*Room, rng *r
 	foundValidPos := false
 
 	for attempt := 0; attempt < maxAttempts && !foundValidPos; attempt++ {
+		// BUG FIX: Phase 1 - Forest lake panic with small terrain
+		// Resolution: Guard against negative/zero range in Intn() when terrain < 20
+		if terrain.Width <= 20 || terrain.Height <= 20 {
+			break // Terrain too small for lake
+		}
+
 		centerX = 10 + rng.Intn(terrain.Width-20)
 		centerY = 10 + rng.Intn(terrain.Height-20)
 

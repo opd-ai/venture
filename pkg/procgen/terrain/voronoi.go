@@ -103,8 +103,16 @@ func generateSeedPoints(width, height, count int, rng *rand.Rand) []Point {
 		baseX := col * cellWidth
 		baseY := row * cellHeight
 
-		offsetX := rng.Intn(cellWidth)
-		offsetY := rng.Intn(cellHeight)
+		// BUG FIX: Phase 1 - Voronoi panic in benchmark with small terrain
+		// Resolution: Guard against zero cellWidth/cellHeight to prevent panic in rng.Intn()
+		// This occurs when width < cols or height < rows in small terrain dimensions
+		var offsetX, offsetY int
+		if cellWidth > 0 {
+			offsetX = rng.Intn(cellWidth)
+		}
+		if cellHeight > 0 {
+			offsetY = rng.Intn(cellHeight)
+		}
 
 		x := baseX + offsetX
 		y := baseY + offsetY

@@ -327,3 +327,28 @@ func TestShortestAngularDistance(t *testing.T) {
 func floatEqual(a, b, epsilon float64) bool {
 	return math.Abs(a-b) < epsilon
 }
+
+// BUG FIX: Phase 3.6 - Test zero deltaTime edge case
+// Resolution: Verify rotation component handles zero deltaTime without crashing
+func TestRotationComponent_ZeroDeltaTime(t *testing.T) {
+	rot := NewRotationComponent(0, 3.0)
+	rot.SetTargetAngle(math.Pi / 2) // 90 degrees
+
+	// Update with zero deltaTime should not crash or divide by zero
+	complete := rot.Update(0)
+
+	// Should return false (rotation not complete)
+	if complete {
+		t.Error("rotation should not complete with zero deltaTime")
+	}
+
+	// Angle should remain unchanged
+	if rot.Angle != 0 {
+		t.Errorf("angle should remain 0 with zero deltaTime, got %f", rot.Angle)
+	}
+
+	// Angular velocity should remain 0
+	if rot.AngularVelocity != 0 {
+		t.Errorf("angular velocity should be 0 with zero deltaTime, got %f", rot.AngularVelocity)
+	}
+}

@@ -98,6 +98,14 @@ func (r *RotationComponent) Update(deltaTime float64) bool {
 		rotationDirection = -1.0
 	}
 
+	// BUG FIX: Phase 3.6 - Potential division by zero on first frame
+	// Resolution: Added deltaTime check to prevent division by zero
+	// If deltaTime is zero (first frame or paused), skip velocity calculation
+	if deltaTime <= 0 {
+		// Cannot calculate velocity with zero deltaTime, keep current state
+		return false
+	}
+
 	// Apply rotation with speed limit
 	maxRotation := r.RotationSpeed * deltaTime
 	actualRotation := math.Min(math.Abs(angleDiff), maxRotation)

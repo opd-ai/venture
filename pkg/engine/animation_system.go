@@ -175,6 +175,16 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 // GetStats returns current animation performance statistics.
 // Useful for monitoring and debugging performance.
 func (s *AnimationSystem) GetStats() AnimationStats {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"total_entities":    s.stats.TotalEntities,
+			"animated_entities": s.stats.AnimatedEntities,
+			"culled_viewport":   s.stats.CulledByViewport,
+			"full_rate":         s.stats.FullRateEntities,
+			"half_rate":         s.stats.HalfRateEntities,
+			"static":            s.stats.StaticEntities,
+		}).Debug("retrieving animation stats")
+	}
 	return s.stats
 }
 
@@ -220,6 +230,11 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 
 // resetStatistics resets animation statistics for the current frame.
 func (s *AnimationSystem) resetStatistics(entityCount int) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": entityCount,
+		}).Debug("resetting animation statistics")
+	}
 	s.stats = AnimationStats{
 		TotalEntities: entityCount,
 	}
@@ -233,6 +248,12 @@ func (s *AnimationSystem) getPlayerPosition() (float64, float64) {
 			if pos, ok := posComp.(*PositionComponent); ok {
 				playerX = pos.X
 				playerY = pos.Y
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"player_x": playerX,
+						"player_y": playerY,
+					}).Debug("retrieved player position")
+				}
 			}
 		}
 	}
@@ -302,22 +323,45 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 
 	spriteComp := s.getSpriteComponent(entity)
 	if spriteComp == nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("entity has animation but no sprite component")
+		}
 		return nil
 	}
 
 	pos, ok := s.getEntityPosition(entity)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("entity has animation but no position component")
+		}
 		return nil
 	}
 
 	if s.shouldCullEntity(entity, pos, viewport, hasViewport) {
 		s.stats.CulledByViewport++
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"pos_x":     pos.X,
+				"pos_y":     pos.Y,
+			}).Debug("entity culled by viewport")
+		}
 		return nil
 	}
 
 	effectiveDeltaTime := s.applyDistanceLOD(animComp, pos, playerX, playerY, deltaTime)
 
 	if err := s.regenerateFramesIfDirty(entity, animComp, spriteComp); err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"error":     err.Error(),
+			}).Error("failed to regenerate animation frames")
+		}
 		return err
 	}
 
@@ -331,9 +375,20 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 func (s *AnimationSystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
 	posComp, hasPos := entity.GetComponent("position")
 	if !hasPos {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("entity missing position component")
+		}
 		return nil, false
 	}
 	pos, ok := posComp.(*PositionComponent)
+	if !ok && s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "position",
+		}).Warn("position component has incorrect type")
+	}
 	return pos, ok
 }
 
@@ -363,15 +418,27 @@ func (s *AnimationSystem) applyDistanceLOD(animComp *AnimationComponent, pos *Po
 	dist := math.Sqrt(dx*dx + dy*dy)
 
 	var targetFrameTime float64
+	var lodTier string
 	if dist <= s.distanceCloseThresh {
 		targetFrameTime = 1.0 / 12.0
 		s.stats.FullRateEntities++
+		lodTier = "full"
 	} else if dist <= s.distanceMidThresh {
 		targetFrameTime = 1.0 / 6.0
 		s.stats.HalfRateEntities++
+		lodTier = "half"
 	} else {
 		targetFrameTime = 1.0 / 3.0
 		s.stats.StaticEntities++
+		lodTier = "static"
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"distance":         dist,
+			"lod_tier":         lodTier,
+			"target_frametime": targetFrameTime,
+		}).Debug("applied distance LOD")
 	}
 
 	animComp.FrameTime = targetFrameTime
@@ -384,9 +451,24 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 		return nil
 	}
 
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"state":     animComp.CurrentState,
+			"dirty":     animComp.Dirty,
+		}).Debug("regenerating frames for dirty animation")
+	}
+
 	s.logFrameGeneration(entity, animComp, spriteComp)
 
 	if err := s.regenerateFrames(entity, animComp, spriteComp); err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"state":     animComp.CurrentState,
+				"error":     err.Error(),
+			}).Error("failed to regenerate frames")
+		}
 		return fmt.Errorf("failed to regenerate frames: %w", err)
 	}
 
@@ -429,6 +511,15 @@ func (s *AnimationSystem) logGenerationResult(entity *Entity, animComp *Animatio
 // updateAnimationFrame advances animation frame if playing.
 func (s *AnimationSystem) updateAnimationFrame(animComp *AnimationComponent, effectiveDeltaTime float64) {
 	if animComp.Playing && len(animComp.Frames) > 0 && effectiveDeltaTime > 0 {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"state":       animComp.CurrentState,
+				"frame_index": animComp.FrameIndex,
+				"frame_count": len(animComp.Frames),
+				"delta_time":  effectiveDeltaTime,
+				"playing":     animComp.Playing,
+			}).Debug("updating animation frame")
+		}
 		s.updateFrame(animComp, effectiveDeltaTime)
 	}
 }
@@ -605,6 +696,18 @@ func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, con
 	offset := calculateAnimationOffset(state, frameIndex, frameCount)
 	rotation := calculateAnimationRotation(state, frameIndex, frameCount)
 	scale := calculateAnimationScale(state, frameIndex, frameCount)
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"state":       state,
+			"frame_index": frameIndex,
+			"frame_count": frameCount,
+			"offset_x":    offset.X,
+			"offset_y":    offset.Y,
+			"rotation":    rotation,
+			"scale":       scale,
+		}).Debug("generating transformed frame")
+	}
 
 	// Create output image with room for transformations
 	outputWidth := config.Width + int(math.Abs(offset.X)*2) + 10
@@ -792,10 +895,24 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 
 	if entity.HasComponent("input") {
 		s.configurePlayerSprite(&config, entity, anim)
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":   entity.ID,
+				"entity_type": "player",
+				"seed":        anim.Seed,
+			}).Debug("configured player sprite")
+		}
 	} else if teamComp, ok := entity.GetComponent("team"); ok {
 		if team, ok := teamComp.(*TeamComponent); ok {
 			if team.TeamID == 2 {
 				s.configureEnemySprite(&config, entity, anim)
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id": entity.ID,
+						"team_id":   team.TeamID,
+						"seed":      anim.Seed,
+					}).Debug("configured enemy sprite")
+				}
 			}
 		}
 	}
@@ -809,11 +926,19 @@ func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite
 // configurePlayerSprite configures sprite settings for player entities.
 func (s *AnimationSystem) configurePlayerSprite(config *sprites.Config, entity *Entity, anim *AnimationComponent) {
 	config.Custom["entityType"] = "humanoid"
-	config.Custom["facing"] = s.determineFacingDirection(entity, anim)
+	facing := s.determineFacingDirection(entity, anim)
+	config.Custom["facing"] = facing
 
 	if entity.HasComponent("equipment") {
 		config.Custom["hasWeapon"] = true
 		config.Custom["hasShield"] = false
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  entity.ID,
+				"has_weapon": true,
+				"facing":     facing,
+			}).Debug("player equipment configured")
+		}
 	}
 }
 
@@ -821,7 +946,16 @@ func (s *AnimationSystem) configurePlayerSprite(config *sprites.Config, entity *
 func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *Entity, anim *AnimationComponent) {
 	entityType := s.determineEnemyType(entity, config)
 	config.Custom["entityType"] = entityType
-	config.Custom["facing"] = s.determineFacingDirection(entity, anim)
+	facing := s.determineFacingDirection(entity, anim)
+	config.Custom["facing"] = facing
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"entity_type": entityType,
+			"facing":      facing,
+		}).Debug("enemy sprite configured")
+	}
 }
 
 // determineEnemyType analyzes entity components to determine monster type.
@@ -834,6 +968,14 @@ func (s *AnimationSystem) determineEnemyType(entity *Entity, config *sprites.Con
 				entityType = "boss"
 				config.Custom["isBoss"] = true
 				config.Custom["bossScale"] = 1.5
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":   entity.ID,
+						"entity_type": entityType,
+						"damage":      attack.Damage,
+						"boss_scale":  1.5,
+					}).Debug("boss enemy detected")
+				}
 				return entityType
 			}
 		}
@@ -842,9 +984,25 @@ func (s *AnimationSystem) determineEnemyType(entity *Entity, config *sprites.Con
 	if colliderComp, ok := entity.GetComponent("collider"); ok {
 		if collider, ok := colliderComp.(*ColliderComponent); ok {
 			if collider.Width > 48 {
-				return "monster"
+				entityType = "monster"
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":      entity.ID,
+						"entity_type":    entityType,
+						"collider_width": collider.Width,
+					}).Debug("large monster detected")
+				}
+				return entityType
 			} else if collider.Width < 24 {
-				return "minion"
+				entityType = "minion"
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":      entity.ID,
+						"entity_type":    entityType,
+						"collider_width": collider.Width,
+					}).Debug("small minion detected")
+				}
+				return entityType
 			}
 		}
 	}
@@ -866,12 +1024,26 @@ func (s *AnimationSystem) determineFacingDirection(entity *Entity, anim *Animati
 
 	vel, ok := velComp.(*VelocityComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "velocity",
+			}).Warn("velocity component has incorrect type")
+		}
 		return facing
 	}
 
 	if math.Abs(vel.VX) > 0.1 || math.Abs(vel.VY) > 0.1 {
 		facing = s.calculateFacingFromVelocity(vel)
 		anim.LastFacing = facing
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"facing":    facing,
+				"vx":        vel.VX,
+				"vy":        vel.VY,
+			}).Debug("updated facing direction from velocity")
+		}
 	} else if anim.LastFacing != "" {
 		facing = anim.LastFacing
 	}
@@ -898,8 +1070,15 @@ func (s *AnimationSystem) calculateFacingFromVelocity(vel *VelocityComponent) st
 func (s *AnimationSystem) applyGenreConfig(config *sprites.Config, entity *Entity) {
 	if genreComp, ok := entity.GetComponent("genre"); ok && genreComp != nil {
 		if gc, ok := genreComp.(interface{ GetGenreID() string }); ok {
-			config.GenreID = gc.GetGenreID()
-			config.Custom["genre"] = gc.GetGenreID()
+			genreID := gc.GetGenreID()
+			config.GenreID = genreID
+			config.Custom["genre"] = genreID
+			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": entity.ID,
+					"genre_id":  genreID,
+				}).Debug("applied genre config from entity")
+			}
 			return
 		}
 	}
@@ -907,6 +1086,12 @@ func (s *AnimationSystem) applyGenreConfig(config *sprites.Config, entity *Entit
 	if config.GenreID == "" {
 		config.GenreID = "fantasy"
 		config.Custom["genre"] = "fantasy"
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"genre_id":  "fantasy",
+			}).Debug("applied default fantasy genre")
+		}
 	}
 }
 
@@ -977,7 +1162,15 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 
 // getCacheKey generates a cache key for animation frames.
 func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) string {
-	return fmt.Sprintf("%d_%s", seed, state)
+	key := fmt.Sprintf("%d_%s", seed, state)
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"seed":      seed,
+			"state":     state,
+			"cache_key": key,
+		}).Debug("generated cache key")
+	}
+	return key
 }
 
 // ClearCache clears the animation frame cache.
@@ -1000,7 +1193,14 @@ func (s *AnimationSystem) ClearCache() {
 func (s *AnimationSystem) GetCacheSize() int {
 	s.cacheMutex.RLock()
 	defer s.cacheMutex.RUnlock()
-	return len(s.frameCache)
+	size := len(s.frameCache)
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"cache_size": size,
+			"max_size":   s.maxCacheSize,
+		}).Debug("retrieved cache size")
+	}
+	return size
 }
 
 // Helper methods to get components
@@ -1012,6 +1212,12 @@ func (s *AnimationSystem) getAnimationComponent(entity *Entity) *AnimationCompon
 	}
 	animComp, ok := comp.(*AnimationComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "animation",
+			}).Warn("animation component has incorrect type")
+		}
 		return nil
 	}
 	return animComp
@@ -1024,6 +1230,12 @@ func (s *AnimationSystem) getSpriteComponent(entity *Entity) *EbitenSprite {
 	}
 	spriteComp, ok := comp.(*EbitenSprite)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "sprite",
+			}).Warn("sprite component has incorrect type")
+		}
 		return nil
 	}
 	return spriteComp

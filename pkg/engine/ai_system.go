@@ -481,7 +481,31 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 		}).Debug("Processing attack state")
 	}
 
-	// Verify target is still valid
+	if !ai.validateAttackTarget(entity, aiComp, pos) {
+		return
+	}
+
+	attack := ai.getAttackComponent(entity)
+	if attack == nil {
+		return
+	}
+
+	targetP := ai.getTargetPosition(entity, aiComp)
+	if targetP == nil {
+		return
+	}
+
+	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
+
+	if ai.handleAttackRangeCheck(entity, aiComp, distance, attack.Range) {
+		return
+	}
+
+	ai.executeAttack(entity, aiComp, attack, distance)
+}
+
+// validateAttackTarget verifies the target is still valid for attack.
+func (ai *AISystem) validateAttackTarget(entity *Entity, aiComp *AIComponent, pos *PositionComponent) bool {
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.5) {
 		if ai.logger != nil {
 			ai.logger.WithFields(logrus.Fields{
@@ -499,10 +523,13 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 				"prev_state": AIStateAttack.String(),
 			}).Debug("State transition completed")
 		}
-		return
+		return false
 	}
+	return true
+}
 
-	// Get attack component
+// getAttackComponent retrieves and validates the attack component.
+func (ai *AISystem) getAttackComponent(entity *Entity) *AttackComponent {
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
 		if ai.logger != nil {
@@ -511,7 +538,7 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 				"component_type": "attack",
 			}).Debug("Entity missing attack component")
 		}
-		return
+		return nil
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
@@ -521,61 +548,72 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 				"component_type": "attack",
 			}).Warn("Failed to type assert attack component")
 		}
-		return
+		return nil
 	}
+	return attack
+}
 
-	// Check if in attack range
+// getTargetPosition retrieves and validates the target's position component.
+func (ai *AISystem) getTargetPosition(entity *Entity, aiComp *AIComponent) *PositionComponent {
 	targetPos, ok := aiComp.Target.GetComponent("position")
 	if !ok {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"target_id":      aiComp.Target.ID,
-				"component_type": "position",
-			}).Debug("Target missing position component")
-		}
-		aiComp.ClearTarget()
-		aiComp.ChangeState(AIStateIdle)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateIdle.String(),
-				"prev_state": AIStateAttack.String(),
-			}).Debug("State transition completed")
-		}
-		return
+		ai.logTargetMissingComponent(entity.ID, aiComp.Target.ID)
+		ai.clearTargetAndReturnToIdle(entity, aiComp)
+		return nil
 	}
 	targetP, ok := targetPos.(*PositionComponent)
 	if !ok {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"target_id":      aiComp.Target.ID,
-				"component_type": "position",
-			}).Warn("Failed to type assert target position component")
-		}
-		aiComp.ClearTarget()
-		aiComp.ChangeState(AIStateIdle)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateIdle.String(),
-				"prev_state": AIStateAttack.String(),
-			}).Debug("State transition completed")
-		}
-		return
+		ai.logTargetTypeAssertFailed(entity.ID, aiComp.Target.ID)
+		ai.clearTargetAndReturnToIdle(entity, aiComp)
+		return nil
 	}
+	return targetP
+}
 
-	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
+// logTargetMissingComponent logs when target is missing position component.
+func (ai *AISystem) logTargetMissingComponent(entityID, targetID uint64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"target_id":      targetID,
+			"component_type": "position",
+		}).Debug("Target missing position component")
+	}
+}
 
-	// If target moved out of range, chase again
-	if distance > attack.Range {
+// logTargetTypeAssertFailed logs when target position type assertion fails.
+func (ai *AISystem) logTargetTypeAssertFailed(entityID, targetID uint64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"target_id":      targetID,
+			"component_type": "position",
+		}).Warn("Failed to type assert target position component")
+	}
+}
+
+// clearTargetAndReturnToIdle clears target and transitions to idle state.
+func (ai *AISystem) clearTargetAndReturnToIdle(entity *Entity, aiComp *AIComponent) {
+	aiComp.ClearTarget()
+	aiComp.ChangeState(AIStateIdle)
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"new_state":  AIStateIdle.String(),
+			"prev_state": AIStateAttack.String(),
+		}).Debug("State transition completed")
+	}
+}
+
+// handleAttackRangeCheck checks if target is in attack range and transitions to chase if not.
+func (ai *AISystem) handleAttackRangeCheck(entity *Entity, aiComp *AIComponent, distance, attackRange float64) bool {
+	if distance > attackRange {
 		if ai.logger != nil {
 			ai.logger.WithFields(logrus.Fields{
 				"entity_id":        entity.ID,
 				"target_id":        aiComp.Target.ID,
 				"distance":         distance,
-				"attack_range":     attack.Range,
+				"attack_range":     attackRange,
 				"state_transition": "Attack->Chase",
 			}).Debug("Target moved out of attack range")
 		}
@@ -587,45 +625,64 @@ func (ai *AISystem) processAttack(entity *Entity, aiComp *AIComponent, pos *Posi
 				"prev_state": AIStateAttack.String(),
 			}).Debug("State transition completed")
 		}
-		return
+		return true
 	}
+	return false
+}
 
-	// Attack if cooldown is ready
+// executeAttack performs the actual attack if cooldown is ready.
+func (ai *AISystem) executeAttack(entity *Entity, aiComp *AIComponent, attack *AttackComponent, distance float64) {
 	if attack.CanAttack() {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"target_id": aiComp.Target.ID,
-				"distance":  distance,
-			}).Info("AI executing attack")
-		}
-		// GAP-018 REPAIR: Set animation to attack when attacking
-		if animComp, ok := entity.GetComponent("animation"); ok {
-			if anim, ok := animComp.(*AnimationComponent); ok {
-				if anim.CurrentState != AnimationStateAttack {
-					anim.SetState(AnimationStateAttack)
-				}
+		ai.performAttack(entity, aiComp, distance)
+	} else {
+		ai.logAttackOnCooldown(entity.ID, aiComp.Target.ID, attack.Cooldown)
+	}
+}
+
+// performAttack executes the attack and updates animation.
+func (ai *AISystem) performAttack(entity *Entity, aiComp *AIComponent, distance float64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"target_id": aiComp.Target.ID,
+			"distance":  distance,
+		}).Info("AI executing attack")
+	}
+	ai.setAttackAnimation(entity)
+	ai.executeCombatAttack(entity, aiComp)
+}
+
+// setAttackAnimation sets the entity's animation to attack state.
+func (ai *AISystem) setAttackAnimation(entity *Entity) {
+	if animComp, ok := entity.GetComponent("animation"); ok {
+		if anim, ok := animComp.(*AnimationComponent); ok {
+			if anim.CurrentState != AnimationStateAttack {
+				anim.SetState(AnimationStateAttack)
 			}
 		}
+	}
+}
 
-		// Create a combat system to perform the attack
-		// In a real game, this would be a separate system call
-		combatSystem := NewCombatSystem(12345) // Use fixed seed for now
-		combatSystem.Attack(entity, aiComp.Target)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"target_id": aiComp.Target.ID,
-			}).Debug("Attack executed")
-		}
-	} else {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"target_id": aiComp.Target.ID,
-				"cooldown":  attack.Cooldown,
-			}).Debug("Attack on cooldown")
-		}
+// executeCombatAttack performs the combat system attack.
+func (ai *AISystem) executeCombatAttack(entity *Entity, aiComp *AIComponent) {
+	combatSystem := NewCombatSystem(12345)
+	combatSystem.Attack(entity, aiComp.Target)
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"target_id": aiComp.Target.ID,
+		}).Debug("Attack executed")
+	}
+}
+
+// logAttackOnCooldown logs when attack is on cooldown.
+func (ai *AISystem) logAttackOnCooldown(entityID, targetID uint64, cooldown float64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"target_id": targetID,
+			"cooldown":  cooldown,
+		}).Debug("Attack on cooldown")
 	}
 }
 

@@ -340,57 +340,70 @@ func (ui *EbitenInventoryUI) handleDropKey() {
 
 // Draw renders the inventory UI.
 func (ui *EbitenInventoryUI) Draw(screen interface{}) {
-	img, ok := screen.(*ebiten.Image)
-	if !ok {
-		return
-	}
-	if !ui.visible || ui.playerEntity == nil {
+	img, inventory := ui.validateAndPrepare(screen)
+	if img == nil || inventory == nil {
 		return
 	}
 
-	// Get inventory component
+	windowX, windowY, windowWidth, windowHeight := ui.calculateWindowBounds()
+	ui.drawOverlayAndBackground(img, windowX, windowY, windowWidth, windowHeight)
+	ui.drawHeader(img, windowX, windowY, windowWidth, inventory)
+	ui.drawInventoryGrid(img, windowX, windowY, windowWidth, windowHeight, inventory)
+	ui.drawEquipmentSlots(img, windowX, windowY, windowWidth, windowHeight)
+	ui.drawFooterAndExtras(img, windowX, windowY, windowWidth, windowHeight)
+}
+
+// validateAndPrepare validates the screen and retrieves the inventory component.
+func (ui *EbitenInventoryUI) validateAndPrepare(screen interface{}) (*ebiten.Image, *InventoryComponent) {
+	img, ok := screen.(*ebiten.Image)
+	if !ok {
+		return nil, nil
+	}
+	if !ui.visible || ui.playerEntity == nil {
+		return nil, nil
+	}
+
 	invComp, ok := ui.playerEntity.GetComponent("inventory")
 	if !ok {
-		return
+		return nil, nil
 	}
 	inventory, ok := invComp.(*InventoryComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
 
-	// Draw semi-transparent overlay
+	return img, inventory
+}
+
+// drawOverlayAndBackground renders the semi-transparent overlay and window background.
+func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
 	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 180})
 	img.DrawImage(overlay, nil)
 
-	// Calculate window position
-	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
-	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 100
-	windowX := (ui.screenWidth - windowWidth) / 2
-	windowY := (ui.screenHeight - windowHeight) / 2
-
-	// Draw window background
 	windowBg := ebiten.NewImage(windowWidth, windowHeight)
 	windowBg.Fill(color.RGBA{40, 40, 50, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	img.DrawImage(windowBg, opts)
+}
 
-	// Draw title
+// drawHeader renders the title, exit hint, capacity info, and gold display.
+func (ui *EbitenInventoryUI) drawHeader(img *ebiten.Image, windowX, windowY, windowWidth int, inventory *InventoryComponent) {
 	ebitenutil.DebugPrintAt(img, "INVENTORY", windowX+10, windowY+10)
 
-	// Draw exit hint (standardized menu navigation)
 	exitHint := GetExitHint(MenuKeys.Inventory)
 	ebitenutil.DebugPrintAt(img, exitHint, windowX+10, windowY+30)
 
-	// Draw capacity info
 	capacityText := fmt.Sprintf("Weight: %.1f / %.1f", inventory.GetCurrentWeight(), inventory.MaxWeight)
 	ebitenutil.DebugPrintAt(img, capacityText, windowX+windowWidth-150, windowY+10)
 
 	goldText := fmt.Sprintf("Gold: %d", inventory.Gold)
 	ebitenutil.DebugPrintAt(img, goldText, windowX+windowWidth-150, windowY+30)
+}
 
-	// Draw inventory grid
+// drawInventoryGrid renders all inventory slots with items and tooltips.
+func (ui *EbitenInventoryUI) drawInventoryGrid(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int, inventory *InventoryComponent) {
 	startY := windowY + 60
 	for row := 0; row < ui.gridRows; row++ {
 		for col := 0; col < ui.gridCols; col++ {
@@ -398,58 +411,65 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 			slotX := windowX + ui.padding + col*ui.slotSize
 			slotY := startY + row*ui.slotSize
 
-			// Draw slot background
-			slotColor := color.RGBA{60, 60, 70, 255}
+			ui.drawInventorySlot(img, slotX, slotY, slotIndex, windowY, inventory)
+		}
+	}
+}
+
+// drawInventorySlot renders a single inventory slot with its item and tooltip.
+func (ui *EbitenInventoryUI) drawInventorySlot(img *ebiten.Image, slotX, slotY, slotIndex, windowY int, inventory *InventoryComponent) {
+	slotColor := color.RGBA{60, 60, 70, 255}
+	if slotIndex == ui.hoveredSlot {
+		slotColor = color.RGBA{80, 80, 100, 255}
+	}
+	if slotIndex == ui.selectedSlot {
+		slotColor = color.RGBA{100, 100, 120, 255}
+	}
+
+	slot := ebiten.NewImage(ui.slotSize-2, ui.slotSize-2)
+	slot.Fill(slotColor)
+	slotOpts := &ebiten.DrawImageOptions{}
+	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
+	img.DrawImage(slot, slotOpts)
+
+	if slotIndex < len(inventory.Items) {
+		item := inventory.Items[slotIndex]
+		if item != nil {
+			itemText := string(item.Name[0])
+			ebitenutil.DebugPrintAt(img, itemText, slotX+16, slotY+16)
+
 			if slotIndex == ui.hoveredSlot {
-				slotColor = color.RGBA{80, 80, 100, 255}
-			}
-			if slotIndex == ui.selectedSlot {
-				slotColor = color.RGBA{100, 100, 120, 255}
-			}
-
-			slot := ebiten.NewImage(ui.slotSize-2, ui.slotSize-2)
-			slot.Fill(slotColor)
-			slotOpts := &ebiten.DrawImageOptions{}
-			slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-			img.DrawImage(slot, slotOpts)
-
-			// Draw item if present
-			if slotIndex < len(inventory.Items) {
-				item := inventory.Items[slotIndex]
-				if item != nil {
-					// Draw item icon (simplified - just show first letter of name)
-					itemText := string(item.Name[0])
-					ebitenutil.DebugPrintAt(img, itemText, slotX+16, slotY+16)
-
-					// Draw item name on hover
-					if slotIndex == ui.hoveredSlot {
-						tooltipX := slotX
-						tooltipY := slotY - 40
-						if tooltipY < windowY {
-							tooltipY = slotY + ui.slotSize + 5
-						}
-
-						tooltipBg := ebiten.NewImage(200, 35)
-						tooltipBg.Fill(color.RGBA{20, 20, 30, 240})
-						tooltipOpts := &ebiten.DrawImageOptions{}
-						tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
-						img.DrawImage(tooltipBg, tooltipOpts)
-
-						ebitenutil.DebugPrintAt(img, item.Name, tooltipX+5, tooltipY+5)
-						ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", item.Stats.Value), tooltipX+5, tooltipY+20)
-					}
-				}
+				ui.drawItemTooltip(img, slotX, slotY, windowY, item)
 			}
 		}
 	}
+}
 
-	// Draw equipment slots
+// drawItemTooltip renders the tooltip for a hovered item.
+func (ui *EbitenInventoryUI) drawItemTooltip(img *ebiten.Image, slotX, slotY, windowY int, item *item.Item) {
+	tooltipX := slotX
+	tooltipY := slotY - 40
+	if tooltipY < windowY {
+		tooltipY = slotY + ui.slotSize + 5
+	}
+
+	tooltipBg := ebiten.NewImage(200, 35)
+	tooltipBg.Fill(color.RGBA{20, 20, 30, 240})
+	tooltipOpts := &ebiten.DrawImageOptions{}
+	tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
+	img.DrawImage(tooltipBg, tooltipOpts)
+
+	ebitenutil.DebugPrintAt(img, item.Name, tooltipX+5, tooltipY+5)
+	ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", item.Stats.Value), tooltipX+5, tooltipY+20)
+}
+
+// drawEquipmentSlots renders the equipment slots section.
+func (ui *EbitenInventoryUI) drawEquipmentSlots(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
+	startY := windowY + 60
 	equipY := startY + ui.gridRows*ui.slotSize + 20
 	ebitenutil.DebugPrintAt(img, "Equipment:", windowX+10, equipY)
 
-	// Get equipment component if exists
 	equipComp, hasEquipment := ui.playerEntity.GetComponent("equipment")
-
 	equipSlots := []struct {
 		name string
 		slot EquipmentSlot
@@ -462,54 +482,57 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	for i, slotInfo := range equipSlots {
 		slotX := windowX + ui.padding + i*100
 		slotY := equipY + 20
+		ui.drawEquipmentSlot(img, slotX, slotY, slotInfo, equipComp, hasEquipment)
+	}
+}
 
-		// Draw slot
-		slotBg := ebiten.NewImage(90, 40)
-		slotBg.Fill(color.RGBA{60, 60, 70, 255})
-		slotOpts := &ebiten.DrawImageOptions{}
-		slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-		img.DrawImage(slotBg, slotOpts)
+// drawEquipmentSlot renders a single equipment slot with its equipped item.
+func (ui *EbitenInventoryUI) drawEquipmentSlot(img *ebiten.Image, slotX, slotY int, slotInfo struct {
+	name string
+	slot EquipmentSlot
+}, equipComp interface{}, hasEquipment bool,
+) {
+	slotBg := ebiten.NewImage(90, 40)
+	slotBg.Fill(color.RGBA{60, 60, 70, 255})
+	slotOpts := &ebiten.DrawImageOptions{}
+	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
+	img.DrawImage(slotBg, slotOpts)
 
-		ebitenutil.DebugPrintAt(img, slotInfo.name, slotX+5, slotY+5)
+	ebitenutil.DebugPrintAt(img, slotInfo.name, slotX+5, slotY+5)
 
-		// Show equipped item if present
-		if hasEquipment {
-			equipment, ok := equipComp.(*EquipmentComponent)
-			if !ok {
-				continue
+	if hasEquipment {
+		equipment, ok := equipComp.(*EquipmentComponent)
+		if !ok {
+			return
+		}
+		equipped := equipment.GetEquipped(slotInfo.slot)
+		if equipped != nil {
+			itemName := equipped.Name
+			if len(itemName) > 10 {
+				itemName = itemName[:10]
 			}
-			equipped := equipment.GetEquipped(slotInfo.slot)
-			if equipped != nil {
-				itemName := equipped.Name
-				if len(itemName) > 10 {
-					itemName = itemName[:10]
-				}
-				ebitenutil.DebugPrintAt(img, itemName, slotX+5, slotY+20)
-			}
+			ebitenutil.DebugPrintAt(img, itemName, slotX+5, slotY+20)
 		}
 	}
+}
 
-	// Draw controls hint
+// drawFooterAndExtras renders controls hint, drag preview, close button, and error feedback.
+func (ui *EbitenInventoryUI) drawFooterAndExtras(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
 	controlsY := windowY + windowHeight - 20
 	ebitenutil.DebugPrintAt(img, "I: Close | E: Use/Equip | D: Drop | Click+Drag: Move", windowX+10, controlsY)
 
-	// Draw drag preview (if dragging)
 	if ui.dragging && ui.dragPreview != nil {
 		mouseX, mouseY := ebiten.CursorPosition()
 		previewOpts := &ebiten.DrawImageOptions{}
-		// Center preview on cursor
 		previewOpts.GeoM.Translate(float64(mouseX-ui.slotSize/2), float64(mouseY-ui.slotSize/2))
-		// Make slightly transparent to show it's being dragged
 		previewOpts.ColorScale.ScaleAlpha(0.7)
 		img.DrawImage(ui.dragPreview, previewOpts)
 	}
 
-	// Draw close button (touch-friendly)
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(img)
 	}
 
-	// H-002 FIX: Draw error feedback
 	ui.errorState.DrawError(img)
 }
 

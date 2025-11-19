@@ -209,72 +209,104 @@ func (gen *Generator) determineRarity(rng *rand.Rand, params procgen.GenerationP
 // selectMaterial chooses material from allowed materials, influenced by genre and rarity
 func (gen *Generator) selectMaterial(rng *rand.Rand, tmpl *Template, genreID string, rarity RarityTier) MaterialType {
 	if len(tmpl.AllowedMaterials) == 0 {
-		return MaterialWood // Fallback
+		return MaterialWood
 	}
 
-	// Higher rarity prefers more exotic materials
-	if rarity >= RarityEpic && len(tmpl.AllowedMaterials) > 1 {
-		// Try to select exotic materials (Crystal > Metal > Stone > Wood/Fabric)
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialCrystal {
-				if rng.Float64() < 0.6 {
-					return MaterialCrystal
-				}
-			}
-		}
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialMetal {
-				if rng.Float64() < 0.5 {
-					return MaterialMetal
-				}
-			}
+	if mat, ok := gen.trySelectExoticMaterial(rng, tmpl, rarity); ok {
+		return mat
+	}
+
+	if mat, ok := gen.trySelectGenreMaterial(rng, tmpl, genreID); ok {
+		return mat
+	}
+
+	return tmpl.AllowedMaterials[rng.Intn(len(tmpl.AllowedMaterials))]
+}
+
+// trySelectExoticMaterial attempts to select exotic materials for high rarity items
+func (gen *Generator) trySelectExoticMaterial(rng *rand.Rand, tmpl *Template, rarity RarityTier) (MaterialType, bool) {
+	if rarity < RarityEpic || len(tmpl.AllowedMaterials) <= 1 {
+		return 0, false
+	}
+
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialCrystal && rng.Float64() < 0.6 {
+			return MaterialCrystal, true
 		}
 	}
 
-	// Genre influences material choice
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialMetal && rng.Float64() < 0.5 {
+			return MaterialMetal, true
+		}
+	}
+
+	return 0, false
+}
+
+// trySelectGenreMaterial attempts to select genre-appropriate materials
+func (gen *Generator) trySelectGenreMaterial(rng *rand.Rand, tmpl *Template, genreID string) (MaterialType, bool) {
 	switch genreID {
 	case "fantasy":
-		// Prefer wood and stone
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialWood && rng.Float64() < 0.4 {
-				return MaterialWood
-			}
-			if mat == MaterialStone && rng.Float64() < 0.3 {
-				return MaterialStone
-			}
-		}
+		return gen.trySelectFantasyMaterial(rng, tmpl)
 	case "scifi", "cyberpunk":
-		// Prefer metal and crystal
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialMetal && rng.Float64() < 0.5 {
-				return MaterialMetal
-			}
-			if mat == MaterialCrystal && rng.Float64() < 0.3 {
-				return MaterialCrystal
-			}
-		}
+		return gen.trySelectScifiMaterial(rng, tmpl)
 	case "horror":
-		// Prefer stone and wood
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialStone && rng.Float64() < 0.4 {
-				return MaterialStone
-			}
-			if mat == MaterialWood && rng.Float64() < 0.3 {
-				return MaterialWood
-			}
-		}
+		return gen.trySelectHorrorMaterial(rng, tmpl)
 	case "postapoc":
-		// Prefer metal and wood
-		for _, mat := range tmpl.AllowedMaterials {
-			if mat == MaterialMetal && rng.Float64() < 0.4 {
-				return MaterialMetal
-			}
-			if mat == MaterialWood && rng.Float64() < 0.3 {
-				return MaterialWood
-			}
+		return gen.trySelectPostapocMaterial(rng, tmpl)
+	}
+	return 0, false
+}
+
+// trySelectFantasyMaterial attempts to select fantasy-themed materials
+func (gen *Generator) trySelectFantasyMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialWood && rng.Float64() < 0.4 {
+			return MaterialWood, true
+		}
+		if mat == MaterialStone && rng.Float64() < 0.3 {
+			return MaterialStone, true
 		}
 	}
+	return 0, false
+}
 
-	// Default: random selection from allowed materials
-	return tmpl.AllowedMaterials[rng.Intn(len(tmpl.AllowedMaterials))]
+// trySelectScifiMaterial attempts to select sci-fi themed materials
+func (gen *Generator) trySelectScifiMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialMetal && rng.Float64() < 0.5 {
+			return MaterialMetal, true
+		}
+		if mat == MaterialCrystal && rng.Float64() < 0.3 {
+			return MaterialCrystal, true
+		}
+	}
+	return 0, false
+}
+
+// trySelectHorrorMaterial attempts to select horror-themed materials
+func (gen *Generator) trySelectHorrorMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialStone && rng.Float64() < 0.4 {
+			return MaterialStone, true
+		}
+		if mat == MaterialWood && rng.Float64() < 0.3 {
+			return MaterialWood, true
+		}
+	}
+	return 0, false
+}
+
+// trySelectPostapocMaterial attempts to select post-apocalyptic themed materials
+func (gen *Generator) trySelectPostapocMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+	for _, mat := range tmpl.AllowedMaterials {
+		if mat == MaterialMetal && rng.Float64() < 0.4 {
+			return MaterialMetal, true
+		}
+		if mat == MaterialWood && rng.Float64() < 0.3 {
+			return MaterialWood, true
+		}
+	}
+	return 0, false
 }

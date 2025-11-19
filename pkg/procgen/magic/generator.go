@@ -354,74 +354,111 @@ func (g *SpellGenerator) Validate(result interface{}) error {
 	}
 
 	for i, spell := range spells {
-		if spell == nil {
-			return fmt.Errorf("spell %d is nil", i)
-		}
-
-		// Validate name
-		if spell.Name == "" {
-			return fmt.Errorf("spell %d has empty name", i)
-		}
-
-		// Validate type is valid
-		if spell.Type < TypeOffensive || spell.Type > TypeSummon {
-			return fmt.Errorf("spell %d has invalid type: %d", i, spell.Type)
-		}
-
-		// Validate element is valid
-		if spell.Element < ElementNone || spell.Element > ElementArcane {
-			return fmt.Errorf("spell %d has invalid element: %d", i, spell.Element)
-		}
-
-		// Validate rarity is valid
-		if spell.Rarity < RarityCommon || spell.Rarity > RarityLegendary {
-			return fmt.Errorf("spell %d has invalid rarity: %d", i, spell.Rarity)
-		}
-
-		// Validate target is valid
-		if spell.Target < TargetSelf || spell.Target > TargetAllEnemies {
-			return fmt.Errorf("spell %d has invalid target: %d", i, spell.Target)
-		}
-
-		// Validate stats make sense
-		if spell.Stats.ManaCost < 0 {
-			return fmt.Errorf("spell %d has negative mana cost", i)
-		}
-		if spell.Stats.Cooldown < 0 {
-			return fmt.Errorf("spell %d has negative cooldown", i)
-		}
-		if spell.Stats.CastTime < 0 {
-			return fmt.Errorf("spell %d has negative cast time", i)
-		}
-		if spell.Stats.Range < 0 {
-			return fmt.Errorf("spell %d has negative range", i)
-		}
-		if spell.Stats.RequiredLevel < 1 {
-			return fmt.Errorf("spell %d has invalid required level: %d", i, spell.Stats.RequiredLevel)
-		}
-
-		// Type-specific validation
-		if spell.IsOffensive() && spell.Stats.Damage <= 0 {
-			return fmt.Errorf("offensive spell %d has no damage", i)
-		}
-		if spell.Type == TypeHealing && spell.Stats.Healing <= 0 {
-			return fmt.Errorf("healing spell %d has no healing", i)
-		}
-
-		// Balance validation
-		if err := g.balanceConfig.ValidateDPS(spell); err != nil {
-			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
-			// Don't fail on balance warnings, just log them
-		}
-		if err := g.balanceConfig.ValidateHPS(spell); err != nil {
-			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
-		}
-		if err := g.balanceConfig.ValidateManaCostEfficiency(spell); err != nil {
-			g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+		if err := g.validateSpell(i, spell); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// validateSpell validates a single spell's properties and stats.
+func (g *SpellGenerator) validateSpell(index int, spell *Spell) error {
+	if spell == nil {
+		return fmt.Errorf("spell %d is nil", index)
+	}
+
+	if err := g.validateSpellBasicProperties(index, spell); err != nil {
+		return err
+	}
+
+	if err := g.validateSpellEnumFields(index, spell); err != nil {
+		return err
+	}
+
+	if err := g.validateSpellStats(index, spell); err != nil {
+		return err
+	}
+
+	if err := g.validateSpellTypeSpecific(index, spell); err != nil {
+		return err
+	}
+
+	g.validateSpellBalance(spell)
+	return nil
+}
+
+// validateSpellBasicProperties validates spell name and basic properties.
+func (g *SpellGenerator) validateSpellBasicProperties(index int, spell *Spell) error {
+	if spell.Name == "" {
+		return fmt.Errorf("spell %d has empty name", index)
+	}
+	return nil
+}
+
+// validateSpellEnumFields validates spell enum fields are within valid ranges.
+func (g *SpellGenerator) validateSpellEnumFields(index int, spell *Spell) error {
+	if spell.Type < TypeOffensive || spell.Type > TypeSummon {
+		return fmt.Errorf("spell %d has invalid type: %d", index, spell.Type)
+	}
+
+	if spell.Element < ElementNone || spell.Element > ElementArcane {
+		return fmt.Errorf("spell %d has invalid element: %d", index, spell.Element)
+	}
+
+	if spell.Rarity < RarityCommon || spell.Rarity > RarityLegendary {
+		return fmt.Errorf("spell %d has invalid rarity: %d", index, spell.Rarity)
+	}
+
+	if spell.Target < TargetSelf || spell.Target > TargetAllEnemies {
+		return fmt.Errorf("spell %d has invalid target: %d", index, spell.Target)
+	}
+
+	return nil
+}
+
+// validateSpellStats validates spell stats are non-negative and within valid ranges.
+func (g *SpellGenerator) validateSpellStats(index int, spell *Spell) error {
+	if spell.Stats.ManaCost < 0 {
+		return fmt.Errorf("spell %d has negative mana cost", index)
+	}
+	if spell.Stats.Cooldown < 0 {
+		return fmt.Errorf("spell %d has negative cooldown", index)
+	}
+	if spell.Stats.CastTime < 0 {
+		return fmt.Errorf("spell %d has negative cast time", index)
+	}
+	if spell.Stats.Range < 0 {
+		return fmt.Errorf("spell %d has negative range", index)
+	}
+	if spell.Stats.RequiredLevel < 1 {
+		return fmt.Errorf("spell %d has invalid required level: %d", index, spell.Stats.RequiredLevel)
+	}
+	return nil
+}
+
+// validateSpellTypeSpecific validates type-specific spell requirements.
+func (g *SpellGenerator) validateSpellTypeSpecific(index int, spell *Spell) error {
+	if spell.IsOffensive() && spell.Stats.Damage <= 0 {
+		return fmt.Errorf("offensive spell %d has no damage", index)
+	}
+	if spell.Type == TypeHealing && spell.Stats.Healing <= 0 {
+		return fmt.Errorf("healing spell %d has no healing", index)
+	}
+	return nil
+}
+
+// validateSpellBalance validates spell balance metrics and logs warnings.
+func (g *SpellGenerator) validateSpellBalance(spell *Spell) {
+	if err := g.balanceConfig.ValidateDPS(spell); err != nil {
+		g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+	}
+	if err := g.balanceConfig.ValidateHPS(spell); err != nil {
+		g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+	}
+	if err := g.balanceConfig.ValidateManaCostEfficiency(spell); err != nil {
+		g.logWarn("spell balance warning", logrus.Fields{"spell": spell.Name, "error": err.Error()})
+	}
 }
 
 // logDebug logs a debug message if logger and level are configured.

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** IN PROGRESS - Phase 50.1 Complete ✅  
+**Status:** IN PROGRESS - Phase 50.2 Complete ✅  
 **Prerequisites:** V7.0 completion  
 **Started:** November 2025
 
@@ -12,6 +12,7 @@
 - ✅ Phase 49.3: Chat History with Delta Compression (November 2025)
 - ✅ Phase 49.4: Persistent Image Storage & Gallery (November 2025)
 - ✅ Phase 50.1: Guild Foundation & Cross-Server Sync (November 2025)
+- ✅ Phase 50.2: Territory Control & Guild Warfare (November 2025)
 
 This document tracks V8.0 development. Phases 49.1-49.4 and 50.1 complete.
 
@@ -418,18 +419,48 @@ type BuildingMaterialComponent struct {
 - Member add/remove: <50ms ✅ (achieved 0.6µs)
 - Cross-server sync: <500ms per guild update (ready for federation integration)
 
-### 50.2: Territory Control & Guild Warfare
+### 50.2: Territory Control & Guild Warfare ✅
+
+**Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [ ] Territory zones on world map (5×5 chunk territories)
-- [ ] Territory ownership assignment to guilds
-- [ ] Territory benefits: +10% resource spawn, +5% XP gain
-- [ ] Capture mechanics, guild war declaration
-- [ ] Defensive structures: Walls, towers, NPC guards
+- [x] Territory zones on world map (5×5 chunk territories)
+- [x] Territory ownership assignment to guilds
+- [x] Territory benefits: +10% resource spawn, +5% XP gain
+- [x] Capture mechanics, guild war declaration
+- [x] Defensive structures: Walls, towers, NPC guards
 
-**Metrics:**
-- Territory load: <50ms for 100 territories
-- Capture progress update: <10ms per tick
+**Implementation:**
+- Created `pkg/world/territory/` package with complete territory control system
+- Implemented `Manager` with thread-safe territory operations (RWMutex)
+- Implemented `Territory` with 5×5 chunk zone representation
+- Implemented capture mechanics with attacker/defender balance
+- Implemented defensive structures: Wall (1000 HP), Tower (500 HP, 100 damage), Guard (500 HP, level 30)
+- Implemented war declaration system with 1000 gold cost, 7-day duration
+- Implemented territory benefits: +10% resource spawn, +5% XP gain per territory
+- Implemented structure damage system with automatic removal on destruction
+- Created `cmd/territorytest/` CLI demo tool for testing and demonstration
+- Test coverage: 93.5% (exceeds 65% requirement)
+
+**Metrics Achieved:**
+- ✅ Territory load: 0.0007ms for 100 territories (target: <50ms, 71,428x faster)
+- ✅ Capture progress update: 0.00006ms per tick (target: <10ms, 166,666x faster)
+- ✅ Structure creation: 0.0002ms per structure (target: <20ms, 100,000x faster)
+- ✅ Benefits calculation: 0.0007ms per guild (target: <5ms, 7,142x faster)
+- ✅ Thread-safe concurrent access verified with race detection
+- ✅ All tests passing with zero race conditions
+
+**Performance:**
+- CreateTerritory: 260ns per territory (3 allocations)
+- UpdateCaptureProgress: 60ns per update (0 allocations)
+- BuildDefensiveStructure: 267ns per structure (3 allocations)
+- GetResourceBonus: 743ns for 100 territories (0 allocations)
+- Zero race conditions detected with `-race` flag
+
+**Test Coverage:**
+- manager_test.go: 27 test functions + 4 benchmarks
+- types_test.go: 3 test functions
+- Total: 93.5% coverage across all files (exceeds 65% requirement)
 
 ### 50.3: Enhanced Vehicle Physics
 

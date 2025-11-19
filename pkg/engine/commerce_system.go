@@ -327,6 +327,36 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 // SellItem handles a player selling an item to a merchant.
 // Returns a TransactionResult with success status and details.
 func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex int) (*TransactionResult, error) {
+	s.logSellStart(playerID, merchantID, playerItemIndex)
+
+	playerEntity, merchantEntity, err := s.retrieveSellEntities(playerID, merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	playerInvComp, merchantComp, err := s.retrieveSellComponents(playerEntity, merchantEntity, playerID, merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	itm, result := s.validatePlayerItem(playerInvComp, playerItemIndex, playerID)
+	if result != nil {
+		return result, nil
+	}
+
+	price := merchantComp.GetBuyPrice(itm)
+	result = s.validateSellTransaction(playerID, merchantID, itm, price, playerInvComp.Gold, merchantComp)
+	if result != nil {
+		return result, nil
+	}
+
+	s.logSellExecution(playerID, merchantID, itm.Name, price)
+
+	return s.executeSellTransaction(playerID, merchantID, playerItemIndex, itm, price, playerInvComp, merchantComp)
+}
+
+// logSellStart logs the start of a sell transaction.
+func (s *CommerceSystem) logSellStart(playerID, merchantID uint64, playerItemIndex int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":       "sell_item",
@@ -335,8 +365,10 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 			"player_item_idx": playerItemIndex,
 		}).Debug("Starting sell transaction")
 	}
+}
 
-	// Get player entity
+// retrieveSellEntities retrieves and validates player and merchant entities for sell transaction.
+func (s *CommerceSystem) retrieveSellEntities(playerID, merchantID uint64) (*Entity, *Entity, error) {
 	playerEntity, ok := s.world.GetEntity(playerID)
 	if !ok {
 		if s.logger != nil {
@@ -346,10 +378,9 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":     "entity_not_found",
 			}).Error("Player entity not found")
 		}
-		return nil, fmt.Errorf("player entity %d not found", playerID)
+		return nil, nil, fmt.Errorf("player entity %d not found", playerID)
 	}
 
-	// Get merchant entity
 	merchantEntity, ok := s.world.GetEntity(merchantID)
 	if !ok {
 		if s.logger != nil {
@@ -359,10 +390,14 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":       "entity_not_found",
 			}).Error("Merchant entity not found")
 		}
-		return nil, fmt.Errorf("merchant entity %d not found", merchantID)
+		return nil, nil, fmt.Errorf("merchant entity %d not found", merchantID)
 	}
 
-	// Get player inventory
+	return playerEntity, merchantEntity, nil
+}
+
+// retrieveSellComponents retrieves inventory and merchant components for sell transaction.
+func (s *CommerceSystem) retrieveSellComponents(playerEntity, merchantEntity *Entity, playerID, merchantID uint64) (*InventoryComponent, *MerchantComponent, error) {
 	playerInvComp, err := s.getInventoryComponent(playerEntity)
 	if err != nil {
 		if s.logger != nil {
@@ -372,10 +407,9 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":     "inventory_component_missing",
 			}).Error("Failed to get player inventory component")
 		}
-		return nil, fmt.Errorf("player inventory: %w", err)
+		return nil, nil, fmt.Errorf("player inventory: %w", err)
 	}
 
-	// Get merchant component
 	merchantComp, err := s.getMerchantComponent(merchantEntity)
 	if err != nil {
 		if s.logger != nil {
@@ -385,10 +419,14 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":       "merchant_component_missing",
 			}).Error("Failed to get merchant component")
 		}
-		return nil, fmt.Errorf("merchant component: %w", err)
+		return nil, nil, fmt.Errorf("merchant component: %w", err)
 	}
 
-	// Validate player item index
+	return playerInvComp, merchantComp, nil
+}
+
+// validatePlayerItem validates player item index and retrieves the item.
+func (s *CommerceSystem) validatePlayerItem(playerInvComp *InventoryComponent, playerItemIndex int, playerID uint64) (*item.Item, *TransactionResult) {
 	if playerItemIndex < 0 || playerItemIndex >= len(playerInvComp.Items) {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -399,13 +437,12 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":           "invalid_index",
 			}).Warn("Invalid player item index")
 		}
-		return &TransactionResult{
+		return nil, &TransactionResult{
 			Success:      false,
 			ErrorMessage: "Invalid item index",
-		}, nil
+		}
 	}
 
-	// Get the item
 	itm := playerInvComp.Items[playerItemIndex]
 	if itm == nil {
 		if s.logger != nil {
@@ -416,15 +453,17 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 				"error":           "item_null",
 			}).Warn("Item at index is null")
 		}
-		return &TransactionResult{
+		return nil, &TransactionResult{
 			Success:      false,
 			ErrorMessage: "Item not found",
-		}, nil
+		}
 	}
 
-	// Calculate price (merchant buy price)
-	price := merchantComp.GetBuyPrice(itm)
+	return itm, nil
+}
 
+// validateSellTransaction validates if the sell transaction can proceed.
+func (s *CommerceSystem) validateSellTransaction(playerID, merchantID uint64, itm *item.Item, price, playerGold int, merchantComp *MerchantComponent) *TransactionResult {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":   "sell_item",
@@ -434,18 +473,11 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 			"item_type":   itm.Type.String(),
 			"item_rarity": itm.Rarity.String(),
 			"price":       price,
-			"player_gold": playerInvComp.Gold,
+			"player_gold": playerGold,
 		}).Debug("Validating sell transaction")
 	}
 
-	// Validate transaction
-	// Note: merchants have infinite gold in current implementation
-	canSell, errMsg := s.validator.CanSellItem(
-		0, // merchant gold (not checked in default validator)
-		price,
-		!merchantComp.CanAddItem(),
-	)
-
+	canSell, errMsg := s.validator.CanSellItem(0, price, !merchantComp.CanAddItem())
 	if !canSell {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -462,21 +494,27 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 			Success:      false,
 			ErrorMessage: errMsg,
 			ItemName:     itm.Name,
-		}, nil
+		}
 	}
 
+	return nil
+}
+
+// logSellExecution logs the execution of a sell transaction.
+func (s *CommerceSystem) logSellExecution(playerID, merchantID uint64, itemName string, price int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":   "sell_item",
 			"player_id":   playerID,
 			"merchant_id": merchantID,
-			"item_name":   itm.Name,
+			"item_name":   itemName,
 			"price":       price,
 		}).Debug("Executing sell transaction")
 	}
+}
 
-	// Execute transaction (atomic operations)
-	// 1. Remove item from player
+// executeSellTransaction executes the atomic sell transaction with rollback on failure.
+func (s *CommerceSystem) executeSellTransaction(playerID, merchantID uint64, playerItemIndex int, itm *item.Item, price int, playerInvComp *InventoryComponent, merchantComp *MerchantComponent) (*TransactionResult, error) {
 	removedItem := playerInvComp.RemoveItem(playerItemIndex)
 	if removedItem == nil {
 		if s.logger != nil {
@@ -493,7 +531,6 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 		}, nil
 	}
 
-	// 2. Add gold to player
 	oldGold := playerInvComp.Gold
 	playerInvComp.Gold += price
 
@@ -507,10 +544,8 @@ func (s *CommerceSystem) SellItem(playerID, merchantID uint64, playerItemIndex i
 		}).Debug("Player gold increased")
 	}
 
-	// 3. Add item to merchant inventory
 	success := merchantComp.AddItem(removedItem)
 	if !success {
-		// Rollback: return item to player and deduct gold
 		playerInvComp.AddItem(removedItem)
 		playerInvComp.Gold -= price
 		if s.logger != nil {

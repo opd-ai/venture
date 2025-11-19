@@ -128,81 +128,14 @@ func (g *Generator) GenerateSeparator(width, height int, style SeparatorStyle, g
 	switch style {
 	case SeparatorLine:
 		g.drawHorizontalLine(img, 0, height/2, width, col)
-
 	case SeparatorDashed:
-		dashLength := 8
-		gapLength := 4
-		y := height / 2
-		for x := 0; x < width; x += dashLength + gapLength {
-			endX := x + dashLength
-			if endX > width {
-				endX = width
-			}
-			g.drawHorizontalLine(img, x, y, endX-x, col)
-		}
-
+		g.drawDashedSeparator(img, width, height, col)
 	case SeparatorDotted:
-		dotSize := 2
-		gapSize := 4
-		y := height / 2
-		for x := 0; x < width; x += dotSize + gapSize {
-			for dy := 0; dy < dotSize && y+dy < height; dy++ {
-				for dx := 0; dx < dotSize && x+dx < width; dx++ {
-					img.Set(x+dx, y+dy, col)
-				}
-			}
-		}
-
+		g.drawDottedSeparator(img, width, height, col)
 	case SeparatorGradient:
-		y := height / 2
-		for x := 0; x < width; x++ {
-			// Calculate alpha based on distance from edges
-			alpha := 1.0
-			fadeWidth := width / 4
-			if x < fadeWidth {
-				alpha = float64(x) / float64(fadeWidth)
-			} else if x > width-fadeWidth {
-				alpha = float64(width-x) / float64(fadeWidth)
-			}
-
-			r, gr, b, _ := col.RGBA()
-			gradCol := color.RGBA{
-				R: uint8(r >> 8),
-				G: uint8(gr >> 8),
-				B: uint8(b >> 8),
-				A: uint8(255 * alpha),
-			}
-			img.Set(x, y, gradCol)
-			if height > 2 {
-				img.Set(x, y+1, gradCol)
-			}
-		}
-
+		g.drawGradientSeparator(img, width, height, col)
 	case SeparatorOrnamental:
-		// Draw base line
-		g.drawHorizontalLine(img, 0, height/2, width, col)
-
-		// Add decorative dots at regular intervals
-		dotSpacing := width / 5
-		y := height / 2
-		for i := 1; i < 5; i++ {
-			x := i * dotSpacing
-			if x < width {
-				// Draw a small decorative diamond
-				size := 3
-				for dy := -size; dy <= size; dy++ {
-					for dx := -size; dx <= size; dx++ {
-						if abs(dx)+abs(dy) <= size {
-							px := x + dx
-							py := y + dy
-							if px >= 0 && px < width && py >= 0 && py < height {
-								img.Set(px, py, col)
-							}
-						}
-					}
-				}
-			}
-		}
+		g.drawOrnamentalSeparator(img, width, height, col)
 	}
 
 	return img
@@ -277,4 +210,95 @@ func abs(x int) int {
 		return -x
 	}
 	return x
+}
+
+// drawDashedSeparator renders a dashed line separator on the image.
+func (g *Generator) drawDashedSeparator(img *image.RGBA, width, height int, col color.Color) {
+	dashLength := 8
+	gapLength := 4
+	y := height / 2
+	for x := 0; x < width; x += dashLength + gapLength {
+		endX := x + dashLength
+		if endX > width {
+			endX = width
+		}
+		g.drawHorizontalLine(img, x, y, endX-x, col)
+	}
+}
+
+// drawDottedSeparator renders a dotted line separator on the image.
+func (g *Generator) drawDottedSeparator(img *image.RGBA, width, height int, col color.Color) {
+	dotSize := 2
+	gapSize := 4
+	y := height / 2
+	for x := 0; x < width; x += dotSize + gapSize {
+		for dy := 0; dy < dotSize && y+dy < height; dy++ {
+			for dx := 0; dx < dotSize && x+dx < width; dx++ {
+				img.Set(x+dx, y+dy, col)
+			}
+		}
+	}
+}
+
+// drawGradientSeparator renders a gradient fade separator on the image.
+func (g *Generator) drawGradientSeparator(img *image.RGBA, width, height int, col color.Color) {
+	y := height / 2
+	for x := 0; x < width; x++ {
+		alpha := calculateGradientAlpha(x, width)
+		r, gr, b, _ := col.RGBA()
+		gradCol := color.RGBA{
+			R: uint8(r >> 8),
+			G: uint8(gr >> 8),
+			B: uint8(b >> 8),
+			A: uint8(255 * alpha),
+		}
+		img.Set(x, y, gradCol)
+		if height > 2 {
+			img.Set(x, y+1, gradCol)
+		}
+	}
+}
+
+// calculateGradientAlpha calculates alpha value based on distance from edges.
+func calculateGradientAlpha(x, width int) float64 {
+	alpha := 1.0
+	fadeWidth := width / 4
+	if x < fadeWidth {
+		alpha = float64(x) / float64(fadeWidth)
+	} else if x > width-fadeWidth {
+		alpha = float64(width-x) / float64(fadeWidth)
+	}
+	return alpha
+}
+
+// drawOrnamentalSeparator renders a decorative separator with diamond pattern.
+func (g *Generator) drawOrnamentalSeparator(img *image.RGBA, width, height int, col color.Color) {
+	// Draw base line
+	g.drawHorizontalLine(img, 0, height/2, width, col)
+
+	// Add decorative dots at regular intervals
+	dotSpacing := width / 5
+	y := height / 2
+	for i := 1; i < 5; i++ {
+		x := i * dotSpacing
+		if x < width {
+			g.drawDecorativeDiamond(img, x, y, width, height, col)
+		}
+	}
+}
+
+// drawDecorativeDiamond draws a small decorative diamond at the specified position.
+func (g *Generator) drawDecorativeDiamond(img *image.RGBA, x, y, width, height int, col color.Color) {
+	size := 3
+	for dy := -size; dy <= size; dy++ {
+		for dx := -size; dx <= size; dx++ {
+			if abs(dx)+abs(dy) <= size {
+				px := x + dx
+				py := y + dy
+				if px >= 0 && px < width && py >= 0 && py < height {
+					img.Set(px, py, col)
+				}
+			}
+		}
+	}
 }

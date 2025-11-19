@@ -53,6 +53,13 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		logEntry = logger.WithFields(logrus.Fields{
 			"system": "animation",
 		})
+		logEntry.WithFields(logrus.Fields{
+			"max_cache_size":        100,
+			"viewport_cull_enabled": true,
+			"distance_lod_enabled":  true,
+			"close_threshold":       200.0,
+			"mid_threshold":         400.0,
+		}).Debug("initializing animation system")
 	}
 
 	return &AnimationSystem{
@@ -75,24 +82,42 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 // Call this during initialization to enable viewport-based optimization.
 func (s *AnimationSystem) SetCameraSystem(cameraSystem *CameraSystem) {
 	s.cameraSystem = cameraSystem
+	if s.logger != nil {
+		s.logger.Debug("camera system set for viewport culling")
+	}
 }
 
 // SetPlayerEntity sets the player entity reference for distance calculations.
 // Call this during initialization to enable distance-based frame rate adjustment.
 func (s *AnimationSystem) SetPlayerEntity(player *Entity) {
 	s.playerEntity = player
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": player.ID,
+		}).Debug("player entity set for distance calculations")
+	}
 }
 
 // EnableViewportCulling enables or disables viewport culling optimization.
 // When enabled, only animates entities visible in the current viewport.
 func (s *AnimationSystem) EnableViewportCulling(enable bool) {
 	s.enableViewportCull = enable
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"enabled": enable,
+		}).Debug("viewport culling configuration changed")
+	}
 }
 
 // EnableDistanceLOD enables or disables distance-based level-of-detail.
 // When enabled, adjusts animation frame rate based on distance from player.
 func (s *AnimationSystem) EnableDistanceLOD(enable bool) {
 	s.enableDistanceLOD = enable
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"enabled": enable,
+		}).Debug("distance LOD configuration changed")
+	}
 }
 
 // SetDistanceThresholds sets the distance thresholds for LOD tiers.
@@ -102,6 +127,12 @@ func (s *AnimationSystem) EnableDistanceLOD(enable bool) {
 func (s *AnimationSystem) SetDistanceThresholds(closeThreshold, midThreshold float64) {
 	s.distanceCloseThresh = closeThreshold
 	s.distanceMidThresh = midThreshold
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"close_threshold": closeThreshold,
+			"mid_threshold":   midThreshold,
+		}).Debug("distance thresholds updated")
+	}
 }
 
 // SetMaxCacheSize sets the maximum number of animation sequences to cache.
@@ -112,17 +143,32 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
+	oldSize := s.maxCacheSize
 	s.maxCacheSize = maxSize
 
 	// If new size is smaller than current cache, trigger eviction
 	if len(s.frameCache) > maxSize {
 		// Evict oldest entries until within limit
 		toEvict := len(s.frameCache) - maxSize
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"old_max_size":    oldSize,
+				"new_max_size":    maxSize,
+				"current_size":    len(s.frameCache),
+				"entries_evicted": toEvict,
+			}).Debug("cache size reduced, evicting entries")
+		}
 		for i := 0; i < toEvict && len(s.cacheKeys) > 0; i++ {
 			oldestKey := s.cacheKeys[0]
 			delete(s.frameCache, oldestKey)
 			s.cacheKeys = s.cacheKeys[1:]
 		}
+	} else if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"old_max_size": oldSize,
+			"new_max_size": maxSize,
+			"current_size": len(s.frameCache),
+		}).Debug("max cache size updated")
 	}
 }
 
@@ -135,14 +181,38 @@ func (s *AnimationSystem) GetStats() AnimationStats {
 // Update processes all entities with animation components.
 // Updates frame timers, transitions states, and regenerates frames if needed.
 func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": len(entities),
+			"delta_time":   deltaTime,
+		}).Debug("animation system update started")
+	}
+
 	s.resetStatistics(len(entities))
 	playerX, playerY := s.getPlayerPosition()
 	viewportBounds, hasViewport := s.calculateViewportBounds()
 
 	for _, entity := range entities {
 		if err := s.updateEntityAnimation(entity, deltaTime, playerX, playerY, viewportBounds, hasViewport); err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": entity.ID,
+					"error":     err.Error(),
+				}).Error("failed to update entity animation")
+			}
 			return err
 		}
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"total_entities":    s.stats.TotalEntities,
+			"animated_entities": s.stats.AnimatedEntities,
+			"culled_viewport":   s.stats.CulledByViewport,
+			"full_rate":         s.stats.FullRateEntities,
+			"half_rate":         s.stats.HalfRateEntities,
+			"static":            s.stats.StaticEntities,
+		}).Debug("animation system update completed")
 	}
 
 	return nil
@@ -178,16 +248,25 @@ type viewportBounds struct {
 func (s *AnimationSystem) calculateViewportBounds() (viewportBounds, bool) {
 	var bounds viewportBounds
 	if !s.enableViewportCull || s.cameraSystem == nil || s.cameraSystem.activeCamera == nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.Debug("viewport culling disabled or camera not available")
+		}
 		return bounds, false
 	}
 
 	camComp, ok := s.cameraSystem.activeCamera.GetComponent("camera")
 	if !ok {
+		if s.logger != nil {
+			s.logger.Warn("active camera missing camera component")
+		}
 		return bounds, false
 	}
 
 	camera, ok := camComp.(*CameraComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.Warn("camera component has incorrect type")
+		}
 		return bounds, false
 	}
 
@@ -198,6 +277,16 @@ func (s *AnimationSystem) calculateViewportBounds() (viewportBounds, bool) {
 	bounds.minY = camera.Y - halfHeight - margin
 	bounds.maxX = camera.X + halfWidth + margin
 	bounds.maxY = camera.Y + halfHeight + margin
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"camera_x":        camera.X,
+			"camera_y":        camera.Y,
+			"zoom":            camera.Zoom,
+			"viewport_width":  halfWidth * 2,
+			"viewport_height": halfHeight * 2,
+		}).Debug("viewport bounds calculated")
+	}
 
 	return bounds, true
 }
@@ -363,6 +452,7 @@ func (s *AnimationSystem) updateFrame(anim *AnimationComponent, deltaTime float6
 
 	// Check if it's time to advance frame
 	if anim.TimeAccumulator >= anim.FrameTime {
+		oldFrame := anim.FrameIndex
 		anim.TimeAccumulator -= anim.FrameTime
 		anim.FrameIndex++
 
@@ -370,9 +460,23 @@ func (s *AnimationSystem) updateFrame(anim *AnimationComponent, deltaTime float6
 		if anim.FrameIndex >= len(anim.Frames) {
 			if anim.Loop {
 				anim.FrameIndex = 0
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"state":     anim.CurrentState,
+						"old_frame": oldFrame,
+						"new_frame": anim.FrameIndex,
+						"loop":      true,
+					}).Debug("animation looped")
+				}
 			} else {
 				anim.FrameIndex = len(anim.Frames) - 1
 				anim.Playing = false
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					s.logger.WithFields(logrus.Fields{
+						"state":       anim.CurrentState,
+						"final_frame": anim.FrameIndex,
+					}).Debug("animation completed")
+				}
 				if anim.OnComplete != nil {
 					anim.OnComplete()
 				}
@@ -390,19 +494,51 @@ func (s *AnimationSystem) regenerateFrames(entity *Entity, anim *AnimationCompon
 	if frames, exists := s.frameCache[cacheKey]; exists {
 		s.cacheMutex.RUnlock()
 		anim.Frames = frames
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":   entity.ID,
+				"cache_key":   cacheKey,
+				"frame_count": len(frames),
+			}).Debug("animation frames loaded from cache")
+		}
 		return nil
 	}
 	s.cacheMutex.RUnlock()
 
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"cache_key": cacheKey,
+			"state":     anim.CurrentState,
+			"seed":      anim.Seed,
+		}).Debug("cache miss, generating new animation frames")
+	}
+
 	// Generate frames using sprite generator
 	frames, err := s.generateFrames(entity, anim, sprite)
 	if err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"state":     anim.CurrentState,
+				"error":     err.Error(),
+			}).Error("frame generation failed")
+		}
 		return err
 	}
 
 	// Cache frames
 	s.cacheFrames(cacheKey, frames)
 	anim.Frames = frames
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"cache_key":   cacheKey,
+			"frame_count": len(frames),
+			"cache_size":  len(s.frameCache),
+		}).Debug("animation frames generated and cached")
+	}
 
 	return nil
 }
@@ -415,6 +551,15 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 		frameCount = anim.FrameCount
 	}
 
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"state":       anim.CurrentState,
+			"frame_count": frameCount,
+			"seed":        anim.Seed,
+		}).Debug("generating animation frames")
+	}
+
 	frames := make([]*ebiten.Image, frameCount)
 
 	// Get sprite configuration from entity
@@ -424,6 +569,13 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 	// This prevents the "mutating shapes" issue where each frame is a different sprite
 	baseSprite, err := s.spriteGenerator.Generate(config)
 	if err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"config":    fmt.Sprintf("%+v", config),
+				"error":     err.Error(),
+			}).Error("failed to generate base sprite")
+		}
 		return nil, fmt.Errorf("failed to generate base sprite: %w", err)
 	}
 
@@ -431,6 +583,13 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 	for i := 0; i < frameCount; i++ {
 		frame, err := s.generateTransformedFrame(baseSprite, config, string(anim.CurrentState), i, frameCount)
 		if err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":   entity.ID,
+					"frame_index": i,
+					"error":       err.Error(),
+				}).Error("frame transformation failed")
+			}
 			return nil, fmt.Errorf("frame %d generation failed: %w", i, err)
 		}
 		frames[i] = frame
@@ -792,6 +951,13 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 	// Evict oldest entry if cache is full
 	if len(s.frameCache) >= s.maxCacheSize {
 		oldestKey := s.cacheKeys[0]
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"evicted_key": oldestKey,
+				"cache_size":  len(s.frameCache),
+				"max_size":    s.maxCacheSize,
+			}).Debug("evicting oldest cache entry")
+		}
 		delete(s.frameCache, oldestKey)
 		s.cacheKeys = s.cacheKeys[1:]
 	}
@@ -799,6 +965,14 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 	// Add to cache
 	s.frameCache[key] = frames
 	s.cacheKeys = append(s.cacheKeys, key)
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"cache_key":   key,
+			"frame_count": len(frames),
+			"cache_size":  len(s.frameCache),
+		}).Debug("frames added to cache")
+	}
 }
 
 // getCacheKey generates a cache key for animation frames.
@@ -811,8 +985,15 @@ func (s *AnimationSystem) ClearCache() {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
+	entriesCleared := len(s.frameCache)
 	s.frameCache = make(map[string][]*ebiten.Image)
 	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entries_cleared": entriesCleared,
+		}).Info("animation cache cleared")
+	}
 }
 
 // GetCacheSize returns the current number of cached animation sequences.
@@ -853,9 +1034,24 @@ func (s *AnimationSystem) getSpriteComponent(entity *Entity) *EbitenSprite {
 func (s *AnimationSystem) TransitionState(entity *Entity, newState AnimationState) bool {
 	animComp := s.getAnimationComponent(entity)
 	if animComp == nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("cannot transition animation state: no animation component")
+		}
 		return false
 	}
 
+	oldState := animComp.CurrentState
 	animComp.SetState(newState)
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"old_state": oldState,
+			"new_state": newState,
+		}).Debug("animation state transitioned")
+	}
+
 	return true
 }

@@ -103,9 +103,8 @@ func (s *CommerceSystem) SetValidator(validator TransactionValidator) {
 	}
 }
 
-// BuyItem handles a player purchasing an item from a merchant.
-// Returns a TransactionResult with success status and details.
-func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex int) (*TransactionResult, error) {
+// logBuyStart logs the start of a buy transaction.
+func (s *CommerceSystem) logBuyStart(playerID, merchantID uint64, merchantItemIndex int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":         "buy_item",
@@ -114,8 +113,10 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 			"merchant_item_idx": merchantItemIndex,
 		}).Debug("Starting buy transaction")
 	}
+}
 
-	// Get player entity
+// retrieveBuyEntities retrieves and validates player and merchant entities for buy transaction.
+func (s *CommerceSystem) retrieveBuyEntities(playerID, merchantID uint64) (*Entity, *Entity, error) {
 	playerEntity, ok := s.world.GetEntity(playerID)
 	if !ok {
 		if s.logger != nil {
@@ -125,10 +126,9 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":     "entity_not_found",
 			}).Error("Player entity not found")
 		}
-		return nil, fmt.Errorf("player entity %d not found", playerID)
+		return nil, nil, fmt.Errorf("player entity %d not found", playerID)
 	}
 
-	// Get merchant entity
 	merchantEntity, ok := s.world.GetEntity(merchantID)
 	if !ok {
 		if s.logger != nil {
@@ -138,10 +138,14 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":       "entity_not_found",
 			}).Error("Merchant entity not found")
 		}
-		return nil, fmt.Errorf("merchant entity %d not found", merchantID)
+		return nil, nil, fmt.Errorf("merchant entity %d not found", merchantID)
 	}
 
-	// Get player inventory
+	return playerEntity, merchantEntity, nil
+}
+
+// retrieveBuyComponents retrieves inventory and merchant components for buy transaction.
+func (s *CommerceSystem) retrieveBuyComponents(playerEntity, merchantEntity *Entity, playerID, merchantID uint64) (*InventoryComponent, *MerchantComponent, error) {
 	playerInvComp, err := s.getInventoryComponent(playerEntity)
 	if err != nil {
 		if s.logger != nil {
@@ -151,10 +155,9 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":     "inventory_component_missing",
 			}).Error("Failed to get player inventory component")
 		}
-		return nil, fmt.Errorf("player inventory: %w", err)
+		return nil, nil, fmt.Errorf("player inventory: %w", err)
 	}
 
-	// Get merchant component
 	merchantComp, err := s.getMerchantComponent(merchantEntity)
 	if err != nil {
 		if s.logger != nil {
@@ -164,10 +167,14 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":       "merchant_component_missing",
 			}).Error("Failed to get merchant component")
 		}
-		return nil, fmt.Errorf("merchant component: %w", err)
+		return nil, nil, fmt.Errorf("merchant component: %w", err)
 	}
 
-	// Validate merchant item index
+	return playerInvComp, merchantComp, nil
+}
+
+// validateMerchantItem validates merchant item index and retrieves the item.
+func (s *CommerceSystem) validateMerchantItem(merchantComp *MerchantComponent, merchantItemIndex int, merchantID uint64) (*item.Item, *TransactionResult) {
 	if merchantItemIndex < 0 || merchantItemIndex >= len(merchantComp.Inventory) {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -178,13 +185,12 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":             "invalid_index",
 			}).Warn("Invalid merchant item index")
 		}
-		return &TransactionResult{
+		return nil, &TransactionResult{
 			Success:      false,
 			ErrorMessage: "Invalid item index",
-		}, nil
+		}
 	}
 
-	// Get the item
 	itm := merchantComp.Inventory[merchantItemIndex]
 	if itm == nil {
 		if s.logger != nil {
@@ -195,15 +201,17 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 				"error":             "item_null",
 			}).Warn("Item at index is null")
 		}
-		return &TransactionResult{
+		return nil, &TransactionResult{
 			Success:      false,
 			ErrorMessage: "Item not found",
-		}, nil
+		}
 	}
 
-	// Calculate price (merchant sell price)
-	price := merchantComp.GetSellPrice(itm)
+	return itm, nil
+}
 
+// validateBuyTransaction validates if the buy transaction can proceed.
+func (s *CommerceSystem) validateBuyTransaction(playerID, merchantID uint64, itm *item.Item, price int, playerInvComp *InventoryComponent) *TransactionResult {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":   "buy_item",
@@ -217,13 +225,7 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 		}).Debug("Validating buy transaction")
 	}
 
-	// Validate transaction
-	canBuy, errMsg := s.validator.CanBuyItem(
-		playerInvComp.Gold,
-		price,
-		playerInvComp.IsFull(),
-	)
-
+	canBuy, errMsg := s.validator.CanBuyItem(playerInvComp.Gold, price, playerInvComp.IsFull())
 	if !canBuy {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -241,21 +243,27 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 			Success:      false,
 			ErrorMessage: errMsg,
 			ItemName:     itm.Name,
-		}, nil
+		}
 	}
 
+	return nil
+}
+
+// logBuyExecution logs the execution of a buy transaction.
+func (s *CommerceSystem) logBuyExecution(playerID, merchantID uint64, itemName string, price int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"operation":   "buy_item",
 			"player_id":   playerID,
 			"merchant_id": merchantID,
-			"item_name":   itm.Name,
+			"item_name":   itemName,
 			"price":       price,
 		}).Debug("Executing buy transaction")
 	}
+}
 
-	// Execute transaction (atomic operations)
-	// 1. Remove item from merchant
+// executeBuyTransaction executes the atomic buy transaction with rollback on failure.
+func (s *CommerceSystem) executeBuyTransaction(playerID, merchantID uint64, merchantItemIndex int, itm *item.Item, price int, playerInvComp *InventoryComponent, merchantComp *MerchantComponent) (*TransactionResult, error) {
 	removedItem := merchantComp.RemoveItem(merchantItemIndex)
 	if removedItem == nil {
 		if s.logger != nil {
@@ -272,7 +280,6 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 		}, nil
 	}
 
-	// 2. Deduct gold from player
 	oldGold := playerInvComp.Gold
 	playerInvComp.Gold -= price
 
@@ -286,10 +293,8 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 		}).Debug("Player gold deducted")
 	}
 
-	// 3. Add item to player inventory
 	success := playerInvComp.AddItem(itm)
 	if !success {
-		// Rollback: return item to merchant and refund gold
 		merchantComp.AddItem(removedItem)
 		playerInvComp.Gold += price
 		if s.logger != nil {
@@ -322,6 +327,37 @@ func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex 
 		GoldChanged: -price,
 		ItemName:    itm.Name,
 	}, nil
+}
+
+// BuyItem handles a player purchasing an item from a merchant.
+// Returns a TransactionResult with success status and details.
+func (s *CommerceSystem) BuyItem(playerID, merchantID uint64, merchantItemIndex int) (*TransactionResult, error) {
+	s.logBuyStart(playerID, merchantID, merchantItemIndex)
+
+	playerEntity, merchantEntity, err := s.retrieveBuyEntities(playerID, merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	playerInvComp, merchantComp, err := s.retrieveBuyComponents(playerEntity, merchantEntity, playerID, merchantID)
+	if err != nil {
+		return nil, err
+	}
+
+	itm, failResult := s.validateMerchantItem(merchantComp, merchantItemIndex, merchantID)
+	if failResult != nil {
+		return failResult, nil
+	}
+
+	price := merchantComp.GetSellPrice(itm)
+
+	if failResult := s.validateBuyTransaction(playerID, merchantID, itm, price, playerInvComp); failResult != nil {
+		return failResult, nil
+	}
+
+	s.logBuyExecution(playerID, merchantID, itm.Name, price)
+
+	return s.executeBuyTransaction(playerID, merchantID, merchantItemIndex, itm, price, playerInvComp, merchantComp)
 }
 
 // SellItem handles a player selling an item to a merchant.

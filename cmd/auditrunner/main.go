@@ -383,144 +383,138 @@ func generateFindings(result *AuditResult, pkgPath string) {
 	}
 }
 
+// writeAuditFile generates and writes the audit report to a markdown file.
 func writeAuditFile(result *AuditResult, filename string) error {
 	var buf bytes.Buffer
 
-	// Header
-	fmt.Fprintf(&buf, "# Code Review Audit: %s\n", result.PackageName)
-	fmt.Fprintf(&buf, "**Date:** %s\n", result.Date)
-	fmt.Fprintf(&buf, "**Reviewer:** GitHub Copilot\n")
-	fmt.Fprintf(&buf, "**Dependency Depth:** %s\n\n", result.Depth)
-
-	// Executive Summary
-	fmt.Fprintf(&buf, "## Executive Summary\n")
-	allPassed := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0
-	hasOnlyMinorFindings := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0 && len(result.MinorFindings) > 0
-
-	if allPassed && len(result.MinorFindings) == 0 {
-		fmt.Fprintf(&buf, "**Status: PASS** ✅\n\n")
-		fmt.Fprintf(&buf, "Package meets all quality standards with zero findings.\n\n")
-	} else if hasOnlyMinorFindings {
-		fmt.Fprintf(&buf, "**Status: PASS** ✅\n\n")
-		fmt.Fprintf(&buf, "Package meets all critical quality standards. Minor findings noted for enhancement.\n\n")
-	} else {
-		fmt.Fprintf(&buf, "**Status: NEEDS WORK** ⚠️\n\n")
-		fmt.Fprintf(&buf, "Package has findings that should be addressed.\n\n")
-	}
-
-	// Quality Gates
-	fmt.Fprintf(&buf, "## Quality Gates\n\n")
-	fmt.Fprintf(&buf, "### Build & Testing\n")
-	writeGate(&buf, "Build Success", result.BuildSuccess)
-	writeGate(&buf, "All Tests Pass", result.TestsPass)
-	writeGate(&buf, "Race-free", result.RaceFree)
-	writeGate(&buf, fmt.Sprintf("Coverage ≥65%% (actual: %.1f%%)", result.CoveragePercent), result.CoveragePass)
-
-	fmt.Fprintf(&buf, "\n### Code Quality\n")
-	writeGate(&buf, "Static Analysis", result.StaticAnalysisPass)
-	writeGate(&buf, "Code Formatting", result.CodeFormatPass)
-	writeGate(&buf, "Documentation Complete", result.DocsComplete)
-	writeGate(&buf, "Package Docs Present", result.PackageDocsPresent)
-	writeGate(&buf, "No Circular Dependencies", result.NoDependencyCycles)
-
-	// Metrics
-	fmt.Fprintf(&buf, "\n## Package Metrics\n\n")
-	fmt.Fprintf(&buf, "- **Go Files:** %d\n", result.NumGoFiles)
-	fmt.Fprintf(&buf, "- **Test Files:** %d\n", result.NumTestFiles)
-	fmt.Fprintf(&buf, "- **Lines of Code:** %d\n", result.LinesOfCode)
-	fmt.Fprintf(&buf, "- **Test Coverage:** %.1f%%\n", result.CoveragePercent)
-	fmt.Fprintf(&buf, "- **Exported Types:** %d\n", result.NumExportedTypes)
-	fmt.Fprintf(&buf, "- **Exported Functions:** %d\n", result.NumExportedFuncs)
-	fmt.Fprintf(&buf, "- **Internal Dependencies:** %d\n", len(result.Dependencies))
-
-	if len(result.Dependencies) > 0 {
-		fmt.Fprintf(&buf, "\n### Dependencies\n")
-		for _, dep := range result.Dependencies {
-			fmt.Fprintf(&buf, "- %s\n", dep)
-		}
-	}
-
-	// Findings
-	fmt.Fprintf(&buf, "\n## Findings\n\n")
-
-	fmt.Fprintf(&buf, "### Critical (blocks merge)\n")
-	if len(result.CriticalFindings) == 0 {
-		fmt.Fprintf(&buf, "None ✅\n\n")
-	} else {
-		for i, f := range result.CriticalFindings {
-			fmt.Fprintf(&buf, "\n#### %d. %s\n", i+1, f.Issue)
-			fmt.Fprintf(&buf, "**File:** %s\n", f.File)
-			if f.Line > 0 {
-				fmt.Fprintf(&buf, "**Line:** %d\n", f.Line)
-			}
-			fmt.Fprintf(&buf, "**Fix:** %s\n", f.Fix)
-			if f.CodeSnippet != "" {
-				fmt.Fprintf(&buf, "```go\n%s\n```\n", f.CodeSnippet)
-			}
-		}
-		fmt.Fprintf(&buf, "\n")
-	}
-
-	fmt.Fprintf(&buf, "### Major (should fix)\n")
-	if len(result.MajorFindings) == 0 {
-		fmt.Fprintf(&buf, "None ✅\n\n")
-	} else {
-		for i, f := range result.MajorFindings {
-			fmt.Fprintf(&buf, "\n#### %d. %s\n", i+1, f.Issue)
-			fmt.Fprintf(&buf, "**File:** %s\n", f.File)
-			if f.Line > 0 {
-				fmt.Fprintf(&buf, "**Line:** %d\n", f.Line)
-			}
-			fmt.Fprintf(&buf, "**Fix:** %s\n", f.Fix)
-			if f.CodeSnippet != "" {
-				fmt.Fprintf(&buf, "```go\n%s\n```\n", f.CodeSnippet)
-			}
-		}
-		fmt.Fprintf(&buf, "\n")
-	}
-
-	fmt.Fprintf(&buf, "### Minor (nice-to-have)\n")
-	if len(result.MinorFindings) == 0 {
-		fmt.Fprintf(&buf, "None ✅\n\n")
-	} else {
-		for i, f := range result.MinorFindings {
-			fmt.Fprintf(&buf, "\n#### %d. %s\n", i+1, f.Issue)
-			fmt.Fprintf(&buf, "**File:** %s\n", f.File)
-			if f.Line > 0 {
-				fmt.Fprintf(&buf, "**Line:** %d\n", f.Line)
-			}
-			fmt.Fprintf(&buf, "**Fix:** %s\n", f.Fix)
-			if f.CodeSnippet != "" {
-				fmt.Fprintf(&buf, "```go\n%s\n```\n", f.CodeSnippet)
-			}
-		}
-		fmt.Fprintf(&buf, "\n")
-	}
-
-	// Recommendations
-	fmt.Fprintf(&buf, "## Recommendations\n\n")
-	if allPassed {
-		fmt.Fprintf(&buf, "Package is production-ready. Consider:\n")
-		fmt.Fprintf(&buf, "1. Using this package as a reference for other packages\n")
-		fmt.Fprintf(&buf, "2. Monitoring performance as usage scales\n")
-		if len(result.MinorFindings) > 0 {
-			fmt.Fprintf(&buf, "3. Addressing minor findings to improve developer experience\n")
-		}
-	} else {
-		fmt.Fprintf(&buf, "### Immediate Actions Required\n\n")
-		if len(result.CriticalFindings) > 0 {
-			fmt.Fprintf(&buf, "1. **Critical:** Address all critical findings before merge\n")
-		}
-		if len(result.MajorFindings) > 0 {
-			fmt.Fprintf(&buf, "2. **Major:** Fix major issues to meet quality standards\n")
-		}
-		fmt.Fprintf(&buf, "3. **Review:** Re-run audit after fixes\n")
-	}
+	writeHeader(&buf, result)
+	writeExecutiveSummary(&buf, result)
+	writeQualityGates(&buf, result)
+	writePackageMetrics(&buf, result)
+	writeFindings(&buf, result)
+	writeRecommendations(&buf, result)
 
 	fmt.Fprintf(&buf, "\n---\n\n")
 	fmt.Fprintf(&buf, "*This audit was generated automatically by the Venture Code Review System*\n")
 
 	return os.WriteFile(filename, buf.Bytes(), 0o644)
+}
+
+// writeHeader writes the audit report header section.
+func writeHeader(buf *bytes.Buffer, result *AuditResult) {
+	fmt.Fprintf(buf, "# Code Review Audit: %s\n", result.PackageName)
+	fmt.Fprintf(buf, "**Date:** %s\n", result.Date)
+	fmt.Fprintf(buf, "**Reviewer:** GitHub Copilot\n")
+	fmt.Fprintf(buf, "**Dependency Depth:** %s\n\n", result.Depth)
+}
+
+// writeExecutiveSummary writes the executive summary section with overall status.
+func writeExecutiveSummary(buf *bytes.Buffer, result *AuditResult) {
+	fmt.Fprintf(buf, "## Executive Summary\n")
+	allPassed := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0
+	hasOnlyMinorFindings := allPassed && len(result.MinorFindings) > 0
+
+	if allPassed && len(result.MinorFindings) == 0 {
+		fmt.Fprintf(buf, "**Status: PASS** ✅\n\n")
+		fmt.Fprintf(buf, "Package meets all quality standards with zero findings.\n\n")
+	} else if hasOnlyMinorFindings {
+		fmt.Fprintf(buf, "**Status: PASS** ✅\n\n")
+		fmt.Fprintf(buf, "Package meets all critical quality standards. Minor findings noted for enhancement.\n\n")
+	} else {
+		fmt.Fprintf(buf, "**Status: NEEDS WORK** ⚠️\n\n")
+		fmt.Fprintf(buf, "Package has findings that should be addressed.\n\n")
+	}
+}
+
+// writeQualityGates writes the quality gates section with build and code quality checks.
+func writeQualityGates(buf *bytes.Buffer, result *AuditResult) {
+	fmt.Fprintf(buf, "## Quality Gates\n\n")
+	fmt.Fprintf(buf, "### Build & Testing\n")
+	writeGate(buf, "Build Success", result.BuildSuccess)
+	writeGate(buf, "All Tests Pass", result.TestsPass)
+	writeGate(buf, "Race-free", result.RaceFree)
+	writeGate(buf, fmt.Sprintf("Coverage ≥65%% (actual: %.1f%%)", result.CoveragePercent), result.CoveragePass)
+
+	fmt.Fprintf(buf, "\n### Code Quality\n")
+	writeGate(buf, "Static Analysis", result.StaticAnalysisPass)
+	writeGate(buf, "Code Formatting", result.CodeFormatPass)
+	writeGate(buf, "Documentation Complete", result.DocsComplete)
+	writeGate(buf, "Package Docs Present", result.PackageDocsPresent)
+	writeGate(buf, "No Circular Dependencies", result.NoDependencyCycles)
+}
+
+// writePackageMetrics writes the package metrics section including dependencies.
+func writePackageMetrics(buf *bytes.Buffer, result *AuditResult) {
+	fmt.Fprintf(buf, "\n## Package Metrics\n\n")
+	fmt.Fprintf(buf, "- **Go Files:** %d\n", result.NumGoFiles)
+	fmt.Fprintf(buf, "- **Test Files:** %d\n", result.NumTestFiles)
+	fmt.Fprintf(buf, "- **Lines of Code:** %d\n", result.LinesOfCode)
+	fmt.Fprintf(buf, "- **Test Coverage:** %.1f%%\n", result.CoveragePercent)
+	fmt.Fprintf(buf, "- **Exported Types:** %d\n", result.NumExportedTypes)
+	fmt.Fprintf(buf, "- **Exported Functions:** %d\n", result.NumExportedFuncs)
+	fmt.Fprintf(buf, "- **Internal Dependencies:** %d\n", len(result.Dependencies))
+
+	if len(result.Dependencies) > 0 {
+		fmt.Fprintf(buf, "\n### Dependencies\n")
+		for _, dep := range result.Dependencies {
+			fmt.Fprintf(buf, "- %s\n", dep)
+		}
+	}
+}
+
+// writeFindings writes all findings sections (critical, major, minor).
+func writeFindings(buf *bytes.Buffer, result *AuditResult) {
+	fmt.Fprintf(buf, "\n## Findings\n\n")
+
+	writeFindingsSection(buf, "Critical (blocks merge)", result.CriticalFindings)
+	writeFindingsSection(buf, "Major (should fix)", result.MajorFindings)
+	writeFindingsSection(buf, "Minor (nice-to-have)", result.MinorFindings)
+}
+
+// writeFindingsSection writes a single findings category section.
+func writeFindingsSection(buf *bytes.Buffer, title string, findings []Finding) {
+	fmt.Fprintf(buf, "### %s\n", title)
+	if len(findings) == 0 {
+		fmt.Fprintf(buf, "None ✅\n\n")
+		return
+	}
+
+	for i, f := range findings {
+		fmt.Fprintf(buf, "\n#### %d. %s\n", i+1, f.Issue)
+		fmt.Fprintf(buf, "**File:** %s\n", f.File)
+		if f.Line > 0 {
+			fmt.Fprintf(buf, "**Line:** %d\n", f.Line)
+		}
+		fmt.Fprintf(buf, "**Fix:** %s\n", f.Fix)
+		if f.CodeSnippet != "" {
+			fmt.Fprintf(buf, "```go\n%s\n```\n", f.CodeSnippet)
+		}
+	}
+	fmt.Fprintf(buf, "\n")
+}
+
+// writeRecommendations writes the recommendations section based on audit results.
+func writeRecommendations(buf *bytes.Buffer, result *AuditResult) {
+	allPassed := len(result.CriticalFindings) == 0 && len(result.MajorFindings) == 0
+
+	fmt.Fprintf(buf, "## Recommendations\n\n")
+	if allPassed {
+		fmt.Fprintf(buf, "Package is production-ready. Consider:\n")
+		fmt.Fprintf(buf, "1. Using this package as a reference for other packages\n")
+		fmt.Fprintf(buf, "2. Monitoring performance as usage scales\n")
+		if len(result.MinorFindings) > 0 {
+			fmt.Fprintf(buf, "3. Addressing minor findings to improve developer experience\n")
+		}
+	} else {
+		fmt.Fprintf(buf, "### Immediate Actions Required\n\n")
+		if len(result.CriticalFindings) > 0 {
+			fmt.Fprintf(buf, "1. **Critical:** Address all critical findings before merge\n")
+		}
+		if len(result.MajorFindings) > 0 {
+			fmt.Fprintf(buf, "2. **Major:** Fix major issues to meet quality standards\n")
+		}
+		fmt.Fprintf(buf, "3. **Review:** Re-run audit after fixes\n")
+	}
 }
 
 func writeGate(buf *bytes.Buffer, name string, passed bool) {

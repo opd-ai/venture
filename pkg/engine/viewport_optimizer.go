@@ -270,8 +270,8 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		"visible_entities":     v.stats.VisibleEntities,
 		"culled_entities":      v.stats.CulledEntities,
 		"offscreen_rendered":   v.stats.OffScreenRendered,
-		"culling_efficiency":   v.CullingEfficiency(),
-		"offscreen_percentage": v.OffScreenPercentage(),
+		"culling_efficiency":   v.cullingEfficiencyUnlocked(),
+		"offscreen_percentage": v.offScreenPercentageUnlocked(),
 	}).Info("Visible set optimization completed")
 
 	return visible
@@ -330,11 +330,9 @@ func (v *ViewportOptimizer) Stats() ViewportStats {
 	return v.stats
 }
 
-// OffScreenPercentage returns percentage of entities rendered off-screen.
-func (v *ViewportOptimizer) OffScreenPercentage() float64 {
-	v.mu.RLock()
-	defer v.mu.RUnlock()
-
+// offScreenPercentageUnlocked returns percentage of entities rendered off-screen.
+// Must be called while holding v.mu lock.
+func (v *ViewportOptimizer) offScreenPercentageUnlocked() float64 {
 	if v.stats.VisibleEntities == 0 {
 		v.logger.Debug("No visible entities, returning 0% off-screen percentage")
 		return 0.0
@@ -351,12 +349,16 @@ func (v *ViewportOptimizer) OffScreenPercentage() float64 {
 	return percentage
 }
 
-// CullingEfficiency returns culling efficiency (0.0 to 1.0).
-// Higher is better. 1.0 = all off-screen entities culled.
-func (v *ViewportOptimizer) CullingEfficiency() float64 {
+// OffScreenPercentage returns percentage of entities rendered off-screen.
+func (v *ViewportOptimizer) OffScreenPercentage() float64 {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
+	return v.offScreenPercentageUnlocked()
+}
 
+// cullingEfficiencyUnlocked returns culling efficiency (0.0 to 1.0).
+// Must be called while holding v.mu lock.
+func (v *ViewportOptimizer) cullingEfficiencyUnlocked() float64 {
 	if v.stats.TotalEntities == 0 {
 		v.logger.Debug("No total entities, returning 1.0 culling efficiency")
 		return 1.0
@@ -371,6 +373,14 @@ func (v *ViewportOptimizer) CullingEfficiency() float64 {
 	}).Debug("Calculated culling efficiency")
 
 	return efficiency
+}
+
+// CullingEfficiency returns culling efficiency (0.0 to 1.0).
+// Higher is better. 1.0 = all off-screen entities culled.
+func (v *ViewportOptimizer) CullingEfficiency() float64 {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.cullingEfficiencyUnlocked()
 }
 
 // ValidateMetrics checks if optimization meets Phase 44 targets.

@@ -25,6 +25,7 @@ EXECUTION PLAN:
    - PRESERVE: Prompt engineering documentation and examples
    - PRESERVE: Files in directories named 'prompts/', 'agents/', or '.github/copilot-instructions/'
    - PRESERVE: Files ending with patterns like '*-prompt.md', '*-agent.md', 'copilot-instructions.md'
+   - PRESERVE: All files mentioned in `.sh` shell scripts such as `loop.sh` and `loop2.sh`
    - EVALUATE: General documentation files for de-bloating (Phase 6)
 
 **Phase 2: Quick Assessment**

@@ -1,0 +1,17 @@
+{
+  "id": "hardcore-mode",
+  "name": "Hardcore Mode",
+  "version": "1.0.0",
+  "author": "Venture Team",
+  "description": "Increased difficulty with permadeath and higher spawn rates",
+  "type": "rule",
+  "rules": {
+    "difficulty_multiplier": 2.0,
+    "permadeath_enabled": true,
+    "spawn_rate_multiplier": 1.5,
+    "loot_drop_multiplier": 0.7,
+    "enemy_health_multiplier": 1.3,
+    "player_damage_multiplier": 0.8
+  },
+  "enabled": true
+}

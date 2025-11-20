@@ -1,0 +1,16 @@
+{
+  "id": "custom-spawns",
+  "name": "Custom Spawn Rates",
+  "version": "1.0.0",
+  "author": "Venture Team",
+  "description": "Customizes entity spawn rates for different entity types",
+  "type": "generator",
+  "generator_params": {
+    "monster_spawn_rate": 1.2,
+    "boss_spawn_rate": 0.5,
+    "npc_spawn_rate": 1.5,
+    "vehicle_spawn_rate": 0.8,
+    "companion_spawn_rate": 1.0
+  },
+  "enabled": true
+}

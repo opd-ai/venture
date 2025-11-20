@@ -1,0 +1,16 @@
+{
+  "id": "pvp-zones",
+  "name": "PvP Zones",
+  "version": "1.0.0",
+  "author": "Venture Team",
+  "description": "Enables player versus player combat in designated zones",
+  "type": "rule",
+  "rules": {
+    "pvp_enabled": true,
+    "pvp_zone_percentage": 0.2,
+    "friendly_fire_enabled": true,
+    "pvp_death_penalty": 0.5,
+    "pvp_reward_multiplier": 1.5
+  },
+  "enabled": false
+}

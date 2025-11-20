@@ -3,6 +3,7 @@
 package engine
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -161,83 +162,105 @@ func NewFocusFireAction() *ActionNode {
 // NewCallForHelpAction creates an action that alerts nearby squads.
 func NewCallForHelpAction(world *World) *ActionNode {
 	return NewActionNode("CallForHelp", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		// Get squad component
-		squadComp, ok := entity.GetComponent("squad")
-		if !ok {
-			return NodeFailure
-		}
-		squad, ok := squadComp.(*SquadComponent)
-		if !ok {
+		squad, pos, err := getSquadAndPosition(entity, blackboard)
+		if err != nil {
 			return NodeFailure
 		}
 
-		// Check if we can alert (cooldown)
-		currentTime, _ := blackboard.GetFloat64("game_time")
-		if !squad.CanAlert(currentTime) {
-			return NodeFailure
-		}
-
-		// Get our position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			return NodeFailure
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			return NodeFailure
-		}
-
-		// Find nearby squads within alert range (500 pixels)
-		alertRange := 500.0
 		allSquadEntities := world.GetEntitiesWith("squad", "position")
+		alertedCount := alertNearbySquads(entity, squad, pos, allSquadEntities, 500.0)
 
-		for _, other := range allSquadEntities {
-			if other.ID == entity.ID {
-				continue
-			}
-
-			otherSquadComp, _ := other.GetComponent("squad")
-			if otherSquadComp == nil {
-				continue
-			}
-			otherSquad, ok := otherSquadComp.(*SquadComponent)
-			if !ok {
-				continue
-			}
-
-			// Skip same squad
-			if otherSquad.SquadID == squad.SquadID {
-				continue
-			}
-
-			otherPosComp, _ := other.GetComponent("position")
-			if otherPosComp == nil {
-				continue
-			}
-			otherPos, ok := otherPosComp.(*PositionComponent)
-			if !ok {
-				continue
-			}
-
-			// Check distance
-			dx := otherPos.X - pos.X
-			dy := otherPos.Y - pos.Y
-			distance := math.Sqrt(dx*dx + dy*dy)
-
-			if distance <= alertRange {
-				// Alert this squad by setting alert status in their shared blackboard
-				if otherSquad.SharedBlackboard != nil {
-					otherSquad.SharedBlackboard.Set("alerted", true)
-					otherSquad.SharedBlackboard.Set("alert_position_x", pos.X)
-					otherSquad.SharedBlackboard.Set("alert_position_y", pos.Y)
-				}
-			}
+		if alertedCount > 0 {
+			currentTime, _ := blackboard.GetFloat64("game_time")
+			squad.SetAlerted(currentTime)
+			return NodeSuccess
 		}
 
-		// Mark as alerted
-		squad.SetAlerted(currentTime)
-		return NodeSuccess
+		return NodeFailure
 	})
+}
+
+// getSquadAndPosition retrieves squad component and position from entity with validation.
+func getSquadAndPosition(entity *Entity, blackboard *Blackboard) (*SquadComponent, *PositionComponent, error) {
+	squadComp, ok := entity.GetComponent("squad")
+	if !ok {
+		return nil, nil, fmt.Errorf("no squad component")
+	}
+	squad, ok := squadComp.(*SquadComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid squad component")
+	}
+
+	currentTime, _ := blackboard.GetFloat64("game_time")
+	if !squad.CanAlert(currentTime) {
+		return nil, nil, fmt.Errorf("cannot alert yet")
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil, fmt.Errorf("no position component")
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid position component")
+	}
+
+	return squad, pos, nil
+}
+
+// alertNearbySquads alerts all nearby squads within range and returns count alerted.
+func alertNearbySquads(entity *Entity, squad *SquadComponent, pos *PositionComponent, allSquadEntities []*Entity, alertRange float64) int {
+	alertedCount := 0
+
+	for _, other := range allSquadEntities {
+		if other.ID == entity.ID {
+			continue
+		}
+
+		otherSquad, otherPos, ok := getOtherSquadAndPosition(other, squad.SquadID)
+		if !ok {
+			continue
+		}
+
+		if isWithinRange(pos, otherPos, alertRange) {
+			alertSquad(otherSquad, pos)
+			alertedCount++
+		}
+	}
+
+	return alertedCount
+}
+
+// getOtherSquadAndPosition retrieves squad and position from another entity with validation.
+func getOtherSquadAndPosition(other *Entity, skipSquadID int) (*SquadComponent, *PositionComponent, bool) {
+	otherSquadComp, _ := other.GetComponent("squad")
+	if otherSquadComp == nil {
+		return nil, nil, false
+	}
+	otherSquad, ok := otherSquadComp.(*SquadComponent)
+	if !ok || otherSquad.SquadID == skipSquadID {
+		return nil, nil, false
+	}
+
+	otherPosComp, _ := other.GetComponent("position")
+	if otherPosComp == nil {
+		return nil, nil, false
+	}
+	otherPos, ok := otherPosComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, false
+	}
+
+	return otherSquad, otherPos, true
+}
+
+// alertSquad sets alert status in squad's shared blackboard.
+func alertSquad(squad *SquadComponent, alertPos *PositionComponent) {
+	if squad.SharedBlackboard != nil {
+		squad.SharedBlackboard.Set("alerted", true)
+		squad.SharedBlackboard.Set("alert_position_x", alertPos.X)
+		squad.SharedBlackboard.Set("alert_position_y", alertPos.Y)
+	}
 }
 
 // NewCoordinatedRetreatAction creates an action for squad retreat.

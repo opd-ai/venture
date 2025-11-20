@@ -92,80 +92,119 @@ func (s *InventorySystem) RemoveItemFromInventory(entityID uint64, index int) (*
 // EquipItem equips an item from inventory to the appropriate slot.
 // The item is removed from inventory and placed in equipment.
 func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
-	entity, ok := s.world.GetEntity(entityID)
-	if !ok {
-		return fmt.Errorf("entity %d not found", entityID)
+	invComp, equipComp, err := s.getInventoryAndEquipment(entityID)
+	if err != nil {
+		return err
 	}
 
-	comp, ok := entity.GetComponent("inventory")
-	if !ok {
-		return fmt.Errorf("entity %d does not have inventory component", entityID)
-	}
-	invComp, ok := comp.(*InventoryComponent)
-	if !ok {
-		return fmt.Errorf("entity %d inventory component has wrong type", entityID)
+	itm, err := s.validateInventoryIndex(invComp, inventoryIndex)
+	if err != nil {
+		return err
 	}
 
-	comp2, ok := entity.GetComponent("equipment")
-	if !ok {
-		return fmt.Errorf("entity %d does not have equipment component", entityID)
-	}
-	equipComp, ok := comp2.(*EquipmentComponent)
-	if !ok {
-		return fmt.Errorf("entity %d equipment component has wrong type", entityID)
+	entity, _ := s.world.GetEntity(entityID)
+	if err := s.validateClassRestrictions(entity, itm); err != nil {
+		return err
 	}
 
-	// Get item from inventory
-	if inventoryIndex < 0 || inventoryIndex >= len(invComp.Items) {
-		return fmt.Errorf("invalid inventory index %d", inventoryIndex)
-	}
-	itm := invComp.Items[inventoryIndex]
-
-	// Phase 25.2: Check class restrictions
-	if comp3, ok := entity.GetComponent("class_progression"); ok {
-		if classComp, ok := comp3.(*ClassProgressionComponent); ok {
-			// Check if the item can be used by the primary class
-			primaryClassName := classComp.Class.LowerName()
-			canUse := itm.CanBeUsedByClass(primaryClassName)
-
-			// If not usable by primary class, check secondary class (dual-classing)
-			if !canUse && classComp.SecondaryClass != nil {
-				secondaryClassName := classComp.SecondaryClass.LowerName()
-				canUse = itm.CanBeUsedByClass(secondaryClassName)
-			}
-
-			if !canUse {
-				return fmt.Errorf("item %s cannot be equipped by %s", itm.Name, classComp.Class.String())
-			}
-		}
-	}
-
-	// Check if item can be equipped
 	slot, canEquip := equipComp.GetSlotForItem(itm)
 	if !canEquip {
 		return fmt.Errorf("item %s cannot be equipped", itm.Name)
 	}
 
-	// Equip the item (this may return a previously equipped item)
 	previousItem := equipComp.Equip(itm, slot)
-
-	// Remove from inventory
 	invComp.RemoveItem(inventoryIndex)
 
-	// If there was a previously equipped item, add it to inventory
-	if previousItem != nil {
-		if !invComp.AddItem(previousItem) {
-			// Inventory is full, re-equip the previous item and return error
-			equipComp.Equip(previousItem, slot)
-			invComp.Items = append(invComp.Items[:inventoryIndex],
-				append([]*item.Item{itm}, invComp.Items[inventoryIndex:]...)...)
-			return fmt.Errorf("cannot equip: inventory full for swapped item")
+	if err := s.handlePreviousItem(invComp, equipComp, previousItem, itm, slot, inventoryIndex); err != nil {
+		return err
+	}
+
+	s.applyEquipmentStats(entityID)
+	s.logEquipAction(entityID, itm, slot, previousItem)
+	return nil
+}
+
+// getInventoryAndEquipment retrieves inventory and equipment components for an entity.
+func (s *InventorySystem) getInventoryAndEquipment(entityID uint64) (*InventoryComponent, *EquipmentComponent, error) {
+	entity, ok := s.world.GetEntity(entityID)
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d not found", entityID)
+	}
+
+	comp, ok := entity.GetComponent("inventory")
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d does not have inventory component", entityID)
+	}
+	invComp, ok := comp.(*InventoryComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d inventory component has wrong type", entityID)
+	}
+
+	comp2, ok := entity.GetComponent("equipment")
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d does not have equipment component", entityID)
+	}
+	equipComp, ok := comp2.(*EquipmentComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d equipment component has wrong type", entityID)
+	}
+
+	return invComp, equipComp, nil
+}
+
+// validateInventoryIndex checks if inventory index is valid and returns the item.
+func (s *InventorySystem) validateInventoryIndex(invComp *InventoryComponent, index int) (*item.Item, error) {
+	if index < 0 || index >= len(invComp.Items) {
+		return nil, fmt.Errorf("invalid inventory index %d", index)
+	}
+	return invComp.Items[index], nil
+}
+
+// validateClassRestrictions checks if entity's class can use the item.
+func (s *InventorySystem) validateClassRestrictions(entity *Entity, itm *item.Item) error {
+	comp, ok := entity.GetComponent("class_progression")
+	if !ok {
+		return nil
+	}
+
+	classComp, ok := comp.(*ClassProgressionComponent)
+	if !ok {
+		return nil
+	}
+
+	primaryClassName := classComp.Class.LowerName()
+	if itm.CanBeUsedByClass(primaryClassName) {
+		return nil
+	}
+
+	if classComp.SecondaryClass != nil {
+		secondaryClassName := classComp.SecondaryClass.LowerName()
+		if itm.CanBeUsedByClass(secondaryClassName) {
+			return nil
 		}
 	}
 
-	// Update entity stats based on new equipment
-	s.applyEquipmentStats(entityID)
+	return fmt.Errorf("item %s cannot be equipped by %s", itm.Name, classComp.Class.String())
+}
 
+// handlePreviousItem manages the previously equipped item when swapping equipment.
+func (s *InventorySystem) handlePreviousItem(invComp *InventoryComponent, equipComp *EquipmentComponent, previousItem, newItem *item.Item, slot EquipmentSlot, inventoryIndex int) error {
+	if previousItem == nil {
+		return nil
+	}
+
+	if invComp.AddItem(previousItem) {
+		return nil
+	}
+
+	equipComp.Equip(previousItem, slot)
+	invComp.Items = append(invComp.Items[:inventoryIndex],
+		append([]*item.Item{newItem}, invComp.Items[inventoryIndex:]...)...)
+	return fmt.Errorf("cannot equip: inventory full for swapped item")
+}
+
+// logEquipAction logs the equipment action if logger is configured.
+func (s *InventorySystem) logEquipAction(entityID uint64, itm *item.Item, slot EquipmentSlot, previousItem *item.Item) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entityID":     entityID,
@@ -174,8 +213,6 @@ func (s *InventorySystem) EquipItem(entityID uint64, inventoryIndex int) error {
 			"previousItem": previousItem != nil,
 		}).Info("item equipped")
 	}
-
-	return nil
 }
 
 // UnequipItem removes an item from an equipment slot and adds it to inventory.

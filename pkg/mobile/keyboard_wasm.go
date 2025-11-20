@@ -65,151 +65,147 @@ var initializationAttempted bool
 func initKeyboardElement() {
 	if !keyboardElement.IsUndefined() {
 		logInfo("Keyboard element already initialized, skipping")
-		return // Already initialized
+		return
 	}
 
-	// Mark that we've attempted initialization
+	markInitializationAttempt()
+
+	doc := js.Global().Get("document")
+	if !validateDOM(doc) {
+		return
+	}
+
+	input := createKeyboardInput(doc)
+	setupInputElement(input)
+	attachEventListeners(input, doc)
+	setupFocusGuard(doc)
+
+	if !appendInputToBody(doc, input) {
+		return
+	}
+
+	keyboardElement = input
+	lastInputValue = ""
+	logInfo("Virtual keyboard element created and added to DOM")
+	logInfo("Element ID: venture-keyboard-input, Type: text, InputMode: text")
+	logInfo("Canvas element detected - keyboard ready for use")
+}
+
+// markInitializationAttempt marks that initialization has been attempted.
+func markInitializationAttempt() {
 	if !initializationAttempted {
 		initializationAttempted = true
 		logInfo("First keyboard initialization attempt")
 	} else {
 		logInfo("Retrying keyboard initialization")
 	}
-
 	logInfo("Initializing virtual keyboard element")
-	doc := js.Global().Get("document")
+}
 
-	// CRITICAL FIX: Verify document is available
+// validateDOM verifies document and body are available.
+func validateDOM(doc js.Value) bool {
 	if doc.IsUndefined() || doc.IsNull() {
 		logError("Document is undefined or null - DOM not ready")
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
-		return
+		return false
 	}
+	return true
+}
 
+// createKeyboardInput creates the input element with basic attributes.
+func createKeyboardInput(doc js.Value) js.Value {
 	input := doc.Call("createElement", "input")
-
-	// Set input type to text for general text input
 	input.Set("type", "text")
 	input.Set("id", "venture-keyboard-input")
-
-	// Enable autocomplete and autocorrect for better mobile UX
 	input.Set("autocomplete", "off")
 	input.Set("autocorrect", "off")
 	input.Set("autocapitalize", "off")
 	input.Set("spellcheck", false)
-
-	// Set inputmode to optimize mobile keyboard layout
-	// "text" mode provides standard keyboard with letters, numbers, symbols
 	input.Set("inputmode", "text")
-
-	// Set enterkeyhint to show appropriate Enter button label on mobile
-	// "done" shows a "Done" button which is intuitive for completing input
 	input.Set("enterkeyhint", "done")
+	return input
+}
 
-	// CRITICAL FIX: Style the input for mobile keyboard interaction
-	//
-	// MOBILE KEYBOARD CHALLENGE:
-	// Many mobile browsers (iOS Safari especially) require a user gesture (touch)
-	// to show the keyboard - programmatic focus() alone may not work.
-	//
-	// SOLUTION:
-	// The input starts OFF-SCREEN. When ShowKeyboard() is called, we move it ON-SCREEN
-	// to a tappable position. When HideKeyboard() is called, we move it back OFF-SCREEN.
-	// This way it only intercepts touches when we actually want keyboard input.
-	//
-	// DEFAULT POSITIONING: Off-screen (hidden until ShowKeyboard() moves it on-screen)
+// setupInputElement applies styling and properties to the input element.
+func setupInputElement(input js.Value) {
 	style := input.Get("style")
 	style.Set("position", "fixed")
-	style.Set("left", "-9999px") // Off-screen initially
-	style.Set("top", "-9999px")  // Off-screen initially
-	style.Set("width", "200px")  // Will be visible when moved on-screen
-	style.Set("height", "50px")  // Tall enough for easy tap
-	style.Set("opacity", "0.01") // Nearly invisible when on-screen (0.01 instead of 0 for interaction)
-	style.Set("zIndex", "999")   // Below loading overlay but above canvas
+	style.Set("left", "-9999px")
+	style.Set("top", "-9999px")
+	style.Set("width", "200px")
+	style.Set("height", "50px")
+	style.Set("opacity", "0.01")
+	style.Set("zIndex", "999")
 	style.Set("border", "none")
 	style.Set("background", "transparent")
-	style.Set("color", "transparent") // Invisible text
-	style.Set("fontSize", "16px")     // Prevents zoom on iOS
-	style.Set("outline", "none")      // No focus outline
+	style.Set("color", "transparent")
+	style.Set("fontSize", "16px")
+	style.Set("outline", "none")
 
-	// CRITICAL: Ensure input can receive touch events and focus
-	// DO NOT set pointerEvents: none - we need touches when on-screen!
-	input.Set("tabIndex", 0)     // Make focusable
-	input.Set("readOnly", false) // Ensure it's editable
+	input.Set("tabIndex", 0)
+	input.Set("readOnly", false)
+}
 
-	// MOBILE KEYBOARD FIX: Forward input events to document for Ebiten
-	// When the mobile keyboard types into our hidden input, we need to dispatch
-	// those characters as keyboard events so Ebiten's AppendInputChars picks them up.
-	// This is the critical piece that makes mobile text input actually work.
-	inputEventListener = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		// Get current input value
+// attachEventListeners attaches input and keydown event listeners.
+func attachEventListeners(input, doc js.Value) {
+	inputEventListener = createInputListener(input, doc)
+	keydownEventListener = createKeydownListener(doc)
+
+	input.Call("addEventListener", "input", inputEventListener)
+	input.Call("addEventListener", "keydown", keydownEventListener)
+}
+
+// createInputListener creates the input event listener function.
+func createInputListener(input, doc js.Value) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		currentValue := input.Get("value").String()
 
-		// Compare with last value to find new characters
 		if len(currentValue) > len(lastInputValue) {
-			// New characters added - dispatch them to document
 			newChars := currentValue[len(lastInputValue):]
 			logInfo("Input event: new chars added: '" + newChars + "'")
 			for _, ch := range newChars {
 				dispatchKeyboardEvent(doc, string(ch))
 			}
-
-			// CRITICAL: Refocus input after dispatching events to keep keyboard open
-			// Dispatching events can cause the canvas to steal focus
 			input.Call("focus")
 		} else if len(currentValue) < len(lastInputValue) {
-			// Characters deleted (backspace) - dispatch backspace event
 			deletedCount := len(lastInputValue) - len(currentValue)
 			logInfo("Input event: backspace pressed (" + string(rune('0'+deletedCount)) + " chars deleted)")
 			for i := 0; i < deletedCount; i++ {
 				dispatchBackspaceEvent(doc)
 			}
-
-			// CRITICAL: Refocus input after dispatching events to keep keyboard open
 			input.Call("focus")
 		}
 
-		// Update last value
 		lastInputValue = currentValue
 		return nil
 	})
+}
 
-	// MOBILE KEYBOARD FIX: Forward special keys (Enter, Tab, Escape, etc.)
-	// Mobile keyboards generate keydown events for special keys that need forwarding
-	keydownEventListener = js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+// createKeydownListener creates the keydown event listener function.
+func createKeydownListener(doc js.Value) js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) > 0 {
 			event := args[0]
 			key := event.Get("key").String()
 
-			// Forward special keys that the game uses for navigation/completion
-			// Enter: Complete input, Tab: Next field, Escape: Cancel
 			if key == "Enter" || key == "Tab" || key == "Escape" {
 				dispatchSpecialKeyEvent(doc, key, event)
 			}
 		}
 		return nil
 	})
+}
 
-	// Attach event listeners
-	input.Call("addEventListener", "input", inputEventListener)
-	input.Call("addEventListener", "keydown", keydownEventListener)
-
-	// CRITICAL FIX: Prevent canvas from stealing focus while keyboard is active
-	// When events are dispatched to canvas, it can steal focus and hide the keyboard
-	// This listener immediately refocuses the input to keep the keyboard visible
+// setupFocusGuard prevents canvas from stealing focus while keyboard is active.
+func setupFocusGuard(doc js.Value) {
 	focusGuard := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		// If canvas gains focus while input has content, refocus input
 		if len(args) > 0 {
 			event := args[0]
 			target := event.Get("target")
 
-			// Check if a canvas element gained focus
 			if target.Get("tagName").String() == "CANVAS" {
-				// Check if our input has value (keyboard is in use)
 				if !keyboardElement.IsUndefined() && keyboardElement.Get("value").String() != "" {
-					// Prevent canvas from taking focus
 					event.Call("preventDefault")
-					// Refocus input
 					keyboardElement.Call("focus")
 				}
 			}
@@ -217,45 +213,35 @@ func initKeyboardElement() {
 		return nil
 	})
 
-	// Listen for focus events on the entire document
-	doc.Call("addEventListener", "focusin", focusGuard, true) // Use capture phase
+	doc.Call("addEventListener", "focusin", focusGuard, true)
+}
 
-	// Add to DOM
-	// CRITICAL FIX: Verify body is available before appending
+// appendInputToBody adds the input element to the document body after validation.
+func appendInputToBody(doc, input js.Value) bool {
 	body := doc.Get("body")
 	if body.IsUndefined() || body.IsNull() {
 		logError("Document body is undefined or null - DOM not ready")
 		logInfo("This may occur if ShowKeyboard() is called too early")
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
-		return
+		return false
 	}
 
-	// CRITICAL FIX: Ensure the canvas element exists before setting up keyboard
-	// This prevents issues where keyboard is initialized before Ebiten creates its canvas
 	canvasList := doc.Call("getElementsByTagName", "canvas")
 	if canvasList.Get("length").Int() == 0 {
 		logError("No canvas element found - Ebiten not fully initialized")
 		logInfo("Waiting for Ebiten to create canvas element")
 		logInfo("Initialization will be retried on next ShowKeyboard() call")
-		return
+		return false
 	}
 
-	// CRITICAL FIX: Ensure input element is above canvas in z-index stacking
-	// Set canvas z-index to a lower value than input (input is 999)
 	canvas := canvasList.Index(0)
 	canvasStyle := canvas.Get("style")
-	canvasStyle.Set("position", "relative") // Need position for z-index to work
-	canvasStyle.Set("zIndex", "1")          // Below input element (999)
+	canvasStyle.Set("position", "relative")
+	canvasStyle.Set("zIndex", "1")
 	logInfo("Canvas z-index set to 1 (input is 999)")
 
 	body.Call("appendChild", input)
-
-	keyboardElement = input
-	lastInputValue = ""
-
-	logInfo("Virtual keyboard element created and added to DOM")
-	logInfo("Element ID: venture-keyboard-input, Type: text, InputMode: text")
-	logInfo("Canvas element detected - keyboard ready for use")
+	return true
 }
 
 // dispatchKeyboardEvent dispatches a synthetic keyboard event to the canvas element

@@ -235,79 +235,51 @@ func (r *EbitenRenderSystem) Update(entities []*Entity, deltaTime float64) {
 // This should be called from the game's Draw method.
 // The screen parameter should be *ebiten.Image in production.
 func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
-	// DEBUG: Count player entities
-	playerCount := 0
-	for _, e := range entities {
-		if e.HasComponent("input") {
-			playerCount++
-		}
-	}
-	if playerCount > 0 {
-	}
-
-	// Type assert to *ebiten.Image
 	ebitenScreen, ok := screen.(*ebiten.Image)
 	if !ok {
-		return // Invalid screen type
+		return
 	}
 	r.screen = ebitenScreen
 
-	// Reset stats for this frame
-	r.stats = RenderStats{
-		TotalEntities: len(entities),
-	}
-
-	// Note: Screen clearing is handled by terrain rendering system
-
-	// Get visible entities using spatial partition (if enabled)
-	visibleEntities := entities
-	r.spatialCullingUsed = false
-	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
-		visibleEntities = r.getVisibleEntities(entities)
-		r.spatialCullingUsed = true // Mark that spatial culling was used
-
-		// DEBUG: Check if player survived culling
-		playerInVisible := 0
-		for _, e := range visibleEntities {
-			if e.HasComponent("input") {
-				playerInVisible++
-			}
-		}
-		if playerCount > 0 {
-		}
-	}
-
-	// Sort entities by layer
+	r.resetFrameStats(len(entities))
+	visibleEntities := r.applyCulling(entities)
 	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
-
-	// DEBUG: Check if player survived sorting
-	if playerCount > 0 {
-		playerInSorted := 0
-		for _, e := range sortedEntities {
-			if e.HasComponent("input") {
-				playerInSorted++
-			}
-		}
-	}
-
-	// Render using batching (if enabled) or individual draws
-	if r.enableBatching {
-		r.drawBatched(sortedEntities)
-	} else {
-		for _, entity := range sortedEntities {
-			r.drawEntity(entity)
-			r.stats.RenderedEntities++
-		}
-	} // Calculate culled count
-	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
-
-	// GAP-016 REPAIR: Draw particle effects
+	r.renderEntities(sortedEntities)
 	r.drawParticles(entities)
 
-	// Draw debug overlays
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
 	}
+}
+
+// resetFrameStats resets rendering statistics for the current frame.
+func (r *EbitenRenderSystem) resetFrameStats(totalEntities int) {
+	r.stats = RenderStats{
+		TotalEntities: totalEntities,
+	}
+}
+
+// applyCulling applies spatial culling if enabled, otherwise returns all entities.
+func (r *EbitenRenderSystem) applyCulling(entities []*Entity) []*Entity {
+	r.spatialCullingUsed = false
+	if r.enableCulling && r.spatialPartition != nil && r.cameraSystem != nil {
+		r.spatialCullingUsed = true
+		return r.getVisibleEntities(entities)
+	}
+	return entities
+}
+
+// renderEntities renders entities using batching or individual drawing.
+func (r *EbitenRenderSystem) renderEntities(entities []*Entity) {
+	if r.enableBatching {
+		r.drawBatched(entities)
+	} else {
+		for _, entity := range entities {
+			r.drawEntity(entity)
+			r.stats.RenderedEntities++
+		}
+	}
+	r.stats.CulledEntities = r.stats.TotalEntities - r.stats.RenderedEntities
 }
 
 // drawBatched renders entities using batch optimization to reduce GPU state changes.

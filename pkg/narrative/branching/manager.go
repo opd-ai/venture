@@ -82,71 +82,88 @@ func (m *Manager) MakeChoice(playerID, arcID, choiceID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	progress, err := m.getProgress(playerID, arcID)
+	progress, arc, currentNode, err := m.validateChoiceContext(playerID, arcID)
 	if err != nil {
 		return err
 	}
 
+	selectedChoice, err := m.findChoice(currentNode, choiceID)
+	if err != nil {
+		return err
+	}
+
+	if err := m.checkRequirements(progress, selectedChoice.Requirements); err != nil {
+		return fmt.Errorf("requirements not met: %w", err)
+	}
+
+	m.applyChoiceEffects(progress, selectedChoice)
+	progress.ChoicesMade[progress.CurrentNodeID] = choiceID
+
+	return m.advanceToNode(progress, arc, selectedChoice.NextNodeID)
+}
+
+// validateChoiceContext validates the player progress and current node for making a choice.
+func (m *Manager) validateChoiceContext(playerID, arcID string) (*PlayerProgress, *StoryArc, *StoryNode, error) {
+	progress, err := m.getProgress(playerID, arcID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	if progress.Completed {
-		return fmt.Errorf("arc %s already completed", arcID)
+		return nil, nil, nil, fmt.Errorf("arc %s already completed", arcID)
 	}
 
 	arc := m.graph.Arcs[arcID]
 	currentNode := arc.Nodes[progress.CurrentNodeID]
 
 	if currentNode.Type != NodeTypeChoice {
-		return fmt.Errorf("current node %s is not a choice node", progress.CurrentNodeID)
+		return nil, nil, nil, fmt.Errorf("current node %s is not a choice node", progress.CurrentNodeID)
 	}
 
-	// Find the choice
-	var selectedChoice *Choice
+	return progress, arc, currentNode, nil
+}
+
+// findChoice locates a choice in the current node by ID.
+func (m *Manager) findChoice(currentNode *StoryNode, choiceID string) (*Choice, error) {
 	for i := range currentNode.Choices {
 		if currentNode.Choices[i].ID == choiceID {
-			selectedChoice = &currentNode.Choices[i]
-			break
+			return &currentNode.Choices[i], nil
 		}
 	}
+	return nil, fmt.Errorf("choice %s not found in node %s", choiceID, currentNode.ID)
+}
 
-	if selectedChoice == nil {
-		return fmt.Errorf("choice %s not found in node %s", choiceID, progress.CurrentNodeID)
-	}
+// applyChoiceEffects applies alignment shifts and faction changes from a choice.
+func (m *Manager) applyChoiceEffects(progress *PlayerProgress, choice *Choice) {
+	applyAlignmentShifts(progress, choice.AlignmentShift)
+	applyFactionChanges(progress, choice.FactionChange)
+}
 
-	// Check requirements
-	if err := m.checkRequirements(progress, selectedChoice.Requirements); err != nil {
-		return fmt.Errorf("requirements not met: %w", err)
-	}
-
-	// Apply alignment shifts
-	for axis, shift := range selectedChoice.AlignmentShift {
+// applyAlignmentShifts applies and clamps alignment changes.
+func applyAlignmentShifts(progress *PlayerProgress, shifts map[AlignmentAxis]float64) {
+	for axis, shift := range shifts {
 		progress.Alignment[axis] += shift
-		// Clamp to [-1.0, 1.0]
 		if progress.Alignment[axis] > 1.0 {
 			progress.Alignment[axis] = 1.0
 		} else if progress.Alignment[axis] < -1.0 {
 			progress.Alignment[axis] = -1.0
 		}
 	}
+}
 
-	// Apply faction changes
-	for faction, change := range selectedChoice.FactionChange {
+// applyFactionChanges applies and clamps faction reputation changes.
+func applyFactionChanges(progress *PlayerProgress, changes map[string]float64) {
+	for faction, change := range changes {
 		if _, exists := progress.Faction[faction]; !exists {
 			progress.Faction[faction] = 0.0
 		}
 		progress.Faction[faction] += change
-		// Clamp to [-1.0, 1.0]
 		if progress.Faction[faction] > 1.0 {
 			progress.Faction[faction] = 1.0
 		} else if progress.Faction[faction] < -1.0 {
 			progress.Faction[faction] = -1.0
 		}
 	}
-
-	// Record choice
-	progress.ChoicesMade[progress.CurrentNodeID] = choiceID
-
-	// Move to next node
-	nextNodeID := selectedChoice.NextNodeID
-	return m.advanceToNode(progress, arc, nextNodeID)
 }
 
 // AdvanceStory moves to the next node in linear narrative sections

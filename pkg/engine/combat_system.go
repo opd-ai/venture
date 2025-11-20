@@ -819,6 +819,36 @@ func (s *CombatSystem) SetDamageCallback(callback func(attacker, target *Entity,
 	s.onDamageCallback = callback
 }
 
+// isValidEnemyTarget checks if entity is a valid enemy target.
+func isValidEnemyTarget(entity *Entity, attackerTeamID int) bool {
+	if entity.HasComponent("dead") {
+		return false
+	}
+
+	targetTeam, hasTeam := entity.GetComponent("team")
+	if hasTeam {
+		if team, ok := targetTeam.(*TeamComponent); ok {
+			if !team.IsEnemy(attackerTeamID) {
+				return false
+			}
+		}
+	}
+
+	healthComp, hasHealth := entity.GetComponent("health")
+	if !hasHealth {
+		return false
+	}
+	if health, ok := healthComp.(*HealthComponent); ok {
+		if health.IsDead() {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	return true
+}
+
 // FindEnemiesInRange finds all enemy entities within the given range of the attacker.
 func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Entity {
 	_, ok := attacker.GetComponent("position")
@@ -835,45 +865,16 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 	}
 
 	enemies := make([]*Entity, 0, 16)
-	checkedCount := 0
-	foundCount := 0
 
 	for _, entity := range world.GetEntities() {
-		checkedCount++
-
 		if entity.ID == attacker.ID {
 			continue
 		}
 
-		// Priority 1.3: Skip dead entities - they cannot be targeted
-		if entity.HasComponent("dead") {
+		if !isValidEnemyTarget(entity, attackerTeamID) {
 			continue
 		}
 
-		// Check team
-		targetTeam, hasTeam := entity.GetComponent("team")
-		if hasTeam {
-			if team, ok := targetTeam.(*TeamComponent); ok {
-				if !team.IsEnemy(attackerTeamID) {
-					continue
-				}
-			}
-		}
-
-		// Check health
-		healthComp, hasHealth := entity.GetComponent("health")
-		if !hasHealth {
-			continue
-		}
-		if health, ok := healthComp.(*HealthComponent); ok {
-			if health.IsDead() {
-				continue
-			}
-		} else {
-			continue
-		}
-
-		// Check range
 		_, hasPos := entity.GetComponent("position")
 		if !hasPos {
 			continue
@@ -882,7 +883,6 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 		distance := GetDistance(attacker, entity)
 		if distance <= maxRange {
 			enemies = append(enemies, entity)
-			foundCount++
 		}
 	}
 

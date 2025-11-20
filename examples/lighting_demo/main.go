@@ -194,52 +194,65 @@ func (g *Game) setupScene() {
 		g.playerID, len(g.world.GetEntities()), 8) // 1 player + 4 torches + 4 crystals - 1 for ambient
 }
 
-// Update updates game logic.
-func (g *Game) Update() error {
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		return fmt.Errorf("quit")
-	}
-
-	// Toggle pause
+// handleKeyboardInput processes keyboard controls for pause and lighting.
+func (g *Game) handleKeyboardInput() {
 	if ebiten.IsKeyPressed(ebiten.KeyP) && ebiten.IsKeyPressed(ebiten.KeyControl) {
 		g.paused = !g.paused
 	}
 
-	// Toggle lighting
 	if ebiten.IsKeyPressed(ebiten.KeyL) && ebiten.IsKeyPressed(ebiten.KeyControl) {
 		g.lightingSystem.SetEnabled(!g.lightingSystem.IsEnabled())
 		log.Printf("Lighting: %v", g.lightingSystem.IsEnabled())
 	}
+}
 
-	if g.paused {
-		return nil
-	}
-
-	deltaTime := 1.0 / 60.0
-
-	// Update player movement
+// updatePlayerVelocity updates player velocity based on input.
+func (g *Game) updatePlayerVelocity() {
 	player, ok := g.world.GetEntity(g.playerID)
-	if ok {
-		vel, _ := player.GetComponent("velocity")
-		velComp := vel.(*engine.VelocityComponent)
-
-		velComp.VX, velComp.VY = 0, 0
-
-		if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-			velComp.VY = -moveSpeed
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-			velComp.VY = moveSpeed
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-			velComp.VX = -moveSpeed
-		}
-		if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-			velComp.VX = moveSpeed
-		}
+	if !ok {
+		return
 	}
 
-	// Update entity positions
+	vel, ok := player.GetComponent("velocity")
+	if !ok {
+		return
+	}
+	velComp := vel.(*engine.VelocityComponent)
+	velComp.VX, velComp.VY = 0, 0
+
+	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		velComp.VY = -moveSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		velComp.VY = moveSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		velComp.VX = -moveSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		velComp.VX = moveSpeed
+	}
+}
+
+// applyBoundsConstraint applies boundary constraints for entities.
+func (g *Game) applyBoundsConstraint(entity *engine.Entity, pos *engine.PositionComponent, vel *engine.VelocityComponent) {
+	if entity.ID != g.playerID {
+		if pos.X < 0 || pos.X > screenWidth {
+			vel.VX = -vel.VX
+			pos.X = clamp(pos.X, 0, screenWidth)
+		}
+		if pos.Y < 0 || pos.Y > screenHeight {
+			vel.VY = -vel.VY
+			pos.Y = clamp(pos.Y, 0, screenHeight)
+		}
+	} else {
+		pos.X = clamp(pos.X, 0, screenWidth)
+		pos.Y = clamp(pos.Y, 0, screenHeight)
+	}
+}
+
+// updateEntityPositions updates all entity positions based on velocity.
+func (g *Game) updateEntityPositions(deltaTime float64) {
 	entities := g.world.GetEntities()
 	for _, entity := range entities {
 		posComp, hasPos := entity.GetComponent("position")
@@ -252,25 +265,29 @@ func (g *Game) Update() error {
 			pos.X += vel.VX * deltaTime
 			pos.Y += vel.VY * deltaTime
 
-			// Bounce spell off edges
-			if entity.ID != g.playerID {
-				if pos.X < 0 || pos.X > screenWidth {
-					vel.VX = -vel.VX
-					pos.X = clamp(pos.X, 0, screenWidth)
-				}
-				if pos.Y < 0 || pos.Y > screenHeight {
-					vel.VY = -vel.VY
-					pos.Y = clamp(pos.Y, 0, screenHeight)
-				}
-			} else {
-				// Keep player in bounds
-				pos.X = clamp(pos.X, 0, screenWidth)
-				pos.Y = clamp(pos.Y, 0, screenHeight)
-			}
+			g.applyBoundsConstraint(entity, pos, vel)
 		}
 	}
+}
 
-	// Update lighting system
+// Update updates game logic.
+func (g *Game) Update() error {
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		return fmt.Errorf("quit")
+	}
+
+	g.handleKeyboardInput()
+
+	if g.paused {
+		return nil
+	}
+
+	deltaTime := 1.0 / 60.0
+
+	g.updatePlayerVelocity()
+	g.updateEntityPositions(deltaTime)
+
+	entities := g.world.GetEntities()
 	g.lightingSystem.Update(entities, deltaTime)
 
 	return nil

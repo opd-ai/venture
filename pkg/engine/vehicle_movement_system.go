@@ -35,78 +35,85 @@ func NewVehicleMovementSystem(world *World) *VehicleMovementSystem {
 	}
 }
 
+// getVehicleComponents retrieves and validates vehicle, position and rotation components.
+func (vms *VehicleMovementSystem) getVehicleComponents(entity *Entity) (*VehicleComponent, *PositionComponent, *RotationComponent, bool) {
+	vehicleComp, hasVehicle := entity.GetComponent("vehicle")
+	if !hasVehicle {
+		return nil, nil, nil, false
+	}
+
+	vehicle, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	if vehicle.IsDestroyed() || vehicle.IsFuelDepleted() {
+		vehicle.Speed = 0.0
+		return nil, nil, nil, false
+	}
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, nil, nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	rotComp, hasRot := entity.GetComponent("rotation")
+	if !hasRot {
+		return nil, nil, nil, false
+	}
+	rot, ok := rotComp.(*RotationComponent)
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	return vehicle, pos, rot, true
+}
+
+// handleVehicleControl processes vehicle control input or deceleration.
+func (vms *VehicleMovementSystem) handleVehicleControl(entity *Entity, vehicle *VehicleComponent, rot *RotationComponent, deltaTime float64) {
+	hasControl := vms.hasControlInput(entity)
+
+	if hasControl {
+		inputComp, hasInput := entity.GetComponent("input")
+		if hasInput {
+			input, ok := inputComp.(InputProvider)
+			if ok {
+				vms.processInput(vehicle, rot, input, deltaTime)
+			}
+		}
+	} else {
+		vms.applyDeceleration(vehicle, deltaTime)
+	}
+}
+
+// consumeVehicleFuel consumes fuel and stops vehicle if depleted.
+func (vms *VehicleMovementSystem) consumeVehicleFuel(entity *Entity, vehicle *VehicleComponent, deltaTime float64) {
+	fuelCost := vehicle.GetFuelCost() * deltaTime
+	if !vehicle.ConsumeFuel(fuelCost) {
+		vehicle.Speed = 0.0
+		if vms.logger != nil {
+			vms.logger.WithField("entity_id", entity.ID).Debug("Vehicle out of fuel")
+		}
+	}
+}
+
 // Update processes vehicle movement for all entities with vehicle components.
 func (vms *VehicleMovementSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Check if entity has vehicle component
-		vehicleComp, hasVehicle := entity.GetComponent("vehicle")
-		if !hasVehicle {
-			continue
-		}
-
-		// Type assert with safety check
-		vehicle, ok := vehicleComp.(*VehicleComponent)
+		vehicle, pos, rot, ok := vms.getVehicleComponents(entity)
 		if !ok {
 			continue
 		}
 
-		// Skip if vehicle is destroyed or out of fuel
-		if vehicle.IsDestroyed() || vehicle.IsFuelDepleted() {
-			vehicle.Speed = 0.0
-			continue
-		}
+		vms.handleVehicleControl(entity, vehicle, rot, deltaTime)
 
-		// Get position and rotation components
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue // Can't move without position
-		}
-		// Type assert with safety check
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		rotComp, hasRot := entity.GetComponent("rotation")
-		if !hasRot {
-			continue // Need rotation for direction
-		}
-		// Type assert with safety check
-		rot, ok := rotComp.(*RotationComponent)
-		if !ok {
-			continue
-		}
-
-		// Check if entity is being controlled (has input or is mounted)
-		hasControl := vms.hasControlInput(entity)
-
-		// Get input for acceleration/turning
-		if hasControl {
-			inputComp, hasInput := entity.GetComponent("input")
-			if hasInput {
-				input, ok := inputComp.(InputProvider)
-				if ok {
-					vms.processInput(vehicle, rot, input, deltaTime)
-				}
-			}
-		} else {
-			// Apply deceleration when not controlled
-			vms.applyDeceleration(vehicle, deltaTime)
-		}
-
-		// Apply movement if vehicle has speed
 		if vehicle.Speed > 0 {
 			vms.applyMovement(vehicle, pos, rot, deltaTime)
-
-			// Consume fuel based on speed
-			fuelCost := vehicle.GetFuelCost() * deltaTime
-			if !vehicle.ConsumeFuel(fuelCost) {
-				// Out of fuel - stop
-				vehicle.Speed = 0.0
-				if vms.logger != nil {
-					vms.logger.WithField("entity_id", entity.ID).Debug("Vehicle out of fuel")
-				}
-			}
+			vms.consumeVehicleFuel(entity, vehicle, deltaTime)
 		}
 	}
 }

@@ -483,6 +483,59 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	}
 }
 
+// findAmbientIntensity searches for ambient light component and returns its intensity.
+func (s *LightingSystem) findAmbientIntensity(entities []*Entity) float64 {
+	for _, entity := range entities {
+		if ambComp, hasAmb := entity.GetComponent("ambient_light"); hasAmb {
+			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":         entity.ID,
+						"ambient_intensity": ambient.Intensity,
+					}).Debug("Found ambient light component")
+				}
+				return ambient.Intensity
+			}
+		}
+	}
+	return s.config.AmbientIntensity
+}
+
+// calculateLightContribution computes light contribution from a single entity.
+func (s *LightingSystem) calculateLightContribution(entity *Entity, x, y float64) (float64, bool) {
+	lightComp, hasLight := entity.GetComponent("light")
+	if !hasLight {
+		return 0, false
+	}
+
+	light, ok := lightComp.(*LightComponent)
+	if !ok || !light.Enabled {
+		return 0, false
+	}
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return 0, false
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return 0, false
+	}
+
+	dx := x - pos.X
+	dy := y - pos.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	if dist > light.Radius {
+		return 0, false
+	}
+
+	falloff := s.calculateFalloff(dist, light.Radius, light.Falloff)
+	intensity := light.GetCurrentIntensity() * falloff
+	return intensity, true
+}
+
 // CalculateLightIntensityAt calculates the total light intensity at a point.
 // This can be used for gameplay mechanics (e.g., stealth, vision).
 func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Entity) float64 {
@@ -494,69 +547,19 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 	}
 
 	if !s.config.Enabled {
-		return 1.0 // Full brightness if lighting disabled
+		return 1.0
 	}
 
-	totalIntensity := s.config.AmbientIntensity
+	totalIntensity := s.findAmbientIntensity(entities)
 	contributingLights := 0
 
-	// Check for ambient light component in entities first
 	for _, entity := range entities {
-		if ambComp, hasAmb := entity.GetComponent("ambient_light"); hasAmb {
-			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
-				totalIntensity = ambient.Intensity
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":         entity.ID,
-						"ambient_intensity": ambient.Intensity,
-					}).Debug("Found ambient light component")
-				}
-				break // Only use first ambient light found
-			}
+		if contribution, ok := s.calculateLightContribution(entity, x, y); ok {
+			totalIntensity += contribution
+			contributingLights++
 		}
 	}
 
-	// Check each light
-	for _, entity := range entities {
-		lightComp, hasLight := entity.GetComponent("light")
-		if !hasLight {
-			continue
-		}
-
-		light, ok := lightComp.(*LightComponent)
-		if !ok || !light.Enabled {
-			continue
-		}
-
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Calculate distance
-		dx := x - pos.X
-		dy := y - pos.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
-
-		if dist > light.Radius {
-			continue
-		}
-
-		// Calculate falloff
-		falloff := s.calculateFalloff(dist, light.Radius, light.Falloff)
-
-		// Add light contribution
-		intensity := light.GetCurrentIntensity() * falloff
-		totalIntensity += intensity
-		contributingLights++
-	}
-
-	// Clamp to [0, 1]
 	if totalIntensity > 1.0 {
 		totalIntensity = 1.0
 	}

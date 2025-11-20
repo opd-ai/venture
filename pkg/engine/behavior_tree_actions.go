@@ -128,6 +128,72 @@ func NewTargetInRangeCondition(range_ float64) *ConditionNode {
 
 // Common Action Builders
 
+// getEntityTeamID extracts team ID from entity.
+func getEntityTeamID(entity *Entity) (int, bool) {
+	teamComp, hasTeam := entity.GetComponent("team")
+	if !hasTeam {
+		return 0, false
+	}
+	if team, ok := teamComp.(*TeamComponent); ok {
+		return team.TeamID, true
+	}
+	return 0, false
+}
+
+// isEnemyEntity checks if other entity is an enemy to the given team.
+func isEnemyEntity(other *Entity, teamID int) bool {
+	otherTeamID, ok := getEntityTeamID(other)
+	if !ok {
+		return false
+	}
+	return otherTeamID != teamID
+}
+
+// calculateEntityDistance computes distance between two position components.
+func calculateEntityDistance(pos1, pos2 *PositionComponent) float64 {
+	dx := pos2.X - pos1.X
+	dy := pos2.Y - pos1.Y
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
+// findNearestEnemy finds the nearest enemy entity within detection range.
+func findNearestEnemy(entity *Entity, pos *PositionComponent, teamID int, detectionRange float64, world *World) (*Entity, float64) {
+	var nearestEnemy *Entity
+	nearestDistance := detectionRange + 1.0
+
+	if world == nil {
+		return nil, nearestDistance
+	}
+
+	entities := world.GetEntitiesWith("position", "team")
+	for _, other := range entities {
+		if other.ID == entity.ID {
+			continue
+		}
+
+		if !isEnemyEntity(other, teamID) {
+			continue
+		}
+
+		otherPosComp, ok := other.GetComponent("position")
+		if !ok {
+			continue
+		}
+		oPos, ok := otherPosComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
+
+		distance := calculateEntityDistance(pos, oPos)
+		if distance <= detectionRange && distance < nearestDistance {
+			nearestEnemy = other
+			nearestDistance = distance
+		}
+	}
+
+	return nearestEnemy, nearestDistance
+}
+
 // NewFindTargetAction creates an action that searches for the nearest enemy.
 func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 	return NewActionNode("FindTarget", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
@@ -140,62 +206,8 @@ func NewFindTargetAction(detectionRange float64, world *World) *ActionNode {
 			return NodeFailure
 		}
 
-		// Get team component to identify enemies
-		teamComp, hasTeam := entity.GetComponent("team")
-		var teamID int
-		if hasTeam {
-			if team, ok := teamComp.(*TeamComponent); ok {
-				teamID = team.TeamID
-			}
-		}
-
-		// Find nearest enemy
-		var nearestEnemy *Entity
-		nearestDistance := detectionRange + 1.0
-
-		// Query all entities with position and team components
-		if world != nil {
-			entities := world.GetEntitiesWith("position", "team")
-
-			for _, other := range entities {
-				if other.ID == entity.ID {
-					continue
-				}
-
-				// Check if enemy (different team)
-				otherTeamComp, hasOtherTeam := other.GetComponent("team")
-				if !hasOtherTeam {
-					continue
-				}
-				if otherTeam, ok := otherTeamComp.(*TeamComponent); ok {
-					otherTeamID := otherTeam.TeamID
-					if otherTeamID == teamID {
-						continue // Same team
-					}
-				} else {
-					continue
-				}
-
-				// Check distance
-				otherPos, ok := other.GetComponent("position")
-				if !ok {
-					continue
-				}
-				oPos, ok := otherPos.(*PositionComponent)
-				if !ok {
-					continue
-				}
-
-				dx := oPos.X - pos.X
-				dy := oPos.Y - pos.Y
-				distance := math.Sqrt(dx*dx + dy*dy)
-
-				if distance <= detectionRange && distance < nearestDistance {
-					nearestEnemy = other
-					nearestDistance = distance
-				}
-			}
-		}
+		teamID, _ := getEntityTeamID(entity)
+		nearestEnemy, nearestDistance := findNearestEnemy(entity, pos, teamID, detectionRange, world)
 
 		if nearestEnemy != nil {
 			blackboard.Set("target", nearestEnemy)

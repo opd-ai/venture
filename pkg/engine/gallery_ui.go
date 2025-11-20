@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
@@ -98,7 +99,9 @@ func (g *GalleryUI) Update() bool {
 	// Gap: No input handling for image navigation
 	// Fix: Added keyboard controls for browsing gallery images
 	// Roadmap: ROADMAP_V8.md Phase 49.4
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	// BUG FIX: Phase 2 - GalleryUI ESC key using IsKeyPressed instead of IsKeyJustPressed
+	// Resolution: Changed to inpututil.IsKeyJustPressed to prevent repeated close on held key
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		g.Hide()
 		return true
 	}
@@ -108,11 +111,13 @@ func (g *GalleryUI) Update() bool {
 		g.TotalImages = g.gallery.GetImageCount()
 	}
 
+	// BUG FIX: Phase 2 - GalleryUI navigation keys using IsKeyPressed causing rapid scrolling
+	// Resolution: Changed to IsKeyJustPressed for single-step navigation on key press
 	// Navigate images
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) || inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		g.NextImage()
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyA) {
 		g.PreviousImage()
 	}
 

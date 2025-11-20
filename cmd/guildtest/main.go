@@ -127,7 +127,9 @@ func main() {
 
 	default:
 		// Default: show demo
-		fmt.Println("=== Guild System Demo ===\n")
+		// BUG FIX: Phase 1 - Redundant newline in fmt.Println
+		// Resolution: Removed \n from Println (already adds newline)
+		fmt.Println("=== Guild System Demo ===")
 		runDemo(manager)
 	}
 }

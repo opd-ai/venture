@@ -5,6 +5,9 @@ package mobile
 
 import (
 	"syscall/js"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 // Console logging helper for debugging keyboard issues
@@ -505,4 +508,32 @@ func HideKeyboard() {
 // This can be used to conditionally show keyboard-related UI hints.
 func IsKeyboardSupported() bool {
 	return true // Always supported in WASM builds
+}
+
+// BUG FIX: Phase 1.2 - Complete Android back button dual-exit pattern
+// Resolution: Add GetBackButtonKey and IsBackButtonPressed for unified navigation
+// Platform: WASM (browser back button, ESC key)
+
+// GetBackButtonKey returns the appropriate back navigation key for the platform.
+// Platform parity fix: WASM uses ESC key (browser back is not accessible)
+func GetBackButtonKey() ebiten.Key {
+	return ebiten.KeyEscape
+}
+
+// IsBackButtonPressed checks if the platform-appropriate back button was pressed.
+// Platform parity fix: Unified back navigation across platforms
+func IsBackButtonPressed() bool {
+	return inpututil.IsKeyJustPressed(GetBackButtonKey())
+}
+
+// IsBackButtonDown checks if the back button is currently held down.
+// Platform parity fix: Allows long-press detection on back button
+func IsBackButtonDown() bool {
+	return ebiten.IsKeyPressed(GetBackButtonKey())
+}
+
+// GetBackButtonName returns a human-readable name for the back button.
+// Platform parity fix: UI labels show correct button name per platform
+func GetBackButtonName() string {
+	return "ESC" // WASM uses ESC key
 }

@@ -1,9 +1,5 @@
 package engine
 
-import (
-	"time"
-)
-
 // AchievementType identifies different types of achievements
 type AchievementType int
 
@@ -318,7 +314,7 @@ func (s *AchievementSystem) checkGroupPerformer(achComp *AchievementComponent, c
 func (s *AchievementSystem) unlockAchievement(achComp *AchievementComponent, achievementType AchievementType, description string) {
 	achievement := Achievement{
 		Type:        achievementType,
-		UnlockedAt:  time.Now().Unix(),
+		UnlockedAt:  s.world.Clock.Now(),
 		Description: description,
 	}
 	achComp.Achievements = append(achComp.Achievements, achievement)

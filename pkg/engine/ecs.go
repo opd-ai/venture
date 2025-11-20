@@ -229,6 +229,9 @@ type World struct {
 	keyPositionHealth   string
 	keyPositionCollider string
 
+	// GameClock provides deterministic or real-time clock services
+	Clock GameClock
+
 	// Logger for ECS operations
 	logger *logrus.Entry
 }
@@ -256,6 +259,7 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		queryCache:       make(map[string][]*Entity),
 		queryCacheDirty:  make(map[string]bool),
 		entityListDirty:  true,
+		Clock:            NewSimulationClock(0), // Default to deterministic simulation clock
 		logger:           logEntry,
 		builderPool: sync.Pool{
 			New: func() interface{} {
@@ -340,6 +344,9 @@ func (w *World) AddSystem(system System) {
 
 // Update updates all systems with the current entity list.
 func (w *World) Update(deltaTime float64) {
+	// Advance game clock for deterministic time tracking
+	w.Clock.Advance(deltaTime)
+
 	// Process pending additions
 	if len(w.entitiesToAdd) > 0 {
 		for _, entity := range w.entitiesToAdd {

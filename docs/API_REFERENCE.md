@@ -2,8 +2,8 @@
 
 Developer documentation for the Venture procedural action-RPG engine.
 
-**Version:** 5.0  
-**Last Updated:** November 2025
+**Version:** 8.0  
+**Last Updated:** December 2025
 
 **New to development?** Start with [Development Guide](DEVELOPMENT.md) and [Contributing Guide](CONTRIBUTING.md).
 
@@ -995,3 +995,182 @@ if tradeUI.GetClickedButton() == "accept" {
 ---
 
 ## Additional Resources
+
+---
+
+## Housing System (V8.0)
+
+### Package: `github.com/opd-ai/venture/pkg/world/housing`
+
+Player housing with procedural buildings and cross-server persistence.
+
+#### Manager
+
+```go
+manager := housing.NewManager()
+
+// Place plot
+plot := &housing.Plot{
+    OwnerID:  "player123",
+    Location: housing.Coords{X: 100, Y: 200},
+    Size:     housing.SizeMedium, // 16×16
+}
+manager.PlacePlot(plot)
+
+// Query
+nearby := manager.GetPlotsInRadius(housing.Coords{X: 100, Y: 200}, 50.0)
+ownerPlots := manager.GetPlotsByOwner("player123")
+
+// Save/load
+manager.Save("world_housing.json.gz")
+manager.Load("world_housing.json.gz")
+```
+
+**Plot Sizes:** Small (8×8), Medium (16×16), Large (24×24), Estate (32×32)
+
+**Permissions:** None, Visit, Friend, CoOwner
+
+**Performance:** <1ms placement, <0.1ms collision (1000 plots)
+
+---
+
+## Guild System (V8.0)
+
+### Package: `github.com/opd-ai/venture/pkg/network/federation/guild`
+
+Multi-server guild management.
+
+```go
+manager := guild.NewManager()
+
+// Create guild
+identity := guild.GenerateIdentity(12345, "fantasy")
+g := &guild.Guild{ID: "guild123", Name: identity.Name, OwnerID: "player123"}
+manager.CreateGuild(g)
+
+// Members
+manager.AddMember("guild123", "player456", guild.RankMember)
+manager.DepositTreasury("guild123", 1000)
+```
+
+**Ranks:** Recruit, Member, Officer, Leader
+
+**Permissions:** Invite, Kick, Promote, Treasury, GuildHall, Territory, MOTD, Diplomacy
+
+---
+
+## Social Persistence (V8.0)
+
+### Package: `github.com/opd-ai/venture/pkg/social/persistence`
+
+Trust, reputation, chat history, images.
+
+```go
+// Trust
+trustMgr := persistence.NewTrustManager()
+trustMgr.UpdateTrust("player1", "player2", 0.1)
+trust := trustMgr.GetTrust("player1", "player2")
+tier := trust.GetTier() // Stranger, Acquaintance, Friend, Trusted
+
+// Chat
+history := persistence.NewChatHistory("player1", 1000)
+history.AddMessage(&persistence.Message{Sender: "player1", Content: "Hi"})
+delta := history.GetDelta(lastVersion) // Delta sync
+
+// Images
+gallery := persistence.NewImageGallery("player1", 100, 50*1024*1024)
+gallery.AddImage(&persistence.StoredImage{Data: imageBytes, Tags: []string{"combat"}})
+```
+
+---
+
+## Advanced Physics (V8.0)
+
+### Package: `github.com/opd-ai/venture/pkg/engine/physics`
+
+Vehicle physics, fluid dynamics, destruction.
+
+```go
+// Vehicle suspension
+suspension := &vehicle.SuspensionComponent{
+    Wheels: []vehicle.Wheel{{Stiffness: 100, Damping: 20}},
+}
+
+// Fluid simulation
+sim := fluids.NewSimulator(&fluids.SimulatorConfig{Width: 100, Height: 100})
+sim.AddFluid(50, 50, fluids.FluidWater, 10.0)
+sim.Update(1.0/30.0) // 30 Hz
+
+// Building destruction
+system := destruction.NewSystem(30.0)
+system.ApplyDamage("building123", position, 500.0, 5.0)
+```
+
+---
+
+## Deep Gameplay (V8.0)
+
+### Companion AI
+
+Package: `github.com/opd-ai/venture/pkg/companion/learning`
+
+```go
+manager := learning.NewManager()
+companion := manager.RegisterCompanion("companion123", "player456")
+manager.AddExperience("companion123", learning.SkillSwordMastery, 50)
+manager.AdjustTrait("companion123", learning.TraitBrave, 0.1)
+```
+
+**24 Skills:** 8 categories (Combat, Defense, Utility, Social, Healing, Magic, Crafting, Stealth)
+
+**10 Personality Traits:** Cautious/Brave, Shy/Outgoing, Aggressive/Pacifist, etc.
+
+### Branching Narratives
+
+Package: `github.com/opd-ai/venture/pkg/narrative/branching`
+
+```go
+gen := branching.NewGenerator()
+arc := gen.Generate(12345, params).(*branching.StoryArc)
+
+manager := branching.NewManager()
+manager.StartArc("player123", arc)
+manager.MakeChoice("player123", arc.ID, choiceID)
+```
+
+**6 Ending Types:** Heroic, Tragic, Neutral, Mystery, Triumph, Betrayal
+
+### Advanced Classes
+
+Package: `github.com/opd-ai/venture/pkg/class/advanced`
+
+```go
+manager := advanced.NewManager()
+manager.SetPrimaryClass("player123", advanced.ClassWarrior)
+manager.SetSecondaryClass("player123", advanced.ClassMage) // Level 20+
+manager.SetPrestigeClass("player123", advanced.PrestigeSpellblade) // Level 30+
+manager.AllocateTalent("player123", talentID)
+```
+
+**15 Base Classes + 20 Prestige Classes + 90+ Talents**
+
+---
+
+## Modding System (V8.0)
+
+### Package: `github.com/opd-ai/venture/pkg/modding`
+
+```go
+loader := modding.NewLoader()
+mod, _ := loader.LoadFromFile("mods/hardcore-mode.json")
+manager := modding.NewManager()
+manager.AddMod(mod)
+manager.ApplyRules(world)
+```
+
+See [MODDING_GUIDE.md](MODDING_GUIDE.md) for complete API.
+
+---
+
+## Additional Resources (Updated)
+

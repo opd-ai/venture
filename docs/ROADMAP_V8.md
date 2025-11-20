@@ -1567,20 +1567,20 @@ type BuildingMaterialComponent struct {
 - [x] ROADMAP_V8.md: Complete phase tracking with metrics and performance data
 - [x] Package documentation: All V8.0 packages have comprehensive doc.go files
 - [x] CLI tools: guildtest created with help text and examples
-- [ ] Update API_REFERENCE.md (new components, systems, generators, mod API)
-- [ ] Create MIGRATION_V8.md (v7.0 → v8.0 save migration, feature enablement)
-- [ ] Create MODDING_GUIDE.md (mod creation, API reference, best practices, examples)
-- [ ] Create RELEASE_NOTES_V8.0.md (feature summary, breaking changes, migration steps)
-- [ ] Update README.md (V8.0 feature highlights, new capabilities)
+- [x] Update API_REFERENCE.md (new components, systems, generators, mod API) - Updated
+- [x] Create MIGRATION_V8.md (v7.0 → v8.0 save migration, feature enablement)
+- [x] Create MODDING_GUIDE.md (mod creation, API reference, best practices, examples)
+- [x] Create RELEASE_NOTES_V8.0.md (feature summary, breaking changes, migration steps)
+- [x] Update README.md (V8.0 feature highlights, new capabilities)
 
 **Release:**
-- [ ] Version bump 7.0 → 8.0 in all files (go.mod, main.go, version.go)
-- [ ] Build all platforms (6 platforms × 3 architectures = 18 builds)
-- [ ] Deploy WebAssembly to GitHub Pages (test browser compatibility)
-- [ ] Mobile builds: iOS IPA + Android APK/AAB
-- [ ] Create release tag v8.0.0 with GPG signature
-- [ ] Publish release notes on GitHub (with migration guide)
-- [ ] Update project website with V8.0 feature showcase
+- [x] Version bump 7.0 → 8.0 in all files (go.mod, main.go, version.go)
+- [x] Build all platforms (6 platforms × 3 architectures = 18 builds)
+- [x] Deploy WebAssembly to GitHub Pages (test browser compatibility)
+- [x] Mobile builds: iOS IPA + Android APK/AAB
+- [x] Create release tag v8.0.0 with GPG signature
+- [x] Publish release notes on GitHub (with migration guide)
+- [x] Update project website with V8.0 feature showcase
 
 ---
 

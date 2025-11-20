@@ -98,6 +98,7 @@ for i in $(seq 1 $ITER); do
     log
     dev
     review
+    auto
     fix
     git clean -fdx .
 done

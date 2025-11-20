@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
 
 // MenuType represents the type of menu being displayed.
@@ -64,13 +65,36 @@ type EbitenMenuSystem struct {
 
 	// Menu component reference (stored on a dedicated menu entity)
 	menuEntity *Entity
+
+	// Structured logger for menu system
+	logger *logrus.Entry
 }
 
 // NewEbitenMenuSystem creates a new menu system.
 func NewEbitenMenuSystem(world *World, screenWidth, screenHeight int, saveDir string) (*EbitenMenuSystem, error) {
+	var logEntry *logrus.Entry
+	if world != nil && world.logger != nil {
+		logEntry = world.logger.Logger.WithField("system", "menu")
+		logEntry.WithFields(logrus.Fields{
+			"screen_width":  screenWidth,
+			"screen_height": screenHeight,
+			"save_dir":      saveDir,
+		}).Debug("Creating menu system")
+	}
+
 	saveManager, err := saveload.NewSaveManager(saveDir)
 	if err != nil {
+		if logEntry != nil {
+			logEntry.WithFields(logrus.Fields{
+				"save_dir": saveDir,
+				"error":    err.Error(),
+			}).Error("Failed to initialize save manager")
+		}
 		return nil, fmt.Errorf("failed to initialize save manager: %w", err)
+	}
+
+	if logEntry != nil {
+		logEntry.Info("Menu system created successfully")
 	}
 
 	return &EbitenMenuSystem{
@@ -78,22 +102,32 @@ func NewEbitenMenuSystem(world *World, screenWidth, screenHeight int, saveDir st
 		screenWidth:  screenWidth,
 		screenHeight: screenHeight,
 		saveManager:  saveManager,
+		logger:       logEntry,
 	}, nil
 }
 
 // SetSaveCallback sets the callback for save operations.
 func (ms *EbitenMenuSystem) SetSaveCallback(callback func(name string) error) {
+	if ms.logger != nil {
+		ms.logger.Debug("Save callback configured")
+	}
 	ms.onSave = callback
 }
 
 // SetLoadCallback sets the callback for load operations.
 func (ms *EbitenMenuSystem) SetLoadCallback(callback func(name string) error) {
+	if ms.logger != nil {
+		ms.logger.Debug("Load callback configured")
+	}
 	ms.onLoad = callback
 }
 
 // Toggle opens or closes the main menu.
 func (ms *EbitenMenuSystem) Toggle() {
 	if ms.menuEntity == nil {
+		if ms.logger != nil {
+			ms.logger.Debug("Creating menu entity")
+		}
 		ms.menuEntity = ms.world.CreateEntity()
 		menu := &MenuComponent{
 			Active:      true,
@@ -102,10 +136,18 @@ func (ms *EbitenMenuSystem) Toggle() {
 		ms.menuEntity.AddComponent(menu)
 		ms.buildMainMenu(menu)
 		ms.world.Update(0) // Process entity addition
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"entity_id": ms.menuEntity.ID,
+				"menu_type": "main",
+				"active":    true,
+			}).Info("Menu opened")
+		}
 	} else {
 		if menu, ok := ms.menuEntity.GetComponent("menu"); ok {
 			// Type assert with safety check
 			if menuComp, ok := menu.(*MenuComponent); ok {
+				previousState := menuComp.Active
 				menuComp.Active = !menuComp.Active
 
 				// Rebuild main menu when opening
@@ -113,6 +155,14 @@ func (ms *EbitenMenuSystem) Toggle() {
 					menuComp.CurrentMenu = MenuTypeMain
 					menuComp.MenuStack = nil
 					ms.buildMainMenu(menuComp)
+				}
+
+				if ms.logger != nil {
+					ms.logger.WithFields(logrus.Fields{
+						"entity_id":      ms.menuEntity.ID,
+						"previous_state": previousState,
+						"current_state":  menuComp.Active,
+					}).Debug("Menu toggled")
 				}
 			}
 		}
@@ -141,19 +191,48 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 
 	menu, ok := ms.menuEntity.GetComponent("menu")
 	if !ok {
+		if ms.logger != nil {
+			ms.logger.WithField("entity_id", ms.menuEntity.ID).Warn("Menu entity missing menu component")
+		}
 		return
 	}
 
 	// Type assert with safety check
 	menuComp, ok := menu.(*MenuComponent)
-	if !ok || !menuComp.Active {
+	if !ok {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"entity_id":      ms.menuEntity.ID,
+				"component_type": "menu",
+			}).Warn("Failed to type assert menu component")
+		}
 		return
+	}
+
+	if !menuComp.Active {
+		return
+	}
+
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"delta_time":     deltaTime,
+			"current_menu":   menuComp.CurrentMenu,
+			"selected_index": menuComp.SelectedIndex,
+			"item_count":     len(menuComp.Items),
+		}).Debug("Menu system update started")
 	}
 
 	// Update error message timeout
 	if menuComp.ErrorTimeout > 0 {
+		previousTimeout := menuComp.ErrorTimeout
 		menuComp.ErrorTimeout -= deltaTime
 		if menuComp.ErrorTimeout <= 0 {
+			if ms.logger != nil {
+				ms.logger.WithFields(logrus.Fields{
+					"previous_timeout": previousTimeout,
+					"error_message":    menuComp.ErrorMessage,
+				}).Debug("Error message timeout expired")
+			}
 			menuComp.ErrorMessage = ""
 		}
 	}
@@ -186,9 +265,26 @@ func (ms *EbitenMenuSystem) handleMouseInput(menu *MenuComponent, menuX, menuY i
 
 		if mouseX >= itemX && mouseX < itemX+itemWidth &&
 			mouseY >= itemY && mouseY < itemY+itemHeight {
+			if menu.SelectedIndex != i {
+				if ms.logger != nil {
+					ms.logger.WithFields(logrus.Fields{
+						"previous_index": menu.SelectedIndex,
+						"new_index":      i,
+						"item_label":     menu.Items[i].Label,
+						"input_method":   "mouse",
+					}).Debug("Menu item selected")
+				}
+			}
 			menu.SelectedIndex = i
 
 			if mouseClicked {
+				if ms.logger != nil {
+					ms.logger.WithFields(logrus.Fields{
+						"item_index": i,
+						"item_label": menu.Items[i].Label,
+						"enabled":    menu.Items[i].Enabled,
+					}).Debug("Mouse click on menu item")
+				}
 				ms.executeMenuItem(menu, i)
 			}
 		}
@@ -199,7 +295,11 @@ func (ms *EbitenMenuSystem) handleMouseInput(menu *MenuComponent, menuX, menuY i
 
 // handleKeyboardNavigation processes keyboard navigation (up/down arrows).
 func (ms *EbitenMenuSystem) handleKeyboardNavigation(menu *MenuComponent) {
+	previousIndex := menu.SelectedIndex
+	var direction string
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) || inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		direction = "up"
 		menu.SelectedIndex--
 		if menu.SelectedIndex < 0 {
 			menu.SelectedIndex = len(menu.Items) - 1
@@ -207,9 +307,21 @@ func (ms *EbitenMenuSystem) handleKeyboardNavigation(menu *MenuComponent) {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) || inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		direction = "down"
 		menu.SelectedIndex++
 		if menu.SelectedIndex >= len(menu.Items) {
 			menu.SelectedIndex = 0
+		}
+	}
+
+	if direction != "" && previousIndex != menu.SelectedIndex {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"direction":      direction,
+				"previous_index": previousIndex,
+				"new_index":      menu.SelectedIndex,
+				"item_label":     menu.Items[menu.SelectedIndex].Label,
+			}).Debug("Keyboard navigation")
 		}
 	}
 }
@@ -218,6 +330,13 @@ func (ms *EbitenMenuSystem) handleKeyboardNavigation(menu *MenuComponent) {
 func (ms *EbitenMenuSystem) handleKeyboardSelection(menu *MenuComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		if menu.SelectedIndex >= 0 && menu.SelectedIndex < len(menu.Items) {
+			if ms.logger != nil {
+				ms.logger.WithFields(logrus.Fields{
+					"item_index": menu.SelectedIndex,
+					"item_label": menu.Items[menu.SelectedIndex].Label,
+					"enabled":    menu.Items[menu.SelectedIndex].Enabled,
+				}).Debug("Keyboard selection")
+			}
 			ms.executeMenuItem(menu, menu.SelectedIndex)
 		}
 	}
@@ -227,10 +346,21 @@ func (ms *EbitenMenuSystem) handleKeyboardSelection(menu *MenuComponent) {
 func (ms *EbitenMenuSystem) handleBackCancel(menu *MenuComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if len(menu.MenuStack) > 0 {
+			previousMenu := menu.CurrentMenu
 			menu.CurrentMenu = menu.MenuStack[len(menu.MenuStack)-1]
 			menu.MenuStack = menu.MenuStack[:len(menu.MenuStack)-1]
+			if ms.logger != nil {
+				ms.logger.WithFields(logrus.Fields{
+					"previous_menu": previousMenu,
+					"current_menu":  menu.CurrentMenu,
+					"stack_depth":   len(menu.MenuStack),
+				}).Debug("Navigating back in menu stack")
+			}
 			ms.rebuildMenu(menu)
 		} else {
+			if ms.logger != nil {
+				ms.logger.Debug("Closing menu via Escape key")
+			}
 			menu.Active = false
 		}
 	}
@@ -239,16 +369,61 @@ func (ms *EbitenMenuSystem) handleBackCancel(menu *MenuComponent) {
 // executeMenuItem executes a menu item's action and handles errors.
 func (ms *EbitenMenuSystem) executeMenuItem(menu *MenuComponent, index int) {
 	item := menu.Items[index]
-	if item.Enabled && item.Action != nil {
-		if err := item.Action(); err != nil {
-			menu.ErrorMessage = err.Error()
-			menu.ErrorTimeout = 3.0
+
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_index": index,
+			"item_label": item.Label,
+			"enabled":    item.Enabled,
+			"has_action": item.Action != nil,
+		}).Debug("Executing menu item")
+	}
+
+	if !item.Enabled {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"item_index": index,
+				"item_label": item.Label,
+			}).Warn("Attempted to execute disabled menu item")
+		}
+		return
+	}
+
+	if item.Action == nil {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"item_index": index,
+				"item_label": item.Label,
+			}).Warn("Menu item has no action defined")
+		}
+		return
+	}
+
+	if err := item.Action(); err != nil {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"item_index": index,
+				"item_label": item.Label,
+				"error":      err.Error(),
+			}).Error("Menu item action failed")
+		}
+		menu.ErrorMessage = err.Error()
+		menu.ErrorTimeout = 3.0
+	} else {
+		if ms.logger != nil {
+			ms.logger.WithFields(logrus.Fields{
+				"item_index": index,
+				"item_label": item.Label,
+			}).Debug("Menu item action executed successfully")
 		}
 	}
 }
 
 // buildMainMenu constructs the main pause menu.
 func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.Debug("Building main menu")
+	}
 	menu.Items = []MenuItem{
 		{
 			Label:   "Save Game",
@@ -298,18 +473,39 @@ func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 		},
 	}
 	menu.SelectedIndex = 0
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     len(menu.Items),
+			"selected_index": menu.SelectedIndex,
+		}).Debug("Main menu built")
+	}
 }
 
 // buildSaveMenu constructs the save game menu with available save slots.
 func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.WithField("callback_available", ms.onSave != nil).Debug("Building save menu")
+	}
 	menu.Items = []MenuItem{
 		{
 			Label:   "Quick Save (slot 1)",
 			Enabled: ms.onSave != nil,
 			Action: func() error {
 				if ms.onSave != nil {
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "quicksave").Info("Saving game")
+					}
 					if err := ms.onSave("quicksave"); err != nil {
+						if ms.logger != nil {
+							ms.logger.WithFields(logrus.Fields{
+								"save_name": "quicksave",
+								"error":     err.Error(),
+							}).Error("Save operation failed")
+						}
 						return fmt.Errorf("save failed: %w", err)
+					}
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "quicksave").Info("Game saved successfully")
 					}
 					menu.ErrorMessage = "Game saved to Quick Save!"
 					menu.ErrorTimeout = 2.0
@@ -322,8 +518,20 @@ func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
 			Enabled: ms.onSave != nil,
 			Action: func() error {
 				if ms.onSave != nil {
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "autosave").Info("Saving game")
+					}
 					if err := ms.onSave("autosave"); err != nil {
+						if ms.logger != nil {
+							ms.logger.WithFields(logrus.Fields{
+								"save_name": "autosave",
+								"error":     err.Error(),
+							}).Error("Save operation failed")
+						}
 						return fmt.Errorf("save failed: %w", err)
+					}
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "autosave").Info("Game saved successfully")
 					}
 					menu.ErrorMessage = "Game saved to Auto Save!"
 					menu.ErrorTimeout = 2.0
@@ -336,8 +544,20 @@ func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
 			Enabled: ms.onSave != nil,
 			Action: func() error {
 				if ms.onSave != nil {
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "save3").Info("Saving game")
+					}
 					if err := ms.onSave("save3"); err != nil {
+						if ms.logger != nil {
+							ms.logger.WithFields(logrus.Fields{
+								"save_name": "save3",
+								"error":     err.Error(),
+							}).Error("Save operation failed")
+						}
 						return fmt.Errorf("save failed: %w", err)
+					}
+					if ms.logger != nil {
+						ms.logger.WithField("save_name", "save3").Info("Game saved successfully")
 					}
 					menu.ErrorMessage = "Game saved to Slot 3!"
 					menu.ErrorTimeout = 2.0
@@ -359,20 +579,36 @@ func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
 		},
 	}
 	menu.SelectedIndex = 0
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     len(menu.Items),
+			"selected_index": menu.SelectedIndex,
+		}).Debug("Save menu built")
+	}
 }
 
 // buildLoadMenu constructs the load game menu with existing saves.
 func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.WithField("callback_available", ms.onLoad != nil).Debug("Building load menu")
+	}
 	menu.Items = []MenuItem{}
 
 	// Get list of saves
 	saves, err := ms.saveManager.ListSaves()
 	if err != nil {
+		if ms.logger != nil {
+			ms.logger.WithField("error", err.Error()).Error("Failed to list save files")
+		}
 		menu.Items = append(menu.Items, MenuItem{
 			Label:   fmt.Sprintf("Error loading saves: %v", err),
 			Enabled: false,
 		})
 	} else {
+		if ms.logger != nil {
+			ms.logger.WithField("save_count", len(saves)).Debug("Retrieved save file list")
+		}
+
 		// Sort saves by timestamp (newest first)
 		sort.Slice(saves, func(i, j int) bool {
 			return saves[i].Timestamp.After(saves[j].Timestamp)
@@ -389,8 +625,20 @@ func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 				Metadata: saveName,
 				Action: func() error {
 					if ms.onLoad != nil {
+						if ms.logger != nil {
+							ms.logger.WithField("save_name", saveName).Info("Loading game")
+						}
 						if err := ms.onLoad(saveName); err != nil {
+							if ms.logger != nil {
+								ms.logger.WithFields(logrus.Fields{
+									"save_name": saveName,
+									"error":     err.Error(),
+								}).Error("Load operation failed")
+							}
 							return fmt.Errorf("load failed: %w", err)
+						}
+						if ms.logger != nil {
+							ms.logger.WithField("save_name", saveName).Info("Game loaded successfully")
 						}
 						menu.ErrorMessage = "Game loaded!"
 						menu.ErrorTimeout = 2.0
@@ -403,6 +651,9 @@ func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 
 		// If no saves found
 		if len(menu.Items) == 0 {
+			if ms.logger != nil {
+				ms.logger.Warn("No save files found")
+			}
 			menu.Items = append(menu.Items, MenuItem{
 				Label:   "No save files found",
 				Enabled: false,
@@ -425,10 +676,19 @@ func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 	})
 
 	menu.SelectedIndex = 0
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     len(menu.Items),
+			"selected_index": menu.SelectedIndex,
+		}).Debug("Load menu built")
+	}
 }
 
 // buildConfirmMenu constructs a confirmation dialog.
 func (ms *EbitenMenuSystem) buildConfirmMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.WithField("confirm_message", menu.ConfirmMessage).Debug("Building confirm menu")
+	}
 	menu.Items = []MenuItem{
 		{
 			Label:   "Yes",
@@ -455,10 +715,21 @@ func (ms *EbitenMenuSystem) buildConfirmMenu(menu *MenuComponent) {
 		},
 	}
 	menu.SelectedIndex = 1 // Default to "No"
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     len(menu.Items),
+			"selected_index": menu.SelectedIndex,
+		}).Debug("Confirm menu built")
+	}
 }
 
 // rebuildMenu reconstructs the menu based on current menu type.
 func (ms *EbitenMenuSystem) rebuildMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"current_menu": menu.CurrentMenu,
+		}).Debug("Rebuilding menu")
+	}
 	menu.SelectedIndex = 0
 	switch menu.CurrentMenu {
 	case MenuTypeMain:
@@ -469,6 +740,16 @@ func (ms *EbitenMenuSystem) rebuildMenu(menu *MenuComponent) {
 		ms.buildLoadMenu(menu)
 	case MenuTypeConfirm:
 		ms.buildConfirmMenu(menu)
+	default:
+		if ms.logger != nil {
+			ms.logger.WithField("menu_type", menu.CurrentMenu).Warn("Unknown menu type in rebuildMenu")
+		}
+	}
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"current_menu": menu.CurrentMenu,
+			"item_count":   len(menu.Items),
+		}).Debug("Menu rebuilt")
 	}
 }
 
@@ -572,14 +853,28 @@ func (ms *EbitenMenuSystem) Draw(screen interface{}) {
 // SetActive opens or closes the menu.
 // Implements UISystem interface.
 func (ms *EbitenMenuSystem) SetActive(active bool) {
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"active":          active,
+			"has_menu_entity": ms.menuEntity != nil,
+		}).Debug("SetActive called")
+	}
+
 	if active {
 		if ms.menuEntity == nil {
+			if ms.logger != nil {
+				ms.logger.Debug("Activating menu via SetActive")
+			}
 			ms.Toggle()
 		}
 	} else {
 		if ms.menuEntity != nil {
-			ms.world.RemoveEntity(ms.menuEntity.ID)
+			entityID := ms.menuEntity.ID
+			ms.world.RemoveEntity(entityID)
 			ms.menuEntity = nil
+			if ms.logger != nil {
+				ms.logger.WithField("entity_id", entityID).Info("Menu entity removed")
+			}
 		}
 	}
 }

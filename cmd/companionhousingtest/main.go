@@ -17,7 +17,8 @@ var (
 func main() {
 	flag.Parse()
 
-	fmt.Println("=== Companion Housing Integration Test Tool ===\n")
+	fmt.Println("=== Companion Housing Integration Test Tool ===")
+	fmt.Println()
 
 	switch *mode {
 	case "demo":
@@ -40,7 +41,8 @@ func main() {
 }
 
 func runDemo() {
-	fmt.Println("## Demo: Complete Companion Housing Setup ##\n")
+	fmt.Println("## Demo: Complete Companion Housing Setup ##")
+	fmt.Println()
 
 	manager := companion_housing.NewPetHomeManager()
 
@@ -89,11 +91,13 @@ func runDemo() {
 	fmt.Printf("Shared storage capacity: %d slots\n", sharedCapacity)
 	fmt.Printf("Companion can access shared chest for item storage\n\n")
 
-	fmt.Println("Demo complete!\n")
+	fmt.Println("Demo complete!")
+	fmt.Println()
 }
 
 func testLoyaltySystem() {
-	fmt.Println("## Testing Loyalty Bonus System ##\n")
+	fmt.Println("## Testing Loyalty Bonus System ##")
+	fmt.Println()
 
 	manager := companion_housing.NewPetHomeManager()
 
@@ -144,7 +148,8 @@ func testLoyaltySystem() {
 }
 
 func testTrainingSystem() {
-	fmt.Println("## Testing Training System ##\n")
+	fmt.Println("## Testing Training System ##")
+	fmt.Println()
 
 	manager := companion_housing.NewPetHomeManager()
 
@@ -188,7 +193,8 @@ func testTrainingSystem() {
 }
 
 func testStorageSystem() {
-	fmt.Println("## Testing Storage System ##\n")
+	fmt.Println("## Testing Storage System ##")
+	fmt.Println()
 
 	manager := companion_housing.NewPetHomeManager()
 

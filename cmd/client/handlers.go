@@ -1271,6 +1271,10 @@ func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *en
 func configureSaveLoadSystem(player *engine.Entity, game *engine.EbitenGame, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, clientLogger *logrus.Entry) *saveload.SaveManager {
 	clientLogger.Info("initializing save/load system")
 
+	// BUG FIX: Phase 7 - SaveManager auto-selects storage backend based on platform
+	// - Desktop/mobile: file-based storage in ./saves directory
+	// - WASM: localStorage with 5MB limit, fallback to in-memory
+	// Platform: All (conditional compilation selects correct implementation)
 	saveManager, err := saveload.NewSaveManager("./saves")
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to initialize save manager, save/load functionality will be unavailable")

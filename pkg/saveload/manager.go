@@ -1,6 +1,10 @@
+//go:build !js
+// +build !js
+
 // Package saveload provides save/load manager for game state persistence.
 // This file implements SaveLoadManager which handles saving and loading
 // game state to/from disk using JSON serialization.
+// For WASM platforms, see storage_wasm.go which uses localStorage instead.
 package saveload
 
 import (

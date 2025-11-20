@@ -31,6 +31,9 @@ func TestAdaptiveSoundtrackSystemCalm(t *testing.T) {
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
+	// Process pending entities
+	world.Update(0)
+
 	// Update - should remain calm
 	for i := 0; i < 10; i++ {
 		system.Update(0.1)
@@ -66,6 +69,9 @@ func TestAdaptiveSoundtrackSystemCombat(t *testing.T) {
 		enemy.AddComponent(&AIComponent{State: AIStateAttack})
 	}
 
+	// Process pending entities
+	world.Update(0)
+
 	// Update - should increase to combat intensity
 	for i := 0; i < 20; i++ {
 		system.Update(0.1)
@@ -92,6 +98,9 @@ func TestAdaptiveSoundtrackSystemLowHealth(t *testing.T) {
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
+	// Process pending entities
+	world.Update(0)
+
 	// Update
 	for i := 0; i < 10; i++ {
 		system.Update(0.1)
@@ -111,14 +120,29 @@ func TestAdaptiveSoundtrackSystemLayerFading(t *testing.T) {
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
 	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
+	soundtrack.CombatThreshold = 2
 	player.AddComponent(soundtrack)
 
-	// Set to combat intensity
-	soundtrack.CurrentIntensity = IntensityCombat
-	soundtrack.TargetIntensity = IntensityCombat
+	// Create nearby enemies to maintain combat intensity
+	for i := 0; i < 3; i++ {
+		enemy := world.CreateEntity()
+		enemy.AddComponent(&PositionComponent{X: 150 + float64(i*10), Y: 100})
+		enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
+		enemy.AddComponent(&AIComponent{State: AIStateAttack})
+	}
 
-	// Update to activate layers
-	system.Update(0.1)
+	// Process pending entities
+	world.Update(0)
+
+	// Update to activate combat layers
+	for i := 0; i < 5; i++ {
+		system.Update(0.1)
+	}
+
+	// Should be at combat intensity now
+	if soundtrack.CurrentIntensity != IntensityCombat {
+		t.Errorf("CurrentIntensity = %v, want IntensityCombat", soundtrack.CurrentIntensity)
+	}
 
 	// Check that percussion layer volume is increasing
 	initialVolume := soundtrack.LayerVolumes[LayerPercussion]
@@ -132,6 +156,11 @@ func TestAdaptiveSoundtrackSystemLayerFading(t *testing.T) {
 
 	if finalVolume <= initialVolume {
 		t.Errorf("LayerPercussion volume should increase, got %f -> %f", initialVolume, finalVolume)
+	}
+
+	// Should approach 1.0
+	if finalVolume < 0.5 {
+		t.Errorf("LayerPercussion volume should be at least 0.5 after many updates, got %f", finalVolume)
 	}
 }
 
@@ -147,6 +176,9 @@ func TestAdaptiveSoundtrackSystemExplorationBonus(t *testing.T) {
 
 	// Set exploration bonus
 	system.SetExplorationBonus(player, 1.0)
+
+	// Process pending entities
+	world.Update(0)
 
 	// Update
 	system.Update(0.1)
@@ -193,21 +225,32 @@ func TestAdaptiveSoundtrackSystemTransitionSpeed(t *testing.T) {
 	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	soundtrack.CurrentIntensity = IntensityCalm
-	soundtrack.TargetIntensity = IntensityCombat
+	soundtrack.CombatThreshold = 2
 	player.AddComponent(soundtrack)
+
+	// Create nearby enemies to trigger combat intensity
+	for i := 0; i < 3; i++ {
+		enemy := world.CreateEntity()
+		enemy.AddComponent(&PositionComponent{X: 150 + float64(i*10), Y: 100})
+		enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
+		enemy.AddComponent(&AIComponent{State: AIStateAttack})
+	}
+
+	// Process pending entities
+	world.Update(0)
 
 	// Transition should be gradual
 	initialIntensity := soundtrack.CurrentIntensity
 
 	system.Update(0.1)
 
-	// Should have moved one step toward target
+	// Should have moved toward combat
 	if soundtrack.CurrentIntensity == initialIntensity {
-		// May not have transitioned yet depending on speed
+		// First update might not have transitioned yet
 	}
 
-	// After many updates, should reach target
-	for i := 0; i < 100; i++ {
+	// After a few updates, should reach target (combat)
+	for i := 0; i < 10; i++ {
 		system.Update(0.1)
 	}
 

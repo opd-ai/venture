@@ -29,6 +29,9 @@ func TestCompanionSystem(t *testing.T) {
 	companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
 	// Test initial state
+
+	// Process pending entities
+	world.Update(0)
 	if companionComp.Loyalty != 10 {
 		t.Errorf("Initial loyalty = %f, want 10", companionComp.Loyalty)
 	}
@@ -64,6 +67,9 @@ func TestCompanionSystemBonding(t *testing.T) {
 
 	initialLoyalty := companionComp.Loyalty
 
+	// Process pending entities
+	world.Update(0)
+
 	// Update for bonding time
 	for i := 0; i < 100; i++ {
 		system.Update(0.1) // 10 seconds total
@@ -97,6 +103,9 @@ func TestCompanionSystemPerkUnlock(t *testing.T) {
 	companion.AddComponent(companionComp)
 	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
 	companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
+
+	// Process pending entities
+	world.Update(0)
 
 	// Update to trigger perk check
 	system.Update(0.1)
@@ -173,6 +182,9 @@ func TestCompanionSystemDefendCommand(t *testing.T) {
 	companion.AddComponent(companionComp)
 	companion.AddComponent(&PositionComponent{X: 300, Y: 100}) // Far from owner
 	companion.AddComponent(&VelocityComponent{})
+
+	// Process pending entities
+	world.Update(0)
 
 	// Update - companion should move to defensive position
 	system.Update(0.1)

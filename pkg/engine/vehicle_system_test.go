@@ -102,6 +102,9 @@ func TestVehicleSystemFuelConsumption(t *testing.T) {
 
 	initialFuel := vehicleComp.FuelAmount
 
+	// Process pending entities
+	world.Update(0)
+
 	// Run updates to consume fuel
 	for i := 0; i < 100; i++ {
 		system.Update(0.016)
@@ -122,6 +125,9 @@ func TestVehicleSystemOutOfFuel(t *testing.T) {
 	vehicleComp.Speed = 100.0
 	vehicleComp.FuelAmount = 1.0 // Very low fuel
 	vehicle.AddComponent(vehicleComp)
+
+	// Process pending entities
+	world.Update(0)
 
 	// Run updates until fuel depleted
 	for i := 0; i < 200; i++ {
@@ -149,6 +155,9 @@ func TestVehicleSystemSpeedDecay(t *testing.T) {
 	vehicle.AddComponent(vehicleComp)
 
 	initialSpeed := vehicleComp.Speed
+
+	// Process pending entities
+	world.Update(0)
 
 	// Run updates without rider input
 	for i := 0; i < 50; i++ {

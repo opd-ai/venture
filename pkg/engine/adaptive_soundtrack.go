@@ -202,22 +202,17 @@ func (s *AdaptiveSoundtrackSystem) transitionIntensity(soundtrack *AdaptiveSound
 		return
 	}
 
-	// Transition speed based on component setting
-	transitionAmount := soundtrack.TransitionSpeed * deltaTime
-
 	if soundtrack.CurrentIntensity < soundtrack.TargetIntensity {
-		// Increase intensity
-		newIntensity := int(soundtrack.CurrentIntensity) + 1
-		if newIntensity <= int(soundtrack.TargetIntensity) {
-			soundtrack.CurrentIntensity = MusicIntensity(newIntensity)
+		// Increase intensity immediately
+		soundtrack.CurrentIntensity++
+		if soundtrack.CurrentIntensity > soundtrack.TargetIntensity {
+			soundtrack.CurrentIntensity = soundtrack.TargetIntensity
 		}
 	} else {
-		// Decrease intensity (slower than increase)
-		if transitionAmount >= 0.05 { // Only transition every ~20 frames
-			newIntensity := int(soundtrack.CurrentIntensity) - 1
-			if newIntensity >= int(soundtrack.TargetIntensity) {
-				soundtrack.CurrentIntensity = MusicIntensity(newIntensity)
-			}
+		// Decrease intensity (can also be immediate)
+		soundtrack.CurrentIntensity--
+		if soundtrack.CurrentIntensity < soundtrack.TargetIntensity {
+			soundtrack.CurrentIntensity = soundtrack.TargetIntensity
 		}
 	}
 }

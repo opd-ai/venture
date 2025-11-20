@@ -60,11 +60,20 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 func (s *CompanionSystem) updateBonding(companion *Entity, companionComp *CompanionComponent, owner *Entity, deltaTime float64) {
 	// Get positions
 	compPos, hasCompanionPos := companion.GetComponent("position")
-	companionPos, _ := compPos.(*PositionComponent)
-	ownPos, hasOwnerPos := owner.GetComponent("position")
-	ownerPos, _ := ownPos.(*PositionComponent)
+	if !hasCompanionPos {
+		return
+	}
+	companionPos, ok := compPos.(*PositionComponent)
+	if !ok {
+		return
+	}
 
-	if !hasCompanionPos || !hasOwnerPos {
+	ownPos, hasOwnerPos := owner.GetComponent("position")
+	if !hasOwnerPos {
+		return
+	}
+	ownerPos, ok := ownPos.(*PositionComponent)
+	if !ok {
 		return
 	}
 

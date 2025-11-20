@@ -141,7 +141,11 @@ func setupCompletePlayerEntity(game *engine.EbitenGame, generatedTerrain *terrai
 
 // setupGameUI initializes all UI systems and input callbacks.
 func setupGameUI(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, sys *systemsContainer, clientLogger *logrus.Entry) {
-	shopUI, _ := initializeUIIntegration(game, player, sys.commerceSystem, sys.dialogSystem, sys.craftingSystem, sys.inventorySystem, clientLogger)
+	// INTEGRATION FIX [Category B]: Pass sys to enable V8 UI integration
+	// Gap: V8 UI systems need access to managers (housing, gallery, etc.)
+	// Fix: Pass systemsContainer to initializeUIIntegration for V8 UI setup
+	// Roadmap: ROADMAP_V8.md Phase 49
+	shopUI, _ := initializeUIIntegration(game, player, sys.commerceSystem, sys.dialogSystem, sys.craftingSystem, sys.inventorySystem, sys, clientLogger)
 
 	saveManager := configureSaveLoadSystem(player, game, generatedTerrain, sys.inputSystem, clientLogger)
 

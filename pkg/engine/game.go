@@ -59,6 +59,13 @@ type EbitenGame struct {
 	CraftingUI  *CraftingUI // Crafting and recipe UI
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 
+	// INTEGRATION FIX [Category B]: V8.0 UI systems
+	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
+	// Fix: Added UI fields for housing and gallery management
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	HousingUI *HousingUI // Player housing management UI (Phase 49.1, 51.2, 51.3)
+	GalleryUI *GalleryUI // Image gallery viewer UI (Phase 49.4)
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -786,6 +793,18 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
 	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
 
+	// INTEGRATION FIX [Category B]: Update V8.0 UI screens
+	// Gap: Housing and Gallery UIs created but never updated
+	// Fix: Added update calls for housing and gallery UIs
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	if g.HousingUI != nil {
+		g.HousingUI.Update()
+	}
+
+	if g.GalleryUI != nil {
+		g.GalleryUI.Update()
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -1004,6 +1023,18 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	}
 
 	g.drawMailboxUI(screen)
+
+	// INTEGRATION FIX [Category B]: Draw V8.0 UI screens
+	// Gap: Housing and Gallery UIs created but never drawn
+	// Fix: Added draw calls for housing and gallery UIs
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	if g.HousingUI != nil {
+		g.HousingUI.Draw(screen)
+	}
+
+	if g.GalleryUI != nil {
+		g.GalleryUI.Draw(screen)
+	}
 }
 
 // drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
@@ -1175,6 +1206,35 @@ func (g *EbitenGame) SetupInputCallbacks(inputSystem *InputSystem, objectiveTrac
 		}
 	}); err != nil {
 		return fmt.Errorf("failed to set mailbox callback: %w", err)
+	}
+
+	// INTEGRATION FIX [Category B]: Housing and Gallery UI input callbacks
+	// Gap: Housing and Gallery systems created but no keyboard bindings
+	// Fix: Added H key for housing UI and G key for gallery UI toggle
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+
+	// Connect housing toggle (H key) - Phase 49.1, 51.2, 51.3
+	if err := inputSystem.SetHousingCallback(func() {
+		if g.HousingUI != nil {
+			g.HousingUI.Toggle()
+			if objectiveTracker != nil && g.PlayerEntity != nil {
+				objectiveTracker.OnUIOpened(g.PlayerEntity, "housing")
+			}
+		}
+	}); err != nil {
+		return fmt.Errorf("failed to set housing callback: %w", err)
+	}
+
+	// Connect gallery toggle (G key) - Phase 49.4
+	if err := inputSystem.SetGalleryCallback(func() {
+		if g.GalleryUI != nil {
+			g.GalleryUI.Toggle()
+			if objectiveTracker != nil && g.PlayerEntity != nil {
+				objectiveTracker.OnUIOpened(g.PlayerEntity, "gallery")
+			}
+		}
+	}); err != nil {
+		return fmt.Errorf("failed to set gallery callback: %w", err)
 	}
 
 	// Connect pause menu toggle (ESC key)

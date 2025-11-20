@@ -240,6 +240,13 @@ type InputSystem struct {
 	KeyCrafting  ebiten.Key // R key for crafting
 	KeyMailbox   ebiten.Key // L key for mailbox
 
+	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
+	// Gap: Housing and Gallery UIs created but no key binding fields
+	// Fix: Added key binding fields for H (housing) and G (gallery)
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	KeyHousing ebiten.Key // H key for housing management (Phase 49.1)
+	KeyGallery ebiten.Key // G key for image gallery (Phase 49.4)
+
 	// Key bindings - System
 	KeyHelp         ebiten.Key // ESC key for help menu
 	KeyQuickSave    ebiten.Key // F5 key for quick save
@@ -276,6 +283,13 @@ type InputSystem struct {
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
+
+	// INTEGRATION FIX [Category B]: V8.0 UI callbacks
+	// Gap: Housing and Gallery UIs created but no callback fields for key bindings
+	// Fix: Added callback fields for H (housing) and G (gallery) key handling
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	onHousingOpen func() // Callback for housing UI toggle (H key) - Phase 49.1
+	onGalleryOpen func() // Callback for gallery UI toggle (G key) - Phase 49.4
 
 	// Priority 2.3: Game state for input filtering
 	currentState GameState
@@ -315,6 +329,8 @@ func NewInputSystem() *InputSystem {
 		KeyMap:       ebiten.KeyM,
 		KeyCrafting:  ebiten.KeyR,
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
+		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
+		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
 		// System keys
 		KeyHelp:         ebiten.KeyEscape,
@@ -502,6 +518,17 @@ func (s *InputSystem) handleUIShortcuts() {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
 		s.onMailboxOpen()
+	}
+
+	// INTEGRATION FIX [Category B]: V8.0 UI key press handling
+	// Gap: Housing and Gallery UIs have callbacks but no key press detection
+	// Fix: Added key press handling for H (housing) and G (gallery) keys
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+	if inpututil.IsKeyJustPressed(s.KeyHousing) && s.onHousingOpen != nil {
+		s.onHousingOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyGallery) && s.onGalleryOpen != nil {
+		s.onGalleryOpen()
 	}
 }
 
@@ -955,6 +982,29 @@ func (s *InputSystem) SetMailboxCallback(callback func()) error {
 		return fmt.Errorf("mailbox callback cannot be nil")
 	}
 	s.onMailboxOpen = callback
+	return nil
+}
+
+// INTEGRATION FIX [Category B]: V8.0 UI callback setters
+// Gap: Housing and Gallery UIs need callback setter methods for key binding integration
+// Fix: Added SetHousingCallback and SetGalleryCallback methods
+// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+
+// SetHousingCallback sets the callback function for opening housing UI (H key).
+func (s *InputSystem) SetHousingCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("housing callback cannot be nil")
+	}
+	s.onHousingOpen = callback
+	return nil
+}
+
+// SetGalleryCallback sets the callback function for opening gallery UI (G key).
+func (s *InputSystem) SetGalleryCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("gallery callback cannot be nil")
+	}
+	s.onGalleryOpen = callback
 	return nil
 }
 

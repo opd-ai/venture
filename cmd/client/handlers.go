@@ -1435,8 +1435,8 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 	return nil
 }
 
-// initializeUIIntegration sets up shop UI, crafting UI, mailbox UI, and connects them to game systems.
-func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
+// initializeUIIntegration sets up shop UI, crafting UI, mailbox UI, housing UI, gallery UI, and connects them to game systems.
+func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, sys *systemsContainer, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
 	shopUI := engine.NewShopUI(*width, *height)
 	shopUI.SetPlayerEntity(player)
 	shopUI.SetCommerceSystem(commerceSystem)
@@ -1445,6 +1445,35 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 
 	if *verbose {
 		clientLogger.Info("shop UI initialized and connected to commerce/dialog systems")
+	}
+
+	// INTEGRATION FIX [Category B]: Housing UI initialization and integration
+	// Gap: Housing system fully implemented but no UI access for players
+	// Fix: Created and integrated HousingUI with H key toggle
+	// Roadmap: ROADMAP_V8.md Phase 49.1, 51.2, 51.3
+	housingUI := engine.NewHousingUI(*width, *height)
+	if sys.housingManager != nil {
+		housingUI.SetManagers(sys.housingManager, sys.guildHallManager, sys.buildingGenerator, sys.furnitureGenerator)
+		housingUI.SetPlayerID(player.ID)
+	}
+	game.HousingUI = housingUI
+
+	if *verbose {
+		clientLogger.Info("housing UI initialized (H key to open)")
+	}
+
+	// INTEGRATION FIX [Category B]: Image Gallery UI initialization
+	// Gap: ImageGallery system fully implemented but no UI access for players
+	// Fix: Created and integrated GalleryUI with G key toggle
+	// Roadmap: ROADMAP_V8.md Phase 49.4
+	galleryUI := engine.NewGalleryUI(*width, *height)
+	if sys.imageGallery != nil {
+		galleryUI.SetGallery(sys.imageGallery)
+	}
+	game.GalleryUI = galleryUI
+
+	if *verbose {
+		clientLogger.Info("gallery UI initialized (G key to open)")
 	}
 
 	craftingUI := engine.NewCraftingUI(*width, *height)

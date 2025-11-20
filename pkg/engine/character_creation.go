@@ -668,7 +668,19 @@ func (cc *EbitenCharacterCreation) updateNameInput() {
 
 // updateClassSelection handles class selection with keyboard/mouse
 func (cc *EbitenCharacterCreation) updateClassSelection() {
-	// Arrow keys for selection
+	cc.handleArrowKeySelection()
+	cc.handleNumberKeySelection()
+	if cc.handleTouchOrMouseClick() {
+		return
+	}
+	cc.handleTouchOrMouseHover()
+	cc.handleConfirmationKeys()
+	cc.handleBackKeys()
+	cc.handleDefaultSave()
+}
+
+// handleArrowKeySelection processes arrow key navigation for class selection
+func (cc *EbitenCharacterCreation) handleArrowKeySelection() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
 		cc.selectedClass--
 		if cc.selectedClass < ClassWarrior {
@@ -681,8 +693,10 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 			cc.selectedClass = ClassWarrior
 		}
 	}
+}
 
-	// Number keys for direct selection
+// handleNumberKeySelection processes numeric key shortcuts for direct class selection
+func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		cc.selectedClass = ClassWarrior
 	}
@@ -692,64 +706,68 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		cc.selectedClass = ClassRogue
 	}
+}
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-
-		// Use cached panel dimensions from Draw method
-		// Class selection area starts at y+140 with 80px spacing
-		startY := cc.panelY + 140
-		classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
-
-		// Check if touch/click is within any class option area
-		for i, class := range classes {
-			classY := startY + i*80
-			// Each class box is from x+40 to x+w-40, and classY-5 to classY+65 (70px height)
-			if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
-				mouseY >= classY-5 && mouseY <= classY+65 {
-				// Clicked on this class - select it and proceed
-				cc.selectedClass = class
-				cc.characterData.Class = cc.selectedClass
-				cc.currentStep = stepPortraitSelection
-				return
-			}
-		}
+// handleTouchOrMouseClick processes touch and mouse click events for class selection
+func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
+	if !IsTouchOrMouseJustPressed() {
+		return false
 	}
-
-	// Update selection highlight on mouse/touch hover (Touch support for WASM/mobile)
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-
-	// Use cached panel dimensions from Draw method
-	// Class selection area starts at y+140 with 80px spacing
 	startY := cc.panelY + 140
 	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
 
-	// Check if hovering over any class option
 	for i, class := range classes {
-		classY := startY + i*80
-		if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
-			mouseY >= classY-5 && mouseY <= classY+65 {
-			// Hovering over this class - highlight it
+		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
+			cc.selectedClass = class
+			cc.characterData.Class = cc.selectedClass
+			cc.currentStep = stepPortraitSelection
+			return true
+		}
+	}
+	return false
+}
+
+// isClassBoxClicked checks if coordinates are within a class option box
+func (cc *EbitenCharacterCreation) isClassBoxClicked(mouseX, mouseY, startY, classIndex int) bool {
+	classY := startY + classIndex*80
+	return mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
+		mouseY >= classY-5 && mouseY <= classY+65
+}
+
+// handleTouchOrMouseHover updates selection based on mouse/touch hover position
+func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	startY := cc.panelY + 140
+	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
+
+	for i, class := range classes {
+		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			break
 		}
 	}
+}
 
-	// Enter to proceed, Backspace to go back
+// handleConfirmationKeys processes Enter key to confirm selection
+func (cc *EbitenCharacterCreation) handleConfirmationKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		cc.characterData.Class = cc.selectedClass
 		cc.currentStep = stepPortraitSelection
-		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
+		cc.stepChangedThisFrame = true
 	}
+}
+
+// handleBackKeys processes Backspace/Escape to return to previous step
+func (cc *EbitenCharacterCreation) handleBackKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepNameInput
-		// MOBILE/WASM FIX: Reset keyboard flag so updateNameInput will show it
-		// when entering the name input step on next Update()
 		cc.keyboardShown = false
 	}
+}
 
-	// F2 to save current class as default
+// handleDefaultSave processes F2 key to save current class as default
+func (cc *EbitenCharacterCreation) handleDefaultSave() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		cc.defaults.DefaultClass = cc.selectedClass
 		cc.errorMsg = fmt.Sprintf("Default class saved: %s", cc.selectedClass.String())

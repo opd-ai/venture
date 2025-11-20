@@ -502,6 +502,17 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 
 // ChainLightning applies chain lightning damage to nearby enemies.
 func (s *StatusEffectSystem) ChainLightning(source, initialTarget *Entity, damage float64, chains int, range_ float64) {
+	s.logChainStart(source, initialTarget, damage, chains, range_)
+	if chains <= 0 {
+		s.logChainTerminated()
+		return
+	}
+	s.applyLightningDamage(initialTarget, damage)
+	s.continueChain(source, initialTarget, damage, chains, range_)
+}
+
+// logChainStart logs the initiation of chain lightning
+func (s *StatusEffectSystem) logChainStart(source, initialTarget *Entity, damage float64, chains int, range_ float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"source_id": source.ID,
@@ -511,86 +522,112 @@ func (s *StatusEffectSystem) ChainLightning(source, initialTarget *Entity, damag
 			"range":     range_,
 		}).Debug("Chain lightning initiated")
 	}
+}
 
-	if chains <= 0 {
-		if s.logger != nil {
-			s.logger.Debug("Chain lightning terminated, no chains remaining")
-		}
+// logChainTerminated logs when chain lightning ends due to no remaining chains
+func (s *StatusEffectSystem) logChainTerminated() {
+	if s.logger != nil {
+		s.logger.Debug("Chain lightning terminated, no chains remaining")
+	}
+}
+
+// applyLightningDamage applies damage and shocked effect to target
+func (s *StatusEffectSystem) applyLightningDamage(target *Entity, damage float64) {
+	healthComp, hasHealth := target.GetComponent("health")
+	if !hasHealth {
 		return
 	}
-
-	// Apply damage to initial target
-	if healthComp, hasHealth := initialTarget.GetComponent("health"); hasHealth {
-		health, ok := healthComp.(*HealthComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"target_id":      initialTarget.ID,
-					"component_type": "health",
-				}).Warn("Failed to type assert health component for chain lightning")
-			}
-			return
-		}
-		health.TakeDamage(damage)
-
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"target_id": initialTarget.ID,
-				"damage":    damage,
-			}).Debug("Applied chain lightning damage to target")
-		}
-
-		// Apply shocked effect
-		s.ApplyStatusEffect(initialTarget, "shocked", 0, 2.0, 0)
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		s.logHealthTypeAssertFailed(target)
+		return
 	}
+	health.TakeDamage(damage)
+	s.logDamageApplied(target, damage)
+	s.ApplyStatusEffect(target, "shocked", 0, 2.0, 0)
+}
 
-	// Find next chain target
+// logHealthTypeAssertFailed logs failure to convert health component
+func (s *StatusEffectSystem) logHealthTypeAssertFailed(target *Entity) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id":      target.ID,
+			"component_type": "health",
+		}).Warn("Failed to type assert health component for chain lightning")
+	}
+}
+
+// logDamageApplied logs successful damage application
+func (s *StatusEffectSystem) logDamageApplied(target *Entity, damage float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id": target.ID,
+			"damage":    damage,
+		}).Debug("Applied chain lightning damage to target")
+	}
+}
+
+// continueChain finds next target and recursively chains lightning
+func (s *StatusEffectSystem) continueChain(source, currentTarget *Entity, damage float64, chains int, range_ float64) {
+	nextTarget := s.findNextChainTarget(source, currentTarget, range_)
+	if nextTarget != nil {
+		s.logChainContinue(nextTarget, damage, chains)
+		s.ChainLightning(source, nextTarget, damage*0.7, chains-1, range_)
+	} else {
+		s.logNoChainTarget(chains)
+	}
+}
+
+// findNextChainTarget searches for the nearest valid enemy to chain to
+func (s *StatusEffectSystem) findNextChainTarget(source, currentTarget *Entity, range_ float64) *Entity {
+	s.logSearchingForTarget(range_)
 	entities := s.world.GetEntities()
 	var nextTarget *Entity
 	minDist := range_
 
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"total_entities": len(entities),
-			"search_range":   range_,
-		}).Debug("Searching for next chain lightning target")
-	}
-
 	for _, entity := range entities {
-		if entity == source || entity == initialTarget {
+		if entity == source || entity == currentTarget {
 			continue
 		}
-
-		// Must be an enemy
 		if !isEnemyTarget(source, entity) {
 			continue
 		}
-
-		// Check distance from current target
-		dist := GetDistance(initialTarget, entity)
+		dist := GetDistance(currentTarget, entity)
 		if dist <= minDist {
 			nextTarget = entity
 			minDist = dist
 		}
 	}
+	return nextTarget
+}
 
-	// Recursively chain to next target with reduced damage
-	if nextTarget != nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"next_target_id":   nextTarget.ID,
-				"distance":         minDist,
-				"remaining_chains": chains - 1,
-				"reduced_damage":   damage * 0.7,
-			}).Debug("Chaining lightning to next target")
-		}
-		s.ChainLightning(source, nextTarget, damage*0.7, chains-1, range_)
-	} else {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"remaining_chains": chains - 1,
-			}).Debug("No valid chain lightning target found, chain terminated")
-		}
+// logSearchingForTarget logs the start of next target search
+func (s *StatusEffectSystem) logSearchingForTarget(range_ float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"total_entities": len(s.world.GetEntities()),
+			"search_range":   range_,
+		}).Debug("Searching for next chain lightning target")
+	}
+}
+
+// logChainContinue logs successful chain to next target
+func (s *StatusEffectSystem) logChainContinue(nextTarget *Entity, damage float64, chains int) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"next_target_id":   nextTarget.ID,
+			"remaining_chains": chains - 1,
+			"reduced_damage":   damage * 0.7,
+		}).Debug("Chaining lightning to next target")
+	}
+}
+
+// logNoChainTarget logs when no valid target is found for chaining
+func (s *StatusEffectSystem) logNoChainTarget(chains int) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"remaining_chains": chains - 1,
+		}).Debug("No valid chain lightning target found, chain terminated")
 	}
 }
 

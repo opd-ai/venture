@@ -194,63 +194,76 @@ func (s *MoralChoiceSystem) MakeChoice(entity *Entity, choiceID string, optionIn
 
 // applyRewards grants rewards to the entity.
 func (s *MoralChoiceSystem) applyRewards(entity *Entity, rewards *ChoiceRewards) error {
-	// Apply XP
-	if rewards.XP > 0 {
-		expComp, ok := entity.GetComponent("experience")
-		if ok {
-			if expComp != nil {
-				if exp, ok := expComp.(*ExperienceComponent); ok {
-					exp.AddXP(rewards.XP)
-				}
-			}
-		}
-	}
+	s.applyXPReward(entity, rewards.XP)
+	s.applyGoldReward(entity, rewards.Gold)
+	s.applyItemRewards(entity, rewards.Items)
+	s.applyQuestUnlock(entity, rewards.UnlockQuest)
+	return nil
+}
 
-	// Apply gold
-	if rewards.Gold > 0 {
-		invComp, ok := entity.GetComponent("inventory")
-		if ok {
-			if invComp != nil {
-				if inv, ok := invComp.(*InventoryComponent); ok {
-					inv.Gold += rewards.Gold
-				}
-			}
-		}
+// applyXPReward grants experience points to entity
+func (s *MoralChoiceSystem) applyXPReward(entity *Entity, xp int) {
+	if xp <= 0 {
+		return
 	}
-
-	// Apply items (spawn items in world near entity)
-	if len(rewards.Items) > 0 {
-		posComp, ok := entity.GetComponent("position")
-		if ok {
-			if posComp != nil {
-				if pos, ok := posComp.(*PositionComponent); ok {
-					for _, itemID := range rewards.Items {
-						// Create a simple item entity near the player
-						itemEntity := s.world.CreateEntity()
-						itemEntity.AddComponent(&PositionComponent{
-							X: pos.X + float64(len(rewards.Items)), // Offset slightly
-							Y: pos.Y,
-						})
-						// Note: In a real implementation, we'd need to properly generate
-						// the item using the item generator. For now, just log it.
-						s.logger.Info("Item reward granted",
-							"entity", entity.ID,
-							"item", itemID)
-					}
-				}
-			}
-		}
+	expComp, ok := entity.GetComponent("experience")
+	if !ok || expComp == nil {
+		return
 	}
+	if exp, ok := expComp.(*ExperienceComponent); ok {
+		exp.AddXP(xp)
+	}
+}
 
-	// Unlock quest (handled by quest system)
-	if rewards.UnlockQuest != "" {
+// applyGoldReward adds gold to entity's inventory
+func (s *MoralChoiceSystem) applyGoldReward(entity *Entity, gold int) {
+	if gold <= 0 {
+		return
+	}
+	invComp, ok := entity.GetComponent("inventory")
+	if !ok || invComp == nil {
+		return
+	}
+	if inv, ok := invComp.(*InventoryComponent); ok {
+		inv.Gold += gold
+	}
+}
+
+// applyItemRewards spawns reward items near entity
+func (s *MoralChoiceSystem) applyItemRewards(entity *Entity, items []string) {
+	if len(items) == 0 {
+		return
+	}
+	posComp, ok := entity.GetComponent("position")
+	if !ok || posComp == nil {
+		return
+	}
+	if pos, ok := posComp.(*PositionComponent); ok {
+		s.spawnRewardItems(entity, pos, items)
+	}
+}
+
+// spawnRewardItems creates item entities at position
+func (s *MoralChoiceSystem) spawnRewardItems(entity *Entity, pos *PositionComponent, items []string) {
+	for i, itemID := range items {
+		itemEntity := s.world.CreateEntity()
+		itemEntity.AddComponent(&PositionComponent{
+			X: pos.X + float64(i),
+			Y: pos.Y,
+		})
+		s.logger.Info("Item reward granted",
+			"entity", entity.ID,
+			"item", itemID)
+	}
+}
+
+// applyQuestUnlock logs quest unlock (handled by quest system integration)
+func (s *MoralChoiceSystem) applyQuestUnlock(entity *Entity, questID string) {
+	if questID != "" {
 		s.logger.Info("Quest unlocked",
 			"entity", entity.ID,
-			"quest", rewards.UnlockQuest)
-		// Quest system would handle this in integration
+			"quest", questID)
 	}
-
-	return nil
 }
 
 // applyConsequences applies negative outcomes to the entity.

@@ -168,7 +168,12 @@ func (sm *SnapshotManager) InterpolateEntity(entityID uint64, renderTime time.Ti
 		return nil
 	}
 
-	// Find two snapshots that bracket the render time
+	before, after := sm.findBracketingSnapshots(renderTime)
+	return sm.computeInterpolation(entityID, renderTime, before, after)
+}
+
+// findBracketingSnapshots finds two snapshots that bracket the render time
+func (sm *SnapshotManager) findBracketingSnapshots(renderTime time.Time) (*WorldSnapshot, *WorldSnapshot) {
 	var before, after *WorldSnapshot
 
 	for i := 0; i < sm.maxSnapshots-1; i++ {
@@ -181,79 +186,109 @@ func (sm *SnapshotManager) InterpolateEntity(entityID uint64, renderTime time.Ti
 
 		if snapshot.Timestamp.Before(renderTime) || snapshot.Timestamp.Equal(renderTime) {
 			before = snapshot
-			// Look for the next snapshot after this one
-			nextIdx := (idx + 1) % sm.maxSnapshots
-			if sm.snapshots[nextIdx].Sequence != 0 &&
-				(sm.snapshots[nextIdx].Timestamp.After(renderTime) || sm.snapshots[nextIdx].Timestamp.Equal(renderTime)) {
-				after = &sm.snapshots[nextIdx]
-			}
+			after = sm.findNextSnapshot(idx, renderTime)
 			break
 		}
 	}
 
-	// If we don't have bracketing snapshots, return the latest
+	return before, after
+}
+
+// findNextSnapshot finds the snapshot after the given index that's after render time
+func (sm *SnapshotManager) findNextSnapshot(currentIdx int, renderTime time.Time) *WorldSnapshot {
+	nextIdx := (currentIdx + 1) % sm.maxSnapshots
+	nextSnapshot := &sm.snapshots[nextIdx]
+
+	if nextSnapshot.Sequence != 0 &&
+		(nextSnapshot.Timestamp.After(renderTime) || nextSnapshot.Timestamp.Equal(renderTime)) {
+		return nextSnapshot
+	}
+	return nil
+}
+
+// computeInterpolation calculates interpolated entity state between snapshots
+func (sm *SnapshotManager) computeInterpolation(entityID uint64, renderTime time.Time, before, after *WorldSnapshot) *EntitySnapshot {
 	if before == nil {
-		snapshot := sm.snapshots[sm.currentIndex]
-		if entity, exists := snapshot.Entities[entityID]; exists {
-			return &entity
-		}
-		return nil
+		return sm.getLatestEntity(entityID)
 	}
 
-	// If we only have before, use it
 	if after == nil {
-		if entity, exists := before.Entities[entityID]; exists {
-			return &entity
-		}
-		return nil
+		return sm.getEntityFromSnapshot(entityID, before)
 	}
 
-	// Interpolate between before and after
+	return sm.interpolateBetweenSnapshots(entityID, renderTime, before, after)
+}
+
+// getLatestEntity retrieves entity from the most recent snapshot
+func (sm *SnapshotManager) getLatestEntity(entityID uint64) *EntitySnapshot {
+	snapshot := sm.snapshots[sm.currentIndex]
+	if entity, exists := snapshot.Entities[entityID]; exists {
+		return &entity
+	}
+	return nil
+}
+
+// getEntityFromSnapshot retrieves entity from a specific snapshot
+func (sm *SnapshotManager) getEntityFromSnapshot(entityID uint64, snapshot *WorldSnapshot) *EntitySnapshot {
+	if entity, exists := snapshot.Entities[entityID]; exists {
+		return &entity
+	}
+	return nil
+}
+
+// interpolateBetweenSnapshots performs linear interpolation between two snapshots
+func (sm *SnapshotManager) interpolateBetweenSnapshots(entityID uint64, renderTime time.Time, before, after *WorldSnapshot) *EntitySnapshot {
 	beforeEntity, beforeExists := before.Entities[entityID]
 	afterEntity, afterExists := after.Entities[entityID]
 
-	if !beforeExists || !afterExists {
-		// Entity doesn't exist in one of the snapshots
-		if beforeExists {
-			return &beforeEntity
-		}
-		if afterExists {
-			return &afterEntity
-		}
+	if !beforeExists && !afterExists {
 		return nil
 	}
+	if !beforeExists {
+		return &afterEntity
+	}
+	if !afterExists {
+		return &beforeEntity
+	}
 
-	// Calculate interpolation factor (0.0 to 1.0)
+	t := sm.calculateInterpolationFactor(renderTime, before, after)
+	return sm.createInterpolatedSnapshot(entityID, renderTime, beforeEntity, afterEntity, t)
+}
+
+// calculateInterpolationFactor computes normalized time between snapshots
+func (sm *SnapshotManager) calculateInterpolationFactor(renderTime time.Time, before, after *WorldSnapshot) float64 {
 	totalDuration := after.Timestamp.Sub(before.Timestamp).Seconds()
 	if totalDuration <= 0 {
-		return &afterEntity
+		return 1.0
 	}
 
 	elapsed := renderTime.Sub(before.Timestamp).Seconds()
 	t := elapsed / totalDuration
 
-	// Clamp t to [0, 1]
 	if t < 0 {
-		t = 0
+		return 0
 	}
 	if t > 1 {
-		t = 1
+		return 1
 	}
+	return t
+}
 
-	// Interpolate position
+// createInterpolatedSnapshot builds interpolated entity snapshot from two states
+func (sm *SnapshotManager) createInterpolatedSnapshot(entityID uint64, renderTime time.Time, before, after EntitySnapshot, t float64) *EntitySnapshot {
 	interpolated := EntitySnapshot{
 		EntityID:  entityID,
 		Timestamp: renderTime,
-		Sequence:  afterEntity.Sequence,
+		Sequence:  after.Sequence,
 		Position: Position{
-			X: lerp(beforeEntity.Position.X, afterEntity.Position.X, t),
-			Y: lerp(beforeEntity.Position.Y, afterEntity.Position.Y, t),
+			X: lerp(before.Position.X, after.Position.X, t),
+			Y: lerp(before.Position.Y, after.Position.Y, t),
 		},
 		Velocity: Velocity{
-			VX: lerp(beforeEntity.Velocity.VX, afterEntity.Velocity.VX, t),
-			VY: lerp(beforeEntity.Velocity.VY, afterEntity.Velocity.VY, t),
+			VX: lerp(before.Velocity.VX, after.Velocity.VX, t),
+			VY: lerp(before.Velocity.VY, after.Velocity.VY, t),
 		},
-		Components: afterEntity.Components, // Use latest component data
+		Components: after.Components,
 	}
 
 	return &interpolated

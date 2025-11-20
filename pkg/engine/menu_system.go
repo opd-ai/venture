@@ -483,106 +483,100 @@ func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 
 // buildSaveMenu constructs the save game menu with available save slots.
 func (ms *EbitenMenuSystem) buildSaveMenu(menu *MenuComponent) {
+	ms.logBuildingMenu()
+	menu.Items = []MenuItem{
+		ms.createSaveMenuItem("Quick Save (slot 1)", "quicksave", "Quick Save"),
+		ms.createSaveMenuItem("Auto Save (slot 2)", "autosave", "Auto Save"),
+		ms.createSaveMenuItem("Save Slot 3", "save3", "Slot 3"),
+		ms.createBackMenuItem(menu),
+	}
+	menu.SelectedIndex = 0
+	ms.logMenuBuilt(len(menu.Items))
+}
+
+// createSaveMenuItem creates a menu item for saving to a specific slot
+func (ms *EbitenMenuSystem) createSaveMenuItem(label, saveName, displayName string) MenuItem {
+	return MenuItem{
+		Label:   label,
+		Enabled: ms.onSave != nil,
+		Action: func() error {
+			return ms.performSave(saveName, displayName)
+		},
+	}
+}
+
+// performSave executes the save operation with logging and error handling
+func (ms *EbitenMenuSystem) performSave(saveName, displayName string) error {
+	if ms.onSave == nil {
+		return nil
+	}
+	ms.logSaveStart(saveName)
+	if err := ms.onSave(saveName); err != nil {
+		ms.logSaveError(saveName, err)
+		return fmt.Errorf("save failed: %w", err)
+	}
+	ms.logSaveSuccess(saveName, displayName)
+	return nil
+}
+
+// createBackMenuItem creates the back navigation menu item
+func (ms *EbitenMenuSystem) createBackMenuItem(menu *MenuComponent) MenuItem {
+	return MenuItem{
+		Label:   "< Back",
+		Enabled: true,
+		Action: func() error {
+			return ms.navigateBack(menu)
+		},
+	}
+}
+
+// navigateBack handles back navigation through menu stack
+func (ms *EbitenMenuSystem) navigateBack(menu *MenuComponent) error {
+	if len(menu.MenuStack) > 0 {
+		menu.CurrentMenu = menu.MenuStack[len(menu.MenuStack)-1]
+		menu.MenuStack = menu.MenuStack[:len(menu.MenuStack)-1]
+		ms.rebuildMenu(menu)
+	}
+	return nil
+}
+
+// logBuildingMenu logs the start of menu building
+func (ms *EbitenMenuSystem) logBuildingMenu() {
 	if ms.logger != nil {
 		ms.logger.WithField("callback_available", ms.onSave != nil).Debug("Building save menu")
 	}
-	menu.Items = []MenuItem{
-		{
-			Label:   "Quick Save (slot 1)",
-			Enabled: ms.onSave != nil,
-			Action: func() error {
-				if ms.onSave != nil {
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "quicksave").Info("Saving game")
-					}
-					if err := ms.onSave("quicksave"); err != nil {
-						if ms.logger != nil {
-							ms.logger.WithFields(logrus.Fields{
-								"save_name": "quicksave",
-								"error":     err.Error(),
-							}).Error("Save operation failed")
-						}
-						return fmt.Errorf("save failed: %w", err)
-					}
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "quicksave").Info("Game saved successfully")
-					}
-					menu.ErrorMessage = "Game saved to Quick Save!"
-					menu.ErrorTimeout = 2.0
-				}
-				return nil
-			},
-		},
-		{
-			Label:   "Auto Save (slot 2)",
-			Enabled: ms.onSave != nil,
-			Action: func() error {
-				if ms.onSave != nil {
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "autosave").Info("Saving game")
-					}
-					if err := ms.onSave("autosave"); err != nil {
-						if ms.logger != nil {
-							ms.logger.WithFields(logrus.Fields{
-								"save_name": "autosave",
-								"error":     err.Error(),
-							}).Error("Save operation failed")
-						}
-						return fmt.Errorf("save failed: %w", err)
-					}
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "autosave").Info("Game saved successfully")
-					}
-					menu.ErrorMessage = "Game saved to Auto Save!"
-					menu.ErrorTimeout = 2.0
-				}
-				return nil
-			},
-		},
-		{
-			Label:   "Save Slot 3",
-			Enabled: ms.onSave != nil,
-			Action: func() error {
-				if ms.onSave != nil {
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "save3").Info("Saving game")
-					}
-					if err := ms.onSave("save3"); err != nil {
-						if ms.logger != nil {
-							ms.logger.WithFields(logrus.Fields{
-								"save_name": "save3",
-								"error":     err.Error(),
-							}).Error("Save operation failed")
-						}
-						return fmt.Errorf("save failed: %w", err)
-					}
-					if ms.logger != nil {
-						ms.logger.WithField("save_name", "save3").Info("Game saved successfully")
-					}
-					menu.ErrorMessage = "Game saved to Slot 3!"
-					menu.ErrorTimeout = 2.0
-				}
-				return nil
-			},
-		},
-		{
-			Label:   "< Back",
-			Enabled: true,
-			Action: func() error {
-				if len(menu.MenuStack) > 0 {
-					menu.CurrentMenu = menu.MenuStack[len(menu.MenuStack)-1]
-					menu.MenuStack = menu.MenuStack[:len(menu.MenuStack)-1]
-					ms.rebuildMenu(menu)
-				}
-				return nil
-			},
-		},
+}
+
+// logSaveStart logs the beginning of a save operation
+func (ms *EbitenMenuSystem) logSaveStart(saveName string) {
+	if ms.logger != nil {
+		ms.logger.WithField("save_name", saveName).Info("Saving game")
 	}
-	menu.SelectedIndex = 0
+}
+
+// logSaveError logs a save operation failure
+func (ms *EbitenMenuSystem) logSaveError(saveName string, err error) {
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
-			"item_count":     len(menu.Items),
-			"selected_index": menu.SelectedIndex,
+			"save_name": saveName,
+			"error":     err.Error(),
+		}).Error("Save operation failed")
+	}
+}
+
+// logSaveSuccess logs a successful save and displays user feedback
+func (ms *EbitenMenuSystem) logSaveSuccess(saveName, displayName string) {
+	if ms.logger != nil {
+		ms.logger.WithField("save_name", saveName).Info("Game saved successfully")
+	}
+}
+
+// logMenuBuilt logs the completion of menu building
+func (ms *EbitenMenuSystem) logMenuBuilt(itemCount int) {
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     itemCount,
+			"selected_index": 0,
 		}).Debug("Save menu built")
 	}
 }

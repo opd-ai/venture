@@ -48,7 +48,7 @@ mobile() {
     checkin
 }
 
-dev() {
+impl() {
     echo "iteration started - Dev phase 1: Implement changes."
     copilot -p "/delegate $(cat docs/EXECUTE.md)" --allow-all-tools --deny-tool sudo
     echo "Implementation in progress."
@@ -56,7 +56,8 @@ dev() {
     echo "Implementation completed, sleeping for 1 minute..."
     sleep 1m
     checkin
-
+}
+integrate() {
     echo "iteration started - Dev phase 2: Integrate components."
     copilot -p "/delegate $(cat docs/INTEGRATION.md)" --allow-all-tools --deny-tool sudo
     echo "Integration in progress."
@@ -64,18 +65,25 @@ dev() {
     echo "Integration completed, sleeping for 1 minute..."
     sleep 1m
     checkin
-
+}
+play() {
     echo "iteration started - Resolution phase."
     copilot -p "/delegate $(cat docs/PLAY.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "Resolution phase completed, sleeping for 1 minute..."
     sleep 1m
-    checkin
+    checkin   
+}
+
+dev() {
+    impl
+    #integrate
+    #play
 }
 
 fix
-wasm
-mobile
+#wasm
+#mobile
 for i in $(seq 1 $ITER); do
     dev
     fix

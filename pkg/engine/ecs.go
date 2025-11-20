@@ -6,7 +6,6 @@ package engine
 import (
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -345,8 +344,8 @@ func (w *World) AddSystem(system System) {
 
 // Update updates all systems with the current entity list.
 func (w *World) Update(deltaTime float64) {
-	// Advance game clock for deterministic time tracking (convert seconds to nanoseconds)
-	w.Clock.Advance(time.Duration(deltaTime * float64(time.Second)))
+	// Advance game clock for deterministic time tracking
+	w.Clock.Advance(deltaTime)
 
 	// Process pending additions
 	if len(w.entitiesToAdd) > 0 {

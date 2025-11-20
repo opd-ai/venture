@@ -138,6 +138,15 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	world.AddSystem(progressionSystem)
 	world.AddSystem(inventorySystem)
 
+	// Create item generator for crafting system
+	itemGen := itemgen.NewItemGenerator()
+
+	// INTEGRATION FIX [Category A]: Core Gameplay Systems Added to Server
+	// Gap: 29 server-critical systems were only on client, causing multiplayer desync
+	// Fix: Added all missing gameplay systems for server-authoritative state
+	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
+	initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
+
 	initializeV4Systems(world, *seed, logger)
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger)

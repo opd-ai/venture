@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/network/federation"
+	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/sirupsen/logrus"
 )
 
@@ -405,4 +406,193 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 		"totalV6Systems":    3,
 		"note":              "Persistent world & federation systems for V6.0",
 	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics)")
+}
+
+// INTEGRATION FIX [Category A]: Core Gameplay Systems Missing from Server
+// Gap: 29 server-critical systems were only on client, causing multiplayer desync
+// Fix: Added all missing gameplay systems for server-authoritative state
+// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
+
+// System wrappers for systems that need deltaTime-only Update signature
+// (These systems query world internally, not via entities parameter)
+
+type investigationSystemWrapper struct {
+	system *engine.InvestigationSystem
+}
+
+func (w *investigationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type merchantCaravanSystemWrapper struct {
+	system *engine.MerchantCaravanSystem
+}
+
+func (w *merchantCaravanSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type rotationSystemWrapper struct {
+	system *engine.RotationSystem
+}
+
+func (w *rotationSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type squadSystemWrapper struct {
+	system *engine.SquadSystem
+}
+
+func (w *squadSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type tradeSystemWrapper struct {
+	system *engine.TradeSystem
+}
+
+func (w *tradeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type vehicleSystemWrapper struct {
+	system *engine.VehicleSystem
+}
+
+func (w *vehicleSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// initializeCoreGameplaySystems adds all missing server-critical systems
+// These systems were previously client-only, causing multiplayer desync
+func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) {
+	serverLogger := logger.WithField("component", "core_gameplay_systems")
+
+	// Phase 13-14: Core Interaction Systems (V3.0)
+	// These systems handle player-world interactions and item pickup
+	interactionSystem := engine.NewInteractionSystem(world)
+	world.AddSystem(interactionSystem) // No wrapper needed - takes entities parameter
+
+	itemPickupSystem := engine.NewItemPickupSystem(world)
+	world.AddSystem(itemPickupSystem) // No wrapper needed
+
+	// Phase 15: Advanced AI (V3.0)
+	// BehaviorTree and Squad systems for complex AI behaviors
+	behaviorTreeSystem := engine.NewBehaviorTreeSystem(world)
+	world.AddSystem(behaviorTreeSystem) // No wrapper needed
+
+	squadSystem := engine.NewSquadSystem(world)
+	world.AddSystem(&squadSystemWrapper{system: squadSystem}) // Wrapper needed - takes only deltaTime
+
+	// Phase 16-17: Combat & Status Effects (V3.0)
+	// Server-authoritative combat and projectile physics
+	statusEffectSystem := engine.NewStatusEffectSystem(world, nil) // nil RNG for deterministic server
+	world.AddSystem(statusEffectSystem)                            // No wrapper needed
+
+	projectileSystem := engine.NewProjectileSystem(world)
+	world.AddSystem(projectileSystem) // No wrapper needed
+
+	rotationSystem := engine.NewRotationSystem(world)
+	world.AddSystem(&rotationSystemWrapper{system: rotationSystem}) // Wrapper needed
+
+	// Phase 18: Death & Revival (V3.0)
+	// Server-authoritative death and respawn mechanics
+	revivalSystem := engine.NewRevivalSystem(world)
+	world.AddSystem(revivalSystem) // No wrapper needed
+
+	// Phase 19-20: Crafting & Trading (V3.0)
+	// Server-validated item creation and economy
+	craftingSystem := engine.NewCraftingSystem(world, inventorySystem, itemGen)
+	world.AddSystem(craftingSystem) // No wrapper needed
+
+	commerceSystem := engine.NewCommerceSystemWithLogger(world, inventorySystem, logger)
+	world.AddSystem(commerceSystem) // No wrapper needed
+
+	tradeSystem := engine.NewTradeSystem(world)
+	world.AddSystem(&tradeSystemWrapper{system: tradeSystem}) // Wrapper needed
+
+	// Phase 33-34: Dialogue & Social (V5.0)
+	// Server-authoritative NPC conversation state
+	// Note: Using DialogSystem (simpler) not NPCDialogSystem (Markov-chain based)
+	dialogSystem := engine.NewDialogSystem(world)
+	world.AddSystem(dialogSystem) // No wrapper needed - takes entities parameter
+
+	// Phase 35-36: Environmental Systems (V5.0)
+	// Server-authoritative weather and environmental hazards
+	weatherSystem := engine.NewWeatherSystem(world)
+	world.AddSystem(weatherSystem) // No wrapper needed
+
+	tileSize := 32 // Standard tile size for server physics
+	firePropagationSystem := engine.NewFirePropagationSystemWithLogger(tileSize, seed, logger)
+	world.AddSystem(firePropagationSystem) // No wrapper needed
+
+	destructibleSystem := engine.NewDestructibleObjectSystemWithLogger(tileSize, seed, logger)
+	world.AddSystem(destructibleSystem) // No wrapper needed
+
+	hazardSystem := engine.NewHazardSystemWithLogger(logger)
+	world.AddSystem(hazardSystem) // No wrapper needed
+
+	lifetimeSystem := engine.NewLifetimeSystem(world)
+	world.AddSystem(lifetimeSystem) // No wrapper needed
+
+	// Phase 37: World Building & Modification (V6.0)
+	// Server-authoritative terrain modification and building
+	terrainConstructionSystem := engine.NewTerrainConstructionSystemWithLogger(tileSize, logger)
+	world.AddSystem(terrainConstructionSystem) // No wrapper needed
+
+	terrainModificationSystem := engine.NewTerrainModificationSystemWithLogger(tileSize, logger)
+	world.AddSystem(terrainModificationSystem) // No wrapper needed
+
+	carrySystem := engine.NewCarrySystemWithLogger(logger)
+	world.AddSystem(carrySystem) // No wrapper needed
+
+	// Phase 38-40: Story & Quest Systems (V6.0)
+	// Server-authoritative narrative progression and puzzle state
+	narrativeSystem := engine.NewNarrativeSystem(world)
+	world.AddSystem(narrativeSystem) // No wrapper needed
+
+	objectiveTrackerSystem := engine.NewObjectiveTrackerSystem()
+	world.AddSystem(objectiveTrackerSystem) // No wrapper needed
+
+	puzzleSystem := engine.NewPuzzleSystem(world)
+	world.AddSystem(puzzleSystem) // No wrapper needed
+
+	investigationSystem := engine.NewInvestigationSystem(world, seed)
+	world.AddSystem(&investigationSystemWrapper{system: investigationSystem}) // Wrapper needed
+
+	// Phase 41-42: Advanced Gameplay (V6.0)
+	// Server-authoritative skill progression and spell casting
+	skillProgressionSystem := engine.NewSkillProgressionSystem()
+	world.AddSystem(skillProgressionSystem) // No wrapper needed
+
+	// SpellCastingSystem requires the StatusEffectSystem (already added above)
+	spellCastingSystem := engine.NewSpellCastingSystemWithLogger(world, statusEffectSystem, logger)
+	world.AddSystem(spellCastingSystem) // No wrapper needed
+
+	merchantCaravanSystem := engine.NewMerchantCaravanSystem(world)
+	world.AddSystem(&merchantCaravanSystemWrapper{system: merchantCaravanSystem}) // Wrapper needed
+
+	vehicleSystem := engine.NewVehicleSystem(world)
+	world.AddSystem(&vehicleSystemWrapper{system: vehicleSystem}) // Wrapper needed
+
+	shadowSystem := engine.NewShadowSystem(world)
+	world.AddSystem(shadowSystem) // No wrapper needed
+
+	systemCount := 29 // Updated count (all systems included)
+	serverLogger.WithFields(logrus.Fields{
+		"interactionSystems": 2, // Interaction, ItemPickup
+		"aiSystems":          2, // BehaviorTree, Squad
+		"combatSystems":      3, // StatusEffect, Projectile, Rotation
+		"deathSystems":       1, // Revival
+		"economySystems":     3, // Crafting, Commerce, Trade
+		"socialSystems":      1, // Dialog
+		"environmentSystems": 5, // Weather, FirePropagation, Destructible, Hazard, Lifetime
+		"buildingSystems":    3, // TerrainConstruction, TerrainModification, Carry
+		"storySystems":       4, // Narrative, ObjectiveTracker, Puzzle, Investigation
+		"gameplaySystems":    5, // SkillProgression, SpellCasting, MerchantCaravan, Vehicle, Shadow
+		"totalCoreSystems":   systemCount,
+		"note":               "Server-authoritative gameplay systems for multiplayer parity",
+		"integrationStatus":  "COMPLETE - All gameplay systems now on server",
+	}).Info("Core gameplay systems initialized on server (V3-V6 features)")
 }

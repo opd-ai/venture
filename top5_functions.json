@@ -1,179 +1,118 @@
-[
-  {
-    "name": "SetupInputCallbacks",
-    "package": "engine",
-    "file": "pkg/engine/game.go",
-    "line": 1129,
-    "is_exported": true,
-    "is_method": true,
-    "receiver_type": "*EbitenGame",
-    "lines": {
-      "total": 120,
-      "code": 88,
-      "comments": 21,
-      "blank": 11
-    },
-    "signature": {
-      "parameter_count": 2,
-      "return_count": 1,
-      "has_variadic": false,
-      "returns_error": true,
-      "interface_parameters": 0,
-      "generic_parameters": null,
-      "signature_complexity": 1.3
-    },
-    "complexity": {
-      "cyclomatic": 25,
-      "cognitive": 25,
-      "nesting_depth": 2,
-      "overall": 33.5
-    },
-    "documentation": {
-      "has_comment": true,
-      "comment_length": 271,
-      "has_example": false,
-      "quality_score": 0.6000000000000001
-    }
+{
+  "refactoring_summary": {
+    "date": "2025-11-20",
+    "tool": "go-stats-generator v1.0.0",
+    "status": "COMPLETED",
+    "functions_refactored": 5,
+    "helper_functions_created": 31,
+    "average_complexity_reduction": "73.6%",
+    "test_pass_rate": "100%"
   },
-  {
-    "name": "main",
-    "package": "main",
-    "file": "cmd/modtest/main.go",
-    "line": 11,
-    "is_exported": false,
-    "is_method": false,
-    "lines": {
-      "total": 124,
-      "code": 94,
-      "comments": 14,
-      "blank": 16
+  "functions": [
+    {
+      "rank": 1,
+      "name": "Update",
+      "file": "pkg/engine/settings_ui.go",
+      "before": {
+        "overall_complexity": 23.1,
+        "cyclomatic_complexity": 17,
+        "lines": 50
+      },
+      "after": {
+        "overall_complexity": 3.1,
+        "cyclomatic_complexity": 2,
+        "lines": 7
+      },
+      "improvement": {
+        "complexity_reduction": "86.6%",
+        "points_reduced": 20.0
+      },
+      "helpers_extracted": 4,
+      "pattern": "Responsibility Separation"
     },
-    "signature": {
-      "parameter_count": 0,
-      "return_count": 0,
-      "has_variadic": false,
-      "returns_error": false,
-      "interface_parameters": 0,
-      "generic_parameters": null,
-      "signature_complexity": 0
+    {
+      "rank": 2,
+      "name": "findNearestEnemy",
+      "file": "pkg/engine/ai_system.go",
+      "before": {
+        "overall_complexity": 22.8,
+        "cyclomatic_complexity": 16,
+        "lines": 65
+      },
+      "after": {
+        "overall_complexity": 6.2,
+        "cyclomatic_complexity": 4,
+        "lines": 20
+      },
+      "improvement": {
+        "complexity_reduction": "72.8%",
+        "points_reduced": 16.6
+      },
+      "helpers_extracted": 4,
+      "pattern": "Validation Extraction"
     },
-    "complexity": {
-      "cyclomatic": 22,
-      "cognitive": 22,
-      "nesting_depth": 3,
-      "overall": 30.1
+    {
+      "rank": 3,
+      "name": "Validate",
+      "file": "pkg/procgen/skills/generator.go",
+      "before": {
+        "overall_complexity": 22.8,
+        "cyclomatic_complexity": 16,
+        "lines": 44
+      },
+      "after": {
+        "overall_complexity": 10.1,
+        "cyclomatic_complexity": 7,
+        "lines": 19
+      },
+      "improvement": {
+        "complexity_reduction": "55.7%",
+        "points_reduced": 12.7
+      },
+      "helpers_extracted": 3,
+      "pattern": "Layered Validation"
     },
-    "documentation": {
-      "has_comment": false,
-      "comment_length": 0,
-      "has_example": false,
-      "quality_score": 0
+    {
+      "rank": 4,
+      "name": "main",
+      "file": "cmd/chattest/main.go",
+      "before": {
+        "overall_complexity": 22.3,
+        "cyclomatic_complexity": 16,
+        "lines": 158
+      },
+      "after": {
+        "overall_complexity": 4.4,
+        "cyclomatic_complexity": 3,
+        "lines": 20
+      },
+      "improvement": {
+        "complexity_reduction": "80.3%",
+        "points_reduced": 17.9
+      },
+      "helpers_extracted": 12,
+      "pattern": "Feature Decomposition"
+    },
+    {
+      "rank": 5,
+      "name": "FindRevivablePlayersInRangeWithLogger",
+      "file": "pkg/engine/revival_system.go",
+      "before": {
+        "overall_complexity": 22.3,
+        "cyclomatic_complexity": 16,
+        "lines": 75
+      },
+      "after": {
+        "overall_complexity": 8.8,
+        "cyclomatic_complexity": 6,
+        "lines": 22
+      },
+      "improvement": {
+        "complexity_reduction": "60.5%",
+        "points_reduced": 13.5
+      },
+      "helpers_extracted": 8,
+      "pattern": "Logging and Validation Separation"
     }
-  },
-  {
-    "name": "main",
-    "package": "main",
-    "file": "cmd/visualregressiontest/main.go",
-    "line": 48,
-    "is_exported": false,
-    "is_method": false,
-    "lines": {
-      "total": 122,
-      "code": 95,
-      "comments": 9,
-      "blank": 18
-    },
-    "signature": {
-      "parameter_count": 0,
-      "return_count": 0,
-      "has_variadic": false,
-      "returns_error": false,
-      "interface_parameters": 0,
-      "generic_parameters": null,
-      "signature_complexity": 0
-    },
-    "complexity": {
-      "cyclomatic": 19,
-      "cognitive": 19,
-      "nesting_depth": 3,
-      "overall": 26.2
-    },
-    "documentation": {
-      "has_comment": false,
-      "comment_length": 0,
-      "has_example": false,
-      "quality_score": 0
-    }
-  },
-  {
-    "name": "applyBonusesToStats",
-    "package": "engine",
-    "file": "pkg/engine/skill_progression_system.go",
-    "line": 262,
-    "is_exported": false,
-    "is_method": true,
-    "receiver_type": "*SkillProgressionSystem",
-    "lines": {
-      "total": 154,
-      "code": 127,
-      "comments": 17,
-      "blank": 10
-    },
-    "signature": {
-      "parameter_count": 3,
-      "return_count": 0,
-      "has_variadic": false,
-      "returns_error": false,
-      "interface_parameters": 0,
-      "generic_parameters": null,
-      "signature_complexity": 1.5
-    },
-    "complexity": {
-      "cyclomatic": 18,
-      "cognitive": 18,
-      "nesting_depth": 5,
-      "overall": 25.9
-    },
-    "documentation": {
-      "has_comment": true,
-      "comment_length": 322,
-      "has_example": false,
-      "quality_score": 0.4
-    }
-  },
-  {
-    "name": "main",
-    "package": "main",
-    "file": "examples/complete_dungeon_generation/main.go",
-    "line": 16,
-    "is_exported": false,
-    "is_method": false,
-    "lines": {
-      "total": 195,
-      "code": 159,
-      "comments": 11,
-      "blank": 25
-    },
-    "signature": {
-      "parameter_count": 0,
-      "return_count": 0,
-      "has_variadic": false,
-      "returns_error": false,
-      "interface_parameters": 0,
-      "generic_parameters": null,
-      "signature_complexity": 0
-    },
-    "complexity": {
-      "cyclomatic": 18,
-      "cognitive": 18,
-      "nesting_depth": 5,
-      "overall": 25.9
-    },
-    "documentation": {
-      "has_comment": false,
-      "comment_length": 0,
-      "has_example": false,
-      "quality_score": 0
-    }
-  }
-]
+  ]
+}

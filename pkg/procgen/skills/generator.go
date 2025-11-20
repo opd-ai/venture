@@ -426,57 +426,69 @@ func (g *SkillTreeGenerator) Validate(result interface{}) error {
 	if !ok {
 		return fmt.Errorf("expected []*SkillTree, got %T", result)
 	}
-
 	if len(trees) == 0 {
 		return fmt.Errorf("no skill trees generated")
 	}
 
 	for i, tree := range trees {
-		if tree == nil {
-			return fmt.Errorf("tree %d is nil", i)
+		if err := g.validateTreeBasics(tree, i); err != nil {
+			return err
 		}
-
-		if tree.Name == "" {
-			return fmt.Errorf("tree %d has empty name", i)
+		if err := g.validateSkillNodes(tree, i); err != nil {
+			return err
 		}
-
-		if len(tree.Nodes) == 0 {
-			return fmt.Errorf("tree %d has no skills", i)
+		if err := g.validatePrerequisites(tree); err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		if len(tree.RootNodes) == 0 {
-			return fmt.Errorf("tree %d has no root nodes", i)
+// validateTreeBasics validates basic tree structure and properties.
+func (g *SkillTreeGenerator) validateTreeBasics(tree *SkillTree, index int) error {
+	if tree == nil {
+		return fmt.Errorf("tree %d is nil", index)
+	}
+	if tree.Name == "" {
+		return fmt.Errorf("tree %d has empty name", index)
+	}
+	if len(tree.Nodes) == 0 {
+		return fmt.Errorf("tree %d has no skills", index)
+	}
+	if len(tree.RootNodes) == 0 {
+		return fmt.Errorf("tree %d has no root nodes", index)
+	}
+	return nil
+}
+
+// validateSkillNodes validates all skill nodes in a tree.
+func (g *SkillTreeGenerator) validateSkillNodes(tree *SkillTree, treeIndex int) error {
+	for j, node := range tree.Nodes {
+		if node == nil || node.Skill == nil {
+			return fmt.Errorf("tree %d node %d is nil", treeIndex, j)
 		}
-
-		// Validate each skill
-		for j, node := range tree.Nodes {
-			if node == nil || node.Skill == nil {
-				return fmt.Errorf("tree %d node %d is nil", i, j)
-			}
-
-			skill := node.Skill
-			if skill.Name == "" {
-				return fmt.Errorf("tree %d skill %d has empty name", i, j)
-			}
-
-			if skill.MaxLevel < 1 {
-				return fmt.Errorf("tree %d skill %d has invalid max level: %d", i, j, skill.MaxLevel)
-			}
-
-			if len(skill.Effects) == 0 {
-				return fmt.Errorf("tree %d skill %d has no effects", i, j)
-			}
+		skill := node.Skill
+		if skill.Name == "" {
+			return fmt.Errorf("tree %d skill %d has empty name", treeIndex, j)
 		}
+		if skill.MaxLevel < 1 {
+			return fmt.Errorf("tree %d skill %d has invalid max level: %d", treeIndex, j, skill.MaxLevel)
+		}
+		if len(skill.Effects) == 0 {
+			return fmt.Errorf("tree %d skill %d has no effects", treeIndex, j)
+		}
+	}
+	return nil
+}
 
-		// Validate prerequisites exist
-		for _, node := range tree.Nodes {
-			for _, prereqID := range node.Skill.Requirements.PrerequisiteIDs {
-				if tree.GetSkillByID(prereqID) == nil {
-					return fmt.Errorf("prerequisite %s not found in tree %s", prereqID, tree.ID)
-				}
+// validatePrerequisites validates that all prerequisite skills exist.
+func (g *SkillTreeGenerator) validatePrerequisites(tree *SkillTree) error {
+	for _, node := range tree.Nodes {
+		for _, prereqID := range node.Skill.Requirements.PrerequisiteIDs {
+			if tree.GetSkillByID(prereqID) == nil {
+				return fmt.Errorf("prerequisite %s not found in tree %s", prereqID, tree.ID)
 			}
 		}
 	}
-
 	return nil
 }

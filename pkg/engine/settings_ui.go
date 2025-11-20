@@ -205,17 +205,20 @@ func (s *SettingsUI) Update() bool {
 		return false
 	}
 
-	// Update touch handler and buttons
+	s.updateButtons()
+	s.handleNavigation()
+	s.handleValueAdjustment()
+	return s.handleEscapeKey()
+}
+
+// updateButtons updates all interactive buttons in the settings UI.
+func (s *SettingsUI) updateButtons() {
 	if s.touchHandler != nil {
 		s.touchHandler.Update()
 	}
-
-	// Update close button
 	if s.closeButton != nil {
 		s.closeButton.Update()
 	}
-
-	// Update decrease/increase/toggle buttons for each option
 	for i := range s.options {
 		if s.decreaseButtons[i] != nil {
 			s.decreaseButtons[i].Update()
@@ -227,23 +230,26 @@ func (s *SettingsUI) Update() bool {
 			s.toggleButtons[i].Update()
 		}
 	}
+}
 
-	// Handle up/down navigation (keyboard)
+// handleNavigation processes up/down keyboard navigation.
+func (s *SettingsUI) handleNavigation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		s.selectedIdx--
 		if s.selectedIdx < 0 {
 			s.selectedIdx = len(s.options) - 1
 		}
 	}
-
 	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		s.selectedIdx++
 		if s.selectedIdx >= len(s.options) {
 			s.selectedIdx = 0
 		}
 	}
+}
 
-	// Handle value adjustments (left/right for selected option)
+// handleValueAdjustment processes left/right value adjustments and activation.
+func (s *SettingsUI) handleValueAdjustment() {
 	selectedOption := s.options[s.selectedIdx]
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyA) {
 		s.decreaseValue(selectedOption)
@@ -251,13 +257,13 @@ func (s *SettingsUI) Update() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) || inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		s.increaseValue(selectedOption)
 	}
-
-	// Handle Enter/Space to toggle booleans or go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		s.activateOption(selectedOption)
 	}
+}
 
-	// Handle ESC key to go back
+// handleEscapeKey processes the ESC key for closing the settings menu.
+func (s *SettingsUI) handleEscapeKey() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		s.Hide()
 		if s.onBack != nil {
@@ -265,7 +271,6 @@ func (s *SettingsUI) Update() bool {
 		}
 		return true
 	}
-
 	return false
 }
 

@@ -374,22 +374,58 @@ func FindRevivablePlayersInRange(world *World, livingPlayer *Entity, maxRange fl
 
 // FindRevivablePlayersInRangeWithLogger finds all dead players within revival range with logging.
 func FindRevivablePlayersInRangeWithLogger(world *World, livingPlayer *Entity, maxRange float64, logger *logrus.Logger) []*Entity {
-	var logEntry *logrus.Entry
-	if logger != nil {
-		logEntry = logger.WithFields(logrus.Fields{
-			"system":    "revival",
-			"operation": "find_revivable_players",
-		})
+	logEntry := createLogEntry(logger)
+	logRevivalSearchStart(logEntry, livingPlayer.ID, maxRange)
+
+	livingPos, ok := validateLivingPlayerPosition(livingPlayer, logEntry)
+	if !ok {
+		return nil
 	}
 
+	var revivablePlayers []*Entity
+	for _, entity := range world.GetEntities() {
+		if !IsPlayerRevivable(entity) {
+			continue
+		}
+
+		deadPos, ok := getDeadPlayerPosition(entity, logEntry)
+		if !ok {
+			continue
+		}
+
+		if isWithinRange(livingPos, deadPos, maxRange) {
+			revivablePlayers = append(revivablePlayers, entity)
+			logRevivableFound(logEntry, entity.ID, calculateDistance(livingPos, deadPos))
+		}
+	}
+
+	logRevivalSearchComplete(logEntry, len(revivablePlayers))
+	return revivablePlayers
+}
+
+// createLogEntry creates a log entry with revival system fields.
+func createLogEntry(logger *logrus.Logger) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
+	return logger.WithFields(logrus.Fields{
+		"system":    "revival",
+		"operation": "find_revivable_players",
+	})
+}
+
+// logRevivalSearchStart logs the start of a revival search operation.
+func logRevivalSearchStart(logEntry *logrus.Entry, entityID uint64, maxRange float64) {
 	if logEntry != nil {
 		logEntry.WithFields(logrus.Fields{
-			"living_entity_id": livingPlayer.ID,
+			"living_entity_id": entityID,
 			"max_range":        maxRange,
 		}).Debug("Finding revivable players in range")
 	}
+}
 
-	// Get living player position
+// validateLivingPlayerPosition retrieves and validates the living player's position.
+func validateLivingPlayerPosition(livingPlayer *Entity, logEntry *logrus.Entry) (*PositionComponent, bool) {
 	livingPosComp, hasPos := livingPlayer.GetComponent("position")
 	if !hasPos {
 		if logEntry != nil {
@@ -397,9 +433,9 @@ func FindRevivablePlayersInRangeWithLogger(world *World, livingPlayer *Entity, m
 				"entity_id": livingPlayer.ID,
 			}).Warn("Living player missing position component")
 		}
-		return nil
+		return nil, false
 	}
-	// Type assert with safety check
+
 	livingPos, ok := livingPosComp.(*PositionComponent)
 	if !ok {
 		if logEntry != nil {
@@ -408,61 +444,63 @@ func FindRevivablePlayersInRangeWithLogger(world *World, livingPlayer *Entity, m
 				"component_type": "position",
 			}).Warn("Failed to cast position component to PositionComponent")
 		}
-		return nil
+		return nil, false
+	}
+	return livingPos, true
+}
+
+// getDeadPlayerPosition retrieves the position of a dead player entity.
+func getDeadPlayerPosition(entity *Entity, logEntry *logrus.Entry) (*PositionComponent, bool) {
+	deadPosComp, hasDeadPos := entity.GetComponent("position")
+	if !hasDeadPos {
+		if logEntry != nil {
+			logEntry.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Dead player missing position component")
+		}
+		return nil, false
 	}
 
-	var revivablePlayers []*Entity
-
-	for _, entity := range world.GetEntities() {
-		// Check if entity is revivable
-		if !IsPlayerRevivable(entity) {
-			continue
+	deadPos, ok := deadPosComp.(*PositionComponent)
+	if !ok {
+		if logEntry != nil {
+			logEntry.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "position",
+			}).Warn("Failed to cast position component to PositionComponent")
 		}
-
-		// Get dead player position
-		deadPosComp, hasDeadPos := entity.GetComponent("position")
-		if !hasDeadPos {
-			if logEntry != nil {
-				logEntry.WithFields(logrus.Fields{
-					"entity_id": entity.ID,
-				}).Debug("Dead player missing position component")
-			}
-			continue
-		}
-		// Type assert with safety check
-		deadPos, ok := deadPosComp.(*PositionComponent)
-		if !ok {
-			if logEntry != nil {
-				logEntry.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "position",
-				}).Warn("Failed to cast position component to PositionComponent")
-			}
-			continue
-		}
-
-		// Calculate distance
-		dx := deadPos.X - livingPos.X
-		dy := deadPos.Y - livingPos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
-
-		// Add if within range
-		if distance <= maxRange {
-			revivablePlayers = append(revivablePlayers, entity)
-			if logEntry != nil {
-				logEntry.WithFields(logrus.Fields{
-					"dead_entity_id": entity.ID,
-					"distance":       distance,
-				}).Debug("Found revivable player in range")
-			}
-		}
+		return nil, false
 	}
+	return deadPos, true
+}
 
+// calculateDistance computes the Euclidean distance between two positions.
+func calculateDistance(pos1, pos2 *PositionComponent) float64 {
+	dx := pos2.X - pos1.X
+	dy := pos2.Y - pos1.Y
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
+// isWithinRange checks if two positions are within the specified range.
+func isWithinRange(pos1, pos2 *PositionComponent, maxRange float64) bool {
+	return calculateDistance(pos1, pos2) <= maxRange
+}
+
+// logRevivableFound logs when a revivable player is found in range.
+func logRevivableFound(logEntry *logrus.Entry, entityID uint64, distance float64) {
 	if logEntry != nil {
 		logEntry.WithFields(logrus.Fields{
-			"revivable_count": len(revivablePlayers),
+			"dead_entity_id": entityID,
+			"distance":       distance,
+		}).Debug("Found revivable player in range")
+	}
+}
+
+// logRevivalSearchComplete logs the completion of a revival search.
+func logRevivalSearchComplete(logEntry *logrus.Entry, count int) {
+	if logEntry != nil {
+		logEntry.WithFields(logrus.Fields{
+			"revivable_count": count,
 		}).Debug("Completed finding revivable players")
 	}
-
-	return revivablePlayers
 }

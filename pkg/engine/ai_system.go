@@ -931,17 +931,7 @@ func (ai *AISystem) shouldFlee(entity *Entity, aiComp *AIComponent) bool {
 
 // findNearestEnemy finds the closest enemy within the detection range.
 func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, detectionRange float64) *Entity {
-	teamComp, ok := entity.GetComponent("team")
-	if !ok {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "team",
-			}).Debug("Entity missing team component for enemy detection")
-		}
-		return nil // No team component, can't determine enemies
-	}
-	team, ok := teamComp.(*TeamComponent)
+	team, ok := ai.validateEntityTeam(entity)
 	if !ok {
 		return nil
 	}
@@ -952,51 +942,76 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 
 	for _, other := range ai.world.entities {
 		candidatesChecked++
-		if other == entity {
+
+		if !ai.isValidEnemyTarget(entity, other, team) {
 			continue
 		}
 
-		// Check if other is an enemy
-		otherTeam, ok := other.GetComponent("team")
-		if !ok {
-			continue
-		}
-		otherT, ok := otherTeam.(*TeamComponent)
+		otherPos, ok := ai.getEntityPosition(other)
 		if !ok {
 			continue
 		}
 
-		if !team.IsEnemy(otherT.TeamID) {
-			continue
-		}
-
-		// Check if alive
-		otherHealth, ok := other.GetComponent("health")
-		if ok {
-			if h, ok := otherHealth.(*HealthComponent); ok {
-				if h.IsDead() {
-					continue
-				}
-			}
-		}
-
-		// Check distance
-		otherPos, ok := other.GetComponent("position")
-		if !ok {
-			continue
-		}
-		otherP, ok := otherPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		dist := ai.getDistance(pos.X, pos.Y, otherP.X, otherP.Y)
+		dist := ai.getDistance(pos.X, pos.Y, otherPos.X, otherPos.Y)
 		if dist < nearestDist {
 			nearest = other
 			nearestDist = dist
 		}
 	}
 
+	ai.logEnemyDetection(entity, detectionRange, nearestDist, candidatesChecked, nearest)
+	return nearest
+}
+
+// validateEntityTeam checks if an entity has a valid team component.
+func (ai *AISystem) validateEntityTeam(entity *Entity) (*TeamComponent, bool) {
+	teamComp, ok := entity.GetComponent("team")
+	if !ok {
+		if ai.logger != nil {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "team",
+			}).Debug("Entity missing team component for enemy detection")
+		}
+		return nil, false
+	}
+	team, ok := teamComp.(*TeamComponent)
+	return team, ok
+}
+
+// isValidEnemyTarget checks if an entity is a valid enemy target.
+func (ai *AISystem) isValidEnemyTarget(entity, other *Entity, myTeam *TeamComponent) bool {
+	if other == entity {
+		return false
+	}
+	otherTeamComp, ok := other.GetComponent("team")
+	if !ok {
+		return false
+	}
+	otherTeam, ok := otherTeamComp.(*TeamComponent)
+	if !ok || !myTeam.IsEnemy(otherTeam.TeamID) {
+		return false
+	}
+	if otherHealth, ok := other.GetComponent("health"); ok {
+		if h, ok := otherHealth.(*HealthComponent); ok && h.IsDead() {
+			return false
+		}
+	}
+	return true
+}
+
+// getEntityPosition retrieves the position component from an entity.
+func (ai *AISystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	return pos, ok
+}
+
+// logEnemyDetection logs the results of an enemy detection scan.
+func (ai *AISystem) logEnemyDetection(entity *Entity, detectionRange, nearestDist float64, candidatesChecked int, nearest *Entity) {
 	if ai.logger != nil {
 		ai.logger.WithFields(logrus.Fields{
 			"entity_id":          entity.ID,
@@ -1006,8 +1021,6 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 			"nearest_distance":   nearestDist,
 		}).Debug("Enemy detection scan completed")
 	}
-
-	return nearest
 }
 
 // isValidTarget checks if a target is still valid (alive, in range, etc.).

@@ -41,7 +41,9 @@ func main() {
 }
 
 func runDemoMode(seed int64, verbose bool) {
-	fmt.Println("=== Demo Mode: Basic Event Generation ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Demo Mode: Basic Event Generation ===")
 
 	manager := world_events.NewEventManager(seed)
 
@@ -96,7 +98,9 @@ func runDemoMode(seed int64, verbose bool) {
 }
 
 func runFactionMode(seed int64, verbose bool) {
-	fmt.Println("=== Faction Response Mode ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Faction Response Mode ===")
 
 	factions := []struct {
 		id       string
@@ -122,7 +126,9 @@ func runFactionMode(seed int64, verbose bool) {
 }
 
 func runEconomicMode(seed int64, verbose bool) {
-	fmt.Println("=== Economic Events Mode ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Economic Events Mode ===")
 
 	items := []struct {
 		eventID  string
@@ -154,7 +160,9 @@ func runEconomicMode(seed int64, verbose bool) {
 }
 
 func runWeatherMode(seed int64, verbose bool) {
-	fmt.Println("=== Weather Disasters Mode ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Weather Disasters Mode ===")
 
 	disasters := []struct {
 		centerX  float64
@@ -181,7 +189,9 @@ func runWeatherMode(seed int64, verbose bool) {
 }
 
 func runPropagateMode(seed int64, verbose bool) {
-	fmt.Println("=== Cross-Server Propagation Mode ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Cross-Server Propagation Mode ===")
 
 	manager := world_events.NewEventManager(seed)
 	params := world_events.TriggerParams{
@@ -215,7 +225,9 @@ func runPropagateMode(seed int64, verbose bool) {
 }
 
 func runChainMode(seed int64, verbose bool) {
-	fmt.Println("=== Event Chain Mode ===\n")
+	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
+	// Resolution: Removed \n from fmt.Println (adds newline automatically)
+	fmt.Println("=== Event Chain Mode ===")
 
 	config := world_events.EventManagerConfig{
 		MaxActiveEvents:      50,

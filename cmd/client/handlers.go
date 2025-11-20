@@ -652,6 +652,16 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 36: Merchant Caravans
 	game.World.AddSystem(&merchantCaravanSystemWrapper{system: sys.merchantCaravanSystem})
+
+	// INTEGRATION FIX [Category A]: V8.0 Fluid Simulator System Registration (Phase 50.4)
+	// Gap: FluidSimulator has Update() method and should be registered for fluid dynamics
+	// Fix: Added fluid simulator to World update loop for water flow simulation
+	// Roadmap: ROADMAP_V8.md Phase 50.4
+	// Note: Other V8 managers (EnhancedVehicleSystem, SwimmingManager, FloodingManager) are
+	// helper utilities used by other systems, not standalone systems requiring registration
+	if sys.fluidSimulator != nil {
+		game.World.AddSystem(&fluidSimulatorWrapper{system: sys.fluidSimulator})
+	}
 }
 
 // configureSystemConnections wires up interdependent systems.
@@ -1644,6 +1654,22 @@ type politicsSystemWrapper struct {
 }
 
 func (w *politicsSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// INTEGRATION FIX [Category A]: V8.0 Fluid Simulator System Wrapper (Phase 50.4)
+// Gap: FluidSimulator needed wrapper to adapt to World.System interface
+// Fix: Added wrapper for fluid dynamics simulation system
+// Roadmap: ROADMAP_V8.md Phase 50.4
+// Note: EnhancedVehicleSystem, SwimmingManager, and FloodingManager are helper managers
+// used by vehicle and entity systems directly, not standalone systems requiring wrappers
+
+// fluidSimulatorWrapper adapts Simulator (fluid dynamics) to the System interface.
+type fluidSimulatorWrapper struct {
+	system *fluids.Simulator
+}
+
+func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

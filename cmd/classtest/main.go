@@ -45,7 +45,7 @@ func main() {
 }
 
 func printClasses() {
-	fmt.Println("=== Base Classes (15 total) ===\n")
+	fmt.Println("=== Base Classes (15 total) ===")
 
 	classes := advanced.GetAllClasses()
 	for _, class := range classes {
@@ -63,7 +63,7 @@ func printClasses() {
 }
 
 func printPrestigeClasses() {
-	fmt.Println("=== Prestige Classes (20 total) ===\n")
+	fmt.Println("=== Prestige Classes (20 total) ===")
 
 	classes := advanced.GetAllPrestigeClasses()
 	for _, class := range classes {
@@ -88,7 +88,7 @@ func printPrestigeClasses() {
 }
 
 func printSynergies() {
-	fmt.Println("=== Multi-Class Synergies (15 combinations) ===\n")
+	fmt.Println("=== Multi-Class Synergies (15 combinations) ===")
 
 	manager := advanced.NewManager()
 	synergies := manager.GetAllSynergies()
@@ -107,7 +107,7 @@ func printSynergies() {
 }
 
 func runDemo() {
-	fmt.Println("=== Advanced Class System Demonstration ===\n")
+	fmt.Println("=== Advanced Class System Demonstration ===")
 
 	manager := advanced.NewManager()
 	playerID := "demo_player"

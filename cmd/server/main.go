@@ -142,6 +142,12 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger)
 
+	// INTEGRATION FIX [Category A]: V8.0 Server System Initialization
+	// Gap: V8.0 systems implemented but never initialized on server
+	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics
+	// Roadmap: ROADMAP_V8.md (Phase 49-51)
+	initializeV8SystemsServer(world, *seed, logger)
+
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
 	}

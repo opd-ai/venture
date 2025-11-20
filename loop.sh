@@ -30,6 +30,24 @@ checkin() {
     fi
 }
 
+wasm() {
+    echo "iteration started - Resolution phase."
+    copilot -p "/delegate $(cat docs/PLAY-WASM.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Resolution phase completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
+mobile() {
+    echo "iteration started - Resolution phase."
+    copilot -p "/delegate $(cat docs/PLAY-MOBILE.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Resolution phase completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
 dev() {
     echo "iteration started - Dev phase 1: Implement changes."
     copilot -p "/delegate $(cat docs/EXECUTE.md)" --allow-all-tools --deny-tool sudo
@@ -56,7 +74,8 @@ dev() {
 }
 
 fix
-
+wasm
+mobile
 for i in $(seq 1 $ITER); do
     dev
     fix

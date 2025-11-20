@@ -179,12 +179,12 @@ func (m *SaveManager) ListSaves() ([]*SaveMetadata, error) {
 				Version:   save.Version,
 			})
 		}
-		
+
 		// Sort by timestamp (newest first)
 		sort.Slice(saves, func(i, j int) bool {
 			return saves[i].Timestamp.After(saves[j].Timestamp)
 		})
-		
+
 		return saves, nil
 	}
 
@@ -319,4 +319,3 @@ func (m *SaveManager) scanLocalStorageKeys() ([]*SaveMetadata, error) {
 
 	return saves, nil
 }
-

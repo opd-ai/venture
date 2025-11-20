@@ -97,24 +97,36 @@ func NewSpellCastingSystemWithLogger(world *World, statusEffectSys *StatusEffect
 // SetAudioManager sets the audio manager for sound effects.
 // This allows deferred initialization when audio system is ready.
 func (s *SpellCastingSystem) SetAudioManager(audioMgr *AudioManager) {
+	if s.logger != nil {
+		s.logger.Debug("AudioManager set for spell casting system")
+	}
 	s.audioMgr = audioMgr
 }
 
 // SetParticleSystem sets the particle system for visual effects.
 // This allows using a shared particle system if desired.
 func (s *SpellCastingSystem) SetParticleSystem(particleSys *ParticleSystem) {
+	if s.logger != nil {
+		s.logger.Debug("ParticleSystem set for spell casting system")
+	}
 	s.particleSys = particleSys
 }
 
 // SetTutorialSystem sets the tutorial system for notifications.
 // This allows displaying feedback messages to the player.
 func (s *SpellCastingSystem) SetTutorialSystem(tutorialSys *EbitenTutorialSystem) {
+	if s.logger != nil {
+		s.logger.Debug("TutorialSystem set for spell casting system")
+	}
 	s.tutorialSys = tutorialSys
 }
 
 // SetComboSystem sets the spell combination system for combo detection.
 // This allows using a shared combo system if desired.
 func (s *SpellCastingSystem) SetComboSystem(comboSys *SpellCombinationSystem) {
+	if s.logger != nil {
+		s.logger.Debug("SpellCombinationSystem set for spell casting system")
+	}
 	s.comboSys = comboSys
 }
 
@@ -549,6 +561,13 @@ func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spe
 
 // findNearestInjuredAlly finds the nearest ally that needs healing.
 func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange float64) *Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"max_range": maxRange,
+		}).Debug("Searching for nearest injured ally")
+	}
+
 	entities := s.world.GetEntities()
 	var nearestAlly *Entity
 	minDist := maxRange
@@ -598,11 +617,32 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 		}
 	}
 
+	if s.logger != nil {
+		if nearestAlly != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+				"ally_id":   nearestAlly.ID,
+				"distance":  minDist,
+			}).Debug("Found injured ally")
+		} else {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+			}).Debug("No injured ally found in range")
+		}
+	}
+
 	return nearestAlly
 }
 
 // findAlliesInRange finds all allies within range.
 func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"max_range": maxRange,
+		}).Debug("Searching for allies in range")
+	}
+
 	entities := s.world.GetEntities()
 	var allies []*Entity
 
@@ -635,6 +675,13 @@ func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64)
 		if dist <= maxRange {
 			allies = append(allies, entity)
 		}
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"ally_count": len(allies),
+		}).Debug("Found allies in range")
 	}
 
 	return allies
@@ -881,6 +928,15 @@ func (s *SpellCastingSystem) shouldApplyPoison() bool {
 
 // castUtilitySpell handles non-combat spells.
 func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+			"tags":       spell.Tags,
+		}).Debug("Casting utility spell")
+	}
+
 	// Determine utility spell type based on tags and element
 	switch {
 	case containsTag(spell.Tags, "teleport"):
@@ -898,6 +954,14 @@ func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell
 			s.castSpeedBoostSpell(caster, spell)
 		case magic.ElementArcane:
 			s.castTeleportSpell(caster, spell)
+		default:
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  caster.ID,
+					"spell_name": spell.Name,
+					"element":    spell.Element.String(),
+				}).Debug("No matching utility spell implementation for element")
+			}
 		}
 	}
 }
@@ -1006,8 +1070,20 @@ func (s *SpellCastingSystem) castTeleportSpell(caster *Entity, spell *magic.Spel
 // castRevealSpell reveals fog of war in an area around the caster.
 // Useful for exploration and finding hidden enemies/items.
 func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+		}).Debug("Casting reveal spell")
+	}
+
 	posComp, hasPos := caster.GetComponent("position")
 	if !hasPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": caster.ID,
+			}).Warn("Caster has no position component for reveal spell")
+		}
 		return
 	}
 	pos, ok := posComp.(*PositionComponent)
@@ -1019,6 +1095,15 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 	revealRadius := spell.Stats.AreaSize
 	if revealRadius <= 0 {
 		revealRadius = 200.0 // Default reveal radius
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":     caster.ID,
+			"reveal_radius": revealRadius,
+			"position_x":    pos.X,
+			"position_y":    pos.Y,
+		}).Info("Reveal spell effect applied")
 	}
 
 	// Reveal fog of war (requires access to map UI system)
@@ -1056,7 +1141,17 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 // castSpeedBoostSpell applies a temporary speed boost to the caster.
 // Increases movement speed for exploration or combat mobility.
 func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+		}).Debug("Casting speed boost spell")
+	}
+
 	if s.statusEffectSys == nil {
+		if s.logger != nil {
+			s.logger.Warn("StatusEffectSystem is nil, cannot apply speed boost")
+		}
 		return
 	}
 
@@ -1070,6 +1165,15 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 	speedMultiplier := 1.5 // 50% speed increase
 	if spell.Rarity >= magic.RarityRare {
 		speedMultiplier = 2.0 // 100% speed increase for rare+ spells
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":        caster.ID,
+			"speed_multiplier": speedMultiplier,
+			"duration":         duration,
+			"rarity":           spell.Rarity.String(),
+		}).Info("Speed boost applied")
 	}
 
 	// Apply speed boost as a status effect
@@ -1108,6 +1212,14 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 // isPositionWalkable checks if a position is valid for teleportation.
 // Returns true if the position has no solid colliders.
 func (s *SpellCastingSystem) isPositionWalkable(x, y float64, caster *Entity) bool {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"target_x":  x,
+			"target_y":  y,
+		}).Debug("Checking if position is walkable")
+	}
+
 	entities := s.world.GetEntities()
 
 	// Check for collisions with solid entities
@@ -1158,15 +1270,39 @@ func (s *SpellCastingSystem) isPositionWalkable(x, y float64, caster *Entity) bo
 				Layer:   cc.Layer,
 			}
 			if tempCollider.Intersects(x, y, collider, pos.X, pos.Y) {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"caster_id":       caster.ID,
+						"blocking_entity": entity.ID,
+						"target_x":        x,
+						"target_y":        y,
+					}).Debug("Position not walkable: collision detected")
+				}
 				return false // Collision detected
 			}
 		} else {
 			// No caster collider, check point collision
 			minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
 			if x >= minX && x <= maxX && y >= minY && y <= maxY {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"caster_id":       caster.ID,
+						"blocking_entity": entity.ID,
+						"target_x":        x,
+						"target_y":        y,
+					}).Debug("Position not walkable: point collision")
+				}
 				return false
 			}
 		}
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"target_x":  x,
+			"target_y":  y,
+		}).Debug("Position is walkable")
 	}
 
 	return true // Position is walkable
@@ -1184,22 +1320,47 @@ func containsTag(tags []string, tag string) bool {
 
 // findTargets returns entities affected by the spell.
 func (s *SpellCastingSystem) findTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":   caster.ID,
+			"spell_name":  spell.Name,
+			"target_type": spell.Target.String(),
+		}).Debug("Finding targets for spell")
+	}
+
+	var targets []*Entity
 	switch spell.Target {
 	case magic.TargetSelf:
-		return []*Entity{caster}
+		targets = []*Entity{caster}
 	case magic.TargetSingle:
-		return s.findNearestEnemyTarget(caster, spell.Stats.Range)
+		targets = s.findNearestEnemyTarget(caster, spell.Stats.Range)
 	case magic.TargetArea:
-		return s.findAreaTargets(caster, spell.Stats.AreaSize)
+		targets = s.findAreaTargets(caster, spell.Stats.AreaSize)
 	case magic.TargetAllEnemies:
-		return s.findAllEnemyTargets(caster)
+		targets = s.findAllEnemyTargets(caster)
 	case magic.TargetCone:
-		return s.findConeTargets(caster, spell, x, y)
+		targets = s.findConeTargets(caster, spell, x, y)
 	case magic.TargetLine:
-		return s.findLineTargets(caster, spell, x, y)
+		targets = s.findLineTargets(caster, spell, x, y)
 	default:
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id":   caster.ID,
+				"target_type": spell.Target.String(),
+			}).Warn("Unknown target type for spell")
+		}
 		return nil
 	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"spell_name":   spell.Name,
+			"target_count": len(targets),
+		}).Debug("Targets found")
+	}
+
+	return targets
 }
 
 // isEnemyTarget checks if an entity is a valid enemy target for spell effects.
@@ -1220,6 +1381,13 @@ func (s *SpellCastingSystem) isEnemyTarget(caster, entity *Entity) bool {
 
 // findNearestEnemyTarget finds the nearest enemy within range.
 func (s *SpellCastingSystem) findNearestEnemyTarget(caster *Entity, maxRange float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"max_range": maxRange,
+		}).Debug("Searching for nearest enemy target")
+	}
+
 	entities := s.world.GetEntities()
 	var nearest *Entity
 	nearestDist := maxRange
@@ -1237,13 +1405,33 @@ func (s *SpellCastingSystem) findNearestEnemyTarget(caster *Entity, maxRange flo
 	}
 
 	if nearest != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+				"target_id": nearest.ID,
+				"distance":  nearestDist,
+			}).Debug("Found nearest enemy target")
+		}
 		return []*Entity{nearest}
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+		}).Debug("No enemy targets found in range")
 	}
 	return nil
 }
 
 // findAreaTargets finds all enemies within area range.
 func (s *SpellCastingSystem) findAreaTargets(caster *Entity, areaSize float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"area_size": areaSize,
+		}).Debug("Searching for enemies in area")
+	}
+
 	entities := s.world.GetEntities()
 	var targets []*Entity
 
@@ -1258,11 +1446,24 @@ func (s *SpellCastingSystem) findAreaTargets(caster *Entity, areaSize float64) [
 		}
 	}
 
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"target_count": len(targets),
+		}).Debug("Found enemies in area")
+	}
+
 	return targets
 }
 
 // findAllEnemyTargets finds all enemies regardless of distance.
 func (s *SpellCastingSystem) findAllEnemyTargets(caster *Entity) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+		}).Debug("Searching for all enemy targets")
+	}
+
 	entities := s.world.GetEntities()
 	var targets []*Entity
 
@@ -1273,13 +1474,33 @@ func (s *SpellCastingSystem) findAllEnemyTargets(caster *Entity) []*Entity {
 		targets = append(targets, entity)
 	}
 
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"target_count": len(targets),
+		}).Debug("Found all enemy targets")
+	}
+
 	return targets
 }
 
 // findConeTargets finds entities within a cone-shaped area from the caster.
 func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"spell_name": spell.Name,
+			"range":      spell.Stats.Range,
+		}).Debug("Searching for enemies in cone")
+	}
+
 	casterPos, hasCasterPos := caster.GetComponent("position")
 	if !hasCasterPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+			}).Warn("Caster has no position component for cone targeting")
+		}
 		return nil
 	}
 	casterPosComp, ok := casterPos.(*PositionComponent)
@@ -1333,13 +1554,33 @@ func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell,
 		}
 	}
 
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"target_count": len(targets),
+		}).Debug("Found enemies in cone")
+	}
+
 	return targets
 }
 
 // findLineTargets finds entities along a line from the caster in the facing direction.
 func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"spell_name": spell.Name,
+			"range":      spell.Stats.Range,
+		}).Debug("Searching for enemies in line")
+	}
+
 	casterPos, hasCasterPos := caster.GetComponent("position")
 	if !hasCasterPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+			}).Warn("Caster has no position component for line targeting")
+		}
 		return nil
 	}
 	casterPosComp, ok := casterPos.(*PositionComponent)
@@ -1396,6 +1637,13 @@ func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell,
 		}
 	}
 
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"target_count": len(targets),
+		}).Debug("Found enemies in line")
+	}
+
 	return targets
 }
 
@@ -1406,6 +1654,14 @@ func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY
 	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
 		if vel, ok := velComp.(*VelocityComponent); ok {
 			if vel.VX != 0 || vel.VY != 0 {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"caster_id": caster.ID,
+						"dir_x":     vel.VX,
+						"dir_y":     vel.VY,
+						"source":    "velocity",
+					}).Debug("Using velocity for spell direction")
+				}
 				return vel.VX, vel.VY
 			}
 		}
@@ -1416,11 +1672,24 @@ func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY
 		if pos, ok := posComp.(*PositionComponent); ok {
 			dirX = targetX - pos.X
 			dirY = targetY - pos.Y
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"caster_id": caster.ID,
+					"dir_x":     dirX,
+					"dir_y":     dirY,
+					"source":    "target_point",
+				}).Debug("Using target point for spell direction")
+			}
 			return dirX, dirY
 		}
 	}
 
 	// Default to facing right if no position
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+		}).Debug("Using default direction (right)")
+	}
 	return 1.0, 0.0
 }
 
@@ -1552,7 +1821,18 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 
 // spawnElementalHitEffect creates element-specific particle effects for spell hits.
 func (s *SpellCastingSystem) spawnElementalHitEffect(x, y float64, element magic.ElementType, seed uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"element":    element.String(),
+			"position_x": x,
+			"position_y": y,
+		}).Debug("Spawning elemental hit effect")
+	}
+
 	if s.particleSys == nil {
+		if s.logger != nil {
+			s.logger.Debug("ParticleSystem is nil, skipping hit effect")
+		}
 		return
 	}
 
@@ -1691,10 +1971,20 @@ func (s *SpellCastingSystem) spawnElementalHitEffect(x, y float64, element magic
 }
 
 // ManaRegenSystem regenerates mana over time.
-type ManaRegenSystem struct{}
+type ManaRegenSystem struct {
+	logger *logrus.Entry
+}
+
+// NewManaRegenSystem creates a new mana regeneration system.
+func NewManaRegenSystem() *ManaRegenSystem {
+	return &ManaRegenSystem{
+		logger: logrus.WithField("system", "mana_regen"),
+	}
+}
 
 // Update regenerates mana for all entities.
 func (s *ManaRegenSystem) Update(entities []*Entity, deltaTime float64) {
+	regenCount := 0
 	for _, entity := range entities {
 		manaComp, hasMana := entity.GetComponent("mana")
 		if !hasMana {
@@ -1705,11 +1995,25 @@ func (s *ManaRegenSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// Regenerate mana
-		mana.Current += int(mana.Regen * deltaTime)
-		if mana.Current > mana.Max {
-			mana.Current = mana.Max
+		// Only regenerate if not at max
+		if mana.Current < mana.Max {
+			oldMana := mana.Current
+			mana.Current += int(mana.Regen * deltaTime)
+			if mana.Current > mana.Max {
+				mana.Current = mana.Max
+			}
+
+			if mana.Current != oldMana {
+				regenCount++
+			}
 		}
+	}
+
+	if s.logger != nil && regenCount > 0 {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": regenCount,
+			"delta_time":   deltaTime,
+		}).Debug("Mana regenerated for entities")
 	}
 }
 

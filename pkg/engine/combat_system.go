@@ -65,11 +65,21 @@ func NewCombatSystemWithLogger(seed int64, logger *logrus.Logger) *CombatSystem 
 
 // SetCamera sets the camera reference for screen shake feedback (GAP-012).
 func (s *CombatSystem) SetCamera(camera *CameraSystem) {
+	if s.logger != nil {
+		s.logger.Debug("camera system linked to combat system")
+	}
 	s.camera = camera
 }
 
 // GAP-016 REPAIR: SetParticleSystem sets the particle system reference for hit effects.
 func (s *CombatSystem) SetParticleSystem(ps *ParticleSystem, world *World, genreID string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"genre_id":            genreID,
+			"has_particle_system": ps != nil,
+			"has_world":           world != nil,
+		}).Debug("particle system linked to combat system")
+	}
 	s.particleSystem = ps
 	s.world = world
 	s.genreID = genreID
@@ -77,6 +87,9 @@ func (s *CombatSystem) SetParticleSystem(ps *ParticleSystem, world *World, genre
 
 // SetProjectileSystem sets the projectile system reference for ranged weapon spawning (Phase 10.2).
 func (s *CombatSystem) SetProjectileSystem(ps *ProjectileSystem) {
+	if s.logger != nil {
+		s.logger.WithField("has_projectile_system", ps != nil).Debug("projectile system linked to combat system")
+	}
 	s.projectileSystem = ps
 }
 
@@ -195,11 +208,25 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 
 	switch effect.EffectType {
 	case "poison", "burn":
-		// Damage over time
 		health.TakeDamage(effect.Magnitude)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":    entity.ID,
+				"effect_type":  effect.EffectType,
+				"damage":       effect.Magnitude,
+				"health_after": health.Current,
+			}).Debug("status effect damage applied")
+		}
 	case "regeneration":
-		// Healing over time
 		health.Heal(effect.Magnitude)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":    entity.ID,
+				"effect_type":  effect.EffectType,
+				"healing":      effect.Magnitude,
+				"health_after": health.Current,
+			}).Debug("status effect healing applied")
+		}
 	}
 }
 
@@ -207,11 +234,20 @@ func (s *CombatSystem) applyStatusEffectTick(entity *Entity, effect *StatusEffec
 func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
 	// Priority 1.3: Dead entities cannot attack
 	if attacker.HasComponent("dead") {
+		if s.logger != nil {
+			s.logger.WithField("entity_id", attacker.ID).Debug("attack blocked - attacker is dead")
+		}
 		return false
 	}
 
 	// Priority 1.3: Dead entities cannot be targeted for attacks
 	if target.HasComponent("dead") {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"attacker_id": attacker.ID,
+				"target_id":   target.ID,
+			}).Debug("attack blocked - target is dead")
+		}
 		return false
 	}
 	return true
@@ -221,10 +257,16 @@ func (s *CombatSystem) validateAttackEntities(attacker, target *Entity) bool {
 func (s *CombatSystem) getAttackComponent(attacker *Entity) (*AttackComponent, bool) {
 	attackComp, ok := attacker.GetComponent("attack")
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("entity_id", attacker.ID).Debug("attack blocked - no attack component")
+		}
 		return nil, false
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("entity_id", attacker.ID).Error("attack component type assertion failed")
+		}
 		return nil, false
 	}
 	return attack, true
@@ -237,6 +279,14 @@ func (s *CombatSystem) validateAttackRange(attacker, target *Entity, attackRange
 	if attackerHasPos && targetHasPos {
 		distance := GetDistance(attacker, target)
 		if distance > attackRange {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"attacker_id": attacker.ID,
+					"target_id":   target.ID,
+					"distance":    distance,
+					"range":       attackRange,
+				}).Debug("attack blocked - target out of range")
+			}
 			return false
 		}
 	}
@@ -252,6 +302,14 @@ func (s *CombatSystem) tryProjectileAttack(attacker, target *Entity, attack *Att
 		if equipment, ok := equipComp.(*EquipmentComponent); ok {
 			if weapon, hasWeapon := equipment.Slots[SlotMainHand]; hasWeapon && weapon != nil {
 				if weapon.Stats.IsProjectile {
+					if s.logger != nil {
+						s.logger.WithFields(logrus.Fields{
+							"attacker_id":     attacker.ID,
+							"target_id":       target.ID,
+							"weapon_name":     weapon.Name,
+							"projectile_type": weapon.Stats.ProjectileType,
+						}).Debug("attempting projectile attack")
+					}
 					// Spawn projectile for ranged weapon
 					success := s.spawnProjectile(attacker, target, weapon, attack)
 					if success {
@@ -269,15 +327,24 @@ func (s *CombatSystem) tryProjectileAttack(attacker, target *Entity, attack *Att
 func (s *CombatSystem) getTargetHealth(target *Entity) (*HealthComponent, bool) {
 	targetHealth, ok := target.GetComponent("health")
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Debug("target has no health component")
+		}
 		return nil, false
 	}
 	health, ok := targetHealth.(*HealthComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Error("health component type assertion failed")
+		}
 		return nil, false
 	}
 
 	// Check if target is already dead
 	if health.IsDead() {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Debug("target is already dead")
+		}
 		return nil, false
 	}
 	return health, true
@@ -286,6 +353,13 @@ func (s *CombatSystem) getTargetHealth(target *Entity) (*HealthComponent, bool) 
 // Attack performs an attack from attacker to target.
 // Returns true if the attack hit, false if it missed or was invalid.
 func (s *CombatSystem) Attack(attacker, target *Entity) bool {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"attacker_id": attacker.ID,
+			"target_id":   target.ID,
+		}).Debug("attack initiated")
+	}
+
 	// Validate entities are in valid state for combat
 	if !s.validateAttackEntities(attacker, target) {
 		return false
@@ -299,6 +373,12 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 
 	// Check cooldown
 	if !attack.CanAttack() {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"attacker_id":    attacker.ID,
+				"cooldown_timer": attack.CooldownTimer,
+			}).Debug("attack blocked - cooldown active")
+		}
 		return false
 	}
 
@@ -344,6 +424,12 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	finalDamage = s.applyShieldAbsorption(target, finalDamage)
 	if finalDamage <= 0 {
 		attack.ResetCooldown()
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"attacker_id": attacker.ID,
+				"target_id":   target.ID,
+			}).Debug("attack damage fully absorbed by shield")
+		}
 		return true // Attack succeeded but damage fully absorbed
 	}
 
@@ -411,6 +497,13 @@ func (s *CombatSystem) calculateDamage(attack *AttackComponent, attackerStats *S
 		if s.rollChance(attackerStats.CritChance) {
 			baseDamage *= attackerStats.CritDamage
 			isCrit = true
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"base_damage":     attack.Damage,
+					"crit_damage":     baseDamage,
+					"crit_multiplier": attackerStats.CritDamage,
+				}).Debug("critical hit")
+			}
 		}
 	}
 
@@ -444,6 +537,14 @@ func (s *CombatSystem) applyShieldAbsorption(target *Entity, damage float64) flo
 				// Shield absorbs damage
 				absorbed := shield.AbsorbDamage(finalDamage)
 				finalDamage -= absorbed
+				if s.logger != nil && absorbed > 0 {
+					s.logger.WithFields(logrus.Fields{
+						"target_id":        target.ID,
+						"damage_absorbed":  absorbed,
+						"damage_remaining": finalDamage,
+						"shield_amount":    shield.Amount,
+					}).Debug("shield absorbed damage")
+				}
 			}
 		}
 	}
@@ -537,6 +638,14 @@ func (s *CombatSystem) spawnHitParticles(target *Entity) {
 				// Use timestamp for particle seed variation
 				particleSeed := s.seed + int64(pos.X*1000) + int64(pos.Y*1000)
 				s.particleSystem.SpawnHitSparks(s.world, pos.X, pos.Y, particleSeed, s.genreID)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id": target.ID,
+						"x":         pos.X,
+						"y":         pos.Y,
+						"genre_id":  s.genreID,
+					}).Debug("hit particles spawned")
+				}
 			}
 		}
 	}
@@ -646,6 +755,16 @@ func (s *CombatSystem) CanAttackTarget(attacker, target *Entity) bool {
 
 // ApplyStatusEffect applies a status effect to an entity.
 func (s *CombatSystem) ApplyStatusEffect(target *Entity, effectType string, duration, magnitude, tickInterval float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id":     target.ID,
+			"effect_type":   effectType,
+			"duration":      duration,
+			"magnitude":     magnitude,
+			"tick_interval": tickInterval,
+		}).Debug("applying status effect")
+	}
+
 	// Use pooled status effect to reduce GC pressure
 	effect := NewStatusEffectComponent(effectType, magnitude, duration, tickInterval)
 
@@ -657,23 +776,46 @@ func (s *CombatSystem) ApplyStatusEffect(target *Entity, effectType string, dura
 func (s *CombatSystem) Heal(target *Entity, amount float64) {
 	healthComp, ok := target.GetComponent("health")
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Debug("heal failed - no health component")
+		}
 		return
 	}
 
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Error("health component type assertion failed in heal")
+		}
 		return
 	}
+
+	beforeHealth := health.Current
 	health.Heal(amount)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id":     target.ID,
+			"heal_amount":   amount,
+			"health_before": beforeHealth,
+			"health_after":  health.Current,
+		}).Debug("entity healed")
+	}
 }
 
 // SetDeathCallback sets the callback function for entity deaths.
 func (s *CombatSystem) SetDeathCallback(callback func(entity *Entity)) {
+	if s.logger != nil {
+		s.logger.Debug("death callback registered")
+	}
 	s.onDeathCallback = callback
 }
 
 // SetDamageCallback sets the callback function for damage dealt.
 func (s *CombatSystem) SetDamageCallback(callback func(attacker, target *Entity, damage float64)) {
+	if s.logger != nil {
+		s.logger.Debug("damage callback registered")
+	}
 	s.onDamageCallback = callback
 }
 
@@ -693,8 +835,12 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 	}
 
 	enemies := make([]*Entity, 0, 16)
+	checkedCount := 0
+	foundCount := 0
 
 	for _, entity := range world.GetEntities() {
+		checkedCount++
+
 		if entity.ID == attacker.ID {
 			continue
 		}
@@ -736,6 +882,7 @@ func FindEnemiesInRange(world *World, attacker *Entity, maxRange float64) []*Ent
 		distance := GetDistance(attacker, entity)
 		if distance <= maxRange {
 			enemies = append(enemies, entity)
+			foundCount++
 		}
 	}
 
@@ -833,6 +980,9 @@ func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange,
 // Returns true if projectile was successfully spawned, false otherwise.
 func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.Item, attack *AttackComponent) bool {
 	if s.projectileSystem == nil || s.world == nil {
+		if s.logger != nil {
+			s.logger.WithField("attacker_id", attacker.ID).Warn("projectile spawn failed - system not initialized")
+		}
 		return false
 	}
 
@@ -862,10 +1012,16 @@ func (s *CombatSystem) spawnProjectile(attacker, target *Entity, weapon *item.It
 func (s *CombatSystem) getAttackerPosition(attacker *Entity) (*PositionComponent, bool) {
 	attackerPosComp, hasPos := attacker.GetComponent("position")
 	if !hasPos {
+		if s.logger != nil {
+			s.logger.WithField("attacker_id", attacker.ID).Debug("projectile spawn failed - attacker has no position")
+		}
 		return nil, false
 	}
 	attackerPos, ok := attackerPosComp.(*PositionComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("attacker_id", attacker.ID).Error("position component type assertion failed")
+		}
 		return nil, false
 	}
 	return attackerPos, true
@@ -892,10 +1048,16 @@ func (s *CombatSystem) calculateAimAngle(attacker, target *Entity, attackerPos *
 func (s *CombatSystem) calculateAngleToTarget(target *Entity, attackerPos *PositionComponent) (float64, bool) {
 	targetPosComp, hasTargetPos := target.GetComponent("position")
 	if !hasTargetPos {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Debug("cannot calculate aim angle - target has no position")
+		}
 		return 0, false
 	}
 	targetPos, ok := targetPosComp.(*PositionComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithField("target_id", target.ID).Error("target position component type assertion failed")
+		}
 		return 0, false
 	}
 	dx := targetPos.X - attackerPos.X

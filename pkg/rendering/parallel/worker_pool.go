@@ -173,10 +173,10 @@ func (p *WorkerPool) IsRunning() bool {
 
 // Stats returns current worker pool statistics.
 type PoolStats struct {
-	WorkerCount int // Number of worker goroutines
-	Running     bool
-	TaskQueueSize    int // Current number of queued tasks
-	ResultQueueSize  int // Current number of pending results
+	WorkerCount     int // Number of worker goroutines
+	Running         bool
+	TaskQueueSize   int // Current number of queued tasks
+	ResultQueueSize int // Current number of pending results
 }
 
 // GetStats returns current pool statistics.
@@ -185,9 +185,9 @@ func (p *WorkerPool) GetStats() PoolStats {
 	defer p.mu.RUnlock()
 
 	return PoolStats{
-		WorkerCount:      p.workerCount,
-		Running:          p.running,
-		TaskQueueSize:    len(p.tasks),
-		ResultQueueSize:  len(p.results),
+		WorkerCount:     p.workerCount,
+		Running:         p.running,
+		TaskQueueSize:   len(p.tasks),
+		ResultQueueSize: len(p.results),
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"math"
 
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // MovementSystem handles entity movement based on velocity.
@@ -27,6 +27,11 @@ type MovementSystem struct {
 
 // NewMovementSystem creates a new movement system.
 func NewMovementSystem(maxSpeed float64) *MovementSystem {
+	log.WithFields(log.Fields{
+		"system_name": "movement",
+		"max_speed":   maxSpeed,
+	}).Debug("Creating movement system")
+
 	return &MovementSystem{
 		MaxSpeed: maxSpeed,
 	}
@@ -35,22 +40,42 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 // SetCollisionSystem sets the collision system for predictive collision checking.
 // When set, MovementSystem will validate positions before applying movement.
 func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
+	log.WithFields(log.Fields{
+		"system_name":       "movement",
+		"collision_enabled": collisionSystem != nil,
+	}).Debug("Setting collision system")
+
 	s.collisionSystem = collisionSystem
 }
 
 // SetSpatialPartition sets the spatial partition system for dirty tracking.
 // When entities move, the spatial partition will be marked dirty for lazy rebuilding.
 func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionSystem) {
+	log.WithFields(log.Fields{
+		"system_name":       "movement",
+		"partition_enabled": spatialPartition != nil,
+	}).Debug("Setting spatial partition system")
+
 	s.spatialPartition = spatialPartition
 }
 
 // Update applies velocity to position for all entities with both components.
 func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
+	log.WithFields(log.Fields{
+		"system_name":  "movement",
+		"entity_count": len(entities),
+		"delta_time":   deltaTime,
+	}).Debug("Movement system update started")
+
 	s.entitiesMoved = false
 
 	for _, entity := range entities {
 		// Skip dead entities - they cannot move (Priority 1.2)
 		if entity.HasComponent("dead") {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"reason":    "dead",
+			}).Debug("Skipping dead entity")
 			continue
 		}
 
@@ -63,19 +88,43 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 
 		pos, ok := posComp.(*PositionComponent)
 		if !ok {
+			log.WithFields(log.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "position",
+			}).Warn("Invalid position component type")
 			continue
 		}
 		vel, ok := velComp.(*VelocityComponent)
 		if !ok {
+			log.WithFields(log.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "velocity",
+			}).Warn("Invalid velocity component type")
 			continue
 		}
 
 		// Apply speed limit if configured
-		s.applySpeedLimit(vel)
+		speedLimited := s.applySpeedLimit(vel)
+		if speedLimited {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"max_speed": s.MaxSpeed,
+			}).Debug("Speed limit applied")
+		}
 
 		// Calculate new position
 		newX := pos.X + vel.VX*deltaTime
 		newY := pos.Y + vel.VY*deltaTime
+
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"old_x":     pos.X,
+			"old_y":     pos.Y,
+			"new_x":     newX,
+			"new_y":     newY,
+			"vel_x":     vel.VX,
+			"vel_y":     vel.VY,
+		}).Debug("Calculating new position")
 
 		// Validate position with collision checking and wall sliding
 		newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
@@ -87,6 +136,14 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 
 		if pos.X != oldX || pos.Y != oldY {
 			s.entitiesMoved = true
+
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"from_x":    oldX,
+				"from_y":    oldY,
+				"to_x":      pos.X,
+				"to_y":      pos.Y,
+			}).Debug("Entity moved")
 
 			// Check for layer transitions via ramps
 			if s.collisionSystem != nil && entity.HasComponent("collider") {
@@ -106,8 +163,16 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 
 	// Mark spatial partition as dirty if any entities moved
 	if s.entitiesMoved && s.spatialPartition != nil {
+		log.WithFields(log.Fields{
+			"system_name": "movement",
+		}).Debug("Marking spatial partition as dirty")
 		s.spatialPartition.MarkDirty()
 	}
+
+	log.WithFields(log.Fields{
+		"system_name":    "movement",
+		"entities_moved": s.entitiesMoved,
+	}).Debug("Movement system update completed")
 }
 
 // anyEntityBlocking checks if any entity would block movement to the given position.
@@ -137,6 +202,12 @@ func (s *MovementSystem) applySpeedLimit(vel *VelocityComponent) bool {
 
 	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
 	if speed > s.MaxSpeed {
+		log.WithFields(log.Fields{
+			"operation":     "speed_limit",
+			"current_speed": speed,
+			"max_speed":     s.MaxSpeed,
+		}).Debug("Applying speed limit")
+
 		scale := s.MaxSpeed / speed
 		vel.VX *= scale
 		vel.VY *= scale
@@ -149,6 +220,13 @@ func (s *MovementSystem) applySpeedLimit(vel *VelocityComponent) bool {
 // Implements wall sliding by trying X-only and Y-only movement when diagonal movement is blocked.
 // Returns the validated newX, newY coordinates.
 func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+		"operation": "collision_check",
+		"target_x":  newX,
+		"target_y":  newY,
+	}).Debug("Validating position")
+
 	// No collision system means no validation needed
 	if s.collisionSystem == nil || !entity.HasComponent("collider") {
 		return newX, newY
@@ -161,6 +239,10 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 
 	collider, ok := colliderComp.(*ColliderComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "collider",
+		}).Warn("Invalid collider component type")
 		return newX, newY
 	}
 
@@ -171,17 +253,34 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 
 	// Check terrain collision at new position
 	if s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"x":         newX,
+			"y":         newY,
+		}).Debug("Terrain collision detected")
+
 		// Collision detected - try sliding along walls
 		if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
 			// Allow X movement, block Y (slide horizontally)
+			log.WithFields(log.Fields{
+				"entity_id":  entity.ID,
+				"slide_type": "horizontal",
+			}).Debug("Wall sliding applied")
 			vel.VY = 0
 			return newX, pos.Y
 		} else if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
 			// Allow Y movement, block X (slide vertically)
+			log.WithFields(log.Fields{
+				"entity_id":  entity.ID,
+				"slide_type": "vertical",
+			}).Debug("Wall sliding applied")
 			vel.VX = 0
 			return pos.X, newY
 		}
 		// Completely blocked - don't move at all
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+		}).Debug("Movement completely blocked by terrain")
 		vel.VX = 0
 		vel.VY = 0
 		return pos.X, pos.Y
@@ -198,6 +297,11 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 			continue
 		}
 		if s.collisionSystem.WouldCollideWithEntity(entity, newX, newY, other) {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"other_id":  other.ID,
+			}).Debug("Entity collision detected")
+
 			// Blocked - try sliding
 			if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
 				vel.VY = 0
@@ -207,6 +311,10 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 				return pos.X, newY
 			}
 			// Completely blocked
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"other_id":  other.ID,
+			}).Debug("Movement completely blocked by entity")
 			vel.VX = 0
 			vel.VY = 0
 			return pos.X, pos.Y
@@ -225,10 +333,25 @@ func (s *MovementSystem) applyBoundsConstraints(entity *Entity, pos *PositionCom
 
 	bounds, ok := boundsComp.(*BoundsComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "bounds",
+		}).Warn("Invalid bounds component type")
 		return
 	}
 
+	oldX, oldY := pos.X, pos.Y
 	pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
+
+	if pos.X != oldX || pos.Y != oldY {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"old_x":     oldX,
+			"old_y":     oldY,
+			"new_x":     pos.X,
+			"new_y":     pos.Y,
+		}).Debug("Position clamped to bounds")
+	}
 
 	// Stop movement at boundaries if not wrapping
 	if !bounds.Wrap {
@@ -251,8 +374,14 @@ func (s *MovementSystem) applyFriction(entity *Entity, vel *VelocityComponent, d
 
 	friction, ok := frictionComp.(*FrictionComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "friction",
+		}).Warn("Invalid friction component type")
 		return
 	}
+
+	oldVX, oldVY := vel.VX, vel.VY
 
 	// Apply friction as exponential decay: v *= (1 - coefficient)^deltaTime
 	// Normalize to 60 FPS for consistent behavior
@@ -264,6 +393,12 @@ func (s *MovementSystem) applyFriction(entity *Entity, vel *VelocityComponent, d
 	if math.Abs(vel.VX) < 0.1 && math.Abs(vel.VY) < 0.1 {
 		vel.VX = 0
 		vel.VY = 0
+
+		if oldVX != 0 || oldVY != 0 {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Velocity stopped by friction threshold")
+		}
 	}
 }
 
@@ -277,6 +412,10 @@ func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityCompo
 
 	anim, ok := animComp.(*AnimationComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "animation",
+		}).Warn("Invalid animation component type")
 		return
 	}
 
@@ -295,11 +434,21 @@ func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityCompo
 		if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
 			// Fast movement - running
 			if anim.CurrentState != AnimationStateRun {
+				log.WithFields(log.Fields{
+					"entity_id":       entity.ID,
+					"animation_state": "run",
+					"speed":           speed,
+				}).Debug("Animation state changed to run")
 				anim.SetState(AnimationStateRun)
 			}
 		} else {
 			// Normal movement - walking
 			if anim.CurrentState != AnimationStateWalk {
+				log.WithFields(log.Fields{
+					"entity_id":       entity.ID,
+					"animation_state": "walk",
+					"speed":           speed,
+				}).Debug("Animation state changed to walk")
 				anim.SetState(AnimationStateWalk)
 			}
 		}
@@ -312,6 +461,10 @@ func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityCompo
 	} else {
 		// Not moving - idle (only if currently in a movement state)
 		if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
+			log.WithFields(log.Fields{
+				"entity_id":       entity.ID,
+				"animation_state": "idle",
+			}).Debug("Animation state changed to idle")
 			anim.SetState(AnimationStateIdle)
 		}
 		// When idle, preserve facing direction (don't reset)
@@ -330,6 +483,8 @@ func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *Ve
 		return
 	}
 
+	oldFacing := anim.Facing
+
 	// Prioritize horizontal movement for diagonal directions
 	// For perfect diagonals (absVX == absVY), horizontal takes priority
 	if absVX >= absVY {
@@ -347,10 +502,24 @@ func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *Ve
 			anim.SetFacing(DirUp)
 		}
 	}
+
+	if oldFacing != anim.Facing {
+		log.WithFields(log.Fields{
+			"old_facing": oldFacing,
+			"new_facing": anim.Facing,
+			"vel_x":      vel.VX,
+			"vel_y":      vel.VY,
+		}).Debug("Facing direction updated")
+	}
 } // SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		if vel, ok := velComp.(*VelocityComponent); ok {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"vel_x":     vx,
+				"vel_y":     vy,
+			}).Debug("Setting entity velocity")
 			vel.VX = vx
 			vel.VY = vy
 		}
@@ -361,6 +530,11 @@ func SetVelocity(entity *Entity, vx, vy float64) {
 func GetPosition(entity *Entity) (x, y float64, ok bool) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
 		if pos, ok := posComp.(*PositionComponent); ok {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"x":         pos.X,
+				"y":         pos.Y,
+			}).Debug("Getting entity position")
 			return pos.X, pos.Y, true
 		}
 	}
@@ -371,6 +545,11 @@ func GetPosition(entity *Entity) (x, y float64, ok bool) {
 func SetPosition(entity *Entity, x, y float64) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
 		if pos, ok := posComp.(*PositionComponent); ok {
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"x":         x,
+				"y":         y,
+			}).Debug("Setting entity position")
 			pos.X = x
 			pos.Y = y
 		}
@@ -383,19 +562,43 @@ func GetDistance(e1, e2 *Entity) float64 {
 	x2, y2, ok2 := GetPosition(e2)
 
 	if !ok1 || !ok2 {
+		log.WithFields(log.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+			"has_pos1":   ok1,
+			"has_pos2":   ok2,
+		}).Warn("Cannot calculate distance - missing position component")
 		return math.Inf(1)
 	}
 
 	dx := x2 - x1
 	dy := y2 - y1
-	return math.Sqrt(dx*dx + dy*dy)
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	log.WithFields(log.Fields{
+		"entity1_id": e1.ID,
+		"entity2_id": e2.ID,
+		"distance":   distance,
+	}).Debug("Calculated entity distance")
+
+	return distance
 }
 
 // MoveTowards moves an entity towards a target position.
 // Returns true if the entity reached the target.
 func MoveTowards(entity *Entity, targetX, targetY, speed, deltaTime float64) bool {
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+		"target_x":  targetX,
+		"target_y":  targetY,
+		"speed":     speed,
+	}).Debug("Moving entity towards target")
+
 	x, y, ok := GetPosition(entity)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+		}).Warn("Cannot move towards - missing position component")
 		return false
 	}
 
@@ -405,6 +608,9 @@ func MoveTowards(entity *Entity, targetX, targetY, speed, deltaTime float64) boo
 
 	// Already at target
 	if distance < 0.1 {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+		}).Debug("Entity reached target")
 		SetVelocity(entity, 0, 0)
 		return true
 	}
@@ -447,6 +653,10 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 	}
 	collider, ok := colliderComp.(*ColliderComponent)
 	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "collider",
+		}).Warn("Invalid collider component type in layer transition")
 		return
 	}
 
@@ -469,11 +679,13 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 			oldLayer := collider.Layer
 			collider.Layer = targetLayer
 			// Phase 11.1 Week 3: Debug logging for layer transitions
-			logrus.WithFields(logrus.Fields{
-				"entity":   entity.ID,
-				"oldLayer": oldLayer,
-				"newLayer": targetLayer,
-				"tile":     currentTile,
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"old_layer": oldLayer,
+				"new_layer": targetLayer,
+				"tile":      currentTile,
+				"tile_x":    tileX,
+				"tile_y":    tileY,
 			}).Debug("Entity layer transition via ramp")
 		}
 	}

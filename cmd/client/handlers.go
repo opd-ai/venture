@@ -32,6 +32,20 @@ import (
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
 	"github.com/sirupsen/logrus"
+
+	// INTEGRATION FIX [Category A]: V7.0 Display System Import
+	// Gap: Display package existed but was never imported for initialization
+	// Fix: Added import for display management (1920x1080 default resolution)
+	// Roadmap: ROADMAP_V7.md Phase 43
+	"github.com/opd-ai/venture/pkg/rendering/display"
+
+	// INTEGRATION FIX [Category A]: V9.0 Integration Manager Imports
+	// Gap: Integration packages implemented but never imported for use
+	// Fix: Added imports for housing crafting, companion housing, and guild housing managers
+	// Roadmap: ROADMAP_V9.md Phase 55.1-55.3
+	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
+	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
+	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -151,6 +165,21 @@ type systemsContainer struct {
 	floodingManager    *fluids.FloodingManager        // Phase 50.4: Flooding system
 	buildingGenerator  *building.Generator            // Phase 51.1: Procedural building generation
 	furnitureGenerator *furniture.Generator           // Phase 51.3: Furniture generation and placement
+
+	// INTEGRATION FIX [Category A]: V7.0 Display & Viewport Systems (Phase 43-44)
+	// Gap: V7.0 display management and viewport optimization implemented but never initialized
+	// Fix: Added system fields for display manager and viewport optimizer
+	// Roadmap: ROADMAP_V7.md (Phase 43-44)
+	displayManager    *display.Manager          // Phase 43: Display resolution management (1920x1080 default)
+	viewportOptimizer *engine.ViewportOptimizer // Phase 44: Enhanced viewport culling for larger resolutions
+
+	// INTEGRATION FIX [Category A]: V9.0 Integration Managers (Phase 55)
+	// Gap: V9.0 integration managers implemented but never initialized or connected to systems
+	// Fix: Added manager fields for housing crafting, companion housing, and guild housing
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
+	stationManager      *housingcrafting.StationManager  // Phase 55.1: Crafting stations in player housing
+	petHomeManager      *companionhousing.PetHomeManager // Phase 55.2: Companion housing and pet homes
+	guildHousingManager *guildhousing.Manager            // Phase 55.3: Guild housing and communal spaces
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -483,6 +512,65 @@ func initializeV8Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 	if *verbose {
 		clientLogger.Info("V8.0 systems initialized (housing, trust, reputation, chat history, images, vehicle physics, fluid dynamics, buildings, guild halls, furniture)")
+	}
+}
+
+// INTEGRATION FIX [Category A]: V7.0 Display & Viewport System Initialization
+// Gap: V7.0 features (display management, viewport optimization) implemented but never initialized
+// Fix: Added initialization function for display manager and viewport optimizer
+// Roadmap: ROADMAP_V7.md (Phase 43-44)
+func initializeV7Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 43: Display Foundation - 1920x1080 default resolution with dynamic scaling
+	displayConfig := &display.Config{
+		Width:      *width,      // From command-line flag (default 1920)
+		Height:     *height,     // From command-line flag (default 1080)
+		Fullscreen: *fullscreen, // From command-line flag
+		VSync:      true,        // VSync enabled by default
+	}
+	sys.displayManager = display.NewManager(displayConfig)
+
+	// Apply resolution on initialization
+	if switchDuration := sys.displayManager.ApplyResolution(); *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"width":          displayConfig.Width,
+			"height":         displayConfig.Height,
+			"fullscreen":     displayConfig.Fullscreen,
+			"switchDuration": switchDuration,
+		}).Info("display manager initialized and resolution applied")
+	}
+
+	// Phase 44: Viewport Optimization - Enhanced culling for larger resolutions
+	sys.viewportOptimizer = engine.NewViewportOptimizer()
+	sys.viewportOptimizer.SetTileSize(32.0) // Standard tile size
+	sys.viewportOptimizer.SetMarginTiles(1) // 1-tile margin for smooth scrolling
+
+	if *verbose {
+		clientLogger.Info("V7.0 systems initialized (display manager, viewport optimizer)")
+	}
+}
+
+// INTEGRATION FIX [Category A]: V9.0 Integration Manager Initialization
+// Gap: V9.0 integration features (housing crafting, companion housing, guild housing) implemented but never initialized
+// Fix: Added initialization function for V9.0 integration managers
+// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
+func initializeV9Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 55.1: Crafting Stations in Player Housing
+	// Enables placing forges, alchemy tables, enchanting stations in player homes
+	// Provides skill training facilities and recipe unlocking system
+	sys.stationManager = housingcrafting.NewStationManager()
+
+	// Phase 55.2: Companion Housing & Pet Homes
+	// Allows companions to live in player housing with bedding quality affecting loyalty
+	// Training areas provide XP bonuses, shared storage accessible by companions
+	sys.petHomeManager = companionhousing.NewPetHomeManager()
+
+	// Phase 55.3: Guild Housing & Communal Spaces
+	// Guild halls with rank-based access permissions
+	// Communal crafting stations, guild storage, meeting halls with chat bonuses
+	sys.guildHousingManager = guildhousing.NewManager()
+
+	if *verbose {
+		clientLogger.Info("V9.0 integration managers initialized (crafting stations, companion housing, guild housing)")
 	}
 }
 

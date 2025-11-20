@@ -114,6 +114,18 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// Roadmap: ROADMAP_V8.md (Phase 49-51)
 	initializeV8Systems(game, sys, clientLogger)
 
+	// INTEGRATION FIX [Category A]: Initialize V7.0 systems (display, viewport)
+	// Gap: V7.0 features fully implemented but never initialized in game client
+	// Fix: Added V7.0 system initialization call for display and viewport optimization
+	// Roadmap: ROADMAP_V7.md (Phase 43-44)
+	initializeV7Systems(game, sys, clientLogger)
+
+	// INTEGRATION FIX [Category A]: Initialize V9.0 integration managers
+	// Gap: V9.0 integration packages fully implemented but never initialized
+	// Fix: Added V9.0 manager initialization call for housing/companion/guild integration
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
+	initializeV9Systems(game, sys, clientLogger)
+
 	// Now register all systems (including environmental systems that are now initialized)
 	registerAllSystems(game, sys)
 

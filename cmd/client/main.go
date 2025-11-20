@@ -9,6 +9,7 @@ import (
 	"flag"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/sirupsen/logrus"
 )
@@ -21,13 +22,26 @@ func main() {
 
 	logger, clientLogger := initializeLogger()
 
-	// Auto-enable host-and-play when no explicit server connection is specified
-	// This makes localhost server the default behavior instead of single-player mode
-	if !*multiplayer && !*hostAndPlay {
-		*hostAndPlay = true
-		*hostLAN = false // Force localhost binding for implicit mode
-		autoEnabledHostAndPlay = true
-		clientLogger.Info("no server specified - defaulting to local host-and-play mode on 127.0.0.1")
+	// BUG FIX: Phase 1 - WASM cannot run embedded server (no network listen in browser)
+	// Resolution: Skip host-and-play initialization on WASM platform
+	// Platform: WASM (all browsers)
+	// WASM multiplayer requires connecting to external WebSocket server (WSS for HTTPS sites)
+	if mobile.IsWASM() {
+		// On WASM, disable host-and-play and only allow explicit server connection
+		*hostAndPlay = false
+		if !*multiplayer {
+			clientLogger.Info("WASM build - running in single-player mode (embedded server not available in browser)")
+			clientLogger.Info("For multiplayer, specify a server with --server flag")
+		}
+	} else {
+		// Auto-enable host-and-play when no explicit server connection is specified
+		// This makes localhost server the default behavior instead of single-player mode
+		if !*multiplayer && !*hostAndPlay {
+			*hostAndPlay = true
+			*hostLAN = false // Force localhost binding for implicit mode
+			autoEnabledHostAndPlay = true
+			clientLogger.Info("no server specified - defaulting to local host-and-play mode on 127.0.0.1")
+		}
 	}
 
 	serverCleanup := handleHostAndPlay(logger, clientLogger)

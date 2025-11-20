@@ -54,11 +54,130 @@ cd build/wasm && python3 -m http.server 8080
 
 ## Testing Methodology: Player Journey Order
 
+### Phase 0: HTML/CSS Validation & Mobile Web Audit (10 minutes)
+
+**HTML Structure Validation**
+
+1. **index.html Audit**
+   - Valid HTML5 doctype: `<!DOCTYPE html>`
+   - `<meta charset="UTF-8">` present
+   - **Viewport meta tag**: `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">`
+     - `width=device-width`: Responsive to device width
+     - `initial-scale=1.0`: No initial zoom
+     - `maximum-scale=1.0, user-scalable=no`: Prevent pinch-zoom (game controls)
+     - `viewport-fit=cover`: Extend to safe area on notch devices
+   - **PWA meta tags**: `<meta name="apple-mobile-web-app-capable">`, `<meta name="mobile-web-app-capable">`
+   - Semantic HTML: Proper heading hierarchy (h1, h2, h3)
+   - Accessible elements: `alt` text on images, `aria-label` on buttons
+   - Valid CSS: No syntax errors in `<style>` blocks
+
+2. **game.html Audit**
+   - Same viewport and PWA meta tags as index.html
+   - **Canvas element**: `<canvas id="gameCanvas">` with fallback content
+   - **Loading indicator**: Visible during WASM initialization
+   - **Error messages**: Graceful degradation for unsupported browsers
+   - **Hidden input element**: For mobile keyboard activation (if implemented)
+
+**CSS Mobile Compatibility Audit**
+
+3. **Responsive Layout**
+   - **Flexbox/Grid**: Modern layout methods for cross-device compatibility
+   - **Viewport units**: `vw`, `vh`, `vmin`, `vmax` for responsive sizing
+   - **Media queries**: Breakpoints for mobile (`max-width: 768px`), tablet (`max-width: 1024px`), desktop
+   - **Orientation queries**: `@media (orientation: portrait)` and `@media (orientation: landscape)`
+   - **Safe area CSS**:
+     ```css
+     padding: env(safe-area-inset-top) env(safe-area-inset-right) 
+              env(safe-area-inset-bottom) env(safe-area-inset-left);
+     ```
+
+4. **Touch-Friendly Styles**
+   - **Touch targets**: Minimum 44x44px (iOS) or 48x48px (Android)
+   - **Touch-action property**: `touch-action: none` on canvas (prevent browser gestures)
+   - **User-select**: `-webkit-user-select: none` to prevent text selection
+   - **Tap highlight**: `-webkit-tap-highlight-color: transparent` for cleaner UI
+   - **No hover-only interactions**: Ensure all hover states have touch equivalents
+
+5. **Canvas Rendering Styles**
+   - **Image rendering**: `image-rendering: pixelated` or `crisp-edges` for pixel art
+   - **Canvas sizing**: Responsive canvas with `max-width: 100vw`, `max-height: 100vh`
+   - **Aspect ratio**: `aspect-ratio: 16/9` or maintain aspect ratio with padding-bottom trick
+   - **High-DPI support**: CSS scaling for Retina/4K displays
+
+6. **Performance CSS**
+   - **Hardware acceleration**: `transform: translateZ(0)` or `will-change: transform` for smooth animations
+   - **Avoid expensive properties**: Minimize `box-shadow`, `filter`, `backdrop-filter` on mobile
+   - **Reduce reflows**: Fixed positioning for HUD elements
+
+**Mobile Web-Specific Tests**
+
+7. **iOS Safari Compatibility**
+   - **Address bar auto-hide**: Content not hidden by Safari UI chrome
+   - **Safe area insets**: Notch/home indicator don't obscure UI (iPhone X+)
+   - **Standalone mode**: Test "Add to Home Screen" (appears as native app)
+   - **Touch callouts**: `-webkit-touch-callout: none` prevents long-press menu
+   - **Momentum scrolling**: `-webkit-overflow-scrolling: touch` for smooth scrolling (if scrollable areas)
+
+8. **Android Chrome Compatibility**
+   - **Address bar behavior**: Content adjusts when address bar shows/hides
+   - **Theme color**: `<meta name="theme-color" content="#000000">` matches app design
+   - **PWA install prompt**: "Add to Home screen" banner appears (if manifest.json present)
+   - **Chrome custom tabs**: External links open in custom tabs, not new browser window
+
+9. **Touch Input Conflicts**
+   - **Canvas touch events**: `touchstart`, `touchmove`, `touchend` not blocked by CSS
+   - **Prevent default**: `event.preventDefault()` on canvas to stop browser scrolling
+   - **Passive listeners**: Use passive event listeners for scroll performance
+   - **Input focus**: Hidden input can receive focus for keyboard (mobile keyboard activation)
+
+**HTML/CSS Validation Tools**
+
+10. **Automated Validation**
+    ```bash
+    # W3C HTML Validator (requires internet or local validator)
+    curl -H "Content-Type: text/html; charset=utf-8" \
+         --data-binary @build/wasm/index.html \
+         https://validator.w3.org/nu/?out=text
+    
+    curl -H "Content-Type: text/html; charset=utf-8" \
+         --data-binary @build/wasm/game.html \
+         https://validator.w3.org/nu/?out=text
+    
+    # CSS Validation
+    # Extract CSS from HTML and validate (manual check in browser DevTools)
+    # Chrome DevTools → Elements → Styles → Check for warnings
+    
+    # Lighthouse Mobile Audit
+    # Chrome DevTools → Lighthouse → Mobile → Performance + Accessibility
+    # Target scores: Performance >80, Accessibility >90
+    ```
+
+11. **Manual Mobile Testing**
+    - **Real devices**: Test on actual iPhone (Safari) and Android (Chrome) devices
+    - **Browser DevTools**: Chrome DevTools → Device Toolbar (Ctrl+Shift+M)
+      - Test various device presets (iPhone SE, Pixel 5, iPad, etc.)
+      - Rotate orientation (portrait ↔ landscape)
+      - Throttle network (Slow 3G, Fast 3G, Offline)
+      - Throttle CPU (4x slowdown for low-end devices)
+    - **Responsive Design Mode**: Firefox DevTools → Responsive Design Mode
+    - **Safari Developer Tools**: macOS Safari → Develop → Enter Responsive Design Mode
+
+12. **Common Mobile Web Issues**
+    - **Viewport not set**: Page zoomed out, requires pinch-zoom
+    - **Touch targets too small**: Buttons <44px, hard to tap accurately
+    - **Fixed positioning bugs**: iOS Safari fixed elements jump on scroll
+    - **100vh bug**: `height: 100vh` includes address bar (use `height: 100svh` or JavaScript)
+    - **Input zoom on focus**: iOS Safari zooms if input font-size <16px
+    - **Landscape orientation**: UI elements off-screen or overlapping
+    - **Notch/cutout overlaps**: UI hidden by iPhone notch or Android camera cutout
+
 ### Phase 1: Launch & Main Menu (5 minutes)
 
 1. **Application Launch**
    - Navigate to deployed URL or `http://localhost:8080`
    - Page loads without errors (check browser console: F12 → Console)
+   - **HTML validation**: No markup errors, proper viewport meta tag
+   - **CSS validation**: No style warnings, touch-action properly applied
    - **Loading screen** displays during WASM initialization
    - **Audio context activation**: Click anywhere or press key to enable audio (browser security requirement)
    - Canvas renders game at correct resolution (auto-scales to window)
@@ -216,7 +335,74 @@ cd build/wasm && python3 -m http.server 8080
     - No state corruption on load (inventory, quests, skills intact)
     - **ESC or back button exits load menu** without loading
 
-## Browser-Specific Tests
+### Browser-Specific Tests
+
+### Mobile Web Browser Tests
+
+**iOS Safari Mobile**
+- **Address Bar Auto-Hide**: Scroll down to hide Safari chrome, verify game area expands
+- **Safe Area Insets**: On iPhone X+ (notch devices), verify UI doesn't overlap notch/home indicator
+- **Standalone Mode (PWA)**:
+  - Add to Home Screen from Safari share menu
+  - Launch from home screen icon
+  - Verify full-screen mode (no Safari UI)
+  - Status bar color matches theme
+- **Touch Gestures**:
+  - Single tap: Select/interact
+  - Double tap: Zoom prevention (should not zoom)
+  - Pinch: Zoom prevention on canvas (should not zoom game)
+  - Swipe: Edge swipes for back navigation (should not interfere with game)
+- **Keyboard Input**:
+  - Tap text field (if implemented), keyboard appears
+  - Keyboard doesn't obscure critical UI
+  - Dismiss keyboard (tap outside), game resumes
+- **Orientation Changes**:
+  - Rotate device portrait → landscape
+  - UI reflows correctly, no broken layouts
+  - Canvas maintains aspect ratio
+- **Performance**:
+  - Frame rate: 20+ FPS on iPhone 8+
+  - Smooth scrolling (if scrollable areas)
+  - No lag on touch input (<100ms)
+
+**Android Chrome Mobile**
+- **Address Bar Behavior**: Scroll to show/hide address bar, game area adjusts smoothly
+- **Theme Color**: Address bar color matches `<meta name="theme-color">`
+- **PWA Install Prompt**: "Add to Home screen" banner appears (if manifest.json exists)
+- **Touch Gestures**:
+  - Same as iOS Safari tests above
+  - Pull-to-refresh disabled on game canvas
+- **Keyboard Input**:
+  - Virtual keyboard activation
+  - Hardware keyboard (if connected via USB/Bluetooth)
+- **Orientation Lock**: Test auto-rotate and manual orientation lock
+- **Performance**:
+  - Frame rate: 20+ FPS on mid-range devices (Snapdragon 660+)
+  - Battery: <25% drain per hour
+
+**Tablet Browsers (iPad/Android Tablets)**
+- **Larger Canvas**: Game utilizes larger screen real estate
+- **Touch Targets**: Still functional at larger sizes (no upscaling issues)
+- **Split-Screen Mode**: Game continues when in split-screen multitasking
+- **External Input**: Bluetooth mouse/keyboard support (optional)
+
+**Mobile Web Edge Cases**
+- **Low-End Devices**:
+  - Test on devices with <2GB RAM
+  - Verify game doesn't crash, degrades gracefully (lower FPS acceptable)
+- **Slow Network**:
+  - Throttle to Slow 3G (DevTools)
+  - Verify loading screen shows progress
+  - Timeout handling for WASM download
+- **Offline Mode**:
+  - Load game once, go offline
+  - Refresh page, verify service worker caches assets (if implemented)
+- **Interrupted Loading**:
+  - Close tab during WASM loading
+  - Reopen, verify recovers gracefully
+- **Background Tab**:
+  - Switch to another tab, wait 5+ minutes
+  - Return, verify game resumes or shows resume prompt
 
 ### WebAssembly & JavaScript Interop
 - **Console Errors**: No errors in browser console (F12 → Console)
@@ -308,6 +494,12 @@ cd build/wasm && python3 -m http.server 8080
 - **Spawn Failures:** Player spawns in walls or out-of-bounds
 - **WASM Crashes:** Uncaught exceptions, memory exhaustion, runtime panics
 - **Audio Failures:** Audio context never activates, no sound playback
+- **Mobile Web Blockers:**
+  - Viewport not set (page requires pinch-zoom to use)
+  - Touch targets <44px (impossible to tap on mobile)
+  - Canvas not responsive (fixed size, off-screen on mobile)
+  - Safe area violations (UI hidden by notch on iPhone X+)
+  - Orientation change breaks layout completely
 
 ### High Priority (P2 - Visual/UX Defects)
 - **Rendering Failures:** Black canvas, missing sprites, broken animations
@@ -315,6 +507,12 @@ cd build/wasm && python3 -m http.server 8080
 - **Input Edge Cases:** Keyboard/mouse conflicts, touch gesture failures
 - **Storage Failures:** IndexedDB quota exceeded, localStorage 5MB limit hit
 - **Fullscreen Bugs:** Canvas broken in fullscreen, ESC exits fullscreen instead of menu
+- **Mobile Web UX Issues:**
+  - Text too small to read on mobile (<16px, causes zoom-on-focus)
+  - Buttons too close together (fat-finger errors)
+  - Landscape orientation unusable (UI off-screen)
+  - Address bar doesn't auto-hide (game area too small)
+  - Keyboard obscures game UI (text input overlap)
 
 ### Medium Priority (P3 - System Bugs)
 - **Memory Leaks:** WASM heap growth beyond 512MB
@@ -323,7 +521,47 @@ cd build/wasm && python3 -m http.server 8080
 - **Network Edge Cases:** WebSocket disconnects, CORS errors, WSS certificate issues
 - **Browser Quirks**: Safari-specific bugs, Firefox rendering differences
 
-## Automated Detection
+### Automated Detection
+
+### HTML/CSS Validation
+```bash
+# Validate HTML structure
+grep -E "<!DOCTYPE html>|<meta.*viewport|<meta.*charset" build/wasm/*.html
+
+# Check for required meta tags
+grep "viewport-fit=cover" build/wasm/*.html  # Safe area support
+grep "user-scalable=no" build/wasm/*.html    # Zoom prevention
+grep "apple-mobile-web-app-capable" build/wasm/*.html  # iOS PWA
+
+# Validate CSS touch properties
+grep -E "touch-action|user-select|-webkit-tap-highlight" build/wasm/*.html
+
+# Check canvas styling
+grep -E "image-rendering.*pixelated|crisp-edges" build/wasm/*.html
+
+# Lighthouse CI (if installed)
+lighthouse http://localhost:8080 \
+  --only-categories=performance,accessibility,best-practices,pwa \
+  --emulated-form-factor=mobile \
+  --output=html \
+  --output-path=./lighthouse-mobile-report.html
+```
+
+### Mobile Compatibility Checks
+```bash
+# Check for mobile-unfriendly patterns
+grep -rn "hover:" build/wasm/*.html  # Hover-only interactions (should have touch alternative)
+grep -rn "cursor: pointer" build/wasm/*.html  # Ensure touch-action also set
+
+# Verify viewport units usage
+grep -E "vw|vh|vmin|vmax|svh|dvh" build/wasm/*.html
+
+# Check for safe area CSS
+grep "env(safe-area-inset" build/wasm/*.html
+
+# Validate touch target sizes (manual check in DevTools)
+# Chrome DevTools → Settings → Show rulers → Measure elements (should be ≥44px)
+```
 
 ### Static Analysis
 ```bash
@@ -399,18 +637,30 @@ Add inline comment for each fix:
 
 ## Success Criteria
 
-- ✅ Complete player journey tested (Phase 1-7) without blocks on Chrome, Firefox, Safari
+- ✅ Complete player journey tested (Phase 0-7) without blocks on Chrome, Firefox, Safari (desktop + mobile)
 - ✅ Build compiles: `make build-wasm`
 - ✅ Full test suite passes: `go test ./...` (excluding WASM-incompatible tests)
 - ✅ No race conditions: `go test -race ./...` (on non-WASM platforms)
-- ✅ All UI menus have functional exit paths (ESC + close button)
+- ✅ **HTML/CSS validation passed** (Phase 0):
+  - Valid HTML5 markup (DOCTYPE, charset, viewport meta tag)
+  - Mobile-friendly viewport configuration
+  - Touch-action CSS properly applied to canvas
+  - Safe area insets respected (iPhone notch, Android cutouts)
+  - Responsive layout works on all screen sizes (320px → 3840px)
+- ✅ **Mobile web compatibility** (Phase 0):
+  - Touch targets ≥44px (iOS) / 48dp (Android)
+  - Orientation changes handled gracefully
+  - iOS Safari standalone mode (PWA) functional
+  - Android Chrome PWA install prompt works
+  - Lighthouse mobile audit: Performance >70, Accessibility >90
+- ✅ All UI menus have functional exit paths (ESC + close button + back button/swipe on mobile)
 - ✅ Core gameplay loop playable: launch → tutorial → combat → loot → progression → save/load
 - ✅ Performance targets met (30+ FPS desktop, 20+ FPS mobile browsers)
 - ✅ Storage persistence works (IndexedDB + localStorage fallback)
-- ✅ Audio plays correctly after user gesture (click/keypress)
-- ✅ Fullscreen mode works without breaking rendering
+- ✅ Audio plays correctly after user gesture (click/keypress/tap)
+- ✅ Fullscreen mode works without breaking rendering (desktop + mobile)
 - ✅ GitHub Pages deployment successful (https://<username>.github.io/<repo>/)
-- ✅ No console errors in browser DevTools
+- ✅ No console errors in browser DevTools (desktop + mobile browsers)
 
 ## Constraints
 
@@ -423,17 +673,26 @@ Add inline comment for each fix:
 
 ## Execution Order
 
-1. Fix Phase 1 (Launch & Main Menu) blockers on all browsers
-2. Fix Phase 2 (Tutorial) blockers
-3. Fix Phase 3 (Core Gameplay) blockers, prioritize input handling
-4. Fix Phase 4 (Progression) issues
-5. Fix Phase 5 (World Interaction) issues
-6. Fix Phase 6 (Multiplayer) issues (verify WebSocket WSS for production)
-7. Fix Phase 7 (Save/Load) issues, prioritize IndexedDB implementation
-8. Fix Browser-Specific Tests (audio context, fullscreen, storage, performance)
-9. Validate all fixes with test suite and browser DevTools on Chrome, Firefox, Safari
-10. Deploy to GitHub Pages and verify production build
-11. Report summary of bugs found and fixed by phase and browser
+1. **Fix Phase 0 (HTML/CSS & Mobile Web Audit) issues first**:
+   - Validate HTML5 markup (index.html, game.html)
+   - Fix viewport meta tag if missing or incorrect
+   - Apply touch-action CSS to canvas
+   - Implement safe area insets (env(safe-area-inset-*))
+   - Fix touch target sizes (<44px buttons)
+   - Test responsive layout (320px mobile → 3840px desktop)
+   - Run Lighthouse mobile audit, fix critical issues
+2. Fix Phase 1 (Launch & Main Menu) blockers on all browsers (desktop + mobile)
+3. Fix Phase 2 (Tutorial) blockers
+4. Fix Phase 3 (Core Gameplay) blockers, prioritize input handling (keyboard + touch)
+5. Fix Phase 4 (Progression) issues
+6. Fix Phase 5 (World Interaction) issues
+7. Fix Phase 6 (Multiplayer) issues (verify WebSocket WSS for production)
+8. Fix Phase 7 (Save/Load) issues, prioritize IndexedDB implementation
+9. Fix Browser-Specific Tests (audio context, fullscreen, storage, performance)
+10. **Fix Mobile Web Browser Tests** (iOS Safari, Android Chrome, tablets, edge cases)
+11. Validate all fixes with test suite and browser DevTools on Chrome, Firefox, Safari (desktop + mobile)
+12. Deploy to GitHub Pages and verify production build on real mobile devices
+13. Report summary of bugs found and fixed by phase, browser, and platform (desktop/mobile)
 
 ## Cross-References
 

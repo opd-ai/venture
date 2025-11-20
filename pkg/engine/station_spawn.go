@@ -108,7 +108,18 @@ func SpawnStationsInTerrain(world *World, stationGen procgen.Generator, terrainD
 		return 0
 	}
 
-	// Generate stations
+	stations := generateStations(stationGen, seed, genreID)
+	if stations == nil {
+		return 0
+	}
+
+	spawnPoints := generateStationSpawnPoints(seed, terrainData.Width, terrainData.Height, tileSize, 200.0)
+
+	return spawnStationsAtPoints(world, stations, spawnPoints, terrainData, tileSize)
+}
+
+// generateStations creates station data using the generator.
+func generateStations(stationGen procgen.Generator, seed int64, genreID string) []*station.StationData {
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -117,29 +128,18 @@ func SpawnStationsInTerrain(world *World, stationGen procgen.Generator, terrainD
 
 	result, err := stationGen.Generate(seed, params)
 	if err != nil {
-		return 0
+		return nil
 	}
 
-	// Type assert to station.StationData slice
-	var stations []*station.StationData
-	if stationSlice, ok := result.([]*station.StationData); ok {
-		stations = stationSlice
-	} else {
-		// Validation failed or wrong type
-		return 0
+	stations, ok := result.([]*station.StationData)
+	if !ok {
+		return nil
 	}
+	return stations
+}
 
-	// Generate spawn points with minimum 200 pixel separation
-	minDistance := 200.0
-	spawnPoints := generateStationSpawnPoints(
-		seed,
-		terrainData.Width,
-		terrainData.Height,
-		tileSize,
-		minDistance,
-	)
-
-	// Spawn each station at its designated point
+// spawnStationsAtPoints spawns each station at its designated point with validation.
+func spawnStationsAtPoints(world *World, stations []*station.StationData, spawnPoints []struct{ X, Y float64 }, terrainData *terrain.Terrain, tileSize int) int {
 	spawnedCount := 0
 	for i, stationData := range stations {
 		if i >= len(spawnPoints) {
@@ -147,57 +147,67 @@ func SpawnStationsInTerrain(world *World, stationGen procgen.Generator, terrainD
 		}
 
 		point := spawnPoints[i]
-
-		// Validate spawn location (must be walkable)
-		tileX := int(point.X) / tileSize
-		tileY := int(point.Y) / tileSize
-
-		if tileX < 0 || tileX >= terrainData.Width || tileY < 0 || tileY >= terrainData.Height {
+		validPoint := validateAndAdjustSpawnPoint(&point, terrainData, tileSize)
+		if !validPoint {
 			continue
 		}
 
-		tile := terrainData.GetTile(tileX, tileY)
-		if tile != terrain.TileFloor {
-			// Try to find nearby walkable tile
-			found := false
-			for dy := -2; dy <= 2 && !found; dy++ {
-				for dx := -2; dx <= 2 && !found; dx++ {
-					newTileX := tileX + dx
-					newTileY := tileY + dy
-					if newTileX >= 0 && newTileX < terrainData.Width &&
-						newTileY >= 0 && newTileY < terrainData.Height {
-						if terrainData.GetTile(newTileX, newTileY) == terrain.TileFloor {
-							tileX = newTileX
-							tileY = newTileY
-							point.X = float64(tileX*tileSize + tileSize/2)
-							point.Y = float64(tileY*tileSize + tileSize/2)
-							found = true
-						}
-					}
-				}
-			}
-			if !found {
-				continue // Skip this station if no walkable tile found
-			}
-		}
-
-		// Convert station.StationData to local StationData format
-		localStationData := &StationData{
-			StationType: int(stationData.StationType),
-			Name:        stationData.Name,
-			SpawnX:      point.X,
-			SpawnY:      point.Y,
-			Seed:        stationData.Seed,
-		}
-
-		// Spawn station at validated position
-		stationEntity := SpawnStationFromData(world, localStationData, point.X, point.Y)
-		if stationEntity != nil {
+		if spawnSingleStation(world, stationData, point) {
 			spawnedCount++
 		}
 	}
-
 	return spawnedCount
+}
+
+// validateAndAdjustSpawnPoint validates spawn location and adjusts to nearest walkable tile if needed.
+func validateAndAdjustSpawnPoint(point *struct{ X, Y float64 }, terrainData *terrain.Terrain, tileSize int) bool {
+	tileX := int(point.X) / tileSize
+	tileY := int(point.Y) / tileSize
+
+	if tileX < 0 || tileX >= terrainData.Width || tileY < 0 || tileY >= terrainData.Height {
+		return false
+	}
+
+	tile := terrainData.GetTile(tileX, tileY)
+	if tile != terrain.TileFloor {
+		return findNearbyWalkableTile(&tileX, &tileY, terrainData, point, tileSize)
+	}
+	return true
+}
+
+// findNearbyWalkableTile searches for a walkable tile near the current position.
+func findNearbyWalkableTile(tileX, tileY *int, terrainData *terrain.Terrain, point *struct{ X, Y float64 }, tileSize int) bool {
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			newTileX := *tileX + dx
+			newTileY := *tileY + dy
+			if newTileX >= 0 && newTileX < terrainData.Width &&
+				newTileY >= 0 && newTileY < terrainData.Height {
+				if terrainData.GetTile(newTileX, newTileY) == terrain.TileFloor {
+					*tileX = newTileX
+					*tileY = newTileY
+					point.X = float64(newTileX*tileSize + tileSize/2)
+					point.Y = float64(newTileY*tileSize + tileSize/2)
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// spawnSingleStation converts station data and spawns it at the specified point.
+func spawnSingleStation(world *World, stationData *station.StationData, point struct{ X, Y float64 }) bool {
+	localStationData := &StationData{
+		StationType: int(stationData.StationType),
+		Name:        stationData.Name,
+		SpawnX:      point.X,
+		SpawnY:      point.Y,
+		Seed:        stationData.Seed,
+	}
+
+	stationEntity := SpawnStationFromData(world, localStationData, point.X, point.Y)
+	return stationEntity != nil
 }
 
 // generateStationSpawnPoints returns deterministic spawn positions for stations.

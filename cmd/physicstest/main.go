@@ -272,12 +272,20 @@ func printStatistics(ps []particles.PhysicsParticle) {
 		return
 	}
 
+	alive, avgVel, maxVel, bounds := computeParticleStats(ps)
+	printGeneralStats(ps, alive, avgVel, maxVel, bounds)
+	printTypeSpecificStats(ps)
+}
+
+// computeParticleStats calculates basic statistics for all particles.
+func computeParticleStats(ps []particles.PhysicsParticle) (int, float64, float64, struct{ MinX, MaxX, MinY, MaxY float64 }) {
 	alive := 0
 	var avgVel, maxVel float64
-	var minX, maxX, minY, maxY float64 = 1e9, -1e9, 1e9, -1e9
+	bounds := struct{ MinX, MaxX, MinY, MaxY float64 }{1e9, -1e9, 1e9, -1e9}
 
 	for i := range ps {
 		p := &ps[i]
+
 		if p.Life > 0 {
 			alive++
 			vel := p.VX*p.VX + p.VY*p.VY
@@ -287,58 +295,83 @@ func printStatistics(ps []particles.PhysicsParticle) {
 			}
 		}
 
-		if p.X < minX {
-			minX = p.X
-		}
-		if p.X > maxX {
-			maxX = p.X
-		}
-		if p.Y < minY {
-			minY = p.Y
-		}
-		if p.Y > maxY {
-			maxY = p.Y
-		}
+		updateBounds(&bounds, p)
 	}
 
 	if alive > 0 {
 		avgVel /= float64(alive)
 	}
 
+	return alive, avgVel, maxVel, bounds
+}
+
+// updateBounds updates particle position bounds with current particle.
+func updateBounds(bounds *struct{ MinX, MaxX, MinY, MaxY float64 }, p *particles.PhysicsParticle) {
+	if p.X < bounds.MinX {
+		bounds.MinX = p.X
+	}
+	if p.X > bounds.MaxX {
+		bounds.MaxX = p.X
+	}
+	if p.Y < bounds.MinY {
+		bounds.MinY = p.Y
+	}
+	if p.Y > bounds.MaxY {
+		bounds.MaxY = p.Y
+	}
+}
+
+// printGeneralStats displays general particle statistics.
+func printGeneralStats(ps []particles.PhysicsParticle, alive int, avgVel, maxVel float64, bounds struct{ MinX, MaxX, MinY, MaxY float64 }) {
 	fmt.Printf("\nStatistics:\n")
 	fmt.Printf("  Alive particles: %d / %d (%.1f%%)\n", alive, len(ps), 100.0*float64(alive)/float64(len(ps)))
 	fmt.Printf("  Average velocity²: %.2f\n", avgVel)
 	fmt.Printf("  Max velocity²: %.2f\n", maxVel)
-	fmt.Printf("  Bounds: X[%.1f, %.1f], Y[%.1f, %.1f]\n", minX, maxX, minY, maxY)
+	fmt.Printf("  Bounds: X[%.1f, %.1f], Y[%.1f, %.1f]\n", bounds.MinX, bounds.MaxX, bounds.MinY, bounds.MaxY)
+}
 
-	// Type-specific stats
+// printTypeSpecificStats displays physics-type-specific statistics.
+func printTypeSpecificStats(ps []particles.PhysicsParticle) {
 	switch *physicsType {
 	case "fluid":
-		var avgDensity, avgPressure float64
-		for i := range ps {
-			avgDensity += ps[i].Density
-			avgPressure += ps[i].Pressure
-		}
-		fmt.Printf("  Avg density: %.2f\n", avgDensity/float64(len(ps)))
-		fmt.Printf("  Avg pressure: %.2f\n", avgPressure/float64(len(ps)))
-
+		printFluidStats(ps)
 	case "fire":
-		var avgHeat float64
-		ignited := 0
-		for i := range ps {
-			avgHeat += ps[i].Heat
-			if ps[i].Ignited {
-				ignited++
-			}
-		}
-		fmt.Printf("  Avg heat: %.2f\n", avgHeat/float64(len(ps)))
-		fmt.Printf("  Ignited: %d (%.1f%%)\n", ignited, 100.0*float64(ignited)/float64(len(ps)))
-
+		printFireStats(ps)
 	case "debris":
-		var avgAngVel float64
-		for i := range ps {
-			avgAngVel += ps[i].AngularVelocity
-		}
-		fmt.Printf("  Avg angular velocity: %.2f rad/s\n", avgAngVel/float64(len(ps)))
+		printDebrisStats(ps)
 	}
+}
+
+// printFluidStats displays fluid simulation statistics.
+func printFluidStats(ps []particles.PhysicsParticle) {
+	var avgDensity, avgPressure float64
+	for i := range ps {
+		avgDensity += ps[i].Density
+		avgPressure += ps[i].Pressure
+	}
+	fmt.Printf("  Avg density: %.2f\n", avgDensity/float64(len(ps)))
+	fmt.Printf("  Avg pressure: %.2f\n", avgPressure/float64(len(ps)))
+}
+
+// printFireStats displays fire simulation statistics.
+func printFireStats(ps []particles.PhysicsParticle) {
+	var avgHeat float64
+	ignited := 0
+	for i := range ps {
+		avgHeat += ps[i].Heat
+		if ps[i].Ignited {
+			ignited++
+		}
+	}
+	fmt.Printf("  Avg heat: %.2f\n", avgHeat/float64(len(ps)))
+	fmt.Printf("  Ignited: %d (%.1f%%)\n", ignited, 100.0*float64(ignited)/float64(len(ps)))
+}
+
+// printDebrisStats displays debris simulation statistics.
+func printDebrisStats(ps []particles.PhysicsParticle) {
+	var avgAngVel float64
+	for i := range ps {
+		avgAngVel += ps[i].AngularVelocity
+	}
+	fmt.Printf("  Avg angular velocity: %.2f rad/s\n", avgAngVel/float64(len(ps)))
 }

@@ -140,77 +140,102 @@ func (s *SpellCastingSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	for _, entity := range entities {
-		// Only process entities with spell slots
-		spellComp, hasSpells := entity.GetComponent("spell_slots")
-		if !hasSpells {
-			continue
-		}
-		slots, ok := spellComp.(*SpellSlotComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "spell_slots",
-				}).Warn("Failed to cast spell_slots component to SpellSlotComponent")
-			}
+		slots := s.getAndValidateSpellSlots(entity)
+		if slots == nil {
 			continue
 		}
 
-		// Update cooldowns
-		for i := range slots.Cooldowns {
-			if slots.Cooldowns[i] > 0 {
-				slots.Cooldowns[i] -= deltaTime
-				if slots.Cooldowns[i] < 0 {
-					slots.Cooldowns[i] = 0
-				}
-			}
+		s.updateCooldowns(slots, deltaTime)
+		s.updateCastingProgress(entity, slots, deltaTime)
+	}
+}
+
+// getAndValidateSpellSlots retrieves and validates the spell slots component.
+func (s *SpellCastingSystem) getAndValidateSpellSlots(entity *Entity) *SpellSlotComponent {
+	spellComp, hasSpells := entity.GetComponent("spell_slots")
+	if !hasSpells {
+		return nil
+	}
+	slots, ok := spellComp.(*SpellSlotComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "spell_slots",
+			}).Warn("Failed to cast spell_slots component to SpellSlotComponent")
 		}
+		return nil
+	}
+	return slots
+}
 
-		// Update casting progress
-		if slots.IsCasting() {
-			spell := slots.GetSlot(slots.Casting)
-			if spell == nil {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":  entity.ID,
-						"slot_index": slots.Casting,
-					}).Warn("Casting spell is nil, canceling cast")
-				}
-				slots.Casting = -1
-				slots.CastingBar = 0
-				continue
-			}
-
-			// Advance casting progress
-			if spell.Stats.CastTime > 0 {
-				slots.CastingBar += deltaTime / spell.Stats.CastTime
-			} else {
-				// Instant cast
-				slots.CastingBar = 1.0
-			}
-
-			// Complete cast when bar reaches 1.0
-			if slots.CastingBar >= 1.0 {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":  entity.ID,
-						"spell_name": spell.Name,
-						"spell_type": spell.Type.String(),
-						"slot_index": slots.Casting,
-						"mana_cost":  spell.Stats.ManaCost,
-					}).Info("Spell cast completed")
-				}
-				s.executeCast(entity, spell, slots.Casting)
-
-				// Start cooldown
-				slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
-
-				// Reset casting state
-				slots.Casting = -1
-				slots.CastingBar = 0
+// updateCooldowns decrements all active spell cooldowns.
+func (s *SpellCastingSystem) updateCooldowns(slots *SpellSlotComponent, deltaTime float64) {
+	for i := range slots.Cooldowns {
+		if slots.Cooldowns[i] > 0 {
+			slots.Cooldowns[i] -= deltaTime
+			if slots.Cooldowns[i] < 0 {
+				slots.Cooldowns[i] = 0
 			}
 		}
 	}
+}
+
+// updateCastingProgress advances spell casting progress and completes casts.
+func (s *SpellCastingSystem) updateCastingProgress(entity *Entity, slots *SpellSlotComponent, deltaTime float64) {
+	if !slots.IsCasting() {
+		return
+	}
+
+	spell := slots.GetSlot(slots.Casting)
+	if spell == nil {
+		s.cancelInvalidCast(entity, slots)
+		return
+	}
+
+	s.advanceCastingBar(slots, spell, deltaTime)
+
+	if slots.CastingBar >= 1.0 {
+		s.completeCast(entity, slots, spell)
+	}
+}
+
+// cancelInvalidCast cancels a cast when the spell is no longer valid.
+func (s *SpellCastingSystem) cancelInvalidCast(entity *Entity, slots *SpellSlotComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"slot_index": slots.Casting,
+		}).Warn("Casting spell is nil, canceling cast")
+	}
+	slots.Casting = -1
+	slots.CastingBar = 0
+}
+
+// advanceCastingBar progresses the casting bar based on cast time.
+func (s *SpellCastingSystem) advanceCastingBar(slots *SpellSlotComponent, spell *magic.Spell, deltaTime float64) {
+	if spell.Stats.CastTime > 0 {
+		slots.CastingBar += deltaTime / spell.Stats.CastTime
+	} else {
+		slots.CastingBar = 1.0
+	}
+}
+
+// completeCast finalizes a spell cast and resets casting state.
+func (s *SpellCastingSystem) completeCast(entity *Entity, slots *SpellSlotComponent, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"spell_name": spell.Name,
+			"spell_type": spell.Type.String(),
+			"slot_index": slots.Casting,
+			"mana_cost":  spell.Stats.ManaCost,
+		}).Info("Spell cast completed")
+	}
+	s.executeCast(entity, spell, slots.Casting)
+	slots.Cooldowns[slots.Casting] = spell.Stats.Cooldown
+	slots.Casting = -1
+	slots.CastingBar = 0
 }
 
 // executeCast performs the spell effect.

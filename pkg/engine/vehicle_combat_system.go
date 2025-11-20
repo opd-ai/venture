@@ -321,84 +321,83 @@ func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *Posi
 // ApplyUpgrades applies all installed upgrades to vehicle stats.
 // This should be called when upgrades are added/removed.
 func ApplyUpgrades(vehicle *VehicleComponent, combat *VehicleCombatComponent, upgrades *UpgradeSlotComponent) {
-	// Track base stats (would need to be stored separately for proper upgrade removal)
-	// For now, we'll apply upgrades additively/multiplicatively
-
 	for _, upgrade := range upgrades.Slots {
-		switch upgrade.Type {
-		case UpgradeSpeed:
-			if upgrade.IsMultiplicative {
-				vehicle.MaxSpeed *= upgrade.Value
-			} else {
-				vehicle.MaxSpeed += upgrade.Value
-			}
+		applyUpgradeByType(vehicle, combat, upgrade)
+	}
+}
 
-		case UpgradeAcceleration:
-			if upgrade.IsMultiplicative {
-				vehicle.Acceleration *= upgrade.Value
-			} else {
-				vehicle.Acceleration += upgrade.Value
-			}
+// applyUpgradeByType routes upgrade application to the appropriate handler.
+func applyUpgradeByType(vehicle *VehicleComponent, combat *VehicleCombatComponent, upgrade *VehicleUpgrade) {
+	switch upgrade.Type {
+	case UpgradeSpeed:
+		applySimpleUpgrade(&vehicle.MaxSpeed, upgrade)
+	case UpgradeAcceleration:
+		applySimpleUpgrade(&vehicle.Acceleration, upgrade)
+	case UpgradeHandling:
+		applySimpleUpgrade(&vehicle.Handling, upgrade)
+	case UpgradeDurability:
+		applyDurabilityUpgrade(vehicle, upgrade)
+	case UpgradeArmor:
+		applyArmorUpgrade(combat, upgrade)
+	case UpgradeCapacity:
+		applyCapacityUpgrade(vehicle, upgrade)
+	case UpgradeFuelCapacity:
+		applyFuelCapacityUpgrade(vehicle, upgrade)
+	case UpgradeWeaponDamage:
+		applyWeaponDamageUpgrade(combat, upgrade)
+	}
+}
 
-		case UpgradeHandling:
-			if upgrade.IsMultiplicative {
-				vehicle.Handling *= upgrade.Value
-			} else {
-				vehicle.Handling += upgrade.Value
-			}
+// applySimpleUpgrade applies an upgrade value to a float64 stat.
+func applySimpleUpgrade(stat *float64, upgrade *VehicleUpgrade) {
+	if upgrade.IsMultiplicative {
+		*stat *= upgrade.Value
+	} else {
+		*stat += upgrade.Value
+	}
+}
 
-		case UpgradeDurability:
-			if upgrade.IsMultiplicative {
-				vehicle.MaxDurability *= upgrade.Value
-			} else {
-				vehicle.MaxDurability += upgrade.Value
-			}
-			// Scale current durability proportionally
-			ratio := vehicle.Durability / vehicle.MaxDurability
-			if upgrade.IsMultiplicative {
-				vehicle.Durability *= upgrade.Value
-			} else {
-				vehicle.Durability = (vehicle.MaxDurability + upgrade.Value) * ratio
-			}
+// applyDurabilityUpgrade applies durability upgrade with proportional scaling.
+func applyDurabilityUpgrade(vehicle *VehicleComponent, upgrade *VehicleUpgrade) {
+	ratio := vehicle.Durability / vehicle.MaxDurability
+	applySimpleUpgrade(&vehicle.MaxDurability, upgrade)
+	if upgrade.IsMultiplicative {
+		vehicle.Durability *= upgrade.Value
+	} else {
+		vehicle.Durability = (vehicle.MaxDurability + upgrade.Value) * ratio
+	}
+}
 
-		case UpgradeArmor:
-			if combat != nil {
-				if upgrade.IsMultiplicative {
-					combat.ArmorRating *= upgrade.Value
-				} else {
-					combat.ArmorRating += upgrade.Value
-				}
-			}
+// applyArmorUpgrade applies armor upgrade to combat component.
+func applyArmorUpgrade(combat *VehicleCombatComponent, upgrade *VehicleUpgrade) {
+	if combat != nil {
+		applySimpleUpgrade(&combat.ArmorRating, upgrade)
+	}
+}
 
-		case UpgradeCapacity:
-			if upgrade.IsMultiplicative {
-				vehicle.Capacity = int(float64(vehicle.Capacity) * upgrade.Value)
-			} else {
-				vehicle.Capacity += int(upgrade.Value)
-			}
+// applyCapacityUpgrade applies capacity upgrade to vehicle.
+func applyCapacityUpgrade(vehicle *VehicleComponent, upgrade *VehicleUpgrade) {
+	if upgrade.IsMultiplicative {
+		vehicle.Capacity = int(float64(vehicle.Capacity) * upgrade.Value)
+	} else {
+		vehicle.Capacity += int(upgrade.Value)
+	}
+}
 
-		case UpgradeFuelCapacity:
-			if upgrade.IsMultiplicative {
-				vehicle.FuelCapacity *= upgrade.Value
-			} else {
-				vehicle.FuelCapacity += upgrade.Value
-			}
-			// Scale current fuel proportionally
-			ratio := vehicle.FuelAmount / vehicle.FuelCapacity
-			if upgrade.IsMultiplicative {
-				vehicle.FuelAmount *= upgrade.Value
-			} else {
-				vehicle.FuelAmount = (vehicle.FuelCapacity + upgrade.Value) * ratio
-			}
+// applyFuelCapacityUpgrade applies fuel capacity upgrade with proportional scaling.
+func applyFuelCapacityUpgrade(vehicle *VehicleComponent, upgrade *VehicleUpgrade) {
+	ratio := vehicle.FuelAmount / vehicle.FuelCapacity
+	applySimpleUpgrade(&vehicle.FuelCapacity, upgrade)
+	if upgrade.IsMultiplicative {
+		vehicle.FuelAmount *= upgrade.Value
+	} else {
+		vehicle.FuelAmount = (vehicle.FuelCapacity + upgrade.Value) * ratio
+	}
+}
 
-		case UpgradeWeaponDamage:
-			if combat != nil {
-				if upgrade.IsMultiplicative {
-					combat.WeaponDamage *= upgrade.Value
-				} else {
-					combat.WeaponDamage += upgrade.Value
-				}
-			}
-		}
+// applyWeaponDamageUpgrade applies weapon damage upgrade to combat component.
+func applyWeaponDamageUpgrade(combat *VehicleCombatComponent, upgrade *VehicleUpgrade) {
+	if combat != nil {
+		applySimpleUpgrade(&combat.WeaponDamage, upgrade)
 	}
 }

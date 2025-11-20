@@ -9,7 +9,10 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
+            /* BUG FIX: Phase 0 - Missing safe-area-inset for iPhone X+ notch/home indicator
+             * Resolution: Added env(safe-area-inset-*) padding to prevent UI overlap
+             * Platform: WASM (iOS Safari, Safari standalone mode) */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             background: #1a1a1a;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -18,6 +21,10 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            /* BUG FIX: Phase 0 - Missing -webkit-tap-highlight-color for iOS tap flash
+             * Resolution: Set transparent tap highlight to prevent blue flash on tap
+             * Platform: WASM (iOS Safari, Chrome iOS) */
+            -webkit-tap-highlight-color: transparent;
         }
         .container {
             text-align: center;

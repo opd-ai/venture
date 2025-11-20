@@ -678,3 +678,20 @@ func (m *MailboxUI) Close() {
 func (m *MailboxUI) IsOpen() bool {
 	return m.Visible
 }
+
+// BUG FIX: Phase 1.2 - Mailbox UI missing Update method for input handling
+// Resolution: Added Update method for consistent UI pattern and future touch support
+// Platform: WASM (all browsers)
+// Update processes input for the mailbox UI.
+// Currently ESC key handling is done by InputSystem.handleEscapeKey(),
+// but this method provides a consistent interface for future enhancements
+// like touch buttons and gesture navigation.
+func (m *MailboxUI) Update(entities []*Entity, deltaTime float64) {
+	// Future enhancement: Add touch button support for closing
+	// Future enhancement: Add swipe gestures for navigating between tabs
+	// Future enhancement: Add touch scrolling for message lists
+	
+	// Input handling is currently done by InputSystem.handleEscapeKey()
+	// which checks IsOpen() and calls Close() when ESC is pressed.
+	// This maintains compatibility with existing code.
+}

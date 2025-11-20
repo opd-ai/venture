@@ -791,8 +791,14 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.CraftingUI.Update(nil, deltaTime)
 	}
 
-	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
-	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
+	// BUG FIX: Phase 1.2 - Added MailboxUI Update call for consistency
+	// Resolution: MailboxUI now has Update method matching other UI systems
+	// Platform: WASM (all browsers)
+	// NOTE: ESC key handling is still done by InputSystem.handleEscapeKey()
+	// which checks mailboxUI.IsOpen() and calls Close()
+	if g.MailboxUI != nil {
+		g.MailboxUI.Update(nil, deltaTime)
+	}
 
 	// INTEGRATION FIX [Category B]: Update V8.0 UI screens
 	// Gap: Housing and Gallery UIs created but never updated

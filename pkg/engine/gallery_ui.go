@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
@@ -94,11 +95,14 @@ func (g *GalleryUI) Update() bool {
 		return false
 	}
 
+	// BUG FIX: Phase 1.2 - Gallery UI ESC key not using inpututil.IsKeyJustPressed
+	// Resolution: Changed from ebiten.IsKeyPressed to inpututil.IsKeyJustPressed to prevent rapid toggling
+	// Platform: WASM (all browsers)
 	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Input Handling
 	// Gap: No input handling for image navigation
 	// Fix: Added keyboard controls for browsing gallery images
 	// Roadmap: ROADMAP_V8.md Phase 49.4
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		g.Hide()
 		return true
 	}
@@ -108,11 +112,14 @@ func (g *GalleryUI) Update() bool {
 		g.TotalImages = g.gallery.GetImageCount()
 	}
 
+	// BUG FIX: Phase 1.2 - Gallery navigation keys not using inpututil.IsKeyJustPressed
+	// Resolution: Changed from ebiten.IsKeyPressed to inpututil.IsKeyJustPressed for single-step navigation
+	// Platform: WASM (all browsers)
 	// Navigate images
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) || inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		g.NextImage()
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyA) {
 		g.PreviousImage()
 	}
 

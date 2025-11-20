@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
@@ -79,17 +80,23 @@ func (h *HousingUI) Update() bool {
 		return false
 	}
 
+	// BUG FIX: Phase 1.2 - Housing UI ESC key not using inpututil.IsKeyJustPressed
+	// Resolution: Changed from ebiten.IsKeyPressed to inpututil.IsKeyJustPressed to prevent rapid toggling
+	// Platform: WASM (all browsers)
 	// INTEGRATION FIX [Category B]: V8.0 Housing UI Input Handling
 	// Gap: No input handling for housing management
 	// Fix: Added keyboard navigation and menu state management
 	// Roadmap: ROADMAP_V8.md Phase 49.1
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		h.Hide()
 		return true
 	}
 
+	// BUG FIX: Phase 1.2 - Housing UI Tab navigation not using inpututil.IsKeyJustPressed
+	// Resolution: Changed from ebiten.IsKeyPressed to inpututil.IsKeyJustPressed for single-step navigation
+	// Platform: WASM (all browsers)
 	// Navigation between menu states
-	if ebiten.IsKeyPressed(ebiten.KeyTab) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 		switch h.menuState {
 		case "main":
 			h.menuState = "build"

@@ -26,7 +26,7 @@ func TestCompanionSystem(t *testing.T) {
 	companion.AddComponent(companionComp)
 	companion.AddComponent(&PositionComponent{X: 200, Y: 100})
 	companion.AddComponent(&VelocityComponent{})
-	companion.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
 	// Test initial state
 	if companionComp.Loyalty != 10 {
@@ -37,8 +37,9 @@ func TestCompanionSystem(t *testing.T) {
 	system.Update(0.1)
 
 	// Companion should start moving toward owner
-	velocityComp, _ := companion.GetComponent("velocity").(*VelocityComponent)
-	if velocityComp.Vx == 0 && velocityComp.Vy == 0 {
+	velComp, _ := companion.GetComponent("velocity")
+	velocityComp, _ := velComp.(*VelocityComponent)
+	if velocityComp.VX == 0 && velocityComp.VY == 0 {
 		t.Error("Companion should be moving toward owner")
 	}
 }
@@ -59,7 +60,7 @@ func TestCompanionSystemBonding(t *testing.T) {
 	}
 	companion.AddComponent(companionComp)
 	companion.AddComponent(&PositionComponent{X: 100, Y: 100}) // Same position (bonding range)
-	companion.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
 	initialLoyalty := companionComp.Loyalty
 
@@ -95,7 +96,7 @@ func TestCompanionSystemPerkUnlock(t *testing.T) {
 	}
 	companion.AddComponent(companionComp)
 	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
-	companion.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
 
 	// Update to trigger perk check
 	system.Update(0.1)
@@ -134,8 +135,9 @@ func TestCompanionSystemCommands(t *testing.T) {
 
 	// Test Stay command stops movement
 	system.Update(0.1)
-	velocityComp, _ := companion.GetComponent("velocity").(*VelocityComponent)
-	if velocityComp.Vx != 0 || velocityComp.Vy != 0 {
+	velComp, _ := companion.GetComponent("velocity")
+	velocityComp, _ := velComp.(*VelocityComponent)
+	if velocityComp.VX != 0 || velocityComp.VY != 0 {
 		t.Error("Companion should stop when commanded to Stay")
 	}
 }
@@ -175,8 +177,9 @@ func TestCompanionSystemDefendCommand(t *testing.T) {
 	// Update - companion should move to defensive position
 	system.Update(0.1)
 
-	velocityComp, _ := companion.GetComponent("velocity").(*VelocityComponent)
-	if velocityComp.Vx == 0 && velocityComp.Vy == 0 {
+	velComp, _ := companion.GetComponent("velocity")
+	velocityComp, _ := velComp.(*VelocityComponent)
+	if velocityComp.VX == 0 && velocityComp.VY == 0 {
 		t.Error("Companion should move to defensive position near owner")
 	}
 }
@@ -199,7 +202,7 @@ func BenchmarkCompanionSystemUpdate(b *testing.B) {
 		companion.AddComponent(companionComp)
 		companion.AddComponent(&PositionComponent{X: float64(i*10 + 100), Y: 0})
 		companion.AddComponent(&VelocityComponent{})
-		companion.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+		companion.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	}
 
 	b.ResetTimer()

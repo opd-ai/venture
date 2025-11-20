@@ -308,10 +308,16 @@ func (v *VehicleComponent) IsDestroyed() bool {
 }
 
 // MountComponent stores the relationship between a rider and vehicle.
-// This component is attached to the rider entity.
+// This component can be attached to either the rider or vehicle entity.
 type MountComponent struct {
-	// MountedEntityID is the ID of the vehicle entity being ridden
+	// MountedEntityID is the ID of the vehicle entity being ridden (when on rider)
 	MountedEntityID uint64
+
+	// RiderID is the ID of the rider entity (when on vehicle)
+	RiderID uint64
+
+	// IsMounted indicates if mounting is currently active
+	IsMounted bool
 
 	// MountOffset is the visual offset from vehicle center
 	// Used for rendering rider at correct position relative to vehicle

@@ -27,7 +27,7 @@ func TestAdaptiveSoundtrackSystemCalm(t *testing.T) {
 	// Create player with no threats
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
@@ -53,7 +53,7 @@ func TestAdaptiveSoundtrackSystemCombat(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	soundtrack.CombatThreshold = 2
 	player.AddComponent(soundtrack)
@@ -62,8 +62,8 @@ func TestAdaptiveSoundtrackSystemCombat(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		enemy := world.CreateEntity()
 		enemy.AddComponent(&PositionComponent{X: 150 + float64(i*10), Y: 100})
-		enemy.AddComponent(&HealthComponent{Health: 50, MaxHealth: 50})
-		enemy.AddComponent(&AIComponent{Behavior: BehaviorAggressive})
+		enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
+		enemy.AddComponent(&AIComponent{State: AIStateAttack})
 	}
 
 	// Update - should increase to combat intensity
@@ -88,7 +88,7 @@ func TestAdaptiveSoundtrackSystemLowHealth(t *testing.T) {
 	// Create player with low health
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 30, MaxHealth: 100}) // 30% health
+	player.AddComponent(&HealthComponent{Current: 30, Max: 100}) // 30% health
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
@@ -109,7 +109,7 @@ func TestAdaptiveSoundtrackSystemLayerFading(t *testing.T) {
 
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
@@ -141,7 +141,7 @@ func TestAdaptiveSoundtrackSystemExplorationBonus(t *testing.T) {
 
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	player.AddComponent(soundtrack)
 
@@ -173,7 +173,7 @@ func TestAdaptiveSoundtrackSystemGetCurrentIntensity(t *testing.T) {
 
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	soundtrack.CurrentIntensity = IntensityMedium
 	player.AddComponent(soundtrack)
@@ -190,7 +190,7 @@ func TestAdaptiveSoundtrackSystemTransitionSpeed(t *testing.T) {
 
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
 	soundtrack.CurrentIntensity = IntensityCalm
 	soundtrack.TargetIntensity = IntensityCombat
@@ -223,14 +223,14 @@ func BenchmarkAdaptiveSoundtrackSystemUpdate(b *testing.B) {
 	// Create player with soundtrack
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 100, Y: 100})
-	player.AddComponent(&HealthComponent{Health: 100, MaxHealth: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	player.AddComponent(NewAdaptiveSoundtrackComponent("fantasy"))
 
 	// Create some enemies
 	for i := 0; i < 5; i++ {
 		enemy := world.CreateEntity()
 		enemy.AddComponent(&PositionComponent{X: 150 + float64(i*20), Y: 100})
-		enemy.AddComponent(&HealthComponent{Health: 50, MaxHealth: 50})
+		enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
 		enemy.AddComponent(&AIComponent{})
 	}
 

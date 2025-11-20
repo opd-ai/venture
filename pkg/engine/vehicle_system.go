@@ -33,15 +33,22 @@ func (s *VehicleSystem) Update(deltaTime float64) {
 	vehicles := s.world.GetEntitiesWith("vehicle")
 
 	for _, vehicle := range vehicles {
-		vehicleComp, ok := vehicle.GetComponent("vehicle").(*VehicleComponent)
+		vComp, ok := vehicle.GetComponent("vehicle")
+		if !ok {
+			continue
+		}
+		vehicleComp, ok := vComp.(*VehicleComponent)
 		if !ok {
 			continue
 		}
 
 		// Process mounted vehicles
-		mountComp, hasMountComp := vehicle.GetComponent("mount").(*MountComponent)
-		if hasMountComp && mountComp.RiderID != 0 {
-			s.processMountedVehicle(vehicle, vehicleComp, mountComp, deltaTime)
+		mComp, hasMountComp := vehicle.GetComponent("mount")
+		if hasMountComp {
+			mountComp, ok := mComp.(*MountComponent)
+			if ok && mountComp.RiderID != 0 {
+				s.processMountedVehicle(vehicle, vehicleComp, mountComp, deltaTime)
+			}
 		}
 
 		// Update fuel consumption
@@ -58,8 +65,8 @@ func (s *VehicleSystem) Update(deltaTime float64) {
 // processMountedVehicle handles physics for vehicles with riders.
 func (s *VehicleSystem) processMountedVehicle(vehicle *Entity, vehicleComp *VehicleComponent, mountComp *MountComponent, deltaTime float64) {
 	// Get rider entity
-	rider := s.world.GetEntity(mountComp.RiderID)
-	if rider == nil {
+	rider, ok := s.world.GetEntity(mountComp.RiderID)
+	if !ok || rider == nil {
 		// Rider no longer exists, dismount
 		mountComp.RiderID = 0
 		mountComp.IsMounted = false
@@ -67,8 +74,9 @@ func (s *VehicleSystem) processMountedVehicle(vehicle *Entity, vehicleComp *Vehi
 	}
 
 	// Get rider input component for acceleration/turning
-	inputComp, hasInput := rider.GetComponent("input").(*InputComponent)
-	if !hasInput {
+	inComp, hasInput := rider.GetComponent("input")
+	inputComp, ok := inComp.(*EbitenInput)
+	if !hasInput || !ok {
 		return
 	}
 
@@ -93,21 +101,28 @@ func (s *VehicleSystem) processMountedVehicle(vehicle *Entity, vehicleComp *Vehi
 	}
 
 	// Apply vehicle speed to rider's velocity
-	if velocityComp, hasVelocity := rider.GetComponent("velocity").(*VelocityComponent); hasVelocity {
+	velComp, hasVelocity := rider.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
 		// Use rider's input direction for movement
 		if inputComp.MoveX != 0 || inputComp.MoveY != 0 {
 			// Normalize input direction
 			length := 1.0 // Simplified
-			velocityComp.Vx = (inputComp.MoveX / length) * vehicleComp.Speed
-			velocityComp.Vy = (inputComp.MoveY / length) * vehicleComp.Speed
+			velocityComp.VX = (inputComp.MoveX / length) * vehicleComp.Speed
+			velocityComp.VY = (inputComp.MoveY / length) * vehicleComp.Speed
 		}
 	}
 
 	// Sync vehicle position with rider
-	if riderPos, hasRiderPos := rider.GetComponent("position").(*PositionComponent); hasRiderPos {
-		if vehiclePos, hasVehiclePos := vehicle.GetComponent("position").(*PositionComponent); hasVehiclePos {
-			vehiclePos.X = riderPos.X
-			vehiclePos.Y = riderPos.Y
+	rPos, hasRiderPos := rider.GetComponent("position")
+	if hasRiderPos {
+		riderPos, ok := rPos.(*PositionComponent)
+		if ok {
+			vPos, hasVehiclePos := vehicle.GetComponent("position")
+			vehiclePos, ok2 := vPos.(*PositionComponent)
+			if hasVehiclePos && ok2 {
+				vehiclePos.X = riderPos.X
+				vehiclePos.Y = riderPos.Y
+			}
 		}
 	}
 }
@@ -130,8 +145,9 @@ func (s *VehicleSystem) updateFuel(vehicle *Entity, vehicleComp *VehicleComponen
 
 // validateTerrain checks if vehicle can traverse current terrain.
 func (s *VehicleSystem) validateTerrain(vehicle *Entity, vehicleComp *VehicleComponent) {
-	posComp, hasPos := vehicle.GetComponent("position").(*PositionComponent)
-	if !hasPos {
+	pComp, hasPos := vehicle.GetComponent("position")
+	posComp, ok := pComp.(*PositionComponent)
+	if !hasPos || !ok {
 		return
 	}
 
@@ -169,16 +185,26 @@ func (s *VehicleSystem) CanTraverse(vehicleComp *VehicleComponent, terrainType t
 
 // Mount attaches a rider to a vehicle.
 func (s *VehicleSystem) Mount(riderEntity, vehicleEntity *Entity) error {
-	vehicleComp, ok := vehicleEntity.GetComponent("vehicle").(*VehicleComponent)
+	vComp, ok := vehicleEntity.GetComponent("vehicle")
+	if !ok {
+		return ErrComponentNotFound
+	}
+	vehicleComp, ok := vComp.(*VehicleComponent)
 	if !ok {
 		return ErrComponentNotFound
 	}
 
-	mountComp, ok := vehicleEntity.GetComponent("mount").(*MountComponent)
+	mComp, ok := vehicleEntity.GetComponent("mount")
+	var mountComp *MountComponent
 	if !ok {
 		// Create mount component if it doesn't exist
 		mountComp = &MountComponent{}
 		vehicleEntity.AddComponent(mountComp)
+	} else {
+		mountComp, ok = mComp.(*MountComponent)
+		if !ok {
+			return ErrComponentNotFound
+		}
 	}
 
 	// Check capacity
@@ -202,12 +228,20 @@ func (s *VehicleSystem) Mount(riderEntity, vehicleEntity *Entity) error {
 
 // Dismount detaches a rider from a vehicle.
 func (s *VehicleSystem) Dismount(riderEntity, vehicleEntity *Entity) error {
-	vehicleComp, ok := vehicleEntity.GetComponent("vehicle").(*VehicleComponent)
+	vComp, ok := vehicleEntity.GetComponent("vehicle")
+	if !ok {
+		return ErrComponentNotFound
+	}
+	vehicleComp, ok := vComp.(*VehicleComponent)
 	if !ok {
 		return ErrComponentNotFound
 	}
 
-	mountComp, ok := vehicleEntity.GetComponent("mount").(*MountComponent)
+	mComp, ok := vehicleEntity.GetComponent("mount")
+	if !ok {
+		return ErrComponentNotFound
+	}
+	mountComp, ok := mComp.(*MountComponent)
 	if !ok {
 		return ErrComponentNotFound
 	}
@@ -238,7 +272,11 @@ func (s *VehicleSystem) IsMounted(riderEntity *Entity) bool {
 	// Check all vehicles for this rider
 	vehicles := s.world.GetEntitiesWith("vehicle", "mount")
 	for _, vehicle := range vehicles {
-		mountComp, ok := vehicle.GetComponent("mount").(*MountComponent)
+		mComp, ok := vehicle.GetComponent("mount")
+		if !ok {
+			continue
+		}
+		mountComp, ok := mComp.(*MountComponent)
 		if ok && mountComp.RiderID == riderEntity.ID && mountComp.IsMounted {
 			return true
 		}
@@ -250,7 +288,11 @@ func (s *VehicleSystem) IsMounted(riderEntity *Entity) bool {
 func (s *VehicleSystem) GetMountedVehicle(riderEntity *Entity) *Entity {
 	vehicles := s.world.GetEntitiesWith("vehicle", "mount")
 	for _, vehicle := range vehicles {
-		mountComp, ok := vehicle.GetComponent("mount").(*MountComponent)
+		mComp, ok := vehicle.GetComponent("mount")
+		if !ok {
+			continue
+		}
+		mountComp, ok := mComp.(*MountComponent)
 		if ok && mountComp.RiderID == riderEntity.ID && mountComp.IsMounted {
 			return vehicle
 		}

@@ -20,7 +20,7 @@ func TestVehicleSystem(t *testing.T) {
 	rider := world.CreateEntity()
 	rider.AddComponent(&PositionComponent{X: 100, Y: 100})
 	rider.AddComponent(&VelocityComponent{})
-	rider.AddComponent(&InputComponent{MoveX: 1, MoveY: 0})
+	rider.AddComponent(&EbitenInput{MoveX: 1, MoveY: 0})
 
 	// Test mounting
 	err := system.Mount(rider, vehicle)
@@ -226,7 +226,7 @@ func TestVehicleSystemRiderVelocitySync(t *testing.T) {
 	rider.AddComponent(&PositionComponent{X: 0, Y: 0})
 	velocityComp := &VelocityComponent{}
 	rider.AddComponent(velocityComp)
-	rider.AddComponent(&InputComponent{MoveX: 1, MoveY: 0})
+	rider.AddComponent(&EbitenInput{MoveX: 1, MoveY: 0})
 
 	system.Mount(rider, vehicle)
 
@@ -236,7 +236,7 @@ func TestVehicleSystemRiderVelocitySync(t *testing.T) {
 	}
 
 	// Verify rider velocity reflects vehicle speed
-	if velocityComp.Vx == 0 && velocityComp.Vy == 0 {
+	if velocityComp.VX == 0 && velocityComp.VY == 0 {
 		t.Error("Rider velocity should be non-zero when mounted on moving vehicle")
 	}
 }
@@ -255,7 +255,7 @@ func BenchmarkVehicleSystemUpdate(b *testing.B) {
 		rider := world.CreateEntity()
 		rider.AddComponent(&PositionComponent{X: float64(i * 10), Y: 0})
 		rider.AddComponent(&VelocityComponent{})
-		rider.AddComponent(&InputComponent{MoveX: 1, MoveY: 0})
+		rider.AddComponent(&EbitenInput{MoveX: 1, MoveY: 0})
 
 		system.Mount(rider, vehicle)
 	}

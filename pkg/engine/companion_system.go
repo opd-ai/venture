@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"errors"
 	"math"
 
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,11 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 	companions := s.world.GetEntitiesWith("companion")
 
 	for _, companion := range companions {
-		companionComp, ok := companion.GetComponent("companion").(*CompanionComponent)
+		comp, ok := companion.GetComponent("companion")
+		if !ok {
+			continue
+		}
+		companionComp, ok := comp.(*CompanionComponent)
 		if !ok {
 			continue
 		}
@@ -56,8 +59,10 @@ func (s *CompanionSystem) Update(deltaTime float64) {
 // updateBonding increases bonding time and unlocks perks.
 func (s *CompanionSystem) updateBonding(companion *Entity, companionComp *CompanionComponent, owner *Entity, deltaTime float64) {
 	// Get positions
-	companionPos, hasCompanionPos := companion.GetComponent("position").(*PositionComponent)
-	ownerPos, hasOwnerPos := owner.GetComponent("position").(*PositionComponent)
+	compPos, hasCompanionPos := companion.GetComponent("position")
+	companionPos, _ := compPos.(*PositionComponent)
+	ownPos, hasOwnerPos := owner.GetComponent("position")
+	ownerPos, _ := ownPos.(*PositionComponent)
 
 	if !hasCompanionPos || !hasOwnerPos {
 		return
@@ -102,20 +107,20 @@ func (s *CompanionSystem) checkPerkUnlocks(companionComp *CompanionComponent) {
 
 	for _, perkInfo := range perks {
 		// Check if perk already unlocked
-		hasПерк := false
+		hasPerk := false
 		for _, p := range companionComp.BondingPerks {
 			if p == perkInfo.perk {
-				hasПерк = true
+				hasPerk = true
 				break
 			}
 		}
 
 		// Unlock if requirements met and not already unlocked
-		if !hasПерк && companionComp.TimeWithOwner >= perkInfo.timeRequired && companionComp.Loyalty >= perkInfo.loyaltyReq {
+		if !hasPerk && companionComp.TimeWithOwner >= perkInfo.timeRequired && companionComp.Loyalty >= perkInfo.loyaltyReq {
 			companionComp.BondingPerks = append(companionComp.BondingPerks, perkInfo.perk)
 			s.logger.WithFields(logrus.Fields{
-				"companion": companion,
-				"perk":      perkInfo.perk.String(),
+				"companion_id": companionComp.OwnerID,
+				"perk":         perkInfo.perk.String(),
 			}).Info("Companion unlocked bonding perk")
 		}
 	}
@@ -149,8 +154,10 @@ func (s *CompanionSystem) processCommand(companion *Entity, companionComp *Compa
 
 // executeFollow makes the companion follow the owner.
 func (s *CompanionSystem) executeFollow(companion *Entity, companionComp *CompanionComponent, owner *Entity, deltaTime float64) {
-	companionPos, hasCompanionPos := companion.GetComponent("position").(*PositionComponent)
-	ownerPos, hasOwnerPos := owner.GetComponent("position").(*PositionComponent)
+	compPos, hasCompanionPos := companion.GetComponent("position")
+	companionPos, _ := compPos.(*PositionComponent)
+	ownPos, hasOwnerPos := owner.GetComponent("position")
+	ownerPos, _ := ownPos.(*PositionComponent)
 
 	if !hasCompanionPos || !hasOwnerPos {
 		return
@@ -171,24 +178,27 @@ func (s *CompanionSystem) executeFollow(companion *Entity, companionComp *Compan
 
 		// Set velocity to move toward owner
 		moveSpeed := 100.0 // Base follow speed
-		if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
-			velocityComp.Vx = dx * moveSpeed
-			velocityComp.Vy = dy * moveSpeed
+		velComp, hasVelocity := companion.GetComponent("velocity")
+		if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+			velocityComp.VX = dx * moveSpeed
+			velocityComp.VY = dy * moveSpeed
 		}
 	} else {
 		// Close enough, stop moving
-		if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
-			velocityComp.Vx = 0
-			velocityComp.Vy = 0
+		velComp, hasVelocity := companion.GetComponent("velocity")
+		if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+			velocityComp.VX = 0
+			velocityComp.VY = 0
 		}
 	}
 }
 
 // executeStay makes the companion stay in place.
 func (s *CompanionSystem) executeStay(companion *Entity, companionComp *CompanionComponent) {
-	if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
-		velocityComp.Vx = 0
-		velocityComp.Vy = 0
+	velComp, hasVelocity := companion.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+		velocityComp.VX = 0
+		velocityComp.VY = 0
 	}
 }
 
@@ -196,8 +206,9 @@ func (s *CompanionSystem) executeStay(companion *Entity, companionComp *Companio
 func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *CompanionComponent, owner *Entity) {
 	// Find nearest enemy entity
 	// This is simplified - full implementation would use spatial queries
-	companionPos, hasPos := companion.GetComponent("position").(*PositionComponent)
-	if !hasPos {
+	compPos, hasPos := companion.GetComponent("position")
+	companionPos, ok := compPos.(*PositionComponent)
+	if !hasPos || !ok {
 		return
 	}
 
@@ -213,7 +224,11 @@ func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *Compan
 		}
 
 		// Check if hostile (simplified)
-		entityPos, _ := entity.GetComponent("position").(*PositionComponent)
+		entPos, _ := entity.GetComponent("position")
+		entityPos, ok := entPos.(*PositionComponent)
+		if !ok {
+			continue
+		}
 		dx := entityPos.X - companionPos.X
 		dy := entityPos.Y - companionPos.Y
 		distance := math.Sqrt(dx*dx + dy*dy)
@@ -226,7 +241,11 @@ func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *Compan
 
 	// Move toward or attack nearest enemy
 	if nearestEnemy != nil {
-		enemyPos, _ := nearestEnemy.GetComponent("position").(*PositionComponent)
+		enPos, _ := nearestEnemy.GetComponent("position")
+		enemyPos, ok := enPos.(*PositionComponent)
+		if !ok {
+			return
+		}
 		dx := enemyPos.X - companionPos.X
 		dy := enemyPos.Y - companionPos.Y
 		distance := math.Sqrt(dx*dx + dy*dy)
@@ -237,9 +256,10 @@ func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *Compan
 				dx /= distance
 				dy /= distance
 			}
-			if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
-				velocityComp.Vx = dx * 150.0 // Aggressive speed
-				velocityComp.Vy = dy * 150.0
+			velComp, hasVelocity := companion.GetComponent("velocity")
+			if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+				velocityComp.VX = dx * 150.0 // Aggressive speed
+				velocityComp.VY = dy * 150.0
 			}
 		} else {
 			// In range, perform attack (would trigger combat system)
@@ -252,8 +272,10 @@ func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *Compan
 func (s *CompanionSystem) executeDefend(companion *Entity, companionComp *CompanionComponent, owner *Entity) {
 	// Stay close to owner and intercept threats
 	// Similar to Follow but with tighter radius
-	companionPos, hasCompanionPos := companion.GetComponent("position").(*PositionComponent)
-	ownerPos, hasOwnerPos := owner.GetComponent("position").(*PositionComponent)
+	compPos, hasCompanionPos := companion.GetComponent("position")
+	companionPos, _ := compPos.(*PositionComponent)
+	ownPos, hasOwnerPos := owner.GetComponent("position")
+	ownerPos, _ := ownPos.(*PositionComponent)
 
 	if !hasCompanionPos || !hasOwnerPos {
 		return
@@ -270,14 +292,15 @@ func (s *CompanionSystem) executeDefend(companion *Entity, companionComp *Compan
 			dy /= distance
 		}
 		targetDistance := 48.0 // Optimal defensive distance
-		if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
+		velComp, hasVelocity := companion.GetComponent("velocity")
+		if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
 			if distance > targetDistance {
-				velocityComp.Vx = dx * 100.0
-				velocityComp.Vy = dy * 100.0
+				velocityComp.VX = dx * 100.0
+				velocityComp.VY = dy * 100.0
 			} else {
 				// Too close, back away slightly
-				velocityComp.Vx = -dx * 50.0
-				velocityComp.Vy = -dy * 50.0
+				velocityComp.VX = -dx * 50.0
+				velocityComp.VY = -dy * 50.0
 			}
 		}
 	}
@@ -287,16 +310,18 @@ func (s *CompanionSystem) executeDefend(companion *Entity, companionComp *Compan
 func (s *CompanionSystem) executeGather(companion *Entity, companionComp *CompanionComponent) {
 	// Find and move toward nearby items
 	// This is a stub - full implementation would detect item entities
-	companionPos, hasPos := companion.GetComponent("position").(*PositionComponent)
-	if !hasPos {
+	compPos, hasPos := companion.GetComponent("position")
+	_, ok := compPos.(*PositionComponent)
+	if !hasPos || !ok {
 		return
 	}
 
 	// Would search for entities with "item" component within range
 	// For now, just idle
-	if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
-		velocityComp.Vx = 0
-		velocityComp.Vy = 0
+	velComp, hasVelocity := companion.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+		velocityComp.VX = 0
+		velocityComp.VY = 0
 	}
 }
 
@@ -304,10 +329,11 @@ func (s *CompanionSystem) executeGather(companion *Entity, companionComp *Compan
 func (s *CompanionSystem) executeScout(companion *Entity, companionComp *CompanionComponent, owner *Entity) {
 	// Move in expanding circles around owner
 	// This is a stub - full implementation would use pathfinding
-	if velocityComp, hasVelocity := companion.GetComponent("velocity").(*VelocityComponent); hasVelocity {
+	velComp, hasVelocity := companion.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
 		// Simple circular motion for scouting
-		velocityComp.Vx = 80.0
-		velocityComp.Vy = 80.0
+		velocityComp.VX = 80.0
+		velocityComp.VY = 80.0
 	}
 }
 
@@ -315,7 +341,7 @@ func (s *CompanionSystem) executeScout(companion *Entity, companionComp *Compani
 func (s *CompanionSystem) applyBondingPerks(companion *Entity, companionComp *CompanionComponent) {
 	comphasHealth, hasHealth := companion.GetComponent("health")
 	if !hasHealth {
-		continue
+		return
 	}
 	healthComp := comphasHealth.(*HealthComponent)
 
@@ -325,7 +351,7 @@ func (s *CompanionSystem) applyBondingPerks(companion *Entity, companionComp *Co
 			// Apply 20% max health bonus
 			if hasHealth {
 				baseMaxHealth := 100.0 // Would come from companion stats
-				healthComp.MaxHealth = baseMaxHealth * 1.2
+				healthComp.Max = baseMaxHealth * 1.2
 			}
 
 		case PerkExtraDamage:
@@ -355,9 +381,9 @@ func (s *CompanionSystem) applyBondingPerks(companion *Entity, companionComp *Co
 func (s *CompanionSystem) IssueCommand(companion *Entity, command CommandType) error {
 	compok, ok := companion.GetComponent("companion")
 	if !ok {
-		continue
+		return ErrComponentNotFound
 	}
-	companionComp := compok.(*CompanionComponent)
+	companionComp, ok := compok.(*CompanionComponent)
 	if !ok {
 		return ErrComponentNotFound
 	}
@@ -377,9 +403,9 @@ func (s *CompanionSystem) IssueCommand(companion *Entity, command CommandType) e
 func (s *CompanionSystem) GetLoyalty(companion *Entity) float64 {
 	compok, ok := companion.GetComponent("companion")
 	if !ok {
-		continue
+		return 0
 	}
-	companionComp := compok.(*CompanionComponent)
+	companionComp, ok := compok.(*CompanionComponent)
 	if !ok {
 		return 0
 	}
@@ -390,9 +416,9 @@ func (s *CompanionSystem) GetLoyalty(companion *Entity) float64 {
 func (s *CompanionSystem) HasPerk(companion *Entity, perk BondingPerk) bool {
 	compok, ok := companion.GetComponent("companion")
 	if !ok {
-		continue
+		return false
 	}
-	companionComp := compok.(*CompanionComponent)
+	companionComp, ok := compok.(*CompanionComponent)
 	if !ok {
 		return false
 	}

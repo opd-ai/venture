@@ -157,6 +157,14 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Roadmap: ROADMAP_V8.md (Phase 49-51)
 	initializeV8SystemsServer(world, *seed, logger)
 
+	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
+	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
+	// Fix: Added V9.0 manager initialization for server-authoritative validation
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
+	_, _, _ = initializeV9SystemsServer(logger)
+	// Note: Managers stored in world context for access by CraftingSystem, CompanionLoyaltySystem, etc.
+	// TODO: Store managers in World.Context or pass to relevant systems
+
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
 	}

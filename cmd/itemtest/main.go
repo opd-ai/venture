@@ -15,7 +15,30 @@ import (
 )
 
 func main() {
-	// Command line flags
+	config := parseFlags()
+	logger := initializeLogger(config)
+	items := generateItems(config, logger)
+	outputFile := prepareOutputFile(config, logger)
+	defer outputFile.Close()
+
+	printHeader(outputFile, config, len(items))
+	rarityCounts, typeCounts := printItems(outputFile, items, config.verbose)
+	printStatistics(outputFile, items, rarityCounts, typeCounts)
+	fmt.Fprintf(outputFile, "\nValidation: PASSED\n")
+}
+
+type testConfig struct {
+	genre    string
+	count    int
+	depth    int
+	itemType string
+	seed     int64
+	verbose  bool
+	output   string
+}
+
+// parseFlags parses command-line flags and returns configuration.
+func parseFlags() testConfig {
 	genre := flag.String("genre", "fantasy", "Genre for items (fantasy, scifi)")
 	count := flag.Int("count", 20, "Number of items to generate")
 	depth := flag.Int("depth", 5, "Dungeon depth (affects item level and rarity)")
@@ -26,128 +49,151 @@ func main() {
 
 	flag.Parse()
 
-	// Generate seed if not provided
 	if *seed == 0 {
 		*seed = time.Now().UnixNano()
 	}
 
-	// Initialize logger for test utility
+	return testConfig{
+		genre:    *genre,
+		count:    *count,
+		depth:    *depth,
+		itemType: *itemType,
+		seed:     *seed,
+		verbose:  *verbose,
+		output:   *output,
+	}
+}
+
+// initializeLogger creates and configures the logger for the test utility.
+func initializeLogger(config testConfig) *logrus.Entry {
 	logger := logging.TestUtilityLogger("itemtest")
 	testLogger := logger.WithFields(logrus.Fields{
-		"genre": *genre,
-		"count": *count,
-		"depth": *depth,
-		"seed":  *seed,
+		"genre": config.genre,
+		"count": config.count,
+		"depth": config.depth,
+		"seed":  config.seed,
 	})
-	if *itemType != "" {
-		testLogger = testLogger.WithField("itemType", *itemType)
+	if config.itemType != "" {
+		testLogger = testLogger.WithField("itemType", config.itemType)
 	}
-
 	testLogger.Info("generating items")
+	return testLogger
+}
 
-	// Create generator with logger
-	generator := item.NewItemGeneratorWithLogger(logger)
+// generateItems generates and validates items using the configured generator.
+func generateItems(config testConfig, logger *logrus.Entry) []*item.Item {
+	generator := item.NewItemGeneratorWithLogger(logger.Logger)
 
-	// Set up parameters
 	params := procgen.GenerationParams{
-		Depth:      *depth,
+		Depth:      config.depth,
 		Difficulty: 0.5,
-		GenreID:    *genre,
+		GenreID:    config.genre,
 		Custom: map[string]interface{}{
-			"count": *count,
+			"count": config.count,
 		},
 	}
 
-	// Add type filter if specified
-	if *itemType != "" {
-		params.Custom["type"] = *itemType
+	if config.itemType != "" {
+		params.Custom["type"] = config.itemType
 	}
 
-	// Generate items
-	genLogger := logging.GeneratorLogger(logger, "item", *seed, *genre)
+	genLogger := logging.GeneratorLogger(logger.Logger, "item", config.seed, config.genre)
 	genLogger.Debug("starting item generation")
 
-	result, err := generator.Generate(*seed, params)
+	result, err := generator.Generate(config.seed, params)
 	if err != nil {
 		genLogger.WithError(err).Fatal("failed to generate items")
 	}
 
 	items := result.([]*item.Item)
 
-	// Validate items
 	if err := generator.Validate(items); err != nil {
 		genLogger.WithError(err).Fatal("generated items failed validation")
 	}
 
 	genLogger.WithField("itemCount", len(items)).Info("items generated successfully")
+	return items
+}
 
-	// Prepare output
-	var outputFile *os.File
-	if *output != "" {
-		f, err := os.Create(*output)
-		if err != nil {
-			testLogger.WithError(err).WithField("outputFile", *output).Fatal("failed to create output file")
-		}
-		defer f.Close()
-		outputFile = f
-		testLogger.WithField("outputFile", *output).Info("writing items to file")
-	} else {
-		outputFile = os.Stdout
+// prepareOutputFile creates the output file or returns stdout.
+func prepareOutputFile(config testConfig, logger *logrus.Entry) *os.File {
+	if config.output == "" {
+		return os.Stdout
 	}
 
-	// Print header
-	fmt.Fprintf(outputFile, "Item Generator Test - Genre: %s, Depth: %d, Seed: %d\n", *genre, *depth, *seed)
-	fmt.Fprintf(outputFile, "Generated %d items\n", len(items))
-	fmt.Fprintf(outputFile, "%s\n\n", separator(80))
+	f, err := os.Create(config.output)
+	if err != nil {
+		logger.WithError(err).WithField("outputFile", config.output).Fatal("failed to create output file")
+	}
 
-	// Print items
+	logger.WithField("outputFile", config.output).Info("writing items to file")
+	return f
+}
+
+// printHeader prints the test header information.
+func printHeader(w *os.File, config testConfig, itemCount int) {
+	fmt.Fprintf(w, "Item Generator Test - Genre: %s, Depth: %d, Seed: %d\n", config.genre, config.depth, config.seed)
+	fmt.Fprintf(w, "Generated %d items\n", itemCount)
+	fmt.Fprintf(w, "%s\n\n", separator(80))
+}
+
+// printItems prints all items and returns rarity and type counts.
+func printItems(w *os.File, items []*item.Item, verbose bool) (map[item.Rarity]int, map[item.ItemType]int) {
 	rarityCounts := make(map[item.Rarity]int)
 	typeCounts := make(map[item.ItemType]int)
 
 	for i, itm := range items {
 		rarityCounts[itm.Rarity]++
 		typeCounts[itm.Type]++
-
-		printItem(outputFile, i+1, itm, *verbose)
-		fmt.Fprintf(outputFile, "\n")
+		printItem(w, i+1, itm, verbose)
+		fmt.Fprintf(w, "\n")
 	}
 
-	// Print statistics
-	fmt.Fprintf(outputFile, "%s\n", separator(80))
-	fmt.Fprintf(outputFile, "Statistics:\n\n")
+	return rarityCounts, typeCounts
+}
 
-	fmt.Fprintf(outputFile, "Rarity Distribution:\n")
+// printStatistics prints distribution and average stats.
+func printStatistics(w *os.File, items []*item.Item, rarityCounts map[item.Rarity]int, typeCounts map[item.ItemType]int) {
+	fmt.Fprintf(w, "%s\n", separator(80))
+	fmt.Fprintf(w, "Statistics:\n\n")
+
+	printRarityDistribution(w, rarityCounts, len(items))
+	printTypeDistribution(w, typeCounts, len(items))
+	printAverageStats(w, items)
+}
+
+// printRarityDistribution prints rarity distribution statistics.
+func printRarityDistribution(w *os.File, rarityCounts map[item.Rarity]int, totalItems int) {
+	fmt.Fprintf(w, "Rarity Distribution:\n")
 	for _, rarity := range []item.Rarity{
-		item.RarityCommon,
-		item.RarityUncommon,
-		item.RarityRare,
-		item.RarityEpic,
-		item.RarityLegendary,
+		item.RarityCommon, item.RarityUncommon, item.RarityRare,
+		item.RarityEpic, item.RarityLegendary,
 	} {
 		count := rarityCounts[rarity]
-		percentage := float64(count) / float64(len(items)) * 100
-		fmt.Fprintf(outputFile, "  %-12s: %3d (%5.1f%%) %s\n",
+		percentage := float64(count) / float64(totalItems) * 100
+		fmt.Fprintf(w, "  %-12s: %3d (%5.1f%%) %s\n",
 			rarity.String(), count, percentage, bar(percentage, 50))
 	}
+}
 
-	fmt.Fprintf(outputFile, "\nType Distribution:\n")
+// printTypeDistribution prints item type distribution statistics.
+func printTypeDistribution(w *os.File, typeCounts map[item.ItemType]int, totalItems int) {
+	fmt.Fprintf(w, "\nType Distribution:\n")
 	for _, itemType := range []item.ItemType{
-		item.TypeWeapon,
-		item.TypeArmor,
-		item.TypeConsumable,
-		item.TypeAccessory,
+		item.TypeWeapon, item.TypeArmor,
+		item.TypeConsumable, item.TypeAccessory,
 	} {
 		count := typeCounts[itemType]
-		percentage := float64(count) / float64(len(items)) * 100
-		fmt.Fprintf(outputFile, "  %-12s: %3d (%5.1f%%) %s\n",
+		percentage := float64(count) / float64(totalItems) * 100
+		fmt.Fprintf(w, "  %-12s: %3d (%5.1f%%) %s\n",
 			itemType.String(), count, percentage, bar(percentage, 50))
 	}
+}
 
-	// Calculate average stats
-	totalDamage := 0
-	totalDefense := 0
-	weaponCount := 0
-	armorCount := 0
+// printAverageStats calculates and prints average weapon/armor stats.
+func printAverageStats(w *os.File, items []*item.Item) {
+	totalDamage, totalDefense := 0, 0
+	weaponCount, armorCount := 0, 0
 
 	for _, itm := range items {
 		if itm.Type == item.TypeWeapon {
@@ -161,16 +207,14 @@ func main() {
 	}
 
 	if weaponCount > 0 || armorCount > 0 {
-		fmt.Fprintf(outputFile, "\nAverage Stats:\n")
+		fmt.Fprintf(w, "\nAverage Stats:\n")
 		if weaponCount > 0 {
-			fmt.Fprintf(outputFile, "  Weapon Damage: %.1f\n", float64(totalDamage)/float64(weaponCount))
+			fmt.Fprintf(w, "  Weapon Damage: %.1f\n", float64(totalDamage)/float64(weaponCount))
 		}
 		if armorCount > 0 {
-			fmt.Fprintf(outputFile, "  Armor Defense: %.1f\n", float64(totalDefense)/float64(armorCount))
+			fmt.Fprintf(w, "  Armor Defense: %.1f\n", float64(totalDefense)/float64(armorCount))
 		}
 	}
-
-	fmt.Fprintf(outputFile, "\nValidation: PASSED\n")
 }
 
 func printItem(w *os.File, index int, itm *item.Item, verbose bool) {

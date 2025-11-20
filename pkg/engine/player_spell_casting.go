@@ -30,66 +30,80 @@ func NewPlayerSpellCastingSystem(castingSystem *SpellCastingSystem, world *World
 
 // Update processes spell casting input for the player.
 func (s *PlayerSpellCastingSystem) Update(entities []*Entity, deltaTime float64) {
-	// Find player entity
-	var player *Entity
-	for _, entity := range entities {
-		if entity.HasComponent("input") {
-			// Skip dead entities - they cannot cast spells (Category 1.1)
-			if entity.HasComponent("dead") {
-				continue
-			}
-			player = entity
-			break
-		}
-	}
-
+	player := s.findLivePlayerEntity(entities)
 	if player == nil {
 		return
 	}
 
-	// Check if player has spell slots
-	if !player.HasComponent("spell_slots") {
+	slots := s.getSpellSlotsComponent(player)
+	if slots == nil || slots.IsCasting() {
 		return
 	}
 
-	// Get spell slots
-	slotsComp, _ := player.GetComponent("spell_slots")
-	slots, ok := slotsComp.(*SpellSlotComponent)
-	if !ok {
+	input := s.getPlayerInput(player)
+	if input == nil {
 		return
 	}
 
-	// If currently casting, don't start new cast
-	if slots.IsCasting() {
-		return
-	}
-
-	// GAP-002 REPAIR: Read spell input flags from InputProvider
-	inputComp, hasInput := player.GetComponent("input")
-	if !hasInput {
-		return
-	}
-	input, ok := inputComp.(InputProvider)
-	if !ok {
-		return // Not an InputProvider
-	}
-
-	// Check spell slot input flags (keys 1-5)
-	slotIndex := -1
-	if input.IsSpellPressed(1) {
-		slotIndex = 0
-	} else if input.IsSpellPressed(2) {
-		slotIndex = 1
-	} else if input.IsSpellPressed(3) {
-		slotIndex = 2
-	} else if input.IsSpellPressed(4) {
-		slotIndex = 3
-	} else if input.IsSpellPressed(5) {
-		slotIndex = 4
-	}
-
-	// Attempt to cast spell
+	slotIndex := s.detectSpellSlotInput(input)
 	if slotIndex >= 0 {
 		s.castingSystem.StartCast(player, slotIndex)
 	}
+}
+
+// findLivePlayerEntity finds the player entity that is alive and has input.
+func (s *PlayerSpellCastingSystem) findLivePlayerEntity(entities []*Entity) *Entity {
+	for _, entity := range entities {
+		if entity.HasComponent("input") && !entity.HasComponent("dead") {
+			return entity
+		}
+	}
+	return nil
+}
+
+// getSpellSlotsComponent retrieves and validates the spell slots component.
+func (s *PlayerSpellCastingSystem) getSpellSlotsComponent(player *Entity) *SpellSlotComponent {
+	if !player.HasComponent("spell_slots") {
+		return nil
+	}
+
+	slotsComp, _ := player.GetComponent("spell_slots")
+	slots, ok := slotsComp.(*SpellSlotComponent)
+	if !ok {
+		return nil
+	}
+	return slots
+}
+
+// getPlayerInput retrieves the InputProvider from the player entity.
+func (s *PlayerSpellCastingSystem) getPlayerInput(player *Entity) InputProvider {
+	inputComp, hasInput := player.GetComponent("input")
+	if !hasInput {
+		return nil
+	}
+	input, ok := inputComp.(InputProvider)
+	if !ok {
+		return nil
+	}
+	return input
+}
+
+// detectSpellSlotInput checks which spell slot key (1-5) is pressed.
+func (s *PlayerSpellCastingSystem) detectSpellSlotInput(input InputProvider) int {
+	if input.IsSpellPressed(1) {
+		return 0
+	}
+	if input.IsSpellPressed(2) {
+		return 1
+	}
+	if input.IsSpellPressed(3) {
+		return 2
+	}
+	if input.IsSpellPressed(4) {
+		return 3
+	}
+	if input.IsSpellPressed(5) {
+		return 4
+	}
+	return -1
 }

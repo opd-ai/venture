@@ -114,91 +114,98 @@ func (m *MobileMenu) Update() {
 	}
 
 	m.touchHandler.Update()
-
-	// Platform parity fix: Update momentum scrolling physics
 	m.updateMomentumScrolling()
+	m.handleTapInput()
+	m.handleLongPressInput()
+	m.handlePressedItemFeedback()
+	m.handleSwipeInput()
+}
 
-	// Platform parity fix: Handle tap on menu items with visual feedback
-	if m.touchHandler.IsTapping() {
-		tapX, tapY := m.touchHandler.GetTapPosition()
-		itemHeight := m.Height / float64(len(m.Items))
-
-		for i := range m.Items {
-			itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
-
-			if float64(tapX) >= m.X && float64(tapX) <= m.X+m.Width &&
-				float64(tapY) >= itemY && float64(tapY) <= itemY+itemHeight {
-				// Tapped on item
-				if m.Items[i].Enabled && m.Items[i].OnSelect != nil {
-					m.Items[i].OnSelect()
-				}
-				m.pressedItemIndex = -1 // Clear visual feedback
-				break
-			}
-		}
+// handleTapInput processes tap on menu items with visual feedback.
+func (m *MobileMenu) handleTapInput() {
+	if !m.touchHandler.IsTapping() {
+		return
 	}
 
-	// Platform parity fix: Handle long-press for context menu (right-click alternative)
-	if m.touchHandler.IsLongPress() {
-		longX, longY := m.touchHandler.gestureDetector.GetLongPressPosition()
-		itemHeight := m.Height / float64(len(m.Items))
+	tapX, tapY := m.touchHandler.GetTapPosition()
+	itemHeight := m.Height / float64(len(m.Items))
 
-		for i := range m.Items {
-			itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
+	for i := range m.Items {
+		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
 
-			if float64(longX) >= m.X && float64(longX) <= m.X+m.Width &&
-				float64(longY) >= itemY && float64(longY) <= itemY+itemHeight {
-				// Long press on item - trigger context menu
-				if m.Items[i].Enabled && m.Items[i].OnLongPress != nil {
-					m.Items[i].OnLongPress()
-					m.longPressItem = i
-				} else if m.longPressCallback != nil {
-					m.longPressCallback(i)
-					m.longPressItem = i
-				}
-				break
+		if float64(tapX) >= m.X && float64(tapX) <= m.X+m.Width &&
+			float64(tapY) >= itemY && float64(tapY) <= itemY+itemHeight {
+			if m.Items[i].Enabled && m.Items[i].OnSelect != nil {
+				m.Items[i].OnSelect()
 			}
+			m.pressedItemIndex = -1
+			break
 		}
-	} else {
-		m.longPressItem = -1 // Clear long-press state
+	}
+}
+
+// handleLongPressInput processes long-press for context menu.
+func (m *MobileMenu) handleLongPressInput() {
+	if !m.touchHandler.IsLongPress() {
+		m.longPressItem = -1
+		return
 	}
 
-	// Platform parity fix: Track pressed item for visual feedback (hover alternative for touch)
+	longX, longY := m.touchHandler.gestureDetector.GetLongPressPosition()
+	itemHeight := m.Height / float64(len(m.Items))
+
+	for i := range m.Items {
+		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
+
+		if float64(longX) >= m.X && float64(longX) <= m.X+m.Width &&
+			float64(longY) >= itemY && float64(longY) <= itemY+itemHeight {
+			if m.Items[i].Enabled && m.Items[i].OnLongPress != nil {
+				m.Items[i].OnLongPress()
+				m.longPressItem = i
+			} else if m.longPressCallback != nil {
+				m.longPressCallback(i)
+				m.longPressItem = i
+			}
+			break
+		}
+	}
+}
+
+// handlePressedItemFeedback tracks pressed item for visual feedback.
+func (m *MobileMenu) handlePressedItemFeedback() {
 	touches := m.touchHandler.GetActiveTouches()
-	if len(touches) > 0 {
-		touch := touches[0]
-		itemHeight := m.Height / float64(len(m.Items))
-
+	if len(touches) == 0 {
 		m.pressedItemIndex = -1
-		for i := range m.Items {
-			itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
-
-			if float64(touch.X) >= m.X && float64(touch.X) <= m.X+m.Width &&
-				float64(touch.Y) >= itemY && float64(touch.Y) <= itemY+itemHeight {
-				m.pressedItemIndex = i
-				break
-			}
-		}
-	} else {
-		m.pressedItemIndex = -1
+		return
 	}
 
-	// Platform parity fix: Handle swipe with velocity-based momentum scrolling
-	if direction, _, detected := m.touchHandler.GetSwipe(); detected {
-		// Calculate swipe direction (vertical swipes for scrolling)
-		// direction is in radians: -π/2 (up) to π/2 (down)
-		isVertical := (direction > 1.0 || direction < -1.0)
+	touch := touches[0]
+	itemHeight := m.Height / float64(len(m.Items))
 
-		if isVertical {
-			// Platform parity fix: Initiate momentum scrolling with velocity
-			velocity := m.touchHandler.gestureDetector.GetLastVelocity()
+	m.pressedItemIndex = -1
+	for i := range m.Items {
+		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
 
-			// Convert velocity to scroll offset change
-			// Negative velocity = swipe down = scroll up (reveal top items)
-			// Positive velocity = swipe up = scroll down (reveal bottom items)
-			m.scrollVelocity = -velocity * 10.0 // Scale factor for feel
-			m.isScrolling = true
+		if float64(touch.X) >= m.X && float64(touch.X) <= m.X+m.Width &&
+			float64(touch.Y) >= itemY && float64(touch.Y) <= itemY+itemHeight {
+			m.pressedItemIndex = i
+			break
 		}
+	}
+}
+
+// handleSwipeInput processes swipe with velocity-based momentum scrolling.
+func (m *MobileMenu) handleSwipeInput() {
+	direction, _, detected := m.touchHandler.GetSwipe()
+	if !detected {
+		return
+	}
+
+	isVertical := (direction > 1.0 || direction < -1.0)
+	if isVertical {
+		velocity := m.touchHandler.gestureDetector.GetLastVelocity()
+		m.scrollVelocity = -velocity * 10.0
+		m.isScrolling = true
 	}
 }
 

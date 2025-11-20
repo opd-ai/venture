@@ -512,63 +512,81 @@ func (s *TCPServer) handleClientSend(client *clientConnection) {
 			return
 
 		case <-client.updateSignal:
-			// Process available updates from the priority queue
-			// Limit batch size to prevent blocking goroutine for too long
-			const maxBatchSize = 20
-			batchCount := 0
+			batchCount := s.processBatchUpdates(client)
+			s.requeueIfMoreUpdates(client, batchCount)
+		}
+	}
+}
 
-			for batchCount < maxBatchSize {
-				update := client.stateUpdateQueue.Pop()
-				if update == nil {
-					break // Queue is empty
-				}
-				batchCount++
+// processBatchUpdates processes a batch of state updates for a client.
+func (s *TCPServer) processBatchUpdates(client *clientConnection) int {
+	const maxBatchSize = 20
+	batchCount := 0
 
-				client.stateUpdateStats.RecordReceive()
+	for batchCount < maxBatchSize {
+		update := client.stateUpdateQueue.Pop()
+		if update == nil {
+			break
+		}
+		batchCount++
 
-				// Encode state update
-				data, err := s.protocol.EncodeStateUpdate(update)
-				if err != nil {
-					s.errors <- fmt.Errorf("player %d encode error: %w", client.playerID, err)
-					continue
-				}
+		client.stateUpdateStats.RecordReceive()
 
-				// Send length prefix
-				msgLen := uint32(len(data))
-				lenBuf := []byte{
-					byte(msgLen),
-					byte(msgLen >> 8),
-					byte(msgLen >> 16),
-					byte(msgLen >> 24),
-				}
+		if !s.sendStateUpdate(client, update) {
+			return batchCount
+		}
+	}
 
-				// Set write deadline
-				client.conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+	return batchCount
+}
 
-				// Send length + data
-				if _, err := client.conn.Write(lenBuf); err != nil {
-					if s.IsRunning() && client.isConnected() {
-						s.errors <- fmt.Errorf("player %d write length error: %w", client.playerID, err)
-					}
-					return
-				}
-				if _, err := client.conn.Write(data); err != nil {
-					if s.IsRunning() && client.isConnected() {
-						s.errors <- fmt.Errorf("player %d write data error: %w", client.playerID, err)
-					}
-					return
-				}
-			}
+// sendStateUpdate encodes and sends a single state update to a client.
+func (s *TCPServer) sendStateUpdate(client *clientConnection, update *StateUpdate) bool {
+	data, err := s.protocol.EncodeStateUpdate(update)
+	if err != nil {
+		s.errors <- fmt.Errorf("player %d encode error: %w", client.playerID, err)
+		return true
+	}
 
-			// If we processed a full batch and there are more updates,
-			// re-signal to continue processing
-			if batchCount == maxBatchSize && !client.stateUpdateQueue.IsEmpty() {
-				select {
-				case client.updateSignal <- struct{}{}:
-				default:
-					// Already signaled
-				}
-			}
+	lenBuf := s.createLengthPrefix(len(data))
+	client.conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+
+	if !s.writeToClient(client, lenBuf) || !s.writeToClient(client, data) {
+		return false
+	}
+
+	return true
+}
+
+// createLengthPrefix creates a 4-byte little-endian length prefix.
+func (s *TCPServer) createLengthPrefix(length int) []byte {
+	msgLen := uint32(length)
+	return []byte{
+		byte(msgLen),
+		byte(msgLen >> 8),
+		byte(msgLen >> 16),
+		byte(msgLen >> 24),
+	}
+}
+
+// writeToClient writes data to a client connection with error handling.
+func (s *TCPServer) writeToClient(client *clientConnection, data []byte) bool {
+	if _, err := client.conn.Write(data); err != nil {
+		if s.IsRunning() && client.isConnected() {
+			s.errors <- fmt.Errorf("player %d write error: %w", client.playerID, err)
+		}
+		return false
+	}
+	return true
+}
+
+// requeueIfMoreUpdates re-signals the client if more updates are available.
+func (s *TCPServer) requeueIfMoreUpdates(client *clientConnection, batchCount int) {
+	const maxBatchSize = 20
+	if batchCount == maxBatchSize && !client.stateUpdateQueue.IsEmpty() {
+		select {
+		case client.updateSignal <- struct{}{}:
+		default:
 		}
 	}
 }

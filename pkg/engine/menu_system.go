@@ -164,50 +164,41 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 
 // handleInput processes keyboard and mouse input for menu navigation.
 func (ms *EbitenMenuSystem) handleInput(menu *MenuComponent) {
-	// Calculate menu bounds for mouse detection
-	menuWidth := 400
-	menuHeight := 300
-	menuX := (ms.screenWidth - menuWidth) / 2
-	menuY := (ms.screenHeight - menuHeight) / 2
+	menuX := (ms.screenWidth - 400) / 2
+	menuY := (ms.screenHeight - 300) / 2
 
-	// Mouse and touch input handling (Touch support for WASM/mobile)
+	ms.handleMouseInput(menu, menuX, menuY)
+	ms.handleKeyboardNavigation(menu)
+	ms.handleKeyboardSelection(menu)
+	ms.handleBackCancel(menu)
+}
+
+// handleMouseInput processes mouse and touch input for menu items.
+func (ms *EbitenMenuSystem) handleMouseInput(menu *MenuComponent, menuX, menuY int) {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	mouseClicked := IsTouchOrMouseJustPressed()
 
-	// Calculate item bounds and handle mouse hover/click
 	itemY := menuY + 70
 	for i := range menu.Items {
-		itemBounds := struct {
-			x, y, width, height int
-		}{
-			x:      menuX + 10,
-			y:      itemY,
-			width:  menuWidth - 20,
-			height: 20,
-		}
+		itemX := menuX + 10
+		itemWidth := 380
+		itemHeight := 20
 
-		// Check if mouse is over this item
-		if mouseX >= itemBounds.x && mouseX < itemBounds.x+itemBounds.width &&
-			mouseY >= itemBounds.y && mouseY < itemBounds.y+itemBounds.height {
-			// Mouse is over this item - highlight it
+		if mouseX >= itemX && mouseX < itemX+itemWidth &&
+			mouseY >= itemY && mouseY < itemY+itemHeight {
 			menu.SelectedIndex = i
 
-			// Handle click
 			if mouseClicked {
-				item := menu.Items[i]
-				if item.Enabled && item.Action != nil {
-					if err := item.Action(); err != nil {
-						menu.ErrorMessage = err.Error()
-						menu.ErrorTimeout = 3.0
-					}
-				}
+				ms.executeMenuItem(menu, i)
 			}
 		}
 
 		itemY += 25
 	}
+}
 
-	// Keyboard input - Navigate up
+// handleKeyboardNavigation processes keyboard navigation (up/down arrows).
+func (ms *EbitenMenuSystem) handleKeyboardNavigation(menu *MenuComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) || inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		menu.SelectedIndex--
 		if menu.SelectedIndex < 0 {
@@ -215,37 +206,43 @@ func (ms *EbitenMenuSystem) handleInput(menu *MenuComponent) {
 		}
 	}
 
-	// Navigate down
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) || inpututil.IsKeyJustPressed(ebiten.KeyDown) {
 		menu.SelectedIndex++
 		if menu.SelectedIndex >= len(menu.Items) {
 			menu.SelectedIndex = 0
 		}
 	}
+}
 
-	// Select item with keyboard
+// handleKeyboardSelection processes keyboard selection (Enter/Space).
+func (ms *EbitenMenuSystem) handleKeyboardSelection(menu *MenuComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		if menu.SelectedIndex >= 0 && menu.SelectedIndex < len(menu.Items) {
-			item := menu.Items[menu.SelectedIndex]
-			if item.Enabled && item.Action != nil {
-				if err := item.Action(); err != nil {
-					menu.ErrorMessage = err.Error()
-					menu.ErrorTimeout = 3.0 // Show error for 3 seconds
-				}
-			}
+			ms.executeMenuItem(menu, menu.SelectedIndex)
 		}
 	}
+}
 
-	// Back/Cancel
+// handleBackCancel processes Escape key for back/cancel navigation.
+func (ms *EbitenMenuSystem) handleBackCancel(menu *MenuComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if len(menu.MenuStack) > 0 {
-			// Pop back to previous menu
 			menu.CurrentMenu = menu.MenuStack[len(menu.MenuStack)-1]
 			menu.MenuStack = menu.MenuStack[:len(menu.MenuStack)-1]
 			ms.rebuildMenu(menu)
 		} else {
-			// Close menu
 			menu.Active = false
+		}
+	}
+}
+
+// executeMenuItem executes a menu item's action and handles errors.
+func (ms *EbitenMenuSystem) executeMenuItem(menu *MenuComponent, index int) {
+	item := menu.Items[index]
+	if item.Enabled && item.Action != nil {
+		if err := item.Action(); err != nil {
+			menu.ErrorMessage = err.Error()
+			menu.ErrorTimeout = 3.0
 		}
 	}
 }

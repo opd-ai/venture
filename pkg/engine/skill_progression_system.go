@@ -272,148 +272,175 @@ func (s *SkillProgressionSystem) applyBonusesToStats(entity *Entity, stats *Stat
 		"cooldown_reduction": bonuses.CooldownReduction,
 	}).Debug("Applying bonuses to entity stats")
 
-	// Apply direct bonuses to critical hit stats (already in correct units)
+	s.applyCriticalHitBonuses(entity, stats, bonuses)
+	s.applyPercentageBonuses(entity, stats, bonuses)
+}
+
+// applyCriticalHitBonuses applies critical hit chance and damage bonuses.
+func (s *SkillProgressionSystem) applyCriticalHitBonuses(entity *Entity, stats *StatsComponent, bonuses *SkillBonuses) {
 	if bonuses.CritChanceBonus != 0 {
-		// Reset crit chance to base (5%) and add bonuses
-		baseCritChance := 0.05
-		oldCritChance := stats.CritChance
-		stats.CritChance = baseCritChance + bonuses.CritChanceBonus
-		// Cap at 100%
-		if stats.CritChance > 1.0 {
-			stats.CritChance = 1.0
-		}
-		log.WithFields(log.Fields{
-			"entity_id":       entity.ID,
-			"old_crit_chance": oldCritChance,
-			"new_crit_chance": stats.CritChance,
-			"bonus":           bonuses.CritChanceBonus,
-		}).Debug("Updated crit chance")
+		s.applyCritChanceBonus(entity, stats, bonuses.CritChanceBonus)
 	}
-
 	if bonuses.CritDamageBonus != 0 {
-		// Reset crit damage to base (2.0x) and add bonuses
-		baseCritDamage := 2.0
-		oldCritDamage := stats.CritDamage
-		stats.CritDamage = baseCritDamage + bonuses.CritDamageBonus
-		log.WithFields(log.Fields{
-			"entity_id":       entity.ID,
-			"old_crit_damage": oldCritDamage,
-			"new_crit_damage": stats.CritDamage,
-			"bonus":           bonuses.CritDamageBonus,
-		}).Debug("Updated crit damage")
+		s.applyCritDamageBonus(entity, stats, bonuses.CritDamageBonus)
 	}
+}
 
-	// Apply attack/defense/magic bonuses using base stats
+// applyCritChanceBonus updates critical hit chance with capping at 100%.
+func (s *SkillProgressionSystem) applyCritChanceBonus(entity *Entity, stats *StatsComponent, bonus float64) {
+	baseCritChance := 0.05
+	oldCritChance := stats.CritChance
+	stats.CritChance = baseCritChance + bonus
+	if stats.CritChance > 1.0 {
+		stats.CritChance = 1.0
+	}
+	log.WithFields(log.Fields{
+		"entity_id":       entity.ID,
+		"old_crit_chance": oldCritChance,
+		"new_crit_chance": stats.CritChance,
+		"bonus":           bonus,
+	}).Debug("Updated crit chance")
+}
+
+// applyCritDamageBonus updates critical damage multiplier.
+func (s *SkillProgressionSystem) applyCritDamageBonus(entity *Entity, stats *StatsComponent, bonus float64) {
+	baseCritDamage := 2.0
+	oldCritDamage := stats.CritDamage
+	stats.CritDamage = baseCritDamage + bonus
+	log.WithFields(log.Fields{
+		"entity_id":       entity.ID,
+		"old_crit_damage": oldCritDamage,
+		"new_crit_damage": stats.CritDamage,
+		"bonus":           bonus,
+	}).Debug("Updated crit damage")
+}
+
+// applyPercentageBonuses applies all percentage-based stat bonuses using base stats.
+func (s *SkillProgressionSystem) applyPercentageBonuses(entity *Entity, stats *StatsComponent, bonuses *SkillBonuses) {
 	baseStatsComp, hasBaseStats := entity.GetComponent("base_stats")
-	if hasBaseStats {
-		// Type assert with safety check
-		baseStats, ok := baseStatsComp.(*BaseStatsComponent)
-		if !ok {
-			log.WithFields(log.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "base_stats",
-			}).Error("Failed to type assert base_stats component")
-			return
-		}
-
-		log.WithFields(log.Fields{
-			"entity_id":        entity.ID,
-			"base_attack":      baseStats.BaseAttack,
-			"base_defense":     baseStats.BaseDefense,
-			"base_magic_power": baseStats.BaseMagicPower,
-			"base_max_health":  baseStats.BaseMaxHealth,
-			"base_mana_regen":  baseStats.BaseManaRegen,
-		}).Debug("Applying bonuses using base stats")
-
-		// Apply attack bonus
-		if bonuses.DamageBonus != 0 {
-			if attackComp, ok := entity.GetComponent("attack"); ok {
-				// Type assert with safety check
-				if attack, ok := attackComp.(*AttackComponent); ok {
-					oldDamage := attack.Damage
-					attack.Damage = baseStats.BaseAttack * (1.0 + bonuses.DamageBonus)
-					log.WithFields(log.Fields{
-						"entity_id":  entity.ID,
-						"old_damage": oldDamage,
-						"new_damage": attack.Damage,
-						"bonus":      bonuses.DamageBonus,
-					}).Debug("Updated attack damage")
-				}
-			}
-		}
-
-		// Apply defense bonus
-		if bonuses.DefenseBonus != 0 {
-			oldDefense := stats.Defense
-			stats.Defense = baseStats.BaseDefense * (1.0 + bonuses.DefenseBonus)
-			log.WithFields(log.Fields{
-				"entity_id":   entity.ID,
-				"old_defense": oldDefense,
-				"new_defense": stats.Defense,
-				"bonus":       bonuses.DefenseBonus,
-			}).Debug("Updated defense")
-		}
-
-		// Apply magic power bonus
-		if bonuses.MagicPowerBonus != 0 {
-			oldMagicPower := stats.MagicPower
-			stats.MagicPower = baseStats.BaseMagicPower * (1.0 + bonuses.MagicPowerBonus)
-			log.WithFields(log.Fields{
-				"entity_id":       entity.ID,
-				"old_magic_power": oldMagicPower,
-				"new_magic_power": stats.MagicPower,
-				"bonus":           bonuses.MagicPowerBonus,
-			}).Debug("Updated magic power")
-		}
-
-		// Apply health bonus
-		if bonuses.HealthBonus != 0 {
-			if healthComp, ok := entity.GetComponent("health"); ok {
-				// Type assert with safety check
-				if health, ok := healthComp.(*HealthComponent); ok {
-					oldMax := health.Max
-					oldCurrent := health.Current
-					health.Max = baseStats.BaseMaxHealth * (1.0 + bonuses.HealthBonus)
-					// Scale current health proportionally
-					if oldMax > 0 {
-						health.Current = health.Current * (health.Max / oldMax)
-					}
-					log.WithFields(log.Fields{
-						"entity_id":      entity.ID,
-						"old_max_health": oldMax,
-						"new_max_health": health.Max,
-						"old_current":    oldCurrent,
-						"new_current":    health.Current,
-						"bonus":          bonuses.HealthBonus,
-					}).Debug("Updated health")
-				}
-			}
-		}
-
-		// Apply mana regen bonus
-		if bonuses.ManaRegenBonus != 0 {
-			if manaComp, ok := entity.GetComponent("mana"); ok {
-				// Type assert with safety check
-				if mana, ok := manaComp.(*ManaComponent); ok {
-					oldRegen := mana.Regen
-					mana.Regen = baseStats.BaseManaRegen * (1.0 + bonuses.ManaRegenBonus)
-					log.WithFields(log.Fields{
-						"entity_id": entity.ID,
-						"old_regen": oldRegen,
-						"new_regen": mana.Regen,
-						"bonus":     bonuses.ManaRegenBonus,
-					}).Debug("Updated mana regen")
-				}
-			}
-		}
-	} else {
+	if !hasBaseStats {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,
 		}).Debug("Entity missing base_stats component, cannot apply percentage bonuses")
+		return
 	}
 
-	// Note: Speed bonus not applied here since it's managed by separate MovementComponent
-	// Cooldown reduction applied during spell casting
+	baseStats, ok := baseStatsComp.(*BaseStatsComponent)
+	if !ok {
+		log.WithFields(log.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "base_stats",
+		}).Error("Failed to type assert base_stats component")
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"entity_id":        entity.ID,
+		"base_attack":      baseStats.BaseAttack,
+		"base_defense":     baseStats.BaseDefense,
+		"base_magic_power": baseStats.BaseMagicPower,
+		"base_max_health":  baseStats.BaseMaxHealth,
+		"base_mana_regen":  baseStats.BaseManaRegen,
+	}).Debug("Applying bonuses using base stats")
+
+	s.applyAttackBonus(entity, baseStats, bonuses.DamageBonus)
+	s.applyDefenseBonus(entity, stats, baseStats, bonuses.DefenseBonus)
+	s.applyMagicPowerBonus(entity, stats, baseStats, bonuses.MagicPowerBonus)
+	s.applyHealthBonus(entity, baseStats, bonuses.HealthBonus)
+	s.applyManaRegenBonus(entity, baseStats, bonuses.ManaRegenBonus)
+}
+
+// applyAttackBonus updates attack damage based on base attack.
+func (s *SkillProgressionSystem) applyAttackBonus(entity *Entity, baseStats *BaseStatsComponent, bonus float64) {
+	if bonus == 0 {
+		return
+	}
+	if attackComp, ok := entity.GetComponent("attack"); ok {
+		if attack, ok := attackComp.(*AttackComponent); ok {
+			oldDamage := attack.Damage
+			attack.Damage = baseStats.BaseAttack * (1.0 + bonus)
+			log.WithFields(log.Fields{
+				"entity_id":  entity.ID,
+				"old_damage": oldDamage,
+				"new_damage": attack.Damage,
+				"bonus":      bonus,
+			}).Debug("Updated attack damage")
+		}
+	}
+}
+
+// applyDefenseBonus updates defense stat based on base defense.
+func (s *SkillProgressionSystem) applyDefenseBonus(entity *Entity, stats *StatsComponent, baseStats *BaseStatsComponent, bonus float64) {
+	if bonus == 0 {
+		return
+	}
+	oldDefense := stats.Defense
+	stats.Defense = baseStats.BaseDefense * (1.0 + bonus)
+	log.WithFields(log.Fields{
+		"entity_id":   entity.ID,
+		"old_defense": oldDefense,
+		"new_defense": stats.Defense,
+		"bonus":       bonus,
+	}).Debug("Updated defense")
+}
+
+// applyMagicPowerBonus updates magic power stat based on base magic power.
+func (s *SkillProgressionSystem) applyMagicPowerBonus(entity *Entity, stats *StatsComponent, baseStats *BaseStatsComponent, bonus float64) {
+	if bonus == 0 {
+		return
+	}
+	oldMagicPower := stats.MagicPower
+	stats.MagicPower = baseStats.BaseMagicPower * (1.0 + bonus)
+	log.WithFields(log.Fields{
+		"entity_id":       entity.ID,
+		"old_magic_power": oldMagicPower,
+		"new_magic_power": stats.MagicPower,
+		"bonus":           bonus,
+	}).Debug("Updated magic power")
+}
+
+// applyHealthBonus updates max health and scales current health proportionally.
+func (s *SkillProgressionSystem) applyHealthBonus(entity *Entity, baseStats *BaseStatsComponent, bonus float64) {
+	if bonus == 0 {
+		return
+	}
+	if healthComp, ok := entity.GetComponent("health"); ok {
+		if health, ok := healthComp.(*HealthComponent); ok {
+			oldMax := health.Max
+			oldCurrent := health.Current
+			health.Max = baseStats.BaseMaxHealth * (1.0 + bonus)
+			if oldMax > 0 {
+				health.Current = health.Current * (health.Max / oldMax)
+			}
+			log.WithFields(log.Fields{
+				"entity_id":      entity.ID,
+				"old_max_health": oldMax,
+				"new_max_health": health.Max,
+				"old_current":    oldCurrent,
+				"new_current":    health.Current,
+				"bonus":          bonus,
+			}).Debug("Updated health")
+		}
+	}
+}
+
+// applyManaRegenBonus updates mana regeneration based on base mana regen.
+func (s *SkillProgressionSystem) applyManaRegenBonus(entity *Entity, baseStats *BaseStatsComponent, bonus float64) {
+	if bonus == 0 {
+		return
+	}
+	if manaComp, ok := entity.GetComponent("mana"); ok {
+		if mana, ok := manaComp.(*ManaComponent); ok {
+			oldRegen := mana.Regen
+			mana.Regen = baseStats.BaseManaRegen * (1.0 + bonus)
+			log.WithFields(log.Fields{
+				"entity_id": entity.ID,
+				"old_regen": oldRegen,
+				"new_regen": mana.Regen,
+				"bonus":     bonus,
+			}).Debug("Updated mana regen")
+		}
+	}
 }
 
 // SkillBonuses accumulates all skill effect bonuses.

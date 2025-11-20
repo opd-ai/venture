@@ -92,23 +92,24 @@ func NewAdaptiveSoundtrackSystem(world *World) *AdaptiveSoundtrackSystem {
 
 // Update analyzes game state and adapts music accordingly.
 func (s *AdaptiveSoundtrackSystem) Update(deltaTime float64) {
-	// Get player entity (assumes single player or primary player)
-	players := s.world.GetEntitiesWith("position", "health")
-	if len(players) == 0 {
-		return
-	}
-
-	player := players[0] // Primary player
-
-	// Get or create adaptive soundtrack component
+	// Get player entity - prefer entities with adaptive_soundtrack component
+	var player *Entity
 	var soundtrackComp *AdaptiveSoundtrackComponent
-	comp, hasComp := player.GetComponent("adaptive_soundtrack")
-	if hasComp {
-		if st, ok := comp.(*AdaptiveSoundtrackComponent); ok {
-			soundtrackComp = st
+
+	// First, try to find entities that already have adaptive_soundtrack
+	soundtrackEntities := s.world.GetEntitiesWith("adaptive_soundtrack")
+	if len(soundtrackEntities) > 0 {
+		player = soundtrackEntities[0]
+		comp, _ := player.GetComponent("adaptive_soundtrack")
+		soundtrackComp = comp.(*AdaptiveSoundtrackComponent)
+	} else {
+		// Fall back to finding player by position+health
+		players := s.world.GetEntitiesWith("position", "health")
+		if len(players) == 0 {
+			return
 		}
-	}
-	if soundtrackComp == nil {
+		player = players[0]
+
 		// Create default soundtrack component
 		soundtrackComp = NewAdaptiveSoundtrackComponent("fantasy")
 		player.AddComponent(soundtrackComp)

@@ -148,6 +148,14 @@ type systemsContainer struct {
 	merchantCaravanSystem  *engine.MerchantCaravanSystem     // Phase 36: Traveling merchants between servers
 	npcDialogSystem        *engine.NPCDialogSystem           // Phase 31: Markov-chain NPC conversations
 
+	// INTEGRATION FIX [Category A]: High-Level Management Systems
+	// Gap: Wrapper systems CompanionSystem, VehicleSystem, AdaptiveSoundtrackSystem implemented but never initialized
+	// Fix: Added system fields for high-level companion/vehicle management and adaptive music
+	// Roadmap: ROADMAP_V4.md Phase 21.2 (VehicleSystem), Phase 22.2 (CompanionSystem), Phase 29 (AdaptiveSoundtrackSystem)
+	companionSystem          *engine.CompanionSystem          // Phase 22.2: High-level companion management
+	vehicleSystem            *engine.VehicleSystem            // Phase 21.2: High-level vehicle management
+	adaptiveSoundtrackSystem *engine.AdaptiveSoundtrackSystem // Phase 29: Dynamic music adaptation based on game state
+
 	// INTEGRATION FIX [Category A]: V8.0 Systems (Phase 49-51)
 	// Gap: V8.0 systems fully implemented but never instantiated or registered
 	// Fix: Added system fields for housing, social persistence, physics, territory, building/furniture generation
@@ -386,8 +394,26 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Roadmap: ROADMAP_V5.md Phase 31
 	sys.npcDialogSystem = engine.NewNPCDialogSystem(game.World, *seed+seedOffsetNPCDialog)
 
+	// INTEGRATION FIX [Category A]: Phase 29 - AdaptiveSoundtrackSystem
+	// Gap: AdaptiveSoundtrackSystem fully implemented but never initialized
+	// Fix: Added system initialization for dynamic music adaptation based on combat, exploration, discovery
+	// Roadmap: ROADMAP_V4.md Phase 29
+	sys.adaptiveSoundtrackSystem = engine.NewAdaptiveSoundtrackSystem(game.World)
+
+	// INTEGRATION FIX [Category A]: Phase 22.2 - CompanionSystem high-level wrapper
+	// Gap: CompanionSystem implemented but never initialized (subsystems CompanionAISystem, etc. initialized above)
+	// Fix: Added high-level CompanionSystem for unified companion management
+	// Roadmap: ROADMAP_V4.md Phase 22.2
+	sys.companionSystem = engine.NewCompanionSystem(game.World)
+
+	// INTEGRATION FIX [Category A]: Phase 21.2 - VehicleSystem high-level wrapper
+	// Gap: VehicleSystem implemented but never initialized (subsystems VehicleMovementSystem, etc. initialized above)
+	// Fix: Added high-level VehicleSystem for unified vehicle management
+	// Roadmap: ROADMAP_V4.md Phase 21.2
+	sys.vehicleSystem = engine.NewVehicleSystem(game.World)
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, companions, books, magic, classes, expressions, mini-games, achievements, moral choices, story discovery, investigation, NPC dialog)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, vehicle-mgmt, mounting, companions, companion-mgmt, skills, books, spells, classes, expressions, minigames, achievements, moral choices, discovery, investigation, NPC dialog, adaptive music)")
 	}
 }
 
@@ -724,7 +750,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&investigationSystemWrapper{system: sys.investigationSystem})
 	game.World.AddSystem(&npcDialogSystemWrapper{system: sys.npcDialogSystem})
 
-	// Phase 14.4: Audio Enhancement Systems
+	// Phase 14.4: Adaptive Audio Systems
 	game.World.AddSystem(&musicTriggerSystemWrapper{system: sys.musicTriggerSystem})
 	game.World.AddSystem(&positionalAudioSystemWrapper{system: sys.positionalAudioSystem})
 	game.World.AddSystem(&reverbSystemWrapper{system: sys.reverbSystem})
@@ -732,15 +758,25 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 14: Quality System
 	game.World.AddSystem(&qualitySystemWrapper{system: sys.qualitySystem})
 
-	// Phase 33: Player-to-Player Trading
+	// Phase 33-36: Trade, Terrain, and Merchant Systems
 	game.World.AddSystem(&tradeSystemWrapper{system: sys.tradeSystem})
-
-	// Phase 35: Terrain Modification
 	game.World.AddSystem(&terrainConstructionSystemWrapper{system: sys.terrainConstructionSys})
 	game.World.AddSystem(&terrainModificationSystemWrapper{system: sys.terrainModificationSys})
-
-	// Phase 36: Merchant Caravans
 	game.World.AddSystem(&merchantCaravanSystemWrapper{system: sys.merchantCaravanSystem})
+
+	// INTEGRATION FIX [Category A]: High-Level Management System Registrations
+	// Gap: CompanionSystem, VehicleSystem, AdaptiveSoundtrackSystem initialized but never registered
+	// Fix: Registered high-level wrapper systems for unified management
+	// Roadmap: ROADMAP_V4.md Phase 21.2, 22.2, 29
+
+	// Phase 21.2: High-level VehicleSystem wrapper
+	game.World.AddSystem(&vehicleSystemWrapper{system: sys.vehicleSystem})
+
+	// Phase 22.2: High-level CompanionSystem wrapper
+	game.World.AddSystem(&companionSystemWrapper{system: sys.companionSystem})
+
+	// Phase 29: AdaptiveSoundtrackSystem for dynamic music
+	game.World.AddSystem(&adaptiveSoundtrackSystemWrapper{system: sys.adaptiveSoundtrackSystem})
 
 	// INTEGRATION FIX [Category A]: V8.0 Fluid Simulator System Registration (Phase 50.4)
 	// Gap: FluidSimulator has Update() method and should be registered for fluid dynamics

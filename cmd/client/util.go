@@ -287,6 +287,37 @@ func (w *merchantCaravanSystemWrapper) Update(entities []*engine.Entity, deltaTi
 	w.system.Update(deltaTime)
 }
 
+// INTEGRATION FIX [Category A]: High-Level Management System Wrappers
+// Gap: CompanionSystem, VehicleSystem, AdaptiveSoundtrackSystem wrappers missing
+// Fix: Added wrapper types for high-level management systems
+// Roadmap: ROADMAP_V4.md Phase 21.2, 22.2, 29
+
+type companionSystemWrapper struct {
+	system *engine.CompanionSystem
+}
+
+func (w *companionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type vehicleSystemWrapper struct {
+	system *engine.VehicleSystem
+}
+
+func (w *vehicleSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+type adaptiveSoundtrackSystemWrapper struct {
+	system *engine.AdaptiveSoundtrackSystem
+}
+
+func (w *adaptiveSoundtrackSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// Note: fluidSimulatorWrapper is defined in handlers.go along with other V8.0 system wrappers
+
 var (
 	width            = flag.Int("width", 1920, "Screen width (1280, 1920, 2560, 3840)")
 	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")

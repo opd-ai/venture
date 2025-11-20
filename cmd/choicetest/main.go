@@ -274,7 +274,8 @@ func testClassQuests(verbose bool) {
 	fmt.Println("Quest: Holy Trial")
 	fmt.Println("Class: Paladin")
 	fmt.Println("Min Level: 20")
-	fmt.Println("Alignment: Good (0.5+), Lawful (0.3+), Honorable (0.4+)\n")
+	fmt.Println("Alignment: Good (0.5+), Lawful (0.3+), Honorable (0.4+)")
+	fmt.Println()
 
 	// Test different scenarios
 	scenarios := []struct {

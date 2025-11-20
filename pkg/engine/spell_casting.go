@@ -968,6 +968,83 @@ func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell
 
 // castTeleportSpell teleports the caster to a nearby safe location.
 // Teleport distance is based on spell range, and landing spot must be walkable.
+// getTeleportDirection calculates the teleport direction from entity velocity or default.
+func getTeleportDirection(caster *Entity) (float64, float64) {
+	dirX, dirY := 0.0, 1.0
+	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			if vel.VX != 0 || vel.VY != 0 {
+				mag := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+				if mag > 0 {
+					dirX = vel.VX / mag
+					dirY = vel.VY / mag
+				}
+			}
+		}
+	}
+	return dirX, dirY
+}
+
+// calculateTeleportTarget calculates the target position for teleportation.
+func calculateTeleportTarget(pos *PositionComponent, dirX, dirY, maxDist float64) (float64, float64) {
+	targetX := pos.X + dirX*maxDist
+	targetY := pos.Y + dirY*maxDist
+	return targetX, targetY
+}
+
+// executeTeleport performs the actual teleportation if position is valid.
+func (s *SpellCastingSystem) executeTeleport(caster *Entity, pos *PositionComponent, targetX, targetY, maxDist float64) bool {
+	if !s.isPositionWalkable(targetX, targetY, caster) {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": caster.ID,
+				"target_x":  targetX,
+				"target_y":  targetY,
+			}).Warn("Teleport failed: position not walkable")
+		}
+		return false
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": caster.ID,
+			"from_x":    pos.X,
+			"from_y":    pos.Y,
+			"to_x":      targetX,
+			"to_y":      targetY,
+			"distance":  maxDist,
+		}).Info("Teleport successful")
+	}
+	pos.X = targetX
+	pos.Y = targetY
+	return true
+}
+
+// spawnTeleportEffects spawns visual and audio effects for teleportation.
+func (s *SpellCastingSystem) spawnTeleportEffects(caster *Entity, x, y float64) {
+	if s.particleSys != nil {
+		config := particles.Config{
+			Type:     particles.ParticleMagic,
+			Count:    30,
+			GenreID:  "fantasy",
+			Seed:     int64(caster.ID),
+			Duration: 0.5,
+			SpreadX:  80.0,
+			SpreadY:  80.0,
+			Gravity:  0.0,
+			MinSize:  4.0,
+			MaxSize:  8.0,
+			Custom:   map[string]interface{}{"color": "teleport"},
+		}
+		s.particleSys.SpawnParticles(s.world, config, x, y)
+	}
+
+	if s.audioMgr != nil {
+		_ = s.audioMgr.PlaySFX("magic", int64(caster.ID))
+	}
+}
+
+// castTeleportSpell casts a teleport spell for the specified entity.
 func (s *SpellCastingSystem) castTeleportSpell(caster *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -990,81 +1067,17 @@ func (s *SpellCastingSystem) castTeleportSpell(caster *Entity, spell *magic.Spel
 		return
 	}
 
-	// Calculate teleport direction and distance
-	// Use spell range as max teleport distance
 	maxDist := spell.Stats.Range
 	if maxDist <= 0 {
-		maxDist = 100.0 // Default teleport range
+		maxDist = 100.0
 	}
 
-	// For simplicity, teleport forward (could be enhanced with mouse targeting later)
-	// Use velocity direction if available, otherwise default direction
-	dirX, dirY := 0.0, 1.0 // Default: down
-	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
-		if vel, ok := velComp.(*VelocityComponent); ok {
-			if vel.VX != 0 || vel.VY != 0 {
-				// Normalize velocity to get direction
-				mag := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-				if mag > 0 {
-					dirX = vel.VX / mag
-					dirY = vel.VY / mag
-				}
-			}
-		}
+	dirX, dirY := getTeleportDirection(caster)
+	targetX, targetY := calculateTeleportTarget(pos, dirX, dirY, maxDist)
+
+	if s.executeTeleport(caster, pos, targetX, targetY, maxDist) {
+		s.spawnTeleportEffects(caster, pos.X, pos.Y)
 	}
-
-	// Calculate target position
-	targetX := pos.X + dirX*maxDist
-	targetY := pos.Y + dirY*maxDist
-
-	// Validate landing position (check collision)
-	if s.isPositionWalkable(targetX, targetY, caster) {
-		// Teleport successful
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"from_x":    pos.X,
-				"from_y":    pos.Y,
-				"to_x":      targetX,
-				"to_y":      targetY,
-				"distance":  maxDist,
-			}).Info("Teleport successful")
-		}
-		pos.X = targetX
-		pos.Y = targetY
-
-		// Spawn teleport visual effect at departure
-		if s.particleSys != nil {
-			config := particles.Config{
-				Type:     particles.ParticleMagic,
-				Count:    30,
-				GenreID:  "fantasy",
-				Seed:     int64(caster.ID),
-				Duration: 0.5,
-				SpreadX:  80.0,
-				SpreadY:  80.0,
-				Gravity:  0.0,
-				MinSize:  4.0,
-				MaxSize:  8.0,
-				Custom:   map[string]interface{}{"color": "teleport"},
-			}
-			s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
-		}
-
-		// Play teleport sound
-		if s.audioMgr != nil {
-			_ = s.audioMgr.PlaySFX("magic", int64(caster.ID))
-		}
-	} else {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"target_x":  targetX,
-				"target_y":  targetY,
-			}).Warn("Teleport failed: position not walkable")
-		}
-	}
-	// If position not walkable, teleport fails (mana still consumed as per executeCast)
 }
 
 // castRevealSpell reveals fog of war in an area around the caster.

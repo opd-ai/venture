@@ -258,6 +258,74 @@ func (cg *CombinedGenerator) GetCache() *Cache {
 	return cg.cache
 }
 
+// batchJob represents a sprite generation job in the batch processing pipeline.
+type batchJob struct {
+	index  int
+	config Config
+}
+
+// batchResult represents the result of a sprite generation job.
+type batchResult struct {
+	index  int
+	sprite *ebiten.Image
+	err    error
+}
+
+// generateSequential generates sprites sequentially without concurrency.
+func (cg *CombinedGenerator) generateSequential(configs []Config, onError func(int, error), onProgress func(int, int)) []*ebiten.Image {
+	results := make([]*ebiten.Image, len(configs))
+	for i, config := range configs {
+		sprite, err := cg.Generate(config)
+		if err != nil {
+			if onError != nil {
+				onError(i, err)
+			}
+			continue
+		}
+		results[i] = sprite
+		if onProgress != nil {
+			onProgress(i+1, len(configs))
+		}
+	}
+	return results
+}
+
+// startWorkers starts worker goroutines for parallel sprite generation.
+func (cg *CombinedGenerator) startWorkers(workers int, jobs <-chan batchJob, results chan<- batchResult, wg *sync.WaitGroup) {
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				sprite, err := cg.Generate(job.config)
+				results <- batchResult{
+					index:  job.index,
+					sprite: sprite,
+					err:    err,
+				}
+			}
+		}()
+	}
+}
+
+// collectResults collects sprite generation results and handles errors and progress.
+func collectResults(resultsChan <-chan batchResult, results []*ebiten.Image, onError func(int, error), onProgress func(int, int), total int) {
+	completed := 0
+	for res := range resultsChan {
+		if res.err != nil {
+			if onError != nil {
+				onError(res.index, res.err)
+			}
+			continue
+		}
+		results[res.index] = res.sprite
+		completed++
+		if onProgress != nil {
+			onProgress(completed, total)
+		}
+	}
+}
+
 // BatchGenerate generates multiple sprites using caching and pooling.
 func (cg *CombinedGenerator) BatchGenerate(batchConfig BatchConfig) ([]*ebiten.Image, error) {
 	if len(batchConfig.Configs) == 0 {
@@ -267,90 +335,33 @@ func (cg *CombinedGenerator) BatchGenerate(batchConfig BatchConfig) ([]*ebiten.I
 	results := make([]*ebiten.Image, len(batchConfig.Configs))
 
 	if !batchConfig.Concurrent || batchConfig.MaxWorkers <= 1 {
-		// Sequential generation
-		for i, config := range batchConfig.Configs {
-			sprite, err := cg.Generate(config)
-			if err != nil {
-				if batchConfig.OnError != nil {
-					batchConfig.OnError(i, err)
-				}
-				continue
-			}
-			results[i] = sprite
-
-			if batchConfig.OnProgress != nil {
-				batchConfig.OnProgress(i+1, len(batchConfig.Configs))
-			}
-		}
-		return results, nil
+		return cg.generateSequential(batchConfig.Configs, batchConfig.OnError, batchConfig.OnProgress), nil
 	}
 
-	// Parallel generation
 	workers := batchConfig.MaxWorkers
 	if workers <= 0 {
 		workers = 4
 	}
 
-	type job struct {
-		index  int
-		config Config
-	}
+	jobs := make(chan batchJob, len(batchConfig.Configs))
+	resultsChan := make(chan batchResult, len(batchConfig.Configs))
 
-	type result struct {
-		index  int
-		sprite *ebiten.Image
-		err    error
-	}
-
-	jobs := make(chan job, len(batchConfig.Configs))
-	resultsChan := make(chan result, len(batchConfig.Configs))
-
-	// Start workers
 	var wg sync.WaitGroup
-	for w := 0; w < workers; w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for job := range jobs {
-				sprite, err := cg.Generate(job.config)
-				resultsChan <- result{
-					index:  job.index,
-					sprite: sprite,
-					err:    err,
-				}
-			}
-		}()
-	}
+	cg.startWorkers(workers, jobs, resultsChan, &wg)
 
-	// Send jobs
 	go func() {
 		for i, config := range batchConfig.Configs {
-			jobs <- job{index: i, config: config}
+			jobs <- batchJob{index: i, config: config}
 		}
 		close(jobs)
 	}()
 
-	// Collect results
 	go func() {
 		wg.Wait()
 		close(resultsChan)
 	}()
 
-	completed := 0
-	for res := range resultsChan {
-		if res.err != nil {
-			if batchConfig.OnError != nil {
-				batchConfig.OnError(res.index, res.err)
-			}
-			continue
-		}
-		results[res.index] = res.sprite
-		completed++
-
-		if batchConfig.OnProgress != nil {
-			batchConfig.OnProgress(completed, len(batchConfig.Configs))
-		}
-	}
+	collectResults(resultsChan, results, batchConfig.OnError, batchConfig.OnProgress, len(batchConfig.Configs))
 
 	return results, nil
 }

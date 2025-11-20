@@ -403,87 +403,97 @@ func (w *World) GetEntities() []*Entity {
 	return w.cachedEntityList
 }
 
-// GetEntitiesWith returns all entities that have all of the specified component types.
-// Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
-// Fast-path optimization for common queries eliminates all allocations on cache hits.
-func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
-	// Fast-path for most common queries (zero allocations on cache hit)
-	var key string
+// generateQueryKey generates a cache key for the component type query.
+// Uses fast-path optimization for common queries to eliminate allocations.
+func (w *World) generateQueryKey(componentTypes []string) string {
 	switch len(componentTypes) {
 	case 1:
 		if componentTypes[0] == "position" {
-			key = w.keyPosition
+			return w.keyPosition
 		}
 	case 2:
 		if componentTypes[0] == "position" {
 			switch componentTypes[1] {
 			case "velocity":
-				key = w.keyPositionVelocity
+				return w.keyPositionVelocity
 			case "health":
-				key = w.keyPositionHealth
+				return w.keyPositionHealth
 			case "collider":
-				key = w.keyPositionCollider
+				return w.keyPositionCollider
 			}
 		}
 	}
 
-	// If not a common pattern, generate key using pooled builder
-	if key == "" {
-		builder := w.builderPool.Get().(*strings.Builder)
-		builder.Reset()
-		for i, compType := range componentTypes {
-			if i > 0 {
-				builder.WriteByte('|')
-			}
-			builder.WriteString(compType)
+	builder := w.builderPool.Get().(*strings.Builder)
+	builder.Reset()
+	for i, compType := range componentTypes {
+		if i > 0 {
+			builder.WriteByte('|')
 		}
-		key = builder.String()
-		w.builderPool.Put(builder)
+		builder.WriteString(compType)
+	}
+	key := builder.String()
+	w.builderPool.Put(builder)
+	return key
+}
+
+// processPendingEntityAdditions adds pending entities to the world.
+// This ensures newly created entities are included in queries.
+func (w *World) processPendingEntityAdditions() {
+	if len(w.entitiesToAdd) == 0 {
+		return
+	}
+	for _, entity := range w.entitiesToAdd {
+		w.entities[entity.ID] = entity
+	}
+	w.entitiesToAdd = w.entitiesToAdd[:0]
+	w.entityListDirty = true
+	w.invalidateQueryCache()
+}
+
+// filterEntitiesByComponents filters entities that have all specified components.
+// Uses and updates the internal query buffer for efficiency.
+func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
+	w.queryBuffer = w.queryBuffer[:0]
+	if cap(w.queryBuffer) < len(w.entities) {
+		w.queryBuffer = make([]*Entity, 0, len(w.entities))
 	}
 
-	// Process pending entity additions before querying
-	// This ensures newly created entities are included in queries
-	if len(w.entitiesToAdd) > 0 {
-		for _, entity := range w.entitiesToAdd {
-			w.entities[entity.ID] = entity
+	for _, entity := range w.entities {
+		if entityHasAllComponents(entity, componentTypes) {
+			w.queryBuffer = append(w.queryBuffer, entity)
 		}
-		w.entitiesToAdd = w.entitiesToAdd[:0]
-		w.entityListDirty = true
-		w.invalidateQueryCache()
 	}
 
-	// Check if cache is valid
+	result := make([]*Entity, len(w.queryBuffer))
+	copy(result, w.queryBuffer)
+	return result
+}
+
+// entityHasAllComponents checks if an entity has all specified component types.
+func entityHasAllComponents(entity *Entity, componentTypes []string) bool {
+	for _, compType := range componentTypes {
+		if !entity.HasComponent(compType) {
+			return false
+		}
+	}
+	return true
+}
+
+// GetEntitiesWith returns all entities that have all of the specified component types.
+// Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
+// Fast-path optimization for common queries eliminates all allocations on cache hits.
+func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
+	key := w.generateQueryKey(componentTypes)
+	w.processPendingEntityAdditions()
+
 	if !w.queryCacheDirty[key] {
 		if cached, exists := w.queryCache[key]; exists {
 			return cached
 		}
 	}
 
-	// Cache miss or dirty - rebuild query result
-	// Reuse buffer, reset length to 0
-	w.queryBuffer = w.queryBuffer[:0]
-
-	// Ensure capacity
-	if cap(w.queryBuffer) < len(w.entities) {
-		w.queryBuffer = make([]*Entity, 0, len(w.entities))
-	}
-
-	for _, entity := range w.entities {
-		hasAll := true
-		for _, compType := range componentTypes {
-			if !entity.HasComponent(compType) {
-				hasAll = false
-				break
-			}
-		}
-		if hasAll {
-			w.queryBuffer = append(w.queryBuffer, entity)
-		}
-	}
-
-	// Cache the result (make a copy to avoid queryBuffer reuse issues)
-	result := make([]*Entity, len(w.queryBuffer))
-	copy(result, w.queryBuffer)
+	result := w.filterEntitiesByComponents(componentTypes)
 	w.queryCache[key] = result
 	w.queryCacheDirty[key] = false
 

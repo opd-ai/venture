@@ -304,19 +304,17 @@ func (sh *SpatialHash) GetNeighbors(particles []PhysicsParticle, x, y, radius fl
 	return neighbors
 }
 
-// UpdateSPH updates fluid particles using SPH algorithm.
-func UpdateSPH(particles []PhysicsParticle, config SPHConfig, deltaTime float64) {
-	if len(particles) == 0 {
-		return
-	}
-
-	// Build spatial hash for efficient neighbor queries
-	hash := NewSpatialHash(config.SmoothingRadius, -1000, -1000, 1000, 1000)
+// buildSpatialHashForSPH creates a spatial hash for efficient neighbor queries.
+func buildSpatialHashForSPH(particles []PhysicsParticle, smoothingRadius float64) *SpatialHash {
+	hash := NewSpatialHash(smoothingRadius, -1000, -1000, 1000, 1000)
 	for i := range particles {
 		hash.Insert(i, particles[i].X, particles[i].Y)
 	}
+	return hash
+}
 
-	// Compute density and pressure
+// computeDensityAndPressure calculates density and pressure for all particles.
+func computeDensityAndPressure(particles []PhysicsParticle, hash *SpatialHash, config SPHConfig) {
 	for i := range particles {
 		p := &particles[i]
 		neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.SmoothingRadius)
@@ -337,70 +335,88 @@ func UpdateSPH(particles []PhysicsParticle, config SPHConfig, deltaTime float64)
 		p.Density = density
 		p.Pressure = config.GasConstant * (density - config.RestDensity)
 	}
+}
 
-	// Compute forces
+// computePressureAndViscosityForces calculates pressure and viscosity forces for a particle.
+func computePressureAndViscosityForces(p *PhysicsParticle, particles []PhysicsParticle, neighbors []int, i int, config SPHConfig) (float64, float64, float64, float64) {
+	pressureForceX := 0.0
+	pressureForceY := 0.0
+	viscosityForceX := 0.0
+	viscosityForceY := 0.0
+
+	for _, nIdx := range neighbors {
+		if nIdx == i {
+			continue
+		}
+		n := &particles[nIdx]
+		dx := p.X - n.X
+		dy := p.Y - n.Y
+		r := math.Sqrt(dx*dx + dy*dy)
+
+		if r > 0.0001 && n.Density > 0.0001 {
+			pressureTerm := (p.Pressure + n.Pressure) / (2.0 * n.Density)
+			gradSpiky := spikyKernelGradient(r, config.SmoothingRadius)
+			pressureForceX -= config.ParticleMass * pressureTerm * (dx / r) * gradSpiky
+			pressureForceY -= config.ParticleMass * pressureTerm * (dy / r) * gradSpiky
+
+			viscosityTerm := config.ParticleMass / n.Density
+			lapViscosity := viscosityKernelLaplacian(r, config.SmoothingRadius)
+			viscosityForceX += viscosityTerm * (n.VX - p.VX) * lapViscosity
+			viscosityForceY += viscosityTerm * (n.VY - p.VY) * lapViscosity
+		}
+	}
+
+	return pressureForceX, pressureForceY, viscosityForceX, viscosityForceY
+}
+
+// applySurfaceTension applies surface tension forces to a particle.
+func applySurfaceTension(p *PhysicsParticle, particles []PhysicsParticle, neighbors []int, i int, config SPHConfig, deltaTime float64) {
+	if config.SurfaceTension <= 0 || len(neighbors) <= 1 {
+		return
+	}
+
+	cohesionX := 0.0
+	cohesionY := 0.0
+	for _, nIdx := range neighbors {
+		if nIdx == i {
+			continue
+		}
+		n := &particles[nIdx]
+		dx := n.X - p.X
+		dy := n.Y - p.Y
+		r := math.Sqrt(dx*dx + dy*dy)
+		if r > 0.0001 && r < config.SmoothingRadius {
+			cohesionX += dx / r
+			cohesionY += dy / r
+		}
+	}
+	p.VX += cohesionX * config.SurfaceTension * deltaTime
+	p.VY += cohesionY * config.SurfaceTension * deltaTime
+}
+
+// UpdateSPH updates fluid particles using SPH algorithm.
+func UpdateSPH(particles []PhysicsParticle, config SPHConfig, deltaTime float64) {
+	if len(particles) == 0 {
+		return
+	}
+
+	hash := buildSpatialHashForSPH(particles, config.SmoothingRadius)
+	computeDensityAndPressure(particles, hash, config)
+
 	for i := range particles {
 		p := &particles[i]
 		neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.SmoothingRadius)
 
-		pressureForceX := 0.0
-		pressureForceY := 0.0
-		viscosityForceX := 0.0
-		viscosityForceY := 0.0
+		pressureForceX, pressureForceY, viscosityForceX, viscosityForceY := computePressureAndViscosityForces(p, particles, neighbors, i, config)
 
-		for _, nIdx := range neighbors {
-			if nIdx == i {
-				continue
-			}
-			n := &particles[nIdx]
-			dx := p.X - n.X
-			dy := p.Y - n.Y
-			r := math.Sqrt(dx*dx + dy*dy)
-
-			if r > 0.0001 && n.Density > 0.0001 {
-				// Pressure force (using Spiky kernel gradient)
-				pressureTerm := (p.Pressure + n.Pressure) / (2.0 * n.Density)
-				gradSpiky := spikyKernelGradient(r, config.SmoothingRadius)
-				pressureForceX -= config.ParticleMass * pressureTerm * (dx / r) * gradSpiky
-				pressureForceY -= config.ParticleMass * pressureTerm * (dy / r) * gradSpiky
-
-				// Viscosity force (using viscosity kernel Laplacian)
-				viscosityTerm := config.ParticleMass / n.Density
-				lapViscosity := viscosityKernelLaplacian(r, config.SmoothingRadius)
-				viscosityForceX += viscosityTerm * (n.VX - p.VX) * lapViscosity
-				viscosityForceY += viscosityTerm * (n.VY - p.VY) * lapViscosity
-			}
-		}
-
-		// Apply forces
 		if p.Density > 0 {
 			accelX := pressureForceX/p.Density + config.Viscosity*viscosityForceX
 			accelY := pressureForceY/p.Density + config.Viscosity*viscosityForceY
-
 			p.VX += accelX * deltaTime
 			p.VY += accelY * deltaTime
 		}
 
-		// Surface tension (cohesion)
-		if config.SurfaceTension > 0 && len(neighbors) > 1 {
-			cohesionX := 0.0
-			cohesionY := 0.0
-			for _, nIdx := range neighbors {
-				if nIdx == i {
-					continue
-				}
-				n := &particles[nIdx]
-				dx := n.X - p.X
-				dy := n.Y - p.Y
-				r := math.Sqrt(dx*dx + dy*dy)
-				if r > 0.0001 && r < config.SmoothingRadius {
-					cohesionX += dx / r
-					cohesionY += dy / r
-				}
-			}
-			p.VX += cohesionX * config.SurfaceTension * deltaTime
-			p.VY += cohesionY * config.SurfaceTension * deltaTime
-		}
+		applySurfaceTension(p, particles, neighbors, i, config, deltaTime)
 	}
 }
 

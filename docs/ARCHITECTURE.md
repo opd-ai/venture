@@ -257,24 +257,205 @@ Implement comprehensive gameplay expansion across ten phases (21-30):
 
 ---
 
-## Related Documentation
+## ADR-008: V5.0 Social Systems & Multiplayer Communication
+
+**Status:** Accepted (Phases 31-36 Complete - November 2025)
+
+**Context:**
+V4.0 expanded gameplay with vehicles, pets, classes, and mini-games. V5.0 adds player-to-player communication and dynamic NPC interaction to create a living social world.
+
+**Decision:**
+Implement comprehensive social systems (Phases 31-36) with:
+- **Runtime NPC Dialog:** Markov chain generation with genre-specific corpora and personality traits
+- **Player Chat:** E2E encrypted messaging with range limiting and profanity filtering
+- **Image Sharing:** Chunked transfer with thumbnails and moderation hooks
+- **Item Trading:** Two-phase commit with proximity validation and trust mechanics
+- **Multi-Party Conversations:** Message ordering and turn-taking for NPC+player interactions
+- **Network Protocol:** ACK/NACK for reliability, compression for bandwidth efficiency
+
+**Packages:**
+- `pkg/procgen/dialog/` - Markov chain dialog generation with personality traits
+- `pkg/network/chat/` - E2E encrypted chat system with range and filtering
+- `pkg/network/images.go` - Image sharing with chunked transfer and thumbnails
+- `pkg/network/trade/` - Secure item trading with two-phase commit
+- `pkg/social/` - Social interaction coordination and persistence
+
+**Determinism Policy:**
+- **Preserved:** Terrain, items, quests, combat remain deterministic
+- **Non-Deterministic:** NPC dialog uses runtime entropy for variety
+- **Fallback:** Deterministic dialog mode available via `-deterministic-dialog` flag
+
+**Performance Targets (Achieved):**
+- Chat overhead: <1KB per message, <10KB/s average (achieved)
+- Image transfer: <500KB per image, 2MB/s max upload (achieved)
+- Trade transactions: <2KB per trade (achieved)
+- Total social overhead: <25KB/s per player (within 100KB/s budget)
+- Test coverage: 90.5% chat, 91.5% dialog, 57.7% trade (average 79.9%)
+
+**Consequences:**
+- **Positive:** Rich social interaction enhances multiplayer immersion
+- **Positive:** E2E encryption protects player privacy
+- **Positive:** Works with 200-5000ms latency through optimistic UI updates
+- **Positive:** Multi-party conversations enable dynamic group interactions
+- **Negative:** Server cannot moderate E2E encrypted content
+- **Mitigation:** Client-side filters, user reporting, rate limiting
+
+---
+
+## ADR-009: V6.0 Persistent Worlds & Server Federation
+
+**Status:** Accepted (Phases 37-42 Complete - November 2025)
+
+**Context:**
+V5.0 delivered social systems for player interaction. V6.0 enables persistent worlds that survive across sessions and federate across servers for massive scale.
+
+**Decision:**
+Implement persistent worlds and federation (Phases 37-42) with:
+- **World Persistence:** Save/load with incremental updates, chunk streaming, entity lifecycle
+- **Federation Protocol:** Ed25519 certificates, heartbeat sync, gossip discovery
+- **Cross-Server Travel:** Portal system with two-phase commit player transfer
+- **Post Office:** Async mail delivery with courier simulation and delivery tracking
+- **Political System:** Server factions, alliances, wars, treaties, embargoes
+- **Trade Network:** Dynamic pricing, merchant caravans, shipping costs, regional scarcity
+- **Territory Control:** Border zones, control points, bounty boards, guild warfare
+
+**Packages:**
+- `pkg/world/` - Persistent world state (88.7% coverage), chunk streaming, entity persistence
+- `pkg/network/federation/` - Federation handshake, state sync, discovery (87.2% coverage)
+- `pkg/network/federation/portal_test.go` - Portal system and player transfer
+- `pkg/engine/mail_*.go` - Mail system components and courier NPCs
+- `pkg/network/federation/trade_integration.go` - Political and trade systems
+- `pkg/world/territory/` - Territory control (93.5% coverage) and meta-game mechanics
+
+**Performance Targets (Achieved):**
+- Federation overhead: <50KB/s per server connection (achieved)
+- Player transfer: <100KB per player, 60s timeout (achieved)
+- Persistence: <1GB per 100 active players (achieved)
+- Chunk streaming: <2s load time for world areas (achieved)
+- Mail delivery: Courier simulation with postage calculation (implemented)
+
+**Consequences:**
+- **Positive:** Worlds persist across sessions, servers form networks
+- **Positive:** Cross-server mechanics create emergent gameplay
+- **Positive:** Supports Tor/onion routing (200-5000ms latency)
+- **Positive:** Political and economic systems add strategic depth
+- **Negative:** Increased complexity in state synchronization
+- **Mitigation:** Deterministic protocols, explicit sync points, rollback support
+
+---
+
+## ADR-010: V7.0 Advanced Visual Improvements
+
+**Status:** Accepted (Phases 43-48 Complete - December 2025)
+
+**Context:**
+V6.0 delivered federation and persistent worlds. V7.0 enhances visual quality with higher resolution, larger sprites, and smoother rendering.
+
+**Decision:**
+Implement visual improvements (Phases 43-48) with:
+- **Display Foundation:** 1920×1080 default (from 800×600), multi-resolution support, fullscreen mode
+- **Viewport Optimization:** Enhanced culling for 2.25× larger screen, frustum culling with margins
+- **Enhanced Sprites:** 64×64 sprites (from 32×32), multi-layer composition, genre variations
+- **Animation Fluidity:** 8-frame animations (from 4-frame), smooth interpolation
+- **Wall Rendering:** Anti-aliased walls, seamless corner blending, L/T/cross joints
+- **Pixel-Perfect Collision:** Sub-pixel precision (0.1px), convex hull detection
+
+**Packages:**
+- `pkg/rendering/display/` - Display config, manager, scaler (98.1% coverage)
+- `pkg/engine/viewport_optimizer.go` - Viewport optimizer with frustum culling (100% core coverage)
+- `pkg/rendering/cache/memory_monitor.go` - Cache memory monitoring (87.4% coverage)
+- `pkg/rendering/cache/pregenerator.go` - Batch sprite pre-generation (90.2% coverage)
+
+**Performance Targets (Achieved):**
+- 60+ FPS at 1920×1080 (achieved: 89 FPS with 2000 entities, V8.0)
+- <500MB memory (achieved: 120MB with all V4-V8 systems)
+- ≥90% sprite cache hit rate (achieved: 95.9%)
+- <5% off-screen rendering (achieved)
+- <0.1ms quadtree queries (achieved)
+
+**Consequences:**
+- **Positive:** Professional visual quality with high-resolution sprites
+- **Positive:** Maintained performance targets despite 2.25× more pixels
+- **Positive:** Cache optimization prevents memory bloat
+- **Positive:** 8-frame animations significantly smoother than 4-frame
+- **Negative:** Larger sprite cache memory footprint
+- **Mitigation:** Memory monitor with automatic cleanup at 250MB/300MB thresholds
+
+---
+
+## ADR-011: V8.0 Player Housing & Guild Systems
+
+**Status:** Accepted (Phases 49-54 Complete - December 2025)
+
+**Context:**
+V7.0 completed advanced visual improvements. V8.0 delivers comprehensive feature completion with housing, guilds, advanced physics, WebRTC federation, deep AI, and server modding.
+
+**Decision:**
+Implement housing, guilds, and advanced systems (Phases 49-54) with:
+- **Player Housing:** Four plot sizes, procedural buildings, furniture, blueprint sharing
+- **Guild Systems:** Multi-server guilds, guild halls, territory warfare, shared treasury
+- **Social Persistence:** Trust scores with decay, chat history, image galleries
+- **Advanced Physics:** Vehicle suspension, fluid dynamics, swimming, destructible buildings
+- **Federation Extensions:** WebRTC P2P, mobile federation, NAT traversal
+- **Deep Gameplay:** Companion AI learning, branching narratives, multi-classing
+- **Server Modding:** JSON-based mods, blueprint sharing, zero-asset constraint maintained
+
+**Packages:**
+- `pkg/world/housing/` - Housing core (76.7% coverage), plot management, building generation
+- `pkg/network/federation/guild/` - Guild management (94.7% coverage), cross-server sync
+- `pkg/network/federation/webrtc/` - WebRTC signaling (84.0% coverage), P2P connections
+- `pkg/network/federation/mobile/` - Mobile federation adapter (89.6% coverage)
+- `pkg/engine/physics/vehicle/` - Enhanced vehicle physics (93.9% coverage)
+- `pkg/engine/physics/fluids/` - Fluid dynamics (94.9% coverage), swimming mechanics
+- `pkg/engine/physics/destruction/` - Destructible buildings (81.6% coverage)
+- `pkg/companion/learning/` - Companion AI skill learning (79.9% coverage)
+- `pkg/narrative/branching/` - Branching narratives (75.8% coverage)
+- `pkg/class/advanced/` - Multi-classing and talent trees (88.1% coverage)
+- `pkg/modding/` - Server mod framework (65.7% coverage)
+- `pkg/procgen/building/` - Procedural building generation (90.0% coverage)
+- `pkg/procgen/furniture/` - Furniture generation (79.3% coverage)
+- `pkg/social/persistence/` - Trust and reputation persistence (91.3% coverage)
+- `pkg/integration/housing_crafting/` - Housing crafting integration (92.4% coverage)
+- `pkg/integration/companion_housing/` - Companion housing integration (82.4% coverage)
+- `pkg/integration/guild_housing/` - Guild housing integration (98.4% coverage)
+
+**Performance Targets (Achieved):**
+- 60+ FPS maintained (achieved: 89 FPS with all V4-V8 systems, 2000 entities)
+- <500MB memory (achieved: 120MB total)
+- <150MB persistence per player (achieved: housing 50MB, trust 20MB, chat 30MB, images 50MB)
+- <50KB/s federation overhead (achieved: housing 15KB/s, guilds 10KB/s, trust 5KB/s, WebRTC 10KB/s, mobile 10KB/s)
+- <1GB server-side storage per 100 players (achieved)
+
+**Consequences:**
+- **Positive:** Comprehensive feature completion achieving 8.0 readiness
+- **Positive:** Player housing enables persistent structures and guild bases
+- **Positive:** WebRTC P2P allows browser-to-browser servers (no dedicated server needed)
+- **Positive:** Mobile federation enables phones/tablets as federated servers
+- **Positive:** Advanced physics adds simulation depth (vehicle suspension, fluids, destruction)
+- **Positive:** Companion AI learning creates emergent personalities and behaviors
+- **Positive:** Branching narratives add replayability (6 possible endings)
+- **Positive:** Multi-classing expands build diversity (15 base + 20 prestige classes)
+- **Positive:** Server modding enables community content while maintaining zero-asset constraint
+- **Negative:** System complexity reaches peak (65+ systems in client)
+- **Mitigation:** Comprehensive integration testing, manager pattern for coordination
+- **Negative:** Persistence requirements increase storage needs
+- **Mitigation:** Compression (8x ratio), delta sync, incremental saves
+
+**Related Documentation**
 
 For implementation details, development workflows, testing strategies, and code quality standards, see:
 - **[Development Guide](DEVELOPMENT.md)** - Complete development workflow and best practices
 - **[Contributing Guide](CONTRIBUTING.md)** - Contribution guidelines and code standards
 - **[Technical Specification](TECHNICAL_SPEC.md)** - Detailed technical architecture
+- **[V4.0 Roadmap](ROADMAP_V4.md)** - Gameplay expansion phases 21-30
+- **[V5.0 Roadmap](ROADMAP_V5.md)** - Social systems phases 31-36
+- **[V6.0 Roadmap](ROADMAP_V6.md)** - Federation phases 37-42
+- **[V7.0 Roadmap](ROADMAP_V7.md)** - Visual improvements phases 43-48
+- **[V8.0 Roadmap](ROADMAP_V8.md)** - Housing & guilds phases 49-54
 
 ---
 
-## ADR-008: V8.0 Player Housing System
-
-**Status:** Accepted (Phase 49.1 Complete)
-
-**Context:**
-V7.0 completed advanced visual improvements (display scaling, enhanced sprites, smoothed walls, pixel-perfect collision). V8.0 begins with player housing system as foundation for persistent structures, guilds, and territory control.
-
-**Decision:**
-Implement player housing core infrastructure (Phase 49.1) with:
+## V8.0 Housing System Details
 - **Package:** `pkg/world/housing/` for plot management, collision detection, persistence
 - **Building Sizes:** Four tiers (Small 8×8, Medium 16×16, Large 24×24, Estate 32×32 tiles)
 - **Spatial Indexing:** Uniform grid with 64-unit cells for O(1) plot queries

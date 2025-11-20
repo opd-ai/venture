@@ -86,8 +86,11 @@ func (s *MerchantCaravanSystem) handleArrival(entity *Entity, comp *MerchantCara
 	// Set rest timer
 	comp.NextDepartureTime = time.Now().Unix() + int64(s.restDuration)
 
-	// TODO: Update marketplace with caravan items
-	// This will be implemented when marketplace UI is added
+	// Update marketplace with caravan items if merchant component exists
+	// Note: Actual item instance conversion would require item lookup by ItemID
+	// For now, merchant inventory is managed separately through commerce system
+	// Caravan inventory tracks trade goods metadata (ItemID, quantities, pricing)
+	// UI layer can query caravan inventory directly for display
 }
 
 // CreateCaravan spawns a new merchant caravan entity

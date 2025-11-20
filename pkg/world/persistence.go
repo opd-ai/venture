@@ -74,14 +74,16 @@ func NewWorldPersistence(savePath string) *WorldPersistence {
 	}
 }
 
-// Update handles auto-save
-func (w *WorldPersistence) Update(deltaTime float64) {
+// Update handles auto-save timer tracking
+// Returns true if auto-save should be triggered by caller
+func (w *WorldPersistence) Update(deltaTime float64) bool {
 	w.timeSinceLastSave += deltaTime
 
 	if w.timeSinceLastSave >= w.AutoSaveInterval {
 		w.timeSinceLastSave = 0
-		// TODO: Trigger auto-save
+		return true // Signal that auto-save is due
 	}
+	return false
 }
 
 // SaveWorld saves the world state to disk with backup rotation and incremental saves

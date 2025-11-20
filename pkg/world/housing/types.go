@@ -169,3 +169,15 @@ func generatePlotID() string {
 	plotIDCounter++
 	return "plot_" + string(rune('0'+plotIDCounter%10)) + string(rune('0'+(plotIDCounter/10)%10)) + string(rune('0'+(plotIDCounter/100)%10))
 }
+
+// House represents a player-owned building with interior and exterior data.
+// This is a higher-level abstraction over Plot that includes building-specific details.
+type House struct {
+	ID      string // Unique identifier (matches Plot.ID)
+	OwnerID string // Player who owns this house
+	Plot    *Plot  // Associated plot in the world
+	// Additional fields for building details, rooms, furniture would go here
+}
+
+// Dimensions is a helper for the integration tests.
+type Dimensions = Vector2

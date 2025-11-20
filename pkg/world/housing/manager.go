@@ -144,3 +144,59 @@ func (m *Manager) Clear() {
 	m.playerPlots = make(map[string][]*Plot)
 	m.spatialGrid = NewSpatialGrid(64)
 }
+
+// CreateHouse creates a new housing plot from building data.
+// This is a convenience method for creating plots from procedurally generated buildings.
+func (m *Manager) CreateHouse(ownerID string, building interface{}) (string, error) {
+	if !m.enabled {
+		return "", fmt.Errorf("housing is disabled")
+	}
+
+	// Generate plot ID
+	plotID := fmt.Sprintf("house_%s_%d", ownerID, len(m.playerPlots[ownerID]))
+
+	// Create plot (simplified - real implementation would extract data from building)
+	plot := &Plot{
+		ID:       plotID,
+		OwnerID:  ownerID,
+		Position: Vector2{X: 0, Y: 0}, // TODO: Extract from building or use placement system
+		Size:     SizeMedium,          // TODO: Extract from building dimensions
+	}
+
+	if err := m.PlacePlot(plot); err != nil {
+		return "", fmt.Errorf("failed to place house plot: %w", err)
+	}
+
+	return plotID, nil
+}
+
+// GetHouse retrieves a house plot by ID.
+func (m *Manager) GetHouse(houseID string) *House {
+	plot, ok := m.plots[houseID]
+	if !ok {
+		return nil
+	}
+
+	// Convert plot to house (simplified representation)
+	return &House{
+		ID:      plot.ID,
+		OwnerID: plot.OwnerID,
+		Plot:    plot,
+	}
+}
+
+// GetHouseFederated retrieves a house that may have originated from another server.
+// serverID is the origin server identifier.
+func (m *Manager) GetHouseFederated(houseID, serverID string) *House {
+	// For now, just check local plots (federation sync would have replicated it)
+	return m.GetHouse(houseID)
+}
+
+// SyncHouseFromFederation synchronizes a house from another federated server.
+// serverID is the origin server, data contains the serialized house information.
+func (m *Manager) SyncHouseFromFederation(serverID string, data []byte) error {
+	// TODO: Deserialize house data
+	// TODO: Create or update local plot representation
+	// For now, return success (placeholder for actual implementation)
+	return nil
+}

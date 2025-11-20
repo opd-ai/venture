@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"fmt"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
 // GalleryUI represents an image gallery viewer interface.
@@ -22,6 +25,12 @@ type GalleryUI struct {
 	BackgroundColor color.Color
 	TextColor       color.Color
 	HighlightColor  color.Color
+
+	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Integration (Phase 49.4)
+	// Gap: UI defined but gallery manager never connected, no rendering implementation
+	// Fix: Added gallery reference for image storage and viewing
+	// Roadmap: ROADMAP_V8.md Phase 49.4
+	gallery *persistence.ImageGallery
 }
 
 // NewGalleryUI creates a new gallery UI instance.
@@ -84,7 +93,30 @@ func (g *GalleryUI) Update() bool {
 	if !g.Visible {
 		return false
 	}
-	// Minimal stub implementation - will be enhanced in Phase 49.4
+
+	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Input Handling
+	// Gap: No input handling for image navigation
+	// Fix: Added keyboard controls for browsing gallery images
+	// Roadmap: ROADMAP_V8.md Phase 49.4
+	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+		g.Hide()
+		return true
+	}
+
+	// Update total images from gallery
+	if g.gallery != nil {
+		g.TotalImages = g.gallery.GetImageCount()
+	}
+
+	// Navigate images
+	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		g.NextImage()
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		g.PreviousImage()
+	}
+
+	// Consume input when UI is visible
 	return true
 }
 
@@ -93,10 +125,58 @@ func (g *GalleryUI) Draw(screen *ebiten.Image) {
 	if !g.Visible || screen == nil {
 		return
 	}
-	// Minimal stub implementation - will be enhanced in Phase 49.4
+
+	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Rendering
+	// Gap: No visual representation of image gallery
+	// Fix: Added comprehensive UI rendering with image metadata and navigation controls
+	// Roadmap: ROADMAP_V8.md Phase 49.4
+
+	// Import required for rendering
+	// Note: Actual image display requires decoding base64 data and converting to ebiten.Image
+	// For MVP, we show metadata; full image rendering can be added in enhancement phase
+
+	ebitenutil.DebugPrintAt(screen, "Image Gallery", g.X+10, g.Y+10)
+
+	if g.gallery != nil {
+		// Show image count
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Images: %d / %d", g.SelectedIndex+1, g.TotalImages), g.X+10, g.Y+40)
+
+		// Get current image metadata
+		images := g.gallery.GetAllImages()
+		if g.SelectedIndex >= 0 && g.SelectedIndex < len(images) {
+			img := images[g.SelectedIndex]
+
+			// Display image metadata
+			metadataY := g.Y + 70
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Title: %s", img.Title), g.X+10, metadataY)
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Format: %s", img.Format), g.X+10, metadataY+20)
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Size: %dx%d (%d bytes)", img.Width, img.Height, img.SizeBytes), g.X+10, metadataY+40)
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Date: %s", img.Timestamp.Format("2006-01-02 15:04")), g.X+10, metadataY+60)
+
+			if len(img.Tags) > 0 {
+				ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Tags: %v", img.Tags), g.X+10, metadataY+80)
+			}
+		}
+	} else {
+		ebitenutil.DebugPrintAt(screen, "No gallery connected", g.X+10, g.Y+40)
+	}
+
+	// Draw controls
+	controlsY := g.Y + g.Height - 30
+	ebitenutil.DebugPrintAt(screen, "ESC: Close | Left/Right or A/D: Navigate", g.X+10, controlsY)
 }
 
 // SetGallery sets the image gallery reference.
 func (g *GalleryUI) SetGallery(gallery interface{}) {
-	// Minimal stub implementation - will be enhanced in Phase 49.4
+	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Manager Wiring
+	// Gap: Gallery passed but never stored or used
+	// Fix: Type-assert and store gallery reference for image viewing
+	// Roadmap: ROADMAP_V8.md Phase 49.4
+	if ig, ok := gallery.(*persistence.ImageGallery); ok {
+		g.gallery = ig
+		g.TotalImages = ig.GetImageCount()
+		if g.TotalImages > 0 {
+			g.SelectedIndex = 0
+		}
+	}
 }

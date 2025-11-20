@@ -14,7 +14,8 @@ import (
 
 func main() {
 	initializeLogging()
-	fmt.Println("=== Venture Image Gallery Test ===\n")
+	fmt.Println("=== Venture Image Gallery Test ===")
+	fmt.Println()
 
 	gallery := createGallery()
 	allImages := runBasicTests(gallery)
@@ -214,7 +215,9 @@ func cleanupTestFile(filename string) {
 }
 
 func printSummary() {
-	fmt.Println("\n=== Image Gallery Test Complete ===\n")
+	fmt.Println()
+	fmt.Println("=== Image Gallery Test Complete ===")
+	fmt.Println()
 	fmt.Println("Key Features Demonstrated:")
 	fmt.Println("  ✓ Image storage with PNG and JPEG formats")
 	fmt.Println("  ✓ Automatic deduplication via SHA256 hashing")

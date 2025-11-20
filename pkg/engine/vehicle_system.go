@@ -200,6 +200,8 @@ func (s *VehicleSystem) Mount(riderEntity, vehicleEntity *Entity) error {
 		// Create mount component if it doesn't exist
 		mountComp = &MountComponent{}
 		vehicleEntity.AddComponent(mountComp)
+		// Invalidate query cache since we added a new component
+		s.world.InvalidateQueryCache()
 	} else {
 		mountComp, ok = mComp.(*MountComponent)
 		if !ok {

@@ -441,6 +441,17 @@ func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 		w.builderPool.Put(builder)
 	}
 
+	// Process pending entity additions before querying
+	// This ensures newly created entities are included in queries
+	if len(w.entitiesToAdd) > 0 {
+		for _, entity := range w.entitiesToAdd {
+			w.entities[entity.ID] = entity
+		}
+		w.entitiesToAdd = w.entitiesToAdd[:0]
+		w.entityListDirty = true
+		w.invalidateQueryCache()
+	}
+
 	// Check if cache is valid
 	if !w.queryCacheDirty[key] {
 		if cached, exists := w.queryCache[key]; exists {
@@ -485,6 +496,12 @@ func (w *World) invalidateQueryCache() {
 	for key := range w.queryCache {
 		w.queryCacheDirty[key] = true
 	}
+}
+
+// InvalidateQueryCache marks all cached queries as dirty.
+// Called when components are added or removed from entities.
+func (w *World) InvalidateQueryCache() {
+	w.invalidateQueryCache()
 }
 
 // GetSystems returns all registered systems.

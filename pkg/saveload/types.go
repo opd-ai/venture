@@ -65,6 +65,27 @@ type PlayerState struct {
 	// Spell slots
 	Spells []SpellData `json:"spells,omitempty"`
 
+	// INTEGRATION FIX [Category D]: V8/V9 Feature Persistence
+	// Gap: Housing plots, trust scores, reputation, guild membership, owned vehicles, and companions not persisted
+	// Fix: Added persistence fields for V8.0 housing system and V9.0 integration features
+	// Roadmap: ROADMAP_V8.md (Phase 49-53) and ROADMAP_V9.md (Phase 55-56)
+
+	// Phase 49.1: Housing ownership data
+	OwnedPlots []HousingPlotData `json:"owned_plots,omitempty"`
+
+	// Phase 49.2: Trust & Reputation persistence
+	TrustScores      map[string]float64 `json:"trust_scores,omitempty"`      // PlayerID -> Trust score
+	ReputationScores map[string]int     `json:"reputation_scores,omitempty"` // Category -> Score
+
+	// Phase 50.1: Guild membership
+	GuildMembership *GuildMembershipData `json:"guild_membership,omitempty"`
+
+	// Phase 50.3: Owned vehicles
+	OwnedVehicles []VehicleData `json:"owned_vehicles,omitempty"`
+
+	// Phase 22: Companion data
+	ActiveCompanions []CompanionData `json:"active_companions,omitempty"`
+
 	// GAP-003 REPAIR: Tutorial progress persistence
 	TutorialState *TutorialStateData `json:"tutorial_state,omitempty"`
 
@@ -95,6 +116,73 @@ type AnimationStateData struct {
 
 	// Timestamp of last frame update (for timing calculations)
 	LastUpdateTime float64 `json:"last_update_time,omitempty"`
+}
+
+// INTEGRATION FIX [Category D]: V8/V9 Save Data Types
+// Gap: Type definitions missing for V8/V9 feature persistence
+// Fix: Added HousingPlotData, GuildMembershipData, VehicleData, CompanionData
+// Roadmap: ROADMAP_V8.md and ROADMAP_V9.md
+
+// HousingPlotData represents a player-owned housing plot.
+type HousingPlotData struct {
+	PlotID    string          `json:"plot_id"`
+	X         float64         `json:"x"`
+	Y         float64         `json:"y"`
+	Width     float64         `json:"width"`
+	Height    float64         `json:"height"`
+	Tier      int             `json:"tier"` // Housing tier level
+	Furniture []FurnitureData `json:"furniture,omitempty"`
+}
+
+// FurnitureData represents a furniture item in a housing plot.
+type FurnitureData struct {
+	FurnitureID string  `json:"furniture_id"`
+	Type        string  `json:"type"`
+	X           float64 `json:"x"`
+	Y           float64 `json:"y"`
+	Rotation    float64 `json:"rotation,omitempty"`
+}
+
+// GuildMembershipData represents player's guild membership.
+type GuildMembershipData struct {
+	GuildID     string    `json:"guild_id"`
+	GuildName   string    `json:"guild_name"`
+	Rank        string    `json:"rank"`
+	JoinedAt    time.Time `json:"joined_at"`
+	Permissions []string  `json:"permissions,omitempty"`
+}
+
+// VehicleData represents an owned vehicle.
+type VehicleData struct {
+	VehicleID     string  `json:"vehicle_id"`
+	Type          string  `json:"type"`
+	Name          string  `json:"name"`
+	Health        float64 `json:"health"`
+	MaxHealth     float64 `json:"max_health"`
+	Fuel          float64 `json:"fuel,omitempty"`
+	MaxFuel       float64 `json:"max_fuel,omitempty"`
+	Speed         float64 `json:"speed"`
+	Durability    int     `json:"durability"`
+	MaxDurability int     `json:"max_durability"`
+	Seed          int64   `json:"seed"`
+}
+
+// CompanionData represents a player companion.
+type CompanionData struct {
+	EntityID      uint64     `json:"entity_id"`
+	Name          string     `json:"name"`
+	Type          string     `json:"type"`
+	Level         int        `json:"level"`
+	Experience    int        `json:"experience"`
+	Health        float64    `json:"health"`
+	MaxHealth     float64    `json:"max_health"`
+	Attack        float64    `json:"attack"`
+	Defense       float64    `json:"defense"`
+	Loyalty       float64    `json:"loyalty"` // Companion loyalty (0.0-1.0)
+	Equipment     []ItemData `json:"equipment,omitempty"`
+	LearnedSkills []string   `json:"learned_skills,omitempty"`
+	Personality   string     `json:"personality,omitempty"`
+	Seed          int64      `json:"seed"`
 }
 
 // ItemData represents a serialized item for save files.
@@ -180,6 +268,20 @@ type WorldState struct {
 	// We store minimal info and rely on seed-based regeneration
 	// for most entities, only saving what's been modified
 	ModifiedEntities []ModifiedEntity `json:"modified_entities,omitempty"`
+
+	// INTEGRATION FIX [Category D]: V8/V9 World State Persistence
+	// Gap: Guild halls, territory control, global events not persisted in world state
+	// Fix: Added GuildHalls, TerritoryControl, ActiveEvents for persistent world features
+	// Roadmap: ROADMAP_V8.md (Phase 51.2) and ROADMAP_V6.md (Phase 42)
+
+	// Phase 51.2: Guild hall placements
+	GuildHalls []GuildHallData `json:"guild_halls,omitempty"`
+
+	// Phase 42: Territory control state
+	TerritoryControl map[string]string `json:"territory_control,omitempty"` // ZoneID -> GuildID
+
+	// Phase 42: Active meta-game events
+	ActiveEvents []WorldEventData `json:"active_events,omitempty"`
 }
 
 // ModifiedEntity represents an entity that has been modified from its
@@ -194,6 +296,44 @@ type ModifiedEntity struct {
 
 	// Phase 7.2: Animation state for entity
 	AnimationState *AnimationStateData `json:"animation_state,omitempty"`
+}
+
+// INTEGRATION FIX [Category D]: V8/V9 World Data Types
+// Gap: Type definitions for guild halls and world events missing
+// Fix: Added GuildHallData and WorldEventData for persistent world state
+// Roadmap: ROADMAP_V8.md (Phase 51.2) and ROADMAP_V6.md (Phase 42)
+
+// GuildHallData represents a guild hall placement in the world.
+type GuildHallData struct {
+	GuildID  string     `json:"guild_id"`
+	X        float64    `json:"x"`
+	Y        float64    `json:"y"`
+	Width    float64    `json:"width"`
+	Height   float64    `json:"height"`
+	Tier     int        `json:"tier"`
+	PlacedAt time.Time  `json:"placed_at"`
+	Rooms    []RoomData `json:"rooms,omitempty"`
+}
+
+// RoomData represents a room within a guild hall.
+type RoomData struct {
+	RoomID string  `json:"room_id"`
+	Type   string  `json:"type"`
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+	Level  int     `json:"level,omitempty"`
+}
+
+// WorldEventData represents an active meta-game event.
+type WorldEventData struct {
+	EventID      string                 `json:"event_id"`
+	Type         string                 `json:"type"`
+	StartedAt    time.Time              `json:"started_at"`
+	ExpiresAt    time.Time              `json:"expires_at"`
+	Participants []string               `json:"participants,omitempty"`
+	State        map[string]interface{} `json:"state,omitempty"`
 }
 
 // GameSettings represents game configuration that should persist.

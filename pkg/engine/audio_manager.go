@@ -301,6 +301,100 @@ func (am *AudioManager) applyVolumeToTrack(track *audio.AudioSample, volume floa
 	}
 }
 
+// INTEGRATION FIX [Category A]: AdaptiveMusicSystem Interface Implementation
+// Gap: AudioManager did not implement audio.AdaptiveMusicSystem interface required by MusicTriggerSystem
+// Fix: Added SetContext, UpdateIntensity, AddLayer, RemoveLayer, Update, GenerateTrack methods
+// Roadmap: ROADMAP_V4.md Phase 14.4 - Adaptive Music Triggers
+
+// SetContext updates the music based on gameplay context.
+func (am *AudioManager) SetContext(context audio.MusicContext) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return nil
+	}
+
+	// Convert MusicContext to context string
+	contextStr := "exploration" // Default
+	if context.Combat {
+		if context.BossNearby {
+			contextStr = "boss_battle"
+		} else {
+			contextStr = "combat"
+		}
+	} else if context.Danger > 0.7 {
+		contextStr = "danger"
+	} else if context.Location != "" {
+		contextStr = context.Location
+	}
+
+	am.currentContext = contextStr
+	am.adaptiveComposer.SetContext(contextStr)
+	return nil
+}
+
+// UpdateIntensity adjusts the intensity level (0.0-1.0).
+func (am *AudioManager) UpdateIntensity(intensity float64) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return nil
+	}
+
+	return am.adaptiveComposer.UpdateIntensity(intensity)
+}
+
+// AddLayer activates a specific music layer.
+func (am *AudioManager) AddLayer(layer audio.MusicLayer) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return nil
+	}
+
+	return am.adaptiveComposer.AddLayer(layer)
+}
+
+// RemoveLayer deactivates a specific music layer.
+func (am *AudioManager) RemoveLayer(layer audio.MusicLayer) error {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return nil
+	}
+
+	return am.adaptiveComposer.RemoveLayer(layer)
+}
+
+// Update performs smooth transitions between states (called every frame).
+func (am *AudioManager) Update(deltaTime float64) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return
+	}
+
+	am.adaptiveComposer.Update(deltaTime)
+}
+
+// GenerateTrack creates an audio sample with current settings.
+func (am *AudioManager) GenerateTrack(duration float64) *audio.AudioSample {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	if !am.useAdaptive {
+		return nil
+	}
+
+	track := am.adaptiveComposer.GenerateTrack(duration)
+	return am.applyVolumeToTrack(track, am.musicVolume)
+}
+
 // AudioManagerSystem is an ECS system that updates audio state based on game context.
 type AudioManagerSystem struct {
 	audioManager      *AudioManager

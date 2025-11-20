@@ -275,9 +275,10 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	// Gap: MusicTriggerSystem, PositionalAudioSystem, and ReverbSystem implemented but never initialized
 	// Fix: Added system initialization for adaptive music triggers, 3D positional audio, and reverb effects
 	// Roadmap: ROADMAP_V4.md Phase 14.4
-	// Note: MusicTriggerSystem requires AdaptiveMusicSystem interface, AudioManager needs to implement it
-	// For now, create without music manager integration - will be connected when interface is implemented
-	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, nil) // TODO: Pass adaptive music system when interface is ready
+	// INTEGRATION FIX [Category A]: Connected AudioManager to MusicTriggerSystem
+	// Gap: AudioManager now implements audio.AdaptiveMusicSystem interface
+	// Fix: Pass AudioManager instance to MusicTriggerSystem for context-aware music transitions
+	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, sys.audioManager)
 	sys.positionalAudioSystem = engine.NewPositionalAudioSystem(game.World)
 	sys.reverbSystem = engine.NewReverbSystemWithLogger(game.World, *seed+seedOffsetReverb, clientLogger.Logger)
 

@@ -152,8 +152,11 @@ func (ui *EbitenInventoryUI) updateTouchComponents() {
 }
 
 // handleMenuNavigation processes menu navigation input and returns whether to exit early.
+// BUG FIX: Phase 1.2 - Mobile gesture support for closing inventory
+// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+// Platform: Mobile (Android/iOS)
 func (ui *EbitenInventoryUI) handleMenuNavigation() bool {
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Inventory, ui.visible); shouldClose {
+	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Inventory, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {

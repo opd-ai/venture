@@ -231,8 +231,11 @@ func (ui *EbitenMapUI) updateTouchHandlers() {
 
 // handleMenuNavigation processes menu navigation input and returns true if Update should exit early.
 func (ui *EbitenMapUI) handleMenuNavigation() bool {
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing map
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
 	if ui.fullScreen {
-		if shouldClose, _ := HandleMenuInput(MenuKeys.Map, true); shouldClose {
+		if shouldClose, _ := HandleMenuInputWithTouch(MenuKeys.Map, true, ui.touchHandler); shouldClose {
 			ui.HideFullScreen()
 			return true
 		}

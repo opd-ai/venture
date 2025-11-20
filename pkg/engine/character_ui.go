@@ -131,8 +131,11 @@ func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
 		ui.closeButton.Update()
 	}
 
-	// Standardized dual-exit menu navigation: toggle key (C) OR Escape
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Character, ui.visible); shouldClose {
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing character sheet
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
+	// Standardized dual-exit menu navigation: toggle key (C) OR Escape OR mobile gestures
+	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Character, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {

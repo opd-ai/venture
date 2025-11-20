@@ -232,7 +232,10 @@ func (ui *CraftingUI) updateTouchComponents() {
 }
 
 func (ui *CraftingUI) handleMenuToggle() bool {
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing crafting menu
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
+	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Crafting, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {

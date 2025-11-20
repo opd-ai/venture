@@ -3,8 +3,11 @@
 package engine
 
 import (
+	"math"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/mobile"
 )
 
 // MenuKeys defines the standard key bindings for all in-game menus.
@@ -82,8 +85,76 @@ func HandleMenuInput(toggleKey ebiten.Key, isVisible bool) (shouldClose, shouldT
 	}
 
 	// Check for Escape key (only works when menu is open)
+	// BUG FIX: Phase 1.2 - Android back button maps to Escape key in Ebiten
+	// This handles both desktop Escape key AND Android back button
+	// Platform: Desktop (Escape), Android (back button → Escape), iOS (N/A)
 	if isVisible && IsKeyJustPressed(MenuKeys.Exit) {
 		return true, false // Always close, never open
+	}
+
+	return false, false
+}
+
+// HandleMenuInputWithTouch provides mobile-enhanced menu input handling with gesture support.
+// BUG FIX: Phase 1.2 - Mobile menu exit gestures missing
+// Resolution: Added swipe-down and edge-swipe gestures for iOS/Android menu closing
+// Platform: Mobile (Android/iOS touch gestures)
+//
+// Parameters:
+//   - toggleKey: The menu's assigned toggle key (e.g., ebiten.KeyI for Inventory)
+//   - isVisible: Current visibility state of the menu
+//   - touchHandler: Touch input handler (nil for non-touch platforms)
+//
+// Returns:
+//   - shouldClose: true if menu should close, false otherwise
+//   - shouldToggle: true if toggle key was pressed (open/close), false if gesture/Escape (close only)
+//
+// Usage:
+//
+//	if shouldClose, _ := HandleMenuInputWithTouch(MenuKeys.Inventory, ui.visible, ui.touchHandler); shouldClose {
+//	    ui.Hide()
+//	    return
+//	}
+func HandleMenuInputWithTouch(toggleKey ebiten.Key, isVisible bool, touchHandler *mobile.TouchInputHandler) (shouldClose, shouldToggle bool) {
+	// Check keyboard input first (desktop + Android back button)
+	if shouldClose, shouldToggle := HandleMenuInput(toggleKey, isVisible); shouldClose {
+		return shouldClose, shouldToggle
+	}
+
+	// BUG FIX: Mobile gesture support - only check when menu is visible
+	if !isVisible || touchHandler == nil {
+		return false, false
+	}
+
+	// Check for swipe-down gesture (common mobile dismiss pattern)
+	direction, distance, detected := touchHandler.GetSwipe()
+	if detected {
+		// Convert angle to degrees for easier logic
+		// direction is in radians: 0=right, π/2=down, π=left, 3π/2=up
+		degrees := direction * 180.0 / math.Pi
+		if degrees < 0 {
+			degrees += 360
+		}
+
+		// Swipe down: 45° to 135° (downward arc)
+		// This matches iOS "swipe down to dismiss" pattern
+		if degrees >= 45 && degrees <= 135 && distance >= 50 {
+			return true, false // Close menu via downward swipe
+		}
+
+		// Edge swipe (iOS back gesture): swipe from left edge (135° to 225°)
+		// Only trigger if swipe starts near screen edge
+		touches := touchHandler.GetActiveTouches()
+		if len(touches) > 0 {
+			touch := touches[0]
+			// Check if swipe started near left or right edge (within 50px)
+			if touch.StartX < 50 || touch.StartX > (720-50) { // Assuming 720px width
+				// Right-to-left swipe (back gesture)
+				if degrees >= 135 && degrees <= 225 && distance >= 75 {
+					return true, false // Close menu via edge swipe
+				}
+			}
+		}
 	}
 
 	return false, false

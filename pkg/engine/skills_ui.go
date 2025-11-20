@@ -183,7 +183,10 @@ func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Standardized dual-exit menu navigation: toggle key (K) OR Escape
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Skills, ui.visible); shouldClose {
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing skills tree
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
+	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Skills, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {

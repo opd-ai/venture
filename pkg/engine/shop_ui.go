@@ -271,7 +271,10 @@ func (ui *ShopUI) updateTimersAndTouchHandlers(deltaTime float64) {
 // handleExitInput processes dual-exit navigation (F key toggle or ESC close).
 // Returns true if the UI should exit early from the update loop.
 func (ui *ShopUI) handleExitInput() bool {
-	shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Shop, ui.visible)
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing shop
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
+	shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Shop, ui.visible, ui.touchHandler)
 	if !shouldClose {
 		return false
 	}

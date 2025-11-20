@@ -754,9 +754,11 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// EMERGENCY FIX: Force minimum dimensions if they got corrupted
+	// BUG FIX: Phase 1.2 - Enforce minimum dimensions for touch targets
+	// Resolution: Validate button dimensions meet 44pt minimum (iOS/Android guidelines)
+	// Platform: Mobile (Android/iOS)
 	if b.Width < 44 {
-		b.Width = 120
+		b.Width = 44
 	}
 	if b.Height < 44 {
 		b.Height = 44
@@ -784,12 +786,13 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 		displayText = b.Icon
 	}
 
-	// DEBUG: Always show SOMETHING to diagnose the issue
+	// BUG FIX: Phase 1.2 - Remove debug rendering code
+	// Resolution: Use proper text color, remove debug markers
+	// Platform: All
 	if displayText == "" {
-		displayText = "EMPTY"
+		return // Nothing to render
 	}
 
-	// Always render text - removed the conditional check
 	// Calculate text position (centered)
 	// basicfont.Face7x13 is approximately 7 pixels wide per character
 	textWidth := len(displayText) * 7
@@ -801,12 +804,8 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 	// For 7x13 font in a 44px button, center is around Y + 28
 	textY := int(b.Y + b.Height/2 + 5)
 
-	// DEBUG: Force bright yellow text and add red dot marker
-	debugColor := color.RGBA{255, 255, 0, 255} // Bright yellow
-	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, debugColor)
-
-	// Draw red dot at text position to verify Draw is being called
-	vector.DrawFilledCircle(screen, float32(textX), float32(textY), 3, color.RGBA{255, 0, 0, 255}, true)
+	// Use configured text color (not debug color)
+	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, b.TextColor)
 }
 
 // SetPosition sets the button position.

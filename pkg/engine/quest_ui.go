@@ -158,7 +158,10 @@ func (ui *EbitenQuestUI) updateTouchInputs() {
 // handleMenuNavigation processes menu open/close input.
 // Returns true if menu was closed and further input processing should stop.
 func (ui *EbitenQuestUI) handleMenuNavigation() bool {
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Quests, ui.visible); shouldClose {
+	// BUG FIX: Phase 1.2 - Mobile gesture support for closing quest log
+	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+	// Platform: Mobile (Android/iOS)
+	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Quests, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {

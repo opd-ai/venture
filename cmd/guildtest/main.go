@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-	// Command-line flags
 	createCmd := flag.Bool("create", false, "Create a new guild")
 	listCmd := flag.Bool("list", false, "List all guilds")
 	genreFlag := flag.String("genre", "fantasy", "Genre for guild generation (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)")
@@ -37,101 +36,129 @@ func main() {
 
 	manager := guild.NewManager()
 
-	// Execute commands
 	switch {
 	case *createCmd:
-		guildID, err := manager.CreateGuild(*genreFlag, *leaderFlag)
-		if err != nil {
-			log.Fatalf("Failed to create guild: %v", err)
-		}
-		g, _ := manager.GetGuild(guildID)
-		fmt.Printf("✅ Guild created successfully!\n")
-		fmt.Printf("   ID:     %s\n", guildID)
-		fmt.Printf("   Name:   %s\n", g.Name)
-		fmt.Printf("   Genre:  %s\n", *genreFlag)
-		fmt.Printf("   Leader: %s\n", *leaderFlag)
-		fmt.Printf("   Emblem: %s %s (RGB: %d,%d,%d)\n",
-			g.Emblem.Symbol, g.Emblem.Shape,
-			g.Emblem.PrimaryR, g.Emblem.PrimaryG, g.Emblem.PrimaryB)
-
+		handleCreateGuild(manager, *genreFlag, *leaderFlag)
 	case *listCmd:
-		fmt.Println("Creating test guilds for demonstration...")
-		createTestGuilds(manager)
-		listGuilds(manager)
-
+		handleListGuilds(manager)
 	case *addMemberCmd:
-		if *guildIDFlag == "" || *playerFlag == "" {
-			log.Fatal("Both -guild and -player flags required for add-member")
-		}
-		err := manager.AddMember(*guildIDFlag, *playerFlag, guild.RankRecruit)
-		if err != nil {
-			log.Fatalf("Failed to add member: %v", err)
-		}
-		fmt.Printf("✅ Added %s to guild %s\n", *playerFlag, *guildIDFlag)
-
+		handleAddMember(manager, *guildIDFlag, *playerFlag)
 	case *depositCmd:
-		if *guildIDFlag == "" || *playerFlag == "" {
-			log.Fatal("Both -guild and -player flags required for deposit")
-		}
-		err := manager.DepositTreasury(*guildIDFlag, *playerFlag, *amountFlag)
-		if err != nil {
-			log.Fatalf("Failed to deposit: %v", err)
-		}
-		g, _ := manager.GetGuild(*guildIDFlag)
-		fmt.Printf("✅ Deposited %d gold. Treasury now: %d gold\n", *amountFlag, g.Treasury)
-
+		handleDeposit(manager, *guildIDFlag, *playerFlag, *amountFlag)
 	case *withdrawCmd:
-		if *guildIDFlag == "" || *playerFlag == "" {
-			log.Fatal("Both -guild and -player flags required for withdrawal")
-		}
-		err := manager.WithdrawTreasury(*guildIDFlag, *playerFlag, *amountFlag)
-		if err != nil {
-			log.Fatalf("Failed to withdraw: %v", err)
-		}
-		g, _ := manager.GetGuild(*guildIDFlag)
-		fmt.Printf("✅ Withdrew %d gold. Treasury now: %d gold\n", *amountFlag, g.Treasury)
-
+		handleWithdraw(manager, *guildIDFlag, *playerFlag, *amountFlag)
 	case *motdCmd:
-		if *guildIDFlag == "" || *motdFlag == "" {
-			log.Fatal("Both -guild and -message flags required for motd")
-		}
-		err := manager.SetMOTD(*guildIDFlag, *motdFlag)
-		if err != nil {
-			log.Fatalf("Failed to set MOTD: %v", err)
-		}
-		fmt.Printf("✅ MOTD updated for guild %s\n", *guildIDFlag)
-
+		handleSetMOTD(manager, *guildIDFlag, *motdFlag)
 	case *saveCmd:
-		createTestGuilds(manager)
-		data, err := manager.Save()
-		if err != nil {
-			log.Fatalf("Failed to save: %v", err)
-		}
-		err = os.WriteFile(*fileFlag, data, 0o644)
-		if err != nil {
-			log.Fatalf("Failed to write file: %v", err)
-		}
-		fmt.Printf("✅ Saved guilds to %s (%d bytes, gzip compressed)\n", *fileFlag, len(data))
-
+		handleSaveGuilds(manager, *fileFlag)
 	case *loadCmd:
-		data, err := os.ReadFile(*fileFlag)
-		if err != nil {
-			log.Fatalf("Failed to read file: %v", err)
-		}
-		err = manager.Load(data)
-		if err != nil {
-			log.Fatalf("Failed to load: %v", err)
-		}
-		fmt.Printf("✅ Loaded guilds from %s\n", *fileFlag)
-		listGuilds(manager)
-
+		handleLoadGuilds(manager, *fileFlag)
 	default:
-		// Default: show demo
-		// BUG FIX: Phase 1 - Redundant newline in fmt.Println
-		// Resolution: Removed \n from Println (already adds newline)
 		fmt.Println("=== Guild System Demo ===")
 		runDemo(manager)
 	}
+}
+
+// handleCreateGuild creates a new guild with specified genre and leader.
+func handleCreateGuild(manager *guild.Manager, genreID, leaderID string) {
+	guildID, err := manager.CreateGuild(genreID, leaderID)
+	if err != nil {
+		log.Fatalf("Failed to create guild: %v", err)
+	}
+	g, _ := manager.GetGuild(guildID)
+	fmt.Printf("✅ Guild created successfully!\n")
+	fmt.Printf("   ID:     %s\n", guildID)
+	fmt.Printf("   Name:   %s\n", g.Name)
+	fmt.Printf("   Genre:  %s\n", genreID)
+	fmt.Printf("   Leader: %s\n", leaderID)
+	fmt.Printf("   Emblem: %s %s (RGB: %d,%d,%d)\n",
+		g.Emblem.Symbol, g.Emblem.Shape,
+		g.Emblem.PrimaryR, g.Emblem.PrimaryG, g.Emblem.PrimaryB)
+}
+
+// handleListGuilds displays all guilds after creating test data.
+func handleListGuilds(manager *guild.Manager) {
+	fmt.Println("Creating test guilds for demonstration...")
+	createTestGuilds(manager)
+	listGuilds(manager)
+}
+
+// handleAddMember adds a member to specified guild.
+func handleAddMember(manager *guild.Manager, guildID, playerID string) {
+	if guildID == "" || playerID == "" {
+		log.Fatal("Both -guild and -player flags required for add-member")
+	}
+	err := manager.AddMember(guildID, playerID, guild.RankRecruit)
+	if err != nil {
+		log.Fatalf("Failed to add member: %v", err)
+	}
+	fmt.Printf("✅ Added %s to guild %s\n", playerID, guildID)
+}
+
+// handleDeposit deposits gold to guild treasury.
+func handleDeposit(manager *guild.Manager, guildID, playerID string, amount int) {
+	if guildID == "" || playerID == "" {
+		log.Fatal("Both -guild and -player flags required for deposit")
+	}
+	err := manager.DepositTreasury(guildID, playerID, amount)
+	if err != nil {
+		log.Fatalf("Failed to deposit: %v", err)
+	}
+	g, _ := manager.GetGuild(guildID)
+	fmt.Printf("✅ Deposited %d gold. Treasury now: %d gold\n", amount, g.Treasury)
+}
+
+// handleWithdraw withdraws gold from guild treasury.
+func handleWithdraw(manager *guild.Manager, guildID, playerID string, amount int) {
+	if guildID == "" || playerID == "" {
+		log.Fatal("Both -guild and -player flags required for withdrawal")
+	}
+	err := manager.WithdrawTreasury(guildID, playerID, amount)
+	if err != nil {
+		log.Fatalf("Failed to withdraw: %v", err)
+	}
+	g, _ := manager.GetGuild(guildID)
+	fmt.Printf("✅ Withdrew %d gold. Treasury now: %d gold\n", amount, g.Treasury)
+}
+
+// handleSetMOTD updates guild message of the day.
+func handleSetMOTD(manager *guild.Manager, guildID, message string) {
+	if guildID == "" || message == "" {
+		log.Fatal("Both -guild and -message flags required for motd")
+	}
+	err := manager.SetMOTD(guildID, message)
+	if err != nil {
+		log.Fatalf("Failed to set MOTD: %v", err)
+	}
+	fmt.Printf("✅ MOTD updated for guild %s\n", guildID)
+}
+
+// handleSaveGuilds saves guilds to file after creating test data.
+func handleSaveGuilds(manager *guild.Manager, filename string) {
+	createTestGuilds(manager)
+	data, err := manager.Save()
+	if err != nil {
+		log.Fatalf("Failed to save: %v", err)
+	}
+	err = os.WriteFile(filename, data, 0o644)
+	if err != nil {
+		log.Fatalf("Failed to write file: %v", err)
+	}
+	fmt.Printf("✅ Saved guilds to %s (%d bytes, gzip compressed)\n", filename, len(data))
+}
+
+// handleLoadGuilds loads guilds from file and displays them.
+func handleLoadGuilds(manager *guild.Manager, filename string) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Failed to read file: %v", err)
+	}
+	err = manager.Load(data)
+	if err != nil {
+		log.Fatalf("Failed to load: %v", err)
+	}
+	fmt.Printf("✅ Loaded guilds from %s\n", filename)
+	listGuilds(manager)
 }
 
 func printHelp() {

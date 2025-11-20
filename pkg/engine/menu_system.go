@@ -588,74 +588,115 @@ func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 	}
 	menu.Items = []MenuItem{}
 
-	// Get list of saves
 	saves, err := ms.saveManager.ListSaves()
 	if err != nil {
-		if ms.logger != nil {
-			ms.logger.WithField("error", err.Error()).Error("Failed to list save files")
-		}
-		menu.Items = append(menu.Items, MenuItem{
-			Label:   fmt.Sprintf("Error loading saves: %v", err),
-			Enabled: false,
-		})
+		ms.addErrorMenuItem(menu, err)
 	} else {
-		if ms.logger != nil {
-			ms.logger.WithField("save_count", len(saves)).Debug("Retrieved save file list")
-		}
-
-		// Sort saves by timestamp (newest first)
-		sort.Slice(saves, func(i, j int) bool {
-			return saves[i].Timestamp.After(saves[j].Timestamp)
-		})
-
-		// Add save entries
-		for _, save := range saves {
-			saveName := save.Name
-			saveInfo := fmt.Sprintf("%s - Level %d (%s)", save.Name, save.PlayerLevel, save.GenreID)
-
-			menu.Items = append(menu.Items, MenuItem{
-				Label:    saveInfo,
-				Enabled:  ms.onLoad != nil,
-				Metadata: saveName,
-				Action: func() error {
-					if ms.onLoad != nil {
-						if ms.logger != nil {
-							ms.logger.WithField("save_name", saveName).Info("Loading game")
-						}
-						if err := ms.onLoad(saveName); err != nil {
-							if ms.logger != nil {
-								ms.logger.WithFields(logrus.Fields{
-									"save_name": saveName,
-									"error":     err.Error(),
-								}).Error("Load operation failed")
-							}
-							return fmt.Errorf("load failed: %w", err)
-						}
-						if ms.logger != nil {
-							ms.logger.WithField("save_name", saveName).Info("Game loaded successfully")
-						}
-						menu.ErrorMessage = "Game loaded!"
-						menu.ErrorTimeout = 2.0
-						menu.Active = false // Close menu after successful load
-					}
-					return nil
-				},
-			})
-		}
-
-		// If no saves found
-		if len(menu.Items) == 0 {
-			if ms.logger != nil {
-				ms.logger.Warn("No save files found")
-			}
-			menu.Items = append(menu.Items, MenuItem{
-				Label:   "No save files found",
-				Enabled: false,
-			})
-		}
+		ms.addSaveMenuItems(menu, saves)
 	}
 
-	// Add back button
+	ms.addBackMenuItem(menu)
+	menu.SelectedIndex = 0
+	ms.logLoadMenuBuilt(len(menu.Items), menu.SelectedIndex)
+}
+
+// addErrorMenuItem adds error message to menu when save listing fails.
+func (ms *EbitenMenuSystem) addErrorMenuItem(menu *MenuComponent, err error) {
+	if ms.logger != nil {
+		ms.logger.WithField("error", err.Error()).Error("Failed to list save files")
+	}
+	menu.Items = append(menu.Items, MenuItem{
+		Label:   fmt.Sprintf("Error loading saves: %v", err),
+		Enabled: false,
+	})
+}
+
+// addSaveMenuItems adds save file entries to load menu.
+func (ms *EbitenMenuSystem) addSaveMenuItems(menu *MenuComponent, saves []*saveload.SaveMetadata) {
+	if ms.logger != nil {
+		ms.logger.WithField("save_count", len(saves)).Debug("Retrieved save file list")
+	}
+
+	sort.Slice(saves, func(i, j int) bool {
+		return saves[i].Timestamp.After(saves[j].Timestamp)
+	})
+
+	for _, save := range saves {
+		menu.Items = append(menu.Items, ms.createLoadMenuItem(*save, menu))
+	}
+
+	if len(menu.Items) == 0 {
+		ms.addNoSavesMenuItem(menu)
+	}
+}
+
+// createLoadMenuItem creates menu item for individual save file.
+func (ms *EbitenMenuSystem) createLoadMenuItem(save saveload.SaveMetadata, menu *MenuComponent) MenuItem {
+	saveName := save.Name
+	saveInfo := fmt.Sprintf("%s - Level %d (%s)", save.Name, save.PlayerLevel, save.GenreID)
+
+	return MenuItem{
+		Label:    saveInfo,
+		Enabled:  ms.onLoad != nil,
+		Metadata: saveName,
+		Action:   ms.createLoadAction(saveName, menu),
+	}
+}
+
+// createLoadAction creates load callback for save file.
+func (ms *EbitenMenuSystem) createLoadAction(saveName string, menu *MenuComponent) func() error {
+	return func() error {
+		if ms.onLoad == nil {
+			return nil
+		}
+
+		if ms.logger != nil {
+			ms.logger.WithField("save_name", saveName).Info("Loading game")
+		}
+
+		if err := ms.onLoad(saveName); err != nil {
+			if ms.logger != nil {
+				ms.logger.WithFields(logrus.Fields{
+					"save_name": saveName,
+					"error":     err.Error(),
+				}).Error("Load operation failed")
+			}
+			return fmt.Errorf("load failed: %w", err)
+		}
+
+		if ms.logger != nil {
+			ms.logger.WithField("save_name", saveName).Info("Game loaded successfully")
+		}
+		menu.ErrorMessage = "Game loaded!"
+		menu.ErrorTimeout = 2.0
+		menu.Active = false
+		return nil
+	}
+}
+
+// addNoSavesMenuItem adds placeholder when no saves exist.
+func (ms *EbitenMenuSystem) addNoSavesMenuItem(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.Warn("No save files found")
+	}
+	menu.Items = append(menu.Items, MenuItem{
+		Label:   "No save files found",
+		Enabled: false,
+	})
+}
+
+// logLoadMenuBuilt logs menu construction completion.
+func (ms *EbitenMenuSystem) logLoadMenuBuilt(itemCount, selectedIndex int) {
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     itemCount,
+			"selected_index": selectedIndex,
+		}).Debug("Load menu built")
+	}
+}
+
+// addBackMenuItem adds back navigation button to menu.
+func (ms *EbitenMenuSystem) addBackMenuItem(menu *MenuComponent) {
 	menu.Items = append(menu.Items, MenuItem{
 		Label:   "< Back",
 		Enabled: true,
@@ -668,14 +709,6 @@ func (ms *EbitenMenuSystem) buildLoadMenu(menu *MenuComponent) {
 			return nil
 		},
 	})
-
-	menu.SelectedIndex = 0
-	if ms.logger != nil {
-		ms.logger.WithFields(logrus.Fields{
-			"item_count":     len(menu.Items),
-			"selected_index": menu.SelectedIndex,
-		}).Debug("Load menu built")
-	}
 }
 
 // buildConfirmMenu constructs a confirmation dialog.

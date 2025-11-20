@@ -414,9 +414,31 @@ func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *Posi
 
 // processChase handles the chase state - pursue the target.
 func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
+	ai.logChaseState(entity.ID, aiComp, pos)
+
+	if !ai.validateChaseTarget(entity, aiComp, pos) {
+		return
+	}
+
+	if ai.shouldReturnToSpawn(entity, aiComp, pos) {
+		return
+	}
+
+	if ai.checkAttackRange(entity, aiComp, pos) {
+		return
+	}
+
+	targetPos := ai.getTargetPositionSimple(aiComp.Target)
+	if targetPos != nil {
+		ai.moveTowards(entity, pos, targetPos.X, targetPos.Y, aiComp.GetSpeedMultiplier())
+	}
+}
+
+// logChaseState logs current chase state information.
+func (ai *AISystem) logChaseState(entityID uint64, aiComp *AIComponent, pos *PositionComponent) {
 	if ai.logger != nil {
 		ai.logger.WithFields(logrus.Fields{
-			"entity_id":    entity.ID,
+			"entity_id":    entityID,
 			"state":        aiComp.State.String(),
 			"target_id":    aiComp.Target.ID,
 			"detect_range": aiComp.DetectionRange * 1.5,
@@ -424,29 +446,22 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 			"y":            pos.Y,
 		}).Debug("Processing chase state")
 	}
+}
 
-	// Verify target is still valid
+// validateChaseTarget verifies target is still valid for chasing.
+func (ai *AISystem) validateChaseTarget(entity *Entity, aiComp *AIComponent, pos *PositionComponent) bool {
 	if !ai.isValidTarget(aiComp.Target, entity, pos, aiComp.DetectionRange*1.5) {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"state_transition": "Chase->Return",
-				"reason":           "target_invalid",
-			}).Debug("AI lost target during chase")
-		}
+		ai.logStateTransition(entity.ID, AIStateChase, AIStateReturn, "target_invalid")
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateReturn.String(),
-				"prev_state": AIStateChase.String(),
-			}).Debug("State transition completed")
-		}
-		return
+		ai.logTransitionComplete(entity.ID, AIStateChase, AIStateReturn)
+		return false
 	}
+	return true
+}
 
-	// Check if too far from spawn
+// shouldReturnToSpawn checks if entity exceeded leash range and should return.
+func (ai *AISystem) shouldReturnToSpawn(entity *Entity, aiComp *AIComponent, pos *PositionComponent) bool {
 	if aiComp.ShouldReturnToSpawn(pos.X, pos.Y) {
 		if ai.logger != nil {
 			ai.logger.WithFields(logrus.Fields{
@@ -461,17 +476,14 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 		}
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateReturn)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateReturn.String(),
-				"prev_state": AIStateChase.String(),
-			}).Debug("State transition completed")
-		}
-		return
+		ai.logTransitionComplete(entity.ID, AIStateChase, AIStateReturn)
+		return true
 	}
+	return false
+}
 
-	// Get attack component to check range
+// checkAttackRange determines if entity is in attack range and transitions to attack state.
+func (ai *AISystem) checkAttackRange(entity *Entity, aiComp *AIComponent, pos *PositionComponent) bool {
 	attackComp, ok := entity.GetComponent("attack")
 	if !ok {
 		if ai.logger != nil {
@@ -480,52 +492,76 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 				"component_type": "attack",
 			}).Debug("Entity missing attack component during chase")
 		}
-		return
+		return false
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
-		return
+		return false
 	}
 
-	// Check if in attack range
-	targetPos, ok := aiComp.Target.GetComponent("position")
-	if !ok {
+	targetPos := ai.getTargetPositionSimple(aiComp.Target)
+	if targetPos == nil {
 		aiComp.ClearTarget()
 		aiComp.ChangeState(AIStateIdle)
-		return
-	}
-	targetP, ok := targetPos.(*PositionComponent)
-	if !ok {
-		aiComp.ClearTarget()
-		aiComp.ChangeState(AIStateIdle)
-		return
+		return false
 	}
 
-	distance := ai.getDistance(pos.X, pos.Y, targetP.X, targetP.Y)
-
+	distance := ai.getDistance(pos.X, pos.Y, targetPos.X, targetPos.Y)
 	if distance <= attack.Range {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"target_id":        aiComp.Target.ID,
-				"distance":         distance,
-				"attack_range":     attack.Range,
-				"state_transition": "Chase->Attack",
-			}).Info("AI in attack range")
-		}
+		ai.logAttackRangeReached(entity.ID, aiComp.Target.ID, distance, attack.Range)
 		aiComp.ChangeState(AIStateAttack)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateAttack.String(),
-				"prev_state": AIStateChase.String(),
-			}).Debug("State transition completed")
-		}
-		return
+		ai.logTransitionComplete(entity.ID, AIStateChase, AIStateAttack)
+		return true
 	}
+	return false
+}
 
-	// Move towards target
-	ai.moveTowards(entity, pos, targetP.X, targetP.Y, aiComp.GetSpeedMultiplier())
+// getTargetPositionSimple extracts position component from target entity.
+func (ai *AISystem) getTargetPositionSimple(target *Entity) *PositionComponent {
+	targetPos, ok := target.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	pos, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return pos
+}
+
+// logStateTransition logs AI state transition with reason.
+func (ai *AISystem) logStateTransition(entityID uint64, from, to AIState, reason string) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":        entityID,
+			"state_transition": from.String() + "->" + to.String(),
+			"reason":           reason,
+		}).Debug("AI state transition")
+	}
+}
+
+// logTransitionComplete logs completion of state transition.
+func (ai *AISystem) logTransitionComplete(entityID uint64, from, to AIState) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":  entityID,
+			"new_state":  to.String(),
+			"prev_state": from.String(),
+		}).Debug("State transition completed")
+	}
+}
+
+// logAttackRangeReached logs when entity reaches attack range.
+func (ai *AISystem) logAttackRangeReached(entityID, targetID uint64, distance, attackRange float64) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":        entityID,
+			"target_id":        targetID,
+			"distance":         distance,
+			"attack_range":     attackRange,
+			"state_transition": "Chase->Attack",
+		}).Info("AI in attack range")
+	}
 }
 
 // processAttack handles the attack state - attack the target.

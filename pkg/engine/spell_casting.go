@@ -1212,100 +1212,112 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 // isPositionWalkable checks if a position is valid for teleportation.
 // Returns true if the position has no solid colliders.
 func (s *SpellCastingSystem) isPositionWalkable(x, y float64, caster *Entity) bool {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"caster_id": caster.ID,
-			"target_x":  x,
-			"target_y":  y,
-		}).Debug("Checking if position is walkable")
-	}
+	s.logWalkableCheck(caster.ID, x, y, "Checking if position is walkable")
 
-	entities := s.world.GetEntities()
-
-	// Check for collisions with solid entities
-	for _, entity := range entities {
+	for _, entity := range s.world.GetEntities() {
 		if entity == caster {
 			continue
 		}
 
-		// Check if entity has collider
-		colliderComp, hasCollider := entity.GetComponent("collider")
-		if !hasCollider {
-			continue
-		}
-		collider, ok := colliderComp.(*ColliderComponent)
-		if !ok {
+		collider, pos := s.extractSolidColliderAndPosition(entity)
+		if collider == nil || pos == nil {
 			continue
 		}
 
-		// Skip non-solid colliders
-		if !collider.Solid {
-			continue
-		}
-
-		// Check if position intersects with this collider
-		entityPos, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		pos, ok := entityPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Get caster collider for size checking
-		casterCollider, hasCasterCollider := caster.GetComponent("collider")
-		if hasCasterCollider {
-			cc, ok := casterCollider.(*ColliderComponent)
-			if !ok {
-				continue
-			}
-			// Create temporary collider at target position
-			tempCollider := &ColliderComponent{
-				Width:   cc.Width,
-				Height:  cc.Height,
-				OffsetX: cc.OffsetX,
-				OffsetY: cc.OffsetY,
-				Solid:   true,
-				Layer:   cc.Layer,
-			}
-			if tempCollider.Intersects(x, y, collider, pos.X, pos.Y) {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"caster_id":       caster.ID,
-						"blocking_entity": entity.ID,
-						"target_x":        x,
-						"target_y":        y,
-					}).Debug("Position not walkable: collision detected")
-				}
-				return false // Collision detected
-			}
-		} else {
-			// No caster collider, check point collision
-			minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
-			if x >= minX && x <= maxX && y >= minY && y <= maxY {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"caster_id":       caster.ID,
-						"blocking_entity": entity.ID,
-						"target_x":        x,
-						"target_y":        y,
-					}).Debug("Position not walkable: point collision")
-				}
-				return false
-			}
+		if s.checkCollisionAtPosition(x, y, caster, entity, collider, pos) {
+			return false
 		}
 	}
 
+	s.logWalkableCheck(caster.ID, x, y, "Position is walkable")
+	return true
+}
+
+// extractSolidColliderAndPosition extracts solid collider and position from entity.
+func (s *SpellCastingSystem) extractSolidColliderAndPosition(entity *Entity) (*ColliderComponent, *PositionComponent) {
+	colliderComp, hasCollider := entity.GetComponent("collider")
+	if !hasCollider {
+		return nil, nil
+	}
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok || !collider.Solid {
+		return nil, nil
+	}
+
+	entityPos, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, nil
+	}
+	pos, ok := entityPos.(*PositionComponent)
+	if !ok {
+		return nil, nil
+	}
+	return collider, pos
+}
+
+// checkCollisionAtPosition checks if position collides with entity.
+func (s *SpellCastingSystem) checkCollisionAtPosition(x, y float64, caster, entity *Entity, collider *ColliderComponent, pos *PositionComponent) bool {
+	casterCollider, hasCasterCollider := caster.GetComponent("collider")
+	if hasCasterCollider {
+		return s.checkBoxCollision(x, y, caster.ID, entity.ID, casterCollider, collider, pos)
+	}
+	return s.checkPointCollision(x, y, caster.ID, entity.ID, collider, pos)
+}
+
+// checkBoxCollision checks box-to-box collision using caster's collider bounds.
+func (s *SpellCastingSystem) checkBoxCollision(x, y float64, casterID, entityID uint64, casterCollider Component, collider *ColliderComponent, pos *PositionComponent) bool {
+	cc, ok := casterCollider.(*ColliderComponent)
+	if !ok {
+		return false
+	}
+
+	tempCollider := &ColliderComponent{
+		Width:   cc.Width,
+		Height:  cc.Height,
+		OffsetX: cc.OffsetX,
+		OffsetY: cc.OffsetY,
+		Solid:   true,
+		Layer:   cc.Layer,
+	}
+
+	if tempCollider.Intersects(x, y, collider, pos.X, pos.Y) {
+		s.logCollisionDetected(casterID, entityID, x, y, "collision detected")
+		return true
+	}
+	return false
+}
+
+// checkPointCollision checks point-to-box collision.
+func (s *SpellCastingSystem) checkPointCollision(x, y float64, casterID, entityID uint64, collider *ColliderComponent, pos *PositionComponent) bool {
+	minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
+	if x >= minX && x <= maxX && y >= minY && y <= maxY {
+		s.logCollisionDetected(casterID, entityID, x, y, "point collision")
+		return true
+	}
+	return false
+}
+
+// logWalkableCheck logs walkable position checks.
+func (s *SpellCastingSystem) logWalkableCheck(casterID uint64, x, y float64, message string) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"caster_id": caster.ID,
+			"caster_id": casterID,
 			"target_x":  x,
 			"target_y":  y,
-		}).Debug("Position is walkable")
+		}).Debug(message)
 	}
+}
 
-	return true // Position is walkable
+// logCollisionDetected logs collision detection events.
+func (s *SpellCastingSystem) logCollisionDetected(casterID, entityID uint64, x, y float64, reason string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":       casterID,
+			"blocking_entity": entityID,
+			"target_x":        x,
+			"target_y":        y,
+		}).Debug("Position not walkable: " + reason)
+	}
 }
 
 // containsTag checks if a spell has a specific tag.
@@ -1695,13 +1707,38 @@ func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY
 
 // StartCast initiates casting a spell from a slot.
 func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
+	s.logCastAttempt(entity.ID, slotIndex)
+
+	slots := s.getSpellSlots(entity)
+	if slots == nil {
+		return false
+	}
+
+	if !s.validateCastPreconditions(entity, slots, slotIndex) {
+		return false
+	}
+
+	spell := slots.GetSlot(slotIndex)
+	if !s.checkManaAvailability(entity, spell) {
+		return false
+	}
+
+	s.initiateCast(entity, slots, slotIndex, spell)
+	return true
+}
+
+// logCastAttempt logs spell cast attempt.
+func (s *SpellCastingSystem) logCastAttempt(entityID uint64, slotIndex int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":  entity.ID,
+			"entity_id":  entityID,
 			"slot_index": slotIndex,
 		}).Debug("Attempting to start spell cast")
 	}
+}
 
+// getSpellSlots retrieves spell slots component from entity.
+func (s *SpellCastingSystem) getSpellSlots(entity *Entity) *SpellSlotComponent {
 	spellComp, hasSpells := entity.GetComponent("spell_slots")
 	if !hasSpells {
 		if s.logger != nil {
@@ -1709,14 +1746,17 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 				"entity_id": entity.ID,
 			}).Debug("Entity has no spell_slots component")
 		}
-		return false
+		return nil
 	}
 	slots, ok := spellComp.(*SpellSlotComponent)
 	if !ok {
-		return false
+		return nil
 	}
+	return slots
+}
 
-	// Check if already casting
+// validateCastPreconditions checks if entity can cast (not already casting, valid slot, not on cooldown).
+func (s *SpellCastingSystem) validateCastPreconditions(entity *Entity, slots *SpellSlotComponent, slotIndex int) bool {
 	if slots.IsCasting() {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -1726,7 +1766,6 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 		return false
 	}
 
-	// Check slot validity
 	spell := slots.GetSlot(slotIndex)
 	if spell == nil {
 		if s.logger != nil {
@@ -1738,7 +1777,6 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 		return false
 	}
 
-	// Check cooldown
 	if slots.IsOnCooldown(slotIndex) {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -1750,8 +1788,11 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 		}
 		return false
 	}
+	return true
+}
 
-	// Check mana
+// checkManaAvailability verifies entity has sufficient mana for spell.
+func (s *SpellCastingSystem) checkManaAvailability(entity *Entity, spell *magic.Spell) bool {
 	manaComp, hasMana := entity.GetComponent("mana")
 	if !hasMana {
 		return false
@@ -1760,6 +1801,7 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 	if !ok {
 		return false
 	}
+
 	if mana.Current < spell.Stats.ManaCost {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -1771,8 +1813,11 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 		}
 		return false
 	}
+	return true
+}
 
-	// Start casting
+// initiateCast starts the spell casting process.
+func (s *SpellCastingSystem) initiateCast(entity *Entity, slots *SpellSlotComponent, slotIndex int, spell *magic.Spell) {
 	slots.Casting = slotIndex
 	slots.CastingBar = 0
 
@@ -1784,8 +1829,6 @@ func (s *SpellCastingSystem) StartCast(entity *Entity, slotIndex int) bool {
 			"cast_time":  spell.Stats.CastTime,
 		}).Info("Spell cast started")
 	}
-
-	return true
 }
 
 // CancelCast interrupts current spell cast.

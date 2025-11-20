@@ -126,18 +126,21 @@ func (c *ThreadSafeCache) GetOrCompute(key string, compute func() interface{}) i
 		atomic.AddInt64(&c.hits, 1)
 		return value
 	}
-	atomic.AddInt64(&c.misses, 1)
 
-	// Compute value (without holding lock)
-	computed := compute()
-
-	// Store computed value
+	// Acquire write lock to ensure only one goroutine computes
 	c.mu.Lock()
-	// Check again in case another goroutine computed it while we waited
+
+	// Double-check: another goroutine may have computed it while we waited for the lock
 	if existing, found := c.cache[key]; found {
 		c.mu.Unlock()
-		return existing // Use existing value
+		atomic.AddInt64(&c.hits, 1)
+		return existing
 	}
+
+	atomic.AddInt64(&c.misses, 1)
+
+	// Compute value while holding lock to prevent redundant computation
+	computed := compute()
 	c.cache[key] = computed
 	c.mu.Unlock()
 

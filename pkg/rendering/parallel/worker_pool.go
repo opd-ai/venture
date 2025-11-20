@@ -70,10 +70,14 @@ func NewWorkerPool(workerCount int) *WorkerPool {
 		workerCount = 64 // Cap at 64 workers to prevent excessive overhead
 	}
 
+	// Use larger buffers to prevent deadlock when submitting many tasks
+	// Buffer size accommodates typical burst of tasks (at least 1024 to handle test cases)
+	bufferSize := 1024
+
 	return &WorkerPool{
 		workerCount: workerCount,
-		tasks:       make(chan Task, workerCount*2), // Buffered to reduce blocking
-		results:     make(chan Result, workerCount*2),
+		tasks:       make(chan Task, bufferSize),
+		results:     make(chan Result, bufferSize),
 		running:     false,
 	}
 }

@@ -260,6 +260,16 @@ type InputSystem struct {
 	expressionSystem *ExpressionSystem // Phase 26.1: For expression/emote handling
 	mailboxUI        *MailboxUI        // BUG FIX: Reference for ESC key handling
 
+	// BUG FIX: Phase 3 - Menu Trap - UI references for ESC key dual-exit pattern
+	// Resolution: ESC now closes open UI panels before opening pause menu
+	inventoryUI *EbitenInventoryUI
+	characterUI *EbitenCharacterUI
+	skillsUI    *EbitenSkillsUI
+	questUI     *EbitenQuestUI
+	mapUI       *EbitenMapUI
+	craftingUI  *CraftingUI
+	shopUI      *ShopUI
+
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
 	virtualControls *mobile.VirtualControlsLayout
@@ -438,19 +448,74 @@ func (s *InputSystem) updateTouchInput() {
 	}
 }
 
-// handleEscapeKey processes ESC key with priority: tutorial > help > mailbox > pause menu.
-// BUG FIX: Menu Trap - Added mailbox UI check to ESC key priority chain.
-// Resolution: ESC now closes mailbox UI before opening pause menu, implementing dual-exit pattern.
+// handleEscapeKey processes ESC key with priority: tutorial > help > any open UI > pause menu.
+// BUG FIX: Phase 3 - Menu Trap - Complete dual-exit pattern for all UI panels
+// Resolution: ESC now closes ALL open UI panels (inventory, character, skills, quests, map, crafting, shop, mailbox) before opening pause menu
 func (s *InputSystem) handleEscapeKey() {
 	if inpututil.IsKeyJustPressed(s.KeyHelp) {
+		// Priority 1: Tutorial (skip tutorial on ESC)
 		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
 			s.tutorialSystem.Skip()
-		} else if s.helpSystem != nil && s.helpSystem.Visible {
+			return
+		}
+
+		// Priority 2: Help menu (toggle help on/off)
+		if s.helpSystem != nil && s.helpSystem.Visible {
 			s.helpSystem.Toggle()
-		} else if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
-			// BUG FIX: Close mailbox UI when ESC is pressed
+			return
+		}
+
+		// Priority 3: Check ALL open UI panels and close them (dual-exit pattern)
+		// BUG FIX: Phase 3.7 - Inventory ESC not working
+		if s.inventoryUI != nil && s.inventoryUI.IsVisible() {
+			s.inventoryUI.Hide()
+			return
+		}
+
+		// BUG FIX: Phase 4.9 - Character sheet ESC not working
+		if s.characterUI != nil && s.characterUI.IsVisible() {
+			s.characterUI.Hide()
+			return
+		}
+
+		// BUG FIX: Phase 4.10 - Skills UI ESC not working
+		if s.skillsUI != nil && s.skillsUI.IsVisible() {
+			s.skillsUI.Hide()
+			return
+		}
+
+		// BUG FIX: Phase 4.11 - Quest log ESC not working
+		if s.questUI != nil && s.questUI.IsVisible() {
+			s.questUI.Hide()
+			return
+		}
+
+		// BUG FIX: Phase 5.14 - Map UI ESC not working
+		if s.mapUI != nil && s.mapUI.fullScreen {
+			s.mapUI.HideFullScreen()
+			return
+		}
+
+		// BUG FIX: Phase 5.13 - Crafting UI ESC not working
+		if s.craftingUI != nil && s.craftingUI.IsVisible() {
+			s.craftingUI.Close()
+			return
+		}
+
+		// BUG FIX: Phase 5.12 - Shop UI ESC not working
+		if s.shopUI != nil && s.shopUI.IsVisible() {
+			s.shopUI.Close()
+			return
+		}
+
+		// BUG FIX: Phase 5.12 - Mailbox UI ESC not working (already fixed, keeping for completeness)
+		if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
 			s.mailboxUI.Close()
-		} else if s.onMenuToggle != nil {
+			return
+		}
+
+		// Priority 4: If no UI is open, toggle pause menu
+		if s.onMenuToggle != nil {
 			s.onMenuToggle()
 		}
 	}
@@ -904,6 +969,44 @@ func (s *InputSystem) SetExpressionSystem(expressionSystem *ExpressionSystem) {
 // Resolution: Mailbox UI can now be closed with ESC key in addition to L key toggle.
 func (s *InputSystem) SetMailboxUI(mailboxUI *MailboxUI) {
 	s.mailboxUI = mailboxUI
+}
+
+// BUG FIX: Phase 3 - Menu Trap - UI reference setters for ESC key handling
+// Resolution: Added setters so game can connect UI panels to InputSystem for dual-exit pattern
+
+// SetInventoryUI connects the inventory UI for ESC key closing.
+func (s *InputSystem) SetInventoryUI(inventoryUI *EbitenInventoryUI) {
+	s.inventoryUI = inventoryUI
+}
+
+// SetCharacterUI connects the character UI for ESC key closing.
+func (s *InputSystem) SetCharacterUI(characterUI *EbitenCharacterUI) {
+	s.characterUI = characterUI
+}
+
+// SetSkillsUI connects the skills UI for ESC key closing.
+func (s *InputSystem) SetSkillsUI(skillsUI *EbitenSkillsUI) {
+	s.skillsUI = skillsUI
+}
+
+// SetQuestUI connects the quest UI for ESC key closing.
+func (s *InputSystem) SetQuestUI(questUI *EbitenQuestUI) {
+	s.questUI = questUI
+}
+
+// SetMapUI connects the map UI for ESC key closing.
+func (s *InputSystem) SetMapUI(mapUI *EbitenMapUI) {
+	s.mapUI = mapUI
+}
+
+// SetCraftingUI connects the crafting UI for ESC key closing.
+func (s *InputSystem) SetCraftingUI(craftingUI *CraftingUI) {
+	s.craftingUI = craftingUI
+}
+
+// SetShopUI connects the shop UI for ESC key closing.
+func (s *InputSystem) SetShopUI(shopUI *ShopUI) {
+	s.shopUI = shopUI
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

@@ -1450,10 +1450,31 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 		return err
 	}
 
-	// BUG FIX: Menu Trap - Connect mailbox UI to input system for ESC key handling
-	// Resolution: Enables dual-exit pattern (L key toggle + ESC key close) for mailbox UI
+	// BUG FIX: Phase 3 - Menu Trap - Connect all UI components to input system for ESC key handling
+	// Resolution: Enables dual-exit pattern (toggle key + ESC key close) for ALL UI panels
 	if game.MailboxUI != nil {
 		inputSystem.SetMailboxUI(game.MailboxUI)
+	}
+	if game.InventoryUI != nil {
+		inputSystem.SetInventoryUI(game.InventoryUI)
+	}
+	if game.CharacterUI != nil {
+		inputSystem.SetCharacterUI(game.CharacterUI)
+	}
+	if game.SkillsUI != nil {
+		inputSystem.SetSkillsUI(game.SkillsUI)
+	}
+	if game.QuestUI != nil {
+		inputSystem.SetQuestUI(game.QuestUI)
+	}
+	if game.MapUI != nil {
+		inputSystem.SetMapUI(game.MapUI)
+	}
+	if game.CraftingUI != nil {
+		inputSystem.SetCraftingUI(game.CraftingUI)
+	}
+	if shopUI != nil {
+		inputSystem.SetShopUI(shopUI)
 	}
 
 	if *verbose {

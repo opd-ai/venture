@@ -1451,7 +1451,7 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	// Gap: Housing system fully implemented but no UI access for players
 	// Fix: Created and integrated HousingUI with H key toggle
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 51.2, 51.3
-	housingUI := engine.NewHousingUI(*width, *height)
+	housingUI := housing.NewHousingUI(*width, *height)
 	if sys.housingManager != nil {
 		housingUI.SetManagers(sys.housingManager, sys.guildHallManager, sys.buildingGenerator, sys.furnitureGenerator)
 		housingUI.SetPlayerID(player.ID)

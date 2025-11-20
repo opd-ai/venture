@@ -1,4 +1,4 @@
-package engine
+package housing
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
-	"github.com/opd-ai/venture/pkg/world/housing"
 )
 
 // HousingUI represents a player housing management interface.
@@ -29,8 +28,8 @@ type HousingUI struct {
 	// Gap: UI defined but managers never connected, no rendering implementation
 	// Fix: Added manager references and player state tracking for housing management
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 51.2, 51.3
-	housingManager     *housing.Manager
-	guildHallManager   *housing.GuildHallManager
+	housingManager     *Manager
+	guildHallManager   *GuildHallManager
 	buildingGenerator  *building.Generator
 	furnitureGenerator *furniture.Generator
 	playerID           uint64
@@ -172,10 +171,10 @@ func (h *HousingUI) SetManagers(housingManager, guildHallManager, buildingGenera
 	// Gap: Managers passed but never stored or used
 	// Fix: Type-assert and store all manager references for housing functionality
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 51.2, 51.3
-	if hm, ok := housingManager.(*housing.Manager); ok {
+	if hm, ok := housingManager.(*Manager); ok {
 		h.housingManager = hm
 	}
-	if ghm, ok := guildHallManager.(*housing.GuildHallManager); ok {
+	if ghm, ok := guildHallManager.(*GuildHallManager); ok {
 		h.guildHallManager = ghm
 	}
 	if bg, ok := buildingGenerator.(*building.Generator); ok {

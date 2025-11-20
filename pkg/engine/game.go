@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/world/housing"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,8 +64,8 @@ type EbitenGame struct {
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
 	// Fix: Added UI fields for housing and gallery management
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
-	HousingUI *HousingUI // Player housing management UI (Phase 49.1, 51.2, 51.3)
-	GalleryUI *GalleryUI // Image gallery viewer UI (Phase 49.4)
+	HousingUI *housing.HousingUI // Player housing management UI (Phase 49.1, 51.2, 51.3)
+	GalleryUI *GalleryUI         // Image gallery viewer UI (Phase 49.4)
 
 	// Audio system (for settings integration)
 	AudioManager *AudioManager

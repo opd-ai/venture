@@ -1,224 +1,23 @@
-# TASK DESCRIPTION:
-Perform a data-driven functional breakdown analysis on a single Go file using `go-stats-generator` metrics to identify and refactor functions exceeding professional complexity thresholds. Use the tool's baseline analysis(with --skip-tests), targeted refactoring guidance, and differential validation to ensure measurable complexity improvements while preserving functionality. When results are ambiguous, such as a tie between complexity scores or if one threshold is exceeded but not another, always choose the longest function first.
+# AUTONOMOUS REFACTORING TASK:
+Autonomously perform data-driven functional breakdown analysis and refactoring on the Venture codebase using `go-stats-generator` metrics. Identify and refactor the top 5 most complex functions exceeding professional complexity thresholds. Execute the complete workflow including baseline analysis, refactoring implementation, and validation to ensure measurable complexity improvements while preserving functionality.
 
 ## CONSTRAINT:
 
-Use only `go-stats-generator` and existing tests for your analysis. You are absolutely forbidden from writing new code of any kind or using any other code analysis tools.
+Use only `go-stats-generator` and existing tests for analysis and validation. Do not use any other code analysis tools. You will write refactored code to reduce complexity based on the tool's metrics and recommendations.
 
 ## PREREQUISITES:
-**Minimum Required Version:** `go-stats-generator` v1.0.0 or higher  
-Install and configure `go-stats-generator` for comprehensive complexity analysis and improvement tracking:
+**Minimum Required Version:** `go-stats-generator` v1.0.0 or higher
 
-### Installation:
+### Installation Check:
 ```bash
-# First, check if go-stats-generator is already installed
+# Verify go-stats-generator is installed
 which go-stats-generator
-# If not, install it with `go install`
+# If not installed, install it
 go install github.com/opd-ai/go-stats-generator@latest
-```
 
-## Recommendations:
-```bash
-# When long json outputs are encountered, use `jq`
-go-stats-generator analyze --output json | jq .example
-# Check if it is installed
+# Verify jq is installed for JSON parsing
 which jq
-# If it is not, install it
-sudo apt-get install jq
-```
-
-### Required Analysis Workflow:
-```bash
-# Phase 1: Establish baseline and identify targets
-go-stats-generator analyze . --max-complexity 10 --max-function-length 30 --skip-tests --format json --output baseline.json
-go-stats-generator analyze . --max-complexity 10 --max-function-length 30 --skip-tests
-
-# Phase 2: Generate refactoring recommendations  
-Using the results generated in phase 1, select a high-complexity function suitable for refactoring.
-
-# Phase 3: Post-refactoring validation
-go-stats-generator analyze . --format json --output refactored.json --max-complexity 10 --max-function-length 30 --skip-tests
-
-# Phase 4: Measure and document improvements
-go-stats-generator diff baseline.json refactored.json
-go-stats-generator diff baseline.json refactored.json --format html --output improvements.html
-```
-
-## CONTEXT:
-You are an automated Go code auditor using `go-stats-generator` for enterprise-grade complexity analysis and refactoring validation. The tool provides precise metrics, identifies refactoring targets, and measures improvements through differential analysis. Focus on functions with the highest complexity scores identified by the tool's analysis engine.
-
-## INSTRUCTIONS:
-
-### Phase 1: Data-Driven Target Identification
-1. **Run Baseline Analysis:**
-  ```bash
-  go-stats-generator analyze .
-  ```
-  - Record the highest complexity function and its metrics
-  - Note specific complexity contributors (cyclomatic, nesting, signature)
-  - Identify the file containing the most complex function
-
-2. **Generate Refactoring Plan:**
-  ```bash
-  go-stats-generator analyze [target-file] --format json
-  ```
-  - Use tool's suggestions for logical extraction points
-  - Identify functions exceeding thresholds:
-    * Overall complexity > 10.0 (default threshold)
-    * Line count > 30 (code lines only)
-    * Cyclomatic complexity > 10
-    * Nesting depth > 3
-
-### Phase 2: Guided Refactoring Implementation
-1. **Follow Tool Recommendations:**
-  - Use `go-stats-generator`'s extraction suggestions as the primary guide
-  - Target each suggested extraction point for separate function creation
-  - Maintain error handling patterns identified in the analysis
-
-2. **Create Focused Extractions:**
-  - Extract each logical block identified by the tool
-  - Name functions using verb-first camelCase (e.g., `validateInput`, `calculateResult`)
-    - ❌ Avoid noun-first or snake_case names (e.g., `inputValidator`, `calculate_result`)
-  - Target metrics per extracted function:
-    * <20 lines of code
-    * Cyclomatic complexity <8
-  - Add GoDoc comments starting with function name  
-    *Example:*  
-    ```go
-    // validateInput checks if the provided input meets all required criteria.
-    // etc...
-    func validateInput(input string) error {
-        // ...
-    }
-    ```
-  - Add GoDoc comments starting with function name and containing a description of the function's purpose and operation
-
-3. **Preserve Analysis-Verified Patterns:**
-  - Maintain error propagation chains
-  - Keep defer statements in correct scope
-  - Preserve variable access patterns
-
-### Phase 3: Differential Validation
-1. **Measure Improvements:**
-  ```bash
-  go-stats-generator diff baseline.json refactored.json
-  ```
-  - Verify target function shows significant complexity reduction (>50%)
-  - Confirm no new functions exceed thresholds
-  - Check for zero regressions in unchanged code
-
-2. **Generate Improvement Report:**
-  ```bash
-  go-stats-generator diff baseline.json refactored.json --format html --output report.html
-  ```
-
-### Phase 4: Quality Verification
-1. **Validate Metrics Achievement:**
-  - Original function complexity reduced by ≥50%
-  - All extracted functions meet target thresholds
-  - No complexity regressions detected by diff analysis
-  - Overall codebase complexity trend positive
-
-2. **Confirm Functional Preservation:**
-  - All tests pass (if present)
-  - Error handling paths unchanged
-  - Return value semantics preserved
-
-## OUTPUT FORMAT:
-
-Structure your response as:
-
-### 1. Baseline Analysis Summary
-```
-go-stats-generator identified target function:
-- Function: [name] in [file]
-- Current complexity: [score]
-- Key issues: [cyclomatic/nesting/lines breakdown]
-- Recommended extractions: [n] functions
-```
-
-### 2. Complete Refactored File
-Present the fully refactored Go file with:
-- Original function reduced to coordination logic
-- Extracted private functions with GoDoc
-- Standard Go formatting
-
-### 3. Improvement Validation
-```
-Differential analysis results:
-- Original function: [old_score] → [new_score] ([improvement_%])
-- New functions: [list with complexities]
-- Regressions: [count]
-- Overall quality improvement: [score]
-```
-
-Signature Complexity = (params * 0.5) + (returns * 0.3) + (interfaces * 0.8) + (generics * 1.5) + variadic_penalty
-- variadic_penalty: An additional score (1.0) added for variadic parameters (...args) to reflect increased complexity.
-- generics: The actual multiplier is 1.5 per generic type parameter, not 1.0 as previously documented.
-
-Refactoring Threshold = Overall Complexity > 10.0 OR Lines > 30 OR Cyclomatic > 10
-- If no targets: "Refactor complete: go-stats-generator baseline analysis found no functions exceeding professional complexity thresholds."
-
-## COMPLEXITY REFERENCE (go-stats-generator calculation):
-```
-Overall Complexity = cyclomatic + (nesting_depth * 0.5) + (cognitive * 0.3)
-Signature Complexity = (params * 0.5) + (returns * 0.3) + (interfaces * 0.8) + (generics * 1.5) + variadic_penalty
-Refactoring Threshold = Overall Complexity > 10.0 OR Lines > 30 OR Cyclomatic > 10
-```
-<!-- Last verified: 2025-07-25 against function.go:calculateComplexity and calculateSignatureComplexity -->
-
-## EXAMPLE WORKFLOW:
-```bash
-$ go-stats-generator analyze .
-=== TOP COMPLEX FUNCTIONS ===
-1. processComplexOrder (order.go): 25.4 complexity
-  - Lines: 45 code lines 
-  - Cyclomatic: 18
-  - Nesting: 4
-  - Recommendations: Extract 4 logical blocks
-
-$ go-stats-generator diff baseline.json refactored.json 
-=== IMPROVEMENT SUMMARY ===
-MAJOR IMPROVEMENTS:
-EXTRACTED FUNCTIONS:
-(All steps validated by automated differential analysis to ensure measurable, data-driven improvements.)
-  
-EXTRACTED FUNCTIONS:
-  validateOrderData: 5.1 complexity ✓
-  calculatePricing: 7.3 complexity ✓
-  finalizeOrder: 6.8 complexity ✓
-  
-QUALITY SCORE: 95/100 (+22 improvement)
-REGRESSIONS: 0
-```
-
-This data-driven approach ensures refactoring decisions are based on quantitative analysis rather than subjective assessment, with measurable validation of improvements.
-# TASK DESCRIPTION:
-Perform a data-driven functional breakdown analysis on the Venture codebase using `go-stats-generator` metrics to identify and refactor the top 5 most complex functions exceeding professional complexity thresholds. Use the tool's baseline analysis (with --skip-tests), targeted refactoring guidance, and differential validation to ensure measurable complexity improvements while preserving functionality. When results are ambiguous, such as a tie between complexity scores or if one threshold is exceeded but not another, always choose the longest function first.
-
-## CONSTRAINT:
-
-Use only `go-stats-generator` and existing tests for your analysis. You are absolutely forbidden from writing new code of any kind or using any other code analysis tools.
-
-## PREREQUISITES:
-**Minimum Required Version:** `go-stats-generator` v1.0.0 or higher  
-Install and configure `go-stats-generator` for comprehensive complexity analysis and improvement tracking:
-
-### Installation:
-```bash
-# First, check if go-stats-generator is already installed
-which go-stats-generator
-# If not, install it with `go install`
-go install github.com/opd-ai/go-stats-generator@latest
-```
-
-## Recommendations:
-```bash
-# When long json outputs are encountered, use `jq`
-go-stats-generator analyze --output json | jq .example
-# Check if it is installed
-which jq
-# If it is not, install it
+# If not installed
 sudo apt-get install jq
 ```
 
@@ -228,10 +27,9 @@ sudo apt-get install jq
 go-stats-generator analyze . --max-complexity 10 --max-function-length 30 --skip-tests --format json --output baseline.json
 go-stats-generator analyze . --max-complexity 10 --max-function-length 30 --skip-tests
 
-# Phase 2: Generate refactoring recommendations for each of the top 5 functions
-Using the results generated in phase 1, select the top 5 high-complexity functions suitable for refactoring.
+# Phase 2: Iteratively refactor each of the top 5 functions
 
-# Phase 3: Post-refactoring validation (after each function is refactored)
+# Phase 3: Post-refactoring validation (after all refactoring)
 go-stats-generator analyze . --format json --output refactored.json --max-complexity 10 --max-function-length 30 --skip-tests
 
 # Phase 4: Measure and document improvements
@@ -240,194 +38,175 @@ go-stats-generator diff baseline.json refactored.json --format html --output imp
 ```
 
 ## CONTEXT:
-You are an automated Go code auditor using `go-stats-generator` for enterprise-grade complexity analysis and refactoring validation on the Venture procedural action-RPG codebase. The tool provides precise metrics, identifies refactoring targets, and measures improvements through differential analysis. Focus on the top 5 functions with the highest complexity scores identified by the tool's analysis engine.
+You are an autonomous Go code refactoring agent using `go-stats-generator` for enterprise-grade complexity analysis and validation on the Venture procedural action-RPG codebase. Execute the complete refactoring workflow: analyze, identify targets, implement refactoring, and validate improvements. Focus on the top 5 functions with the highest complexity scores.
 
-## INSTRUCTIONS:
+## AUTONOMOUS EXECUTION STEPS:
 
-### Phase 1: Data-Driven Target Identification
-1. **Run Baseline Analysis:**
+### Step 1: Execute Baseline Analysis
+1. Run `go-stats-generator analyze . --max-complexity 10 --max-function-length 30 --skip-tests`
+2. Parse output to identify top 5 most complex functions by overall complexity score
+3. For ambiguous cases (tied scores), prioritize by:
+  - First: highest cyclomatic complexity
+  - Second: longest function (most lines)
+  - Third: deepest nesting
+4. Record each function's:
+  - Name and file location
+  - Overall complexity score
+  - Cyclomatic complexity
+  - Nesting depth
+  - Line count
+  - Signature complexity
+
+### Step 2: Analyze Each Target Function
+For each of the top 5 functions:
+1. Examine the function's code structure
+2. Identify logical extraction candidates:
+  - Validation blocks
+  - Calculation sections
+  - Data transformation logic
+  - Error handling chains
+  - Nested conditional blocks
+3. Plan extraction targets with metrics:
+  - Target <20 lines per extracted function
+  - Target cyclomatic complexity <8
+  - Maintain single responsibility
+
+### Step 3: Implement Refactoring
+For each of the top 5 functions, execute:
+
+1. **Extract Helper Functions:**
+  - Create focused, single-purpose helper functions
+  - Use verb-first camelCase naming (e.g., `validateInput`, `calculateResult`)
+  - Add GoDoc comments starting with function name
+  - Keep extracted functions <20 lines with cyclomatic <8
+
+2. **Reduce Original Function:**
+  - Convert to coordination logic calling helpers
+  - Maintain error propagation patterns
+  - Preserve defer statements in correct scope
+  - Keep variable access patterns intact
+
+3. **Code Quality Standards:**
+  - Follow Go formatting conventions
+  - Maintain existing error handling semantics
+  - Preserve return value types and meanings
+  - Ensure thread-safety patterns remain intact
+
+### Step 4: Validate Refactoring
+After completing all refactoring:
+
+1. **Run Metrics Validation:**
   ```bash
-  go-stats-generator analyze .
-  ```
-  - Record the top 5 highest complexity functions and their metrics
-  - Note specific complexity contributors (cyclomatic, nesting, signature)
-  - Identify the files containing these complex functions
-
-2. **Generate Refactoring Plan:**
-  ```bash
-  go-stats-generator analyze [target-file] --format json
-  ```
-  - Use tool's suggestions for logical extraction points
-  - Identify functions exceeding thresholds:
-    * Overall complexity > 10.0 (default threshold)
-    * Line count > 30 (code lines only)
-    * Cyclomatic complexity > 10
-    * Nesting depth > 3
-
-### Phase 2: Guided Refactoring Implementation (Iterate for Each of Top 5 Functions)
-1. **Follow Tool Recommendations:**
-  - Use `go-stats-generator`'s extraction suggestions as the primary guide
-  - Target each suggested extraction point for separate function creation
-  - Maintain error handling patterns identified in the analysis
-
-2. **Create Focused Extractions:**
-  - Extract each logical block identified by the tool
-  - Name functions using verb-first camelCase (e.g., `validateInput`, `calculateResult`)
-    - ❌ Avoid noun-first or snake_case names (e.g., `inputValidator`, `calculate_result`)
-  - Target metrics per extracted function:
-    * <20 lines of code
-    * Cyclomatic complexity <8
-  - Add GoDoc comments starting with function name  
-    *Example:*  
-    ```go
-    // validateInput checks if the provided input meets all required criteria.
-    // etc...
-    func validateInput(input string) error {
-        // ...
-    }
-    ```
-  - Add GoDoc comments starting with function name and containing a description of the function's purpose and operation
-
-3. **Preserve Analysis-Verified Patterns:**
-  - Maintain error propagation chains
-  - Keep defer statements in correct scope
-  - Preserve variable access patterns
-
-### Phase 3: Differential Validation (After Each Function Refactoring)
-1. **Measure Improvements:**
-  ```bash
+  go-stats-generator analyze . --format json --output refactored.json --skip-tests
   go-stats-generator diff baseline.json refactored.json
   ```
-  - Verify target function shows significant complexity reduction (>50%)
-  - Confirm no new functions exceed thresholds
-  - Check for zero regressions in unchanged code
 
-2. **Generate Improvement Report:**
+2. **Verify Improvements:**
+  - Each original function reduced by ≥50% complexity
+  - All extracted functions meet targets (<20 lines, cyclomatic <8)
+  - Zero regressions in unchanged code
+  - Overall codebase quality improvement
+
+3. **Run Functional Tests:**
   ```bash
-  go-stats-generator diff baseline.json refactored.json --format html --output report.html
+  make test
+  # or
+  go test ./...
   ```
+  - All tests must pass
+  - No behavioral changes
+  - Error paths preserved
 
-### Phase 4: Quality Verification (Overall)
-1. **Validate Metrics Achievement:**
-  - Each of the 5 original functions' complexity reduced by ≥50%
-  - All extracted functions meet target thresholds
-  - No complexity regressions detected by diff analysis
-  - Overall codebase complexity trend positive
-
-2. **Confirm Functional Preservation:**
-  - All tests pass (run `make test` or `go test ./...`)
-  - Error handling paths unchanged
-  - Return value semantics preserved
+### Step 5: Document Results
+Generate comprehensive report including:
+- Baseline metrics for top 5 functions
+- Complete refactored code for each file
+- Before/after complexity metrics
+- Differential analysis summary
+- Test validation results
 
 ## OUTPUT FORMAT:
 
-Structure your response as:
-
-### 1. Baseline Analysis Summary
+### 1. Baseline Analysis Results
 ```
-go-stats-generator identified top 5 target functions:
+=== TOP 5 COMPLEX FUNCTIONS IDENTIFIED ===
+
 1. Function: [name] in [file]
-   - Current complexity: [score]
-   - Key issues: [cyclomatic/nesting/lines breakdown]
-   - Recommended extractions: [n] functions
+  - Overall Complexity: [score]
+  - Cyclomatic: [score]
+  - Nesting: [depth]
+  - Lines: [count]
+  - Signature: [complexity]
+  - Planned Extractions: [n] functions
 
 2. Function: [name] in [file]
-   - Current complexity: [score]
-   - Key issues: [cyclomatic/nesting/lines breakdown]
-   - Recommended extractions: [n] functions
+  [... same structure ...]
 
-3. Function: [name] in [file]
-   - Current complexity: [score]
-   - Key issues: [cyclomatic/nesting/lines breakdown]
-   - Recommended extractions: [n] functions
-
-4. Function: [name] in [file]
-   - Current complexity: [score]
-   - Key issues: [cyclomatic/nesting/lines breakdown]
-   - Recommended extractions: [n] functions
-
-5. Function: [name] in [file]
-   - Current complexity: [score]
-   - Key issues: [cyclomatic/nesting/lines breakdown]
-   - Recommended extractions: [n] functions
+[... functions 3-5 ...]
 ```
 
-### 2. Complete Refactored Files (For Each of the 5 Functions)
-Present each fully refactored Go file with:
-- Original function reduced to coordination logic
-- Extracted private functions with GoDoc
-- Standard Go formatting
-
-### 3. Improvement Validation (Cumulative)
-```
-Differential analysis results:
-Function 1: [old_score] → [new_score] ([improvement_%])
-  - New functions: [list with complexities]
-  
-Function 2: [old_score] → [new_score] ([improvement_%])
-  - New functions: [list with complexities]
-  
-Function 3: [old_score] → [new_score] ([improvement_%])
-  - New functions: [list with complexities]
-  
-Function 4: [old_score] → [new_score] ([improvement_%])
-  - New functions: [list with complexities]
-  
-Function 5: [old_score] → [new_score] ([improvement_%])
-  - New functions: [list with complexities]
-
-Regressions: [count]
-Overall quality improvement: [score]
+### 2. Refactored Code (For Each File)
+```go
+// Present complete refactored file content
+// Include:
+// - Original function reduced to coordination logic
+// - All extracted helper functions with GoDoc
+// - Standard Go formatting
+// - Preserved functionality
 ```
 
-Signature Complexity = (params * 0.5) + (returns * 0.3) + (interfaces * 0.8) + (generics * 1.5) + variadic_penalty
-- variadic_penalty: An additional score (1.0) added for variadic parameters (...args) to reflect increased complexity.
-- generics: The actual multiplier is 1.5 per generic type parameter, not 1.0 as previously documented.
+### 3. Validation Results
+```
+=== REFACTORING VALIDATION ===
 
-Refactoring Threshold = Overall Complexity > 10.0 OR Lines > 30 OR Cyclomatic > 10
-- If fewer than 5 targets found: "Refactor complete: go-stats-generator baseline analysis found only [n] functions exceeding professional complexity thresholds."
+COMPLEXITY IMPROVEMENTS:
+1. [FunctionName]: [old_score] → [new_score] (-[improvement_%])
+  Extracted Functions:
+  - [helperName1]: [complexity] ✓
+  - [helperName2]: [complexity] ✓
+  
+2. [FunctionName]: [old_score] → [new_score] (-[improvement_%])
+  [... same structure ...]
 
-## COMPLEXITY REFERENCE (go-stats-generator calculation):
+[... functions 3-5 ...]
+
+METRICS SUMMARY:
+- Total Complexity Reduction: [total_%]
+- Functions Meeting Targets: [count]/[total]
+- Regressions Detected: [count]
+- Overall Quality Score: [score]/100 (+[improvement])
+
+TEST RESULTS:
+- Tests Run: [count]
+- Tests Passed: [count]
+- Tests Failed: [count]
+- Coverage: [percentage]%
+```
+
+## COMPLEXITY THRESHOLDS:
 ```
 Overall Complexity = cyclomatic + (nesting_depth * 0.5) + (cognitive * 0.3)
 Signature Complexity = (params * 0.5) + (returns * 0.3) + (interfaces * 0.8) + (generics * 1.5) + variadic_penalty
+
 Refactoring Threshold = Overall Complexity > 10.0 OR Lines > 30 OR Cyclomatic > 10
-```
-<!-- Last verified: 2025-07-25 against function.go:calculateComplexity and calculateSignatureComplexity -->
 
-## EXAMPLE WORKFLOW:
-```bash
-$ go-stats-generator analyze .
-=== TOP COMPLEX FUNCTIONS ===
-1. processComplexOrder (order.go): 25.4 complexity
-  - Lines: 45 code lines 
-  - Cyclomatic: 18
-  - Nesting: 4
-  - Recommendations: Extract 4 logical blocks
-
-2. handleNetworkSync (network.go): 22.1 complexity
-  - Lines: 38 code lines
-  - Cyclomatic: 15
-  - Nesting: 3
-  - Recommendations: Extract 3 logical blocks
-
-[... 3 more functions ...]
-
-$ go-stats-generator diff baseline.json refactored.json 
-=== IMPROVEMENT SUMMARY ===
-MAJOR IMPROVEMENTS:
-  processComplexOrder: 25.4 → 8.2 (67.7% reduction)
-  handleNetworkSync: 22.1 → 7.9 (64.3% reduction)
-  [... 3 more functions ...]
-  
-EXTRACTED FUNCTIONS:
-  validateOrderData: 5.1 complexity ✓
-  calculatePricing: 7.3 complexity ✓
-  finalizeOrder: 6.8 complexity ✓
-  [... more extracted functions ...]
-  
-QUALITY SCORE: 95/100 (+22 improvement)
-REGRESSIONS: 0
+Target After Refactoring:
+- Original function: Overall complexity ≤10.0
+- Extracted functions: Lines <20, Cyclomatic <8
 ```
 
-This data-driven approach ensures refactoring decisions are based on quantitative analysis rather than subjective assessment, with measurable validation of improvements across the top 5 most complex functions in the Venture codebase.
+## SUCCESS CRITERIA:
+- ✅ Top 5 functions identified and refactored
+- ✅ Each function shows ≥50% complexity reduction
+- ✅ All extracted functions meet target metrics
+- ✅ Zero complexity regressions
+- ✅ All existing tests pass
+- ✅ Code follows Go conventions and project guidelines
+
+## EDGE CASES:
+- If fewer than 5 functions exceed thresholds: Refactor all available targets
+- If tie in complexity scores: Prioritize longest function
+- If extraction would create <5 line functions: Merge related logic
+- If tests fail after refactoring: Document issue and revert specific change
+
+Execute this workflow autonomously, making data-driven decisions based on `go-stats-generator` metrics to achieve measurable, validated complexity improvements across the Venture codebase.

@@ -40,72 +40,103 @@ func (s *BookReadingSystem) Update(entities []*Entity, deltaTime float64) {
 // ReadBook processes reading a book entity by a player entity.
 // Returns an error if reading fails.
 func (s *BookReadingSystem) ReadBook(playerID, bookEntityID uint64) error {
-	// Get player entity
-	player, ok := s.world.GetEntity(playerID)
-	if !ok {
-		return fmt.Errorf("player entity %d not found", playerID)
+	player, book, err := s.validateAndGetEntities(playerID, bookEntityID)
+	if err != nil {
+		return err
 	}
 
-	// Get book entity
-	bookEntity, ok := s.world.GetEntity(bookEntityID)
-	if !ok {
-		return fmt.Errorf("book entity %d not found", bookEntityID)
-	}
-
-	// Get book component
-	bookComp, ok := bookEntity.GetComponent("book")
-	if !ok {
-		return fmt.Errorf("entity %d is not a book", bookEntityID)
-	}
-	book, ok := bookComp.(*BookComponent)
-	if !ok {
-		return fmt.Errorf("invalid book component")
-	}
-
-	// Check if already read
 	if book.IsRead {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"playerID": playerID,
-				"bookID":   bookEntityID,
-				"title":    book.Title,
-			}).Debug("book already read")
-		}
-		return nil // Not an error, just skip
+		s.logBookAlreadyRead(playerID, bookEntityID, book.Title)
+		return nil
 	}
 
-	// Mark book as read
 	book.IsRead = true
 
-	// Get or create library component for player
-	var library *LibraryComponent
-	if libComp, ok := player.GetComponent("library"); ok {
-		library, ok = libComp.(*LibraryComponent)
-		if !ok {
-			return fmt.Errorf("invalid library component")
-		}
-	} else {
-		// Create new library component
-		library = &LibraryComponent{
-			Books:       make([]uint64, 0),
-			Completions: make(map[string]bool),
-		}
-		player.AddComponent(library)
+	library, err := s.getOrCreateLibrary(player)
+	if err != nil {
+		return err
 	}
 
-	// Add book to library if not already there
-	found := false
+	s.addBookToLibrary(library, bookEntityID)
+
+	if err := s.applyBookEffects(player, book); err != nil {
+		return err
+	}
+
+	if err := s.checkSeriesCompletion(player, library, book); err != nil && s.logger != nil {
+		s.logger.WithError(err).Warn("failed to check series completion")
+	}
+
+	s.logBookReadSuccess(playerID, bookEntityID, book)
+	return nil
+}
+
+// validateAndGetEntities validates and retrieves player and book entities.
+func (s *BookReadingSystem) validateAndGetEntities(playerID, bookEntityID uint64) (*Entity, *BookComponent, error) {
+	player, ok := s.world.GetEntity(playerID)
+	if !ok {
+		return nil, nil, fmt.Errorf("player entity %d not found", playerID)
+	}
+
+	bookEntity, ok := s.world.GetEntity(bookEntityID)
+	if !ok {
+		return nil, nil, fmt.Errorf("book entity %d not found", bookEntityID)
+	}
+
+	bookComp, ok := bookEntity.GetComponent("book")
+	if !ok {
+		return nil, nil, fmt.Errorf("entity %d is not a book", bookEntityID)
+	}
+
+	book, ok := bookComp.(*BookComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid book component")
+	}
+
+	return player, book, nil
+}
+
+// logBookAlreadyRead logs when a book has already been read.
+func (s *BookReadingSystem) logBookAlreadyRead(playerID, bookEntityID uint64, title string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID": playerID,
+			"bookID":   bookEntityID,
+			"title":    title,
+		}).Debug("book already read")
+	}
+}
+
+// getOrCreateLibrary gets or creates a library component for the player.
+func (s *BookReadingSystem) getOrCreateLibrary(player *Entity) (*LibraryComponent, error) {
+	if libComp, ok := player.GetComponent("library"); ok {
+		library, ok := libComp.(*LibraryComponent)
+		if !ok {
+			return nil, fmt.Errorf("invalid library component")
+		}
+		return library, nil
+	}
+
+	library := &LibraryComponent{
+		Books:       make([]uint64, 0),
+		Completions: make(map[string]bool),
+	}
+	player.AddComponent(library)
+	return library, nil
+}
+
+// addBookToLibrary adds a book to the library if not already present.
+func (s *BookReadingSystem) addBookToLibrary(library *LibraryComponent, bookEntityID uint64) {
 	for _, id := range library.Books {
 		if id == bookEntityID {
-			found = true
-			break
+			return
 		}
 	}
-	if !found {
-		library.Books = append(library.Books, bookEntityID)
-	}
+	library.Books = append(library.Books, bookEntityID)
+}
 
-	// Apply book-specific effects
+// applyBookEffects applies book-specific effects based on book type.
+func (s *BookReadingSystem) applyBookEffects(player *Entity, book *BookComponent) error {
 	switch book.BookType {
 	case BookTypeSkill:
 		if err := s.applySkillBonuses(player, book); err != nil {
@@ -116,14 +147,11 @@ func (s *BookReadingSystem) ReadBook(playerID, bookEntityID uint64) error {
 			return fmt.Errorf("failed to unlock recipe: %w", err)
 		}
 	}
+	return nil
+}
 
-	// Check for series completion
-	if err := s.checkSeriesCompletion(player, library, book); err != nil {
-		if s.logger != nil {
-			s.logger.WithError(err).Warn("failed to check series completion")
-		}
-	}
-
+// logBookReadSuccess logs successful book reading.
+func (s *BookReadingSystem) logBookReadSuccess(playerID, bookEntityID uint64, book *BookComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"playerID": playerID,
@@ -132,8 +160,6 @@ func (s *BookReadingSystem) ReadBook(playerID, bookEntityID uint64) error {
 			"type":     book.BookType,
 		}).Info("book read successfully")
 	}
-
-	return nil
 }
 
 // applySkillBonuses applies skill bonuses from a skill book to the player.

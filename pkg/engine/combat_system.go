@@ -83,70 +83,101 @@ func (s *CombatSystem) SetProjectileSystem(ps *ProjectileSystem) {
 // Update implements the System interface.
 // Updates attack cooldowns and processes status effects.
 func (s *CombatSystem) Update(entities []*Entity, deltaTime float64) {
-	// Update attack cooldowns and status effects
 	for _, entity := range entities {
-		// Priority 1.3: Dead entities don't progress attack cooldowns
-		// but status effects continue (poison doesn't stop at death)
-		isDead := entity.HasComponent("dead")
+		s.updateEntityCombat(entity, deltaTime)
+	}
+	s.processDeadEntities(entities)
+}
 
-		// Log if player is somehow marked as dead
-		if entity.HasComponent("input") && isDead && s.logger != nil {
-			s.logger.WithField("entityID", entity.ID).Warn("player entity has dead component")
-		}
+// updateEntityCombat updates attack cooldowns and status effects for an entity.
+func (s *CombatSystem) updateEntityCombat(entity *Entity, deltaTime float64) {
+	isDead := entity.HasComponent("dead")
 
-		if !isDead {
-			// Update attack cooldowns only for living entities
-			if attackComp, ok := entity.GetComponent("attack"); ok {
-				if attack, ok := attackComp.(*AttackComponent); ok {
-					beforeCooldown := attack.CooldownTimer
-					attack.UpdateCooldown(deltaTime)
-
-					// Log cooldown updates for player when debugging
-					if entity.HasComponent("input") && beforeCooldown > 0 && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-						s.logger.WithFields(logrus.Fields{
-							"entityID":       entity.ID,
-							"cooldownBefore": beforeCooldown,
-							"cooldownAfter":  attack.CooldownTimer,
-							"deltaTime":      deltaTime,
-						}).Debug("player attack cooldown updated")
-					}
-				}
-			}
-		}
-
-		// Process status effects (for both living and dead entities)
-		if statusComp, ok := entity.GetComponent("status_effect"); ok {
-			if status, ok := statusComp.(*StatusEffectComponent); ok {
-				// Update status effect
-				if ticked := status.Update(deltaTime); ticked {
-					s.applyStatusEffectTick(entity, status)
-				}
-
-				// Remove expired effects
-				if status.IsExpired() {
-					entity.RemoveComponent("status_effect")
-				}
-			}
-		}
+	if entity.HasComponent("input") && isDead && s.logger != nil {
+		s.logger.WithField("entityID", entity.ID).Warn("player entity has dead component")
 	}
 
-	// Clean up dead entities
+	if !isDead {
+		s.updateAttackCooldown(entity, deltaTime)
+	}
+
+	s.processStatusEffects(entity, deltaTime)
+}
+
+// updateAttackCooldown updates attack cooldown for living entities.
+func (s *CombatSystem) updateAttackCooldown(entity *Entity, deltaTime float64) {
+	attackComp, ok := entity.GetComponent("attack")
+	if !ok {
+		return
+	}
+
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok {
+		return
+	}
+
+	beforeCooldown := attack.CooldownTimer
+	attack.UpdateCooldown(deltaTime)
+
+	if entity.HasComponent("input") && beforeCooldown > 0 && s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":       entity.ID,
+			"cooldownBefore": beforeCooldown,
+			"cooldownAfter":  attack.CooldownTimer,
+			"deltaTime":      deltaTime,
+		}).Debug("player attack cooldown updated")
+	}
+}
+
+// processStatusEffects processes status effects for an entity.
+func (s *CombatSystem) processStatusEffects(entity *Entity, deltaTime float64) {
+	statusComp, ok := entity.GetComponent("status_effect")
+	if !ok {
+		return
+	}
+
+	status, ok := statusComp.(*StatusEffectComponent)
+	if !ok {
+		return
+	}
+
+	if ticked := status.Update(deltaTime); ticked {
+		s.applyStatusEffectTick(entity, status)
+	}
+
+	if status.IsExpired() {
+		entity.RemoveComponent("status_effect")
+	}
+}
+
+// processDeadEntities handles death callbacks for dead entities.
+func (s *CombatSystem) processDeadEntities(entities []*Entity) {
 	for _, entity := range entities {
-		if healthComp, ok := entity.GetComponent("health"); ok {
-			if health, ok := healthComp.(*HealthComponent); ok {
-				if health.IsDead() {
-					if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
-						s.logger.WithFields(logrus.Fields{
-							"entityID":      entity.ID,
-							"currentHealth": health.Current,
-						}).Info("entity death")
-					}
-					if s.onDeathCallback != nil {
-						s.onDeathCallback(entity)
-					}
-				}
-			}
-		}
+		s.handleEntityDeath(entity)
+	}
+}
+
+// handleEntityDeath checks and handles entity death.
+func (s *CombatSystem) handleEntityDeath(entity *Entity) {
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok || !health.IsDead() {
+		return
+	}
+
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":      entity.ID,
+			"currentHealth": health.Current,
+		}).Info("entity death")
+	}
+
+	if s.onDeathCallback != nil {
+		s.onDeathCallback(entity)
 	}
 }
 

@@ -183,6 +183,35 @@ func (ai *AISystem) processIdle(entity *Entity, aiComp *AIComponent, pos *Positi
 
 // processPatrol handles the patrol state - move between waypoints.
 func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *PositionComponent, deltaTime float64) {
+	ai.logPatrolState(entity, aiComp, pos)
+
+	if ai.checkAndHandleEnemyDetection(entity, aiComp, pos) {
+		return
+	}
+
+	if !ai.validatePatrolRoute(entity, aiComp) {
+		return
+	}
+
+	waypoint := aiComp.GetCurrentWaypoint()
+	if waypoint == nil {
+		ai.logInvalidWaypoint(entity, aiComp)
+		return
+	}
+
+	if ai.handleWaypointWait(entity, aiComp, waypoint, deltaTime) {
+		return
+	}
+
+	if ai.handleWaypointReached(entity, aiComp, pos, waypoint) {
+		return
+	}
+
+	ai.moveTowardWaypoint(entity, aiComp, pos, waypoint)
+}
+
+// logPatrolState logs the current patrol state.
+func (ai *AISystem) logPatrolState(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	if ai.logger != nil {
 		ai.logger.WithFields(logrus.Fields{
 			"entity_id":       entity.ID,
@@ -193,110 +222,140 @@ func (ai *AISystem) processPatrol(entity *Entity, aiComp *AIComponent, pos *Posi
 			"y":               pos.Y,
 		}).Debug("Processing patrol state")
 	}
+}
 
-	// Look for enemies in range
+// checkAndHandleEnemyDetection checks for enemies and transitions to detect state if found.
+func (ai *AISystem) checkAndHandleEnemyDetection(entity *Entity, aiComp *AIComponent, pos *PositionComponent) bool {
 	target := ai.findNearestEnemy(entity, pos, aiComp.DetectionRange)
-
-	if target != nil {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"target_id":        target.ID,
-				"state_transition": "Patrol->Detect",
-			}).Info("AI detected enemy during patrol")
-		}
-		aiComp.Target = target
-		aiComp.ChangeState(AIStateDetect)
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateDetect.String(),
-				"prev_state": AIStatePatrol.String(),
-			}).Debug("State transition completed")
-		}
-		return
+	if target == nil {
+		return false
 	}
 
-	// Check if patrol route is configured
-	if !aiComp.HasPatrolRoute() {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Debug("No patrol route configured, behaving like idle")
-		}
-		// No patrol route, behave like idle
-		return
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":        entity.ID,
+			"target_id":        target.ID,
+			"state_transition": "Patrol->Detect",
+		}).Info("AI detected enemy during patrol")
 	}
 
-	// Get current waypoint
-	waypoint := aiComp.GetCurrentWaypoint()
-	if waypoint == nil {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"waypoint_index": aiComp.CurrentWaypointIndex,
-			}).Warn("Invalid waypoint index during patrol")
-		}
-		return
+	aiComp.Target = target
+	aiComp.ChangeState(AIStateDetect)
+
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"new_state":  AIStateDetect.String(),
+			"prev_state": AIStatePatrol.String(),
+		}).Debug("State transition completed")
+	}
+	return true
+}
+
+// validatePatrolRoute checks if patrol route is configured.
+func (ai *AISystem) validatePatrolRoute(entity *Entity, aiComp *AIComponent) bool {
+	if aiComp.HasPatrolRoute() {
+		return true
 	}
 
-	// Check if waiting at waypoint
-	if aiComp.IsWaitingAtWaypoint(deltaTime) {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"waypoint_index": aiComp.CurrentWaypointIndex,
-				"waypoint_x":     waypoint.X,
-				"waypoint_y":     waypoint.Y,
-			}).Debug("Waiting at waypoint")
-		}
-		// Stop movement while waiting
-		if velComp, ok := entity.GetComponent("velocity"); ok {
-			if vel, ok := velComp.(*VelocityComponent); ok {
-				vel.VX = 0
-				vel.VY = 0
-			}
-		}
-		return
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+		}).Debug("No patrol route configured, behaving like idle")
+	}
+	return false
+}
+
+// logInvalidWaypoint logs an invalid waypoint error.
+func (ai *AISystem) logInvalidWaypoint(entity *Entity, aiComp *AIComponent) {
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"waypoint_index": aiComp.CurrentWaypointIndex,
+		}).Warn("Invalid waypoint index during patrol")
+	}
+}
+
+// handleWaypointWait handles the waiting period at a waypoint.
+func (ai *AISystem) handleWaypointWait(entity *Entity, aiComp *AIComponent, waypoint *PatrolWaypoint, deltaTime float64) bool {
+	if !aiComp.IsWaitingAtWaypoint(deltaTime) {
+		return false
 	}
 
-	// Calculate distance to waypoint
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"waypoint_index": aiComp.CurrentWaypointIndex,
+			"waypoint_x":     waypoint.X,
+			"waypoint_y":     waypoint.Y,
+		}).Debug("Waiting at waypoint")
+	}
+
+	ai.stopEntityMovement(entity)
+	return true
+}
+
+// stopEntityMovement stops an entity's movement.
+func (ai *AISystem) stopEntityMovement(entity *Entity) {
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			vel.VX = 0
+			vel.VY = 0
+		}
+	}
+}
+
+// handleWaypointReached checks if waypoint is reached and advances to next.
+func (ai *AISystem) handleWaypointReached(entity *Entity, aiComp *AIComponent, pos *PositionComponent, waypoint *PatrolWaypoint) bool {
 	dx := waypoint.X - pos.X
 	dy := waypoint.Y - pos.Y
 	distToWaypoint := math.Sqrt(dx*dx + dy*dy)
 
-	// Check if reached waypoint
-	if distToWaypoint <= aiComp.WaypointReachDistance {
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"waypoint_index": aiComp.CurrentWaypointIndex,
-				"waypoint_x":     waypoint.X,
-				"waypoint_y":     waypoint.Y,
-				"reach_distance": aiComp.WaypointReachDistance,
-			}).Debug("AI reached waypoint")
-		}
-		aiComp.AdvanceToNextWaypoint()
+	if distToWaypoint > aiComp.WaypointReachDistance {
+		return false
+	}
+
+	if ai.logger != nil {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"waypoint_index": aiComp.CurrentWaypointIndex,
+			"waypoint_x":     waypoint.X,
+			"waypoint_y":     waypoint.Y,
+			"reach_distance": aiComp.WaypointReachDistance,
+		}).Debug("AI reached waypoint")
+	}
+
+	aiComp.AdvanceToNextWaypoint()
+	return true
+}
+
+// moveTowardWaypoint calculates and applies movement toward the current waypoint.
+func (ai *AISystem) moveTowardWaypoint(entity *Entity, aiComp *AIComponent, pos *PositionComponent, waypoint *PatrolWaypoint) {
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
 		return
 	}
 
-	// Move towards waypoint
-	if velComp, ok := entity.GetComponent("velocity"); ok {
-		if vel, ok := velComp.(*VelocityComponent); ok {
-			// Use default base speed (velocity component doesn't store speed)
-			baseSpeed := 100.0 // Default pixels per second
-
-			// Normalize direction and apply patrol speed multiplier
-			if distToWaypoint > 0 {
-				dirX := dx / distToWaypoint
-				dirY := dy / distToWaypoint
-				speed := baseSpeed * aiComp.GetSpeedMultiplier()
-
-				vel.VX = dirX * speed
-				vel.VY = dirY * speed
-			}
-		}
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return
 	}
+
+	dx := waypoint.X - pos.X
+	dy := waypoint.Y - pos.Y
+	distToWaypoint := math.Sqrt(dx*dx + dy*dy)
+
+	if distToWaypoint <= 0 {
+		return
+	}
+
+	baseSpeed := 100.0
+	dirX := dx / distToWaypoint
+	dirY := dy / distToWaypoint
+	speed := baseSpeed * aiComp.GetSpeedMultiplier()
+
+	vel.VX = dirX * speed
+	vel.VY = dirY * speed
 }
 
 // processDetect handles the detect state - confirm target and start chase.

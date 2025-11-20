@@ -62,78 +62,118 @@ func NewCraftingSystemWithLogger(world *World, inventorySystem *InventorySystem,
 // Update processes crafting progress for all entities with CraftingProgressComponent.
 // Call this each game tick with deltaTime in seconds.
 func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
+	s.logUpdateStart(len(entities), deltaTime)
+
+	for _, entity := range entities {
+		s.updateCraftingProgress(entity, deltaTime)
+	}
+
+	s.logUpdateComplete(len(entities))
+}
+
+// logUpdateStart logs the start of crafting system update.
+func (s *CraftingSystem) logUpdateStart(entityCount int, deltaTime float64) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_count": len(entities),
+			"entity_count": entityCount,
 			"delta_time":   deltaTime,
 		}).Debug("crafting system update started")
 	}
+}
 
-	for _, entity := range entities {
-		comp, ok := entity.GetComponent("crafting_progress")
-		if !ok {
-			continue
-		}
-
-		progressComp, ok := comp.(*CraftingProgressComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "crafting_progress",
-				}).Warn("crafting_progress component has wrong type")
-			}
-			continue
-		}
-
-		// Update elapsed time
-		oldElapsed := progressComp.ElapsedTimeSec
-		progressComp.ElapsedTimeSec += deltaTime
-
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":    entity.ID,
-				"recipe_id":    progressComp.CurrentRecipe.ID,
-				"old_elapsed":  oldElapsed,
-				"new_elapsed":  progressComp.ElapsedTimeSec,
-				"required":     progressComp.RequiredTimeSec,
-				"progress_pct": (progressComp.ElapsedTimeSec / progressComp.RequiredTimeSec) * 100,
-			}).Debug("updated crafting progress")
-		}
-
-		// Check if crafting is complete
-		if progressComp.IsComplete() {
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":  entity.ID,
-					"recipe_id":  progressComp.CurrentRecipe.ID,
-					"elapsed":    progressComp.ElapsedTimeSec,
-					"total_time": progressComp.RequiredTimeSec,
-				}).Debug("crafting complete, processing result")
-			}
-
-			// Complete the craft
-			s.completeCraft(entity.ID, progressComp)
-			// Remove crafting progress component
-			entity.RemoveComponent("crafting_progress")
-
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "crafting_progress",
-				}).Debug("removed crafting progress component")
-			}
-
-			// Release crafting station if used
-			if progressComp.UsingStationID != 0 {
-				s.releaseStation(progressComp.UsingStationID)
-			}
-		}
+// updateCraftingProgress updates crafting progress for a single entity.
+func (s *CraftingSystem) updateCraftingProgress(entity *Entity, deltaTime float64) {
+	progressComp, ok := s.getCraftingProgress(entity)
+	if !ok {
+		return
 	}
+
+	s.advanceProgress(entity, progressComp, deltaTime)
+
+	if progressComp.IsComplete() {
+		s.handleCraftingCompletion(entity, progressComp)
+	}
+}
+
+// getCraftingProgress retrieves and validates the crafting progress component.
+func (s *CraftingSystem) getCraftingProgress(entity *Entity) (*CraftingProgressComponent, bool) {
+	comp, ok := entity.GetComponent("crafting_progress")
+	if !ok {
+		return nil, false
+	}
+
+	progressComp, ok := comp.(*CraftingProgressComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "crafting_progress",
+			}).Warn("crafting_progress component has wrong type")
+		}
+		return nil, false
+	}
+
+	return progressComp, true
+}
+
+// advanceProgress updates the elapsed time for crafting progress.
+func (s *CraftingSystem) advanceProgress(entity *Entity, progressComp *CraftingProgressComponent, deltaTime float64) {
+	oldElapsed := progressComp.ElapsedTimeSec
+	progressComp.ElapsedTimeSec += deltaTime
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_count": len(entities),
+			"entity_id":    entity.ID,
+			"recipe_id":    progressComp.CurrentRecipe.ID,
+			"old_elapsed":  oldElapsed,
+			"new_elapsed":  progressComp.ElapsedTimeSec,
+			"required":     progressComp.RequiredTimeSec,
+			"progress_pct": (progressComp.ElapsedTimeSec / progressComp.RequiredTimeSec) * 100,
+		}).Debug("updated crafting progress")
+	}
+}
+
+// handleCraftingCompletion handles the completion of a crafting operation.
+func (s *CraftingSystem) handleCraftingCompletion(entity *Entity, progressComp *CraftingProgressComponent) {
+	s.logCraftingComplete(entity, progressComp)
+
+	s.completeCraft(entity.ID, progressComp)
+	entity.RemoveComponent("crafting_progress")
+
+	s.logComponentRemoved(entity)
+
+	if progressComp.UsingStationID != 0 {
+		s.releaseStation(progressComp.UsingStationID)
+	}
+}
+
+// logCraftingComplete logs when crafting is complete.
+func (s *CraftingSystem) logCraftingComplete(entity *Entity, progressComp *CraftingProgressComponent) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"recipe_id":  progressComp.CurrentRecipe.ID,
+			"elapsed":    progressComp.ElapsedTimeSec,
+			"total_time": progressComp.RequiredTimeSec,
+		}).Debug("crafting complete, processing result")
+	}
+}
+
+// logComponentRemoved logs when crafting progress component is removed.
+func (s *CraftingSystem) logComponentRemoved(entity *Entity) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "crafting_progress",
+		}).Debug("removed crafting progress component")
+	}
+}
+
+// logUpdateComplete logs the completion of crafting system update.
+func (s *CraftingSystem) logUpdateComplete(entityCount int) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": entityCount,
 		}).Debug("crafting system update complete")
 	}
 }

@@ -1,0 +1,617 @@
+package guild
+
+import (
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestNewManager(t *testing.T) {
+	m := NewManager()
+	if m == nil {
+		t.Fatal("NewManager returned nil")
+	}
+	if m.guilds == nil {
+		t.Error("guilds map not initialized")
+	}
+}
+
+func TestCreateGuild(t *testing.T) {
+	tests := []struct {
+		name     string
+		genre    string
+		leaderID string
+	}{
+		{"fantasy guild", "fantasy", "player1"},
+		{"sci-fi guild", "sci-fi", "player2"},
+		{"horror guild", "horror", "player3"},
+		{"cyberpunk guild", "cyberpunk", "player4"},
+		{"post-apocalyptic guild", "post-apocalyptic", "player5"},
+		{"unknown genre", "unknown", "player6"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewManager()
+			guildID, err := m.CreateGuild(tt.genre, tt.leaderID)
+			if err != nil {
+				t.Fatalf("CreateGuild failed: %v", err)
+			}
+			if guildID == "" {
+				t.Error("CreateGuild returned empty ID")
+			}
+
+			// Verify guild was created
+			guild, err := m.GetGuild(guildID)
+			if err != nil {
+				t.Fatalf("GetGuild failed: %v", err)
+			}
+			if guild.LeaderID != tt.leaderID {
+				t.Errorf("LeaderID = %s, want %s", guild.LeaderID, tt.leaderID)
+			}
+			if len(guild.Members) != 1 {
+				t.Errorf("Members count = %d, want 1", len(guild.Members))
+			}
+			if guild.Members[0].Rank != RankLeader {
+				t.Errorf("First member rank = %s, want %s", guild.Members[0].Rank, RankLeader)
+			}
+			if guild.Treasury != 0 {
+				t.Errorf("Treasury = %d, want 0", guild.Treasury)
+			}
+			if guild.Name == "" {
+				t.Error("Guild name is empty")
+			}
+			if guild.Emblem == nil {
+				t.Error("Guild emblem is nil")
+			}
+		})
+	}
+}
+
+func TestGetGuild(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "player1")
+
+	t.Run("existing guild", func(t *testing.T) {
+		guild, err := m.GetGuild(guildID)
+		if err != nil {
+			t.Fatalf("GetGuild failed: %v", err)
+		}
+		if guild.ID != guildID {
+			t.Errorf("ID = %s, want %s", guild.ID, guildID)
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		_, err := m.GetGuild("nonexistent")
+		if err == nil {
+			t.Error("GetGuild should fail for non-existing guild")
+		}
+	})
+}
+
+func TestAddMember(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	t.Run("add new member", func(t *testing.T) {
+		err := m.AddMember(guildID, "player1", RankRecruit)
+		if err != nil {
+			t.Fatalf("AddMember failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if len(guild.Members) != 2 {
+			t.Errorf("Members count = %d, want 2", len(guild.Members))
+		}
+
+		// Verify member exists
+		member := guild.GetMember("player1")
+		if member == nil {
+			t.Fatal("Member not found")
+		}
+		if member.Rank != RankRecruit {
+			t.Errorf("Rank = %s, want %s", member.Rank, RankRecruit)
+		}
+	})
+
+	t.Run("add duplicate member", func(t *testing.T) {
+		err := m.AddMember(guildID, "player1", RankMember)
+		if err == nil {
+			t.Error("AddMember should fail for duplicate member")
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.AddMember("nonexistent", "player2", RankMember)
+		if err == nil {
+			t.Error("AddMember should fail for non-existing guild")
+		}
+	})
+}
+
+func TestRemoveMember(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.AddMember(guildID, "player1", RankMember)
+
+	t.Run("remove existing member", func(t *testing.T) {
+		err := m.RemoveMember(guildID, "player1")
+		if err != nil {
+			t.Fatalf("RemoveMember failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if len(guild.Members) != 1 {
+			t.Errorf("Members count = %d, want 1", len(guild.Members))
+		}
+	})
+
+	t.Run("remove leader", func(t *testing.T) {
+		err := m.RemoveMember(guildID, "leader")
+		if err == nil {
+			t.Error("RemoveMember should fail when trying to remove leader")
+		}
+	})
+
+	t.Run("remove non-existing member", func(t *testing.T) {
+		err := m.RemoveMember(guildID, "nonexistent")
+		if err == nil {
+			t.Error("RemoveMember should fail for non-existing member")
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.RemoveMember("nonexistent", "player1")
+		if err == nil {
+			t.Error("RemoveMember should fail for non-existing guild")
+		}
+	})
+}
+
+func TestDepositTreasury(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	t.Run("valid deposit", func(t *testing.T) {
+		err := m.DepositTreasury(guildID, "leader", 100)
+		if err != nil {
+			t.Fatalf("DepositTreasury failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if guild.Treasury != 100 {
+			t.Errorf("Treasury = %d, want 100", guild.Treasury)
+		}
+		if len(guild.Transactions) != 1 {
+			t.Errorf("Transactions count = %d, want 1", len(guild.Transactions))
+		}
+	})
+
+	t.Run("multiple deposits", func(t *testing.T) {
+		m.DepositTreasury(guildID, "leader", 50)
+		guild, _ := m.GetGuild(guildID)
+		if guild.Treasury != 150 {
+			t.Errorf("Treasury = %d, want 150", guild.Treasury)
+		}
+	})
+
+	t.Run("negative amount", func(t *testing.T) {
+		err := m.DepositTreasury(guildID, "leader", -50)
+		if err == nil {
+			t.Error("DepositTreasury should fail for negative amount")
+		}
+	})
+
+	t.Run("zero amount", func(t *testing.T) {
+		err := m.DepositTreasury(guildID, "leader", 0)
+		if err == nil {
+			t.Error("DepositTreasury should fail for zero amount")
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.DepositTreasury("nonexistent", "leader", 100)
+		if err == nil {
+			t.Error("DepositTreasury should fail for non-existing guild")
+		}
+	})
+}
+
+func TestWithdrawTreasury(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.DepositTreasury(guildID, "leader", 1000)
+
+	t.Run("valid withdrawal", func(t *testing.T) {
+		err := m.WithdrawTreasury(guildID, "leader", 100)
+		if err != nil {
+			t.Fatalf("WithdrawTreasury failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if guild.Treasury != 900 {
+			t.Errorf("Treasury = %d, want 900", guild.Treasury)
+		}
+	})
+
+	t.Run("insufficient funds", func(t *testing.T) {
+		err := m.WithdrawTreasury(guildID, "leader", 1000)
+		if err == nil {
+			t.Error("WithdrawTreasury should fail for insufficient funds")
+		}
+	})
+
+	t.Run("negative amount", func(t *testing.T) {
+		err := m.WithdrawTreasury(guildID, "leader", -50)
+		if err == nil {
+			t.Error("WithdrawTreasury should fail for negative amount")
+		}
+	})
+
+	t.Run("zero amount", func(t *testing.T) {
+		err := m.WithdrawTreasury(guildID, "leader", 0)
+		if err == nil {
+			t.Error("WithdrawTreasury should fail for zero amount")
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.WithdrawTreasury("nonexistent", "leader", 100)
+		if err == nil {
+			t.Error("WithdrawTreasury should fail for non-existing guild")
+		}
+	})
+}
+
+func TestSetMOTD(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	t.Run("valid MOTD", func(t *testing.T) {
+		newMOTD := "New message of the day!"
+		err := m.SetMOTD(guildID, newMOTD)
+		if err != nil {
+			t.Fatalf("SetMOTD failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if guild.MOTD != newMOTD {
+			t.Errorf("MOTD = %s, want %s", guild.MOTD, newMOTD)
+		}
+	})
+
+	t.Run("empty MOTD", func(t *testing.T) {
+		err := m.SetMOTD(guildID, "")
+		if err != nil {
+			t.Fatalf("SetMOTD should allow empty MOTD: %v", err)
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.SetMOTD("nonexistent", "test")
+		if err == nil {
+			t.Error("SetMOTD should fail for non-existing guild")
+		}
+	})
+}
+
+func TestSaveLoad(t *testing.T) {
+	m := NewManager()
+
+	// Create multiple guilds
+	guildID1, _ := m.CreateGuild("fantasy", "leader1")
+	guildID2, _ := m.CreateGuild("sci-fi", "leader2")
+	m.AddMember(guildID1, "player1", RankMember)
+	m.DepositTreasury(guildID1, "leader1", 500)
+
+	// Save
+	data, err := m.Save()
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("Save returned empty data")
+	}
+
+	// Load into new manager
+	m2 := NewManager()
+	err = m2.Load(data)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify guilds were loaded
+	guild1, err := m2.GetGuild(guildID1)
+	if err != nil {
+		t.Fatalf("Guild 1 not found after load: %v", err)
+	}
+	if len(guild1.Members) != 2 {
+		t.Errorf("Guild 1 members count = %d, want 2", len(guild1.Members))
+	}
+	if guild1.Treasury != 500 {
+		t.Errorf("Guild 1 treasury = %d, want 500", guild1.Treasury)
+	}
+
+	guild2, err := m2.GetGuild(guildID2)
+	if err != nil {
+		t.Fatalf("Guild 2 not found after load: %v", err)
+	}
+	if guild2.LeaderID != "leader2" {
+		t.Errorf("Guild 2 leader = %s, want leader2", guild2.LeaderID)
+	}
+}
+
+func TestConcurrency(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	// Concurrent deposits
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			playerID := "player" + string(rune(id))
+			m.DepositTreasury(guildID, playerID, 10)
+		}(i)
+	}
+	wg.Wait()
+
+	guild, _ := m.GetGuild(guildID)
+	if guild.Treasury != 1000 {
+		t.Errorf("Treasury = %d, want 1000", guild.Treasury)
+	}
+}
+
+func TestGuildHasPermission(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guild, _ := m.GetGuild(guildID)
+
+	tests := []struct {
+		name string
+		rank Rank
+		perm Permission
+		want bool
+	}{
+		{"leader invite", RankLeader, PermissionInvite, true},
+		{"leader kick", RankLeader, PermissionKick, true},
+		{"officer invite", RankOfficer, PermissionInvite, true},
+		{"officer kick", RankOfficer, PermissionKick, false},
+		{"member deposit", RankMember, PermissionDeposit, true},
+		{"member withdraw", RankMember, PermissionWithdraw, false},
+		{"recruit deposit", RankRecruit, PermissionDeposit, true},
+		{"recruit invite", RankRecruit, PermissionInvite, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := guild.HasPermission(tt.rank, tt.perm)
+			if got != tt.want {
+				t.Errorf("HasPermission(%s, %s) = %v, want %v", tt.rank, tt.perm, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetMember(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.AddMember(guildID, "player1", RankMember)
+	guild, _ := m.GetGuild(guildID)
+
+	t.Run("existing member", func(t *testing.T) {
+		member := guild.GetMember("player1")
+		if member == nil {
+			t.Fatal("GetMember returned nil for existing member")
+		}
+		if member.PlayerID != "player1" {
+			t.Errorf("PlayerID = %s, want player1", member.PlayerID)
+		}
+	})
+
+	t.Run("non-existing member", func(t *testing.T) {
+		member := guild.GetMember("nonexistent")
+		if member != nil {
+			t.Error("GetMember should return nil for non-existing member")
+		}
+	})
+}
+
+// Benchmarks
+func BenchmarkCreateGuild(b *testing.B) {
+	m := NewManager()
+	for i := 0; i < b.N; i++ {
+		playerID := "player" + string(rune(i))
+		m.CreateGuild("fantasy", playerID)
+	}
+}
+
+func BenchmarkAddMember(b *testing.B) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		playerID := "player" + string(rune(i))
+		m.AddMember(guildID, playerID, RankMember)
+	}
+}
+
+func BenchmarkDepositTreasury(b *testing.B) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.DepositTreasury(guildID, "leader", 10)
+	}
+}
+
+func BenchmarkWithdrawTreasury(b *testing.B) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.DepositTreasury(guildID, "leader", 1000000)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.WithdrawTreasury(guildID, "leader", 1)
+	}
+}
+
+func BenchmarkSave(b *testing.B) {
+	m := NewManager()
+	for i := 0; i < 100; i++ {
+		playerID := "player" + string(rune(i))
+		m.CreateGuild("fantasy", playerID)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.Save()
+	}
+}
+
+func BenchmarkLoad(b *testing.B) {
+	m := NewManager()
+	for i := 0; i < 100; i++ {
+		playerID := "player" + string(rune(i))
+		m.CreateGuild("fantasy", playerID)
+	}
+	data, _ := m.Save()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m2 := NewManager()
+		m2.Load(data)
+	}
+}
+
+func BenchmarkHasPermission(b *testing.B) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guild, _ := m.GetGuild(guildID)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		guild.HasPermission(RankLeader, PermissionInvite)
+	}
+}
+
+func TestGenerateIdentity(t *testing.T) {
+	tests := []struct {
+		name  string
+		genre string
+		seed  int64
+	}{
+		{"fantasy", "fantasy", 12345},
+		{"sci-fi", "sci-fi", 12345},
+		{"horror", "horror", 12345},
+		{"cyberpunk", "cyberpunk", 12345},
+		{"post-apocalyptic", "post-apocalyptic", 12345},
+		{"unknown", "unknown", 12345},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			identity := GenerateIdentity(tt.genre, tt.seed)
+			if identity.Name == "" {
+				t.Error("Generated name is empty")
+			}
+			if identity.Emblem == nil {
+				t.Fatal("Generated emblem is nil")
+			}
+			if identity.Emblem.Shape == "" {
+				t.Error("Emblem shape is empty")
+			}
+			if identity.Emblem.Symbol == "" {
+				t.Error("Emblem symbol is empty")
+			}
+		})
+	}
+}
+
+func TestGenerateIdentityDeterministic(t *testing.T) {
+	seed := int64(54321)
+	id1 := GenerateIdentity("fantasy", seed)
+	id2 := GenerateIdentity("fantasy", seed)
+
+	if id1.Name != id2.Name {
+		t.Errorf("Names differ: %s vs %s", id1.Name, id2.Name)
+	}
+	if id1.Emblem.Shape != id2.Emblem.Shape {
+		t.Errorf("Shapes differ: %s vs %s", id1.Emblem.Shape, id2.Emblem.Shape)
+	}
+	if id1.Emblem.Symbol != id2.Emblem.Symbol {
+		t.Errorf("Symbols differ: %s vs %s", id1.Emblem.Symbol, id2.Emblem.Symbol)
+	}
+	if id1.Emblem.PrimaryR != id2.Emblem.PrimaryR {
+		t.Error("Primary colors differ")
+	}
+}
+
+func TestGuildType(t *testing.T) {
+	guild := &Guild{}
+	if guild.Type() != "guild" {
+		t.Errorf("Type() = %s, want guild", guild.Type())
+	}
+}
+
+func TestTransactionHistory(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	// Multiple transactions
+	m.DepositTreasury(guildID, "player1", 100)
+	m.DepositTreasury(guildID, "player2", 200)
+	m.WithdrawTreasury(guildID, "leader", 50)
+
+	guild, _ := m.GetGuild(guildID)
+	if len(guild.Transactions) != 3 {
+		t.Errorf("Transactions count = %d, want 3", len(guild.Transactions))
+	}
+
+	// Check transaction details
+	if guild.Transactions[0].Amount != 100 {
+		t.Errorf("Transaction 0 amount = %d, want 100", guild.Transactions[0].Amount)
+	}
+	if guild.Transactions[2].Amount != -50 {
+		t.Errorf("Transaction 2 amount = %d, want -50", guild.Transactions[2].Amount)
+	}
+}
+
+func TestUpdatedAtTimestamp(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	guild1, _ := m.GetGuild(guildID)
+	oldTime := guild1.UpdatedAt
+
+	time.Sleep(10 * time.Millisecond)
+	m.DepositTreasury(guildID, "leader", 100)
+
+	guild2, _ := m.GetGuild(guildID)
+	if !guild2.UpdatedAt.After(oldTime) {
+		t.Error("UpdatedAt not updated after treasury deposit")
+	}
+}
+
+func TestGenreSpecificNames(t *testing.T) {
+	genres := []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apocalyptic"}
+
+	for _, genre := range genres {
+		t.Run(genre, func(t *testing.T) {
+			identity := GenerateIdentity(genre, 12345)
+			name := identity.Name
+
+			// Verify name is not empty and emblem is valid
+			if name == "" {
+				t.Error("Generated name is empty")
+			}
+			if identity.Emblem == nil {
+				t.Error("Emblem is nil")
+			}
+			if identity.Emblem.Shape == "" {
+				t.Error("Emblem shape is empty")
+			}
+			if identity.Emblem.Symbol == "" {
+				t.Error("Emblem symbol is empty")
+			}
+		})
+	}
+}

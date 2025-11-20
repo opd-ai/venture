@@ -44,101 +44,107 @@ func NewPlayerItemUseSystemWithLogger(inventorySystem *InventorySystem, world *W
 // This system must run AFTER InputSystem.
 func (s *PlayerItemUseSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Skip dead entities - they cannot use items (Category 1.1)
-		if entity.HasComponent("dead") {
+		if !s.canUseItems(entity) {
 			continue
 		}
 
-		// Check for input component (player-controlled entities only)
-		inputComp, ok := entity.GetComponent("input")
-		if !ok {
-			continue
-		}
-		input, ok := inputComp.(InputProvider)
-		if !ok {
-			continue // Not an InputProvider
-		}
-
-		// Check if player pressed use item button
-		if !input.IsUseItemPressed() {
+		input, ok := s.getInputProvider(entity)
+		if !ok || !input.IsUseItemPressed() {
 			continue
 		}
 
-		// Get inventory component
-		invComp, ok := entity.GetComponent("inventory")
-		if !ok {
-			continue // Entity has no inventory
-		}
-		// Type assert with safety check
-		inventory, ok := invComp.(*InventoryComponent)
+		inventory, ok := s.getInventory(entity)
 		if !ok {
 			continue
 		}
 
-		// Get hotbar component for selected item (if available)
-		var selectedIndex int
-		if hotbarComp, hasHotbar := entity.GetComponent("hotbar"); hasHotbar {
-			// Type assert with safety check
-			if hotbar, ok := hotbarComp.(*HotbarComponent); ok {
-				selectedIndex = hotbar.LastUsedIndex
-				// Check if the slot has an item
-				if selectedIndex == -1 || hotbar.GetSlot(selectedIndex) == nil {
-					// No selected item, fall back to first consumable
-					selectedIndex = s.findFirstUsableItem(inventory)
-				} else {
-					// Find the hotbar item in inventory
-					targetItem := hotbar.GetSlot(selectedIndex)
-					selectedIndex = s.findItemInInventory(inventory, targetItem)
-				}
-			} else {
-				// Type assertion failed, fall back to first consumable
-				selectedIndex = s.findFirstUsableItem(inventory)
-			}
-		} else {
-			// No hotbar, use first consumable
-			selectedIndex = s.findFirstUsableItem(inventory)
-		}
-
+		selectedIndex := s.determineSelectedItem(entity, inventory)
 		if selectedIndex == -1 {
-			// No usable item found
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithField("entityID", entity.ID).Debug("no usable items in inventory")
-			}
-			// Note: Input flag will be cleared by InputSystem on next frame
+			s.logNoUsableItems(entity.ID)
 			continue
 		}
 
-		// Use the item through inventory system
-		err := s.inventorySystem.UseConsumable(entity.ID, selectedIndex)
+		s.executeItemUse(entity.ID, selectedIndex, inventory)
+	}
+}
 
-		if err == nil {
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
-				// Get item name for logging
-				var itemName string
-				if selectedIndex < len(inventory.Items) {
-					itemName = inventory.Items[selectedIndex].Name
-				}
-				s.logger.WithFields(logrus.Fields{
-					"entityID":  entity.ID,
-					"itemIndex": selectedIndex,
-					"itemName":  itemName,
-				}).Info("item used")
-			}
-			// Could trigger effects here:
-			// - Use animation
-			// - Sound effect
-			// - Visual feedback
-			// - Tutorial progress tracking
-		} else {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entityID":  entity.ID,
-					"itemIndex": selectedIndex,
-				}).WithError(err).Warn("failed to use item")
-			}
+func (s *PlayerItemUseSystem) canUseItems(entity *Entity) bool {
+	return !entity.HasComponent("dead")
+}
+
+func (s *PlayerItemUseSystem) getInputProvider(entity *Entity) (InputProvider, bool) {
+	inputComp, ok := entity.GetComponent("input")
+	if !ok {
+		return nil, false
+	}
+	input, ok := inputComp.(InputProvider)
+	return input, ok
+}
+
+func (s *PlayerItemUseSystem) getInventory(entity *Entity) (*InventoryComponent, bool) {
+	invComp, ok := entity.GetComponent("inventory")
+	if !ok {
+		return nil, false
+	}
+	inventory, ok := invComp.(*InventoryComponent)
+	return inventory, ok
+}
+
+func (s *PlayerItemUseSystem) determineSelectedItem(entity *Entity, inventory *InventoryComponent) int {
+	hotbarComp, hasHotbar := entity.GetComponent("hotbar")
+	if !hasHotbar {
+		return s.findFirstUsableItem(inventory)
+	}
+
+	hotbar, ok := hotbarComp.(*HotbarComponent)
+	if !ok {
+		return s.findFirstUsableItem(inventory)
+	}
+
+	selectedIndex := hotbar.LastUsedIndex
+	if selectedIndex == -1 || hotbar.GetSlot(selectedIndex) == nil {
+		return s.findFirstUsableItem(inventory)
+	}
+
+	targetItem := hotbar.GetSlot(selectedIndex)
+	return s.findItemInInventory(inventory, targetItem)
+}
+
+func (s *PlayerItemUseSystem) logNoUsableItems(entityID uint64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithField("entityID", entityID).Debug("no usable items in inventory")
+	}
+}
+
+func (s *PlayerItemUseSystem) executeItemUse(entityID uint64, selectedIndex int, inventory *InventoryComponent) {
+	err := s.inventorySystem.UseConsumable(entityID, selectedIndex)
+	if err == nil {
+		s.logSuccessfulItemUse(entityID, selectedIndex, inventory)
+	} else {
+		s.logFailedItemUse(entityID, selectedIndex, err)
+	}
+}
+
+func (s *PlayerItemUseSystem) logSuccessfulItemUse(entityID uint64, selectedIndex int, inventory *InventoryComponent) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		var itemName string
+		if selectedIndex < len(inventory.Items) {
+			itemName = inventory.Items[selectedIndex].Name
 		}
+		s.logger.WithFields(logrus.Fields{
+			"entityID":  entityID,
+			"itemIndex": selectedIndex,
+			"itemName":  itemName,
+		}).Info("item used")
+	}
+}
 
-		// Note: Input flag will be cleared by InputSystem on next frame
+func (s *PlayerItemUseSystem) logFailedItemUse(entityID uint64, selectedIndex int, err error) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":  entityID,
+			"itemIndex": selectedIndex,
+		}).WithError(err).Warn("failed to use item")
 	}
 }
 

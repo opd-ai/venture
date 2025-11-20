@@ -17,13 +17,33 @@ func NewGenerator() *Generator {
 
 // Generate creates a procedural story arc
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if params.Depth < 1 {
-		return nil, fmt.Errorf("depth must be at least 1, got %d", params.Depth)
+	if err := validateGenerationParams(params); err != nil {
+		return nil, err
 	}
 
 	rng := rand.New(rand.NewSource(seed))
+	arc := createStoryArc(seed, rng, params)
+	nodeCount := calculateNodeCount(params.Depth)
 
-	arc := &StoryArc{
+	startNode := g.generateStartNode(rng, arc.GenreID)
+	arc.Nodes[startNode.ID] = startNode
+	arc.StartNodeID = startNode.ID
+
+	endingNodes := g.buildStoryGraph(arc, rng, startNode.ID, nodeCount)
+	g.ensureStoryEnding(arc, rng, endingNodes)
+
+	return arc, nil
+}
+
+func validateGenerationParams(params procgen.GenerationParams) error {
+	if params.Depth < 1 {
+		return fmt.Errorf("depth must be at least 1, got %d", params.Depth)
+	}
+	return nil
+}
+
+func createStoryArc(seed int64, rng *rand.Rand, params procgen.GenerationParams) *StoryArc {
+	return &StoryArc{
 		ID:          generateID(rng, "arc"),
 		Title:       generateTitle(rng, params.GenreID),
 		Description: generateDescription(rng, params.GenreID),
@@ -32,85 +52,29 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 		Endings:     make(map[string]EndingType),
 		Seed:        seed,
 	}
+}
 
-	// Calculate number of nodes (10-20 based on depth)
-	nodeCount := 10 + int(float64(params.Depth)*2)
+func calculateNodeCount(depth int) int {
+	nodeCount := 10 + int(float64(depth)*2)
 	if nodeCount > 20 {
 		nodeCount = 20
 	}
+	return nodeCount
+}
 
-	// Generate start node
-	startNode := g.generateStartNode(rng, arc.GenreID)
-	arc.Nodes[startNode.ID] = startNode
-	arc.StartNodeID = startNode.ID
-
-	// Track available nodes for connections
-	currentLayer := []string{startNode.ID}
+func (g *Generator) buildStoryGraph(arc *StoryArc, rng *rand.Rand, startNodeID string, nodeCount int) []string {
+	currentLayer := []string{startNodeID}
 	endingNodes := []string{}
 
-	// Generate nodes until we reach target count
 	for len(arc.Nodes) < nodeCount {
 		nextLayer := []string{}
-
 		for _, nodeID := range currentLayer {
 			if len(arc.Nodes) >= nodeCount {
 				break
 			}
-
-			parentNode := arc.Nodes[nodeID]
-
-			// Determine how many branches from this node
-			var branchCount int
-			if parentNode.Type == NodeTypeChoice {
-				branchCount = 2 + rng.Intn(2) // 2-3 choices
-			} else {
-				branchCount = 1 // Linear progression for events/consequences
-			}
-
-			for i := 0; i < branchCount && len(arc.Nodes) < nodeCount; i++ {
-				var newNode *StoryNode
-
-				// Create ending nodes when we're near the target count
-				if len(arc.Nodes) >= nodeCount-3 {
-					newNode = g.generateEndingNode(rng, arc.GenreID)
-					endingType := EndingType(rng.Intn(6))
-					arc.Endings[newNode.ID] = endingType
-					endingNodes = append(endingNodes, newNode.ID)
-				} else {
-					// Random node type distribution
-					nodeTypeRoll := rng.Float64()
-					if nodeTypeRoll < 0.5 {
-						newNode = g.generateChoiceNode(rng, arc.GenreID)
-					} else if nodeTypeRoll < 0.8 {
-						newNode = g.generateEventNode(rng, arc.GenreID)
-					} else {
-						newNode = g.generateConsequenceNode(rng, arc.GenreID)
-					}
-
-					// Only add to next layer if not an ending
-					nextLayer = append(nextLayer, newNode.ID)
-				}
-
-				arc.Nodes[newNode.ID] = newNode
-
-				// Connect to parent
-				if parentNode.Type == NodeTypeChoice {
-					// Add as a choice option
-					choice := Choice{
-						ID:             generateID(rng, "choice"),
-						Text:           generateChoiceText(rng, arc.GenreID),
-						Requirements:   make(map[string]interface{}),
-						AlignmentShift: generateAlignmentShift(rng),
-						FactionChange:  generateFactionChange(rng, arc.GenreID),
-						NextNodeID:     newNode.ID,
-					}
-					parentNode.Choices = append(parentNode.Choices, choice)
-				} else {
-					// Linear connection
-					parentNode.NextNodeID = newNode.ID
-					break // Only one connection for linear nodes
-				}
-			}
+			layer, endings := g.processNodeBranches(arc, rng, nodeID, nodeCount)
+			nextLayer = append(nextLayer, layer...)
+			endingNodes = append(endingNodes, endings...)
 		}
 
 		currentLayer = nextLayer
@@ -119,21 +83,85 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 		}
 	}
 
-	// Ensure we have at least one ending
-	if len(endingNodes) == 0 {
-		endingNode := g.generateEndingNode(rng, arc.GenreID)
-		arc.Nodes[endingNode.ID] = endingNode
-		arc.Endings[endingNode.ID] = EndingTypeNeutral
+	return endingNodes
+}
 
-		// Connect last nodes to ending
-		for _, node := range arc.Nodes {
-			if node.NextNodeID == "" && len(node.Choices) == 0 && node.Type != NodeTypeEnding {
-				node.NextNodeID = endingNode.ID
-			}
+func (g *Generator) processNodeBranches(arc *StoryArc, rng *rand.Rand, nodeID string, nodeCount int) ([]string, []string) {
+	parentNode := arc.Nodes[nodeID]
+	branchCount := determineBranchCount(rng, parentNode.Type)
+
+	nextLayer := []string{}
+	endingNodes := []string{}
+
+	for i := 0; i < branchCount && len(arc.Nodes) < nodeCount; i++ {
+		newNode, isEnding := g.createBranchNode(arc, rng, nodeCount)
+		arc.Nodes[newNode.ID] = newNode
+		g.connectToParent(parentNode, newNode, rng, arc.GenreID)
+
+		if isEnding {
+			endingNodes = append(endingNodes, newNode.ID)
+		} else {
+			nextLayer = append(nextLayer, newNode.ID)
 		}
 	}
 
-	return arc, nil
+	return nextLayer, endingNodes
+}
+
+func determineBranchCount(rng *rand.Rand, nodeType NodeType) int {
+	if nodeType == NodeTypeChoice {
+		return 2 + rng.Intn(2)
+	}
+	return 1
+}
+
+func (g *Generator) createBranchNode(arc *StoryArc, rng *rand.Rand, nodeCount int) (*StoryNode, bool) {
+	if len(arc.Nodes) >= nodeCount-3 {
+		newNode := g.generateEndingNode(rng, arc.GenreID)
+		endingType := EndingType(rng.Intn(6))
+		arc.Endings[newNode.ID] = endingType
+		return newNode, true
+	}
+
+	nodeTypeRoll := rng.Float64()
+	if nodeTypeRoll < 0.5 {
+		return g.generateChoiceNode(rng, arc.GenreID), false
+	} else if nodeTypeRoll < 0.8 {
+		return g.generateEventNode(rng, arc.GenreID), false
+	}
+	return g.generateConsequenceNode(rng, arc.GenreID), false
+}
+
+func (g *Generator) connectToParent(parentNode, newNode *StoryNode, rng *rand.Rand, genreID string) {
+	if parentNode.Type == NodeTypeChoice {
+		choice := Choice{
+			ID:             generateID(rng, "choice"),
+			Text:           generateChoiceText(rng, genreID),
+			Requirements:   make(map[string]interface{}),
+			AlignmentShift: generateAlignmentShift(rng),
+			FactionChange:  generateFactionChange(rng, genreID),
+			NextNodeID:     newNode.ID,
+		}
+		parentNode.Choices = append(parentNode.Choices, choice)
+	} else {
+		parentNode.NextNodeID = newNode.ID
+	}
+}
+
+func (g *Generator) ensureStoryEnding(arc *StoryArc, rng *rand.Rand, endingNodes []string) {
+	if len(endingNodes) > 0 {
+		return
+	}
+
+	endingNode := g.generateEndingNode(rng, arc.GenreID)
+	arc.Nodes[endingNode.ID] = endingNode
+	arc.Endings[endingNode.ID] = EndingTypeNeutral
+
+	for _, node := range arc.Nodes {
+		if node.NextNodeID == "" && len(node.Choices) == 0 && node.Type != NodeTypeEnding {
+			node.NextNodeID = endingNode.ID
+		}
+	}
 }
 
 // Validate checks if the generated story arc is valid

@@ -189,30 +189,13 @@ func (ui *CraftingUI) Toggle() {
 // and crafting initiation (ENTER/click).
 func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	ui.updateMessageTimer(deltaTime)
+	ui.updateTouchComponents()
 
-	// Update touch handler
-	if ui.touchHandler != nil {
-		ui.touchHandler.Update()
-	}
-
-	// Update touch buttons
-	if ui.closeButton != nil {
-		ui.closeButton.Update()
-	}
-	if ui.craftButton != nil {
-		ui.craftButton.Update()
-	}
-
-	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
-		if shouldToggle {
-			ui.Toggle()
-		} else {
-			ui.Close()
-		}
+	if ui.handleMenuToggle() {
 		return
 	}
 
-	if !ui.visible || ui.playerEntity == nil {
+	if !ui.isActive() {
 		return
 	}
 
@@ -226,45 +209,85 @@ func (ui *CraftingUI) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	ui.handleSearchFilterInput()
-
 	recipeList = ui.filterAndSortRecipes(recipeList)
+
 	if len(recipeList) == 0 {
 		ui.showMessage("No recipes match your search/filter")
 		return
 	}
 
-	windowWidth, windowHeight, maxVisibleRecipes := ui.calculateVisibleArea()
+	ui.processRecipeListInteraction(recipeList)
+}
 
-	// Handle touch scrolling
+func (ui *CraftingUI) updateTouchComponents() {
 	if ui.touchHandler != nil {
-		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for scrolling
-			if direction > 1.0 || direction < -1.0 {
-				scrollDelta := int(distance * 0.1)
-				if direction < 0 {
-					ui.scrollOffset += scrollDelta
-				} else {
-					ui.scrollOffset -= scrollDelta
-				}
-				// Clamp scroll
-				if ui.scrollOffset < 0 {
-					ui.scrollOffset = 0
-				}
-				maxScroll := len(recipeList) - maxVisibleRecipes
-				if maxScroll < 0 {
-					maxScroll = 0
-				}
-				if ui.scrollOffset > maxScroll {
-					ui.scrollOffset = maxScroll
-				}
-			}
-		}
+		ui.touchHandler.Update()
 	}
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+	if ui.craftButton != nil {
+		ui.craftButton.Update()
+	}
+}
 
+func (ui *CraftingUI) handleMenuToggle() bool {
+	if shouldClose, shouldToggle := HandleMenuInput(MenuKeys.Crafting, ui.visible); shouldClose {
+		if shouldToggle {
+			ui.Toggle()
+		} else {
+			ui.Close()
+		}
+		return true
+	}
+	return false
+}
+
+func (ui *CraftingUI) isActive() bool {
+	return ui.visible && ui.playerEntity != nil
+}
+
+func (ui *CraftingUI) processRecipeListInteraction(recipeList []*Recipe) {
+	windowWidth, windowHeight, maxVisibleRecipes := ui.calculateVisibleArea()
+	ui.handleTouchScrolling(recipeList, maxVisibleRecipes)
 	ui.handleMouseInput(recipeList, windowWidth, windowHeight, maxVisibleRecipes)
 	ui.handleKeyboardNavigation(recipeList, maxVisibleRecipes)
 	ui.handleMouseWheelScrolling(recipeList, maxVisibleRecipes)
 	ui.handleCraftingInitiation(recipeList)
+}
+
+func (ui *CraftingUI) handleTouchScrolling(recipeList []*Recipe, maxVisibleRecipes int) {
+	if ui.touchHandler == nil {
+		return
+	}
+
+	direction, distance, detected := ui.touchHandler.GetSwipe()
+	if !detected {
+		return
+	}
+
+	if direction > 1.0 || direction < -1.0 {
+		scrollDelta := int(distance * 0.1)
+		if direction < 0 {
+			ui.scrollOffset += scrollDelta
+		} else {
+			ui.scrollOffset -= scrollDelta
+		}
+		ui.clampScrollOffset(len(recipeList), maxVisibleRecipes)
+	}
+}
+
+func (ui *CraftingUI) clampScrollOffset(recipeCount, maxVisible int) {
+	if ui.scrollOffset < 0 {
+		ui.scrollOffset = 0
+	}
+	maxScroll := recipeCount - maxVisible
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if ui.scrollOffset > maxScroll {
+		ui.scrollOffset = maxScroll
+	}
 }
 
 // updateMessageTimer decrements the crafting message timer and clears the message when expired.

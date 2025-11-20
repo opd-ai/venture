@@ -2,7 +2,7 @@
 
 # Number of iterations to perform
 # (must be a positive integer)
-ITER=3
+ITER=8
 
 alias copilot="yes n | copilot"
 

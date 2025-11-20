@@ -4,7 +4,16 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.New()
+
+func init() {
+	log.SetReportCaller(true)
+	log.WithField("package", "companion_learning").Debug("Companion learning package initialized")
+}
 
 // Manager handles companion learning operations.
 type Manager struct {
@@ -13,14 +22,32 @@ type Manager struct {
 
 // NewManager creates a new companion learning manager.
 func NewManager() *Manager {
-	return &Manager{
+	log.Debug("Creating new companion learning manager")
+
+	m := &Manager{
 		companions: make(map[string]*CompanionLearningComponent),
 	}
+
+	log.WithFields(logrus.Fields{
+		"initial_companion_count": 0,
+	}).Info("Companion learning manager created")
+
+	return m
 }
 
 // AddCompanion registers a companion for learning tracking.
 func (m *Manager) AddCompanion(companionID string, learningRate float64) *CompanionLearningComponent {
+	log.WithFields(logrus.Fields{
+		"companion_id":  companionID,
+		"learning_rate": learningRate,
+	}).Debug("Adding companion to learning manager")
+
 	if learningRate <= 0 {
+		log.WithFields(logrus.Fields{
+			"companion_id":          companionID,
+			"invalid_learning_rate": learningRate,
+			"default_learning_rate": 1.0,
+		}).Warn("Invalid learning rate provided, using default")
 		learningRate = 1.0
 	}
 
@@ -34,22 +61,62 @@ func (m *Manager) AddCompanion(companionID string, learningRate float64) *Compan
 	}
 
 	m.companions[companionID] = comp
+
+	log.WithFields(logrus.Fields{
+		"companion_id":     companionID,
+		"learning_rate":    learningRate,
+		"total_companions": len(m.companions),
+	}).Info("Companion added to learning manager")
+
 	return comp
 }
 
 // GetCompanion retrieves a companion's learning component.
 func (m *Manager) GetCompanion(companionID string) (*CompanionLearningComponent, bool) {
+	log.WithFields(logrus.Fields{
+		"companion_id": companionID,
+	}).Debug("Retrieving companion from learning manager")
+
 	comp, ok := m.companions[companionID]
+
+	if !ok {
+		log.WithFields(logrus.Fields{
+			"companion_id": companionID,
+		}).Debug("Companion not found in learning manager")
+	} else {
+		log.WithFields(logrus.Fields{
+			"companion_id": companionID,
+		}).Debug("Companion retrieved successfully")
+	}
+
 	return comp, ok
 }
 
 // RemoveCompanion removes a companion from tracking.
 func (m *Manager) RemoveCompanion(companionID string) {
+	log.WithFields(logrus.Fields{
+		"companion_id": companionID,
+	}).Debug("Removing companion from learning manager")
+
+	_, existed := m.companions[companionID]
 	delete(m.companions, companionID)
+
+	if existed {
+		log.WithFields(logrus.Fields{
+			"companion_id":         companionID,
+			"remaining_companions": len(m.companions),
+		}).Info("Companion removed from learning manager")
+	} else {
+		log.WithFields(logrus.Fields{
+			"companion_id": companionID,
+		}).Warn("Attempted to remove non-existent companion")
+	}
 }
 
 // NewSkillProgression creates a new skill progression system.
 func NewSkillProgression() *SkillProgression {
+	log.Debug("Creating new skill progression system")
+
 	sp := &SkillProgression{
 		Skills:          make(map[string]*Skill),
 		AvailablePoints: 0,
@@ -58,54 +125,86 @@ func NewSkillProgression() *SkillProgression {
 	}
 
 	sp.initializeSkillTree()
+
+	log.WithFields(logrus.Fields{
+		"total_skills":     len(sp.Skills),
+		"available_points": sp.AvailablePoints,
+		"total_xp":         sp.TotalXP,
+	}).Info("Skill progression system created")
+
 	return sp
 }
 
 // initializeSkillTree sets up the default skill tree.
 func (sp *SkillProgression) initializeSkillTree() {
+	log.Debug("Initializing skill tree with default skills")
+
+	skillsAdded := 0
+
 	// Combat skills
 	sp.addSkillNode("Basic Attack", SkillCombat, "Improved melee damage", nil, 1, 10)
 	sp.addSkillNode("Power Strike", SkillCombat, "Devastating attack", []string{"Basic Attack"}, 1, 10)
 	sp.addSkillNode("Combat Mastery", SkillCombat, "Enhanced combat effectiveness", []string{"Power Strike"}, 2, 10)
+	skillsAdded += 3
 
 	// Defense skills
 	sp.addSkillNode("Block", SkillDefense, "Reduce incoming damage", nil, 1, 10)
 	sp.addSkillNode("Iron Skin", SkillDefense, "Increased armor", []string{"Block"}, 1, 10)
 	sp.addSkillNode("Defensive Stance", SkillDefense, "Maximum protection", []string{"Iron Skin"}, 2, 10)
+	skillsAdded += 3
 
 	// Utility skills
 	sp.addSkillNode("Gather", SkillUtility, "Collect resources faster", nil, 1, 10)
 	sp.addSkillNode("Scout", SkillUtility, "Reveal hidden paths", []string{"Gather"}, 1, 10)
 	sp.addSkillNode("Tracking", SkillUtility, "Follow enemy trails", []string{"Scout"}, 2, 10)
+	skillsAdded += 3
 
 	// Social skills
 	sp.addSkillNode("Persuasion", SkillSocial, "Convince NPCs", nil, 1, 10)
 	sp.addSkillNode("Charm", SkillSocial, "Better trade prices", []string{"Persuasion"}, 1, 10)
 	sp.addSkillNode("Leadership", SkillSocial, "Inspire allies", []string{"Charm"}, 2, 10)
+	skillsAdded += 3
 
 	// Healing skills
 	sp.addSkillNode("First Aid", SkillHealing, "Basic healing", nil, 1, 10)
 	sp.addSkillNode("Restoration", SkillHealing, "Powerful healing", []string{"First Aid"}, 1, 10)
 	sp.addSkillNode("Regeneration", SkillHealing, "Continuous healing", []string{"Restoration"}, 2, 10)
+	skillsAdded += 3
 
 	// Magic skills
 	sp.addSkillNode("Mana Control", SkillMagic, "Increased mana pool", nil, 1, 10)
 	sp.addSkillNode("Spell Power", SkillMagic, "Stronger spells", []string{"Mana Control"}, 1, 10)
 	sp.addSkillNode("Arcane Mastery", SkillMagic, "Ultimate magic power", []string{"Spell Power"}, 2, 10)
+	skillsAdded += 3
 
 	// Crafting skills
 	sp.addSkillNode("Apprentice Smith", SkillCrafting, "Basic crafting", nil, 1, 10)
 	sp.addSkillNode("Master Smith", SkillCrafting, "Advanced crafting", []string{"Apprentice Smith"}, 1, 10)
 	sp.addSkillNode("Legendary Smith", SkillCrafting, "Epic items", []string{"Master Smith"}, 2, 10)
+	skillsAdded += 3
 
 	// Stealth skills
 	sp.addSkillNode("Sneak", SkillStealth, "Move undetected", nil, 1, 10)
 	sp.addSkillNode("Backstab", SkillStealth, "Critical strikes", []string{"Sneak"}, 1, 10)
 	sp.addSkillNode("Shadow Walk", SkillStealth, "Become invisible", []string{"Backstab"}, 2, 10)
+	skillsAdded += 3
+
+	log.WithFields(logrus.Fields{
+		"skills_added": skillsAdded,
+		"total_skills": len(sp.Skills),
+	}).Info("Skill tree initialized")
 }
 
 // addSkillNode adds a skill to the tree.
 func (sp *SkillProgression) addSkillNode(name string, skillType SkillType, description string, prerequisites []string, cost, maxLevel int) {
+	log.WithFields(logrus.Fields{
+		"skill_name":         name,
+		"skill_type":         skillType.String(),
+		"prerequisite_count": len(prerequisites),
+		"cost":               cost,
+		"max_level":          maxLevel,
+	}).Debug("Adding skill node to tree")
+
 	skill := &Skill{
 		Type:        skillType,
 		Name:        name,
@@ -127,27 +226,66 @@ func (sp *SkillProgression) addSkillNode(name string, skillType SkillType, descr
 
 // AddExperience adds XP to a specific skill.
 func (sp *SkillProgression) AddExperience(skillName string, xp, learningRate float64) error {
+	log.WithFields(logrus.Fields{
+		"skill_name":    skillName,
+		"xp":            xp,
+		"learning_rate": learningRate,
+	}).Debug("Adding experience to skill")
+
 	skill, ok := sp.Skills[skillName]
 	if !ok {
+		log.WithFields(logrus.Fields{
+			"skill_name": skillName,
+		}).Warn("Skill not found when adding experience")
 		return fmt.Errorf("skill not found: %s", skillName)
 	}
 
 	adjustedXP := xp * learningRate
+	oldTotalXP := sp.TotalXP
 	sp.TotalXP += adjustedXP
 
 	if skill.Level >= skill.MaxLevel {
-		return nil // Max level reached, still count XP towards total
+		log.WithFields(logrus.Fields{
+			"skill_name":  skillName,
+			"skill_level": skill.Level,
+			"max_level":   skill.MaxLevel,
+			"xp_added":    adjustedXP,
+		}).Debug("Skill at max level, XP counted towards total only")
+		return nil
 	}
 
+	oldLevel := skill.Level
+	oldExperience := skill.Experience
 	skill.Experience += adjustedXP
 
-	// Level up if enough XP
+	levelsGained := 0
 	xpNeeded := float64(skill.Level+1) * 100.0
 	for skill.Experience >= xpNeeded && skill.Level < skill.MaxLevel {
 		skill.Experience -= xpNeeded
 		skill.Level++
 		sp.AvailablePoints++
+		levelsGained++
 		xpNeeded = float64(skill.Level+1) * 100.0
+	}
+
+	if levelsGained > 0 {
+		log.WithFields(logrus.Fields{
+			"skill_name":       skillName,
+			"old_level":        oldLevel,
+			"new_level":        skill.Level,
+			"levels_gained":    levelsGained,
+			"available_points": sp.AvailablePoints,
+		}).Info("Skill leveled up")
+	} else {
+		log.WithFields(logrus.Fields{
+			"skill_name":   skillName,
+			"skill_level":  skill.Level,
+			"old_xp":       oldExperience,
+			"new_xp":       skill.Experience,
+			"xp_added":     adjustedXP,
+			"old_total_xp": oldTotalXP,
+			"new_total_xp": sp.TotalXP,
+		}).Debug("Experience added to skill")
 	}
 
 	return nil
@@ -155,42 +293,87 @@ func (sp *SkillProgression) AddExperience(skillName string, xp, learningRate flo
 
 // CanLearnSkill checks if prerequisites are met.
 func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
+	log.WithFields(logrus.Fields{
+		"skill_name": skillName,
+	}).Debug("Checking if skill can be learned")
+
 	node, ok := sp.SkillTree[skillName]
 	if !ok {
+		log.WithFields(logrus.Fields{
+			"skill_name": skillName,
+		}).Warn("Skill not found in tree")
 		return false, fmt.Errorf("skill not found: %s", skillName)
 	}
 
 	if sp.AvailablePoints < node.Cost {
+		log.WithFields(logrus.Fields{
+			"skill_name":       skillName,
+			"available_points": sp.AvailablePoints,
+			"cost":             node.Cost,
+		}).Debug("Insufficient skill points")
 		return false, fmt.Errorf("insufficient skill points: have %d, need %d", sp.AvailablePoints, node.Cost)
 	}
 
 	for _, prereq := range node.Prerequisites {
 		prereqSkill, ok := sp.Skills[prereq]
 		if !ok {
+			log.WithFields(logrus.Fields{
+				"skill_name":   skillName,
+				"prerequisite": prereq,
+			}).Error("Prerequisite skill not found")
 			return false, fmt.Errorf("prerequisite not found: %s", prereq)
 		}
 		if prereqSkill.Level < 1 {
+			log.WithFields(logrus.Fields{
+				"skill_name":         skillName,
+				"prerequisite":       prereq,
+				"prerequisite_level": prereqSkill.Level,
+			}).Debug("Prerequisite not met")
 			return false, fmt.Errorf("prerequisite not met: %s", prereq)
 		}
 	}
 
+	log.WithFields(logrus.Fields{
+		"skill_name":       skillName,
+		"available_points": sp.AvailablePoints,
+		"cost":             node.Cost,
+	}).Debug("Skill can be learned")
 	return true, nil
 }
 
 // LearnSkill allocates points to a skill.
 func (sp *SkillProgression) LearnSkill(skillName string) error {
+	log.WithFields(logrus.Fields{
+		"skill_name": skillName,
+	}).Debug("Attempting to learn skill")
+
 	canLearn, err := sp.CanLearnSkill(skillName)
 	if !canLearn {
+		log.WithFields(logrus.Fields{
+			"skill_name": skillName,
+			"error":      err.Error(),
+		}).Warn("Cannot learn skill")
 		return err
 	}
 
 	node := sp.SkillTree[skillName]
+	oldPoints := sp.AvailablePoints
 	sp.AvailablePoints -= node.Cost
+
+	log.WithFields(logrus.Fields{
+		"skill_name":       skillName,
+		"cost":             node.Cost,
+		"old_points":       oldPoints,
+		"remaining_points": sp.AvailablePoints,
+	}).Info("Skill learned successfully")
+
 	return nil
 }
 
 // NewPersonalityEvolution creates a new personality system.
 func NewPersonalityEvolution() *PersonalityEvolution {
+	log.Debug("Creating new personality evolution system")
+
 	pe := &PersonalityEvolution{
 		Traits:     make(map[PersonalityTrait]float64),
 		Changes:    []PersonalityChange{},
@@ -209,20 +392,41 @@ func NewPersonalityEvolution() *PersonalityEvolution {
 	pe.Traits[TraitCurious] = 0.5
 	pe.Traits[TraitPractical] = 0.5
 
+	log.WithFields(logrus.Fields{
+		"trait_count":   len(pe.Traits),
+		"default_value": 0.5,
+	}).Info("Personality evolution system created")
+
 	return pe
 }
 
 // AdjustTrait modifies a personality trait.
 func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float64, reason string) {
+	log.WithFields(logrus.Fields{
+		"trait":  trait.String(),
+		"delta":  delta,
+		"reason": reason,
+	}).Debug("Adjusting personality trait")
+
 	oldValue := pe.Traits[trait]
 	newValue := oldValue + delta
 
 	// Clamp to [0.0, 1.0]
 	if newValue < 0.0 {
 		newValue = 0.0
+		log.WithFields(logrus.Fields{
+			"trait":      trait.String(),
+			"attempted":  oldValue + delta,
+			"clamped_to": 0.0,
+		}).Debug("Trait value clamped to minimum")
 	}
 	if newValue > 1.0 {
 		newValue = 1.0
+		log.WithFields(logrus.Fields{
+			"trait":      trait.String(),
+			"attempted":  oldValue + delta,
+			"clamped_to": 1.0,
+		}).Debug("Trait value clamped to maximum")
 	}
 
 	pe.Traits[trait] = newValue
@@ -236,10 +440,21 @@ func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float6
 		Timestamp: time.Now(),
 	}
 	pe.Changes = append(pe.Changes, change)
+
+	log.WithFields(logrus.Fields{
+		"trait":         trait.String(),
+		"old_value":     oldValue,
+		"new_value":     newValue,
+		"delta":         delta,
+		"reason":        reason,
+		"total_changes": len(pe.Changes),
+	}).Info("Personality trait adjusted")
 }
 
 // GetDominantTrait returns the strongest personality trait.
 func (pe *PersonalityEvolution) GetDominantTrait() PersonalityTrait {
+	log.Debug("Determining dominant personality trait")
+
 	var dominant PersonalityTrait
 	maxValue := 0.0
 
@@ -250,84 +465,182 @@ func (pe *PersonalityEvolution) GetDominantTrait() PersonalityTrait {
 		}
 	}
 
+	log.WithFields(logrus.Fields{
+		"dominant_trait": dominant.String(),
+		"trait_value":    maxValue,
+	}).Debug("Dominant trait determined")
+
 	return dominant
 }
 
 // NewEventMemory creates a new event memory system.
 func NewEventMemory(maxEvents int) *EventMemory {
-	return &EventMemory{
+	log.WithFields(logrus.Fields{
+		"max_events": maxEvents,
+	}).Debug("Creating new event memory system")
+
+	em := &EventMemory{
 		Events:       []MemorableEvent{},
 		MaxEvents:    maxEvents,
 		TotalEvents:  0,
 		FirstEventAt: time.Now(),
 	}
+
+	log.WithFields(logrus.Fields{
+		"max_events": maxEvents,
+	}).Info("Event memory system created")
+
+	return em
 }
 
 // AddEvent records a memorable event.
 func (em *EventMemory) AddEvent(event MemorableEvent) {
+	log.WithFields(logrus.Fields{
+		"event_type":  event.Type.String(),
+		"description": event.Description,
+		"importance":  event.Importance,
+		"player_id":   event.PlayerID,
+	}).Debug("Adding event to memory")
+
 	em.Events = append(em.Events, event)
+	oldTotalEvents := em.TotalEvents
 	em.TotalEvents++
 
 	if em.TotalEvents == 1 {
 		em.FirstEventAt = event.Timestamp
+		log.WithFields(logrus.Fields{
+			"first_event_time": em.FirstEventAt,
+		}).Debug("First event recorded")
 	}
 
-	// LRU eviction if over limit
+	evicted := false
 	if len(em.Events) > em.MaxEvents {
 		em.Events = em.Events[len(em.Events)-em.MaxEvents:]
+		evicted = true
 	}
+
+	log.WithFields(logrus.Fields{
+		"event_type":    event.Type.String(),
+		"old_total":     oldTotalEvents,
+		"new_total":     em.TotalEvents,
+		"stored_events": len(em.Events),
+		"evicted":       evicted,
+	}).Debug("Event added to memory")
 }
 
 // GetRecentEvents returns the N most recent events.
 func (em *EventMemory) GetRecentEvents(n int) []MemorableEvent {
+	log.WithFields(logrus.Fields{
+		"requested_count": n,
+		"total_events":    len(em.Events),
+	}).Debug("Retrieving recent events")
+
 	if n > len(em.Events) {
 		n = len(em.Events)
 	}
-	return em.Events[len(em.Events)-n:]
+
+	events := em.Events[len(em.Events)-n:]
+
+	log.WithFields(logrus.Fields{
+		"requested_count": n,
+		"returned_count":  len(events),
+	}).Debug("Recent events retrieved")
+
+	return events
 }
 
 // GetEventsByType filters events by type.
 func (em *EventMemory) GetEventsByType(eventType EventType) []MemorableEvent {
+	log.WithFields(logrus.Fields{
+		"event_type":   eventType.String(),
+		"total_events": len(em.Events),
+	}).Debug("Filtering events by type")
+
 	var filtered []MemorableEvent
 	for _, event := range em.Events {
 		if event.Type == eventType {
 			filtered = append(filtered, event)
 		}
 	}
+
+	log.WithFields(logrus.Fields{
+		"event_type":     eventType.String(),
+		"filtered_count": len(filtered),
+		"total_events":   len(em.Events),
+	}).Debug("Events filtered by type")
+
 	return filtered
 }
 
 // ProcessCombatAction updates skills and personality based on combat behavior.
 func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successful bool) {
-	// Award XP based on action
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"aggressive":   aggressive,
+		"successful":   successful,
+	}).Debug("Processing combat action")
+
 	xp := 10.0
 	if successful {
 		xp = 20.0
 	}
 
 	if aggressive {
-		_ = comp.SkillTree.AddExperience("Basic Attack", xp, comp.LearningRate)
+		err := comp.SkillTree.AddExperience("Basic Attack", xp, comp.LearningRate)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"companion_id": comp.CompanionID,
+				"skill_name":   "Basic Attack",
+				"error":        err.Error(),
+			}).Warn("Failed to add combat XP")
+		}
 		comp.Personality.AdjustTrait(TraitAggressive, 0.01, "engaged in aggressive combat")
 		comp.Personality.AdjustTrait(TraitPacifist, -0.01, "engaged in aggressive combat")
 	} else {
-		_ = comp.SkillTree.AddExperience("Block", xp, comp.LearningRate)
+		err := comp.SkillTree.AddExperience("Block", xp, comp.LearningRate)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"companion_id": comp.CompanionID,
+				"skill_name":   "Block",
+				"error":        err.Error(),
+			}).Warn("Failed to add defense XP")
+		}
 		comp.Personality.AdjustTrait(TraitCautious, 0.01, "used defensive tactics")
 	}
 
-	// Record event
 	comp.Memory.AddEvent(MemorableEvent{
 		Type:        EventCombat,
 		Description: fmt.Sprintf("Combat action (aggressive=%v, successful=%v)", aggressive, successful),
 		Timestamp:   time.Now(),
 		Importance:  0.6,
 	})
+
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"aggressive":   aggressive,
+		"successful":   successful,
+		"xp_awarded":   xp,
+	}).Info("Combat action processed")
 }
 
 // ProcessSocialInteraction updates skills and personality based on social behavior.
 func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string, positive bool) {
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"player_id":    playerID,
+		"positive":     positive,
+	}).Debug("Processing social interaction")
+
 	xp := 15.0
 	if positive {
-		_ = comp.SkillTree.AddExperience("Persuasion", xp, comp.LearningRate)
+		err := comp.SkillTree.AddExperience("Persuasion", xp, comp.LearningRate)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"companion_id": comp.CompanionID,
+				"skill_name":   "Persuasion",
+				"error":        err.Error(),
+			}).Warn("Failed to add persuasion XP")
+		}
 		comp.Personality.AdjustTrait(TraitOutgoing, 0.02, "positive social interaction")
 		comp.Personality.AdjustTrait(TraitShy, -0.02, "positive social interaction")
 		comp.Personality.AdjustTrait(TraitLoyal, 0.01, "bonded with player")
@@ -343,16 +656,35 @@ func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string,
 		Importance:  0.5,
 		PlayerID:    playerID,
 	})
+
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"player_id":    playerID,
+		"positive":     positive,
+		"xp_awarded":   xp,
+	}).Info("Social interaction processed")
 }
 
 // ProcessExploration updates skills and personality based on exploration behavior.
 func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"discovered":   discovered,
+	}).Debug("Processing exploration action")
+
 	xp := 8.0
 	if discovered {
 		xp = 12.0
 	}
 
-	_ = comp.SkillTree.AddExperience("Scout", xp, comp.LearningRate)
+	err := comp.SkillTree.AddExperience("Scout", xp, comp.LearningRate)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"companion_id": comp.CompanionID,
+			"skill_name":   "Scout",
+			"error":        err.Error(),
+		}).Warn("Failed to add scout XP")
+	}
 	comp.Personality.AdjustTrait(TraitCurious, 0.015, "explored new area")
 	comp.Personality.AdjustTrait(TraitPractical, -0.005, "took exploratory risk")
 
@@ -362,42 +694,76 @@ func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
 		Timestamp:   time.Now(),
 		Importance:  0.4,
 	})
+
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"discovered":   discovered,
+		"xp_awarded":   xp,
+	}).Info("Exploration action processed")
 }
 
 // GeneratePersonalityDescription creates a text description of personality.
 func GeneratePersonalityDescription(pe *PersonalityEvolution) string {
+	log.Debug("Generating personality description")
+
 	dominant := pe.GetDominantTrait()
-	return fmt.Sprintf("Primarily %s with varying degrees of other traits", dominant.String())
+	description := fmt.Sprintf("Primarily %s with varying degrees of other traits", dominant.String())
+
+	log.WithFields(logrus.Fields{
+		"dominant_trait": dominant.String(),
+		"description":    description,
+	}).Debug("Personality description generated")
+
+	return description
 }
 
 // AdaptBehaviorToCombatStyle learns from player's combat preferences.
 func AdaptBehaviorToCombatStyle(comp *CompanionLearningComponent, seed int64) {
+	log.WithFields(logrus.Fields{
+		"companion_id": comp.CompanionID,
+		"seed":         seed,
+	}).Debug("Adapting behavior to combat style")
+
 	rng := rand.New(rand.NewSource(seed))
 
-	// Check recent combat events
 	combatEvents := comp.Memory.GetEventsByType(EventCombat)
 	if len(combatEvents) < 5 {
-		return // Not enough data
+		log.WithFields(logrus.Fields{
+			"companion_id":  comp.CompanionID,
+			"combat_events": len(combatEvents),
+			"required":      5,
+		}).Debug("Insufficient combat events for behavior adaptation")
+		return
 	}
 
-	// Analyze last 10 combat events for patterns
 	recentCombat := combatEvents
 	if len(recentCombat) > 10 {
 		recentCombat = recentCombat[len(recentCombat)-10:]
 	}
 
-	// Simple pattern detection (would be more sophisticated in production)
 	aggressiveCount := 0
 	for range recentCombat {
-		if rng.Float64() > 0.5 { // Simulated aggression detection
+		if rng.Float64() > 0.5 {
 			aggressiveCount++
 		}
 	}
 
 	if aggressiveCount > len(recentCombat)/2 {
+		log.WithFields(logrus.Fields{
+			"companion_id":     comp.CompanionID,
+			"aggressive_count": aggressiveCount,
+			"total_events":     len(recentCombat),
+			"adaptation":       "aggressive",
+		}).Info("Adapting to aggressive combat style")
 		comp.Personality.AdjustTrait(TraitAggressive, 0.05, "learned aggressive combat style")
 		comp.Personality.AdjustTrait(TraitBrave, 0.03, "learned aggressive combat style")
 	} else {
+		log.WithFields(logrus.Fields{
+			"companion_id":     comp.CompanionID,
+			"aggressive_count": aggressiveCount,
+			"total_events":     len(recentCombat),
+			"adaptation":       "defensive",
+		}).Info("Adapting to defensive combat style")
 		comp.Personality.AdjustTrait(TraitCautious, 0.05, "learned defensive combat style")
 		comp.Personality.AdjustTrait(TraitPacifist, 0.02, "learned defensive combat style")
 	}

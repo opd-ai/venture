@@ -314,7 +314,7 @@ func (s *AchievementSystem) checkGroupPerformer(achComp *AchievementComponent, c
 func (s *AchievementSystem) unlockAchievement(achComp *AchievementComponent, achievementType AchievementType, description string) {
 	achievement := Achievement{
 		Type:        achievementType,
-		UnlockedAt:  s.world.Clock.Now(),
+		UnlockedAt:  s.world.Clock.Now().Unix(),
 		Description: description,
 	}
 	achComp.Achievements = append(achComp.Achievements, achievement)

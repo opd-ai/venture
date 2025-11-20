@@ -21,26 +21,53 @@ var (
 func main() {
 	flag.Parse()
 
-	// Initialize logger
-	logger := logging.TestUtilityLogger("inventorytest")
-	if *verbose {
-		logger.SetLevel(logrus.DebugLevel)
-	}
-
+	logger := initializeLogger()
 	logger.WithFields(logrus.Fields{
 		"seed":  *seed,
 		"count": *count,
 		"depth": *depth,
 	}).Info("Inventory Test Tool started")
 
+	printHeader()
+
+	invSystem, player := setupWorldAndPlayer(logger)
+	items := generateItems(logger)
+
+	printItemList(items)
+	addedCount := addItemsToInventory(invSystem, player, items)
+
+	printInventoryStatus(invSystem, player, addedCount, len(items))
+	equippedCount := equipItems(invSystem, player)
+
+	printEquipmentStatus(player, equippedCount)
+	demonstrateConsumable(invSystem, player)
+
+	sortAndDisplayInventory(invSystem, player)
+	printFinalSummary(invSystem, player)
+
+	fmt.Println("\n=== Demo Complete ===")
+}
+
+// initializeLogger creates and configures the logger.
+func initializeLogger() *logrus.Logger {
+	logger := logging.TestUtilityLogger("inventorytest")
+	if *verbose {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+	return logger
+}
+
+// printHeader displays the demo header.
+func printHeader() {
 	fmt.Println("=== Venture Inventory & Equipment System Demo ===")
 	fmt.Printf("Seed: %d, Items: %d, Depth: %d\n\n", *seed, *count, *depth)
+}
 
-	// Create world and systems
+// setupWorldAndPlayer creates the world, systems, and player entity.
+func setupWorldAndPlayer(logger *logrus.Logger) (*engine.InventorySystem, *engine.Entity) {
 	world := engine.NewWorld()
 	invSystem := engine.NewInventorySystem(world)
 
-	// Create player entity
 	player := world.CreateEntity()
 	player.AddComponent(engine.NewInventoryComponent(20, 100.0))
 	player.AddComponent(engine.NewEquipmentComponent())
@@ -55,7 +82,11 @@ func main() {
 	fmt.Printf("- Inventory Capacity: 20 items, 100.0 kg\n")
 	fmt.Printf("- Equipment Slots: 10 (weapons, armor, accessories)\n\n")
 
-	// Generate items
+	return invSystem, player
+}
+
+// generateItems generates items using the item generator.
+func generateItems(logger *logrus.Logger) []*item.Item {
 	itemGen := item.NewItemGeneratorWithLogger(logger)
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
@@ -73,7 +104,11 @@ func main() {
 
 	items := result.([]*item.Item)
 	logger.WithField("itemCount", len(items)).Info("items generated")
+	return items
+}
 
+// printItemList displays the list of generated items.
+func printItemList(items []*item.Item) {
 	fmt.Printf("Generated %d items:\n", len(items))
 	for i, itm := range items {
 		fmt.Printf("%2d. %-30s %-12s Dmg:%-3d Def:%-3d Weight:%.1fkg Value:%d\n",
@@ -81,14 +116,15 @@ func main() {
 			itm.Stats.Weight, itm.Stats.Value)
 	}
 	fmt.Println()
+}
 
-	// Add items to inventory
+// addItemsToInventory adds generated items to player inventory.
+func addItemsToInventory(invSystem *engine.InventorySystem, player *engine.Entity, items []*item.Item) int {
 	fmt.Println("Adding items to player inventory...")
 	addedCount := 0
 	for _, itm := range items {
 		success, err := invSystem.AddItemToInventory(player.ID, itm)
 		if err != nil {
-			logger.WithError(err).WithField("item", itm.Name).Warn("failed to add item to inventory")
 			fmt.Printf("  Error adding item %s: %v\n", itm.Name, err)
 			continue
 		}
@@ -99,21 +135,29 @@ func main() {
 			break
 		}
 	}
-	fmt.Printf("Successfully added %d/%d items to inventory\n\n", addedCount, len(items))
+	return addedCount
+}
 
-	// Get inventory component
+// printInventoryStatus displays current inventory status.
+func printInventoryStatus(invSystem *engine.InventorySystem, player *engine.Entity, addedCount, totalItems int) {
+	fmt.Printf("Successfully added %d/%d items to inventory\n\n", addedCount, totalItems)
+
 	comp, _ := player.GetComponent("inventory")
 	inv := comp.(*engine.InventoryComponent)
 
-	// Show inventory status
 	fmt.Println("Inventory Status:")
 	fmt.Printf("- Items: %d/%d\n", inv.GetItemCount(), inv.MaxItems)
 	fmt.Printf("- Weight: %.1f/%.1f kg\n", inv.GetCurrentWeight(), inv.MaxWeight)
 	totalValue, _ := invSystem.GetInventoryValue(player.ID)
 	fmt.Printf("- Total Value: %d gold\n\n", totalValue)
+}
 
-	// Equip some items
+// equipItems equips items from inventory.
+func equipItems(invSystem *engine.InventorySystem, player *engine.Entity) int {
 	fmt.Println("Attempting to equip items...")
+	comp, _ := player.GetComponent("inventory")
+	inv := comp.(*engine.InventoryComponent)
+
 	equippedCount := 0
 	for i := 0; i < inv.GetItemCount(); i++ {
 		itm := inv.Items[i]
@@ -131,8 +175,11 @@ func main() {
 		}
 	}
 	fmt.Printf("Equipped %d items\n\n", equippedCount)
+	return equippedCount
+}
 
-	// Show equipment status
+// printEquipmentStatus displays equipped items and stats.
+func printEquipmentStatus(player *engine.Entity, equippedCount int) {
 	comp2, _ := player.GetComponent("equipment")
 	equip := comp2.(*engine.EquipmentComponent)
 
@@ -147,7 +194,6 @@ func main() {
 	}
 	fmt.Println()
 
-	// Show calculated stats
 	equipStats := equip.GetStats()
 	fmt.Println("Equipment Bonuses:")
 	fmt.Printf("- Total Damage: %d\n", equipStats.Damage)
@@ -155,8 +201,13 @@ func main() {
 	fmt.Printf("- Attack Speed: %.2fx\n", equipStats.AttackSpeed)
 	fmt.Printf("- Total Weight: %.1f kg\n", equipStats.Weight)
 	fmt.Printf("- Total Value: %d gold\n\n", equipStats.Value)
+}
 
-	// Demonstrate consumable usage
+// demonstrateConsumable finds and uses a consumable item.
+func demonstrateConsumable(invSystem *engine.InventorySystem, player *engine.Entity) {
+	comp, _ := player.GetComponent("inventory")
+	inv := comp.(*engine.InventoryComponent)
+
 	fmt.Println("Looking for consumables to use...")
 	for i, itm := range inv.Items {
 		if itm.IsConsumable() {
@@ -174,8 +225,13 @@ func main() {
 		}
 	}
 	fmt.Println()
+}
 
-	// Sort inventory by value
+// sortAndDisplayInventory sorts inventory and shows top items.
+func sortAndDisplayInventory(invSystem *engine.InventorySystem, player *engine.Entity) {
+	comp, _ := player.GetComponent("inventory")
+	inv := comp.(*engine.InventoryComponent)
+
 	fmt.Println("Sorting inventory by value (descending)...")
 	invSystem.SortInventoryByValue(player.ID)
 	fmt.Println("Top 5 most valuable items in inventory:")
@@ -184,13 +240,16 @@ func main() {
 		fmt.Printf("%2d. %-30s Value:%d gold\n", i+1, itm.Name, itm.Stats.Value)
 	}
 	fmt.Println()
+}
 
-	// Final inventory status
+// printFinalSummary displays final inventory summary.
+func printFinalSummary(invSystem *engine.InventorySystem, player *engine.Entity) {
+	comp, _ := player.GetComponent("inventory")
+	inv := comp.(*engine.InventoryComponent)
+
 	fmt.Println("Final Inventory Summary:")
 	fmt.Printf("- Items Carried: %d/%d\n", inv.GetItemCount(), inv.MaxItems)
 	fmt.Printf("- Weight Carried: %.1f/%.1f kg\n", inv.GetCurrentWeight(), inv.MaxWeight)
-	totalValue, _ = invSystem.GetInventoryValue(player.ID)
+	totalValue, _ := invSystem.GetInventoryValue(player.ID)
 	fmt.Printf("- Total Wealth: %d gold (inventory + equipment)\n", totalValue)
-
-	fmt.Println("\n=== Demo Complete ===")
 }

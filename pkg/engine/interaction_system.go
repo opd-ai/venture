@@ -431,36 +431,55 @@ func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity,
 // handlePlayGameAction handles interaction with mini-game stations (Phase 27.3).
 // Validates entry cost/requirements and starts the mini-game if allowed.
 func (s *InteractionSystem) handlePlayGameAction(player, stationEntity *Entity) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"playerID":  player.ID,
-			"stationID": stationEntity.ID,
-		}).Debug("play game action initiated")
+	s.logPlayGameStart(player.ID, stationEntity.ID)
+
+	station, ok := s.getMiniGameStation(stationEntity)
+	if !ok {
+		return
 	}
 
-	// Get mini-game station component
+	if !s.validateStationAvailable(station, stationEntity.ID) {
+		return
+	}
+
+	playerLevel, playerGold := s.getPlayerResources(player)
+
+	if !s.validatePlayerRequirements(station, playerLevel, playerGold, stationEntity.ID) {
+		return
+	}
+
+	s.deductEntryCost(player, station.EntryCost)
+	station.StartGame(player.ID)
+	s.logGameStarted(player.ID, stationEntity.ID, station)
+}
+
+// getMiniGameStation retrieves and validates the mini-game station component.
+func (s *InteractionSystem) getMiniGameStation(stationEntity *Entity) (*MiniGameStationComponent, bool) {
 	stationCompRaw, ok := stationEntity.GetComponent("minigameStation")
 	if !ok {
 		if s.logger != nil {
 			s.logger.WithField("stationID", stationEntity.ID).Warn("entity missing minigameStation component")
 		}
-		return
+		return nil, false
 	}
 
 	station, ok := stationCompRaw.(*MiniGameStationComponent)
-	if !ok {
-		return
-	}
+	return station, ok
+}
 
-	// Check if station is already occupied
+// validateStationAvailable checks if the station is currently available.
+func (s *InteractionSystem) validateStationAvailable(station *MiniGameStationComponent, stationID uint64) bool {
 	if station.IsOccupied {
 		if s.logger != nil {
-			s.logger.WithField("stationID", stationEntity.ID).Debug("station is occupied")
+			s.logger.WithField("stationID", stationID).Debug("station is occupied")
 		}
-		return
+		return false
 	}
+	return true
+}
 
-	// Get player level and gold
+// getPlayerResources extracts player level and gold from components.
+func (s *InteractionSystem) getPlayerResources(player *Entity) (int, int) {
 	playerLevel := 1
 	playerGold := 0
 
@@ -476,7 +495,11 @@ func (s *InteractionSystem) handlePlayGameAction(player, stationEntity *Entity) 
 		}
 	}
 
-	// Check if player meets requirements
+	return playerLevel, playerGold
+}
+
+// validatePlayerRequirements checks if player meets station requirements.
+func (s *InteractionSystem) validatePlayerRequirements(station *MiniGameStationComponent, playerLevel, playerGold int, stationID uint64) bool {
 	if !station.CanPlay(playerLevel, playerGold) {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -486,35 +509,43 @@ func (s *InteractionSystem) handlePlayGameAction(player, stationEntity *Entity) 
 				"entryCost":     station.EntryCost,
 			}).Debug("player does not meet station requirements")
 		}
-		return
+		return false
 	}
+	return true
+}
 
-	// Deduct entry cost if applicable
-	if station.EntryCost > 0 {
+// deductEntryCost deducts the entry cost from player's gold.
+func (s *InteractionSystem) deductEntryCost(player *Entity, entryCost int) {
+	if entryCost > 0 {
 		if invComp, ok := player.GetComponent("inventory"); ok {
 			if inv, ok := invComp.(*InventoryComponent); ok {
-				inv.Gold -= station.EntryCost
+				inv.Gold -= entryCost
 			}
 		}
 	}
+}
 
-	// Mark station as occupied
-	station.StartGame(player.ID)
-
-	// Create mini-game instance (this would be handled by MiniGameSystem)
-	// For now, just log the start
+// logPlayGameStart logs the initiation of play game action.
+func (s *InteractionSystem) logPlayGameStart(playerID, stationID uint64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"playerID":   player.ID,
-			"stationID":  stationEntity.ID,
+			"playerID":  playerID,
+			"stationID": stationID,
+		}).Debug("play game action initiated")
+	}
+}
+
+// logGameStarted logs successful game start with details.
+func (s *InteractionSystem) logGameStarted(playerID, stationID uint64, station *MiniGameStationComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID":   playerID,
+			"stationID":  stationID,
 			"gameType":   station.GameType.String(),
 			"difficulty": station.Difficulty,
 			"entryCost":  station.EntryCost,
 		}).Info("player started mini-game")
 	}
-
-	// The actual mini-game would be started by MiniGameSystem.StartGame()
-	// and integrated with the game factory from pkg/procgen/minigame/factory.go
 }
 
 // handleInvestigateAction initiates environmental investigation (Phase 30.2).

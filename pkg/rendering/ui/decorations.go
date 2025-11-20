@@ -52,69 +52,96 @@ func (g *Generator) generateOrnateCornerFrame(img *image.RGBA, pal *palette.Pale
 	accentColor := pal.Accent1
 	w, h := config.Width, config.Height
 
-	// Draw double border
 	g.drawBorder(img, borderColor, BorderDouble, 1)
+	g.drawCornerDecorations(img, w, h, accentColor)
+	g.drawCenterDecorations(img, w, h, accentColor)
+}
 
-	// Add corner decorations (diamond shapes)
+// drawCornerDecorations draws diamond-shaped decorations at frame corners.
+func (g *Generator) drawCornerDecorations(img *image.RGBA, w, h int, accentColor color.Color) {
 	cornerSize := 8
 	for i := 0; i < cornerSize && i < w && i < h; i++ {
-		// Top-left
-		if i < w && cornerSize-i-1 < h {
-			img.Set(i, cornerSize-i-1, accentColor)
-		}
-		if cornerSize-i-1 < w && i < h {
-			img.Set(cornerSize-i-1, i, accentColor)
-		}
-		// Top-right
-		if w-i-1 >= 0 && cornerSize-i-1 < h {
-			img.Set(w-i-1, cornerSize-i-1, accentColor)
-		}
-		if w-cornerSize+i < w && i < h {
-			img.Set(w-cornerSize+i, i, accentColor)
-		}
-		// Bottom-left
-		if i < w && h-cornerSize+i < h && h-cornerSize+i >= 0 {
-			img.Set(i, h-cornerSize+i, accentColor)
-		}
-		if cornerSize-i-1 < w && h-i-1 >= 0 {
-			img.Set(cornerSize-i-1, h-i-1, accentColor)
-		}
-		// Bottom-right
-		if w-i-1 >= 0 && h-cornerSize+i < h && h-cornerSize+i >= 0 {
-			img.Set(w-i-1, h-cornerSize+i, accentColor)
-		}
-		if w-cornerSize+i < w && h-i-1 >= 0 {
-			img.Set(w-cornerSize+i, h-i-1, accentColor)
-		}
+		g.drawTopLeftCorner(img, i, cornerSize, w, h, accentColor)
+		g.drawTopRightCorner(img, i, cornerSize, w, h, accentColor)
+		g.drawBottomLeftCorner(img, i, cornerSize, w, h, accentColor)
+		g.drawBottomRightCorner(img, i, cornerSize, w, h, accentColor)
 	}
+}
 
-	// Add center decorations on each side
+// drawTopLeftCorner draws top-left corner decoration pixels.
+func (g *Generator) drawTopLeftCorner(img *image.RGBA, i, cornerSize, w, h int, col color.Color) {
+	if i < w && cornerSize-i-1 < h {
+		img.Set(i, cornerSize-i-1, col)
+	}
+	if cornerSize-i-1 < w && i < h {
+		img.Set(cornerSize-i-1, i, col)
+	}
+}
+
+// drawTopRightCorner draws top-right corner decoration pixels.
+func (g *Generator) drawTopRightCorner(img *image.RGBA, i, cornerSize, w, h int, col color.Color) {
+	if w-i-1 >= 0 && cornerSize-i-1 < h {
+		img.Set(w-i-1, cornerSize-i-1, col)
+	}
+	if w-cornerSize+i < w && i < h {
+		img.Set(w-cornerSize+i, i, col)
+	}
+}
+
+// drawBottomLeftCorner draws bottom-left corner decoration pixels.
+func (g *Generator) drawBottomLeftCorner(img *image.RGBA, i, cornerSize, w, h int, col color.Color) {
+	if i < w && h-cornerSize+i < h && h-cornerSize+i >= 0 {
+		img.Set(i, h-cornerSize+i, col)
+	}
+	if cornerSize-i-1 < w && h-i-1 >= 0 {
+		img.Set(cornerSize-i-1, h-i-1, col)
+	}
+}
+
+// drawBottomRightCorner draws bottom-right corner decoration pixels.
+func (g *Generator) drawBottomRightCorner(img *image.RGBA, i, cornerSize, w, h int, col color.Color) {
+	if w-i-1 >= 0 && h-cornerSize+i < h && h-cornerSize+i >= 0 {
+		img.Set(w-i-1, h-cornerSize+i, col)
+	}
+	if w-cornerSize+i < w && h-i-1 >= 0 {
+		img.Set(w-cornerSize+i, h-i-1, col)
+	}
+}
+
+// drawCenterDecorations draws accent marks at the center of each frame side.
+func (g *Generator) drawCenterDecorations(img *image.RGBA, w, h int, accentColor color.Color) {
 	midX, midY := w/2, h/2
 	decorSize := 4
 	for i := -decorSize; i <= decorSize; i++ {
-		if midX+i >= 0 && midX+i < w {
-			// Top
-			img.Set(midX+i, 0, accentColor)
-			if h > 1 {
-				img.Set(midX+i, 1, accentColor)
-			}
-			// Bottom
-			img.Set(midX+i, h-1, accentColor)
-			if h > 1 {
-				img.Set(midX+i, h-2, accentColor)
-			}
+		g.drawHorizontalCenterDecor(img, midX, i, w, h, accentColor)
+		g.drawVerticalCenterDecor(img, midY, i, w, h, accentColor)
+	}
+}
+
+// drawHorizontalCenterDecor draws top and bottom center decorations.
+func (g *Generator) drawHorizontalCenterDecor(img *image.RGBA, midX, offset, w, h int, col color.Color) {
+	if midX+offset >= 0 && midX+offset < w {
+		img.Set(midX+offset, 0, col)
+		if h > 1 {
+			img.Set(midX+offset, 1, col)
 		}
-		if midY+i >= 0 && midY+i < h {
-			// Left
-			img.Set(0, midY+i, accentColor)
-			if w > 1 {
-				img.Set(1, midY+i, accentColor)
-			}
-			// Right
-			img.Set(w-1, midY+i, accentColor)
-			if w > 1 {
-				img.Set(w-2, midY+i, accentColor)
-			}
+		img.Set(midX+offset, h-1, col)
+		if h > 1 {
+			img.Set(midX+offset, h-2, col)
+		}
+	}
+}
+
+// drawVerticalCenterDecor draws left and right center decorations.
+func (g *Generator) drawVerticalCenterDecor(img *image.RGBA, midY, offset, w, h int, col color.Color) {
+	if midY+offset >= 0 && midY+offset < h {
+		img.Set(0, midY+offset, col)
+		if w > 1 {
+			img.Set(1, midY+offset, col)
+		}
+		img.Set(w-1, midY+offset, col)
+		if w > 1 {
+			img.Set(w-2, midY+offset, col)
 		}
 	}
 }

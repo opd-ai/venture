@@ -371,39 +371,70 @@ func (g *QuestGenerator) Validate(result interface{}) error {
 	}
 
 	for i, quest := range quests {
-		if quest == nil {
-			return fmt.Errorf("quest %d is nil", i)
-		}
-
-		if quest.Name == "" {
-			return fmt.Errorf("quest %d has empty name", i)
-		}
-
-		if quest.Description == "" {
-			return fmt.Errorf("quest %d has empty description", i)
-		}
-
-		if len(quest.Objectives) == 0 {
-			return fmt.Errorf("quest %d has no objectives", i)
-		}
-
-		for j, obj := range quest.Objectives {
-			if obj.Description == "" {
-				return fmt.Errorf("quest %d objective %d has empty description", i, j)
-			}
-			if obj.Required <= 0 {
-				return fmt.Errorf("quest %d objective %d has invalid required amount: %d", i, j, obj.Required)
-			}
-		}
-
-		if quest.Reward.XP <= 0 {
-			return fmt.Errorf("quest %d has no XP reward", i)
-		}
-
-		if quest.RequiredLevel < 0 {
-			return fmt.Errorf("quest %d has negative required level", i)
+		if err := validateSingleQuest(quest, i); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+// validateSingleQuest validates a single quest's structure and data.
+func validateSingleQuest(quest *Quest, index int) error {
+	if quest == nil {
+		return fmt.Errorf("quest %d is nil", index)
+	}
+
+	if err := validateQuestBasics(quest, index); err != nil {
+		return err
+	}
+
+	if err := validateQuestObjectives(quest, index); err != nil {
+		return err
+	}
+
+	return validateQuestRewards(quest, index)
+}
+
+// validateQuestBasics validates basic quest properties.
+func validateQuestBasics(quest *Quest, index int) error {
+	if quest.Name == "" {
+		return fmt.Errorf("quest %d has empty name", index)
+	}
+
+	if quest.Description == "" {
+		return fmt.Errorf("quest %d has empty description", index)
+	}
+
+	if quest.RequiredLevel < 0 {
+		return fmt.Errorf("quest %d has negative required level", index)
+	}
+
+	return nil
+}
+
+// validateQuestObjectives validates quest objectives.
+func validateQuestObjectives(quest *Quest, index int) error {
+	if len(quest.Objectives) == 0 {
+		return fmt.Errorf("quest %d has no objectives", index)
+	}
+
+	for j, obj := range quest.Objectives {
+		if obj.Description == "" {
+			return fmt.Errorf("quest %d objective %d has empty description", index, j)
+		}
+		if obj.Required <= 0 {
+			return fmt.Errorf("quest %d objective %d has invalid required amount: %d", index, j, obj.Required)
+		}
+	}
+
+	return nil
+}
+
+// validateQuestRewards validates quest rewards.
+func validateQuestRewards(quest *Quest, index int) error {
+	if quest.Reward.XP <= 0 {
+		return fmt.Errorf("quest %d has no XP reward", index)
+	}
 	return nil
 }

@@ -43,35 +43,46 @@ func NewChoiceTracker() *ChoiceTracker {
 
 // RecordChoice records a player choice and applies consequences.
 func (ct *ChoiceTracker) RecordChoice(playerID string, choice *PlayerChoice) error {
-	if choice == nil {
-		return fmt.Errorf("choice cannot be nil")
-	}
-	if choice.ChoiceID == "" {
-		return fmt.Errorf("choice ID cannot be empty")
+	if err := validateChoice(choice); err != nil {
+		return err
 	}
 
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
 
 	state := ct.getOrCreateState(playerID)
+	addChoiceToHistory(state, choice, ct.choiceLimit)
+	applyChoiceEffects(ct, state, choice)
+	state.LastUpdate = time.Now().Unix()
 
-	// Add choice to history
+	return nil
+}
+
+// validateChoice validates the choice parameters.
+func validateChoice(choice *PlayerChoice) error {
+	if choice == nil {
+		return fmt.Errorf("choice cannot be nil")
+	}
+	if choice.ChoiceID == "" {
+		return fmt.Errorf("choice ID cannot be empty")
+	}
+	return nil
+}
+
+// addChoiceToHistory adds a choice to history with LRU eviction.
+func addChoiceToHistory(state *PlayerState, choice *PlayerChoice, choiceLimit int) {
 	state.ChoiceHistory = append(state.ChoiceHistory, choice)
 
-	// Enforce choice limit with LRU eviction (keep recent choices)
-	if len(state.ChoiceHistory) > ct.choiceLimit {
-		// Remove oldest non-irreversible choices first
-		newHistory := make([]*PlayerChoice, 0, ct.choiceLimit)
+	if len(state.ChoiceHistory) > choiceLimit {
+		newHistory := make([]*PlayerChoice, 0, choiceLimit)
 
-		// Keep all irreversible choices
 		for _, c := range state.ChoiceHistory {
 			if c.Irreversible {
 				newHistory = append(newHistory, c)
 			}
 		}
 
-		// Add most recent choices up to limit
-		start := len(state.ChoiceHistory) - (ct.choiceLimit - len(newHistory))
+		start := len(state.ChoiceHistory) - (choiceLimit - len(newHistory))
 		if start < 0 {
 			start = 0
 		}
@@ -83,27 +94,23 @@ func (ct *ChoiceTracker) RecordChoice(playerID string, choice *PlayerChoice) err
 
 		state.ChoiceHistory = newHistory
 	}
+}
 
-	// Apply alignment shift
+// applyChoiceEffects applies all effects of a choice to player state.
+func applyChoiceEffects(ct *ChoiceTracker, state *PlayerState, choice *PlayerChoice) {
 	if choice.MoralAlignment != nil {
 		state.Alignment.ApplyShift(choice.MoralAlignment)
 	}
 
-	// Update NPC relationships
 	for _, npcID := range choice.NPCsAffected {
 		ct.updateNPCRelationship(state, npcID, choice)
 	}
 
-	// Apply content locks
 	if choice.Irreversible && len(choice.Consequences) > 0 {
 		for _, consequence := range choice.Consequences {
 			ct.applyConsequence(state, choice.ChoiceID, consequence)
 		}
 	}
-
-	state.LastUpdate = time.Now().Unix()
-
-	return nil
 }
 
 // getOrCreateState gets or creates player state.

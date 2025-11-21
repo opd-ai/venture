@@ -259,74 +259,88 @@ func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, te
 		return candidates[0]
 	}
 
-	// Temperature 0.0: deterministic selection (most frequent)
 	if temperature < 0.01 {
-		// Count frequencies
-		freq := make(map[string]int)
-		maxFreq := 0
-		mostCommon := candidates[0]
-
-		for _, word := range candidates {
-			freq[word]++
-			if freq[word] > maxFreq {
-				maxFreq = freq[word]
-				mostCommon = word
-			}
-		}
-		return mostCommon
+		return selectMostFrequentWord(candidates)
 	}
 
-	// Temperature 1.0: uniform random
 	if temperature > 0.99 {
 		return candidates[rng.Intn(len(candidates))]
 	}
 
-	// Temperature 0.0-1.0: weighted selection
-	// Build frequency map
-	freq := make(map[string]float64)
+	return selectWeightedWord(candidates, rng, temperature)
+}
+
+// selectMostFrequentWord returns the most frequently occurring word in candidates.
+func selectMostFrequentWord(candidates []string) string {
+	freq := make(map[string]int)
+	maxFreq := 0
+	mostCommon := candidates[0]
+
 	for _, word := range candidates {
 		freq[word]++
-	}
-
-	// Sort keys for deterministic iteration order
-	sortedWords := make([]string, 0, len(freq))
-	for word := range freq {
-		sortedWords = append(sortedWords, word)
-	}
-	sort.Strings(sortedWords)
-
-	// Apply temperature to frequencies (higher temp = more uniform)
-	weights := make([]float64, 0, len(freq))
-	words := make([]string, 0, len(freq))
-	totalWeight := 0.0
-
-	for _, word := range sortedWords {
-		count := freq[word]
-		// Weight = count^(1/temperature)
-		// Higher temperature reduces weight differences
-		weight := 1.0
-		if temperature > 0 {
-			weight = count / temperature
+		if freq[word] > maxFreq {
+			maxFreq = freq[word]
+			mostCommon = word
 		}
-
-		weights = append(weights, weight)
-		words = append(words, word)
-		totalWeight += weight
 	}
+	return mostCommon
+}
 
-	// Select word by weighted random
+// selectWeightedWord selects a word using temperature-adjusted weighted randomness.
+func selectWeightedWord(candidates []string, rng *rand.Rand, temperature float64) string {
+	freq := buildFrequencyMap(candidates)
+	sortedWords := sortWords(freq)
+	weights, totalWeight := calculateTemperatureWeights(freq, sortedWords, temperature)
+
 	r := rng.Float64() * totalWeight
 	cumulative := 0.0
 
 	for i, weight := range weights {
 		cumulative += weight
 		if r <= cumulative {
-			return words[i]
+			return sortedWords[i]
 		}
 	}
 
-	// Fallback (should never reach here)
-	return words[len(words)-1]
+	return sortedWords[len(sortedWords)-1]
+}
+
+// buildFrequencyMap creates a frequency map from word candidates.
+func buildFrequencyMap(candidates []string) map[string]float64 {
+	freq := make(map[string]float64)
+	for _, word := range candidates {
+		freq[word]++
+	}
+	return freq
+}
+
+// sortWords returns sorted keys from frequency map for deterministic iteration.
+func sortWords(freq map[string]float64) []string {
+	sortedWords := make([]string, 0, len(freq))
+	for word := range freq {
+		sortedWords = append(sortedWords, word)
+	}
+	sort.Strings(sortedWords)
+	return sortedWords
+}
+
+// calculateTemperatureWeights applies temperature scaling to word frequencies.
+func calculateTemperatureWeights(freq map[string]float64, sortedWords []string, temperature float64) ([]float64, float64) {
+	weights := make([]float64, 0, len(freq))
+	totalWeight := 0.0
+
+	for _, word := range sortedWords {
+		count := freq[word]
+		weight := 1.0
+		if temperature > 0 {
+			weight = count / temperature
+		}
+
+		weights = append(weights, weight)
+		totalWeight += weight
+	}
+
+	return weights, totalWeight
 }
 
 // deriveRuntimeSeed creates a seed from player input, conversation ID, and timestamp.

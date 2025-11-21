@@ -94,104 +94,14 @@ func NewEbitenGame(screenWidth, screenHeight int) *EbitenGame {
 
 // NewEbitenGameWithLogger creates a new game instance with a logger.
 func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logger) *EbitenGame {
-	var logEntry *logrus.Entry
-	if logger != nil {
-		logEntry = logger.WithFields(logrus.Fields{
-			"system": "game",
-		})
-	}
-
+	logEntry := initializeLogger(logger)
 	world := NewWorldWithLogger(logger)
-	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
-	renderSystem := NewRenderSystem(cameraSystem)
-	hudSystem := NewEbitenHUDSystem(screenWidth, screenHeight)
-	// TerrainRenderSystem will be initialized later with specific genre/seed
 
-	// Create UI systems
-	inventoryUI := NewEbitenInventoryUI(world, screenWidth, screenHeight)
-	questUI := NewEbitenQuestUI(world, screenWidth, screenHeight)
-	characterUI := NewEbitenCharacterUI(world, screenWidth, screenHeight)
-	skillsUI := NewEbitenSkillsUI(world, screenWidth, screenHeight)
-	mapUI := NewEbitenMapUI(world, screenWidth, screenHeight)
+	coreComponents := initializeCoreComponents(world, screenWidth, screenHeight, logger, logEntry)
+	uiComponents := initializeUIComponents(world, screenWidth, screenHeight, coreComponents.settingsManager)
 
-	// Create menu system with save directory
-	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
-	if err != nil {
-		// Always log critical initialization failures
-		if logEntry != nil {
-			logEntry.WithError(err).Warn("failed to initialize menu system")
-		} else {
-			// Fallback to stderr if no logger configured
-			fmt.Fprintf(os.Stderr, "WARNING: failed to initialize menu system: %v\n", err)
-		}
-	}
-
-	// Create settings manager and UI
-	settingsManager, err := NewSettingsManager()
-	if err != nil {
-		// Log error but continue with default settings
-		if logEntry != nil {
-			logEntry.WithError(err).Warn("failed to initialize settings manager, using defaults")
-		}
-		// Create a minimal settings manager with defaults
-		settingsManager = &SettingsManager{
-			settings: DefaultSettings(),
-		}
-	} else {
-		// Load existing settings
-		if err := settingsManager.LoadSettings(); err != nil {
-			if logEntry != nil {
-				logEntry.WithError(err).Warn("failed to load settings, using defaults")
-			}
-		}
-	}
-
-	settingsUI := NewSettingsUI(screenWidth, screenHeight, settingsManager)
-
-	// Initialize frame time tracker (disabled by default, enabled via EnableFrameTimeProfiling)
-	frameTimeTracker := NewFrameTimeTracker(1000) // Track last 1000 frames (~16 seconds at 60 FPS)
-
-	// Create lighting system with default configuration
-	// Note: Will be enabled via command-line flag in client/main.go
-	lightingConfig := NewLightingConfig()
-	lightingConfig.Enabled = false // Disabled by default, enable via flag
-	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
-
-	// WASM FIX: Scene buffer will be lazily initialized on first Draw() call
-	// Cannot call ebiten.NewImage() during initialization in WASM builds
-	// The graphics context is not available until the first Update/Draw cycle
-	var sceneBuffer *ebiten.Image = nil
-
-	game := &EbitenGame{
-		World:              world,
-		lastUpdateTime:     time.Now(),
-		ScreenWidth:        screenWidth,
-		ScreenHeight:       screenHeight,
-		StateManager:       NewAppStateManager(),
-		MainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
-		SinglePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
-		GenreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
-		MultiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
-		ServerAddressInput: NewServerAddressInput(screenWidth, screenHeight),
-		SettingsUI:         settingsUI,
-		SettingsManager:    settingsManager,
-		CharacterCreation:  NewCharacterCreation(screenWidth, screenHeight),
-		CameraSystem:       cameraSystem,
-		RenderSystem:       renderSystem,
-		LightingSystem:     lightingSystem,
-		sceneBuffer:        sceneBuffer,
-		HUDSystem:          hudSystem,
-		MenuSystem:         menuSystem,
-		InventoryUI:        inventoryUI,
-		QuestUI:            questUI,
-		CharacterUI:        characterUI,
-		SkillsUI:           skillsUI,
-		MapUI:              mapUI,
-		logger:             logEntry,
-		frameTimeTracker:   frameTimeTracker,
-		frameCount:         0,
-		profilingEnabled:   false,
-	}
+	game := buildGameInstance(screenWidth, screenHeight, world, logEntry, coreComponents, uiComponents)
+	setupGameCallbacks(game, logEntry)
 
 	if logEntry != nil {
 		logEntry.WithFields(logrus.Fields{
@@ -200,30 +110,169 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		}).Info("game initialized")
 	}
 
-	// Setup main menu callback
+	return game
+}
+
+// initializeLogger creates a structured logger entry for the game system.
+func initializeLogger(logger *logrus.Logger) *logrus.Entry {
+	if logger != nil {
+		return logger.WithFields(logrus.Fields{"system": "game"})
+	}
+	return nil
+}
+
+// coreComponents holds core game components needed during initialization.
+type coreComponents struct {
+	cameraSystem     *CameraSystem
+	renderSystem     *EbitenRenderSystem
+	hudSystem        *EbitenHUDSystem
+	menuSystem       *EbitenMenuSystem
+	settingsManager  *SettingsManager
+	frameTimeTracker *FrameTimeTracker
+	lightingSystem   *LightingSystem
+	sceneBuffer      *ebiten.Image
+}
+
+// initializeCoreComponents creates all core game systems.
+func initializeCoreComponents(world *World, screenWidth, screenHeight int, logger *logrus.Logger, logEntry *logrus.Entry) *coreComponents {
+	cameraSystem := NewCameraSystem(screenWidth, screenHeight)
+	renderSystem := NewRenderSystem(cameraSystem)
+	hudSystem := NewEbitenHUDSystem(screenWidth, screenHeight)
+
+	menuSystem, err := NewEbitenMenuSystem(world, screenWidth, screenHeight, "./saves")
+	if err != nil {
+		logInitializationError(logEntry, err, "menu system")
+	}
+
+	settingsManager := initializeSettingsManager(logEntry)
+	frameTimeTracker := NewFrameTimeTracker(1000)
+
+	lightingConfig := NewLightingConfig()
+	lightingConfig.Enabled = false
+	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
+
+	return &coreComponents{
+		cameraSystem:     cameraSystem,
+		renderSystem:     renderSystem,
+		hudSystem:        hudSystem,
+		menuSystem:       menuSystem,
+		settingsManager:  settingsManager,
+		frameTimeTracker: frameTimeTracker,
+		lightingSystem:   lightingSystem,
+		sceneBuffer:      nil,
+	}
+}
+
+// initializeSettingsManager creates and loads the settings manager.
+func initializeSettingsManager(logEntry *logrus.Entry) *SettingsManager {
+	settingsManager, err := NewSettingsManager()
+	if err != nil {
+		logInitializationError(logEntry, err, "settings manager, using defaults")
+		return &SettingsManager{settings: DefaultSettings()}
+	}
+
+	if err := settingsManager.LoadSettings(); err != nil {
+		logInitializationError(logEntry, err, "loading settings, using defaults")
+	}
+	return settingsManager
+}
+
+// logInitializationError logs initialization errors with consistent formatting.
+func logInitializationError(logEntry *logrus.Entry, err error, context string) {
+	if logEntry != nil {
+		logEntry.WithError(err).Warnf("failed to initialize %s", context)
+	} else {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to initialize %s: %v\n", context, err)
+	}
+}
+
+// uiComponents holds UI-related game components.
+type uiComponents struct {
+	inventoryUI        *EbitenInventoryUI
+	questUI            *EbitenQuestUI
+	characterUI        *EbitenCharacterUI
+	skillsUI           *EbitenSkillsUI
+	mapUI              *EbitenMapUI
+	settingsUI         *SettingsUI
+	mainMenuUI         *MainMenuUI
+	singlePlayerMenu   *SinglePlayerMenu
+	genreSelectionMenu *GenreSelectionMenu
+	multiplayerMenu    *MultiplayerMenu
+	serverAddressInput *ServerAddressInput
+	characterCreation  *EbitenCharacterCreation
+}
+
+// initializeUIComponents creates all UI systems.
+func initializeUIComponents(world *World, screenWidth, screenHeight int, settingsManager *SettingsManager) *uiComponents {
+	return &uiComponents{
+		inventoryUI:        NewEbitenInventoryUI(world, screenWidth, screenHeight),
+		questUI:            NewEbitenQuestUI(world, screenWidth, screenHeight),
+		characterUI:        NewEbitenCharacterUI(world, screenWidth, screenHeight),
+		skillsUI:           NewEbitenSkillsUI(world, screenWidth, screenHeight),
+		mapUI:              NewEbitenMapUI(world, screenWidth, screenHeight),
+		settingsUI:         NewSettingsUI(screenWidth, screenHeight, settingsManager),
+		mainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
+		singlePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
+		genreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
+		multiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
+		serverAddressInput: NewServerAddressInput(screenWidth, screenHeight),
+		characterCreation:  NewCharacterCreation(screenWidth, screenHeight),
+	}
+}
+
+// buildGameInstance constructs the EbitenGame struct with all components.
+func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *logrus.Entry, core *coreComponents, ui *uiComponents) *EbitenGame {
+	return &EbitenGame{
+		World:              world,
+		lastUpdateTime:     time.Now(),
+		ScreenWidth:        screenWidth,
+		ScreenHeight:       screenHeight,
+		StateManager:       NewAppStateManager(),
+		MainMenuUI:         ui.mainMenuUI,
+		SinglePlayerMenu:   ui.singlePlayerMenu,
+		GenreSelectionMenu: ui.genreSelectionMenu,
+		MultiplayerMenu:    ui.multiplayerMenu,
+		ServerAddressInput: ui.serverAddressInput,
+		SettingsUI:         ui.settingsUI,
+		SettingsManager:    core.settingsManager,
+		CharacterCreation:  ui.characterCreation,
+		CameraSystem:       core.cameraSystem,
+		RenderSystem:       core.renderSystem,
+		LightingSystem:     core.lightingSystem,
+		sceneBuffer:        core.sceneBuffer,
+		HUDSystem:          core.hudSystem,
+		MenuSystem:         core.menuSystem,
+		InventoryUI:        ui.inventoryUI,
+		QuestUI:            ui.questUI,
+		CharacterUI:        ui.characterUI,
+		SkillsUI:           ui.skillsUI,
+		MapUI:              ui.mapUI,
+		logger:             logEntry,
+		frameTimeTracker:   core.frameTimeTracker,
+		frameCount:         0,
+		profilingEnabled:   false,
+	}
+}
+
+// setupGameCallbacks configures all UI callback handlers.
+func setupGameCallbacks(game *EbitenGame, logEntry *logrus.Entry) {
 	game.MainMenuUI.SetSelectCallback(game.handleMainMenuSelection)
 
-	// Setup single-player menu callbacks
 	game.SinglePlayerMenu.SetNewGameCallback(game.handleSinglePlayerMenuNewGame)
 	game.SinglePlayerMenu.SetLoadGameCallback(game.handleSinglePlayerMenuLoadGame)
 	game.SinglePlayerMenu.SetBackCallback(game.handleSinglePlayerMenuBack)
 
-	// Setup genre selection menu callbacks
 	game.GenreSelectionMenu.SetGenreSelectCallback(game.handleGenreSelection)
 	game.GenreSelectionMenu.SetBackCallback(game.handleGenreSelectionBack)
 
-	// Setup multiplayer menu callbacks
 	game.MultiplayerMenu.SetJoinCallback(game.handleMultiplayerMenuJoin)
 	game.MultiplayerMenu.SetHostCallback(game.handleMultiplayerMenuHost)
 	game.MultiplayerMenu.SetBackCallback(game.handleMultiplayerMenuBack)
 
-	// Setup server address input callbacks
 	game.ServerAddressInput.SetConnectCallback(game.handleServerAddressConnect)
 	game.ServerAddressInput.SetCancelCallback(game.handleServerAddressCancel)
 
-	// Setup settings UI callbacks
 	game.SettingsUI.SetBackCallback(func() {
-		// Return to main menu when back is pressed
 		if err := game.StateManager.TransitionTo(AppStateMainMenu); err != nil {
 			if logEntry != nil {
 				logEntry.WithError(err).Error("failed to return to main menu from settings")
@@ -231,15 +280,12 @@ func NewEbitenGameWithLogger(screenWidth, screenHeight int, logger *logrus.Logge
 		}
 	})
 	game.SettingsUI.SetApplyCallback(func() {
-		// Apply settings when they're saved
 		if err := game.ApplySettings(); err != nil {
 			if logEntry != nil {
 				logEntry.WithError(err).Error("failed to apply settings")
 			}
 		}
 	})
-
-	return game
 }
 
 // SetNewGameCallback sets the callback function called when New Game is selected.

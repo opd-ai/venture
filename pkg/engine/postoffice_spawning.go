@@ -95,44 +95,65 @@ func (s *PostOfficeSpawner) findSuitableBlocks(blocks []*terrain.CityBlock, city
 // hasStreetAccess checks if a block has adjacent street tiles
 func (s *PostOfficeSpawner) hasStreetAccess(block *terrain.CityBlock, cityTerrain *terrain.Terrain) bool {
 	rect := block.Rect
+	return s.checkTopSide(rect, cityTerrain) ||
+		s.checkBottomSide(rect, cityTerrain) ||
+		s.checkLeftSide(rect, cityTerrain) ||
+		s.checkRightSide(rect, cityTerrain)
+}
 
-	// Check all four sides for corridors (streets)
-	// Top side
+// checkTopSide checks for street access on the top side of a block
+func (s *PostOfficeSpawner) checkTopSide(rect terrain.Rect, cityTerrain *terrain.Terrain) bool {
+	y := rect.Y - 1
+	if y < 0 {
+		return false
+	}
 	for x := rect.X; x < rect.X+rect.Width; x++ {
-		if y := rect.Y - 1; y >= 0 {
-			if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
-				return true
-			}
+		if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
+			return true
 		}
 	}
+	return false
+}
 
-	// Bottom side
+// checkBottomSide checks for street access on the bottom side of a block
+func (s *PostOfficeSpawner) checkBottomSide(rect terrain.Rect, cityTerrain *terrain.Terrain) bool {
+	y := rect.Y + rect.Height
+	if y >= cityTerrain.Height {
+		return false
+	}
 	for x := rect.X; x < rect.X+rect.Width; x++ {
-		if y := rect.Y + rect.Height; y < cityTerrain.Height {
-			if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
-				return true
-			}
+		if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
+			return true
 		}
 	}
+	return false
+}
 
-	// Left side
+// checkLeftSide checks for street access on the left side of a block
+func (s *PostOfficeSpawner) checkLeftSide(rect terrain.Rect, cityTerrain *terrain.Terrain) bool {
+	x := rect.X - 1
+	if x < 0 {
+		return false
+	}
 	for y := rect.Y; y < rect.Y+rect.Height; y++ {
-		if x := rect.X - 1; x >= 0 {
-			if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
-				return true
-			}
+		if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
+			return true
 		}
 	}
+	return false
+}
 
-	// Right side
+// checkRightSide checks for street access on the right side of a block
+func (s *PostOfficeSpawner) checkRightSide(rect terrain.Rect, cityTerrain *terrain.Terrain) bool {
+	x := rect.X + rect.Width
+	if x >= cityTerrain.Width {
+		return false
+	}
 	for y := rect.Y; y < rect.Y+rect.Height; y++ {
-		if x := rect.X + rect.Width; x < cityTerrain.Width {
-			if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
-				return true
-			}
+		if cityTerrain.GetTile(x, y) == terrain.TileCorridor {
+			return true
 		}
 	}
-
 	return false
 }
 

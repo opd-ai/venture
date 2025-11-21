@@ -422,76 +422,87 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 // resolveCollision separates two colliding entities.
 // Precondition: Both entities must have position and collider components.
 func (s *CollisionSystem) resolveCollision(e1, e2 *Entity) {
+	pos1, pos2, collider1, collider2, ok := s.getCollisionComponents(e1, e2)
+	if !ok {
+		return
+	}
+
+	min1X, min1Y, max1X, max1Y := collider1.GetBounds(pos1.X, pos1.Y)
+	min2X, min2Y, max2X, max2Y := collider2.GetBounds(pos2.X, pos2.Y)
+
+	overlapX := math.Min(max1X-min2X, max2X-min1X)
+	overlapY := math.Min(max1Y-min2Y, max2Y-min1Y)
+
+	if overlapX < overlapY {
+		s.separateEntitiesHorizontally(e1, e2, pos1, pos2, overlapX)
+	} else {
+		s.separateEntitiesVertically(e1, e2, pos1, pos2, overlapY)
+	}
+}
+
+// getCollisionComponents extracts and validates position and collider components.
+func (s *CollisionSystem) getCollisionComponents(e1, e2 *Entity) (*PositionComponent, *PositionComponent, *ColliderComponent, *ColliderComponent, bool) {
 	pos1Comp, _ := e1.GetComponent("position")
 	pos2Comp, _ := e2.GetComponent("position")
 	collider1Comp, _ := e1.GetComponent("collider")
 	collider2Comp, _ := e2.GetComponent("collider")
 
-	// Safe type assertions with nil checks to prevent panics
 	pos1, ok1 := pos1Comp.(*PositionComponent)
 	pos2, ok2 := pos2Comp.(*PositionComponent)
 	collider1, ok3 := collider1Comp.(*ColliderComponent)
 	collider2, ok4 := collider2Comp.(*ColliderComponent)
 
 	if !ok1 || !ok2 || !ok3 || !ok4 {
-		// Components missing or wrong type - should not happen if Update() filters correctly
-		return
+		return nil, nil, nil, nil, false
 	}
 
-	// Get bounding boxes
-	min1X, min1Y, max1X, max1Y := collider1.GetBounds(pos1.X, pos1.Y)
-	min2X, min2Y, max2X, max2Y := collider2.GetBounds(pos2.X, pos2.Y)
+	return pos1, pos2, collider1, collider2, true
+}
 
-	// Calculate overlap in each axis
-	overlapX := math.Min(max1X-min2X, max2X-min1X)
-	overlapY := math.Min(max1Y-min2Y, max2Y-min1Y)
-
-	// Separate along the axis with minimum overlap
-	if overlapX < overlapY {
-		// Separate horizontally
-		if pos1.X < pos2.X {
-			pos1.X -= overlapX / 2
-			pos2.X += overlapX / 2
-		} else {
-			pos1.X += overlapX / 2
-			pos2.X -= overlapX / 2
-		}
-
-		// Stop horizontal velocity
-		if e1.HasComponent("velocity") {
-			vel1, _ := e1.GetComponent("velocity")
-			if v, ok := vel1.(*VelocityComponent); ok {
-				v.VX = 0
-			}
-		}
-		if e2.HasComponent("velocity") {
-			vel2, _ := e2.GetComponent("velocity")
-			if v, ok := vel2.(*VelocityComponent); ok {
-				v.VX = 0
-			}
-		}
+// separateEntitiesHorizontally separates entities along X axis and stops horizontal velocity.
+func (s *CollisionSystem) separateEntitiesHorizontally(e1, e2 *Entity, pos1, pos2 *PositionComponent, overlapX float64) {
+	if pos1.X < pos2.X {
+		pos1.X -= overlapX / 2
+		pos2.X += overlapX / 2
 	} else {
-		// Separate vertically
-		if pos1.Y < pos2.Y {
-			pos1.Y -= overlapY / 2
-			pos2.Y += overlapY / 2
-		} else {
-			pos1.Y += overlapY / 2
-			pos2.Y -= overlapY / 2
-		}
+		pos1.X += overlapX / 2
+		pos2.X -= overlapX / 2
+	}
 
-		// Stop vertical velocity
-		if e1.HasComponent("velocity") {
-			vel1, _ := e1.GetComponent("velocity")
-			if v, ok := vel1.(*VelocityComponent); ok {
-				v.VY = 0
-			}
+	s.stopHorizontalVelocity(e1)
+	s.stopHorizontalVelocity(e2)
+}
+
+// separateEntitiesVertically separates entities along Y axis and stops vertical velocity.
+func (s *CollisionSystem) separateEntitiesVertically(e1, e2 *Entity, pos1, pos2 *PositionComponent, overlapY float64) {
+	if pos1.Y < pos2.Y {
+		pos1.Y -= overlapY / 2
+		pos2.Y += overlapY / 2
+	} else {
+		pos1.Y += overlapY / 2
+		pos2.Y -= overlapY / 2
+	}
+
+	s.stopVerticalVelocity(e1)
+	s.stopVerticalVelocity(e2)
+}
+
+// stopHorizontalVelocity sets entity's horizontal velocity to zero.
+func (s *CollisionSystem) stopHorizontalVelocity(entity *Entity) {
+	if entity.HasComponent("velocity") {
+		vel, _ := entity.GetComponent("velocity")
+		if v, ok := vel.(*VelocityComponent); ok {
+			v.VX = 0
 		}
-		if e2.HasComponent("velocity") {
-			vel2, _ := e2.GetComponent("velocity")
-			if v, ok := vel2.(*VelocityComponent); ok {
-				v.VY = 0
-			}
+	}
+}
+
+// stopVerticalVelocity sets entity's vertical velocity to zero.
+func (s *CollisionSystem) stopVerticalVelocity(entity *Entity) {
+	if entity.HasComponent("velocity") {
+		vel, _ := entity.GetComponent("velocity")
+		if v, ok := vel.(*VelocityComponent); ok {
+			v.VY = 0
 		}
 	}
 }

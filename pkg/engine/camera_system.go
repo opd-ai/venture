@@ -79,80 +79,93 @@ func NewCameraSystem(screenWidth, screenHeight int) *CameraSystem {
 
 // Update updates camera positions to follow their target entities.
 func (s *CameraSystem) Update(entities []*Entity, deltaTime float64) {
-	// Phase 10.3: Apply hit-stop time dilation
 	effectiveDeltaTime := s.calculateEffectiveDeltaTime(entities, deltaTime)
 
 	for _, entity := range entities {
-		cameraComp, ok := entity.GetComponent("camera")
+		camera, pos, ok := s.getCameraAndPosition(entity)
 		if !ok {
 			continue
 		}
 
-		camera, ok := cameraComp.(*CameraComponent)
-		if !ok {
-			continue
-		}
-
-		// Get entity position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Calculate target camera position (entity position + offset)
-		targetX := pos.X + camera.OffsetX
-		targetY := pos.Y + camera.OffsetY
-
-		// Apply smoothing (lerp with frame-rate independent exponential decay)
-		if camera.Smoothing > 0 {
-			// Use exponential decay formula for frame-rate independence
-			// Higher smoothing value = slower camera tracking
-			// alpha approaches 1 as deltaTime increases, ensuring smooth convergence
-			alpha := 1.0 - math.Exp(-effectiveDeltaTime/camera.Smoothing)
-			camera.X += (targetX - camera.X) * alpha
-			camera.Y += (targetY - camera.Y) * alpha
-		} else {
-			camera.X = targetX
-			camera.Y = targetY
-		}
-
-		// Apply bounds
-		if camera.X < camera.MinX {
-			camera.X = camera.MinX
-		}
-		if camera.X > camera.MaxX {
-			camera.X = camera.MaxX
-		}
-		if camera.Y < camera.MinY {
-			camera.Y = camera.MinY
-		}
-		if camera.Y > camera.MaxY {
-			camera.Y = camera.MaxY
-		}
-
-		// GAP-012 REPAIR: Update screen shake (basic)
-		if camera.ShakeIntensity > 0 {
-			// Decay shake intensity over time
-			camera.ShakeIntensity -= camera.ShakeDecay * effectiveDeltaTime
-			if camera.ShakeIntensity < 0 {
-				camera.ShakeIntensity = 0
-				camera.ShakeOffsetX = 0
-				camera.ShakeOffsetY = 0
-			} else {
-				// Generate random shake offset within intensity radius
-				// Use simple pseudo-random based on time for shake variation
-				angle := float64(int(camera.X*1000+camera.Y*1000)%360) * (math.Pi / 180.0)
-				camera.ShakeOffsetX = math.Cos(angle) * camera.ShakeIntensity
-				camera.ShakeOffsetY = math.Sin(angle) * camera.ShakeIntensity
-			}
-		}
-
-		// Phase 10.3: Update advanced screen shake
+		targetX, targetY := s.calculateTargetPosition(camera, pos)
+		s.applyCameraSmoothing(camera, targetX, targetY, effectiveDeltaTime)
+		s.applyCameraBounds(camera)
+		s.updateCameraShake(camera, effectiveDeltaTime)
 		s.updateAdvancedShake(entity, effectiveDeltaTime)
+	}
+}
+
+// getCameraAndPosition extracts and validates camera and position components.
+func (s *CameraSystem) getCameraAndPosition(entity *Entity) (*CameraComponent, *PositionComponent, bool) {
+	cameraComp, ok := entity.GetComponent("camera")
+	if !ok {
+		return nil, nil, false
+	}
+
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return nil, nil, false
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil, false
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, false
+	}
+
+	return camera, pos, true
+}
+
+// calculateTargetPosition computes the target camera position from entity position and offset.
+func (s *CameraSystem) calculateTargetPosition(camera *CameraComponent, pos *PositionComponent) (float64, float64) {
+	return pos.X + camera.OffsetX, pos.Y + camera.OffsetY
+}
+
+// applyCameraSmoothing applies exponential smoothing to camera position.
+func (s *CameraSystem) applyCameraSmoothing(camera *CameraComponent, targetX, targetY, deltaTime float64) {
+	if camera.Smoothing > 0 {
+		alpha := 1.0 - math.Exp(-deltaTime/camera.Smoothing)
+		camera.X += (targetX - camera.X) * alpha
+		camera.Y += (targetY - camera.Y) * alpha
+	} else {
+		camera.X = targetX
+		camera.Y = targetY
+	}
+}
+
+// applyCameraBounds clamps camera position to configured bounds.
+func (s *CameraSystem) applyCameraBounds(camera *CameraComponent) {
+	if camera.X < camera.MinX {
+		camera.X = camera.MinX
+	}
+	if camera.X > camera.MaxX {
+		camera.X = camera.MaxX
+	}
+	if camera.Y < camera.MinY {
+		camera.Y = camera.MinY
+	}
+	if camera.Y > camera.MaxY {
+		camera.Y = camera.MaxY
+	}
+}
+
+// updateCameraShake updates screen shake effect with decay and pseudo-random offset.
+func (s *CameraSystem) updateCameraShake(camera *CameraComponent, deltaTime float64) {
+	if camera.ShakeIntensity > 0 {
+		camera.ShakeIntensity -= camera.ShakeDecay * deltaTime
+		if camera.ShakeIntensity < 0 {
+			camera.ShakeIntensity = 0
+			camera.ShakeOffsetX = 0
+			camera.ShakeOffsetY = 0
+		} else {
+			angle := float64(int(camera.X*1000+camera.Y*1000)%360) * (math.Pi / 180.0)
+			camera.ShakeOffsetX = math.Cos(angle) * camera.ShakeIntensity
+			camera.ShakeOffsetY = math.Sin(angle) * camera.ShakeIntensity
+		}
 	}
 }
 

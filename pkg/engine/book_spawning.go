@@ -34,6 +34,25 @@ type BookshelfSpawnData struct {
 // Note: This function expects book generation to be done externally to avoid import cycles.
 // Call this from cmd/client with books generated via bookgen.NewGenerator().
 func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves []BookshelfSpawnData, seed int64) (int, error) {
+	if err := validateBookshelfSpawnInputs(terr, bookshelves, seed); err != nil {
+		return 0, err
+	}
+
+	rng := rand.New(rand.NewSource(seed + 7000))
+	libraryRooms := selectLibraryRooms(terr, rng)
+
+	if len(libraryRooms) == 0 {
+		bookSpawnLog.WithFields(logrus.Fields{
+			"operation": "SpawnBookshelvesInTerrain",
+		}).Error("No available rooms for bookshelf spawning")
+		return 0, fmt.Errorf("no available rooms for bookshelf spawning")
+	}
+
+	return spawnBookshelvesInRooms(world, libraryRooms, bookshelves, rng), nil
+}
+
+// validateBookshelfSpawnInputs validates terrain and bookshelf data for spawning.
+func validateBookshelfSpawnInputs(terr *terrain.Terrain, bookshelves []BookshelfSpawnData, seed int64) error {
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":       "SpawnBookshelvesInTerrain",
 		"seed":            seed,
@@ -47,99 +66,64 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 			"num_rooms":  len(terr.Rooms),
 			"min_needed": 2,
 		}).Error("Insufficient rooms for bookshelf spawning")
-		return 0, fmt.Errorf("insufficient rooms for bookshelf spawning (need at least 2, got %d)", len(terr.Rooms))
+		return fmt.Errorf("insufficient rooms for bookshelf spawning (need at least 2, got %d)", len(terr.Rooms))
 	}
 
 	if len(bookshelves) == 0 {
 		bookSpawnLog.WithFields(logrus.Fields{
 			"operation": "SpawnBookshelvesInTerrain",
 		}).Debug("No bookshelves to spawn, returning early")
-		return 0, nil
+		return fmt.Errorf("no bookshelves provided")
 	}
 
-	// Create RNG for room selection
-	rng := rand.New(rand.NewSource(seed + 7000))
-	bookSpawnLog.WithFields(logrus.Fields{
-		"operation":  "SpawnBookshelvesInTerrain",
-		"seed":       seed + 7000,
-		"rng_offset": 7000,
-	}).Debug("Initialized RNG for room selection")
+	return nil
+}
 
-	// Select larger rooms for bookshelf placement (library-like rooms)
-	// Filter rooms with area >= 40 tiles (minimum 8x5 or 5x8)
-	libraryRooms := make([]*terrain.Room, 0)
-	for i := 1; i < len(terr.Rooms); i++ { // Skip first room (player spawn)
-		room := terr.Rooms[i]
-		area := room.Width * room.Height
-		if area >= 40 {
-			libraryRooms = append(libraryRooms, room)
-			bookSpawnLog.WithFields(logrus.Fields{
-				"operation": "SpawnBookshelvesInTerrain",
-				"room_idx":  i,
-				"room_x":    room.X,
-				"room_y":    room.Y,
-				"width":     room.Width,
-				"height":    room.Height,
-				"area":      area,
-				"threshold": 40,
-			}).Debug("Selected large room for library placement")
-		}
-	}
-
+// selectLibraryRooms filters and returns suitable rooms for bookshelf placement.
+func selectLibraryRooms(terr *terrain.Terrain, rng *rand.Rand) []*terrain.Room {
+	libraryRooms := filterRoomsByArea(terr, 40)
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":         "SpawnBookshelvesInTerrain",
 		"large_rooms_found": len(libraryRooms),
 		"threshold":         40,
 	}).Debug("Completed large room filtering")
 
-	// If no large rooms, fall back to medium-sized rooms (>= 25 tiles)
 	if len(libraryRooms) == 0 {
 		bookSpawnLog.WithFields(logrus.Fields{
 			"operation": "SpawnBookshelvesInTerrain",
 			"threshold": 25,
 		}).Debug("No large rooms found, falling back to medium-sized rooms")
-
-		for i := 1; i < len(terr.Rooms); i++ {
-			room := terr.Rooms[i]
-			area := room.Width * room.Height
-			if area >= 25 {
-				libraryRooms = append(libraryRooms, room)
-				bookSpawnLog.WithFields(logrus.Fields{
-					"operation": "SpawnBookshelvesInTerrain",
-					"room_idx":  i,
-					"room_x":    room.X,
-					"room_y":    room.Y,
-					"width":     room.Width,
-					"height":    room.Height,
-					"area":      area,
-					"threshold": 25,
-				}).Debug("Selected medium room for library placement")
-			}
-		}
-
-		bookSpawnLog.WithFields(logrus.Fields{
-			"operation":          "SpawnBookshelvesInTerrain",
-			"medium_rooms_found": len(libraryRooms),
-			"threshold":          25,
-		}).Debug("Completed medium room filtering")
+		libraryRooms = filterRoomsByArea(terr, 25)
 	}
 
-	if len(libraryRooms) == 0 {
-		bookSpawnLog.WithFields(logrus.Fields{
-			"operation": "SpawnBookshelvesInTerrain",
-		}).Error("No available rooms for bookshelf spawning")
-		return 0, fmt.Errorf("no available rooms for bookshelf spawning")
-	}
-
-	// Shuffle rooms
 	rng.Shuffle(len(libraryRooms), func(i, j int) {
 		libraryRooms[i], libraryRooms[j] = libraryRooms[j], libraryRooms[i]
 	})
-	bookSpawnLog.WithFields(logrus.Fields{
-		"operation":      "SpawnBookshelvesInTerrain",
-		"shuffled_rooms": len(libraryRooms),
-	}).Debug("Shuffled library rooms for random placement")
 
+	return libraryRooms
+}
+
+// filterRoomsByArea returns rooms with area >= minArea, skipping first room.
+func filterRoomsByArea(terr *terrain.Terrain, minArea int) []*terrain.Room {
+	rooms := make([]*terrain.Room, 0)
+	for i := 1; i < len(terr.Rooms); i++ {
+		room := terr.Rooms[i]
+		area := room.Width * room.Height
+		if area >= minArea {
+			rooms = append(rooms, room)
+			bookSpawnLog.WithFields(logrus.Fields{
+				"operation": "filterRoomsByArea",
+				"room_idx":  i,
+				"area":      area,
+				"threshold": minArea,
+			}).Debug("Selected room for library placement")
+		}
+	}
+	return rooms
+}
+
+// spawnBookshelvesInRooms spawns bookshelf entities in selected rooms.
+func spawnBookshelvesInRooms(world *World, libraryRooms []*terrain.Room, bookshelves []BookshelfSpawnData, rng *rand.Rand) int {
 	spawned := 0
 	for i, shelfData := range bookshelves {
 		if i >= len(libraryRooms) {
@@ -149,70 +133,13 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 				"available_rooms":   len(libraryRooms),
 				"remaining_shelves": len(bookshelves) - i,
 			}).Warn("No more rooms available for remaining bookshelves")
-			break // No more rooms available
+			break
 		}
 
 		room := libraryRooms[i]
-		bookSpawnLog.WithFields(logrus.Fields{
-			"operation": "SpawnBookshelvesInTerrain",
-			"shelf_idx": i,
-			"room_x":    room.X,
-			"room_y":    room.Y,
-			"width":     room.Width,
-			"height":    room.Height,
-			"num_books": len(shelfData.Books),
-		}).Debug("Processing bookshelf placement")
-
-		// Place bookshelf against a wall (edges of room)
-		// Randomly choose wall: 0=left, 1=top, 2=right, 3=bottom
-		wall := rng.Intn(4)
-		var spawnX, spawnY float64
-
-		switch wall {
-		case 0: // Left wall
-			spawnX = float64(room.X*32) + 16 // Near left edge
-			spawnY = float64((room.Y + room.Height/2) * 32)
-			bookSpawnLog.WithFields(logrus.Fields{
-				"operation": "SpawnBookshelvesInTerrain",
-				"shelf_idx": i,
-				"wall":      "left",
-				"spawn_x":   spawnX,
-				"spawn_y":   spawnY,
-			}).Debug("Positioned bookshelf against left wall")
-		case 1: // Top wall
-			spawnX = float64((room.X + room.Width/2) * 32)
-			spawnY = float64(room.Y*32) + 16 // Near top edge
-			bookSpawnLog.WithFields(logrus.Fields{
-				"operation": "SpawnBookshelvesInTerrain",
-				"shelf_idx": i,
-				"wall":      "top",
-				"spawn_x":   spawnX,
-				"spawn_y":   spawnY,
-			}).Debug("Positioned bookshelf against top wall")
-		case 2: // Right wall
-			spawnX = float64((room.X+room.Width-1)*32) - 16 // Near right edge
-			spawnY = float64((room.Y + room.Height/2) * 32)
-			bookSpawnLog.WithFields(logrus.Fields{
-				"operation": "SpawnBookshelvesInTerrain",
-				"shelf_idx": i,
-				"wall":      "right",
-				"spawn_x":   spawnX,
-				"spawn_y":   spawnY,
-			}).Debug("Positioned bookshelf against right wall")
-		case 3: // Bottom wall
-			spawnX = float64((room.X + room.Width/2) * 32)
-			spawnY = float64((room.Y+room.Height-1)*32) - 16 // Near bottom edge
-			bookSpawnLog.WithFields(logrus.Fields{
-				"operation": "SpawnBookshelvesInTerrain",
-				"shelf_idx": i,
-				"wall":      "bottom",
-				"spawn_x":   spawnX,
-				"spawn_y":   spawnY,
-			}).Debug("Positioned bookshelf against bottom wall")
-		}
-
-		// Create bookshelf entity with books
+		spawnX, spawnY := calculateWallSpawnPosition(room, rng, i)
 		entity := createBookshelfEntity(world, shelfData, spawnX, spawnY)
+
 		if entity != nil {
 			spawned++
 			bookSpawnLog.WithFields(logrus.Fields{
@@ -228,8 +155,6 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 			bookSpawnLog.WithFields(logrus.Fields{
 				"operation": "SpawnBookshelvesInTerrain",
 				"shelf_idx": i,
-				"spawn_x":   spawnX,
-				"spawn_y":   spawnY,
 			}).Error("Failed to create bookshelf entity")
 		}
 	}
@@ -241,7 +166,45 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 		"available_rooms": len(libraryRooms),
 	}).Info("Completed bookshelf spawning")
 
-	return spawned, nil
+	return spawned
+}
+
+// calculateWallSpawnPosition determines spawn coordinates along a room wall.
+func calculateWallSpawnPosition(room *terrain.Room, rng *rand.Rand, shelfIdx int) (float64, float64) {
+	wall := rng.Intn(4)
+	var spawnX, spawnY float64
+
+	switch wall {
+	case 0: // Left wall
+		spawnX = float64(room.X*32) + 16
+		spawnY = float64((room.Y + room.Height/2) * 32)
+		logWallPlacement(shelfIdx, "left", spawnX, spawnY)
+	case 1: // Top wall
+		spawnX = float64((room.X + room.Width/2) * 32)
+		spawnY = float64(room.Y*32) + 16
+		logWallPlacement(shelfIdx, "top", spawnX, spawnY)
+	case 2: // Right wall
+		spawnX = float64((room.X+room.Width-1)*32) - 16
+		spawnY = float64((room.Y + room.Height/2) * 32)
+		logWallPlacement(shelfIdx, "right", spawnX, spawnY)
+	case 3: // Bottom wall
+		spawnX = float64((room.X + room.Width/2) * 32)
+		spawnY = float64((room.Y+room.Height-1)*32) - 16
+		logWallPlacement(shelfIdx, "bottom", spawnX, spawnY)
+	}
+
+	return spawnX, spawnY
+}
+
+// logWallPlacement logs bookshelf placement details.
+func logWallPlacement(shelfIdx int, wall string, x, y float64) {
+	bookSpawnLog.WithFields(logrus.Fields{
+		"operation": "calculateWallSpawnPosition",
+		"shelf_idx": shelfIdx,
+		"wall":      wall,
+		"spawn_x":   x,
+		"spawn_y":   y,
+	}).Debug("Positioned bookshelf against wall")
 }
 
 // createBookshelfEntity creates a bookshelf entity with pre-generated books.

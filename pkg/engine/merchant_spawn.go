@@ -122,28 +122,32 @@ func SpawnMerchantsInTerrain(world *World, terrain *terrain.Terrain, worldSeed i
 		return 0, nil
 	}
 
-	// Get world logger if available
-	var logger *logrus.Entry
+	logger := createMerchantLogger(world, worldSeed, params, merchantCount)
+	spawnPoints := generateMerchantSpawnPoints(terrain, worldSeed, merchantCount, logger)
+
+	return spawnMerchantsAtPoints(world, terrain, spawnPoints, worldSeed, params, logger), nil
+}
+
+// createMerchantLogger creates a logger for merchant spawning operations.
+func createMerchantLogger(world *World, worldSeed int64, params procgen.GenerationParams, merchantCount int) *logrus.Entry {
 	if world != nil && world.logger != nil {
-		logger = world.logger.WithFields(logrus.Fields{
+		return world.logger.WithFields(logrus.Fields{
 			"system": "merchant_spawn",
 			"seed":   worldSeed,
 			"genre":  params.GenreID,
 			"count":  merchantCount,
 		})
 	}
+	return nil
+}
 
-	spawned := 0
-	merchantGen := procgenEntity.NewEntityGenerator()
-
-	// Generate spawn points (deterministic based on world seed)
-	worldWidth := terrain.Width
-	worldHeight := terrain.Height
+// generateMerchantSpawnPoints creates spawn point locations for merchants.
+func generateMerchantSpawnPoints(terrain *terrain.Terrain, worldSeed int64, merchantCount int, logger *logrus.Entry) []struct{ X, Y float64 } {
 	spawnPoints := procgenEntity.GenerateMerchantSpawnPoints(
 		worldSeed,
-		worldWidth,
-		worldHeight,
-		procgenEntity.MerchantFixed, // Use fixed merchants for dungeon shops
+		terrain.Width,
+		terrain.Height,
+		procgenEntity.MerchantFixed,
 		merchantCount,
 	)
 
@@ -151,54 +155,26 @@ func SpawnMerchantsInTerrain(world *World, terrain *terrain.Terrain, worldSeed i
 		logger.WithField("spawnPoints", len(spawnPoints)).Debug("merchant spawn points generated")
 	}
 
-	// Generate and spawn merchants at each point
+	return spawnPoints
+}
+
+// spawnMerchantsAtPoints spawns merchant entities at generated spawn points.
+func spawnMerchantsAtPoints(world *World, terrain *terrain.Terrain, spawnPoints []struct{ X, Y float64 }, worldSeed int64, params procgen.GenerationParams, logger *logrus.Entry) int {
+	spawned := 0
+	merchantGen := procgenEntity.NewEntityGenerator()
+
 	for i, point := range spawnPoints {
-		// Generate merchant data
-		merchantSeed := worldSeed + int64(i*1000) + 500 // Offset seed for each merchant
-		merchantData, err := merchantGen.GenerateMerchant(merchantSeed, params, procgenEntity.MerchantFixed)
-		if err != nil {
-			if logger != nil {
-				logger.WithError(err).WithField("index", i).Warn("failed to generate merchant")
-			}
+		merchantData, worldX, worldY, ok := generateMerchantAtPoint(merchantGen, point, i, worldSeed, params, logger)
+		if !ok {
 			continue
 		}
 
-		// Convert tile coordinates to world coordinates (32 pixels per tile)
-		worldX := point.X * 32.0
-		worldY := point.Y * 32.0
-
-		// Validate spawn position is walkable
-		tileX := int(point.X)
-		tileY := int(point.Y)
-		if !terrain.IsWalkable(tileX, tileY) {
-			if logger != nil {
-				logger.WithFields(logrus.Fields{
-					"x": tileX,
-					"y": tileY,
-				}).Debug("spawn point not walkable, skipping")
-			}
+		if !validateMerchantSpawnPosition(terrain, point, logger) {
 			continue
 		}
 
-		// Spawn merchant entity
-		merchantEntity := SpawnMerchantFromData(world, merchantData, worldX, worldY)
-		if merchantEntity == nil {
-			if logger != nil {
-				logger.WithField("index", i).Warn("failed to spawn merchant entity")
-			}
-			continue
-		}
-
-		spawned++
-
-		if logger != nil {
-			logger.WithFields(logrus.Fields{
-				"entityID": merchantEntity.ID,
-				"name":     merchantData.Entity.Name,
-				"x":        worldX,
-				"y":        worldY,
-				"items":    len(merchantData.Inventory),
-			}).Info("merchant spawned")
+		if spawnSingleMerchant(world, merchantData, worldX, worldY, logger) {
+			spawned++
 		}
 	}
 
@@ -206,7 +182,66 @@ func SpawnMerchantsInTerrain(world *World, terrain *terrain.Terrain, worldSeed i
 		logger.WithField("spawned", spawned).Info("merchant spawning complete")
 	}
 
-	return spawned, nil
+	return spawned
+}
+
+// generateMerchantAtPoint generates merchant data and calculates world coordinates.
+func generateMerchantAtPoint(merchantGen *procgenEntity.EntityGenerator, point struct{ X, Y float64 }, index int, worldSeed int64, params procgen.GenerationParams, logger *logrus.Entry) (*procgenEntity.MerchantData, float64, float64, bool) {
+	merchantSeed := worldSeed + int64(index*1000) + 500
+	merchantData, err := merchantGen.GenerateMerchant(merchantSeed, params, procgenEntity.MerchantFixed)
+	if err != nil {
+		if logger != nil {
+			logger.WithError(err).WithField("index", index).Warn("failed to generate merchant")
+		}
+		return nil, 0, 0, false
+	}
+
+	worldX := point.X * 32.0
+	worldY := point.Y * 32.0
+
+	return merchantData, worldX, worldY, true
+}
+
+// validateMerchantSpawnPosition checks if spawn position is walkable terrain.
+func validateMerchantSpawnPosition(terrain *terrain.Terrain, point struct{ X, Y float64 }, logger *logrus.Entry) bool {
+	tileX := int(point.X)
+	tileY := int(point.Y)
+
+	if !terrain.IsWalkable(tileX, tileY) {
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"x": tileX,
+				"y": tileY,
+			}).Debug("spawn point not walkable, skipping")
+		}
+		return false
+	}
+
+	return true
+}
+
+// spawnSingleMerchant creates and spawns a single merchant entity.
+func spawnSingleMerchant(world *World, merchantData *procgenEntity.MerchantData, worldX, worldY float64, logger *logrus.Entry) bool {
+	merchantEntity := SpawnMerchantFromData(world, merchantData, worldX, worldY)
+
+	if merchantEntity == nil {
+		if logger != nil {
+			logger.Warn("failed to spawn merchant entity")
+		}
+		return false
+	}
+
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entityID": merchantEntity.ID,
+			"name":     merchantData.Entity.Name,
+			"x":        worldX,
+			"y":        worldY,
+			"items":    len(merchantData.Inventory),
+		}).Info("merchant spawned")
+	}
+
+	return true
 }
 
 // GetNearbyMerchants returns all merchant entities within a specified radius of a position.

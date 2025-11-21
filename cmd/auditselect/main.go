@@ -30,7 +30,6 @@ func main() {
 	verbose := flag.Bool("v", false, "Verbose output")
 	flag.Parse()
 
-	// Find all packages
 	packages, err := findPackages(filepath.Join(*repoRoot, *pkgDir))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error finding packages: %v\n", err)
@@ -41,26 +40,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Found %d packages\n", len(packages))
 	}
 
-	// Analyze dependencies for each package
-	for i := range packages {
-		deps, err := analyzePackageDependencies(*repoRoot, packages[i].Path)
-		if err != nil {
-			if *verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to analyze %s: %v\n", packages[i].Path, err)
-			}
-			continue
-		}
-		packages[i].Dependencies = deps
-		packages[i].DependencyCount = len(deps)
-	}
-
-	// Filter out packages that already have audits
-	unaudited := make([]PackageInfo, 0)
-	for _, pkg := range packages {
-		if !pkg.HasAudit {
-			unaudited = append(unaudited, pkg)
-		}
-	}
+	analyzeDependencies(*repoRoot, packages, *verbose)
+	unaudited := filterUnauditedPackages(packages)
 
 	if len(unaudited) == 0 {
 		fmt.Println("All packages have been audited!")
@@ -71,24 +52,51 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%d packages need auditing\n", len(unaudited))
 	}
 
-	// Sort by dependency depth (ascending), then by priority path
-	sort.Slice(unaudited, func(i, j int) bool {
-		// Compare dependency counts first
-		if unaudited[i].DependencyCount != unaudited[j].DependencyCount {
-			return unaudited[i].DependencyCount < unaudited[j].DependencyCount
-		}
-
-		// If equal, prioritize by path: engine > procgen > rendering > others
-		return getPriority(unaudited[i].Path) < getPriority(unaudited[j].Path)
-	})
-
-	// Select the first package (lowest depth)
+	sortPackagesByPriority(unaudited)
 	selected := unaudited[0]
+	outputSelection(selected, *verbose)
+}
 
-	// Output selection
+// analyzeDependencies analyzes dependencies for all packages in place.
+func analyzeDependencies(repoRoot string, packages []PackageInfo, verbose bool) {
+	for i := range packages {
+		deps, err := analyzePackageDependencies(repoRoot, packages[i].Path)
+		if err != nil {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Warning: failed to analyze %s: %v\n", packages[i].Path, err)
+			}
+			continue
+		}
+		packages[i].Dependencies = deps
+		packages[i].DependencyCount = len(deps)
+	}
+}
+
+// filterUnauditedPackages returns packages that don't have audit files.
+func filterUnauditedPackages(packages []PackageInfo) []PackageInfo {
+	unaudited := make([]PackageInfo, 0)
+	for _, pkg := range packages {
+		if !pkg.HasAudit {
+			unaudited = append(unaudited, pkg)
+		}
+	}
+	return unaudited
+}
+
+// sortPackagesByPriority sorts packages by dependency depth then path priority.
+func sortPackagesByPriority(packages []PackageInfo) {
+	sort.Slice(packages, func(i, j int) bool {
+		if packages[i].DependencyCount != packages[j].DependencyCount {
+			return packages[i].DependencyCount < packages[j].DependencyCount
+		}
+		return getPriority(packages[i].Path) < getPriority(packages[j].Path)
+	})
+}
+
+// outputSelection prints the selected package and optional details.
+func outputSelection(selected PackageInfo, verbose bool) {
 	fmt.Printf("%s\n", selected.Path)
-
-	if *verbose {
+	if verbose {
 		fmt.Fprintf(os.Stderr, "Selected: %s (depth: %d dependencies)\n", selected.Path, selected.DependencyCount)
 		if len(selected.Dependencies) > 0 {
 			fmt.Fprintf(os.Stderr, "Dependencies: %s\n", strings.Join(selected.Dependencies, ", "))

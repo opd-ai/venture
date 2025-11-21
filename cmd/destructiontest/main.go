@@ -20,29 +20,8 @@ func main() {
 
 	flag.Parse()
 
-	materialMap := map[string]destruction.MaterialType{
-		"wood":     destruction.MaterialWood,
-		"stone":    destruction.MaterialStone,
-		"metal":    destruction.MaterialMetal,
-		"glass":    destruction.MaterialGlass,
-		"concrete": destruction.MaterialConcrete,
-		"brick":    destruction.MaterialBrick,
-	}
-
-	mat, ok := materialMap[*material]
-	if !ok {
-		log.Fatalf("Unknown material: %s", *material)
-	}
-
-	width, height, floors := 16, 16, 2
-	switch *buildingType {
-	case "house":
-		width, height, floors = 16, 16, 2
-	case "manor":
-		width, height, floors = 24, 24, 3
-	case "tower":
-		width, height, floors = 8, 8, 5
-	}
+	mat := parseMaterialType(*material)
+	width, height, floors := getBuildingDimensions(*buildingType)
 
 	config := destruction.DefaultConfig()
 	sys := destruction.NewSystem(config)
@@ -72,26 +51,70 @@ func main() {
 	printIntegrity(integrity, *verbose)
 
 	if *simulate {
-		fmt.Printf("\n=== Running Simulation ===\n")
+		runCollapseSimulation(sys, buildingID)
+	}
 
-		for i := 0; i < 100; i++ {
-			sys.Update(0.1)
+	runPhysicsSimulation(sys, mat)
 
-			if (i+1)%20 == 0 {
-				integrity, _ = sys.GetIntegrity(buildingID)
-				fmt.Printf("\nStep %d (%.1fs):\n", i+1, float64(i+1)*0.1)
-				printIntegrity(integrity, false)
+	fmt.Printf("\n=== Test Complete ===\n")
+}
 
-				if integrity.State == destruction.IntegrityCollapsed {
-					fmt.Printf("\n!!! BUILDING COLLAPSED !!!\n")
-					fmt.Printf("Debris particles: %d\n", sys.GetDebrisCount())
-					fmt.Printf("Falling objects: %d\n", sys.GetFallingObjectCount())
-					break
-				}
+// parseMaterialType converts material string to MaterialType enum.
+func parseMaterialType(material string) destruction.MaterialType {
+	materialMap := map[string]destruction.MaterialType{
+		"wood":     destruction.MaterialWood,
+		"stone":    destruction.MaterialStone,
+		"metal":    destruction.MaterialMetal,
+		"glass":    destruction.MaterialGlass,
+		"concrete": destruction.MaterialConcrete,
+		"brick":    destruction.MaterialBrick,
+	}
+
+	mat, ok := materialMap[material]
+	if !ok {
+		log.Fatalf("Unknown material: %s", material)
+	}
+	return mat
+}
+
+// getBuildingDimensions returns width, height, and floors for a building type.
+func getBuildingDimensions(buildingType string) (int, int, int) {
+	switch buildingType {
+	case "house":
+		return 16, 16, 2
+	case "manor":
+		return 24, 24, 3
+	case "tower":
+		return 8, 8, 5
+	default:
+		return 16, 16, 2
+	}
+}
+
+// runCollapseSimulation executes the building collapse simulation.
+func runCollapseSimulation(sys *destruction.System, buildingID string) {
+	fmt.Printf("\n=== Running Simulation ===\n")
+
+	for i := 0; i < 100; i++ {
+		sys.Update(0.1)
+
+		if (i+1)%20 == 0 {
+			integrity, _ := sys.GetIntegrity(buildingID)
+			fmt.Printf("\nStep %d (%.1fs):\n", i+1, float64(i+1)*0.1)
+			printIntegrity(integrity, false)
+
+			if integrity.State == destruction.IntegrityCollapsed {
+				fmt.Printf("\n!!! BUILDING COLLAPSED !!!\n")
+				fmt.Printf("Debris particles: %d\n", sys.GetDebrisCount())
+				fmt.Printf("Falling objects: %d\n", sys.GetFallingObjectCount())
+				break
 			}
 		}
 	}
+}
 
+// runPhysicsSimulation demonstrates falling object physics.
+func runPhysicsSimulation(sys *destruction.System, mat destruction.MaterialType) {
 	fmt.Printf("\n=== Physics Simulation ===\n")
 	fmt.Printf("Spawning falling object...\n")
 	sys.SpawnFallingObject(100, 100, 200, mat, 16, 16)
@@ -113,8 +136,6 @@ func main() {
 			}
 		}
 	}
-
-	fmt.Printf("\n=== Test Complete ===\n")
 }
 
 func printIntegrity(integrity *destruction.StructuralIntegrity, verbose bool) {

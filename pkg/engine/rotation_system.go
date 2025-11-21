@@ -58,85 +58,116 @@ func (s *RotationSystem) Update(deltaTime float64) {
 	}).Debug("Processing entities with rotation component")
 
 	for _, entity := range entities {
-		// Get rotation component
-		rotComp, ok := entity.GetComponent("rotation")
-		if !ok {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Warn("Entity has rotation in query but component retrieval failed")
-			continue
-		}
-		rotation, ok := rotComp.(*RotationComponent)
-		if !ok {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "rotation",
-			}).Error("Failed to cast rotation component")
+		rotation := s.getRotationComponent(entity)
+		if rotation == nil {
 			continue
 		}
 
-		// Sync rotation target with aim component if present
-		if entity.HasComponent("aim") {
-			aimComp, ok := entity.GetComponent("aim")
-			if ok {
-				if aim, ok := aimComp.(*AimComponent); ok {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":    entity.ID,
-						"aim_angle":    aim.AimAngle,
-						"has_position": entity.HasComponent("position"),
-					}).Debug("Syncing rotation with aim component")
-
-					// Update aim angle from position if target-based
-					if entity.HasComponent("position") {
-						posComp, ok := entity.GetComponent("position")
-						if ok {
-							if pos, ok := posComp.(*PositionComponent); ok {
-								aim.UpdateAimAngle(pos.X, pos.Y)
-								s.logger.WithFields(logrus.Fields{
-									"entity_id":     entity.ID,
-									"position_x":    pos.X,
-									"position_y":    pos.Y,
-									"updated_angle": aim.AimAngle,
-								}).Debug("Updated aim angle from position")
-							}
-						}
-					}
-
-					// Set rotation target to match aim
-					oldTarget := rotation.TargetAngle
-					rotation.SetTargetAngle(aim.AimAngle)
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":     entity.ID,
-						"old_target":    oldTarget,
-						"new_target":    aim.AimAngle,
-						"current_angle": rotation.Angle,
-					}).Debug("Set rotation target from aim")
-				} else {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":      entity.ID,
-						"component_type": "aim",
-					}).Warn("Failed to cast aim component")
-				}
-			}
-		}
-
-		// Perform smooth rotation update
-		oldAngle := rotation.Angle
-		rotation.Update(deltaTime)
-
-		if oldAngle != rotation.Angle {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"old_angle":      oldAngle,
-				"new_angle":      rotation.Angle,
-				"target_angle":   rotation.TargetAngle,
-				"smooth_enabled": rotation.SmoothRotation,
-				"rotation_speed": rotation.RotationSpeed,
-			}).Debug("Entity rotation updated")
-		}
+		s.syncRotationWithAim(entity, rotation)
+		s.performRotationUpdate(entity, rotation, deltaTime)
 	}
 
 	s.logger.Debug("Rotation system update complete")
+}
+
+// getRotationComponent retrieves and validates the rotation component from an entity.
+func (s *RotationSystem) getRotationComponent(entity *Entity) *RotationComponent {
+	rotComp, ok := entity.GetComponent("rotation")
+	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+		}).Warn("Entity has rotation in query but component retrieval failed")
+		return nil
+	}
+	rotation, ok := rotComp.(*RotationComponent)
+	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "rotation",
+		}).Error("Failed to cast rotation component")
+		return nil
+	}
+	return rotation
+}
+
+// syncRotationWithAim synchronizes rotation target with aim component if present.
+func (s *RotationSystem) syncRotationWithAim(entity *Entity, rotation *RotationComponent) {
+	if !entity.HasComponent("aim") {
+		return
+	}
+
+	aimComp, ok := entity.GetComponent("aim")
+	if !ok {
+		return
+	}
+
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"component_type": "aim",
+		}).Warn("Failed to cast aim component")
+		return
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":    entity.ID,
+		"aim_angle":    aim.AimAngle,
+		"has_position": entity.HasComponent("position"),
+	}).Debug("Syncing rotation with aim component")
+
+	s.updateAimFromPosition(entity, aim)
+
+	oldTarget := rotation.TargetAngle
+	rotation.SetTargetAngle(aim.AimAngle)
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":     entity.ID,
+		"old_target":    oldTarget,
+		"new_target":    aim.AimAngle,
+		"current_angle": rotation.Angle,
+	}).Debug("Set rotation target from aim")
+}
+
+// updateAimFromPosition updates aim angle based on entity position if available.
+func (s *RotationSystem) updateAimFromPosition(entity *Entity, aim *AimComponent) {
+	if !entity.HasComponent("position") {
+		return
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	aim.UpdateAimAngle(pos.X, pos.Y)
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":     entity.ID,
+		"position_x":    pos.X,
+		"position_y":    pos.Y,
+		"updated_angle": aim.AimAngle,
+	}).Debug("Updated aim angle from position")
+}
+
+// performRotationUpdate executes the rotation interpolation and logs changes.
+func (s *RotationSystem) performRotationUpdate(entity *Entity, rotation *RotationComponent, deltaTime float64) {
+	oldAngle := rotation.Angle
+	rotation.Update(deltaTime)
+
+	if oldAngle != rotation.Angle {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"old_angle":      oldAngle,
+			"new_angle":      rotation.Angle,
+			"target_angle":   rotation.TargetAngle,
+			"smooth_enabled": rotation.SmoothRotation,
+			"rotation_speed": rotation.RotationSpeed,
+		}).Debug("Entity rotation updated")
+	}
 }
 
 // SyncRotationToAim immediately sets an entity's rotation to match aim.

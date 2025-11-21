@@ -311,57 +311,83 @@ func NewCoordinatedRetreatAction() *ActionNode {
 // NewSquadLeaderDecisionAction creates an action for squad leader decision-making.
 func NewSquadLeaderDecisionAction() *ActionNode {
 	return NewActionNode("SquadLeaderDecision", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		// Get squad component
-		squadComp, ok := entity.GetComponent("squad")
-		if !ok {
-			return NodeFailure
-		}
-		squad, ok := squadComp.(*SquadComponent)
-		if !ok || !squad.IsLeader() {
+		squad := getSquadLeaderComponent(entity)
+		if squad == nil {
 			return NodeFailure
 		}
 
-		// Leader makes tactical decisions for the squad
-		// Check if squad should retreat (simple heuristic: if leader health low)
-		healthComp, ok := entity.GetComponent("health")
-		if ok {
-			if health, ok := healthComp.(*HealthComponent); ok {
-				healthPercent := float64(health.Current) / float64(health.Max)
-
-				if healthPercent < 0.3 {
-					// Order retreat
-					squad.SharedBlackboard.Set("retreat_ordered", true)
-
-					// Calculate retreat direction (away from current target)
-					if target, ok := blackboard.GetEntity("target"); ok {
-						posComp, _ := entity.GetComponent("position")
-						targetPosComp, _ := target.GetComponent("position")
-						if posComp != nil && targetPosComp != nil {
-							if pos, ok := posComp.(*PositionComponent); ok {
-								if targetPos, ok := targetPosComp.(*PositionComponent); ok {
-									// Retreat direction is away from target
-									dx := pos.X - targetPos.X
-									dy := pos.Y - targetPos.Y
-									squad.SharedBlackboard.Set("retreat_dir_x", dx)
-									squad.SharedBlackboard.Set("retreat_dir_y", dy)
-								}
-							}
-						}
-					}
-				} else {
-					// Continue fighting
-					squad.SharedBlackboard.Set("retreat_ordered", false)
-				}
-			}
-		}
-
-		// Set priority target if we have one
-		if target, ok := blackboard.GetEntity("target"); ok {
-			squad.SharedBlackboard.Set("priority_target", target)
-		}
+		evaluateRetreatDecision(entity, squad, blackboard)
+		setPriorityTarget(squad, blackboard)
 
 		return NodeSuccess
 	})
+}
+
+// getSquadLeaderComponent retrieves and validates the squad component for a leader.
+func getSquadLeaderComponent(entity *Entity) *SquadComponent {
+	squadComp, ok := entity.GetComponent("squad")
+	if !ok {
+		return nil
+	}
+	squad, ok := squadComp.(*SquadComponent)
+	if !ok || !squad.IsLeader() {
+		return nil
+	}
+	return squad
+}
+
+// evaluateRetreatDecision determines whether the squad should retreat based on leader health.
+func evaluateRetreatDecision(entity *Entity, squad *SquadComponent, blackboard *Blackboard) {
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	healthPercent := float64(health.Current) / float64(health.Max)
+
+	if healthPercent < 0.3 {
+		squad.SharedBlackboard.Set("retreat_ordered", true)
+		setRetreatDirection(entity, squad, blackboard)
+	} else {
+		squad.SharedBlackboard.Set("retreat_ordered", false)
+	}
+}
+
+// setRetreatDirection calculates and sets the retreat direction away from the target.
+func setRetreatDirection(entity *Entity, squad *SquadComponent, blackboard *Blackboard) {
+	target, ok := blackboard.GetEntity("target")
+	if !ok {
+		return
+	}
+
+	posComp, _ := entity.GetComponent("position")
+	targetPosComp, _ := target.GetComponent("position")
+	if posComp == nil || targetPosComp == nil {
+		return
+	}
+
+	pos, ok1 := posComp.(*PositionComponent)
+	targetPos, ok2 := targetPosComp.(*PositionComponent)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	dx := pos.X - targetPos.X
+	dy := pos.Y - targetPos.Y
+	squad.SharedBlackboard.Set("retreat_dir_x", dx)
+	squad.SharedBlackboard.Set("retreat_dir_y", dy)
+}
+
+// setPriorityTarget sets the squad's priority target from the leader's current target.
+func setPriorityTarget(squad *SquadComponent, blackboard *Blackboard) {
+	if target, ok := blackboard.GetEntity("target"); ok {
+		squad.SharedBlackboard.Set("priority_target", target)
+	}
 }
 
 // Squad-related Conditions

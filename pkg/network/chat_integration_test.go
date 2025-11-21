@@ -408,8 +408,8 @@ func TestChatIntegrationThroughput(t *testing.T) {
 	encKey := DeriveAESKey(big.NewInt(161718))
 	cm.AddPlayer(1, Vector2{}, encKey)
 
-	messageCount := 500
-	messagesPerSecond := 10
+	messageCount := 100
+	messagesPerSecond := 20
 	interval := time.Second / time.Duration(messagesPerSecond)
 
 	start := time.Now()

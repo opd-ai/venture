@@ -436,13 +436,8 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 	// Apply remaining damage to health
 	health.TakeDamage(finalDamage)
 
-	// Trigger animations and visual feedback
-	s.triggerAttackAnimation(attacker)
-	s.triggerHurtAnimation(target)
-	s.logDamageEvent(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
-	s.spawnHitParticles(target)
-	s.applyVisualFeedback(target, finalDamage)
-	s.triggerScreenShake(target, finalDamage, isCrit)
+	// Trigger all visual and audio feedback
+	s.applyAttackFeedback(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
 
 	// Reset cooldown
 	attack.ResetCooldown()
@@ -456,6 +451,16 @@ func (s *CombatSystem) Attack(attacker, target *Entity) bool {
 }
 
 // getEntityStats retrieves the stats component from an entity, returns nil if not present.
+// applyAttackFeedback triggers all visual and audio feedback for an attack.
+func (s *CombatSystem) applyAttackFeedback(attacker, target *Entity, finalDamage, baseDamage float64, damageType combat.DamageType, isCrit bool, targetHealth float64) {
+	s.triggerAttackAnimation(attacker)
+	s.triggerHurtAnimation(target)
+	s.logDamageEvent(attacker, target, finalDamage, baseDamage, damageType, isCrit, targetHealth)
+	s.spawnHitParticles(target)
+	s.applyVisualFeedback(target, finalDamage)
+	s.triggerScreenShake(target, finalDamage, isCrit)
+}
+
 func (s *CombatSystem) getEntityStats(entity *Entity) *StatsComponent {
 	statsComp, _ := entity.GetComponent("stats")
 	if statsComp != nil {

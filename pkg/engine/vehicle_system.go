@@ -65,66 +65,109 @@ func (s *VehicleSystem) Update(deltaTime float64) {
 // processMountedVehicle handles physics for vehicles with riders.
 func (s *VehicleSystem) processMountedVehicle(vehicle *Entity, vehicleComp *VehicleComponent, mountComp *MountComponent, deltaTime float64) {
 	// Get rider entity
+	rider, ok := s.validateRider(mountComp)
+	if !ok {
+		return
+	}
+
+	// Get rider input component for acceleration/turning
+	inputComp, ok := s.getRiderInput(rider)
+	if !ok {
+		return
+	}
+
+	// Apply acceleration and update vehicle speed
+	s.updateVehicleSpeed(vehicleComp, inputComp, deltaTime)
+
+	// Apply vehicle speed to rider's velocity
+	s.applyVehicleVelocity(rider, inputComp, vehicleComp.Speed)
+
+	// Sync vehicle position with rider
+	s.syncVehiclePosition(vehicle, rider)
+}
+
+// validateRider checks if the rider still exists and dismounts if not.
+func (s *VehicleSystem) validateRider(mountComp *MountComponent) (*Entity, bool) {
 	rider, ok := s.world.GetEntity(mountComp.RiderID)
 	if !ok || rider == nil {
 		// Rider no longer exists, dismount
 		mountComp.RiderID = 0
 		mountComp.IsMounted = false
-		return
+		return nil, false
 	}
+	return rider, true
+}
 
-	// Get rider input component for acceleration/turning
+// getRiderInput retrieves the rider's input component.
+func (s *VehicleSystem) getRiderInput(rider *Entity) (*EbitenInput, bool) {
 	inComp, hasInput := rider.GetComponent("input")
 	inputComp, ok := inComp.(*EbitenInput)
 	if !hasInput || !ok {
+		return nil, false
+	}
+	return inputComp, true
+}
+
+// updateVehicleSpeed applies acceleration based on rider input.
+func (s *VehicleSystem) updateVehicleSpeed(vehicleComp *VehicleComponent, inputComp *EbitenInput, deltaTime float64) {
+	if inputComp.MoveX == 0 && inputComp.MoveY == 0 {
 		return
 	}
 
-	// Apply acceleration based on input
-	if inputComp.MoveX != 0 || inputComp.MoveY != 0 {
-		// Calculate desired speed based on input magnitude
-		inputMagnitude := 1.0 // Simplified, could use sqrt(moveX^2 + moveY^2)
-		targetSpeed := vehicleComp.MaxSpeed * inputMagnitude
+	// Calculate desired speed based on input magnitude
+	inputMagnitude := 1.0 // Simplified, could use sqrt(moveX^2 + moveY^2)
+	targetSpeed := vehicleComp.MaxSpeed * inputMagnitude
 
-		// Accelerate toward target speed
+	// Accelerate toward target speed
+	if vehicleComp.Speed < targetSpeed {
+		vehicleComp.Speed += vehicleComp.Acceleration * deltaTime
+		if vehicleComp.Speed > targetSpeed {
+			vehicleComp.Speed = targetSpeed
+		}
+	} else if vehicleComp.Speed > targetSpeed {
+		vehicleComp.Speed -= vehicleComp.Acceleration * deltaTime * 2.0 // Deceleration faster than acceleration
 		if vehicleComp.Speed < targetSpeed {
-			vehicleComp.Speed += vehicleComp.Acceleration * deltaTime
-			if vehicleComp.Speed > targetSpeed {
-				vehicleComp.Speed = targetSpeed
-			}
-		} else if vehicleComp.Speed > targetSpeed {
-			vehicleComp.Speed -= vehicleComp.Acceleration * deltaTime * 2.0 // Deceleration faster than acceleration
-			if vehicleComp.Speed < targetSpeed {
-				vehicleComp.Speed = targetSpeed
-			}
+			vehicleComp.Speed = targetSpeed
 		}
 	}
+}
 
-	// Apply vehicle speed to rider's velocity
+// applyVehicleVelocity applies vehicle speed to the rider's velocity component.
+func (s *VehicleSystem) applyVehicleVelocity(rider *Entity, inputComp *EbitenInput, speed float64) {
 	velComp, hasVelocity := rider.GetComponent("velocity")
-	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
-		// Use rider's input direction for movement
-		if inputComp.MoveX != 0 || inputComp.MoveY != 0 {
-			// Normalize input direction
-			length := 1.0 // Simplified
-			velocityComp.VX = (inputComp.MoveX / length) * vehicleComp.Speed
-			velocityComp.VY = (inputComp.MoveY / length) * vehicleComp.Speed
-		}
+	velocityComp, ok := velComp.(*VelocityComponent)
+	if !hasVelocity || !ok {
+		return
 	}
 
-	// Sync vehicle position with rider
-	rPos, hasRiderPos := rider.GetComponent("position")
-	if hasRiderPos {
-		riderPos, ok := rPos.(*PositionComponent)
-		if ok {
-			vPos, hasVehiclePos := vehicle.GetComponent("position")
-			vehiclePos, ok2 := vPos.(*PositionComponent)
-			if hasVehiclePos && ok2 {
-				vehiclePos.X = riderPos.X
-				vehiclePos.Y = riderPos.Y
-			}
-		}
+	// Use rider's input direction for movement
+	if inputComp.MoveX != 0 || inputComp.MoveY != 0 {
+		// Normalize input direction
+		length := 1.0 // Simplified
+		velocityComp.VX = (inputComp.MoveX / length) * speed
+		velocityComp.VY = (inputComp.MoveY / length) * speed
 	}
+}
+
+// syncVehiclePosition synchronizes the vehicle's position with the rider's position.
+func (s *VehicleSystem) syncVehiclePosition(vehicle, rider *Entity) {
+	rPos, hasRiderPos := rider.GetComponent("position")
+	if !hasRiderPos {
+		return
+	}
+	riderPos, ok := rPos.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	vPos, hasVehiclePos := vehicle.GetComponent("position")
+	vehiclePos, ok := vPos.(*PositionComponent)
+	if !hasVehiclePos || !ok {
+		return
+	}
+
+	vehiclePos.X = riderPos.X
+	vehiclePos.Y = riderPos.Y
 }
 
 // updateFuel reduces fuel based on speed and deltaTime.

@@ -1674,68 +1674,14 @@ func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell,
 		}).Debug("Searching for enemies in line")
 	}
 
-	casterPos, hasCasterPos := caster.GetComponent("position")
-	if !hasCasterPos {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"caster_id": caster.ID,
-			}).Warn("Caster has no position component for line targeting")
-		}
-		return nil
-	}
-	casterPosComp, ok := casterPos.(*PositionComponent)
+	casterPos, ok := s.validateCasterPosition(caster)
 	if !ok {
 		return nil
 	}
 
-	dirX, dirY := s.getCasterDirection(caster, x, y)
-	if dirX == 0 && dirY == 0 {
-		dirX = 1.0
-	}
-
-	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
-	dirX /= dirLength
-	dirY /= dirLength
-
+	dirX, dirY := s.getNormalizedDirection(caster, x, y)
 	lineWidth := 32.0
-	entities := s.world.GetEntities()
-	var targets []*Entity
-
-	for _, entity := range entities {
-		if !s.isEnemyTarget(caster, entity) {
-			continue
-		}
-
-		entityPos, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		entityPosComp, ok := entityPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		toEntityX := entityPosComp.X - casterPosComp.X
-		toEntityY := entityPosComp.Y - casterPosComp.Y
-		dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
-
-		if dist > spell.Stats.Range || dist < 0.1 {
-			continue
-		}
-
-		projection := toEntityX*dirX + toEntityY*dirY
-		if projection < 0 {
-			continue
-		}
-
-		perpX := toEntityX - projection*dirX
-		perpY := toEntityY - projection*dirY
-		perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
-
-		if perpDist <= lineWidth {
-			targets = append(targets, entity)
-		}
-	}
+	targets := s.filterEntitiesInLine(caster, casterPos, dirX, dirY, spell.Stats.Range, lineWidth)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -1745,6 +1691,93 @@ func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell,
 	}
 
 	return targets
+}
+
+// validateCasterPosition retrieves and validates the caster's position component.
+func (s *SpellCastingSystem) validateCasterPosition(caster *Entity) (*PositionComponent, bool) {
+	casterPos, hasCasterPos := caster.GetComponent("position")
+	if !hasCasterPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id": caster.ID,
+			}).Warn("Caster has no position component for line targeting")
+		}
+		return nil, false
+	}
+	casterPosComp, ok := casterPos.(*PositionComponent)
+	if !ok {
+		return nil, false
+	}
+	return casterPosComp, true
+}
+
+// getNormalizedDirection calculates and normalizes the caster's facing direction.
+func (s *SpellCastingSystem) getNormalizedDirection(caster *Entity, x, y float64) (float64, float64) {
+	dirX, dirY := s.getCasterDirection(caster, x, y)
+	if dirX == 0 && dirY == 0 {
+		dirX = 1.0
+	}
+
+	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
+	return dirX / dirLength, dirY / dirLength
+}
+
+// filterEntitiesInLine finds all entities within the line attack area.
+func (s *SpellCastingSystem) filterEntitiesInLine(caster *Entity, casterPos *PositionComponent, dirX, dirY, maxRange, lineWidth float64) []*Entity {
+	entities := s.world.GetEntities()
+	var targets []*Entity
+
+	for _, entity := range entities {
+		if !s.isEnemyTarget(caster, entity) {
+			continue
+		}
+
+		entityPos, ok := s.getEntityPosition(entity)
+		if !ok {
+			continue
+		}
+
+		if s.isEntityInLineArea(casterPos, entityPos, dirX, dirY, maxRange, lineWidth) {
+			targets = append(targets, entity)
+		}
+	}
+
+	return targets
+}
+
+// getEntityPosition retrieves and validates an entity's position component.
+func (s *SpellCastingSystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
+	entityPos, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, false
+	}
+	entityPosComp, ok := entityPos.(*PositionComponent)
+	if !ok {
+		return nil, false
+	}
+	return entityPosComp, true
+}
+
+// isEntityInLineArea checks if an entity is within the line attack boundaries.
+func (s *SpellCastingSystem) isEntityInLineArea(casterPos, entityPos *PositionComponent, dirX, dirY, maxRange, lineWidth float64) bool {
+	toEntityX := entityPos.X - casterPos.X
+	toEntityY := entityPos.Y - casterPos.Y
+	dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+	if dist > maxRange || dist < 0.1 {
+		return false
+	}
+
+	projection := toEntityX*dirX + toEntityY*dirY
+	if projection < 0 {
+		return false
+	}
+
+	perpX := toEntityX - projection*dirX
+	perpY := toEntityY - projection*dirY
+	perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
+
+	return perpDist <= lineWidth
 }
 
 // getCasterDirection determines the caster's facing direction for directional spells.

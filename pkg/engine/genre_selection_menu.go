@@ -81,6 +81,22 @@ func (m *GenreSelectionMenu) Update() bool {
 		return true
 	}
 
+	// Handle keyboard navigation
+	if m.handleKeyboardNavigation() {
+		return true
+	}
+
+	// Handle mouse and touch input (Touch support for WASM/mobile)
+	if m.handleMouseTouchInput() {
+		return true
+	}
+
+	return false
+}
+
+// handleKeyboardNavigation processes keyboard input for menu navigation.
+// Returns true if a genre was selected via keyboard.
+func (m *GenreSelectionMenu) handleKeyboardNavigation() bool {
 	// Handle up/down arrow keys for navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIdx--
@@ -110,6 +126,12 @@ func (m *GenreSelectionMenu) Update() bool {
 		return m.selectCurrentGenre()
 	}
 
+	return false
+}
+
+// handleMouseTouchInput processes mouse and touch input for menu interaction.
+// Returns true if a genre was selected via mouse/touch.
+func (m *GenreSelectionMenu) handleMouseTouchInput() bool {
 	// Handle mouse and touch input (Touch support for WASM/mobile)
 	if IsTouchOrMouseJustPressed() {
 		mx, my, _ := GetTouchOrMousePosition()

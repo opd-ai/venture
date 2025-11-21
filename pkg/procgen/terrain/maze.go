@@ -48,9 +48,39 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		}).Debug("starting maze terrain generation")
 	}
 
-	// Use custom parameters if provided, otherwise use defaults
+	// Extract and validate dimensions
+	width, height, err := g.extractDimensions(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create RNG with seed
+	rng := rand.New(rand.NewSource(seed))
+
+	// Create terrain (starts filled with walls)
+	terrain := NewTerrain(width, height, seed)
+
+	// Generate maze structure
+	g.generateMazeStructure(terrain, rng)
+
+	// Add rooms and hazards to enhance maze
+	g.enhanceMazeWithFeatures(terrain, rng)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":  terrain.Width,
+			"height": terrain.Height,
+		}).Info("maze terrain generation complete")
+	}
+
+	return terrain, nil
+}
+
+// extractDimensions extracts and validates maze dimensions from parameters.
+func (g *MazeGenerator) extractDimensions(params procgen.GenerationParams) (int, int, error) {
 	width := 80
 	height := 50
+
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok {
 			width = w
@@ -68,11 +98,11 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 	// Validate dimensions
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+		return 0, 0, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
 	}
 
 	if width > 1000 || height > 1000 {
-		return nil, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
+		return 0, 0, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
 	}
 
 	// Ensure dimensions are odd for maze algorithm (walls on edges, floors in between)
@@ -83,19 +113,21 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 		height++
 	}
 
-	// Create RNG with seed
-	rng := rand.New(rand.NewSource(seed))
+	return width, height, nil
+}
 
-	// Create terrain (starts filled with walls)
-	terrain := NewTerrain(width, height, seed)
-
+// generateMazeStructure creates the basic maze layout using recursive backtracking.
+func (g *MazeGenerator) generateMazeStructure(terrain *Terrain, rng *rand.Rand) {
 	// Start maze generation from a random odd position
-	startX := 1 + (rng.Intn((width-2)/2) * 2)
-	startY := 1 + (rng.Intn((height-2)/2) * 2)
+	startX := 1 + (rng.Intn((terrain.Width-2)/2) * 2)
+	startY := 1 + (rng.Intn((terrain.Height-2)/2) * 2)
 
 	// Carve passages using recursive backtracking
 	g.carvePassages(startX, startY, terrain, rng)
+}
 
+// enhanceMazeWithFeatures adds rooms, water hazards, and stairs to the maze.
+func (g *MazeGenerator) enhanceMazeWithFeatures(terrain *Terrain, rng *rand.Rand) {
 	// Find dead ends and potentially create rooms
 	deadEnds := g.findDeadEnds(terrain)
 	for _, point := range deadEnds {
@@ -109,16 +141,6 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 	// Place stairs at furthest corners
 	g.placeStairsInCorners(terrain, rng)
-
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"width":    terrain.Width,
-			"height":   terrain.Height,
-			"deadEnds": len(deadEnds),
-		}).Info("maze terrain generation complete")
-	}
-
-	return terrain, nil
 }
 
 // carvePassages recursively carves passages through the maze using backtracking.

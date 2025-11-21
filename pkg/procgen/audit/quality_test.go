@@ -160,7 +160,7 @@ type EntityQualityValidator struct{}
 func (v *EntityQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	// Entity generator may return a single entity or a slice
 	var e *entity.Entity
-	
+
 	switch v := result.(type) {
 	case *entity.Entity:
 		e = v
@@ -185,7 +185,7 @@ func (v *EntityQualityValidator) Validate(result interface{}, params procgen.Gen
 
 	// Check no negative values
 	if e.Stats.Health < 0 || e.Stats.Damage < 0 || e.Stats.Defense < 0 || e.Stats.Speed < 0 {
-		return fmt.Errorf("negative stat values detected: H=%d D=%d Def=%d S=%.1f", 
+		return fmt.Errorf("negative stat values detected: H=%d D=%d Def=%d S=%.1f",
 			e.Stats.Health, e.Stats.Damage, e.Stats.Defense, e.Stats.Speed)
 	}
 
@@ -220,7 +220,7 @@ type ItemQualityValidator struct{}
 
 func (v *ItemQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	var i *item.Item
-	
+
 	switch v := result.(type) {
 	case *item.Item:
 		i = v
@@ -244,7 +244,7 @@ func (v *ItemQualityValidator) Validate(result interface{}, params procgen.Gener
 
 	// Check no negative values
 	if i.Stats.Damage < 0 || i.Stats.Defense < 0 || i.Stats.Value < 0 {
-		return fmt.Errorf("negative stat values: damage=%d defense=%d value=%d", 
+		return fmt.Errorf("negative stat values: damage=%d defense=%d value=%d",
 			i.Stats.Damage, i.Stats.Defense, i.Stats.Value)
 	}
 
@@ -261,7 +261,7 @@ type MagicQualityValidator struct{}
 
 func (v *MagicQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	var s *magic.Spell
-	
+
 	switch v := result.(type) {
 	case *magic.Spell:
 		s = v
@@ -279,7 +279,7 @@ func (v *MagicQualityValidator) Validate(result interface{}, params procgen.Gene
 		expectedCost := s.Stats.Damage * 10
 		tolerance := 20 // Allow ±20 mana
 		if s.Stats.ManaCost < expectedCost-tolerance || s.Stats.ManaCost > expectedCost+tolerance {
-			return fmt.Errorf("mana cost mismatch: %d (expected ~%d for damage %d)", 
+			return fmt.Errorf("mana cost mismatch: %d (expected ~%d for damage %d)",
 				s.Stats.ManaCost, expectedCost, s.Stats.Damage)
 		}
 	}
@@ -291,7 +291,7 @@ func (v *MagicQualityValidator) Validate(result interface{}, params procgen.Gene
 
 	// Check no negative values
 	if s.Stats.Damage < 0 || s.Stats.ManaCost < 0 || s.Stats.Healing < 0 {
-		return fmt.Errorf("negative values: damage=%d mana=%d healing=%d", 
+		return fmt.Errorf("negative values: damage=%d mana=%d healing=%d",
 			s.Stats.Damage, s.Stats.ManaCost, s.Stats.Healing)
 	}
 
@@ -308,7 +308,7 @@ type QuestQualityValidator struct{}
 
 func (v *QuestQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	var q *quest.Quest
-	
+
 	switch v := result.(type) {
 	case *quest.Quest:
 		q = v
@@ -329,7 +329,7 @@ func (v *QuestQualityValidator) Validate(result interface{}, params procgen.Gene
 	// Check rewards scale with difficulty
 	expectedRewardMin := int(params.Difficulty * 100)
 	if q.Reward.Gold < expectedRewardMin {
-		return fmt.Errorf("insufficient reward: %d gold (expected ≥%d for difficulty %.1f)", 
+		return fmt.Errorf("insufficient reward: %d gold (expected ≥%d for difficulty %.1f)",
 			q.Reward.Gold, expectedRewardMin, params.Difficulty)
 	}
 
@@ -411,7 +411,7 @@ type VehicleQualityValidator struct{}
 
 func (v *VehicleQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	var veh *vehicle.Vehicle
-	
+
 	switch v := result.(type) {
 	case *vehicle.Vehicle:
 		veh = v
@@ -435,7 +435,7 @@ func (v *VehicleQualityValidator) Validate(result interface{}, params procgen.Ge
 
 	// Check no negative values
 	if veh.MaxSpeed < 0 || veh.Handling < 0 || veh.MaxDurability < 0 {
-		return fmt.Errorf("negative stats: maxSpeed=%.1f handling=%.1f maxDurability=%.1f", 
+		return fmt.Errorf("negative stats: maxSpeed=%.1f handling=%.1f maxDurability=%.1f",
 			veh.MaxSpeed, veh.Handling, veh.MaxDurability)
 	}
 
@@ -571,7 +571,7 @@ type SkillsQualityValidator struct{}
 
 func (v *SkillsQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
 	var st *skills.SkillTree
-	
+
 	switch v := result.(type) {
 	case *skills.SkillTree:
 		st = v

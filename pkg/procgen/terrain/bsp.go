@@ -661,49 +661,64 @@ func (g *BSPGenerator) addCornerPits(terrain *Terrain, room *Room, rng *rand.Ran
 
 // addLavaFlow adds a lava stream through a room.
 func (g *BSPGenerator) addLavaFlow(terrain *Terrain, room *Room, rng *rand.Rand) {
-	// Lava flows horizontally or vertically across room
-	horizontal := rng.Float64() < 0.5
-
-	if horizontal {
-		// Horizontal flow
-		lavaY := room.Y + rng.Intn(room.Height)
-		for x := room.X; x < room.X+room.Width; x++ {
-			if terrain.IsInBounds(x, lavaY) {
-				// Skip if it's a wall or door
-				currentTile := terrain.GetTile(x, lavaY)
-				if currentTile == TileFloor || currentTile == TileCorridor {
-					terrain.SetTile(x, lavaY, TileLavaFlow)
-				}
-			}
-		}
-
-		// Add bridges over lava (2-3 crossing points)
-		numBridges := 2 + rng.Intn(2)
-		for i := 0; i < numBridges; i++ {
-			bridgeX := room.X + rng.Intn(room.Width)
-			if terrain.IsInBounds(bridgeX, lavaY) && terrain.GetTile(bridgeX, lavaY) == TileLavaFlow {
-				terrain.SetTile(bridgeX, lavaY, TileBridge)
-			}
-		}
+	if rng.Float64() < 0.5 {
+		g.addHorizontalLavaFlow(terrain, room, rng)
 	} else {
-		// Vertical flow
-		lavaX := room.X + rng.Intn(room.Width)
-		for y := room.Y; y < room.Y+room.Height; y++ {
-			if terrain.IsInBounds(lavaX, y) {
-				currentTile := terrain.GetTile(lavaX, y)
-				if currentTile == TileFloor || currentTile == TileCorridor {
-					terrain.SetTile(lavaX, y, TileLavaFlow)
-				}
-			}
+		g.addVerticalLavaFlow(terrain, room, rng)
+	}
+}
+
+// addHorizontalLavaFlow creates a horizontal lava stream across the room.
+func (g *BSPGenerator) addHorizontalLavaFlow(terrain *Terrain, room *Room, rng *rand.Rand) {
+	lavaY := room.Y + rng.Intn(room.Height)
+	g.placeLavaLine(terrain, room.X, room.X+room.Width, lavaY, true)
+	g.addBridgesToHorizontalLava(terrain, room, lavaY, rng)
+}
+
+// addVerticalLavaFlow creates a vertical lava stream across the room.
+func (g *BSPGenerator) addVerticalLavaFlow(terrain *Terrain, room *Room, rng *rand.Rand) {
+	lavaX := room.X + rng.Intn(room.Width)
+	g.placeLavaLine(terrain, room.Y, room.Y+room.Height, lavaX, false)
+	g.addBridgesToVerticalLava(terrain, room, lavaX, rng)
+}
+
+// placeLavaLine places lava tiles in a line, skipping walls and doors.
+func (g *BSPGenerator) placeLavaLine(terrain *Terrain, start, end, fixedCoord int, horizontal bool) {
+	for i := start; i < end; i++ {
+		var x, y int
+		if horizontal {
+			x, y = i, fixedCoord
+		} else {
+			x, y = fixedCoord, i
 		}
 
-		// Add bridges over lava
-		numBridges := 2 + rng.Intn(2)
-		for i := 0; i < numBridges; i++ {
-			bridgeY := room.Y + rng.Intn(room.Height)
-			if terrain.IsInBounds(lavaX, bridgeY) && terrain.GetTile(lavaX, bridgeY) == TileLavaFlow {
-				terrain.SetTile(lavaX, bridgeY, TileBridge)
+		if terrain.IsInBounds(x, y) {
+			currentTile := terrain.GetTile(x, y)
+			if currentTile == TileFloor || currentTile == TileCorridor {
+				terrain.SetTile(x, y, TileLavaFlow)
 			}
+		}
+	}
+}
+
+// addBridgesToHorizontalLava adds 2-3 bridge crossing points over horizontal lava.
+func (g *BSPGenerator) addBridgesToHorizontalLava(terrain *Terrain, room *Room, lavaY int, rng *rand.Rand) {
+	numBridges := 2 + rng.Intn(2)
+	for i := 0; i < numBridges; i++ {
+		bridgeX := room.X + rng.Intn(room.Width)
+		if terrain.IsInBounds(bridgeX, lavaY) && terrain.GetTile(bridgeX, lavaY) == TileLavaFlow {
+			terrain.SetTile(bridgeX, lavaY, TileBridge)
+		}
+	}
+}
+
+// addBridgesToVerticalLava adds 2-3 bridge crossing points over vertical lava.
+func (g *BSPGenerator) addBridgesToVerticalLava(terrain *Terrain, room *Room, lavaX int, rng *rand.Rand) {
+	numBridges := 2 + rng.Intn(2)
+	for i := 0; i < numBridges; i++ {
+		bridgeY := room.Y + rng.Intn(room.Height)
+		if terrain.IsInBounds(lavaX, bridgeY) && terrain.GetTile(lavaX, bridgeY) == TileLavaFlow {
+			terrain.SetTile(lavaX, bridgeY, TileBridge)
 		}
 	}
 }

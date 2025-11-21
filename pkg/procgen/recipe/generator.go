@@ -83,75 +83,15 @@ func NewRecipeGeneratorWithLogger(logger *logrus.Logger) *RecipeGenerator {
 // Generate creates recipes based on seed and parameters.
 // Returns a slice of *engine.Recipe.
 func (g *RecipeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":    seed,
-			"genreID": params.GenreID,
-			"depth":   params.Depth,
-		}).Debug("starting recipe generation")
-	}
+	g.logGenerationStart(seed, params)
 
-	// Get count from custom parameters
-	count := 5 // default: generate 5 recipes
-	if params.Custom != nil {
-		if c, ok := params.Custom["count"].(int); ok {
-			count = c
-		}
-	}
+	count := g.extractRecipeCount(params)
+	recipeTypeFilter := g.extractRecipeTypeFilter(params)
 
-	// Get recipe type filter from custom parameters
-	var recipeTypeFilter *engine.RecipeType
-	if params.Custom != nil {
-		if typeStr, ok := params.Custom["type"].(string); ok {
-			switch typeStr {
-			case "potion":
-				t := engine.RecipePotion
-				recipeTypeFilter = &t
-			case "enchanting":
-				t := engine.RecipeEnchanting
-				recipeTypeFilter = &t
-			case "magic_item":
-				t := engine.RecipeMagicItem
-				recipeTypeFilter = &t
-			}
-		}
-	}
-
-	// Create random source from seed
 	rng := rand.New(rand.NewSource(seed))
+	recipes := g.generateRecipes(rng, params, count, recipeTypeFilter)
 
-	// Generate recipes
-	recipes := make([]*engine.Recipe, 0, count)
-	for i := 0; i < count; i++ {
-		// Determine recipe type
-		var recipeType engine.RecipeType
-		if recipeTypeFilter != nil {
-			recipeType = *recipeTypeFilter
-		} else {
-			// Random distribution: 50% potion, 30% enchanting, 20% magic item
-			roll := rng.Float64()
-			if roll < 0.5 {
-				recipeType = engine.RecipePotion
-			} else if roll < 0.8 {
-				recipeType = engine.RecipeEnchanting
-			} else {
-				recipeType = engine.RecipeMagicItem
-			}
-		}
-
-		// Generate recipe
-		recipe := g.generateRecipe(rng, params, recipeType, i)
-		recipes = append(recipes, recipe)
-	}
-
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":        seed,
-			"recipeCount": len(recipes),
-			"genreID":     params.GenreID,
-		}).Debug("recipe generation complete")
-	}
-
+	g.logGenerationComplete(seed, params.GenreID, len(recipes))
 	return recipes, nil
 }
 
@@ -251,6 +191,90 @@ func (g *RecipeGenerator) generateRecipe(rng *rand.Rand, params procgen.Generati
 		OutputItemSeed:    int64(rng.Int63()),
 		OutputItemType:    template.OutputType,
 		GenreID:           params.GenreID,
+	}
+}
+
+// logGenerationStart logs the start of recipe generation.
+func (g *RecipeGenerator) logGenerationStart(seed int64, params procgen.GenerationParams) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":    seed,
+			"genreID": params.GenreID,
+			"depth":   params.Depth,
+		}).Debug("starting recipe generation")
+	}
+}
+
+// extractRecipeCount gets the recipe count from custom parameters, defaults to 5.
+func (g *RecipeGenerator) extractRecipeCount(params procgen.GenerationParams) int {
+	count := 5
+	if params.Custom != nil {
+		if c, ok := params.Custom["count"].(int); ok {
+			count = c
+		}
+	}
+	return count
+}
+
+// extractRecipeTypeFilter gets the recipe type filter from custom parameters.
+func (g *RecipeGenerator) extractRecipeTypeFilter(params procgen.GenerationParams) *engine.RecipeType {
+	if params.Custom == nil {
+		return nil
+	}
+
+	typeStr, ok := params.Custom["type"].(string)
+	if !ok {
+		return nil
+	}
+
+	switch typeStr {
+	case "potion":
+		t := engine.RecipePotion
+		return &t
+	case "enchanting":
+		t := engine.RecipeEnchanting
+		return &t
+	case "magic_item":
+		t := engine.RecipeMagicItem
+		return &t
+	}
+	return nil
+}
+
+// generateRecipes creates the specified number of recipes.
+func (g *RecipeGenerator) generateRecipes(rng *rand.Rand, params procgen.GenerationParams, count int, typeFilter *engine.RecipeType) []*engine.Recipe {
+	recipes := make([]*engine.Recipe, 0, count)
+	for i := 0; i < count; i++ {
+		recipeType := g.determineRecipeType(rng, typeFilter)
+		recipe := g.generateRecipe(rng, params, recipeType, i)
+		recipes = append(recipes, recipe)
+	}
+	return recipes
+}
+
+// determineRecipeType selects recipe type based on filter or random distribution.
+func (g *RecipeGenerator) determineRecipeType(rng *rand.Rand, typeFilter *engine.RecipeType) engine.RecipeType {
+	if typeFilter != nil {
+		return *typeFilter
+	}
+
+	roll := rng.Float64()
+	if roll < 0.5 {
+		return engine.RecipePotion
+	} else if roll < 0.8 {
+		return engine.RecipeEnchanting
+	}
+	return engine.RecipeMagicItem
+}
+
+// logGenerationComplete logs the completion of recipe generation.
+func (g *RecipeGenerator) logGenerationComplete(seed int64, genreID string, recipeCount int) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":        seed,
+			"recipeCount": recipeCount,
+			"genreID":     genreID,
+		}).Debug("recipe generation complete")
 	}
 }
 

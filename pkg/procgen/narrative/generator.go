@@ -140,6 +140,15 @@ func (g *StoryArcGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not a *StoryArc")
 	}
 
+	if err := g.validateRequiredFields(arc); err != nil {
+		return err
+	}
+
+	return g.validateThreeActStructure(arc)
+}
+
+// validateRequiredFields checks that all required story arc fields are populated.
+func (g *StoryArcGenerator) validateRequiredFields(arc *StoryArc) error {
 	if arc.Title == "" {
 		return fmt.Errorf("story arc has empty title")
 	}
@@ -155,8 +164,11 @@ func (g *StoryArcGenerator) Validate(result interface{}) error {
 	if len(arc.PossibleEndings) < 1 {
 		return fmt.Errorf("story arc has no endings")
 	}
+	return nil
+}
 
-	// Validate three-act structure
+// validateThreeActStructure ensures the story arc has plot points in all three acts.
+func (g *StoryArcGenerator) validateThreeActStructure(arc *StoryArc) error {
 	hasAct1, hasAct2, hasAct3 := false, false, false
 	for _, point := range arc.PlotPoints {
 		if point.Act == 1 {
@@ -167,6 +179,7 @@ func (g *StoryArcGenerator) Validate(result interface{}) error {
 			hasAct3 = true
 		}
 	}
+
 	if !hasAct1 || !hasAct2 || !hasAct3 {
 		return fmt.Errorf("story arc missing one or more acts (Act1: %v, Act2: %v, Act3: %v)",
 			hasAct1, hasAct2, hasAct3)

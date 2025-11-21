@@ -323,66 +323,96 @@ func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projCo
 
 // handleExplosion applies area damage around explosion point.
 func (s *ProjectileSystem) handleExplosion(projEntity *Entity, posComp *PositionComponent) {
+	proj := s.getExplosiveProjectile(projEntity)
+	if proj == nil {
+		return
+	}
+
+	s.applyExplosionDamage(posComp, proj)
+	s.spawnExplosionParticles(posComp.X, posComp.Y, proj.ExplosionRadius)
+	s.triggerExplosionScreenShake(proj.ExplosionRadius)
+}
+
+// getExplosiveProjectile retrieves the projectile component if it's explosive.
+func (s *ProjectileSystem) getExplosiveProjectile(projEntity *Entity) *ProjectileComponent {
 	projComp, ok := projEntity.GetComponent("projectile")
 	if !ok {
-		return
+		return nil
 	}
 	proj, ok := projComp.(*ProjectileComponent)
 	if !ok || !proj.Explosive {
-		return
+		return nil
 	}
+	return proj
+}
 
-	// Get all entities within explosion radius
+// applyExplosionDamage applies damage to all entities within explosion radius.
+func (s *ProjectileSystem) applyExplosionDamage(posComp *PositionComponent, proj *ProjectileComponent) {
 	entities := s.world.GetEntitiesWith("position", "health")
 
 	for _, entity := range entities {
-		// Skip owner
 		if entity.ID == proj.OwnerID {
 			continue
 		}
 
-		entityPosComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		entityPos, ok := entityPosComp.(*PositionComponent)
-		if !ok {
+		entityPos := s.getEntityPosition(entity)
+		if entityPos == nil {
 			continue
 		}
 
-		// Calculate distance to explosion center
-		dx := entityPos.X - posComp.X
-		dy := entityPos.Y - posComp.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
+		s.damageEntityFromExplosion(entity, entityPos, posComp, proj)
+	}
+}
 
-		// Apply damage based on distance (linear falloff)
-		if dist <= proj.ExplosionRadius {
-			healthComp, ok := entity.GetComponent("health")
-			if ok {
-				health, ok := healthComp.(*HealthComponent)
-				if ok {
-					// Full damage at center, 0 at edge
-					damageFactor := 1.0 - (dist / proj.ExplosionRadius)
-					damage := proj.Damage * damageFactor
-					health.Current -= damage
-				}
-			}
-		}
+// getEntityPosition retrieves the position component from an entity.
+func (s *ProjectileSystem) getEntityPosition(entity *Entity) *PositionComponent {
+	entityPosComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	entityPos, ok := entityPosComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return entityPos
+}
+
+// damageEntityFromExplosion calculates and applies explosion damage to an entity.
+func (s *ProjectileSystem) damageEntityFromExplosion(entity *Entity, entityPos, explosionPos *PositionComponent, proj *ProjectileComponent) {
+	dx := entityPos.X - explosionPos.X
+	dy := entityPos.Y - explosionPos.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	if dist > proj.ExplosionRadius {
+		return
 	}
 
-	// Phase 10.2: Spawn explosion particle effect
-	s.spawnExplosionParticles(posComp.X, posComp.Y, proj.ExplosionRadius)
-
-	// Phase 10.2: Trigger screen shake for explosion
-	if s.camera != nil {
-		// Use a substantial shake for explosions
-		shakeIntensity := 8.0 + (proj.ExplosionRadius / 20.0) // Scale with explosion radius
-		if shakeIntensity > ExplosionShakeMaxIntensity {
-			shakeIntensity = ExplosionShakeMaxIntensity
-		}
-		shakeDuration := 0.3 // Fixed duration for explosions
-		s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
 	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	damageFactor := 1.0 - (dist / proj.ExplosionRadius)
+	damage := proj.Damage * damageFactor
+	health.Current -= damage
+}
+
+// triggerExplosionScreenShake triggers camera shake for explosion effect.
+func (s *ProjectileSystem) triggerExplosionScreenShake(explosionRadius float64) {
+	if s.camera == nil {
+		return
+	}
+
+	shakeIntensity := 8.0 + (explosionRadius / 20.0)
+	if shakeIntensity > ExplosionShakeMaxIntensity {
+		shakeIntensity = ExplosionShakeMaxIntensity
+	}
+	shakeDuration := 0.3
+	s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
 }
 
 // ExplosionShakeMaxIntensity is maximum shake intensity for explosions

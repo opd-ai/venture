@@ -174,47 +174,74 @@ func (c *TCPClient) Connect() error {
 		c.logger.WithField("server", c.config.ServerAddress).Info("connecting to server")
 	}
 
-	// Set connection timeout
-	conn, err := net.DialTimeout("tcp", c.config.ServerAddress, c.config.ConnectionTimeout)
+	conn, err := c.establishConnection()
 	if err != nil {
-		if c.logger != nil {
-			c.logger.WithError(err).WithField("server", c.config.ServerAddress).Error("failed to connect")
-		}
-		return fmt.Errorf("failed to connect to %s: %w", c.config.ServerAddress, err)
+		return err
 	}
 
-	// Enable TCP keepalive for long-duration connections
-	// This prevents silent disconnections at NAT/proxy boundaries (typical 5-15 min timeout)
-	// and helps detect dead connections when network fails without proper FIN/RST
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		if err := tcpConn.SetKeepAlive(true); err != nil {
-			if c.logger != nil {
-				c.logger.WithError(err).Warn("failed to enable TCP keepalive")
-			}
-		} else if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
-			if c.logger != nil {
-				c.logger.WithError(err).Warn("failed to set TCP keepalive period")
-			}
-		} else if c.logger != nil {
-			c.logger.Debug("TCP keepalive enabled (30s period)")
-		}
-	}
-
-	c.conn = conn
-	c.connected = true
-	c.lastPing = time.Now()
-	c.lastPong = time.Now()
+	c.setupConnection(conn)
+	c.startConnectionHandlers()
 
 	if c.logger != nil {
 		c.logger.WithField("server", c.config.ServerAddress).Info("connected successfully")
 	}
 
-	// Start async handlers
+	return nil
+}
+
+// establishConnection creates and configures a TCP connection to the server.
+func (c *TCPClient) establishConnection() (net.Conn, error) {
+	conn, err := net.DialTimeout("tcp", c.config.ServerAddress, c.config.ConnectionTimeout)
+	if err != nil {
+		if c.logger != nil {
+			c.logger.WithError(err).WithField("server", c.config.ServerAddress).Error("failed to connect")
+		}
+		return nil, fmt.Errorf("failed to connect to %s: %w", c.config.ServerAddress, err)
+	}
+
+	c.configureTCPKeepalive(conn)
+	return conn, nil
+}
+
+// configureTCPKeepalive enables TCP keepalive to prevent silent disconnections.
+func (c *TCPClient) configureTCPKeepalive(conn net.Conn) {
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		return
+	}
+
+	if err := tcpConn.SetKeepAlive(true); err != nil {
+		if c.logger != nil {
+			c.logger.WithError(err).Warn("failed to enable TCP keepalive")
+		}
+		return
+	}
+
+	if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+		if c.logger != nil {
+			c.logger.WithError(err).Warn("failed to set TCP keepalive period")
+		}
+		return
+	}
+
+	if c.logger != nil {
+		c.logger.Debug("TCP keepalive enabled (30s period)")
+	}
+}
+
+// setupConnection initializes connection state.
+func (c *TCPClient) setupConnection(conn net.Conn) {
+	c.conn = conn
+	c.connected = true
+	c.lastPing = time.Now()
+	c.lastPong = time.Now()
+}
+
+// startConnectionHandlers starts async receive and send loops.
+func (c *TCPClient) startConnectionHandlers() {
 	c.wg.Add(2)
 	go c.receiveLoop()
 	go c.sendLoop()
-
-	return nil
 }
 
 // ConnectWithRetry establishes connection to the server with automatic retry on failure.

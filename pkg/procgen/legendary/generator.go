@@ -27,37 +27,55 @@ func NewGenerator() *Generator {
 
 // Generate implements the procgen.Generator interface.
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	// Validate parameters
+	if err := g.validateParams(params); err != nil {
+		return nil, err
+	}
+
+	rng := rand.New(rand.NewSource(seed))
+	genreID, err := g.getValidatedGenreID(params.GenreID)
+	if err != nil {
+		return nil, err
+	}
+
+	playerLevel, serversVisited := g.extractCustomParams(params.Custom)
+	quest := g.createBaseQuest(seed, rng, genreID, playerLevel, serversVisited)
+
+	g.populateQuestPhases(quest, rng, genreID, serversVisited, params)
+	g.populateQuestRewards(quest, rng, genreID)
+
+	return quest, nil
+}
+
+func (g *Generator) validateParams(params procgen.GenerationParams) error {
 	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
-		return nil, fmt.Errorf("difficulty must be 0.0-1.0, got %.2f", params.Difficulty)
+		return fmt.Errorf("difficulty must be 0.0-1.0, got %.2f", params.Difficulty)
 	}
 	if params.Depth < 1 {
-		return nil, fmt.Errorf("depth must be >= 1, got %d", params.Depth)
+		return fmt.Errorf("depth must be >= 1, got %d", params.Depth)
 	}
+	return nil
+}
 
-	// Create RNG
-	rng := rand.New(rand.NewSource(seed))
-
-	// Get genre
-	genreID := params.GenreID
+func (g *Generator) getValidatedGenreID(genreID string) (string, error) {
 	if genreID == "" {
 		genreID = "fantasy"
 	}
-	_, err := g.registry.Get(genreID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid genre: %s", genreID)
+	if _, err := g.registry.Get(genreID); err != nil {
+		return "", fmt.Errorf("invalid genre: %s", genreID)
 	}
+	return genreID, nil
+}
 
-	// Extract custom params
+func (g *Generator) extractCustomParams(custom map[string]interface{}) (int, int) {
 	playerLevel := 50
-	if lvl, ok := params.Custom["player_level"]; ok {
+	if lvl, ok := custom["player_level"]; ok {
 		if l, ok := lvl.(int); ok {
 			playerLevel = l
 		}
 	}
 
 	serversVisited := 3
-	if sv, ok := params.Custom["servers_visited"]; ok {
+	if sv, ok := custom["servers_visited"]; ok {
 		if s, ok := sv.(int); ok {
 			serversVisited = s
 			if serversVisited < 3 {
@@ -69,50 +87,52 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 		}
 	}
 
-	// Generate quest
-	quest := &LegendaryQuest{
+	return playerLevel, serversVisited
+}
+
+func (g *Generator) createBaseQuest(seed int64, rng *rand.Rand, genreID string, playerLevel, serversVisited int) *LegendaryQuest {
+	return &LegendaryQuest{
 		ID:              fmt.Sprintf("legendary_%d", seed),
 		Name:            g.generateQuestName(rng, genreID),
 		Description:     g.generateDescription(rng, genreID),
 		Lore:            g.generateLore(rng, genreID),
 		MinLevel:        playerLevel,
-		EstimatedHours:  10 + rng.Intn(11), // 10-20 hours
+		EstimatedHours:  10 + rng.Intn(11),
 		ServersRequired: serversVisited,
 		RaidsRequired:   make([]string, 0),
 		Phases:          make([]*QuestPhase, 0),
 		Rewards:         make([]*LegendaryReward, 0),
 		CreatedAt:       time.Now(),
 	}
+}
 
-	// Generate phases (5-10)
+func (g *Generator) populateQuestPhases(quest *LegendaryQuest, rng *rand.Rand, genreID string, serversVisited int, params procgen.GenerationParams) {
 	numPhases := 5 + rng.Intn(6)
 	for i := 0; i < numPhases; i++ {
 		phase := g.generatePhase(rng, i, numPhases, genreID, serversVisited, params)
 		quest.Phases = append(quest.Phases, phase)
 
-		// Track raid requirements
 		if phase.Type == PhaseRaid && phase.RaidID != "" {
-			found := false
-			for _, r := range quest.RaidsRequired {
-				if r == phase.RaidID {
-					found = true
-					break
-				}
-			}
-			if !found {
-				quest.RaidsRequired = append(quest.RaidsRequired, phase.RaidID)
-			}
+			g.trackRaidRequirement(quest, phase.RaidID)
 		}
 	}
+}
 
-	// Generate rewards (1-3 unique rewards)
+func (g *Generator) trackRaidRequirement(quest *LegendaryQuest, raidID string) {
+	for _, r := range quest.RaidsRequired {
+		if r == raidID {
+			return
+		}
+	}
+	quest.RaidsRequired = append(quest.RaidsRequired, raidID)
+}
+
+func (g *Generator) populateQuestRewards(quest *LegendaryQuest, rng *rand.Rand, genreID string) {
 	numRewards := 1 + rng.Intn(3)
 	for i := 0; i < numRewards; i++ {
 		reward := g.generateReward(rng, i, genreID, quest.Name)
 		quest.Rewards = append(quest.Rewards, reward)
 	}
-
-	return quest, nil
 }
 
 // Validate implements the procgen.Generator interface.

@@ -321,92 +321,124 @@ const (
 
 // generateMelodyLayer creates a melodic line with patterns and variation.
 func (ac *AdaptiveComposer) generateMelodyLayer(data []float64, scale Scale, beatDuration float64) {
-	samplePos := 0
-	noteDuration := beatDuration * 0.5 // Eighth notes
-
-	// Choose melodic pattern based on context and genre
+	noteDuration := beatDuration * 0.5
 	pattern := ac.chooseMelodyPattern()
-	motifLength := 4 // 4-note motifs
-	scalePos := ac.rng.Intn(len(scale.Intervals))
-	direction := 1
+	motifLength := 4
 
-	for samplePos < len(data) {
-		// Generate motif (4-note phrase)
-		for i := 0; i < motifLength && samplePos < len(data); i++ {
-			// Apply pattern to choose next note
-			switch pattern {
-			case PatternAscending:
-				scalePos = (scalePos + 1) % len(scale.Intervals)
-			case PatternDescending:
-				scalePos = (scalePos - 1 + len(scale.Intervals)) % len(scale.Intervals)
-			case PatternArpeggio:
-				scalePos = (scalePos + 2) % len(scale.Intervals) // Skip notes (thirds)
-			case PatternWave:
-				scalePos = scalePos + direction
-				// Handle wrap-around for both positive and negative
-				if scalePos < 0 {
-					scalePos = len(scale.Intervals) - 1
-				} else if scalePos >= len(scale.Intervals) {
-					scalePos = 0
-				}
-				if i%2 == 1 {
-					direction = -direction // Reverse direction every other note
-				}
-			case PatternRepeat:
-				// Keep same position for repetition
-			}
-
-			note := ac.rootNote + scale.Intervals[scalePos] + 12 // One octave above root
-
-			// Add occasional octave jumps for interest
-			if ac.rng.Float64() < 0.15 {
-				note += 12
-			}
-
-			freq := NoteToFrequency(note)
-
-			// Vary note duration for rhythm
-			noteDur := noteDuration
-			if i%4 == 3 && ac.rng.Float64() < 0.3 { // Occasional longer notes
-				noteDur *= 1.5
-			}
-
-			// Generate note
-			noteLen := int(float64(ac.sampleRate) * noteDur)
-			noteSample := ac.osc.Generate(audio.WaveformTriangle, freq, noteDur)
-
-			// Apply ADSR envelope with variation
-			attack := 0.01
-			if ac.currentContext == "combat" || ac.currentContext == "boss" {
-				attack = 0.005 // Sharper attack in combat
-			}
-			env := synthesis.Envelope{Attack: attack, Decay: 0.1, Sustain: 0.6, Release: 0.2}
-			env.Apply(noteSample.Data, noteSample.SampleRate)
-
-			// Mix into data with dynamic volume
-			volume := 0.5
-			if i == 0 { // Accent first note of motif
-				volume = 0.6
-			}
-
-			for j := 0; j < noteLen && samplePos+j < len(data); j++ {
-				data[samplePos+j] += noteSample.Data[j] * volume
-			}
-
-			samplePos += noteLen
-		}
-
-		// Occasional rests between motifs for phrasing
-		if ac.rng.Float64() < 0.2 {
-			restLen := int(float64(ac.sampleRate) * noteDuration)
-			samplePos += restLen
-		}
-
-		// Vary pattern occasionally
-		if ac.rng.Float64() < 0.25 {
-			pattern = ac.chooseMelodyPattern()
-		}
+	state := &melodyState{
+		scalePos:  ac.rng.Intn(len(scale.Intervals)),
+		direction: 1,
+		samplePos: 0,
 	}
+
+	for state.samplePos < len(data) {
+		ac.generateMotif(data, scale, noteDuration, motifLength, pattern, state)
+		ac.addPhraseRest(state, noteDuration)
+		pattern = ac.varyPatternOccasionally(pattern)
+	}
+}
+
+type melodyState struct {
+	scalePos  int
+	direction int
+	samplePos int
+}
+
+func (ac *AdaptiveComposer) generateMotif(data []float64, scale Scale, noteDuration float64, motifLength int, pattern MelodyPattern, state *melodyState) {
+	for i := 0; i < motifLength && state.samplePos < len(data); i++ {
+		ac.applyMelodyPattern(pattern, scale, state, i)
+		note := ac.calculateMelodyNote(scale, state.scalePos)
+		noteDur := ac.varyNoteDuration(noteDuration, i)
+
+		noteSample := ac.generateMelodyNote(note, noteDur, i)
+		state.samplePos = ac.mixNoteIntoData(data, noteSample, state.samplePos, i)
+	}
+}
+
+func (ac *AdaptiveComposer) applyMelodyPattern(pattern MelodyPattern, scale Scale, state *melodyState, noteIndex int) {
+	scaleLen := len(scale.Intervals)
+
+	switch pattern {
+	case PatternAscending:
+		state.scalePos = (state.scalePos + 1) % scaleLen
+	case PatternDescending:
+		state.scalePos = (state.scalePos - 1 + scaleLen) % scaleLen
+	case PatternArpeggio:
+		state.scalePos = (state.scalePos + 2) % scaleLen
+	case PatternWave:
+		state.scalePos = state.scalePos + state.direction
+		if state.scalePos < 0 {
+			state.scalePos = scaleLen - 1
+		} else if state.scalePos >= scaleLen {
+			state.scalePos = 0
+		}
+		if noteIndex%2 == 1 {
+			state.direction = -state.direction
+		}
+	case PatternRepeat:
+		// Keep same position
+	}
+}
+
+func (ac *AdaptiveComposer) calculateMelodyNote(scale Scale, scalePos int) int {
+	note := ac.rootNote + scale.Intervals[scalePos] + 12
+	if ac.rng.Float64() < 0.15 {
+		note += 12
+	}
+	return note
+}
+
+func (ac *AdaptiveComposer) varyNoteDuration(baseDuration float64, noteIndex int) float64 {
+	if noteIndex%4 == 3 && ac.rng.Float64() < 0.3 {
+		return baseDuration * 1.5
+	}
+	return baseDuration
+}
+
+func (ac *AdaptiveComposer) generateMelodyNote(note int, duration float64, noteIndex int) *audio.AudioSample {
+	freq := NoteToFrequency(note)
+	noteSample := ac.osc.Generate(audio.WaveformTriangle, freq, duration)
+
+	attack := ac.getMelodyAttack()
+	env := synthesis.Envelope{Attack: attack, Decay: 0.1, Sustain: 0.6, Release: 0.2}
+	env.Apply(noteSample.Data, noteSample.SampleRate)
+
+	return noteSample
+}
+
+func (ac *AdaptiveComposer) getMelodyAttack() float64 {
+	if ac.currentContext == "combat" || ac.currentContext == "boss" {
+		return 0.005
+	}
+	return 0.01
+}
+
+func (ac *AdaptiveComposer) mixNoteIntoData(data []float64, noteSample *audio.AudioSample, startPos, noteIndex int) int {
+	volume := 0.5
+	if noteIndex == 0 {
+		volume = 0.6
+	}
+
+	noteLen := len(noteSample.Data)
+	for j := 0; j < noteLen && startPos+j < len(data); j++ {
+		data[startPos+j] += noteSample.Data[j] * volume
+	}
+
+	return startPos + noteLen
+}
+
+func (ac *AdaptiveComposer) addPhraseRest(state *melodyState, noteDuration float64) {
+	if ac.rng.Float64() < 0.2 {
+		restLen := int(float64(ac.sampleRate) * noteDuration)
+		state.samplePos += restLen
+	}
+}
+
+func (ac *AdaptiveComposer) varyPatternOccasionally(currentPattern MelodyPattern) MelodyPattern {
+	if ac.rng.Float64() < 0.25 {
+		return ac.chooseMelodyPattern()
+	}
+	return currentPattern
 }
 
 // chooseMelodyPattern selects a melodic pattern based on context and genre.

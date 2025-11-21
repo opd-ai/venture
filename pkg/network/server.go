@@ -444,60 +444,92 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 
 	buf := make([]byte, 4096)
 	for {
-		select {
-		case <-s.done:
-			return
-		default:
-		}
-
-		// Set read deadline
-		client.conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
-
-		// Read message length (4 bytes)
-		if _, err := client.conn.Read(buf[:4]); err != nil {
-			if s.IsRunning() && client.isConnected() {
-				s.errors <- fmt.Errorf("player %d read length error: %w", client.playerID, err)
-			}
+		if shouldStopReceiving(s) {
 			return
 		}
 
-		// Decode length
-		msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
-		if msgLen > uint32(len(buf)) {
-			s.errors <- fmt.Errorf("player %d message too large: %d bytes", client.playerID, msgLen)
-			return
-		}
-
-		// Read message data
-		if _, err := client.conn.Read(buf[:msgLen]); err != nil {
-			if s.IsRunning() && client.isConnected() {
-				s.errors <- fmt.Errorf("player %d read data error: %w", client.playerID, err)
-			}
-			return
-		}
-
-		// Update last active
-		client.mu.Lock()
-		client.lastActive = time.Now()
-		client.mu.Unlock()
-
-		// Decode input command
-		cmd, err := s.protocol.DecodeInputCommand(buf[:msgLen])
+		msgLen, err := s.readMessageLength(client, buf)
 		if err != nil {
-			s.errors <- fmt.Errorf("player %d decode error: %w", client.playerID, err)
+			return
+		}
+
+		if err := s.readMessageData(client, buf, msgLen); err != nil {
+			return
+		}
+
+		client.updateLastActive()
+
+		cmd, err := s.decodeCommand(client, buf, msgLen)
+		if err != nil {
 			continue
 		}
 
-		// Send to game logic (non-blocking)
-		select {
-		case s.inputCommands <- cmd:
-			s.inputCommandStats.RecordSend()
-		case <-s.done:
-			return
-		default:
-			// Drop if full
-			s.inputCommandStats.RecordDrop()
+		s.sendCommandToGameLogic(cmd)
+	}
+}
+
+func shouldStopReceiving(s *TCPServer) bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *TCPServer) readMessageLength(client *clientConnection, buf []byte) (uint32, error) {
+	client.conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
+
+	if _, err := client.conn.Read(buf[:4]); err != nil {
+		if s.IsRunning() && client.isConnected() {
+			s.errors <- fmt.Errorf("player %d read length error: %w", client.playerID, err)
 		}
+		return 0, err
+	}
+
+	msgLen := uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24
+	if msgLen > uint32(len(buf)) {
+		err := fmt.Errorf("player %d message too large: %d bytes", client.playerID, msgLen)
+		s.errors <- err
+		return 0, err
+	}
+
+	return msgLen, nil
+}
+
+func (s *TCPServer) readMessageData(client *clientConnection, buf []byte, msgLen uint32) error {
+	if _, err := client.conn.Read(buf[:msgLen]); err != nil {
+		if s.IsRunning() && client.isConnected() {
+			s.errors <- fmt.Errorf("player %d read data error: %w", client.playerID, err)
+		}
+		return err
+	}
+	return nil
+}
+
+func (client *clientConnection) updateLastActive() {
+	client.mu.Lock()
+	client.lastActive = time.Now()
+	client.mu.Unlock()
+}
+
+func (s *TCPServer) decodeCommand(client *clientConnection, buf []byte, msgLen uint32) (*InputCommand, error) {
+	cmd, err := s.protocol.DecodeInputCommand(buf[:msgLen])
+	if err != nil {
+		s.errors <- fmt.Errorf("player %d decode error: %w", client.playerID, err)
+		return nil, err
+	}
+	return cmd, nil
+}
+
+func (s *TCPServer) sendCommandToGameLogic(cmd *InputCommand) {
+	select {
+	case s.inputCommands <- cmd:
+		s.inputCommandStats.RecordSend()
+	case <-s.done:
+		return
+	default:
+		s.inputCommandStats.RecordDrop()
 	}
 }
 

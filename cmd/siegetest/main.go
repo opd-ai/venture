@@ -38,12 +38,25 @@ func runDemo(verbose bool) {
 	fmt.Println()
 
 	sm := territory.NewSiegeManager()
+	siege := createDemoSiege(sm)
+	if siege == nil {
+		return
+	}
 
-	// Create a siege
+	addDemoParticipants(siege)
+	addDemoReinforcements(siege)
+	advanceToAssaultPhase(siege)
+	simulateAssaultActions(siege)
+	advanceToResolution(siege)
+	distributeDemoLoot(siege)
+	endDemoSiege(siege)
+}
+
+func createDemoSiege(sm *territory.SiegeManager) *territory.Siege {
 	siege, err := sm.CreateSiege("demo_territory", "attacking_guild", "defending_guild", 50000)
 	if err != nil {
 		fmt.Printf("Error creating siege: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Printf("✓ Created siege: %s\n", siege.ID)
@@ -54,7 +67,10 @@ func runDemo(verbose bool) {
 	fmt.Printf("  Defender Treasury: %d gold\n", siege.DefenderTreasury)
 	fmt.Println()
 
-	// Add participants
+	return siege
+}
+
+func addDemoParticipants(siege *territory.Siege) {
 	for i := 0; i < 25; i++ {
 		playerID := fmt.Sprintf("attacker_%d", i)
 		if err := siege.JoinSiege(playerID, true); err != nil {
@@ -73,8 +89,9 @@ func runDemo(verbose bool) {
 
 	fmt.Printf("✓ Added %d attackers and %d defenders\n", len(siege.Attackers), len(siege.Defenders))
 	fmt.Println()
+}
 
-	// Add reinforcements
+func addDemoReinforcements(siege *territory.Siege) {
 	allies := []string{"ally_1", "ally_2", "ally_3", "ally_4", "ally_5"}
 	if err := siege.AddReinforcements("allied_guild_1", allies); err != nil {
 		fmt.Printf("Error adding reinforcements: %v\n", err)
@@ -83,8 +100,9 @@ func runDemo(verbose bool) {
 		fmt.Printf("  Total defenders now: %d\n", len(siege.Defenders))
 	}
 	fmt.Println()
+}
 
-	// Advance to assault phase (simulated)
+func advanceToAssaultPhase(siege *territory.Siege) {
 	fmt.Println("Simulating 1 hour preparation phase...")
 	siege.PhaseStartTime = time.Now().Add(-61 * time.Minute)
 	if err := siege.AdvancePhase(); err != nil {
@@ -93,10 +111,17 @@ func runDemo(verbose bool) {
 		fmt.Printf("✓ Advanced to phase: %s\n", siege.Phase)
 	}
 	fmt.Println()
+}
 
-	// Capture some control points
+func simulateAssaultActions(siege *territory.Siege) {
 	fmt.Println("Simulating assault phase actions...")
-	for i := 0; i < 3; i++ {
+	captureInitialPoints(siege, 3)
+	damageGuildHall(siege, 3000)
+	captureRemainingPoints(siege)
+}
+
+func captureInitialPoints(siege *territory.Siege, count int) {
+	for i := 0; i < count; i++ {
 		if err := siege.CaptureControlPoint(); err != nil {
 			fmt.Printf("Error capturing point %d: %v\n", i+1, err)
 		} else {
@@ -104,18 +129,20 @@ func runDemo(verbose bool) {
 		}
 	}
 	fmt.Println()
+}
 
-	// Damage guild hall
+func damageGuildHall(siege *territory.Siege, damage float64) {
 	fmt.Printf("Guild Hall HP: %.0f/%.0f\n", siege.GuildHallHP, siege.GuildHallMaxHP)
-	if err := siege.DamageGuildHall(3000); err != nil {
+	if err := siege.DamageGuildHall(damage); err != nil {
 		fmt.Printf("Error damaging guild hall: %v\n", err)
 	} else {
-		fmt.Printf("✓ Dealt 3000 damage to guild hall\n")
+		fmt.Printf("✓ Dealt %.0f damage to guild hall\n", damage)
 		fmt.Printf("  Remaining HP: %.0f/%.0f\n", siege.GuildHallHP, siege.GuildHallMaxHP)
 	}
 	fmt.Println()
+}
 
-	// Capture remaining points for victory
+func captureRemainingPoints(siege *territory.Siege) {
 	fmt.Println("Capturing remaining control points...")
 	for siege.ControlPointsCaptured < siege.TotalControlPoints {
 		if err := siege.CaptureControlPoint(); err != nil {
@@ -129,16 +156,18 @@ func runDemo(verbose bool) {
 		fmt.Printf("  Winner: %s\n", siege.WinnerGuildID)
 	}
 	fmt.Println()
+}
 
-	// Advance to resolution
+func advanceToResolution(siege *territory.Siege) {
 	if err := siege.AdvancePhase(); err != nil {
 		fmt.Printf("Error advancing to resolution: %v\n", err)
 	} else {
 		fmt.Printf("✓ Advanced to phase: %s\n", siege.Phase)
 	}
 	fmt.Println()
+}
 
-	// Distribute loot
+func distributeDemoLoot(siege *territory.Siege) {
 	loot, err := siege.DistributeLoot()
 	if err != nil {
 		fmt.Printf("Error distributing loot: %v\n", err)
@@ -146,8 +175,9 @@ func runDemo(verbose bool) {
 		fmt.Printf("✓ Loot distributed: %d gold (%.0f%% of %d)\n", loot, siege.LootPercentage*100, siege.DefenderTreasury)
 	}
 	fmt.Println()
+}
 
-	// End siege
+func endDemoSiege(siege *territory.Siege) {
 	if err := siege.AdvancePhase(); err != nil {
 		fmt.Printf("Error ending siege: %v\n", err)
 	} else {

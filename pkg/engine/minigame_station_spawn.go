@@ -123,66 +123,74 @@ func SpawnMultipleStations(world *World, centerX, centerY float64, count int, se
 // selectGameType chooses a mini-game type based on genre and RNG.
 // Genre influences which games are more common.
 func selectGameType(rng *rand.Rand, genreID string) MiniGameType {
-	// Genre-specific game distribution
 	switch genreID {
 	case "fantasy":
-		// Fantasy: card games, dice, puzzles, ritual
-		roll := rng.Float64()
-		if roll < 0.3 {
-			return MiniGameCard
-		} else if roll < 0.5 {
-			return MiniGameDice
-		} else if roll < 0.7 {
-			return MiniGamePuzzle
-		} else if roll < 0.9 {
-			return MiniGameMemory
-		}
-		return MiniGameRitual
-
+		return selectFantasyGame(rng)
 	case "sci-fi":
-		// Sci-fi: hacking, puzzles, memory
-		roll := rng.Float64()
-		if roll < 0.5 {
-			return MiniGameHacking
-		} else if roll < 0.75 {
-			return MiniGamePuzzle
-		}
-		return MiniGameMemory
-
+		return selectSciFiGame(rng)
 	case "horror":
-		// Horror: ritual, lock-picking, memory (scary games)
-		roll := rng.Float64()
-		if roll < 0.4 {
-			return MiniGameRitual
-		} else if roll < 0.7 {
-			return MiniGameLockPicking
-		}
-		return MiniGameMemory
-
+		return selectHorrorGame(rng)
 	case "cyberpunk":
-		// Cyberpunk: hacking, card, dice
-		roll := rng.Float64()
-		if roll < 0.4 {
-			return MiniGameHacking
-		} else if roll < 0.7 {
-			return MiniGameCard
-		}
-		return MiniGameDice
-
+		return selectCyberpunkGame(rng)
 	case "post-apocalyptic":
-		// Post-apocalyptic: dice, lock-picking, puzzle
-		roll := rng.Float64()
-		if roll < 0.4 {
-			return MiniGameDice
-		} else if roll < 0.7 {
-			return MiniGameLockPicking
-		}
-		return MiniGamePuzzle
-
+		return selectPostApocalypticGame(rng)
 	default:
-		// Default: equal distribution
 		return MiniGameType(rng.Intn(7))
 	}
+}
+
+func selectFantasyGame(rng *rand.Rand) MiniGameType {
+	roll := rng.Float64()
+	if roll < 0.3 {
+		return MiniGameCard
+	} else if roll < 0.5 {
+		return MiniGameDice
+	} else if roll < 0.7 {
+		return MiniGamePuzzle
+	} else if roll < 0.9 {
+		return MiniGameMemory
+	}
+	return MiniGameRitual
+}
+
+func selectSciFiGame(rng *rand.Rand) MiniGameType {
+	roll := rng.Float64()
+	if roll < 0.5 {
+		return MiniGameHacking
+	} else if roll < 0.75 {
+		return MiniGamePuzzle
+	}
+	return MiniGameMemory
+}
+
+func selectHorrorGame(rng *rand.Rand) MiniGameType {
+	roll := rng.Float64()
+	if roll < 0.4 {
+		return MiniGameRitual
+	} else if roll < 0.7 {
+		return MiniGameLockPicking
+	}
+	return MiniGameMemory
+}
+
+func selectCyberpunkGame(rng *rand.Rand) MiniGameType {
+	roll := rng.Float64()
+	if roll < 0.4 {
+		return MiniGameHacking
+	} else if roll < 0.7 {
+		return MiniGameCard
+	}
+	return MiniGameDice
+}
+
+func selectPostApocalypticGame(rng *rand.Rand) MiniGameType {
+	roll := rng.Float64()
+	if roll < 0.4 {
+		return MiniGameDice
+	} else if roll < 0.7 {
+		return MiniGameLockPicking
+	}
+	return MiniGamePuzzle
 }
 
 // calculateStationDifficulty determines station difficulty based on world depth.

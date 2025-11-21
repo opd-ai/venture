@@ -1,0 +1,161 @@
+package qol
+
+import (
+	"time"
+)
+
+// SortCriteria defines how items should be sorted
+type SortCriteria int
+
+const (
+	SortByType SortCriteria = iota
+	SortByRarity
+	SortByName
+	SortByValue
+	SortByQuantity
+)
+
+// String returns human-readable sort criteria name
+func (s SortCriteria) String() string {
+	switch s {
+	case SortByType:
+		return "Type"
+	case SortByRarity:
+		return "Rarity"
+	case SortByName:
+		return "Name"
+	case SortByValue:
+		return "Value"
+	case SortByQuantity:
+		return "Quantity"
+	default:
+		return "Unknown"
+	}
+}
+
+// AutoLootConfig defines auto-loot behavior per companion
+type AutoLootConfig struct {
+	CompanionID    uint64
+	Enabled        bool
+	Radius         float64 // Tiles (5-10)
+	MinRarity      int     // 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legendary
+	FilterTypes    []string
+	IgnoreTypes    []string
+	MaxPerCycle    int // Max items per collection cycle
+	LastCollection time.Time
+}
+
+// CraftQueueEntry represents a recipe in the crafting queue
+type CraftQueueEntry struct {
+	RecipeID       string
+	Quantity       int
+	MaterialsReady bool
+	Position       int // Queue position (0-based)
+	AddedAt        time.Time
+}
+
+// GuildInvitation represents an offline guild invitation
+type GuildInvitation struct {
+	InvitationID string
+	GuildID      string
+	GuildName    string
+	InviterID    string
+	InviterName  string
+	InviteeID    string
+	InviteeName  string
+	Message      string
+	SentAt       time.Time
+	ExpiresAt    time.Time
+	Accepted     bool
+	AcceptedAt   time.Time
+}
+
+// MountSummon represents a vehicle summon request
+type MountSummon struct {
+	PlayerID      uint64
+	VehicleID     uint64
+	VehicleType   string
+	RequestTime   time.Time
+	EstimatedTime float64 // Seconds
+	CurrentPos    [2]float64
+	TargetPos     [2]float64
+	Distance      float64
+	Completed     bool
+}
+
+// RecipeTrackingInfo shows recipe requirements and availability
+type RecipeTrackingInfo struct {
+	RecipeID        string
+	RecipeName      string
+	RequiredMats    map[string]int // MaterialID -> Quantity
+	AvailableMats   map[string]int
+	MissingMats     map[string]int
+	CanCraft        bool
+	MaxCraftable    int
+	MaterialSources map[string][]string // MaterialID -> Source hints
+}
+
+// StorageSortPreset defines a reusable sort configuration
+type StorageSortPreset struct {
+	Name              string
+	PrimaryCriteria   SortCriteria
+	SecondaryCriteria SortCriteria
+	Descending        bool
+	GroupByType       bool
+}
+
+// QoLComponent is the ECS component for quality of life features
+type QoLComponent struct {
+	PlayerID        uint64
+	AutoLootEnabled bool
+	AutoLootRadius  float64
+	CraftQueue      []*CraftQueueEntry
+	SortPreset      string
+	MountWhistle    bool
+	RecipeTracking  bool
+}
+
+// Type returns the component type identifier
+func (q QoLComponent) Type() string {
+	return "qol"
+}
+
+// DefaultAutoLootConfig returns default auto-loot settings
+func DefaultAutoLootConfig(companionID uint64) *AutoLootConfig {
+	return &AutoLootConfig{
+		CompanionID:    companionID,
+		Enabled:        true,
+		Radius:         7.0, // 7 tiles default
+		MinRarity:      0,   // Common and above
+		FilterTypes:    []string{},
+		IgnoreTypes:    []string{"junk"},
+		MaxPerCycle:    10,
+		LastCollection: time.Time{},
+	}
+}
+
+// IsExpired checks if a guild invitation has expired
+func (g *GuildInvitation) IsExpired() bool {
+	return time.Now().After(g.ExpiresAt)
+}
+
+// DaysUntilExpiry returns days remaining before expiration
+func (g *GuildInvitation) DaysUntilExpiry() float64 {
+	if g.IsExpired() {
+		return 0
+	}
+	return time.Until(g.ExpiresAt).Hours() / 24.0
+}
+
+// EstimateArrivalTime calculates mount arrival time based on distance
+// Formula: 1 second per tile, max 5 seconds
+func EstimateArrivalTime(distance float64) float64 {
+	if distance < 0 {
+		distance = 0
+	}
+	time := distance * 1.0 // 1 second per tile
+	if time > 5.0 {
+		time = 5.0 // Max 5 seconds
+	}
+	return time
+}

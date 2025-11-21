@@ -4,7 +4,21 @@ package procgen
 
 import (
 	"math/rand"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log *logrus.Logger
+
+func init() {
+	log = logrus.New()
+	log.SetReportCaller(true)
+	log.WithFields(logrus.Fields{
+		"package":    "procgen",
+		"subsystem":  "naming",
+		"name_count": len(DefaultNames),
+	}).Debug("Naming system initialized")
+}
 
 // DefaultNames is a list of 100 culturally diverse, inoffensive character names.
 // These names are used for deterministic default character naming based on world seed.
@@ -48,11 +62,33 @@ var DefaultNames = [100]string{
 //
 //	name := SelectDefaultName(12345) // Always returns the same name for seed 12345
 func SelectDefaultName(seed int64) string {
+	log.WithFields(logrus.Fields{
+		"seed":            seed,
+		"operation":       "select_default_name",
+		"available_names": len(DefaultNames),
+	}).Debug("SelectDefaultName function entry")
+
 	// Create a seeded random number generator for deterministic selection
 	rng := rand.New(rand.NewSource(seed))
+	log.WithFields(logrus.Fields{
+		"seed": seed,
+	}).Debug("Created seeded RNG for deterministic name selection")
 
 	// Select an index from the name list
 	index := rng.Intn(len(DefaultNames))
+	log.WithFields(logrus.Fields{
+		"seed":      seed,
+		"index":     index,
+		"max_index": len(DefaultNames) - 1,
+	}).Debug("Generated random index for name selection")
 
-	return DefaultNames[index]
+	selectedName := DefaultNames[index]
+	log.WithFields(logrus.Fields{
+		"seed":          seed,
+		"index":         index,
+		"selected_name": selectedName,
+		"operation":     "select_default_name",
+	}).Debug("SelectDefaultName function exit")
+
+	return selectedName
 }

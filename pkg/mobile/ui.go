@@ -700,52 +700,65 @@ func (b *TouchButton) Update() {
 	}
 
 	b.touchHandler.Update()
-
-	// Get mouse/cursor position
-	mouseX, mouseY := ebiten.CursorPosition()
 	b.pressed = false
 
-	// Check if button is being pressed via mouse
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if float64(mouseX) >= b.X && float64(mouseX) <= b.X+b.Width &&
-			float64(mouseY) >= b.Y && float64(mouseY) <= b.Y+b.Height {
-			b.pressed = true
-		}
+	b.checkMousePress()
+	b.checkTouchPress()
+	b.handleMouseClick()
+	b.handleTouchTap()
+}
+
+// checkMousePress checks if button is being pressed via mouse
+func (b *TouchButton) checkMousePress() {
+	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		return
 	}
 
-	// Check if button is being touched (native touch events)
+	mouseX, mouseY := ebiten.CursorPosition()
+	if b.isPointInButton(float64(mouseX), float64(mouseY)) {
+		b.pressed = true
+	}
+}
+
+// checkTouchPress checks if button is being touched via native touch
+func (b *TouchButton) checkTouchPress() {
 	touchIDs := ebiten.TouchIDs()
 	for _, id := range touchIDs {
 		x, y := ebiten.TouchPosition(id)
-		if float64(x) >= b.X && float64(x) <= b.X+b.Width &&
-			float64(y) >= b.Y && float64(y) <= b.Y+b.Height {
+		if b.isPointInButton(float64(x), float64(y)) {
 			b.pressed = true
 			break
 		}
 	}
+}
 
-	// Handle mouse click (works in WASM with mouse)
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		if float64(mouseX) >= b.X && float64(mouseX) <= b.X+b.Width &&
-			float64(mouseY) >= b.Y && float64(mouseY) <= b.Y+b.Height {
-			if b.OnTap != nil {
-				b.OnTap()
-			}
-		}
+// handleMouseClick processes mouse click events
+func (b *TouchButton) handleMouseClick() {
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
 	}
 
-	// Handle native touch tap (works in WASM with actual touch devices)
+	mouseX, mouseY := ebiten.CursorPosition()
+	if b.isPointInButton(float64(mouseX), float64(mouseY)) && b.OnTap != nil {
+		b.OnTap()
+	}
+}
+
+// handleTouchTap processes native touch tap events
+func (b *TouchButton) handleTouchTap() {
 	justPressedTouchIDs := inpututil.AppendJustPressedTouchIDs(nil)
 	for _, id := range justPressedTouchIDs {
 		x, y := ebiten.TouchPosition(id)
-		if float64(x) >= b.X && float64(x) <= b.X+b.Width &&
-			float64(y) >= b.Y && float64(y) <= b.Y+b.Height {
-			if b.OnTap != nil {
-				b.OnTap()
-			}
+		if b.isPointInButton(float64(x), float64(y)) && b.OnTap != nil {
+			b.OnTap()
 			break
 		}
 	}
+}
+
+// isPointInButton returns true if point is inside button bounds
+func (b *TouchButton) isPointInButton(x, y float64) bool {
+	return x >= b.X && x <= b.X+b.Width && y >= b.Y && y <= b.Y+b.Height
 }
 
 // Draw renders the button.

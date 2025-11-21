@@ -63,46 +63,63 @@ type Mod struct {
 
 // Validate checks if the mod configuration is valid.
 func (m *Mod) Validate() error {
+	if err := m.validateBasicFields(); err != nil {
+		return err
+	}
+
+	if err := m.validateModType(); err != nil {
+		return err
+	}
+
+	if err := m.validateRules(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBasicFields validates required mod fields
+func (m *Mod) validateBasicFields() error {
 	if m.ID == "" {
 		return fmt.Errorf("mod ID cannot be empty")
 	}
-
 	if m.Name == "" {
 		return fmt.Errorf("mod name cannot be empty")
 	}
-
 	if m.Version == "" {
 		return fmt.Errorf("mod version cannot be empty")
 	}
-
 	if m.Type == "" {
-		m.Type = ModTypeRule // Default to rule mod
+		m.Type = ModTypeRule
 	}
+	return nil
+}
 
-	// Validate type
-	validType := false
-	for _, t := range []ModType{ModTypeRule, ModTypeGenerator, ModTypeEvent} {
+// validateModType validates the mod type is valid
+func (m *Mod) validateModType() error {
+	validTypes := []ModType{ModTypeRule, ModTypeGenerator, ModTypeEvent}
+	for _, t := range validTypes {
 		if m.Type == t {
-			validType = true
-			break
+			return nil
 		}
 	}
-	if !validType {
-		return fmt.Errorf("invalid mod type: %s", m.Type)
+	return fmt.Errorf("invalid mod type: %s", m.Type)
+}
+
+// validateRules validates mod rules if present
+func (m *Mod) validateRules() error {
+	if m.Type != ModTypeRule || len(m.Rules) == 0 {
+		return nil
 	}
 
-	// Validate rules if present
-	if m.Type == ModTypeRule && len(m.Rules) > 0 {
-		for key, value := range m.Rules {
-			if key == "" {
-				return fmt.Errorf("rule key cannot be empty")
-			}
-			if value == nil {
-				return fmt.Errorf("rule value for %s cannot be nil", key)
-			}
+	for key, value := range m.Rules {
+		if key == "" {
+			return fmt.Errorf("rule key cannot be empty")
+		}
+		if value == nil {
+			return fmt.Errorf("rule value for %s cannot be nil", key)
 		}
 	}
-
 	return nil
 }
 

@@ -183,66 +183,89 @@ func (vcs *VehicleCombatSystem) applyRammingDamage(vehicle *Entity, vehicleComp 
 
 // processMountedWeapons handles mounted weapon attacks.
 func (vcs *VehicleCombatSystem) processMountedWeapons(vehicle *Entity, combat *VehicleCombatComponent, entities []*Entity) {
-	// Check if weapon can shoot
 	if !combat.CanShoot() {
 		return
 	}
 
-	// Get vehicle position
+	pos := vcs.getVehiclePosition(vehicle)
+	if pos == nil {
+		return
+	}
+
+	if !vcs.hasTargetInput(vehicle) {
+		return
+	}
+
+	target := vcs.findNearestTarget(vehicle, pos, combat.WeaponRange, entities)
+	if target == nil {
+		return
+	}
+
+	vcs.fireWeapon(vehicle, pos, target, combat)
+	combat.ExecuteShot()
+	vcs.logWeaponAttack(vehicle, target, combat)
+}
+
+// getVehiclePosition retrieves and validates vehicle position component
+func (vcs *VehicleCombatSystem) getVehiclePosition(vehicle *Entity) *PositionComponent {
 	posComp, hasPos := vehicle.GetComponent("position")
 	if !hasPos {
-		return
+		return nil
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
+		return nil
+	}
+	return pos
+}
+
+// fireWeapon fires weapon at target using projectile system or direct damage
+func (vcs *VehicleCombatSystem) fireWeapon(vehicle *Entity, pos *PositionComponent, target *Entity, combat *VehicleCombatComponent) {
+	if vcs.projectileSystem != nil {
+		vcs.fireProjectileWeapon(vehicle, pos, target, combat)
+	} else {
+		vcs.applyDirectDamage(target, combat.WeaponDamage)
+	}
+}
+
+// fireProjectileWeapon spawns projectile towards target
+func (vcs *VehicleCombatSystem) fireProjectileWeapon(vehicle *Entity, pos *PositionComponent, target *Entity, combat *VehicleCombatComponent) {
+	targetPos := vcs.getTargetPosition(target)
+	if targetPos == nil {
 		return
 	}
 
-	// Check if vehicle is player-controlled or has AI targeting
-	hasControl := vcs.hasTargetInput(vehicle)
-	if !hasControl {
-		return // Only shoot when controlled
+	dx := targetPos.X - pos.X
+	dy := targetPos.Y - pos.Y
+	targetAngle := math.Atan2(dy, dx)
+	vcs.spawnWeaponProjectile(vehicle, pos, targetAngle, combat)
+}
+
+// getTargetPosition retrieves target position component
+func (vcs *VehicleCombatSystem) getTargetPosition(target *Entity) *PositionComponent {
+	targetPos, _ := target.GetComponent("position")
+	if targetPos == nil {
+		return nil
 	}
-
-	// Find nearest target in weapon range
-	target := vcs.findNearestTarget(vehicle, pos, combat.WeaponRange, entities)
-	if target == nil {
-		return // No target in range
+	tPos, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return nil
 	}
+	return tPos
+}
 
-	// Fire weapon (create projectile if projectile system available)
-	if vcs.projectileSystem != nil {
-		// Calculate direction to target
-		targetPos, _ := target.GetComponent("position")
-		if targetPos == nil {
-			return
-		}
-		tPos, ok := targetPos.(*PositionComponent)
-		if !ok {
-			return
-		}
-		dx := tPos.X - pos.X
-		dy := tPos.Y - pos.Y
-		targetAngle := math.Atan2(dy, dx)
-
-		// Create projectile entity with weapon stats
-		// Note: This is a simplified version - full implementation would use
-		// projectile system's spawn methods with proper configuration
-		vcs.spawnWeaponProjectile(vehicle, pos, targetAngle, combat)
-	} else {
-		// Direct damage application (fallback if no projectile system)
-		targetHealth, hasHealth := target.GetComponent("health")
-		if hasHealth {
-			if health, ok := targetHealth.(*HealthComponent); ok {
-				health.TakeDamage(combat.WeaponDamage)
-			}
+// applyDirectDamage applies damage directly to target health
+func (vcs *VehicleCombatSystem) applyDirectDamage(target *Entity, damage float64) {
+	targetHealth, hasHealth := target.GetComponent("health")
+	if hasHealth {
+		if health, ok := targetHealth.(*HealthComponent); ok {
+			health.TakeDamage(damage)
 		}
 	}
+}
 
-	// Execute shot (set cooldown)
-	combat.ExecuteShot()
-
-	// Log weapon attack
+// logWeaponAttack logs vehicle weapon attack event
+func (vcs *VehicleCombatSystem) logWeaponAttack(vehicle, target *Entity, combat *VehicleCombatComponent) {
 	if vcs.logger != nil && target != nil {
 		vcs.logger.WithFields(logrus.Fields{
 			"vehicle_id":  vehicle.ID,

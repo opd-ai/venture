@@ -78,10 +78,22 @@ func (m *MainMenuUI) SetSelectCallback(callback func(option MainMenuOption)) {
 // Update processes input for the main menu.
 // Returns true if an option was selected.
 func (m *MainMenuUI) Update() bool {
-	// BUG FIX: Removed duplicate TouchButton handling - menu already handles touch via GetTouchOrMousePosition
-	// Root cause: Both text-based menu AND TouchButtons were processing same input, causing duplicate triggers
+	m.handleArrowKeyNavigation()
 
-	// Handle up/down arrow keys for navigation
+	if m.handleKeyboardSelection() {
+		return true
+	}
+
+	if m.handleTouchOrMouseSelection() {
+		return true
+	}
+
+	m.updateHoverSelection()
+	return false
+}
+
+// handleArrowKeyNavigation processes up/down arrow keys for menu navigation
+func (m *MainMenuUI) handleArrowKeyNavigation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIdx--
 		if m.selectedIdx < 0 {
@@ -95,54 +107,68 @@ func (m *MainMenuUI) Update() bool {
 			m.selectedIdx = 0
 		}
 	}
+}
 
-	// Handle Enter key for selection
+// handleKeyboardSelection processes Enter/Space key selection
+func (m *MainMenuUI) handleKeyboardSelection() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		log.WithFields(log.Fields{
-			"option":      m.options[m.selectedIdx].String(),
-			"index":       m.selectedIdx,
-			"inputMethod": "keyboard",
-		}).Debug("Main menu option selected")
-
-		if m.onSelect != nil {
-			m.onSelect(m.options[m.selectedIdx])
-		}
+		m.logSelection("keyboard", -1, -1)
+		m.selectCurrentOption()
 		return true
 	}
+	return false
+}
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
-	// BUG FIX: Unified input handling - GetTouchOrMousePosition handles both mouse and touch
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		if clickedOption := m.getOptionAtPosition(mouseX, mouseY); clickedOption != -1 {
-			inputMethod := "mouse"
-			if len(ebiten.TouchIDs()) > 0 {
-				inputMethod = "touch"
-			}
-
-			log.WithFields(log.Fields{
-				"option":      m.options[clickedOption].String(),
-				"index":       clickedOption,
-				"inputMethod": inputMethod,
-				"x":           mouseX,
-				"y":           mouseY,
-			}).Debug("Main menu option selected")
-
-			m.selectedIdx = clickedOption
-			if m.onSelect != nil {
-				m.onSelect(m.options[m.selectedIdx])
-			}
-			return true
-		}
+// handleTouchOrMouseSelection processes touch and mouse click selection
+func (m *MainMenuUI) handleTouchOrMouseSelection() bool {
+	if !IsTouchOrMouseJustPressed() {
+		return false
 	}
 
-	// Update selection highlight on mouse/touch hover (Touch support for WASM/mobile)
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	clickedOption := m.getOptionAtPosition(mouseX, mouseY)
+	if clickedOption == -1 {
+		return false
+	}
+
+	inputMethod := "mouse"
+	if len(ebiten.TouchIDs()) > 0 {
+		inputMethod = "touch"
+	}
+
+	m.selectedIdx = clickedOption
+	m.logSelection(inputMethod, mouseX, mouseY)
+	m.selectCurrentOption()
+	return true
+}
+
+// updateHoverSelection updates selection highlight on mouse/touch hover
+func (m *MainMenuUI) updateHoverSelection() {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	if hoverOption := m.getOptionAtPosition(mouseX, mouseY); hoverOption != -1 {
 		m.selectedIdx = hoverOption
 	}
+}
 
-	return false
+// selectCurrentOption calls the selection callback
+func (m *MainMenuUI) selectCurrentOption() {
+	if m.onSelect != nil {
+		m.onSelect(m.options[m.selectedIdx])
+	}
+}
+
+// logSelection logs the menu option selection
+func (m *MainMenuUI) logSelection(inputMethod string, x, y int) {
+	fields := log.Fields{
+		"option":      m.options[m.selectedIdx].String(),
+		"index":       m.selectedIdx,
+		"inputMethod": inputMethod,
+	}
+	if x >= 0 && y >= 0 {
+		fields["x"] = x
+		fields["y"] = y
+	}
+	log.WithFields(fields).Debug("Main menu option selected")
 }
 
 // Draw renders the main menu to the screen.

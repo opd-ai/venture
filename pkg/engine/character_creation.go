@@ -613,56 +613,78 @@ func (cc *EbitenCharacterCreation) updatePanelDimensions() {
 
 // updateNameInput handles name input with keyboard
 func (cc *EbitenCharacterCreation) updateNameInput() {
-	// MOBILE/WASM: Show keyboard when entering name input step
-	// The native mobile keyboard needs to be explicitly triggered on WASM builds
-	// because the game runs in a canvas element which doesn't automatically focus
+	cc.showKeyboardIfNeeded()
+	cc.processTextInput()
+	cc.handleBackspaceKey()
+	cc.handleEnterKey()
+	cc.handleDefaultNameSave()
+}
+
+// showKeyboardIfNeeded shows mobile keyboard when entering name input
+func (cc *EbitenCharacterCreation) showKeyboardIfNeeded() {
 	if !cc.keyboardShown && mobile.IsWASM() {
 		mobile.ShowKeyboard()
 		cc.keyboardShown = true
 	}
+}
 
-	// Handle text input
+// processTextInput appends valid alphanumeric characters to name input
+func (cc *EbitenCharacterCreation) processTextInput() {
 	cc.inputBuffer = ebiten.AppendInputChars(cc.inputBuffer[:0])
 	for _, r := range cc.inputBuffer {
-		// Only allow alphanumeric and spaces
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' ' {
-			if len(cc.nameInput) < 20 {
-				cc.nameInput += string(r)
-			}
+		if isValidNameCharacter(r) && len(cc.nameInput) < 20 {
+			cc.nameInput += string(r)
 		}
 	}
+}
 
-	// Handle backspace
-	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
-		if len(cc.nameInput) > 0 {
-			cc.nameInput = cc.nameInput[:len(cc.nameInput)-1]
-		}
+// isValidNameCharacter returns true if the rune is alphanumeric or space
+func isValidNameCharacter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' '
+}
+
+// handleBackspaceKey removes last character from name input
+func (cc *EbitenCharacterCreation) handleBackspaceKey() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && len(cc.nameInput) > 0 {
+		cc.nameInput = cc.nameInput[:len(cc.nameInput)-1]
+	}
+}
+
+// handleEnterKey validates name and proceeds to class selection
+func (cc *EbitenCharacterCreation) handleEnterKey() {
+	if !inpututil.IsKeyJustPressed(ebiten.KeyEnter) || cc.stepChangedThisFrame {
+		return
 	}
 
-	// Handle enter to proceed
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
-		if len(strings.TrimSpace(cc.nameInput)) > 0 {
-			cc.characterData.Name = cc.nameInput
-			cc.currentStep = stepClassSelection
-			cc.stepChangedThisFrame = true // Mark that we changed steps this frame
-			cc.errorMsg = ""
-
-			// MOBILE/WASM: Hide keyboard when leaving name input
-			if cc.keyboardShown && mobile.IsWASM() {
-				mobile.HideKeyboard()
-				cc.keyboardShown = false
-			}
-		} else {
-			cc.errorMsg = "Name cannot be empty"
-		}
+	if len(strings.TrimSpace(cc.nameInput)) > 0 {
+		cc.proceedToClassSelection()
+	} else {
+		cc.errorMsg = "Name cannot be empty"
 	}
+}
 
-	// F2 to save current name as default
-	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
-		if len(strings.TrimSpace(cc.nameInput)) > 0 {
-			cc.defaults.DefaultName = strings.TrimSpace(cc.nameInput)
-			cc.errorMsg = "Default name saved!"
-		}
+// proceedToClassSelection advances to class selection step
+func (cc *EbitenCharacterCreation) proceedToClassSelection() {
+	cc.characterData.Name = cc.nameInput
+	cc.currentStep = stepClassSelection
+	cc.stepChangedThisFrame = true
+	cc.errorMsg = ""
+	cc.hideKeyboardIfNeeded()
+}
+
+// hideKeyboardIfNeeded hides mobile keyboard when leaving name input
+func (cc *EbitenCharacterCreation) hideKeyboardIfNeeded() {
+	if cc.keyboardShown && mobile.IsWASM() {
+		mobile.HideKeyboard()
+		cc.keyboardShown = false
+	}
+}
+
+// handleDefaultNameSave saves current name as default on F2
+func (cc *EbitenCharacterCreation) handleDefaultNameSave() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) && len(strings.TrimSpace(cc.nameInput)) > 0 {
+		cc.defaults.DefaultName = strings.TrimSpace(cc.nameInput)
+		cc.errorMsg = "Default name saved!"
 	}
 }
 
@@ -984,14 +1006,6 @@ func (cc *EbitenCharacterCreation) skipPortrait() {
 func (cc *EbitenCharacterCreation) returnToClassSelection() {
 	cc.currentStep = stepClassSelection
 	cc.hideKeyboardIfNeeded()
-}
-
-// hideKeyboardIfNeeded hides mobile keyboard if shown on WASM platform.
-func (cc *EbitenCharacterCreation) hideKeyboardIfNeeded() {
-	if cc.keyboardShown && mobile.IsWASM() {
-		mobile.HideKeyboard()
-		cc.keyboardShown = false
-	}
 }
 
 // handlePresetName handles preset name button presses

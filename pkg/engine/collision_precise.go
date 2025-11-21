@@ -451,54 +451,71 @@ func CheckPreciseCollision(e1, e2 *Entity) bool {
 		"entity2_id": e2.ID,
 	}).Debug("Checking precise collision between entities")
 
-	// Try precise collider first
+	if result, ok := checkPreciseColliders(e1, e2); ok {
+		return result
+	}
+
+	return checkStandardColliders(e1, e2)
+}
+
+// checkPreciseColliders tests collision using precise collider components.
+func checkPreciseColliders(e1, e2 *Entity) (result, ok bool) {
 	pc1Comp, has1 := e1.GetComponent("precise_collider")
 	pc2Comp, has2 := e2.GetComponent("precise_collider")
 
-	if has1 && has2 {
+	if !has1 || !has2 {
+		return false, false
+	}
+
+	collisionLog.WithFields(logrus.Fields{
+		"entity1_id": e1.ID,
+		"entity2_id": e2.ID,
+	}).Debug("Both entities have precise colliders, using precise collision")
+
+	pc1, ok1 := pc1Comp.(*PreciseColliderComponent)
+	pc2, ok2 := pc2Comp.(*PreciseColliderComponent)
+
+	if !ok1 || !ok2 {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id":   e1.ID,
+			"entity2_id":   e2.ID,
+			"type_assert1": ok1,
+			"type_assert2": ok2,
+		}).Warn("Failed to type assert precise collider components")
+		return false, false
+	}
+
+	pos1Comp, hasPos1 := e1.GetComponent("position")
+	pos2Comp, hasPos2 := e2.GetComponent("position")
+
+	if !hasPos1 || !hasPos2 {
 		collisionLog.WithFields(logrus.Fields{
 			"entity1_id": e1.ID,
 			"entity2_id": e2.ID,
-		}).Debug("Both entities have precise colliders, using precise collision")
-
-		pc1, ok1 := pc1Comp.(*PreciseColliderComponent)
-		pc2, ok2 := pc2Comp.(*PreciseColliderComponent)
-
-		if ok1 && ok2 {
-			pos1Comp, hasPos1 := e1.GetComponent("position")
-			pos2Comp, hasPos2 := e2.GetComponent("position")
-
-			if hasPos1 && hasPos2 {
-				if p1, ok := pos1Comp.(*PositionComponent); ok {
-					if p2, ok := pos2Comp.(*PositionComponent); ok {
-						result := pc1.Intersects(p1.X, p1.Y, pc2, p2.X, p2.Y)
-						collisionLog.WithFields(logrus.Fields{
-							"entity1_id": e1.ID,
-							"entity2_id": e2.ID,
-							"collides":   result,
-						}).Debug("Precise collision check completed")
-						return result
-					}
-				}
-			} else {
-				collisionLog.WithFields(logrus.Fields{
-					"entity1_id": e1.ID,
-					"entity2_id": e2.ID,
-					"has_pos1":   hasPos1,
-					"has_pos2":   hasPos2,
-				}).Warn("Entities missing position components for precise collision")
-			}
-		} else {
-			collisionLog.WithFields(logrus.Fields{
-				"entity1_id":   e1.ID,
-				"entity2_id":   e2.ID,
-				"type_assert1": ok1,
-				"type_assert2": ok2,
-			}).Warn("Failed to type assert precise collider components")
-		}
+			"has_pos1":   hasPos1,
+			"has_pos2":   hasPos2,
+		}).Warn("Entities missing position components for precise collision")
+		return false, false
 	}
 
-	// Fallback to standard collider
+	p1, ok1 := pos1Comp.(*PositionComponent)
+	p2, ok2 := pos2Comp.(*PositionComponent)
+
+	if !ok1 || !ok2 {
+		return false, false
+	}
+
+	result = pc1.Intersects(p1.X, p1.Y, pc2, p2.X, p2.Y)
+	collisionLog.WithFields(logrus.Fields{
+		"entity1_id": e1.ID,
+		"entity2_id": e2.ID,
+		"collides":   result,
+	}).Debug("Precise collision check completed")
+	return result, true
+}
+
+// checkStandardColliders tests collision using standard collider components.
+func checkStandardColliders(e1, e2 *Entity) bool {
 	collisionLog.WithFields(logrus.Fields{
 		"entity1_id": e1.ID,
 		"entity2_id": e2.ID,
@@ -507,51 +524,55 @@ func CheckPreciseCollision(e1, e2 *Entity) bool {
 	c1Comp, has1 := e1.GetComponent("collider")
 	c2Comp, has2 := e2.GetComponent("collider")
 
-	if has1 && has2 {
-		c1, ok1 := c1Comp.(*ColliderComponent)
-		c2, ok2 := c2Comp.(*ColliderComponent)
-
-		if ok1 && ok2 {
-			pos1Comp, hasPos1 := e1.GetComponent("position")
-			pos2Comp, hasPos2 := e2.GetComponent("position")
-
-			if hasPos1 && hasPos2 {
-				if p1, ok := pos1Comp.(*PositionComponent); ok {
-					if p2, ok := pos2Comp.(*PositionComponent); ok {
-						result := c1.Intersects(p1.X, p1.Y, c2, p2.X, p2.Y)
-						collisionLog.WithFields(logrus.Fields{
-							"entity1_id": e1.ID,
-							"entity2_id": e2.ID,
-							"collides":   result,
-						}).Debug("Standard collision check completed")
-						return result
-					}
-				}
-			} else {
-				collisionLog.WithFields(logrus.Fields{
-					"entity1_id": e1.ID,
-					"entity2_id": e2.ID,
-					"has_pos1":   hasPos1,
-					"has_pos2":   hasPos2,
-				}).Warn("Entities missing position components for standard collision")
-			}
-		} else {
-			collisionLog.WithFields(logrus.Fields{
-				"entity1_id":   e1.ID,
-				"entity2_id":   e2.ID,
-				"type_assert1": ok1,
-				"type_assert2": ok2,
-			}).Warn("Failed to type assert standard collider components")
-		}
+	if !has1 || !has2 {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+			"result":     false,
+		}).Debug("No valid colliders found, returning false")
+		return false
 	}
 
+	c1, ok1 := c1Comp.(*ColliderComponent)
+	c2, ok2 := c2Comp.(*ColliderComponent)
+
+	if !ok1 || !ok2 {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id":   e1.ID,
+			"entity2_id":   e2.ID,
+			"type_assert1": ok1,
+			"type_assert2": ok2,
+		}).Warn("Failed to type assert standard collider components")
+		return false
+	}
+
+	pos1Comp, hasPos1 := e1.GetComponent("position")
+	pos2Comp, hasPos2 := e2.GetComponent("position")
+
+	if !hasPos1 || !hasPos2 {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+			"has_pos1":   hasPos1,
+			"has_pos2":   hasPos2,
+		}).Warn("Entities missing position components for standard collision")
+		return false
+	}
+
+	p1, ok1 := pos1Comp.(*PositionComponent)
+	p2, ok2 := pos2Comp.(*PositionComponent)
+
+	if !ok1 || !ok2 {
+		return false
+	}
+
+	result := c1.Intersects(p1.X, p1.Y, c2, p2.X, p2.Y)
 	collisionLog.WithFields(logrus.Fields{
 		"entity1_id": e1.ID,
 		"entity2_id": e2.ID,
-		"result":     false,
-	}).Debug("No valid colliders found, returning false")
-
-	return false
+		"collides":   result,
+	}).Debug("Standard collision check completed")
+	return result
 }
 
 // GetCollisionAlignment calculates the visual/collision alignment error.

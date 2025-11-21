@@ -73,28 +73,34 @@ func (v *CombatValidator) validateClassBalance(ctx context.Context, result *Vali
 		engine.ClassCleric,
 		engine.ClassNecromancer,
 	}
-
 	classNames := []string{"Warrior", "Rogue", "Mage", "Ranger", "Cleric", "Necromancer"}
-	wins := make(map[string]int)
-	battles := make(map[string]int)
 
+	wins, battles := v.runClassBattleSimulations(ctx, classTypes, classNames, result.SimulationCount)
+	minWinRate, maxWinRate := v.calculateWinRateMetrics(classNames, wins, battles, result)
+	v.checkBalanceThresholds(minWinRate, maxWinRate, result)
+
+	return nil
+}
+
+// runClassBattleSimulations executes all class vs class battle simulations.
+func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTypes []engine.CharacterClass, classNames []string, totalSims int) (wins, battles map[string]int) {
+	wins = make(map[string]int)
+	battles = make(map[string]int)
 	rng := rand.New(rand.NewSource(v.config.Seed))
-	simCount := result.SimulationCount / len(classTypes) // ~1666 per class
+	simCount := totalSims / len(classTypes)
 
-	// Simulate class vs class battles
 	for i, class1 := range classTypes {
 		for j, class2 := range classTypes {
 			if i == j {
-				continue // No self-battles
+				continue
 			}
 
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
+				return wins, battles
 			default:
 			}
 
-			// Run simulations for this matchup
 			for k := 0; k < simCount/len(classTypes); k++ {
 				winner := v.simulateBattle(class1, class2, rng)
 				battles[classNames[i]]++
@@ -104,9 +110,14 @@ func (v *CombatValidator) validateClassBalance(ctx context.Context, result *Vali
 			}
 		}
 	}
+	return wins, battles
+}
 
-	// Calculate win rates
-	minWinRate, maxWinRate := 1.0, 0.0
+// calculateWinRateMetrics computes win rates, variance, and extremes.
+func (v *CombatValidator) calculateWinRateMetrics(classNames []string, wins, battles map[string]int, result *ValidationResult) (minWinRate, maxWinRate float64) {
+	minWinRate, maxWinRate = 1.0, 0.0
+	variance := 0.0
+
 	for _, className := range classNames {
 		winRate := float64(wins[className]) / float64(battles[className])
 		result.Metrics[fmt.Sprintf("class_win_rate_%s", className)] = winRate
@@ -117,18 +128,15 @@ func (v *CombatValidator) validateClassBalance(ctx context.Context, result *Vali
 		if winRate > maxWinRate {
 			maxWinRate = winRate
 		}
-	}
-
-	// Calculate variance from 50% target
-	variance := 0.0
-	for _, className := range classNames {
-		winRate := result.Metrics[fmt.Sprintf("class_win_rate_%s", className)]
 		variance += (winRate - 0.50) * (winRate - 0.50)
 	}
-	variance /= float64(len(classNames))
-	result.Metrics["class_win_rate_variance"] = math.Sqrt(variance)
 
-	// Check acceptance criteria
+	result.Metrics["class_win_rate_variance"] = math.Sqrt(variance / float64(len(classNames)))
+	return minWinRate, maxWinRate
+}
+
+// checkBalanceThresholds validates win rates against acceptance criteria.
+func (v *CombatValidator) checkBalanceThresholds(minWinRate, maxWinRate float64, result *ValidationResult) {
 	minThreshold := v.config.GetThreshold("class_win_rate_min")
 	maxThreshold := v.config.GetThreshold("class_win_rate_max")
 
@@ -149,8 +157,6 @@ func (v *CombatValidator) validateClassBalance(ctx context.Context, result *Vali
 		result.Recommendations = append(result.Recommendations,
 			"Nerf strongest class stats or abilities")
 	}
-
-	return nil
 }
 
 // simulateBattle simulates a battle between two classes, returns 1 if class1 wins, 2 if class2 wins.

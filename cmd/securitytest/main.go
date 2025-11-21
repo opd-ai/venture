@@ -65,13 +65,19 @@ func outputJSON(results *security.AuditResults) {
 }
 
 func outputText(results *security.AuditResults) {
-	// Print summary
+	printSecuritySummary(results)
+	domainChecks := groupChecksByDomain(results.Checks)
+	printDomainResults(domainChecks)
+	printRecommendations(results)
+}
+
+// printSecuritySummary prints the audit header and overall status.
+func printSecuritySummary(results *security.AuditResults) {
 	fmt.Println("=== Venture Security Audit - Phase 64.2 ===")
 	fmt.Println()
 	fmt.Println(results.Summary())
 	fmt.Println()
 
-	// Print status indicator
 	if results.AllPassed() {
 		fmt.Println("✅ PASS - All security checks passed")
 	} else if results.HasCritical() {
@@ -80,14 +86,19 @@ func outputText(results *security.AuditResults) {
 		fmt.Println("⚠️  WARNING - Non-critical issues found")
 	}
 	fmt.Println()
+}
 
-	// Group checks by domain
+// groupChecksByDomain organizes security checks by their domain.
+func groupChecksByDomain(checks []security.SecurityCheck) map[string][]security.SecurityCheck {
 	domainChecks := make(map[string][]security.SecurityCheck)
-	for _, check := range results.Checks {
+	for _, check := range checks {
 		domainChecks[check.Domain] = append(domainChecks[check.Domain], check)
 	}
+	return domainChecks
+}
 
-	// Print results by domain
+// printDomainResults outputs results for each security domain.
+func printDomainResults(domainChecks map[string][]security.SecurityCheck) {
 	domains := []string{
 		"Federation Security",
 		"Chat & Encryption",
@@ -98,7 +109,6 @@ func outputText(results *security.AuditResults) {
 	}
 
 	for _, d := range domains {
-		// Skip domain if filter specified and doesn't match
 		if *domain != "" && d != *domain {
 			continue
 		}
@@ -108,81 +118,101 @@ func outputText(results *security.AuditResults) {
 			continue
 		}
 
-		// Count passed/failed
-		passed := 0
-		failed := 0
-		for _, c := range checks {
-			if c.Passed {
-				passed++
-			} else {
-				failed++
-			}
-		}
-
-		// Print domain header
+		passed, _ := countPassedFailed(checks)
 		fmt.Printf("--- %s (%d/%d passed) ---\n", d, passed, len(checks))
 
 		if *verbose {
-			// Print all checks
-			for _, check := range checks {
-				status := "✅"
-				if !check.Passed {
-					switch check.Severity {
-					case security.SeverityCritical:
-						status = "❌ CRITICAL"
-					case security.SeverityHigh:
-						status = "⚠️  HIGH"
-					case security.SeverityMedium:
-						status = "⚠️  MEDIUM"
-					case security.SeverityLow:
-						status = "⚠️  LOW"
-					}
-				}
-				fmt.Printf("  %s %s\n", status, check.Name)
-				if *verbose {
-					fmt.Printf("     %s\n", check.Description)
-					fmt.Printf("     %s\n", check.Message)
-				}
-			}
+			printAllChecks(checks)
 		} else {
-			// Just show failures
-			for _, check := range checks {
-				if !check.Passed {
-					status := "⚠️ "
-					if check.Severity == security.SeverityCritical {
-						status = "❌"
-					}
-					fmt.Printf("  %s %s (%s): %s\n", status, check.Name, check.Severity, check.Message)
-				}
-			}
+			printFailures(checks)
 		}
 		fmt.Println()
 	}
+}
 
-	// Print recommendations if failures exist
-	if !results.AllPassed() {
-		fmt.Println("=== Recommendations ===")
-		if results.CriticalCount > 0 {
-			fmt.Printf("- Address %d critical vulnerabilities before release\n", results.CriticalCount)
-		}
-		if results.HighCount > 0 {
-			fmt.Printf("- Fix %d high-severity issues\n", results.HighCount)
-		}
-		if results.MediumCount > 0 {
-			fmt.Printf("- Consider addressing %d medium-severity issues\n", results.MediumCount)
-		}
-
-		// Specific recommendations for mod sandbox
-		modSandboxFailed := false
-		for _, check := range results.Checks {
-			if check.Domain == "Mod Sandbox" && !check.Passed {
-				modSandboxFailed = true
-				break
-			}
-		}
-		if modSandboxFailed {
-			fmt.Println("- Mod sandbox security is not implemented (deferred to future release)")
-			fmt.Println("  This is acceptable if mods are not enabled in v10.0")
+// countPassedFailed tallies passed and failed checks.
+func countPassedFailed(checks []security.SecurityCheck) (passed, failed int) {
+	for _, c := range checks {
+		if c.Passed {
+			passed++
 		}
 	}
+	return passed, failed
+}
+
+// printAllChecks displays all security checks with details.
+func printAllChecks(checks []security.SecurityCheck) {
+	for _, check := range checks {
+		status := formatCheckStatus(check)
+		fmt.Printf("  %s %s\n", status, check.Name)
+		if *verbose {
+			fmt.Printf("     %s\n", check.Description)
+			fmt.Printf("     %s\n", check.Message)
+		}
+	}
+}
+
+// formatCheckStatus returns a formatted status indicator for a check.
+func formatCheckStatus(check security.SecurityCheck) string {
+	if check.Passed {
+		return "✅"
+	}
+	switch check.Severity {
+	case security.SeverityCritical:
+		return "❌ CRITICAL"
+	case security.SeverityHigh:
+		return "⚠️  HIGH"
+	case security.SeverityMedium:
+		return "⚠️  MEDIUM"
+	case security.SeverityLow:
+		return "⚠️  LOW"
+	default:
+		return "⚠️ "
+	}
+}
+
+// printFailures displays only failed security checks.
+func printFailures(checks []security.SecurityCheck) {
+	for _, check := range checks {
+		if !check.Passed {
+			status := "⚠️ "
+			if check.Severity == security.SeverityCritical {
+				status = "❌"
+			}
+			fmt.Printf("  %s %s (%s): %s\n", status, check.Name, check.Severity, check.Message)
+		}
+	}
+}
+
+// printRecommendations outputs remediation suggestions for failed checks.
+func printRecommendations(results *security.AuditResults) {
+	if results.AllPassed() {
+		return
+	}
+
+	fmt.Println("=== Recommendations ===")
+	if results.CriticalCount > 0 {
+		fmt.Printf("- Address %d critical vulnerabilities before release\n", results.CriticalCount)
+	}
+	if results.HighCount > 0 {
+		fmt.Printf("- Fix %d high-severity issues\n", results.HighCount)
+	}
+	if results.MediumCount > 0 {
+		fmt.Printf("- Consider addressing %d medium-severity issues\n", results.MediumCount)
+	}
+
+	if checkModSandboxFailed(results.Checks) {
+		fmt.Println("- Mod sandbox security is not implemented (deferred to future release)")
+		fmt.Println("  This is acceptable if mods are not enabled in v10.0")
+	}
+}
+
+// checkModSandboxFailed determines if any mod sandbox checks failed.
+func checkModSandboxFailed(checks []security.SecurityCheck) bool {
+	for _, check := range checks {
+		if check.Domain == "Mod Sandbox" && !check.Passed {
+			return true
+		}
+	}
+	return false
 }

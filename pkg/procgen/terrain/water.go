@@ -115,22 +115,29 @@ func GenerateRiver(start, end Point, width int, terrain *Terrain, rng *rand.Rand
 		Tiles: make([]Point, 0, 100),
 	}
 
+	width = validateRiverWidth(width)
+	pathPoints := generateRiverPath(start, end, terrain, rng)
+	expandPathToRiver(pathPoints, width, terrain, feature)
+
+	return feature
+}
+
+// validateRiverWidth ensures river width stays within valid bounds.
+func validateRiverWidth(width int) int {
 	if width < 1 {
-		width = 1
+		return 1
 	}
 	if width > 5 {
-		width = 5
+		return 5
 	}
+	return width
+}
 
-	// Generate path points from start to end with meandering
-	pathPoints := generateRiverPath(start, end, terrain, rng)
-
-	// Track placed tiles to avoid duplicates
+// expandPathToRiver converts path points into river tiles with varying depth.
+func expandPathToRiver(pathPoints []Point, width int, terrain *Terrain, feature *WaterFeature) {
 	placed := make(map[Point]bool)
 
-	// Expand path points to river width
 	for _, point := range pathPoints {
-		// Place water tiles around each path point
 		for dy := -width; dy <= width; dy++ {
 			for dx := -width; dx <= width; dx++ {
 				x := point.X + dx
@@ -140,22 +147,18 @@ func GenerateRiver(start, end Point, width int, terrain *Terrain, rng *rand.Rand
 					continue
 				}
 
-				// Skip if already placed
 				p := Point{x, y}
 				if placed[p] {
 					continue
 				}
 
-				// Don't overwrite important tiles
 				tile := terrain.GetTile(x, y)
 				if tile == TileWall || tile == TileDoor || tile == TileStairsUp || tile == TileStairsDown {
 					continue
 				}
 
-				// Calculate distance from path center
 				dist := math.Sqrt(float64(dx*dx + dy*dy))
 
-				// Deep water in center, shallow at edges
 				if width > 2 && dist <= float64(width)*0.5 {
 					terrain.SetTile(x, y, TileWaterDeep)
 					feature.Tiles = append(feature.Tiles, p)
@@ -168,8 +171,6 @@ func GenerateRiver(start, end Point, width int, terrain *Terrain, rng *rand.Rand
 			}
 		}
 	}
-
-	return feature
 }
 
 // generateRiverPath creates a winding path between two points.

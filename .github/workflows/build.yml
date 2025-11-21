@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Checkout code
@@ -99,7 +99,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [amd64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Checkout code
@@ -141,4 +141,34 @@ jobs:
         with:
           name: darwin-${{ matrix.arch }}
           path: build/venture-*
+          retention-days: 7
+
+  build-wasm:
+    name: Build WebAssembly
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build WebAssembly
+        run: |
+          mkdir -p build/wasm
+          GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
+          cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm
+          path: build/wasm/*
           retention-days: 7

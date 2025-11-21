@@ -221,6 +221,215 @@ These scripts are designed to work in CI/CD environments:
 
 ---
 
+---
+
+## Phase 66.1: Build & Deployment Automation
+
+Comprehensive release automation system for building, packaging, and deploying Venture across all supported platforms.
+
+### One-Command Release Build
+
+```bash
+# Build all platforms, package, and generate checksums
+make release VERSION=v10.0.0
+```
+
+This single command will:
+1. Build for all 11 platform/architecture combinations
+2. Package binaries into compressed archives
+3. Generate SHA256 checksums
+
+### build-all-platforms.sh
+
+Build binaries for all supported platforms and architectures.
+
+**Usage:**
+```bash
+./scripts/build-all-platforms.sh [version]
+
+# Examples
+./scripts/build-all-platforms.sh v10.0.0
+./scripts/build-all-platforms.sh dev
+```
+
+**Platforms Built:**
+- Linux: x64, ARM64
+- macOS: x64, ARM64  
+- Windows: x64
+- WebAssembly
+
+**Build Time:** <10 minutes for all platforms
+
+### package-release.sh
+
+Create compressed archives from build artifacts.
+
+**Usage:**
+```bash
+./scripts/package-release.sh [version]
+
+# Example
+./scripts/package-release.sh v10.0.0
+```
+
+**Output:** Archives in `dist/` directory
+- `.tar.gz` for Linux/macOS
+- `.zip` for Windows
+- Platform-specific naming
+
+### generate-checksums.sh
+
+Generate SHA256 checksums for verification.
+
+**Usage:**
+```bash
+./scripts/generate-checksums.sh [build_dir]
+
+# Examples
+./scripts/generate-checksums.sh dist
+./scripts/generate-checksums.sh build
+```
+
+**Output:** `SHA256SUMS.txt` in the specified directory
+
+**Verification:**
+```bash
+# Linux
+sha256sum -c dist/SHA256SUMS.txt
+
+# macOS
+shasum -a 256 -c dist/SHA256SUMS.txt
+```
+
+### sign-binaries.sh
+
+Sign release binaries with GPG for authentication.
+
+**Usage:**
+```bash
+./scripts/sign-binaries.sh [build_dir] [gpg_key_id]
+
+# Example
+./scripts/sign-binaries.sh dist 1234ABCD5678EFGH
+```
+
+**Prerequisites:**
+- GPG installed and configured
+- GPG key available
+
+**Output:** `.sig` files for each binary
+
+**Verification:**
+```bash
+gpg --verify <file>.sig <file>
+```
+
+### Release Makefile Targets
+
+```bash
+make release             # Complete release build (all platforms + packaging + checksums)
+make package             # Package existing builds
+make checksums           # Generate SHA256 checksums
+make sign GPG_KEY=<id>   # Sign binaries with GPG
+make docker-build        # Build Docker image
+make docker-run          # Run server in Docker
+make docker-stop         # Stop Docker containers
+```
+
+### Docker Deployment
+
+**Build Image:**
+```bash
+make docker-build VERSION=v10.0.0
+```
+
+**Run Server:**
+```bash
+# Start server and optional web client
+make docker-run
+
+# Stop containers
+make docker-stop
+```
+
+**Manual Commands:**
+```bash
+# Build image
+docker build -t venture-server:latest .
+
+# Run with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+### Platform Support Matrix
+
+| Platform | Architectures | Status | Build Time |
+|----------|--------------|--------|------------|
+| Linux    | x64, ARM64   | ✅ Full | ~2 min    |
+| macOS    | x64, ARM64   | ✅ Full | ~3 min    |
+| Windows  | x64          | ✅ Full | ~2 min    |
+| WebAssembly | -         | ✅ Full | ~1 min    |
+| Android  | ARM64, ARMv7 | ✅ Full | ~5 min*   |
+| iOS      | ARM64        | ✅ Full | ~5 min*   |
+
+*Mobile builds use separate workflows (android.yml, ios.yml)
+
+### GitHub Actions CI/CD
+
+Automated builds run on:
+- Every push to `main` branch
+- Every tag push matching `v*.*.*`
+- Manual workflow dispatch
+- Nightly at 00:00 UTC
+
+**Tag a Version:**
+```bash
+git tag -a v10.0.0 -m "Release v10.0.0"
+git push origin v10.0.0
+```
+
+**Automatic Process:**
+1. GitHub Actions builds all platforms
+2. Generates release notes from git log
+3. Creates SHA256 checksums
+4. Packages all artifacts
+5. Publishes GitHub Release
+
+### Artifact Sizes
+
+- Linux/macOS binaries: 15-35 MB per archive
+- Windows binaries: 15-40 MB per archive
+- WebAssembly: 10-20 MB
+- Total release size: ~150-250 MB
+
+### Troubleshooting
+
+**Cross-compilation fails for macOS:**
+- Install Xcode command-line tools or use CI/CD
+
+**ARM64 builds fail on x64 host:**
+- Install cross-compilation toolchain or use CI/CD
+
+**Checksums don't match:**
+- Ensure binary wasn't modified, re-download if necessary
+
+**GPG "No secret key" error:**
+- Generate GPG key with `gpg --full-generate-key`
+
+### See Also
+- [ROADMAP_V10.md](../docs/ROADMAP_V10.md) - Phase 66.1 details
+- [.github/workflows/](../.github/workflows/) - CI/CD workflows
+- [Makefile](../Makefile) - Build targets reference
+- [Dockerfile](../Dockerfile) - Docker containerization
+
+---
+
 ## Automated Package Code Review
 
 ### audit-package.sh

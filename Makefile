@@ -5,7 +5,8 @@
         build-server build-client build-wasm \
         android ios mobile-deps \
         run-client run-server serve-wasm \
-        validate-code-review
+        validate-code-review release package checksums sign \
+        docker docker-build docker-run docker-stop
 
 # Default target
 .DEFAULT_GOAL := help
@@ -221,5 +222,49 @@ serve-wasm: build-wasm ## Build and serve WebAssembly version locally
 git-clean: ## Remove all untracked files (use with caution!)
 	@echo "This will remove all untracked files. Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
 	git clean -fdx
+
+# Release automation (Phase 66.1)
+release: clean ## Build all platforms, package, generate checksums (one-command release)
+	@echo "========================================="
+	@echo "  Venture Release Build"
+	@echo "========================================="
+	@./scripts/build-all-platforms.sh $(VERSION)
+	@./scripts/package-release.sh $(VERSION)
+	@./scripts/generate-checksums.sh dist
+	@echo ""
+	@echo "✓ Release build complete!"
+	@echo "  Packages: dist/"
+	@echo "  Checksums: dist/SHA256SUMS.txt"
+	@echo ""
+	@echo "Optional: Sign binaries with GPG"
+	@echo "  make sign VERSION=$(VERSION) GPG_KEY=<your-key-id>"
+
+package: ## Package existing build artifacts
+	@./scripts/package-release.sh $(VERSION)
+
+checksums: ## Generate SHA256 checksums for dist/ directory
+	@./scripts/generate-checksums.sh dist
+
+sign: ## Sign release binaries with GPG
+	@if [ -z "$(GPG_KEY)" ]; then \
+		echo "Error: GPG_KEY not set. Usage: make sign GPG_KEY=<your-key-id>"; \
+		exit 1; \
+	fi
+	@./scripts/sign-binaries.sh dist $(GPG_KEY)
+
+# Docker targets (Phase 66.1)
+docker-build: ## Build Docker image for server
+	@echo "Building Docker image..."
+	docker build -t venture-server:latest -t venture-server:$(VERSION) .
+
+docker-run: docker-build ## Build and run Docker container
+	@echo "Starting Venture server in Docker..."
+	docker-compose up -d
+
+docker-stop: ## Stop Docker containers
+	@echo "Stopping Venture server..."
+	docker-compose down
+
+docker: docker-run ## Alias for docker-run
 
 .PHONY: help

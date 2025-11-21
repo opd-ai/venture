@@ -1110,6 +1110,25 @@ func (ai *AISystem) isValidTarget(target, entity *Entity, pos *PositionComponent
 
 // moveTowards moves an entity towards a target position.
 func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX, targetY, speedMultiplier float64) {
+	vel := ai.getVelocityComponent(entity)
+	if vel == nil {
+		return
+	}
+
+	dx := targetX - pos.X
+	dy := targetY - pos.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	if dist > 0 {
+		ai.calculateMovementVelocity(vel, dx, dy, dist, speedMultiplier)
+		ai.logMovement(entity, targetX, targetY, dist, speedMultiplier, vel)
+		ai.updateEntityDirection(entity, targetX, targetY)
+		ai.updateWalkAnimation(entity)
+	}
+}
+
+// getVelocityComponent retrieves and validates the velocity component.
+func (ai *AISystem) getVelocityComponent(entity *Entity) *VelocityComponent {
 	velComp, ok := entity.GetComponent("velocity")
 	if !ok {
 		if ai.logger != nil {
@@ -1118,7 +1137,7 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 				"component_type": "velocity",
 			}).Debug("Entity missing velocity component for movement")
 		}
-		return // No velocity component, can't move
+		return nil
 	}
 	vel, ok := velComp.(*VelocityComponent)
 	if !ok {
@@ -1128,49 +1147,60 @@ func (ai *AISystem) moveTowards(entity *Entity, pos *PositionComponent, targetX,
 				"component_type": "velocity",
 			}).Warn("Failed to type assert velocity component")
 		}
+		return nil
+	}
+	return vel
+}
+
+// calculateMovementVelocity calculates and sets the velocity for movement.
+func (ai *AISystem) calculateMovementVelocity(vel *VelocityComponent, dx, dy, dist, speedMultiplier float64) {
+	speed := 100.0 * speedMultiplier
+	vel.VX = (dx / dist) * speed
+	vel.VY = (dy / dist) * speed
+}
+
+// logMovement logs movement details for debugging.
+func (ai *AISystem) logMovement(entity *Entity, targetX, targetY, dist, speedMultiplier float64, vel *VelocityComponent) {
+	if ai.logger == nil {
 		return
 	}
+	ai.logger.WithFields(logrus.Fields{
+		"entity_id":        entity.ID,
+		"target_x":         targetX,
+		"target_y":         targetY,
+		"distance":         dist,
+		"speed":            100.0 * speedMultiplier,
+		"speed_multiplier": speedMultiplier,
+		"vx":               vel.VX,
+		"vy":               vel.VY,
+	}).Debug("Entity moving towards target")
+}
 
-	// Calculate direction
-	dx := targetX - pos.X
-	dy := targetY - pos.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
+// updateEntityDirection updates the aim component to face the movement direction.
+func (ai *AISystem) updateEntityDirection(entity *Entity, targetX, targetY float64) {
+	aimComp, ok := entity.GetComponent("aim")
+	if !ok {
+		return
+	}
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return
+	}
+	aim.SetAimTarget(targetX, targetY)
+}
 
-	if dist > 0 {
-		// Normalize and apply speed (use fixed speed since VelocityComponent doesn't have MaxSpeed)
-		speed := 100.0 * speedMultiplier // Default speed
-		vel.VX = (dx / dist) * speed
-		vel.VY = (dy / dist) * speed
-
-		if ai.logger != nil {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"target_x":         targetX,
-				"target_y":         targetY,
-				"distance":         dist,
-				"speed":            speed,
-				"speed_multiplier": speedMultiplier,
-				"vx":               vel.VX,
-				"vy":               vel.VY,
-			}).Debug("Entity moving towards target")
-		}
-
-		// Phase 10.1: Update aim component to face movement direction
-		// This makes enemies visibly rotate towards their target
-		if aimComp, ok := entity.GetComponent("aim"); ok {
-			if aim, ok := aimComp.(*AimComponent); ok {
-				aim.SetAimTarget(targetX, targetY)
-			}
-		}
-
-		// GAP-018 REPAIR: Update animation state to walk when moving
-		if animComp, ok := entity.GetComponent("animation"); ok {
-			if anim, ok := animComp.(*AnimationComponent); ok {
-				if anim.CurrentState != AnimationStateWalk {
-					anim.SetState(AnimationStateWalk)
-				}
-			}
-		}
+// updateWalkAnimation sets the animation state to walk when moving.
+func (ai *AISystem) updateWalkAnimation(entity *Entity) {
+	animComp, ok := entity.GetComponent("animation")
+	if !ok {
+		return
+	}
+	anim, ok := animComp.(*AnimationComponent)
+	if !ok {
+		return
+	}
+	if anim.CurrentState != AnimationStateWalk {
+		anim.SetState(AnimationStateWalk)
 	}
 }
 

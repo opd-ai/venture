@@ -356,59 +356,85 @@ func (s *InventorySystem) applyEquipmentStats(entityID uint64) {
 		return
 	}
 
+	equipComp := s.getEquipmentComponent(entity)
+	if equipComp == nil {
+		return
+	}
+
+	s.applyDefenseStats(entity, equipComp)
+	s.applyAttackStats(entity, equipComp)
+}
+
+// getEquipmentComponent retrieves and validates the equipment component.
+func (s *InventorySystem) getEquipmentComponent(entity *Entity) *EquipmentComponent {
 	comp, ok := entity.GetComponent("equipment")
+	if !ok {
+		return nil
+	}
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok || equipComp == nil {
+		return nil
+	}
+	return equipComp
+}
+
+// applyDefenseStats updates the entity's defense stat based on equipment.
+func (s *InventorySystem) applyDefenseStats(entity *Entity, equipComp *EquipmentComponent) {
+	comp, ok := entity.GetComponent("stats")
 	if !ok {
 		return
 	}
-	// Type assert with safety check
-	equipComp, ok := comp.(*EquipmentComponent)
-	if !ok || equipComp == nil {
+	statsComp, ok := comp.(*StatsComponent)
+	if !ok {
+		return
+	}
+	equipStats := equipComp.GetStats()
+	statsComp.Defense = float64(equipStats.Defense)
+}
+
+// applyAttackStats updates the entity's attack component based on equipped weapon.
+func (s *InventorySystem) applyAttackStats(entity *Entity, equipComp *EquipmentComponent) {
+	comp, ok := entity.GetComponent("attack")
+	if !ok {
+		return
+	}
+	attackComp, ok := comp.(*AttackComponent)
+	if !ok {
 		return
 	}
 
-	// Get equipment stats
-	equipStats := equipComp.GetStats()
+	s.applyWeaponDamage(attackComp, equipComp)
+	s.applyWeaponSpeed(attackComp, equipComp)
+	s.applyWeaponDamageType(attackComp, equipComp)
+}
 
-	// Update stats component if it exists
-	comp2, ok := entity.GetComponent("stats")
-	if ok {
-		if statsComp, ok := comp2.(*StatsComponent); ok {
-			// Apply equipment defense to defense stat
-			// Note: This is additive. The base stats are assumed to be set elsewhere.
-			// A full implementation might want to track base vs. equipment bonuses separately
-			statsComp.Defense = float64(equipStats.Defense)
-		}
+// applyWeaponDamage sets the attack damage from the equipped weapon.
+func (s *InventorySystem) applyWeaponDamage(attackComp *AttackComponent, equipComp *EquipmentComponent) {
+	weaponDamage := equipComp.GetWeaponDamage()
+	if weaponDamage > 0 {
+		attackComp.Damage = float64(weaponDamage)
 	}
+}
 
-	// Update attack component if it exists
-	comp3, ok := entity.GetComponent("attack")
-	if ok {
-		if attackComp, ok := comp3.(*AttackComponent); ok {
-			// Apply weapon damage
-			weaponDamage := equipComp.GetWeaponDamage()
-			if weaponDamage > 0 {
-				attackComp.Damage = float64(weaponDamage)
-			}
+// applyWeaponSpeed sets the attack cooldown from the equipped weapon speed.
+func (s *InventorySystem) applyWeaponSpeed(attackComp *AttackComponent, equipComp *EquipmentComponent) {
+	weaponSpeed := equipComp.GetWeaponSpeed()
+	if weaponSpeed > 0 {
+		attackComp.Cooldown = 1.0 / weaponSpeed
+	}
+}
 
-			// Apply weapon speed
-			weaponSpeed := equipComp.GetWeaponSpeed()
-			if weaponSpeed > 0 {
-				attackComp.Cooldown = 1.0 / weaponSpeed
-			}
-
-			// Set damage type based on weapon
-			mainHand := equipComp.GetEquipped(SlotMainHand)
-			if mainHand != nil {
-				// Map weapon types to damage types
-				// This is simplified; a full system would have more nuanced mapping
-				switch mainHand.WeaponType {
-				case item.WeaponStaff:
-					attackComp.DamageType = combat.DamageMagical
-				default:
-					attackComp.DamageType = combat.DamagePhysical
-				}
-			}
-		}
+// applyWeaponDamageType sets the damage type based on the equipped weapon.
+func (s *InventorySystem) applyWeaponDamageType(attackComp *AttackComponent, equipComp *EquipmentComponent) {
+	mainHand := equipComp.GetEquipped(SlotMainHand)
+	if mainHand == nil {
+		return
+	}
+	switch mainHand.WeaponType {
+	case item.WeaponStaff:
+		attackComp.DamageType = combat.DamageMagical
+	default:
+		attackComp.DamageType = combat.DamagePhysical
 	}
 }
 

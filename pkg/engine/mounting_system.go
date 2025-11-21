@@ -36,7 +36,6 @@ func NewMountingSystem(world *World) *MountingSystem {
 // Update synchronizes rider positions with their mounted vehicles.
 func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Check if entity is mounted on a vehicle
 		mountComp, isMounted := entity.GetComponent("mount")
 		if !isMounted {
 			continue
@@ -47,44 +46,70 @@ func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// Find the vehicle entity
-		vehicle := ms.findEntity(entities, mount.MountedEntityID)
-		if vehicle == nil {
-			// Vehicle no longer exists - dismount
-			ms.forceDismount(entity)
-			continue
-		}
-
-		// Get vehicle position
-		vehiclePosComp, hasVehiclePos := vehicle.GetComponent("position")
-		if !hasVehiclePos {
-			continue
-		}
-		vehiclePos, ok := vehiclePosComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Update rider position to match vehicle + offset
-		riderPosComp, hasRiderPos := entity.GetComponent("position")
-		if hasRiderPos {
-			if riderPos, ok := riderPosComp.(*PositionComponent); ok {
-				riderPos.X = vehiclePos.X + mount.MountOffset.X
-				riderPos.Y = vehiclePos.Y + mount.MountOffset.Y
-			}
-		}
-
-		// Synchronize rider rotation with vehicle
-		vehicleRotComp, hasVehicleRot := vehicle.GetComponent("rotation")
-		riderRotComp, hasRiderRot := entity.GetComponent("rotation")
-		if hasVehicleRot && hasRiderRot {
-			if vehicleRot, ok := vehicleRotComp.(*RotationComponent); ok {
-				if riderRot, ok := riderRotComp.(*RotationComponent); ok {
-					riderRot.Angle = vehicleRot.Angle
-				}
-			}
-		}
+		ms.processMountedEntity(entity, mount, entities)
 	}
+}
+
+// processMountedEntity handles the logic for a single mounted entity.
+func (ms *MountingSystem) processMountedEntity(entity *Entity, mount *MountComponent, entities []*Entity) {
+	vehicle := ms.findEntity(entities, mount.MountedEntityID)
+	if vehicle == nil {
+		ms.forceDismount(entity)
+		return
+	}
+
+	vehiclePos := ms.getVehiclePosition(vehicle)
+	if vehiclePos == nil {
+		return
+	}
+
+	ms.syncRiderPosition(entity, vehiclePos, mount)
+	ms.syncRiderRotation(entity, vehicle)
+}
+
+// getVehiclePosition retrieves and validates the vehicle's position component.
+func (ms *MountingSystem) getVehiclePosition(vehicle *Entity) *PositionComponent {
+	vehiclePosComp, hasVehiclePos := vehicle.GetComponent("position")
+	if !hasVehiclePos {
+		return nil
+	}
+	vehiclePos, ok := vehiclePosComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return vehiclePos
+}
+
+// syncRiderPosition updates the rider's position to match the vehicle with offset.
+func (ms *MountingSystem) syncRiderPosition(entity *Entity, vehiclePos *PositionComponent, mount *MountComponent) {
+	riderPosComp, hasRiderPos := entity.GetComponent("position")
+	if !hasRiderPos {
+		return
+	}
+	riderPos, ok := riderPosComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+	riderPos.X = vehiclePos.X + mount.MountOffset.X
+	riderPos.Y = vehiclePos.Y + mount.MountOffset.Y
+}
+
+// syncRiderRotation synchronizes the rider's rotation with the vehicle.
+func (ms *MountingSystem) syncRiderRotation(entity, vehicle *Entity) {
+	vehicleRotComp, hasVehicleRot := vehicle.GetComponent("rotation")
+	riderRotComp, hasRiderRot := entity.GetComponent("rotation")
+	if !hasVehicleRot || !hasRiderRot {
+		return
+	}
+	vehicleRot, ok := vehicleRotComp.(*RotationComponent)
+	if !ok {
+		return
+	}
+	riderRot, ok := riderRotComp.(*RotationComponent)
+	if !ok {
+		return
+	}
+	riderRot.Angle = vehicleRot.Angle
 }
 
 // Mount attempts to mount a rider entity onto a vehicle entity.

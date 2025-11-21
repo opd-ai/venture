@@ -60,77 +60,112 @@ func (s *HazardSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Update zone tracker (handles expiration and fading)
+	s.updateZoneTracker(deltaTime)
+	hazards := s.world.GetEntitiesWith("hazard")
+
+	for _, hazardEntity := range hazards {
+		s.processHazardEntity(hazardEntity, deltaTime)
+	}
+
+	s.applyZoneEffects(deltaTime)
+}
+
+// updateZoneTracker updates the zone tracker and logs expired zones.
+func (s *HazardSystem) updateZoneTracker(deltaTime float64) {
 	removed := s.zoneTracker.Update(deltaTime)
 	if s.logger != nil && removed > 0 {
 		s.logger.WithField("removed", removed).Debug("expired hazard zones removed")
 	}
+}
 
-	// Find all hazard entities
-	hazards := s.world.GetEntitiesWith("hazard")
-
-	for _, hazardEntity := range hazards {
-		// Get hazard component
-		hazComp, ok := hazardEntity.GetComponent("hazard")
-		if !ok {
-			continue
-		}
-		hazard, ok := hazComp.(*HazardComponent)
-		if !ok {
-			continue
-		}
-
-		// Update hazard duration
-		hazard.Update(deltaTime)
-
-		// Check if hazard should be removed
-		if hazard.ShouldRemove() {
-			// Remove from zone tracker
-			s.zoneTracker.RemoveZone(hazardEntity.ID)
-			// Remove entity
-			s.world.RemoveEntity(hazardEntity.ID)
-			continue
-		}
-
-		// Get hazard position
-		hazPosComp, ok := hazardEntity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		hazPos, ok := hazPosComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Sync zone tracker with current hazard state
-		zone, exists := s.zoneTracker.GetZone(hazardEntity.ID)
-		if !exists {
-			// Zone not tracked yet, add it
-			zone = &HazardZone{
-				ID:                 hazardEntity.ID,
-				X:                  hazPos.X,
-				Y:                  hazPos.Y,
-				Radius:             hazard.Radius,
-				HazardType:         hazard.HazardType,
-				DamagePerSecond:    hazard.DamagePerSecond,
-				MovementMultiplier: hazard.MovementMultiplier,
-				RemainingDuration:  hazard.Duration,
-			}
-			if !s.zoneTracker.AddZone(zone) {
-				if s.logger != nil {
-					s.logger.Warn("failed to add zone (max limit reached)")
-				}
-			}
-		} else {
-			// Update existing zone with current hazard state
-			zone.X = hazPos.X
-			zone.Y = hazPos.Y
-			zone.RemainingDuration = hazard.Duration
-		}
+// processHazardEntity processes a single hazard entity's lifecycle and zone sync.
+func (s *HazardSystem) processHazardEntity(hazardEntity *Entity, deltaTime float64) {
+	hazard := s.getHazardComponent(hazardEntity)
+	if hazard == nil {
+		return
 	}
 
-	// Apply hazard effects to entities using zone tracker
-	s.applyZoneEffects(deltaTime)
+	hazard.Update(deltaTime)
+
+	if hazard.ShouldRemove() {
+		s.removeHazard(hazardEntity)
+		return
+	}
+
+	s.syncHazardZone(hazardEntity, hazard)
+}
+
+// getHazardComponent retrieves and validates the hazard component.
+func (s *HazardSystem) getHazardComponent(hazardEntity *Entity) *HazardComponent {
+	hazComp, ok := hazardEntity.GetComponent("hazard")
+	if !ok {
+		return nil
+	}
+	hazard, ok := hazComp.(*HazardComponent)
+	if !ok {
+		return nil
+	}
+	return hazard
+}
+
+// removeHazard removes a hazard entity and its zone from tracking.
+func (s *HazardSystem) removeHazard(hazardEntity *Entity) {
+	s.zoneTracker.RemoveZone(hazardEntity.ID)
+	s.world.RemoveEntity(hazardEntity.ID)
+}
+
+// syncHazardZone synchronizes the zone tracker with the current hazard state.
+func (s *HazardSystem) syncHazardZone(hazardEntity *Entity, hazard *HazardComponent) {
+	hazPos := s.getHazardPosition(hazardEntity)
+	if hazPos == nil {
+		return
+	}
+
+	zone, exists := s.zoneTracker.GetZone(hazardEntity.ID)
+	if !exists {
+		s.addNewZone(hazardEntity, hazard, hazPos)
+	} else {
+		s.updateExistingZone(zone, hazard, hazPos)
+	}
+}
+
+// getHazardPosition retrieves and validates the hazard's position component.
+func (s *HazardSystem) getHazardPosition(hazardEntity *Entity) *PositionComponent {
+	hazPosComp, ok := hazardEntity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	hazPos, ok := hazPosComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return hazPos
+}
+
+// addNewZone creates a new zone in the tracker for a hazard entity.
+func (s *HazardSystem) addNewZone(hazardEntity *Entity, hazard *HazardComponent, hazPos *PositionComponent) {
+	zone := &HazardZone{
+		ID:                 hazardEntity.ID,
+		X:                  hazPos.X,
+		Y:                  hazPos.Y,
+		Radius:             hazard.Radius,
+		HazardType:         hazard.HazardType,
+		DamagePerSecond:    hazard.DamagePerSecond,
+		MovementMultiplier: hazard.MovementMultiplier,
+		RemainingDuration:  hazard.Duration,
+	}
+	if !s.zoneTracker.AddZone(zone) {
+		if s.logger != nil {
+			s.logger.Warn("failed to add zone (max limit reached)")
+		}
+	}
+}
+
+// updateExistingZone updates an existing zone with current hazard state.
+func (s *HazardSystem) updateExistingZone(zone *HazardZone, hazard *HazardComponent, hazPos *PositionComponent) {
+	zone.X = hazPos.X
+	zone.Y = hazPos.Y
+	zone.RemainingDuration = hazard.Duration
 }
 
 // applyZoneEffects applies hazard effects to entities using zone tracker.

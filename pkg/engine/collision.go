@@ -525,55 +525,69 @@ func (s *CollisionSystem) resolveTerrainCollision(entity *Entity) {
 		return
 	}
 
-	// Try to find a valid position by moving away from walls
-	// Check 8 directions around the entity
+	if s.findValidPosition(entity, pos, collider) {
+		return
+	}
+
+	s.stopAllMovement(entity)
+}
+
+// findValidPosition attempts to find a valid position by pushing away from walls.
+// Returns true if a valid position was found, false otherwise.
+func (s *CollisionSystem) findValidPosition(entity *Entity, pos *PositionComponent, collider *ColliderComponent) bool {
 	directions := []struct{ dx, dy float64 }{
 		{-1, 0}, {1, 0}, {0, -1}, {0, 1}, // Cardinal directions
 		{-1, -1}, {1, -1}, {-1, 1}, {1, 1}, // Diagonal directions
 	}
 
 	originalX, originalY := pos.X, pos.Y
-	pushDistance := 2.0 // Pixels to push away from wall
+	pushDistance := 2.0
 
 	for _, dir := range directions {
 		testX := originalX + dir.dx*pushDistance
 		testY := originalY + dir.dy*pushDistance
 
-		// Check if this position is clear of terrain walls
 		if !s.terrainChecker.CheckCollision(testX, testY, collider.Width, collider.Height) {
 			pos.X = testX
 			pos.Y = testY
-
-			// Stop movement in the blocked direction
-			if entity.HasComponent("velocity") {
-				vel, _ := entity.GetComponent("velocity")
-				velocity, ok := vel.(*VelocityComponent)
-				if !ok {
-					return
-				}
-
-				// Stop velocity component that's moving into the wall
-				if dir.dx != 0 {
-					velocity.VX = 0
-				}
-				if dir.dy != 0 {
-					velocity.VY = 0
-				}
-			}
-			return
+			s.stopBlockedMovement(entity, dir.dx, dir.dy)
+			return true
 		}
 	}
 
-	// If no direction works, stop all movement
-	if entity.HasComponent("velocity") {
-		vel, _ := entity.GetComponent("velocity")
-		velocity, ok := vel.(*VelocityComponent)
-		if !ok {
-			return
-		}
+	return false
+}
+
+// stopBlockedMovement stops velocity components that are moving into a wall.
+func (s *CollisionSystem) stopBlockedMovement(entity *Entity, dx, dy float64) {
+	if !entity.HasComponent("velocity") {
+		return
+	}
+	vel, _ := entity.GetComponent("velocity")
+	velocity, ok := vel.(*VelocityComponent)
+	if !ok {
+		return
+	}
+	if dx != 0 {
 		velocity.VX = 0
+	}
+	if dy != 0 {
 		velocity.VY = 0
 	}
+}
+
+// stopAllMovement stops all velocity components of an entity.
+func (s *CollisionSystem) stopAllMovement(entity *Entity) {
+	if !entity.HasComponent("velocity") {
+		return
+	}
+	vel, _ := entity.GetComponent("velocity")
+	velocity, ok := vel.(*VelocityComponent)
+	if !ok {
+		return
+	}
+	velocity.VX = 0
+	velocity.VY = 0
 }
 
 // CheckCollision checks if two entities are colliding.

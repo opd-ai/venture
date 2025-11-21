@@ -578,6 +578,25 @@ func (g *Generator) luminance(c color.RGBA) float64 {
 
 // Validate checks if the generated texture meets quality requirements.
 func (g *Generator) Validate(img *image.RGBA) error {
+	if err := g.validateImageBasics(img); err != nil {
+		return err
+	}
+
+	bounds := img.Bounds()
+	avgR, avgG, avgB, err := g.calculateAverageColor(img, bounds)
+	if err != nil {
+		return err
+	}
+
+	if err := g.checkColorVariation(img, bounds, avgR, avgG, avgB); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateImageBasics checks basic image validity (nil check and dimensions).
+func (g *Generator) validateImageBasics(img *image.RGBA) error {
 	if img == nil {
 		return fmt.Errorf("texture image is nil")
 	}
@@ -587,14 +606,18 @@ func (g *Generator) Validate(img *image.RGBA) error {
 		return fmt.Errorf("texture has invalid dimensions: %dx%d", bounds.Dx(), bounds.Dy())
 	}
 
-	// Check for sufficient variation (not a solid color)
-	// Sample a few pixels to check variation
+	return nil
+}
+
+// calculateAverageColor computes the average color of sampled pixels.
+func (g *Generator) calculateAverageColor(img *image.RGBA, bounds image.Rectangle) (uint8, uint8, uint8, error) {
 	var sumR, sumG, sumB, sumA uint32
 	sampleCount := 0
 	step := bounds.Dy() / 4
 	if step == 0 {
 		step = 1
 	}
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
 		stepX := bounds.Dx() / 4
 		if stepX == 0 {
@@ -611,15 +634,23 @@ func (g *Generator) Validate(img *image.RGBA) error {
 	}
 
 	if sampleCount == 0 {
-		return fmt.Errorf("no pixels sampled for validation")
+		return 0, 0, 0, fmt.Errorf("no pixels sampled for validation")
 	}
 
-	// Calculate average color
 	avgR := uint8(sumR / uint32(sampleCount))
 	avgG := uint8(sumG / uint32(sampleCount))
 	avgB := uint8(sumB / uint32(sampleCount))
 
-	// Check if all sampled pixels are nearly identical (solid color)
+	return avgR, avgG, avgB, nil
+}
+
+// checkColorVariation validates that the image has sufficient color variation.
+func (g *Generator) checkColorVariation(img *image.RGBA, bounds image.Rectangle, avgR, avgG, avgB uint8) error {
+	step := bounds.Dy() / 4
+	if step == 0 {
+		step = 1
+	}
+
 	allSame := true
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
 		stepX := bounds.Dx() / 4
@@ -628,7 +659,6 @@ func (g *Generator) Validate(img *image.RGBA) error {
 		}
 		for x := bounds.Min.X; x < bounds.Max.X; x += stepX {
 			c := img.RGBAAt(x, y)
-			// Allow 5% variation
 			if math.Abs(float64(c.R)-float64(avgR)) > float64(avgR)*0.05 ||
 				math.Abs(float64(c.G)-float64(avgG)) > float64(avgG)*0.05 ||
 				math.Abs(float64(c.B)-float64(avgB)) > float64(avgB)*0.05 {

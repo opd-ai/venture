@@ -249,9 +249,40 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPosition {
 	startTime := time.Now()
 
+	if !s.validateLightCollection(len(entities)) {
+		return s.visibleLights
+	}
+
+	s.visibleLights = s.visibleLights[:0]
+	metrics := s.initLightMetrics()
+
+	for _, entity := range entities {
+		if len(s.visibleLights) >= s.config.MaxLights {
+			s.logMaxLightsReached(metrics)
+			break
+		}
+
+		light, pos, skip := s.extractLightAndPosition(entity, metrics)
+		if skip {
+			continue
+		}
+
+		if !s.isLightVisibleInViewport(entity, pos, light, metrics) {
+			continue
+		}
+
+		s.addVisibleLight(entity, light, pos)
+	}
+
+	s.logLightCollectionComplete(metrics, len(entities), startTime)
+	return s.visibleLights
+}
+
+// validateLightCollection performs initial validation for light collection.
+func (s *LightingSystem) validateLightCollection(entityCount int) bool {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_count":  len(entities),
+			"entity_count":  entityCount,
 			"enabled":       s.config.Enabled,
 			"viewport_set":  s.viewportSet,
 			"max_lights":    s.config.MaxLights,
@@ -259,119 +290,128 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPo
 		}).Debug("Collecting visible lights")
 	}
 
-	s.visibleLights = s.visibleLights[:0]
-
 	if !s.config.Enabled {
 		if s.logger != nil {
 			s.logger.Debug("Lighting disabled, returning empty light collection")
 		}
-		return s.visibleLights
+		return false
+	}
+	return true
+}
+
+// lightMetrics tracks statistics during light collection.
+type lightMetrics struct {
+	totalLights     int
+	culledLights    int
+	disabledLights  int
+	missingPosition int
+}
+
+// initLightMetrics creates a new lightMetrics instance.
+func (s *LightingSystem) initLightMetrics() *lightMetrics {
+	return &lightMetrics{}
+}
+
+// extractLightAndPosition extracts light and position components from entity.
+func (s *LightingSystem) extractLightAndPosition(entity *Entity, metrics *lightMetrics) (*LightComponent, *PositionComponent, bool) {
+	lightComp, hasLight := entity.GetComponent("light")
+	if !hasLight {
+		return nil, nil, true
 	}
 
-	totalLights := 0
-	culledLights := 0
-	disabledLights := 0
-	missingPosition := 0
-
-	for _, entity := range entities {
-		// Get light component
-		lightComp, hasLight := entity.GetComponent("light")
-		if !hasLight {
-			continue
+	light, ok := lightComp.(*LightComponent)
+	if !ok || !light.Enabled {
+		if !ok || !light.Enabled {
+			metrics.disabledLights++
 		}
+		return nil, nil, true
+	}
 
-		light, ok := lightComp.(*LightComponent)
-		if !ok {
-			continue
+	metrics.totalLights++
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		metrics.missingPosition++
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("Light entity missing position component")
 		}
+		return nil, nil, true
+	}
 
-		if !light.Enabled {
-			disabledLights++
-			continue
-		}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, true
+	}
 
-		totalLights++
+	return light, pos, false
+}
 
-		// Get position
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			missingPosition++
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": entity.ID,
-				}).Warn("Light entity missing position component")
-			}
-			continue
-		}
-
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Viewport culling (if viewport is set)
-		if s.viewportSet {
-			if !s.isLightInViewport(pos.X, pos.Y, light.Radius) {
-				culledLights++
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id": entity.ID,
-						"x":         pos.X,
-						"y":         pos.Y,
-						"radius":    light.Radius,
-					}).Debug("Light culled (outside viewport)")
-				}
-				continue
-			}
-		}
-
-		// Add to visible lights
-		s.visibleLights = append(s.visibleLights, &lightWithPosition{
-			light: light,
-			x:     pos.X,
-			y:     pos.Y,
-		})
-
+// isLightVisibleInViewport checks if light is visible in viewport.
+func (s *LightingSystem) isLightVisibleInViewport(entity *Entity, pos *PositionComponent, light *LightComponent, metrics *lightMetrics) bool {
+	if s.viewportSet && !s.isLightInViewport(pos.X, pos.Y, light.Radius) {
+		metrics.culledLights++
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id": entity.ID,
 				"x":         pos.X,
 				"y":         pos.Y,
 				"radius":    light.Radius,
-				"intensity": light.GetCurrentIntensity(),
-			}).Debug("Light added to visible collection")
+			}).Debug("Light culled (outside viewport)")
 		}
-
-		// Limit to MaxLights
-		if len(s.visibleLights) >= s.config.MaxLights {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"max_lights":     s.config.MaxLights,
-					"total_lights":   totalLights,
-					"culled_lights":  culledLights,
-					"visible_lights": len(s.visibleLights),
-				}).Warn("Reached maximum light limit")
-			}
-			break
-		}
+		return false
 	}
+	return true
+}
 
+// addVisibleLight adds a light to the visible lights collection.
+func (s *LightingSystem) addVisibleLight(entity *Entity, light *LightComponent, pos *PositionComponent) {
+	s.visibleLights = append(s.visibleLights, &lightWithPosition{
+		light: light,
+		x:     pos.X,
+		y:     pos.Y,
+	})
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"x":         pos.X,
+			"y":         pos.Y,
+			"radius":    light.Radius,
+			"intensity": light.GetCurrentIntensity(),
+		}).Debug("Light added to visible collection")
+	}
+}
+
+// logMaxLightsReached logs when maximum light limit is reached.
+func (s *LightingSystem) logMaxLightsReached(metrics *lightMetrics) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"max_lights":     s.config.MaxLights,
+			"total_lights":   metrics.totalLights,
+			"culled_lights":  metrics.culledLights,
+			"visible_lights": len(s.visibleLights),
+		}).Warn("Reached maximum light limit")
+	}
+}
+
+// logLightCollectionComplete logs the completion of light collection.
+func (s *LightingSystem) logLightCollectionComplete(metrics *lightMetrics, entityCount int, startTime time.Time) {
 	duration := time.Since(startTime)
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"total_lights":     totalLights,
-			"culled_lights":    culledLights,
-			"disabled_lights":  disabledLights,
-			"missing_position": missingPosition,
+			"total_lights":     metrics.totalLights,
+			"culled_lights":    metrics.culledLights,
+			"disabled_lights":  metrics.disabledLights,
+			"missing_position": metrics.missingPosition,
 			"visible_lights":   len(s.visibleLights),
 			"duration_ms":      duration.Milliseconds(),
 			"duration_us":      duration.Microseconds(),
-			"entities_checked": len(entities),
+			"entities_checked": entityCount,
 			"viewport_culling": s.viewportSet,
 		}).Debug("Light collection complete")
 	}
-
-	return s.visibleLights
 }
 
 // isLightInViewport checks if a light affects the viewport.
@@ -447,10 +487,38 @@ func (s *LightingSystem) ClearAmbientLightCache() {
 func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, entities []*Entity) {
 	startTime := time.Now()
 
+	if !s.validateLightingSetup(renderedScene, len(entities)) {
+		screen.DrawImage(renderedScene, nil)
+		return
+	}
+
+	collectStart := time.Now()
+	lights := s.CollectVisibleLights(entities)
+	collectDuration := time.Since(collectStart)
+
+	ambientIntensity, ambientColor, usedCachedAmbient := s.getCachedAmbientLight()
+
+	if s.shouldSkipLighting(lights, ambientIntensity, startTime) {
+		screen.DrawImage(renderedScene, nil)
+		return
+	}
+
+	w, h := renderedScene.Size()
+	bufferResized := s.createOrResizeLightingBuffer(w, h)
+
+	lightsApplied := s.applyAmbientAndPointLights(renderedScene, lights, ambientIntensity, ambientColor, usedCachedAmbient, bufferResized, collectDuration)
+
+	screen.DrawImage(s.lightingBuffer, nil)
+
+	s.logLightingComplete(lightsApplied, startTime, collectDuration, ambientIntensity, bufferResized)
+}
+
+// validateLightingSetup performs initial validation and logging for lighting application.
+func (s *LightingSystem) validateLightingSetup(renderedScene *ebiten.Image, entityCount int) bool {
 	if s.logger != nil {
 		w, h := renderedScene.Size()
 		s.logger.WithFields(logrus.Fields{
-			"entity_count": len(entities),
+			"entity_count": entityCount,
 			"scene_width":  w,
 			"scene_height": h,
 			"enabled":      s.config.Enabled,
@@ -461,21 +529,17 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 		if s.logger != nil {
 			s.logger.Debug("Lighting disabled, drawing scene directly")
 		}
-		screen.DrawImage(renderedScene, nil)
-		return
+		return false
 	}
+	return true
+}
 
-	// Collect visible lights
-	collectStart := time.Now()
-	lights := s.CollectVisibleLights(entities)
-	collectDuration := time.Since(collectStart)
-
-	// Get ambient light from cache or config defaults
+// getCachedAmbientLight retrieves ambient light from cache or config defaults.
+func (s *LightingSystem) getCachedAmbientLight() (float64, color.RGBA, bool) {
 	ambientIntensity := s.config.AmbientIntensity
 	ambientColor := s.config.AmbientColor
 	usedCachedAmbient := false
 
-	// Try cached ambient light entity first
 	if s.ambientLightCached {
 		if entity, ok := s.world.GetEntity(s.ambientLightEntityID); ok {
 			if ambComp, ok := entity.GetComponent("ambient_light"); ok {
@@ -499,7 +563,11 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 		}
 	}
 
-	// If no lights and high ambient, just draw normally
+	return ambientIntensity, ambientColor, usedCachedAmbient
+}
+
+// shouldSkipLighting determines if lighting can be skipped for performance.
+func (s *LightingSystem) shouldSkipLighting(lights []*lightWithPosition, ambientIntensity float64, startTime time.Time) bool {
 	if len(lights) == 0 && ambientIntensity > 0.8 {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -507,7 +575,6 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 				"light_count":       0,
 			}).Debug("Skipping lighting (high ambient, no lights)")
 		}
-		screen.DrawImage(renderedScene, nil)
 		duration := time.Since(startTime)
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -515,11 +582,13 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 				"duration_us": duration.Microseconds(),
 			}).Debug("Lighting skipped (fast path)")
 		}
-		return
+		return true
 	}
+	return false
+}
 
-	// Create lighting buffer if needed
-	w, h := renderedScene.Size()
+// createOrResizeLightingBuffer creates or resizes the lighting buffer as needed.
+func (s *LightingSystem) createOrResizeLightingBuffer(w, h int) bool {
 	bufferResized := false
 	if s.lightingBuffer == nil || s.lightingBuffer.Bounds().Dx() != w || s.lightingBuffer.Bounds().Dy() != h {
 		previousW, previousH := 0, 0
@@ -538,12 +607,13 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 			}).Debug("Created/resized lighting buffer")
 		}
 	}
+	return bufferResized
+}
 
-	// Calculate lighting (simplified version - full per-pixel lighting would be more complex)
-	// For now, we'll use a blend approach with colored overlays
+// applyAmbientAndPointLights applies ambient lighting and point lights to the scene.
+func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image, lights []*lightWithPosition, ambientIntensity float64, ambientColor color.RGBA, usedCachedAmbient, bufferResized bool, collectDuration time.Duration) int {
 	s.lightingBuffer.Clear()
 
-	// Apply ambient base
 	ambR := float64(ambientColor.R) / 255.0 * ambientIntensity
 	ambG := float64(ambientColor.G) / 255.0 * ambientIntensity
 	ambB := float64(ambientColor.B) / 255.0 * ambientIntensity
@@ -561,23 +631,21 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 		}).Debug("Applying lighting calculations")
 	}
 
-	// Draw rendered scene with ambient modulation
 	opts := &ebiten.DrawImageOptions{}
 	opts.ColorScale.Scale(float32(ambR), float32(ambG), float32(ambB), 1.0)
 	s.lightingBuffer.DrawImage(renderedScene, opts)
 
-	// Apply point lights additively
-	// Note: Full lighting would require shader support or per-pixel calculations
-	// This is a simplified version using additive blending
 	lightsApplied := 0
 	for _, lwp := range lights {
 		s.applyPointLight(s.lightingBuffer, renderedScene, lwp)
 		lightsApplied++
 	}
 
-	// Draw final result to screen
-	screen.DrawImage(s.lightingBuffer, nil)
+	return lightsApplied
+}
 
+// logLightingComplete logs the completion of lighting application.
+func (s *LightingSystem) logLightingComplete(lightsApplied int, startTime time.Time, collectDuration time.Duration, ambientIntensity float64, bufferResized bool) {
 	duration := time.Since(startTime)
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

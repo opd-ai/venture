@@ -624,48 +624,39 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 		}).Debug("Searching for nearest injured ally")
 	}
 
+	casterTeamID := s.getCasterTeamID(caster)
 	entities := s.world.GetEntities()
-	var nearestAlly *Entity
-	minDist := maxRange
+	nearestAlly, minDist := s.searchNearestInjuredAlly(caster, entities, casterTeamID, maxRange)
 
-	// Get caster's team
+	s.logSearchResult(caster, nearestAlly, minDist)
+	return nearestAlly
+}
+
+// getCasterTeamID extracts the team ID from the caster entity.
+func (s *SpellCastingSystem) getCasterTeamID(caster *Entity) int {
 	var casterTeamID int
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
 		if team, ok := teamComp.(*TeamComponent); ok {
 			casterTeamID = team.TeamID
 		}
 	}
+	return casterTeamID
+}
+
+// searchNearestInjuredAlly searches for the nearest injured ally within range.
+func (s *SpellCastingSystem) searchNearestInjuredAlly(caster *Entity, entities []*Entity, casterTeamID int, maxRange float64) (*Entity, float64) {
+	var nearestAlly *Entity
+	minDist := maxRange
 
 	for _, entity := range entities {
 		if entity == caster {
 			continue
 		}
 
-		// Check if ally
-		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
-			team, ok := teamComp.(*TeamComponent)
-			if !ok || !team.IsAlly(casterTeamID) {
-				continue
-			}
-		} else {
-			// No team component - skip
+		if !s.isValidInjuredAlly(entity, casterTeamID) {
 			continue
 		}
 
-		// Check if injured
-		healthComp, hasHealth := entity.GetComponent("health")
-		if !hasHealth {
-			continue
-		}
-		health, ok := healthComp.(*HealthComponent)
-		if !ok {
-			continue
-		}
-		if health.Current >= health.Max {
-			continue // At full health
-		}
-
-		// Check distance
 		dist := GetDistance(caster, entity)
 		if dist <= minDist {
 			nearestAlly = entity
@@ -673,6 +664,36 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 		}
 	}
 
+	return nearestAlly, minDist
+}
+
+// isValidInjuredAlly checks if entity is an ally and injured.
+func (s *SpellCastingSystem) isValidInjuredAlly(entity *Entity, casterTeamID int) bool {
+	teamComp, hasTeam := entity.GetComponent("team")
+	if !hasTeam {
+		return false
+	}
+
+	team, ok := teamComp.(*TeamComponent)
+	if !ok || !team.IsAlly(casterTeamID) {
+		return false
+	}
+
+	healthComp, hasHealth := entity.GetComponent("health")
+	if !hasHealth {
+		return false
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return false
+	}
+
+	return health.Current < health.Max
+}
+
+// logSearchResult logs the result of the nearest ally search.
+func (s *SpellCastingSystem) logSearchResult(caster, nearestAlly *Entity, minDist float64) {
 	if s.logger != nil {
 		if nearestAlly != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -686,8 +707,6 @@ func (s *SpellCastingSystem) findNearestInjuredAlly(caster *Entity, maxRange flo
 			}).Debug("No injured ally found in range")
 		}
 	}
-
-	return nearestAlly
 }
 
 // findAlliesInRange finds all allies within range.

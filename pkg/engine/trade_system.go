@@ -42,31 +42,48 @@ func NewTradeSystem(world *World) *TradeSystem {
 // ProposeTrade initiates a trade between two players.
 // Returns error if proximity, trust, or ownership validation fails.
 func (ts *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemIDs, requestedItemIDs []string) error {
+	proposer, recipient, err := ts.validateProposalParticipants(proposerID, recipientID)
+	if err != nil {
+		return err
+	}
+
+	proposerTrade := ts.getOrCreateTradeComponent(proposer)
+	recipientTrade := ts.getOrCreateTradeComponent(recipient)
+
+	if err := ts.validateOfferedItems(proposer, proposerTrade, offeredItemIDs); err != nil {
+		return err
+	}
+
+	if err := ts.validateRequestedItems(recipient, recipientTrade, requestedItemIDs); err != nil {
+		return err
+	}
+
+	ts.createTradeProposal(proposerID, recipientID, proposerTrade, recipientTrade, offeredItemIDs, requestedItemIDs)
+	return nil
+}
+
+// validateProposalParticipants validates that both entities exist and are in proximity.
+func (ts *TradeSystem) validateProposalParticipants(proposerID, recipientID uint64) (*Entity, *Entity, error) {
 	proposer, _ := ts.world.GetEntity(proposerID)
 	recipient, _ := ts.world.GetEntity(recipientID)
 
 	if proposer == nil || recipient == nil {
-		return fmt.Errorf("invalid entity IDs")
+		return nil, nil, fmt.Errorf("invalid entity IDs")
 	}
 
-	// Check proximity
 	if !ts.checkProximity(proposer, recipient, ProposalProximity) {
-		return fmt.Errorf("players too far apart (>%.1f tiles)", ProposalProximity)
+		return nil, nil, fmt.Errorf("players too far apart (>%.1f tiles)", ProposalProximity)
 	}
 
-	// Get trade components
-	proposerTrade := ts.getOrCreateTradeComponent(proposer)
-	recipientTrade := ts.getOrCreateTradeComponent(recipient)
+	return proposer, recipient, nil
+}
 
-	// Check for existing active trades
+// validateOfferedItems validates that proposer owns and can trade offered items.
+func (ts *TradeSystem) validateOfferedItems(proposer *Entity, proposerTrade *TradeComponent, offeredItemIDs []string) error {
 	if proposerTrade.ActiveTrade != nil {
 		return fmt.Errorf("proposer already has an active trade")
 	}
-	if recipientTrade.ActiveTrade != nil {
-		return fmt.Errorf("recipient already has an active trade")
-	}
 
-	// Validate offered items ownership
 	proposerInv := ts.getInventoryComponent(proposer)
 	if proposerInv == nil {
 		return fmt.Errorf("proposer has no inventory")
@@ -78,31 +95,43 @@ func (ts *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemI
 		}
 	}
 
-	// Check trust-based limits for proposer
 	if err := ts.checkTrustLimits(proposerTrade.TrustScore, proposerInv, offeredItemIDs); err != nil {
 		return fmt.Errorf("proposer trust check failed: %w", err)
 	}
 
-	// Validate requested items if recipient must provide them
-	if len(requestedItemIDs) > 0 {
-		recipientInv := ts.getInventoryComponent(recipient)
-		if recipientInv == nil {
-			return fmt.Errorf("recipient has no inventory")
-		}
+	return nil
+}
 
-		for _, itemID := range requestedItemIDs {
-			if !ts.ownsItem(recipientInv, itemID) {
-				return fmt.Errorf("recipient doesn't own requested item: %s", itemID)
-			}
-		}
+// validateRequestedItems validates that recipient owns and can trade requested items.
+func (ts *TradeSystem) validateRequestedItems(recipient *Entity, recipientTrade *TradeComponent, requestedItemIDs []string) error {
+	if recipientTrade.ActiveTrade != nil {
+		return fmt.Errorf("recipient already has an active trade")
+	}
 
-		// Check trust limits for recipient
-		if err := ts.checkTrustLimits(recipientTrade.TrustScore, recipientInv, requestedItemIDs); err != nil {
-			return fmt.Errorf("recipient trust check failed: %w", err)
+	if len(requestedItemIDs) == 0 {
+		return nil
+	}
+
+	recipientInv := ts.getInventoryComponent(recipient)
+	if recipientInv == nil {
+		return fmt.Errorf("recipient has no inventory")
+	}
+
+	for _, itemID := range requestedItemIDs {
+		if !ts.ownsItem(recipientInv, itemID) {
+			return fmt.Errorf("recipient doesn't own requested item: %s", itemID)
 		}
 	}
 
-	// Create proposal
+	if err := ts.checkTrustLimits(recipientTrade.TrustScore, recipientInv, requestedItemIDs); err != nil {
+		return fmt.Errorf("recipient trust check failed: %w", err)
+	}
+
+	return nil
+}
+
+// createTradeProposal creates and assigns a trade proposal to both participants.
+func (ts *TradeSystem) createTradeProposal(proposerID, recipientID uint64, proposerTrade, recipientTrade *TradeComponent, offeredItemIDs, requestedItemIDs []string) {
 	proposal := &TradeProposal{
 		ProposerID:     proposerID,
 		RecipientID:    recipientID,
@@ -114,8 +143,6 @@ func (ts *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemI
 
 	proposerTrade.ActiveTrade = proposal
 	recipientTrade.ActiveTrade = proposal
-
-	return nil
 }
 
 // AcceptTrade accepts a pending trade proposal.

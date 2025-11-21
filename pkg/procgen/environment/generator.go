@@ -917,43 +917,78 @@ func (g *Generator) drawMushroom(img *image.RGBA, width, height int, base, accen
 }
 
 func (g *Generator) drawSkull(img *image.RGBA, width, height int, base, accent color.Color) {
-	// Draw cranium (large oval)
+	g.drawCranium(img, width, height, base)
+	g.drawEyeSockets(img, width, height, accent)
+	g.drawNasalCavity(img, width, height, accent)
+}
+
+// drawCranium draws the skull cranium as a large oval.
+func (g *Generator) drawCranium(img *image.RGBA, width, height int, base color.Color) {
 	centerX, centerY := width/2, height/3
 	radiusX, radiusY := width/3, height/4
 	for y := 0; y < height*2/3; y++ {
 		for x := 0; x < width; x++ {
-			dx := float64(x - centerX)
-			dy := float64(y - centerY)
-			dist := (dx*dx)/float64(radiusX*radiusX) + (dy*dy)/float64(radiusY*radiusY)
-			if dist <= 1.0 {
+			if g.isInsideEllipse(x, y, centerX, centerY, radiusX, radiusY) {
 				img.Set(x, y, base)
 			}
 		}
 	}
+}
 
-	// Draw eye sockets (two circles)
+// isInsideEllipse checks if a point is inside an ellipse.
+func (g *Generator) isInsideEllipse(x, y, centerX, centerY, radiusX, radiusY int) bool {
+	dx := float64(x - centerX)
+	dy := float64(y - centerY)
+	dist := (dx*dx)/float64(radiusX*radiusX) + (dy*dy)/float64(radiusY*radiusY)
+	return dist <= 1.0
+}
+
+// drawEyeSockets draws two circular eye sockets.
+func (g *Generator) drawEyeSockets(img *image.RGBA, width, height int, accent color.Color) {
 	eyeY := height / 3
 	eyeRadius := width / 10
-	for _, eyeX := range []int{width / 3, width * 2 / 3} {
-		for y := eyeY - eyeRadius; y <= eyeY+eyeRadius; y++ {
-			for x := eyeX - eyeRadius; x <= eyeX+eyeRadius; x++ {
-				if x >= 0 && x < width && y >= 0 && y < height {
-					dx := x - eyeX
-					dy := y - eyeY
-					if dx*dx+dy*dy <= eyeRadius*eyeRadius {
-						img.Set(x, y, accent)
-					}
-				}
+	eyePositions := []int{width / 3, width * 2 / 3}
+
+	for _, eyeX := range eyePositions {
+		g.drawCircle(img, eyeX, eyeY, eyeRadius, width, height, accent)
+	}
+}
+
+// drawCircle draws a filled circle at the specified position.
+func (g *Generator) drawCircle(img *image.RGBA, centerX, centerY, radius, width, height int, c color.Color) {
+	for y := centerY - radius; y <= centerY+radius; y++ {
+		for x := centerX - radius; x <= centerX+radius; x++ {
+			if g.isInBounds(x, y, width, height) && g.isInsideCircle(x, y, centerX, centerY, radius) {
+				img.Set(x, y, c)
 			}
 		}
 	}
+}
 
-	// Draw nasal cavity (small triangle)
+// isInsideCircle checks if a point is inside a circle.
+func (g *Generator) isInsideCircle(x, y, centerX, centerY, radius int) bool {
+	dx := x - centerX
+	dy := y - centerY
+	return dx*dx+dy*dy <= radius*radius
+}
+
+// isInBounds checks if coordinates are within image bounds.
+func (g *Generator) isInBounds(x, y, width, height int) bool {
+	return x >= 0 && x < width && y >= 0 && y < height
+}
+
+// drawNasalCavity draws a triangular nasal cavity.
+func (g *Generator) drawNasalCavity(img *image.RGBA, width, height int, accent color.Color) {
 	noseY := height / 2
-	for y := noseY; y < noseY+height/8; y++ {
+	noseHeight := height / 8
+
+	for y := noseY; y < noseY+noseHeight; y++ {
 		yOffset := y - noseY
-		for x := width/2 - yOffset/2; x <= width/2+yOffset/2; x++ {
-			if x >= 0 && x < width && y < height {
+		xStart := width/2 - yOffset/2
+		xEnd := width/2 + yOffset/2
+
+		for x := xStart; x <= xEnd; x++ {
+			if g.isInBounds(x, y, width, height) {
 				img.Set(x, y, accent)
 			}
 		}

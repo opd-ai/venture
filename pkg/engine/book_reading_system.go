@@ -248,63 +248,88 @@ func (s *BookReadingSystem) unlockRecipe(player *Entity, book *BookComponent) er
 
 // checkSeriesCompletion checks if the player has completed any book series.
 func (s *BookReadingSystem) checkSeriesCompletion(player *Entity, library *LibraryComponent, newBook *BookComponent) error {
-	// Extract series name from book title (format: "Title - Volume N")
-	// For simplicity, we'll consider books with similar prefixes as part of a series
 	seriesName := extractSeriesName(newBook.Title)
 	if seriesName == "" {
-		return nil // Not part of a series
+		return nil
 	}
 
-	// Count books in this series
-	seriesBooks := 0
-	for _, bookID := range library.Books {
-		bookEntity, ok := s.world.GetEntity(bookID)
-		if !ok {
-			continue
-		}
-		bookComp, ok := bookEntity.GetComponent("book")
-		if !ok {
-			continue
-		}
-		book, ok := bookComp.(*BookComponent)
-		if !ok {
-			continue
-		}
-		if extractSeriesName(book.Title) == seriesName {
-			seriesBooks++
-		}
-	}
-
-	// Check if series is complete (requires 3+ books for completion bonus)
-	if seriesBooks >= 3 {
-		// Check if already marked as complete
-		if !library.Completions[seriesName] {
-			// Mark as complete
-			library.Completions[seriesName] = true
-
-			// Apply completion bonus (10% additional XP for future skill books in series)
-			s.seriesBonuses[seriesName] = 0.1
-
-			// Award immediate XP bonus
-			if expComp, ok := player.GetComponent("experience"); ok {
-				if experience, ok := expComp.(*ExperienceComponent); ok {
-					bonusXP := 100 * seriesBooks // 100 XP per book in series
-					experience.AddXP(bonusXP)
-
-					if s.logger != nil {
-						s.logger.WithFields(logrus.Fields{
-							"playerID":   player.ID,
-							"seriesName": seriesName,
-							"booksCount": seriesBooks,
-							"bonusXP":    bonusXP,
-						}).Info("book series completed!")
-					}
-				}
-			}
-		}
+	seriesBooks := s.countSeriesBooks(library, seriesName)
+	if s.shouldAwardCompletion(library, seriesName, seriesBooks) {
+		s.awardCompletionBonus(player, library, seriesName, seriesBooks)
 	}
 
 	return nil
+}
+
+// countSeriesBooks counts how many books in the library belong to the given series.
+func (s *BookReadingSystem) countSeriesBooks(library *LibraryComponent, seriesName string) int {
+	count := 0
+	for _, bookID := range library.Books {
+		if s.isBookInSeries(bookID, seriesName) {
+			count++
+		}
+	}
+	return count
+}
+
+// isBookInSeries checks if a book entity belongs to the specified series.
+func (s *BookReadingSystem) isBookInSeries(bookID uint64, seriesName string) bool {
+	bookEntity, ok := s.world.GetEntity(bookID)
+	if !ok {
+		return false
+	}
+	bookComp, ok := bookEntity.GetComponent("book")
+	if !ok {
+		return false
+	}
+	book, ok := bookComp.(*BookComponent)
+	if !ok {
+		return false
+	}
+	return extractSeriesName(book.Title) == seriesName
+}
+
+// shouldAwardCompletion checks if series completion bonus should be awarded.
+func (s *BookReadingSystem) shouldAwardCompletion(library *LibraryComponent, seriesName string, seriesBooks int) bool {
+	return seriesBooks >= 3 && !library.Completions[seriesName]
+}
+
+// awardCompletionBonus awards XP and marks a book series as complete.
+func (s *BookReadingSystem) awardCompletionBonus(player *Entity, library *LibraryComponent, seriesName string, seriesBooks int) {
+	library.Completions[seriesName] = true
+	s.seriesBonuses[seriesName] = 0.1
+
+	experience := s.getPlayerExperience(player)
+	if experience != nil {
+		bonusXP := 100 * seriesBooks
+		experience.AddXP(bonusXP)
+		s.logSeriesCompletion(player.ID, seriesName, seriesBooks, bonusXP)
+	}
+}
+
+// getPlayerExperience retrieves the player's experience component.
+func (s *BookReadingSystem) getPlayerExperience(player *Entity) *ExperienceComponent {
+	expComp, ok := player.GetComponent("experience")
+	if !ok {
+		return nil
+	}
+	experience, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return nil
+	}
+	return experience
+}
+
+// logSeriesCompletion logs series completion information.
+func (s *BookReadingSystem) logSeriesCompletion(playerID uint64, seriesName string, booksCount, bonusXP int) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"playerID":   playerID,
+			"seriesName": seriesName,
+			"booksCount": booksCount,
+			"bonusXP":    bonusXP,
+		}).Info("book series completed!")
+	}
 }
 
 // extractSeriesName extracts the series name from a book title.

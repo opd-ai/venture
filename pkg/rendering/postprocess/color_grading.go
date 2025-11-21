@@ -21,77 +21,89 @@ func (p *Processor) ApplyColorGrading(img *image.RGBA) *image.RGBA {
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			c := img.RGBAAt(x, y)
-
-			// Convert to float 0.0-1.0
-			r := float64(c.R) / 255.0
-			g := float64(c.G) / 255.0
-			b := float64(c.B) / 255.0
-			a := float64(c.A) / 255.0
-
-			// Apply brightness
-			if config.Brightness != 0.0 {
-				r = clamp(r+config.Brightness, 0.0, 1.0)
-				g = clamp(g+config.Brightness, 0.0, 1.0)
-				b = clamp(b+config.Brightness, 0.0, 1.0)
-			}
-
-			// Apply contrast
-			if config.Contrast != 1.0 {
-				r = clamp((r-0.5)*config.Contrast+0.5, 0.0, 1.0)
-				g = clamp((g-0.5)*config.Contrast+0.5, 0.0, 1.0)
-				b = clamp((b-0.5)*config.Contrast+0.5, 0.0, 1.0)
-			}
-
-			// Apply saturation
-			if config.Saturation != 1.0 {
-				lum := luminance(r, g, b)
-				r = clamp(lerp(lum, r, config.Saturation), 0.0, 1.0)
-				g = clamp(lerp(lum, g, config.Saturation), 0.0, 1.0)
-				b = clamp(lerp(lum, b, config.Saturation), 0.0, 1.0)
-			}
-
-			// Apply temperature and tint
-			if config.Temperature != 0.0 || config.Tint != 0.0 {
-				// Temperature: negative = cooler (more blue), positive = warmer (more orange)
-				if config.Temperature < 0 {
-					// Cool (add blue, reduce red)
-					strength := -config.Temperature
-					r = clamp(r-strength*0.2, 0.0, 1.0)
-					b = clamp(b+strength*0.3, 0.0, 1.0)
-				} else if config.Temperature > 0 {
-					// Warm (add red/orange, reduce blue)
-					strength := config.Temperature
-					r = clamp(r+strength*0.3, 0.0, 1.0)
-					g = clamp(g+strength*0.15, 0.0, 1.0)
-					b = clamp(b-strength*0.2, 0.0, 1.0)
-				}
-
-				// Tint: negative = green, positive = magenta
-				if config.Tint < 0 {
-					// Green tint
-					strength := -config.Tint
-					g = clamp(g+strength*0.2, 0.0, 1.0)
-					r = clamp(r-strength*0.1, 0.0, 1.0)
-					b = clamp(b-strength*0.1, 0.0, 1.0)
-				} else if config.Tint > 0 {
-					// Magenta tint
-					strength := config.Tint
-					r = clamp(r+strength*0.2, 0.0, 1.0)
-					b = clamp(b+strength*0.2, 0.0, 1.0)
-					g = clamp(g-strength*0.15, 0.0, 1.0)
-				}
-			}
-
-			result.Set(x, y, color.RGBA{
-				R: clampUint8(r * 255.0),
-				G: clampUint8(g * 255.0),
-				B: clampUint8(b * 255.0),
-				A: clampUint8(a * 255.0),
-			})
+			r, g, b, a := p.processPixel(c, config)
+			result.Set(x, y, color.RGBA{R: r, G: g, B: b, A: a})
 		}
 	}
 
 	return result
+}
+
+// processPixel processes a single pixel with color grading adjustments.
+func (p *Processor) processPixel(c color.RGBA, config ColorGradingConfig) (r, g, b, a uint8) {
+	rf, gf, bf, af := normalizeColor(c)
+
+	rf, gf, bf = applyBrightnessAdjustment(rf, gf, bf, config.Brightness)
+	rf, gf, bf = applyContrastAdjustment(rf, gf, bf, config.Contrast)
+	rf, gf, bf = applySaturationAdjustment(rf, gf, bf, config.Saturation)
+	rf, gf, bf = applyTemperatureAndTint(rf, gf, bf, config.Temperature, config.Tint)
+
+	return clampUint8(rf * 255.0), clampUint8(gf * 255.0), clampUint8(bf * 255.0), clampUint8(af * 255.0)
+}
+
+// normalizeColor converts RGBA uint8 values to float64 in range 0.0-1.0.
+func normalizeColor(c color.RGBA) (r, g, b, a float64) {
+	return float64(c.R) / 255.0, float64(c.G) / 255.0, float64(c.B) / 255.0, float64(c.A) / 255.0
+}
+
+// applyBrightnessAdjustment applies brightness adjustment to RGB values.
+func applyBrightnessAdjustment(r, g, b, brightness float64) (float64, float64, float64) {
+	if brightness == 0.0 {
+		return r, g, b
+	}
+	return clamp(r+brightness, 0.0, 1.0), clamp(g+brightness, 0.0, 1.0), clamp(b+brightness, 0.0, 1.0)
+}
+
+// applyContrastAdjustment applies contrast adjustment to RGB values.
+func applyContrastAdjustment(r, g, b, contrast float64) (float64, float64, float64) {
+	if contrast == 1.0 {
+		return r, g, b
+	}
+	return clamp((r-0.5)*contrast+0.5, 0.0, 1.0), clamp((g-0.5)*contrast+0.5, 0.0, 1.0), clamp((b-0.5)*contrast+0.5, 0.0, 1.0)
+}
+
+// applySaturationAdjustment applies saturation adjustment to RGB values.
+func applySaturationAdjustment(r, g, b, saturation float64) (float64, float64, float64) {
+	if saturation == 1.0 {
+		return r, g, b
+	}
+	lum := luminance(r, g, b)
+	return clamp(lerp(lum, r, saturation), 0.0, 1.0), clamp(lerp(lum, g, saturation), 0.0, 1.0), clamp(lerp(lum, b, saturation), 0.0, 1.0)
+}
+
+// applyTemperatureAndTint applies temperature and tint adjustments to RGB values.
+func applyTemperatureAndTint(r, g, b, temperature, tint float64) (float64, float64, float64) {
+	if temperature == 0.0 && tint == 0.0 {
+		return r, g, b
+	}
+
+	r, g, b = applyTemperature(r, g, b, temperature)
+	r, g, b = applyTint(r, g, b, tint)
+	return r, g, b
+}
+
+// applyTemperature applies temperature adjustment (cool/warm).
+func applyTemperature(r, g, b, temperature float64) (float64, float64, float64) {
+	if temperature < 0 {
+		strength := -temperature
+		return clamp(r-strength*0.2, 0.0, 1.0), g, clamp(b+strength*0.3, 0.0, 1.0)
+	} else if temperature > 0 {
+		strength := temperature
+		return clamp(r+strength*0.3, 0.0, 1.0), clamp(g+strength*0.15, 0.0, 1.0), clamp(b-strength*0.2, 0.0, 1.0)
+	}
+	return r, g, b
+}
+
+// applyTint applies tint adjustment (green/magenta).
+func applyTint(r, g, b, tint float64) (float64, float64, float64) {
+	if tint < 0 {
+		strength := -tint
+		return clamp(r-strength*0.1, 0.0, 1.0), clamp(g+strength*0.2, 0.0, 1.0), clamp(b-strength*0.1, 0.0, 1.0)
+	} else if tint > 0 {
+		strength := tint
+		return clamp(r+strength*0.2, 0.0, 1.0), clamp(g-strength*0.15, 0.0, 1.0), clamp(b+strength*0.2, 0.0, 1.0)
+	}
+	return r, g, b
 }
 
 // ApplyGrayscale converts an image to grayscale using luminance.

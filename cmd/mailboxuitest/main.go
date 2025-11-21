@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image"
 	"image/png"
 	"os"
 	"time"
@@ -11,121 +12,169 @@ import (
 )
 
 func main() {
-	// Command-line flags
+	genreID, width, height, mode, output, verbose := parseFlags()
+
+	if err := validateGenre(*genreID); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	mailboxUI := setupMailboxUI(*genreID, *width, *height, *mode)
+
+	if *verbose {
+		displayMailboxInfo(*genreID, *width, *height, *mode, mailboxUI)
+	}
+
+	img := mailboxUI.Render()
+
+	if err := saveOutputImage(*output, img); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if *verbose {
+		displayNavigationHelp()
+		displayMessageStats(mailboxUI)
+		testNavigation(*mode, mailboxUI)
+	}
+}
+
+// parseFlags parses command-line flags and returns them.
+func parseFlags() (*string, *int, *int, *string, *string, *bool) {
 	genreID := flag.String("genre", "fantasy", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
 	width := flag.Int("width", 600, "Mailbox UI width")
 	height := flag.Int("height", 400, "Mailbox UI height")
 	mode := flag.String("mode", "inbox", "View mode (inbox, outbox, compose, detail)")
 	output := flag.String("output", "", "Output PNG file (optional)")
 	verbose := flag.Bool("verbose", false, "Verbose output")
-
 	flag.Parse()
+	return genreID, width, height, mode, output, verbose
+}
 
-	// Validate genre
+// validateGenre validates the genre parameter.
+func validateGenre(genreID string) error {
 	validGenres := map[string]bool{
 		"fantasy": true, "scifi": true, "horror": true,
 		"cyberpunk": true, "postapoc": true,
 	}
-	if !validGenres[*genreID] {
-		fmt.Printf("Error: Invalid genre '%s'. Valid genres: fantasy, scifi, horror, cyberpunk, postapoc\n", *genreID)
+	if !validGenres[genreID] {
+		return fmt.Errorf("Error: Invalid genre '%s'. Valid genres: fantasy, scifi, horror, cyberpunk, postapoc", genreID)
+	}
+	return nil
+}
+
+// setupMailboxUI creates and configures the mailbox UI.
+func setupMailboxUI(genreID string, width, height int, mode string) *engine.MailboxUI {
+	mailboxUI := engine.NewMailboxUI(0, 0, width, height, genreID)
+	mailComp := createSampleMailData()
+	mailboxUI.LoadFromMailComponent(mailComp)
+
+	if err := setViewMode(mailboxUI, mode); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// Create mailbox UI
-	mailboxUI := engine.NewMailboxUI(0, 0, *width, *height, *genreID)
+	return mailboxUI
+}
 
-	// Create sample mail data
-	mailComp := createSampleMailData()
-
-	// Load data into UI
-	mailboxUI.LoadFromMailComponent(mailComp)
-
-	// Set view mode
-	switch *mode {
+// setViewMode sets the mailbox UI view mode based on the mode string.
+func setViewMode(mailboxUI *engine.MailboxUI, mode string) error {
+	switch mode {
 	case "inbox":
 		mailboxUI.SwitchView(engine.ViewInbox)
 	case "outbox":
 		mailboxUI.SwitchView(engine.ViewOutbox)
 	case "compose":
-		mailboxUI.SwitchView(engine.ViewCompose)
-		// Pre-fill compose form for demo
-		mailboxUI.ComposeRecipient = "player2"
-		mailboxUI.ComposeSubject = "Greetings from the test tool"
-		mailboxUI.ComposeBody = "This is a test message created by the mailbox UI test tool. It demonstrates the compose interface with text wrapping and attachment support."
-		mailboxUI.AddAttachment(100)
-		mailboxUI.AddAttachment(101)
+		setupComposeMode(mailboxUI)
 	case "detail":
-		mailboxUI.SwitchView(engine.ViewInbox)
-		if len(mailboxUI.InboxMessages) > 0 {
-			mailboxUI.OpenSelectedMessage()
-		}
+		setupDetailMode(mailboxUI)
 	default:
-		fmt.Printf("Error: Invalid mode '%s'. Valid modes: inbox, outbox, compose, detail\n", *mode)
-		os.Exit(1)
+		return fmt.Errorf("Error: Invalid mode '%s'. Valid modes: inbox, outbox, compose, detail", mode)
 	}
+	return nil
+}
 
-	if *verbose {
-		fmt.Printf("=== Mailbox UI Test ===\n")
-		fmt.Printf("Genre: %s\n", *genreID)
-		fmt.Printf("Size: %dx%d\n", *width, *height)
-		fmt.Printf("View Mode: %s\n", *mode)
-		fmt.Printf("Inbox Messages: %d\n", len(mailboxUI.InboxMessages))
-		fmt.Printf("Outbox Messages: %d\n", len(mailboxUI.OutboxMessages))
-		fmt.Printf("Unread Count: %d\n", mailboxUI.GetUnreadCount())
-		fmt.Println()
+// setupComposeMode configures compose view with sample data.
+func setupComposeMode(mailboxUI *engine.MailboxUI) {
+	mailboxUI.SwitchView(engine.ViewCompose)
+	mailboxUI.ComposeRecipient = "player2"
+	mailboxUI.ComposeSubject = "Greetings from the test tool"
+	mailboxUI.ComposeBody = "This is a test message created by the mailbox UI test tool. It demonstrates the compose interface with text wrapping and attachment support."
+	mailboxUI.AddAttachment(100)
+	mailboxUI.AddAttachment(101)
+}
+
+// setupDetailMode configures detail view.
+func setupDetailMode(mailboxUI *engine.MailboxUI) {
+	mailboxUI.SwitchView(engine.ViewInbox)
+	if len(mailboxUI.InboxMessages) > 0 {
+		mailboxUI.OpenSelectedMessage()
 	}
+}
 
-	// Render UI
-	img := mailboxUI.Render()
+// displayMailboxInfo displays mailbox information.
+func displayMailboxInfo(genreID string, width, height int, mode string, mailboxUI *engine.MailboxUI) {
+	fmt.Printf("=== Mailbox UI Test ===\n")
+	fmt.Printf("Genre: %s\n", genreID)
+	fmt.Printf("Size: %dx%d\n", width, height)
+	fmt.Printf("View Mode: %s\n", mode)
+	fmt.Printf("Inbox Messages: %d\n", len(mailboxUI.InboxMessages))
+	fmt.Printf("Outbox Messages: %d\n", len(mailboxUI.OutboxMessages))
+	fmt.Printf("Unread Count: %d\n", mailboxUI.GetUnreadCount())
+	fmt.Println()
+}
 
-	// Save to file if output specified
-	if *output != "" {
-		f, err := os.Create(*output)
-		if err != nil {
-			fmt.Printf("Error creating output file: %v\n", err)
-			os.Exit(1)
-		}
-		defer f.Close()
-
-		if err := png.Encode(f, img); err != nil {
-			fmt.Printf("Error encoding PNG: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Mailbox UI saved to %s\n", *output)
-	} else {
+// saveOutputImage saves the rendered image to a file if output path is specified.
+func saveOutputImage(output string, img *image.RGBA) error {
+	if output == "" {
 		fmt.Println("Mailbox UI rendered successfully (use -output flag to save PNG)")
+		return nil
 	}
 
-	// Display navigation help
-	if *verbose {
-		fmt.Println("\n=== Navigation Methods ===")
-		fmt.Println("SelectNext()      - Move to next message")
-		fmt.Println("SelectPrevious()  - Move to previous message")
-		fmt.Println("SwitchView(mode)  - Change view (ViewInbox, ViewOutbox, ViewCompose, ViewMessageDetail)")
-		fmt.Println("OpenSelectedMessage() - View message details")
-		fmt.Println("CloseMessageDetail()  - Return to list view")
-		fmt.Println("AddAttachment(id)     - Add item to compose")
-		fmt.Println("RemoveAttachment(idx) - Remove attachment")
-		fmt.Println("ClearCompose()        - Reset compose form")
-		fmt.Println()
+	f, err := os.Create(output)
+	if err != nil {
+		return fmt.Errorf("Error creating output file: %v", err)
+	}
+	defer f.Close()
+
+	if err := png.Encode(f, img); err != nil {
+		return fmt.Errorf("Error encoding PNG: %v", err)
 	}
 
-	// Display message statistics
-	if *verbose {
-		fmt.Println("=== Message Statistics ===")
-		for i, msg := range mailboxUI.InboxMessages {
-			fmt.Printf("[%d] From: %s | Subject: %s | Status: %s | Unread: %v\n",
-				i, msg.SenderID, msg.Subject, msg.Status.String(), msg.IsUnread)
-		}
-		if len(mailboxUI.InboxMessages) == 0 {
-			fmt.Println("(No inbox messages)")
-		}
-		fmt.Println()
-	}
+	fmt.Printf("Mailbox UI saved to %s\n", output)
+	return nil
+}
 
-	// Test navigation if verbose
-	if *verbose && *mode == "inbox" && len(mailboxUI.InboxMessages) > 1 {
+// displayNavigationHelp displays navigation method help.
+func displayNavigationHelp() {
+	fmt.Println("\n=== Navigation Methods ===")
+	fmt.Println("SelectNext()      - Move to next message")
+	fmt.Println("SelectPrevious()  - Move to previous message")
+	fmt.Println("SwitchView(mode)  - Change view (ViewInbox, ViewOutbox, ViewCompose, ViewMessageDetail)")
+	fmt.Println("OpenSelectedMessage() - View message details")
+	fmt.Println("CloseMessageDetail()  - Return to list view")
+	fmt.Println("AddAttachment(id)     - Add item to compose")
+	fmt.Println("RemoveAttachment(idx) - Remove attachment")
+	fmt.Println("ClearCompose()        - Reset compose form")
+	fmt.Println()
+}
+
+// displayMessageStats displays message statistics.
+func displayMessageStats(mailboxUI *engine.MailboxUI) {
+	fmt.Println("=== Message Statistics ===")
+	for i, msg := range mailboxUI.InboxMessages {
+		fmt.Printf("[%d] From: %s | Subject: %s | Status: %s | Unread: %v\n",
+			i, msg.SenderID, msg.Subject, msg.Status.String(), msg.IsUnread)
+	}
+	if len(mailboxUI.InboxMessages) == 0 {
+		fmt.Println("(No inbox messages)")
+	}
+	fmt.Println()
+}
+
+// testNavigation tests navigation if in inbox mode with multiple messages.
+func testNavigation(mode string, mailboxUI *engine.MailboxUI) {
+	if mode == "inbox" && len(mailboxUI.InboxMessages) > 1 {
 		fmt.Println("=== Testing Navigation ===")
 		mailboxUI.SelectNext()
 		fmt.Printf("After SelectNext: SelectedInboxIndex = %d\n", mailboxUI.SelectedInboxIndex)

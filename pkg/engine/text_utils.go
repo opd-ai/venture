@@ -16,67 +16,79 @@ func WrapText(text string, maxWidth int, face font.Face) []string {
 	if text == "" {
 		return []string{}
 	}
-
 	if maxWidth <= 0 {
-		// Invalid width, return single line
 		return []string{text}
 	}
 
 	lines := []string{}
-	words := strings.Fields(text) // Split by whitespace
+	words := strings.Fields(text)
 	currentLine := ""
 
 	for _, word := range words {
-		testLine := currentLine
-		if testLine != "" {
-			testLine += " "
-		}
-		testLine += word
-
-		// Measure text width
-		width := MeasureText(testLine, face)
-
-		if width <= maxWidth {
-			// Word fits, add to current line
-			currentLine = testLine
+		newLine, overflow := tryAddWordToLine(currentLine, word, maxWidth, face)
+		if !overflow {
+			currentLine = newLine
 		} else {
-			// Word doesn't fit
-			if currentLine != "" {
-				// Save current line and start new one
-				lines = append(lines, currentLine)
-			}
-
-			// Check if single word is too long for maxWidth
-			wordWidth := MeasureText(word, face)
-			if wordWidth > maxWidth {
-				// Hyphenate very long word
-				hyphenatedLines := hyphenateWord(word, maxWidth, face)
-				for i, line := range hyphenatedLines {
-					if i < len(hyphenatedLines)-1 {
-						// All but last line get appended immediately
-						lines = append(lines, line)
-					} else {
-						// Last line becomes new current line
-						currentLine = line
-					}
-				}
-			} else {
-				// Word fits on its own line
-				currentLine = word
-			}
+			lines = appendCurrentLine(lines, currentLine)
+			currentLine = handleOverflowWord(word, maxWidth, face, &lines)
 		}
 	}
 
-	// Add final line if any
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
+	lines = appendCurrentLine(lines, currentLine)
+	return ensureNonNilSlice(lines)
+}
 
-	// Return at least empty array, never nil
+// tryAddWordToLine attempts to add a word to the current line.
+// Returns the new line and whether it overflows the max width.
+func tryAddWordToLine(currentLine, word string, maxWidth int, face font.Face) (string, bool) {
+	testLine := buildTestLine(currentLine, word)
+	width := MeasureText(testLine, face)
+	return testLine, width > maxWidth
+}
+
+// buildTestLine builds a test line by adding a word to the current line.
+func buildTestLine(currentLine, word string) string {
+	if currentLine == "" {
+		return word
+	}
+	return currentLine + " " + word
+}
+
+// handleOverflowWord handles a word that doesn't fit on the current line.
+// Returns the new current line after processing the overflow.
+func handleOverflowWord(word string, maxWidth int, face font.Face, lines *[]string) string {
+	wordWidth := MeasureText(word, face)
+	if wordWidth > maxWidth {
+		return hyphenateAndAppend(word, maxWidth, face, lines)
+	}
+	return word
+}
+
+// hyphenateAndAppend hyphenates a long word and appends all but the last segment.
+func hyphenateAndAppend(word string, maxWidth int, face font.Face, lines *[]string) string {
+	hyphenatedLines := hyphenateWord(word, maxWidth, face)
+	for i := 0; i < len(hyphenatedLines)-1; i++ {
+		*lines = append(*lines, hyphenatedLines[i])
+	}
+	if len(hyphenatedLines) > 0 {
+		return hyphenatedLines[len(hyphenatedLines)-1]
+	}
+	return ""
+}
+
+// appendCurrentLine appends the current line to lines if non-empty.
+func appendCurrentLine(lines []string, currentLine string) []string {
+	if currentLine != "" {
+		return append(lines, currentLine)
+	}
+	return lines
+}
+
+// ensureNonNilSlice ensures the slice is non-nil.
+func ensureNonNilSlice(lines []string) []string {
 	if len(lines) == 0 {
 		return []string{}
 	}
-
 	return lines
 }
 

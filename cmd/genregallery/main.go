@@ -93,12 +93,23 @@ func (g *Game) generateSprites() {
 
 // Update handles game logic updates.
 func (g *Game) Update() error {
-	needsRegenerate := false
-
-	// Handle input
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return fmt.Errorf("quit")
 	}
+
+	needsRegenerate := g.handleNavigationInput()
+	needsRegenerate = g.handleActionInput() || needsRegenerate
+
+	if len(g.sprites) == 0 || needsRegenerate {
+		g.generateSprites()
+	}
+
+	return nil
+}
+
+// handleNavigationInput processes genre and page navigation keys.
+func (g *Game) handleNavigationInput() bool {
+	needsRegenerate := false
 
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		if g.genreIndex < len(g.genres)-1 {
@@ -134,6 +145,13 @@ func (g *Game) Update() error {
 		time.Sleep(200 * time.Millisecond)
 	}
 
+	return needsRegenerate
+}
+
+// handleActionInput processes action keys (info, regenerate, clear cache).
+func (g *Game) handleActionInput() bool {
+	needsRegenerate := false
+
 	if ebiten.IsKeyPressed(ebiten.KeyI) {
 		g.showInfo = !g.showInfo
 		time.Sleep(200 * time.Millisecond)
@@ -150,12 +168,7 @@ func (g *Game) Update() error {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	// Generate sprites on first frame or when needed
-	if len(g.sprites) == 0 || needsRegenerate {
-		g.generateSprites()
-	}
-
-	return nil
+	return needsRegenerate
 }
 
 // Draw renders the game screen.

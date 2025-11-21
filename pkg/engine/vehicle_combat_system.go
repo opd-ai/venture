@@ -76,90 +76,109 @@ func (vcs *VehicleCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 // processRamming handles ramming damage when vehicle collides with entities.
 func (vcs *VehicleCombatSystem) processRamming(vehicle *Entity, combat *VehicleCombatComponent, entities []*Entity) {
-	// Get vehicle speed and position
-	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
-	if !hasVehicle {
-		return
-	}
-	v, ok := vehicleComp.(*VehicleComponent)
-	if !ok {
+	vehicleComp, pos := vcs.getVehicleComponents(vehicle, combat)
+	if vehicleComp == nil || pos == nil {
 		return
 	}
 
-	// Check if can ram (cooldown ready and sufficient speed)
-	if !combat.CanRam(v.Speed) {
+	target := vcs.findRammingTarget(vehicle, pos, entities)
+	if target == nil {
 		return
+	}
+
+	vcs.applyRammingDamage(vehicle, vehicleComp, combat, target)
+}
+
+// getVehicleComponents retrieves and validates vehicle and position components.
+func (vcs *VehicleCombatSystem) getVehicleComponents(vehicle *Entity, combat *VehicleCombatComponent) (*VehicleComponent, *PositionComponent) {
+	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
+	if !hasVehicle {
+		return nil, nil
+	}
+	v, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	if !combat.CanRam(v.Speed) {
+		return nil, nil
 	}
 
 	posComp, hasPos := vehicle.GetComponent("position")
 	if !hasPos {
-		return
+		return nil, nil
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
 
-	// Check for entities in ramming range (small radius around vehicle)
-	rammingRadius := 20.0 // pixels
+	return v, pos
+}
+
+// findRammingTarget finds a valid target within ramming range.
+func (vcs *VehicleCombatSystem) findRammingTarget(vehicle *Entity, pos *PositionComponent, entities []*Entity) *Entity {
+	const rammingRadius = 20.0 // pixels
+
 	for _, target := range entities {
 		if target.ID == vehicle.ID {
-			continue // Don't ram self
-		}
-
-		// Check if target is a valid combat target
-		targetHealth, hasHealth := target.GetComponent("health")
-		if !hasHealth {
-			continue // Can't damage entities without health
-		}
-
-		// Get target position
-		targetPos, hasTargetPos := target.GetComponent("position")
-		if !hasTargetPos {
-			continue
-		}
-		tPos, ok := targetPos.(*PositionComponent)
-		if !ok {
 			continue
 		}
 
-		// Calculate distance
-		dx := tPos.X - pos.X
-		dy := tPos.Y - pos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
-
-		// Check if within ramming range
-		if distance <= rammingRadius {
-			// Calculate ramming damage based on speed
-			damage := combat.CalculateRammingDamage(v.Speed)
-
-			// Apply damage to target
-			if health, ok := targetHealth.(*HealthComponent); ok {
-				health.TakeDamage(damage)
-			} else {
-				continue
-			}
-
-			// Execute ramming attack (set cooldown)
-			combat.ExecuteRam()
-
-			// Log ramming attack
-			if vcs.logger != nil {
-				vcs.logger.WithFields(logrus.Fields{
-					"vehicle_id": vehicle.ID,
-					"target_id":  target.ID,
-					"damage":     damage,
-					"speed":      v.Speed,
-				}).Debug("Vehicle ramming attack")
-			}
-
-			// Vehicle also takes some damage from impact (10% of dealt damage)
-			v.TakeDamage(damage * 0.1)
-
-			// Only ram one target per update
-			break
+		if !vcs.isValidRammingTarget(target, pos, rammingRadius) {
+			continue
 		}
+
+		return target
 	}
+
+	return nil
+}
+
+// isValidRammingTarget checks if target is valid and within ramming range.
+func (vcs *VehicleCombatSystem) isValidRammingTarget(target *Entity, vehiclePos *PositionComponent, rammingRadius float64) bool {
+	targetHealth, hasHealth := target.GetComponent("health")
+	if !hasHealth {
+		return false
+	}
+
+	targetPos, hasTargetPos := target.GetComponent("position")
+	if !hasTargetPos {
+		return false
+	}
+	tPos, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return false
+	}
+
+	dx := tPos.X - vehiclePos.X
+	dy := tPos.Y - vehiclePos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	return distance <= rammingRadius && targetHealth != nil
+}
+
+// applyRammingDamage applies damage to target and vehicle from ramming.
+func (vcs *VehicleCombatSystem) applyRammingDamage(vehicle *Entity, vehicleComp *VehicleComponent, combat *VehicleCombatComponent, target *Entity) {
+	damage := combat.CalculateRammingDamage(vehicleComp.Speed)
+
+	targetHealth, _ := target.GetComponent("health")
+	if health, ok := targetHealth.(*HealthComponent); ok {
+		health.TakeDamage(damage)
+	}
+
+	combat.ExecuteRam()
+
+	if vcs.logger != nil {
+		vcs.logger.WithFields(logrus.Fields{
+			"vehicle_id": vehicle.ID,
+			"target_id":  target.ID,
+			"damage":     damage,
+			"speed":      vehicleComp.Speed,
+		}).Debug("Vehicle ramming attack")
+	}
+
+	vehicleComp.TakeDamage(damage * 0.1)
 }
 
 // processMountedWeapons handles mounted weapon attacks.

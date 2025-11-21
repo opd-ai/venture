@@ -255,8 +255,14 @@ func (g *MazeGenerator) createRoomAtDeadEnd(x, y int, terrain *Terrain, rng *ran
 
 // placeStairsInCorners places stairs up and down in opposite corners of the maze.
 func (g *MazeGenerator) placeStairsInCorners(terrain *Terrain, rng *rand.Rand) {
-	// Find walkable tiles in each corner region
-	cornerSize := 10
+	cornerTiles := g.collectCornerTiles(terrain)
+	upCornerIdx := g.placeStairsUp(terrain, cornerTiles, rng)
+	g.placeStairsDown(terrain, cornerTiles, rng, upCornerIdx)
+}
+
+// collectCornerTiles finds walkable tiles in each corner region.
+func (g *MazeGenerator) collectCornerTiles(terrain *Terrain) [][]Point {
+	const cornerSize = 10
 	corners := []struct {
 		name   string
 		x, y   int
@@ -269,7 +275,6 @@ func (g *MazeGenerator) placeStairsInCorners(terrain *Terrain, rng *rand.Rand) {
 		{"bottom-right", terrain.Width - cornerSize - 1, terrain.Height - cornerSize - 1, cornerSize, cornerSize},
 	}
 
-	// Collect walkable positions in each corner
 	cornerTiles := make([][]Point, len(corners))
 	for i, corner := range corners {
 		for y := corner.y; y < corner.y+corner.height && y < terrain.Height-1; y++ {
@@ -281,53 +286,62 @@ func (g *MazeGenerator) placeStairsInCorners(terrain *Terrain, rng *rand.Rand) {
 		}
 	}
 
-	// Place stairs up in a random corner with walkable tiles
-	stairsUpPlaced := false
-	attempts := 0
-	for !stairsUpPlaced && attempts < 10 {
-		cornerIdx := rng.Intn(len(corners))
+	return cornerTiles
+}
+
+// placeStairsUp places stairs up in a random corner with walkable tiles.
+func (g *MazeGenerator) placeStairsUp(terrain *Terrain, cornerTiles [][]Point, rng *rand.Rand) int {
+	const maxAttempts = 10
+	upCornerIdx := -1
+
+	for attempts := 0; attempts < maxAttempts; attempts++ {
+		cornerIdx := rng.Intn(len(cornerTiles))
 		if len(cornerTiles[cornerIdx]) > 0 {
 			tileIdx := rng.Intn(len(cornerTiles[cornerIdx]))
 			point := cornerTiles[cornerIdx][tileIdx]
 			terrain.AddStairs(point.X, point.Y, true)
-			stairsUpPlaced = true
+			upCornerIdx = cornerIdx
+			break
 		}
-		attempts++
 	}
 
-	// Place stairs down in opposite corner
-	stairsDownPlaced := false
-	attempts = 0
-	for !stairsDownPlaced && attempts < 10 {
-		// Choose opposite corner (0↔3, 1↔2)
-		var oppositeIdx int
-		if len(terrain.StairsUp) > 0 {
-			upPoint := terrain.StairsUp[0]
-			// Determine which corner based on position
-			isLeft := upPoint.X < terrain.Width/2
-			isTop := upPoint.Y < terrain.Height/2
+	return upCornerIdx
+}
 
-			if isLeft && isTop {
-				oppositeIdx = 3 // bottom-right
-			} else if !isLeft && isTop {
-				oppositeIdx = 2 // bottom-left
-			} else if isLeft && !isTop {
-				oppositeIdx = 1 // top-right
-			} else {
-				oppositeIdx = 0 // top-left
-			}
-		} else {
-			oppositeIdx = rng.Intn(len(corners))
-		}
+// placeStairsDown places stairs down in opposite corner from stairs up.
+func (g *MazeGenerator) placeStairsDown(terrain *Terrain, cornerTiles [][]Point, rng *rand.Rand, upCornerIdx int) {
+	const maxAttempts = 10
+
+	for attempts := 0; attempts < maxAttempts; attempts++ {
+		oppositeIdx := g.getOppositeCornerIndex(terrain, upCornerIdx)
 
 		if len(cornerTiles[oppositeIdx]) > 0 {
 			tileIdx := rng.Intn(len(cornerTiles[oppositeIdx]))
 			point := cornerTiles[oppositeIdx][tileIdx]
 			terrain.AddStairs(point.X, point.Y, false)
-			stairsDownPlaced = true
+			break
 		}
-		attempts++
 	}
+}
+
+// getOppositeCornerIndex determines the opposite corner index.
+func (g *MazeGenerator) getOppositeCornerIndex(terrain *Terrain, upCornerIdx int) int {
+	if len(terrain.StairsUp) == 0 {
+		return 0
+	}
+
+	upPoint := terrain.StairsUp[0]
+	isLeft := upPoint.X < terrain.Width/2
+	isTop := upPoint.Y < terrain.Height/2
+
+	if isLeft && isTop {
+		return 3 // bottom-right
+	} else if !isLeft && isTop {
+		return 2 // bottom-left
+	} else if isLeft && !isTop {
+		return 1 // top-right
+	}
+	return 0 // top-left
 }
 
 // Validate checks if the generated maze meets quality requirements.

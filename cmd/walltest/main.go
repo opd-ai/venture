@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -24,31 +25,55 @@ var (
 
 func main() {
 	flag.Parse()
+	logger := setupLogger()
+	logTestInfo(logger)
 
-	// Setup logging
+	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
+		logger.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	gen := tiles.NewGeneratorWithLogger(logger)
+	testCases := createTestCases()
+
+	successCount := generateTestCases(gen, testCases, logger)
+	logger.Infof("Generation complete: %d/%d successful", successCount, len(testCases))
+
+	if *genreID == "fantasy" {
+		generateMultiGenreComparison(gen, logger)
+	}
+
+	logger.Info("All operations complete!")
+}
+
+// setupLogger creates and configures the logger.
+func setupLogger() *logrus.Logger {
 	logger := logrus.New()
 	if *verbose {
 		logger.SetLevel(logrus.DebugLevel)
 	} else {
 		logger.SetLevel(logrus.InfoLevel)
 	}
+	return logger
+}
 
+// logTestInfo logs test configuration information.
+func logTestInfo(logger *logrus.Logger) {
 	logger.Info("Phase 47 Wall Rendering Test")
 	logger.Infof("Output directory: %s", *outputDir)
 	logger.Infof("Tile size: %dx%d", *size, *size)
 	logger.Infof("Seed: %d", *seed)
 	logger.Infof("Genre: %s", *genreID)
+}
 
-	// Create output directory
-	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
-		logger.Fatalf("Failed to create output directory: %v", err)
-	}
-
-	// Create generator
-	gen := tiles.NewGeneratorWithLogger(logger)
-
-	// Test cases to generate
-	testCases := []struct {
+// createTestCases creates all test case configurations.
+func createTestCases() []struct {
+	name      string
+	neighbors tiles.WallNeighbors
+	antiAlias bool
+	shadows   bool
+	blendRad  int
+} {
+	return []struct {
 		name      string
 		neighbors tiles.WallNeighbors
 		antiAlias bool
@@ -161,9 +186,18 @@ func main() {
 			blendRad:  8,
 		},
 	}
+}
 
+// generateTestCases generates all test cases and saves to files.
+func generateTestCases(gen *tiles.Generator, testCases []struct {
+	name      string
+	neighbors tiles.WallNeighbors
+	antiAlias bool
+	shadows   bool
+	blendRad  int
+}, logger *logrus.Logger,
+) int {
 	logger.Infof("Generating %d test cases...", len(testCases))
-
 	successCount := 0
 	for i, tc := range testCases {
 		logger.Infof("[%d/%d] Generating: %s", i+1, len(testCases), tc.name)
@@ -184,68 +218,61 @@ func main() {
 			continue
 		}
 
-		// Save to file
 		filename := filepath.Join(*outputDir, fmt.Sprintf("%s_%s.png", tc.name, *genreID))
-		f, err := os.Create(filename)
-		if err != nil {
-			logger.Errorf("Failed to create file %s: %v", filename, err)
+		if err := saveImage(filename, img, logger); err != nil {
 			continue
 		}
-
-		if err := png.Encode(f, img); err != nil {
-			f.Close()
-			logger.Errorf("Failed to encode PNG %s: %v", filename, err)
-			continue
-		}
-		f.Close()
 
 		logger.Infof("  ✓ Saved: %s", filename)
 		successCount++
 	}
+	return successCount
+}
 
-	logger.Infof("Generation complete: %d/%d successful", successCount, len(testCases))
+// generateMultiGenreComparison generates comparison grid for different genres.
+func generateMultiGenreComparison(gen *tiles.Generator, logger *logrus.Logger) {
+	logger.Info("Generating multi-genre comparison...")
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 
-	// Generate comparison grid for different genres
-	if *genreID == "fantasy" {
-		logger.Info("Generating multi-genre comparison...")
-		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	for _, genre := range genres {
+		logger.Infof("  Genre: %s", genre)
 
-		for _, genre := range genres {
-			logger.Infof("  Genre: %s", genre)
+		config := tiles.DefaultEnhancedWallConfig()
+		config.Config.Width = *size
+		config.Config.Height = *size
+		config.Config.Seed = *seed
+		config.Config.GenreID = genre
+		config.Neighbors = tiles.WallNeighbors{North: true, East: true}
+		config.EnableAntialiasing = true
+		config.EnableShadows = true
 
-			config := tiles.DefaultEnhancedWallConfig()
-			config.Config.Width = *size
-			config.Config.Height = *size
-			config.Config.Seed = *seed
-			config.Config.GenreID = genre
-			config.Neighbors = tiles.WallNeighbors{North: true, East: true}
-			config.EnableAntialiasing = true
-			config.EnableShadows = true
-
-			img, err := gen.GenerateEnhancedWall(config)
-			if err != nil {
-				logger.Errorf("Failed to generate %s: %v", genre, err)
-				continue
-			}
-
-			filename := filepath.Join(*outputDir, fmt.Sprintf("genre_%s.png", genre))
-			f, err := os.Create(filename)
-			if err != nil {
-				logger.Errorf("Failed to create file %s: %v", filename, err)
-				continue
-			}
-
-			if err := png.Encode(f, img); err != nil {
-				f.Close()
-				logger.Errorf("Failed to encode PNG %s: %v", filename, err)
-				continue
-			}
-			f.Close()
-
-			logger.Infof("  ✓ Saved: %s", filename)
+		img, err := gen.GenerateEnhancedWall(config)
+		if err != nil {
+			logger.Errorf("Failed to generate %s: %v", genre, err)
+			continue
 		}
-	}
 
-	logger.Info("All operations complete!")
-	logger.Infof("Generated tiles are in: %s", *outputDir)
+		filename := filepath.Join(*outputDir, fmt.Sprintf("genre_%s.png", genre))
+		if err := saveImage(filename, img, logger); err != nil {
+			continue
+		}
+
+		logger.Infof("  ✓ Saved: %s", filename)
+	}
+}
+
+// saveImage saves an image to a PNG file.
+func saveImage(filename string, img image.Image, logger *logrus.Logger) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		logger.Errorf("Failed to create file %s: %v", filename, err)
+		return err
+	}
+	defer f.Close()
+
+	if err := png.Encode(f, img); err != nil {
+		logger.Errorf("Failed to encode PNG %s: %v", filename, err)
+		return err
+	}
+	return nil
 }

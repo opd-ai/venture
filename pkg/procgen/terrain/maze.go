@@ -404,55 +404,59 @@ func (g *MazeGenerator) Validate(result interface{}) error {
 // Creates small water pools (2-3 tiles) at dead ends that weren't converted to rooms.
 func (g *MazeGenerator) addWaterHazards(terrain *Terrain, deadEnds []Point, rng *rand.Rand) {
 	for _, point := range deadEnds {
-		// Skip if this dead end was turned into a room or stairs
-		tile := terrain.GetTile(point.X, point.Y)
-		if tile != TileFloor {
+		if !g.isValidWaterLocation(terrain, point) {
 			continue
 		}
 
-		// Skip if this point is part of a room
-		isInRoom := false
-		for _, room := range terrain.Rooms {
-			if point.X >= room.X && point.X < room.X+room.Width &&
-				point.Y >= room.Y && point.Y < room.Y+room.Height {
-				isInRoom = true
-				break
-			}
-		}
-		if isInRoom {
-			continue
-		}
-
-		// 20% chance to create water hazard
 		if rng.Float64() < 0.2 {
-			// Create small water pool (2-3 tiles from the dead end)
-			poolSize := 2 + rng.Intn(2)
+			g.placeWaterPool(terrain, point, rng)
+		}
+	}
+}
 
-			// Find the direction of the corridor leading to this dead end
-			directions := []struct{ dx, dy int }{
-				{0, -1}, // North
-				{1, 0},  // East
-				{0, 1},  // South
-				{-1, 0}, // West
-			}
+// isValidWaterLocation checks if a point is valid for water placement.
+func (g *MazeGenerator) isValidWaterLocation(terrain *Terrain, point Point) bool {
+	if terrain.GetTile(point.X, point.Y) != TileFloor {
+		return false
+	}
+	return !g.isPointInRoom(terrain, point)
+}
 
-			for _, dir := range directions {
-				nx, ny := point.X+dir.dx, point.Y+dir.dy
-				if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
-					// Found corridor direction, place water in dead end
-					terrain.SetTile(point.X, point.Y, TileWaterDeep)
+// isPointInRoom checks if a point is inside any room.
+func (g *MazeGenerator) isPointInRoom(terrain *Terrain, point Point) bool {
+	for _, room := range terrain.Rooms {
+		if point.X >= room.X && point.X < room.X+room.Width &&
+			point.Y >= room.Y && point.Y < room.Y+room.Height {
+			return true
+		}
+	}
+	return false
+}
 
-					// Add 1-2 more shallow water tiles back toward corridor
-					for i := 1; i < poolSize; i++ {
-						wx := point.X - dir.dx*i
-						wy := point.Y - dir.dy*i
-						if terrain.IsInBounds(wx, wy) && terrain.GetTile(wx, wy) == TileFloor {
-							terrain.SetTile(wx, wy, TileWaterShallow)
-						}
-					}
-					break
-				}
-			}
+// placeWaterPool creates a water pool at the dead end.
+func (g *MazeGenerator) placeWaterPool(terrain *Terrain, point Point, rng *rand.Rand) {
+	poolSize := 2 + rng.Intn(2)
+	directions := []struct{ dx, dy int }{
+		{0, -1}, {1, 0}, {0, 1}, {-1, 0},
+	}
+
+	for _, dir := range directions {
+		nx, ny := point.X+dir.dx, point.Y+dir.dy
+		if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
+			terrain.SetTile(point.X, point.Y, TileWaterDeep)
+			g.addShallowWaterTiles(terrain, point, dir, poolSize)
+			break
+		}
+	}
+}
+
+// addShallowWaterTiles adds shallow water tiles toward corridor.
+func (g *MazeGenerator) addShallowWaterTiles(terrain *Terrain, point Point, dir struct{ dx, dy int }, poolSize int) {
+	for i := 1; i < poolSize; i++ {
+		wx := point.X - dir.dx*i
+		wy := point.Y - dir.dy*i
+		if terrain.IsInBounds(wx, wy) && terrain.GetTile(wx, wy) == TileFloor {
+			terrain.SetTile(wx, wy, TileWaterShallow)
 		}
 	}
 }

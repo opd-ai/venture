@@ -34,84 +34,128 @@ func (b *SnapshotBuilder) BuildEntitySnapshot(entity *engine.Entity, timestamp t
 		Components: make(map[string][]byte),
 	}
 
-	// Core components
+	b.serializeCoreComponents(entity, &snapshot)
+	b.serializeV4Components(entity, &snapshot)
+
+	return snapshot
+}
+
+// serializeCoreComponents serializes core entity components.
+func (b *SnapshotBuilder) serializeCoreComponents(entity *engine.Entity, snapshot *EntitySnapshot) {
+	b.serializePosition(entity, snapshot)
+	b.serializeVelocity(entity, snapshot)
+	b.serializeHealth(entity, snapshot)
+	b.serializeStats(entity, snapshot)
+	b.serializeTeam(entity, snapshot)
+	b.serializeLevel(entity, snapshot)
+}
+
+// serializeV4Components serializes V4.0 entity components.
+func (b *SnapshotBuilder) serializeV4Components(entity *engine.Entity, snapshot *EntitySnapshot) {
+	b.serializeVehicle(entity, snapshot)
+	b.serializeCompanion(entity, snapshot)
+	b.serializeMount(entity, snapshot)
+	b.serializeAchievement(entity, snapshot)
+	b.serializeExpression(entity, snapshot)
+	b.serializeClassProgression(entity, snapshot)
+}
+
+// serializePosition serializes position component.
+func (b *SnapshotBuilder) serializePosition(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if posComp, ok := entity.GetComponent("position"); ok {
 		pos := posComp.(*engine.PositionComponent)
 		snapshot.Position = Position{X: pos.X, Y: pos.Y}
 		snapshot.Components["position"] = b.serializer.SerializePosition(pos.X, pos.Y)
 	}
+}
 
+// serializeVelocity serializes velocity component.
+func (b *SnapshotBuilder) serializeVelocity(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if velComp, ok := entity.GetComponent("velocity"); ok {
 		vel := velComp.(*engine.VelocityComponent)
 		snapshot.Velocity = Velocity{VX: vel.VX, VY: vel.VY}
 		snapshot.Components["velocity"] = b.serializer.SerializeVelocity(vel.VX, vel.VY)
 	}
+}
 
+// serializeHealth serializes health component.
+func (b *SnapshotBuilder) serializeHealth(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		health := healthComp.(*engine.HealthComponent)
 		snapshot.Components["health"] = b.serializer.SerializeHealth(health.Current, health.Max)
 	}
+}
 
+// serializeStats serializes stats component.
+func (b *SnapshotBuilder) serializeStats(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if statsComp, ok := entity.GetComponent("stats"); ok {
 		stats := statsComp.(*engine.StatsComponent)
 		snapshot.Components["stats"] = b.serializer.SerializeStats(stats.Attack, stats.Defense, stats.MagicPower)
 	}
+}
 
+// serializeTeam serializes team component.
+func (b *SnapshotBuilder) serializeTeam(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if teamComp, ok := entity.GetComponent("team"); ok {
 		team := teamComp.(*engine.TeamComponent)
 		snapshot.Components["team"] = b.serializer.SerializeTeam(uint64(team.TeamID))
 	}
+}
 
+// serializeLevel serializes experience component as level data.
+func (b *SnapshotBuilder) serializeLevel(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if expComp, ok := entity.GetComponent("experience"); ok {
 		exp := expComp.(*engine.ExperienceComponent)
 		snapshot.Components["level"] = b.serializer.SerializeLevel(uint32(exp.Level), uint32(exp.CurrentXP))
 	}
+}
 
-	// V4.0 Components (Phase 21-27)
-	// These components use their built-in Serialize() methods
-
-	// Vehicle component (Phase 21)
+// serializeVehicle serializes vehicle component.
+func (b *SnapshotBuilder) serializeVehicle(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
 		vehicle := vehicleComp.(*engine.VehicleComponent)
 		snapshot.Components["vehicle"] = vehicle.Serialize()
 	}
+}
 
-	// Companion component (Phase 22)
+// serializeCompanion serializes companion component.
+func (b *SnapshotBuilder) serializeCompanion(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if companionComp, ok := entity.GetComponent("companion"); ok {
 		companion := companionComp.(*engine.CompanionComponent)
 		snapshot.Components["companion"] = companion.Serialize()
 	}
+}
 
-	// Mount component (Phase 21)
+// serializeMount serializes mount component.
+func (b *SnapshotBuilder) serializeMount(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if mountComp, ok := entity.GetComponent("mount"); ok {
 		mount := mountComp.(*engine.MountComponent)
 		snapshot.Components["mount"] = mount.Serialize()
 	}
+}
 
-	// MiniGame component (Phase 27)
-	// Note: MiniGameComponent has interface{} State field which cannot be easily serialized
-	// Mini-games are typically single-player and don't need network sync
-	// If multi-player mini-games are needed in future, implement custom serialization
-
-	// Achievement component (Phase 27)
+// serializeAchievement serializes achievement component.
+func (b *SnapshotBuilder) serializeAchievement(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if achievementComp, ok := entity.GetComponent("achievement"); ok {
 		achievement := achievementComp.(*engine.AchievementComponent)
 		snapshot.Components["achievement"] = achievement.Serialize()
 	}
+}
 
-	// Expression component (Phase 26)
+// serializeExpression serializes expression component.
+func (b *SnapshotBuilder) serializeExpression(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if expressionComp, ok := entity.GetComponent("expression"); ok {
 		expression := expressionComp.(*engine.ExpressionComponent)
 		snapshot.Components["expression"] = expression.Serialize()
 	}
+}
 
-	// Class progression component (Phase 25)
+// serializeClassProgression serializes class progression component.
+func (b *SnapshotBuilder) serializeClassProgression(entity *engine.Entity, snapshot *EntitySnapshot) {
 	if classComp, ok := entity.GetComponent("class_progression"); ok {
 		class := classComp.(*engine.ClassProgressionComponent)
 		snapshot.Components["class_progression"] = class.Serialize()
 	}
-
-	return snapshot
 }
 
 // BuildWorldSnapshot creates a WorldSnapshot from all entities in the world.

@@ -457,15 +457,22 @@ func (g *CityGenerator) createPlaza(block *CityBlock, terrain *Terrain) {
 // createPark creates a park with trees and/or water features.
 func (g *CityGenerator) createPark(block *CityBlock, terrain *Terrain, rng *rand.Rand) {
 	rect := block.Rect
+	g.fillParkGrass(rect, terrain)
+	g.placeParkTrees(rect, terrain, rng)
+	g.maybeAddPond(rect, terrain, rng)
+}
 
-	// Fill with floor tiles (grass)
+// fillParkGrass fills the park area with grass tiles.
+func (g *CityGenerator) fillParkGrass(rect Rect, terrain *Terrain) {
 	for y := rect.Y; y < rect.Y+rect.Height; y++ {
 		for x := rect.X; x < rect.X+rect.Width; x++ {
 			terrain.SetTile(x, y, TileFloor)
 		}
 	}
+}
 
-	// Add trees (30% of park tiles)
+// placeParkTrees adds trees to 30% of park tiles.
+func (g *CityGenerator) placeParkTrees(rect Rect, terrain *Terrain, rng *rand.Rand) {
 	treeCount := int(float64(rect.Width*rect.Height) * 0.3)
 	for i := 0; i < treeCount; i++ {
 		x := rect.X + rng.Intn(rect.Width)
@@ -474,24 +481,33 @@ func (g *CityGenerator) createPark(block *CityBlock, terrain *Terrain, rng *rand
 			terrain.SetTile(x, y, TileTree)
 		}
 	}
+}
 
-	// Sometimes add a small pond (20% chance)
-	if rng.Float64() < 0.2 && rect.Width >= 6 && rect.Height >= 6 {
-		cx := rect.X + rect.Width/2
-		cy := rect.Y + rect.Height/2
-		radius := 2 + rng.Intn(2) // 2-3 tile radius
+// maybeAddPond adds a small pond to the park with 20% chance.
+func (g *CityGenerator) maybeAddPond(rect Rect, terrain *Terrain, rng *rand.Rand) {
+	if rng.Float64() >= 0.2 || rect.Width < 6 || rect.Height < 6 {
+		return
+	}
 
-		for dy := -radius; dy <= radius; dy++ {
-			for dx := -radius; dx <= radius; dx++ {
-				if dx*dx+dy*dy <= radius*radius {
-					x := cx + dx
-					y := cy + dy
-					if rect.Contains(x, y) && terrain.GetTile(x, y) != TileTree {
-						if dx*dx+dy*dy < (radius-1)*(radius-1) {
-							terrain.SetTile(x, y, TileWaterDeep)
-						} else {
-							terrain.SetTile(x, y, TileWaterShallow)
-						}
+	cx := rect.X + rect.Width/2
+	cy := rect.Y + rect.Height/2
+	radius := 2 + rng.Intn(2)
+
+	g.placePondTiles(rect, terrain, cx, cy, radius)
+}
+
+// placePondTiles places water tiles in a circular pond pattern.
+func (g *CityGenerator) placePondTiles(rect Rect, terrain *Terrain, cx, cy, radius int) {
+	for dy := -radius; dy <= radius; dy++ {
+		for dx := -radius; dx <= radius; dx++ {
+			if dx*dx+dy*dy <= radius*radius {
+				x := cx + dx
+				y := cy + dy
+				if rect.Contains(x, y) && terrain.GetTile(x, y) != TileTree {
+					if dx*dx+dy*dy < (radius-1)*(radius-1) {
+						terrain.SetTile(x, y, TileWaterDeep)
+					} else {
+						terrain.SetTile(x, y, TileWaterShallow)
 					}
 				}
 			}

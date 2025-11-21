@@ -25,45 +25,7 @@ func main() {
 
 	flag.Parse()
 
-	// Map book type string to enum
-	var bookType engine.BookType
-	switch *bookTypeStr {
-	case "skill":
-		bookType = engine.BookTypeSkill
-	case "lore":
-		bookType = engine.BookTypeLore
-	case "quest":
-		bookType = engine.BookTypeQuest
-	case "recipe":
-		bookType = engine.BookTypeRecipe
-	case "history":
-		bookType = engine.BookTypeHistory
-	default:
-		log.Fatalf("Invalid book type: %s (must be skill, lore, quest, recipe, or history)", *bookTypeStr)
-	}
-
-	// Create generator
-	generator := book.NewGenerator()
-
-	// Set up parameters
-	params := procgen.GenerationParams{
-		Difficulty: *difficulty,
-		Depth:      *depth,
-		GenreID:    *genre,
-		Custom: map[string]interface{}{
-			"book_type": bookType,
-		},
-	}
-
-	// Add type-specific parameters
-	switch bookType {
-	case engine.BookTypeSkill:
-		params.Custom["skill_name"] = *skillName
-	case engine.BookTypeRecipe:
-		params.Custom["recipe_id"] = *recipeID
-	case engine.BookTypeHistory:
-		params.Custom["location"] = *location
-	}
+	bookType, params := parseBookInputs(*bookTypeStr, *genre, *difficulty, *depth, *skillName, *recipeID, *location)
 
 	fmt.Println("=== Venture Book Generator Test ===")
 	fmt.Printf("Seed: %d\n", *seed)
@@ -72,8 +34,66 @@ func main() {
 	fmt.Printf("Difficulty: %.2f\n", *difficulty)
 	fmt.Printf("Depth: %d\n\n", *depth)
 
-	// Generate book
-	result, err := generator.Generate(*seed, params)
+	bookComp := generateAndValidateBook(*seed, params)
+	displayBookSummary(bookComp, bookType)
+	displayBookContent(bookComp, *verbose)
+
+	fmt.Println("\n✓ Book generation successful!")
+	fmt.Println("✓ Validation passed")
+	fmt.Printf("✓ Test coverage: 74.0%% (exceeds 65%% requirement)\n")
+}
+
+// parseBookInputs parses command-line inputs and creates generation parameters.
+func parseBookInputs(bookTypeStr, genre string, difficulty float64, depth int,
+	skillName, recipeID, location string,
+) (engine.BookType, procgen.GenerationParams) {
+	bookType := parseBookType(bookTypeStr)
+
+	params := procgen.GenerationParams{
+		Difficulty: difficulty,
+		Depth:      depth,
+		GenreID:    genre,
+		Custom: map[string]interface{}{
+			"book_type": bookType,
+		},
+	}
+
+	switch bookType {
+	case engine.BookTypeSkill:
+		params.Custom["skill_name"] = skillName
+	case engine.BookTypeRecipe:
+		params.Custom["recipe_id"] = recipeID
+	case engine.BookTypeHistory:
+		params.Custom["location"] = location
+	}
+
+	return bookType, params
+}
+
+// parseBookType converts book type string to enum value.
+func parseBookType(bookTypeStr string) engine.BookType {
+	switch bookTypeStr {
+	case "skill":
+		return engine.BookTypeSkill
+	case "lore":
+		return engine.BookTypeLore
+	case "quest":
+		return engine.BookTypeQuest
+	case "recipe":
+		return engine.BookTypeRecipe
+	case "history":
+		return engine.BookTypeHistory
+	default:
+		log.Fatalf("Invalid book type: %s (must be skill, lore, quest, recipe, or history)", bookTypeStr)
+		return engine.BookTypeSkill
+	}
+}
+
+// generateAndValidateBook generates and validates a book component.
+func generateAndValidateBook(seed int64, params procgen.GenerationParams) *engine.BookComponent {
+	generator := book.NewGenerator()
+
+	result, err := generator.Generate(seed, params)
 	if err != nil {
 		log.Fatalf("Generation error: %v", err)
 	}
@@ -83,27 +103,28 @@ func main() {
 		log.Fatal("Result is not a BookComponent")
 	}
 
-	// Validate
 	if err := generator.Validate(bookComp); err != nil {
 		log.Fatalf("Validation error: %v", err)
 	}
 
-	// Display results
-	fmt.Println("========================================")
-	fmt.Printf("Title: %s\n", bookComp.Title)
-	fmt.Printf("Author: %s\n", bookComp.Author)
-	fmt.Printf("Type: %v\n", bookComp.BookType)
-	fmt.Printf("Pages: %d\n", len(bookComp.Content))
+	return bookComp
+}
 
-	// Count words
+// displayBookSummary displays book metadata and statistics.
+func displayBookSummary(bookComp *engine.BookComponent, bookType engine.BookType) {
 	totalWords := 0
 	for _, page := range bookComp.Content {
 		words := strings.Fields(page)
 		totalWords += len(words)
 	}
+
+	fmt.Println("========================================")
+	fmt.Printf("Title: %s\n", bookComp.Title)
+	fmt.Printf("Author: %s\n", bookComp.Author)
+	fmt.Printf("Type: %v\n", bookComp.BookType)
+	fmt.Printf("Pages: %d\n", len(bookComp.Content))
 	fmt.Printf("Total Words: %d\n", totalWords)
 
-	// Type-specific info
 	if bookType == engine.BookTypeSkill && len(bookComp.SkillBonus) > 0 {
 		fmt.Println("\nSkill Bonuses:")
 		for skill, bonus := range bookComp.SkillBonus {
@@ -116,9 +137,11 @@ func main() {
 	}
 
 	fmt.Println("========================================")
+}
 
-	// Display content
-	if *verbose {
+// displayBookContent displays full book content or preview based on verbose flag.
+func displayBookContent(bookComp *engine.BookComponent, verbose bool) {
+	if verbose {
 		fmt.Println("\n=== BOOK CONTENT ===")
 		for i, page := range bookComp.Content {
 			fmt.Printf("\n--- Page %d ---\n\n", i+1)
@@ -130,7 +153,6 @@ func main() {
 		fmt.Println("\nFirst page preview:")
 		fmt.Println("---")
 		if len(bookComp.Content) > 0 {
-			// Show first 200 characters of first page
 			preview := bookComp.Content[0]
 			if len(preview) > 200 {
 				preview = preview[:200] + "..."
@@ -139,8 +161,4 @@ func main() {
 		}
 		fmt.Println("---")
 	}
-
-	fmt.Println("\n✓ Book generation successful!")
-	fmt.Println("✓ Validation passed")
-	fmt.Printf("✓ Test coverage: 74.0%% (exceeds 65%% requirement)\n")
 }

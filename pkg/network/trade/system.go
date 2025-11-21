@@ -109,91 +109,114 @@ func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemID
 		return fmt.Errorf("world is nil")
 	}
 
-	// Get entities
-	proposer, ok := s.world.GetEntity(proposerID)
-	if !ok || proposer == nil {
-		return fmt.Errorf("proposer not found")
+	proposer, recipient, err := s.getTradeEntities(proposerID, recipientID)
+	if err != nil {
+		return err
 	}
 
-	recipient, ok := s.world.GetEntity(recipientID)
-	if !ok || recipient == nil {
-		return fmt.Errorf("recipient not found")
-	}
-
-	// Validate proximity
 	if !s.validateProximity(proposerID, recipientID, maxProposalDistance) {
 		return fmt.Errorf("players too far apart (max %v tiles)", maxProposalDistance)
 	}
 
-	// Get or create trade component for proposer
-	proposerTradeComp := s.getOrCreateTradeComponent(proposer)
-	if proposerTradeComp.ActiveTrade != nil {
-		return fmt.Errorf("proposer already has an active trade")
-	}
-
-	// Get or create trade component for recipient
-	recipientTradeComp := s.getOrCreateTradeComponent(recipient)
-	if recipientTradeComp.ActiveTrade != nil {
-		return fmt.Errorf("recipient already has an active trade")
-	}
-
-	// Get inventory components
-	proposerInv := s.getInventoryComponent(proposer)
-	if proposerInv == nil {
-		return fmt.Errorf("proposer has no inventory")
-	}
-
-	recipientInv := s.getInventoryComponent(recipient)
-	if recipientInv == nil {
-		return fmt.Errorf("recipient has no inventory")
-	}
-
-	// Resolve item IDs to actual items and validate ownership
-	offeredItemRefs, err := s.resolveItems(proposerInv, offeredItemIDs)
+	proposerTradeComp, recipientTradeComp, err := s.getOrCreateTradeComponents(proposer, recipient)
 	if err != nil {
-		return fmt.Errorf("offered items invalid: %w", err)
+		return err
 	}
 
-	requestedItemRefs, err := s.resolveItems(recipientInv, requestedItemIDs)
+	proposerInv, recipientInv, err := s.getInventories(proposer, recipient)
 	if err != nil {
-		return fmt.Errorf("requested items invalid: %w", err)
+		return err
 	}
 
-	// Validate trust for offered items
-	if err := s.validateTrust(proposerTradeComp.TrustScore, offeredItemRefs); err != nil {
-		return fmt.Errorf("trust validation failed for offered items: %w", err)
+	_, _, err = s.resolveAndValidateTradeItems(
+		proposerInv, recipientInv, offeredItemIDs, requestedItemIDs,
+		proposerTradeComp.TrustScore, recipientTradeComp.TrustScore)
+	if err != nil {
+		return err
 	}
 
-	// Validate trust for requested items
-	if err := s.validateTrust(recipientTradeComp.TrustScore, requestedItemRefs); err != nil {
-		return fmt.Errorf("trust validation failed for requested items: %w", err)
-	}
-
-	// Validate tradability
-	if err := s.validateTradability(offeredItemRefs); err != nil {
-		return fmt.Errorf("offered items validation failed: %w", err)
-	}
-	if err := s.validateTradability(requestedItemRefs); err != nil {
-		return fmt.Errorf("requested items validation failed: %w", err)
-	}
-
-	// Create proposal
-	now := time.Now()
-	proposal := &engine.TradeProposal{
-		ProposerID:     proposerID,
-		RecipientID:    recipientID,
-		OfferedItems:   offeredItemIDs,
-		RequestedItems: requestedItemIDs,
-		Status:         string(TradeStatusPending),
-		ProposalTime:   now.Unix(),
-		FailureReason:  "",
-	}
-
-	// Set active trade on both participants
+	proposal := s.createTradeProposal(proposerID, recipientID, offeredItemIDs, requestedItemIDs)
 	proposerTradeComp.ActiveTrade = proposal
 	recipientTradeComp.ActiveTrade = proposal
 
 	return nil
+}
+
+// getTradeEntities retrieves and validates proposer and recipient entities.
+func (s *TradeSystem) getTradeEntities(proposerID, recipientID uint64) (*engine.Entity, *engine.Entity, error) {
+	proposer, ok := s.world.GetEntity(proposerID)
+	if !ok || proposer == nil {
+		return nil, nil, fmt.Errorf("proposer not found")
+	}
+
+	recipient, ok := s.world.GetEntity(recipientID)
+	if !ok || recipient == nil {
+		return nil, nil, fmt.Errorf("recipient not found")
+	}
+
+	return proposer, recipient, nil
+}
+
+// getOrCreateTradeComponents gets or creates trade components for both participants.
+func (s *TradeSystem) getOrCreateTradeComponents(proposer, recipient *engine.Entity) (*engine.TradeComponent, *engine.TradeComponent, error) {
+	proposerTradeComp := s.getOrCreateTradeComponent(proposer)
+	if proposerTradeComp.ActiveTrade != nil {
+		return nil, nil, fmt.Errorf("proposer already has an active trade")
+	}
+
+	recipientTradeComp := s.getOrCreateTradeComponent(recipient)
+	if recipientTradeComp.ActiveTrade != nil {
+		return nil, nil, fmt.Errorf("recipient already has an active trade")
+	}
+
+	return proposerTradeComp, recipientTradeComp, nil
+}
+
+// resolveAndValidateTradeItems resolves item IDs and validates trust/tradability.
+func (s *TradeSystem) resolveAndValidateTradeItems(proposerInv, recipientInv *engine.InventoryComponent,
+	offeredItemIDs, requestedItemIDs []string, proposerTrust, recipientTrust float64,
+) ([]*item.Item, []*item.Item, error) {
+	offeredItemRefs, err := s.resolveItems(proposerInv, offeredItemIDs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("offered items invalid: %w", err)
+	}
+
+	requestedItemRefs, err := s.resolveItems(recipientInv, requestedItemIDs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("requested items invalid: %w", err)
+	}
+
+	if err := s.validateTrust(proposerTrust, offeredItemRefs); err != nil {
+		return nil, nil, fmt.Errorf("trust validation failed for offered items: %w", err)
+	}
+
+	if err := s.validateTrust(recipientTrust, requestedItemRefs); err != nil {
+		return nil, nil, fmt.Errorf("trust validation failed for requested items: %w", err)
+	}
+
+	if err := s.validateTradability(offeredItemRefs); err != nil {
+		return nil, nil, fmt.Errorf("offered items validation failed: %w", err)
+	}
+
+	if err := s.validateTradability(requestedItemRefs); err != nil {
+		return nil, nil, fmt.Errorf("requested items validation failed: %w", err)
+	}
+
+	return offeredItemRefs, requestedItemRefs, nil
+}
+
+// createTradeProposal creates a new trade proposal with current timestamp.
+func (s *TradeSystem) createTradeProposal(proposerID, recipientID uint64, offeredItems, requestedItems []string) *engine.TradeProposal {
+	now := time.Now()
+	return &engine.TradeProposal{
+		ProposerID:     proposerID,
+		RecipientID:    recipientID,
+		OfferedItems:   offeredItems,
+		RequestedItems: requestedItems,
+		Status:         string(TradeStatusPending),
+		ProposalTime:   now.Unix(),
+		FailureReason:  "",
+	}
 }
 
 // AcceptTrade accepts a trade proposal and commits the transfer

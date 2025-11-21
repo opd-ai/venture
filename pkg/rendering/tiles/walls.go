@@ -389,80 +389,76 @@ func (g *Generator) blendWallFloorBoundary(img *image.RGBA, pal *palette.Palette
 	bounds := img.Bounds()
 	floorColor := g.pickColor(pal, "floor", rng)
 	fr, fg, fb, _ := floorColor.RGBA()
-
 	thickness := 1
 
-	// Blend at edges where floor would be
 	for t := 0; t < thickness; t++ {
-		// Bottom edge (floor typically below)
 		if !config.Neighbors.South {
-			y := bounds.Max.Y - t - 1
-			if y >= bounds.Min.Y && y < bounds.Max.Y {
-				for x := bounds.Min.X; x < bounds.Max.X; x++ {
-					existing := img.At(x, y)
-					er, eg, eb, ea := existing.RGBA()
-
-					// 50/50 blend
-					newR := uint8((er>>8)/2 + (fr>>8)/2)
-					newG := uint8((eg>>8)/2 + (fg>>8)/2)
-					newB := uint8((eb>>8)/2 + (fb>>8)/2)
-
-					img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(ea >> 8)})
-				}
-			}
+			g.blendBottomEdge(img, bounds, t, fr, fg, fb)
 		}
-
-		// Top edge
 		if !config.Neighbors.North {
-			y := bounds.Min.Y + t
-			if y >= bounds.Min.Y && y < bounds.Max.Y {
-				for x := bounds.Min.X; x < bounds.Max.X; x++ {
-					existing := img.At(x, y)
-					er, eg, eb, ea := existing.RGBA()
-
-					newR := uint8((er>>8)/2 + (fr>>8)/2)
-					newG := uint8((eg>>8)/2 + (fg>>8)/2)
-					newB := uint8((eb>>8)/2 + (fb>>8)/2)
-
-					img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(ea >> 8)})
-				}
-			}
+			g.blendTopEdge(img, bounds, t, fr, fg, fb)
 		}
-
-		// Left edge
 		if !config.Neighbors.West {
-			x := bounds.Min.X + t
-			if x >= bounds.Min.X && x < bounds.Max.X {
-				for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-					existing := img.At(x, y)
-					er, eg, eb, ea := existing.RGBA()
-
-					newR := uint8((er>>8)/2 + (fr>>8)/2)
-					newG := uint8((eg>>8)/2 + (fg>>8)/2)
-					newB := uint8((eb>>8)/2 + (fb>>8)/2)
-
-					img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(ea >> 8)})
-				}
-			}
+			g.blendLeftEdge(img, bounds, t, fr, fg, fb)
 		}
-
-		// Right edge
 		if !config.Neighbors.East {
-			x := bounds.Max.X - t - 1
-			if x >= bounds.Min.X && x < bounds.Max.X {
-				for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-					existing := img.At(x, y)
-					er, eg, eb, ea := existing.RGBA()
-
-					newR := uint8((er>>8)/2 + (fr>>8)/2)
-					newG := uint8((eg>>8)/2 + (fg>>8)/2)
-					newB := uint8((eb>>8)/2 + (fb>>8)/2)
-
-					img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(ea >> 8)})
-				}
-			}
+			g.blendRightEdge(img, bounds, t, fr, fg, fb)
 		}
 	}
+}
+
+// blendBottomEdge blends the bottom edge with floor color.
+func (g *Generator) blendBottomEdge(img *image.RGBA, bounds image.Rectangle, t int, fr, fg, fb uint32) {
+	y := bounds.Max.Y - t - 1
+	if y < bounds.Min.Y || y >= bounds.Max.Y {
+		return
+	}
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		g.blendPixel(img, x, y, fr, fg, fb)
+	}
+}
+
+// blendTopEdge blends the top edge with floor color.
+func (g *Generator) blendTopEdge(img *image.RGBA, bounds image.Rectangle, t int, fr, fg, fb uint32) {
+	y := bounds.Min.Y + t
+	if y < bounds.Min.Y || y >= bounds.Max.Y {
+		return
+	}
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		g.blendPixel(img, x, y, fr, fg, fb)
+	}
+}
+
+// blendLeftEdge blends the left edge with floor color.
+func (g *Generator) blendLeftEdge(img *image.RGBA, bounds image.Rectangle, t int, fr, fg, fb uint32) {
+	x := bounds.Min.X + t
+	if x < bounds.Min.X || x >= bounds.Max.X {
+		return
+	}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		g.blendPixel(img, x, y, fr, fg, fb)
+	}
+}
+
+// blendRightEdge blends the right edge with floor color.
+func (g *Generator) blendRightEdge(img *image.RGBA, bounds image.Rectangle, t int, fr, fg, fb uint32) {
+	x := bounds.Max.X - t - 1
+	if x < bounds.Min.X || x >= bounds.Max.X {
+		return
+	}
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		g.blendPixel(img, x, y, fr, fg, fb)
+	}
+}
+
+// blendPixel performs 50/50 color blending on a single pixel.
+func (g *Generator) blendPixel(img *image.RGBA, x, y int, fr, fg, fb uint32) {
+	existing := img.At(x, y)
+	er, eg, eb, ea := existing.RGBA()
+	newR := uint8((er>>8)/2 + (fr>>8)/2)
+	newG := uint8((eg>>8)/2 + (fg>>8)/2)
+	newB := uint8((eb>>8)/2 + (fb>>8)/2)
+	img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(ea >> 8)})
 }
 
 // applyWallShadow applies directional shadow gradient to walls.

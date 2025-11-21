@@ -181,49 +181,52 @@ func testSpawning(verbose bool) {
 	mailSys := engine.NewMailSystem(world)
 	courierSys := engine.NewCourierSystem(world, mailSys)
 
-	// Test courier spawning
+	testCourierSpawning(world, courierSys, verbose)
+	testPostOfficeSpawning(world, courierSys, verbose)
+	testFindingAvailableCouriers(courierSys)
+
+	fmt.Println("\n=== Test Complete ===")
+}
+
+// testCourierSpawning spawns couriers and verifies their components.
+func testCourierSpawning(world *engine.World, courierSys *engine.CourierSystem, verbose bool) {
 	fmt.Println("\n1. Spawning Couriers:")
 	courierNames := []string{"Swift", "Fast", "Quick"}
-	courierIDs := make([]uint64, len(courierNames))
 
 	for i, name := range courierNames {
-		courierIDs[i] = courierSys.SpawnCourierNPC(float64(i*10), float64(i*10), name)
+		courierID := courierSys.SpawnCourierNPC(float64(i*10), float64(i*10), name)
 		world.Update(0.0)
 
-		entity, exists := world.GetEntity(courierIDs[i])
+		entity, exists := world.GetEntity(courierID)
 		if !exists {
 			fmt.Printf("  ✗ Courier '%s' not found\n", name)
 			continue
 		}
 
-		// Verify components
-		hasPosition := false
-		hasCourier := false
-		hasAI := false
-
-		if _, ok := entity.GetComponent("position"); ok {
-			hasPosition = true
-		}
-		if _, ok := entity.GetComponent("courier"); ok {
-			hasCourier = true
-		}
-		if _, ok := entity.GetComponent("ai"); ok {
-			hasAI = true
-		}
-
-		if hasPosition && hasCourier && hasAI {
-			if verbose {
-				fmt.Printf("  ✓ Courier '%s' (ID=%d): All components present\n", name, courierIDs[i])
-			} else {
-				fmt.Printf("  ✓ Courier '%s' spawned\n", name)
-			}
-		} else {
-			fmt.Printf("  ✗ Courier '%s': Missing components (pos=%v, courier=%v, ai=%v)\n",
-				name, hasPosition, hasCourier, hasAI)
-		}
+		verifyCourierComponents(entity, name, courierID, verbose)
 	}
+}
 
-	// Test post office spawning
+// verifyCourierComponents verifies that a courier entity has all required components.
+func verifyCourierComponents(entity *engine.Entity, name string, courierID uint64, verbose bool) {
+	_, hasPosition := entity.GetComponent("position")
+	_, hasCourier := entity.GetComponent("courier")
+	_, hasAI := entity.GetComponent("ai")
+
+	if hasPosition && hasCourier && hasAI {
+		if verbose {
+			fmt.Printf("  ✓ Courier '%s' (ID=%d): All components present\n", name, courierID)
+		} else {
+			fmt.Printf("  ✓ Courier '%s' spawned\n", name)
+		}
+	} else {
+		fmt.Printf("  ✗ Courier '%s': Missing components (pos=%v, courier=%v, ai=%v)\n",
+			name, hasPosition, hasCourier, hasAI)
+	}
+}
+
+// testPostOfficeSpawning spawns post offices and verifies their components.
+func testPostOfficeSpawning(world *engine.World, courierSys *engine.CourierSystem, verbose bool) {
 	fmt.Println("\n2. Spawning Post Offices:")
 	clerkNames := []string{"Bob", "Alice", "Charlie"}
 
@@ -243,31 +246,36 @@ func testSpawning(verbose bool) {
 			continue
 		}
 
-		// Verify building components
-		_, hasPos := building.GetComponent("position")
-		poComp, hasPostOffice := building.GetComponent("postoffice")
-
-		// Verify clerk components
-		_, hasClerkPos := clerk.GetComponent("position")
-		clerkComp, hasClerkComponent := clerk.GetComponent("postoffice_clerk")
-
-		if hasPos && hasPostOffice && hasClerkPos && hasClerkComponent {
-			if verbose {
-				po := poComp.(*engine.PostOfficeComponent)
-				clerkData := clerkComp.(*engine.PostOfficeClerkComponent)
-				fmt.Printf("  ✓ Post Office (Building=%d, Clerk=%d):\n", buildingID, clerkID)
-				fmt.Printf("    Clerk: %s, Fee=%d, Office Fee=%d\n",
-					po.ClerkName, clerkData.ServiceFee, po.ServiceFee)
-			} else {
-				fmt.Printf("  ✓ Post Office with clerk '%s' spawned\n", clerkName)
-			}
-		} else {
-			fmt.Printf("  ✗ Post Office incomplete (building: pos=%v, po=%v; clerk: pos=%v, clerk=%v)\n",
-				hasPos, hasPostOffice, hasClerkPos, hasClerkComponent)
-		}
+		verifyPostOfficeComponents(building, clerk, buildingID, clerkID, clerkName, verbose)
 	}
+}
 
-	// Test finding available couriers
+// verifyPostOfficeComponents verifies that a post office and clerk have all required components.
+func verifyPostOfficeComponents(building, clerk *engine.Entity, buildingID, clerkID uint64, clerkName string, verbose bool) {
+	_, hasPos := building.GetComponent("position")
+	poComp, hasPostOffice := building.GetComponent("postoffice")
+
+	_, hasClerkPos := clerk.GetComponent("position")
+	clerkComp, hasClerkComponent := clerk.GetComponent("postoffice_clerk")
+
+	if hasPos && hasPostOffice && hasClerkPos && hasClerkComponent {
+		if verbose {
+			po := poComp.(*engine.PostOfficeComponent)
+			clerkData := clerkComp.(*engine.PostOfficeClerkComponent)
+			fmt.Printf("  ✓ Post Office (Building=%d, Clerk=%d):\n", buildingID, clerkID)
+			fmt.Printf("    Clerk: %s, Fee=%d, Office Fee=%d\n",
+				po.ClerkName, clerkData.ServiceFee, po.ServiceFee)
+		} else {
+			fmt.Printf("  ✓ Post Office with clerk '%s' spawned\n", clerkName)
+		}
+	} else {
+		fmt.Printf("  ✗ Post Office incomplete (building: pos=%v, po=%v; clerk: pos=%v, clerk=%v)\n",
+			hasPos, hasPostOffice, hasClerkPos, hasClerkComponent)
+	}
+}
+
+// testFindingAvailableCouriers tests the courier availability search.
+func testFindingAvailableCouriers(courierSys *engine.CourierSystem) {
 	fmt.Println("\n3. Finding Available Couriers:")
 	availableID := courierSys.FindAvailableCourier("TestServer")
 	if availableID != 0 {
@@ -275,8 +283,6 @@ func testSpawning(verbose bool) {
 	} else {
 		fmt.Println("  ✗ No available courier found")
 	}
-
-	fmt.Println("\n=== Test Complete ===")
 }
 
 func testIntegration(verbose bool) {

@@ -26,7 +26,19 @@ func main() {
 	gen := palette.NewGenerator()
 	seed := int64(12345)
 
-	// Demo 1: Show expanded 12+ color palette
+	printExpandedPalette(gen, seed)
+	printHarmonyTypes(gen, seed)
+	printMoodVariations(gen, seed)
+	printRarityTiers(gen, seed)
+	printGenrePalettes(gen, seed)
+	printColorCounts(gen, seed)
+	printCombinedEffects(gen, seed)
+	printPerformanceStats()
+	printSummary()
+}
+
+// printExpandedPalette demonstrates the expanded 12+ color palette.
+func printExpandedPalette(gen *palette.Generator, seed int64) {
 	fmt.Println("1. Expanded Color Palette (12+ colors)")
 	fmt.Println("   Previous: 8 colors | Now: 12+ colors")
 	fmt.Println("   New roles: Accent3, Highlight1/2, Shadow1/2, Neutral, Warning, Info")
@@ -40,8 +52,10 @@ func main() {
 
 	printPaletteColors(pal)
 	fmt.Println()
+}
 
-	// Demo 2: Color Harmony Types
+// printHarmonyTypes demonstrates the 6 color harmony types.
+func printHarmonyTypes(gen *palette.Generator, seed int64) {
 	fmt.Println("2. Color Harmony Types (6 types)")
 	fmt.Println("   Demonstrates mathematically harmonious color relationships")
 
@@ -54,6 +68,7 @@ func main() {
 		palette.HarmonyMonochromatic,
 	}
 
+	opts := palette.DefaultOptions()
 	for _, harmony := range harmonies {
 		opts.Harmony = harmony
 		pal, err := gen.GenerateWithOptions("scifi", seed, opts)
@@ -68,8 +83,10 @@ func main() {
 			colorToString(pal.Accent1))
 	}
 	fmt.Println()
+}
 
-	// Demo 3: Mood Variations
+// printMoodVariations demonstrates the 7 mood variations.
+func printMoodVariations(gen *palette.Generator, seed int64) {
 	fmt.Println("3. Mood Variations (7 moods)")
 	fmt.Println("   Adjusts emotional tone while maintaining genre identity")
 
@@ -83,9 +100,10 @@ func main() {
 		palette.MoodPastel,
 	}
 
+	opts := palette.DefaultOptions()
+	opts.Harmony = palette.HarmonyComplementary
 	for _, mood := range moods {
 		opts.Mood = mood
-		opts.Harmony = palette.HarmonyComplementary
 		pal, err := gen.GenerateWithOptions("horror", seed, opts)
 		if err != nil {
 			fmt.Printf("   Error generating %s: %v\n", mood, err)
@@ -98,8 +116,10 @@ func main() {
 			colorToString(pal.Text))
 	}
 	fmt.Println()
+}
 
-	// Demo 4: Rarity Tiers
+// printRarityTiers demonstrates the 5 rarity-based color schemes.
+func printRarityTiers(gen *palette.Generator, seed int64) {
 	fmt.Println("4. Rarity-Based Color Schemes (5 tiers)")
 	fmt.Println("   Color intensity increases with rarity for visual impact")
 
@@ -111,9 +131,10 @@ func main() {
 		palette.RarityLegendary,
 	}
 
+	opts := palette.DefaultOptions()
+	opts.Mood = palette.MoodNormal
 	for _, rarity := range rarities {
 		opts.Rarity = rarity
-		opts.Mood = palette.MoodNormal
 		pal, err := gen.GenerateWithOptions("cyberpunk", seed, opts)
 		if err != nil {
 			fmt.Printf("   Error generating %s: %v\n", rarity, err)
@@ -126,15 +147,17 @@ func main() {
 			colorToString(pal.Highlight1))
 	}
 	fmt.Println()
+}
 
-	// Demo 5: Genre Comparisons
+// printGenrePalettes demonstrates genre-specific color palettes.
+func printGenrePalettes(gen *palette.Generator, seed int64) {
 	fmt.Println("5. Genre-Specific Palettes")
 	fmt.Println("   Each genre has distinct color personality")
 
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	genreNames := []string{"Fantasy", "Sci-Fi", "Horror", "Cyberpunk", "Post-Apocalyptic"}
 
-	opts = palette.DefaultOptions()
+	opts := palette.DefaultOptions()
 	for i, genreID := range genres {
 		pal, err := gen.GenerateWithOptions(genreID, seed, opts)
 		if err != nil {
@@ -148,12 +171,15 @@ func main() {
 			colorToString(pal.Accent1))
 	}
 	fmt.Println()
+}
 
-	// Demo 6: Custom MinColors
+// printColorCounts demonstrates custom color count generation.
+func printColorCounts(gen *palette.Generator, seed int64) {
 	fmt.Println("6. Custom Color Count")
 	fmt.Println("   Generate palettes with 12, 16, 20, or 24+ colors")
 
 	colorCounts := []int{12, 16, 20, 24}
+	opts := palette.DefaultOptions()
 	for _, count := range colorCounts {
 		opts.MinColors = count
 		pal, err := gen.GenerateWithOptions("fantasy", seed, opts)
@@ -164,8 +190,10 @@ func main() {
 		fmt.Printf("   %2d colors: Generated %d colors in palette\n", count, len(pal.Colors))
 	}
 	fmt.Println()
+}
 
-	// Demo 7: Combined Effects
+// printCombinedEffects demonstrates combining harmony, mood, and rarity.
+func printCombinedEffects(gen *palette.Generator, seed int64) {
 	fmt.Println("7. Combined Effects (Harmony + Mood + Rarity)")
 	fmt.Println("   All features work together for maximum variety")
 
@@ -200,15 +228,20 @@ func main() {
 			colorToString(pal.Accent1))
 	}
 	fmt.Println()
+}
 
-	// Demo 8: Performance Stats
+// printPerformanceStats displays performance characteristics.
+func printPerformanceStats() {
 	fmt.Println("8. Performance Characteristics")
 	fmt.Println("   - Generation time: ~10-11μs per palette")
 	fmt.Println("   - Memory usage: ~6KB per palette")
 	fmt.Println("   - Target: <5ms (exceeded by 450x)")
 	fmt.Println("   - Deterministic: Same seed = same colors")
 	fmt.Println()
+}
 
+// printSummary displays the final summary of Phase 4 features.
+func printSummary() {
 	fmt.Println("=== Demo Complete ===")
 	fmt.Println("\nPhase 4 Summary:")
 	fmt.Println("  ✓ Expanded to 12+ colors (from 8)")

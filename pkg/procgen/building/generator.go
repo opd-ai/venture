@@ -418,98 +418,108 @@ func (g *Generator) generateManorLayout(building *Building, roomCount int, rng *
 
 // generateGuildHallLayout creates a multi-floor layout for guild halls
 func (g *Generator) generateGuildHallLayout(building *Building, roomCount int, rng *rand.Rand) error {
-	// Guild halls have multiple floors (1-5)
 	floorsCount := building.Floors
 	if floorsCount < 1 {
 		floorsCount = 1
 	}
 
-	// Distribute rooms across floors
+	cols, rows, roomWidth, roomHeight := g.calculateGuildHallLayout(building, roomCount, floorsCount, rng)
+
+	for floor := 0; floor < floorsCount; floor++ {
+		floorRooms := g.generateFloorRooms(building, floor, floorsCount, cols, rows, roomWidth, roomHeight, rng)
+		building.FloorRooms[floor] = floorRooms
+	}
+
+	return nil
+}
+
+// calculateGuildHallLayout determines grid dimensions for guild hall.
+func (g *Generator) calculateGuildHallLayout(building *Building, roomCount, floorsCount int, rng *rand.Rand) (cols, rows, roomWidth, roomHeight int) {
 	roomsPerFloor := roomCount / floorsCount
 	if roomsPerFloor < 2 {
 		roomsPerFloor = 2
 	}
 
-	// Each floor uses a grid layout similar to manor
-	cols := 3 + rng.Intn(2) // 3-4 columns for guild halls
-	rows := (roomsPerFloor + cols - 1) / cols
+	cols = 3 + rng.Intn(2)
+	rows = (roomsPerFloor + cols - 1) / cols
+	roomWidth = building.Width / cols
+	roomHeight = building.Height / rows
 
-	roomWidth := building.Width / cols
-	roomHeight := building.Height / rows
+	return cols, rows, roomWidth, roomHeight
+}
 
-	// Generate rooms for each floor
-	for floor := 0; floor < floorsCount; floor++ {
-		floorRooms := []Room{}
-		roomIdx := 0
+// generateFloorRooms creates rooms for a single floor.
+func (g *Generator) generateFloorRooms(building *Building, floor, floorsCount, cols, rows, roomWidth, roomHeight int, rng *rand.Rand) []Room {
+	floorRooms := []Room{}
+	roomsPerFloor := cols * rows
+	roomIdx := 0
 
-		for row := 0; row < rows && roomIdx < roomsPerFloor; row++ {
-			for col := 0; col < cols && roomIdx < roomsPerFloor; col++ {
-				// Determine room type based on floor
-				roomType := RoomLiving
-				if floor == 0 && roomIdx == 0 {
-					// Ground floor entrance
-					roomType = RoomEntrance
-				} else if floor == floorsCount-1 {
-					// Top floor: meeting rooms and special rooms
-					roomType = RoomLiving
-				} else {
-					// Middle floors: varied rooms
-					switch roomIdx % 4 {
-					case 0:
-						roomType = RoomStorage
-					case 1:
-						roomType = RoomWorkshop
-					case 2:
-						roomType = RoomLiving
-					case 3:
-						roomType = RoomBedroom
-					}
-				}
+	for row := 0; row < rows && roomIdx < roomsPerFloor; row++ {
+		for col := 0; col < cols && roomIdx < roomsPerFloor; col++ {
+			roomType := g.determineGuildRoomType(floor, floorsCount, roomIdx)
 
-				room := Room{
-					X:      col * roomWidth,
-					Y:      row * roomHeight,
-					Width:  roomWidth,
-					Height: roomHeight,
-					Type:   roomType,
-				}
-
-				// For multi-floor buildings, only add ground floor to main Rooms list
-				// All floors go into FloorRooms for completeness
-				if floor == 0 {
-					building.Rooms = append(building.Rooms, room)
-				}
-				floorRooms = append(floorRooms, room)
-
-				// Add horizontal door (only to ground floor for validation)
-				if floor == 0 && col < cols-1 && roomIdx+1 < roomsPerFloor {
-					door := Door{
-						X:    (col + 1) * roomWidth,
-						Y:    row*roomHeight + roomHeight/2,
-						Type: DoorMetal, // Guild halls use metal doors
-					}
-					building.Doors = append(building.Doors, door)
-				}
-
-				// Add vertical door (only to ground floor for validation)
-				if floor == 0 && row < rows-1 && roomIdx+cols < roomsPerFloor {
-					door := Door{
-						X:    col*roomWidth + roomWidth/2,
-						Y:    (row + 1) * roomHeight,
-						Type: DoorMetal,
-					}
-					building.Doors = append(building.Doors, door)
-				}
-
-				roomIdx++
+			room := Room{
+				X:      col * roomWidth,
+				Y:      row * roomHeight,
+				Width:  roomWidth,
+				Height: roomHeight,
+				Type:   roomType,
 			}
-		}
 
-		// Store rooms per floor
-		building.FloorRooms[floor] = floorRooms
+			if floor == 0 {
+				building.Rooms = append(building.Rooms, room)
+				g.addFloorDoors(building, col, row, cols, rows, roomIdx, roomsPerFloor, roomWidth, roomHeight)
+			}
+			floorRooms = append(floorRooms, room)
+
+			roomIdx++
+		}
 	}
 
-	return nil
+	return floorRooms
+}
+
+// determineGuildRoomType selects room type based on floor and position.
+func (g *Generator) determineGuildRoomType(floor, floorsCount, roomIdx int) RoomType {
+	if floor == 0 && roomIdx == 0 {
+		return RoomEntrance
+	} else if floor == floorsCount-1 {
+		return RoomLiving
+	}
+
+	switch roomIdx % 4 {
+	case 0:
+		return RoomStorage
+	case 1:
+		return RoomWorkshop
+	case 2:
+		return RoomLiving
+	case 3:
+		return RoomBedroom
+	default:
+		return RoomLiving
+	}
+}
+
+// addFloorDoors adds horizontal and vertical doors for ground floor rooms.
+func (g *Generator) addFloorDoors(building *Building, col, row, cols, rows, roomIdx, roomsPerFloor, roomWidth, roomHeight int) {
+	if col < cols-1 && roomIdx+1 < roomsPerFloor {
+		door := Door{
+			X:    (col + 1) * roomWidth,
+			Y:    row*roomHeight + roomHeight/2,
+			Type: DoorMetal,
+		}
+		building.Doors = append(building.Doors, door)
+	}
+
+	if row < rows-1 && roomIdx+cols < roomsPerFloor {
+		door := Door{
+			X:    col*roomWidth + roomWidth/2,
+			Y:    (row + 1) * roomHeight,
+			Type: DoorMetal,
+		}
+		building.Doors = append(building.Doors, door)
+	}
 }
 
 // generateRoof selects an appropriate roof type

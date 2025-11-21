@@ -167,7 +167,14 @@ func (g *Game) handleInput() {
 		return
 	}
 
-	// Camera movement (WASD)
+	g.handleCameraMovement(cam)
+	g.handleOptimizationToggles()
+	g.handleEntityCountAdjustment()
+	g.handleMiscControls(cam)
+}
+
+// handleCameraMovement processes WASD camera movement.
+func (g *Game) handleCameraMovement(cam *engine.CameraComponent) {
 	const moveSpeed = 10.0
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
 		cam.Y -= moveSpeed
@@ -181,8 +188,10 @@ func (g *Game) handleInput() {
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
 		cam.X += moveSpeed
 	}
+}
 
-	// Toggle optimizations
+// handleOptimizationToggles processes optimization toggle keys.
+func (g *Game) handleOptimizationToggles() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		g.cullingEnabled = !g.cullingEnabled
 		g.renderSystem.EnableCulling(g.cullingEnabled)
@@ -193,8 +202,10 @@ func (g *Game) handleInput() {
 		g.renderSystem.EnableBatching(g.batchingEnabled)
 		log.Printf("Batch Rendering: %v", g.batchingEnabled)
 	}
+}
 
-	// Entity count adjustment
+// handleEntityCountAdjustment processes entity count adjustment keys.
+func (g *Game) handleEntityCountAdjustment() {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		g.createEntities(500)
 		log.Println("Entity count: 500")
@@ -211,13 +222,14 @@ func (g *Game) handleInput() {
 		g.createEntities(5000)
 		log.Println("Entity count: 5000")
 	}
+}
 
-	// Toggle help
+// handleMiscControls processes help toggle and camera reset.
+func (g *Game) handleMiscControls(cam *engine.CameraComponent) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		g.showHelp = !g.showHelp
 	}
 
-	// Reset camera position
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		cam.X = worldWidth/2 - screenWidth/2
 		cam.Y = worldHeight/2 - screenHeight/2

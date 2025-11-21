@@ -330,54 +330,75 @@ func (g *CellularGenerator) Validate(result interface{}) error {
 // addUndergroundLakes creates small lakes in cave chambers.
 // Lakes are placed in open floor areas, giving caves a natural water feature.
 func (g *CellularGenerator) addUndergroundLakes(terrain *Terrain, rng *rand.Rand) {
-	// Find suitable locations for lakes (open areas with floor tiles)
-	candidates := make([]Point, 0, 50)
-
-	for y := 5; y < terrain.Height-5; y++ {
-		for x := 5; x < terrain.Width-5; x++ {
-			// Check if this is a floor tile surrounded by mostly floor tiles
-			if terrain.GetTile(x, y) == TileFloor {
-				// Count floor neighbors in 5x5 area
-				floorNeighbors := 0
-				for dy := -2; dy <= 2; dy++ {
-					for dx := -2; dx <= 2; dx++ {
-						nx, ny := x+dx, y+dy
-						if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
-							floorNeighbors++
-						}
-					}
-				}
-
-				// If area is mostly open (>15 floor tiles in 5x5), it's a good lake spot
-				if floorNeighbors > 15 {
-					candidates = append(candidates, Point{x, y})
-				}
-			}
-		}
-	}
-
+	candidates := g.findLakeCandidates(terrain)
 	if len(candidates) == 0 {
 		return
 	}
 
-	// Create 1-3 small underground lakes
-	numLakes := 1 + rng.Intn(3)
-	for i := 0; i < numLakes && len(candidates) > 0; i++ {
-		// Pick a random location
-		idx := rng.Intn(len(candidates))
-		center := candidates[idx]
+	lakeLocations := g.selectLakeLocations(candidates, rng)
+	g.placeLakes(terrain, lakeLocations, rng)
+}
 
-		// Remove nearby candidates to avoid overlapping lakes
-		newCandidates := make([]Point, 0, len(candidates))
-		for _, c := range candidates {
-			dist := abs(c.X-center.X) + abs(c.Y-center.Y)
-			if dist > 15 { // Manhattan distance > 15
-				newCandidates = append(newCandidates, c)
+// findLakeCandidates identifies suitable locations for underground lakes.
+func (g *CellularGenerator) findLakeCandidates(terrain *Terrain) []Point {
+	candidates := make([]Point, 0, 50)
+
+	for y := 5; y < terrain.Height-5; y++ {
+		for x := 5; x < terrain.Width-5; x++ {
+			if terrain.GetTile(x, y) == TileFloor && g.hasOpenArea(terrain, x, y) {
+				candidates = append(candidates, Point{x, y})
 			}
 		}
-		candidates = newCandidates
+	}
 
-		// Generate small lake (radius 3-6)
+	return candidates
+}
+
+// hasOpenArea checks if location is surrounded by mostly floor tiles.
+func (g *CellularGenerator) hasOpenArea(terrain *Terrain, x, y int) bool {
+	floorNeighbors := 0
+	for dy := -2; dy <= 2; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			nx, ny := x+dx, y+dy
+			if terrain.IsInBounds(nx, ny) && terrain.GetTile(nx, ny) == TileFloor {
+				floorNeighbors++
+			}
+		}
+	}
+	return floorNeighbors > 15
+}
+
+// selectLakeLocations picks 1-3 non-overlapping lake locations.
+func (g *CellularGenerator) selectLakeLocations(candidates []Point, rng *rand.Rand) []Point {
+	locations := []Point{}
+	numLakes := 1 + rng.Intn(3)
+
+	for i := 0; i < numLakes && len(candidates) > 0; i++ {
+		idx := rng.Intn(len(candidates))
+		center := candidates[idx]
+		locations = append(locations, center)
+
+		candidates = g.removeNearbyPoints(candidates, center)
+	}
+
+	return locations
+}
+
+// removeNearbyPoints filters out candidates near a given point.
+func (g *CellularGenerator) removeNearbyPoints(candidates []Point, center Point) []Point {
+	newCandidates := make([]Point, 0, len(candidates))
+	for _, c := range candidates {
+		dist := abs(c.X-center.X) + abs(c.Y-center.Y)
+		if dist > 15 {
+			newCandidates = append(newCandidates, c)
+		}
+	}
+	return newCandidates
+}
+
+// placeLakes generates lakes at selected locations.
+func (g *CellularGenerator) placeLakes(terrain *Terrain, locations []Point, rng *rand.Rand) {
+	for _, center := range locations {
 		radius := 3 + rng.Intn(4)
 		GenerateLake(center, radius, terrain, rng)
 	}

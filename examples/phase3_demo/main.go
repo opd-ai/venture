@@ -28,7 +28,18 @@ func main() {
 
 	fmt.Println("=== Venture Phase 3: Particle & UI Systems Demo ===")
 
-	// Validate genre
+	_, seedGen := initializeDemo()
+
+	demoColorPalette(seedGen)
+	demoTileRendering(seedGen)
+	demoParticleEffects(seedGen)
+	demoUIElements(seedGen)
+	demoParticleSimulation(seedGen)
+	printSummary()
+}
+
+// initializeDemo validates genre and creates seed generator.
+func initializeDemo() (*genre.Genre, *procgen.SeedGenerator) {
 	registry := genre.DefaultRegistry()
 	if !registry.Has(*genreID) {
 		log.Fatalf("Invalid genre: %s", *genreID)
@@ -38,10 +49,11 @@ func main() {
 	fmt.Printf("Genre: %s - %s\n", g.Name, g.Description)
 	fmt.Printf("Seed: %d\n\n", *seed)
 
-	// Create seed generator for deterministic sub-seeds
-	seedGen := procgen.NewSeedGenerator(*seed)
+	return g, procgen.NewSeedGenerator(*seed)
+}
 
-	// === COLOR PALETTE ===
+// demoColorPalette demonstrates color palette generation.
+func demoColorPalette(seedGen *procgen.SeedGenerator) {
 	fmt.Println("=== 1. Color Palette Generation ===")
 	paletteGen := palette.NewGenerator()
 	pal, err := paletteGen.Generate(*genreID, seedGen.GetSeed("palette", 0))
@@ -57,8 +69,10 @@ func main() {
 	} else {
 		fmt.Println()
 	}
+}
 
-	// === TILE RENDERING ===
+// demoTileRendering demonstrates tile rendering system.
+func demoTileRendering(seedGen *procgen.SeedGenerator) {
 	fmt.Println("=== 2. Tile Rendering ===")
 	tileGen := tiles.NewGenerator()
 
@@ -89,8 +103,10 @@ func main() {
 		fmt.Printf("  %s: %dx%d\n", tt.name, tile.Bounds().Dx(), tile.Bounds().Dy())
 	}
 	fmt.Println()
+}
 
-	// === PARTICLE EFFECTS ===
+// demoParticleEffects demonstrates particle effect generation.
+func demoParticleEffects(seedGen *procgen.SeedGenerator) {
 	fmt.Println("=== 3. Particle Effects ===")
 	particleGen := particles.NewGenerator()
 
@@ -130,8 +146,10 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
+}
 
-	// === UI ELEMENTS ===
+// demoUIElements demonstrates UI element generation.
+func demoUIElements(seedGen *procgen.SeedGenerator) {
 	fmt.Println("=== 4. UI Element Generation ===")
 	uiGen := ui.NewGenerator()
 
@@ -177,35 +195,42 @@ func main() {
 		fmt.Println()
 	}
 	fmt.Println()
+}
 
-	// === PARTICLE SIMULATION ===
-	if *verbose {
-		fmt.Println("=== 5. Particle Simulation Demo ===")
-		sparkSystem, _ := particleGen.Generate(particles.Config{
-			Type:     particles.ParticleSpark,
-			Count:    10,
-			GenreID:  *genreID,
-			Seed:     seedGen.GetSeed("sim", 0),
-			Duration: 0.5,
-			SpreadX:  10.0,
-			SpreadY:  10.0,
-			Gravity:  5.0,
-			MinSize:  1.0,
-			MaxSize:  3.0,
-		})
-
-		fmt.Println("Simulating particle system over 1 second:")
-		deltaTime := 0.1
-		for step := 0; step <= 10; step++ {
-			time := float64(step) * deltaTime
-			aliveCount := len(sparkSystem.GetAliveParticles())
-			fmt.Printf("  t=%.1fs: %d particles alive\n", time, aliveCount)
-			sparkSystem.Update(deltaTime)
-		}
-		fmt.Println()
+// demoParticleSimulation demonstrates particle simulation over time.
+func demoParticleSimulation(seedGen *procgen.SeedGenerator) {
+	if !*verbose {
+		return
 	}
 
-	// === SUMMARY ===
+	fmt.Println("=== 5. Particle Simulation Demo ===")
+	particleGen := particles.NewGenerator()
+	sparkSystem, _ := particleGen.Generate(particles.Config{
+		Type:     particles.ParticleSpark,
+		Count:    10,
+		GenreID:  *genreID,
+		Seed:     seedGen.GetSeed("sim", 0),
+		Duration: 0.5,
+		SpreadX:  10.0,
+		SpreadY:  10.0,
+		Gravity:  5.0,
+		MinSize:  1.0,
+		MaxSize:  3.0,
+	})
+
+	fmt.Println("Simulating particle system over 1 second:")
+	deltaTime := 0.1
+	for step := 0; step <= 10; step++ {
+		time := float64(step) * deltaTime
+		aliveCount := len(sparkSystem.GetAliveParticles())
+		fmt.Printf("  t=%.1fs: %d particles alive\n", time, aliveCount)
+		sparkSystem.Update(deltaTime)
+	}
+	fmt.Println()
+}
+
+// printSummary displays Phase 3 implementation summary.
+func printSummary() {
 	fmt.Println("=== Phase 3 Implementation Summary ===")
 	fmt.Printf("✓ Color Palette: Genre-aware color generation\n")
 	fmt.Printf("✓ Tile Rendering: 8 procedural tile types\n")

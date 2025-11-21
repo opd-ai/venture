@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -11,6 +12,7 @@ import (
 
 // Generator creates procedural books with grammar-based text generation.
 type Generator struct {
+	mu  sync.Mutex
 	rng *rand.Rand
 }
 
@@ -32,6 +34,10 @@ func NewGenerator() *Generator {
 //   - "quest_id": string (for quest books)
 //   - "location": string (for historical texts)
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	// Lock for thread safety when accessing g.rng
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	// Validate parameters
 	if err := procgen.ValidateParams(params); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)

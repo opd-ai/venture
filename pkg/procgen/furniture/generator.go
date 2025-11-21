@@ -212,31 +212,42 @@ func (gen *Generator) selectMaterial(rng *rand.Rand, tmpl *Template, genreID str
 		return MaterialWood
 	}
 
-	if mat, ok := gen.trySelectExoticMaterial(rng, tmpl, rarity); ok {
+	// Pre-generate all RNG values to ensure determinism
+	exoticRoll := rng.Float64()
+	genreRoll := rng.Float64()
+	finalRoll := rng.Intn(len(tmpl.AllowedMaterials))
+
+	// Try exotic material selection for high rarity
+	if mat, ok := gen.trySelectExoticMaterialDeterministic(exoticRoll, tmpl, rarity); ok {
 		return mat
 	}
 
-	if mat, ok := gen.trySelectGenreMaterial(rng, tmpl, genreID); ok {
+	// Try genre-specific material selection
+	if mat, ok := gen.trySelectGenreMaterialDeterministic(genreRoll, tmpl, genreID); ok {
 		return mat
 	}
 
-	return tmpl.AllowedMaterials[rng.Intn(len(tmpl.AllowedMaterials))]
+	// Fallback to random selection
+	return tmpl.AllowedMaterials[finalRoll]
 }
 
-// trySelectExoticMaterial attempts to select exotic materials for high rarity items
-func (gen *Generator) trySelectExoticMaterial(rng *rand.Rand, tmpl *Template, rarity RarityTier) (MaterialType, bool) {
+// trySelectExoticMaterialDeterministic attempts to select exotic materials for high rarity items
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectExoticMaterialDeterministic(roll float64, tmpl *Template, rarity RarityTier) (MaterialType, bool) {
 	if rarity < RarityEpic || len(tmpl.AllowedMaterials) <= 1 {
 		return 0, false
 	}
 
+	// Check for crystal first (60% chance if available)
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialCrystal && rng.Float64() < 0.6 {
+		if mat == MaterialCrystal && roll < 0.6 {
 			return MaterialCrystal, true
 		}
 	}
 
+	// Check for metal (50% chance if available and crystal didn't match)
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialMetal && rng.Float64() < 0.5 {
+		if mat == MaterialMetal && roll >= 0.6 && roll < 0.8 {
 			return MaterialMetal, true
 		}
 	}
@@ -244,67 +255,72 @@ func (gen *Generator) trySelectExoticMaterial(rng *rand.Rand, tmpl *Template, ra
 	return 0, false
 }
 
-// trySelectGenreMaterial attempts to select genre-appropriate materials
-func (gen *Generator) trySelectGenreMaterial(rng *rand.Rand, tmpl *Template, genreID string) (MaterialType, bool) {
+// trySelectGenreMaterialDeterministic attempts to select genre-appropriate materials
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectGenreMaterialDeterministic(roll float64, tmpl *Template, genreID string) (MaterialType, bool) {
 	switch genreID {
 	case "fantasy":
-		return gen.trySelectFantasyMaterial(rng, tmpl)
+		return gen.trySelectFantasyMaterialDeterministic(roll, tmpl)
 	case "scifi", "cyberpunk":
-		return gen.trySelectScifiMaterial(rng, tmpl)
+		return gen.trySelectScifiMaterialDeterministic(roll, tmpl)
 	case "horror":
-		return gen.trySelectHorrorMaterial(rng, tmpl)
+		return gen.trySelectHorrorMaterialDeterministic(roll, tmpl)
 	case "postapoc":
-		return gen.trySelectPostapocMaterial(rng, tmpl)
+		return gen.trySelectPostapocMaterialDeterministic(roll, tmpl)
 	}
 	return 0, false
 }
 
-// trySelectFantasyMaterial attempts to select fantasy-themed materials
-func (gen *Generator) trySelectFantasyMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+// trySelectFantasyMaterialDeterministic attempts to select fantasy-themed materials
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectFantasyMaterialDeterministic(roll float64, tmpl *Template) (MaterialType, bool) {
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialWood && rng.Float64() < 0.4 {
+		if mat == MaterialWood && roll < 0.4 {
 			return MaterialWood, true
 		}
-		if mat == MaterialStone && rng.Float64() < 0.3 {
+		if mat == MaterialStone && roll >= 0.4 && roll < 0.7 {
 			return MaterialStone, true
 		}
 	}
 	return 0, false
 }
 
-// trySelectScifiMaterial attempts to select sci-fi themed materials
-func (gen *Generator) trySelectScifiMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+// trySelectScifiMaterialDeterministic attempts to select sci-fi themed materials
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectScifiMaterialDeterministic(roll float64, tmpl *Template) (MaterialType, bool) {
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialMetal && rng.Float64() < 0.5 {
+		if mat == MaterialMetal && roll < 0.5 {
 			return MaterialMetal, true
 		}
-		if mat == MaterialCrystal && rng.Float64() < 0.3 {
+		if mat == MaterialCrystal && roll >= 0.5 && roll < 0.8 {
 			return MaterialCrystal, true
 		}
 	}
 	return 0, false
 }
 
-// trySelectHorrorMaterial attempts to select horror-themed materials
-func (gen *Generator) trySelectHorrorMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+// trySelectHorrorMaterialDeterministic attempts to select horror-themed materials
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectHorrorMaterialDeterministic(roll float64, tmpl *Template) (MaterialType, bool) {
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialStone && rng.Float64() < 0.4 {
+		if mat == MaterialStone && roll < 0.4 {
 			return MaterialStone, true
 		}
-		if mat == MaterialWood && rng.Float64() < 0.3 {
+		if mat == MaterialWood && roll >= 0.4 && roll < 0.7 {
 			return MaterialWood, true
 		}
 	}
 	return 0, false
 }
 
-// trySelectPostapocMaterial attempts to select post-apocalyptic themed materials
-func (gen *Generator) trySelectPostapocMaterial(rng *rand.Rand, tmpl *Template) (MaterialType, bool) {
+// trySelectPostapocMaterialDeterministic attempts to select post-apocalyptic themed materials
+// Uses pre-rolled random value to ensure determinism
+func (gen *Generator) trySelectPostapocMaterialDeterministic(roll float64, tmpl *Template) (MaterialType, bool) {
 	for _, mat := range tmpl.AllowedMaterials {
-		if mat == MaterialMetal && rng.Float64() < 0.4 {
+		if mat == MaterialMetal && roll < 0.4 {
 			return MaterialMetal, true
 		}
-		if mat == MaterialWood && rng.Float64() < 0.3 {
+		if mat == MaterialWood && roll >= 0.4 && roll < 0.7 {
 			return MaterialWood, true
 		}
 	}

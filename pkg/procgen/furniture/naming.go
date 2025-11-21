@@ -19,6 +19,8 @@ func (gen *Generator) getMaterialColor(rng *rand.Rand, material MaterialType, ge
 	case MaterialMetal:
 		// Grays, silvers, with genre tint
 		base := uint8(140 + rng.Intn(76)) // 140-215
+		// Pre-roll for fantasy gold/silver choice to ensure determinism
+		goldRoll := rng.Float64()
 		var r, g, b uint8
 		switch genreID {
 		case "scifi", "cyberpunk":
@@ -28,7 +30,7 @@ func (gen *Generator) getMaterialColor(rng *rand.Rand, material MaterialType, ge
 			b = base
 		case "fantasy":
 			// Silver/gold tint
-			if rng.Float64() < 0.3 {
+			if goldRoll < 0.3 {
 				// Gold
 				r = base + 20
 				g = base + 10

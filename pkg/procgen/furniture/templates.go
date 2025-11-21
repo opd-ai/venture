@@ -1,5 +1,7 @@
 package furniture
 
+import "sort"
+
 // GetTemplate returns the template for a given furniture subtype
 func GetTemplate(subType string) *Template {
 	templates := getAllTemplates()
@@ -246,17 +248,19 @@ func getAllTemplates() map[string]Template {
 	}
 }
 
-// GetAllSubTypes returns a list of all available furniture subtypes
+// GetAllSubTypes returns a list of all available furniture subtypes in deterministic order
 func GetAllSubTypes() []string {
 	templates := getAllTemplates()
 	subtypes := make([]string, 0, len(templates))
 	for subtype := range templates {
 		subtypes = append(subtypes, subtype)
 	}
+	// Sort to ensure deterministic order (map iteration is non-deterministic in Go)
+	sort.Strings(subtypes)
 	return subtypes
 }
 
-// GetSubTypesByCategory returns all subtypes for a given furniture type
+// GetSubTypesByCategory returns all subtypes for a given furniture type in deterministic order
 func GetSubTypesByCategory(furnitureType FurnitureType) []string {
 	templates := getAllTemplates()
 	subtypes := make([]string, 0)
@@ -265,5 +269,7 @@ func GetSubTypesByCategory(furnitureType FurnitureType) []string {
 			subtypes = append(subtypes, subtype)
 		}
 	}
+	// Sort to ensure deterministic order (map iteration is non-deterministic in Go)
+	sort.Strings(subtypes)
 	return subtypes
 }

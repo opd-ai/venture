@@ -6,6 +6,7 @@ package skills
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -443,8 +444,14 @@ func (g *SkillTreeGenerator) connectNodes(rng *rand.Rand, skillsByTier map[int][
 				attempts++
 			}
 
-			// Establish connections
+			// Establish connections (sort indices for deterministic order)
+			prereqIndices := make([]int, 0, len(prereqs))
 			for prereqIdx := range prereqs {
+				prereqIndices = append(prereqIndices, prereqIdx)
+			}
+			sort.Ints(prereqIndices)
+
+			for _, prereqIdx := range prereqIndices {
 				prereqNode := previousTier[prereqIdx]
 				prereqNode.Children = append(prereqNode.Children, node)
 				node.Skill.Requirements.PrerequisiteIDs = append(

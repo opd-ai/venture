@@ -291,7 +291,17 @@ func printPhaseRequirements(phase *legendary.QuestPhase) {
 		return
 	}
 
-	// Kill requirements
+	printKillRequirements(req)
+	printCollectionRequirements(req)
+	printCraftingRequirements(req)
+	printRaidRequirements(req)
+	printTravelRequirements(req)
+	printNPCRequirements(req)
+	printChallengeRequirements(req)
+}
+
+// printKillRequirements displays kill target and boss requirements.
+func printKillRequirements(req *legendary.PhaseRequirements) {
 	if len(req.KillTargets) > 0 {
 		fmt.Println("      Kill Targets:")
 		for enemy, count := range req.KillTargets {
@@ -304,16 +314,20 @@ func printPhaseRequirements(phase *legendary.QuestPhase) {
 			fmt.Printf("        • %s\n", boss)
 		}
 	}
+}
 
-	// Collection requirements
+// printCollectionRequirements displays item collection requirements.
+func printCollectionRequirements(req *legendary.PhaseRequirements) {
 	if len(req.CollectItems) > 0 {
 		fmt.Println("      Collect Items:")
 		for item, count := range req.CollectItems {
 			fmt.Printf("        • %s: %d\n", item, count)
 		}
 	}
+}
 
-	// Crafting requirements
+// printCraftingRequirements displays crafting requirements.
+func printCraftingRequirements(req *legendary.PhaseRequirements) {
 	if len(req.CraftItems) > 0 {
 		fmt.Println("      Craft Items:")
 		for _, craft := range req.CraftItems {
@@ -321,8 +335,10 @@ func printPhaseRequirements(phase *legendary.QuestPhase) {
 				craft.ItemName, craft.ItemType, craft.Quantity, craft.StationQuality)
 		}
 	}
+}
 
-	// Raid requirements
+// printRaidRequirements displays raid encounter requirements.
+func printRaidRequirements(req *legendary.PhaseRequirements) {
 	if len(req.RaidEncounters) > 0 {
 		fmt.Println("      Raid Encounters:")
 		for _, raid := range req.RaidEncounters {
@@ -334,8 +350,10 @@ func printPhaseRequirements(phase *legendary.QuestPhase) {
 			}
 		}
 	}
+}
 
-	// Travel requirements
+// printTravelRequirements displays server and location requirements.
+func printTravelRequirements(req *legendary.PhaseRequirements) {
 	if req.MinServers > 0 {
 		fmt.Printf("      Travel: Visit %d servers\n", req.MinServers)
 		if len(req.ServersToVisit) > 0 {
@@ -348,16 +366,20 @@ func printPhaseRequirements(phase *legendary.QuestPhase) {
 			fmt.Printf("        • %s\n", loc)
 		}
 	}
+}
 
-	// NPC requirements
+// printNPCRequirements displays NPC interaction requirements.
+func printNPCRequirements(req *legendary.PhaseRequirements) {
 	if len(req.NPCsToTalk) > 0 {
 		fmt.Println("      Talk to NPCs:")
 		for _, npc := range req.NPCsToTalk {
 			fmt.Printf("        • %s\n", npc)
 		}
 	}
+}
 
-	// Challenges
+// printChallengeRequirements displays challenge trial requirements.
+func printChallengeRequirements(req *legendary.PhaseRequirements) {
 	if len(req.Challenges) > 0 {
 		fmt.Println("      Challenges:")
 		for _, challenge := range req.Challenges {

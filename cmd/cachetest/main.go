@@ -75,21 +75,40 @@ func (g *Game) generateRandomConfig() sprites.Config {
 
 // Update handles game logic updates.
 func (g *Game) Update() error {
-	// Handle input
+	if err := g.handleInput(); err != nil {
+		return err
+	}
+
+	g.generateSprites()
+
+	return nil
+}
+
+// handleInput processes keyboard input and updates game state.
+func (g *Game) handleInput() error {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return fmt.Errorf("quit")
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		if !g.paused {
-			g.paused = true
-			time.Sleep(200 * time.Millisecond) // Simple debounce
-		} else {
-			g.paused = false
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
+	g.handlePauseKey()
+	g.handleClearKey()
+	g.handleGenreKey()
+	g.handleStatsKey()
+	g.handleSpeedKeys()
 
+	return nil
+}
+
+// handlePauseKey toggles pause state when space is pressed.
+func (g *Game) handlePauseKey() {
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.paused = !g.paused
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// handleClearKey clears cache and resets counters when C is pressed.
+func (g *Game) handleClearKey() {
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
 		g.cachedGen.ClearCache()
 		g.configs = g.configs[:0]
@@ -97,17 +116,26 @@ func (g *Game) Update() error {
 		g.totalRequests = 0
 		time.Sleep(200 * time.Millisecond)
 	}
+}
 
+// handleGenreKey cycles through genres when G is pressed.
+func (g *Game) handleGenreKey() {
 	if ebiten.IsKeyPressed(ebiten.KeyG) {
 		g.genreIndex = (g.genreIndex + 1) % len(g.genres)
 		time.Sleep(200 * time.Millisecond)
 	}
+}
 
+// handleStatsKey toggles stats display when S is pressed.
+func (g *Game) handleStatsKey() {
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		g.showStats = !g.showStats
 		time.Sleep(200 * time.Millisecond)
 	}
+}
 
+// handleSpeedKeys adjusts update interval with +/- keys.
+func (g *Game) handleSpeedKeys() {
 	if ebiten.IsKeyPressed(ebiten.KeyEqual) {
 		if g.updateInterval > 100*time.Millisecond {
 			g.updateInterval -= 100 * time.Millisecond
@@ -121,38 +149,38 @@ func (g *Game) Update() error {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+}
 
-	// Generate sprites periodically (if not paused)
-	if !g.paused && time.Since(g.lastUpdate) >= g.updateInterval {
-		g.lastUpdate = time.Now()
-
-		// Generate random config or reuse existing (50/50 chance for cache hits)
-		var config sprites.Config
-		if len(g.configs) > 0 && rand.Intn(2) == 0 {
-			// Reuse existing config (should hit cache)
-			config = g.configs[rand.Intn(len(g.configs))]
-		} else {
-			// Generate new config
-			config = g.generateRandomConfig()
-			g.configs = append(g.configs, config)
-			g.generatedCount++
-		}
-
-		// Request sprite (will use cache if available)
-		_, err := g.cachedGen.Generate(config)
-		if err != nil {
-			g.logger.WithError(err).Error("failed to generate sprite")
-		}
-
-		g.totalRequests++
-
-		// Keep configs list manageable
-		if len(g.configs) > 200 {
-			g.configs = g.configs[50:]
-		}
+// generateSprites periodically generates sprites when not paused.
+func (g *Game) generateSprites() {
+	if g.paused || time.Since(g.lastUpdate) < g.updateInterval {
+		return
 	}
 
-	return nil
+	g.lastUpdate = time.Now()
+
+	config := g.selectSpriteConfig()
+	if _, err := g.cachedGen.Generate(config); err != nil {
+		g.logger.WithError(err).Error("failed to generate sprite")
+	}
+
+	g.totalRequests++
+
+	if len(g.configs) > 200 {
+		g.configs = g.configs[50:]
+	}
+}
+
+// selectSpriteConfig chooses a random or cached sprite config.
+func (g *Game) selectSpriteConfig() sprites.Config {
+	if len(g.configs) > 0 && rand.Intn(2) == 0 {
+		return g.configs[rand.Intn(len(g.configs))]
+	}
+
+	config := g.generateRandomConfig()
+	g.configs = append(g.configs, config)
+	g.generatedCount++
+	return config
 }
 
 // Draw renders the game screen.

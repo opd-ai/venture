@@ -27,70 +27,87 @@ func NewParticleSystem() *ParticleSystem {
 //   - Manages emission timers and rates
 func (ps *ParticleSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		comp, ok := entity.GetComponent("particle_emitter")
-		if !ok {
+		emitter := ps.getParticleEmitter(entity)
+		if emitter == nil {
 			continue
 		}
 
-		emitter, ok := comp.(*ParticleEmitterComponent)
-		if !ok {
-			continue
-		}
+		ps.updateEmitterTime(emitter, deltaTime)
+		ps.updateParticleSystems(emitter, deltaTime)
+		ps.emitNewParticles(emitter, entity, deltaTime)
+		ps.cleanupDeadSystems(emitter)
+	}
+}
 
-		// Update elapsed time for time-limited emitters
-		if emitter.EmissionTime > 0 {
-			emitter.ElapsedTime += deltaTime
-		}
+// getParticleEmitter retrieves the particle emitter component from an entity.
+func (ps *ParticleSystem) getParticleEmitter(entity *Entity) *ParticleEmitterComponent {
+	comp, ok := entity.GetComponent("particle_emitter")
+	if !ok {
+		return nil
+	}
+	emitter, ok := comp.(*ParticleEmitterComponent)
+	if !ok {
+		return nil
+	}
+	return emitter
+}
 
-		// Update all particle systems
-		for _, system := range emitter.Systems {
-			system.Update(deltaTime)
-		}
+// updateEmitterTime advances elapsed time for time-limited emitters.
+func (ps *ParticleSystem) updateEmitterTime(emitter *ParticleEmitterComponent, deltaTime float64) {
+	if emitter.EmissionTime > 0 {
+		emitter.ElapsedTime += deltaTime
+	}
+}
 
-		// Emit new particles for continuous emitters
-		if emitter.EmitRate > 0 && emitter.IsActive() {
-			emitter.EmitTimer += deltaTime
+// updateParticleSystems updates all particle systems in the emitter.
+func (ps *ParticleSystem) updateParticleSystems(emitter *ParticleEmitterComponent, deltaTime float64) {
+	for _, system := range emitter.Systems {
+		system.Update(deltaTime)
+	}
+}
 
-			// Time to emit?
-			emitInterval := 1.0 / emitter.EmitRate
-			for emitter.EmitTimer >= emitInterval {
-				emitter.EmitTimer -= emitInterval
+// emitNewParticles generates new particles for continuous emitters.
+func (ps *ParticleSystem) emitNewParticles(emitter *ParticleEmitterComponent, entity *Entity, deltaTime float64) {
+	if emitter.EmitRate <= 0 || !emitter.IsActive() {
+		return
+	}
 
-				// GAP-001 FIX: Cleanup dead systems BEFORE attempting to add new ones
-				// This ensures capacity is available for continuous emission
-				if emitter.AutoCleanup {
-					emitter.CleanupDeadSystems()
-				}
+	emitter.EmitTimer += deltaTime
+	emitInterval := 1.0 / emitter.EmitRate
 
-				// Generate new particle system
-				system, err := ps.generator.Generate(emitter.EmitConfig)
-				if err != nil {
-					// Failed to generate - skip this emission
-					continue
-				}
+	for emitter.EmitTimer >= emitInterval {
+		emitter.EmitTimer -= emitInterval
 
-				// Position particles at entity's position
-				if posComp, ok := entity.GetComponent("position"); ok {
-					if pos, ok := posComp.(*PositionComponent); ok {
-						ps.offsetParticles(system, pos.X, pos.Y)
-					}
-				}
-
-				// Add to emitter (with capacity check)
-				if !emitter.AddSystem(system) {
-					// Still at capacity after cleanup - this indicates a problem
-					// Log in verbose mode but continue (fail gracefully)
-					continue
-				}
-			}
-		}
-
-		// GAP-001 FIX: Also cleanup at end of Update() for one-shot emitters
-		// Continuous emitters cleanup before emission, but one-shot emitters
-		// need cleanup here to remove dead systems
 		if emitter.AutoCleanup {
 			emitter.CleanupDeadSystems()
 		}
+
+		system, err := ps.generator.Generate(emitter.EmitConfig)
+		if err != nil {
+			continue
+		}
+
+		ps.positionParticlesAtEntity(system, entity)
+
+		if !emitter.AddSystem(system) {
+			continue
+		}
+	}
+}
+
+// positionParticlesAtEntity positions particles at entity's world coordinates.
+func (ps *ParticleSystem) positionParticlesAtEntity(system *particles.ParticleSystem, entity *Entity) {
+	if posComp, ok := entity.GetComponent("position"); ok {
+		if pos, ok := posComp.(*PositionComponent); ok {
+			ps.offsetParticles(system, pos.X, pos.Y)
+		}
+	}
+}
+
+// cleanupDeadSystems removes finished particle systems from emitter.
+func (ps *ParticleSystem) cleanupDeadSystems(emitter *ParticleEmitterComponent) {
+	if emitter.AutoCleanup {
+		emitter.CleanupDeadSystems()
 	}
 }
 

@@ -198,81 +198,106 @@ func (p *QuestPhase) PhaseProgress() float64 {
 	totalTasks := 0
 	completedTasks := 0
 
-	// Kill targets
-	for target, required := range req.KillTargets {
-		totalTasks++
-		if current := req.KillCompleted[target]; current >= required {
-			completedTasks++
-		}
-	}
-
-	// Collection
-	for item, required := range req.CollectItems {
-		totalTasks++
-		if current := req.CollectCompleted[item]; current >= required {
-			completedTasks++
-		}
-	}
-
-	// Crafting
-	for _, craft := range req.CraftItems {
-		totalTasks++
-		if craft.Completed {
-			completedTasks++
-		}
-	}
-
-	// Raids
-	for range req.RaidEncounters {
-		totalTasks++
-	}
-	for range req.RaidCompleted {
-		if req.RaidCompleted != nil {
-			for _, done := range req.RaidCompleted {
-				if done {
-					completedTasks++
-					break
-				}
-			}
-		}
-	}
-
-	// Travel
-	if req.MinServers > 0 {
-		totalTasks++
-		if len(req.ServersVisited) >= req.MinServers {
-			completedTasks++
-		}
-	}
-
-	// NPCs
-	for range req.NPCsToTalk {
-		totalTasks++
-	}
-	for range req.NPCsTalkedTo {
-		if req.NPCsTalkedTo != nil {
-			for _, talked := range req.NPCsTalkedTo {
-				if talked {
-					completedTasks++
-					break
-				}
-			}
-		}
-	}
-
-	// Challenges
-	for _, challenge := range req.Challenges {
-		totalTasks++
-		if challenge.Completed {
-			completedTasks++
-		}
-	}
+	totalTasks, completedTasks = countKillProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countCollectionProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countCraftingProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countRaidProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countTravelProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countNPCProgress(req, totalTasks, completedTasks)
+	totalTasks, completedTasks = countChallengeProgress(req, totalTasks, completedTasks)
 
 	if totalTasks == 0 {
 		return 0.0
 	}
 
 	return float64(completedTasks) / float64(totalTasks)
+}
+
+// countKillProgress tallies kill target completion.
+func countKillProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for target, required := range req.KillTargets {
+		total++
+		if current := req.KillCompleted[target]; current >= required {
+			completed++
+		}
+	}
+	return total, completed
+}
+
+// countCollectionProgress tallies item collection completion.
+func countCollectionProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for item, required := range req.CollectItems {
+		total++
+		if current := req.CollectCompleted[item]; current >= required {
+			completed++
+		}
+	}
+	return total, completed
+}
+
+// countCraftingProgress tallies crafting requirement completion.
+func countCraftingProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for _, craft := range req.CraftItems {
+		total++
+		if craft.Completed {
+			completed++
+		}
+	}
+	return total, completed
+}
+
+// countRaidProgress tallies raid encounter completion.
+func countRaidProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for range req.RaidEncounters {
+		total++
+	}
+	if req.RaidCompleted != nil {
+		for _, done := range req.RaidCompleted {
+			if done {
+				completed++
+				break
+			}
+		}
+	}
+	return total, completed
+}
+
+// countTravelProgress tallies server visit completion.
+func countTravelProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	if req.MinServers > 0 {
+		total++
+		if len(req.ServersVisited) >= req.MinServers {
+			completed++
+		}
+	}
+	return total, completed
+}
+
+// countNPCProgress tallies NPC interaction completion.
+func countNPCProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for range req.NPCsToTalk {
+		total++
+	}
+	if req.NPCsTalkedTo != nil {
+		for _, talked := range req.NPCsTalkedTo {
+			if talked {
+				completed++
+				break
+			}
+		}
+	}
+	return total, completed
+}
+
+// countChallengeProgress tallies challenge completion.
+func countChallengeProgress(req *PhaseRequirements, total, completed int) (int, int) {
+	for _, challenge := range req.Challenges {
+		total++
+		if challenge.Completed {
+			completed++
+		}
+	}
+	return total, completed
 }
 
 // NewPhaseRequirements creates an initialized requirements struct.

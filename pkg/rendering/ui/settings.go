@@ -439,60 +439,85 @@ func (sm *SettingsManager) SetValue(id string, value interface{}) error {
 func (sm *SettingsManager) validateValue(s *Setting, value interface{}) error {
 	switch s.Type {
 	case TypeBool:
-		if _, ok := value.(bool); !ok {
-			return fmt.Errorf("expected bool, got %T", value)
-		}
+		return validateBool(value)
 	case TypeInt:
-		intVal, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("expected int, got %T", value)
-		}
-		if s.MinValue != nil {
-			if intVal < s.MinValue.(int) {
-				return fmt.Errorf("value %d below minimum %d", intVal, s.MinValue.(int))
-			}
-		}
-		if s.MaxValue != nil {
-			if intVal > s.MaxValue.(int) {
-				return fmt.Errorf("value %d above maximum %d", intVal, s.MaxValue.(int))
-			}
-		}
+		return validateInt(s, value)
 	case TypeFloat:
-		floatVal, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("expected float64, got %T", value)
-		}
-		if s.MinValue != nil {
-			if floatVal < s.MinValue.(float64) {
-				return fmt.Errorf("value %.2f below minimum %.2f", floatVal, s.MinValue.(float64))
-			}
-		}
-		if s.MaxValue != nil {
-			if floatVal > s.MaxValue.(float64) {
-				return fmt.Errorf("value %.2f above maximum %.2f", floatVal, s.MaxValue.(float64))
-			}
-		}
+		return validateFloat(s, value)
 	case TypeString:
-		if _, ok := value.(string); !ok {
-			return fmt.Errorf("expected string, got %T", value)
-		}
+		return validateString(value)
 	case TypeEnum:
-		strVal, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("expected string for enum, got %T", value)
+		return validateEnum(s, value)
+	}
+	return nil
+}
+
+// validateBool checks if value is a boolean type.
+func validateBool(value interface{}) error {
+	if _, ok := value.(bool); !ok {
+		return fmt.Errorf("expected bool, got %T", value)
+	}
+	return nil
+}
+
+// validateInt checks if value is an integer within allowed range.
+func validateInt(s *Setting, value interface{}) error {
+	intVal, ok := value.(int)
+	if !ok {
+		return fmt.Errorf("expected int, got %T", value)
+	}
+	if s.MinValue != nil {
+		if intVal < s.MinValue.(int) {
+			return fmt.Errorf("value %d below minimum %d", intVal, s.MinValue.(int))
 		}
-		valid := false
-		for _, opt := range s.EnumOptions {
-			if strVal == opt {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			return fmt.Errorf("invalid enum value: %s", strVal)
+	}
+	if s.MaxValue != nil {
+		if intVal > s.MaxValue.(int) {
+			return fmt.Errorf("value %d above maximum %d", intVal, s.MaxValue.(int))
 		}
 	}
 	return nil
+}
+
+// validateFloat checks if value is a float within allowed range.
+func validateFloat(s *Setting, value interface{}) error {
+	floatVal, ok := value.(float64)
+	if !ok {
+		return fmt.Errorf("expected float64, got %T", value)
+	}
+	if s.MinValue != nil {
+		if floatVal < s.MinValue.(float64) {
+			return fmt.Errorf("value %.2f below minimum %.2f", floatVal, s.MinValue.(float64))
+		}
+	}
+	if s.MaxValue != nil {
+		if floatVal > s.MaxValue.(float64) {
+			return fmt.Errorf("value %.2f above maximum %.2f", floatVal, s.MaxValue.(float64))
+		}
+	}
+	return nil
+}
+
+// validateString checks if value is a string type.
+func validateString(value interface{}) error {
+	if _, ok := value.(string); !ok {
+		return fmt.Errorf("expected string, got %T", value)
+	}
+	return nil
+}
+
+// validateEnum checks if value is a valid enum option.
+func validateEnum(s *Setting, value interface{}) error {
+	strVal, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("expected string for enum, got %T", value)
+	}
+	for _, opt := range s.EnumOptions {
+		if strVal == opt {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid enum value: %s", strVal)
 }
 
 // GetValue retrieves current value of a setting

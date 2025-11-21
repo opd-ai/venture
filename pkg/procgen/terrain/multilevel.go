@@ -194,43 +194,56 @@ func (g *LevelGenerator) ValidateMultiLevelConnectivity(levels []*Terrain) error
 	}
 
 	for i, level := range levels {
-		// First level should have stairs down (except if only one level)
-		if i == 0 && len(levels) > 1 {
-			if len(level.StairsDown) == 0 {
-				return fmt.Errorf("level %d (first level) missing stairs down", i)
-			}
+		if err := validateLevelStairs(i, level, len(levels)); err != nil {
+			return err
 		}
 
-		// Middle levels should have both stairs
-		if i > 0 && i < len(levels)-1 {
-			if len(level.StairsUp) == 0 {
-				return fmt.Errorf("level %d (middle level) missing stairs up", i)
-			}
-			if len(level.StairsDown) == 0 {
-				return fmt.Errorf("level %d (middle level) missing stairs down", i)
-			}
-		}
-
-		// Last level should have stairs up
-		if i == len(levels)-1 && len(levels) > 1 {
-			if len(level.StairsUp) == 0 {
-				return fmt.Errorf("level %d (last level) missing stairs up", i)
-			}
-		}
-
-		// Validate all stairs are in walkable positions
-		for _, stair := range level.StairsUp {
-			if !level.IsWalkable(stair.X, stair.Y) {
-				return fmt.Errorf("level %d stairs up at (%d, %d) is not walkable", i, stair.X, stair.Y)
-			}
-		}
-		for _, stair := range level.StairsDown {
-			if !level.IsWalkable(stair.X, stair.Y) {
-				return fmt.Errorf("level %d stairs down at (%d, %d) is not walkable", i, stair.X, stair.Y)
-			}
+		if err := validateStairsWalkability(i, level); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+// validateLevelStairs checks if a level has the correct stairs configuration.
+func validateLevelStairs(levelIndex int, level *Terrain, totalLevels int) error {
+	if levelIndex == 0 && totalLevels > 1 {
+		if len(level.StairsDown) == 0 {
+			return fmt.Errorf("level %d (first level) missing stairs down", levelIndex)
+		}
+	}
+
+	if levelIndex > 0 && levelIndex < totalLevels-1 {
+		if len(level.StairsUp) == 0 {
+			return fmt.Errorf("level %d (middle level) missing stairs up", levelIndex)
+		}
+		if len(level.StairsDown) == 0 {
+			return fmt.Errorf("level %d (middle level) missing stairs down", levelIndex)
+		}
+	}
+
+	if levelIndex == totalLevels-1 && totalLevels > 1 {
+		if len(level.StairsUp) == 0 {
+			return fmt.Errorf("level %d (last level) missing stairs up", levelIndex)
+		}
+	}
+
+	return nil
+}
+
+// validateStairsWalkability ensures all stairs are positioned on walkable tiles.
+func validateStairsWalkability(levelIndex int, level *Terrain) error {
+	for _, stair := range level.StairsUp {
+		if !level.IsWalkable(stair.X, stair.Y) {
+			return fmt.Errorf("level %d stairs up at (%d, %d) is not walkable", levelIndex, stair.X, stair.Y)
+		}
+	}
+	for _, stair := range level.StairsDown {
+		if !level.IsWalkable(stair.X, stair.Y) {
+			return fmt.Errorf("level %d stairs down at (%d, %d) is not walkable", levelIndex, stair.X, stair.Y)
+		}
+	}
 	return nil
 }
 

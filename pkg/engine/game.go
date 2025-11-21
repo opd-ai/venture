@@ -270,64 +270,72 @@ func (g *EbitenGame) SetWorldSeed(seed int64) {
 func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	switch option {
 	case MainMenuOptionSinglePlayer:
-		// Transition to single-player submenu
-		if err := g.StateManager.TransitionTo(AppStateSinglePlayerMenu); err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to single-player menu")
-			}
-			return
-		}
-
-		// Show single-player menu
-		if g.SinglePlayerMenu != nil {
-			g.SinglePlayerMenu.Show()
-		}
-
-		if g.logger != nil {
-			g.logger.Info("entering single-player menu")
-		}
-
+		g.handleSinglePlayerOption()
 	case MainMenuOptionMultiPlayer:
-		// Transition to multiplayer submenu
-		if err := g.StateManager.TransitionTo(AppStateMultiPlayerMenu); err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to multiplayer menu")
-			}
-			return
-		}
-
-		// Show multiplayer menu
-		if g.MultiplayerMenu != nil {
-			g.MultiplayerMenu.Show()
-		}
-
-		if g.logger != nil {
-			g.logger.Info("entering multiplayer menu")
-		}
-
+		g.handleMultiPlayerOption()
 	case MainMenuOptionSettings:
-		// Transition to settings menu
-		if err := g.StateManager.TransitionTo(AppStateSettings); err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to settings")
-			}
-			return
-		}
-
-		// Show settings UI
-		g.SettingsUI.Show()
-
-		if g.logger != nil {
-			g.logger.Info("entering settings menu")
-		}
-
+		g.handleSettingsOption()
 	case MainMenuOptionQuit:
-		// Exit the application
+		g.handleQuitOption()
+	}
+}
+
+// handleSinglePlayerOption transitions to single-player submenu.
+func (g *EbitenGame) handleSinglePlayerOption() {
+	if err := g.StateManager.TransitionTo(AppStateSinglePlayerMenu); err != nil {
 		if g.logger != nil {
-			g.logger.Info("quit selected")
+			g.logger.WithError(err).Error("failed to transition to single-player menu")
 		}
-		// Ebiten doesn't have a clean exit API, so we return an error which will terminate RunGame
-		// The client can handle this gracefully
+		return
+	}
+
+	if g.SinglePlayerMenu != nil {
+		g.SinglePlayerMenu.Show()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("entering single-player menu")
+	}
+}
+
+// handleMultiPlayerOption transitions to multiplayer submenu.
+func (g *EbitenGame) handleMultiPlayerOption() {
+	if err := g.StateManager.TransitionTo(AppStateMultiPlayerMenu); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to multiplayer menu")
+		}
+		return
+	}
+
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Show()
+	}
+
+	if g.logger != nil {
+		g.logger.Info("entering multiplayer menu")
+	}
+}
+
+// handleSettingsOption transitions to settings menu.
+func (g *EbitenGame) handleSettingsOption() {
+	if err := g.StateManager.TransitionTo(AppStateSettings); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to settings")
+		}
+		return
+	}
+
+	g.SettingsUI.Show()
+
+	if g.logger != nil {
+		g.logger.Info("entering settings menu")
+	}
+}
+
+// handleQuitOption logs the quit action.
+func (g *EbitenGame) handleQuitOption() {
+	if g.logger != nil {
+		g.logger.Info("quit selected")
 	}
 }
 

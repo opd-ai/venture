@@ -412,34 +412,43 @@ func GetStyleForGenreAndType(genreID string, buildingType BuildingType, rng *ran
 
 // Validate checks if the building meets quality standards
 func (b *Building) Validate() error {
-	// Check basic dimensions
+	if err := validateBuildingDimensions(b); err != nil {
+		return err
+	}
+
+	if err := validateBuildingRooms(b); err != nil {
+		return err
+	}
+
+	if err := validateBuildingLayout(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBuildingDimensions checks if building dimensions are within acceptable bounds.
+func validateBuildingDimensions(b *Building) error {
 	if b.Width < 4 || b.Height < 4 {
 		return fmt.Errorf("building too small: %dx%d (minimum 4x4)", b.Width, b.Height)
 	}
 	if b.Width > 64 || b.Height > 64 {
 		return fmt.Errorf("building too large: %dx%d (maximum 64x64)", b.Width, b.Height)
 	}
+	return nil
+}
 
-	// Check room count (varies by building type)
+// validateBuildingRooms checks room count and entrance requirements.
+func validateBuildingRooms(b *Building) error {
 	if len(b.Rooms) < 1 {
 		return fmt.Errorf("building has no rooms")
 	}
 
-	maxRooms := 8 // Default for houses/workshops/storage
-	switch b.Type {
-	case TypeManor:
-		maxRooms = 20
-	case TypeGuildHall:
-		maxRooms = 100 // Guild halls can be very large
-	case TypeTower:
-		maxRooms = 12
-	}
-
+	maxRooms := getMaxRoomsForType(b.Type)
 	if len(b.Rooms) > maxRooms {
 		return fmt.Errorf("building has too many rooms: %d (maximum %d for %s)", len(b.Rooms), maxRooms, b.Type)
 	}
 
-	// Check for entrance room
 	hasEntrance := false
 	for _, room := range b.Rooms {
 		if room.Type == RoomEntrance {
@@ -451,12 +460,29 @@ func (b *Building) Validate() error {
 		return fmt.Errorf("building has no entrance room")
 	}
 
-	// Check navigability (all rooms accessible from entrance)
+	return nil
+}
+
+// getMaxRoomsForType returns maximum room count for a building type.
+func getMaxRoomsForType(buildingType BuildingType) int {
+	switch buildingType {
+	case TypeManor:
+		return 20
+	case TypeGuildHall:
+		return 100
+	case TypeTower:
+		return 12
+	default:
+		return 8
+	}
+}
+
+// validateBuildingLayout checks navigability and room overlap.
+func validateBuildingLayout(b *Building) error {
 	if !b.IsNavigable() {
 		return fmt.Errorf("building floor plan is not navigable")
 	}
 
-	// Check for room overlap
 	for i, r1 := range b.Rooms {
 		for j, r2 := range b.Rooms {
 			if i >= j {

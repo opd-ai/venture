@@ -171,6 +171,23 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("expected *StoryArc, got %T", result)
 	}
 
+	if err := validateBasicArcProperties(arc); err != nil {
+		return err
+	}
+
+	if err := validateArcNodeReferences(arc); err != nil {
+		return err
+	}
+
+	if err := validateArcConnections(arc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBasicArcProperties checks basic arc properties like ID, nodes count, and endings.
+func validateBasicArcProperties(arc *StoryArc) error {
 	if arc.ID == "" {
 		return fmt.Errorf("arc must have an ID")
 	}
@@ -187,19 +204,26 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("arc must have at least 1 ending, got %d", len(arc.Endings))
 	}
 
-	// Verify start node exists
+	return nil
+}
+
+// validateArcNodeReferences verifies start node and ending nodes exist.
+func validateArcNodeReferences(arc *StoryArc) error {
 	if _, exists := arc.Nodes[arc.StartNodeID]; !exists {
 		return fmt.Errorf("start node %s not found in nodes", arc.StartNodeID)
 	}
 
-	// Verify all endings exist
 	for endingID := range arc.Endings {
 		if _, exists := arc.Nodes[endingID]; !exists {
 			return fmt.Errorf("ending node %s not found in nodes", endingID)
 		}
 	}
 
-	// Verify all connections are valid
+	return nil
+}
+
+// validateArcConnections verifies all node connections are valid.
+func validateArcConnections(arc *StoryArc) error {
 	for _, node := range arc.Nodes {
 		if node.NextNodeID != "" {
 			if _, exists := arc.Nodes[node.NextNodeID]; !exists {

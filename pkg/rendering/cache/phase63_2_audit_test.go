@@ -107,7 +107,7 @@ func TestPhase63_2_Audit_SpriteCache_HitRate(t *testing.T) {
 func TestPhase63_2_Audit_SpriteCache_LRU(t *testing.T) {
 	const (
 		maxSize    = 10 * 64 * 64 * 4 // Space for exactly 10 sprites
-		numSprites = 20                // Add 20 sprites to force eviction
+		numSprites = 20               // Add 20 sprites to force eviction
 	)
 
 	cache := NewSpriteCache(maxSize)
@@ -265,7 +265,7 @@ func TestPhase63_2_Audit_AnimationCache_HitRate(t *testing.T) {
 // TestPhase63_2_Audit_ParticlePool tests particle pool performance.
 func TestPhase63_2_Audit_ParticlePool(t *testing.T) {
 	const (
-		numIterations = 1000
+		numIterations      = 1000
 		particlesPerSystem = 100
 	)
 

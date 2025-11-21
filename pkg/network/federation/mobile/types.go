@@ -112,6 +112,7 @@ type State struct {
 	BytesReceived   int64       // Total bytes received
 	SyncCount       int64       // Total sync operations
 	BackgroundCount int64       // Total background syncs
+	bytesAvailable  int64       // Token bucket: available bandwidth tokens
 }
 
 // NewState creates a new adapter state

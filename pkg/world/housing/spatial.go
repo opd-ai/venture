@@ -104,3 +104,10 @@ func (sg *SpatialGrid) removeFromCell(x, y int, plot *Plot) {
 		}
 	}
 }
+
+// Update removes a plot from its old position and re-inserts it.
+// This is more efficient than Remove followed by Insert when the plot may have moved.
+func (sg *SpatialGrid) Update(plot *Plot) {
+	sg.Remove(plot)
+	sg.Insert(plot)
+}

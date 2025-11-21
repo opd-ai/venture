@@ -186,8 +186,51 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 		return handler(ctx)
 	}
 
-	// TODO: Implement actual bandwidth limiting using token bucket or similar
-	// For now, just execute the handler
+	// Implement token bucket algorithm for bandwidth limiting
+	// Bucket capacity = MaxBandwidth (bytes per second)
+	// Tokens refill at rate of MaxBandwidth per second
+	// Each sync operation consumes tokens equal to estimated data transfer
+
+	// Estimate data transfer size (conservative estimate: 10KB per sync)
+	estimatedBytes := int64(10 * 1024)
+
+	// Calculate token refill based on time since last sync
+	a.mu.Lock()
+	now := time.Now()
+	lastSync := a.state.LastSyncTime
+	timeDelta := now.Sub(lastSync)
+
+	// Refill tokens based on elapsed time
+	tokensToAdd := int64(timeDelta.Seconds() * float64(a.config.MaxBandwidth))
+	currentTokens := a.state.bytesAvailable + tokensToAdd
+
+	// Cap tokens at bucket capacity (MaxBandwidth)
+	if currentTokens > int64(a.config.MaxBandwidth) {
+		currentTokens = int64(a.config.MaxBandwidth)
+	}
+
+	// Check if we have enough tokens
+	if currentTokens < estimatedBytes {
+		a.mu.Unlock()
+		// Not enough bandwidth available - calculate wait time
+		tokensNeeded := estimatedBytes - currentTokens
+		waitTime := time.Duration(float64(tokensNeeded)/float64(a.config.MaxBandwidth)) * time.Second
+
+		// Wait or return error if context deadline would be exceeded
+		select {
+		case <-time.After(waitTime):
+			// Retry after waiting
+			return a.executeSyncWithBandwidthLimit(ctx, handler)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	// Consume tokens
+	a.state.bytesAvailable = currentTokens - estimatedBytes
+	a.mu.Unlock()
+
+	// Execute sync handler
 	return handler(ctx)
 }
 

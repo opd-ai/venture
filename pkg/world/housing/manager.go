@@ -1,6 +1,7 @@
 package housing
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -147,7 +148,8 @@ func (m *Manager) Clear() {
 
 // CreateHouse creates a new housing plot from building data.
 // This is a convenience method for creating plots from procedurally generated buildings.
-func (m *Manager) CreateHouse(ownerID string, building interface{}) (string, error) {
+// The building parameter should be of type *building.Building, but we use interface{} to avoid import cycles.
+func (m *Manager) CreateHouse(ownerID string, buildingData interface{}) (string, error) {
 	if !m.enabled {
 		return "", fmt.Errorf("housing is disabled")
 	}
@@ -155,12 +157,41 @@ func (m *Manager) CreateHouse(ownerID string, building interface{}) (string, err
 	// Generate plot ID
 	plotID := fmt.Sprintf("house_%s_%d", ownerID, len(m.playerPlots[ownerID]))
 
-	// Create plot (simplified - real implementation would extract data from building)
+	// Extract position and size from building data
+	position := Vector2{X: 0, Y: 0}
+	size := SizeMedium
+
+	// Type assert to extract building metadata
+	// Expected structure: building with Width, Height fields (tiles)
+	if buildingData != nil {
+		type BuildingInterface interface {
+			GetWidth() int
+			GetHeight() int
+		}
+
+		if b, ok := buildingData.(BuildingInterface); ok {
+			width := b.GetWidth()
+			height := b.GetHeight()
+
+			// Determine plot size based on building dimensions
+			if width <= 8 && height <= 8 {
+				size = SizeSmall // 8x8
+			} else if width <= 16 && height <= 16 {
+				size = SizeMedium // 16x16
+			} else if width <= 24 && height <= 24 {
+				size = SizeLarge // 24x24
+			} else {
+				size = SizeEstate // 32x32
+			}
+		}
+	}
+
+	// Create plot
 	plot := &Plot{
 		ID:       plotID,
 		OwnerID:  ownerID,
-		Position: Vector2{X: 0, Y: 0}, // TODO: Extract from building or use placement system
-		Size:     SizeMedium,          // TODO: Extract from building dimensions
+		Position: position, // Caller should set position before placement
+		Size:     size,
 	}
 
 	if err := m.PlacePlot(plot); err != nil {
@@ -195,8 +226,35 @@ func (m *Manager) GetHouseFederated(houseID, serverID string) *House {
 // SyncHouseFromFederation synchronizes a house from another federated server.
 // serverID is the origin server, data contains the serialized house information.
 func (m *Manager) SyncHouseFromFederation(serverID string, data []byte) error {
-	// TODO: Deserialize house data
-	// TODO: Create or update local plot representation
-	// For now, return success (placeholder for actual implementation)
+	if !m.enabled {
+		return fmt.Errorf("housing is disabled")
+	}
+
+	// Deserialize plot data from federation message
+	var plot Plot
+	if err := json.Unmarshal(data, &plot); err != nil {
+		return fmt.Errorf("failed to deserialize house data: %w", err)
+	}
+
+	// Reconstruct permission set if nil
+	if plot.Permissions == nil {
+		plot.Permissions = NewPermissionSet()
+	}
+
+	// Check if plot already exists (update case)
+	if existing, ok := m.plots[plot.ID]; ok {
+		// Update existing plot
+		existing.Position = plot.Position
+		existing.Size = plot.Size
+		existing.Permissions = plot.Permissions
+		m.spatialGrid.Update(existing)
+		return nil
+	}
+
+	// Create new local plot representation (sync case)
+	m.plots[plot.ID] = &plot
+	m.playerPlots[plot.OwnerID] = append(m.playerPlots[plot.OwnerID], &plot)
+	m.spatialGrid.Insert(&plot)
+
 	return nil
 }

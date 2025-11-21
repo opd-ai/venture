@@ -289,6 +289,16 @@ func (b *Building) GetRoomCount() int {
 	return len(b.Rooms)
 }
 
+// GetWidth returns the building width in tiles
+func (b *Building) GetWidth() int {
+	return b.Width
+}
+
+// GetHeight returns the building height in tiles
+func (b *Building) GetHeight() int {
+	return b.Height
+}
+
 // IsNavigable checks if all rooms are accessible from the entrance
 func (b *Building) IsNavigable() bool {
 	if len(b.Rooms) == 0 {

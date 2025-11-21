@@ -275,74 +275,90 @@ func (g *Generator) applyHeightShadows(img *image.RGBA, config ParallaxConfig) {
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// Calculate shadow offset based on angle and height
+	shadowDX, shadowDY := calculateShadowOffset(config, width, height)
+	shadowIntensity := determineShadowIntensity(config)
+	shadowMap := createShadowMap(img, width, height, shadowDX, shadowDY, shadowIntensity)
+	applyShadowToImage(img, shadowMap, width, height)
+}
+
+// calculateShadowOffset computes shadow offset based on angle and height.
+func calculateShadowOffset(config ParallaxConfig, width, height int) (int, int) {
 	shadowDX := int(math.Cos(config.ShadowAngle) * config.ShadowHeight * float64(width) * 0.3)
 	shadowDY := int(math.Sin(config.ShadowAngle) * config.ShadowHeight * float64(height) * 0.3)
+	return shadowDX, shadowDY
+}
 
-	// Wall tiles cast more prominent shadows
-	shadowIntensity := 0.2
+// determineShadowIntensity returns shadow intensity based on tile type.
+func determineShadowIntensity(config ParallaxConfig) float64 {
 	if config.BaseConfig.Type == TileWall ||
 		config.BaseConfig.Type == TileWallNE ||
 		config.BaseConfig.Type == TileWallNW ||
 		config.BaseConfig.Type == TileWallSE ||
 		config.BaseConfig.Type == TileWallSW {
-		shadowIntensity = 0.4
+		return 0.4
 	}
+	return 0.2
+}
 
-	// Create shadow overlay
+// createShadowMap generates a shadow overlay from edge detection.
+func createShadowMap(img *image.RGBA, width, height, shadowDX, shadowDY int, shadowIntensity float64) [][]float64 {
 	shadowMap := make([][]float64, height)
 	for y := 0; y < height; y++ {
 		shadowMap[y] = make([]float64, width)
 	}
 
-	// Generate shadow from edges
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			// Check if this pixel is an edge (bright to dark transition)
-			c := img.RGBAAt(x, y)
-			brightness := float64(c.R+c.G+c.B) / 3.0
-
-			// Check right and bottom neighbors
-			isEdge := false
-			if x < width-1 {
-				cRight := img.RGBAAt(x+1, y)
-				brightRight := float64(cRight.R+cRight.G+cRight.B) / 3.0
-				if brightness > brightRight*1.3 {
-					isEdge = true
-				}
-			}
-			if y < height-1 {
-				cDown := img.RGBAAt(x, y+1)
-				brightDown := float64(cDown.R+cDown.G+cDown.B) / 3.0
-				if brightness > brightDown*1.3 {
-					isEdge = true
-				}
-			}
-
-			// Cast shadow from edges
-			if isEdge {
-				sx := x + shadowDX
-				sy := y + shadowDY
-				if sx >= 0 && sx < width && sy >= 0 && sy < height {
-					shadowMap[sy][sx] = math.Max(shadowMap[sy][sx], shadowIntensity)
-				}
+			if isEdgePixel(img, x, y, width, height) {
+				castShadowFromEdge(shadowMap, x, y, shadowDX, shadowDY, width, height, shadowIntensity)
 			}
 		}
 	}
 
-	// Apply shadow to image with falloff
+	return shadowMap
+}
+
+// isEdgePixel detects if a pixel is an edge (bright to dark transition).
+func isEdgePixel(img *image.RGBA, x, y, width, height int) bool {
+	c := img.RGBAAt(x, y)
+	brightness := float64(c.R+c.G+c.B) / 3.0
+
+	if x < width-1 {
+		cRight := img.RGBAAt(x+1, y)
+		brightRight := float64(cRight.R+cRight.G+cRight.B) / 3.0
+		if brightness > brightRight*1.3 {
+			return true
+		}
+	}
+	if y < height-1 {
+		cDown := img.RGBAAt(x, y+1)
+		brightDown := float64(cDown.R+cDown.G+cDown.B) / 3.0
+		if brightness > brightDown*1.3 {
+			return true
+		}
+	}
+	return false
+}
+
+// castShadowFromEdge projects shadow from an edge pixel to the shadow map.
+func castShadowFromEdge(shadowMap [][]float64, x, y, shadowDX, shadowDY, width, height int, shadowIntensity float64) {
+	sx := x + shadowDX
+	sy := y + shadowDY
+	if sx >= 0 && sx < width && sy >= 0 && sy < height {
+		shadowMap[sy][sx] = math.Max(shadowMap[sy][sx], shadowIntensity)
+	}
+}
+
+// applyShadowToImage applies the shadow map to the image.
+func applyShadowToImage(img *image.RGBA, shadowMap [][]float64, width, height int) {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			if shadowMap[y][x] > 0 {
 				c := img.RGBAAt(x, y)
-
-				// Apply shadow darkening
 				shadowFactor := 1.0 - shadowMap[y][x]
-
 				r := uint8(float64(c.R) * shadowFactor)
 				g := uint8(float64(c.G) * shadowFactor)
 				b := uint8(float64(c.B) * shadowFactor)
-
 				img.SetRGBA(x, y, color.RGBA{r, g, b, c.A})
 			}
 		}

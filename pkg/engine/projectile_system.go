@@ -102,76 +102,104 @@ func (s *ProjectileSystem) Update(entities []*Entity, deltaTime float64) {
 
 // updateProjectile handles a single projectile's physics and collision.
 func (s *ProjectileSystem) updateProjectile(entity *Entity, deltaTime float64) {
-	projComp, ok := entity.GetComponent("projectile")
-	if !ok {
-		return
-	}
-	projComponent, ok := projComp.(*ProjectileComponent)
-	if !ok {
+	projComponent, posComponent, velComponent := s.getProjectileComponents(entity)
+	if projComponent == nil {
 		return
 	}
 
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return
-	}
-	posComponent, ok := posComp.(*PositionComponent)
-	if !ok {
+	if s.updateProjectileAge(entity, projComponent, deltaTime) {
 		return
 	}
 
-	velComp, ok := entity.GetComponent("velocity")
-	if !ok {
-		return
-	}
-	velComponent, ok := velComp.(*VelocityComponent)
-	if !ok {
-		return
-	}
-
-	// Age the projectile
-	projComponent.Age += deltaTime
-	if projComponent.IsExpired() {
-		s.despawnProjectile(entity)
-		return
-	}
-
-	// Store old position for collision resolution
 	oldX, oldY := posComponent.X, posComponent.Y
-
-	// Move projectile
-	posComponent.X += velComponent.VX * deltaTime
-	posComponent.Y += velComponent.VY * deltaTime
-
-	// Spawn trail particles if TrailComponent is present
+	s.moveProjectile(posComponent, velComponent, deltaTime)
 	s.spawnTrailParticles(entity, posComponent, deltaTime)
 
-	// Check wall collision
-	if s.checkWallCollision(entity, oldX, oldY) {
-		if projComponent.CanBounce() {
-			s.handleBounce(entity, velComponent, posComponent, oldX, oldY)
-			if projComponent.DecrementBounce() {
-				// Handle explosion if explosive
-				if projComponent.Explosive {
-					s.handleExplosion(entity, posComponent)
-				}
-				s.despawnProjectile(entity)
-			}
-		} else {
-			// Handle explosion if explosive
-			if projComponent.Explosive {
-				s.handleExplosion(entity, posComponent)
-			}
-			s.despawnProjectile(entity)
-		}
+	if s.handleWallCollisionLogic(entity, projComponent, velComponent, posComponent, oldX, oldY) {
 		return
 	}
 
-	// Check entity collision
 	hitEntity := s.checkEntityCollision(entity, posComponent, projComponent)
 	if hitEntity != nil {
 		s.handleEntityHit(entity, hitEntity, projComponent, posComponent)
 	}
+}
+
+// getProjectileComponents retrieves and validates all required components for a projectile.
+func (s *ProjectileSystem) getProjectileComponents(entity *Entity) (*ProjectileComponent, *PositionComponent, *VelocityComponent) {
+	projComp, ok := entity.GetComponent("projectile")
+	if !ok {
+		return nil, nil, nil
+	}
+	projComponent, ok := projComp.(*ProjectileComponent)
+	if !ok {
+		return nil, nil, nil
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil, nil
+	}
+	posComponent, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil
+	}
+
+	velComp, ok := entity.GetComponent("velocity")
+	if !ok {
+		return nil, nil, nil
+	}
+	velComponent, ok := velComp.(*VelocityComponent)
+	if !ok {
+		return nil, nil, nil
+	}
+
+	return projComponent, posComponent, velComponent
+}
+
+// updateProjectileAge ages the projectile and despawns if expired.
+// Returns true if projectile was despawned.
+func (s *ProjectileSystem) updateProjectileAge(entity *Entity, projComponent *ProjectileComponent, deltaTime float64) bool {
+	projComponent.Age += deltaTime
+	if projComponent.IsExpired() {
+		s.despawnProjectile(entity)
+		return true
+	}
+	return false
+}
+
+// moveProjectile updates the projectile's position based on velocity.
+func (s *ProjectileSystem) moveProjectile(posComponent *PositionComponent, velComponent *VelocityComponent, deltaTime float64) {
+	posComponent.X += velComponent.VX * deltaTime
+	posComponent.Y += velComponent.VY * deltaTime
+}
+
+// handleWallCollisionLogic processes wall collision, bouncing, and explosion.
+// Returns true if projectile should stop processing.
+func (s *ProjectileSystem) handleWallCollisionLogic(entity *Entity, projComponent *ProjectileComponent,
+	velComponent *VelocityComponent, posComponent *PositionComponent, oldX, oldY float64,
+) bool {
+	if !s.checkWallCollision(entity, oldX, oldY) {
+		return false
+	}
+
+	if projComponent.CanBounce() {
+		s.handleBounce(entity, velComponent, posComponent, oldX, oldY)
+		if projComponent.DecrementBounce() {
+			s.handleExplosionAndDespawn(entity, projComponent, posComponent)
+		}
+	} else {
+		s.handleExplosionAndDespawn(entity, projComponent, posComponent)
+	}
+	return true
+}
+
+// handleExplosionAndDespawn handles explosion effect if projectile is explosive, then despawns.
+func (s *ProjectileSystem) handleExplosionAndDespawn(entity *Entity, projComponent *ProjectileComponent, posComponent *PositionComponent) {
+	if projComponent.Explosive {
+		s.handleExplosion(entity, posComponent)
+	}
+	s.despawnProjectile(entity)
 }
 
 // checkWallCollision checks if projectile hit a wall.

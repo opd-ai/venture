@@ -454,60 +454,90 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 		return
 	}
 
-	// Build spatial hash
+	hash := buildHeatSpatialHash(particles, config)
+
+	for i := range particles {
+		updateFireParticle(&particles[i], particles, config, deltaTime, rng, hash, i)
+	}
+}
+
+// buildHeatSpatialHash creates a spatial hash of all particles with heat.
+func buildHeatSpatialHash(particles []PhysicsParticle, config FireConfig) *SpatialHash {
 	hash := NewSpatialHash(config.HeatTransferRadius, -1000, -1000, 1000, 1000)
 	for i := range particles {
 		if particles[i].Heat > 0 {
 			hash.Insert(i, particles[i].X, particles[i].Y)
 		}
 	}
+	return hash
+}
 
-	// Update each particle
-	for i := range particles {
-		p := &particles[i]
+// updateFireParticle updates a single fire particle's heat, ignition, and movement.
+func updateFireParticle(p *PhysicsParticle, allParticles []PhysicsParticle, config FireConfig,
+	deltaTime float64, rng *rand.Rand, hash *SpatialHash, index int,
+) {
+	dissipateHeat(p, config, deltaTime)
+	updateIgnitionStatus(p, config)
+	consumeFuel(p, config, deltaTime)
+	transferHeatToNeighbors(p, allParticles, config, deltaTime, hash, index)
+	applyBuoyancy(p, config, deltaTime)
+	spawnEmbers(p, config, deltaTime, rng)
+}
 
-		// Dissipate heat
-		p.Heat -= config.HeatDissipation * deltaTime
-		if p.Heat < 0 {
-			p.Heat = 0
+// dissipateHeat reduces particle heat over time.
+func dissipateHeat(p *PhysicsParticle, config FireConfig, deltaTime float64) {
+	p.Heat -= config.HeatDissipation * deltaTime
+	if p.Heat < 0 {
+		p.Heat = 0
+	}
+}
+
+// updateIgnitionStatus checks if particle should ignite based on heat.
+func updateIgnitionStatus(p *PhysicsParticle, config FireConfig) {
+	if p.Heat >= config.IgnitionTemp {
+		p.Ignited = true
+	}
+}
+
+// consumeFuel consumes fuel if particle is ignited.
+func consumeFuel(p *PhysicsParticle, config FireConfig, deltaTime float64) {
+	if p.Ignited && p.FuelRemain > 0 {
+		p.FuelRemain -= config.FuelConsumptionRate * deltaTime
+		if p.FuelRemain <= 0 {
+			p.Ignited = false
+			p.Heat *= config.ExtinguishHeatMultiplier
 		}
+	}
+}
 
-		// Check ignition status
-		if p.Heat >= config.IgnitionTemp {
-			p.Ignited = true
-		}
-
-		// Consume fuel if ignited
-		if p.Ignited && p.FuelRemain > 0 {
-			p.FuelRemain -= config.FuelConsumptionRate * deltaTime
-			if p.FuelRemain <= 0 {
-				p.Ignited = false
-				p.Heat *= config.ExtinguishHeatMultiplier
+// transferHeatToNeighbors distributes heat to nearby particles.
+func transferHeatToNeighbors(p *PhysicsParticle, allParticles []PhysicsParticle, config FireConfig,
+	deltaTime float64, hash *SpatialHash, index int,
+) {
+	if p.Heat > config.MinActiveHeat {
+		neighbors := hash.GetNeighbors(allParticles, p.X, p.Y, config.HeatTransferRadius)
+		for _, nIdx := range neighbors {
+			if nIdx == index {
+				continue
 			}
+			n := &allParticles[nIdx]
+			heatTransfer := p.Heat * config.HeatTransferRate * deltaTime
+			n.Heat += heatTransfer * config.HeatTransferFraction
 		}
+	}
+}
 
-		// Transfer heat to neighbors
-		if p.Heat > config.MinActiveHeat {
-			neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.HeatTransferRadius)
-			for _, nIdx := range neighbors {
-				if nIdx == i {
-					continue
-				}
-				n := &particles[nIdx]
-				heatTransfer := p.Heat * config.HeatTransferRate * deltaTime
-				n.Heat += heatTransfer * config.HeatTransferFraction
-			}
-		}
+// applyBuoyancy makes heated particles rise.
+func applyBuoyancy(p *PhysicsParticle, config FireConfig, deltaTime float64) {
+	if p.Heat > config.MinActiveHeat {
+		p.VY -= config.BuoyancyStrength * p.Heat * deltaTime
+	}
+}
 
-		// Apply buoyancy (heat rises)
-		if p.Heat > config.MinActiveHeat {
-			p.VY -= config.BuoyancyStrength * p.Heat * deltaTime
-		}
-
-		// Spawn embers
-		if p.Ignited && rng.Float64() < config.EmberChance*deltaTime {
-			p.EmberTimer += deltaTime
-		}
+// spawnEmbers generates ember particles from ignited particles.
+func spawnEmbers(p *PhysicsParticle, config FireConfig, deltaTime float64, rng *rand.Rand) {
+	if p.Ignited && rng.Float64() < config.EmberChance*deltaTime {
+		p.EmberTimer += deltaTime
 	}
 }
 

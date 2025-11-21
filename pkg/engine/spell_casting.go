@@ -402,6 +402,17 @@ func (s *SpellCastingSystem) applySpellEffects(caster *Entity, spell *magic.Spel
 
 // castOffensiveSpell deals damage to enemies in range.
 func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spell, x, y float64) {
+	s.logSpellCasting(caster, spell)
+	targets := s.findTargets(caster, spell, x, y)
+	s.logTargetsFound(caster, spell, targets)
+
+	for _, target := range targets {
+		s.applySpellDamageToTarget(caster, target, spell)
+	}
+}
+
+// logSpellCasting logs the spell casting event.
+func (s *SpellCastingSystem) logSpellCasting(caster *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":   caster.ID,
@@ -410,10 +421,10 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 			"damage":      spell.Stats.Damage,
 		}).Debug("Casting offensive spell")
 	}
+}
 
-	// Find targets based on spell target type
-	targets := s.findTargets(caster, spell, x, y)
-
+// logTargetsFound logs the number of targets found.
+func (s *SpellCastingSystem) logTargetsFound(caster *Entity, spell *magic.Spell, targets []*Entity) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":    caster.ID,
@@ -421,63 +432,83 @@ func (s *SpellCastingSystem) castOffensiveSpell(caster *Entity, spell *magic.Spe
 			"target_count": len(targets),
 		}).Debug("Targets found for offensive spell")
 	}
+}
 
-	for _, target := range targets {
-		// Apply damage
-		healthComp, hasHealth := target.GetComponent("health")
-		if !hasHealth {
-			continue
-		}
-		health, ok := healthComp.(*HealthComponent)
-		if !ok {
-			continue
-		}
+// applySpellDamageToTarget applies damage, effects, and feedback to a single target.
+func (s *SpellCastingSystem) applySpellDamageToTarget(caster, target *Entity, spell *magic.Spell) {
+	health := s.getTargetHealth(target)
+	if health == nil {
+		return
+	}
 
-		// Calculate damage with combo multiplier (Phase 24.2)
-		damage := float64(spell.Stats.Damage)
-		comboMultiplier := 1.0
-		if s.comboSys != nil {
-			comboMultiplier = s.comboSys.GetActiveComboMultiplier(caster)
-			damage *= comboMultiplier
-		}
+	damage, comboMultiplier := s.calculateSpellDamage(caster, spell)
+	health.Current -= damage
+	if health.Current < 0 {
+		health.Current = 0
+	}
 
-		health.Current -= damage
-		if health.Current < 0 {
-			health.Current = 0
-		}
+	s.logDamageApplied(caster, target, spell, damage, comboMultiplier, health)
+	s.applySpellEffectsAndFeedback(target, spell)
+}
 
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"caster_id":        caster.ID,
-				"target_id":        target.ID,
-				"spell_name":       spell.Name,
-				"base_damage":      spell.Stats.Damage,
-				"combo_multiplier": comboMultiplier,
-				"final_damage":     damage,
-				"health_remaining": health.Current,
-			}).Info("Offensive spell damage applied")
-		}
+// getTargetHealth retrieves the health component from a target entity.
+func (s *SpellCastingSystem) getTargetHealth(target *Entity) *HealthComponent {
+	healthComp, hasHealth := target.GetComponent("health")
+	if !hasHealth {
+		return nil
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return nil
+	}
+	return health
+}
 
-		// Apply elemental effects based on spell element
-		if s.statusEffectSys != nil {
-			s.applyElementalEffect(target, spell)
-		}
+// calculateSpellDamage computes final damage with combo multiplier.
+func (s *SpellCastingSystem) calculateSpellDamage(caster *Entity, spell *magic.Spell) (float64, float64) {
+	damage := float64(spell.Stats.Damage)
+	comboMultiplier := 1.0
+	if s.comboSys != nil {
+		comboMultiplier = s.comboSys.GetActiveComboMultiplier(caster)
+		damage *= comboMultiplier
+	}
+	return damage, comboMultiplier
+}
 
-		// Spawn damage visual effect based on element
-		if s.particleSys != nil {
-			targetPos, hasPos := target.GetComponent("position")
-			if hasPos {
-				if pos, ok := targetPos.(*PositionComponent); ok {
-					// Spawn element-specific particles
-					s.spawnElementalHitEffect(pos.X, pos.Y, spell.Element, target.ID)
-				}
+// logDamageApplied logs the damage application details.
+func (s *SpellCastingSystem) logDamageApplied(caster, target *Entity, spell *magic.Spell,
+	damage, comboMultiplier float64, health *HealthComponent,
+) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":        caster.ID,
+			"target_id":        target.ID,
+			"spell_name":       spell.Name,
+			"base_damage":      spell.Stats.Damage,
+			"combo_multiplier": comboMultiplier,
+			"final_damage":     damage,
+			"health_remaining": health.Current,
+		}).Info("Offensive spell damage applied")
+	}
+}
+
+// applySpellEffectsAndFeedback applies elemental effects, visuals, and audio.
+func (s *SpellCastingSystem) applySpellEffectsAndFeedback(target *Entity, spell *magic.Spell) {
+	if s.statusEffectSys != nil {
+		s.applyElementalEffect(target, spell)
+	}
+
+	if s.particleSys != nil {
+		targetPos, hasPos := target.GetComponent("position")
+		if hasPos {
+			if pos, ok := targetPos.(*PositionComponent); ok {
+				s.spawnElementalHitEffect(pos.X, pos.Y, spell.Element, target.ID)
 			}
 		}
+	}
 
-		// Play impact sound effect
-		if s.audioMgr != nil {
-			_ = s.audioMgr.PlaySFX("impact", int64(target.ID))
-		}
+	if s.audioMgr != nil {
+		_ = s.audioMgr.PlaySFX("impact", int64(target.ID))
 	}
 }
 

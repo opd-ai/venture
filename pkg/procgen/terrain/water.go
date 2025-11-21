@@ -257,18 +257,11 @@ func GenerateMoat(room *Room, width int, terrain *Terrain) *WaterFeature {
 		Tiles: make([]Point, 0, (room.Width+room.Height)*2*width),
 	}
 
-	if width < 1 {
-		width = 1
-	}
-	if width > 3 {
-		width = 3
-	}
+	width = clampMoatWidth(width)
 
-	// Place water tiles around room perimeter
 	for dy := -width; dy <= room.Height+width-1; dy++ {
 		for dx := -width; dx <= room.Width+width-1; dx++ {
-			// Skip interior of room
-			if dx >= 0 && dx < room.Width && dy >= 0 && dy < room.Height {
+			if shouldSkipMoatTile(dx, dy, room) {
 				continue
 			}
 
@@ -279,39 +272,63 @@ func GenerateMoat(room *Room, width int, terrain *Terrain) *WaterFeature {
 				continue
 			}
 
-			// Calculate distance from room edge
-			minDistX := 0
-			if dx < 0 {
-				minDistX = -dx
-			} else if dx >= room.Width {
-				minDistX = dx - room.Width + 1
-			}
-
-			minDistY := 0
-			if dy < 0 {
-				minDistY = -dy
-			} else if dy >= room.Height {
-				minDistY = dy - room.Height + 1
-			}
-
-			dist := minDistX
-			if minDistY > dist {
-				dist = minDistY
-			}
-
-			// Place water based on distance (only if within moat width)
+			dist := calculateDistanceFromRoomEdge(dx, dy, room)
 			if dist > 0 && dist <= width {
-				if width > 1 && dist <= width/2 {
-					terrain.SetTile(x, y, TileWaterDeep)
-				} else {
-					terrain.SetTile(x, y, TileWaterShallow)
-				}
-				feature.Tiles = append(feature.Tiles, Point{x, y})
+				placeMoatTile(terrain, feature, x, y, dist, width)
 			}
 		}
 	}
 
 	return feature
+}
+
+// clampMoatWidth ensures moat width is within valid range [1, 3].
+func clampMoatWidth(width int) int {
+	if width < 1 {
+		return 1
+	}
+	if width > 3 {
+		return 3
+	}
+	return width
+}
+
+// shouldSkipMoatTile determines if a tile position is inside the room interior.
+func shouldSkipMoatTile(dx, dy int, room *Room) bool {
+	return dx >= 0 && dx < room.Width && dy >= 0 && dy < room.Height
+}
+
+// calculateDistanceFromRoomEdge computes the tile's distance from the room edge.
+func calculateDistanceFromRoomEdge(dx, dy int, room *Room) int {
+	minDistX := 0
+	if dx < 0 {
+		minDistX = -dx
+	} else if dx >= room.Width {
+		minDistX = dx - room.Width + 1
+	}
+
+	minDistY := 0
+	if dy < 0 {
+		minDistY = -dy
+	} else if dy >= room.Height {
+		minDistY = dy - room.Height + 1
+	}
+
+	dist := minDistX
+	if minDistY > dist {
+		dist = minDistY
+	}
+	return dist
+}
+
+// placeMoatTile places a water tile at the given position based on distance.
+func placeMoatTile(terrain *Terrain, feature *WaterFeature, x, y, dist, width int) {
+	if width > 1 && dist <= width/2 {
+		terrain.SetTile(x, y, TileWaterDeep)
+	} else {
+		terrain.SetTile(x, y, TileWaterShallow)
+	}
+	feature.Tiles = append(feature.Tiles, Point{x, y})
 }
 
 // PlaceBridges automatically places bridges where paths cross water.

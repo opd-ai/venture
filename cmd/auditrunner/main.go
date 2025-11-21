@@ -254,55 +254,78 @@ func analyzeDocumentation(result *AuditResult, pkgPath string) {
 func analyzeDependencies(result *AuditResult, pkgPath string) {
 	fmt.Println("Analyzing dependencies...")
 
-	// Find all Go files
-	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
+	goFiles := findNonTestGoFiles(pkgPath)
+	depMap := extractDependencies(goFiles)
+	updateResultWithDependencies(result, depMap)
 
+	fmt.Printf("  Internal dependencies: %d\n", len(result.Dependencies))
+}
+
+// findNonTestGoFiles returns all non-test Go files in the package path.
+func findNonTestGoFiles(pkgPath string) []string {
+	goFiles, _ := filepath.Glob(filepath.Join(pkgPath, "*.go"))
+	var nonTestFiles []string
+	for _, file := range goFiles {
+		if !strings.HasSuffix(file, "_test.go") {
+			nonTestFiles = append(nonTestFiles, file)
+		}
+	}
+	return nonTestFiles
+}
+
+// extractDependencies extracts internal dependencies from Go files.
+func extractDependencies(goFiles []string) map[string]bool {
 	depMap := make(map[string]bool)
+	importRegex := regexp.MustCompile(`import\s+\(\s*([^)]+)\)`)
+	singleImportRegex := regexp.MustCompile(`import\s+"([^"]+)"`)
 
 	for _, file := range goFiles {
-		if strings.HasSuffix(file, "_test.go") {
-			continue
-		}
-
 		content, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
 
-		// Find imports
-		importRegex := regexp.MustCompile(`import\s+\(\s*([^)]+)\)`)
-		singleImportRegex := regexp.MustCompile(`import\s+"([^"]+)"`)
+		extractMultiLineImports(string(content), importRegex, depMap)
+		extractSingleLineImports(string(content), singleImportRegex, depMap)
+	}
 
-		matches := importRegex.FindAllStringSubmatch(string(content), -1)
-		for _, match := range matches {
-			if len(match) > 1 {
-				lines := strings.Split(match[1], "\n")
-				for _, line := range lines {
-					line = strings.TrimSpace(line)
-					line = strings.Trim(line, "\"")
-					if strings.HasPrefix(line, "github.com/opd-ai/venture/pkg/") {
-						depMap[line] = true
-					}
+	return depMap
+}
+
+// extractMultiLineImports extracts dependencies from multi-line import blocks.
+func extractMultiLineImports(content string, importRegex *regexp.Regexp, depMap map[string]bool) {
+	matches := importRegex.FindAllStringSubmatch(content, -1)
+	for _, match := range matches {
+		if len(match) > 1 {
+			lines := strings.Split(match[1], "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				line = strings.Trim(line, "\"")
+				if strings.HasPrefix(line, "github.com/opd-ai/venture/pkg/") {
+					depMap[line] = true
 				}
 			}
 		}
+	}
+}
 
-		matches = singleImportRegex.FindAllStringSubmatch(string(content), -1)
-		for _, match := range matches {
-			if len(match) > 1 && strings.HasPrefix(match[1], "github.com/opd-ai/venture/pkg/") {
-				depMap[match[1]] = true
-			}
+// extractSingleLineImports extracts dependencies from single-line imports.
+func extractSingleLineImports(content string, singleImportRegex *regexp.Regexp, depMap map[string]bool) {
+	matches := singleImportRegex.FindAllStringSubmatch(content, -1)
+	for _, match := range matches {
+		if len(match) > 1 && strings.HasPrefix(match[1], "github.com/opd-ai/venture/pkg/") {
+			depMap[match[1]] = true
 		}
 	}
+}
 
+// updateResultWithDependencies updates the audit result with extracted dependencies.
+func updateResultWithDependencies(result *AuditResult, depMap map[string]bool) {
 	for dep := range depMap {
 		result.Dependencies = append(result.Dependencies, dep)
 	}
 	sort.Strings(result.Dependencies)
-
-	result.NoDependencyCycles = true // Simplified - go build would fail if cycles exist
-
-	fmt.Printf("  Internal dependencies: %d\n", len(result.Dependencies))
+	result.NoDependencyCycles = true
 }
 
 func generateFindings(result *AuditResult, pkgPath string) {

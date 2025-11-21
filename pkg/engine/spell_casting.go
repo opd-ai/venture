@@ -639,6 +639,22 @@ func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell
 
 // healTarget applies healing to a single target.
 func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spell) {
+	s.logHealingAttempt(caster, target, spell)
+
+	health := s.getHealthComponent(target)
+	if health == nil {
+		return
+	}
+
+	healing := s.calculateHealing(caster, spell)
+	s.applyHealing(health, healing)
+	s.logHealingApplied(caster, target, spell, healing, health)
+	s.spawnHealingParticles(target)
+	s.playHealingSound(target)
+}
+
+// logHealingAttempt logs the start of a healing action.
+func (s *SpellCastingSystem) logHealingAttempt(caster, target *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id":  caster.ID,
@@ -646,7 +662,10 @@ func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spe
 			"spell_name": spell.Name,
 		}).Debug("Healing target")
 	}
+}
 
+// getHealthComponent retrieves and validates the health component from target.
+func (s *SpellCastingSystem) getHealthComponent(target *Entity) *HealthComponent {
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
 		if s.logger != nil {
@@ -654,8 +673,9 @@ func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spe
 				"target_id": target.ID,
 			}).Debug("Target has no health component for healing")
 		}
-		return
+		return nil
 	}
+
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
 		if s.logger != nil {
@@ -664,74 +684,105 @@ func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spe
 				"component_type": "health",
 			}).Warn("Failed to cast health component for healing")
 		}
-		return
+		return nil
 	}
 
-	// Calculate healing with combo multiplier (Phase 24.2)
+	return health
+}
+
+// calculateHealing calculates the total healing amount including combo multiplier.
+func (s *SpellCastingSystem) calculateHealing(caster *Entity, spell *magic.Spell) float64 {
 	healing := float64(spell.Stats.Healing)
-	comboMultiplier := 1.0
 	if s.comboSys != nil {
-		comboMultiplier = s.comboSys.GetActiveComboMultiplier(caster)
+		comboMultiplier := s.comboSys.GetActiveComboMultiplier(caster)
 		healing *= comboMultiplier
 	}
+	return healing
+}
 
+// applyHealing applies healing to the health component.
+func (s *SpellCastingSystem) applyHealing(health *HealthComponent, healing float64) {
 	health.Current += healing
 	if health.Current > health.Max {
 		health.Current = health.Max
 	}
+}
+
+// logHealingApplied logs successful healing application.
+func (s *SpellCastingSystem) logHealingApplied(caster, target *Entity, spell *magic.Spell, healing float64, health *HealthComponent) {
+	if s.logger == nil {
+		return
+	}
+
+	comboMultiplier := 1.0
+	if s.comboSys != nil {
+		comboMultiplier = s.comboSys.GetActiveComboMultiplier(caster)
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"caster_id":        caster.ID,
+		"target_id":        target.ID,
+		"spell_name":       spell.Name,
+		"base_healing":     spell.Stats.Healing,
+		"combo_multiplier": comboMultiplier,
+		"final_healing":    healing,
+		"health_after":     health.Current,
+		"health_max":       health.Max,
+	}).Info("Healing applied")
+}
+
+// spawnHealingParticles creates visual healing particle effects.
+func (s *SpellCastingSystem) spawnHealingParticles(target *Entity) {
+	if s.particleSys == nil {
+		return
+	}
+
+	targetPos, hasPos := target.GetComponent("position")
+	if !hasPos {
+		return
+	}
+
+	pos, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	config := particles.Config{
+		Type:     particles.ParticleMagic,
+		Count:    20,
+		GenreID:  "fantasy",
+		Seed:     int64(target.ID),
+		Duration: 1.0,
+		SpreadX:  60.0,
+		SpreadY:  60.0,
+		Gravity:  -80.0,
+		MinSize:  4.0,
+		MaxSize:  8.0,
+		Custom:   map[string]interface{}{"color": "healing"},
+	}
+	s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"caster_id":        caster.ID,
-			"target_id":        target.ID,
-			"spell_name":       spell.Name,
-			"base_healing":     spell.Stats.Healing,
-			"combo_multiplier": comboMultiplier,
-			"final_healing":    healing,
-			"health_after":     health.Current,
-			"health_max":       health.Max,
-		}).Info("Healing applied")
+			"target_id":  target.ID,
+			"position_x": pos.X,
+			"position_y": pos.Y,
+		}).Debug("Spawned healing particles")
+	}
+}
+
+// playHealingSound plays the healing sound effect.
+func (s *SpellCastingSystem) playHealingSound(target *Entity) {
+	if s.audioMgr == nil {
+		return
 	}
 
-	// Spawn healing visual effect (green/gold particles rising upward)
-	if s.particleSys != nil {
-		targetPos, hasPos := target.GetComponent("position")
-		if hasPos {
-			if pos, ok := targetPos.(*PositionComponent); ok {
-				config := particles.Config{
-					Type:     particles.ParticleMagic,
-					Count:    20,
-					GenreID:  "fantasy",
-					Seed:     int64(target.ID),
-					Duration: 1.0,
-					SpreadX:  60.0,
-					SpreadY:  60.0,
-					Gravity:  -80.0, // Rise upward for healing
-					MinSize:  4.0,
-					MaxSize:  8.0,
-					Custom:   map[string]interface{}{"color": "healing"},
-				}
-				s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"target_id":  target.ID,
-						"position_x": pos.X,
-						"position_y": pos.Y,
-					}).Debug("Spawned healing particles")
-				}
-			}
-		}
-	}
-
-	// Play healing sound effect
-	if s.audioMgr != nil {
-		if err := s.audioMgr.PlaySFX("powerup", int64(target.ID)); err != nil {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"target_id": target.ID,
-					"error":     err.Error(),
-				}).Debug("Failed to play healing sound")
-			}
+	if err := s.audioMgr.PlaySFX("powerup", int64(target.ID)); err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id": target.ID,
+				"error":     err.Error(),
+			}).Debug("Failed to play healing sound")
 		}
 	}
 }
@@ -856,61 +907,64 @@ func (s *SpellCastingSystem) logSearchResult(caster, nearestAlly *Entity, minDis
 
 // findAlliesInRange finds all allies within range.
 func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64) []*Entity {
+	s.logAllySearchStart(caster, maxRange)
+	casterTeamID := s.getCasterTeamID(caster)
+	allies := s.filterAlliesInRange(caster, casterTeamID, maxRange)
+	s.logAllySearchResult(caster, allies)
+	return allies
+}
+
+// logAllySearchStart logs the beginning of ally search.
+func (s *SpellCastingSystem) logAllySearchStart(caster *Entity, maxRange float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id": caster.ID,
 			"max_range": maxRange,
 		}).Debug("Searching for allies in range")
 	}
+}
 
+// filterAlliesInRange filters entities to find allies within range.
+func (s *SpellCastingSystem) filterAlliesInRange(caster *Entity, casterTeamID int, maxRange float64) []*Entity {
 	entities := s.world.GetEntities()
 	var allies []*Entity
 
-	// Get caster's team
-	var casterTeamID int
-	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
-		if team, ok := teamComp.(*TeamComponent); ok {
-			casterTeamID = team.TeamID
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"caster_id": caster.ID,
-					"team_id":   casterTeamID,
-				}).Debug("Using caster team ID for ally search")
-			}
-		}
-	}
-
 	for _, entity := range entities {
-		// Check if ally (including self)
-		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
-			team, ok := teamComp.(*TeamComponent)
-			if !ok || !team.IsAlly(casterTeamID) {
-				continue
-			}
-		} else if entity != caster {
+		if !s.isAlly(entity, caster, casterTeamID) {
 			continue
 		}
-
-		// Check if has health
 		if !entity.HasComponent("health") {
 			continue
 		}
-
-		// Check distance
-		dist := GetDistance(caster, entity)
-		if dist <= maxRange {
+		if GetDistance(caster, entity) <= maxRange {
 			allies = append(allies, entity)
 		}
 	}
 
+	return allies
+}
+
+// isAlly checks if an entity is an ally of the caster.
+func (s *SpellCastingSystem) isAlly(entity, caster *Entity, casterTeamID int) bool {
+	if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
+		team, ok := teamComp.(*TeamComponent)
+		if !ok || !team.IsAlly(casterTeamID) {
+			return false
+		}
+	} else if entity != caster {
+		return false
+	}
+	return true
+}
+
+// logAllySearchResult logs the number of allies found.
+func (s *SpellCastingSystem) logAllySearchResult(caster *Entity, allies []*Entity) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id":  caster.ID,
 			"ally_count": len(allies),
 		}).Debug("Found allies in range")
 	}
-
-	return allies
 }
 
 // castDefensiveSpell applies shields or defensive buffs.
@@ -1046,6 +1100,18 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 
 // castDebuffSpell applies stat reductions to enemies.
 func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell, x, y float64) {
+	s.logDebuffCast(caster, spell)
+	targets := s.findTargets(caster, spell, x, y)
+	s.logDebuffTargets(caster, spell, targets)
+
+	for _, target := range targets {
+		s.applyDebuffDamage(target, spell)
+		s.applyDebuffEffect(target, spell)
+	}
+}
+
+// logDebuffCast logs the initiation of a debuff spell cast.
+func (s *SpellCastingSystem) logDebuffCast(caster *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  caster.ID,
@@ -1053,9 +1119,10 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			"element":    spell.Element.String(),
 		}).Debug("Casting debuff spell")
 	}
+}
 
-	targets := s.findTargets(caster, spell, x, y)
-
+// logDebuffTargets logs the number of targets found for debuff.
+func (s *SpellCastingSystem) logDebuffTargets(caster *Entity, spell *magic.Spell, targets []*Entity) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":    caster.ID,
@@ -1063,80 +1130,84 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			"target_count": len(targets),
 		}).Debug("Targets found for debuff spell")
 	}
+}
 
-	for _, target := range targets {
-		// Apply minor damage if any
-		if spell.Stats.Damage > 0 {
-			healthComp, hasHealth := target.GetComponent("health")
-			if hasHealth {
-				if health, ok := healthComp.(*HealthComponent); ok {
-					oldHealth := health.Current
-					health.Current -= float64(spell.Stats.Damage)
-					if health.Current < 0 {
-						health.Current = 0
-					}
-					if s.logger != nil {
-						s.logger.WithFields(logrus.Fields{
-							"target_id":     target.ID,
-							"damage":        spell.Stats.Damage,
-							"health_before": oldHealth,
-							"health_after":  health.Current,
-						}).Debug("Debuff spell damage applied")
-					}
-				}
-			}
+// applyDebuffDamage applies minor damage from debuff spell if any.
+func (s *SpellCastingSystem) applyDebuffDamage(target *Entity, spell *magic.Spell) {
+	if spell.Stats.Damage <= 0 {
+		return
+	}
+
+	healthComp, hasHealth := target.GetComponent("health")
+	if !hasHealth {
+		return
+	}
+
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	oldHealth := health.Current
+	health.Current -= float64(spell.Stats.Damage)
+	if health.Current < 0 {
+		health.Current = 0
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id":     target.ID,
+			"damage":        spell.Stats.Damage,
+			"health_before": oldHealth,
+			"health_after":  health.Current,
+		}).Debug("Debuff spell damage applied")
+	}
+}
+
+// applyDebuffEffect applies debuff status effect based on spell element.
+func (s *SpellCastingSystem) applyDebuffEffect(target *Entity, spell *magic.Spell) {
+	if s.statusEffectSys == nil {
+		return
+	}
+
+	duration := s.getDebuffDuration(target, spell)
+	effectName, magnitude := s.determineDebuffType(spell.Element)
+	s.statusEffectSys.ApplyStatusEffect(target, effectName, magnitude, duration, 0)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id": target.ID,
+			"effect":    effectName,
+			"magnitude": magnitude,
+			"duration":  duration,
+		}).Info("Debuff applied")
+	}
+}
+
+// getDebuffDuration returns the duration for a debuff effect.
+func (s *SpellCastingSystem) getDebuffDuration(target *Entity, spell *magic.Spell) float64 {
+	duration := spell.Stats.Duration
+	if duration <= 0 {
+		duration = 10.0
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id":  target.ID,
+				"spell_name": spell.Name,
+			}).Debug("Using default debuff duration")
 		}
+	}
+	return duration
+}
 
-		// Apply debuff effects
-		if s.statusEffectSys != nil {
-			duration := spell.Stats.Duration
-			if duration <= 0 {
-				duration = 10.0 // Default duration
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"target_id":  target.ID,
-						"spell_name": spell.Name,
-					}).Debug("Using default debuff duration")
-				}
-			}
-
-			// Determine debuff type based on spell element
-			switch spell.Element {
-			case magic.ElementDark:
-				// Weakness - reduced attack
-				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.7, duration, 0)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"target_id": target.ID,
-						"effect":    "weakness",
-						"magnitude": 0.7,
-						"duration":  duration,
-					}).Info("Weakness debuff applied")
-				}
-			case magic.ElementEarth:
-				// Vulnerability - reduced defense
-				s.statusEffectSys.ApplyStatusEffect(target, "vulnerability", 0.7, duration, 0)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"target_id": target.ID,
-						"effect":    "vulnerability",
-						"magnitude": 0.7,
-						"duration":  duration,
-					}).Info("Vulnerability debuff applied")
-				}
-			default:
-				// Generic debuff - small attack reduction
-				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.8, duration, 0)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"target_id": target.ID,
-						"effect":    "weakness",
-						"magnitude": 0.8,
-						"duration":  duration,
-					}).Info("Generic debuff applied")
-				}
-			}
-		}
+// determineDebuffType returns the debuff type and magnitude based on element.
+func (s *SpellCastingSystem) determineDebuffType(element magic.ElementType) (string, float64) {
+	switch element {
+	case magic.ElementDark:
+		return "weakness", 0.7
+	case magic.ElementEarth:
+		return "vulnerability", 0.7
+	default:
+		return "weakness", 0.8
 	}
 }
 
@@ -1531,24 +1602,44 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 // castSpeedBoostSpell applies a temporary speed boost to the caster.
 // Increases movement speed for exploration or combat mobility.
 func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Spell) {
+	s.logSpeedBoostCast(caster, spell)
+
+	if s.statusEffectSys == nil {
+		s.logMissingStatusSystem()
+		return
+	}
+
+	duration := s.getSpeedBoostDuration(caster, spell)
+	speedMultiplier := s.calculateSpeedMultiplier(caster, spell)
+	s.logSpeedBoostApplication(caster, spell, speedMultiplier, duration)
+
+	s.statusEffectSys.ApplyStatusEffect(caster, "speed_boost", speedMultiplier, duration, 0)
+	s.spawnSpeedBoostParticles(caster, duration)
+	s.playSpeedBoostSound(caster)
+}
+
+// logSpeedBoostCast logs the initiation of speed boost spell.
+func (s *SpellCastingSystem) logSpeedBoostCast(caster *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  caster.ID,
 			"spell_name": spell.Name,
 		}).Debug("Casting speed boost spell")
 	}
+}
 
-	if s.statusEffectSys == nil {
-		if s.logger != nil {
-			s.logger.Warn("StatusEffectSystem is nil, cannot apply speed boost")
-		}
-		return
+// logMissingStatusSystem logs warning when status effect system is missing.
+func (s *SpellCastingSystem) logMissingStatusSystem() {
+	if s.logger != nil {
+		s.logger.Warn("StatusEffectSystem is nil, cannot apply speed boost")
 	}
+}
 
-	// Determine duration from spell stats
+// getSpeedBoostDuration returns the duration for speed boost effect.
+func (s *SpellCastingSystem) getSpeedBoostDuration(caster *Entity, spell *magic.Spell) float64 {
 	duration := spell.Stats.Duration
 	if duration <= 0 {
-		duration = 10.0 // Default speed boost duration
+		duration = 10.0
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  caster.ID,
@@ -1556,11 +1647,14 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 			}).Debug("Using default speed boost duration")
 		}
 	}
+	return duration
+}
 
-	// Speed multiplier based on spell power
-	speedMultiplier := 1.5 // 50% speed increase
+// calculateSpeedMultiplier determines the speed multiplier based on spell rarity.
+func (s *SpellCastingSystem) calculateSpeedMultiplier(caster *Entity, spell *magic.Spell) float64 {
+	speedMultiplier := 1.5
 	if spell.Rarity >= magic.RarityRare {
-		speedMultiplier = 2.0 // 100% speed increase for rare+ spells
+		speedMultiplier = 2.0
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  caster.ID,
@@ -1569,7 +1663,11 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 			}).Debug("Using increased speed multiplier for rare spell")
 		}
 	}
+	return speedMultiplier
+}
 
+// logSpeedBoostApplication logs successful speed boost application.
+func (s *SpellCastingSystem) logSpeedBoostApplication(caster *Entity, spell *magic.Spell, speedMultiplier, duration float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":        caster.ID,
@@ -1578,50 +1676,60 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 			"rarity":           spell.Rarity.String(),
 		}).Info("Speed boost applied")
 	}
+}
 
-	// Apply speed boost as a status effect
-	// The movement system will need to check for this effect
-	s.statusEffectSys.ApplyStatusEffect(caster, "speed_boost", speedMultiplier, duration, 0)
-
-	// Spawn speed particles (fast-moving wind particles)
-	if s.particleSys != nil {
-		posComp, hasPos := caster.GetComponent("position")
-		if hasPos {
-			if pos, ok := posComp.(*PositionComponent); ok {
-				config := particles.Config{
-					Type:     particles.ParticleDust,
-					Count:    25,
-					GenreID:  "fantasy",
-					Seed:     int64(caster.ID),
-					Duration: duration,
-					SpreadX:  100.0,
-					SpreadY:  60.0,
-					Gravity:  10.0,
-					MinSize:  2.0,
-					MaxSize:  4.0,
-					Custom:   map[string]interface{}{"color": "wind"},
-				}
-				s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":  caster.ID,
-						"position_x": pos.X,
-						"position_y": pos.Y,
-					}).Debug("Spawned speed boost particles")
-				}
-			}
-		}
+// spawnSpeedBoostParticles creates visual speed boost particle effects.
+func (s *SpellCastingSystem) spawnSpeedBoostParticles(caster *Entity, duration float64) {
+	if s.particleSys == nil {
+		return
 	}
 
-	// Play speed boost sound
-	if s.audioMgr != nil {
-		if err := s.audioMgr.PlaySFX("powerup", int64(caster.ID)); err != nil {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": caster.ID,
-					"error":     err.Error(),
-				}).Debug("Failed to play speed boost sound")
-			}
+	posComp, hasPos := caster.GetComponent("position")
+	if !hasPos {
+		return
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	config := particles.Config{
+		Type:     particles.ParticleDust,
+		Count:    25,
+		GenreID:  "fantasy",
+		Seed:     int64(caster.ID),
+		Duration: duration,
+		SpreadX:  100.0,
+		SpreadY:  60.0,
+		Gravity:  10.0,
+		MinSize:  2.0,
+		MaxSize:  4.0,
+		Custom:   map[string]interface{}{"color": "wind"},
+	}
+	s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"position_x": pos.X,
+			"position_y": pos.Y,
+		}).Debug("Spawned speed boost particles")
+	}
+}
+
+// playSpeedBoostSound plays the speed boost sound effect.
+func (s *SpellCastingSystem) playSpeedBoostSound(caster *Entity) {
+	if s.audioMgr == nil {
+		return
+	}
+
+	if err := s.audioMgr.PlaySFX("powerup", int64(caster.ID)); err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": caster.ID,
+				"error":     err.Error(),
+			}).Debug("Failed to play speed boost sound")
 		}
 	}
 }

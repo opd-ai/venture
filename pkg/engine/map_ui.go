@@ -628,73 +628,103 @@ func (ui *EbitenMapUI) drawMapIcons(screen *ebiten.Image, mapAreaX, mapAreaY int
 		return
 	}
 
-	// Draw player icon
-	if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-		// Type assert with safety check
-		if pos, ok := posComp.(*PositionComponent); ok {
-			tileX := int(pos.X / 32)
-			tileY := int(pos.Y / 32)
+	ui.drawPlayerIcon(screen, mapAreaX, mapAreaY, tileSize, startTileX, startTileY)
+	ui.drawEntityIcons(screen, mapAreaX, mapAreaY, tileSize, startTileX, startTileY)
+}
 
-			if tileX >= startTileX && tileY >= startTileY {
-				screenX := float32(mapAreaX) + float32((float64(tileX)*tileSize)-(ui.offsetX))
-				screenY := float32(mapAreaY) + float32((float64(tileY)*tileSize)-(ui.offsetY))
-
-				// Draw player as blue circle
-				vector.DrawFilledCircle(screen, screenX+float32(tileSize)/2, screenY+float32(tileSize)/2,
-					float32(tileSize)/2, color.RGBA{100, 150, 255, 255}, false)
-			}
-		}
+// drawPlayerIcon renders the player icon on the map.
+func (ui *EbitenMapUI) drawPlayerIcon(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY int) {
+	posComp, ok := ui.playerEntity.GetComponent("position")
+	if !ok {
+		return
 	}
 
-	// Draw other entities (enemies, items)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	tileX := int(pos.X / 32)
+	tileY := int(pos.Y / 32)
+
+	if tileX >= startTileX && tileY >= startTileY {
+		screenX := float32(mapAreaX) + float32((float64(tileX)*tileSize)-(ui.offsetX))
+		screenY := float32(mapAreaY) + float32((float64(tileY)*tileSize)-(ui.offsetY))
+
+		vector.DrawFilledCircle(screen, screenX+float32(tileSize)/2, screenY+float32(tileSize)/2,
+			float32(tileSize)/2, color.RGBA{100, 150, 255, 255}, false)
+	}
+}
+
+// drawEntityIcons renders icons for other entities on the map.
+func (ui *EbitenMapUI) drawEntityIcons(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY int) {
 	for _, entity := range ui.world.GetEntities() {
 		if entity == ui.playerEntity {
 			continue
 		}
 
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
+		pos := ui.getEntityPosition(entity)
+		if pos == nil {
 			continue
 		}
 
-		// Type assert with safety check
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
 		tileX := int(pos.X / 32)
 		tileY := int(pos.Y / 32)
 
-		// Only draw if explored
-		if tileX < 0 || tileX >= ui.terrain.Width || tileY < 0 || tileY >= ui.terrain.Height {
-			continue
-		}
-		if !ui.fogOfWar[tileY][tileX] {
+		if !ui.isEntityVisible(tileX, tileY) {
 			continue
 		}
 
 		screenX := float32(mapAreaX) + float32((float64(tileX)*tileSize)-(ui.offsetX))
 		screenY := float32(mapAreaY) + float32((float64(tileY)*tileSize)-(ui.offsetY))
 
-		// Determine icon color based on entity type
-		iconColor := color.RGBA{200, 200, 200, 255} // Default gray
-
-		// Check if enemy
-		if teamComp, hasTeam := entity.GetComponent("team"); hasTeam {
-			// Type assert with safety check
-			if team, ok := teamComp.(*TeamComponent); ok {
-				if team.TeamID == 2 { // Enemy team
-					iconColor = color.RGBA{255, 100, 100, 255} // Red
-				}
-			}
-		}
-
-		// Draw entity marker (small square)
+		iconColor := ui.calculateEntityIconColor(entity)
 		markerSize := float32(tileSize) / 3
 		vector.DrawFilledRect(screen, screenX+float32(tileSize)/2-markerSize/2,
 			screenY+float32(tileSize)/2-markerSize/2,
 			markerSize, markerSize, iconColor, false)
 	}
+}
+
+// getEntityPosition retrieves and validates entity position component.
+func (ui *EbitenMapUI) getEntityPosition(entity *Entity) *PositionComponent {
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return pos
+}
+
+// isEntityVisible checks if entity tile is explored in fog of war.
+func (ui *EbitenMapUI) isEntityVisible(tileX, tileY int) bool {
+	if tileX < 0 || tileX >= ui.terrain.Width || tileY < 0 || tileY >= ui.terrain.Height {
+		return false
+	}
+	return ui.fogOfWar[tileY][tileX]
+}
+
+// calculateEntityIconColor determines icon color based on entity team.
+func (ui *EbitenMapUI) calculateEntityIconColor(entity *Entity) color.RGBA {
+	teamComp, hasTeam := entity.GetComponent("team")
+	if !hasTeam {
+		return color.RGBA{200, 200, 200, 255}
+	}
+
+	team, ok := teamComp.(*TeamComponent)
+	if !ok {
+		return color.RGBA{200, 200, 200, 255}
+	}
+
+	if team.TeamID == 2 {
+		return color.RGBA{255, 100, 100, 255}
+	}
+
+	return color.RGBA{200, 200, 200, 255}
 }
 
 // getVisibleRadius returns the player's vision radius in tiles.

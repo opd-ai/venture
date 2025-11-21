@@ -105,15 +105,42 @@ func (m *SinglePlayerMenu) Update() bool {
 		return false
 	}
 
-	// Handle ESC key for back navigation (dual-exit pattern)
+	if m.handleEscapeKey() {
+		return true
+	}
+
+	m.handleArrowKeyNavigation()
+
+	if m.handleNumberShortcuts() {
+		return true
+	}
+
+	if m.handleSelectionKeys() {
+		return true
+	}
+
+	if m.handleMouseTouchClick() {
+		return true
+	}
+
+	m.updateHoverState()
+
+	return false
+}
+
+// handleEscapeKey processes ESC key for back navigation.
+func (m *SinglePlayerMenu) handleEscapeKey() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if m.onBack != nil {
 			m.onBack()
 		}
 		return true
 	}
+	return false
+}
 
-	// Handle up/down arrow keys for navigation
+// handleArrowKeyNavigation processes up/down arrow keys and WASD for navigation.
+func (m *SinglePlayerMenu) handleArrowKeyNavigation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIdx--
 		if m.selectedIdx < 0 {
@@ -127,8 +154,10 @@ func (m *SinglePlayerMenu) Update() bool {
 			m.selectedIdx = 0
 		}
 	}
+}
 
-	// Handle number key shortcuts (1-3)
+// handleNumberShortcuts processes number key shortcuts for direct selection.
+func (m *SinglePlayerMenu) handleNumberShortcuts() bool {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		m.selectedIdx = 0
 		return m.selectCurrentOption()
@@ -141,13 +170,19 @@ func (m *SinglePlayerMenu) Update() bool {
 		m.selectedIdx = 2
 		return m.selectCurrentOption()
 	}
+	return false
+}
 
-	// Handle Enter/Space for selection
+// handleSelectionKeys processes Enter and Space keys for selection.
+func (m *SinglePlayerMenu) handleSelectionKeys() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		return m.selectCurrentOption()
 	}
+	return false
+}
 
-	// Handle mouse and touch input (Touch support for WASM/mobile)
+// handleMouseTouchClick processes mouse and touch click input.
+func (m *SinglePlayerMenu) handleMouseTouchClick() bool {
 	if IsTouchOrMouseJustPressed() {
 		mx, my, _ := GetTouchOrMousePosition()
 		if idx := m.getOptionAtPosition(mx, my); idx >= 0 {
@@ -155,14 +190,15 @@ func (m *SinglePlayerMenu) Update() bool {
 			return m.selectCurrentOption()
 		}
 	}
+	return false
+}
 
-	// Update hover state for mouse/touch (Touch support for WASM/mobile)
+// updateHoverState updates menu selection based on mouse/touch position.
+func (m *SinglePlayerMenu) updateHoverState() {
 	mx, my, _ := GetTouchOrMousePosition()
 	if idx := m.getOptionAtPosition(mx, my); idx >= 0 {
 		m.selectedIdx = idx
 	}
-
-	return false
 }
 
 // selectCurrentOption triggers the callback for the currently selected option.

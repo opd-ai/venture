@@ -76,16 +76,26 @@ func main() {
 }
 
 func displayFloorPlan(b *building.Building) {
-	// Create grid
-	grid := make([][]rune, b.Height)
-	for y := 0; y < b.Height; y++ {
-		grid[y] = make([]rune, b.Width)
-		for x := 0; x < b.Width; x++ {
+	grid := initializeGrid(b.Width, b.Height)
+	drawRoomsToGrid(grid, b)
+	drawFeaturesToGrid(grid, b)
+	printGridAndLegend(grid, b.Width, b.Height)
+}
+
+// initializeGrid creates an empty grid filled with spaces.
+func initializeGrid(width, height int) [][]rune {
+	grid := make([][]rune, height)
+	for y := 0; y < height; y++ {
+		grid[y] = make([]rune, width)
+		for x := 0; x < width; x++ {
 			grid[y][x] = ' '
 		}
 	}
+	return grid
+}
 
-	// Draw rooms
+// drawRoomsToGrid fills grid cells with room characters and numbers.
+func drawRoomsToGrid(grid [][]rune, b *building.Building) {
 	for i, room := range b.Rooms {
 		roomChar := getRoomChar(room.Type)
 		for y := room.Y; y < room.Y+room.Height; y++ {
@@ -96,37 +106,38 @@ func displayFloorPlan(b *building.Building) {
 				grid[y][x] = roomChar
 			}
 		}
-		// Mark room number in center
 		centerY := room.Y + room.Height/2
 		centerX := room.X + room.Width/2
 		if centerY >= 0 && centerY < b.Height && centerX >= 0 && centerX < b.Width {
 			grid[centerY][centerX] = rune('0' + (i % 10))
 		}
 	}
+}
 
-	// Draw doors
+// drawFeaturesToGrid adds doors and windows to the grid.
+func drawFeaturesToGrid(grid [][]rune, b *building.Building) {
 	for _, door := range b.Doors {
 		if door.Y >= 0 && door.Y < b.Height && door.X >= 0 && door.X < b.Width {
 			grid[door.Y][door.X] = 'D'
 		}
 	}
 
-	// Draw windows
 	for _, window := range b.Windows {
 		if window.Y >= 0 && window.Y < b.Height && window.X >= 0 && window.X < b.Width {
 			grid[window.Y][window.X] = 'W'
 		}
 	}
+}
 
-	// Print grid
-	for y := 0; y < b.Height; y++ {
-		for x := 0; x < b.Width; x++ {
+// printGridAndLegend outputs the grid and legend to stdout.
+func printGridAndLegend(grid [][]rune, width, height int) {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 			fmt.Printf("%c", grid[y][x])
 		}
 		fmt.Println()
 	}
 
-	// Legend
 	fmt.Println("\nLegend:")
 	fmt.Println("  E = Entrance")
 	fmt.Println("  L = Living")

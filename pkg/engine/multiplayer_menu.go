@@ -102,26 +102,35 @@ func (m *MultiplayerMenu) Update() {
 		return
 	}
 
-	// Track mouse/touch position (Touch support for WASM/mobile)
 	m.mouseX, m.mouseY, _ = GetTouchOrMousePosition()
 
-	// Keyboard navigation - Arrow keys
+	m.handleKeyboardNavigation()
+	m.handleNumberShortcuts()
+	m.handleSelectionKeys()
+	m.handleEscapeKey()
+	m.handleMouseInput()
+}
+
+// handleKeyboardNavigation processes arrow key and WASD navigation.
+func (m *MultiplayerMenu) handleKeyboardNavigation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		m.selectedIndex--
 		if m.selectedIndex < 0 {
-			m.selectedIndex = len(m.options) - 1 // Wrap to bottom
+			m.selectedIndex = len(m.options) - 1
 		}
 		m.lastPressedKey = ebiten.KeyUp
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		m.selectedIndex++
 		if m.selectedIndex >= len(m.options) {
-			m.selectedIndex = 0 // Wrap to top
+			m.selectedIndex = 0
 		}
 		m.lastPressedKey = ebiten.KeyDown
 	}
+}
 
-	// Number shortcuts (1-3)
+// handleNumberShortcuts processes number key shortcuts for direct selection.
+func (m *MultiplayerMenu) handleNumberShortcuts() {
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		m.selectedIndex = 0
 		m.selectCurrentOption()
@@ -134,25 +143,30 @@ func (m *MultiplayerMenu) Update() {
 		m.selectedIndex = 2
 		m.selectCurrentOption()
 	}
+}
 
-	// Enter or Space to select
+// handleSelectionKeys processes Enter and Space keys for selection.
+func (m *MultiplayerMenu) handleSelectionKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		m.selectCurrentOption()
 	}
+}
 
-	// ESC to go back (dual-exit pattern)
+// handleEscapeKey processes ESC key for back navigation.
+func (m *MultiplayerMenu) handleEscapeKey() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		if m.onBack != nil {
 			m.onBack()
 		}
 	}
+}
 
-	// Mouse/touch hover detection (Touch support for WASM/mobile)
+// handleMouseInput processes mouse and touch input for selection.
+func (m *MultiplayerMenu) handleMouseInput() {
 	if mouseIndex := m.getOptionAtPosition(m.mouseX, m.mouseY); mouseIndex >= 0 {
 		m.selectedIndex = mouseIndex
 	}
 
-	// Mouse/touch click (Touch support for WASM/mobile)
 	if IsTouchOrMouseJustPressed() {
 		if clickIndex := m.getOptionAtPosition(m.mouseX, m.mouseY); clickIndex >= 0 {
 			m.selectedIndex = clickIndex

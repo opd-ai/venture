@@ -227,14 +227,36 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 		"target_y":  newY,
 	}).Debug("Validating position")
 
-	// No collision system means no validation needed
-	if s.collisionSystem == nil || !entity.HasComponent("collider") {
+	if !s.hasValidCollider(entity) {
 		return newX, newY
 	}
 
+	collider := s.getCollider(entity)
+	if collider == nil || !collider.Solid || collider.IsTrigger {
+		return newX, newY
+	}
+
+	if resultX, resultY, blocked := s.handleTerrainCollision(entity, pos, vel, newX, newY); blocked {
+		return resultX, resultY
+	}
+
+	if newX == pos.X && newY == pos.Y {
+		return newX, newY
+	}
+
+	return s.handleEntityCollisions(entity, pos, vel, newX, newY, entities)
+}
+
+// hasValidCollider checks if entity has collision system and collider component.
+func (s *MovementSystem) hasValidCollider(entity *Entity) bool {
+	return s.collisionSystem != nil && entity.HasComponent("collider")
+}
+
+// getCollider retrieves and validates the collider component from entity.
+func (s *MovementSystem) getCollider(entity *Entity) *ColliderComponent {
 	colliderComp, _ := entity.GetComponent("collider")
 	if colliderComp == nil {
-		return newX, newY
+		return nil
 	}
 
 	collider, ok := colliderComp.(*ColliderComponent)
@@ -243,55 +265,56 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 			"entity_id":      entity.ID,
 			"component_type": "collider",
 		}).Warn("Invalid collider component type")
-		return newX, newY
+		return nil
+	}
+	return collider
+}
+
+// handleTerrainCollision checks terrain collision and applies wall sliding.
+func (s *MovementSystem) handleTerrainCollision(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64) (float64, float64, bool) {
+	if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
+		return newX, newY, false
 	}
 
-	// Only check solid, non-trigger colliders
-	if !collider.Solid || collider.IsTrigger {
-		return newX, newY
-	}
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+		"x":         newX,
+		"y":         newY,
+	}).Debug("Terrain collision detected")
 
-	// Check terrain collision at new position
-	if s.collisionSystem.WouldCollideWithTerrain(entity, newX, newY) {
-		log.WithFields(log.Fields{
-			"entity_id": entity.ID,
-			"x":         newX,
-			"y":         newY,
-		}).Debug("Terrain collision detected")
+	return s.tryTerrainWallSlide(entity, pos, vel, newX, newY)
+}
 
-		// Collision detected - try sliding along walls
-		if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
-			// Allow X movement, block Y (slide horizontally)
-			log.WithFields(log.Fields{
-				"entity_id":  entity.ID,
-				"slide_type": "horizontal",
-			}).Debug("Wall sliding applied")
-			vel.VY = 0
-			return newX, pos.Y
-		} else if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
-			// Allow Y movement, block X (slide vertically)
-			log.WithFields(log.Fields{
-				"entity_id":  entity.ID,
-				"slide_type": "vertical",
-			}).Debug("Wall sliding applied")
-			vel.VX = 0
-			return pos.X, newY
-		}
-		// Completely blocked - don't move at all
+// tryTerrainWallSlide attempts to slide along walls when blocked by terrain.
+func (s *MovementSystem) tryTerrainWallSlide(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64) (float64, float64, bool) {
+	if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
 		log.WithFields(log.Fields{
-			"entity_id": entity.ID,
-		}).Debug("Movement completely blocked by terrain")
-		vel.VX = 0
+			"entity_id":  entity.ID,
+			"slide_type": "horizontal",
+		}).Debug("Wall sliding applied")
 		vel.VY = 0
-		return pos.X, pos.Y
+		return newX, pos.Y, true
 	}
 
-	// Check entity-to-entity collisions (only if still planning to move)
-	if newX == pos.X && newY == pos.Y {
-		return newX, newY
+	if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
+		log.WithFields(log.Fields{
+			"entity_id":  entity.ID,
+			"slide_type": "vertical",
+		}).Debug("Wall sliding applied")
+		vel.VX = 0
+		return pos.X, newY, true
 	}
 
-	// Check if blocked by another entity
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+	}).Debug("Movement completely blocked by terrain")
+	vel.VX = 0
+	vel.VY = 0
+	return pos.X, pos.Y, true
+}
+
+// handleEntityCollisions checks collisions with other entities and applies wall sliding.
+func (s *MovementSystem) handleEntityCollisions(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
 	for _, other := range entities {
 		if other.ID == entity.ID {
 			continue
@@ -302,26 +325,30 @@ func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionCom
 				"other_id":  other.ID,
 			}).Debug("Entity collision detected")
 
-			// Blocked - try sliding
-			if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
-				vel.VY = 0
-				return newX, pos.Y
-			} else if !s.anyEntityBlocking(entity, pos.X, newY, entities) {
-				vel.VX = 0
-				return pos.X, newY
-			}
-			// Completely blocked
-			log.WithFields(log.Fields{
-				"entity_id": entity.ID,
-				"other_id":  other.ID,
-			}).Debug("Movement completely blocked by entity")
-			vel.VX = 0
-			vel.VY = 0
-			return pos.X, pos.Y
+			return s.tryEntityWallSlide(entity, pos, vel, newX, newY, entities)
 		}
 	}
-
 	return newX, newY
+}
+
+// tryEntityWallSlide attempts to slide along entities when blocked.
+func (s *MovementSystem) tryEntityWallSlide(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
+	if !s.anyEntityBlocking(entity, newX, pos.Y, entities) {
+		vel.VY = 0
+		return newX, pos.Y
+	}
+
+	if !s.anyEntityBlocking(entity, pos.X, newY, entities) {
+		vel.VX = 0
+		return pos.X, newY
+	}
+
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+	}).Debug("Movement completely blocked by entity")
+	vel.VX = 0
+	vel.VY = 0
+	return pos.X, pos.Y
 }
 
 // applyBoundsConstraints clamps position to bounds and stops velocity at boundaries.

@@ -27,6 +27,9 @@ func (g *LegendaryQuestGenerator) Generate(seed int64, params procgen.Generation
 
 	// Select template based on difficulty
 	templateIndex := int(params.Difficulty * float64(len(g.templates)))
+	if templateIndex < 0 {
+		templateIndex = 0
+	}
 	if templateIndex >= len(g.templates) {
 		templateIndex = len(g.templates) - 1
 	}

@@ -114,6 +114,23 @@ func (g *CrossDungeonGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not a *CrossDungeonStory")
 	}
 
+	if err := g.validateBasicFields(story); err != nil {
+		return err
+	}
+
+	if err := g.validateDepthRange(story); err != nil {
+		return err
+	}
+
+	if err := g.validateFragments(story); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBasicFields checks title, level span, fragment count, coherence and continuity.
+func (g *CrossDungeonGenerator) validateBasicFields(story *CrossDungeonStory) error {
 	if story.Title == "" {
 		return fmt.Errorf("story title is empty")
 	}
@@ -138,7 +155,11 @@ func (g *CrossDungeonGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("story continuity too low: %.2f, minimum 0.5", story.Continuity)
 	}
 
-	// Validate depth range
+	return nil
+}
+
+// validateDepthRange checks minimum and maximum depth values.
+func (g *CrossDungeonGenerator) validateDepthRange(story *CrossDungeonStory) error {
 	if story.MinDepth < 1 {
 		return fmt.Errorf("minimum depth must be at least 1, got %d", story.MinDepth)
 	}
@@ -147,7 +168,11 @@ func (g *CrossDungeonGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("maximum depth (%d) must be greater than minimum depth (%d)", story.MaxDepth, story.MinDepth)
 	}
 
-	// Validate all fragments have content
+	return nil
+}
+
+// validateFragments ensures all fragments have content and valid depth.
+func (g *CrossDungeonGenerator) validateFragments(story *CrossDungeonStory) error {
 	for i, frag := range story.Fragments {
 		if frag.Content == "" {
 			return fmt.Errorf("fragment %d has empty content", i)

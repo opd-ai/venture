@@ -452,72 +452,94 @@ func (s *InputSystem) updateTouchInput() {
 // BUG FIX: Phase 3 - Menu Trap - Complete dual-exit pattern for all UI panels
 // Resolution: ESC now closes ALL open UI panels (inventory, character, skills, quests, map, crafting, shop, mailbox) before opening pause menu
 func (s *InputSystem) handleEscapeKey() {
-	if inpututil.IsKeyJustPressed(s.KeyHelp) {
-		// Priority 1: Tutorial (skip tutorial on ESC)
-		if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
-			s.tutorialSystem.Skip()
-			return
-		}
+	if !inpututil.IsKeyJustPressed(s.KeyHelp) {
+		return
+	}
 
-		// Priority 2: Help menu (toggle help on/off)
-		if s.helpSystem != nil && s.helpSystem.Visible {
-			s.helpSystem.Toggle()
-			return
-		}
+	if s.handleHighPriorityEscapeActions() {
+		return
+	}
 
-		// Priority 3: Check ALL open UI panels and close them (dual-exit pattern)
-		// BUG FIX: Phase 3.7 - Inventory ESC not working
-		if s.inventoryUI != nil && s.inventoryUI.IsVisible() {
-			s.inventoryUI.Hide()
-			return
-		}
+	if s.handleGameUIEscapeActions() {
+		return
+	}
 
-		// BUG FIX: Phase 4.9 - Character sheet ESC not working
-		if s.characterUI != nil && s.characterUI.IsVisible() {
-			s.characterUI.Hide()
-			return
-		}
+	if s.handleShopUIEscapeActions() {
+		return
+	}
 
-		// BUG FIX: Phase 4.10 - Skills UI ESC not working
-		if s.skillsUI != nil && s.skillsUI.IsVisible() {
-			s.skillsUI.Hide()
-			return
-		}
+	s.togglePauseMenu()
+}
 
-		// BUG FIX: Phase 4.11 - Quest log ESC not working
-		if s.questUI != nil && s.questUI.IsVisible() {
-			s.questUI.Hide()
-			return
-		}
+// handleHighPriorityEscapeActions processes tutorial and help menu escape actions.
+func (s *InputSystem) handleHighPriorityEscapeActions() bool {
+	if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
+		s.tutorialSystem.Skip()
+		return true
+	}
 
-		// BUG FIX: Phase 5.14 - Map UI ESC not working
-		if s.mapUI != nil && s.mapUI.fullScreen {
-			s.mapUI.HideFullScreen()
-			return
-		}
+	if s.helpSystem != nil && s.helpSystem.Visible {
+		s.helpSystem.Toggle()
+		return true
+	}
 
-		// BUG FIX: Phase 5.13 - Crafting UI ESC not working
-		if s.craftingUI != nil && s.craftingUI.IsVisible() {
-			s.craftingUI.Close()
-			return
-		}
+	return false
+}
 
-		// BUG FIX: Phase 5.12 - Shop UI ESC not working
-		if s.shopUI != nil && s.shopUI.IsVisible() {
-			s.shopUI.Close()
-			return
-		}
+// handleGameUIEscapeActions closes open game UI panels (inventory, character, skills, quest, map).
+func (s *InputSystem) handleGameUIEscapeActions() bool {
+	if s.inventoryUI != nil && s.inventoryUI.IsVisible() {
+		s.inventoryUI.Hide()
+		return true
+	}
 
-		// BUG FIX: Phase 5.12 - Mailbox UI ESC not working (already fixed, keeping for completeness)
-		if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
-			s.mailboxUI.Close()
-			return
-		}
+	if s.characterUI != nil && s.characterUI.IsVisible() {
+		s.characterUI.Hide()
+		return true
+	}
 
-		// Priority 4: If no UI is open, toggle pause menu
-		if s.onMenuToggle != nil {
-			s.onMenuToggle()
-		}
+	if s.skillsUI != nil && s.skillsUI.IsVisible() {
+		s.skillsUI.Hide()
+		return true
+	}
+
+	if s.questUI != nil && s.questUI.IsVisible() {
+		s.questUI.Hide()
+		return true
+	}
+
+	if s.mapUI != nil && s.mapUI.fullScreen {
+		s.mapUI.HideFullScreen()
+		return true
+	}
+
+	return false
+}
+
+// handleShopUIEscapeActions closes open shop-related UI panels (crafting, shop, mailbox).
+func (s *InputSystem) handleShopUIEscapeActions() bool {
+	if s.craftingUI != nil && s.craftingUI.IsVisible() {
+		s.craftingUI.Close()
+		return true
+	}
+
+	if s.shopUI != nil && s.shopUI.IsVisible() {
+		s.shopUI.Close()
+		return true
+	}
+
+	if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
+		s.mailboxUI.Close()
+		return true
+	}
+
+	return false
+}
+
+// togglePauseMenu activates the pause menu if no UI is open.
+func (s *InputSystem) togglePauseMenu() {
+	if s.onMenuToggle != nil {
+		s.onMenuToggle()
 	}
 }
 

@@ -237,41 +237,59 @@ func (g *CompositeGenerator) selectGenerators(genreID string, count int, rng *ra
 
 // generateBiomeRegion generates terrain for a specific biome region.
 func (g *CompositeGenerator) generateBiomeRegion(terrain *Terrain, region *BiomeRegionInfo, diagram *VoronoiDiagram, params procgen.GenerationParams, rng *rand.Rand) error {
-	// Get generator for this biome
 	generator, ok := g.generators[region.GeneratorName]
 	if !ok {
 		return fmt.Errorf("unknown generator: %s", region.GeneratorName)
 	}
 
-	// Get region bounds
 	minX, minY, maxX, maxY := diagram.GetRegionBounds(region.ID)
-	regionWidth := maxX - minX + 1
-	regionHeight := maxY - minY + 1
-
-	if regionWidth <= 0 || regionHeight <= 0 {
-		return fmt.Errorf("invalid region bounds: width=%d, height=%d", regionWidth, regionHeight)
+	regionWidth, regionHeight, err := g.calculateRegionDimensions(minX, minY, maxX, maxY, terrain.Width, terrain.Height)
+	if err != nil {
+		return err
 	}
 
-	// Enforce minimum region size to prevent generator issues
-	// However, keep within the actual region bounds to maintain determinism
-	minRegionWidth := 20
-	minRegionHeight := 15
-	if regionWidth < minRegionWidth {
-		regionWidth = minRegionWidth
-	}
-	if regionHeight < minRegionHeight {
-		regionHeight = minRegionHeight
+	regionParams := g.buildRegionParams(params, regionWidth, regionHeight)
+	biomeTerrain, err := g.generateBiomeTerrain(generator, region, regionParams)
+	if err != nil {
+		return err
 	}
 
-	// Never exceed the original terrain dimensions
-	if minX+regionWidth > terrain.Width {
-		regionWidth = terrain.Width - minX
-	}
-	if minY+regionHeight > terrain.Height {
-		regionHeight = terrain.Height - minY
+	g.copyBiomeTilesToTerrain(terrain, biomeTerrain, region, minX, minY, regionWidth, regionHeight)
+	return nil
+}
+
+// calculateRegionDimensions computes and validates region dimensions with minimum sizes.
+func (g *CompositeGenerator) calculateRegionDimensions(minX, minY, maxX, maxY, terrainWidth, terrainHeight int) (width, height int, err error) {
+	width = maxX - minX + 1
+	height = maxY - minY + 1
+
+	if width <= 0 || height <= 0 {
+		return 0, 0, fmt.Errorf("invalid region bounds: width=%d, height=%d", width, height)
 	}
 
-	// Create params for this region (deep copy to avoid mutation)
+	width = g.enforceMinimumDimension(width, 20)
+	height = g.enforceMinimumDimension(height, 15)
+
+	if minX+width > terrainWidth {
+		width = terrainWidth - minX
+	}
+	if minY+height > terrainHeight {
+		height = terrainHeight - minY
+	}
+
+	return width, height, nil
+}
+
+// enforceMinimumDimension ensures dimension meets minimum threshold.
+func (g *CompositeGenerator) enforceMinimumDimension(dimension, minimum int) int {
+	if dimension < minimum {
+		return minimum
+	}
+	return dimension
+}
+
+// buildRegionParams creates generation parameters for the biome region.
+func (g *CompositeGenerator) buildRegionParams(params procgen.GenerationParams, width, height int) procgen.GenerationParams {
 	regionParams := procgen.GenerationParams{
 		Difficulty: params.Difficulty,
 		Depth:      params.Depth,
@@ -279,42 +297,44 @@ func (g *CompositeGenerator) generateBiomeRegion(terrain *Terrain, region *Biome
 		Custom:     make(map[string]interface{}),
 	}
 
-	// Copy original custom params
 	if params.Custom != nil {
 		for k, v := range params.Custom {
 			regionParams.Custom[k] = v
 		}
 	}
 
-	// Override dimensions for this region
-	regionParams.Custom["width"] = regionWidth
-	regionParams.Custom["height"] = regionHeight
+	regionParams.Custom["width"] = width
+	regionParams.Custom["height"] = height
 
-	// Generate biome terrain
-	result, err := generator.Generate(region.Seed, regionParams)
+	return regionParams
+}
+
+// generateBiomeTerrain generates terrain for the biome using the appropriate generator.
+func (g *CompositeGenerator) generateBiomeTerrain(generator procgen.Generator, region *BiomeRegionInfo, params procgen.GenerationParams) (*Terrain, error) {
+	result, err := generator.Generate(region.Seed, params)
 	if err != nil {
-		return fmt.Errorf("generator %s failed: %w", region.GeneratorName, err)
+		return nil, fmt.Errorf("generator %s failed: %w", region.GeneratorName, err)
 	}
 
 	biomeTerrain, ok := result.(*Terrain)
 	if !ok {
-		return fmt.Errorf("generator %s returned non-terrain result", region.GeneratorName)
+		return nil, fmt.Errorf("generator %s returned non-terrain result", region.GeneratorName)
 	}
 
-	// Copy generated tiles to main terrain (only tiles belonging to this region)
+	return biomeTerrain, nil
+}
+
+// copyBiomeTilesToTerrain copies generated biome tiles to the main terrain.
+func (g *CompositeGenerator) copyBiomeTilesToTerrain(terrain, biomeTerrain *Terrain, region *BiomeRegionInfo, minX, minY, regionWidth, regionHeight int) {
 	for _, tile := range region.Bounds.Tiles {
-		// Calculate offset into biome terrain
 		biomeX := tile.X - minX
 		biomeY := tile.Y - minY
 
-		// Bounds check
 		if biomeX >= 0 && biomeX < regionWidth && biomeY >= 0 && biomeY < regionHeight {
 			srcTile := biomeTerrain.GetTile(biomeX, biomeY)
 			terrain.SetTile(tile.X, tile.Y, srcTile)
 		}
 	}
-
-	return nil
 }
 
 // ensureConnectivity ensures all biome regions are connected.

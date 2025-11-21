@@ -1649,6 +1649,22 @@ func (s *SpellCastingSystem) findAllEnemyTargets(caster *Entity) []*Entity {
 
 // findConeTargets finds entities within a cone-shaped area from the caster.
 func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell, x, y float64) []*Entity {
+	s.logConeTargetSearch(caster, spell)
+
+	casterPosComp := s.getCasterPositionForCone(caster)
+	if casterPosComp == nil {
+		return nil
+	}
+
+	dirX, dirY := s.getNormalizedConeDirection(caster, x, y)
+	targets := s.filterTargetsInCone(caster, spell, casterPosComp, dirX, dirY)
+
+	s.logConeTargetResults(caster, targets)
+	return targets
+}
+
+// logConeTargetSearch logs the start of cone target search.
+func (s *SpellCastingSystem) logConeTargetSearch(caster *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id":  caster.ID,
@@ -1656,7 +1672,10 @@ func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell,
 			"range":      spell.Stats.Range,
 		}).Debug("Searching for enemies in cone")
 	}
+}
 
+// getCasterPositionForCone retrieves and validates caster position component for cone targeting.
+func (s *SpellCastingSystem) getCasterPositionForCone(caster *Entity) *PositionComponent {
 	casterPos, hasCasterPos := caster.GetComponent("position")
 	if !hasCasterPos {
 		if s.logger != nil {
@@ -1666,20 +1685,28 @@ func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell,
 		}
 		return nil
 	}
+
 	casterPosComp, ok := casterPos.(*PositionComponent)
 	if !ok {
 		return nil
 	}
 
+	return casterPosComp
+}
+
+// getNormalizedConeDirection calculates and normalizes the direction vector for cone attacks.
+func (s *SpellCastingSystem) getNormalizedConeDirection(caster *Entity, x, y float64) (float64, float64) {
 	dirX, dirY := s.getCasterDirection(caster, x, y)
 	if dirX == 0 && dirY == 0 {
 		dirX = 1.0
 	}
 
 	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
-	dirX /= dirLength
-	dirY /= dirLength
+	return dirX / dirLength, dirY / dirLength
+}
 
+// filterTargetsInCone finds all valid targets within the cone area.
+func (s *SpellCastingSystem) filterTargetsInCone(caster *Entity, spell *magic.Spell, casterPos *PositionComponent, dirX, dirY float64) []*Entity {
 	coneAngle := 45.0 * math.Pi / 180.0
 	entities := s.world.GetEntities()
 	var targets []*Entity
@@ -1689,42 +1716,61 @@ func (s *SpellCastingSystem) findConeTargets(caster *Entity, spell *magic.Spell,
 			continue
 		}
 
-		entityPos, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		entityPosComp, ok := entityPos.(*PositionComponent)
-		if !ok {
+		entityPosComp := s.getConeEntityPosition(entity)
+		if entityPosComp == nil {
 			continue
 		}
 
-		toEntityX := entityPosComp.X - casterPosComp.X
-		toEntityY := entityPosComp.Y - casterPosComp.Y
-		dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
-
-		if dist > spell.Stats.Range || dist < 0.1 {
-			continue
-		}
-
-		toEntityX /= dist
-		toEntityY /= dist
-
-		dotProduct := dirX*toEntityX + dirY*toEntityY
-		angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
-
-		if angle <= coneAngle {
+		if s.isInCone(casterPos, entityPosComp, dirX, dirY, spell.Stats.Range, coneAngle) {
 			targets = append(targets, entity)
 		}
 	}
 
+	return targets
+}
+
+// getConeEntityPosition retrieves entity position component for cone targeting.
+func (s *SpellCastingSystem) getConeEntityPosition(entity *Entity) *PositionComponent {
+	entityPos, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil
+	}
+
+	entityPosComp, ok := entityPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+
+	return entityPosComp
+}
+
+// isInCone checks if an entity position is within the cone area.
+func (s *SpellCastingSystem) isInCone(casterPos, entityPos *PositionComponent, dirX, dirY, maxRange, coneAngle float64) bool {
+	toEntityX := entityPos.X - casterPos.X
+	toEntityY := entityPos.Y - casterPos.Y
+	dist := math.Sqrt(toEntityX*toEntityX + toEntityY*toEntityY)
+
+	if dist > maxRange || dist < 0.1 {
+		return false
+	}
+
+	toEntityX /= dist
+	toEntityY /= dist
+
+	dotProduct := dirX*toEntityX + dirY*toEntityY
+	angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
+
+	return angle <= coneAngle
+}
+
+// logConeTargetResults logs the cone target search results.
+func (s *SpellCastingSystem) logConeTargetResults(caster *Entity, targets []*Entity) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id":    caster.ID,
 			"target_count": len(targets),
 		}).Debug("Found enemies in cone")
 	}
-
-	return targets
 }
 
 // findLineTargets finds entities along a line from the caster in the facing direction.
@@ -1742,7 +1788,7 @@ func (s *SpellCastingSystem) findLineTargets(caster *Entity, spell *magic.Spell,
 		return nil
 	}
 
-	dirX, dirY := s.getNormalizedDirection(caster, x, y)
+	dirX, dirY := s.getNormalizedConeDirection(caster, x, y)
 	lineWidth := 32.0
 	targets := s.filterEntitiesInLine(caster, casterPos, dirX, dirY, spell.Stats.Range, lineWidth)
 
@@ -1774,17 +1820,6 @@ func (s *SpellCastingSystem) validateCasterPosition(caster *Entity) (*PositionCo
 	return casterPosComp, true
 }
 
-// getNormalizedDirection calculates and normalizes the caster's facing direction.
-func (s *SpellCastingSystem) getNormalizedDirection(caster *Entity, x, y float64) (float64, float64) {
-	dirX, dirY := s.getCasterDirection(caster, x, y)
-	if dirX == 0 && dirY == 0 {
-		dirX = 1.0
-	}
-
-	dirLength := math.Sqrt(dirX*dirX + dirY*dirY)
-	return dirX / dirLength, dirY / dirLength
-}
-
 // filterEntitiesInLine finds all entities within the line attack area.
 func (s *SpellCastingSystem) filterEntitiesInLine(caster *Entity, casterPos *PositionComponent, dirX, dirY, maxRange, lineWidth float64) []*Entity {
 	entities := s.world.GetEntities()
@@ -1795,30 +1830,17 @@ func (s *SpellCastingSystem) filterEntitiesInLine(caster *Entity, casterPos *Pos
 			continue
 		}
 
-		entityPos, ok := s.getEntityPosition(entity)
-		if !ok {
+		entityPosComp := s.getConeEntityPosition(entity)
+		if entityPosComp == nil {
 			continue
 		}
 
-		if s.isEntityInLineArea(casterPos, entityPos, dirX, dirY, maxRange, lineWidth) {
+		if s.isEntityInLineArea(casterPos, entityPosComp, dirX, dirY, maxRange, lineWidth) {
 			targets = append(targets, entity)
 		}
 	}
 
 	return targets
-}
-
-// getEntityPosition retrieves and validates an entity's position component.
-func (s *SpellCastingSystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
-	entityPos, hasPos := entity.GetComponent("position")
-	if !hasPos {
-		return nil, false
-	}
-	entityPosComp, ok := entityPos.(*PositionComponent)
-	if !ok {
-		return nil, false
-	}
-	return entityPosComp, true
 }
 
 // isEntityInLineArea checks if an entity is within the line attack boundaries.

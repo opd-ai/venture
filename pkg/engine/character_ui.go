@@ -178,63 +178,87 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 		return
 	}
 
-	// Fetch required components
-	statsComp, hasStats := ui.playerEntity.GetComponent("stats")
-	equipComp, hasEquip := ui.playerEntity.GetComponent("equipment")
-	expComp, hasExp := ui.playerEntity.GetComponent("experience")
-	invComp, hasInv := ui.playerEntity.GetComponent("inventory")
+	stats, equipment := ui.fetchPlayerComponents()
+	if stats == nil {
+		return
+	}
 
+	panelX, panelY, panelWidth, panelHeight := ui.calculatePanelDimensions()
+	ui.drawBackground(img, panelX, panelY, panelWidth, panelHeight)
+	ui.drawTitleBar(img, panelX, panelY, panelWidth)
+	ui.drawPlayerInfo(img, panelX, panelY, panelWidth)
+
+	ui.drawStatsPanel(img, stats, equipment)
+	ui.drawEquipmentPanel(img, equipment)
+	ui.drawAttributesPanel(img, stats)
+
+	ui.drawFooter(img, panelX, panelY, panelWidth, panelHeight)
+	ui.errorState.DrawError(img)
+}
+
+// fetchPlayerComponents retrieves and validates player stats and equipment components.
+func (ui *EbitenCharacterUI) fetchPlayerComponents() (*StatsComponent, *EquipmentComponent) {
+	statsComp, hasStats := ui.playerEntity.GetComponent("stats")
 	if !hasStats {
-		return // Need stats at minimum
+		return nil, nil
 	}
 
 	stats, ok := statsComp.(*StatsComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
+
 	var equipment *EquipmentComponent
-	if hasEquip {
+	if equipComp, hasEquip := ui.playerEntity.GetComponent("equipment"); hasEquip {
 		if eq, ok := equipComp.(*EquipmentComponent); ok {
 			equipment = eq
 		}
 	}
 
-	// Draw semi-transparent overlay
-	vector.DrawFilledRect(img, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
-		color.RGBA{0, 0, 0, 180}, false)
+	return stats, equipment
+}
 
-	// Draw main panel background (800x600 centered)
-	panelWidth := 800
-	panelHeight := 600
+// calculatePanelDimensions determines panel position and size based on screen dimensions.
+func (ui *EbitenCharacterUI) calculatePanelDimensions() (x, y, width, height int) {
+	width = 800
+	height = 600
 	if ui.screenWidth < 800 {
-		panelWidth = ui.screenWidth - 40
+		width = ui.screenWidth - 40
 	}
 	if ui.screenHeight < 600 {
-		panelHeight = ui.screenHeight - 40
+		height = ui.screenHeight - 40
 	}
+	x = (ui.screenWidth - width) / 2
+	y = (ui.screenHeight - height) / 2
+	return x, y, width, height
+}
 
-	panelX := (ui.screenWidth - panelWidth) / 2
-	panelY := (ui.screenHeight - panelHeight) / 2
-
-	// Panel background
+// drawBackground renders the overlay and panel background.
+func (ui *EbitenCharacterUI) drawBackground(img *ebiten.Image, panelX, panelY, panelWidth, panelHeight int) {
+	vector.DrawFilledRect(img, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
+		color.RGBA{0, 0, 0, 180}, false)
 	vector.DrawFilledRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		color.RGBA{20, 20, 30, 255}, false)
-
-	// Panel border
 	vector.StrokeRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight), 2,
 		color.RGBA{100, 150, 200, 255}, false)
+}
 
-	// Title bar
+// drawTitleBar renders the panel title.
+func (ui *EbitenCharacterUI) drawTitleBar(img *ebiten.Image, panelX, panelY, panelWidth int) {
 	titleText := "CHARACTER STATS"
 	titleX := panelX + panelWidth/2 - len(titleText)*3
 	titleY := panelY + 20
 	text.Draw(img, titleText, basicfont.Face7x13, titleX, titleY+13,
 		color.RGBA{255, 255, 100, 255})
+}
 
-	// Level and Gold info
-	if hasExp {
+// drawPlayerInfo renders level and gold information.
+func (ui *EbitenCharacterUI) drawPlayerInfo(img *ebiten.Image, panelX, panelY, panelWidth int) {
+	titleY := panelY + 20
+
+	if expComp, hasExp := ui.playerEntity.GetComponent("experience"); hasExp {
 		if exp, ok := expComp.(*ExperienceComponent); ok {
 			levelText := fmt.Sprintf("Level %d", exp.Level)
 			text.Draw(img, levelText, basicfont.Face7x13, panelX+20, titleY+13,
@@ -242,35 +266,27 @@ func (ui *EbitenCharacterUI) Draw(screen interface{}) {
 		}
 	}
 
-	if hasInv {
+	if invComp, hasInv := ui.playerEntity.GetComponent("inventory"); hasInv {
 		if inv, ok := invComp.(*InventoryComponent); ok {
 			goldText := fmt.Sprintf("Gold: %d", inv.Gold)
 			text.Draw(img, goldText, basicfont.Face7x13, panelX+panelWidth-120, titleY+13,
 				color.RGBA{255, 215, 0, 255})
 		}
 	}
+}
 
-	// Draw three panels
-	ui.drawStatsPanel(img, stats, equipment)
-	ui.drawEquipmentPanel(img, equipment)
-	ui.drawAttributesPanel(img, stats)
-
-	// Draw controls hint at bottom (standardized menu navigation)
+// drawFooter renders controls hint and close button.
+func (ui *EbitenCharacterUI) drawFooter(img *ebiten.Image, panelX, panelY, panelWidth, panelHeight int) {
 	controlsText := GetExitHint(MenuKeys.Character)
 	controlsX := panelX + panelWidth/2 - len(controlsText)*3
 	controlsY := panelY + panelHeight - 20
 	text.Draw(img, controlsText, basicfont.Face7x13, controlsX, controlsY,
 		color.RGBA{180, 180, 180, 255})
 
-	// Draw close button (touch-friendly)
 	if ui.closeButton != nil {
-		// Position button at top-right of panel
 		ui.closeButton.SetPosition(float64(panelX+panelWidth-54), float64(panelY+10))
 		ui.closeButton.Draw(img)
 	}
-
-	// H-002 FIX: Draw error feedback
-	ui.errorState.DrawError(img)
 }
 
 // calculateLayout computes panel positions based on img size.

@@ -3,7 +3,6 @@ package legendary
 import (
 	"fmt"
 	"math/rand"
-	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/world/raids"

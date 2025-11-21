@@ -1,6 +1,7 @@
 package performance
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -125,12 +126,12 @@ func TestMemoryLeakDetection(t *testing.T) {
 
 // TestNetworkBatcher tests network batching
 func TestNetworkBatcher(t *testing.T) {
-	batchReceived := false
-	var receivedBatch *BatchedMessage
+	var batchReceived int32
+	var receivedBatch atomic.Value
 
 	sendFunc := func(batch *BatchedMessage) {
-		batchReceived = true
-		receivedBatch = batch
+		atomic.StoreInt32(&batchReceived, 1)
+		receivedBatch.Store(batch)
 	}
 
 	nb := NewNetworkBatcher(100, sendFunc)
@@ -144,25 +145,27 @@ func TestNetworkBatcher(t *testing.T) {
 	// Wait for batch window
 	time.Sleep(150 * time.Millisecond)
 
-	if !batchReceived {
+	if atomic.LoadInt32(&batchReceived) != 1 {
 		t.Error("Expected batch to be sent")
 	}
 
-	if receivedBatch == nil {
+	batch := receivedBatch.Load()
+	if batch == nil {
 		t.Fatal("Received batch is nil")
 	}
 
-	if len(receivedBatch.Messages) != 2 {
-		t.Errorf("Expected 2 messages in batch, got %d", len(receivedBatch.Messages))
+	batchMsg := batch.(*BatchedMessage)
+	if len(batchMsg.Messages) != 2 {
+		t.Errorf("Expected 2 messages in batch, got %d", len(batchMsg.Messages))
 	}
 }
 
 // TestNetworkBatcherMaxSize tests max batch size enforcement
 func TestNetworkBatcherMaxSize(t *testing.T) {
-	batchCount := 0
+	var batchCount int32
 
 	sendFunc := func(batch *BatchedMessage) {
-		batchCount++
+		atomic.AddInt32(&batchCount, 1)
 	}
 
 	nb := NewNetworkBatcher(1000, sendFunc) // Long window
@@ -179,8 +182,8 @@ func TestNetworkBatcherMaxSize(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Should have 1 batch from max size trigger, 1 still queued
-	if batchCount != 1 {
-		t.Errorf("Expected 1 batch from max size trigger, got %d", batchCount)
+	if atomic.LoadInt32(&batchCount) != 1 {
+		t.Errorf("Expected 1 batch from max size trigger, got %d", atomic.LoadInt32(&batchCount))
 	}
 }
 
@@ -242,15 +245,15 @@ func TestBackgroundLoader(t *testing.T) {
 	bl.Start()
 	defer bl.Stop()
 
-	loaded := false
+	var loaded int32
 	bl.PreloadRaid("raid1", func(data interface{}) {
-		loaded = true
+		atomic.StoreInt32(&loaded, 1)
 	})
 
 	// Wait for loading
 	time.Sleep(200 * time.Millisecond)
 
-	if !loaded {
+	if atomic.LoadInt32(&loaded) != 1 {
 		t.Error("Expected raid to be loaded")
 	}
 }

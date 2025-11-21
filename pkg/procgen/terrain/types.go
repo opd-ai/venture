@@ -390,49 +390,46 @@ func (t *Terrain) IsInBounds(x, y int) bool {
 
 // ValidateStairPlacement checks that all stairs are placed in valid, walkable locations.
 func (t *Terrain) ValidateStairPlacement() error {
-	// Check stairs up
-	for _, p := range t.StairsUp {
-		tile := t.GetTile(p.X, p.Y)
-		if tile != TileStairsUp {
-			return fmt.Errorf("stairs up at (%d, %d) not placed correctly (tile is %s)", p.X, p.Y, tile.String())
-		}
-		// Check that at least one adjacent tile is walkable (for accessibility)
-		accessible := false
-		for _, neighbor := range p.Neighbors() {
-			if t.IsInBounds(neighbor.X, neighbor.Y) {
-				neighborTile := t.GetTile(neighbor.X, neighbor.Y)
-				if neighborTile.IsWalkableTile() && neighborTile != TileStairsUp && neighborTile != TileStairsDown {
-					accessible = true
-					break
-				}
-			}
-		}
-		if !accessible {
-			return fmt.Errorf("stairs up at (%d, %d) is not accessible from walkable tiles", p.X, p.Y)
-		}
+	if err := t.validateStairSet(t.StairsUp, TileStairsUp, "stairs up"); err != nil {
+		return err
 	}
-
-	// Check stairs down
-	for _, p := range t.StairsDown {
-		tile := t.GetTile(p.X, p.Y)
-		if tile != TileStairsDown {
-			return fmt.Errorf("stairs down at (%d, %d) not placed correctly (tile is %s)", p.X, p.Y, tile.String())
-		}
-		// Check that at least one adjacent tile is walkable (for accessibility)
-		accessible := false
-		for _, neighbor := range p.Neighbors() {
-			if t.IsInBounds(neighbor.X, neighbor.Y) {
-				neighborTile := t.GetTile(neighbor.X, neighbor.Y)
-				if neighborTile.IsWalkableTile() && neighborTile != TileStairsUp && neighborTile != TileStairsDown {
-					accessible = true
-					break
-				}
-			}
-		}
-		if !accessible {
-			return fmt.Errorf("stairs down at (%d, %d) is not accessible from walkable tiles", p.X, p.Y)
-		}
+	if err := t.validateStairSet(t.StairsDown, TileStairsDown, "stairs down"); err != nil {
+		return err
 	}
-
 	return nil
+}
+
+// validateStairSet validates a set of stairs of a specific type.
+func (t *Terrain) validateStairSet(positions []Point, expectedTile TileType, stairType string) error {
+	for _, p := range positions {
+		if err := t.validateSingleStair(p, expectedTile, stairType); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateSingleStair validates that a single stair is correctly placed and accessible.
+func (t *Terrain) validateSingleStair(p Point, expectedTile TileType, stairType string) error {
+	tile := t.GetTile(p.X, p.Y)
+	if tile != expectedTile {
+		return fmt.Errorf("%s at (%d, %d) not placed correctly (tile is %s)", stairType, p.X, p.Y, tile.String())
+	}
+	if !t.isStairAccessible(p) {
+		return fmt.Errorf("%s at (%d, %d) is not accessible from walkable tiles", stairType, p.X, p.Y)
+	}
+	return nil
+}
+
+// isStairAccessible checks if at least one adjacent tile is walkable.
+func (t *Terrain) isStairAccessible(p Point) bool {
+	for _, neighbor := range p.Neighbors() {
+		if t.IsInBounds(neighbor.X, neighbor.Y) {
+			neighborTile := t.GetTile(neighbor.X, neighbor.Y)
+			if neighborTile.IsWalkableTile() && neighborTile != TileStairsUp && neighborTile != TileStairsDown {
+				return true
+			}
+		}
+	}
+	return false
 }

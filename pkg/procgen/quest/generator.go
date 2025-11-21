@@ -37,43 +37,58 @@ func NewQuestGeneratorWithLogger(logger *logrus.Logger) *QuestGenerator {
 // Generate creates quests based on the seed and parameters.
 // Returns []*Quest or error.
 func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":       seed,
-			"genreID":    params.GenreID,
-			"depth":      params.Depth,
-			"difficulty": params.Difficulty,
-		}).Debug("starting quest generation")
+	g.logGenerationStart(seed, params)
+
+	if err := g.validateParams(params); err != nil {
+		return nil, err
 	}
 
-	// Validate parameters
+	count := g.extractQuestCount(params)
+	rng := rand.New(rand.NewSource(seed))
+	templates, err := g.selectTemplates(params.GenreID)
+	if err != nil {
+		return nil, err
+	}
+
+	g.logTemplateSelection(count, len(templates))
+	quests := g.generateQuests(rng, templates, params, seed, count)
+	g.logGenerationComplete(len(quests), seed)
+
+	return quests, nil
+}
+
+// validateParams validates generation parameters.
+func (g *QuestGenerator) validateParams(params procgen.GenerationParams) error {
 	if params.Depth < 0 {
 		err := fmt.Errorf("depth must be non-negative")
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("depth", params.Depth).Error("invalid depth parameter")
 		}
-		return nil, err
+		return err
 	}
 	if params.Difficulty < 0 || params.Difficulty > 1 {
 		err := fmt.Errorf("difficulty must be between 0 and 1")
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("difficulty", params.Difficulty).Error("invalid difficulty parameter")
 		}
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	// Extract custom parameters
-	count := 5 // default
+// extractQuestCount extracts the quest count from custom parameters.
+func (g *QuestGenerator) extractQuestCount(params procgen.GenerationParams) int {
+	count := 5
 	if c, ok := params.Custom["count"].(int); ok {
 		count = c
 	}
+	return count
+}
 
-	// Create deterministic RNG
-	rng := rand.New(rand.NewSource(seed))
-
-	// Get templates based on genre
+// selectTemplates selects quest templates based on genre.
+func (g *QuestGenerator) selectTemplates(genreID string) ([]QuestTemplate, error) {
 	var templates []QuestTemplate
-	switch params.GenreID {
+	switch genreID {
 	case "scifi":
 		templates = append(templates, GetSciFiKillTemplates()...)
 		templates = append(templates, GetSciFiCollectTemplates()...)
@@ -88,50 +103,70 @@ func (g *QuestGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	}
 
 	if len(templates) == 0 {
-		err := fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		err := fmt.Errorf("no templates available for genre: %s", genreID)
 		if g.logger != nil {
-			g.logger.WithError(err).WithField("genreID", params.GenreID).Error("template selection failed")
+			g.logger.WithError(err).WithField("genreID", genreID).Error("template selection failed")
 		}
 		return nil, err
 	}
+	return templates, nil
+}
 
+// generateQuests generates multiple quests from templates.
+func (g *QuestGenerator) generateQuests(rng *rand.Rand, templates []QuestTemplate, params procgen.GenerationParams, seed int64, count int) []*Quest {
+	quests := make([]*Quest, count)
+	for i := 0; i < count; i++ {
+		template := templates[rng.Intn(len(templates))]
+		quest := g.generateFromTemplate(rng, template, params, i)
+		quest.Seed = seed + int64(i)
+		quests[i] = quest
+		g.logQuestGenerated(i, quest)
+	}
+	return quests
+}
+
+// logGenerationStart logs the start of quest generation.
+func (g *QuestGenerator) logGenerationStart(seed int64, params procgen.GenerationParams) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting quest generation")
+	}
+}
+
+// logTemplateSelection logs template selection details.
+func (g *QuestGenerator) logTemplateSelection(count, templateCount int) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
 			"count":         count,
-			"templateCount": len(templates),
+			"templateCount": templateCount,
 		}).Debug("generating quests")
 	}
+}
 
-	// Generate quests
-	quests := make([]*Quest, count)
-	for i := 0; i < count; i++ {
-		// Select random template
-		template := templates[rng.Intn(len(templates))]
-
-		// Generate quest from template
-		quest := g.generateFromTemplate(rng, template, params, i)
-		quest.Seed = seed + int64(i)
-
-		quests[i] = quest
-
-		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			g.logger.WithFields(logrus.Fields{
-				"questIndex": i,
-				"questName":  quest.Name,
-				"questType":  quest.Type,
-				"difficulty": quest.Difficulty,
-			}).Debug("quest generated")
-		}
+// logQuestGenerated logs details of a generated quest.
+func (g *QuestGenerator) logQuestGenerated(index int, quest *Quest) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"questIndex": index,
+			"questName":  quest.Name,
+			"questType":  quest.Type,
+			"difficulty": quest.Difficulty,
+		}).Debug("quest generated")
 	}
+}
 
+// logGenerationComplete logs completion of quest generation.
+func (g *QuestGenerator) logGenerationComplete(questCount int, seed int64) {
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"questCount": len(quests),
+			"questCount": questCount,
 			"seed":       seed,
 		}).Info("quest generation complete")
 	}
-
-	return quests, nil
 }
 
 // generateFromTemplate creates a single quest from a template.

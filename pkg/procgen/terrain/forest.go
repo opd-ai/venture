@@ -41,18 +41,26 @@ func NewForestGeneratorWithLogger(logger *logrus.Logger) *ForestGenerator {
 
 // Generate creates a forest environment using Poisson disc sampling for trees.
 func (g *ForestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":       seed,
-			"genreID":    params.GenreID,
-			"depth":      params.Depth,
-			"difficulty": params.Difficulty,
-		}).Debug("starting forest terrain generation")
+	g.logGenerationStart(seed, params)
+
+	width, height := g.extractDimensions(params)
+	if err := g.validateDimensions(width, height); err != nil {
+		return nil, err
 	}
 
-	// Use custom parameters if provided
-	width := 80
-	height := 50
+	rng := rand.New(rand.NewSource(seed))
+	terrain := g.initializeTerrain(width, height, seed)
+	clearings := g.createClearings(terrain, rng)
+
+	g.populateForestFeatures(terrain, clearings, rng)
+	g.logGenerationComplete(terrain, clearings)
+
+	return terrain, nil
+}
+
+// extractDimensions extracts and applies custom dimension parameters.
+func (g *ForestGenerator) extractDimensions(params procgen.GenerationParams) (width, height int) {
+	width, height = 80, 50
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok {
 			width = w
@@ -70,47 +78,56 @@ func (g *ForestGenerator) Generate(seed int64, params procgen.GenerationParams) 
 			g.waterChance = wc
 		}
 	}
+	return width, height
+}
 
-	// Validate dimensions
+// validateDimensions validates terrain dimensions.
+func (g *ForestGenerator) validateDimensions(width, height int) error {
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+		return fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
 	}
-
 	if width > 1000 || height > 1000 {
-		return nil, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
+		return fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
 	}
+	return nil
+}
 
-	// Create RNG with seed
-	rng := rand.New(rand.NewSource(seed))
-
-	// Create terrain (starts with all floors - grassland)
+// initializeTerrain creates a new terrain filled with floor tiles.
+func (g *ForestGenerator) initializeTerrain(width, height int, seed int64) *Terrain {
 	terrain := NewTerrain(width, height, seed)
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			terrain.SetTile(x, y, TileFloor)
 		}
 	}
+	return terrain
+}
 
-	// Create clearings first (before trees)
-	clearings := g.createClearings(terrain, rng)
-
-	// Add water features if chance succeeds
+// populateForestFeatures adds water, trees, paths and stairs to the forest.
+func (g *ForestGenerator) populateForestFeatures(terrain *Terrain, clearings []*Room, rng *rand.Rand) {
 	if rng.Float64() < g.waterChance {
 		g.addWaterFeatures(terrain, clearings, rng)
 	}
-
-	// Generate trees using Poisson disc sampling
 	g.generateTrees(terrain, clearings, rng)
-
-	// Create organic paths between clearings
 	g.connectClearings(terrain, clearings, rng)
-
-	// Auto-place bridges where paths cross water
 	g.placeAutoBridges(terrain)
-
-	// Place stairs in largest clearings
 	g.placeStairsInClearings(terrain, clearings, rng)
+}
 
+// logGenerationStart logs the start of forest generation.
+func (g *ForestGenerator) logGenerationStart(seed int64, params procgen.GenerationParams) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting forest terrain generation")
+	}
+}
+
+// logGenerationComplete logs the completion of forest generation.
+func (g *ForestGenerator) logGenerationComplete(terrain *Terrain, clearings []*Room) {
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
 			"width":     terrain.Width,
@@ -118,8 +135,6 @@ func (g *ForestGenerator) Generate(seed int64, params procgen.GenerationParams) 
 			"clearings": len(clearings),
 		}).Info("forest terrain generation complete")
 	}
-
-	return terrain, nil
 }
 
 // createClearings creates circular or elliptical open areas in the forest.

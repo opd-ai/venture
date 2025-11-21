@@ -38,41 +38,56 @@ func NewSkillTreeGeneratorWithLogger(logger *logrus.Logger) *SkillTreeGenerator 
 // Generate creates skill trees based on the seed and parameters.
 // Returns []*SkillTree or error.
 func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		g.logger.WithFields(logrus.Fields{
-			"seed":       seed,
-			"genreID":    params.GenreID,
-			"depth":      params.Depth,
-			"difficulty": params.Difficulty,
-		}).Debug("starting skill tree generation")
+	g.logGenerationStart(seed, params)
+
+	if err := g.validateParams(params); err != nil {
+		return nil, err
 	}
 
-	// Validate parameters
+	count := g.extractTreeCount(params)
+	rng := rand.New(rand.NewSource(seed))
+	templates, err := g.selectTemplates(params.GenreID)
+	if err != nil {
+		return nil, err
+	}
+
+	g.logTemplateSelection(count, len(templates))
+	trees := g.generateTrees(rng, templates, params, seed, count)
+	g.logGenerationComplete(len(trees), seed)
+
+	return trees, nil
+}
+
+// validateParams validates generation parameters.
+func (g *SkillTreeGenerator) validateParams(params procgen.GenerationParams) error {
 	if err := procgen.ValidateDepth(params.Depth); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("invalid depth parameter")
 		}
-		return nil, err
+		return err
 	}
 	if err := procgen.ValidateDifficulty(params.Difficulty); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("invalid difficulty parameter")
 		}
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	// Extract custom parameters
-	count := 3 // default: generate 3 trees
+// extractTreeCount extracts the tree count from custom parameters.
+func (g *SkillTreeGenerator) extractTreeCount(params procgen.GenerationParams) int {
+	count := 3
 	if c, ok := params.Custom["count"].(int); ok {
 		count = c
 	}
+	return count
+}
 
-	// Create deterministic RNG
-	rng := rand.New(rand.NewSource(seed))
-
-	// Get templates based on genre
+// selectTemplates selects skill tree templates based on genre.
+func (g *SkillTreeGenerator) selectTemplates(genreID string) ([]SkillTreeTemplate, error) {
 	var templates []SkillTreeTemplate
-	switch params.GenreID {
+	switch genreID {
 	case "scifi":
 		templates = GetSciFiTreeTemplates()
 	case "fantasy":
@@ -82,48 +97,69 @@ func (g *SkillTreeGenerator) Generate(seed int64, params procgen.GenerationParam
 	}
 
 	if len(templates) == 0 {
-		err := fmt.Errorf("no templates available for genre: %s", params.GenreID)
+		err := fmt.Errorf("no templates available for genre: %s", genreID)
 		if g.logger != nil {
-			g.logger.WithError(err).WithField("genreID", params.GenreID).Error("template selection failed")
+			g.logger.WithError(err).WithField("genreID", genreID).Error("template selection failed")
 		}
 		return nil, err
 	}
+	return templates, nil
+}
 
+// generateTrees generates multiple skill trees from templates.
+func (g *SkillTreeGenerator) generateTrees(rng *rand.Rand, templates []SkillTreeTemplate, params procgen.GenerationParams, seed int64, count int) []*SkillTree {
+	trees := make([]*SkillTree, count)
+	for i := 0; i < count; i++ {
+		template := templates[i%len(templates)]
+		tree := g.generateTree(rng, template, params, seed+int64(i))
+		trees[i] = tree
+		g.logTreeGenerated(i, tree)
+	}
+	return trees
+}
+
+// logGenerationStart logs the start of skill tree generation.
+func (g *SkillTreeGenerator) logGenerationStart(seed int64, params procgen.GenerationParams) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"genreID":    params.GenreID,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+		}).Debug("starting skill tree generation")
+	}
+}
+
+// logTemplateSelection logs template selection details.
+func (g *SkillTreeGenerator) logTemplateSelection(count, templateCount int) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
 			"count":         count,
-			"templateCount": len(templates),
+			"templateCount": templateCount,
 		}).Debug("generating skill trees")
 	}
+}
 
-	// Generate skill trees
-	trees := make([]*SkillTree, count)
-	for i := 0; i < count; i++ {
-		// Select template
-		template := templates[i%len(templates)]
-
-		// Generate tree from template
-		tree := g.generateTree(rng, template, params, seed+int64(i))
-		trees[i] = tree
-
-		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			g.logger.WithFields(logrus.Fields{
-				"treeIndex": i,
-				"treeName":  tree.Name,
-				"nodeCount": len(tree.Nodes),
-				"maxPoints": tree.MaxPoints,
-			}).Debug("skill tree generated")
-		}
+// logTreeGenerated logs details of a generated tree.
+func (g *SkillTreeGenerator) logTreeGenerated(index int, tree *SkillTree) {
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"treeIndex": index,
+			"treeName":  tree.Name,
+			"nodeCount": len(tree.Nodes),
+			"maxPoints": tree.MaxPoints,
+		}).Debug("skill tree generated")
 	}
+}
 
+// logGenerationComplete logs completion of skill tree generation.
+func (g *SkillTreeGenerator) logGenerationComplete(treeCount int, seed int64) {
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"treeCount": len(trees),
+			"treeCount": treeCount,
 			"seed":      seed,
 		}).Info("skill tree generation complete")
 	}
-
-	return trees, nil
 }
 
 // generateTree creates a complete skill tree from a template.

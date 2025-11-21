@@ -353,101 +353,120 @@ func (s *CombatSystem) getTargetHealth(target *Entity) (*HealthComponent, bool) 
 // Attack performs an attack from attacker to target.
 // Returns true if the attack hit, false if it missed or was invalid.
 func (s *CombatSystem) Attack(attacker, target *Entity) bool {
+	s.logAttackInitiated(attacker, target)
+
+	if !s.validateAttackEntities(attacker, target) {
+		return false
+	}
+
+	attack, ok := s.getAttackComponent(attacker)
+	if !ok {
+		return false
+	}
+
+	if !s.checkAttackCooldown(attacker, attack) {
+		return false
+	}
+
+	if success, isProjectile := s.tryProjectileAttack(attacker, target, attack); isProjectile {
+		return success
+	}
+
+	if !s.validateAttackRange(attacker, target, attack.Range) {
+		return false
+	}
+
+	return s.executeMeleeAttack(attacker, target, attack)
+}
+
+// checkAttackCooldown validates if the attack is off cooldown.
+func (s *CombatSystem) checkAttackCooldown(attacker *Entity, attack *AttackComponent) bool {
+	if !attack.CanAttack() {
+		s.logCooldownBlocked(attacker, attack)
+		return false
+	}
+	return true
+}
+
+// executeMeleeAttack executes a melee attack after validation.
+func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *AttackComponent) bool {
+	health, ok := s.getTargetHealth(target)
+	if !ok {
+		return false
+	}
+
+	attackerStats := s.getEntityStats(attacker)
+	targetStats := s.getEntityStats(target)
+
+	if s.checkEvasion(attacker, target, targetStats) {
+		attack.ResetCooldown()
+		return false
+	}
+
+	finalDamage, isCrit := s.computeFinalDamage(attack, attackerStats, targetStats, target)
+	if finalDamage <= 0 {
+		attack.ResetCooldown()
+		s.logDamageAbsorbed(attacker, target)
+		return true
+	}
+
+	s.applyDamageAndFeedback(attacker, target, health, attack, finalDamage, isCrit)
+	return true
+}
+
+// computeFinalDamage calculates the final damage after all modifiers.
+func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, bool) {
+	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
+	finalDamage := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
+
+	if finalDamage < 1.0 {
+		finalDamage = 1.0
+	}
+
+	finalDamage = s.applyShieldAbsorption(target, finalDamage)
+	return finalDamage, isCrit
+}
+
+// applyDamageAndFeedback applies damage to target and triggers all feedback.
+func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *HealthComponent, attack *AttackComponent, finalDamage float64, isCrit bool) {
+	baseDamage, _ := s.calculateDamage(attack, s.getEntityStats(attacker))
+	health.TakeDamage(finalDamage)
+	s.applyAttackFeedback(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
+	attack.ResetCooldown()
+
+	if s.onDamageCallback != nil {
+		s.onDamageCallback(attacker, target, finalDamage)
+	}
+}
+
+// logAttackInitiated logs the initiation of an attack.
+func (s *CombatSystem) logAttackInitiated(attacker, target *Entity) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"attacker_id": attacker.ID,
 			"target_id":   target.ID,
 		}).Debug("attack initiated")
 	}
+}
 
-	// Validate entities are in valid state for combat
-	if !s.validateAttackEntities(attacker, target) {
-		return false
+// logCooldownBlocked logs when an attack is blocked by cooldown.
+func (s *CombatSystem) logCooldownBlocked(attacker *Entity, attack *AttackComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"attacker_id":    attacker.ID,
+			"cooldown_timer": attack.CooldownTimer,
+		}).Debug("attack blocked - cooldown active")
 	}
+}
 
-	// Validate entities have required components
-	attack, ok := s.getAttackComponent(attacker)
-	if !ok {
-		return false
+// logDamageAbsorbed logs when damage is fully absorbed by shield.
+func (s *CombatSystem) logDamageAbsorbed(attacker, target *Entity) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"attacker_id": attacker.ID,
+			"target_id":   target.ID,
+		}).Debug("attack damage fully absorbed by shield")
 	}
-
-	// Check cooldown
-	if !attack.CanAttack() {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"attacker_id":    attacker.ID,
-				"cooldown_timer": attack.CooldownTimer,
-			}).Debug("attack blocked - cooldown active")
-		}
-		return false
-	}
-
-	// Try projectile attack first (for ranged weapons)
-	success, isProjectile := s.tryProjectileAttack(attacker, target, attack)
-	if isProjectile {
-		return success
-	}
-
-	// Check range
-	if !s.validateAttackRange(attacker, target, attack.Range) {
-		return false
-	}
-
-	// Get and validate target health
-	health, ok := s.getTargetHealth(target)
-	if !ok {
-		return false
-	}
-
-	// Get attacker and target stats
-	attackerStats := s.getEntityStats(attacker)
-	targetStats := s.getEntityStats(target)
-
-	// Check for evasion
-	if s.checkEvasion(attacker, target, targetStats) {
-		attack.ResetCooldown()
-		return false
-	}
-
-	// Calculate damage
-	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
-
-	// Apply target defense and resistances
-	finalDamage := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
-
-	// Minimum damage
-	if finalDamage < 1.0 {
-		finalDamage = 1.0
-	}
-
-	// Check for shield first
-	finalDamage = s.applyShieldAbsorption(target, finalDamage)
-	if finalDamage <= 0 {
-		attack.ResetCooldown()
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"attacker_id": attacker.ID,
-				"target_id":   target.ID,
-			}).Debug("attack damage fully absorbed by shield")
-		}
-		return true // Attack succeeded but damage fully absorbed
-	}
-
-	// Apply remaining damage to health
-	health.TakeDamage(finalDamage)
-
-	// Trigger all visual and audio feedback
-	s.applyAttackFeedback(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
-
-	// Reset cooldown
-	attack.ResetCooldown()
-
-	// Trigger callback
-	if s.onDamageCallback != nil {
-		s.onDamageCallback(attacker, target, finalDamage)
-	}
-
-	return true
 }
 
 // getEntityStats retrieves the stats component from an entity, returns nil if not present.

@@ -168,13 +168,17 @@ func TestImagePool_Clear(t *testing.T) {
 	// Return to pool (should clear)
 	pool.PutImage(img)
 
-	// Get again
+	// Get again - sync.Pool doesn't guarantee same object returned
+	// Just verify we can get another image without panic
 	img2 := pool.GetImage(SizeSmall, SizeSmall)
+	if img2 == nil {
+		t.Error("Expected non-nil image from pool")
+	}
 
-	// Verify it's cleared (or at least same image)
-	// Ebiten's Clear() is called in PutImage
-	if img != img2 {
-		t.Error("Expected same image from pool")
+	// Verify image is usable
+	bounds := img2.Bounds()
+	if bounds.Dx() != SizeSmall || bounds.Dy() != SizeSmall {
+		t.Errorf("Expected %dx%d image, got %dx%d", SizeSmall, SizeSmall, bounds.Dx(), bounds.Dy())
 	}
 }
 

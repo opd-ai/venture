@@ -188,8 +188,6 @@ func (g *GraphGrammarGenerator) parseIntoGraph(lsystemString string, graph *Dung
 	var currentRoom *RoomNode
 	roomID := 0
 	depth := 0
-
-	// Stack for tracking branch points
 	branchStack := make([]*RoomNode, 0)
 
 	for _, char := range lsystemString {
@@ -197,149 +195,178 @@ func (g *GraphGrammarGenerator) parseIntoGraph(lsystemString string, graph *Dung
 
 		switch symbol {
 		case SymbolStart:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomSpawn, // Use RoomSpawn for start
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			graph.StartRoom = room
-			currentRoom = room
-
+			currentRoom = g.createStartRoom(&roomID, depth, graph)
 		case SymbolEnd:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomBoss, // Use RoomBoss for end
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			graph.BossRoom = room
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
-			}
-			currentRoom = room
-			if depth > graph.NarrativeDepth {
-				graph.NarrativeDepth = depth
-			}
-
+			currentRoom, depth = g.createEndRoom(&roomID, depth, graph, currentRoom)
 		case SymbolCombat:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomCombat, // Use new RoomCombat type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
-			}
-			currentRoom = room
-
+			currentRoom = g.createCombatRoom(&roomID, depth, graph, currentRoom)
 		case SymbolTreasure:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomTreasure, // Existing type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
-			}
-			currentRoom = room
-
+			currentRoom = g.createTreasureRoom(&roomID, depth, graph, currentRoom)
 		case SymbolPuzzle:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomPuzzle, // Use new RoomPuzzle type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionLocked, 1.5)
-			}
-			currentRoom = room
-
+			currentRoom = g.createPuzzleRoom(&roomID, depth, graph, currentRoom)
 		case SymbolShop:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomShop, // Use new RoomShop type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionDoor, 1.0)
-			}
-			currentRoom = room
-
+			currentRoom = g.createShopRoom(&roomID, depth, graph, currentRoom)
 		case SymbolRest:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomRest, // Use new RoomRest type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionDoor, 1.0)
-			}
-			currentRoom = room
-
+			currentRoom = g.createRestRoom(&roomID, depth, graph, currentRoom)
 		case SymbolSecret:
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomSecret, // Use new RoomSecret type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionSecret, 2.0)
-			}
-			currentRoom = room
-
+			currentRoom = g.createSecretRoom(&roomID, depth, graph, currentRoom)
 		case SymbolCorridor:
-			// Corridor advances depth
 			depth++
-
 		case SymbolBranch:
-			// Branch point - create a branch hub room
-			room := &RoomNode{
-				ID:         roomID,
-				Type:       RoomBranch, // Use new RoomBranch type
-				Depth:      depth,
-				Properties: make(map[string]interface{}),
-			}
-			roomID++
-			graph.AddRoom(room)
-			if currentRoom != nil {
-				graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
-			}
-			// Push previous room onto stack for later branching
-			if currentRoom != nil {
-				branchStack = append(branchStack, currentRoom)
-			}
-			currentRoom = room
-
+			currentRoom = g.createBranchRoom(&roomID, depth, graph, currentRoom, &branchStack)
 		case SymbolEmpty:
-			// Skip empty symbols
 			continue
 		}
 	}
 
 	return nil
+}
+
+// createStartRoom creates the starting spawn room.
+func (g *GraphGrammarGenerator) createStartRoom(roomID *int, depth int, graph *DungeonGraph) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomSpawn,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	graph.StartRoom = room
+	return room
+}
+
+// createEndRoom creates the boss room and updates narrative depth.
+func (g *GraphGrammarGenerator) createEndRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) (*RoomNode, int) {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomBoss,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	graph.BossRoom = room
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
+	}
+	if depth > graph.NarrativeDepth {
+		graph.NarrativeDepth = depth
+	}
+	return room, depth
+}
+
+// createCombatRoom creates a combat encounter room.
+func (g *GraphGrammarGenerator) createCombatRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomCombat,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
+	}
+	return room
+}
+
+// createTreasureRoom creates a treasure room.
+func (g *GraphGrammarGenerator) createTreasureRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomTreasure,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
+	}
+	return room
+}
+
+// createPuzzleRoom creates a puzzle room with locked connection.
+func (g *GraphGrammarGenerator) createPuzzleRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomPuzzle,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionLocked, 1.5)
+	}
+	return room
+}
+
+// createShopRoom creates a merchant shop room.
+func (g *GraphGrammarGenerator) createShopRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomShop,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionDoor, 1.0)
+	}
+	return room
+}
+
+// createRestRoom creates a rest/safe room.
+func (g *GraphGrammarGenerator) createRestRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomRest,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionDoor, 1.0)
+	}
+	return room
+}
+
+// createSecretRoom creates a hidden secret room.
+func (g *GraphGrammarGenerator) createSecretRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomSecret,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionSecret, 2.0)
+	}
+	return room
+}
+
+// createBranchRoom creates a branching hub room.
+func (g *GraphGrammarGenerator) createBranchRoom(roomID *int, depth int, graph *DungeonGraph, currentRoom *RoomNode, branchStack *[]*RoomNode) *RoomNode {
+	room := &RoomNode{
+		ID:         *roomID,
+		Type:       RoomBranch,
+		Depth:      depth,
+		Properties: make(map[string]interface{}),
+	}
+	*roomID++
+	graph.AddRoom(room)
+	if currentRoom != nil {
+		graph.ConnectRooms(currentRoom, room, ConnectionCorridor, 1.0)
+		*branchStack = append(*branchStack, currentRoom)
+	}
+	return room
 }
 
 // assignRoomPositions assigns spatial positions to rooms in the graph.

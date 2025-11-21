@@ -53,27 +53,59 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		}).Debug("generating UI element")
 	}
 
+	if err := g.validateConfigs(config); err != nil {
+		return nil, err
+	}
+
+	rng := rand.New(rand.NewSource(config.Seed))
+	pal, err := g.generatePalette(config)
+	if err != nil {
+		return nil, err
+	}
+
+	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+	if err := g.generateElementByType(img, pal, rng, config); err != nil {
+		return nil, err
+	}
+
+	if config.Transition != nil && config.Transition.Type != TransitionNone {
+		img = g.ApplyTransition(img, *config.Transition)
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"type":      config.Type,
+			"seed":      config.Seed,
+			"hierarchy": config.HierarchyLevel,
+		}).Info("UI element generated")
+	}
+
+	return img, nil
+}
+
+// validateConfigs validates the main config and transition config if present.
+func (g *Generator) validateConfigs(config Config) error {
 	if err := config.Validate(); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("invalid UI config")
 		}
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return fmt.Errorf("invalid config: %w", err)
 	}
 
-	// Validate transition config if present
 	if config.Transition != nil {
 		if err := config.Transition.Validate(); err != nil {
 			if g.logger != nil {
 				g.logger.WithError(err).Error("invalid transition config")
 			}
-			return nil, fmt.Errorf("invalid transition config: %w", err)
+			return fmt.Errorf("invalid transition config: %w", err)
 		}
 	}
 
-	// Create RNG from seed
-	rng := rand.New(rand.NewSource(config.Seed))
+	return nil
+}
 
-	// Generate color palette for genre
+// generatePalette creates a color palette for the given config.
+func (g *Generator) generatePalette(config Config) (*palette.Palette, error) {
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
 		if g.logger != nil {
@@ -81,11 +113,11 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		}
 		return nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
+	return pal, nil
+}
 
-	// Create base image
-	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-
-	// Generate element based on type
+// generateElementByType generates the UI element based on its type.
+func (g *Generator) generateElementByType(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) error {
 	switch config.Type {
 	case ElementButton:
 		g.generateButton(img, pal, rng, config)
@@ -104,23 +136,9 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("type", config.Type).Error("unknown element type")
 		}
-		return nil, err
+		return err
 	}
-
-	// Apply transition if configured
-	if config.Transition != nil && config.Transition.Type != TransitionNone {
-		img = g.ApplyTransition(img, *config.Transition)
-	}
-
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"type":      config.Type,
-			"seed":      config.Seed,
-			"hierarchy": config.HierarchyLevel,
-		}).Info("UI element generated")
-	}
-
-	return img, nil
+	return nil
 }
 
 // generateButton creates a button UI element.

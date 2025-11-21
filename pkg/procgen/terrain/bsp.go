@@ -192,44 +192,8 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 
 	// If this is a leaf node, create a room
 	if node.left == nil && node.right == nil {
-		// Determine room size (smaller than the node)
-		maxWidth := min(g.maxRoomSize, node.width-2)
-		maxHeight := min(g.maxRoomSize, node.height-2)
-
-		// Ensure we have valid dimensions
-		if maxWidth < g.minRoomSize {
-			maxWidth = g.minRoomSize
-		}
-		if maxHeight < g.minRoomSize {
-			maxHeight = g.minRoomSize
-		}
-
-		widthRange := maxWidth - g.minRoomSize + 1
-		heightRange := maxHeight - g.minRoomSize + 1
-
-		roomWidth := g.minRoomSize
-		if widthRange > 0 {
-			roomWidth += rng.Intn(widthRange)
-		}
-
-		roomHeight := g.minRoomSize
-		if heightRange > 0 {
-			roomHeight += rng.Intn(heightRange)
-		}
-
-		// Position room randomly within the node
-		xRange := node.width - roomWidth - 1
-		yRange := node.height - roomHeight - 1
-
-		roomX := node.x + 1
-		if xRange > 0 {
-			roomX += rng.Intn(xRange)
-		}
-
-		roomY := node.y + 1
-		if yRange > 0 {
-			roomY += rng.Intn(yRange)
-		}
+		roomWidth, roomHeight := g.calculateRoomDimensions(node, rng)
+		roomX, roomY := g.positionRoomInNode(node, roomWidth, roomHeight, rng)
 
 		room := &Room{
 			X:      roomX,
@@ -240,18 +204,66 @@ func (g *BSPGenerator) createRooms(node *bspNode, terrain *Terrain, rng *rand.Ra
 
 		node.room = room
 		terrain.Rooms = append(terrain.Rooms, room)
+		g.carveRoomInTerrain(terrain, room, rng)
+	}
+}
 
-		// Carve out the room
-		for y := roomY; y < roomY+roomHeight; y++ {
-			for x := roomX; x < roomX+roomWidth; x++ {
-				terrain.SetTile(x, y, TileFloor)
-			}
-		}
+// calculateRoomDimensions determines the width and height for a room within a BSP node.
+func (g *BSPGenerator) calculateRoomDimensions(node *bspNode, rng *rand.Rand) (int, int) {
+	maxWidth := min(g.maxRoomSize, node.width-2)
+	maxHeight := min(g.maxRoomSize, node.height-2)
 
-		// Phase 11.1: Add diagonal walls by chamfering corners (60% chance per room - increased for visibility)
-		if rng.Float64() < 0.60 { // 60% of rooms get diagonal corners (was 0.30)
-			g.chamferRoomCorners(terrain, room, rng)
+	if maxWidth < g.minRoomSize {
+		maxWidth = g.minRoomSize
+	}
+	if maxHeight < g.minRoomSize {
+		maxHeight = g.minRoomSize
+	}
+
+	widthRange := maxWidth - g.minRoomSize + 1
+	heightRange := maxHeight - g.minRoomSize + 1
+
+	roomWidth := g.minRoomSize
+	if widthRange > 0 {
+		roomWidth += rng.Intn(widthRange)
+	}
+
+	roomHeight := g.minRoomSize
+	if heightRange > 0 {
+		roomHeight += rng.Intn(heightRange)
+	}
+
+	return roomWidth, roomHeight
+}
+
+// positionRoomInNode calculates random position for a room within a BSP node.
+func (g *BSPGenerator) positionRoomInNode(node *bspNode, roomWidth, roomHeight int, rng *rand.Rand) (int, int) {
+	xRange := node.width - roomWidth - 1
+	yRange := node.height - roomHeight - 1
+
+	roomX := node.x + 1
+	if xRange > 0 {
+		roomX += rng.Intn(xRange)
+	}
+
+	roomY := node.y + 1
+	if yRange > 0 {
+		roomY += rng.Intn(yRange)
+	}
+
+	return roomX, roomY
+}
+
+// carveRoomInTerrain carves out the room in the terrain and optionally chamfers corners.
+func (g *BSPGenerator) carveRoomInTerrain(terrain *Terrain, room *Room, rng *rand.Rand) {
+	for y := room.Y; y < room.Y+room.Height; y++ {
+		for x := room.X; x < room.X+room.Width; x++ {
+			terrain.SetTile(x, y, TileFloor)
 		}
+	}
+
+	if rng.Float64() < 0.60 {
+		g.chamferRoomCorners(terrain, room, rng)
 	}
 }
 
@@ -532,11 +544,16 @@ func (g *BSPGenerator) addMultiLayerFeatures(terrain *Terrain, rng *rand.Rand) {
 
 // addCentralPlatform adds an elevated platform in the center of a room.
 func (g *BSPGenerator) addCentralPlatform(terrain *Terrain, room *Room, rng *rand.Rand) {
-	// Platform size: 30-60% of room size
+	platformX, platformY, platformWidth, platformHeight := g.calculatePlatformDimensions(room, rng)
+	g.carvePlatformArea(terrain, platformX, platformY, platformWidth, platformHeight)
+	g.addPlatformRamps(terrain, platformX, platformY, platformWidth, platformHeight, rng)
+}
+
+// calculatePlatformDimensions determines the size and position of a central platform.
+func (g *BSPGenerator) calculatePlatformDimensions(room *Room, rng *rand.Rand) (int, int, int, int) {
 	platformWidth := room.Width * (30 + rng.Intn(31)) / 100
 	platformHeight := room.Height * (30 + rng.Intn(31)) / 100
 
-	// Ensure minimum size
 	if platformWidth < 3 {
 		platformWidth = 3
 	}
@@ -544,11 +561,14 @@ func (g *BSPGenerator) addCentralPlatform(terrain *Terrain, room *Room, rng *ran
 		platformHeight = 3
 	}
 
-	// Center the platform
 	platformX := room.X + (room.Width-platformWidth)/2
 	platformY := room.Y + (room.Height-platformHeight)/2
 
-	// Create platform
+	return platformX, platformY, platformWidth, platformHeight
+}
+
+// carvePlatformArea creates the platform tiles in the terrain.
+func (g *BSPGenerator) carvePlatformArea(terrain *Terrain, platformX, platformY, platformWidth, platformHeight int) {
 	for y := platformY; y < platformY+platformHeight; y++ {
 		for x := platformX; x < platformX+platformWidth; x++ {
 			if terrain.IsInBounds(x, y) {
@@ -556,11 +576,13 @@ func (g *BSPGenerator) addCentralPlatform(terrain *Terrain, room *Room, rng *ran
 			}
 		}
 	}
+}
 
-	// Add ramps on 1-2 sides
+// addPlatformRamps adds 1-2 ramps on random sides of the platform.
+func (g *BSPGenerator) addPlatformRamps(terrain *Terrain, platformX, platformY, platformWidth, platformHeight int, rng *rand.Rand) {
 	numRamps := 1 + rng.Intn(2)
-	sides := []int{0, 1, 2, 3} // North, East, South, West
-	// Shuffle sides
+	sides := []int{0, 1, 2, 3}
+
 	for i := len(sides) - 1; i > 0; i-- {
 		j := rng.Intn(i + 1)
 		sides[i], sides[j] = sides[j], sides[i]
@@ -569,22 +591,22 @@ func (g *BSPGenerator) addCentralPlatform(terrain *Terrain, room *Room, rng *ran
 	for i := 0; i < numRamps && i < len(sides); i++ {
 		side := sides[i]
 		switch side {
-		case 0: // North
+		case 0:
 			rampX := platformX + platformWidth/2
 			if terrain.IsInBounds(rampX, platformY-1) {
 				terrain.SetTile(rampX, platformY-1, TileRampUp)
 			}
-		case 1: // East
+		case 1:
 			rampY := platformY + platformHeight/2
 			if terrain.IsInBounds(platformX+platformWidth, rampY) {
 				terrain.SetTile(platformX+platformWidth, rampY, TileRampUp)
 			}
-		case 2: // South
+		case 2:
 			rampX := platformX + platformWidth/2
 			if terrain.IsInBounds(rampX, platformY+platformHeight) {
 				terrain.SetTile(rampX, platformY+platformHeight, TileRampDown)
 			}
-		case 3: // West
+		case 3:
 			rampY := platformY + platformHeight/2
 			if terrain.IsInBounds(platformX-1, rampY) {
 				terrain.SetTile(platformX-1, rampY, TileRampUp)

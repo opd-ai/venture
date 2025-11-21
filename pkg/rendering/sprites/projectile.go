@@ -249,8 +249,19 @@ func drawFilledCircle(img *ebiten.Image, cx, cy, radius int, col color.RGBA) {
 }
 
 func drawFilledTriangle(img *ebiten.Image, x1, y1, x2, y2, x3, y3 int, col color.RGBA) {
-	// Simple scanline triangle fill
-	// Sort vertices by y coordinate
+	x1, y1, x2, y2, x3, y3 = sortTriangleVertices(x1, y1, x2, y2, x3, y3)
+
+	for y := y1; y <= y3; y++ {
+		xStart, xEnd := calculateScanlineXBounds(x1, y1, x2, y2, x3, y3, y)
+		if xStart > xEnd {
+			xStart, xEnd = xEnd, xStart
+		}
+		drawScanline(img, xStart, xEnd, y, col)
+	}
+}
+
+// sortTriangleVertices sorts three vertices by y coordinate (ascending).
+func sortTriangleVertices(x1, y1, x2, y2, x3, y3 int) (int, int, int, int, int, int) {
 	if y1 > y2 {
 		x1, x2 = x2, x1
 		y1, y2 = y2, y1
@@ -263,46 +274,46 @@ func drawFilledTriangle(img *ebiten.Image, x1, y1, x2, y2, x3, y3 int, col color
 		x2, x3 = x3, x2
 		y2, y3 = y3, y2
 	}
+	return x1, y1, x2, y2, x3, y3
+}
 
-	// Draw horizontal lines from y1 to y3
-	for y := y1; y <= y3; y++ {
-		// Calculate x bounds for this scanline
-		var xStart, xEnd int
+// calculateScanlineXBounds computes the x-coordinate bounds for a scanline.
+func calculateScanlineXBounds(x1, y1, x2, y2, x3, y3, y int) (int, int) {
+	var xStart, xEnd int
 
-		if y < y2 {
-			// Upper half
-			if y2-y1 != 0 {
-				xStart = x1 + (x2-x1)*(y-y1)/(y2-y1)
-			} else {
-				xStart = x1
-			}
-			if y3-y1 != 0 {
-				xEnd = x1 + (x3-x1)*(y-y1)/(y3-y1)
-			} else {
-				xEnd = x1
-			}
+	if y < y2 {
+		if y2-y1 != 0 {
+			xStart = x1 + (x2-x1)*(y-y1)/(y2-y1)
 		} else {
-			// Lower half
-			if y3-y2 != 0 {
-				xStart = x2 + (x3-x2)*(y-y2)/(y3-y2)
-			} else {
-				xStart = x2
-			}
-			if y3-y1 != 0 {
-				xEnd = x1 + (x3-x1)*(y-y1)/(y3-y1)
-			} else {
-				xEnd = x1
-			}
+			xStart = x1
 		}
-
-		if xStart > xEnd {
-			xStart, xEnd = xEnd, xStart
+		if y3-y1 != 0 {
+			xEnd = x1 + (x3-x1)*(y-y1)/(y3-y1)
+		} else {
+			xEnd = x1
 		}
+	} else {
+		if y3-y2 != 0 {
+			xStart = x2 + (x3-x2)*(y-y2)/(y3-y2)
+		} else {
+			xStart = x2
+		}
+		if y3-y1 != 0 {
+			xEnd = x1 + (x3-x1)*(y-y1)/(y3-y1)
+		} else {
+			xEnd = x1
+		}
+	}
 
-		for x := xStart; x <= xEnd; x++ {
-			if x >= 0 && x < img.Bounds().Dx() && y >= 0 && y < img.Bounds().Dy() {
-				img.Set(x, y, col)
-			}
+	return xStart, xEnd
+}
+
+// drawScanline draws a horizontal line segment with bounds checking.
+func drawScanline(img *ebiten.Image, xStart, xEnd, y int, col color.RGBA) {
+	bounds := img.Bounds()
+	for x := xStart; x <= xEnd; x++ {
+		if x >= 0 && x < bounds.Dx() && y >= 0 && y < bounds.Dy() {
+			img.Set(x, y, col)
 		}
 	}
 }

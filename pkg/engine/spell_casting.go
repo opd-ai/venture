@@ -179,6 +179,12 @@ func (s *SpellCastingSystem) getAndValidateSpellSlots(entity *Entity) *SpellSlot
 
 // updateCooldowns decrements all active spell cooldowns.
 func (s *SpellCastingSystem) updateCooldowns(slots *SpellSlotComponent, deltaTime float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"delta_time": deltaTime,
+		}).Debug("Updating spell cooldowns")
+	}
+
 	for i := range slots.Cooldowns {
 		if slots.Cooldowns[i] > 0 {
 			oldCooldown := slots.Cooldowns[i]
@@ -199,6 +205,15 @@ func (s *SpellCastingSystem) updateCooldowns(slots *SpellSlotComponent, deltaTim
 func (s *SpellCastingSystem) updateCastingProgress(entity *Entity, slots *SpellSlotComponent, deltaTime float64) {
 	if !slots.IsCasting() {
 		return
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":    entity.ID,
+			"casting_slot": slots.Casting,
+			"progress":     slots.CastingBar,
+			"delta_time":   deltaTime,
+		}).Debug("Updating casting progress")
 	}
 
 	spell := slots.GetSlot(slots.Casting)
@@ -228,6 +243,7 @@ func (s *SpellCastingSystem) cancelInvalidCast(entity *Entity, slots *SpellSlotC
 
 // advanceCastingBar progresses the casting bar based on cast time.
 func (s *SpellCastingSystem) advanceCastingBar(slots *SpellSlotComponent, spell *magic.Spell, deltaTime float64) {
+	oldProgress := slots.CastingBar
 	if spell.Stats.CastTime > 0 {
 		slots.CastingBar += deltaTime / spell.Stats.CastTime
 	} else {
@@ -237,6 +253,15 @@ func (s *SpellCastingSystem) advanceCastingBar(slots *SpellSlotComponent, spell 
 				"spell_name": spell.Name,
 			}).Debug("Instant cast spell")
 		}
+	}
+
+	if s.logger != nil && oldProgress != slots.CastingBar {
+		s.logger.WithFields(logrus.Fields{
+			"spell_name":   spell.Name,
+			"old_progress": oldProgress,
+			"new_progress": slots.CastingBar,
+			"cast_time":    spell.Stats.CastTime,
+		}).Debug("Casting bar advanced")
 	}
 }
 
@@ -484,10 +509,21 @@ func (s *SpellCastingSystem) applySpellDamageToTarget(caster, target *Entity, sp
 func (s *SpellCastingSystem) getTargetHealth(target *Entity) *HealthComponent {
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id": target.ID,
+			}).Debug("Target has no health component")
+		}
 		return nil
 	}
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id":      target.ID,
+				"component_type": "health",
+			}).Warn("Failed to cast health component")
+		}
 		return nil
 	}
 	return health
@@ -531,6 +567,14 @@ func (s *SpellCastingSystem) logDamageApplied(caster, target *Entity, spell *mag
 
 // applySpellEffectsAndFeedback applies elemental effects, visuals, and audio.
 func (s *SpellCastingSystem) applySpellEffectsAndFeedback(target *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id":  target.ID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+		}).Debug("Applying spell effects and feedback")
+	}
+
 	if s.statusEffectSys != nil {
 		s.applyElementalEffect(target, spell)
 	}
@@ -545,7 +589,14 @@ func (s *SpellCastingSystem) applySpellEffectsAndFeedback(target *Entity, spell 
 	}
 
 	if s.audioMgr != nil {
-		_ = s.audioMgr.PlaySFX("impact", int64(target.ID))
+		if err := s.audioMgr.PlaySFX("impact", int64(target.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"target_id": target.ID,
+					"error":     err.Error(),
+				}).Debug("Failed to play impact sound")
+			}
+		}
 	}
 }
 
@@ -588,12 +639,31 @@ func (s *SpellCastingSystem) castHealingSpell(caster *Entity, spell *magic.Spell
 
 // healTarget applies healing to a single target.
 func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"target_id":  target.ID,
+			"spell_name": spell.Name,
+		}).Debug("Healing target")
+	}
+
 	healthComp, hasHealth := target.GetComponent("health")
 	if !hasHealth {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id": target.ID,
+			}).Debug("Target has no health component for healing")
+		}
 		return
 	}
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id":      target.ID,
+				"component_type": "health",
+			}).Warn("Failed to cast health component for healing")
+		}
 		return
 	}
 
@@ -642,13 +712,27 @@ func (s *SpellCastingSystem) healTarget(caster, target *Entity, spell *magic.Spe
 					Custom:   map[string]interface{}{"color": "healing"},
 				}
 				s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id":  target.ID,
+						"position_x": pos.X,
+						"position_y": pos.Y,
+					}).Debug("Spawned healing particles")
+				}
 			}
 		}
 	}
 
 	// Play healing sound effect
 	if s.audioMgr != nil {
-		_ = s.audioMgr.PlaySFX("powerup", int64(target.ID))
+		if err := s.audioMgr.PlaySFX("powerup", int64(target.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"target_id": target.ID,
+					"error":     err.Error(),
+				}).Debug("Failed to play healing sound")
+			}
+		}
 	}
 }
 
@@ -675,6 +759,12 @@ func (s *SpellCastingSystem) getCasterTeamID(caster *Entity) int {
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
 		if team, ok := teamComp.(*TeamComponent); ok {
 			casterTeamID = team.TeamID
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"caster_id": caster.ID,
+					"team_id":   casterTeamID,
+				}).Debug("Retrieved caster team ID")
+			}
 		}
 	}
 	return casterTeamID
@@ -682,6 +772,15 @@ func (s *SpellCastingSystem) getCasterTeamID(caster *Entity) int {
 
 // searchNearestInjuredAlly searches for the nearest injured ally within range.
 func (s *SpellCastingSystem) searchNearestInjuredAlly(caster *Entity, entities []*Entity, casterTeamID int, maxRange float64) (*Entity, float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"team_id":      casterTeamID,
+			"max_range":    maxRange,
+			"entity_count": len(entities),
+		}).Debug("Searching nearest injured ally")
+	}
+
 	var nearestAlly *Entity
 	minDist := maxRange
 
@@ -726,7 +825,16 @@ func (s *SpellCastingSystem) isValidInjuredAlly(entity *Entity, casterTeamID int
 		return false
 	}
 
-	return health.Current < health.Max
+	isInjured := health.Current < health.Max
+	if s.logger != nil && isInjured {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entity.ID,
+			"team_id":        team.TeamID,
+			"health_current": health.Current,
+			"health_max":     health.Max,
+		}).Debug("Found valid injured ally")
+	}
+	return isInjured
 }
 
 // logSearchResult logs the result of the nearest ally search.
@@ -763,6 +871,12 @@ func (s *SpellCastingSystem) findAlliesInRange(caster *Entity, maxRange float64)
 	if teamComp, hasTeam := caster.GetComponent("team"); hasTeam {
 		if team, ok := teamComp.(*TeamComponent); ok {
 			casterTeamID = team.TeamID
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"caster_id": caster.ID,
+					"team_id":   casterTeamID,
+				}).Debug("Using caster team ID for ally search")
+			}
 		}
 	}
 
@@ -813,11 +927,23 @@ func (s *SpellCastingSystem) castDefensiveSpell(caster *Entity, spell *magic.Spe
 		shieldAmount := float64(spell.Stats.Damage)
 		if shieldAmount <= 0 {
 			shieldAmount = 50.0 // Default shield if no damage stat
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  caster.ID,
+					"spell_name": spell.Name,
+				}).Debug("Using default shield amount")
+			}
 		}
 
 		duration := spell.Stats.Duration
 		if duration <= 0 {
 			duration = 30.0 // Default duration
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":  caster.ID,
+					"spell_name": spell.Name,
+				}).Debug("Using default shield duration")
+			}
 		}
 
 		if s.logger != nil {
@@ -853,9 +979,23 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 	duration := spell.Stats.Duration
 	if duration <= 0 {
 		duration = 30.0 // Default duration
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Using default buff duration")
+		}
 	}
 
 	// Determine buff type based on spell element
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+			"duration":   duration,
+		}).Debug("Determining buff type by element")
+	}
 	switch spell.Element {
 	case magic.ElementWind:
 		// Haste - increased attack speed (represented as attack boost)
@@ -930,9 +1070,18 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			healthComp, hasHealth := target.GetComponent("health")
 			if hasHealth {
 				if health, ok := healthComp.(*HealthComponent); ok {
+					oldHealth := health.Current
 					health.Current -= float64(spell.Stats.Damage)
 					if health.Current < 0 {
 						health.Current = 0
+					}
+					if s.logger != nil {
+						s.logger.WithFields(logrus.Fields{
+							"target_id":     target.ID,
+							"damage":        spell.Stats.Damage,
+							"health_before": oldHealth,
+							"health_after":  health.Current,
+						}).Debug("Debuff spell damage applied")
 					}
 				}
 			}
@@ -943,6 +1092,12 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			duration := spell.Stats.Duration
 			if duration <= 0 {
 				duration = 10.0 // Default duration
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id":  target.ID,
+						"spell_name": spell.Name,
+					}).Debug("Using default debuff duration")
+				}
 			}
 
 			// Determine debuff type based on spell element
@@ -950,12 +1105,36 @@ func (s *SpellCastingSystem) castDebuffSpell(caster *Entity, spell *magic.Spell,
 			case magic.ElementDark:
 				// Weakness - reduced attack
 				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.7, duration, 0)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id": target.ID,
+						"effect":    "weakness",
+						"magnitude": 0.7,
+						"duration":  duration,
+					}).Info("Weakness debuff applied")
+				}
 			case magic.ElementEarth:
 				// Vulnerability - reduced defense
 				s.statusEffectSys.ApplyStatusEffect(target, "vulnerability", 0.7, duration, 0)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id": target.ID,
+						"effect":    "vulnerability",
+						"magnitude": 0.7,
+						"duration":  duration,
+					}).Info("Vulnerability debuff applied")
+				}
 			default:
 				// Generic debuff - small attack reduction
 				s.statusEffectSys.ApplyStatusEffect(target, "weakness", 0.8, duration, 0)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"target_id": target.ID,
+						"effect":    "weakness",
+						"magnitude": 0.8,
+						"duration":  duration,
+					}).Info("Generic debuff applied")
+				}
 			}
 		}
 	}
@@ -1068,13 +1247,38 @@ func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell
 	// Determine utility spell type based on tags and element
 	switch {
 	case containsTag(spell.Tags, "teleport"):
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Casting teleport utility spell")
+		}
 		s.castTeleportSpell(caster, spell)
 	case containsTag(spell.Tags, "light"), containsTag(spell.Tags, "reveal"):
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Casting reveal utility spell")
+		}
 		s.castRevealSpell(caster, spell)
 	case containsTag(spell.Tags, "speed"), containsTag(spell.Tags, "haste"):
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Casting speed boost utility spell")
+		}
 		s.castSpeedBoostSpell(caster, spell)
 	default:
 		// Generic utility effect based on element
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+				"element":    spell.Element.String(),
+			}).Debug("Using element-based utility spell routing")
+		}
 		switch spell.Element {
 		case magic.ElementLight:
 			s.castRevealSpell(caster, spell)
@@ -1155,6 +1359,14 @@ func (s *SpellCastingSystem) executeTeleport(caster *Entity, pos *PositionCompon
 
 // spawnTeleportEffects spawns visual and audio effects for teleportation.
 func (s *SpellCastingSystem) spawnTeleportEffects(caster *Entity, x, y float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"position_x": x,
+			"position_y": y,
+		}).Debug("Spawning teleport effects")
+	}
+
 	if s.particleSys != nil {
 		config := particles.Config{
 			Type:     particles.ParticleMagic,
@@ -1173,7 +1385,14 @@ func (s *SpellCastingSystem) spawnTeleportEffects(caster *Entity, x, y float64) 
 	}
 
 	if s.audioMgr != nil {
-		_ = s.audioMgr.PlaySFX("magic", int64(caster.ID))
+		if err := s.audioMgr.PlaySFX("magic", int64(caster.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": caster.ID,
+					"error":     err.Error(),
+				}).Debug("Failed to play teleport sound")
+			}
+		}
 	}
 }
 
@@ -1197,12 +1416,24 @@ func (s *SpellCastingSystem) castTeleportSpell(caster *Entity, spell *magic.Spel
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      caster.ID,
+				"component_type": "position",
+			}).Warn("Failed to cast position component for teleport")
+		}
 		return
 	}
 
 	maxDist := spell.Stats.Range
 	if maxDist <= 0 {
 		maxDist = 100.0
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Using default teleport distance")
+		}
 	}
 
 	dirX, dirY := getTeleportDirection(caster)
@@ -1241,6 +1472,12 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 	revealRadius := spell.Stats.AreaSize
 	if revealRadius <= 0 {
 		revealRadius = 200.0 // Default reveal radius
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Using default reveal radius")
+		}
 	}
 
 	if s.logger != nil {
@@ -1258,6 +1495,13 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 	if s.statusEffectSys != nil {
 		duration := 0.1 // Brief marker effect
 		s.statusEffectSys.ApplyStatusEffect(caster, "revealing", revealRadius, duration, 0)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": caster.ID,
+				"radius":    revealRadius,
+				"duration":  duration,
+			}).Debug("Revealing status effect applied")
+		}
 	}
 
 	// Spawn light particles to indicate reveal
@@ -1305,12 +1549,25 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 	duration := spell.Stats.Duration
 	if duration <= 0 {
 		duration = 10.0 // Default speed boost duration
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+			}).Debug("Using default speed boost duration")
+		}
 	}
 
 	// Speed multiplier based on spell power
 	speedMultiplier := 1.5 // 50% speed increase
 	if spell.Rarity >= magic.RarityRare {
 		speedMultiplier = 2.0 // 100% speed increase for rare+ spells
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":  caster.ID,
+				"spell_name": spell.Name,
+				"rarity":     spell.Rarity.String(),
+			}).Debug("Using increased speed multiplier for rare spell")
+		}
 	}
 
 	if s.logger != nil {
@@ -1345,13 +1602,27 @@ func (s *SpellCastingSystem) castSpeedBoostSpell(caster *Entity, spell *magic.Sp
 					Custom:   map[string]interface{}{"color": "wind"},
 				}
 				s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":  caster.ID,
+						"position_x": pos.X,
+						"position_y": pos.Y,
+					}).Debug("Spawned speed boost particles")
+				}
 			}
 		}
 	}
 
 	// Play speed boost sound
 	if s.audioMgr != nil {
-		_ = s.audioMgr.PlaySFX("powerup", int64(caster.ID))
+		if err := s.audioMgr.PlaySFX("powerup", int64(caster.ID)); err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id": caster.ID,
+					"error":     err.Error(),
+				}).Debug("Failed to play speed boost sound")
+			}
+		}
 	}
 }
 
@@ -1398,11 +1669,27 @@ func (s *SpellCastingSystem) extractSolidColliderAndPosition(entity *Entity) (*C
 	if !ok {
 		return nil, nil
 	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"solid":     collider.Solid,
+		}).Debug("Extracted solid collider and position")
+	}
 	return collider, pos
 }
 
 // checkCollisionAtPosition checks if position collides with entity.
 func (s *SpellCastingSystem) checkCollisionAtPosition(x, y float64, caster, entity *Entity, collider *ColliderComponent, pos *PositionComponent) bool {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": caster.ID,
+			"entity_id": entity.ID,
+			"target_x":  x,
+			"target_y":  y,
+		}).Debug("Checking collision at position")
+	}
+
 	casterCollider, hasCasterCollider := caster.GetComponent("collider")
 	if hasCasterCollider {
 		return s.checkBoxCollision(x, y, caster.ID, entity.ID, casterCollider, collider, pos)
@@ -1528,6 +1815,11 @@ func (s *SpellCastingSystem) isEnemyTarget(caster, entity *Entity) bool {
 	}
 	// Player has input component
 	if entity.HasComponent("input") {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Entity rejected as target: is player")
+		}
 		return false
 	}
 	// Must have health to be a valid target
@@ -1733,11 +2025,22 @@ func (s *SpellCastingSystem) filterTargetsInCone(caster *Entity, spell *magic.Sp
 func (s *SpellCastingSystem) getConeEntityPosition(entity *Entity) *PositionComponent {
 	entityPos, hasPos := entity.GetComponent("position")
 	if !hasPos {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Entity has no position component for cone targeting")
+		}
 		return nil
 	}
 
 	entityPosComp, ok := entityPos.(*PositionComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "position",
+			}).Warn("Failed to cast position component for cone targeting")
+		}
 		return nil
 	}
 
@@ -1760,7 +2063,15 @@ func (s *SpellCastingSystem) isInCone(casterPos, entityPos *PositionComponent, d
 	dotProduct := dirX*toEntityX + dirY*toEntityY
 	angle := math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
 
-	return angle <= coneAngle
+	inCone := angle <= coneAngle
+	if s.logger != nil && inCone {
+		s.logger.WithFields(logrus.Fields{
+			"distance":   dist,
+			"angle":      angle,
+			"cone_angle": coneAngle,
+		}).Debug("Entity is within cone area")
+	}
+	return inCone
 }
 
 // logConeTargetResults logs the cone target search results.
@@ -1815,13 +2126,37 @@ func (s *SpellCastingSystem) validateCasterPosition(caster *Entity) (*PositionCo
 	}
 	casterPosComp, ok := casterPos.(*PositionComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"caster_id":      caster.ID,
+				"component_type": "position",
+			}).Warn("Failed to cast position component for line targeting")
+		}
 		return nil, false
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"position_x": casterPosComp.X,
+			"position_y": casterPosComp.Y,
+		}).Debug("Caster position validated for line targeting")
 	}
 	return casterPosComp, true
 }
 
 // filterEntitiesInLine finds all entities within the line attack area.
 func (s *SpellCastingSystem) filterEntitiesInLine(caster *Entity, casterPos *PositionComponent, dirX, dirY, maxRange, lineWidth float64) []*Entity {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":  caster.ID,
+			"max_range":  maxRange,
+			"line_width": lineWidth,
+			"dir_x":      dirX,
+			"dir_y":      dirY,
+		}).Debug("Filtering entities in line area")
+	}
+
 	entities := s.world.GetEntities()
 	var targets []*Entity
 
@@ -1840,6 +2175,12 @@ func (s *SpellCastingSystem) filterEntitiesInLine(caster *Entity, casterPos *Pos
 		}
 	}
 
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id":    caster.ID,
+			"target_count": len(targets),
+		}).Debug("Completed line area filtering")
+	}
 	return targets
 }
 
@@ -1862,7 +2203,16 @@ func (s *SpellCastingSystem) isEntityInLineArea(casterPos, entityPos *PositionCo
 	perpY := toEntityY - projection*dirY
 	perpDist := math.Sqrt(perpX*perpX + perpY*perpY)
 
-	return perpDist <= lineWidth
+	inLine := perpDist <= lineWidth
+	if s.logger != nil && inLine {
+		s.logger.WithFields(logrus.Fields{
+			"distance":         dist,
+			"projection":       projection,
+			"perpendicular":    perpDist,
+			"line_width_limit": lineWidth,
+		}).Debug("Entity is within line area")
+	}
+	return inLine
 }
 
 // getCasterDirection determines the caster's facing direction for directional spells.
@@ -2047,10 +2397,21 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 
 	spellComp, hasSpells := entity.GetComponent("spell_slots")
 	if !hasSpells {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Entity has no spell_slots component to cancel")
+		}
 		return
 	}
 	slots, ok := spellComp.(*SpellSlotComponent)
 	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "spell_slots",
+			}).Warn("Failed to cast spell_slots component for cancel")
+		}
 		return
 	}
 
@@ -2064,6 +2425,12 @@ func (s *SpellCastingSystem) CancelCast(entity *Entity) {
 		}
 		slots.Casting = -1
 		slots.CastingBar = 0
+	} else {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("No active cast to cancel")
+		}
 	}
 }
 
@@ -2232,6 +2599,13 @@ func NewManaRegenSystem() *ManaRegenSystem {
 
 // Update regenerates mana for all entities.
 func (s *ManaRegenSystem) Update(entities []*Entity, deltaTime float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_count": len(entities),
+			"delta_time":   deltaTime,
+		}).Debug("ManaRegenSystem update started")
+	}
+
 	regenCount := 0
 	totalRegenerated := 0.0
 	for _, entity := range entities {

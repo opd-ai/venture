@@ -422,59 +422,64 @@ func (g *Generator) addVariation(img *image.RGBA, config TextureConfig, rng *ran
 
 // addDepthEffect adds normal map approximation for depth perception.
 func (g *Generator) addDepthEffect(img *image.RGBA, config TextureConfig, rng *rand.Rand) {
-	// Create a temporary copy for gradient calculation
+	temp := g.copyImageForGradient(img, config)
+	g.applyLightingEffect(img, temp, config)
+}
+
+// copyImageForGradient creates a temporary copy for gradient calculation.
+func (g *Generator) copyImageForGradient(img *image.RGBA, config TextureConfig) *image.RGBA {
 	temp := image.NewRGBA(img.Bounds())
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {
 			temp.Set(x, y, img.At(x, y))
 		}
 	}
+	return temp
+}
 
-	// Apply subtle lighting based on gradient (normal map approximation)
+// applyLightingEffect applies subtle lighting based on luminance gradients.
+func (g *Generator) applyLightingEffect(img, temp *image.RGBA, config TextureConfig) {
 	for y := 1; y < config.Height-1; y++ {
 		for x := 1; x < config.Width-1; x++ {
-			// Calculate luminance gradient (approximate normal)
-			leftLum := g.luminance(temp.RGBAAt(x-1, y))
-			rightLum := g.luminance(temp.RGBAAt(x+1, y))
-			topLum := g.luminance(temp.RGBAAt(x, y-1))
-			bottomLum := g.luminance(temp.RGBAAt(x, y+1))
-
-			gradX := rightLum - leftLum
-			gradY := bottomLum - topLum
-
-			// Simple lighting from top-left
-			lightDir := -gradX + -gradY
-			lightEffect := lightDir * 0.15 // Subtle effect
-
-			// Get current pixel
-			c := img.RGBAAt(x, y)
-			r := float64(c.R) + lightEffect*255
-			g := float64(c.G) + lightEffect*255
-			b := float64(c.B) + lightEffect*255
-
-			// Clamp values
-			if r < 0 {
-				r = 0
-			}
-			if r > 255 {
-				r = 255
-			}
-			if g < 0 {
-				g = 0
-			}
-			if g > 255 {
-				g = 255
-			}
-			if b < 0 {
-				b = 0
-			}
-			if b > 255 {
-				b = 255
-			}
-
-			img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: c.A})
+			lightEffect := g.calculateLightingAtPixel(temp, x, y)
+			g.applyLightToPixel(img, x, y, lightEffect)
 		}
 	}
+}
+
+// calculateLightingAtPixel calculates lighting effect for a single pixel.
+func (g *Generator) calculateLightingAtPixel(temp *image.RGBA, x, y int) float64 {
+	leftLum := g.luminance(temp.RGBAAt(x-1, y))
+	rightLum := g.luminance(temp.RGBAAt(x+1, y))
+	topLum := g.luminance(temp.RGBAAt(x, y-1))
+	bottomLum := g.luminance(temp.RGBAAt(x, y+1))
+
+	gradX := rightLum - leftLum
+	gradY := bottomLum - topLum
+
+	lightDir := -gradX + -gradY
+	return lightDir * 0.15
+}
+
+// applyLightToPixel applies lighting effect to a pixel with clamping.
+func (g *Generator) applyLightToPixel(img *image.RGBA, x, y int, lightEffect float64) {
+	c := img.RGBAAt(x, y)
+	r := g.clampColorValue(float64(c.R) + lightEffect*255)
+	green := g.clampColorValue(float64(c.G) + lightEffect*255)
+	b := g.clampColorValue(float64(c.B) + lightEffect*255)
+
+	img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(green), B: uint8(b), A: c.A})
+}
+
+// clampColorValue clamps a color value to the range [0, 255].
+func (g *Generator) clampColorValue(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 255 {
+		return 255
+	}
+	return value
 }
 
 // perlinNoise generates Perlin-like noise at given coordinates.

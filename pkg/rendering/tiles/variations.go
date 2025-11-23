@@ -153,6 +153,15 @@ func (ts *TileSet) GetVariationSet(tileType TileType) (*VariationSet, error) {
 
 // ValidateTileSet checks if a tile set is complete and valid.
 func ValidateTileSet(ts *TileSet) error {
+	if err := validateTileSetBasics(ts); err != nil {
+		return err
+	}
+
+	return validateTileVariations(ts)
+}
+
+// validateTileSetBasics validates basic tile set properties.
+func validateTileSetBasics(ts *TileSet) error {
 	if ts == nil {
 		return fmt.Errorf("tile set is nil")
 	}
@@ -169,6 +178,11 @@ func ValidateTileSet(ts *TileSet) error {
 		return fmt.Errorf("variantCount must be positive, got %d", ts.VariantCount)
 	}
 
+	return nil
+}
+
+// validateTileVariations validates all required tile type variations.
+func validateTileVariations(ts *TileSet) error {
 	requiredTypes := []TileType{
 		TileFloor,
 		TileWall,
@@ -181,27 +195,45 @@ func ValidateTileSet(ts *TileSet) error {
 	}
 
 	for _, tileType := range requiredTypes {
-		varSet, ok := ts.Variations[tileType]
-		if !ok {
-			return fmt.Errorf("missing variations for tile type %s", tileType)
+		if err := validateSingleTileType(ts, tileType); err != nil {
+			return err
 		}
+	}
 
-		if varSet.Count != ts.VariantCount {
-			return fmt.Errorf("tile type %s has %d variations, expected %d",
-				tileType, varSet.Count, ts.VariantCount)
+	return nil
+}
+
+// validateSingleTileType validates a specific tile type's variations.
+func validateSingleTileType(ts *TileSet, tileType TileType) error {
+	varSet, ok := ts.Variations[tileType]
+	if !ok {
+		return fmt.Errorf("missing variations for tile type %s", tileType)
+	}
+
+	if varSet.Count != ts.VariantCount {
+		return fmt.Errorf("tile type %s has %d variations, expected %d",
+			tileType, varSet.Count, ts.VariantCount)
+	}
+
+	for i, img := range varSet.Variations {
+		if err := validateTileImage(img, i, tileType, ts.TileSize); err != nil {
+			return err
 		}
+	}
 
-		for i, img := range varSet.Variations {
-			if img == nil {
-				return fmt.Errorf("variation %d for tile type %s is nil", i, tileType)
-			}
+	return nil
+}
 
-			bounds := img.Bounds()
-			if bounds.Dx() != ts.TileSize || bounds.Dy() != ts.TileSize {
-				return fmt.Errorf("variation %d for tile type %s has size %dx%d, expected %dx%d",
-					i, tileType, bounds.Dx(), bounds.Dy(), ts.TileSize, ts.TileSize)
-			}
-		}
+// validateTileImage validates a single tile variation image.
+func validateTileImage(img *image.RGBA, index int, tileType TileType, expectedSize int) error {
+	if img == nil {
+		return fmt.Errorf("variation %d for tile type %s is nil", index, tileType)
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != expectedSize || bounds.Dy() != expectedSize {
+		return fmt.Errorf("variation %d for tile type %s has size %dx%d, expected %dx%d",
+			index, tileType, bounds.Dx(), bounds.Dy(), expectedSize, expectedSize)
 	}
 
 	return nil

@@ -277,88 +277,86 @@ func (g *ItemGenerator) generateName(template ItemTemplate, rarity Rarity, rng *
 
 // generateStats creates stats for the item.
 func (g *ItemGenerator) generateStats(template ItemTemplate, depth int, rarity Rarity, difficulty float64, rng *rand.Rand) Stats {
-	stats := Stats{}
+	stats := Stats{RequiredLevel: 1 + depth/2}
 
-	// Calculate level requirement based on depth
-	stats.RequiredLevel = 1 + depth/2
+	g.generateCombatStats(&stats, template, depth, rarity, difficulty, rng)
+	g.generateItemProperties(&stats, template, rarity, rng)
 
-	// Generate damage (for weapons)
+	if template.IsProjectile {
+		g.generateProjectileStats(&stats, template, rarity, rng)
+	}
+
+	return stats
+}
+
+// generateCombatStats generates damage, defense, and attack speed stats.
+func (g *ItemGenerator) generateCombatStats(stats *Stats, template ItemTemplate, depth int, rarity Rarity, difficulty float64, rng *rand.Rand) {
 	if template.DamageRange[1] > 0 {
 		baseDamage := template.DamageRange[0] + rng.Intn(template.DamageRange[1]-template.DamageRange[0]+1)
 		stats.Damage = g.scaleStatByFactors(baseDamage, depth, rarity, difficulty)
 	}
 
-	// Generate defense (for armor)
 	if template.DefenseRange[1] > 0 {
 		baseDefense := template.DefenseRange[0] + rng.Intn(template.DefenseRange[1]-template.DefenseRange[0]+1)
 		stats.Defense = g.scaleStatByFactors(baseDefense, depth, rarity, difficulty)
 	}
 
-	// Generate attack speed (for weapons)
 	if template.AttackSpeedRange[1] > 0 {
 		stats.AttackSpeed = template.AttackSpeedRange[0] + rng.Float64()*(template.AttackSpeedRange[1]-template.AttackSpeedRange[0])
-		// Slightly increase attack speed for rare items
 		stats.AttackSpeed += float64(rarity) * 0.05
 	}
+}
 
-	// Generate value
+// generateItemProperties generates value, weight, and durability.
+func (g *ItemGenerator) generateItemProperties(stats *Stats, template ItemTemplate, rarity Rarity, rng *rand.Rand) {
 	baseValue := template.ValueRange[0] + rng.Intn(template.ValueRange[1]-template.ValueRange[0]+1)
-	stats.Value = g.scaleStatByFactors(baseValue, depth, rarity, 1.0)
-
-	// Generate weight
+	stats.Value = g.scaleStatByFactors(baseValue, 0, rarity, 1.0)
 	stats.Weight = template.WeightRange[0] + rng.Float64()*(template.WeightRange[1]-template.WeightRange[0])
 
-	// Generate durability
 	if template.DurabilityRange[1] > 0 {
 		stats.DurabilityMax = template.DurabilityRange[0] + rng.Intn(template.DurabilityRange[1]-template.DurabilityRange[0]+1)
-		// Increase durability for rare items
 		stats.DurabilityMax += int(rarity) * 20
-		stats.Durability = stats.DurabilityMax // Start at full durability
+		stats.Durability = stats.DurabilityMax
+	}
+}
+
+// generateProjectileStats generates projectile-specific stats and properties.
+func (g *ItemGenerator) generateProjectileStats(stats *Stats, template ItemTemplate, rarity Rarity, rng *rand.Rand) {
+	stats.IsProjectile = true
+	stats.ProjectileType = template.ProjectileType
+	stats.ProjectileSpeed = template.ProjectileSpeedRange[0] + rng.Float64()*(template.ProjectileSpeedRange[1]-template.ProjectileSpeedRange[0])
+	stats.ProjectileSpeed += float64(rarity) * 20.0
+	stats.ProjectileLifetime = template.ProjectileLifetime
+
+	g.generateProjectileSpecialProperties(stats, template, rarity, rng)
+}
+
+// generateProjectileSpecialProperties generates pierce, bounce, and explosive properties.
+func (g *ItemGenerator) generateProjectileSpecialProperties(stats *Stats, template ItemTemplate, rarity Rarity, rng *rand.Rand) {
+	rarityMultiplier := g.getRarityChanceMultiplier(rarity)
+
+	if rng.Float64() < template.PierceChance*rarityMultiplier {
+		if template.PierceRange[1] > template.PierceRange[0] {
+			stats.Pierce = template.PierceRange[0] + rng.Intn(template.PierceRange[1]-template.PierceRange[0]+1)
+		} else {
+			stats.Pierce = template.PierceRange[0]
+		}
+		stats.Pierce += int(rarity) / 2
 	}
 
-	// Generate projectile properties if weapon is ranged
-	if template.IsProjectile {
-		stats.IsProjectile = true
-		stats.ProjectileType = template.ProjectileType
-
-		// Generate projectile speed
-		stats.ProjectileSpeed = template.ProjectileSpeedRange[0] + rng.Float64()*(template.ProjectileSpeedRange[1]-template.ProjectileSpeedRange[0])
-		// Increase speed slightly for rare items
-		stats.ProjectileSpeed += float64(rarity) * 20.0
-
-		// Set lifetime
-		stats.ProjectileLifetime = template.ProjectileLifetime
-
-		// Generate pierce based on rarity and chance
-		if rng.Float64() < template.PierceChance*g.getRarityChanceMultiplier(rarity) {
-			if template.PierceRange[1] > template.PierceRange[0] {
-				stats.Pierce = template.PierceRange[0] + rng.Intn(template.PierceRange[1]-template.PierceRange[0]+1)
-			} else {
-				stats.Pierce = template.PierceRange[0]
-			}
-			// Higher rarity = more pierce
-			stats.Pierce += int(rarity) / 2
-		}
-
-		// Generate bounce based on rarity and chance
-		if rng.Float64() < template.BounceChance*g.getRarityChanceMultiplier(rarity) {
-			if template.BounceRange[1] > template.BounceRange[0] {
-				stats.Bounce = template.BounceRange[0] + rng.Intn(template.BounceRange[1]-template.BounceRange[0]+1)
-			} else {
-				stats.Bounce = template.BounceRange[0]
-			}
-		}
-
-		// Generate explosive property based on rarity and chance
-		if rng.Float64() < template.ExplosiveChance*g.getRarityChanceMultiplier(rarity) {
-			stats.Explosive = true
-			stats.ExplosionRadius = template.ExplosionRadiusRange[0] + rng.Float64()*(template.ExplosionRadiusRange[1]-template.ExplosionRadiusRange[0])
-			// Increase explosion radius for rare items
-			stats.ExplosionRadius += float64(rarity) * 10.0
+	if rng.Float64() < template.BounceChance*rarityMultiplier {
+		if template.BounceRange[1] > template.BounceRange[0] {
+			stats.Bounce = template.BounceRange[0] + rng.Intn(template.BounceRange[1]-template.BounceRange[0]+1)
+		} else {
+			stats.Bounce = template.BounceRange[0]
 		}
 	}
 
-	return stats
+	if rng.Float64() < template.ExplosiveChance*rarityMultiplier {
+		stats.Explosive = true
+		stats.ExplosionRadius = template.ExplosionRadiusRange[0] + rng.Float64()*(template.ExplosionRadiusRange[1]-template.ExplosionRadiusRange[0])
+		stats.ExplosionRadius += float64(rarity) * 10.0
+	}
 }
 
 // scaleStatByFactors applies scaling based on depth, rarity, and difficulty.

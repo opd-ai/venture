@@ -42,17 +42,7 @@ func (v *JourneyValidator) ValidateAll() []JourneyResult {
 
 // ValidateJourney validates a specific journey by running it multiple times.
 func (v *JourneyValidator) ValidateJourney(journeyType JourneyType) JourneyResult {
-	// Find the journey definition
-	var journey JourneyDefinition
-	found := false
-	for _, j := range AllJourneys() {
-		if j.Type == journeyType {
-			journey = j
-			found = true
-			break
-		}
-	}
-
+	journey, found := v.findJourneyDefinition(journeyType)
 	if !found {
 		return JourneyResult{
 			Type:   journeyType,
@@ -61,7 +51,39 @@ func (v *JourneyValidator) ValidateJourney(journeyType JourneyType) JourneyResul
 		}
 	}
 
-	// Run the journey multiple times
+	completions, totalDuration, errors, stepResults := v.executeJourneyRuns(journey)
+
+	completionRate, averageDuration, errorRate, satisfaction := v.calculateJourneyMetrics(
+		completions, totalDuration, errors, len(journey.Steps), journey.ExpectedDuration)
+
+	v.averageStepDurations(stepResults, completions)
+
+	passed := v.journeyMeetsThresholds(completionRate, errorRate, satisfaction, averageDuration, journey.ExpectedDuration)
+
+	return JourneyResult{
+		Type:            journey.Type,
+		Name:            journey.Name,
+		Passed:          passed,
+		CompletionRate:  completionRate,
+		AverageDuration: averageDuration,
+		Satisfaction:    satisfaction,
+		ErrorRate:       errorRate,
+		Steps:           stepResults,
+	}
+}
+
+// findJourneyDefinition locates a journey definition by type.
+func (v *JourneyValidator) findJourneyDefinition(journeyType JourneyType) (JourneyDefinition, bool) {
+	for _, j := range AllJourneys() {
+		if j.Type == journeyType {
+			return j, true
+		}
+	}
+	return JourneyDefinition{}, false
+}
+
+// executeJourneyRuns runs the journey multiple times and collects results.
+func (v *JourneyValidator) executeJourneyRuns(journey JourneyDefinition) (int, time.Duration, int, []StepResult) {
 	completions := 0
 	totalDuration := time.Duration(0)
 	errors := 0
@@ -75,26 +97,7 @@ func (v *JourneyValidator) ValidateJourney(journeyType JourneyType) JourneyResul
 		}
 
 		runStart := time.Now()
-		runCompleted := true
-
-		for i, step := range journey.Steps {
-			ctx.StepIndex = i
-			ctx.StepStartTime = time.Now()
-
-			err := step.Action(ctx)
-			stepDuration := time.Since(ctx.StepStartTime)
-
-			if err != nil {
-				runCompleted = false
-				errors++
-				stepResults[i].Error = err
-				break
-			}
-
-			stepResults[i].Completed = true
-			stepResults[i].Duration += stepDuration
-			stepResults[i].Name = step.Name
-		}
+		runCompleted := v.executeJourneySteps(ctx, journey.Steps, stepResults, &errors)
 
 		if runCompleted {
 			completions++
@@ -102,40 +105,61 @@ func (v *JourneyValidator) ValidateJourney(journeyType JourneyType) JourneyResul
 		}
 	}
 
-	// Calculate metrics
+	return completions, totalDuration, errors, stepResults
+}
+
+// executeJourneySteps executes all steps in a single journey run.
+func (v *JourneyValidator) executeJourneySteps(ctx *JourneyContext, steps []JourneyStep, stepResults []StepResult, errors *int) bool {
+	for i, step := range steps {
+		ctx.StepIndex = i
+		ctx.StepStartTime = time.Now()
+
+		err := step.Action(ctx)
+		stepDuration := time.Since(ctx.StepStartTime)
+
+		if err != nil {
+			*errors++
+			stepResults[i].Error = err
+			return false
+		}
+
+		stepResults[i].Completed = true
+		stepResults[i].Duration += stepDuration
+		stepResults[i].Name = step.Name
+	}
+	return true
+}
+
+// calculateJourneyMetrics computes completion rate, average duration, error rate, and satisfaction.
+func (v *JourneyValidator) calculateJourneyMetrics(completions int, totalDuration time.Duration, errors, totalSteps int, expectedDuration time.Duration) (float64, time.Duration, float64, float64) {
 	completionRate := float64(completions) / float64(v.config.Runs)
+
 	var averageDuration time.Duration
 	if completions > 0 {
 		averageDuration = totalDuration / time.Duration(completions)
 	}
-	errorRate := float64(errors) / float64(v.config.Runs*len(journey.Steps))
 
-	// Simulate satisfaction based on completion rate and time adherence
-	satisfaction := v.calculateSatisfaction(completionRate, averageDuration, journey.ExpectedDuration)
+	errorRate := float64(errors) / float64(v.config.Runs*totalSteps)
+	satisfaction := v.calculateSatisfaction(completionRate, averageDuration, expectedDuration)
 
-	// Average step durations
-	for i := range stepResults {
-		if completions > 0 {
+	return completionRate, averageDuration, errorRate, satisfaction
+}
+
+// averageStepDurations normalizes step durations by number of completions.
+func (v *JourneyValidator) averageStepDurations(stepResults []StepResult, completions int) {
+	if completions > 0 {
+		for i := range stepResults {
 			stepResults[i].Duration /= time.Duration(completions)
 		}
 	}
+}
 
-	// Determine if journey passed
-	passed := completionRate >= v.config.MinCompletionRate &&
+// journeyMeetsThresholds checks if journey results meet validation criteria.
+func (v *JourneyValidator) journeyMeetsThresholds(completionRate, errorRate, satisfaction float64, averageDuration, expectedDuration time.Duration) bool {
+	return completionRate >= v.config.MinCompletionRate &&
 		errorRate <= v.config.MaxErrorRate &&
 		satisfaction >= v.config.MinSatisfaction &&
-		v.checkDurationWithinTolerance(averageDuration, journey.ExpectedDuration)
-
-	return JourneyResult{
-		Type:            journey.Type,
-		Name:            journey.Name,
-		Passed:          passed,
-		CompletionRate:  completionRate,
-		AverageDuration: averageDuration,
-		Satisfaction:    satisfaction,
-		ErrorRate:       errorRate,
-		Steps:           stepResults,
-	}
+		v.checkDurationWithinTolerance(averageDuration, expectedDuration)
 }
 
 // calculateSatisfaction simulates user satisfaction based on completion and timing.

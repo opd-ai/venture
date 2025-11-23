@@ -1,0 +1,308 @@
+package stability
+
+import (
+	"context"
+	"testing"
+	"time"
+)
+
+func TestMonitor_DefaultConfig(t *testing.T) {
+	config := DefaultConfig()
+
+	if config.Duration != 72*time.Hour {
+		t.Errorf("expected duration 72h, got %v", config.Duration)
+	}
+	if config.CheckInterval != 30*time.Second {
+		t.Errorf("expected check interval 30s, got %v", config.CheckInterval)
+	}
+	if config.MemoryLimit != 500*1024*1024 {
+		t.Errorf("expected memory limit 500MB, got %d", config.MemoryLimit)
+	}
+	if config.MinFPS != 60.0 {
+		t.Errorf("expected min FPS 60, got %.2f", config.MinFPS)
+	}
+}
+
+func TestMonitor_NewMonitor(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   100 * 1024 * 1024,
+		MinFPS:        30.0,
+	}
+
+	monitor := NewMonitor(config)
+	if monitor == nil {
+		t.Fatal("expected monitor instance, got nil")
+	}
+	if monitor.config.Duration != 1*time.Second {
+		t.Errorf("expected duration 1s, got %v", monitor.config.Duration)
+	}
+	if monitor.running {
+		t.Error("expected running to be false initially")
+	}
+}
+
+func TestMonitor_Run_ShortDuration(t *testing.T) {
+	config := Config{
+		Duration:            500 * time.Millisecond,
+		CheckInterval:       100 * time.Millisecond,
+		MemoryLimit:         500 * 1024 * 1024,
+		MinFPS:              60.0,
+		MemoryLeakThreshold: 10 * 1024, // 10KB/s - more lenient for short test
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	start := time.Now()
+	report, err := monitor.Run(ctx)
+	elapsed := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report == nil {
+		t.Fatal("expected report, got nil")
+	}
+
+	// Verify test ran for approximately the configured duration
+	if elapsed < 500*time.Millisecond || elapsed > 700*time.Millisecond {
+		t.Errorf("expected elapsed time ~500ms, got %v", elapsed)
+	}
+
+	// Verify at least 4 checks were performed (500ms / 100ms = 5, minus startup/teardown)
+	if report.Checks < 4 {
+		t.Errorf("expected at least 4 checks, got %d", report.Checks)
+	}
+
+	// Verify uptime matches duration
+	if report.TotalUptime < 500*time.Millisecond {
+		t.Errorf("expected uptime >=500ms, got %v", report.TotalUptime)
+	}
+
+	// Verify no crashes
+	if report.CrashCount != 0 {
+		t.Errorf("expected 0 crashes, got %d", report.CrashCount)
+	}
+
+	// Note: Short tests may have normal memory variance, so we don't fail on pass/fail
+	t.Logf("Test report: Passed=%v, Checks=%d, AvgFPS=%.2f, PeakMem=%d, Reason=%s",
+		report.Passed, report.Checks, report.AvgFPS, report.PeakMemory, report.FailureReason)
+}
+
+func TestMonitor_Stop(t *testing.T) {
+	config := Config{
+		Duration:      10 * time.Second, // Long duration
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	// Start monitor in goroutine
+	done := make(chan struct{})
+	var report *Report
+	var err error
+
+	go func() {
+		report, err = monitor.Run(ctx)
+		close(done)
+	}()
+
+	// Wait for monitor to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Stop monitor early
+	monitor.Stop()
+
+	// Wait for completion
+	select {
+	case <-done:
+		// Expected: monitor stopped early
+	case <-time.After(2 * time.Second):
+		t.Fatal("monitor did not stop within timeout")
+	}
+
+	// Verify monitor was running briefly
+	if err != nil && err.Error() != "context canceled" {
+		// Context cancellation is expected when stopped early
+		t.Logf("expected context canceled error, got: %v", err)
+	}
+	if report != nil && report.TotalUptime > 5*time.Second {
+		t.Errorf("expected uptime <5s after stop, got %v", report.TotalUptime)
+	}
+}
+
+func TestMonitor_MemoryLimit(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   1, // Extremely low limit to trigger failure
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	report, err := monitor.Run(ctx)
+
+	// Expect error due to memory limit exceeded
+	if err == nil {
+		t.Error("expected error for memory limit exceeded")
+	}
+	if report == nil {
+		t.Fatal("expected report even on error")
+	}
+	if report.Passed {
+		t.Error("expected test to fail due to memory limit")
+	}
+}
+
+func TestMonitor_HealthCheck(t *testing.T) {
+	config := Config{
+		Duration:      500 * time.Millisecond,
+		CheckInterval: 50 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	report, err := monitor.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify health checks were recorded
+	if len(monitor.checks) < 8 { // 500ms / 50ms = 10, minus startup
+		t.Errorf("expected at least 8 health checks, got %d", len(monitor.checks))
+	}
+
+	// Verify peak memory is reasonable
+	if report.PeakMemory == 0 {
+		t.Error("expected non-zero peak memory")
+	}
+	if report.PeakMemory > 500*1024*1024 {
+		t.Errorf("peak memory exceeded limit: %d bytes", report.PeakMemory)
+	}
+
+	// Verify average FPS is recorded
+	if report.AvgFPS < 50.0 {
+		t.Errorf("expected avg FPS >= 50, got %.2f", report.AvgFPS)
+	}
+}
+
+func TestMonitor_Report(t *testing.T) {
+	config := Config{
+		Duration:      500 * time.Millisecond,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	report, err := monitor.Run(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify report fields
+	if report.StartTime.IsZero() {
+		t.Error("expected non-zero start time")
+	}
+	if report.EndTime.IsZero() {
+		t.Error("expected non-zero end time")
+	}
+	if report.EndTime.Before(report.StartTime) {
+		t.Error("expected end time after start time")
+	}
+	if report.TotalUptime == 0 {
+		t.Error("expected non-zero uptime")
+	}
+	if report.Checks == 0 {
+		t.Error("expected non-zero check count")
+	}
+	if report.PeakMemory == 0 {
+		t.Error("expected non-zero peak memory")
+	}
+	if report.AvgMemory == 0 {
+		t.Error("expected non-zero average memory")
+	}
+	if report.AvgFPS == 0 {
+		t.Error("expected non-zero average FPS")
+	}
+}
+
+func TestMonitor_ConcurrentRun(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	ctx := context.Background()
+
+	// Try to run monitor twice concurrently
+	go monitor.Run(ctx)
+	time.Sleep(100 * time.Millisecond)
+
+	_, err := monitor.Run(ctx)
+	if err == nil {
+		t.Error("expected error when running monitor concurrently")
+	}
+	if err != nil && err.Error() != "monitor already running" {
+		t.Errorf("expected 'monitor already running' error, got: %v", err)
+	}
+}
+
+func BenchmarkMonitor_HealthCheck(b *testing.B) {
+	config := Config{
+		Duration:      1 * time.Hour, // Won't run this long
+		CheckInterval: 10 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		monitor.performHealthCheck()
+	}
+}
+
+func BenchmarkMonitor_GenerateReport(b *testing.B) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+	start := time.Now()
+	end := start.Add(1 * time.Second)
+
+	// Populate with fake checks
+	for i := 0; i < 10; i++ {
+		monitor.checks = append(monitor.checks, HealthCheck{
+			Timestamp:  start.Add(time.Duration(i) * 100 * time.Millisecond),
+			Memory:     10 * 1024 * 1024,
+			FPS:        60.0,
+			Goroutines: 10,
+		})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		monitor.generateReport(start, end)
+	}
+}

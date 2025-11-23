@@ -183,21 +183,25 @@ func (g *QuestGenerator) generateFromTemplate(rng *rand.Rand, template QuestTemp
 	quest.Difficulty = g.determineDifficulty(rng, params.Depth, params.Difficulty)
 	quest.Name = g.generateQuestName(rng, template)
 
-	// Generate objectives
-	targetType := template.TargetTypes[rng.Intn(len(template.TargetTypes))]
-	objective := g.generateObjective(rng, template, params, targetType)
-	quest.Objectives = []Objective{objective}
+	// Generate objectives (3-5 objectives per quest for quality requirements)
+	numObjectives := 3 + rng.Intn(3) // 3-5 objectives
+	quest.Objectives = make([]Objective, numObjectives)
+	for i := 0; i < numObjectives; i++ {
+		targetType := template.TargetTypes[rng.Intn(len(template.TargetTypes))]
+		quest.Objectives[i] = g.generateObjective(rng, template, params, targetType)
+	}
 
-	// Generate description
-	quest.Description = g.generateQuestDescription(rng, template, params, targetType, objective.Required)
+	// Generate description (use first objective for description)
+	firstObjective := quest.Objectives[0]
+	quest.Description = g.generateQuestDescription(rng, template, params, firstObjective.Target, firstObjective.Required)
 
 	// Generate rewards
 	depthScale := 1.0 + float64(params.Depth)*0.15
 	g.generateRewards(rng, quest, template, depthScale)
 
-	// Optional properties
+	// Optional properties (use first objective's target for location)
 	quest.RequiredLevel = 1 + params.Depth
-	g.setOptionalProperties(rng, quest, template, targetType)
+	g.setOptionalProperties(rng, quest, template, quest.Objectives[0].Target)
 
 	return quest
 }

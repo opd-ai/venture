@@ -286,49 +286,17 @@ func (r *EbitenRenderSystem) renderEntities(entities []*Entity) {
 // Entities with the same sprite image are grouped together.
 func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	// DEBUG: Log entry
-	playerCount := 0
-	for _, e := range entities {
-		if e.HasComponent("input") {
-			playerCount++
-		}
-	}
-	if playerCount > 0 {
-	}
+	r.logPlayerCount(entities)
 
 	// Get or create batch map from pool
 	batches := r.getBatchMap()
 	defer r.returnBatchMap(batches)
 
-	// Reuse non-sprite buffer instead of allocating each frame
-	r.nonSpriteBuffer = r.nonSpriteBuffer[:0]
-	if cap(r.nonSpriteBuffer) < len(entities) {
-		r.nonSpriteBuffer = make([]*Entity, 0, len(entities))
-	}
+	// Prepare non-sprite buffer
+	r.prepareNonSpriteBuffer(entities)
 
 	// Group entities by sprite image
-	for _, entity := range entities {
-		spriteComp, hasSprite := entity.GetComponent("sprite")
-		if !hasSprite {
-			continue
-		}
-		sprite, ok := spriteComp.(*EbitenSprite)
-		if !ok {
-			continue
-		}
-
-		if !sprite.Visible {
-			continue
-		}
-
-		// Entities without sprite images need individual rendering
-		if sprite.Image == nil {
-			r.nonSpriteBuffer = append(r.nonSpriteBuffer, entity)
-			continue
-		}
-
-		// Group by sprite image pointer (entities with same sprite are batched)
-		batches[sprite.Image] = append(batches[sprite.Image], entity)
-	}
+	r.groupEntitiesBySprite(entities, batches)
 
 	r.stats.BatchCount = len(batches)
 
@@ -341,6 +309,49 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 	for _, entity := range r.nonSpriteBuffer {
 		r.drawEntity(entity)
 		r.stats.RenderedEntities++
+	}
+}
+
+// logPlayerCount logs the number of player entities for debugging.
+func (r *EbitenRenderSystem) logPlayerCount(entities []*Entity) {
+	playerCount := 0
+	for _, e := range entities {
+		if e.HasComponent("input") {
+			playerCount++
+		}
+	}
+	if playerCount > 0 {
+	}
+}
+
+// prepareNonSpriteBuffer resets and prepares the buffer for non-sprite entities.
+func (r *EbitenRenderSystem) prepareNonSpriteBuffer(entities []*Entity) {
+	r.nonSpriteBuffer = r.nonSpriteBuffer[:0]
+	if cap(r.nonSpriteBuffer) < len(entities) {
+		r.nonSpriteBuffer = make([]*Entity, 0, len(entities))
+	}
+}
+
+// groupEntitiesBySprite groups entities by their sprite image for batching.
+func (r *EbitenRenderSystem) groupEntitiesBySprite(entities []*Entity, batches map[*ebiten.Image][]*Entity) {
+	for _, entity := range entities {
+		spriteComp, hasSprite := entity.GetComponent("sprite")
+		if !hasSprite {
+			continue
+		}
+		sprite, ok := spriteComp.(*EbitenSprite)
+		if !ok || !sprite.Visible {
+			continue
+		}
+
+		// Entities without sprite images need individual rendering
+		if sprite.Image == nil {
+			r.nonSpriteBuffer = append(r.nonSpriteBuffer, entity)
+			continue
+		}
+
+		// Group by sprite image pointer (entities with same sprite are batched)
+		batches[sprite.Image] = append(batches[sprite.Image], entity)
 	}
 }
 
@@ -824,20 +835,48 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 		return
 	}
 
+	// Validate entity has required components
+	health, isBoss, shouldDraw := r.validateHealthBarEntity(entity)
+	if !shouldDraw {
+		return
+	}
+
+	// Only show health bar if: (1) damaged, or (2) is boss
+	if health.Current >= health.Max && !isBoss {
+		return
+	}
+
+	// Calculate health bar dimensions
+	barX, barY, barWidth, barHeight := r.calculateHealthBarDimensions(screenX, screenY, spriteWidth, spriteHeight)
+
+	// Draw background
+	r.drawHealthBarBackground(barX, barY, barWidth, barHeight)
+
+	// Calculate and draw health bar
+	healthPercent := r.calculateHealthPercent(health)
+	healthColor := r.getHealthBarColor(healthPercent)
+	r.drawHealthBarForeground(barX, barY, barWidth, barHeight, healthPercent, healthColor)
+
+	// Draw border
+	r.drawHealthBarBorder(barX, barY, barWidth, barHeight)
+}
+
+// validateHealthBarEntity validates if entity should have health bar drawn.
+func (r *EbitenRenderSystem) validateHealthBarEntity(entity *Entity) (*HealthComponent, bool, bool) {
 	// Only draw health bars for entities with health component
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
-		return
+		return nil, false, false
 	}
 
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
-		return
+		return nil, false, false
 	}
 
 	// Don't draw health bar for player (has HUD display)
 	if entity.HasComponent("input") {
-		return
+		return nil, false, false
 	}
 
 	// Check if entity is a boss (high attack indicates boss)
@@ -848,23 +887,27 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 		}
 	}
 
-	// Only show health bar if: (1) damaged, or (2) is boss
-	if health.Current >= health.Max && !isBoss {
-		return
-	}
+	return health, isBoss, true
+}
 
-	// Calculate health bar dimensions
+// calculateHealthBarDimensions calculates position and size of health bar.
+func (r *EbitenRenderSystem) calculateHealthBarDimensions(screenX, screenY, spriteWidth, spriteHeight float64) (float64, float64, float64, float64) {
 	barWidth := spriteWidth
 	barHeight := 4.0
 	barX := screenX - barWidth/2
 	barY := screenY - spriteHeight/2 - barHeight - 5 // 5px above sprite
+	return barX, barY, barWidth, barHeight
+}
 
-	// Draw background (dark gray)
+// drawHealthBarBackground draws the dark background of the health bar.
+func (r *EbitenRenderSystem) drawHealthBarBackground(barX, barY, barWidth, barHeight float64) {
 	bgColor := color.RGBA{40, 40, 40, 200}
 	vector.DrawFilledRect(r.screen, float32(barX), float32(barY),
 		float32(barWidth), float32(barHeight), bgColor, false)
+}
 
-	// Calculate health percentage
+// calculateHealthPercent calculates and clamps health percentage.
+func (r *EbitenRenderSystem) calculateHealthPercent(health *HealthComponent) float64 {
 	healthPercent := health.Current / health.Max
 	if healthPercent < 0 {
 		healthPercent = 0
@@ -872,26 +915,28 @@ func (r *EbitenRenderSystem) drawHealthBar(entity *Entity, screenX, screenY, spr
 	if healthPercent > 1 {
 		healthPercent = 1
 	}
+	return healthPercent
+}
 
-	// Determine health bar color (green → yellow → red)
-	var healthColor color.RGBA
+// getHealthBarColor determines health bar color based on percentage.
+func (r *EbitenRenderSystem) getHealthBarColor(healthPercent float64) color.RGBA {
 	if healthPercent > 0.6 {
-		// Green (healthy)
-		healthColor = color.RGBA{50, 200, 50, 255}
+		return color.RGBA{50, 200, 50, 255} // Green (healthy)
 	} else if healthPercent > 0.3 {
-		// Yellow (wounded)
-		healthColor = color.RGBA{220, 220, 50, 255}
-	} else {
-		// Red (critical)
-		healthColor = color.RGBA{220, 50, 50, 255}
+		return color.RGBA{220, 220, 50, 255} // Yellow (wounded)
 	}
+	return color.RGBA{220, 50, 50, 255} // Red (critical)
+}
 
-	// Draw health bar (scaled by percentage)
+// drawHealthBarForeground draws the colored health bar foreground.
+func (r *EbitenRenderSystem) drawHealthBarForeground(barX, barY, barWidth, barHeight, healthPercent float64, healthColor color.RGBA) {
 	healthBarWidth := barWidth * healthPercent
 	vector.DrawFilledRect(r.screen, float32(barX), float32(barY),
 		float32(healthBarWidth), float32(barHeight), healthColor, false)
+}
 
-	// Draw border around health bar (makes it more visible)
+// drawHealthBarBorder draws the border around the health bar.
+func (r *EbitenRenderSystem) drawHealthBarBorder(barX, barY, barWidth, barHeight float64) {
 	borderColor := color.RGBA{200, 200, 200, 255}
 	vector.StrokeRect(r.screen, float32(barX), float32(barY),
 		float32(barWidth), float32(barHeight), 1, borderColor, false)

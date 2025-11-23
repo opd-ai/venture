@@ -68,70 +68,95 @@ func NewFlankTargetAction(world *World) *ActionNode {
 			return NodeFailure
 		}
 
-		// Get squad component
-		squadComp, ok := entity.GetComponent("squad")
-		if !ok {
-			return NodeFailure // Not in a squad
-		}
-		squad, ok := squadComp.(*SquadComponent)
-		if !ok {
+		// Validate and extract components
+		squad, pos, targetPos, failed := extractFlankingComponents(entity, target)
+		if failed {
 			return NodeFailure
 		}
 
-		// Get positions
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			return NodeFailure
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			return NodeFailure
-		}
-
-		targetPosComp, ok := target.GetComponent("position")
-		if !ok {
-			return NodeFailure
-		}
-		targetPos, ok := targetPosComp.(*PositionComponent)
-		if !ok {
-			return NodeFailure
-		}
-
-		// Determine flanking position based on squad position index
-		// Even indices flank left, odd indices flank right
-		flankAngle := math.Pi / 3 // 60 degrees to the side
-		if squad.FormationPosition%2 == 1 {
-			flankAngle = -flankAngle
-		}
-
-		// Calculate flanking position around target
-		toTarget := math.Atan2(targetPos.Y-pos.Y, targetPos.X-pos.X)
-		flankDirection := toTarget + flankAngle
-		flankDistance := 100.0 // Distance from target
-
-		flankX := targetPos.X + math.Cos(flankDirection)*flankDistance
-		flankY := targetPos.Y + math.Sin(flankDirection)*flankDistance
+		// Calculate flanking position
+		flankX, flankY := calculateFlankingPosition(squad, pos, targetPos)
 
 		// Move towards flanking position
-		dx := flankX - pos.X
-		dy := flankY - pos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
-
-		if distance < 10.0 {
-			// At flanking position
-			return NodeSuccess
-		}
-
-		if velComp, ok := entity.GetComponent("velocity"); ok {
-			if vel, ok := velComp.(*VelocityComponent); ok {
-				speed := 90.0
-				vel.VX = (dx / distance) * speed
-				vel.VY = (dy / distance) * speed
-			}
-		}
-
-		return NodeRunning
+		return applyFlankingMovement(entity, pos, flankX, flankY)
 	})
+}
+
+// extractFlankingComponents validates and extracts required components for flanking.
+func extractFlankingComponents(entity, target *Entity) (*SquadComponent, *PositionComponent, *PositionComponent, bool) {
+	// Get squad component
+	squadComp, ok := entity.GetComponent("squad")
+	if !ok {
+		return nil, nil, nil, true
+	}
+	squad, ok := squadComp.(*SquadComponent)
+	if !ok {
+		return nil, nil, nil, true
+	}
+
+	// Get entity position
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil, nil, true
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil, true
+	}
+
+	// Get target position
+	targetPosComp, ok := target.GetComponent("position")
+	if !ok {
+		return nil, nil, nil, true
+	}
+	targetPos, ok := targetPosComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, nil, true
+	}
+
+	return squad, pos, targetPos, false
+}
+
+// calculateFlankingPosition determines the flanking position around target.
+func calculateFlankingPosition(squad *SquadComponent, pos, targetPos *PositionComponent) (float64, float64) {
+	// Determine flanking position based on squad position index
+	// Even indices flank left, odd indices flank right
+	flankAngle := math.Pi / 3 // 60 degrees to the side
+	if squad.FormationPosition%2 == 1 {
+		flankAngle = -flankAngle
+	}
+
+	// Calculate flanking position around target
+	toTarget := math.Atan2(targetPos.Y-pos.Y, targetPos.X-pos.X)
+	flankDirection := toTarget + flankAngle
+	flankDistance := 100.0 // Distance from target
+
+	flankX := targetPos.X + math.Cos(flankDirection)*flankDistance
+	flankY := targetPos.Y + math.Sin(flankDirection)*flankDistance
+
+	return flankX, flankY
+}
+
+// applyFlankingMovement moves entity towards flanking position.
+func applyFlankingMovement(entity *Entity, pos *PositionComponent, flankX, flankY float64) NodeStatus {
+	dx := flankX - pos.X
+	dy := flankY - pos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	if distance < 10.0 {
+		// At flanking position
+		return NodeSuccess
+	}
+
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			speed := 90.0
+			vel.VX = (dx / distance) * speed
+			vel.VY = (dy / distance) * speed
+		}
+	}
+
+	return NodeRunning
 }
 
 // NewFocusFireAction creates an action that prioritizes the squad's shared target.

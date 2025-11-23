@@ -190,13 +190,21 @@ func (s *ReverbSystem) ApplyReverbToSamples(samples []float64, sampleRate int) [
 		return samples // No reverb
 	}
 
-	// Simplified reverb using comb filter approach
-	// In a real implementation, this would use proper convolution reverb
-
 	numSamples := len(samples)
 	output := make([]float64, numSamples)
 
-	// Calculate delay buffer size from decay time
+	// Calculate reverb parameters
+	delay1, delay2, delay3, delay4 := s.calculateReverbDelays(sampleRate, numSamples)
+	feedback, wetLevel, dryLevel := s.calculateReverbLevels()
+
+	// Process samples with multiple comb filters
+	s.processReverbSamples(samples, output, numSamples, delay1, delay2, delay3, delay4, feedback, wetLevel, dryLevel)
+
+	return output
+}
+
+// calculateReverbDelays computes delay buffer sizes for reverb effect.
+func (s *ReverbSystem) calculateReverbDelays(sampleRate, numSamples int) (int, int, int, int) {
 	// Use shorter delays for the buffer to create multiple early reflections
 	delay1 := int(0.029 * float64(sampleRate)) // ~29ms
 	delay2 := int(0.037 * float64(sampleRate)) // ~37ms
@@ -204,51 +212,66 @@ func (s *ReverbSystem) ApplyReverbToSamples(samples []float64, sampleRate int) [
 	delay4 := int(0.043 * float64(sampleRate)) // ~43ms
 
 	// Clamp delays to buffer size
-	if delay1 >= numSamples {
-		delay1 = numSamples / 4
-	}
-	if delay2 >= numSamples {
-		delay2 = numSamples / 3
-	}
-	if delay3 >= numSamples {
-		delay3 = numSamples / 2
-	}
-	if delay4 >= numSamples {
-		delay4 = (numSamples * 2) / 3
-	}
+	delay1 = s.clampDelay(delay1, numSamples, 4)
+	delay2 = s.clampDelay(delay2, numSamples, 3)
+	delay3 = s.clampDelay(delay3, numSamples, 2)
+	delay4 = s.clampDelayWithMultiplier(delay4, numSamples, 2, 3)
 
-	// Feedback based on decay time and damping
+	return delay1, delay2, delay3, delay4
+}
+
+// clampDelay clamps a delay value to buffer size using division.
+func (s *ReverbSystem) clampDelay(delay, numSamples, divisor int) int {
+	if delay >= numSamples {
+		return numSamples / divisor
+	}
+	return delay
+}
+
+// clampDelayWithMultiplier clamps a delay value using multiplication and division.
+func (s *ReverbSystem) clampDelayWithMultiplier(delay, numSamples, multiplier, divisor int) int {
+	if delay >= numSamples {
+		return (numSamples * multiplier) / divisor
+	}
+	return delay
+}
+
+// calculateReverbLevels computes feedback and mix levels for reverb.
+func (s *ReverbSystem) calculateReverbLevels() (float64, float64, float64) {
 	feedback := 0.5 * (s.currentReverb.DecayTime / 3.0) * (1.0 - s.currentReverb.Damping)
 	if feedback > 0.85 {
 		feedback = 0.85 // Prevent instability
 	}
 	wetLevel := s.currentReverb.Amount
 	dryLevel := 1.0 - wetLevel
+	return feedback, wetLevel, dryLevel
+}
 
-	// Process samples with multiple comb filters
+// processReverbSamples applies comb filter reverb to samples.
+func (s *ReverbSystem) processReverbSamples(samples, output []float64, numSamples, delay1, delay2, delay3, delay4 int, feedback, wetLevel, dryLevel float64) {
 	for i := 0; i < numSamples; i++ {
 		dry := samples[i]
-
-		// Get delayed samples from multiple delay lines (early reflections)
-		var wet float64
-		if i >= delay1 {
-			wet += output[i-delay1] * feedback * 0.37
-		}
-		if i >= delay2 {
-			wet += output[i-delay2] * feedback * 0.33
-		}
-		if i >= delay3 {
-			wet += output[i-delay3] * feedback * 0.19
-		}
-		if i >= delay4 {
-			wet += output[i-delay4] * feedback * 0.11
-		}
-
-		// Mix dry and wet signals
+		wet := s.calculateWetSignal(output, i, delay1, delay2, delay3, delay4, feedback)
 		output[i] = dry*dryLevel + dry*wetLevel + wet*wetLevel
 	}
+}
 
-	return output
+// calculateWetSignal computes wet signal from delay lines.
+func (s *ReverbSystem) calculateWetSignal(output []float64, i, delay1, delay2, delay3, delay4 int, feedback float64) float64 {
+	var wet float64
+	if i >= delay1 {
+		wet += output[i-delay1] * feedback * 0.37
+	}
+	if i >= delay2 {
+		wet += output[i-delay2] * feedback * 0.33
+	}
+	if i >= delay3 {
+		wet += output[i-delay3] * feedback * 0.19
+	}
+	if i >= delay4 {
+		wet += output[i-delay4] * feedback * 0.11
+	}
+	return wet
 }
 
 // GetReverbParameters returns reverb parameters for audio processing.

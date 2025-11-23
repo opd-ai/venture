@@ -521,80 +521,95 @@ func (s *ObjectiveTrackerSystem) matchesTarget(target, name, context string) boo
 	targetLower := strings.ToLower(target)
 	nameLower := strings.ToLower(name)
 
+	// Check exact and partial matches
+	if s.matchesExactOrPartial(targetLower, nameLower, target, name) {
+		return true
+	}
+
+	// Check context-specific matching
+	matched, matchType := s.matchesContext(context, targetLower, nameLower)
+	if matched {
+		s.logTargetMatch(target, name, matchType)
+	}
+
+	return matched
+}
+
+// matchesExactOrPartial checks for exact or partial string matches.
+func (s *ObjectiveTrackerSystem) matchesExactOrPartial(targetLower, nameLower, target, name string) bool {
 	// Exact match
 	if targetLower == nameLower {
-		log.WithFields(log.Fields{
-			"system_name": "objective_tracker",
-			"target":      target,
-			"name":        name,
-			"match_type":  "exact",
-		}).Debug("Target matched")
+		s.logTargetMatch(target, name, "exact")
 		return true
 	}
 
 	// Partial match (target contains name or vice versa)
 	if strings.Contains(targetLower, nameLower) || strings.Contains(nameLower, targetLower) {
-		log.WithFields(log.Fields{
-			"system_name": "objective_tracker",
-			"target":      target,
-			"name":        name,
-			"match_type":  "partial",
-		}).Debug("Target matched")
+		s.logTargetMatch(target, name, "partial")
 		return true
 	}
 
-	// Context-specific matching
-	matched := false
-	matchType := ""
+	return false
+}
 
+// matchesContext checks context-specific target matching rules.
+func (s *ObjectiveTrackerSystem) matchesContext(context, targetLower, nameLower string) (bool, string) {
 	switch context {
 	case "kill":
-		// Generic kill objectives match any enemy
-		if targetLower == "enemy" || targetLower == "enemies" || targetLower == "monster" {
-			matched = true
-			matchType = "generic_kill"
-		}
+		return s.matchesKillContext(targetLower)
 	case "collect":
-		// Generic collect objectives match any item
-		if targetLower == "item" || targetLower == "items" {
-			matched = true
-			matchType = "generic_collect"
-		}
+		return s.matchesCollectContext(targetLower)
 	case "ui":
-		// GAP-014 REPAIR: UI objective matching (for tutorial)
-		// Handle variations in objective naming
-		if targetLower == "inventory" && nameLower == "inventory" {
-			matched = true
-			matchType = "ui_inventory"
-		}
-		if targetLower == "quest_log" && nameLower == "quest_log" {
-			matched = true
-			matchType = "ui_quest_log"
-		}
-		if strings.Contains(targetLower, "character") && nameLower == "character" {
-			matched = true
-			matchType = "ui_character"
-		}
-		if strings.Contains(targetLower, "skill") && nameLower == "skills" {
-			matched = true
-			matchType = "ui_skills"
-		}
-		if strings.Contains(targetLower, "map") && nameLower == "map" {
-			matched = true
-			matchType = "ui_map"
-		}
+		return s.matchesUIContext(targetLower, nameLower)
 	}
+	return false, ""
+}
 
-	if matched {
-		log.WithFields(log.Fields{
-			"system_name": "objective_tracker",
-			"target":      target,
-			"name":        name,
-			"match_type":  matchType,
-		}).Debug("Target matched")
+// matchesKillContext checks if target matches generic kill objectives.
+func (s *ObjectiveTrackerSystem) matchesKillContext(targetLower string) (bool, string) {
+	if targetLower == "enemy" || targetLower == "enemies" || targetLower == "monster" {
+		return true, "generic_kill"
 	}
+	return false, ""
+}
 
-	return matched
+// matchesCollectContext checks if target matches generic collect objectives.
+func (s *ObjectiveTrackerSystem) matchesCollectContext(targetLower string) (bool, string) {
+	if targetLower == "item" || targetLower == "items" {
+		return true, "generic_collect"
+	}
+	return false, ""
+}
+
+// matchesUIContext checks if target matches UI objectives for tutorial.
+func (s *ObjectiveTrackerSystem) matchesUIContext(targetLower, nameLower string) (bool, string) {
+	// GAP-014 REPAIR: UI objective matching (for tutorial)
+	if targetLower == "inventory" && nameLower == "inventory" {
+		return true, "ui_inventory"
+	}
+	if targetLower == "quest_log" && nameLower == "quest_log" {
+		return true, "ui_quest_log"
+	}
+	if strings.Contains(targetLower, "character") && nameLower == "character" {
+		return true, "ui_character"
+	}
+	if strings.Contains(targetLower, "skill") && nameLower == "skills" {
+		return true, "ui_skills"
+	}
+	if strings.Contains(targetLower, "map") && nameLower == "map" {
+		return true, "ui_map"
+	}
+	return false, ""
+}
+
+// logTargetMatch logs successful target matches.
+func (s *ObjectiveTrackerSystem) logTargetMatch(target, name, matchType string) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"target":      target,
+		"name":        name,
+		"match_type":  matchType,
+	}).Debug("Target matched")
 }
 
 // tileKeyFromCoords creates a unique key for a tile position.

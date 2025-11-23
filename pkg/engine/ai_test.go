@@ -517,3 +517,38 @@ func BenchmarkAISystemUpdateMany(b *testing.B) {
 		aiSystem.Update(world.GetEntities(), 0.016) // ~60 FPS
 	}
 }
+
+// TestAISystem_Patrol tests patrol behavior
+func TestAISystem_Patrol(t *testing.T) {
+	world := NewWorld()
+	aiSystem := NewAISystem(world)
+
+	// Create AI entity with patrol route
+	entity := world.CreateEntity()
+	aiComp := NewAIComponent(100, 100)
+	aiComp.State = AIStatePatrol
+	aiComp.SetPatrolRoute([]PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 0},
+		{X: 200, Y: 100, WaitTime: 0},
+		{X: 200, Y: 200, WaitTime: 0},
+	}, false)
+
+	entity.AddComponent(aiComp)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+	entity.AddComponent(&VelocityComponent{})
+	entity.AddComponent(&TeamComponent{TeamID: 1})
+	world.Update(0)
+
+	// Update AI system - should move toward waypoint
+	aiSystem.Update(world.GetEntities(), 0.016)
+
+	// Verify AI component was updated
+	aiCompRaw, ok := entity.GetComponent("ai")
+	if !ok {
+		t.Fatal("AI component not found")
+	}
+	updatedAI := aiCompRaw.(*AIComponent)
+	if updatedAI.State != AIStatePatrol {
+		t.Errorf("State = %v, want Patrol", updatedAI.State)
+	}
+}

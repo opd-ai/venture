@@ -558,3 +558,211 @@ func TestAIComponent_TimerAccuracy(t *testing.T) {
 			updateCount, expectedUpdates, tolerance)
 	}
 }
+
+// TestAIComponent_SetPatrolRoute tests patrol route configuration
+func TestAIComponent_SetPatrolRoute(t *testing.T) {
+	ai := NewAIComponent(0, 0)
+
+	waypoints := []PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 1.0},
+		{X: 200, Y: 100, WaitTime: 2.0},
+		{X: 200, Y: 200, WaitTime: 0.5},
+	}
+
+	// Set route with looping
+	ai.SetPatrolRoute(waypoints, false)
+
+	if len(ai.PatrolWaypoints) != 3 {
+		t.Errorf("PatrolWaypoints count = %d, want 3", len(ai.PatrolWaypoints))
+	}
+	if ai.CurrentWaypointIndex != 0 {
+		t.Errorf("CurrentWaypointIndex = %d, want 0", ai.CurrentWaypointIndex)
+	}
+	if ai.PatrolReverse {
+		t.Error("PatrolReverse should be false")
+	}
+	if ai.PatrolDirection != 1 {
+		t.Errorf("PatrolDirection = %d, want 1", ai.PatrolDirection)
+	}
+
+	// Set route with reversing
+	ai.SetPatrolRoute(waypoints, true)
+	if !ai.PatrolReverse {
+		t.Error("PatrolReverse should be true")
+	}
+}
+
+// TestAIComponent_GetCurrentWaypoint tests waypoint retrieval
+func TestAIComponent_GetCurrentWaypoint(t *testing.T) {
+	ai := NewAIComponent(0, 0)
+
+	// No route set
+	if wp := ai.GetCurrentWaypoint(); wp != nil {
+		t.Error("GetCurrentWaypoint should return nil when no route set")
+	}
+
+	// Set route
+	waypoints := []PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 1.0},
+		{X: 200, Y: 100, WaitTime: 2.0},
+	}
+	ai.SetPatrolRoute(waypoints, false)
+
+	// Get first waypoint
+	wp := ai.GetCurrentWaypoint()
+	if wp == nil {
+		t.Fatal("GetCurrentWaypoint returned nil")
+	}
+	if wp.X != 100 || wp.Y != 100 {
+		t.Errorf("Waypoint position = (%f, %f), want (100, 100)", wp.X, wp.Y)
+	}
+
+	// Invalid index
+	ai.CurrentWaypointIndex = -1
+	if wp := ai.GetCurrentWaypoint(); wp != nil {
+		t.Error("GetCurrentWaypoint should return nil for negative index")
+	}
+
+	ai.CurrentWaypointIndex = 99
+	if wp := ai.GetCurrentWaypoint(); wp != nil {
+		t.Error("GetCurrentWaypoint should return nil for out-of-bounds index")
+	}
+}
+
+// TestAIComponent_AdvanceToNextWaypoint tests waypoint advancement
+func TestAIComponent_AdvanceToNextWaypoint(t *testing.T) {
+	ai := NewAIComponent(0, 0)
+
+	// No route set
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 0 {
+		t.Error("AdvanceToNextWaypoint should not change index when no route")
+	}
+
+	// Looping route
+	waypoints := []PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 1.0},
+		{X: 200, Y: 100, WaitTime: 2.0},
+		{X: 200, Y: 200, WaitTime: 0.5},
+	}
+	ai.SetPatrolRoute(waypoints, false)
+
+	// Advance through route
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 1 {
+		t.Errorf("Index = %d, want 1", ai.CurrentWaypointIndex)
+	}
+
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 2 {
+		t.Errorf("Index = %d, want 2", ai.CurrentWaypointIndex)
+	}
+
+	// Should loop back to start
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 0 {
+		t.Errorf("Index = %d, want 0 (looped)", ai.CurrentWaypointIndex)
+	}
+
+	// Reversing route
+	ai.SetPatrolRoute(waypoints, true)
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 1 {
+		t.Errorf("Index = %d, want 1", ai.CurrentWaypointIndex)
+	}
+
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 2 {
+		t.Errorf("Index = %d, want 2", ai.CurrentWaypointIndex)
+	}
+
+	// Should reverse direction
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 1 {
+		t.Errorf("Index = %d, want 1 (reversed)", ai.CurrentWaypointIndex)
+	}
+	if ai.PatrolDirection != -1 {
+		t.Errorf("PatrolDirection = %d, want -1", ai.PatrolDirection)
+	}
+
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 0 {
+		t.Errorf("Index = %d, want 0", ai.CurrentWaypointIndex)
+	}
+
+	// Should reverse direction again
+	ai.AdvanceToNextWaypoint()
+	if ai.CurrentWaypointIndex != 1 {
+		t.Errorf("Index = %d, want 1 (reversed again)", ai.CurrentWaypointIndex)
+	}
+	if ai.PatrolDirection != 1 {
+		t.Errorf("PatrolDirection = %d, want 1", ai.PatrolDirection)
+	}
+}
+
+// TestAIComponent_IsWaitingAtWaypoint tests waypoint wait logic
+func TestAIComponent_IsWaitingAtWaypoint(t *testing.T) {
+	ai := NewAIComponent(0, 0)
+
+	// No route
+	if ai.IsWaitingAtWaypoint(1.0) {
+		t.Error("Should not wait when no route set")
+	}
+
+	// Route with wait times
+	waypoints := []PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 2.0},
+		{X: 200, Y: 100, WaitTime: 0.0}, // No wait
+	}
+	ai.SetPatrolRoute(waypoints, false)
+
+	// First frame - should wait
+	if !ai.IsWaitingAtWaypoint(0.5) {
+		t.Error("Should wait at waypoint with WaitTime > 0")
+	}
+
+	// Still waiting
+	if !ai.IsWaitingAtWaypoint(0.5) {
+		t.Error("Should still be waiting")
+	}
+
+	// Still waiting
+	if !ai.IsWaitingAtWaypoint(0.5) {
+		t.Error("Should still be waiting")
+	}
+
+	// Done waiting (total 2.1s, need 2.0s)
+	if ai.IsWaitingAtWaypoint(0.6) {
+		t.Error("Should be done waiting after 2.0s")
+	}
+
+	// Move to next waypoint with no wait time
+	ai.AdvanceToNextWaypoint()
+	if ai.IsWaitingAtWaypoint(1.0) {
+		t.Error("Should not wait at waypoint with WaitTime = 0")
+	}
+}
+
+// TestAIComponent_HasPatrolRoute tests route checking
+func TestAIComponent_HasPatrolRoute(t *testing.T) {
+	ai := NewAIComponent(0, 0)
+
+	if ai.HasPatrolRoute() {
+		t.Error("HasPatrolRoute should return false initially")
+	}
+
+	waypoints := []PatrolWaypoint{
+		{X: 100, Y: 100, WaitTime: 1.0},
+	}
+	ai.SetPatrolRoute(waypoints, false)
+
+	if !ai.HasPatrolRoute() {
+		t.Error("HasPatrolRoute should return true after setting route")
+	}
+
+	// Clear route
+	ai.PatrolWaypoints = nil
+	if ai.HasPatrolRoute() {
+		t.Error("HasPatrolRoute should return false after clearing")
+	}
+}

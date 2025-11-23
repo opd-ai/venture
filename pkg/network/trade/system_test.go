@@ -538,3 +538,107 @@ func BenchmarkAcceptTrade(b *testing.B) {
 		ts.AcceptTrade(recipients[i])
 	}
 }
+
+// TestCancelTrade tests trade cancellation
+func TestCancelTrade(t *testing.T) {
+	world := engine.NewWorld()
+	ts := NewTradeSystem(world)
+
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item2})
+	world.Update(0)
+
+	// Propose trade
+	err := ts.ProposeTrade(proposer, recipient, []string{"item1"}, []string{"item2"})
+	if err != nil {
+		t.Fatalf("ProposeTrade() failed: %v", err)
+	}
+
+	// Cancel trade
+	err = ts.CancelTrade(proposer)
+	if err != nil {
+		t.Errorf("CancelTrade() failed: %v", err)
+	}
+
+	// Verify trade is cleared
+	proposerEntity, _ := world.GetEntity(proposer)
+	tradeCompRaw, ok := proposerEntity.GetComponent("trade")
+	if ok {
+		tradeComp := tradeCompRaw.(*engine.TradeComponent)
+		if tradeComp.ActiveTrade != nil {
+			t.Error("active trade should be cleared after cancellation")
+		}
+	}
+
+	recipientEntity, _ := world.GetEntity(recipient)
+	tradeCompRaw, ok = recipientEntity.GetComponent("trade")
+	if ok {
+		tradeComp := tradeCompRaw.(*engine.TradeComponent)
+		if tradeComp.ActiveTrade != nil {
+			t.Error("recipient's active trade should be cleared after cancellation")
+		}
+	}
+}
+
+// TestCancelTradeNoActiveTrade tests cancelling when no trade exists
+func TestCancelTradeNoActiveTrade(t *testing.T) {
+	world := engine.NewWorld()
+	ts := NewTradeSystem(world)
+
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	player := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	world.Update(0)
+
+	// Try to cancel when no trade exists
+	err := ts.CancelTrade(player)
+	if err == nil {
+		t.Error("expected error when cancelling non-existent trade")
+	}
+}
+
+// TestGetActiveTrade tests getting active trade
+func TestGetActiveTrade(t *testing.T) {
+	world := engine.NewWorld()
+	ts := NewTradeSystem(world)
+
+	item1 := createTestItem("item1", "Sword", item.RarityCommon)
+	item2 := createTestItem("item2", "Shield", item.RarityCommon)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{item1})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{item2})
+	world.Update(0)
+
+	// No trade initially
+	proposal := ts.GetActiveTrade(proposer)
+	if proposal != nil {
+		t.Error("expected nil for no active trade")
+	}
+
+	// Propose trade
+	err := ts.ProposeTrade(proposer, recipient, []string{"item1"}, []string{"item2"})
+	if err != nil {
+		t.Fatalf("ProposeTrade() failed: %v", err)
+	}
+
+	// Now should have active trade
+	proposal = ts.GetActiveTrade(proposer)
+	if proposal == nil {
+		t.Error("expected active trade proposal")
+	} else {
+		if proposal.ProposerID != proposer {
+			t.Errorf("proposer ID = %d, want %d", proposal.ProposerID, proposer)
+		}
+		if proposal.RecipientID != recipient {
+			t.Errorf("recipient ID = %d, want %d", proposal.RecipientID, recipient)
+		}
+	}
+
+	// Recipient should also see the trade
+	proposal = ts.GetActiveTrade(recipient)
+	if proposal == nil {
+		t.Error("recipient should see active trade proposal")
+	}
+}

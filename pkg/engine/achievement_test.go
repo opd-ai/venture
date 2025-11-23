@@ -328,3 +328,78 @@ func BenchmarkAchievementSystem_OnExpressionUsed(b *testing.B) {
 		system.OnExpressionUsed(entity.ID, ExpressionWave)
 	}
 }
+
+// TestAchievementComponent_Serialize tests serialization
+func TestAchievementComponent_Serialize(t *testing.T) {
+	comp := &AchievementComponent{
+		Achievements: []Achievement{
+			{Type: AchievementFirstExpression, UnlockedAt: 12345, Description: "First"},
+			{Type: AchievementComboStarter, UnlockedAt: 67890, Description: "Combo"},
+		},
+		ExpressionCount: 42,
+		UniqueExpression: map[ExpressionType]int{
+			ExpressionWave:  10,
+			ExpressionCheer: 5,
+		},
+	}
+
+	data := comp.Serialize()
+	if len(data) == 0 {
+		t.Error("Serialize() returned empty data")
+	}
+
+	// Verify we can deserialize
+	comp2 := &AchievementComponent{}
+	err := comp2.Deserialize(data)
+	if err != nil {
+		t.Errorf("Deserialize() failed: %v", err)
+	}
+
+	if len(comp2.Achievements) != 2 {
+		t.Errorf("Achievement count = %d, want 2", len(comp2.Achievements))
+	}
+	if comp2.ExpressionCount != 42 {
+		t.Errorf("ExpressionCount = %d, want 42", comp2.ExpressionCount)
+	}
+	if len(comp2.UniqueExpression) != 2 {
+		t.Errorf("UniqueExpression count = %d, want 2", len(comp2.UniqueExpression))
+	}
+}
+
+// TestAchievementComponent_Deserialize_Invalid tests error handling
+func TestAchievementComponent_Deserialize_Invalid(t *testing.T) {
+	comp := &AchievementComponent{}
+
+	// Too short
+	err := comp.Deserialize([]byte{1, 2, 3})
+	if err == nil {
+		t.Error("Expected error for short data")
+	}
+
+	// Empty
+	err = comp.Deserialize([]byte{})
+	if err == nil {
+		t.Error("Expected error for empty data")
+	}
+}
+
+// TestAchievementSystem_Update tests system update
+func TestAchievementSystem_Update(t *testing.T) {
+	world := NewWorld()
+	system := NewAchievementSystem(world)
+
+	// Should not crash with no entities
+	system.Update(0.016)
+
+	// Add entity with achievement component
+	entity := world.CreateEntity()
+	entity.AddComponent(&AchievementComponent{
+		ExpressionCount:  5,
+		UniqueExpression: make(map[ExpressionType]int),
+	})
+	world.Update(0)
+
+	// Update should process without error
+	system.Update(0.016)
+	system.Update(1.0)
+}

@@ -462,7 +462,22 @@ func (g *CompositeGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not a Terrain")
 	}
 
-	// Count walkable tiles
+	walkable := g.countWalkableTiles(terrain)
+	if err := g.validateWalkablePercentage(terrain, walkable); err != nil {
+		return err
+	}
+
+	start, found := g.findFirstWalkableTile(terrain)
+	if !found {
+		return fmt.Errorf("no walkable tiles found")
+	}
+
+	connected := floodFillConnectivity(terrain, start)
+	return g.validateConnectivity(walkable, connected)
+}
+
+// countWalkableTiles counts the number of walkable tiles in terrain.
+func (g *CompositeGenerator) countWalkableTiles(terrain *Terrain) int {
 	walkable := 0
 	for y := 0; y < terrain.Height; y++ {
 		for x := 0; x < terrain.Width; x++ {
@@ -471,41 +486,37 @@ func (g *CompositeGenerator) Validate(result interface{}) error {
 			}
 		}
 	}
+	return walkable
+}
 
+// validateWalkablePercentage checks if terrain has sufficient walkable area.
+func (g *CompositeGenerator) validateWalkablePercentage(terrain *Terrain, walkable int) error {
 	totalTiles := terrain.Width * terrain.Height
 	walkablePercent := float64(walkable) / float64(totalTiles)
-
-	// Composite terrain should have at least 25% walkable (lower than single-biome due to variety)
 	if walkablePercent < 0.25 {
 		return fmt.Errorf("insufficient walkable area: %.1f%% (need at least 25%%)", walkablePercent*100)
 	}
+	return nil
+}
 
-	// Check connectivity via flood fill
-	// Find first walkable tile
-	var start Point
-	found := false
-	for y := 0; y < terrain.Height && !found; y++ {
-		for x := 0; x < terrain.Width && !found; x++ {
+// findFirstWalkableTile finds the first walkable tile in terrain for connectivity check.
+func (g *CompositeGenerator) findFirstWalkableTile(terrain *Terrain) (Point, bool) {
+	for y := 0; y < terrain.Height; y++ {
+		for x := 0; x < terrain.Width; x++ {
 			if terrain.IsWalkable(x, y) {
-				start = Point{X: x, Y: y}
-				found = true
+				return Point{X: x, Y: y}, true
 			}
 		}
 	}
+	return Point{}, false
+}
 
-	if !found {
-		return fmt.Errorf("no walkable tiles found")
-	}
-
-	// Flood fill to count connected walkable tiles
-	connected := floodFillConnectivity(terrain, start)
-
-	// At least 90% of walkable tiles should be connected
+// validateConnectivity checks if sufficient walkable tiles are connected.
+func (g *CompositeGenerator) validateConnectivity(walkable, connected int) error {
 	connectedPercent := float64(connected) / float64(walkable)
 	if connectedPercent < 0.90 {
 		return fmt.Errorf("disconnected regions: only %.1f%% of walkable tiles are connected", connectedPercent*100)
 	}
-
 	return nil
 }
 

@@ -1240,58 +1240,69 @@ func (s *SpellCastingSystem) applyElementalEffect(target *Entity, spell *magic.S
 
 	switch spell.Element {
 	case magic.ElementFire:
-		// Burning: 10 damage per second for 3 seconds
-		s.statusEffectSys.ApplyStatusEffect(target, "burning", 10.0, 3.0, 1.0)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"target_id": target.ID,
-				"effect":    "burning",
-				"dps":       10.0,
-				"duration":  3.0,
-			}).Info("Burning effect applied")
-		}
-
+		s.applyBurningEffect(target)
 	case magic.ElementIce:
-		// Frozen: 50% movement slow for 2 seconds (visual indicator only, actual movement handled by AI)
-		s.statusEffectSys.ApplyStatusEffect(target, "frozen", 0.5, 2.0, 0)
+		s.applyFrozenEffect(target)
+	case magic.ElementLightning:
+		s.applyLightningEffect(target, spell)
+	case magic.ElementEarth:
+		s.applyPoisonEffect(target)
+	}
+}
+
+// applyBurningEffect applies burning status (fire damage over time).
+func (s *SpellCastingSystem) applyBurningEffect(target *Entity) {
+	s.statusEffectSys.ApplyStatusEffect(target, "burning", 10.0, 3.0, 1.0)
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id": target.ID,
+			"effect":    "burning",
+			"dps":       10.0,
+			"duration":  3.0,
+		}).Info("Burning effect applied")
+	}
+}
+
+// applyFrozenEffect applies frozen status (movement slow).
+func (s *SpellCastingSystem) applyFrozenEffect(target *Entity) {
+	s.statusEffectSys.ApplyStatusEffect(target, "frozen", 0.5, 2.0, 0)
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"target_id": target.ID,
+			"effect":    "frozen",
+			"slow":      0.5,
+			"duration":  2.0,
+		}).Info("Frozen effect applied")
+	}
+}
+
+// applyLightningEffect applies lightning chaining and shocked status.
+func (s *SpellCastingSystem) applyLightningEffect(target *Entity, spell *magic.Spell) {
+	if spell.Target == magic.TargetSingle || spell.Target == magic.TargetArea {
+		s.statusEffectSys.ChainLightning(nil, target, float64(spell.Stats.Damage)*0.5, 2, 15.0)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id":    target.ID,
+				"chain_damage": float64(spell.Stats.Damage) * 0.5,
+				"max_chain":    2,
+				"chain_range":  15.0,
+			}).Info("Lightning chain initiated")
+		}
+	}
+	s.statusEffectSys.ApplyStatusEffect(target, "shocked", 0, 2.0, 0)
+}
+
+// applyPoisonEffect applies poison status if proc check passes.
+func (s *SpellCastingSystem) applyPoisonEffect(target *Entity) {
+	if s.shouldApplyPoison() {
+		s.statusEffectSys.ApplyStatusEffect(target, "poisoned", 5.0, 5.0, 1.0)
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"target_id": target.ID,
-				"effect":    "frozen",
-				"slow":      0.5,
-				"duration":  2.0,
-			}).Info("Frozen effect applied")
-		}
-
-	case magic.ElementLightning:
-		// Shocked: chain to nearby enemies
-		if spell.Target == magic.TargetSingle || spell.Target == magic.TargetArea {
-			s.statusEffectSys.ChainLightning(nil, target, float64(spell.Stats.Damage)*0.5, 2, 15.0)
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"target_id":    target.ID,
-					"chain_damage": float64(spell.Stats.Damage) * 0.5,
-					"max_chain":    2,
-					"chain_range":  15.0,
-				}).Info("Lightning chain initiated")
-			}
-		}
-		// Apply shocked marker for visual effects
-		s.statusEffectSys.ApplyStatusEffect(target, "shocked", 0, 2.0, 0)
-
-	case magic.ElementEarth:
-		// Earth spells can apply poison effect
-		// Poison: 5 damage per second ignoring armor for 5 seconds
-		if s.shouldApplyPoison() {
-			s.statusEffectSys.ApplyStatusEffect(target, "poisoned", 5.0, 5.0, 1.0)
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"target_id": target.ID,
-					"effect":    "poisoned",
-					"dps":       5.0,
-					"duration":  5.0,
-				}).Info("Poison effect applied")
-			}
+				"effect":    "poisoned",
+				"dps":       5.0,
+				"duration":  5.0,
+			}).Info("Poison effect applied")
 		}
 	}
 }

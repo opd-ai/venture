@@ -139,101 +139,123 @@ func NewTouchInputHandler() *TouchInputHandler {
 // Must be called every frame.
 // Platform parity fix: Enhanced with state tracking, debouncing, and focus awareness
 func (h *TouchInputHandler) Update() {
-	// Platform parity fix: Skip input processing during UI transitions or when blurred
-	if h.inTransition || h.focusState == FocusStateBlurred {
+	if h.shouldSkipProcessing() {
 		return
 	}
 
-	// Platform parity fix: Debouncing to prevent rapid-fire duplicate events
-	// Particularly important for WASM where browser event timing can vary
 	now := time.Now()
-	if now.Sub(h.lastProcessTime) < h.debounceTime {
+	if !h.shouldProcessNow(now) {
 		return
 	}
 	h.lastProcessTime = now
 
-	// Get all active touch IDs
 	activeTouchIDs := ebiten.TouchIDs()
 	activeSet := make(map[ebiten.TouchID]bool)
 
-	// Platform parity fix: Track simultaneity for multi-input gestures
+	h.updateSimultaneityTracking(activeTouchIDs)
+	h.processActiveTouches(activeTouchIDs, activeSet, now)
+	h.processEndedTouches(activeSet, now)
+	h.resetSimultaneityIfNeeded()
+	h.gestureDetector.Update(h.touches)
+}
+
+// shouldSkipProcessing checks if input should be skipped due to transitions or blur.
+func (h *TouchInputHandler) shouldSkipProcessing() bool {
+	return h.inTransition || h.focusState == FocusStateBlurred
+}
+
+// shouldProcessNow checks if enough time has passed for debouncing.
+func (h *TouchInputHandler) shouldProcessNow(now time.Time) bool {
+	return now.Sub(h.lastProcessTime) >= h.debounceTime
+}
+
+// updateSimultaneityTracking tracks simultaneous touches for multi-input gestures.
+func (h *TouchInputHandler) updateSimultaneityTracking(activeTouchIDs []ebiten.TouchID) {
 	h.simultaneousTouches = len(activeTouchIDs)
 	if h.simultaneousTouches > h.maxSimultaneous {
 		h.maxSimultaneous = h.simultaneousTouches
 	}
+}
 
-	// Update existing touches and add new ones
+// processActiveTouches updates existing touches and creates new ones.
+func (h *TouchInputHandler) processActiveTouches(activeTouchIDs []ebiten.TouchID, activeSet map[ebiten.TouchID]bool, now time.Time) {
 	for _, id := range activeTouchIDs {
 		x, y := ebiten.TouchPosition(id)
 		activeSet[id] = true
 
 		if touch, exists := h.touches[id]; exists {
-			// Platform parity fix: Update existing touch with delta calculation and state tracking
-			touch.LastX = touch.X
-			touch.LastY = touch.Y
-			touch.X = x
-			touch.Y = y
-			touch.DeltaX = touch.X - touch.LastX
-			touch.DeltaY = touch.Y - touch.LastY
-
-			// Platform parity fix: State determination based on movement
-			if touch.DeltaX != 0 || touch.DeltaY != 0 {
-				touch.State = TouchStateMoved
-			} else {
-				touch.State = TouchStateStationary
-			}
+			h.updateExistingTouch(touch, x, y)
 		} else {
-			// Platform parity fix: New touch started - initialize with full state tracking
-			touch := &Touch{
-				ID:        id,
-				X:         x,
-				Y:         y,
-				StartX:    x,
-				StartY:    y,
-				LastX:     x,
-				LastY:     y,
-				DeltaX:    0,
-				DeltaY:    0,
-				StartTime: now,
-				Active:    true,
-				State:     TouchStateStarted,
-				Consumed:  false,
-			}
-			h.touches[id] = touch
-
-			// Platform parity fix: Buffer new touch for consistent processing
-			h.bufferTouch(touch)
+			h.createNewTouch(id, x, y, now)
 		}
 	}
+}
 
-	// Platform parity fix: Properly handle touch end/cancel with state tracking
+// updateExistingTouch updates an existing touch with delta calculation and state tracking.
+func (h *TouchInputHandler) updateExistingTouch(touch *Touch, x, y int) {
+	touch.LastX = touch.X
+	touch.LastY = touch.Y
+	touch.X = x
+	touch.Y = y
+	touch.DeltaX = touch.X - touch.LastX
+	touch.DeltaY = touch.Y - touch.LastY
+
+	if touch.DeltaX != 0 || touch.DeltaY != 0 {
+		touch.State = TouchStateMoved
+	} else {
+		touch.State = TouchStateStationary
+	}
+}
+
+// createNewTouch creates a new touch with full state tracking.
+func (h *TouchInputHandler) createNewTouch(id ebiten.TouchID, x, y int, now time.Time) {
+	touch := &Touch{
+		ID:        id,
+		X:         x,
+		Y:         y,
+		StartX:    x,
+		StartY:    y,
+		LastX:     x,
+		LastY:     y,
+		DeltaX:    0,
+		DeltaY:    0,
+		StartTime: now,
+		Active:    true,
+		State:     TouchStateStarted,
+		Consumed:  false,
+	}
+	h.touches[id] = touch
+	h.bufferTouch(touch)
+}
+
+// processEndedTouches handles touch end/cancel with state tracking.
+func (h *TouchInputHandler) processEndedTouches(activeSet map[ebiten.TouchID]bool, now time.Time) {
 	for id, touch := range h.touches {
 		if !activeSet[id] {
-			touch.Active = false
-			touch.EndTime = now
-
-			// Platform parity fix: Distinguish between normal end and system cancellation
-			// On mobile, system interruptions (calls, notifications) should cancel, not end
-			// Detection heuristic: very short touch (<50ms) likely cancelled
-			duration := now.Sub(touch.StartTime)
-			if duration < 50*time.Millisecond {
-				touch.State = TouchStateCancelled
-			} else {
-				touch.State = TouchStateEnded
-			}
-
-			// Keep touch for one frame for tap detection
+			h.endTouch(touch, now)
 			delete(h.touches, id)
 		}
 	}
+}
 
-	// Platform parity fix: Reset simultaneity counter when all touches end
+// endTouch marks a touch as ended or cancelled based on duration.
+func (h *TouchInputHandler) endTouch(touch *Touch, now time.Time) {
+	touch.Active = false
+	touch.EndTime = now
+
+	duration := now.Sub(touch.StartTime)
+	if duration < 50*time.Millisecond {
+		touch.State = TouchStateCancelled
+	} else {
+		touch.State = TouchStateEnded
+	}
+}
+
+// resetSimultaneityIfNeeded resets simultaneity counter when all touches end.
+func (h *TouchInputHandler) resetSimultaneityIfNeeded() {
 	if h.simultaneousTouches == 0 {
 		h.maxSimultaneous = 0
 	}
-
-	// Update gesture detector with current touches
-	h.gestureDetector.Update(h.touches)
 }
 
 // GetActiveTouches returns all currently active touches.

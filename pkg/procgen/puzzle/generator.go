@@ -574,16 +574,39 @@ func (g *Generator) generateMemoryPatternPuzzle(rng *rand.Rand, template PuzzleT
 
 // generateColorMatchingPuzzle creates a color/symbol matching puzzle.
 func (g *Generator) generateColorMatchingPuzzle(rng *rand.Rand, template PuzzleTemplate, difficulty int, params procgen.GenerationParams) (*Puzzle, error) {
-	// Element count based on difficulty
-	elementCount := template.MinElements + int(float64(template.MaxElements-template.MinElements)*float64(difficulty)/10.0)
-
+	elementCount := g.calculateElementCount(template, difficulty)
 	puzzleID := fmt.Sprintf("color_%d", rng.Int63())
 
-	// Create elements (colored tiles/switches)
 	colors := []string{"red", "blue", "green", "yellow", "purple", "orange", "white", "black"}
-	elements := make([]PuzzleElement, elementCount)
+	elements := g.createColoredElements(elementCount, colors, rng)
+	targetColors, usedColors := g.selectTargetColors(colors, difficulty, rng)
+	solution := g.buildColorMatchSolution(elements, usedColors)
+	hint := fmt.Sprintf("Activate all %s tiles", strings.Join(targetColors, ", "))
 
-	for i := 0; i < elementCount; i++ {
+	return &Puzzle{
+		ID:           puzzleID,
+		Type:         PuzzleTypeColorMatching,
+		Difficulty:   difficulty,
+		Solution:     solution,
+		ElementCount: elementCount,
+		Elements:     elements,
+		TimeLimit:    0,
+		MaxAttempts:  0,
+		HintText:     hint,
+		Description:  "Match the correct colors to proceed",
+		RewardType:   "door",
+	}, nil
+}
+
+// calculateElementCount determines element count based on difficulty.
+func (g *Generator) calculateElementCount(template PuzzleTemplate, difficulty int) int {
+	return template.MinElements + int(float64(template.MaxElements-template.MinElements)*float64(difficulty)/10.0)
+}
+
+// createColoredElements generates colored tile elements for the puzzle.
+func (g *Generator) createColoredElements(count int, colors []string, rng *rand.Rand) []PuzzleElement {
+	elements := make([]PuzzleElement, count)
+	for i := 0; i < count; i++ {
 		elements[i] = PuzzleElement{
 			ID:           fmt.Sprintf("tile_%d", i),
 			ElementType:  "colored_tile",
@@ -592,8 +615,11 @@ func (g *Generator) generateColorMatchingPuzzle(rng *rand.Rand, template PuzzleT
 			Interactable: true,
 		}
 	}
+	return elements
+}
 
-	// Solution: activate tiles of specific colors
+// selectTargetColors chooses unique target colors for the puzzle solution.
+func (g *Generator) selectTargetColors(colors []string, difficulty int, rng *rand.Rand) ([]string, map[string]bool) {
 	numColors := 1 + difficulty/3
 	if numColors > len(colors) {
 		numColors = len(colors)
@@ -612,8 +638,11 @@ func (g *Generator) generateColorMatchingPuzzle(rng *rand.Rand, template PuzzleT
 			}
 		}
 	}
+	return targetColors, usedColors
+}
 
-	// Build solution from elements matching target colors
+// buildColorMatchSolution builds solution from elements matching target colors.
+func (g *Generator) buildColorMatchSolution(elements []PuzzleElement, usedColors map[string]bool) []string {
 	solution := make([]string, 0)
 	for _, elem := range elements {
 		if colorStr, ok := elem.State.(string); ok {
@@ -624,28 +653,8 @@ func (g *Generator) generateColorMatchingPuzzle(rng *rand.Rand, template PuzzleT
 	}
 
 	// Ensure solution has at least one element
-	if len(solution) == 0 {
-		// If no matching colors, just use first element
-		if len(elements) > 0 {
-			solution = append(solution, elements[0].ID)
-		}
+	if len(solution) == 0 && len(elements) > 0 {
+		solution = append(solution, elements[0].ID)
 	}
-
-	hint := fmt.Sprintf("Activate all %s tiles", strings.Join(targetColors, ", "))
-
-	puzzle := &Puzzle{
-		ID:           puzzleID,
-		Type:         PuzzleTypeColorMatching,
-		Difficulty:   difficulty,
-		Solution:     solution,
-		ElementCount: elementCount,
-		Elements:     elements,
-		TimeLimit:    0,
-		MaxAttempts:  0,
-		HintText:     hint,
-		Description:  "Match the correct colors to proceed",
-		RewardType:   "door",
-	}
-
-	return puzzle, nil
+	return solution
 }

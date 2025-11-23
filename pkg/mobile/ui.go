@@ -297,27 +297,33 @@ func (m *MobileMenu) updateMomentumScrolling() {
 		return
 	}
 
-	// Apply velocity to scroll offset
 	m.scrollOffset += m.scrollVelocity
-
-	// Clamp scroll offset to valid range
-	itemHeight := 50.0 // Default item height
-	if len(m.Items) > 0 {
-		itemHeight = m.Height / float64(len(m.Items))
-	}
-	maxScroll := float64(len(m.Items))*itemHeight - m.Height
+	maxScroll := m.calculateMaxScroll()
 
 	if maxScroll <= 0 {
-		m.scrollOffset = 0
-		m.isScrolling = false
-		m.scrollVelocity = 0
+		m.stopScrolling()
 		return
 	}
 
-	// Platform parity fix: Bounce-back effect when overscrolling (iOS-like behavior)
+	m.applyBounceBackEffect(maxScroll)
+	m.applyDeceleration()
+	m.stopIfVelocityNegligible(maxScroll)
+}
+
+// calculateMaxScroll returns the maximum scroll offset for the menu.
+func (m *MobileMenu) calculateMaxScroll() float64 {
+	itemHeight := 50.0
+	if len(m.Items) > 0 {
+		itemHeight = m.Height / float64(len(m.Items))
+	}
+	return float64(len(m.Items))*itemHeight - m.Height
+}
+
+// applyBounceBackEffect applies rubber-band resistance when overscrolling.
+func (m *MobileMenu) applyBounceBackEffect(maxScroll float64) {
 	if m.scrollOffset > 0 {
 		// Scrolled above top - apply strong resistance
-		m.scrollOffset *= 0.85 // Rubber-band effect
+		m.scrollOffset *= 0.85
 		m.scrollVelocity *= 0.7
 		if m.scrollOffset < 1.0 {
 			m.scrollOffset = 0
@@ -325,27 +331,40 @@ func (m *MobileMenu) updateMomentumScrolling() {
 	} else if m.scrollOffset < -maxScroll {
 		// Scrolled below bottom - apply strong resistance
 		excess := m.scrollOffset + maxScroll
-		m.scrollOffset = -maxScroll + excess*0.85 // Rubber-band effect
+		m.scrollOffset = -maxScroll + excess*0.85
 		m.scrollVelocity *= 0.7
 		if m.scrollOffset > -maxScroll-1.0 {
 			m.scrollOffset = -maxScroll
 		}
 	}
+}
 
-	// Apply deceleration (friction)
+// applyDeceleration applies friction to scrolling velocity.
+func (m *MobileMenu) applyDeceleration() {
 	m.scrollVelocity *= m.scrollDeceleration
+}
 
-	// Stop scrolling when velocity is negligible
+// stopIfVelocityNegligible stops scrolling when velocity becomes negligible.
+func (m *MobileMenu) stopIfVelocityNegligible(maxScroll float64) {
 	if m.scrollVelocity > -0.1 && m.scrollVelocity < 0.1 {
-		m.isScrolling = false
-		m.scrollVelocity = 0
+		m.stopScrolling()
+		m.snapToValidRange(maxScroll)
+	}
+}
 
-		// Snap to valid range if in overscroll
-		if m.scrollOffset > 0 {
-			m.scrollOffset = 0
-		} else if m.scrollOffset < -maxScroll {
-			m.scrollOffset = -maxScroll
-		}
+// stopScrolling halts momentum scrolling and resets velocity.
+func (m *MobileMenu) stopScrolling() {
+	m.isScrolling = false
+	m.scrollVelocity = 0
+	m.scrollOffset = 0
+}
+
+// snapToValidRange snaps scroll offset to valid range if in overscroll.
+func (m *MobileMenu) snapToValidRange(maxScroll float64) {
+	if m.scrollOffset > 0 {
+		m.scrollOffset = 0
+	} else if m.scrollOffset < -maxScroll {
+		m.scrollOffset = -maxScroll
 	}
 }
 

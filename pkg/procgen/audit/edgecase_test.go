@@ -215,6 +215,7 @@ func TestEdgeCases_MaximumComplexity(t *testing.T) {
 
 			// Measure memory before
 			var memBefore runtime.MemStats
+			runtime.GC() // Force GC to get clean baseline
 			runtime.ReadMemStats(&memBefore)
 
 			result, err := gen.Generate(99999, maxParams)
@@ -223,7 +224,18 @@ func TestEdgeCases_MaximumComplexity(t *testing.T) {
 			var memAfter runtime.MemStats
 			runtime.ReadMemStats(&memAfter)
 
-			allocatedMB := float64(memAfter.Alloc-memBefore.Alloc) / 1024 / 1024
+			// Use TotalAlloc to avoid underflow from GC between measurements
+			var allocatedMB float64
+			if memAfter.TotalAlloc >= memBefore.TotalAlloc {
+				allocatedMB = float64(memAfter.TotalAlloc-memBefore.TotalAlloc) / 1024 / 1024
+			} else {
+				// GC happened, use Alloc with safety check
+				if memAfter.Alloc >= memBefore.Alloc {
+					allocatedMB = float64(memAfter.Alloc-memBefore.Alloc) / 1024 / 1024
+				} else {
+					allocatedMB = 0 // GC reclaimed memory, treat as minimal allocation
+				}
+			}
 
 			if err != nil {
 				t.Logf("%s failed with maximum complexity: %v (acceptable if resource limit)", name, err)

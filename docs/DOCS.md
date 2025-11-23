@@ -9,6 +9,7 @@ REQUIREMENTS:
 - Consolidate overlapping materials
 - Execute deletions directly without backup overhead
 - De-bloat remaining documentation by removing unnecessary details
+- Extract and preserve valuable content from deleted documents into consolidated versions
 
 EXECUTION PLAN:
 
@@ -57,29 +58,49 @@ EXECUTION PLAN:
      /YYYY/
    ```
 
-**Phase 4: Execution**
-7. Delete in priority order:
-   - Drafts where finals exist
-   - Duplicates
-   - Files exceeding age threshold
-   - Obsolete project folders
+**Phase 4: Content Extraction and Update**
+7. Before deletion, extract valuable content:
+   - Identify unique information in documents marked for deletion
+   - Extract key insights, data points, or examples not present in kept versions
+   - Note critical references, links, or metadata
    
-8. Move remaining files to clean structure
-9. Delete empty directories
+8. Update consolidated documents:
+   - Merge extracted content into appropriate consolidated documents
+   - Add missing sections or subsections from deleted files
+   - Incorporate unique examples or case studies
+   - Update tables of contents and cross-references
+   - Preserve important historical context where relevant
+   - Add attribution notes if multiple sources were merged
+   
+9. Quality check updated documents:
+   - Verify all valuable content has been preserved
+   - Ensure logical flow after content integration
+   - Remove redundant information created by merging
+   - Validate that consolidated document remains coherent
 
-**Phase 5: Cleanup**
-10. Update repository README with new structure
-11. Generate summary metrics
+**Phase 5: Execution**
+10. Delete in priority order:
+    - Drafts where finals exist (after content extraction)
+    - Duplicates (after verifying no unique content)
+    - Files exceeding age threshold (after preserving key insights)
+    - Obsolete project folders (after archiving critical information)
+   
+11. Move remaining files to clean structure
+12. Delete empty directories
 
-**Phase 6: De-bloating**
-12. Review files marked for DE-BLOAT:
+**Phase 6: Cleanup**
+13. Update repository README with new structure
+14. Generate summary metrics
+
+**Phase 7: De-bloating**
+15. Review files marked for DE-BLOAT:
     - Remove verbose explanations that can be condensed
     - Eliminate redundant examples and repetitive content
     - Strip unnecessary formatting and whitespace
     - Condense multi-paragraph sections to essential points
     - Remove outdated references and deprecated information
     
-13. Apply de-bloating systematically:
+16. Apply de-bloating systematically:
     - Target files >500 lines first (highest impact)
     - Set reduction targets based on document type:
       * Reference docs/specs: 20-30% reduction (use 20% for critical specs, 30% for verbose ones)
@@ -89,7 +110,7 @@ EXECUTION PLAN:
     - Keep one clear example per concept (remove extras)
     - Preserve all section headers and structure
     
-14. Quality check de-bloated documents:
+17. Quality check de-bloated documents:
     - Verify core information remains intact
     - Ensure readability is maintained or improved
     - Confirm no broken references or links
@@ -110,12 +131,18 @@ Date: [YYYY-MM-DD]
 - LLM prompts preserved: [count]
 - Files de-bloated: [count]
 - Average size reduction from de-bloating: [X%]
+- Content extraction updates: [count of documents updated with extracted content]
 
 ## Deletion Criteria Used
 - Age threshold: [X years]
 - File types targeted: [list]
 - Size threshold: [if applicable]
 - LLM prompt preservation rules applied
+
+## Content Consolidation
+- Documents updated with extracted content: [count]
+- Unique insights preserved: [brief summary]
+- Examples/case studies merged: [count]
 
 ## New Repository Structure
 [Brief outline of cleaned structure]
@@ -132,6 +159,7 @@ QUALITY CRITERIA:
 ✓ Clear, simplified repository structure
 ✓ Only recent/active materials retained
 ✓ LLM prompts and templates preserved
+✓ Valuable content from deleted files preserved in consolidated documents
 ✓ Remaining documentation streamlined through de-bloating
 ✓ Cleanup completed efficiently
 
@@ -141,6 +169,9 @@ EXECUTION CHECKLIST:
 - [ ] Age/type filters applied
 - [ ] Duplicates identified
 - [ ] Consolidation completed
+- [ ] Content extraction from files marked for deletion
+- [ ] Consolidated documents updated with extracted content
+- [ ] Quality check on updated documents
 - [ ] Direct deletions executed
 - [ ] Empty folders removed
 - [ ] Structure simplified
@@ -151,21 +182,21 @@ EXAMPLE DELETION DECISIONS:
 
 **Scenario 1: Version Stack**
 - Files: Report_v1.pdf, Report_v2.pdf, Report_v3_DRAFT.pdf, Report_FINAL.pdf
-- Action: DELETE v1, v2, v3_DRAFT → Keep only Report_FINAL.pdf
+- Action: Extract unique charts from v2 → Add to Report_FINAL.pdf → DELETE v1, v2, v3_DRAFT
 
 **Scenario 2: Age-based**
 - File: Q2_2018_Analysis.xlsx
 - Age: 6+ years old
-- Action: DELETE (exceeds retention threshold)
+- Action: Extract key metrics summary → Add to annual_trends.md → DELETE original
 
 **Scenario 3: Duplicates**
 - Files: Meeting_Notes.docx, Meeting_Notes (1).docx, Meeting_Notes_copy.docx
-- Action: Keep Meeting_Notes.docx (newest) → DELETE duplicates
+- Action: Compare all versions → Merge unique action items → Keep Meeting_Notes.docx (updated) → DELETE duplicates
 
 **Scenario 4: Project Cleanup**
 - Folder: /archived_project_2017/
 - Contains: 247 files, all >5 years old
-- Action: DELETE entire folder
+- Action: Extract lessons learned → Add to project_retrospectives.md → DELETE entire folder
 
 **Scenario 5: LLM Prompt Preservation**
 - File: code-review-prompt.md

@@ -787,38 +787,54 @@ func (g *Generator) drawSconce(img *image.RGBA, width, height int, base, accent 
 }
 
 func (g *Generator) drawWallCrack(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
-	// Draw jagged crack line from top to bottom
 	x := width / 2
 	for y := 0; y < height; y++ {
-		// Draw crack line
-		for dx := -1; dx <= 1; dx++ {
-			if x+dx >= 0 && x+dx < width {
-				img.Set(x+dx, y, base)
-			}
+		g.drawCrackSegment(img, x, y, width, base)
+		x = g.moveHorizontally(x, width, rng)
+		g.addBranch(img, x, y, width, height, accent, rng)
+	}
+}
+
+// drawCrackSegment draws a crack line segment with thickness.
+func (g *Generator) drawCrackSegment(img *image.RGBA, x, y, width int, base color.Color) {
+	for dx := -1; dx <= 1; dx++ {
+		if x+dx >= 0 && x+dx < width {
+			img.Set(x+dx, y, base)
 		}
-		// Random horizontal movement
-		if rng.Float64() < 0.3 {
-			x += rng.Intn(5) - 2
-			if x < width/4 {
-				x = width / 4
-			}
-			if x >= width*3/4 {
-				x = width*3/4 - 1
-			}
+	}
+}
+
+// moveHorizontally applies random horizontal movement to crack position.
+func (g *Generator) moveHorizontally(x, width int, rng *rand.Rand) int {
+	if rng.Float64() < 0.3 {
+		x += rng.Intn(5) - 2
+		if x < width/4 {
+			x = width / 4
 		}
-		// Add side branches occasionally
-		if rng.Float64() < 0.1 {
-			branchLen := 2 + rng.Intn(4)
-			dir := 1
-			if rng.Float64() < 0.5 {
-				dir = -1
-			}
-			for i := 0; i < branchLen; i++ {
-				bx := x + i*dir
-				if bx >= 0 && bx < width && y+i < height {
-					img.Set(bx, y+i, accent)
-				}
-			}
+		if x >= width*3/4 {
+			x = width*3/4 - 1
+		}
+	}
+	return x
+}
+
+// addBranch occasionally adds a side branch to the crack.
+func (g *Generator) addBranch(img *image.RGBA, x, y, width, height int, accent color.Color, rng *rand.Rand) {
+	if rng.Float64() >= 0.1 {
+		return
+	}
+
+	branchLen := 2 + rng.Intn(4)
+	dir := 1
+	if rng.Float64() < 0.5 {
+		dir = -1
+	}
+
+	for i := 0; i < branchLen; i++ {
+		bx := x + i*dir
+		by := y + i
+		if bx >= 0 && bx < width && by < height {
+			img.Set(bx, by, accent)
 		}
 	}
 }

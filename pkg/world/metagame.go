@@ -255,46 +255,71 @@ func (em *EventManager) CheckCompletion(eventID string) (bool, error) {
 		return false, fmt.Errorf("event not found: %s", eventID)
 	}
 
-	now := time.Now().Unix()
-	if now > event.EndTime {
+	if em.isEventExpired(event) {
 		event.Active = false
 		return false, nil
 	}
 
+	completed := em.checkEventGoals(event)
+	if completed {
+		event.Active = false
+	}
+	return completed, nil
+}
+
+// isEventExpired checks if an event has passed its end time.
+func (em *EventManager) isEventExpired(event *MetaGameEvent) bool {
+	return time.Now().Unix() > event.EndTime
+}
+
+// checkEventGoals checks if event-specific goals are met.
+func (em *EventManager) checkEventGoals(event *MetaGameEvent) bool {
 	switch event.Type {
 	case EventWorldThreat:
-		damageDealt := event.Progress["damage_dealt"]
-		requiredDamage := event.Goals["boss_damage"]
-		if damageDealt >= requiredDamage {
-			event.Active = false
-			return true, nil
-		}
+		return em.checkWorldThreatGoals(event)
 	case EventServerVsServer:
-		for server, progress := range event.Progress {
-			if progress >= event.Goals["resources"] {
-				event.Active = false
-				return true, nil
-			}
-			_ = server
-		}
+		return em.checkServerVsServerGoals(event)
 	default:
-		for _, progress := range event.Progress {
-			allGoalsMet := true
-			for goalKey, goalValue := range event.Goals {
-				if progress < goalValue {
-					allGoalsMet = false
-					break
-				}
-				_ = goalKey
-			}
-			if allGoalsMet {
-				event.Active = false
-				return true, nil
-			}
+		return em.checkDefaultGoals(event)
+	}
+}
+
+// checkWorldThreatGoals checks if world threat damage goal is met.
+func (em *EventManager) checkWorldThreatGoals(event *MetaGameEvent) bool {
+	damageDealt := event.Progress["damage_dealt"]
+	requiredDamage := event.Goals["boss_damage"]
+	return damageDealt >= requiredDamage
+}
+
+// checkServerVsServerGoals checks if any server met resource goal.
+func (em *EventManager) checkServerVsServerGoals(event *MetaGameEvent) bool {
+	resourceGoal := event.Goals["resources"]
+	for _, progress := range event.Progress {
+		if progress >= resourceGoal {
+			return true
 		}
 	}
+	return false
+}
 
-	return false, nil
+// checkDefaultGoals checks if any participant met all goals.
+func (em *EventManager) checkDefaultGoals(event *MetaGameEvent) bool {
+	for _, progress := range event.Progress {
+		if em.allGoalsMet(progress, event.Goals) {
+			return true
+		}
+	}
+	return false
+}
+
+// allGoalsMet checks if progress meets all goal requirements.
+func (em *EventManager) allGoalsMet(progress int, goals map[string]int) bool {
+	for _, goalValue := range goals {
+		if progress < goalValue {
+			return false
+		}
+	}
+	return true
 }
 
 // GetActiveEvents returns all currently active events.

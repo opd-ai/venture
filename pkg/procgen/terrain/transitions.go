@@ -213,13 +213,15 @@ func weightedSelectTile(tiles []TileType, weights []float64, rng *rand.Rand) Til
 // BlendTransitionZones creates transition zones between all adjacent regions.
 // Radius determines the width of the transition zone (typically 2-4 tiles).
 func BlendTransitionZones(terrain *Terrain, diagram *VoronoiDiagram, biomeTypes map[int]BiomeType, radius int, rng *rand.Rand) {
-	// Find all boundary tiles
 	boundaries := diagram.FindBoundaryTiles()
-
-	// Create transition zone by expanding boundaries
 	transitionZone := ExpandBoundaryZone(boundaries, radius, terrain.Width, terrain.Height)
+	regionPairs := groupTransitionTilesByRegionPairs(transitionZone, diagram)
+	sortedPairs := sortRegionPairs(regionPairs)
+	applyTransitionsForPairs(terrain, regionPairs, sortedPairs, biomeTypes, rng)
+}
 
-	// Group transition tiles by adjacent region pairs
+// groupTransitionTilesByRegionPairs groups transition tiles by adjacent region pairs.
+func groupTransitionTilesByRegionPairs(transitionZone []Point, diagram *VoronoiDiagram) map[[2]int][]Point {
 	regionPairs := make(map[[2]int][]Point)
 
 	for _, p := range transitionZone {
@@ -228,37 +230,49 @@ func BlendTransitionZones(terrain *Terrain, diagram *VoronoiDiagram, biomeTypes 
 			continue
 		}
 
-		// Check neighbors for different regions
-		neighbors := []Point{
-			{X: p.X - 1, Y: p.Y},
-			{X: p.X + 1, Y: p.Y},
-			{X: p.X, Y: p.Y - 1},
-			{X: p.X, Y: p.Y + 1},
-		}
-
-		for _, n := range neighbors {
-			neighborRegion := diagram.GetRegion(n.X, n.Y)
-			if neighborRegion >= 0 && neighborRegion != currentRegion {
-				// Create ordered pair (smaller ID first)
-				pair := [2]int{currentRegion, neighborRegion}
-				if pair[0] > pair[1] {
-					pair[0], pair[1] = pair[1], pair[0]
-				}
-
-				regionPairs[pair] = append(regionPairs[pair], p)
-				break
-			}
+		neighborRegion := findDifferentNeighborRegion(p, currentRegion, diagram)
+		if neighborRegion >= 0 {
+			pair := createOrderedPair(currentRegion, neighborRegion)
+			regionPairs[pair] = append(regionPairs[pair], p)
 		}
 	}
 
-	// Apply transition styles for each region pair
-	// Sort pairs for deterministic iteration
+	return regionPairs
+}
+
+// findDifferentNeighborRegion finds a neighboring region different from current.
+func findDifferentNeighborRegion(p Point, currentRegion int, diagram *VoronoiDiagram) int {
+	neighbors := []Point{
+		{X: p.X - 1, Y: p.Y},
+		{X: p.X + 1, Y: p.Y},
+		{X: p.X, Y: p.Y - 1},
+		{X: p.X, Y: p.Y + 1},
+	}
+
+	for _, n := range neighbors {
+		neighborRegion := diagram.GetRegion(n.X, n.Y)
+		if neighborRegion >= 0 && neighborRegion != currentRegion {
+			return neighborRegion
+		}
+	}
+	return -1
+}
+
+// createOrderedPair creates an ordered pair with smaller ID first.
+func createOrderedPair(r1, r2 int) [2]int {
+	if r1 <= r2 {
+		return [2]int{r1, r2}
+	}
+	return [2]int{r2, r1}
+}
+
+// sortRegionPairs sorts region pairs for deterministic iteration.
+func sortRegionPairs(regionPairs map[[2]int][]Point) [][2]int {
 	sortedPairs := make([][2]int, 0, len(regionPairs))
 	for pair := range regionPairs {
 		sortedPairs = append(sortedPairs, pair)
 	}
 
-	// Sort by region IDs for consistent ordering
 	for i := 0; i < len(sortedPairs); i++ {
 		for j := i + 1; j < len(sortedPairs); j++ {
 			pi, pj := sortedPairs[i], sortedPairs[j]
@@ -268,14 +282,15 @@ func BlendTransitionZones(terrain *Terrain, diagram *VoronoiDiagram, biomeTypes 
 		}
 	}
 
-	// Apply transitions in deterministic order
+	return sortedPairs
+}
+
+// applyTransitionsForPairs applies transition styles for each region pair.
+func applyTransitionsForPairs(terrain *Terrain, regionPairs map[[2]int][]Point, sortedPairs [][2]int, biomeTypes map[int]BiomeType, rng *rand.Rand) {
 	for _, pair := range sortedPairs {
 		tiles := regionPairs[pair]
-		region1, region2 := pair[0], pair[1]
-
-		biome1 := biomeTypes[region1]
-		biome2 := biomeTypes[region2]
-
+		biome1 := biomeTypes[pair[0]]
+		biome2 := biomeTypes[pair[1]]
 		style := GetTransitionStyle(biome1, biome2)
 		ApplyTransitionZone(terrain, tiles, style, rng)
 	}

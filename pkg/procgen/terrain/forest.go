@@ -355,43 +355,50 @@ func (g *ForestGenerator) addWaterFeatures(terrain *Terrain, clearings []*Room, 
 
 // createLake creates a natural-looking lake.
 func (g *ForestGenerator) createLake(terrain *Terrain, clearings []*Room, rng *rand.Rand) {
-	// Random center position (avoid clearings)
-	maxAttempts := 50
-	var centerX, centerY int
-	foundValidPos := false
-
-	for attempt := 0; attempt < maxAttempts && !foundValidPos; attempt++ {
-		// BUG FIX: Phase 1 - Forest lake panic with small terrain
-		// Resolution: Guard against negative/zero range in Intn() when terrain < 20
-		if terrain.Width <= 20 || terrain.Height <= 20 {
-			break // Terrain too small for lake
-		}
-
-		centerX = 10 + rng.Intn(terrain.Width-20)
-		centerY = 10 + rng.Intn(terrain.Height-20)
-
-		// Check if far enough from clearings
-		farFromClearings := true
-		for _, clearing := range clearings {
-			cx, cy := clearing.Center()
-			dist := math.Sqrt(float64((centerX-cx)*(centerX-cx) + (centerY-cy)*(centerY-cy)))
-			if dist < 15.0 {
-				farFromClearings = false
-				break
-			}
-		}
-		foundValidPos = farFromClearings
+	centerX, centerY, valid := g.findValidLakePosition(terrain, clearings, rng)
+	if !valid {
+		return
 	}
 
-	if !foundValidPos {
-		return // Skip this lake
-	}
-
-	// Random lake size
-	radiusX := 4.0 + rng.Float64()*4.0 // 4-8 tiles
+	radiusX := 4.0 + rng.Float64()*4.0
 	radiusY := 4.0 + rng.Float64()*4.0
 
-	// Create irregular lake using ellipse with noise
+	g.fillLakeArea(terrain, centerX, centerY, radiusX, radiusY, rng)
+}
+
+// findValidLakePosition finds a valid position for a lake away from clearings.
+func (g *ForestGenerator) findValidLakePosition(terrain *Terrain, clearings []*Room, rng *rand.Rand) (int, int, bool) {
+	if terrain.Width <= 20 || terrain.Height <= 20 {
+		return 0, 0, false
+	}
+
+	maxAttempts := 50
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		centerX := 10 + rng.Intn(terrain.Width-20)
+		centerY := 10 + rng.Intn(terrain.Height-20)
+
+		if g.isFarFromClearings(centerX, centerY, clearings) {
+			return centerX, centerY, true
+		}
+	}
+	return 0, 0, false
+}
+
+// isFarFromClearings checks if a position is far enough from all clearings.
+func (g *ForestGenerator) isFarFromClearings(x, y int, clearings []*Room) bool {
+	minDist := 15.0
+	for _, clearing := range clearings {
+		cx, cy := clearing.Center()
+		dist := math.Sqrt(float64((x-cx)*(x-cx) + (y-cy)*(y-cy)))
+		if dist < minDist {
+			return false
+		}
+	}
+	return true
+}
+
+// fillLakeArea fills the lake area with water tiles using irregular ellipse.
+func (g *ForestGenerator) fillLakeArea(terrain *Terrain, centerX, centerY int, radiusX, radiusY float64, rng *rand.Rand) {
 	for dy := -int(radiusY) - 2; dy <= int(radiusY)+2; dy++ {
 		for dx := -int(radiusX) - 2; dx <= int(radiusX)+2; dx++ {
 			x := centerX + dx
@@ -401,23 +408,27 @@ func (g *ForestGenerator) createLake(terrain *Terrain, clearings []*Room, rng *r
 				continue
 			}
 
-			// Distance from center
-			normX := float64(dx) / radiusX
-			normY := float64(dy) / radiusY
-			dist := math.Sqrt(normX*normX + normY*normY)
-
-			// Add some noise to make it irregular
-			noise := rng.Float64()*0.3 - 0.15
-
-			if dist+noise < 0.7 {
-				// Deep water in center
-				terrain.SetTile(x, y, TileWaterDeep)
-			} else if dist+noise < 1.0 {
-				// Shallow water at edges
-				terrain.SetTile(x, y, TileWaterShallow)
+			waterType := g.determineWaterType(dx, dy, radiusX, radiusY, rng)
+			if waterType != TileFloor {
+				terrain.SetTile(x, y, waterType)
 			}
 		}
 	}
+}
+
+// determineWaterType determines water tile type based on distance from center.
+func (g *ForestGenerator) determineWaterType(dx, dy int, radiusX, radiusY float64, rng *rand.Rand) TileType {
+	normX := float64(dx) / radiusX
+	normY := float64(dy) / radiusY
+	dist := math.Sqrt(normX*normX + normY*normY)
+	noise := rng.Float64()*0.3 - 0.15
+
+	if dist+noise < 0.7 {
+		return TileWaterDeep
+	} else if dist+noise < 1.0 {
+		return TileWaterShallow
+	}
+	return TileFloor
 }
 
 // createRiver creates a winding river across the map.

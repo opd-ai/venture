@@ -137,33 +137,61 @@ func (g *Generator) addDiagonalShadow(img *image.RGBA, direction DiagonalDirecti
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// Add shadow on the "inner" edge of the diagonal
 	for t := 0; t < thickness; t++ {
-		switch direction {
-		case DiagonalNE: // /
-			for i := 0; i < width && i < height; i++ {
-				if i+t < width && i+t < height {
-					img.Set(bounds.Min.X+i+t, bounds.Min.Y+height-1-i-t, shadowColor)
-				}
-			}
-		case DiagonalNW: // \
-			for i := 0; i < width && i < height; i++ {
-				if i+t < width && i+t < height {
-					img.Set(bounds.Min.X+i+t, bounds.Min.Y+i+t, shadowColor)
-				}
-			}
-		case DiagonalSE: // \
-			for i := 0; i < width && i < height; i++ {
-				if i+t < width && i+t < height {
-					img.Set(bounds.Min.X+i+t, bounds.Min.Y+i+t, shadowColor)
-				}
-			}
-		case DiagonalSW: // /
-			for i := 0; i < width && i < height; i++ {
-				if i+t < width && i+t < height {
-					img.Set(bounds.Min.X+i+t, bounds.Min.Y+height-1-i-t, shadowColor)
-				}
-			}
+		g.drawShadowLayer(img, direction, shadowColor, t, bounds, width, height)
+	}
+}
+
+// drawShadowLayer draws a single shadow layer for the given direction.
+func (g *Generator) drawShadowLayer(img *image.RGBA, direction DiagonalDirection, shadowColor color.Color, offset int, bounds image.Rectangle, width, height int) {
+	switch direction {
+	case DiagonalNE:
+		g.drawNEShadow(img, shadowColor, offset, bounds, width, height)
+	case DiagonalNW:
+		g.drawNWShadow(img, shadowColor, offset, bounds, width, height)
+	case DiagonalSE:
+		g.drawSEShadow(img, shadowColor, offset, bounds, width, height)
+	case DiagonalSW:
+		g.drawSWShadow(img, shadowColor, offset, bounds, width, height)
+	}
+}
+
+// drawNEShadow draws northeast diagonal shadow.
+func (g *Generator) drawNEShadow(img *image.RGBA, shadowColor color.Color, offset int, bounds image.Rectangle, width, height int) {
+	maxDim := min(width, height)
+	for i := 0; i < maxDim; i++ {
+		if i+offset < width && i+offset < height {
+			img.Set(bounds.Min.X+i+offset, bounds.Min.Y+height-1-i-offset, shadowColor)
+		}
+	}
+}
+
+// drawNWShadow draws northwest diagonal shadow.
+func (g *Generator) drawNWShadow(img *image.RGBA, shadowColor color.Color, offset int, bounds image.Rectangle, width, height int) {
+	maxDim := min(width, height)
+	for i := 0; i < maxDim; i++ {
+		if i+offset < width && i+offset < height {
+			img.Set(bounds.Min.X+i+offset, bounds.Min.Y+i+offset, shadowColor)
+		}
+	}
+}
+
+// drawSEShadow draws southeast diagonal shadow.
+func (g *Generator) drawSEShadow(img *image.RGBA, shadowColor color.Color, offset int, bounds image.Rectangle, width, height int) {
+	maxDim := min(width, height)
+	for i := 0; i < maxDim; i++ {
+		if i+offset < width && i+offset < height {
+			img.Set(bounds.Min.X+i+offset, bounds.Min.Y+i+offset, shadowColor)
+		}
+	}
+}
+
+// drawSWShadow draws southwest diagonal shadow.
+func (g *Generator) drawSWShadow(img *image.RGBA, shadowColor color.Color, offset int, bounds image.Rectangle, width, height int) {
+	maxDim := min(width, height)
+	for i := 0; i < maxDim; i++ {
+		if i+offset < width && i+offset < height {
+			img.Set(bounds.Min.X+i+offset, bounds.Min.Y+height-1-i-offset, shadowColor)
 		}
 	}
 }

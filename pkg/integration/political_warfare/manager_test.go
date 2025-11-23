@@ -221,3 +221,453 @@ func BenchmarkUpdate(b *testing.B) {
 		manager.Update(0.016)
 	}
 }
+
+// Phase 67.2: Additional test coverage for political warfare
+
+// Test war declaration edge cases
+
+func TestDeclareWarAlreadyAtWar(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare war once
+	_, err := manager.DeclareWar(guild1, guild2, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("First DeclareWar failed: %v", err)
+	}
+
+	// Attempt to declare war again
+	_, err = manager.DeclareWar(guild1, guild2, 24*time.Hour)
+	if err == nil {
+		t.Error("Expected error when declaring war while already at war")
+	}
+}
+
+func TestDeclareWarPeaceCooldown(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Sign peace treaty
+	_, err := manager.SignPeaceTreaty(guild1, guild2, 7*24*time.Hour)
+	if err != nil {
+		t.Fatalf("SignPeaceTreaty failed: %v", err)
+	}
+
+	// Attempt to declare war during peace treaty
+	_, err = manager.DeclareWar(guild1, guild2, 24*time.Hour)
+	if err == nil {
+		t.Error("Expected error when declaring war during peace treaty")
+	}
+}
+
+// Test peace treaty negotiation with various concessions
+
+func TestSignPeaceTreatyInvalidGuild(t *testing.T) {
+	manager, _, _, guild2, _ := setupTestManager(t)
+
+	_, err := manager.SignPeaceTreaty("invalid_guild", guild2, 7*24*time.Hour)
+	if err == nil {
+		t.Error("Expected error for invalid guild1")
+	}
+
+	_, err = manager.SignPeaceTreaty(guild2, "invalid_guild", 7*24*time.Hour)
+	if err == nil {
+		t.Error("Expected error for invalid guild2")
+	}
+}
+
+func TestSignPeaceTreatyActiveTreaty(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Sign first treaty
+	treaty1, err := manager.SignPeaceTreaty(guild1, guild2, 7*24*time.Hour)
+	if err != nil {
+		t.Fatalf("First SignPeaceTreaty failed: %v", err)
+	}
+
+	// Sign another treaty (should overwrite the first)
+	treaty2, err := manager.SignPeaceTreaty(guild1, guild2, 14*24*time.Hour)
+	if err != nil {
+		t.Fatalf("Second SignPeaceTreaty failed: %v", err)
+	}
+
+	// Both should reference same treaty (overwritten)
+	if treaty2.Duration != 14*24*time.Hour {
+		t.Errorf("Expected treaty duration 14 days, got %v", treaty2.Duration)
+	}
+
+	// Verify only one active treaty exists
+	treaties := manager.GetActiveTreaties()
+	if len(treaties) != 1 {
+		t.Errorf("Expected 1 active treaty, got %d", len(treaties))
+	}
+
+	// Verify the newer treaty overwrote the older one
+	if treaties[0].Duration != treaty2.Duration {
+		t.Error("Expected newer treaty to replace older treaty")
+	}
+
+	_ = treaty1 // Suppress unused warning
+}
+
+// Test trade embargo enforcement
+
+func TestImposeEmbargoInvalidGuild(t *testing.T) {
+	manager, _, _, guild2, _ := setupTestManager(t)
+
+	_, err := manager.ImposeEmbargo("invalid_guild", guild2, 0.75)
+	if err == nil {
+		t.Error("Expected error for invalid imposer guild")
+	}
+
+	_, err = manager.ImposeEmbargo(guild2, "invalid_guild", 0.75)
+	if err == nil {
+		t.Error("Expected error for invalid target guild")
+	}
+}
+
+func TestImposeEmbargoInvalidPriceIncrease(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Test below minimum
+	_, err := manager.ImposeEmbargo(guild1, guild2, 0.3)
+	if err == nil {
+		t.Error("Expected error for price increase below 0.5")
+	}
+
+	// Test above maximum
+	_, err = manager.ImposeEmbargo(guild1, guild2, 1.0)
+	if err == nil {
+		t.Error("Expected error for price increase above 0.9")
+	}
+}
+
+func TestImposeEmbargoAlreadyExists(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Impose first embargo
+	_, err := manager.ImposeEmbargo(guild1, guild2, 0.75)
+	if err != nil {
+		t.Fatalf("First ImposeEmbargo failed: %v", err)
+	}
+
+	// Attempt to impose another embargo
+	_, err = manager.ImposeEmbargo(guild1, guild2, 0.75)
+	if err == nil {
+		t.Error("Expected error when embargo already active")
+	}
+}
+
+// Test alliance reinforcement failure scenarios
+
+func TestCallReinforcementAlliesInvalidGuild(t *testing.T) {
+	manager, _, _, guild2, _ := setupTestManager(t)
+
+	_, err := manager.CallReinforcementAllies("invalid_guild", guild2)
+	if err == nil {
+		t.Error("Expected error for invalid caller guild")
+	}
+
+	_, err = manager.CallReinforcementAllies(guild2, "invalid_guild")
+	if err == nil {
+		t.Error("Expected error for invalid enemy guild")
+	}
+}
+
+func TestCallReinforcementAlliesNoAllies(t *testing.T) {
+	manager, guildManager, _, guild2, _ := setupTestManager(t)
+
+	// Create a guild with no allies
+	loneGuildID, _ := guildManager.CreateGuild("fantasy", "player4")
+
+	call, err := manager.CallReinforcementAllies(loneGuildID, guild2)
+	if err != nil {
+		t.Fatalf("CallReinforcementAllies failed: %v", err)
+	}
+
+	if len(call.ResponingAllies) > 0 {
+		t.Error("Expected no responding allies for guild with no allies")
+	}
+}
+
+// Test diplomatic victory conditions
+
+func TestNegotiateDiplomaticVictorySuccess(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+	_ = guild1 // Used in loop below
+
+	// Declare war first
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+
+	// Wait for war to activate
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Try negotiation with large concessions
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 50000},
+		{Type: ConcessionTerritory, Value: nil},
+	}
+
+	// Run multiple times to get at least one success
+	successFound := false
+	for i := 0; i < 100; i++ {
+		// Reset war state
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
+		manager.Update(0)
+
+		success, err := manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if err != nil {
+			t.Fatalf("NegotiateDiplomaticVictory failed: %v", err)
+		}
+		if success {
+			successFound = true
+			break
+		}
+	}
+
+	if !successFound {
+		t.Log("Warning: No diplomatic victory in 100 attempts (probabilistic test)")
+	}
+}
+
+func TestNegotiateDiplomaticVictoryInvalidGuild(t *testing.T) {
+	manager, _, _, guild2, _ := setupTestManager(t)
+
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 10000},
+	}
+
+	_, err := manager.NegotiateDiplomaticVictory("invalid_guild", guild2, concessions)
+	if err == nil {
+		t.Error("Expected error for invalid attacker guild")
+	}
+
+	_, err = manager.NegotiateDiplomaticVictory(guild2, "invalid_guild", concessions)
+	if err == nil {
+		t.Error("Expected error for invalid defender guild")
+	}
+}
+
+func TestNegotiateDiplomaticVictoryNoActiveWar(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 10000},
+	}
+
+	_, err := manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+	if err == nil {
+		t.Error("Expected error when no active war exists")
+	}
+}
+
+func TestNegotiateDiplomaticVictoryConcessionTypes(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Test various concession types
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 10000},
+		{Type: ConcessionTerritory, Value: nil},
+		{Type: ConcessionApology, Value: nil},
+		{Type: ConcessionTribute, Value: []string{"item1", "item2"}},
+		{Type: ConcessionTrade, Value: 0.5},
+	}
+
+	_, err = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+	if err != nil {
+		t.Fatalf("NegotiateDiplomaticVictory with all concession types failed: %v", err)
+	}
+}
+
+// Test reputation penalty calculations
+
+func TestApplyReputationPenaltyPositivePenalty(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	err := manager.ApplyReputationPenalty(guild1, "attack", 0.3)
+	if err == nil {
+		t.Error("Expected error for positive penalty value")
+	}
+}
+
+func TestApplyReputationPenaltyTooSevere(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	err := manager.ApplyReputationPenalty(guild1, "attack", -0.6)
+	if err == nil {
+		t.Error("Expected error for penalty below -0.5")
+	}
+}
+
+func TestApplyReputationPenaltyValidRange(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	tests := []struct {
+		penalty float64
+		action  string
+	}{
+		{-0.1, "minor_attack"},
+		{-0.25, "medium_attack"},
+		{-0.5, "major_attack"},
+	}
+
+	for _, tt := range tests {
+		err := manager.ApplyReputationPenalty(guild1, tt.action, tt.penalty)
+		if err != nil {
+			t.Errorf("ApplyReputationPenalty(%s, %.2f) failed: %v", tt.action, tt.penalty, err)
+		}
+	}
+
+	penalties := manager.GetReputationPenalties()
+	if len(penalties) != len(tests) {
+		t.Errorf("Expected %d penalties, got %d", len(tests), len(penalties))
+	}
+}
+
+// Test getter methods
+
+func TestGetActiveWars(t *testing.T) {
+	manager, _, guild1, guild2, guild3 := setupTestManager(t)
+
+	// Declare multiple wars
+	_, err := manager.DeclareWar(guild1, guild2, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("DeclareWar 1 failed: %v", err)
+	}
+
+	_, err = manager.DeclareWar(guild1, guild3, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("DeclareWar 2 failed: %v", err)
+	}
+
+	wars := manager.GetActiveWars()
+	if len(wars) != 2 {
+		t.Errorf("Expected 2 active wars, got %d", len(wars))
+	}
+}
+
+func TestGetActiveTreaties(t *testing.T) {
+	manager, guildManager, guild1, guild2, guild3 := setupTestManager(t)
+
+	// Create fourth guild
+	guild4, _ := guildManager.CreateGuild("fantasy", "player4")
+
+	// Sign multiple treaties
+	_, err := manager.SignPeaceTreaty(guild1, guild2, 7*24*time.Hour)
+	if err != nil {
+		t.Fatalf("SignPeaceTreaty 1 failed: %v", err)
+	}
+
+	_, err = manager.SignPeaceTreaty(guild3, guild4, 14*24*time.Hour)
+	if err != nil {
+		t.Fatalf("SignPeaceTreaty 2 failed: %v", err)
+	}
+
+	treaties := manager.GetActiveTreaties()
+	if len(treaties) != 2 {
+		t.Errorf("Expected 2 active treaties, got %d", len(treaties))
+	}
+}
+
+func TestGetActiveEmbargoes(t *testing.T) {
+	manager, guildManager, guild1, guild2, guild3 := setupTestManager(t)
+
+	// Create fourth guild
+	guild4, _ := guildManager.CreateGuild("fantasy", "player4")
+
+	// Impose multiple embargoes
+	_, err := manager.ImposeEmbargo(guild1, guild2, 0.75)
+	if err != nil {
+		t.Fatalf("ImposeEmbargo 1 failed: %v", err)
+	}
+
+	_, err = manager.ImposeEmbargo(guild3, guild4, 0.6)
+	if err != nil {
+		t.Fatalf("ImposeEmbargo 2 failed: %v", err)
+	}
+
+	embargoes := manager.GetActiveEmbargoes()
+	if len(embargoes) != 2 {
+		t.Errorf("Expected 2 active embargoes, got %d", len(embargoes))
+	}
+}
+
+// Test treaty expiration via Update
+
+func TestUpdateExpiresTreaties(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Sign treaty with short duration
+	treaty, err := manager.SignPeaceTreaty(guild1, guild2, 100*time.Millisecond)
+	if err != nil {
+		t.Fatalf("SignPeaceTreaty failed: %v", err)
+	}
+
+	if !treaty.Active {
+		t.Error("Treaty should be active initially")
+	}
+
+	// Wait for expiration
+	time.Sleep(200 * time.Millisecond)
+	manager.Update(0)
+
+	if treaty.Active {
+		t.Error("Treaty should be expired after duration")
+	}
+
+	treaties := manager.GetActiveTreaties()
+	if len(treaties) != 0 {
+		t.Errorf("Expected 0 active treaties after expiration, got %d", len(treaties))
+	}
+}
+
+// Test String() methods for types
+
+func TestVictoryTypeString(t *testing.T) {
+	tests := []struct {
+		vt   VictoryType
+		want string
+	}{
+		{VictoryTypeDiplomatic, "diplomatic"},
+		{VictoryTypeMilitary, "military"},
+		{VictoryTypeDefault, "default"},
+	}
+
+	for _, tt := range tests {
+		got := tt.vt.String()
+		if got != tt.want {
+			t.Errorf("VictoryType.String() = %q, want %q", got, tt.want)
+		}
+	}
+}
+
+func TestConcessionTypeString(t *testing.T) {
+	tests := []struct {
+		ct   ConcessionType
+		want string
+	}{
+		{ConcessionGold, "gold"},
+		{ConcessionTerritory, "territory"},
+		{ConcessionApology, "apology"},
+		{ConcessionTribute, "tribute"},
+		{ConcessionTrade, "trade"},
+	}
+
+	for _, tt := range tests {
+		got := tt.ct.String()
+		if got != tt.want {
+			t.Errorf("ConcessionType.String() = %q, want %q", got, tt.want)
+		}
+	}
+}

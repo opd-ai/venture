@@ -86,12 +86,27 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not *RaidDungeon, got %T", result)
 	}
 
-	// Validate boss count (3-5 bosses per raid)
+	if err := validateRaidBosses(raid); err != nil {
+		return err
+	}
+
+	if err := validateRaidTerrain(raid); err != nil {
+		return err
+	}
+
+	if err := validateRaidRooms(raid); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateRaidBosses checks boss count and mechanics.
+func validateRaidBosses(raid *RaidDungeon) error {
 	if len(raid.Bosses) < 3 || len(raid.Bosses) > 5 {
 		return fmt.Errorf("raid must have 3-5 bosses, got %d", len(raid.Bosses))
 	}
 
-	// Validate each boss has mechanics
 	for i, boss := range raid.Bosses {
 		if len(boss.Mechanics) == 0 {
 			return fmt.Errorf("boss %d has no mechanics", i)
@@ -101,20 +116,28 @@ func (g *Generator) Validate(result interface{}) error {
 		}
 	}
 
-	// Validate terrain
+	return nil
+}
+
+// validateRaidTerrain checks terrain dimensions.
+func validateRaidTerrain(raid *RaidDungeon) error {
 	if raid.Terrain == nil {
 		return fmt.Errorf("raid has no terrain")
 	}
+
 	if raid.Terrain.Width < 50 || raid.Terrain.Height < 50 {
 		return fmt.Errorf("raid terrain too small: %dx%d", raid.Terrain.Width, raid.Terrain.Height)
 	}
 
-	// Validate rooms
+	return nil
+}
+
+// validateRaidRooms checks room count and entrance presence.
+func validateRaidRooms(raid *RaidDungeon) error {
 	if len(raid.Rooms) < 4 {
 		return fmt.Errorf("raid must have at least 4 rooms, got %d", len(raid.Rooms))
 	}
 
-	// Validate at least one entrance
 	hasEntrance := false
 	for _, room := range raid.Rooms {
 		if room.Type == RoomEntrance {
@@ -122,6 +145,7 @@ func (g *Generator) Validate(result interface{}) error {
 			break
 		}
 	}
+
 	if !hasEntrance {
 		return fmt.Errorf("raid has no entrance room")
 	}

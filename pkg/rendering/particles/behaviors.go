@@ -84,12 +84,18 @@ func DefaultPhysicsConfig() PhysicsConfig {
 // ApplyPhysics updates particle velocity and position based on physics behaviors.
 // This is called during particle system updates to simulate physical effects.
 func ApplyPhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
-	// Apply gravity
+	applyGravityForces(p, behavior, config, deltaTime)
+	applyAttractorPhysics(p, behavior, config, deltaTime)
+	applyOrbitalMotion(p, behavior, config, deltaTime)
+	applyBouncePhysics(p, behavior, config)
+}
+
+// applyGravityForces applies gravity, air resistance, rising, and sinking forces.
+func applyGravityForces(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
 	if behavior.Has(BehaviorGravity) {
 		p.VY += config.Gravity * deltaTime
 	}
 
-	// Apply air resistance (velocity damping)
 	if behavior.Has(BehaviorAirResistance) {
 		damping := 1.0 - (config.AirResistance * deltaTime)
 		if damping < 0 {
@@ -99,61 +105,67 @@ func ApplyPhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig, 
 		p.VY *= damping
 	}
 
-	// Apply rising force (opposite of gravity)
 	if behavior.Has(BehaviorRising) {
 		p.VY -= config.Gravity * 0.5 * deltaTime
 	}
 
-	// Apply sinking force (downward push)
 	if behavior.Has(BehaviorSink) {
 		p.VY += config.Gravity * 0.3 * deltaTime
 	}
+}
 
-	// Apply attraction to point
-	if behavior.Has(BehaviorAttract) {
-		dx := config.AttractorX - p.X
-		dy := config.AttractorY - p.Y
-		dist := math.Sqrt(dx*dx + dy*dy)
-		if dist > 1.0 {
-			// Normalize and scale by strength
-			force := config.AttractorStrength / (dist * dist) * deltaTime
-			p.VX += (dx / dist) * force
-			p.VY += (dy / dist) * force
-		}
+// applyAttractorPhysics applies attraction force toward a point.
+func applyAttractorPhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
+	if !behavior.Has(BehaviorAttract) {
+		return
 	}
 
-	// Apply orbital motion
-	if behavior.Has(BehaviorOrbit) {
-		dx := p.X - config.AttractorX
-		dy := p.Y - config.AttractorY
-		dist := math.Sqrt(dx*dx + dy*dy)
+	dx := config.AttractorX - p.X
+	dy := config.AttractorY - p.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
 
-		if dist > 0.1 {
-			// Tangential velocity for circular motion
-			angle := math.Atan2(dy, dx)
-			tangentAngle := angle + math.Pi/2
+	if dist > 1.0 {
+		force := config.AttractorStrength / (dist * dist) * deltaTime
+		p.VX += (dx / dist) * force
+		p.VY += (dy / dist) * force
+	}
+}
 
-			// Add centripetal acceleration
-			centripetalForce := config.OrbitSpeed * config.OrbitSpeed * dist
-			p.VX += -math.Cos(angle) * centripetalForce * deltaTime
-			p.VY += -math.Sin(angle) * centripetalForce * deltaTime
-
-			// Add tangential velocity
-			p.VX += math.Cos(tangentAngle) * config.OrbitSpeed * config.OrbitRadius * deltaTime
-			p.VY += math.Sin(tangentAngle) * config.OrbitSpeed * config.OrbitRadius * deltaTime
-		}
+// applyOrbitalMotion applies centripetal and tangential forces for circular motion.
+func applyOrbitalMotion(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
+	if !behavior.Has(BehaviorOrbit) {
+		return
 	}
 
-	// Handle bouncing off ground
-	if behavior.Has(BehaviorBounce) {
-		if p.Y > config.GroundY && p.VY > 0 {
-			// Hit ground, reverse and dampen velocity
-			p.Y = config.GroundY
-			p.VY = -p.VY * config.BounceDamping
+	dx := p.X - config.AttractorX
+	dy := p.Y - config.AttractorY
+	dist := math.Sqrt(dx*dx + dy*dy)
 
-			// Also dampen horizontal velocity on bounce
-			p.VX *= config.BounceDamping
-		}
+	if dist <= 0.1 {
+		return
+	}
+
+	angle := math.Atan2(dy, dx)
+	tangentAngle := angle + math.Pi/2
+
+	centripetalForce := config.OrbitSpeed * config.OrbitSpeed * dist
+	p.VX += -math.Cos(angle) * centripetalForce * deltaTime
+	p.VY += -math.Sin(angle) * centripetalForce * deltaTime
+
+	p.VX += math.Cos(tangentAngle) * config.OrbitSpeed * config.OrbitRadius * deltaTime
+	p.VY += math.Sin(tangentAngle) * config.OrbitSpeed * config.OrbitRadius * deltaTime
+}
+
+// applyBouncePhysics handles bouncing off ground with damping.
+func applyBouncePhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig) {
+	if !behavior.Has(BehaviorBounce) {
+		return
+	}
+
+	if p.Y > config.GroundY && p.VY > 0 {
+		p.Y = config.GroundY
+		p.VY = -p.VY * config.BounceDamping
+		p.VX *= config.BounceDamping
 	}
 }
 

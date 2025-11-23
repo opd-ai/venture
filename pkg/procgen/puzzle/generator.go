@@ -193,7 +193,23 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("invalid puzzle type: expected *Puzzle")
 	}
 
-	// Verify basic properties
+	if err := validateBasicPuzzleProperties(puzzle); err != nil {
+		return err
+	}
+
+	if err := validatePuzzleElements(puzzle); err != nil {
+		return err
+	}
+
+	if err := validatePuzzleTypeSpecific(puzzle); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBasicPuzzleProperties checks fundamental puzzle properties.
+func validateBasicPuzzleProperties(puzzle *Puzzle) error {
 	if puzzle.ID == "" {
 		return fmt.Errorf("puzzle missing ID")
 	}
@@ -206,18 +222,20 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("puzzle has no solution")
 	}
 
-	// Verify difficulty in valid range
 	if puzzle.Difficulty < 1 || puzzle.Difficulty > 10 {
 		return fmt.Errorf("puzzle difficulty %d out of range [1-10]", puzzle.Difficulty)
 	}
 
-	// Verify element count matches
+	return nil
+}
+
+// validatePuzzleElements verifies element structure and solution references.
+func validatePuzzleElements(puzzle *Puzzle) error {
 	if len(puzzle.Elements) != puzzle.ElementCount {
 		return fmt.Errorf("element count mismatch: declared=%d, actual=%d",
 			puzzle.ElementCount, len(puzzle.Elements))
 	}
 
-	// Verify solution references valid elements
 	elementIDs := make(map[string]bool)
 	for _, elem := range puzzle.Elements {
 		elementIDs[elem.ID] = true
@@ -229,7 +247,11 @@ func (g *Generator) Validate(result interface{}) error {
 		}
 	}
 
-	// Type-specific validation
+	return nil
+}
+
+// validatePuzzleTypeSpecific performs type-specific validation checks.
+func validatePuzzleTypeSpecific(puzzle *Puzzle) error {
 	switch puzzle.Type {
 	case PuzzleTypeTimedChallenge:
 		if puzzle.TimeLimit <= 0 {

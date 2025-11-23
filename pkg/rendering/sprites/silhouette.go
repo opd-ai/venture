@@ -1,6 +1,7 @@
 package sprites
 
 import (
+	"image"
 	"image/color"
 	"math"
 
@@ -222,36 +223,48 @@ func AddOutline(sprite *ebiten.Image, outlineColor color.Color, thickness int) *
 	bounds := sprite.Bounds()
 	outlined := ebiten.NewImage(bounds.Dx(), bounds.Dy())
 
-	// Draw outline first (behind sprite)
-	for y := 0; y < bounds.Dy(); y++ {
-		for x := 0; x < bounds.Dx(); x++ {
-			_, _, _, a := sprite.At(x, y).RGBA()
-			if a > 128*257 {
-				// Draw outline around this pixel
-				for dy := -thickness; dy <= thickness; dy++ {
-					for dx := -thickness; dx <= thickness; dx++ {
-						if dx == 0 && dy == 0 {
-							continue
-						}
-						ox, oy := x+dx, y+dy
-						if ox >= 0 && oy >= 0 && ox < bounds.Dx() && oy < bounds.Dy() {
-							// Only draw outline where sprite is transparent
-							_, _, _, oa := sprite.At(ox, oy).RGBA()
-							if oa < 128*257 {
-								outlined.Set(ox, oy, outlineColor)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	drawOutlinePixels(sprite, outlined, outlineColor, thickness, bounds)
 
-	// Draw original sprite on top of outline
 	op := &ebiten.DrawImageOptions{}
 	outlined.DrawImage(sprite, op)
 
 	return outlined
+}
+
+// drawOutlinePixels renders outline pixels behind the sprite.
+func drawOutlinePixels(sprite, outlined *ebiten.Image, outlineColor color.Color, thickness int, bounds image.Rectangle) {
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			if shouldDrawOutlineAt(sprite, x, y) {
+				drawOutlineAround(sprite, outlined, outlineColor, x, y, thickness, bounds)
+			}
+		}
+	}
+}
+
+// shouldDrawOutlineAt checks if pixel is opaque and needs outline.
+func shouldDrawOutlineAt(sprite *ebiten.Image, x, y int) bool {
+	_, _, _, a := sprite.At(x, y).RGBA()
+	return a > 128*257
+}
+
+// drawOutlineAround draws outline pixels around a specific position.
+func drawOutlineAround(sprite, outlined *ebiten.Image, outlineColor color.Color, x, y, thickness int, bounds image.Rectangle) {
+	for dy := -thickness; dy <= thickness; dy++ {
+		for dx := -thickness; dx <= thickness; dx++ {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+
+			ox, oy := x+dx, y+dy
+			if ox >= 0 && oy >= 0 && ox < bounds.Dx() && oy < bounds.Dy() {
+				_, _, _, oa := sprite.At(ox, oy).RGBA()
+				if oa < 128*257 {
+					outlined.Set(ox, oy, outlineColor)
+				}
+			}
+		}
+	}
 }
 
 // ValidateContrast checks if a sprite has sufficient contrast between body parts.

@@ -363,34 +363,50 @@ func (g *VehicleGenerator) Validate(result interface{}) error {
 	}
 
 	for i, vehicle := range vehicles {
-		if vehicle == nil {
-			return fmt.Errorf("vehicle %d is nil", i)
+		if err := validateVehicleBasics(vehicle, i); err != nil {
+			return err
 		}
 
-		// Validate stats are positive
-		if vehicle.MaxSpeed <= 0 {
-			return fmt.Errorf("vehicle %d has invalid MaxSpeed: %f", i, vehicle.MaxSpeed)
+		if err := validateVehicleStats(vehicle, i); err != nil {
+			return err
 		}
-		if vehicle.Acceleration <= 0 {
-			return fmt.Errorf("vehicle %d has invalid Acceleration: %f", i, vehicle.Acceleration)
-		}
-		if vehicle.Handling <= 0 {
-			return fmt.Errorf("vehicle %d has invalid Handling: %f", i, vehicle.Handling)
-		}
-		if vehicle.MaxDurability <= 0 {
-			return fmt.Errorf("vehicle %d has invalid MaxDurability: %f", i, vehicle.MaxDurability)
-		}
-		if vehicle.FuelCapacity <= 0 {
-			return fmt.Errorf("vehicle %d has invalid FuelCapacity: %f", i, vehicle.FuelCapacity)
-		}
-		if vehicle.Capacity <= 0 {
-			return fmt.Errorf("vehicle %d has invalid Capacity: %d", i, vehicle.Capacity)
-		}
+	}
 
-		// Validate name is not empty
-		if vehicle.Name == "" {
-			return fmt.Errorf("vehicle %d has empty name", i)
-		}
+	return nil
+}
+
+// validateVehicleBasics checks fundamental vehicle properties.
+func validateVehicleBasics(vehicle *Vehicle, index int) error {
+	if vehicle == nil {
+		return fmt.Errorf("vehicle %d is nil", index)
+	}
+
+	if vehicle.Name == "" {
+		return fmt.Errorf("vehicle %d has empty name", index)
+	}
+
+	return nil
+}
+
+// validateVehicleStats verifies all vehicle stats are positive.
+func validateVehicleStats(vehicle *Vehicle, index int) error {
+	if vehicle.MaxSpeed <= 0 {
+		return fmt.Errorf("vehicle %d has invalid MaxSpeed: %f", index, vehicle.MaxSpeed)
+	}
+	if vehicle.Acceleration <= 0 {
+		return fmt.Errorf("vehicle %d has invalid Acceleration: %f", index, vehicle.Acceleration)
+	}
+	if vehicle.Handling <= 0 {
+		return fmt.Errorf("vehicle %d has invalid Handling: %f", index, vehicle.Handling)
+	}
+	if vehicle.MaxDurability <= 0 {
+		return fmt.Errorf("vehicle %d has invalid MaxDurability: %f", index, vehicle.MaxDurability)
+	}
+	if vehicle.FuelCapacity <= 0 {
+		return fmt.Errorf("vehicle %d has invalid FuelCapacity: %f", index, vehicle.FuelCapacity)
+	}
+	if vehicle.Capacity <= 0 {
+		return fmt.Errorf("vehicle %d has invalid Capacity: %d", index, vehicle.Capacity)
 	}
 
 	return nil

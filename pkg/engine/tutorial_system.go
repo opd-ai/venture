@@ -506,33 +506,47 @@ func (ts *EbitenTutorialSystem) ShowNotification(msg string, duration float64) {
 // Draw renders the tutorial UI overlay (implements UISystem interface).
 // The screen parameter should be *ebiten.Image in production.
 func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
-	// Type assert to *ebiten.Image
 	ebitenScreen, ok := screen.(*ebiten.Image)
-	if !ok {
-		return // Invalid screen type
-	}
-
-	if !ts.Enabled || !ts.ShowUI {
+	if !ok || !ts.shouldDrawTutorialUI() {
 		return
 	}
 
 	step := ts.GetCurrentStep()
 	if step == nil {
-		// Show notification if available
 		if ts.NotificationTTL > 0 {
 			ts.drawNotification(ebitenScreen)
 		}
 		return
 	}
 
-	// Draw tutorial panel with responsive positioning to avoid HUD overlap
-	screenWidth := ebitenScreen.Bounds().Dx()
-	screenHeight := ebitenScreen.Bounds().Dy()
+	ts.drawTutorialPanel(ebitenScreen, step)
 
-	// Scale panel size based on screen dimensions
-	panelWidth := 400
+	if ts.NotificationTTL > 0 {
+		ts.drawNotification(ebitenScreen)
+	}
+}
+
+// shouldDrawTutorialUI returns true if the tutorial UI should be drawn.
+func (ts *EbitenTutorialSystem) shouldDrawTutorialUI() bool {
+	return ts.Enabled && ts.ShowUI
+}
+
+// drawTutorialPanel renders the complete tutorial panel.
+func (ts *EbitenTutorialSystem) drawTutorialPanel(screen *ebiten.Image, step *TutorialStep) {
+	screenWidth := screen.Bounds().Dx()
+	screenHeight := screen.Bounds().Dy()
+
+	panelWidth, panelX, panelY := ts.calculatePanelLayout(screenWidth, screenHeight)
+
+	ts.drawPanelBackground(screen, panelX, panelY, panelWidth, 150)
+	ts.drawPanelContent(screen, step, panelX, panelY, panelWidth)
+	ts.drawTutorialButtons(screen)
+}
+
+// calculatePanelLayout calculates panel dimensions and position.
+func (ts *EbitenTutorialSystem) calculatePanelLayout(screenWidth, screenHeight int) (panelWidth, panelX, panelY int) {
+	panelWidth = 400
 	if screenWidth < 800 {
-		// Minimum 300px, or leave 100px margin
 		if screenWidth-100 > 300 {
 			panelWidth = screenWidth - 100
 		} else {
@@ -541,76 +555,66 @@ func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
 	}
 	panelHeight := 150
 
-	// HUD element margins (approximate positions)
-	const hudMarginTop = 120   // Health bar + stats panel height
-	const hudMarginBottom = 60 // XP bar height
-	const hudMarginRight = 220 // Stats panel width + margin
+	const hudMarginBottom = 60
 
-	// Position panel to avoid HUD elements
-	var panelX, panelY int
 	if screenWidth >= 800 && screenHeight >= 600 {
-		// Standard position: bottom-right, above XP bar
 		panelX = screenWidth - panelWidth - 20
 		panelY = screenHeight - panelHeight - hudMarginBottom
 	} else if screenHeight >= 400 {
-		// Small screen: center-bottom, above XP bar
 		panelX = (screenWidth - panelWidth) / 2
 		panelY = screenHeight - panelHeight - hudMarginBottom
 	} else {
-		// Tiny screen: center-center overlay (last resort)
 		panelX = (screenWidth - panelWidth) / 2
 		panelY = (screenHeight - panelHeight) / 2
 	}
 
-	// Semi-transparent background
-	vector.DrawFilledRect(ebitenScreen,
-		float32(panelX), float32(panelY),
-		float32(panelWidth), float32(panelHeight),
+	return panelWidth, panelX, panelY
+}
+
+// drawPanelBackground renders the panel background, border, and progress bar.
+func (ts *EbitenTutorialSystem) drawPanelBackground(screen *ebiten.Image, x, y, width, height int) {
+	vector.DrawFilledRect(screen,
+		float32(x), float32(y),
+		float32(width), float32(height),
 		color.RGBA{0, 0, 0, 200}, false)
 
-	// Border
-	vector.StrokeRect(ebitenScreen,
-		float32(panelX), float32(panelY),
-		float32(panelWidth), float32(panelHeight),
+	vector.StrokeRect(screen,
+		float32(x), float32(y),
+		float32(width), float32(height),
 		2, color.RGBA{100, 200, 255, 255}, false)
 
-	// Progress bar
-	progressWidth := int(float64(panelWidth-20) * ts.GetProgress())
-	vector.DrawFilledRect(ebitenScreen,
-		float32(panelX+10), float32(panelY+10),
+	progressWidth := int(float64(width-20) * ts.GetProgress())
+	vector.DrawFilledRect(screen,
+		float32(x+10), float32(y+10),
 		float32(progressWidth), 4,
 		color.RGBA{100, 200, 255, 255}, false)
+}
 
-	// Title
+// drawPanelContent renders the tutorial text content.
+func (ts *EbitenTutorialSystem) drawPanelContent(screen *ebiten.Image, step *TutorialStep, x, y, width int) {
 	titleColor := color.RGBA{255, 255, 100, 255}
-	text.Draw(ebitenScreen, fmt.Sprintf("Tutorial (%d/%d)", ts.CurrentStepIdx+1, len(ts.Steps)),
-		basicfont.Face7x13, panelX+10, panelY+35, titleColor)
+	text.Draw(screen, fmt.Sprintf("Tutorial (%d/%d)", ts.CurrentStepIdx+1, len(ts.Steps)),
+		basicfont.Face7x13, x+10, y+35, titleColor)
 
-	text.Draw(ebitenScreen, step.Title, basicfont.Face7x13, panelX+10, panelY+55, color.White)
+	text.Draw(screen, step.Title, basicfont.Face7x13, x+10, y+55, color.White)
 
-	// Description
 	descColor := color.RGBA{200, 200, 200, 255}
-	ts.drawWrappedText(ebitenScreen, step.Description, panelX+10, panelY+75, panelWidth-20, descColor)
+	ts.drawWrappedText(screen, step.Description, x+10, y+75, width-20, descColor)
 
-	// Objective
 	objColor := color.RGBA{100, 255, 100, 255}
-	text.Draw(ebitenScreen, "Objective: "+step.Objective, basicfont.Face7x13, panelX+10, panelY+120, objColor)
+	text.Draw(screen, "Objective: "+step.Objective, basicfont.Face7x13, x+10, y+120, objColor)
 
-	// Skip hint
 	hintColor := color.RGBA{150, 150, 150, 255}
-	text.Draw(ebitenScreen, "Press ESC to skip current step", basicfont.Face7x13, panelX+10, panelY+140, hintColor)
+	text.Draw(screen, "Press ESC to skip current step", basicfont.Face7x13, x+10, y+140, hintColor)
+}
 
-	// Draw touch buttons
+// drawTutorialButtons renders the touch buttons.
+func (ts *EbitenTutorialSystem) drawTutorialButtons(screen *ebiten.Image) {
 	if ts.nextButton != nil {
-		ts.nextButton.Draw(ebitenScreen)
+		ts.nextButton.Draw(screen)
 	}
 	if ts.skipButton != nil {
-		ts.skipButton.Draw(ebitenScreen)
-	}
-
-	// Show notification if available
-	if ts.NotificationTTL > 0 {
-		ts.drawNotification(ebitenScreen)
+		ts.skipButton.Draw(screen)
 	}
 }
 

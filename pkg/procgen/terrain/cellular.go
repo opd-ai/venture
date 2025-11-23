@@ -52,9 +52,30 @@ func (g *CellularGenerator) Generate(seed int64, params procgen.GenerationParams
 		}).Debug("starting cellular automata terrain generation")
 	}
 
-	// Use custom parameters if provided, otherwise use defaults
-	width := 80
-	height := 50
+	width, height := g.parseTerrainDimensions(params)
+	if err := g.validateTerrainDimensions(width, height); err != nil {
+		return nil, err
+	}
+
+	terrain, addedLakes := g.generateCellularTerrain(seed, width, height)
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"width":      terrain.Width,
+			"height":     terrain.Height,
+			"iterations": g.iterations,
+			"lakes":      addedLakes,
+		}).Info("cellular automata terrain generation complete")
+	}
+
+	return terrain, nil
+}
+
+// parseTerrainDimensions extracts width and height from custom parameters.
+func (g *CellularGenerator) parseTerrainDimensions(params procgen.GenerationParams) (width, height int) {
+	width = 80
+	height = 50
+
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok {
 			width = w
@@ -70,51 +91,43 @@ func (g *CellularGenerator) Generate(seed int64, params procgen.GenerationParams
 		}
 	}
 
-	// Validate dimensions to prevent panic on slice allocation
+	return width, height
+}
+
+// validateTerrainDimensions validates width and height are within acceptable bounds.
+func (g *CellularGenerator) validateTerrainDimensions(width, height int) error {
 	if width <= 0 || height <= 0 {
-		return nil, fmt.Errorf("invalid dimensions: width and height must be positive (got width=%d, height=%d)", width, height)
+		return fmt.Errorf("invalid dimensions: width and height must be positive (got width=%d, height=%d)", width, height)
 	}
 
-	// Set reasonable maximum to prevent memory exhaustion
 	const maxDimension = 10000
 	if width > maxDimension || height > maxDimension {
-		return nil, fmt.Errorf("dimensions too large: maximum is %d (got width=%d, height=%d)", maxDimension, width, height)
+		return fmt.Errorf("dimensions too large: maximum is %d (got width=%d, height=%d)", maxDimension, width, height)
 	}
 
-	// Create random source from seed for deterministic generation
-	rng := rand.New(rand.NewSource(seed))
+	return nil
+}
 
-	// Create terrain
+// generateCellularTerrain creates terrain using cellular automata.
+func (g *CellularGenerator) generateCellularTerrain(seed int64, width, height int) (*Terrain, bool) {
+	rng := rand.New(rand.NewSource(seed))
 	terrain := NewTerrain(width, height, seed)
 
-	// Initialize with random noise
 	g.initializeNoise(terrain, rng)
 
-	// Apply cellular automata rules
 	for i := 0; i < g.iterations; i++ {
 		g.simulateStep(terrain)
 	}
 
-	// Post-process to ensure connectivity
 	g.ensureConnectivity(terrain)
 
-	// Add underground lakes (30% chance)
 	addedLakes := false
 	if rng.Float64() < 0.3 {
 		g.addUndergroundLakes(terrain, rng)
 		addedLakes = true
 	}
 
-	if g.logger != nil {
-		g.logger.WithFields(logrus.Fields{
-			"width":      terrain.Width,
-			"height":     terrain.Height,
-			"iterations": g.iterations,
-			"lakes":      addedLakes,
-		}).Info("cellular automata terrain generation complete")
-	}
-
-	return terrain, nil
+	return terrain, addedLakes
 }
 
 // initializeNoise fills the map with random walls and floors.

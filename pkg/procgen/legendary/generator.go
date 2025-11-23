@@ -25,93 +25,92 @@ func NewLegendaryQuestGenerator() *LegendaryQuestGenerator {
 func (g *LegendaryQuestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	rng := rand.New(rand.NewSource(seed))
 
-	// Select template based on difficulty
-	templateIndex := int(params.Difficulty * float64(len(g.templates)))
-	if templateIndex < 0 {
-		templateIndex = 0
-	}
-	if templateIndex >= len(g.templates) {
-		templateIndex = len(g.templates) - 1
-	}
-	template := g.templates[templateIndex]
-
-	// Generate quest ID
+	template := g.selectQuestTemplate(params.Difficulty)
 	questID := fmt.Sprintf("legendary_quest_%d", seed)
-
-	// Generate quest name
 	questName := g.generateQuestName(rng, template, params.GenreID)
-
-	// Generate quest description
 	description := g.generateDescription(rng, questName, params.GenreID)
 
-	// Determine number of phases
-	numPhases := template.MinPhases + rng.Intn(template.MaxPhases-template.MinPhases+1)
+	numPhases := g.calculateNumPhases(rng, template)
+	phases := g.generateQuestPhases(rng, numPhases, template, params)
+	phases = g.ensurePhaseRequirements(rng, phases, numPhases, template)
 
-	// Ensure quest meets requirements
-	if numPhases < 5 {
-		numPhases = 5 // Minimum per spec
-	}
-	if numPhases > 10 {
-		numPhases = 10 // Maximum per spec
-	}
-
-	// Generate phases
-	phases := make([]*QuestPhase, numPhases)
-	usedRaid := false
-	usedCrafting := false
-	usedTravel := false
-
-	for i := 0; i < numPhases; i++ {
-		phaseType := template.PhaseTypes[rng.Intn(len(template.PhaseTypes))]
-
-		// Ensure requirements are met
-		if i == numPhases-2 && template.RequiresRaid && !usedRaid {
-			phaseType = PhaseRaid
-		}
-		if i == numPhases-1 && template.RequiresCrafting && !usedCrafting {
-			phaseType = PhaseCraft
-		}
-
-		phase := g.generatePhase(rng, i+1, phaseType, params, template)
-		phases[i] = phase
-
-		if phaseType == PhaseRaid {
-			usedRaid = true
-		}
-		if phaseType == PhaseCraft {
-			usedCrafting = true
-		}
-		if phaseType == PhaseTravel {
-			usedTravel = true
-		}
-	}
-
-	// Ensure at least one travel phase for cross-server requirement
-	if !usedTravel {
-		// Replace a random phase with travel
-		replaceIndex := 1 + rng.Intn(numPhases-2) // Not first or last
-		phases[replaceIndex] = g.generatePhase(rng, replaceIndex+1, PhaseTravel, params, template)
-	}
-
-	// Generate rewards
 	rewards := g.generateRewards(rng, params, template)
-
-	// Calculate estimated hours
 	estimatedHours := template.EstimatedHoursMin + rng.Float64()*(template.EstimatedHoursMax-template.EstimatedHoursMin)
 
-	// Create quest
 	quest := &LegendaryQuest{
 		ID:             questID,
 		Name:           questName,
 		Description:    description,
 		Phases:         phases,
 		Rewards:        rewards,
-		RequiredLevel:  20 + int(params.Depth*5), // Scale with depth
+		RequiredLevel:  20 + int(params.Depth*5),
 		Seed:           seed,
 		EstimatedHours: estimatedHours,
 	}
 
 	return quest, nil
+}
+
+// selectQuestTemplate selects a template based on difficulty.
+func (g *LegendaryQuestGenerator) selectQuestTemplate(difficulty float64) *QuestTemplate {
+	templateIndex := int(difficulty * float64(len(g.templates)))
+	if templateIndex < 0 {
+		templateIndex = 0
+	}
+	if templateIndex >= len(g.templates) {
+		templateIndex = len(g.templates) - 1
+	}
+	return g.templates[templateIndex]
+}
+
+// calculateNumPhases determines the number of quest phases.
+func (g *LegendaryQuestGenerator) calculateNumPhases(rng *rand.Rand, template *QuestTemplate) int {
+	numPhases := template.MinPhases + rng.Intn(template.MaxPhases-template.MinPhases+1)
+	if numPhases < 5 {
+		numPhases = 5
+	}
+	if numPhases > 10 {
+		numPhases = 10
+	}
+	return numPhases
+}
+
+// generateQuestPhases generates all quest phases.
+func (g *LegendaryQuestGenerator) generateQuestPhases(rng *rand.Rand, numPhases int, template *QuestTemplate, params procgen.GenerationParams) []*QuestPhase {
+	phases := make([]*QuestPhase, numPhases)
+
+	for i := 0; i < numPhases; i++ {
+		phaseType := template.PhaseTypes[rng.Intn(len(template.PhaseTypes))]
+
+		if i == numPhases-2 && template.RequiresRaid {
+			phaseType = PhaseRaid
+		}
+		if i == numPhases-1 && template.RequiresCrafting {
+			phaseType = PhaseCraft
+		}
+
+		phases[i] = g.generatePhase(rng, i+1, phaseType, params, template)
+	}
+
+	return phases
+}
+
+// ensurePhaseRequirements ensures quest meets all phase requirements.
+func (g *LegendaryQuestGenerator) ensurePhaseRequirements(rng *rand.Rand, phases []*QuestPhase, numPhases int, template *QuestTemplate) []*QuestPhase {
+	hasTravel := false
+	for _, phase := range phases {
+		if phase.Type == PhaseTravel {
+			hasTravel = true
+			break
+		}
+	}
+
+	if !hasTravel {
+		replaceIndex := 1 + rng.Intn(numPhases-2)
+		phases[replaceIndex] = g.generatePhase(rng, replaceIndex+1, PhaseTravel, procgen.GenerationParams{}, template)
+	}
+
+	return phases
 }
 
 // Validate ensures the generated quest meets quality standards.

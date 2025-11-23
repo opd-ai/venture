@@ -1023,16 +1023,30 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 		}).Debug("Casting buff spell")
 	}
 
+	if !s.validateBuffSpellCaster() {
+		return
+	}
+
+	duration := s.determineBuffDuration(caster, spell)
+	s.applyElementalBuff(caster, spell, duration)
+}
+
+// validateBuffSpellCaster checks if the caster can cast buff spells.
+func (s *SpellCastingSystem) validateBuffSpellCaster() bool {
 	if s.statusEffectSys == nil {
 		if s.logger != nil {
 			s.logger.Warn("StatusEffectSystem is nil, cannot apply buff")
 		}
-		return
+		return false
 	}
+	return true
+}
 
+// determineBuffDuration calculates the duration for a buff spell.
+func (s *SpellCastingSystem) determineBuffDuration(caster *Entity, spell *magic.Spell) float64 {
 	duration := spell.Stats.Duration
 	if duration <= 0 {
-		duration = 30.0 // Default duration
+		duration = 30.0
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  caster.ID,
@@ -1040,8 +1054,11 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 			}).Debug("Using default buff duration")
 		}
 	}
+	return duration
+}
 
-	// Determine buff type based on spell element
+// applyElementalBuff applies a buff based on spell element.
+func (s *SpellCastingSystem) applyElementalBuff(caster *Entity, spell *magic.Spell, duration float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":  caster.ID,
@@ -1050,51 +1067,44 @@ func (s *SpellCastingSystem) castBuffSpell(caster *Entity, spell *magic.Spell) {
 			"duration":   duration,
 		}).Debug("Determining buff type by element")
 	}
+
 	switch spell.Element {
 	case magic.ElementWind:
-		// Haste - increased attack speed (represented as attack boost)
 		s.statusEffectSys.ApplyStatusEffect(caster, "haste", 0.5, duration, 0)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"buff_type": "haste",
-				"magnitude": 0.5,
-				"duration":  duration,
-			}).Info("Buff applied")
-		}
+		s.logBuffApplied(caster.ID, "haste", 0.5, duration)
 	case magic.ElementLight:
-		// Strength - increased attack
 		s.statusEffectSys.ApplyStatusEffect(caster, "strength", 0.3, duration, 0)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"buff_type": "strength",
-				"magnitude": 0.3,
-				"duration":  duration,
-			}).Info("Buff applied")
-		}
+		s.logBuffApplied(caster.ID, "strength", 0.3, duration)
 	case magic.ElementEarth:
-		// Fortify - increased defense
 		s.statusEffectSys.ApplyStatusEffect(caster, "fortify", 0.3, duration, 0)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"buff_type": "fortify",
-				"magnitude": 0.3,
-				"duration":  duration,
-			}).Info("Buff applied")
-		}
+		s.logBuffApplied(caster.ID, "fortify", 0.3, duration)
 	default:
-		// Generic buff - small attack and defense boost
 		s.statusEffectSys.ApplyStatusEffect(caster, "strength", 0.2, duration, 0)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": caster.ID,
-				"buff_type": "strength",
-				"magnitude": 0.2,
-				"duration":  duration,
-			}).Info("Generic buff applied")
-		}
+		s.logGenericBuffApplied(caster.ID, duration)
+	}
+}
+
+// logBuffApplied logs when a buff is applied.
+func (s *SpellCastingSystem) logBuffApplied(entityID uint64, buffType string, magnitude, duration float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"buff_type": buffType,
+			"magnitude": magnitude,
+			"duration":  duration,
+		}).Info("Buff applied")
+	}
+}
+
+// logGenericBuffApplied logs when a generic buff is applied.
+func (s *SpellCastingSystem) logGenericBuffApplied(entityID uint64, duration float64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"buff_type": "strength",
+			"magnitude": 0.2,
+			"duration":  duration,
+		}).Info("Generic buff applied")
 	}
 }
 
@@ -1525,6 +1535,17 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 		}).Debug("Casting reveal spell")
 	}
 
+	pos, ok := s.validateRevealSpellPosition(caster)
+	if !ok {
+		return
+	}
+
+	revealRadius := s.calculateRevealRadius(caster, spell)
+	s.applyRevealEffects(caster, pos, revealRadius)
+}
+
+// validateRevealSpellPosition validates the caster has a valid position.
+func (s *SpellCastingSystem) validateRevealSpellPosition(caster *Entity) (*PositionComponent, bool) {
 	posComp, hasPos := caster.GetComponent("position")
 	if !hasPos {
 		if s.logger != nil {
@@ -1532,17 +1553,20 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 				"entity_id": caster.ID,
 			}).Warn("Caster has no position component for reveal spell")
 		}
-		return
+		return nil, false
 	}
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
-		return
+		return nil, false
 	}
+	return pos, true
+}
 
-	// Determine reveal radius from spell stats
+// calculateRevealRadius determines the reveal radius from spell stats.
+func (s *SpellCastingSystem) calculateRevealRadius(caster *Entity, spell *magic.Spell) float64 {
 	revealRadius := spell.Stats.AreaSize
 	if revealRadius <= 0 {
-		revealRadius = 200.0 // Default reveal radius
+		revealRadius = 200.0
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  caster.ID,
@@ -1550,7 +1574,11 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 			}).Debug("Using default reveal radius")
 		}
 	}
+	return revealRadius
+}
 
+// applyRevealEffects applies status effect and spawns visual/audio effects.
+func (s *SpellCastingSystem) applyRevealEffects(caster *Entity, pos *PositionComponent, revealRadius float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":     caster.ID,
@@ -1560,11 +1588,8 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 		}).Info("Reveal spell effect applied")
 	}
 
-	// Reveal fog of war (requires access to map UI system)
-	// This is handled at a higher level in the game loop
-	// For now, we mark this with a temporary status effect that the map system can detect
 	if s.statusEffectSys != nil {
-		duration := 0.1 // Brief marker effect
+		duration := 0.1
 		s.statusEffectSys.ApplyStatusEffect(caster, "revealing", revealRadius, duration, 0)
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -1575,7 +1600,12 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 		}
 	}
 
-	// Spawn light particles to indicate reveal
+	s.spawnRevealParticles(caster, pos, revealRadius)
+	s.playRevealSound(caster)
+}
+
+// spawnRevealParticles spawns light particles for reveal effect.
+func (s *SpellCastingSystem) spawnRevealParticles(caster *Entity, pos *PositionComponent, revealRadius float64) {
 	if s.particleSys != nil {
 		config := particles.Config{
 			Type:     particles.ParticleSpark,
@@ -1585,15 +1615,17 @@ func (s *SpellCastingSystem) castRevealSpell(caster *Entity, spell *magic.Spell)
 			Duration: 1.5,
 			SpreadX:  revealRadius,
 			SpreadY:  revealRadius,
-			Gravity:  -20.0, // Slow rise
+			Gravity:  -20.0,
 			MinSize:  3.0,
 			MaxSize:  6.0,
 			Custom:   map[string]interface{}{"color": "light"},
 		}
 		s.particleSys.SpawnParticles(s.world, config, pos.X, pos.Y)
 	}
+}
 
-	// Play light sound
+// playRevealSound plays the reveal sound effect.
+func (s *SpellCastingSystem) playRevealSound(caster *Entity) {
 	if s.audioMgr != nil {
 		_ = s.audioMgr.PlaySFX("powerup", int64(caster.ID))
 	}

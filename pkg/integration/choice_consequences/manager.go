@@ -376,42 +376,56 @@ func (ct *ChoiceTracker) IsClassQuestAvailable(playerID, questID, playerClass st
 	ct.mu.RLock()
 	defer ct.mu.RUnlock()
 
-	var quest *ClassSpecificQuest
+	quest := ct.findClassQuest(questID)
+	if quest == nil {
+		return false
+	}
+
+	if !ct.checkClassRequirement(quest, playerClass) {
+		return false
+	}
+
+	if !ct.checkLevelRequirement(quest, playerLevel) {
+		return false
+	}
+
+	return ct.checkAlignmentAndPrerequisites(playerID, quest)
+}
+
+// findClassQuest searches for a class quest by ID.
+func (ct *ChoiceTracker) findClassQuest(questID string) *ClassSpecificQuest {
 	for _, q := range ct.classQuests {
 		if q.QuestID == questID {
-			quest = q
-			break
+			return q
 		}
 	}
+	return nil
+}
 
-	if quest == nil {
-		return false // Quest not found
-	}
+// checkClassRequirement validates class requirement for quest.
+func (ct *ChoiceTracker) checkClassRequirement(quest *ClassSpecificQuest, playerClass string) bool {
+	return quest.RequiredClass == playerClass
+}
 
-	// Check class requirement
-	if quest.RequiredClass != playerClass {
-		return false
-	}
+// checkLevelRequirement validates level requirement for quest.
+func (ct *ChoiceTracker) checkLevelRequirement(quest *ClassSpecificQuest, playerLevel int) bool {
+	return playerLevel >= quest.MinLevel
+}
 
-	// Check level requirement
-	if playerLevel < quest.MinLevel {
-		return false
-	}
-
-	// Check alignment requirement
+// checkAlignmentAndPrerequisites validates alignment and prerequisite choices.
+func (ct *ChoiceTracker) checkAlignmentAndPrerequisites(playerID string, quest *ClassSpecificQuest) bool {
 	state, exists := ct.players[playerID]
-	if exists && quest.AlignmentReq != nil {
-		if !state.Alignment.ChecksAlignment(quest.AlignmentReq) {
-			return false
-		}
+	if !exists {
+		return len(quest.Prerequisites) == 0
 	}
 
-	// Check prerequisites
-	if exists {
-		for _, prereq := range quest.Prerequisites {
-			if !ct.hasChoice(state, prereq) {
-				return false
-			}
+	if quest.AlignmentReq != nil && !state.Alignment.ChecksAlignment(quest.AlignmentReq) {
+		return false
+	}
+
+	for _, prereq := range quest.Prerequisites {
+		if !ct.hasChoice(state, prereq) {
+			return false
 		}
 	}
 

@@ -158,40 +158,9 @@ func (ui *EbitenSkillsUI) loadSkillTree() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
-	// Update touch handler
-	if ui.touchHandler != nil {
-		ui.touchHandler.Update()
-	}
+	ui.handleTouchInput()
 
-	// Update touch buttons
-	if ui.closeButton != nil {
-		ui.closeButton.Update()
-	}
-
-	// Handle touch pan gestures for scrolling the skill tree
-	if ui.touchHandler != nil {
-		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for Y scrolling
-			if direction > 1.0 || direction < -1.0 {
-				// Vertical swipe
-				ui.scrollOffset.Y += int(distance * 0.5)
-			} else {
-				// Horizontal swipe
-				ui.scrollOffset.X += int(distance * 0.5)
-			}
-		}
-	}
-
-	// Standardized dual-exit menu navigation: toggle key (K) OR Escape
-	// BUG FIX: Phase 1.2 - Mobile gesture support for closing skills tree
-	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
-	// Platform: Mobile (Android/iOS)
-	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Skills, ui.visible, ui.touchHandler); shouldClose {
-		if shouldToggle {
-			ui.Toggle()
-		} else {
-			ui.Hide()
-		}
+	if ui.handleMenuExit() {
 		return // Don't process other input on the same frame as toggle/close
 	}
 
@@ -199,14 +168,68 @@ func (ui *EbitenSkillsUI) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Handle mouse input
-	// Get mouse/touch position (Touch support for WASM/mobile)
+	ui.handleMouseHoverAndClick()
+}
+
+// handleTouchInput processes touch handler updates and scroll gestures.
+func (ui *EbitenSkillsUI) handleTouchInput() {
+	if ui.touchHandler != nil {
+		ui.touchHandler.Update()
+	}
+
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+
+	ui.handleScrollPanning()
+}
+
+// handleScrollPanning handles touch pan gestures for scrolling the skill tree.
+func (ui *EbitenSkillsUI) handleScrollPanning() {
+	if ui.touchHandler == nil {
+		return
+	}
+
+	direction, distance, detected := ui.touchHandler.GetSwipe()
+	if !detected {
+		return
+	}
+
+	// Vertical swipe for Y scrolling
+	if direction > 1.0 || direction < -1.0 {
+		ui.scrollOffset.Y += int(distance * 0.5)
+	} else {
+		// Horizontal swipe
+		ui.scrollOffset.X += int(distance * 0.5)
+	}
+}
+
+// handleMenuExit handles standardized dual-exit menu navigation.
+// BUG FIX: Phase 1.2 - Mobile gesture support for closing skills tree
+// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
+// Platform: Mobile (Android/iOS)
+func (ui *EbitenSkillsUI) handleMenuExit() bool {
+	shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Skills, ui.visible, ui.touchHandler)
+	if !shouldClose {
+		return false
+	}
+
+	if shouldToggle {
+		ui.Toggle()
+	} else {
+		ui.Hide()
+	}
+	return true
+}
+
+// handleMouseHoverAndClick handles mouse/touch hover detection and click actions.
+func (ui *EbitenSkillsUI) handleMouseHoverAndClick() {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 
 	// Find hovered node (adjust for scroll offset)
 	ui.hoveredNode = ui.findNodeAtPosition(mouseX-ui.scrollOffset.X, mouseY-ui.scrollOffset.Y)
 
-	// Handle left click or touch to purchase skill (Touch support for WASM/mobile)
+	// Handle left click or touch to purchase skill
 	if IsTouchOrMouseJustPressed() && ui.hoveredNode != nil {
 		ui.attemptPurchaseSkill(ui.hoveredNode.Skill.ID)
 	}

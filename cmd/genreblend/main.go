@@ -175,26 +175,38 @@ func showBlendedGenre(blended *genre.BlendedGenre, verbose bool, logger *logrus.
 }
 
 func colorBar(hexColor string) string {
-	// Simple ASCII representation
 	color := strings.ToLower(hexColor)
-	if strings.Contains(color, "ff0000") || strings.Contains(color, "8b0000") {
-		return "█████ (Red)"
-	} else if strings.Contains(color, "00ff00") || strings.Contains(color, "008000") {
-		return "█████ (Green)"
-	} else if strings.Contains(color, "0000ff") || strings.Contains(color, "000080") {
-		return "█████ (Blue)"
-	} else if strings.Contains(color, "ffff00") || strings.Contains(color, "daa520") {
-		return "█████ (Yellow/Gold)"
-	} else if strings.Contains(color, "ff00ff") || strings.Contains(color, "ff1493") {
-		return "█████ (Magenta/Pink)"
-	} else if strings.Contains(color, "00ffff") || strings.Contains(color, "00ced1") {
-		return "█████ (Cyan)"
-	} else if strings.Contains(color, "ffffff") {
-		return "█████ (White)"
-	} else if strings.Contains(color, "000000") {
-		return "█████ (Black)"
+	colorName := getBarColor(color)
+	return renderBarSegment(colorName)
+}
+
+// getBarColor determines the color name from hex string.
+func getBarColor(color string) string {
+	colorMap := map[string]string{
+		"ff0000": "Red", "8b0000": "Red",
+		"00ff00": "Green", "008000": "Green",
+		"0000ff": "Blue", "000080": "Blue",
+		"ffff00": "Yellow/Gold", "daa520": "Yellow/Gold",
+		"ff00ff": "Magenta/Pink", "ff1493": "Magenta/Pink",
+		"00ffff": "Cyan", "00ced1": "Cyan",
+		"ffffff": "White",
+		"000000": "Black",
 	}
-	return "█████"
+
+	for hexCode, name := range colorMap {
+		if strings.Contains(color, hexCode) {
+			return name
+		}
+	}
+	return ""
+}
+
+// renderBarSegment renders the colored bar with optional label.
+func renderBarSegment(colorName string) string {
+	if colorName == "" {
+		return "█████"
+	}
+	return fmt.Sprintf("█████ (%s)", colorName)
 }
 
 func init() {

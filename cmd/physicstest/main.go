@@ -213,58 +213,77 @@ func initDebrisParticles(ps []particles.PhysicsParticle, rng *rand.Rand) {
 }
 
 func renderParticles(ps []particles.PhysicsParticle, width, height int) *image.RGBA {
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	img := initializeCanvas(width, height)
 
-	// Clear to black
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.Set(x, y, color.RGBA{R: 0, G: 0, B: 0, A: 255})
-		}
-	}
-
-	// Draw particles
 	for i := range ps {
 		p := &ps[i]
 		if p.Life <= 0 {
 			continue
 		}
 
-		// Convert particle position to image coordinates
-		px := int(p.X)
-		py := int(p.Y)
-
-		if px < 0 || px >= width || py < 0 || py >= height {
+		px, py := int(p.X), int(p.Y)
+		if !isParticleVisible(px, py, width, height) {
 			continue
 		}
 
-		// Draw particle as a circle
-		size := int(p.Size)
-		for dy := -size; dy <= size; dy++ {
-			for dx := -size; dx <= size; dx++ {
-				if dx*dx+dy*dy <= size*size {
-					x := px + dx
-					y := py + dy
-					if x >= 0 && x < width && y >= 0 && y < height {
-						// Blend with existing color
-						existing := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
-						newCol := color.RGBAModel.Convert(p.Color).(color.RGBA)
+		drawParticleCircle(img, p, px, py, width, height)
+	}
 
-						// Simple alpha blending
-						alpha := float64(newCol.A) / 255.0 * p.Life
-						blended := color.RGBA{
-							R: uint8(float64(existing.R)*(1-alpha) + float64(newCol.R)*alpha),
-							G: uint8(float64(existing.G)*(1-alpha) + float64(newCol.G)*alpha),
-							B: uint8(float64(existing.B)*(1-alpha) + float64(newCol.B)*alpha),
-							A: 255,
-						}
-						img.Set(x, y, blended)
-					}
-				}
-			}
+	return img
+}
+
+// initializeCanvas creates and clears the rendering canvas.
+func initializeCanvas(width, height int) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	black := color.RGBA{R: 0, G: 0, B: 0, A: 255}
+
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.Set(x, y, black)
 		}
 	}
 
 	return img
+}
+
+// isParticleVisible checks if particle position is within canvas bounds.
+func isParticleVisible(px, py, width, height int) bool {
+	return px >= 0 && px < width && py >= 0 && py < height
+}
+
+// drawParticleCircle renders a single particle as a filled circle with alpha blending.
+func drawParticleCircle(img *image.RGBA, p *particles.PhysicsParticle, px, py, width, height int) {
+	size := int(p.Size)
+
+	for dy := -size; dy <= size; dy++ {
+		for dx := -size; dx <= size; dx++ {
+			if dx*dx+dy*dy > size*size {
+				continue
+			}
+
+			x, y := px+dx, py+dy
+			if x < 0 || x >= width || y < 0 || y >= height {
+				continue
+			}
+
+			blendPixel(img, x, y, p)
+		}
+	}
+}
+
+// blendPixel performs alpha blending of particle color with existing pixel.
+func blendPixel(img *image.RGBA, x, y int, p *particles.PhysicsParticle) {
+	existing := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
+	newCol := color.RGBAModel.Convert(p.Color).(color.RGBA)
+
+	alpha := float64(newCol.A) / 255.0 * p.Life
+	blended := color.RGBA{
+		R: uint8(float64(existing.R)*(1-alpha) + float64(newCol.R)*alpha),
+		G: uint8(float64(existing.G)*(1-alpha) + float64(newCol.G)*alpha),
+		B: uint8(float64(existing.B)*(1-alpha) + float64(newCol.B)*alpha),
+		A: 255,
+	}
+	img.Set(x, y, blended)
 }
 
 func printStatistics(ps []particles.PhysicsParticle) {

@@ -91,16 +91,34 @@ func (s *SquadSystem) updateSquad(members []*Entity, deltaTime float64) {
 
 // updateFormation calculates and applies formation positions.
 func (s *SquadSystem) updateFormation(leader *Entity, leaderSquad *SquadComponent, members []*Entity) {
-	leaderPosComp, ok := leader.GetComponent("position")
-	if !ok {
-		return
-	}
-	leaderPos, ok := leaderPosComp.(*PositionComponent)
+	leaderPos, leaderAngle, ok := s.getLeaderComponents(leader)
 	if !ok {
 		return
 	}
 
-	// Get leader's rotation for oriented formations
+	memberIndex := 0
+	for _, member := range members {
+		if member.ID == leader.ID {
+			continue // Skip leader
+		}
+
+		if s.updateMemberFormationTarget(member, leaderSquad, leaderPos, leaderAngle, memberIndex) {
+			memberIndex++
+		}
+	}
+}
+
+// getLeaderComponents extracts position and rotation from leader entity.
+func (s *SquadSystem) getLeaderComponents(leader *Entity) (*PositionComponent, float64, bool) {
+	leaderPosComp, ok := leader.GetComponent("position")
+	if !ok {
+		return nil, 0, false
+	}
+	leaderPos, ok := leaderPosComp.(*PositionComponent)
+	if !ok {
+		return nil, 0, false
+	}
+
 	leaderAngle := 0.0
 	if rotComp, ok := leader.GetComponent("rotation"); ok {
 		if rot, ok := rotComp.(*RotationComponent); ok {
@@ -108,41 +126,40 @@ func (s *SquadSystem) updateFormation(leader *Entity, leaderSquad *SquadComponen
 		}
 	}
 
-	// Calculate formation positions for each member
-	memberIndex := 0
-	for _, member := range members {
-		if member.ID == leader.ID {
-			continue // Skip leader
-		}
+	return leaderPos, leaderAngle, true
+}
 
-		squadComp, _ := member.GetComponent("squad")
-		if squadComp == nil {
-			continue
-		}
-		squad, ok := squadComp.(*SquadComponent)
-		if !ok {
-			continue
-		}
+// updateMemberFormationTarget updates a single member's formation target.
+func (s *SquadSystem) updateMemberFormationTarget(member *Entity, leaderSquad *SquadComponent, leaderPos *PositionComponent, leaderAngle float64, memberIndex int) bool {
+	squadComp, _ := member.GetComponent("squad")
+	if squadComp == nil {
+		return false
+	}
+	squad, ok := squadComp.(*SquadComponent)
+	if !ok {
+		return false
+	}
 
-		// Calculate target position based on formation type
-		targetX, targetY := s.calculateFormationPosition(
-			leaderSquad.Formation,
-			memberIndex,
-			leaderPos.X,
-			leaderPos.Y,
-			leaderAngle,
-			squad.FormationSpacing,
-		)
+	targetX, targetY := s.calculateFormationPosition(
+		leaderSquad.Formation,
+		memberIndex,
+		leaderPos.X,
+		leaderPos.Y,
+		leaderAngle,
+		squad.FormationSpacing,
+	)
 
-		// Store target position in member's blackboard
-		if btComp, ok := member.GetComponent("behaviortree"); ok {
-			if bt, ok := btComp.(*BehaviorTreeComponent); ok {
-				bt.Blackboard.Set("formation_target_x", targetX)
-				bt.Blackboard.Set("formation_target_y", targetY)
-			}
+	s.storeFormationTarget(member, targetX, targetY)
+	return true
+}
+
+// storeFormationTarget stores target position in member's behavior tree blackboard.
+func (s *SquadSystem) storeFormationTarget(member *Entity, targetX, targetY float64) {
+	if btComp, ok := member.GetComponent("behaviortree"); ok {
+		if bt, ok := btComp.(*BehaviorTreeComponent); ok {
+			bt.Blackboard.Set("formation_target_x", targetX)
+			bt.Blackboard.Set("formation_target_y", targetY)
 		}
-
-		memberIndex++
 	}
 }
 

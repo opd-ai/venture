@@ -55,35 +55,11 @@ func main() {
 	}
 	fmt.Println()
 
-	// Run benchmarks
-	var suite *visualtest.BenchmarkSuite
-
-	if *profileMemory {
-		// Profile memory while running benchmarks
-		profile := visualtest.ProfileFunction("AllBenchmarks", 1, func() {
-			suite = visualtest.RunAllBenchmarks(*seed)
-		})
-
-		fmt.Println("\n=== Memory Profile ===")
-		profile.PrintProfile()
-		fmt.Println()
-	} else {
-		suite = visualtest.RunAllBenchmarks(*seed)
-	}
+	// Run benchmarks with optional memory profiling
+	suite := runBenchmarksWithProfiling(*seed, *profileMemory)
 
 	// Filter results if requested
-	filteredResults := suite.Results
-	if *phaseFilter != "" {
-		filtered := []visualtest.BenchmarkResult{}
-		for _, result := range suite.Results {
-			if strings.HasPrefix(result.Phase, *phaseFilter) {
-				filtered = append(filtered, result)
-			}
-		}
-		filteredResults = filtered
-	}
-
-	// Print results
+	filteredResults := filterBenchmarkResults(suite.Results, *phaseFilter)
 	if len(filteredResults) == 0 {
 		fmt.Println("No benchmarks match the filter criteria")
 		os.Exit(1)
@@ -105,23 +81,58 @@ func main() {
 		printDetailedAnalysis(filteredResults)
 	}
 
-	// Check if all targets met
-	allPassed := true
-	for _, result := range filteredResults {
-		if !result.TargetMetNs || !result.TargetMetBytes {
-			allPassed = false
-			break
-		}
-	}
-
-	// Exit with appropriate code
-	if !allPassed {
+	// Check if all targets met and exit accordingly
+	if !checkAllTargetsMet(filteredResults) {
 		fmt.Println("\n⚠ Some benchmarks did not meet performance targets")
 		os.Exit(1)
 	}
 
 	fmt.Println("\n✓ All benchmarks met performance targets")
 	os.Exit(0)
+}
+
+// runBenchmarksWithProfiling runs all benchmarks with optional memory profiling.
+func runBenchmarksWithProfiling(seed int64, profileMemory bool) *visualtest.BenchmarkSuite {
+	var suite *visualtest.BenchmarkSuite
+
+	if profileMemory {
+		profile := visualtest.ProfileFunction("AllBenchmarks", 1, func() {
+			suite = visualtest.RunAllBenchmarks(seed)
+		})
+
+		fmt.Println("\n=== Memory Profile ===")
+		profile.PrintProfile()
+		fmt.Println()
+	} else {
+		suite = visualtest.RunAllBenchmarks(seed)
+	}
+
+	return suite
+}
+
+// filterBenchmarkResults filters benchmark results by phase prefix.
+func filterBenchmarkResults(results []visualtest.BenchmarkResult, phaseFilter string) []visualtest.BenchmarkResult {
+	if phaseFilter == "" {
+		return results
+	}
+
+	filtered := []visualtest.BenchmarkResult{}
+	for _, result := range results {
+		if strings.HasPrefix(result.Phase, phaseFilter) {
+			filtered = append(filtered, result)
+		}
+	}
+	return filtered
+}
+
+// checkAllTargetsMet checks if all benchmark results met their performance targets.
+func checkAllTargetsMet(results []visualtest.BenchmarkResult) bool {
+	for _, result := range results {
+		if !result.TargetMetNs || !result.TargetMetBytes {
+			return false
+		}
+	}
+	return true
 }
 
 // printDetailedAnalysis prints detailed benchmark analysis.

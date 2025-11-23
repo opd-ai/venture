@@ -132,60 +132,85 @@ func (s *DestructibleObjectSystem) createExplosion(x, y float64, destructibleObj
 		return
 	}
 
-	// Deal area damage to entities in explosion radius
+	s.applyExplosionDamageToEntities(x, y, destructibleObj)
+	s.igniteExplosionArea(x, y, destructibleObj)
+	s.logExplosionEvent(x, y, destructibleObj)
+}
+
+// applyExplosionDamageToEntities deals area damage to entities in explosion radius.
+func (s *DestructibleObjectSystem) applyExplosionDamageToEntities(x, y float64, destructibleObj *DestructibleObjectComponent) {
 	entities := s.world.GetEntities()
+	radiusSq := destructibleObj.ExplosionRadius * destructibleObj.ExplosionRadius
+
 	for _, entity := range entities {
-		// Get entity position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		entityPos, ok := posComp.(*PositionComponent)
-		if !ok {
+		entityPos := s.getEntityPosition(entity)
+		if entityPos == nil {
 			continue
 		}
 
-		// Calculate distance
-		dx := entityPos.X - x
-		dy := entityPos.Y - y
-		distSq := dx*dx + dy*dy
-		radiusSq := destructibleObj.ExplosionRadius * destructibleObj.ExplosionRadius
-
-		// Check if in explosion radius
+		distSq := s.calculateDistanceSquared(entityPos.X, entityPos.Y, x, y)
 		if distSq <= radiusSq {
-			// Get health component if entity has one
-			healthComp, ok := entity.GetComponent("health")
-			if !ok {
-				continue
-			}
-			health, ok := healthComp.(*HealthComponent)
-			if !ok {
-				continue
-			}
-
-			// Apply explosion damage (full damage at center, reduced at edges)
-			distPercent := distSq / radiusSq
-			damageMultiplier := 1.0 - distPercent // 1.0 at center, 0.0 at edge
-			damage := destructibleObj.ExplosionDamage * damageMultiplier
-
-			health.TakeDamage(damage)
-
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"targetID": entity.ID,
-					"damage":   damage,
-					"distance": distPercent,
-				}).Debug("explosion damage applied")
-			}
+			s.dealExplosionDamage(entity, distSq, radiusSq, destructibleObj.ExplosionDamage)
 		}
 	}
+}
 
-	// Ignite tiles in explosion radius if fire system is available
+// getEntityPosition retrieves the position component of an entity.
+func (s *DestructibleObjectSystem) getEntityPosition(entity *Entity) *PositionComponent {
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	entityPos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return entityPos
+}
+
+// calculateDistanceSquared calculates squared distance between two points.
+func (s *DestructibleObjectSystem) calculateDistanceSquared(x1, y1, x2, y2 float64) float64 {
+	dx := x1 - x2
+	dy := y1 - y2
+	return dx*dx + dy*dy
+}
+
+// dealExplosionDamage applies damage to an entity based on distance from explosion.
+func (s *DestructibleObjectSystem) dealExplosionDamage(entity *Entity, distSq, radiusSq, baseDamage float64) {
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+
+	distPercent := distSq / radiusSq
+	damageMultiplier := 1.0 - distPercent
+	damage := baseDamage * damageMultiplier
+
+	health.TakeDamage(damage)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"targetID": entity.ID,
+			"damage":   damage,
+			"distance": distPercent,
+		}).Debug("explosion damage applied")
+	}
+}
+
+// igniteExplosionArea ignites tiles in the explosion radius.
+func (s *DestructibleObjectSystem) igniteExplosionArea(x, y float64, destructibleObj *DestructibleObjectComponent) {
 	if s.fireSystem != nil {
-		intensity := 0.8 // Explosions create intense fires
+		intensity := 0.8
 		s.fireSystem.IgniteTilesInArea(x, y, destructibleObj.ExplosionRadius*0.5, intensity)
 	}
+}
 
+// logExplosionEvent logs details about the explosion event.
+func (s *DestructibleObjectSystem) logExplosionEvent(x, y float64, destructibleObj *DestructibleObjectComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"x":      x,

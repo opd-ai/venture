@@ -213,67 +213,91 @@ func (s *CompanionSystem) executeStay(companion *Entity, companionComp *Companio
 
 // executeAttack makes the companion attack nearby enemies.
 func (s *CompanionSystem) executeAttack(companion *Entity, companionComp *CompanionComponent, owner *Entity) {
-	// Find nearest enemy entity
-	// This is simplified - full implementation would use spatial queries
-	compPos, hasPos := companion.GetComponent("position")
-	companionPos, ok := compPos.(*PositionComponent)
-	if !hasPos || !ok {
+	companionPos := s.getCompanionPosition(companion)
+	if companionPos == nil {
 		return
 	}
 
-	// Get all entities with combat component
+	nearestEnemy := s.findNearestEnemy(companion, owner, companionPos)
+	if nearestEnemy != nil {
+		s.engageEnemy(companion, nearestEnemy, companionPos)
+	}
+}
+
+// getCompanionPosition retrieves the position component of a companion.
+func (s *CompanionSystem) getCompanionPosition(companion *Entity) *PositionComponent {
+	compPos, hasPos := companion.GetComponent("position")
+	if !hasPos {
+		return nil
+	}
+	companionPos, ok := compPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return companionPos
+}
+
+// findNearestEnemy finds the nearest hostile entity within attack range.
+func (s *CompanionSystem) findNearestEnemy(companion, owner *Entity, companionPos *PositionComponent) *Entity {
 	entities := s.world.GetEntitiesWith("position", "health")
 	var nearestEnemy *Entity
-	minDistance := 300.0 // Attack range
+	minDistance := 300.0
 
 	for _, entity := range entities {
-		// Skip self and owner
 		if entity.ID == companion.ID || entity.ID == owner.ID {
 			continue
 		}
 
-		// Check if hostile (simplified)
-		entPos, _ := entity.GetComponent("position")
-		entityPos, ok := entPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-		dx := entityPos.X - companionPos.X
-		dy := entityPos.Y - companionPos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
-
-		if distance < minDistance {
+		distance := s.calculateDistanceToEntity(entity, companionPos)
+		if distance >= 0 && distance < minDistance {
 			minDistance = distance
 			nearestEnemy = entity
 		}
 	}
 
-	// Move toward or attack nearest enemy
-	if nearestEnemy != nil {
-		enPos, _ := nearestEnemy.GetComponent("position")
-		enemyPos, ok := enPos.(*PositionComponent)
-		if !ok {
-			return
-		}
-		dx := enemyPos.X - companionPos.X
-		dy := enemyPos.Y - companionPos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
+	return nearestEnemy
+}
 
-		if distance > 32 { // Not in melee range
-			// Move toward enemy
-			if distance > 0 {
-				dx /= distance
-				dy /= distance
-			}
-			velComp, hasVelocity := companion.GetComponent("velocity")
-			if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
-				velocityComp.VX = dx * 150.0 // Aggressive speed
-				velocityComp.VY = dy * 150.0
-			}
-		} else {
-			// In range, perform attack (would trigger combat system)
-			// This is a stub - actual combat handled by CombatSystem
-		}
+// calculateDistanceToEntity calculates distance from companion to entity.
+func (s *CompanionSystem) calculateDistanceToEntity(entity *Entity, companionPos *PositionComponent) float64 {
+	entPos, _ := entity.GetComponent("position")
+	entityPos, ok := entPos.(*PositionComponent)
+	if !ok {
+		return -1
+	}
+	dx := entityPos.X - companionPos.X
+	dy := entityPos.Y - companionPos.Y
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
+// engageEnemy moves toward or attacks an enemy based on distance.
+func (s *CompanionSystem) engageEnemy(companion, enemy *Entity, companionPos *PositionComponent) {
+	enPos, _ := enemy.GetComponent("position")
+	enemyPos, ok := enPos.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	dx := enemyPos.X - companionPos.X
+	dy := enemyPos.Y - companionPos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	if distance > 32 {
+		s.moveTowardsTarget(companion, dx, dy, distance)
+	}
+}
+
+// moveTowardsTarget updates companion velocity to move toward target.
+func (s *CompanionSystem) moveTowardsTarget(companion *Entity, dx, dy, distance float64) {
+	if distance > 0 {
+		dx /= distance
+		dy /= distance
+	}
+
+	velComp, hasVelocity := companion.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+		velocityComp.VX = dx * 150.0
+		velocityComp.VY = dy * 150.0
 	}
 }
 

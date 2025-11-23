@@ -436,37 +436,49 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 		return
 	}
 
-	// Draw semi-transparent overlay
+	ui.drawMapBackground(screen)
+
+	panelX, panelY, panelWidth, panelHeight := ui.calculateMapPanelBounds()
+	mapAreaX, mapAreaY, mapAreaWidth, mapAreaHeight := ui.calculateMapArea(panelX, panelY, panelWidth, panelHeight)
+
+	tileSize, startTileX, startTileY, endTileX, endTileY := ui.calculateVisibleArea(mapAreaWidth, mapAreaHeight)
+
+	ui.renderMapTiles(screen, mapAreaX, mapAreaY, tileSize, startTileX, startTileY, endTileX, endTileY)
+	ui.renderMapOverlays(screen, mapAreaX, mapAreaY, tileSize, startTileX, startTileY, panelX, panelY, panelWidth, panelHeight)
+}
+
+// drawMapBackground draws the semi-transparent overlay and map panel.
+func (ui *EbitenMapUI) drawMapBackground(screen *ebiten.Image) {
 	vector.DrawFilledRect(screen, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
 		color.RGBA{0, 0, 0, 200}, false)
+}
 
-	// Draw map panel
+// calculateMapPanelBounds calculates the position and size of the map panel.
+func (ui *EbitenMapUI) calculateMapPanelBounds() (int, int, int, int) {
 	panelWidth := ui.screenWidth - 100
 	panelHeight := ui.screenHeight - 100
 	panelX := 50
 	panelY := 50
 
-	vector.DrawFilledRect(screen, float32(panelX), float32(panelY),
+	vector.DrawFilledRect(nil, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
 		color.RGBA{20, 20, 30, 255}, false)
-	vector.StrokeRect(screen, float32(panelX), float32(panelY),
-		float32(panelWidth), float32(panelHeight), 2,
-		color.RGBA{100, 150, 200, 255}, false)
 
-	// Title
-	titleText := "WORLD MAP"
-	titleX := panelX + panelWidth/2 - len(titleText)*3
-	text.Draw(screen, titleText, basicfont.Face7x13, titleX, panelY+20,
-		color.RGBA{255, 255, 100, 255})
+	return panelX, panelY, panelWidth, panelHeight
+}
 
-	// Draw terrain
+// calculateMapArea calculates the drawable map area within the panel.
+func (ui *EbitenMapUI) calculateMapArea(panelX, panelY, panelWidth, panelHeight int) (int, int, int, int) {
 	mapAreaX := panelX + 10
 	mapAreaY := panelY + 40
 	mapAreaWidth := panelWidth - 20
 	mapAreaHeight := panelHeight - 80
+	return mapAreaX, mapAreaY, mapAreaWidth, mapAreaHeight
+}
 
-	// Calculate visible area based on scale and offset
-	tileSize := 8.0 * ui.scale // Base 8px per tile, scaled
+// calculateVisibleArea calculates visible tile bounds based on scale and offset.
+func (ui *EbitenMapUI) calculateVisibleArea(mapAreaWidth, mapAreaHeight int) (float64, int, int, int, int) {
+	tileSize := 8.0 * ui.scale
 	startTileX := int(ui.offsetX / tileSize)
 	startTileY := int(ui.offsetY / tileSize)
 
@@ -487,7 +499,11 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 		endTileY = ui.terrain.Height
 	}
 
-	// Draw tiles
+	return tileSize, startTileX, startTileY, endTileX, endTileY
+}
+
+// renderMapTiles renders the terrain tiles in the visible area.
+func (ui *EbitenMapUI) renderMapTiles(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY, endTileX, endTileY int) {
 	for y := startTileY; y < endTileY; y++ {
 		for x := startTileX; x < endTileX; x++ {
 			if y < 0 || y >= ui.terrain.Height || x < 0 || x >= ui.terrain.Width {
@@ -506,14 +522,26 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 				float32(tileSize), float32(tileSize), tileColor, false)
 		}
 	}
+}
 
-	// Draw map icons (player, enemies, items)
+// renderMapOverlays renders icons, legend, buttons, and controls on the map.
+func (ui *EbitenMapUI) renderMapOverlays(screen *ebiten.Image, mapAreaX, mapAreaY int, tileSize float64, startTileX, startTileY, panelX, panelY, panelWidth, panelHeight int) {
+	// Draw map panel and title first
+	vector.DrawFilledRect(screen, float32(panelX), float32(panelY),
+		float32(panelWidth), float32(panelHeight),
+		color.RGBA{20, 20, 30, 255}, false)
+	vector.StrokeRect(screen, float32(panelX), float32(panelY),
+		float32(panelWidth), float32(panelHeight), 2,
+		color.RGBA{100, 150, 200, 255}, false)
+
+	titleText := "WORLD MAP"
+	titleX := panelX + panelWidth/2 - len(titleText)*3
+	text.Draw(screen, titleText, basicfont.Face7x13, titleX, panelY+20,
+		color.RGBA{255, 255, 100, 255})
+
 	ui.drawMapIcons(screen, mapAreaX, mapAreaY, tileSize, startTileX, startTileY)
-
-	// Draw legend
 	ui.drawLegend(screen, panelX+10, panelY+panelHeight-60)
 
-	// Draw touch buttons for mobile/WASM
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(screen)
 	}
@@ -521,7 +549,6 @@ func (ui *EbitenMapUI) drawFullScreenMap(screen *ebiten.Image) {
 		ui.centerButton.Draw(screen)
 	}
 
-	// Draw controls (standardized menu navigation)
 	exitHint := GetExitHint(MenuKeys.Map)
 	controlsText := "[Arrow Keys/WASD] Pan | [Mouse Wheel] Zoom | [Space] Center | " + exitHint
 	text.Draw(screen, controlsText, basicfont.Face7x13,

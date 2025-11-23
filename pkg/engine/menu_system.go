@@ -185,8 +185,24 @@ func (ms *EbitenMenuSystem) IsActive() bool {
 
 // Update processes menu input and state.
 func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
-	if ms.menuEntity == nil {
+	menuComp := ms.validateMenuComponent()
+	if menuComp == nil {
 		return
+	}
+
+	if !menuComp.Active {
+		return
+	}
+
+	ms.logMenuUpdate(menuComp, deltaTime)
+	ms.updateErrorTimeout(menuComp, deltaTime)
+	ms.handleInput(menuComp)
+}
+
+// validateMenuComponent retrieves and validates the menu component.
+func (ms *EbitenMenuSystem) validateMenuComponent() *MenuComponent {
+	if ms.menuEntity == nil {
+		return nil
 	}
 
 	menu, ok := ms.menuEntity.GetComponent("menu")
@@ -194,10 +210,9 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 		if ms.logger != nil {
 			ms.logger.WithField("entity_id", ms.menuEntity.ID).Warn("Menu entity missing menu component")
 		}
-		return
+		return nil
 	}
 
-	// Type assert with safety check
 	menuComp, ok := menu.(*MenuComponent)
 	if !ok {
 		if ms.logger != nil {
@@ -206,13 +221,14 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 				"component_type": "menu",
 			}).Warn("Failed to type assert menu component")
 		}
-		return
+		return nil
 	}
 
-	if !menuComp.Active {
-		return
-	}
+	return menuComp
+}
 
+// logMenuUpdate logs debug information about menu update.
+func (ms *EbitenMenuSystem) logMenuUpdate(menuComp *MenuComponent, deltaTime float64) {
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
 			"delta_time":     deltaTime,
@@ -221,8 +237,10 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 			"item_count":     len(menuComp.Items),
 		}).Debug("Menu system update started")
 	}
+}
 
-	// Update error message timeout
+// updateErrorTimeout decrements error message timeout and clears message when expired.
+func (ms *EbitenMenuSystem) updateErrorTimeout(menuComp *MenuComponent, deltaTime float64) {
 	if menuComp.ErrorTimeout > 0 {
 		previousTimeout := menuComp.ErrorTimeout
 		menuComp.ErrorTimeout -= deltaTime
@@ -236,9 +254,6 @@ func (ms *EbitenMenuSystem) Update(entities []*Entity, deltaTime float64) {
 			menuComp.ErrorMessage = ""
 		}
 	}
-
-	// Handle input
-	ms.handleInput(menuComp)
 }
 
 // handleInput processes keyboard and mouse input for menu navigation.

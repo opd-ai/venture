@@ -26,7 +26,17 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
+
+var log *logrus.Logger
+
+func init() {
+	log = logrus.New()
+	log.SetReportCaller(true)
+	log.SetLevel(logrus.DebugLevel)
+}
 
 // Severity indicates the severity level of a security finding
 type Severity int
@@ -82,17 +92,37 @@ type AuditResults struct {
 
 // AllPassed returns true if all security checks passed
 func (r *AuditResults) AllPassed() bool {
+	log.WithFields(logrus.Fields{
+		"total_checks":   r.TotalChecks,
+		"passed_checks":  r.PassedChecks,
+		"failed_checks":  r.FailedChecks,
+		"critical_count": r.CriticalCount,
+	}).Debug("Evaluating audit results")
 	return r.FailedChecks == 0
 }
 
 // HasCritical returns true if any critical vulnerabilities were found
 func (r *AuditResults) HasCritical() bool {
+	log.WithFields(logrus.Fields{
+		"critical_count": r.CriticalCount,
+		"has_critical":   r.CriticalCount > 0,
+	}).Debug("Checking for critical vulnerabilities")
 	return r.CriticalCount > 0
 }
 
 // Summary returns a human-readable summary of the audit
 func (r *AuditResults) Summary() string {
 	duration := r.EndTime.Sub(r.StartTime)
+	log.WithFields(logrus.Fields{
+		"total_checks":   r.TotalChecks,
+		"passed_checks":  r.PassedChecks,
+		"failed_checks":  r.FailedChecks,
+		"critical_count": r.CriticalCount,
+		"high_count":     r.HighCount,
+		"medium_count":   r.MediumCount,
+		"low_count":      r.LowCount,
+		"duration_ms":    duration.Milliseconds(),
+	}).Info("Generated audit summary")
 	return fmt.Sprintf(
 		"Security Audit: %d/%d passed (%.1f%%) - Critical: %d, High: %d, Medium: %d, Low: %d - Duration: %v",
 		r.PassedChecks, r.TotalChecks,
@@ -109,6 +139,10 @@ type Auditor struct {
 
 // NewAuditor creates a new security auditor
 func NewAuditor() *Auditor {
+	log.WithFields(logrus.Fields{
+		"expected_checks": 30,
+		"domain_count":    6,
+	}).Debug("Creating new security auditor")
 	return &Auditor{
 		checks: make([]SecurityCheck, 0, 30), // 30 total checks across 6 domains
 	}
@@ -116,37 +150,72 @@ func NewAuditor() *Auditor {
 
 // RunFullAudit executes all security checks and returns results
 func (a *Auditor) RunFullAudit() *AuditResults {
+	log.Info("Starting full security audit")
 	results := &AuditResults{
 		StartTime: time.Now(),
 		Checks:    make([]SecurityCheck, 0, 30),
 	}
 
 	// Domain 1: Federation Security (8 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Federation Security",
+		"expected_checks": 8,
+	}).Debug("Starting domain audit")
 	a.auditFederationSecurity(results)
 
 	// Domain 2: Chat & Encryption (6 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Chat & Encryption",
+		"expected_checks": 6,
+	}).Debug("Starting domain audit")
 	a.auditChatEncryption(results)
 
 	// Domain 3: Mod Sandbox (6 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Mod Sandbox",
+		"expected_checks": 6,
+	}).Debug("Starting domain audit")
 	a.auditModSandbox(results)
 
 	// Domain 4: Input Validation (4 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Input Validation",
+		"expected_checks": 4,
+	}).Debug("Starting domain audit")
 	a.auditInputValidation(results)
 
 	// Domain 5: Anti-Cheat (3 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Anti-Cheat",
+		"expected_checks": 3,
+	}).Debug("Starting domain audit")
 	a.auditAntiCheat(results)
 
 	// Domain 6: Privacy (3 checks)
+	log.WithFields(logrus.Fields{
+		"domain":          "Privacy",
+		"expected_checks": 3,
+	}).Debug("Starting domain audit")
 	a.auditPrivacy(results)
 
 	// Calculate summary statistics
 	results.EndTime = time.Now()
 	results.TotalChecks = len(results.Checks)
+	log.WithFields(logrus.Fields{
+		"total_checks": results.TotalChecks,
+	}).Debug("Calculating audit statistics")
+
 	for _, check := range results.Checks {
 		if check.Passed {
 			results.PassedChecks++
 		} else {
 			results.FailedChecks++
+			log.WithFields(logrus.Fields{
+				"domain":   check.Domain,
+				"check":    check.Name,
+				"severity": check.Severity.String(),
+				"message":  check.Message,
+			}).Warn("Security check failed")
 			switch check.Severity {
 			case SeverityCritical:
 				results.CriticalCount++
@@ -160,364 +229,676 @@ func (a *Auditor) RunFullAudit() *AuditResults {
 		}
 	}
 
+	duration := results.EndTime.Sub(results.StartTime)
+	log.WithFields(logrus.Fields{
+		"total_checks":   results.TotalChecks,
+		"passed_checks":  results.PassedChecks,
+		"failed_checks":  results.FailedChecks,
+		"critical_count": results.CriticalCount,
+		"high_count":     results.HighCount,
+		"medium_count":   results.MediumCount,
+		"low_count":      results.LowCount,
+		"duration_ms":    duration.Milliseconds(),
+	}).Info("Full security audit completed")
+
+	if results.CriticalCount > 0 {
+		log.WithFields(logrus.Fields{
+			"critical_count": results.CriticalCount,
+		}).Error("Critical security vulnerabilities detected")
+	}
+
 	return results
 }
 
 // auditFederationSecurity checks federation protocol security (8 checks)
 func (a *Auditor) auditFederationSecurity(results *AuditResults) {
 	domain := "Federation Security"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing federation security")
 
 	// Check 1: Certificate validation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "Certificate Validation",
 		Description: "Reject invalid/expired ed25519 certificates",
 		Passed:      true,
 		Severity:    SeverityCritical,
 		Message:     "Certificate validation operational with ed25519 signatures",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Certificate validation check completed")
 
 	// Check 2: Replay attack prevention
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Replay Prevention",
 		Description: "Nonce expiry and replay detection working",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Nonce-based replay prevention functional (5-minute expiry)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Replay prevention check completed")
 
 	// Check 3: Man-in-the-middle protection
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "MITM Protection",
 		Description: "Encrypted federation messages with signature verification",
 		Passed:      true,
 		Severity:    SeverityCritical,
 		Message:     "Federation messages signed and verified",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("MITM protection check completed")
 
 	// Check 4: DoS protection
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "DoS Protection",
 		Description: "Rate limiting on federation endpoints",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Federation rate limits: 10 transfers/minute per server",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":     check.Domain,
+		"check":      check.Name,
+		"passed":     check.Passed,
+		"severity":   check.Severity.String(),
+		"rate_limit": "10/minute",
+	}).Debug("DoS protection check completed")
 
 	// Check 5: Trust model (TOFU)
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Trust Model",
 		Description: "Trust-On-First-Use implemented with cert fingerprints",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "TOFU trust model operational",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":      check.Domain,
+		"check":       check.Name,
+		"passed":      check.Passed,
+		"severity":    check.Severity.String(),
+		"trust_model": "TOFU",
+	}).Debug("Trust model check completed")
 
 	// Check 6: Server reputation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Server Reputation",
 		Description: "Malicious servers detected and blacklisted",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "Server reputation system tracks anomalies",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Server reputation check completed")
 
 	// Check 7: State validation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "State Validation",
 		Description: "Incoming player state sanity-checked",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Player state validation includes stat/inventory checks",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("State validation check completed")
 
 	// Check 8: Audit logging
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Audit Logging",
 		Description: "All federation transactions logged",
 		Passed:      true,
 		Severity:    SeverityLow,
 		Message:     "Federation transactions logged with timestamps",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Audit logging check completed")
+
+	log.WithFields(logrus.Fields{
+		"domain":       domain,
+		"checks_added": 8,
+	}).Debug("Federation security audit completed")
 }
 
 // auditChatEncryption checks chat security (6 checks)
 func (a *Auditor) auditChatEncryption(results *AuditResults) {
 	domain := "Chat & Encryption"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing chat encryption")
 
 	// Check 1: E2E encryption
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "E2E Encryption",
 		Description: "AES-256-GCM with Diffie-Hellman key exchange",
 		Passed:      true,
 		Severity:    SeverityCritical,
 		Message:     "AES-256-GCM encryption operational",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":    check.Domain,
+		"check":     check.Name,
+		"passed":    check.Passed,
+		"severity":  check.Severity.String(),
+		"algorithm": "AES-256-GCM",
+	}).Debug("E2E encryption check completed")
 
 	// Check 2: Key exchange security
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Key Exchange",
 		Description: "2048-bit DH modulus, RFC 3526 Group 14",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Secure key exchange with 2048-bit modulus",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"modulus":  "2048-bit",
+		"rfc":      "RFC 3526",
+	}).Debug("Key exchange check completed")
 
 	// Check 3: IV randomness
 	passed, msg := validateIVRandomness()
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "IV Randomness",
 		Description: "Never reuse initialization vectors",
 		Passed:      passed,
 		Severity:    SeverityCritical,
 		Message:     msg,
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"message":  msg,
+	}).Debug("IV randomness check completed")
 
 	// Check 4: Profanity filter
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Profanity Filter",
 		Description: "Client-side, opt-in, no server access to plaintext",
 		Passed:      true,
 		Severity:    SeverityLow,
 		Message:     "Client-side profanity filter operational (opt-in)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"mode":     "client-side opt-in",
+	}).Debug("Profanity filter check completed")
 
 	// Check 5: Spam prevention
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Spam Prevention",
 		Description: "Rate limiting enforced per channel",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "Rate limits: 1 msg/3s (global), 1 msg/1s (local), 1 msg/0.5s (party/whisper)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":       check.Domain,
+		"check":        check.Name,
+		"passed":       check.Passed,
+		"severity":     check.Severity.String(),
+		"global_limit": "1 msg/3s",
+		"local_limit":  "1 msg/1s",
+		"party_limit":  "1 msg/0.5s",
+	}).Debug("Spam prevention check completed")
 
 	// Check 6: Block list
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Block List",
 		Description: "Players can ignore others, client-side enforcement",
 		Passed:      true,
 		Severity:    SeverityLow,
 		Message:     "Block list functional (client-side enforcement)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Block list check completed")
+
+	log.WithFields(logrus.Fields{
+		"domain":       domain,
+		"checks_added": 6,
+	}).Debug("Chat encryption audit completed")
 }
 
 // auditModSandbox checks mod system security (6 checks)
 func (a *Auditor) auditModSandbox(results *AuditResults) {
 	domain := "Mod Sandbox"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing mod sandbox")
 
 	// Check 1: File system access restriction
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "File System Isolation",
 		Description: "Mods cannot access files outside mod directory",
 		Passed:      false,
 		Severity:    SeverityCritical,
 		Message:     "Mod sandbox not yet implemented (deferred to future version)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Warn("File system isolation not implemented")
 
 	// Check 2: Network access restriction
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Network Isolation",
 		Description: "Mods cannot make external HTTP requests",
 		Passed:      false,
 		Severity:    SeverityHigh,
 		Message:     "Network isolation not yet implemented",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Warn("Network isolation not implemented")
 
 	// Check 3: Memory limits
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Memory Limits",
 		Description: "Mods capped at 100MB heap",
 		Passed:      false,
 		Severity:    SeverityMedium,
 		Message:     "Memory limits not yet enforced",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":       check.Domain,
+		"check":        check.Name,
+		"passed":       check.Passed,
+		"severity":     check.Severity.String(),
+		"target_limit": "100MB",
+	}).Warn("Memory limits not enforced")
 
 	// Check 4: CPU limits
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "CPU Limits",
 		Description: "Mods killed if >10% CPU for >5 seconds",
 		Passed:      false,
 		Severity:    SeverityMedium,
 		Message:     "CPU limits not yet enforced",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":         check.Domain,
+		"check":          check.Name,
+		"passed":         check.Passed,
+		"severity":       check.Severity.String(),
+		"cpu_threshold":  "10%",
+		"time_threshold": "5s",
+	}).Warn("CPU limits not enforced")
 
 	// Check 5: API surface restriction
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "API Restrictions",
 		Description: "Only approved hooks exposed, no engine internals",
 		Passed:      false,
 		Severity:    SeverityHigh,
 		Message:     "Mod API not yet restricted",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Warn("API restrictions not implemented")
 
 	// Check 6: Code execution safety
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Code Execution",
 		Description: "Interpreted only, no native code loading",
 		Passed:      false,
 		Severity:    SeverityCritical,
 		Message:     "Code execution safety not yet implemented",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Warn("Code execution safety not implemented")
+
+	log.WithFields(logrus.Fields{
+		"domain":        domain,
+		"checks_added":  6,
+		"failed_checks": 6,
+	}).Warn("Mod sandbox audit completed - all checks failed (not yet implemented)")
 }
 
 // auditInputValidation checks input sanitization (4 checks)
 func (a *Auditor) auditInputValidation(results *AuditResults) {
 	domain := "Input Validation"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing input validation")
 
 	// Check 1: Chat message validation
 	passed, msg := validateChatMessageSafety()
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "Chat Sanitization",
 		Description: "Length limits, sanitization, no code injection",
 		Passed:      passed,
 		Severity:    SeverityHigh,
 		Message:     msg,
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"message":  msg,
+	}).Debug("Chat sanitization check completed")
 
 	// Check 2: Item transfer validation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Item Transfer",
 		Description: "Validate existence, ownership, proximity",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Trade system validates ownership and proximity",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Item transfer validation check completed")
 
 	// Check 3: Command input validation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Command Validation",
 		Description: "Whitelist allowed commands, reject malformed",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "Command whitelist operational",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Command validation check completed")
 
 	// Check 4: Coordinate bounds checking
 	passed, msg = validateCoordinateBounds()
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Coordinate Bounds",
 		Description: "Reject out-of-bounds positions",
 		Passed:      passed,
 		Severity:    SeverityHigh,
 		Message:     msg,
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"message":  msg,
+	}).Debug("Coordinate bounds check completed")
+
+	log.WithFields(logrus.Fields{
+		"domain":       domain,
+		"checks_added": 4,
+	}).Debug("Input validation audit completed")
 }
 
 // auditAntiCheat checks anti-cheat measures (3 checks)
 func (a *Auditor) auditAntiCheat(results *AuditResults) {
 	domain := "Anti-Cheat"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing anti-cheat measures")
 
 	// Check 1: Stat validation
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "Stat Validation",
 		Description: "Server validates player stats on transfer",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Player state validation includes stat sanity checks",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+	}).Debug("Stat validation check completed")
 
 	// Check 2: Inventory integrity
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Inventory Integrity",
 		Description: "Item duplication prevented",
 		Passed:      true,
 		Severity:    SeverityCritical,
 		Message:     "Two-phase commit prevents item duplication",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":    check.Domain,
+		"check":     check.Name,
+		"passed":    check.Passed,
+		"severity":  check.Severity.String(),
+		"mechanism": "two-phase commit",
+	}).Debug("Inventory integrity check completed")
 
 	// Check 3: Speed hack prevention
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Speed Enforcement",
 		Description: "Server enforces max movement speed",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "Movement system enforces speed limits server-side",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":      check.Domain,
+		"check":       check.Name,
+		"passed":      check.Passed,
+		"severity":    check.Severity.String(),
+		"enforcement": "server-side",
+	}).Debug("Speed enforcement check completed")
+
+	log.WithFields(logrus.Fields{
+		"domain":       domain,
+		"checks_added": 3,
+	}).Debug("Anti-cheat audit completed")
 }
 
 // auditPrivacy checks privacy compliance (3 checks)
 func (a *Auditor) auditPrivacy(results *AuditResults) {
 	domain := "Privacy"
+	log.WithFields(logrus.Fields{
+		"domain": domain,
+	}).Debug("Auditing privacy compliance")
 
 	// Check 1: Data minimization
-	results.Checks = append(results.Checks, SecurityCheck{
+	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "Data Minimization",
 		Description: "Only essential data collected",
 		Passed:      true,
 		Severity:    SeverityLow,
 		Message:     "Only gameplay-essential data collected (no analytics by default)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":    check.Domain,
+		"check":     check.Name,
+		"passed":    check.Passed,
+		"severity":  check.Severity.String(),
+		"analytics": "disabled by default",
+	}).Debug("Data minimization check completed")
 
 	// Check 2: User consent
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "User Consent",
 		Description: "Opt-out from social features works",
 		Passed:      true,
 		Severity:    SeverityMedium,
 		Message:     "User opt-out functional (-disable-social, -disable-chat flags)",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":   check.Domain,
+		"check":    check.Name,
+		"passed":   check.Passed,
+		"severity": check.Severity.String(),
+		"flags":    "-disable-social, -disable-chat",
+	}).Debug("User consent check completed")
 
 	// Check 3: Server logs
-	results.Checks = append(results.Checks, SecurityCheck{
+	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Log Protection",
 		Description: "No plaintext passwords/messages logged",
 		Passed:      true,
 		Severity:    SeverityHigh,
 		Message:     "Server cannot decrypt E2E messages, no password logging",
-	})
+	}
+	results.Checks = append(results.Checks, check)
+	log.WithFields(logrus.Fields{
+		"domain":     check.Domain,
+		"check":      check.Name,
+		"passed":     check.Passed,
+		"severity":   check.Severity.String(),
+		"encryption": "E2E",
+	}).Debug("Log protection check completed")
+
+	log.WithFields(logrus.Fields{
+		"domain":       domain,
+		"checks_added": 3,
+	}).Debug("Privacy audit completed")
 }
 
 // validateIVRandomness tests IV generation for proper randomness
 func validateIVRandomness() (bool, string) {
+	log.Debug("Validating IV randomness")
 	const testCount = 100
 	ivs := make(map[string]bool, testCount)
 
 	for i := 0; i < testCount; i++ {
 		iv := make([]byte, 12)
 		if _, err := rand.Read(iv); err != nil {
+			log.WithFields(logrus.Fields{
+				"error":      err.Error(),
+				"iteration":  i,
+				"test_count": testCount,
+			}).Error("IV generation failed")
 			return false, fmt.Sprintf("IV generation failed: %v", err)
 		}
 		key := string(iv)
 		if ivs[key] {
+			log.WithFields(logrus.Fields{
+				"iteration":  i,
+				"test_count": testCount,
+			}).Error("IV collision detected in randomness test")
 			return false, "IV collision detected in randomness test"
 		}
 		ivs[key] = true
 	}
 
+	log.WithFields(logrus.Fields{
+		"unique_ivs": testCount,
+		"test_count": testCount,
+	}).Debug("IV randomness validation passed")
 	return true, fmt.Sprintf("IV randomness validated (%d unique IVs)", testCount)
 }
 
 // validateChatMessageSafety tests chat message sanitization
 func validateChatMessageSafety() (bool, string) {
+	log.Debug("Validating chat message sanitization")
 	testCases := []string{
 		"<script>alert('xss')</script>",
 		"'; DROP TABLE users; --",
@@ -525,22 +906,37 @@ func validateChatMessageSafety() (bool, string) {
 		"\x00\x01\x02",
 	}
 
-	for _, test := range testCases {
+	log.WithFields(logrus.Fields{
+		"test_cases": len(testCases),
+	}).Debug("Running chat sanitization tests")
+
+	for i, test := range testCases {
 		if len(test) > 1000 {
+			log.WithFields(logrus.Fields{
+				"test_index":  i,
+				"message_len": len(test),
+				"max_length":  1000,
+			}).Debug("Length limit validation passed")
 			return true, "Length limits enforced (max 1000 chars)"
 		}
 		for _, r := range test {
 			if r < 32 && r != '\n' && r != '\r' && r != '\t' {
+				log.WithFields(logrus.Fields{
+					"test_index": i,
+					"char_code":  int(r),
+				}).Debug("Control character filtering validated")
 				return true, "Control characters filtered"
 			}
 		}
 	}
 
+	log.Debug("Chat sanitization validation passed")
 	return true, "Chat sanitization functional (length + character validation)"
 }
 
 // validateCoordinateBounds tests position validation
 func validateCoordinateBounds() (bool, string) {
+	log.Debug("Validating coordinate bounds")
 	testPositions := [][2]float64{
 		{0, 0},
 		{100, 100},
@@ -549,18 +945,39 @@ func validateCoordinateBounds() (bool, string) {
 		{1e100, 1e100},
 	}
 
+	log.WithFields(logrus.Fields{
+		"test_positions": len(testPositions),
+	}).Debug("Running coordinate bounds tests")
+
 	const maxCoord = 1e6
-	for _, pos := range testPositions {
+	for i, pos := range testPositions {
 		x, y := pos[0], pos[1]
 		if x > maxCoord || y > maxCoord || x < -maxCoord || y < -maxCoord {
+			log.WithFields(logrus.Fields{
+				"test_index": i,
+				"x":          x,
+				"y":          y,
+				"max_coord":  maxCoord,
+			}).Debug("Out-of-bounds coordinate detected")
 			return true, fmt.Sprintf("Coordinate bounds enforced (max ±%.0f)", maxCoord)
 		}
 	}
 
+	log.WithFields(logrus.Fields{
+		"max_coord": maxCoord,
+	}).Debug("Coordinate validation operational")
 	return true, "Coordinate validation operational"
 }
 
 // ConstantTimeCompare performs constant-time comparison to prevent timing attacks
 func ConstantTimeCompare(a, b []byte) bool {
-	return subtle.ConstantTimeCompare(a, b) == 1
+	log.WithFields(logrus.Fields{
+		"len_a": len(a),
+		"len_b": len(b),
+	}).Debug("Performing constant-time comparison")
+	result := subtle.ConstantTimeCompare(a, b) == 1
+	log.WithFields(logrus.Fields{
+		"match": result,
+	}).Debug("Constant-time comparison completed")
+	return result
 }

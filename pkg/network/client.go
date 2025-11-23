@@ -510,53 +510,67 @@ func (c *TCPClient) sendLoop() {
 			return
 
 		case <-pingTicker.C:
-			// Send ping (empty input with type "ping")
-			c.mu.Lock()
-			c.lastPing = time.Now()
-			c.mu.Unlock()
-
-			// Update latency (time since last pong)
-			c.mu.RLock()
-			c.latency = time.Since(c.lastPong)
-			c.mu.RUnlock()
+			c.handlePingTick()
 
 		case cmd := <-c.inputQueue:
-			c.inputQueueStats.RecordReceive()
-
-			// Encode input
-			data, err := c.protocol.EncodeInputCommand(cmd)
-			if err != nil {
-				c.errors <- fmt.Errorf("encode error: %w", err)
-				continue
-			}
-
-			// Send length prefix
-			msgLen := uint32(len(data))
-			lenBuf := []byte{
-				byte(msgLen),
-				byte(msgLen >> 8),
-				byte(msgLen >> 16),
-				byte(msgLen >> 24),
-			}
-
-			// Set write deadline
-			c.conn.SetWriteDeadline(time.Now().Add(c.config.ConnectionTimeout))
-
-			// Send length + data
-			if _, err := c.conn.Write(lenBuf); err != nil {
-				if c.IsConnected() {
-					c.errors <- fmt.Errorf("write length error: %w", err)
-				}
-				return
-			}
-			if _, err := c.conn.Write(data); err != nil {
-				if c.IsConnected() {
-					c.errors <- fmt.Errorf("write data error: %w", err)
-				}
+			if err := c.sendInputCommand(cmd); err != nil {
 				return
 			}
 		}
 	}
+}
+
+// handlePingTick updates ping timestamp and calculates latency.
+func (c *TCPClient) handlePingTick() {
+	c.mu.Lock()
+	c.lastPing = time.Now()
+	c.mu.Unlock()
+
+	c.mu.RLock()
+	c.latency = time.Since(c.lastPong)
+	c.mu.RUnlock()
+}
+
+// sendInputCommand encodes and sends an input command to the server.
+func (c *TCPClient) sendInputCommand(cmd *InputCommand) error {
+	c.inputQueueStats.RecordReceive()
+
+	data, err := c.protocol.EncodeInputCommand(cmd)
+	if err != nil {
+		c.errors <- fmt.Errorf("encode error: %w", err)
+		return nil
+	}
+
+	return c.writeMessageWithLength(data)
+}
+
+// writeMessageWithLength writes a length-prefixed message to the connection.
+func (c *TCPClient) writeMessageWithLength(data []byte) error {
+	msgLen := uint32(len(data))
+	lenBuf := []byte{
+		byte(msgLen),
+		byte(msgLen >> 8),
+		byte(msgLen >> 16),
+		byte(msgLen >> 24),
+	}
+
+	c.conn.SetWriteDeadline(time.Now().Add(c.config.ConnectionTimeout))
+
+	if _, err := c.conn.Write(lenBuf); err != nil {
+		if c.IsConnected() {
+			c.errors <- fmt.Errorf("write length error: %w", err)
+		}
+		return err
+	}
+
+	if _, err := c.conn.Write(data); err != nil {
+		if c.IsConnected() {
+			c.errors <- fmt.Errorf("write data error: %w", err)
+		}
+		return err
+	}
+
+	return nil
 }
 
 // GetBufferStats returns snapshots of all buffer statistics.

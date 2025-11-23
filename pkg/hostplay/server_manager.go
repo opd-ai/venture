@@ -227,7 +227,6 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(1000/sm.config.TickRate) * time.Millisecond)
 	defer ticker.Stop()
 
-	// Channels from network server
 	inputCommands := sm.server.ReceiveInputCommand()
 	playerJoins := sm.server.ReceivePlayerJoin()
 	playerLeaves := sm.server.ReceivePlayerLeave()
@@ -241,37 +240,54 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 			return
 
 		case playerID := <-playerJoins:
-			sm.logger.Info("Player joined", "player_id", playerID)
-			// Spawn player entity at a random spawn point
-			sm.spawnPlayer(playerID)
+			sm.handlePlayerJoin(playerID)
 
 		case playerID := <-playerLeaves:
-			sm.logger.Info("Player left", "player_id", playerID)
-			// Remove player entity from world
-			sm.removePlayer(playerID)
+			sm.handlePlayerLeave(playerID)
 
 		case inputCmd := <-inputCommands:
-			sm.logger.Debug("Received input command", "player_id", inputCmd.PlayerID, "type", inputCmd.InputType)
-			// Process player input through InputHandler
-			sm.inputHandler.ProcessInputRaw(inputCmd.PlayerID, inputCmd.InputType, inputCmd.Data)
+			sm.handleInputCommand(inputCmd)
 
 		case err := <-errors:
 			sm.logger.Error("Network error", "error", err)
 
 		case <-ticker.C:
-			// Update game world
-			dt := float64(1.0 / float64(sm.config.TickRate))
-			sm.world.Update(dt)
-
-			// Broadcast state updates to clients
-			snapshot, err := sm.stateBroadcaster.CreateSnapshot()
-			if err != nil {
-				sm.logger.Error("Failed to create snapshot", "error", err)
-			} else if sm.stateBroadcaster.ShouldBroadcast() {
-				// Send entity state updates through TCPServer
-				sm.broadcastEntityStates(snapshot)
-			}
+			sm.handleWorldUpdate()
 		}
+	}
+}
+
+// handlePlayerJoin spawns a player entity when a player joins.
+func (sm *ServerManager) handlePlayerJoin(playerID uint64) {
+	sm.logger.Info("Player joined", "player_id", playerID)
+	sm.spawnPlayer(playerID)
+}
+
+// handlePlayerLeave removes a player entity when a player leaves.
+func (sm *ServerManager) handlePlayerLeave(playerID uint64) {
+	sm.logger.Info("Player left", "player_id", playerID)
+	sm.removePlayer(playerID)
+}
+
+// handleInputCommand processes player input through the InputHandler.
+func (sm *ServerManager) handleInputCommand(inputCmd *network.InputCommand) {
+	sm.logger.Debug("Received input command", "player_id", inputCmd.PlayerID, "type", inputCmd.InputType)
+	sm.inputHandler.ProcessInputRaw(inputCmd.PlayerID, inputCmd.InputType, inputCmd.Data)
+}
+
+// handleWorldUpdate updates the game world and broadcasts state to clients.
+func (sm *ServerManager) handleWorldUpdate() {
+	dt := float64(1.0 / float64(sm.config.TickRate))
+	sm.world.Update(dt)
+
+	snapshot, err := sm.stateBroadcaster.CreateSnapshot()
+	if err != nil {
+		sm.logger.Error("Failed to create snapshot", "error", err)
+		return
+	}
+
+	if sm.stateBroadcaster.ShouldBroadcast() {
+		sm.broadcastEntityStates(snapshot)
 	}
 }
 

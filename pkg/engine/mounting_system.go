@@ -115,65 +115,21 @@ func (ms *MountingSystem) syncRiderRotation(entity, vehicle *Entity) {
 // Mount attempts to mount a rider entity onto a vehicle entity.
 // Implements VehicleController interface.
 func (ms *MountingSystem) Mount(rider, vehicle *Entity) error {
-	if rider == nil {
-		return fmt.Errorf("rider entity is nil")
-	}
-	if vehicle == nil {
-		return fmt.Errorf("vehicle entity is nil")
+	if err := ms.validateMountEntities(rider, vehicle); err != nil {
+		return err
 	}
 
-	// Check if rider is already mounted
-	if _, isMounted := rider.GetComponent("mount"); isMounted {
-		return fmt.Errorf("rider is already mounted")
+	vehicleData, err := ms.validateVehicleState(vehicle)
+	if err != nil {
+		return err
 	}
 
-	// Check if vehicle has vehicle component
-	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
-	if !hasVehicle {
-		return fmt.Errorf("entity is not a vehicle")
+	riderPos, vehiclePos, err := ms.extractPositionComponents(rider, vehicle)
+	if err != nil {
+		return err
 	}
 
-	vehicleData, ok := vehicleComp.(*VehicleComponent)
-	if !ok {
-		return fmt.Errorf("invalid vehicle component type")
-	}
-
-	// Check if vehicle has capacity
-	if !vehicleData.CanAddPassenger() {
-		return fmt.Errorf("vehicle is at full capacity")
-	}
-
-	// Check if vehicle is destroyed
-	if vehicleData.IsDestroyed() {
-		return fmt.Errorf("vehicle is destroyed")
-	}
-
-	// Get rider and vehicle positions for offset calculation
-	riderPosComp, hasRiderPos := rider.GetComponent("position")
-	vehiclePosComp, hasVehiclePos := vehicle.GetComponent("position")
-	if !hasRiderPos || !hasVehiclePos {
-		return fmt.Errorf("missing position component")
-	}
-
-	riderPos, ok := riderPosComp.(*PositionComponent)
-	if !ok {
-		return fmt.Errorf("invalid rider position component type")
-	}
-	vehiclePos, ok := vehiclePosComp.(*PositionComponent)
-	if !ok {
-		return fmt.Errorf("invalid vehicle position component type")
-	}
-
-	// Calculate offset (preserve relative position)
-	offsetX := riderPos.X - vehiclePos.X
-	offsetY := riderPos.Y - vehiclePos.Y
-
-	// Create mount component
-	mountComp := NewMountComponent(vehicle.ID, offsetX, offsetY)
-	rider.AddComponent(mountComp)
-
-	// Update vehicle passenger count
-	vehicleData.AddPassenger()
+	ms.createMountRelationship(rider, vehicle.ID, vehicleData, riderPos, vehiclePos)
 
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
@@ -183,6 +139,77 @@ func (ms *MountingSystem) Mount(rider, vehicle *Entity) error {
 	}
 
 	return nil
+}
+
+// validateMountEntities validates rider and vehicle entities for mounting.
+func (ms *MountingSystem) validateMountEntities(rider, vehicle *Entity) error {
+	if rider == nil {
+		return fmt.Errorf("rider entity is nil")
+	}
+	if vehicle == nil {
+		return fmt.Errorf("vehicle entity is nil")
+	}
+
+	if _, isMounted := rider.GetComponent("mount"); isMounted {
+		return fmt.Errorf("rider is already mounted")
+	}
+
+	return nil
+}
+
+// validateVehicleState validates the vehicle component and its state.
+func (ms *MountingSystem) validateVehicleState(vehicle *Entity) (*VehicleComponent, error) {
+	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
+	if !hasVehicle {
+		return nil, fmt.Errorf("entity is not a vehicle")
+	}
+
+	vehicleData, ok := vehicleComp.(*VehicleComponent)
+	if !ok {
+		return nil, fmt.Errorf("invalid vehicle component type")
+	}
+
+	if !vehicleData.CanAddPassenger() {
+		return nil, fmt.Errorf("vehicle is at full capacity")
+	}
+
+	if vehicleData.IsDestroyed() {
+		return nil, fmt.Errorf("vehicle is destroyed")
+	}
+
+	return vehicleData, nil
+}
+
+// extractPositionComponents extracts and validates position components.
+func (ms *MountingSystem) extractPositionComponents(rider, vehicle *Entity) (*PositionComponent, *PositionComponent, error) {
+	riderPosComp, hasRiderPos := rider.GetComponent("position")
+	vehiclePosComp, hasVehiclePos := vehicle.GetComponent("position")
+	if !hasRiderPos || !hasVehiclePos {
+		return nil, nil, fmt.Errorf("missing position component")
+	}
+
+	riderPos, ok := riderPosComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid rider position component type")
+	}
+
+	vehiclePos, ok := vehiclePosComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid vehicle position component type")
+	}
+
+	return riderPos, vehiclePos, nil
+}
+
+// createMountRelationship creates mount component and updates vehicle.
+func (ms *MountingSystem) createMountRelationship(rider *Entity, vehicleID uint64, vehicleData *VehicleComponent, riderPos, vehiclePos *PositionComponent) {
+	offsetX := riderPos.X - vehiclePos.X
+	offsetY := riderPos.Y - vehiclePos.Y
+
+	mountComp := NewMountComponent(vehicleID, offsetX, offsetY)
+	rider.AddComponent(mountComp)
+
+	vehicleData.AddPassenger()
 }
 
 // Dismount removes a rider entity from their current vehicle.

@@ -151,6 +151,27 @@ func (si *ServerIdentity) signHandshake(h *FederationHandshake) ([]byte, error) 
 
 // VerifyHandshake verifies the signature of a received handshake
 func VerifyHandshake(h *FederationHandshake) error {
+	if err := validateHandshakeFields(h); err != nil {
+		return err
+	}
+
+	if err := validateCryptoFields(h); err != nil {
+		return err
+	}
+
+	if err := verifyFingerprint(h); err != nil {
+		return err
+	}
+
+	if err := verifySignature(h); err != nil {
+		return err
+	}
+
+	return verifyTimestamp(h)
+}
+
+// validateHandshakeFields validates basic handshake fields.
+func validateHandshakeFields(h *FederationHandshake) error {
 	if h == nil {
 		return fmt.Errorf("handshake is nil")
 	}
@@ -167,6 +188,11 @@ func VerifyHandshake(h *FederationHandshake) error {
 		return fmt.Errorf("version is empty")
 	}
 
+	return nil
+}
+
+// validateCryptoFields validates cryptographic field sizes.
+func validateCryptoFields(h *FederationHandshake) error {
 	if len(h.PublicKey) != ed25519.PublicKeySize {
 		return fmt.Errorf("invalid public key size: %d (expected %d)", len(h.PublicKey), ed25519.PublicKeySize)
 	}
@@ -179,13 +205,20 @@ func VerifyHandshake(h *FederationHandshake) error {
 		return fmt.Errorf("invalid nonce size: %d (expected 16)", len(h.Nonce))
 	}
 
-	// Verify fingerprint matches public key
+	return nil
+}
+
+// verifyFingerprint verifies the fingerprint matches the public key.
+func verifyFingerprint(h *FederationHandshake) error {
 	expectedFingerprint := generateFingerprint(h.PublicKey)
 	if h.ServerID != expectedFingerprint {
 		return fmt.Errorf("server ID does not match public key fingerprint")
 	}
+	return nil
+}
 
-	// Verify signature
+// verifySignature verifies the handshake signature.
+func verifySignature(h *FederationHandshake) error {
 	message := fmt.Sprintf("%s|%s|%s|%s|%d|%x|%x",
 		h.ServerID,
 		h.ServerName,
@@ -200,10 +233,14 @@ func VerifyHandshake(h *FederationHandshake) error {
 		return fmt.Errorf("signature verification failed")
 	}
 
-	// Check timestamp is not too old (prevent replay attacks)
+	return nil
+}
+
+// verifyTimestamp checks timestamp for replay attack protection.
+func verifyTimestamp(h *FederationHandshake) error {
 	now := time.Now().UnixMilli()
 	age := now - h.Timestamp
-	maxAge := int64(60000) // 60 seconds
+	maxAge := int64(60000)
 
 	if age < 0 {
 		return fmt.Errorf("handshake timestamp is in the future")

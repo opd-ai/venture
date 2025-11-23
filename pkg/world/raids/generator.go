@@ -32,15 +32,44 @@ func NewGenerator(baseSeed int64) *Generator {
 
 // Generate implements the procgen.Generator interface.
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	// Validate parameters
-	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
-		return nil, fmt.Errorf("difficulty must be 0.0-1.0, got %.2f", params.Difficulty)
-	}
-	if params.Depth < 1 {
-		return nil, fmt.Errorf("depth must be >= 1, got %d", params.Depth)
+	if err := validateGenerationParams(params); err != nil {
+		return nil, err
 	}
 
-	// Extract tier from custom params (defaults to Normal)
+	tier, groupID, groupSize := extractRaidParameters(params)
+
+	instanceSeed := seed + int64(hashString(groupID))
+	rng := rand.New(rand.NewSource(instanceSeed))
+
+	raid, err := g.generateRaid(rng, tier, params, instanceSeed, groupSize)
+	if err != nil {
+		return nil, fmt.Errorf("generate raid: %w", err)
+	}
+
+	return raid, nil
+}
+
+// validateGenerationParams validates the generation parameters.
+func validateGenerationParams(params procgen.GenerationParams) error {
+	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
+		return fmt.Errorf("difficulty must be 0.0-1.0, got %.2f", params.Difficulty)
+	}
+	if params.Depth < 1 {
+		return fmt.Errorf("depth must be >= 1, got %d", params.Depth)
+	}
+	return nil
+}
+
+// extractRaidParameters extracts tier, groupID, and groupSize from params.
+func extractRaidParameters(params procgen.GenerationParams) (RaidTier, string, int) {
+	tier := extractTier(params)
+	groupID := extractGroupID(params)
+	groupSize := extractGroupSize(params, tier)
+	return tier, groupID, groupSize
+}
+
+// extractTier extracts tier from custom params.
+func extractTier(params procgen.GenerationParams) RaidTier {
 	tier := TierNormal
 	if tierVal, ok := params.Custom["tier"]; ok {
 		if t, ok := tierVal.(RaidTier); ok {
@@ -49,34 +78,29 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 			tier = RaidTier(tInt)
 		}
 	}
+	return tier
+}
 
-	// Extract group ID for instance isolation
+// extractGroupID extracts group ID from custom params.
+func extractGroupID(params procgen.GenerationParams) string {
 	groupID := "default"
 	if gid, ok := params.Custom["group_id"]; ok {
 		if s, ok := gid.(string); ok {
 			groupID = s
 		}
 	}
+	return groupID
+}
 
-	// Extract group size for scaling (default to tier minimum)
+// extractGroupSize extracts group size from custom params.
+func extractGroupSize(params procgen.GenerationParams, tier RaidTier) int {
 	groupSize := tier.MinPlayers()
 	if gs, ok := params.Custom["group_size"]; ok {
 		if size, ok := gs.(int); ok {
 			groupSize = size
 		}
 	}
-
-	// Derive instance seed from base seed + group ID hash
-	instanceSeed := seed + int64(hashString(groupID))
-	rng := rand.New(rand.NewSource(instanceSeed))
-
-	// Generate raid dungeon
-	raid, err := g.generateRaid(rng, tier, params, instanceSeed, groupSize)
-	if err != nil {
-		return nil, fmt.Errorf("generate raid: %w", err)
-	}
-
-	return raid, nil
+	return groupSize
 }
 
 // Validate implements the procgen.Generator interface.

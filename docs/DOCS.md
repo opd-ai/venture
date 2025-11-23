@@ -208,3 +208,45 @@ EXAMPLE DELETION DECISIONS:
 - File: installation-guide.md (2,500 words)
 - Contains: Verbose explanations, 8 redundant examples, outdated references
 - Action: DE-BLOAT → Reduce to 1,200 words (keep 1-2 key examples, condense explanations)
+
+**Scenario 7: Git History-based Cleanup**
+- Folder: /archive/, /old_docs/, /deprecated/
+- Rationale: Git history preserves all deleted content
+- Action: DELETE entire folders immediately (no archival needed - git log/git checkout recovers anything)
+
+**Updated Execution Plan:**
+
+**Phase 3: Consolidation (Revised)**
+5. For CONSOLIDATE items:
+   - Group related documents
+   - Keep most recent or authoritative version only
+   - Delete all others immediately
+   
+6. ~~Create minimal archive structure for kept items~~ **REMOVED**
+   - Rely on git history for versioning and recovery
+   - No /archive/ or /YYYY/ folders needed
+
+**Phase 5: Execution (Revised)**
+10. Delete in priority order:
+    - Drafts where finals exist (after content extraction)
+    - Duplicates (after verifying no unique content)
+    - Files exceeding age threshold (after preserving key insights)
+    - Obsolete project folders (after archiving critical information)
+    - **Archive directories and old_docs folders (git history serves as archive)**
+   
+11. ~~Move remaining files to clean structure~~ **REMOVED**
+    - Keep active files in logical locations only
+    - No year-based or archival subdirectories
+12. Delete empty directories
+
+**Phase 6: Cleanup (Revised)**
+13. Update repository README with new structure
+14. Generate summary metrics
+15. **Document git recovery commands for deleted content:**
+    ```bash
+    # View deleted file history
+    git log --all --full-history -- path/to/deleted/file
+    
+    # Recover deleted file
+    git checkout <commit-hash> -- path/to/deleted/file
+    ```

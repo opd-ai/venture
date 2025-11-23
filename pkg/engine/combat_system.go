@@ -941,63 +941,81 @@ func FindNearestEnemy(world *World, attacker *Entity, maxRange float64) *Entity 
 // aimCone: angle cone in radians (e.g., π/4 = 45° cone for forgiving aim)
 // Returns the closest enemy within the aim cone, or nil if none found.
 func FindEnemyInAimDirection(world *World, attacker *Entity, aimAngle, maxRange, aimCone float64) *Entity {
-	// Get all enemies in range first (distance check)
 	enemies := FindEnemiesInRange(world, attacker, maxRange)
 	if len(enemies) == 0 {
 		return nil
 	}
 
-	// Get attacker position
-	attackerPos, hasPos := attacker.GetComponent("position")
+	attackerPos := getAttackerPosition(attacker)
+	if attackerPos == nil {
+		return nil
+	}
+
+	return findBestEnemyInAimCone(enemies, attackerPos, aimAngle, aimCone)
+}
+
+// getAttackerPosition retrieves the position component from an entity.
+func getAttackerPosition(attacker *Entity) *PositionComponent {
+	attackerPosComp, hasPos := attacker.GetComponent("position")
 	if !hasPos {
 		return nil
 	}
-	pos, ok := attackerPos.(*PositionComponent)
+
+	pos, ok := attackerPosComp.(*PositionComponent)
 	if !ok {
 		return nil
 	}
 
-	// Filter enemies by aim cone and find closest
+	return pos
+}
+
+// findBestEnemyInAimCone finds the closest enemy within the aim cone.
+func findBestEnemyInAimCone(enemies []*Entity, attackerPos *PositionComponent, aimAngle, aimCone float64) *Entity {
 	var bestEnemy *Entity
 	bestDistanceSquared := math.MaxFloat64
 
 	for _, enemy := range enemies {
-		// Get enemy position
-		enemyPos, hasEnemyPos := enemy.GetComponent("position")
-		if !hasEnemyPos {
-			continue
-		}
-		ePos, ok := enemyPos.(*PositionComponent)
-		if !ok {
+		enemyPos := getAttackerPosition(enemy)
+		if enemyPos == nil {
 			continue
 		}
 
-		// Calculate angle from attacker to enemy
-		dx := ePos.X - pos.X
-		dy := ePos.Y - pos.Y
-		angleToEnemy := math.Atan2(dy, dx)
-
-		// Normalize angle difference to [-π, π]
-		angleDiff := angleToEnemy - aimAngle
-		for angleDiff > math.Pi {
-			angleDiff -= 2 * math.Pi
-		}
-		for angleDiff < -math.Pi {
-			angleDiff += 2 * math.Pi
-		}
-
-		// Check if enemy is within aim cone
-		if math.Abs(angleDiff) <= aimCone/2 {
-			// Enemy is in aim cone - check distance using squared distance to avoid sqrt
-			distanceSquared := dx*dx + dy*dy
-			if distanceSquared < bestDistanceSquared {
-				bestDistanceSquared = distanceSquared
-				bestEnemy = enemy
-			}
+		if isEnemyInAimCone(attackerPos, enemyPos, aimAngle, aimCone, &bestDistanceSquared, &bestEnemy, enemy) {
+			// Enemy was updated in isEnemyInAimCone if it's closer
 		}
 	}
 
 	return bestEnemy
+}
+
+// isEnemyInAimCone checks if enemy is within aim cone and updates best enemy if closer.
+func isEnemyInAimCone(attackerPos, enemyPos *PositionComponent, aimAngle, aimCone float64, bestDistSquared *float64, bestEnemy **Entity, enemy *Entity) bool {
+	dx := enemyPos.X - attackerPos.X
+	dy := enemyPos.Y - attackerPos.Y
+	angleToEnemy := math.Atan2(dy, dx)
+
+	angleDiff := normalizeAngleDifference(angleToEnemy - aimAngle)
+
+	if math.Abs(angleDiff) <= aimCone/2 {
+		distanceSquared := dx*dx + dy*dy
+		if distanceSquared < *bestDistSquared {
+			*bestDistSquared = distanceSquared
+			*bestEnemy = enemy
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeAngleDifference normalizes an angle difference to the range [-π, π].
+func normalizeAngleDifference(angleDiff float64) float64 {
+	for angleDiff > math.Pi {
+		angleDiff -= 2 * math.Pi
+	}
+	for angleDiff < -math.Pi {
+		angleDiff += 2 * math.Pi
+	}
+	return angleDiff
 }
 
 // spawnProjectile creates a projectile entity for ranged weapon attacks (Phase 10.2).

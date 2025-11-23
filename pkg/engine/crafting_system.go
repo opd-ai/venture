@@ -760,50 +760,10 @@ func (s *CraftingSystem) consumeMaterials(entityID uint64, invComp *InventoryCom
 		}).Debug("consuming materials for crafting")
 	}
 
-	consumed := []string{}
+	consumed := s.deductGoldCost(invComp, recipe.GoldCost)
 
-	// Deduct gold
-	invComp.Gold -= recipe.GoldCost
-	if recipe.GoldCost > 0 {
-		consumed = append(consumed, fmt.Sprintf("%d gold", recipe.GoldCost))
-	}
-
-	// Remove materials
-	for _, req := range recipe.Materials {
-		removed := 0
-		for i := 0; i < len(invComp.Items) && removed < req.Quantity; i++ {
-			itm := invComp.Items[i]
-			if itm == nil {
-				continue
-			}
-			// Check name match
-			if itm.Name != req.ItemName {
-				continue
-			}
-			// Check type match if specified
-			if req.ItemType != nil && itm.Type != *req.ItemType {
-				continue
-			}
-
-			// Remove this item
-			invComp.Items[i] = nil
-			removed++
-			consumed = append(consumed, itm.Name)
-		}
-
-		// Verify we removed enough
-		if removed < req.Quantity {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": entityID,
-					"recipe_id": recipe.ID,
-					"material":  req.ItemName,
-					"needed":    req.Quantity,
-					"found":     removed,
-				}).Error("insufficient materials during consumption")
-			}
-			return nil, fmt.Errorf("insufficient %s: needed %d, found %d", req.ItemName, req.Quantity, removed)
-		}
+	if err := s.removeMaterialItems(entityID, invComp, recipe, &consumed); err != nil {
+		return nil, err
 	}
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -815,6 +775,64 @@ func (s *CraftingSystem) consumeMaterials(entityID uint64, invComp *InventoryCom
 	}
 
 	return consumed, nil
+}
+
+// deductGoldCost removes gold from inventory and returns consumption list.
+func (s *CraftingSystem) deductGoldCost(invComp *InventoryComponent, goldCost int) []string {
+	invComp.Gold -= goldCost
+	consumed := []string{}
+	if goldCost > 0 {
+		consumed = append(consumed, fmt.Sprintf("%d gold", goldCost))
+	}
+	return consumed
+}
+
+// removeMaterialItems removes required materials from inventory.
+func (s *CraftingSystem) removeMaterialItems(entityID uint64, invComp *InventoryComponent, recipe *Recipe, consumed *[]string) error {
+	for _, req := range recipe.Materials {
+		removed := s.removeMatchingItems(invComp, req, consumed)
+		if err := s.validateMaterialRemoval(entityID, recipe, req, removed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// removeMatchingItems finds and removes matching items from inventory.
+func (s *CraftingSystem) removeMatchingItems(invComp *InventoryComponent, req MaterialRequirement, consumed *[]string) int {
+	removed := 0
+	for i := 0; i < len(invComp.Items) && removed < req.Quantity; i++ {
+		itm := invComp.Items[i]
+		if itm == nil || itm.Name != req.ItemName {
+			continue
+		}
+		if req.ItemType != nil && itm.Type != *req.ItemType {
+			continue
+		}
+
+		invComp.Items[i] = nil
+		removed++
+		*consumed = append(*consumed, itm.Name)
+	}
+	return removed
+}
+
+// validateMaterialRemoval ensures sufficient materials were removed.
+func (s *CraftingSystem) validateMaterialRemoval(entityID uint64, recipe *Recipe, req MaterialRequirement, removed int) error {
+	if removed >= req.Quantity {
+		return nil
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"recipe_id": recipe.ID,
+			"material":  req.ItemName,
+			"needed":    req.Quantity,
+			"found":     removed,
+		}).Error("insufficient materials during consumption")
+	}
+	return fmt.Errorf("insufficient %s: needed %d, found %d", req.ItemName, req.Quantity, removed)
 }
 
 // validateAndReserveStation checks if station is valid and marks it as in-use.

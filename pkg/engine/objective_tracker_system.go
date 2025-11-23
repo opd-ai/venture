@@ -631,52 +631,10 @@ func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Qu
 		"item_count":          len(qst.Reward.Items),
 	}).Info("Awarding quest rewards")
 
-	// Award XP
-	if qst.Reward.XP > 0 {
-		if expComp, ok := entity.GetComponent("experience"); ok {
-			if exp, ok := expComp.(*ExperienceComponent); ok {
-				log.WithFields(log.Fields{
-					"system_name": "objective_tracker",
-					"entity_id":   entity.ID,
-					"quest_id":    qst.ID,
-					"xp_awarded":  qst.Reward.XP,
-				}).Debug("Awarded XP reward")
-				exp.AddXP(qst.Reward.XP)
-			}
-		}
-	}
+	s.awardXPReward(entity, qst)
+	s.awardGoldReward(entity, qst)
+	s.awardSkillPointsReward(entity, qst)
 
-	// Award gold
-	if qst.Reward.Gold > 0 {
-		if invComp, ok := entity.GetComponent("inventory"); ok {
-			if inv, ok := invComp.(*InventoryComponent); ok {
-				log.WithFields(log.Fields{
-					"system_name":  "objective_tracker",
-					"entity_id":    entity.ID,
-					"quest_id":     qst.ID,
-					"gold_awarded": qst.Reward.Gold,
-				}).Debug("Awarded gold reward")
-				inv.Gold += qst.Reward.Gold
-			}
-		}
-	}
-
-	// Award skill points
-	if qst.Reward.SkillPoints > 0 {
-		if expComp, ok := entity.GetComponent("experience"); ok {
-			if exp, ok := expComp.(*ExperienceComponent); ok {
-				log.WithFields(log.Fields{
-					"system_name":          "objective_tracker",
-					"entity_id":            entity.ID,
-					"quest_id":             qst.ID,
-					"skill_points_awarded": qst.Reward.SkillPoints,
-				}).Debug("Awarded skill points reward")
-				exp.SkillPoints += qst.Reward.SkillPoints
-			}
-		}
-	}
-
-	// Award items
 	if len(qst.Reward.Items) > 0 {
 		log.WithFields(log.Fields{
 			"system_name": "objective_tracker",
@@ -692,6 +650,81 @@ func (s *ObjectiveTrackerSystem) AwardQuestRewards(entity *Entity, qst *quest.Qu
 		"entity_id":   entity.ID,
 		"quest_id":    qst.ID,
 	}).Info("Quest rewards awarded")
+}
+
+// awardXPReward awards experience points to an entity from quest rewards.
+func (s *ObjectiveTrackerSystem) awardXPReward(entity *Entity, qst *quest.Quest) {
+	if qst.Reward.XP <= 0 {
+		return
+	}
+
+	expComp, ok := entity.GetComponent("experience")
+	if !ok {
+		return
+	}
+
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   entity.ID,
+		"quest_id":    qst.ID,
+		"xp_awarded":  qst.Reward.XP,
+	}).Debug("Awarded XP reward")
+	exp.AddXP(qst.Reward.XP)
+}
+
+// awardGoldReward awards gold to an entity from quest rewards.
+func (s *ObjectiveTrackerSystem) awardGoldReward(entity *Entity, qst *quest.Quest) {
+	if qst.Reward.Gold <= 0 {
+		return
+	}
+
+	invComp, ok := entity.GetComponent("inventory")
+	if !ok {
+		return
+	}
+
+	inv, ok := invComp.(*InventoryComponent)
+	if !ok {
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"system_name":  "objective_tracker",
+		"entity_id":    entity.ID,
+		"quest_id":     qst.ID,
+		"gold_awarded": qst.Reward.Gold,
+	}).Debug("Awarded gold reward")
+	inv.Gold += qst.Reward.Gold
+}
+
+// awardSkillPointsReward awards skill points to an entity from quest rewards.
+func (s *ObjectiveTrackerSystem) awardSkillPointsReward(entity *Entity, qst *quest.Quest) {
+	if qst.Reward.SkillPoints <= 0 {
+		return
+	}
+
+	expComp, ok := entity.GetComponent("experience")
+	if !ok {
+		return
+	}
+
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"system_name":          "objective_tracker",
+		"entity_id":            entity.ID,
+		"quest_id":             qst.ID,
+		"skill_points_awarded": qst.Reward.SkillPoints,
+	}).Debug("Awarded skill points reward")
+	exp.SkillPoints += qst.Reward.SkillPoints
 }
 
 // awardQuestItems generates and awards items from quest rewards.

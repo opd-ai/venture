@@ -1876,87 +1876,16 @@ func generateCompanionColor(companionType engine.CompanionType, genreID string, 
 func spawnBookshelves(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
 	bookGen := book.NewGenerator()
 
-	// Determine number of bookshelves based on room count (1-2 bookshelves per level)
-	roomCount := len(terrainMap.Rooms)
-	if roomCount < 2 {
-		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+	bookshelfCount := calculateBookshelfCount(terrainMap)
+	if bookshelfCount == 0 {
+		return 0, nil
 	}
 
-	bookshelfCount := 1
-	if roomCount >= 8 {
-		bookshelfCount = 2 // 2 bookshelves for larger dungeons
-	}
-
-	// Generate bookshelves with books
-	bookshelfSpawnData := make([]engine.BookshelfSpawnData, 0, bookshelfCount)
-	for i := 0; i < bookshelfCount; i++ {
-		bookshelfSeed := seed + int64(i*10000) // Unique seed per bookshelf
-
-		// Generate 3-8 books per bookshelf
-		booksPerShelf := 3 + (i % 6) // Varies between 3-8
-		books := make([]*engine.BookComponent, 0, booksPerShelf)
-
-		for j := 0; j < booksPerShelf; j++ {
-			bookSeed := bookshelfSeed + int64(j*100)
-
-			// Randomly select book type
-			bookTypes := []engine.BookType{
-				engine.BookTypeSkill,
-				engine.BookTypeLore,
-				engine.BookTypeRecipe,
-				engine.BookTypeHistory,
-			}
-			rng := rand.New(rand.NewSource(bookSeed))
-			bookType := bookTypes[rng.Intn(len(bookTypes))]
-
-			// Generate book
-			bookParams := params
-			bookParams.Custom = map[string]interface{}{
-				"book_type": bookType,
-			}
-
-			// Add skill-specific params for skill books
-			if bookType == engine.BookTypeSkill {
-				skills := []string{"Combat", "Magic", "Crafting", "Stealth", "Survival"}
-				bookParams.Custom["skill_name"] = skills[rng.Intn(len(skills))]
-				bookParams.Custom["skill_bonus"] = float64(params.Depth) * 0.1
-			}
-
-			bookResult, err := bookGen.Generate(bookSeed, bookParams)
-			if err != nil {
-				logger.WithError(err).Warn("failed to generate book")
-				continue
-			}
-
-			bookComp, ok := bookResult.(*engine.BookComponent)
-			if !ok {
-				logger.Warn("book generator returned invalid result")
-				continue
-			}
-
-			books = append(books, bookComp)
-		}
-
-		if len(books) == 0 {
-			continue // Skip empty bookshelves
-		}
-
-		// Generate bookshelf color based on genre
-		shelfColor := generateBookshelfColor(params.GenreID, bookshelfSeed)
-
-		bookshelfSpawnData = append(bookshelfSpawnData, engine.BookshelfSpawnData{
-			Books:        books,
-			ShelfColor:   shelfColor,
-			ShelfSize:    32, // Standard bookshelf size
-			ColliderSize: 28.0,
-		})
-	}
-
+	bookshelfSpawnData := generateBookshelves(bookGen, bookshelfCount, seed, params, logger)
 	if len(bookshelfSpawnData) == 0 {
-		return 0, nil // No bookshelves generated
+		return 0, nil
 	}
 
-	// Spawn bookshelves in terrain
 	spawned, err := engine.SpawnBookshelvesInTerrain(world, terrainMap, bookshelfSpawnData, seed)
 	if err != nil {
 		return 0, fmt.Errorf("failed to spawn bookshelves in terrain: %w", err)
@@ -1969,6 +1898,108 @@ func spawnBookshelves(world *engine.World, terrainMap *terrain.Terrain, seed int
 	}).Debug("bookshelf spawning complete")
 
 	return spawned, nil
+}
+
+// calculateBookshelfCount determines number of bookshelves based on room count.
+func calculateBookshelfCount(terrainMap *terrain.Terrain) int {
+	roomCount := len(terrainMap.Rooms)
+	if roomCount < 2 {
+		return 0
+	}
+
+	bookshelfCount := 1
+	if roomCount >= 8 {
+		bookshelfCount = 2
+	}
+	return bookshelfCount
+}
+
+// generateBookshelves creates bookshelf spawn data with generated books.
+func generateBookshelves(bookGen *book.Generator, count int, seed int64, params procgen.GenerationParams, logger *logrus.Entry) []engine.BookshelfSpawnData {
+	bookshelfSpawnData := make([]engine.BookshelfSpawnData, 0, count)
+
+	for i := 0; i < count; i++ {
+		bookshelfSeed := seed + int64(i*10000)
+		books := generateBooksForShelf(bookGen, i, bookshelfSeed, params, logger)
+
+		if len(books) == 0 {
+			continue
+		}
+
+		shelfColor := generateBookshelfColor(params.GenreID, bookshelfSeed)
+		bookshelfSpawnData = append(bookshelfSpawnData, engine.BookshelfSpawnData{
+			Books:        books,
+			ShelfColor:   shelfColor,
+			ShelfSize:    32,
+			ColliderSize: 28.0,
+		})
+	}
+
+	return bookshelfSpawnData
+}
+
+// generateBooksForShelf creates books for a single bookshelf.
+func generateBooksForShelf(bookGen *book.Generator, shelfIndex int, bookshelfSeed int64, params procgen.GenerationParams, logger *logrus.Entry) []*engine.BookComponent {
+	booksPerShelf := 3 + (shelfIndex % 6)
+	books := make([]*engine.BookComponent, 0, booksPerShelf)
+
+	for j := 0; j < booksPerShelf; j++ {
+		bookComp := generateSingleBook(bookGen, bookshelfSeed+int64(j*100), params, logger)
+		if bookComp != nil {
+			books = append(books, bookComp)
+		}
+	}
+
+	return books
+}
+
+// generateSingleBook creates a single book with appropriate parameters.
+func generateSingleBook(bookGen *book.Generator, bookSeed int64, params procgen.GenerationParams, logger *logrus.Entry) *engine.BookComponent {
+	bookType := selectBookType(bookSeed)
+	bookParams := createBookParams(params, bookType, bookSeed)
+
+	bookResult, err := bookGen.Generate(bookSeed, bookParams)
+	if err != nil {
+		logger.WithError(err).Warn("failed to generate book")
+		return nil
+	}
+
+	bookComp, ok := bookResult.(*engine.BookComponent)
+	if !ok {
+		logger.Warn("book generator returned invalid result")
+		return nil
+	}
+
+	return bookComp
+}
+
+// selectBookType randomly selects a book type.
+func selectBookType(bookSeed int64) engine.BookType {
+	bookTypes := []engine.BookType{
+		engine.BookTypeSkill,
+		engine.BookTypeLore,
+		engine.BookTypeRecipe,
+		engine.BookTypeHistory,
+	}
+	rng := rand.New(rand.NewSource(bookSeed))
+	return bookTypes[rng.Intn(len(bookTypes))]
+}
+
+// createBookParams creates generation parameters for a book.
+func createBookParams(params procgen.GenerationParams, bookType engine.BookType, bookSeed int64) procgen.GenerationParams {
+	bookParams := params
+	bookParams.Custom = map[string]interface{}{
+		"book_type": bookType,
+	}
+
+	if bookType == engine.BookTypeSkill {
+		skills := []string{"Combat", "Magic", "Crafting", "Stealth", "Survival"}
+		rng := rand.New(rand.NewSource(bookSeed))
+		bookParams.Custom["skill_name"] = skills[rng.Intn(len(skills))]
+		bookParams.Custom["skill_bonus"] = float64(params.Depth) * 0.1
+	}
+
+	return bookParams
 }
 
 // generateBookshelfColor generates a color for a bookshelf based on genre.

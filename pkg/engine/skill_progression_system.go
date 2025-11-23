@@ -33,13 +33,9 @@ func NewSkillProgressionSystem() *SkillProgressionSystem {
 // Update applies skill effects to entities with skill trees.
 // This recalculates stat bonuses based on all learned skills.
 func (s *SkillProgressionSystem) Update(entities []*Entity, deltaTime float64) {
-	s.frameCounter++
-
-	// Only update periodically to avoid excessive recalculation
-	if s.frameCounter < s.updateInterval {
+	if !s.shouldUpdateThisFrame() {
 		return
 	}
-	s.frameCounter = 0
 
 	log.WithFields(log.Fields{
 		"system_name":   "skill_progression",
@@ -47,22 +43,36 @@ func (s *SkillProgressionSystem) Update(entities []*Entity, deltaTime float64) {
 		"frame_counter": s.frameCounter,
 	}).Debug("Starting skill progression update cycle")
 
-	// Apply skill bonuses to all entities with skill trees
-	entitiesProcessed := 0
-	for _, entity := range entities {
-		if !entity.HasComponent("skill_tree") {
-			continue
-		}
-
-		s.applySkillBonuses(entity)
-		entitiesProcessed++
-	}
+	entitiesProcessed := s.processSkillEntities(entities)
 
 	log.WithFields(log.Fields{
 		"system_name":        "skill_progression",
 		"entities_processed": entitiesProcessed,
 		"total_entities":     len(entities),
 	}).Debug("Completed skill progression update cycle")
+}
+
+// shouldUpdateThisFrame checks if enough frames have passed for an update.
+func (s *SkillProgressionSystem) shouldUpdateThisFrame() bool {
+	s.frameCounter++
+	if s.frameCounter < s.updateInterval {
+		return false
+	}
+	s.frameCounter = 0
+	return true
+}
+
+// processSkillEntities applies skill bonuses to all entities with skill trees.
+func (s *SkillProgressionSystem) processSkillEntities(entities []*Entity) int {
+	entitiesProcessed := 0
+	for _, entity := range entities {
+		if !entity.HasComponent("skill_tree") {
+			continue
+		}
+		s.applySkillBonuses(entity)
+		entitiesProcessed++
+	}
+	return entitiesProcessed
 }
 
 // applySkillBonuses calculates and applies all learned skill effects to an entity.

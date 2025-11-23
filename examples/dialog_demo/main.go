@@ -105,16 +105,34 @@ func demonstrateVariation(genreID string, order dialog.MarkovOrder, deterministi
 	fmt.Println("\n--- Demonstrating Dialog Variation ---")
 
 	seed := int64(12345)
+	printVariationMode(deterministic)
+
+	responses := generateResponses(genreID, order, seed, deterministic)
+	uniqueCount, totalCount := analyzeUniqueness(responses)
+	reportVariationResults(uniqueCount, totalCount, deterministic)
+}
+
+// printVariationMode prints the current variation mode.
+func printVariationMode(deterministic bool) {
 	if !deterministic {
 		fmt.Println("Non-deterministic mode: Same input should produce varied responses")
 	} else {
 		fmt.Println("Deterministic mode: Same input produces identical responses")
 	}
+}
 
-	// Generate 5 responses to same input
+// generateResponses generates 5 responses to the same input.
+func generateResponses(genreID string, order dialog.MarkovOrder, seed int64, deterministic bool) []string {
 	responses := make([]string, 5)
+	params := dialog.GenerateParams{
+		PlayerInput:    "What do you know about this place?",
+		ConversationID: "demo_variation",
+		MaxWords:       25,
+		MinWords:       10,
+		Temperature:    0.7,
+	}
+
 	for i := 0; i < 5; i++ {
-		// In deterministic mode, use same seed; in non-deterministic, use different seeds
 		currentSeed := seed
 		if !deterministic {
 			currentSeed = seed + int64(i)
@@ -126,14 +144,6 @@ func demonstrateVariation(genreID string, order dialog.MarkovOrder, deterministi
 			log.Fatalf("Failed to get corpus for genre: %s", genreID)
 		}
 		generator.TrainFromCorpus(corpus.Sentences)
-
-		params := dialog.GenerateParams{
-			PlayerInput:    "What do you know about this place?",
-			ConversationID: "demo_variation",
-			MaxWords:       25,
-			MinWords:       10,
-			Temperature:    0.7,
-		}
 
 		var response string
 		if deterministic {
@@ -150,19 +160,23 @@ func demonstrateVariation(genreID string, order dialog.MarkovOrder, deterministi
 		responses[i] = response
 		fmt.Printf("\nResponse %d: \"%s\"\n", i+1, response)
 	}
+	return responses
+}
 
-	// Check uniqueness
+// analyzeUniqueness counts unique responses.
+func analyzeUniqueness(responses []string) (int, int) {
 	unique := make(map[string]bool)
 	for _, r := range responses {
 		if r != "" {
 			unique[r] = true
 		}
 	}
+	return len(unique), len(responses)
+}
 
-	uniqueCount := len(unique)
-	totalCount := len(responses)
+// reportVariationResults reports uniqueness results.
+func reportVariationResults(uniqueCount, totalCount int, deterministic bool) {
 	uniquePercent := float64(uniqueCount) / float64(totalCount) * 100
-
 	fmt.Printf("\nUniqueness: %d/%d responses unique (%.1f%%)\n", uniqueCount, totalCount, uniquePercent)
 
 	if !deterministic {

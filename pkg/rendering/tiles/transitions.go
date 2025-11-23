@@ -552,57 +552,69 @@ func (g *Generator) applyEdgeSmoothing(img *image.RGBA, smoothness float64, widt
 		return
 	}
 
-	// Create a temporary copy for sampling
+	temp := copyImageRGBA(img, width, height)
+	edgeWidth := 1
+
+	for y := edgeWidth; y < height-edgeWidth; y++ {
+		for x := edgeWidth; x < width-edgeWidth; x++ {
+			if !isEdgeBoundaryPixel(x, y, edgeWidth, width, height) {
+				continue
+			}
+
+			avgColor := sampleNeighborhood(temp, x, y, width, height)
+			if avgColor != nil {
+				blendedColor := blendColors(temp.At(x, y), *avgColor, smoothness)
+				img.Set(x, y, blendedColor)
+			}
+		}
+	}
+}
+
+// copyImageRGBA creates a copy of the image for sampling.
+func copyImageRGBA(img *image.RGBA, width, height int) *image.RGBA {
 	temp := image.NewRGBA(img.Bounds())
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			temp.Set(x, y, img.At(x, y))
 		}
 	}
+	return temp
+}
 
-	// Apply 3x3 blur at edges (1 pixel from edge)
-	edgeWidth := 1
-	for y := edgeWidth; y < height-edgeWidth; y++ {
-		for x := edgeWidth; x < width-edgeWidth; x++ {
-			// Only apply to edge pixels
-			isEdge := x == edgeWidth || x == width-1-edgeWidth ||
-				y == edgeWidth || y == height-1-edgeWidth
+// isEdgeBoundaryPixel determines if a pixel is at the edge boundary.
+func isEdgeBoundaryPixel(x, y, edgeWidth, width, height int) bool {
+	return x == edgeWidth || x == width-1-edgeWidth ||
+		y == edgeWidth || y == height-1-edgeWidth
+}
 
-			if !isEdge {
-				continue
-			}
+// sampleNeighborhood samples a 3x3 neighborhood and returns average color.
+func sampleNeighborhood(img *image.RGBA, x, y, width, height int) *color.RGBA {
+	var r, g, b, a uint32
+	count := 0
 
-			// Sample 3x3 neighborhood
-			var r, g, b, a uint32
-			count := 0
-			for dy := -1; dy <= 1; dy++ {
-				for dx := -1; dx <= 1; dx++ {
-					nx, ny := x+dx, y+dy
-					if nx >= 0 && nx < width && ny >= 0 && ny < height {
-						pr, pg, pb, pa := temp.At(nx, ny).RGBA()
-						r += pr
-						g += pg
-						b += pb
-						a += pa
-						count++
-					}
-				}
-			}
-
-			if count > 0 {
-				// Blend averaged color with original based on smoothness
-				avgColor := color.RGBA{
-					R: uint8((r / uint32(count)) >> 8),
-					G: uint8((g / uint32(count)) >> 8),
-					B: uint8((b / uint32(count)) >> 8),
-					A: uint8((a / uint32(count)) >> 8),
-				}
-
-				originalColor := temp.At(x, y)
-				blendedColor := blendColors(originalColor, avgColor, smoothness)
-				img.Set(x, y, blendedColor)
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			nx, ny := x+dx, y+dy
+			if nx >= 0 && nx < width && ny >= 0 && ny < height {
+				pr, pg, pb, pa := img.At(nx, ny).RGBA()
+				r += pr
+				g += pg
+				b += pb
+				a += pa
+				count++
 			}
 		}
+	}
+
+	if count == 0 {
+		return nil
+	}
+
+	return &color.RGBA{
+		R: uint8((r / uint32(count)) >> 8),
+		G: uint8((g / uint32(count)) >> 8),
+		B: uint8((b / uint32(count)) >> 8),
+		A: uint8((a / uint32(count)) >> 8),
 	}
 }
 

@@ -960,54 +960,70 @@ func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *E
 
 // determineEnemyType analyzes entity components to determine monster type.
 func (s *AnimationSystem) determineEnemyType(entity *Entity, config *sprites.Config) string {
-	entityType := "humanoid"
+	if bossType := s.checkBossType(entity, config); bossType != "" {
+		return bossType
+	}
+	if sizeType := s.checkSizeBasedType(entity); sizeType != "" {
+		return sizeType
+	}
+	return "humanoid"
+}
 
-	if attackComp, ok := entity.GetComponent("attack"); ok {
-		if attack, ok := attackComp.(*AttackComponent); ok {
-			if attack.Damage > 20 {
-				entityType = "boss"
-				config.Custom["isBoss"] = true
-				config.Custom["bossScale"] = 1.5
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":   entity.ID,
-						"entity_type": entityType,
-						"damage":      attack.Damage,
-						"boss_scale":  1.5,
-					}).Debug("boss enemy detected")
-				}
-				return entityType
-			}
-		}
+// checkBossType determines if the entity is a boss based on attack damage.
+func (s *AnimationSystem) checkBossType(entity *Entity, config *sprites.Config) string {
+	attackComp, ok := entity.GetComponent("attack")
+	if !ok {
+		return ""
+	}
+	attack, ok := attackComp.(*AttackComponent)
+	if !ok || attack.Damage <= 20 {
+		return ""
 	}
 
-	if colliderComp, ok := entity.GetComponent("collider"); ok {
-		if collider, ok := colliderComp.(*ColliderComponent); ok {
-			if collider.Width > 48 {
-				entityType = "monster"
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":      entity.ID,
-						"entity_type":    entityType,
-						"collider_width": collider.Width,
-					}).Debug("large monster detected")
-				}
-				return entityType
-			} else if collider.Width < 24 {
-				entityType = "minion"
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":      entity.ID,
-						"entity_type":    entityType,
-						"collider_width": collider.Width,
-					}).Debug("small minion detected")
-				}
-				return entityType
-			}
-		}
+	config.Custom["isBoss"] = true
+	config.Custom["bossScale"] = 1.5
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"entity_type": "boss",
+			"damage":      attack.Damage,
+			"boss_scale":  1.5,
+		}).Debug("boss enemy detected")
+	}
+	return "boss"
+}
+
+// checkSizeBasedType determines entity type based on collider size.
+func (s *AnimationSystem) checkSizeBasedType(entity *Entity) string {
+	colliderComp, ok := entity.GetComponent("collider")
+	if !ok {
+		return ""
+	}
+	collider, ok := colliderComp.(*ColliderComponent)
+	if !ok {
+		return ""
 	}
 
-	return entityType
+	if collider.Width > 48 {
+		s.logEntityType(entity.ID, "monster", collider.Width)
+		return "monster"
+	}
+	if collider.Width < 24 {
+		s.logEntityType(entity.ID, "minion", collider.Width)
+		return "minion"
+	}
+	return ""
+}
+
+// logEntityType logs the detected entity type at debug level.
+func (s *AnimationSystem) logEntityType(entityID uint64, entityType string, width float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"entity_type":    entityType,
+			"collider_width": width,
+		}).Debug("entity type detected")
+	}
 }
 
 // determineFacingDirection calculates entity facing direction from velocity.

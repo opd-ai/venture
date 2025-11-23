@@ -114,53 +114,73 @@ func createPlayerWithInventory(world *engine.World, name string, x, y float64, v
 func demonstrateSuccessfulTrade(ts *engine.TradeSystem, world *engine.World, player1ID, player2ID uint64, verbose bool) {
 	fmt.Println("\n--- Demonstrating Successful Trade ---")
 
+	player1, player2 := getPlayers(world, player1ID, player2ID)
+	inv1, inv2 := getInventories(player1, player2)
+
+	printInventorySizes(inv1, inv2, verbose, "before trade")
+
+	offeredItems := []string{"Player1_sword_common"}
+	requestedItems := []string{"Player2_shield_common"}
+
+	executeTrade(ts, player1ID, player2ID, offeredItems, requestedItems)
+
+	printInventorySizes(inv1, inv2, verbose, "after trade")
+	verifyItemTransfer(inv1, inv2)
+	checkTrustScores(player1, player2)
+}
+
+// getPlayers retrieves both player entities.
+func getPlayers(world *engine.World, player1ID, player2ID uint64) (*engine.Entity, *engine.Entity) {
 	player1, _ := world.GetEntity(player1ID)
 	player2, _ := world.GetEntity(player2ID)
+	return player1, player2
+}
 
+// getInventories retrieves inventory components from players.
+func getInventories(player1, player2 *engine.Entity) (*engine.InventoryComponent, *engine.InventoryComponent) {
 	inv1Comp, _ := player1.GetComponent("inventory")
 	inv1 := inv1Comp.(*engine.InventoryComponent)
 
 	inv2Comp, _ := player2.GetComponent("inventory")
 	inv2 := inv2Comp.(*engine.InventoryComponent)
 
+	return inv1, inv2
+}
+
+// printInventorySizes prints inventory sizes if verbose mode is enabled.
+func printInventorySizes(inv1, inv2 *engine.InventoryComponent, verbose bool, context string) {
 	if verbose {
-		fmt.Printf("Player 1 inventory before trade: %d items\n", len(inv1.Items))
-		fmt.Printf("Player 2 inventory before trade: %d items\n", len(inv2.Items))
+		fmt.Printf("Player 1 inventory %s: %d items\n", context, len(inv1.Items))
+		fmt.Printf("Player 2 inventory %s: %d items\n", context, len(inv2.Items))
 	}
+}
 
-	// Player 1 offers common sword for Player 2's common shield
-	offeredItems := []string{"Player1_sword_common"}
-	requestedItems := []string{"Player2_shield_common"}
-
-	// Propose trade
+// executeTrade proposes, accepts, and commits a trade.
+func executeTrade(ts *engine.TradeSystem, player1ID, player2ID uint64, offeredItems, requestedItems []string) {
 	err := ts.ProposeTrade(player1ID, player2ID, offeredItems, requestedItems)
 	if err != nil {
 		log.Fatalf("Trade proposal failed: %v", err)
 	}
 	fmt.Println("✓ Trade proposal successful (players within proximity)")
 
-	// Accept trade
 	err = ts.AcceptTrade(player2ID)
 	if err != nil {
 		log.Fatalf("Trade acceptance failed: %v", err)
 	}
 	fmt.Println("✓ Trade accepted by Player 2")
 
-	// Commit trade (called by proposer or either party)
 	err = ts.CommitTrade(player1ID)
 	if err != nil {
 		log.Fatalf("Trade commit failed: %v", err)
 	}
 	fmt.Println("✓ Trade committed (atomic item transfer)")
+}
 
-	if verbose {
-		fmt.Printf("Player 1 inventory after trade: %d items\n", len(inv1.Items))
-		fmt.Printf("Player 2 inventory after trade: %d items\n", len(inv2.Items))
-	}
-
-	// Verify item transfer
+// verifyItemTransfer verifies that items were transferred correctly.
+func verifyItemTransfer(inv1, inv2 *engine.InventoryComponent) {
 	player1HasShield := false
 	player2HasSword := false
+
 	for _, item := range inv1.Items {
 		if item.ID == "Player2_shield_common" {
 			player1HasShield = true
@@ -177,8 +197,10 @@ func demonstrateSuccessfulTrade(ts *engine.TradeSystem, world *engine.World, pla
 	} else {
 		log.Fatal("Item transfer verification failed!")
 	}
+}
 
-	// Check trust score increased
+// checkTrustScores verifies that trust scores increased.
+func checkTrustScores(player1, player2 *engine.Entity) {
 	trade1Comp, _ := player1.GetComponent("trade")
 	trade1 := trade1Comp.(*engine.TradeComponent)
 

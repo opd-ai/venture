@@ -33,40 +33,53 @@ var (
 func main() {
 	flag.Parse()
 
-	// Initialize logger
 	logger := logging.TestUtilityLogger("transitiontest")
 	if *verbose {
 		logger.SetLevel(logrus.DebugLevel)
 	}
-
 	logger.Info("Transition Test Tool started")
 
-	// Parse tile type
-	var tileTypeEnum tiles.TileType
-	switch *tileType {
-	case "floor":
-		tileTypeEnum = tiles.TileFloor
-	case "wall":
-		tileTypeEnum = tiles.TileWall
-	case "door":
-		tileTypeEnum = tiles.TileDoor
-	case "corridor":
-		tileTypeEnum = tiles.TileCorridor
-	case "water":
-		tileTypeEnum = tiles.TileWater
-	case "lava":
-		tileTypeEnum = tiles.TileLava
-	case "trap":
-		tileTypeEnum = tiles.TileTrap
-	case "stairs":
-		tileTypeEnum = tiles.TileStairs
-	default:
-		logger.WithField("type", *tileType).Fatal("unknown tile type")
-	}
-
-	// Create generator
+	tileTypeEnum := parseTileType(*tileType, logger)
 	gen := tiles.NewGeneratorWithLogger(logger)
 
+	printConfiguration()
+
+	transitionsToTest := buildTransitionsList(*transition, logger)
+	composite := createCompositeImage(transitionsToTest, *width, *height)
+
+	generateTransitions(gen, transitionsToTest, composite, tileTypeEnum, *width, *height)
+	saveComposite(composite, *output, len(transitionsToTest), logger)
+
+	logger.Info("transition generation completed")
+}
+
+// parseTileType converts tile type string to enum.
+func parseTileType(tileType string, logger *logrus.Logger) tiles.TileType {
+	switch tileType {
+	case "floor":
+		return tiles.TileFloor
+	case "wall":
+		return tiles.TileWall
+	case "door":
+		return tiles.TileDoor
+	case "corridor":
+		return tiles.TileCorridor
+	case "water":
+		return tiles.TileWater
+	case "lava":
+		return tiles.TileLava
+	case "trap":
+		return tiles.TileTrap
+	case "stairs":
+		return tiles.TileStairs
+	default:
+		logger.WithField("type", tileType).Fatal("unknown tile type")
+		return tiles.TileFloor
+	}
+}
+
+// printConfiguration prints the current configuration.
+func printConfiguration() {
 	fmt.Printf("=== Tile Transition Test Tool ===\n\n")
 	fmt.Printf("Configuration:\n")
 	fmt.Printf("  Type:         %s\n", *tileType)
@@ -77,149 +90,117 @@ func main() {
 	fmt.Printf("  Blend Radius: %.2f\n", *blendRadius)
 	fmt.Printf("  Corner Rad:   %.2f\n", *cornerRadius)
 	fmt.Printf("  Smoothness:   %.2f\n\n", *smoothness)
+}
 
-	// Determine which transitions to generate
-	var transitionsToTest []struct {
-		name       string
-		transition tiles.TileTransitionType
-		neighbors  tiles.TileNeighbors
+// transitionSpec holds transition configuration.
+type transitionSpec struct {
+	name       string
+	transition tiles.TileTransitionType
+	neighbors  tiles.TileNeighbors
+}
+
+// buildTransitionsList constructs the list of transitions to test.
+func buildTransitionsList(transition string, logger *logrus.Logger) []transitionSpec {
+	if transition == "all" {
+		return buildAllTransitions()
+	}
+	return buildSingleTransition(transition, logger)
+}
+
+// buildAllTransitions returns all transition types.
+func buildAllTransitions() []transitionSpec {
+	return []transitionSpec{
+		{"None", tiles.TransitionNone, tiles.TileNeighbors{}},
+		{"Full", tiles.TransitionFull, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true, SW: true}},
+		{"North", tiles.TransitionN, tiles.TileNeighbors{N: true}},
+		{"East", tiles.TransitionE, tiles.TileNeighbors{E: true}},
+		{"South", tiles.TransitionS, tiles.TileNeighbors{S: true}},
+		{"West", tiles.TransitionW, tiles.TileNeighbors{W: true}},
+		{"Northeast", tiles.TransitionNE, tiles.TileNeighbors{N: true, E: true}},
+		{"Northwest", tiles.TransitionNW, tiles.TileNeighbors{N: true, W: true}},
+		{"Southeast", tiles.TransitionSE, tiles.TileNeighbors{S: true, E: true}},
+		{"Southwest", tiles.TransitionSW, tiles.TileNeighbors{S: true, W: true}},
+		{"N-S Corridor", tiles.TransitionNS, tiles.TileNeighbors{N: true, S: true}},
+		{"E-W Corridor", tiles.TransitionEW, tiles.TileNeighbors{E: true, W: true}},
+		{"T-junction NES", tiles.TransitionNES, tiles.TileNeighbors{N: true, E: true, S: true}},
+		{"T-junction NEW", tiles.TransitionNEW, tiles.TileNeighbors{N: true, E: true, W: true}},
+		{"T-junction NSW", tiles.TransitionNSW, tiles.TileNeighbors{N: true, S: true, W: true}},
+		{"T-junction ESW", tiles.TransitionESW, tiles.TileNeighbors{E: true, S: true, W: true}},
+		{"Inner NE", tiles.TransitionInnerNE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NW: true, SE: true, SW: true}},
+		{"Inner NW", tiles.TransitionInnerNW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, SE: true, SW: true}},
+		{"Inner SE", tiles.TransitionInnerSE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SW: true}},
+		{"Inner SW", tiles.TransitionInnerSW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true}},
+	}
+}
+
+// buildSingleTransition returns a single transition based on name.
+func buildSingleTransition(transition string, logger *logrus.Logger) []transitionSpec {
+	transMap := map[string]transitionSpec{
+		"none":     {"none", tiles.TransitionNone, tiles.TileNeighbors{}},
+		"full":     {"full", tiles.TransitionFull, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true, SW: true}},
+		"n":        {"n", tiles.TransitionN, tiles.TileNeighbors{N: true}},
+		"e":        {"e", tiles.TransitionE, tiles.TileNeighbors{E: true}},
+		"s":        {"s", tiles.TransitionS, tiles.TileNeighbors{S: true}},
+		"w":        {"w", tiles.TransitionW, tiles.TileNeighbors{W: true}},
+		"ne":       {"ne", tiles.TransitionNE, tiles.TileNeighbors{N: true, E: true}},
+		"nw":       {"nw", tiles.TransitionNW, tiles.TileNeighbors{N: true, W: true}},
+		"se":       {"se", tiles.TransitionSE, tiles.TileNeighbors{S: true, E: true}},
+		"sw":       {"sw", tiles.TransitionSW, tiles.TileNeighbors{S: true, W: true}},
+		"ns":       {"ns", tiles.TransitionNS, tiles.TileNeighbors{N: true, S: true}},
+		"ew":       {"ew", tiles.TransitionEW, tiles.TileNeighbors{E: true, W: true}},
+		"nes":      {"nes", tiles.TransitionNES, tiles.TileNeighbors{N: true, E: true, S: true}},
+		"new":      {"new", tiles.TransitionNEW, tiles.TileNeighbors{N: true, E: true, W: true}},
+		"nsw":      {"nsw", tiles.TransitionNSW, tiles.TileNeighbors{N: true, S: true, W: true}},
+		"esw":      {"esw", tiles.TransitionESW, tiles.TileNeighbors{E: true, S: true, W: true}},
+		"inner_ne": {"inner_ne", tiles.TransitionInnerNE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NW: true, SE: true, SW: true}},
+		"inner_nw": {"inner_nw", tiles.TransitionInnerNW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, SE: true, SW: true}},
+		"inner_se": {"inner_se", tiles.TransitionInnerSE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SW: true}},
+		"inner_sw": {"inner_sw", tiles.TransitionInnerSW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true}},
 	}
 
-	if *transition == "all" {
-		// Generate all transition types in a grid
-		transitionsToTest = []struct {
-			name       string
-			transition tiles.TileTransitionType
-			neighbors  tiles.TileNeighbors
-		}{
-			{"None", tiles.TransitionNone, tiles.TileNeighbors{}},
-			{"Full", tiles.TransitionFull, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true, SW: true}},
-			{"North", tiles.TransitionN, tiles.TileNeighbors{N: true}},
-			{"East", tiles.TransitionE, tiles.TileNeighbors{E: true}},
-			{"South", tiles.TransitionS, tiles.TileNeighbors{S: true}},
-			{"West", tiles.TransitionW, tiles.TileNeighbors{W: true}},
-			{"Northeast", tiles.TransitionNE, tiles.TileNeighbors{N: true, E: true}},
-			{"Northwest", tiles.TransitionNW, tiles.TileNeighbors{N: true, W: true}},
-			{"Southeast", tiles.TransitionSE, tiles.TileNeighbors{S: true, E: true}},
-			{"Southwest", tiles.TransitionSW, tiles.TileNeighbors{S: true, W: true}},
-			{"N-S Corridor", tiles.TransitionNS, tiles.TileNeighbors{N: true, S: true}},
-			{"E-W Corridor", tiles.TransitionEW, tiles.TileNeighbors{E: true, W: true}},
-			{"T-junction NES", tiles.TransitionNES, tiles.TileNeighbors{N: true, E: true, S: true}},
-			{"T-junction NEW", tiles.TransitionNEW, tiles.TileNeighbors{N: true, E: true, W: true}},
-			{"T-junction NSW", tiles.TransitionNSW, tiles.TileNeighbors{N: true, S: true, W: true}},
-			{"T-junction ESW", tiles.TransitionESW, tiles.TileNeighbors{E: true, S: true, W: true}},
-			{"Inner NE", tiles.TransitionInnerNE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NW: true, SE: true, SW: true}},
-			{"Inner NW", tiles.TransitionInnerNW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, SE: true, SW: true}},
-			{"Inner SE", tiles.TransitionInnerSE, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SW: true}},
-			{"Inner SW", tiles.TransitionInnerSW, tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true}},
-		}
-	} else {
-		// Single transition type
-		var transType tiles.TileTransitionType
-		var neighbors tiles.TileNeighbors
-
-		switch *transition {
-		case "none":
-			transType = tiles.TransitionNone
-		case "full":
-			transType = tiles.TransitionFull
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true, SW: true}
-		case "n":
-			transType = tiles.TransitionN
-			neighbors = tiles.TileNeighbors{N: true}
-		case "e":
-			transType = tiles.TransitionE
-			neighbors = tiles.TileNeighbors{E: true}
-		case "s":
-			transType = tiles.TransitionS
-			neighbors = tiles.TileNeighbors{S: true}
-		case "w":
-			transType = tiles.TransitionW
-			neighbors = tiles.TileNeighbors{W: true}
-		case "ne":
-			transType = tiles.TransitionNE
-			neighbors = tiles.TileNeighbors{N: true, E: true}
-		case "nw":
-			transType = tiles.TransitionNW
-			neighbors = tiles.TileNeighbors{N: true, W: true}
-		case "se":
-			transType = tiles.TransitionSE
-			neighbors = tiles.TileNeighbors{S: true, E: true}
-		case "sw":
-			transType = tiles.TransitionSW
-			neighbors = tiles.TileNeighbors{S: true, W: true}
-		case "ns":
-			transType = tiles.TransitionNS
-			neighbors = tiles.TileNeighbors{N: true, S: true}
-		case "ew":
-			transType = tiles.TransitionEW
-			neighbors = tiles.TileNeighbors{E: true, W: true}
-		case "nes":
-			transType = tiles.TransitionNES
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true}
-		case "new":
-			transType = tiles.TransitionNEW
-			neighbors = tiles.TileNeighbors{N: true, E: true, W: true}
-		case "nsw":
-			transType = tiles.TransitionNSW
-			neighbors = tiles.TileNeighbors{N: true, S: true, W: true}
-		case "esw":
-			transType = tiles.TransitionESW
-			neighbors = tiles.TileNeighbors{E: true, S: true, W: true}
-		case "inner_ne":
-			transType = tiles.TransitionInnerNE
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true, W: true, NW: true, SE: true, SW: true}
-		case "inner_nw":
-			transType = tiles.TransitionInnerNW
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, SE: true, SW: true}
-		case "inner_se":
-			transType = tiles.TransitionInnerSE
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SW: true}
-		case "inner_sw":
-			transType = tiles.TransitionInnerSW
-			neighbors = tiles.TileNeighbors{N: true, E: true, S: true, W: true, NE: true, NW: true, SE: true}
-		default:
-			logger.WithField("transition", *transition).Fatal("unknown transition type")
-		}
-
-		transitionsToTest = []struct {
-			name       string
-			transition tiles.TileTransitionType
-			neighbors  tiles.TileNeighbors
-		}{
-			{*transition, transType, neighbors},
-		}
+	if spec, ok := transMap[transition]; ok {
+		return []transitionSpec{spec}
 	}
+	logger.WithField("transition", transition).Fatal("unknown transition type")
+	return nil
+}
 
-	// Create composite image
+// createCompositeImage creates the composite image for all transitions.
+func createCompositeImage(transitions []transitionSpec, width, height int) *image.RGBA {
 	cols := 5
-	if len(transitionsToTest) < 5 {
-		cols = len(transitionsToTest)
+	if len(transitions) < 5 {
+		cols = len(transitions)
 	}
-	rows := (len(transitionsToTest) + cols - 1) / cols
+	rows := (len(transitions) + cols - 1) / cols
 
-	compositeWidth := cols * (*width + 4)    // 4px spacing between tiles
-	compositeHeight := rows * (*height + 24) // 24px spacing for labels
-
+	compositeWidth := cols * (width + 4)
+	compositeHeight := rows * (height + 24)
 	composite := image.NewRGBA(image.Rect(0, 0, compositeWidth, compositeHeight))
 
-	// Fill background with dark gray
 	for y := 0; y < compositeHeight; y++ {
 		for x := 0; x < compositeWidth; x++ {
 			composite.Set(x, y, image.Black)
 		}
 	}
+	return composite
+}
 
-	// Generate each transition
-	for i, trans := range transitionsToTest {
+// generateTransitions generates all transitions and draws them to composite.
+func generateTransitions(gen *tiles.Generator, transitions []transitionSpec, composite *image.RGBA, tileType tiles.TileType, width, height int) {
+	cols := 5
+	if len(transitions) < 5 {
+		cols = len(transitions)
+	}
+
+	for i, trans := range transitions {
 		row := i / cols
 		col := i % cols
 
 		config := tiles.TransitionConfig{
 			BaseConfig: tiles.Config{
-				Type:    tileTypeEnum,
-				Width:   *width,
-				Height:  *height,
+				Type:    tileType,
+				Width:   width,
+				Height:  height,
 				GenreID: *genre,
 				Seed:    *seed,
 				Variant: 0.5,
@@ -234,21 +215,21 @@ func main() {
 
 		img, err := gen.GenerateWithTransition(config)
 		if err != nil {
-			logger.WithError(err).WithField("transition", trans.name).Fatal("transition generation failed")
+			fmt.Printf("Error generating %s: %v\n", trans.name, err)
+			continue
 		}
 
-		// Calculate position in composite
-		x := col*(*width+4) + 2
-		y := row*(*height+24) + 20 // Leave space for label
-
-		// Draw tile
-		draw.Draw(composite, image.Rect(x, y, x+*width, y+*height), img, image.Point{}, draw.Src)
+		x := col*(width+4) + 2
+		y := row*(height+24) + 20
+		draw.Draw(composite, image.Rect(x, y, x+width, y+height), img, image.Point{}, draw.Src)
 
 		fmt.Printf("Generated: %-15s (%s)\n", trans.name, trans.transition.String())
 	}
+}
 
-	// Save composite image
-	f, err := os.Create(*output)
+// saveComposite saves the composite image to file.
+func saveComposite(composite *image.RGBA, outputPath string, count int, logger *logrus.Logger) {
+	f, err := os.Create(outputPath)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to create output file")
 	}
@@ -259,7 +240,6 @@ func main() {
 		logger.WithError(err).Fatal("failed to encode PNG")
 	}
 
-	fmt.Printf("\nSaved %d transitions to: %s\n", len(transitionsToTest), *output)
-	fmt.Printf("Image size: %dx%d\n", compositeWidth, compositeHeight)
-	logger.Info("transition generation completed")
+	fmt.Printf("\nSaved %d transitions to: %s\n", count, outputPath)
+	fmt.Printf("Image size: %dx%d\n", composite.Bounds().Dx(), composite.Bounds().Dy())
 }

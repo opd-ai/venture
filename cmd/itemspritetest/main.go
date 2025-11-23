@@ -212,87 +212,105 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{40, 40, 50, 255})
 
-	// Draw large version of current item with checkerboard background
 	if g.currentIndex < len(g.sprites) {
-		currentItem := g.sprites[g.currentIndex]
-		displaySize := *width * g.zoom
-		displayX := (screenWidth - displaySize) / 2
-		displayY := 50
-
-		// Draw checkerboard background
-		checkerSize := 16
-		for cy := 0; cy < displaySize/checkerSize; cy++ {
-			for cx := 0; cx < displaySize/checkerSize; cx++ {
-				var col color.Color
-				if (cx+cy)%2 == 0 {
-					col = color.RGBA{60, 60, 70, 255}
-				} else {
-					col = color.RGBA{50, 50, 60, 255}
-				}
-				ebitenutil.DrawRect(screen,
-					float64(displayX+cx*checkerSize),
-					float64(displayY+cy*checkerSize),
-					float64(checkerSize), float64(checkerSize), col)
-			}
-		}
-
-		// Draw item
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(float64(g.zoom), float64(g.zoom))
-		op.GeoM.Translate(float64(displayX), float64(displayY))
-		screen.DrawImage(currentItem, op)
-
-		// Draw border
-		borderColor := color.RGBA{255, 255, 255, 255}
-		ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY-2), float64(displaySize+4), 2, borderColor)
-		ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY+displaySize), float64(displaySize+4), 2, borderColor)
-		ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY-2), 2, float64(displaySize+4), borderColor)
-		ebitenutil.DrawRect(screen, float64(displayX+displaySize), float64(displayY-2), 2, float64(displaySize+4), borderColor)
-
-		// Draw item name
-		itemName := g.spriteNames[g.currentIndex]
-		ebitenutil.DebugPrintAt(screen, itemName, displayX, displayY+displaySize+10)
+		drawMainItemDisplay(screen, g, g.currentIndex)
 	}
 
-	// Draw thumbnail grid at bottom
+	drawThumbnailGrid(screen, g)
+	drawInstructionsAndLegend(screen, g)
+}
+
+// drawMainItemDisplay renders the main item with checkerboard background.
+func drawMainItemDisplay(screen *ebiten.Image, g *Game, currentIndex int) {
+	currentItem := g.sprites[currentIndex]
+	displaySize := *width * g.zoom
+	displayX := (screenWidth - displaySize) / 2
+	displayY := 50
+
+	drawCheckerboardBackground(screen, displayX, displayY, displaySize)
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(float64(g.zoom), float64(g.zoom))
+	op.GeoM.Translate(float64(displayX), float64(displayY))
+	screen.DrawImage(currentItem, op)
+
+	drawItemBorder(screen, displayX, displayY, displaySize)
+
+	itemName := g.spriteNames[currentIndex]
+	ebitenutil.DebugPrintAt(screen, itemName, displayX, displayY+displaySize+10)
+}
+
+// drawCheckerboardBackground renders a checkerboard pattern behind the item.
+func drawCheckerboardBackground(screen *ebiten.Image, displayX, displayY, displaySize int) {
+	checkerSize := 16
+	for cy := 0; cy < displaySize/checkerSize; cy++ {
+		for cx := 0; cx < displaySize/checkerSize; cx++ {
+			var col color.Color
+			if (cx+cy)%2 == 0 {
+				col = color.RGBA{60, 60, 70, 255}
+			} else {
+				col = color.RGBA{50, 50, 60, 255}
+			}
+			ebitenutil.DrawRect(screen,
+				float64(displayX+cx*checkerSize),
+				float64(displayY+cy*checkerSize),
+				float64(checkerSize), float64(checkerSize), col)
+		}
+	}
+}
+
+// drawItemBorder draws a border around the displayed item.
+func drawItemBorder(screen *ebiten.Image, displayX, displayY, displaySize int) {
+	borderColor := color.RGBA{255, 255, 255, 255}
+	ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY-2), float64(displaySize+4), 2, borderColor)
+	ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY+displaySize), float64(displaySize+4), 2, borderColor)
+	ebitenutil.DrawRect(screen, float64(displayX-2), float64(displayY-2), 2, float64(displaySize+4), borderColor)
+	ebitenutil.DrawRect(screen, float64(displayX+displaySize), float64(displayY-2), 2, float64(displaySize+4), borderColor)
+}
+
+// drawThumbnailGrid renders the thumbnail grid at the bottom.
+func drawThumbnailGrid(screen *ebiten.Image, g *Game) {
 	thumbnailY := screenHeight - 5*(g.thumbnailSize+24) - 20
 	thumbnailStartX := (screenWidth - g.itemsPerRow*(g.thumbnailSize+4)) / 2
 
-	// Draw rarity sections
 	rarities := []string{"Common", "Uncommon", "Rare", "Epic", "Legendary"}
 	for row := 0; row < 5; row++ {
-		// Draw rarity label
 		labelY := thumbnailY + row*(g.thumbnailSize+24)
 		ebitenutil.DebugPrintAt(screen, rarities[row], 10, labelY+g.thumbnailSize/2)
 
-		for col := 0; col < g.itemsPerRow; col++ {
-			idx := row*g.itemsPerRow + col
-			if idx >= len(g.thumbnails) {
-				break
-			}
-
-			x := thumbnailStartX + col*(g.thumbnailSize+4)
-			y := labelY
-
-			// Highlight current
-			if idx == g.currentIndex {
-				ebitenutil.DrawRect(screen, float64(x-2), float64(y-2),
-					float64(g.thumbnailSize+4), float64(g.thumbnailSize+4),
-					color.RGBA{255, 255, 0, 255})
-			}
-
-			// Draw thumbnail with background
-			ebitenutil.DrawRect(screen, float64(x), float64(y),
-				float64(g.thumbnailSize), float64(g.thumbnailSize),
-				color.RGBA{30, 30, 40, 255})
-
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(float64(x), float64(y))
-			screen.DrawImage(g.thumbnails[idx], op)
-		}
+		drawThumbnailRow(screen, g, row, thumbnailStartX, labelY)
 	}
+}
 
-	// Draw instructions
+// drawThumbnailRow renders a single row of thumbnails.
+func drawThumbnailRow(screen *ebiten.Image, g *Game, row, thumbnailStartX, labelY int) {
+	for col := 0; col < g.itemsPerRow; col++ {
+		idx := row*g.itemsPerRow + col
+		if idx >= len(g.thumbnails) {
+			break
+		}
+
+		x := thumbnailStartX + col*(g.thumbnailSize+4)
+		y := labelY
+
+		if idx == g.currentIndex {
+			ebitenutil.DrawRect(screen, float64(x-2), float64(y-2),
+				float64(g.thumbnailSize+4), float64(g.thumbnailSize+4),
+				color.RGBA{255, 255, 0, 255})
+		}
+
+		ebitenutil.DrawRect(screen, float64(x), float64(y),
+			float64(g.thumbnailSize), float64(g.thumbnailSize),
+			color.RGBA{30, 30, 40, 255})
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(float64(x), float64(y))
+		screen.DrawImage(g.thumbnails[idx], op)
+	}
+}
+
+// drawInstructionsAndLegend renders UI instructions and category legend.
+func drawInstructionsAndLegend(screen *ebiten.Image, g *Game) {
 	instructions := []string{
 		"Arrow Keys: Navigate items",
 		"1-5: Jump to rarity tier",
@@ -303,7 +321,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, line, 10, 10+i*15)
 	}
 
-	// Draw category legend
 	legend := []string{
 		"Weapons: Sword, Axe, Bow, Staff, Gun",
 		"Armor: Helmet",

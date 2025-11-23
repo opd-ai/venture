@@ -121,47 +121,49 @@ func (ui *EbitenCharacterUI) Hide() {
 //
 // Called by: Game.Update() every frame
 func (ui *EbitenCharacterUI) Update(entities []*Entity, deltaTime float64) {
-	// Update touch handler
-	if ui.touchHandler != nil {
-		ui.touchHandler.Update()
-	}
+	updateTouchComponents(ui)
 
-	// Update close button
-	if ui.closeButton != nil {
-		ui.closeButton.Update()
-	}
-
-	// BUG FIX: Phase 1.2 - Mobile gesture support for closing character sheet
-	// Resolution: Use HandleMenuInputWithTouch to support swipe gestures on mobile
-	// Platform: Mobile (Android/iOS)
-	// Standardized dual-exit menu navigation: toggle key (C) OR Escape OR mobile gestures
 	if shouldClose, shouldToggle := HandleMenuInputWithTouch(MenuKeys.Character, ui.visible, ui.touchHandler); shouldClose {
 		if shouldToggle {
 			ui.Toggle()
 		} else {
 			ui.Hide()
 		}
-		return // Don't process other input on the same frame as toggle/close
+		return
 	}
 
 	if !ui.visible {
 		return
 	}
 
-	// Handle touch scrolling
+	handleScrolling(ui)
+}
+
+// updateTouchComponents updates touch handler and close button.
+func updateTouchComponents(ui *EbitenCharacterUI) {
 	if ui.touchHandler != nil {
-		if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-			// Vertical swipe for scrolling
-			if direction > 1.0 || direction < -1.0 {
-				if direction < 0 {
-					ui.scrollOffset += distance * 0.5
-				} else {
-					ui.scrollOffset -= distance * 0.5
-				}
-				// Clamp scroll offset
-				if ui.scrollOffset < 0 {
-					ui.scrollOffset = 0
-				}
+		ui.touchHandler.Update()
+	}
+	if ui.closeButton != nil {
+		ui.closeButton.Update()
+	}
+}
+
+// handleScrolling processes touch scrolling gestures.
+func handleScrolling(ui *EbitenCharacterUI) {
+	if ui.touchHandler == nil {
+		return
+	}
+
+	if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
+		if direction > 1.0 || direction < -1.0 {
+			if direction < 0 {
+				ui.scrollOffset += distance * 0.5
+			} else {
+				ui.scrollOffset -= distance * 0.5
+			}
+			if ui.scrollOffset < 0 {
+				ui.scrollOffset = 0
 			}
 		}
 	}

@@ -98,7 +98,20 @@ func validateFeature(registry *features.FeatureRegistry, id string) {
 }
 
 func validateCategory(registry *features.FeatureRegistry, catName string) {
-	// Map string to category
+	cat := mapCategoryName(catName)
+	categoryFeatures := registry.GetCategory(cat)
+	if len(categoryFeatures) == 0 {
+		fmt.Printf("No features in category '%s'\n", cat)
+		return
+	}
+
+	fmt.Printf("=== Category: %s (%d features) ===\n\n", cat, len(categoryFeatures))
+	passed, failed := validateFeatures(categoryFeatures)
+	printCategorySummary(passed, failed, len(categoryFeatures))
+}
+
+// mapCategoryName maps a category name string to its corresponding FeatureCategory.
+func mapCategoryName(catName string) features.FeatureCategory {
 	catMap := map[string]features.FeatureCategory{
 		"core":     features.CategoryCore,
 		"advanced": features.CategoryAdvanced,
@@ -118,18 +131,11 @@ func validateCategory(registry *features.FeatureRegistry, catName string) {
 		fmt.Printf("Valid categories: core, advanced, vehicles, social, housing, guilds, combat, economy, content, meta\n")
 		os.Exit(1)
 	}
+	return cat
+}
 
-	categoryFeatures := registry.GetCategory(cat)
-	if len(categoryFeatures) == 0 {
-		fmt.Printf("No features in category '%s'\n", cat)
-		return
-	}
-
-	fmt.Printf("=== Category: %s (%d features) ===\n\n", cat, len(categoryFeatures))
-
-	passed := 0
-	failed := 0
-
+// validateFeatures validates a list of features and returns pass/fail counts.
+func validateFeatures(categoryFeatures []*features.Feature) (passed, failed int) {
 	for _, feature := range categoryFeatures {
 		valid, issues := feature.Validate()
 
@@ -139,27 +145,41 @@ func validateCategory(registry *features.FeatureRegistry, catName string) {
 
 		if valid {
 			passed++
-			if !*summaryFlag {
-				fmt.Printf("✅ %s (%s)\n", feature.Name, feature.ID)
-				if *verboseFlag {
-					fmt.Printf("   Accessibility: %v, Tutorial: %.0f%%, Integration: %d systems\n",
-						feature.AccessibilityTime, feature.TutorialCompleteness*100, feature.IntegrationCount)
-				}
-			}
+			printPassedFeature(feature)
 		} else {
 			failed++
-			if !*summaryFlag {
-				fmt.Printf("❌ %s (%s)\n", feature.Name, feature.ID)
-				for _, issue := range issues {
-					fmt.Printf("   - %s\n", issue)
-				}
-			}
+			printFailedFeature(feature, issues)
 		}
 	}
+	return passed, failed
+}
 
+// printPassedFeature prints a passed feature with optional verbose details.
+func printPassedFeature(feature *features.Feature) {
+	if !*summaryFlag {
+		fmt.Printf("✅ %s (%s)\n", feature.Name, feature.ID)
+		if *verboseFlag {
+			fmt.Printf("   Accessibility: %v, Tutorial: %.0f%%, Integration: %d systems\n",
+				feature.AccessibilityTime, feature.TutorialCompleteness*100, feature.IntegrationCount)
+		}
+	}
+}
+
+// printFailedFeature prints a failed feature with its validation issues.
+func printFailedFeature(feature *features.Feature, issues []string) {
+	if !*summaryFlag {
+		fmt.Printf("❌ %s (%s)\n", feature.Name, feature.ID)
+		for _, issue := range issues {
+			fmt.Printf("   - %s\n", issue)
+		}
+	}
+}
+
+// printCategorySummary prints the category validation summary with pass rate.
+func printCategorySummary(passed, failed, total int) {
 	fmt.Println()
-	passRate := float64(passed) / float64(len(categoryFeatures)) * 100
-	fmt.Printf("Summary: %d/%d passed (%.1f%%)\n", passed, len(categoryFeatures), passRate)
+	passRate := float64(passed) / float64(total) * 100
+	fmt.Printf("Summary: %d/%d passed (%.1f%%)\n", passed, total, passRate)
 
 	if passRate >= 90.0 {
 		fmt.Printf("✅ Category meets 90%% acceptance criteria\n")

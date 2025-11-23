@@ -135,10 +135,16 @@ func main() {
 
 // generateMultiLevel handles multi-level dungeon generation
 func generateMultiLevel(logger *logrus.Logger) {
-	// Create level generator
 	gen := terrain.NewLevelGenerator()
+	params := createGenerationParams()
+	levels := generateLevels(gen, params, logger)
 
-	// Set up generation parameters
+	rendered := renderLevels(levels, logger)
+	writeOutputToFileOrConsole(rendered, logger)
+}
+
+// createGenerationParams creates and configures generation parameters.
+func createGenerationParams() procgen.GenerationParams {
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -148,11 +154,12 @@ func generateMultiLevel(logger *logrus.Logger) {
 			"height": *height,
 		},
 	}
-
-	// Apply genre-specific defaults
 	terrain.ApplyGenreDefaults(&params)
+	return params
+}
 
-	// Generate all levels
+// generateLevels generates all terrain levels.
+func generateLevels(gen *terrain.LevelGenerator, params procgen.GenerationParams, logger *logrus.Logger) []*terrain.Terrain {
 	genLogger := logging.GeneratorLogger(logger, "multilevel-terrain", *seed, *genre)
 	genLogger.WithField("numLevels", *numLevels).Debug("starting multi-level generation")
 
@@ -162,60 +169,63 @@ func generateMultiLevel(logger *logrus.Logger) {
 	}
 
 	genLogger.WithField("levelCount", len(levels)).Info("multi-level terrain generated")
+	return levels
+}
 
-	// Render based on showAll flag and visualization mode
-	var rendered string
+// renderLevels renders levels based on showAll flag and visualization mode.
+func renderLevels(levels []*terrain.Terrain, logger *logrus.Logger) string {
 	if *showAll {
-		// Show all levels
-		var builder strings.Builder
-		builder.WriteString(fmt.Sprintf("Multi-Level Dungeon: %d levels\n", len(levels)))
-		builder.WriteString(fmt.Sprintf("Size: %dx%d per level, Seed: %d\n\n", *width, *height, *seed))
+		return renderAllLevels(levels)
+	}
+	logger.WithField("utility", "terraintest").Info("showing level 0 (use -showAll to see all levels)")
+	return renderSingleLevelByMode(levels[0])
+}
 
-		for i, level := range levels {
-			builder.WriteString(fmt.Sprintf("=== LEVEL %d ===\n", i))
+// renderAllLevels renders all levels with connectivity information.
+func renderAllLevels(levels []*terrain.Terrain) string {
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("Multi-Level Dungeon: %d levels\n", len(levels)))
+	builder.WriteString(fmt.Sprintf("Size: %dx%d per level, Seed: %d\n\n", *width, *height, *seed))
 
-			// Render based on visualization mode
-			switch *visualize {
-			case "color":
-				builder.WriteString(renderTerrainColor(level, *genre))
-			case "stats":
-				builder.WriteString(renderStats(level))
-			default:
-				builder.WriteString(renderTerrain(level))
-			}
+	for i, level := range levels {
+		builder.WriteString(fmt.Sprintf("=== LEVEL %d ===\n", i))
+		builder.WriteString(renderSingleLevelByMode(level))
+		builder.WriteString("\n")
 
-			builder.WriteString("\n")
-
-			// Show connectivity
-			if i < len(levels)-1 {
-				builder.WriteString("Connections:\n")
-				if len(level.StairsDown) > 0 {
-					builder.WriteString(fmt.Sprintf("  Stairs Down: %v\n", level.StairsDown))
-				}
-				if len(levels[i+1].StairsUp) > 0 {
-					builder.WriteString(fmt.Sprintf("  Stairs Up (next level): %v\n", levels[i+1].StairsUp))
-				}
-				builder.WriteString("\n")
-			}
-		}
-
-		rendered = builder.String()
-	} else {
-		// Show only first level
-		genLogger.Info("showing level 0 (use -showAll to see all levels)")
-
-		// Render based on visualization mode
-		switch *visualize {
-		case "color":
-			rendered = renderTerrainColor(levels[0], *genre)
-		case "stats":
-			rendered = renderStats(levels[0])
-		default:
-			rendered = renderTerrain(levels[0])
+		if i < len(levels)-1 {
+			writeConnectivityInfo(&builder, level, levels[i+1])
 		}
 	}
 
-	// Output to file or console
+	return builder.String()
+}
+
+// writeConnectivityInfo writes stairs connectivity information.
+func writeConnectivityInfo(builder *strings.Builder, currentLevel, nextLevel *terrain.Terrain) {
+	builder.WriteString("Connections:\n")
+	if len(currentLevel.StairsDown) > 0 {
+		builder.WriteString(fmt.Sprintf("  Stairs Down: %v\n", currentLevel.StairsDown))
+	}
+	if len(nextLevel.StairsUp) > 0 {
+		builder.WriteString(fmt.Sprintf("  Stairs Up (next level): %v\n", nextLevel.StairsUp))
+	}
+	builder.WriteString("\n")
+}
+
+// renderSingleLevelByMode renders a single level based on visualization mode.
+func renderSingleLevelByMode(level *terrain.Terrain) string {
+	switch *visualize {
+	case "color":
+		return renderTerrainColor(level, *genre)
+	case "stats":
+		return renderStats(level)
+	default:
+		return renderTerrain(level)
+	}
+}
+
+// writeOutputToFileOrConsole writes output to file or console.
+func writeOutputToFileOrConsole(rendered string, logger *logrus.Logger) {
 	testLogger := logger.WithField("utility", "terraintest")
 	if *output != "" {
 		if err := os.WriteFile(*output, []byte(rendered), 0o644); err != nil {

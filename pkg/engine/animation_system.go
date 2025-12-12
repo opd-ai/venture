@@ -687,10 +687,12 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 	var err error
 
 	if s.spriteCache != nil {
-		// Create cache key from sprite config
-		cacheKey := cache.GenerateKey(config.Seed, config.GenreID, config.Variation)
-		baseSprite, _ = s.spriteCache.Get(cacheKey)
-		if baseSprite == nil {
+		// Create cache key from sprite config components
+		// Key format: "sprite:seed:genre:width:height:complexity" for unique identification
+		cacheKey := s.generateSpriteCacheKey(config)
+		var hit bool
+		baseSprite, hit = s.spriteCache.Get(cacheKey)
+		if !hit {
 			// Cache miss: generate and cache
 			baseSprite, err = s.spriteGenerator.Generate(config)
 			if err == nil {
@@ -1339,4 +1341,22 @@ func (s *AnimationSystem) TransitionState(entity *Entity, newState AnimationStat
 	}
 
 	return true
+}
+
+// generateSpriteCacheKey creates a cache key from a sprite config.
+// The key uniquely identifies a sprite based on its generation parameters.
+// Format: "sprite:type:seed:genre:width:height:complexity:variation"
+func (s *AnimationSystem) generateSpriteCacheKey(config sprites.Config) cache.CacheKey {
+	// Include all relevant config fields that affect sprite generation
+	// Type is included to prevent cache collisions between different sprite categories
+	keyStr := fmt.Sprintf("sprite:%s:%d:%s:%d:%d:%.2f:%d",
+		config.Type.String(),
+		config.Seed,
+		config.GenreID,
+		config.Width,
+		config.Height,
+		config.Complexity,
+		config.Variation,
+	)
+	return cache.CacheKey(keyStr)
 }

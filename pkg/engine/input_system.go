@@ -239,6 +239,7 @@ type InputSystem struct {
 	KeyMap       ebiten.Key // M key for map
 	KeyCrafting  ebiten.Key // R key for crafting
 	KeyMailbox   ebiten.Key // L key for mailbox
+	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -269,6 +270,7 @@ type InputSystem struct {
 	mapUI       *EbitenMapUI
 	craftingUI  *CraftingUI
 	shopUI      *ShopUI
+	tradeUI     *TradeUI // Phase 3.3 (PLAN.md): Trade UI for T key toggle
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -290,6 +292,7 @@ type InputSystem struct {
 	onMapOpen       func()
 	onCraftingOpen  func() // Callback for crafting UI toggle
 	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
+	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -339,6 +342,7 @@ func NewInputSystem() *InputSystem {
 		KeyMap:       ebiten.KeyM,
 		KeyCrafting:  ebiten.KeyR,
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
+		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
@@ -528,6 +532,12 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 		return true
 	}
 
+	// Phase 3.3 (PLAN.md): Close trade UI on ESC
+	if s.tradeUI != nil && s.tradeUI.IsVisible() {
+		s.tradeUI.Close()
+		return true
+	}
+
 	if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
 		s.mailboxUI.Close()
 		return true
@@ -605,6 +615,10 @@ func (s *InputSystem) handleUIShortcuts() {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
 		s.onMailboxOpen()
+	}
+	// Phase 3.3 (PLAN.md): T key for Trade UI
+	if inpututil.IsKeyJustPressed(s.KeyTrade) && s.onTradeOpen != nil {
+		s.onTradeOpen()
 	}
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key press handling
@@ -1031,6 +1045,12 @@ func (s *InputSystem) SetShopUI(shopUI *ShopUI) {
 	s.shopUI = shopUI
 }
 
+// SetTradeUI connects the trade UI for T key toggle and ESC key closing.
+// Phase 3.3 (PLAN.md): Player-to-player trading UI integration.
+func (s *InputSystem) SetTradeUI(tradeUI *TradeUI) {
+	s.tradeUI = tradeUI
+}
+
 // SetQuickSaveCallback sets the callback function for quick save (F5).
 func (s *InputSystem) SetQuickSaveCallback(callback func() error) {
 	s.onQuickSave = callback
@@ -1107,6 +1127,16 @@ func (s *InputSystem) SetMailboxCallback(callback func()) error {
 		return fmt.Errorf("mailbox callback cannot be nil")
 	}
 	s.onMailboxOpen = callback
+	return nil
+}
+
+// SetTradeCallback sets the callback function for opening trade UI (T key).
+// Phase 3.3 (PLAN.md): Player-to-player trading UI integration.
+func (s *InputSystem) SetTradeCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("trade callback cannot be nil")
+	}
+	s.onTradeOpen = callback
 	return nil
 }
 

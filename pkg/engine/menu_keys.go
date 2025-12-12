@@ -26,6 +26,7 @@ var MenuKeys = struct {
 	Map       ebiten.Key // M - World map
 	Shop      ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
 	Crafting  ebiten.Key // R - Crafting recipes
+	Trade     ebiten.Key // T - Player-to-player trading
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -38,6 +39,7 @@ var MenuKeys = struct {
 	MapLabel       string
 	ShopLabel      string
 	CraftingLabel  string
+	TradeLabel     string
 	ExitHint       string // Standard exit hint text
 }{
 	// Key assignments
@@ -48,6 +50,7 @@ var MenuKeys = struct {
 	Map:       ebiten.KeyM,
 	Shop:      ebiten.KeyF,
 	Crafting:  ebiten.KeyR,
+	Trade:     ebiten.KeyT,
 	Exit:      ebiten.KeyEscape,
 
 	// Display labels
@@ -58,6 +61,7 @@ var MenuKeys = struct {
 	MapLabel:       "[M] Map",
 	ShopLabel:      "[F] Shop",
 	CraftingLabel:  "[R] Crafting",
+	TradeLabel:     "[T] Trade",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }
 
@@ -204,6 +208,8 @@ func getKeyName(key ebiten.Key) string {
 		return "F"
 	case ebiten.KeyR:
 		return "R"
+	case ebiten.KeyT:
+		return "T"
 	case ebiten.KeyEscape:
 		return "ESC"
 	default:

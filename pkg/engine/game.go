@@ -59,6 +59,7 @@ type EbitenGame struct {
 	ShopUI      *ShopUI     // Commerce and merchant interaction UI
 	CraftingUI  *CraftingUI // Crafting and recipe UI
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
+	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
@@ -848,6 +849,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.CraftingUI.Update(nil, deltaTime)
 	}
 
+	// Phase 3.3 (PLAN.md): Update Trade UI
+	if g.TradeUI != nil {
+		g.TradeUI.Update(deltaTime)
+	}
+
 	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
 	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
 
@@ -894,6 +900,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		g.MapUI.IsFullScreen() ||
 		(g.ShopUI != nil && g.ShopUI.IsVisible()) ||
 		(g.CraftingUI != nil && g.CraftingUI.IsVisible()) ||
+		(g.TradeUI != nil && g.TradeUI.IsVisible()) ||
 		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
 		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
@@ -923,6 +930,7 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		!g.MapUI.IsFullScreen() &&
 		(g.ShopUI == nil || !g.ShopUI.IsVisible()) &&
 		(g.CraftingUI == nil || !g.CraftingUI.IsVisible()) &&
+		(g.TradeUI == nil || !g.TradeUI.IsVisible()) &&
 		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
 		(g.GuildUI == nil || !g.GuildUI.IsVisible())
 }
@@ -1087,6 +1095,11 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 		g.CraftingUI.Draw(screen)
 	}
 
+	// Phase 3.3 (PLAN.md): Draw Trade UI
+	if g.TradeUI != nil {
+		g.TradeUI.Draw(screen)
+	}
+
 	g.drawMailboxUI(screen)
 
 	// INTEGRATION FIX [Category B]: Draw V8.0 UI screens
@@ -1153,6 +1166,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	// Set player for crafting UI (if initialized)
 	if g.CraftingUI != nil {
 		g.CraftingUI.SetPlayerEntity(entity)
+	}
+
+	// Phase 3.3 (PLAN.md): Set player for trade UI (if initialized)
+	if g.TradeUI != nil {
+		g.TradeUI.SetPlayerEntity(entity)
 	}
 }
 
@@ -1234,6 +1252,7 @@ func (g *EbitenGame) setupOptionalUICallbacks(inputSystem *InputSystem, objectiv
 	}{
 		{"crafting", inputSystem.SetCraftingCallback, g.CraftingUI, "crafting"},
 		{"mailbox", inputSystem.SetMailboxCallback, g.MailboxUI, "mailbox"},
+		{"trade", inputSystem.SetTradeCallback, g.TradeUI, "trade"}, // Phase 3.3 (PLAN.md)
 		{"housing", inputSystem.SetHousingCallback, g.HousingUI, "housing"},
 		{"gallery", inputSystem.SetGalleryCallback, g.GalleryUI, "gallery"},
 	}

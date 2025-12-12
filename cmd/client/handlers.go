@@ -1542,6 +1542,10 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 	if shopUI != nil {
 		inputSystem.SetShopUI(shopUI)
 	}
+	// Phase 3.3 (PLAN.md): Connect Trade UI to input system
+	if game.TradeUI != nil {
+		inputSystem.SetTradeUI(game.TradeUI)
+	}
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.
@@ -1680,6 +1684,16 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		if *verbose {
 			clientLogger.Info("guild UI initialized (U key to open)")
 		}
+	}
+
+	// Phase 3.3 (PLAN.md): Trade UI initialization and integration
+	// Player-to-player trading with validation
+	tradeUI := engine.NewTradeUI(game.World, sys.tradeSystem, *width, *height)
+	tradeUI.SetPlayerEntity(player)
+	game.TradeUI = tradeUI
+
+	if *verbose {
+		clientLogger.Info("trade UI initialized (T key to open)")
 	}
 
 	craftingUI := engine.NewCraftingUI(*width, *height)

@@ -85,6 +85,7 @@ play() {
 
 dev() {
     impl
+    review
     #integrate
     #play
 }

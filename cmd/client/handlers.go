@@ -794,6 +794,8 @@ func configureSystemConnections(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.combatSystem.SetCamera(game.CameraSystem)
 	sys.combatSystem.SetParticleSystem(sys.particleSystem, game.World, *genreID)
 	sys.combatSystem.SetProjectileSystem(sys.projectileSystem)
+	// Plan Phase 1.1: Connect combat system to audio manager for combat SFX
+	sys.combatSystem.SetAudioManager(sys.audioManager)
 	sys.projectileSystem.SetCamera(game.CameraSystem)
 	sys.projectileSystem.SetGenre(*genreID)
 	sys.projectileSystem.SetSeed(*seed)

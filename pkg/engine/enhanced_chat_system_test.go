@@ -145,13 +145,15 @@ func TestEnhancedChatSystem_SendMessage_GlobalChannel(t *testing.T) {
 	}
 
 	// Verify message in sender's history
-	senderChatRaw, _ := sender.GetComponent("chat"); senderChat := senderChatRaw.(*ChatComponent)
+	senderChatRaw, _ := sender.GetComponent("chat")
+	senderChat := senderChatRaw.(*ChatComponent)
 	if len(senderChat.Messages) != 1 {
 		t.Errorf("sender should have 1 message, got %d", len(senderChat.Messages))
 	}
 
 	// Verify message delivered to recipient
-	recipientChatRaw, _ := recipient.GetComponent("chat"); recipientChat := recipientChatRaw.(*ChatComponent)
+	recipientChatRaw, _ := recipient.GetComponent("chat")
+	recipientChat := recipientChatRaw.(*ChatComponent)
 	if len(recipientChat.Messages) != 1 {
 		t.Errorf("recipient should have 1 message, got %d", len(recipientChat.Messages))
 	}
@@ -195,9 +197,11 @@ func TestEnhancedChatSystem_SendMessage_LocalChannel(t *testing.T) {
 	system.RegisterPlayer(farID)
 
 	// Subscribe both to local channel
-	nearChatRaw, _ := nearRecipient.GetComponent("chat"); nearChat := nearChatRaw.(*ChatComponent)
+	nearChatRaw, _ := nearRecipient.GetComponent("chat")
+	nearChat := nearChatRaw.(*ChatComponent)
 	nearChat.SubscribeChannel(ChatLocal)
-	farChatRaw, _ := farRecipient.GetComponent("chat"); farChat := farChatRaw.(*ChatComponent)
+	farChatRaw, _ := farRecipient.GetComponent("chat")
+	farChat := farChatRaw.(*ChatComponent)
 	farChat.SubscribeChannel(ChatLocal)
 
 	// Send local message
@@ -246,12 +250,14 @@ func TestEnhancedChatSystem_SendMessage_Whisper(t *testing.T) {
 	}
 
 	// Verify only recipient received message
-	recipientChatRaw, _ := recipient.GetComponent("chat"); recipientChat := recipientChatRaw.(*ChatComponent)
+	recipientChatRaw, _ := recipient.GetComponent("chat")
+	recipientChat := recipientChatRaw.(*ChatComponent)
 	if len(recipientChat.Messages) != 1 {
 		t.Errorf("recipient should have 1 message, got %d", len(recipientChat.Messages))
 	}
 
-	otherChatRaw, _ := other.GetComponent("chat"); otherChat := otherChatRaw.(*ChatComponent)
+	otherChatRaw, _ := other.GetComponent("chat")
+	otherChat := otherChatRaw.(*ChatComponent)
 	if len(otherChat.Messages) != 0 {
 		t.Errorf("other player should have 0 messages, got %d", len(otherChat.Messages))
 	}
@@ -360,7 +366,8 @@ func TestEnhancedChatSystem_GetPlayerHistory_WithFilter(t *testing.T) {
 	system.RegisterPlayer(recipientID)
 
 	// Subscribe recipient to local channel
-	recipientChatRaw, _ := recipient.GetComponent("chat"); recipientChat := recipientChatRaw.(*ChatComponent)
+	recipientChatRaw, _ := recipient.GetComponent("chat")
+	recipientChat := recipientChatRaw.(*ChatComponent)
 	recipientChat.SubscribeChannel(ChatLocal)
 
 	// Send messages to different channels
@@ -454,7 +461,8 @@ func TestEnhancedChatSystem_ProcessACK(t *testing.T) {
 	}
 
 	// Get message ID
-	senderChatRaw, _ := sender.GetComponent("chat"); senderChat := senderChatRaw.(*ChatComponent)
+	senderChatRaw, _ := sender.GetComponent("chat")
+	senderChat := senderChatRaw.(*ChatComponent)
 	msgID := senderChat.Messages[0].ID
 
 	// Process ACK
@@ -488,7 +496,8 @@ func TestEnhancedChatSystem_ProcessNACK(t *testing.T) {
 	}
 
 	// Get message ID
-	senderChatRaw, _ := sender.GetComponent("chat"); senderChat := senderChatRaw.(*ChatComponent)
+	senderChatRaw, _ := sender.GetComponent("chat")
+	senderChat := senderChatRaw.(*ChatComponent)
 	msgID := senderChat.Messages[0].ID
 
 	// Process NACK
@@ -503,7 +512,6 @@ func TestEnhancedChatSystem_ProcessNACK(t *testing.T) {
 		t.Errorf("message not marked as failed after NACK")
 	}
 }
-
 
 func TestEnhancedChatSystem_IsMuted(t *testing.T) {
 	world := NewWorld()
@@ -523,15 +531,15 @@ func TestEnhancedChatSystem_IsMuted(t *testing.T) {
 	system.ApplyMute(playerID, 2*time.Second)
 
 	// Should be muted
-if !system.IsMuted(playerID) {
-t.Errorf("player should be muted")
-}
+	if !system.IsMuted(playerID) {
+		t.Errorf("player should be muted")
+	}
 
-// Wait for mute to expire
-time.Sleep(2100 * time.Millisecond)
+	// Wait for mute to expire
+	time.Sleep(2100 * time.Millisecond)
 
-// Should not be muted anymore
-if system.IsMuted(playerID) {
-t.Errorf("player should not be muted after expiry")
-}
+	// Should not be muted anymore
+	if system.IsMuted(playerID) {
+		t.Errorf("player should not be muted after expiry")
+	}
 }

@@ -12,10 +12,10 @@ import (
 // EnhancedChatSystem provides advanced chat with encryption and history persistence.
 // Integrates with persistence.ChatHistory for message storage and retrieval.
 type EnhancedChatSystem struct {
-	world       *World
-	history     map[uint64]*persistence.ChatHistory // Player ID → chat history
-	nextMsgID   uint64                              // For generating unique message IDs
-	encryptedMsgs map[string][]byte                // Message ID → encrypted payload (simulated encryption)
+	world         *World
+	history       map[uint64]*persistence.ChatHistory // Player ID → chat history
+	nextMsgID     uint64                              // For generating unique message IDs
+	encryptedMsgs map[string][]byte                   // Message ID → encrypted payload (simulated encryption)
 }
 
 // NewEnhancedChatSystem creates a new enhanced chat system with history persistence.

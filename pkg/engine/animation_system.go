@@ -17,7 +17,7 @@ import (
 // Integrates with sprite generator to create procedural animation frames.
 type AnimationSystem struct {
 	spriteGenerator *sprites.Generator
-	spriteCache     *cache.SpriteCache // Phase 1.2: External sprite cache for base sprites
+	spriteCache     *cache.SpriteCache         // Phase 1.2: External sprite cache for base sprites
 	frameCache      map[string][]*ebiten.Image // Cache by key: seed_state
 	cacheMutex      sync.RWMutex
 	maxCacheSize    int

@@ -30,7 +30,7 @@ type CombatSystem struct {
 	// Phase 10.2: Projectile system for ranged weapon physics
 	projectileSystem *ProjectileSystem
 
-	// Phase 14.4/Plan 1.1: Audio manager for combat SFX
+	// Plan Phase 1.1: Audio manager for combat SFX
 	audioManager *AudioManager
 
 	// Callback for when an entity dies
@@ -96,7 +96,7 @@ func (s *CombatSystem) SetProjectileSystem(ps *ProjectileSystem) {
 	s.projectileSystem = ps
 }
 
-// SetAudioManager sets the audio manager reference for combat SFX (Phase 14.4/Plan 1.1).
+// SetAudioManager sets the audio manager reference for combat SFX (Plan Phase 1.1).
 func (s *CombatSystem) SetAudioManager(am *AudioManager) {
 	if s.logger != nil {
 		s.logger.WithField("has_audio_manager", am != nil).Debug("audio manager linked to combat system")
@@ -492,7 +492,7 @@ func (s *CombatSystem) applyAttackFeedback(attacker, target *Entity, finalDamage
 	s.playCombatSFX(target, damageType, isCrit)
 }
 
-// playCombatSFX plays combat sound effects for damage events (Phase 14.4/Plan 1.1).
+// playCombatSFX plays combat sound effects for damage events (Plan Phase 1.1).
 func (s *CombatSystem) playCombatSFX(target *Entity, damageType combat.DamageType, isCrit bool) {
 	if s.audioManager == nil {
 		return

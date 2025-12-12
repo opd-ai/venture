@@ -9,13 +9,13 @@ echo "Building keyboard test for WebAssembly..."
 mkdir -p build/keyboardtest
 
 # Build WASM binary
-GOOS=js GOARCH=wasm go build -o build/keyboardtest/keyboardtest.wasm ./cmd/keyboardtest
+GOOS=js GOARCH=wasm go build -o build/keyboardtest/keyboardtest.wasm ./examples/keyboardtest
 
 # Copy wasm_exec.js from Go installation
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" build/keyboardtest/
 
 # Copy HTML file
-cp cmd/keyboardtest/keyboardtest.html build/keyboardtest/index.html
+cp examples/keyboardtest/keyboardtest.html build/keyboardtest/index.html
 
 echo "Build complete!"
 echo "Output directory: build/keyboardtest"

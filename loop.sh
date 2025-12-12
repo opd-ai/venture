@@ -57,6 +57,14 @@ impl() {
     sleep 1m
     checkin
 }
+review() {
+    echo "iteration started - Review phase."
+    copilot -p "/delegate $(cat docs/REVIEW.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Review completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin   
+}
 integrate() {
     echo "iteration started - Dev phase 2: Integrate components."
     copilot -p "/delegate $(cat docs/INTEGRATION.md)" --allow-all-tools --deny-tool sudo

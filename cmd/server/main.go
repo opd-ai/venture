@@ -221,6 +221,23 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 		},
 	}
 
+	// Spawn enemies using entity generator
+	enemyCount, err := engine.SpawnEnemiesInTerrain(world, generatedTerrain, *seed, params)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn enemies")
+	} else if enemyCount > 0 {
+		v4Logger.WithField("count", enemyCount).Info("enemies spawned")
+	}
+
+	// Spawn merchants using entity generator
+	merchantCount := defaultMerchantCount
+	merchantSpawned, err := engine.SpawnMerchantsInTerrain(world, generatedTerrain, *seed, params, merchantCount)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn merchants")
+	} else if merchantSpawned > 0 {
+		v4Logger.WithField("count", merchantSpawned).Info("merchants spawned")
+	}
+
 	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn vehicles")

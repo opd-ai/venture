@@ -135,6 +135,68 @@ func (m *Manager) RemoveMember(guildID, playerID string) error {
 	return fmt.Errorf("member not found: %s", playerID)
 }
 
+// PromoteMember promotes a guild member to the next rank
+func (m *Manager) PromoteMember(guildID, targetPlayerID, promoterID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	guild, exists := m.guilds[guildID]
+	if !exists {
+		return fmt.Errorf("guild not found: %s", guildID)
+	}
+
+	// Get promoter's rank to check permissions
+	promoter := guild.GetMember(promoterID)
+	if promoter == nil {
+		return fmt.Errorf("promoter not a member of guild")
+	}
+
+	// Check if promoter has permission to promote
+	if !guild.HasPermission(promoter.Rank, PermissionPromote) {
+		return fmt.Errorf("insufficient permissions to promote")
+	}
+
+	// Find and update target member
+	for i := range guild.Members {
+		if guild.Members[i].PlayerID == targetPlayerID {
+			currentRank := guild.Members[i].Rank
+
+			// Determine next rank
+			var newRank Rank
+			switch currentRank {
+			case RankRecruit:
+				newRank = RankMember
+			case RankMember:
+				newRank = RankOfficer
+			case RankOfficer:
+				// Only leader can promote to leader
+				if promoter.Rank != RankLeader {
+					return fmt.Errorf("only leader can promote to officer")
+				}
+				newRank = RankLeader
+				// Transfer leadership
+				guild.LeaderID = targetPlayerID
+				// Demote current leader to officer
+				for j := range guild.Members {
+					if guild.Members[j].PlayerID == promoterID {
+						guild.Members[j].Rank = RankOfficer
+						break
+					}
+				}
+			case RankLeader:
+				return fmt.Errorf("cannot promote leader")
+			default:
+				return fmt.Errorf("unknown rank: %s", currentRank)
+			}
+
+			guild.Members[i].Rank = newRank
+			guild.UpdatedAt = time.Now()
+			return nil
+		}
+	}
+	return fmt.Errorf("target member not found: %s", targetPlayerID)
+}
+
 // DepositTreasury adds gold to guild treasury
 func (m *Manager) DepositTreasury(guildID, playerID string, amount int) error {
 	if amount <= 0 {

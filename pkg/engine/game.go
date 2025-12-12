@@ -67,6 +67,9 @@ type EbitenGame struct {
 	HousingUI *housing.HousingUI // Player housing management UI (Phase 49.1, 51.2, 51.3)
 	GalleryUI *GalleryUI         // Image gallery viewer UI (Phase 49.4)
 
+	// Phase 3.2 (PLAN.md): Guild Federation
+	GuildUI *GuildUI // Guild management UI
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -860,6 +863,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.GalleryUI.Update()
 	}
 
+	// Phase 3.2 (PLAN.md): Update Guild UI
+	if g.GuildUI != nil {
+		g.GuildUI.Update()
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -887,6 +895,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.ShopUI != nil && g.ShopUI.IsVisible()) ||
 		(g.CraftingUI != nil && g.CraftingUI.IsVisible()) ||
 		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
+		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -914,7 +923,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		!g.MapUI.IsFullScreen() &&
 		(g.ShopUI == nil || !g.ShopUI.IsVisible()) &&
 		(g.CraftingUI == nil || !g.CraftingUI.IsVisible()) &&
-		(g.MailboxUI == nil || !g.MailboxUI.IsOpen())
+		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
+		(g.GuildUI == nil || !g.GuildUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {

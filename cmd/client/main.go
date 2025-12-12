@@ -126,6 +126,10 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
 	initializeV9Systems(game, sys, clientLogger)
 
+	// Phase 3.2: Initialize Guild Federation (PLAN.md)
+	// Cross-server guild management with synchronization
+	initializePhase3Systems(game, sys, clientLogger)
+
 	// Now register all systems (including environmental systems that are now initialized)
 	registerAllSystems(game, sys)
 

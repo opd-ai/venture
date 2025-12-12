@@ -47,6 +47,9 @@ import (
 	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
 	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
 	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
+
+	// Phase 3.2: Guild Federation (PLAN.md)
+	"github.com/opd-ai/venture/pkg/network/federation/guild"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -190,6 +193,10 @@ type systemsContainer struct {
 	stationManager      *housingcrafting.StationManager  // Phase 55.1: Crafting stations in player housing
 	petHomeManager      *companionhousing.PetHomeManager // Phase 55.2: Companion housing and pet homes
 	guildHousingManager *guildhousing.Manager            // Phase 55.3: Guild housing and communal spaces
+
+	// Phase 3.2: Guild Federation (PLAN.md)
+	guildSystem *engine.GuildSystem // Cross-server guild management and sync
+	guildUI     *engine.GuildUI     // Guild UI for player interaction
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -612,6 +619,18 @@ func initializeV9Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 }
 
+// initializePhase3Systems initializes Phase 3 systems from PLAN.md (Networking & Social Features)
+func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 3.2: Guild Federation - Cross-server guild management
+	guildManager := guild.NewManager()
+	sys.guildSystem = engine.NewGuildSystem(game.World, guildManager)
+	sys.guildUI = engine.NewGuildUI(game.World, sys.guildSystem, *width, *height)
+
+	if *verbose {
+		clientLogger.Info("Phase 3 systems initialized (guild federation)")
+	}
+}
+
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inputSystem)
@@ -741,6 +760,11 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 40: Mail and courier systems for asynchronous messaging
 	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
 	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
+
+	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
+	if sys.guildSystem != nil {
+		game.World.AddSystem(sys.guildSystem)
+	}
 
 	// V6.0 System Registrations (Persistent Worlds & Federation)
 	// Phase 39: Portal system for cross-server travel
@@ -1641,6 +1665,15 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 
 	if *verbose {
 		clientLogger.Info("gallery UI initialized (G key to open)")
+	}
+
+	// Phase 3.2 (PLAN.md): Guild UI initialization and integration
+	// Cross-server guild management UI
+	if sys.guildUI != nil {
+		game.GuildUI = sys.guildUI
+		if *verbose {
+			clientLogger.Info("guild UI initialized (U key to open)")
+		}
 	}
 
 	craftingUI := engine.NewCraftingUI(*width, *height)

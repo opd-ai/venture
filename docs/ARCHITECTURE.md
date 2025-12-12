@@ -469,7 +469,7 @@ For implementation details, development workflows, testing strategies, and code 
 - **SpatialGrid:** Efficient collision detection using uniform grid partitioning
 - **PermissionSet:** Access control with default and per-player permissions
 - **Persistence:** Save/load with incremental updates and player-specific export
-- **CLI Tool:** `cmd/housingtest/` for demonstration and testing
+- **CLI Tool:** `examples/housingtest/` for demonstration and testing
 
 **Performance Metrics (Phase 49.1):**
 - Plot allocation: <1ms per placement (50x better than <50ms target)
@@ -504,7 +504,7 @@ pkg/world/housing/
 
 **CLI Integration:**
 - Added `-enable-housing` flag to client (default: true)
-- Created `cmd/housingtest/` demo tool with actions: demo, save, load, benchmark
+- Created `examples/housingtest/` demo tool with actions: demo, save, load, benchmark
 
 **Next Steps (Remaining V8.0 Phases):**
 - Phase 49.2: Persistent trust & reputation system

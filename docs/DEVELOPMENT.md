@@ -45,7 +45,13 @@ The project follows Go best practices with a clear separation between commands a
 venture/
 ├── cmd/                    # Command-line applications
 │   ├── client/            # Game client
-│   └── server/            # Game server
+│   ├── server/            # Game server
+│   └── mobile/            # Mobile entry point
+├── examples/               # Example and test programs
+│   ├── terraintest/       # Terrain generation testing
+│   ├── entitytest/        # Entity generation testing
+│   ├── itemtest/          # Item generation testing
+│   └── ...                # Many other test/demo commands
 ├── pkg/                    # Reusable packages
 │   ├── engine/            # ECS framework and game loop
 │   ├── procgen/           # Procedural generation

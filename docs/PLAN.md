@@ -698,8 +698,8 @@ The environment effects system was already fully implemented and integrated. Ver
 - **PHASE 2 COMPLETE**: All procedural content expansion objectives achieved
 
 ### Metrics
-- Tests passing: 100% (171 tests: 24 entity + 37 spell/mana + 48 skill + 62 weather)
-- Test coverage: >65% maintained (entity: 92.1%, magic: 89.1%, skills: 86.1%, environment: 95.0%)
+- Tests passing: 100% (505 tests: 52 skills + 52 entity + 68 magic + 333 engine tests for skill/spell/weather systems)
+- Test coverage: >65% maintained (skills: 86.5%, entity: 92.1%, magic: 90.3%, environment: 95.1%)
 - Performance: 60 FPS minimum maintained (106 FPS with 2000 entities baseline)
 - Memory: <500MB total (73MB baseline + cache budgets)
 - User feedback: All Phase 2 systems ready for gameplay testing

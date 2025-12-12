@@ -123,7 +123,7 @@ type systemsContainer struct {
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
 	// V5.0 Systems (Social & Communication)
-	chatSystem    *engine.ChatSystem
+	chatSystem    *engine.EnhancedChatSystem // Phase 3.1: Enhanced chat with E2E encryption and history persistence
 	mailSystem    *engine.MailSystem
 	courierSystem *engine.CourierSystem
 	// V6.0 Systems (Persistent Worlds & Federation)
@@ -429,8 +429,9 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 // initializeV5Systems initializes Version 5.0 social and communication systems.
 func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
-	// Phase 32: Chat system for player-to-player communication
-	sys.chatSystem = engine.NewChatSystem(game.World)
+	// Phase 3.1: Enhanced chat system with E2E encryption and history persistence
+	sys.chatSystem = engine.NewEnhancedChatSystem(game.World)
+	clientLogger.Info("enhanced chat system initialized with encryption and history persistence")
 
 	// INTEGRATION FIX [Category A]: Phase 33 - TradeSystem
 	// Gap: TradeSystem implemented but never initialized

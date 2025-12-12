@@ -23,7 +23,7 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 1. ✅ Complete Integration Audit (DONE - Dec 12, 2025)
 2. ✅ Activate Audio System (DONE - Dec 12, 2025) - Background music and combat SFX integrated
 3. ✅ Enable Sprite Caching (DONE - Dec 12, 2025) - AnimationSystem integrated with SpriteCache
-4. ✅ Integrate Animation System (DONE - Dec 12, 2025) - AnimationSystem with 4-direction support, viewport culling, distance LOD
+4. ✅ Integrate Animation System (DONE - Dec 12, 2025) - AnimationSystem + RotationSystem with 360° rotation, viewport culling, distance LOD
 
 ### Current Priority
 **Phase 2: Procedural Content Expansion** - Expand content variety with entity generator, magic system, skills
@@ -265,7 +265,7 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 
 **Success Criteria**:
 - [x] Animations cycle smoothly at configured FPS (AnimationSystem.updateFrame handles timing)
-- [x] Direction-based animations work correctly (4-direction in engine via Direction type, 8-direction available in pkg/rendering/animation for future integration)
+- [x] Rotational animation support (360° rotation via RotationComponent + RotationSystem with smooth interpolation, 8-direction cardinal mapping via GetCardinalDirection())
 - [x] Animation cache hit rate >85% (from V10 validation, cache integrated with LRU eviction)
 - [x] Tests implemented: Animation tests exist in pkg/engine/animation_*_test.go (require X11 display for runtime)
 - [x] No performance regression (maintain 60 FPS) - Distance LOD and viewport culling implemented

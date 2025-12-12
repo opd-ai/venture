@@ -626,8 +626,14 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	sys.guildSystem = engine.NewGuildSystem(game.World, guildManager)
 	sys.guildUI = engine.NewGuildUI(game.World, sys.guildSystem, *width, *height)
 
+	// Connect guild system to federation protocol for cross-server sync
+	if sys.federationProtocol != nil {
+		sys.guildSystem.SetFederation(sys.federationProtocol)
+		clientLogger.Debug("guild system connected to federation protocol")
+	}
+
 	if *verbose {
-		clientLogger.Info("Phase 3 systems initialized (guild federation)")
+		clientLogger.Info("Phase 3 systems initialized (guild federation with cross-server sync)")
 	}
 }
 

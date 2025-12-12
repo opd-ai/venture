@@ -7,6 +7,8 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
 	"github.com/opd-ai/venture/pkg/engine/physics/vehicle"
+	"github.com/opd-ai/venture/pkg/network/federation"
+	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
 	"github.com/opd-ai/venture/pkg/social/persistence"
@@ -40,6 +42,20 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 
 	// Phase 49.3 & 49.4: Chat History and Image Gallery are per-player
 	// Created when player entities spawn, not as global systems
+
+	// Phase 50.1: Guild Federation & Cross-Server Sync
+	guildManager := guild.NewManager()
+	guildSystem := engine.NewGuildSystem(world, guildManager)
+	world.AddSystem(guildSystem)
+
+	// Initialize federation protocol for cross-server guild sync
+	serverIdentity := &federation.ServerIdentity{
+		PublicKey:  []byte("server-public-key"), // In production, load from config/cert
+		ServerName: "venture-server",
+	}
+	federationProtocol := federation.NewFederationProtocol("server-id", serverIdentity)
+	guildSystem.SetFederation(federationProtocol)
+	_ = federationProtocol // Available for future cross-server features
 
 	// Phase 50.3: Enhanced Vehicle Physics
 	// Note: EnhancedVehicleSystem is a helper for vehicle movement, not standalone system
@@ -82,7 +98,7 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	_ = furnitureGenerator // Used during building interior generation
 
 	if logger.GetLevel() >= logrus.DebugLevel {
-		serverLogger.Info("V8.0 systems initialized (housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
+		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
 }
 

@@ -282,3 +282,60 @@ func (s *PortalSystem) checkRequiredItem(playerID uint64, itemName string) error
 
 	return fmt.Errorf("required item not found: %s", itemName)
 }
+
+// GuildUpdateMessage represents a guild state update for cross-server sync
+type GuildUpdateMessage struct {
+	Type      string `json:"type"`       // "guild_update"
+	GuildID   string `json:"guild_id"`   // Guild identifier
+	GuildData []byte `json:"guild_data"` // Serialized guild state (gzip-compressed JSON)
+	Timestamp int64  `json:"timestamp"`  // Update timestamp for conflict resolution
+}
+
+// BroadcastGuildUpdate broadcasts a guild update to all connected peer servers
+func (f *FederationProtocol) BroadcastGuildUpdate(guildID string, guildData []byte) error {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	if len(f.connections) == 0 {
+		return nil
+	}
+
+	msg := GuildUpdateMessage{
+		Type:      "guild_update",
+		GuildID:   guildID,
+		GuildData: guildData,
+		Timestamp: time.Now().Unix(),
+	}
+
+	for peerAddr, conn := range f.connections {
+		encoder := json.NewEncoder(conn)
+		if err := encoder.Encode(msg); err != nil {
+			f.mu.RUnlock()
+			f.mu.Lock()
+			conn.Close()
+			delete(f.connections, peerAddr)
+			f.mu.Unlock()
+			f.mu.RLock()
+			continue
+		}
+	}
+
+	return nil
+}
+
+// ReceiveGuildUpdate processes an incoming guild update from a peer server
+func (f *FederationProtocol) ReceiveGuildUpdate(msg *GuildUpdateMessage) error {
+	if msg.Type != "guild_update" {
+		return fmt.Errorf("invalid message type: %s", msg.Type)
+	}
+
+	if msg.GuildID == "" {
+		return fmt.Errorf("missing guild ID")
+	}
+
+	if len(msg.GuildData) == 0 {
+		return fmt.Errorf("missing guild data")
+	}
+
+	return nil
+}

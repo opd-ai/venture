@@ -21,7 +21,7 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 
 ### Immediate Next Steps (Phase 1)
 1. ✅ Complete Integration Audit (DONE - Dec 12, 2025)
-2. 🔄 Activate Audio System (2 hours)
+2. ✅ Activate Audio System (DONE - Dec 12, 2025) - Background music and combat SFX integrated
 3. 🔄 Enable Sprite Caching (1 hour)
 4. 🔄 Integrate Animation System (3-4 hours)
 
@@ -96,11 +96,13 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 - Check logs for "audio system initialized"
 
 **Success Criteria**:
-- [ ] Background music plays on game start
-- [ ] Combat SFX triggers on attacks
-- [ ] Movement SFX triggers on player movement
-- [ ] No audio-related errors in logs
-- [ ] Tests pass: `go test ./pkg/audio/...`
+- [x] Background music plays on game start (already implemented in initializeAudioSystem)
+- [x] Combat SFX triggers on attacks (CombatSystem.playCombatSFX integrated Dec 12, 2025)
+- [ ] Movement SFX triggers on player movement (deferred - requires MovementSystem audio integration)
+- [x] No audio-related errors in logs
+- [x] Tests pass: `go test ./pkg/audio/...`
+
+**Note**: Movement SFX integration deferred to reduce scope. Core audio system activation complete with music and combat SFX.
 
 ---
 

@@ -24,6 +24,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/cache"
 	"github.com/opd-ai/venture/pkg/rendering/quality"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
@@ -95,6 +96,7 @@ type systemsContainer struct {
 	narrativeSystem        *engine.NarrativeSystem
 	shadowSystem           *engine.ShadowSystem
 	spriteGenerator        *sprites.Generator
+	spriteCache            *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                *item.ItemGenerator
 	recipeGen              *recipe.RecipeGenerator
 	statusEffectRNG        *rand.Rand
@@ -207,9 +209,17 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	sys.interactionSystem = engine.NewInteractionSystem(game.World)
 	sys.particleSystem = engine.NewParticleSystem()
 
+	// Phase 1.2: Initialize sprite cache for base sprite caching
+	// 400MB limit provides significant performance improvement through cached sprite reuse
+	sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
+	clientLogger.WithField("maxSize", spriteCacheMaxSize).Info("sprite cache initialized")
+
 	sys.spriteGenerator = sprites.NewGenerator()
 	sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 	sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+
+	// Phase 1.2: Connect sprite cache to animation system
+	sys.animationSystem.SetSpriteCache(sys.spriteCache)
 
 	sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 

@@ -23,6 +23,9 @@ const (
 	playerFrameTime    = 0.15 // seconds per animation frame (~6.7 FPS)
 	playerFrameCount   = 4    // frames per animation sequence
 
+	// Sprite cache (Phase 1.2)
+	spriteCacheMaxSize = 400 * 1024 * 1024 // 400MB limit for sprite cache
+
 	// Player stats
 	playerStartHealth     = 100   // initial and max health
 	playerStartMana       = 100   // initial and max mana

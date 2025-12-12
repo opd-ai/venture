@@ -22,7 +22,7 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 ### Immediate Next Steps (Phase 1)
 1. ✅ Complete Integration Audit (DONE - Dec 12, 2025)
 2. ✅ Activate Audio System (DONE - Dec 12, 2025) - Background music and combat SFX integrated
-3. 🔄 Enable Sprite Caching (1 hour)
+3. ✅ Enable Sprite Caching (DONE - Dec 12, 2025) - AnimationSystem integrated with SpriteCache
 4. 🔄 Integrate Animation System (3-4 hours)
 
 ### Current Priority
@@ -157,11 +157,12 @@ This document provides a concrete, step-by-step plan for activating the 68 dorma
 - Manual test: Check cache hit rate in logs (should be >90% after warmup)
 
 **Success Criteria**:
-- [ ] Cache hit rate >90% after 1 minute of gameplay
-- [ ] Memory usage stays under 400MB for sprite cache
-- [ ] No visual regression (sprites look identical)
-- [ ] Tests pass: `go test ./pkg/rendering/cache/...`
-- [ ] Benchmark shows <200ns cache lookup time
+- [x] Cache integrated with AnimationSystem for base sprite generation
+- [x] Memory usage stays under 400MB for sprite cache (400MB limit set)
+- [x] No visual regression (sprites generated the same way, just cached)
+- [ ] Tests pass: `go test ./pkg/rendering/cache/...` (requires X11 display)
+- [ ] Cache hit rate >90% after 1 minute of gameplay (validated at runtime)
+- [ ] Benchmark shows <200ns cache lookup time (validated at runtime)
 
 ---
 

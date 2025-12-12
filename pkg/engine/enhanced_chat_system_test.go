@@ -68,10 +68,12 @@ func TestEnhancedChatSystem_RegisterPlayer(t *testing.T) {
 			if tt.createEnt {
 				entity = world.CreateEntity()
 				playerID = entity.ID
+				world.Update(0) // Process pending entity additions
 			} else {
 				playerID = 999 // Non-existent ID
 			}
 
+			world.Update(0) // Process pending entity additions
 			err := system.RegisterPlayer(playerID)
 
 			if tt.wantErr {
@@ -106,6 +108,8 @@ func TestEnhancedChatSystem_UnregisterPlayer(t *testing.T) {
 	// Register a player
 	entity := world.CreateEntity()
 	playerID := entity.ID
+	world.Update(0) // Process pending entity additions
+	system.RegisterPlayer(playerID)
 	system.RegisterPlayer(playerID)
 
 	// Verify registration
@@ -130,12 +134,16 @@ func TestEnhancedChatSystem_SendMessage_GlobalChannel(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
+	system.RegisterPlayer(senderID)
 	system.RegisterPlayer(senderID)
 
 	// Create recipient
 	recipient := world.CreateEntity()
 	recipientID := recipient.ID
 	recipient.AddComponent(&PositionComponent{X: 200, Y: 200})
+	world.Update(0) // Process pending entity additions
+	system.RegisterPlayer(recipientID)
 	system.RegisterPlayer(recipientID)
 
 	// Send message
@@ -182,18 +190,21 @@ func TestEnhancedChatSystem_SendMessage_LocalChannel(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Create nearby recipient (within 10 tile radius)
 	nearRecipient := world.CreateEntity()
 	nearID := nearRecipient.ID
 	nearRecipient.AddComponent(&PositionComponent{X: 105, Y: 105})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(nearID)
 
 	// Create far recipient (beyond 10 tile radius)
 	farRecipient := world.CreateEntity()
 	farID := farRecipient.ID
 	farRecipient.AddComponent(&PositionComponent{X: 200, Y: 200})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(farID)
 
 	// Subscribe both to local channel
@@ -229,18 +240,26 @@ func TestEnhancedChatSystem_SendMessage_Whisper(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
+
+	// Subscribe sender to whisper channel
+	senderChatRaw, _ := sender.GetComponent("chat")
+	senderChat := senderChatRaw.(*ChatComponent)
+	senderChat.SubscribeChannel(ChatWhisper)
 
 	// Create recipient
 	recipient := world.CreateEntity()
 	recipientID := recipient.ID
 	recipient.AddComponent(&PositionComponent{X: 200, Y: 200})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(recipientID)
 
 	// Create third player (should not receive whisper)
 	other := world.CreateEntity()
 	otherID := other.ID
 	other.AddComponent(&PositionComponent{X: 300, Y: 300})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(otherID)
 
 	// Send whisper
@@ -271,6 +290,7 @@ func TestEnhancedChatSystem_SendMessage_RateLimit(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Send first message (should succeed)
@@ -302,6 +322,7 @@ func TestEnhancedChatSystem_SendMessage_Muted(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Mute sender
@@ -322,12 +343,15 @@ func TestEnhancedChatSystem_GetPlayerHistory(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Send multiple messages
 	messages := []string{"First", "Second", "Third"}
-	for _, msg := range messages {
-		time.Sleep(100 * time.Millisecond) // Avoid rate limit
+	for i, msg := range messages {
+		if i > 0 {
+			time.Sleep(3100 * time.Millisecond) // Wait for GlobalChannel cooldown (3s)
+		}
 		system.SendMessage(senderID, ChatGlobal, msg, 0)
 	}
 
@@ -357,12 +381,14 @@ func TestEnhancedChatSystem_GetPlayerHistory_WithFilter(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Create recipient
 	recipient := world.CreateEntity()
 	recipientID := recipient.ID
 	recipient.AddComponent(&PositionComponent{X: 200, Y: 200})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(recipientID)
 
 	// Subscribe recipient to local channel
@@ -401,6 +427,7 @@ func TestEnhancedChatSystem_SaveLoadHistory(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Send message
@@ -422,6 +449,7 @@ func TestEnhancedChatSystem_SaveLoadHistory(t *testing.T) {
 	newEntity := newWorld.CreateEntity()
 	newEntity.ID = senderID
 	newEntity.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	newSystem.RegisterPlayer(senderID)
 
 	err = newSystem.LoadHistory(senderID, data)
@@ -451,6 +479,7 @@ func TestEnhancedChatSystem_ProcessACK(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Send message
@@ -486,6 +515,7 @@ func TestEnhancedChatSystem_ProcessNACK(t *testing.T) {
 	sender := world.CreateEntity()
 	senderID := sender.ID
 	sender.AddComponent(&PositionComponent{X: 100, Y: 100})
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(senderID)
 
 	// Send message
@@ -520,6 +550,7 @@ func TestEnhancedChatSystem_IsMuted(t *testing.T) {
 	// Create player
 	player := world.CreateEntity()
 	playerID := player.ID
+	world.Update(0) // Process pending entity additions
 	system.RegisterPlayer(playerID)
 
 	// Initially not muted

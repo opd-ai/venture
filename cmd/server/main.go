@@ -230,7 +230,7 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 	}
 
 	// Spawn merchants using entity generator
-	merchantCount := 2 // Default merchant count
+	merchantCount := defaultMerchantCount
 	merchantSpawned, err := engine.SpawnMerchantsInTerrain(world, generatedTerrain, *seed, params, merchantCount)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn merchants")

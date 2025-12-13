@@ -473,7 +473,8 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 // initializeV6Systems initializes Version 6.0 persistent world and federation systems.
 func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Phase 38: Federation protocol for server-to-server communication
-	serverID := fmt.Sprintf("client-%d", time.Now().Unix())
+	// Use deterministic client ID based on seed to ensure reproducible federation state
+	serverID := fmt.Sprintf("client-%d", *seed)
 	clientIdentity, err := federation.NewServerIdentity(serverID)
 	if err != nil {
 		clientLogger.WithError(err).Warn("Failed to create client identity")

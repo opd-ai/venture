@@ -61,9 +61,9 @@ func (a *Adapter) Start() error {
 // Stop halts mobile federation
 func (a *Adapter) Stop() error {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	if !a.running {
+		a.mu.Unlock()
 		return fmt.Errorf("adapter not running")
 	}
 
@@ -74,6 +74,7 @@ func (a *Adapter) Stop() error {
 	if a.syncTicker != nil {
 		a.syncTicker.Stop()
 	}
+	a.mu.Unlock()
 
 	a.wg.Wait()
 	return nil

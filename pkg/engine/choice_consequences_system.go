@@ -34,7 +34,14 @@ func (s *ChoiceConsequencesSystem) Update(entities []*Entity, deltaTime float64)
 		if !ok {
 			continue
 		}
-		choiceComp := comp.(*choice_consequences.ChoiceTrackerComponent)
+		choiceComp, ok := comp.(*choice_consequences.ChoiceTrackerComponent)
+		if !ok {
+			s.logger.WithFields(logrus.Fields{
+				"entityID":       entity.ID,
+				"component_type": "choice_tracker",
+			}).Warn("Component type assertion failed")
+			continue
+		}
 		s.syncComponentState(choiceComp)
 	}
 }

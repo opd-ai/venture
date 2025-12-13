@@ -1715,6 +1715,54 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 			game.TerritoryUI.Toggle()
 		})
 	}
+
+	// Phase 6.2 (PLAN.md): Connect Dialog UI to input system
+	if game.DialogUI != nil {
+		inputSystem.SetDialogUI(game.DialogUI)
+		inputSystem.SetDialogCallback(func() {
+			// Find nearest NPC and show dialog
+			if player == nil {
+				return
+			}
+			// Get player position
+			posComp, ok := player.GetComponent("position")
+			if !ok {
+				return
+			}
+			pos := posComp.(*engine.PositionComponent)
+
+			// Find nearest NPC within interaction range (5 tiles)
+			var nearestNPC *engine.Entity
+			minDist := 5.0 * 32.0 // 5 tiles * 32 pixels per tile
+			for _, entity := range game.World.GetEntities() {
+				if entity.ID == player.ID {
+					continue
+				}
+				// Check if entity has dialog component
+				if _, hasDialog := entity.GetComponent("dialog"); !hasDialog {
+					continue
+				}
+				// Get entity position
+				if ePos, ok := entity.GetComponent("position"); ok {
+					entityPos := ePos.(*engine.PositionComponent)
+					dx := entityPos.X - pos.X
+					dy := entityPos.Y - pos.Y
+					dist := dx*dx + dy*dy
+					if dist < minDist*minDist {
+						minDist = dist
+						nearestNPC = entity
+					}
+				}
+			}
+
+			// Show dialog with nearest NPC if found
+			if nearestNPC != nil {
+				if err := game.DialogUI.Show(nearestNPC.ID); err != nil {
+					clientLogger.WithError(err).Warn("failed to open dialog UI")
+				}
+			}
+		})
+	}
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.
@@ -1897,6 +1945,16 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	// Phase 6.1 (PLAN.md): Initialize branching narrative for player
 	// Add branching narrative component and start initial story arc
 	initializePlayerNarrative(player, sys.branchingNarrativeSystem, *seed, *genreID, clientLogger)
+
+	// Phase 6.2 (PLAN.md): Dialog UI initialization
+	// NPC conversation and dialog choice system
+	dialogUI := engine.NewDialogUI(game.World, sys.dialogSystem, sys.npcDialogSystem, *width, *height)
+	dialogUI.SetPlayerEntity(player)
+	game.DialogUI = dialogUI
+
+	if *verbose {
+		clientLogger.Info("dialog UI initialized (D key to toggle with NPCs)")
+	}
 
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)

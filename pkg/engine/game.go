@@ -81,6 +81,9 @@ type EbitenGame struct {
 	// Phase 6.1 (PLAN.md): Branching Narratives
 	StoryChoiceUI *StoryChoiceUI // Branching narrative choice UI (story decisions, consequences)
 
+	// Phase 6.2 (PLAN.md): Dialog System
+	DialogUI *DialogUI // NPC dialog UI (conversations, dialog choices)
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -898,6 +901,13 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.StoryChoiceUI.Update(deltaTime)
 	}
 
+	// Phase 6.2 (PLAN.md): Update Dialog UI
+	if g.DialogUI != nil {
+		if err := g.DialogUI.Update(); err != nil {
+			// Log error but don't crash - error handling for dialog update failures
+		}
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -931,6 +941,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.AdvancedClassUI != nil && g.AdvancedClassUI.IsVisible()) ||
 		(g.TerritoryUI != nil && g.TerritoryUI.IsVisible()) ||
 		(g.StoryChoiceUI != nil && g.StoryChoiceUI.IsVisible()) ||
+		(g.DialogUI != nil && g.DialogUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -951,6 +962,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 // BUG FIX: Phase 3.7 - MailboxUI missing from world update check
 // Resolution: Added MailboxUI.IsOpen() check to pause world when mailbox is open
 // Phase 4.3: Added TerritoryUI.IsVisible() check to pause world during territory management
+// Phase 6.2: Added DialogUI.IsVisible() check to pause world during NPC conversations
 func (g *EbitenGame) shouldUpdateWorld() bool {
 	return !g.InventoryUI.IsVisible() &&
 		!g.QuestUI.IsVisible() &&
@@ -964,7 +976,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		(g.GuildUI == nil || !g.GuildUI.IsVisible()) &&
 		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible()) &&
 		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible()) &&
-		(g.StoryChoiceUI == nil || !g.StoryChoiceUI.IsVisible())
+		(g.StoryChoiceUI == nil || !g.StoryChoiceUI.IsVisible()) &&
+		(g.DialogUI == nil || !g.DialogUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {
@@ -1177,6 +1190,11 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	// Phase 6.1 (PLAN.md): Draw Story Choice UI
 	if g.StoryChoiceUI != nil {
 		g.StoryChoiceUI.Draw(screen)
+	}
+
+	// Phase 6.2 (PLAN.md): Draw Dialog UI
+	if g.DialogUI != nil {
+		g.DialogUI.Draw(screen)
 	}
 
 	g.drawMailboxUI(screen)

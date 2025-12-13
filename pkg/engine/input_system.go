@@ -275,6 +275,7 @@ type InputSystem struct {
 	tradeUI         *TradeUI         // Phase 3.3 (PLAN.md): Trade UI for T key toggle
 	advancedClassUI *AdvancedClassUI // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
 	territoryUI     *TerritoryUI     // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
+	dialogUI        *DialogUI        // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -299,6 +300,7 @@ type InputSystem struct {
 	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
 	onClassesOpen   func() // Callback for advanced class UI toggle (Phase 4.2)
 	onTerritoryOpen func() // Callback for territory UI toggle (Phase 4.3)
+	onDialogOpen    func() // Callback for dialog UI toggle (Phase 6.2)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -555,6 +557,12 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 	// Phase 4.3 (PLAN.md): Close territory UI on ESC
 	if s.territoryUI != nil && s.territoryUI.IsVisible() {
 		s.territoryUI.Hide()
+		return true
+	}
+
+	// Phase 6.2 (PLAN.md): Close dialog UI on ESC
+	if s.dialogUI != nil && s.dialogUI.IsVisible() {
+		s.dialogUI.Hide()
 		return true
 	}
 
@@ -1089,6 +1097,11 @@ func (s *InputSystem) SetTerritoryUI(territoryUI *TerritoryUI) {
 	s.territoryUI = territoryUI
 }
 
+// SetDialogUI sets the dialog UI reference for D key toggle and ESC key handling (Phase 6.2)
+func (s *InputSystem) SetDialogUI(dialogUI *DialogUI) {
+	s.dialogUI = dialogUI
+}
+
 // SetQuickSaveCallback sets the callback function for quick save (F5).
 func (s *InputSystem) SetQuickSaveCallback(callback func() error) {
 	s.onQuickSave = callback
@@ -1195,6 +1208,16 @@ func (s *InputSystem) SetTerritoryCallback(callback func()) error {
 		return fmt.Errorf("territory callback cannot be nil")
 	}
 	s.onTerritoryOpen = callback
+	return nil
+}
+
+// SetDialogCallback sets the callback function for opening dialog UI (D key).
+// Phase 6.2 (PLAN.md): Dialog system UI integration for NPC conversations.
+func (s *InputSystem) SetDialogCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("dialog callback cannot be nil")
+	}
+	s.onDialogOpen = callback
 	return nil
 }
 

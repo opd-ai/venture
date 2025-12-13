@@ -29,6 +29,7 @@ var MenuKeys = struct {
 	Trade     ebiten.Key // T - Player-to-player trading
 	Classes   ebiten.Key // A - Advanced classes (multi-classing, prestige, talents)
 	Territory ebiten.Key // Y - Territory control and guild warfare
+	Dialog    ebiten.Key // D - Dialog with NPCs
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -44,6 +45,7 @@ var MenuKeys = struct {
 	TradeLabel     string
 	ClassesLabel   string
 	TerritoryLabel string
+	DialogLabel    string
 	ExitHint       string // Standard exit hint text
 }{
 	// Key assignments
@@ -57,6 +59,7 @@ var MenuKeys = struct {
 	Trade:     ebiten.KeyT,
 	Classes:   ebiten.KeyA,
 	Territory: ebiten.KeyY,
+	Dialog:    ebiten.KeyD,
 	Exit:      ebiten.KeyEscape,
 
 	// Display labels
@@ -70,6 +73,7 @@ var MenuKeys = struct {
 	TradeLabel:     "[T] Trade",
 	ClassesLabel:   "[A] Classes",
 	TerritoryLabel: "[Y] Territory",
+	DialogLabel:    "[D] Dialog",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }
 
@@ -222,6 +226,8 @@ func getKeyName(key ebiten.Key) string {
 		return "A"
 	case ebiten.KeyY:
 		return "Y"
+	case ebiten.KeyD:
+		return "D"
 	case ebiten.KeyEscape:
 		return "ESC"
 	default:

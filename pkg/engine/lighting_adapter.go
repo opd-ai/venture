@@ -1,0 +1,148 @@
+package engine
+
+import (
+	"image"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/rendering/lighting"
+	"github.com/sirupsen/logrus"
+)
+
+// LightingAdapter wraps pkg/rendering/lighting.System for ECS integration.
+// Provides Phase 2.2 dynamic lighting effects with multiple light sources.
+type LightingAdapter struct {
+	system  *lighting.System
+	enabled bool
+	logger  *logrus.Entry
+}
+
+// NewLightingAdapter creates a lighting adapter with default configuration.
+func NewLightingAdapter(logger *logrus.Entry) *LightingAdapter {
+	return &LightingAdapter{
+		system:  lighting.NewSystem(),
+		enabled: true,
+		logger:  logger,
+	}
+}
+
+// NewLightingAdapterWithConfig creates a lighting adapter with custom configuration.
+func NewLightingAdapterWithConfig(config lighting.LightingConfig, logger *logrus.Entry) *LightingAdapter {
+	return &LightingAdapter{
+		system:  lighting.NewSystemWithConfig(config),
+		enabled: true,
+		logger:  logger,
+	}
+}
+
+// SetEnabled enables or disables lighting effects.
+func (l *LightingAdapter) SetEnabled(enabled bool) {
+	l.enabled = enabled
+	if l.logger != nil {
+		l.logger.WithField("enabled", enabled).Debug("lighting enabled state changed")
+	}
+}
+
+// IsEnabled returns whether lighting is enabled.
+func (l *LightingAdapter) IsEnabled() bool {
+	return l.enabled
+}
+
+// AddLight adds a light source to the system.
+func (l *LightingAdapter) AddLight(light lighting.Light) error {
+	return l.system.AddLight(light)
+}
+
+// RemoveLight removes a light at the specified index.
+func (l *LightingAdapter) RemoveLight(index int) error {
+	return l.system.RemoveLight(index)
+}
+
+// ClearLights removes all light sources.
+func (l *LightingAdapter) ClearLights() {
+	l.system.ClearLights()
+}
+
+// LightCount returns the number of active lights.
+func (l *LightingAdapter) LightCount() int {
+	return l.system.LightCount()
+}
+
+// Update processes entity lighting components (implements System interface).
+func (l *LightingAdapter) Update(entities []*Entity, deltaTime float64) {
+	if !l.enabled {
+		return
+	}
+
+	// Update lighting from entity components
+	l.system.ClearLights()
+
+	for _, entity := range entities {
+		lightComp, ok := entity.GetComponent("light")
+		if !ok || lightComp == nil {
+			continue
+		}
+
+		// Get entity position
+		posComp, ok := entity.GetComponent("position")
+		if !ok || posComp == nil {
+			continue
+		}
+
+		// Convert components to lighting.Light
+		if lc, ok := lightComp.(*LightComponent); ok {
+			if pc, ok := posComp.(*PositionComponent); ok {
+				// Convert LightFalloffType to lighting.FalloffType
+				falloff := lighting.FalloffLinear
+				switch lc.Falloff {
+				case FalloffConstant:
+					falloff = lighting.FalloffNone
+				case FalloffLinear:
+					falloff = lighting.FalloffLinear
+				case FalloffQuadratic:
+					falloff = lighting.FalloffQuadratic
+				case FalloffInverseSquare:
+					falloff = lighting.FalloffInverseSquare
+				}
+
+				light := lighting.Light{
+					Type:      lighting.TypePoint,
+					Position:  image.Point{X: int(pc.X), Y: int(pc.Y)},
+					Color:     lc.Color,
+					Intensity: lc.Intensity,
+					Radius:    lc.Radius,
+					Falloff:   falloff,
+					Enabled:   lc.Enabled,
+				}
+				if err := l.system.AddLight(light); err != nil {
+					if l.logger != nil {
+						l.logger.WithError(err).Warn("failed to add light from entity")
+					}
+				}
+			}
+		}
+	}
+}
+
+// ApplyLighting applies lighting effects to the rendered scene.
+// Should be called during rendering pass, not in Update.
+func (l *LightingAdapter) ApplyLighting(scene *ebiten.Image) *ebiten.Image {
+	if !l.enabled {
+		return scene
+	}
+
+	// Convert Ebiten image to RGBA
+	bounds := scene.Bounds()
+	rgba := image.NewRGBA(bounds)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			rgba.Set(x, y, scene.At(x, y))
+		}
+	}
+
+	// Apply lighting
+	lit := l.system.ApplyLighting(rgba)
+
+	// Convert back to Ebiten image
+	result := ebiten.NewImageFromImage(lit)
+	return result
+}

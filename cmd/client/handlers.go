@@ -98,6 +98,9 @@ import (
 
 	// Phase 4.2: Trade System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/trade"
+
+	// Phase 5.1: Quality-of-Life System (PLAN.md)
+	"github.com/opd-ai/venture/pkg/engine/qol"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -288,6 +291,10 @@ type systemsContainer struct {
 
 	// Phase 4.2: Trade System (PLAN.md)
 	networkTradeSystem *trade.TradeSystem // Network-based trade system for multiplayer item trading
+
+	// Phase 5.1: Quality-of-Life System (PLAN.md)
+	qolManager *qol.Manager             // Unified QoL manager for auto-loot, crafting queues, guild invitations, etc.
+	qolSystem  *engine.QoLSystemWrapper // QoL system wrapper for ECS integration
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -650,8 +657,17 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.networkTradeSystem = trade.NewTradeSystem(game.World)
 	clientLogger.Info("network trade system initialized for multiplayer trading")
 
+	// Phase 5.1: Quality-of-Life System (PLAN.md)
+	sys.qolManager = qol.NewManager(qol.Config{
+		AutoLoot:     true,
+		AutoSort:     true,
+		QuickDeposit: true,
+	})
+	sys.qolSystem = engine.NewQoLSystem(sys.qolManager)
+	clientLogger.Info("QoL system initialized (auto-loot, auto-sort, quick-deposit)")
+
 	if *verbose {
-		clientLogger.Info("V5.0 systems initialized (chat, trade, terrain construction/modification, merchant caravans, mail, courier, network chat/trade)")
+		clientLogger.Info("V5.0 systems initialized (chat, trade, terrain construction/modification, merchant caravans, mail, courier, network chat/trade, QoL)")
 	}
 }
 
@@ -974,6 +990,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 4.1-4.2 (PLAN.md): Network Chat and Trade Systems
 	game.World.AddSystem(&networkChatSystemWrapper{system: sys.networkChatSystem})
 	game.World.AddSystem(&networkTradeSystemWrapper{system: sys.networkTradeSystem})
+
+	// Phase 5.1 (PLAN.md): Quality-of-Life System - Auto-loot, crafting queues, guild invitations
+	game.World.AddSystem(sys.qolSystem)
 
 	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
 	if sys.guildSystem != nil {

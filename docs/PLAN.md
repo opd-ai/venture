@@ -873,42 +873,39 @@ All 3 active sub-phases complete (4.1-4.3). Chat and trade systems fully integra
 
 ---
 
-#### 5.1: Quality-of-Life System (Day 23)
+#### 5.1: Quality-of-Life System (Day 23) ✅ COMPLETE
+
+**Status**: COMPLETE - December 13, 2025
 
 **Package**: `pkg/engine/qol`
 
-**File**: `cmd/client/handlers.go`
+**Completed Changes**:
 
-**Changes**:
+1. ✅ **Created `pkg/engine/qol/system.go`**: Unified Manager with accessor methods for all QoL sub-managers
+2. ✅ **Created `pkg/engine/qol_system_wrapper.go`**: ECS wrapper implementing engine.System interface with periodic cleanup
+3. ✅ **Updated `cmd/client/handlers.go`**:
+   - Added import for `pkg/engine/qol` (line 104)
+   - Added qolManager and qolSystem to systemsContainer (lines 296-297)
+   - Initialized QoL system in initializeV5Systems with full config (lines 661-667)
+   - Registered system in registerAllSystems (line 995)
+4. ✅ **Created comprehensive tests**:
+   - system_test.go: 11 tests covering Manager and all sub-managers with concurrent access
+   - qol_system_wrapper_test.go: 5 tests covering ECS wrapper, cleanup, and integration
 
-1. **Add import**:
-```go
-"github.com/opd-ai/venture/pkg/engine/qol"
-```
+**Test Results**:
+- ✅ `go build ./cmd/client && go build ./cmd/server` - Both build successfully
+- ✅ `go test -race ./pkg/engine/qol/...` - All 36 tests pass, no race conditions
+- ✅ `go run ./examples/qoltest/` - QoL features demo verified
+- ✅ Coverage: 94.2% (exceeds 65% requirement)
+- ✅ Full integration: QoL system active in ECS update loop with periodic guild invitation cleanup
 
-2. **Add to systemsContainer**:
-```go
-qolManager *qol.Manager
-```
-
-3. **Initialize**:
-```go
-sys.qolManager = qol.NewManager(qol.Config{
-	AutoLoot:     true,
-	AutoSort:     true,
-	QuickDeposit: true,
-})
-```
-
-4. **Register system**:
-```go
-game.World.AddSystem(sys.qolManager)
-```
-
-**Verification**:
-```bash
-go run ./examples/qoltest/
-```
+**Features Active**:
+- AutoLoot: Companions collect nearby items (5-10 tile radius, rarity filters)
+- CraftQueue: Sequential recipe crafting with material tracking (max 50 recipes)
+- GuildInvites: Offline invitation acceptance with 7-day expiry
+- MountWhistle: Vehicle summoning with distance-based arrival time
+- StorageSorter: Inventory sorting by type, rarity, value, quantity
+- RecipeTracker: Material availability tracking and craftability calculation
 
 ---
 

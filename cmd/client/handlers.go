@@ -34,6 +34,7 @@ import (
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
+	"github.com/opd-ai/venture/pkg/world/raids"
 	"github.com/opd-ai/venture/pkg/world/territory"
 	"github.com/sirupsen/logrus"
 
@@ -310,6 +311,9 @@ type systemsContainer struct {
 
 	// Phase 2.2: Raid System (PLAN.md)
 	raidSystem *engine.RaidSystem // Dynamic raid instance creation and lockout management
+
+	// Phase 3.3: Legendary Quest System (PLAN.md)
+	legendaryQuestSystem *engine.LegendaryQuestSystem // Legendary quest management
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -463,6 +467,11 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	// Phase 2.2: Raid system
 	sys.raidSystem = engine.NewRaidSystem(game.World, game.GetWorldSeed())
 	logging.ComponentLogger(logger, "raids").Debug("Created raid system")
+
+	// Phase 3.3: Legendary quest system (requires raid manager)
+	raidManager := raids.NewManager(game.GetWorldSeed())
+	sys.legendaryQuestSystem = engine.NewLegendaryQuestSystem(game.World, game.GetWorldSeed(), raidManager)
+	logging.ComponentLogger(logger, "legendary").Debug("Created legendary quest system")
 
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
 	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
@@ -943,8 +952,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.manaRegenSystem)
 	game.World.AddSystem(sys.inventorySystem)
 	game.World.AddSystem(sys.commerceSystem)
-	game.World.AddSystem(sys.economySystem) // Phase 2.1: Dynamic economy
-	game.World.AddSystem(sys.raidSystem)    // Phase 2.2: Dynamic raids
+	game.World.AddSystem(sys.economySystem)        // Phase 2.1: Dynamic economy
+	game.World.AddSystem(sys.raidSystem)           // Phase 2.2: Dynamic raids
+	game.World.AddSystem(sys.legendaryQuestSystem) // Phase 3.3: Legendary quests
 	game.World.AddSystem(sys.dialogSystem)
 	game.World.AddSystem(sys.craftingSystem)
 	game.World.AddSystem(sys.interactionSystem)

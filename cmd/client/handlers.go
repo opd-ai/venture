@@ -318,6 +318,9 @@ type systemsContainer struct {
 
 	// Phase 3.3: Legendary Quest System (PLAN.md)
 	legendaryQuestSystem *engine.LegendaryQuestSystem // Legendary quest management
+
+	// Phase 4.1: Choice & Consequences System (PLAN.md)
+	choiceConsequencesSystem *engine.ChoiceConsequencesSystem // Persistent choice tracking and consequences
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -619,6 +622,10 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 3.4: Minigame implementations
 	sys.minigameGamesSystem = games.NewSystem(game.World)
 	logging.ComponentLogger(clientLogger.Logger, "minigame_games").Debug("Created minigame games system")
+
+	// Phase 4.1: Choice & consequences system
+	sys.choiceConsequencesSystem = engine.NewChoiceConsequencesSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "choice_consequences").Debug("Created choice consequences system")
 
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
@@ -1036,6 +1043,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 3.4: Minigame implementations
 	game.World.AddSystem(sys.minigameGamesSystem) // Phase 3.4: Minigame implementations
+
+	// Phase 4.1: Choice & consequences
+	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

@@ -70,6 +70,11 @@ import (
 	_ "github.com/opd-ai/venture/pkg/rendering/animation"
 	_ "github.com/opd-ai/venture/pkg/rendering/lighting"
 	_ "github.com/opd-ai/venture/pkg/rendering/postprocess"
+
+	// Phase 2.3: UI & Shape Rendering (PLAN.md)
+	"github.com/opd-ai/venture/pkg/rendering/patterns"
+	"github.com/opd-ai/venture/pkg/rendering/shapes"
+	"github.com/opd-ai/venture/pkg/rendering/ui"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -233,6 +238,11 @@ type systemsContainer struct {
 	lightingAdapter  *engine.LightingAdapter  // Dynamic lighting with multiple light sources
 	animationAdapter *engine.AnimationAdapter // Advanced animation with articulation and direction
 	// Note: PostProcessorAdapter already exists in game.PostProcessor (see initializeCoreSystems)
+
+	// Phase 2.3: UI & Shape Rendering (PLAN.md)
+	uiGenerator      *ui.Generator       // Procedural UI element generation (menus, buttons, panels)
+	shapeRenderer    *shapes.Generator   // Geometric shape rendering for sprites and UI
+	patternGenerator *patterns.Generator // Texture pattern generation for tiles and materials
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -292,6 +302,19 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	// Initialize animation adapter for advanced animation features
 	sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
 	clientLogger.Info("animation adapter initialized")
+
+	// Phase 2.3: UI & Shape Rendering (PLAN.md)
+	// Initialize UI generator for procedural interface elements
+	sys.uiGenerator = ui.NewGeneratorWithLogger(logger)
+	clientLogger.Info("UI generator initialized")
+
+	// Initialize shape renderer for geometric primitives
+	sys.shapeRenderer = shapes.NewGenerator()
+	clientLogger.Info("shape renderer initialized")
+
+	// Initialize pattern generator for textures and materials
+	sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
+	clientLogger.Info("pattern generator initialized")
 
 	return sys
 }

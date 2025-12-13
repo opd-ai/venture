@@ -118,6 +118,9 @@ import (
 
 	// Phase 1.3: Prestige System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/engine/prestige"
+
+	// Phase 4.4: Trade Routes System (PLAN.md Integration - Week 4)
+	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -344,6 +347,9 @@ type systemsContainer struct {
 	// Phase 4.5: Territory Siege System (PLAN.md)
 	siegeManager *territory.SiegeManager      // Territory siege manager (V8.0)
 	siegeSystem  *engine.TerritorySiegeSystem // ECS wrapper for siege mechanics
+
+	// Phase 4.4: Trade Routes System (PLAN.md Integration - Week 4)
+	tradeRouteManager *trade_routes.RouteManager // AI merchant caravan trading system
 
 	// Phase 5.1: Mobile Federation Support (PLAN.md)
 	mobileFederationSystem *engine.MobileFederationSystem // Mobile-optimized federation
@@ -944,6 +950,13 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	sys.siegeManager = territory.NewSiegeManager()
 	sys.siegeSystem = engine.NewTerritorySiegeSystem(sys.siegeManager)
 	logging.ComponentLogger(clientLogger.Logger, "territory_siege").Debug("Created territory siege system")
+
+	// Phase 4.4: Trade Routes System (PLAN.md Integration - Week 4)
+	// Generate deterministic server ID from seed for trade route identification
+	tradeServerID := fmt.Sprintf("client-%d", *seed)
+	sys.tradeRouteManager = trade_routes.NewRouteManager(tradeServerID, *seed+seedOffsetTradeRoutes)
+	sys.tradeRouteManager.Start()
+	logging.ComponentLogger(clientLogger.Logger, "trade_routes").Debug("Created trade routes system")
 
 	// Phase 5.1: Mobile Federation Support
 	mobileConfig := mobilefed.DefaultConfig()

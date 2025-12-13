@@ -26,7 +26,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libglfw3-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev xorg-dev
 
       - name: Install cross-compilation tools for ARM64
-        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross libgl1-mesa-dev:arm64 libglfw3-dev:arm64
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
 
       - name: Set up Go
         uses: actions/setup-go@v5

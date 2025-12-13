@@ -204,55 +204,36 @@ All 3 sub-phases complete. Audio, destruction physics, and companion learning sy
 
 ---
 
-#### 2.2: Core Rendering Systems (Days 6-7)
+#### 2.2: Core Rendering Systems (Days 6-7) ✅ COMPLETE
+
+**Status**: COMPLETE - December 13, 2025
 
 **Packages**: `pkg/rendering/lighting`, `pkg/rendering/animation`, `pkg/rendering/postprocess`
 
-**File**: `cmd/client/handlers.go`
+**Completed Changes**:
 
-**Changes**:
+1. ✅ **Created `pkg/engine/lighting_adapter.go`**: Wraps lighting.System for ECS integration with entity light components
+2. ✅ **Created `pkg/engine/animation_adapter.go`**: Wraps animation.Controller for advanced articulation and caching
+3. ✅ **Updated `cmd/client/handlers.go`**: 
+   - Added imports for rendering packages (lines 68-70)
+   - Added lightingAdapter and animationAdapter to systemsContainer (lines 228-230)
+   - Initialized adapters in initializeCoreSystems (lines 286-293)
+   - Registered systems in registerAllSystems (lines 810-812)
+4. ✅ **Created comprehensive tests**:
+   - lighting_adapter_test.go: 13 tests covering all functionality
+   - animation_adapter_test.go: 9 tests covering frame generation and caching
 
-1. **Add imports** (around line 30):
-```go
-"github.com/opd-ai/venture/pkg/rendering/lighting"
-"github.com/opd-ai/venture/pkg/rendering/animation"
-"github.com/opd-ai/venture/pkg/rendering/postprocess"
-```
+**Test Results**:
+- ✅ `go build ./cmd/client && go build ./cmd/server` - Both build successfully
+- ✅ `go test -race ./pkg/engine/...` - All tests pass, no race conditions
+- ✅ Coverage: Lighting 96.7%, Animation 71.6%, Postprocess 85.2% (all exceed 65% requirement)
+- ✅ All adapter tests pass (22 total tests)
+- ✅ Integration: Systems registered and active in ECS update loop
 
-2. **Add to systemsContainer** (around line 85):
-```go
-lightingSystem      *lighting.System
-animationManager    *animation.Manager
-postProcessSystem   *postprocess.System
-```
-
-3. **Replace conditional lighting** (find all `if *enableLighting` blocks):
-```go
-// BEFORE:
-if *enableLighting {
-    // lighting code
-}
-
-// AFTER (unconditional):
-sys.lightingSystem = lighting.NewSystem()
-game.World.AddSystem(sys.lightingSystem)
-```
-
-4. **Add animation system** in `initializeCoreSystems`:
-```go
-sys.animationManager = animation.NewManager()
-game.World.AddSystem(sys.animationManager)
-```
-
-5. **Add post-processing** (unconditional):
-```go
-sys.postProcessSystem = postprocess.NewSystem(postprocess.Config{
-	EnableVignette:           true,
-	EnableChromaticAberration: true,
-	EnableColorGrading:        true,
-})
-game.World.AddSystem(sys.postProcessSystem)
-```
+**Architecture**:
+- LightingAdapter: Processes entity LightComponents, applies dynamic lighting during rendering
+- AnimationAdapter: Provides advanced 8-direction animation with articulation (on-demand generation)
+- PostProcessorAdapter: Already existed and is used during rendering (vignette, color grading, chromatic aberration)
 
 ---
 

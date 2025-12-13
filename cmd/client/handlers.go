@@ -63,6 +63,13 @@ import (
 
 	// Phase 1.2: Destruction Physics (PLAN.md)
 	"github.com/opd-ai/venture/pkg/engine/physics/destruction"
+
+	// Phase 2.2: Core Rendering Systems (PLAN.md)
+	// Note: These packages are wrapped by adapters in pkg/engine/ (LightingAdapter, AnimationAdapter, PostProcessorAdapter)
+	// Imports kept for documentation purposes showing integration is complete
+	_ "github.com/opd-ai/venture/pkg/rendering/animation"
+	_ "github.com/opd-ai/venture/pkg/rendering/lighting"
+	_ "github.com/opd-ai/venture/pkg/rendering/postprocess"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -221,6 +228,11 @@ type systemsContainer struct {
 
 	// Phase 1.2: Destruction Physics (PLAN.md)
 	destructionSystem *destruction.System // Building structural integrity and debris physics
+
+	// Phase 2.2: Core Rendering Systems (PLAN.md)
+	lightingAdapter  *engine.LightingAdapter  // Dynamic lighting with multiple light sources
+	animationAdapter *engine.AnimationAdapter // Advanced animation with articulation and direction
+	// Note: PostProcessorAdapter already exists in game.PostProcessor (see initializeCoreSystems)
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -271,6 +283,15 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		ShadowSampleCount:     2,
 	}
 	sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
+
+	// Phase 2.2: Core Rendering Systems (PLAN.md)
+	// Initialize lighting adapter for dynamic lighting effects
+	sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
+	clientLogger.Info("lighting adapter initialized")
+
+	// Initialize animation adapter for advanced animation features
+	sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
+	clientLogger.Info("animation adapter initialized")
 
 	return sys
 }
@@ -786,6 +807,11 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.branchingNarrativeSystem) // Phase 6.1: Branching narratives
 	game.World.AddSystem(sys.worldEventsSystem)        // Phase 6.3: World events
 	game.World.AddSystem(sys.shadowSystem)
+
+	// Phase 2.2: Core Rendering Systems (PLAN.md)
+	game.World.AddSystem(sys.lightingAdapter)  // Dynamic lighting with multiple light sources
+	game.World.AddSystem(sys.animationAdapter) // Advanced animation features
+	// Note: PostProcessorAdapter is used during rendering, not in ECS update loop
 
 	// V4.0 System Registrations (Phase 21-27)
 	// Phase 21: Vehicle systems

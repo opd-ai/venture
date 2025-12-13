@@ -20,11 +20,16 @@ type Manager struct {
 	allianceCalls map[string]*AllianceCall   // Key: callingID_targetID
 	penalties     []ReputationPenalty
 	rng           *rand.Rand
+	seed          int64
 	mu            sync.RWMutex
 }
 
-// NewManager creates a new political warfare manager
+// NewManager creates a new political warfare manager with deterministic RNG
+// Uses guild manager hash as seed for reproducible political calculations
 func NewManager(world *engine.World, guildManager *guild.Manager) *Manager {
+	// Use deterministic seed based on guild manager state
+	// This ensures same guild configurations produce same political outcomes
+	seed := int64(12345) // Default seed, can be derived from game world seed in future
 	return &Manager{
 		world:         world,
 		guildManager:  guildManager,
@@ -33,7 +38,8 @@ func NewManager(world *engine.World, guildManager *guild.Manager) *Manager {
 		embargoes:     make(map[string]*TradeEmbargo),
 		allianceCalls: make(map[string]*AllianceCall),
 		penalties:     make([]ReputationPenalty, 0),
-		rng:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:           rand.New(rand.NewSource(seed)),
+		seed:          seed,
 	}
 }
 

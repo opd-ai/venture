@@ -103,7 +103,6 @@ The forest algorithm creates natural outdoor environments with trees, clearings,
 - Lakes and rivers with shallow/deep water
 - Automatic bridge placement over water
 - Organic paths connecting clearings
-- Stairs placed in clearings
 
 **Usage:**
 ```go
@@ -151,7 +150,6 @@ The city algorithm creates urban environments with buildings, streets, and publi
 - Three types of blocks: buildings, plazas, parks
 - Building interiors with BSP subdivision
 - Solid structures and accessible buildings with rooms
-- Parks with trees and optional ponds
 
 **Usage:**
 ```go
@@ -185,7 +183,6 @@ terrain := result.(*terrain.Terrain)
 - Large buildings (10x10+): BSP subdivided interiors with multiple rooms
 - Plazas: Open public squares (tracked as rooms for stairs placement)
 - Parks: Green spaces with trees (30% coverage) and optional ponds (20% chance)
-- Streets provide full connectivity between all blocks
 
 **Performance:**
 - 40x30 city: ~0.02ms
@@ -202,7 +199,6 @@ The water system provides utilities for generating lakes, rivers, moats, and oth
 - Defensive moats around rooms
 - Automatic bridge placement over water
 - Flood fill utilities for water body creation
-- Deep and shallow water zones
 
 **Usage:**
 ```go
@@ -357,7 +353,6 @@ The multi-level system generates connected dungeons spanning multiple levels wit
 - Difficulty scaling with depth
 - Mix different generators per level
 - Connectivity validation ensures reachability
-- Deterministic generation per level
 
 **Usage:**
 ```go
@@ -405,7 +400,6 @@ type LevelGenerator struct {
 - `GetGenerator(depth)`: Retrieve generator for specific depth
 - `GenerateMultiLevel(numLevels, seed, params)`: Generate connected levels
 - `ConnectLevels(above, below, rng)`: Connect two adjacent levels with stairs
-- `ValidateMultiLevelConnectivity(levels)`: Ensure all levels reachable
 
 ### Stair Placement Strategies
 
@@ -570,7 +564,6 @@ type Terrain struct {
 - `IsWalkable(x, y int) bool` - Check if a position is walkable
 - `AddStairs(x, y int, up bool)` - Add stairs at the specified position
 - `IsInBounds(x, y int) bool` - Check if coordinates are within terrain bounds
-- `ValidateStairPlacement() error` - Validate that all stairs are placed correctly
 
 ### Point Type
 
@@ -588,7 +581,6 @@ type Point struct {
 - `Equals(other Point) bool` - Check if two points are equal
 - `IsInBounds(width, height int) bool` - Check if point is within bounds
 - `Neighbors() []Point` - Get the four orthogonal neighbors
-- `AllNeighbors() []Point` - Get all eight neighbors (orthogonal and diagonal)
 
 ### Room Type
 
@@ -669,14 +661,7 @@ The CLI tool renders terrain as ASCII art:
 - `:` - Corridor
 - `+` - Door
 - `W` - Shallow Water
-- `~` - Deep Water
-- `T` - Tree
-- `^` - Stairs Up
-- `v` - Stairs Down
-- `[` - Trap Door
-- `?` - Secret Door
-- `=` - Bridge
-- `@` - Structure
+  - _(... 8 more items ...)_
 
 ## Performance
 
@@ -708,16 +693,6 @@ Potential additions to the terrain system:
 - [x] **Extended tile types** (water, trees, bridges, structures) (✓ Completed: Phase 1)
 - [x] **Maze generator** (✓ Completed: Phase 2 - recursive backtracking)
 - [x] **Forest generator** (✓ Completed: Phase 3 - Poisson disc sampling)
-- [x] **City generator** (✓ Completed: Phase 4 - grid subdivision)
-- [x] **Water system** (✓ Completed: Phase 5 - lakes, rivers, moats, bridges)
-- [x] **Multi-level generator** (✓ Completed: Phase 6 - connects levels, 1-20 levels, stair placement)
-- [ ] Room templates and prefabs
-- [ ] Door placement algorithms
-- [ ] Treasure room generation
-- [ ] Themed room variants (treasure, boss, puzzle)
-- [ ] **Composite generator** (Phase 7 - multi-biome maps)
-- [ ] Drunkard's walk algorithm
-- [ ] Voronoi diagram-based generation
-- [ ] Integration with entity placement system
+  - _(... 11 more items ...)_
 
 See `docs/ROADMAP.md` for the complete development roadmap including terrain expansion plans.

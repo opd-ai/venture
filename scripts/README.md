@@ -25,10 +25,7 @@ SKIP_RACE=true SKIP_COVERAGE=true ./scripts/validate-code-review.sh
 - ✓ Race freedom (no race conditions)
 - ✓ Code coverage (≥65% per package)
 - ✓ Static analysis (go vet)
-- ✓ Code formatting (gofmt)
-- ✓ Documentation completeness
-- ✓ Package docs present (doc.go files)
-- ✓ No circular dependencies
+  - _(... 4 more items ...)_
 
 **Environment Variables:**
 - `SKIP_RACE=true` - Skip race detector tests (faster, but less thorough)
@@ -491,9 +488,7 @@ Running tests...
 - ✓ Test Pass (`go test`)
 - ✓ Race Freedom (`go test -race`)
 - ✓ Coverage Analysis (≥65% threshold, with interface-only exceptions)
-- ✓ Package Structure (file counts, LOC)
-- ✓ Documentation Review (doc.go, godoc comments)
-- ✓ Dependency Analysis (internal imports)
+  - _(... 3 more items ...)_
 
 **Output Format (`pkg/[PACKAGE]/AUDIT.md`):**
 ```markdown
@@ -526,7 +521,6 @@ Running tests...
 - **Finding Categories**:
   - **Critical**: Blocks merge (build failures, failing tests, race conditions)
   - **Major**: Should fix (vet issues, low coverage, missing docs)
-  - **Minor**: Nice-to-have (enhancements, optimizations)
 
 **Integration with Workflow:**
 1. Run before merge to audit changed packages

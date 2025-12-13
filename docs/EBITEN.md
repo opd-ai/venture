@@ -6,7 +6,6 @@ CONTEXT:
 - **Architecture**: Entity-Component-System (ECS) with deterministic procedural generation
 - **Audit Scope**: All UI systems including game HUD, menus, inventory, character progression, crafting, quests, and multiplayer interfaces
 - **Genre Support**: Fantasy, sci-fi, horror, cyberpunk, post-apocalyptic themes with cross-genre blending
-- **Platform Testing**: Desktop (Linux/macOS/Windows), WebAssembly (browser), and mobile (iOS/Android touch interface)
 
 REQUIREMENTS:
 
@@ -17,7 +16,6 @@ REQUIREMENTS:
     - Character systems (inventory, skills, progression, stats)
     - World interaction (crafting stations, merchant trading, quest log)
     - Multiplayer interfaces (lobby, player list, connection status)
-    - Mobile-specific touch controls (`pkg/mobile/`)
 
 2. Document navigation flow using dual-exit pattern (ESC + dedicated back buttons)
 3. Test procedural UI adaptation across all five genre themes
@@ -30,7 +28,6 @@ REQUIREMENTS:
     - Responsive feedback (visual/audio through `pkg/audio/synthesis/`)
     - Cross-platform input handling (keyboard, gamepad, touch)
     - Network latency tolerance (200-5000ms multiplayer scenarios)
-    - Save/load state preservation (`pkg/saveload/`)
 
 2. Evaluate procedural generation integration:
     - Dynamic item tooltips with generated stats and descriptions
@@ -144,8 +141,7 @@ Create `/AUDIT.md` in the project root with this structure:
 - ✓ Performance impact assessed against 60 FPS / <500MB targets
 - ✓ Multiplayer implications evaluated for all UI changes
 - ✓ Genre theming compatibility verified across all five themes
-- ✓ Mobile touch interface considerations included where applicable
-- ✓ Code examples follow Venture's established patterns in pkg/rendering/ui/
+  - _(... 2 more items ...)_
 
 **Testing Methodology for Venture**:
 1. **Deterministic Exploration**: Use fixed seeds (e.g., 12345) for consistent UI state testing
@@ -162,10 +158,7 @@ Create `/AUDIT.md` in the project root with this structure:
 - Network UI must handle Venture's high-latency tolerance (onion services)
 - Touch controls must maintain action-RPG responsiveness on mobile
 - Entity UI (health bars, status effects) must perform with 2000+ entities
-- Crafting and merchant UIs must handle infinite procedural item variety
-- Quest log must accommodate procedural quest text and objectives
-- Skill tree UI must dynamically render procedural skill graphs
-- Chat system must integrate with Venture's multiplayer architecture
+  - _(... 4 more items ...)_
 
 ## Visual Layering and Collision Detection Audit
 
@@ -261,7 +254,6 @@ entity2.GetComponent("layer").(*LayerComponent).CurrentLayer = 1
 - `OnSameLayer()` properly handles nil layer components (defaults to Layer 0)
 - Flying entities (`CanFly=true`) can move between any layers
 - Swimming entities can only enter water layer (Layer 1)
-- Layer transitions update `TransitionProgress` correctly
 
 **1.3 Equipment Visual Layer Verification**
 
@@ -638,5 +630,4 @@ go test -bench=BenchmarkRenderSystem -benchmem ./pkg/engine/
   ```
 - **ECS Integration**: Tooltip rendering system should query ItemComponent and use cached display names
 - **Performance Impact**: Text wrapping adds ~0.1ms per tooltip, negligible for 60 FPS target
-- **Testing Verification**: Test with all genre palettes using deterministic item generation
 ```

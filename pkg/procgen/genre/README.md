@@ -9,8 +9,7 @@ The genre package provides a centralized genre definition system for the Venture
 - **Type Safety**: Compile-time checks and runtime validation
 - **Color Palettes**: Genre-specific color schemes for visual generation
 - **Theme Keywords**: Descriptive keywords for content generation
-- **Name Prefixes**: Genre-appropriate prefixes for entities, items, and locations
-- **Extensibility**: Easy addition of new custom genres
+  - _(... 2 more items ...)_
 
 ## Quick Start
 
@@ -443,7 +442,6 @@ type Registry struct {
 - `Has(id string) bool` - Check if genre exists
 - `All() []*Genre` - Get all genres
 - `IDs() []string` - Get all genre IDs
-- `Count() int` - Get number of genres
 
 ### Predefined Genre Functions
 
@@ -452,7 +450,6 @@ type Registry struct {
 - `SciFiGenre() *Genre` - Get Sci-Fi genre
 - `HorrorGenre() *Genre` - Get Horror genre
 - `CyberpunkGenre() *Genre` - Get Cyberpunk genre
-- `PostApocalypticGenre() *Genre` - Get Post-Apocalyptic genre
 
 ## Design Decisions
 
@@ -505,8 +502,7 @@ The genre system integrates with:
 - **Magic Generator** (`pkg/procgen/magic`) - Spell generation
 - **Skill Generator** (`pkg/procgen/skills`) - Skill tree generation
 - **Terrain Generator** (`pkg/procgen/terrain`) - Dungeon generation
-- **Future: Rendering** (`pkg/rendering`) - Visual generation (Phase 3)
-- **Future: Audio** (`pkg/audio`) - Sound synthesis (Phase 4)
+  - _(... 2 more items ...)_
 
 ## Performance
 

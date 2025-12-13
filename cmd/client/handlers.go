@@ -52,59 +52,63 @@ import (
 
 	// Phase 3.2: Guild Federation (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
+
+	// Phase 6.1: Branching Narratives (PLAN.md)
+	"github.com/opd-ai/venture/pkg/narrative/branching"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
 type systemsContainer struct {
-	inputSystem            *engine.InputSystem
-	movementSystem         *engine.MovementSystem
-	collisionSystem        *engine.CollisionSystem
-	combatSystem           *engine.CombatSystem
-	interactionSystem      *engine.InteractionSystem
-	particleSystem         *engine.ParticleSystem
-	animationSystem        *engine.AnimationSystem
-	equipmentVisualSystem  *engine.EquipmentVisualSystem
-	objectiveTracker       *engine.ObjectiveTrackerSystem
-	aiSystem               *engine.AISystem
-	progressionSystem      *engine.ProgressionSystem
-	inventorySystem        *engine.InventorySystem
-	commerceSystem         *engine.CommerceSystem
-	dialogSystem           *engine.DialogSystem
-	craftingSystem         *engine.CraftingSystem
-	audioManager           *engine.AudioManager
-	audioManagerSystem     *engine.AudioManagerSystem
-	itemPickupSystem       *engine.ItemPickupSystem
-	statusEffectSystem     *engine.StatusEffectSystem
-	spellCastingSystem     *engine.SpellCastingSystem
-	playerSpellCasting     *engine.PlayerSpellCastingSystem
-	manaRegenSystem        *engine.ManaRegenSystem
-	playerCombatSystem     *engine.PlayerCombatSystem
-	playerItemUseSystem    *engine.PlayerItemUseSystem
-	rotationSystem         *engine.RotationSystem
-	projectileSystem       *engine.ProjectileSystem
-	revivalSystem          *engine.RevivalSystem
-	behaviorTreeSystem     *engine.BehaviorTreeSystem
-	squadSystem            *engine.SquadSystem
-	factionSystem          *engine.FactionSystem
-	reputationSystem       *engine.ReputationSystem
-	alignmentSystem        *engine.AlignmentSystem
-	factionReactionSystem  *engine.FactionReactionSystem
-	skillProgressionSystem *engine.SkillProgressionSystem
-	visualFeedbackSystem   *engine.VisualFeedbackSystem
-	weatherSystem          *engine.WeatherSystem
-	lifetimeSystem         *engine.LifetimeSystem
-	puzzleSystem           *engine.PuzzleSystem
-	firePropagationSystem  *engine.FirePropagationSystem
-	destructibleSystem     *engine.DestructibleObjectSystem
-	carrySystem            *engine.CarrySystem
-	hazardSystem           *engine.HazardSystem
-	narrativeSystem        *engine.NarrativeSystem
-	shadowSystem           *engine.ShadowSystem
-	spriteGenerator        *sprites.Generator
-	spriteCache            *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
-	itemGen                *item.ItemGenerator
-	recipeGen              *recipe.RecipeGenerator
-	statusEffectRNG        *rand.Rand
+	inputSystem              *engine.InputSystem
+	movementSystem           *engine.MovementSystem
+	collisionSystem          *engine.CollisionSystem
+	combatSystem             *engine.CombatSystem
+	interactionSystem        *engine.InteractionSystem
+	particleSystem           *engine.ParticleSystem
+	animationSystem          *engine.AnimationSystem
+	equipmentVisualSystem    *engine.EquipmentVisualSystem
+	objectiveTracker         *engine.ObjectiveTrackerSystem
+	aiSystem                 *engine.AISystem
+	progressionSystem        *engine.ProgressionSystem
+	inventorySystem          *engine.InventorySystem
+	commerceSystem           *engine.CommerceSystem
+	dialogSystem             *engine.DialogSystem
+	craftingSystem           *engine.CraftingSystem
+	audioManager             *engine.AudioManager
+	audioManagerSystem       *engine.AudioManagerSystem
+	itemPickupSystem         *engine.ItemPickupSystem
+	statusEffectSystem       *engine.StatusEffectSystem
+	spellCastingSystem       *engine.SpellCastingSystem
+	playerSpellCasting       *engine.PlayerSpellCastingSystem
+	manaRegenSystem          *engine.ManaRegenSystem
+	playerCombatSystem       *engine.PlayerCombatSystem
+	playerItemUseSystem      *engine.PlayerItemUseSystem
+	rotationSystem           *engine.RotationSystem
+	projectileSystem         *engine.ProjectileSystem
+	revivalSystem            *engine.RevivalSystem
+	behaviorTreeSystem       *engine.BehaviorTreeSystem
+	squadSystem              *engine.SquadSystem
+	factionSystem            *engine.FactionSystem
+	reputationSystem         *engine.ReputationSystem
+	alignmentSystem          *engine.AlignmentSystem
+	factionReactionSystem    *engine.FactionReactionSystem
+	skillProgressionSystem   *engine.SkillProgressionSystem
+	visualFeedbackSystem     *engine.VisualFeedbackSystem
+	weatherSystem            *engine.WeatherSystem
+	lifetimeSystem           *engine.LifetimeSystem
+	puzzleSystem             *engine.PuzzleSystem
+	firePropagationSystem    *engine.FirePropagationSystem
+	destructibleSystem       *engine.DestructibleObjectSystem
+	carrySystem              *engine.CarrySystem
+	hazardSystem             *engine.HazardSystem
+	narrativeSystem          *engine.NarrativeSystem
+	branchingNarrativeSystem *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
+	shadowSystem             *engine.ShadowSystem
+	spriteGenerator          *sprites.Generator
+	spriteCache              *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
+	itemGen                  *item.ItemGenerator
+	recipeGen                *recipe.RecipeGenerator
+	statusEffectRNG          *rand.Rand
 	// V4.0 Systems (Phase 21-27)
 	vehicleMovementSys      *engine.VehicleMovementSystem
 	vehicleDurabilitySys    *engine.VehicleDurabilitySystem
@@ -359,6 +363,7 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.hazardSystem.SetWorld(game.World)
 
 	sys.narrativeSystem = engine.NewNarrativeSystem(game.World)
+	sys.branchingNarrativeSystem = engine.NewBranchingNarrativeSystem(game.World) // Phase 6.1: Branching narratives
 	sys.shadowSystem = engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
 }
 
@@ -733,6 +738,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.carrySystem)
 	game.World.AddSystem(sys.hazardSystem)
 	game.World.AddSystem(sys.narrativeSystem)
+	game.World.AddSystem(sys.branchingNarrativeSystem) // Phase 6.1: Branching narratives
 	game.World.AddSystem(sys.shadowSystem)
 
 	// V4.0 System Registrations (Phase 21-27)
@@ -1878,6 +1884,20 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("territory UI initialized (Y key to open)")
 	}
 
+	// Phase 6.1 (PLAN.md): Story Choice UI initialization
+	// Branching narrative choices and story arc progression
+	storyChoiceUI := engine.NewStoryChoiceUI(game.World, sys.branchingNarrativeSystem, *width, *height)
+	storyChoiceUI.SetPlayerEntity(player)
+	game.StoryChoiceUI = storyChoiceUI
+
+	if *verbose {
+		clientLogger.Info("story choice UI initialized (shows automatically when choices available)")
+	}
+
+	// Phase 6.1 (PLAN.md): Initialize branching narrative for player
+	// Add branching narrative component and start initial story arc
+	initializePlayerNarrative(player, sys.branchingNarrativeSystem, *seed, *genreID, clientLogger)
+
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)
 	craftingUI.SetCraftingSystem(craftingSystem)
@@ -2175,4 +2195,48 @@ func runGameLoop(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 	if err := game.Run(windowTitle); err != nil {
 		clientLogger.WithError(err).Fatal("error running game")
 	}
+}
+
+// initializePlayerNarrative initializes branching narrative for the player.
+// Phase 6.1 (PLAN.md): Creates a procedural story arc and starts player on narrative journey.
+func initializePlayerNarrative(player *engine.Entity, narrativeSystem *engine.BranchingNarrativeSystem, seed int64, genreID string, logger *logrus.Entry) {
+	// Add branching narrative component to player
+	player.AddComponent(&engine.BranchingNarrativeComponent{
+		LastUpdate: 0,
+	})
+
+	// Create narrative generator and manager
+	generator := branching.NewGenerator()
+	manager := branching.NewManager()
+
+	// Generate a story arc for the player
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      0,
+		GenreID:    genreID,
+	}
+
+	result, err := generator.Generate(seed, params)
+	if err != nil {
+		logger.WithError(err).Warn("failed to generate branching narrative arc")
+		return
+	}
+
+	arc, ok := result.(*branching.StoryArc)
+	if !ok {
+		logger.Warn("branching narrative generator returned invalid type")
+		return
+	}
+
+	// Start the story arc
+	if err := narrativeSystem.StartStoryArc(player, arc, manager); err != nil {
+		logger.WithError(err).Warn("failed to start branching narrative arc")
+		return
+	}
+
+	logger.WithFields(logrus.Fields{
+		"arc_id":     arc.ID,
+		"arc_title":  arc.Title,
+		"node_count": len(arc.Nodes),
+	}).Info("player branching narrative initialized")
 }

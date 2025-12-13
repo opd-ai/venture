@@ -78,6 +78,9 @@ type EbitenGame struct {
 	// Phase 4.3 (PLAN.md): Territory Control
 	TerritoryUI *TerritoryUI // Territory management UI (guild warfare, territory capture)
 
+	// Phase 6.1 (PLAN.md): Branching Narratives
+	StoryChoiceUI *StoryChoiceUI // Branching narrative choice UI (story decisions, consequences)
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -890,6 +893,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.TerritoryUI.Update()
 	}
 
+	// Phase 6.1 (PLAN.md): Update Story Choice UI
+	if g.StoryChoiceUI != nil {
+		g.StoryChoiceUI.Update(deltaTime)
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -922,6 +930,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
 		(g.AdvancedClassUI != nil && g.AdvancedClassUI.IsVisible()) ||
 		(g.TerritoryUI != nil && g.TerritoryUI.IsVisible()) ||
+		(g.StoryChoiceUI != nil && g.StoryChoiceUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -954,7 +963,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
 		(g.GuildUI == nil || !g.GuildUI.IsVisible()) &&
 		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible()) &&
-		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible())
+		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible()) &&
+		(g.StoryChoiceUI == nil || !g.StoryChoiceUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {
@@ -1162,6 +1172,11 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	// Phase 4.3 (PLAN.md): Draw Territory UI
 	if g.TerritoryUI != nil {
 		g.TerritoryUI.Draw(screen)
+	}
+
+	// Phase 6.1 (PLAN.md): Draw Story Choice UI
+	if g.StoryChoiceUI != nil {
+		g.StoryChoiceUI.Draw(screen)
 	}
 
 	g.drawMailboxUI(screen)

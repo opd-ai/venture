@@ -310,6 +310,7 @@ func (s *RaidSystem) updateBossPhases() {
 }
 
 // cleanupExpiredInstances removes raid instances past their expiration time.
+// Note: Uses time.Now() for instance expiration - this is intentional for real-time cleanup.
 func (s *RaidSystem) cleanupExpiredInstances() {
 	entities := s.world.GetEntitiesWith("raid_instance")
 	now := time.Now()

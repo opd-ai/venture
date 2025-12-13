@@ -61,6 +61,7 @@ func NewRaidLockoutComponent() *RaidLockoutComponent {
 }
 
 // IsLockedOut returns true if the player cannot run this raid tier yet.
+// Note: Uses time.Now() for lockout expiration checking - this is intentional for real-time game mechanics.
 func (r *RaidLockoutComponent) IsLockedOut(tier raids.RaidTier) bool {
 	lockout, exists := r.Lockouts[tier]
 	if !exists {
@@ -70,6 +71,7 @@ func (r *RaidLockoutComponent) IsLockedOut(tier raids.RaidTier) bool {
 }
 
 // SetLockout marks the player as having completed this tier.
+// Note: Uses time.Now() for lockout timestamps - this is intentional for real-time game mechanics.
 func (r *RaidLockoutComponent) SetLockout(playerID string, tier raids.RaidTier) {
 	now := time.Now()
 	nextReset := now.Add(7 * 24 * time.Hour) // Weekly reset

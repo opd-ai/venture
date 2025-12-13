@@ -170,7 +170,6 @@ func createCompanionEntity(world *World, companionData CompanionSpawnData, x, y 
 	entity.AddComponent(&TeamComponent{TeamID: 1}) // Team 1 = friendly NPCs
 
 	// Add dialog component for recruitment interaction
-	// Use a simple dialog provider (merchant dialog can be adapted for companions)
 	dialogProvider := NewMerchantDialogProvider(companionData.Name)
 	dialogComp := NewDialogComponent(dialogProvider)
 	entity.AddComponent(dialogComp)

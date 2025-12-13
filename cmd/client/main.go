@@ -60,7 +60,7 @@ func main() {
 	initializeSpatialPartitioning(game, generatedTerrain, clientLogger)
 	connectMapUIToTerrain(game, generatedTerrain, clientLogger)
 
-	spawnWorldEntities(game, generatedTerrain, clientLogger)
+	spawnWorldEntities(game, generatedTerrain, sys, clientLogger)
 	spawnEnvironmentalEffects(game, generatedTerrain, clientLogger)
 
 	player := setupCompletePlayerEntity(game, generatedTerrain, sys, logger, clientLogger)

@@ -112,6 +112,7 @@ type systemsContainer struct {
 	companionProgressionSys *engine.CompanionProgressionSystem
 	companionLoyaltySys     *engine.CompanionLoyaltySystem
 	companionInventorySys   *engine.CompanionInventorySystem
+	companionLearningSys    *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
 	skillInheritanceSys     *engine.SkillInheritanceSystem
 	bookReadingSystem       *engine.BookReadingSystem
 	spellEffectSystem       *engine.SpellEffectSystem
@@ -367,6 +368,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.companionProgressionSys = engine.NewCompanionProgressionSystem(game.World)
 	sys.companionLoyaltySys = engine.NewCompanionLoyaltySystem(game.World, clientLogger.Logger)
 	sys.companionInventorySys = engine.NewCompanionInventorySystem(game.World)
+	sys.companionLearningSys = engine.NewCompanionLearningSystem(game.World) // Phase 4.1: Companion learning
 	sys.skillInheritanceSys = engine.NewSkillInheritanceSystem(game.World)
 
 	// Phase 23: Book system
@@ -729,6 +731,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&companionProgressionSystemWrapper{system: sys.companionProgressionSys})
 	game.World.AddSystem(&companionLoyaltySystemWrapper{system: sys.companionLoyaltySys})
 	game.World.AddSystem(&companionInventorySystemWrapper{system: sys.companionInventorySys})
+	game.World.AddSystem(sys.companionLearningSys) // Phase 4.1: Companion learning (compatible signature)
 	game.World.AddSystem(&skillInheritanceSystemWrapper{system: sys.skillInheritanceSys})
 
 	// Phase 23: Book system
@@ -1022,7 +1025,7 @@ func connectMapUIToTerrain(game *engine.EbitenGame, generatedTerrain *terrain.Te
 }
 
 // spawnWorldEntities spawns enemies, merchants, stations, puzzles, and objects.
-func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
+func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, sys *systemsContainer, clientLogger *logrus.Entry) {
 	params := procgen.GenerationParams{
 		Difficulty: defaultDifficulty,
 		Depth:      defaultDepth,
@@ -1035,7 +1038,7 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	spawnPuzzlesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnObjectsWithLogging(game.World, generatedTerrain, clientLogger)
 	spawnVehiclesWithLogging(game.World, generatedTerrain, params, clientLogger)
-	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger, sys.companionLearningSys)
 	spawnBookshelvesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnStoryFragmentsWithLogging(game.World, generatedTerrain, params, clientLogger)
 }
@@ -1125,7 +1128,7 @@ func spawnVehiclesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain
 }
 
 // spawnCompanionsWithLogging spawns companions in terrain with optional verbose logging.
-func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
+func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry, companionLearningSys *engine.CompanionLearningSystem) {
 	if *verbose {
 		clientLogger.Info("spawning companions in dungeon")
 	}
@@ -1134,6 +1137,29 @@ func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terra
 		clientLogger.WithError(err).Warn("failed to spawn companions")
 	} else if *verbose {
 		clientLogger.WithField("companionCount", companionCount).Info("spawned companions")
+	}
+
+	// Initialize learning for spawned companions (Phase 4.1)
+	if companionLearningSys != nil {
+		companionEntities := w.GetEntitiesWith("companion")
+		for _, entity := range companionEntities {
+			_, hasLearning := entity.GetComponent("companion_learning")
+			if !hasLearning {
+				learningRate := 1.0 + (float64(companionCount) * 0.1)
+				if learningRate > 2.0 {
+					learningRate = 2.0
+				}
+				err := companionLearningSys.AddCompanionLearning(entity.ID, learningRate)
+				if err != nil {
+					clientLogger.WithError(err).WithField("companionID", entity.ID).Warn("failed to initialize companion learning")
+				} else if *verbose {
+					clientLogger.WithFields(logrus.Fields{
+						"companionID":  entity.ID,
+						"learningRate": learningRate,
+					}).Debug("initialized companion learning")
+				}
+			}
+		}
 	}
 }
 

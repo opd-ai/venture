@@ -231,7 +231,7 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 - **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
 - **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
 - **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
-- **[Release Notes V1.1](docs/RELEASE_NOTES_V1.1.md)** - Version 1.1 release notes
+- **[Changelog](docs/CHANGELOG.md)** - Complete version history (V1.0 - V10.0)
 
 ## Contributing
 

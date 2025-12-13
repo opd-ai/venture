@@ -98,6 +98,9 @@ import (
 
 	// Phase 3.5: Puzzles, Minigames, Class Generation (PLAN.md)
 	"github.com/opd-ai/venture/pkg/procgen/class"
+
+	// Phase 1.1: Companion Learning System (PLAN.md Integration)
+	"github.com/opd-ai/venture/pkg/companion/learning"
 	"github.com/opd-ai/venture/pkg/procgen/minigame"
 	"github.com/opd-ai/venture/pkg/procgen/puzzle"
 
@@ -344,6 +347,9 @@ type systemsContainer struct {
 
 	// Phase 5.1: Mobile Federation Support (PLAN.md)
 	mobileFederationSystem *engine.MobileFederationSystem // Mobile-optimized federation
+
+	// Phase 1.1: Companion Learning System (PLAN.md Integration - Week 1)
+	companionLearningSystem *learning.CompanionLearningSystem // AI companion behavior adaptation and learning
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -693,6 +699,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Fix: Added high-level CompanionSystem for unified companion management
 	// Roadmap: ROADMAP_V4.md Phase 22.2
 	sys.companionSystem = engine.NewCompanionSystem(game.World)
+
+	// Phase 1.1: Companion Learning System (PLAN.md Integration - Week 1)
+	// Unconditional activation: AI companion behavior adaptation and learning baseline feature
+	sys.companionLearningSystem = learning.NewCompanionLearningSystem(10 * time.Second)
+	clientLogger.WithField("system_name", "companion_learning").Debug("Created companion learning system")
 
 	// INTEGRATION FIX [Category A]: Phase 21.2 - VehicleSystem high-level wrapper
 	// Gap: VehicleSystem implemented but never initialized (subsystems VehicleMovementSystem, etc. initialized above)
@@ -1168,6 +1179,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 22.2: High-level CompanionSystem wrapper
 	game.World.AddSystem(&companionSystemWrapper{system: sys.companionSystem})
+
+	// Phase 1.1: Companion Learning System (PLAN.md Integration - Week 1)
+	game.World.AddSystem(&companionLearningSystemWrapper{system: sys.companionLearningSystem})
 
 	// Phase 29: AdaptiveSoundtrackSystem for dynamic music
 	game.World.AddSystem(&adaptiveSoundtrackSystemWrapper{system: sys.adaptiveSoundtrackSystem})
@@ -2687,6 +2701,16 @@ func (w *prestigeSystemWrapper) Update(entities []*engine.Entity, deltaTime floa
 		prestigeEntities[i] = &prestigeEntityAdapter{entity: e}
 	}
 	w.system.Update(prestigeEntities, deltaTime)
+}
+
+// companionLearningSystemWrapper adapts CompanionLearningSystem to the System interface.
+// Phase 1.1: Companion Learning System (PLAN.md Integration - Week 1)
+type companionLearningSystemWrapper struct {
+	system *learning.CompanionLearningSystem
+}
+
+func (w *companionLearningSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
 }
 
 // runGameLoop starts the main game loop.

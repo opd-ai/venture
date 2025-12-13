@@ -908,6 +908,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 	// Check if any gameplay UI is open
 	// BUG FIX: Phase 3.7 - MailboxUI missing from virtual controls visibility check
 	// Resolution: Added MailboxUI.IsOpen() check to hide virtual controls when mailbox is open
+	// Phase 4.3: Added TerritoryUI.IsVisible() check for territory control UI
 	anyUIOpen := g.InventoryUI.IsVisible() ||
 		g.QuestUI.IsVisible() ||
 		g.CharacterUI.IsVisible() ||
@@ -919,6 +920,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
 		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
 		(g.AdvancedClassUI != nil && g.AdvancedClassUI.IsVisible()) ||
+		(g.TerritoryUI != nil && g.TerritoryUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -938,6 +940,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 // shouldUpdateWorld checks if world updates should proceed based on UI visibility.
 // BUG FIX: Phase 3.7 - MailboxUI missing from world update check
 // Resolution: Added MailboxUI.IsOpen() check to pause world when mailbox is open
+// Phase 4.3: Added TerritoryUI.IsVisible() check to pause world during territory management
 func (g *EbitenGame) shouldUpdateWorld() bool {
 	return !g.InventoryUI.IsVisible() &&
 		!g.QuestUI.IsVisible() &&
@@ -949,7 +952,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		(g.TradeUI == nil || !g.TradeUI.IsVisible()) &&
 		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
 		(g.GuildUI == nil || !g.GuildUI.IsVisible()) &&
-		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible())
+		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible()) &&
+		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {

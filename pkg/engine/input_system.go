@@ -241,6 +241,7 @@ type InputSystem struct {
 	KeyMailbox   ebiten.Key // L key for mailbox
 	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
 	KeyClasses   ebiten.Key // A key for advanced classes (Phase 4.2)
+	KeyTerritory ebiten.Key // Y key for territory control (Phase 4.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -296,6 +297,7 @@ type InputSystem struct {
 	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
 	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
 	onClassesOpen   func() // Callback for advanced class UI toggle (Phase 4.2)
+	onTerritoryOpen func() // Callback for territory UI toggle (Phase 4.3)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -347,6 +349,7 @@ func NewInputSystem() *InputSystem {
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
 		KeyClasses:   ebiten.KeyA, // Phase 4.2: Advanced Classes UI
+		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
@@ -633,6 +636,10 @@ func (s *InputSystem) handleUIShortcuts() {
 	// Phase 4.2 (PLAN.md): A key for Advanced Classes UI
 	if inpututil.IsKeyJustPressed(s.KeyClasses) && s.onClassesOpen != nil {
 		s.onClassesOpen()
+	}
+	// Phase 4.3 (PLAN.md): Y key for Territory UI
+	if inpututil.IsKeyJustPressed(s.KeyTerritory) && s.onTerritoryOpen != nil {
+		s.onTerritoryOpen()
 	}
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key press handling
@@ -1166,6 +1173,16 @@ func (s *InputSystem) SetClassesCallback(callback func()) error {
 		return fmt.Errorf("classes callback cannot be nil")
 	}
 	s.onClassesOpen = callback
+	return nil
+}
+
+// SetTerritoryCallback sets the callback function for opening territory UI (Y key).
+// Phase 4.3 (PLAN.md): Territory control (guild warfare, territory capture) UI integration.
+func (s *InputSystem) SetTerritoryCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("territory callback cannot be nil")
+	}
+	s.onTerritoryOpen = callback
 	return nil
 }
 

@@ -1762,6 +1762,15 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("advanced class UI initialized (A key to open)")
 	}
 
+	// Phase 4.3 (PLAN.md): Territory UI initialization
+	// Guild warfare, territory capture, and defensive structures
+	sys.territoryUI.SetPlayerEntity(player)
+	game.TerritoryUI = sys.territoryUI
+
+	if *verbose {
+		clientLogger.Info("territory UI initialized (Y key to open)")
+	}
+
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)
 	craftingUI.SetCraftingSystem(craftingSystem)

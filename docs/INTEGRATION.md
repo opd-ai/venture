@@ -1,249 +1,251 @@
-**OBJECTIVE**: Conduct a systematic audit of the venture codebase to identify and fix all feature integration gaps, ensuring 100% of ROADMAP_V*.md deliverables are fully accessible and functional in both single-player and multiplayer modes, with **NO BACKWARD COMPATIBILITY**—only the latest code is supported (pre-1.0).
+# Venture Integration Audit — Detailed Execution Plan
 
-**EXECUTION MODE**: Autonomous action with inline documentation
-- Fix issues immediately upon discovery
-- Document each fix with inline code comments (gap description + resolution)
-- No external reports
-- If all components are integrated, do nothing.
+## Objective
+Generate two documents:
+1. `docs/INTEGRATION_AUDIT.md` — Comprehensive inventory of all `pkg/` packages with activation status
+2. `docs/PLAN.md` — Phased roadmap to integrate dormant packages as always-on baseline features
 
-**PHASE 1: COMPREHENSIVE DISCOVERY**
+## Execution Mode
+**Report Generation** — Analyze codebase and produce documents. Do not modify source code.
 
-1. **Roadmap Feature Inventory**:
-   - Parse all ROADMAP_V*.md files in docs/
-   - Extract every feature, system, and deliverable by phase
-   - Build complete feature list with expected components
+## Core Principle
+**All features are baseline features.** Dormant packages become unconditionally enabled upon integration. No feature flags, no toggles, no optional activation. If a package exists, it should be active.
 
-2. **Deep Code Analysis**:
-   - **System Registration Audit**: 
-     - Check `cmd/client/main.go` and `cmd/server/main.go` initialization
-     - Verify every pkg/engine system is instantiated and added to World
-     - Confirm pkg/procgen generators are registered and callable
-   
-   - **UI Integration Audit**:
-     - Examine all pkg/rendering/ui/ menu screens (character sheet, skills, quests, map, crafting, inventory, trade, dialogue, minigames, companions, books)
-     - Trace input handlers for each UI screen activation
-     - Verify rendering pipeline includes all UI elements
-     - Check command-line flags enable/disable UI features
-   
-   - **Gameplay System Audit**:
-     - Review pkg/engine systems (movement, collision, combat, inventory, progression, AI, death/revival, audio manager, time-day cycle, weather, physics, rotation, shadows, vehicles, companions, dialogue, social, trading, minigames, books, puzzles)
-     - Confirm each system's Update() is called in game loop
-     - Verify component creation for system functionality
-   
-   - **Procedural Generation Audit**:
-     - Check pkg/procgen/* generators (terrain, entity, item, magic, skills, quest, recipe, station, environment, narrative, puzzle, decorations, weather, gradients, time-day)
-     - Verify generators are invoked during world/level creation
-     - Confirm generated content is spawned as entities with proper components
-   
-   - **Multiplayer Sync Audit**:
-     - Review pkg/network/protocol.go message types
-     - Check which systems/components have NetworkComponent
-     - Verify server-side equivalents for client systems
-     - Confirm state synchronization for all player-affecting features
-   
-  - **Persistence Audit**:
-      - Review pkg/saveload serialization
-      - Verify all gameplay-critical components are saved/loaded
-      - **NO BACKWARD COMPATIBILITY**: Remove legacy save format support, obsolete migration code, and deprecated serialization paths. **DELETE all obsolete code completely, do not comment out or deprecate.**
-      - Check that new features added in recent phases are persisted
+---
 
-3. **Pattern-Based Detection**:
-   - Search: `grep -rn "TODO\|FIXME\|HACK\|XXX\|disabled\|commented.*out" pkg/ cmd/`
-   - Search: `grep -rn "not.*implemented\|placeholder\|stub" pkg/ cmd/`
-   - Find unused systems: Compare system definitions vs. instantiations
-   - Find orphaned generators: Compare generator interfaces vs. invocations
-   - **Find obsolete code**: Identify features replaced by newer implementations. **DELETE all obsolete code completely, do not comment out or deprecate.**
+## Phase 1: Establish Baseline (Active Systems)
 
-4. **Cross-Reference Validation**:
-   - For each roadmap feature, trace from:
-     - Generation → Entity creation → Component attachment → System processing → UI display → Input handling → Network sync → Save/load
-   - Identify breaks in any chain
-   - **Identify superseded features**: Mark old implementations replaced by roadmap deliverables for removal
-
-**PHASE 2: GAP CATEGORIZATION**
-
-Classify discovered issues:
-- **Category A**: Feature implemented but not instantiated (missing from main.go init)
-- **Category B**: System running but no UI access (missing menu/input binding)
-- **Category C**: Single-player only (missing NetworkComponent or server system)
-- **Category D**: Not persisted (missing from saveload)
-- **Category E**: Generated but not spawned (generator exists, no entity creation)
-- **Category F**: Partially wired (some code paths work, others don't)
-
-**PHASE 3: AUTONOMOUS FIXES**
-
-For each gap, apply appropriate fix pattern:
-
-- **Category A**: Add system instantiation to engine.World creation, register in appropriate initialization section
-- **Category B**: Add UI screen, input handler (keyboard/mouse/touch), menu entry, HUD element
-- **Category C**: Add NetworkComponent to entities, implement server-side system, add protocol messages, sync state
-- **Category D**: Add fields to save/load structs, implement marshal/unmarshal, **remove all backward compatibility code**
-- **Category E**: Add generator invocation in world/level creation, spawn entities with results, attach components
-- **Category F**: Complete missing code paths, ensure feature works in all contexts
-- **Category G**: **DELETE obsolete code completely** – immediately and fully remove deprecated systems, legacy generators, old UI screens, compatibility shims, migration utilities, and all references from the codebase, rather than just marking or identifying them.
-
-**INLINE DOCUMENTATION TEMPLATE**:
-```go
-// INTEGRATION FIX [Category X]: [Feature Name]
-// Gap: [Description of what was missing]
-// Fix: [What was added/changed]
-// Roadmap: [Reference to ROADMAP_V*.md section]
+### Step 1.1: Extract Client Imports
+Identify all packages currently used by the game client:
+```bash
+grep -rh "github.com/opd-ai/venture/pkg/" cmd/client/ --include="*.go" | \
+  grep -oP '"[^"]*"' | tr -d '"' | sort -u > /tmp/client_imports.txt
 ```
 
-For removals:
-```go
-// OBSOLETE CODE REMOVED: [Feature Name]
-// Replaced by: [New implementation reference]
-// Removed: [List of deleted files/functions/types]
+### Step 1.2: Extract Server Imports
+Identify all packages currently used by the game server:
+```bash
+grep -rh "github.com/opd-ai/venture/pkg/" cmd/server/ --include="*.go" | \
+  grep -oP '"[^"]*"' | tr -d '"' | sort -u > /tmp/server_imports.txt
 ```
 
-**TECHNICAL CONSTRAINTS**:
-- Maintain deterministic generation (seed-based RNG only)
-- Follow ECS patterns (components are data, systems are logic)
-- Preserve performance targets (60 FPS, <500MB memory, <2s generation)
-**SUCCESS CRITERIA**:
-- Every roadmap feature has complete integration chain
-- **Zero deprecated/legacy/obsolete code paths**
-- **Zero backward compatibility code for save formats or protocols**
-- **All replaced features completely removed from codebase**
-**SUCCESS CRITERIA**:
-- Every roadmap feature has complete integration chain
-- No systems defined but unused
-- No generators that don't spawn entities
-- All features accessible via UI or gameplay in both modes
-- All player-affecting state is networked and persisted
-- Zero TODO/FIXME related to missing integration
-- **Zero deprecated/legacy/obsolete code paths**
-- **Zero backward compatibility code for save formats or protocols** (pre-1.0: only latest code is supported, no migration or legacy support)
-- **All replaced features completely removed from codebase**
-- If all components are integrated and codebase is clean, do nothing.
-- If all components are integrated and codebase is clean, do nothing.
-
-**OUTPUT**: Modified source files with inline comments documenting each integration gap found and fixed, organized by category. Deleted files for obsolete features with commit messages explaining replacement.
-- **All replaced features completely removed from codebase**
-- If all components are integrated and codebase is clean, do nothing.
-
-**OUTPUT**: Modified source files with inline comments documenting each integration gap found and fixed, organized by category.
-**OBJECTIVE**: Conduct a systematic audit of the venture codebase to identify and fix all feature integration gaps, ensuring 100% of ROADMAP_V*.md deliverables are fully accessible and functional in both single-player and multiplayer modes.
-
-**EXECUTION MODE**: Autonomous action with inline documentation
-- Fix issues immediately upon discovery
-- Document each fix with inline code comments (gap description + resolution)
-- No external reports
-- If all components are integrated, do nothing.
-
-**PHASE 1: COMPREHENSIVE DISCOVERY**
-
-1. **Roadmap Feature Inventory**:
-  - Parse all ROADMAP_V*.md files in docs/
-  - Extract every feature, system, and deliverable by phase
-  - Build complete feature list with expected components
-
-2. **Deep Code Analysis**:
-  - **System Registration Audit**: 
-    - Check `cmd/client/main.go` and `cmd/server/main.go` initialization
-    - Verify every pkg/engine system is instantiated and added to World
-    - Confirm pkg/procgen generators are registered and callable
-  
-  - **UI Integration Audit**:
-    - Examine all pkg/rendering/ui/ menu screens (character sheet, skills, quests, map, crafting, inventory, trade, dialogue, minigames, companions, books)
-    - Trace input handlers for each UI screen activation
-    - Verify rendering pipeline includes all UI elements
-    - Check command-line flags enable/disable UI features
-  
-  - **Gameplay System Audit**:
-    - Review pkg/engine systems (movement, collision, combat, inventory, progression, AI, death/revival, audio manager, time-day cycle, weather, physics, rotation, shadows, vehicles, companions, dialogue, social, trading, minigames, books, puzzles)
-    - Confirm each system's Update() is called in game loop
-    - Verify component creation for system functionality
-  
-  - **Procedural Generation Audit**:
-    - Check pkg/procgen/* generators (terrain, entity, item, magic, skills, quest, recipe, station, environment, narrative, puzzle, decorations, weather, gradients, time-day)
-    - Verify generators are invoked during world/level creation
-    - Confirm generated content is spawned as entities with proper components
-  
-  - **Multiplayer Sync Audit**:
-    - Review pkg/network/protocol.go message types
-    - Check which systems/components have NetworkComponent
-    - Verify server-side equivalents for client systems
-    - Confirm state synchronization for all player-affecting features
-  
-  - **Persistence Audit**:
-    - Review pkg/saveload serialization
-    - Verify all gameplay-critical components are saved/loaded
-    - **NO BACKWARD COMPATIBILITY**: Remove legacy save format support, obsolete migration code, and deprecated serialization paths
-
-  - Search: `grep -rn "deprecated\|legacy\|obsolete\|backward.*compat" pkg/ cmd/`
-  - Find unused systems: Compare system definitions vs. instantiations
-  - Find orphaned generators: Compare generator interfaces vs. invocations
-  - **Find obsolete code**: Identify features replaced by newer implementations. **DELETE all obsolete code completely, do not comment out or deprecate.**
-  - Find unused systems: Compare system definitions vs. instantiations
-  - Find orphaned generators: Compare generator interfaces vs. invocations
-  - **Find obsolete code**: Identify features replaced by newer implementations
-
-4. **Cross-Reference Validation**:
-  - For each roadmap feature, trace from:
-    - Generation → Entity creation → Component attachment → System processing → UI display → Input handling → Network sync → Save/load
-  - Identify breaks in any chain
-  - **Identify superseded features**: Mark old implementations replaced by roadmap deliverables for removal
-
-**PHASE 2: GAP CATEGORIZATION**
-
-Classify discovered issues:
-- **Category A**: Feature implemented but not instantiated (missing from main.go init)
-- **Category B**: System running but no UI access (missing menu/input binding)
-- **Category C**: Single-player only (missing NetworkComponent or server system)
-- **Category D**: Not persisted (missing from saveload)
-- **Category E**: Generated but not spawned (generator exists, no entity creation)
-- **Category F**: Partially wired (some code paths work, others don't)
-- **Category G**: Obsolete code (replaced by newer implementation, marked for removal)
-
-**PHASE 3: AUTONOMOUS FIXES**
-
-For each gap, apply appropriate fix pattern:
-
-- **Category A**: Add system instantiation to engine.World creation, register in appropriate initialization section
-- **Category B**: Add UI screen, input handler (keyboard/mouse/touch), menu entry, HUD element
-- **Category C**: Add NetworkComponent to entities, implement server-side system, add protocol messages, sync state
-- **Category D**: Add fields to save/load structs, implement marshal/unmarshal, **remove all backward compatibility code**
-- **Category E**: Add generator invocation in world/level creation, spawn entities with results, attach components
-- **Category F**: Complete missing code paths, ensure feature works in all contexts
-- **Category G**: **DELETE obsolete code completely** - remove deprecated systems, legacy generators, old UI screens, compatibility shims, migration utilities, and all references
-
-**INLINE DOCUMENTATION TEMPLATE**:
-```go
-// INTEGRATION FIX [Category X]: [Feature Name]
-// Gap: [Description of what was missing]
-// Fix: [What was added/changed]
-// Roadmap: [Reference to ROADMAP_V*.md section]
+### Step 1.3: Identify Registered ECS Systems
+Find all systems added to the game world:
+```bash
+grep -rn "AddSystem\|RegisterSystem\|world\.Add" cmd/client/ cmd/server/ --include="*.go"
 ```
 
-For removals:
-```go
-// OBSOLETE CODE REMOVED: [Feature Name]
-// Replaced by: [New implementation reference]
-// Removed: [List of deleted files/functions/types]
+### Step 1.4: Find Existing Feature Flags (To Remove)
+Identify flags gating functionality that should become always-on:
+```bash
+grep -rn 'enable\|disable\|toggle' cmd/client/ cmd/server/ --include="*.go" | grep -i flag
+```
+**Action**: These flags should be removed during integration; features become unconditional.
+
+---
+
+## Phase 2: Inventory All Packages
+
+### Step 2.1: Enumerate Package Directories
+```bash
+find pkg -type d -mindepth 1 -maxdepth 3 | sort > /tmp/all_packages.txt
 ```
 
-**TECHNICAL CONSTRAINTS**:
-- Maintain deterministic generation (seed-based RNG only)
-- Follow ECS patterns (components are data, systems are logic)
-- Preserve performance targets (60 FPS, <500MB memory, <2s generation)
-- Keep network bandwidth <100KB/s per player
-- All fixes must compile and pass: `make test`
-- **NO BACKWARD COMPATIBILITY**: We are pre-version 1.0, latest code is the only supported version
-- **DELETE obsolete features**: Remove replaced implementations completely, don't comment out or deprecate
-- If all components are integrated and no obsolete code exists, do nothing.
+### Step 2.2: For Each Package, Collect Metadata
 
-**SUCCESS CRITERIA**:
-- Every roadmap feature has complete integration chain
-- No systems defined but unused
-- No generators that don't spawn entities
-- All features accessible via UI or gameplay in both modes
-- All player-affecting state is networked and persisted
-- Zero TODO/FIXME related to missing integration
-- **Zero deprecated/legacy/obsolete code paths**
-- **Zero backward compatibility code for save formats or protocols**
-- **All replaced features completely removed from codebase**
-- If all components are integrated and codebase is clean, do nothing.
+| Check | Command | Meaning |
+|-------|---------|---------|
+| Has Go files | `ls pkg/<path>/*.go 2>/dev/null \| wc -l` | Package exists |
+| Has doc.go | `test -f pkg/<path>/doc.go` | Documented |
+| Has tests | `ls pkg/<path>/*_test.go 2>/dev/null \| wc -l` | Tested |
+| Exports public API | `grep -l '^func [A-Z]' pkg/<path>/*.go` | Usable externally |
+| Line count | `wc -l pkg/<path>/*.go 2>/dev/null \| tail -1` | Implementation size |
 
-**OUTPUT**: Modified source files with inline comments documenting each integration gap found and fixed, organized by category. Deleted files for obsolete features with commit messages explaining replacement.
+### Step 2.3: Classify Package Completeness
+- **Complete**: Has doc.go, tests, exports, >200 LOC
+- **Partial**: Has exports but missing docs or tests
+- **Stub**: <100 LOC or only type definitions
+
+---
+
+## Phase 3: Cross-Reference (Find Dormant Packages)
+
+### Step 3.1: Compute Set Difference
+```bash
+comm -23 /tmp/all_packages.txt <(cat /tmp/client_imports.txt /tmp/server_imports.txt | sort -u)
+```
+
+### Step 3.2: Check for Indirect Usage
+```bash
+grep -r "pkg/<dormant_package>" pkg/ --include="*.go" | grep -v "_test.go"
+```
+**Classify**: 
+- "Truly Dormant" = not imported anywhere
+- "Indirectly Used" = imported by other pkg/ but not client/server
+- "Test Only" = only in *_test.go files
+
+### Step 3.3: Check Example/Demo Usage
+```bash
+grep -r "pkg/<dormant_package>" examples/ cmd/*test/ --include="*.go"
+```
+**Note**: Demos prove functionality works — activation should be straightforward.
+
+---
+
+## Phase 4: Dependency Analysis
+
+### Step 4.1: Build Dependency Graph
+```bash
+go list -f '{{.ImportPath}}: {{join .Imports ", "}}' ./pkg/<path>/...
+```
+
+### Step 4.2: Identify Activation Order
+If pkg/A imports pkg/B, then B must be integrated before A.
+Build topological order for integration phases.
+
+### Step 4.3: Map to Integration Points
+```bash
+grep -rn "Component\|System" pkg/<path>/*.go | head -20
+```
+- Defines Components → Entity integration
+- Defines Systems → World.AddSystem() unconditionally
+- Defines Generators → Procgen pipeline integration
+
+---
+
+## Phase 5: Determine Integration Steps
+
+### Step 5.1: Categorize Integration Type
+
+| Integration Type | Detection | Integration Pattern |
+|------------------|-----------|---------------------|
+| **ECS System** | Has `Update(dt)` | Unconditional `AddSystem()` |
+| **Procgen Generator** | Implements `Generator` | Add to generation pipeline |
+| **Rendering Layer** | Imports `ebiten` | Add to render loop |
+| **Network Protocol** | Imports `network/` | Register handlers at startup |
+| **UI Component** | In `rendering/ui/` | Add to UI initialization |
+| **Audio** | In `audio/` | Connect to AudioManager |
+| **Save/Load** | Has serialization | Register with SaveLoad |
+
+### Step 5.2: Write Concrete Integration Steps
+For each dormant package, specify exact changes:
+```
+Example for `pkg/companion/learning/`:
+1. Add import in cmd/client/main.go
+2. Create LearningSystem: `learningSys := learning.NewSystem(companionSys)`
+3. Register unconditionally: `world.AddSystem(learningSys)`
+```
+**No feature flags. No conditionals. Just add it.**
+
+### Step 5.3: Estimate Effort
+- **Small (S)**: Import + 1-2 line registration
+- **Medium (M)**: New initialization code or UI wiring
+- **Large (L)**: Multiple system integrations
+
+---
+
+## Phase 6: Review Recent Changes
+
+### Step 6.1: Check Roadmap Context
+```bash
+cat docs/ROADMAP*.md | grep -A5 -B5 "Phase\|TODO\|WIP\|Complete"
+```
+
+### Step 6.2: Git History
+```bash
+git log --since="2 months ago" --name-only --pretty=format: -- pkg/ | sort | uniq -c | sort -rn | head -30
+```
+Recently modified = likely being activated already.
+
+---
+
+## Phase 7: Generate Output Documents
+
+### Output 1: `docs/INTEGRATION_AUDIT.md`
+
+```markdown
+# Integration Audit - December 2025
+
+## Summary
+- **Total pkg/ directories**: X
+- **Active**: Y  
+- **Dormant (requires integration)**: Z
+
+## Active Packages
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/engine` | client, server | Core ECS |
+| ... | ... | ... |
+
+## Dormant Packages (To Integrate)
+
+### `pkg/companion/learning`
+- **Completeness**: Complete
+- **Blocker**: Not registered as system
+- **Dependencies**: `pkg/companion` (active)
+- **Integration**:
+  1. Import in `cmd/client/main.go`
+  2. `world.AddSystem(learning.NewSystem(companionSys))`
+- **Effort**: Small
+
+### `pkg/engine/physics/destruction`
+...
+
+## Dependency Graph
+[Mermaid diagram showing integration order]
+```
+
+### Output 2: `docs/PLAN.md`
+
+```markdown
+# Integration Plan - December 2025
+
+## Principle
+All packages become unconditionally active. No feature flags. No optional toggles.
+
+## Phase 1: Foundation (Week 1)
+Activate core systems that others depend on.
+
+- [ ] `pkg/engine/physics/destruction`
+  - File: `cmd/client/main.go`
+  - Add: `world.AddSystem(destruction.NewSystem())`
+  - Verify: `go run ./cmd/destructiontest`
+
+- [ ] `pkg/class/advanced`
+  - File: `cmd/client/main.go`
+  - Add: `world.AddSystem(advancedclass.NewSystem())`
+
+## Phase 2: Social Systems (Week 2)
+- [ ] `pkg/network/chat`
+- [ ] `pkg/social/persistence`
+...
+
+## Phase 3: Content Generation (Week 3)
+- [ ] `pkg/procgen/companion`
+- [ ] `pkg/procgen/dialog`
+...
+
+## Verification
+After each phase:
+- [ ] `go build ./cmd/client && go build ./cmd/server`
+- [ ] `go test ./pkg/...`
+- [ ] Run client, verify features work
+```
+
+---
+
+## Success Criteria
+- [ ] All `pkg/` subdirectories inventoried
+- [ ] Every dormant package has exact file + code changes
+- [ ] Integration order respects dependencies
+- [ ] No feature flags in integration steps
+- [ ] All features become always-on baseline
+- [ ] Excludes `cmd/*test/` (standalone tools, not features)
+
+## Anti-Patterns to Avoid
+- ❌ `if enableFeatureX { ... }` — No conditionals
+- ❌ `-enable-*` flags — No toggles
+- ❌ "Optional" integration — Everything is mandatory
+- ✅ Unconditional `AddSystem()` calls
+- ✅ Direct imports without guards
+- ✅ Always-on initialization

@@ -208,9 +208,14 @@ func (g *ForestGenerator) createClearings(terrain *Terrain, rng *rand.Rand) []*R
 // generateTrees places trees using Poisson disc sampling for natural distribution.
 func (g *ForestGenerator) generateTrees(terrain *Terrain, clearings []*Room, rng *rand.Rand) {
 	// Calculate minimum distance between trees based on density
-	minDist := 3.0 / math.Sqrt(g.treeDensity)
-	if minDist < 2.0 {
-		minDist = 2.0
+	// Higher density = smaller minimum distance between trees
+	// Formula: minDist ≈ 1/sqrt(density) gives points with spacing inversely proportional to density
+	minDist := 1.0 / math.Sqrt(g.treeDensity)
+	if minDist < 1.5 {
+		minDist = 1.5
+	}
+	if minDist > 5.0 {
+		minDist = 5.0
 	}
 
 	// Get tree positions using Poisson disc sampling
@@ -243,7 +248,7 @@ func (g *ForestGenerator) poissonDiscSampling(width, height int, minDist float64
 
 	grid := g.initializePoissonGrid(gridW, gridH)
 	points, activeList := g.initializeWithStartPoint(width, height, grid, gridW, gridH, cellSize, rng)
-	g.processActivePoints(points, &activeList, grid, cellSize, minDist, width, height, rng)
+	g.processActivePoints(&points, &activeList, grid, cellSize, minDist, width, height, rng)
 
 	return points
 }
@@ -279,13 +284,13 @@ func (g *ForestGenerator) initializeWithStartPoint(width, height int, grid [][]i
 }
 
 // processActivePoints generates new points around active points.
-func (g *ForestGenerator) processActivePoints(points []Point, activeList *[]int, grid [][]int, cellSize, minDist float64, width, height int, rng *rand.Rand) {
+func (g *ForestGenerator) processActivePoints(points *[]Point, activeList *[]int, grid [][]int, cellSize, minDist float64, width, height int, rng *rand.Rand) {
 	for len(*activeList) > 0 {
 		activeIdx := rng.Intn(len(*activeList))
 		pointIdx := (*activeList)[activeIdx]
-		point := points[pointIdx]
+		point := (*points)[pointIdx]
 
-		found := g.tryGenerateNewPoints(point, &points, activeList, grid, cellSize, minDist, width, height, rng)
+		found := g.tryGenerateNewPoints(point, points, activeList, grid, cellSize, minDist, width, height, rng)
 		if !found {
 			*activeList = append((*activeList)[:activeIdx], (*activeList)[activeIdx+1:]...)
 		}

@@ -90,6 +90,18 @@ func (s *RaidSystem) CreateRaidInstance(tier raids.RaidTier, groupID string, pla
 		ActiveBoss:   0,
 		BossesKilled: make([]bool, len(raidDungeon.Bosses)),
 	})
+	entrance.AddComponent(&EbitenSprite{
+		Width:   64,
+		Height:  64,
+		Visible: true,
+		Layer:   1,
+	})
+	entrance.AddComponent(&ColliderComponent{
+		Width:     64,
+		Height:    64,
+		Solid:     false,
+		IsTrigger: true,
+	})
 
 	return instance.InstanceID, entrance, nil
 }

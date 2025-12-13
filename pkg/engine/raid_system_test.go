@@ -137,8 +137,8 @@ func TestRaidSystemCreateInstance(t *testing.T) {
 	if _, ok := entrance.GetComponent("sprite"); !ok {
 		t.Errorf("entrance missing sprite component")
 	}
-	if _, ok := entrance.GetComponent("collision"); !ok {
-		t.Errorf("entrance missing collision component")
+	if _, ok := entrance.GetComponent("collider"); !ok {
+		t.Errorf("entrance missing collider component")
 	}
 
 	// Verify instance component properties
@@ -171,8 +171,8 @@ func TestRaidSystemEnterInstance(t *testing.T) {
 	world := NewWorld()
 	system := NewRaidSystem(world, 12345)
 
-	// Create instance
-	playerIDs := []string{"player1"}
+	// Create instance with minimum player count (5 for normal tier)
+	playerIDs := []string{"player1", "player2", "player3", "player4", "player5"}
 	_, entrance, err := system.CreateRaidInstance(
 		raids.TierNormal,
 		"group1",
@@ -215,8 +215,8 @@ func TestRaidSystemEnterInstanceLockout(t *testing.T) {
 	world := NewWorld()
 	system := NewRaidSystem(world, 12345)
 
-	// Create instance
-	playerIDs := []string{"player1"}
+	// Create instance with minimum player count (5 for normal tier)
+	playerIDs := []string{"player1", "player2", "player3", "player4", "player5"}
 	_, entrance, err := system.CreateRaidInstance(
 		raids.TierNormal,
 		"group1",
@@ -247,8 +247,8 @@ func TestRaidSystemCompleteInstance(t *testing.T) {
 	world := NewWorld()
 	system := NewRaidSystem(world, 12345)
 
-	// Create instance
-	playerIDs := []string{"player1", "player2"}
+	// Create instance with minimum player count (6 for heroic tier)
+	playerIDs := []string{"player1", "player2", "player3", "player4", "player5", "player6"}
 	instanceID, entrance, err := system.CreateRaidInstance(
 		raids.TierHeroic,
 		"group1",
@@ -380,10 +380,18 @@ func TestRaidSystemUpdateBossPhases(t *testing.T) {
 	}
 	boss.AddComponent(bossComp)
 
+	// Reduce health to trigger phase 1 (need health <= 0.75)
+	healthCompRaw, ok := boss.GetComponent("health")
+	if !ok {
+		t.Fatal("boss missing health component")
+	}
+	healthComp := healthCompRaw.(*HealthComponent)
+	healthComp.Current = 750 // 750/1000 = 0.75, exactly at threshold
+
 	// Update system
 	system.Update(1.0)
 
-	// Verify phase transition happened (800/1000 = 0.8, so phase 1 at 0.75 should trigger)
+	// Verify phase transition happened (750/1000 = 0.75, so phase 1 at 0.75 should trigger)
 	if bossComp.CurrentPhase != 1 {
 		t.Errorf("current phase = %d, want 1", bossComp.CurrentPhase)
 	}
@@ -392,11 +400,6 @@ func TestRaidSystemUpdateBossPhases(t *testing.T) {
 	}
 
 	// Reduce health to trigger phase 2
-	healthCompRaw, ok := boss.GetComponent("health")
-	if !ok {
-		t.Fatal("boss missing health component")
-	}
-	healthComp := healthCompRaw.(*HealthComponent)
 	healthComp.Current = 450 // 450/1000 = 0.45, below 0.50 threshold
 
 	system.Update(1.0)
@@ -413,11 +416,15 @@ func TestRaidSystemCleanupExpiredInstances(t *testing.T) {
 
 	// Create instance with past expiration
 	entrance := world.CreateEntity()
+	entrance.AddComponent(&PositionComponent{X: 100, Y: 100}) // Required by world entity tracking
 	entrance.AddComponent(&RaidInstanceComponent{
 		InstanceID: "expired_instance",
 		ExpiresAt:  time.Now().Add(-1 * time.Hour), // Expired 1 hour ago
 		Completed:  false,
 	})
+
+	// Update world to commit entity addition
+	world.Update(0.0)
 
 	// Verify entrance exists
 	if _, ok := world.GetEntity(entrance.ID); !ok {
@@ -426,6 +433,9 @@ func TestRaidSystemCleanupExpiredInstances(t *testing.T) {
 
 	// Trigger cleanup
 	system.cleanupExpiredInstances()
+
+	// Update world to process entity removal
+	world.Update(0.0)
 
 	// Verify entrance was removed
 	if _, ok := world.GetEntity(entrance.ID); ok {
@@ -439,11 +449,15 @@ func TestRaidSystemCleanupCompletedInstances(t *testing.T) {
 
 	// Create completed instance
 	entrance := world.CreateEntity()
+	entrance.AddComponent(&PositionComponent{X: 100, Y: 100}) // Required by world entity tracking
 	entrance.AddComponent(&RaidInstanceComponent{
 		InstanceID: "completed_instance",
 		ExpiresAt:  time.Now().Add(4 * time.Hour), // Not expired
 		Completed:  true,                          // But completed
 	})
+
+	// Update world to commit entity addition
+	world.Update(0.0)
 
 	// Verify entrance exists
 	if _, ok := world.GetEntity(entrance.ID); !ok {
@@ -452,6 +466,9 @@ func TestRaidSystemCleanupCompletedInstances(t *testing.T) {
 
 	// Trigger cleanup
 	system.cleanupExpiredInstances()
+
+	// Update world to process entity removal
+	world.Update(0.0)
 
 	// Verify entrance was removed
 	if _, ok := world.GetEntity(entrance.ID); ok {

@@ -71,6 +71,13 @@ func (tui *TerritoryUI) Update() error {
 		return nil
 	}
 
+	tui.handleKeyboardInput()
+	tui.handleTouchInput()
+	return nil
+}
+
+// handleKeyboardInput processes keyboard navigation and actions.
+func (tui *TerritoryUI) handleKeyboardInput() {
 	// Keyboard navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		tui.scrollOffset--
@@ -91,8 +98,10 @@ func (tui *TerritoryUI) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyB) && tui.selectedTerritory != nil {
 		tui.handleBuildStructure()
 	}
+}
 
-	// Touch input
+// handleTouchInput processes touch input for UI interaction.
+func (tui *TerritoryUI) handleTouchInput() {
 	if tui.touchHandler != nil {
 		tui.touchHandler.Update()
 	}
@@ -110,8 +119,6 @@ func (tui *TerritoryUI) Update() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 // Draw renders the territory UI.

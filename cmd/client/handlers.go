@@ -1450,38 +1450,57 @@ func spawnVehiclesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain
 
 // spawnCompanionsWithLogging spawns companions in terrain with optional verbose logging.
 func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry, companionLearningSys *engine.CompanionLearningSystem) {
+	companionCount := spawnCompanionsWithVerboseLogging(w, generatedTerrain, params, clientLogger)
+	initializeCompanionLearning(w, companionLearningSys, companionCount, clientLogger)
+}
+
+// spawnCompanionsWithVerboseLogging spawns companions and logs the result.
+func spawnCompanionsWithVerboseLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) int {
 	if *verbose {
 		clientLogger.Info("spawning companions in dungeon")
 	}
 	companionCount, err := spawnCompanions(w, generatedTerrain, *seed+seedOffsetCompanion, params, clientLogger)
 	if err != nil {
 		clientLogger.WithError(err).Warn("failed to spawn companions")
-	} else if *verbose {
+		return 0
+	}
+	if *verbose {
 		clientLogger.WithField("companionCount", companionCount).Info("spawned companions")
 	}
+	return companionCount
+}
 
-	// Initialize learning for spawned companions (Phase 4.1)
-	if companionLearningSys != nil {
-		companionEntities := w.GetEntitiesWith("companion")
-		for _, entity := range companionEntities {
-			_, hasLearning := entity.GetComponent("companion_learning")
-			if !hasLearning {
-				learningRate := 1.0 + (float64(companionCount) * 0.1)
-				if learningRate > 2.0 {
-					learningRate = 2.0
-				}
-				err := companionLearningSys.AddCompanionLearning(entity.ID, learningRate)
-				if err != nil {
-					clientLogger.WithError(err).WithField("companionID", entity.ID).Warn("failed to initialize companion learning")
-				} else if *verbose {
-					clientLogger.WithFields(logrus.Fields{
-						"companionID":  entity.ID,
-						"learningRate": learningRate,
-					}).Debug("initialized companion learning")
-				}
-			}
+// initializeCompanionLearning initializes learning for all spawned companions.
+func initializeCompanionLearning(w *engine.World, companionLearningSys *engine.CompanionLearningSystem, companionCount int, clientLogger *logrus.Entry) {
+	if companionLearningSys == nil {
+		return
+	}
+
+	companionEntities := w.GetEntitiesWith("companion")
+	for _, entity := range companionEntities {
+		if _, hasLearning := entity.GetComponent("companion_learning"); hasLearning {
+			continue
+		}
+
+		learningRate := calculateLearningRate(companionCount)
+		if err := companionLearningSys.AddCompanionLearning(entity.ID, learningRate); err != nil {
+			clientLogger.WithError(err).WithField("companionID", entity.ID).Warn("failed to initialize companion learning")
+		} else if *verbose {
+			clientLogger.WithFields(logrus.Fields{
+				"companionID":  entity.ID,
+				"learningRate": learningRate,
+			}).Debug("initialized companion learning")
 		}
 	}
+}
+
+// calculateLearningRate calculates learning rate based on companion count.
+func calculateLearningRate(companionCount int) float64 {
+	learningRate := 1.0 + (float64(companionCount) * 0.1)
+	if learningRate > 2.0 {
+		learningRate = 2.0
+	}
+	return learningRate
 }
 
 // spawnBookshelvesWithLogging spawns bookshelves with books in terrain with optional verbose logging.
@@ -2506,33 +2525,47 @@ func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.St
 		clientLogger.Info("generating procedural narrative arc for world")
 	}
 
-	// Generate story arc using world seed
-	result, err := narrativeGen.Generate(*seed+seedOffsetNarrative, params)
-	if err != nil {
-		clientLogger.WithError(err).Warn("failed to generate narrative arc")
+	arc := generateAndValidateNarrativeArc(narrativeGen, params, clientLogger)
+	if arc == nil {
 		return
 	}
 
-	// Validate the generated arc
-	arc, ok := result.(*narrative.StoryArc)
-	if !ok {
-		clientLogger.Warn("narrative generator returned invalid type")
-		return
-	}
-
-	if err := narrativeGen.Validate(arc); err != nil {
-		clientLogger.WithError(err).Warn("generated narrative arc failed validation")
-		return
-	}
-
-	// Find or create world narrative entity
 	worldNarrativeEntity := findOrCreateWorldNarrativeEntity(w)
 	if worldNarrativeEntity == nil {
 		clientLogger.Warn("failed to create world narrative entity")
 		return
 	}
 
-	// Get or create narrative component
+	narrativeComp := setupNarrativeComponent(worldNarrativeEntity, arc)
+	addInitialNarrativeEvent(narrativeComp, arc)
+	addPlotPointsAsThreads(narrativeComp, arc)
+	logNarrativeArcSuccess(arc, clientLogger)
+}
+
+// generateAndValidateNarrativeArc generates and validates a story arc.
+func generateAndValidateNarrativeArc(narrativeGen *narrative.StoryArcGenerator, params procgen.GenerationParams, clientLogger *logrus.Entry) *narrative.StoryArc {
+	result, err := narrativeGen.Generate(*seed+seedOffsetNarrative, params)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to generate narrative arc")
+		return nil
+	}
+
+	arc, ok := result.(*narrative.StoryArc)
+	if !ok {
+		clientLogger.Warn("narrative generator returned invalid type")
+		return nil
+	}
+
+	if err := narrativeGen.Validate(arc); err != nil {
+		clientLogger.WithError(err).Warn("generated narrative arc failed validation")
+		return nil
+	}
+
+	return arc
+}
+
+// setupNarrativeComponent gets or creates narrative component with story arc data.
+func setupNarrativeComponent(worldNarrativeEntity *engine.Entity, arc *narrative.StoryArc) *engine.NarrativeComponent {
 	var narrativeComp *engine.NarrativeComponent
 	if comp, ok := worldNarrativeEntity.GetComponent("narrative"); ok {
 		narrativeComp, _ = comp.(*engine.NarrativeComponent)
@@ -2550,12 +2583,14 @@ func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.St
 			PlayerDecisions: make([]engine.PlayerDecision, 0),
 		}
 		worldNarrativeEntity.AddComponent(narrativeComp)
+	} else {
+		narrativeComp.MainObjective = arc.MainConflict
 	}
+	return narrativeComp
+}
 
-	// Update narrative component with story arc data
-	narrativeComp.MainObjective = arc.MainConflict
-
-	// Add initial narrative event for the story arc
+// addInitialNarrativeEvent adds the initial narrative event for the story arc.
+func addInitialNarrativeEvent(narrativeComp *engine.NarrativeComponent, arc *narrative.StoryArc) {
 	initialEvent := engine.NarrativeEvent{
 		Type:        engine.EventDiscovery,
 		Timestamp:   time.Now(),
@@ -2564,14 +2599,19 @@ func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.St
 		Act:         engine.ActSetup,
 	}
 	narrativeComp.AddEvent(initialEvent)
+}
 
-	// Add plot points as active threads
+// addPlotPointsAsThreads adds Act 1 plot points as active narrative threads.
+func addPlotPointsAsThreads(narrativeComp *engine.NarrativeComponent, arc *narrative.StoryArc) {
 	for _, plotPoint := range arc.PlotPoints {
 		if plotPoint.Act == 1 {
 			narrativeComp.ActiveThreads = append(narrativeComp.ActiveThreads, plotPoint.Description)
 		}
 	}
+}
 
+// logNarrativeArcSuccess logs successful narrative arc generation with details.
+func logNarrativeArcSuccess(arc *narrative.StoryArc, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.WithFields(logrus.Fields{
 			"arc_title":   arc.Title,

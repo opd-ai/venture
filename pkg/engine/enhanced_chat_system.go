@@ -219,13 +219,8 @@ func (ecs *EnhancedChatSystem) deliverToAll(msg ChatMessage, senderID uint64) {
 
 // deliverToLocal delivers a message to entities within range.
 func (ecs *EnhancedChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat *ChatComponent) {
-	senderPosRaw, exists := sender.GetComponent("position")
-	if !exists {
-		return
-	}
-
-	senderPos, ok := senderPosRaw.(*PositionComponent)
-	if !ok {
+	senderPos := ecs.extractSenderPosition(sender)
+	if senderPos == nil {
 		return
 	}
 
@@ -237,58 +232,92 @@ func (ecs *EnhancedChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, s
 			continue
 		}
 
-		chatCompRaw, exists := entity.GetComponent("chat")
-		if !exists {
+		chatComp := ecs.extractRecipientChat(entity)
+		if chatComp == nil {
 			continue
 		}
 
-		chatComp, ok := chatCompRaw.(*ChatComponent)
-		if !ok || !chatComp.IsChannelActive(ChatLocal) {
+		recipientPos := ecs.extractRecipientPosition(entity)
+		if recipientPos == nil {
 			continue
 		}
 
-		// Check range
-		recipientPosRaw, exists := entity.GetComponent("position")
-		if !exists {
-			continue
+		if ecs.shouldDeliverMessage(senderPos, recipientPos, radius, radiusSquared) {
+			ecs.deliverMessageToRecipient(msg, entity, chatComp)
 		}
+	}
+}
 
-		recipientPos, ok := recipientPosRaw.(*PositionComponent)
-		if !ok {
-			continue
+// extractSenderPosition extracts and validates sender position component.
+func (ecs *EnhancedChatSystem) extractSenderPosition(sender *Entity) *PositionComponent {
+	senderPosRaw, exists := sender.GetComponent("position")
+	if !exists {
+		return nil
+	}
+
+	senderPos, ok := senderPosRaw.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return senderPos
+}
+
+// extractRecipientChat extracts and validates recipient chat component.
+func (ecs *EnhancedChatSystem) extractRecipientChat(entity *Entity) *ChatComponent {
+	chatCompRaw, exists := entity.GetComponent("chat")
+	if !exists {
+		return nil
+	}
+
+	chatComp, ok := chatCompRaw.(*ChatComponent)
+	if !ok || !chatComp.IsChannelActive(ChatLocal) {
+		return nil
+	}
+	return chatComp
+}
+
+// extractRecipientPosition extracts and validates recipient position component.
+func (ecs *EnhancedChatSystem) extractRecipientPosition(entity *Entity) *PositionComponent {
+	recipientPosRaw, exists := entity.GetComponent("position")
+	if !exists {
+		return nil
+	}
+
+	recipientPos, ok := recipientPosRaw.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return recipientPos
+}
+
+// shouldDeliverMessage checks if message should be delivered based on range.
+func (ecs *EnhancedChatSystem) shouldDeliverMessage(senderPos, recipientPos *PositionComponent, radius, radiusSquared float64) bool {
+	if radius < 0 {
+		return true
+	}
+
+	dx := senderPos.X - recipientPos.X
+	dy := senderPos.Y - recipientPos.Y
+	distSquared := dx*dx + dy*dy
+	return distSquared <= radiusSquared
+}
+
+// deliverMessageToRecipient delivers message to recipient and persists to history.
+func (ecs *EnhancedChatSystem) deliverMessageToRecipient(msg ChatMessage, entity *Entity, chatComp *ChatComponent) {
+	deliveredMsg := msg
+	deliveredMsg.Delivered = true
+	chatComp.AddMessage(deliveredMsg)
+
+	if hist, exists := ecs.history[entity.ID]; exists {
+		persistMsg := &persistence.Message{
+			ID:        msg.ID,
+			Sender:    msg.SenderName,
+			Recipient: fmt.Sprintf("%d", entity.ID),
+			Channel:   msg.Channel.String(),
+			Content:   msg.Content,
+			Timestamp: msg.Timestamp,
 		}
-
-		// Unlimited range for walkie-talkie
-		if radius < 0 {
-			deliveredMsg := msg
-			deliveredMsg.Delivered = true
-			chatComp.AddMessage(deliveredMsg)
-			continue
-		}
-
-		// Calculate distance
-		dx := senderPos.X - recipientPos.X
-		dy := senderPos.Y - recipientPos.Y
-		distSquared := dx*dx + dy*dy
-
-		if distSquared <= radiusSquared {
-			deliveredMsg := msg
-			deliveredMsg.Delivered = true
-			chatComp.AddMessage(deliveredMsg)
-
-			// Add to persistent history
-			if hist, exists := ecs.history[entity.ID]; exists {
-				persistMsg := &persistence.Message{
-					ID:        msg.ID,
-					Sender:    msg.SenderName,
-					Recipient: fmt.Sprintf("%d", entity.ID),
-					Channel:   msg.Channel.String(),
-					Content:   msg.Content,
-					Timestamp: msg.Timestamp,
-				}
-				hist.AddMessage(persistMsg)
-			}
-		}
+		hist.AddMessage(persistMsg)
 	}
 }
 

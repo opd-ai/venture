@@ -73,53 +73,80 @@ func (l *LightingAdapter) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Update lighting from entity components
 	l.system.ClearLights()
 
 	for _, entity := range entities {
-		lightComp, ok := entity.GetComponent("light")
-		if !ok || lightComp == nil {
-			continue
-		}
+		l.processEntityLight(entity)
+	}
+}
 
-		// Get entity position
-		posComp, ok := entity.GetComponent("position")
-		if !ok || posComp == nil {
-			continue
-		}
+// processEntityLight extracts light data from entity and adds to lighting system.
+func (l *LightingAdapter) processEntityLight(entity *Entity) {
+	lightComp, posComp := l.extractLightComponents(entity)
+	if lightComp == nil || posComp == nil {
+		return
+	}
 
-		// Convert components to lighting.Light
-		if lc, ok := lightComp.(*LightComponent); ok {
-			if pc, ok := posComp.(*PositionComponent); ok {
-				// Convert LightFalloffType to lighting.FalloffType
-				falloff := lighting.FalloffLinear
-				switch lc.Falloff {
-				case FalloffConstant:
-					falloff = lighting.FalloffNone
-				case FalloffLinear:
-					falloff = lighting.FalloffLinear
-				case FalloffQuadratic:
-					falloff = lighting.FalloffQuadratic
-				case FalloffInverseSquare:
-					falloff = lighting.FalloffInverseSquare
-				}
-
-				light := lighting.Light{
-					Type:      lighting.TypePoint,
-					Position:  image.Point{X: int(pc.X), Y: int(pc.Y)},
-					Color:     lc.Color,
-					Intensity: lc.Intensity,
-					Radius:    lc.Radius,
-					Falloff:   falloff,
-					Enabled:   lc.Enabled,
-				}
-				if err := l.system.AddLight(light); err != nil {
-					if l.logger != nil {
-						l.logger.WithError(err).Warn("failed to add light from entity")
-					}
-				}
-			}
+	light := l.convertToLight(lightComp, posComp)
+	if err := l.system.AddLight(light); err != nil {
+		if l.logger != nil {
+			l.logger.WithError(err).Warn("failed to add light from entity")
 		}
+	}
+}
+
+// extractLightComponents extracts and validates light and position components.
+func (l *LightingAdapter) extractLightComponents(entity *Entity) (*LightComponent, *PositionComponent) {
+	lightComp, ok := entity.GetComponent("light")
+	if !ok || lightComp == nil {
+		return nil, nil
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok || posComp == nil {
+		return nil, nil
+	}
+
+	lc, ok := lightComp.(*LightComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	pc, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	return lc, pc
+}
+
+// convertToLight converts ECS light components to lighting.Light.
+func (l *LightingAdapter) convertToLight(lc *LightComponent, pc *PositionComponent) lighting.Light {
+	falloff := l.convertFalloffType(lc.Falloff)
+	return lighting.Light{
+		Type:      lighting.TypePoint,
+		Position:  image.Point{X: int(pc.X), Y: int(pc.Y)},
+		Color:     lc.Color,
+		Intensity: lc.Intensity,
+		Radius:    lc.Radius,
+		Falloff:   falloff,
+		Enabled:   lc.Enabled,
+	}
+}
+
+// convertFalloffType converts LightFalloffType to lighting.FalloffType.
+func (l *LightingAdapter) convertFalloffType(falloff LightFalloffType) lighting.FalloffType {
+	switch falloff {
+	case FalloffConstant:
+		return lighting.FalloffNone
+	case FalloffLinear:
+		return lighting.FalloffLinear
+	case FalloffQuadratic:
+		return lighting.FalloffQuadratic
+	case FalloffInverseSquare:
+		return lighting.FalloffInverseSquare
+	default:
+		return lighting.FalloffLinear
 	}
 }
 

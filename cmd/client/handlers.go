@@ -960,6 +960,72 @@ func configureLightingSystem(game *engine.EbitenGame, clientLogger *logrus.Entry
 	}).Info("lighting system configured")
 }
 
+// configurePostProcessing initializes and configures the post-processing system (Phase 5.3).
+func configurePostProcessing(game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	if game.PostProcessor == nil {
+		clientLogger.Warn("PostProcessor not initialized")
+		return
+	}
+
+	// Enable/disable based on flag
+	game.PostProcessor.SetEnabled(*enablePostProcessing)
+
+	if !*enablePostProcessing {
+		clientLogger.Info("post-processing disabled")
+		return
+	}
+
+	// Apply preset if specified
+	if *postprocessPreset != "" {
+		game.PostProcessor.SetGenrePreset(*postprocessPreset)
+		clientLogger.WithFields(logrus.Fields{
+			"preset": *postprocessPreset,
+		}).Info("post-processing preset applied")
+		return
+	}
+
+	// Otherwise, configure individual effects
+	if *postprocessColorGrading {
+		game.PostProcessor.EnableColorGrading(
+			*postprocessSaturation,
+			*postprocessContrast,
+			*postprocessBrightness,
+			0.0, // temperature (not exposed via flags yet)
+			0.0, // tint (not exposed via flags yet)
+		)
+		clientLogger.WithFields(logrus.Fields{
+			"saturation": *postprocessSaturation,
+			"contrast":   *postprocessContrast,
+			"brightness": *postprocessBrightness,
+		}).Debug("color grading enabled")
+	}
+
+	if *postprocessVignette {
+		game.PostProcessor.EnableVignette(
+			*postprocessVignetteIntens,
+			*postprocessVignetteSoft,
+		)
+		clientLogger.WithFields(logrus.Fields{
+			"intensity": *postprocessVignetteIntens,
+			"softness":  *postprocessVignetteSoft,
+		}).Debug("vignette enabled")
+	}
+
+	if *postprocessChromaticAber {
+		game.PostProcessor.EnableChromaticAberration(
+			*postprocessChromaticIntens,
+			1.0, // directionX (outward from center)
+			0.0, // directionY
+			3,   // samples
+		)
+		clientLogger.WithFields(logrus.Fields{
+			"intensity": *postprocessChromaticIntens,
+		}).Debug("chromatic aberration enabled")
+	}
+
+	clientLogger.Info("post-processing configured")
+}
+
 // initializeTerrainCollision sets up efficient terrain collision checking.
 func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {

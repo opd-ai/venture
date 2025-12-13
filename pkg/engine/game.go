@@ -43,8 +43,9 @@ type EbitenGame struct {
 	CameraSystem        *CameraSystem
 	RenderSystem        *EbitenRenderSystem
 	TerrainRenderSystem *TerrainRenderSystem
-	LightingSystem      *LightingSystem // Dynamic lighting system (Phase 5.3)
-	sceneBuffer         *ebiten.Image   // Reusable buffer for lighting post-processing
+	LightingSystem      *LightingSystem       // Dynamic lighting system (Phase 5.1)
+	PostProcessor       *PostProcessorAdapter // Post-processing effects (Phase 5.3)
+	sceneBuffer         *ebiten.Image         // Reusable buffer for lighting/post-processing
 	HUDSystem           *EbitenHUDSystem
 	TutorialSystem      *EbitenTutorialSystem
 	HelpSystem          *EbitenHelpSystem
@@ -1045,7 +1046,7 @@ func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
 	return false
 }
 
-// drawGameplayScene renders the main game scene with terrain, entities, and lighting effects.
+// drawGameplayScene renders the main game scene with terrain, entities, and visual effects.
 func (g *EbitenGame) drawGameplayScene(screen *ebiten.Image) {
 	if g.LightingSystem != nil && g.LightingSystem.IsEnabled() {
 		g.drawLitScene(screen)
@@ -1054,7 +1055,7 @@ func (g *EbitenGame) drawGameplayScene(screen *ebiten.Image) {
 	}
 }
 
-// drawLitScene renders the game scene with dynamic lighting using post-processing pipeline.
+// drawLitScene renders the game scene with dynamic lighting and post-processing pipeline.
 func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 	if g.sceneBuffer == nil {
 		g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
@@ -1074,16 +1075,48 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 	}
 
 	entities := g.World.GetEntities()
-	g.LightingSystem.ApplyLighting(screen, g.sceneBuffer, entities)
-}
 
-// drawStandardScene renders the game scene without lighting effects.
-func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
-	if g.TerrainRenderSystem != nil {
-		g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+	// Apply lighting to intermediate buffer
+	litBuffer := ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+	g.LightingSystem.ApplyLighting(litBuffer, g.sceneBuffer, entities)
+
+	// Apply post-processing if enabled (Phase 5.3)
+	finalImage := litBuffer
+	if g.PostProcessor != nil && g.PostProcessor.IsEnabled() {
+		finalImage = g.PostProcessor.Apply(litBuffer)
 	}
 
-	g.RenderSystem.Draw(screen, g.World.GetEntities())
+	// Draw final image to screen
+	screen.DrawImage(finalImage, nil)
+}
+
+// drawStandardScene renders the game scene without lighting effects, with optional post-processing.
+func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
+	// Render to buffer if post-processing is enabled
+	if g.PostProcessor != nil && g.PostProcessor.IsEnabled() {
+		if g.sceneBuffer == nil {
+			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+		}
+
+		g.sceneBuffer.Clear()
+
+		if g.TerrainRenderSystem != nil {
+			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
+		}
+
+		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+
+		// Apply post-processing
+		finalImage := g.PostProcessor.Apply(g.sceneBuffer)
+		screen.DrawImage(finalImage, nil)
+	} else {
+		// Direct rendering without post-processing
+		if g.TerrainRenderSystem != nil {
+			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
+		}
+
+		g.RenderSystem.Draw(screen, g.World.GetEntities())
+	}
 }
 
 // drawOverlays renders all UI overlays including HUD, menus, inventory, and other interfaces.

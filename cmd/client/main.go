@@ -153,6 +153,11 @@ func setupWorldTerrain(game *engine.EbitenGame, sys *systemsContainer, logger *l
 	generatedTerrain := generateWorldTerrain(logger, clientLogger)
 	initializeTerrainRendering(game, generatedTerrain, clientLogger)
 	configureLightingSystem(game, clientLogger)
+
+	// Phase 5.3: Initialize and configure post-processing system
+	game.PostProcessor = engine.NewPostProcessorAdapter(clientLogger)
+	configurePostProcessing(game, clientLogger)
+
 	initializeTerrainCollision(game, sys, generatedTerrain, clientLogger)
 
 	return generatedTerrain

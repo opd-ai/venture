@@ -218,6 +218,8 @@ func getKeyName(key ebiten.Key) string {
 		return "R"
 	case ebiten.KeyT:
 		return "T"
+	case ebiten.KeyA:
+		return "A"
 	case ebiten.KeyY:
 		return "Y"
 	case ebiten.KeyEscape:

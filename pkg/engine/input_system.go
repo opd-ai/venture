@@ -274,6 +274,7 @@ type InputSystem struct {
 	shopUI          *ShopUI
 	tradeUI         *TradeUI         // Phase 3.3 (PLAN.md): Trade UI for T key toggle
 	advancedClassUI *AdvancedClassUI // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
+	territoryUI     *TerritoryUI     // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -548,6 +549,12 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 	// Phase 4.2 (PLAN.md): Close advanced class UI on ESC
 	if s.advancedClassUI != nil && s.advancedClassUI.IsVisible() {
 		s.advancedClassUI.SetVisible(false)
+		return true
+	}
+
+	// Phase 4.3 (PLAN.md): Close territory UI on ESC
+	if s.territoryUI != nil && s.territoryUI.IsVisible() {
+		s.territoryUI.Hide()
 		return true
 	}
 
@@ -1075,6 +1082,11 @@ func (s *InputSystem) SetTradeUI(tradeUI *TradeUI) {
 // SetAdvancedClassUI sets the advanced class UI reference for ESC key handling (Phase 4.2)
 func (s *InputSystem) SetAdvancedClassUI(advancedClassUI *AdvancedClassUI) {
 	s.advancedClassUI = advancedClassUI
+}
+
+// SetTerritoryUI sets the territory UI reference for Y key toggle and ESC key handling (Phase 4.3)
+func (s *InputSystem) SetTerritoryUI(territoryUI *TerritoryUI) {
+	s.territoryUI = territoryUI
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

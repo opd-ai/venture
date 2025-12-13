@@ -1602,6 +1602,13 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 			game.AdvancedClassUI.Toggle()
 		})
 	}
+	// Phase 4.3 (PLAN.md): Connect Territory UI to input system
+	if game.TerritoryUI != nil {
+		inputSystem.SetTerritoryUI(game.TerritoryUI)
+		inputSystem.SetTerritoryCallback(func() {
+			game.TerritoryUI.Toggle()
+		})
+	}
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.

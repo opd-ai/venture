@@ -5,18 +5,34 @@ import (
 )
 
 func TestManager_NewManager(t *testing.T) {
-	m := NewManager(44100, 12345)
-	if m == nil {
-		t.Fatal("expected non-nil Manager")
+	tests := []struct {
+		name             string
+		sampleRate       int
+		seed             int64
+		expectSampleRate int
+	}{
+		{"valid rate", 44100, 12345, 44100},
+		{"zero rate defaults", 0, 12345, 44100},
+		{"negative rate defaults", -1000, 12345, 44100},
+		{"custom rate", 48000, 67890, 48000},
 	}
-	if m.sampleRate != 44100 {
-		t.Errorf("expected sampleRate 44100, got %d", m.sampleRate)
-	}
-	if m.seed != 12345 {
-		t.Errorf("expected seed 12345, got %d", m.seed)
-	}
-	if m.masterVolume != 1.0 {
-		t.Errorf("expected masterVolume 1.0, got %f", m.masterVolume)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewManager(tt.sampleRate, tt.seed)
+			if m == nil {
+				t.Fatal("expected non-nil Manager")
+			}
+			if m.sampleRate != tt.expectSampleRate {
+				t.Errorf("expected sampleRate %d, got %d", tt.expectSampleRate, m.sampleRate)
+			}
+			if m.seed != tt.seed {
+				t.Errorf("expected seed %d, got %d", tt.seed, m.seed)
+			}
+			if m.masterVolume != 1.0 {
+				t.Errorf("expected masterVolume 1.0, got %f", m.masterVolume)
+			}
+		})
 	}
 }
 

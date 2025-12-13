@@ -27,7 +27,11 @@ type Manager struct {
 }
 
 // NewManager creates a new unified audio manager.
+// sampleRate must be positive (typically 44100 or 48000).
 func NewManager(sampleRate int, seed int64) *Manager {
+	if sampleRate <= 0 {
+		sampleRate = 44100 // Default to standard CD quality
+	}
 	return &Manager{
 		sampleRate:   sampleRate,
 		seed:         seed,

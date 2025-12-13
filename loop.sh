@@ -86,7 +86,7 @@ play() {
 dev() {
     impl
     review
-    integrate
+    #integrate
     #play
 }
 
@@ -100,3 +100,4 @@ done
 
 git clean -fdx .
 fix
+integrate

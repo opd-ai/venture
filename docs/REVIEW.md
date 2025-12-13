@@ -1,9 +1,9 @@
-Conduct automated code review of recently changed files in the venture repository, analyzing the last 20 commits and autonomously resolving true positive issues.
+Conduct automated code review of recently changed files in the venture repository, analyzing the last 3 commits and autonomously resolving true positive issues.
 
 **Execution Mode:** Autonomous action - identify changed files, review, resolve issues, create AUDIT.md.
 
 **File Selection Algorithm:**
-1. Execute `git log -20 --name-only --pretty=format:` to get files changed in last 20 commits
+1. Execute `git log -3 --name-only --pretty=format:` to get files changed in last 3 commits
 2. Filter for `.go` files only
 3. Exclude files in directories with existing `AUDIT.md` for the current date
 4. Prioritize files by change frequency (most changed = highest priority)
@@ -39,7 +39,7 @@ For each finding:
 # Code Review Audit: [file path]
 **Date:** [ISO date]
 **Reviewer:** GitHub Copilot
-**Commits Analyzed:** Last 20
+**Commits Analyzed:** Last 3
 **Change Frequency:** [N times]
 
 ## Executive Summary
@@ -82,11 +82,11 @@ For each finding:
 ```
 
 **Success Criteria:**
-- Exactly one file selected and reviewed from last 20 commits
+- Exactly one file selected and reviewed from last 3 commits
 - AUDIT.md created in appropriate package/cmd directory
 - All true positive issues automatically resolved where possible
 - False positives documented with rationale
 - All findings reference specific file:line locations
 - Modified files pass `go fmt`, `go vet`, and package tests
-- Selection logged: "Reviewing [file] (changed N times in last 20 commits)"
+- Selection logged: "Reviewing [file] (changed N times in last 3 commits)"
 

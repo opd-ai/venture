@@ -260,6 +260,9 @@ type systemsContainer struct {
 	// Phase 1.2: Destruction Physics (PLAN.md)
 	destructionSystem *destruction.System // Building structural integrity and debris physics
 
+	// Phase 1.2: Performance Monitoring System (PLAN.md)
+	performanceSystem *engine.PerformanceMonitoringSystem // Real-time performance tracking and metrics
+
 	// Phase 2.2: Core Rendering Systems (PLAN.md)
 	lightingAdapter  *engine.LightingAdapter  // Dynamic lighting with multiple light sources
 	animationAdapter *engine.AnimationAdapter // Advanced animation with articulation and direction
@@ -302,6 +305,10 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	clientLogger.Info("initializing game systems")
 
 	sys := &systemsContainer{}
+
+	// Phase 1.2: Performance monitoring (PLAN.md)
+	sys.performanceSystem = engine.NewPerformanceMonitoringSystem()
+	clientLogger.WithField("system_name", "performance").Debug("Created performance monitoring system")
 
 	// Core gameplay systems
 	sys.inputSystem = engine.NewInputSystem()
@@ -849,6 +856,9 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
+	// Phase 1.2: Performance monitoring - register first to track all systems
+	game.World.AddSystem(sys.performanceSystem)
+
 	game.World.AddSystem(sys.inputSystem)
 	game.World.AddSystem(game.CameraSystem)
 

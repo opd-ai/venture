@@ -5,9 +5,11 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/world/territory"
+	log "github.com/sirupsen/logrus"
 )
 
 // TerritoryUI provides a UI for viewing and managing territories.
@@ -70,23 +72,23 @@ func (tui *TerritoryUI) Update() error {
 	}
 
 	// Keyboard navigation
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		tui.scrollOffset--
 		if tui.scrollOffset < 0 {
 			tui.scrollOffset = 0
 		}
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
 		tui.scrollOffset++
 	}
 
 	// Declare war (W key)
-	if ebiten.IsKeyPressed(ebiten.KeyW) && tui.selectedTerritory != nil {
+	if inpututil.IsKeyJustPressed(ebiten.KeyW) && tui.selectedTerritory != nil {
 		tui.handleDeclareWar()
 	}
 
 	// Build structure (B key)
-	if ebiten.IsKeyPressed(ebiten.KeyB) && tui.selectedTerritory != nil {
+	if inpututil.IsKeyJustPressed(ebiten.KeyB) && tui.selectedTerritory != nil {
 		tui.handleBuildStructure()
 	}
 
@@ -355,7 +357,11 @@ func (tui *TerritoryUI) handleDeclareWar() {
 	// Declare war
 	_, err := tui.territorySystem.GetManager().DeclareWar(playerGuildID, targetGuildID)
 	if err != nil {
-		// Could log error, but UI doesn't have logger
+		log.WithFields(log.Fields{
+			"attacker_guild": playerGuildID,
+			"defender_guild": targetGuildID,
+			"error":          err,
+		}).Warn("failed to declare war from territory UI")
 		return
 	}
 }
@@ -391,6 +397,13 @@ func (tui *TerritoryUI) handleBuildStructure() {
 		p.Y,
 	)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"territory_id": tui.selectedTerritory.ID,
+			"guild_id":     playerGuildID,
+			"x":            p.X,
+			"y":            p.Y,
+			"error":        err,
+		}).Warn("failed to build structure from territory UI")
 		return
 	}
 

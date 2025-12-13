@@ -85,12 +85,12 @@ play() {
 
 dev() {
     impl
-    #review
+    review
     #integrate
     #play
 }
 
-dev
+impl
 integrate
 fix
 #wasm

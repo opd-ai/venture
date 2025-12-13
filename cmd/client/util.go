@@ -436,17 +436,17 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 
 // return a random seed
 func seededRandom() int64 {
-	time := time.Now().UnixNano()
-	rand := rand.New(rand.NewSource(time))
-	return rand.Int63()
+	nowNano := time.Now().UnixNano()
+	rng := rand.New(rand.NewSource(nowNano))
+	return rng.Int63()
 }
 
 // return a random genre
 func randomGenre() string {
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
-	time := time.Now().UnixNano()
-	rand := rand.New(rand.NewSource(time))
-	return genres[rand.Intn(len(genres))]
+	nowNano := time.Now().UnixNano()
+	rng := rand.New(rand.NewSource(nowNano))
+	return genres[rng.Intn(len(genres))]
 }
 
 // spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.

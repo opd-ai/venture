@@ -1445,7 +1445,7 @@ func spawnStoryFragmentsWithLogging(w *engine.World, generatedTerrain *terrain.T
 	}
 }
 
-// spawnEnvironmentalEffects spawns lights and weather effects (unconditionally enabled as of Phase 2.1).
+// spawnEnvironmentalEffects spawns lights, weather effects, and environmental hazards (unconditionally enabled).
 func spawnEnvironmentalEffects(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.Info("spawning environmental lights in dungeon")
@@ -1467,6 +1467,16 @@ func spawnEnvironmentalEffects(game *engine.EbitenGame, generatedTerrain *terrai
 			"genre":     *genreID,
 		}).Info("weather effects spawned")
 	}
+
+	// Phase 3.4: Spawn environmental hazards (fire pits, acid pools, spike traps, etc.)
+	if *verbose {
+		clientLogger.Info("spawning environmental hazards")
+	}
+	hazardCount := spawnEnvironmentalHazards(game.World, generatedTerrain, *seed+seedOffsetEnvironment, *genreID, clientLogger)
+	clientLogger.WithFields(logrus.Fields{
+		"hazardCount": hazardCount,
+		"genre":       *genreID,
+	}).Info("spawned environmental hazards")
 }
 
 // calculatePlayerSpawnPosition determines where the player should spawn.

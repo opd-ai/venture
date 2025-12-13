@@ -22,6 +22,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/book"
 	"github.com/opd-ai/venture/pkg/procgen/companion"
+	"github.com/opd-ai/venture/pkg/procgen/environment"
 	"github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
@@ -728,6 +729,162 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 	return weatherEntity
 }
 
+// spawnEnvironmentalHazards spawns procedural environmental hazards (fire pits, acid pools, spike traps, etc.).
+// Phase 3.4: Environment & Legendary Items
+func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string, logger *logrus.Entry) int {
+	rng := rand.New(rand.NewSource(seed))
+	hazardCount := 0
+	envGen := environment.NewGenerator()
+
+	// Spawn 1-3 hazards per room (excluding entrance room)
+	for i, room := range terrain.Rooms {
+		// Skip entrance room (index 0) - keep it safe for player spawn
+		if i == 0 {
+			continue
+		}
+
+		// Determine number of hazards for this room (1-3)
+		numHazards := 1 + rng.Intn(3)
+
+		for j := 0; j < numHazards; j++ {
+			// Select random hazard subtype based on genre
+			subType := selectHazardSubType(genreID, rng)
+
+			// Find random position within room (avoid edges)
+			padding := 2 // Tiles of padding from room edges
+			if room.Width <= padding*2 || room.Height <= padding*2 {
+				continue // Room too small for hazards
+			}
+
+			tileX := room.X + padding + rng.Intn(room.Width-padding*2)
+			tileY := room.Y + padding + rng.Intn(room.Height-padding*2)
+			worldX := float64(tileX * tileSize)
+			worldY := float64(tileY * tileSize)
+
+			// Generate environmental object
+			config := environment.Config{
+				SubType: subType,
+				GenreID: genreID,
+				Seed:    seed + int64(i*1000+j),
+				Width:   28, // Standard sprite size
+				Height:  28,
+			}
+
+			envObj, err := envGen.Generate(config)
+			if err != nil {
+				if logger != nil && logger.Logger.GetLevel() >= logrus.DebugLevel {
+					logger.WithError(err).Debug("failed to generate environmental hazard")
+				}
+				continue
+			}
+
+			// Create entity in world
+			hazardEntity := world.CreateEntity()
+			hazardEntity.AddComponent(&engine.PositionComponent{X: worldX, Y: worldY})
+
+			// Add sprite component (note: image conversion will be handled by rendering system)
+			sprite := &engine.EbitenSprite{
+				Image:   nil, // Will be converted from envObj.Sprite by rendering system
+				Width:   float64(envObj.Width),
+				Height:  float64(envObj.Height),
+				Visible: true,
+				Layer:   3, // Below player but above ground
+			}
+			hazardEntity.AddComponent(sprite)
+
+			// Add collision if hazard is collidable
+			if envObj.Collidable {
+				hazardEntity.AddComponent(&engine.ColliderComponent{
+					Width:     float64(envObj.Width),
+					Height:    float64(envObj.Height),
+					Solid:     true,
+					IsTrigger: false,
+					Layer:     2,
+					OffsetX:   -float64(envObj.Width) / 2,
+					OffsetY:   -float64(envObj.Height) / 2,
+				})
+			}
+
+			// Add hazard component if hazard is harmful
+			if envObj.Harmful && envObj.Damage > 0 {
+				hazardType := determineHazardType(subType)
+				hazardEntity.AddComponent(&engine.HazardComponent{
+					HazardType:      hazardType,
+					Duration:        0, // Permanent hazard
+					DamagePerSecond: float64(envObj.Damage),
+				})
+			}
+
+			hazardCount++
+		}
+	}
+
+	return hazardCount
+}
+
+// determineHazardType maps environment SubType to engine HazardType.
+func determineHazardType(subType environment.SubType) engine.HazardType {
+	switch subType {
+	case environment.SubTypeFirePit, environment.SubTypeLavaPit:
+		return engine.HazardPoison // Use poison as generic damage type
+	case environment.SubTypeAcidPool, environment.SubTypePoisonGas:
+		return engine.HazardPoison
+	case environment.SubTypeElectricField:
+		return engine.HazardPoison // Use poison as generic damage
+	case environment.SubTypeIceField:
+		return engine.HazardWater // Ice/water slows movement
+	case environment.SubTypeSpikes, environment.SubTypeBearTrap:
+		return engine.HazardPoison // Physical damage via poison type
+	default:
+		return engine.HazardPoison
+	}
+}
+
+// selectHazardSubType selects an appropriate hazard type for the genre.
+func selectHazardSubType(genreID string, rng *rand.Rand) environment.SubType {
+	// Define hazard pools per genre
+	genreHazards := map[string][]environment.SubType{
+		"fantasy": {
+			environment.SubTypeFirePit,
+			environment.SubTypeSpikes,
+			environment.SubTypeBearTrap,
+			environment.SubTypePoisonGas,
+		},
+		"scifi": {
+			environment.SubTypeElectricField,
+			environment.SubTypeAcidPool,
+			environment.SubTypeLavaPit,
+			environment.SubTypeIceField,
+		},
+		"horror": {
+			environment.SubTypeBloodstain, // Decorative, not harmful
+			environment.SubTypeBearTrap,
+			environment.SubTypePoisonGas,
+			environment.SubTypeSpikes,
+		},
+		"cyberpunk": {
+			environment.SubTypeElectricField,
+			environment.SubTypeAcidPool,
+			environment.SubTypePoisonGas,
+		},
+		"postapocalyptic": {
+			environment.SubTypeFirePit,
+			environment.SubTypeAcidPool,
+			environment.SubTypeSpikes,
+			environment.SubTypePoisonGas,
+		},
+	}
+
+	// Default to fantasy hazards if genre not found
+	hazards := genreHazards["fantasy"]
+	if genrePool, ok := genreHazards[genreID]; ok {
+		hazards = genrePool
+	}
+
+	// Select random hazard from pool
+	return hazards[rng.Intn(len(hazards))]
+}
+
 // spawnDestructibleObjects spawns destructible objects (crates, barrels, furniture) in dungeon rooms.
 // Phase 11.3: Environmental Destruction & Manipulation
 // objectConfig defines spawn probabilities and counts for destructible objects per genre.
@@ -1272,6 +1429,60 @@ func dropEquippedItems(
 	}
 }
 
+// generateLegendaryItemDrop generates a legendary item drop for an enemy (1% base, 5% for bosses).
+func generateLegendaryItemDrop(world *engine.World, enemy *engine.Entity, x, y float64, seed int64, genreID string) *engine.Entity {
+	// Determine drop chance based on enemy stats (bosses have higher stats)
+	statsComp, hasStats := enemy.GetComponent("stats")
+	baseDropChance := 0.01 // 1% base chance
+	if hasStats {
+		stats := statsComp.(*engine.StatsComponent)
+		// Bosses/elites (high attack/defense) have 5% chance
+		if stats.Attack > 20 || stats.Defense > 20 {
+			baseDropChance = 0.05
+		}
+	}
+
+	// Deterministic drop check using enemy ID and seed
+	dropRNG := rand.New(rand.NewSource(seed + int64(enemy.ID*7)))
+	if dropRNG.Float64() > baseDropChance {
+		return nil // No drop
+	}
+
+	// Generate legendary item using procgen/item with high quality
+	itemGen := item.NewItemGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.9,  // High difficulty for legendary quality
+		Depth:      10.0, // High depth for legendary stats
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"quality": "legendary",
+		},
+	}
+
+	generatedItem, err := itemGen.Generate(seed+int64(enemy.ID*11), params)
+	if err != nil {
+		return nil
+	}
+
+	itm := generatedItem.(*item.Item)
+
+	// Override to ensure legendary rarity
+	itm.Rarity = item.RarityLegendary
+	itm.Name = "Legendary " + itm.Name // Prefix with "Legendary"
+
+	// Use SpawnItemInWorld to create properly structured item entity
+	itemEntity := engine.SpawnItemInWorld(world, itm, x, y)
+
+	// Override sprite color to golden for legendary items
+	if spriteComp, ok := itemEntity.GetComponent("sprite"); ok {
+		if sprite, ok := spriteComp.(*engine.EbitenSprite); ok {
+			sprite.Color = color.RGBA{255, 215, 0, 255} // Golden color
+		}
+	}
+
+	return itemEntity
+}
+
 // spawnProceduralLoot generates and spawns procedural loot drops for non-player entities.
 func spawnProceduralLoot(
 	game *engine.EbitenGame,
@@ -1347,6 +1558,20 @@ func spawnProceduralLoot(
 		skillBookEntity.AddComponent(engine.NewFrictionComponent(0.12))
 
 		deadComp.AddDroppedItem(skillBookEntity.ID)
+	}
+
+	// Phase 3.4: Generate and spawn legendary item drops (1% base, 5% for bosses)
+	legendaryEntity := generateLegendaryItemDrop(game.World, enemy, pos.X, pos.Y, seed, genreID)
+	if legendaryEntity != nil {
+		// Add physics to legendary items (dramatic velocity)
+		legendaryEntity.AddComponent(&engine.VelocityComponent{
+			VX: (physicsRNG.Float64()*2.0 - 1.0) * 35.0, // Higher velocity for legendary (dramatic effect)
+			VY: (physicsRNG.Float64()*2.0 - 1.0) * 35.0,
+		})
+		// Add friction for smooth deceleration
+		legendaryEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+		deadComp.AddDroppedItem(legendaryEntity.ID)
 	}
 
 	// Track enemy kill for quest objectives

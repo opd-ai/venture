@@ -329,6 +329,11 @@ func (g *EbitenGame) SetWorldSeed(seed int64) {
 	}
 }
 
+// GetWorldSeed returns the current world generation seed.
+func (g *EbitenGame) GetWorldSeed() int64 {
+	return g.worldSeed
+}
+
 // handleMainMenuSelection processes main menu option selections and triggers state transitions.
 func (g *EbitenGame) handleMainMenuSelection(option MainMenuOption) {
 	switch option {

@@ -33,8 +33,8 @@ func NewRaidSystem(world *World, worldSeed int64) *RaidSystem {
 	}
 }
 
-// Update processes raid instances, boss mechanics, and periodic cleanup.
-func (s *RaidSystem) Update(deltaTime float64) {
+// Update processes raid instance cleanup and lockout resets.
+func (s *RaidSystem) Update(entities []*Entity, deltaTime float64) {
 	// Update boss mechanics
 	s.updateBossMechanics(deltaTime)
 

@@ -307,6 +307,9 @@ type systemsContainer struct {
 
 	// Phase 2.1: Economy System (PLAN.md)
 	economySystem *engine.EconomySystem // Cross-server marketplace and guild bank management
+
+	// Phase 2.2: Raid System (PLAN.md)
+	raidSystem *engine.RaidSystem // Dynamic raid instance creation and lockout management
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -456,6 +459,10 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	serverID := "local" // TODO: Get from server config
 	sys.economySystem = engine.NewEconomySystem(game.World, serverID)
 	logging.ComponentLogger(logger, "economy").Debug("Created economy system")
+
+	// Phase 2.2: Raid system
+	sys.raidSystem = engine.NewRaidSystem(game.World, game.GetWorldSeed())
+	logging.ComponentLogger(logger, "raids").Debug("Created raid system")
 
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
 	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
@@ -937,6 +944,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inventorySystem)
 	game.World.AddSystem(sys.commerceSystem)
 	game.World.AddSystem(sys.economySystem) // Phase 2.1: Dynamic economy
+	game.World.AddSystem(sys.raidSystem)    // Phase 2.2: Dynamic raids
 	game.World.AddSystem(sys.dialogSystem)
 	game.World.AddSystem(sys.craftingSystem)
 	game.World.AddSystem(sys.interactionSystem)

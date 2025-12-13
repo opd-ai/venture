@@ -333,8 +333,9 @@ func TestRaidSystemUpdateBossMechanics(t *testing.T) {
 	player.AddComponent(&PlayerComponent{})
 
 	// Update system multiple times to trigger mechanic
+	entities := world.GetEntities()
 	for i := 0; i < 10; i++ {
-		system.Update(1.0) // 1 second per update
+		system.Update(entities, 1.0) // 1 second per update
 	}
 
 	// Verify mechanic timer was initialized and updated
@@ -389,7 +390,8 @@ func TestRaidSystemUpdateBossPhases(t *testing.T) {
 	healthComp.Current = 750 // 750/1000 = 0.75, exactly at threshold
 
 	// Update system
-	system.Update(1.0)
+	entities := world.GetEntities()
+	system.Update(entities, 1.0)
 
 	// Verify phase transition happened (750/1000 = 0.75, so phase 1 at 0.75 should trigger)
 	if bossComp.CurrentPhase != 1 {
@@ -402,7 +404,7 @@ func TestRaidSystemUpdateBossPhases(t *testing.T) {
 	// Reduce health to trigger phase 2
 	healthComp.Current = 450 // 450/1000 = 0.45, below 0.50 threshold
 
-	system.Update(1.0)
+	system.Update(entities, 1.0)
 
 	// Verify phase 2 transition
 	if bossComp.CurrentPhase != 2 {

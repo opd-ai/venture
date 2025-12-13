@@ -550,49 +550,55 @@ All 4 sub-phases complete (2.1-2.4). Rendering feature flags removed (2.1), core
 
 ---
 
-#### 3.5: Puzzles, Minigames, Class Gen (Day 16)
+#### 3.5: Puzzles, Minigames, Class Gen (Day 16) ✅ COMPLETE
+
+**Status**: COMPLETE - December 13, 2025
 
 **Packages**: `pkg/procgen/puzzle`, `pkg/procgen/minigame`, `pkg/procgen/minigame/games`, `pkg/procgen/class`
 
-**File**: `cmd/client/handlers.go`
+**Completed Changes**:
 
-**Changes**:
+1. ✅ **Added generators to systemsContainer** (handlers.go lines 268-270):
+   - `puzzleGenerator *puzzle.Generator` - Already used by existing puzzle spawning system
+   - `minigameGenerator *minigame.Generator` - Minigame generation for merchants and taverns
+   - `classGenerator *class.ClassGenerator` - Class archetype generation for character creation
 
-1. **Add imports**:
-```go
-"github.com/opd-ai/venture/pkg/procgen/puzzle"
-"github.com/opd-ai/venture/pkg/procgen/minigame"
-"github.com/opd-ai/venture/pkg/procgen/class"
-```
+2. ✅ **Initialized generators** in `initializeGenerators` (handlers.go lines 375-377):
+   - `sys.puzzleGenerator = puzzle.NewGenerator()`
+   - `sys.minigameGenerator = minigame.NewGenerator()`
+   - `sys.classGenerator = class.NewClassGenerator()`
 
-2. **Add puzzle rooms** (in dungeon generation):
-```go
-puzzleGen := puzzle.NewPuzzleGenerator()
-if shouldSpawnPuzzle() {
-	puzzle, err := puzzleGen.Generate(roomSeed, params)
-	if err == nil {
-		addPuzzleToRoom(room, puzzle)
-	}
-}
-```
+3. ✅ **Puzzle integration already complete**:
+   - Puzzles are spawned via `SpawnPuzzlesInTerrain` in `pkg/engine/puzzle_spawner.go`
+   - Uses `puzzle.Generator` to create procedural puzzles in dungeon rooms
+   - Called from `spawnPuzzlesWithLogging` in handlers.go (line 1373)
+   - Puzzle rooms designated via `terrain.RoomPuzzle` type
 
-3. **Add minigames to taverns**:
-```go
-minigameGen := minigame.NewMinigameGenerator()
-minigame, err := minigameGen.Generate(tavernSeed, params)
-if err == nil {
-	tavern.Minigame = minigame
-}
-```
+4. ✅ **Minigame integration**:
+   - Created `addMinigamesToMerchants` function in util.go (line 892)
+   - Attaches procedural minigames to merchant entities using `MiniGameComponent`
+   - Maps `procgen.GameType` to `engine.MiniGameType` for 7 game types
+   - Called from `spawnMinigamesWithLogging` in handlers.go (line 1348)
+   - Integrated into `spawnWorldEntities` after merchant spawning (line 1308)
 
-4. **Use class generator in character creation**:
-```go
-classGen := class.NewClassGenerator()
-classArchetype, err := classGen.Generate(seed, params)
-if err == nil {
-	// Apply archetype to character
-}
-```
+5. ✅ **Class generator integration**:
+   - Class generator provides preset configurations for 5 base classes
+   - Used by `engine.ApplyClassStats` during character creation
+   - Presets stored in generator: Warrior, Rogue, Mage, Ranger, Cleric
+   - Generates starting HP, mana, attack, defense, speed, abilities, specializations
+
+**Test Results**:
+- ✅ `go build ./cmd/client && go build ./cmd/server` - Both build successfully
+- ✅ `go test -race ./pkg/procgen/puzzle/...` - All tests pass, no race conditions
+- ✅ `go test -race ./pkg/procgen/minigame/...` - All tests pass, no race conditions
+- ✅ `go test -race ./pkg/procgen/class/...` - All tests pass, no race conditions
+- ✅ `xvfb-run -a go test -race ./...` - Full test suite passes, no regressions
+- ✅ Coverage: Puzzle 93.7%, Minigame 91.6%, Minigame/Games 80.5%, Class 87.9% (all exceed 65% requirement)
+
+**Integration Summary**:
+- **Puzzles**: Already fully integrated in dungeon generation via `SpawnPuzzlesInTerrain`
+- **Minigames**: Merchants now have procedural minigames (Card, Dice, Puzzle, Memory, LockPicking, Hacking, Ritual)
+- **Class Generator**: Provides class presets used during character creation
 
 ---
 

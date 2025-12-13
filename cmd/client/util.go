@@ -1,8 +1,6 @@
 //go:build !android && !ios
 // +build !android,!ios
 
-// Package main provides the desktop client application.
-// For mobile platforms (Android/iOS), use cmd/mobile with ebitenmobile build tool.
 package main
 
 import (
@@ -26,6 +24,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
+	"github.com/opd-ai/venture/pkg/procgen/minigame"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/skills"
@@ -883,6 +882,86 @@ func selectHazardSubType(genreID string, rng *rand.Rand) environment.SubType {
 
 	// Select random hazard from pool
 	return hazards[rng.Intn(len(hazards))]
+}
+
+// addMinigamesToMerchants attaches procedural minigames to merchant entities.
+// Phase 3.5 (PLAN.md): Minigames in shops/taverns for player entertainment
+func addMinigamesToMerchants(world *engine.World, minigameGen *minigame.Generator, seed int64, params procgen.GenerationParams, logger *logrus.Entry) int {
+	if minigameGen == nil {
+		return 0
+	}
+
+	minigameCount := 0
+	const seedOffsetMinigame = 16000
+
+	// Find all merchant entities
+	entities := world.GetEntities()
+	for i, entity := range entities {
+		// Check if entity is a merchant
+		if !entity.HasComponent("merchant") {
+			continue
+		}
+
+		// Skip if merchant already has a minigame
+		if entity.HasComponent("minigame") {
+			continue
+		}
+
+		// Generate minigame with entity-specific seed
+		minigameSeed := seed + seedOffsetMinigame + int64(i)
+		minigameResult, err := minigameGen.Generate(minigameSeed, params)
+		if err != nil {
+			logger.WithError(err).WithField("entityID", entity.ID).Warn("failed to generate minigame")
+			continue
+		}
+
+		mg, ok := minigameResult.(*minigame.MiniGame)
+		if !ok {
+			logger.WithField("entityID", entity.ID).Warn("minigame generator returned invalid type")
+			continue
+		}
+
+		// Map procgen.GameType to engine.MiniGameType
+		var gameType engine.MiniGameType
+		switch mg.Type {
+		case minigame.GameTypeCard:
+			gameType = engine.MiniGameCard
+		case minigame.GameTypeDice:
+			gameType = engine.MiniGameDice
+		case minigame.GameTypePuzzle:
+			gameType = engine.MiniGamePuzzle
+		case minigame.GameTypeMemory:
+			gameType = engine.MiniGameMemory
+		case minigame.GameTypeLockPicking:
+			gameType = engine.MiniGameLockPicking
+		case minigame.GameTypeHacking:
+			gameType = engine.MiniGameHacking
+		case minigame.GameTypeRitual:
+			gameType = engine.MiniGameRitual
+		default:
+			gameType = engine.MiniGameCard
+		}
+
+		// Add minigame component to merchant
+		entity.AddComponent(&engine.MiniGameComponent{
+			GameType:   gameType,
+			Active:     false,
+			State:      mg.State,
+			Difficulty: mg.Difficulty,
+			TimeLimit:  mg.TimeLimit,
+		})
+
+		logger.WithFields(logrus.Fields{
+			"entityID": entity.ID,
+			"gameType": gameType.String(),
+			"name":     mg.Name,
+			"merchant": true,
+		}).Debug("added minigame to merchant")
+
+		minigameCount++
+	}
+
+	return minigameCount
 }
 
 // spawnDestructibleObjects spawns destructible objects (crates, barrels, furniture) in dungeon rooms.

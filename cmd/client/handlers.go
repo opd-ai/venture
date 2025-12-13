@@ -84,6 +84,11 @@ import (
 	// Phase 3.2: Magic & Skills (PLAN.md)
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/procgen/skills"
+
+	// Phase 3.5: Puzzles, Minigames, Class Generation (PLAN.md)
+	"github.com/opd-ai/venture/pkg/procgen/class"
+	"github.com/opd-ai/venture/pkg/procgen/minigame"
+	"github.com/opd-ai/venture/pkg/procgen/puzzle"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -260,6 +265,11 @@ type systemsContainer struct {
 	// Phase 3.2: Magic & Skills (PLAN.md)
 	magicGenerator *magic.SpellGenerator      // Procedural spell and magic generation for loot and progression
 	skillGenerator *skills.SkillTreeGenerator // Skill tree generation for class progression
+
+	// Phase 3.5: Puzzles, Minigames, Class Generation (PLAN.md)
+	puzzleGenerator   *puzzle.Generator     // Procedural puzzle generation for dungeon rooms
+	minigameGenerator *minigame.Generator   // Minigame generation for taverns and social spaces
+	classGenerator    *class.ClassGenerator // Class archetype generation for character creation
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -361,6 +371,11 @@ func initializeGenerators(sys *systemsContainer) {
 	// Phase 3.2: Magic & Skills (PLAN.md)
 	sys.magicGenerator = magic.NewSpellGenerator()
 	sys.skillGenerator = skills.NewSkillTreeGenerator()
+
+	// Phase 3.5: Puzzles, Minigames, Class Generation (PLAN.md)
+	sys.puzzleGenerator = puzzle.NewGenerator()
+	sys.minigameGenerator = minigame.NewGenerator()
+	sys.classGenerator = class.NewClassGenerator()
 }
 
 // initializeObjectiveSystem creates and configures the objective tracker with callbacks.
@@ -1290,6 +1305,7 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 
 	spawnEnemiesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnMerchantsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnMinigamesWithLogging(game.World, sys.minigameGenerator, params, clientLogger)
 	spawnStationsWithLogging(game.World, generatedTerrain, clientLogger)
 	spawnPuzzlesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnObjectsWithLogging(game.World, generatedTerrain, clientLogger)
@@ -1325,6 +1341,21 @@ func spawnMerchantsWithLogging(w *engine.World, generatedTerrain *terrain.Terrai
 		clientLogger.WithError(err).Warn("failed to spawn merchants")
 	} else if *verbose {
 		clientLogger.WithField("merchantCount", merchantCount).Info("spawned merchants")
+	}
+}
+
+// spawnMinigamesWithLogging adds procedural minigames to merchants with optional verbose logging.
+// Phase 3.5 (PLAN.md): Minigames in shops/taverns for player entertainment
+func spawnMinigamesWithLogging(w *engine.World, minigameGen *minigame.Generator, params procgen.GenerationParams, clientLogger *logrus.Entry) {
+	if minigameGen == nil {
+		return
+	}
+	if *verbose {
+		clientLogger.Info("adding minigames to merchants")
+	}
+	minigameCount := addMinigamesToMerchants(w, minigameGen, *seed, params, clientLogger)
+	if *verbose {
+		clientLogger.WithField("minigameCount", minigameCount).Info("added minigames to merchants")
 	}
 }
 

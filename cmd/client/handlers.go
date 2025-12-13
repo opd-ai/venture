@@ -80,6 +80,10 @@ import (
 	// Phase 2.4: Rendering Optimization (PLAN.md)
 	"github.com/opd-ai/venture/pkg/rendering/parallel"
 	"github.com/opd-ai/venture/pkg/rendering/pool"
+
+	// Phase 3.2: Magic & Skills (PLAN.md)
+	"github.com/opd-ai/venture/pkg/procgen/magic"
+	"github.com/opd-ai/venture/pkg/procgen/skills"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -252,6 +256,10 @@ type systemsContainer struct {
 	// Phase 2.4: Rendering Optimization (PLAN.md)
 	imagePool        *pool.ImagePool      // Image pool for memory efficiency
 	parallelRenderer *parallel.WorkerPool // Parallel renderer for performance
+
+	// Phase 3.2: Magic & Skills (PLAN.md)
+	magicGenerator *magic.SpellGenerator      // Procedural spell and magic generation for loot and progression
+	skillGenerator *skills.SkillTreeGenerator // Skill tree generation for class progression
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -349,6 +357,10 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 func initializeGenerators(sys *systemsContainer) {
 	sys.itemGen = item.NewItemGenerator()
 	sys.recipeGen = recipe.NewRecipeGenerator()
+
+	// Phase 3.2: Magic & Skills (PLAN.md)
+	sys.magicGenerator = magic.NewSpellGenerator()
+	sys.skillGenerator = skills.NewSkillTreeGenerator()
 }
 
 // initializeObjectiveSystem creates and configures the objective tracker with callbacks.
@@ -2244,7 +2256,7 @@ func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logg
 	var playerEntity *engine.Entity
 	sys.combatSystem.SetDeathCallback(createDeathCallback(
 		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, *seed, *genreID, logger,
+		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, *seed, *genreID, logger,
 	))
 }
 

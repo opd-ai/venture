@@ -24,8 +24,10 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/companion"
 	"github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
+	"github.com/opd-ai/venture/pkg/procgen/skills"
 	"github.com/opd-ai/venture/pkg/procgen/story"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
@@ -1281,6 +1283,8 @@ func spawnProceduralLoot(
 	genreID string,
 	playerEntity *engine.Entity,
 	objectiveTracker *engine.ObjectiveTrackerSystem,
+	magicGen *magic.SpellGenerator,
+	skillGen *skills.SkillTreeGenerator,
 ) {
 	// Only for NPCs/enemies, not players
 	if enemy.HasComponent("input") {
@@ -1317,6 +1321,34 @@ func spawnProceduralLoot(
 		deadComp.AddDroppedItem(recipeEntity.ID)
 	}
 
+	// Phase 3.2: Generate and spawn spell scroll drops (10% base, 25% for bosses)
+	spellScrollEntity := engine.GenerateSpellScrollDrop(magicGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	if spellScrollEntity != nil {
+		// Add physics to spell scrolls
+		spellScrollEntity.AddComponent(&engine.VelocityComponent{
+			VX: (physicsRNG.Float64()*2.0 - 1.0) * 28.0, // Medium velocity for scrolls
+			VY: (physicsRNG.Float64()*2.0 - 1.0) * 28.0,
+		})
+		// Add friction for smooth deceleration
+		spellScrollEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+		deadComp.AddDroppedItem(spellScrollEntity.ID)
+	}
+
+	// Phase 3.2: Generate and spawn skill book drops (5% base, 15% for bosses)
+	skillBookEntity := engine.GenerateSkillBookDrop(skillGen, game.World, enemy, pos.X, pos.Y, seed, genreID)
+	if skillBookEntity != nil {
+		// Add physics to skill books
+		skillBookEntity.AddComponent(&engine.VelocityComponent{
+			VX: (physicsRNG.Float64()*2.0 - 1.0) * 26.0, // Slower velocity for books (heavier)
+			VY: (physicsRNG.Float64()*2.0 - 1.0) * 26.0,
+		})
+		// Add friction for smooth deceleration
+		skillBookEntity.AddComponent(engine.NewFrictionComponent(0.12))
+
+		deadComp.AddDroppedItem(skillBookEntity.ID)
+	}
+
 	// Track enemy kill for quest objectives
 	if playerEntity != nil {
 		objectiveTracker.OnEnemyKilled(playerEntity, enemy)
@@ -1335,6 +1367,8 @@ func createDeathCallback(
 	objectiveTracker *engine.ObjectiveTrackerSystem,
 	audioManager **engine.AudioManager,
 	recipeGen *recipe.RecipeGenerator,
+	magicGen *magic.SpellGenerator,
+	skillGen *skills.SkillTreeGenerator,
 	seed int64,
 	genreID string,
 	logger *logrus.Logger,
@@ -1364,7 +1398,7 @@ func createDeathCallback(
 		dropEquippedItems(game, enemy, pos, deadComp)
 
 		// Generate and spawn procedural loot drop (in addition to inventory items)
-		spawnProceduralLoot(game, enemy, pos, deadComp, recipeGen, seed, genreID, *playerEntity, objectiveTracker)
+		spawnProceduralLoot(game, enemy, pos, deadComp, recipeGen, seed, genreID, *playerEntity, objectiveTracker, magicGen, skillGen)
 
 		// GAP-010 REPAIR: Play death sound effect
 		if *audioManager != nil {

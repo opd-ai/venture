@@ -9,6 +9,8 @@ import (
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/procgen/magic"
+	"github.com/opd-ai/venture/pkg/procgen/skills"
 	"github.com/sirupsen/logrus"
 )
 
@@ -208,6 +210,247 @@ func getItemColor(itm *item.Item) color.RGBA {
 		rarityMultiplier = 1.5
 	case item.RarityLegendary:
 		rarityMultiplier = 2.0
+	}
+
+	// Apply rarity brightness (clamp to 255)
+	r := float64(baseColor.R) * rarityMultiplier
+	if r > 255 {
+		r = 255
+	}
+	g := float64(baseColor.G) * rarityMultiplier
+	if g > 255 {
+		g = 255
+	}
+	b := float64(baseColor.B) * rarityMultiplier
+	if b > 255 {
+		b = 255
+	}
+
+	return color.RGBA{
+		R: uint8(r),
+		G: uint8(g),
+		B: uint8(b),
+		A: 255,
+	}
+}
+
+// GenerateSpellScrollDrop creates a random spell scroll appropriate for the enemy's level and drops it.
+// Uses the procedural magic generator with scaling based on enemy difficulty.
+// Returns nil if no spell scroll should be dropped (based on drop chance).
+// Spell scrolls are rarer than items: 10% base, 25% for bosses.
+func GenerateSpellScrollDrop(spellGen *magic.SpellGenerator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
+	// Calculate spell scroll drop chance based on enemy type
+	dropChance := 0.10 // 10% base drop chance for spell scrolls
+
+	// Increase drop chance for bosses/elites (spell casters more likely to drop scrolls)
+	if statsComp, ok := enemy.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			if stats.Attack > 20 || stats.Defense > 20 {
+				dropChance = 0.25 // 25% for strong enemies
+			}
+		}
+	}
+
+	// Roll for drop
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 2000))
+	if rng.Float64() > dropChance {
+		return nil // No spell scroll drop
+	}
+
+	// Determine spell depth/difficulty from enemy stats
+	depth := 1
+	difficulty := 0.4 // Start moderate for spell scrolls
+
+	if expComp, ok := enemy.GetComponent("experience"); ok {
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			depth = exp.Level
+			difficulty = 0.4 + float64(depth)*0.05 // Scale with depth
+		}
+	}
+
+	// Generate spell
+	params := procgen.GenerationParams{
+		Difficulty: difficulty,
+		Depth:      depth,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 1, // Generate 1 spell
+		},
+	}
+
+	result, err := spellGen.Generate(seed+int64(enemy.ID)+2100, params)
+	if err != nil {
+		return nil
+	}
+
+	spells := result.([]*magic.Spell)
+	if len(spells) == 0 {
+		return nil
+	}
+
+	// Create spell scroll item entity
+	spell := spells[0]
+	scrollEntity := world.CreateEntity()
+
+	// Position in world
+	scrollEntity.AddComponent(&PositionComponent{
+		X: x,
+		Y: y,
+	})
+
+	// Visual representation - scrolls are purple/arcane colored
+	scrollSize := 24.0
+	scrollColor := getSpellScrollColor(spell)
+	sprite := NewSpriteComponent(scrollSize, scrollSize, scrollColor)
+	sprite.Layer = 3 // Items drawn below entities but above terrain
+	scrollEntity.AddComponent(sprite)
+
+	// Collision for pickup detection
+	scrollEntity.AddComponent(&ColliderComponent{
+		Width:     scrollSize,
+		Height:    scrollSize,
+		Solid:     false, // Scrolls don't block movement
+		IsTrigger: true,  // Trigger collision events for pickup
+		Layer:     3,     // Item collision layer
+		OffsetX:   -scrollSize / 2,
+		OffsetY:   -scrollSize / 2,
+	})
+
+	// Create a consumable item representing the spell scroll
+	scrollItem := &item.Item{
+		Name:           fmt.Sprintf("Scroll of %s", spell.Name),
+		Description:    fmt.Sprintf("A magical scroll containing the spell '%s'. %s (Damage: %d, Mana: %d, Element: %s)", spell.Name, spell.Description, spell.Stats.Damage, spell.Stats.ManaCost, spell.Element.String()),
+		Type:           item.TypeConsumable,
+		ConsumableType: item.ConsumableScroll,     // Spell scrolls are scroll-type consumables
+		Rarity:         item.Rarity(spell.Rarity), // Map spell rarity to item rarity
+		Seed:           spell.Seed,
+	}
+	scrollEntity.AddComponent(&ItemEntityComponent{
+		Item: scrollItem,
+	})
+
+	return scrollEntity
+}
+
+// GenerateSkillBookDrop creates a random skill book for the player to learn new abilities.
+// Skill books grant skill points or unlock specific skills when used.
+// Returns nil if no skill book should be dropped (based on drop chance).
+// Skill books are very rare: 5% base, 15% for bosses.
+func GenerateSkillBookDrop(skillGen *skills.SkillTreeGenerator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
+	// Calculate skill book drop chance based on enemy type
+	dropChance := 0.05 // 5% base drop chance for skill books (very rare)
+
+	// Increase drop chance for bosses/elites
+	if statsComp, ok := enemy.GetComponent("stats"); ok {
+		if stats, ok := statsComp.(*StatsComponent); ok {
+			if stats.Attack > 20 || stats.Defense > 20 {
+				dropChance = 0.15 // 15% for strong enemies
+			}
+		}
+	}
+
+	// Roll for drop
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 3000))
+	if rng.Float64() > dropChance {
+		return nil // No skill book drop
+	}
+
+	// Determine skill book depth from enemy stats
+	depth := 1
+
+	if expComp, ok := enemy.GetComponent("experience"); ok {
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			depth = exp.Level
+		}
+	}
+
+	// Skill books grant skill points rather than teaching specific skills
+	// This allows player choice in how to spend them
+	skillPointsGranted := 1 + depth/5 // More points at higher levels
+
+	// Create skill book item entity
+	bookEntity := world.CreateEntity()
+
+	// Position in world
+	bookEntity.AddComponent(&PositionComponent{
+		X: x,
+		Y: y,
+	})
+
+	// Visual representation - books are brown/tan colored with golden highlights
+	bookSize := 24.0
+	bookColor := color.RGBA{139, 90, 43, 255} // Brown book with golden tint
+	if depth > 10 {
+		bookColor = color.RGBA{184, 134, 11, 255} // Golden book for high-level
+	}
+	sprite := NewSpriteComponent(bookSize, bookSize, bookColor)
+	sprite.Layer = 3 // Items drawn below entities but above terrain
+	bookEntity.AddComponent(sprite)
+
+	// Collision for pickup detection
+	bookEntity.AddComponent(&ColliderComponent{
+		Width:     bookSize,
+		Height:    bookSize,
+		Solid:     false, // Books don't block movement
+		IsTrigger: true,  // Trigger collision events for pickup
+		Layer:     3,     // Item collision layer
+		OffsetX:   -bookSize / 2,
+		OffsetY:   -bookSize / 2,
+	})
+
+	// Create consumable item representing the skill book
+	bookItem := &item.Item{
+		Name:           fmt.Sprintf("Tome of Mastery (Tier %d)", depth/5+1),
+		Description:    fmt.Sprintf("An ancient tome containing knowledge that grants %d skill point(s) when read.", skillPointsGranted),
+		Type:           item.TypeConsumable,
+		ConsumableType: item.ConsumableScroll, // Skill books use scroll type (readable consumables)
+		Rarity:         item.RarityRare,       // Skill books are always at least rare
+		Seed:           seed + int64(enemy.ID) + 3100,
+	}
+
+	bookEntity.AddComponent(&ItemEntityComponent{
+		Item: bookItem,
+	})
+
+	return bookEntity
+}
+
+// getSpellScrollColor determines the sprite color based on spell element and rarity.
+func getSpellScrollColor(spell *magic.Spell) color.RGBA {
+	// Base color by element
+	var baseColor color.RGBA
+	switch spell.Element {
+	case magic.ElementFire:
+		baseColor = color.RGBA{220, 80, 40, 255} // Red-orange for fire
+	case magic.ElementIce:
+		baseColor = color.RGBA{100, 180, 220, 255} // Light blue for ice
+	case magic.ElementLightning:
+		baseColor = color.RGBA{200, 200, 100, 255} // Yellow for lightning
+	case magic.ElementEarth:
+		baseColor = color.RGBA{120, 100, 60, 255} // Brown for earth
+	case magic.ElementWind:
+		baseColor = color.RGBA{180, 220, 200, 255} // Light cyan for wind
+	case magic.ElementLight:
+		baseColor = color.RGBA{240, 240, 200, 255} // Bright yellow-white for light
+	case magic.ElementDark:
+		baseColor = color.RGBA{80, 60, 100, 255} // Dark purple for dark magic
+	case magic.ElementArcane:
+		baseColor = color.RGBA{160, 100, 200, 255} // Purple for arcane
+	default:
+		baseColor = color.RGBA{150, 120, 180, 255} // Default purple for scrolls
+	}
+
+	// Modify by rarity (brighter = rarer)
+	rarityMultiplier := 1.0
+	switch spell.Rarity {
+	case magic.RarityUncommon:
+		rarityMultiplier = 1.1
+	case magic.RarityRare:
+		rarityMultiplier = 1.2
+	case magic.RarityEpic:
+		rarityMultiplier = 1.4
+	case magic.RarityLegendary:
+		rarityMultiplier = 1.6
 	}
 
 	// Apply rarity brightness (clamp to 255)

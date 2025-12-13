@@ -95,6 +95,9 @@ import (
 
 	// Phase 4.1: Chat System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/chat"
+
+	// Phase 4.2: Trade System (PLAN.md)
+	"github.com/opd-ai/venture/pkg/network/trade"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -282,6 +285,9 @@ type systemsContainer struct {
 
 	// Phase 4.1: Chat System (PLAN.md)
 	networkChatSystem *chat.ChatSystem // Network-based chat system for multiplayer messaging
+
+	// Phase 4.2: Trade System (PLAN.md)
+	networkTradeSystem *trade.TradeSystem // Network-based trade system for multiplayer item trading
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -636,8 +642,16 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 40: Courier system for mail delivery simulation (depends on MailSystem)
 	sys.courierSystem = engine.NewCourierSystem(game.World, sys.mailSystem)
 
+	// Phase 4.1: Network chat system for multiplayer messaging (PLAN.md)
+	sys.networkChatSystem = chat.NewChatSystem(game.World)
+	clientLogger.Info("network chat system initialized for multiplayer messaging")
+
+	// Phase 4.2: Network trade system for multiplayer item trading (PLAN.md)
+	sys.networkTradeSystem = trade.NewTradeSystem(game.World)
+	clientLogger.Info("network trade system initialized for multiplayer trading")
+
 	if *verbose {
-		clientLogger.Info("V5.0 systems initialized (chat, trade, terrain construction/modification, merchant caravans, mail, courier)")
+		clientLogger.Info("V5.0 systems initialized (chat, trade, terrain construction/modification, merchant caravans, mail, courier, network chat/trade)")
 	}
 }
 

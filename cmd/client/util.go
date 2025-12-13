@@ -733,6 +733,7 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string, logger *logrus.Entry) int {
 	rng := rand.New(rand.NewSource(seed))
 	hazardCount := 0
+	const tileSize = 32
 	envGen := environment.NewGenerator()
 
 	// Spawn 1-3 hazards per room (excluding entrance room)

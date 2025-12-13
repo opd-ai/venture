@@ -103,6 +103,7 @@ type systemsContainer struct {
 	hazardSystem             *engine.HazardSystem
 	narrativeSystem          *engine.NarrativeSystem
 	branchingNarrativeSystem *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
+	worldEventsSystem        *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
 	shadowSystem             *engine.ShadowSystem
 	spriteGenerator          *sprites.Generator
 	spriteCache              *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
@@ -363,7 +364,8 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.hazardSystem.SetWorld(game.World)
 
 	sys.narrativeSystem = engine.NewNarrativeSystem(game.World)
-	sys.branchingNarrativeSystem = engine.NewBranchingNarrativeSystem(game.World) // Phase 6.1: Branching narratives
+	sys.branchingNarrativeSystem = engine.NewBranchingNarrativeSystem(game.World)                                               // Phase 6.1: Branching narratives
+	sys.worldEventsSystem = engine.NewWorldEventsSystemWithLogger(game.World, *seed+seedOffsetWorldEvents, clientLogger.Logger) // Phase 6.3: World events
 	sys.shadowSystem = engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
 }
 
@@ -739,6 +741,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.hazardSystem)
 	game.World.AddSystem(sys.narrativeSystem)
 	game.World.AddSystem(sys.branchingNarrativeSystem) // Phase 6.1: Branching narratives
+	game.World.AddSystem(sys.worldEventsSystem)        // Phase 6.3: World events
 	game.World.AddSystem(sys.shadowSystem)
 
 	// V4.0 System Registrations (Phase 21-27)

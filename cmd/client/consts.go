@@ -78,6 +78,7 @@ const (
 	seedOffsetReverb          = 8000  // offset for reverb system (Phase 14.4)
 	seedOffsetInvestigation   = 9000  // offset for investigation system (Phase 30)
 	seedOffsetNPCDialog       = 10000 // offset for NPC dialog system (Phase 31)
+	seedOffsetWorldEvents     = 11000 // offset for world events system (Phase 6.3)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

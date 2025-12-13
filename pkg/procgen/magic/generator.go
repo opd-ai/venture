@@ -82,18 +82,26 @@ func (g *SpellGenerator) validateParams(params procgen.GenerationParams) error {
 
 // getSpellCount extracts the spell count from custom parameters.
 func (g *SpellGenerator) getSpellCount(params procgen.GenerationParams) int {
+	g.logDebug("determining spell count", logrus.Fields{
+		"custom_params": params.Custom,
+	})
 	count := 10 // default
 	if c, ok := params.Custom["count"].(int); ok {
 		count = c
+		g.logDebug("using custom spell count", logrus.Fields{"count": count})
+	} else {
+		g.logDebug("using default spell count", logrus.Fields{"count": count})
 	}
 	return count
 }
 
 // getTemplatesForGenre returns spell templates for the specified genre.
 func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, error) {
+	g.logDebug("retrieving templates for genre", logrus.Fields{"genre_id": genreID})
 	var templates []SpellTemplate
 	switch genreID {
 	case "scifi":
+		g.logDebug("loading scifi templates", logrus.Fields{"genre_id": genreID})
 		templates = append(templates, GetSciFiOffensiveTemplates()...)
 		templates = append(templates, GetSciFiSupportTemplates()...)
 		templates = append(templates, GetSciFiAdvancedTemplates()...)
@@ -101,6 +109,7 @@ func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, 
 		templates = append(templates, GetAdvancedUtilityTemplates()...)
 		templates = append(templates, GetAdvancedSupportTemplates()...)
 	case "horror":
+		g.logDebug("loading horror templates", logrus.Fields{"genre_id": genreID})
 		templates = append(templates, GetFantasyOffensiveTemplates()...)
 		templates = append(templates, GetFantasySupportTemplates()...)
 		templates = append(templates, GetHorrorAdvancedTemplates()...)
@@ -110,6 +119,7 @@ func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, 
 	case "fantasy":
 		fallthrough
 	default:
+		g.logDebug("loading fantasy templates (default)", logrus.Fields{"genre_id": genreID})
 		templates = append(templates, GetFantasyOffensiveTemplates()...)
 		templates = append(templates, GetFantasySupportTemplates()...)
 		templates = append(templates, GetAdvancedOffensiveTemplates()...)
@@ -118,27 +128,50 @@ func (g *SpellGenerator) getTemplatesForGenre(genreID string) ([]SpellTemplate, 
 	}
 
 	if len(templates) == 0 {
-		g.logError("no templates available", logrus.Fields{"genreID": genreID})
+		g.logError("no templates available", logrus.Fields{"genre_id": genreID})
 		return nil, fmt.Errorf("no templates available for genre: %s", genreID)
 	}
 
+	g.logDebug("templates loaded successfully", logrus.Fields{
+		"genre_id":       genreID,
+		"template_count": len(templates),
+	})
 	return templates, nil
 }
 
 // generateSpells generates the specified count of spells from templates.
 func (g *SpellGenerator) generateSpells(rng *rand.Rand, templates []SpellTemplate, params procgen.GenerationParams, seed int64, count int) []*Spell {
+	g.logDebug("generating spells from templates", logrus.Fields{
+		"count":          count,
+		"template_count": len(templates),
+		"seed":           seed,
+	})
 	spells := make([]*Spell, count)
 	for i := 0; i < count; i++ {
 		template := templates[rng.Intn(len(templates))]
 		spell := g.generateFromTemplate(rng, template, params)
 		spell.Seed = seed + int64(i)
 		spells[i] = spell
+		g.logDebug("generated spell from template", logrus.Fields{
+			"spell_index": i,
+			"spell_name":  spell.Name,
+			"spell_type":  spell.Type,
+			"rarity":      spell.Rarity,
+			"seed":        spell.Seed,
+		})
 	}
+	g.logDebug("spell generation loop complete", logrus.Fields{"spell_count": len(spells)})
 	return spells
 }
 
 // generateFromTemplate creates a single spell from a template.
 func (g *SpellGenerator) generateFromTemplate(rng *rand.Rand, template SpellTemplate, params procgen.GenerationParams) *Spell {
+	g.logDebug("generating spell from template", logrus.Fields{
+		"template_type":    template.BaseType,
+		"template_element": template.BaseElement,
+		"depth":            params.Depth,
+		"difficulty":       params.Difficulty,
+	})
 	spell := &Spell{
 		Type:    template.BaseType,
 		Element: template.BaseElement,
@@ -151,6 +184,7 @@ func (g *SpellGenerator) generateFromTemplate(rng *rand.Rand, template SpellTemp
 
 	// Determine rarity based on depth and difficulty
 	spell.Rarity = g.determineRarity(rng, params.Depth, params.Difficulty)
+	g.logDebug("determined spell rarity", logrus.Fields{"rarity": spell.Rarity})
 
 	// Generate name
 	prefix := template.NamePrefixes[rng.Intn(len(template.NamePrefixes))]
@@ -162,11 +196,18 @@ func (g *SpellGenerator) generateFromTemplate(rng *rand.Rand, template SpellTemp
 		rarityPrefixes := []string{"Greater", "Superior", "Ultimate", "Ancient", "Legendary"}
 		spell.Name = fmt.Sprintf("%s %s", rarityPrefixes[spell.Rarity-RarityRare], spell.Name)
 	}
+	g.logDebug("generated spell name", logrus.Fields{"spell_name": spell.Name})
 
 	// Generate stats with scaling
 	depthScale := 1.0 + float64(params.Depth)*0.1
 	difficultyScale := 0.8 + params.Difficulty*0.4
 	rarityScale := 1.0 + float64(spell.Rarity)*0.25
+
+	g.logDebug("calculated scaling factors", logrus.Fields{
+		"depth_scale":      depthScale,
+		"difficulty_scale": difficultyScale,
+		"rarity_scale":     rarityScale,
+	})
 
 	spell.Stats = g.generateStats(rng, template, depthScale, difficultyScale, rarityScale)
 	spell.Stats.RequiredLevel = 1 + params.Depth + int(spell.Rarity)*2
@@ -177,11 +218,22 @@ func (g *SpellGenerator) generateFromTemplate(rng *rand.Rand, template SpellTemp
 	// Generate description
 	spell.Description = g.generateDescription(spell)
 
+	g.logDebug("spell generation complete", logrus.Fields{
+		"spell_name":     spell.Name,
+		"required_level": spell.Stats.RequiredLevel,
+		"mana_cost":      spell.Stats.ManaCost,
+		"damage":         spell.Stats.Damage,
+	})
 	return spell
 }
 
 // generateStats generates spell statistics from template ranges.
 func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, depthScale, difficultyScale, rarityScale float64) Stats {
+	g.logDebug("generating spell stats", logrus.Fields{
+		"depth_scale":      depthScale,
+		"difficulty_scale": difficultyScale,
+		"rarity_scale":     rarityScale,
+	})
 	stats := Stats{}
 
 	// Damage
@@ -190,6 +242,10 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 		baseMax := float64(template.DamageRange[1])
 		damage := baseMin + rng.Float64()*(baseMax-baseMin)
 		stats.Damage = int(damage * depthScale * difficultyScale * rarityScale)
+		g.logDebug("generated damage stat", logrus.Fields{
+			"base_range": template.DamageRange,
+			"damage":     stats.Damage,
+		})
 	}
 
 	// Healing
@@ -198,6 +254,10 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 		baseMax := float64(template.HealingRange[1])
 		healing := baseMin + rng.Float64()*(baseMax-baseMin)
 		stats.Healing = int(healing * depthScale * rarityScale)
+		g.logDebug("generated healing stat", logrus.Fields{
+			"base_range": template.HealingRange,
+			"healing":    stats.Healing,
+		})
 	}
 
 	// Mana cost
@@ -207,6 +267,10 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 		manaCost := baseMin + rng.Float64()*(baseMax-baseMin)
 		// Higher rarity costs more mana
 		stats.ManaCost = int(manaCost * rarityScale)
+		g.logDebug("generated mana cost", logrus.Fields{
+			"base_range": template.ManaCostRange,
+			"mana_cost":  stats.ManaCost,
+		})
 	}
 
 	// Cooldown
@@ -215,6 +279,9 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			rng.Float64()*(template.CooldownRange[1]-template.CooldownRange[0])
 		// Higher rarity has shorter cooldown
 		stats.Cooldown = stats.Cooldown / rarityScale
+		g.logDebug("generated cooldown", logrus.Fields{
+			"cooldown": stats.Cooldown,
+		})
 	}
 
 	// Cast time
@@ -223,6 +290,9 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			rng.Float64()*(template.CastTimeRange[1]-template.CastTimeRange[0])
 		// Higher rarity has faster cast time
 		stats.CastTime = stats.CastTime / (1.0 + float64(rarityScale)*0.1)
+		g.logDebug("generated cast time", logrus.Fields{
+			"cast_time": stats.CastTime,
+		})
 	}
 
 	// Range
@@ -231,6 +301,9 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			rng.Float64()*(template.RangeRange[1]-template.RangeRange[0])
 		// Higher rarity has better range
 		stats.Range = stats.Range * (1.0 + float64(rarityScale)*0.1)
+		g.logDebug("generated range", logrus.Fields{
+			"range": stats.Range,
+		})
 	}
 
 	// Area size
@@ -239,6 +312,9 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			rng.Float64()*(template.AreaSizeRange[1]-template.AreaSizeRange[0])
 		// Higher rarity has larger area
 		stats.AreaSize = stats.AreaSize * (1.0 + float64(rarityScale)*0.15)
+		g.logDebug("generated area size", logrus.Fields{
+			"area_size": stats.AreaSize,
+		})
 	}
 
 	// Duration
@@ -247,13 +323,26 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			rng.Float64()*(template.DurationRange[1]-template.DurationRange[0])
 		// Higher rarity has longer duration
 		stats.Duration = stats.Duration * (1.0 + float64(rarityScale)*0.2)
+		g.logDebug("generated duration", logrus.Fields{
+			"duration": stats.Duration,
+		})
 	}
 
+	g.logDebug("spell stats generation complete", logrus.Fields{
+		"damage":    stats.Damage,
+		"healing":   stats.Healing,
+		"mana_cost": stats.ManaCost,
+		"cooldown":  stats.Cooldown,
+	})
 	return stats
 }
 
 // determineRarity calculates spell rarity based on depth and difficulty.
 func (g *SpellGenerator) determineRarity(rng *rand.Rand, depth int, difficulty float64) Rarity {
+	g.logDebug("determining rarity", logrus.Fields{
+		"depth":      depth,
+		"difficulty": difficulty,
+	})
 	// Base chance influenced by depth
 	roll := rng.Float64()
 
@@ -263,23 +352,39 @@ func (g *SpellGenerator) determineRarity(rng *rand.Rand, depth int, difficulty f
 
 	roll += depthBonus + difficultyBonus
 
+	g.logDebug("rarity roll calculated", logrus.Fields{
+		"base_roll":        roll - depthBonus - difficultyBonus,
+		"depth_bonus":      depthBonus,
+		"difficulty_bonus": difficultyBonus,
+		"final_roll":       roll,
+	})
+
 	// Determine rarity thresholds
+	var rarity Rarity
 	switch {
 	case roll < 0.50:
-		return RarityCommon
+		rarity = RarityCommon
 	case roll < 0.75:
-		return RarityUncommon
+		rarity = RarityUncommon
 	case roll < 0.90:
-		return RarityRare
+		rarity = RarityRare
 	case roll < 0.97:
-		return RarityEpic
+		rarity = RarityEpic
 	default:
-		return RarityLegendary
+		rarity = RarityLegendary
 	}
+
+	g.logDebug("rarity determined", logrus.Fields{"rarity": rarity})
+	return rarity
 }
 
 // generateDescription creates flavor text for the spell.
 func (g *SpellGenerator) generateDescription(spell *Spell) string {
+	g.logDebug("generating spell description", logrus.Fields{
+		"spell_type":    spell.Type,
+		"spell_element": spell.Element,
+		"spell_target":  spell.Target,
+	})
 	// Build description based on spell type and element
 	var action string
 	switch spell.Type {
@@ -339,34 +444,55 @@ func (g *SpellGenerator) generateDescription(spell *Spell) string {
 		targetDesc = "upon all enemies"
 	}
 
-	return fmt.Sprintf("%s %s %s.", action, elementDesc, targetDesc)
+	description := fmt.Sprintf("%s %s %s.", action, elementDesc, targetDesc)
+	g.logDebug("spell description generated", logrus.Fields{"description": description})
+	return description
 }
 
 // Validate checks if the generated spells are valid.
 func (g *SpellGenerator) Validate(result interface{}) error {
+	g.logDebug("validating spell generation result", logrus.Fields{})
 	spells, ok := result.([]*Spell)
 	if !ok {
+		g.logError("validation failed: invalid result type", logrus.Fields{
+			"expected_type": "[]*Spell",
+		})
 		return fmt.Errorf("result is not []*Spell")
 	}
 
 	if len(spells) == 0 {
+		g.logError("validation failed: no spells generated", logrus.Fields{})
 		return fmt.Errorf("no spells generated")
 	}
 
+	g.logDebug("validating individual spells", logrus.Fields{"spell_count": len(spells)})
 	for i, spell := range spells {
 		if err := g.validateSpell(i, spell); err != nil {
+			g.logError("spell validation failed", logrus.Fields{
+				"spell_index": i,
+				"error":       err.Error(),
+			})
 			return err
 		}
 	}
 
+	g.logInfo("spell validation complete", logrus.Fields{
+		"validated_count": len(spells),
+	})
 	return nil
 }
 
 // validateSpell validates a single spell's properties and stats.
 func (g *SpellGenerator) validateSpell(index int, spell *Spell) error {
 	if spell == nil {
+		g.logError("spell is nil", logrus.Fields{"spell_index": index})
 		return fmt.Errorf("spell %d is nil", index)
 	}
+
+	g.logDebug("validating spell", logrus.Fields{
+		"spell_index": index,
+		"spell_name":  spell.Name,
+	})
 
 	if err := g.validateSpellBasicProperties(index, spell); err != nil {
 		return err
@@ -385,12 +511,21 @@ func (g *SpellGenerator) validateSpell(index int, spell *Spell) error {
 	}
 
 	g.validateSpellBalance(spell)
+	g.logDebug("spell validation passed", logrus.Fields{
+		"spell_index": index,
+		"spell_name":  spell.Name,
+	})
 	return nil
 }
 
 // validateSpellBasicProperties validates spell name and basic properties.
 func (g *SpellGenerator) validateSpellBasicProperties(index int, spell *Spell) error {
+	g.logDebug("validating basic properties", logrus.Fields{
+		"spell_index": index,
+		"spell_name":  spell.Name,
+	})
 	if spell.Name == "" {
+		g.logError("spell has empty name", logrus.Fields{"spell_index": index})
 		return fmt.Errorf("spell %d has empty name", index)
 	}
 	return nil
@@ -398,19 +533,42 @@ func (g *SpellGenerator) validateSpellBasicProperties(index int, spell *Spell) e
 
 // validateSpellEnumFields validates spell enum fields are within valid ranges.
 func (g *SpellGenerator) validateSpellEnumFields(index int, spell *Spell) error {
+	g.logDebug("validating enum fields", logrus.Fields{
+		"spell_index": index,
+		"type":        spell.Type,
+		"element":     spell.Element,
+		"rarity":      spell.Rarity,
+		"target":      spell.Target,
+	})
 	if spell.Type < TypeOffensive || spell.Type > TypeSummon {
+		g.logError("invalid spell type", logrus.Fields{
+			"spell_index": index,
+			"type":        spell.Type,
+		})
 		return fmt.Errorf("spell %d has invalid type: %d", index, spell.Type)
 	}
 
 	if spell.Element < ElementNone || spell.Element > ElementArcane {
+		g.logError("invalid spell element", logrus.Fields{
+			"spell_index": index,
+			"element":     spell.Element,
+		})
 		return fmt.Errorf("spell %d has invalid element: %d", index, spell.Element)
 	}
 
 	if spell.Rarity < RarityCommon || spell.Rarity > RarityLegendary {
+		g.logError("invalid spell rarity", logrus.Fields{
+			"spell_index": index,
+			"rarity":      spell.Rarity,
+		})
 		return fmt.Errorf("spell %d has invalid rarity: %d", index, spell.Rarity)
 	}
 
 	if spell.Target < TargetSelf || spell.Target > TargetAllEnemies {
+		g.logError("invalid spell target", logrus.Fields{
+			"spell_index": index,
+			"target":      spell.Target,
+		})
 		return fmt.Errorf("spell %d has invalid target: %d", index, spell.Target)
 	}
 
@@ -419,19 +577,47 @@ func (g *SpellGenerator) validateSpellEnumFields(index int, spell *Spell) error 
 
 // validateSpellStats validates spell stats are non-negative and within valid ranges.
 func (g *SpellGenerator) validateSpellStats(index int, spell *Spell) error {
+	g.logDebug("validating spell stats", logrus.Fields{
+		"spell_index":    index,
+		"mana_cost":      spell.Stats.ManaCost,
+		"cooldown":       spell.Stats.Cooldown,
+		"cast_time":      spell.Stats.CastTime,
+		"range":          spell.Stats.Range,
+		"required_level": spell.Stats.RequiredLevel,
+	})
 	if spell.Stats.ManaCost < 0 {
+		g.logError("negative mana cost", logrus.Fields{
+			"spell_index": index,
+			"mana_cost":   spell.Stats.ManaCost,
+		})
 		return fmt.Errorf("spell %d has negative mana cost", index)
 	}
 	if spell.Stats.Cooldown < 0 {
+		g.logError("negative cooldown", logrus.Fields{
+			"spell_index": index,
+			"cooldown":    spell.Stats.Cooldown,
+		})
 		return fmt.Errorf("spell %d has negative cooldown", index)
 	}
 	if spell.Stats.CastTime < 0 {
+		g.logError("negative cast time", logrus.Fields{
+			"spell_index": index,
+			"cast_time":   spell.Stats.CastTime,
+		})
 		return fmt.Errorf("spell %d has negative cast time", index)
 	}
 	if spell.Stats.Range < 0 {
+		g.logError("negative range", logrus.Fields{
+			"spell_index": index,
+			"range":       spell.Stats.Range,
+		})
 		return fmt.Errorf("spell %d has negative range", index)
 	}
 	if spell.Stats.RequiredLevel < 1 {
+		g.logError("invalid required level", logrus.Fields{
+			"spell_index":    index,
+			"required_level": spell.Stats.RequiredLevel,
+		})
 		return fmt.Errorf("spell %d has invalid required level: %d", index, spell.Stats.RequiredLevel)
 	}
 	return nil
@@ -439,10 +625,26 @@ func (g *SpellGenerator) validateSpellStats(index int, spell *Spell) error {
 
 // validateSpellTypeSpecific validates type-specific spell requirements.
 func (g *SpellGenerator) validateSpellTypeSpecific(index int, spell *Spell) error {
+	g.logDebug("validating type-specific requirements", logrus.Fields{
+		"spell_index": index,
+		"spell_type":  spell.Type,
+		"damage":      spell.Stats.Damage,
+		"healing":     spell.Stats.Healing,
+	})
 	if spell.IsOffensive() && spell.Stats.Damage <= 0 {
+		g.logError("offensive spell has no damage", logrus.Fields{
+			"spell_index": index,
+			"spell_name":  spell.Name,
+			"damage":      spell.Stats.Damage,
+		})
 		return fmt.Errorf("offensive spell %d has no damage", index)
 	}
 	if spell.Type == TypeHealing && spell.Stats.Healing <= 0 {
+		g.logError("healing spell has no healing", logrus.Fields{
+			"spell_index": index,
+			"spell_name":  spell.Name,
+			"healing":     spell.Stats.Healing,
+		})
 		return fmt.Errorf("healing spell %d has no healing", index)
 	}
 	return nil

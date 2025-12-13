@@ -61,13 +61,13 @@ const (
 
 	// Seed offsets for deterministic generation
 	seedOffsetFaction         = 1000  // offset for faction generation
-	seedOffsetStation         = 1000  // offset for station generation
-	seedOffsetStatusEffect    = 999   // offset for status effect RNG
-	seedOffsetPlayerAnimation = 1000  // multiplier for player animation seed
+	seedOffsetStation         = 1010  // offset for station generation
+	seedOffsetStatusEffect    = 1020  // offset for status effect RNG
+	seedOffsetPlayerAnimation = 1030  // multiplier for player animation seed
 	seedOffsetPuzzle          = 2000  // offset for puzzle generation
-	seedOffsetLight           = 2000  // offset for environmental light generation
+	seedOffsetLight           = 2010  // offset for environmental light generation
 	seedOffsetObject          = 3000  // offset for destructible object generation
-	seedOffsetWeather         = 3000  // offset for weather generation
+	seedOffsetWeather         = 3010  // offset for weather generation
 	seedOffsetFirePropagation = 1090  // offset for fire propagation system
 	seedOffsetDestructible    = 1100  // offset for destructible object system
 	seedOffsetSpellEffects    = 1200  // offset for spell effect system (V4.0)

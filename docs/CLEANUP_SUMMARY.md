@@ -2,15 +2,38 @@
 Date: 2025-12-13 (Updated)
 
 ## Results
-- **Files deleted:** 12 (6 previous + 6 new)
-- **Storage recovered:** ~37.5 MB (previous ~50 KB + new ~37.5 MB)
-- **Files consolidated:** 2 duplicate AUDIT files → 1 per directory
-- **Files remaining:** 146 markdown files
+- **Files deleted:** 14 (12 previous + 2 new)
+- **Storage recovered:** ~37.5 MB (previous + ~7 KB new deletions)
+- **Files consolidated:** 3 duplicate AUDIT files → 1 per directory
+- **Files remaining:** 151 markdown files
 - **LLM prompts preserved:** 14 files
-- **Files de-bloated:** 5 major documentation files
-- **Average size reduction from de-bloating:** 17.2%
+- **Files de-bloated:** 6 major documentation files
+- **Average size reduction from de-bloating:** 16.5%
 
-## Latest Cleanup (2025-12-13)
+## Latest Cleanup (2025-12-13 - Phase 2)
+
+### Obsolete Documentation Removed
+
+**docs/:**
+- `V4_PERFORMANCE_BENCHMARKS.md` (177 lines, ~5 KB) - Old V4 benchmark data from November 2025, superseded by V10_COMPLETION_REPORT.md and ROADMAP_V10.md performance sections
+
+**cmd/client/:**
+- `AUDIT_consts.md` (108 lines, ~4 KB) - Duplicate AUDIT file violating one-AUDIT-per-directory policy (information already in AUDIT.md)
+
+### Documentation De-bloated
+
+**docs/ROADMAP_V8.md:**
+- Original: 820 lines
+- Final: 720 lines  
+- Reduction: 100 lines (12.2%)
+- Changes: Condensed Risk Mitigation (detailed fallbacks → summary), Dependencies (verbose lists → compact table), Timeline (week-by-week → monthly table). V8.0 is complete so detailed planning info is historical.
+
+### Deletion Criteria Applied
+- **Superseded files:** Old benchmark data replaced by current version documentation
+- **Duplicate AUDIT files:** Consolidated to one AUDIT.md per directory
+- **Historical verbosity:** Completed roadmaps de-bloated (planning details no longer needed)
+
+## Previous Cleanup (2025-12-13 - Phase 1)
 
 ### Compiled Binaries Removed (~5.5 MB)
 **Repository Root:**
@@ -38,7 +61,7 @@ Added patterns to prevent future accumulation:
 - `**/baseline.json`
 - `/improvements.html`
 
-## Previous Cleanup (2025-12-13)
+## Earlier Cleanup (2025-12-13)
 
 ## Deletion Criteria Used
 - **Age threshold:** Timestamped backup files (e.g., *_OLD_20251213_*, *_CONSTS.md duplicate)
@@ -93,7 +116,7 @@ All 14 LLM prompt templates preserved (no deletions):
 
 ## De-bloating Summary
 
-### Files Processed (5 major documentation files)
+### Files Processed (6 major documentation files)
 
 **1. docs/ROADMAP_V10.md**
 - Original: 1,236 lines
@@ -119,19 +142,26 @@ All 14 LLM prompt templates preserved (no deletions):
 - Reduction: 72 lines (13.0%)
 - Changes: Limited verbose answers to 8 lines per question, preserved all questions and core answers
 
-**5. docs/ROADMAP_V8.md**
+**5. docs/ROADMAP_V8.md** (Phase 1)
 - Original: 895 lines
 - Final: 821 lines
 - Reduction: 74 lines (8.3%)
 - Changes: Condensed bullet lists (kept first 5 items), removed verbose implementation details, preserved all phase completion status
 
+**6. docs/ROADMAP_V8.md** (Phase 2 - this cleanup)
+- Original: 820 lines
+- Final: 720 lines
+- Reduction: 100 lines (12.2%)
+- Changes: Condensed Risk Mitigation section to summary, Dependencies to compact table, Timeline to monthly overview. V8.0 is complete so detailed planning info is now historical.
+
 ### De-bloating Statistics
-- **Total lines reduced:** 768 lines
-- **Total size reduced:** ~35 KB
+- **Total lines reduced:** 868 lines (768 previous + 100 new)
+- **Total size reduced:** ~40 KB
 - **Largest reductions:**
   1. ROADMAP_V10.md: 20.2% (250 lines)
-  2. EBITEN.md: 21.3% (135 lines)
-  3. API_REFERENCE.md: 20.7% (237 lines)
+  2. API_REFERENCE.md: 20.7% (237 lines)
+  3. EBITEN.md: 21.3% (135 lines)
+  4. ROADMAP_V8.md: 19.6% cumulative (174 lines total across both phases)
 
 ### De-bloating Techniques Applied
 - Condensed long checklists (kept first 3 items + summary)
@@ -139,6 +169,7 @@ All 14 LLM prompt templates preserved (no deletions):
 - Removed repetitive test result details while keeping pass/fail status
 - Condensed verbose bullet lists (kept first 5 items + summary)
 - Eliminated redundant examples (kept one clear example per concept)
+- Converted detailed planning sections to summary tables (for completed roadmaps)
 - Preserved all section headers, phase status, and technical accuracy
 - Maintained document structure and navigation
 
@@ -152,8 +183,8 @@ docs/
   │   └── USER_MANUAL.md, CONTROLS.md, FAQ.md (de-bloated)
   │
   ├── Current Roadmaps (de-bloated)
-  │   ├── ROADMAP_V8.md (821 lines, 8.3% reduction)
-  │   └── ROADMAP_V10.md (986 lines, 20.2% reduction)
+  │   ├── ROADMAP_V8.md (720 lines, 19.6% cumulative reduction) - COMPLETE ✅
+  │   └── ROADMAP_V10.md (986 lines, 20.2% reduction) - IN PROGRESS
   │
   ├── LLM Automation Prompts (preserved - DO NOT DELETE)
   │   ├── FIX.md, CHECKIN.md, REVIEW.md
@@ -180,11 +211,12 @@ cmd/, pkg/
 ```
 
 **Key Improvements:**
-- ✅ Eliminated 6 duplicate/outdated files
-- ✅ Consolidated duplicate AUDIT files (removed _CONSTS duplicate, _OLD backup)
+- ✅ Eliminated 8 duplicate/outdated files (6 previous + 2 new)
+- ✅ Consolidated duplicate AUDIT files (removed _CONSTS duplicate, _OLD backup, AUDIT_consts)
 - ✅ Removed completed phase reports (incorporated into roadmaps)
+- ✅ Removed obsolete V4 benchmark data (superseded by V10 documentation)
 - ✅ Preserved all 14 LLM automation prompts
-- ✅ Streamlined verbose documentation (17.2% average reduction)
+- ✅ Streamlined verbose documentation (16.5% average reduction)
 - ✅ Maintained all active documentation and technical accuracy
 
 ## Quality Verification
@@ -206,6 +238,8 @@ cmd/, pkg/
 - ✅ Verbose test result details (kept summary status, removed sub-bullets)
 - ✅ Repetitive code examples (kept representative samples)
 - ✅ Long checklists (kept first items + summary)
+- ✅ V4 performance benchmarks (superseded by V10 completion report)
+- ✅ Variant AUDIT files (AUDIT_consts.md consolidated into AUDIT.md)
 
 ### Technical Accuracy
 - ✅ No broken internal links (verified in major files)
@@ -214,16 +248,16 @@ cmd/, pkg/
 - ✅ All acceptance criteria preserved in roadmaps
 
 ## Execution Checklist
-- [x] Deletion criteria defined (duplicates, old backups, completed reports)
+- [x] Deletion criteria defined (duplicates, old backups, completed reports, obsolete benchmarks)
 - [x] LLM prompt preservation rules established (14 files identified)
-- [x] Age/type filters applied (timestamped files, case duplicates)
-- [x] Duplicates identified (2 AUDIT duplicates, 3 phase reports)
+- [x] Age/type filters applied (timestamped files, case duplicates, superseded docs)
+- [x] Duplicates identified (3 AUDIT duplicates, 3 phase reports, 1 obsolete benchmark)
 - [x] Consolidation completed (one AUDIT.md per directory policy)
-- [x] Direct deletions executed (6 files removed)
+- [x] Direct deletions executed (8 files removed total)
 - [x] Empty folders removed (none needed - pkg/procgen/audit/ still has code)
 - [x] Structure simplified (flat AUDIT structure maintained)
-- [x] De-bloating targets identified (5 large documentation files)
-- [x] De-bloating completed with quality checks (17.2% average reduction)
+- [x] De-bloating targets identified (6 large documentation files)
+- [x] De-bloating completed with quality checks (16.5% average reduction)
 - [x] Technical accuracy verified (all headers, status, APIs preserved)
 - [x] LLM prompts confirmed intact (all 14 files verified)
 
@@ -250,15 +284,16 @@ cmd/, pkg/
 
 - Consider consolidating multiple `PLAY-*.md` platform guides into single `PLATFORM_GUIDES.md` (verify LLM automation dependencies first)
 - Evaluate merging specialized system docs (MAGIC_SYSTEM.md, SHADOW_SYSTEM.md) into ARCHITECTURE.md sections
-- Monitor `pkg/*/AUDIT.md` files (49 total) for consistent format and regular updates
+- Monitor `pkg/*/AUDIT.md` files (52 total) for consistent format and regular updates
 
 ## Success Metrics
 
-✅ **Significant storage space recovered:** ~50 KB from deletions + ~35 KB from de-bloating = ~85 KB total  
-✅ **Duplicate files eliminated:** 2 duplicate AUDIT files consolidated  
+✅ **Significant storage space recovered:** ~37.5 MB from binaries/JSON + ~45 KB from doc deletions/de-bloating  
+✅ **Duplicate files eliminated:** 3 duplicate AUDIT files consolidated (AUDIT_CONSTS, AUDIT_OLD, AUDIT_consts)  
+✅ **Obsolete documentation removed:** V4 performance benchmarks superseded by V10 reports  
 ✅ **Clear, simplified repository structure:** One AUDIT.md per directory, no orphaned backups  
 ✅ **Only recent/active materials retained:** Current V8/V10 roadmaps, latest releases, active documentation  
 ✅ **LLM prompts and templates preserved:** All 14 automation files intact and verified  
-✅ **Remaining documentation streamlined:** 768 lines removed (17.2% reduction) from verbose files  
-✅ **Cleanup completed efficiently:** Focused approach targeting duplicates and verbosity  
+✅ **Remaining documentation streamlined:** 868 lines removed (16.5% average reduction) from verbose files  
+✅ **Cleanup completed efficiently:** Focused approach targeting duplicates, obsolete data, and verbosity  
 ✅ **Technical accuracy maintained:** All APIs, phase status, and critical info preserved

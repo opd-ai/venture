@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/world/territory"
 )
 
@@ -18,7 +19,7 @@ type TerritoryUI struct {
 	screenHeight      int
 	selectedTerritory *territory.Territory
 	scrollOffset      int
-	touchHandler      *TouchHandler
+	touchHandler      *mobile.TouchInputHandler
 }
 
 // NewTerritoryUI creates a new territory UI.
@@ -29,7 +30,7 @@ func NewTerritoryUI(territorySystem *TerritorySystem, screenWidth, screenHeight 
 		screenWidth:     screenWidth,
 		screenHeight:    screenHeight,
 		scrollOffset:    0,
-		touchHandler:    NewTouchHandler(),
+		touchHandler:    mobile.NewTouchInputHandler(),
 	}
 }
 
@@ -90,11 +91,14 @@ func (tui *TerritoryUI) Update() error {
 	}
 
 	// Touch input
+	if tui.touchHandler != nil {
+		tui.touchHandler.Update()
+	}
+
 	touches := ebiten.AppendTouchIDs(nil)
 	if len(touches) > 0 {
 		for _, touchID := range touches {
 			x, y := ebiten.TouchPosition(touchID)
-			tui.touchHandler.HandleTouch(touchID, float64(x), float64(y))
 
 			// Close button area (top right)
 			closeX := tui.screenWidth - 60
@@ -129,8 +133,8 @@ func (tui *TerritoryUI) Draw(screen *ebiten.Image) {
 		tui.drawTerritoryDetails(screen, &yOffset)
 	} else if tui.playerEntity != nil {
 		// Show player's current location territory
-		pos := tui.playerEntity.GetComponent("position")
-		if pos != nil {
+		pos, ok := tui.playerEntity.GetComponent("position")
+		if ok {
 			p := pos.(*PositionComponent)
 			terr, err := tui.territorySystem.GetTerritoryAtPosition(p.X, p.Y)
 			if err == nil && terr != nil {
@@ -181,7 +185,7 @@ func (tui *TerritoryUI) Draw(screen *ebiten.Image) {
 				if war.DefenderGuild == playerGuildID {
 					opponent = war.AttackerGuild
 				}
-				warText := fmt.Sprintf("War with %s (ends in %d days)", opponent, war.EndsAt.Sub(war.DeclaredAt).Hours()/24)
+				warText := fmt.Sprintf("War with %s (ends in %.0f days)", opponent, war.EndsAt.Sub(war.DeclaredAt).Hours()/24)
 				drawText(screen, warText, 70, yOffset, color.RGBA{255, 150, 150, 255})
 				yOffset += 25
 				activeWars++
@@ -276,8 +280,8 @@ func (tui *TerritoryUI) getPlayerGuildID() string {
 	if tui.playerEntity == nil {
 		return ""
 	}
-	guildComp := tui.playerEntity.GetComponent("guild")
-	if guildComp == nil {
+	guildComp, ok := tui.playerEntity.GetComponent("guild")
+	if !ok {
 		return ""
 	}
 	return guildComp.(*GuildComponent).GuildID
@@ -288,8 +292,8 @@ func (tui *TerritoryUI) refreshCurrentTerritory() {
 	if tui.playerEntity == nil {
 		return
 	}
-	pos := tui.playerEntity.GetComponent("position")
-	if pos == nil {
+	pos, ok := tui.playerEntity.GetComponent("position")
+	if !ok {
 		return
 	}
 	p := pos.(*PositionComponent)
@@ -345,8 +349,8 @@ func (tui *TerritoryUI) handleBuildStructure() {
 	}
 
 	// Get player position for structure placement
-	pos := tui.playerEntity.GetComponent("position")
-	if pos == nil {
+	pos, ok := tui.playerEntity.GetComponent("position")
+	if !ok {
 		return
 	}
 	p := pos.(*PositionComponent)

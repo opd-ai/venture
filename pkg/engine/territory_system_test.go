@@ -167,7 +167,7 @@ func TestTerritorySystem_Update_NoGuildEntities(t *testing.T) {
 	entities := []*Entity{
 		{
 			ID:         1,
-			components: make(map[string]Component),
+			Components: make(map[string]Component),
 		},
 	}
 	entities[0].AddComponent(&PositionComponent{X: 250, Y: 250})
@@ -219,7 +219,7 @@ func TestTerritorySystem_GetManager(t *testing.T) {
 func createEntityAtPosition(x, y float64, guildID string) *Entity {
 	entity := &Entity{
 		ID:         nextEntityID(),
-		components: make(map[string]Component),
+		Components: make(map[string]Component),
 	}
 	entity.AddComponent(&PositionComponent{X: x, Y: y})
 	entity.AddComponent(&GuildComponent{GuildID: guildID})

@@ -40,10 +40,10 @@ func (ts *TerritorySystem) Update(entities []*Entity, deltaTime float64) {
 	territoryPresence := make(map[string]map[string]int) // territoryID -> guildID -> count
 
 	for _, entity := range entities {
-		posComp := entity.GetComponent("position")
-		guildComp := entity.GetComponent("guild")
+		posComp, hasPos := entity.GetComponent("position")
+		guildComp, hasGuild := entity.GetComponent("guild")
 
-		if posComp == nil || guildComp == nil {
+		if !hasPos || !hasGuild {
 			continue
 		}
 
@@ -119,8 +119,15 @@ func (ts *TerritorySystem) getTerritoryIDFromPosition(x, y float64) string {
 	territoryChunks := 5
 	territorySize := chunkSize * float64(territoryChunks)
 
+	// Use floor division to handle negative coordinates correctly
 	territoryX := int(x / territorySize)
+	if x < 0 && x != float64(territoryX)*territorySize {
+		territoryX--
+	}
 	territoryY := int(y / territorySize)
+	if y < 0 && y != float64(territoryY)*territorySize {
+		territoryY--
+	}
 
 	return fmt.Sprintf("territory_%d_%d", territoryX, territoryY)
 }

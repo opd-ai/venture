@@ -31,7 +31,7 @@ func TestTerritoryUI_SetPlayerEntity(t *testing.T) {
 	sys := NewTerritorySystem(manager, nil)
 	ui := NewTerritoryUI(sys, 800, 600)
 
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 
 	ui.SetPlayerEntity(player)
 
@@ -62,7 +62,7 @@ func TestTerritoryUI_Toggle(t *testing.T) {
 	ui := NewTerritoryUI(sys, 800, 600)
 
 	// Create player entity with position
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	player.AddComponent(&PositionComponent{X: 250, Y: 250})
 	ui.SetPlayerEntity(player)
 
@@ -112,7 +112,7 @@ func TestTerritoryUI_GetPlayerGuildID(t *testing.T) {
 	}
 
 	// Player without guild component
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	ui.SetPlayerEntity(player)
 
 	guildID = ui.getPlayerGuildID()
@@ -144,7 +144,7 @@ func TestTerritoryUI_RefreshCurrentTerritory(t *testing.T) {
 	}
 
 	// Player at territory location
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	player.AddComponent(&PositionComponent{X: 250, Y: 250})
 	ui.SetPlayerEntity(player)
 
@@ -197,7 +197,7 @@ func TestTerritoryUI_HandleDeclareWar(t *testing.T) {
 	manager.AssignOwner(terr.ID, guildB)
 
 	// Player in guild A at guild B territory
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	player.AddComponent(&PositionComponent{X: 250, Y: 250})
 	player.AddComponent(&GuildComponent{GuildID: guildA})
 	ui.SetPlayerEntity(player)
@@ -253,7 +253,7 @@ func TestTerritoryUI_HandleBuildStructure(t *testing.T) {
 	manager.AssignOwner(terr.ID, guildA)
 
 	// Player in guild A at their territory
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	player.AddComponent(&PositionComponent{X: 250, Y: 250})
 	player.AddComponent(&GuildComponent{GuildID: guildA})
 	ui.SetPlayerEntity(player)
@@ -284,7 +284,7 @@ func TestTerritoryUI_HandleBuildStructure_NotOwned(t *testing.T) {
 	manager.AssignOwner(terr.ID, guildB)
 
 	// Player in guild A trying to build in guild B territory
-	player := &Entity{ID: 1, components: make(map[string]Component)}
+	player := &Entity{ID: 1, Components: make(map[string]Component)}
 	player.AddComponent(&PositionComponent{X: 250, Y: 250})
 	player.AddComponent(&GuildComponent{GuildID: guildA})
 	ui.SetPlayerEntity(player)

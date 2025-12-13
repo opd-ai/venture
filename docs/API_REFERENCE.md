@@ -225,22 +225,7 @@ Quest objectives/rewards, environmental effects/ambience.
 
 ```go
 // Create sprite generator
-gen := sprites.NewGenerator()
-
-// Basic sprite generation
-config := sprites.Config{
-    Type:       sprites.SpriteEntity,
-    Width:      32,
-    Height:     32,
-    Seed:       12345,
-    GenreID:    "fantasy",
-    Complexity: 0.8,
-}
-sprite, err := gen.Generate(config)
-
-// Generate directional sprites (for 8-way movement)
-directions, err := gen.GenerateDirectionalSprites(config)
-// Returns map[int]*ebiten.Image with sprites for 8 directions
+// ... (see source code for full example)
 ```
 
 **Performance:**
@@ -261,17 +246,7 @@ directions, err := gen.GenerateDirectionalSprites(config)
 
 ```go
 // Create tile generator
-gen := tiles.NewGenerator()
-
-// Generate tile with pattern
-config := tiles.Config{
-    Type:       tiles.TypeFloor,
-    Size:       32,
-    Seed:       12345,
-    GenreID:    "fantasy",
-    Complexity: 0.7,
-}
-tile, err := gen.Generate(config)
+// ... (see source code for full example)
 ```
 
 **Tile Types:** Floor, Wall, Door, Corridor, Water, Lava, Trap, Stairs
@@ -294,24 +269,7 @@ tile, err := gen.Generate(config)
 
 ```go
 // Lighting system in engine
-lightingSystem := engine.NewLightingSystem(world)
-
-// Add light source to an entity
-lightComp := &engine.LightComponent{
-    Color:     color.RGBA{255, 200, 150, 255}, // Warm torch color
-    Intensity: 1.0,
-    Radius:    150.0,
-    Flicker:   true, // Dynamic flickering
-}
-entity.AddComponent(lightComp)
-
-// Ambient occlusion (rendering/lighting package)
-config := lighting.DefaultAOConfig()
-config.Intensity = 0.8
-enhancedImage := lighting.ApplyAmbientOcclusion(img, depthMap, config)
-
-// Bloom effects
-bloomImage := lighting.ApplyBloom(img, bloomRadius, bloomIntensity)
+// ... (see source code for full example)
 ```
 
 **Performance:**
@@ -331,24 +289,7 @@ bloomImage := lighting.ApplyBloom(img, bloomRadius, bloomIntensity)
 
 ```go
 // Generate weather system
-config := particles.WeatherConfig{
-    Type:      particles.WeatherRain,
-    Intensity: particles.IntensityMedium,
-    GenreID:   "fantasy",
-    Width:     800,
-    Height:    600,
-    Seed:      12345,
-}
-weatherSystem, err := particles.GenerateWeather(config)
-
-// Update weather each frame
-weatherSystem.Update(deltaTime)
-
-// Get genre-specific weather types
-genreWeathers := particles.GetGenreWeather("scifi")
-// Returns: [WeatherNeonRain, WeatherSmog, WeatherRadiation]
-
-// Check environmental effects
+// ... (see source code for full example)
 ```
 
 **Weather Types:**
@@ -381,24 +322,7 @@ genreWeathers := particles.GetGenreWeather("scifi")
 
 ```go
 // V3.0: Dynamic UI colors based on genre
-uiColors := ui.GetGenreColorScheme(genreID)
-primaryColor := uiColors.Primary
-secondaryColor := uiColors.Secondary
-accentColor := uiColors.Accent
-
-// V3.0: Smooth menu transitions
-ui.TransitionToMenu(
-    fromMenu, toMenu,
-    transitionType, // ui.FadeIn, SlideLeft, SlideRight, etc.
-    duration,
-)
-
-// V3.0: Visual hierarchy
-ui.RenderWithHierarchy(
-    elements,
-    primaryLevel,    // Main focus elements
-    secondaryLevel,  // Supporting information
-    tertiaryLevel,   // Background/decorative
+// ... (see source code for full example)
 ```
 
 #### Post-Processing (V3.0 New)
@@ -413,24 +337,7 @@ ui.RenderWithHierarchy(
 
 ```go
 // V3.0: Parallax background
-parallax := postprocess.NewParallaxBackground(
-    genreID, seed,
-    layerCount, // Number of parallax layers (2-5)
-)
-parallax.Update(cameraX, cameraY)
-
-// V3.0: Time-of-day system
-timeOfDay := postprocess.NewTimeOfDaySystem(
-    startHour, // 0-23
-    dayLength, // Duration of full day cycle
-)
-timeOfDay.Update(deltaTime)
-ambientColor := timeOfDay.GetAmbientColor()
-lightIntensity := timeOfDay.GetLightIntensity()
-
-// V3.0: Screen-space effects
-postprocess.ApplyBloom(screen, bloomIntensity, bloomRadius)
-postprocess.ApplyVignette(screen, vignetteIntensity)
+// ... (see source code for full example)
 ```
 
 #### Quality Settings (V3.0 New)
@@ -445,24 +352,7 @@ postprocess.ApplyVignette(screen, vignetteIntensity)
 
 ```go
 // V3.0: Anti-aliasing quality
-quality.SetAntiAliasing(quality.High) // Off, Low, Medium, High
-// Off: No AA, fastest
-// Low: 2x2 super-sampling
-// Medium: 4x4 super-sampling
-// High: 8x8 super-sampling
-
-// V3.0: Lighting quality
-quality.SetLighting(quality.High)
-// Low: Hard shadows, basic lighting
-// Medium: Soft shadows, colored lights
-// High: Bloom effects, advanced ambient occlusion
-
-// V3.0: Particle density
-quality.SetParticleDensity(quality.Medium)
-// Low: Fewer particles, better performance
-// Medium: Balanced particle count
-// High: Maximum particle density
-
+// ... (see source code for full example)
 ```
 
 #### Color Palettes
@@ -642,24 +532,7 @@ Multiplayer communication and E2E encryption.
 
 ```go
 // Create chat component
-chat := engine.NewChatComponent()
-
-// Add message
-msg := engine.ChatMessage{
-    ID:         "msg-uuid",
-    SenderID:   playerEntity.ID,
-    SenderName: "Alice",
-    Channel:    engine.ChatGlobal,
-    Content:    "Hello world!",
-    Timestamp:  time.Now(),
-}
-chat.AddMessage(msg)
-
-// Check rate limiting
-canSend := chat.CanSendMessage(engine.ChatGlobal, time.Now())
-
-// Apply mute for rate limit violation
-chat.ApplyMute(time.Now(), 3) // 3 violations = 120s mute
+// ... (see source code for full example)
 ```
 
 **Key Methods:**
@@ -686,16 +559,7 @@ engine.ChatWhisper  // Direct message, 0.5s cooldown
 
 ```go
 // Generate key pair (2048-bit DH)
-keyPair := crypto.GenerateKeyPair()
-
-// Perform key exchange
-sharedSecret := crypto.ComputeSharedSecret(keyPair.Private, partnerPublicKey)
-
-// Encrypt message
-ciphertext, err := crypto.EncryptMessage(plaintext, sharedSecret)
-
-// Decrypt message
-plaintext, err := crypto.DecryptMessage(ciphertext, sharedSecret)
+// ... (see source code for full example)
 ```
 
 **Performance:**
@@ -742,18 +606,7 @@ Tracks conversation state for NPCs.
 
 ```go
 // Create NPC dialog component
-npcDialog := &engine.NPCDialogComponent{
-    NPCPersonality: &dialog.Personality{
-        Friendliness: 0.7,
-        Formality:    0.5,
-        Verbosity:    0.8,
-    },
-    GenreID:           "fantasy",
-    DeterministicMode: false,
-}
-
-// Component methods
-npcDialog.Type() // Returns "npcdialog"
+// ... (see source code for full example)
 ```
 
 **Key Fields:**
@@ -865,24 +718,7 @@ type TradeProposal struct {
 **Trust Mechanics:**
 ```go
 // Update trust after trade
-UpdateTrust(success bool) {
-    if success {
-        trustScore += 0.05 // Max 1.0
-    } else {
-        trustScore -= 0.1  // Min 0.0
-    }
-}
-
-// Check trust requirements
-CanTradeItem(rarity string) bool {
-    if trustScore > 0.8 {
-        return true // Can trade any rarity
-    }
-    if trustScore < 0.3 {
-        return rarity == "Common" || rarity == "Uncommon"
-    }
-    return rarity != "Legendary"
-}
+// ... (see source code for full example)
 ```
 
 **Proximity Validation:**
@@ -900,24 +736,7 @@ Renders chat interface with message history and input field.
 
 ```go
 // Create chat UI
-chatUI := ui.NewChatUI(x, y, width, height)
-
-// Set colors
-chatUI.SetColors(bg, text, inputBG, border)
-
-// Add message
-msg := ui.ChatMessage{
-    SenderName: "Bob",
-    Content:    "Hello!",
-    Channel:    0, // Global
-    Timestamp:  time.Now(),
-    IsSystem:   false,
-}
-chatUI.AddMessage(msg)
-
-// Update and draw
-chatUI.Update() // Handle input
-chatUI.Draw(screen) // Render
+// ... (see source code for full example)
 ```
 
 **Features:**
@@ -934,24 +753,7 @@ Renders trade proposal and acceptance interface.
 
 ```go
 // Create trade UI
-tradeUI := ui.NewTradeUI(x, y, width, height)
-
-// Set proposal
-proposal := &ui.TradeProposal{
-    ProposerName:   "Alice",
-    RecipientName:  "Bob",
-    OfferedItems:   []ui.TradeItem{...},
-    RequestedItems: []ui.TradeItem{...},
-    Status:         "pending",
-    ProposalTime:   time.Now(),
-}
-tradeUI.SetProposal(proposal)
-
-// Update and draw
-tradeUI.Update()
-tradeUI.Draw(screen)
-
-// Check for button clicks
+// ... (see source code for full example)
 ```
 
 **Features:**
@@ -978,22 +780,7 @@ Player housing with procedural buildings and cross-server persistence.
 
 ```go
 manager := housing.NewManager()
-
-// Place plot
-plot := &housing.Plot{
-    OwnerID:  "player123",
-    Location: housing.Coords{X: 100, Y: 200},
-    Size:     housing.SizeMedium, // 16×16
-}
-manager.PlacePlot(plot)
-
-// Query
-nearby := manager.GetPlotsInRadius(housing.Coords{X: 100, Y: 200}, 50.0)
-ownerPlots := manager.GetPlotsByOwner("player123")
-
-// Save/load
-manager.Save("world_housing.json.gz")
-manager.Load("world_housing.json.gz")
+// ... (see source code for full example)
 ```
 
 **Plot Sizes:** Small (8×8), Medium (16×16), Large (24×24), Estate (32×32)
@@ -1037,19 +824,7 @@ Trust, reputation, chat history, images.
 
 ```go
 // Trust
-trustMgr := persistence.NewTrustManager()
-trustMgr.UpdateTrust("player1", "player2", 0.1)
-trust := trustMgr.GetTrust("player1", "player2")
-tier := trust.GetTier() // Stranger, Acquaintance, Friend, Trusted
-
-// Chat
-history := persistence.NewChatHistory("player1", 1000)
-history.AddMessage(&persistence.Message{Sender: "player1", Content: "Hi"})
-delta := history.GetDelta(lastVersion) // Delta sync
-
-// Images
-gallery := persistence.NewImageGallery("player1", 100, 50*1024*1024)
-gallery.AddImage(&persistence.StoredImage{Data: imageBytes, Tags: []string{"combat"}})
+// ... (see source code for full example)
 ```
 
 ---
@@ -1062,18 +837,7 @@ Vehicle physics, fluid dynamics, destruction.
 
 ```go
 // Vehicle suspension
-suspension := &vehicle.SuspensionComponent{
-    Wheels: []vehicle.Wheel{{Stiffness: 100, Damping: 20}},
-}
-
-// Fluid simulation
-sim := fluids.NewSimulator(&fluids.SimulatorConfig{Width: 100, Height: 100})
-sim.AddFluid(50, 50, fluids.FluidWater, 10.0)
-sim.Update(1.0/30.0) // 30 Hz
-
-// Building destruction
-system := destruction.NewSystem(30.0)
-system.ApplyDamage("building123", position, 500.0, 5.0)
+// ... (see source code for full example)
 ```
 
 ---

@@ -59,13 +59,6 @@ Yes! Start the game without `-multiplayer` flag for local single-player mode. Al
 
 **Web:**
 Visit [https://opd-ai.github.io/venture](https://opd-ai.github.io/venture) - no installation required!
-
-**Mobile:**
-- **Android:** Download `.apk` from Releases, enable "Install Unknown Apps", install
-- **iOS:** Requires TestFlight or building from source (App Store submission in progress)
-
-See [Getting Started](GETTING_STARTED.md) for detailed instructions.
-
 ### What are the system requirements?
 
 **Minimum:**
@@ -74,15 +67,6 @@ See [Getting Started](GETTING_STARTED.md) for detailed instructions.
 - **GPU:** OpenGL 2.1 or WebGL 2.0 compatible
 - **Storage:** 50 MB
 - **OS:** Windows 10, macOS 10.13, Ubuntu 18.04, or equivalent
-
-**Recommended:**
-- **CPU:** Quad-core 3.0 GHz
-- **RAM:** 4 GB
-- **GPU:** Dedicated graphics with OpenGL 3.3+
-- **Storage:** 200 MB (for saves and caching)
-- **OS:** Latest stable release
-
-**Note:** Mobile requirements vary by device. Most devices from 2020+ should run smoothly.
 
 ### How do I update to the latest version?
 
@@ -93,7 +77,6 @@ See [Getting Started](GETTING_STARTED.md) for detailed instructions.
 4. Run the new client
 
 **Automatic (planned for v10.1):** In-game update checker will notify you and auto-download.
-
 ### Where are save files stored?
 
 - **Windows:** `%APPDATA%\Venture\saves\`
@@ -103,7 +86,6 @@ See [Getting Started](GETTING_STARTED.md) for detailed instructions.
 - **Mobile:** App-specific storage (auto-backed up to iCloud/Google Drive if enabled)
 
 ---
-
 ## Gameplay
 
 ### How do I start a new game?
@@ -159,7 +141,6 @@ A **world seed** is a number (e.g., `12345`) that determines the layout of the e
 - **Progression:** Certain areas require minimum level (e.g., Nightmare Dungeon needs Level 30)
 
 ---
-
 ## Multiplayer & Federation
 
 ### How do I play with friends?
@@ -171,15 +152,6 @@ A **world seed** is a number (e.g., `12345`) that determines the layout of the e
 
 **Option 2: Host Your Own Server**
 1. Launch server: `./venture-server -port 8080 -max-players 10`
-2. Share your IP address with friends (find via `ifconfig` or `ipconfig`)
-3. Friends connect using Option 1
-
-**Option 3: LAN Party Mode**
-1. Launch client with `-host-and-play` (auto-starts server + connects client)
-2. Friends on same network connect to your IP
-
-See [Multiplayer Guide](MULTIPLAYER_GUIDE.md) for detailed setup.
-
 ### What is server federation?
 
 **Federation** allows multiple servers to connect, creating a **multiverse** of interconnected worlds. Players can travel between servers via portals, trade items cross-server, and join guilds spanning multiple servers.
@@ -212,13 +184,6 @@ Venture supports **200-5000ms latency** (including Tor onion services). Key tech
 4. Destination server receives and validates state
 5. Transfer completes (success) or rolls back (failure, character stays on origin)
 
-**Limitations:**
-- Destination server must be **trusted** (reputation score >0.5)
-- Transfer timeout: 60 seconds (network issues cause rollback)
-- Inventory limit: <100KB (drop excess items before transfer)
-
----
-
 ## Performance & Technical
 
 ### Why is my FPS low?
@@ -229,10 +194,6 @@ Venture supports **200-5000ms latency** (including Tor onion services). Key tech
 3. **Post-Processing:** Disable bloom, AO, motion blur (Settings → Graphics → Advanced)
 4. **Background Apps:** Close memory-intensive programs
 5. **Outdated Drivers:** Update GPU drivers
-
-**Performance Mode:** Settings → Graphics → Quality: Low (disables most effects, 2x FPS boost)
-
-See [Performance Guide](PERFORMANCE.md) for profiling and optimization.
 
 ### How much memory does Venture use?
 
@@ -251,8 +212,6 @@ See [Performance Guide](PERFORMANCE.md) for profiling and optimization.
 
 **Constraint:** Mods **cannot** add external assets (maintains zero-asset architecture).
 
-See [Modding Guide](MODDING_GUIDE.md) for creating mods.
-
 ### Is Venture deterministic?
 
 **Mostly yes:**
@@ -262,7 +221,6 @@ See [Modding Guide](MODDING_GUIDE.md) for creating mods.
 This enables **reproducible worlds** for testing and sharing while allowing dynamic content variety.
 
 ---
-
 ## Content & Features
 
 ### How many dungeons are there?
@@ -283,9 +241,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Ranger:** Archery, pet bonding, traps, survival
 - **Cleric:** Healing, buffs, undead resistance, holy magic
 
-**Specializations:** Each class has 2 specializations (unlocked at level 10)  
-**Dual-Classing:** Unlock a second class at level 20 (12 possible combinations)
-
 ### What are companions/pets?
 
 **Companions** are AI-controlled allies that follow you. Types:
@@ -295,10 +250,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 
 **Features:**
 - Level up with you (gain stats, learn skills)
-- Customizable behavior (aggressive, defensive, passive)
-- Inventory (carry loot, fetch items)
-- Permadeath mode (hardcore option)
-
 ### What vehicles are available?
 
 **5 Vehicle Types:**
@@ -307,8 +258,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Boats:** Water travel, fishing
 - **Gliders:** Aerial navigation, limited fuel
 - **Mechs:** Combat vehicles, heavy armor
-
-**Mechanics:** Fuel consumption, durability, upgrades (speed, armor, capacity), genre-specific (fantasy vs. sci-fi designs)
 
 ### Can I build a house?
 
@@ -328,8 +277,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Exploration:** Discover hidden locations
 - **Moral Choices:** Branching dialog with alignment consequences
 
-**Quest Chains:** Some quests unlock follow-up quests (up to 10 stages)
-
 ### What is the endgame content?
 
 - **Prestige Levels:** Reset to level 1, gain prestige bonuses, replay with harder enemies
@@ -339,7 +286,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Cross-Server Events:** Server vs. server competitions
 
 ---
-
 ## Modding & Customization
 
 ### How do I install mods?
@@ -360,7 +306,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 Mods are **configuration files (JSON/YAML)** + **scripting (Lua-based, sandboxed)**.
 
 Example: Increase enemy HP by 2x, reduce XP by 1.5x for hardcore mode.
-
 ### Where can I share my mods?
 
 - **Community Hub:** [GitHub Discussions](https://github.com/opd-ai/venture/discussions)
@@ -370,7 +315,6 @@ Example: Increase enemy HP by 2x, reduce XP by 1.5x for hardcore mode.
 See [Modding Guide](MODDING_GUIDE.md) for mod creation tutorials.
 
 ---
-
 ## Troubleshooting
 
 ### Game won't start / crashes on launch
@@ -459,8 +403,6 @@ See [Modding Guide](MODDING_GUIDE.md) for mod creation tutorials.
 
 **Automatic Backup:**
 - Enable cloud sync: Settings → Saves → Cloud Backup: Enable
-- Auto-backup creates `saves/backups/autosave_YYYYMMDD_HHMMSS.save` every 10 minutes
-
 ### Can I play with keyboard only (no mouse)?
 
 Yes! Enable keyboard-only mode: Settings → Controls → Keyboard-Only Mode: Enable
@@ -470,8 +412,6 @@ All actions become keyboard-accessible:
 - Enter: Confirm/Select
 - Tab: Cycle UI elements
 - Number keys: Inventory slots
-- Escape: Cancel/Back
-
 ### What happens when I die?
 
 **Normal Mode:**
@@ -481,12 +421,6 @@ All actions become keyboard-accessible:
 
 **Hardcore Mode:**
 - Permadeath (character deleted)
-- Can retrieve items from corpse with new character
-
-**Multiplayer:**
-- Team Revival: Party members can revive you within 60 seconds
-- No XP loss in multiplayer (server configurable)
-
 ### How do quests scale with my level?
 
 Quests dynamically scale to your level ±5:
@@ -520,7 +454,6 @@ Yes! Visit any town's Name Registry NPC:
 4. **Master Looter:** Party leader distributes loot
 
 **Trading:** Can trade items to party members (see Item Trading section).
-
 ### Can I change my character class?
 
 **Dual-Classing:** Unlock second class at Level 20 (see "How many character classes are there?" above)
@@ -530,7 +463,6 @@ Yes! Visit any town's Name Registry NPC:
 - Cost: 5000 gold + 1 Skill Reset Token
 - Keeps current level and equipment
 - Reallocate all skill points
-
 ### How does the honor/dishonor system work?
 
 **Alignment System** (Good ↔ Evil):
@@ -540,7 +472,6 @@ Yes! Visit any town's Name Registry NPC:
 - Reputation with factions also affected
 
 **Redemption:** Evil characters can redeem via multi-part quests.
-
 ### Where can I find the rarest items?
 
 **Legendary Drop Sources:**
@@ -550,6 +481,3 @@ Yes! Visit any town's Name Registry NPC:
 4. **Crafting:** Combine 5 epic items → 1 legendary (random)
 5. **World Events:** Server-wide events, limited-time legendaries
 
----
-
-**Still have questions?** Join our [Discord](https://discord.gg/venture) or check the [User Manual](USER_MANUAL.md) for detailed information.

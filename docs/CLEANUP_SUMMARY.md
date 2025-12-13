@@ -3,7 +3,7 @@ Date: 2025-12-13 (Updated)
 
 ## Results
 - **Files deleted:** 12 (6 previous + 6 new)
-- **Storage recovered:** ~37.6 MB (previous ~50 KB + new ~37.5 MB)
+- **Storage recovered:** ~37.5 MB (previous ~50 KB + new ~37.5 MB)
 - **Files consolidated:** 2 duplicate AUDIT files → 1 per directory
 - **Files remaining:** 146 markdown files
 - **LLM prompts preserved:** 14 files

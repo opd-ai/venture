@@ -333,18 +333,10 @@ var (
 	fullscreen       = flag.Bool("fullscreen", false, "Start in fullscreen mode")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
 	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
-	enableLighting   = flag.Bool("enable-lighting", true, "Enable dynamic lighting system")
-	enableWeather    = flag.Bool("enable-weather", true, "Enable procedural weather effects")
 	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
 	weatherIntensity = flag.String("weather-intensity", "medium", "Weather intensity (light, medium, heavy, extreme)")
 
-	// Phase 5.2 (PLAN.md): Tile Rendering
-	enableTileTransitions = flag.Bool("enable-tile-transitions", true, "Enable smooth tile transitions with auto-tiling (Marching Squares)")
-	enableTileParallax    = flag.Bool("enable-tile-parallax", false, "Enable parallax depth effects for tiles (performance impact)")
-	enableEnhancedWalls   = flag.Bool("enable-enhanced-walls", true, "Enable anti-aliased walls with corner blending")
-
-	// Phase 5.3 (PLAN.md): Post-Processing
-	enablePostProcessing       = flag.Bool("enable-postprocessing", false, "Enable post-processing effects (color grading, vignette, chromatic aberration)")
+	// Post-processing configuration (always enabled as of Phase 2.1)
 	postprocessPreset          = flag.String("postprocess-preset", "", "Post-processing preset (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic, neutral, cinematic)")
 	postprocessColorGrading    = flag.Bool("postprocess-color-grading", false, "Enable color grading effect")
 	postprocessVignette        = flag.Bool("postprocess-vignette", false, "Enable vignette effect")
@@ -371,7 +363,6 @@ var (
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 	noTutorial    = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
-	enableHousing = flag.Bool("enable-housing", true, "Enable player housing system (V8.0)")
 )
 
 // initializeLogger creates and configures the logger based on environment variables and flags.

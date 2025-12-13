@@ -169,23 +169,38 @@ All 3 sub-phases complete. Audio, destruction physics, and companion learning sy
 
 ---
 
-#### 2.1: Remove Rendering Feature Flags (Day 6)
+#### 2.1: Remove Rendering Feature Flags (Day 6) ✅ COMPLETE
+
+**Status**: COMPLETE - December 13, 2025
 
 **File**: `cmd/client/util.go`
 
-**Changes**: **DELETE** the following flag declarations (lines 336-347):
-```go
-// DELETE THESE LINES:
-enableLighting        = flag.Bool("enable-lighting", true, ...)
-enableWeather         = flag.Bool("enable-weather", true, ...)
-enableTileTransitions = flag.Bool("enable-tile-transitions", true, ...)
-enableTileParallax    = flag.Bool("enable-tile-parallax", false, ...)
-enableEnhancedWalls   = flag.Bool("enable-enhanced-walls", true, ...)
-enablePostProcessing  = flag.Bool("enable-postprocessing", false, ...)
-enableHousing         = flag.Bool("enable-housing", true, ...)
-```
+**Changes Completed**:
 
-**Note**: Keep `hostAndPlay` flag - it's a valid operational mode, not a feature toggle.
+**DELETED** the following flag declarations (flags removed completely):
+- `enableLighting` - Dynamic lighting now unconditionally enabled
+- `enableWeather` - Weather effects now unconditionally enabled  
+- `enableTileTransitions` - Tile transitions now unconditionally enabled
+- `enableTileParallax` - Remains disabled (performance impact)
+- `enableEnhancedWalls` - Enhanced walls now unconditionally enabled
+- `enablePostProcessing` - Post-processing now unconditionally enabled
+- `enableHousing` - Housing system now unconditionally enabled
+
+**Note**: Kept `hostAndPlay` flag - it's a valid operational mode, not a feature toggle.
+
+**Test Results**:
+- ✅ `go build ./cmd/client && go build ./cmd/server` - Both build successfully
+- ✅ `go test -race ./cmd/client/...` - All tests pass, no race conditions
+- ✅ Verified NO `enable-` flags remain in cmd/client/ (except operational modes)
+- ✅ All rendering features now unconditionally active
+
+**Code Changes**:
+1. Removed 7 feature flag declarations from `cmd/client/util.go`
+2. Updated `initializeTerrainRendering` to unconditionally enable transitions and enhanced walls
+3. Updated `configureLightingSystem` to always enable lighting (removed early return)
+4. Updated `configurePostProcessing` to unconditionally enable post-processing
+5. Updated `spawnEnvironmentalEffects` to always spawn lights and weather
+6. Updated player spawn to always add torch component
 
 ---
 

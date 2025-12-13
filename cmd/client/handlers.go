@@ -974,19 +974,19 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 func initializeTerrainRendering(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
 		clientLogger.WithFields(logrus.Fields{
-			"transitions":    *enableTileTransitions,
-			"parallax":       *enableTileParallax,
-			"enhanced_walls": *enableEnhancedWalls,
+			"transitions":    true,
+			"parallax":       false,
+			"enhanced_walls": true,
 		}).Info("initializing terrain rendering system")
 	}
 
 	terrainRenderSystem := engine.NewTerrainRenderSystem(tileSize, tileSize, *genreID, *seed)
 	terrainRenderSystem.SetTerrain(generatedTerrain)
 
-	// Configure advanced tile rendering features
-	terrainRenderSystem.SetTransitionsEnabled(*enableTileTransitions)
-	terrainRenderSystem.SetParallaxEnabled(*enableTileParallax)
-	terrainRenderSystem.SetEnhancedWallsEnabled(*enableEnhancedWalls)
+	// Configure advanced tile rendering features (unconditionally enabled as of Phase 2.1)
+	terrainRenderSystem.SetTransitionsEnabled(true)
+	terrainRenderSystem.SetParallaxEnabled(false) // Disabled due to performance impact
+	terrainRenderSystem.SetEnhancedWallsEnabled(true)
 
 	game.TerrainRenderSystem = terrainRenderSystem
 
@@ -995,12 +995,8 @@ func initializeTerrainRendering(game *engine.EbitenGame, generatedTerrain *terra
 	}
 }
 
-// configureLightingSystem enables and configures dynamic lighting.
+// configureLightingSystem enables and configures dynamic lighting (unconditionally enabled as of Phase 2.1).
 func configureLightingSystem(game *engine.EbitenGame, clientLogger *logrus.Entry) {
-	if !*enableLighting {
-		return
-	}
-
 	clientLogger.Info("enabling dynamic lighting system")
 	game.EnableLighting(true)
 	game.SetLightingGenrePreset(*genreID)
@@ -1012,20 +1008,15 @@ func configureLightingSystem(game *engine.EbitenGame, clientLogger *logrus.Entry
 	}).Info("lighting system configured")
 }
 
-// configurePostProcessing initializes and configures the post-processing system (Phase 5.3).
+// configurePostProcessing initializes and configures the post-processing system (unconditionally enabled as of Phase 2.1).
 func configurePostProcessing(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 	if game.PostProcessor == nil {
 		clientLogger.Warn("PostProcessor not initialized")
 		return
 	}
 
-	// Enable/disable based on flag
-	game.PostProcessor.SetEnabled(*enablePostProcessing)
-
-	if !*enablePostProcessing {
-		clientLogger.Info("post-processing disabled")
-		return
-	}
+	// Enable post-processing unconditionally (Phase 2.1)
+	game.PostProcessor.SetEnabled(true)
 
 	// Apply preset if specified
 	if *postprocessPreset != "" {
@@ -1363,31 +1354,27 @@ func spawnStoryFragmentsWithLogging(w *engine.World, generatedTerrain *terrain.T
 	}
 }
 
-// spawnEnvironmentalEffects spawns lights and weather effects.
+// spawnEnvironmentalEffects spawns lights and weather effects (unconditionally enabled as of Phase 2.1).
 func spawnEnvironmentalEffects(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
-	if *enableLighting {
-		if *verbose {
-			clientLogger.Info("spawning environmental lights in dungeon")
-		}
-		lightCount := spawnEnvironmentalLights(game.World, generatedTerrain, *seed+seedOffsetLight, *genreID)
-		clientLogger.WithFields(logrus.Fields{
-			"lightCount": lightCount,
-			"genre":      *genreID,
-		}).Info("spawned environmental lights")
+	if *verbose {
+		clientLogger.Info("spawning environmental lights in dungeon")
 	}
+	lightCount := spawnEnvironmentalLights(game.World, generatedTerrain, *seed+seedOffsetLight, *genreID)
+	clientLogger.WithFields(logrus.Fields{
+		"lightCount": lightCount,
+		"genre":      *genreID,
+	}).Info("spawned environmental lights")
 
-	if *enableWeather {
-		if *verbose {
-			clientLogger.Info("spawning weather effects")
-		}
-		weatherEntity := spawnWeather(game.World, *width, *height, *seed+seedOffsetWeather, *genreID, *weatherType, *weatherIntensity)
-		if weatherEntity != nil {
-			clientLogger.WithFields(logrus.Fields{
-				"type":      *weatherType,
-				"intensity": *weatherIntensity,
-				"genre":     *genreID,
-			}).Info("weather effects spawned")
-		}
+	if *verbose {
+		clientLogger.Info("spawning weather effects")
+	}
+	weatherEntity := spawnWeather(game.World, *width, *height, *seed+seedOffsetWeather, *genreID, *weatherType, *weatherIntensity)
+	if weatherEntity != nil {
+		clientLogger.WithFields(logrus.Fields{
+			"type":      *weatherType,
+			"intensity": *weatherIntensity,
+			"genre":     *genreID,
+		}).Info("weather effects spawned")
 	}
 }
 
@@ -1478,18 +1465,16 @@ func createPlayerEntity(game *engine.EbitenGame, playerX, playerY float64, anima
 	playerShadow.ShadowType = engine.ShadowTypeSoft
 	player.AddComponent(playerShadow)
 
-	// Add player torch if lighting enabled
-	if *enableLighting {
-		playerTorch := engine.NewTorchLight(200)
-		playerTorch.Enabled = true
-		player.AddComponent(playerTorch)
+	// Add player torch (unconditionally enabled as of Phase 2.1)
+	playerTorch := engine.NewTorchLight(200)
+	playerTorch.Enabled = true
+	player.AddComponent(playerTorch)
 
-		if *verbose {
-			clientLogger.WithFields(logrus.Fields{
-				"radius":    200,
-				"intensity": playerTorch.Intensity,
-			}).Info("player torch added")
-		}
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"radius":    200,
+			"intensity": playerTorch.Intensity,
+		}).Info("player torch added")
 	}
 
 	// Configure camera and animation systems

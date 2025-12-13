@@ -480,7 +480,11 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	clientIdentity, err := federation.NewServerIdentity(serverID)
 	if err != nil {
 		clientLogger.WithError(err).Warn("Failed to create client identity")
-		clientIdentity, _ = federation.NewServerIdentity("fallback-client")
+		var fallbackErr error
+		clientIdentity, fallbackErr = federation.NewServerIdentity("fallback-client")
+		if fallbackErr != nil {
+			clientLogger.WithError(fallbackErr).Error("Failed to create fallback client identity")
+		}
 	}
 	sys.federationProtocol = federation.NewFederationProtocol(serverID, clientIdentity)
 

@@ -971,6 +971,10 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
 	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
 
+	// Phase 4.1-4.2 (PLAN.md): Network Chat and Trade Systems
+	game.World.AddSystem(&networkChatSystemWrapper{system: sys.networkChatSystem})
+	game.World.AddSystem(&networkTradeSystemWrapper{system: sys.networkTradeSystem})
+
 	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
 	if sys.guildSystem != nil {
 		game.World.AddSystem(sys.guildSystem)
@@ -2462,6 +2466,24 @@ type territorySystemWrapper struct {
 
 func (w *territorySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(entities, deltaTime)
+}
+
+// networkChatSystemWrapper adapts chat.ChatSystem to World.System interface
+type networkChatSystemWrapper struct {
+	system *chat.ChatSystem
+}
+
+func (w *networkChatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// networkTradeSystemWrapper adapts trade.TradeSystem to World.System interface
+type networkTradeSystemWrapper struct {
+	system *trade.TradeSystem
+}
+
+func (w *networkTradeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
 }
 
 // runGameLoop starts the main game loop.

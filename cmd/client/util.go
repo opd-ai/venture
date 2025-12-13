@@ -431,14 +431,18 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 	return networkClient
 }
 
-// return a random seed
+// return a random seed based on time (for default seed only, not for procedural generation)
+// Note: This is only used for default flag values when user doesn't specify --seed
+// Once a seed is chosen, all generation uses that deterministic seed.
 func seededRandom() int64 {
 	nowNano := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(nowNano))
 	return rng.Int63()
 }
 
-// return a random genre
+// return a random genre based on time (for default genre only)
+// Note: This is only used for default flag values when user doesn't specify --genre
+// Once a genre is chosen, all generation uses that deterministic value.
 func randomGenre() string {
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	nowNano := time.Now().UnixNano()

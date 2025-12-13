@@ -65,35 +65,54 @@ func (ui *AdvancedClassUI) Update() error {
 		return nil
 	}
 
-	// Tab switching with number keys
+	ui.handleTabSwitching()
+	ui.handleCategoryAndScrolling()
+	ui.handleRespecConfirmation()
+
+	return nil
+}
+
+func (ui *AdvancedClassUI) handleTabSwitching() {
 	if ebiten.IsKeyPressed(ebiten.Key1) {
-		ui.selectedTab = 0 // Talents
+		ui.selectedTab = 0
 	} else if ebiten.IsKeyPressed(ebiten.Key2) {
-		ui.selectedTab = 1 // Classes
+		ui.selectedTab = 1
 	} else if ebiten.IsKeyPressed(ebiten.Key3) {
-		ui.selectedTab = 2 // Prestige
+		ui.selectedTab = 2
 	}
+}
 
-	// Category switching for talents tab
+func (ui *AdvancedClassUI) handleCategoryAndScrolling() {
 	if ui.selectedTab == 0 {
-		if ebiten.IsKeyPressed(ebiten.KeyQ) {
-			ui.selectedCategory = advanced.CategoryOffensive
-		} else if ebiten.IsKeyPressed(ebiten.KeyW) {
-			ui.selectedCategory = advanced.CategoryDefensive
-		} else if ebiten.IsKeyPressed(ebiten.KeyE) {
-			ui.selectedCategory = advanced.CategoryUtility
-		}
+		ui.handleCategorySwitching()
 	}
+	ui.handleScrollInput()
+}
 
-	// Scroll with arrow keys
+func (ui *AdvancedClassUI) handleCategorySwitching() {
+	if ebiten.IsKeyPressed(ebiten.KeyQ) {
+		ui.selectedCategory = advanced.CategoryOffensive
+	} else if ebiten.IsKeyPressed(ebiten.KeyW) {
+		ui.selectedCategory = advanced.CategoryDefensive
+	} else if ebiten.IsKeyPressed(ebiten.KeyE) {
+		ui.selectedCategory = advanced.CategoryUtility
+	}
+}
+
+func (ui *AdvancedClassUI) handleScrollInput() {
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		ui.scrollOffset = max(0, ui.scrollOffset-1)
 	} else if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		ui.scrollOffset++
 	}
+}
 
-	// Respec confirmation
-	if ui.selectedTab == 0 && ebiten.IsKeyPressed(ebiten.KeyR) {
+func (ui *AdvancedClassUI) handleRespecConfirmation() {
+	if ui.selectedTab != 0 {
+		return
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyR) {
 		if ui.confirmRespec {
 			ui.handleRespec()
 			ui.confirmRespec = false
@@ -101,8 +120,6 @@ func (ui *AdvancedClassUI) Update() error {
 			ui.confirmRespec = true
 		}
 	}
-
-	return nil
 }
 
 // Draw renders the advanced class UI

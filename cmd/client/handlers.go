@@ -1866,6 +1866,12 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 // connectUIComponentsToInputSystem connects all UI components to input system for ESC key handling.
 // BUG FIX: Phase 3 - Menu Trap - Enables dual-exit pattern (toggle key + ESC key close) for ALL UI panels.
 func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI, player *engine.Entity, clientLogger *logrus.Entry) {
+	connectBasicUIComponents(game, inputSystem, shopUI)
+	connectAdvancedUIComponents(game, inputSystem)
+	connectDialogUI(game, inputSystem, player, clientLogger)
+}
+
+func connectBasicUIComponents(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI) {
 	if game.MailboxUI != nil {
 		inputSystem.SetMailboxUI(game.MailboxUI)
 	}
@@ -1890,72 +1896,79 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 	if shopUI != nil {
 		inputSystem.SetShopUI(shopUI)
 	}
-	// Phase 3.3 (PLAN.md): Connect Trade UI to input system
 	if game.TradeUI != nil {
 		inputSystem.SetTradeUI(game.TradeUI)
 	}
-	// Phase 4.2 (PLAN.md): Connect Advanced Class UI to input system
+}
+
+func connectAdvancedUIComponents(game *engine.EbitenGame, inputSystem *engine.InputSystem) {
 	if game.AdvancedClassUI != nil {
 		inputSystem.SetAdvancedClassUI(game.AdvancedClassUI)
 		inputSystem.SetClassesCallback(func() {
 			game.AdvancedClassUI.Toggle()
 		})
 	}
-	// Phase 4.3 (PLAN.md): Connect Territory UI to input system
 	if game.TerritoryUI != nil {
 		inputSystem.SetTerritoryUI(game.TerritoryUI)
 		inputSystem.SetTerritoryCallback(func() {
 			game.TerritoryUI.Toggle()
 		})
 	}
+}
 
-	// Phase 6.2 (PLAN.md): Connect Dialog UI to input system
-	if game.DialogUI != nil {
-		inputSystem.SetDialogUI(game.DialogUI)
-		inputSystem.SetDialogCallback(func() {
-			// Find nearest NPC and show dialog
-			if player == nil {
-				return
-			}
-			// Get player position
-			posComp, ok := player.GetComponent("position")
-			if !ok {
-				return
-			}
-			pos := posComp.(*engine.PositionComponent)
-
-			// Find nearest NPC within interaction range (5 tiles)
-			var nearestNPC *engine.Entity
-			minDist := 5.0 * 32.0 // 5 tiles * 32 pixels per tile
-			for _, entity := range game.World.GetEntities() {
-				if entity.ID == player.ID {
-					continue
-				}
-				// Check if entity has dialog component
-				if _, hasDialog := entity.GetComponent("dialog"); !hasDialog {
-					continue
-				}
-				// Get entity position
-				if ePos, ok := entity.GetComponent("position"); ok {
-					entityPos := ePos.(*engine.PositionComponent)
-					dx := entityPos.X - pos.X
-					dy := entityPos.Y - pos.Y
-					dist := dx*dx + dy*dy
-					if dist < minDist*minDist {
-						minDist = dist
-						nearestNPC = entity
-					}
-				}
-			}
-
-			// Show dialog with nearest NPC if found
-			if nearestNPC != nil {
-				if err := game.DialogUI.Show(nearestNPC.ID); err != nil {
-					clientLogger.WithError(err).Warn("failed to open dialog UI")
-				}
-			}
-		})
+func connectDialogUI(game *engine.EbitenGame, inputSystem *engine.InputSystem, player *engine.Entity, clientLogger *logrus.Entry) {
+	if game.DialogUI == nil {
+		return
 	}
+
+	inputSystem.SetDialogUI(game.DialogUI)
+	inputSystem.SetDialogCallback(func() {
+		nearestNPC := findNearestNPC(game, player)
+		if nearestNPC != nil {
+			if err := game.DialogUI.Show(nearestNPC.ID); err != nil {
+				clientLogger.WithError(err).Warn("failed to open dialog UI")
+			}
+		}
+	})
+}
+
+func findNearestNPC(game *engine.EbitenGame, player *engine.Entity) *engine.Entity {
+	if player == nil {
+		return nil
+	}
+
+	posComp, ok := player.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	pos := posComp.(*engine.PositionComponent)
+
+	var nearestNPC *engine.Entity
+	minDist := 5.0 * 32.0
+	minDistSquared := minDist * minDist
+
+	for _, entity := range game.World.GetEntities() {
+		if entity.ID == player.ID {
+			continue
+		}
+		if _, hasDialog := entity.GetComponent("dialog"); !hasDialog {
+			continue
+		}
+
+		if ePos, ok := entity.GetComponent("position"); ok {
+			entityPos := ePos.(*engine.PositionComponent)
+			dx := entityPos.X - pos.X
+			dy := entityPos.Y - pos.Y
+			distSquared := dx*dx + dy*dy
+
+			if distSquared < minDistSquared {
+				minDistSquared = distSquared
+				nearestNPC = entity
+			}
+		}
+	}
+
+	return nearestNPC
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.
@@ -2048,6 +2061,17 @@ func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generat
 
 // initializeUIIntegration sets up shop UI, crafting UI, mailbox UI, housing UI, gallery UI, and connects them to game systems.
 func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, sys *systemsContainer, clientLogger *logrus.Entry) (*engine.ShopUI, *engine.CraftingUI) {
+	shopUI := initializeShopAndCommerceUI(game, player, commerceSystem, dialogSystem, clientLogger)
+	initializeHousingAndGalleryUI(game, player, sys, clientLogger)
+	initializeGuildAndTradeUI(game, player, sys, clientLogger)
+	initializeAdvancedAndTerritoryUI(game, player, sys, clientLogger)
+	initializeStoryAndDialogUI(game, player, sys, clientLogger)
+	craftingUI := initializeCraftingAndMailboxUI(game, player, craftingSystem, inventorySystem, clientLogger)
+
+	return shopUI, craftingUI
+}
+
+func initializeShopAndCommerceUI(game *engine.EbitenGame, player *engine.Entity, commerceSystem *engine.CommerceSystem, dialogSystem *engine.DialogSystem, clientLogger *logrus.Entry) *engine.ShopUI {
 	shopUI := engine.NewShopUI(*width, *height)
 	shopUI.SetPlayerEntity(player)
 	shopUI.SetCommerceSystem(commerceSystem)
@@ -2058,10 +2082,10 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("shop UI initialized and connected to commerce/dialog systems")
 	}
 
-	// INTEGRATION FIX [Category B]: Housing UI initialization and integration
-	// Gap: Housing system fully implemented but no UI access for players
-	// Fix: Created and integrated HousingUI with H key toggle
-	// Roadmap: ROADMAP_V8.md Phase 49.1, 51.2, 51.3
+	return shopUI
+}
+
+func initializeHousingAndGalleryUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
 	housingUI := housing.NewHousingUI(*width, *height)
 	if sys.housingManager != nil {
 		housingUI.SetManagers(sys.housingManager, sys.guildHallManager, sys.buildingGenerator, sys.furnitureGenerator)
@@ -2073,10 +2097,6 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("housing UI initialized (H key to open)")
 	}
 
-	// INTEGRATION FIX [Category B]: Image Gallery UI initialization
-	// Gap: ImageGallery system fully implemented but no UI access for players
-	// Fix: Created and integrated GalleryUI with G key toggle
-	// Roadmap: ROADMAP_V8.md Phase 49.4
 	galleryUI := engine.NewGalleryUI(*width, *height)
 	if sys.imageGallery != nil {
 		galleryUI.SetGallery(sys.imageGallery)
@@ -2086,9 +2106,9 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	if *verbose {
 		clientLogger.Info("gallery UI initialized (G key to open)")
 	}
+}
 
-	// Phase 3.2 (PLAN.md): Guild UI initialization and integration
-	// Cross-server guild management UI
+func initializeGuildAndTradeUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
 	if sys.guildUI != nil {
 		game.GuildUI = sys.guildUI
 		if *verbose {
@@ -2096,8 +2116,6 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		}
 	}
 
-	// Phase 3.3 (PLAN.md): Trade UI initialization and integration
-	// Player-to-player trading with validation
 	tradeUI := engine.NewTradeUI(game.World, sys.tradeSystem, *width, *height)
 	tradeUI.SetPlayerEntity(player)
 	game.TradeUI = tradeUI
@@ -2105,9 +2123,9 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	if *verbose {
 		clientLogger.Info("trade UI initialized (T key to open)")
 	}
+}
 
-	// Phase 4.2 (PLAN.md): Advanced Class UI initialization
-	// Multi-classing, prestige classes, and talent trees
+func initializeAdvancedAndTerritoryUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
 	advancedClassUI := engine.NewAdvancedClassUI(game.World, sys.advancedClassSystem, *width, *height)
 	advancedClassUI.SetPlayerEntity(player)
 	game.AdvancedClassUI = advancedClassUI
@@ -2116,17 +2134,15 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("advanced class UI initialized (A key to open)")
 	}
 
-	// Phase 4.3 (PLAN.md): Territory UI initialization
-	// Guild warfare, territory capture, and defensive structures
 	sys.territoryUI.SetPlayerEntity(player)
 	game.TerritoryUI = sys.territoryUI
 
 	if *verbose {
 		clientLogger.Info("territory UI initialized (Y key to open)")
 	}
+}
 
-	// Phase 6.1 (PLAN.md): Story Choice UI initialization
-	// Branching narrative choices and story arc progression
+func initializeStoryAndDialogUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
 	storyChoiceUI := engine.NewStoryChoiceUI(game.World, sys.branchingNarrativeSystem, *width, *height)
 	storyChoiceUI.SetPlayerEntity(player)
 	game.StoryChoiceUI = storyChoiceUI
@@ -2135,12 +2151,8 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("story choice UI initialized (shows automatically when choices available)")
 	}
 
-	// Phase 6.1 (PLAN.md): Initialize branching narrative for player
-	// Add branching narrative component and start initial story arc
 	initializePlayerNarrative(player, sys.branchingNarrativeSystem, *seed, *genreID, clientLogger)
 
-	// Phase 6.2 (PLAN.md): Dialog UI initialization
-	// NPC conversation and dialog choice system
 	dialogUI := engine.NewDialogUI(game.World, sys.dialogSystem, sys.npcDialogSystem, *width, *height)
 	dialogUI.SetPlayerEntity(player)
 	game.DialogUI = dialogUI
@@ -2148,7 +2160,9 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	if *verbose {
 		clientLogger.Info("dialog UI initialized (D key to toggle with NPCs)")
 	}
+}
 
+func initializeCraftingAndMailboxUI(game *engine.EbitenGame, player *engine.Entity, craftingSystem *engine.CraftingSystem, inventorySystem *engine.InventorySystem, clientLogger *logrus.Entry) *engine.CraftingUI {
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)
 	craftingUI.SetCraftingSystem(craftingSystem)
@@ -2158,7 +2172,6 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("crafting UI initialized and connected to crafting system")
 	}
 
-	// Phase 40.3: Initialize mailbox UI
 	mailboxUI := engine.NewMailboxUI(0, 0, *width, *height, *genreID)
 	game.MailboxUI = mailboxUI
 
@@ -2168,7 +2181,7 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 
 	game.SetInventorySystem(inventorySystem)
 
-	return shopUI, craftingUI
+	return craftingUI
 }
 
 // applyCharacterClass applies character class stats if character data is pending.

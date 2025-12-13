@@ -118,92 +118,120 @@ func (tui *TerritoryUI) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Semi-transparent background
+	tui.drawBackground(screen)
+	yOffset := tui.drawHeader(screen)
+	yOffset = tui.drawCurrentTerritoryInfo(screen, yOffset)
+	yOffset = tui.drawGuildTerritories(screen, yOffset)
+	yOffset = tui.drawActiveWars(screen, yOffset)
+	tui.drawControls(screen)
+}
+
+func (tui *TerritoryUI) drawBackground(screen *ebiten.Image) {
 	bg := ebiten.NewImage(tui.screenWidth, tui.screenHeight)
 	bg.Fill(color.RGBA{0, 0, 0, 200})
 	screen.DrawImage(bg, nil)
+}
 
-	// Title
+func (tui *TerritoryUI) drawHeader(screen *ebiten.Image) int {
 	titleY := 20.0
 	drawTextCentered(screen, "Territory Control", tui.screenWidth/2, int(titleY), color.White)
+	return 60
+}
 
-	// Current territory info
-	yOffset := 60
+func (tui *TerritoryUI) drawCurrentTerritoryInfo(screen *ebiten.Image, yOffset int) int {
 	if tui.selectedTerritory != nil {
 		tui.drawTerritoryDetails(screen, &yOffset)
-	} else if tui.playerEntity != nil {
-		// Show player's current location territory
-		pos, ok := tui.playerEntity.GetComponent("position")
-		if ok {
-			p := pos.(*PositionComponent)
-			terr, err := tui.territorySystem.GetTerritoryAtPosition(p.X, p.Y)
-			if err == nil && terr != nil {
-				tui.selectedTerritory = terr
-				tui.drawTerritoryDetails(screen, &yOffset)
-			} else {
-				drawText(screen, "Not in any territory", 50, yOffset, color.White)
-				yOffset += 25
-			}
-		}
+		return yOffset
 	}
 
-	// Guild territories section
+	if tui.playerEntity == nil {
+		return yOffset
+	}
+
+	pos, ok := tui.playerEntity.GetComponent("position")
+	if !ok {
+		return yOffset
+	}
+
+	p := pos.(*PositionComponent)
+	terr, err := tui.territorySystem.GetTerritoryAtPosition(p.X, p.Y)
+	if err == nil && terr != nil {
+		tui.selectedTerritory = terr
+		tui.drawTerritoryDetails(screen, &yOffset)
+	} else {
+		drawText(screen, "Not in any territory", 50, yOffset, color.White)
+		yOffset += 25
+	}
+
+	return yOffset
+}
+
+func (tui *TerritoryUI) drawGuildTerritories(screen *ebiten.Image, yOffset int) int {
 	yOffset += 20
 	drawText(screen, "Guild Territories:", 50, yOffset, color.RGBA{255, 255, 0, 255})
 	yOffset += 30
 
 	playerGuildID := tui.getPlayerGuildID()
-	if playerGuildID != "" {
-		territories := tui.territorySystem.GetManager().GetGuildTerritories(playerGuildID)
-		if len(territories) > 0 {
-			for _, terr := range territories {
-				statusColor := tui.getStatusColor(terr.Status)
-				text := fmt.Sprintf("%s - %s", terr.ID, terr.Status)
-				drawText(screen, text, 70, yOffset, statusColor)
-				yOffset += 25
-			}
-		} else {
-			drawText(screen, "No territories controlled", 70, yOffset, color.Gray{128})
-			yOffset += 25
-		}
-	} else {
+	if playerGuildID == "" {
 		drawText(screen, "Not in a guild", 70, yOffset, color.Gray{128})
+		return yOffset + 25
+	}
+
+	territories := tui.territorySystem.GetManager().GetGuildTerritories(playerGuildID)
+	if len(territories) == 0 {
+		drawText(screen, "No territories controlled", 70, yOffset, color.Gray{128})
+		return yOffset + 25
+	}
+
+	for _, terr := range territories {
+		statusColor := tui.getStatusColor(terr.Status)
+		text := fmt.Sprintf("%s - %s", terr.ID, terr.Status)
+		drawText(screen, text, 70, yOffset, statusColor)
 		yOffset += 25
 	}
 
-	// Active wars section
+	return yOffset
+}
+
+func (tui *TerritoryUI) drawActiveWars(screen *ebiten.Image, yOffset int) int {
 	yOffset += 20
 	drawText(screen, "Active Wars:", 50, yOffset, color.RGBA{255, 100, 100, 255})
 	yOffset += 30
 
-	if playerGuildID != "" {
-		wars := tui.territorySystem.GetManager().GetGuildWars(playerGuildID)
-		activeWars := 0
-		for _, war := range wars {
-			if war.Active {
-				opponent := war.DefenderGuild
-				if war.DefenderGuild == playerGuildID {
-					opponent = war.AttackerGuild
-				}
-				warText := fmt.Sprintf("War with %s (ends in %.0f days)", opponent, war.EndsAt.Sub(war.DeclaredAt).Hours()/24)
-				drawText(screen, warText, 70, yOffset, color.RGBA{255, 150, 150, 255})
-				yOffset += 25
-				activeWars++
+	playerGuildID := tui.getPlayerGuildID()
+	if playerGuildID == "" {
+		return yOffset
+	}
+
+	wars := tui.territorySystem.GetManager().GetGuildWars(playerGuildID)
+	activeWars := 0
+	for _, war := range wars {
+		if war.Active {
+			opponent := war.DefenderGuild
+			if war.DefenderGuild == playerGuildID {
+				opponent = war.AttackerGuild
 			}
-		}
-		if activeWars == 0 {
-			drawText(screen, "No active wars", 70, yOffset, color.Gray{128})
+			warText := fmt.Sprintf("War with %s (ends in %.0f days)", opponent, war.EndsAt.Sub(war.DeclaredAt).Hours()/24)
+			drawText(screen, warText, 70, yOffset, color.RGBA{255, 150, 150, 255})
 			yOffset += 25
+			activeWars++
 		}
 	}
 
-	// Controls help
-	yOffset = tui.screenHeight - 80
+	if activeWars == 0 {
+		drawText(screen, "No active wars", 70, yOffset, color.Gray{128})
+		yOffset += 25
+	}
+
+	return yOffset
+}
+
+func (tui *TerritoryUI) drawControls(screen *ebiten.Image) {
+	yOffset := tui.screenHeight - 80
 	drawText(screen, "Controls:", 50, yOffset, color.RGBA{200, 200, 200, 255})
 	yOffset += 25
 	drawText(screen, "W - Declare War  |  B - Build Structure  |  ESC - Close", 50, yOffset, color.RGBA{150, 150, 150, 255})
 
-	// Close button for touch
 	closeX := tui.screenWidth - 60
 	closeY := 10
 	drawTextCentered(screen, "[X]", closeX+25, closeY+15, color.RGBA{255, 100, 100, 255})

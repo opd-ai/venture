@@ -36,26 +36,20 @@ func (ts *TerritorySystem) Update(entities []*Entity, deltaTime float64) {
 	}
 	ts.timeAccum = 0.0
 
-	// Count guild members in each territory
-	territoryPresence := make(map[string]map[string]int) // territoryID -> guildID -> count
+	territoryPresence := ts.countTerritoryPresence(entities)
+	ts.processTerritoryCombat(territoryPresence)
+}
+
+func (ts *TerritorySystem) countTerritoryPresence(entities []*Entity) map[string]map[string]int {
+	territoryPresence := make(map[string]map[string]int)
 
 	for _, entity := range entities {
-		posComp, hasPos := entity.GetComponent("position")
-		guildComp, hasGuild := entity.GetComponent("guild")
-
-		if !hasPos || !hasGuild {
+		guildID := ts.extractEntityGuildID(entity)
+		if guildID == "" {
 			continue
 		}
 
-		pos := posComp.(*PositionComponent)
-		guild := guildComp.(*GuildComponent)
-
-		if guild.GuildID == "" {
-			continue
-		}
-
-		// Find territory based on position
-		territoryID := ts.getTerritoryIDFromPosition(pos.X, pos.Y)
+		territoryID := ts.extractEntityTerritoryID(entity)
 		if territoryID == "" {
 			continue
 		}
@@ -63,52 +57,88 @@ func (ts *TerritorySystem) Update(entities []*Entity, deltaTime float64) {
 		if territoryPresence[territoryID] == nil {
 			territoryPresence[territoryID] = make(map[string]int)
 		}
-		territoryPresence[territoryID][guild.GuildID]++
+		territoryPresence[territoryID][guildID]++
 	}
 
-	// Update capture progress for each territory
+	return territoryPresence
+}
+
+func (ts *TerritorySystem) extractEntityGuildID(entity *Entity) string {
+	_, hasPos := entity.GetComponent("position")
+	guildComp, hasGuild := entity.GetComponent("guild")
+
+	if !hasPos || !hasGuild {
+		return ""
+	}
+
+	guild := guildComp.(*GuildComponent)
+	return guild.GuildID
+}
+
+func (ts *TerritorySystem) extractEntityTerritoryID(entity *Entity) string {
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return ""
+	}
+
+	pos := posComp.(*PositionComponent)
+	return ts.getTerritoryIDFromPosition(pos.X, pos.Y)
+}
+
+func (ts *TerritorySystem) processTerritoryCombat(territoryPresence map[string]map[string]int) {
 	for territoryID, presence := range territoryPresence {
 		terr, err := ts.manager.GetTerritory(territoryID)
 		if err != nil {
 			continue
 		}
 
-		ownerCount := 0
-		attackerGuild := ""
-		attackerCount := 0
+		ownerCount, attackerGuild, attackerCount := ts.analyzeTerritoryForces(terr, presence)
+		ts.updateTerritoryCapture(territoryID, terr, attackerGuild, attackerCount, ownerCount)
+	}
+}
 
-		// Count defenders (owner guild members)
-		if terr.OwnerGuildID != "" {
-			ownerCount = presence[terr.OwnerGuildID]
-		}
+func (ts *TerritorySystem) analyzeTerritoryForces(terr *territory.Territory, presence map[string]int) (int, string, int) {
+	ownerCount := 0
+	if terr.OwnerGuildID != "" {
+		ownerCount = presence[terr.OwnerGuildID]
+	}
 
-		// Find strongest attacker (guild with most members that isn't owner)
-		for guildID, count := range presence {
-			if guildID != terr.OwnerGuildID && count > attackerCount {
-				attackerGuild = guildID
-				attackerCount = count
-			}
+	attackerGuild := ""
+	attackerCount := 0
+	for guildID, count := range presence {
+		if guildID != terr.OwnerGuildID && count > attackerCount {
+			attackerGuild = guildID
+			attackerCount = count
 		}
+	}
 
-		// Update capture progress
-		if attackerCount > 0 {
-			err := ts.manager.UpdateCaptureProgress(territoryID, attackerCount, ownerCount, attackerGuild)
-			if err != nil {
-				ts.logger.WithError(err).Warn("failed to update capture progress")
-			} else {
-				// Log progress updates
-				updatedTerr, _ := ts.manager.GetTerritory(territoryID)
-				if updatedTerr != nil && updatedTerr.Status == territory.StatusContested {
-					ts.logger.WithFields(logrus.Fields{
-						"territory":       territoryID,
-						"attackers":       attackerCount,
-						"defenders":       ownerCount,
-						"progress":        updatedTerr.CaptureProgress,
-						"attacking_guild": attackerGuild,
-					}).Debug("territory contested")
-				}
-			}
-		}
+	return ownerCount, attackerGuild, attackerCount
+}
+
+func (ts *TerritorySystem) updateTerritoryCapture(territoryID string, terr *territory.Territory, attackerGuild string, attackerCount, ownerCount int) {
+	if attackerCount == 0 {
+		return
+	}
+
+	err := ts.manager.UpdateCaptureProgress(territoryID, attackerCount, ownerCount, attackerGuild)
+	if err != nil {
+		ts.logger.WithError(err).Warn("failed to update capture progress")
+		return
+	}
+
+	ts.logCaptureProgress(territoryID, attackerGuild, attackerCount, ownerCount)
+}
+
+func (ts *TerritorySystem) logCaptureProgress(territoryID, attackerGuild string, attackerCount, ownerCount int) {
+	updatedTerr, _ := ts.manager.GetTerritory(territoryID)
+	if updatedTerr != nil && updatedTerr.Status == territory.StatusContested {
+		ts.logger.WithFields(logrus.Fields{
+			"territory":       territoryID,
+			"attackers":       attackerCount,
+			"defenders":       ownerCount,
+			"progress":        updatedTerr.CaptureProgress,
+			"attacking_guild": attackerGuild,
+		}).Debug("territory contested")
 	}
 }
 

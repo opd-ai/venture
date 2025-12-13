@@ -27,6 +27,7 @@ var MenuKeys = struct {
 	Shop      ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
 	Crafting  ebiten.Key // R - Crafting recipes
 	Trade     ebiten.Key // T - Player-to-player trading
+	Classes   ebiten.Key // A - Advanced classes (multi-classing, prestige, talents)
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -40,6 +41,7 @@ var MenuKeys = struct {
 	ShopLabel      string
 	CraftingLabel  string
 	TradeLabel     string
+	ClassesLabel   string
 	ExitHint       string // Standard exit hint text
 }{
 	// Key assignments
@@ -51,6 +53,7 @@ var MenuKeys = struct {
 	Shop:      ebiten.KeyF,
 	Crafting:  ebiten.KeyR,
 	Trade:     ebiten.KeyT,
+	Classes:   ebiten.KeyA,
 	Exit:      ebiten.KeyEscape,
 
 	// Display labels
@@ -62,6 +65,7 @@ var MenuKeys = struct {
 	ShopLabel:      "[F] Shop",
 	CraftingLabel:  "[R] Crafting",
 	TradeLabel:     "[T] Trade",
+	ClassesLabel:   "[A] Classes",
 	ExitHint:       "Press [KEY] or [ESC] to close",
 }
 

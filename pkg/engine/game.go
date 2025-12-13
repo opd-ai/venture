@@ -51,15 +51,16 @@ type EbitenGame struct {
 	MenuSystem          *EbitenMenuSystem
 
 	// UI systems
-	InventoryUI *EbitenInventoryUI
-	QuestUI     *EbitenQuestUI
-	CharacterUI *EbitenCharacterUI
-	SkillsUI    *EbitenSkillsUI
-	MapUI       *EbitenMapUI
-	ShopUI      *ShopUI     // Commerce and merchant interaction UI
-	CraftingUI  *CraftingUI // Crafting and recipe UI
-	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
-	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
+	InventoryUI     *EbitenInventoryUI
+	QuestUI         *EbitenQuestUI
+	CharacterUI     *EbitenCharacterUI
+	SkillsUI        *EbitenSkillsUI
+	MapUI           *EbitenMapUI
+	ShopUI          *ShopUI          // Commerce and merchant interaction UI
+	CraftingUI      *CraftingUI      // Crafting and recipe UI
+	MailboxUI       *MailboxUI       // Mail system UI (Phase 40.3)
+	TradeUI         *TradeUI         // Player-to-player trading UI (Phase 3.3)
+	AdvancedClassUI *AdvancedClassUI // Advanced class system UI (Phase 4.2)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields

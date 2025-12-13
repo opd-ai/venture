@@ -165,6 +165,7 @@ func setupCompletePlayerEntity(game *engine.EbitenGame, generatedTerrain *terrai
 
 	addPlayerComponents(player, logger, clientLogger)
 	applyCharacterClass(player, game, clientLogger)
+	initializePlayerAdvancedClass(player, game, clientLogger)
 
 	return player
 }

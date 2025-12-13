@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/class/advanced"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
@@ -113,6 +114,7 @@ type systemsContainer struct {
 	companionLoyaltySys     *engine.CompanionLoyaltySystem
 	companionInventorySys   *engine.CompanionInventorySystem
 	companionLearningSys    *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
+	advancedClassSystem     *engine.AdvancedClassSystem     // Phase 4.2: Multi-classing, prestige classes, talent trees
 	skillInheritanceSys     *engine.SkillInheritanceSystem
 	bookReadingSystem       *engine.BookReadingSystem
 	spellEffectSystem       *engine.SpellEffectSystem
@@ -369,6 +371,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.companionLoyaltySys = engine.NewCompanionLoyaltySystem(game.World, clientLogger.Logger)
 	sys.companionInventorySys = engine.NewCompanionInventorySystem(game.World)
 	sys.companionLearningSys = engine.NewCompanionLearningSystem(game.World) // Phase 4.1: Companion learning
+	sys.advancedClassSystem = engine.NewAdvancedClassSystem(game.World)      // Phase 4.2: Advanced classes
 	sys.skillInheritanceSys = engine.NewSkillInheritanceSystem(game.World)
 
 	// Phase 23: Book system
@@ -736,6 +739,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&companionLoyaltySystemWrapper{system: sys.companionLoyaltySys})
 	game.World.AddSystem(&companionInventorySystemWrapper{system: sys.companionInventorySys})
 	game.World.AddSystem(sys.companionLearningSys) // Phase 4.1: Companion learning (compatible signature)
+	game.World.AddSystem(sys.advancedClassSystem)  // Phase 4.2: Advanced classes (compatible signature)
 	game.World.AddSystem(&skillInheritanceSystemWrapper{system: sys.skillInheritanceSys})
 
 	// Phase 23: Book system
@@ -1577,6 +1581,13 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 	if game.TradeUI != nil {
 		inputSystem.SetTradeUI(game.TradeUI)
 	}
+	// Phase 4.2 (PLAN.md): Connect Advanced Class UI to input system
+	if game.AdvancedClassUI != nil {
+		inputSystem.SetAdvancedClassUI(game.AdvancedClassUI)
+		inputSystem.SetClassesCallback(func() {
+			game.AdvancedClassUI.Toggle()
+		})
+	}
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.
@@ -1727,6 +1738,16 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("trade UI initialized (T key to open)")
 	}
 
+	// Phase 4.2 (PLAN.md): Advanced Class UI initialization
+	// Multi-classing, prestige classes, and talent trees
+	advancedClassUI := engine.NewAdvancedClassUI(game.World, sys.advancedClassSystem, *width, *height)
+	advancedClassUI.SetPlayerEntity(player)
+	game.AdvancedClassUI = advancedClassUI
+
+	if *verbose {
+		clientLogger.Info("advanced class UI initialized (A key to open)")
+	}
+
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)
 	craftingUI.SetCraftingSystem(craftingSystem)
@@ -1766,12 +1787,68 @@ func applyCharacterClass(player *engine.Entity, game *engine.EbitenGame, clientL
 	}
 }
 
+// initializePlayerAdvancedClass initializes the advanced class system for the player.
+// Phase 4.2 (PLAN.md): Multi-classing, prestige classes, and talent trees
+func initializePlayerAdvancedClass(player *engine.Entity, game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	charData := game.GetPendingCharacterData()
+	if charData == nil {
+		return
+	}
+
+	// Map CharacterClass to advanced.ClassID
+	classID := mapCharacterClassToAdvancedClass(charData.Class)
+	if classID == "" {
+		clientLogger.Warn("character class not mapped to advanced class system")
+		return
+	}
+
+	// Initialize with level 1 and warrior class (can be customized via character creation)
+	// Get the advanced class system from game systems
+	// Note: We can't access sys.advancedClassSystem here directly,
+	// so we initialize the component manually and the system will pick it up
+	player.AddComponent(&advanced.AdvancedClassComponent{
+		PrimaryClass: classID,
+		Level:        1,
+		TalentPoints: advanced.TalentAllocation{
+			Talents:     make(map[advanced.TalentID]int),
+			PointsTotal: 1,
+		},
+	})
+
+	clientLogger.WithFields(logrus.Fields{
+		"class": classID,
+		"level": 1,
+	}).Info("initialized advanced class system")
+}
+
+// mapCharacterClassToAdvancedClass maps engine.CharacterClass to advanced.ClassID
+func mapCharacterClassToAdvancedClass(class engine.CharacterClass) advanced.ClassID {
+	switch class {
+	case engine.ClassWarrior:
+		return advanced.ClassWarrior
+	case engine.ClassMage:
+		return advanced.ClassMage
+	case engine.ClassRogue:
+		return advanced.ClassRogue
+	case engine.ClassRanger:
+		return advanced.ClassRanger
+	case engine.ClassCleric:
+		return advanced.ClassCleric
+	case engine.ClassNecromancer:
+		return advanced.ClassNecromancer
+	case engine.ClassBattlemage:
+		return advanced.ClassWarrior // Default to warrior for hybrids (can be improved)
+	default:
+		return ""
+	}
+}
+
 // finalizeGameInitialization processes initial entity updates and logs game start info.
 func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, networkClient interface{}, clientLogger *logrus.Entry) {
 	game.World.Update(0)
 
 	clientLogger.Info("game initialized successfully")
-	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox, A: Classes")
 	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed, "server": *server}).Info("game settings")
 }
 

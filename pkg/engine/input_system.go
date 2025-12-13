@@ -240,6 +240,7 @@ type InputSystem struct {
 	KeyCrafting  ebiten.Key // R key for crafting
 	KeyMailbox   ebiten.Key // L key for mailbox
 	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
+	KeyClasses   ebiten.Key // A key for advanced classes (Phase 4.2)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -263,14 +264,15 @@ type InputSystem struct {
 
 	// BUG FIX: Phase 3 - Menu Trap - UI references for ESC key dual-exit pattern
 	// Resolution: ESC now closes open UI panels before opening pause menu
-	inventoryUI *EbitenInventoryUI
-	characterUI *EbitenCharacterUI
-	skillsUI    *EbitenSkillsUI
-	questUI     *EbitenQuestUI
-	mapUI       *EbitenMapUI
-	craftingUI  *CraftingUI
-	shopUI      *ShopUI
-	tradeUI     *TradeUI // Phase 3.3 (PLAN.md): Trade UI for T key toggle
+	inventoryUI     *EbitenInventoryUI
+	characterUI     *EbitenCharacterUI
+	skillsUI        *EbitenSkillsUI
+	questUI         *EbitenQuestUI
+	mapUI           *EbitenMapUI
+	craftingUI      *CraftingUI
+	shopUI          *ShopUI
+	tradeUI         *TradeUI         // Phase 3.3 (PLAN.md): Trade UI for T key toggle
+	advancedClassUI *AdvancedClassUI // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -293,6 +295,7 @@ type InputSystem struct {
 	onCraftingOpen  func() // Callback for crafting UI toggle
 	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
 	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
+	onClassesOpen   func() // Callback for advanced class UI toggle (Phase 4.2)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
 	onInteract      func() // Callback for F key NPC/merchant interaction
@@ -343,6 +346,7 @@ func NewInputSystem() *InputSystem {
 		KeyCrafting:  ebiten.KeyR,
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
+		KeyClasses:   ebiten.KeyA, // Phase 4.2: Advanced Classes UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
@@ -520,7 +524,7 @@ func (s *InputSystem) handleGameUIEscapeActions() bool {
 	return false
 }
 
-// handleShopUIEscapeActions closes open shop-related UI panels (crafting, shop, mailbox).
+// handleShopUIEscapeActions closes open shop-related UI panels (crafting, shop, mailbox, trade, classes).
 func (s *InputSystem) handleShopUIEscapeActions() bool {
 	if s.craftingUI != nil && s.craftingUI.IsVisible() {
 		s.craftingUI.Close()
@@ -535,6 +539,12 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 	// Phase 3.3 (PLAN.md): Close trade UI on ESC
 	if s.tradeUI != nil && s.tradeUI.IsVisible() {
 		s.tradeUI.Close()
+		return true
+	}
+
+	// Phase 4.2 (PLAN.md): Close advanced class UI on ESC
+	if s.advancedClassUI != nil && s.advancedClassUI.IsVisible() {
+		s.advancedClassUI.SetVisible(false)
 		return true
 	}
 
@@ -619,6 +629,10 @@ func (s *InputSystem) handleUIShortcuts() {
 	// Phase 3.3 (PLAN.md): T key for Trade UI
 	if inpututil.IsKeyJustPressed(s.KeyTrade) && s.onTradeOpen != nil {
 		s.onTradeOpen()
+	}
+	// Phase 4.2 (PLAN.md): A key for Advanced Classes UI
+	if inpututil.IsKeyJustPressed(s.KeyClasses) && s.onClassesOpen != nil {
+		s.onClassesOpen()
 	}
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key press handling
@@ -1051,6 +1065,11 @@ func (s *InputSystem) SetTradeUI(tradeUI *TradeUI) {
 	s.tradeUI = tradeUI
 }
 
+// SetAdvancedClassUI sets the advanced class UI reference for ESC key handling (Phase 4.2)
+func (s *InputSystem) SetAdvancedClassUI(advancedClassUI *AdvancedClassUI) {
+	s.advancedClassUI = advancedClassUI
+}
+
 // SetQuickSaveCallback sets the callback function for quick save (F5).
 func (s *InputSystem) SetQuickSaveCallback(callback func() error) {
 	s.onQuickSave = callback
@@ -1137,6 +1156,16 @@ func (s *InputSystem) SetTradeCallback(callback func()) error {
 		return fmt.Errorf("trade callback cannot be nil")
 	}
 	s.onTradeOpen = callback
+	return nil
+}
+
+// SetClassesCallback sets the callback function for opening advanced class UI (A key).
+// Phase 4.2 (PLAN.md): Advanced classes (multi-classing, prestige, talents) UI integration.
+func (s *InputSystem) SetClassesCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("classes callback cannot be nil")
+	}
+	s.onClassesOpen = callback
 	return nil
 }
 

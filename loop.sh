@@ -65,6 +65,15 @@ review() {
     sleep 1m
     checkin   
 }
+perf() {
+    echo "iteration started - Dev phase 2: Optimize performance."
+    copilot -p "/delegate $(cat docs/PERFORMANCE.md)" --allow-all-tools --deny-tool sudo
+    echo "Optimization in progress."
+    make fmt
+    echo "Optimization completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
 integrate() {
     echo "iteration started - Dev phase 2: Integrate components."
     copilot -p "/delegate $(cat docs/INTEGRATION.md)" --allow-all-tools --deny-tool sudo
@@ -85,6 +94,7 @@ play() {
 
 dev() {
     impl
+    perf
     review
     #integrate
     #play

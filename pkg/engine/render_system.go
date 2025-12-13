@@ -345,14 +345,8 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 
 // logPlayerCount logs the number of player entities for debugging.
 func (r *EbitenRenderSystem) logPlayerCount(entities []*Entity) {
-	playerCount := 0
-	for _, e := range entities {
-		if e.HasComponent("input") {
-			playerCount++
-		}
-	}
-	if playerCount > 0 {
-	}
+	// DEBUG: Removed empty conditional block - this function is intentionally minimal
+	// and exists as a placeholder for future debug logging if needed
 }
 
 // prepareNonSpriteBuffer resets and prepares the buffer for non-sprite entities.

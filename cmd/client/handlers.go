@@ -78,6 +78,9 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 	"github.com/opd-ai/venture/pkg/rendering/ui"
 
+	// Phase 3.4: Minigame Implementations (PLAN.md)
+	"github.com/opd-ai/venture/pkg/procgen/minigame/games"
+
 	// Phase 2.4: Rendering Optimization (PLAN.md)
 	"github.com/opd-ai/venture/pkg/rendering/parallel"
 	"github.com/opd-ai/venture/pkg/rendering/pool"
@@ -179,6 +182,7 @@ type systemsContainer struct {
 	expressionSystem        *engine.ExpressionSystem
 	expressionComboSys      *engine.ExpressionComboSystem
 	miniGameSystem          *engine.MiniGameSystem
+	minigameGamesSystem     *games.System // Phase 3.4: Minigame implementations
 	achievementSystem       *engine.AchievementSystem
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
@@ -612,6 +616,10 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 27: Mini-game system
 	sys.miniGameSystem = engine.NewMiniGameSystem(game.World)
 
+	// Phase 3.4: Minigame implementations
+	sys.minigameGamesSystem = games.NewSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "minigame_games").Debug("Created minigame games system")
+
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
 
@@ -1025,6 +1033,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
+
+	// Phase 3.4: Minigame implementations
+	game.World.AddSystem(sys.minigameGamesSystem) // Phase 3.4: Minigame implementations
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

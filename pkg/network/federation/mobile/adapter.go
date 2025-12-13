@@ -206,12 +206,12 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 	// Calculate token refill based on time since last sync
 	a.mu.Lock()
 	now := time.Now()
-	lastSync := a.state.LastSyncTime
+	lastSync := a.state.GetLastSyncTime()
 	timeDelta := now.Sub(lastSync)
 
 	// Refill tokens based on elapsed time
 	tokensToAdd := int64(timeDelta.Seconds() * float64(a.config.MaxBandwidth))
-	currentTokens := a.state.bytesAvailable + tokensToAdd
+	currentTokens := a.state.GetBytesAvailable() + tokensToAdd
 
 	// Cap tokens at bucket capacity (MaxBandwidth)
 	if currentTokens > int64(a.config.MaxBandwidth) {
@@ -236,7 +236,7 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 	}
 
 	// Consume tokens
-	a.state.bytesAvailable = currentTokens - estimatedBytes
+	a.state.SetBytesAvailable(currentTokens - estimatedBytes)
 	a.mu.Unlock()
 
 	// Execute sync handler
@@ -326,17 +326,20 @@ func (a *Adapter) GetState() State {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
+	// Get all fields atomically from state
+	batteryLevel, batteryMode, syncStatus, lastSyncTime, syncErrors, bytesSent, bytesReceived, syncCount, backgroundCount := a.state.GetAllFields()
+
 	// Return a copy to avoid race conditions
 	return State{
-		BatteryLevel:    a.state.GetBatteryLevel(),
-		BatteryMode:     a.state.GetBatteryMode(),
-		SyncStatus:      a.state.GetSyncStatus(),
-		LastSyncTime:    a.state.LastSyncTime,
-		SyncErrors:      a.state.SyncErrors,
-		BytesSent:       a.state.BytesSent,
-		BytesReceived:   a.state.BytesReceived,
-		SyncCount:       a.state.SyncCount,
-		BackgroundCount: a.state.BackgroundCount,
+		BatteryLevel:    batteryLevel,
+		BatteryMode:     batteryMode,
+		SyncStatus:      syncStatus,
+		LastSyncTime:    lastSyncTime,
+		SyncErrors:      syncErrors,
+		BytesSent:       bytesSent,
+		BytesReceived:   bytesReceived,
+		SyncCount:       syncCount,
+		BackgroundCount: backgroundCount,
 	}
 }
 

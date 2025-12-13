@@ -199,6 +199,34 @@ func (s *State) GetStats() (bytesSent, bytesReceived, syncCount, backgroundCount
 	return s.BytesSent, s.BytesReceived, s.SyncCount, s.BackgroundCount
 }
 
+// GetLastSyncTime returns the last sync time (thread-safe)
+func (s *State) GetLastSyncTime() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.LastSyncTime
+}
+
+// GetBytesAvailable returns available bandwidth tokens (thread-safe)
+func (s *State) GetBytesAvailable() int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.bytesAvailable
+}
+
+// SetBytesAvailable updates available bandwidth tokens (thread-safe)
+func (s *State) SetBytesAvailable(bytes int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.bytesAvailable = bytes
+}
+
+// GetAllFields returns a complete copy of all state fields (thread-safe)
+func (s *State) GetAllFields() (batteryLevel float64, batteryMode BatteryMode, syncStatus SyncStatus, lastSyncTime time.Time, syncErrors int, bytesSent, bytesReceived, syncCount, backgroundCount int64) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.BatteryLevel, s.BatteryMode, s.SyncStatus, s.LastSyncTime, s.SyncErrors, s.BytesSent, s.BytesReceived, s.SyncCount, s.BackgroundCount
+}
+
 // SyncHandler is called to perform federation sync
 type SyncHandler func(ctx context.Context) error
 

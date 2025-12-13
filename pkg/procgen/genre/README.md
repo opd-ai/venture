@@ -443,7 +443,6 @@ type Registry struct {
 - `Has(id string) bool` - Check if genre exists
 - `All() []*Genre` - Get all genres
 - `IDs() []string` - Get all genre IDs
-- `Count() int` - Get number of genres
 
 ### Predefined Genre Functions
 
@@ -452,7 +451,6 @@ type Registry struct {
 - `SciFiGenre() *Genre` - Get Sci-Fi genre
 - `HorrorGenre() *Genre` - Get Horror genre
 - `CyberpunkGenre() *Genre` - Get Cyberpunk genre
-- `PostApocalypticGenre() *Genre` - Get Post-Apocalyptic genre
 
 ## Design Decisions
 

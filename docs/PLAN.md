@@ -298,7 +298,6 @@ The tile variation system is fully integrated through the engine layer:
 - Advanced features enabled in `cmd/client/handlers.go` (lines 1277-1279):
   - Transitions enabled for smooth terrain blending
   - Enhanced walls enabled for anti-aliased walls with corner detection
-  - Parallax disabled for performance optimization
 
 **Verification**:
 ```bash
@@ -600,9 +599,7 @@ After full integration (5 weeks):
 - [ ] 0 feature flags exist
 - [ ] All builds pass
 - [ ] All tests pass (>65% coverage maintained)
-- [ ] Client runs with all features visible
-- [ ] Server supports all client features
-- [ ] Documentation updated (`INTEGRATION_AUDIT.md`)
+  - _(... 3 more items ...)_
 
 ---
 
@@ -685,12 +682,7 @@ The final integration was the Trade Routes System (`pkg/integration/trade_routes
 - **Integration Method**: Direct RouteManager integration (no ECS wrapper to avoid circular dependencies)
 - **Location**: `cmd/client/handlers.go` lines 954-959
 - **Seed Offset**: Added `seedOffsetTradeRoutes = 14000` to `consts.go`
-- **Features**: 
-  - AI-controlled caravan fleets with procedural cargo generation
-  - Route optimization based on danger level and profit margins
-  - Player escort missions with gold rewards
-  - Bandit encounter system with dynamic resolution
-  - Guild sponsorship for price manipulation
+  - _(... 6 more items ...)_
 
 ### Architecture Patterns
 
@@ -715,7 +707,6 @@ All integrations meet Venture's quality standards:
 - ✅ Race detector clean: `go test -race ./...`
 - ✅ Coverage >65%: All packages meet or exceed threshold
 - ✅ No feature flags: All systems unconditionally enabled
-- ✅ Deterministic: Seed-based generation throughout
 
 ### Integration Locations
 
@@ -764,8 +755,6 @@ With PLAN.md complete at 100%, the next priorities are:
 - [x] All tests pass (>65% coverage maintained)
 - [x] Client runs with all features visible
 - [x] Server supports all client features
-- [x] Zero feature flags exist for integrated packages
-- [x] No performance degradation (<16.67ms frame time maintained)
-- [x] Documentation updated
+  - _(... 3 more items ...)_
 
 **Status**: ✅ **INTEGRATION PLAN COMPLETE**

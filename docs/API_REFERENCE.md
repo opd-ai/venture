@@ -349,9 +349,6 @@ genreWeathers := particles.GetGenreWeather("scifi")
 // Returns: [WeatherNeonRain, WeatherSmog, WeatherRadiation]
 
 // Check environmental effects
-puddleLevel := weatherSystem.GetPuddleLevel(tileX, tileY)
-snowLevel := weatherSystem.GetSnowLevel(tileX, tileY)
-visibility := weatherSystem.GetVisibilityModifier()
 ```
 
 **Weather Types:**
@@ -402,13 +399,6 @@ ui.RenderWithHierarchy(
     primaryLevel,    // Main focus elements
     secondaryLevel,  // Supporting information
     tertiaryLevel,   // Background/decorative
-)
-
-// V3.0: Procedural UI decorations
-decoration := ui.GenerateDecoration(
-    decorationType, // ui.Border, Corner, Divider, etc.
-    genreID, seed,
-)
 ```
 
 #### Post-Processing (V3.0 New)
@@ -441,15 +431,6 @@ lightIntensity := timeOfDay.GetLightIntensity()
 // V3.0: Screen-space effects
 postprocess.ApplyBloom(screen, bloomIntensity, bloomRadius)
 postprocess.ApplyVignette(screen, vignetteIntensity)
-postprocess.ApplyColorGrading(screen, genreID)
-
-// V3.0: Genre-specific filters
-postprocess.ApplyGenreFilter(screen, genreID)
-// Fantasy: Warm, vibrant colors
-// Sci-Fi: Cool, high-tech aesthetic
-// Horror: Desaturated, dark tones
-// Cyberpunk: Neon-enhanced, high contrast
-// Post-Apocalyptic: Dusty, washed-out palette
 ```
 
 #### Quality Settings (V3.0 New)
@@ -482,8 +463,6 @@ quality.SetParticleDensity(quality.Medium)
 // Medium: Balanced particle count
 // High: Maximum particle density
 
-// V3.0: Performance preset
-quality.SetPreset(quality.Performance) // Performance, Balanced, Quality
 ```
 
 #### Color Palettes
@@ -939,12 +918,6 @@ chatUI.AddMessage(msg)
 // Update and draw
 chatUI.Update() // Handle input
 chatUI.Draw(screen) // Render
-
-// Input handling
-if chatUI.IsInputActive() {
-    text := chatUI.GetInputText()
-    // Process text
-}
 ```
 
 **Features:**
@@ -979,9 +952,6 @@ tradeUI.Update()
 tradeUI.Draw(screen)
 
 // Check for button clicks
-if tradeUI.GetClickedButton() == "accept" {
-    // Accept trade
-}
 ```
 
 **Features:**

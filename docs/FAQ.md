@@ -148,8 +148,7 @@ A **world seed** is a number (e.g., `12345`) that determines the layout of the e
 - **Ice:** Slows enemies, effective vs. fire creatures
 - **Lightning:** Chain damage, effective vs. mechanical/water
 - **Poison:** Damage over time, effective vs. organic enemies
-- **Holy:** Extra damage vs. undead/demons
-- **Dark:** Life drain, effective vs. living enemies
+  - _(... 2 more items ...)_
 
 ### How do I unlock new areas?
 
@@ -283,7 +282,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Mage:** Elemental spells, mana efficiency, glass cannon
 - **Ranger:** Archery, pet bonding, traps, survival
 - **Cleric:** Healing, buffs, undead resistance, holy magic
-- **Necromancer:** Summon undead, life drain, curses
 
 **Specializations:** Each class has 2 specializations (unlocked at level 10)  
 **Dual-Classing:** Unlock a second class at level 20 (12 possible combinations)
@@ -329,7 +327,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Escort Quests:** Protect NPC to destination
 - **Exploration:** Discover hidden locations
 - **Moral Choices:** Branching dialog with alignment consequences
-- **Legendary:** Multi-stage epic quests with unique rewards
 
 **Quest Chains:** Some quests unlock follow-up quests (up to 10 stages)
 
@@ -340,7 +337,6 @@ This enables **reproducible worlds** for testing and sharing while allowing dyna
 - **Raids:** 10-player dungeon runs with boss mechanics
 - **Guild Warfare:** Territory control, siege battles
 - **Cross-Server Events:** Server vs. server competitions
-- **Min-Maxing:** Perfect builds, speedrun challenges, achievement hunting
 
 ---
 
@@ -438,10 +434,7 @@ See [Modding Guide](MODDING_GUIDE.md) for mod creation tutorials.
 - **[Controls](CONTROLS.md):** Keyboard/mouse/gamepad mappings
 - **[Troubleshooting](TROUBLESHOOTING.md):** Detailed problem-solving guide
 - **[Gameplay Guide](GAMEPLAY_GUIDE.md):** Strategies, tips, progression advice
-- **[Multiplayer Guide](MULTIPLAYER_GUIDE.md):** Hosting servers, joining, federation
-- **[Modding Guide](MODDING_GUIDE.md):** Creating mods, API reference
-- **[Discord](https://discord.gg/venture):** Community support and discussion
-- **[GitHub](https://github.com/opd-ai/venture):** Source code, issues, contributions
+  - _(... 4 more items ...)_
 
 ---
 

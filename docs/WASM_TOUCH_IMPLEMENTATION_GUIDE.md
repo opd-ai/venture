@@ -22,9 +22,7 @@ if ui.touchHandler != nil {
 }
 
 // For gesture detection
-if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
-    // Handle swipe for scrolling
-}
+// ... (additional details omitted for brevity)
 ```
 
 ### 2. TouchButton
@@ -45,10 +43,7 @@ closeButton := mobile.NewTouchButton(
 closeButton.Update()
 
 // Draw button
-closeButton.Draw(screen)
-
-// Dynamic positioning (for responsive layout)
-closeButton.SetPosition(float64(newX), float64(newY))
+// ... (additional details omitted for brevity)
 ```
 
 ### 3. VirtualControlsLayout
@@ -105,55 +100,7 @@ func NewMyMenuUI(screenWidth, screenHeight int) *MyMenuUI {
     ui := &MyMenuUI{
         touchHandler: mobile.NewTouchInputHandler(),
         screenWidth:  screenWidth,
-        screenHeight: screenHeight,
-    }
-    
-    // Position close button in top-right of window
-    ui.closeButton = mobile.NewTouchButton(
-        float64(windowX+windowWidth-54),
-        float64(windowY+10),
-        44, 44,
-        "✕",
-        func() { ui.Hide() },
-    )
-    
-    return ui
-}
-
-func (ui *MyMenuUI) Update() {
-    // Update touch handler
-    if ui.touchHandler != nil {
-        ui.touchHandler.Update()
-    }
-    
-    // Update close button
-    if ui.closeButton != nil {
-        ui.closeButton.Update()
-    }
-    
-    // Handle keyboard shortcuts (preserved for desktop)
-    if shouldClose, _ := HandleMenuInput(MenuKeys.MyMenu, ui.visible); shouldClose {
-        ui.Hide()
-        return
-    }
-}
-
-func (ui *MyMenuUI) Draw(screen *ebiten.Image) {
-    if !ui.visible {
-        return
-    }
-    
-    // Draw menu content...
-    
-    // Update button position (for dynamic layout)
-    ui.closeButton.SetPosition(
-        float64(windowX+windowWidth-54),
-        float64(windowY+10),
-    )
-    
-    // Draw close button
-    ui.closeButton.Draw(screen)
-}
+// ... (additional details omitted for brevity)
 ```
 
 ### Pattern 2: Menu with Tabs
@@ -173,60 +120,7 @@ type TabMenuUI struct {
 func NewTabMenuUI() *TabMenuUI {
     ui := &TabMenuUI{
         touchHandler: mobile.NewTouchInputHandler(),
-        currentTab:   0,
-    }
-    
-    // Close button (top-right)
-    ui.closeButton = mobile.NewTouchButton(
-        100, 10, 44, 44, "✕",
-        func() { ui.Hide() },
-    )
-    
-    // Tab buttons (120x44 minimum for tab labels)
-    ui.tab1Button = mobile.NewTouchButton(
-        50, 50, 120, 44, "Tab 1",
-        func() { ui.currentTab = 0 },
-    )
-    
-    ui.tab2Button = mobile.NewTouchButton(
-        180, 50, 120, 44, "Tab 2",
-        func() { ui.currentTab = 1 },
-    )
-    
-    return ui
-}
-
-func (ui *TabMenuUI) Update() {
-    ui.touchHandler.Update()
-    ui.closeButton.Update()
-    ui.tab1Button.Update()
-    ui.tab2Button.Update()
-    
-    // Keyboard shortcuts (1/2 keys for tabs on desktop)
-    if inpututil.IsKeyJustPressed(ebiten.Key1) {
-        ui.currentTab = 0
-    }
-    if inpututil.IsKeyJustPressed(ebiten.Key2) {
-        ui.currentTab = 1
-    }
-}
-
-func (ui *TabMenuUI) Draw(screen *ebiten.Image) {
-    // Draw tabs with visual active state
-    ui.tab1Button.BackgroundColor = getTabColor(ui.currentTab == 0)
-    ui.tab2Button.BackgroundColor = getTabColor(ui.currentTab == 1)
-    
-    ui.tab1Button.Draw(screen)
-    ui.tab2Button.Draw(screen)
-    ui.closeButton.Draw(screen)
-}
-
-func getTabColor(active bool) color.Color {
-    if active {
-        return color.RGBA{80, 120, 200, 255} // Highlighted
-    }
-    return color.RGBA{50, 50, 70, 255} // Normal
-}
+// ... (additional details omitted for brevity)
 ```
 
 ### Pattern 3: Scrollable Menu
@@ -246,19 +140,7 @@ func (ui *ScrollableMenuUI) Update() {
     // Handle swipe for scrolling
     if direction, distance, detected := ui.touchHandler.GetSwipe(); detected {
         // Vertical swipe (direction > 1.0 or < -1.0)
-        if direction > 1.0 || direction < -1.0 {
-            if direction < 0 {
-                ui.scrollOffset += distance * 0.5  // Swipe up
-            } else {
-                ui.scrollOffset -= distance * 0.5  // Swipe down
-            }
-            // Clamp scroll offset
-            if ui.scrollOffset < 0 {
-                ui.scrollOffset = 0
-            }
-        }
-    }
-}
+// ... (additional details omitted for brevity)
 ```
 
 ### Pattern 4: Text Input with Virtual Keyboard
@@ -278,30 +160,7 @@ func (ui *TextInputUI) Update() {
         mobile.ShowKeyboard()
         ui.keyboardShown = true
     }
-    
-    // Capture keyboard input
-    ui.inputBuffer = ebiten.AppendInputChars(ui.inputBuffer[:0])
-    
-    // Process input
-    for _, ch := range ui.inputBuffer {
-        if ch >= 32 && ch <= 126 {
-            ui.text += string(ch)
-        }
-    }
-    
-    // Handle backspace
-    if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && len(ui.text) > 0 {
-        ui.text = ui.text[:len(ui.text)-1]
-    }
-    
-    // Handle submit (Enter key)
-    if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-        mobile.HideKeyboard()
-        ui.keyboardShown = false
-        ui.inputActive = false
-        ui.handleSubmit()
-    }
-}
+// ... (additional details omitted for brevity)
 ```
 
 ### Pattern 5: Dialog with Touch Choices
@@ -321,63 +180,7 @@ func (ui *DialogUI) SetDialog(text string, options []DialogOption) {
     ui.dialogText = text
     ui.options = options
     
-    // Create touch button for each choice
-    ui.choiceButtons = make([]*mobile.TouchButton, len(options))
-    for i, option := range options {
-        btnLabel := fmt.Sprintf("%d. %s", i+1, option.Text)
-        btnY := 200 + i*50 // Vertical spacing
-        
-        ui.choiceButtons[i] = mobile.NewTouchButton(
-            100, float64(btnY),
-            400, 44, // Wide button for text
-            btnLabel,
-            func(idx int) func() {
-                return func() { ui.selectChoice(idx) }
-            }(i),
-        )
-        
-        // Disable button if option is disabled
-        ui.choiceButtons[i].Enabled = option.Enabled
-    }
-}
-
-func (ui *DialogUI) Update() {
-    ui.touchHandler.Update()
-    
-    // Update all choice buttons
-    for _, btn := range ui.choiceButtons {
-        btn.Update()
-    }
-    
-    // Keyboard shortcuts (1-9 keys for desktop)
-    for i := 0; i < len(ui.options) && i < 9; i++ {
-        key := ebiten.Key(ebiten.Key1 + i)
-        if inpututil.IsKeyJustPressed(key) && ui.options[i].Enabled {
-            ui.selectChoice(i)
-        }
-    }
-}
-
-func (ui *DialogUI) Draw(screen *ebiten.Image) {
-    if !ui.visible {
-        return
-    }
-    
-    // Draw dialog text...
-    
-    // Draw choice buttons
-    for _, btn := range ui.choiceButtons {
-        btn.Draw(screen)
-    }
-}
-
-func (ui *DialogUI) selectChoice(index int) {
-    if index >= 0 && index < len(ui.options) && ui.options[index].Enabled {
-        // Process dialog choice
-        action := ui.options[index].Action
-        // Handle action...
-    }
-}
+// ... (additional details omitted for brevity)
 ```
 
 ## Best Practices

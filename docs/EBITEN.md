@@ -72,67 +72,7 @@ Create `/AUDIT.md` in the project root with this structure:
 ## Executive Summary
 [2-3 sentence overview focusing on procedural generation UI integration and multiplayer synchronization]
 
-## Issues by Severity
-
-### Critical Issues
-#### Issue #[N]: [Descriptive Title]
-- **Component**: [Specific UI system in pkg/rendering/ui/]
-- **Genre Impact**: [Which genres affected: fantasy/sci-fi/horror/cyberpunk/post-apocalyptic]
-- **Platform**: [Desktop/Web/Mobile or All]
-- **Description**: [Problem explanation with ECS/procedural context]
-- **Steps to Reproduce**:
-  1. [Include seed value for deterministic testing]
-  2. [Specify genre and difficulty parameters]
-  3. [Detail multiplayer context if applicable]
-- **Expected Behavior**: [What should happen per Venture's design patterns]
-- **Actual Behavior**: [Current problematic behavior]
-- **Suggested Fix**: [Actionable solution with Go/Ebiten code examples]
-- **ECS Integration**: [How fix affects entity/component/system architecture]
-- **Performance Impact**: [Frame rate or memory considerations]
-- **Testing Verification**: [How to verify fix maintains determinism]
-
-### High Priority Issues
-[Same structure, focusing on genre immersion and procedural content display]
-
-### Medium Priority Issues  
-[Same structure, emphasizing usability and polish]
-
-### Low Priority Issues
-[Same structure, covering enhancement opportunities]
-
-## Procedural Generation UI Integration
-- **Genre Theming**: [How well UI adapts to different genres]
-- **Dynamic Content**: [Procedural item/quest/skill display quality]
-- **Performance**: [UI impact on generation and rendering performance]
-- **Determinism**: [UI state consistency across clients with same seed]
-
-## Multiplayer UI Assessment
-- **State Synchronization**: [UI updates with network prediction]
-- **Lag Tolerance**: [Interface responsiveness at 200-5000ms latency]
-- **Player Communication**: [Chat, status indicators, lobby functionality]
-- **Connection Feedback**: [Network status and error reporting]
-
-## Cross-Platform Compatibility
-- **Desktop**: [Windows/macOS/Linux keyboard and mouse experience]
-- **WebAssembly**: [Browser deployment UI considerations]
-- **Mobile**: [Touch interface adaptation and responsiveness]
-
-## Positive Observations
-[Highlight excellent UI/procedural integration examples and ECS patterns]
-
-## Recommendations Summary
-1. [Prioritized fixes with estimated development effort]
-2. [Architecture improvements for better procedural integration]
-3. [Performance optimizations for UI rendering]
-4. [Multiplayer UI enhancements]
-
-## Technical Implementation Notes
-- **Ebiten Version**: 2.9.3
-- **Go Version**: 1.24+
-- **Resolution Tested**: [Multiple resolutions including mobile viewports]
-- **Seed Used**: [For deterministic reproduction]
-- **Network Conditions**: [Latency scenarios tested]
-- **Entity Count**: [UI performance with various entity loads]
+// ... (additional code omitted)
 ```
 
 **Quality Standards Specific to Venture**:
@@ -203,14 +143,7 @@ sprite1.Layer = 0
 entity2 := world.CreateEntity() // Layer 2
 entity2.AddComponent("sprite", NewSpriteComponent(32, 32, color.RGBA{0, 255, 0, 255}))
 sprite2 := entity2.GetComponent("sprite").(*EbitenSprite)
-sprite2.Layer = 2
-
-// 2. Place entities at same position
-entity1.AddComponent("position", &PositionComponent{X: 400, Y: 300})
-entity2.AddComponent("position", &PositionComponent{X: 400, Y: 300})
-
-// 3. Expected: entity2 (green, Layer 2) renders on top of entity1 (red, Layer 0)
-// 4. Verify via screenshot or visual inspection
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -235,17 +168,7 @@ entity.AddComponent("layer", layerComp)
 layerComp.StartTransition(2) // Transition to platform layer
 // Expected: CanTransitionTo(2) returns true if entity has CanClimb=true
 
-// 3. Update transition progress
-for progress := 0.0; progress < 1.0; progress += 0.1 {
-    layerComp.UpdateTransition(0.1)
-    // Verify GetEffectiveLayer() returns correct layer during transition
-}
-
-// 4. Verify layer-based collision filtering
-entity2 := world.CreateEntity()
-entity2.AddComponent("layer", NewLayerComponent())
-entity2.GetComponent("layer").(*LayerComponent).CurrentLayer = 1
-// Expected: OnSameLayer(layerComp, entity2.GetComponent("layer")) returns false
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -270,14 +193,7 @@ entity.AddComponent("sprite", NewSpriteComponent(64, 64, color.White))
 // 2. Add equipment layers
 equipVisual.SetWeaponEquipped(true)
 equipVisual.SetArmorEquipped(true)
-equipVisual.AddAccessorySlot()
-
-// 3. Regenerate equipment layers via EquipmentVisualSystem
-system := NewEquipmentVisualSystem(spriteGen)
-system.Update([]*Entity{entity}, 0.016)
-
-// 4. Expected: WeaponLayer, ArmorLayer, AccessoryLayers[0] are non-nil
-// 5. Verify layers composite correctly on base sprite
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -304,16 +220,7 @@ entity1.AddComponent("layer", NewLayerComponent()) // Layer 0
 entity2 := world.CreateEntity()
 entity2.AddComponent("position", &PositionComponent{X: 100, Y: 100})
 entity2.AddComponent("collider", NewColliderComponent(32, 32))
-layer2 := NewLayerComponent()
-layer2.CurrentLayer = 2 // Platform layer
-entity2.AddComponent("layer", layer2)
-
-// 2. Check collision
-collisionSystem := NewCollisionSystem(64.0)
-collisionSystem.Update([]*Entity{entity1, entity2}, 0.016)
-
-// 3. Expected: No collision because entities are on different layers
-// 4. Verify via collision callback (should not be invoked)
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -338,22 +245,7 @@ solidCollider.IsTrigger = false
 solid.AddComponent("collider", solidCollider)
 
 // 2. Create trigger collider entity
-trigger := world.CreateEntity()
-trigger.AddComponent("position", &PositionComponent{X: 100, Y: 100})
-triggerCollider := NewColliderComponent(32, 32)
-triggerCollider.Solid = true
-triggerCollider.IsTrigger = true
-trigger.AddComponent("collider", triggerCollider)
-
-// 3. Test collision behavior
-collisionSystem := NewCollisionSystem(64.0)
-var collisionTriggered bool
-collisionSystem.SetCollisionCallback(func(e1, e2 *Entity) {
-    collisionTriggered = true
-})
-collisionSystem.Update([]*Entity{solid, trigger}, 0.016)
-
-// 4. Expected: Callback invoked, but no position resolution (trigger doesn't block)
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -378,17 +270,7 @@ collisionSystem.SetTerrainChecker(checker)
 
 // 2. Create entity moving toward wall
 entity := world.CreateEntity()
-entity.AddComponent("position", &PositionComponent{X: 90, Y: 100})
-entity.AddComponent("collider", NewColliderComponent(16, 16))
-entity.AddComponent("velocity", &VelocityComponent{VX: 20, VY: 0})
-
-// 3. Update collision system
-collisionSystem.Update([]*Entity{entity}, 0.016)
-
-// 4. Expected: Entity position pushed away from wall, velocity.VX set to 0
-pos := entity.GetComponent("position").(*PositionComponent)
-vel := entity.GetComponent("velocity").(*VelocityComponent)
-// Verify pos.X < 100 and vel.VX == 0
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -413,15 +295,7 @@ entity2 := world.CreateEntity()
 entity2.AddComponent("position", &PositionComponent{X: 200, Y: 100})
 entity2.AddComponent("collider", NewColliderComponent(32, 32))
 
-collisionSystem := NewCollisionSystem(64.0)
-
-// 2. Test predictive collision at overlapping position
-wouldCollide := collisionSystem.WouldCollideWithEntity(entity1, 200, 100, entity2)
-// Expected: wouldCollide = true
-
-// 3. Test predictive collision at safe position
-wouldCollide = collisionSystem.WouldCollideWithEntity(entity1, 100, 100, entity2)
-// Expected: wouldCollide = false
+// ... (additional code omitted)
 ```
 
 **Issues to Check**:
@@ -584,16 +458,7 @@ equipSystem.Update([]*Entity{entity}, 0.0)
 - Compare screenshots or collision logs for consistency
 
 **Cross-Genre Validation**:
-- Test layer rendering with all five genre palettes
-- Verify layer visibility with dark (horror) and bright (cyberpunk) themes
-- Ensure collision detection is genre-agnostic
-
-**Multiplayer Synchronization**:
-- Verify layer state syncs between client and server
-- Test that LayerComponent.CurrentLayer matches across clients
-- Ensure collision resolution is deterministic with same inputs
-
-**Performance Benchmarks**:
+// ... (additional code omitted)
 ```bash
 # Run collision system benchmark
 go test -bench=BenchmarkCollisionSystem -benchmem ./pkg/engine/

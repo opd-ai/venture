@@ -55,6 +55,9 @@ import (
 	// Phase 4.3: Narrative-World Integration (PLAN.md)
 	"github.com/opd-ai/venture/pkg/integration/narrative_world"
 
+	// Phase 4.4: Political Warfare Integration (PLAN.md)
+	"github.com/opd-ai/venture/pkg/integration/political_warfare"
+
 	// Phase 3.2: Guild Federation (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 
@@ -330,6 +333,9 @@ type systemsContainer struct {
 
 	// Phase 4.3: Narrative-World Integration (PLAN.md)
 	narrativeWorldSystem *narrative_world.System // Companion-driven narrative events and story progression
+
+	// Phase 4.4: Political Warfare Integration (PLAN.md)
+	politicalWarfareSystem *political_warfare.System // Guild politics, war declarations, and diplomatic mechanics
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -911,6 +917,10 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 		clientLogger.Debug("guild system connected to federation protocol")
 	}
 
+	// Phase 4.4: Political Warfare Integration
+	sys.politicalWarfareSystem = political_warfare.NewSystem(game.World, guildManager)
+	logging.ComponentLogger(clientLogger.Logger, "political_warfare").Debug("Created political warfare system")
+
 	// Phase 4.3: Territory Control - Guild warfare and territory management
 	sys.territorySystem = engine.NewTerritorySystem(sys.territoryManager, clientLogger.WithField("system", "territory"))
 	sys.territoryUI = engine.NewTerritoryUI(sys.territorySystem, *width, *height)
@@ -1065,6 +1075,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences
 	game.World.AddSystem(sys.guildVehicleSystem)       // Phase 4.2: Guild vehicle fleets
 	game.World.AddSystem(sys.narrativeWorldSystem)     // Phase 4.3: Narrative-world integration
+	game.World.AddSystem(sys.politicalWarfareSystem)   // Phase 4.4: Political warfare
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

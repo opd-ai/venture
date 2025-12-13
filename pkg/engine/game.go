@@ -875,6 +875,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.GuildUI.Update()
 	}
 
+	// Phase 4.2 (PLAN.md): Update Advanced Class UI
+	if g.AdvancedClassUI != nil {
+		g.AdvancedClassUI.Update()
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -904,6 +909,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.TradeUI != nil && g.TradeUI.IsVisible()) ||
 		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
 		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
+		(g.AdvancedClassUI != nil && g.AdvancedClassUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -933,7 +939,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		(g.CraftingUI == nil || !g.CraftingUI.IsVisible()) &&
 		(g.TradeUI == nil || !g.TradeUI.IsVisible()) &&
 		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
-		(g.GuildUI == nil || !g.GuildUI.IsVisible())
+		(g.GuildUI == nil || !g.GuildUI.IsVisible()) &&
+		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {

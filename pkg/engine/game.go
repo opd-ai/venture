@@ -72,6 +72,12 @@ type EbitenGame struct {
 	// Phase 3.2 (PLAN.md): Guild Federation
 	GuildUI *GuildUI // Guild management UI
 
+	// Phase 4.2 (PLAN.md): Advanced Classes
+	AdvancedClassUI *AdvancedClassUI // Advanced class management UI (multi-classing, prestige, talents)
+
+	// Phase 4.3 (PLAN.md): Territory Control
+	TerritoryUI *TerritoryUI // Territory management UI (guild warfare, territory capture)
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -879,6 +885,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.AdvancedClassUI.Update()
 	}
 
+	// Phase 4.3 (PLAN.md): Update Territory UI
+	if g.TerritoryUI != nil {
+		g.TerritoryUI.Update()
+	}
+
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
 		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -1110,6 +1121,11 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	// Phase 4.2 (PLAN.md): Draw Advanced Class UI
 	if g.AdvancedClassUI != nil {
 		g.AdvancedClassUI.Draw(screen)
+	}
+
+	// Phase 4.3 (PLAN.md): Draw Territory UI
+	if g.TerritoryUI != nil {
+		g.TerritoryUI.Draw(screen)
 	}
 
 	g.drawMailboxUI(screen)

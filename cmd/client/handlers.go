@@ -33,6 +33,7 @@ import (
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
+	"github.com/opd-ai/venture/pkg/world/territory"
 	"github.com/sirupsen/logrus"
 
 	// INTEGRATION FIX [Category A]: V7.0 Display System Import
@@ -136,7 +137,7 @@ type systemsContainer struct {
 	portalSystem       *federation.PortalSystem
 	bountySystem       *engine.BountySystem
 	politicsSystem     *engine.PoliticsSystem
-	territoryManager   *world.TerritoryManager
+	territoryManager   *territory.Manager
 	rankingManager     *world.RankingManager
 	eventManager       *world.EventManager
 	federationProtocol *federation.FederationProtocol
@@ -200,6 +201,10 @@ type systemsContainer struct {
 	// Phase 3.2: Guild Federation (PLAN.md)
 	guildSystem *engine.GuildSystem // Cross-server guild management and sync
 	guildUI     *engine.GuildUI     // Guild UI for player interaction
+
+	// Phase 4.3: Territory Control (PLAN.md)
+	territorySystem *engine.TerritorySystem // Territory capture and guild warfare mechanics
+	territoryUI     *engine.TerritoryUI     // Territory UI for viewing and managing territories
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -501,7 +506,7 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.politicsSystem = engine.NewPoliticsSystem(game.World)
 
 	// Phase 42: Territory control system
-	sys.territoryManager = world.NewTerritoryManager()
+	sys.territoryManager = territory.NewManager()
 
 	// Phase 42: Server ranking system
 	sys.rankingManager = world.NewRankingManager()
@@ -642,8 +647,12 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 		clientLogger.Debug("guild system connected to federation protocol")
 	}
 
+	// Phase 4.3: Territory Control - Guild warfare and territory management
+	sys.territorySystem = engine.NewTerritorySystem(sys.territoryManager, clientLogger.WithField("system", "territory"))
+	sys.territoryUI = engine.NewTerritoryUI(sys.territorySystem, *width, *height)
+
 	if *verbose {
-		clientLogger.Info("Phase 3 systems initialized (guild federation with cross-server sync)")
+		clientLogger.Info("Phase 3 systems initialized (guild federation with cross-server sync, territory control)")
 	}
 }
 
@@ -782,6 +791,11 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
 	if sys.guildSystem != nil {
 		game.World.AddSystem(sys.guildSystem)
+	}
+
+	// Phase 4.3 (PLAN.md): Territory Control - Guild warfare and territory capture
+	if sys.territorySystem != nil {
+		game.World.AddSystem(&territorySystemWrapper{system: sys.territorySystem})
 	}
 
 	// V6.0 System Registrations (Persistent Worlds & Federation)
@@ -2028,6 +2042,15 @@ type fluidSimulatorWrapper struct {
 
 func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// territorySystemWrapper adapts TerritorySystem to the System interface.
+type territorySystemWrapper struct {
+	system *engine.TerritorySystem
+}
+
+func (w *territorySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(entities, deltaTime)
 }
 
 // runGameLoop starts the main game loop.

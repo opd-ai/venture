@@ -21,7 +21,9 @@ config := network.DefaultServerConfig()
 config.Address = ":8080"
 config.MaxPlayers = 32
 server := network.NewServer(config)
-server.Start()
+if err := server.Start(); err != nil {
+    log.Fatal(err)
+}
 defer server.Stop()
 
 // Handle inputs and broadcast state updates

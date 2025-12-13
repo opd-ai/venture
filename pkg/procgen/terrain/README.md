@@ -1,6 +1,6 @@
 # Terrain Generation
 
-Procedural terrain and dungeon generation for Venture. All generators are deterministic based on seed values.
+Procedural terrain and dungeon generation algorithms for the Venture game. All generators are deterministic based on seed values and produce varied, interesting layouts suitable for classic roguelike exploration.
 
 ## Algorithms
 

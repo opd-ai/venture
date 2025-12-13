@@ -565,7 +565,7 @@ func (g *EbitenGame) handleMultiplayerMenuHost() {
 				g.logger.WithError(err).Error("failed to connect to hosted server")
 			}
 			// Transition back to multiplayer menu on error
-			g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
+			_ = g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
 			if g.MultiplayerMenu != nil {
 				g.MultiplayerMenu.Show()
 			}
@@ -626,7 +626,7 @@ func (g *EbitenGame) handleServerAddressConnect(address string) {
 				g.logger.WithError(err).Error("failed to connect to server")
 			}
 			// Transition back to server address input on error
-			g.StateManager.TransitionTo(AppStateServerAddressInput)
+			_ = g.StateManager.TransitionTo(AppStateServerAddressInput)
 			if g.ServerAddressInput != nil {
 				g.ServerAddressInput.Show()
 			}
@@ -669,7 +669,6 @@ func (g *EbitenGame) IsInMainMenu() bool {
 	return g.StateManager.IsInMenu()
 }
 
-// Update implements ebiten.Game interface. Called every frame.
 // trackFramePerformance records frame timing metrics and logs performance statistics.
 func (g *EbitenGame) trackFramePerformance(frameStart time.Time) {
 	if !g.profilingEnabled || g.frameTimeTracker == nil {

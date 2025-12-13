@@ -149,52 +149,70 @@ func (s *Simulator) advect(deltaTime float64) {
 	s.grid.mu.Lock()
 	defer s.grid.mu.Unlock()
 
-	// Create temporary grid for new values
+	newCells := s.createTemporaryGrid()
+	s.advectFluidCells(newCells, deltaTime)
+	s.grid.Cells = newCells
+}
+
+// createTemporaryGrid creates a copy of the current grid for advection.
+func (s *Simulator) createTemporaryGrid() [][]Cell {
 	newCells := make([][]Cell, s.grid.Height)
 	for y := 0; y < s.grid.Height; y++ {
 		newCells[y] = make([]Cell, s.grid.Width)
 		copy(newCells[y], s.grid.Cells[y])
 	}
+	return newCells
+}
 
-	// Advect fluid
+// advectFluidCells processes all cells and distributes fluid based on velocity.
+func (s *Simulator) advectFluidCells(newCells [][]Cell, deltaTime float64) {
 	for y := 1; y < s.grid.Height-1; y++ {
 		for x := 1; x < s.grid.Width-1; x++ {
 			cell := &s.grid.Cells[y][x]
 			if cell.Amount == 0.0 {
 				continue
 			}
-
-			// Calculate flow based on velocity
 			flowX := cell.VelocityX * deltaTime
 			flowY := cell.VelocityY * deltaTime
-
-			// Distribute fluid to neighbors
-			if math.Abs(flowX) > 0.01 || math.Abs(flowY) > 0.01 {
-				if flowX > 0 && x < s.grid.Width-1 {
-					transfer := math.Min(cell.Amount*0.1, flowX)
-					newCells[y][x].Amount -= transfer
-					newCells[y][x+1].Amount += transfer
-				} else if flowX < 0 && x > 0 {
-					transfer := math.Min(cell.Amount*0.1, -flowX)
-					newCells[y][x].Amount -= transfer
-					newCells[y][x-1].Amount += transfer
-				}
-
-				if flowY > 0 && y < s.grid.Height-1 {
-					transfer := math.Min(cell.Amount*0.1, flowY)
-					newCells[y][x].Amount -= transfer
-					newCells[y+1][x].Amount += transfer
-				} else if flowY < 0 && y > 0 {
-					transfer := math.Min(cell.Amount*0.1, -flowY)
-					newCells[y][x].Amount -= transfer
-					newCells[y-1][x].Amount += transfer
-				}
-			}
+			s.distributeFluidToNeighbors(newCells, x, y, cell.Amount, flowX, flowY)
 		}
 	}
+}
 
-	// Copy back to grid
-	s.grid.Cells = newCells
+// distributeFluidToNeighbors transfers fluid to adjacent cells based on flow.
+func (s *Simulator) distributeFluidToNeighbors(newCells [][]Cell, x, y int, amount, flowX, flowY float64) {
+	if math.Abs(flowX) <= 0.01 && math.Abs(flowY) <= 0.01 {
+		return
+	}
+
+	s.distributeHorizontalFlow(newCells, x, y, amount, flowX)
+	s.distributeVerticalFlow(newCells, x, y, amount, flowY)
+}
+
+// distributeHorizontalFlow handles left-right fluid transfer.
+func (s *Simulator) distributeHorizontalFlow(newCells [][]Cell, x, y int, amount, flowX float64) {
+	if flowX > 0 && x < s.grid.Width-1 {
+		transfer := math.Min(amount*0.1, flowX)
+		newCells[y][x].Amount -= transfer
+		newCells[y][x+1].Amount += transfer
+	} else if flowX < 0 && x > 0 {
+		transfer := math.Min(amount*0.1, -flowX)
+		newCells[y][x].Amount -= transfer
+		newCells[y][x-1].Amount += transfer
+	}
+}
+
+// distributeVerticalFlow handles up-down fluid transfer.
+func (s *Simulator) distributeVerticalFlow(newCells [][]Cell, x, y int, amount, flowY float64) {
+	if flowY > 0 && y < s.grid.Height-1 {
+		transfer := math.Min(amount*0.1, flowY)
+		newCells[y][x].Amount -= transfer
+		newCells[y+1][x].Amount += transfer
+	} else if flowY < 0 && y > 0 {
+		transfer := math.Min(amount*0.1, -flowY)
+		newCells[y][x].Amount -= transfer
+		newCells[y-1][x].Amount += transfer
+	}
 }
 
 // enforceBoundaries ensures fluid stays within grid bounds

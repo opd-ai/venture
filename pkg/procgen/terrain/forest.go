@@ -241,7 +241,15 @@ func (g *ForestGenerator) poissonDiscSampling(width, height int, minDist float64
 	gridW := int(math.Ceil(float64(width) / cellSize))
 	gridH := int(math.Ceil(float64(height) / cellSize))
 
-	// Grid to store point indices (-1 = empty)
+	grid := g.initializePoissonGrid(gridW, gridH)
+	points, activeList := g.initializeWithStartPoint(width, height, grid, gridW, gridH, cellSize, rng)
+	g.processActivePoints(points, &activeList, grid, cellSize, minDist, width, height, rng)
+
+	return points
+}
+
+// initializePoissonGrid creates an empty grid for Poisson disc sampling.
+func (g *ForestGenerator) initializePoissonGrid(gridW, gridH int) [][]int {
 	grid := make([][]int, gridH)
 	for i := range grid {
 		grid[i] = make([]int, gridW)
@@ -249,62 +257,85 @@ func (g *ForestGenerator) poissonDiscSampling(width, height int, minDist float64
 			grid[i][j] = -1
 		}
 	}
+	return grid
+}
 
-	points := make([]Point, 0)
-	activeList := make([]int, 0)
-
-	// Start with random point
+// initializeWithStartPoint creates the initial point and active list.
+func (g *ForestGenerator) initializeWithStartPoint(width, height int, grid [][]int, gridW, gridH int, cellSize float64, rng *rand.Rand) ([]Point, []int) {
 	startX := rng.Intn(width)
 	startY := rng.Intn(height)
 	startPoint := Point{X: startX, Y: startY}
-	points = append(points, startPoint)
-	activeList = append(activeList, 0)
+
+	points := []Point{startPoint}
+	activeList := []int{0}
+
 	startGridX := int(float64(startX) / cellSize)
 	startGridY := int(float64(startY) / cellSize)
 	if startGridX >= 0 && startGridX < gridW && startGridY >= 0 && startGridY < gridH {
 		grid[startGridY][startGridX] = 0
 	}
 
-	// Process active list
-	for len(activeList) > 0 {
-		// Pick random active point
-		activeIdx := rng.Intn(len(activeList))
-		pointIdx := activeList[activeIdx]
+	return points, activeList
+}
+
+// processActivePoints generates new points around active points.
+func (g *ForestGenerator) processActivePoints(points []Point, activeList *[]int, grid [][]int, cellSize, minDist float64, width, height int, rng *rand.Rand) {
+	for len(*activeList) > 0 {
+		activeIdx := rng.Intn(len(*activeList))
+		pointIdx := (*activeList)[activeIdx]
 		point := points[pointIdx]
 
-		// Try to generate new points around it
-		found := false
-		for i := 0; i < 30; i++ { // 30 attempts per point
-			// Random point in annulus (minDist to 2*minDist from point)
-			angle := rng.Float64() * 2.0 * math.Pi
-			radius := minDist * (1.0 + rng.Float64())
-			newX := point.X + int(radius*math.Cos(angle))
-			newY := point.Y + int(radius*math.Sin(angle))
-
-			// Check if point is valid
-			if newX >= 0 && newX < width && newY >= 0 && newY < height {
-				gridX := int(float64(newX) / cellSize)
-				gridY := int(float64(newY) / cellSize)
-				// Ensure grid indices are in bounds
-				if gridX >= 0 && gridX < gridW && gridY >= 0 && gridY < gridH {
-					newPoint := Point{X: newX, Y: newY}
-					if g.isValidPoissonPoint(newPoint, points, grid, cellSize, minDist, width, height) {
-						points = append(points, newPoint)
-						activeList = append(activeList, len(points)-1)
-						grid[gridY][gridX] = len(points) - 1
-						found = true
-					}
-				}
-			}
-		}
-
-		// Remove from active list if no new points found
+		found := g.tryGenerateNewPoints(point, &points, activeList, grid, cellSize, minDist, width, height, rng)
 		if !found {
-			activeList = append(activeList[:activeIdx], activeList[activeIdx+1:]...)
+			*activeList = append((*activeList)[:activeIdx], (*activeList)[activeIdx+1:]...)
 		}
 	}
+}
 
-	return points
+// tryGenerateNewPoints attempts to generate new points around a point.
+func (g *ForestGenerator) tryGenerateNewPoints(point Point, points *[]Point, activeList *[]int, grid [][]int, cellSize, minDist float64, width, height int, rng *rand.Rand) bool {
+	for i := 0; i < 30; i++ {
+		newPoint := g.generateCandidatePoint(point, minDist, rng)
+		if g.isValidAndAddPoint(newPoint, points, activeList, grid, cellSize, minDist, width, height) {
+			return true
+		}
+	}
+	return false
+}
+
+// generateCandidatePoint generates a random point in the annulus around a point.
+func (g *ForestGenerator) generateCandidatePoint(point Point, minDist float64, rng *rand.Rand) Point {
+	angle := rng.Float64() * 2.0 * math.Pi
+	radius := minDist * (1.0 + rng.Float64())
+	return Point{
+		X: point.X + int(radius*math.Cos(angle)),
+		Y: point.Y + int(radius*math.Sin(angle)),
+	}
+}
+
+// isValidAndAddPoint validates and adds a point if valid.
+func (g *ForestGenerator) isValidAndAddPoint(newPoint Point, points *[]Point, activeList *[]int, grid [][]int, cellSize, minDist float64, width, height int) bool {
+	if newPoint.X < 0 || newPoint.X >= width || newPoint.Y < 0 || newPoint.Y >= height {
+		return false
+	}
+
+	gridW := len(grid[0])
+	gridH := len(grid)
+	gridX := int(float64(newPoint.X) / cellSize)
+	gridY := int(float64(newPoint.Y) / cellSize)
+
+	if gridX < 0 || gridX >= gridW || gridY < 0 || gridY >= gridH {
+		return false
+	}
+
+	if !g.isValidPoissonPoint(newPoint, *points, grid, cellSize, minDist, width, height) {
+		return false
+	}
+
+	*points = append(*points, newPoint)
+	*activeList = append(*activeList, len(*points)-1)
+	grid[gridY][gridX] = len(*points) - 1
+	return true
 }
 
 // isValidPoissonPoint checks if a point is valid for Poisson disc sampling.

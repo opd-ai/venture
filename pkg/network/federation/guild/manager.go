@@ -140,61 +140,95 @@ func (m *Manager) PromoteMember(guildID, targetPlayerID, promoterID string) erro
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	guild, err := m.getGuildUnsafe(guildID)
+	if err != nil {
+		return err
+	}
+
+	promoter, err := m.validatePromoterPermissions(guild, promoterID)
+	if err != nil {
+		return err
+	}
+
+	return m.updateMemberRank(guild, targetPlayerID, promoter)
+}
+
+// getGuildUnsafe retrieves a guild without locking (caller must lock).
+func (m *Manager) getGuildUnsafe(guildID string) (*Guild, error) {
 	guild, exists := m.guilds[guildID]
 	if !exists {
-		return fmt.Errorf("guild not found: %s", guildID)
+		return nil, fmt.Errorf("guild not found: %s", guildID)
 	}
+	return guild, nil
+}
 
-	// Get promoter's rank to check permissions
+// validatePromoterPermissions checks if promoter has permission to promote.
+func (m *Manager) validatePromoterPermissions(guild *Guild, promoterID string) (*Member, error) {
 	promoter := guild.GetMember(promoterID)
 	if promoter == nil {
-		return fmt.Errorf("promoter not a member of guild")
+		return nil, fmt.Errorf("promoter not a member of guild")
 	}
-
-	// Check if promoter has permission to promote
 	if !guild.HasPermission(promoter.Rank, PermissionPromote) {
-		return fmt.Errorf("insufficient permissions to promote")
+		return nil, fmt.Errorf("insufficient permissions to promote")
 	}
+	return promoter, nil
+}
 
-	// Find and update target member
+// updateMemberRank finds and updates the target member's rank.
+func (m *Manager) updateMemberRank(guild *Guild, targetPlayerID string, promoter *Member) error {
 	for i := range guild.Members {
 		if guild.Members[i].PlayerID == targetPlayerID {
-			currentRank := guild.Members[i].Rank
-
-			// Determine next rank
-			var newRank Rank
-			switch currentRank {
-			case RankRecruit:
-				newRank = RankMember
-			case RankMember:
-				newRank = RankOfficer
-			case RankOfficer:
-				// Only leader can promote to leader
-				if promoter.Rank != RankLeader {
-					return fmt.Errorf("only leader can promote to officer")
-				}
-				newRank = RankLeader
-				// Transfer leadership
-				guild.LeaderID = targetPlayerID
-				// Demote current leader to officer
-				for j := range guild.Members {
-					if guild.Members[j].PlayerID == promoterID {
-						guild.Members[j].Rank = RankOfficer
-						break
-					}
-				}
-			case RankLeader:
-				return fmt.Errorf("cannot promote leader")
-			default:
-				return fmt.Errorf("unknown rank: %s", currentRank)
-			}
-
-			guild.Members[i].Rank = newRank
-			guild.UpdatedAt = time.Now()
-			return nil
+			return m.promoteToNextRank(guild, i, promoter)
 		}
 	}
 	return fmt.Errorf("target member not found: %s", targetPlayerID)
+}
+
+// promoteToNextRank determines and applies the next rank for a member.
+func (m *Manager) promoteToNextRank(guild *Guild, memberIdx int, promoter *Member) error {
+	currentRank := guild.Members[memberIdx].Rank
+	newRank, err := m.calculateNextRank(currentRank, promoter.Rank)
+	if err != nil {
+		return err
+	}
+
+	if newRank == RankLeader {
+		m.transferLeadership(guild, memberIdx, promoter.PlayerID)
+	}
+
+	guild.Members[memberIdx].Rank = newRank
+	guild.UpdatedAt = time.Now()
+	return nil
+}
+
+// calculateNextRank determines the next rank based on current rank.
+func (m *Manager) calculateNextRank(currentRank, promoterRank Rank) (Rank, error) {
+	switch currentRank {
+	case RankRecruit:
+		return RankMember, nil
+	case RankMember:
+		return RankOfficer, nil
+	case RankOfficer:
+		if promoterRank != RankLeader {
+			return "", fmt.Errorf("only leader can promote to officer")
+		}
+		return RankLeader, nil
+	case RankLeader:
+		return "", fmt.Errorf("cannot promote leader")
+	default:
+		return "", fmt.Errorf("unknown rank: %s", currentRank)
+	}
+}
+
+// transferLeadership transfers guild leadership and demotes current leader.
+func (m *Manager) transferLeadership(guild *Guild, newLeaderIdx int, oldLeaderID string) {
+	guild.LeaderID = guild.Members[newLeaderIdx].PlayerID
+	for j := range guild.Members {
+		if guild.Members[j].PlayerID == oldLeaderID {
+			guild.Members[j].Rank = RankOfficer
+			break
+		}
+	}
 }
 
 // DepositTreasury adds gold to guild treasury

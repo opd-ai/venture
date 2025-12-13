@@ -21,94 +21,137 @@ import (
 // spawnVehiclesInTerrain generates and spawns vehicles for the server.
 // Returns the number of vehicles spawned.
 func spawnVehiclesInTerrain(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Logger) (int, error) {
-	vehicleGen := vehicle.NewVehicleGenerator()
-
 	roomCount := len(terrainMap.Rooms)
 	if roomCount < 2 {
 		return 0, nil
 	}
 
-	vehicleCount := 2 + (roomCount-2)/4
-	if vehicleCount > 5 {
-		vehicleCount = 5
+	vehicles, err := generateVehicles(seed, params, roomCount)
+	if err != nil {
+		return 0, err
 	}
+
+	vehicleSpawnData := convertVehiclesToSpawnData(vehicles)
+	spawned, err := engine.SpawnVehiclesInTerrain(world, terrainMap, vehicleSpawnData, seed)
+	if err != nil {
+		return 0, fmt.Errorf("failed to spawn vehicles in terrain: %w", err)
+	}
+
+	logVehicleSpawning(logger, len(vehicleSpawnData), len(vehicles), spawned)
+	return spawned, nil
+}
+
+// generateVehicles creates the vehicle list based on room count.
+func generateVehicles(seed int64, params procgen.GenerationParams, roomCount int) ([]*vehicle.Vehicle, error) {
+	vehicleGen := vehicle.NewVehicleGenerator()
+	vehicleCount := calculateVehicleCount(roomCount)
 
 	vehicleResult, err := vehicleGen.Generate(seed, params)
 	if err != nil {
-		return 0, fmt.Errorf("failed to generate vehicles: %w", err)
+		return nil, fmt.Errorf("failed to generate vehicles: %w", err)
 	}
 
 	vehicles, ok := vehicleResult.([]*vehicle.Vehicle)
 	if !ok || len(vehicles) == 0 {
-		return 0, fmt.Errorf("vehicle generator returned invalid result")
+		return nil, fmt.Errorf("vehicle generator returned invalid result")
 	}
 
 	if len(vehicles) > vehicleCount {
 		vehicles = vehicles[:vehicleCount]
 	}
 
+	return vehicles, nil
+}
+
+// calculateVehicleCount determines vehicle count based on room count.
+func calculateVehicleCount(roomCount int) int {
+	vehicleCount := 2 + (roomCount-2)/4
+	if vehicleCount > 5 {
+		vehicleCount = 5
+	}
+	return vehicleCount
+}
+
+// convertVehiclesToSpawnData converts vehicle objects to spawn data.
+func convertVehiclesToSpawnData(vehicles []*vehicle.Vehicle) []engine.VehicleSpawnData {
 	vehicleSpawnData := make([]engine.VehicleSpawnData, len(vehicles))
 	for i, v := range vehicles {
-		var engineType engine.VehicleType
-		switch v.VehicleType {
-		case vehicle.TypeMount:
-			engineType = engine.VehicleMount
-		case vehicle.TypeCart:
-			engineType = engine.VehicleCart
-		case vehicle.TypeBoat:
-			engineType = engine.VehicleBoat
-		case vehicle.TypeGlider:
-			engineType = engine.VehicleGlider
-		case vehicle.TypeMech:
-			engineType = engine.VehicleMech
-		}
-
-		r := uint8((v.Color >> 16) & 0xFF)
-		g := uint8((v.Color >> 8) & 0xFF)
-		b := uint8(v.Color & 0xFF)
-		colorRGBA := color.RGBA{R: r, G: g, B: b, A: 255}
-
-		var size int
-		var colliderSize float64
-		switch v.VehicleType {
-		case vehicle.TypeMount:
-			size, colliderSize = 32, 28.0
-		case vehicle.TypeCart:
-			size, colliderSize = 40, 36.0
-		case vehicle.TypeBoat:
-			size, colliderSize = 48, 44.0
-		case vehicle.TypeGlider:
-			size, colliderSize = 36, 32.0
-		case vehicle.TypeMech:
-			size, colliderSize = 44, 40.0
-		default:
-			size, colliderSize = 32, 28.0
-		}
-
-		vehicleSpawnData[i] = engine.VehicleSpawnData{
-			Name:         v.Name,
-			VehicleType:  engineType,
-			Components:   v.ToComponents(), // Generate components from vehicle
-			Color:        colorRGBA,
-			Size:         size,
-			ColliderSize: colliderSize,
-		}
+		vehicleSpawnData[i] = createVehicleSpawnData(v)
 	}
+	return vehicleSpawnData
+}
 
-	spawned, err := engine.SpawnVehiclesInTerrain(world, terrainMap, vehicleSpawnData, seed)
-	if err != nil {
-		return 0, fmt.Errorf("failed to spawn vehicles in terrain: %w", err)
+// createVehicleSpawnData creates spawn data from a single vehicle.
+func createVehicleSpawnData(v *vehicle.Vehicle) engine.VehicleSpawnData {
+	engineType := mapVehicleType(v.VehicleType)
+	colorRGBA := extractColor(v.Color)
+	size, colliderSize := getVehicleSizeForType(v.VehicleType)
+
+	return engine.VehicleSpawnData{
+		Name:         v.Name,
+		VehicleType:  engineType,
+		Components:   v.ToComponents(),
+		Color:        colorRGBA,
+		Size:         size,
+		ColliderSize: colliderSize,
 	}
+}
 
+// mapVehicleType converts procgen vehicle type to engine vehicle type.
+func mapVehicleType(vType vehicle.VehicleType) engine.VehicleType {
+	switch vType {
+	case vehicle.TypeMount:
+		return engine.VehicleMount
+	case vehicle.TypeCart:
+		return engine.VehicleCart
+	case vehicle.TypeBoat:
+		return engine.VehicleBoat
+	case vehicle.TypeGlider:
+		return engine.VehicleGlider
+	case vehicle.TypeMech:
+		return engine.VehicleMech
+	default:
+		return engine.VehicleMount
+	}
+}
+
+// extractColor converts uint32 color to color.RGBA.
+func extractColor(colorValue uint32) color.RGBA {
+	return color.RGBA{
+		R: uint8((colorValue >> 16) & 0xFF),
+		G: uint8((colorValue >> 8) & 0xFF),
+		B: uint8(colorValue & 0xFF),
+		A: 255,
+	}
+}
+
+// getVehicleSizeForType returns size and collider size for vehicle type.
+func getVehicleSizeForType(vType vehicle.VehicleType) (int, float64) {
+	switch vType {
+	case vehicle.TypeMount:
+		return 32, 28.0
+	case vehicle.TypeCart:
+		return 40, 36.0
+	case vehicle.TypeBoat:
+		return 48, 44.0
+	case vehicle.TypeGlider:
+		return 36, 32.0
+	case vehicle.TypeMech:
+		return 44, 40.0
+	default:
+		return 32, 28.0
+	}
+}
+
+// logVehicleSpawning logs vehicle spawning results.
+func logVehicleSpawning(logger *logrus.Logger, requested, generated, spawned int) {
 	if logger.GetLevel() >= logrus.DebugLevel {
 		logger.WithFields(logrus.Fields{
-			"requested": vehicleCount,
-			"generated": len(vehicles),
+			"requested": requested,
+			"generated": generated,
 			"spawned":   spawned,
 		}).Debug("vehicle spawning complete")
 	}
-
-	return spawned, nil
 }
 
 // spawnCompanionsInTerrain generates and spawns companions for the server.

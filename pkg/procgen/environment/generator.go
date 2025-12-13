@@ -840,20 +840,17 @@ func (g *Generator) addBranch(img *image.RGBA, x, y, width, height int, accent c
 }
 
 func (g *Generator) drawBloodstain(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
-	// Draw irregular blood splatter
 	centerX, centerY := width/2, height/2
+	g.drawMainBloodStain(img, width, height, centerX, centerY, base, accent, rng)
+	g.drawBloodSplatters(img, width, height, centerX, centerY, base, rng)
+}
 
-	// Main stain (irregular circle)
+// drawMainBloodStain draws the main irregular blood stain.
+func (g *Generator) drawMainBloodStain(img *image.RGBA, width, height, centerX, centerY int, base, accent color.Color, rng *rand.Rand) {
 	radius := min(width, height) / 3
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			dx := x - centerX
-			dy := y - centerY
-			dist := dx*dx + dy*dy
-			// Irregular edge using noise
-			threshold := radius * radius
-			noise := rng.Intn(radius)
-			if dist <= threshold+noise*noise {
+			if g.isInsideBloodStain(x, y, centerX, centerY, radius, rng) {
 				if rng.Float64() < 0.8 {
 					img.Set(x, y, base)
 				} else {
@@ -862,18 +859,35 @@ func (g *Generator) drawBloodstain(img *image.RGBA, width, height int, base, acc
 			}
 		}
 	}
+}
 
-	// Add splatters
+// isInsideBloodStain checks if a point is inside the irregular blood stain.
+func (g *Generator) isInsideBloodStain(x, y, centerX, centerY, radius int, rng *rand.Rand) bool {
+	dx := x - centerX
+	dy := y - centerY
+	dist := dx*dx + dy*dy
+	threshold := radius * radius
+	noise := rng.Intn(radius)
+	return dist <= threshold+noise*noise
+}
+
+// drawBloodSplatters adds small blood splatters around the main stain.
+func (g *Generator) drawBloodSplatters(img *image.RGBA, width, height, centerX, centerY int, base color.Color, rng *rand.Rand) {
 	for i := 0; i < 5; i++ {
 		sx := centerX + rng.Intn(width/2) - width/4
 		sy := centerY + rng.Intn(height/2) - height/4
 		size := 2 + rng.Intn(4)
-		for dy := -size; dy <= size; dy++ {
-			for dx := -size; dx <= size; dx++ {
-				if sx+dx >= 0 && sx+dx < width && sy+dy >= 0 && sy+dy < height {
-					if dx*dx+dy*dy <= size*size {
-						img.Set(sx+dx, sy+dy, base)
-					}
+		g.drawSingleSplatter(img, width, height, sx, sy, size, base)
+	}
+}
+
+// drawSingleSplatter draws a single circular splatter.
+func (g *Generator) drawSingleSplatter(img *image.RGBA, width, height, sx, sy, size int, base color.Color) {
+	for dy := -size; dy <= size; dy++ {
+		for dx := -size; dx <= size; dx++ {
+			if sx+dx >= 0 && sx+dx < width && sy+dy >= 0 && sy+dy < height {
+				if dx*dx+dy*dy <= size*size {
+					img.Set(sx+dx, sy+dy, base)
 				}
 			}
 		}

@@ -1,0 +1,1509 @@
+# Integration Plan - December 13, 2025
+
+## Core Principle
+
+**All packages become unconditionally active. No feature flags. No optional toggles.**
+
+Dormant packages represent complete, tested implementations awaiting integration. This plan provides exact file changes, code snippets, and activation steps to integrate all 58 dormant packages into the game client and server as always-on baseline features.
+
+---
+
+## Integration Phases
+
+### Phase 1: Foundation (Week 1 - Days 1-5)
+**Goal**: Activate high-impact systems with no dependencies  
+**Packages**: 6  
+**Impact**: Audio, destruction physics, companion learning  
+**Effort**: Medium (5 days)
+
+---
+
+#### 1.1: Audio System Complete (Days 1-3)
+
+**Packages**: `pkg/audio`, `pkg/audio/synthesis`, `pkg/audio/sfx`, `pkg/audio/music`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports** (after line 37):
+```go
+// Phase 1.1: Audio System Integration
+"github.com/opd-ai/venture/pkg/audio"
+"github.com/opd-ai/venture/pkg/audio/music"
+"github.com/opd-ai/venture/pkg/audio/sfx"
+"github.com/opd-ai/venture/pkg/audio/synthesis"
+```
+
+2. **Modify `initializeAudioSystem`** (replace existing function around line 550):
+```go
+// initializeAudioSystem creates and initializes the audio system with full synthesis support.
+func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, logger *logrus.Entry) {
+	// Phase 1.1: Full audio integration - synthesis, music, SFX
+	const sampleRate = 44100
+	seed := *gameSeed
+	
+	// Create base audio manager
+	audioManager := audio.NewManager(sampleRate, seed)
+	
+	// Create adaptive music manager
+	musicManager := music.NewAdaptiveMusicManager(sampleRate, seed)
+	audioManager.SetMusicManager(musicManager)
+	
+	// Create SFX variety manager
+	sfxManager := sfx.NewVarietyManager(sampleRate, seed)
+	audioManager.SetSFXManager(sfxManager)
+	
+	logger.WithFields(logrus.Fields{
+		"sampleRate": sampleRate,
+		"seed":       seed,
+	}).Info("audio system initialized with adaptive music and SFX variety")
+	
+	// Store reference
+	sys.audioManager = audioManager
+	sys.audioManagerSystem = engine.NewAudioManagerSystem(audioManager)
+}
+```
+
+3. **Verification**:
+```bash
+go build ./cmd/client
+./cmd/client --seed 12345 --genre fantasy
+# Listen for procedural music and sound effects
+```
+
+**Test Programs**:
+- `go run ./examples/audiotest/` - Verify audio playback
+- `go run ./examples/musictest/` - Test adaptive music system
+
+---
+
+#### 1.2: Destruction Physics (Day 3)
+
+**Package**: `pkg/engine/physics/destruction`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import** (after line 14):
+```go
+"github.com/opd-ai/venture/pkg/engine/physics/destruction"
+```
+
+2. **Add to systemsContainer** (around line 60):
+```go
+destructionSystem    *destruction.System
+```
+
+3. **Add initialization** in `initializeCoreSystems` (around line 350):
+```go
+// Phase 1.2: Destruction physics
+destructionConfig := destruction.Config{
+	MinStructuralIntegrity: 0.3,
+	PropagationRadius:      5.0,
+	DamageThreshold:        10.0,
+}
+sys.destructionSystem = destruction.NewSystem(destructionConfig)
+```
+
+4. **Register system** in `registerAllSystems` (around line 740):
+```go
+game.World.AddSystem(sys.destructionSystem)
+```
+
+**File**: `cmd/client/util.go`
+
+**Changes**: Add flag for destruction testing (optional):
+```go
+destructionDebug = flag.Bool("destruction-debug", false, "Show destruction physics debug info")
+```
+
+**Verification**:
+```bash
+go run ./examples/destructiontest/
+# Verify structures break when damaged
+```
+
+---
+
+#### 1.3: Companion Learning (Day 4)
+
+**Package**: `pkg/companion/learning`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import** (after line 7):
+```go
+"github.com/opd-ai/venture/pkg/companion/learning"
+"time"
+```
+
+2. **Add to systemsContainer** (around line 100):
+```go
+companionLearningSystem *learning.CompanionLearningSystem
+```
+
+3. **Add initialization** in `initializeCoreSystems` (around line 400):
+```go
+// Phase 1.3: Companion learning system
+sys.companionLearningSystem = learning.NewCompanionLearningSystem(time.Second)
+```
+
+4. **Register system** in `registerAllSystems` (around line 722):
+```go
+game.World.AddSystem(sys.companionLearningSystem)
+```
+
+**Verification**:
+```bash
+go run ./examples/companiontest/
+# Verify companions gain skills over time
+```
+
+---
+
+#### 1.4: Phase 1 Validation (Day 5)
+
+**Tasks**:
+- [ ] `go build ./cmd/client && go build ./cmd/server`
+- [ ] `go test ./pkg/audio/... ./pkg/engine/physics/destruction/... ./pkg/companion/learning/...`
+- [ ] Run client, verify audio playing
+- [ ] Test destruction with combat
+- [ ] Verify companion skill progression
+- [ ] Performance check: 60+ FPS with 2000 entities
+
+---
+
+### Phase 2: Visual Enhancement (Week 2 - Days 6-10)
+**Goal**: Unconditionally enable all rendering systems  
+**Packages**: 9  
+**Impact**: Lighting, post-processing, animation, UI, shapes, patterns, optimization  
+**Effort**: Medium (5 days)
+
+---
+
+#### 2.1: Remove Rendering Feature Flags (Day 6)
+
+**File**: `cmd/client/util.go`
+
+**Changes**: **DELETE** the following flag declarations (lines 336-347):
+```go
+// DELETE THESE LINES:
+enableLighting        = flag.Bool("enable-lighting", true, ...)
+enableWeather         = flag.Bool("enable-weather", true, ...)
+enableTileTransitions = flag.Bool("enable-tile-transitions", true, ...)
+enableTileParallax    = flag.Bool("enable-tile-parallax", false, ...)
+enableEnhancedWalls   = flag.Bool("enable-enhanced-walls", true, ...)
+enablePostProcessing  = flag.Bool("enable-postprocessing", false, ...)
+enableHousing         = flag.Bool("enable-housing", true, ...)
+```
+
+**Note**: Keep `hostAndPlay` flag - it's a valid operational mode, not a feature toggle.
+
+---
+
+#### 2.2: Core Rendering Systems (Days 6-7)
+
+**Packages**: `pkg/rendering/lighting`, `pkg/rendering/animation`, `pkg/rendering/postprocess`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports** (around line 30):
+```go
+"github.com/opd-ai/venture/pkg/rendering/lighting"
+"github.com/opd-ai/venture/pkg/rendering/animation"
+"github.com/opd-ai/venture/pkg/rendering/postprocess"
+```
+
+2. **Add to systemsContainer** (around line 85):
+```go
+lightingSystem      *lighting.System
+animationManager    *animation.Manager
+postProcessSystem   *postprocess.System
+```
+
+3. **Replace conditional lighting** (find all `if *enableLighting` blocks):
+```go
+// BEFORE:
+if *enableLighting {
+    // lighting code
+}
+
+// AFTER (unconditional):
+sys.lightingSystem = lighting.NewSystem()
+game.World.AddSystem(sys.lightingSystem)
+```
+
+4. **Add animation system** in `initializeCoreSystems`:
+```go
+sys.animationManager = animation.NewManager()
+game.World.AddSystem(sys.animationManager)
+```
+
+5. **Add post-processing** (unconditional):
+```go
+sys.postProcessSystem = postprocess.NewSystem(postprocess.Config{
+	EnableVignette:           true,
+	EnableChromaticAberration: true,
+	EnableColorGrading:        true,
+})
+game.World.AddSystem(sys.postProcessSystem)
+```
+
+---
+
+#### 2.3: UI & Shape Rendering (Day 8)
+
+**Packages**: `pkg/rendering/ui`, `pkg/rendering/shapes`, `pkg/rendering/patterns`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/rendering/ui"
+"github.com/opd-ai/venture/pkg/rendering/shapes"
+"github.com/opd-ai/venture/pkg/rendering/patterns"
+```
+
+2. **Add to systemsContainer**:
+```go
+uiGenerator      *ui.Generator
+shapeRenderer    *shapes.Renderer
+patternGenerator *patterns.Generator
+```
+
+3. **Initialize**:
+```go
+sys.uiGenerator = ui.NewGenerator(*gameSeed)
+sys.shapeRenderer = shapes.NewRenderer()
+sys.patternGenerator = patterns.NewGenerator(*gameSeed)
+```
+
+4. **Connect to existing UI systems**:
+```go
+// Replace manual UI drawing with generator
+game.UIGenerator = sys.uiGenerator
+game.ShapeRenderer = sys.shapeRenderer
+```
+
+---
+
+#### 2.4: Rendering Optimization (Day 9)
+
+**Packages**: `pkg/rendering/pool`, `pkg/rendering/parallel`, `pkg/rendering`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/rendering/pool"
+"github.com/opd-ai/venture/pkg/rendering/parallel"
+"github.com/opd-ai/venture/pkg/rendering"
+"runtime"
+```
+
+2. **Add to systemsContainer**:
+```go
+spritePool       *pool.SpritePool
+parallelRenderer *parallel.Renderer
+```
+
+3. **Initialize** in `initializeCoreSystems`:
+```go
+// Sprite pool for memory efficiency
+sys.spritePool = pool.NewSpritePool(1000)
+
+// Parallel rendering for performance
+sys.parallelRenderer = parallel.NewRenderer(runtime.NumCPU())
+```
+
+4. **Connect to render system**:
+```go
+// Modify existing RenderSystem initialization
+game.RenderSystem.SetPool(sys.spritePool)
+game.RenderSystem.SetParallelRenderer(sys.parallelRenderer)
+```
+
+---
+
+#### 2.5: Phase 2 Validation (Day 10)
+
+**Tasks**:
+- [ ] `go build ./cmd/client`
+- [ ] Verify NO feature flags remain (grep for `enable-`)
+- [ ] Run client, check lighting effects visible
+- [ ] Test post-processing (vignette, chromatic aberration)
+- [ ] Verify UI rendering improvements
+- [ ] Performance check: 60+ FPS maintained
+- [ ] Run `go run ./examples/lightingtest/`
+- [ ] Run `go run ./examples/postprocesstest/`
+
+---
+
+### Phase 3: Content Generation (Week 3 - Days 11-17)
+**Goal**: Integrate all procgen systems  
+**Packages**: 12  
+**Impact**: Magic, skills, entities, dialog, environment, legendary items, puzzles, minigames  
+**Effort**: Large (7 days)
+
+---
+
+#### 3.1: Genre Theme System (Day 11)
+
+**Package**: `pkg/procgen/genre`
+
+**File**: `cmd/client/util.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/genre"
+```
+
+2. **Add after `createGenerationParams`** (around line 900):
+```go
+// getGenreTheme returns the genre theme configuration for all generators.
+func getGenreTheme() *genre.Theme {
+	return genre.GetTheme(*genreFlag)
+}
+```
+
+3. **Modify all generator calls** to use theme:
+```go
+// BEFORE:
+params := createGenerationParams()
+
+// AFTER:
+params := createGenerationParams()
+params.Custom["theme"] = getGenreTheme()
+```
+
+---
+
+#### 3.2: Magic & Skills (Days 11-12)
+
+**Packages**: `pkg/procgen/magic`, `pkg/procgen/skills`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/magic"
+"github.com/opd-ai/venture/pkg/procgen/skills"
+```
+
+2. **Add to systemsContainer**:
+```go
+magicGenerator *magic.SpellGenerator
+skillGenerator *skills.SkillTreeGenerator
+```
+
+3. **Initialize** in `initializeGenerators`:
+```go
+sys.magicGenerator = magic.NewSpellGenerator()
+sys.skillGenerator = skills.NewSkillTreeGenerator()
+```
+
+4. **Integrate with loot system** (find loot generation code around line 1200):
+```go
+// Add magic items to loot tables
+if rand.Float64() < 0.15 { // 15% chance for spell scroll
+	spell, err := sys.magicGenerator.Generate(seed, params)
+	if err == nil {
+		spellItem := createSpellScrollItem(spell)
+		// Add to loot
+	}
+}
+```
+
+5. **Integrate with progression** (find class selection around line 600):
+```go
+// Generate skill tree for class
+skillTree, err := sys.skillGenerator.Generate(classSeed, params)
+if err == nil {
+	player.SetSkillTree(skillTree)
+}
+```
+
+**Verification**:
+```bash
+go run ./examples/magictest/
+go run ./examples/skilltest/
+```
+
+---
+
+#### 3.3: Entity & Dialog Generation (Days 13-14)
+
+**Packages**: `pkg/procgen/entity`, `pkg/procgen/dialog`
+
+**File**: `cmd/client/util.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/entity"
+"github.com/opd-ai/venture/pkg/procgen/dialog"
+```
+
+2. **Replace manual NPC creation** (find `spawnWorldEntities` around line 1500):
+```go
+// BEFORE: Manual entity creation
+enemy := &engine.Entity{...}
+
+// AFTER: Procedural entity generation
+entityGen := entity.NewEntityGenerator()
+generatedEntity, err := entityGen.Generate(seed, params)
+if err == nil {
+	enemy := convertToEngineEntity(generatedEntity)
+	// Spawn enemy
+}
+```
+
+3. **Add dialog to NPCs** (find NPC interaction code):
+```go
+dialogGen := dialog.NewDialogGenerator()
+dialogTree, err := dialogGen.Generate(npcSeed, params)
+if err == nil {
+	npc.DialogTree = dialogTree
+}
+```
+
+**Verification**:
+```bash
+go run ./examples/entitytest/
+go run ./examples/dialogtest/
+```
+
+---
+
+#### 3.4: Environment & Legendary Items (Day 15)
+
+**Packages**: `pkg/procgen/environment`, `pkg/procgen/legendary`
+
+**File**: `cmd/client/util.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/environment"
+"github.com/opd-ai/venture/pkg/procgen/legendary"
+```
+
+2. **Add environmental hazards** (in `spawnEnvironmentalEffects` around line 1800):
+```go
+envGen := environment.NewEnvironmentGenerator()
+for i := 0; i < 20; i++ {
+	hazard, err := envGen.Generate(seed+int64(i), params)
+	if err == nil {
+		spawnHazard(game, hazard)
+	}
+}
+```
+
+3. **Add legendary loot** (in loot tables):
+```go
+legendaryGen := legendary.NewLegendaryGenerator()
+if isLegendaryDrop() {
+	legendary, err := legendaryGen.Generate(seed, params)
+	if err == nil {
+		legendaryItem := createLegendaryItem(legendary)
+		// Add to loot
+	}
+}
+```
+
+---
+
+#### 3.5: Puzzles, Minigames, Class Gen (Day 16)
+
+**Packages**: `pkg/procgen/puzzle`, `pkg/procgen/minigame`, `pkg/procgen/minigame/games`, `pkg/procgen/class`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add imports**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/puzzle"
+"github.com/opd-ai/venture/pkg/procgen/minigame"
+"github.com/opd-ai/venture/pkg/procgen/class"
+```
+
+2. **Add puzzle rooms** (in dungeon generation):
+```go
+puzzleGen := puzzle.NewPuzzleGenerator()
+if shouldSpawnPuzzle() {
+	puzzle, err := puzzleGen.Generate(roomSeed, params)
+	if err == nil {
+		addPuzzleToRoom(room, puzzle)
+	}
+}
+```
+
+3. **Add minigames to taverns**:
+```go
+minigameGen := minigame.NewMinigameGenerator()
+minigame, err := minigameGen.Generate(tavernSeed, params)
+if err == nil {
+	tavern.Minigame = minigame
+}
+```
+
+4. **Use class generator in character creation**:
+```go
+classGen := class.NewClassGenerator()
+classArchetype, err := classGen.Generate(seed, params)
+if err == nil {
+	// Apply archetype to character
+}
+```
+
+---
+
+#### 3.6: Narrative Integration & Audit (Day 17)
+
+**Packages**: `pkg/procgen/narrative`, `pkg/procgen/audit`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/procgen/narrative"
+```
+
+2. **Integrate narrative events**:
+```go
+narrativeGen := narrative.NewNarrativeGenerator()
+event, err := narrativeGen.Generate(worldSeed, params)
+if err == nil {
+	sys.narrativeSystem.AddEvent(event)
+}
+```
+
+**File**: `Makefile` (for audit integration)
+
+**Changes**: Add audit target:
+```makefile
+audit:
+	go test ./pkg/procgen/audit/... -v
+```
+
+**Verification**:
+```bash
+make audit
+go run ./examples/narrativetest/
+```
+
+---
+
+#### 3.7: Phase 3 Validation (Day 17)
+
+**Tasks**:
+- [ ] `go build ./cmd/client`
+- [ ] `go test ./pkg/procgen/...`
+- [ ] Run client, verify magic spells drop
+- [ ] Check skill trees generated
+- [ ] Test NPC dialog trees
+- [ ] Verify environmental hazards spawn
+- [ ] Test puzzle rooms
+- [ ] Check minigames in taverns
+- [ ] Run `make audit`
+
+---
+
+### Phase 4: Network & Multiplayer (Week 4 - Days 18-22)
+**Goal**: Expand multiplayer capabilities  
+**Packages**: 5  
+**Impact**: Chat, trade, resilience, mobile federation, WebRTC  
+**Effort**: Medium (5 days)
+
+---
+
+#### 4.1: Chat System (Day 18)
+
+**Package**: `pkg/network/chat`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/network/chat"
+```
+
+2. **Add to systemsContainer**:
+```go
+chatSystem *chat.System
+```
+
+3. **Initialize** in `initializeV5Systems` (around line 550):
+```go
+sys.chatSystem = chat.NewSystem(networkClient)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.chatSystem)
+```
+
+**File**: `cmd/server/main.go`
+
+**Changes**: Add chat handler:
+```go
+chatHandler := chat.NewServerHandler()
+server.RegisterHandler("chat", chatHandler)
+```
+
+**Verification**:
+```bash
+go run ./examples/chattest/
+```
+
+---
+
+#### 4.2: Trade System (Day 19)
+
+**Package**: `pkg/network/trade`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/network/trade"
+```
+
+2. **Add to systemsContainer**:
+```go
+tradeSystem *trade.System
+```
+
+3. **Initialize**:
+```go
+sys.tradeSystem = trade.NewSystem(networkClient)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.tradeSystem)
+```
+
+**File**: `cmd/server/main.go`
+
+**Changes**:
+```go
+tradeHandler := trade.NewServerHandler()
+server.RegisterHandler("trade", tradeHandler)
+```
+
+**Verification**:
+```bash
+go run ./examples/tradetest/
+```
+
+---
+
+#### 4.3: High-Latency Resilience (Day 20)
+
+**Package**: `pkg/network/resilience`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/network/resilience"
+```
+
+2. **Wrap network client** (in `initializeNetworkClient`):
+```go
+// Wrap client with resilience layer for high-latency support (Tor/onion)
+if networkClient != nil {
+	resilientClient := resilience.NewResilientClient(networkClient, resilience.Config{
+		MaxLatency:        5000 * time.Millisecond, // 5 seconds for Tor
+		RetryAttempts:     3,
+		PredictionEnabled: true,
+	})
+	networkClient = resilientClient
+}
+```
+
+**Verification**:
+```bash
+go run ./examples/resiliencetest/
+# Test with --high-latency flag
+```
+
+---
+
+#### 4.4: Platform-Specific Federation (Day 21)
+
+**Packages**: `pkg/network/federation/mobile`, `pkg/network/federation/webrtc`
+
+**File**: `cmd/client/handlers.go` (mobile builds)
+
+**Changes**:
+
+1. **Add conditional import** (with build tags):
+```go
+// +build android ios
+
+"github.com/opd-ai/venture/pkg/network/federation/mobile"
+```
+
+2. **Initialize mobile federation**:
+```go
+// +build android ios
+
+func initializeMobileFederation(client *network.Client) {
+	mobileFed := mobile.NewFederationClient(client)
+	client.SetFederationProvider(mobileFed)
+}
+```
+
+**File**: `cmd/client/handlers.go` (WASM/desktop)
+
+**Changes**:
+
+1. **Add import**:
+```go
+// +build !android,!ios
+
+"github.com/opd-ai/venture/pkg/network/federation/webrtc"
+```
+
+2. **Initialize WebRTC**:
+```go
+webrtcFed := webrtc.NewFederationClient(client)
+client.SetFederationProvider(webrtcFed)
+```
+
+---
+
+#### 4.5: Phase 4 Validation (Day 22)
+
+**Tasks**:
+- [ ] `go build ./cmd/client`
+- [ ] Test chat between clients
+- [ ] Test player-to-player trading
+- [ ] Test high-latency mode (Tor simulation)
+- [ ] Build mobile: `ebitenmobile bind`
+- [ ] Test WebRTC on WASM build
+
+---
+
+### Phase 5: Engine Enhancements (Week 5 - Days 23-25)
+**Goal**: QoL, prestige, performance monitoring  
+**Packages**: 3  
+**Impact**: Auto-loot, New Game+, profiling  
+**Effort**: Small (3 days)
+
+---
+
+#### 5.1: Quality-of-Life System (Day 23)
+
+**Package**: `pkg/engine/qol`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/engine/qol"
+```
+
+2. **Add to systemsContainer**:
+```go
+qolManager *qol.Manager
+```
+
+3. **Initialize**:
+```go
+sys.qolManager = qol.NewManager(qol.Config{
+	AutoLoot:     true,
+	AutoSort:     true,
+	QuickDeposit: true,
+})
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.qolManager)
+```
+
+**Verification**:
+```bash
+go run ./examples/qoltest/
+```
+
+---
+
+#### 5.2: Prestige System (Day 24)
+
+**Package**: `pkg/engine/prestige`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/engine/prestige"
+```
+
+2. **Add to systemsContainer**:
+```go
+prestigeSystem *prestige.System
+```
+
+3. **Initialize**:
+```go
+sys.prestigeSystem = prestige.NewSystem()
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.prestigeSystem)
+```
+
+5. **Connect to save/load**:
+```go
+// In save/load code
+saveState.Prestige = sys.prestigeSystem.GetState()
+```
+
+**Verification**:
+```bash
+go run ./examples/prestigetest/
+```
+
+---
+
+#### 5.3: Performance Monitoring (Day 25)
+
+**Package**: `pkg/engine/performance`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/engine/performance"
+```
+
+2. **Add to systemsContainer**:
+```go
+perfMonitor *performance.Monitor
+```
+
+3. **Initialize**:
+```go
+sys.perfMonitor = performance.NewMonitor(performance.Config{
+	EnableProfiling: *verbose,
+	TargetFPS:       60,
+})
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.perfMonitor)
+```
+
+5. **Add debug output** (if verbose):
+```go
+if *verbose {
+	sys.perfMonitor.PrintStats()
+}
+```
+
+**Verification**:
+```bash
+go run ./examples/performancetest/
+./cmd/client --verbose
+```
+
+---
+
+#### 5.4: Phase 5 Validation (Day 25)
+
+**Tasks**:
+- [ ] `go build ./cmd/client`
+- [ ] Test auto-loot functionality
+- [ ] Test prestige reset
+- [ ] Verify performance monitoring output
+- [ ] Check 60+ FPS maintained
+
+---
+
+### Phase 6: World Systems (Week 6 - Days 26-30)
+**Goal**: Economy and raid mechanics  
+**Packages**: 2  
+**Impact**: Market simulation, territory raids  
+**Effort**: Medium (5 days)
+
+---
+
+#### 6.1: Economy System (Days 26-28)
+
+**Package**: `pkg/world/economy`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/world/economy"
+```
+
+2. **Add to systemsContainer**:
+```go
+economySystem *economy.System
+```
+
+3. **Initialize** (requires trade system):
+```go
+sys.economySystem = economy.NewSystem(
+	game.World,
+	sys.tradeSystem,
+	economy.Config{
+		InflationRate:      0.02,
+		TaxRate:            0.10,
+		UpdateInterval:     time.Minute,
+	},
+)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.economySystem)
+```
+
+**File**: `cmd/server/main.go`
+
+**Changes**: Add economy sync:
+```go
+economySys := economy.NewSystem(world, tradeHandler, config)
+server.AddSystem(economySys)
+```
+
+**Verification**:
+```bash
+go run ./examples/marketplacetest/
+```
+
+---
+
+#### 6.2: Raid System (Days 29-30)
+
+**Package**: `pkg/world/raids`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/world/raids"
+```
+
+2. **Add to systemsContainer**:
+```go
+raidSystem *raids.System
+```
+
+3. **Initialize** (requires territory, faction systems):
+```go
+sys.raidSystem = raids.NewSystem(
+	game.World,
+	sys.territorySystem,
+	sys.factionSystem,
+	raids.Config{
+		RaidFrequency:     24 * time.Hour,
+		MinAttackers:      5,
+		MaxAttackers:      20,
+		DifficultyScaling: true,
+	},
+)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.raidSystem)
+```
+
+**File**: `cmd/server/main.go`
+
+**Changes**:
+```go
+raidSys := raids.NewSystem(world, territorySys, factionSys, config)
+server.AddSystem(raidSys)
+```
+
+**Verification**:
+```bash
+go run ./examples/raidtest/
+```
+
+---
+
+#### 6.3: Phase 6 Validation (Day 30)
+
+**Tasks**:
+- [ ] `go build ./cmd/client && go build ./cmd/server`
+- [ ] Test market prices fluctuate
+- [ ] Verify supply/demand mechanics
+- [ ] Test raid spawning
+- [ ] Check raid difficulty scaling
+- [ ] Verify territory defense
+
+---
+
+### Phase 7: Advanced Integration (Weeks 7-8 - Days 31-45)
+**Goal**: Cross-system feature interactions  
+**Packages**: 7  
+**Impact**: Choice consequences, guild vehicles, narrative world, political warfare, sieges, trade routes  
+**Effort**: Large (15 days)
+
+---
+
+#### 7.1: Choice & Consequence (Days 31-33)
+
+**Package**: `pkg/integration/choice_consequences`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/choice_consequences"
+```
+
+2. **Add to systemsContainer**:
+```go
+choiceManager *choice_consequences.Manager
+```
+
+3. **Initialize** (requires quest, world systems):
+```go
+sys.choiceManager = choice_consequences.NewManager(
+	sys.objectiveTracker, // Quest system
+	game.World,
+)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.choiceManager)
+```
+
+**Verification**:
+```bash
+go run ./examples/choicetest/
+```
+
+---
+
+#### 7.2: Guild Vehicles (Days 34-36)
+
+**Package**: `pkg/integration/guild_vehicle`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
+```
+
+2. **Add to systemsContainer**:
+```go
+guildVehicleManager *guild_vehicle.Manager
+```
+
+3. **Initialize**:
+```go
+sys.guildVehicleManager = guild_vehicle.NewManager(
+	sys.guildSystem,
+	sys.vehicleMovementSys,
+)
+```
+
+4. **Register system**:
+```go
+game.World.AddSystem(sys.guildVehicleManager)
+```
+
+---
+
+#### 7.3: Narrative World Integration (Days 37-38)
+
+**Package**: `pkg/integration/narrative_world`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/narrative_world"
+```
+
+2. **Initialize**:
+```go
+narrativeWorldManager := narrative_world.NewManager(
+	sys.narrativeSystem,
+	game.World,
+)
+game.World.AddSystem(narrativeWorldManager)
+```
+
+---
+
+#### 7.4: Political Warfare (Days 39-40)
+
+**Package**: `pkg/integration/political_warfare`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/political_warfare"
+```
+
+2. **Initialize**:
+```go
+politicalWarfareSys := political_warfare.NewManager(
+	sys.factionSystem,
+	sys.territorySystem,
+)
+game.World.AddSystem(politicalWarfareSys)
+```
+
+**Verification**:
+```bash
+go run ./examples/politicalwarfaretest/
+```
+
+---
+
+#### 7.5: Territory Siege (Days 41-42)
+
+**Package**: `pkg/integration/territory_siege`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/territory_siege"
+```
+
+2. **Initialize**:
+```go
+siegeSystem := territory_siege.NewManager(
+	sys.territorySystem,
+	sys.combatSystem,
+)
+game.World.AddSystem(siegeSystem)
+```
+
+**Verification**:
+```bash
+go run ./examples/siegetest/
+```
+
+---
+
+#### 7.6: Trade Routes (Days 43-44)
+
+**Package**: `pkg/integration/trade_routes`
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/integration/trade_routes"
+```
+
+2. **Initialize**:
+```go
+tradeRoutesSys := trade_routes.NewManager(
+	sys.economySystem,
+	sys.tradeSystem,
+)
+game.World.AddSystem(tradeRoutesSys)
+```
+
+**Verification**:
+```bash
+go run ./examples/traderoutetest/
+```
+
+---
+
+#### 7.7: Phase 7 Validation (Day 45)
+
+**Tasks**:
+- [ ] `go build ./cmd/client && go build ./cmd/server`
+- [ ] Test all integration systems active
+- [ ] Verify choice consequences persist
+- [ ] Test guild vehicle ownership
+- [ ] Check narrative events affect world
+- [ ] Test faction politics
+- [ ] Verify territory sieges
+- [ ] Check trade route economics
+
+---
+
+### Phase 8: Developer Tools (Ongoing)
+**Goal**: CI/CD and server tooling  
+**Packages**: 11  
+**Impact**: Development workflow, not end-user features  
+**Effort**: Medium (5 days, integrated into CI/CD)
+
+---
+
+#### 8.1: CI/CD Integration
+
+**File**: `.github/workflows/test.yml`
+
+**Changes**: Add audit steps:
+```yaml
+- name: Feature Audit
+  run: go test ./pkg/audit/features/... -v
+
+- name: Balance Audit
+  run: go test ./pkg/balance/... -v
+
+- name: Security Audit
+  run: go test ./pkg/security/... -v
+
+- name: Stability Audit
+  run: go test ./pkg/stability/... -v
+
+- name: Visual Regression Test
+  run: go test ./pkg/visualtest/... -v
+
+- name: Platform Parity Test
+  run: go test ./pkg/visualtest/parity/... -v
+```
+
+---
+
+#### 8.2: Server Modding Support
+
+**File**: `cmd/server/main.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/modding"
+```
+
+2. **Add mod loading**:
+```go
+modLoader := modding.NewLoader("./mods")
+if err := modLoader.LoadAll(); err != nil {
+	log.Warn("failed to load mods: ", err)
+}
+server.SetModLoader(modLoader)
+```
+
+---
+
+#### 8.3: Migration System
+
+**File**: `cmd/server/main.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/migration"
+```
+
+2. **Add save migration**:
+```go
+migrator := migration.NewMigrator()
+if err := migrator.MigrateSaves("./saves"); err != nil {
+	log.Error("save migration failed: ", err)
+}
+```
+
+---
+
+#### 8.4: Analytics Integration
+
+**File**: `cmd/client/handlers.go`
+
+**Changes**:
+
+1. **Add import**:
+```go
+"github.com/opd-ai/venture/pkg/ux"
+```
+
+2. **Add UX tracking** (optional, privacy-respecting):
+```go
+if *enableAnalytics {
+	uxTracker := ux.NewTracker()
+	game.World.AddSystem(uxTracker)
+}
+```
+
+---
+
+## Final Validation Checklist
+
+### Build Validation
+- [ ] `go build ./cmd/client` (no errors)
+- [ ] `go build ./cmd/server` (no errors)
+- [ ] `go build ./cmd/mobile` (Android/iOS builds)
+- [ ] WASM build: `GOOS=js GOARCH=wasm go build`
+
+### Test Validation
+- [ ] `go test ./pkg/...` (all packages pass)
+- [ ] `go test -race ./pkg/...` (no race conditions)
+- [ ] `go test -cover ./pkg/...` (≥65% coverage maintained)
+
+### Feature Validation
+- [ ] **Audio**: Music and SFX playing
+- [ ] **Destruction**: Objects break when damaged
+- [ ] **Companions**: Companions learn skills
+- [ ] **Rendering**: Lighting, post-processing, animation visible
+- [ ] **Procgen**: Magic, skills, entities, dialog, puzzles, minigames active
+- [ ] **Network**: Chat, trade, high-latency resilience functional
+- [ ] **Engine**: QoL, prestige, performance monitoring active
+- [ ] **World**: Economy fluctuates, raids spawn
+- [ ] **Integration**: All cross-system features working
+
+### Performance Validation
+- [ ] 60+ FPS with 2000 entities
+- [ ] <500MB client memory usage
+- [ ] <1GB server memory (4 players)
+- [ ] No memory leaks (run for 1 hour)
+
+### Flag Cleanup Validation
+- [ ] `grep -r "enable-" cmd/client/util.go` returns ONLY `host-and-play`
+- [ ] All conditional feature activations removed
+- [ ] All systems unconditionally registered
+
+---
+
+## Rollback Plan
+
+If integration causes issues:
+
+1. **Revert specific package**:
+   ```bash
+   git revert <commit-hash>
+   ```
+
+2. **Temporarily disable system**:
+   ```go
+   // Comment out system registration
+   // game.World.AddSystem(sys.problematicSystem)
+   ```
+
+3. **Full phase rollback**:
+   ```bash
+   git reset --hard <phase-start-commit>
+   ```
+
+---
+
+## Success Metrics
+
+### Quantitative
+- **Packages Active**: 102/102 (100%)
+- **Feature Flags Removed**: 7/7 (100%)
+- **Test Coverage**: ≥65% per package
+- **Performance**: 60+ FPS, <500MB memory
+- **Build Time**: <2 minutes
+- **Lines of Code Active**: ~382,000
+
+### Qualitative
+- All game systems feel "always-on" (no toggles)
+- Procedural content is varied and high-quality
+- Audio enhances gameplay immersion
+- Visual effects are polished
+- Multiplayer is robust (chat, trade, federation)
+- Cross-system features work seamlessly
+
+---
+
+## Timeline Summary
+
+| Phase | Duration | Packages | Effort |
+|-------|----------|----------|--------|
+| Phase 1: Foundation | 5 days | 6 | Medium |
+| Phase 2: Visual | 5 days | 9 | Medium |
+| Phase 3: Content | 7 days | 12 | Large |
+| Phase 4: Network | 5 days | 5 | Medium |
+| Phase 5: Engine | 3 days | 3 | Small |
+| Phase 6: World | 5 days | 2 | Medium |
+| Phase 7: Integration | 15 days | 7 | Large |
+| Phase 8: Tools | 5 days | 11 | Medium |
+| **TOTAL** | **50 days** | **55** | **~2.5 months** |
+
+**Note**: Phase 8 (Developer Tools) runs in parallel with Phases 1-7 via CI/CD integration.
+
+---
+
+## Post-Integration Roadmap
+
+### V11.0: Full Integration Release
+- All 55 dormant packages activated
+- Zero feature flags (except operational modes)
+- Comprehensive documentation update
+- Performance optimization pass
+- User acceptance testing
+
+### V11.1: Polish & Optimization
+- Performance tuning based on profiling
+- Balance adjustments from telemetry
+- Bug fixes from user feedback
+- Visual polish pass
+
+### V12.0: Next Features
+- New gameplay systems (not yet implemented)
+- Advanced AI behaviors
+- Expanded federation capabilities
+- Community modding support
+
+---
+
+*Generated: December 13, 2025*  
+*Target Completion: February 2026 (V11.0)*  
+*Maintenance: Ongoing (CI/CD automation)*

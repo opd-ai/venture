@@ -524,14 +524,14 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 			if rng.Float64() < spawnChance {
 				worldX := float64(x * tileSize)
 				worldY := float64(room.Y * tileSize)
-				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker, rng)
 				count++
 			}
 			// Bottom wall
 			if rng.Float64() < spawnChance {
 				worldX := float64(x * tileSize)
 				worldY := float64((room.Y + room.Height - 1) * tileSize)
-				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker, rng)
 				count++
 			}
 		}
@@ -544,14 +544,14 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 			if rng.Float64() < spawnChance {
 				worldX := float64(room.X * tileSize)
 				worldY := float64(y * tileSize)
-				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker, rng)
 				count++
 			}
 			// Right wall
 			if rng.Float64() < spawnChance {
 				worldX := float64((room.X + room.Width - 1) * tileSize)
 				worldY := float64(y * tileSize)
-				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker)
+				spawnTorchLight(world, worldX, worldY, config.torchColor, config.torchRadius, config.torchFlicker, rng)
 				count++
 			}
 		}
@@ -589,7 +589,7 @@ func spawnEnvironmentalLights(world *engine.World, terrain *terrain.Terrain, see
 }
 
 // spawnTorchLight creates a wall torch light entity.
-func spawnTorchLight(world *engine.World, x, y float64, color color.RGBA, radius float64, flicker bool) {
+func spawnTorchLight(world *engine.World, x, y float64, color color.RGBA, radius float64, flicker bool, rng *rand.Rand) {
 	lightEntity := world.CreateEntity()
 	lightEntity.AddComponent(&engine.PositionComponent{X: x, Y: y})
 
@@ -598,7 +598,7 @@ func spawnTorchLight(world *engine.World, x, y float64, color color.RGBA, radius
 	torchLight.Enabled = true
 	if flicker {
 		torchLight.Flickering = true
-		torchLight.FlickerSpeed = 2.0 + (rand.Float64() * 2.0) // Vary flicker speed
+		torchLight.FlickerSpeed = 2.0 + (rng.Float64() * 2.0) // Vary flicker speed
 		torchLight.FlickerAmount = 0.15
 	}
 	lightEntity.AddComponent(torchLight)
@@ -1261,12 +1261,15 @@ func spawnProceduralLoot(
 		return
 	}
 
+	// Create deterministic RNG from enemy ID and seed for physics
+	physicsRNG := rand.New(rand.NewSource(seed + int64(enemy.ID)))
+
 	lootEntity := engine.GenerateLootDrop(game.World, enemy, pos.X, pos.Y, seed, genreID)
 	if lootEntity != nil {
 		// Add physics to procedural loot too
 		lootEntity.AddComponent(&engine.VelocityComponent{
-			VX: (rand.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
-			VY: (rand.Float64()*2.0 - 1.0) * 30.0,
+			VX: (physicsRNG.Float64()*2.0 - 1.0) * 30.0, // Random velocity -30 to +30
+			VY: (physicsRNG.Float64()*2.0 - 1.0) * 30.0,
 		})
 		// Add friction for smooth deceleration
 		lootEntity.AddComponent(engine.NewFrictionComponent(0.12))
@@ -1279,8 +1282,8 @@ func spawnProceduralLoot(
 	if recipeEntity != nil {
 		// Add physics to recipe drops
 		recipeEntity.AddComponent(&engine.VelocityComponent{
-			VX: (rand.Float64()*2.0 - 1.0) * 25.0, // Slightly slower velocity for recipes
-			VY: (rand.Float64()*2.0 - 1.0) * 25.0,
+			VX: (physicsRNG.Float64()*2.0 - 1.0) * 25.0, // Slightly slower velocity for recipes
+			VY: (physicsRNG.Float64()*2.0 - 1.0) * 25.0,
 		})
 		// Add friction for smooth deceleration
 		recipeEntity.AddComponent(engine.NewFrictionComponent(0.12))

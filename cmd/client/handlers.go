@@ -17,6 +17,7 @@ import (
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/network/federation"
+	mobilefed "github.com/opd-ai/venture/pkg/network/federation/mobile"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
@@ -340,6 +341,9 @@ type systemsContainer struct {
 	// Phase 4.5: Territory Siege System (PLAN.md)
 	siegeManager *territory.SiegeManager      // Territory siege manager (V8.0)
 	siegeSystem  *engine.TerritorySiegeSystem // ECS wrapper for siege mechanics
+
+	// Phase 5.1: Mobile Federation Support (PLAN.md)
+	mobileFederationSystem *engine.MobileFederationSystem // Mobile-optimized federation
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -930,6 +934,11 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	sys.siegeSystem = engine.NewTerritorySiegeSystem(sys.siegeManager)
 	logging.ComponentLogger(clientLogger.Logger, "territory_siege").Debug("Created territory siege system")
 
+	// Phase 5.1: Mobile Federation Support
+	mobileConfig := mobilefed.DefaultConfig()
+	sys.mobileFederationSystem = engine.NewMobileFederationSystem(mobileConfig)
+	logging.ComponentLogger(clientLogger.Logger, "mobile_federation").Debug("Created mobile federation system")
+
 	// Phase 4.3: Territory Control - Guild warfare and territory management
 	sys.territorySystem = engine.NewTerritorySystem(sys.territoryManager, clientLogger.WithField("system", "territory"))
 	sys.territoryUI = engine.NewTerritoryUI(sys.territorySystem, *width, *height)
@@ -1086,6 +1095,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.narrativeWorldSystem)     // Phase 4.3: Narrative-world integration
 	game.World.AddSystem(sys.politicalWarfareSystem)   // Phase 4.4: Political warfare
 	game.World.AddSystem(sys.siegeSystem)              // Phase 4.5: Territory sieges
+	game.World.AddSystem(sys.mobileFederationSystem)   // Phase 5.1: Mobile federation
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

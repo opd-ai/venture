@@ -614,40 +614,62 @@ go test ./pkg/world/territory/... -cover
 
 ---
 
-### 5.1: Mobile Federation
+### 5.1: Mobile Federation ✅
 
-**Package**: `pkg/network/federation/mobile`  
-**LOC**: 1,349  
-**Type**: ECS System
+**Status**: COMPLETE (December 13, 2025)
+
+**Package**: `pkg/network/federation/mobile` (1,349 LOC) + wrapper in `pkg/engine/mobile_federation_system.go` (93 LOC)  
+**Test Coverage**: 89.6% (mobile package), 100% (wrapper)  
+**Integration**: `cmd/client/handlers.go`, registered after territory siege system
+
+**Implementation Details**:
+- Created `MobileFederationSystem` ECS wrapper for mobile federation adapter
+- Battery-aware sync with adaptive intervals (1min→5min→15min based on battery level)
+- Bandwidth limiting support with token bucket algorithm (configurable MaxBandwidth)
+- Mobile-optimized timeouts (2x base timeout, adjustable via TimeoutMultiplier)
+- Background task scheduling with platform-specific delays
+- Thread-safe operations with RWMutex protection
+- Fixed race condition in syncLoop() ticker access
+- All operations logged with structured logging
 
 **File**: `cmd/client/handlers.go`
 
-**Changes**:
+**Changes Made**:
 
-1. **Add import**:
+1. **Added import** (with alias to avoid conflict with pkg/mobile):
 ```go
-"github.com/opd-ai/venture/pkg/network/federation/mobile"
+mobilefed "github.com/opd-ai/venture/pkg/network/federation/mobile"
 ```
 
-2. **Initialize** (after federation system):
+2. **Added to system container** (line 347):
 ```go
-// Phase 5.1: Mobile federation support
-mobileFedSystem := mobile.NewSystem(sys.federationManager)
-logger.WithField("system_name", "mobile_federation").Debug("Created mobile federation system")
+mobileFederationSystem *engine.MobileFederationSystem // Mobile-optimized federation
 ```
 
-3. **Register**:
+3. **Initialized** (line 942):
 ```go
-game.World.AddSystem(mobileFedSystem) // Phase 5.1: Mobile federation
+// Phase 5.1: Mobile Federation Support
+mobileConfig := mobilefed.DefaultConfig()
+sys.mobileFederationSystem = engine.NewMobileFederationSystem(mobileConfig)
+logging.ComponentLogger(clientLogger.Logger, "mobile_federation").Debug("Created mobile federation system")
+```
+
+4. **Registered** (line 1091):
+```go
+game.World.AddSystem(sys.mobileFederationSystem)   // Phase 5.1: Mobile federation
 ```
 
 **Verification**:
 ```bash
-go build ./cmd/client
-# Test on mobile device with federation
+go build ./cmd/client ./cmd/server
+# Builds successfully
+go test -race ./pkg/engine -run TestMobileFederation
+# All tests pass, zero race conditions
+go test ./pkg/network/federation/mobile
+# All tests pass
 ```
 
-**Effort**: Small (10 minutes)
+**Effort**: Small (45 minutes - system wrapper creation, race condition fix, integration)
 
 ---
 

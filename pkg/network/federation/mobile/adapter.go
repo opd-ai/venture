@@ -138,12 +138,21 @@ func (a *Adapter) syncLoop() {
 	defer a.wg.Done()
 
 	for {
+		// Get current ticker atomically
+		a.mu.RLock()
+		ticker := a.syncTicker
+		a.mu.RUnlock()
+
+		if ticker == nil {
+			return
+		}
+
 		select {
 		case <-a.stopChan:
 			return
 		case <-a.ctx.Done():
 			return
-		case <-a.syncTicker.C:
+		case <-ticker.C:
 			a.performSync()
 		}
 	}

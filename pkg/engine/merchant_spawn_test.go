@@ -41,7 +41,7 @@ func TestSpawnMerchantFromData(t *testing.T) {
 			x:                 100.0,
 			y:                 200.0,
 			expectNil:         false,
-			expectedCompCount: 8, // position, velocity, health, team, sprite, animation, collider, merchant, dialog
+			expectedCompCount: 9, // position, velocity, health, team, sprite, animation, collider, merchant, dialog, npcdialog
 		},
 		{
 			name: "nil merchant data",
@@ -73,7 +73,13 @@ func TestSpawnMerchantFromData(t *testing.T) {
 			world := NewWorld()
 			merchantData := tt.setupMerchant()
 
-			result := SpawnMerchantFromData(world, merchantData, tt.x, tt.y)
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+			}
+
+			result := SpawnMerchantFromData(world, merchantData, tt.x, tt.y, 12345, params)
 
 			if tt.expectNil {
 				if result != nil {
@@ -114,6 +120,21 @@ func TestSpawnMerchantFromData(t *testing.T) {
 			// Verify dialog component
 			if !result.HasComponent("dialog") {
 				t.Error("merchant missing dialog component")
+			}
+
+			// Verify NPC dialog component for procedural dialog
+			if !result.HasComponent("npcdialog") {
+				t.Error("merchant missing npcdialog component")
+			}
+			npcDialogComp, ok := result.GetComponent("npcdialog")
+			if ok {
+				npcDialog := npcDialogComp.(*NPCDialogComponent)
+				if npcDialog.GenreID != "fantasy" {
+					t.Errorf("npcdialog genre = %s, want fantasy", npcDialog.GenreID)
+				}
+				if npcDialog.NPCPersonality == nil {
+					t.Error("npcdialog personality is nil")
+				}
 			}
 
 			// Verify collider

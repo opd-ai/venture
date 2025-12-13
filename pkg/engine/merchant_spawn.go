@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/dialog"
 	procgenEntity "github.com/opd-ai/venture/pkg/procgen/entity"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -19,7 +20,7 @@ import (
 // collider, merchant, dialog), and registers it with the world.
 //
 // Returns the spawned merchant entity or nil if spawning fails.
-func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantData, x, y float64) *Entity {
+func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantData, x, y float64, seed int64, params procgen.GenerationParams) *Entity {
 	if merchantData == nil || merchantData.Entity == nil {
 		return nil
 	}
@@ -97,10 +98,17 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 
 	merchant.AddComponent(merchantComp)
 
-	// Add dialog component
+	// Add both dialog components for backward compatibility and advanced features
+	// Simple dialog component for basic shop interactions
 	dialogProvider := NewMerchantDialogProvider(merchantData.Entity.Name)
 	dialogComp := NewDialogComponent(dialogProvider)
 	merchant.AddComponent(dialogComp)
+
+	// Advanced procedural dialog component for rich NPC interactions
+	// Uses genre-specific corpus and merchant personality for varied dialog
+	merchantPersonality := dialog.NewPersonality(dialog.PersonalityMerchant)
+	npcDialogComp := NewNPCDialogComponent(params.GenreID, merchantPersonality, seed+int64(merchantData.Entity.Seed))
+	merchant.AddComponent(npcDialogComp)
 
 	return merchant
 }
@@ -173,7 +181,7 @@ func spawnMerchantsAtPoints(world *World, terrain *terrain.Terrain, spawnPoints 
 			continue
 		}
 
-		if spawnSingleMerchant(world, merchantData, worldX, worldY, logger) {
+		if spawnSingleMerchant(world, merchantData, worldX, worldY, worldSeed, params, logger) {
 			spawned++
 		}
 	}
@@ -221,8 +229,8 @@ func validateMerchantSpawnPosition(terrain *terrain.Terrain, point struct{ X, Y 
 }
 
 // spawnSingleMerchant creates and spawns a single merchant entity.
-func spawnSingleMerchant(world *World, merchantData *procgenEntity.MerchantData, worldX, worldY float64, logger *logrus.Entry) bool {
-	merchantEntity := SpawnMerchantFromData(world, merchantData, worldX, worldY)
+func spawnSingleMerchant(world *World, merchantData *procgenEntity.MerchantData, worldX, worldY float64, worldSeed int64, params procgen.GenerationParams, logger *logrus.Entry) bool {
+	merchantEntity := SpawnMerchantFromData(world, merchantData, worldX, worldY, worldSeed, params)
 
 	if merchantEntity == nil {
 		if logger != nil {

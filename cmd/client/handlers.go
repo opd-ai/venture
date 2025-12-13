@@ -52,6 +52,9 @@ import (
 	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
 	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
 
+	// Phase 4.3: Narrative-World Integration (PLAN.md)
+	"github.com/opd-ai/venture/pkg/integration/narrative_world"
+
 	// Phase 3.2: Guild Federation (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 
@@ -324,6 +327,9 @@ type systemsContainer struct {
 
 	// Phase 4.2: Guild Vehicle Integration (PLAN.md)
 	guildVehicleSystem *engine.GuildVehicleSystem // Guild vehicle fleet combat with formation bonuses
+
+	// Phase 4.3: Narrative-World Integration (PLAN.md)
+	narrativeWorldSystem *narrative_world.System // Companion-driven narrative events and story progression
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -633,6 +639,10 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 4.2: Guild vehicle integration
 	sys.guildVehicleSystem = engine.NewGuildVehicleSystem(game.World)
 	logging.ComponentLogger(clientLogger.Logger, "guild_vehicle").Debug("Created guild vehicle system")
+
+	// Phase 4.3: Narrative-world integration
+	sys.narrativeWorldSystem = narrative_world.NewSystem(game.World, game.GetWorldSeed())
+	logging.ComponentLogger(clientLogger.Logger, "narrative_world").Debug("Created narrative world system")
 
 	// Phase 26.2: Achievement system (social features)
 	sys.achievementSystem = engine.NewAchievementSystem(game.World)
@@ -1054,6 +1064,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 4.1: Choice & consequences
 	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences
 	game.World.AddSystem(sys.guildVehicleSystem)       // Phase 4.2: Guild vehicle fleets
+	game.World.AddSystem(sys.narrativeWorldSystem)     // Phase 4.3: Narrative-world integration
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

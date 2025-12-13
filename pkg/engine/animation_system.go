@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/rendering/cache"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
@@ -23,6 +24,7 @@ type AnimationSystem struct {
 	maxCacheSize    int
 	cacheKeys       []string // For LRU eviction
 	logger          *logrus.Entry
+	paletteOptions  *palette.GenerationOptions // Phase 5.4: Custom palette generation options
 
 	// Phase 14.2: Viewport culling and distance-based optimization
 	cameraSystem        *CameraSystem
@@ -121,6 +123,31 @@ func (s *AnimationSystem) SetSpriteCache(spriteCache *cache.SpriteCache) {
 // GetSpriteCache returns the current sprite cache, or nil if not set.
 func (s *AnimationSystem) GetSpriteCache() *cache.SpriteCache {
 	return s.spriteCache
+}
+
+// SetPaletteOptions sets custom palette generation options for all sprites (Phase 5.4).
+// These options control color harmony, mood, and rarity/intensity of generated palettes.
+// If nil, uses default palette generation.
+func (s *AnimationSystem) SetPaletteOptions(opts *palette.GenerationOptions) {
+	s.paletteOptions = opts
+	// Clear frame cache to regenerate sprites with new palette options
+	s.cacheMutex.Lock()
+	s.frameCache = make(map[string][]*ebiten.Image)
+	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+	s.cacheMutex.Unlock()
+
+	if s.logger != nil {
+		if opts != nil {
+			s.logger.WithFields(logrus.Fields{
+				"harmony":    opts.Harmony,
+				"mood":       opts.Mood,
+				"rarity":     opts.Rarity,
+				"min_colors": opts.MinColors,
+			}).Info("palette options set, frame cache cleared")
+		} else {
+			s.logger.Debug("palette options cleared, using defaults")
+		}
+	}
 }
 
 // EnableViewportCulling enables or disables viewport culling optimization.
@@ -942,13 +969,14 @@ func calculateAnimationScale(state string, frameIndex, frameCount int) float64 {
 // buildSpriteConfig creates a sprite configuration from entity components.
 func (s *AnimationSystem) buildSpriteConfig(entity *Entity, sprite *EbitenSprite, anim *AnimationComponent) sprites.Config {
 	config := sprites.Config{
-		Type:       sprites.SpriteEntity,
-		Width:      int(sprite.Width),
-		Height:     int(sprite.Height),
-		Seed:       anim.Seed,
-		Complexity: 0.7,
-		Palette:    nil,
-		Custom:     make(map[string]interface{}),
+		Type:           sprites.SpriteEntity,
+		Width:          int(sprite.Width),
+		Height:         int(sprite.Height),
+		Seed:           anim.Seed,
+		Complexity:     0.7,
+		Palette:        nil,
+		Custom:         make(map[string]interface{}),
+		PaletteOptions: s.paletteOptions, // Phase 5.4: Use custom palette options if set
 	}
 
 	config.Custom["useAerial"] = true

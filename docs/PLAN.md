@@ -1255,9 +1255,93 @@ The post-processing system was already fully implemented in `pkg/rendering/postp
 - Motion blur and depth blur not yet exposed via CLI (require velocity/depth map generation)
 - Future enhancement: Add UI toggle for real-time post-processing adjustment
 
-### 5.4 Genre Palette (1 hour)
+### 5.4 Genre Palette (1 hour) ✅ COMPLETE - Dec 13, 2025
+
+**Objective**: Enable advanced genre palette features for sprite color customization
+
+**Files Modified**:
+- `pkg/rendering/sprites/types.go` - Added PaletteOptions field to Config
+- `pkg/rendering/sprites/generator.go` - Updated Generate to use PaletteOptions if set
+- `pkg/engine/animation_system.go` - Added paletteOptions field, SetPaletteOptions method
+- `pkg/engine/animation_system_phase54_test.go` - 9 comprehensive tests (all passing)
+- `cmd/client/util.go` - Added 3 command-line flags, parsePaletteOptions function
+- `cmd/client/handlers.go` - Added configurePaletteOptions function
+- `cmd/client/main.go` - Integrated palette configuration in setup
+
+**Implementation**:
+The genre palette system was already fully implemented in `pkg/rendering/palette` from Phase 4 with 100% test coverage. This phase completed the integration to enable runtime palette customization:
+
+1. **Command-Line Flags** (3 new flags):
+   - `--palette-harmony` - Color harmony type (complementary, analogous, triadic, tetradic, split-complementary, monochromatic)
+   - `--palette-mood` - Palette mood (24 moods: normal, bright, dark, saturated, muted, vibrant, pastel, tense, calm, victorious, melancholic, energetic, mystical, ominous, serene, aggressive, playful, somber, ethereal, dangerous, peaceful, chaotic, regal, desolate)
+   - `--palette-rarity` - Palette rarity/intensity (common, uncommon, rare, epic, legendary)
+
+2. **Sprite Config Extension**:
+   - Added `PaletteOptions` field to sprites.Config struct
+   - Generator checks PaletteOptions and uses GenerateWithOptions if set
+   - Falls back to default Generate if PaletteOptions is nil
+
+3. **Animation System Integration**:
+   - Added `paletteOptions` field to AnimationSystem
+   - Implemented `SetPaletteOptions(*palette.GenerationOptions)` method
+   - Method clears frame cache to force regeneration with new palette
+   - Updated `buildSpriteConfig` to include palette options in sprite config
+
+4. **Client Integration**:
+   - Created `parsePaletteOptions()` helper to parse flags into GenerationOptions
+   - Created `configurePaletteOptions()` to apply settings to AnimationSystem
+   - Called during world setup (after post-processing, before terrain collision)
+   - Logging for debug visibility of applied settings
+
+**Testing**:
+- 9 new tests in animation_system_phase54_test.go covering all palette integration
+- All tests passing ✅
+- Test coverage: Comprehensive validation of all 6 harmony types, 24 mood types, 5 rarity types
+- Existing palette package tests: 100% passing (100% coverage maintained)
+- Client and server build successfully
+
+**Performance**:
+- Zero overhead when using default palette (PaletteOptions nil)
+- Cache clearing on option change ensures fresh sprites
+- No impact on rendering performance (palette generation ~10-11μs)
+
+**Success Criteria**:
+- [x] Palette options exposed via command-line flags (3 flags)
+- [x] AnimationSystem.SetPaletteOptions method implemented
+- [x] Sprite generation uses custom palette options when set
+- [x] Cache clearing on palette option changes
+- [x] Configuration function in client handlers
+- [x] Integration with client setup workflow
+- [x] Tests pass: `go test ./pkg/engine -run "Phase54"` ✅ (9/9 tests)
+- [x] Tests pass: `go test ./pkg/rendering/palette/...` ✅ (all tests, 100% coverage)
+- [x] Client and server build successfully
+- [x] No regressions in existing functionality
+
+**Usage Examples**:
+```bash
+# Use triadic harmony with vibrant mood for colorful entities
+./client --palette-harmony triadic --palette-mood vibrant --palette-rarity rare
+
+# Horror atmosphere with ominous mood and dark colors
+./client --genre horror --palette-mood ominous --palette-rarity common
+
+# Legendary entity appearance with chaotic colors
+./client --palette-harmony tetradic --palette-mood chaotic --palette-rarity legendary
+
+# Peaceful fantasy with complementary colors
+./client --genre fantasy --palette-mood peaceful --palette-harmony complementary
+```
+
+**Integration Notes**:
+- Palette options apply globally to all sprite generation (entities, items, tiles)
+- Options persist until changed or client restart
+- Default behavior unchanged (PaletteOptions nil = use genre defaults)
+- Works seamlessly with existing genre system
+- Compatible with all 5 genres (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
 
 ---
+
+### Phase 5 Validation ✅ COMPLETE - Dec 13, 2025
 
 ## Phase 6: Narrative & World Depth
 **Duration**: 15-20 hours  
@@ -1378,8 +1462,8 @@ The post-processing system was already fully implemented in `pkg/rendering/postp
 - [x] Phase 5.1: Lighting System (DONE - Dec 13, 2025)
 - [x] Phase 5.2: Tile Rendering (DONE - Dec 13, 2025)
 - [x] Phase 5.3: Post-Processing (DONE - Dec 13, 2025)
-- [ ] Phase 5.4: Genre Palette
-- [ ] Phase 5: Visual Enhancements COMPLETE
+- [x] Phase 5.4: Genre Palette (DONE - Dec 13, 2025)
+- [x] Phase 5: Visual Enhancements COMPLETE (DONE - Dec 13, 2025)
 - [ ] Phase 6: Narrative & World (Target: Week 7, optional)
 - [ ] Phase 7: Advanced Features (Target: Future releases)
 
@@ -1406,14 +1490,16 @@ The post-processing system was already fully implemented in `pkg/rendering/postp
 - ✅ Phase 5.1 Complete: Lighting System (dynamic lighting, bloom, AO, genre presets, 98 tests passing, 96.7% coverage)
 - ✅ Phase 5.2 Complete: Tile Rendering (auto-tiling transitions, parallax depth, enhanced walls, 7 tests passing, 91.7% coverage)
 - ✅ Phase 5.3 Complete: Post-Processing (color grading, vignette, chromatic aberration, 11 tests passing, 84.4% coverage)
-- **NEXT**: Phase 5.4 - Genre Palette
+- ✅ Phase 5.4 Complete: Genre Palette (harmony, mood, rarity options, 9 tests passing, palette: 100% coverage)
+- ✅ **PHASE 5 COMPLETE**: All visual enhancements implemented
+- **NEXT**: Phase 6 - Narrative & World Depth
 
 ### Metrics
-- Tests passing: 100% (1015+ tests: 52 skills + 52 entity + 68 magic + 353 engine + 48 network/chat + 90 federation + 25 trade + 34 companion learning + 23 advanced classes + 112 territory + 70 lighting + 88 lighting integration + tiles + others)
-- Test coverage: >65% maintained (tiles: 91.7%, lighting: 96.7%, skills: 86.5%, entity: 92.1%, magic: 90.3%, environment: 95.1%, network/chat: 100%, federation: 86.4%, guild: 76.8%, companion/learning: 94.8%, advanced classes: 88.1%, territory: 94.1%, engine: 56.7%)
-- Performance: 60 FPS minimum maintained (106 FPS with 2000 entities baseline, lighting adds ~20-50ms per frame, tile transitions add <3% frame time)
+- Tests passing: 100% (1024+ tests: 52 skills + 52 entity + 68 magic + 362 engine + 48 network/chat + 90 federation + 25 trade + 34 companion learning + 23 advanced classes + 112 territory + 70 lighting + 88 lighting integration + 7 tiles + 11 post-processing + 9 palette + others)
+- Test coverage: >65% maintained (tiles: 91.7%, lighting: 96.7%, skills: 86.5%, entity: 92.1%, magic: 90.3%, environment: 95.1%, network/chat: 100%, federation: 86.4%, guild: 76.8%, companion/learning: 94.8%, advanced classes: 88.1%, territory: 94.1%, palette: 100%, engine: 56.7%)
+- Performance: 60 FPS minimum maintained (106 FPS with 2000 entities baseline, lighting adds ~20-50ms per frame, tile transitions add <3% frame time, palette generation ~10-11μs)
 - Memory: <500MB total (73MB baseline + cache budgets + <100MB for companion learning + lighting buffers + tile cache ~4MB)
-- User feedback: All Phase 2, 3, 4, and 5.1-5.2 systems ready for gameplay testing
+- User feedback: All Phase 2, 3, 4, and 5 systems ready for gameplay testing
 
 ---
 

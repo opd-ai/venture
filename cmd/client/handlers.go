@@ -1026,6 +1026,30 @@ func configurePostProcessing(game *engine.EbitenGame, clientLogger *logrus.Entry
 	clientLogger.Info("post-processing configured")
 }
 
+// configurePaletteOptions sets up genre palette options for sprite generation (Phase 5.4).
+func configurePaletteOptions(sys *systemsContainer, clientLogger *logrus.Entry) {
+	if sys.animationSystem == nil {
+		clientLogger.Warn("AnimationSystem not initialized, skipping palette configuration")
+		return
+	}
+
+	// Parse palette options from command-line flags
+	opts, err := parsePaletteOptions()
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to parse palette options, using defaults")
+		return
+	}
+
+	// Set palette options on animation system (used for sprite generation)
+	sys.animationSystem.SetPaletteOptions(opts)
+
+	clientLogger.WithFields(logrus.Fields{
+		"harmony": paletteHarmony,
+		"mood":    paletteMood,
+		"rarity":  paletteRarity,
+	}).Info("palette options configured")
+}
+
 // initializeTerrainCollision sets up efficient terrain collision checking.
 func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {

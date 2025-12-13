@@ -54,7 +54,7 @@ type Config struct {
 	// Seed for deterministic generation
 	Seed int64
 
-	// Palette to use for colors
+	// Palette to use for colors (if nil, generated from PaletteOptions)
 	Palette *palette.Palette
 
 	// Genre ID for style consistency
@@ -68,6 +68,10 @@ type Config struct {
 
 	// Custom parameters for specific sprite types
 	Custom map[string]interface{}
+
+	// PaletteOptions for advanced palette generation (Phase 5.4)
+	// If set, these options are used when generating palette from GenreID and Seed
+	PaletteOptions *palette.GenerationOptions
 }
 
 // DefaultConfig returns a default sprite configuration.

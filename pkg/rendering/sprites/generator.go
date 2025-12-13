@@ -61,7 +61,15 @@ func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
 
 	// Generate palette if not provided
 	if config.Palette == nil {
-		pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
+		var pal *palette.Palette
+		var err error
+		if config.PaletteOptions != nil {
+			// Use advanced palette options (Phase 5.4)
+			pal, err = g.paletteGen.GenerateWithOptions(config.GenreID, config.Seed, *config.PaletteOptions)
+		} else {
+			// Use default palette generation
+			pal, err = g.paletteGen.Generate(config.GenreID, config.Seed)
+		}
 		if err != nil {
 			if g.logger != nil {
 				g.logger.WithError(err).Error("palette generation failed")

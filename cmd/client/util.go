@@ -28,6 +28,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/story"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/version"
@@ -354,6 +355,11 @@ var (
 	postprocessVignetteIntens  = flag.Float64("postprocess-vignette-intensity", 0.5, "Vignette intensity (0.0-1.0)")
 	postprocessVignetteSoft    = flag.Float64("postprocess-vignette-softness", 0.3, "Vignette softness (0.0-1.0)")
 	postprocessChromaticIntens = flag.Float64("postprocess-chromatic-intensity", 0.5, "Chromatic aberration intensity (0.0-1.0)")
+
+	// Phase 5.4 (PLAN.md): Genre Palette
+	paletteHarmony = flag.String("palette-harmony", "complementary", "Color harmony type (complementary, analogous, triadic, tetradic, split-complementary, monochromatic)")
+	paletteMood    = flag.String("palette-mood", "normal", "Palette mood (normal, bright, dark, saturated, muted, vibrant, pastel, tense, calm, victorious, melancholic, energetic, mystical, ominous, serene, aggressive, playful, somber, ethereal, dangerous, peaceful, chaotic, regal, desolate)")
+	paletteRarity  = flag.String("palette-rarity", "common", "Palette rarity/intensity (common, uncommon, rare, epic, legendary)")
 
 	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
 	profile       = flag.Bool("profile", false, "Enable performance profiling with frame time tracking")
@@ -2148,4 +2154,102 @@ func spawnStoryFragments(world *engine.World, terrainMap *terrain.Terrain, seed 
 	}).Debug("spawned story fragments")
 
 	return spawned, nil
+}
+
+// parsePaletteOptions parses command-line flags into palette.GenerationOptions (Phase 5.4).
+func parsePaletteOptions() (*palette.GenerationOptions, error) {
+	opts := &palette.GenerationOptions{}
+
+	// Parse harmony type
+	switch *paletteHarmony {
+	case "complementary":
+		opts.Harmony = palette.HarmonyComplementary
+	case "analogous":
+		opts.Harmony = palette.HarmonyAnalogous
+	case "triadic":
+		opts.Harmony = palette.HarmonyTriadic
+	case "tetradic":
+		opts.Harmony = palette.HarmonyTetradic
+	case "split-complementary":
+		opts.Harmony = palette.HarmonySplitComplementary
+	case "monochromatic":
+		opts.Harmony = palette.HarmonyMonochromatic
+	default:
+		return nil, fmt.Errorf("invalid harmony type: %s", *paletteHarmony)
+	}
+
+	// Parse mood type
+	switch *paletteMood {
+	case "normal":
+		opts.Mood = palette.MoodNormal
+	case "bright":
+		opts.Mood = palette.MoodBright
+	case "dark":
+		opts.Mood = palette.MoodDark
+	case "saturated":
+		opts.Mood = palette.MoodSaturated
+	case "muted":
+		opts.Mood = palette.MoodMuted
+	case "vibrant":
+		opts.Mood = palette.MoodVibrant
+	case "pastel":
+		opts.Mood = palette.MoodPastel
+	case "tense":
+		opts.Mood = palette.MoodTense
+	case "calm":
+		opts.Mood = palette.MoodCalm
+	case "victorious":
+		opts.Mood = palette.MoodVictorious
+	case "melancholic":
+		opts.Mood = palette.MoodMelancholic
+	case "energetic":
+		opts.Mood = palette.MoodEnergetic
+	case "mystical":
+		opts.Mood = palette.MoodMystical
+	case "ominous":
+		opts.Mood = palette.MoodOminous
+	case "serene":
+		opts.Mood = palette.MoodSerene
+	case "aggressive":
+		opts.Mood = palette.MoodAggressive
+	case "playful":
+		opts.Mood = palette.MoodPlayful
+	case "somber":
+		opts.Mood = palette.MoodSomber
+	case "ethereal":
+		opts.Mood = palette.MoodEthereal
+	case "dangerous":
+		opts.Mood = palette.MoodDangerous
+	case "peaceful":
+		opts.Mood = palette.MoodPeaceful
+	case "chaotic":
+		opts.Mood = palette.MoodChaotic
+	case "regal":
+		opts.Mood = palette.MoodRegal
+	case "desolate":
+		opts.Mood = palette.MoodDesolate
+	default:
+		return nil, fmt.Errorf("invalid mood type: %s", *paletteMood)
+	}
+
+	// Parse rarity type
+	switch *paletteRarity {
+	case "common":
+		opts.Rarity = palette.RarityCommon
+	case "uncommon":
+		opts.Rarity = palette.RarityUncommon
+	case "rare":
+		opts.Rarity = palette.RarityRare
+	case "epic":
+		opts.Rarity = palette.RarityEpic
+	case "legendary":
+		opts.Rarity = palette.RarityLegendary
+	default:
+		return nil, fmt.Errorf("invalid rarity type: %s", *paletteRarity)
+	}
+
+	// Default minimum colors (can be extended later with flag)
+	opts.MinColors = 12
+
+	return opts, nil
 }

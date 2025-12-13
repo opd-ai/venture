@@ -158,6 +158,9 @@ func setupWorldTerrain(game *engine.EbitenGame, sys *systemsContainer, logger *l
 	game.PostProcessor = engine.NewPostProcessorAdapter(clientLogger)
 	configurePostProcessing(game, clientLogger)
 
+	// Phase 5.4: Configure palette options for sprite generation
+	configurePaletteOptions(sys, clientLogger)
+
 	initializeTerrainCollision(game, sys, generatedTerrain, clientLogger)
 
 	return generatedTerrain

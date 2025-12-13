@@ -238,3 +238,15 @@ func PostApocalypticGenre() *Genre {
 		LocationPrefix: "Ruins of",
 	}
 }
+
+// GetTheme retrieves a genre theme by ID.
+// Returns the genre for the given ID, or defaults to Fantasy if not found.
+func GetTheme(genreID string) *Genre {
+	registry := DefaultRegistry()
+	genre, err := registry.Get(genreID)
+	if err != nil {
+		// Default to fantasy if genre not found
+		return FantasyGenre()
+	}
+	return genre
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/book"
 	"github.com/opd-ai/venture/pkg/procgen/companion"
+	"github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
@@ -448,6 +449,11 @@ func randomGenre() string {
 	nowNano := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(nowNano))
 	return genres[rng.Intn(len(genres))]
+}
+
+// getGenreTheme returns the genre theme configuration for all generators.
+func getGenreTheme() *genre.Genre {
+	return genre.GetTheme(*genreID)
 }
 
 // spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.
@@ -947,6 +953,7 @@ func generateStarterWeapon(inventory *engine.InventoryComponent, itemGen *item.I
 		Custom: map[string]interface{}{
 			"count": 1,
 			"type":  "weapon",
+			"theme": getGenreTheme(),
 		},
 	}
 
@@ -980,6 +987,7 @@ func generateStarterPotions(inventory *engine.InventoryComponent, itemGen *item.
 		Custom: map[string]interface{}{
 			"count": 2,
 			"type":  "consumable",
+			"theme": getGenreTheme(),
 		},
 	}
 
@@ -1010,6 +1018,7 @@ func generateStarterArmor(inventory *engine.InventoryComponent, itemGen *item.It
 		Custom: map[string]interface{}{
 			"count": 1,
 			"type":  "armor",
+			"theme": getGenreTheme(),
 		},
 	}
 

@@ -350,36 +350,39 @@ All 4 sub-phases complete (2.1-2.4). Rendering feature flags removed (2.1), core
 
 ---
 
-#### 3.1: Genre Theme System (Day 11)
+#### 3.1: Genre Theme System (Day 11) ✅ COMPLETE
+
+**Status**: COMPLETE - December 13, 2025
 
 **Package**: `pkg/procgen/genre`
 
-**File**: `cmd/client/util.go`
+**Completed Changes**:
 
-**Changes**:
+1. ✅ **Added `GetTheme` function** to `pkg/procgen/genre/types.go`:
+   - Retrieves genre theme by ID from default registry
+   - Defaults to Fantasy if genre not found
+   - Returns `*genre.Genre` with full theme configuration
 
-1. **Add import**:
-```go
-"github.com/opd-ai/venture/pkg/procgen/genre"
-```
+2. ✅ **Updated `cmd/client/util.go`**:
+   - Added import for `pkg/procgen/genre`
+   - Created `getGenreTheme()` helper function (line 458)
+   - Updated all 3 GenerationParams creations to include theme in Custom map
 
-2. **Add after `createGenerationParams`** (around line 900):
-```go
-// getGenreTheme returns the genre theme configuration for all generators.
-func getGenreTheme() *genre.Theme {
-	return genre.GetTheme(*genreFlag)
-}
-```
+3. ✅ **Updated `cmd/client/handlers.go`**:
+   - Modified 4 GenerationParams creations to include `"theme": getGenreTheme()` in Custom map
+   - Terrain generation, world entities, and branching narrative now receive genre theme
 
-3. **Modify all generator calls** to use theme:
-```go
-// BEFORE:
-params := createGenerationParams()
+**Test Results**:
+- ✅ `go build ./cmd/client && go build ./cmd/server` - Both build successfully
+- ✅ `go test -race ./pkg/procgen/genre/...` - All tests pass, no race conditions
+- ✅ Coverage: 100.0% (exceeds 65% requirement)
+- ✅ Full test suite passes with no regressions
+- ✅ Added comprehensive test for `GetTheme` function with 7 test cases
 
-// AFTER:
-params := createGenerationParams()
-params.Custom["theme"] = getGenreTheme()
-```
+**Integration**:
+- Genre themes now available to all generators through GenerationParams.Custom["theme"]
+- Generators can access color palettes, prefixes, and theme keywords for content theming
+- Deterministic: Same genre ID always returns same theme configuration
 
 ---
 

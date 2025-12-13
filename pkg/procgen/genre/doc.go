@@ -14,10 +14,15 @@
 //   - Cross-genre blending for hybrid genres
 //   - Preset blended genre combinations
 //   - Easy extension for new genres
+//   - Convenient GetTheme helper for direct genre lookup
 //
 // # Usage
 //
-//	// Get the default genre registry
+//	// Get a genre theme directly (simplest method)
+//	theme := genre.GetTheme("fantasy")
+//	fmt.Printf("%s: %s\n", theme.Name, theme.Description)
+//
+//	// Or use the registry for more control
 //	registry := genre.DefaultRegistry()
 //
 //	// Look up a genre
@@ -35,6 +40,27 @@
 //	genres := registry.All()
 //	for _, g := range genres {
 //	    fmt.Printf("%s: %s\n", g.ID, g.Name)
+//	}
+//
+// # Integration with Procedural Generation
+//
+// The genre theme is passed to generators through GenerationParams:
+//
+//	params := procgen.GenerationParams{
+//	    Difficulty: 0.5,
+//	    Depth:      1,
+//	    GenreID:    "fantasy",
+//	    Custom: map[string]interface{}{
+//	        "theme": genre.GetTheme("fantasy"),
+//	    },
+//	}
+//
+// Generators can then access theme properties:
+//
+//	if theme, ok := params.Custom["theme"].(*genre.Genre); ok {
+//	    itemName := theme.ItemPrefix + " " + baseName
+//	    colors := theme.ColorPalette()
+//	    // Use theme data for generation
 //	}
 //
 // # Genre Blending

@@ -1027,6 +1027,7 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 		Custom: map[string]interface{}{
 			"width":  defaultTerrainWidth,
 			"height": defaultTerrainHeight,
+			"theme":  getGenreTheme(),
 		},
 	}
 
@@ -1270,6 +1271,9 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 		Difficulty: defaultDifficulty,
 		Depth:      defaultDepth,
 		GenreID:    *genreID,
+		Custom: map[string]interface{}{
+			"theme": getGenreTheme(),
+		},
 	}
 
 	spawnEnemiesWithLogging(game.World, generatedTerrain, params, clientLogger)
@@ -2253,6 +2257,7 @@ func createGenerationParams() procgen.GenerationParams {
 		Custom: map[string]interface{}{
 			"width":  defaultTerrainWidth,
 			"height": defaultTerrainHeight,
+			"theme":  getGenreTheme(),
 		},
 	}
 }
@@ -2388,6 +2393,9 @@ func initializePlayerNarrative(player *engine.Entity, narrativeSystem *engine.Br
 		Difficulty: 0.5,
 		Depth:      0,
 		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"theme": getGenreTheme(),
+		},
 	}
 
 	result, err := generator.Generate(seed, params)

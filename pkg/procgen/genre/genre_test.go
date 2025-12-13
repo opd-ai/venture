@@ -439,3 +439,74 @@ func TestRegistry_GetOrDefault(t *testing.T) {
 		t.Error("Expected error for non-existent genre")
 	}
 }
+
+func TestGetTheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		genreID  string
+		wantID   string
+		wantName string
+	}{
+		{
+			name:     "valid fantasy genre",
+			genreID:  "fantasy",
+			wantID:   "fantasy",
+			wantName: "Fantasy",
+		},
+		{
+			name:     "valid scifi genre",
+			genreID:  "scifi",
+			wantID:   "scifi",
+			wantName: "Sci-Fi",
+		},
+		{
+			name:     "valid horror genre",
+			genreID:  "horror",
+			wantID:   "horror",
+			wantName: "Horror",
+		},
+		{
+			name:     "valid cyberpunk genre",
+			genreID:  "cyberpunk",
+			wantID:   "cyberpunk",
+			wantName: "Cyberpunk",
+		},
+		{
+			name:     "valid postapoc genre",
+			genreID:  "postapoc",
+			wantID:   "postapoc",
+			wantName: "Post-Apocalyptic",
+		},
+		{
+			name:     "nonexistent genre defaults to fantasy",
+			genreID:  "nonexistent",
+			wantID:   "fantasy",
+			wantName: "Fantasy",
+		},
+		{
+			name:     "empty genre defaults to fantasy",
+			genreID:  "",
+			wantID:   "fantasy",
+			wantName: "Fantasy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			theme := GetTheme(tt.genreID)
+			if theme == nil {
+				t.Fatal("GetTheme() returned nil")
+			}
+			if theme.ID != tt.wantID {
+				t.Errorf("GetTheme() ID = %v, want %v", theme.ID, tt.wantID)
+			}
+			if theme.Name != tt.wantName {
+				t.Errorf("GetTheme() Name = %v, want %v", theme.Name, tt.wantName)
+			}
+			// Verify it's a valid genre
+			if err := theme.Validate(); err != nil {
+				t.Errorf("GetTheme() returned invalid theme: %v", err)
+			}
+		})
+	}
+}

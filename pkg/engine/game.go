@@ -1101,6 +1101,11 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 		g.TradeUI.Draw(screen)
 	}
 
+	// Phase 4.2 (PLAN.md): Draw Advanced Class UI
+	if g.AdvancedClassUI != nil {
+		g.AdvancedClassUI.Draw(screen)
+	}
+
 	g.drawMailboxUI(screen)
 
 	// INTEGRATION FIX [Category B]: Draw V8.0 UI screens

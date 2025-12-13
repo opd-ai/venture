@@ -1648,7 +1648,7 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 		return err
 	}
 
-	connectUIComponentsToInputSystem(game, inputSystem, shopUI)
+	connectUIComponentsToInputSystem(game, inputSystem, shopUI, player, clientLogger)
 
 	if *verbose {
 		clientLogger.Info("UI callbacks registered (I: Inventory, J: Quests, ESC: Pause Menu)")
@@ -1672,7 +1672,7 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 
 // connectUIComponentsToInputSystem connects all UI components to input system for ESC key handling.
 // BUG FIX: Phase 3 - Menu Trap - Enables dual-exit pattern (toggle key + ESC key close) for ALL UI panels.
-func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI) {
+func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI, player *engine.Entity, clientLogger *logrus.Entry) {
 	if game.MailboxUI != nil {
 		inputSystem.SetMailboxUI(game.MailboxUI)
 	}

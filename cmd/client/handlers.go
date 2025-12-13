@@ -60,6 +60,9 @@ import (
 	"github.com/opd-ai/venture/pkg/audio"
 	"github.com/opd-ai/venture/pkg/audio/music"
 	"github.com/opd-ai/venture/pkg/audio/sfx"
+
+	// Phase 1.2: Destruction Physics (PLAN.md)
+	"github.com/opd-ai/venture/pkg/engine/physics/destruction"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -215,6 +218,9 @@ type systemsContainer struct {
 	// Phase 4.3: Territory Control (PLAN.md)
 	territorySystem *engine.TerritorySystem // Territory capture and guild warfare mechanics
 	territoryUI     *engine.TerritoryUI     // Territory UI for viewing and managing territories
+
+	// Phase 1.2: Destruction Physics (PLAN.md)
+	destructionSystem *destruction.System // Building structural integrity and debris physics
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -386,6 +392,23 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.branchingNarrativeSystem = engine.NewBranchingNarrativeSystem(game.World)                                               // Phase 6.1: Branching narratives
 	sys.worldEventsSystem = engine.NewWorldEventsSystemWithLogger(game.World, *seed+seedOffsetWorldEvents, clientLogger.Logger) // Phase 6.3: World events
 	sys.shadowSystem = engine.NewShadowSystemWithLogger(game.World, clientLogger.Logger)
+
+	// Phase 1.2: Destruction physics
+	destructionConfig := destruction.Config{
+		EnableIntegrityChecks: true,
+		DamagePropagationRate: 0.1,
+		CollapseThreshold:     0.3,
+		EnableDebris:          true,
+		MaxDebrisParticles:    500,
+		DebrisLifetime:        10.0,
+		Gravity:               980.0,
+		AirResistance:         0.05,
+		GroundFriction:        0.8,
+		MaxFallingObjects:     100,
+		UpdateFrequency:       30.0,
+	}
+	sys.destructionSystem = destruction.NewSystem(&destructionConfig)
+	clientLogger.Info("destruction physics system initialized")
 }
 
 // initializeV4Systems initializes Version 4.0 systems (Phase 21-27).
@@ -756,6 +779,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)
 	game.World.AddSystem(sys.destructibleSystem)
+	game.World.AddSystem(&destructionSystemWrapper{system: sys.destructionSystem}) // Phase 1.2: Destruction physics
 	game.World.AddSystem(sys.carrySystem)
 	game.World.AddSystem(sys.hazardSystem)
 	game.World.AddSystem(sys.narrativeSystem)
@@ -2257,6 +2281,16 @@ type fluidSimulatorWrapper struct {
 }
 
 func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// Phase 1.2: Destruction Physics System Wrapper (PLAN.md)
+// destructionSystemWrapper adapts destruction.System to the World.System interface.
+type destructionSystemWrapper struct {
+	system *destruction.System
+}
+
+func (w *destructionSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

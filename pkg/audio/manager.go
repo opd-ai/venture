@@ -1,0 +1,261 @@
+package audio
+
+import (
+	"sync"
+)
+
+// Manager is a unified audio manager that coordinates music and SFX systems.
+// It provides a single interface for managing all game audio with support
+// for adaptive music and varied sound effects.
+type Manager struct {
+	sampleRate int
+	seed       int64
+	mu         sync.RWMutex
+
+	// Sub-managers (set via dependency injection)
+	musicManager AdaptiveMusicSystem
+	sfxManager   SFXGenerator
+
+	// Volume controls
+	masterVolume float64
+	musicVolume  float64
+	sfxVolume    float64
+
+	// Enabled states
+	musicEnabled bool
+	sfxEnabled   bool
+}
+
+// NewManager creates a new unified audio manager.
+func NewManager(sampleRate int, seed int64) *Manager {
+	return &Manager{
+		sampleRate:   sampleRate,
+		seed:         seed,
+		masterVolume: 1.0,
+		musicVolume:  1.0,
+		sfxVolume:    1.0,
+		musicEnabled: true,
+		sfxEnabled:   true,
+	}
+}
+
+// SetMusicManager sets the adaptive music manager implementation.
+func (m *Manager) SetMusicManager(manager AdaptiveMusicSystem) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.musicManager = manager
+}
+
+// SetSFXManager sets the sound effects generator implementation.
+func (m *Manager) SetSFXManager(manager SFXGenerator) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sfxManager = manager
+}
+
+// GetMusicManager returns the current music manager.
+func (m *Manager) GetMusicManager() AdaptiveMusicSystem {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.musicManager
+}
+
+// GetSFXManager returns the current SFX manager.
+func (m *Manager) GetSFXManager() SFXGenerator {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.sfxManager
+}
+
+// SetMasterVolume sets the master volume (0.0-1.0).
+func (m *Manager) SetMasterVolume(volume float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.masterVolume = clampVolume(volume)
+}
+
+// SetMusicVolume sets the music volume (0.0-1.0).
+func (m *Manager) SetMusicVolume(volume float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.musicVolume = clampVolume(volume)
+	m.musicEnabled = volume > 0.0
+}
+
+// SetSFXVolume sets the sound effects volume (0.0-1.0).
+func (m *Manager) SetSFXVolume(volume float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sfxVolume = clampVolume(volume)
+	m.sfxEnabled = volume > 0.0
+}
+
+// GetMasterVolume returns the master volume.
+func (m *Manager) GetMasterVolume() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.masterVolume
+}
+
+// GetMusicVolume returns the music volume.
+func (m *Manager) GetMusicVolume() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.musicVolume
+}
+
+// GetSFXVolume returns the sound effects volume.
+func (m *Manager) GetSFXVolume() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.sfxVolume
+}
+
+// SetMusicContext updates music based on gameplay context.
+func (m *Manager) SetMusicContext(context MusicContext) error {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	return manager.SetContext(context)
+}
+
+// UpdateMusicIntensity adjusts music intensity (0.0-1.0).
+func (m *Manager) UpdateMusicIntensity(intensity float64) error {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	return manager.UpdateIntensity(intensity)
+}
+
+// AddMusicLayer activates a music layer.
+func (m *Manager) AddMusicLayer(layer MusicLayer) error {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	return manager.AddLayer(layer)
+}
+
+// RemoveMusicLayer deactivates a music layer.
+func (m *Manager) RemoveMusicLayer(layer MusicLayer) error {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	return manager.RemoveLayer(layer)
+}
+
+// Update performs smooth transitions for music.
+func (m *Manager) Update(deltaTime float64) {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return
+	}
+
+	manager.Update(deltaTime)
+}
+
+// GenerateMusicTrack creates a music track with current settings.
+func (m *Manager) GenerateMusicTrack(duration float64) *AudioSample {
+	m.mu.RLock()
+	manager := m.musicManager
+	enabled := m.musicEnabled
+	musicVol := m.musicVolume
+	masterVol := m.masterVolume
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	sample := manager.GenerateTrack(duration)
+	if sample != nil {
+		applyVolume(sample, musicVol*masterVol)
+	}
+	return sample
+}
+
+// GenerateSFX creates a sound effect.
+func (m *Manager) GenerateSFX(effectType string, seed int64) *AudioSample {
+	m.mu.RLock()
+	manager := m.sfxManager
+	enabled := m.sfxEnabled
+	sfxVol := m.sfxVolume
+	masterVol := m.masterVolume
+	m.mu.RUnlock()
+
+	if !enabled || manager == nil {
+		return nil
+	}
+
+	sample := manager.Generate(effectType, seed)
+	if sample != nil {
+		applyVolume(sample, sfxVol*masterVol)
+	}
+	return sample
+}
+
+// GetSampleRate returns the sample rate.
+func (m *Manager) GetSampleRate() int {
+	return m.sampleRate
+}
+
+// GetSeed returns the seed.
+func (m *Manager) GetSeed() int64 {
+	return m.seed
+}
+
+// clampVolume ensures volume is in valid range [0.0, 1.0].
+func clampVolume(volume float64) float64 {
+	if volume < 0.0 {
+		return 0.0
+	}
+	if volume > 1.0 {
+		return 1.0
+	}
+	return volume
+}
+
+// applyVolume scales audio sample data by volume multiplier.
+func applyVolume(sample *AudioSample, volume float64) {
+	if sample == nil || volume == 1.0 {
+		return
+	}
+
+	for i := range sample.Data {
+		sample.Data[i] *= volume
+
+		// Clamp to prevent clipping
+		if sample.Data[i] > 1.0 {
+			sample.Data[i] = 1.0
+		} else if sample.Data[i] < -1.0 {
+			sample.Data[i] = -1.0
+		}
+	}
+}

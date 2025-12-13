@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen/dialog"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/sirupsen/logrus"
 )
@@ -48,7 +49,7 @@ func SpawnBookshelvesInTerrain(world *World, terr *terrain.Terrain, bookshelves 
 		return 0, fmt.Errorf("no available rooms for bookshelf spawning")
 	}
 
-	return spawnBookshelvesInRooms(world, libraryRooms, bookshelves, rng), nil
+	return spawnBookshelvesInRooms(world, libraryRooms, bookshelves, rng, seed, "fantasy"), nil
 }
 
 // validateBookshelfSpawnInputs validates terrain and bookshelf data for spawning.
@@ -123,7 +124,7 @@ func filterRoomsByArea(terr *terrain.Terrain, minArea int) []*terrain.Room {
 }
 
 // spawnBookshelvesInRooms spawns bookshelf entities in selected rooms.
-func spawnBookshelvesInRooms(world *World, libraryRooms []*terrain.Room, bookshelves []BookshelfSpawnData, rng *rand.Rand) int {
+func spawnBookshelvesInRooms(world *World, libraryRooms []*terrain.Room, bookshelves []BookshelfSpawnData, rng *rand.Rand, seed int64, genreID string) int {
 	spawned := 0
 	for i, shelfData := range bookshelves {
 		if i >= len(libraryRooms) {
@@ -138,7 +139,7 @@ func spawnBookshelvesInRooms(world *World, libraryRooms []*terrain.Room, bookshe
 
 		room := libraryRooms[i]
 		spawnX, spawnY := calculateWallSpawnPosition(room, rng, i)
-		entity := createBookshelfEntity(world, shelfData, spawnX, spawnY)
+		entity := createBookshelfEntity(world, shelfData, spawnX, spawnY, seed, genreID)
 
 		if entity != nil {
 			spawned++
@@ -208,7 +209,7 @@ func logWallPlacement(shelfIdx int, wall string, x, y float64) {
 }
 
 // createBookshelfEntity creates a bookshelf entity with pre-generated books.
-func createBookshelfEntity(world *World, shelfData BookshelfSpawnData, x, y float64) *Entity {
+func createBookshelfEntity(world *World, shelfData BookshelfSpawnData, x, y float64, seed int64, genreID string) *Entity {
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":     "createBookshelfEntity",
 		"x":             x,
@@ -270,14 +271,14 @@ func createBookshelfEntity(world *World, shelfData BookshelfSpawnData, x, y floa
 	}).Debug("Added collider component")
 
 	// Add bookshelf component (marks as container for books)
-	bookshelfComp := NewBookshelfComponent(8, "fantasy") // Max 8 books per shelf
+	bookshelfComp := NewBookshelfComponent(8, genreID) // Max 8 books per shelf
 	entity.AddComponent(bookshelfComp)
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":      "createBookshelfEntity",
 		"entity_id":      entity.ID,
 		"component_type": "bookshelf",
 		"max_books":      8,
-		"genre":          "fantasy",
+		"genre":          genreID,
 	}).Debug("Added bookshelf component")
 
 	// Spawn individual book entities and add them to the bookshelf
@@ -320,8 +321,8 @@ func createBookshelfEntity(world *World, shelfData BookshelfSpawnData, x, y floa
 		"books_expected": len(shelfData.Books),
 	}).Info("Completed book addition to bookshelf")
 
-	// Add dialog component for interaction
-	dialogProvider := NewBookshelfDialogProvider(bookshelfComp.GetBookCount())
+	// Add dialog component for interaction (Phase 3.1)
+	dialogProvider := NewBookshelfDialogProvider(bookshelfComp.GetBookCount(), seed+int64(entity.ID), genreID)
 	dialogComp := NewDialogComponent(dialogProvider)
 	entity.AddComponent(dialogComp)
 	bookSpawnLog.WithFields(logrus.Fields{
@@ -467,22 +468,24 @@ func getBookColor(bookType BookType) color.RGBA {
 // INTEGRATION FIX [Category B]: Bookshelf Dialog Provider
 // Gap: Bookshelves reuse merchant dialog instead of dedicated bookshelf dialog
 // Fix: Create BookshelfDialogProvider in dialog_system.go with book-specific responses
-// Roadmap: ROADMAP_V4.md Phase 23.2 - Lore Integration (bookshelf interaction)
-// Temporary: Reuses MerchantDialogProvider with bookshelf context until dedicated provider added
-func NewBookshelfDialogProvider(bookCount int) DialogProvider {
+// NewBookshelfDialogProvider creates a dialog provider for bookshelf interactions (Phase 3.1).
+// Uses Markov chain generation for genre-appropriate book descriptions.
+func NewBookshelfDialogProvider(bookCount int, seed int64, genreID string) DialogProvider {
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":  "NewBookshelfDialogProvider",
 		"book_count": bookCount,
-	}).Debug("Creating dialog provider for bookshelf")
+		"genre":      genreID,
+	}).Debug("Creating Markov dialog provider for bookshelf")
 
-	// For now, reuse merchant dialog provider with bookshelf context
-	provider := NewMerchantDialogProvider(fmt.Sprintf("Bookshelf (%d books)", bookCount))
+	bookshelfName := fmt.Sprintf("Bookshelf (%d books)", bookCount)
+	bookPersonality := dialog.NewPersonality(dialog.PersonalityScholarly)
+	provider := NewMarkovDialogProvider(seed, genreID, bookshelfName, bookPersonality)
 
 	bookSpawnLog.WithFields(logrus.Fields{
 		"operation":  "NewBookshelfDialogProvider",
 		"book_count": bookCount,
-		"provider":   "MerchantDialogProvider",
-	}).Debug("Created bookshelf dialog provider (using merchant dialog as temporary solution)")
+		"provider":   "MarkovDialogProvider",
+	}).Debug("Created bookshelf dialog provider with procedural generation")
 
 	return provider
 }

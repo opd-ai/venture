@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen/dialog"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
@@ -89,7 +90,7 @@ func SpawnCompanionsInTerrain(world *World, terr *terrain.Terrain, companions []
 		spawnY := float64(cy*32) + offsetY
 
 		// Create companion entity
-		entity := createCompanionEntity(world, companionData, spawnX, spawnY)
+		entity := createCompanionEntity(world, companionData, spawnX, spawnY, seed, "fantasy")
 		if entity != nil {
 			spawned++
 		}
@@ -99,7 +100,7 @@ func SpawnCompanionsInTerrain(world *World, terr *terrain.Terrain, companions []
 }
 
 // createCompanionEntity creates a companion entity with the provided data.
-func createCompanionEntity(world *World, companionData CompanionSpawnData, x, y float64) *Entity {
+func createCompanionEntity(world *World, companionData CompanionSpawnData, x, y float64, seed int64, genreID string) *Entity {
 	entity := world.CreateEntity()
 
 	// Add position
@@ -169,8 +170,9 @@ func createCompanionEntity(world *World, companionData CompanionSpawnData, x, y 
 	// Add team component (neutral/friendly initially)
 	entity.AddComponent(&TeamComponent{TeamID: 1}) // Team 1 = friendly NPCs
 
-	// Add dialog component for recruitment interaction
-	dialogProvider := NewMerchantDialogProvider(companionData.Name)
+	// Add dialog component for recruitment interaction (Phase 3.1)
+	companionPersonality := dialog.NewPersonality(dialog.PersonalityHelpful)
+	dialogProvider := NewMarkovDialogProvider(seed+int64(entity.ID), genreID, companionData.Name, companionPersonality)
 	dialogComp := NewDialogComponent(dialogProvider)
 	entity.AddComponent(dialogComp)
 

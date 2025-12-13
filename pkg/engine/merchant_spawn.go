@@ -99,8 +99,9 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	merchant.AddComponent(merchantComp)
 
 	// Add both dialog components for backward compatibility and advanced features
-	// Simple dialog component for basic shop interactions
-	dialogProvider := NewMerchantDialogProvider(merchantData.Entity.Name)
+	// Markov dialog component for varied shop interactions (Phase 3.1)
+	merchantPersonalitySimple := dialog.NewPersonality(dialog.PersonalityMerchant)
+	dialogProvider := NewMarkovDialogProvider(seed+int64(merchantData.Entity.Seed), params.GenreID, merchantData.Entity.Name, merchantPersonalitySimple)
 	dialogComp := NewDialogComponent(dialogProvider)
 	merchant.AddComponent(dialogComp)
 

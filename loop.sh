@@ -85,11 +85,13 @@ play() {
 
 dev() {
     impl
-    review
+    #review
     #integrate
     #play
 }
 
+dev
+integrate
 fix
 #wasm
 #mobile
@@ -100,4 +102,3 @@ done
 
 git clean -fdx .
 fix
-integrate

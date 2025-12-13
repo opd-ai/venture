@@ -159,7 +159,13 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 
 // collectAndGridCollidableEntities filters entities with colliders and builds the spatial grid.
 func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) []*Entity {
-	s.grid = make(map[int]map[int][]*Entity)
+	// Clear grid instead of reallocating - reuse existing maps
+	for x := range s.grid {
+		for y := range s.grid[x] {
+			s.grid[x][y] = s.grid[x][y][:0]
+		}
+	}
+
 	collidableEntities := make([]*Entity, 0, len(entities))
 
 	for _, entity := range entities {
@@ -196,8 +202,11 @@ func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEnti
 		return
 	}
 
-	candidates := s.getNearbyEntities(entity)
-	for _, other := range candidates {
+	// Use pooled result directly without copying
+	nr := s.getNearbyEntitiesPooled(entity)
+	defer putNearbyResult(nr)
+
+	for _, other := range nr.result {
 		if entity.ID == other.ID {
 			continue
 		}
@@ -373,9 +382,10 @@ func (s *CollisionSystem) addToGrid(entity *Entity) {
 	}
 }
 
-// getNearbyEntities returns entities in the same or adjacent grid cells.
-// Precondition: Entity must have position and collider components.
-func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
+// getNearbyEntitiesPooled returns pooled nearby entities without copying.
+// The result must be returned to the pool after use via putNearbyResult().
+// DO NOT store the result - it will be reused by the pool.
+func (s *CollisionSystem) getNearbyEntitiesPooled(entity *Entity) *nearbyResult {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
@@ -383,9 +393,11 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 	pos, ok1 := posComp.(*PositionComponent)
 	collider, ok2 := colliderComp.(*ColliderComponent)
 
+	nr := getNearbyResult()
+
 	if !ok1 || !ok2 {
-		// Components missing or wrong type - should not happen if Update() filters correctly
-		return nil
+		// Components missing or wrong type - return empty result
+		return nr
 	}
 
 	minX, minY, maxX, maxY := collider.GetBounds(pos.X, pos.Y)
@@ -395,10 +407,6 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 	minCellY := int(math.Floor(minY / s.CellSize))
 	maxCellX := int(math.Floor(maxX / s.CellSize))
 	maxCellY := int(math.Floor(maxY / s.CellSize))
-
-	// Use pooled resources to reduce allocations
-	nr := getNearbyResult()
-	defer putNearbyResult(nr)
 
 	for x := minCellX; x <= maxCellX; x++ {
 		for y := minCellY; y <= maxCellY; y++ {
@@ -412,6 +420,16 @@ func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
 			}
 		}
 	}
+
+	return nr
+}
+
+// getNearbyEntities returns entities in the same or adjacent grid cells.
+// Precondition: Entity must have position and collider components.
+// Note: This method allocates a new slice. For hot paths, use getNearbyEntitiesPooled.
+func (s *CollisionSystem) getNearbyEntities(entity *Entity) []*Entity {
+	nr := s.getNearbyEntitiesPooled(entity)
+	defer putNearbyResult(nr)
 
 	// Copy result before returning (pool will be reused)
 	result := make([]*Entity, len(nr.result))

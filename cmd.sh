@@ -100,15 +100,4 @@ dev() {
     #play
 }
 
-#impl
-integrate
-fix
-#wasm
-#mobile
-for i in $(seq 1 $ITER); do
-    dev
-    fix
-done
-
-git clean -fdx .
-fix
+$@

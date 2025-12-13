@@ -55,24 +55,42 @@ func (ui *GuildUI) Update() error {
 		return nil
 	}
 
-	// Handle keyboard input
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		ui.visible = false
+	if ui.handleKeyboardInput() {
 		return nil
 	}
 
-	// Handle tab switching
-	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		ui.selectedTab = 0 // Info
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		ui.selectedTab = 1 // Members
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key3) {
-		ui.selectedTab = 2 // Treasury
+	ui.handleScrolling()
+	ui.handleTouchInput()
+
+	return nil
+}
+
+// handleKeyboardInput processes keyboard input and returns true if UI should close.
+func (ui *GuildUI) handleKeyboardInput() bool {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		ui.visible = false
+		return true
 	}
 
-	// Handle scrolling
+	ui.handleTabSwitching()
+	return false
+}
+
+// handleTabSwitching processes tab switching key presses.
+func (ui *GuildUI) handleTabSwitching() {
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
+		ui.selectedTab = 0
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key2) {
+		ui.selectedTab = 1
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key3) {
+		ui.selectedTab = 2
+	}
+}
+
+// handleScrolling processes mouse wheel scrolling.
+func (ui *GuildUI) handleScrolling() {
 	_, dy := ebiten.Wheel()
 	if dy != 0 {
 		ui.scrollOffset -= int(dy * 20)
@@ -80,35 +98,51 @@ func (ui *GuildUI) Update() error {
 			ui.scrollOffset = 0
 		}
 	}
+}
 
-	// Handle touch input
+// handleTouchInput processes touch input for tab and close buttons.
+func (ui *GuildUI) handleTouchInput() {
 	ui.touchHandler.Update()
 	touches := ui.touchHandler.GetActiveTouches()
 
 	for _, touch := range touches {
 		if touch.State == mobile.TouchStateStarted || touch.State == mobile.TouchStateMoved {
-			// Check tab buttons
-			tabY := 100
-			tabWidth := 150
-			for i := 0; i < 3; i++ {
-				tabX := 50 + i*160
-				if touch.X >= tabX && touch.X <= tabX+tabWidth &&
-					touch.Y >= tabY && touch.Y <= tabY+40 {
-					ui.selectedTab = i
-				}
-			}
-
-			// Check close button
-			closeX := ui.width - 80
-			closeY := 50
-			if touch.X >= closeX && touch.X <= closeX+60 &&
-				touch.Y >= closeY && touch.Y <= closeY+40 {
-				ui.visible = false
-			}
+			ui.processTouchOnButtons(touch)
 		}
 	}
+}
 
-	return nil
+// processTouchOnButtons checks if touch hits tab or close buttons.
+func (ui *GuildUI) processTouchOnButtons(touch *mobile.Touch) {
+	if ui.checkTabButtons(touch) {
+		return
+	}
+	ui.checkCloseButton(touch)
+}
+
+// checkTabButtons checks if touch is on any tab button.
+func (ui *GuildUI) checkTabButtons(touch *mobile.Touch) bool {
+	tabY := 100
+	tabWidth := 150
+	for i := 0; i < 3; i++ {
+		tabX := 50 + i*160
+		if touch.X >= tabX && touch.X <= tabX+tabWidth &&
+			touch.Y >= tabY && touch.Y <= tabY+40 {
+			ui.selectedTab = i
+			return true
+		}
+	}
+	return false
+}
+
+// checkCloseButton checks if touch is on the close button.
+func (ui *GuildUI) checkCloseButton(touch *mobile.Touch) {
+	closeX := ui.width - 80
+	closeY := 50
+	if touch.X >= closeX && touch.X <= closeX+60 &&
+		touch.Y >= closeY && touch.Y <= closeY+40 {
+		ui.visible = false
+	}
 }
 
 // Draw renders the guild UI

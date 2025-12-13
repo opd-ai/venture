@@ -847,12 +847,27 @@ func (g *EbitenGame) startSinglePlayerGame(charData CharacterData) error {
 
 // updateGameplayUI updates all UI systems during active gameplay.
 func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
+	g.updateCoreUIScreens(deltaTime)
+	g.updateCommerceUIScreens(deltaTime)
+	g.updatePhaseUIScreens(deltaTime)
+	g.updateVirtualControlsVisibility()
+}
+
+// updateCoreUIScreens updates the primary UI screens.
+func (g *EbitenGame) updateCoreUIScreens(deltaTime float64) {
 	g.InventoryUI.Update(nil, deltaTime)
 	g.QuestUI.Update(nil, deltaTime)
 	g.CharacterUI.Update(nil, deltaTime)
 	g.SkillsUI.Update(nil, deltaTime)
 	g.MapUI.Update(nil, deltaTime)
 
+	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
+		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
+	}
+}
+
+// updateCommerceUIScreens updates shop, crafting, and trade UIs.
+func (g *EbitenGame) updateCommerceUIScreens(deltaTime float64) {
 	if g.ShopUI != nil {
 		g.ShopUI.Update(g.World.GetEntities(), deltaTime)
 	}
@@ -861,18 +876,13 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.CraftingUI.Update(nil, deltaTime)
 	}
 
-	// Phase 3.3 (PLAN.md): Update Trade UI
 	if g.TradeUI != nil {
 		g.TradeUI.Update(deltaTime)
 	}
+}
 
-	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
-	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
-
-	// INTEGRATION FIX [Category B]: Update V8.0 UI screens
-	// Gap: Housing and Gallery UIs created but never updated
-	// Fix: Added update calls for housing and gallery UIs
-	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
+// updatePhaseUIScreens updates all phase-specific UI screens.
+func (g *EbitenGame) updatePhaseUIScreens(deltaTime float64) {
 	if g.HousingUI != nil {
 		g.HousingUI.Update()
 	}
@@ -881,40 +891,25 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.GalleryUI.Update()
 	}
 
-	// Phase 3.2 (PLAN.md): Update Guild UI
 	if g.GuildUI != nil {
 		g.GuildUI.Update()
 	}
 
-	// Phase 4.2 (PLAN.md): Update Advanced Class UI
 	if g.AdvancedClassUI != nil {
 		g.AdvancedClassUI.Update()
 	}
 
-	// Phase 4.3 (PLAN.md): Update Territory UI
 	if g.TerritoryUI != nil {
 		g.TerritoryUI.Update()
 	}
 
-	// Phase 6.1 (PLAN.md): Update Story Choice UI
 	if g.StoryChoiceUI != nil {
 		g.StoryChoiceUI.Update(deltaTime)
 	}
 
-	// Phase 6.2 (PLAN.md): Update Dialog UI
 	if g.DialogUI != nil {
-		if err := g.DialogUI.Update(); err != nil {
-			// Log error but don't crash - error handling for dialog update failures
-		}
+		g.DialogUI.Update()
 	}
-
-	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
-		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
-	}
-
-	// WASM/Mobile: Auto-hide virtual controls when any UI menu is open
-	// This prevents D-pad/buttons from overlapping with UI elements
-	g.updateVirtualControlsVisibility()
 }
 
 // updateVirtualControlsVisibility manages virtual control visibility based on UI state.
@@ -1144,6 +1139,14 @@ func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
 
 // drawOverlays renders all UI overlays including HUD, menus, inventory, and other interfaces.
 func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
+	g.drawSystemOverlays(screen)
+	g.drawCoreUIOverlays(screen)
+	g.drawCommerceUIOverlays(screen)
+	g.drawPhaseUIOverlays(screen)
+}
+
+// drawSystemOverlays draws HUD, tutorial, help, and menu systems.
+func (g *EbitenGame) drawSystemOverlays(screen *ebiten.Image) {
 	g.HUDSystem.Draw(screen)
 
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
@@ -1157,13 +1160,19 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	if g.MenuSystem != nil && g.MenuSystem.IsActive() {
 		g.MenuSystem.Draw(screen)
 	}
+}
 
+// drawCoreUIOverlays draws primary UI screens.
+func (g *EbitenGame) drawCoreUIOverlays(screen *ebiten.Image) {
 	g.InventoryUI.Draw(screen)
 	g.QuestUI.Draw(screen)
 	g.CharacterUI.Draw(screen)
 	g.SkillsUI.Draw(screen)
 	g.MapUI.Draw(screen)
+}
 
+// drawCommerceUIOverlays draws shop and crafting UIs.
+func (g *EbitenGame) drawCommerceUIOverlays(screen *ebiten.Image) {
 	if g.ShopUI != nil {
 		g.ShopUI.Draw(screen)
 	}
@@ -1171,38 +1180,32 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 	if g.CraftingUI != nil {
 		g.CraftingUI.Draw(screen)
 	}
+}
 
-	// Phase 3.3 (PLAN.md): Draw Trade UI
+// drawPhaseUIOverlays draws all phase-specific UI screens.
+func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 	if g.TradeUI != nil {
 		g.TradeUI.Draw(screen)
 	}
 
-	// Phase 4.2 (PLAN.md): Draw Advanced Class UI
 	if g.AdvancedClassUI != nil {
 		g.AdvancedClassUI.Draw(screen)
 	}
 
-	// Phase 4.3 (PLAN.md): Draw Territory UI
 	if g.TerritoryUI != nil {
 		g.TerritoryUI.Draw(screen)
 	}
 
-	// Phase 6.1 (PLAN.md): Draw Story Choice UI
 	if g.StoryChoiceUI != nil {
 		g.StoryChoiceUI.Draw(screen)
 	}
 
-	// Phase 6.2 (PLAN.md): Draw Dialog UI
 	if g.DialogUI != nil {
 		g.DialogUI.Draw(screen)
 	}
 
 	g.drawMailboxUI(screen)
 
-	// INTEGRATION FIX [Category B]: Draw V8.0 UI screens
-	// Gap: Housing and Gallery UIs created but never drawn
-	// Fix: Added draw calls for housing and gallery UIs
-	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
 	if g.HousingUI != nil {
 		g.HousingUI.Draw(screen)
 	}

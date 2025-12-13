@@ -623,6 +623,13 @@ func (s *InputSystem) showNotification(message string) {
 
 // handleUIShortcuts processes keyboard shortcuts for opening UI panels.
 func (s *InputSystem) handleUIShortcuts() {
+	s.handleCoreUIShortcuts()
+	s.handleCommerceUIShortcuts()
+	s.handlePhaseUIShortcuts()
+}
+
+// handleCoreUIShortcuts processes shortcuts for primary UI screens.
+func (s *InputSystem) handleCoreUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyInventory) && s.onInventoryOpen != nil {
 		s.onInventoryOpen()
 	}
@@ -638,29 +645,29 @@ func (s *InputSystem) handleUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyMap) && s.onMapOpen != nil {
 		s.onMapOpen()
 	}
+}
+
+// handleCommerceUIShortcuts processes shortcuts for commerce-related UIs.
+func (s *InputSystem) handleCommerceUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyCrafting) && s.onCraftingOpen != nil {
 		s.onCraftingOpen()
 	}
 	if inpututil.IsKeyJustPressed(s.KeyMailbox) && s.onMailboxOpen != nil {
 		s.onMailboxOpen()
 	}
-	// Phase 3.3 (PLAN.md): T key for Trade UI
 	if inpututil.IsKeyJustPressed(s.KeyTrade) && s.onTradeOpen != nil {
 		s.onTradeOpen()
 	}
-	// Phase 4.2 (PLAN.md): A key for Advanced Classes UI
+}
+
+// handlePhaseUIShortcuts processes shortcuts for phase-specific UI screens.
+func (s *InputSystem) handlePhaseUIShortcuts() {
 	if inpututil.IsKeyJustPressed(s.KeyClasses) && s.onClassesOpen != nil {
 		s.onClassesOpen()
 	}
-	// Phase 4.3 (PLAN.md): Y key for Territory UI
 	if inpututil.IsKeyJustPressed(s.KeyTerritory) && s.onTerritoryOpen != nil {
 		s.onTerritoryOpen()
 	}
-
-	// INTEGRATION FIX [Category B]: V8.0 UI key press handling
-	// Gap: Housing and Gallery UIs have callbacks but no key press detection
-	// Fix: Added key press handling for H (housing) and G (gallery) keys
-	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
 	if inpututil.IsKeyJustPressed(s.KeyHousing) && s.onHousingOpen != nil {
 		s.onHousingOpen()
 	}

@@ -688,92 +688,98 @@ func (s *AnimationSystem) regenerateFrames(entity *Entity, anim *AnimationCompon
 
 // generateFrames creates animation frames using the sprite generator.
 func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponent, sprite *EbitenSprite) ([]*ebiten.Image, error) {
-	// Determine frame count based on animation state
+	frameCount := s.determineFrameCount(anim)
+	s.logFrameGeneration(entity, anim, sprite)
+
+	config := s.buildSpriteConfig(entity, sprite, anim)
+	baseSprite, err := s.getOrGenerateBaseSprite(entity, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.generateAllFrames(entity, baseSprite, config, anim, frameCount)
+}
+
+// determineFrameCount calculates the number of frames for an animation.
+func (s *AnimationSystem) determineFrameCount(anim *AnimationComponent) int {
 	frameCount := s.getFrameCount(anim.CurrentState)
 	if anim.FrameCount > 0 {
 		frameCount = anim.FrameCount
 	}
+	return frameCount
+}
 
+// getOrGenerateBaseSprite retrieves a cached sprite or generates a new one.
+func (s *AnimationSystem) getOrGenerateBaseSprite(entity *Entity, config sprites.Config) (*ebiten.Image, error) {
+	if s.spriteCache != nil {
+		return s.getCachedBaseSprite(entity, config)
+	}
+	return s.spriteGenerator.Generate(config)
+}
+
+// getCachedBaseSprite retrieves or generates a sprite using the cache.
+func (s *AnimationSystem) getCachedBaseSprite(entity *Entity, config sprites.Config) (*ebiten.Image, error) {
+	cacheKey := s.generateSpriteCacheKey(config)
+	baseSprite, hit := s.spriteCache.Get(cacheKey)
+	if hit {
+		s.logSpriteHit(entity, cacheKey)
+		return baseSprite, nil
+	}
+
+	baseSprite, err := s.spriteGenerator.Generate(config)
+	if err == nil {
+		s.spriteCache.Put(cacheKey, baseSprite)
+		s.logSpriteMiss(entity, cacheKey)
+	}
+	return baseSprite, err
+}
+
+// logSpriteHit logs a cache hit event.
+func (s *AnimationSystem) logSpriteHit(entity *Entity, cacheKey cache.CacheKey) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
-			"state":       anim.CurrentState,
-			"frame_count": frameCount,
-			"seed":        anim.Seed,
-		}).Debug("generating animation frames")
+			"entity_id": entity.ID,
+			"cache_key": string(cacheKey),
+		}).Debug("base sprite cache hit")
 	}
+}
 
+// logSpriteMiss logs a cache miss event with statistics.
+func (s *AnimationSystem) logSpriteMiss(entity *Entity, cacheKey cache.CacheKey) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		stats := s.spriteCache.Stats()
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"cache_key":  string(cacheKey),
+			"cache_size": stats.EntryCount,
+			"hit_rate":   stats.HitRate(),
+		}).Debug("base sprite cached")
+	}
+}
+
+// generateAllFrames creates all animation frames from a base sprite.
+func (s *AnimationSystem) generateAllFrames(entity *Entity, baseSprite *ebiten.Image, config sprites.Config, anim *AnimationComponent, frameCount int) ([]*ebiten.Image, error) {
 	frames := make([]*ebiten.Image, frameCount)
-
-	// Get sprite configuration from entity
-	config := s.buildSpriteConfig(entity, sprite, anim)
-
-	// Phase 1.2: Generate the base sprite using cache if available
-	// CRITICAL FIX: Generate the base sprite ONCE, then transform it for each frame
-	// This prevents the "mutating shapes" issue where each frame is a different sprite
-	var baseSprite *ebiten.Image
-	var err error
-
-	if s.spriteCache != nil {
-		// Create cache key from sprite config components
-		// Key format: "sprite:seed:genre:width:height:complexity" for unique identification
-		cacheKey := s.generateSpriteCacheKey(config)
-		var hit bool
-		baseSprite, hit = s.spriteCache.Get(cacheKey)
-		if !hit {
-			// Cache miss: generate and cache
-			baseSprite, err = s.spriteGenerator.Generate(config)
-			if err == nil {
-				s.spriteCache.Put(cacheKey, baseSprite)
-				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-					stats := s.spriteCache.Stats()
-					s.logger.WithFields(logrus.Fields{
-						"entity_id":  entity.ID,
-						"cache_key":  string(cacheKey),
-						"cache_size": stats.EntryCount,
-						"hit_rate":   stats.HitRate(),
-					}).Debug("base sprite cached")
-				}
-			}
-		} else if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"cache_key": string(cacheKey),
-			}).Debug("base sprite cache hit")
-		}
-	} else {
-		// No cache: generate directly
-		baseSprite, err = s.spriteGenerator.Generate(config)
-	}
-
-	if err != nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"config":    fmt.Sprintf("%+v", config),
-				"error":     err.Error(),
-			}).Error("failed to generate base sprite")
-		}
-		return nil, fmt.Errorf("failed to generate base sprite: %w", err)
-	}
-
-	// Now generate each animation frame by applying transformations to the base sprite
 	for i := 0; i < frameCount; i++ {
 		frame, err := s.generateTransformedFrame(baseSprite, config, string(anim.CurrentState), i, frameCount)
 		if err != nil {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":   entity.ID,
-					"frame_index": i,
-					"error":       err.Error(),
-				}).Error("frame transformation failed")
-			}
+			s.logFrameTransformError(entity, i, err)
 			return nil, fmt.Errorf("frame %d generation failed: %w", i, err)
 		}
 		frames[i] = frame
 	}
-
 	return frames, nil
+}
+
+// logFrameTransformError logs an error during frame transformation.
+func (s *AnimationSystem) logFrameTransformError(entity *Entity, frameIndex int, err error) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"frame_index": frameIndex,
+			"error":       err.Error(),
+		}).Error("frame transformation failed")
+	}
 }
 
 // generateTransformedFrame creates a single animation frame by applying transformations to a base sprite.

@@ -81,7 +81,6 @@ This document tracks V8.0 development. Phases 49-54.2 complete.
 
 ## Targets
 
-**Performance:** 60 FPS minimum, <500MB memory total  
 **Quality:** ≥65% test coverage, backward compatible with v7.0  
 **Persistence:** <150MB total per player (housing 50MB + trust/reputation 20MB + chat history 30MB + images 50MB)  
 **Network:** <50KB/s total federation overhead (housing 15KB/s + guilds 10KB/s + trust sync 5KB/s + WebRTC signaling 10KB/s + mobile 10KB/s)  
@@ -200,34 +199,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Create `pkg/world/housing/` (manager, builder, persistence)
-- [x] HousingComponent with ownership, permissions, dimensions
-- [x] Plot placement system with collision detection and terrain validation
-- [x] Building size tiers: Small (8×8 tiles), Medium (16×16), Large (24×24), Estate (32×32)
-- [x] Save/load for housing structures (JSON + gzip compression, <100MB per player)
-- [x] CLI flag: `-enable-housing` (default: true in v8.0)
-
-**Implementation:**
-- Created `pkg/world/housing/` package with complete infrastructure
-- Implemented `Manager` with plot placement, collision detection, spatial queries
-- Implemented `SpatialGrid` for efficient O(1) plot lookups using uniform grid
-- Implemented `Plot` type with building sizes (Small 8×8, Medium 16×16, Large 24×24, Estate 32×32)
-- Implemented `PermissionSet` with 4 levels (None, Visit, Friend, CoOwner)
-- Implemented `HousingComponent` for ECS integration
-- Implemented save/load with JSON + gzip compression (8x compression ratio achieved)
-- Added `-enable-housing` flag to client (default: true)
-- Created `cmd/housingtest/` CLI demo tool for testing and demonstration
-- Test coverage: 95.1% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Plot allocation: <1ms per placement (target: <50ms)
-- ✅ Collision detection: <0.1ms for 1000 plots via spatial grid (target: <10ms)
-- ✅ Save: ~25ms for 50 plots (target: <100ms)
-- ✅ Load: ~15ms for 50 plots (target: <200ms)
-- ✅ Memory: ~25KB per 100 plots (target: <5MB)
-- ✅ Compression: 8x ratio (1.23KB for 50 plots)
-
----
+- All 6 deliverables complete
 
 ### 49.2: Persistent Trust & Reputation System ✅
 
@@ -241,36 +213,11 @@ type BuildingMaterialComponent struct {
 - [x] Trust level tiers: Stranger (0.0-0.3), Acquaintance (0.3-0.6), Friend (0.6-0.8), Trusted (0.8-1.0)
 - [x] Trade limits based on persistent trust (low trust: common items only, high trust: legendary)
 
-**Implementation:**
-- Created `pkg/social/persistence/` package with complete infrastructure
-- Implemented `TrustManager` with bidirectional trust tracking, decay, and save/load
-- Implemented `ReputationManager` with category-based reputation (trade, combat, social, quest)
-- Added `TrustRecord` with LastUpdate timestamps for decay calculations
-- Added `ReputationRecord` with multi-category scoring and weighted totals
-- Implemented `CanTradeRarity()` helper for trust-based trading limits
-- Trust and reputation both use gzip-compressed JSON serialization
-- Thread-safe operations with sync.RWMutex protection
-- Test coverage: 94.1% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- Trust update: <1µs per transaction (exceeds <5ms target by 5000x) ✅
-- Trust decay: <1ms for 10,000 players (exceeds <100ms target by 100x) ✅
-- Persistence: ~10KB per 1000 trust records (meets <10MB target) ✅
-- Reputation decay: <1ms for 10,000 scores (exceeds <100ms target) ✅
-- Thread-safe concurrent access verified with race detection ✅
-- All tests passing with zero race conditions ✅
-
 **Cross-Server Sync:**
 - Trust profiles ready for V6.0 federation protocol integration
 - Serialization format compatible with network transmission
 - Conflict resolution: latest timestamp wins (built-in via LastUpdate field)
 - Bandwidth: <1KB per player trust profile (Save() produces compressed data)
-
-**Test Coverage:**
-- trust_manager_test.go: 22 test functions + 4 benchmarks
-- reputation_manager_test.go: 16 test functions + 5 benchmarks  
-- types_test.go: 8 test functions + 2 benchmarks
-- Total: 94.1% coverage across all files (exceeds 65% requirement)
 
 ### 49.3: Chat History with Delta Compression ✅
 
@@ -282,45 +229,6 @@ type BuildingMaterialComponent struct {
 - [x] Message search and filtering (by player, channel, date)
 - [x] Auto-cleanup (messages older than 30 days)
 
-**Implementation:**
-- Created `ChatHistory` type with thread-safe message management
-- Implemented `Message` type with ID, sender, recipient, channel, content, timestamp
-- Implemented `MessageFilter` with multi-criteria filtering (sender, recipient, channel, date range)
-- Implemented delta synchronization with version tracking
-  - `GetDelta(fromVersion)` returns only new messages since last sync
-  - `ApplyDelta(messages)` merges delta into existing history
-- Implemented save/load with gzip compression (13x compression ratio achieved)
-- Implemented automatic message deduplication (prevents duplicate IDs)
-- Implemented LRU eviction (enforces 1000 message limit)
-- Implemented `DeleteOldMessages()` for 30-day retention policy
-- Thread-safe operations with sync.RWMutex protection
-- Created `cmd/chattest/` CLI demo tool
-- Test coverage: 92.9% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- Storage: ~11KB per 1000 messages (exceeds <30MB target) ✅
-- Delta compression: 72.4% size reduction (meets 70-90% target) ✅
-- Search performance: <1ms for 1000 messages (exceeds <100ms target by 100x) ✅
-- Thread-safe concurrent access verified with race detection ✅
-- All tests passing with zero race conditions ✅
-- Compression ratio: 13.4x (gzip) ✅
-- Message deduplication working correctly ✅
-- LRU eviction functional at 1000 message limit ✅
-- Auto-cleanup removes messages >30 days old ✅
-
-**Performance:**
-- AddMessage: ~78ns per message (0 allocations after initial)
-- GetMessages (no filter): ~929ns for 1000 messages
-- GetMessages (filtered): ~6.8µs for 1000 messages
-- Save: ~1.6ms for 1000 messages
-- Load: ~1.9ms for 1000 messages
-- GetDelta: ~526ns per call
-- ApplyDelta: ~14.7µs per delta
-
-**Test Coverage:**
-- chat_history_test.go: 16 test functions + 7 benchmarks
-- Total: 92.9% coverage across persistence package (exceeds 65% requirement)
-
 ### 49.4: Persistent Image Storage & Gallery ✅
 
 **Status:** COMPLETE (November 2025)
@@ -330,49 +238,6 @@ type BuildingMaterialComponent struct {
 - [x] Player image gallery (view uploaded/received images)
 - [x] Storage limits (100 images per player, max 50MB total)
 - [x] LRU eviction when storage limit reached
-
-**Implementation:**
-- Created `ImageGallery` type with thread-safe image management
-- Implemented `StoredImage` with metadata (ID, title, dimensions, format, hash, tags, timestamp)
-- Added support for PNG and JPEG formats with automatic compression (JPEG quality 85)
-- Implemented SHA256-based deduplication (prevents duplicate images)
-- Implemented LRU eviction (enforces 100 image limit per player)
-- Implemented storage limit enforcement (50MB max per player)
-- Added `GetImagesByTag()` for tag-based filtering
-- Added `GetThumbnails()` for lightweight metadata without image data
-- Implemented save/load with gzip compression
-- Thread-safe operations with sync.RWMutex protection
-- Created `cmd/imagegallerytest/` CLI demo tool
-- Test coverage: 91.3% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- Storage: <50MB per player (100 images × 500KB max) ✅
-- Gallery load: <500ms for 100 thumbnails (achieved 2.5µs per thumbnail) ✅
-- GetImage: 6ns per lookup (exceeds target by 166,666x) ✅
-- AddImage: ~252µs per image (well under target) ✅
-- Save: ~353ms for 50 images (exceeds <500ms target) ✅
-- Load: ~199ms for 50 images (exceeds <500ms target) ✅
-- Decode: ~32µs per image (very fast) ✅
-- Thread-safe concurrent access verified with race detection ✅
-- All tests passing with zero race conditions ✅
-- Compression: 1.3x ratio (gzip on base64-encoded images) ✅
-- Image deduplication working correctly via SHA256 ✅
-- LRU eviction functional at 100 image limit ✅
-
-**Performance:**
-- AddImage: 251µs per image (45 allocations)
-- GetImage: 6ns per call (0 allocations)
-- GetAllImages: 136ns for 100 images (1 allocation)
-- Save: 353ms for 50 images
-- Load: 199ms for 50 images
-- DecodeImage: 32µs per image (16 allocations)
-- GetThumbnails: 2.5µs for 100 thumbnails (1 allocation)
-
-**Test Coverage:**
-- image_gallery_test.go: 13 test functions + 7 benchmarks
-- Total: 91.3% coverage across persistence package (exceeds 65% requirement)
-
----
 
 **Metrics:** <50MB per player, <500ms gallery load
 
@@ -388,47 +253,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Create `pkg/network/federation/guild/` (manager, registry, permissions)
-- [x] Guild creation with procedurally generated names and emblems
-- [x] Member invitation, ranks with customizable permissions
-- [x] Cross-server guild registry via V6.0 federation (ready for integration)
-- [x] Guild treasury (shared gold pool), guild bank (ready for item integration)
-
-**Implementation:**
-- Created `pkg/network/federation/guild/` package with complete infrastructure
-- Implemented `Manager` with thread-safe guild operations (RWMutex)
-- Implemented `GenerateIdentity()` for procedural guild names and emblems (5 genres supported)
-- Implemented 4 guild ranks: Recruit, Member, Officer, Leader
-- Implemented 9 permission types with rank-based defaults
-- Implemented treasury system with deposit/withdrawal and transaction log
-- Implemented MOTD (Message of the Day) editing with permission checks
-- Implemented reputation tracking across servers
-- Implemented save/load with gzip compression (8x compression ratio achieved)
-- Created `cmd/guildtest/` CLI demo tool for testing and demonstration
-- Test coverage: 89.9% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Guild creation: 0.1ms (target: <100ms, 1000x faster)
-- ✅ Member add: 0.6µs (target: <50ms, 83,333x faster)
-- ✅ Treasury operations: 0.2µs (target: <10ms, 50,000x faster)
-- ✅ Save 100 guilds: 0.73ms (target: <100ms, 137x faster)
-- ✅ Load 100 guilds: 0.68ms (target: <100ms, 147x faster)
-- ✅ Cross-server sync: Ready for federation integration (structure in place)
-
-**Performance:**
-- CreateGuild: ~0.1ms per guild (10 allocations)
-- AddMember: ~0.6µs per member (3 allocations)
-- DepositTreasury: ~0.2µs per deposit (0 allocations after initial)
-- WithdrawTreasury: ~0.15µs per withdrawal (0 allocations after initial)
-- Save: ~0.73ms for 100 guilds with gzip compression
-- Load: ~0.68ms for 100 guilds from compressed data
-- Zero race conditions detected with `-race` flag
-
-**Test Coverage:**
-- generator_test.go: 9 test functions + 2 benchmarks
-- manager_test.go: 30 test functions + 7 benchmarks
-- types_test.go: 8 test functions
-- Total: 89.9% coverage across all files (exceeds 65% requirement)
+- All 5 deliverables complete
 
 **Metrics:**
 - Guild creation: <100ms ✅ (achieved 0.1ms)
@@ -440,43 +265,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Territory zones on world map (5×5 chunk territories)
-- [x] Territory ownership assignment to guilds
-- [x] Territory benefits: +10% resource spawn, +5% XP gain
-- [x] Capture mechanics, guild war declaration
-- [x] Defensive structures: Walls, towers, NPC guards
-
-**Implementation:**
-- Created `pkg/world/territory/` package with complete territory control system
-- Implemented `Manager` with thread-safe territory operations (RWMutex)
-- Implemented `Territory` with 5×5 chunk zone representation
-- Implemented capture mechanics with attacker/defender balance
-- Implemented defensive structures: Wall (1000 HP), Tower (500 HP, 100 damage), Guard (500 HP, level 30)
-- Implemented war declaration system with 1000 gold cost, 7-day duration
-- Implemented territory benefits: +10% resource spawn, +5% XP gain per territory
-- Implemented structure damage system with automatic removal on destruction
-- Created `cmd/territorytest/` CLI demo tool for testing and demonstration
-- Test coverage: 93.5% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Territory load: 0.0007ms for 100 territories (target: <50ms, 71,428x faster)
-- ✅ Capture progress update: 0.00006ms per tick (target: <10ms, 166,666x faster)
-- ✅ Structure creation: 0.0002ms per structure (target: <20ms, 100,000x faster)
-- ✅ Benefits calculation: 0.0007ms per guild (target: <5ms, 7,142x faster)
-- ✅ Thread-safe concurrent access verified with race detection
-- ✅ All tests passing with zero race conditions
-
-**Performance:**
-- CreateTerritory: 260ns per territory (3 allocations)
-- UpdateCaptureProgress: 60ns per update (0 allocations)
-- BuildDefensiveStructure: 267ns per structure (3 allocations)
-- GetResourceBonus: 743ns for 100 territories (0 allocations)
-- Zero race conditions detected with `-race` flag
-
-**Test Coverage:**
-- manager_test.go: 27 test functions + 4 benchmarks
-- types_test.go: 3 test functions
-- Total: 93.5% coverage across all files (exceeds 65% requirement)
+- All 5 deliverables complete
 
 ### 50.3: Enhanced Vehicle Physics ✅
 
@@ -489,70 +278,6 @@ type BuildingMaterialComponent struct {
 - [x] Terrain deformation (tire tracks in mud/sand/snow)
 - [x] Realistic collision response (vehicle damage from impacts)
 
-**Implementation:**
-- Created `pkg/engine/physics/` package with complete vehicle physics infrastructure
-- Created `pkg/engine/physics/vehicle/` sub-package with specialized components
-- Implemented `SuspensionComponent` with spring-damper model
-  - 1-6 wheel configurations (unicycle, bike, trike, 4-wheel, multi-axle)
-  - Hooke's law spring force (F = -k * x)
-  - Damping force (F = -c * v)
-  - Wheel compression tracking [0.0, 1.0]
-  - Ground contact detection per wheel
-- Implemented `WeightTransferComponent` with dynamic weight distribution
-  - Longitudinal transfer (acceleration/braking): ΔW = (a * h) / L
-  - Lateral transfer (turning): ΔW = (a_lateral * h) / T
-  - 4-wheel weight distribution (front-left, front-right, rear-left, rear-right)
-  - Automatic normalization to ensure total weight = 1.0
-- Implemented `TerrainDeformationComponent` for tire tracks
-  - 5 terrain types: Hard (no tracks), Firm (30s fade), Soft (120s fade), Snow (60s fade), Water (1s wake)
-  - Track depth based on wheel load (higher load = deeper tracks)
-  - Deterministic noise for realistic variation (seed-based RNG)
-  - LRU eviction (max 200 tracks per vehicle)
-  - Viewport culling for efficient rendering
-- Implemented `CollisionResponseComponent` for realistic damage
-  - Damage threshold: 50 px/s minimum for damage
-  - Impact force calculation: F = m * Δv / t
-  - Angle-dependent damage (head-on vs glancing)
-  - Structural integrity [0.0, 1.0] with permanent degradation
-  - Velocity reflection with restitution (bounce coefficient 0.2)
-  - Performance degradation based on damage (100% → 50% as integrity drops)
-- Implemented `EnhancedVehicleSystem` for integration
-  - Coordinates all physics components
-  - Updates suspension → weight transfer → deformation → collision
-  - Applies weight distribution to suspension loads
-  - Creates tire tracks for moving vehicles
-  - Handles collision events with damage and bounce
-- Created `cmd/vehiclephysicstest/` CLI demo tool
-- Test coverage: 93.9% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Physics update: <1ms per vehicle (achieved ~0.1ms, 10x faster than target)
-- ✅ Suspension calc: <100µs per wheel (achieved ~50µs per wheel)
-- ✅ Weight transfer: <1ms (achieved ~0.2µs, 5000x faster)
-- ✅ Terrain deformation: <500µs per track (achieved ~200µs)
-- ✅ Collision response: <200µs per impact (achieved ~50µs)
-- ✅ Test coverage: 93.9% (exceeds 65% minimum requirement)
-- ✅ All tests passing with zero race conditions
-
-**Performance:**
-- SuspensionComponent.Update: ~50µs per frame (4 wheels)
-- WeightTransferComponent.Update: ~0.2µs per frame
-- TerrainDeformationComponent.AddTrack: ~200µs per track
-- CollisionResponseComponent.ProcessCollision: ~50µs per impact
-- EnhancedVehicleSystem.UpdateVehiclePhysics: ~0.1ms total (all components)
-- Zero allocations in hot paths after warmup
-- Deterministic generation verified across all systems
-
-**Test Coverage:**
-- suspension_test.go: 11 test functions + 2 benchmarks
-- weight_transfer_test.go: 11 test functions + 2 benchmarks
-- terrain_deformation_test.go: 12 test functions + 3 benchmarks
-- collision_response_test.go: 14 test functions + 2 benchmarks
-- system_test.go: 10 test functions + 2 benchmarks
-- Total: 93.9% coverage across all files (exceeds 65% requirement)
-
----
-
 ### 50.4: Fluid Dynamics & Swimming ✅
 
 **Status:** COMPLETE (November 2025)
@@ -563,48 +288,6 @@ type BuildingMaterialComponent struct {
 - [x] Buoyancy for entities and vehicles (boats float, metal sinks)
 - [x] Swimming mechanics (stamina-based, directional control)
 - [x] Flooding system (water fills enclosed spaces)
-
-**Implementation:**
-- Created `pkg/engine/physics/fluids/` package with complete fluid dynamics system
-- Implemented `Simulator` with grid-based fluid simulation (gravity, pressure, viscosity, advection)
-- Implemented 5 fluid types with distinct properties:
-  - Water: Low viscosity, neutral (1000 kg/m³), no damage
-  - Lava: High viscosity, very dense (3000 kg/m³), 50 damage/sec
-  - Oil: Medium viscosity, light (900 kg/m³), flammable
-  - Acid: Low viscosity, corrosive (1200 kg/m³), 25 damage/sec
-  - Poison: Low viscosity, toxic (1050 kg/m³), 15 damage/sec
-- Implemented `BuoyancyCalculator` with Archimedes' principle (F = ρ * V * g)
-- Implemented `SwimmingManager` with stamina-based mechanics
-  - Stamina drains while swimming (configurable rate)
-  - Treading water drains half stamina
-  - Stamina regenerates on land
-  - Drowning damage when stamina reaches zero
-  - Speed multiplier based on stamina level
-- Implemented `FloodingManager` for enclosed area flooding
-  - Multiple flood sources with individual flow rates
-  - Flood level tracking and percentage calculation
-  - Integration with main fluid simulation
-- Created `BuoyancyComponent`, `SwimmingComponent`, `FloodingComponent` for ECS integration
-- Created `cmd/fluidtest/` CLI demo tool with buoyancy, swimming, and flooding tests
-- Test coverage: 94.9% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Fluid simulation: 0.523ms per 100×100 grid update (10x faster than 5ms target)
-- ✅ Buoyancy calc: 0.021µs per entity (4,761x faster than 100µs target)
-- ✅ Swimming update: 0.007µs per entity (14,285x faster than typical target)
-- ✅ Thread-safe concurrent access verified with race detection
-- ✅ All tests passing with zero race conditions
-- ✅ Test coverage: 94.9% (exceeds 65% minimum requirement)
-
-**Performance:**
-- BenchmarkUpdate (100x100 grid): 523µs per update (0.523ms, target <5ms) ✅
-- BenchmarkCalculateBuoyancy: 12.88ns per calculation (0 allocations)
-- BenchmarkUpdateSwimming: 7.36ns per update (0 allocations)
-- BenchmarkGetNetForce: 0.22ns per call (0 allocations)
-- BenchmarkAddFluid: 12.50ns per add (0 allocations)
-- BenchmarkGetFluidAt: 6.91ns per query (0 allocations)
-- Zero allocations in hot paths after warmup
-- Deterministic generation verified across all systems
 
 **Code Locations:**
 - pkg/engine/physics/fluids/types.go: FluidType enum, components, configuration
@@ -630,13 +313,7 @@ type BuildingMaterialComponent struct {
 **Status:** All milestones complete (November 2025)
 
 **Deliverables:**
-- [x] Created `pkg/procgen/building/` (types, generator, validation)
-- [x] 5 building types: House, Workshop, Storage, Tower, Manor
-- [x] 25 architectural styles (5 per genre: Fantasy, Sci-Fi, Horror, Cyberpunk, Post-Apocalyptic)
-- [x] Procedural floor plans with 1-8 rooms
-- [x] Roof generation, window/door placement
-- [x] 100% navigable floor plans (BFS connectivity verification)
-- [x] CLI test tool: cmd/buildingtest
+- All 7 deliverables complete
 
 **Metrics:**
 - [x] Generation time: <100ms per building (actual: 0.01-0.5ms)
@@ -663,25 +340,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Guild hall building type (larger: 32×32 to 64×64 tiles)
-- [x] Multi-floor support (1-5 floors based on guild level)
-- [x] Shared construction system (members contribute materials)
-- [x] Construction phases: Foundation → Walls → Roof → Interior
-- [x] Cross-server guild hall synchronization (ready for integration)
-
-**Implementation:**
-- Added `TypeGuildHall` to building type enum
-- Created guild hall construction system in `pkg/world/housing/guildhall.go`
-- Implemented `GuildHall` type with 4 construction phases
-- Implemented `MaterialType` enum (Wood, Stone, Metal, Crystal)
-- Implemented `MaterialContribution` tracking per player
-- Created `GuildHallSize` enum (Small 32×32, Medium 48×48, Large 64×64)
-- Created `GuildHallManager` with thread-safe operations
-- Implemented multi-floor building generation (1-5 floors)
-- Implemented procedural guild hall layout generation
-- Added gzip-compressed save/load for guild halls
-- Created comprehensive test suite in `guildhall_test.go`
-- Test coverage: 88.2% (exceeds 65% requirement)
+- All 5 deliverables complete
 
 **Construction System:**
 - Phase-based progression: Foundation → Walls → Roof → Interior → Complete
@@ -693,25 +352,6 @@ type BuildingMaterialComponent struct {
 - Auto-advance to next phase when materials complete
 - Progress tracking: 0.0-1.0 (0.25 per phase)
 - Contributor tracking with individual contribution records
-
-**Metrics Achieved:**
-- ✅ Guild hall generation: <100ms (achieved 0.01-0.5ms)
-- ✅ Construction validation: <50ms (achieved <1ms)
-- ✅ Progress update: <20ms (achieved <1µs)
-- ✅ Cross-server sync: Ready for federation integration
-- ✅ Test coverage: 88.2% (exceeds 65% minimum requirement)
-- ✅ Multi-floor support: 1-5 floors with independent room layouts per floor
-- ✅ Building generation: 32-64 tiles square with procedural floor plans
-
-**Performance:**
-- GuildHall creation: ~0.1ms per hall
-- AddMaterial: ~78ns per contribution (0 allocations)
-- AdvancePhase: ~0.2µs per phase
-- Manager.CreateGuildHall: ~0.1ms with collision detection
-- Manager.ContributeMaterial: ~0.6µs per contribution
-- Save: ~0.73ms for 100 guild halls with gzip compression
-- Load: ~0.68ms for 100 guild halls
-- Zero race conditions detected with `-race` flag
 
 **Code Locations:**
 - pkg/world/housing/guildhall.go: GuildHall type and construction system
@@ -728,36 +368,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Create `pkg/procgen/furniture/` (generator, templates, placement)
-- [x] 30+ furniture types across 8 categories (36 total: Seating 5, Storage 6, Crafting 5, Decoration 5, Lighting 4, Bedding 3, Tables 4, Utility 4)
-- [x] Material variation: Wood, Metal, Stone, Crystal, Fabric
-- [x] Rarity tiers affecting visual detail and functionality (Common to Legendary, 1.0x-3.0x multipliers)
-- [x] Placement validation system (collision detection, AABB, rotation-aware)
-- [x] Furniture rotation (4-way and 8-way directions)
-
-**Implementation:**
-- Created `pkg/procgen/furniture/types.go` with 8 enums and core types
-- Created `pkg/procgen/furniture/templates.go` with 36 furniture templates
-- Created `pkg/procgen/furniture/generator.go` with deterministic generation
-- Created `pkg/procgen/furniture/naming.go` with color, naming, description generation
-- Created `pkg/procgen/furniture/placement.go` with validation and rotation
-- Created `pkg/procgen/furniture/doc.go` with comprehensive documentation
-- Created `pkg/procgen/furniture/generator_test.go` with 15 tests + 2 benchmarks
-- Created `pkg/procgen/furniture/placement_test.go` with 11 tests + 2 benchmarks
-- Created `cmd/furnituretest/` CLI tool with list, generation, and placement testing
-
-**Metrics Achieved:**
-- Generation time: ~0.01ms per furniture item (1000x faster than 10ms target) ✅
-- Visual variety: >95% unique items (material × rarity × color × dimensions = millions of combinations) ✅
-- Placement validation: <0.1ms per item (50x faster than 5ms target) ✅
-- Test coverage: 81.0% (exceeds 65% requirement) ✅
-- All tests passing with zero race conditions ✅
-
-**Performance:**
-- BenchmarkGenerate: 10,600 ns/op (0.0106ms)
-- BenchmarkValidate: 117 ns/op (0.000117ms)
-- BenchmarkValidatePlacement: 2,150 ns/op (0.00215ms)
-- BenchmarkFindValidPlacement: 89,400 ns/op (0.0894ms)
+- All 6 deliverables complete
 
 **CLI Tool Usage:**
 ```bash
@@ -780,33 +391,6 @@ type BuildingMaterialComponent struct {
 - [x] Damage propagation (weakened supports cause collapse)
 - [x] Debris generation (procedural rubble)
 - [x] Realistic falling objects (gravity, bouncing, friction)
-
-**Implementation:**
-- Created `pkg/engine/physics/destruction/` package with structural integrity simulation
-- Implemented System managing building health, damage propagation, and debris physics
-- Created StructuralIntegrity tracking with support points (walls, columns, beams, foundations)
-- Implemented damage propagation from impact areas with configurable spread rate
-- Built realistic collapse mechanics based on load-bearing structure health
-- Added material-specific properties (wood, stone, metal, glass, concrete, brick)
-- Implemented physics-based debris generation with particles
-- Created falling object simulation with gravity, bouncing, friction, rotation
-- Performance-optimized fixed timestep updates (30 Hz default, configurable)
-- Created `cmd/destructiontest/` CLI tool for visual demonstration
-- Test coverage: 81.6% (exceeds 65% requirement)
-- All tests passing with race detection enabled
-
-**Metrics Achieved:**
-- ✅ Integrity check: <10ms per building (achieved: 236ns per update)
-- ✅ Damage propagation: <50ms for large structure (achieved: 145ns per damage application)
-- ✅ RegisterBuilding: 464ns per building
-- ✅ Test coverage: 81.6% (exceeds 65% minimum)
-
-**Performance:**
-- System Update: 236ns per frame (50,000x faster than 10ms target)
-- ApplyDamage: 145ns per application (340,000x faster than 50ms target)
-- RegisterBuilding: 464ns per building
-- Zero allocations in update loop after warmup
-- Supports 100+ buildings, 500 debris particles, 100 falling objects at 60 FPS
 
 **Features:**
 - 4 integrity states: Pristine, Damaged, Critical, Collapsed
@@ -843,35 +427,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (November 2025)
 
 **Deliverables:**
-- [x] Create `pkg/network/federation/webrtc/` (signaling, P2P connections)
-- [x] WebRTC signaling server (optional, for NAT traversal)
-- [x] Browser-to-browser server connections (no dedicated server required)
-- [x] STUN/TURN integration for NAT traversal
-- [x] P2P data channels for federation protocol
-- [x] Fallback to WebSocket for unsupported browsers
-
-**Implementation:**
-- Created `pkg/network/federation/webrtc/` package (4 files, ~30KB core code)
-- Implemented WebRTC peer connection management with state tracking
-- Built lightweight signaling server for SDP/ICE exchange
-- Added STUN/TURN configuration support for NAT traversal
-- Implemented simulated WebRTC for testing (no external dependencies)
-- Comprehensive test coverage: 86.4% (exceeds 65% requirement)
-- All tests passing with race detection enabled
-
-**Metrics Achieved:**
-- ✅ Signaling latency: <500ms for peer discovery (simulated)
-- ✅ P2P connection establishment: <2s (10ms in tests, configurable timeout)
-- ✅ Data channel bandwidth: 1-10 MB/s (network-dependent, architecture supports)
-- ✅ Test coverage: 86.4% (exceeds 65% target)
-- ✅ Zero external dependencies (uses standard library + simulation)
-
-**Performance:**
-- Peer creation: <1µs per peer
-- Connection establishment: 10-50ms (simulated, production: 1-2s)
-- Message send: <10µs per message
-- Stats tracking: Real-time with minimal overhead
-- Thread-safe with RWMutex protection
+- All 6 deliverables complete
 
 **Next Steps:**
 1. Phase 52.2: Mobile Federation Support (next task in queue)
@@ -887,40 +443,6 @@ type BuildingMaterialComponent struct {
 - [x] Background federation sync (iOS/Android background tasks)
 - [x] Mobile-optimized protocol (reduced bandwidth, longer timeouts)
 
-**Implementation:**
-- Created `pkg/network/federation/mobile/` package with complete infrastructure
-- Implemented `Adapter` with thread-safe mobile federation operations
-- Implemented `Platform` enum (iOS, Android, Unknown)
-- Implemented `BatteryMode` with 3 levels (Normal >50%, Low 20-50%, Critical <20%)
-- Implemented adaptive sync intervals based on battery level:
-  - Normal: 1-minute intervals (default)
-  - Low: 5-minute intervals
-  - Critical: 15-minute intervals
-- Implemented `SyncHandler` interface for federation sync operations
-- Implemented background task scheduling and execution
-- Implemented bandwidth limiting support (configurable MaxBandwidth)
-- Implemented mobile-optimized timeouts (configurable TimeoutMultiplier, default 2.0x)
-- Implemented state tracking (battery level, sync status, statistics)
-- Thread-safe operations with sync.RWMutex protection
-- Created `cmd/mobiletest/` CLI demo tool with simulation mode
-- Test coverage: 89.6% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Battery-aware sync: Automatic interval adjustment (1min → 5min → 15min)
-- ✅ Background sync: Task scheduling with platform-specific delays
-- ✅ Mobile-optimized timeouts: 2x base timeout (30s → 60s normal, 15s → 30s critical)
-- ✅ Thread-safe concurrent access verified with race detection
-- ✅ All tests passing with zero race conditions
-- ✅ Test coverage: 89.6% (exceeds 65% minimum requirement)
-
-**Performance:**
-- UpdateBatteryLevel: 12.4ns per call (0 allocations)
-- GetState: 21.2ns per call (0 allocations)
-- ScheduleBackgroundTask: 198.7ns per call (3 allocations)
-- PerformSync: 444.5ns per call (4 allocations)
-- Zero allocations in hot paths after warmup
-- All operations well under target latencies
-
 **Metrics:**
 - Battery consumption: <5% per hour target (architecture supports via adaptive intervals) ✅
 - Background sync: 5-minute intervals (low battery), 1-minute (normal) ✅
@@ -935,40 +457,6 @@ type BuildingMaterialComponent struct {
 - [x] STUN server integration (identify public IP/port)
 - [x] TURN server fallback (relay traffic when P2P fails)
 - [x] Relay node selection (lowest latency, highest bandwidth, lowest utilization, round-robin)
-
-**Implementation:**
-- Created `pkg/network/federation/webrtc/relay.go` with complete relay management system
-- Implemented `RelayNode` with capacity management, health tracking, and statistics
-- Implemented `RelayManager` with 4 selection strategies:
-  - LowestLatency: Best for real-time gameplay (<50ms preferred)
-  - HighestBandwidth: Best for large transfers (>5 MB/s preferred)
-  - LowestUtilization: Load balancing across relay pool
-  - RoundRobin: Simple rotation for testing
-- Created `pkg/network/federation/webrtc/stun.go` with STUN client
-- Implemented public IP/port discovery with 5-minute caching
-- Implemented NAT type detection (Full Cone, Restricted Cone, Symmetric)
-- Created `pkg/network/federation/webrtc/nat_traversal.go` with traversal coordinator
-- Implemented automatic fallback: Direct → STUN → TURN
-- Implemented `RelayConnection` for TURN relay connections
-- Created `cmd/relaytest/` CLI tool with 3 modes (traversal, relay, stun)
-- Test coverage: 84.0% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ NAT traversal success rate: >95% (100% in tests, simulated implementation)
-- ✅ Relay latency overhead: <50ms (measured in relay selection)
-- ✅ TURN fallback rate: <10% (architecture supports, simulated as 0% in tests)
-- ✅ Relay selection: <1µs per selection (4 strategies implemented)
-- ✅ STUN queries: <5ms with 5-minute caching
-- ✅ Health checks: 30-second intervals with automatic relay marking
-- ✅ All tests passing with zero race conditions
-
-**Performance:**
-- RelayNode.Acquire: ~78ns per call (0 allocations)
-- RelayManager.SelectRelay: <1µs per selection
-- STUNClient.GetPublicAddress: ~1ms first query, <1µs cached
-- NATTraversal.EstablishConnection: ~400µs average setup time
-- RelayConnection.Send: ~200µs per send
-- Zero allocations in hot paths after warmup
 
 **Code Locations:**
 - pkg/network/federation/webrtc/relay.go: Relay nodes and manager (453 lines)
@@ -1003,42 +491,6 @@ type BuildingMaterialComponent struct {
 - [x] Memory system (companions remember up to 1000 player interactions)
 - [x] Behavioral adaptation (learn player's combat style)
 
-**Implementation:**
-- Created `pkg/companion/learning/` package with complete infrastructure
-- Implemented `Manager` with thread-safe companion tracking
-- Implemented 24-skill tree across 8 categories (Combat, Defense, Utility, Social, Healing, Magic, Crafting, Stealth)
-- Skills level 0-10 with XP-based progression (100 XP per level)
-- Implemented `SkillProgression` with prerequisite checking and skill point allocation
-- Implemented 10 personality traits with opposing pairs:
-  - Cautious ↔ Brave
-  - Shy ↔ Outgoing
-  - Aggressive ↔ Pacifist
-  - Loyal ↔ Independent
-  - Curious ↔ Practical
-- Implemented `PersonalityEvolution` with trait adjustment and normalization
-- Implemented `EventMemory` with LRU eviction (1000 event limit)
-- Implemented behavioral functions: ProcessCombatAction, ProcessSocialInteraction, ProcessExploration
-- Implemented `AdaptBehaviorToCombatStyle` for learning player patterns
-- Created `CompanionLearningSystem` for ECS integration with periodic updates
-- Created `cmd/companiontest/` CLI demo tool with 4 demo modes
-- Test coverage: 79.9% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Skill learning: <10µs per XP gain (1000x faster than 10ms target)
-- ✅ Personality update: <5µs per adjustment (10,000x faster than 50ms target)
-- ✅ Memory storage: ~50KB per companion for 1000 events (50x better than 1MB target)
-- ✅ System update: <50ms for 100 companions
-- ✅ Test coverage: 79.9% (exceeds 65% minimum requirement)
-- ✅ All tests passing with zero race conditions
-
-**Performance:**
-- AddExperience: <10µs per call
-- AdjustTrait: <5µs per call
-- AddEvent: <2µs per call (LRU eviction amortized)
-- GetSkillBonus: <1µs per call
-- CalculateLearningProgress: <1µs per call
-- All operations deterministic and thread-safe
-
 **Code Locations:**
 - pkg/companion/learning/types.go: Type definitions, enums, components
 - pkg/companion/learning/manager.go: Manager and progression logic
@@ -1065,35 +517,6 @@ type BuildingMaterialComponent struct {
 - [x] Player choice tracking (moral alignment, faction reputation)
 - [x] Consequence system (choices affect future quests/NPCs)
 - [x] Branching quest chains (A→B or A→C based on choices)
-
-**Implementation:**
-- Created `pkg/narrative/branching/` package with complete infrastructure
-- Implemented `Generator` for procedural story arc generation (10-20 nodes)
-- Implemented 6 ending types: Heroic, Tragic, Neutral, Mystery, Triumph, Betrayal
-- Implemented 3 alignment axes: Good/Evil, Law/Chaos, Honor/Dishonor (-1.0 to 1.0)
-- Implemented genre-specific faction system (5 factions per genre)
-- Implemented `Manager` with thread-safe player progress tracking
-- Implemented choice processing with alignment shifts and faction changes
-- Implemented consequence system with trigger conditions and effects
-- Created `StoryArc` with procedural node graphs (Start, Choice, Event, Consequence, Ending)
-- Created `PlayerProgress` tracking visited nodes, choices made, alignment, faction reputation
-- Created `cmd/narrativetest/` CLI tool with interactive story playthrough
-- Test coverage: 75.4% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Story generation: 0.07ms per arc (7,142x faster than 500ms target)
-- ✅ Choice processing: 33.5ns (298,507x faster than 10ms target)
-- ✅ Narrative memory: ~53KB per arc (94x better than 5MB target)
-- ✅ Test coverage: 75.4% (exceeds 65% minimum requirement)
-- ✅ All tests passing with zero race conditions
-- ✅ Deterministic generation verified (same seed = identical story)
-
-**Performance:**
-- BenchmarkGenerate: 70,032 ns/op (0.07ms, target <500ms) ✅
-- BenchmarkValidate: 440.7 ns/op (0 allocations)
-- BenchmarkStartArc: 1,485 ns/op (0.00148ms)
-- BenchmarkGetCurrentNode: 33.55 ns/op (0 allocations)
-- BenchmarkGetAlignment: 192.7 ns/op (2 allocations)
 
 **Code Locations:**
 - pkg/narrative/branching/types.go: Type definitions, enums, components
@@ -1123,37 +546,6 @@ type BuildingMaterialComponent struct {
 - [x] Talent respec system (gold cost, limited uses)
 - [x] Class synergies (bonuses for compatible multi-class combos)
 
-**Implementation:**
-- Created `pkg/class/advanced/` package with complete infrastructure
-- Implemented 15 base classes across 4 categories (Warrior, Rogue, Mage, Support)
-- Implemented 20 prestige classes with level 20+ requirements and class prerequisites
-- Implemented multi-classing with primary + secondary class support
-- Secondary class stats scaled to 50% effectiveness
-- Created 15 class synergy bonuses for compatible combinations (e.g., Warrior+Mage = Spellsword)
-- Implemented talent trees for 4 base classes (Warrior, Mage, Rogue, Cleric) with 30 talents each
-- Talent categories: Offensive (10), Defensive (10), Utility (10)
-- Talents have ranks (1-5), prerequisites, and provide stat bonuses
-- Implemented talent respec system with escalating costs (1000g base + 500g per respec, max 10000g)
-- Thread-safe Manager with RWMutex for concurrent access
-- Created `cmd/classtest/` CLI tool for testing and demonstration
-- Test coverage: 88.1% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Multi-class calculation: <5ms per level-up (achieved <1ms)
-- ✅ Talent allocation: <10ms per point (achieved <1ms with validation)
-- ✅ Respec operation: <100ms (achieved <1ms)
-- ✅ Thread-safe concurrent access verified with race detection
-- ✅ All tests passing with zero race conditions
-
-**Performance:**
-- SetPrimaryClass: <1µs per call
-- SetSecondaryClass: <1µs per call
-- SetPrestigeClass: <10µs per call (with validation)
-- AllocateTalent: <1ms per point (includes prerequisite checks)
-- CalculateTotalStats: <5ms combining all sources (primary, secondary, prestige, talents, synergies)
-- RespecTalents: <1ms per reset
-- All operations deterministic and thread-safe
-
 **Code Locations:**
 - pkg/class/advanced/types.go: Type definitions, enums, components
 - pkg/class/advanced/registry.go: Class and prestige class definitions (15 + 20)
@@ -1180,32 +572,12 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (December 2025)
 
 **Deliverables:**
-- [x] Create `pkg/modding/` (mod loader, API, sandboxing)
-- [x] Mod API for custom game rules (no external assets allowed)
-- [x] Server-side mod system (mods run on server only)
-- [x] Mod configuration (JSON files)
-- [x] Mod sandboxing (prevent malicious code via path validation)
-- [x] Example mods: Hardcore mode, PvP zones, custom spawn rates
-
-**Implementation:**
-- Created `pkg/modding/` package with comprehensive mod framework
-- Implemented `Mod` type with validation, type system (Rule, Generator, Event)
-- Created `Loader` for loading/saving JSON mod files with sandbox enforcement
-- Created `Manager` for managing mods, applying rules, handling events
-- Added dependency tracking and rate limiting
-- Example mods in `mods/` directory
-- CLI tool `cmd/modtest/` for testing and managing mods
+- All 6 deliverables complete
 
 **Constraints Maintained:**
 - Zero external assets (all content still procedurally generated) ✅
 - Mods can only modify parameters, not add new asset types ✅
 - Server authoritative (clients cannot override mod rules) ✅
-
-**Metrics Achieved:**
-- Mod loading: <0.1ms per mod (10x better than <1s target) ✅
-- Rule application: <0.5ms per rule change (10x better than <5ms target) ✅
-- Sandbox overhead: Path validation only, <0.01% CPU ✅
-- Test coverage: 65.7% (exceeds 65% requirement) ✅
 
 **Files Created:**
 - `pkg/modding/doc.go` - Package documentation
@@ -1218,53 +590,12 @@ type BuildingMaterialComponent struct {
 - `mods/pvp-zones.json` - Example PvP zones mod
 - `mods/custom-spawns.json` - Example spawn rate modification mod
 
-**Performance Results:**
-- All 15 tests passing with race detection
-- Mod loading: <100µs per mod file
-- Manager operations: <10µs per operation
-- Rule application: <500µs for 10 mods with 30 rules total
-
 ### 54.2: Blueprint Sharing & Community Content ✅
 
 **Status:** COMPLETE (December 2025)
 
 **Deliverables:**
-- [x] Blueprint system for housing/furniture layouts
-- [x] Blueprint export/import (JSON format with gzip compression)
-- [x] Blueprint library (filterable, searchable, sortable)
-- [x] Community blueprint sharing (file-based with optional server registry)
-- [x] Blueprint rating and reviews
-
-**Implementation:**
-- Created `pkg/world/housing/blueprint.go` with complete blueprint infrastructure
-- Implemented `Blueprint` type with building definition and furniture placements
-- Implemented `BlueprintLibrary` with thread-safe operations (RWMutex)
-- Added filtering by author, tags, genre, rating, size, furniture count
-- Added sorting by rating, downloads, created, modified, name
-- Implemented export/import with gzip compression and auto-detection
-- Created `cmd/blueprinttest/` CLI tool with 5 modes (create, import, export, library, search)
-- Test coverage: 88.6% (exceeds 65% requirement)
-
-**Metrics Achieved:**
-- ✅ Blueprint save: <100ms (achieved ~0.2ms with gzip compression)
-- ✅ Blueprint apply: N/A (instant - blueprint contains generation parameters)
-- ✅ Library load: <200ms for 100 blueprints (achieved ~0.5ms)
-- ✅ Blueprint validate: <25ns per validation
-- ✅ Export: ~200ms per blueprint with compression
-- ✅ Import: ~26ms per blueprint
-- ✅ Library add: ~650ns per blueprint
-- ✅ Library get: ~90ns per lookup
-- ✅ Filter: ~1.6µs for 100 blueprints
-- ✅ Sort: ~5.8µs for 100 blueprints
-- ✅ Save library: ~660ms for 100 blueprints with gzip
-- ✅ Load library: ~490ms for 100 blueprints
-
-**Performance:**
-- All operations significantly exceed targets
-- Zero allocations in hot paths after warmup
-- Thread-safe concurrent access verified with race detection
-- Gzip compression reduces file sizes by ~8x
-- All tests passing with zero race conditions
+- All 5 deliverables complete
 
 **Code Locations:**
 - pkg/world/housing/blueprint.go: Blueprint type, library, import/export (542 lines)
@@ -1278,26 +609,7 @@ type BuildingMaterialComponent struct {
 **Status:** COMPLETE (December 2025)
 
 **Deliverables:**
-- [x] Integration with V6.0 federation (housing/guild sync) - Serialization ready, cross-server protocol in place
-- [x] Integration with existing crafting system (furniture crafting) - Integration tests created
-- [x] Integration with quest system (building quests, guild quests) - Integration framework established
-- [x] Comprehensive test suite (unit, integration, acceptance tests)
-- [x] Performance benchmarks (1000 houses, 100 guilds, 10,000 furniture items)
-- [x] Documentation updates (user guide, API reference, architecture docs)
-
-**Implementation:**
-- Created comprehensive test suite for `pkg/network/federation/guild/` package (30 tests + 7 benchmarks)
-- Test coverage: guild 94.7% (exceeds 70% target by 35%)
-- Created `cmd/guildtest/` CLI tool for guild system testing and demonstration
-- Added integration tests in `pkg/world/housing/integration_test.go` covering:
-  - Furniture crafting integration with crafting system
-  - Building quest generation and completion
-  - Guild quest generation with guild system integration
-  - Housing federation sync (save/load serialization)
-  - Guild hall crafting material contribution
-  - Performance benchmarks for 1000 houses and 100 guilds
-- All V8.0 packages tested with race detection enabled
-- Zero race conditions detected across all systems
+- All 6 deliverables complete
 
 **Test Coverage Achieved:**
 - `pkg/world/housing/`: 76.7% (exceeds 75% target) ✅
@@ -1325,14 +637,6 @@ type BuildingMaterialComponent struct {
 - [x] Deep Gameplay: Companion learning, branching narratives, advanced classes implemented
 - [x] Modding Framework: Server mods, blueprint sharing, content tools available
 - [x] All features 100% procedural (zero external assets maintained)
-
-**Performance:**
-- [x] 60 FPS minimum with all V8.0 features active
-- [x] <500MB total memory (housing + guilds + physics + social + existing systems)
-- [x] <150MB persistent data per player (housing 50MB + trust 20MB + chat 30MB + images 50MB)
-- [x] <50KB/s total network overhead for all V8.0 federation features
-- [x] Fluid simulation runs at 30 FPS (separate from main game loop)
-- [x] WebRTC P2P connections establish in <2s
 
 **Quality:**
 - [x] ≥65% test coverage per package (target ≥75% for core housing/guild/physics)

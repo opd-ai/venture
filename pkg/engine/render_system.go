@@ -12,6 +12,21 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
+// ImagePoolProvider abstracts image pool operations for memory efficiency.
+// Implementations provide pooled image allocation and recycling.
+type ImagePoolProvider interface {
+	GetImage(width, height int) *ebiten.Image
+	PutImage(img *ebiten.Image)
+}
+
+// ParallelRendererProvider abstracts parallel rendering capabilities.
+// Implementations distribute rendering tasks across worker goroutines.
+type ParallelRendererProvider interface {
+	Start()
+	Stop()
+	IsRunning() bool
+}
+
 // EbitenSprite holds visual representation data for an entity (Ebiten implementation).
 // Implements SpriteProvider interface.
 type EbitenSprite struct {
@@ -165,6 +180,10 @@ type EbitenRenderSystem struct {
 	// Track whether spatial partition culling was used this frame
 	// to avoid redundant per-entity culling
 	spatialCullingUsed bool
+
+	// Phase 2.4: Rendering optimization (PLAN.md)
+	imagePool        ImagePoolProvider        // Image pool for memory efficiency (optional)
+	parallelRenderer ParallelRendererProvider // Parallel renderer for performance (optional)
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -217,6 +236,18 @@ func (r *EbitenRenderSystem) EnableCulling(enable bool) {
 // When enabled, entities with the same sprite are grouped to reduce GPU state changes.
 func (r *EbitenRenderSystem) EnableBatching(enable bool) {
 	r.enableBatching = enable
+}
+
+// SetPool sets the image pool for memory efficiency.
+// The pool is used to reuse allocated images, reducing GC pressure.
+func (r *EbitenRenderSystem) SetPool(pool ImagePoolProvider) {
+	r.imagePool = pool
+}
+
+// SetParallelRenderer sets the parallel renderer for performance.
+// The parallel renderer distributes rendering tasks across multiple workers.
+func (r *EbitenRenderSystem) SetParallelRenderer(renderer ParallelRendererProvider) {
+	r.parallelRenderer = renderer
 }
 
 // GetStats returns rendering performance statistics.

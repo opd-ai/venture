@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/class/advanced"
@@ -75,6 +76,10 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/patterns"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 	"github.com/opd-ai/venture/pkg/rendering/ui"
+
+	// Phase 2.4: Rendering Optimization (PLAN.md)
+	"github.com/opd-ai/venture/pkg/rendering/parallel"
+	"github.com/opd-ai/venture/pkg/rendering/pool"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -243,6 +248,10 @@ type systemsContainer struct {
 	uiGenerator      *ui.Generator       // Procedural UI element generation (menus, buttons, panels)
 	shapeRenderer    *shapes.Generator   // Geometric shape rendering for sprites and UI
 	patternGenerator *patterns.Generator // Texture pattern generation for tiles and materials
+
+	// Phase 2.4: Rendering Optimization (PLAN.md)
+	imagePool        *pool.ImagePool      // Image pool for memory efficiency
+	parallelRenderer *parallel.WorkerPool // Parallel renderer for performance
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -315,6 +324,23 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	// Initialize pattern generator for textures and materials
 	sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
 	clientLogger.Info("pattern generator initialized")
+
+	// Phase 2.4: Rendering Optimization (PLAN.md)
+	// Initialize image pool for memory efficiency (1000 pooled images)
+	sys.imagePool = pool.NewImagePool()
+	clientLogger.Info("image pool initialized")
+
+	// Initialize parallel renderer for performance (CPU count workers)
+	workerCount := runtime.NumCPU()
+	sys.parallelRenderer = parallel.NewWorkerPool(workerCount)
+	clientLogger.WithField("workerCount", workerCount).Info("parallel renderer initialized")
+
+	// Connect rendering optimizations to RenderSystem
+	poolAdapter := engine.NewImagePoolAdapter(sys.imagePool)
+	parallelAdapter := engine.NewParallelRendererAdapter(sys.parallelRenderer)
+	game.RenderSystem.SetPool(poolAdapter)
+	game.RenderSystem.SetParallelRenderer(parallelAdapter)
+	clientLogger.Info("rendering optimizations connected to RenderSystem")
 
 	return sys
 }

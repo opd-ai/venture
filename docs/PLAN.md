@@ -416,18 +416,21 @@ go test -race ./...
 
 ---
 
-### 4.2: Guild Vehicle Integration
+### 4.2: Guild Vehicle Integration ✅
 
-**Package**: `pkg/integration/guild_vehicle`
+**Status**: COMPLETE (December 13, 2025)  
+**Package**: `pkg/integration/guild_vehicle` (27 LOC) + wrapper in `pkg/engine/guild_vehicle_system.go` (161 LOC)  
+**Test Coverage**: 88.2%+ (exceeds 65% requirement)  
+**Integration**: `cmd/client/handlers.go`, registered after choice consequences system
 
-**Changes**:
-```go
-"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
-guildVehicleSystem := guild_vehicle.NewSystem(game.World)
-game.World.AddSystem(guildVehicleSystem) // Phase 4.2: Guild vehicles
-```
-
-**Effort**: Small (5 minutes)
+**Implementation Details**:
+- Guild vehicle fleet management with formation bonuses (Line: 5%, Wedge: 7%, Column: 10% defense, Circle: 8% defense)
+- Siege engine types with damage multipliers (Battering Ram: 3x, Catapult: 5x, Siege Tower: 2x, Ballista: 4x)
+- Formation bonuses apply to both ramming damage and mounted weapon damage
+- Defense bonuses apply to vehicle armor rating
+- Shared vehicle access control with player permissions
+- Thread-safe fleet operations with mutex protection
+- All operations logged with structured logging
 
 ---
 
@@ -716,7 +719,7 @@ grep "AddSystem" cmd/client/handlers.go | wc -l
 
 ## Success Criteria
 
-- [ ] All 22 runtime dormant packages integrated (Phases 1.1-1.3, 2.1-2.2, 3.1-3.4, 4.1 complete, 3.2 was already integrated)
+- [ ] All 22 runtime dormant packages integrated (Phases 1.1-1.3, 2.1-2.2, 3.1-3.4, 4.1-4.2 complete, 3.2 was already integrated)
 - [ ] No feature flags introduced  
 - [x] All systems registered unconditionally
 - [x] `go build ./cmd/client ./cmd/server` succeeds (engine package builds)

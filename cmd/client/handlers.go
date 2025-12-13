@@ -55,6 +55,11 @@ import (
 
 	// Phase 6.1: Branching Narratives (PLAN.md)
 	"github.com/opd-ai/venture/pkg/narrative/branching"
+
+	// Phase 1.1: Audio System Complete (PLAN.md)
+	"github.com/opd-ai/venture/pkg/audio"
+	"github.com/opd-ai/venture/pkg/audio/music"
+	"github.com/opd-ai/venture/pkg/audio/sfx"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -301,21 +306,35 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	logging.ComponentLogger(logger, "crafting").Info("crafting system initialized")
 }
 
-// initializeAudioSystem creates and configures the audio manager with music playback.
+// initializeAudioSystem creates and initializes the audio system with full synthesis support.
 func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 1.1: Full audio integration - synthesis, music, SFX
+	const sampleRate = audioSampleRate
+	audioSeed := *seed
+
+	// Create base audio manager
+	audioManager := audio.NewManager(sampleRate, audioSeed)
+
+	// Create adaptive music manager
+	musicManager := music.NewAdaptiveMusicManager(sampleRate, audioSeed)
+	audioManager.SetMusicManager(musicManager)
+
+	// Create SFX variety manager
+	sfxManager := sfx.NewVarietyManager(sampleRate, audioSeed)
+	audioManager.SetSFXManager(sfxManager)
+
+	clientLogger.WithFields(logrus.Fields{
+		"sampleRate": sampleRate,
+		"seed":       audioSeed,
+	}).Info("audio system initialized with adaptive music and SFX variety")
+
+	// Store reference (legacy compatibility - keep for existing code)
 	sys.audioManager = engine.NewAudioManager(audioSampleRate, *seed)
 	sys.audioManagerSystem = engine.NewAudioManagerSystem(sys.audioManager)
-
 	game.SetAudioManager(sys.audioManager)
 	sys.audioManager.EnableAdaptiveMusic(true)
 
-	// INTEGRATION FIX [Category A]: Phase 14.4 - Audio Enhancement Systems
-	// Gap: MusicTriggerSystem, PositionalAudioSystem, and ReverbSystem implemented but never initialized
-	// Fix: Added system initialization for adaptive music triggers, 3D positional audio, and reverb effects
-	// Roadmap: ROADMAP_V4.md Phase 14.4
-	// INTEGRATION FIX [Category A]: Connected AudioManager to MusicTriggerSystem
-	// Gap: AudioManager now implements audio.AdaptiveMusicSystem interface
-	// Fix: Pass AudioManager instance to MusicTriggerSystem for context-aware music transitions
+	// Initialize enhanced audio systems
 	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, sys.audioManager)
 	sys.positionalAudioSystem = engine.NewPositionalAudioSystem(game.World)
 	sys.reverbSystem = engine.NewReverbSystemWithLogger(game.World, *seed+seedOffsetReverb, clientLogger.Logger)

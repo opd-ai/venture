@@ -304,6 +304,9 @@ type systemsContainer struct {
 
 	// Phase 1.3: Prestige System (PLAN.md)
 	prestigeSystem *prestige.System // Post-max-level progression with paragon points and prestige abilities
+
+	// Phase 2.1: Economy System (PLAN.md)
+	economySystem *engine.EconomySystem // Cross-server marketplace and guild bank management
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -448,6 +451,11 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	// Phase 1.3: Prestige system
 	sys.prestigeSystem = prestige.NewSystemWithLogger(logger)
 	logging.ComponentLogger(logger, "prestige").Debug("Created prestige system")
+
+	// Phase 2.1: Economy system
+	serverID := "local" // TODO: Get from server config
+	sys.economySystem = engine.NewEconomySystem(game.World, serverID)
+	logging.ComponentLogger(logger, "economy").Debug("Created economy system")
 
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
 	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
@@ -928,6 +936,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.manaRegenSystem)
 	game.World.AddSystem(sys.inventorySystem)
 	game.World.AddSystem(sys.commerceSystem)
+	game.World.AddSystem(sys.economySystem) // Phase 2.1: Dynamic economy
 	game.World.AddSystem(sys.dialogSystem)
 	game.World.AddSystem(sys.craftingSystem)
 	game.World.AddSystem(sys.interactionSystem)

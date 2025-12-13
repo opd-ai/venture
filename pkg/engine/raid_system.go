@@ -334,6 +334,7 @@ func (s *RaidSystem) cleanupExpiredInstances() {
 
 // Helper methods for mechanic execution
 
+// spawnBossAdd creates a hostile add entity near the boss position.
 func (s *RaidSystem) spawnBossAdd(x, y float64, damage int) {
 	add := s.world.CreateEntity()
 	add.AddComponent(&PositionComponent{X: x, Y: y})
@@ -366,6 +367,7 @@ func (s *RaidSystem) spawnBossAdd(x, y float64, damage int) {
 	// No SpriteComponent exists in this ECS architecture
 }
 
+// createGroundEffect spawns a damaging hazard zone at the specified location.
 func (s *RaidSystem) createGroundEffect(x, y, radius float64, damage int) {
 	hazard := s.world.CreateEntity()
 	hazard.AddComponent(&PositionComponent{X: x, Y: y})
@@ -380,6 +382,7 @@ func (s *RaidSystem) createGroundEffect(x, y, radius float64, damage int) {
 	hazard.AddComponent(&LifetimeComponent{Duration: 10.0}) // 10 second duration
 }
 
+// applyNearbyDebuff applies a slow effect to all players within radius.
 func (s *RaidSystem) applyNearbyDebuff(x, y, radius float64) {
 	players := s.world.GetEntitiesWith("player", "position")
 
@@ -404,6 +407,7 @@ func (s *RaidSystem) applyNearbyDebuff(x, y, radius float64) {
 	}
 }
 
+// applyAoEDamage deals instant damage to all players within radius.
 func (s *RaidSystem) applyAoEDamage(x, y, radius float64, damage int) {
 	players := s.world.GetEntitiesWith("player", "position", "health")
 

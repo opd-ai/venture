@@ -30,50 +30,21 @@ The following dormant packages are **excluded** from integration as they are dev
 
 ---
 
-### 1.1: Companion Learning System
+### 1.1: Companion Learning System ✅
 
-**Package**: `pkg/companion/learning`  
-**LOC**: 2,107  
-**Type**: ECS System  
-**Completeness**: Complete (doc, tests, 2,107 LOC)
+**Status**: COMPLETE (December 13, 2025)  
+**Package**: `pkg/companion/learning` (1,488 LOC) + wrapper in `pkg/engine/companion_learning_system.go` (159 LOC)  
+**Test Coverage**: 86.8% (exceeds 65% requirement)  
+**Integration**: `cmd/client/handlers.go`, registered in Phase 22 companion systems
 
-**File**: `cmd/client/handlers.go`
-
-**Changes**:
-
-1. **Add import** (after line 40):
-```go
-"github.com/opd-ai/venture/pkg/companion/learning"
-```
-
-2. **Add to system container** (around line 110):
-```go
-type systemsContainer struct {
-    // ... existing fields ...
-    companionLearningSystem *learning.System
-}
-```
-
-3. **Initialize system** (around line 600, after companion system initialization):
-```go
-// Phase 1.1: Companion learning system
-sys.companionLearningSystem = learning.NewSystem()
-logger.WithField("system_name", "companion_learning").Debug("Created companion learning system")
-```
-
-4. **Register system** (around line 935):
-```go
-game.World.AddSystem(sys.companionLearningSystem) // Phase 1.1: Companion AI learning
-```
-
-**Verification**:
-```bash
-go build ./cmd/client
-./cmd/client/client -seed 12345
-# Spawn companion, observe learning behavior over time
-```
-
-**Effort**: Small (10 minutes)
+**Implementation Details**:
+- Implements 24-skill tree across 8 categories (Combat, Defense, Utility, Social, Healing, Magic, Crafting, Stealth)
+- Skills level 0-10 with XP-based progression (100 XP per level)
+- 10 personality traits with opposing pairs that evolve based on companion actions
+- Event memory with LRU eviction (1000 event limit)
+- Behavioral adaptation learns player combat style
+- All operations deterministic and thread-safe
+- Performance: <10µs per XP gain, <5µs per personality update, ~50KB memory per companion
 
 ---
 
@@ -95,78 +66,45 @@ go build ./cmd/client
 
 ---
 
-### 1.4: Balance Calculator Integration
+### 1.4: Balance Validation Framework ⚠️
 
-**Package**: `pkg/balance`  
-**LOC**: 1,232  
-**Type**: Utility Library  
-**Completeness**: Complete (doc, tests, 1,232 LOC)
+**Status**: PACKAGE PURPOSE MISMATCH - Existing package is for validation/testing, not runtime integration  
+**Package**: `pkg/balance` (1,232 LOC)  
+**Type**: Validation/Testing Framework  
+**Purpose**: Statistical analysis and validation of game balance (Phase 65.2 of V10.0)
 
-**File**: Multiple systems that calculate difficulty/scaling
+**Actual Package Features**:
+- Combat balance validation (class win rates, weapon viability, enemy scaling)
+- Economic balance validation (loot value, crafting profitability, market pricing)
+- Validation uses statistical analysis (chi-square, t-tests, regression, Gini coefficients)
+- Runs offline for testing purposes, not runtime game mechanics
 
-**Changes**:
+**Note**: The balance package exists and is complete but serves a different purpose than originally planned.  
+Runtime balance calculations are handled directly in respective systems (combat, spawning, etc.).
 
-1. **Import in combat system** (`pkg/engine/combat_system.go`):
-```go
-"github.com/opd-ai/venture/pkg/balance"
-```
-
-2. **Use in damage calculation**:
-```go
-func (cs *CombatSystem) calculateDamage(attacker, defender *Entity) float64 {
-    baseDamage := attacker.GetComponent("attack").(*AttackComponent).Power
-    scaling := balance.CalculateScaling(attacker.Level, cs.difficulty)
-    return baseDamage * scaling
-}
-```
-
-3. **Import in spawn systems** (`pkg/engine/spawn_system.go`):
-```go
-difficulty := balance.CalculateEnemyDifficulty(playerLevel, depth, genreID)
-```
-
-**Verification**:
-```bash
-go test ./pkg/balance/...
-go build ./cmd/client
-# Verify difficulty scaling feels appropriate
-```
-
-**Effort**: Medium (1 hour - multiple integration points)
+**Action**: Mark as complete for validation purposes, no integration needed
 
 ---
 
-### 1.5: Stability Monitoring
+### 1.5: Stability Testing Framework ⚠️
 
-**Package**: `pkg/stability`  
-**LOC**: 599  
-**Type**: Monitoring/Crash Reporting  
-**Completeness**: Complete (doc, tests, 599 LOC)
+**Status**: PACKAGE PURPOSE MISMATCH - Existing package is for long-term stability testing, not runtime crash reporting  
+**Package**: `pkg/stability` (599 LOC)  
+**Type**: Testing/Monitoring Framework  
+**Purpose**: 72-hour uptime validation for production readiness (Phase 66.4 of V10.0)
 
-**Files**: `cmd/client/main.go`, `cmd/server/main.go`
+**Actual Package Features**:
+- Long-duration stability monitoring (default: 72 hours)
+- Memory leak detection (threshold: 1KB/s growth)
+- Performance degradation tracking (min 60 FPS)
+- Crash counting and reporting
+- Health check intervals (default: 30 seconds)
+- Generates JSON stability reports
 
-**Changes**:
+**Note**: The stability package exists and is complete but is a testing framework, not runtime crash reporting.  
+For runtime crash handling, the application uses standard Go panic recovery and logging.
 
-1. **Add import**:
-```go
-"github.com/opd-ai/venture/pkg/stability"
-```
-
-2. **Enable monitoring** (in `main()`, early):
-```go
-func main() {
-    // Phase 1.5: Stability monitoring
-    stability.EnableMonitoring()
-    defer stability.ReportCrash()
-    
-    // ... rest of main
-}
-```
-
-3. **Add crash log directory** (optional):
-```go
-stability.SetCrashDir("./crash_logs")
-```
+**Action**: Mark as complete for testing purposes, no integration needed
 
 **Verification**:
 ```bash
@@ -179,49 +117,24 @@ go build ./cmd/client ./cmd/server
 
 ---
 
-### 1.6: User Experience Enhancements
+### 1.6: UX Validation Framework ⚠️
 
-**Package**: `pkg/ux`  
-**LOC**: 1,571  
-**Type**: UX Systems  
-**Completeness**: Complete (doc, tests, 1,571 LOC)
+**Status**: PACKAGE PURPOSE MISMATCH - Existing package is for UX testing/validation, not runtime UI enhancements  
+**Package**: `pkg/ux` (1,571 LOC)  
+**Type**: User Journey Validation Framework  
+**Purpose**: Automated UX testing and user journey validation
 
-**File**: `cmd/client/handlers.go`
+**Actual Package Features**:
+- User journey simulation and validation
+- UX metric collection and analysis
+- Accessibility testing automation
+- Performance impact assessment
+- Statistical validation of user experience
 
-**Changes**:
+**Note**: The ux package exists and is complete but is a validation framework, not runtime UI/tooltip system.  
+Runtime UI features like tooltips are handled by the rendering and UI systems in `pkg/engine/`.
 
-1. **Add import**:
-```go
-"github.com/opd-ai/venture/pkg/ux"
-```
-
-2. **Add to system container**:
-```go
-uxManager     *ux.Manager
-tooltipSystem *ux.TooltipSystem
-```
-
-3. **Initialize** (around line 650):
-```go
-// Phase 1.6: UX enhancements
-sys.uxManager = ux.NewManager()
-sys.tooltipSystem = sys.uxManager.TooltipSystem()
-logger.WithField("system_name", "ux").Debug("Created UX enhancement systems")
-```
-
-4. **Register systems** (around line 920):
-```go
-game.World.AddSystem(sys.tooltipSystem) // Phase 1.6: Tooltips
-```
-
-**Verification**:
-```bash
-go build ./cmd/client
-./cmd/client/client -seed 12345
-# Hover over items, verify tooltips appear
-```
-
-**Effort**: Small (20 minutes)
+**Action**: Mark as complete for validation purposes, no integration needed
 
 ---
 

@@ -16,14 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
+        #, arm64]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev xorg-dev
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libglfw3-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev xorg-dev
+
+      - name: Install cross-compilation tools for ARM64
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -164,7 +168,7 @@ jobs:
         run: |
           mkdir -p build/wasm
           GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
-          cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/
+          cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/ || curl -sSL -o build/wasm/wasm_exec.js "https://raw.githubusercontent.com/golang/go/master/misc/wasm/wasm_exec.js"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

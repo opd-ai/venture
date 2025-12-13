@@ -491,3 +491,158 @@ func BenchmarkPortalSystemUpdate(b *testing.B) {
 		ps.Update(0.016)
 	}
 }
+
+// TestGuildUpdateMessage tests guild update message serialization
+func TestGuildUpdateMessage(t *testing.T) {
+	tests := []struct {
+		name      string
+		guildID   string
+		guildData []byte
+		wantErr   bool
+	}{
+		{"valid message", "guild-123", []byte("compressed-data"), false},
+		{"empty guild ID", "", []byte("data"), false},
+		{"empty data", "guild-123", []byte{}, false},
+		{"large data", "guild-456", make([]byte, 10000), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := &GuildUpdateMessage{
+				Type:      "guild_update",
+				GuildID:   tt.guildID,
+				GuildData: tt.guildData,
+				Timestamp: 1234567890,
+			}
+
+			if msg.Type != "guild_update" {
+				t.Errorf("Type = %v, want guild_update", msg.Type)
+			}
+			if msg.GuildID != tt.guildID {
+				t.Errorf("GuildID = %v, want %v", msg.GuildID, tt.guildID)
+			}
+			if len(msg.GuildData) != len(tt.guildData) {
+				t.Errorf("GuildData length = %v, want %v", len(msg.GuildData), len(tt.guildData))
+			}
+		})
+	}
+}
+
+// TestBroadcastGuildUpdate tests broadcasting guild updates to peers
+func TestBroadcastGuildUpdate(t *testing.T) {
+	fp := NewFederationProtocol("test-server", testIdentity())
+
+	tests := []struct {
+		name      string
+		guildID   string
+		guildData []byte
+		wantErr   bool
+	}{
+		{"valid broadcast with no peers", "guild-123", []byte("data"), false},
+		{"empty guild ID", "", []byte("data"), false},
+		{"empty data", "guild-123", []byte{}, false},
+		{"nil data", "guild-123", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := fp.BroadcastGuildUpdate(tt.guildID, tt.guildData)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BroadcastGuildUpdate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestReceiveGuildUpdate tests receiving and validating guild updates
+func TestReceiveGuildUpdate(t *testing.T) {
+	fp := NewFederationProtocol("test-server", testIdentity())
+
+	tests := []struct {
+		name    string
+		msg     *GuildUpdateMessage
+		wantErr bool
+	}{
+		{
+			name: "valid message",
+			msg: &GuildUpdateMessage{
+				Type:      "guild_update",
+				GuildID:   "guild-123",
+				GuildData: []byte("compressed-data"),
+				Timestamp: 1234567890,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid type",
+			msg: &GuildUpdateMessage{
+				Type:      "wrong_type",
+				GuildID:   "guild-123",
+				GuildData: []byte("data"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing guild ID",
+			msg: &GuildUpdateMessage{
+				Type:      "guild_update",
+				GuildID:   "",
+				GuildData: []byte("data"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing guild data",
+			msg: &GuildUpdateMessage{
+				Type:    "guild_update",
+				GuildID: "guild-123",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty guild data",
+			msg: &GuildUpdateMessage{
+				Type:      "guild_update",
+				GuildID:   "guild-123",
+				GuildData: []byte{},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := fp.ReceiveGuildUpdate(tt.msg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReceiveGuildUpdate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// BenchmarkBroadcastGuildUpdate benchmarks guild update broadcasting
+func BenchmarkBroadcastGuildUpdate(b *testing.B) {
+	fp := NewFederationProtocol("test-server", testIdentity())
+	guildData := make([]byte, 1000) // 1KB guild data
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = fp.BroadcastGuildUpdate("guild-123", guildData)
+	}
+}
+
+// BenchmarkReceiveGuildUpdate benchmarks guild update reception
+func BenchmarkReceiveGuildUpdate(b *testing.B) {
+	fp := NewFederationProtocol("test-server", testIdentity())
+	msg := &GuildUpdateMessage{
+		Type:      "guild_update",
+		GuildID:   "guild-123",
+		GuildData: make([]byte, 1000),
+		Timestamp: 1234567890,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = fp.ReceiveGuildUpdate(msg)
+	}
+}

@@ -4,9 +4,11 @@ package engine
 import (
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/rendering/cache"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
@@ -15,6 +17,7 @@ import (
 // Integrates with sprite generator to create procedural animation frames.
 type AnimationSystem struct {
 	spriteGenerator *sprites.Generator
+	spriteCache     *cache.SpriteCache         // Phase 1.2: External sprite cache for base sprites
 	frameCache      map[string][]*ebiten.Image // Cache by key: seed_state
 	cacheMutex      sync.RWMutex
 	maxCacheSize    int
@@ -96,6 +99,28 @@ func (s *AnimationSystem) SetPlayerEntity(player *Entity) {
 			"entity_id": player.ID,
 		}).Debug("player entity set for distance calculations")
 	}
+}
+
+// SetSpriteCache sets the external sprite cache for base sprite caching.
+// Phase 1.2: Integrates with pkg/rendering/cache for efficient sprite reuse.
+// When set, base sprites are cached before animation frame transformation,
+// significantly reducing regeneration overhead for repeated sprite types.
+func (s *AnimationSystem) SetSpriteCache(spriteCache *cache.SpriteCache) {
+	s.spriteCache = spriteCache
+	if s.logger != nil {
+		if spriteCache != nil {
+			s.logger.WithFields(logrus.Fields{
+				"max_size": spriteCache.MaxSize(),
+			}).Info("sprite cache connected to animation system")
+		} else {
+			s.logger.Debug("sprite cache disconnected from animation system")
+		}
+	}
+}
+
+// GetSpriteCache returns the current sprite cache, or nil if not set.
+func (s *AnimationSystem) GetSpriteCache() *cache.SpriteCache {
+	return s.spriteCache
 }
 
 // EnableViewportCulling enables or disables viewport culling optimization.
@@ -656,9 +681,44 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 	// Get sprite configuration from entity
 	config := s.buildSpriteConfig(entity, sprite, anim)
 
+	// Phase 1.2: Generate the base sprite using cache if available
 	// CRITICAL FIX: Generate the base sprite ONCE, then transform it for each frame
 	// This prevents the "mutating shapes" issue where each frame is a different sprite
-	baseSprite, err := s.spriteGenerator.Generate(config)
+	var baseSprite *ebiten.Image
+	var err error
+
+	if s.spriteCache != nil {
+		// Create cache key from sprite config components
+		// Key format: "sprite:seed:genre:width:height:complexity" for unique identification
+		cacheKey := s.generateSpriteCacheKey(config)
+		var hit bool
+		baseSprite, hit = s.spriteCache.Get(cacheKey)
+		if !hit {
+			// Cache miss: generate and cache
+			baseSprite, err = s.spriteGenerator.Generate(config)
+			if err == nil {
+				s.spriteCache.Put(cacheKey, baseSprite)
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+					stats := s.spriteCache.Stats()
+					s.logger.WithFields(logrus.Fields{
+						"entity_id":  entity.ID,
+						"cache_key":  string(cacheKey),
+						"cache_size": stats.EntryCount,
+						"hit_rate":   stats.HitRate(),
+					}).Debug("base sprite cached")
+				}
+			}
+		} else if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"cache_key": string(cacheKey),
+			}).Debug("base sprite cache hit")
+		}
+	} else {
+		// No cache: generate directly
+		baseSprite, err = s.spriteGenerator.Generate(config)
+	}
+
 	if err != nil {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -1282,4 +1342,87 @@ func (s *AnimationSystem) TransitionState(entity *Entity, newState AnimationStat
 	}
 
 	return true
+}
+
+// generateSpriteCacheKey creates a cache key from a sprite config.
+// The key uniquely identifies a sprite based on its generation parameters.
+// Format: "sprite:type:seed:genre:width:height:complexity:variation:customHash"
+// The customHash includes sprite-affecting Custom field values: entityType,
+// facing, hasWeapon, hasShield, isBoss, bossScale, useAerial, and genre.
+func (s *AnimationSystem) generateSpriteCacheKey(config sprites.Config) cache.CacheKey {
+	// Build a deterministic string from relevant Custom fields that affect sprite appearance
+	customKey := s.buildCustomFieldsKey(config.Custom, config.GenreID)
+
+	// Include all relevant config fields that affect sprite generation
+	// Type is included to prevent cache collisions between different sprite categories
+	keyStr := fmt.Sprintf("sprite:%s:%d:%s:%d:%d:%.2f:%d:%s",
+		config.Type.String(),
+		config.Seed,
+		config.GenreID,
+		config.Width,
+		config.Height,
+		config.Complexity,
+		config.Variation,
+		customKey,
+	)
+	return cache.CacheKey(keyStr)
+}
+
+// buildCustomFieldsKey creates a deterministic key string from Custom field values
+// that affect sprite appearance. This ensures sprites with different entity types,
+// facing directions, equipment, or boss configurations get unique cache entries.
+// The configGenreID parameter is used to avoid duplicating genre in the key when
+// the Custom["genre"] matches the config.GenreID.
+func (s *AnimationSystem) buildCustomFieldsKey(custom map[string]interface{}, configGenreID string) string {
+	if custom == nil {
+		return ""
+	}
+
+	// Extract relevant sprite-affecting fields in a deterministic order
+	var parts []string
+
+	// Entity type (humanoid, boss, monster, etc.)
+	if entityType, ok := custom["entityType"].(string); ok {
+		parts = append(parts, "et:"+entityType)
+	}
+
+	// Facing direction
+	if facing, ok := custom["facing"].(string); ok {
+		parts = append(parts, "f:"+facing)
+	}
+
+	// Equipment flags
+	if hasWeapon, ok := custom["hasWeapon"].(bool); ok && hasWeapon {
+		parts = append(parts, "w:1")
+	}
+	if hasShield, ok := custom["hasShield"].(bool); ok && hasShield {
+		parts = append(parts, "s:1")
+	}
+
+	// Boss configuration - bossScale is only relevant when isBoss is true
+	if isBoss, ok := custom["isBoss"].(bool); ok && isBoss {
+		parts = append(parts, "boss:1")
+		// Include bossScale only for boss entities (meaningless otherwise)
+		if bossScale, ok := custom["bossScale"].(float64); ok {
+			parts = append(parts, fmt.Sprintf("bs:%.1f", bossScale))
+		}
+	}
+
+	// Aerial sprite flag
+	if useAerial, ok := custom["useAerial"].(bool); ok && useAerial {
+		parts = append(parts, "a:1")
+	}
+
+	// Genre from custom field - only include if different from config.GenreID
+	// to avoid redundant information in the cache key
+	if genre, ok := custom["genre"].(string); ok && genre != configGenreID {
+		parts = append(parts, "g:"+genre)
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	// Join with pipe separator for readability in debug logs
+	return strings.Join(parts, "|")
 }

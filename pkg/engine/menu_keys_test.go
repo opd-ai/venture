@@ -21,6 +21,9 @@ func TestMenuKeys_Constants(t *testing.T) {
 		{"Map key", MenuKeys.Map, ebiten.KeyM},
 		{"Shop key", MenuKeys.Shop, ebiten.KeyF},
 		{"Crafting key", MenuKeys.Crafting, ebiten.KeyR},
+		{"Trade key", MenuKeys.Trade, ebiten.KeyT},
+		{"Classes key", MenuKeys.Classes, ebiten.KeyA},
+		{"Territory key", MenuKeys.Territory, ebiten.KeyY},
 		{"Exit key", MenuKeys.Exit, ebiten.KeyEscape},
 	}
 
@@ -46,6 +49,9 @@ func TestMenuKeys_Labels(t *testing.T) {
 		{"MapLabel", MenuKeys.MapLabel},
 		{"ShopLabel", MenuKeys.ShopLabel},
 		{"CraftingLabel", MenuKeys.CraftingLabel},
+		{"TradeLabel", MenuKeys.TradeLabel},
+		{"ClassesLabel", MenuKeys.ClassesLabel},
+		{"TerritoryLabel", MenuKeys.TerritoryLabel},
 		{"ExitHint", MenuKeys.ExitHint},
 	}
 
@@ -126,6 +132,9 @@ func TestMenuKeys_Uniqueness(t *testing.T) {
 		MenuKeys.Map:       "Map",
 		MenuKeys.Shop:      "Shop",
 		MenuKeys.Crafting:  "Crafting",
+		MenuKeys.Trade:     "Trade",
+		MenuKeys.Classes:   "Classes",
+		MenuKeys.Territory: "Territory",
 	}
 
 	// Check for duplicate keys (excluding Exit which is universal)
@@ -138,9 +147,9 @@ func TestMenuKeys_Uniqueness(t *testing.T) {
 		seen[key] = name
 	}
 
-	// Verify we have exactly 7 unique menu keys
-	if len(seen) != 7 {
-		t.Errorf("Expected 7 unique menu keys, got %d", len(seen))
+	// Verify we have exactly 10 unique menu keys
+	if len(seen) != 10 {
+		t.Errorf("Expected 10 unique menu keys, got %d", len(seen))
 	}
 }
 
@@ -199,6 +208,9 @@ func TestGetExitHint(t *testing.T) {
 		{"Map", MenuKeys.Map, "Press [M] or [ESC] to close"},
 		{"Shop", MenuKeys.Shop, "Press [F] or [ESC] to close"},
 		{"Crafting", MenuKeys.Crafting, "Press [R] or [ESC] to close"},
+		{"Trade", MenuKeys.Trade, "Press [T] or [ESC] to close"},
+		{"Classes", MenuKeys.Classes, "Press [A] or [ESC] to close"},
+		{"Territory", MenuKeys.Territory, "Press [Y] or [ESC] to close"},
 	}
 
 	for _, tt := range tests {

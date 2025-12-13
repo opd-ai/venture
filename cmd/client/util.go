@@ -178,8 +178,16 @@ func (w *achievementSystemWrapper) Update(entities []*engine.Entity, deltaTime f
 
 // V5.0 System Wrappers (Social & Communication)
 
+type enhancedChatSystemWrapper struct {
+	system *engine.EnhancedChatSystem
+}
+
+func (w *enhancedChatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 type chatSystemWrapper struct {
-	system *engine.ChatSystem
+	system *engine.EnhancedChatSystem
 }
 
 func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {

@@ -59,6 +59,7 @@ type EbitenGame struct {
 	ShopUI      *ShopUI     // Commerce and merchant interaction UI
 	CraftingUI  *CraftingUI // Crafting and recipe UI
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
+	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
@@ -66,6 +67,15 @@ type EbitenGame struct {
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
 	HousingUI *housing.HousingUI // Player housing management UI (Phase 49.1, 51.2, 51.3)
 	GalleryUI *GalleryUI         // Image gallery viewer UI (Phase 49.4)
+
+	// Phase 3.2 (PLAN.md): Guild Federation
+	GuildUI *GuildUI // Guild management UI
+
+	// Phase 4.2 (PLAN.md): Advanced Classes
+	AdvancedClassUI *AdvancedClassUI // Advanced class management UI (multi-classing, prestige, talents)
+
+	// Phase 4.3 (PLAN.md): Territory Control
+	TerritoryUI *TerritoryUI // Territory management UI (guild warfare, territory capture)
 
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
@@ -560,7 +570,7 @@ func (g *EbitenGame) handleMultiplayerMenuHost() {
 				g.logger.WithError(err).Error("failed to connect to hosted server")
 			}
 			// Transition back to multiplayer menu on error
-			g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
+			_ = g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
 			if g.MultiplayerMenu != nil {
 				g.MultiplayerMenu.Show()
 			}
@@ -621,7 +631,7 @@ func (g *EbitenGame) handleServerAddressConnect(address string) {
 				g.logger.WithError(err).Error("failed to connect to server")
 			}
 			// Transition back to server address input on error
-			g.StateManager.TransitionTo(AppStateServerAddressInput)
+			_ = g.StateManager.TransitionTo(AppStateServerAddressInput)
 			if g.ServerAddressInput != nil {
 				g.ServerAddressInput.Show()
 			}
@@ -664,7 +674,6 @@ func (g *EbitenGame) IsInMainMenu() bool {
 	return g.StateManager.IsInMenu()
 }
 
-// Update implements ebiten.Game interface. Called every frame.
 // trackFramePerformance records frame timing metrics and logs performance statistics.
 func (g *EbitenGame) trackFramePerformance(frameStart time.Time) {
 	if !g.profilingEnabled || g.frameTimeTracker == nil {
@@ -845,6 +854,11 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 		g.CraftingUI.Update(nil, deltaTime)
 	}
 
+	// Phase 3.3 (PLAN.md): Update Trade UI
+	if g.TradeUI != nil {
+		g.TradeUI.Update(deltaTime)
+	}
+
 	// NOTE: MailboxUI does not have an Update() method - ESC key handling is done
 	// by InputSystem.handleEscapeKey() which checks mailboxUI.IsOpen() and calls Close()
 
@@ -858,6 +872,21 @@ func (g *EbitenGame) updateGameplayUI(deltaTime float64) {
 
 	if g.GalleryUI != nil {
 		g.GalleryUI.Update()
+	}
+
+	// Phase 3.2 (PLAN.md): Update Guild UI
+	if g.GuildUI != nil {
+		g.GuildUI.Update()
+	}
+
+	// Phase 4.2 (PLAN.md): Update Advanced Class UI
+	if g.AdvancedClassUI != nil {
+		g.AdvancedClassUI.Update()
+	}
+
+	// Phase 4.3 (PLAN.md): Update Territory UI
+	if g.TerritoryUI != nil {
+		g.TerritoryUI.Update()
 	}
 
 	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
@@ -879,6 +908,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 	// Check if any gameplay UI is open
 	// BUG FIX: Phase 3.7 - MailboxUI missing from virtual controls visibility check
 	// Resolution: Added MailboxUI.IsOpen() check to hide virtual controls when mailbox is open
+	// Phase 4.3: Added TerritoryUI.IsVisible() check for territory control UI
 	anyUIOpen := g.InventoryUI.IsVisible() ||
 		g.QuestUI.IsVisible() ||
 		g.CharacterUI.IsVisible() ||
@@ -886,7 +916,11 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		g.MapUI.IsFullScreen() ||
 		(g.ShopUI != nil && g.ShopUI.IsVisible()) ||
 		(g.CraftingUI != nil && g.CraftingUI.IsVisible()) ||
+		(g.TradeUI != nil && g.TradeUI.IsVisible()) ||
 		(g.MailboxUI != nil && g.MailboxUI.IsOpen()) ||
+		(g.GuildUI != nil && g.GuildUI.IsVisible()) ||
+		(g.AdvancedClassUI != nil && g.AdvancedClassUI.IsVisible()) ||
+		(g.TerritoryUI != nil && g.TerritoryUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -906,6 +940,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 // shouldUpdateWorld checks if world updates should proceed based on UI visibility.
 // BUG FIX: Phase 3.7 - MailboxUI missing from world update check
 // Resolution: Added MailboxUI.IsOpen() check to pause world when mailbox is open
+// Phase 4.3: Added TerritoryUI.IsVisible() check to pause world during territory management
 func (g *EbitenGame) shouldUpdateWorld() bool {
 	return !g.InventoryUI.IsVisible() &&
 		!g.QuestUI.IsVisible() &&
@@ -914,7 +949,11 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		!g.MapUI.IsFullScreen() &&
 		(g.ShopUI == nil || !g.ShopUI.IsVisible()) &&
 		(g.CraftingUI == nil || !g.CraftingUI.IsVisible()) &&
-		(g.MailboxUI == nil || !g.MailboxUI.IsOpen())
+		(g.TradeUI == nil || !g.TradeUI.IsVisible()) &&
+		(g.MailboxUI == nil || !g.MailboxUI.IsOpen()) &&
+		(g.GuildUI == nil || !g.GuildUI.IsVisible()) &&
+		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible()) &&
+		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {
@@ -1077,6 +1116,21 @@ func (g *EbitenGame) drawOverlays(screen *ebiten.Image) {
 		g.CraftingUI.Draw(screen)
 	}
 
+	// Phase 3.3 (PLAN.md): Draw Trade UI
+	if g.TradeUI != nil {
+		g.TradeUI.Draw(screen)
+	}
+
+	// Phase 4.2 (PLAN.md): Draw Advanced Class UI
+	if g.AdvancedClassUI != nil {
+		g.AdvancedClassUI.Draw(screen)
+	}
+
+	// Phase 4.3 (PLAN.md): Draw Territory UI
+	if g.TerritoryUI != nil {
+		g.TerritoryUI.Draw(screen)
+	}
+
 	g.drawMailboxUI(screen)
 
 	// INTEGRATION FIX [Category B]: Draw V8.0 UI screens
@@ -1143,6 +1197,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	// Set player for crafting UI (if initialized)
 	if g.CraftingUI != nil {
 		g.CraftingUI.SetPlayerEntity(entity)
+	}
+
+	// Phase 3.3 (PLAN.md): Set player for trade UI (if initialized)
+	if g.TradeUI != nil {
+		g.TradeUI.SetPlayerEntity(entity)
 	}
 }
 
@@ -1224,6 +1283,7 @@ func (g *EbitenGame) setupOptionalUICallbacks(inputSystem *InputSystem, objectiv
 	}{
 		{"crafting", inputSystem.SetCraftingCallback, g.CraftingUI, "crafting"},
 		{"mailbox", inputSystem.SetMailboxCallback, g.MailboxUI, "mailbox"},
+		{"trade", inputSystem.SetTradeCallback, g.TradeUI, "trade"}, // Phase 3.3 (PLAN.md)
 		{"housing", inputSystem.SetHousingCallback, g.HousingUI, "housing"},
 		{"gallery", inputSystem.SetGalleryCallback, g.GalleryUI, "gallery"},
 	}

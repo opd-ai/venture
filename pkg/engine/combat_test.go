@@ -1185,3 +1185,28 @@ func TestFindEnemyInAimDirection_EdgeCases(t *testing.T) {
 		}
 	})
 }
+
+// TestCombatSystem_SetAudioManager tests the SetAudioManager method for combat SFX integration.
+// Phase 14.4/Plan 1.1: Audio system integration with combat system.
+func TestCombatSystem_SetAudioManager(t *testing.T) {
+	// Create combat system
+	combatSystem := NewCombatSystem(12345)
+
+	// Test with nil audio manager (should not panic)
+	combatSystem.SetAudioManager(nil)
+	if combatSystem.audioManager != nil {
+		t.Error("expected audioManager to be nil")
+	}
+
+	// Create audio manager and set it
+	audioManager := NewAudioManager(44100, 12345)
+	combatSystem.SetAudioManager(audioManager)
+
+	if combatSystem.audioManager == nil {
+		t.Error("expected audioManager to be set")
+	}
+
+	if combatSystem.audioManager != audioManager {
+		t.Error("expected audioManager to match the one that was set")
+	}
+}

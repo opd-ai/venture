@@ -30,6 +30,9 @@ type CombatSystem struct {
 	// Phase 10.2: Projectile system for ranged weapon physics
 	projectileSystem *ProjectileSystem
 
+	// Plan Phase 1.1: Audio manager for combat SFX
+	audioManager *AudioManager
+
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
 
@@ -91,6 +94,14 @@ func (s *CombatSystem) SetProjectileSystem(ps *ProjectileSystem) {
 		s.logger.WithField("has_projectile_system", ps != nil).Debug("projectile system linked to combat system")
 	}
 	s.projectileSystem = ps
+}
+
+// SetAudioManager sets the audio manager reference for combat SFX (Plan Phase 1.1).
+func (s *CombatSystem) SetAudioManager(am *AudioManager) {
+	if s.logger != nil {
+		s.logger.WithField("has_audio_manager", am != nil).Debug("audio manager linked to combat system")
+	}
+	s.audioManager = am
 }
 
 // Update implements the System interface.
@@ -478,6 +489,37 @@ func (s *CombatSystem) applyAttackFeedback(attacker, target *Entity, finalDamage
 	s.spawnHitParticles(target)
 	s.applyVisualFeedback(target, finalDamage)
 	s.triggerScreenShake(target, finalDamage, isCrit)
+	s.playCombatSFX(target, damageType, isCrit)
+}
+
+// playCombatSFX plays combat sound effects for damage events (Plan Phase 1.1).
+func (s *CombatSystem) playCombatSFX(target *Entity, damageType combat.DamageType, isCrit bool) {
+	if s.audioManager == nil {
+		return
+	}
+
+	// Select effect type based on damage type
+	var effectType string
+	switch damageType {
+	case combat.DamageMagical:
+		effectType = "magic"
+	case combat.DamageFire, combat.DamageIce, combat.DamageLightning, combat.DamagePoison:
+		effectType = "magic"
+	default:
+		effectType = "hit"
+	}
+
+	// Use stronger impact sound for critical hits
+	if isCrit {
+		effectType = "impact"
+	}
+
+	// Use target entity ID as seed for deterministic but varied sounds
+	if err := s.audioManager.PlaySFX(effectType, int64(target.ID)); err != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithError(err).WithField("effectType", effectType).Debug("failed to play combat SFX")
+		}
+	}
 }
 
 func (s *CombatSystem) getEntityStats(entity *Entity) *StatsComponent {

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/class/advanced"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
@@ -24,6 +25,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/station"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/cache"
 	"github.com/opd-ai/venture/pkg/rendering/quality"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
@@ -31,6 +33,7 @@ import (
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
+	"github.com/opd-ai/venture/pkg/world/territory"
 	"github.com/sirupsen/logrus"
 
 	// INTEGRATION FIX [Category A]: V7.0 Display System Import
@@ -46,6 +49,9 @@ import (
 	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
 	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
 	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
+
+	// Phase 3.2: Guild Federation (PLAN.md)
+	"github.com/opd-ai/venture/pkg/network/federation/guild"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -95,6 +101,7 @@ type systemsContainer struct {
 	narrativeSystem        *engine.NarrativeSystem
 	shadowSystem           *engine.ShadowSystem
 	spriteGenerator        *sprites.Generator
+	spriteCache            *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                *item.ItemGenerator
 	recipeGen              *recipe.RecipeGenerator
 	statusEffectRNG        *rand.Rand
@@ -107,6 +114,8 @@ type systemsContainer struct {
 	companionProgressionSys *engine.CompanionProgressionSystem
 	companionLoyaltySys     *engine.CompanionLoyaltySystem
 	companionInventorySys   *engine.CompanionInventorySystem
+	companionLearningSys    *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
+	advancedClassSystem     *engine.AdvancedClassSystem     // Phase 4.2: Multi-classing, prestige classes, talent trees
 	skillInheritanceSys     *engine.SkillInheritanceSystem
 	bookReadingSystem       *engine.BookReadingSystem
 	spellEffectSystem       *engine.SpellEffectSystem
@@ -121,14 +130,14 @@ type systemsContainer struct {
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
 	// V5.0 Systems (Social & Communication)
-	chatSystem    *engine.ChatSystem
+	chatSystem    *engine.EnhancedChatSystem // Phase 3.1: Enhanced chat with E2E encryption and history persistence
 	mailSystem    *engine.MailSystem
 	courierSystem *engine.CourierSystem
 	// V6.0 Systems (Persistent Worlds & Federation)
 	portalSystem       *federation.PortalSystem
 	bountySystem       *engine.BountySystem
 	politicsSystem     *engine.PoliticsSystem
-	territoryManager   *world.TerritoryManager
+	territoryManager   *territory.Manager
 	rankingManager     *world.RankingManager
 	eventManager       *world.EventManager
 	federationProtocol *federation.FederationProtocol
@@ -188,6 +197,14 @@ type systemsContainer struct {
 	stationManager      *housingcrafting.StationManager  // Phase 55.1: Crafting stations in player housing
 	petHomeManager      *companionhousing.PetHomeManager // Phase 55.2: Companion housing and pet homes
 	guildHousingManager *guildhousing.Manager            // Phase 55.3: Guild housing and communal spaces
+
+	// Phase 3.2: Guild Federation (PLAN.md)
+	guildSystem *engine.GuildSystem // Cross-server guild management and sync
+	guildUI     *engine.GuildUI     // Guild UI for player interaction
+
+	// Phase 4.3: Territory Control (PLAN.md)
+	territorySystem *engine.TerritorySystem // Territory capture and guild warfare mechanics
+	territoryUI     *engine.TerritoryUI     // Territory UI for viewing and managing territories
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -207,9 +224,17 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	sys.interactionSystem = engine.NewInteractionSystem(game.World)
 	sys.particleSystem = engine.NewParticleSystem()
 
+	// Phase 1.2: Initialize sprite cache for base sprite caching
+	// 400MB limit provides significant performance improvement through cached sprite reuse
+	sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
+	clientLogger.WithField("maxSize", spriteCacheMaxSize).Info("sprite cache initialized")
+
 	sys.spriteGenerator = sprites.NewGenerator()
 	sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 	sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+
+	// Phase 1.2: Connect sprite cache to animation system
+	sys.animationSystem.SetSpriteCache(sys.spriteCache)
 
 	sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 
@@ -350,6 +375,8 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.companionProgressionSys = engine.NewCompanionProgressionSystem(game.World)
 	sys.companionLoyaltySys = engine.NewCompanionLoyaltySystem(game.World, clientLogger.Logger)
 	sys.companionInventorySys = engine.NewCompanionInventorySystem(game.World)
+	sys.companionLearningSys = engine.NewCompanionLearningSystem(game.World) // Phase 4.1: Companion learning
+	sys.advancedClassSystem = engine.NewAdvancedClassSystem(game.World)      // Phase 4.2: Advanced classes
 	sys.skillInheritanceSys = engine.NewSkillInheritanceSystem(game.World)
 
 	// Phase 23: Book system
@@ -419,8 +446,9 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 // initializeV5Systems initializes Version 5.0 social and communication systems.
 func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
-	// Phase 32: Chat system for player-to-player communication
-	sys.chatSystem = engine.NewChatSystem(game.World)
+	// Phase 3.1: Enhanced chat system with E2E encryption and history persistence
+	sys.chatSystem = engine.NewEnhancedChatSystem(game.World)
+	clientLogger.Info("enhanced chat system initialized with encryption and history persistence")
 
 	// INTEGRATION FIX [Category A]: Phase 33 - TradeSystem
 	// Gap: TradeSystem implemented but never initialized
@@ -455,11 +483,16 @@ func initializeV5Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 // initializeV6Systems initializes Version 6.0 persistent world and federation systems.
 func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Phase 38: Federation protocol for server-to-server communication
-	serverID := fmt.Sprintf("client-%d", time.Now().Unix())
+	// Use deterministic client ID based on seed to ensure reproducible federation state
+	serverID := fmt.Sprintf("client-%d", *seed)
 	clientIdentity, err := federation.NewServerIdentity(serverID)
 	if err != nil {
 		clientLogger.WithError(err).Warn("Failed to create client identity")
-		clientIdentity, _ = federation.NewServerIdentity("fallback-client")
+		var fallbackErr error
+		clientIdentity, fallbackErr = federation.NewServerIdentity("fallback-client")
+		if fallbackErr != nil {
+			clientLogger.WithError(fallbackErr).Error("Failed to create fallback client identity")
+		}
 	}
 	sys.federationProtocol = federation.NewFederationProtocol(serverID, clientIdentity)
 
@@ -473,7 +506,7 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.politicsSystem = engine.NewPoliticsSystem(game.World)
 
 	// Phase 42: Territory control system
-	sys.territoryManager = world.NewTerritoryManager()
+	sys.territoryManager = territory.NewManager()
 
 	// Phase 42: Server ranking system
 	sys.rankingManager = world.NewRankingManager()
@@ -601,6 +634,28 @@ func initializeV9Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 }
 
+// initializePhase3Systems initializes Phase 3 systems from PLAN.md (Networking & Social Features)
+func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 3.2: Guild Federation - Cross-server guild management
+	guildManager := guild.NewManager()
+	sys.guildSystem = engine.NewGuildSystem(game.World, guildManager)
+	sys.guildUI = engine.NewGuildUI(game.World, sys.guildSystem, *width, *height)
+
+	// Connect guild system to federation protocol for cross-server sync
+	if sys.federationProtocol != nil {
+		sys.guildSystem.SetFederation(sys.federationProtocol)
+		clientLogger.Debug("guild system connected to federation protocol")
+	}
+
+	// Phase 4.3: Territory Control - Guild warfare and territory management
+	sys.territorySystem = engine.NewTerritorySystem(sys.territoryManager, clientLogger.WithField("system", "territory"))
+	sys.territoryUI = engine.NewTerritoryUI(sys.territorySystem, *width, *height)
+
+	if *verbose {
+		clientLogger.Info("Phase 3 systems initialized (guild federation with cross-server sync, territory control)")
+	}
+}
+
 // registerAllSystems adds all systems to the game world in the correct order.
 func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.inputSystem)
@@ -692,6 +747,8 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&companionProgressionSystemWrapper{system: sys.companionProgressionSys})
 	game.World.AddSystem(&companionLoyaltySystemWrapper{system: sys.companionLoyaltySys})
 	game.World.AddSystem(&companionInventorySystemWrapper{system: sys.companionInventorySys})
+	game.World.AddSystem(sys.companionLearningSys) // Phase 4.1: Companion learning (compatible signature)
+	game.World.AddSystem(sys.advancedClassSystem)  // Phase 4.2: Advanced classes (compatible signature)
 	game.World.AddSystem(&skillInheritanceSystemWrapper{system: sys.skillInheritanceSys})
 
 	// Phase 23: Book system
@@ -730,6 +787,16 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 40: Mail and courier systems for asynchronous messaging
 	game.World.AddSystem(&mailSystemWrapper{system: sys.mailSystem})
 	game.World.AddSystem(&courierSystemWrapper{system: sys.courierSystem})
+
+	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
+	if sys.guildSystem != nil {
+		game.World.AddSystem(sys.guildSystem)
+	}
+
+	// Phase 4.3 (PLAN.md): Territory Control - Guild warfare and territory capture
+	if sys.territorySystem != nil {
+		game.World.AddSystem(&territorySystemWrapper{system: sys.territorySystem})
+	}
 
 	// V6.0 System Registrations (Persistent Worlds & Federation)
 	// Phase 39: Portal system for cross-server travel
@@ -794,6 +861,8 @@ func configureSystemConnections(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.combatSystem.SetCamera(game.CameraSystem)
 	sys.combatSystem.SetParticleSystem(sys.particleSystem, game.World, *genreID)
 	sys.combatSystem.SetProjectileSystem(sys.projectileSystem)
+	// Plan Phase 1.1: Connect combat system to audio manager for combat SFX
+	sys.combatSystem.SetAudioManager(sys.audioManager)
 	sys.projectileSystem.SetCamera(game.CameraSystem)
 	sys.projectileSystem.SetGenre(*genreID)
 	sys.projectileSystem.SetSeed(*seed)
@@ -978,7 +1047,7 @@ func connectMapUIToTerrain(game *engine.EbitenGame, generatedTerrain *terrain.Te
 }
 
 // spawnWorldEntities spawns enemies, merchants, stations, puzzles, and objects.
-func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
+func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, sys *systemsContainer, clientLogger *logrus.Entry) {
 	params := procgen.GenerationParams{
 		Difficulty: defaultDifficulty,
 		Depth:      defaultDepth,
@@ -991,7 +1060,7 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	spawnPuzzlesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnObjectsWithLogging(game.World, generatedTerrain, clientLogger)
 	spawnVehiclesWithLogging(game.World, generatedTerrain, params, clientLogger)
-	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger, sys.companionLearningSys)
 	spawnBookshelvesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnStoryFragmentsWithLogging(game.World, generatedTerrain, params, clientLogger)
 }
@@ -1081,7 +1150,7 @@ func spawnVehiclesWithLogging(w *engine.World, generatedTerrain *terrain.Terrain
 }
 
 // spawnCompanionsWithLogging spawns companions in terrain with optional verbose logging.
-func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry) {
+func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, clientLogger *logrus.Entry, companionLearningSys *engine.CompanionLearningSystem) {
 	if *verbose {
 		clientLogger.Info("spawning companions in dungeon")
 	}
@@ -1090,6 +1159,29 @@ func spawnCompanionsWithLogging(w *engine.World, generatedTerrain *terrain.Terra
 		clientLogger.WithError(err).Warn("failed to spawn companions")
 	} else if *verbose {
 		clientLogger.WithField("companionCount", companionCount).Info("spawned companions")
+	}
+
+	// Initialize learning for spawned companions (Phase 4.1)
+	if companionLearningSys != nil {
+		companionEntities := w.GetEntitiesWith("companion")
+		for _, entity := range companionEntities {
+			_, hasLearning := entity.GetComponent("companion_learning")
+			if !hasLearning {
+				learningRate := 1.0 + (float64(companionCount) * 0.1)
+				if learningRate > 2.0 {
+					learningRate = 2.0
+				}
+				err := companionLearningSys.AddCompanionLearning(entity.ID, learningRate)
+				if err != nil {
+					clientLogger.WithError(err).WithField("companionID", entity.ID).Warn("failed to initialize companion learning")
+				} else if *verbose {
+					clientLogger.WithFields(logrus.Fields{
+						"companionID":  entity.ID,
+						"learningRate": learningRate,
+					}).Debug("initialized companion learning")
+				}
+			}
+		}
 	}
 }
 
@@ -1499,6 +1591,24 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 	if shopUI != nil {
 		inputSystem.SetShopUI(shopUI)
 	}
+	// Phase 3.3 (PLAN.md): Connect Trade UI to input system
+	if game.TradeUI != nil {
+		inputSystem.SetTradeUI(game.TradeUI)
+	}
+	// Phase 4.2 (PLAN.md): Connect Advanced Class UI to input system
+	if game.AdvancedClassUI != nil {
+		inputSystem.SetAdvancedClassUI(game.AdvancedClassUI)
+		inputSystem.SetClassesCallback(func() {
+			game.AdvancedClassUI.Toggle()
+		})
+	}
+	// Phase 4.3 (PLAN.md): Connect Territory UI to input system
+	if game.TerritoryUI != nil {
+		inputSystem.SetTerritoryUI(game.TerritoryUI)
+		inputSystem.SetTerritoryCallback(func() {
+			game.TerritoryUI.Toggle()
+		})
+	}
 }
 
 // setupMerchantInteraction configures the F key interaction callback for merchants.
@@ -1630,6 +1740,44 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 		clientLogger.Info("gallery UI initialized (G key to open)")
 	}
 
+	// Phase 3.2 (PLAN.md): Guild UI initialization and integration
+	// Cross-server guild management UI
+	if sys.guildUI != nil {
+		game.GuildUI = sys.guildUI
+		if *verbose {
+			clientLogger.Info("guild UI initialized (U key to open)")
+		}
+	}
+
+	// Phase 3.3 (PLAN.md): Trade UI initialization and integration
+	// Player-to-player trading with validation
+	tradeUI := engine.NewTradeUI(game.World, sys.tradeSystem, *width, *height)
+	tradeUI.SetPlayerEntity(player)
+	game.TradeUI = tradeUI
+
+	if *verbose {
+		clientLogger.Info("trade UI initialized (T key to open)")
+	}
+
+	// Phase 4.2 (PLAN.md): Advanced Class UI initialization
+	// Multi-classing, prestige classes, and talent trees
+	advancedClassUI := engine.NewAdvancedClassUI(game.World, sys.advancedClassSystem, *width, *height)
+	advancedClassUI.SetPlayerEntity(player)
+	game.AdvancedClassUI = advancedClassUI
+
+	if *verbose {
+		clientLogger.Info("advanced class UI initialized (A key to open)")
+	}
+
+	// Phase 4.3 (PLAN.md): Territory UI initialization
+	// Guild warfare, territory capture, and defensive structures
+	sys.territoryUI.SetPlayerEntity(player)
+	game.TerritoryUI = sys.territoryUI
+
+	if *verbose {
+		clientLogger.Info("territory UI initialized (Y key to open)")
+	}
+
 	craftingUI := engine.NewCraftingUI(*width, *height)
 	craftingUI.SetPlayerEntity(player)
 	craftingUI.SetCraftingSystem(craftingSystem)
@@ -1669,12 +1817,68 @@ func applyCharacterClass(player *engine.Entity, game *engine.EbitenGame, clientL
 	}
 }
 
+// initializePlayerAdvancedClass initializes the advanced class system for the player.
+// Phase 4.2 (PLAN.md): Multi-classing, prestige classes, and talent trees
+func initializePlayerAdvancedClass(player *engine.Entity, game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	charData := game.GetPendingCharacterData()
+	if charData == nil {
+		return
+	}
+
+	// Map CharacterClass to advanced.ClassID
+	classID := mapCharacterClassToAdvancedClass(charData.Class)
+	if classID == "" {
+		clientLogger.Warn("character class not mapped to advanced class system")
+		return
+	}
+
+	// Initialize with level 1 and warrior class (can be customized via character creation)
+	// Get the advanced class system from game systems
+	// Note: We can't access sys.advancedClassSystem here directly,
+	// so we initialize the component manually and the system will pick it up
+	player.AddComponent(&advanced.AdvancedClassComponent{
+		PrimaryClass: classID,
+		Level:        1,
+		TalentPoints: advanced.TalentAllocation{
+			Talents:     make(map[advanced.TalentID]int),
+			PointsTotal: 1,
+		},
+	})
+
+	clientLogger.WithFields(logrus.Fields{
+		"class": classID,
+		"level": 1,
+	}).Info("initialized advanced class system")
+}
+
+// mapCharacterClassToAdvancedClass maps engine.CharacterClass to advanced.ClassID
+func mapCharacterClassToAdvancedClass(class engine.CharacterClass) advanced.ClassID {
+	switch class {
+	case engine.ClassWarrior:
+		return advanced.ClassWarrior
+	case engine.ClassMage:
+		return advanced.ClassMage
+	case engine.ClassRogue:
+		return advanced.ClassRogue
+	case engine.ClassRanger:
+		return advanced.ClassRanger
+	case engine.ClassCleric:
+		return advanced.ClassCleric
+	case engine.ClassNecromancer:
+		return advanced.ClassNecromancer
+	case engine.ClassBattlemage:
+		return advanced.ClassWarrior // Default to warrior for hybrids (can be improved)
+	default:
+		return ""
+	}
+}
+
 // finalizeGameInitialization processes initial entity updates and logs game start info.
 func finalizeGameInitialization(game *engine.EbitenGame, player *engine.Entity, networkClient interface{}, clientLogger *logrus.Entry) {
 	game.World.Update(0)
 
 	clientLogger.Info("game initialized successfully")
-	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox")
+	clientLogger.Info("controls: WASD to move, Space to attack, E to use item, I: Inventory, J: Quests, L: Mailbox, A: Classes")
 	clientLogger.WithFields(logrus.Fields{"genre": *genreID, "seed": *seed, "server": *server}).Info("game settings")
 }
 
@@ -1854,6 +2058,15 @@ type fluidSimulatorWrapper struct {
 
 func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// territorySystemWrapper adapts TerritorySystem to the System interface.
+type territorySystemWrapper struct {
+	system *engine.TerritorySystem
+}
+
+func (w *territorySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(entities, deltaTime)
 }
 
 // runGameLoop starts the main game loop.

@@ -33,6 +33,12 @@ var (
 	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
 	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
+
+	// V9.0 integration managers for server-authoritative validation
+	// These are initialized in createGameWorld() and used by systems for validation
+	v9StationManager      interface{}
+	v9PetHomeManager      interface{}
+	v9GuildHousingManager interface{}
 )
 
 func main() {
@@ -161,9 +167,7 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
 	// Fix: Added V9.0 manager initialization for server-authoritative validation
 	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
-	_, _, _ = initializeV9SystemsServer(logger)
-	// Note: Managers stored in world context for access by CraftingSystem, CompanionLoyaltySystem, etc.
-	// TODO: Store managers in World.Context or pass to relevant systems
+	v9StationManager, v9PetHomeManager, v9GuildHousingManager = initializeV9SystemsServer(logger)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
@@ -219,6 +223,23 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 			"width":  100,
 			"height": 100,
 		},
+	}
+
+	// Spawn enemies using entity generator
+	enemyCount, err := engine.SpawnEnemiesInTerrain(world, generatedTerrain, *seed, params)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn enemies")
+	} else if enemyCount > 0 {
+		v4Logger.WithField("count", enemyCount).Info("enemies spawned")
+	}
+
+	// Spawn merchants using entity generator
+	merchantCount := 2
+	merchantSpawned, err := engine.SpawnMerchantsInTerrain(world, generatedTerrain, *seed, params, merchantCount)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to spawn merchants")
+	} else if merchantSpawned > 0 {
+		v4Logger.WithField("count", merchantSpawned).Info("merchants spawned")
 	}
 
 	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)

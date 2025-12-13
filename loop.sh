@@ -4,7 +4,7 @@
 # (must be a positive integer)
 ITER=15
 
-alias copilot="yes n | copilot"
+alias copilot="yes n | copilot --model claude-sonnet-4.5"
 
 fix() { 
     go test -race ./...
@@ -57,6 +57,14 @@ impl() {
     sleep 1m
     checkin
 }
+review() {
+    echo "iteration started - Review phase."
+    copilot -p "/delegate $(cat docs/REVIEW.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Review completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin   
+}
 integrate() {
     echo "iteration started - Dev phase 2: Integrate components."
     copilot -p "/delegate $(cat docs/INTEGRATION.md)" --allow-all-tools --deny-tool sudo
@@ -77,7 +85,8 @@ play() {
 
 dev() {
     impl
-    #integrate
+    review
+    integrate
     #play
 }
 

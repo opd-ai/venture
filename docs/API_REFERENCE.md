@@ -63,7 +63,11 @@ Pure data structures implementing `Type() string`.
 - `PositionComponent` - X, Y coordinates
 - `VelocityComponent` - VX, VY velocity
 - `ColliderComponent` - Collision box
-- _5 more components..._
+- `HealthComponent`, `ManaComponent` - Resources
+- `StatsComponent` - RPG stats (Attack, Defense, etc.)
+- `InventoryComponent`, `EquipmentComponent` - Item management
+- `AIComponent` - AI state machine
+- `NetworkComponent` - Network sync
 
 **Visual/Audio:**
 - Sprite (via `SpriteProvider` interface)

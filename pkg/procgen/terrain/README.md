@@ -661,7 +661,14 @@ The CLI tool renders terrain as ASCII art:
 - `:` - Corridor
 - `+` - Door
 - `W` - Shallow Water
-  - _(... 8 more items ...)_
+- `~` - Deep Water
+- `T` - Tree
+- `^` - Stairs Up
+- `v` - Stairs Down
+- `[` - Trap Door
+- `?` - Secret Door
+- `=` - Bridge
+- `@` - Structure
 
 ## Performance
 

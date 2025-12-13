@@ -9,7 +9,8 @@ The genre package provides a centralized genre definition system for the Venture
 - **Type Safety**: Compile-time checks and runtime validation
 - **Color Palettes**: Genre-specific color schemes for visual generation
 - **Theme Keywords**: Descriptive keywords for content generation
-  - _(... 2 more items ...)_
+- **Name Prefixes**: Genre-appropriate prefixes for entities, items, and locations
+- **Extensibility**: Easy addition of new custom genres
 
 ## Quick Start
 
@@ -502,7 +503,8 @@ The genre system integrates with:
 - **Magic Generator** (`pkg/procgen/magic`) - Spell generation
 - **Skill Generator** (`pkg/procgen/skills`) - Skill tree generation
 - **Terrain Generator** (`pkg/procgen/terrain`) - Dungeon generation
-  - _(... 2 more items ...)_
+- **Future: Rendering** (`pkg/rendering`) - Visual generation (Phase 3)
+- **Future: Audio** (`pkg/audio`) - Sound synthesis (Phase 4)
 
 ## Performance
 

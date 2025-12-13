@@ -9,7 +9,12 @@ The network package provides multiplayer networking functionality for Venture, i
 - **Server Networking**: Client management, broadcasting, authoritative state
 - **Client-Side Prediction**: Immediate response to player input with server reconciliation
 - **Entity Interpolation**: Smooth remote entity movement between server snapshots
-  - _(... 6 more items ...)_
+- **Lag Compensation**: Server-side rewind for fair hit detection in high-latency environments
+- **Buffer Monitoring**: Real-time channel utilization tracking with automatic warnings
+- **Snapshot Management**: Efficient state history with delta compression
+- **Low Latency**: Optimized for real-time multiplayer (sub-millisecond serialization)
+- **High Bandwidth**: Minimal packet sizes (<100 bytes typical)
+- **Thread-Safe**: Concurrent client/server operations
 
 ## Architecture
 
@@ -621,7 +626,10 @@ attackData := serializer.SerializeAttack(targetID)
 - **Health**: Current, Max health (16 bytes)
 - **Stats**: Attack, Defense, MagicPower (24 bytes)
 - **Team**: Team ID (8 bytes)
-  - _(... 4 more items ...)_
+- **Level**: Level, XP (8 bytes)
+- **Input**: Movement dx, dy (2 bytes)
+- **Attack**: Target entity ID (8 bytes)
+- **Item**: Item ID (8 bytes)
 
 ### Creating Entity Updates
 
@@ -666,7 +674,11 @@ func CreateEntityUpdate(entity *engine.Entity, serializer *network.ComponentSeri
 - [ ] Lag compensation
 - [ ] Delta compression
 - [ ] Connection encryption (TLS)
-  - _(... 5 more items ...)_
+- [ ] Authentication system
+- [ ] Matchmaking
+- [ ] Reconnection handling
+- [ ] Bandwidth throttling
+- [ ] Packet prioritization
 
 ### Advanced Features
 
@@ -675,6 +687,7 @@ func CreateEntityUpdate(entity *engine.Entity, serializer *network.ComponentSeri
 - [ ] NAT traversal
 - [ ] Relay servers
 - [ ] Anti-cheat validation
+- [ ] Replay recording
 
 ## Testing
 

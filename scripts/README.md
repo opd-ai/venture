@@ -488,7 +488,9 @@ Running tests...
 - ✓ Test Pass (`go test`)
 - ✓ Race Freedom (`go test -race`)
 - ✓ Coverage Analysis (≥65% threshold, with interface-only exceptions)
-  - _(... 3 more items ...)_
+- ✓ Package Structure (file counts, LOC)
+- ✓ Documentation Review (doc.go, godoc comments)
+- ✓ Dependency Analysis (internal imports)
 
 **Output Format (`pkg/[PACKAGE]/AUDIT.md`):**
 ```markdown

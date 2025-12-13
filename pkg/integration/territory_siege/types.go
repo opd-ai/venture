@@ -218,3 +218,16 @@ func (s *Siege) GetDestructionPercentage() float64 {
 	destroyed := s.CountDestroyedStructures()
 	return float64(destroyed) / float64(len(s.DefensiveStructures))
 }
+
+// SiegeParticipantComponent tracks an entity's participation in a territory siege.
+type SiegeParticipantComponent struct {
+	SiegeID      string
+	IsAttacker   bool  // true if attacker, false if defender
+	IsActive     bool  // true if siege is ongoing
+	LastSeenTime int64 // Unix timestamp for tracking presence
+}
+
+// Type returns the component type identifier.
+func (c *SiegeParticipantComponent) Type() string {
+	return "siege_participant"
+}

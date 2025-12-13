@@ -336,6 +336,10 @@ type systemsContainer struct {
 
 	// Phase 4.4: Political Warfare Integration (PLAN.md)
 	politicalWarfareSystem *political_warfare.System // Guild politics, war declarations, and diplomatic mechanics
+
+	// Phase 4.5: Territory Siege System (PLAN.md)
+	siegeManager *territory.SiegeManager      // Territory siege manager (V8.0)
+	siegeSystem  *engine.TerritorySiegeSystem // ECS wrapper for siege mechanics
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -921,6 +925,11 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	sys.politicalWarfareSystem = political_warfare.NewSystem(game.World, guildManager)
 	logging.ComponentLogger(clientLogger.Logger, "political_warfare").Debug("Created political warfare system")
 
+	// Phase 4.5: Territory Siege System
+	sys.siegeManager = territory.NewSiegeManager()
+	sys.siegeSystem = engine.NewTerritorySiegeSystem(sys.siegeManager)
+	logging.ComponentLogger(clientLogger.Logger, "territory_siege").Debug("Created territory siege system")
+
 	// Phase 4.3: Territory Control - Guild warfare and territory management
 	sys.territorySystem = engine.NewTerritorySystem(sys.territoryManager, clientLogger.WithField("system", "territory"))
 	sys.territoryUI = engine.NewTerritoryUI(sys.territorySystem, *width, *height)
@@ -1076,6 +1085,7 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.guildVehicleSystem)       // Phase 4.2: Guild vehicle fleets
 	game.World.AddSystem(sys.narrativeWorldSystem)     // Phase 4.3: Narrative-world integration
 	game.World.AddSystem(sys.politicalWarfareSystem)   // Phase 4.4: Political warfare
+	game.World.AddSystem(sys.siegeSystem)              // Phase 4.5: Territory sieges
 
 	// Phase 30: Environmental Storytelling - Discovery System (use wrapper)
 	game.World.AddSystem(&discoverySystemWrapper{system: sys.discoverySystem})

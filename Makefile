@@ -87,6 +87,10 @@ bench: ## Run benchmarks
 	@echo "Running benchmarks..."
 	go test -bench=. -benchmem ./...
 
+audit: ## Run audit tests for procedural generators
+	@echo "Running audit tests..."
+	go test ./pkg/procgen/audit/... -v
+
 lint: ## Run linters
 	@echo "Running linters..."
 	go vet ./...

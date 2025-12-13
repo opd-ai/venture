@@ -89,6 +89,9 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/class"
 	"github.com/opd-ai/venture/pkg/procgen/minigame"
 	"github.com/opd-ai/venture/pkg/procgen/puzzle"
+
+	// Phase 3.6: Narrative Integration (PLAN.md)
+	"github.com/opd-ai/venture/pkg/procgen/narrative"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -270,6 +273,9 @@ type systemsContainer struct {
 	puzzleGenerator   *puzzle.Generator     // Procedural puzzle generation for dungeon rooms
 	minigameGenerator *minigame.Generator   // Minigame generation for taverns and social spaces
 	classGenerator    *class.ClassGenerator // Class archetype generation for character creation
+
+	// Phase 3.6: Narrative Integration (PLAN.md)
+	narrativeGenerator *narrative.StoryArcGenerator // Procedural story arc generation for world narrative
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -376,6 +382,9 @@ func initializeGenerators(sys *systemsContainer) {
 	sys.puzzleGenerator = puzzle.NewGenerator()
 	sys.minigameGenerator = minigame.NewGenerator()
 	sys.classGenerator = class.NewClassGenerator()
+
+	// Phase 3.6: Narrative Integration (PLAN.md)
+	sys.narrativeGenerator = narrative.NewStoryArcGenerator()
 }
 
 // initializeObjectiveSystem creates and configures the objective tracker with callbacks.
@@ -1313,6 +1322,7 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger, sys.companionLearningSys)
 	spawnBookshelvesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnStoryFragmentsWithLogging(game.World, generatedTerrain, params, clientLogger)
+	generateNarrativeArcWithLogging(game.World, sys.narrativeGenerator, params, clientLogger)
 }
 
 // spawnEnemiesWithLogging spawns enemies in terrain with optional verbose logging.
@@ -2427,6 +2437,115 @@ func runGameLoop(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 	if err := game.Run(windowTitle); err != nil {
 		clientLogger.WithError(err).Fatal("error running game")
 	}
+}
+
+// generateNarrativeArcWithLogging generates a procedural story arc for the world narrative with optional verbose logging.
+// Phase 3.6 (PLAN.md): Integrates pkg/procgen/narrative to create overarching world story
+func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.StoryArcGenerator, params procgen.GenerationParams, clientLogger *logrus.Entry) {
+	if narrativeGen == nil {
+		clientLogger.Warn("narrative generator is nil, skipping story arc generation")
+		return
+	}
+
+	if *verbose {
+		clientLogger.Info("generating procedural narrative arc for world")
+	}
+
+	// Generate story arc using world seed
+	result, err := narrativeGen.Generate(*seed+seedOffsetNarrative, params)
+	if err != nil {
+		clientLogger.WithError(err).Warn("failed to generate narrative arc")
+		return
+	}
+
+	// Validate the generated arc
+	arc, ok := result.(*narrative.StoryArc)
+	if !ok {
+		clientLogger.Warn("narrative generator returned invalid type")
+		return
+	}
+
+	if err := narrativeGen.Validate(arc); err != nil {
+		clientLogger.WithError(err).Warn("generated narrative arc failed validation")
+		return
+	}
+
+	// Find or create world narrative entity
+	worldNarrativeEntity := findOrCreateWorldNarrativeEntity(w)
+	if worldNarrativeEntity == nil {
+		clientLogger.Warn("failed to create world narrative entity")
+		return
+	}
+
+	// Get or create narrative component
+	var narrativeComp *engine.NarrativeComponent
+	if comp, ok := worldNarrativeEntity.GetComponent("narrative"); ok {
+		narrativeComp, _ = comp.(*engine.NarrativeComponent)
+	}
+	if narrativeComp == nil {
+		narrativeComp = &engine.NarrativeComponent{
+			CurrentAct:      engine.ActSetup,
+			EventHistory:    make([]engine.NarrativeEvent, 0),
+			MainObjective:   arc.MainConflict,
+			StoryProgress:   0.0,
+			ActiveThreads:   make([]string, 0),
+			ResolvedThreads: make([]string, 0),
+			WorldStateFlags: make(map[string]bool),
+			Relationships:   make(map[string]float64),
+			PlayerDecisions: make([]engine.PlayerDecision, 0),
+		}
+		worldNarrativeEntity.AddComponent(narrativeComp)
+	}
+
+	// Update narrative component with story arc data
+	narrativeComp.MainObjective = arc.MainConflict
+
+	// Add initial narrative event for the story arc
+	initialEvent := engine.NarrativeEvent{
+		Type:        engine.EventDiscovery,
+		Timestamp:   time.Now(),
+		Description: fmt.Sprintf("The story begins: %s", arc.Title),
+		Importance:  1.0,
+		Act:         engine.ActSetup,
+	}
+	narrativeComp.AddEvent(initialEvent)
+
+	// Add plot points as active threads
+	for _, plotPoint := range arc.PlotPoints {
+		if plotPoint.Act == 1 {
+			narrativeComp.ActiveThreads = append(narrativeComp.ActiveThreads, plotPoint.Description)
+		}
+	}
+
+	if *verbose {
+		clientLogger.WithFields(logrus.Fields{
+			"arc_title":   arc.Title,
+			"antagonist":  arc.Antagonist,
+			"ally":        arc.Ally,
+			"plot_points": len(arc.PlotPoints),
+			"endings":     len(arc.PossibleEndings),
+			"difficulty":  arc.Difficulty,
+			"seed":        arc.Seed,
+		}).Info("procedural narrative arc generated and integrated")
+	}
+}
+
+// findOrCreateWorldNarrativeEntity finds existing world narrative entity or creates a new one.
+func findOrCreateWorldNarrativeEntity(w *engine.World) *engine.Entity {
+	// Search for existing world narrative entity
+	entities := w.GetEntities()
+	for _, entity := range entities {
+		if _, ok := entity.GetComponent("narrative"); ok {
+			// Check if this is a world narrative entity (not player narrative)
+			if _, hasPlayer := entity.GetComponent("player"); !hasPlayer {
+				return entity
+			}
+		}
+	}
+
+	// Create new world narrative entity
+	worldNarrative := w.CreateEntity()
+	return worldNarrative
 }
 
 // initializePlayerNarrative initializes branching narrative for the player.

@@ -80,6 +80,7 @@ const (
 	seedOffsetNPCDialog       = 10000 // offset for NPC dialog system (Phase 31)
 	seedOffsetWorldEvents     = 11000 // offset for world events system (Phase 6.3)
 	seedOffsetEnvironment     = 12000 // offset for environmental hazard generation (Phase 3.4)
+	seedOffsetNarrative       = 13000 // offset for procedural narrative arc generation (Phase 3.6)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

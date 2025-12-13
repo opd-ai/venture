@@ -50,9 +50,9 @@ func (s *ChoiceConsequencesSystem) syncComponentState(comp *choice_consequences.
 	choiceCount := s.tracker.GetChoiceCount(comp.PlayerID)
 	if len(comp.ChoiceHistory) != choiceCount {
 		s.logger.WithFields(logrus.Fields{
-			"player_id":     comp.PlayerID,
-			"choice_count":  choiceCount,
-			"comp_count":    len(comp.ChoiceHistory),
+			"player_id":    comp.PlayerID,
+			"choice_count": choiceCount,
+			"comp_count":   len(comp.ChoiceHistory),
 		}).Debug("Choice count mismatch, component may be stale")
 	}
 }
@@ -65,9 +65,9 @@ func (s *ChoiceConsequencesSystem) RecordChoice(playerID string, choice *choice_
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"player_id": playerID,
-		"choice_id": choice.ChoiceID,
-		"story_node": choice.StoryNodeID,
+		"player_id":    playerID,
+		"choice_id":    choice.ChoiceID,
+		"story_node":   choice.StoryNodeID,
 		"irreversible": choice.Irreversible,
 	}).Debug("Recorded player choice")
 

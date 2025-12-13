@@ -101,6 +101,9 @@ import (
 
 	// Phase 5.1: Quality-of-Life System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/engine/qol"
+
+	// Phase 1.3: Prestige System (PLAN.md)
+	"github.com/opd-ai/venture/pkg/engine/prestige"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -298,6 +301,9 @@ type systemsContainer struct {
 	// Phase 5.1: Quality-of-Life System (PLAN.md)
 	qolManager *qol.Manager             // Unified QoL manager for auto-loot, crafting queues, guild invitations, etc.
 	qolSystem  *engine.QoLSystemWrapper // QoL system wrapper for ECS integration
+
+	// Phase 1.3: Prestige System (PLAN.md)
+	prestigeSystem *prestige.System // Post-max-level progression with paragon points and prestige abilities
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -438,6 +444,10 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	sys.commerceSystem = engine.NewCommerceSystemWithLogger(game.World, sys.inventorySystem, logger)
 	sys.dialogSystem = engine.NewDialogSystemWithLogger(game.World, logger)
 	sys.craftingSystem = engine.NewCraftingSystem(game.World, sys.inventorySystem, sys.itemGen)
+
+	// Phase 1.3: Prestige system
+	sys.prestigeSystem = prestige.NewSystemWithLogger(logger)
+	logging.ComponentLogger(logger, "prestige").Debug("Created prestige system")
 
 	logging.ComponentLogger(logger, "commerce").Info("commerce system initialized")
 	logging.ComponentLogger(logger, "dialog").Info("dialog system initialized")
@@ -889,6 +899,9 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&squadSystemWrapper{system: sys.squadSystem})
 
 	game.World.AddSystem(sys.progressionSystem)
+
+	// Phase 1.3: Prestige levels and resets
+	game.World.AddSystem(&prestigeSystemWrapper{system: sys.prestigeSystem})
 
 	sys.factionSystem = engine.NewFactionSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(sys.factionSystem)
@@ -2532,6 +2545,50 @@ type networkTradeSystemWrapper struct {
 
 func (w *networkTradeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// Phase 1.3: Prestige System Wrapper (PLAN.md)
+// prestigeSystemWrapper adapts prestige.System to the engine.System interface.
+type prestigeSystemWrapper struct {
+	system *prestige.System
+}
+
+// prestigeEntityAdapter adapts engine.Entity to prestige.Entity interface.
+type prestigeEntityAdapter struct {
+	entity *engine.Entity
+}
+
+func (a *prestigeEntityAdapter) GetID() string {
+	return fmt.Sprintf("%d", a.entity.ID)
+}
+
+func (a *prestigeEntityAdapter) HasComponent(componentType string) bool {
+	return a.entity.HasComponent(componentType)
+}
+
+func (a *prestigeEntityAdapter) GetComponent(componentType string) interface{} {
+	comp, _ := a.entity.GetComponent(componentType)
+	return comp
+}
+
+func (a *prestigeEntityAdapter) AddComponent(component interface{ Type() string }) {
+	// Convert to engine.Component (they have the same interface)
+	if c, ok := component.(engine.Component); ok {
+		a.entity.AddComponent(c)
+	}
+}
+
+func (a *prestigeEntityAdapter) RemoveComponent(componentType string) {
+	a.entity.RemoveComponent(componentType)
+}
+
+func (w *prestigeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	// Convert []*engine.Entity to []prestige.Entity using adapters
+	prestigeEntities := make([]prestige.Entity, len(entities))
+	for i, e := range entities {
+		prestigeEntities[i] = &prestigeEntityAdapter{entity: e}
+	}
+	w.system.Update(prestigeEntities, deltaTime)
 }
 
 // runGameLoop starts the main game loop.

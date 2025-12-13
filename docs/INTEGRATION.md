@@ -42,6 +42,14 @@ grep -rn 'enable\|disable\|toggle' cmd/client/ cmd/server/ --include="*.go" | gr
 ```
 **Action**: These flags should be removed during integration; features become unconditional.
 
+### Step 1.5: Audit Graphics Configuration
+Identify current sprite/tile sizes and visual effect settings:
+```bash
+grep -rn "SpriteSize\|TileSize\|sprite.*width\|sprite.*height" pkg/rendering/ cmd/client/ --include="*.go"
+grep -rn "particle\|lighting\|shadow\|effect" pkg/rendering/ --include="*.go"
+```
+**Action**: Ensure latest enhancements (larger sprites/tiles, improved effects) are hardcoded defaults, not configurable options.
+
 ---
 
 ## Phase 2: Inventory All Packages
@@ -159,7 +167,58 @@ Recently modified = likely being activated already.
 
 ---
 
-## Phase 7: Generate Output Documents
+## Phase 7: Graphics Enhancement Baseline
+
+### Step 7.1: Identify Visual Enhancement Packages
+```bash
+grep -rn "particle\|lighting\|shadow\|animation\|cache" pkg/rendering/ --include="*.go" | grep "package\|type.*System"
+```
+
+### Step 7.2: Enforce Default Graphics Settings
+All graphics enhancements must be unconditionally enabled with enhanced defaults:
+
+| Enhancement | Default Value | Location | Action |
+|-------------|---------------|----------|--------|
+| **Sprite Size** | 64x64 (up from 32x32) | `pkg/rendering/sprites/` | Hardcode `DefaultSpriteSize = 64` |
+| **Tile Size** | 64x64 (up from 32x32) | `pkg/rendering/` | Hardcode `DefaultTileSize = 64` |
+| **Particle Effects** | Always enabled | `pkg/rendering/particles/` | Remove any enable flags |
+| **Lighting System** | Always enabled | `pkg/rendering/lighting/` | Unconditional registration |
+| **Shadow Rendering** | Always enabled | `pkg/rendering/lighting/` | Hardcode `EnableShadows = true` |
+| **Animation Cache** | Always enabled | `pkg/rendering/cache/` | Unconditional initialization |
+| **Sprite Cache** | Always enabled | `pkg/rendering/cache/` | Unconditional initialization |
+
+### Step 7.3: Remove Graphics Flags
+```bash
+grep -rn "sprite.*size.*flag\|tile.*size.*flag\|enable.*particle\|enable.*lighting" cmd/client/ --include="*.go"
+```
+**Action**: Delete all CLI flags for graphics settings. Values are constants, not variables.
+
+### Step 7.4: Verify Enhanced Rendering Active
+```
+Integration checklist:
+- [ ] `pkg/rendering/particles` imported in cmd/client/main.go
+- [ ] `pkg/rendering/lighting` system unconditionally added
+- [ ] `pkg/rendering/cache` initialized at startup
+- [ ] `pkg/rendering/animation` system registered
+- [ ] All sprite generators use 64x64 default
+- [ ] No `-sprite-size`, `-enable-particles`, or similar flags exist
+```
+
+### Step 7.5: Document Visual Baseline
+Add to `docs/INTEGRATION_AUDIT.md`:
+```markdown
+## Graphics Baseline (Always Active)
+- **Sprite Resolution**: 64x64 pixels (procedurally generated)
+- **Tile Resolution**: 64x64 pixels
+- **Particle System**: Unconditionally active for combat, magic, environmental effects
+- **Dynamic Lighting**: Per-pixel lighting with shadow casting
+- **Animation Cache**: Automatic caching of sprite sequences
+- **Visual Effects**: Explosions, magic auras, weather particles always rendered
+```
+
+---
+
+## Phase 8: Generate Output Documents
 
 ### Output 1: `docs/INTEGRATION_AUDIT.md`
 
@@ -176,6 +235,14 @@ Recently modified = likely being activated already.
 |---------|---------|---------|
 | `pkg/engine` | client, server | Core ECS |
 | ... | ... | ... |
+
+## Graphics Baseline (Always Active)
+- **Sprite Resolution**: 64x64 pixels (procedurally generated)
+- **Tile Resolution**: 64x64 pixels
+- **Particle System**: Unconditionally active for combat, magic, environmental effects
+- **Dynamic Lighting**: Per-pixel lighting with shadow casting
+- **Animation Cache**: Automatic caching of sprite sequences
+- **Visual Effects**: Explosions, magic auras, weather particles always rendered
 
 ## Dormant Packages (To Integrate)
 
@@ -215,6 +282,17 @@ Activate core systems that others depend on.
   - File: `cmd/client/main.go`
   - Add: `world.AddSystem(advancedclass.NewSystem())`
 
+- [ ] **Graphics Enhancement Baseline**
+  - File: `pkg/rendering/sprites/generator.go`
+  - Change: `const DefaultSpriteSize = 64` (remove flag)
+  - File: `pkg/rendering/cache/cache.go`
+  - Add: Unconditional initialization in `cmd/client/main.go`
+  - File: `pkg/rendering/particles/system.go`
+  - Add: `world.AddSystem(particles.NewSystem())`
+  - File: `pkg/rendering/lighting/system.go`
+  - Add: `world.AddSystem(lighting.NewSystem())`
+  - Verify: Visual quality improvements visible at startup
+
 ## Phase 2: Social Systems (Week 2)
 - [ ] `pkg/network/chat`
 - [ ] `pkg/social/persistence`
@@ -230,6 +308,9 @@ After each phase:
 - [ ] `go build ./cmd/client && go build ./cmd/server`
 - [ ] `go test ./pkg/...`
 - [ ] Run client, verify features work
+- [ ] Confirm 64x64 sprites rendering
+- [ ] Verify particle effects active
+- [ ] Check lighting system operational
 ```
 
 ---
@@ -240,12 +321,16 @@ After each phase:
 - [ ] Integration order respects dependencies
 - [ ] No feature flags in integration steps
 - [ ] All features become always-on baseline
+- [ ] Graphics enhancements (64x64 sprites, particles, lighting) unconditionally enabled
+- [ ] No CLI flags for sprite size, tile size, or visual effects
 - [ ] Excludes `cmd/*test/` (standalone tools, not features)
 
 ## Anti-Patterns to Avoid
 - ❌ `if enableFeatureX { ... }` — No conditionals
 - ❌ `-enable-*` flags — No toggles
+- ❌ `-sprite-size`, `-tile-size` flags — Hardcode constants
 - ❌ "Optional" integration — Everything is mandatory
 - ✅ Unconditional `AddSystem()` calls
 - ✅ Direct imports without guards
 - ✅ Always-on initialization
+- ✅ Hardcoded enhanced graphics defaults

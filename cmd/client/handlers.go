@@ -92,6 +92,9 @@ import (
 
 	// Phase 3.6: Narrative Integration (PLAN.md)
 	"github.com/opd-ai/venture/pkg/procgen/narrative"
+
+	// Phase 4.1: Chat System (PLAN.md)
+	"github.com/opd-ai/venture/pkg/network/chat"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -276,6 +279,9 @@ type systemsContainer struct {
 
 	// Phase 3.6: Narrative Integration (PLAN.md)
 	narrativeGenerator *narrative.StoryArcGenerator // Procedural story arc generation for world narrative
+
+	// Phase 4.1: Chat System (PLAN.md)
+	networkChatSystem *chat.ChatSystem // Network-based chat system for multiplayer messaging
 }
 
 // initializeCoreSystems creates and initializes all core game systems.

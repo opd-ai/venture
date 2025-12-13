@@ -921,15 +921,25 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 // initializeTerrainRendering sets up the terrain rendering system.
 func initializeTerrainRendering(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
-		clientLogger.Info("initializing terrain rendering system")
+		clientLogger.WithFields(logrus.Fields{
+			"transitions":    *enableTileTransitions,
+			"parallax":       *enableTileParallax,
+			"enhanced_walls": *enableEnhancedWalls,
+		}).Info("initializing terrain rendering system")
 	}
 
 	terrainRenderSystem := engine.NewTerrainRenderSystem(tileSize, tileSize, *genreID, *seed)
 	terrainRenderSystem.SetTerrain(generatedTerrain)
+
+	// Configure advanced tile rendering features
+	terrainRenderSystem.SetTransitionsEnabled(*enableTileTransitions)
+	terrainRenderSystem.SetParallaxEnabled(*enableTileParallax)
+	terrainRenderSystem.SetEnhancedWallsEnabled(*enableEnhancedWalls)
+
 	game.TerrainRenderSystem = terrainRenderSystem
 
 	if *verbose {
-		clientLogger.Info("terrain rendering system initialized")
+		clientLogger.Info("terrain rendering system initialized with advanced features")
 	}
 }
 

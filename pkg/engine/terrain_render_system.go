@@ -4,7 +4,10 @@
 package engine
 
 import (
+	"fmt"
+	"image"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -13,24 +16,32 @@ import (
 
 // TerrainRenderSystem handles rendering of procedural terrain tiles.
 type TerrainRenderSystem struct {
-	tileCache  *TileCache
-	terrain    *terrain.Terrain
-	genreID    string
-	seed       int64
-	tileWidth  int
-	tileHeight int
-	tileImages map[string]*ebiten.Image // Pre-converted ebiten images
+	tileCache           *TileCache
+	terrain             *terrain.Terrain
+	genreID             string
+	seed                int64
+	tileWidth           int
+	tileHeight          int
+	tileImages          map[string]*ebiten.Image // Pre-converted ebiten images
+	enableTransitions   bool                     // Enable auto-tiling transitions
+	enableParallax      bool                     // Enable parallax depth effects
+	enableEnhancedWalls bool                     // Enable anti-aliased walls
+	cameraX             float64                  // Camera X for parallax
+	cameraY             float64                  // Camera Y for parallax
 }
 
 // NewTerrainRenderSystem creates a new terrain rendering system.
 func NewTerrainRenderSystem(tileWidth, tileHeight int, genreID string, seed int64) *TerrainRenderSystem {
 	return &TerrainRenderSystem{
-		tileCache:  NewTileCache(1000), // Cache up to 1000 tiles (~4MB at 32x32)
-		tileWidth:  tileWidth,
-		tileHeight: tileHeight,
-		genreID:    genreID,
-		seed:       seed,
-		tileImages: make(map[string]*ebiten.Image),
+		tileCache:           NewTileCache(1000), // Cache up to 1000 tiles (~4MB at 32x32)
+		tileWidth:           tileWidth,
+		tileHeight:          tileHeight,
+		genreID:             genreID,
+		seed:                seed,
+		tileImages:          make(map[string]*ebiten.Image),
+		enableTransitions:   true,  // Enable by default for smooth terrain
+		enableParallax:      false, // Disable by default (performance)
+		enableEnhancedWalls: true,  // Enable by default for better visuals
 	}
 }
 
@@ -46,11 +57,46 @@ func (t *TerrainRenderSystem) SetGenre(genreID string) {
 	t.tileImages = make(map[string]*ebiten.Image)
 }
 
+// SetTransitionsEnabled enables or disables auto-tiling transitions.
+func (t *TerrainRenderSystem) SetTransitionsEnabled(enabled bool) {
+	if t.enableTransitions != enabled {
+		t.enableTransitions = enabled
+		t.ClearCache() // Clear cache when transition mode changes
+	}
+}
+
+// SetParallaxEnabled enables or disables parallax depth effects.
+func (t *TerrainRenderSystem) SetParallaxEnabled(enabled bool) {
+	if t.enableParallax != enabled {
+		t.enableParallax = enabled
+		t.ClearCache()
+	}
+}
+
+// SetEnhancedWallsEnabled enables or disables enhanced wall rendering.
+func (t *TerrainRenderSystem) SetEnhancedWallsEnabled(enabled bool) {
+	if t.enableEnhancedWalls != enabled {
+		t.enableEnhancedWalls = enabled
+		t.ClearCache()
+	}
+}
+
+// SetCameraPosition updates camera position for parallax calculations.
+func (t *TerrainRenderSystem) SetCameraPosition(x, y float64) {
+	t.cameraX = x
+	t.cameraY = y
+}
+
 // Draw renders the terrain using the camera system for viewport culling.
 func (t *TerrainRenderSystem) Draw(screen *ebiten.Image, camera *CameraSystem) {
 	if t.terrain == nil {
 		return
 	}
+
+	// Update camera position for parallax calculations
+	camX, camY := camera.GetPosition()
+	t.cameraX = camX
+	t.cameraY = camY
 
 	// Calculate viewport bounds in tile coordinates
 	viewportMinX, viewportMinY := camera.ScreenToWorld(0, 0)
@@ -121,24 +167,92 @@ func (t *TerrainRenderSystem) getTileImage(tileType tiles.TileType, tileX, tileY
 	// Create cache key
 	// Use position-based variant for visual variety
 	variant := float64((tileX*7+tileY*13)%100) / 100.0
-	key := TileCacheKey{
-		TileType: tileType,
-		GenreID:  t.genreID,
-		Seed:     t.seed,
-		Variant:  variant,
-		Width:    t.tileWidth,
-		Height:   t.tileHeight,
-	}
 
-	keyStr := key.String()
+	// Include feature flags in cache key to avoid conflicts
+	keyStr := fmt.Sprintf("%s-%s-%d-%.2f-%dx%d-t%v-p%v-w%v",
+		tileType, t.genreID, t.seed, variant, t.tileWidth, t.tileHeight,
+		t.enableTransitions, t.enableParallax, t.enableEnhancedWalls)
 
 	// Check if we already have an ebiten image
 	if img, ok := t.tileImages[keyStr]; ok {
 		return img, nil
 	}
 
-	// Get RGBA image from cache
-	rgbaImg, err := t.tileCache.Get(key)
+	// Generate RGBA image using advanced features
+	var rgbaImg *image.RGBA
+	var err error
+
+	if tileType == tiles.TileWall && t.enableEnhancedWalls {
+		// Use enhanced wall rendering with corner detection
+		neighbors := t.getWallNeighbors(tileX, tileY)
+		wallConfig := tiles.EnhancedWallConfig{
+			Config: tiles.Config{
+				Type:    tileType,
+				Width:   t.tileWidth,
+				Height:  t.tileHeight,
+				GenreID: t.genreID,
+				Seed:    t.seed,
+				Variant: variant,
+			},
+			Neighbors:          neighbors,
+			EnableAntialiasing: true,
+			EnableShadows:      true,
+			BlendRadius:        4,
+		}
+		rgbaImg, err = t.tileCache.gen.GenerateEnhancedWall(wallConfig)
+	} else if t.enableTransitions && (tileType == tiles.TileFloor || tileType == tiles.TileCorridor) {
+		// Use transition system for smooth floor connections
+		neighbors := t.getTileNeighbors(tileX, tileY, tileType)
+		transitionType := tiles.DetermineTransition(neighbors)
+		transConfig := tiles.TransitionConfig{
+			BaseConfig: tiles.Config{
+				Type:    tileType,
+				Width:   t.tileWidth,
+				Height:  t.tileHeight,
+				GenreID: t.genreID,
+				Seed:    t.seed,
+				Variant: variant,
+			},
+			Transition:   transitionType,
+			Neighbors:    neighbors,
+			BlendRadius:  0.3,
+			CornerRadius: 0.25,
+			Smoothness:   0.5,
+		}
+		rgbaImg, err = t.tileCache.gen.GenerateWithTransition(transConfig)
+	} else if t.enableParallax {
+		// Use parallax rendering for depth effects
+		parallaxConfig := tiles.ParallaxConfig{
+			BaseConfig: tiles.Config{
+				Type:    tileType,
+				Width:   t.tileWidth,
+				Height:  t.tileHeight,
+				GenreID: t.genreID,
+				Seed:    t.seed,
+				Variant: variant,
+			},
+			Layer:         tiles.LayerBase,
+			CameraX:       t.cameraX,
+			CameraY:       t.cameraY,
+			ParallaxDepth: 1.0,
+			AOIntensity:   0.5,
+			ShadowHeight:  0.3,
+			ShadowAngle:   math.Pi / 4,
+		}
+		rgbaImg, err = t.tileCache.gen.GenerateWithParallax(parallaxConfig)
+	} else {
+		// Use basic generation
+		key := TileCacheKey{
+			TileType: tileType,
+			GenreID:  t.genreID,
+			Seed:     t.seed,
+			Variant:  variant,
+			Width:    t.tileWidth,
+			Height:   t.tileHeight,
+		}
+		rgbaImg, err = t.tileCache.Get(key)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -249,4 +363,58 @@ func (t *TerrainRenderSystem) GetCacheStats() (hits, misses uint64, hitRate floa
 func (t *TerrainRenderSystem) ClearCache() {
 	t.tileCache.Clear()
 	t.tileImages = make(map[string]*ebiten.Image)
+}
+
+// getWallNeighbors returns which neighboring tiles are walls for enhanced wall rendering.
+func (t *TerrainRenderSystem) getWallNeighbors(tileX, tileY int) tiles.WallNeighbors {
+	neighbors := tiles.WallNeighbors{}
+
+	// Check north
+	if tileY > 0 && t.terrain.GetTile(tileX, tileY-1) == terrain.TileWall {
+		neighbors.North = true
+	}
+
+	// Check south
+	if tileY < t.terrain.Height-1 && t.terrain.GetTile(tileX, tileY+1) == terrain.TileWall {
+		neighbors.South = true
+	}
+
+	// Check east
+	if tileX < t.terrain.Width-1 && t.terrain.GetTile(tileX+1, tileY) == terrain.TileWall {
+		neighbors.East = true
+	}
+
+	// Check west
+	if tileX > 0 && t.terrain.GetTile(tileX-1, tileY) == terrain.TileWall {
+		neighbors.West = true
+	}
+
+	return neighbors
+}
+
+// getTileNeighbors returns 8-directional neighbors for transition detection.
+func (t *TerrainRenderSystem) getTileNeighbors(tileX, tileY int, targetType tiles.TileType) tiles.TileNeighbors {
+	neighbors := tiles.TileNeighbors{}
+
+	// Helper to check if tile matches target type
+	isTargetType := func(x, y int) bool {
+		if x < 0 || x >= t.terrain.Width || y < 0 || y >= t.terrain.Height {
+			return false
+		}
+		terrainTile := t.terrain.GetTile(x, y)
+		renderTile := t.terrainTileToRenderTile(terrainTile)
+		return renderTile == targetType
+	}
+
+	// Check all 8 directions
+	neighbors.N = isTargetType(tileX, tileY-1)
+	neighbors.NE = isTargetType(tileX+1, tileY-1)
+	neighbors.E = isTargetType(tileX+1, tileY)
+	neighbors.SE = isTargetType(tileX+1, tileY+1)
+	neighbors.S = isTargetType(tileX, tileY+1)
+	neighbors.SW = isTargetType(tileX-1, tileY+1)
+	neighbors.W = isTargetType(tileX-1, tileY)
+	neighbors.NW = isTargetType(tileX-1, tileY-1)
+
+	return neighbors
 }

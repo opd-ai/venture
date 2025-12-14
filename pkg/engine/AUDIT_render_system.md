@@ -1,17 +1,19 @@
 # Code Review Audit: pkg/engine/render_system.go
-**Date:** 2025-12-14
+**Date:** 2025-12-14 (Updated 18:30 UTC)
 **Reviewer:** GitHub Copilot
 **Commits Analyzed:** Last 3
-**Change Frequency:** 1 time
+**Change Frequency:** 2 times
 
 ## Executive Summary
 **Status:** ✅ PASS
 
-Reviewing pkg/engine/render_system.go (changed 1 time in last 3 commits).
+Reviewing pkg/engine/render_system.go (changed 2 times in last 3 commits).
 
-The file implements the `EbitenRenderSystem` for sprite rendering with camera transformations, viewport culling, batch rendering, and visual effects. The recent commit (6d25676) optimized performance by pre-allocating `DrawTrianglesOptions` to reduce GC pressure during batch rendering.
+The file implements the `EbitenRenderSystem` for sprite rendering with camera transformations, viewport culling, batch rendering, and visual effects. Two recent performance optimization commits were analyzed:
+1. **6d25676** - Pre-allocated `DrawTrianglesOptions` to reduce GC pressure during batch rendering
+2. **3905b16** - Added `entitySpriteSlice` type implementing `sort.Interface` to eliminate reflection-based swapping, reducing allocations from 3 to 0 per sort call
 
-The code follows ECS patterns correctly with `EbitenSprite` as a pure data component. The optimization change is clean, well-documented, and follows project guidelines. Test coverage for this file (50.3%) is below the 65% target, but this is expected due to Ebiten-dependent rendering functions that require GPU context and cannot be easily unit tested. The existing test files (batching, culling, memory, performance, sorting) provide good coverage for testable logic.
+The code follows ECS patterns correctly with `EbitenSprite` as a pure data component. Both optimization changes are clean, well-documented, and follow project guidelines. Test coverage for this file (~52%) is below the 65% target, but this is expected due to Ebiten-dependent rendering functions that require GPU context and cannot be easily unit tested. The existing test files (batching, culling, memory, performance, sorting) provide good coverage for testable logic.
 
 **Auto-Fix Summary:**
 - Files Modified: 0
@@ -41,12 +43,21 @@ The code follows ECS patterns correctly with `EbitenSprite` as a pure data compo
 
 ## Changed Files Analysis
 
+### Commit 3905b16: perf(engine): optimize render sort to eliminate allocations
+
+**Changes:**
+1. Added `entitySpriteSlice` type implementing `sort.Interface` (lines 164-185)
+2. `Len()`, `Swap()`, `Less()` methods provide allocation-free sorting
+3. Replaced `sort.Slice` with `sort.Sort(entitySpriteSlice(...))` in `sortEntitiesByLayer` (line 1202)
+
+**Assessment:** Excellent performance optimization. The `sort.Slice` function uses reflection for its comparator callback, causing 3 allocations per sort. By implementing `sort.Interface` directly on the type, the sort becomes allocation-free. The `Less()` method correctly implements the same comparison logic (layer → Y position → entity ID) with proper determinism guarantees. This is a clean, targeted optimization that follows Go best practices.
+
 ### Commit 6d25676: perf(engine): reuse DrawTrianglesOptions in render system
 
 **Changes:**
-1. Added `drawTrianglesOptions ebiten.DrawTrianglesOptions` field to `EbitenRenderSystem` struct (line 213)
-2. Initialized field with `FilterLinear` in `NewRenderSystem` constructor (lines 242-244)
-3. Replaced per-batch allocation with reused instance in `renderBatchGeometry` (line 624)
+1. Added `drawTrianglesOptions ebiten.DrawTrianglesOptions` field to `EbitenRenderSystem` struct (line 235)
+2. Initialized field with `FilterLinear` in `NewRenderSystem` constructor (lines 265-267)
+3. Replaced per-batch allocation with reused instance in `renderBatchGeometry` (line 647)
 
 **Assessment:** Clean performance optimization. Reduces per-frame allocations by reusing a single `DrawTrianglesOptions` instance across all batch render calls. The change is minimal, focused, and follows the existing pattern of pre-allocating buffers (vertexBuffer, indexBuffer, sortBuffer, etc.).
 
@@ -60,12 +71,12 @@ The code follows ECS patterns correctly with `EbitenSprite` as a pure data compo
 
 ### Minor (nice-to-have)
 
-**pkg/engine/render_system.go:355 - Unused function call**
+**pkg/engine/render_system.go:378 - Unused function call**
 - Status: FALSE_POSITIVE
 - Issue: `logPlayerCount(entities)` is called but the function body is empty
 - Rationale: The function is intentionally kept as a placeholder for future debug logging, as documented in the comment: "exists as a placeholder for future debug logging if needed". The Go compiler will inline this function, eliminating any performance overhead. This is a deliberate design decision, not dead code.
 
-**pkg/engine/render_system.go:50.3% - File coverage below 65% threshold**
+**pkg/engine/render_system.go:~52% - File coverage below 65% threshold**
 - Status: FALSE_POSITIVE
 - Issue: Test coverage for render_system.go is 50.3%, below the 65% target
 - Rationale: Per CODE_REVIEW_PLAN.md and copilot-instructions.md, Ebiten initialization functions are documented as untestable. The rendering functions (`drawRect`, `drawColliders`, `drawHealthBar*`, `drawParticles`, `drawSpriteImage`, `drawFallbackRect`) require active GPU context via `*ebiten.Image` which cannot be mocked without Ebiten runtime. The testable logic paths (sorting, batching, culling decisions, buffer management) are covered by the 6 existing test files.
@@ -83,6 +94,20 @@ The code follows ECS patterns correctly with `EbitenSprite` as a pure data compo
 2. **Documentation update:** The doc.go states "50.0% test coverage" but package coverage is 57.7%. Consider updating this comment to reflect current coverage.
 
 ## Appendix: Commit Details
+
+```
+commit 3905b160738a894d4680273727a927a32134763b
+Author: user <user@mail.com>
+Date:   Sun Dec 14 13:11:27 2025 -0500
+
+    perf(engine): optimize render sort to eliminate allocations
+    
+    - Add entitySpriteSlice type implementing sort.Interface
+    - Replace sort.Slice with sort.Sort to avoid reflection-based swapping
+    - Reduces allocations from 3 to 0 per sort call
+    - Add event calendar system with seasonal events
+    - Add ROADMAP_V12 and audit documentation
+```
 
 ```
 commit 6d2567655343594813047ceb90a5701bf08c00f4

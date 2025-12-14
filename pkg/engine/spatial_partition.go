@@ -5,6 +5,7 @@ package engine
 
 import (
 	"math"
+	"sync"
 )
 
 // Bounds represents a rectangular area in 2D space.
@@ -40,17 +41,25 @@ type Quadtree struct {
 	northeast *Quadtree
 	southwest *Quadtree
 	southeast *Quadtree
+
+	// Result buffer pool for zero-allocation queries
+	resultPool sync.Pool
 }
 
 // NewQuadtree creates a new quadtree with the given bounds and capacity.
 // Capacity determines how many entities can be stored before subdivision.
 func NewQuadtree(bounds Bounds, capacity int) *Quadtree {
-	return &Quadtree{
+	qt := &Quadtree{
 		bounds:   bounds,
 		capacity: capacity,
 		entities: make([]*Entity, 0, capacity),
 		divided:  false,
 	}
+	qt.resultPool.New = func() interface{} {
+		slice := make([]*Entity, 0, capacity)
+		return &slice
+	}
+	return qt
 }
 
 // Insert adds an entity to the quadtree.
@@ -117,11 +126,21 @@ func (q *Quadtree) subdivide() {
 }
 
 // Query returns all entities within the given bounds.
-// Pre-allocates result slice with capacity hint to reduce allocations in hot paths.
+// Uses pooled result buffers to eliminate allocations in hot paths.
 func (q *Quadtree) Query(queryBounds Bounds) []*Entity {
-	result := make([]*Entity, 0, q.capacity)
+	resultPtr := q.resultPool.Get().(*[]*Entity)
+	result := (*resultPtr)[:0]
 	q.queryRecursive(queryBounds, &result)
-	return result
+
+	// Copy to new slice for caller (they own it)
+	output := make([]*Entity, len(result))
+	copy(output, result)
+
+	// Return buffer to pool
+	*resultPtr = result
+	q.resultPool.Put(resultPtr)
+
+	return output
 }
 
 // queryRecursive performs the actual recursive query.
@@ -189,10 +208,14 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 		Height: radius * 2,
 	}
 
-	candidates := q.Query(queryBounds)
+	// Get pooled buffer for candidates
+	candidatesPtr := q.resultPool.Get().(*[]*Entity)
+	candidates := (*candidatesPtr)[:0]
+	q.queryRecursive(queryBounds, &candidates)
 
-	// Filter by actual circular distance (pre-size for common case)
-	result := make([]*Entity, 0, q.capacity)
+	// Get pooled buffer for results
+	resultPtr := q.resultPool.Get().(*[]*Entity)
+	result := (*resultPtr)[:0]
 	radiusSq := radius * radius
 
 	for _, entity := range candidates {
@@ -215,7 +238,17 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 		}
 	}
 
-	return result
+	// Copy to new slice for caller
+	output := make([]*Entity, len(result))
+	copy(output, result)
+
+	// Return buffers to pool
+	*candidatesPtr = candidates
+	q.resultPool.Put(candidatesPtr)
+	*resultPtr = result
+	q.resultPool.Put(resultPtr)
+
+	return output
 }
 
 // Clear removes all entities from the quadtree.

@@ -3,6 +3,7 @@ package animation
 import (
 	"container/list"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -17,8 +18,19 @@ type CacheKey struct {
 }
 
 // String returns the string representation of the cache key.
+// Optimized to use strconv instead of fmt.Sprintf to reduce allocations.
 func (k CacheKey) String() string {
-	return fmt.Sprintf("%d:%s:%s:%d", k.Seed, k.State, k.Direction.String(), k.FrameIndex)
+	// Estimate buffer size: seed ~20 chars, state ~10 chars, direction ~10 chars, frame ~5 chars, 3 colons
+	// Pre-allocate buffer to avoid intermediate allocations
+	buf := make([]byte, 0, 48+len(k.State))
+	buf = strconv.AppendInt(buf, k.Seed, 10)
+	buf = append(buf, ':')
+	buf = append(buf, k.State...)
+	buf = append(buf, ':')
+	buf = append(buf, k.Direction.String()...)
+	buf = append(buf, ':')
+	buf = strconv.AppendInt(buf, int64(k.FrameIndex), 10)
+	return string(buf)
 }
 
 // cacheEntry represents a single cached animation frame.

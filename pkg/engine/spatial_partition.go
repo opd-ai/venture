@@ -162,25 +162,20 @@ func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 			continue
 		}
 
-		// BUG FIX: Check if entity intersects query bounds
-		// Need to consider entity size, not just center point position
-
-		// Get sprite size if available (default to 32x32 if no sprite)
-		spriteWidth, spriteHeight := 32.0, 32.0
-		if spriteComp, ok := entity.GetComponent("sprite"); ok {
-			if sprite, ok := spriteComp.(interface {
-				GetSize() (width, height float64)
-			}); ok {
-				spriteWidth, spriteHeight = sprite.GetSize()
-			}
+		// Get entity size from cached collider accessor (zero-overhead)
+		// Falls back to 32x32 default if no collider
+		entityWidth, entityHeight := 32.0, 32.0
+		if collider := entity.GetCollider(); collider != nil {
+			entityWidth = collider.Width
+			entityHeight = collider.Height
 		}
 
 		// Create entity bounds (centered on position)
 		entityBounds := Bounds{
-			X:      pos.X - spriteWidth/2,
-			Y:      pos.Y - spriteHeight/2,
-			Width:  spriteWidth,
-			Height: spriteHeight,
+			X:      pos.X - entityWidth/2,
+			Y:      pos.Y - entityHeight/2,
+			Width:  entityWidth,
+			Height: entityHeight,
 		}
 
 		// Check if entity bounds intersect query bounds

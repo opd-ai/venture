@@ -580,7 +580,9 @@ func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *Ve
 			"vel_y":      vel.VY,
 		}).Debug("Facing direction updated")
 	}
-} // SetVelocity is a helper to set entity velocity.
+}
+
+// SetVelocity is a helper to set entity velocity.
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		if vel, ok := velComp.(*VelocityComponent); ok {

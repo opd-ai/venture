@@ -11,6 +11,7 @@
 package engine
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 
@@ -38,6 +39,10 @@ type ShadowSystem struct {
 	// Reusable buffer for shadow casters to reduce per-frame allocations
 	// Uses slice of values (not pointers) to avoid per-caster heap allocations
 	casterBuffer []shadowCaster
+
+	// Image cache to avoid per-frame allocations for shadow/AO images
+	// Key format: "WxH" (width x height)
+	imageCache map[string]*ebiten.Image
 
 	// Configuration
 	enabled       bool
@@ -72,6 +77,7 @@ func NewShadowSystemWithLogger(world *World, logger *logrus.Logger) *ShadowSyste
 		maxShadows:    100,
 		renderQuality: 1.0,
 		casterBuffer:  make([]shadowCaster, 0, 100), // Pre-allocate for typical max shadows (values, not pointers)
+		imageCache:    make(map[string]*ebiten.Image),
 	}
 }
 
@@ -106,6 +112,19 @@ func (s *ShadowSystem) SetViewport(cameraX, cameraY float64, width, height int) 
 	s.viewportW = width
 	s.viewportH = height
 	s.viewportSet = true
+}
+
+// getCachedImage returns a cached image of the given size, creating one if needed.
+// This avoids per-frame allocations for shadow and AO images.
+func (s *ShadowSystem) getCachedImage(width, height int) *ebiten.Image {
+	key := fmt.Sprintf("%dx%d", width, height)
+	if img, ok := s.imageCache[key]; ok {
+		img.Clear()
+		return img
+	}
+	img := ebiten.NewImage(width, height)
+	s.imageCache[key] = img
+	return img
 }
 
 // Update processes shadow-casting entities (no per-frame updates needed).
@@ -253,8 +272,8 @@ func (s *ShadowSystem) renderHardShadow(target *ebiten.Image, caster *shadowCast
 		return
 	}
 
-	// Create shadow rectangle
-	shadowImg := ebiten.NewImage(shadowW, shadowH)
+	// Get cached shadow image to avoid per-frame allocations
+	shadowImg := s.getCachedImage(shadowW, shadowH)
 	shadowImg.Fill(caster.shadow.Color)
 
 	// Draw shadow with rotation
@@ -349,7 +368,8 @@ func (s *ShadowSystem) renderContactShadow(target *ebiten.Image, caster *shadowC
 		return
 	}
 
-	shadowImg := ebiten.NewImage(shadowW, shadowH)
+	// Get cached shadow image to avoid per-frame allocations
+	shadowImg := s.getCachedImage(shadowW, shadowH)
 
 	// Fill with gradient (darker in center)
 	shadowImg.Fill(caster.shadow.Color)

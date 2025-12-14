@@ -44,12 +44,13 @@ type HazardZone struct {
 
 // HazardZoneTracker manages active hazard zones with spatial indexing.
 type HazardZoneTracker struct {
-	zones      map[uint64]*HazardZone
-	mu         sync.RWMutex
-	fadeTime   float64 // Duration of fade-out effect in seconds
-	maxZones   int     // Maximum zones to prevent unbounded growth
-	zoneCount  int     // Current active zone count
-	totalZones uint64  // Lifetime zone creation count
+	zones        map[uint64]*HazardZone
+	mu           sync.RWMutex
+	fadeTime     float64  // Duration of fade-out effect in seconds
+	maxZones     int      // Maximum zones to prevent unbounded growth
+	zoneCount    int      // Current active zone count
+	totalZones   uint64   // Lifetime zone creation count
+	removeBuffer []uint64 // Reusable buffer for expired zone IDs
 }
 
 // NewHazardZoneTracker creates a new hazard zone tracker.
@@ -59,9 +60,10 @@ func NewHazardZoneTracker(maxZones int) *HazardZoneTracker {
 	}
 
 	return &HazardZoneTracker{
-		zones:    make(map[uint64]*HazardZone, maxZones),
-		fadeTime: 1.0, // 1 second fade-out
-		maxZones: maxZones,
+		zones:        make(map[uint64]*HazardZone, maxZones),
+		fadeTime:     1.0, // 1 second fade-out
+		maxZones:     maxZones,
+		removeBuffer: make([]uint64, 0, 16), // Pre-allocate for typical usage
 	}
 }
 
@@ -161,7 +163,8 @@ func (t *HazardZoneTracker) Update(deltaTime float64) int {
 	defer t.mu.Unlock()
 
 	removed := 0
-	toRemove := make([]uint64, 0, 16)
+	// Reuse buffer to reduce allocations
+	t.removeBuffer = t.removeBuffer[:0]
 
 	for id, zone := range t.zones {
 		// Update duration for non-permanent zones
@@ -176,13 +179,13 @@ func (t *HazardZoneTracker) Update(deltaTime float64) int {
 
 			// Mark expired zones for removal
 			if zone.RemainingDuration < 0 {
-				toRemove = append(toRemove, id)
+				t.removeBuffer = append(t.removeBuffer, id)
 			}
 		}
 	}
 
 	// Remove expired zones
-	for _, id := range toRemove {
+	for _, id := range t.removeBuffer {
 		delete(t.zones, id)
 		t.zoneCount--
 		removed++

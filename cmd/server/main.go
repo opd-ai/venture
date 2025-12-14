@@ -18,6 +18,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/migration"
+	"github.com/opd-ai/venture/pkg/modding"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/network/resilience"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -57,6 +58,10 @@ var (
 
 	// Phase 6.4 (PLAN.md): UX journey validation integration
 	uxValidate = flag.Bool("ux-validate", false, "Run user experience journey validation at startup")
+
+	// Phase 6.3 (PLAN.md): Modding system integration
+	enableMods = flag.Bool("enable-mods", false, "Enable mod system with sandbox security")
+	modsDir    = flag.String("mods-dir", "mods", "Directory to load mods from")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -104,6 +109,13 @@ func main() {
 	if *uxValidate {
 		runUXValidation(serverLogger)
 	}
+
+	// Phase 6.3 (PLAN.md): Initialize mod system if enabled
+	var modManager *modding.Manager
+	if *enableMods {
+		modManager = initializeModSystem(serverLogger)
+	}
+	_ = modManager // Available for future game rule integration
 
 	// Phase 2 (PLAN.md): Start stability monitoring if enabled
 	var stabilityMon *stability.Monitor
@@ -1111,4 +1123,104 @@ func runUXValidation(serverLogger *logrus.Entry) {
 			}
 		}
 	}
+}
+
+// initializeModSystem sets up the sandboxed mod system.
+// Phase 6.3 (PLAN.md): Modding package integration with security sandbox
+func initializeModSystem(serverLogger *logrus.Entry) *modding.Manager {
+	serverLogger.WithFields(logrus.Fields{
+		"mods_dir": *modsDir,
+	}).Info("initializing mod system with security sandbox")
+
+	// Validate sandbox security first
+	sandbox := modding.NewSandboxWithConfig(modding.SandboxConfig{
+		ModsDirectory: *modsDir,
+	})
+	report := sandbox.GenerateSecurityReport()
+
+	if !report.AllChecksPassed() {
+		serverLogger.WithFields(logrus.Fields{
+			"passed_checks":  report.PassedCount(),
+			"file_system":    report.FileSystemIsolation,
+			"network":        report.NetworkIsolation,
+			"memory":         report.MemoryLimits,
+			"cpu":            report.CPULimits,
+			"api":            report.APIRestrictions,
+			"code_execution": report.CodeExecution,
+		}).Error("mod sandbox security checks failed - mods disabled")
+		return nil
+	}
+
+	serverLogger.WithFields(logrus.Fields{
+		"passed_checks": report.PassedCount(),
+	}).Debug("mod sandbox security checks passed")
+
+	// Create mod loader and manager
+	config := modding.ModConfig{
+		ModsDirectory:       *modsDir,
+		EnableSandbox:       true,
+		MaxMods:             50,
+		RuleChangeRateLimit: 10.0,
+	}
+
+	loader := modding.NewLoaderWithConfig(config)
+	manager := modding.NewManagerWithConfig(config)
+
+	// Load all mods from directory
+	mods, err := loader.LoadAll()
+	if err != nil {
+		serverLogger.WithError(err).Warn("failed to load mods")
+		return manager
+	}
+
+	// Add and enable loaded mods
+	loadedCount := 0
+	for _, mod := range mods {
+		if err := manager.AddMod(mod); err != nil {
+			serverLogger.WithFields(logrus.Fields{
+				"mod_id":   mod.ID,
+				"mod_name": mod.Name,
+				"error":    err.Error(),
+			}).Warn("failed to add mod")
+			continue
+		}
+
+		if err := manager.EnableMod(mod.ID); err != nil {
+			serverLogger.WithFields(logrus.Fields{
+				"mod_id": mod.ID,
+				"error":  err.Error(),
+			}).Warn("failed to enable mod")
+			continue
+		}
+
+		loadedCount++
+		serverLogger.WithFields(logrus.Fields{
+			"mod_id":      mod.ID,
+			"mod_name":    mod.Name,
+			"mod_version": mod.Version,
+			"mod_type":    mod.Type.String(),
+			"rule_count":  len(mod.Rules),
+		}).Info("mod loaded and enabled")
+	}
+
+	// Apply all enabled mod rules
+	if loadedCount > 0 {
+		if err := manager.ApplyRules(); err != nil {
+			serverLogger.WithError(err).Warn("failed to apply mod rules")
+		} else {
+			stats := manager.GetStats()
+			serverLogger.WithFields(logrus.Fields{
+				"total_mods":   stats["total_mods"],
+				"enabled_mods": stats["enabled_mods"],
+				"active_rules": stats["active_rules"],
+			}).Info("mod rules applied")
+		}
+	}
+
+	serverLogger.WithFields(logrus.Fields{
+		"mods_loaded": loadedCount,
+		"mods_total":  len(mods),
+	}).Info("mod system initialized")
+
+	return manager
 }

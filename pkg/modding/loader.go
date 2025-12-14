@@ -32,20 +32,13 @@ func NewLoaderWithConfig(config ModConfig) *Loader {
 func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 	// Validate path is within mods directory if sandboxing enabled
 	if l.config.EnableSandbox {
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return nil, &LoadError{ModID: path, Err: err}
-		}
-
-		modsDir, err := filepath.Abs(l.config.ModsDirectory)
-		if err != nil {
-			return nil, &LoadError{ModID: path, Err: err}
-		}
-
-		if !strings.HasPrefix(absPath, modsDir) {
+		sandbox := NewSandboxWithConfig(SandboxConfig{
+			ModsDirectory: l.config.ModsDirectory,
+		})
+		if err := sandbox.ValidatePath(path); err != nil {
 			return nil, &LoadError{
 				ModID: path,
-				Err:   fmt.Errorf("path outside mods directory (sandbox violation)"),
+				Err:   err,
 			}
 		}
 	}
@@ -54,6 +47,14 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, &LoadError{ModID: path, Err: err}
+	}
+
+	// Check file size limit
+	if l.config.EnableSandbox && len(data) > 1024*1024 {
+		return nil, &LoadError{
+			ModID: path,
+			Err:   fmt.Errorf("mod file exceeds 1MB size limit"),
+		}
 	}
 
 	// Parse JSON
@@ -65,9 +66,22 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 	// Set load timestamp
 	mod.LoadedAt = time.Now()
 
-	// Validate
+	// Validate mod structure
 	if err := mod.Validate(); err != nil {
 		return nil, &LoadError{ModID: mod.ID, Err: err}
+	}
+
+	// Validate mod content against sandbox rules
+	if l.config.EnableSandbox {
+		sandbox := NewSandbox()
+		result := sandbox.ValidateMod(&mod)
+		if !result.Valid {
+			errMsg := ""
+			for _, e := range result.Errors {
+				errMsg += e.Error() + "; "
+			}
+			return nil, &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
+		}
 	}
 
 	return &mod, nil
@@ -135,21 +149,24 @@ func (l *Loader) SaveToFile(mod *Mod, path string) error {
 
 	// Validate path is within mods directory if sandboxing enabled
 	if l.config.EnableSandbox {
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return &LoadError{ModID: mod.ID, Err: err}
-		}
-
-		modsDir, err := filepath.Abs(l.config.ModsDirectory)
-		if err != nil {
-			return &LoadError{ModID: mod.ID, Err: err}
-		}
-
-		if !strings.HasPrefix(absPath, modsDir) {
+		sandbox := NewSandboxWithConfig(SandboxConfig{
+			ModsDirectory: l.config.ModsDirectory,
+		})
+		if err := sandbox.ValidatePath(path); err != nil {
 			return &LoadError{
 				ModID: mod.ID,
-				Err:   fmt.Errorf("path outside mods directory (sandbox violation)"),
+				Err:   err,
 			}
+		}
+
+		// Validate mod content against sandbox rules
+		result := sandbox.ValidateMod(mod)
+		if !result.Valid {
+			errMsg := ""
+			for _, e := range result.Errors {
+				errMsg += e.Error() + "; "
+			}
+			return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
 		}
 	}
 

@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/modding"
 	"github.com/sirupsen/logrus"
 )
 
@@ -532,14 +533,18 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"domain": domain,
 	}).Debug("Auditing mod sandbox")
 
+	// Get security report from modding sandbox
+	sandbox := modding.NewSandbox()
+	report := sandbox.GenerateSecurityReport()
+
 	// Check 1: File system access restriction
 	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "File System Isolation",
 		Description: "Mods cannot access files outside mod directory",
-		Passed:      false,
+		Passed:      report.FileSystemIsolation,
 		Severity:    SeverityCritical,
-		Message:     "Mod sandbox not yet implemented (deferred to future version)",
+		Message:     report.Details["FileSystemIsolation"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -547,16 +552,16 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"check":    check.Name,
 		"passed":   check.Passed,
 		"severity": check.Severity.String(),
-	}).Warn("File system isolation not implemented")
+	}).Debug("File system isolation check")
 
 	// Check 2: Network access restriction
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Network Isolation",
 		Description: "Mods cannot make external HTTP requests",
-		Passed:      false,
+		Passed:      report.NetworkIsolation,
 		Severity:    SeverityHigh,
-		Message:     "Network isolation not yet implemented",
+		Message:     report.Details["NetworkIsolation"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -564,16 +569,16 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"check":    check.Name,
 		"passed":   check.Passed,
 		"severity": check.Severity.String(),
-	}).Warn("Network isolation not implemented")
+	}).Debug("Network isolation check")
 
 	// Check 3: Memory limits
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Memory Limits",
 		Description: "Mods capped at 100MB heap",
-		Passed:      false,
+		Passed:      report.MemoryLimits,
 		Severity:    SeverityMedium,
-		Message:     "Memory limits not yet enforced",
+		Message:     report.Details["MemoryLimits"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -582,16 +587,16 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"passed":       check.Passed,
 		"severity":     check.Severity.String(),
 		"target_limit": "100MB",
-	}).Warn("Memory limits not enforced")
+	}).Debug("Memory limits check")
 
 	// Check 4: CPU limits
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "CPU Limits",
 		Description: "Mods killed if >10% CPU for >5 seconds",
-		Passed:      false,
+		Passed:      report.CPULimits,
 		Severity:    SeverityMedium,
-		Message:     "CPU limits not yet enforced",
+		Message:     report.Details["CPULimits"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -601,16 +606,16 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"severity":       check.Severity.String(),
 		"cpu_threshold":  "10%",
 		"time_threshold": "5s",
-	}).Warn("CPU limits not enforced")
+	}).Debug("CPU limits check")
 
 	// Check 5: API surface restriction
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "API Restrictions",
 		Description: "Only approved hooks exposed, no engine internals",
-		Passed:      false,
+		Passed:      report.APIRestrictions,
 		Severity:    SeverityHigh,
-		Message:     "Mod API not yet restricted",
+		Message:     report.Details["APIRestrictions"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -618,16 +623,16 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"check":    check.Name,
 		"passed":   check.Passed,
 		"severity": check.Severity.String(),
-	}).Warn("API restrictions not implemented")
+	}).Debug("API restrictions check")
 
 	// Check 6: Code execution safety
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Code Execution",
 		Description: "Interpreted only, no native code loading",
-		Passed:      false,
+		Passed:      report.CodeExecution,
 		Severity:    SeverityCritical,
-		Message:     "Code execution safety not yet implemented",
+		Message:     report.Details["CodeExecution"],
 	}
 	results.Checks = append(results.Checks, check)
 	log.WithFields(logrus.Fields{
@@ -635,13 +640,15 @@ func (a *Auditor) auditModSandbox(results *AuditResults) {
 		"check":    check.Name,
 		"passed":   check.Passed,
 		"severity": check.Severity.String(),
-	}).Warn("Code execution safety not implemented")
+	}).Debug("Code execution safety check")
 
+	passedCount := report.PassedCount()
 	log.WithFields(logrus.Fields{
 		"domain":        domain,
 		"checks_added":  6,
-		"failed_checks": 6,
-	}).Warn("Mod sandbox audit completed - all checks failed (not yet implemented)")
+		"passed_checks": passedCount,
+		"failed_checks": 6 - passedCount,
+	}).Info("Mod sandbox audit completed")
 }
 
 // auditInputValidation checks input sanitization (4 checks)

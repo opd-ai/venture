@@ -238,22 +238,22 @@ func TestModSandboxAudit(t *testing.T) {
 		t.Errorf("Expected 6 mod sandbox checks, got %d", len(results.Checks))
 	}
 
-	// All mod sandbox checks should fail (not implemented yet)
+	// All mod sandbox checks should now pass (sandbox implemented)
 	for _, check := range results.Checks {
-		if check.Passed {
-			t.Errorf("Mod sandbox check should fail (not implemented): %s", check.Name)
+		if !check.Passed {
+			t.Errorf("Mod sandbox check should pass: %s (got: %s)", check.Name, check.Message)
 		}
 	}
 
-	// Verify critical failures documented
+	// Verify no critical failures
 	criticalFails := 0
 	for _, check := range results.Checks {
 		if check.Severity == SeverityCritical && !check.Passed {
 			criticalFails++
 		}
 	}
-	if criticalFails != 2 {
-		t.Errorf("Expected 2 critical mod sandbox failures, got %d", criticalFails)
+	if criticalFails != 0 {
+		t.Errorf("Expected 0 critical mod sandbox failures, got %d", criticalFails)
 	}
 }
 

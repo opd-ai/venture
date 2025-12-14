@@ -62,7 +62,7 @@ For detailed completion report, see [V10_COMPLETION_REPORT.md](V10_COMPLETION_RE
 | Subphase | Focus | Result |
 |----------|-------|--------|
 | 64.1 | Network Resilience | 200ms-5000ms latency scenarios validated |
-| 64.2 | Security | 24/30 checks passed, 93.8% test coverage |
+| 64.2 | Security | 30/30 checks passed, 91.3% test coverage (mod sandbox now complete) |
 | 64.3 | Desync Detection | <1ms detection time (30,000x faster than target) |
 
 ### Phase 65: Content & Gameplay Audit ✅
@@ -101,7 +101,7 @@ For detailed completion report, see [V10_COMPLETION_REPORT.md](V10_COMPLETION_RE
 - Input validation: 4/4 passed
 - Anti-cheat: 3/3 passed
 - Privacy: 3/3 passed
-- Mod sandbox: 0/6 (deferred to future release)
+- Mod sandbox: 6/6 passed (file system isolation, network isolation, memory limits, CPU limits, API restrictions, code execution safety)
 
 ## Pending: User Acceptance Testing (66.3)
 

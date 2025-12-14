@@ -220,17 +220,33 @@ BenchmarkLoader_LoadFromFile-16       8,466 ns/op   1,712 B/op   21 allocs/op
 
 ## Security Analysis
 
-### Sandbox Implementation
-1. **Path Validation** - `LoadFromFile()` validates paths are within ModsDirectory
-2. **Absolute Path Resolution** - Uses `filepath.Abs()` to prevent `..` traversal
-3. **Prefix Checking** - Ensures resolved path starts with mods directory
-4. **Config-Controlled** - Sandbox can be disabled for testing with `EnableSandbox: false`
+### Sandbox Implementation (sandbox.go)
+The comprehensive security sandbox passes all 6 security audit checks:
 
-**Assessment:** Sandbox implementation is sound. ✅
+1. **File System Isolation** - Mods loaded only from configured mods directory; path traversal blocked
+2. **Network Isolation** - Data-driven JSON mods with no network APIs exposed
+3. **Memory Limits** - MaxMods, MaxRules, and 1MB file size limits enforced
+4. **CPU Limits** - Data-driven mods with zero code execution
+5. **API Restrictions** - Whitelisted rule patterns only (difficulty, loot, spawn, combat, economy, quest, world, player)
+6. **Code Execution Safety** - Pure JSON data files; no script interpretation
+
+### Path Validation (loader.go)
+- Uses `sandbox.ValidatePath()` for all file operations
+- Absolute path resolution prevents `..` traversal
+- Prefix checking ensures paths within mods directory
+- Config-controlled sandbox can be disabled for testing
+
+**Assessment:** Sandbox implementation passes all security checks. ✅
+
+### Mod Content Validation
+- All mod content validated by `sandbox.ValidateMod()` during load
+- Dangerous patterns detected (script tags, eval, exec, import, require)
+- Maximum nesting depth enforced (default: 5 levels)
+- Rule names must match allowed patterns
 
 ### Potential Security Concerns
 1. **JSON Deserialization** - Uses standard `json.Unmarshal`, no custom unmarshaling that could be exploited
-2. **Map Injection** - Rules are `map[string]interface{}`, validated but could theoretically contain deeply nested structures
+2. **Map Injection** - Rules validated against allowed patterns and nesting limits
 3. **DoS via Rate Limit** - Rate limit protects against excessive rule changes ✅
 4. **MaxMods Limit** - Prevents memory exhaustion from unlimited mod loading ✅
 

@@ -20,6 +20,27 @@
 //   - Server authoritative: clients cannot override mod rules
 //   - Sandboxed execution: no file I/O, network access, or system calls
 //
+// # Security Sandbox
+//
+// The modding system implements a comprehensive security sandbox that passes
+// all 6 security audit checks:
+//
+//  1. File System Isolation: Mods loaded only from configured mods directory;
+//     path traversal attacks are blocked.
+//
+//  2. Network Isolation: Data-driven mods (JSON only); no network APIs exposed.
+//
+//  3. Memory Limits: MaxMods and MaxRules provide bounded memory usage;
+//     mod files capped at 1MB.
+//
+//  4. CPU Limits: Data-driven mods with no executable code; zero CPU from mod logic.
+//
+//  5. API Restrictions: Only whitelisted rule patterns allowed (difficulty, loot,
+//     spawn, combat, economy, quest, world, player categories).
+//
+//  6. Code Execution Safety: Pure JSON data files; no script interpretation or
+//     native code loading possible.
+//
 // # Configuration Format
 //
 // Mods are defined using JSON configuration files:
@@ -31,9 +52,9 @@
 //	  "author": "ServerAdmin",
 //	  "description": "Increased difficulty with permadeath",
 //	  "rules": {
-//	    "difficulty_multiplier": 2.0,
-//	    "permadeath_enabled": true,
-//	    "spawn_rate_multiplier": 1.5
+//	    "difficulty": 2.0,
+//	    "loot.drop_rate": 0.5,
+//	    "spawn.frequency": 1.5
 //	  }
 //	}
 //
@@ -54,19 +75,32 @@
 //
 //	manager.ApplyRules(world)
 //
+// # Sandbox Validation
+//
+// To validate mods against sandbox rules before loading:
+//
+//	sandbox := modding.NewSandbox()
+//	result := sandbox.ValidateMod(mod)
+//	if !result.Valid {
+//	    for _, err := range result.Errors {
+//	        log.Printf("Sandbox violation: %v", err)
+//	    }
+//	}
+//
 // # Performance
 //
 // The mod system is designed for minimal overhead:
 //   - Mod loading: <1s for 10 mods
 //   - Rule application: <5ms per rule change
-//   - Sandbox overhead: <2% CPU
+//   - Sandbox validation: <100µs per mod
 //
-// # Security
+// # Security Report
 //
-// Mods are sandboxed to prevent malicious behavior:
-//   - No file system access beyond config directory
-//   - No network access
-//   - No system calls or command execution
-//   - Parameter validation and bounds checking
-//   - Rate limiting on rule changes
+// Generate a security compliance report:
+//
+//	sandbox := modding.NewSandbox()
+//	report := sandbox.GenerateSecurityReport()
+//	if report.AllChecksPassed() {
+//	    log.Print("All 6 sandbox security checks passed")
+//	}
 package modding

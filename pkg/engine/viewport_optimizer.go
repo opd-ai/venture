@@ -20,6 +20,9 @@ type ViewportOptimizer struct {
 	// Statistics
 	stats ViewportStats
 
+	// Reusable buffer for player entities to reduce per-frame allocations
+	playerBuffer []*Entity
+
 	// Logger for structured logging
 	logger *logrus.Entry
 }
@@ -39,9 +42,10 @@ func NewViewportOptimizer() *ViewportOptimizer {
 	logger.SetReportCaller(true)
 
 	vo := &ViewportOptimizer{
-		tileSize:    32.0,
-		marginTiles: 1, // 1-tile margin as per Phase 44
-		logger:      logger.WithField("system_name", "viewport_optimizer"),
+		tileSize:     32.0,
+		marginTiles:  1,                     // 1-tile margin as per Phase 44
+		playerBuffer: make([]*Entity, 0, 4), // Pre-allocate for typical player count (1-4)
+		logger:       logger.WithField("system_name", "viewport_optimizer"),
 	}
 
 	vo.logger.WithFields(logrus.Fields{
@@ -284,7 +288,8 @@ func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity
 		"visible_entities": len(visible),
 	}).Debug("Extracting player entities")
 
-	playerEntities := make([]*Entity, 0, 4)
+	// Reuse player buffer to reduce per-frame allocations
+	v.playerBuffer = v.playerBuffer[:0]
 
 	for _, entity := range allEntities {
 		if !entity.HasComponent("input") {
@@ -301,7 +306,7 @@ func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity
 		}
 
 		if !alreadyVisible {
-			playerEntities = append(playerEntities, entity)
+			v.playerBuffer = append(v.playerBuffer, entity)
 			v.logger.WithFields(logrus.Fields{
 				"entity_id": entity.ID,
 			}).Debug("Added player entity not in visible set")
@@ -309,10 +314,10 @@ func (v *ViewportOptimizer) extractPlayerEntities(allEntities, visible []*Entity
 	}
 
 	v.logger.WithFields(logrus.Fields{
-		"player_entities_count": len(playerEntities),
+		"player_entities_count": len(v.playerBuffer),
 	}).Debug("Player entity extraction completed")
 
-	return playerEntities
+	return v.playerBuffer
 }
 
 // Stats returns current viewport optimization statistics.

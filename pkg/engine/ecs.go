@@ -474,10 +474,10 @@ func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
 		}
 	}
 
-	// Return a slice of the buffer without copying.
-	// This is safe because the result is immediately cached by GetEntitiesWith
-	// and queryBuffer is reset at the start of each filterEntitiesByComponents call.
-	result := w.queryBuffer[:len(w.queryBuffer):len(w.queryBuffer)]
+	// Copy the buffer to avoid cache corruption.
+	// The queryBuffer is reused across calls, so cached results must have their own backing array.
+	result := make([]*Entity, len(w.queryBuffer))
+	copy(result, w.queryBuffer)
 	return result
 }
 

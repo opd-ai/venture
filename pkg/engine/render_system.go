@@ -185,6 +185,9 @@ type EbitenRenderSystem struct {
 	vertexBuffer []ebiten.Vertex
 	indexBuffer  []uint16
 
+	// Reusable buffer for player entities in viewport culling to reduce allocations
+	playerBuffer []*Entity
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -224,6 +227,7 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		sortCacheBuffer:  make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
 		vertexBuffer:     make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
 		indexBuffer:      make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
+		playerBuffer:     make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
 		ShowColliders:    false,
 		ShowGrid:         false,
 	}
@@ -679,7 +683,8 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 
 	// CRITICAL FIX: Always include local player(s) regardless of viewport culling
 	// Player entities have input component and should never be culled
-	playerEntities := make([]*Entity, 0, 4) // Pre-allocate for up to 4 players
+	// Reuse player buffer to reduce per-frame allocations
+	r.playerBuffer = r.playerBuffer[:0]
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
 			// Check if player is already in visible list
@@ -692,14 +697,14 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 			}
 			// Add player if not already visible
 			if !alreadyVisible {
-				playerEntities = append(playerEntities, entity)
+				r.playerBuffer = append(r.playerBuffer, entity)
 			}
 		}
 	}
 
 	// Append player entities to visible list
-	if len(playerEntities) > 0 {
-		visible = append(visible, playerEntities...)
+	if len(r.playerBuffer) > 0 {
+		visible = append(visible, r.playerBuffer...)
 	}
 
 	return visible

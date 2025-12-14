@@ -317,6 +317,9 @@ type InputSystem struct {
 
 	// Priority 2.1: Key binding registry for centralized binding management
 	keyBindings *KeyBindingRegistry
+
+	// Reusable buffer for pressed keys to reduce per-frame allocations
+	pressedKeysBuffer []ebiten.Key
 }
 
 // NewInputSystem creates a new input system with default key bindings.
@@ -372,6 +375,9 @@ func NewInputSystem() *InputSystem {
 
 		// Priority 2.1: Initialize key binding registry
 		keyBindings: NewKeyBindingRegistry(),
+
+		// Pre-allocate buffer for pressed keys (typical case: 1-4 keys pressed)
+		pressedKeysBuffer: make([]ebiten.Key, 0, 10),
 	}
 }
 
@@ -937,10 +943,12 @@ func (s *InputSystem) processSpellKeys(input *EbitenInput) {
 }
 
 // detectAnyKeyPress sets AnyKeyPressed flag if any key is pressed.
+// Uses reusable buffer to reduce per-frame allocations.
 func (s *InputSystem) detectAnyKeyPress(input *EbitenInput) {
 	if !input.AnyKeyPressed {
-		pressedKeys := inpututil.AppendPressedKeys(nil)
-		if len(pressedKeys) > 0 {
+		// Reuse buffer to reduce allocations in hot path
+		s.pressedKeysBuffer = inpututil.AppendPressedKeys(s.pressedKeysBuffer[:0])
+		if len(s.pressedKeysBuffer) > 0 {
 			input.AnyKeyPressed = true
 		}
 	}
@@ -1312,23 +1320,33 @@ func (s *InputSystem) IsKeyJustReleased(key ebiten.Key) bool {
 
 // GetPressedKeys returns a slice of all keys currently pressed.
 // BUG-003 fix: Needed for key binding UI and "press any key" prompts.
+// Note: Returns a copy to allow callers to safely store the result.
 func (s *InputSystem) GetPressedKeys() []ebiten.Key {
-	keys := make([]ebiten.Key, 0, 10) // Pre-allocate for common case
-	return inpututil.AppendPressedKeys(keys)
+	// Reuse buffer to reduce allocations, then copy for safe return
+	s.pressedKeysBuffer = inpututil.AppendPressedKeys(s.pressedKeysBuffer[:0])
+	if len(s.pressedKeysBuffer) == 0 {
+		return []ebiten.Key{} // Return empty slice, not nil (test expects non-nil)
+	}
+	result := make([]ebiten.Key, len(s.pressedKeysBuffer))
+	copy(result, s.pressedKeysBuffer)
+	return result
 }
 
 // IsAnyKeyPressed returns true if any keyboard key is currently pressed.
 // BUG-021 fix: Common pattern for "press any key to continue" scenarios.
+// Uses reusable buffer to reduce allocations.
 func (s *InputSystem) IsAnyKeyPressed() bool {
-	return len(inpututil.AppendPressedKeys(nil)) > 0
+	s.pressedKeysBuffer = inpututil.AppendPressedKeys(s.pressedKeysBuffer[:0])
+	return len(s.pressedKeysBuffer) > 0
 }
 
 // GetAnyPressedKey returns the first pressed key found, or (0, false) if none.
 // BUG-021 fix: Useful for key binding configuration UI.
+// Uses reusable buffer to reduce allocations.
 func (s *InputSystem) GetAnyPressedKey() (ebiten.Key, bool) {
-	keys := inpututil.AppendPressedKeys(nil)
-	if len(keys) > 0 {
-		return keys[0], true
+	s.pressedKeysBuffer = inpututil.AppendPressedKeys(s.pressedKeysBuffer[:0])
+	if len(s.pressedKeysBuffer) > 0 {
+		return s.pressedKeysBuffer[0], true
 	}
 	return 0, false
 }

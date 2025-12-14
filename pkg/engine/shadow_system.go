@@ -433,7 +433,8 @@ func (s *ShadowSystem) renderAOForEntity(target *ebiten.Image, ao *AmbientOcclus
 		return
 	}
 
-	aoImg := ebiten.NewImage(aoRadius*2, aoRadius*2)
+	// Use cached image to avoid per-frame allocations
+	aoImg := s.getCachedImage(aoRadius*2, aoRadius*2)
 
 	// Fill with dark color
 	aoColor := color.RGBA{0, 0, 0, uint8(ao.Intensity * 128)}
@@ -452,7 +453,8 @@ func (s *ShadowSystem) renderAOForEntity(target *ebiten.Image, ao *AmbientOcclus
 			return
 		}
 
-		cornerImg := ebiten.NewImage(cornerRadius*2, cornerRadius*2)
+		// Use cached image to avoid per-frame allocations
+		cornerImg := s.getCachedImage(cornerRadius*2, cornerRadius*2)
 		cornerColor := color.RGBA{0, 0, 0, uint8(ao.CornerAmount * 192)}
 		cornerImg.Fill(cornerColor)
 

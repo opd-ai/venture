@@ -13,8 +13,9 @@ import (
 // AISystem manages artificial intelligence behaviors for entities.
 // It implements a state machine that transitions between idle, patrol, chase, attack, and flee states.
 type AISystem struct {
-	world  *World
-	logger *logrus.Entry
+	world        *World
+	logger       *logrus.Entry
+	combatSystem *CombatSystem // Cached combat system to avoid per-attack allocations
 }
 
 // NewAISystem creates a new AI system.
@@ -27,8 +28,9 @@ func NewAISystem(world *World) *AISystem {
 		}
 	}
 	return &AISystem{
-		world:  world,
-		logger: logEntry,
+		world:        world,
+		logger:       logEntry,
+		combatSystem: NewCombatSystem(12345), // Pre-allocate combat system to avoid per-attack allocations
 	}
 }
 
@@ -760,8 +762,7 @@ func (ai *AISystem) setAttackAnimation(entity *Entity) {
 
 // executeCombatAttack performs the combat system attack.
 func (ai *AISystem) executeCombatAttack(entity *Entity, aiComp *AIComponent) {
-	combatSystem := NewCombatSystem(12345)
-	combatSystem.Attack(entity, aiComp.Target)
+	ai.combatSystem.Attack(entity, aiComp.Target)
 	if ai.logger != nil {
 		ai.logger.WithFields(logrus.Fields{
 			"entity_id": entity.ID,

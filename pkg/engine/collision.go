@@ -15,7 +15,8 @@ type CollisionSystem struct {
 	CellSize float64
 
 	// Spatial grid for broad-phase collision detection
-	grid map[int]map[int][]*Entity
+	// Uses flat map with composite key (x<<32 | y) to eliminate nested map allocations
+	flatGrid map[int64][]*Entity
 
 	// Collision callbacks
 	onCollision func(e1, e2 *Entity)
@@ -35,7 +36,7 @@ type CollisionSystem struct {
 func NewCollisionSystem(cellSize float64) *CollisionSystem {
 	return &CollisionSystem{
 		CellSize:         cellSize,
-		grid:             make(map[int]map[int][]*Entity),
+		flatGrid:         make(map[int64][]*Entity, 256), // Pre-allocate for typical grid size
 		collidableBuffer: make([]*Entity, 0, 256),
 		checkedPairPool: sync.Pool{
 			New: func() interface{} {
@@ -166,11 +167,9 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 
 // collectAndGridCollidableEntities filters entities with colliders and builds the spatial grid.
 func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) []*Entity {
-	// Clear grid instead of reallocating - reuse existing maps
-	for x := range s.grid {
-		for y := range s.grid[x] {
-			s.grid[x][y] = s.grid[x][y][:0]
-		}
+	// Clear flat grid - reuse existing slices
+	for key := range s.flatGrid {
+		s.flatGrid[key] = s.flatGrid[key][:0]
 	}
 
 	// Reuse collidableBuffer to reduce allocations
@@ -190,6 +189,12 @@ func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) [
 	}
 
 	return s.collidableBuffer
+}
+
+// makeCollisionGridKey creates a composite key from grid cell coordinates.
+// Uses the same pattern as makePairKey for consistency.
+func makeCollisionGridKey(x, y int) int64 {
+	return (int64(x) << 32) | (int64(y) & 0xFFFFFFFF)
 }
 
 // acquireCheckedPairs obtains a cleaned collision pair tracking map from the pool.
@@ -398,13 +403,11 @@ func (s *CollisionSystem) addToGrid(entity *Entity) {
 	maxCellX := int(math.Floor(maxX / s.CellSize))
 	maxCellY := int(math.Floor(maxY / s.CellSize))
 
-	// Add to all occupied cells
+	// Add to all occupied cells using flat grid
 	for x := minCellX; x <= maxCellX; x++ {
 		for y := minCellY; y <= maxCellY; y++ {
-			if s.grid[x] == nil {
-				s.grid[x] = make(map[int][]*Entity)
-			}
-			s.grid[x][y] = append(s.grid[x][y], entity)
+			key := makeCollisionGridKey(x, y)
+			s.flatGrid[key] = append(s.flatGrid[key], entity)
 		}
 	}
 }
@@ -437,8 +440,9 @@ func (s *CollisionSystem) getNearbyEntitiesPooled(entity *Entity) *nearbyResult 
 
 	for x := minCellX; x <= maxCellX; x++ {
 		for y := minCellY; y <= maxCellY; y++ {
-			if s.grid[x] != nil && s.grid[x][y] != nil {
-				for _, e := range s.grid[x][y] {
+			key := makeCollisionGridKey(x, y)
+			if entities := s.flatGrid[key]; len(entities) > 0 {
+				for _, e := range entities {
 					if !nr.seen[e.ID] {
 						nr.seen[e.ID] = true
 						nr.result = append(nr.result, e)

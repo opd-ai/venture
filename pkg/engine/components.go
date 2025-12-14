@@ -226,28 +226,10 @@ func (c *ColliderComponent) Deserialize(data []byte) error {
 // Returns min and max coordinates.
 // Note: Does not account for rotation. Use GetRotatedBounds() for rotated entities.
 func (c *ColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY float64) {
-	componentsLog.WithFields(logrus.Fields{
-		"component_type": "collider",
-		"x":              x,
-		"y":              y,
-		"width":          c.Width,
-		"height":         c.Height,
-		"offset_x":       c.OffsetX,
-		"offset_y":       c.OffsetY,
-	}).Debug("Calculating collider bounds")
-
 	minX = x + c.OffsetX
 	minY = y + c.OffsetY
 	maxX = minX + c.Width
 	maxY = minY + c.Height
-
-	componentsLog.WithFields(logrus.Fields{
-		"component_type": "collider",
-		"min_x":          minX,
-		"min_y":          minY,
-		"max_x":          maxX,
-		"max_y":          maxY,
-	}).Debug("Collider bounds calculated")
 
 	return minX, minY, maxX, maxY
 }
@@ -340,27 +322,10 @@ func (c *ColliderComponent) GetRotatedBounds(x, y, angle float64) (minX, minY, m
 // Intersects checks if this collider intersects with another collider.
 // Uses axis-aligned bounding boxes without rotation.
 func (c *ColliderComponent) Intersects(x1, y1 float64, other *ColliderComponent, x2, y2 float64) bool {
-	componentsLog.WithFields(logrus.Fields{
-		"component_type": "collider",
-		"operation":      "intersects",
-		"x1":             x1,
-		"y1":             y1,
-		"x2":             x2,
-		"y2":             y2,
-	}).Debug("Checking collider intersection")
-
 	minX1, minY1, maxX1, maxY1 := c.GetBounds(x1, y1)
 	minX2, minY2, maxX2, maxY2 := other.GetBounds(x2, y2)
 
-	intersects := !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
-
-	componentsLog.WithFields(logrus.Fields{
-		"component_type": "collider",
-		"operation":      "intersects",
-		"result":         intersects,
-	}).Debug("Collider intersection check completed")
-
-	return intersects
+	return !(maxX1 <= minX2 || maxX2 <= minX1 || maxY1 <= minY2 || maxY2 <= minY1)
 }
 
 // Issue #20 FIX: IntersectsRotated checks intersection accounting for rotation angles.

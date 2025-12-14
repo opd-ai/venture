@@ -24,8 +24,8 @@ func TestCollisionSystemRequiresConstructor(t *testing.T) {
 		t.Errorf("CellSize = %f, want %f", sys.CellSize, cellSize)
 	}
 
-	if sys.grid == nil {
-		t.Error("grid map not initialized")
+	if sys.flatGrid == nil {
+		t.Error("flatGrid map not initialized")
 	}
 }
 

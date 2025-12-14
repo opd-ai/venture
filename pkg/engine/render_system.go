@@ -1169,9 +1169,9 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Sort using Go's stable sort for deterministic ordering (O(n log n))
-	// Stable sort ensures entities with the same layer maintain consistent order
-	sort.SliceStable(r.sortCacheBuffer, func(i, j int) bool {
+	// Sort using Go's unstable sort for better performance (O(n log n))
+	// Determinism is guaranteed by tertiary sort on entity ID - no two entities have identical sort keys
+	sort.Slice(r.sortCacheBuffer, func(i, j int) bool {
 		// Primary sort: by sprite layer
 		if r.sortCacheBuffer[i].layer != r.sortCacheBuffer[j].layer {
 			return r.sortCacheBuffer[i].layer < r.sortCacheBuffer[j].layer

@@ -4,11 +4,13 @@
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| **Active** | 79 | 82.3% |
-| **Dormant** | 17 | 17.7% |
+| **Active** | 87 | 90.6% |
+| **Test/Utility** | 9 | 9.4% |
 | **Total** | 96 | 100% |
 
-**Note:** The project has achieved high integration levels. Most "dormant" packages are utility/test packages that don't require direct import (e.g., `pkg/visualtest`, `pkg/audit/features`, `pkg/procgen/audit`).
+**Note:** All production packages are now actively integrated. The remaining 9 packages are test utilities and audit frameworks that don't require direct import (e.g., `pkg/visualtest`, `pkg/audit/features`, `pkg/procgen/audit`).
+
+**Last Verified:** December 14, 2025
 
 ---
 
@@ -152,84 +154,20 @@
 
 ---
 
-## Dormant Packages (17 total)
+## Previously Dormant Packages (Now Active)
 
-### Production Integration Required
+All previously dormant packages have been verified as integrated via their respective ECS systems:
 
-These packages have complete implementations but are not imported by any entry point:
-
-#### `pkg/audio/synthesis`
-- **Completeness**: Complete (doc.go, envelope.go, oscillator.go, tests)
-- **Purpose**: Low-level waveform synthesis (sine, square, sawtooth, triangle, noise)
-- **Dependencies**: None (standalone)
-- **Blocker**: Not imported - used indirectly by `pkg/audio/music` and `pkg/audio/sfx`
-- **Integration**: Import in audio packages that need direct synthesis control
-- **Effort**: Small - may already be used transitively
-
-#### `pkg/integration/choice_consequences`
-- **Completeness**: Complete (doc.go, manager.go, types.go, tests)
-- **Purpose**: Persistent choice tracking, branching consequence system
-- **Dependencies**: `pkg/narrative/branching` (active)
-- **Blocker**: Not registered as ECS system in client
-- **Integration**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create: `choiceTracker := choice_consequences.NewChoiceTracker()`
-  3. Wire to narrative/quest systems
-- **Effort**: Medium - needs integration with narrative flow
-
-#### `pkg/integration/guild_vehicle`
-- **Completeness**: Complete (doc.go, fleet_manager.go, types.go, tests)
-- **Purpose**: Guild vehicle fleets with formations, siege engines
-- **Dependencies**: `pkg/network/federation/guild` (active), `pkg/engine` (active)
-- **Blocker**: Not registered - `guildVehicleSystem` exists but may not use this package
-- **Integration**: Already integrated via `sys.guildVehicleSystem` - verify import
-- **Effort**: Small - verify usage
-
-#### `pkg/integration/world_events`
-- **Completeness**: Complete (doc.go, manager.go, events.go, types.go, tests)
-- **Purpose**: Dynamic world events from player actions (guild wars, economy, weather)
-- **Dependencies**: `pkg/network/federation` (active), weather system (active)
-- **Blocker**: Not registered as system
-- **Integration**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create: `worldEventsManager := world_events.NewEventManager(seed)`
-  3. Register: `game.World.AddSystem(worldEventsSystemWrapper{...})`
-- **Effort**: Medium - new system wrapper needed
-
-#### `pkg/procgen/dialog`
-- **Completeness**: Complete (doc.go, markov.go, corpus.go, personality.go, tests)
-- **Purpose**: Markov chain NPC dialog generation with personality
-- **Dependencies**: Genre system (active)
-- **Blocker**: Engine has `MarkovDialogProvider` but unclear if using this package
-- **Integration**: Verify `pkg/engine/markov_dialog_provider.go` imports this
-- **Effort**: Small - likely already integrated
-
-#### `pkg/procgen/entity`
-- **Completeness**: Complete (doc.go, generator.go, merchant.go, types.go, tests)
-- **Purpose**: Procedural monster/NPC/boss generation
-- **Dependencies**: `pkg/procgen` (active)
-- **Blocker**: Entity spawning in engine may duplicate this
-- **Integration**: Consolidate with `pkg/engine/entity_spawning.go`
-- **Effort**: Medium - code consolidation needed
-
-#### `pkg/procgen/legendary`
-- **Completeness**: Complete (doc.go, generator.go, manager.go, types.go, tests)
-- **Purpose**: Legendary quest generation (multi-phase, cross-server)
-- **Dependencies**: `pkg/procgen/quest` (active), `pkg/world/raids` (active)
-- **Blocker**: `legendaryQuestSystem` exists in engine - verify import
-- **Integration**: Already integrated via `sys.legendaryQuestSystem` - verify import
-- **Effort**: Small - verify usage
-
-#### `pkg/world/economy`
-- **Completeness**: Complete (doc.go, marketplace.go, guild_bank.go, pricing_engine.go, tests)
-- **Purpose**: Federated marketplace, guild banks, dynamic pricing
-- **Dependencies**: `pkg/network/federation` (active), `pkg/network/trade` (active)
-- **Blocker**: Not imported - commerce/economy systems may duplicate
-- **Integration**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create: `marketplace := economy.NewFederatedMarketplace(...)`
-  3. Wire to trade UI and guild systems
-- **Effort**: Medium - significant integration with existing trade system
+| Package | Integrated Via | Verified |
+|---------|----------------|----------|
+| `pkg/audio/synthesis` | `pkg/audio/music`, `pkg/audio/sfx` | ✅ |
+| `pkg/integration/choice_consequences` | `pkg/engine/choice_consequences_system.go` | ✅ |
+| `pkg/integration/guild_vehicle` | `pkg/engine/guild_vehicle_system.go` | ✅ |
+| `pkg/integration/world_events` | `pkg/engine/world_events_system.go` | ✅ |
+| `pkg/procgen/dialog` | `pkg/engine/npcdialog_system.go`, `pkg/engine/markov_dialog_provider.go` | ✅ |
+| `pkg/procgen/entity` | `pkg/engine/entity_spawning.go`, `pkg/engine/merchant_spawn.go` | ✅ |
+| `pkg/procgen/legendary` | `pkg/engine/legendary_quest_system.go` | ✅ |
+| `pkg/world/economy` | `pkg/engine/economy_system.go` | ✅ |
 
 ### Test/Audit Packages (No Integration Needed)
 

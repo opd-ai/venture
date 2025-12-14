@@ -233,6 +233,9 @@ type EbitenRenderSystem struct {
 
 	// Pre-allocated DrawTrianglesOptions to avoid per-batch allocations
 	drawTrianglesOptions ebiten.DrawTrianglesOptions
+
+	// Pre-allocated DrawImageOptions to avoid per-sprite allocations in drawSpriteImage
+	drawImageOptions ebiten.DrawImageOptions
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -878,11 +881,14 @@ func (r *EbitenRenderSystem) selectSpriteImage(sprite *EbitenSprite) *ebiten.Ima
 }
 
 // drawSpriteImage renders a sprite image with visual effects applied.
+// Uses pre-allocated DrawImageOptions to avoid per-call heap allocations.
 func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSprite, screenX, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA float64) {
-	opts := &ebiten.DrawImageOptions{}
+	// Reset pre-allocated options to identity state
+	r.drawImageOptions.GeoM.Reset()
+	r.drawImageOptions.ColorScale.Reset()
 
 	if flashAlpha > 0 || tintR != 1.0 || tintG != 1.0 || tintB != 1.0 || tintA != 1.0 {
-		opts.ColorScale.ScaleWithColor(color.RGBA{
+		r.drawImageOptions.ColorScale.ScaleWithColor(color.RGBA{
 			R: uint8((tintR + flashAlpha) * 255),
 			G: uint8((tintG + flashAlpha) * 255),
 			B: uint8((tintB + flashAlpha) * 255),
@@ -890,10 +896,10 @@ func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSp
 		})
 	}
 
-	opts.GeoM.Translate(-sprite.Width/2, -sprite.Height/2)
-	opts.GeoM.Rotate(sprite.Rotation)
-	opts.GeoM.Translate(screenX, screenY+layerYOffset)
-	r.screen.DrawImage(img, opts)
+	r.drawImageOptions.GeoM.Translate(-sprite.Width/2, -sprite.Height/2)
+	r.drawImageOptions.GeoM.Rotate(sprite.Rotation)
+	r.drawImageOptions.GeoM.Translate(screenX, screenY+layerYOffset)
+	r.screen.DrawImage(img, &r.drawImageOptions)
 }
 
 // drawFallbackRect renders a colored rectangle when no sprite image exists.

@@ -255,3 +255,47 @@ func BenchmarkDrawBatchLarge(b *testing.B) {
 		renderSys.drawBatch(entities)
 	}
 }
+
+// BenchmarkDrawSpriteImage measures individual sprite drawing performance
+// This tests the hot path for entities that don't go through batch rendering
+// (e.g., entities with directional sprites or visual effects)
+func BenchmarkDrawSpriteImage(b *testing.B) {
+	world := NewWorld()
+
+	// Create camera system
+	cameraSys := NewCameraSystem(800, 600)
+	camera := world.CreateEntity()
+	camera.AddComponent(&PositionComponent{X: 0, Y: 0})
+	camera.AddComponent(&CameraComponent{Zoom: 1.0})
+	cameraSys.SetActiveCamera(camera)
+
+	// Create render system with camera
+	renderSys := NewRenderSystem(cameraSys)
+
+	// Create sprite image
+	spriteImg := ebiten.NewImage(32, 32)
+	spriteImg.Fill(color.White)
+
+	// Create sprite component
+	sprite := &EbitenSprite{
+		Image:    spriteImg,
+		Width:    32,
+		Height:   32,
+		Visible:  true,
+		Color:    color.White,
+		Rotation: 0.5,
+	}
+
+	// Create screen
+	screen := ebiten.NewImage(800, 600)
+	renderSys.screen = screen
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		// Simulate rendering 100 sprites individually (like directional sprites)
+		for j := 0; j < 100; j++ {
+			renderSys.drawSpriteImage(spriteImg, sprite, float64(j*8), float64(j*8), 0, 0, 1.0, 1.0, 1.0, 1.0)
+		}
+	}
+}

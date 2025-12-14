@@ -6,7 +6,8 @@
         android ios mobile-deps \
         run-client run-server serve-wasm \
         validate-code-review release package checksums sign \
-        docker docker-build docker-run docker-stop
+        docker docker-build docker-run docker-stop \
+        feature-audit visual-regression parity-test quality
 
 # Default target
 .DEFAULT_GOAL := help
@@ -270,5 +271,22 @@ docker-stop: ## Stop Docker containers
 	docker-compose down
 
 docker: docker-run ## Alias for docker-run
+
+# Development Tools (Phase 5: PLAN.md)
+feature-audit: ## Run feature completeness audit (Phase 65.1)
+	@echo "Running feature completeness audit..."
+	go run ./examples/featureaudit
+
+visual-regression: ## Run visual regression tests (Phase 63)
+	@echo "Running visual regression tests..."
+	xvfb-run -s "-screen 0 1920x1080x24" go run ./examples/visualregressiontest
+
+parity-test: ## Run cross-platform parity tests (Phase 63.3)
+	@echo "Running parity tests..."
+	go run ./examples/paritytest
+
+quality: feature-audit visual-regression parity-test ## Run all quality validation tools
+	@echo ""
+	@echo "✓ All quality checks passed!"
 
 .PHONY: help

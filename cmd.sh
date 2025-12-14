@@ -4,7 +4,7 @@
 # (must be a positive integer)
 ITER=15
 
-alias copilot="yes n | copilot --model claude-sonnet-4.5"
+alias copilot="yes n | copilot --model claude-opus-4.5"
 
 fix() { 
     go test -race ./...
@@ -96,6 +96,7 @@ dev() {
     impl
     perf
     review
+    fix
     #integrate
     #play
 }

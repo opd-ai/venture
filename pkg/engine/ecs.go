@@ -456,11 +456,19 @@ func (w *World) processPendingEntityAdditions() {
 // Returns a slice that will be cached - caller must not modify the returned slice.
 func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
 	w.queryBuffer = w.queryBuffer[:0]
-	if cap(w.queryBuffer) < len(w.entities) {
-		w.queryBuffer = make([]*Entity, 0, len(w.entities))
+
+	// Ensure entity list cache is up to date
+	if w.entityListDirty {
+		w.rebuildEntityCache()
 	}
 
-	for _, entity := range w.entities {
+	if cap(w.queryBuffer) < len(w.cachedEntityList) {
+		w.queryBuffer = make([]*Entity, 0, len(w.cachedEntityList))
+	}
+
+	// Iterate over cached entity list (slice) instead of entities map
+	// Slice iteration is significantly faster than map iteration
+	for _, entity := range w.cachedEntityList {
 		if entityHasAllComponents(entity, componentTypes) {
 			w.queryBuffer = append(w.queryBuffer, entity)
 		}

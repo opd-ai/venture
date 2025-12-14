@@ -13,6 +13,79 @@ Generate two documents:
 
 ---
 
+## Critical Integration Lessons Learned
+
+### Component Initialization: NEVER Use Lazy Initialization
+
+**Problem Discovered**: The `AdaptiveSoundtrackSystem` used lazy initialization - creating the `AdaptiveSoundtrackComponent` on first `Update()` call. This caused nil pointer panics due to ECS query cache staleness.
+
+**Root Cause**: 
+1. `Entity.AddComponent()` does NOT invalidate the `World`'s query cache (Entity has no reference to World)
+2. `GetEntitiesWith()` uses cached results that can become stale when components are added/removed
+3. If cache returns an entity but the component value is nil, type assertions panic
+
+**Solution**: **Always add components during entity creation, NEVER during system Update()**.
+
+```go
+// ❌ BAD: Lazy initialization in System.Update()
+func (s *MySoundSystem) Update(deltaTime float64) {
+    entities := s.world.GetEntitiesWith("my_sound")
+    if len(entities) == 0 {
+        // Fall back to finding player and adding component dynamically
+        players := s.world.GetEntitiesWith("position", "health")
+        player := players[0]
+        player.AddComponent(NewMySoundComponent()) // DANGER: Cache not invalidated!
+    }
+}
+
+// ✅ GOOD: Add component during entity creation
+func createPlayerEntity(game *engine.EbitenGame, ...) *engine.Entity {
+    player := game.World.CreateEntity()
+    player.AddComponent(&engine.PositionComponent{X: x, Y: y})
+    player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+    // ... other core components ...
+    
+    // Audio components - add during creation, not lazily
+    player.AddComponent(engine.NewAdaptiveSoundtrackComponent(genreID))
+    player.AddComponent(engine.NewMusicTriggerComponent())
+    
+    return player
+}
+```
+
+### Defensive Component Access Pattern
+
+**Always** check both the boolean return AND nil before type assertion:
+
+```go
+// ❌ BAD: Ignores boolean, panics on nil
+comp, _ := entity.GetComponent("my_component")
+myComp := comp.(*MyComponent) // PANIC if comp is nil
+
+// ✅ GOOD: Check both ok AND nil
+comp, ok := entity.GetComponent("my_component")
+if ok && comp != nil {
+    myComp := comp.(*MyComponent)
+    // Safe to use myComp
+}
+```
+
+### Component Integration Checklist
+
+When integrating a new component type, verify:
+
+- [ ] Component is added during entity creation (not lazily in Update)
+- [ ] All `GetComponent()` calls check both `ok` AND `comp != nil`
+- [ ] Component is added to ALL relevant entity creation paths:
+  - [ ] `cmd/client/handlers.go` - desktop client player creation
+  - [ ] `cmd/mobile/mobile.go` - mobile client player creation  
+  - [ ] `cmd/server/main.go` - server-side entity creation (if applicable)
+  - [ ] `pkg/engine/entity_spawning.go` - procedural entity spawning
+- [ ] Corresponding system is unconditionally registered via `AddSystem()`
+- [ ] Tests verify component exists after entity creation
+
+---
+
 ## Phase 1: Establish Baseline (Active Systems)
 
 ### Step 1.1: Extract Client Imports
@@ -149,6 +222,36 @@ Example for `pkg/companion/learning/`:
 - **Small (S)**: Import + 1-2 line registration
 - **Medium (M)**: New initialization code or UI wiring
 - **Large (L)**: Multiple system integrations
+
+### Step 5.4: ECS Query Cache Awareness
+
+**Critical**: The ECS query cache is invalidated when:
+- Entities are added/removed from World
+- `World.Update()` processes pending entity additions
+
+The cache is **NOT** invalidated when:
+- Components are added/removed from existing entities via `Entity.AddComponent()`
+- Component values are modified
+
+**Implication**: Systems that add components during `Update()` may experience stale cache results on subsequent frames. Always add required components during entity creation.
+
+### Step 5.5: Complete Integration Verification
+
+After integrating a component/system, verify with this checklist:
+
+```bash
+# 1. Verify component is added during entity creation
+grep -rn "AddComponent.*New<ComponentName>" cmd/client/ cmd/mobile/ cmd/server/
+
+# 2. Verify system is unconditionally registered  
+grep -rn "AddSystem.*New<SystemName>\|world\.AddSystem" cmd/client/ cmd/server/
+
+# 3. Verify defensive nil checks in system Update()
+grep -A3 "GetComponent.*<component_type>" pkg/engine/<system_file>.go
+
+# 4. Run tests for the integrated system
+go test -v ./pkg/engine/... -run <SystemName>
+```
 
 ---
 
@@ -330,7 +433,108 @@ After each phase:
 - ❌ `-enable-*` flags — No toggles
 - ❌ `-sprite-size`, `-tile-size` flags — Hardcode constants
 - ❌ "Optional" integration — Everything is mandatory
+- ❌ Lazy component initialization in `System.Update()` — Causes cache staleness
+- ❌ Ignoring `GetComponent()` boolean return — Causes nil panics
+- ❌ Adding components to only one client (desktop but not mobile)
 - ✅ Unconditional `AddSystem()` calls
 - ✅ Direct imports without guards
 - ✅ Always-on initialization
 - ✅ Hardcoded enhanced graphics defaults
+- ✅ Components added during entity creation
+- ✅ Defensive nil checks: `if ok && comp != nil`
+- ✅ Consistent component addition across all clients
+
+---
+
+## Common Integration Failure Modes
+
+### 1. Nil Component Panic
+**Symptom**: `panic: interface conversion: engine.Component is nil, not *engine.FooComponent`
+
+**Cause**: System calls `GetEntitiesWith("foo")`, gets entity from stale cache, component is nil.
+
+**Fix**:
+1. Add defensive nil check in system: `if ok && comp != nil`
+2. Add component during entity creation, not lazily in Update()
+3. Verify component added in ALL entity creation paths
+
+### 2. Component Not Found After Adding
+**Symptom**: `GetEntitiesWith("new_component")` returns empty even after `AddComponent()`
+
+**Cause**: ECS query cache not invalidated after component addition to existing entity.
+
+**Fix**:
+1. Call `world.InvalidateQueryCache()` after adding components to existing entities
+2. Better: Add components during entity creation before first `Update()`
+
+### 3. Mobile/Desktop Feature Parity
+**Symptom**: Feature works on desktop but crashes on mobile (or vice versa)
+
+**Cause**: Component/system only integrated in one client entry point.
+
+**Fix**: Always integrate in both:
+- `cmd/client/handlers.go` — Desktop client
+- `cmd/mobile/mobile.go` — Mobile client
+- Verify with: `grep -l "NewFooComponent" cmd/client/ cmd/mobile/`
+
+### 4. System Registration Order
+**Symptom**: System A depends on data from System B but runs first
+
+**Cause**: Systems registered in wrong order; Update() order matters.
+
+**Fix**: Register dependent systems AFTER their dependencies:
+```go
+// ✅ Correct order
+world.AddSystem(audioManagerSystem)           // Provides audio context
+world.AddSystem(adaptiveSoundtrackSystem)     // Depends on audio context
+world.AddSystem(musicTriggerSystem)           // Depends on soundtrack state
+```
+
+### 5. Missing Wrapper for System Interface
+**Symptom**: System implements `Update(deltaTime float64)` but World expects `Update(entities []*Entity, deltaTime float64)`
+
+**Cause**: System uses self-contained pattern but isn't wrapped.
+
+**Fix**: Create wrapper struct:
+```go
+type fooSystemWrapper struct {
+    system *FooSystem
+}
+
+func (w *fooSystemWrapper) Update(entities []*Entity, deltaTime float64) {
+    w.system.Update(deltaTime) // Delegate to actual system
+}
+
+// Register wrapped version
+world.AddSystem(&fooSystemWrapper{system: fooSystem})
+```
+
+---
+
+## Entity Creation Integration Template
+
+When integrating a new component, add it following this template pattern:
+
+```go
+// In createPlayerEntity() or equivalent:
+
+// === PHASE XX: ComponentName ===
+// Add component for feature description
+player.AddComponent(engine.NewFooComponent(requiredParams))
+if verbose {
+    clientLogger.WithFields(logrus.Fields{
+        "component": "foo",
+        "param1":    requiredParams.Field1,
+    }).Debug("foo component added")
+}
+```
+
+**Files to update for player components:**
+1. `cmd/client/handlers.go` — `createPlayerEntity()` and/or `addPlayerComponents()`
+2. `cmd/mobile/mobile.go` — Player creation section
+3. `pkg/engine/entity_spawning.go` — If component applies to NPCs/enemies
+
+**Files to update for system registration:**
+1. `cmd/client/handlers.go` — `initializeV*Systems()` functions
+2. `cmd/client/util.go` — System wrapper definitions (if needed)
+3. `cmd/server/main.go` — Server-side systems (if applicable)

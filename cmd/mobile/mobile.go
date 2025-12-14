@@ -275,6 +275,9 @@ func initializeGame() {
 	// Add visual feedback
 	playerEntity.AddComponent(engine.NewVisualFeedbackComponent())
 
+	// Add adaptive soundtrack component for dynamic music (Phase 29)
+	playerEntity.AddComponent(engine.NewAdaptiveSoundtrackComponent(genreID))
+
 	// Add starter items
 	addStarterItems(playerInventory, worldSeed, genreID)
 

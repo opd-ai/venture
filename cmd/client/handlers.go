@@ -1946,6 +1946,9 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 		MaxInbox: 50,
 	})
 
+	// Add adaptive soundtrack component for dynamic music (Phase 29)
+	player.AddComponent(engine.NewAdaptiveSoundtrackComponent(*genreID))
+
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")
 	addStarterItems(playerInventory, *seed, *genreID, logger)

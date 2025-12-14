@@ -100,9 +100,13 @@ func (s *AdaptiveSoundtrackSystem) Update(deltaTime float64) {
 	soundtrackEntities := s.world.GetEntitiesWith("adaptive_soundtrack")
 	if len(soundtrackEntities) > 0 {
 		player = soundtrackEntities[0]
-		comp, _ := player.GetComponent("adaptive_soundtrack")
-		soundtrackComp = comp.(*AdaptiveSoundtrackComponent)
-	} else {
+		comp, ok := player.GetComponent("adaptive_soundtrack")
+		if ok && comp != nil {
+			soundtrackComp = comp.(*AdaptiveSoundtrackComponent)
+		}
+	}
+
+	if soundtrackComp == nil {
 		// Fall back to finding player by position+health
 		players := s.world.GetEntitiesWith("position", "health")
 		if len(players) == 0 {

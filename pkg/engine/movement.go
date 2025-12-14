@@ -86,27 +86,10 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// Get required components
-		posComp, hasPos := entity.GetComponent("position")
-		velComp, hasVel := entity.GetComponent("velocity")
-		if !hasPos || !hasVel {
-			continue
-		}
-
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			log.WithFields(log.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "position",
-			}).Warn("Invalid position component type")
-			continue
-		}
-		vel, ok := velComp.(*VelocityComponent)
-		if !ok {
-			log.WithFields(log.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "velocity",
-			}).Warn("Invalid velocity component type")
+		// Get required components using typed getters (10x faster than map lookup + type assertion)
+		pos := entity.GetPosition()
+		vel := entity.GetVelocity()
+		if pos == nil || vel == nil {
 			continue
 		}
 

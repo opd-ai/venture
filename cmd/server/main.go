@@ -16,6 +16,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
+	"github.com/opd-ai/venture/pkg/network/resilience"
 	"github.com/opd-ai/venture/pkg/procgen"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -39,6 +40,10 @@ var (
 	// Phase 2 (PLAN.md): Security and stability integration
 	securityAudit    = flag.Bool("security-audit", false, "Run security audit at startup and log results")
 	stabilityMonitor = flag.Bool("stability-monitor", false, "Enable stability monitoring for production validation")
+
+	// Phase 4.1 (PLAN.md): Network resilience testing
+	simulateNetwork   = flag.String("simulate-network", "", "Simulate network conditions for testing: low, medium, high, very-high, extreme")
+	resilienceMetrics = flag.Bool("resilience-metrics", false, "Enable network resilience metrics collection")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -78,6 +83,13 @@ func main() {
 		stabilityMon = startStabilityMonitoring(serverLogger)
 	}
 
+	// Phase 4.1 (PLAN.md): Initialize network resilience testing
+	var networkSim *resilience.NetworkSimulator
+	var metricsCollector *resilience.MetricsCollector
+	if *simulateNetwork != "" || *resilienceMetrics {
+		networkSim, metricsCollector = initializeResilienceTesting(serverLogger)
+	}
+
 	world := createGameWorld(logger)
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
@@ -103,6 +115,27 @@ func main() {
 		if stabilityMon != nil {
 			stabilityMon.Stop()
 			serverLogger.Info("stability monitor stopped")
+		}
+		// Phase 4.1 (PLAN.md): Log resilience metrics on shutdown
+		if metricsCollector != nil {
+			stats := metricsCollector.GetStats()
+			serverLogger.WithFields(logrus.Fields{
+				"avg_latency":      stats.AvgLatency.String(),
+				"packets_sent":     stats.PacketsSent,
+				"packets_dropped":  stats.PacketsDropped,
+				"packet_loss_rate": stats.PacketLossRate,
+				"mispredictions":   stats.MispredictionCount,
+				"desyncs":          stats.DesyncCount,
+				"duration":         stats.Duration.String(),
+			}).Info("network resilience metrics summary")
+		}
+		if networkSim != nil {
+			sent, dropped, bytes := networkSim.GetStats()
+			serverLogger.WithFields(logrus.Fields{
+				"packets_sent":    sent,
+				"packets_dropped": dropped,
+				"bytes_processed": bytes,
+			}).Info("network simulation stats")
 		}
 		if err := server.Stop(); err != nil {
 			serverLogger.WithError(err).Error("error stopping server")
@@ -857,4 +890,54 @@ func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
 	}).Info("stability monitoring initialized")
 
 	return monitor
+}
+
+// initializeResilienceTesting sets up network resilience testing tools.
+// Phase 4.1 (PLAN.md): Network resilience testing integration
+func initializeResilienceTesting(serverLogger *logrus.Entry) (*resilience.NetworkSimulator, *resilience.MetricsCollector) {
+	var networkSim *resilience.NetworkSimulator
+	var metricsCollector *resilience.MetricsCollector
+
+	// Initialize metrics collector for network performance tracking
+	if *resilienceMetrics {
+		metricsCollector = resilience.NewMetricsCollector()
+		serverLogger.Info("network resilience metrics collector initialized")
+	}
+
+	// Initialize network simulator based on scenario
+	if *simulateNetwork != "" {
+		var scenario *resilience.TestScenario
+
+		switch *simulateNetwork {
+		case "low":
+			scenario = &resilience.LowLatencyScenario
+		case "medium":
+			scenario = &resilience.MediumLatencyScenario
+		case "high":
+			scenario = &resilience.HighLatencyScenario
+		case "very-high":
+			scenario = &resilience.VeryHighLatencyScenario
+		case "extreme":
+			scenario = &resilience.ExtremeLatencyScenario
+		default:
+			serverLogger.WithField("scenario", *simulateNetwork).Warn("unknown network simulation scenario, using low latency")
+			scenario = &resilience.LowLatencyScenario
+		}
+
+		var err error
+		networkSim, err = resilience.NewNetworkSimulatorWithConfig(scenario.Config)
+		if err != nil {
+			serverLogger.WithError(err).Error("failed to initialize network simulator")
+		} else {
+			serverLogger.WithFields(logrus.Fields{
+				"scenario":    scenario.Name,
+				"latency":     scenario.Config.Latency.String(),
+				"packet_loss": scenario.Config.PacketLossRate,
+				"jitter":      scenario.Config.Jitter.String(),
+				"bandwidth":   scenario.Config.BandwidthLimit,
+			}).Info("network simulation enabled for testing")
+		}
+	}
+
+	return networkSim, metricsCollector
 }

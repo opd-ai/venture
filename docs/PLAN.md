@@ -81,85 +81,16 @@ Packages integrated with unconditional activation.
 
 ---
 
-## Phase 3: System Registration (Week 1)
+## Phase 3: System Registration ✅
 
-Packages with systems that need `AddSystem()` registration.
+All packages integrated via engine wrapper systems in `cmd/client/handlers.go`.
 
-### 3.1 `pkg/integration/choice_consequences`
-- **LOC**: 1,545 | **Tests**: 1 | **Completeness**: Complete
-- **Blocker**: System not registered
-- **Dependencies**: None (standalone)
-- **Integration**:
-  1. File: `cmd/client/handlers.go`
-  2. Add import:
-     ```go
-     import "github.com/opd-ai/venture/pkg/integration/choice_consequences"
-     ```
-  3. Create and register system in `initializeV10Systems()`:
-     ```go
-     choiceSystem := choice_consequences.NewSystem()
-     game.World.AddSystem(choiceSystem)
-     ```
-- **Effort**: Small
+- [x] **`pkg/integration/choice_consequences`** - Wrapped by `engine.ChoiceConsequencesSystem`
+- [x] **`pkg/integration/guild_vehicle`** - Wrapped by `engine.GuildVehicleSystem`
+- [x] **`pkg/integration/territory_siege`** - Wrapped by `engine.TerritorySiegeSystem`
+- [x] **`pkg/integration/world_events`** - Wrapped by `engine.WorldEventsSystem`
 
-### 3.2 `pkg/integration/guild_vehicle`
-- **LOC**: 1,433 | **Tests**: 2 | **Completeness**: Complete
-- **Blocker**: System not registered
-- **Dependencies**: `pkg/network/federation/guild`, `pkg/engine/physics/vehicle`
-- **Integration**:
-  1. File: `cmd/client/handlers.go`
-  2. Add import:
-     ```go
-     import "github.com/opd-ai/venture/pkg/integration/guild_vehicle"
-     ```
-  3. Create and register system:
-     ```go
-     guildVehicleSys := guild_vehicle.NewSystem(federationGuildClient, vehicleSystem)
-     game.World.AddSystem(guildVehicleSys)
-     ```
-- **Effort**: Small
-
-### 3.3 `pkg/integration/territory_siege`
-- **LOC**: 1,925 | **Tests**: 4 | **Completeness**: Complete
-- **Blocker**: System not registered
-- **Dependencies**: `pkg/engine`, `pkg/network/federation/guild`, `pkg/world`
-- **Integration**:
-  1. File: `cmd/client/handlers.go`
-  2. Add import:
-     ```go
-     import "github.com/opd-ai/venture/pkg/integration/territory_siege"
-     ```
-  3. Register system:
-     ```go
-     siegeSys := territory_siege.NewSystem(world, guildClient)
-     game.World.AddSystem(siegeSys)
-     ```
-- **Effort**: Small
-
-### 3.4 `pkg/integration/world_events`
-- **LOC**: 1,876 | **Tests**: 2 | **Completeness**: Complete
-- **Blocker**: System not registered
-- **Dependencies**: `pkg/procgen`
-- **Integration**:
-  1. File: `cmd/client/handlers.go`
-  2. Add import:
-     ```go
-     import "github.com/opd-ai/venture/pkg/integration/world_events"
-     ```
-  3. Register system:
-     ```go
-     worldEventsSys := world_events.NewSystem(seed)
-     game.World.AddSystem(worldEventsSys)
-     ```
-- **Effort**: Small
-
-### Phase 3 Verification
-```bash
-go build ./cmd/client
-go test ./pkg/integration/choice_consequences/... ./pkg/integration/guild_vehicle/... ./pkg/integration/territory_siege/... ./pkg/integration/world_events/...
-# Run client and verify systems activate
-./client -verbose 2>&1 | grep -i "world_events\|siege\|guild_vehicle\|choice"
-```
+**Completed: December 2025**
 
 ---
 

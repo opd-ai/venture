@@ -202,7 +202,10 @@ func TestTournamentSystem_UnregisterPlayer(t *testing.T) {
 	}
 
 	// Check component state
-	tcComp, _ := player.GetComponent("tournament")
+	tcComp, ok := player.GetComponent("tournament")
+	if !ok {
+		t.Fatal("tournament component not found")
+	}
 	tc := tcComp.(*TournamentComponent)
 	if tc.IsInTournament() {
 		t.Error("Player should not be in tournament after unregistering")
@@ -278,7 +281,10 @@ func TestTournamentSystem_CancelTournament(t *testing.T) {
 	}
 
 	// Player should be released
-	tc, _ := player.GetComponent("tournament")
+	tc, ok := player.GetComponent("tournament")
+	if !ok {
+		t.Fatal("tournament component not found")
+	}
 	tournComp := tc.(*TournamentComponent)
 	if tournComp.IsInTournament() {
 		t.Error("Player should not be in tournament after cancel")

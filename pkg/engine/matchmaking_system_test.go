@@ -282,6 +282,9 @@ func TestMatchmakingSystem_AcceptMatch(t *testing.T) {
 		system.AddToQueue(players[i], MatchmakingMode1v1)
 	}
 
+	// Flush entities to the world so they can be looked up by ID
+	world.FlushPendingEntities()
+
 	// Create match
 	system.Update([]*Entity{}, 0.016)
 
@@ -317,6 +320,9 @@ func TestMatchmakingSystem_DeclineMatch(t *testing.T) {
 		players[i].AddComponent(NewPvPRatingComponent("season-1"))
 		system.AddToQueue(players[i], MatchmakingMode1v1)
 	}
+
+	// Flush entities to the world so they can be looked up by ID
+	world.FlushPendingEntities()
 
 	// Create match
 	system.Update([]*Entity{}, 0.016)
@@ -393,6 +399,9 @@ func TestMatchmakingSystem_ProcessExpiredMatches(t *testing.T) {
 		player.AddComponent(NewPvPRatingComponent("season-1"))
 		system.AddToQueue(player, MatchmakingMode1v1)
 	}
+
+	// Flush entities to the world so they can be looked up by ID
+	world.FlushPendingEntities()
 
 	// Create match
 	system.Update([]*Entity{}, 0.016)

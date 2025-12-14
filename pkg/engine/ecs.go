@@ -525,6 +525,13 @@ func (w *World) InvalidateQueryCache() {
 	w.invalidateQueryCache()
 }
 
+// FlushPendingEntities processes pending entity additions immediately.
+// This ensures newly created entities are available via GetEntity()
+// without waiting for the next Update() cycle.
+func (w *World) FlushPendingEntities() {
+	w.processPendingEntityAdditions()
+}
+
 // GetSystems returns all registered systems.
 func (w *World) GetSystems() []System {
 	return w.systems

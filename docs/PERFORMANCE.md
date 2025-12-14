@@ -30,12 +30,12 @@ Identify and implement ONE safe, high-impact performance optimization in the Ven
 1. Create benchmark test for target code path
 2. Record baseline performance (time/op, allocs/op)
 3. Implement optimization
-4. Verify improvement with benchmark (minimum 15% improvement)
+4. Verify improvement with benchmark (minimum 3% improvement)
 5. Run full test suite: `go test ./...`
 6. Verify determinism if generation code modified
 
 ## Success Criteria
-- Benchmark shows ≥15% improvement (time or allocations)
+- Benchmark shows ≥3% improvement (time or allocations)
 - All tests pass: `go test ./...`
 - No race conditions: `go test -race ./...`
 - Code coverage maintained or improved

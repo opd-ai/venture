@@ -151,6 +151,9 @@ type DialogOption struct {
 
 	// Enabled determines if option can be selected
 	Enabled bool
+
+	// Payload carries additional data for the action (e.g., quest ID)
+	Payload string
 }
 
 // DialogAction represents the type of action triggered by a dialog choice.
@@ -167,6 +170,10 @@ const (
 	ActionStartQuest
 	// ActionGiveItem gives an item to the player (future enhancement)
 	ActionGiveItem
+	// ActionOfferEventQuest offers an event-specific quest to the player
+	ActionOfferEventQuest
+	// ActionCompleteEventQuest turns in a completed event quest
+	ActionCompleteEventQuest
 )
 
 // String returns the string representation of a dialog action.
@@ -182,6 +189,10 @@ func (d DialogAction) String() string {
 		return "start_quest"
 	case ActionGiveItem:
 		return "give_item"
+	case ActionOfferEventQuest:
+		return "offer_event_quest"
+	case ActionCompleteEventQuest:
+		return "complete_event_quest"
 	default:
 		return "unknown"
 	}

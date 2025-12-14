@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** IN PROGRESS - 50% Complete (2/4 phases done)  
+**Status:** IN PROGRESS - 75% Complete (3/4 phases done)  
 **Prerequisites:** V11.0 Complete (Living World)  
 **Timeline:** December 2025 - Q1 2026  
 **Focus:** Procedural seasonal events and holiday-themed content
@@ -77,8 +77,8 @@ Procedurally generate visual decorations for cities and NPCs during events.
 - [x] Test coverage ≥65%
 
 ### Phase 73: Event Quests
-**Status:** Not Started  
-**Target:** January 2026
+**Status:** ✅ Complete  
+**Completed:** December 14, 2025
 
 Generate time-limited quests unique to each seasonal event.
 
@@ -87,14 +87,26 @@ Generate time-limited quests unique to each seasonal event.
 - `EventQuestSystem` - manages event quest lifecycle
 - Integration with existing quest generator (`pkg/procgen/quest`)
 - 3 quest types per event: collection, exploration, boss
-- Event-specific NPCs and dialog
+- Event-specific NPCs and dialog (via `DialogOption` with `ActionOfferEventQuest`/`ActionCompleteEventQuest`)
 - Quest failure/timeout handling when event ends
 
+**Files Created:**
+- `pkg/engine/event_quest_component.go`
+- `pkg/engine/event_quest_component_test.go`
+- `pkg/engine/event_quest_system.go`
+- `pkg/engine/event_quest_system_test.go`
+- `pkg/engine/event_quest_integration_test.go`
+
+**Files Modified:**
+- `pkg/engine/commerce_components.go` - Added `ActionOfferEventQuest`, `ActionCompleteEventQuest`, and `Payload` field to `DialogOption`
+
+**Test Coverage:** 85%+ average (most functions at 100%)
+
 **Acceptance Criteria:**
-- [ ] Event quests available only during events
-- [ ] Quests properly expire when event ends
-- [ ] Integration with Living World NPCs
-- [ ] Test coverage ≥65%
+- [x] Event quests available only during events
+- [x] Quests properly expire when event ends
+- [x] Integration with Living World NPCs
+- [x] Test coverage ≥65%
 
 ### Phase 74: Event Rewards
 **Status:** Not Started  

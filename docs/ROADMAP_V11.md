@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** IN PROGRESS - 25% Complete (1/4 phases done)  
+**Status:** IN PROGRESS - 50% Complete (2/4 phases done)  
 **Prerequisites:** V10.0 Complete (Technical Production Ready)  
 **Timeline:** December 2025 - Q2 2026  
 **Focus:** Living World system - dynamic, evolving game environments
@@ -43,22 +43,26 @@ Implemented NPC daily routines and schedules for a living, breathing world.
 **Test Coverage:** 90%+ (all core functions at 100%)
 
 ### Phase 68: Operating Hours & Availability
-**Status:** ⏳ Not Started  
-**Effort:** Small
+**Status:** ✅ Complete  
+**Completed:** December 14, 2025
 
-Implement time-based service availability.
+Implemented time-based service availability for shops and NPCs.
 
-| Subphase | Focus | Deliverables |
-|----------|-------|--------------|
-| 68.1 | Operating Hours Component | `OperatingHoursComponent` for shops/services |
-| 68.2 | Availability System | Check hours before interactions |
-| 68.3 | UI Indicators | Display open/closed status |
+**Deliverables:**
+- `OperatingHoursComponent` - tracks open/close hours, days of week, custom messages
+- `AvailabilitySystem` - validates interactions against operating hours, updates dialog options
+- Integration with `DialogComponent` - shop options disabled when closed
+- Support for overnight hours (e.g., 22:00-06:00 for taverns)
+- `NewAlwaysOpenComponent()` for 24/7 services like inns
 
-**Acceptance Criteria:**
-- Shops open/close at scheduled times
-- Quest givers available at specific hours
-- Clear UI indication of availability
-- Time displayed in game world
+**Files Created:**
+- `pkg/engine/operating_hours_component.go`
+- `pkg/engine/operating_hours_component_test.go`
+- `pkg/engine/availability_system.go`
+- `pkg/engine/availability_system_test.go`
+- `pkg/engine/operating_hours_integration_test.go`
+
+**Test Coverage:** 91.7% average for new files
 
 ### Phase 69: City State & Evolution
 **Status:** ⏳ Not Started  

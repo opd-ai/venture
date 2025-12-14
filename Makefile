@@ -7,7 +7,7 @@
         run-client run-server serve-wasm \
         validate-code-review release package checksums sign \
         docker docker-build docker-run docker-stop \
-        feature-audit visual-regression parity-test quality
+        feature-audit visual-regression parity-test balance-validate quality
 
 # Default target
 .DEFAULT_GOAL := help
@@ -285,7 +285,11 @@ parity-test: ## Run cross-platform parity tests (Phase 63.3)
 	@echo "Running parity tests..."
 	go run ./examples/paritytest
 
-quality: feature-audit visual-regression parity-test ## Run all quality validation tools
+balance-validate: build-server ## Run combat/economic balance validation (Phase 6.1)
+	@echo "Running balance validation..."
+	./$(BUILD_DIR)/venture-server --balance-validate
+
+quality: feature-audit visual-regression parity-test balance-validate ## Run all quality validation tools
 	@echo ""
 	@echo "✓ All quality checks passed!"
 

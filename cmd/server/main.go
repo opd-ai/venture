@@ -6,12 +6,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"image/color"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/balance"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
@@ -45,6 +47,9 @@ var (
 	simulateNetwork   = flag.String("simulate-network", "", "Simulate network conditions for testing: low, medium, high, very-high, extreme")
 	resilienceMetrics = flag.Bool("resilience-metrics", false, "Enable network resilience metrics collection")
 
+	// Phase 6.1 (PLAN.md): Balance validation integration
+	balanceValidate = flag.Bool("balance-validate", false, "Run combat and economic balance validation at startup")
+
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
 	v9StationManager      interface{}
@@ -75,6 +80,11 @@ func main() {
 	// Phase 2 (PLAN.md): Run security audit if enabled
 	if *securityAudit {
 		runSecurityAudit(serverLogger)
+	}
+
+	// Phase 6.1 (PLAN.md): Run balance validation if enabled
+	if *balanceValidate {
+		runBalanceValidation(serverLogger)
 	}
 
 	// Phase 2 (PLAN.md): Start stability monitoring if enabled
@@ -940,4 +950,68 @@ func initializeResilienceTesting(serverLogger *logrus.Entry) (*resilience.Networ
 	}
 
 	return networkSim, metricsCollector
+}
+
+// runBalanceValidation performs combat and economic balance validation at startup.
+// Phase 6.1 (PLAN.md): Balance package integration for gameplay validation
+func runBalanceValidation(serverLogger *logrus.Entry) {
+	serverLogger.Info("running balance validation at startup")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	config := balance.NewDefaultConfig()
+	config.Seed = *seed
+
+	// Use reduced simulation counts for faster startup validation
+	config.SimulationCounts["Combat"] = 1000
+	config.SimulationCounts["Economic"] = 500
+
+	// Run combat validation
+	combatValidator := balance.NewCombatValidator(config)
+	combatResult, err := combatValidator.Validate(ctx)
+	if err != nil {
+		serverLogger.WithError(err).Error("combat balance validation failed")
+	} else {
+		logBalanceResult(serverLogger, combatResult)
+	}
+
+	// Run economic validation
+	economicValidator := balance.NewEconomicValidator(config)
+	economicResult, err := economicValidator.Validate(ctx)
+	if err != nil {
+		serverLogger.WithError(err).Error("economic balance validation failed")
+	} else {
+		logBalanceResult(serverLogger, economicResult)
+	}
+
+	serverLogger.Info("balance validation completed")
+}
+
+// logBalanceResult logs the results of a balance validation run.
+func logBalanceResult(serverLogger *logrus.Entry, result *balance.ValidationResult) {
+	fields := logrus.Fields{
+		"domain":           result.Domain,
+		"passed":           result.Passed,
+		"simulation_count": result.SimulationCount,
+		"duration_sec":     result.Duration,
+		"issue_count":      len(result.Issues),
+	}
+
+	// Add key metrics to log output
+	for key, value := range result.Metrics {
+		fields[key] = value
+	}
+
+	if result.Passed {
+		serverLogger.WithFields(fields).Info("balance validation passed")
+	} else {
+		serverLogger.WithFields(fields).Warn("balance validation detected issues")
+		for _, issue := range result.Issues {
+			serverLogger.WithField("domain", result.Domain).Warn(issue)
+		}
+		for _, rec := range result.Recommendations {
+			serverLogger.WithField("domain", result.Domain).Info("recommendation: " + rec)
+		}
+	}
 }

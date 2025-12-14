@@ -153,11 +153,13 @@ make quality  # Runs all quality tools locally
 
 These packages require significant work or have external dependencies.
 
-### 6.1 `pkg/balance`
-- **LOC**: 1,232 | **Status**: Complete but unused
-- **Blocker**: No system consumers
-- **Action**: Design integration points for combat/economy balancing
-- **Effort**: Medium
+### 6.1 `pkg/balance` ✅
+- **LOC**: 1,232 | **Status**: Integrated
+- **Integration**: Added `--balance-validate` flag to `cmd/server/main.go`
+- **Usage**: `./server --balance-validate` or `make balance-validate`
+- **CI/CD**: Added to `.github/workflows/quality.yml` for automated validation
+- **Coverage**: 81.0%
+- **Completed**: December 2025
 
 ### 6.2 `pkg/migration`
 - **LOC**: 619 | **Status**: Complete

@@ -1073,7 +1073,7 @@ func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Col
 
 	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
 	defer func() {
-		if r := recover(); r != nil {
+		if recovered := recover(); recovered != nil {
 			// Silently ignore - this can happen during Ebiten initialization
 		}
 	}()

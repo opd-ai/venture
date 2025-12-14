@@ -64,19 +64,25 @@ func (p *PreciseColliderComponent) Type() string {
 // QuantizePosition rounds a position to the nearest collision precision unit.
 // This ensures consistent collision detection at 0.1-pixel precision.
 func QuantizePosition(x, y float64) (float64, float64) {
-	collisionLog.WithFields(logrus.Fields{
-		"input_x":   x,
-		"input_y":   y,
-		"precision": CollisionPrecision,
-	}).Debug("Quantizing position")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"input_x":   x,
+			"input_y":   y,
+			"precision": CollisionPrecision,
+		}).Debug("Quantizing position")
+	}
 
 	qx := math.Round(x/CollisionPrecision) * CollisionPrecision
 	qy := math.Round(y/CollisionPrecision) * CollisionPrecision
 
-	collisionLog.WithFields(logrus.Fields{
-		"quantized_x": qx,
-		"quantized_y": qy,
-	}).Debug("Position quantized")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"quantized_x": qx,
+			"quantized_y": qy,
+		}).Debug("Position quantized")
+	}
 
 	return qx, qy
 }
@@ -84,15 +90,19 @@ func QuantizePosition(x, y float64) (float64, float64) {
 // GetBounds returns the axis-aligned bounding box for this collider.
 // Returns min and max coordinates with sub-pixel precision.
 func (p *PreciseColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY float64) {
-	collisionLog.WithFields(logrus.Fields{
-		"component_type": "precise_collider",
-		"position_x":     x,
-		"position_y":     y,
-		"width":          p.Width,
-		"height":         p.Height,
-		"offset_x":       p.OffsetX,
-		"offset_y":       p.OffsetY,
-	}).Debug("Getting collider bounds")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"component_type": "precise_collider",
+			"position_x":     x,
+			"position_y":     y,
+			"width":          p.Width,
+			"height":         p.Height,
+			"offset_x":       p.OffsetX,
+			"offset_y":       p.OffsetY,
+		}).Debug("Getting collider bounds")
+	}
 
 	minX = x + p.OffsetX
 	minY = y + p.OffsetY
@@ -103,26 +113,31 @@ func (p *PreciseColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, ma
 	minX, minY = QuantizePosition(minX, minY)
 	maxX, maxY = QuantizePosition(maxX, maxY)
 
-	collisionLog.WithFields(logrus.Fields{
-		"min_x": minX,
-		"min_y": minY,
-		"max_x": maxX,
-		"max_y": maxY,
-	}).Debug("Bounds calculated and quantized")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"min_x": minX,
+			"min_y": minY,
+			"max_x": maxX,
+			"max_y": maxY,
+		}).Debug("Bounds calculated and quantized")
+	}
 
 	return minX, minY, maxX, maxY
 }
 
 // IntersectsAABB checks AABB intersection with sub-pixel precision.
 func (p *PreciseColliderComponent) IntersectsAABB(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":      "intersects_aabb",
-		"component_type": "precise_collider",
-		"pos1_x":         x1,
-		"pos1_y":         y1,
-		"pos2_x":         x2,
-		"pos2_y":         y2,
-	}).Debug("Checking AABB intersection")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	if collisionLog.GetLevel() >= logrus.DebugLevel {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":      "intersects_aabb",
+			"component_type": "precise_collider",
+			"pos1_x":         x1,
+			"pos1_y":         y1,
+			"pos2_x":         x2,
+			"pos2_y":         y2,
+		}).Debug("Checking AABB intersection")
+	}
 
 	minX1, minY1, maxX1, maxY1 := p.GetBounds(x1, y1)
 	minX2, minY2, maxX2, maxY2 := other.GetBounds(x2, y2)
@@ -135,24 +150,31 @@ func (p *PreciseColliderComponent) IntersectsAABB(x1, y1 float64, other *Precise
 		maxY1 <= minY2+epsilon ||
 		maxY2 <= minY1+epsilon)
 
-	collisionLog.WithFields(logrus.Fields{
-		"intersects": intersects,
-		"epsilon":    epsilon,
-	}).Debug("AABB intersection check completed")
+	// OPTIMIZATION: Check log level before allocating Fields map
+	if collisionLog.GetLevel() >= logrus.DebugLevel {
+		collisionLog.WithFields(logrus.Fields{
+			"intersects": intersects,
+			"epsilon":    epsilon,
+		}).Debug("AABB intersection check completed")
+	}
 
 	return intersects
 }
 
 // IntersectsCircle checks circle-circle intersection.
 func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":      "intersects_circle",
-		"component_type": "precise_collider",
-		"pos1_x":         x1,
-		"pos1_y":         y1,
-		"pos2_x":         x2,
-		"pos2_y":         y2,
-	}).Debug("Checking circle intersection")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":      "intersects_circle",
+			"component_type": "precise_collider",
+			"pos1_x":         x1,
+			"pos1_y":         y1,
+			"pos2_x":         x2,
+			"pos2_y":         y2,
+		}).Debug("Checking circle intersection")
+	}
 
 	// Calculate centers
 	centerX1 := x1 + p.OffsetX + p.Width/2.0
@@ -172,13 +194,15 @@ func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *Preci
 
 	intersects := distSq <= radiusSum*radiusSum+CollisionPrecision
 
-	collisionLog.WithFields(logrus.Fields{
-		"intersects":  intersects,
-		"distance_sq": distSq,
-		"radius_sum":  radiusSum,
-		"radius1":     radius1,
-		"radius2":     radius2,
-	}).Debug("Circle intersection check completed")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"intersects":  intersects,
+			"distance_sq": distSq,
+			"radius_sum":  radiusSum,
+			"radius1":     radius1,
+			"radius2":     radius2,
+		}).Debug("Circle intersection check completed")
+	}
 
 	return intersects
 }
@@ -186,16 +210,20 @@ func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *Preci
 // IntersectsRoundedRect checks intersection with rounded rectangle.
 // Uses hybrid approach: AABB for core, circles for corners.
 func (p *PreciseColliderComponent) IntersectsRoundedRect(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":      "intersects_rounded_rect",
-		"component_type": "precise_collider",
-		"pos1_x":         x1,
-		"pos1_y":         y1,
-		"pos2_x":         x2,
-		"pos2_y":         y2,
-		"corner_radius1": p.CornerRadius,
-		"corner_radius2": other.CornerRadius,
-	}).Debug("Checking rounded rectangle intersection")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":      "intersects_rounded_rect",
+			"component_type": "precise_collider",
+			"pos1_x":         x1,
+			"pos1_y":         y1,
+			"pos2_x":         x2,
+			"pos2_y":         y2,
+			"corner_radius1": p.CornerRadius,
+			"corner_radius2": other.CornerRadius,
+		}).Debug("Checking rounded rectangle intersection")
+	}
 
 	// First check core AABB (excluding corner radius)
 	coreMinX1 := x1 + p.OffsetX + p.CornerRadius
@@ -215,15 +243,19 @@ func (p *PreciseColliderComponent) IntersectsRoundedRect(x1, y1 float64, other *
 		coreMaxX2 <= coreMinX1+epsilon ||
 		coreMaxY1 <= coreMinY2+epsilon ||
 		coreMaxY2 <= coreMinY1+epsilon) {
-		collisionLog.WithFields(logrus.Fields{
-			"result": true,
-			"reason": "core_aabb_overlap",
-		}).Debug("Rounded rectangle intersection: AABB cores overlap")
+		if debugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"result": true,
+				"reason": "core_aabb_overlap",
+			}).Debug("Rounded rectangle intersection: AABB cores overlap")
+		}
 		return true
 	}
 
 	// Check corner circles if AABBs don't overlap
-	collisionLog.Debug("Checking corner circles for rounded rectangle intersection")
+	if debugEnabled {
+		collisionLog.Debug("Checking corner circles for rounded rectangle intersection")
+	}
 	corners1 := p.getCornerPositions(x1, y1)
 	corners2 := other.getCornerPositions(x2, y2)
 
@@ -234,21 +266,25 @@ func (p *PreciseColliderComponent) IntersectsRoundedRect(x1, y1 float64, other *
 			distSq := dx*dx + dy*dy
 			radiusSum := p.CornerRadius + other.CornerRadius
 			if distSq <= radiusSum*radiusSum+CollisionPrecision {
-				collisionLog.WithFields(logrus.Fields{
-					"result":      true,
-					"reason":      "corner_collision",
-					"corner1_idx": i,
-					"corner2_idx": j,
-					"distance_sq": distSq,
-				}).Debug("Rounded rectangle intersection: corners collide")
+				if debugEnabled {
+					collisionLog.WithFields(logrus.Fields{
+						"result":      true,
+						"reason":      "corner_collision",
+						"corner1_idx": i,
+						"corner2_idx": j,
+						"distance_sq": distSq,
+					}).Debug("Rounded rectangle intersection: corners collide")
+				}
 				return true
 			}
 		}
 	}
 
-	collisionLog.WithFields(logrus.Fields{
-		"result": false,
-	}).Debug("Rounded rectangle intersection check completed: no collision")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"result": false,
+		}).Debug("Rounded rectangle intersection check completed: no collision")
+	}
 
 	return false
 }
@@ -268,31 +304,41 @@ func (p *PreciseColliderComponent) getCornerPositions(x, y float64) [4][2]float6
 
 // Intersects checks intersection based on shape type.
 func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":      "intersects",
-		"component_type": "precise_collider",
-		"shape1":         p.Shape,
-		"shape2":         other.Shape,
-		"pos1_x":         x1,
-		"pos1_y":         y1,
-		"pos2_x":         x2,
-		"pos2_y":         y2,
-	}).Debug("Determining collision check method based on shapes")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":      "intersects",
+			"component_type": "precise_collider",
+			"shape1":         p.Shape,
+			"shape2":         other.Shape,
+			"pos1_x":         x1,
+			"pos1_y":         y1,
+			"pos2_x":         x2,
+			"pos2_y":         y2,
+		}).Debug("Determining collision check method based on shapes")
+	}
 
 	// Use most specific shape check
 	if p.Shape == ShapeCircle && other.Shape == ShapeCircle {
-		collisionLog.Debug("Using circle-circle intersection")
+		if debugEnabled {
+			collisionLog.Debug("Using circle-circle intersection")
+		}
 		return p.IntersectsCircle(x1, y1, other, x2, y2)
 	}
 
 	if (p.Shape == ShapeRoundedRect || other.Shape == ShapeRoundedRect) &&
 		(p.CornerRadius > 0 || other.CornerRadius > 0) {
-		collisionLog.Debug("Using rounded rectangle intersection")
+		if debugEnabled {
+			collisionLog.Debug("Using rounded rectangle intersection")
+		}
 		return p.IntersectsRoundedRect(x1, y1, other, x2, y2)
 	}
 
 	// Default to AABB
-	collisionLog.Debug("Using AABB intersection (default)")
+	if debugEnabled {
+		collisionLog.Debug("Using AABB intersection (default)")
+	}
 	return p.IntersectsAABB(x1, y1, other, x2, y2)
 }
 
@@ -300,14 +346,18 @@ func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColl
 // This enables smooth wall sliding instead of getting stuck on walls.
 // Returns a normalized vector perpendicular to the wall surface.
 func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
-	collisionLog.WithFields(logrus.Fields{
-		"operation": "compute_wall_normal",
-		"entity_x":  entityX,
-		"entity_y":  entityY,
-		"wall_x":    wallX,
-		"wall_y":    wallY,
-		"precision": CollisionPrecision,
-	}).Debug("Computing wall normal for collision")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation": "compute_wall_normal",
+			"entity_x":  entityX,
+			"entity_y":  entityY,
+			"wall_x":    wallX,
+			"wall_y":    wallY,
+			"precision": CollisionPrecision,
+		}).Debug("Computing wall normal for collision")
+	}
 
 	// Vector from wall to entity
 	dx := entityX - wallX
@@ -317,12 +367,14 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 	length := math.Sqrt(dx*dx + dy*dy)
 	if length < CollisionPrecision {
 		// Default to upward normal if too close
-		collisionLog.WithFields(logrus.Fields{
-			"result":   "default_normal",
-			"length":   length,
-			"normal_x": 0.0,
-			"normal_y": -1.0,
-		}).Debug("Entities too close, using default upward normal")
+		if debugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"result":   "default_normal",
+				"length":   length,
+				"normal_x": 0.0,
+				"normal_y": -1.0,
+			}).Debug("Entities too close, using default upward normal")
+		}
 		return EdgeNormal{NX: 0, NY: -1}
 	}
 
@@ -331,11 +383,13 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 		NY: dy / length,
 	}
 
-	collisionLog.WithFields(logrus.Fields{
-		"normal_x": normal.NX,
-		"normal_y": normal.NY,
-		"length":   length,
-	}).Debug("Wall normal computed and normalized")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"normal_x": normal.NX,
+			"normal_y": normal.NY,
+			"length":   length,
+		}).Debug("Wall normal computed and normalized")
+	}
 
 	return normal
 }
@@ -343,13 +397,17 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 // ApplyWallSlide projects velocity along a wall surface for smooth sliding.
 // Takes current velocity and wall normal, returns adjusted velocity that slides along the wall.
 func ApplyWallSlide(vx, vy float64, normal EdgeNormal) (newVX, newVY float64) {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":  "apply_wall_slide",
-		"velocity_x": vx,
-		"velocity_y": vy,
-		"normal_x":   normal.NX,
-		"normal_y":   normal.NY,
-	}).Debug("Applying wall slide to velocity")
+	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
+	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":  "apply_wall_slide",
+			"velocity_x": vx,
+			"velocity_y": vy,
+			"normal_x":   normal.NX,
+			"normal_y":   normal.NY,
+		}).Debug("Applying wall slide to velocity")
+	}
 
 	// Project velocity onto wall tangent (perpendicular to normal)
 	// Tangent is (-normal.NY, normal.NX) for 2D
@@ -363,13 +421,15 @@ func ApplyWallSlide(vx, vy float64, normal EdgeNormal) (newVX, newVY float64) {
 	newVX = dotProduct * tangentX
 	newVY = dotProduct * tangentY
 
-	collisionLog.WithFields(logrus.Fields{
-		"new_velocity_x": newVX,
-		"new_velocity_y": newVY,
-		"tangent_x":      tangentX,
-		"tangent_y":      tangentY,
-		"dot_product":    dotProduct,
-	}).Debug("Wall slide velocity calculated")
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"new_velocity_x": newVX,
+			"new_velocity_y": newVY,
+			"tangent_x":      tangentX,
+			"tangent_y":      tangentY,
+			"dot_product":    dotProduct,
+		}).Debug("Wall slide velocity calculated")
+	}
 
 	return newVX, newVY
 }

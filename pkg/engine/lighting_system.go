@@ -50,6 +50,10 @@ type LightingSystem struct {
 	// Light circle image cache - keyed by diameter to avoid per-frame allocations
 	// This dramatically reduces allocations in the hot applyPointLight path
 	lightCircleCache map[int]*ebiten.Image
+
+	// Reusable DrawImageOptions to eliminate per-light allocations in hot path
+	// Reset and reused for each point light in applyPointLight
+	lightDrawOpts ebiten.DrawImageOptions
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -699,16 +703,21 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	// Fix: Implement gradient shader or pre-generated gradient texture with alpha falloff
 	// Roadmap: ROADMAP_V3.md Phase 17.1 - Soft Shadows & Colored Lighting (bloom/glow complete, gradients deferred)
 	// Temporary: Simple circle fill provides acceptable visual quality, gradient is optimization
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(x-radius), float64(y-radius))
+	//
+	// OPTIMIZATION: Reuse cached DrawImageOptions to eliminate per-light heap allocations
+	// Previous: opts := &ebiten.DrawImageOptions{} - allocated 1 struct per light per frame
+	// Now: Reuse s.lightDrawOpts with Reset() - zero allocations in hot path
+	s.lightDrawOpts.GeoM.Reset()
+	s.lightDrawOpts.ColorScale.Reset()
+	s.lightDrawOpts.GeoM.Translate(float64(x-radius), float64(y-radius))
 
 	// Modulate by light color and intensity
 	r := float64(lwp.light.Color.R) / 255.0 * intensity * 0.15 // 0.15 is blend strength (very subtle lighting)
 	g := float64(lwp.light.Color.G) / 255.0 * intensity * 0.15
 	b := float64(lwp.light.Color.B) / 255.0 * intensity * 0.15
 
-	opts.ColorScale.Scale(float32(r), float32(g), float32(b), 1.0)
-	opts.Blend = ebiten.BlendLighter // Additive blending
+	s.lightDrawOpts.ColorScale.Scale(float32(r), float32(g), float32(b), 1.0)
+	s.lightDrawOpts.Blend = ebiten.BlendLighter // Additive blending
 
 	// Minimal implementation: draw a filled white circle as the light influence
 	diameter := 2 * radius
@@ -726,7 +735,7 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 
 	// Use cached light circle image to avoid per-frame allocations
 	lightImg := s.getCachedLightCircle(diameter)
-	lightBuffer.DrawImage(lightImg, opts)
+	lightBuffer.DrawImage(lightImg, &s.lightDrawOpts)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

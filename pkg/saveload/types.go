@@ -282,6 +282,10 @@ type WorldState struct {
 
 	// Phase 42: Active meta-game events
 	ActiveEvents []WorldEventData `json:"active_events,omitempty"`
+
+	// Phase 70: Living World Memory (V11.0)
+	// Persists city states, NPC states, world events, and player reputations
+	LivingWorldMemory *LivingWorldMemoryData `json:"living_world_memory,omitempty"`
 }
 
 // ModifiedEntity represents an entity that has been modified from its
@@ -334,6 +338,79 @@ type WorldEventData struct {
 	ExpiresAt    time.Time              `json:"expires_at"`
 	Participants []string               `json:"participants,omitempty"`
 	State        map[string]interface{} `json:"state,omitempty"`
+}
+
+// LivingWorldMemoryData represents the Phase 70 living world state for persistence.
+// This tracks city states, NPC states, world events, and player reputations
+// across game sessions to create a persistent, evolving world.
+type LivingWorldMemoryData struct {
+	// WorldSeed is the deterministic seed for this world
+	WorldSeed int64 `json:"world_seed"`
+	// LastSaveTime is the in-game time when world was last saved
+	LastSaveTime float64 `json:"last_save_time"`
+	// CityStates stores serialized city state data by city ID
+	CityStates map[string]LivingCityStateData `json:"city_states,omitempty"`
+	// NPCStates stores serialized NPC state data by entity ID
+	NPCStates map[string]LivingNPCStateData `json:"npc_states,omitempty"`
+	// EventHistory stores recent significant world events
+	EventHistory []LivingWorldEventRecord `json:"event_history,omitempty"`
+	// PlayerReputations stores per-city reputation by player ID
+	PlayerReputations map[string]map[string]float64 `json:"player_reputations,omitempty"`
+	// TimeProgressionEnabled allows world to advance while player is away
+	TimeProgressionEnabled bool `json:"time_progression_enabled"`
+	// TimeProgressionRate is the multiplier for offline time advancement
+	TimeProgressionRate float64 `json:"time_progression_rate"`
+}
+
+// LivingCityStateData represents serialized city state for living world persistence.
+type LivingCityStateData struct {
+	CityID            string  `json:"city_id"`
+	CityName          string  `json:"city_name"`
+	Prosperity        float64 `json:"prosperity"`
+	Population        int     `json:"population"`
+	MaxPopulation     int     `json:"max_population"`
+	Infrastructure    float64 `json:"infrastructure"`
+	Defense           float64 `json:"defense"`
+	State             string  `json:"state"`
+	TradeVolume       float64 `json:"trade_volume"`
+	ResourceStockpile float64 `json:"resource_stockpile"`
+	Seed              int64   `json:"seed"`
+}
+
+// LivingNPCStateData represents serialized NPC state for living world persistence.
+type LivingNPCStateData struct {
+	EntityID           string                        `json:"entity_id"`
+	Name               string                        `json:"name"`
+	X                  float64                       `json:"x"`
+	Y                  float64                       `json:"y"`
+	HomeX              float64                       `json:"home_x"`
+	HomeY              float64                       `json:"home_y"`
+	CurrentActivityIdx int                           `json:"current_activity_idx"`
+	Schedule           []LivingScheduledActivityData `json:"schedule,omitempty"`
+	IsMoving           bool                          `json:"is_moving"`
+	LastUpdateHour     int                           `json:"last_update_hour"`
+}
+
+// LivingScheduledActivityData represents a scheduled activity for NPC persistence.
+type LivingScheduledActivityData struct {
+	ActivityType string  `json:"activity_type"`
+	StartHour    int     `json:"start_hour"`
+	EndHour      int     `json:"end_hour"`
+	LocationX    float64 `json:"location_x"`
+	LocationY    float64 `json:"location_y"`
+	LocationName string  `json:"location_name"`
+}
+
+// LivingWorldEventRecord represents a significant world event for history tracking.
+type LivingWorldEventRecord struct {
+	EventID          string                 `json:"event_id"`
+	EventType        string                 `json:"event_type"`
+	Description      string                 `json:"description"`
+	GameTime         float64                `json:"game_time"`
+	AffectedCityID   string                 `json:"affected_city_id,omitempty"`
+	AffectedPlayerID string                 `json:"affected_player_id,omitempty"`
+	Magnitude        float64                `json:"magnitude"`
+	Details          map[string]interface{} `json:"details,omitempty"`
 }
 
 // GameSettings represents game configuration that should persist.

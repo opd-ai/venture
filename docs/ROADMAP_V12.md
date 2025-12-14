@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** IN PROGRESS - 25% Complete (1/4 phases done)  
+**Status:** IN PROGRESS - 50% Complete (2/4 phases done)  
 **Prerequisites:** V11.0 Complete (Living World)  
 **Timeline:** December 2025 - Q1 2026  
 **Focus:** Procedural seasonal events and holiday-themed content
@@ -48,8 +48,8 @@ Implemented the core event scheduling and management system.
 - [x] <0.1ms per Update cycle
 
 ### Phase 72: Event Decorations
-**Status:** Not Started  
-**Target:** December 2025
+**Status:** ✅ Complete  
+**Completed:** December 14, 2025
 
 Procedurally generate visual decorations for cities and NPCs during events.
 
@@ -61,11 +61,20 @@ Procedurally generate visual decorations for cities and NPCs during events.
 - NPC costume variations during events
 - Particle effects for celebration atmosphere
 
+**Files Created:**
+- `pkg/engine/event_decoration_component.go`
+- `pkg/engine/event_decoration_component_test.go`
+- `pkg/engine/event_decoration_system.go`
+- `pkg/engine/event_decoration_system_test.go`
+- `pkg/engine/event_decoration_integration_test.go`
+
+**Test Coverage:** 93.7% average
+
 **Acceptance Criteria:**
-- [ ] Decorations apply when event starts
-- [ ] Decorations remove when event ends
-- [ ] No visual artifacts or memory leaks
-- [ ] Test coverage ≥65%
+- [x] Decorations apply when event starts
+- [x] Decorations remove when event ends
+- [x] No visual artifacts or memory leaks
+- [x] Test coverage ≥65%
 
 ### Phase 73: Event Quests
 **Status:** Not Started  

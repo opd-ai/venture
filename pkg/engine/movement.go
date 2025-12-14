@@ -255,21 +255,9 @@ func (s *MovementSystem) hasValidCollider(entity *Entity) bool {
 }
 
 // getCollider retrieves and validates the collider component from entity.
+// Uses typed getter for zero-overhead access.
 func (s *MovementSystem) getCollider(entity *Entity) *ColliderComponent {
-	colliderComp, _ := entity.GetComponent("collider")
-	if colliderComp == nil {
-		return nil
-	}
-
-	collider, ok := colliderComp.(*ColliderComponent)
-	if !ok {
-		log.WithFields(log.Fields{
-			"entity_id":      entity.ID,
-			"component_type": "collider",
-		}).Warn("Invalid collider component type")
-		return nil
-	}
-	return collider
+	return entity.GetCollider()
 }
 
 // handleTerrainCollision checks terrain collision and applies wall sliding.
@@ -713,17 +701,9 @@ func (s *MovementSystem) checkLayerTransition(entity *Entity, pos *PositionCompo
 		return
 	}
 
-	// Get entity's collider
-	colliderComp, hasCollider := entity.GetComponent("collider")
-	if !hasCollider {
-		return
-	}
-	collider, ok := colliderComp.(*ColliderComponent)
-	if !ok {
-		log.WithFields(log.Fields{
-			"entity_id":      entity.ID,
-			"component_type": "collider",
-		}).Warn("Invalid collider component type in layer transition")
+	// Get entity's collider using typed getter for zero-overhead access
+	collider := entity.GetCollider()
+	if collider == nil {
 		return
 	}
 

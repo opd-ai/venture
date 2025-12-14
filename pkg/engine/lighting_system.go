@@ -82,10 +82,11 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 	}
 
 	system := &LightingSystem{
-		world:         world,
-		config:        config,
-		logger:        logEntry,
-		visibleLights: make([]*lightWithPosition, 0, config.MaxLights),
+		world:            world,
+		config:           config,
+		logger:           logEntry,
+		visibleLights:    make([]*lightWithPosition, 0, config.MaxLights),
+		lightCircleCache: make(map[int]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
 	}
 
 	// Initialize shadow system if shadows are enabled
@@ -722,18 +723,9 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 		}
 		return
 	}
-	lightImg := ebiten.NewImage(diameter, diameter)
-	// Fill with white, but only inside the circle
-	cx, cy := float64(radius), float64(radius)
-	for py := 0; py < diameter; py++ {
-		for px := 0; px < diameter; px++ {
-			dx := float64(px) - cx
-			dy := float64(py) - cy
-			if dx*dx+dy*dy <= float64(radius*radius) {
-				lightImg.Set(px, py, color.White)
-			}
-		}
-	}
+
+	// Use cached light circle image to avoid per-frame allocations
+	lightImg := s.getCachedLightCircle(diameter)
 	lightBuffer.DrawImage(lightImg, opts)
 
 	if s.logger != nil {
@@ -751,6 +743,30 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 			"blend_b":   b,
 		}).Debug("Point light applied successfully")
 	}
+}
+
+// getCachedLightCircle returns a cached light circle image for the given diameter.
+// This avoids per-frame allocations in the hot applyPointLight path.
+func (s *LightingSystem) getCachedLightCircle(diameter int) *ebiten.Image {
+	if img, ok := s.lightCircleCache[diameter]; ok {
+		return img
+	}
+
+	// Create new light circle image and cache it
+	img := ebiten.NewImage(diameter, diameter)
+	radius := diameter / 2
+	cx, cy := float64(radius), float64(radius)
+	for py := 0; py < diameter; py++ {
+		for px := 0; px < diameter; px++ {
+			dx := float64(px) - cx
+			dy := float64(py) - cy
+			if dx*dx+dy*dy <= float64(radius*radius) {
+				img.Set(px, py, color.White)
+			}
+		}
+	}
+	s.lightCircleCache[diameter] = img
+	return img
 }
 
 // findAmbientIntensity searches for ambient light component and returns its intensity.

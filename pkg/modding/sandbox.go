@@ -178,7 +178,12 @@ func (s *Sandbox) ValidateMod(mod *Mod) SandboxValidation {
 // isAllowedRuleName checks if a rule name matches allowed patterns.
 func (s *Sandbox) isAllowedRuleName(name string) bool {
 	for _, pattern := range s.config.AllowedRulePatterns {
-		if matched, _ := regexp.MatchString(pattern, name); matched {
+		matched, err := regexp.MatchString(pattern, name)
+		if err != nil {
+			// Invalid regex pattern - skip it but don't crash
+			continue
+		}
+		if matched {
 			return true
 		}
 	}

@@ -117,8 +117,9 @@ func (q *Quadtree) subdivide() {
 }
 
 // Query returns all entities within the given bounds.
+// Pre-allocates result slice with capacity hint to reduce allocations in hot paths.
 func (q *Quadtree) Query(queryBounds Bounds) []*Entity {
-	result := make([]*Entity, 0)
+	result := make([]*Entity, 0, q.capacity)
 	q.queryRecursive(queryBounds, &result)
 	return result
 }
@@ -190,8 +191,8 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 
 	candidates := q.Query(queryBounds)
 
-	// Filter by actual circular distance
-	result := make([]*Entity, 0, len(candidates))
+	// Filter by actual circular distance (pre-size for common case)
+	result := make([]*Entity, 0, q.capacity)
 	radiusSq := radius * radius
 
 	for _, entity := range candidates {

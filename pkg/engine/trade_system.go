@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/social"
 )
 
 const (
@@ -72,7 +73,8 @@ func (ts *TradeSystem) validateProposalParticipants(proposerID, recipientID uint
 	}
 
 	if !ts.checkProximity(proposer, recipient, ProposalProximity) {
-		return nil, nil, fmt.Errorf("players too far apart (>%.1f tiles)", ProposalProximity)
+		distance := ts.calculateDistance(proposer, recipient)
+		return nil, nil, social.ErrProximity(ProposalProximity, distance)
 	}
 
 	return proposer, recipient, nil
@@ -91,7 +93,7 @@ func (ts *TradeSystem) validateOfferedItems(proposer *Entity, proposerTrade *Tra
 
 	for _, itemID := range offeredItemIDs {
 		if !ts.ownsItem(proposerInv, itemID) {
-			return fmt.Errorf("proposer doesn't own item: %s", itemID)
+			return social.ErrOwnership(itemID)
 		}
 	}
 
@@ -119,7 +121,7 @@ func (ts *TradeSystem) validateRequestedItems(recipient *Entity, recipientTrade 
 
 	for _, itemID := range requestedItemIDs {
 		if !ts.ownsItem(recipientInv, itemID) {
-			return fmt.Errorf("recipient doesn't own requested item: %s", itemID)
+			return social.ErrOwnership(itemID)
 		}
 	}
 
@@ -429,6 +431,27 @@ func (ts *TradeSystem) checkProximity(e1, e2 *Entity, maxDistance float64) bool 
 	return distance <= maxDistance
 }
 
+// calculateDistance returns the distance between two entities.
+func (ts *TradeSystem) calculateDistance(e1, e2 *Entity) float64 {
+	pos1Comp, ok1 := e1.GetComponent("position")
+	pos2Comp, ok2 := e2.GetComponent("position")
+
+	if !ok1 || !ok2 {
+		return math.MaxFloat64
+	}
+
+	pos1, ok1 := pos1Comp.(*PositionComponent)
+	pos2, ok2 := pos2Comp.(*PositionComponent)
+
+	if !ok1 || !ok2 {
+		return math.MaxFloat64
+	}
+
+	dx := pos1.X - pos2.X
+	dy := pos1.Y - pos2.Y
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
 func (ts *TradeSystem) getOrCreateTradeComponent(entity *Entity) *TradeComponent {
 	comp, ok := entity.GetComponent("trade")
 	if ok {
@@ -481,7 +504,9 @@ func (ts *TradeSystem) checkTrustLimits(trustScore float64, inv *InventoryCompon
 	if trustScore < TrustLow {
 		// Check item count limit
 		if len(itemIDs) > LowTrustMaxItems {
-			return fmt.Errorf("low trust limited to %d items per trade", LowTrustMaxItems)
+			return social.ErrTrust(TrustLow, trustScore).
+				WithContext("reason", "item_count_exceeded").
+				WithContext("max_items", LowTrustMaxItems)
 		}
 
 		// Check rarity limits
@@ -493,7 +518,9 @@ func (ts *TradeSystem) checkTrustLimits(trustScore float64, inv *InventoryCompon
 
 			// Legendary and Epic forbidden for low trust
 			if itm.Rarity == item.RarityLegendary || itm.Rarity == item.RarityEpic {
-				return fmt.Errorf("low trust cannot trade %s items", itm.Rarity.String())
+				return social.ErrTrust(TrustLow, trustScore).
+					WithContext("reason", "rarity_restricted").
+					WithContext("item_rarity", itm.Rarity.String())
 			}
 		}
 	}

@@ -181,11 +181,11 @@ These packages require significant work or have external dependencies.
 - **Action**: Connect to rendering/ui system
 - **Effort**: Medium
 
-### 6.5 `pkg/social`
-- **LOC**: 574 | **Status**: Partial (missing doc.go)
-- **Blocker**: Incomplete package
-- **Action**: Complete package, add documentation
-- **Effort**: Medium
+### 6.5 `pkg/social` ✅
+- **LOC**: 574 | **Status**: Complete
+- **Integration**: Added doc.go, integrated social error types into trade_system.go and chat_system.go
+- **Coverage**: 98.0% (social), 91.3% (social/persistence)
+- **Completed**: December 2025
 
 ### 6.6 Container Packages (No Action)
 These are empty package roots:

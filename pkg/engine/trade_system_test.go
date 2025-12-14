@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/social"
 )
 
 // TestProposeTrade_Success verifies successful trade proposal.
@@ -75,8 +76,13 @@ func TestProposeTrade_ProximityFailure(t *testing.T) {
 		t.Fatal("Expected proximity error, got nil")
 	}
 
-	if err.Error() != "players too far apart (>5.0 tiles)" {
-		t.Errorf("Unexpected error: %v", err)
+	// Verify it's a social proximity error
+	socialErr, ok := social.IsSocialError(err)
+	if !ok {
+		t.Fatalf("Expected SocialError, got: %v", err)
+	}
+	if socialErr.Type != social.ErrorTypeProximity {
+		t.Errorf("Expected proximity error type, got: %v", socialErr.Type)
 	}
 }
 

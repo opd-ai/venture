@@ -3,6 +3,8 @@ package engine
 import (
 	"fmt"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/social"
 )
 
 // ChatSystem processes chat messages and enforces chat rules.
@@ -47,14 +49,14 @@ func (cs *ChatSystem) SendMessage(senderID uint64, channel ChatChannel, content 
 	// Check if entity can send to this channel
 	if !chat.CanSendMessage(channel) {
 		if chat.IsMuted() {
-			return fmt.Errorf("sender is muted")
+			return social.ErrMuted(chat.MuteExpiry.Format(time.RFC1123))
 		}
-		return fmt.Errorf("rate limit exceeded for channel %s", channel.String())
+		return social.ErrRateLimit(channel.String())
 	}
 
 	// Validate channel subscription
 	if !chat.IsChannelActive(channel) {
-		return fmt.Errorf("not subscribed to channel %s", channel.String())
+		return social.ErrNotSubscribed(channel.String())
 	}
 
 	// Validate recipient for whispers

@@ -152,11 +152,13 @@ var (
 	_ ImageProvider  = (*EbitenImage)(nil)
 )
 
-// entitySprite pairs an entity with its sprite for efficient sorting
+// entitySprite pairs an entity with its sprite for efficient sorting.
+// Caches layer and Y position to eliminate map lookups during sort comparisons.
 type entitySprite struct {
 	entity *Entity
 	sprite *EbitenSprite
 	layer  int
+	yPos   float64 // Cached Y position for depth sorting (avoids O(n log n) map lookups)
 }
 
 // EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
@@ -1126,6 +1128,7 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 
 // sortEntitiesByLayer sorts entities by their sprite layer for correct draw order.
 // Optimized: Uses reusable buffers to eliminate per-frame allocations.
+// Optimized: Caches Y positions during collection to avoid O(n log n) map lookups during sort.
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 	// Reuse buffers, clearing them first
 	r.sortBuffer = r.sortBuffer[:0]
@@ -1139,14 +1142,21 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		r.sortCacheBuffer = make([]entitySprite, 0, len(entities))
 	}
 
-	// Collect entities with sprites and cache their sprite components
+	// Collect entities with sprites and cache their sprite components and Y positions.
+	// Caching Y here eliminates O(n log n) map lookups during sort comparisons.
 	for _, entity := range entities {
 		if sprite, ok := entity.GetComponent("sprite"); ok {
 			if ebitenSprite, ok := sprite.(*EbitenSprite); ok {
+				// Cache Y position now to avoid map lookups during sort
+				yPos := 0.0
+				if pos := entity.GetPosition(); pos != nil {
+					yPos = pos.Y
+				}
 				r.sortCacheBuffer = append(r.sortCacheBuffer, entitySprite{
 					entity: entity,
 					sprite: ebitenSprite,
 					layer:  ebitenSprite.Layer,
+					yPos:   yPos,
 				})
 			}
 		}
@@ -1160,16 +1170,11 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 			return r.sortCacheBuffer[i].layer < r.sortCacheBuffer[j].layer
 		}
 
-		// Secondary sort: by Y position for depth sorting
+		// Secondary sort: by cached Y position for depth sorting
 		// Entities lower on screen (higher Y) appear in front
-		posI, okI := r.sortCacheBuffer[i].entity.GetComponent("position")
-		posJ, okJ := r.sortCacheBuffer[j].entity.GetComponent("position")
-		if okI && okJ {
-			yI := posI.(*PositionComponent).Y
-			yJ := posJ.(*PositionComponent).Y
-			if yI != yJ {
-				return yI < yJ
-			}
+		// Uses cached yPos instead of map lookup for O(n log n) improvement
+		if r.sortCacheBuffer[i].yPos != r.sortCacheBuffer[j].yPos {
+			return r.sortCacheBuffer[i].yPos < r.sortCacheBuffer[j].yPos
 		}
 
 		// Tertiary sort: by entity ID for complete determinism

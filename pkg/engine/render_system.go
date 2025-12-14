@@ -207,6 +207,9 @@ type EbitenRenderSystem struct {
 	// Phase 2.4: Rendering optimization (PLAN.md)
 	imagePool        ImagePoolProvider        // Image pool for memory efficiency (optional)
 	parallelRenderer ParallelRendererProvider // Parallel renderer for performance (optional)
+
+	// Pre-allocated DrawTrianglesOptions to avoid per-batch allocations
+	drawTrianglesOptions ebiten.DrawTrianglesOptions
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -236,6 +239,9 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		viewportQueryBuffer: make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
 		ShowColliders:       false,
 		ShowGrid:            false,
+		drawTrianglesOptions: ebiten.DrawTrianglesOptions{
+			Filter: ebiten.FilterLinear,
+		},
 	}
 }
 
@@ -615,9 +621,7 @@ func (r *EbitenRenderSystem) calculateTextureCoords(cornerIndex int, texWidth, t
 // renderBatchGeometry submits the batch geometry to the GPU for rendering.
 func (r *EbitenRenderSystem) renderBatchGeometry(vertices []ebiten.Vertex, indices []uint16, batchSpriteImage *ebiten.Image) {
 	if len(vertices) > 0 && len(indices) > 0 {
-		r.screen.DrawTriangles(vertices, indices, batchSpriteImage, &ebiten.DrawTrianglesOptions{
-			Filter: ebiten.FilterLinear,
-		})
+		r.screen.DrawTriangles(vertices, indices, batchSpriteImage, &r.drawTrianglesOptions)
 	}
 }
 

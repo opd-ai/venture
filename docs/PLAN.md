@@ -175,11 +175,12 @@ These packages require significant work or have external dependencies.
 - **Action**: Defer until mod sandbox implemented
 - **Effort**: Large
 
-### 6.4 `pkg/ux`
-- **LOC**: 1,571 | **Status**: Complete
-- **Blocker**: No UI integration
-- **Action**: Connect to rendering/ui system
-- **Effort**: Medium
+### 6.4 `pkg/ux` ✅
+- **LOC**: 1,571 | **Status**: Integrated
+- **Integration**: Added `--ux-validate` flag to `cmd/server/main.go`, `make ux-validate` target
+- **Usage**: `./server --ux-validate` or `make ux-validate`
+- **Coverage**: 96.5%
+- **Completed**: December 2025
 
 ### 6.5 `pkg/social` ✅
 - **LOC**: 574 | **Status**: Complete

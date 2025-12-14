@@ -132,3 +132,32 @@ jobs:
 
       - name: Run Balance Validation
         run: timeout 120 ./build/venture-server --balance-validate || true
+
+  ux-validation:
+    name: UX Journey Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Test pkg/ux
+        run: go test -cover ./pkg/ux/...
+
+      - name: Build server
+        run: go build -o ./build/venture-server ./cmd/server
+
+      - name: Run UX Validation
+        run: timeout 60 ./build/venture-server --ux-validate || true

@@ -26,6 +26,7 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/security"
 	"github.com/opd-ai/venture/pkg/stability"
+	"github.com/opd-ai/venture/pkg/ux"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
@@ -53,6 +54,9 @@ var (
 
 	// Phase 6.2 (PLAN.md): Migration validation integration
 	migrationValidate = flag.Bool("migration-validate", false, "Run save file migration validation at startup")
+
+	// Phase 6.4 (PLAN.md): UX journey validation integration
+	uxValidate = flag.Bool("ux-validate", false, "Run user experience journey validation at startup")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -94,6 +98,11 @@ func main() {
 	// Phase 6.2 (PLAN.md): Run migration validation if enabled
 	if *migrationValidate {
 		runMigrationValidation(serverLogger)
+	}
+
+	// Phase 6.4 (PLAN.md): Run UX journey validation if enabled
+	if *uxValidate {
+		runUXValidation(serverLogger)
 	}
 
 	// Phase 2 (PLAN.md): Start stability monitoring if enabled
@@ -1058,6 +1067,47 @@ func runMigrationValidation(serverLogger *logrus.Entry) {
 					"target_version": m.TargetVersion,
 					"error":          m.Error,
 				}).Warn("migration failed")
+			}
+		}
+	}
+}
+
+// runUXValidation performs user experience journey validation at startup.
+// Phase 6.4 (PLAN.md): UX package integration for user journey validation
+func runUXValidation(serverLogger *logrus.Entry) {
+	serverLogger.Info("running UX journey validation at startup")
+
+	config := ux.ValidationConfig{
+		Runs:                 5,
+		TimeTolerancePercent: 20.0,
+		MinCompletionRate:    0.90,
+		MinSatisfaction:      0.80,
+		MaxErrorRate:         0.05,
+	}
+
+	validator := ux.NewJourneyValidatorWithConfig(config)
+	results := validator.ValidateAll()
+	summary := ux.GetSummary(results)
+
+	serverLogger.WithFields(logrus.Fields{
+		"total_journeys":   summary.TotalJourneys,
+		"passed":           summary.PassedJourneys,
+		"pass_rate":        summary.PassRate * 100.0,
+		"avg_completion":   summary.AverageCompletionRate * 100.0,
+		"avg_satisfaction": summary.AverageSatisfaction * 100.0,
+		"avg_error_rate":   summary.AverageErrorRate * 100.0,
+	}).Info("UX journey validation completed")
+
+	if summary.PassedJourneys < summary.TotalJourneys {
+		serverLogger.Warn("some user journeys failed validation - UX issues may exist")
+		for _, result := range results {
+			if !result.Passed {
+				serverLogger.WithFields(logrus.Fields{
+					"journey":         result.Name,
+					"completion_rate": result.CompletionRate * 100.0,
+					"satisfaction":    result.Satisfaction * 100.0,
+					"error_rate":      result.ErrorRate * 100.0,
+				}).Warn("journey failed")
 			}
 		}
 	}

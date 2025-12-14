@@ -7,7 +7,7 @@
         run-client run-server serve-wasm \
         validate-code-review release package checksums sign \
         docker docker-build docker-run docker-stop \
-        feature-audit visual-regression parity-test balance-validate migration-validate quality
+        feature-audit visual-regression parity-test balance-validate migration-validate ux-validate quality
 
 # Default target
 .DEFAULT_GOAL := help
@@ -293,7 +293,11 @@ migration-validate: build-server ## Run save file migration validation (Phase 6.
 	@echo "Running migration validation..."
 	./$(BUILD_DIR)/venture-server --migration-validate
 
-quality: feature-audit visual-regression parity-test balance-validate migration-validate ## Run all quality validation tools
+ux-validate: build-server ## Run user experience journey validation (Phase 6.4)
+	@echo "Running UX journey validation..."
+	./$(BUILD_DIR)/venture-server --ux-validate
+
+quality: feature-audit visual-regression parity-test balance-validate migration-validate ux-validate ## Run all quality validation tools
 	@echo ""
 	@echo "✓ All quality checks passed!"
 

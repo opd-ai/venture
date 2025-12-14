@@ -124,10 +124,14 @@ func (r *AuditResults) Summary() string {
 		"low_count":      r.LowCount,
 		"duration_ms":    duration.Milliseconds(),
 	}).Info("Generated audit summary")
+	var passPercent float64
+	if r.TotalChecks > 0 {
+		passPercent = float64(r.PassedChecks) / float64(r.TotalChecks) * 100
+	}
 	return fmt.Sprintf(
 		"Security Audit: %d/%d passed (%.1f%%) - Critical: %d, High: %d, Medium: %d, Low: %d - Duration: %v",
 		r.PassedChecks, r.TotalChecks,
-		float64(r.PassedChecks)/float64(r.TotalChecks)*100,
+		passPercent,
 		r.CriticalCount, r.HighCount, r.MediumCount, r.LowCount,
 		duration,
 	)

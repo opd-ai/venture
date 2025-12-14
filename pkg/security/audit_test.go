@@ -140,6 +140,28 @@ func TestAuditResults_Summary(t *testing.T) {
 	}
 }
 
+func TestAuditResults_Summary_ZeroChecks(t *testing.T) {
+	r := &AuditResults{
+		TotalChecks:  0,
+		PassedChecks: 0,
+		StartTime:    time.Now(),
+		EndTime:      time.Now().Add(10 * time.Millisecond),
+	}
+
+	summary := r.Summary()
+
+	// Verify no NaN in output when TotalChecks is zero
+	if strings.Contains(summary, "NaN") {
+		t.Error("Summary should not contain NaN when TotalChecks is 0")
+	}
+	if !strings.Contains(summary, "0/0") {
+		t.Error("Summary should show 0/0 checks")
+	}
+	if !strings.Contains(summary, "0.0%") {
+		t.Error("Summary should show 0.0% when no checks")
+	}
+}
+
 func TestSeverity_String(t *testing.T) {
 	tests := []struct {
 		severity Severity

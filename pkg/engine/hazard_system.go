@@ -25,6 +25,8 @@ type HazardSystem struct {
 	world       *World
 	logger      *logrus.Entry
 	zoneTracker *HazardZoneTracker
+	// Reusable buffer for zone queries to reduce per-entity allocations
+	zoneQueryBuffer []*HazardZone
 }
 
 // NewHazardSystem creates a new hazard system.
@@ -43,8 +45,9 @@ func NewHazardSystemWithLogger(logger *logrus.Logger) *HazardSystem {
 	}
 
 	return &HazardSystem{
-		logger:      logEntry,
-		zoneTracker: NewHazardZoneTracker(500), // Max 500 concurrent hazard zones
+		logger:          logEntry,
+		zoneTracker:     NewHazardZoneTracker(500), // Max 500 concurrent hazard zones
+		zoneQueryBuffer: make([]*HazardZone, 0, 8), // Pre-allocate for typical zone overlap count
 	}
 }
 
@@ -188,11 +191,12 @@ func (s *HazardSystem) applyZoneEffects(deltaTime float64) {
 			continue
 		}
 
-		// Query zones at entity position
-		zones := s.zoneTracker.GetZonesAt(entPos.X, entPos.Y)
+		// Query zones at entity position using reusable buffer
+		s.zoneQueryBuffer = s.zoneQueryBuffer[:0]
+		s.zoneQueryBuffer = s.zoneTracker.GetZonesAtInto(entPos.X, entPos.Y, s.zoneQueryBuffer)
 
 		// Apply effects from all overlapping zones
-		for _, zone := range zones {
+		for _, zone := range s.zoneQueryBuffer {
 			// Apply damage if zone is damaging
 			if zone.DamagePerSecond > 0 {
 				s.applyZoneDamage(entity, zone, deltaTime)

@@ -46,11 +46,12 @@ type HazardZone struct {
 type HazardZoneTracker struct {
 	zones        map[uint64]*HazardZone
 	mu           sync.RWMutex
-	fadeTime     float64  // Duration of fade-out effect in seconds
-	maxZones     int      // Maximum zones to prevent unbounded growth
-	zoneCount    int      // Current active zone count
-	totalZones   uint64   // Lifetime zone creation count
-	removeBuffer []uint64 // Reusable buffer for expired zone IDs
+	fadeTime     float64       // Duration of fade-out effect in seconds
+	maxZones     int           // Maximum zones to prevent unbounded growth
+	zoneCount    int           // Current active zone count
+	totalZones   uint64        // Lifetime zone creation count
+	removeBuffer []uint64      // Reusable buffer for expired zone IDs
+	queryBuffer  []*HazardZone // Reusable buffer for zone queries to reduce allocations
 }
 
 // NewHazardZoneTracker creates a new hazard zone tracker.
@@ -63,7 +64,8 @@ func NewHazardZoneTracker(maxZones int) *HazardZoneTracker {
 		zones:        make(map[uint64]*HazardZone, maxZones),
 		fadeTime:     1.0, // 1 second fade-out
 		maxZones:     maxZones,
-		removeBuffer: make([]uint64, 0, 16), // Pre-allocate for typical usage
+		removeBuffer: make([]uint64, 0, 16),     // Pre-allocate for typical usage
+		queryBuffer:  make([]*HazardZone, 0, 8), // Pre-allocate for typical query results
 	}
 }
 
@@ -111,11 +113,13 @@ func (t *HazardZoneTracker) GetZone(id uint64) (*HazardZone, bool) {
 
 // GetZonesAt returns all hazard zones affecting a position.
 // This is the primary spatial query method used by entity damage processing.
+// Uses internal buffer reuse to eliminate per-call allocations.
 func (t *HazardZoneTracker) GetZonesAt(x, y float64) []*HazardZone {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	result := make([]*HazardZone, 0, 4) // Most positions have 0-4 overlapping zones
+	// Reuse query buffer to reduce allocations
+	t.queryBuffer = t.queryBuffer[:0]
 
 	for _, zone := range t.zones {
 		// Calculate distance to zone center
@@ -126,11 +130,40 @@ func (t *HazardZoneTracker) GetZonesAt(x, y float64) []*HazardZone {
 
 		// Check if position is within zone radius
 		if distSq <= radiusSq {
-			result = append(result, zone)
+			t.queryBuffer = append(t.queryBuffer, zone)
 		}
 	}
 
+	// Return a copy to preserve caller ownership semantics
+	if len(t.queryBuffer) == 0 {
+		return nil
+	}
+	result := make([]*HazardZone, len(t.queryBuffer))
+	copy(result, t.queryBuffer)
 	return result
+}
+
+// GetZonesAtInto appends all hazard zones affecting a position to the provided buffer.
+// This is a zero-allocation query method for hot paths that reuse buffers.
+// Returns the (possibly reallocated) buffer with results appended.
+func (t *HazardZoneTracker) GetZonesAtInto(x, y float64, buffer []*HazardZone) []*HazardZone {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	for _, zone := range t.zones {
+		// Calculate distance to zone center
+		dx := x - zone.X
+		dy := y - zone.Y
+		distSq := dx*dx + dy*dy
+		radiusSq := zone.Radius * zone.Radius
+
+		// Check if position is within zone radius
+		if distSq <= radiusSq {
+			buffer = append(buffer, zone)
+		}
+	}
+
+	return buffer
 }
 
 // GetZonesInRadius returns all hazard zones overlapping a circular area.

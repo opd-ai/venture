@@ -161,11 +161,13 @@ These packages require significant work or have external dependencies.
 - **Coverage**: 81.0%
 - **Completed**: December 2025
 
-### 6.2 `pkg/migration`
-- **LOC**: 619 | **Status**: Complete
-- **Blocker**: No trigger mechanism
-- **Action**: Add migration hooks to saveload system
-- **Effort**: Medium
+### 6.2 `pkg/migration` ✅
+- **LOC**: 619 | **Status**: Integrated
+- **Integration**: Added migration hooks to `pkg/saveload/migrator.go`, `--migration-validate` flag to `cmd/server/main.go`
+- **Usage**: `./server --migration-validate` or `make migration-validate`
+- **Makefile**: Added `migration-validate` target
+- **Coverage**: saveload 73.3%, migration 77.1%
+- **Completed**: December 2025
 
 ### 6.3 `pkg/modding`
 - **LOC**: 1,484 | **Status**: Complete

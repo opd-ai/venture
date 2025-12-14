@@ -17,6 +17,7 @@ import (
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/opd-ai/venture/pkg/migration"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/network/resilience"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -49,6 +50,9 @@ var (
 
 	// Phase 6.1 (PLAN.md): Balance validation integration
 	balanceValidate = flag.Bool("balance-validate", false, "Run combat and economic balance validation at startup")
+
+	// Phase 6.2 (PLAN.md): Migration validation integration
+	migrationValidate = flag.Bool("migration-validate", false, "Run save file migration validation at startup")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -85,6 +89,11 @@ func main() {
 	// Phase 6.1 (PLAN.md): Run balance validation if enabled
 	if *balanceValidate {
 		runBalanceValidation(serverLogger)
+	}
+
+	// Phase 6.2 (PLAN.md): Run migration validation if enabled
+	if *migrationValidate {
+		runMigrationValidation(serverLogger)
 	}
 
 	// Phase 2 (PLAN.md): Start stability monitoring if enabled
@@ -1012,6 +1021,44 @@ func logBalanceResult(serverLogger *logrus.Entry, result *balance.ValidationResu
 		}
 		for _, rec := range result.Recommendations {
 			serverLogger.WithField("domain", result.Domain).Info("recommendation: " + rec)
+		}
+	}
+}
+
+// runMigrationValidation validates that all supported save file versions can be migrated.
+// Phase 6.2 (PLAN.md): Migration package integration for save file compatibility
+func runMigrationValidation(serverLogger *logrus.Entry) {
+	serverLogger.Info("running migration validation at startup")
+
+	config := migration.Config{
+		TargetVersion: "v10.0",
+		ValidateData:  true,
+	}
+
+	validator := migration.NewValidator(config)
+	results, err := validator.ValidateAll()
+	if err != nil {
+		serverLogger.WithError(err).Error("migration validation failed")
+		return
+	}
+
+	serverLogger.WithFields(logrus.Fields{
+		"total_migrations": results.TotalCount,
+		"passed":           results.PassedCount,
+		"failed":           results.FailedCount,
+		"pass_rate":        float64(results.PassedCount) / float64(results.TotalCount) * 100.0,
+	}).Info("migration validation completed")
+
+	if results.FailedCount > 0 {
+		serverLogger.Warn("some migrations failed - save file compatibility may be affected")
+		for _, m := range results.Migrations {
+			if !m.Passed {
+				serverLogger.WithFields(logrus.Fields{
+					"source_version": m.SourceVersion,
+					"target_version": m.TargetVersion,
+					"error":          m.Error,
+				}).Warn("migration failed")
+			}
 		}
 	}
 }

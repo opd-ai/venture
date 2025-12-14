@@ -26,6 +26,8 @@ type SaveManager struct {
 	saveDir string
 	// Logger for save/load operations
 	logger *logrus.Entry
+	// Migrator for version upgrades (nil = no migration, reject incompatible)
+	migrator Migrator
 }
 
 // NewSaveManager creates a new save manager with the specified save directory.
@@ -36,6 +38,13 @@ func NewSaveManager(saveDir string) (*SaveManager, error) {
 
 // NewSaveManagerWithLogger creates a new save manager with a logger.
 func NewSaveManagerWithLogger(saveDir string, logger *logrus.Logger) (*SaveManager, error) {
+	return NewSaveManagerWithMigrator(saveDir, logger, nil)
+}
+
+// NewSaveManagerWithMigrator creates a new save manager with a logger and migrator.
+// If migrator is nil, incompatible save versions will be rejected.
+// Pass NewDefaultMigrator() to enable automatic migration of older saves.
+func NewSaveManagerWithMigrator(saveDir string, logger *logrus.Logger, migrator Migrator) (*SaveManager, error) {
 	var logEntry *logrus.Entry
 	if logger != nil {
 		logEntry = logger.WithFields(logrus.Fields{
@@ -57,9 +66,16 @@ func NewSaveManagerWithLogger(saveDir string, logger *logrus.Logger) (*SaveManag
 	}
 
 	return &SaveManager{
-		saveDir: saveDir,
-		logger:  logEntry,
+		saveDir:  saveDir,
+		logger:   logEntry,
+		migrator: migrator,
 	}, nil
+}
+
+// SetMigrator sets the migrator for handling older save file versions.
+// Pass nil to disable migration and reject incompatible saves.
+func (m *SaveManager) SetMigrator(migrator Migrator) {
+	m.migrator = migrator
 }
 
 // SaveGame saves the game state to a file with the specified name.
@@ -294,15 +310,42 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 		return fmt.Errorf("save file has no version")
 	}
 
-	// OBSOLETE CODE REMOVED: Save format migration logic
-	// Replaced by: Pre-1.0 policy - incompatible saves rejected with error
-	// Removed: Migration logic placeholder comments
-	// PRE-1.0: Only current save version supported
-	if save.Version != SaveVersion {
-		return fmt.Errorf("save file version %s is not supported (current version: %s) - no migration before v1.0", save.Version, SaveVersion)
+	// If version matches current, no migration needed
+	if save.Version == SaveVersion {
+		return m.validateRequiredFields(save)
 	}
 
-	// Validate required fields
+	// Attempt migration if migrator is configured
+	if m.migrator != nil && m.migrator.CanMigrate(save.Version) {
+		m.logInfo("migrating save file", logrus.Fields{
+			"from_version": save.Version,
+			"to_version":   SaveVersion,
+		})
+
+		migratedSave, err := m.migrator.Migrate(save, save.Version)
+		if err != nil {
+			m.logError("migration failed", err, logrus.Fields{
+				"from_version": save.Version,
+			})
+			return fmt.Errorf("failed to migrate save: %w", err)
+		}
+
+		// Copy migrated data back to original save
+		*save = *migratedSave
+
+		m.logInfo("save file migrated successfully", logrus.Fields{
+			"new_version": save.Version,
+		})
+	} else {
+		// No migrator or unsupported version
+		return fmt.Errorf("save file version %s is not supported (current version: %s) - no migration available", save.Version, SaveVersion)
+	}
+
+	return m.validateRequiredFields(save)
+}
+
+// validateRequiredFields checks that a save has all required data.
+func (m *SaveManager) validateRequiredFields(save *GameSave) error {
 	if save.PlayerState == nil {
 		return fmt.Errorf("save file missing player state")
 	}
@@ -312,7 +355,6 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 	if save.Settings == nil {
 		return fmt.Errorf("save file missing settings")
 	}
-
 	return nil
 }
 

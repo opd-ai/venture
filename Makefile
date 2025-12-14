@@ -7,7 +7,7 @@
         run-client run-server serve-wasm \
         validate-code-review release package checksums sign \
         docker docker-build docker-run docker-stop \
-        feature-audit visual-regression parity-test balance-validate quality
+        feature-audit visual-regression parity-test balance-validate migration-validate quality
 
 # Default target
 .DEFAULT_GOAL := help
@@ -289,7 +289,11 @@ balance-validate: build-server ## Run combat/economic balance validation (Phase 
 	@echo "Running balance validation..."
 	./$(BUILD_DIR)/venture-server --balance-validate
 
-quality: feature-audit visual-regression parity-test balance-validate ## Run all quality validation tools
+migration-validate: build-server ## Run save file migration validation (Phase 6.2)
+	@echo "Running migration validation..."
+	./$(BUILD_DIR)/venture-server --migration-validate
+
+quality: feature-audit visual-regression parity-test balance-validate migration-validate ## Run all quality validation tools
 	@echo ""
 	@echo "✓ All quality checks passed!"
 

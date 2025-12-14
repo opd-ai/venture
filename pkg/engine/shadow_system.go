@@ -35,6 +35,9 @@ type ShadowSystem struct {
 	// Shadow buffer (reused each frame)
 	shadowBuffer *ebiten.Image
 
+	// Reusable buffer for shadow casters to reduce per-frame allocations
+	casterBuffer []*shadowCaster
+
 	// Configuration
 	enabled       bool
 	maxShadows    int
@@ -67,6 +70,7 @@ func NewShadowSystemWithLogger(world *World, logger *logrus.Logger) *ShadowSyste
 		enabled:       true,
 		maxShadows:    100,
 		renderQuality: 1.0,
+		casterBuffer:  make([]*shadowCaster, 0, 100), // Pre-allocate for typical max shadows
 	}
 }
 
@@ -142,7 +146,13 @@ func (s *ShadowSystem) RenderShadows(screen *ebiten.Image, lightX, lightY, light
 
 // collectShadowCasters finds all entities that should cast shadows from this light.
 func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64) []*shadowCaster {
-	casters := make([]*shadowCaster, 0, s.maxShadows)
+	// Reuse caster buffer to reduce per-frame allocations
+	s.casterBuffer = s.casterBuffer[:0]
+
+	// Ensure capacity for maxShadows
+	if cap(s.casterBuffer) < s.maxShadows {
+		s.casterBuffer = make([]*shadowCaster, 0, s.maxShadows)
+	}
 
 	entities := s.world.GetEntities()
 	for _, entity := range entities {
@@ -184,7 +194,7 @@ func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64)
 			}
 		}
 
-		casters = append(casters, &shadowCaster{
+		s.casterBuffer = append(s.casterBuffer, &shadowCaster{
 			shadow:   shadow,
 			position: pos,
 			x:        pos.X,
@@ -192,12 +202,12 @@ func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64)
 		})
 
 		// Limit shadows
-		if len(casters) >= s.maxShadows {
+		if len(s.casterBuffer) >= s.maxShadows {
 			break
 		}
 	}
 
-	return casters
+	return s.casterBuffer
 }
 
 // renderShadowForEntity renders shadow for a single entity.

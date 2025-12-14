@@ -255,7 +255,7 @@ func TestPvPRatingSystem_GetPlayerRank(t *testing.T) {
 	}
 
 	// Test unranked player
-	unrankedPlayer := NewEntity()
+	unrankedPlayer := world.CreateEntity()
 	rank = system.GetPlayerRank(unrankedPlayer)
 	if rank != "Unranked" {
 		t.Errorf("unranked = %q, want %q", rank, "Unranked")
@@ -365,7 +365,8 @@ func TestPvPRatingSystem_RatingDecay(t *testing.T) {
 	// Force decay check
 	system.processRatingDecay([]*Entity{player}, time.Now())
 
-	updatedRating := player.GetComponent("pvp_rating").(*PvPRatingComponent)
+	updatedComp, _ := player.GetComponent("pvp_rating")
+	updatedRating := updatedComp.(*PvPRatingComponent)
 	if updatedRating.Rating >= 1600 {
 		t.Errorf("rating should have decayed from 1600, got %d", updatedRating.Rating)
 	}
@@ -384,9 +385,10 @@ func TestPvPRatingSystem_RatingDecay_NoDecayForSilver(t *testing.T) {
 
 	system.processRatingDecay([]*Entity{player}, time.Now())
 
-	updatedRating := player.GetComponent("pvp_rating").(*PvPRatingComponent)
-	if updatedRating.Rating != 1050 {
-		t.Errorf("silver player should not decay, got %d", updatedRating.Rating)
+	updatedComp2, _ := player.GetComponent("pvp_rating")
+	updatedRating2 := updatedComp2.(*PvPRatingComponent)
+	if updatedRating2.Rating != 1050 {
+		t.Errorf("silver player should not decay, got %d", updatedRating2.Rating)
 	}
 }
 

@@ -46,6 +46,10 @@ type LightingSystem struct {
 
 	// Shadow system integration (optional)
 	shadowSystem *ShadowSystem
+
+	// Light circle image cache - keyed by diameter to avoid per-frame allocations
+	// This dramatically reduces allocations in the hot applyPointLight path
+	lightCircleCache map[int]*ebiten.Image
 }
 
 // lightWithPosition combines a light component with its world position.

@@ -20,6 +20,8 @@ import (
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
+	"github.com/opd-ai/venture/pkg/security"
+	"github.com/opd-ai/venture/pkg/stability"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
@@ -33,6 +35,10 @@ var (
 	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
 	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
+
+	// Phase 2 (PLAN.md): Security and stability integration
+	securityAudit    = flag.Bool("security-audit", false, "Run security audit at startup and log results")
+	stabilityMonitor = flag.Bool("stability-monitor", false, "Enable stability monitoring for production validation")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -61,6 +67,17 @@ func main() {
 		"aerialSprites": *aerialSprites,
 	}).Info("server configuration")
 
+	// Phase 2 (PLAN.md): Run security audit if enabled
+	if *securityAudit {
+		runSecurityAudit(serverLogger)
+	}
+
+	// Phase 2 (PLAN.md): Start stability monitoring if enabled
+	var stabilityMon *stability.Monitor
+	if *stabilityMonitor {
+		stabilityMon = startStabilityMonitoring(serverLogger)
+	}
+
 	world := createGameWorld(logger)
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
@@ -83,6 +100,10 @@ func main() {
 	// Handle server shutdown gracefully
 	defer func() {
 		serverLogger.Info("shutting down server")
+		if stabilityMon != nil {
+			stabilityMon.Stop()
+			serverLogger.Info("stability monitor stopped")
+		}
 		if err := server.Stop(); err != nil {
 			serverLogger.WithError(err).Error("error stopping server")
 		}
@@ -794,4 +815,46 @@ func logUnknownInput(cmd *network.InputCommand, logger *logrus.Logger) {
 			"inputType": cmd.InputType,
 		}).Warn("unknown input type")
 	}
+}
+
+// runSecurityAudit performs security validation at server startup.
+// Phase 2.4 (PLAN.md): Unconditional security package integration
+func runSecurityAudit(serverLogger *logrus.Entry) {
+	serverLogger.Info("running security audit at startup")
+	auditor := security.NewAuditor()
+	results := auditor.RunFullAudit()
+
+	serverLogger.WithFields(logrus.Fields{
+		"total_checks": results.TotalChecks,
+		"passed":       results.PassedChecks,
+		"failed":       results.FailedChecks,
+		"critical":     results.CriticalCount,
+		"high":         results.HighCount,
+		"pass_rate":    float64(results.PassedChecks) / float64(results.TotalChecks) * 100.0,
+		"duration_ms":  results.EndTime.Sub(results.StartTime).Milliseconds(),
+	}).Info("security audit completed")
+
+	if results.HasCritical() {
+		serverLogger.Warn("critical security vulnerabilities detected - review security audit results")
+	}
+}
+
+// startStabilityMonitoring initializes the stability monitor for production validation.
+// Phase 2.3 (PLAN.md): Unconditional stability package integration
+func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
+	config := stability.DefaultConfig()
+	// Use shorter duration for non-production testing
+	config.Duration = 24 * time.Hour
+	config.CheckInterval = 60 * time.Second
+
+	monitor := stability.NewMonitor(config)
+
+	serverLogger.WithFields(logrus.Fields{
+		"duration":       config.Duration.String(),
+		"check_interval": config.CheckInterval.String(),
+		"memory_limit":   config.MemoryLimit,
+		"min_fps":        config.MinFPS,
+	}).Info("stability monitoring initialized")
+
+	return monitor
 }

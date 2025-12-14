@@ -255,12 +255,9 @@ func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *Pos
 			continue
 		}
 
-		entityPosComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		entityPos, ok := entityPosComp.(*PositionComponent)
-		if !ok {
+		// Use typed getter for zero-overhead access (eliminates map lookup + type assertion)
+		entityPos := entity.GetPosition()
+		if entityPos == nil {
 			continue
 		}
 
@@ -280,33 +277,30 @@ func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *Pos
 
 // handleEntityHit processes damage and pierce logic when projectile hits entity.
 func (s *ProjectileSystem) handleEntityHit(projEntity, hitEntity *Entity, projComp *ProjectileComponent, posComp *PositionComponent) {
-	// Apply damage
-	healthComp, ok := hitEntity.GetComponent("health")
-	if ok {
-		health, ok := healthComp.(*HealthComponent)
-		if ok {
-			health.Current -= projComp.Damage
-			projComp.HasHit = true
+	// Apply damage using typed getter for zero-overhead access
+	health := hitEntity.GetHealth()
+	if health != nil {
+		health.Current -= projComp.Damage
+		projComp.HasHit = true
 
-			// Phase 10.3: Trigger screen shake on projectile hit
-			if s.camera != nil {
-				// Calculate shake based on damage
-				maxHP := health.Max
-				shakeIntensity := CalculateShakeIntensity(projComp.Damage, maxHP,
-					ProjectileShakeScaleFactor, ProjectileShakeMinIntensity, ProjectileShakeMaxIntensity)
-				shakeDuration := CalculateShakeDuration(shakeIntensity,
-					ProjectileShakeBaseDuration, ProjectileShakeAdditionalDuration, ProjectileShakeMaxIntensity)
+		// Phase 10.3: Trigger screen shake on projectile hit
+		if s.camera != nil {
+			// Calculate shake based on damage
+			maxHP := health.Max
+			shakeIntensity := CalculateShakeIntensity(projComp.Damage, maxHP,
+				ProjectileShakeScaleFactor, ProjectileShakeMinIntensity, ProjectileShakeMaxIntensity)
+			shakeDuration := CalculateShakeDuration(shakeIntensity,
+				ProjectileShakeBaseDuration, ProjectileShakeAdditionalDuration, ProjectileShakeMaxIntensity)
 
-				// Explosive projectiles get extra shake
-				if projComp.Explosive {
-					shakeIntensity *= ExplosionShakeMultiplier
-					shakeDuration *= ExplosionDurationMultiplier
-					// Trigger brief hit-stop for explosions
-					s.camera.TriggerHitStop(ExplosionHitStopDuration, 0.0)
-				}
-
-				s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
+			// Explosive projectiles get extra shake
+			if projComp.Explosive {
+				shakeIntensity *= ExplosionShakeMultiplier
+				shakeDuration *= ExplosionDurationMultiplier
+				// Trigger brief hit-stop for explosions
+				s.camera.TriggerHitStop(ExplosionHitStopDuration, 0.0)
 			}
+
+			s.camera.ShakeAdvanced(shakeIntensity, shakeDuration)
 		}
 	}
 
@@ -365,16 +359,9 @@ func (s *ProjectileSystem) applyExplosionDamage(posComp *PositionComponent, proj
 }
 
 // getEntityPosition retrieves the position component from an entity.
+// Uses typed getter for zero-overhead access (eliminates map lookup + type assertion).
 func (s *ProjectileSystem) getEntityPosition(entity *Entity) *PositionComponent {
-	entityPosComp, ok := entity.GetComponent("position")
-	if !ok {
-		return nil
-	}
-	entityPos, ok := entityPosComp.(*PositionComponent)
-	if !ok {
-		return nil
-	}
-	return entityPos
+	return entity.GetPosition()
 }
 
 // damageEntityFromExplosion calculates and applies explosion damage to an entity.
@@ -387,12 +374,9 @@ func (s *ProjectileSystem) damageEntityFromExplosion(entity *Entity, entityPos, 
 		return
 	}
 
-	healthComp, ok := entity.GetComponent("health")
-	if !ok {
-		return
-	}
-	health, ok := healthComp.(*HealthComponent)
-	if !ok {
+	// Use typed getter for zero-overhead access
+	health := entity.GetHealth()
+	if health == nil {
 		return
 	}
 

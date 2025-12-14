@@ -91,6 +91,9 @@ type PlayerState struct {
 
 	// Phase 7.2: Animation state persistence
 	AnimationState *AnimationStateData `json:"animation_state,omitempty"`
+
+	// Phase 74: Event reward persistence (V12.0 Seasonal Events)
+	EventRewardData *EventRewardStateData `json:"event_reward_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -116,6 +119,31 @@ type AnimationStateData struct {
 
 	// Timestamp of last frame update (for timing calculations)
 	LastUpdateTime float64 `json:"last_update_time,omitempty"`
+}
+
+// EventRewardStateData represents saved event reward progress for Phase 74 (V12.0).
+// This allows event currency, rewards, achievements, and cosmetics to persist across saves.
+type EventRewardStateData struct {
+	// EventCurrency tracks currency per event (eventID -> amount)
+	EventCurrency map[string]int `json:"event_currency,omitempty"`
+	// EarnedRewards contains all rewards earned from events (serialized as JSON)
+	EarnedRewardsJSON []byte `json:"earned_rewards_json,omitempty"`
+	// EarnedTitles contains unlocked cosmetic titles (serialized as JSON)
+	EarnedTitlesJSON []byte `json:"earned_titles_json,omitempty"`
+	// ActiveTitle is the currently displayed title ID
+	ActiveTitle string `json:"active_title,omitempty"`
+	// EarnedEffects contains unlocked visual effects (serialized as JSON)
+	EarnedEffectsJSON []byte `json:"earned_effects_json,omitempty"`
+	// ActiveEffect is the currently displayed effect ID
+	ActiveEffect string `json:"active_effect,omitempty"`
+	// CompletedAchievements contains finished achievement IDs
+	CompletedAchievements []string `json:"completed_achievements,omitempty"`
+	// TotalEventsParticipated is lifetime event count
+	TotalEventsParticipated int `json:"total_events_participated"`
+	// TotalQuestsCompleted is lifetime event quests completed
+	TotalQuestsCompleted int `json:"total_quests_completed"`
+	// TotalCurrencyEarned is lifetime currency earned across all events
+	TotalCurrencyEarned int `json:"total_currency_earned"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

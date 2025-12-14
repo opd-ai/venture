@@ -6,6 +6,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/opd-ai/venture/pkg/network/federation/webrtc"
 )
 
@@ -22,7 +24,7 @@ func initWebRTCFederation(clientID string) (*webrtc.Peer, error) {
 
 	peer, err := webrtc.NewPeer(clientID, webrtcConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create WebRTC peer: %w", err)
 	}
 
 	return peer, nil

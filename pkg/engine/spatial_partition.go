@@ -143,6 +143,15 @@ func (q *Quadtree) Query(queryBounds Bounds) []*Entity {
 	return output
 }
 
+// QueryInto appends entities within bounds to the provided buffer.
+// This is a zero-allocation query method for hot paths that reuse buffers.
+// The caller must pass a slice (typically with len 0 but existing capacity).
+// Returns the (possibly reallocated) buffer with results appended.
+func (q *Quadtree) QueryInto(queryBounds Bounds, buffer []*Entity) []*Entity {
+	q.queryRecursive(queryBounds, &buffer)
+	return buffer
+}
+
 // queryRecursive performs the actual recursive query.
 func (q *Quadtree) queryRecursive(queryBounds Bounds, result *[]*Entity) {
 	// If bounds don't intersect, nothing to do
@@ -401,6 +410,14 @@ func (s *SpatialPartitionSystem) QueryRadius(x, y, radius float64) []*Entity {
 func (s *SpatialPartitionSystem) QueryBounds(bounds Bounds) []*Entity {
 	s.queryCount++
 	return s.quadtree.Query(bounds)
+}
+
+// QueryBoundsInto appends entities within bounds to the provided buffer.
+// This is a zero-allocation query method for hot paths that reuse buffers.
+// Returns the (possibly reallocated) buffer with results appended.
+func (s *SpatialPartitionSystem) QueryBoundsInto(bounds Bounds, buffer []*Entity) []*Entity {
+	s.queryCount++
+	return s.quadtree.QueryInto(bounds, buffer)
 }
 
 // GetStatistics returns performance statistics.

@@ -190,6 +190,9 @@ type EbitenRenderSystem struct {
 	// Reusable buffer for player entities in viewport culling to reduce allocations
 	playerBuffer []*Entity
 
+	// Reusable buffer for viewport query results to reduce allocations
+	viewportQueryBuffer []*Entity
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -218,20 +221,21 @@ type RenderStats struct {
 // NewRenderSystem creates a new render system.
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
-		cameraSystem:     cameraSystem,
-		spatialPartition: nil,  // Will be set when world bounds are known
-		enableCulling:    true, // Culling enabled by default (spatial partition bug fixed)
-		enableBatching:   true, // Batching enabled by default
-		batches:          make(map[*ebiten.Image][]*Entity),
-		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
-		nonSpriteBuffer:  make([]*Entity, 0, 64),         // Pre-allocate for typical non-sprite entity count
-		sortBuffer:       make([]*Entity, 0, 2000),       // Pre-allocate for typical entity count
-		sortCacheBuffer:  make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
-		vertexBuffer:     make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
-		indexBuffer:      make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
-		playerBuffer:     make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
-		ShowColliders:    false,
-		ShowGrid:         false,
+		cameraSystem:        cameraSystem,
+		spatialPartition:    nil,  // Will be set when world bounds are known
+		enableCulling:       true, // Culling enabled by default (spatial partition bug fixed)
+		enableBatching:      true, // Batching enabled by default
+		batches:             make(map[*ebiten.Image][]*Entity),
+		batchPool:           make([]map[*ebiten.Image][]*Entity, 0, 2),
+		nonSpriteBuffer:     make([]*Entity, 0, 64),         // Pre-allocate for typical non-sprite entity count
+		sortBuffer:          make([]*Entity, 0, 2000),       // Pre-allocate for typical entity count
+		sortCacheBuffer:     make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
+		vertexBuffer:        make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
+		indexBuffer:         make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
+		playerBuffer:        make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
+		viewportQueryBuffer: make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
+		ShowColliders:       false,
+		ShowGrid:            false,
 	}
 }
 
@@ -680,8 +684,10 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 		Height: viewportHeight + margin*2,
 	}
 
-	// Query spatial partition for entities in viewport
-	visible := r.spatialPartition.QueryBounds(viewportBounds)
+	// Query spatial partition for entities in viewport using zero-allocation method
+	r.viewportQueryBuffer = r.viewportQueryBuffer[:0]
+	visible := r.spatialPartition.QueryBoundsInto(viewportBounds, r.viewportQueryBuffer)
+	r.viewportQueryBuffer = visible // Update buffer reference in case it was reallocated
 
 	// CRITICAL FIX: Always include local player(s) regardless of viewport culling
 	// Player entities have input component and should never be culled
@@ -707,6 +713,7 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	// Append player entities to visible list
 	if len(r.playerBuffer) > 0 {
 		visible = append(visible, r.playerBuffer...)
+		r.viewportQueryBuffer = visible // Update in case append reallocated
 	}
 
 	return visible

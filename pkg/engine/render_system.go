@@ -181,6 +181,10 @@ type EbitenRenderSystem struct {
 	sortBuffer      []*Entity
 	sortCacheBuffer []entitySprite
 
+	// Reusable buffers for batch geometry to reduce allocations
+	vertexBuffer []ebiten.Vertex
+	indexBuffer  []uint16
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -215,9 +219,11 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		enableBatching:   true, // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
-		nonSpriteBuffer:  make([]*Entity, 0, 64),        // Pre-allocate for typical non-sprite entity count
-		sortBuffer:       make([]*Entity, 0, 2000),      // Pre-allocate for typical entity count
-		sortCacheBuffer:  make([]entitySprite, 0, 2000), // Pre-allocate for typical entity count
+		nonSpriteBuffer:  make([]*Entity, 0, 64),         // Pre-allocate for typical non-sprite entity count
+		sortBuffer:       make([]*Entity, 0, 2000),       // Pre-allocate for typical entity count
+		sortCacheBuffer:  make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
+		vertexBuffer:     make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
+		indexBuffer:      make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
 		ShowColliders:    false,
 		ShowGrid:         false,
 	}
@@ -429,8 +435,20 @@ func (r *EbitenRenderSystem) drawEntitiesIndividually(entities []*Entity) {
 
 // buildBatchGeometry constructs vertex and index buffers for all entities in the batch.
 func (r *EbitenRenderSystem) buildBatchGeometry(entities []*Entity, batchSpriteImage *ebiten.Image) ([]ebiten.Vertex, []uint16) {
-	vertices := make([]ebiten.Vertex, 0, len(entities)*4)
-	indices := make([]uint16, 0, len(entities)*6)
+	// Reuse vertex and index buffers to reduce allocations
+	r.vertexBuffer = r.vertexBuffer[:0]
+	r.indexBuffer = r.indexBuffer[:0]
+
+	// Ensure capacity
+	requiredVertices := len(entities) * 4
+	requiredIndices := len(entities) * 6
+	if cap(r.vertexBuffer) < requiredVertices {
+		r.vertexBuffer = make([]ebiten.Vertex, 0, requiredVertices)
+	}
+	if cap(r.indexBuffer) < requiredIndices {
+		r.indexBuffer = make([]uint16, 0, requiredIndices)
+	}
+
 	vertexIndex := uint16(0)
 
 	for _, entity := range entities {
@@ -451,10 +469,10 @@ func (r *EbitenRenderSystem) buildBatchGeometry(entities []*Entity, batchSpriteI
 		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
 		flashAlpha, tintR, tintG, tintB, tintA := r.extractVisualFeedback(entity)
 
-		r.appendSpriteVertices(&vertices, &indices, sprite, screenX, screenY, flashAlpha, tintR, tintG, tintB, tintA, batchSpriteImage, &vertexIndex)
+		r.appendSpriteVertices(&r.vertexBuffer, &r.indexBuffer, sprite, screenX, screenY, flashAlpha, tintR, tintG, tintB, tintA, batchSpriteImage, &vertexIndex)
 	}
 
-	return vertices, indices
+	return r.vertexBuffer, r.indexBuffer
 }
 
 // validateBatchEntity checks if an entity has the required components for batch rendering.

@@ -25,13 +25,17 @@ type CollisionSystem struct {
 
 	// Pool for collision pair tracking maps to reduce allocations
 	checkedMapPool sync.Pool
+
+	// Reusable buffer for collidable entities to reduce allocations
+	collidableBuffer []*Entity
 }
 
 // NewCollisionSystem creates a new collision system.
 func NewCollisionSystem(cellSize float64) *CollisionSystem {
 	return &CollisionSystem{
-		CellSize: cellSize,
-		grid:     make(map[int]map[int][]*Entity),
+		CellSize:         cellSize,
+		grid:             make(map[int]map[int][]*Entity),
+		collidableBuffer: make([]*Entity, 0, 256),
 		checkedMapPool: sync.Pool{
 			New: func() interface{} {
 				return make(map[uint64]map[uint64]bool)
@@ -166,19 +170,23 @@ func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) [
 		}
 	}
 
-	collidableEntities := make([]*Entity, 0, len(entities))
+	// Reuse collidableBuffer to reduce allocations
+	s.collidableBuffer = s.collidableBuffer[:0]
+	if cap(s.collidableBuffer) < len(entities) {
+		s.collidableBuffer = make([]*Entity, 0, len(entities))
+	}
 
 	for _, entity := range entities {
 		if entity.HasComponent("collider") && entity.HasComponent("position") {
-			collidableEntities = append(collidableEntities, entity)
+			s.collidableBuffer = append(s.collidableBuffer, entity)
 		}
 	}
 
-	for _, entity := range collidableEntities {
+	for _, entity := range s.collidableBuffer {
 		s.addToGrid(entity)
 	}
 
-	return collidableEntities
+	return s.collidableBuffer
 }
 
 // acquireCheckedMap obtains a cleaned collision tracking map from the pool.

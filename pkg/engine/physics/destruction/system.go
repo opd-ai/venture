@@ -14,6 +14,9 @@ type System struct {
 	debris         []*DebrisParticle
 	fallingObjects []*FallingObject
 	accumulator    float64 // Time accumulator for fixed timestep
+	// Reusable buffers to reduce per-frame allocations
+	debrisBuffer  []*DebrisParticle
+	fallingBuffer []*FallingObject
 }
 
 // NewSystem creates a new destruction system
@@ -27,6 +30,8 @@ func NewSystem(config *Config) *System {
 		debris:         make([]*DebrisParticle, 0, config.MaxDebrisParticles),
 		fallingObjects: make([]*FallingObject, 0, config.MaxFallingObjects),
 		accumulator:    0,
+		debrisBuffer:   make([]*DebrisParticle, 0, config.MaxDebrisParticles),
+		fallingBuffer:  make([]*FallingObject, 0, config.MaxFallingObjects),
 	}
 }
 
@@ -346,7 +351,13 @@ func (s *System) updateBuildingState(buildingID string) {
 
 // updateDebris updates debris particle physics
 func (s *System) updateDebris(deltaTime float64) {
-	activeDebris := make([]*DebrisParticle, 0, len(s.debris))
+	// Reuse buffer to reduce per-frame allocations
+	s.debrisBuffer = s.debrisBuffer[:0]
+
+	// Ensure capacity
+	if cap(s.debrisBuffer) < len(s.debris) {
+		s.debrisBuffer = make([]*DebrisParticle, 0, len(s.debris))
+	}
 
 	for _, d := range s.debris {
 		d.Life -= deltaTime
@@ -363,15 +374,22 @@ func (s *System) updateDebris(deltaTime float64) {
 		d.Y += d.VelY * deltaTime
 		d.Angle += d.RotVel * deltaTime
 
-		activeDebris = append(activeDebris, d)
+		s.debrisBuffer = append(s.debrisBuffer, d)
 	}
 
-	s.debris = activeDebris
+	// Swap buffers to avoid allocation
+	s.debris, s.debrisBuffer = s.debrisBuffer, s.debris
 }
 
 // updateFallingObjects updates falling object physics with realistic gravity and bouncing
 func (s *System) updateFallingObjects(deltaTime float64) {
-	activeFalling := make([]*FallingObject, 0, len(s.fallingObjects))
+	// Reuse buffer to reduce per-frame allocations
+	s.fallingBuffer = s.fallingBuffer[:0]
+
+	// Ensure capacity
+	if cap(s.fallingBuffer) < len(s.fallingObjects) {
+		s.fallingBuffer = make([]*FallingObject, 0, len(s.fallingObjects))
+	}
 
 	for _, obj := range s.fallingObjects {
 		if obj.IsGrounded() && obj.Bounces >= obj.MaxBounces {
@@ -406,10 +424,11 @@ func (s *System) updateFallingObjects(deltaTime float64) {
 			}
 		}
 
-		activeFalling = append(activeFalling, obj)
+		s.fallingBuffer = append(s.fallingBuffer, obj)
 	}
 
-	s.fallingObjects = activeFalling
+	// Swap buffers to avoid allocation
+	s.fallingObjects, s.fallingBuffer = s.fallingBuffer, s.fallingObjects
 }
 
 // SpawnFallingObject adds a falling object to the simulation

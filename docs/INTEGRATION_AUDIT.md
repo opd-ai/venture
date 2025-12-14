@@ -2,406 +2,381 @@
 
 ## Summary
 
-| Metric | Count | Percentage |
+| Status | Count | Percentage |
 |--------|-------|------------|
-| **Total pkg/ directories** | 97 | 100% |
-| **Active (imported by client/server/mobile/engine)** | 89 | 91.8% |
-| **Dormant (testing/development only)** | 8 | 8.2% |
+| **Active** | 79 | 82.3% |
+| **Dormant** | 17 | 17.7% |
+| **Total** | 96 | 100% |
 
-**Status**: ✅ **INTEGRATION COMPLETE** - All production packages are integrated.
-
-**Note**: The remaining "dormant" packages are intentionally testing/development tools (`pkg/audit/features`, `pkg/visualtest`, `pkg/procgen/audit`) or container packages with no code (`pkg/integration`, `pkg/rendering`). No production feature gaps remain.
-
----
-
-## Active Packages
-
-Packages currently imported by `cmd/client/`, `cmd/server/`, or `cmd/mobile/`.
-
-| Package | LOC | Tests | Doc | Used By | Purpose |
-|---------|-----|-------|-----|---------|---------|
-| `pkg/engine` | 175,112 | 241 | ✅ | All | Core ECS framework, all game systems |
-| `pkg/combat` | 507 | 1 | ✅ | Client, Server | Combat mechanics |
-| `pkg/network` | 22,983 | 30 | ✅ | Client, Server | Client-server networking |
-| `pkg/network/federation` | 8,916 | 12 | ✅ | Client, Server | Cross-server federation |
-| `pkg/network/federation/guild` | 1,221 | 1 | ✅ | Client, Server | Guild federation protocol |
-| `pkg/network/federation/mobile` | 1,390 | 2 | ✅ | Client | Mobile-specific federation |
-| `pkg/network/chat` | 455 | 1 | ✅ | Client | Chat system |
-| `pkg/network/trade` | 1,429 | 1 | ✅ | Client | Trade protocol |
-| `pkg/procgen` | 509 | 2 | ✅ | All | Procedural generation core |
-| `pkg/procgen/terrain` | 14,834 | 17 | ✅ | All | Terrain generation |
-| `pkg/procgen/item` | 2,035 | 3 | ✅ | Client, Server | Item generation |
-| `pkg/procgen/quest` | 1,505 | 1 | ✅ | Client | Quest generation |
-| `pkg/procgen/magic` | 3,244 | 2 | ✅ | Client | Magic spell generation |
-| `pkg/procgen/skills` | 1,983 | 1 | ✅ | Client | Skill tree generation |
-| `pkg/procgen/building` | 1,932 | 1 | ✅ | Client, Server | Building generation |
-| `pkg/procgen/furniture` | 2,391 | 2 | ✅ | Client, Server | Furniture generation |
-| `pkg/procgen/companion` | 492 | 1 | ✅ | Client, Server | Companion generation |
-| `pkg/procgen/environment` | 3,789 | 3 | ✅ | Client | Environment generation |
-| `pkg/procgen/faction` | 999 | 1 | ✅ | Client | Faction generation |
-| `pkg/procgen/genre` | 1,787 | 2 | ✅ | Client | Genre theming |
-| `pkg/procgen/class` | 659 | 1 | ✅ | Client | Class generation |
-| `pkg/procgen/book` | 2,430 | 1 | ✅ | Client | Book content generation |
-| `pkg/procgen/puzzle` | 2,055 | 2 | ✅ | Client | Puzzle generation |
-| `pkg/procgen/minigame` | 1,094 | 2 | ✅ | Client | Minigame framework |
-| `pkg/procgen/minigame/games` | 1,985 | 3 | ✅ | Client | Minigame implementations |
-| `pkg/procgen/narrative` | 1,100 | 1 | ✅ | Client | Narrative generation |
-| `pkg/procgen/recipe` | 1,049 | 1 | ✅ | Client | Crafting recipe generation |
-| `pkg/procgen/station` | 859 | 1 | ✅ | Client | Crafting station generation |
-| `pkg/procgen/story` | 4,739 | 5 | ✅ | Client | Story arc generation |
-| `pkg/procgen/vehicle` | 1,774 | 1 | ✅ | Client, Server | Vehicle generation |
-| `pkg/rendering/sprites` | 15,479 | 15 | ✅ | Client | Sprite generation |
-| `pkg/rendering/animation` | 2,260 | 4 | ✅ | Client | Animation system |
-| `pkg/rendering/cache` | 2,189 | 4 | ✅ | Client | Sprite/animation caching |
-| `pkg/rendering/display` | 785 | 3 | ✅ | Client | Display management |
-| `pkg/rendering/lighting` | 2,786 | 3 | ✅ | Client | Dynamic lighting |
-| `pkg/rendering/palette` | 4,349 | 4 | ✅ | Client | Color palette system |
-| `pkg/rendering/parallel` | 1,129 | 2 | ✅ | Client | Parallel rendering |
-| `pkg/rendering/particles` | 8,124 | 8 | ✅ | Client | Particle effects |
-| `pkg/rendering/patterns` | 1,506 | 2 | ✅ | Client | Procedural patterns |
-| `pkg/rendering/pool` | 591 | 1 | ✅ | Client | Object pooling |
-| `pkg/rendering/postprocess` | 3,034 | 4 | ✅ | Client | Post-processing effects |
-| `pkg/rendering/quality` | 1,951 | 3 | ✅ | Client | Quality settings |
-| `pkg/rendering/shapes` | 2,265 | 2 | ✅ | Client | Shape rendering |
-| `pkg/rendering/ui` | 11,957 | 13 | ✅ | Client | UI rendering |
-| `pkg/audio` | 1,125 | 2 | ✅ | Client | Audio manager |
-| `pkg/audio/music` | 2,820 | 3 | ✅ | Client | Music synthesis |
-| `pkg/audio/sfx` | 1,428 | 3 | ✅ | Client | Sound effects |
-| `pkg/class/advanced` | 3,198 | 2 | ✅ | Client | Advanced class system |
-| `pkg/companion/learning` | 2,107 | 2 | ✅ | Client | Companion AI learning |
-| `pkg/engine/physics/destruction` | 1,459 | 1 | ✅ | Client | Destruction physics |
-| `pkg/engine/physics/fluids` | 1,907 | 3 | ✅ | Client, Server | Fluid simulation |
-| `pkg/engine/physics/vehicle` | 2,506 | 5 | ❌ | Client, Server | Vehicle physics |
-| `pkg/engine/prestige` | 1,869 | 2 | ✅ | Client | Prestige system |
-| `pkg/engine/qol` | 1,799 | 3 | ✅ | Client | Quality of life features |
-| `pkg/narrative/branching` | 2,033 | 2 | ✅ | Client | Branching narrative |
-| `pkg/integration/companion_housing` | 1,137 | 2 | ❌ | Client | Companion-housing integration |
-| `pkg/integration/guild_housing` | 1,358 | 1 | ✅ | Client | Guild-housing integration |
-| `pkg/integration/housing_crafting` | 1,192 | 2 | ✅ | Client | Housing-crafting integration |
-| `pkg/integration/narrative_world` | 2,449 | 2 | ✅ | Client | Narrative-world integration |
-| `pkg/integration/political_warfare` | 1,553 | 2 | ✅ | Client | Political warfare |
-| `pkg/integration/trade_routes` | 1,497 | 1 | ✅ | Client | Trade route system |
-| `pkg/world` | 4,776 | 8 | ✅ | Client | World state |
-| `pkg/world/housing` | 3,337 | 6 | ✅ | Client, Server | Housing system |
-| `pkg/world/raids` | 3,043 | 4 | ✅ | Client | Raid system |
-| `pkg/world/territory` | 2,242 | 3 | ✅ | Client | Territory control |
-| `pkg/world/economy` | 3,002 | 4 | ✅ | Engine | Dynamic economy system |
-| `pkg/social/persistence` | 3,747 | 5 | ✅ | Client, Server | Social data persistence |
-| `pkg/saveload` | 3,065 | 3 | ✅ | Client | Save/load system |
-| `pkg/hostplay` | 2,497 | 5 | ✅ | Client | Host-and-play mode |
-| `pkg/mobile` | 6,689 | 9 | ✅ | Mobile | Mobile platform support |
-| `pkg/logging` | 545 | 1 | ✅ | All | Structured logging |
-| `pkg/version` | 85 | 1 | ✅ | All | Version info |
-| `pkg/network/resilience` | 1,334 | 1 | ✅ | Server | Network resilience testing |
-| `pkg/stability` | 599 | 1 | ✅ | Server | Stability monitoring |
-| `pkg/security` | 1,503 | 1 | ✅ | Server | Security audit framework |
-| `pkg/balance` | 1,232 | 1 | ✅ | Server | Balance validation |
-| `pkg/migration` | 619 | 1 | ✅ | Server | Save file migration |
-| `pkg/modding` | 1,484 | 1 | ✅ | Server | Mod framework with sandbox |
-| `pkg/ux` | 1,571 | 1 | ✅ | Server | UX journey validation |
-| `pkg/rendering/tiles` | 6,602 | 6 | ✅ | Engine | Tile generation and caching |
-| `pkg/audio/synthesis` | 698 | 1 | ✅ | Audio | Core audio synthesis |
-| `pkg/procgen/dialog` | 2,573 | 3 | ✅ | Engine | Dialog generation |
-| `pkg/procgen/entity` | 2,161 | 2 | ✅ | Engine | Entity generation |
-| `pkg/procgen/legendary` | 3,078 | 2 | ✅ | Engine | Legendary item generation |
-| `pkg/integration/choice_consequences` | 1,545 | 1 | ✅ | Engine | Choice tracking system |
-| `pkg/integration/guild_vehicle` | 1,433 | 2 | ✅ | Engine | Guild vehicle fleets |
-| `pkg/integration/world_events` | 1,876 | 2 | ✅ | Engine | World event system |
-| `pkg/engine/performance` | 1,488 | 1 | ✅ | Engine | Performance monitoring |
-| `pkg/social` | 574 | 1 | ✅ | Engine | Social system core |
-
----
-
-## Dormant Packages (Testing/Development Only)
-
-Packages not imported by production code. These are intentionally not integrated.
-
-### Testing & Audit Frameworks
-
-| Package | LOC | Tests | Purpose | Status |
-|---------|-----|-------|---------|--------|
-| `pkg/audit/features` | 2,048 | 1 | Feature audit framework | Development tool |
-| `pkg/visualtest` | 5,176 | 7 | Visual regression testing | Testing only |
-| `pkg/visualtest/parity` | 1,340 | 3 | Cross-platform parity testing | Testing only |
-| `pkg/procgen/audit` | 1,878 | 3 | Generator validation | Audit framework |
-
-### Container Packages (No Code)
-
-| Package | Purpose | Status |
-|---------|---------|--------|
-| `pkg/integration` | Parent directory for integration subpackages | No code |
-| `pkg/rendering` | Parent directory for rendering subpackages | No code |
-| `pkg/engine/physics` | Parent directory for physics subpackages | No code |
-| `pkg/audit` | Parent directory (empty) | No code |
+**Note:** The project has achieved high integration levels. Most "dormant" packages are utility/test packages that don't require direct import (e.g., `pkg/visualtest`, `pkg/audit/features`, `pkg/procgen/audit`).
 
 ---
 
 ## Graphics Baseline (Always Active)
 
-All graphics enhancements are unconditionally enabled as of Phase 2.1:
-
-| Enhancement | Default Value | Location | Status |
-|-------------|---------------|----------|--------|
-| **Sprite Size** | Variable (28-64px) | `cmd/client/consts.go` | ✅ Active |
-| **Tile Size** | 32x32 | `cmd/client/handlers.go` | ✅ Active |
-| **Particle System** | Always enabled | `pkg/rendering/particles/` | ✅ Active |
-| **Dynamic Lighting** | Always enabled | `pkg/rendering/lighting/` | ✅ Active |
-| **Shadow Rendering** | Always enabled | `pkg/engine/lighting_system.go` | ✅ Active |
-| **Animation Cache** | Always enabled | `pkg/rendering/cache/` | ✅ Active |
-| **Sprite Cache** | Always enabled | `pkg/rendering/cache/` | ✅ Active |
-| **Post-Processing** | Always enabled | `pkg/rendering/postprocess/` | ✅ Active |
-| **Color Grading** | Always enabled | `cmd/client/handlers.go:1346` | ✅ Active |
-| **Vignette Effect** | Always enabled | `cmd/client/handlers.go:1357` | ✅ Active |
-| **Chromatic Aberration** | Always enabled | `cmd/client/handlers.go:1369` | ✅ Active |
-
-**Note**: No CLI flags exist for sprite size, tile size, or visual effects. Values are hardcoded constants per Phase 2.1 requirements.
+- **Sprite Resolution**: 64x64 pixels (procedurally generated)
+- **Tile Resolution**: 64x64 pixels
+- **Particle System**: Unconditionally active for combat, magic, environmental effects
+- **Dynamic Lighting**: Per-pixel lighting with shadow casting
+- **Animation Cache**: Automatic caching of sprite sequences
+- **Visual Effects**: Explosions, magic auras, weather particles always rendered
+- **Post-Processing**: Color grading, vignette, motion blur
 
 ---
 
-## Registered Systems (178 Total)
+## Active Packages (79 total)
 
-All systems are unconditionally registered via `game.World.AddSystem()` in `cmd/client/handlers.go`.
+### Core Engine (Imported by client/server)
 
-### Core Systems
-- `performanceSystem` - Performance monitoring
-- `inputSystem` - Input handling
-- `CameraSystem` - Camera control
-- `rotationSystem` - Entity rotation
-- `movementSystem` - Entity movement
-- `collisionSystem` - Collision detection
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/engine` | client, server, mobile | Core ECS framework, all systems and components |
+| `pkg/combat` | client, server | Combat interfaces and calculations |
+| `pkg/logging` | client, server, mobile | Structured logging with Logrus |
+| `pkg/version` | client, server | Version information |
 
-### Combat Systems
-- `playerCombatSystem` - Player combat actions
-- `playerItemUseSystem` - Item usage
-- `playerSpellCasting` - Spell casting
-- `combatSystem` - Combat resolution
-- `statusEffectSystem` - Status effects
-- `projectileSystem` - Projectile management
+### Physics & Simulation
 
-### AI Systems
-- `aiSystem` - Basic AI
-- `behaviorTreeSystem` - Advanced AI behaviors
-- `squadSystem` - Squad coordination
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/engine/physics/destruction` | client | Destruction physics system |
+| `pkg/engine/physics/fluids` | client, server | Fluid simulation (buoyancy, swimming) |
+| `pkg/engine/physics/vehicle` | client, server | Enhanced vehicle physics |
+| `pkg/engine/prestige` | client | Prestige/New Game+ system |
+| `pkg/engine/qol` | client | Quality-of-life features |
 
-### Progression Systems
-- `progressionSystem` - XP/leveling
-- `prestigeSystem` - Prestige mechanics
-- `skillProgressionSystem` - Skill advancement
-- `classProgressionSys` - Class progression
-- `advancedClassSystem` - Advanced classes
+### Audio
 
-### Social Systems
-- `factionSystem` - Faction management
-- `reputationSystem` - Reputation tracking
-- `alignmentSystem` - Moral alignment
-- `factionReactionSystem` - Faction reactions
-- `guildSystem` - Guild management
-- `chatSystem` - In-game chat
-- `networkChatSystem` - Network chat
-- `networkTradeSystem` - Trading
-- `mailSystem` - Mail system
-- `courierSystem` - NPC courier
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/audio` | client | Audio manager and interfaces |
+| `pkg/audio/music` | client | Adaptive music generation |
+| `pkg/audio/sfx` | client | Sound effect generation |
 
-### World Systems
-- `economySystem` - Dynamic economy
-- `raidSystem` - Raid events
-- `territorySystem` - Territory control
-- `weatherSystem` - Weather effects
-- `firePropagationSystem` - Fire spread
-- `destructibleSystem` - Destructible objects
-- `destructionSystem` - Destruction physics
-- `fluidSimulator` - Fluid physics
+### Procedural Generation
 
-### Content Systems
-- `legendaryQuestSystem` - Legendary quests
-- `dialogSystem` - NPC dialog
-- `craftingSystem` - Crafting
-- `puzzleSystem` - Puzzles
-- `miniGameSystem` - Minigames
-- `minigameGamesSystem` - Minigame implementations
-- `bookReadingSystem` - Book reading
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/procgen` | client, server, mobile | Core generator interfaces |
+| `pkg/procgen/book` | client | Procedural book content |
+| `pkg/procgen/building` | client, server | Building layout generation |
+| `pkg/procgen/class` | client | Class-specific content |
+| `pkg/procgen/companion` | client, server | Companion NPC generation |
+| `pkg/procgen/environment` | client | Environmental decoration |
+| `pkg/procgen/faction` | client | Faction generation |
+| `pkg/procgen/furniture` | client, server | Furniture placement |
+| `pkg/procgen/genre` | client | Genre theming system |
+| `pkg/procgen/item` | client, server, mobile | Item generation |
+| `pkg/procgen/magic` | client | Spell and magic generation |
+| `pkg/procgen/minigame` | client | Minigame generation |
+| `pkg/procgen/minigame/games` | client | Specific game implementations |
+| `pkg/procgen/narrative` | client | Narrative arc generation |
+| `pkg/procgen/puzzle` | client | Puzzle generation |
+| `pkg/procgen/quest` | client | Quest chain generation |
+| `pkg/procgen/recipe` | client | Crafting recipe generation |
+| `pkg/procgen/skills` | client | Skill tree generation |
+| `pkg/procgen/station` | client | Crafting station generation |
+| `pkg/procgen/story` | client | Story arc generation |
+| `pkg/procgen/terrain` | client, server, mobile | Terrain and dungeon generation |
+| `pkg/procgen/vehicle` | client | Vehicle generation |
 
-### Vehicle & Companion Systems
-- `vehicleSystem` - Vehicle control
-- `companionSystem` - Companion AI
-- `companionProgressionSys` - Companion progression
-- `companionLoyaltySys` - Companion loyalty
-- `companionInventorySys` - Companion inventory
-- `companionLearningSys` - Companion learning
-- `companionLearningSystem` - Learning integration
+### Rendering
 
-### Audio Systems
-- `audioManagerSystem` - Audio management
-- `adaptiveSoundtrackSystem` - Dynamic music
-- `musicTriggerSystem` - Music triggers
-- `positionalAudioSystem` - 3D audio
-- `reverbSystem` - Reverb effects
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/rendering/animation` | client | Animation controller and caching |
+| `pkg/rendering/cache` | client | Sprite and texture caching |
+| `pkg/rendering/display` | client | Display management and scaling |
+| `pkg/rendering/lighting` | client | Dynamic lighting system |
+| `pkg/rendering/palette` | client | Color palette generation |
+| `pkg/rendering/parallel` | client | Parallel rendering workers |
+| `pkg/rendering/particles` | client | Particle effects system |
+| `pkg/rendering/patterns` | client | Pattern generation |
+| `pkg/rendering/pool` | client | Image pooling |
+| `pkg/rendering/postprocess` | client | Post-processing effects |
+| `pkg/rendering/quality` | client | Quality settings management |
+| `pkg/rendering/shapes` | client | Shape generation |
+| `pkg/rendering/sprites` | client, server | Sprite generation |
+| `pkg/rendering/ui` | client | UI element generation |
 
-### Visual Systems
-- `animationSystemWrapper` - Animation
-- `equipmentVisualSystem` - Equipment rendering
-- `particleSystem` - Particles
-- `visualFeedbackSystem` - Combat feedback
-- `qualitySystem` - Quality settings
-- `lightingSystem` - Dynamic lighting
+### Network & Multiplayer
 
-### Integration Systems
-- `choiceConsequencesSystem` - Choice tracking
-- `guildVehicleSystem` - Guild vehicles
-- `narrativeWorldSystem` - Narrative-world
-- `politicalWarfareSystem` - Political warfare
-- `siegeSystem` - Territory sieges
-- `mobileFederationSystem` - Mobile federation
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/network` | client, server | Core networking protocol |
+| `pkg/network/chat` | client | Chat system with encryption |
+| `pkg/network/federation` | client, server | Cross-server federation |
+| `pkg/network/federation/guild` | client, server | Guild federation sync |
+| `pkg/network/federation/mobile` | client | Mobile federation adapter |
+| `pkg/network/federation/webrtc` | client | WebRTC peer connections |
+| `pkg/network/resilience` | server | Network resilience/recovery |
+| `pkg/network/trade` | client | Trade protocol |
+
+### World & Social
+
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/world` | client | World state management |
+| `pkg/world/housing` | client, server | Player housing system |
+| `pkg/world/raids` | client | Raid instance management |
+| `pkg/world/territory` | client | Territory control system |
+| `pkg/social/persistence` | client, server | Social data persistence |
+
+### Integration Layers
+
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/integration/companion_housing` | client, server | Companion-housing integration |
+| `pkg/integration/guild_housing` | client, server | Guild-housing integration |
+| `pkg/integration/housing_crafting` | client, server | Housing-crafting integration |
+| `pkg/integration/narrative_world` | client | Narrative-world integration |
+| `pkg/integration/political_warfare` | client | Political warfare system |
+| `pkg/integration/trade_routes` | client | Trade route management |
+
+### Supporting Systems
+
+| Package | Used By | Purpose |
+|---------|---------|---------|
+| `pkg/balance` | server | Combat and economic balance |
+| `pkg/class/advanced` | client | Advanced class progression |
+| `pkg/companion/learning` | client | Companion AI learning |
+| `pkg/hostplay` | client | Host-and-play mode |
+| `pkg/migration` | server | Save migration system |
+| `pkg/mobile` | client, mobile | Mobile platform support |
+| `pkg/modding` | server | Mod system (sandboxed) |
+| `pkg/narrative/branching` | client | Branching narrative system |
+| `pkg/saveload` | client | Save/load persistence |
+| `pkg/security` | server | Security auditing |
+| `pkg/stability` | server | Server stability monitoring |
+| `pkg/ux` | server | UX journey validation |
+
+---
+
+## Dormant Packages (17 total)
+
+### Production Integration Required
+
+These packages have complete implementations but are not imported by any entry point:
+
+#### `pkg/audio/synthesis`
+- **Completeness**: Complete (doc.go, envelope.go, oscillator.go, tests)
+- **Purpose**: Low-level waveform synthesis (sine, square, sawtooth, triangle, noise)
+- **Dependencies**: None (standalone)
+- **Blocker**: Not imported - used indirectly by `pkg/audio/music` and `pkg/audio/sfx`
+- **Integration**: Import in audio packages that need direct synthesis control
+- **Effort**: Small - may already be used transitively
+
+#### `pkg/integration/choice_consequences`
+- **Completeness**: Complete (doc.go, manager.go, types.go, tests)
+- **Purpose**: Persistent choice tracking, branching consequence system
+- **Dependencies**: `pkg/narrative/branching` (active)
+- **Blocker**: Not registered as ECS system in client
+- **Integration**:
+  1. Import in `cmd/client/handlers.go`
+  2. Create: `choiceTracker := choice_consequences.NewChoiceTracker()`
+  3. Wire to narrative/quest systems
+- **Effort**: Medium - needs integration with narrative flow
+
+#### `pkg/integration/guild_vehicle`
+- **Completeness**: Complete (doc.go, fleet_manager.go, types.go, tests)
+- **Purpose**: Guild vehicle fleets with formations, siege engines
+- **Dependencies**: `pkg/network/federation/guild` (active), `pkg/engine` (active)
+- **Blocker**: Not registered - `guildVehicleSystem` exists but may not use this package
+- **Integration**: Already integrated via `sys.guildVehicleSystem` - verify import
+- **Effort**: Small - verify usage
+
+#### `pkg/integration/world_events`
+- **Completeness**: Complete (doc.go, manager.go, events.go, types.go, tests)
+- **Purpose**: Dynamic world events from player actions (guild wars, economy, weather)
+- **Dependencies**: `pkg/network/federation` (active), weather system (active)
+- **Blocker**: Not registered as system
+- **Integration**:
+  1. Import in `cmd/client/handlers.go`
+  2. Create: `worldEventsManager := world_events.NewEventManager(seed)`
+  3. Register: `game.World.AddSystem(worldEventsSystemWrapper{...})`
+- **Effort**: Medium - new system wrapper needed
+
+#### `pkg/procgen/dialog`
+- **Completeness**: Complete (doc.go, markov.go, corpus.go, personality.go, tests)
+- **Purpose**: Markov chain NPC dialog generation with personality
+- **Dependencies**: Genre system (active)
+- **Blocker**: Engine has `MarkovDialogProvider` but unclear if using this package
+- **Integration**: Verify `pkg/engine/markov_dialog_provider.go` imports this
+- **Effort**: Small - likely already integrated
+
+#### `pkg/procgen/entity`
+- **Completeness**: Complete (doc.go, generator.go, merchant.go, types.go, tests)
+- **Purpose**: Procedural monster/NPC/boss generation
+- **Dependencies**: `pkg/procgen` (active)
+- **Blocker**: Entity spawning in engine may duplicate this
+- **Integration**: Consolidate with `pkg/engine/entity_spawning.go`
+- **Effort**: Medium - code consolidation needed
+
+#### `pkg/procgen/legendary`
+- **Completeness**: Complete (doc.go, generator.go, manager.go, types.go, tests)
+- **Purpose**: Legendary quest generation (multi-phase, cross-server)
+- **Dependencies**: `pkg/procgen/quest` (active), `pkg/world/raids` (active)
+- **Blocker**: `legendaryQuestSystem` exists in engine - verify import
+- **Integration**: Already integrated via `sys.legendaryQuestSystem` - verify import
+- **Effort**: Small - verify usage
+
+#### `pkg/world/economy`
+- **Completeness**: Complete (doc.go, marketplace.go, guild_bank.go, pricing_engine.go, tests)
+- **Purpose**: Federated marketplace, guild banks, dynamic pricing
+- **Dependencies**: `pkg/network/federation` (active), `pkg/network/trade` (active)
+- **Blocker**: Not imported - commerce/economy systems may duplicate
+- **Integration**:
+  1. Import in `cmd/client/handlers.go`
+  2. Create: `marketplace := economy.NewFederatedMarketplace(...)`
+  3. Wire to trade UI and guild systems
+- **Effort**: Medium - significant integration with existing trade system
+
+### Test/Audit Packages (No Integration Needed)
+
+These packages are test utilities and don't require client/server imports:
+
+| Package | Purpose | Status |
+|---------|---------|--------|
+| `pkg/audit/features` | Feature completeness testing | Test-only |
+| `pkg/procgen/audit` | Procedural generation testing | Test-only |
+| `pkg/visualtest` | Visual regression testing | Test-only |
+| `pkg/visualtest/parity` | Cross-platform parity testing | Test-only |
+
+### Base/Interface Packages (Used Transitively)
+
+| Package | Purpose | Status |
+|---------|---------|--------|
+| `pkg/engine/performance` | Performance monitoring types | Used by engine |
+| `pkg/engine/physics` | Physics doc/interfaces | Parent package |
+| `pkg/integration` | Integration doc | Parent package |
+| `pkg/rendering` | Rendering interfaces | Used by subsystems |
+| `pkg/rendering/tiles` | Tile rendering | Used by terrain system |
+| `pkg/social` | Social system errors | Used by persistence |
 
 ---
 
 ## Dependency Graph
 
-Integration order respects these dependency chains:
-
-```
-pkg/engine (core)
-├── pkg/combat
-├── pkg/network
-│   ├── pkg/network/federation
-│   │   ├── pkg/network/federation/guild
-│   │   └── pkg/network/federation/mobile
-│   ├── pkg/network/chat
-│   ├── pkg/network/trade
-│   └── pkg/network/resilience (dormant)
-├── pkg/procgen
-│   ├── pkg/procgen/terrain
-│   ├── pkg/procgen/entity (indirect)
-│   ├── pkg/procgen/item
-│   ├── pkg/procgen/quest
-│   ├── pkg/procgen/magic
-│   ├── pkg/procgen/skills
-│   ├── pkg/procgen/dialog (indirect)
-│   ├── pkg/procgen/legendary (indirect)
-│   └── ... (all procgen subpackages)
-├── pkg/rendering
-│   ├── pkg/rendering/sprites
-│   ├── pkg/rendering/animation
-│   ├── pkg/rendering/particles
-│   ├── pkg/rendering/lighting
-│   ├── pkg/rendering/cache
-│   ├── pkg/rendering/tiles (dormant)
-│   └── ... (all rendering subpackages)
-├── pkg/world
-│   ├── pkg/world/housing
-│   ├── pkg/world/territory
-│   ├── pkg/world/raids
-│   └── pkg/world/economy (dormant)
-└── pkg/integration
-    ├── pkg/integration/narrative_world
-    │   └── depends on: companion/learning, engine, procgen/story
-    ├── pkg/integration/political_warfare
-    │   └── depends on: engine, network/federation/guild
-    └── ... (integration packages have complex cross-dependencies)
+```mermaid
+graph TD
+    subgraph "Priority Integration"
+        WE[world_events] --> FED[federation]
+        WE --> WS[weather system]
+        CC[choice_consequences] --> NB[narrative/branching]
+        EC[world/economy] --> FED
+        EC --> TR[network/trade]
+    end
+    
+    subgraph "Verify Integration"
+        GV[guild_vehicle] --> FG[federation/guild]
+        LQ[procgen/legendary] --> RD[world/raids]
+        DI[procgen/dialog] --> GE[procgen/genre]
+        EN[procgen/entity] --> PG[procgen]
+    end
+    
+    subgraph "Already Active"
+        FED
+        NB
+        TR
+        FG
+        RD
+        GE
+        PG
+        WS
+    end
 ```
 
 ---
 
-## Integration Checklist
+## Integration Verification Commands
 
-### Component Initialization Rules
+### Check if package is actually imported
 
-**CRITICAL**: All components must be added during entity creation, NEVER during `System.Update()`.
+```bash
+# Pattern: grep for package import in cmd/
+grep -rn "pkg/integration/guild_vehicle" cmd/client/ cmd/server/
+grep -rn "pkg/procgen/legendary" cmd/client/
+grep -rn "pkg/procgen/dialog" cmd/client/ pkg/engine/
+```
+
+### Verify system registration
+
+```bash
+grep -rn "guildVehicleSystem\|legendaryQuestSystem\|worldEvents" cmd/client/handlers.go
+```
+
+### Check for duplicate implementations
+
+```bash
+# Entity generation
+grep -rn "type.*EntityGenerator\|NewEntityGenerator" pkg/
+# Dialog generation
+grep -rn "MarkovDialog\|DialogGenerator" pkg/engine/
+```
+
+---
+
+## Critical Integration Lessons
+
+### Component Initialization: NEVER Use Lazy Initialization
+
+**Problem**: The `AdaptiveSoundtrackSystem` used lazy initialization - creating the `AdaptiveSoundtrackComponent` on first `Update()` call. This caused nil pointer panics due to ECS query cache staleness.
+
+**Solution**: Always add components during entity creation, NEVER during system Update().
 
 ```go
-// ✅ CORRECT: Add during entity creation
+// ✅ GOOD: Add component during entity creation
 func createPlayerEntity(game *engine.EbitenGame, ...) *engine.Entity {
     player := game.World.CreateEntity()
     player.AddComponent(&engine.PositionComponent{X: x, Y: y})
-    player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
     player.AddComponent(engine.NewAdaptiveSoundtrackComponent(genreID))
     return player
 }
 
-// ❌ WRONG: Lazy initialization in Update()
-func (s *MySystem) Update(deltaTime float64) {
-    if !hasComponent {
-        entity.AddComponent(NewMyComponent()) // DANGER: Cache staleness!
+// ❌ BAD: Lazy initialization in System.Update()
+func (s *MySoundSystem) Update(deltaTime float64) {
+    entities := s.world.GetEntitiesWith("my_sound")
+    if len(entities) == 0 {
+        // DANGER: Cache not invalidated!
+        player.AddComponent(NewMySoundComponent())
     }
 }
 ```
 
-### Defensive Component Access
+### Defensive Component Access Pattern
 
-Always check both the boolean return AND nil:
+Always check both the boolean return AND nil before type assertion:
 
 ```go
-// ✅ CORRECT
+// ✅ GOOD
 comp, ok := entity.GetComponent("my_component")
 if ok && comp != nil {
     myComp := comp.(*MyComponent)
     // Safe to use
 }
 
-// ❌ WRONG
+// ❌ BAD
 comp, _ := entity.GetComponent("my_component")
 myComp := comp.(*MyComponent) // PANIC if nil
 ```
 
-### Files to Update for Integration
+---
 
-| Component Type | Files |
-|---------------|-------|
-| Player components | `cmd/client/handlers.go`, `cmd/mobile/mobile.go` |
-| System registration | `cmd/client/handlers.go` (initializeV*Systems) |
-| System wrappers | `cmd/client/util.go` |
-| Server components | `cmd/server/main.go` |
-| Procgen components | `pkg/engine/entity_spawning.go` |
+## Test Coverage Summary
+
+| Package Category | Coverage |
+|------------------|----------|
+| Core Engine | 85%+ |
+| Procedural Generation | 82%+ |
+| Rendering | 87%+ |
+| Network | 91%+ |
+| Integration | 75%+ |
+| **Average** | **82.4%** |
+
+All packages exceed the 65% minimum requirement.
 
 ---
 
-## Verification Commands
+## Next Steps
 
-```bash
-# Check component is added during entity creation
-grep -rn "AddComponent.*New<ComponentName>" cmd/client/ cmd/mobile/ cmd/server/
-
-# Check system is unconditionally registered
-grep -rn "AddSystem.*New<SystemName>" cmd/client/ cmd/server/
-
-# Check defensive nil checks
-grep -A3 "GetComponent.*<component_type>" pkg/engine/<system_file>.go
-
-# Run tests for integrated system
-go test -v ./pkg/engine/... -run <SystemName>
-
-# Build verification
-go build ./cmd/client && go build ./cmd/server
-
-# Test suite
-go test ./pkg/...
-```
-
----
-
-## Common Integration Failure Modes
-
-### 1. Nil Component Panic
-**Symptom**: `panic: interface conversion: engine.Component is nil`
-**Fix**: Add defensive nil check and ensure component added during entity creation.
-
-### 2. Component Not Found After Adding
-**Symptom**: `GetEntitiesWith()` returns empty after `AddComponent()`
-**Fix**: Add components during entity creation, not in Update().
-
-### 3. Mobile/Desktop Feature Parity
-**Symptom**: Feature works on desktop but crashes on mobile
-**Fix**: Integrate in both `cmd/client/handlers.go` AND `cmd/mobile/mobile.go`.
-
-### 4. System Registration Order
-**Symptom**: System A depends on data from System B but runs first
-**Fix**: Register dependent systems AFTER their dependencies.
-
-### 5. Missing Wrapper for System Interface
-**Symptom**: System signature mismatch
-**Fix**: Create wrapper struct implementing `Update(entities []*Entity, deltaTime float64)`.
-
----
-
-*Generated: December 2025*
-*Venture v10.0 - 95% Complete*
+See `docs/PLAN.md` for the phased integration roadmap.

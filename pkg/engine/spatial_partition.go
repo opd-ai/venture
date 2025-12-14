@@ -362,7 +362,9 @@ func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 		s.lastRebuildFrame = s.frameCount
 		s.isDirty = false // Clear dirty flag after rebuild
 	}
-} // MarkDirty marks the spatial partition as needing a rebuild.
+}
+
+// MarkDirty marks the spatial partition as needing a rebuild.
 // Should be called when entities move significantly.
 func (s *SpatialPartitionSystem) MarkDirty() {
 	s.isDirty = true

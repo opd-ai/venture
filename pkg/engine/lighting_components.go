@@ -297,17 +297,25 @@ const twoPi = 6.283185307179586
 
 // GetCurrentIntensity calculates the effective intensity with animations applied.
 // This is called by LightingSystem during rendering.
+// Optimized: Log level check avoids logrus.Fields allocation in hot path.
 func (l *LightComponent) GetCurrentIntensity() float64 {
-	lightingLog.WithFields(logrus.Fields{
-		"enabled":        l.Enabled,
-		"base_intensity": l.Intensity,
-		"flickering":     l.Flickering,
-		"pulsing":        l.Pulsing,
-		"internal_time":  l.internalTime,
-	}).Debug("GetCurrentIntensity called")
+	// Check log level once to avoid per-call map allocations from WithFields
+	debugEnabled := lightingLog.GetLevel() >= logrus.DebugLevel
+
+	if debugEnabled {
+		lightingLog.WithFields(logrus.Fields{
+			"enabled":        l.Enabled,
+			"base_intensity": l.Intensity,
+			"flickering":     l.Flickering,
+			"pulsing":        l.Pulsing,
+			"internal_time":  l.internalTime,
+		}).Debug("GetCurrentIntensity called")
+	}
 
 	if !l.Enabled {
-		lightingLog.Debug("Light disabled, returning 0 intensity")
+		if debugEnabled {
+			lightingLog.Debug("Light disabled, returning 0 intensity")
+		}
 		return 0
 	}
 
@@ -318,11 +326,13 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 		// Use internal time for pseudo-random flicker
 		// Range: [1.0 - FlickerAmount, 1.0]
 		flicker := 1.0 - l.FlickerAmount/2.0 + l.FlickerAmount/2.0*l.fastSin(l.internalTime*l.FlickerSpeed*twoPi)
-		lightingLog.WithFields(logrus.Fields{
-			"flicker_multiplier": flicker,
-			"flicker_amount":     l.FlickerAmount,
-			"flicker_speed":      l.FlickerSpeed,
-		}).Debug("Flicker effect applied")
+		if debugEnabled {
+			lightingLog.WithFields(logrus.Fields{
+				"flicker_multiplier": flicker,
+				"flicker_amount":     l.FlickerAmount,
+				"flicker_speed":      l.FlickerSpeed,
+			}).Debug("Flicker effect applied")
+		}
 		intensity *= flicker
 	}
 
@@ -330,17 +340,21 @@ func (l *LightComponent) GetCurrentIntensity() float64 {
 	if l.Pulsing {
 		// Range: [1.0 - PulseAmount, 1.0]
 		pulse := 1.0 - l.PulseAmount/2.0 + l.PulseAmount/2.0*l.fastSin(l.internalTime*l.PulseSpeed*twoPi)
-		lightingLog.WithFields(logrus.Fields{
-			"pulse_multiplier": pulse,
-			"pulse_amount":     l.PulseAmount,
-			"pulse_speed":      l.PulseSpeed,
-		}).Debug("Pulse effect applied")
+		if debugEnabled {
+			lightingLog.WithFields(logrus.Fields{
+				"pulse_multiplier": pulse,
+				"pulse_amount":     l.PulseAmount,
+				"pulse_speed":      l.PulseSpeed,
+			}).Debug("Pulse effect applied")
+		}
 		intensity *= pulse
 	}
 
-	lightingLog.WithFields(logrus.Fields{
-		"final_intensity": intensity,
-	}).Debug("GetCurrentIntensity returning")
+	if debugEnabled {
+		lightingLog.WithFields(logrus.Fields{
+			"final_intensity": intensity,
+		}).Debug("GetCurrentIntensity returning")
+	}
 
 	return intensity
 }

@@ -93,12 +93,10 @@ play() {
 }
 
 dev() {
-    impl
-    perf
-    review
     fix
-    #integrate
-    #play
+    impl
+    review
+    perf
 }
 
 $@

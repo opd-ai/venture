@@ -24,7 +24,8 @@ type CollisionSystem struct {
 	terrainChecker *TerrainCollisionChecker
 
 	// Pool for collision pair tracking maps to reduce allocations
-	checkedMapPool sync.Pool
+	// Uses flat map with composite keys to eliminate nested map allocations
+	checkedPairPool sync.Pool
 
 	// Reusable buffer for collidable entities to reduce allocations
 	collidableBuffer []*Entity
@@ -36,9 +37,11 @@ func NewCollisionSystem(cellSize float64) *CollisionSystem {
 		CellSize:         cellSize,
 		grid:             make(map[int]map[int][]*Entity),
 		collidableBuffer: make([]*Entity, 0, 256),
-		checkedMapPool: sync.Pool{
+		checkedPairPool: sync.Pool{
 			New: func() interface{} {
-				return make(map[uint64]map[uint64]bool)
+				// Pre-allocate for typical collision pair count
+				// 200 entities * ~4 nearby each = ~800 pairs
+				return make(map[uint64]bool, 1024)
 			},
 		},
 	}
@@ -153,8 +156,8 @@ func (s *CollisionSystem) checkPredictiveIntersection(entity *Entity, collider1 
 // Update detects and resolves collisions between entities.
 func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 	collidableEntities := s.collectAndGridCollidableEntities(entities)
-	checked := s.acquireCheckedMap()
-	defer s.checkedMapPool.Put(checked)
+	checked := s.acquireCheckedPairs()
+	defer s.releaseCheckedPairs(checked)
 
 	for _, entity := range collidableEntities {
 		s.processEntityCollisions(entity, collidableEntities, checked)
@@ -189,17 +192,37 @@ func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) [
 	return s.collidableBuffer
 }
 
-// acquireCheckedMap obtains a cleaned collision tracking map from the pool.
-func (s *CollisionSystem) acquireCheckedMap() map[uint64]map[uint64]bool {
-	checked := s.checkedMapPool.Get().(map[uint64]map[uint64]bool)
+// acquireCheckedPairs obtains a cleaned collision pair tracking map from the pool.
+// Uses flat map with composite keys to eliminate nested map allocations.
+func (s *CollisionSystem) acquireCheckedPairs() map[uint64]bool {
+	checked := s.checkedPairPool.Get().(map[uint64]bool)
+	// Clear the map for reuse
 	for k := range checked {
 		delete(checked, k)
 	}
 	return checked
 }
 
+// releaseCheckedPairs returns the collision pair map to the pool.
+func (s *CollisionSystem) releaseCheckedPairs(checked map[uint64]bool) {
+	// Clear if too large to prevent memory bloat
+	if len(checked) > 4096 {
+		checked = make(map[uint64]bool, 1024)
+	}
+	s.checkedPairPool.Put(checked)
+}
+
+// makePairKey creates a unique key for an entity pair.
+// Uses canonical ordering (smaller ID first) to ensure (a,b) == (b,a).
+func makePairKey(id1, id2 uint64) uint64 {
+	if id1 > id2 {
+		id1, id2 = id2, id1
+	}
+	return (id1 << 32) | (id2 & 0xFFFFFFFF)
+}
+
 // processEntityCollisions handles collision detection and resolution for a single entity.
-func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEntities []*Entity, checked map[uint64]map[uint64]bool) {
+func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEntities []*Entity, checked map[uint64]bool) {
 	posComp, _ := entity.GetComponent("position")
 	colliderComp, _ := entity.GetComponent("collider")
 
@@ -219,11 +242,12 @@ func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEnti
 			continue
 		}
 
-		if s.isCollisionPairChecked(entity.ID, other.ID, checked) {
+		pairKey := makePairKey(entity.ID, other.ID)
+		if checked[pairKey] {
 			continue
 		}
 
-		s.markCollisionPairChecked(entity.ID, other.ID, checked)
+		checked[pairKey] = true
 
 		if s.checkAndResolveEntityPair(entity, pos, collider, other) {
 			continue
@@ -234,20 +258,15 @@ func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEnti
 }
 
 // isCollisionPairChecked returns true if the entity pair has already been checked.
-func (s *CollisionSystem) isCollisionPairChecked(id1, id2 uint64, checked map[uint64]map[uint64]bool) bool {
-	return checked[id1] != nil && checked[id1][id2]
+// Uses flat map with composite key for O(1) lookup without nested map allocations.
+func (s *CollisionSystem) isCollisionPairChecked(id1, id2 uint64, checked map[uint64]bool) bool {
+	return checked[makePairKey(id1, id2)]
 }
 
-// markCollisionPairChecked marks an entity pair as checked in both directions.
-func (s *CollisionSystem) markCollisionPairChecked(id1, id2 uint64, checked map[uint64]map[uint64]bool) {
-	if checked[id1] == nil {
-		checked[id1] = make(map[uint64]bool)
-	}
-	if checked[id2] == nil {
-		checked[id2] = make(map[uint64]bool)
-	}
-	checked[id1][id2] = true
-	checked[id2][id1] = true
+// markCollisionPairChecked marks an entity pair as checked.
+// Uses flat map with composite key - no inner map allocations needed.
+func (s *CollisionSystem) markCollisionPairChecked(id1, id2 uint64, checked map[uint64]bool) {
+	checked[makePairKey(id1, id2)] = true
 }
 
 // checkAndResolveEntityPair checks if two entities collide and resolves the collision.

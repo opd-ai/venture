@@ -470,12 +470,12 @@ func TestPvPRewardSystem_VendorItemStock(t *testing.T) {
 	world := NewWorld()
 	sys := NewPvPRewardSystem(world, 12345)
 
-	// Find an item with limited stock
+	// Find an item with limited stock (any rank requirement)
 	vendorItems := sys.GetVendorInventory()
 	var limitedItem *PvPVendorItem
 	var itemIdx int
 	for i := range vendorItems {
-		if vendorItems[i].Stock > 0 && vendorItems[i].RankRequirement == "" {
+		if vendorItems[i].Stock > 0 {
 			limitedItem = &vendorItems[i]
 			itemIdx = i
 			break
@@ -488,11 +488,16 @@ func TestPvPRewardSystem_VendorItemStock(t *testing.T) {
 
 	initialStock := limitedItem.Stock
 
-	// Create entity with enough honor
+	// Create entity with enough honor and high rank to purchase any item
 	entity := world.CreateEntity()
 	rewardComp := NewPvPRewardComponent("season_1")
 	rewardComp.AddHonor(100000)
 	entity.AddComponent(rewardComp)
+
+	// Add rating component with Legend rank to meet any rank requirement
+	ratingComp := NewPvPRatingComponent("season_1")
+	ratingComp.RankTier = RankLegend
+	entity.AddComponent(ratingComp)
 
 	// Purchase item
 	if !sys.PurchaseFromVendor(entity, limitedItem.ID) {

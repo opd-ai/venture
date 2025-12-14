@@ -276,7 +276,7 @@ func (s *EventQuestSystem) AcceptEventQuest(
 				expiresAt = event.EndTime
 			} else {
 				// Default to 7 days if event not found
-				expiresAt = time.Now().AddDate(0, 0, 7)
+				expiresAt = s.clock.Now().AddDate(0, 0, 7)
 			}
 			break
 		}

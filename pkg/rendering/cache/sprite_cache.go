@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"hash/fnv"
+	"strconv"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -13,8 +14,17 @@ import (
 type CacheKey string
 
 // GenerateKey creates a cache key from seed, state, and frame information.
+// Optimized to use strconv instead of fmt.Sprintf to reduce allocations.
 func GenerateKey(seed int64, state string, frame int) CacheKey {
-	return CacheKey(fmt.Sprintf("%d:%s:%d", seed, state, frame))
+	// Estimate buffer size: typical seed ~10 digits, frame ~3 digits, 2 colons
+	// Add state length for precise sizing to minimize allocations
+	buf := make([]byte, 0, 16+len(state))
+	buf = strconv.AppendInt(buf, seed, 10)
+	buf = append(buf, ':')
+	buf = append(buf, state...)
+	buf = append(buf, ':')
+	buf = strconv.AppendInt(buf, int64(frame), 10)
+	return CacheKey(buf)
 }
 
 // GenerateCompositeKey creates a cache key for composite sprites.

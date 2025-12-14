@@ -152,6 +152,13 @@ var (
 	_ ImageProvider  = (*EbitenImage)(nil)
 )
 
+// entitySprite pairs an entity with its sprite for efficient sorting
+type entitySprite struct {
+	entity *Entity
+	sprite *EbitenSprite
+	layer  int
+}
+
 // EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
 // Implements RenderingSystem interface.
 type EbitenRenderSystem struct {
@@ -169,6 +176,10 @@ type EbitenRenderSystem struct {
 
 	// Reusable buffer for non-sprite entities to reduce allocations
 	nonSpriteBuffer []*Entity
+
+	// Reusable buffers for sorting to reduce allocations
+	sortBuffer      []*Entity
+	sortCacheBuffer []entitySprite
 
 	// Debug rendering flags
 	ShowColliders bool
@@ -204,7 +215,9 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		enableBatching:   true, // Batching enabled by default
 		batches:          make(map[*ebiten.Image][]*Entity),
 		batchPool:        make([]map[*ebiten.Image][]*Entity, 0, 2),
-		nonSpriteBuffer:  make([]*Entity, 0, 64), // Pre-allocate for typical non-sprite entity count
+		nonSpriteBuffer:  make([]*Entity, 0, 64),        // Pre-allocate for typical non-sprite entity count
+		sortBuffer:       make([]*Entity, 0, 2000),      // Pre-allocate for typical entity count
+		sortCacheBuffer:  make([]entitySprite, 0, 2000), // Pre-allocate for typical entity count
 		ShowColliders:    false,
 		ShowGrid:         false,
 	}
@@ -1089,25 +1102,25 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 }
 
 // sortEntitiesByLayer sorts entities by their sprite layer for correct draw order.
-// Optimized: Uses Go's sort.Slice (O(n log n)) and caches sprite components to avoid repeated map lookups.
+// Optimized: Uses reusable buffers to eliminate per-frame allocations.
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
-	// Pre-allocate with capacity
-	sorted := make([]*Entity, 0, len(entities))
+	// Reuse buffers, clearing them first
+	r.sortBuffer = r.sortBuffer[:0]
+	r.sortCacheBuffer = r.sortCacheBuffer[:0]
 
-	// Cache sprite components to avoid repeated GetComponent calls
-	type entitySprite struct {
-		entity *Entity
-		sprite *EbitenSprite
-		layer  int
+	// Grow buffers if needed (rare, only when entity count increases)
+	if cap(r.sortBuffer) < len(entities) {
+		r.sortBuffer = make([]*Entity, 0, len(entities))
 	}
-
-	cache := make([]entitySprite, 0, len(entities))
+	if cap(r.sortCacheBuffer) < len(entities) {
+		r.sortCacheBuffer = make([]entitySprite, 0, len(entities))
+	}
 
 	// Collect entities with sprites and cache their sprite components
 	for _, entity := range entities {
 		if sprite, ok := entity.GetComponent("sprite"); ok {
 			if ebitenSprite, ok := sprite.(*EbitenSprite); ok {
-				cache = append(cache, entitySprite{
+				r.sortCacheBuffer = append(r.sortCacheBuffer, entitySprite{
 					entity: entity,
 					sprite: ebitenSprite,
 					layer:  ebitenSprite.Layer,
@@ -1118,16 +1131,16 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 
 	// Sort using Go's stable sort for deterministic ordering (O(n log n))
 	// Stable sort ensures entities with the same layer maintain consistent order
-	sort.SliceStable(cache, func(i, j int) bool {
+	sort.SliceStable(r.sortCacheBuffer, func(i, j int) bool {
 		// Primary sort: by sprite layer
-		if cache[i].layer != cache[j].layer {
-			return cache[i].layer < cache[j].layer
+		if r.sortCacheBuffer[i].layer != r.sortCacheBuffer[j].layer {
+			return r.sortCacheBuffer[i].layer < r.sortCacheBuffer[j].layer
 		}
 
 		// Secondary sort: by Y position for depth sorting
 		// Entities lower on screen (higher Y) appear in front
-		posI, okI := cache[i].entity.GetComponent("position")
-		posJ, okJ := cache[j].entity.GetComponent("position")
+		posI, okI := r.sortCacheBuffer[i].entity.GetComponent("position")
+		posJ, okJ := r.sortCacheBuffer[j].entity.GetComponent("position")
 		if okI && okJ {
 			yI := posI.(*PositionComponent).Y
 			yJ := posJ.(*PositionComponent).Y
@@ -1137,15 +1150,15 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		}
 
 		// Tertiary sort: by entity ID for complete determinism
-		return cache[i].entity.ID < cache[j].entity.ID
+		return r.sortCacheBuffer[i].entity.ID < r.sortCacheBuffer[j].entity.ID
 	})
 
-	// Extract sorted entities
-	for _, es := range cache {
-		sorted = append(sorted, es.entity)
+	// Extract sorted entities into reusable buffer
+	for _, es := range r.sortCacheBuffer {
+		r.sortBuffer = append(r.sortBuffer, es.entity)
 	}
 
-	return sorted
+	return r.sortBuffer
 }
 
 // SetShowColliders implements RenderingSystem interface.

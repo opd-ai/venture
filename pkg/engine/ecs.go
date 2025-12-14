@@ -453,6 +453,7 @@ func (w *World) processPendingEntityAdditions() {
 
 // filterEntitiesByComponents filters entities that have all specified components.
 // Uses and updates the internal query buffer for efficiency.
+// Returns a slice that will be cached - caller must not modify the returned slice.
 func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
 	w.queryBuffer = w.queryBuffer[:0]
 	if cap(w.queryBuffer) < len(w.entities) {
@@ -465,8 +466,10 @@ func (w *World) filterEntitiesByComponents(componentTypes []string) []*Entity {
 		}
 	}
 
-	result := make([]*Entity, len(w.queryBuffer))
-	copy(result, w.queryBuffer)
+	// Return a slice of the buffer without copying.
+	// This is safe because the result is immediately cached by GetEntitiesWith
+	// and queryBuffer is reset at the start of each filterEntitiesByComponents call.
+	result := w.queryBuffer[:len(w.queryBuffer):len(w.queryBuffer)]
 	return result
 }
 

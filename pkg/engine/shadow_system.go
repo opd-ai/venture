@@ -36,7 +36,8 @@ type ShadowSystem struct {
 	shadowBuffer *ebiten.Image
 
 	// Reusable buffer for shadow casters to reduce per-frame allocations
-	casterBuffer []*shadowCaster
+	// Uses slice of values (not pointers) to avoid per-caster heap allocations
+	casterBuffer []shadowCaster
 
 	// Configuration
 	enabled       bool
@@ -70,7 +71,7 @@ func NewShadowSystemWithLogger(world *World, logger *logrus.Logger) *ShadowSyste
 		enabled:       true,
 		maxShadows:    100,
 		renderQuality: 1.0,
-		casterBuffer:  make([]*shadowCaster, 0, 100), // Pre-allocate for typical max shadows
+		casterBuffer:  make([]shadowCaster, 0, 100), // Pre-allocate for typical max shadows (values, not pointers)
 	}
 }
 
@@ -137,21 +138,22 @@ func (s *ShadowSystem) RenderShadows(screen *ebiten.Image, lightX, lightY, light
 	casters := s.collectShadowCasters(lightX, lightY, lightRadius)
 
 	// Render shadows for each caster
-	for _, caster := range casters {
-		s.renderShadowForEntity(s.shadowBuffer, caster, lightX, lightY)
+	for i := range casters {
+		s.renderShadowForEntity(s.shadowBuffer, &casters[i], lightX, lightY)
 	}
 
 	return s.shadowBuffer
 }
 
 // collectShadowCasters finds all entities that should cast shadows from this light.
-func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64) []*shadowCaster {
+// Returns a slice of shadow caster values (not pointers) to avoid per-caster heap allocations.
+func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64) []shadowCaster {
 	// Reuse caster buffer to reduce per-frame allocations
 	s.casterBuffer = s.casterBuffer[:0]
 
 	// Ensure capacity for maxShadows
 	if cap(s.casterBuffer) < s.maxShadows {
-		s.casterBuffer = make([]*shadowCaster, 0, s.maxShadows)
+		s.casterBuffer = make([]shadowCaster, 0, s.maxShadows)
 	}
 
 	entities := s.world.GetEntities()
@@ -194,7 +196,8 @@ func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64)
 			}
 		}
 
-		s.casterBuffer = append(s.casterBuffer, &shadowCaster{
+		// Append value (not pointer) to avoid heap allocation per caster
+		s.casterBuffer = append(s.casterBuffer, shadowCaster{
 			shadow:   shadow,
 			position: pos,
 			x:        pos.X,

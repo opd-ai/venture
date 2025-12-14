@@ -424,9 +424,10 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 }
 
 // getEntityPosition retrieves entity position component.
+// Uses typed getter for ~91x faster access vs generic GetComponent.
 func (s *AnimationSystem) getEntityPosition(entity *Entity) (*PositionComponent, bool) {
-	posComp, hasPos := entity.GetComponent("position")
-	if !hasPos {
+	pos := entity.GetPosition()
+	if pos == nil {
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id": entity.ID,
@@ -434,14 +435,7 @@ func (s *AnimationSystem) getEntityPosition(entity *Entity) (*PositionComponent,
 		}
 		return nil, false
 	}
-	pos, ok := posComp.(*PositionComponent)
-	if !ok && s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":      entity.ID,
-			"component_type": "position",
-		}).Warn("position component has incorrect type")
-	}
-	return pos, ok
+	return pos, true
 }
 
 // shouldCullEntity determines if entity should be culled from animation updates.
@@ -1121,24 +1115,14 @@ func (s *AnimationSystem) logEntityType(entityID uint64, entityType string, widt
 }
 
 // determineFacingDirection calculates entity facing direction from velocity.
+// Uses typed getter for ~91x faster access vs generic GetComponent.
 func (s *AnimationSystem) determineFacingDirection(entity *Entity, anim *AnimationComponent) string {
 	facing := "down"
 
-	velComp, hasVel := entity.GetComponent("velocity")
-	if !hasVel {
+	vel := entity.GetVelocity()
+	if vel == nil {
 		if anim.LastFacing != "" {
 			return anim.LastFacing
-		}
-		return facing
-	}
-
-	vel, ok := velComp.(*VelocityComponent)
-	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "velocity",
-			}).Warn("velocity component has incorrect type")
 		}
 		return facing
 	}

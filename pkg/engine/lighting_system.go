@@ -35,7 +35,7 @@ type LightingSystem struct {
 	viewportSet bool
 
 	// Light collection (reused each frame)
-	visibleLights []*lightWithPosition
+	visibleLights []lightWithPosition
 
 	// Lighting buffer (reused each frame)
 	lightingBuffer *ebiten.Image
@@ -85,7 +85,7 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 		world:            world,
 		config:           config,
 		logger:           logEntry,
-		visibleLights:    make([]*lightWithPosition, 0, config.MaxLights),
+		visibleLights:    make([]lightWithPosition, 0, config.MaxLights),
 		lightCircleCache: make(map[int]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
 	}
 
@@ -251,7 +251,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 
 // CollectVisibleLights gathers lights within viewport for rendering.
 // Returns the collected lights sorted by priority (closest first).
-func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []*lightWithPosition {
+func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []lightWithPosition {
 	startTime := time.Now()
 
 	if !s.validateLightCollection(len(entities)) {
@@ -372,7 +372,7 @@ func (s *LightingSystem) isLightVisibleInViewport(entity *Entity, pos *PositionC
 
 // addVisibleLight adds a light to the visible lights collection.
 func (s *LightingSystem) addVisibleLight(entity *Entity, light *LightComponent, pos *PositionComponent) {
-	s.visibleLights = append(s.visibleLights, &lightWithPosition{
+	s.visibleLights = append(s.visibleLights, lightWithPosition{
 		light: light,
 		x:     pos.X,
 		y:     pos.Y,
@@ -572,7 +572,7 @@ func (s *LightingSystem) getCachedAmbientLight() (float64, color.RGBA, bool) {
 }
 
 // shouldSkipLighting determines if lighting can be skipped for performance.
-func (s *LightingSystem) shouldSkipLighting(lights []*lightWithPosition, ambientIntensity float64, startTime time.Time) bool {
+func (s *LightingSystem) shouldSkipLighting(lights []lightWithPosition, ambientIntensity float64, startTime time.Time) bool {
 	if len(lights) == 0 && ambientIntensity > 0.8 {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -616,7 +616,7 @@ func (s *LightingSystem) createOrResizeLightingBuffer(w, h int) bool {
 }
 
 // applyAmbientAndPointLights applies ambient lighting and point lights to the scene.
-func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image, lights []*lightWithPosition, ambientIntensity float64, ambientColor color.RGBA, usedCachedAmbient, bufferResized bool, collectDuration time.Duration) int {
+func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image, lights []lightWithPosition, ambientIntensity float64, ambientColor color.RGBA, usedCachedAmbient, bufferResized bool, collectDuration time.Duration) int {
 	s.lightingBuffer.Clear()
 
 	ambR := float64(ambientColor.R) / 255.0 * ambientIntensity
@@ -641,8 +641,8 @@ func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image,
 	s.lightingBuffer.DrawImage(renderedScene, opts)
 
 	lightsApplied := 0
-	for _, lwp := range lights {
-		s.applyPointLight(s.lightingBuffer, renderedScene, lwp)
+	for i := range lights {
+		s.applyPointLight(s.lightingBuffer, renderedScene, &lights[i])
 		lightsApplied++
 	}
 

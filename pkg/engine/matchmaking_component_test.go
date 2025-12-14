@@ -147,14 +147,14 @@ func TestMatchmakingComponent_CompleteMatch(t *testing.T) {
 	result := MatchResult{
 		MatchID:      "match-1",
 		Mode:         MatchmakingMode1v1,
-		Participants: []string{"player-1", "player-2"},
-		WinnerIDs:    []string{"player-1"},
-		LoserIDs:     []string{"player-2"},
+		Participants: []uint64{1, 2},
+		WinnerIDs:    []uint64{1},
+		LoserIDs:     []uint64{2},
 		Duration:     5 * time.Minute,
 		CompletedAt:  time.Now(),
-		RatingChanges: map[string]int{
-			"player-1": 16,
-			"player-2": -16,
+		RatingChanges: map[uint64]int{
+			1: 16,
+			2: -16,
 		},
 	}
 
@@ -389,22 +389,22 @@ func TestMatchmakingComponent_Deserialize_Invalid(t *testing.T) {
 func TestMatchmakingComponent_GetWinCount(t *testing.T) {
 	c := NewMatchmakingComponent("server-1")
 	c.MatchHistory = []MatchResult{
-		{MatchID: "m1", WinnerIDs: []string{"player-1"}, LoserIDs: []string{"player-2"}},
-		{MatchID: "m2", WinnerIDs: []string{"player-2"}, LoserIDs: []string{"player-1"}},
-		{MatchID: "m3", WinnerIDs: []string{"player-1"}, LoserIDs: []string{"player-3"}},
+		{MatchID: "m1", WinnerIDs: []uint64{1}, LoserIDs: []uint64{2}},
+		{MatchID: "m2", WinnerIDs: []uint64{2}, LoserIDs: []uint64{1}},
+		{MatchID: "m3", WinnerIDs: []uint64{1}, LoserIDs: []uint64{3}},
 	}
 
-	wins := c.GetWinCount("player-1")
+	wins := c.GetWinCount(1)
 	if wins != 2 {
-		t.Errorf("GetWinCount(player-1) = %d, want 2", wins)
+		t.Errorf("GetWinCount(1) = %d, want 2", wins)
 	}
 
-	wins = c.GetWinCount("player-2")
+	wins = c.GetWinCount(2)
 	if wins != 1 {
-		t.Errorf("GetWinCount(player-2) = %d, want 1", wins)
+		t.Errorf("GetWinCount(2) = %d, want 1", wins)
 	}
 
-	wins = c.GetWinCount("player-unknown")
+	wins = c.GetWinCount(999)
 	if wins != 0 {
 		t.Errorf("GetWinCount(unknown) = %d, want 0", wins)
 	}
@@ -413,24 +413,24 @@ func TestMatchmakingComponent_GetWinCount(t *testing.T) {
 func TestMatchmakingComponent_GetLossCount(t *testing.T) {
 	c := NewMatchmakingComponent("server-1")
 	c.MatchHistory = []MatchResult{
-		{MatchID: "m1", WinnerIDs: []string{"player-1"}, LoserIDs: []string{"player-2"}},
-		{MatchID: "m2", WinnerIDs: []string{"player-2"}, LoserIDs: []string{"player-1"}},
-		{MatchID: "m3", WinnerIDs: []string{"player-1"}, LoserIDs: []string{"player-3"}},
+		{MatchID: "m1", WinnerIDs: []uint64{1}, LoserIDs: []uint64{2}},
+		{MatchID: "m2", WinnerIDs: []uint64{2}, LoserIDs: []uint64{1}},
+		{MatchID: "m3", WinnerIDs: []uint64{1}, LoserIDs: []uint64{3}},
 	}
 
-	losses := c.GetLossCount("player-1")
+	losses := c.GetLossCount(1)
 	if losses != 1 {
-		t.Errorf("GetLossCount(player-1) = %d, want 1", losses)
+		t.Errorf("GetLossCount(1) = %d, want 1", losses)
 	}
 
-	losses = c.GetLossCount("player-2")
+	losses = c.GetLossCount(2)
 	if losses != 1 {
-		t.Errorf("GetLossCount(player-2) = %d, want 1", losses)
+		t.Errorf("GetLossCount(2) = %d, want 1", losses)
 	}
 
-	losses = c.GetLossCount("player-3")
+	losses = c.GetLossCount(3)
 	if losses != 1 {
-		t.Errorf("GetLossCount(player-3) = %d, want 1", losses)
+		t.Errorf("GetLossCount(3) = %d, want 1", losses)
 	}
 }
 

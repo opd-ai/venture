@@ -207,7 +207,7 @@ func TestMatchmakingSystem_GetPlayerQueuePosition(t *testing.T) {
 	}
 
 	// Non-queued player
-	pos = system.GetPlayerQueuePosition("unknown")
+	pos = system.GetPlayerQueuePosition(999999)
 	if pos != 0 {
 		t.Errorf("Unknown player position = %d, want 0", pos)
 	}
@@ -500,8 +500,8 @@ func TestAbsHelper(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := abs(tt.input); got != tt.want {
-			t.Errorf("abs(%d) = %d, want %d", tt.input, got, tt.want)
+		if got := absInt(tt.input); got != tt.want {
+			t.Errorf("absInt(%d) = %d, want %d", tt.input, got, tt.want)
 		}
 	}
 }

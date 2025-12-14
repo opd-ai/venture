@@ -310,8 +310,10 @@ func (s *StatusEffectSystem) removeEffectModifiers(entity *Entity, effect *Statu
 
 	case "weakness":
 		oldAttack := stats.Attack
-		// Remove attack penalty
-		stats.Attack /= effect.Magnitude
+		// Remove attack penalty (guard against division by zero)
+		if effect.Magnitude > 0 {
+			stats.Attack /= effect.Magnitude
+		}
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  entity.ID,
@@ -334,8 +336,10 @@ func (s *StatusEffectSystem) removeEffectModifiers(entity *Entity, effect *Statu
 
 	case "vulnerability":
 		oldDefense := stats.Defense
-		// Remove defense penalty
-		stats.Defense /= effect.Magnitude
+		// Remove defense penalty (guard against division by zero)
+		if effect.Magnitude > 0 {
+			stats.Defense /= effect.Magnitude
+		}
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":   entity.ID,

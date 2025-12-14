@@ -976,7 +976,9 @@ func (ai *AISystem) findNearestEnemy(entity *Entity, pos *PositionComponent, det
 	nearestDist := detectionRange
 	candidatesChecked := 0
 
-	for _, other := range ai.world.entities {
+	// Iterate over cached entity list (slice) instead of entities map for better performance
+	// Slice iteration is significantly faster than map iteration
+	for _, other := range ai.world.cachedEntityList {
 		candidatesChecked++
 
 		if !ai.isValidEnemyTarget(entity, other, team) {

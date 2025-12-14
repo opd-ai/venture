@@ -11,6 +11,9 @@ type StatusEffectSystem struct {
 	world  *World
 	rng    *rand.Rand
 	logger *logrus.Entry
+
+	// Reusable buffer for expired effects to reduce per-entity allocations
+	expiredEffectsBuffer []Component
 }
 
 // NewStatusEffectSystem creates a new status effect system.
@@ -23,9 +26,10 @@ func NewStatusEffectSystem(world *World, rng *rand.Rand) *StatusEffectSystem {
 		}
 	}
 	return &StatusEffectSystem{
-		world:  world,
-		rng:    rng,
-		logger: logEntry,
+		world:                world,
+		rng:                  rng,
+		logger:               logEntry,
+		expiredEffectsBuffer: make([]Component, 0, 8), // Pre-allocate for typical max expired effects per entity
 	}
 }
 
@@ -39,8 +43,10 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	for _, entity := range entities {
-		effectsToRemove := s.processStatusEffects(entity, deltaTime)
-		s.removeExpiredEffects(entity, effectsToRemove)
+		// Reuse buffer to avoid per-entity allocations
+		s.expiredEffectsBuffer = s.expiredEffectsBuffer[:0]
+		s.processStatusEffectsInto(entity, deltaTime)
+		s.removeExpiredEffects(entity, s.expiredEffectsBuffer)
 		s.updateShieldComponent(entity, deltaTime)
 	}
 
@@ -49,7 +55,36 @@ func (s *StatusEffectSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 }
 
+// processStatusEffectsInto processes status effects for an entity and appends expired effects to the system buffer.
+func (s *StatusEffectSystem) processStatusEffectsInto(entity *Entity, deltaTime float64) {
+	for _, comp := range entity.Components {
+		effect, ok := comp.(*StatusEffectComponent)
+		if !ok {
+			continue
+		}
+
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":     entity.ID,
+				"effect_type":   effect.EffectType,
+				"magnitude":     effect.Magnitude,
+				"duration":      effect.Duration,
+				"tick_interval": effect.TickInterval,
+			}).Debug("Processing status effect")
+		}
+
+		ticked := effect.Update(deltaTime)
+
+		if effect.IsExpired() {
+			s.handleExpiredEffectBuffer(entity, effect)
+		} else if ticked {
+			s.handleTickedEffect(entity, effect)
+		}
+	}
+}
+
 // processStatusEffects processes status effects for an entity and returns expired effects.
+// Deprecated: Use processStatusEffectsInto for better performance with buffer reuse.
 func (s *StatusEffectSystem) processStatusEffects(entity *Entity, deltaTime float64) []Component {
 	var effectsToRemove []Component
 
@@ -90,6 +125,18 @@ func (s *StatusEffectSystem) handleExpiredEffect(entity *Entity, effect *StatusE
 		}).Debug("Status effect expired")
 	}
 	*effectsToRemove = append(*effectsToRemove, effect)
+	s.removeEffectModifiers(entity, effect)
+}
+
+// handleExpiredEffectBuffer handles an expired status effect using the system buffer.
+func (s *StatusEffectSystem) handleExpiredEffectBuffer(entity *Entity, effect *StatusEffectComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"effect_type": effect.EffectType,
+		}).Debug("Status effect expired")
+	}
+	s.expiredEffectsBuffer = append(s.expiredEffectsBuffer, effect)
 	s.removeEffectModifiers(entity, effect)
 }
 

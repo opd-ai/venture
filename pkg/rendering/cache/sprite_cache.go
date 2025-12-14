@@ -2,7 +2,6 @@ package cache
 
 import (
 	"container/list"
-	"fmt"
 	"hash/fnv"
 	"strconv"
 	"sync"
@@ -28,13 +27,25 @@ func GenerateKey(seed int64, state string, frame int) CacheKey {
 }
 
 // GenerateCompositeKey creates a cache key for composite sprites.
+// Optimized to use strconv instead of fmt.Fprintf to reduce allocations.
 func GenerateCompositeKey(seed int64, layers []string) CacheKey {
 	h := fnv.New64a()
-	fmt.Fprintf(h, "%d", seed)
+
+	// Use strconv.AppendInt to avoid fmt.Fprintf allocations
+	seedBuf := strconv.AppendInt(nil, seed, 10)
+	h.Write(seedBuf)
+
 	for _, layer := range layers {
-		fmt.Fprintf(h, ":%s", layer)
+		h.Write([]byte(":"))
+		h.Write([]byte(layer))
 	}
-	return CacheKey(fmt.Sprintf("composite:%x", h.Sum64()))
+
+	// Build result string efficiently using strconv.AppendUint
+	// "composite:" prefix (10 chars) + hex uint64 (max 16 chars) = 26 chars max
+	result := make([]byte, 0, 26)
+	result = append(result, "composite:"...)
+	result = strconv.AppendUint(result, h.Sum64(), 16)
+	return CacheKey(result)
 }
 
 // entry represents a single cache entry with its metadata.

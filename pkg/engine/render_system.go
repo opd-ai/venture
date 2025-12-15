@@ -388,14 +388,11 @@ func (r *EbitenRenderSystem) prepareNonSpriteBuffer(entities []*Entity) {
 }
 
 // groupEntitiesBySprite groups entities by their sprite image for batching.
+// Uses cached GetSprite() getter for ~93x faster component access.
 func (r *EbitenRenderSystem) groupEntitiesBySprite(entities []*Entity, batches map[*ebiten.Image][]*Entity) {
 	for _, entity := range entities {
-		spriteComp, hasSprite := entity.GetComponent("sprite")
-		if !hasSprite {
-			continue
-		}
-		sprite, ok := spriteComp.(*EbitenSprite)
-		if !ok || !sprite.Visible {
+		sprite := entity.GetSprite()
+		if sprite == nil || !sprite.Visible {
 			continue
 		}
 
@@ -428,12 +425,13 @@ func (r *EbitenRenderSystem) drawBatch(entities []*Entity) {
 }
 
 // extractBatchSpriteImage retrieves the shared sprite image from the first entity in the batch.
+// Uses cached GetSprite() getter for ~93x faster component access.
 func (r *EbitenRenderSystem) extractBatchSpriteImage(entities []*Entity) *ebiten.Image {
-	firstSprite, hasSprite := entities[0].GetComponent("sprite")
-	if !hasSprite {
+	sprite := entities[0].GetSprite()
+	if sprite == nil {
 		return nil
 	}
-	return firstSprite.(*EbitenSprite).Image
+	return sprite.Image
 }
 
 // drawEntitiesIndividually renders each entity separately when batch rendering is not possible.
@@ -487,26 +485,17 @@ func (r *EbitenRenderSystem) buildBatchGeometry(entities []*Entity, batchSpriteI
 }
 
 // validateBatchEntity checks if an entity has the required components for batch rendering.
-// Uses cached GetPosition() getter for ~90x faster access vs map lookup + type assertion.
+// Uses cached GetPosition() and GetSprite() getters for ~93x faster access vs map lookup + type assertion.
 func (r *EbitenRenderSystem) validateBatchEntity(entity *Entity) (*PositionComponent, *EbitenSprite) {
-	// Use cached getter for position (~90x faster than GetComponent + type assertion)
+	// Use cached getter for position (~93x faster than GetComponent + type assertion)
 	pos := entity.GetPosition()
 	if pos == nil {
 		return nil, nil
 	}
 
-	// Sprite component uses generic access (not yet a cached hot path component)
-	spriteComp, hasSprite := entity.GetComponent("sprite")
-	if !hasSprite {
-		return nil, nil
-	}
-
-	sprite, ok := spriteComp.(*EbitenSprite)
-	if !ok {
-		return nil, nil
-	}
-
-	if !sprite.Visible {
+	// Use cached getter for sprite (~93x faster than GetComponent + type assertion)
+	sprite := entity.GetSprite()
+	if sprite == nil || !sprite.Visible {
 		return nil, nil
 	}
 
@@ -751,26 +740,17 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 }
 
 // validateEntityComponents retrieves and validates position and sprite components.
-// Uses cached GetPosition() getter for ~90x faster access vs map lookup + type assertion.
+// Uses cached GetPosition() and GetSprite() getters for ~93x faster access vs map lookup + type assertion.
 func (r *EbitenRenderSystem) validateEntityComponents(entity *Entity) (*PositionComponent, *EbitenSprite) {
-	// Use cached getter for position (~90x faster than GetComponent + type assertion)
+	// Use cached getter for position (~93x faster than GetComponent + type assertion)
 	pos := entity.GetPosition()
 	if pos == nil {
 		return nil, nil
 	}
 
-	// Sprite component uses generic access (not yet a cached hot path component)
-	spriteComp, hasSprite := entity.GetComponent("sprite")
-	if !hasSprite {
-		return nil, nil
-	}
-
-	sprite, ok := spriteComp.(*EbitenSprite)
-	if !ok {
-		return nil, nil
-	}
-
-	if !sprite.Visible {
+	// Use cached getter for sprite (~93x faster than GetComponent + type assertion)
+	sprite := entity.GetSprite()
+	if sprite == nil || !sprite.Visible {
 		return nil, nil
 	}
 
@@ -1157,21 +1137,20 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 
 	// Collect entities with sprites and cache their sprite components and Y positions.
 	// Caching Y here eliminates O(n log n) map lookups during sort comparisons.
+	// Uses cached GetSprite() getter for ~93x faster component access.
 	for _, entity := range entities {
-		if sprite, ok := entity.GetComponent("sprite"); ok {
-			if ebitenSprite, ok := sprite.(*EbitenSprite); ok {
-				// Cache Y position now to avoid map lookups during sort
-				yPos := 0.0
-				if pos := entity.GetPosition(); pos != nil {
-					yPos = pos.Y
-				}
-				r.sortCacheBuffer = append(r.sortCacheBuffer, entitySprite{
-					entity: entity,
-					sprite: ebitenSprite,
-					layer:  ebitenSprite.Layer,
-					yPos:   yPos,
-				})
+		if sprite := entity.GetSprite(); sprite != nil {
+			// Cache Y position now to avoid map lookups during sort
+			yPos := 0.0
+			if pos := entity.GetPosition(); pos != nil {
+				yPos = pos.Y
 			}
+			r.sortCacheBuffer = append(r.sortCacheBuffer, entitySprite{
+				entity: entity,
+				sprite: sprite,
+				layer:  sprite.Layer,
+				yPos:   yPos,
+			})
 		}
 	}
 

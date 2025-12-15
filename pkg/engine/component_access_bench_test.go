@@ -114,3 +114,95 @@ func BenchmarkSystemUpdateTyped(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkSpriteAccessGeneric benchmarks generic sprite component access.
+func BenchmarkSpriteAccessGeneric(b *testing.B) {
+	entity := NewEntity(1)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 200})
+	entity.AddComponent(NewSpriteComponent(32, 32, nil))
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Generic access pattern (old way)
+		if comp, ok := entity.GetComponent("sprite"); ok {
+			sprite := comp.(*EbitenSprite)
+			_ = sprite.Layer
+		}
+	}
+}
+
+// BenchmarkSpriteAccessTyped benchmarks typed sprite getter.
+func BenchmarkSpriteAccessTyped(b *testing.B) {
+	entity := NewEntity(1)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 200})
+	entity.AddComponent(NewSpriteComponent(32, 32, nil))
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Typed access pattern (new way)
+		if sprite := entity.GetSprite(); sprite != nil {
+			_ = sprite.Layer
+		}
+	}
+}
+
+// BenchmarkRenderValidationGeneric benchmarks render entity validation with generic access.
+func BenchmarkRenderValidationGeneric(b *testing.B) {
+	// Create 2000 entities (typical game count)
+	entities := make([]*Entity, 2000)
+	for i := 0; i < 2000; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		entity.AddComponent(NewSpriteComponent(32, 32, nil))
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate render system validation with generic access
+		for _, entity := range entities {
+			pos := entity.GetPosition()
+			if pos == nil {
+				continue
+			}
+			if comp, ok := entity.GetComponent("sprite"); ok {
+				sprite := comp.(*EbitenSprite)
+				if sprite.Visible {
+					_ = sprite.Layer
+				}
+			}
+		}
+	}
+}
+
+// BenchmarkRenderValidationTyped benchmarks render entity validation with typed getters.
+func BenchmarkRenderValidationTyped(b *testing.B) {
+	// Create 2000 entities (typical game count)
+	entities := make([]*Entity, 2000)
+	for i := 0; i < 2000; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		entity.AddComponent(NewSpriteComponent(32, 32, nil))
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate render system validation with typed getters
+		for _, entity := range entities {
+			pos := entity.GetPosition()
+			sprite := entity.GetSprite()
+			if pos != nil && sprite != nil && sprite.Visible {
+				_ = sprite.Layer
+			}
+		}
+	}
+}

@@ -381,7 +381,7 @@ func formatStatDisplayValue(value int64, def StatDefinition) string {
 }
 
 // getStatValueColor returns a color based on stat value (higher = greener).
-func (ui *StatisticsUI) getStatValueColor(value int64, def StatDefinition) color.Color {
+func (ui *StatisticsUI) getStatValueColor(value int64, _ StatDefinition) color.Color {
 	if value == 0 {
 		return color.RGBA{100, 100, 100, 255}
 	}

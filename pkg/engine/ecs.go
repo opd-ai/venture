@@ -224,10 +224,11 @@ type World struct {
 	builderPool sync.Pool
 
 	// Pre-computed cache keys for common queries (zero-allocation fast path)
-	keyPosition         string
-	keyPositionVelocity string
-	keyPositionHealth   string
-	keyPositionCollider string
+	keyPosition                   string
+	keyPositionVelocity           string
+	keyPositionHealth             string
+	keyPositionCollider           string
+	keyProjectilePositionVelocity string
 
 	// GameClock provides deterministic or real-time clock services
 	Clock GameClock
@@ -267,10 +268,11 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 			},
 		},
 		// Pre-compute common query keys
-		keyPosition:         "position",
-		keyPositionVelocity: "position|velocity",
-		keyPositionHealth:   "position|health",
-		keyPositionCollider: "position|collider",
+		keyPosition:                   "position",
+		keyPositionVelocity:           "position|velocity",
+		keyPositionHealth:             "position|health",
+		keyPositionCollider:           "position|collider",
+		keyProjectilePositionVelocity: "projectile|position|velocity",
 	}
 
 	if w.logger != nil {
@@ -421,6 +423,11 @@ func (w *World) generateQueryKey(componentTypes []string) string {
 			case "collider":
 				return w.keyPositionCollider
 			}
+		}
+	case 3:
+		// Fast path for projectile system's hot query
+		if componentTypes[0] == "projectile" && componentTypes[1] == "position" && componentTypes[2] == "velocity" {
+			return w.keyProjectilePositionVelocity
 		}
 	}
 

@@ -162,3 +162,35 @@ func BenchmarkGetEntitiesWithCacheHitOptimized(b *testing.B) {
 		_ = world.GetEntitiesWith("position")
 	}
 }
+
+// BenchmarkGetEntitiesWithProjectileQuery tests the 3-component projectile query fast path.
+// This tests the optimization added to eliminate string allocations in the projectile system's hot path.
+func BenchmarkGetEntitiesWithProjectileQuery(b *testing.B) {
+	world := NewWorld()
+
+	// Create entities with projectile components (simulating projectile system scenario)
+	for i := 0; i < 100; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&PositionComponent{X: float64(i * 10), Y: float64(i * 10)})
+		entity.AddComponent(&VelocityComponent{VX: 100, VY: 100})
+		entity.AddComponent(&ProjectileComponent{
+			Damage:   10,
+			Speed:    100,
+			LifeTime: 5.0,
+			OwnerID:  999,
+		})
+	}
+
+	world.FlushPendingEntities()
+
+	// Prime the cache
+	_ = world.GetEntitiesWith("projectile", "position", "velocity")
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Should hit the fast path for 3-component projectile query
+		_ = world.GetEntitiesWith("projectile", "position", "velocity")
+	}
+}

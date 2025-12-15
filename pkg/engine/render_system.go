@@ -4,9 +4,10 @@
 package engine
 
 import (
+	"cmp"
 	"image/color"
 	"math"
-	"sort"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -162,8 +163,8 @@ type entitySprite struct {
 }
 
 // entitySpriteSlice implements sort.Interface for []entitySprite.
-// Using sort.Sort with this type instead of sort.Slice eliminates
-// reflection-based swapping, reducing allocations from 3 to 0 per sort.
+// Deprecated: Now using slices.SortFunc which is a generic function that avoids
+// heap allocations. Kept for backward compatibility and potential fallback.
 type entitySpriteSlice []entitySprite
 
 func (s entitySpriteSlice) Len() int      { return len(s) }
@@ -1202,10 +1203,22 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Sort using sort.Sort with entitySpriteSlice to eliminate reflection-based swapping.
-	// This reduces allocations from 3 to 0 per sort call compared to sort.Slice.
+	// Sort using slices.SortFunc which is a generic function that avoids
+	// the interface allocation that sort.Sort causes when converting the slice
+	// to a sort.Interface. This eliminates 1 allocation per frame (24 bytes).
 	// Determinism is guaranteed by tertiary sort on entity ID - no two entities have identical sort keys.
-	sort.Sort(entitySpriteSlice(r.sortCacheBuffer))
+	slices.SortFunc(r.sortCacheBuffer, func(a, b entitySprite) int {
+		// Primary sort: by sprite layer
+		if a.layer != b.layer {
+			return cmp.Compare(a.layer, b.layer)
+		}
+		// Secondary sort: by cached Y position for depth sorting
+		if a.yPos != b.yPos {
+			return cmp.Compare(a.yPos, b.yPos)
+		}
+		// Tertiary sort: by entity ID for complete determinism
+		return cmp.Compare(a.entity.ID, b.entity.ID)
+	})
 
 	// Extract sorted entities into reusable buffer
 	for _, es := range r.sortCacheBuffer {

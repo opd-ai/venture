@@ -94,6 +94,9 @@ type PlayerState struct {
 
 	// Phase 74: Event reward persistence (V12.0 Seasonal Events)
 	EventRewardData *EventRewardStateData `json:"event_reward_data,omitempty"`
+
+	// Phase 84: Player statistics persistence (V15.0)
+	PlayerStatistics *PlayerStatisticsData `json:"player_statistics,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -144,6 +147,17 @@ type EventRewardStateData struct {
 	TotalQuestsCompleted int `json:"total_quests_completed"`
 	// TotalCurrencyEarned is lifetime currency earned across all events
 	TotalCurrencyEarned int `json:"total_currency_earned"`
+}
+
+// PlayerStatisticsData represents saved player statistics for Phase 84 (V15.0).
+// This allows lifetime and session statistics to persist across saves.
+type PlayerStatisticsData struct {
+	// Lifetime contains all lifetime statistics (stat ID -> value).
+	Lifetime map[string]int64 `json:"lifetime,omitempty"`
+	// FirstPlayTime is the Unix timestamp of the first play session.
+	FirstPlayTime int64 `json:"first_play_time"`
+	// TotalPlayTime is the total playtime in seconds (lifetime).
+	TotalPlayTime int64 `json:"total_play_time"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

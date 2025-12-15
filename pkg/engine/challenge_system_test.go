@@ -28,7 +28,6 @@ func TestSetCallbacks(t *testing.T) {
 	world := NewWorld()
 	s := NewChallengeSystem(world)
 
-	_ = false // placeholder for unused var warning
 	s.SetRewardCallback(func(entityID uint64, reward *ChallengeReward) {
 		// callback set
 	})

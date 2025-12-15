@@ -1129,3 +1129,247 @@ The render_system.go file has limited unit test coverage because it depends heav
 10. `projectile_system.go:234-235` - Dead code: unused debug assignment → Fixed
 11. `render_system.go:165-186` - Deprecated entitySpriteSlice type (dead code) → Fixed
 12. `render_system.go:381-412` - Dead code: logPlayerCount function → Fixed
+
+---
+
+## Review 10: achievement_notification_system.go
+**Date:** 2025-12-15
+**Change Frequency:** 1 time in last 3 commits
+**Reviewer:** GitHub Copilot
+
+Reviewing pkg/engine/achievement_notification_system.go (changed 1 time in last 3 commits)
+
+### Executive Summary
+**PASS (after fixes)** - The AchievementNotificationSystem properly implements the ECS System pattern with proper concurrency (sync.RWMutex), deterministic reward generation, and game clock integration. Two performance issues were automatically resolved by converting to typed getters. Code follows all project guidelines.
+
+### Quality Gates
+
+| Gate | Status |
+|------|--------|
+| Build success | ✅ |
+| All tests pass | ✅ |
+| Race-free | ✅ (race detection passed) |
+| Coverage ≥65% | ✅ (89.5% HandleAchievementUnlock, 100% most functions) |
+| go fmt compliant | ✅ |
+| go vet clean | ✅ |
+| Package documentation | ✅ (doc.go exists, file has package docs) |
+| Godoc on exports | ✅ (all public functions documented) |
+| Deterministic generation | ✅ (uses seeded rand.New for item rewards) |
+| ECS pattern compliance | ✅ (System with Update method, pure data components) |
+| Structured logging | ✅ (uses logrus.Fields with proper field names) |
+| Error handling | ✅ (defensive nil checks throughout) |
+| Interface-based networking | N/A (no networking) |
+| No external assets | ✅ (no asset files) |
+| No time.Now() | ✅ (uses s.world.Clock.Now() - game clock interface) |
+| No global rand | ✅ (uses rand.New(rand.NewSource(s.rewardSeed))) |
+
+### Static Analysis Results
+- **go vet**: No issues
+- **gofmt**: Properly formatted
+- **go build**: Compilation successful
+
+### Findings & Resolutions
+
+#### Critical (blocks merge)
+*None*
+
+#### Major (should fix)
+**achievement_notification_system.go:233-241 - Inconsistent typed getter in grantXP**
+- Status: **RESOLVED**
+- Rationale: Used `GetComponent("experience")` with type assertion instead of typed getter `GetExperience()`. Per project guidelines and commit comments (f1f909a), typed getters are ~93x faster than map lookup + type assertion. This is a hot path during reward granting.
+- Fix Applied:
+```diff
+ // grantXP adds experience points to the entity.
+-func (s *AchievementNotificationSystem) grantXP(entity *Entity, amount int) {
+-compRaw, exists := entity.GetComponent("experience")
+-if !exists {
++// Uses typed getter for ~93x faster component access than map lookup + type assertion.
++func (s *AchievementNotificationSystem) grantXP(entity *Entity, amount int) {
++comp := entity.GetExperience()
++if comp == nil {
+ return
+ }
+-
+-if comp, ok := compRaw.(*ExperienceComponent); ok {
+-comp.AddXP(amount)
+-}
++comp.AddXP(amount)
+ }
+```
+
+**achievement_notification_system.go:244-253 - Inconsistent typed getter in grantCurrency**
+- Status: **RESOLVED**
+- Rationale: Used `GetComponent("inventory")` with type assertion instead of typed getter `GetInventory()`. Same performance issue as above.
+- Fix Applied:
+```diff
+ // grantCurrency adds gold/currency to the entity.
+-func (s *AchievementNotificationSystem) grantCurrency(entity *Entity, amount int) {
+-compRaw, exists := entity.GetComponent("inventory")
+-if !exists {
++// Uses typed getter for ~93x faster component access than map lookup + type assertion.
++func (s *AchievementNotificationSystem) grantCurrency(entity *Entity, amount int) {
++comp := entity.GetInventory()
++if comp == nil {
+ return
+ }
+-
+-if comp, ok := compRaw.(*InventoryComponent); ok {
+-comp.Gold += amount
+-}
++comp.Gold += amount
+ }
+```
+
+#### Minor (nice-to-have)
+
+**achievement_notification_system.go:252-264 - grantTitle function is a stub with no-op**
+- Status: **FALSE_POSITIVE**
+- Rationale: The function intentionally contains `_ = comp` as a placeholder. The comment explicitly states "Title storage would be implemented in a titles component". This is a documented stub for future implementation, not dead code to remove.
+
+**achievement_notification_system.go:266-281 - grantItem only logs, doesn't grant**
+- Status: **FALSE_POSITIVE**
+- Rationale: Comment explicitly states "Item granting would integrate with the item generator and inventory system. For now, we log the intent - actual item creation uses pkg/procgen/item." This is documented planned behavior for V16+ integration.
+
+**achievement_notification_system.go:99-103 - Update method is empty**
+- Status: **FALSE_POSITIVE**
+- Rationale: Comment explains "The actual display logic would be handled by the UI layer. This system just manages the queue and grants rewards." The Update method exists for ECS interface compliance but is intentionally a no-op since this system operates via HandleAchievementUnlock callbacks.
+
+**GetComponent calls for extended_achievement, player_statistics, achievement_notification**
+- Status: **FALSE_POSITIVE**
+- Rationale: These components don't have typed getters defined in ecs.go. Only core components (position, velocity, health, collider, inventory, stats, experience, attack, animation, sprite) have typed getters. Adding new typed getters is outside scope of this review.
+
+### Pattern Compliance Notes
+
+1. **ECS System Pattern**: ✅ AchievementNotificationSystem follows the System pattern with:
+   - Constructor: `NewAchievementNotificationSystem(world *World)`
+   - Update method: `Update(entities []*Entity, deltaTime float64)` (no-op, event-driven)
+   - All logic in system, components are pure data
+
+2. **Typed Getters (Performance)**: ✅ After fix, uses typed getters where available:
+   - `entity.GetExperience()` for XP rewards
+   - `entity.GetInventory()` for currency rewards
+
+3. **Deterministic Generation**: ✅ Item seeds use seeded RNG:
+   - `rng := rand.New(rand.NewSource(s.rewardSeed))`
+   - `result[i].ItemSeed = rng.Int63()`
+
+4. **Game Clock Usage**: ✅ Timestamps use world clock, not time.Now():
+   - `Timestamp: s.world.Clock.Now().Unix()`
+
+5. **Concurrency Safety**: ✅ Proper mutex usage:
+   - `sync.RWMutex` for thread-safe access
+   - Read locks for getters, write locks for setters
+   - Callback captures copy value before calling
+
+6. **Structured Logging**: ✅ Uses logrus.Fields with proper field names:
+   - `entity_id`, `achievement_id`, `tier`, `points`, `rewards_count`
+   - `item_name`, `item_seed`, `quantity`
+
+### Auto-Fix Summary (Review 10)
+- Files Modified: 1 (achievement_notification_system.go)
+- Issues Resolved: 2
+- False Positives: 4
+- Manual Review Required: 0
+
+### Recommendations
+1. ✅ Commit the resolved issues with: `perf(engine): use typed getters in achievement notification system`
+2. Consider adding typed getters for `player_statistics`, `extended_achievement`, and `achievement_notification` components in a future PR to improve performance consistency
+3. The stub functions (grantTitle, grantItem) should be completed when integrating with titles and item systems
+
+---
+
+## Review 11: achievement_notification_component.go
+**Date:** 2025-12-15
+**Change Frequency:** 1 time in last 3 commits
+**Reviewer:** GitHub Copilot
+
+Reviewing pkg/engine/achievement_notification_component.go (changed 1 time in last 3 commits)
+
+### Executive Summary
+**PASS** - The AchievementNotificationComponent is a well-designed pure data component following ECS guidelines. Full test coverage (100% on all functions), proper thread safety, and complete serialization support. No issues found.
+
+### Quality Gates
+
+| Gate | Status |
+|------|--------|
+| Build success | ✅ |
+| All tests pass | ✅ |
+| Race-free | ✅ (concurrency test passes) |
+| Coverage ≥65% | ✅ (100% on all functions) |
+| go fmt compliant | ✅ |
+| go vet clean | ✅ |
+| Package documentation | ✅ (file has package docs) |
+| Godoc on exports | ✅ (all types and methods documented) |
+| ECS Component pattern | ✅ (pure data with Type() method only) |
+| Serialization support | ✅ (Serialize/Deserialize implemented) |
+| Concurrency safety | ✅ (sync.RWMutex on all operations) |
+
+### Static Analysis Results
+- **go vet**: No issues
+- **gofmt**: Properly formatted
+- **go build**: Compilation successful
+
+### Findings & Resolutions
+
+#### Critical (blocks merge)
+*None*
+
+#### Major (should fix)
+*None*
+
+#### Minor (nice-to-have)
+*None - Component is well-designed*
+
+### Pattern Compliance Notes
+
+1. **ECS Component Pattern**: ✅ Pure data component:
+   - Only has `Type() string` method returning `"achievement_notification"`
+   - All fields are data, no behavior methods that modify other components
+   - Constructor `NewAchievementNotificationComponent()` properly initializes slices
+
+2. **Serialization**: ✅ Complete JSON serialization:
+   - `Serialize()` returns JSON bytes
+   - `Deserialize()` restores state with nil-safety for slices
+   - Handles empty/missing fields with defaults
+
+3. **Concurrency Safety**: ✅ All methods protected:
+   - Read operations use `mu.RLock()`/`mu.RUnlock()`
+   - Write operations use `mu.Lock()`/`mu.Unlock()`
+   - Concurrency test in _test.go verifies no races
+
+4. **History Management**: ✅ Proper bounds:
+   - `MaxHistorySize` limits memory usage (default 100)
+   - Old entries pruned on PopNotification
+   - GetRecentHistory returns defensive copy
+
+### Auto-Fix Summary (Review 11)
+- Files Modified: 0
+- Issues Resolved: 0
+- False Positives: 0
+- Manual Review Required: 0
+
+---
+
+## Combined Summary (All Reviews Updated)
+
+### Total Stats
+- Files Reviewed: 17
+- Issues Resolved: 14
+- False Positives: 16
+- Manual Review Required: 4
+
+### All Resolved Issues (Updated)
+1. `event_quest_system.go:279` - Non-deterministic time.Now() usage → Fixed to use clock interface
+2. `animation_system.go:296-310` - Inconsistent typed getter in getPlayerPosition → Fixed
+3. `animation_system.go:1302-1318` - Inconsistent typed getter in getAnimationComponent → Fixed
+4. `matchmaking_component_test.go:150-158` - Type mismatch string→uint64 → Fixed
+5. `matchmaking_component_test.go:392-407` - Type mismatch in GetWinCount test → Fixed
+6. `matchmaking_component_test.go:416-434` - Type mismatch in GetLossCount test → Fixed
+7. `matchmaking_system_test.go:210` - Type mismatch in GetPlayerQueuePosition → Fixed
+8. `tournament_system_test.go:205,281` - Ignored error returns from GetComponent → Fixed
+9. `pvp_reward_system_test.go:478` - Test always skipped due to filter conditions → Fixed
+10. `projectile_system.go:234-235` - Dead code: unused debug assignment → Fixed
+11. `render_system.go:165-186` - Deprecated entitySpriteSlice type (dead code) → Fixed
+12. `render_system.go:381-412` - Dead code: logPlayerCount function → Fixed
+13. `achievement_notification_system.go:233-241` - Inconsistent typed getter in grantXP → Fixed
+14. `achievement_notification_system.go:244-253` - Inconsistent typed getter in grantCurrency → Fixed

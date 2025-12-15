@@ -256,7 +256,7 @@ func (s *VRControllerSystem) Update(entities []*Entity, deltaTime float64) {
 		if controller != nil {
 			hand := ctrl.GetHand()
 			if controller.IsConnected(hand) {
-				s.updateFromAdapter(ctrl, controller, deltaTime)
+				s.updateFromAdapter(ctrl, controller)
 			}
 		}
 
@@ -274,7 +274,7 @@ func (s *VRControllerSystem) Update(entities []*Entity, deltaTime float64) {
 }
 
 // updateFromAdapter updates the component from controller adapter data.
-func (s *VRControllerSystem) updateFromAdapter(ctrl *VRControllerComponent, adapter VRControllerAdapter, deltaTime float64) {
+func (s *VRControllerSystem) updateFromAdapter(ctrl *VRControllerComponent, adapter VRControllerAdapter) {
 	hand := ctrl.GetHand()
 
 	// Update analog inputs

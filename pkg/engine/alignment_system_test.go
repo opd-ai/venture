@@ -230,6 +230,17 @@ func TestGetAlignmentDescription(t *testing.T) {
 		{"Neutral Evil", 0.0, -0.8, "Evil"},
 		{"Lawful Neutral", 0.8, 0.0, "Lawful"},
 		{"Chaotic Neutral", -0.8, 0.0, "Chaotic"},
+		// Moderate alignment range tests (0.2 to 0.6)
+		{"Slightly Lawful Good", 0.3, 0.8, "Slightly Lawful Good"},
+		{"Slightly Chaotic Evil", -0.4, -0.8, "Slightly Chaotic Evil"},
+		{"Lawful Slightly Good", 0.8, 0.3, "Lawful Slightly Good"},
+		{"Chaotic Slightly Evil", -0.8, -0.4, "Chaotic Slightly Evil"},
+		{"Slightly Lawful Slightly Good", 0.3, 0.3, "Slightly Lawful Slightly Good"},
+		{"Slightly Chaotic Slightly Evil", -0.4, -0.4, "Slightly Chaotic Slightly Evil"},
+		{"Slightly Lawful only", 0.3, 0.0, "Slightly Lawful"},
+		{"Slightly Good only", 0.0, 0.3, "Slightly Good"},
+		{"Slightly Chaotic only", -0.3, 0.0, "Slightly Chaotic"},
+		{"Slightly Evil only", 0.0, -0.3, "Slightly Evil"},
 	}
 
 	for _, tt := range tests {

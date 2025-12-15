@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"math"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -96,39 +94,48 @@ func (s *AlignmentSystem) GetAlignment(entityID uint64) Alignment {
 func (s *AlignmentSystem) GetAlignmentDescription(entityID uint64) string {
 	alignment := s.GetAlignment(entityID)
 
-	// Threshold for axis classification
-	const threshold = 0.2
+	// Thresholds for axis classification
+	const neutralThreshold = 0.2 // Below this is "neutral"
+	const strongThreshold = 0.6  // Above this is "strong" (Lawful/Chaotic/Good/Evil)
 
-	// Determine law axis
+	// Determine law axis description
 	var lawDesc string
-	if alignment.LawAxis > 0.6 {
+	if alignment.LawAxis > strongThreshold {
 		lawDesc = "Lawful"
-	} else if alignment.LawAxis < -0.6 {
+	} else if alignment.LawAxis < -strongThreshold {
 		lawDesc = "Chaotic"
-	} else if math.Abs(alignment.LawAxis) < threshold {
+	} else if alignment.LawAxis >= neutralThreshold {
+		lawDesc = "Slightly Lawful"
+	} else if alignment.LawAxis <= -neutralThreshold {
+		lawDesc = "Slightly Chaotic"
+	} else {
 		lawDesc = "Neutral"
 	}
 
-	// Determine good axis
+	// Determine good axis description
 	var goodDesc string
-	if alignment.GoodAxis > 0.6 {
+	if alignment.GoodAxis > strongThreshold {
 		goodDesc = "Good"
-	} else if alignment.GoodAxis < -0.6 {
+	} else if alignment.GoodAxis < -strongThreshold {
 		goodDesc = "Evil"
-	} else if math.Abs(alignment.GoodAxis) < threshold {
+	} else if alignment.GoodAxis >= neutralThreshold {
+		goodDesc = "Slightly Good"
+	} else if alignment.GoodAxis <= -neutralThreshold {
+		goodDesc = "Slightly Evil"
+	} else {
 		goodDesc = "Neutral"
 	}
 
 	// Handle True Neutral case
-	if math.Abs(alignment.LawAxis) < threshold && math.Abs(alignment.GoodAxis) < threshold {
+	if lawDesc == "Neutral" && goodDesc == "Neutral" {
 		return "True Neutral"
 	}
 
-	// Handle single-axis dominance
-	if math.Abs(alignment.LawAxis) < threshold {
+	// Handle single-axis neutrality
+	if lawDesc == "Neutral" {
 		return goodDesc
 	}
-	if math.Abs(alignment.GoodAxis) < threshold {
+	if goodDesc == "Neutral" {
 		return lawDesc
 	}
 

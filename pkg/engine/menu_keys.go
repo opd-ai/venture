@@ -19,62 +19,70 @@ import (
 // This standardization ensures consistent, predictable navigation across all UI screens.
 var MenuKeys = struct {
 	// Menu activation keys (mnemonic letter assignments)
-	Inventory ebiten.Key // I - Inventory management
-	Character ebiten.Key // C - Character stats and equipment
-	Skills    ebiten.Key // K - Skill tree
-	Quests    ebiten.Key // J - Quest log (J for "Journal")
-	Map       ebiten.Key // M - World map
-	Shop      ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
-	Crafting  ebiten.Key // R - Crafting recipes
-	Trade     ebiten.Key // T - Player-to-player trading
-	Classes   ebiten.Key // A - Advanced classes (multi-classing, prestige, talents)
-	Territory ebiten.Key // Y - Territory control and guild warfare
-	Dialog    ebiten.Key // D - Dialog with NPCs
+	Inventory    ebiten.Key // I - Inventory management
+	Character    ebiten.Key // C - Character stats and equipment
+	Skills       ebiten.Key // K - Skill tree
+	Quests       ebiten.Key // J - Quest log (J for "Journal")
+	Map          ebiten.Key // M - World map
+	Shop         ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
+	Crafting     ebiten.Key // R - Crafting recipes
+	Trade        ebiten.Key // T - Player-to-player trading
+	Classes      ebiten.Key // A - Advanced classes (multi-classing, prestige, talents)
+	Territory    ebiten.Key // Y - Territory control and guild warfare
+	Dialog       ebiten.Key // D - Dialog with NPCs
+	Statistics   ebiten.Key // N - Player statistics (N for "Numbers")
+	Achievements ebiten.Key // H - Achievements (H for "Honor")
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
 
 	// Menu navigation description strings for UI display
-	InventoryLabel string
-	CharacterLabel string
-	SkillsLabel    string
-	QuestsLabel    string
-	MapLabel       string
-	ShopLabel      string
-	CraftingLabel  string
-	TradeLabel     string
-	ClassesLabel   string
-	TerritoryLabel string
-	DialogLabel    string
-	ExitHint       string // Standard exit hint text
+	InventoryLabel    string
+	CharacterLabel    string
+	SkillsLabel       string
+	QuestsLabel       string
+	MapLabel          string
+	ShopLabel         string
+	CraftingLabel     string
+	TradeLabel        string
+	ClassesLabel      string
+	TerritoryLabel    string
+	DialogLabel       string
+	StatisticsLabel   string
+	AchievementsLabel string
+	ExitHint          string // Standard exit hint text
 }{
 	// Key assignments
-	Inventory: ebiten.KeyI,
-	Character: ebiten.KeyC,
-	Skills:    ebiten.KeyK,
-	Quests:    ebiten.KeyJ,
-	Map:       ebiten.KeyM,
-	Shop:      ebiten.KeyF,
-	Crafting:  ebiten.KeyR,
-	Trade:     ebiten.KeyT,
-	Classes:   ebiten.KeyA,
-	Territory: ebiten.KeyY,
-	Dialog:    ebiten.KeyD,
-	Exit:      ebiten.KeyEscape,
+	Inventory:    ebiten.KeyI,
+	Character:    ebiten.KeyC,
+	Skills:       ebiten.KeyK,
+	Quests:       ebiten.KeyJ,
+	Map:          ebiten.KeyM,
+	Shop:         ebiten.KeyF,
+	Crafting:     ebiten.KeyR,
+	Trade:        ebiten.KeyT,
+	Classes:      ebiten.KeyA,
+	Territory:    ebiten.KeyY,
+	Dialog:       ebiten.KeyD,
+	Statistics:   ebiten.KeyN,
+	Achievements: ebiten.KeyH,
+	Exit:         ebiten.KeyEscape,
 
 	// Display labels
-	InventoryLabel: "[I] Inventory",
-	CharacterLabel: "[C] Character",
-	SkillsLabel:    "[K] Skills",
-	QuestsLabel:    "[J] Quests",
-	MapLabel:       "[M] Map",
-	ShopLabel:      "[F] Shop",
-	CraftingLabel:  "[R] Crafting",
-	TradeLabel:     "[T] Trade",
-	ClassesLabel:   "[A] Classes",
-	TerritoryLabel: "[Y] Territory",
-	DialogLabel:    "[D] Dialog",
-	ExitHint:       "Press [KEY] or [ESC] to close",
+	InventoryLabel:    "[I] Inventory",
+	CharacterLabel:    "[C] Character",
+	SkillsLabel:       "[K] Skills",
+	QuestsLabel:       "[J] Quests",
+	MapLabel:          "[M] Map",
+	ShopLabel:         "[F] Shop",
+	CraftingLabel:     "[R] Crafting",
+	TradeLabel:        "[T] Trade",
+	ClassesLabel:      "[A] Classes",
+	TerritoryLabel:    "[Y] Territory",
+	DialogLabel:       "[D] Dialog",
+	StatisticsLabel:   "[N] Statistics",
+	AchievementsLabel: "[H] Achievements",
+	ExitHint:          "Press [KEY] or [ESC] to close",
 }
 
 // HandleMenuInput provides standardized dual-exit menu input handling.
@@ -228,6 +236,10 @@ func getKeyName(key ebiten.Key) string {
 		return "Y"
 	case ebiten.KeyD:
 		return "D"
+	case ebiten.KeyN:
+		return "N"
+	case ebiten.KeyH:
+		return "H"
 	case ebiten.KeyEscape:
 		return "ESC"
 	default:

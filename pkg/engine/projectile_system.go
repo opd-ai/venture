@@ -127,29 +127,19 @@ func (s *ProjectileSystem) updateProjectile(entity *Entity, deltaTime float64) {
 
 // getProjectileComponents retrieves and validates all required components for a projectile.
 func (s *ProjectileSystem) getProjectileComponents(entity *Entity) (*ProjectileComponent, *PositionComponent, *VelocityComponent) {
+	// Use typed getters for position and velocity (~93x faster than map lookup + type assertion)
+	posComponent := entity.GetPosition()
+	velComponent := entity.GetVelocity()
+	if posComponent == nil || velComponent == nil {
+		return nil, nil, nil
+	}
+
+	// Projectile component uses generic access (not a hot path component)
 	projComp, ok := entity.GetComponent("projectile")
 	if !ok {
 		return nil, nil, nil
 	}
 	projComponent, ok := projComp.(*ProjectileComponent)
-	if !ok {
-		return nil, nil, nil
-	}
-
-	posComp, ok := entity.GetComponent("position")
-	if !ok {
-		return nil, nil, nil
-	}
-	posComponent, ok := posComp.(*PositionComponent)
-	if !ok {
-		return nil, nil, nil
-	}
-
-	velComp, ok := entity.GetComponent("velocity")
-	if !ok {
-		return nil, nil, nil
-	}
-	velComponent, ok := velComp.(*VelocityComponent)
 	if !ok {
 		return nil, nil, nil
 	}

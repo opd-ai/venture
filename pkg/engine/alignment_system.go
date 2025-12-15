@@ -53,10 +53,7 @@ func (s *AlignmentSystem) RecordDeed(entityID uint64, action string, lawDelta, g
 		repComp = comp.(*ReputationComponent)
 	}
 
-	// Apply alignment change using component's method (which includes clamping)
-	repComp.AdjustAlignment(lawDelta, goodDelta)
-
-	// Record deed in history using component's method
+	// Record deed in history using component's method (which also applies alignment changes)
 	deed := Deed{
 		Description: action,
 		LawImpact:   lawDelta,

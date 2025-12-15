@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/sirupsen/logrus"
@@ -72,6 +73,11 @@ func (p *PositionComponent) Deserialize(data []byte) error {
 	}).Debug("Position component deserialized successfully")
 
 	return nil
+}
+
+// String returns a human-readable representation of the position.
+func (p *PositionComponent) String() string {
+	return fmt.Sprintf("(%.2f, %.2f)", p.X, p.Y)
 }
 
 // VelocityComponent represents an entity's velocity in 2D space.

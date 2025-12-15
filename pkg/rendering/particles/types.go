@@ -220,6 +220,7 @@ func (ps *ParticleSystem) IsAlive() bool {
 }
 
 // GetAliveParticles returns only the particles that are still alive.
+// Note: This method allocates a new slice. For hot paths, use VisitAliveParticles instead.
 func (ps *ParticleSystem) GetAliveParticles() []Particle {
 	alive := make([]Particle, 0, len(ps.Particles))
 	for i := range ps.Particles {
@@ -228,4 +229,15 @@ func (ps *ParticleSystem) GetAliveParticles() []Particle {
 		}
 	}
 	return alive
+}
+
+// VisitAliveParticles calls the visitor function for each alive particle.
+// This is a zero-allocation alternative to GetAliveParticles for hot paths.
+// The visitor receives a pointer to the particle; do not store it.
+func (ps *ParticleSystem) VisitAliveParticles(visitor func(p *Particle)) {
+	for i := range ps.Particles {
+		if ps.Particles[i].Life > 0 {
+			visitor(&ps.Particles[i])
+		}
+	}
 }

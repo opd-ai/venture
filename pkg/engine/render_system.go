@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/rendering/particles"
 )
 
 // ImagePoolProvider abstracts image pool operations for memory efficiency.
@@ -1016,38 +1017,43 @@ func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 			continue
 		}
 
-		// Render each particle system
+		// Render each particle system using zero-allocation visitor
 		for _, system := range emitter.Systems {
-			for _, particle := range system.GetAliveParticles() {
-				// Convert world coordinates to screen coordinates
-				screenX, screenY := r.cameraSystem.WorldToScreen(particle.X, particle.Y)
-
-				// Calculate alpha based on particle life (fade out)
-				alpha := particle.Life
-				if alpha < 0 {
-					alpha = 0
-				}
-				if alpha > 1 {
-					alpha = 1
-				}
-
-				// Extract color with alpha applied
-				pr, pg, pb, _ := particle.Color.RGBA()
-				particleColor := color.RGBA{
-					R: uint8(pr >> 8),
-					G: uint8(pg >> 8),
-					B: uint8(pb >> 8),
-					A: uint8(float64(255) * alpha),
-				}
-
-				// Draw particle as a small filled circle
-				vector.DrawFilledCircle(r.screen,
-					float32(screenX), float32(screenY),
-					float32(particle.Size),
-					particleColor, false)
-			}
+			r.drawParticleSystem(system)
 		}
 	}
+}
+
+// drawParticleSystem renders a single particle system using a zero-allocation visitor pattern.
+func (r *EbitenRenderSystem) drawParticleSystem(system *particles.ParticleSystem) {
+	system.VisitAliveParticles(func(particle *particles.Particle) {
+		// Convert world coordinates to screen coordinates
+		screenX, screenY := r.cameraSystem.WorldToScreen(particle.X, particle.Y)
+
+		// Calculate alpha based on particle life (fade out)
+		alpha := particle.Life
+		if alpha < 0 {
+			alpha = 0
+		}
+		if alpha > 1 {
+			alpha = 1
+		}
+
+		// Extract color with alpha applied
+		pr, pg, pb, _ := particle.Color.RGBA()
+		particleColor := color.RGBA{
+			R: uint8(pr >> 8),
+			G: uint8(pg >> 8),
+			B: uint8(pb >> 8),
+			A: uint8(float64(255) * alpha),
+		}
+
+		// Draw particle as a small filled circle
+		vector.DrawFilledCircle(r.screen,
+			float32(screenX), float32(screenY),
+			float32(particle.Size),
+			particleColor, false)
+	})
 }
 
 // drawRect draws a filled rectangle at the given screen position.

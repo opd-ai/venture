@@ -5,7 +5,6 @@ package engine
 
 import (
 	"testing"
-	"time"
 )
 
 func TestNewFishingSystem(t *testing.T) {
@@ -852,9 +851,4 @@ func TestFishingSystem_PositionString(t *testing.T) {
 	if str == "" {
 		t.Error("position string should not be empty")
 	}
-}
-
-func init() {
-	// Ensure time package is imported for tests
-	_ = time.Now
 }

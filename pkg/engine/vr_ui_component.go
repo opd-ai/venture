@@ -70,6 +70,12 @@ type VRUIPanel struct {
 	// FollowDistance maintains distance when following
 	FollowDistance float64 `json:"follow_distance"`
 
+	// FollowOffsetX is the horizontal offset from head when FollowHead is true
+	FollowOffsetX float64 `json:"follow_offset_x"`
+
+	// FollowOffsetY is the vertical offset from head when FollowHead is true
+	FollowOffsetY float64 `json:"follow_offset_y"`
+
 	// Opacity is the panel opacity (0-1)
 	Opacity float64 `json:"opacity"`
 

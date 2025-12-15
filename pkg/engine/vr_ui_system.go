@@ -95,18 +95,19 @@ func (s *VRUISystem) updatePanelPositions(ui *VRUIComponent) {
 
 	for _, panel := range ui.GetAllPanels() {
 		if panel.FollowHead {
-			// Calculate position in front of head
+			// Calculate position in front of head using stored offsets
 			// Use yaw to rotate the offset direction
 			sinYaw := sinApprox(headYaw)
 			cosYaw := cosApprox(headYaw)
 
-			offsetX := panel.WorldX*cosYaw - panel.WorldZ*sinYaw
-			offsetZ := panel.WorldX*sinYaw + panel.WorldZ*cosYaw
+			// Use stored offsets instead of current position to avoid drift
+			offsetX := panel.FollowOffsetX*cosYaw - panel.FollowDistance*sinYaw
+			offsetZ := panel.FollowOffsetX*sinYaw + panel.FollowDistance*cosYaw
 
-			// Panel follows head but maintains relative offset
+			// Panel follows head at fixed relative offset
 			panel.WorldX = headX + offsetX
-			panel.WorldY = headY + panel.WorldY
-			panel.WorldZ = headZ + offsetZ + panel.FollowDistance
+			panel.WorldY = headY + panel.FollowOffsetY
+			panel.WorldZ = headZ + offsetZ
 		}
 
 		if panel.LockedToHand == ControllerLeft {

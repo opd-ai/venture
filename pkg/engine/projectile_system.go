@@ -231,9 +231,6 @@ func (s *ProjectileSystem) checkEntityCollision(projEntity *Entity, posComp *Pos
 	// Get all entities with position and health (potential targets)
 	entities := s.world.GetEntitiesWith("position", "health")
 
-	// DEBUG: Log collision check
-	_ = entities // prevent unused warning if logging is disabled
-
 	for _, entity := range entities {
 		// Skip self (owner)
 		if entity.ID == projComp.OwnerID {

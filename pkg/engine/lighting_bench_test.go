@@ -118,3 +118,46 @@ func BenchmarkLightingSystem_CollectVisibleLights(b *testing.B) {
 		system.CollectVisibleLights(entities)
 	}
 }
+
+// BenchmarkLightingSystem_ApplyLightingFullPath benchmarks the full ApplyLighting method
+// which calls CollectVisibleLights (now optimized) and applyAmbientAndPointLights (now optimized).
+func BenchmarkLightingSystem_ApplyLightingFullPath(b *testing.B) {
+	world := NewWorld()
+	config := NewLightingConfig()
+	config.Enabled = true
+	config.MaxLights = 20
+	system := NewLightingSystem(world, config)
+	system.SetViewport(0, 0, 800, 600)
+
+	// Create scene and buffer images
+	scene := ebiten.NewImage(800, 600)
+	screen := ebiten.NewImage(800, 600)
+
+	// Create entities with light and position components
+	entities := make([]*Entity, 10)
+	for i := 0; i < 10; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&PositionComponent{
+			X: float64(100 + i*60),
+			Y: float64(100 + i*40),
+		})
+		entity.AddComponent(&LightComponent{
+			Enabled:   true,
+			Intensity: 1.0,
+			Radius:    50 + float64(i*10),
+			Color:     color.RGBA{255, 255, 200, 255},
+			Falloff:   FalloffLinear,
+		})
+		entities[i] = entity
+	}
+
+	// Flush pending entities
+	world.FlushPendingEntities()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		system.ApplyLighting(screen, scene, entities)
+	}
+}

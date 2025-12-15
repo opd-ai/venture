@@ -54,6 +54,12 @@ type LightingSystem struct {
 	// Reusable DrawImageOptions to eliminate per-light allocations in hot path
 	// Reset and reused for each point light in applyPointLight
 	lightDrawOpts ebiten.DrawImageOptions
+
+	// Reusable DrawImageOptions for ambient lighting to eliminate per-frame allocation
+	ambientDrawOpts ebiten.DrawImageOptions
+
+	// Reusable lightMetrics to eliminate per-frame allocation in CollectVisibleLights
+	metrics lightMetrics
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -309,6 +315,7 @@ func (s *LightingSystem) validateLightCollection(entityCount int) bool {
 }
 
 // lightMetrics tracks statistics during light collection.
+// This struct is reused across frames to avoid allocations.
 type lightMetrics struct {
 	totalLights     int
 	culledLights    int
@@ -316,9 +323,18 @@ type lightMetrics struct {
 	missingPosition int
 }
 
-// initLightMetrics creates a new lightMetrics instance.
+// reset clears all metrics for reuse in a new frame.
+func (m *lightMetrics) reset() {
+	m.totalLights = 0
+	m.culledLights = 0
+	m.disabledLights = 0
+	m.missingPosition = 0
+}
+
+// initLightMetrics returns a pointer to the reusable metrics struct after resetting it.
 func (s *LightingSystem) initLightMetrics() *lightMetrics {
-	return &lightMetrics{}
+	s.metrics.reset()
+	return &s.metrics
 }
 
 // extractLightAndPosition extracts light and position components from entity.
@@ -640,9 +656,13 @@ func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image,
 		}).Debug("Applying lighting calculations")
 	}
 
-	opts := &ebiten.DrawImageOptions{}
-	opts.ColorScale.Scale(float32(ambR), float32(ambG), float32(ambB), 1.0)
-	s.lightingBuffer.DrawImage(renderedScene, opts)
+	// OPTIMIZATION: Reuse pre-allocated DrawImageOptions to eliminate per-frame heap allocation
+	// Previous: opts := &ebiten.DrawImageOptions{} - allocated 1 struct per frame
+	// Now: Reuse s.ambientDrawOpts with Reset() - zero allocations in hot path
+	s.ambientDrawOpts.GeoM.Reset()
+	s.ambientDrawOpts.ColorScale.Reset()
+	s.ambientDrawOpts.ColorScale.Scale(float32(ambR), float32(ambG), float32(ambB), 1.0)
+	s.lightingBuffer.DrawImage(renderedScene, &s.ambientDrawOpts)
 
 	lightsApplied := 0
 	for i := range lights {

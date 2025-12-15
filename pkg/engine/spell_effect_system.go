@@ -7,12 +7,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// expiredEffect represents a spell effect to be removed from an entity.
+// Used internally by SpellEffectSystem to track expired effects.
+type expiredEffect struct {
+	entity *Entity
+	effect *SpellEffectComponent
+}
+
 // SpellEffectSystem manages spell effects on entities and terrain.
 // It processes SpellEffectComponents and executes their effects based on type.
 type SpellEffectSystem struct {
 	world  *World
 	rng    *rand.Rand
 	logger *logrus.Entry
+
+	// Reusable buffer for expired effects to reduce per-frame allocations
+	expiredEffectsBuffer []expiredEffect
 }
 
 // NewSpellEffectSystem creates a new spell effect system.
@@ -27,18 +37,17 @@ func NewSpellEffectSystemWithLogger(world *World, rng *rand.Rand, logger *logrus
 		logEntry = logger.WithField("system", "spell_effect")
 	}
 	return &SpellEffectSystem{
-		world:  world,
-		rng:    rng,
-		logger: logEntry,
+		world:                world,
+		rng:                  rng,
+		logger:               logEntry,
+		expiredEffectsBuffer: make([]expiredEffect, 0, 16), // Pre-allocate for typical max expired effects per frame
 	}
 }
 
 // Update processes all active spell effects.
 func (s *SpellEffectSystem) Update(entities []*Entity, deltaTime float64) {
-	var effectsToRemove []struct {
-		entity *Entity
-		effect *SpellEffectComponent
-	}
+	// Reuse buffer to avoid per-frame allocations
+	s.expiredEffectsBuffer = s.expiredEffectsBuffer[:0]
 
 	// Process all entities with spell effects
 	for _, entity := range entities {
@@ -56,17 +65,17 @@ func (s *SpellEffectSystem) Update(entities []*Entity, deltaTime float64) {
 
 				// Mark expired effects for removal
 				if effect.IsExpired() {
-					effectsToRemove = append(effectsToRemove, struct {
-						entity *Entity
-						effect *SpellEffectComponent
-					}{entity, effect})
+					s.expiredEffectsBuffer = append(s.expiredEffectsBuffer, expiredEffect{
+						entity: entity,
+						effect: effect,
+					})
 				}
 			}
 		}
 	}
 
 	// Remove expired effects
-	for _, item := range effectsToRemove {
+	for _, item := range s.expiredEffectsBuffer {
 		item.entity.RemoveComponent(item.effect.Type())
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{

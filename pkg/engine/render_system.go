@@ -162,29 +162,6 @@ type entitySprite struct {
 	yPos   float64 // Cached Y position for depth sorting (avoids O(n log n) map lookups)
 }
 
-// entitySpriteSlice implements sort.Interface for []entitySprite.
-// Deprecated: Now using slices.SortFunc which is a generic function that avoids
-// heap allocations. Kept for backward compatibility and potential fallback.
-type entitySpriteSlice []entitySprite
-
-func (s entitySpriteSlice) Len() int      { return len(s) }
-func (s entitySpriteSlice) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s entitySpriteSlice) Less(i, j int) bool {
-	// Primary sort: by sprite layer
-	if s[i].layer != s[j].layer {
-		return s[i].layer < s[j].layer
-	}
-
-	// Secondary sort: by cached Y position for depth sorting
-	// Entities lower on screen (higher Y) appear in front
-	if s[i].yPos != s[j].yPos {
-		return s[i].yPos < s[j].yPos
-	}
-
-	// Tertiary sort: by entity ID for complete determinism
-	return s[i].entity.ID < s[j].entity.ID
-}
-
 // EbitenRenderSystem handles rendering of entities to the screen (Ebiten implementation).
 // Implements RenderingSystem interface.
 type EbitenRenderSystem struct {
@@ -378,9 +355,6 @@ func (r *EbitenRenderSystem) renderEntities(entities []*Entity) {
 // drawBatched renders entities using batch optimization to reduce GPU state changes.
 // Entities with the same sprite image are grouped together.
 func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
-	// DEBUG: Log entry
-	r.logPlayerCount(entities)
-
 	// Get or create batch map from pool
 	batches := r.getBatchMap()
 	defer r.returnBatchMap(batches)
@@ -403,12 +377,6 @@ func (r *EbitenRenderSystem) drawBatched(entities []*Entity) {
 		r.drawEntity(entity)
 		r.stats.RenderedEntities++
 	}
-}
-
-// logPlayerCount logs the number of player entities for debugging.
-func (r *EbitenRenderSystem) logPlayerCount(entities []*Entity) {
-	// DEBUG: Removed empty conditional block - this function is intentionally minimal
-	// and exists as a placeholder for future debug logging if needed
 }
 
 // prepareNonSpriteBuffer resets and prepares the buffer for non-sprite entities.

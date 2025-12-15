@@ -97,6 +97,9 @@ type PlayerState struct {
 
 	// Phase 84: Player statistics persistence (V15.0)
 	PlayerStatistics *PlayerStatisticsData `json:"player_statistics,omitempty"`
+
+	// Phase 98: Daily/weekly challenge persistence (V18.0)
+	ChallengeData *ChallengeStateData `json:"challenge_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -158,6 +161,35 @@ type PlayerStatisticsData struct {
 	FirstPlayTime int64 `json:"first_play_time"`
 	// TotalPlayTime is the total playtime in seconds (lifetime).
 	TotalPlayTime int64 `json:"total_play_time"`
+}
+
+// ChallengeStateData represents saved challenge progress for Phase 98 (V18.0).
+// This allows daily/weekly challenge progress to persist across saves.
+type ChallengeStateData struct {
+	// ActiveDailyChallengesJSON is serialized daily challenge data.
+	ActiveDailyChallengesJSON []byte `json:"active_daily_challenges_json,omitempty"`
+	// ActiveWeeklyChallengesJSON is serialized weekly challenge data.
+	ActiveWeeklyChallengesJSON []byte `json:"active_weekly_challenges_json,omitempty"`
+	// DailyStreak is consecutive days with all dailies completed.
+	DailyStreak int `json:"daily_streak"`
+	// LongestDailyStreak is the all-time highest daily streak.
+	LongestDailyStreak int `json:"longest_daily_streak"`
+	// WeeklyStreak is consecutive weeks with all weeklies completed.
+	WeeklyStreak int `json:"weekly_streak"`
+	// LongestWeeklyStreak is the all-time highest weekly streak.
+	LongestWeeklyStreak int `json:"longest_weekly_streak"`
+	// TotalChallengesCompleted is lifetime completed challenges.
+	TotalChallengesCompleted int `json:"total_challenges_completed"`
+	// TotalXPEarned is lifetime XP from challenges.
+	TotalXPEarned int `json:"total_xp_earned"`
+	// TotalGoldEarned is lifetime gold from challenges.
+	TotalGoldEarned int `json:"total_gold_earned"`
+	// LastDailyReset is unix timestamp of last daily reset.
+	LastDailyReset int64 `json:"last_daily_reset"`
+	// LastWeeklyReset is unix timestamp of last weekly reset.
+	LastWeeklyReset int64 `json:"last_weekly_reset"`
+	// BaseSeed is the base seed for deterministic generation.
+	BaseSeed int64 `json:"base_seed"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

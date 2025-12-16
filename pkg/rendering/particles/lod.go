@@ -134,40 +134,48 @@ func ApplyDistanceLOD(particles []Particle, visibleIndices []int, cameraX, camer
 		return visibleIndices
 	}
 
-	// Categorize by distance
-	close := make([]int, 0)
-	mid := make([]int, 0)
-	far := make([]int, 0)
+	n := len(visibleIndices)
+	if n == 0 {
+		return visibleIndices
+	}
+
+	// Pre-allocate tier slices with estimated capacity to reduce allocations
+	// Typical distribution: 30% close, 30% mid, 30% far, 10% culled
+	estimatedPerTier := (n + 2) / 3
+	close := make([]int, 0, estimatedPerTier)
+	mid := make([]int, 0, estimatedPerTier)
+	far := make([]int, 0, estimatedPerTier)
+
+	// Pre-compute squared distances to avoid sqrt in hot loop
+	distCloseSq := config.DistanceClose * config.DistanceClose
+	distMidSq := config.DistanceMid * config.DistanceMid
+	distFarSq := config.DistanceFar * config.DistanceFar
 
 	for _, idx := range visibleIndices {
 		p := particles[idx]
 		dx := p.X - cameraX
 		dy := p.Y - cameraY
-		dist := math.Sqrt(dx*dx + dy*dy)
+		distSq := dx*dx + dy*dy
 
-		if dist < config.DistanceClose {
+		if distSq < distCloseSq {
 			close = append(close, idx)
-		} else if dist < config.DistanceMid {
+		} else if distSq < distMidSq {
 			mid = append(mid, idx)
-		} else if dist < config.DistanceFar {
+		} else if distSq < distFarSq {
 			far = append(far, idx)
 		}
 		// Beyond DistanceFar: culled entirely
 	}
 
 	// Apply reduction factors to each tier
-	result := make([]int, 0, len(visibleIndices))
-
-	// Close tier: keep all or most
 	keepClose := int(float64(len(close)) * config.CloseReduction)
-	result = append(result, close[:keepClose]...)
-
-	// Mid tier: keep subset
 	keepMid := int(float64(len(mid)) * config.MidReduction)
-	result = append(result, mid[:keepMid]...)
-
-	// Far tier: keep minimal
 	keepFar := int(float64(len(far)) * config.FarReduction)
+
+	// Pre-allocate result with exact capacity needed
+	result := make([]int, 0, keepClose+keepMid+keepFar)
+	result = append(result, close[:keepClose]...)
+	result = append(result, mid[:keepMid]...)
 	result = append(result, far[:keepFar]...)
 
 	return result

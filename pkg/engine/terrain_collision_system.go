@@ -364,11 +364,6 @@ func checkAABBEdgeVsTriangleEdges(edgeX1, edgeY1, edgeX2, edgeY2, t1X, t1Y, t2X,
 	return false
 }
 
-// pointInAABB checks if a point is inside an axis-aligned bounding box.
-func pointInAABB(x, y, minX, minY, maxX, maxY float64) bool {
-	return x >= minX && x <= maxX && y >= minY && y <= maxY
-}
-
 // pointInAABBStrict checks if a point is strictly inside an AABB (not on boundary).
 // Phase 11.1 Week 3: Strict version excludes boundary points to avoid false positives
 // for adjacent (touching) shapes in collision detection.

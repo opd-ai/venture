@@ -18,17 +18,18 @@ type Entity struct {
 
 	// Fast-path cache for frequently accessed components
 	// These eliminate map lookups in hot paths
-	position   *PositionComponent
-	velocity   *VelocityComponent
-	health     *HealthComponent
-	collider   *ColliderComponent
-	inventory  *InventoryComponent
-	stats      *StatsComponent
-	animation  *AnimationComponent
-	attack     *AttackComponent
-	experience *ExperienceComponent
-	sprite     *EbitenSprite      // Cached for render system hot path (~93x faster access)
-	rotation   *RotationComponent // Cached for render and collision hot paths
+	position       *PositionComponent
+	velocity       *VelocityComponent
+	health         *HealthComponent
+	collider       *ColliderComponent
+	inventory      *InventoryComponent
+	stats          *StatsComponent
+	animation      *AnimationComponent
+	attack         *AttackComponent
+	experience     *ExperienceComponent
+	sprite         *EbitenSprite            // Cached for render system hot path (~93x faster access)
+	rotation       *RotationComponent       // Cached for render and collision hot paths
+	visualFeedback *VisualFeedbackComponent // Cached for render system hot path (visual effects)
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -90,6 +91,10 @@ func (e *Entity) AddComponent(c Component) {
 		if rot, ok := c.(*RotationComponent); ok {
 			e.rotation = rot
 		}
+	case "visual_feedback":
+		if vf, ok := c.(*VisualFeedbackComponent); ok {
+			e.visualFeedback = vf
+		}
 	}
 }
 
@@ -138,6 +143,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.sprite = nil
 	case "rotation":
 		e.rotation = nil
+	case "visual_feedback":
+		e.visualFeedback = nil
 	}
 }
 
@@ -225,6 +232,12 @@ func (e *Entity) GetSprite() *EbitenSprite {
 // Uses cached pointer for zero-overhead access in render and collision hot paths.
 func (e *Entity) GetRotation() *RotationComponent {
 	return e.rotation
+}
+
+// GetVisualFeedback retrieves the VisualFeedbackComponent if present.
+// Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
+func (e *Entity) GetVisualFeedback() *VisualFeedbackComponent {
+	return e.visualFeedback
 }
 
 // World manages all entities and systems in the game.

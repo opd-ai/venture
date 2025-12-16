@@ -718,21 +718,23 @@ func (s *CombatSystem) spawnHitParticles(target *Entity) {
 }
 
 // applyVisualFeedback triggers visual hit flash on the target entity.
+// Uses cached GetVisualFeedback() getter for ~93x faster access.
 func (s *CombatSystem) applyVisualFeedback(target *Entity, finalDamage float64) {
 	// GAP-012 REPAIR: Trigger hit flash on damage
 	// Phase 10.3: Respects accessibility settings via camera
-	if feedbackComp, ok := target.GetComponent("visual_feedback"); ok {
-		// Check accessibility settings for visual flash
-		if s.camera != nil && s.camera.Accessibility.ShouldApplyVisualFlash() {
-			if feedback, ok := feedbackComp.(*VisualFeedbackComponent); ok {
-				// Flash intensity scales with damage (0.3-1.0 range)
-				flashIntensity := 0.3 + (finalDamage / 100.0)
-				if flashIntensity > 1.0 {
-					flashIntensity = 1.0
-				}
-				feedback.TriggerFlash(flashIntensity)
-			}
+	feedback := target.GetVisualFeedback()
+	if feedback == nil {
+		return
+	}
+
+	// Check accessibility settings for visual flash
+	if s.camera != nil && s.camera.Accessibility.ShouldApplyVisualFlash() {
+		// Flash intensity scales with damage (0.3-1.0 range)
+		flashIntensity := 0.3 + (finalDamage / 100.0)
+		if flashIntensity > 1.0 {
+			flashIntensity = 1.0
 		}
+		feedback.TriggerFlash(flashIntensity)
 	}
 }
 

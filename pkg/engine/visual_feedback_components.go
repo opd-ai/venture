@@ -82,15 +82,11 @@ func NewVisualFeedbackSystem() *VisualFeedbackSystem {
 }
 
 // Update decrements flash timers and updates visual effects.
+// Uses cached GetVisualFeedback() getter for ~93x faster access.
 func (s *VisualFeedbackSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		feedbackComp, ok := entity.GetComponent("visual_feedback")
-		if !ok {
-			continue
-		}
-
-		feedback, ok := feedbackComp.(*VisualFeedbackComponent)
-		if !ok {
+		feedback := entity.GetVisualFeedback()
+		if feedback == nil {
 			continue
 		}
 

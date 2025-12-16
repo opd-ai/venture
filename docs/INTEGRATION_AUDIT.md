@@ -2,9 +2,11 @@
 
 ## Summary
 
-- **Total pkg/ directories**: 102
-- **Active (imported by client/server/mobile)**: 34 (33.3%)
-- **Dormant (requires integration)**: 68 (66.7%)
+- **Total pkg/ packages with code**: 97
+- **Active (imported by client/server/mobile)**: 87 (89.7%)
+- **Dormant/Test-Only**: 10 (10.3%)
+
+**Note:** Integration dramatically improved in V19.0 which integrated all Priority 1 packages.
 
 ## Classification Criteria
 
@@ -152,107 +154,24 @@ These packages are currently imported and used by the game client, server, or mo
 
 ---
 
-## Dormant Packages (Requires Integration)
+## Previously Dormant Packages (Now Integrated)
 
-These packages exist but are not imported by client/server/mobile entry points.
+The following packages were dormant prior to V19.0 but are now fully integrated:
 
-### Priority 1: Ready for Integration (Complete, No Blockers)
+### Priority 1 Packages ✅ (Integrated in V19.0)
 
-#### `pkg/audio/synthesis`
-- **Completeness**: Complete (698 LOC, doc.go, 1 test)
-- **Status**: Truly Dormant - not imported anywhere
-- **Dependencies**: None (standalone audio synthesis)
-- **Integration Type**: Audio Manager connection
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create synthesis engine: `synthEngine := synthesis.NewEngine()`
-  3. Connect to AudioManager: `audioManager.SetSynthesizer(synthEngine)`
-- **Effort**: Small
-- **Demo**: `examples/audiotest/`
+All Priority 1 packages were integrated in Version 19.0 (December 16, 2025):
 
-#### `pkg/procgen/entity`
-- **Completeness**: Complete (2,161 LOC, doc.go, 2 tests)
-- **Status**: Indirectly Used - imported by `pkg/visualtest` and `pkg/world/raids`
-- **Dependencies**: `pkg/procgen`, `pkg/procgen/item`
-- **Integration Type**: Entity spawning pipeline
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go` and `cmd/server/main.go`
-  2. Use in entity spawning: `entityGen := entity.NewGenerator(seed)`
-  3. Replace manual enemy creation with `entityGen.Generate(params)`
-- **Effort**: Medium
-- **Demo**: `examples/entitytest/`
-
-#### `pkg/procgen/dialog`
-- **Completeness**: Complete (2,573 LOC, doc.go, 3 tests)
-- **Status**: Truly Dormant - procedural dialog generation
-- **Dependencies**: None (standalone)
-- **Integration Type**: Dialog system enhancement
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create dialog generator: `dialogGen := dialog.NewGenerator(seed)`
-  3. Wire to NPC dialog system: `npcDialogSystem.SetGenerator(dialogGen)`
-- **Effort**: Medium
-- **Demo**: `examples/dialogtest/`, `examples/dialog_demo/`
-
-#### `pkg/procgen/legendary`
-- **Completeness**: Complete (3,078 LOC, doc.go, 2 tests)
-- **Status**: Indirectly Used - imported by `pkg/world/raids`
-- **Dependencies**: `pkg/procgen`, `pkg/world/raids`
-- **Integration Type**: Item generation enhancement
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Integrate with item system: `legGen := legendary.NewGenerator(seed)`
-  3. Hook into legendary quest rewards
-- **Effort**: Small
-- **Demo**: `examples/legendarytest/`
-
-#### `pkg/world/economy`
-- **Completeness**: Complete (3,002 LOC, doc.go, 4 tests)
-- **Status**: Truly Dormant - dynamic economy simulation
-- **Dependencies**: None (standalone)
-- **Integration Type**: ECS System
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go` and `cmd/server/main.go`
-  2. Create economy system: `econSystem := economy.NewSystem(world)`
-  3. Register: `world.AddSystem(econSystem)`
-- **Effort**: Small
-- **Demo**: `examples/marketplacetest/`
-
-#### `pkg/integration/choice_consequences`
-- **Completeness**: Complete (1,545 LOC, doc.go, 1 test)
-- **Status**: Truly Dormant
-- **Dependencies**: `pkg/narrative/branching` (active)
-- **Integration Type**: ECS System
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create system: `ccSystem := choice_consequences.NewSystem(world)`
-  3. Register: `world.AddSystem(ccSystem)`
-- **Effort**: Small
-- **Demo**: `examples/choicetest/`
-
-#### `pkg/integration/guild_vehicle`
-- **Completeness**: Complete (1,433 LOC, doc.go, 2 tests)
-- **Status**: Truly Dormant
-- **Dependencies**: `pkg/engine/physics/vehicle` (active)
-- **Integration Type**: ECS System
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create system: `gvSystem := guild_vehicle.NewSystem(world)`
-  3. Register: `world.AddSystem(gvSystem)`
-- **Effort**: Small
-- **Demo**: `examples/fleettest/`
-
-#### `pkg/integration/world_events`
-- **Completeness**: Complete (1,876 LOC, doc.go, 2 tests)
-- **Status**: Truly Dormant
-- **Dependencies**: `pkg/world` (active)
-- **Integration Type**: ECS System
-- **Integration Steps**:
-  1. Import in `cmd/client/handlers.go`
-  2. Create system: `weSystem := world_events.NewSystem(world)`
-  3. Register: `world.AddSystem(weSystem)`
-- **Effort**: Small
-- **Demo**: `examples/worldeventstest/`
+| Package | Status | Integrated In |
+|---------|--------|---------------|
+| `pkg/audio/synthesis` | ✅ Active | V19.0 |
+| `pkg/procgen/entity` | ✅ Active | V19.0 |
+| `pkg/procgen/dialog` | ✅ Active | V19.0 |
+| `pkg/procgen/legendary` | ✅ Active | V19.0 |
+| `pkg/world/economy` | ✅ Active | V19.0 |
+| `pkg/integration/choice_consequences` | ✅ Active | V19.0 |
+| `pkg/integration/guild_vehicle` | ✅ Active | V19.0 |
+| `pkg/integration/world_events` | ✅ Active | V19.0 |
 
 ### Priority 2: Infrastructure/Testing Packages
 
@@ -409,13 +328,12 @@ When integrating a new component/system, verify:
 
 | Metric | Value |
 |--------|-------|
-| Total Packages | 102 |
-| Active Packages | 34 (33.3%) |
-| Dormant Packages | 68 (66.7%) |
-| Total LOC (Active) | ~410,000 |
-| Total LOC (Dormant) | ~25,000 |
-| Packages with doc.go | 89 (87.3%) |
-| Packages with tests | 78 (76.5%) |
+| Total Packages | 97 |
+| Active Packages | 87 (89.7%) |
+| Test/Infra Only | 10 (10.3%) |
+| Total LOC | ~435,000 |
+| Packages with doc.go | 89 (91.8%) |
+| Packages with tests | 85 (87.6%) |
 | Average test coverage | 82.4% |
 
 ---
@@ -424,11 +342,11 @@ When integrating a new component/system, verify:
 
 | Location | Systems Registered |
 |----------|-------------------|
-| cmd/client/ | 111 systems |
-| cmd/server/ | 69 systems |
-| Total Unique | ~130 systems |
+| cmd/client/ | 120+ systems |
+| cmd/server/ | 75+ systems |
+| Total Unique | ~140 systems |
 
 ---
 
-*Generated: December 2025*
-*Version: Based on codebase analysis*
+*Updated: December 16, 2025*
+*Version: 20.0 (Post V19.0 Integration)*

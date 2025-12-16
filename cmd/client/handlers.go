@@ -65,10 +65,11 @@ import (
 	// Phase 6.1: Branching Narratives (PLAN.md)
 	"github.com/opd-ai/venture/pkg/narrative/branching"
 
-	// Phase 1.1: Audio System Complete (PLAN.md)
+	// Phase 1.1: Audio Synthesis Engine (PLAN.md)
 	"github.com/opd-ai/venture/pkg/audio"
 	"github.com/opd-ai/venture/pkg/audio/music"
 	"github.com/opd-ai/venture/pkg/audio/sfx"
+	"github.com/opd-ai/venture/pkg/audio/synthesis"
 
 	// Phase 1.2: Destruction Physics (PLAN.md)
 	"github.com/opd-ai/venture/pkg/engine/physics/destruction"
@@ -526,6 +527,9 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	const sampleRate = audioSampleRate
 	audioSeed := *seed
 
+	// Create synthesis engine for low-level waveform generation
+	synthEngine := synthesis.NewEngineWithSampleRate(sampleRate, audioSeed)
+
 	// Create base audio manager
 	audioManager := audio.NewManager(sampleRate, audioSeed)
 
@@ -548,6 +552,9 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	game.SetAudioManager(sys.audioManager)
 	sys.audioManager.EnableAdaptiveMusic(true)
 
+	// Phase 1.1 (PLAN.md): Connect synthesis engine to audio manager system
+	sys.audioManagerSystem.SetSynthesizer(synthEngine)
+
 	// Initialize enhanced audio systems
 	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, sys.audioManager)
 	sys.positionalAudioSystem = engine.NewPositionalAudioSystem(game.World)
@@ -561,7 +568,7 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 		logging.ComponentLogger(clientLogger.Logger, "audio").WithError(err).Warn("failed to start background music")
 	}
 
-	logging.ComponentLogger(clientLogger.Logger, "audio").Info("audio system initialized (music and SFX generators, triggers, 3D audio, reverb)")
+	logging.ComponentLogger(clientLogger.Logger, "audio").Info("audio system initialized (synthesis engine, music and SFX generators, triggers, 3D audio, reverb)")
 }
 
 // initializeCombatSystems creates spell casting and player combat systems.

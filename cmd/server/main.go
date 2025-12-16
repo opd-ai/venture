@@ -238,6 +238,12 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	world.AddSystem(progressionSystem)
 	world.AddSystem(inventorySystem)
 
+	// Phase 1.2 (PLAN.md): Economy system for marketplace and guild banking
+	serverID := "server-" + *port // Generate server ID from port for uniqueness
+	economySystem := engine.NewEconomySystem(world, serverID)
+	world.AddSystem(economySystem)
+	worldLogger.WithField("serverID", serverID).Debug("economy system initialized")
+
 	// Create item generator for crafting system
 	itemGen := itemgen.NewItemGenerator()
 

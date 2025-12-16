@@ -395,11 +395,19 @@ func (am *AudioManager) GenerateTrack(duration float64) *audio.AudioSample {
 	return am.applyVolumeToTrack(track, am.musicVolume)
 }
 
+// Synthesizer defines the interface for audio synthesis engines.
+// This allows AudioManagerSystem to use different synthesis implementations.
+type Synthesizer interface {
+	GetSampleRate() int
+	GetSeed() int64
+}
+
 // AudioManagerSystem is an ECS system that updates audio state based on game context.
 type AudioManagerSystem struct {
 	audioManager      *AudioManager
 	detector          *MusicContextDetector
 	transitionManager *MusicTransitionManager
+	synthesizer       Synthesizer
 	playerEntity      *Entity
 	genreID           string
 	updateTimer       int
@@ -437,6 +445,23 @@ func (ams *AudioManagerSystem) SetPlayerEntity(player *Entity) {
 // SetGenreID sets the genre for music generation
 func (ams *AudioManagerSystem) SetGenreID(genre string) {
 	ams.genreID = genre
+}
+
+// SetSynthesizer sets the audio synthesis engine for waveform generation.
+// This connects the low-level synthesis package to the audio manager.
+func (ams *AudioManagerSystem) SetSynthesizer(synth Synthesizer) {
+	ams.synthesizer = synth
+	if ams.logger != nil {
+		ams.logger.WithFields(logrus.Fields{
+			"sample_rate": synth.GetSampleRate(),
+			"seed":        synth.GetSeed(),
+		}).Debug("synthesizer connected to audio manager")
+	}
+}
+
+// GetSynthesizer returns the current audio synthesizer, or nil if none set.
+func (ams *AudioManagerSystem) GetSynthesizer() Synthesizer {
+	return ams.synthesizer
 }
 
 // Update checks game state and updates audio context as needed.

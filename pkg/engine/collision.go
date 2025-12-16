@@ -266,18 +266,6 @@ func (s *CollisionSystem) processEntityCollisions(entity *Entity, collidableEnti
 	s.checkTerrainCollision(entity, collider)
 }
 
-// isCollisionPairChecked returns true if the entity pair has already been checked.
-// Uses flat map with composite key for O(1) lookup without nested map allocations.
-func (s *CollisionSystem) isCollisionPairChecked(id1, id2 uint64, checked map[uint64]bool) bool {
-	return checked[makePairKey(id1, id2)]
-}
-
-// markCollisionPairChecked marks an entity pair as checked.
-// Uses flat map with composite key - no inner map allocations needed.
-func (s *CollisionSystem) markCollisionPairChecked(id1, id2 uint64, checked map[uint64]bool) {
-	checked[makePairKey(id1, id2)] = true
-}
-
 // checkAndResolveEntityPair checks if two entities collide and resolves the collision.
 // Returns true if processing should skip this pair (invalid components or incompatible layers).
 func (s *CollisionSystem) checkAndResolveEntityPair(entity *Entity, pos *PositionComponent, collider *ColliderComponent, other *Entity) bool {

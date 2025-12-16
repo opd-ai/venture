@@ -2038,7 +2038,7 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 	}
 
 	if err := game.SetupInputCallbacks(inputSystem, objectiveTracker); err != nil {
-		return err
+		return fmt.Errorf("failed to setup input callbacks: %w", err)
 	}
 
 	connectUIComponentsToInputSystem(game, inputSystem, shopUI, player, clientLogger)
@@ -2049,7 +2049,7 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 	}
 
 	if err := setupMerchantInteraction(player, game, dialogSystem, shopUI, inputSystem, clientLogger); err != nil {
-		return err
+		return fmt.Errorf("failed to setup merchant interaction: %w", err)
 	}
 
 	if *verbose {
@@ -2057,7 +2057,7 @@ func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedT
 	}
 
 	if err := connectMenuSaveLoad(game, player, generatedTerrain, saveManager, clientLogger); err != nil {
-		return err
+		return fmt.Errorf("failed to connect menu save/load: %w", err)
 	}
 
 	return nil

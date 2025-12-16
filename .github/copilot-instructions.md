@@ -175,10 +175,10 @@ func (c *MyComponent) Serialize() ([]byte, error) { ... }
 func (c *MyComponent) Deserialize(data []byte) error { ... }
 ```
 
-## Active vs Dormant Packages
+## Package Integration Status
 
-The project has 34 active packages (33.3%) and 68 dormant packages (66.7%). Most dormant packages are complete implementations awaiting client/server integration. See `docs/INTEGRATION_AUDIT.md` for activation roadmaps and dependency chains.
+The project has 87 active packages (89.7%) and 10 test/infrastructure-only packages (10.3%). All priority packages have been integrated as of V19.0. See `docs/INTEGRATION_AUDIT.md` for detailed package status.
 
-Key active packages: `engine`, `combat`, `network`, `procgen/terrain`, `procgen/item`, `procgen/quest`, `rendering/sprites`, `saveload`, `world/housing`.
+Key active packages include: `engine` (240K+ LOC), `network` (22K+ LOC), `procgen/*` (all generators active), `rendering/*` (all systems active), `world/*` (housing, economy, territory), `combat`, `saveload`, and all integration packages.
 
-Priority dormant packages ready for integration: `audio/`, `audio/music`, `audio/sfx`, `rendering/cache`, `rendering/animation`, `procgen/entity`, `procgen/magic`, `procgen/skills`.
+Test/infrastructure packages: `pkg/audit/features`, `pkg/procgen/audit`, `pkg/visualtest`, `pkg/visualtest/parity` - used by CI/CD for quality validation.

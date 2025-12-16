@@ -104,6 +104,9 @@ jobs:
       - name: Test pkg/visualtest/parity
         run: go test -cover ./pkg/visualtest/parity/...
 
+      - name: Test pkg/procgen/audit (Determinism Validation)
+        run: xvfb-run -s "-screen 0 1920x1080x24" go test -v ./pkg/procgen/audit/...
+
   balance-validation:
     name: Balance Validation
     runs-on: ubuntu-latest

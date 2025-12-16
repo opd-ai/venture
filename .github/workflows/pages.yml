@@ -38,13 +38,6 @@ jobs:
         run: |
           cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/ || curl -sSL -o build/wasm/wasm_exec.js "https://raw.githubusercontent.com/golang/go/master/misc/wasm/wasm_exec.js"
 
-      - name: Copy web assets to build directory
-        run: |
-          cp web/index.html build/wasm/
-          if [ -f web/README.md ]; then
-            cp web/README.md build/wasm/
-          fi
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

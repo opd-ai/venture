@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Venture - Play the fully procedural action-RPG in your browser">
+    <title>Play Venture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        #gameCanvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #loadingScreen.hidden {
+            display: none;
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(76, 175, 80, 0.2);
+            border-top-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        #loadingText {
+            font-size: 18px;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        
+        #loadingProgress {
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+        
+        #errorScreen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            padding: 20px;
+        }
+        
+        #errorScreen.visible {
+            display: flex;
+        }
+        
+        .error-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .error-title {
+            font-size: 24px;
+            color: #f44336;
+            margin-bottom: 15px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #b0b0b0;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .back-button {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .back-button:hover {
+            background: #45a049;
+        }
+        
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #b0b0b0;
+            z-index: 100;
+            display: none;
+        }
+        
+        #controls.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="loadingScreen">
+            <div class="loader"></div>
+            <div id="loadingText">Loading Venture...</div>
+            <div id="loadingProgress">Initializing WebAssembly</div>
+        </div>
+        
+        <div id="errorScreen">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">Failed to Load Game</div>
+            <div class="error-message" id="errorMessage">
+                An error occurred while loading the game. Please ensure you're using a modern browser with WebAssembly support.
+            </div>
+            <a href="index.html" class="back-button">← Back to Home</a>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <strong>Controls:</strong> Arrow Keys/WASD - Move | Space - Attack | E - Interact | I - Inventory | M - Map | ESC - Menu
+    </div>
+    
+    <script src="wasm_exec.js"></script>
+    <script>
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingText = document.getElementById('loadingText');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const errorScreen = document.getElementById('errorScreen');
+        const errorMessage = document.getElementById('errorMessage');
+        const controls = document.getElementById('controls');
+        
+        function showError(message) {
+            loadingScreen.classList.add('hidden');
+            errorMessage.textContent = message;
+            errorScreen.classList.add('visible');
+        }
+        
+        function updateProgress(message) {
+            loadingProgress.textContent = message;
+        }
+        
+        // Check for WebAssembly support
+        if (!WebAssembly) {
+            showError('Your browser does not support WebAssembly. Please use a modern browser like Chrome, Firefox, or Safari.');
+        } else {
+            // Load the Go WebAssembly runtime
+            const go = new Go();
+            
+            updateProgress('Downloading game binary...');
+            
+            // Load and instantiate the WebAssembly module
+            WebAssembly.instantiateStreaming(fetch("venture.wasm"), go.importObject)
+                .then(result => {
+                    updateProgress('Starting game...');
+                    
+                    // Run the Go program
+                    go.run(result.instance).then(() => {
+                        // Game has finished running
+                        console.log('Game execution completed');
+                    }).catch(err => {
+                        console.error('Error running game:', err);
+                        showError('An error occurred while running the game: ' + err.message);
+                    });
+                    
+                    // Hide loading screen after a short delay to allow the game to initialize
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        controls.classList.add('visible');
+                    }, 1000);
+                })
+                .catch(err => {
+                    console.error('Failed to load WASM:', err);
+                    
+                    let message = 'Failed to load the game. ';
+                    if (err.message.includes('404')) {
+                        message += 'The game binary could not be found. Please ensure the build was successful.';
+                    } else if (err.message.includes('MIME')) {
+                        message += 'The server is not configured to serve WebAssembly files correctly.';
+                    } else {
+                        message += err.message;
+                    }
+                    
+                    showError(message);
+                });
+        }
+        
+        // Prevent default touch behaviors on mobile
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.tagName === 'CANVAS') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.tagName === 'CANVAS') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Prevent context menu on right-click
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Log when the page is fully loaded
+        window.addEventListener('load', () => {
+            console.log('Page fully loaded');
+        });
+    </script>
+</body>
+</html>

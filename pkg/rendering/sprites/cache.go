@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -233,11 +234,16 @@ func (c *Cache) hashConfig(config Config) uint64 {
 
 	h.Write(buf)
 
-	// Hash custom parameters (still uses fmt for complex values)
-	if config.Custom != nil {
-		// Hash important custom fields that affect sprite generation
-		for key, value := range config.Custom {
-			fmt.Fprintf(h, "|%s=%v", key, value)
+	// Hash custom parameters in sorted key order for determinism
+	// Go map iteration order is randomized, so we must sort keys
+	if config.Custom != nil && len(config.Custom) > 0 {
+		keys := make([]string, 0, len(config.Custom))
+		for key := range config.Custom {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			fmt.Fprintf(h, "|%s=%v", key, config.Custom[key])
 		}
 	}
 

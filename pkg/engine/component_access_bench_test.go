@@ -206,3 +206,67 @@ func BenchmarkRenderValidationTyped(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkLayerAccessGeneric benchmarks generic layer component access in collision-like patterns.
+func BenchmarkLayerAccessGeneric(b *testing.B) {
+	// Create entities with layer components (simulating collision system)
+	entities := make([]*Entity, 200)
+	for i := 0; i < 200; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		entity.AddComponent(&ColliderComponent{Width: 32, Height: 32})
+		layerComp := NewLayerComponent()
+		entity.AddComponent(&layerComp)
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate areLayersCompatible with generic access (old way)
+		for _, e1 := range entities[:50] {
+			for _, e2 := range entities[50:100] {
+				layer1Comp, hasLayer1 := e1.GetComponent("layer")
+				layer2Comp, hasLayer2 := e2.GetComponent("layer")
+				if hasLayer1 && hasLayer2 {
+					l1, ok1 := layer1Comp.(*LayerComponent)
+					l2, ok2 := layer2Comp.(*LayerComponent)
+					if ok1 && ok2 {
+						_ = l1.GetEffectiveLayer() == l2.GetEffectiveLayer()
+					}
+				}
+			}
+		}
+	}
+}
+
+// BenchmarkLayerAccessTyped benchmarks typed layer getter in collision-like patterns.
+func BenchmarkLayerAccessTyped(b *testing.B) {
+	// Create entities with layer components (simulating collision system)
+	entities := make([]*Entity, 200)
+	for i := 0; i < 200; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		entity.AddComponent(&ColliderComponent{Width: 32, Height: 32})
+		layerComp := NewLayerComponent()
+		entity.AddComponent(&layerComp)
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate areLayersCompatible with typed getter (new way)
+		for _, e1 := range entities[:50] {
+			for _, e2 := range entities[50:100] {
+				l1 := e1.GetLayer()
+				l2 := e2.GetLayer()
+				if l1 != nil && l2 != nil {
+					_ = l1.GetEffectiveLayer() == l2.GetEffectiveLayer()
+				}
+			}
+		}
+	}
+}

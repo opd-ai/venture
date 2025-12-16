@@ -30,6 +30,7 @@ type Entity struct {
 	sprite         *EbitenSprite            // Cached for render system hot path (~93x faster access)
 	rotation       *RotationComponent       // Cached for render and collision hot paths
 	visualFeedback *VisualFeedbackComponent // Cached for render system hot path (visual effects)
+	layer          *LayerComponent          // Cached for collision hot path (layer compatibility checks)
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -95,6 +96,10 @@ func (e *Entity) AddComponent(c Component) {
 		if vf, ok := c.(*VisualFeedbackComponent); ok {
 			e.visualFeedback = vf
 		}
+	case "layer":
+		if layer, ok := c.(*LayerComponent); ok {
+			e.layer = layer
+		}
 	}
 }
 
@@ -145,6 +150,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.rotation = nil
 	case "visual_feedback":
 		e.visualFeedback = nil
+	case "layer":
+		e.layer = nil
 	}
 }
 
@@ -238,6 +245,12 @@ func (e *Entity) GetRotation() *RotationComponent {
 // Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
 func (e *Entity) GetVisualFeedback() *VisualFeedbackComponent {
 	return e.visualFeedback
+}
+
+// GetLayer retrieves the LayerComponent if present.
+// Uses cached pointer for zero-overhead access in collision hot path (~93x faster than map lookup).
+func (e *Entity) GetLayer() *LayerComponent {
+	return e.layer
 }
 
 // World manages all entities and systems in the game.

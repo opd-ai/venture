@@ -3,11 +3,30 @@ package sprites
 import (
 	"container/list"
 	"fmt"
+	"hash"
 	"hash/fnv"
+	"strconv"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
+
+// hasherPool pools FNV-64a hashers to avoid per-call allocations.
+// This eliminates 1 allocation per hashConfig call in hot paths.
+var hasherPool = sync.Pool{
+	New: func() interface{} {
+		return fnv.New64a()
+	},
+}
+
+// hashBuffer is a reusable byte buffer for building hash strings.
+// Thread-local via sync.Pool to avoid allocations in hashConfig.
+var hashBufferPool = sync.Pool{
+	New: func() interface{} {
+		buf := make([]byte, 0, 128)
+		return &buf
+	},
+}
 
 // Cache is an LRU (Least Recently Used) cache for generated sprites.
 // It stores sprites by their configuration hash to avoid regenerating
@@ -188,21 +207,33 @@ func (c *Cache) SetCapacity(capacity int) {
 
 // hashConfig generates a hash key for a sprite configuration.
 // Uses FNV-1a hash for fast, deterministic hashing.
+// Optimized: Uses pooled hasher and buffer to avoid per-call allocations.
 func (c *Cache) hashConfig(config Config) uint64 {
-	h := fnv.New64a()
+	// Get pooled hasher and buffer
+	h := hasherPool.Get().(hash.Hash64)
+	h.Reset()
+	bufPtr := hashBufferPool.Get().(*[]byte)
+	buf := (*bufPtr)[:0]
 
-	// Hash all relevant config fields
-	fmt.Fprintf(h, "%d|%d|%d|%d|%s|%f|%d",
-		config.Type,
-		config.Width,
-		config.Height,
-		config.Seed,
-		config.GenreID,
-		config.Complexity,
-		config.Variation,
-	)
+	// Build hash string without fmt.Fprintf allocations
+	// Format: "%d|%d|%d|%d|%s|%f|%d"
+	buf = strconv.AppendInt(buf, int64(config.Type), 10)
+	buf = append(buf, '|')
+	buf = strconv.AppendInt(buf, int64(config.Width), 10)
+	buf = append(buf, '|')
+	buf = strconv.AppendInt(buf, int64(config.Height), 10)
+	buf = append(buf, '|')
+	buf = strconv.AppendInt(buf, config.Seed, 10)
+	buf = append(buf, '|')
+	buf = append(buf, config.GenreID...)
+	buf = append(buf, '|')
+	buf = strconv.AppendFloat(buf, config.Complexity, 'f', -1, 64)
+	buf = append(buf, '|')
+	buf = strconv.AppendInt(buf, int64(config.Variation), 10)
 
-	// Hash custom parameters
+	h.Write(buf)
+
+	// Hash custom parameters (still uses fmt for complex values)
 	if config.Custom != nil {
 		// Hash important custom fields that affect sprite generation
 		for key, value := range config.Custom {
@@ -210,7 +241,14 @@ func (c *Cache) hashConfig(config Config) uint64 {
 		}
 	}
 
-	return h.Sum64()
+	sum := h.Sum64()
+
+	// Return pooled resources
+	*bufPtr = buf
+	hashBufferPool.Put(bufPtr)
+	hasherPool.Put(h)
+
+	return sum
 }
 
 // CachedGenerator wraps a Generator with caching functionality.

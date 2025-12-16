@@ -129,15 +129,23 @@ func (s *CollisionSystem) canCollidePredictive(entity *Entity, collider1 *Collid
 }
 
 // checkPredictiveIntersection performs intersection check at predicted position with rotation support.
+// Uses cached GetRotation() getter for faster access in collision hot path.
 func (s *CollisionSystem) checkPredictiveIntersection(entity *Entity, collider1 *ColliderComponent, newX, newY float64, other *Entity, collider2 *ColliderComponent, pos2 *PositionComponent) bool {
-	rot1Comp, hasRot1 := entity.GetComponent("rotation")
-	rot2Comp, hasRot2 := other.GetComponent("rotation")
+	rot1 := entity.GetRotation()
+	rot2 := other.GetRotation()
 
-	if !hasRot1 && !hasRot2 {
+	if rot1 == nil && rot2 == nil {
 		return collider1.Intersects(newX, newY, collider2, pos2.X, pos2.Y)
 	}
 
-	angle1, angle2 := s.extractRotationAngles(rot1Comp, hasRot1, rot2Comp, hasRot2)
+	angle1 := 0.0
+	angle2 := 0.0
+	if rot1 != nil {
+		angle1 = rot1.Angle
+	}
+	if rot2 != nil {
+		angle2 = rot2.Angle
+	}
 	return collider1.IntersectsRotated(newX, newY, angle1, collider2, pos2.X, pos2.Y, angle2)
 }
 
@@ -312,35 +320,24 @@ func (s *CollisionSystem) areLayersCompatible(entity *Entity, collider *Collider
 }
 
 // detectIntersection determines if two entities intersect, accounting for rotation.
+// Uses cached GetRotation() getter for faster access in collision hot path.
 func (s *CollisionSystem) detectIntersection(entity *Entity, pos *PositionComponent, collider *ColliderComponent, other *Entity, otherPos *PositionComponent, otherCollider *ColliderComponent) bool {
-	rot1Comp, hasRot1 := entity.GetComponent("rotation")
-	rot2Comp, hasRot2 := other.GetComponent("rotation")
+	rot1 := entity.GetRotation()
+	rot2 := other.GetRotation()
 
-	if !hasRot1 && !hasRot2 {
+	if rot1 == nil && rot2 == nil {
 		return collider.Intersects(pos.X, pos.Y, otherCollider, otherPos.X, otherPos.Y)
 	}
 
-	angle1, angle2 := s.extractRotationAngles(rot1Comp, hasRot1, rot2Comp, hasRot2)
-	return collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
-}
-
-// extractRotationAngles retrieves rotation angles from rotation components.
-func (s *CollisionSystem) extractRotationAngles(rot1Comp Component, hasRot1 bool, rot2Comp Component, hasRot2 bool) (float64, float64) {
 	angle1 := 0.0
 	angle2 := 0.0
-
-	if hasRot1 {
-		if rot1, ok := rot1Comp.(*RotationComponent); ok {
-			angle1 = rot1.Angle
-		}
+	if rot1 != nil {
+		angle1 = rot1.Angle
 	}
-	if hasRot2 {
-		if rot2, ok := rot2Comp.(*RotationComponent); ok {
-			angle2 = rot2.Angle
-		}
+	if rot2 != nil {
+		angle2 = rot2.Angle
 	}
-
-	return angle1, angle2
+	return collider.IntersectsRotated(pos.X, pos.Y, angle1, otherCollider, otherPos.X, otherPos.Y, angle2)
 }
 
 // handleCollision processes a detected collision between two entities.

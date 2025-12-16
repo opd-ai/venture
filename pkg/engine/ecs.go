@@ -27,7 +27,8 @@ type Entity struct {
 	animation  *AnimationComponent
 	attack     *AttackComponent
 	experience *ExperienceComponent
-	sprite     *EbitenSprite // Cached for render system hot path (~93x faster access)
+	sprite     *EbitenSprite      // Cached for render system hot path (~93x faster access)
+	rotation   *RotationComponent // Cached for render and collision hot paths
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -85,6 +86,10 @@ func (e *Entity) AddComponent(c Component) {
 		if sprite, ok := c.(*EbitenSprite); ok {
 			e.sprite = sprite
 		}
+	case "rotation":
+		if rot, ok := c.(*RotationComponent); ok {
+			e.rotation = rot
+		}
 	}
 }
 
@@ -131,6 +136,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.experience = nil
 	case "sprite":
 		e.sprite = nil
+	case "rotation":
+		e.rotation = nil
 	}
 }
 
@@ -212,6 +219,12 @@ func (e *Entity) GetAnimation() *AnimationComponent {
 // Uses cached pointer for zero-overhead access (~93x faster than map lookup).
 func (e *Entity) GetSprite() *EbitenSprite {
 	return e.sprite
+}
+
+// GetRotation retrieves the RotationComponent if present.
+// Uses cached pointer for zero-overhead access in render and collision hot paths.
+func (e *Entity) GetRotation() *RotationComponent {
+	return e.rotation
 }
 
 // World manages all entities and systems in the game.

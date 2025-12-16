@@ -511,10 +511,9 @@ func (r *EbitenRenderSystem) syncBatchSpriteState(entity *Entity, sprite *Ebiten
 		sprite.CurrentDirection = int(anim.GetFacing())
 	}
 
-	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
-		if rotation, ok := rotComp.(*RotationComponent); ok {
-			sprite.Rotation = rotation.Angle
-		}
+	// Use cached getter for rotation (avoids map lookup + type assertion in hot path)
+	if rotation := entity.GetRotation(); rotation != nil {
+		sprite.Rotation = rotation.Angle
 	}
 }
 
@@ -759,17 +758,16 @@ func (r *EbitenRenderSystem) validateEntityComponents(entity *Entity) (*Position
 }
 
 // syncSpriteState synchronizes sprite direction and rotation from entity components.
-// Uses cached GetAnimation() getter for faster access.
+// Uses cached GetAnimation() and GetRotation() getters for faster access.
 func (r *EbitenRenderSystem) syncSpriteState(entity *Entity, sprite *EbitenSprite) {
 	// Use cached getter for animation (~90x faster than GetComponent + type assertion)
 	if anim := entity.GetAnimation(); anim != nil {
 		sprite.CurrentDirection = int(anim.GetFacing())
 	}
 
-	if rotComp, hasRot := entity.GetComponent("rotation"); hasRot {
-		if rotation, ok := rotComp.(*RotationComponent); ok {
-			sprite.Rotation = rotation.Angle
-		}
+	// Use cached getter for rotation (avoids map lookup + type assertion in hot path)
+	if rotation := entity.GetRotation(); rotation != nil {
+		sprite.Rotation = rotation.Angle
 	}
 }
 

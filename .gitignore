@@ -64,7 +64,6 @@ go.work.sum
 /perfprofile*
 /complete_dungeon_generation
 /terrain_entity_integration
-build/
 *.backup
 *.gz
 /*.md
@@ -80,3 +79,11 @@ build/
 **/refactored.json
 **/baseline.json
 /improvements.html
+
+# Build directory - ignore everything except WASM static files
+build/
+!build/wasm/
+!build/wasm/.gitignore
+!build/wasm/README.md
+!build/wasm/index.html
+!build/wasm/game.html

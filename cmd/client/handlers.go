@@ -122,6 +122,20 @@ import (
 
 	// Phase 4.4: Trade Routes System (PLAN.md Integration - Week 4)
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
+
+	// V19.0: Priority 1 Dormant Package Integration (ROADMAP_V19.md)
+	// Phase 99: Entity & Dialog Generation
+	"github.com/opd-ai/venture/pkg/procgen/dialog"
+	"github.com/opd-ai/venture/pkg/procgen/entity"
+
+	// Phase 100: Legendary & Economy
+	"github.com/opd-ai/venture/pkg/procgen/legendary"
+	"github.com/opd-ai/venture/pkg/world/economy"
+
+	// Phase 101: Integration Package Activation
+	"github.com/opd-ai/venture/pkg/integration/choice_consequences"
+	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
+	"github.com/opd-ai/venture/pkg/integration/world_events"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -357,6 +371,20 @@ type systemsContainer struct {
 
 	// Phase 1.1: Companion Learning System (PLAN.md Integration - Week 1)
 	companionLearningSystem *learning.CompanionLearningSystem // AI companion behavior adaptation and learning
+
+	// V19.0: Priority 1 Dormant Package Integration (ROADMAP_V19.md)
+	// Phase 99: Entity & Dialog Generation
+	entityGenerator *entity.EntityGenerator // Procedural entity generation for monsters/NPCs
+	dialogGenerator *dialog.MarkovGenerator // Markov-chain dialog generation for NPCs
+
+	// Phase 100: Legendary & Economy
+	legendaryManager   *legendary.QuestManager // Legendary quest tracking and generation
+	worldEconomySystem *economy.System         // Federated marketplace and dynamic economy
+
+	// Phase 101: Integration Package Activation
+	choiceTracker     *choice_consequences.ChoiceTracker // Persistent choice tracking and consequences
+	guildFleetManager *guild_vehicle.FleetManager        // Guild vehicle fleet management
+	worldEventManager *world_events.EventManager         // World-responsive event generation
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -936,6 +964,59 @@ func initializeV9Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	}
 }
 
+// initializeV19Systems initializes V19.0 Priority 1 dormant packages (ROADMAP_V19.md)
+func initializeV19Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Phase 99: Entity & Dialog Generation
+	// Procedural entity generator for monsters and NPCs
+	sys.entityGenerator = entity.NewEntityGeneratorWithLogger(clientLogger.Logger)
+	clientLogger.Debug("entity generator initialized")
+
+	// Markov-chain dialog generator for NPC conversations
+	// Uses genre-specific corpus for contextual dialogs
+	sys.dialogGenerator = dialog.NewMarkovGenerator(*seed, *genreID, dialog.Order2)
+	// Train with genre-specific corpus
+	if corpus := dialog.GetCorpus(*genreID); corpus != nil {
+		sys.dialogGenerator.TrainFromCorpus(corpus.Sentences)
+		clientLogger.WithFields(logrus.Fields{
+			"genreID":   *genreID,
+			"chainSize": sys.dialogGenerator.GetChainSize(),
+		}).Debug("dialog generator initialized and trained")
+	} else {
+		// Fallback to fantasy corpus
+		if fantasyCorpus := dialog.GetCorpus("fantasy"); fantasyCorpus != nil {
+			sys.dialogGenerator.TrainFromCorpus(fantasyCorpus.Sentences)
+		}
+		clientLogger.Debug("dialog generator initialized with fallback corpus")
+	}
+
+	// Phase 100: Legendary & Economy
+	// Legendary quest manager for boss drops and quest rewards
+	sys.legendaryManager = legendary.NewQuestManager(nil) // nil raid manager for now
+	clientLogger.Debug("legendary quest manager initialized")
+
+	// Federated marketplace and dynamic economy system
+	serverID := fmt.Sprintf("client-%d", *seed)
+	sys.worldEconomySystem = economy.NewSystemWithServerID(nil, serverID) // nil world for now, entity interface
+	clientLogger.Debug("world economy system initialized")
+
+	// Phase 101: Integration Package Activation
+	// Choice tracker for persistent choice tracking and consequences
+	sys.choiceTracker = choice_consequences.NewChoiceTracker()
+	clientLogger.Debug("choice tracker initialized")
+
+	// Guild fleet manager for vehicle fleet combat with formation bonuses
+	sys.guildFleetManager = guild_vehicle.NewFleetManager()
+	clientLogger.Debug("guild fleet manager initialized")
+
+	// World event manager for responsive world events
+	sys.worldEventManager = world_events.NewEventManager(*seed + seedOffsetWorldEvents)
+	clientLogger.Debug("world event manager initialized")
+
+	if *verbose {
+		clientLogger.Info("V19.0 systems initialized (entity gen, dialog gen, legendary, economy, choice tracker, fleet manager, world events)")
+	}
+}
+
 // initializePhase3Systems initializes Phase 3 systems from PLAN.md (Networking & Social Features)
 func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Phase 3.2: Guild Federation - Cross-server guild management
@@ -1214,6 +1295,17 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// helper utilities used by other systems, not standalone systems requiring registration
 	if sys.fluidSimulator != nil {
 		game.World.AddSystem(&fluidSimulatorWrapper{system: sys.fluidSimulator})
+	}
+
+	// V19.0: Priority 1 Dormant Package Integration (ROADMAP_V19.md)
+	// Phase 100: World Economy System
+	if sys.worldEconomySystem != nil {
+		game.World.AddSystem(&worldEconomySystemWrapper{system: sys.worldEconomySystem})
+	}
+
+	// Phase 101: World Event Manager
+	if sys.worldEventManager != nil {
+		game.World.AddSystem(&worldEventManagerWrapper{system: sys.worldEventManager})
 	}
 }
 
@@ -2733,6 +2825,26 @@ type companionLearningSystemWrapper struct {
 }
 
 func (w *companionLearningSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// V19.0: Priority 1 Dormant Package System Wrappers (ROADMAP_V19.md)
+
+// worldEconomySystemWrapper adapts economy.System to the System interface.
+type worldEconomySystemWrapper struct {
+	system *economy.System
+}
+
+func (w *worldEconomySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// worldEventManagerWrapper adapts world_events.EventManager to the System interface.
+type worldEventManagerWrapper struct {
+	system *world_events.EventManager
+}
+
+func (w *worldEventManagerWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

@@ -195,6 +195,10 @@ type EbitenRenderSystem struct {
 	// Reusable buffer for viewport query results to reduce allocations
 	viewportQueryBuffer []*Entity
 
+	// Reusable map for O(1) visible entity lookup during player inclusion check
+	// Eliminates O(n × m) nested loop in getVisibleEntities
+	visibleEntityIDs map[uint64]struct{}
+
 	// Debug rendering flags
 	ShowColliders bool
 	ShowGrid      bool
@@ -242,6 +246,7 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		indexBuffer:         make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
 		playerBuffer:        make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
 		viewportQueryBuffer: make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
+		visibleEntityIDs:    make(map[uint64]struct{}, 256), // Pre-allocate for O(1) visible lookup
 		ShowColliders:       false,
 		ShowGrid:            false,
 		drawTrianglesOptions: ebiten.DrawTrianglesOptions{
@@ -683,18 +688,19 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 	// Player entities have input component and should never be culled
 	// Reuse player buffer to reduce per-frame allocations
 	r.playerBuffer = r.playerBuffer[:0]
+
+	// Build O(1) lookup set from visible entities to replace O(n × m) nested loop
+	// Clear the map by deleting all keys (reuses underlying memory)
+	clear(r.visibleEntityIDs)
+	for _, visibleEntity := range visible {
+		r.visibleEntityIDs[visibleEntity.ID] = struct{}{}
+	}
+
+	// Check players with O(1) lookup instead of O(m) scan per player
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
-			// Check if player is already in visible list
-			alreadyVisible := false
-			for _, visibleEntity := range visible {
-				if visibleEntity.ID == entity.ID {
-					alreadyVisible = true
-					break
-				}
-			}
-			// Add player if not already visible
-			if !alreadyVisible {
+			// O(1) map lookup instead of O(m) linear scan
+			if _, alreadyVisible := r.visibleEntityIDs[entity.ID]; !alreadyVisible {
 				r.playerBuffer = append(r.playerBuffer, entity)
 			}
 		}

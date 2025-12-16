@@ -144,6 +144,46 @@ func TestQuadtreeQueryRadius(t *testing.T) {
 	}
 }
 
+func TestQuadtreeQueryRadiusInto(t *testing.T) {
+	qt := NewQuadtree(Bounds{0, 0, 1000, 1000}, 4)
+
+	// Insert entities in a cluster
+	positions := []struct{ x, y float64 }{
+		{500, 500}, {510, 510}, {520, 520}, {600, 600},
+	}
+
+	for i, pos := range positions {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: pos.x, Y: pos.y})
+		qt.Insert(entity)
+	}
+
+	// Pre-allocate buffer
+	buffer := make([]*Entity, 0, 10)
+
+	// Query with small radius using zero-allocation method
+	buffer = buffer[:0]
+	buffer = qt.QueryRadiusInto(500, 500, 30, buffer)
+	if len(buffer) != 3 {
+		t.Errorf("QueryRadiusInto(small) returned %d entities, want 3", len(buffer))
+	}
+
+	// Query with large radius using zero-allocation method
+	buffer = buffer[:0]
+	buffer = qt.QueryRadiusInto(500, 500, 200, buffer)
+	if len(buffer) != 4 {
+		t.Errorf("QueryRadiusInto(large) returned %d entities, want 4", len(buffer))
+	}
+
+	// Verify results match regular QueryRadius
+	regular := qt.QueryRadius(500, 500, 30)
+	buffer = buffer[:0]
+	buffer = qt.QueryRadiusInto(500, 500, 30, buffer)
+	if len(regular) != len(buffer) {
+		t.Errorf("QueryRadiusInto result count %d != QueryRadius result count %d", len(buffer), len(regular))
+	}
+}
+
 func TestQuadtreeSubdivision(t *testing.T) {
 	qt := NewQuadtree(Bounds{0, 0, 100, 100}, 2) // Small capacity
 

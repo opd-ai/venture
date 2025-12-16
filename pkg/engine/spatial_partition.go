@@ -242,6 +242,49 @@ func (q *Quadtree) QueryRadius(x, y, radius float64) []*Entity {
 	return output
 }
 
+// QueryRadiusInto appends entities within radius to the provided buffer.
+// This is a zero-allocation query method for hot paths that reuse buffers.
+// The caller must pass a slice (typically with len 0 but existing capacity).
+// Returns the (possibly reallocated) buffer with results appended.
+func (q *Quadtree) QueryRadiusInto(x, y, radius float64, buffer []*Entity) []*Entity {
+	// Query a square bounding box first
+	queryBounds := Bounds{
+		X:      x - radius,
+		Y:      y - radius,
+		Width:  radius * 2,
+		Height: radius * 2,
+	}
+
+	// Get pooled buffer for candidates
+	candidatesPtr := q.resultPool.Get().(*[]*Entity)
+	candidates := (*candidatesPtr)[:0]
+	q.queryRecursive(queryBounds, &candidates)
+
+	radiusSq := radius * radius
+
+	for _, entity := range candidates {
+		// Use cached position accessor for ~96x faster access vs GetComponent
+		pos := entity.GetPosition()
+		if pos == nil {
+			continue
+		}
+
+		dx := pos.X - x
+		dy := pos.Y - y
+		distSq := dx*dx + dy*dy
+
+		if distSq <= radiusSq {
+			buffer = append(buffer, entity)
+		}
+	}
+
+	// Return candidate buffer to pool
+	*candidatesPtr = candidates
+	q.resultPool.Put(candidatesPtr)
+
+	return buffer
+}
+
 // Clear removes all entities from the quadtree.
 func (q *Quadtree) Clear() {
 	q.entities = q.entities[:0]
@@ -402,6 +445,14 @@ func (s *SpatialPartitionSystem) QueryBounds(bounds Bounds) []*Entity {
 func (s *SpatialPartitionSystem) QueryBoundsInto(bounds Bounds, buffer []*Entity) []*Entity {
 	s.queryCount++
 	return s.quadtree.QueryInto(bounds, buffer)
+}
+
+// QueryRadiusInto appends entities within radius to the provided buffer.
+// This is a zero-allocation query method for hot paths that reuse buffers.
+// Returns the (possibly reallocated) buffer with results appended.
+func (s *SpatialPartitionSystem) QueryRadiusInto(x, y, radius float64, buffer []*Entity) []*Entity {
+	s.queryCount++
+	return s.quadtree.QueryRadiusInto(x, y, radius, buffer)
 }
 
 // GetStatistics returns performance statistics.

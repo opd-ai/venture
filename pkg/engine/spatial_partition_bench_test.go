@@ -121,3 +121,59 @@ func BenchmarkMovementSystemWithSpatialPartition(b *testing.B) {
 		movementSys.Update(entities, 0.016)
 	}
 }
+
+// BenchmarkQueryRadiusInto benchmarks the zero-allocation radius query method.
+func BenchmarkQueryRadiusInto(b *testing.B) {
+	qt := NewQuadtree(Bounds{X: 0, Y: 0, Width: 1000, Height: 1000}, 8)
+
+	// Pre-populate with entities in a tight cluster
+	for i := 0; i < 100; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{
+			X: 500 + float64(i%10), // Cluster around (500, 505)
+			Y: 500 + float64(i/10),
+		})
+		qt.Insert(entity)
+	}
+
+	// Pre-allocate buffer for zero-allocation queries
+	buffer := make([]*Entity, 0, 100)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		buffer = buffer[:0] // Reset buffer length, keep capacity
+		buffer = qt.QueryRadiusInto(505, 505, 50, buffer)
+	}
+}
+
+// BenchmarkQueryRadius_Comparison compares allocating vs zero-allocation radius queries.
+func BenchmarkQueryRadius_Comparison(b *testing.B) {
+	qt := NewQuadtree(Bounds{X: 0, Y: 0, Width: 1000, Height: 1000}, 8)
+
+	// Pre-populate with entities in a tight cluster
+	for i := 0; i < 100; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{
+			X: 500 + float64(i%10),
+			Y: 500 + float64(i/10),
+		})
+		qt.Insert(entity)
+	}
+
+	b.Run("QueryRadius_allocating", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = qt.QueryRadius(505, 505, 50)
+		}
+	})
+
+	b.Run("QueryRadiusInto_zero_alloc", func(b *testing.B) {
+		buffer := make([]*Entity, 0, 100)
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			buffer = buffer[:0]
+			buffer = qt.QueryRadiusInto(505, 505, 50, buffer)
+		}
+	})
+}

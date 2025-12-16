@@ -163,6 +163,11 @@ func (s *CollisionSystem) Update(entities []*Entity, deltaTime float64) {
 // collectAndGridCollidableEntities filters entities with colliders and builds the spatial grid.
 // Uses cached typed getters for ~93x faster component access vs HasComponent map lookups.
 func (s *CollisionSystem) collectAndGridCollidableEntities(entities []*Entity) []*Entity {
+	// Defensive: Initialize flatGrid if nil (handles improper initialization)
+	if s.flatGrid == nil {
+		s.flatGrid = make(map[int64][]*Entity, 256)
+	}
+
 	// Clear flat grid - reuse existing slices
 	for key := range s.flatGrid {
 		s.flatGrid[key] = s.flatGrid[key][:0]
@@ -197,7 +202,12 @@ func makeCollisionGridKey(x, y int) int64 {
 // acquireCheckedPairs obtains a cleaned collision pair tracking map from the pool.
 // Uses flat map with composite keys to eliminate nested map allocations.
 func (s *CollisionSystem) acquireCheckedPairs() map[uint64]bool {
-	checked := s.checkedPairPool.Get().(map[uint64]bool)
+	// Defensive: Handle improper initialization where pool.New is nil
+	pooled := s.checkedPairPool.Get()
+	if pooled == nil {
+		return make(map[uint64]bool, 1024)
+	}
+	checked := pooled.(map[uint64]bool)
 	// Clear the map for reuse
 	// Use clear() builtin (Go 1.21+) for ~21% faster map clearing vs delete loop
 	clear(checked)

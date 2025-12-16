@@ -257,33 +257,19 @@ func (s *SpellEffectSystem) executeElementalFusion(effect *SpellEffectComponent)
 
 // executeLifeDrain transfers HP between entities.
 func (s *SpellEffectSystem) executeLifeDrain(effect *SpellEffectComponent, deltaTime float64) {
-	// Find caster and target entities
-	var caster, target *Entity
-	for _, entity := range s.world.GetEntities() {
-		if entity.ID == effect.CasterID {
-			caster = entity
-		}
-		if entity.ID == effect.TargetID {
-			target = entity
-		}
-	}
+	// Find caster and target entities using O(1) lookup instead of O(n) iteration
+	caster, casterOk := s.world.GetEntity(effect.CasterID)
+	target, targetOk := s.world.GetEntity(effect.TargetID)
 
-	if caster == nil || target == nil {
+	if !casterOk || !targetOk || caster == nil || target == nil {
 		return
 	}
 
-	// Get health components
-	targetHealthComp, hasTargetHealth := target.GetComponent("health")
-	casterHealthComp, hasCasterHealth := caster.GetComponent("health")
+	// Get health components using typed getters for zero-overhead access
+	targetHealth := target.GetHealth()
+	casterHealth := caster.GetHealth()
 
-	if !hasTargetHealth || !hasCasterHealth {
-		return
-	}
-
-	targetHealth, okTarget := targetHealthComp.(*HealthComponent)
-	casterHealth, okCaster := casterHealthComp.(*HealthComponent)
-
-	if !okTarget || !okCaster {
+	if targetHealth == nil || casterHealth == nil {
 		return
 	}
 

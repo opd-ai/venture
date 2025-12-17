@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/rendering/particles"
 )
 
 // BenchmarkComponentAccessGeneric benchmarks generic GetComponent + type assertion.
@@ -280,7 +282,7 @@ func BenchmarkParticleEmitterAccessGeneric(b *testing.B) {
 		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
 		// Only 5% of entities have particle emitters (typical)
 		if i%20 == 0 {
-			emitter := NewParticleEmitterComponent(0, DefaultParticleConfig(), 10)
+			emitter := NewParticleEmitterComponent(0, particles.DefaultConfig(), 10)
 			entity.AddComponent(emitter)
 		}
 		entities[i] = entity
@@ -314,7 +316,7 @@ func BenchmarkParticleEmitterAccessTyped(b *testing.B) {
 		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
 		// Only 5% of entities have particle emitters (typical)
 		if i%20 == 0 {
-			emitter := NewParticleEmitterComponent(0, DefaultParticleConfig(), 10)
+			emitter := NewParticleEmitterComponent(0, particles.DefaultConfig(), 10)
 			entity.AddComponent(emitter)
 		}
 		entities[i] = entity

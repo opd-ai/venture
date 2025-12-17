@@ -54,6 +54,8 @@ func (m *Manager) CreateTerritory(id string, coords TerritoryCoords) (*Territory
 }
 
 // GetTerritory retrieves a territory by ID.
+// WARNING: Returned territory is a pointer to internal state. Do not mutate directly.
+// Use AssignOwner, UpdateCaptureProgress, BuildDefensiveStructure, etc. to modify territories.
 func (m *Manager) GetTerritory(id string) (*Territory, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -287,6 +289,8 @@ func (m *Manager) IsAtWar(guildA, guildB string) bool {
 }
 
 // GetGuildTerritories returns all territories owned by a guild.
+// WARNING: Returned territories are pointers to internal state. Do not mutate directly.
+// Use AssignOwner, UpdateCaptureProgress, BuildDefensiveStructure, etc. to modify territories.
 func (m *Manager) GetGuildTerritories(guildID string) []*Territory {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -329,6 +333,7 @@ func (m *Manager) GetXPBonus(guildID string) float64 {
 }
 
 // GetContestedTerritories returns all territories that are currently being contested.
+// WARNING: Returned territories are pointers to internal state. Do not mutate directly.
 func (m *Manager) GetContestedTerritories() []*Territory {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -343,6 +348,7 @@ func (m *Manager) GetContestedTerritories() []*Territory {
 }
 
 // GetAllTerritories returns all territories.
+// WARNING: Returned territories are pointers to internal state. Do not mutate directly.
 func (m *Manager) GetAllTerritories() []*Territory {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -355,6 +361,7 @@ func (m *Manager) GetAllTerritories() []*Territory {
 }
 
 // GetActiveWars returns all active war declarations.
+// WARNING: Returned wars are pointers to internal state. Do not mutate directly.
 func (m *Manager) GetActiveWars() []*WarDeclaration {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -369,6 +376,7 @@ func (m *Manager) GetActiveWars() []*WarDeclaration {
 }
 
 // GetGuildWars returns all wars (active and inactive) involving a guild.
+// WARNING: Returned wars are pointers to internal state. Do not mutate directly.
 func (m *Manager) GetGuildWars(guildID string) []*WarDeclaration {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

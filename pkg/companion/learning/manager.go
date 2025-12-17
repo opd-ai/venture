@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -17,7 +18,9 @@ func init() {
 }
 
 // Manager handles companion learning operations.
+// Thread-safe for concurrent access from multiple goroutines.
 type Manager struct {
+	mu         sync.RWMutex
 	companions map[string]*CompanionLearningComponent
 }
 
@@ -61,12 +64,15 @@ func (m *Manager) AddCompanion(companionID string, learningRate float64) *Compan
 		LastSkillUse: make(map[string]time.Time),
 	}
 
+	m.mu.Lock()
 	m.companions[companionID] = comp
+	totalCompanions := len(m.companions)
+	m.mu.Unlock()
 
 	log.WithFields(logrus.Fields{
 		"companion_id":     companionID,
 		"learning_rate":    learningRate,
-		"total_companions": len(m.companions),
+		"total_companions": totalCompanions,
 	}).Info("Companion added to learning manager")
 
 	return comp
@@ -78,7 +84,9 @@ func (m *Manager) GetCompanion(companionID string) (*CompanionLearningComponent,
 		"companion_id": companionID,
 	}).Debug("Retrieving companion from learning manager")
 
+	m.mu.RLock()
 	comp, ok := m.companions[companionID]
+	m.mu.RUnlock()
 
 	if !ok {
 		log.WithFields(logrus.Fields{
@@ -99,13 +107,16 @@ func (m *Manager) RemoveCompanion(companionID string) {
 		"companion_id": companionID,
 	}).Debug("Removing companion from learning manager")
 
+	m.mu.Lock()
 	_, existed := m.companions[companionID]
 	delete(m.companions, companionID)
+	remainingCompanions := len(m.companions)
+	m.mu.Unlock()
 
 	if existed {
 		log.WithFields(logrus.Fields{
 			"companion_id":         companionID,
-			"remaining_companions": len(m.companions),
+			"remaining_companions": remainingCompanions,
 		}).Info("Companion removed from learning manager")
 	} else {
 		log.WithFields(logrus.Fields{

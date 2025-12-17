@@ -341,7 +341,7 @@ func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
 	return true, nil
 }
 
-// LearnSkill allocates points to a skill.
+// LearnSkill allocates points to a skill and increments its level.
 func (sp *SkillProgression) LearnSkill(skillName string) error {
 	log.WithFields(logrus.Fields{
 		"skill_name": skillName,
@@ -360,11 +360,15 @@ func (sp *SkillProgression) LearnSkill(skillName string) error {
 	oldPoints := sp.AvailablePoints
 	sp.AvailablePoints -= node.Cost
 
+	// Increment skill level so it can satisfy prerequisites
+	node.Skill.Level++
+
 	log.WithFields(logrus.Fields{
 		"skill_name":       skillName,
 		"cost":             node.Cost,
 		"old_points":       oldPoints,
 		"remaining_points": sp.AvailablePoints,
+		"new_level":        node.Skill.Level,
 	}).Info("Skill learned successfully")
 
 	return nil
@@ -452,14 +456,22 @@ func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float6
 }
 
 // GetDominantTrait returns the strongest personality trait.
+// On ties, returns the trait with lowest enum value for determinism.
 func (pe *PersonalityEvolution) GetDominantTrait() PersonalityTrait {
 	log.Debug("Determining dominant personality trait")
+
+	// Use deterministic tie-breaking by iterating in enum order
+	allTraits := []PersonalityTrait{
+		TraitCautious, TraitBrave, TraitShy, TraitOutgoing,
+		TraitAggressive, TraitPacifist, TraitLoyal, TraitIndependent,
+		TraitCurious, TraitPractical,
+	}
 
 	var dominant PersonalityTrait
 	maxValue := 0.0
 
-	for trait, value := range pe.Traits {
-		if value > maxValue {
+	for _, trait := range allTraits {
+		if value, exists := pe.Traits[trait]; exists && value > maxValue {
 			maxValue = value
 			dominant = trait
 		}

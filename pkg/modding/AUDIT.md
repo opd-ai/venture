@@ -57,46 +57,13 @@ None found. ✅
 #### 1. Event Handler Removal Logic Incomplete
 **Location:** `manager.go:104-116`  
 **Issue:** RemoveMod() contains incomplete event handler cleanup with a TODO comment acknowledging the limitation.
+**Status:** RESOLVED (2025-12-17, commit 0be638f)
 
-**Current Code:**
-```go
-// Remove this mod's handlers from the event type
-handlers := m.eventHandlers[eventType]
-for i := len(handlers) - 1; i >= 0; i-- {
-    // Note: This is a simplified removal; in production you'd need
-    // a way to identify which handler belongs to which mod
-    if len(handlers) > 0 {
-        m.eventHandlers[eventType] = append(handlers[:i], handlers[i+1:]...)
-    }
-}
-```
-
-**Problem:** The current implementation removes ALL handlers for an event type when removing a mod, not just the handlers belonging to that specific mod. This will incorrectly remove handlers from other mods that handle the same event type.
-
-**Recommended Fix:** Store handler ownership in a separate map or use a struct wrapper:
-```go
-type handlerWithOwner struct {
-    modID   string
-    handler EventHandler
-}
-
-// In Manager struct:
-eventHandlers map[string][]handlerWithOwner
-
-// In RemoveMod:
-for eventType := range mod.EventHandlers {
-    handlers := m.eventHandlers[eventType]
-    filtered := handlers[:0]
-    for _, h := range handlers {
-        if h.modID != modID {
-            filtered = append(filtered, h)
-        }
-    }
-    m.eventHandlers[eventType] = filtered
-}
-```
-
-**Impact:** Low - Event mods are not widely used yet, but this will cause bugs when multiple mods register handlers for the same event type.
+**Resolution:** Implemented the recommended fix:
+- Added `handlerWithOwner` struct to track handler ownership
+- Modified `AddMod` to store handlers with modID
+- Rewrote handler removal in `RemoveMod` to filter by modID only
+- Added cleanup of empty handler slices from the map
 
 ---
 

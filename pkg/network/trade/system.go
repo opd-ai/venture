@@ -559,6 +559,15 @@ func (s *TradeSystem) getInventoryComponent(entity *engine.Entity) *engine.Inven
 }
 
 func (s *TradeSystem) resolveItems(inventory *engine.InventoryComponent, itemIDs []string) ([]*item.Item, error) {
+	// Check for duplicate item IDs to prevent double-trading the same item
+	seenIDs := make(map[string]bool)
+	for _, id := range itemIDs {
+		if seenIDs[id] {
+			return nil, fmt.Errorf("duplicate item ID in trade request: %s", id)
+		}
+		seenIDs[id] = true
+	}
+
 	var items []*item.Item
 	for _, id := range itemIDs {
 		found := false

@@ -381,6 +381,7 @@ func NewPersonalityEvolution() *PersonalityEvolution {
 	pe := &PersonalityEvolution{
 		Traits:     make(map[PersonalityTrait]float64),
 		Changes:    []PersonalityChange{},
+		MaxChanges: 1000, // Limit personality change history (LRU eviction)
 		LastUpdate: time.Now(),
 	}
 
@@ -444,6 +445,11 @@ func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float6
 		Timestamp: time.Now(),
 	}
 	pe.Changes = append(pe.Changes, change)
+
+	// LRU eviction to prevent unbounded memory growth
+	if pe.MaxChanges > 0 && len(pe.Changes) > pe.MaxChanges {
+		pe.Changes = pe.Changes[len(pe.Changes)-pe.MaxChanges:]
+	}
 
 	log.WithFields(logrus.Fields{
 		"trait":         trait.String(),

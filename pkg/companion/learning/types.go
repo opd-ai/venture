@@ -113,6 +113,7 @@ func (p PersonalityTrait) String() string {
 type PersonalityEvolution struct {
 	Traits     map[PersonalityTrait]float64 // Trait -> strength (0.0-1.0)
 	Changes    []PersonalityChange          // History of trait changes
+	MaxChanges int                          // Maximum changes to store (LRU)
 	LastUpdate time.Time
 }
 

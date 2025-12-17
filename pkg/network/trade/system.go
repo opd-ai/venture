@@ -246,6 +246,10 @@ func (s *TradeSystem) AcceptTrade(recipientID uint64) error {
 	// Validate and commit the trade
 	if err := s.commitTrade(proposal.ProposerID, recipientID); err != nil {
 		proposal.Status = string(TradeStatusFailed)
+		proposal.FailureReason = err.Error()
+		// Clear trade from both participants to prevent stuck state
+		s.clearTrade(proposal.ProposerID)
+		s.clearTrade(recipientID)
 		return fmt.Errorf("trade commit failed: %w", err)
 	}
 
@@ -364,45 +368,70 @@ func (s *TradeSystem) resolveAndValidateItems(proposerInv, recipientInv *engine.
 }
 
 // executeItemTransfer performs the atomic item transfer between participants.
+// Tracks removed items so they can be properly restored on rollback.
 func (s *TradeSystem) executeItemTransfer(proposerInv, recipientInv *engine.InventoryComponent, offeredItems, requestedItems []*item.Item, proposal *engine.TradeProposal) error {
-	if err := s.removeItemsFromInventory(proposerInv, offeredItems, "proposer", proposal); err != nil {
-		return err
-	}
+	// Track items removed during transfer for proper rollback
+	var removedFromProposer []*item.Item
+	var removedFromRecipient []*item.Item
+	var addedToRecipient []*item.Item
+	var addedToProposer []*item.Item
 
-	if err := s.removeItemsFromInventory(recipientInv, requestedItems, "recipient", proposal); err != nil {
-		return err
-	}
-
-	if err := s.addItemsToInventory(recipientInv, offeredItems, "recipient", proposal); err != nil {
-		return err
-	}
-
-	if err := s.addItemsToInventory(proposerInv, requestedItems, "proposer", proposal); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// removeItemsFromInventory removes items from an inventory with rollback on failure.
-func (s *TradeSystem) removeItemsFromInventory(inv *engine.InventoryComponent, items []*item.Item, participant string, proposal *engine.TradeProposal) error {
-	for _, itm := range items {
-		if !inv.RemoveItemByReference(itm) {
-			s.rollbackTrade(proposal.ProposerID, proposal.RecipientID, proposal)
-			return fmt.Errorf("%s: failed to remove item from %s", ReasonOwnership, participant)
+	// Helper to restore items on failure
+	rollback := func() {
+		// Restore items removed from proposer
+		for _, itm := range removedFromProposer {
+			proposerInv.AddItem(itm)
+		}
+		// Restore items removed from recipient
+		for _, itm := range removedFromRecipient {
+			recipientInv.AddItem(itm)
+		}
+		// Remove items added to recipient (reverse of add)
+		for _, itm := range addedToRecipient {
+			recipientInv.RemoveItemByReference(itm)
+		}
+		// Remove items added to proposer (reverse of add)
+		for _, itm := range addedToProposer {
+			proposerInv.RemoveItemByReference(itm)
 		}
 	}
-	return nil
-}
 
-// addItemsToInventory adds items to an inventory with rollback on failure.
-func (s *TradeSystem) addItemsToInventory(inv *engine.InventoryComponent, items []*item.Item, participant string, proposal *engine.TradeProposal) error {
-	for _, itm := range items {
-		if !inv.AddItem(itm) {
-			s.rollbackTrade(proposal.ProposerID, proposal.RecipientID, proposal)
-			return fmt.Errorf("%s: failed to add item to %s", ReasonInventory, participant)
+	// Phase 1: Remove offered items from proposer
+	for _, itm := range offeredItems {
+		if !proposerInv.RemoveItemByReference(itm) {
+			rollback()
+			return fmt.Errorf("%s: failed to remove item from proposer", ReasonOwnership)
 		}
+		removedFromProposer = append(removedFromProposer, itm)
 	}
+
+	// Phase 2: Remove requested items from recipient
+	for _, itm := range requestedItems {
+		if !recipientInv.RemoveItemByReference(itm) {
+			rollback()
+			return fmt.Errorf("%s: failed to remove item from recipient", ReasonOwnership)
+		}
+		removedFromRecipient = append(removedFromRecipient, itm)
+	}
+
+	// Phase 3: Add offered items to recipient
+	for _, itm := range offeredItems {
+		if !recipientInv.AddItem(itm) {
+			rollback()
+			return fmt.Errorf("%s: failed to add item to recipient", ReasonInventory)
+		}
+		addedToRecipient = append(addedToRecipient, itm)
+	}
+
+	// Phase 4: Add requested items to proposer
+	for _, itm := range requestedItems {
+		if !proposerInv.AddItem(itm) {
+			rollback()
+			return fmt.Errorf("%s: failed to add item to proposer", ReasonInventory)
+		}
+		addedToProposer = append(addedToProposer, itm)
+	}
+
 	return nil
 }
 
@@ -439,6 +468,7 @@ func (s *TradeSystem) cancelTrade(entityID uint64, reason TradeFailureReason) er
 
 	proposal := tradeComp.ActiveTrade
 	proposal.Status = string(TradeStatusCancelled)
+	proposal.FailureReason = string(reason)
 
 	// Update trust scores (failed trade)
 	proposerEntity, ok := s.world.GetEntity(proposal.ProposerID)
@@ -462,31 +492,6 @@ func (s *TradeSystem) cancelTrade(entityID uint64, reason TradeFailureReason) er
 	s.clearTrade(proposal.RecipientID)
 
 	return nil
-}
-
-// rollbackTrade attempts to restore items to original owners
-func (s *TradeSystem) rollbackTrade(proposerID, recipientID uint64, proposal *engine.TradeProposal) {
-	// Best-effort rollback - items may not be restorable if inventory is full
-	// This is a known limitation of the trade system
-	proposer, ok := s.world.GetEntity(proposerID)
-	if ok && proposer != nil {
-		if inv := s.getInventoryComponent(proposer); inv != nil {
-			items, _ := s.resolveItems(inv, proposal.OfferedItems)
-			for _, itm := range items {
-				inv.AddItem(itm) // Ignore errors - best effort
-			}
-		}
-	}
-
-	recipient, ok := s.world.GetEntity(recipientID)
-	if ok && recipient != nil {
-		if inv := s.getInventoryComponent(recipient); inv != nil {
-			items, _ := s.resolveItems(inv, proposal.RequestedItems)
-			for _, itm := range items {
-				inv.AddItem(itm) // Ignore errors - best effort
-			}
-		}
-	}
 }
 
 // Helper functions

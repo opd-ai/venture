@@ -1,11 +1,11 @@
 # Code Review Audit: pkg/rendering/sprites/cache.go
-**Date:** 2025-12-16
+**Date:** 2025-12-17
 **Reviewer:** GitHub Copilot
-**Commits Analyzed:** Last 3
-**Change Frequency:** 1 time
+**Commits Analyzed:** Last 20 (expanded from 3 due to prior audits)
+**Change Frequency:** 2 times
 
 ## Executive Summary
-**PASS** - File passes all quality gates after 1 critical issue was automatically resolved. The non-deterministic map iteration in `hashConfig()` was fixed by sorting keys before hashing.
+**PASS** - File passes all quality gates with no critical or major issues. Previous audit (2025-12-16) resolved the non-deterministic map iteration issue. Current code is well-structured with proper concurrency handling, deterministic hashing, and comprehensive documentation.
 
 ## Quality Gates
 - [x] Build success
@@ -31,32 +31,11 @@
 
 ### Critical (blocks merge)
 
-**cache.go:239-241 - Non-deterministic map iteration in hashConfig()**
-- Status: **RESOLVED**
-- Rationale: Go map iteration order is intentionally randomized. When hashing `config.Custom` map, iterating without sorting keys produces different hashes for identical configs on different runs. This breaks cache lookups and violates the project's determinism requirement (copilot-instructions.md §2).
-- Fix Applied:
-```diff
--	// Hash custom parameters (still uses fmt for complex values)
--	if config.Custom != nil {
--		// Hash important custom fields that affect sprite generation
--		for key, value := range config.Custom {
--			fmt.Fprintf(h, "|%s=%v", key, value)
--		}
--	}
-+	// Hash custom parameters in sorted key order for determinism
-+	// Go map iteration order is randomized, so we must sort keys
-+	if config.Custom != nil && len(config.Custom) > 0 {
-+		keys := make([]string, 0, len(config.Custom))
-+		for key := range config.Custom {
-+			keys = append(keys, key)
-+		}
-+		sort.Strings(keys)
-+		for _, key := range keys {
-+			fmt.Fprintf(h, "|%s=%v", key, config.Custom[key])
-+		}
-+	}
-```
-- Import added: `"sort"`
+**None** - No critical issues found.
+
+**Previous Critical (RESOLVED 2025-12-16):**
+- cache.go:239-241 - Non-deterministic map iteration in hashConfig()
+- Status: **RESOLVED** - Keys are now sorted before hashing to ensure determinism.
 
 ### Major (should fix)
 
@@ -80,10 +59,20 @@
 - Rationale: The comment acknowledges this (`"still uses fmt for complex values"`). The Custom map is rarely used and the allocation cost is negligible compared to sprite generation. The primary hash path uses pooled buffers efficiently.
 
 ## Auto-Fix Summary
-- Files Modified: 1
-- Issues Resolved: 1
+- Files Modified: 0
+- Issues Resolved: 0 (prior issues remain resolved)
 - False Positives: 2
 - Manual Review Required: 2
+
+## Performance Benchmarks (2025-12-17)
+| Benchmark | ns/op | B/op | allocs/op |
+|-----------|-------|------|-----------|
+| Cache_Get | 77.63 | 0 | 0 |
+| Cache_HashConfig | 115.6 | 0 | 0 |
+| Cache_HashConfigWithCustom | 688.7 | 128 | 5 |
+| Cache_Stats | 6.28 | 0 | 0 |
+| Cache_Concurrent | 100.1 | 0 | 0 |
+| Cache_Eviction | 83.14 | 0 | 0 |
 
 ## Recommendations
 1. **Consider generic cache implementation**: Extract the LRU cache logic into a generic type `Cache[K comparable, V any]` that can be tested without Ebiten dependencies.

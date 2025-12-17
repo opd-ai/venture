@@ -267,12 +267,14 @@ func (m *Manager) CheckConsequences(playerID, arcID string) []string {
 	triggered := []string{}
 
 	for consequenceID, consequence := range m.graph.Consequences {
-		// Skip already triggered
+		// Skip already triggered - safely check if triggered_consequences exists
 		alreadyTriggered := false
-		for _, id := range progress.Variables["triggered_consequences"].([]string) {
-			if id == consequenceID {
-				alreadyTriggered = true
-				break
+		if triggeredList, ok := progress.Variables["triggered_consequences"].([]string); ok {
+			for _, id := range triggeredList {
+				if id == consequenceID {
+					alreadyTriggered = true
+					break
+				}
 			}
 		}
 		if alreadyTriggered {
@@ -371,19 +373,42 @@ func (m *Manager) checkRequirements(progress *PlayerProgress, requirements map[s
 		// Type-specific comparison
 		switch req := required.(type) {
 		case int:
-			act, ok := actual.(int)
-			if !ok || act < req {
-				return fmt.Errorf("requirement %s not met: need %d, have %v", key, req, actual)
+			// Handle both int and float64 for JSON unmarshaling compatibility
+			switch act := actual.(type) {
+			case int:
+				if act < req {
+					return fmt.Errorf("requirement %s not met: need %d, have %d", key, req, act)
+				}
+			case float64:
+				if int(act) < req {
+					return fmt.Errorf("requirement %s not met: need %d, have %v", key, req, actual)
+				}
+			default:
+				return fmt.Errorf("requirement %s not met: type mismatch", key)
 			}
 		case float64:
-			act, ok := actual.(float64)
-			if !ok || act < req {
-				return fmt.Errorf("requirement %s not met: need %f, have %v", key, req, actual)
+			// Handle both float64 and int for JSON unmarshaling compatibility
+			switch act := actual.(type) {
+			case float64:
+				if act < req {
+					return fmt.Errorf("requirement %s not met: need %f, have %f", key, req, act)
+				}
+			case int:
+				if float64(act) < req {
+					return fmt.Errorf("requirement %s not met: need %f, have %v", key, req, actual)
+				}
+			default:
+				return fmt.Errorf("requirement %s not met: type mismatch", key)
 			}
 		case bool:
 			act, ok := actual.(bool)
 			if !ok || act != req {
 				return fmt.Errorf("requirement %s not met: need %v, have %v", key, req, actual)
+			}
+		case string:
+			act, ok := actual.(string)
+			if !ok || act != req {
+				return fmt.Errorf("requirement %s not met: need %s, have %v", key, req, actual)
 			}
 		}
 	}

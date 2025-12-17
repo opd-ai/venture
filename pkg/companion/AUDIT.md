@@ -80,28 +80,9 @@ for range recentCombat {
 
 **File:** manager.go:442  
 **Severity:** Medium  
-**Description:** The `PersonalityEvolution.Changes` slice has no maximum size limit. Unlike `EventMemory` which caps at `MaxEvents` (1000) with LRU eviction, personality changes are appended indefinitely.
-
-**Expected Behavior:** Per doc.go's performance claims of "<1MB per companion", there should be a limit on stored changes.
-
-**Actual Behavior:** With frequent personality adjustments (e.g., many combat/social interactions), the `Changes` slice can grow to consume significant memory over long play sessions.
-
-**Impact:**
-- Potential memory exhaustion for long-running companions
-- Violates the "<1MB per companion" performance target for edge cases
-- Serialization of companion state becomes increasingly expensive
-
-**Reproduction:**
-1. Create companion and process millions of interactions
-2. Observe `len(pe.Changes)` growing without bound
-3. Memory usage increases proportionally
-
-**Code Reference:**
-```go
-// manager.go:442
-pe.Changes = append(pe.Changes, change)
-// No check like: if len(pe.Changes) > maxChanges { pe.Changes = pe.Changes[1:] }
-```
+**Status:** RESOLVED (2025-12-17, commit 48ca7b5)  
+**Description:** The `PersonalityEvolution.Changes` slice had no maximum size limit, allowing unbounded memory growth.  
+**Resolution:** Added `MaxChanges` field (default: 1000) to PersonalityEvolution and implemented LRU eviction in AdjustTrait, matching the pattern used by EventMemory.
 
 ---
 

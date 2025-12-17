@@ -134,35 +134,18 @@ type Report struct {
 ~~~~
 ### EDGE CASE BUG: Memory Leak Detection Can Produce Negative Growth Rate
 
-**File:** `monitor.go:222-231`  
+**File:** `monitor.go:242-256`  
 **Severity:** Low  
-**Description:** The memory leak detection calculates growth rate as `(lastMemory - firstMemory) / timeDiff`. If memory decreases during the test (normal GC behavior), this produces a negative growth rate which is compared against a positive threshold. While this doesn't cause false positives, it means the memory leak detection is simplistic and doesn't account for normal GC patterns.  
-**Expected Behavior:** Memory leak detection should use statistical analysis (linear regression as noted in the comment on line 221) to identify sustained memory growth while filtering out GC-induced fluctuations.  
-**Actual Behavior:** Simple first-to-last delta divided by time. Large GC events near test start or end could mask real memory leaks or falsely indicate leaks.  
-**Impact:** Memory leak detection may miss slow leaks masked by GC or produce false negatives when final memory happens to be lower than initial due to GC timing.  
-**Reproduction:** Run a test where memory initially spikes then GC runs near the end, returning to baseline. No leak detected despite temporary excessive memory usage.  
-**Code Reference:**
-```go
-// monitor.go:221-231
-// Detect memory leaks (linear regression would be better, but simple check for now)
-if len(m.checks) >= 2 {
-    timeDiff := m.checks[len(m.checks)-1].Timestamp.Sub(m.checks[0].Timestamp).Seconds()
-    memDiff := float64(m.checks[len(m.checks)-1].Memory) - float64(m.checks[0].Memory)
-    growthRate := memDiff / timeDiff  // Can be negative
-
-    if growthRate > m.config.MemoryLeakThreshold {
-        report.MemoryLeakCount++
-        // ...
-    }
-}
-```
+**Status:** RESOLVED (2025-12-17)
+**Description:** The memory leak detection calculated growth rate as `(lastMemory - firstMemory) / timeDiff`. If memory decreased during the test (normal GC behavior), this produced a negative growth rate which was compared against a positive threshold.
+**Resolution:** Added explicit check `growthRate > 0` before comparing to threshold. Negative growth rates (indicating GC reclamation) are now correctly ignored. The code comment explains that only positive growth rates are considered as potential leaks.
 ~~~~
 
 ---
 
 ## RECOMMENDATIONS
 
-1. **Critical:** Fix server integration to call `monitor.Run()` in a goroutine after initialization.
+1. ~~**Critical:** Fix server integration to call `monitor.Run()` in a goroutine after initialization.~~ RESOLVED (2025-12-17, commit af8ca30)
 
 2. **High:** Add an `FPSProvider` interface parameter to allow injection of actual FPS values from the rendering system.
 

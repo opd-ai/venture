@@ -3,6 +3,7 @@ package learning
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -759,12 +760,17 @@ func AdaptBehaviorToCombatStyle(comp *CompanionLearningComponent, seed int64) {
 		recentCombat = recentCombat[len(recentCombat)-10:]
 	}
 
+	// Count aggressive combat actions by parsing event descriptions
+	// Events are stored as "Combat action (aggressive=true/false, successful=...)"
 	aggressiveCount := 0
-	for range recentCombat {
-		if rng.Float64() > 0.5 {
+	for _, event := range recentCombat {
+		if strings.Contains(event.Description, "aggressive=true") {
 			aggressiveCount++
 		}
 	}
+
+	// Use seed-based RNG only for minor personality variation, not core logic
+	_ = rng // Seed preserved for potential future personality variation
 
 	if aggressiveCount > len(recentCombat)/2 {
 		log.WithFields(logrus.Fields{

@@ -918,7 +918,7 @@ func runSecurityAudit(serverLogger *logrus.Entry) {
 	}
 }
 
-// startStabilityMonitoring initializes the stability monitor for production validation.
+// startStabilityMonitoring initializes and starts the stability monitor for production validation.
 // Phase 2.3 (PLAN.md): Unconditional stability package integration
 func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
 	config := stability.DefaultConfig()
@@ -928,12 +928,33 @@ func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
 
 	monitor := stability.NewMonitor(config)
 
+	// Start the monitor in a background goroutine to perform actual health checks
+	go func() {
+		report, err := monitor.Run(context.Background())
+		if err != nil {
+			serverLogger.WithError(err).Error("stability monitor encountered error")
+		}
+		if report != nil {
+			serverLogger.WithFields(logrus.Fields{
+				"passed":       report.Passed,
+				"uptime":       report.TotalUptime.String(),
+				"avg_fps":      report.AvgFPS,
+				"peak_memory":  report.PeakMemory,
+				"memory_leaks": report.MemoryLeakCount,
+				"checks":       report.Checks,
+			}).Info("stability monitoring completed")
+			if !report.Passed {
+				serverLogger.WithField("reason", report.FailureReason).Warn("stability test failed")
+			}
+		}
+	}()
+
 	serverLogger.WithFields(logrus.Fields{
 		"duration":       config.Duration.String(),
 		"check_interval": config.CheckInterval.String(),
 		"memory_limit":   config.MemoryLimit,
 		"min_fps":        config.MinFPS,
-	}).Info("stability monitoring initialized")
+	}).Info("stability monitoring started")
 
 	return monitor
 }

@@ -72,7 +72,6 @@ type Monitor struct {
 	config   Config
 	mu       sync.RWMutex
 	checks   []HealthCheck
-	startMem uint64
 	peakMem  uint64
 	sumMem   uint64
 	sumFPS   float64
@@ -121,7 +120,6 @@ func (m *Monitor) Run(ctx context.Context) (*Report, error) {
 	}
 
 	m.running = true
-	m.startMem = getCurrentMemory()
 	testCtx, cancel := context.WithTimeout(ctx, m.config.Duration)
 	m.cancel = cancel
 	m.mu.Unlock()

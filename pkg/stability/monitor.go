@@ -294,7 +294,7 @@ func (m *Monitor) WriteReport(report *Report) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(reportPath, data, 0644); err != nil {
+	if err := os.WriteFile(reportPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write report to %s: %w", reportPath, err)
 	}
 

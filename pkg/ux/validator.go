@@ -14,17 +14,24 @@ type JourneyValidator struct {
 
 // NewJourneyValidator creates a new journey validator with default configuration.
 func NewJourneyValidator() *JourneyValidator {
-	return &JourneyValidator{
-		config: DefaultValidationConfig(),
-		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
-	}
+	config := DefaultValidationConfig()
+	return newValidatorWithConfig(config)
 }
 
 // NewJourneyValidatorWithConfig creates a validator with custom configuration.
 func NewJourneyValidatorWithConfig(config ValidationConfig) *JourneyValidator {
+	return newValidatorWithConfig(config)
+}
+
+// newValidatorWithConfig creates a validator using seed from config (or time-based if seed is 0).
+func newValidatorWithConfig(config ValidationConfig) *JourneyValidator {
+	seed := config.Seed
+	if seed == 0 {
+		seed = time.Now().UnixNano()
+	}
 	return &JourneyValidator{
 		config: config,
-		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:    rand.New(rand.NewSource(seed)),
 	}
 }
 

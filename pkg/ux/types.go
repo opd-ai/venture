@@ -84,6 +84,7 @@ type ValidationConfig struct {
 	MinCompletionRate    float64
 	MinSatisfaction      float64
 	MaxErrorRate         float64
+	Seed                 int64 // RNG seed; 0 means use time-based seed
 }
 
 // DefaultValidationConfig returns the standard validation configuration.
@@ -94,5 +95,6 @@ func DefaultValidationConfig() ValidationConfig {
 		MinCompletionRate:    0.90,
 		MinSatisfaction:      0.80,
 		MaxErrorRate:         0.05,
+		Seed:                 0, // Use time-based seed by default
 	}
 }

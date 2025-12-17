@@ -30,27 +30,12 @@ The `pkg/stability` package provides a stability monitoring framework for long-r
 
 **File:** `cmd/server/main.go:921-939` (integration point)  
 **Severity:** High  
+**Status:** RESOLVED (2025-12-17, commit af8ca30)  
 **Description:** The server creates a `stability.Monitor` instance but never calls its `Run()` method. The monitor is initialized with `NewMonitor()` and `Stop()` is called on shutdown, but without `Run()`, no actual monitoring occurs. The monitor sits idle for the server's entire lifetime.  
 **Expected Behavior:** Per doc.go lines 26-35, calling `monitor.Run(serverInstance)` should execute the stability test and perform continuous health checks.  
 **Actual Behavior:** Monitor is created but never runs. Zero health checks are performed. The "stability monitoring initialized" log message creates a false impression that monitoring is active.  
 **Impact:** Production servers with `-stability-monitor` flag believe they have stability monitoring, but no actual monitoring occurs. Stability issues, memory leaks, and performance degradations go undetected.  
-**Reproduction:** Start server with `-stability-monitor` flag and observe that no health check logs appear and no stability report is generated.  
-**Code Reference:**
-```go
-// cmd/server/main.go:921-939
-func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
-    config := stability.DefaultConfig()
-    config.Duration = 24 * time.Hour
-    config.CheckInterval = 60 * time.Second
-
-    monitor := stability.NewMonitor(config)
-    // BUG: Run() is never called!
-    // Missing: go monitor.Run(context.Background())
-    
-    serverLogger.WithFields(logrus.Fields{...}).Info("stability monitoring initialized")
-    return monitor
-}
-```
+**Resolution:** Added `go monitor.Run(context.Background())` call in a goroutine to start the monitor. The goroutine logs the final report when monitoring completes or encounters an error.
 ~~~~
 
 ~~~~

@@ -106,8 +106,12 @@ func NewFeatureRegistry() *FeatureRegistry {
 	}
 }
 
-// Register adds a feature to the registry
+// Register adds a feature to the registry.
+// Nil features are silently ignored to prevent panics.
 func (r *FeatureRegistry) Register(f *Feature) {
+	if f == nil {
+		return
+	}
 	r.features[f.ID] = f
 	r.categories[f.Category] = append(r.categories[f.Category], f)
 }

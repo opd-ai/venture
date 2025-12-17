@@ -360,7 +360,9 @@ func TestRerollCompletedChallenge(t *testing.T) {
 func TestCheckDailyReset(t *testing.T) {
 	c := NewDailyChallengeComponent(12345)
 
-	yesterday := time.Now().AddDate(0, 0, -1)
+	// Use UTC times to match the implementation's UTC-based day comparison
+	now := time.Now().UTC()
+	yesterday := now.AddDate(0, 0, -1)
 	c.LastDailyReset = yesterday.Unix()
 
 	// Add completed challenges
@@ -372,7 +374,7 @@ func TestCheckDailyReset(t *testing.T) {
 		{ID: "ch5", IsCompleted: true},
 	}
 
-	reset := c.CheckDailyReset(time.Now())
+	reset := c.CheckDailyReset(now)
 
 	if !reset {
 		t.Error("CheckDailyReset should return true")
@@ -395,7 +397,9 @@ func TestCheckDailyResetBreaksStreak(t *testing.T) {
 	c := NewDailyChallengeComponent(12345)
 	c.DailyStreak = 5
 
-	yesterday := time.Now().AddDate(0, 0, -1)
+	// Use UTC times to match the implementation's UTC-based day comparison
+	now := time.Now().UTC()
+	yesterday := now.AddDate(0, 0, -1)
 	c.LastDailyReset = yesterday.Unix()
 
 	// Add incomplete challenges
@@ -405,7 +409,7 @@ func TestCheckDailyResetBreaksStreak(t *testing.T) {
 		{ID: "ch3", IsCompleted: true},
 	}
 
-	c.CheckDailyReset(time.Now())
+	c.CheckDailyReset(now)
 
 	if c.DailyStreak != 0 {
 		t.Errorf("DailyStreak = %d, want 0 (streak broken)", c.DailyStreak)
@@ -660,13 +664,16 @@ func TestDefaultWeeklyChallengeDefinitions(t *testing.T) {
 func TestLongestStreakTracking(t *testing.T) {
 	c := NewDailyChallengeComponent(12345)
 
+	// Use UTC times to match the implementation's UTC-based day comparison
+	now := time.Now().UTC()
+
 	// Simulate multiple daily resets with completed challenges
 	for i := 0; i < 5; i++ {
 		c.ActiveDailyChallenges = []*Challenge{
 			{ID: "ch1", IsCompleted: true},
 		}
-		c.LastDailyReset = time.Now().AddDate(0, 0, -(i + 1)).Unix()
-		c.CheckDailyReset(time.Now().AddDate(0, 0, -i))
+		c.LastDailyReset = now.AddDate(0, 0, -(i + 1)).Unix()
+		c.CheckDailyReset(now.AddDate(0, 0, -i))
 	}
 
 	if c.LongestDailyStreak < 5 {

@@ -32,24 +32,9 @@
 
 **1. Benchmark panic in Voronoi diagram generation**
 - **File:Line:** voronoi.go:106-107
+- **Status:** RESOLVED (already fixed in codebase)
 - **Issue:** `rng.Intn(cellWidth)` and `rng.Intn(cellHeight)` panic when cellWidth or cellHeight is 0. This occurs when width < cols or height < rows in small terrain dimensions.
-- **Evidence:**
-  ```
-  BenchmarkCompositeGenerator_Medium-16    panic: invalid argument to Intn
-  ```
-- **Impact:** Benchmarks fail, potential runtime panic in production with small terrain sizes
-- **Fix:**
-  ```go
-  // voronoi.go:106-107 - Add guards for zero values
-  offsetX := 0
-  if cellWidth > 0 {
-      offsetX = rng.Intn(cellWidth)
-  }
-  offsetY := 0
-  if cellHeight > 0 {
-      offsetY = rng.Intn(cellHeight)
-  }
-  ```
+- **Resolution:** Guards were added for zero cellWidth/cellHeight values. The fix checks if values are > 0 before calling rng.Intn().
 
 ### Major (should fix)
 

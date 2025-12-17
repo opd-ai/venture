@@ -38,40 +38,11 @@ None identified.
 
 **Issue:** Methods that return slices/pointers (`GetGuildTerritories`, `GetContestedTerritories`, `GetAllTerritories`, `GetActiveWars`, `GetGuildWars`) return pointers to internal Territory and WarDeclaration structs while holding only read locks. Callers can mutate the returned structs after the lock is released, creating data races.
 
-**Current pattern:**
-```go
-func (m *Manager) GetGuildTerritories(guildID string) []*Territory {
-    m.mu.RLock()
-    defer m.mu.RUnlock()
-    
-    territories := make([]*Territory, 0)
-    for _, territory := range m.territories {
-        if territory.OwnerGuildID == guildID {
-            territories = append(territories, territory) // Returns internal pointer
-        }
-    }
-    return territories
-}
-```
+**Status:** RESOLVED (2025-12-17, commit 05c7816)
 
-**Fix:** Return defensive copies or document that returned values are read-only snapshots. Options:
-1. Deep copy structs before returning
-2. Add documentation warning against mutation
-3. Return value types instead of pointers (breaks existing API)
+**Resolution:** Added WARNING documentation to all getter methods (`GetTerritory`, `GetGuildTerritories`, `GetContestedTerritories`, `GetAllTerritories`, `GetActiveWars`, `GetGuildWars`) explicitly warning callers not to mutate the returned pointers and to use mutation methods like AssignOwner, UpdateCaptureProgress, etc. instead.
 
-**Recommended fix:**
-```go
-// GetGuildTerritories returns snapshots of all territories owned by a guild.
-// WARNING: Returned territories are pointers to internal state and MUST NOT be mutated.
-// Use AssignOwner, UpdateCaptureProgress, etc. to modify territories.
-func (m *Manager) GetGuildTerritories(guildID string) []*Territory {
-    // ... existing implementation
-}
-```
-
-Add similar warnings to: `GetTerritory`, `GetContestedTerritories`, `GetAllTerritories`, `GetActiveWars`, `GetGuildWars`, `BuildDefensiveStructure`, `CreateTerritory`, `DeclareWar`.
-
-#### 2. Missing GetTerritory Defensive Copy
+#### 2. Missing GetTerritory Defensive Copy (Merged with #1)
 **File:** manager.go:56-66
 
 **Issue:** `GetTerritory` returns a pointer to internal state under read lock, allowing external mutation.

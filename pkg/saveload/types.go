@@ -100,6 +100,9 @@ type PlayerState struct {
 
 	// Phase 98: Daily/weekly challenge persistence (V18.0)
 	ChallengeData *ChallengeStateData `json:"challenge_data,omitempty"`
+
+	// Phase 111: New Game Plus persistence (V22.0)
+	NewGamePlusData *NewGamePlusStateData `json:"newgameplus_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -190,6 +193,31 @@ type ChallengeStateData struct {
 	LastWeeklyReset int64 `json:"last_weekly_reset"`
 	// BaseSeed is the base seed for deterministic generation.
 	BaseSeed int64 `json:"base_seed"`
+}
+
+// NewGamePlusStateData represents saved NG+ progression for Phase 111 (V22.0).
+// This allows NG+ state to persist across saves and carry over between cycles.
+type NewGamePlusStateData struct {
+	// Cycle is the current NG+ cycle (0 = first playthrough)
+	Cycle int `json:"cycle"`
+	// MaxCycleReached is the highest NG+ cycle ever achieved
+	MaxCycleReached int `json:"max_cycle_reached"`
+	// LegacyStats accumulates statistics across all playthroughs
+	LegacyStats map[string]int64 `json:"legacy_stats,omitempty"`
+	// TotalPlaytime is cumulative playtime in seconds across all cycles
+	TotalPlaytime int64 `json:"total_playtime"`
+	// CycleStartTime is Unix timestamp when current cycle started
+	CycleStartTime int64 `json:"cycle_start_time"`
+	// CurrentCyclePlaytime is playtime in current cycle (seconds)
+	CurrentCyclePlaytime int64 `json:"current_cycle_playtime"`
+	// CarryOverSlots is equipment carry-over slots unlocked
+	CarryOverSlots int `json:"carry_over_slots"`
+	// UnlockedBonuses lists permanent bonuses earned
+	UnlockedBonuses []string `json:"unlocked_bonuses,omitempty"`
+	// CurrencyCarryOverPercent is currency carry-over percentage
+	CurrencyCarryOverPercent float64 `json:"currency_carry_over_percent"`
+	// CompletedCyclesJSON is serialized completed cycle records
+	CompletedCyclesJSON []byte `json:"completed_cycles_json,omitempty"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

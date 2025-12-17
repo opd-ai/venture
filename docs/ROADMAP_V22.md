@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** 🔄 IN PROGRESS - 25% (1/4 phases done)  
+**Status:** 🔄 IN PROGRESS - 50% (2/4 phases done)  
 **Prerequisites:** V21.0 Complete (Documentation & CI/CD)  
 **Started:** December 2025  
 **Focus:** New Game Plus mode for enhanced replayability
@@ -52,22 +52,34 @@
 - [x] <0.1ms per NG+ state access (verified via benchmarks)
 
 ### Phase 112: Carry-Over System
-**Status:** ⏳ Pending  
-**Target:** Selection and transfer of items/progress to new playthrough
+**Status:** ✅ Complete  
+**Completed:** December 17, 2025
 
 **Deliverables:**
-- [ ] `CarryOverComponent` - tracks what can be carried over
-- [ ] `CarryOverSystem` - manages carry-over selection UI and transfer
-- [ ] Carry-over categories: currency (partial), equipment (selection), skills (partial), cosmetics (all), achievements (all)
-- [ ] Carry-over limits based on NG+ level (more unlocked at higher NG+)
-- [ ] Equipment carry-over with level scaling
-- [ ] Currency carry-over with percentage cap (50% base, +5% per NG+ level)
+- [x] `CarryOverComponent` - tracks what can be carried over
+- [x] `CarryOverSystem` - manages carry-over selection UI and transfer
+- [x] Carry-over categories: currency (partial), equipment (selection), skills (partial), cosmetics (all), achievements (all)
+- [x] Carry-over limits based on NG+ level (more unlocked at higher NG+)
+- [x] Equipment carry-over with level scaling
+- [x] Currency carry-over with percentage cap (50% base, +5% per NG+ level)
+
+**Files Created:**
+- `pkg/engine/carryover_component.go`
+- `pkg/engine/carryover_component_test.go`
+- `pkg/engine/carryover_system.go`
+- `pkg/engine/carryover_system_test.go`
+- `pkg/engine/carryover_types.go` (support types: CosmeticComponent, SkillBookComponent, SpellComponent)
+
+**Files Modified:**
+- `pkg/saveload/types.go` - Added CarryOverStateData type
+
+**Test Coverage:** 85%+ (most functions at 80-100%)
 
 **Acceptance Criteria:**
-- [ ] Players can select carry-over items
-- [ ] Limits enforced correctly
-- [ ] Items transfer with appropriate scaling
-- [ ] Test coverage ≥65%
+- [x] Players can select carry-over items
+- [x] Limits enforced correctly
+- [x] Items transfer with appropriate scaling
+- [x] Test coverage ≥65%
 
 ### Phase 113: Difficulty Scaling System
 **Status:** ⏳ Pending  

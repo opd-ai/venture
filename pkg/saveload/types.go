@@ -103,6 +103,9 @@ type PlayerState struct {
 
 	// Phase 111: New Game Plus persistence (V22.0)
 	NewGamePlusData *NewGamePlusStateData `json:"newgameplus_data,omitempty"`
+
+	// Phase 112: Carry-Over persistence (V22.0)
+	CarryOverData *CarryOverStateData `json:"carryover_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -218,6 +221,33 @@ type NewGamePlusStateData struct {
 	CurrencyCarryOverPercent float64 `json:"currency_carry_over_percent"`
 	// CompletedCyclesJSON is serialized completed cycle records
 	CompletedCyclesJSON []byte `json:"completed_cycles_json,omitempty"`
+}
+
+// CarryOverStateData represents saved carry-over selections for Phase 112 (V22.0).
+// This allows carry-over state to persist and transfer between NG+ cycles.
+type CarryOverStateData struct {
+	// SelectedEquipment contains item IDs selected for carry-over
+	SelectedEquipment []string `json:"selected_equipment,omitempty"`
+	// CurrencyCarryOver tracks currency type to amount
+	CurrencyCarryOver map[string]int64 `json:"currency_carry_over,omitempty"`
+	// SkillsToKeep contains skill IDs that will be preserved
+	SkillsToKeep []string `json:"skills_to_keep,omitempty"`
+	// CosmeticsUnlocked contains all unlocked cosmetics (always carries over)
+	CosmeticsUnlocked []string `json:"cosmetics_unlocked,omitempty"`
+	// AchievementsUnlocked contains all unlocked achievements (always carries over)
+	AchievementsUnlocked []string `json:"achievements_unlocked,omitempty"`
+	// SelectionLocked indicates selections cannot be changed
+	SelectionLocked bool `json:"selection_locked"`
+	// SelectionConfirmed indicates player confirmed selections
+	SelectionConfirmed bool `json:"selection_confirmed"`
+	// EquipmentSlotLimit is the maximum equipment carry-over slots
+	EquipmentSlotLimit int `json:"equipment_slot_limit"`
+	// SkillSlotLimit is the maximum skill carry-over slots
+	SkillSlotLimit int `json:"skill_slot_limit"`
+	// CurrencyPercentLimit is the maximum currency carry-over percentage
+	CurrencyPercentLimit float64 `json:"currency_percent_limit"`
+	// TransferComplete indicates the carry-over has been applied
+	TransferComplete bool `json:"transfer_complete"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

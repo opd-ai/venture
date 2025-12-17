@@ -34,23 +34,9 @@ None identified.
 ### Major (should fix)
 
 **1. Mutable package-level slice (config.go:13)**
-```go
-var StandardResolutions = []Resolution{
-    {Width: 1280, Height: 720, Name: "HD"},
-    // ...
-}
-```
 **Issue:** External code could mutate this slice, affecting all consumers.  
-**Fix:** Either make it a function returning a copy, or use an unexported variable with exported getter:
-```go
-var standardResolutions = []Resolution{ /* ... */ }
-
-func GetStandardResolutions() []Resolution {
-    result := make([]Resolution, len(standardResolutions))
-    copy(result, standardResolutions)
-    return result
-}
-```
+**Status:** RESOLVED (2025-12-17, commit 0fbbb73)
+**Resolution:** Changed `StandardResolutions` to unexported `standardResolutions` and added `GetStandardResolutions()` function that returns a defensive copy. All internal usages and tests updated to use the new getter.
 
 **2. No concurrency protection on Manager.config (manager.go:11)**
 **Issue:** Manager methods that mutate `config` field (SetResolution, SetFullscreen) are not safe for concurrent access. If multiple goroutines call these methods simultaneously, data races could occur.  

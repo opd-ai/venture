@@ -112,6 +112,17 @@ func (g *SkillTreeGenerator) selectTemplates(genreID string) ([]SkillTreeTemplat
 	return templates, nil
 }
 
+// normalizeGenre returns the actual genre used for template selection.
+// Empty or unknown genres default to "fantasy".
+func normalizeGenre(genreID string) string {
+	switch genreID {
+	case "scifi", "fantasy":
+		return genreID
+	default:
+		return "fantasy"
+	}
+}
+
 // generateTrees generates multiple skill trees from templates.
 func (g *SkillTreeGenerator) generateTrees(rng *rand.Rand, templates []SkillTreeTemplate, params procgen.GenerationParams, seed int64, count int) []*SkillTree {
 	trees := make([]*SkillTree, count)
@@ -175,8 +186,8 @@ func (g *SkillTreeGenerator) generateTree(rng *rand.Rand, template SkillTreeTemp
 		Name:        template.Name,
 		Description: template.Description,
 		Category:    template.Category,
-		Genre:       params.GenreID,
-		MaxPoints:   50 + params.Depth*5, // Scale points with depth
+		Genre:       normalizeGenre(params.GenreID), // Use actual genre, not empty/unknown
+		MaxPoints:   50 + params.Depth*5,            // Scale points with depth
 		Seed:        treeSeed,
 		Nodes:       make([]*SkillNode, 0),
 		RootNodes:   make([]*SkillNode, 0),

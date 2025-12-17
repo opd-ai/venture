@@ -32,9 +32,4 @@
 //
 //	fmt.Printf("Uptime: %v, Crashes: %d, Memory Leaks: %d\n",
 //	    report.TotalUptime, report.CrashCount, report.MemoryLeakCount)
-//
-// # CLI Tool
-//
-// See cmd/stabilitytest/ for standalone stability testing tool with verbose logging
-// and configurable test parameters.
 package stability

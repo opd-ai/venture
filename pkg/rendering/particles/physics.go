@@ -486,8 +486,12 @@ func UpdateFire(particles []PhysicsParticle, config FireConfig, deltaTime float6
 
 	hash := buildHeatSpatialHash(particles, config)
 
+	// Pre-allocate buffers for neighbor lookups (reused across particles)
+	candidateBuffer := make([]int, 0, 64)
+	neighborsBuffer := make([]int, 0, 64)
+
 	for i := range particles {
-		updateFireParticle(&particles[i], particles, config, deltaTime, rng, hash, i)
+		updateFireParticle(&particles[i], particles, config, deltaTime, rng, hash, i, candidateBuffer, neighborsBuffer)
 	}
 }
 
@@ -504,12 +508,12 @@ func buildHeatSpatialHash(particles []PhysicsParticle, config FireConfig) *Spati
 
 // updateFireParticle updates a single fire particle's heat, ignition, and movement.
 func updateFireParticle(p *PhysicsParticle, allParticles []PhysicsParticle, config FireConfig,
-	deltaTime float64, rng *rand.Rand, hash *SpatialHash, index int,
+	deltaTime float64, rng *rand.Rand, hash *SpatialHash, index int, candidateBuffer, neighborsBuffer []int,
 ) {
 	dissipateHeat(p, config, deltaTime)
 	updateIgnitionStatus(p, config)
 	consumeFuel(p, config, deltaTime)
-	transferHeatToNeighbors(p, allParticles, config, deltaTime, hash, index)
+	transferHeatToNeighbors(p, allParticles, config, deltaTime, hash, index, candidateBuffer, neighborsBuffer)
 	applyBuoyancy(p, config, deltaTime)
 	spawnEmbers(p, config, deltaTime, rng)
 }

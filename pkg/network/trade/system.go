@@ -356,11 +356,11 @@ func (s *TradeSystem) resolveAndValidateItems(proposerInv, recipientInv *engine.
 		return nil, nil, fmt.Errorf("%s: %w", ReasonOwnership, err)
 	}
 
-	if err := s.validateInventorySpace(proposerInv, requestedItems); err != nil {
+	if err := s.validateInventorySpace(proposerInv, requestedItems, offeredItems); err != nil {
 		return nil, nil, fmt.Errorf("%s (proposer): %w", ReasonInventory, err)
 	}
 
-	if err := s.validateInventorySpace(recipientInv, offeredItems); err != nil {
+	if err := s.validateInventorySpace(recipientInv, offeredItems, requestedItems); err != nil {
 		return nil, nil, fmt.Errorf("%s (recipient): %w", ReasonInventory, err)
 	}
 
@@ -612,22 +612,33 @@ func (s *TradeSystem) validateTradability(items []*item.Item) error {
 	return nil
 }
 
-func (s *TradeSystem) validateInventorySpace(inventory *engine.InventoryComponent, items []*item.Item) error {
-	// Calculate total weight of items to add
-	totalWeight := 0.0
-	for _, itm := range items {
-		totalWeight += itm.Stats.Weight
+func (s *TradeSystem) validateInventorySpace(inventory *engine.InventoryComponent, incomingItems, outgoingItems []*item.Item) error {
+	// Calculate net change in item count and weight
+	netItemChange := len(incomingItems) - len(outgoingItems)
+	
+	// Calculate total weight change
+	incomingWeight := 0.0
+	for _, itm := range incomingItems {
+		incomingWeight += itm.Stats.Weight
+	}
+	outgoingWeight := 0.0
+	for _, itm := range outgoingItems {
+		outgoingWeight += itm.Stats.Weight
+	}
+	netWeightChange := incomingWeight - outgoingWeight
+
+	// Check if resulting inventory would exceed slot limits
+	resultingItems := len(inventory.Items) + netItemChange
+	if resultingItems > inventory.MaxItems {
+		return fmt.Errorf("insufficient inventory slots (%d/%d used, net change +%d)",
+			len(inventory.Items), inventory.MaxItems, netItemChange)
 	}
 
-	// Check if adding items would exceed limits
-	if len(inventory.Items)+len(items) > inventory.MaxItems {
-		return fmt.Errorf("insufficient inventory slots (%d/%d used, adding %d)",
-			len(inventory.Items), inventory.MaxItems, len(items))
-	}
-
-	if inventory.GetCurrentWeight()+totalWeight > inventory.MaxWeight {
-		return fmt.Errorf("insufficient inventory weight capacity (%.2f/%.2f used, adding %.2f)",
-			inventory.GetCurrentWeight(), inventory.MaxWeight, totalWeight)
+	// Check if resulting inventory would exceed weight limits
+	resultingWeight := inventory.GetCurrentWeight() + netWeightChange
+	if resultingWeight > inventory.MaxWeight {
+		return fmt.Errorf("insufficient inventory weight capacity (%.2f/%.2f used, net change +%.2f)",
+			inventory.GetCurrentWeight(), inventory.MaxWeight, netWeightChange)
 	}
 
 	return nil

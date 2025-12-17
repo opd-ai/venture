@@ -379,8 +379,14 @@ func TestMultiplayerDifferentSeeds(t *testing.T) {
 	itemGen := item.NewItemGenerator()
 
 	// Generate items with different seeds
-	result1, _ := itemGen.Generate(12345, params)
-	result2, _ := itemGen.Generate(67890, params)
+	result1, err1 := itemGen.Generate(12345, params)
+	if err1 != nil {
+		t.Fatalf("Item generation failed for seed 12345: %v", err1)
+	}
+	result2, err2 := itemGen.Generate(67890, params)
+	if err2 != nil {
+		t.Fatalf("Item generation failed for seed 67890: %v", err2)
+	}
 
 	items1 := result1.([]*item.Item)
 	items2 := result2.([]*item.Item)

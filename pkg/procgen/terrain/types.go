@@ -178,6 +178,20 @@ const (
 	LayerPlatform
 )
 
+// String returns a human-readable name for the layer.
+func (l Layer) String() string {
+	switch l {
+	case LayerGround:
+		return "ground"
+	case LayerWater:
+		return "water"
+	case LayerPlatform:
+		return "platform"
+	default:
+		return "unknown"
+	}
+}
+
 // GetLayer returns the layer this tile type belongs to.
 func (t TileType) GetLayer() Layer {
 	switch t {

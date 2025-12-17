@@ -255,17 +255,26 @@ func (m *Manager) CalculateTotalStats(playerID string) (StatBonuses, error) {
 	total := StatBonuses{}
 
 	if player.PrimaryClass != "" {
-		primaryDef, _ := GetClassDefinition(player.PrimaryClass)
+		primaryDef, err := GetClassDefinition(player.PrimaryClass)
+		if err != nil {
+			return StatBonuses{}, fmt.Errorf("invalid primary class %s: %w", player.PrimaryClass, err)
+		}
 		total = total.Add(primaryDef.BaseStats)
 	}
 
 	if player.SecondaryClass != "" {
-		secondaryDef, _ := GetClassDefinition(player.SecondaryClass)
+		secondaryDef, err := GetClassDefinition(player.SecondaryClass)
+		if err != nil {
+			return StatBonuses{}, fmt.Errorf("invalid secondary class %s: %w", player.SecondaryClass, err)
+		}
 		total = total.Add(secondaryDef.BaseStats.Scale(0.5))
 	}
 
 	if player.PrestigeClass != "" {
-		prestigeDef, _ := GetPrestigeClassDefinition(player.PrestigeClass)
+		prestigeDef, err := GetPrestigeClassDefinition(player.PrestigeClass)
+		if err != nil {
+			return StatBonuses{}, fmt.Errorf("invalid prestige class %s: %w", player.PrestigeClass, err)
+		}
 		total = total.Add(prestigeDef.BaseStats)
 	}
 

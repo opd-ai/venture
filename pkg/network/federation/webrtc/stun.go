@@ -162,12 +162,18 @@ func (s *STUNClient) querySTUNServer(ctx context.Context, server string) (*STUNR
 	//
 	// For testing, we simulate the response
 
-	// Get local address
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	// Get local address using net.Addr interface
+	localAddr := conn.LocalAddr()
+	_, portStr, err := net.SplitHostPort(localAddr.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse local address: %w", err)
+	}
+	localPort := 0
+	fmt.Sscanf(portStr, "%d", &localPort)
 
 	// Simulate public address (in reality, comes from STUN response)
 	publicIP := net.ParseIP("203.0.113.42") // TEST-NET-3 range
-	publicPort := localAddr.Port + 10000    // Simulated NAT mapping
+	publicPort := localPort + 10000         // Simulated NAT mapping
 
 	rtt := time.Since(start)
 

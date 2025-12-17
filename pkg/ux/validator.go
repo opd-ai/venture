@@ -151,7 +151,7 @@ func (v *JourneyValidator) calculateJourneyMetrics(completions int, totalDuratio
 	if totalSteps > 0 {
 		errorRate = float64(errors) / float64(v.config.Runs*totalSteps)
 	}
-	
+
 	satisfaction := v.calculateSatisfaction(completionRate, averageDuration, expectedDuration)
 
 	return completionRate, averageDuration, errorRate, satisfaction
@@ -216,7 +216,7 @@ func (v *JourneyValidator) checkDurationWithinTolerance(actual, expected time.Du
 // GetSummary returns a summary of validation results.
 func GetSummary(results []JourneyResult) Summary {
 	total := len(results)
-	
+
 	// Handle empty results to avoid division by zero
 	if total == 0 {
 		return Summary{
@@ -228,7 +228,7 @@ func GetSummary(results []JourneyResult) Summary {
 			PassRate:              0.0,
 		}
 	}
-	
+
 	passed := 0
 	totalCompletion := 0.0
 	totalSatisfaction := 0.0

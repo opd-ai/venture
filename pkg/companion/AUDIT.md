@@ -11,12 +11,12 @@
 | Category | Count |
 |----------|-------|
 | CRITICAL BUG | 1 (RESOLVED) |
-| FUNCTIONAL MISMATCH | 2 (1 RESOLVED) |
-| EDGE CASE BUG | 3 |
+| FUNCTIONAL MISMATCH | 2 (2 RESOLVED) |
+| EDGE CASE BUG | 3 (1 RESOLVED) |
 | PERFORMANCE ISSUE | 1 |
 | MISSING FEATURE | 0 |
 
-**Overall Assessment:** The companion learning package is well-structured with good test coverage. The critical bug in skill learning has been resolved. One functional mismatch (GetDominantTrait) has also been fixed.
+**Overall Assessment:** The companion learning package is well-structured with good test coverage. The critical bug in skill learning has been resolved. Both functional mismatches (GetDominantTrait and AdaptBehaviorToCombatStyle) have also been fixed.
 
 ---
 
@@ -36,33 +36,9 @@
 
 **File:** manager.go:720-770  
 **Severity:** High  
-**Description:** The function is documented as "learns from player's combat preferences" but completely ignores the actual combat event data. Instead, it randomly determines aggression using `rng.Float64() > 0.5` for each event, making the adaptation arbitrary rather than based on actual player behavior.
-
-**Expected Behavior:** The function should analyze the stored combat events to determine if the player prefers aggressive or defensive tactics based on the `aggressive` parameter stored in event descriptions.
-
-**Actual Behavior:** The function counts random numbers as "aggressive" events, ignoring whether `ProcessCombatAction` was called with `aggressive=true` or `aggressive=false`.
-
-**Impact:**
-- Companion AI does not actually learn from player behavior
-- The "Behavioral Adaptation" feature documented in doc.go is non-functional
-- Personality evolution is random rather than reflective of gameplay
-
-**Reproduction:**
-1. Process 10 defensive combat actions with `ProcessCombatAction(comp, false, true)`
-2. Call `AdaptBehaviorToCombatStyle(comp, seed)`
-3. Observe that adaptation may still be "aggressive" depending on seed, not actual combat data
-
-**Code Reference:**
-```go
-// manager.go:744-749
-aggressiveCount := 0
-for range recentCombat {
-    if rng.Float64() > 0.5 {  // Random! Does not check event.Description
-        aggressiveCount++
-    }
-}
-// Should instead parse event.Description to check "aggressive=true/false"
-```
+**Status:** RESOLVED (2025-12-17, commit 044806f)  
+**Description:** The function was documented as "learns from player's combat preferences" but completely ignored the actual combat event data. Instead, it randomly determined aggression using `rng.Float64() > 0.5`.  
+**Resolution:** Changed to parse event.Description for "aggressive=true" instead of using random numbers, making companion behavioral adaptation deterministic and based on actual player combat choices.
 
 ---
 

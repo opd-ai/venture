@@ -119,7 +119,7 @@ base_audit() {
 
 audit3() {
     echo "iteration started - Maintenance phase 3: Tertiary components."
-    copilot -p "/delegate $(cat docs/AUDIT3.md)" --allow-all-tools --deny-tool sudo
+    copilot -p "/delegate $(cat docs/audit3.md)" --allow-all-tools --deny-tool sudo
     make fmt
     echo "Tertiary component audit completed, sleeping for 1 minute..."
     sleep 1m

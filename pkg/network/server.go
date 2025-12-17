@@ -349,20 +349,21 @@ func (s *TCPServer) isServerFull(conn net.Conn) bool {
 }
 
 // configureTCPKeepalive enables TCP keepalive for long-duration connections to prevent silent disconnections.
+// Uses KeepAliveConn interface for testability instead of concrete *net.TCPConn.
 func (s *TCPServer) configureTCPKeepalive(conn net.Conn) {
-	tcpConn, ok := conn.(*net.TCPConn)
+	kaConn, ok := conn.(KeepAliveConn)
 	if !ok {
 		return
 	}
 
-	if err := tcpConn.SetKeepAlive(true); err != nil {
+	if err := kaConn.SetKeepAlive(true); err != nil {
 		if s.logger != nil {
 			s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to enable TCP keepalive")
 		}
 		return
 	}
 
-	if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+	if err := kaConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
 		if s.logger != nil {
 			s.logger.WithError(err).WithField("client", conn.RemoteAddr()).Warn("failed to set TCP keepalive period")
 		}

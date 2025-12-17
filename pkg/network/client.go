@@ -12,6 +12,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// KeepAliveConn is an interface for connections that support TCP keepalive.
+// Using an interface instead of *net.TCPConn enhances testability.
+type KeepAliveConn interface {
+	SetKeepAlive(keepalive bool) error
+	SetKeepAlivePeriod(d time.Duration) error
+}
+
 // ClientConfig holds configuration for the network client.
 type ClientConfig struct {
 	ServerAddress     string        // Server address (host:port)
@@ -204,20 +211,21 @@ func (c *TCPClient) establishConnection() (net.Conn, error) {
 }
 
 // configureTCPKeepalive enables TCP keepalive to prevent silent disconnections.
+// Uses KeepAliveConn interface for testability instead of concrete *net.TCPConn.
 func (c *TCPClient) configureTCPKeepalive(conn net.Conn) {
-	tcpConn, ok := conn.(*net.TCPConn)
+	kaConn, ok := conn.(KeepAliveConn)
 	if !ok {
 		return
 	}
 
-	if err := tcpConn.SetKeepAlive(true); err != nil {
+	if err := kaConn.SetKeepAlive(true); err != nil {
 		if c.logger != nil {
 			c.logger.WithError(err).Warn("failed to enable TCP keepalive")
 		}
 		return
 	}
 
-	if err := tcpConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
+	if err := kaConn.SetKeepAlivePeriod(30 * time.Second); err != nil {
 		if c.logger != nil {
 			c.logger.WithError(err).Warn("failed to set TCP keepalive period")
 		}

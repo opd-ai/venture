@@ -31,6 +31,7 @@ type Entity struct {
 	rotation       *RotationComponent       // Cached for render and collision hot paths
 	visualFeedback *VisualFeedbackComponent // Cached for render system hot path (visual effects)
 	layer          *LayerComponent          // Cached for collision hot path (layer compatibility checks)
+	team           *TeamComponent           // Cached for AI system hot path (enemy detection)
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -100,6 +101,10 @@ func (e *Entity) AddComponent(c Component) {
 		if layer, ok := c.(*LayerComponent); ok {
 			e.layer = layer
 		}
+	case "team":
+		if team, ok := c.(*TeamComponent); ok {
+			e.team = team
+		}
 	}
 }
 
@@ -152,6 +157,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.visualFeedback = nil
 	case "layer":
 		e.layer = nil
+	case "team":
+		e.team = nil
 	}
 }
 
@@ -251,6 +258,12 @@ func (e *Entity) GetVisualFeedback() *VisualFeedbackComponent {
 // Uses cached pointer for zero-overhead access in collision hot path (~93x faster than map lookup).
 func (e *Entity) GetLayer() *LayerComponent {
 	return e.layer
+}
+
+// GetTeam retrieves the TeamComponent if present.
+// Uses cached pointer for zero-overhead access in AI hot path (~93x faster than map lookup).
+func (e *Entity) GetTeam() *TeamComponent {
+	return e.team
 }
 
 // World manages all entities and systems in the game.

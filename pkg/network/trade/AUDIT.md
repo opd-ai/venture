@@ -9,12 +9,12 @@
 
 | Category | Count |
 |----------|-------|
-| CRITICAL BUG | 2 |
-| FUNCTIONAL MISMATCH | 2 |
+| CRITICAL BUG | 2 (2 RESOLVED) |
+| FUNCTIONAL MISMATCH | 2 (1 RESOLVED) |
 | MISSING FEATURE | 2 |
 | EDGE CASE BUG | 2 |
 | PERFORMANCE ISSUE | 0 |
-| **Total Issues** | **8** |
+| **Total Issues** | **8 (3 RESOLVED)** |
 
 ---
 
@@ -22,79 +22,23 @@
 
 ### CRITICAL BUG: Rollback Mechanism Does Not Restore Items
 
-**File:** system.go:467-490  
+**File:** system.go:370-435  
 **Severity:** High  
-**Description:** The `rollbackTrade` function attempts to restore items to their original owners by calling `resolveItems` on the current inventory. However, by the time rollback is called, items have already been removed from their original inventories. The function tries to resolve items that no longer exist in the inventory, resulting in an empty result, and therefore no items are actually restored.
+**Status:** RESOLVED (2025-12-17, commit 01a4a10)  
+**Description:** The `rollbackTrade` function attempted to restore items to their original owners by calling `resolveItems` on the current inventory. However, by the time rollback was called, items had already been removed from their original inventories.
 
-**Expected Behavior:** When a trade transfer fails mid-way (e.g., after removing items from both players but failing to add them to the new owner), all items should be restored to their original owners.
-
-**Actual Behavior:** Items that were successfully removed before the failure are permanently lost. The rollback function finds no items to restore because they were already removed.
-
-**Impact:** Critical data loss - players can lose items during failed trades with no way to recover them. This could affect game economy and player trust.
-
-**Reproduction:**
-1. Set up two players with items to trade
-2. Configure one player's inventory to be nearly full (will fail on AddItem)
-3. Propose a trade where both players offer items
-4. Accept the trade - the second AddItem fails
-5. Observe that items removed from both inventories are not restored
-
-**Code Reference:**
-```go
-func (s *TradeSystem) rollbackTrade(proposerID, recipientID uint64, proposal *engine.TradeProposal) {
-    proposer, ok := s.world.GetEntity(proposerID)
-    if ok && proposer != nil {
-        if inv := s.getInventoryComponent(proposer); inv != nil {
-            // BUG: Items have already been removed from inventory
-            // resolveItems will return empty because items are not in inventory anymore
-            items, _ := s.resolveItems(inv, proposal.OfferedItems)
-            for _, itm := range items {
-                inv.AddItem(itm) // Does nothing - items slice is empty
-            }
-        }
-    }
-    // ... same issue for recipient
-}
-```
+**Resolution:** Replaced the broken rollback approach with inline rollback tracking in `executeItemTransfer`. The function now tracks all removed and added items during the transfer phases, and if any phase fails, it properly reverses all prior operations using the tracked item references.
 
 ---
 
 ### CRITICAL BUG: Failed Trade Acceptance Leaves Players Stuck
 
-**File:** system.go:246-253  
+**File:** system.go:246-256  
 **Severity:** High  
-**Description:** When `AcceptTrade` fails during `commitTrade`, the trade status is set to "failed" but the trade is never cleared from either participant's TradeComponent. Both players remain with an ActiveTrade that has status "failed", preventing them from initiating or receiving new trade proposals.
+**Status:** RESOLVED (2025-12-17, commit 01a4a10)  
+**Description:** When `AcceptTrade` failed during `commitTrade`, the trade status was set to "failed" but the trade was never cleared from either participant's TradeComponent.
 
-**Expected Behavior:** After a failed trade acceptance, both players should have their ActiveTrade cleared so they can participate in new trades.
-
-**Actual Behavior:** Both players are left with a stale "failed" trade, blocking all future trades until the game is restarted or the component is manually cleared.
-
-**Impact:** Players become permanently unable to trade after a single failed trade, requiring game restart to fix.
-
-**Reproduction:**
-1. Set up two players with items to trade
-2. Configure scenario where commitTrade will fail (e.g., items no longer exist)
-3. Call AcceptTrade
-4. Observe ActiveTrade is set to "failed" but not cleared
-5. Attempt to propose a new trade - fails with "already has active trade"
-
-**Code Reference:**
-```go
-func (s *TradeSystem) AcceptTrade(recipientID uint64) error {
-    // ... validation ...
-    
-    proposal.Status = string(TradeStatusAccepted)
-
-    if err := s.commitTrade(proposal.ProposerID, recipientID); err != nil {
-        proposal.Status = string(TradeStatusFailed)
-        // BUG: No clearTrade call here - trade remains active
-        return fmt.Errorf("trade commit failed: %w", err)
-    }
-
-    proposal.Status = string(TradeStatusCommitted)
-    return nil
-}
-```
+**Resolution:** Added `clearTrade` calls in the failure path of `AcceptTrade` for both proposer and recipient. Also now stores the failure reason in `proposal.FailureReason` for client debugging.
 
 ---
 
@@ -134,33 +78,12 @@ func (s *TradeSystem) validateProximity(id1, id2 uint64, maxDist float64) bool {
 
 ### FUNCTIONAL MISMATCH: Cancellation Reason Not Stored
 
-**File:** system.go:425, 440-441  
+**File:** system.go:469-471  
 **Severity:** Medium  
-**Description:** The `cancelTrade` function accepts a `reason` parameter but never stores it in the trade proposal's `FailureReason` field. The reason is effectively discarded.
+**Status:** RESOLVED (2025-12-17, commit 01a4a10)  
+**Description:** The `cancelTrade` function accepted a `reason` parameter but never stored it in the trade proposal's `FailureReason` field.
 
-**Expected Behavior:** When a trade is cancelled, the reason should be stored in `proposal.FailureReason` so clients/UI can display why the trade was cancelled.
-
-**Actual Behavior:** The `FailureReason` field remains empty regardless of why the trade was cancelled (timeout, proximity, disconnect, user action, etc.).
-
-**Impact:** Users/UI cannot determine why a trade was cancelled, leading to confusion and poor user experience.
-
-**Reproduction:**
-1. Propose a trade
-2. Wait for timeout (30 seconds)
-3. Check proposal.FailureReason - it's empty despite timeout being the reason
-
-**Code Reference:**
-```go
-func (s *TradeSystem) cancelTrade(entityID uint64, reason TradeFailureReason) error {
-    // ...
-    proposal := tradeComp.ActiveTrade
-    proposal.Status = string(TradeStatusCancelled)
-    // BUG: reason parameter is never used - FailureReason remains empty
-    
-    // Missing: proposal.FailureReason = string(reason)
-    // ...
-}
-```
+**Resolution:** Added `proposal.FailureReason = string(reason)` in `cancelTrade` function to store the cancellation reason.
 
 ---
 

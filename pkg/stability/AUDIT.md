@@ -136,23 +136,9 @@ type Report struct {
 
 **File:** `monitor.go:75, 124`  
 **Severity:** Low  
+**Status:** RESOLVED (2025-12-17, commit e8bc4ad)  
 **Description:** The `Monitor` struct has a `startMem` field that is set to the initial memory at the start of `Run()`, but this value is never used anywhere in the code. The memory leak detection uses `m.checks[0].Memory` instead.  
-**Expected Behavior:** The `startMem` field should either be used for baseline memory comparison or removed.  
-**Actual Behavior:** `startMem` is set but never read, making it dead code. Memory leak detection compares first check to last check, not start memory to current.  
-**Impact:** Minor code quality issue. Dead field increases cognitive load and may mislead readers about the algorithm.  
-**Reproduction:** N/A - code quality issue, not runtime behavior.  
-**Code Reference:**
-```go
-// monitor.go:75
-type Monitor struct {
-    // ...
-    startMem uint64  // Set on line 124, never read
-    // ...
-}
-
-// monitor.go:124
-m.startMem = getCurrentMemory()  // Value never used
-```
+**Resolution:** Removed the unused `startMem` field and its assignment. Memory leak detection continues to use the first health check value as intended.
 ~~~~
 
 ~~~~

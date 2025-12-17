@@ -2,7 +2,9 @@ package stability
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -238,14 +240,18 @@ func (m *Monitor) generateReport(start, end time.Time) *Report {
 	}
 
 	// Detect memory leaks (linear regression would be better, but simple check for now)
+	// Only consider positive growth rates - negative rates indicate GC reclamation, not leaks
 	if len(m.checks) >= 2 {
 		timeDiff := m.checks[len(m.checks)-1].Timestamp.Sub(m.checks[0].Timestamp).Seconds()
-		memDiff := float64(m.checks[len(m.checks)-1].Memory) - float64(m.checks[0].Memory)
-		growthRate := memDiff / timeDiff
+		if timeDiff > 0 {
+			memDiff := float64(m.checks[len(m.checks)-1].Memory) - float64(m.checks[0].Memory)
+			growthRate := memDiff / timeDiff
 
-		if growthRate > m.config.MemoryLeakThreshold {
-			report.MemoryLeakCount++
-			report.FailureReason = fmt.Sprintf("memory leak detected: %.2f bytes/sec growth rate", growthRate)
+			// Only report as leak if growth rate is positive and exceeds threshold
+			if growthRate > 0 && growthRate > m.config.MemoryLeakThreshold {
+				report.MemoryLeakCount++
+				report.FailureReason = fmt.Sprintf("memory leak detected: %.2f bytes/sec growth rate", growthRate)
+			}
 		}
 	}
 
@@ -267,4 +273,30 @@ func getCurrentMemory() uint64 {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 	return mem.HeapAlloc
+}
+
+// WriteReport writes the report to the configured ReportPath.
+// If ReportPath is empty or "-", it writes to stdout.
+func (m *Monitor) WriteReport(report *Report) error {
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal report: %w", err)
+	}
+
+	m.mu.RLock()
+	reportPath := m.config.ReportPath
+	m.mu.RUnlock()
+
+	// Write to stdout if no path or "-" specified
+	if reportPath == "" || reportPath == "-" {
+		_, err = os.Stdout.Write(append(data, '\n'))
+		return err
+	}
+
+	// Write to file
+	if err := os.WriteFile(reportPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write report to %s: %w", reportPath, err)
+	}
+
+	return nil
 }

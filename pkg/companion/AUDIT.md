@@ -13,10 +13,10 @@
 | CRITICAL BUG | 1 (RESOLVED) |
 | FUNCTIONAL MISMATCH | 2 (2 RESOLVED) |
 | EDGE CASE BUG | 3 (3 RESOLVED) |
-| PERFORMANCE ISSUE | 1 |
+| PERFORMANCE ISSUE | 1 (RESOLVED) |
 | MISSING FEATURE | 0 |
 
-**Overall Assessment:** The companion learning package is well-structured with good test coverage. All critical bugs, functional mismatches, and edge case bugs have been resolved. Only one low-priority performance issue (missing skill type cases in ShouldLearnNewSkill) remains.
+**Overall Assessment:** The companion learning package is well-structured with good test coverage. All identified issues have been resolved.
 
 ---
 
@@ -84,34 +84,14 @@
 
 ### PERFORMANCE ISSUE: ShouldLearnNewSkill Missing Skill Type Cases
 
-**File:** system.go:213-226  
+**File:** system.go:240-260  
 **Severity:** Low  
-**Description:** The switch statement in `ShouldLearnNewSkill` does not explicitly handle `SkillHealing`, `SkillMagic`, and `SkillCrafting`. These fall through to `default: return true`, allowing any personality to auto-learn these skills.
-
-**Expected Behavior:** Each skill type should have explicit personality mappings for consistency and intentional design.
-
-**Actual Behavior:** Three skill categories (Healing, Magic, Crafting) are auto-learnable by any personality, which may not match game balance intentions.
-
-**Impact:**
-- Potential unintended companion skill acquisition
-- Inconsistent personality-skill alignment
-
-**Reproduction:**
-1. Create companion with dominant TraitShy
-2. Call `ShouldLearnNewSkill(comp, "First Aid")` (SkillHealing)
-3. Returns `true` even though Shy trait isn't explicitly mapped to Healing
-
-**Code Reference:**
-```go
-// system.go:213-226
-switch skill.Type {
-case SkillCombat:
-    return dominant == TraitAggressive || dominant == TraitBrave
-// ... SkillDefense, SkillSocial, SkillUtility, SkillStealth handled ...
-default:
-    return true  // SkillHealing, SkillMagic, SkillCrafting all fall here
-}
-```
+**Status:** RESOLVED (2025-12-17, commit 2abf45f)  
+**Description:** The switch statement in `ShouldLearnNewSkill` lacked explicit handling for SkillHealing, SkillMagic, and SkillCrafting.  
+**Resolution:** Added explicit cases with appropriate personality-skill mappings:
+- SkillHealing: TraitPacifist, TraitLoyal
+- SkillMagic: TraitCurious, TraitIndependent
+- SkillCrafting: TraitPractical, TraitCurious
 
 ---
 

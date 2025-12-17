@@ -116,19 +116,9 @@ type Report struct {
 
 **File:** `doc.go:37-39`  
 **Severity:** Low  
+**Status:** RESOLVED (2025-12-17, commit 8435ee7)  
 **Description:** The doc.go package documentation references "cmd/stabilitytest/" as a standalone CLI tool for stability testing with "verbose logging and configurable test parameters". This directory does not exist in the repository.  
-**Expected Behavior:** A cmd/stabilitytest/ directory should exist with a runnable CLI tool as documented.  
-**Actual Behavior:** The cmd/stabilitytest/ directory does not exist. No standalone stability testing CLI tool is available.  
-**Impact:** Users following documentation to use the CLI tool will find it missing. The doc.go provides misleading information.  
-**Reproduction:** `ls cmd/stabilitytest/` returns "No such file or directory".  
-**Code Reference:**
-```go
-// doc.go:37-39
-// # CLI Tool
-//
-// See cmd/stabilitytest/ for standalone stability testing tool with verbose logging
-// and configurable test parameters.
-```
+**Resolution:** Removed the misleading CLI Tool section from doc.go since the referenced directory does not exist.
 ~~~~
 
 ~~~~

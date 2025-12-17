@@ -56,7 +56,9 @@
 
 **File:** generator.go:401-428
 **Severity:** Medium
+**Status:** RESOLVED (2025-12-17, commit 31687bc)
 **Description:** The documentation (doc.go) lists 5 genres (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic), but `generateNodeDescription` only provides templates for "fantasy" and "scifi". Horror, cyberpunk, and post-apocalyptic genres fall back to fantasy templates.
+**Resolution:** Added horror, cyberpunk, and postapoc genre templates to `generateNodeDescription()` matching the pattern used in other generation functions.
 
 **Expected Behavior:** Each genre should have unique node descriptions as implied by the genre-specific theming documentation.
 

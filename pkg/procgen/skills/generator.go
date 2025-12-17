@@ -77,10 +77,15 @@ func (g *SkillTreeGenerator) validateParams(params procgen.GenerationParams) err
 }
 
 // extractTreeCount extracts the tree count from custom parameters.
+// Returns a valid count (minimum 1) to prevent panic on slice allocation.
 func (g *SkillTreeGenerator) extractTreeCount(params procgen.GenerationParams) int {
 	count := 3
 	if c, ok := params.Custom["count"].(int); ok {
 		count = c
+	}
+	// Validate count to prevent panic from negative values
+	if count < 1 {
+		count = 1
 	}
 	return count
 }

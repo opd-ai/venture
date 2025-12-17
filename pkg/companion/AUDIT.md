@@ -10,13 +10,13 @@
 
 | Category | Count |
 |----------|-------|
-| CRITICAL BUG | 1 |
-| FUNCTIONAL MISMATCH | 2 |
+| CRITICAL BUG | 1 (RESOLVED) |
+| FUNCTIONAL MISMATCH | 2 (1 RESOLVED) |
 | EDGE CASE BUG | 3 |
 | PERFORMANCE ISSUE | 1 |
 | MISSING FEATURE | 0 |
 
-**Overall Assessment:** The companion learning package is well-structured with good test coverage. However, there is one critical bug in the skill learning function, functional mismatches in behavior adaptation logic, and several edge cases that could cause issues in production.
+**Overall Assessment:** The companion learning package is well-structured with good test coverage. The critical bug in skill learning has been resolved. One functional mismatch (GetDominantTrait) has also been fixed.
 
 ---
 
@@ -26,40 +26,9 @@
 
 **File:** manager.go:345-371  
 **Severity:** High  
-**Description:** The `LearnSkill` function is documented as "allocates points to a skill" but only deducts available skill points without actually incrementing the skill's level. This means skills cannot satisfy prerequisite requirements after being "learned" since they remain at level 0.
-
-**Expected Behavior:** Calling `LearnSkill("Basic Attack")` should set the skill's level to 1 (or increment it), making it eligible as a prerequisite for dependent skills like "Power Strike".
-
-**Actual Behavior:** `LearnSkill` deducts points from `AvailablePoints` but the skill's `Level` field remains at 0. The skill cannot satisfy prerequisite checks in `CanLearnSkill`.
-
-**Impact:** 
-- The skill tree progression system is broken
-- Players cannot progress through skill chains (e.g., Basic Attack → Power Strike → Combat Mastery)
-- Test at line 169 of system_test.go must manually set `Level = 1` to work around this bug
-
-**Reproduction:** 
-1. Create a new companion with skill points
-2. Call `LearnSkill("Basic Attack")`
-3. Attempt to call `CanLearnSkill("Power Strike")` - fails with "prerequisite not met"
-
-**Code Reference:**
-```go
-// manager.go:345-371
-func (sp *SkillProgression) LearnSkill(skillName string) error {
-    canLearn, err := sp.CanLearnSkill(skillName)
-    if !canLearn {
-        return err
-    }
-
-    node := sp.SkillTree[skillName]
-    sp.AvailablePoints -= node.Cost  // Points deducted...
-
-    // BUG: skill.Level is never incremented!
-    // Missing: node.Skill.Level = 1  (or node.Skill.Level++)
-
-    return nil
-}
-```
+**Status:** RESOLVED (2025-12-17, commit 540f040)  
+**Description:** The `LearnSkill` function deducted skill points but didn't increment the skill's level, breaking skill tree progression.  
+**Resolution:** Added `node.Skill.Level++` to increment the skill level after deducting points.
 
 ---
 
@@ -101,33 +70,9 @@ for range recentCombat {
 
 **File:** manager.go:454-474  
 **Severity:** Medium  
-**Description:** When multiple personality traits have the same maximum value (e.g., all traits at 0.5 initially), the function iterates over a map and returns the first maximum found. Go's map iteration order is randomized, making this function non-deterministic on ties.
-
-**Expected Behavior:** Per doc.go's statement that "retrieval is deterministic", ties should be resolved consistently (e.g., by trait index order or alphabetically).
-
-**Actual Behavior:** On initial companion creation (all traits = 0.5), calling `GetDominantTrait()` may return different traits across executions.
-
-**Impact:**
-- Violates the project's determinism requirements
-- `ShouldLearnNewSkill` behavior varies between runs
-- Reproducibility issues for testing and debugging
-
-**Reproduction:**
-1. Create new PersonalityEvolution (all traits = 0.5)
-2. Call `GetDominantTrait()` multiple times in different program runs
-3. Observe varying results
-
-**Code Reference:**
-```go
-// manager.go:461-466
-for trait, value := range pe.Traits {  // Map iteration is non-deterministic
-    if value > maxValue {
-        maxValue = value
-        dominant = trait
-    }
-}
-// Should use a sorted slice or check trait index for tie-breaking
-```
+**Status:** RESOLVED (2025-12-17, commit 540f040)  
+**Description:** Map iteration order is randomized in Go, causing non-deterministic behavior on ties.  
+**Resolution:** Changed to iterate over an ordered slice of PersonalityTrait enum values, ensuring deterministic tie-breaking (returns lowest enum value on ties).
 
 ---
 

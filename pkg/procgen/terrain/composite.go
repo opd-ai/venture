@@ -149,8 +149,9 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 		}).Debug("starting composite terrain generation")
 	}
 
-	width, height, biomeCount, transitionWidth := g.extractParameters(params)
-	width, height, biomeCount, transitionWidth, err := g.validateAndClampParameters(width, height, biomeCount, transitionWidth)
+	// Extract parameters and validate/clamp them in sequence
+	rawWidth, rawHeight, rawBiomeCount, rawTransitionWidth := g.extractParameters(params)
+	width, height, biomeCount, transitionWidth, err := g.validateAndClampParameters(rawWidth, rawHeight, rawBiomeCount, rawTransitionWidth)
 	if err != nil {
 		return nil, err
 	}

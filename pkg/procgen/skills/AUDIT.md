@@ -14,7 +14,7 @@
 | **CRITICAL BUG** | 1 (RESOLVED) |
 | **FUNCTIONAL MISMATCH** | 3 |
 | **MISSING FEATURE** | 2 |
-| **EDGE CASE BUG** | 1 |
+| **EDGE CASE BUG** | 1 (RESOLVED) |
 | **PERFORMANCE ISSUE** | 0 |
 | **CODE QUALITY** | 2 |
 
@@ -153,31 +153,12 @@ go test ./pkg/procgen/skills/... -bench=.
 
 ### EDGE CASE BUG: Genre Not Set in Output for Empty/Unknown Genre
 
-**File:** generator.go:167-178  
+**File:** generator.go:182-194  
 **Severity:** Low  
+**Status:** RESOLVED (2025-12-17, commit c995699)  
 **Description:** When GenreID is empty or unrecognized, the generator defaults to fantasy templates but stores the original (possibly empty) genre in the tree.Genre field.
 
-**Expected Behavior:** Either:
-1. Validate GenreID and return an error for invalid values
-2. Set tree.Genre to the actual genre used ("fantasy" for default)
-
-**Actual Behavior:** Tree is generated with fantasy templates but Genre field contains empty string or the unknown genre string.
-
-**Impact:** Downstream code checking tree.Genre for logic decisions may behave incorrectly.
-
-**Reproduction:**
-```go
-params := procgen.GenerationParams{GenreID: "", ...}
-result, _ := gen.Generate(12345, params)
-trees := result.([]*skills.SkillTree)
-fmt.Println(trees[0].Genre) // Outputs: "" (empty string, not "fantasy")
-```
-
-**Code Reference:**
-```go
-// generator.go:173
-Genre: params.GenreID,  // Uses original, not resolved genre
-```
+**Resolution:** Added `normalizeGenre` helper function that returns the actual genre used for template selection. The generateTree function now uses this helper when setting tree.Genre, ensuring the output reflects the actual genre used ("fantasy" for empty or unknown inputs).
 
 ---
 

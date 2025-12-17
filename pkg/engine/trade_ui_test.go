@@ -516,3 +516,171 @@ func TestTradeUI_GetDistance(t *testing.T) {
 		t.Errorf("Expected distance 25.0, got %f", distance)
 	}
 }
+
+// TestTradeUI_ToggleSlotSelection tests the toggleSlotSelection method.
+func TestTradeUI_ToggleSlotSelection(t *testing.T) {
+	world := NewWorld()
+	tradeSystem := NewTradeSystem(world)
+	ui := NewTradeUI(world, tradeSystem, 1920, 1080)
+
+	// Toggle on offer panel (panel 0)
+	ui.toggleSlotSelection(0, 2)
+	if len(ui.selectedOfferedSlots) != 1 {
+		t.Errorf("Expected 1 selected slot, got %d", len(ui.selectedOfferedSlots))
+	}
+	if ui.selectedOfferedSlots[0] != 2 {
+		t.Errorf("Expected slot 2 selected, got %d", ui.selectedOfferedSlots[0])
+	}
+
+	// Toggle again to deselect
+	ui.toggleSlotSelection(0, 2)
+	if len(ui.selectedOfferedSlots) != 0 {
+		t.Errorf("Expected 0 selected slots after deselect, got %d", len(ui.selectedOfferedSlots))
+	}
+
+	// Toggle on request panel (panel 1)
+	ui.toggleSlotSelection(1, 3)
+	if len(ui.selectedRequestedSlots) != 1 {
+		t.Errorf("Expected 1 requested slot, got %d", len(ui.selectedRequestedSlots))
+	}
+	if ui.selectedRequestedSlots[0] != 3 {
+		t.Errorf("Expected slot 3 selected, got %d", ui.selectedRequestedSlots[0])
+	}
+
+	// Add multiple selections
+	ui.toggleSlotSelection(1, 5)
+	if len(ui.selectedRequestedSlots) != 2 {
+		t.Errorf("Expected 2 requested slots, got %d", len(ui.selectedRequestedSlots))
+	}
+}
+
+// TestTradeUI_GetSlotIndexAt tests the getSlotIndexAt method.
+func TestTradeUI_GetSlotIndexAt(t *testing.T) {
+	world := NewWorld()
+	tradeSystem := NewTradeSystem(world)
+	ui := NewTradeUI(world, tradeSystem, 800, 600)
+
+	// gridStartX = (800 - 6*64)/2 = 208
+	// slotSize = 64
+	// offerPanelY = 140
+
+	tests := []struct {
+		name     string
+		mouseX   int
+		mouseY   int
+		panelY   int
+		expected int
+	}{
+		{"top-left slot", 210, 145, ui.offerPanelY, 0},
+		{"second column", 275, 145, ui.offerPanelY, 1},
+		{"third column", 340, 145, ui.offerPanelY, 2},
+		{"second row first col", 210, 205, ui.offerPanelY, 6},
+		{"outside left", 100, 145, ui.offerPanelY, -1},
+		{"outside right", 700, 145, ui.offerPanelY, -1},
+		{"outside above", 210, 100, ui.offerPanelY, -1},
+		{"outside below", 210, 300, ui.offerPanelY, -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ui.getSlotIndexAt(tt.mouseX, tt.mouseY, tt.panelY)
+			if result != tt.expected {
+				t.Errorf("getSlotIndexAt(%d, %d, %d) = %d, want %d",
+					tt.mouseX, tt.mouseY, tt.panelY, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestTradeUI_GetItemCountForPanel tests the getItemCountForPanel method.
+func TestTradeUI_GetItemCountForPanel(t *testing.T) {
+	world := NewWorld()
+	tradeSystem := NewTradeSystem(world)
+	ui := NewTradeUI(world, tradeSystem, 1920, 1080)
+
+	// No entities set - should return 0
+	count := ui.getItemCountForPanel(0)
+	if count != 0 {
+		t.Errorf("Expected 0 items with no player entity, got %d", count)
+	}
+
+	// Create player with inventory
+	player := world.CreateEntity()
+	inv := NewInventoryComponent(10, 100.0)
+	inv.Items = []*item.Item{
+		{ID: "item1", Name: "Sword"},
+		{ID: "item2", Name: "Shield"},
+		{ID: "item3", Name: "Potion"},
+	}
+	player.AddComponent(inv)
+	ui.SetPlayerEntity(player)
+	world.Update(0.0)
+
+	count = ui.getItemCountForPanel(0)
+	if count != 3 {
+		t.Errorf("Expected 3 items for player, got %d", count)
+	}
+
+	// Panel 1 (partner) - no partner set
+	count = ui.getItemCountForPanel(1)
+	if count != 0 {
+		t.Errorf("Expected 0 items with no partner entity, got %d", count)
+	}
+
+	// Set partner with inventory
+	partner := world.CreateEntity()
+	partnerInv := NewInventoryComponent(10, 100.0)
+	partnerInv.Items = []*item.Item{
+		{ID: "item4", Name: "Bow"},
+		{ID: "item5", Name: "Arrow"},
+	}
+	partner.AddComponent(partnerInv)
+	ui.partnerEntity = partner
+	world.Update(0.0)
+
+	count = ui.getItemCountForPanel(1)
+	if count != 2 {
+		t.Errorf("Expected 2 items for partner, got %d", count)
+	}
+}
+
+// TestTradeUI_GridNavigation tests grid cursor navigation.
+func TestTradeUI_GridNavigation(t *testing.T) {
+	world := NewWorld()
+	tradeSystem := NewTradeSystem(world)
+	ui := NewTradeUI(world, tradeSystem, 1920, 1080)
+
+	// Initial cursor position
+	if ui.cursorRow != 0 || ui.cursorCol != 0 {
+		t.Errorf("Expected cursor at (0,0), got (%d,%d)", ui.cursorRow, ui.cursorCol)
+	}
+
+	// Initial focused panel
+	if ui.focusedPanel != 0 {
+		t.Errorf("Expected focused panel 0, got %d", ui.focusedPanel)
+	}
+}
+
+// TestTradeUI_ResetSelection tests the resetSelection method.
+func TestTradeUI_ResetSelection(t *testing.T) {
+	world := NewWorld()
+	tradeSystem := NewTradeSystem(world)
+	ui := NewTradeUI(world, tradeSystem, 1920, 1080)
+
+	// Add some selections
+	ui.selectedOfferedSlots = []int{1, 2, 3}
+	ui.selectedRequestedSlots = []int{4, 5}
+	ui.hoveredSlot = 7
+
+	ui.resetSelection()
+
+	if len(ui.selectedOfferedSlots) != 0 {
+		t.Errorf("Expected 0 offered slots after reset, got %d", len(ui.selectedOfferedSlots))
+	}
+	if len(ui.selectedRequestedSlots) != 0 {
+		t.Errorf("Expected 0 requested slots after reset, got %d", len(ui.selectedRequestedSlots))
+	}
+	if ui.hoveredSlot != -1 {
+		t.Errorf("Expected hoveredSlot -1 after reset, got %d", ui.hoveredSlot)
+	}
+}

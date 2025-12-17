@@ -80,6 +80,12 @@ type TradeUI struct {
 	selectedRequestedSlots []int // Indices of items player is requesting
 	hoveredSlot            int   // Currently hovered slot
 
+	// Grid navigation (keyboard)
+	focusedPanel int // 0 = offer panel, 1 = request panel
+	cursorRow    int // Current cursor row in focused panel
+	cursorCol    int // Current cursor column in focused panel
+	gridStartX   int // X position of grid (calculated from center)
+
 	// UI panels
 	offerPanelY    int
 	requestPanelY  int
@@ -125,11 +131,15 @@ func NewTradeUI(world *World, tradeSystem *TradeSystem, screenWidth, screenHeigh
 		touchHandler:           mobile.NewTouchInputHandler(),
 		nearbyPartners:         make([]*Entity, 0),
 		partnerButtons:         make([]*mobile.TouchButton, 0),
+		focusedPanel:           0,
+		cursorRow:              0,
+		cursorCol:              0,
 	}
 
 	// Calculate panel positions
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
 	windowX := (screenWidth - windowWidth) / 2
+	ui.gridStartX = (screenWidth - ui.gridCols*ui.slotSize) / 2
 
 	ui.offerPanelY = 140
 	ui.requestPanelY = ui.offerPanelY + ui.gridRows*ui.slotSize + 80
@@ -349,7 +359,7 @@ func (ui *TradeUI) drawItemSelection(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Trading with %s", partnerName), centerX-100, 40)
 
 	// Instructions
-	ebitenutil.DebugPrintAt(screen, "Select items to OFFER (your items) and REQUEST (their items)", centerX-220, 80)
+	ebitenutil.DebugPrintAt(screen, "Arrow keys: navigate | Tab: switch panel | Space: select | Enter: confirm", centerX-280, 80)
 
 	// Draw offer panel (your items)
 	ui.drawOfferPanel(screen)
@@ -366,7 +376,12 @@ func (ui *TradeUI) drawItemSelection(screen *ebiten.Image) {
 func (ui *TradeUI) drawOfferPanel(screen *ebiten.Image) {
 	centerX := ui.screenWidth / 2
 
-	ebitenutil.DebugPrintAt(screen, "Your Items (OFFER):", centerX-280, ui.offerPanelY-30)
+	// Show focused indicator
+	label := "Your Items (OFFER):"
+	if ui.focusedPanel == 0 {
+		label = "► Your Items (OFFER):"
+	}
+	ebitenutil.DebugPrintAt(screen, label, centerX-280, ui.offerPanelY-30)
 
 	inv := ui.getInventoryComponent(ui.playerEntity)
 	if inv == nil {
@@ -380,7 +395,12 @@ func (ui *TradeUI) drawOfferPanel(screen *ebiten.Image) {
 func (ui *TradeUI) drawRequestPanel(screen *ebiten.Image) {
 	centerX := ui.screenWidth / 2
 
-	ebitenutil.DebugPrintAt(screen, "Their Items (REQUEST):", centerX-280, ui.requestPanelY-30)
+	// Show focused indicator
+	label := "Their Items (REQUEST):"
+	if ui.focusedPanel == 1 {
+		label = "► Their Items (REQUEST):"
+	}
+	ebitenutil.DebugPrintAt(screen, label, centerX-280, ui.requestPanelY-30)
 
 	partnerInv := ui.getInventoryComponent(ui.partnerEntity)
 	if partnerInv == nil {
@@ -394,6 +414,9 @@ func (ui *TradeUI) drawRequestPanel(screen *ebiten.Image) {
 func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY int, selectedSlots []int, panelType string) {
 	centerX := ui.screenWidth / 2
 	gridStartX := centerX - (ui.gridCols*ui.slotSize)/2
+
+	// Determine if this is the focused panel
+	isFocusedPanel := (panelType == "offer" && ui.focusedPanel == 0) || (panelType == "request" && ui.focusedPanel == 1)
 
 	for i := 0; i < len(items) && i < ui.gridCols*ui.gridRows; i++ {
 		row := i / ui.gridCols
@@ -411,10 +434,15 @@ func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY
 			}
 		}
 
+		// Determine if this is the cursor position
+		isCursor := isFocusedPanel && row == ui.cursorRow && col == ui.cursorCol
+
 		// Draw slot background
 		bgColor := color.RGBA{50, 50, 50, 255}
 		if isSelected {
 			bgColor = color.RGBA{100, 150, 100, 255}
+		} else if isCursor {
+			bgColor = color.RGBA{100, 100, 150, 255} // Blue for cursor
 		} else if ui.hoveredSlot == i {
 			bgColor = color.RGBA{80, 80, 80, 255}
 		}
@@ -424,6 +452,21 @@ func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(float64(x+2), float64(y+2))
 		screen.DrawImage(slotImg, op)
+
+		// Draw cursor border if focused
+		if isCursor {
+			borderColor := color.RGBA{200, 200, 255, 255}
+			// Top border
+			borderImg := ebiten.NewImage(ui.slotSize-4, 2)
+			borderImg.Fill(borderColor)
+			opBorder := &ebiten.DrawImageOptions{}
+			opBorder.GeoM.Translate(float64(x+2), float64(y+2))
+			screen.DrawImage(borderImg, opBorder)
+			// Bottom border
+			opBorder2 := &ebiten.DrawImageOptions{}
+			opBorder2.GeoM.Translate(float64(x+2), float64(y+ui.slotSize-6))
+			screen.DrawImage(borderImg, opBorder2)
+		}
 
 		// Draw item info
 		itm := items[i]
@@ -553,13 +596,108 @@ func (ui *TradeUI) handlePartnerSelectionInput() {
 
 // handleItemSelectionInput handles keyboard input for item selection.
 func (ui *TradeUI) handleItemSelectionInput() {
-	// TODO: Implement grid navigation with arrow keys
-	// For now, rely on touch/mouse input
+	// Get item count for current panel
+	itemCount := ui.getItemCountForPanel(ui.focusedPanel)
+	if itemCount == 0 {
+		itemCount = 1 // Prevent division by zero
+	}
+
+	// Arrow key navigation within grid
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		ui.cursorCol--
+		if ui.cursorCol < 0 {
+			ui.cursorCol = ui.gridCols - 1
+			ui.cursorRow--
+			if ui.cursorRow < 0 {
+				ui.cursorRow = ui.gridRows - 1
+			}
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		ui.cursorCol++
+		if ui.cursorCol >= ui.gridCols {
+			ui.cursorCol = 0
+			ui.cursorRow++
+			if ui.cursorRow >= ui.gridRows {
+				ui.cursorRow = 0
+			}
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		ui.cursorRow--
+		if ui.cursorRow < 0 {
+			ui.cursorRow = ui.gridRows - 1
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		ui.cursorRow++
+		if ui.cursorRow >= ui.gridRows {
+			ui.cursorRow = 0
+		}
+	}
+
+	// Tab to switch between offer/request panels
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		ui.focusedPanel = 1 - ui.focusedPanel // Toggle between 0 and 1
+		ui.cursorRow = 0
+		ui.cursorCol = 0
+	}
+
+	// Space to toggle item selection
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		slotIndex := ui.cursorRow*ui.gridCols + ui.cursorCol
+		if slotIndex < itemCount {
+			ui.toggleSlotSelection(ui.focusedPanel, slotIndex)
+		}
+	}
 
 	// Enter to confirm selection
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		ui.confirmItemSelection()
 	}
+
+	// Escape to cancel
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		ui.cancelTrade()
+	}
+}
+
+// getItemCountForPanel returns the number of items in the specified panel.
+func (ui *TradeUI) getItemCountForPanel(panel int) int {
+	var entity *Entity
+	if panel == 0 {
+		entity = ui.playerEntity
+	} else {
+		entity = ui.partnerEntity
+	}
+
+	inv := ui.getInventoryComponent(entity)
+	if inv == nil {
+		return 0
+	}
+	return len(inv.Items)
+}
+
+// toggleSlotSelection toggles the selection state of a slot.
+func (ui *TradeUI) toggleSlotSelection(panel, slotIndex int) {
+	var selectedSlots *[]int
+	if panel == 0 {
+		selectedSlots = &ui.selectedOfferedSlots
+	} else {
+		selectedSlots = &ui.selectedRequestedSlots
+	}
+
+	// Check if already selected
+	for i, sel := range *selectedSlots {
+		if sel == slotIndex {
+			// Remove from selection
+			*selectedSlots = append((*selectedSlots)[:i], (*selectedSlots)[i+1:]...)
+			return
+		}
+	}
+
+	// Add to selection
+	*selectedSlots = append(*selectedSlots, slotIndex)
 }
 
 // handleNegotiationInput handles keyboard input during negotiation.
@@ -577,20 +715,119 @@ func (ui *TradeUI) handleTouchInput() {
 	// Handle close button
 	ui.closeButton.Update()
 
-	// Handle state-specific buttons
+	// Get mouse/touch position
+	mouseX, mouseY := ebiten.CursorPosition()
+
+	// Handle state-specific buttons and clicks
 	switch ui.state {
 	case TradeUIStateSelectingPartner:
-		// TODO: Handle partner button clicks
+		ui.handlePartnerListClick(mouseX, mouseY)
 	case TradeUIStateSelectingItems:
 		ui.confirmOfferButton.Update()
 		ui.cancelButton.Update()
-		// TODO: Handle item slot clicks
+		ui.handleItemSlotClick(mouseX, mouseY)
+		ui.updateHoveredSlot(mouseX, mouseY)
 	case TradeUIStatePending:
 		ui.cancelButton.Update()
 	case TradeUIStateNegotiating:
 		ui.acceptButton.Update()
 		ui.rejectButton.Update()
 	}
+}
+
+// handlePartnerListClick handles clicks on the partner selection list.
+func (ui *TradeUI) handlePartnerListClick(mouseX, mouseY int) {
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
+	}
+
+	centerX := ui.screenWidth / 2
+	slotX := centerX - 200
+	slotWidth := 400
+	slotHeight := 50
+
+	y := ui.partnerListY
+	for i, partner := range ui.nearbyPartners {
+		// Check if click is within this partner slot
+		if mouseX >= slotX && mouseX < slotX+slotWidth &&
+			mouseY >= y && mouseY < y+slotHeight {
+			ui.selectedPartnerIndex = i
+			ui.selectPartner(partner)
+			return
+		}
+		y += 60
+	}
+}
+
+// handleItemSlotClick handles clicks on item slots in offer/request panels.
+func (ui *TradeUI) handleItemSlotClick(mouseX, mouseY int) {
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		return
+	}
+
+	// Check offer panel
+	slotIndex := ui.getSlotIndexAt(mouseX, mouseY, ui.offerPanelY)
+	if slotIndex >= 0 {
+		itemCount := ui.getItemCountForPanel(0)
+		if slotIndex < itemCount {
+			ui.toggleSlotSelection(0, slotIndex)
+			ui.focusedPanel = 0
+		}
+		return
+	}
+
+	// Check request panel
+	slotIndex = ui.getSlotIndexAt(mouseX, mouseY, ui.requestPanelY)
+	if slotIndex >= 0 {
+		itemCount := ui.getItemCountForPanel(1)
+		if slotIndex < itemCount {
+			ui.toggleSlotSelection(1, slotIndex)
+			ui.focusedPanel = 1
+		}
+		return
+	}
+}
+
+// getSlotIndexAt returns the slot index at the given coordinates, or -1 if none.
+func (ui *TradeUI) getSlotIndexAt(mouseX, mouseY, panelY int) int {
+	// Check if within panel Y range
+	if mouseY < panelY || mouseY >= panelY+ui.gridRows*ui.slotSize {
+		return -1
+	}
+
+	// Check if within panel X range
+	if mouseX < ui.gridStartX || mouseX >= ui.gridStartX+ui.gridCols*ui.slotSize {
+		return -1
+	}
+
+	// Calculate row and column
+	col := (mouseX - ui.gridStartX) / ui.slotSize
+	row := (mouseY - panelY) / ui.slotSize
+
+	if col < 0 || col >= ui.gridCols || row < 0 || row >= ui.gridRows {
+		return -1
+	}
+
+	return row*ui.gridCols + col
+}
+
+// updateHoveredSlot updates the hovered slot based on mouse position.
+func (ui *TradeUI) updateHoveredSlot(mouseX, mouseY int) {
+	// Check offer panel
+	slotIndex := ui.getSlotIndexAt(mouseX, mouseY, ui.offerPanelY)
+	if slotIndex >= 0 {
+		ui.hoveredSlot = slotIndex
+		return
+	}
+
+	// Check request panel
+	slotIndex = ui.getSlotIndexAt(mouseX, mouseY, ui.requestPanelY)
+	if slotIndex >= 0 {
+		ui.hoveredSlot = slotIndex + ui.gridCols*ui.gridRows // Offset for request panel
+		return
+	}
+
+	ui.hoveredSlot = -1
 }
 
 // findNearbyPartners finds all nearby players within trade range.

@@ -18,20 +18,21 @@ type Entity struct {
 
 	// Fast-path cache for frequently accessed components
 	// These eliminate map lookups in hot paths
-	position       *PositionComponent
-	velocity       *VelocityComponent
-	health         *HealthComponent
-	collider       *ColliderComponent
-	inventory      *InventoryComponent
-	stats          *StatsComponent
-	animation      *AnimationComponent
-	attack         *AttackComponent
-	experience     *ExperienceComponent
-	sprite         *EbitenSprite            // Cached for render system hot path (~93x faster access)
-	rotation       *RotationComponent       // Cached for render and collision hot paths
-	visualFeedback *VisualFeedbackComponent // Cached for render system hot path (visual effects)
-	layer          *LayerComponent          // Cached for collision hot path (layer compatibility checks)
-	team           *TeamComponent           // Cached for AI system hot path (enemy detection)
+	position        *PositionComponent
+	velocity        *VelocityComponent
+	health          *HealthComponent
+	collider        *ColliderComponent
+	inventory       *InventoryComponent
+	stats           *StatsComponent
+	animation       *AnimationComponent
+	attack          *AttackComponent
+	experience      *ExperienceComponent
+	sprite          *EbitenSprite             // Cached for render system hot path (~93x faster access)
+	rotation        *RotationComponent        // Cached for render and collision hot paths
+	visualFeedback  *VisualFeedbackComponent  // Cached for render system hot path (visual effects)
+	layer           *LayerComponent           // Cached for collision hot path (layer compatibility checks)
+	team            *TeamComponent            // Cached for AI system hot path (enemy detection)
+	particleEmitter *ParticleEmitterComponent // Cached for render system particle drawing hot path
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -105,6 +106,10 @@ func (e *Entity) AddComponent(c Component) {
 		if team, ok := c.(*TeamComponent); ok {
 			e.team = team
 		}
+	case "particle_emitter":
+		if emitter, ok := c.(*ParticleEmitterComponent); ok {
+			e.particleEmitter = emitter
+		}
 	}
 }
 
@@ -159,6 +164,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.layer = nil
 	case "team":
 		e.team = nil
+	case "particle_emitter":
+		e.particleEmitter = nil
 	}
 }
 
@@ -264,6 +271,12 @@ func (e *Entity) GetLayer() *LayerComponent {
 // Uses cached pointer for zero-overhead access in AI hot path (~93x faster than map lookup).
 func (e *Entity) GetTeam() *TeamComponent {
 	return e.team
+}
+
+// GetParticleEmitter retrieves the ParticleEmitterComponent if present.
+// Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
+func (e *Entity) GetParticleEmitter() *ParticleEmitterComponent {
+	return e.particleEmitter
 }
 
 // World manages all entities and systems in the game.

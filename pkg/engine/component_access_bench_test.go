@@ -270,3 +270,67 @@ func BenchmarkLayerAccessTyped(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkParticleEmitterAccessGeneric benchmarks generic particle emitter access in render-like patterns.
+func BenchmarkParticleEmitterAccessGeneric(b *testing.B) {
+	// Create 2000 entities (typical game count), 100 with particle emitters
+	entities := make([]*Entity, 2000)
+	for i := 0; i < 2000; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		// Only 5% of entities have particle emitters (typical)
+		if i%20 == 0 {
+			emitter := NewParticleEmitterComponent(0, DefaultParticleConfig(), 10)
+			entity.AddComponent(emitter)
+		}
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate drawParticles with generic access (old way)
+		for _, entity := range entities {
+			comp, ok := entity.GetComponent("particle_emitter")
+			if !ok {
+				continue
+			}
+			emitter, ok := comp.(*ParticleEmitterComponent)
+			if !ok {
+				continue
+			}
+			_ = len(emitter.Systems)
+		}
+	}
+}
+
+// BenchmarkParticleEmitterAccessTyped benchmarks typed particle emitter getter in render-like patterns.
+func BenchmarkParticleEmitterAccessTyped(b *testing.B) {
+	// Create 2000 entities (typical game count), 100 with particle emitters
+	entities := make([]*Entity, 2000)
+	for i := 0; i < 2000; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		// Only 5% of entities have particle emitters (typical)
+		if i%20 == 0 {
+			emitter := NewParticleEmitterComponent(0, DefaultParticleConfig(), 10)
+			entity.AddComponent(emitter)
+		}
+		entities[i] = entity
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Simulate drawParticles with typed getter (new way)
+		for _, entity := range entities {
+			emitter := entity.GetParticleEmitter()
+			if emitter == nil {
+				continue
+			}
+			_ = len(emitter.Systems)
+		}
+	}
+}

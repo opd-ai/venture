@@ -91,19 +91,13 @@ ds.conn.WriteTo(data, addr)
 #### 1. Concrete UDP Address Type Assertion in WebRTC
 **Location:** `federation/webrtc/stun.go:166`  
 **Issue:** Using `*net.UDPAddr` type assertion instead of `net.Addr` interface  
-**Status:** Outstanding
-
-```go
-// federation/webrtc/stun.go:166 - VIOLATION
-localAddr := conn.LocalAddr().(*net.UDPAddr)
-```
-
-**Note:** This is in simulation code for testing, but still violates the project's networking best practices.
+**Status:** RESOLVED (2025-12-17)
+**Resolution:** Changed to use `conn.LocalAddr()` with `net.SplitHostPort(localAddr.String())` for interface-based address parsing.
 
 #### 2. Incomplete TODOs in Federation
 **Location:** `federation/discovery.go:281`, `federation/discovery.go:419`  
 **Issue:** Two TODO comments indicating incomplete implementation  
-**Status:** Outstanding
+**Status:** Outstanding (feature incomplete, not a bug)
 
 ```go
 // federation/discovery.go:281
@@ -113,34 +107,19 @@ localAddr := conn.LocalAddr().(*net.UDPAddr)
 // TODO: Send gossip message to target peer via TCP/TLS connection
 ```
 
-**Recommendation:** Implement or document these features in a tracking issue
+**Note:** These are feature placeholders. The code works correctly using localhost:8080 as a default. Full implementation deferred to federation feature completion.
 
 #### 3. Stale TODO Tracking References
 **Location:** `chat/system.go:42-43`, `chat/system.go:67`  
 **Issue:** References to non-existent `docs/TODO_TRACKING.md` file  
-**Status:** Outstanding
-
-```go
-Timestamp: time.Time{}, // Timestamp implementation tracked in docs/TODO_TRACKING.md
-Encrypted: nil,         // E2E encryption tracked in docs/TODO_TRACKING.md
-// Broadcast, rate limiting, and encryption tracked in docs/TODO_TRACKING.md
-```
-
-**Note:** The referenced file `docs/TODO_TRACKING.md` does not exist. The main network package already implements full E2E encryption in `network/chat.go` and `network/crypto.go`. The chat/system.go appears to be a legacy placeholder or alternative implementation. Should be cleaned up or integrated with main implementation.
+**Status:** RESOLVED (2025-12-17)
+**Resolution:** Comments updated to reference actual implementation locations (`pkg/network/chat.go` provides E2E encryption).
 
 #### 4. BUG FIX Comments Should Be Removed
 **Location:** `client.go:309`, `client.go:372`, `server.go:157`, `server.go:184`  
 **Issue:** Comments like "BUG FIX: Phase 6 - ..." should be removed after fixes are verified  
-**Status:** Outstanding
-
-```go
-// BUG FIX: Phase 6 - Disconnect() mutex deadlock risk
-// BUG FIX: Phase 6 - SendInput() mutex handling with channel send
-// BUG FIX: Phase 6 - Start() mutex deadlock risk
-// BUG FIX: Phase 6 - Stop() mutex handling with wait
-```
-
-**Recommendation:** These fixes appear stable - remove historical comments or convert to changelog entry
+**Status:** RESOLVED (2025-12-17)
+**Resolution:** Historical BUG FIX comments have been removed from client.go and server.go.
 
 ### Resolved Issues (from previous audit)
 

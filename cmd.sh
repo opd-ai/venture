@@ -108,6 +108,24 @@ log() {
     checkin
 }
 
+base_audit() {
+    echo "iteration started - Maintenance phase 1: Base components."
+    copilot -p "/delegate $(cat docs/BASE_AUDIT.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Base component audit completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
+audit3() {
+    echo "iteration started - Maintenance phase 3: Tertiary components."
+    copilot -p "/delegate $(cat docs/AUDIT3.md)" --allow-all-tools --deny-tool sudo
+    make fmt
+    echo "Tertiary component audit completed, sleeping for 1 minute..."
+    sleep 1m
+    checkin
+}
+
 audit() {
     #check if any directories do not contain an AUDIT.md file, if so, set NEED_AUDIT to true
     NEED_AUDIT=false
@@ -138,6 +156,12 @@ dev() {
     impl
     review
     perf
+}
+
+auditloop() {
+    rm AUDIT.md -f
+    base_audit
+    audit3
 }
 
 $@

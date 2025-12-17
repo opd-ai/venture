@@ -106,6 +106,9 @@ type PlayerState struct {
 
 	// Phase 112: Carry-Over persistence (V22.0)
 	CarryOverData *CarryOverStateData `json:"carryover_data,omitempty"`
+
+	// Phase 114: NG+ Reward persistence (V22.0)
+	NGPlusRewardData *NGPlusRewardStateData `json:"ngplus_reward_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -248,6 +251,31 @@ type CarryOverStateData struct {
 	CurrencyPercentLimit float64 `json:"currency_percent_limit"`
 	// TransferComplete indicates the carry-over has been applied
 	TransferComplete bool `json:"transfer_complete"`
+}
+
+// NGPlusRewardStateData represents saved NG+ exclusive rewards for Phase 114 (V22.0).
+// This allows NG+ achievements, items, titles, and challenges to persist.
+type NGPlusRewardStateData struct {
+	// ExclusiveAchievements lists NG+ achievements earned
+	ExclusiveAchievements []string `json:"exclusive_achievements,omitempty"`
+	// ExclusiveItems lists NG+ exclusive item IDs acquired
+	ExclusiveItems []string `json:"exclusive_items,omitempty"`
+	// TitlesUnlocked lists NG+ exclusive titles earned
+	TitlesUnlocked []string `json:"titles_unlocked,omitempty"`
+	// ChallengesCompleted tracks challenge ID -> completion status (as JSON)
+	ChallengesCompletedJSON []byte `json:"challenges_completed_json,omitempty"`
+	// ChallengesActive tracks currently active challenge IDs
+	ChallengesActive []string `json:"challenges_active,omitempty"`
+	// HighestTierReached is the highest NG+ tier for tiered rewards
+	HighestTierReached int `json:"highest_tier_reached"`
+	// CurrentTitle is the currently equipped title
+	CurrentTitle string `json:"current_title,omitempty"`
+	// TimeAttackBestTimesJSON is serialized best times for time attacks
+	TimeAttackBestTimesJSON []byte `json:"time_attack_best_times_json,omitempty"`
+	// NoDeathRunProgressJSON is serialized no-death run progress
+	NoDeathRunProgressJSON []byte `json:"no_death_run_progress_json,omitempty"`
+	// NPCDialogVariationsUnlocked tracks unlocked dialog variations
+	NPCDialogVariationsUnlocked []string `json:"npc_dialog_variations_unlocked,omitempty"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

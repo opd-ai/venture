@@ -34,38 +34,13 @@ None.
 ### Major (should fix)
 
 #### 1. Non-Thread-Safe Global ID Generators
-**Files:** `types.go:166-171`, `guildhall.go:367-372`
+**Files:** `types.go:168-174`, `guildhall.go:368-374`
 
-**Issue:** Package-level counters `plotIDCounter` and `guildHallIDCounter` are not thread-safe and may produce duplicate IDs under concurrent access.
+**Issue:** Package-level counters `plotIDCounter` and `guildHallIDCounter` were not thread-safe and could produce duplicate IDs under concurrent access.
 
-```go
-// types.go:166-171
-var plotIDCounter int
+**Status:** RESOLVED (Pre-existing fix using atomic.Int64)
 
-func generatePlotID() string {
-	plotIDCounter++  // Race condition: concurrent calls can produce duplicate IDs
-	return "plot_" + string(rune('0'+plotIDCounter%10)) + ...
-}
-```
-
-**Impact:** In multiplayer scenarios with concurrent plot creation, duplicate IDs could cause data corruption in the `Manager.plots` map.
-
-**Recommended Fix:**
-```go
-var (
-	plotIDCounter     int
-	plotIDCounterLock sync.Mutex
-)
-
-func generatePlotID() string {
-	plotIDCounterLock.Lock()
-	defer plotIDCounterLock.Unlock()
-	plotIDCounter++
-	return fmt.Sprintf("plot_%03d", plotIDCounter)
-}
-```
-
-Alternatively, use `sync/atomic` for lock-free increments:
+**Resolution:** Both ID generators now use `atomic.Int64` for lock-free thread-safe increments:
 ```go
 var plotIDCounter atomic.Int64
 
@@ -78,21 +53,11 @@ func generatePlotID() string {
 #### 2. Inefficient String Concatenation for ID Generation
 **File:** `types.go:170`
 
-**Issue:** Manual rune concatenation is error-prone and less efficient than `fmt.Sprintf`.
+**Issue:** Manual rune concatenation was error-prone and less efficient than `fmt.Sprintf`.
 
-```go
-return "plot_" + string(rune('0'+plotIDCounter%10)) + string(rune('0'+(plotIDCounter/10)%10)) + string(rune('0'+(plotIDCounter/100)%10))
-```
+**Status:** RESOLVED (Pre-existing fix as part of atomic migration)
 
-**Impact:** Limited to 3-digit IDs (max 999 plots), confusing implementation.
-
-**Recommended Fix:** Use `fmt.Sprintf` for clarity and no practical limit:
-```go
-func generatePlotID() string {
-	plotIDCounter++
-	return fmt.Sprintf("plot_%d", plotIDCounter)
-}
-```
+**Resolution:** Now uses `fmt.Sprintf("plot_%d", id)` for clarity and no practical ID limit.
 
 ### Minor (nice-to-have)
 

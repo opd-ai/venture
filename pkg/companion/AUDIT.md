@@ -12,11 +12,11 @@
 |----------|-------|
 | CRITICAL BUG | 1 (RESOLVED) |
 | FUNCTIONAL MISMATCH | 2 (2 RESOLVED) |
-| EDGE CASE BUG | 3 (1 RESOLVED) |
+| EDGE CASE BUG | 3 (2 RESOLVED) |
 | PERFORMANCE ISSUE | 1 |
 | MISSING FEATURE | 0 |
 
-**Overall Assessment:** The companion learning package is well-structured with good test coverage. The critical bug in skill learning has been resolved. Both functional mismatches (GetDominantTrait and AdaptBehaviorToCombatStyle) have also been fixed.
+**Overall Assessment:** The companion learning package is well-structured with good test coverage. The critical bug in skill learning has been resolved. Both functional mismatches (GetDominantTrait and AdaptBehaviorToCombatStyle) and thread safety issues have been fixed.
 
 ---
 
@@ -64,30 +64,11 @@
 
 ### EDGE CASE BUG: No Thread Safety for Concurrent Access
 
-**File:** All source files  
+**File:** manager.go  
 **Severity:** Medium  
-**Description:** The package uses no mutexes, atomic operations, or other synchronization primitives. In a multiplayer game context where companion state may be accessed/modified from multiple goroutines (e.g., game loop + network handlers), this creates data races.
-
-**Expected Behavior:** Per the project's multiplayer support and the race detector test (`go test -race`), concurrent access should be safe.
-
-**Actual Behavior:** While tests pass with `-race`, the package is not designed for concurrent modification. Concurrent calls to `ProcessCombatAction`, `AdjustTrait`, or `AddEvent` on the same companion can cause data races.
-
-**Impact:**
-- Potential crashes or data corruption in multiplayer scenarios
-- Race conditions may only manifest under production load
-
-**Reproduction:**
-1. Create companion
-2. Launch goroutines calling ProcessCombatAction concurrently
-3. Run with `-race` flag to detect issues
-
-**Code Reference:**
-```go
-// No sync.Mutex in any struct definitions
-type Manager struct {
-    companions map[string]*CompanionLearningComponent  // Unsafe for concurrent access
-}
-```
+**Status:** RESOLVED (2025-12-17, commit 3f4718d)  
+**Description:** The Manager struct lacked synchronization primitives, allowing data races on the companions map.  
+**Resolution:** Added sync.RWMutex to Manager struct. AddCompanion, GetCompanion, and RemoveCompanion now use proper locking (Lock/Unlock for writes, RLock/RUnlock for reads).
 
 ---
 

@@ -46,19 +46,9 @@
 
 **2. Inconsistent enum string method coverage**
 - **File:Line:** types.go (RoomType, TileType, Layer)
+- **Status:** RESOLVED (2025-12-17, commit bb63fc5)
 - **Issue:** `Layer` enum (lines 170-179) lacks a `String()` method while `TileType` and `RoomType` have them
-- **Impact:** Inconsistent debugging output, type assertions in logging/error messages
-- **Fix:** Add String() method for Layer type:
-  ```go
-  func (l Layer) String() string {
-      switch l {
-      case LayerGround: return "ground"
-      case LayerWater: return "water"
-      case LayerPlatform: return "platform"
-      default: return "unknown"
-      }
-  }
-  ```
+- **Resolution:** Added String() method for Layer type returning "ground", "water", "platform", or "unknown".
 
 **3. Missing godoc for private structs**
 - **File:Line:** bsp.go:41, composite.go:56, city.go:56,62

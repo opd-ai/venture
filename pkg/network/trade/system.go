@@ -624,7 +624,7 @@ func (s *TradeSystem) validateTradability(items []*item.Item) error {
 func (s *TradeSystem) validateInventorySpace(inventory *engine.InventoryComponent, incomingItems, outgoingItems []*item.Item) error {
 	// Calculate net change in item count and weight
 	netItemChange := len(incomingItems) - len(outgoingItems)
-	
+
 	// Calculate total weight change
 	incomingWeight := 0.0
 	for _, itm := range incomingItems {

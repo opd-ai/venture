@@ -10,7 +10,7 @@ import (
 
 // Config defines migration validation parameters.
 type Config struct {
-	// TargetVersion is the version to migrate to (e.g., "v10.0")
+	// TargetVersion is the version to migrate to (e.g., "1.0.0")
 	TargetVersion string
 	// TestDataPath is the directory containing test save files
 	TestDataPath string
@@ -26,7 +26,7 @@ type Validator struct {
 // NewValidator creates a migration validator with the given configuration.
 func NewValidator(config Config) *Validator {
 	if config.TargetVersion == "" {
-		config.TargetVersion = "v10.0"
+		config.TargetVersion = "1.0.0"
 	}
 	if config.TestDataPath == "" {
 		config.TestDataPath = "testdata/saves/"
@@ -66,10 +66,11 @@ type MigrationResult struct {
 }
 
 // ValidateAll tests migration from all supported versions to target version.
+// Supported versions match pkg/saveload.DefaultMigrator.SupportedVersions().
 func (v *Validator) ValidateAll() (*ValidationResults, error) {
+	// Use the same versions as pkg/saveload.DefaultMigrator.SupportedVersions()
 	supportedVersions := []string{
-		"v1.0", "v2.0", "v3.0", "v4.0", "v5.0",
-		"v6.0", "v7.0", "v8.0", "v9.0",
+		"0.9.0", "0.9.1", "0.9.2", "0.9.3",
 	}
 
 	results := &ValidationResults{
@@ -132,10 +133,10 @@ func (v *Validator) ValidateMigration(source, target string) MigrationResult {
 func (v *Validator) loadSaveFile(path string) (map[string]interface{}, error) {
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// Generate synthetic save data for testing (since actual v1.0 saves may not exist)
+		// Generate synthetic save data for testing (since actual saves may not exist)
 		version := extractVersion(path)
 		if version == "" {
-			version = "v1.0" // Default to v1.0 for synthetic saves with malformed paths
+			version = "0.9.0" // Default to earliest supported version for synthetic saves
 		}
 		return v.generateSyntheticSave(version), nil
 	}
@@ -174,19 +175,22 @@ func (v *Validator) generateSyntheticSave(version string) map[string]interface{}
 }
 
 // extractVersion extracts version from save file path.
-// Returns empty string if the path doesn't match expected format "save_vX.Y.json".
+// Returns empty string if the path doesn't match expected format "save_X.Y.Z.json".
 func extractVersion(path string) string {
 	base := filepath.Base(path)
 	parts := strings.Split(base, "_")
 	if len(parts) >= 2 {
 		versionWithExt := parts[1]
 		version := strings.TrimSuffix(versionWithExt, ".json")
-		// Validate version format starts with 'v' followed by digits
-		if len(version) >= 2 && version[0] == 'v' {
-			return version
+		// Validate version format is semantic (X.Y.Z) or legacy (vX.Y)
+		if len(version) >= 3 {
+			// Accept both "0.9.0" style and legacy "v1.0" style
+			if (version[0] >= '0' && version[0] <= '9') || version[0] == 'v' {
+				return version
+			}
 		}
 	}
-	// Return empty string for malformed paths instead of defaulting to v1.0
+	// Return empty string for malformed paths
 	return ""
 }
 
@@ -212,47 +216,85 @@ func (v *Validator) performMigration(data map[string]interface{}, source, target
 }
 
 // applyMigrationRules applies version-specific data transformations.
+// These mirror the migrations in pkg/saveload.DefaultMigrator.registerDefaultHooks().
 func (v *Validator) applyMigrationRules(data map[string]interface{}, source, target string) error {
-	// Add missing fields from newer versions with defaults
-	switch target {
-	case "v10.0":
-		v.ensureV10Fields(data)
-	case "v9.0":
-		v.ensureV9Fields(data)
-	case "v8.0":
-		v.ensureV8Fields(data)
+	// Apply source-version-specific migrations (matching pkg/saveload patterns)
+	switch source {
+	case "0.9.0", "0.9.1":
+		// 0.9.0 and 0.9.1 need TrustScores and ReputationScores initialized
+		v.ensureTrustAndReputationFields(data)
+	case "0.9.2":
+		// 0.9.2 needs TrustScores initialized
+		v.ensureTrustFields(data)
+	case "0.9.3":
+		// 0.9.3 - minimal changes, close to 1.0.0
 	}
+
+	// Apply default migrations that apply to all versions
+	v.ensureRequiredFields(data)
 
 	return nil
 }
 
-// ensureV10Fields adds v10.0-specific fields if missing.
-func (v *Validator) ensureV10Fields(data map[string]interface{}) {
-	// v10.0 adds stability metrics and audit flags
-	if _, exists := data["audit_flags"]; !exists {
-		data["audit_flags"] = map[string]bool{
-			"determinism_validated":  true,
-			"visual_regression_test": true,
+// ensureTrustAndReputationFields adds trust and reputation fields if missing.
+// Mirrors pkg/saveload migration hooks for 0.9.0 and 0.9.1.
+func (v *Validator) ensureTrustAndReputationFields(data map[string]interface{}) {
+	if player, ok := data["player"].(map[string]interface{}); ok {
+		if _, exists := player["trust_scores"]; !exists {
+			player["trust_scores"] = map[string]interface{}{}
+		}
+		if _, exists := player["reputation_scores"]; !exists {
+			player["reputation_scores"] = map[string]interface{}{}
 		}
 	}
 }
 
-// ensureV9Fields adds v9.0-specific fields if missing.
-func (v *Validator) ensureV9Fields(data map[string]interface{}) {
-	// v9.0 adds performance metrics
-	if _, exists := data["performance"]; !exists {
-		data["performance"] = map[string]float64{
-			"avg_fps":     60.0,
-			"peak_memory": 100 * 1024 * 1024, // 100MB
+// ensureTrustFields adds trust fields if missing.
+// Mirrors pkg/saveload migration hook for 0.9.2.
+func (v *Validator) ensureTrustFields(data map[string]interface{}) {
+	if player, ok := data["player"].(map[string]interface{}); ok {
+		if _, exists := player["trust_scores"]; !exists {
+			player["trust_scores"] = map[string]interface{}{}
 		}
 	}
 }
 
-// ensureV8Fields adds v8.0-specific fields if missing.
-func (v *Validator) ensureV8Fields(data map[string]interface{}) {
-	// v8.0 adds content expansion fields
-	if _, exists := data["content_version"]; !exists {
-		data["content_version"] = "8.0"
+// ensureRequiredFields adds fields common to all migrations.
+// Mirrors pkg/saveload.DefaultMigrator.applyDefaultMigrations().
+func (v *Validator) ensureRequiredFields(data map[string]interface{}) {
+	// Ensure player exists with required nested fields
+	if _, exists := data["player"]; !exists {
+		data["player"] = map[string]interface{}{
+			"items": []interface{}{},
+		}
+	} else if player, ok := data["player"].(map[string]interface{}); ok {
+		if _, exists := player["items"]; !exists {
+			player["items"] = []interface{}{}
+		}
+	}
+
+	// Ensure world exists with required nested fields
+	if _, exists := data["world"]; !exists {
+		data["world"] = map[string]interface{}{
+			"modified_entities": []interface{}{},
+		}
+	} else if world, ok := data["world"].(map[string]interface{}); ok {
+		if _, exists := world["modified_entities"]; !exists {
+			world["modified_entities"] = []interface{}{}
+		}
+	}
+
+	// Ensure settings exists with defaults
+	if _, exists := data["settings"]; !exists {
+		data["settings"] = map[string]interface{}{
+			"screen_width":  800,
+			"screen_height": 600,
+			"vsync":         true,
+			"master_volume": 1.0,
+			"music_volume":  0.7,
+			"sfx_volume":    0.8,
+			"key_bindings":  map[string]interface{}{},
+		}
 	}
 }
 

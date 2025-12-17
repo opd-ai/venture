@@ -6,7 +6,7 @@ import (
 
 func TestValidator_NewValidator(t *testing.T) {
 	config := Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  true,
 	}
@@ -15,39 +15,39 @@ func TestValidator_NewValidator(t *testing.T) {
 	if validator == nil {
 		t.Fatal("expected validator instance, got nil")
 	}
-	if validator.config.TargetVersion != "v10.0" {
-		t.Errorf("expected target version v10.0, got %s", validator.config.TargetVersion)
+	if validator.config.TargetVersion != "1.0.0" {
+		t.Errorf("expected target version 1.0.0, got %s", validator.config.TargetVersion)
 	}
 }
 
 func TestValidator_Defaults(t *testing.T) {
 	validator := NewValidator(Config{})
 
-	if validator.config.TargetVersion != "v10.0" {
-		t.Errorf("expected default target version v10.0, got %s", validator.config.TargetVersion)
+	if validator.config.TargetVersion != "1.0.0" {
+		t.Errorf("expected default target version 1.0.0, got %s", validator.config.TargetVersion)
 	}
 	if validator.config.TestDataPath != "testdata/saves/" {
 		t.Errorf("expected default test data path, got %s", validator.config.TestDataPath)
 	}
 }
 
-func TestValidator_ValidateMigration_V1ToV10(t *testing.T) {
+func TestValidator_ValidateMigration_090To100(t *testing.T) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  true,
 	})
 
-	result := validator.ValidateMigration("v1.0", "v10.0")
+	result := validator.ValidateMigration("0.9.0", "1.0.0")
 
 	if !result.Passed {
 		t.Errorf("expected migration to pass, got error: %s", result.Error)
 	}
-	if result.SourceVersion != "v1.0" {
-		t.Errorf("expected source version v1.0, got %s", result.SourceVersion)
+	if result.SourceVersion != "0.9.0" {
+		t.Errorf("expected source version 0.9.0, got %s", result.SourceVersion)
 	}
-	if result.TargetVersion != "v10.0" {
-		t.Errorf("expected target version v10.0, got %s", result.TargetVersion)
+	if result.TargetVersion != "1.0.0" {
+		t.Errorf("expected target version 1.0.0, got %s", result.TargetVersion)
 	}
 	if result.MigrationTime == 0 {
 		t.Error("expected non-zero migration time")
@@ -57,14 +57,14 @@ func TestValidator_ValidateMigration_V1ToV10(t *testing.T) {
 	}
 }
 
-func TestValidator_ValidateMigration_V5ToV10(t *testing.T) {
+func TestValidator_ValidateMigration_092To100(t *testing.T) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  true,
 	})
 
-	result := validator.ValidateMigration("v5.0", "v10.0")
+	result := validator.ValidateMigration("0.9.2", "1.0.0")
 
 	if !result.Passed {
 		t.Errorf("expected migration to pass, got error: %s", result.Error)
@@ -74,19 +74,19 @@ func TestValidator_ValidateMigration_V5ToV10(t *testing.T) {
 	}
 }
 
-func TestValidator_ValidateMigration_V9ToV10(t *testing.T) {
+func TestValidator_ValidateMigration_093To100(t *testing.T) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  true,
 	})
 
-	result := validator.ValidateMigration("v9.0", "v10.0")
+	result := validator.ValidateMigration("0.9.3", "1.0.0")
 
 	if !result.Passed {
 		t.Errorf("expected migration to pass, got error: %s", result.Error)
 	}
-	// v9.0 to v10.0 should preserve all components
+	// 0.9.3 to 1.0.0 should preserve all components
 	if len(result.ComponentsPreserved) < 3 {
 		t.Errorf("expected at least 3 components, got %d", len(result.ComponentsPreserved))
 	}
@@ -94,7 +94,7 @@ func TestValidator_ValidateMigration_V9ToV10(t *testing.T) {
 
 func TestValidator_ValidateAll(t *testing.T) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  true,
 	})
@@ -104,8 +104,8 @@ func TestValidator_ValidateAll(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if results.TotalCount != 9 { // v1.0 through v9.0
-		t.Errorf("expected 9 migrations, got %d", results.TotalCount)
+	if results.TotalCount != 4 { // 0.9.0 through 0.9.3
+		t.Errorf("expected 4 migrations, got %d", results.TotalCount)
 	}
 
 	// All migrations should pass with synthetic data
@@ -126,11 +126,11 @@ func TestValidator_ValidateAll(t *testing.T) {
 func TestValidator_GenerateSyntheticSave(t *testing.T) {
 	validator := NewValidator(Config{})
 
-	save := validator.generateSyntheticSave("v1.0")
+	save := validator.generateSyntheticSave("0.9.0")
 
 	// Verify required fields
-	if version, ok := save["version"].(string); !ok || version != "v1.0" {
-		t.Error("expected version field v1.0")
+	if version, ok := save["version"].(string); !ok || version != "0.9.0" {
+		t.Error("expected version field 0.9.0")
 	}
 	if _, ok := save["player"]; !ok {
 		t.Error("expected player field")
@@ -143,41 +143,52 @@ func TestValidator_GenerateSyntheticSave(t *testing.T) {
 	}
 }
 
-func TestValidator_ApplyMigrationRules_V10(t *testing.T) {
+func TestValidator_ApplyMigrationRules_090(t *testing.T) {
 	validator := NewValidator(Config{})
 
 	data := map[string]interface{}{
-		"version": "v1.0",
+		"version": "0.9.0",
 		"player":  map[string]interface{}{"level": 10},
 	}
 
-	err := validator.applyMigrationRules(data, "v1.0", "v10.0")
+	err := validator.applyMigrationRules(data, "0.9.0", "1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Verify v10.0 fields were added
-	if _, exists := data["audit_flags"]; !exists {
-		t.Error("expected audit_flags to be added for v10.0")
+	// Verify trust and reputation fields were added (matching pkg/saveload migrations)
+	player, ok := data["player"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected player to be a map")
+	}
+	if _, exists := player["trust_scores"]; !exists {
+		t.Error("expected trust_scores to be added for 0.9.0 migration")
+	}
+	if _, exists := player["reputation_scores"]; !exists {
+		t.Error("expected reputation_scores to be added for 0.9.0 migration")
 	}
 }
 
-func TestValidator_ApplyMigrationRules_V9(t *testing.T) {
+func TestValidator_ApplyMigrationRules_092(t *testing.T) {
 	validator := NewValidator(Config{})
 
 	data := map[string]interface{}{
-		"version": "v1.0",
+		"version": "0.9.2",
 		"player":  map[string]interface{}{"level": 10},
 	}
 
-	err := validator.applyMigrationRules(data, "v1.0", "v9.0")
+	err := validator.applyMigrationRules(data, "0.9.2", "1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Verify v9.0 fields were added
-	if _, exists := data["performance"]; !exists {
-		t.Error("expected performance to be added for v9.0")
+	// Verify trust fields were added (matching pkg/saveload migrations)
+	player, ok := data["player"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected player to be a map")
+	}
+	if _, exists := player["trust_scores"]; !exists {
+		t.Error("expected trust_scores to be added for 0.9.2 migration")
 	}
 }
 
@@ -186,12 +197,12 @@ func TestValidator_ValidateData(t *testing.T) {
 
 	// Valid data
 	validData := map[string]interface{}{
-		"version": "v10.0",
+		"version": "1.0.0",
 		"player":  map[string]interface{}{"level": 10},
 		"world":   map[string]interface{}{"seed": 12345},
 	}
 
-	components, err := validator.validateData(validData, "v10.0")
+	components, err := validator.validateData(validData, "1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -201,24 +212,24 @@ func TestValidator_ValidateData(t *testing.T) {
 
 	// Missing required field
 	invalidData := map[string]interface{}{
-		"version": "v10.0",
+		"version": "1.0.0",
 		"player":  map[string]interface{}{"level": 10},
 		// Missing "world"
 	}
 
-	_, err = validator.validateData(invalidData, "v10.0")
+	_, err = validator.validateData(invalidData, "1.0.0")
 	if err == nil {
 		t.Error("expected error for missing required field")
 	}
 
 	// Version mismatch
 	mismatchData := map[string]interface{}{
-		"version": "v9.0",
+		"version": "0.9.3",
 		"player":  map[string]interface{}{"level": 10},
 		"world":   map[string]interface{}{"seed": 12345},
 	}
 
-	_, err = validator.validateData(mismatchData, "v10.0")
+	_, err = validator.validateData(mismatchData, "1.0.0")
 	if err == nil {
 		t.Error("expected error for version mismatch")
 	}
@@ -231,7 +242,7 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 
 	// Create save with optional components
 	saveData := map[string]interface{}{
-		"version":    "v5.0",
+		"version":    "0.9.2",
 		"player":     map[string]interface{}{"level": 20},
 		"world":      map[string]interface{}{"seed": 12345},
 		"inventory":  []interface{}{},
@@ -240,12 +251,12 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 		"vehicles":   []interface{}{},
 	}
 
-	migratedData, _, err := validator.performMigration(saveData, "v5.0", "v10.0")
+	migratedData, _, err := validator.performMigration(saveData, "0.9.2", "1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	components, err := validator.validateData(migratedData, "v10.0")
+	components, err := validator.validateData(migratedData, "1.0.0")
 	if err != nil {
 		t.Fatalf("validation error: %v", err)
 	}
@@ -268,20 +279,20 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 
 func BenchmarkValidator_ValidateMigration(b *testing.B) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  false, // Skip validation for speed
 	})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		validator.ValidateMigration("v1.0", "v10.0")
+		validator.ValidateMigration("0.9.0", "1.0.0")
 	}
 }
 
 func BenchmarkValidator_ValidateAll(b *testing.B) {
 	validator := NewValidator(Config{
-		TargetVersion: "v10.0",
+		TargetVersion: "1.0.0",
 		TestDataPath:  "testdata/",
 		ValidateData:  false,
 	})

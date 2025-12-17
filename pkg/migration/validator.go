@@ -133,7 +133,11 @@ func (v *Validator) loadSaveFile(path string) (map[string]interface{}, error) {
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Generate synthetic save data for testing (since actual v1.0 saves may not exist)
-		return v.generateSyntheticSave(extractVersion(path)), nil
+		version := extractVersion(path)
+		if version == "" {
+			version = "v1.0" // Default to v1.0 for synthetic saves with malformed paths
+		}
+		return v.generateSyntheticSave(version), nil
 	}
 
 	data, err := os.ReadFile(path)
@@ -170,14 +174,20 @@ func (v *Validator) generateSyntheticSave(version string) map[string]interface{}
 }
 
 // extractVersion extracts version from save file path.
+// Returns empty string if the path doesn't match expected format "save_vX.Y.json".
 func extractVersion(path string) string {
 	base := filepath.Base(path)
 	parts := strings.Split(base, "_")
 	if len(parts) >= 2 {
 		versionWithExt := parts[1]
-		return strings.TrimSuffix(versionWithExt, ".json")
+		version := strings.TrimSuffix(versionWithExt, ".json")
+		// Validate version format starts with 'v' followed by digits
+		if len(version) >= 2 && version[0] == 'v' {
+			return version
+		}
 	}
-	return "v1.0"
+	// Return empty string for malformed paths instead of defaulting to v1.0
+	return ""
 }
 
 // performMigration applies version-specific migration logic.
@@ -253,8 +263,15 @@ func (v *Validator) validateData(data map[string]interface{}, targetVersion stri
 	// Check required fields
 	requiredFields := []string{"version", "player", "world"}
 	for _, field := range requiredFields {
-		if _, exists := data[field]; !exists {
+		val, exists := data[field]
+		if !exists {
 			return nil, fmt.Errorf("missing required field: %s", field)
+		}
+		// Validate nested field types - player and world should be maps
+		if field == "player" || field == "world" {
+			if _, isMap := val.(map[string]interface{}); !isMap {
+				return nil, fmt.Errorf("field %s must be an object, got %T", field, val)
+			}
 		}
 		preservedComponents = append(preservedComponents, field)
 	}

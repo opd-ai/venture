@@ -51,29 +51,8 @@ None identified.
 - **Location:** `manager.go:258, 263, 268`
 - **Issue:** Error returns from `GetClassDefinition()` and `GetPrestigeClassDefinition()` are intentionally ignored with blank identifier `_`. While these class IDs come from validated player data, unchecked errors could mask data corruption issues.
 - **Impact:** Silent failures if player data becomes corrupted (e.g., invalid ClassID stored)
-- **Code:**
-```go
-// Line 258
-primaryDef, _ := GetClassDefinition(player.PrimaryClass)
-total = total.Add(primaryDef.BaseStats)
-
-// Line 263
-secondaryDef, _ := GetClassDefinition(player.SecondaryClass)
-total = total.Add(secondaryDef.BaseStats.Scale(0.5))
-
-// Line 268
-prestigeDef, _ := GetPrestigeClassDefinition(player.PrestigeClass)
-total = total.Add(prestigeDef.BaseStats)
-```
-- **Fix:** Either check and return errors, or add defensive validation comments explaining why ignoring is safe (validated during SetPrimaryClass/SetSecondaryClass/SetPrestigeClass).
-- **Recommended approach:**
-```go
-primaryDef, err := GetClassDefinition(player.PrimaryClass)
-if err != nil {
-    return StatBonuses{}, fmt.Errorf("invalid primary class %s: %w", player.PrimaryClass, err)
-}
-total = total.Add(primaryDef.BaseStats)
-```
+- **Status:** RESOLVED (2025-12-17, commit 61c233d)
+- **Resolution:** Added proper error handling that returns wrapped errors with context for all three class definition lookups.
 
 **2. Missing package documentation on non-doc.go files**
 - **Location:** `talents.go:1`, `registry.go:1`, `manager.go:1`

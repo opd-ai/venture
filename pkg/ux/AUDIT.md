@@ -12,56 +12,26 @@
 | Category | Count |
 |----------|-------|
 | CRITICAL BUG | 0 |
-| FUNCTIONAL MISMATCH | 1 |
+| FUNCTIONAL MISMATCH | 1 (RESOLVED) |
 | MISSING FEATURE | 0 |
 | EDGE CASE BUG | 2 (2 RESOLVED) |
 | PERFORMANCE ISSUE | 0 |
 
-**Overall Assessment:** The package is well-implemented with 96.5% test coverage. Division by zero bugs have been fixed. One functional mismatch (non-deterministic RNG initialization) remains as a design consideration.
+**Overall Assessment:** The package is well-implemented with 96.5% test coverage. All identified issues have been resolved.
 
 ---
 
 ## DETAILED FINDINGS
 
-~~~~
 ### FUNCTIONAL MISMATCH: Non-Deterministic RNG Initialization
 
-**File:** validator.go:19, validator.go:27  
+**File:** validator.go, types.go  
 **Severity:** Medium  
-**Description:** The `NewJourneyValidator()` and `NewJourneyValidatorWithConfig()` functions use `time.Now().UnixNano()` to seed the random number generator. This violates the project's deterministic generation guidelines which state that all procedural generation must use seed-based deterministic algorithms and never use `time.Now()`.
+**Status:** RESOLVED (2025-12-17, commit 3708624)  
+**Description:** The validator constructors used `time.Now().UnixNano()` for RNG seeding, making journey validation non-reproducible.  
+**Resolution:** Added `Seed` field to ValidationConfig (default 0 uses time-based seed for backward compatibility). When Seed is non-zero, it's used for deterministic RNG initialization, enabling reproducible testing.
 
-**Expected Behavior:** According to doc.go (lines 63-65): "Deterministic AI 'players' follow the journey steps" and the project guidelines specify "Always use `rand.New(rand.NewSource(seed))` to ensure same seed = same output."
-
-**Actual Behavior:** The RNG is seeded with `time.Now().UnixNano()`, producing different results on each invocation, making journey validation non-reproducible.
-
-**Impact:** 
-- Journey validation results cannot be reproduced for debugging
-- Test flakiness potential when validation is run at different times
-- Violates project-wide deterministic generation requirement
-
-**Reproduction:** Run `NewJourneyValidator().ValidateJourney(JourneyNewPlayer)` twice in quick succession - the internal PlayerID and WorldSeed will differ.
-
-**Code Reference:**
-```go
-func NewJourneyValidator() *JourneyValidator {
-    return &JourneyValidator{
-        config: DefaultValidationConfig(),
-        rng:    rand.New(rand.NewSource(time.Now().UnixNano())), // Non-deterministic
-    }
-}
-
-func NewJourneyValidatorWithConfig(config ValidationConfig) *JourneyValidator {
-    return &JourneyValidator{
-        config: config,
-        rng:    rand.New(rand.NewSource(time.Now().UnixNano())), // Non-deterministic
-    }
-}
-```
-
-**Suggested Approach:** Add an optional seed parameter to the validator constructors, or add a `WithSeed(seed int64)` method to enable deterministic testing.
-~~~~
-
-~~~~
+---
 ### EDGE CASE BUG: Division by Zero in GetSummary with Empty Results
 
 **File:** validator.go:205-240  

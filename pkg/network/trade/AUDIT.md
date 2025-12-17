@@ -12,9 +12,9 @@
 | CRITICAL BUG | 2 (2 RESOLVED) |
 | FUNCTIONAL MISMATCH | 2 (1 RESOLVED) |
 | MISSING FEATURE | 2 |
-| EDGE CASE BUG | 2 |
+| EDGE CASE BUG | 2 (2 RESOLVED) |
 | PERFORMANCE ISSUE | 0 |
-| **Total Issues** | **8 (3 RESOLVED)** |
+| **Total Issues** | **8 (5 RESOLVED)** |
 
 ---
 
@@ -147,68 +147,23 @@ const (
 
 ### EDGE CASE BUG: Inventory Space Validation Ignores Outgoing Items
 
-**File:** system.go:610-629  
+**File:** system.go:615-634  
 **Severity:** Medium  
+**Status:** RESOLVED (2025-12-17, commit b8b4e3e)  
 **Description:** The `validateInventorySpace` function checks if the inventory can accommodate incoming items, but does not account for items that will be removed during the same trade. This causes valid trades to be incorrectly rejected.
 
-**Expected Behavior:** When validating if proposer can receive requestedItems, the validation should account for offeredItems being removed (freeing slots and weight capacity).
-
-**Actual Behavior:** Validation assumes items are only being added, not that outgoing items free up space. A player with 99/100 slots trading 10 items for 10 items would fail validation despite the trade being valid.
-
-**Impact:** Valid trades are incorrectly rejected when inventory is near capacity, even though the trade would net-neutral or net-positive in terms of space.
-
-**Reproduction:**
-1. Create player with inventory: 95/100 slots, 900/1000 weight
-2. Player offers 10 items (100 weight), requests 5 items (50 weight)
-3. Trade is rejected due to "insufficient inventory slots" despite net gain of 5 slots
-
-**Code Reference:**
-```go
-func (s *TradeSystem) validateInventorySpace(inventory *engine.InventoryComponent, items []*item.Item) error {
-    // BUG: Does not subtract items being traded away
-    if len(inventory.Items)+len(items) > inventory.MaxItems {
-        return fmt.Errorf("insufficient inventory slots...")
-    }
-    // Same issue for weight validation
-}
-```
+**Resolution:** Modified `validateInventorySpace` to accept both incoming and outgoing items. The function now calculates net change in slot count and weight, properly accounting for items being removed during the trade.
 
 ---
 
 ### EDGE CASE BUG: Duplicate Item IDs Allow Double-Trading Same Item
 
-**File:** system.go:556-572  
+**File:** system.go:561-585  
 **Severity:** Medium  
+**Status:** RESOLVED (2025-12-17, commit ef94692)  
 **Description:** The `resolveItems` function does not check for duplicate item IDs in the input list. If a malicious client sends the same item ID multiple times (e.g., `["sword1", "sword1"]`), the function returns the same item pointer twice. When `removeItemsFromInventory` then processes this list, the first removal succeeds but the second fails (item already removed), triggering an unnecessary rollback.
 
-**Expected Behavior:** The function should detect and reject duplicate item IDs, or deduplicate the input.
-
-**Actual Behavior:** Duplicate IDs result in the same `*item.Item` pointer appearing multiple times in the returned slice, causing the second removal attempt to fail.
-
-**Impact:** Potential for failed trades and confusing error messages; could be exploited to trigger rollback scenarios.
-
-**Reproduction:**
-1. Call ProposeTrade with offeredItemIDs containing duplicates: `["item1", "item1"]`
-2. Trade proposal succeeds (validation passes)
-3. AcceptTrade attempts to remove "item1" twice
-4. Second removal fails, triggering (broken) rollback
-
-**Code Reference:**
-```go
-func (s *TradeSystem) resolveItems(inventory *engine.InventoryComponent, itemIDs []string) ([]*item.Item, error) {
-    var items []*item.Item
-    for _, id := range itemIDs {
-        // No duplicate check - same ID can be added multiple times
-        for _, itm := range inventory.Items {
-            if itm.ID == id {
-                items = append(items, itm)  // Same pointer added twice for duplicate IDs
-                break
-            }
-        }
-    }
-    return items, nil
-}
-```
+**Resolution:** Added duplicate ID detection at the start of `resolveItems` using a map to track seen IDs. Function now returns an error immediately if any duplicate ID is detected.
 
 ---
 

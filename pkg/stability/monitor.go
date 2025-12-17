@@ -67,17 +67,29 @@ type Report struct {
 	FailureReason string
 }
 
+// FPSProvider is an interface for providing FPS metrics from the renderer.
+type FPSProvider interface {
+	// CurrentFPS returns the current frames per second
+	CurrentFPS() float64
+}
+
+// defaultFPSProvider returns a constant 60 FPS for testing when no provider is set.
+type defaultFPSProvider struct{}
+
+func (d *defaultFPSProvider) CurrentFPS() float64 { return 60.0 }
+
 // Monitor performs continuous stability monitoring.
 type Monitor struct {
-	config   Config
-	mu       sync.RWMutex
-	checks   []HealthCheck
-	peakMem  uint64
-	sumMem   uint64
-	sumFPS   float64
-	fpsCount int
-	running  bool
-	cancel   context.CancelFunc
+	config      Config
+	mu          sync.RWMutex
+	checks      []HealthCheck
+	peakMem     uint64
+	sumMem      uint64
+	sumFPS      float64
+	fpsCount    int
+	running     bool
+	cancel      context.CancelFunc
+	fpsProvider FPSProvider
 }
 
 // HealthCheck represents a single health check snapshot.
@@ -105,9 +117,18 @@ func NewMonitor(config Config) *Monitor {
 	}
 
 	return &Monitor{
-		config: config,
-		checks: make([]HealthCheck, 0, 8640), // 72 hours at 30s intervals
+		config:      config,
+		checks:      make([]HealthCheck, 0, 8640), // 72 hours at 30s intervals
+		fpsProvider: &defaultFPSProvider{},
 	}
+}
+
+// SetFPSProvider sets the FPS provider for obtaining actual FPS metrics.
+// If not set, the monitor defaults to 60 FPS for testing purposes.
+func (m *Monitor) SetFPSProvider(provider FPSProvider) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.fpsProvider = provider
 }
 
 // Run executes the stability test for the configured duration.
@@ -167,7 +188,7 @@ func (m *Monitor) performHealthCheck() error {
 	check := HealthCheck{
 		Timestamp:  time.Now(),
 		Memory:     getCurrentMemory(),
-		FPS:        60.0, // In real implementation, would get actual FPS from renderer
+		FPS:        m.fpsProvider.CurrentFPS(),
 		Goroutines: runtime.NumGoroutine(),
 	}
 

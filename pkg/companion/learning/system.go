@@ -248,6 +248,15 @@ func ShouldLearnNewSkill(comp *CompanionLearningComponent, skillName string) boo
 		return dominant == TraitCurious || dominant == TraitPractical
 	case SkillStealth:
 		return dominant == TraitCautious || dominant == TraitIndependent
+	case SkillHealing:
+		// Healing aligns with compassionate and protective personalities
+		return dominant == TraitPacifist || dominant == TraitLoyal
+	case SkillMagic:
+		// Magic aligns with curious and independent learners
+		return dominant == TraitCurious || dominant == TraitIndependent
+	case SkillCrafting:
+		// Crafting aligns with practical and curious personalities
+		return dominant == TraitPractical || dominant == TraitCurious
 	default:
 		return true
 	}

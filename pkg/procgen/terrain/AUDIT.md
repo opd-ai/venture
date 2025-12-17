@@ -40,17 +40,9 @@
 
 **1. Variable shadowing in composite generator**
 - **File:Line:** composite.go:152-153
+- **Status:** RESOLVED (2025-12-17, commit e1b75ed)
 - **Issue:** Declaration of `width, height, biomeCount, transitionWidth` at line 152 is immediately shadowed by redeclaration with validation at line 153, making line 152 redundant
-- **Code:**
-  ```go
-  width, height, biomeCount, transitionWidth := g.extractParameters(params)
-  width, height, biomeCount, transitionWidth, err := g.validateAndClampParameters(width, height, biomeCount, transitionWidth)
-  ```
-- **Fix:** Remove line 152 and inline extraction into validation call, or use separate intermediate variables
-  ```go
-  w, h, bc, tw := g.extractParameters(params)
-  width, height, biomeCount, transitionWidth, err := g.validateAndClampParameters(w, h, bc, tw)
-  ```
+- **Resolution:** Renamed first assignment to use `raw*` prefix (rawWidth, rawHeight, etc.) to avoid shadowing.
 
 **2. Inconsistent enum string method coverage**
 - **File:Line:** types.go (RoomType, TileType, Layer)

@@ -261,13 +261,20 @@ func (sh *SpatialHash) Insert(index int, x, y float64) {
 
 // QueryRadius returns all particle indices within radius of position.
 func (sh *SpatialHash) QueryRadius(x, y, radius float64) []int {
+	return sh.QueryRadiusInto(x, y, radius, nil)
+}
+
+// QueryRadiusInto appends particle indices within radius to the provided buffer.
+// If buffer is nil, a new slice is allocated. Returns the updated buffer.
+// This method enables zero-allocation queries when the buffer is pre-allocated and reused.
+func (sh *SpatialHash) QueryRadiusInto(x, y, radius float64, buffer []int) []int {
 	// Determine which cells to check
 	minCellX := int(math.Floor((x - radius) / sh.CellSize))
 	maxCellX := int(math.Floor((x + radius) / sh.CellSize))
 	minCellY := int(math.Floor((y - radius) / sh.CellSize))
 	maxCellY := int(math.Floor((y + radius) / sh.CellSize))
 
-	var result []int
+	result := buffer
 
 	// Check all nearby cells
 	for cellX := minCellX; cellX <= maxCellX; cellX++ {
@@ -284,10 +291,18 @@ func (sh *SpatialHash) QueryRadius(x, y, radius float64) []int {
 
 // GetNeighbors returns particles within radius, with actual distance check.
 func (sh *SpatialHash) GetNeighbors(particles []PhysicsParticle, x, y, radius float64) []int {
-	candidates := sh.QueryRadius(x, y, radius)
+	return sh.GetNeighborsInto(particles, x, y, radius, nil, nil)
+}
+
+// GetNeighborsInto appends particles within radius to the neighbors buffer.
+// candidateBuffer is used internally for QueryRadius results to avoid allocation.
+// Both buffers should be reset ([:0]) before calling for zero-allocation operation.
+// Returns the updated neighbors buffer.
+func (sh *SpatialHash) GetNeighborsInto(particles []PhysicsParticle, x, y, radius float64, candidateBuffer, neighborsBuffer []int) []int {
+	candidates := sh.QueryRadiusInto(x, y, radius, candidateBuffer)
 	radiusSq := radius * radius
 
-	var neighbors []int
+	neighbors := neighborsBuffer
 	for _, idx := range candidates {
 		if idx >= len(particles) {
 			continue
@@ -315,9 +330,17 @@ func buildSpatialHashForSPH(particles []PhysicsParticle, smoothingRadius float64
 
 // computeDensityAndPressure calculates density and pressure for all particles.
 func computeDensityAndPressure(particles []PhysicsParticle, hash *SpatialHash, config SPHConfig) {
+	// Pre-allocate buffers for zero-allocation neighbor queries
+	// Typical neighbor count is ~20-50 particles within smoothing radius
+	candidateBuffer := make([]int, 0, 64)
+	neighborsBuffer := make([]int, 0, 64)
+
 	for i := range particles {
 		p := &particles[i]
-		neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.SmoothingRadius)
+		// Reset buffers to reuse capacity
+		candidateBuffer = candidateBuffer[:0]
+		neighborsBuffer = neighborsBuffer[:0]
+		neighbors := hash.GetNeighborsInto(particles, p.X, p.Y, config.SmoothingRadius, candidateBuffer, neighborsBuffer)
 
 		density := 0.0
 		for _, nIdx := range neighbors {
@@ -403,9 +426,16 @@ func UpdateSPH(particles []PhysicsParticle, config SPHConfig, deltaTime float64)
 	hash := buildSpatialHashForSPH(particles, config.SmoothingRadius)
 	computeDensityAndPressure(particles, hash, config)
 
+	// Pre-allocate buffers for zero-allocation neighbor queries
+	candidateBuffer := make([]int, 0, 64)
+	neighborsBuffer := make([]int, 0, 64)
+
 	for i := range particles {
 		p := &particles[i]
-		neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.SmoothingRadius)
+		// Reset buffers to reuse capacity
+		candidateBuffer = candidateBuffer[:0]
+		neighborsBuffer = neighborsBuffer[:0]
+		neighbors := hash.GetNeighborsInto(particles, p.X, p.Y, config.SmoothingRadius, candidateBuffer, neighborsBuffer)
 
 		pressureForceX, pressureForceY, viscosityForceX, viscosityForceY := computePressureAndViscosityForces(p, particles, neighbors, i, config)
 
@@ -511,11 +541,12 @@ func consumeFuel(p *PhysicsParticle, config FireConfig, deltaTime float64) {
 }
 
 // transferHeatToNeighbors distributes heat to nearby particles.
+// candidateBuffer and neighborsBuffer should be pre-allocated and reset before calling.
 func transferHeatToNeighbors(p *PhysicsParticle, allParticles []PhysicsParticle, config FireConfig,
-	deltaTime float64, hash *SpatialHash, index int,
-) {
+	deltaTime float64, hash *SpatialHash, index int, candidateBuffer, neighborsBuffer []int,
+) []int {
 	if p.Heat > config.MinActiveHeat {
-		neighbors := hash.GetNeighbors(allParticles, p.X, p.Y, config.HeatTransferRadius)
+		neighbors := hash.GetNeighborsInto(allParticles, p.X, p.Y, config.HeatTransferRadius, candidateBuffer, neighborsBuffer)
 		for _, nIdx := range neighbors {
 			if nIdx == index {
 				continue
@@ -524,7 +555,9 @@ func transferHeatToNeighbors(p *PhysicsParticle, allParticles []PhysicsParticle,
 			heatTransfer := p.Heat * config.HeatTransferRate * deltaTime
 			n.Heat += heatTransfer * config.HeatTransferFraction
 		}
+		return neighbors
 	}
+	return neighborsBuffer
 }
 
 // applyBuoyancy makes heated particles rise.

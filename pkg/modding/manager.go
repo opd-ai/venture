@@ -6,11 +6,18 @@ import (
 	"time"
 )
 
+// handlerWithOwner associates an event handler with the mod that registered it.
+// This enables proper cleanup when a mod is removed.
+type handlerWithOwner struct {
+	modID   string
+	handler EventHandler
+}
+
 // Manager manages loaded mods and applies their rules to the game.
 type Manager struct {
 	mods           map[string]*Mod
 	activeRules    map[string]interface{}
-	eventHandlers  map[string][]EventHandler
+	eventHandlers  map[string][]handlerWithOwner
 	mu             sync.RWMutex
 	config         ModConfig
 	ruleChangeLog  []RuleContext
@@ -23,7 +30,7 @@ func NewManager() *Manager {
 	return &Manager{
 		mods:          make(map[string]*Mod),
 		activeRules:   make(map[string]interface{}),
-		eventHandlers: make(map[string][]EventHandler),
+		eventHandlers: make(map[string][]handlerWithOwner),
 		config:        DefaultConfig(),
 		ruleChangeLog: make([]RuleContext, 0, 1000),
 	}
@@ -34,7 +41,7 @@ func NewManagerWithConfig(config ModConfig) *Manager {
 	return &Manager{
 		mods:          make(map[string]*Mod),
 		activeRules:   make(map[string]interface{}),
-		eventHandlers: make(map[string][]EventHandler),
+		eventHandlers: make(map[string][]handlerWithOwner),
 		config:        config,
 		ruleChangeLog: make([]RuleContext, 0, 1000),
 	}
@@ -70,10 +77,13 @@ func (m *Manager) AddMod(mod *Mod) error {
 	// Store mod
 	m.mods[mod.ID] = mod
 
-	// Register event handlers if present
+	// Register event handlers with ownership tracking
 	if len(mod.EventHandlers) > 0 {
 		for eventType, handler := range mod.EventHandlers {
-			m.eventHandlers[eventType] = append(m.eventHandlers[eventType], handler)
+			m.eventHandlers[eventType] = append(m.eventHandlers[eventType], handlerWithOwner{
+				modID:   mod.ID,
+				handler: handler,
+			})
 		}
 	}
 
@@ -100,18 +110,19 @@ func (m *Manager) RemoveMod(modID string) error {
 		}
 	}
 
-	// Remove event handlers
-	if len(mod.EventHandlers) > 0 {
-		for eventType := range mod.EventHandlers {
-			// Remove this mod's handlers from the event type
-			handlers := m.eventHandlers[eventType]
-			for i := len(handlers) - 1; i >= 0; i-- {
-				// Note: This is a simplified removal; in production you'd need
-				// a way to identify which handler belongs to which mod
-				if len(handlers) > 0 {
-					m.eventHandlers[eventType] = append(handlers[:i], handlers[i+1:]...)
-				}
+	// Remove event handlers belonging to this mod only
+	for eventType := range mod.EventHandlers {
+		handlers := m.eventHandlers[eventType]
+		filtered := handlers[:0]
+		for _, h := range handlers {
+			if h.modID != modID {
+				filtered = append(filtered, h)
 			}
+		}
+		if len(filtered) > 0 {
+			m.eventHandlers[eventType] = filtered
+		} else {
+			delete(m.eventHandlers, eventType)
 		}
 	}
 
@@ -265,8 +276,8 @@ func (m *Manager) TriggerEvent(event Event) error {
 	}
 
 	// Call handlers (in order of registration)
-	for _, handler := range handlers {
-		if err := handler(event); err != nil {
+	for _, h := range handlers {
+		if err := h.handler(event); err != nil {
 			return fmt.Errorf("event handler failed for %s: %w", event.Type, err)
 		}
 	}

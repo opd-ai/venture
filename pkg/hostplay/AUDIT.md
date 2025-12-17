@@ -41,30 +41,9 @@ Minor issues identified: one mathematical error in vector normalization, missing
 
 #### 1. Incorrect Vector Normalization in Movement Processing
 **File:** `input_handler.go:98-102`  
-**Issue:** Vector normalization uses `1.0 / (dx² + dy²)` instead of `1.0 / sqrt(dx² + dy²)`, causing incorrect velocity magnitudes. This results in movement speed inversely proportional to the square of distance rather than normalized to unit length.
-
-**Current code:**
-```go
-magnitude := dx*dx + dy*dy
-if magnitude > 0 {
-    magnitude = 1.0 / magnitude // inverse for normalization
-    velocity.VX = dx * magnitude * h.moveSpeed
-    velocity.VY = dy * magnitude * h.moveSpeed
-}
-```
-
-**Fix:**
-```go
-import "math"
-
-magnitude := math.Sqrt(dx*dx + dy*dy)
-if magnitude > 0 {
-    velocity.VX = (dx / magnitude) * h.moveSpeed
-    velocity.VY = (dy / magnitude) * h.moveSpeed
-}
-```
-
-**Impact:** Diagonal movement and variable-length input vectors will have incorrect speeds. For example, input (0.5, 0.5) will result in 4x faster movement than input (1.0, 1.0), when both should normalize to the same speed.
+**Status:** RESOLVED (2025-12-17, commit 20edf2e)  
+**Issue:** Vector normalization was using `1.0 / (dx² + dy²)` instead of `1.0 / sqrt(dx² + dy²)`, causing incorrect velocity magnitudes. This resulted in movement speed inversely proportional to the square of distance rather than normalized to unit length.  
+**Resolution:** Changed to use `math.Sqrt(magnitudeSq)` for proper unit vector normalization. The fix computes the inverse of the actual magnitude (not squared) before multiplying with direction components.
 
 ### Minor (nice-to-have)
 

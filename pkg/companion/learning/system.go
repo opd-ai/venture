@@ -99,11 +99,17 @@ func (s *CompanionLearningSystem) GetManager() *Manager {
 
 // RecordSkillUse marks a skill as recently used.
 func RecordSkillUse(comp *CompanionLearningComponent, skillName string) {
+	if comp == nil || comp.LastSkillUse == nil {
+		return
+	}
 	comp.LastSkillUse[skillName] = time.Now()
 }
 
 // GetSkillBonus calculates a bonus multiplier based on skill level.
 func GetSkillBonus(comp *CompanionLearningComponent, skillName string) float64 {
+	if comp == nil || comp.SkillTree == nil {
+		return 1.0
+	}
 	skill, ok := comp.SkillTree.Skills[skillName]
 	if !ok {
 		return 1.0
@@ -114,6 +120,9 @@ func GetSkillBonus(comp *CompanionLearningComponent, skillName string) float64 {
 
 // GetPersonalityInfluence returns how much a trait influences behavior.
 func GetPersonalityInfluence(comp *CompanionLearningComponent, trait PersonalityTrait) float64 {
+	if comp == nil || comp.Personality == nil {
+		return 0.5
+	}
 	value, ok := comp.Personality.Traits[trait]
 	if !ok {
 		return 0.5
@@ -123,6 +132,9 @@ func GetPersonalityInfluence(comp *CompanionLearningComponent, trait Personality
 
 // IsSkillMaxed checks if a skill is at maximum level.
 func IsSkillMaxed(comp *CompanionLearningComponent, skillName string) bool {
+	if comp == nil || comp.SkillTree == nil {
+		return false
+	}
 	skill, ok := comp.SkillTree.Skills[skillName]
 	if !ok {
 		return false
@@ -132,6 +144,9 @@ func IsSkillMaxed(comp *CompanionLearningComponent, skillName string) bool {
 
 // GetTotalSkillPoints returns total skill points spent.
 func GetTotalSkillPoints(comp *CompanionLearningComponent) int {
+	if comp == nil || comp.SkillTree == nil {
+		return 0
+	}
 	total := 0
 	for _, node := range comp.SkillTree.SkillTree {
 		if node.Skill.Level > 0 {
@@ -143,6 +158,9 @@ func GetTotalSkillPoints(comp *CompanionLearningComponent) int {
 
 // GetSkillsByType returns all skills of a specific type.
 func GetSkillsByType(comp *CompanionLearningComponent, skillType SkillType) []*Skill {
+	if comp == nil || comp.SkillTree == nil {
+		return nil
+	}
 	var skills []*Skill
 	for _, skill := range comp.SkillTree.Skills {
 		if skill.Type == skillType {
@@ -154,6 +172,9 @@ func GetSkillsByType(comp *CompanionLearningComponent, skillType SkillType) []*S
 
 // GetMemorySummary generates a summary of companion memories.
 func GetMemorySummary(comp *CompanionLearningComponent) string {
+	if comp == nil || comp.Memory == nil {
+		return "No companion data"
+	}
 	if len(comp.Memory.Events) == 0 {
 		return "No memories yet"
 	}
@@ -173,6 +194,9 @@ func GetMemorySummary(comp *CompanionLearningComponent) string {
 
 // CalculateLearningProgress returns overall learning progress (0.0-1.0).
 func CalculateLearningProgress(comp *CompanionLearningComponent) float64 {
+	if comp == nil || comp.SkillTree == nil {
+		return 0.0
+	}
 	totalSkills := len(comp.SkillTree.Skills)
 	if totalSkills == 0 {
 		return 0.0
@@ -195,6 +219,9 @@ func CalculateLearningProgress(comp *CompanionLearningComponent) float64 {
 
 // ShouldLearnNewSkill determines if companion should auto-learn a skill.
 func ShouldLearnNewSkill(comp *CompanionLearningComponent, skillName string) bool {
+	if comp == nil || comp.SkillTree == nil || comp.Personality == nil {
+		return false
+	}
 	if comp.SkillTree.AvailablePoints <= 0 {
 		return false
 	}

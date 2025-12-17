@@ -1,7 +1,9 @@
 package housing
 
 import (
+	"fmt"
 	"image/color"
+	"sync/atomic"
 	"time"
 )
 
@@ -163,11 +165,12 @@ func (p *Plot) Overlaps(other *Plot) bool {
 	return !noOverlap
 }
 
-var plotIDCounter int
+// plotIDCounter uses atomic operations for thread-safe ID generation
+var plotIDCounter atomic.Int64
 
 func generatePlotID() string {
-	plotIDCounter++
-	return "plot_" + string(rune('0'+plotIDCounter%10)) + string(rune('0'+(plotIDCounter/10)%10)) + string(rune('0'+(plotIDCounter/100)%10))
+	id := plotIDCounter.Add(1)
+	return fmt.Sprintf("plot_%d", id)
 }
 
 // House represents a player-owned building with interior and exterior data.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -364,9 +365,10 @@ func (gh *GuildHall) MarshalJSON() ([]byte, error) {
 	})
 }
 
-var guildHallIDCounter int
+// guildHallIDCounter uses atomic operations for thread-safe ID generation
+var guildHallIDCounter atomic.Int64
 
 func generateGuildHallID() string {
-	guildHallIDCounter++
-	return fmt.Sprintf("guildhall_%03d", guildHallIDCounter)
+	id := guildHallIDCounter.Add(1)
+	return fmt.Sprintf("guildhall_%d", id)
 }

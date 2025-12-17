@@ -412,6 +412,24 @@ func generateNodeDescription(rng *rand.Rand, genreID string, nodeType NodeType) 
 			NodeTypeConsequence: {"The results are in.", "The experiment concludes."},
 			NodeTypeEnding:      {"Mission parameters achieved.", "Final log entry recorded."},
 		},
+		"horror": {
+			NodeTypeChoice:      {"Something lurks in the shadows, waiting for your decision.", "The whispers grow louder, demanding a choice."},
+			NodeTypeEvent:       {"A chill runs down your spine as something stirs.", "The darkness seems to breathe around you."},
+			NodeTypeConsequence: {"The nightmare takes shape from your actions.", "What you have done cannot be undone."},
+			NodeTypeEnding:      {"The horror ends, but the scars remain.", "Silence falls at last."},
+		},
+		"cyberpunk": {
+			NodeTypeChoice:      {"The neural interface flickers with options.", "Corps or streets—time to pick a side."},
+			NodeTypeEvent:       {"A data spike floods your implants.", "The grid pulses with encrypted signals."},
+			NodeTypeConsequence: {"The net remembers everything.", "Your digital footprint echoes across the grid."},
+			NodeTypeEnding:      {"Connection terminated.", "You jack out one final time."},
+		},
+		"postapoc": {
+			NodeTypeChoice:      {"Resources are scarce. Every choice counts.", "The wasteland offers no easy answers."},
+			NodeTypeEvent:       {"Dust storms reveal something long buried.", "A caravan appears on the horizon."},
+			NodeTypeConsequence: {"The fallout from your actions spreads.", "Survivors will remember this day."},
+			NodeTypeEnding:      {"The wasteland claims another story.", "A new dawn breaks over the ruins."},
+		},
 	}
 
 	genreTemplates := templates[genreID]

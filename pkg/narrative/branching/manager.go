@@ -267,14 +267,13 @@ func (m *Manager) CheckConsequences(playerID, arcID string) []string {
 	triggered := []string{}
 
 	for consequenceID, consequence := range m.graph.Consequences {
-		// Skip already triggered - safely check if triggered_consequences exists
+		// Skip already triggered - safely handle both []string and []interface{} from JSON
 		alreadyTriggered := false
-		if triggeredList, ok := progress.Variables["triggered_consequences"].([]string); ok {
-			for _, id := range triggeredList {
-				if id == consequenceID {
-					alreadyTriggered = true
-					break
-				}
+		triggeredList := toStringSlice(progress.Variables["triggered_consequences"])
+		for _, id := range triggeredList {
+			if id == consequenceID {
+				alreadyTriggered = true
+				break
 			}
 		}
 		if alreadyTriggered {
@@ -290,14 +289,12 @@ func (m *Manager) CheckConsequences(playerID, arcID string) []string {
 
 			triggered = append(triggered, consequenceID)
 
-			// Track triggered consequence
-			if progress.Variables["triggered_consequences"] == nil {
-				progress.Variables["triggered_consequences"] = []string{}
+			// Track triggered consequence - convert to []string if needed
+			existingList := toStringSlice(progress.Variables["triggered_consequences"])
+			if existingList == nil {
+				existingList = []string{}
 			}
-			progress.Variables["triggered_consequences"] = append(
-				progress.Variables["triggered_consequences"].([]string),
-				consequenceID,
-			)
+			progress.Variables["triggered_consequences"] = append(existingList, consequenceID)
 		}
 	}
 
@@ -423,16 +420,34 @@ func (m *Manager) evaluateConditions(progress *PlayerProgress, conditions map[st
 			return false
 		}
 
-		// Type-specific comparison
+		// Type-specific comparison with JSON type coercion support
 		switch exp := expected.(type) {
 		case int:
-			act, ok := actual.(int)
-			if !ok || act != exp {
+			// Handle both int and float64 (from JSON unmarshaling)
+			switch act := actual.(type) {
+			case int:
+				if act != exp {
+					return false
+				}
+			case float64:
+				if int(act) != exp {
+					return false
+				}
+			default:
 				return false
 			}
 		case float64:
-			act, ok := actual.(float64)
-			if !ok || act != exp {
+			// Handle both float64 and int for JSON unmarshaling compatibility
+			switch act := actual.(type) {
+			case float64:
+				if act != exp {
+					return false
+				}
+			case int:
+				if float64(act) != exp {
+					return false
+				}
+			default:
 				return false
 			}
 		case bool:
@@ -449,4 +464,30 @@ func (m *Manager) evaluateConditions(progress *PlayerProgress, conditions map[st
 	}
 
 	return true
+}
+
+// toStringSlice safely converts interface{} to []string, handling both
+// []string (direct assignment) and []interface{} (from JSON deserialization).
+func toStringSlice(v interface{}) []string {
+	if v == nil {
+		return nil
+	}
+
+	// Handle direct []string type
+	if ss, ok := v.([]string); ok {
+		return ss
+	}
+
+	// Handle []interface{} from JSON deserialization
+	if si, ok := v.([]interface{}); ok {
+		result := make([]string, 0, len(si))
+		for _, item := range si {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	}
+
+	return nil
 }

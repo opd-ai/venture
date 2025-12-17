@@ -2,6 +2,7 @@ package hostplay
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/sirupsen/logrus"
@@ -95,11 +96,12 @@ func (h *InputHandler) processMovement(entity *engine.Entity, data map[string]in
 	}
 
 	// Normalize and apply speed
-	magnitude := dx*dx + dy*dy
-	if magnitude > 0 {
-		magnitude = 1.0 / magnitude // inverse for normalization
-		velocity.VX = dx * magnitude * h.moveSpeed
-		velocity.VY = dy * magnitude * h.moveSpeed
+	magnitudeSq := dx*dx + dy*dy
+	if magnitudeSq > 0 {
+		// Use sqrt for proper unit vector normalization
+		invMagnitude := 1.0 / math.Sqrt(magnitudeSq)
+		velocity.VX = dx * invMagnitude * h.moveSpeed
+		velocity.VY = dy * invMagnitude * h.moveSpeed
 	} else {
 		velocity.VX = 0
 		velocity.VY = 0

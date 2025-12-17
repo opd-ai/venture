@@ -154,8 +154,6 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 }
 
 // Start begins listening for client connections.
-// BUG FIX: Phase 6 - Start() mutex deadlock risk
-// Resolution: Use defer to ensure unlock even if Listen fails
 func (s *TCPServer) Start() error {
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
@@ -181,8 +179,7 @@ func (s *TCPServer) Start() error {
 	return nil
 }
 
-// BUG FIX: Phase 6 - Stop() mutex handling with wait
-// Resolution: Properly unlock before waiting to prevent deadlock
+// Stop stops the server and closes all connections.
 func (s *TCPServer) Stop() error {
 	s.clientsMu.Lock()
 

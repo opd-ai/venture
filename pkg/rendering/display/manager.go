@@ -69,5 +69,5 @@ func (m *Manager) GetLastSwitchDuration() time.Duration {
 
 // SupportedResolutions returns list of all supported resolutions.
 func (m *Manager) SupportedResolutions() []Resolution {
-	return StandardResolutions
+	return GetStandardResolutions()
 }

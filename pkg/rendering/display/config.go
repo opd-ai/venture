@@ -9,12 +9,21 @@ type Resolution struct {
 	Name   string
 }
 
-// StandardResolutions defines supported resolutions per Phase 43.
-var StandardResolutions = []Resolution{
+// standardResolutions defines supported resolutions per Phase 43.
+// Use GetStandardResolutions() to access a safe copy of this slice.
+var standardResolutions = []Resolution{
 	{Width: 1280, Height: 720, Name: "HD"},
 	{Width: 1920, Height: 1080, Name: "Full HD"},
 	{Width: 2560, Height: 1440, Name: "QHD"},
 	{Width: 3840, Height: 2160, Name: "4K UHD"},
+}
+
+// GetStandardResolutions returns a copy of the standard resolutions.
+// This prevents external code from mutating the package-level slice.
+func GetStandardResolutions() []Resolution {
+	result := make([]Resolution, len(standardResolutions))
+	copy(result, standardResolutions)
+	return result
 }
 
 // Config holds display configuration.
@@ -47,7 +56,7 @@ func NewConfigDefault() *Config {
 
 // IsValidResolution checks if resolution is supported.
 func IsValidResolution(width, height int) bool {
-	for _, res := range StandardResolutions {
+	for _, res := range standardResolutions {
 		if res.Width == width && res.Height == height {
 			return true
 		}
@@ -57,7 +66,7 @@ func IsValidResolution(width, height int) bool {
 
 // GetResolutionByName returns resolution by name.
 func GetResolutionByName(name string) (Resolution, bool) {
-	for _, res := range StandardResolutions {
+	for _, res := range standardResolutions {
 		if res.Name == name {
 			return res, true
 		}
@@ -67,7 +76,7 @@ func GetResolutionByName(name string) (Resolution, bool) {
 
 // GetResolution returns current resolution as Resolution struct.
 func (c *Config) GetResolution() Resolution {
-	for _, res := range StandardResolutions {
+	for _, res := range standardResolutions {
 		if res.Width == c.Width && res.Height == c.Height {
 			return res
 		}
@@ -82,5 +91,5 @@ func (c *Config) AspectRatio() float64 {
 
 // BaseResolution returns baseline 1920x1080 for scaling calculations.
 func BaseResolution() Resolution {
-	return StandardResolutions[1] // 1920x1080
+	return standardResolutions[1] // 1920x1080
 }

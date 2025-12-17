@@ -157,8 +157,9 @@ func TestBaseResolution(t *testing.T) {
 }
 
 func TestStandardResolutionsCount(t *testing.T) {
-	if len(StandardResolutions) != 4 {
-		t.Errorf("StandardResolutions count = %d, want 4", len(StandardResolutions))
+	resolutions := GetStandardResolutions()
+	if len(resolutions) != 4 {
+		t.Errorf("GetStandardResolutions() count = %d, want 4", len(resolutions))
 	}
 }
 
@@ -174,10 +175,11 @@ func TestStandardResolutionsOrder(t *testing.T) {
 		{3840, 2160, "4K UHD"},
 	}
 
+	resolutions := GetStandardResolutions()
 	for i, exp := range expected {
-		res := StandardResolutions[i]
+		res := resolutions[i]
 		if res.Width != exp.width || res.Height != exp.height || res.Name != exp.name {
-			t.Errorf("StandardResolutions[%d] = %+v, want %+v", i, res, exp)
+			t.Errorf("GetStandardResolutions()[%d] = %+v, want %+v", i, res, exp)
 		}
 	}
 }

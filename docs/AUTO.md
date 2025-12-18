@@ -1,7 +1,7 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 4 phases: (1) **complete item toward V4.0, V5.0, V6.0, V7.0, V8.0 → 8.0 readiness**, (2) align docs, (3) roadmap, (4) refactor. Use xvfb for tests. Ref: ROADMAP_V4.md, ROADMAP_V5.md, ROADMAP_V6.md, ROADMAP_V7.md, ROADMAP_V8.md, AUDIT.md files. Work sequentially where possible, with v4 features first, v5 features next, v6 features, then v7, then v8 last. Pick a reasonable workload if the roadmap is too long.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 4 phases: (1) **complete item toward V8.0 → 8.0 readiness**, (2) align docs, (3) roadmap, (4) refactor. Use xvfb for tests. Ref: ROADMAP_V8.md, AUDIT.md files. Work sequentially where possible. Pick a reasonable workload if the roadmap is too long.
 
 **Target: 8.0 Readiness (V4→V5→V6→V7→V8):**
 V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-games, reputation, adaptive music, storytelling | V5 (6 phases): Chat, NPC dialog, image sharing, item trading, social systems | V6 (P31-36): Persistent worlds, federation, cross-server travel, post office, politics/trade, territory control | V7 (P37-42): Advanced AI, dynamic events, procedural quests 2.0, economy simulation, seasonal content, world history | V8 (P43-48): Modding API, user content, workshop integration, scripting system, plugin architecture, community features
@@ -24,7 +24,7 @@ V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-g
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 3: ROADMAP
-**Priority:** (1) ROADMAP_V4.md → V5.md → V6.md → V7.md → V8.md (sequential), (2) TODOs, (3) EXECUTE.md.
+**Priority:** (1) ROADMAP_V8.md, (2) TODOs, (3) EXECUTE.md.
 ECS changes, loop integration, test (≥65%, determinism), verify. Skip if done.
 Complete V4 (Phases 21-30), then V5 (social), then V6 (Phases 31-36), then V7 (Phases 37-42), then V8 (Phases 43-48) for 8.0 readiness.
 

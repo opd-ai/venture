@@ -894,8 +894,9 @@ manager.AllocateTalent("player123", talentID)
 ### Package: `github.com/opd-ai/venture/pkg/modding`
 
 ```go
-manager := modding.NewLoader()
-mod, _ := manager.LoadFromFile("mods/hardcore-mode.json")
+loader := modding.NewLoader()
+mod, _ := loader.LoadFromFile("mods/hardcore-mode.json")
+manager := modding.NewManager()
 manager.AddMod(mod)
 manager.ApplyRules(world)
 ```

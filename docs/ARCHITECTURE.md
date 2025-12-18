@@ -447,11 +447,7 @@ For implementation details, development workflows, testing strategies, and code 
 - **[Development Guide](DEVELOPMENT.md)** - Complete development workflow and best practices
 - **[Contributing Guide](CONTRIBUTING.md)** - Contribution guidelines and code standards
 - **[Technical Specification](TECHNICAL_SPEC.md)** - Detailed technical architecture
-- **[V4.0 Roadmap](ROADMAP_V4.md)** - Gameplay expansion phases 21-30
-- **[V5.0 Roadmap](ROADMAP_V5.md)** - Social systems phases 31-36
-- **[V6.0 Roadmap](ROADMAP_V6.md)** - Federation phases 37-42
-- **[V7.0 Roadmap](ROADMAP_V7.md)** - Visual improvements phases 43-48
-- **[V8.0 Roadmap](ROADMAP_V8.md)** - Housing & guilds phases 49-54
+- **[Roadmap V8](ROADMAP_V8.md)** - Housing & guilds phases 49-54
 
 ---
 

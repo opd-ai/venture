@@ -514,7 +514,6 @@ See `examples/` directory for standalone demos:
 - [Performance Guide](PERFORMANCE.md) - Optimization
 - [Testing Guide](TESTING.md) - Test infrastructure
 - [Social Systems Guide](SOCIAL_SYSTEMS.md) - Chat, NPC dialog, trading (v5.0)
-- [Migration Guide v5.0](MIGRATION_V5.md) - Upgrade from v4.0
 
 **Repository:** https://github.com/opd-ai/venture
 
@@ -902,7 +901,7 @@ manager.AddMod(mod)
 manager.ApplyRules(world)
 ```
 
-See [MODDING_GUIDE.md](MODDING_GUIDE.md) for complete API.
+**Note:** The modding system provides JSON-based server modifications while maintaining the zero-asset constraint. See the codebase in `pkg/modding/` for implementation details.
 
 ---
 

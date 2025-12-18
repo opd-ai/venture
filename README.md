@@ -103,7 +103,7 @@ go build -o venture-server ./cmd/server
 - `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
 - `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
 
-**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), G (guild), ESC (close menus/pause), F5 (save), F9 (load), H or F1 (help)
+**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), G (gallery), ESC (close menus/pause), F5 (save), F9 (load), H or F1 (help)
 
 **All In-Game Menus** (Dual-Exit: Each menu's key OR ESC):
 
@@ -115,14 +115,13 @@ go build -o venture-server ./cmd/server
 | Quest Log | J | Track active and completed quests, story arcs |
 | World Map | M | View explored areas and navigation |
 | Crafting | R | Brew potions, enchant items, craft equipment |
-| Guild | G | Guild management, territory, members (V8.0) |
+| Gallery | G | View shared images and screenshots (V8.0) |
 | Shop | F | Buy/sell items (when near merchant) |
 | Help | H or F1 | View controls and game information |
 
 **Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 
 **Gameplay Systems:**
-- **Guilds (G key, V8.0)**: Create guilds, manage members, control territory, guild halls
 - **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
 - **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
 - **Skills & Progression**: Unlock abilities, multi-class at level 20, prestige classes at level 30, talent trees

@@ -1,7 +1,7 @@
 # Controls Reference
 
 **Venture - Fully Procedural Multiplayer Action-RPG**  
-**Version:** 10.0  
+**Version:** 8.0  
 **Last Updated:** December 2025
 
 This document provides comprehensive keyboard, mouse, and gamepad control mappings for all platforms.

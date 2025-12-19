@@ -262,7 +262,7 @@ First launch will prompt for feature opt-in:
 - `README.md`: V8.0 feature highlights
 - `ARCHITECTURE.md`: New package documentation
 - `API_REFERENCE.md`: V8.0 APIs and components
-- `ROADMAP_V8.md`: Phase completion tracking
+- `CHANGELOG.md`: Complete version history
 
 ## Community & Support
 
@@ -299,4 +299,4 @@ Please use GitHub issues with:
 
 This release represents the culmination of V4-V8 roadmaps, establishing a foundation for infinite procedural content, deep social interactions, and physically realistic gameplay. All while maintaining the core principle: **zero external assets, infinite possibilities**.
 
-*For detailed technical specifications, see `docs/ROADMAP_V8.md` and `docs/ARCHITECTURE.md`.*
+*For detailed technical specifications, see `docs/CHANGELOG.md` and `docs/ARCHITECTURE.md`.*

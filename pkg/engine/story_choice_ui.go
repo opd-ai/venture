@@ -161,13 +161,7 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 			if mouseX >= panelX && mouseX <= panelX+400 &&
 				mouseY >= choiceY-12 && mouseY <= choiceY+12 {
 				ui.selectedChoice = i
-				// Confirm selection
-				choice := ui.pendingChoices[ui.selectedChoice]
-				if err := ui.narrativeSystem.MakeChoice(ui.playerEntity, choice.ID); err == nil {
-					ui.visible = false
-					ui.currentNode = nil
-					ui.pendingChoices = nil
-				}
+				ui.confirmCurrentChoice()
 				return true
 			}
 		}
@@ -192,14 +186,7 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 
 	// Confirm choice - Platform parity fix: Use edge-triggered detection
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		if ui.selectedChoice >= 0 && ui.selectedChoice < len(ui.pendingChoices) {
-			choice := ui.pendingChoices[ui.selectedChoice]
-			if err := ui.narrativeSystem.MakeChoice(ui.playerEntity, choice.ID); err == nil {
-				ui.visible = false
-				ui.currentNode = nil
-				ui.pendingChoices = nil
-			}
-		}
+		ui.confirmCurrentChoice()
 		return true
 	}
 
@@ -211,6 +198,19 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 	}
 
 	return false
+}
+
+// confirmCurrentChoice confirms the currently selected choice.
+// Platform parity fix: Extracted to reduce code duplication between touch and keyboard input.
+func (ui *StoryChoiceUI) confirmCurrentChoice() {
+	if ui.selectedChoice >= 0 && ui.selectedChoice < len(ui.pendingChoices) {
+		choice := ui.pendingChoices[ui.selectedChoice]
+		if err := ui.narrativeSystem.MakeChoice(ui.playerEntity, choice.ID); err == nil {
+			ui.visible = false
+			ui.currentNode = nil
+			ui.pendingChoices = nil
+		}
+	}
 }
 
 // IsVisible returns whether the UI is currently visible.

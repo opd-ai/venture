@@ -10,6 +10,13 @@ import (
 	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
+// Gallery UI layout constants for maintainability
+const (
+	galleryCloseButtonWidth  = 40
+	galleryCloseButtonHeight = 30
+	galleryCloseButtonMargin = 10
+)
+
 // GalleryUI represents an image gallery viewer interface.
 // Phase 49.4
 type GalleryUI struct {
@@ -114,9 +121,10 @@ func (g *GalleryUI) Update() bool {
 		midX := g.X + g.Width/2
 		if mouseY >= g.Y && mouseY <= g.Y+g.Height {
 			// Close button area (top right corner)
-			closeX := g.X + g.Width - 50
-			closeY := g.Y + 10
-			if mouseX >= closeX && mouseX <= closeX+40 && mouseY >= closeY && mouseY <= closeY+30 {
+			closeX := g.X + g.Width - galleryCloseButtonWidth - galleryCloseButtonMargin
+			closeY := g.Y + galleryCloseButtonMargin
+			if mouseX >= closeX && mouseX <= closeX+galleryCloseButtonWidth &&
+				mouseY >= closeY && mouseY <= closeY+galleryCloseButtonHeight {
 				g.Hide()
 				return true
 			}

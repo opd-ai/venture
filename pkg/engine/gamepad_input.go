@@ -32,9 +32,9 @@ type GamepadInputHandler struct {
 
 	// Platform parity fix: UI shortcut button mappings for complete accessibility
 	// L3 (left stick click): Character, R3 (right stick click): Skills
+	// Note: Quest Log accessible via Menu -> Quest Log submenu (no dedicated button)
 	ButtonCharacter ebiten.StandardGamepadButton
 	ButtonSkills    ebiten.StandardGamepadButton
-	ButtonQuestLog  ebiten.StandardGamepadButton // LT+Start for quest log
 
 	// Spell casting using D-pad + trigger combinations
 	ButtonSpell1 ebiten.StandardGamepadButton

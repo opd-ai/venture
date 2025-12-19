@@ -283,6 +283,10 @@ type InputSystem struct {
 	mobileEnabled   bool
 	useTouchInput   bool // Auto-detected or manually set
 
+	// Platform parity fix: Gamepad input support for Desktop and WASM
+	gamepadHandler *GamepadInputHandler
+	useGamepadInput bool // Auto-detected when gamepad is connected
+
 	// Mouse state tracking for delta calculation (BUG-010 fix)
 	lastMouseX, lastMouseY   int
 	mouseDeltaX, mouseDeltaY int
@@ -323,6 +327,7 @@ type InputSystem struct {
 }
 
 // NewInputSystem creates a new input system with default key bindings.
+// Platform parity fix: Now initializes gamepad handler for Desktop/WASM support.
 func NewInputSystem() *InputSystem {
 	return &InputSystem{
 		MoveSpeed: 100.0, // pixels per second
@@ -369,6 +374,10 @@ func NewInputSystem() *InputSystem {
 		touchHandler:  mobile.NewTouchInputHandler(),
 		mobileEnabled: mobile.IsMobilePlatform(),
 		useTouchInput: mobile.IsTouchCapable(), // Enable touch input for mobile AND WASM
+
+		// Platform parity fix: Gamepad input support for Desktop and WASM
+		gamepadHandler:  NewGamepadInputHandler(),
+		useGamepadInput: false, // Will be auto-enabled when gamepad is detected
 
 		// Priority 2.3: Initialize game state to exploring
 		currentState: StateExploring,
@@ -420,13 +429,16 @@ func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 }
 
 // Update processes input for all entities with input components.
+// Platform parity fix: Now processes gamepad input alongside keyboard/mouse/touch.
 func (s *InputSystem) Update(entities []*Entity, deltaTime float64) {
 	s.ensureTouchInputInitialized()
+	s.updateGamepadState()
 	s.updateMousePosition()
 	s.updateTouchInput()
 	s.handleEscapeKey()
 	s.handleQuickSaveLoad()
 	s.handleUIShortcuts()
+	s.handleGamepadUIShortcuts()
 	s.handleExpressionHotkeys(entities)
 	s.handleInteractionKeys()
 
@@ -444,6 +456,16 @@ func (s *InputSystem) ensureTouchInputInitialized() {
 	}
 }
 
+// updateGamepadState updates gamepad connection and auto-enables gamepad input.
+// Platform parity fix: Enables seamless controller support on Desktop and WASM.
+func (s *InputSystem) updateGamepadState() {
+	if s.gamepadHandler != nil {
+		s.gamepadHandler.Update()
+		// Auto-enable gamepad input when controller is connected
+		s.useGamepadInput = s.gamepadHandler.HasGamepad()
+	}
+}
+
 // updateMousePosition tracks mouse position for delta calculation.
 func (s *InputSystem) updateMousePosition() {
 	currentMouseX, currentMouseY := ebiten.CursorPosition()
@@ -454,6 +476,7 @@ func (s *InputSystem) updateMousePosition() {
 }
 
 // updateTouchInput processes touch handler and virtual controls updates.
+// Platform parity fix: Now handles all extended virtual control buttons.
 func (s *InputSystem) updateTouchInput() {
 	if s.useTouchInput && s.touchHandler != nil {
 		s.touchHandler.Update()
@@ -461,8 +484,20 @@ func (s *InputSystem) updateTouchInput() {
 		if s.virtualControls != nil {
 			s.virtualControls.Update()
 
+			// Handle menu button
 			if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
 				s.onMenuToggle()
+			}
+
+			// Platform parity fix: Handle extended virtual control buttons
+			if s.virtualControls.IsInventoryPressed() && s.onInventoryOpen != nil {
+				s.onInventoryOpen()
+			}
+			if s.virtualControls.IsTargetPressed() && s.onCycleTargets != nil {
+				s.onCycleTargets()
+			}
+			if s.virtualControls.IsInteractPressed() && s.onInteract != nil {
+				s.onInteract()
 			}
 		}
 	}
@@ -682,6 +717,39 @@ func (s *InputSystem) handlePhaseUIShortcuts() {
 	}
 }
 
+// handleGamepadUIShortcuts processes gamepad button presses for UI actions.
+// Platform parity fix: Enables full UI navigation via gamepad controller.
+func (s *InputSystem) handleGamepadUIShortcuts() {
+	if !s.useGamepadInput || s.gamepadHandler == nil {
+		return
+	}
+
+	// Menu button (Start)
+	if s.gamepadHandler.IsMenuJustPressed() && s.onMenuToggle != nil {
+		s.onMenuToggle()
+	}
+
+	// Inventory button (RB)
+	if s.gamepadHandler.IsInventoryJustPressed() && s.onInventoryOpen != nil {
+		s.onInventoryOpen()
+	}
+
+	// Map button (Back/Select)
+	if s.gamepadHandler.IsMapJustPressed() && s.onMapOpen != nil {
+		s.onMapOpen()
+	}
+
+	// Cycle targets (LB)
+	if s.gamepadHandler.IsCycleTargetJustPressed() && s.onCycleTargets != nil {
+		s.onCycleTargets()
+	}
+
+	// Interact (Y button)
+	if s.gamepadHandler.IsInteractJustPressed() && s.onInteract != nil {
+		s.onInteract()
+	}
+}
+
 // handleExpressionHotkeys processes Shift+number key combinations for player expressions.
 func (s *InputSystem) handleExpressionHotkeys(entities []*Entity) {
 	if s.expressionSystem == nil || !ebiten.IsKeyPressed(ebiten.KeyShift) {
@@ -824,16 +892,27 @@ func (s *InputSystem) detectInputMethod() {
 	}
 }
 
-// updateInputFromSource processes input from either touch or keyboard/mouse.
+// updateInputFromSource processes input from touch, gamepad, or keyboard/mouse.
+// Platform parity fix: Unified input processing from all available sources.
 func (s *InputSystem) updateInputFromSource(input *EbitenInput) {
+	// Priority: Touch > Gamepad > Keyboard/Mouse
 	if s.useTouchInput && s.virtualControls != nil {
 		s.processTouchInput(input)
+	} else if s.useGamepadInput && s.gamepadHandler != nil {
+		s.processGamepadInput(input)
 	} else {
 		s.processKeyboardInput(input)
+	}
+
+	// Platform parity fix: Allow gamepad to supplement keyboard on Desktop
+	// This enables simultaneous keyboard + gamepad usage
+	if !s.useTouchInput && s.useGamepadInput && s.gamepadHandler != nil {
+		s.mergeGamepadInput(input)
 	}
 }
 
 // processTouchInput handles touch input from virtual controls.
+// Platform parity fix: Now processes all extended virtual control buttons.
 func (s *InputSystem) processTouchInput(input *EbitenInput) {
 	moveX, moveY := s.virtualControls.GetMovementInput()
 	input.MoveX = moveX
@@ -841,12 +920,122 @@ func (s *InputSystem) processTouchInput(input *EbitenInput) {
 
 	if s.virtualControls.IsActionPressed() {
 		input.ActionPressed = true
+		input.ActionJustPressed = true
+		input.AnyKeyPressed = true
 	}
 	if s.virtualControls.IsSecondaryPressed() {
 		input.UseItemPressed = true
+		input.UseItemJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// Platform parity fix: Process spell buttons from virtual controls
+	for i := 1; i <= 5; i++ {
+		if s.virtualControls.IsSpellPressed(i) {
+			s.setSpellPressed(input, i)
+			input.AnyKeyPressed = true
+		}
 	}
 
 	s.processTouchMousePosition(input)
+}
+
+// processGamepadInput handles gamepad input for movement and actions.
+// Platform parity fix: Full gamepad support for Desktop and WASM.
+func (s *InputSystem) processGamepadInput(input *EbitenInput) {
+	if !s.currentState.AllowsMovement() {
+		// Still process non-movement input
+		s.processGamepadActionKeys(input)
+		return
+	}
+
+	// Movement from left stick
+	moveX, moveY := s.gamepadHandler.GetMovementInput()
+	input.MoveX = moveX
+	input.MoveY = moveY
+
+	// Process action buttons
+	s.processGamepadActionKeys(input)
+
+	// Process aim from right stick for mouse position
+	aimX, aimY := s.gamepadHandler.GetAimInput()
+	if aimX != 0 || aimY != 0 {
+		// Convert aim direction to screen position relative to center
+		screenW, screenH := ebiten.WindowSize()
+		input.MouseX = screenW/2 + int(aimX*200)
+		input.MouseY = screenH/2 + int(aimY*200)
+	}
+}
+
+// processGamepadActionKeys handles gamepad button presses for combat actions.
+// Platform parity fix: Maps gamepad buttons to action inputs.
+func (s *InputSystem) processGamepadActionKeys(input *EbitenInput) {
+	if !s.currentState.AllowsCombat() {
+		return
+	}
+
+	if s.gamepadHandler.IsAttackJustPressed() {
+		input.ActionPressed = true
+		input.ActionJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	if s.gamepadHandler.IsUseItemJustPressed() {
+		input.UseItemPressed = true
+		input.UseItemJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// D-pad spell casting (slots 1-4)
+	for slot := 1; slot <= 4; slot++ {
+		if s.gamepadHandler.IsSpellJustPressed(slot) {
+			s.setSpellPressed(input, slot)
+			input.AnyKeyPressed = true
+		}
+	}
+
+	// Right trigger for spell 5 (alternative)
+	if s.gamepadHandler.IsRightTriggerPressed() {
+		input.Spell5Pressed = true
+		input.AnyKeyPressed = true
+	}
+}
+
+// mergeGamepadInput merges gamepad input with existing keyboard input.
+// Platform parity fix: Allows simultaneous keyboard + gamepad on Desktop.
+func (s *InputSystem) mergeGamepadInput(input *EbitenInput) {
+	// Only merge if no keyboard movement detected
+	if input.MoveX == 0 && input.MoveY == 0 {
+		moveX, moveY := s.gamepadHandler.GetMovementInput()
+		input.MoveX = moveX
+		input.MoveY = moveY
+	}
+
+	// Merge action buttons (OR logic)
+	if s.gamepadHandler.IsAttackJustPressed() {
+		input.ActionPressed = true
+		input.ActionJustPressed = true
+	}
+	if s.gamepadHandler.IsUseItemJustPressed() {
+		input.UseItemPressed = true
+		input.UseItemJustPressed = true
+	}
+}
+
+// setSpellPressed sets the spell pressed flag for the given slot.
+func (s *InputSystem) setSpellPressed(input *EbitenInput, slot int) {
+	switch slot {
+	case 1:
+		input.Spell1Pressed = true
+	case 2:
+		input.Spell2Pressed = true
+	case 3:
+		input.Spell3Pressed = true
+	case 4:
+		input.Spell4Pressed = true
+	case 5:
+		input.Spell5Pressed = true
+	}
 }
 
 // processTouchMousePosition maps touch position outside controls to mouse position.
@@ -1631,9 +1820,37 @@ func (s *InputSystem) GetTouchHandler() *mobile.TouchInputHandler {
 	return s.touchHandler
 }
 
+// GetGamepadHandler returns the gamepad input handler for advanced gamepad processing.
+// Platform parity fix: Enables external access to gamepad state for custom handling.
+func (s *InputSystem) GetGamepadHandler() *GamepadInputHandler {
+	return s.gamepadHandler
+}
+
+// HasGamepad returns true if a gamepad is connected and active.
+// Platform parity fix: Allows UI to show gamepad-specific prompts.
+func (s *InputSystem) HasGamepad() bool {
+	return s.useGamepadInput && s.gamepadHandler != nil && s.gamepadHandler.HasGamepad()
+}
+
 // SetVirtualControlsVisible controls visibility of virtual controls.
 func (s *InputSystem) SetVirtualControlsVisible(visible bool) {
 	if s.virtualControls != nil {
 		s.virtualControls.SetVisible(visible)
+	}
+}
+
+// SetSpellButtonsVisible controls visibility of spell buttons on virtual controls.
+// Platform parity fix: Allows hiding spell buttons when not needed.
+func (s *InputSystem) SetSpellButtonsVisible(visible bool) {
+	if s.virtualControls != nil {
+		s.virtualControls.SetSpellButtonsVisible(visible)
+	}
+}
+
+// ResizeVirtualControls recalculates virtual control positions for new screen size.
+// Platform parity fix: Handles orientation changes on mobile/tablet devices.
+func (s *InputSystem) ResizeVirtualControls(screenWidth, screenHeight int) {
+	if s.virtualControls != nil {
+		s.virtualControls.Resize(screenWidth, screenHeight)
 	}
 }

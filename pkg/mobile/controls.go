@@ -387,21 +387,38 @@ func (b *VirtualButton) Draw(screen *ebiten.Image) {
 }
 
 // VirtualControlsLayout manages the complete virtual control layout.
+// Platform parity fix: Extended to provide complete action coverage for Mobile/WASM.
+// All game actions available on Desktop are now accessible via virtual controls.
 type VirtualControlsLayout struct {
 	DPad            *VirtualDPad
 	ActionButton    *VirtualButton
 	SecondaryButton *VirtualButton
 	MenuButton      *VirtualButton
 
+	// Platform parity fix: Additional action buttons for complete input coverage
+	// These buttons provide access to actions that are keyboard-only on Desktop
+	SpellButtons    []*VirtualButton // Spell casting buttons (1-5)
+	InventoryButton *VirtualButton   // Quick access to inventory
+	TargetButton    *VirtualButton   // Cycle targets button
+	InteractButton  *VirtualButton   // Interact/Use button (F key equivalent)
+
+	// Extended controls visibility (can be toggled for cleaner UI)
+	ShowSpellButtons bool
+
 	Visible      bool
 	touchHandler *TouchInputHandler
+	screenWidth  int
+	screenHeight int
 }
 
 // NewVirtualControlsLayout creates a complete virtual control layout for a given screen size.
+// Platform parity fix: Now includes all action buttons to ensure complete input coverage
+// for Mobile and WASM platforms matching Desktop keyboard functionality.
 func NewVirtualControlsLayout(screenWidth, screenHeight int) *VirtualControlsLayout {
 	// Calculate positions based on screen size
 	dpadSize := float64(screenHeight) * 0.15
 	buttonSize := float64(screenHeight) * 0.08
+	smallButtonSize := float64(screenHeight) * 0.06
 	margin := float64(screenHeight) * 0.05
 
 	// D-pad on bottom left
@@ -419,17 +436,45 @@ func NewVirtualControlsLayout(screenWidth, screenHeight int) *VirtualControlsLay
 	menuX := float64(screenWidth) - margin - buttonSize
 	menuY := margin + buttonSize
 
+	// Platform parity fix: Inventory button on top right (next to menu)
+	inventoryX := menuX - buttonSize*1.3
+	inventoryY := menuY
+
+	// Platform parity fix: Target cycle button above D-pad
+	targetX := dpadX
+	targetY := dpadY - dpadSize - smallButtonSize - margin*0.5
+
+	// Platform parity fix: Interact button near action buttons
+	interactX := actionX - buttonSize*1.5
+	interactY := actionY
+
+	// Platform parity fix: Spell buttons arranged horizontally above action area
+	spellButtonY := actionY - buttonSize*1.8
+	spellButtons := make([]*VirtualButton, 5)
+	for i := 0; i < 5; i++ {
+		spellX := float64(screenWidth)/2 - smallButtonSize*3 + float64(i)*smallButtonSize*1.3
+		spellButtons[i] = NewVirtualButton(spellX, spellButtonY, smallButtonSize, string(rune('1'+i)))
+	}
+
 	return &VirtualControlsLayout{
 		DPad:            NewVirtualDPad(dpadX, dpadY, dpadSize),
 		ActionButton:    NewVirtualButton(actionX, actionY, buttonSize, "A"),
 		SecondaryButton: NewVirtualButton(secondaryX, secondaryY, buttonSize, "B"),
 		MenuButton:      NewVirtualButton(menuX, menuY, buttonSize*0.7, "☰"),
+		InventoryButton: NewVirtualButton(inventoryX, inventoryY, buttonSize*0.7, "I"),
+		TargetButton:    NewVirtualButton(targetX, targetY, smallButtonSize, "⎯"),
+		InteractButton:  NewVirtualButton(interactX, interactY, smallButtonSize, "F"),
+		SpellButtons:    spellButtons,
+		ShowSpellButtons: true,
 		Visible:         true,
 		touchHandler:    NewTouchInputHandler(),
+		screenWidth:     screenWidth,
+		screenHeight:    screenHeight,
 	}
 }
 
 // Update processes touch input for all virtual controls.
+// Platform parity fix: Now updates all extended controls including spell buttons.
 func (l *VirtualControlsLayout) Update() {
 	if !l.Visible {
 		return
@@ -445,9 +490,30 @@ func (l *VirtualControlsLayout) Update() {
 	l.ActionButton.Update(touches)
 	l.SecondaryButton.Update(touches)
 	l.MenuButton.Update(touches)
+
+	// Platform parity fix: Update extended controls
+	if l.InventoryButton != nil {
+		l.InventoryButton.Update(touches)
+	}
+	if l.TargetButton != nil {
+		l.TargetButton.Update(touches)
+	}
+	if l.InteractButton != nil {
+		l.InteractButton.Update(touches)
+	}
+
+	// Update spell buttons
+	if l.ShowSpellButtons {
+		for _, btn := range l.SpellButtons {
+			if btn != nil {
+				btn.Update(touches)
+			}
+		}
+	}
 }
 
 // Draw renders all virtual controls on screen.
+// Platform parity fix: Now renders all extended controls including spell buttons.
 func (l *VirtualControlsLayout) Draw(screen *ebiten.Image) {
 	if !l.Visible {
 		return
@@ -457,6 +523,26 @@ func (l *VirtualControlsLayout) Draw(screen *ebiten.Image) {
 	l.ActionButton.Draw(screen)
 	l.SecondaryButton.Draw(screen)
 	l.MenuButton.Draw(screen)
+
+	// Platform parity fix: Draw extended controls
+	if l.InventoryButton != nil {
+		l.InventoryButton.Draw(screen)
+	}
+	if l.TargetButton != nil {
+		l.TargetButton.Draw(screen)
+	}
+	if l.InteractButton != nil {
+		l.InteractButton.Draw(screen)
+	}
+
+	// Draw spell buttons
+	if l.ShowSpellButtons {
+		for _, btn := range l.SpellButtons {
+			if btn != nil {
+				btn.Draw(screen)
+			}
+		}
+	}
 }
 
 // GetMovementInput returns normalized movement direction from D-pad.
@@ -482,6 +568,105 @@ func (l *VirtualControlsLayout) IsMenuPressed() bool {
 // SetVisible controls whether virtual controls are shown and active.
 func (l *VirtualControlsLayout) SetVisible(visible bool) {
 	l.Visible = visible
+}
+
+// Platform parity fix: Additional input getter methods for complete action coverage
+
+// IsInventoryPressed returns true when the inventory button is pressed.
+// Platform parity fix: Provides touch equivalent of 'I' key on Desktop.
+func (l *VirtualControlsLayout) IsInventoryPressed() bool {
+	return l.InventoryButton != nil && l.InventoryButton.IsPressed()
+}
+
+// IsTargetPressed returns true when the target cycle button is pressed.
+// Platform parity fix: Provides touch equivalent of 'Tab' key on Desktop.
+func (l *VirtualControlsLayout) IsTargetPressed() bool {
+	return l.TargetButton != nil && l.TargetButton.IsPressed()
+}
+
+// IsInteractPressed returns true when the interact button is pressed.
+// Platform parity fix: Provides touch equivalent of 'F' key on Desktop.
+func (l *VirtualControlsLayout) IsInteractPressed() bool {
+	return l.InteractButton != nil && l.InteractButton.IsPressed()
+}
+
+// IsSpellPressed returns true when the specified spell button (1-5) is pressed.
+// Platform parity fix: Provides touch equivalent of number keys on Desktop.
+func (l *VirtualControlsLayout) IsSpellPressed(slot int) bool {
+	if !l.ShowSpellButtons || slot < 1 || slot > len(l.SpellButtons) {
+		return false
+	}
+	btn := l.SpellButtons[slot-1]
+	return btn != nil && btn.IsPressed()
+}
+
+// SetSpellButtonsVisible controls visibility of spell buttons.
+// Platform parity fix: Allows hiding spell buttons when not in combat.
+func (l *VirtualControlsLayout) SetSpellButtonsVisible(visible bool) {
+	l.ShowSpellButtons = visible
+}
+
+// Resize recalculates control positions for new screen dimensions.
+// Platform parity fix: Handles orientation changes on mobile devices.
+func (l *VirtualControlsLayout) Resize(screenWidth, screenHeight int) {
+	l.screenWidth = screenWidth
+	l.screenHeight = screenHeight
+
+	// Recalculate positions
+	dpadSize := float64(screenHeight) * 0.15
+	buttonSize := float64(screenHeight) * 0.08
+	smallButtonSize := float64(screenHeight) * 0.06
+	margin := float64(screenHeight) * 0.05
+
+	// D-pad on bottom left
+	l.DPad.X = margin + dpadSize
+	l.DPad.Y = float64(screenHeight) - margin - dpadSize
+	l.DPad.Radius = dpadSize
+
+	// Action buttons on bottom right
+	l.ActionButton.X = float64(screenWidth) - margin - buttonSize*2.5
+	l.ActionButton.Y = float64(screenHeight) - margin - buttonSize
+	l.ActionButton.Radius = buttonSize
+
+	l.SecondaryButton.X = float64(screenWidth) - margin - buttonSize
+	l.SecondaryButton.Y = float64(screenHeight) - margin - buttonSize*2.5
+	l.SecondaryButton.Radius = buttonSize
+
+	// Menu button on top right
+	l.MenuButton.X = float64(screenWidth) - margin - buttonSize
+	l.MenuButton.Y = margin + buttonSize
+	l.MenuButton.Radius = buttonSize * 0.7
+
+	// Update extended controls positions
+	if l.InventoryButton != nil {
+		l.InventoryButton.X = l.MenuButton.X - buttonSize*1.3
+		l.InventoryButton.Y = l.MenuButton.Y
+		l.InventoryButton.Radius = buttonSize * 0.7
+	}
+
+	if l.TargetButton != nil {
+		l.TargetButton.X = l.DPad.X
+		l.TargetButton.Y = l.DPad.Y - dpadSize - smallButtonSize - margin*0.5
+		l.TargetButton.Radius = smallButtonSize
+	}
+
+	if l.InteractButton != nil {
+		l.InteractButton.X = l.ActionButton.X - buttonSize*1.5
+		l.InteractButton.Y = l.ActionButton.Y
+		l.InteractButton.Radius = smallButtonSize
+	}
+
+	// Update spell buttons positions
+	if l.SpellButtons != nil {
+		spellButtonY := l.ActionButton.Y - buttonSize*1.8
+		for i := range l.SpellButtons {
+			if l.SpellButtons[i] != nil {
+				l.SpellButtons[i].X = float64(screenWidth)/2 - smallButtonSize*3 + float64(i)*smallButtonSize*1.3
+				l.SpellButtons[i].Y = spellButtonY
+				l.SpellButtons[i].Radius = smallButtonSize
+			}
+		}
+	}
 }
 
 // Platform parity fix: Cancel/undo gesture patterns for consistent UX

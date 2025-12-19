@@ -742,25 +742,30 @@ func (l *VirtualControlsLayout) Resize(screenWidth, screenHeight int) {
 	}
 
 	// Platform parity fix: Update UI shortcut buttons positions
+	// Use incremental positioning pattern (same as NewVirtualControlsLayout) for maintainability
 	uiButtonY := margin + buttonSize*0.7
 	uiButtonSpacing := smallButtonSize * 1.3
+	characterX := margin + smallButtonSize
+	skillsX := characterX + uiButtonSpacing
+	questLogX := skillsX + uiButtonSpacing
+	mapX := questLogX + uiButtonSpacing
 	if l.CharacterButton != nil {
-		l.CharacterButton.X = margin + smallButtonSize
+		l.CharacterButton.X = characterX
 		l.CharacterButton.Y = uiButtonY
 		l.CharacterButton.Radius = smallButtonSize
 	}
 	if l.SkillsButton != nil {
-		l.SkillsButton.X = margin + smallButtonSize + uiButtonSpacing
+		l.SkillsButton.X = skillsX
 		l.SkillsButton.Y = uiButtonY
 		l.SkillsButton.Radius = smallButtonSize
 	}
 	if l.QuestLogButton != nil {
-		l.QuestLogButton.X = margin + smallButtonSize + uiButtonSpacing*2
+		l.QuestLogButton.X = questLogX
 		l.QuestLogButton.Y = uiButtonY
 		l.QuestLogButton.Radius = smallButtonSize
 	}
 	if l.MapButton != nil {
-		l.MapButton.X = margin + smallButtonSize + uiButtonSpacing*3
+		l.MapButton.X = mapX
 		l.MapButton.Y = uiButtonY
 		l.MapButton.Radius = smallButtonSize
 	}

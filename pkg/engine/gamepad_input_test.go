@@ -139,6 +139,20 @@ func TestGamepadInputHandler_IsButtonPressed_NoGamepad(t *testing.T) {
 	}
 }
 
+// TestGamepadInputHandler_UIShortcutHelpers_NoGamepad verifies UI shortcut button helper methods.
+// Platform parity fix: Ensures Character and Skills buttons work correctly
+func TestGamepadInputHandler_UIShortcutHelpers_NoGamepad(t *testing.T) {
+	handler := NewGamepadInputHandler()
+
+	// Without gamepad, all UI shortcut inputs should be false
+	if handler.IsCharacterJustPressed() {
+		t.Error("IsCharacterJustPressed() without gamepad should return false")
+	}
+	if handler.IsSkillsJustPressed() {
+		t.Error("IsSkillsJustPressed() without gamepad should return false")
+	}
+}
+
 // TestGamepadInputHandler_SpellInputHelpers verifies spell button helper methods.
 func TestGamepadInputHandler_SpellInputHelpers(t *testing.T) {
 	handler := NewGamepadInputHandler()

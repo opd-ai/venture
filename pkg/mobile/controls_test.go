@@ -833,13 +833,16 @@ func TestVirtualControlsLayout_SetUIShortcutsVisible(t *testing.T) {
 		t.Error("Character button should be detected when shortcuts visible")
 	}
 
+	// Reset button state before testing visibility toggle
+	layout.CharacterButton.Pressed = false
+
 	// Hide shortcuts
 	layout.SetUIShortcutsVisible(false)
 	if layout.ShowUIShortcuts {
 		t.Error("ShowUIShortcuts should be false after SetUIShortcutsVisible(false)")
 	}
 
-	// Button press should not be detected when hidden
+	// Simulate fresh button press while hidden
 	layout.CharacterButton.Pressed = true
 	if layout.IsCharacterPressed() {
 		t.Error("Character button should NOT be detected when shortcuts hidden")
@@ -849,6 +852,11 @@ func TestVirtualControlsLayout_SetUIShortcutsVisible(t *testing.T) {
 	layout.SetUIShortcutsVisible(true)
 	if !layout.ShowUIShortcuts {
 		t.Error("ShowUIShortcuts should be true after SetUIShortcutsVisible(true)")
+	}
+
+	// Verify button press is now detected again (round-trip test)
+	if !layout.IsCharacterPressed() {
+		t.Error("Character button should be detected after re-enabling shortcuts")
 	}
 }
 

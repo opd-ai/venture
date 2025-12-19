@@ -76,14 +76,18 @@ func (ui *AdvancedClassUI) Update() error {
 // Platform parity fix: Uses edge-triggered detection for tab switching
 func (ui *AdvancedClassUI) handleTabSwitching() {
 	// Handle touch/mouse tab selection
+	// Match coordinates from drawTabs(): tabWidth=120, startX=70, spacing=10, y=60
 	if IsTouchOrMouseJustPressed() {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		// Tab buttons are at top of panel (approximate positions)
+		tabWidth := 120
+		tabHeight := 30
+		startX := 70
 		tabY := 60
-		tabWidth := (ui.screenWidth - 100 - 20) / 3
-		if mouseY >= tabY && mouseY <= tabY+30 {
+		tabSpacing := 10
+
+		if mouseY >= tabY && mouseY <= tabY+tabHeight {
 			for i := 0; i < 3; i++ {
-				tabX := 60 + i*tabWidth
+				tabX := startX + i*(tabWidth+tabSpacing)
 				if mouseX >= tabX && mouseX <= tabX+tabWidth {
 					ui.selectedTab = i
 					break

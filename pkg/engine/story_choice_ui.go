@@ -152,13 +152,19 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 	// Handle touch/mouse input for choice selection
 	if IsTouchOrMouseJustPressed() {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		// Calculate choice area position
-		panelX := ui.screenWidth/2 - 200
-		choiceStartY := ui.screenHeight/2 - 50
+		// Calculate choice area position to match Draw() layout
+		panelWidth := float64(ui.screenWidth) * 0.8
+		panelXFloat := (float64(ui.screenWidth) - panelWidth) / 2
+		titleX := int(panelXFloat) + 20
+
+		panelYFloat := float64(ui.screenHeight) * 0.2
+		titleY := int(panelYFloat) + 20
+		choiceStartY := titleY + 30 + 40
+
 		for i := range ui.pendingChoices {
 			choiceY := choiceStartY + i*30
 			// Check if within choice bounds (approximate hit area)
-			if mouseX >= panelX && mouseX <= panelX+400 &&
+			if mouseX >= titleX && mouseX <= titleX+int(panelWidth)-40 &&
 				mouseY >= choiceY-12 && mouseY <= choiceY+12 {
 				ui.selectedChoice = i
 				ui.confirmCurrentChoice()
@@ -201,7 +207,7 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 }
 
 // confirmCurrentChoice confirms the currently selected choice.
-// Platform parity fix: Extracted to reduce code duplication between touch and keyboard input.
+// It applies the selected choice via the narrative system and hides the UI if successful.
 func (ui *StoryChoiceUI) confirmCurrentChoice() {
 	if ui.selectedChoice >= 0 && ui.selectedChoice < len(ui.pendingChoices) {
 		choice := ui.pendingChoices[ui.selectedChoice]

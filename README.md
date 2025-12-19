@@ -97,8 +97,8 @@ go build -o venture-server ./cmd/server
 - **Display Scaling (V7.0)**: Dynamic resolution support (1280x720 to 3840x2160) with UI scaling and fullscreen mode
 - **Enhanced Sprites**: 40% more detail with anatomical accuracy, facial features, anti-aliasing, and genre variations
 - **Advanced Tiles**: Rich procedural textures with smooth transitions and depth effects
-- **Sophisticated Lighting**: Soft shadows, colored lighting, bloom effects, and advanced ambient occlusion (disable with `-enable-lighting=false`)
-- **Rich Weather**: Comprehensive weather systems with fluid simulation and environmental interactions (disable with `-enable-weather=false`)
+- **Sophisticated Lighting**: Soft shadows, colored lighting, bloom effects, and advanced ambient occlusion
+- **Rich Weather**: Comprehensive weather systems with fluid simulation and environmental interactions (configure with `-weather` and `-weather-intensity` flags)
 - **Polished UI**: Dynamic color palettes with smooth transitions and visual hierarchy
 - `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
 - `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme

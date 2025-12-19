@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/narrative/branching"
@@ -140,15 +141,40 @@ func (ui *StoryChoiceUI) Draw(screen *ebiten.Image) {
 	text.Draw(screen, helpText, basicfont.Face7x13, titleX, helpY, ui.textColor)
 }
 
-// HandleInput processes keyboard input for choice selection.
+// HandleInput processes keyboard and touch/mouse input for choice selection.
 // Returns true if input was handled.
+// Platform parity fix: Uses edge-triggered detection and touch support.
 func (ui *StoryChoiceUI) HandleInput() bool {
 	if !ui.visible || len(ui.pendingChoices) == 0 {
 		return false
 	}
 
-	// Navigate choices
-	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+	// Handle touch/mouse input for choice selection
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+		// Calculate choice area position
+		panelX := ui.screenWidth/2 - 200
+		choiceStartY := ui.screenHeight/2 - 50
+		for i := range ui.pendingChoices {
+			choiceY := choiceStartY + i*30
+			// Check if within choice bounds (approximate hit area)
+			if mouseX >= panelX && mouseX <= panelX+400 &&
+				mouseY >= choiceY-12 && mouseY <= choiceY+12 {
+				ui.selectedChoice = i
+				// Confirm selection
+				choice := ui.pendingChoices[ui.selectedChoice]
+				if err := ui.narrativeSystem.MakeChoice(ui.playerEntity, choice.ID); err == nil {
+					ui.visible = false
+					ui.currentNode = nil
+					ui.pendingChoices = nil
+				}
+				return true
+			}
+		}
+	}
+
+	// Navigate choices - Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		ui.selectedChoice--
 		if ui.selectedChoice < 0 {
 			ui.selectedChoice = len(ui.pendingChoices) - 1
@@ -156,7 +182,7 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 		return true
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		ui.selectedChoice++
 		if ui.selectedChoice >= len(ui.pendingChoices) {
 			ui.selectedChoice = 0
@@ -164,8 +190,8 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 		return true
 	}
 
-	// Confirm choice
-	if ebiten.IsKeyPressed(ebiten.KeyEnter) || ebiten.IsKeyPressed(ebiten.KeySpace) {
+	// Confirm choice - Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		if ui.selectedChoice >= 0 && ui.selectedChoice < len(ui.pendingChoices) {
 			choice := ui.pendingChoices[ui.selectedChoice]
 			if err := ui.narrativeSystem.MakeChoice(ui.playerEntity, choice.ID); err == nil {
@@ -178,7 +204,8 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 	}
 
 	// Cancel (hide UI without making choice - player can come back later)
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	// Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		ui.visible = false
 		return true
 	}

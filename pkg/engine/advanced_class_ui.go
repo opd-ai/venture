@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/opd-ai/venture/pkg/class/advanced"
 	"golang.org/x/image/font/basicfont"
@@ -72,12 +73,30 @@ func (ui *AdvancedClassUI) Update() error {
 	return nil
 }
 
+// Platform parity fix: Uses edge-triggered detection for tab switching
 func (ui *AdvancedClassUI) handleTabSwitching() {
-	if ebiten.IsKeyPressed(ebiten.Key1) {
+	// Handle touch/mouse tab selection
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+		// Tab buttons are at top of panel (approximate positions)
+		tabY := 60
+		tabWidth := (ui.screenWidth - 100 - 20) / 3
+		if mouseY >= tabY && mouseY <= tabY+30 {
+			for i := 0; i < 3; i++ {
+				tabX := 60 + i*tabWidth
+				if mouseX >= tabX && mouseX <= tabX+tabWidth {
+					ui.selectedTab = i
+					break
+				}
+			}
+		}
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		ui.selectedTab = 0
-	} else if ebiten.IsKeyPressed(ebiten.Key2) {
+	} else if inpututil.IsKeyJustPressed(ebiten.Key2) {
 		ui.selectedTab = 1
-	} else if ebiten.IsKeyPressed(ebiten.Key3) {
+	} else if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		ui.selectedTab = 2
 	}
 }
@@ -89,30 +108,33 @@ func (ui *AdvancedClassUI) handleCategoryAndScrolling() {
 	ui.handleScrollInput()
 }
 
+// Platform parity fix: Uses edge-triggered detection for category switching
 func (ui *AdvancedClassUI) handleCategorySwitching() {
-	if ebiten.IsKeyPressed(ebiten.KeyQ) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
 		ui.selectedCategory = advanced.CategoryOffensive
-	} else if ebiten.IsKeyPressed(ebiten.KeyW) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		ui.selectedCategory = advanced.CategoryDefensive
-	} else if ebiten.IsKeyPressed(ebiten.KeyE) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyE) {
 		ui.selectedCategory = advanced.CategoryUtility
 	}
 }
 
+// Platform parity fix: Uses edge-triggered detection for scroll input
 func (ui *AdvancedClassUI) handleScrollInput() {
-	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
 		ui.scrollOffset = max(0, ui.scrollOffset-1)
-	} else if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
 		ui.scrollOffset++
 	}
 }
 
+// Platform parity fix: Uses edge-triggered detection for respec confirmation
 func (ui *AdvancedClassUI) handleRespecConfirmation() {
 	if ui.selectedTab != 0 {
 		return
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		if ui.confirmRespec {
 			ui.handleRespec()
 			ui.confirmRespec = false

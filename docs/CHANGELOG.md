@@ -97,7 +97,7 @@ This update completes the comprehensive Integration Activation Plan, activating 
 
 #### Command-Line Flags Added
 - **Audio:** `--enable-audio`, `--audio-volume`
-- **Lighting:** `--enable-lighting`
+- **Lighting:** Enabled by default (always on)
 - **Tile Rendering:** `--enable-tile-transitions`, `--enable-tile-parallax`, `--enable-enhanced-walls`
 - **Post-Processing:** `--enable-postprocessing`, `--postprocess-preset`, 9 effect parameters
 - **Palette:** `--palette-harmony`, `--palette-mood`, `--palette-rarity`

@@ -19,7 +19,7 @@ The Dynamic Lighting System adds atmospheric lighting effects to Venture, enhanc
 - Animation support (flickering torches, pulsing magic)
 - Post-processing render pipeline integration
 - Player torch implementation
-- Command-line control (`-enable-lighting` flag)
+- Weather integration with `-weather` and `-weather-intensity` flags
 - Documentation and demo application
 - Spell light generation
 - Environmental light spawning
@@ -290,7 +290,7 @@ if *enableLighting {
 - [x] Add player torch by default
 - [x] Generate spell lights based on element
 - [x] Spawn environmental lights in terrain generation
-- [x] Add command-line flag `-enable-lighting`
+- [x] Lighting enabled by default (always on)
 - [x] Performance profiling and optimization
 - [x] Update user manual with lighting controls
 - [x] Add lighting section to TECHNICAL_SPEC.md

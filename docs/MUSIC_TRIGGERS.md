@@ -262,4 +262,4 @@ Planned improvements for future phases:
 - [Adaptive Music System](../pkg/audio/music/doc.go) - Core music generation
 - [Music Interfaces](../pkg/audio/interfaces.go) - AdaptiveMusicSystem interface
 - [ECS Architecture](ARCHITECTURE.md#entity-component-system) - ECS pattern overview
-- [Phase 29 Roadmap](ROADMAP_V4.md#phase-29-adaptive-soundtrack) - Full phase plan
+- [Roadmap V8](ROADMAP_V8.md) - Full phase plan

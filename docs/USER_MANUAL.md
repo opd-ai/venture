@@ -185,9 +185,9 @@ Each genre has unique themes, color palettes, entity types, and items.
 
 **Performance Control:**
 ```bash
-# Enable/disable features for performance
--enable-lighting=false  # Disable lighting system
--enable-weather=false   # Disable weather effects
+# Configure weather for performance
+-weather ""              # Disable weather effects (empty string)
+-weather-intensity light # Use light weather for better performance
 ```
 
 **Performance (V3.0):**

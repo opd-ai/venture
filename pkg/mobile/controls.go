@@ -402,8 +402,16 @@ type VirtualControlsLayout struct {
 	TargetButton    *VirtualButton   // Cycle targets button
 	InteractButton  *VirtualButton   // Interact/Use button (F key equivalent)
 
+	// Platform parity fix: UI shortcut buttons for complete menu accessibility
+	// These provide touch equivalents to all keyboard UI shortcuts
+	CharacterButton *VirtualButton // Character sheet (C key equivalent)
+	SkillsButton    *VirtualButton // Skills/Skill tree (K key equivalent)
+	QuestLogButton  *VirtualButton // Quest log (J key equivalent)
+	MapButton       *VirtualButton // World map (M key equivalent)
+
 	// Extended controls visibility (can be toggled for cleaner UI)
-	ShowSpellButtons bool
+	ShowSpellButtons   bool
+	ShowUIShortcuts    bool // Toggle visibility of UI shortcut buttons
 
 	Visible      bool
 	touchHandler *TouchInputHandler
@@ -456,6 +464,15 @@ func NewVirtualControlsLayout(screenWidth, screenHeight int) *VirtualControlsLay
 		spellButtons[i] = NewVirtualButton(spellX, spellButtonY, smallButtonSize, string(rune('1'+i)))
 	}
 
+	// Platform parity fix: UI shortcut buttons arranged on top left (below HUD area)
+	// These provide touch equivalents for Character (C), Skills (K), Quest (J), Map (M)
+	uiButtonY := margin + buttonSize*0.7
+	uiButtonSpacing := smallButtonSize * 1.3
+	characterX := margin + smallButtonSize
+	skillsX := characterX + uiButtonSpacing
+	questX := skillsX + uiButtonSpacing
+	mapX := questX + uiButtonSpacing
+
 	return &VirtualControlsLayout{
 		DPad:            NewVirtualDPad(dpadX, dpadY, dpadSize),
 		ActionButton:    NewVirtualButton(actionX, actionY, buttonSize, "A"),
@@ -465,11 +482,17 @@ func NewVirtualControlsLayout(screenWidth, screenHeight int) *VirtualControlsLay
 		TargetButton:    NewVirtualButton(targetX, targetY, smallButtonSize, "↹"),
 		InteractButton:  NewVirtualButton(interactX, interactY, smallButtonSize, "F"),
 		SpellButtons:    spellButtons,
+		// Platform parity fix: UI shortcut buttons for complete menu accessibility
+		CharacterButton:  NewVirtualButton(characterX, uiButtonY, smallButtonSize, "C"),
+		SkillsButton:     NewVirtualButton(skillsX, uiButtonY, smallButtonSize, "K"),
+		QuestLogButton:   NewVirtualButton(questX, uiButtonY, smallButtonSize, "J"),
+		MapButton:        NewVirtualButton(mapX, uiButtonY, smallButtonSize, "M"),
 		ShowSpellButtons: true,
-		Visible:         true,
-		touchHandler:    NewTouchInputHandler(),
-		screenWidth:     screenWidth,
-		screenHeight:    screenHeight,
+		ShowUIShortcuts:  true,
+		Visible:          true,
+		touchHandler:     NewTouchInputHandler(),
+		screenWidth:      screenWidth,
+		screenHeight:     screenHeight,
 	}
 }
 
@@ -500,6 +523,22 @@ func (l *VirtualControlsLayout) Update() {
 	}
 	if l.InteractButton != nil {
 		l.InteractButton.Update(touches)
+	}
+
+	// Platform parity fix: Update UI shortcut buttons
+	if l.ShowUIShortcuts {
+		if l.CharacterButton != nil {
+			l.CharacterButton.Update(touches)
+		}
+		if l.SkillsButton != nil {
+			l.SkillsButton.Update(touches)
+		}
+		if l.QuestLogButton != nil {
+			l.QuestLogButton.Update(touches)
+		}
+		if l.MapButton != nil {
+			l.MapButton.Update(touches)
+		}
 	}
 
 	// Update spell buttons
@@ -533,6 +572,22 @@ func (l *VirtualControlsLayout) Draw(screen *ebiten.Image) {
 	}
 	if l.InteractButton != nil {
 		l.InteractButton.Draw(screen)
+	}
+
+	// Platform parity fix: Draw UI shortcut buttons
+	if l.ShowUIShortcuts {
+		if l.CharacterButton != nil {
+			l.CharacterButton.Draw(screen)
+		}
+		if l.SkillsButton != nil {
+			l.SkillsButton.Draw(screen)
+		}
+		if l.QuestLogButton != nil {
+			l.QuestLogButton.Draw(screen)
+		}
+		if l.MapButton != nil {
+			l.MapButton.Draw(screen)
+		}
 	}
 
 	// Draw spell buttons
@@ -590,6 +645,30 @@ func (l *VirtualControlsLayout) IsInteractPressed() bool {
 	return l.InteractButton != nil && l.InteractButton.IsPressed()
 }
 
+// IsCharacterPressed returns true when the character button is pressed.
+// Platform parity fix: Provides touch equivalent of 'C' key on Desktop.
+func (l *VirtualControlsLayout) IsCharacterPressed() bool {
+	return l.ShowUIShortcuts && l.CharacterButton != nil && l.CharacterButton.IsPressed()
+}
+
+// IsSkillsPressed returns true when the skills button is pressed.
+// Platform parity fix: Provides touch equivalent of 'K' key on Desktop.
+func (l *VirtualControlsLayout) IsSkillsPressed() bool {
+	return l.ShowUIShortcuts && l.SkillsButton != nil && l.SkillsButton.IsPressed()
+}
+
+// IsQuestLogPressed returns true when the quest log button is pressed.
+// Platform parity fix: Provides touch equivalent of 'J' key on Desktop.
+func (l *VirtualControlsLayout) IsQuestLogPressed() bool {
+	return l.ShowUIShortcuts && l.QuestLogButton != nil && l.QuestLogButton.IsPressed()
+}
+
+// IsMapPressed returns true when the map button is pressed.
+// Platform parity fix: Provides touch equivalent of 'M' key on Desktop.
+func (l *VirtualControlsLayout) IsMapPressed() bool {
+	return l.ShowUIShortcuts && l.MapButton != nil && l.MapButton.IsPressed()
+}
+
 // IsSpellPressed returns true when the specified spell button (1-5) is pressed.
 // Platform parity fix: Provides touch equivalent of number keys on Desktop.
 func (l *VirtualControlsLayout) IsSpellPressed(slot int) bool {
@@ -604,6 +683,12 @@ func (l *VirtualControlsLayout) IsSpellPressed(slot int) bool {
 // Platform parity fix: Allows hiding spell buttons when not in combat.
 func (l *VirtualControlsLayout) SetSpellButtonsVisible(visible bool) {
 	l.ShowSpellButtons = visible
+}
+
+// SetUIShortcutsVisible controls visibility of UI shortcut buttons.
+// Platform parity fix: Allows toggling UI shortcuts visibility for cleaner interface.
+func (l *VirtualControlsLayout) SetUIShortcutsVisible(visible bool) {
+	l.ShowUIShortcuts = visible
 }
 
 // Resize recalculates control positions for new screen dimensions.
@@ -654,6 +739,35 @@ func (l *VirtualControlsLayout) Resize(screenWidth, screenHeight int) {
 		l.InteractButton.X = l.ActionButton.X - buttonSize*1.5
 		l.InteractButton.Y = l.ActionButton.Y
 		l.InteractButton.Radius = smallButtonSize
+	}
+
+	// Platform parity fix: Update UI shortcut buttons positions
+	// Use incremental positioning pattern (same as NewVirtualControlsLayout) for maintainability
+	uiButtonY := margin + buttonSize*0.7
+	uiButtonSpacing := smallButtonSize * 1.3
+	characterX := margin + smallButtonSize
+	skillsX := characterX + uiButtonSpacing
+	questLogX := skillsX + uiButtonSpacing
+	mapX := questLogX + uiButtonSpacing
+	if l.CharacterButton != nil {
+		l.CharacterButton.X = characterX
+		l.CharacterButton.Y = uiButtonY
+		l.CharacterButton.Radius = smallButtonSize
+	}
+	if l.SkillsButton != nil {
+		l.SkillsButton.X = skillsX
+		l.SkillsButton.Y = uiButtonY
+		l.SkillsButton.Radius = smallButtonSize
+	}
+	if l.QuestLogButton != nil {
+		l.QuestLogButton.X = questLogX
+		l.QuestLogButton.Y = uiButtonY
+		l.QuestLogButton.Radius = smallButtonSize
+	}
+	if l.MapButton != nil {
+		l.MapButton.X = mapX
+		l.MapButton.Y = uiButtonY
+		l.MapButton.Radius = smallButtonSize
 	}
 
 	// Update spell buttons positions

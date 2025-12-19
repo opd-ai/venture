@@ -499,6 +499,20 @@ func (s *InputSystem) updateTouchInput() {
 			if s.virtualControls.IsInteractPressed() && s.onInteract != nil {
 				s.onInteract()
 			}
+
+			// Platform parity fix: Handle UI shortcut buttons for complete menu accessibility
+			if s.virtualControls.IsCharacterPressed() && s.onCharacterOpen != nil {
+				s.onCharacterOpen()
+			}
+			if s.virtualControls.IsSkillsPressed() && s.onSkillsOpen != nil {
+				s.onSkillsOpen()
+			}
+			if s.virtualControls.IsQuestLogPressed() && s.onQuestsOpen != nil {
+				s.onQuestsOpen()
+			}
+			if s.virtualControls.IsMapPressed() && s.onMapOpen != nil {
+				s.onMapOpen()
+			}
 		}
 	}
 }
@@ -747,6 +761,17 @@ func (s *InputSystem) handleGamepadUIShortcuts() {
 	// Interact (Y button)
 	if s.gamepadHandler.IsInteractJustPressed() && s.onInteract != nil {
 		s.onInteract()
+	}
+
+	// Platform parity fix: UI shortcut buttons for complete gamepad accessibility
+	// Character (L3 - left stick click)
+	if s.gamepadHandler.IsCharacterJustPressed() && s.onCharacterOpen != nil {
+		s.onCharacterOpen()
+	}
+
+	// Skills (R3 - right stick click)
+	if s.gamepadHandler.IsSkillsJustPressed() && s.onSkillsOpen != nil {
+		s.onSkillsOpen()
 	}
 }
 

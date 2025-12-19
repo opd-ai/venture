@@ -30,6 +30,12 @@ type GamepadInputHandler struct {
 	ButtonCycleTarget ebiten.StandardGamepadButton
 	ButtonInteract    ebiten.StandardGamepadButton
 
+	// Platform parity fix: UI shortcut button mappings for complete accessibility
+	// L3 (left stick click): Character, R3 (right stick click): Skills
+	// Note: Quest Log accessible via Menu -> Quest Log submenu (no dedicated button)
+	ButtonCharacter ebiten.StandardGamepadButton
+	ButtonSkills    ebiten.StandardGamepadButton
+
 	// Spell casting using D-pad + trigger combinations
 	ButtonSpell1 ebiten.StandardGamepadButton
 	ButtonSpell2 ebiten.StandardGamepadButton
@@ -50,6 +56,7 @@ type GamepadInputHandler struct {
 // - A: Attack, B: Secondary, X: Use Item, Y: Interact
 // - Start: Menu, Back: Map
 // - LB: Cycle Targets, RB: Inventory
+// - L3: Character, R3: Skills
 // - D-pad: Spell casting (Up=1, Right=2, Down=3, Left=4)
 func NewGamepadInputHandler() *GamepadInputHandler {
 	return &GamepadInputHandler{
@@ -68,6 +75,11 @@ func NewGamepadInputHandler() *GamepadInputHandler {
 		ButtonMap:         ebiten.StandardGamepadButtonCenterLeft,  // Back/Select
 		ButtonCycleTarget: ebiten.StandardGamepadButtonFrontTopLeft,  // LB
 		ButtonInventory:   ebiten.StandardGamepadButtonFrontTopRight, // RB
+
+		// Platform parity fix: L3/R3 for UI shortcuts
+		ButtonCharacter: ebiten.StandardGamepadButtonLeftStick,  // L3 (left stick click)
+		ButtonSkills:    ebiten.StandardGamepadButtonRightStick, // R3 (right stick click)
+		// Note: Quest log accessible via Menu -> Quest Log submenu
 
 		// D-pad for spell casting
 		ButtonSpell1: ebiten.StandardGamepadButtonLeftTop,    // D-pad Up
@@ -267,6 +279,20 @@ func (g *GamepadInputHandler) IsInventoryJustPressed() bool {
 // IsCycleTargetJustPressed returns true on the frame when cycle target button is first pressed.
 func (g *GamepadInputHandler) IsCycleTargetJustPressed() bool {
 	return g.IsButtonJustPressed(g.ButtonCycleTarget)
+}
+
+// Platform parity fix: UI shortcut button helpers
+
+// IsCharacterJustPressed returns true on the frame when character button is first pressed.
+// Platform parity fix: Provides gamepad equivalent of 'C' key on Desktop.
+func (g *GamepadInputHandler) IsCharacterJustPressed() bool {
+	return g.IsButtonJustPressed(g.ButtonCharacter)
+}
+
+// IsSkillsJustPressed returns true on the frame when skills button is first pressed.
+// Platform parity fix: Provides gamepad equivalent of 'K' key on Desktop.
+func (g *GamepadInputHandler) IsSkillsJustPressed() bool {
+	return g.IsButtonJustPressed(g.ButtonSkills)
 }
 
 // Spell input helpers

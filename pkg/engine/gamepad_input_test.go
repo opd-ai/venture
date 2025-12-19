@@ -55,6 +55,9 @@ func TestGamepadInputHandler_DefaultButtonMappings(t *testing.T) {
 		{"Spell2", handler.ButtonSpell2, ebiten.StandardGamepadButtonLeftRight},        // D-pad Right
 		{"Spell3", handler.ButtonSpell3, ebiten.StandardGamepadButtonLeftBottom},       // D-pad Down
 		{"Spell4", handler.ButtonSpell4, ebiten.StandardGamepadButtonLeftLeft},         // D-pad Left
+		// Platform parity fix: UI shortcut buttons
+		{"Character", handler.ButtonCharacter, ebiten.StandardGamepadButtonLeftStick},  // L3
+		{"Skills", handler.ButtonSkills, ebiten.StandardGamepadButtonRightStick},       // R3
 	}
 
 	for _, tt := range tests {
@@ -133,6 +136,20 @@ func TestGamepadInputHandler_IsButtonPressed_NoGamepad(t *testing.T) {
 	}
 	if handler.IsUseItemPressed() {
 		t.Error("IsUseItemPressed() without gamepad should return false")
+	}
+}
+
+// TestGamepadInputHandler_UIShortcutHelpers_NoGamepad verifies UI shortcut button helper methods.
+// Platform parity fix: Ensures Character and Skills buttons work correctly
+func TestGamepadInputHandler_UIShortcutHelpers_NoGamepad(t *testing.T) {
+	handler := NewGamepadInputHandler()
+
+	// Without gamepad, all UI shortcut inputs should be false
+	if handler.IsCharacterJustPressed() {
+		t.Error("IsCharacterJustPressed() without gamepad should return false")
+	}
+	if handler.IsSkillsJustPressed() {
+		t.Error("IsSkillsJustPressed() without gamepad should return false")
 	}
 }
 

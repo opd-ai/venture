@@ -2,13 +2,17 @@
 Date: 2025-12-19 (Updated - Phase 5)
 
 ## Results
-- **Files deleted:** 29 (15 previous + 14 new)
-- **Storage recovered:** ~37.6 MB (previous) + ~100 KB (Phase 5 roadmap cleanup)
-- **Files consolidated:** 3 duplicate AUDIT files → 1 per directory
-- **Files remaining:** 136 markdown files
+- **Files deleted (total):** 31 files across all phases
+  - Previous phases: 15 files (~37.5 MB from binaries/JSON)
+  - Phase 5: 16 files (~105 KB)
+    - 14 completed roadmaps (~100 KB, 2,773 lines)
+    - 2 duplicate AUDIT files (~5 KB, 207 lines)
+- **Storage recovered:** ~37.7 MB total
+- **Files consolidated:** Duplicate AUDIT files removed (1 per directory)
+- **Files remaining:** 134 markdown files
 - **LLM prompts preserved:** 14 files
 - **Files de-bloated:** 21 major documentation files
-- **Broken links fixed:** 4 doc files updated
+- **Broken links fixed:** 5 doc files updated
 
 ## Latest Cleanup (2025-12-19 - Phase 5: Completed Roadmap Consolidation)
 
@@ -33,6 +37,14 @@ All completed roadmaps (V8, V11-V23) were deleted as their content is preserved 
 | docs/ROADMAP_V22.md | 237 | COMPLETE ✅ | Superseded, content in CHANGELOG.md |
 | docs/ROADMAP_V23.md | 130 | COMPLETE ✅ | Superseded, content in CHANGELOG.md |
 | **Total** | **2,773** | | **100% reduction** |
+
+### Duplicate AUDIT File Cleanup (2 files)
+
+| File | Lines | Reason |
+|------|-------|--------|
+| pkg/modding/AUDIT_2025_12_14.md | 103 | Duplicate of AUDIT.md (dated version) |
+| pkg/engine/render_system_AUDIT.md | 104 | Duplicate of AUDIT_render_system.md |
+| **Total** | **207** | |
 
 ### Documentation Link Updates (4 files)
 

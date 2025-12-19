@@ -961,9 +961,11 @@ func (s *InputSystem) processGamepadInput(input *EbitenInput) {
 	aimX, aimY := s.gamepadHandler.GetAimInput()
 	if aimX != 0 || aimY != 0 {
 		// Convert aim direction to screen position relative to center
+		// AimSensitivity controls how far from center the cursor moves
+		const aimSensitivity = 200.0 // pixels at max stick deflection
 		screenW, screenH := ebiten.WindowSize()
-		input.MouseX = screenW/2 + int(aimX*200)
-		input.MouseY = screenH/2 + int(aimY*200)
+		input.MouseX = screenW/2 + int(aimX*aimSensitivity)
+		input.MouseY = screenH/2 + int(aimY*aimSensitivity)
 	}
 }
 

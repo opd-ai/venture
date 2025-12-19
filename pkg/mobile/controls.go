@@ -462,7 +462,7 @@ func NewVirtualControlsLayout(screenWidth, screenHeight int) *VirtualControlsLay
 		SecondaryButton: NewVirtualButton(secondaryX, secondaryY, buttonSize, "B"),
 		MenuButton:      NewVirtualButton(menuX, menuY, buttonSize*0.7, "☰"),
 		InventoryButton: NewVirtualButton(inventoryX, inventoryY, buttonSize*0.7, "I"),
-		TargetButton:    NewVirtualButton(targetX, targetY, smallButtonSize, "⎯"),
+		TargetButton:    NewVirtualButton(targetX, targetY, smallButtonSize, "↹"),
 		InteractButton:  NewVirtualButton(interactX, interactY, smallButtonSize, "F"),
 		SpellButtons:    spellButtons,
 		ShowSpellButtons: true,

@@ -390,7 +390,7 @@ When contributing performance improvements, always profile first and focus on co
 - [API Reference](API_REFERENCE.md) - API documentation with code examples
 - [Architecture](ARCHITECTURE.md) - Architectural decisions and patterns
 - [Technical Specification](TECHNICAL_SPEC.md) - Complete technical details
-- [Roadmap V8](ROADMAP_V8.md) - Current development phases and progress (V8.0 Housing & Guilds)
+- [Changelog](CHANGELOG.md) - Version history and completed features
 
 ---
 

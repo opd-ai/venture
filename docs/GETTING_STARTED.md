@@ -110,7 +110,6 @@ The client now **automatically starts a localhost server** when no explicit serv
 - `-genre`: Choose theme (fantasy, scifi, horror, cyberpunk, postapoc)
 - `-width`/`-height`: Set screen resolution (default: 1920x1080, supported: 1280x720, 1920x1080, 2560x1440, 3840x2160)
 - `-fullscreen`: Start in fullscreen mode (default: windowed)
-- `-enable-lighting`: Enable/disable dynamic lighting system (enabled by default, enhances atmosphere)
 - `-verbose`: Enable detailed logging
 - `-profile`: Enable performance profiling
 
@@ -246,10 +245,10 @@ All V3.0 enhancements are **enabled by default** and optimized to maintain excel
 ./venture-client -genre postapoc  # Harsh, dusty lighting
 
 # Enable weather effects for additional atmosphere
-./venture-client -enable-weather -weather rain -weather-intensity medium
+./venture-client -weather rain -weather-intensity medium
 
 # Combined for maximum immersion
-./venture-client -genre horror -enable-weather -weather fog -weather-intensity heavy
+./venture-client -genre horror -weather fog -weather-intensity heavy
 ```
 
 **Weather Types (V3.0):**
@@ -273,7 +272,7 @@ All V3.0 enhancements are **enabled by default** and optimized to maintain excel
 - Sprite cache hit rate: 95.9% (same as V2.0)
 - Lighting overhead: <5% frame time
 - All enhancements use deterministic generation (same seed = same visuals)
-- To disable features for better performance: use `-enable-lighting=false` or `-enable-weather=false`
+- Weather can be configured with `-weather` and `-weather-intensity` flags
 
 ---
 
@@ -301,7 +300,7 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-fullscreen`, `-seed`, `-genre`, `-enable-lighting`, `-enable-weather`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
+**Client:** `-width`, `-height`, `-fullscreen`, `-seed`, `-genre`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
 **Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
 
 **V3.0 Weather Options:**

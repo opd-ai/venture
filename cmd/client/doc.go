@@ -59,7 +59,7 @@ Host a local server and auto-connect (LAN party mode):
 
 Enable all features for testing:
 
-	go run ./cmd/client -verbose -profile -enable-lighting -enable-weather
+	go run ./cmd/client -verbose -profile -weather rain -weather-intensity heavy
 
 # Command-Line Flags
 
@@ -73,12 +73,10 @@ World Generation:
 	-seed: World generation seed (default: random)
 	-genre: Theme selection (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
 
-Features:
+Weather:
 
-	-enable-lighting: Enable dynamic lighting system
-	-enable-weather: Enable weather effects
-	-weather: Weather type (rain, snow, fog, storm)
-	-weather-intensity: Weather strength (0.0-1.0)
+	-weather: Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation)
+	-weather-intensity: Weather strength (light, medium, heavy, extreme)
 
 Multiplayer:
 

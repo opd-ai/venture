@@ -762,6 +762,17 @@ func (s *InputSystem) handleGamepadUIShortcuts() {
 	if s.gamepadHandler.IsInteractJustPressed() && s.onInteract != nil {
 		s.onInteract()
 	}
+
+	// Platform parity fix: UI shortcut buttons for complete gamepad accessibility
+	// Character (L3 - left stick click)
+	if s.gamepadHandler.IsCharacterJustPressed() && s.onCharacterOpen != nil {
+		s.onCharacterOpen()
+	}
+
+	// Skills (R3 - right stick click)
+	if s.gamepadHandler.IsSkillsJustPressed() && s.onSkillsOpen != nil {
+		s.onSkillsOpen()
+	}
 }
 
 // handleExpressionHotkeys processes Shift+number key combinations for player expressions.

@@ -55,6 +55,9 @@ func TestGamepadInputHandler_DefaultButtonMappings(t *testing.T) {
 		{"Spell2", handler.ButtonSpell2, ebiten.StandardGamepadButtonLeftRight},        // D-pad Right
 		{"Spell3", handler.ButtonSpell3, ebiten.StandardGamepadButtonLeftBottom},       // D-pad Down
 		{"Spell4", handler.ButtonSpell4, ebiten.StandardGamepadButtonLeftLeft},         // D-pad Left
+		// Platform parity fix: UI shortcut buttons
+		{"Character", handler.ButtonCharacter, ebiten.StandardGamepadButtonLeftStick},  // L3
+		{"Skills", handler.ButtonSkills, ebiten.StandardGamepadButtonRightStick},       // R3
 	}
 
 	for _, tt := range tests {

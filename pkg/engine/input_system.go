@@ -913,6 +913,8 @@ func (s *InputSystem) updateInputFromSource(input *EbitenInput) {
 
 // processTouchInput handles touch input from virtual controls.
 // Platform parity fix: Now processes all extended virtual control buttons.
+// Note: VirtualButton.IsPressed() returns true ONLY on the frame when touch is released,
+// so ActionJustPressed is correctly set for a single frame per button press.
 func (s *InputSystem) processTouchInput(input *EbitenInput) {
 	moveX, moveY := s.virtualControls.GetMovementInput()
 	input.MoveX = moveX
@@ -966,6 +968,10 @@ func (s *InputSystem) processGamepadInput(input *EbitenInput) {
 		screenW, screenH := ebiten.WindowSize()
 		input.MouseX = screenW/2 + int(aimX*aimSensitivity)
 		input.MouseY = screenH/2 + int(aimY*aimSensitivity)
+	} else {
+		// When gamepad aim is neutral, keep cursor in sync with the actual mouse
+		// position for consistent behavior across input modes.
+		s.processMouseState(input)
 	}
 }
 
@@ -1011,16 +1017,40 @@ func (s *InputSystem) mergeGamepadInput(input *EbitenInput) {
 		moveX, moveY := s.gamepadHandler.GetMovementInput()
 		input.MoveX = moveX
 		input.MoveY = moveY
+		if moveX != 0 || moveY != 0 {
+			input.AnyKeyPressed = true
+		}
+	}
+
+	// Only merge combat inputs if combat is allowed (consistent with processGamepadActionKeys)
+	if !s.currentState.AllowsCombat() {
+		return
 	}
 
 	// Merge action buttons (OR logic)
 	if s.gamepadHandler.IsAttackJustPressed() {
 		input.ActionPressed = true
 		input.ActionJustPressed = true
+		input.AnyKeyPressed = true
 	}
 	if s.gamepadHandler.IsUseItemJustPressed() {
 		input.UseItemPressed = true
 		input.UseItemJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// Merge spell casting inputs (D-pad slots 1-4)
+	for slot := 1; slot <= 4; slot++ {
+		if s.gamepadHandler.IsSpellJustPressed(slot) {
+			s.setSpellPressed(input, slot)
+			input.AnyKeyPressed = true
+		}
+	}
+
+	// Merge right trigger as alternative spell 5
+	if s.gamepadHandler.IsRightTriggerPressed() {
+		input.Spell5Pressed = true
+		input.AnyKeyPressed = true
 	}
 }
 

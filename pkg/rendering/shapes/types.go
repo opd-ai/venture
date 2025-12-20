@@ -165,8 +165,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Type:       ShapeCircle,
-		Width:      32,
-		Height:     32,
+		Width:      64,
+		Height:     64,
 		Color:      color.RGBA{R: 255, G: 255, B: 255, A: 255},
 		Seed:       0,
 		Sides:      5,

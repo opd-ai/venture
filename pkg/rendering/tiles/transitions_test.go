@@ -169,8 +169,8 @@ func TestDetermineTransition(t *testing.T) {
 func TestDefaultTransitionConfig(t *testing.T) {
 	config := DefaultTransitionConfig()
 
-	if config.BaseConfig.Width != 32 {
-		t.Errorf("DefaultTransitionConfig().BaseConfig.Width = %v, want 32", config.BaseConfig.Width)
+	if config.BaseConfig.Width != 64 {
+		t.Errorf("DefaultTransitionConfig().BaseConfig.Width = %v, want 64", config.BaseConfig.Width)
 	}
 	if config.Transition != TransitionFull {
 		t.Errorf("DefaultTransitionConfig().Transition = %v, want TransitionFull", config.Transition)

@@ -21,6 +21,7 @@ type InteractionSystem struct {
 	world       *World
 	logger      *logrus.Entry
 	carrySystem *CarrySystem // For pickup/throw mechanics
+	inputSystem *InputSystem // INPUT CONFLICT FIX: Reference for checking if interaction allowed
 }
 
 // NewInteractionSystem creates a new interaction system.
@@ -37,7 +38,14 @@ func (s *InteractionSystem) SetCarrySystem(carrySystem *CarrySystem) {
 	s.carrySystem = carrySystem
 }
 
+// SetInputSystem sets the input system reference for checking if interaction is allowed.
+// INPUT CONFLICT FIX: Allows checking game state and input context before processing.
+func (s *InteractionSystem) SetInputSystem(inputSystem *InputSystem) {
+	s.inputSystem = inputSystem
+}
+
 // Update checks for interaction key presses and processes player interactions.
+// INPUT CONFLICT FIX: Now checks if interaction input is allowed before processing.
 func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 	// Update context action cooldowns for all entities
 	contextActions := s.world.GetEntitiesWith("contextAction")
@@ -49,8 +57,18 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
+	// INPUT CONFLICT FIX: Check if interaction input is allowed (no UI open, gameplay state)
+	if s.inputSystem != nil && !s.inputSystem.IsInteractionAllowed() {
+		return
+	}
+
 	// Check if F key was just pressed (or touch input on mobile)
 	interactionPressed := inpututil.IsKeyJustPressed(ebiten.KeyF)
+	
+	// INPUT CONFLICT FIX: Also check for touch input on mobile/WASM platforms
+	if !interactionPressed {
+		interactionPressed = IsTouchOrMouseJustPressed() && s.isTouchInInteractArea()
+	}
 
 	if !interactionPressed {
 		return
@@ -586,4 +604,13 @@ func (s *InteractionSystem) handleInvestigateAction(player *Entity) {
 	}
 
 	// The actual investigation processing is handled by InvestigationSystem.Update()
+}
+
+// isTouchInInteractArea checks if a touch is in a valid interaction area (not on virtual controls).
+// INPUT CONFLICT FIX: Prevents touch on D-pad/buttons from triggering interactions.
+func (s *InteractionSystem) isTouchInInteractArea() bool {
+	// For mobile, interaction is typically handled via the interact button on virtual controls
+	// This method returns false to prevent random screen touches from triggering interactions
+	// Touch-based interactions should go through the virtual controls interact button
+	return false
 }

@@ -26,7 +26,7 @@
 | Shape Primitives | 32×32 px | RGBA | `shapes/types.go:168-169` |
 | Particles | 2-8 px | RGBA | `particles/types.go` |
 | UI Elements | Variable | RGBA | `ui/types.go` |
-| Enhanced Humanoid | 28×28 px | RGBA | Phase 15.1 templates |
+| EnhancedHumanoidTemplate | 28×28 px | RGBA | Phase 15.1, `anatomy_template.go:238` |
 | Phase 45 Templates | 64×64 px | RGBA | `anatomy_template.go:2436+` |
 
 ### 1.3 Key Dependencies
@@ -118,7 +118,7 @@ Shadow: 40% width ellipse
    - Change `Height: 32` → `Height: 64`
 3. Update `DefaultConfig()` in `shapes/types.go`:
    - Change `Width: 32` → `Width: 64`
-   - Change `Height: 64` → `Height: 64`
+   - Change `Height: 32` → `Height: 64`
 
 **Testing checkpoint:** Run `go test ./pkg/rendering/sprites/... ./pkg/rendering/tiles/... ./pkg/rendering/shapes/...` to verify dimension changes don't break generation.
 
@@ -130,17 +130,17 @@ Shadow: 40% width ellipse
 - `pkg/rendering/sprites/anatomy_template.go`
 
 **Changes required:**
-1. Update `HumanoidTemplate()` (lines 168-229):
+1. Update `HumanoidTemplate()` (lines 168-229) for 64×64 base:
    - Change head `RelativeY: 0.25` → `RelativeY: 0.18`
    - Change head `RelativeHeight: 0.35` → `RelativeHeight: 0.125`
+   - Add `PreferredPixelSize{Width: 8, Height: 8}` for pixel-perfect head
    - Update torso to bean shape with shoulders
    - Adjust legs to 48% height proportion
 
-2. Create new `TopDownHumanoidTemplate()` function with:
-   - Head: 12% height, ellipse shape, upper placement
-   - Torso: 40% height, bean/rectangle, visible shoulder width
-   - Legs: 48% height, compressed vertical perspective
-   - Shadow: Ground-level ellipse, 30% opacity
+2. Leverage existing `Enhanced64HumanoidTemplate()` (line 2457+):
+   - This template already implements Phase 45 proportions (12%/40%/48%)
+   - Make it the default for 64×64 sprite generation
+   - Update `SelectTemplate64()` to use Enhanced64 for all 64+ sprites
 
 3. Update `QuadrupedTemplate()` (lines 371-435):
    - Adjust body to horizontal ellipse (top-down view of back)
@@ -194,8 +194,10 @@ Shadow: 40% width ellipse
    - Replace `radius := math.Min(cx, cy) * 0.8` with dynamic scaling
    - Add top-down perspective distortion for 3D shapes
 
-2. Enable anti-aliasing by default:
-   - Change `AntiAlias: AntiAliasOff` → `AntiAlias: AntiAliasMedium`
+2. Enable anti-aliasing conditionally:
+   - Default: `AntiAlias: AntiAliasLow` (2× super-sampling for performance)
+   - Quality mode: `AntiAlias: AntiAliasMedium` (4× super-sampling)
+   - Add performance toggle in `shapes/types.go:Config.Quality` field
 
 3. Add new top-down specific shapes:
    - `ShapeFootprint`: Humanoid feet visible from above
@@ -279,8 +281,9 @@ Shadow: 40% width ellipse
    - Update memory limits for larger sprites
 
 2. Adjust cache capacity:
-   - 64×64 RGBA = 16KB per sprite
-   - Reduce max cached sprites to maintain <300MB limit
+   - 64×64 RGBA = 16KB per sprite (64×64×4 bytes)
+   - 300MB limit ÷ 16KB = ~18,750 max cached 64×64 sprites
+   - Reduce max cached sprites from current limit to maintain <300MB
 
 **Testing checkpoint:** Run cache benchmarks, verify memory usage stays under limits.
 

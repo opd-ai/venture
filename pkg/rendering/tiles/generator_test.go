@@ -38,11 +38,11 @@ func TestDefaultConfig(t *testing.T) {
 	if config.Type != TileFloor {
 		t.Errorf("DefaultConfig Type = %v, want %v", config.Type, TileFloor)
 	}
-	if config.Width != 32 {
-		t.Errorf("DefaultConfig Width = %v, want 32", config.Width)
+	if config.Width != 64 {
+		t.Errorf("DefaultConfig Width = %v, want 64", config.Width)
 	}
-	if config.Height != 32 {
-		t.Errorf("DefaultConfig Height = %v, want 32", config.Height)
+	if config.Height != 64 {
+		t.Errorf("DefaultConfig Height = %v, want 64", config.Height)
 	}
 	if config.GenreID != "fantasy" {
 		t.Errorf("DefaultConfig GenreID = %v, want fantasy", config.GenreID)

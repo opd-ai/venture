@@ -112,8 +112,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Type:    TileFloor,
-		Width:   32,
-		Height:  32,
+		Width:   64,
+		Height:  64,
 		GenreID: "fantasy",
 		Seed:    0,
 		Variant: 0.5,

@@ -78,8 +78,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Type:       SpriteEntity,
-		Width:      32,
-		Height:     32,
+		Width:      64,
+		Height:     64,
 		Seed:       0,
 		GenreID:    "fantasy",
 		Complexity: 0.5,

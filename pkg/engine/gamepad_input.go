@@ -67,12 +67,12 @@ func NewGamepadInputHandler() *GamepadInputHandler {
 		TriggerThreshold:   0.5,
 
 		// Xbox-style button mappings
-		ButtonAttack:      ebiten.StandardGamepadButtonRightBottom, // A
-		ButtonSecondary:   ebiten.StandardGamepadButtonRightRight,  // B
-		ButtonUseItem:     ebiten.StandardGamepadButtonRightLeft,   // X
-		ButtonInteract:    ebiten.StandardGamepadButtonRightTop,    // Y
-		ButtonMenu:        ebiten.StandardGamepadButtonCenterRight, // Start
-		ButtonMap:         ebiten.StandardGamepadButtonCenterLeft,  // Back/Select
+		ButtonAttack:      ebiten.StandardGamepadButtonRightBottom,   // A
+		ButtonSecondary:   ebiten.StandardGamepadButtonRightRight,    // B
+		ButtonUseItem:     ebiten.StandardGamepadButtonRightLeft,     // X
+		ButtonInteract:    ebiten.StandardGamepadButtonRightTop,      // Y
+		ButtonMenu:        ebiten.StandardGamepadButtonCenterRight,   // Start
+		ButtonMap:         ebiten.StandardGamepadButtonCenterLeft,    // Back/Select
 		ButtonCycleTarget: ebiten.StandardGamepadButtonFrontTopLeft,  // LB
 		ButtonInventory:   ebiten.StandardGamepadButtonFrontTopRight, // RB
 

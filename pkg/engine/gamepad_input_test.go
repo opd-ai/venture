@@ -43,21 +43,21 @@ func TestGamepadInputHandler_DefaultButtonMappings(t *testing.T) {
 		button   ebiten.StandardGamepadButton
 		expected ebiten.StandardGamepadButton
 	}{
-		{"Attack", handler.ButtonAttack, ebiten.StandardGamepadButtonRightBottom},     // A
-		{"Secondary", handler.ButtonSecondary, ebiten.StandardGamepadButtonRightRight}, // B
-		{"UseItem", handler.ButtonUseItem, ebiten.StandardGamepadButtonRightLeft},      // X
-		{"Interact", handler.ButtonInteract, ebiten.StandardGamepadButtonRightTop},     // Y
-		{"Menu", handler.ButtonMenu, ebiten.StandardGamepadButtonCenterRight},          // Start
-		{"Map", handler.ButtonMap, ebiten.StandardGamepadButtonCenterLeft},             // Back
-		{"CycleTarget", handler.ButtonCycleTarget, ebiten.StandardGamepadButtonFrontTopLeft},  // LB
-		{"Inventory", handler.ButtonInventory, ebiten.StandardGamepadButtonFrontTopRight},     // RB
-		{"Spell1", handler.ButtonSpell1, ebiten.StandardGamepadButtonLeftTop},          // D-pad Up
-		{"Spell2", handler.ButtonSpell2, ebiten.StandardGamepadButtonLeftRight},        // D-pad Right
-		{"Spell3", handler.ButtonSpell3, ebiten.StandardGamepadButtonLeftBottom},       // D-pad Down
-		{"Spell4", handler.ButtonSpell4, ebiten.StandardGamepadButtonLeftLeft},         // D-pad Left
+		{"Attack", handler.ButtonAttack, ebiten.StandardGamepadButtonRightBottom},            // A
+		{"Secondary", handler.ButtonSecondary, ebiten.StandardGamepadButtonRightRight},       // B
+		{"UseItem", handler.ButtonUseItem, ebiten.StandardGamepadButtonRightLeft},            // X
+		{"Interact", handler.ButtonInteract, ebiten.StandardGamepadButtonRightTop},           // Y
+		{"Menu", handler.ButtonMenu, ebiten.StandardGamepadButtonCenterRight},                // Start
+		{"Map", handler.ButtonMap, ebiten.StandardGamepadButtonCenterLeft},                   // Back
+		{"CycleTarget", handler.ButtonCycleTarget, ebiten.StandardGamepadButtonFrontTopLeft}, // LB
+		{"Inventory", handler.ButtonInventory, ebiten.StandardGamepadButtonFrontTopRight},    // RB
+		{"Spell1", handler.ButtonSpell1, ebiten.StandardGamepadButtonLeftTop},                // D-pad Up
+		{"Spell2", handler.ButtonSpell2, ebiten.StandardGamepadButtonLeftRight},              // D-pad Right
+		{"Spell3", handler.ButtonSpell3, ebiten.StandardGamepadButtonLeftBottom},             // D-pad Down
+		{"Spell4", handler.ButtonSpell4, ebiten.StandardGamepadButtonLeftLeft},               // D-pad Left
 		// Platform parity fix: UI shortcut buttons
-		{"Character", handler.ButtonCharacter, ebiten.StandardGamepadButtonLeftStick},  // L3
-		{"Skills", handler.ButtonSkills, ebiten.StandardGamepadButtonRightStick},       // R3
+		{"Character", handler.ButtonCharacter, ebiten.StandardGamepadButtonLeftStick}, // L3
+		{"Skills", handler.ButtonSkills, ebiten.StandardGamepadButtonRightStick},      // R3
 	}
 
 	for _, tt := range tests {

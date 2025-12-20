@@ -163,8 +163,10 @@ func (t *AnatomicalTemplate) GetSortedParts() []struct {
 }
 
 // HumanoidTemplate returns the default humanoid anatomical template.
-// This is optimized for 32x32 pixel sprites (player size).
-// Proportions: Head 12%, Torso 40%, Legs 48% (top-down perspective, Phase 45 aligned).
+// This is optimized for 32x32 pixel sprites with Phase 45 top-down proportions.
+// The PreferredPixelSize values define pixel-perfect dimensions that override
+// RelativeWidth/RelativeHeight, enabling precise body part sizing.
+// Proportions: Head 12%, Torso 40%, Legs 48% (top-down perspective).
 // Target: head visible from above, feet/shadow at bottom.
 func HumanoidTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
@@ -174,7 +176,7 @@ func HumanoidTemplate() AnatomicalTemplate {
 				RelativeX:      0.5,
 				RelativeY:      0.93,
 				RelativeWidth:  0.40,
-				RelativeHeight: 0.08, // Slim shadow for top-down perspective
+				RelativeHeight: 0.08, // 8% height: slim ellipse for grounding without obscuring feet
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
@@ -462,7 +464,7 @@ func BlobTemplate() AnatomicalTemplate {
 				RelativeX:      0.5,
 				RelativeY:      0.88,
 				RelativeWidth:  0.65,
-				RelativeHeight: 0.15, // Wider shadow for blob
+				RelativeHeight: 0.15, // 65% width shadow: larger than humanoid (40%) to match blob's amorphous mass
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",

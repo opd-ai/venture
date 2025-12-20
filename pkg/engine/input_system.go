@@ -295,7 +295,7 @@ type InputSystem struct {
 	useTouchInput   bool // Auto-detected or manually set
 
 	// Platform parity fix: Gamepad input support for Desktop and WASM
-	gamepadHandler *GamepadInputHandler
+	gamepadHandler  *GamepadInputHandler
 	useGamepadInput bool // Auto-detected when gamepad is connected
 
 	// Mouse state tracking for delta calculation (BUG-010 fix)

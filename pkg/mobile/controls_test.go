@@ -562,158 +562,158 @@ func TestVirtualButtonHapticIntegration(t *testing.T) {
 
 // TestNewVirtualControlsLayout_ExtendedControls tests extended control creation.
 func TestNewVirtualControlsLayout_ExtendedControls(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-// Verify extended controls are created
-if layout.InventoryButton == nil {
-t.Error("layout.InventoryButton is nil")
-}
-if layout.TargetButton == nil {
-t.Error("layout.TargetButton is nil")
-}
-if layout.InteractButton == nil {
-t.Error("layout.InteractButton is nil")
-}
-if len(layout.SpellButtons) != 5 {
-t.Errorf("len(layout.SpellButtons) = %d, want 5", len(layout.SpellButtons))
-}
-if !layout.ShowSpellButtons {
-t.Error("layout.ShowSpellButtons = false, want true initially")
-}
+	// Verify extended controls are created
+	if layout.InventoryButton == nil {
+		t.Error("layout.InventoryButton is nil")
+	}
+	if layout.TargetButton == nil {
+		t.Error("layout.TargetButton is nil")
+	}
+	if layout.InteractButton == nil {
+		t.Error("layout.InteractButton is nil")
+	}
+	if len(layout.SpellButtons) != 5 {
+		t.Errorf("len(layout.SpellButtons) = %d, want 5", len(layout.SpellButtons))
+	}
+	if !layout.ShowSpellButtons {
+		t.Error("layout.ShowSpellButtons = false, want true initially")
+	}
 }
 
 // TestVirtualControlsLayout_IsInventoryPressed tests inventory button.
 func TestVirtualControlsLayout_IsInventoryPressed(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-if layout.IsInventoryPressed() {
-t.Error("IsInventoryPressed() = true, want false initially")
-}
+	if layout.IsInventoryPressed() {
+		t.Error("IsInventoryPressed() = true, want false initially")
+	}
 
-layout.InventoryButton.Pressed = true
+	layout.InventoryButton.Pressed = true
 
-if !layout.IsInventoryPressed() {
-t.Error("IsInventoryPressed() = false, want true after press")
-}
+	if !layout.IsInventoryPressed() {
+		t.Error("IsInventoryPressed() = false, want true after press")
+	}
 }
 
 // TestVirtualControlsLayout_IsTargetPressed tests target cycle button.
 func TestVirtualControlsLayout_IsTargetPressed(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-if layout.IsTargetPressed() {
-t.Error("IsTargetPressed() = true, want false initially")
-}
+	if layout.IsTargetPressed() {
+		t.Error("IsTargetPressed() = true, want false initially")
+	}
 
-layout.TargetButton.Pressed = true
+	layout.TargetButton.Pressed = true
 
-if !layout.IsTargetPressed() {
-t.Error("IsTargetPressed() = false, want true after press")
-}
+	if !layout.IsTargetPressed() {
+		t.Error("IsTargetPressed() = false, want true after press")
+	}
 }
 
 // TestVirtualControlsLayout_IsInteractPressed tests interact button.
 func TestVirtualControlsLayout_IsInteractPressed(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-if layout.IsInteractPressed() {
-t.Error("IsInteractPressed() = true, want false initially")
-}
+	if layout.IsInteractPressed() {
+		t.Error("IsInteractPressed() = true, want false initially")
+	}
 
-layout.InteractButton.Pressed = true
+	layout.InteractButton.Pressed = true
 
-if !layout.IsInteractPressed() {
-t.Error("IsInteractPressed() = false, want true after press")
-}
+	if !layout.IsInteractPressed() {
+		t.Error("IsInteractPressed() = false, want true after press")
+	}
 }
 
 // TestVirtualControlsLayout_IsSpellPressed tests spell button detection.
 func TestVirtualControlsLayout_IsSpellPressed(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-// All spell buttons should be not pressed initially
-for slot := 1; slot <= 5; slot++ {
-if layout.IsSpellPressed(slot) {
-t.Errorf("IsSpellPressed(%d) = true, want false initially", slot)
-}
-}
+	// All spell buttons should be not pressed initially
+	for slot := 1; slot <= 5; slot++ {
+		if layout.IsSpellPressed(slot) {
+			t.Errorf("IsSpellPressed(%d) = true, want false initially", slot)
+		}
+	}
 
-// Test each slot
-for slot := 1; slot <= 5; slot++ {
-layout.SpellButtons[slot-1].Pressed = true
-if !layout.IsSpellPressed(slot) {
-t.Errorf("IsSpellPressed(%d) = false, want true after press", slot)
-}
-layout.SpellButtons[slot-1].Pressed = false
-}
+	// Test each slot
+	for slot := 1; slot <= 5; slot++ {
+		layout.SpellButtons[slot-1].Pressed = true
+		if !layout.IsSpellPressed(slot) {
+			t.Errorf("IsSpellPressed(%d) = false, want true after press", slot)
+		}
+		layout.SpellButtons[slot-1].Pressed = false
+	}
 
-// Invalid slots should return false
-if layout.IsSpellPressed(0) {
-t.Error("IsSpellPressed(0) should return false for invalid slot")
-}
-if layout.IsSpellPressed(6) {
-t.Error("IsSpellPressed(6) should return false for out of range slot")
-}
+	// Invalid slots should return false
+	if layout.IsSpellPressed(0) {
+		t.Error("IsSpellPressed(0) should return false for invalid slot")
+	}
+	if layout.IsSpellPressed(6) {
+		t.Error("IsSpellPressed(6) should return false for out of range slot")
+	}
 }
 
 // TestVirtualControlsLayout_SetSpellButtonsVisible tests spell visibility toggle.
 func TestVirtualControlsLayout_SetSpellButtonsVisible(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-if !layout.ShowSpellButtons {
-t.Error("ShowSpellButtons = false, want true initially")
-}
+	if !layout.ShowSpellButtons {
+		t.Error("ShowSpellButtons = false, want true initially")
+	}
 
-layout.SetSpellButtonsVisible(false)
-if layout.ShowSpellButtons {
-t.Error("ShowSpellButtons = true, want false after SetSpellButtonsVisible(false)")
-}
+	layout.SetSpellButtonsVisible(false)
+	if layout.ShowSpellButtons {
+		t.Error("ShowSpellButtons = true, want false after SetSpellButtonsVisible(false)")
+	}
 
-// IsSpellPressed should return false when hidden
-layout.SpellButtons[0].Pressed = true
-if layout.IsSpellPressed(1) {
-t.Error("IsSpellPressed(1) should return false when spell buttons hidden")
-}
+	// IsSpellPressed should return false when hidden
+	layout.SpellButtons[0].Pressed = true
+	if layout.IsSpellPressed(1) {
+		t.Error("IsSpellPressed(1) should return false when spell buttons hidden")
+	}
 
-layout.SetSpellButtonsVisible(true)
-if !layout.ShowSpellButtons {
-t.Error("ShowSpellButtons = false, want true after SetSpellButtonsVisible(true)")
-}
+	layout.SetSpellButtonsVisible(true)
+	if !layout.ShowSpellButtons {
+		t.Error("ShowSpellButtons = false, want true after SetSpellButtonsVisible(true)")
+	}
 }
 
 // TestVirtualControlsLayout_Resize tests control repositioning on resize.
 func TestVirtualControlsLayout_Resize(t *testing.T) {
-layout := NewVirtualControlsLayout(800, 600)
+	layout := NewVirtualControlsLayout(800, 600)
 
-origDPadX := layout.DPad.X
-origMenuX := layout.MenuButton.X
+	origDPadX := layout.DPad.X
+	origMenuX := layout.MenuButton.X
 
-// Resize to larger screen
-layout.Resize(1920, 1080)
+	// Resize to larger screen
+	layout.Resize(1920, 1080)
 
-// Verify positions changed
-if layout.DPad.X == origDPadX {
-t.Error("D-pad X position should change on resize")
-}
-if layout.MenuButton.X == origMenuX {
-t.Error("Menu button X position should change on resize")
-}
+	// Verify positions changed
+	if layout.DPad.X == origDPadX {
+		t.Error("D-pad X position should change on resize")
+	}
+	if layout.MenuButton.X == origMenuX {
+		t.Error("Menu button X position should change on resize")
+	}
 
-// Verify all extended controls still valid
-if layout.InventoryButton == nil {
-t.Error("InventoryButton should not be nil after resize")
-}
-if layout.TargetButton == nil {
-t.Error("TargetButton should not be nil after resize")
-}
-if layout.InteractButton == nil {
-t.Error("InteractButton should not be nil after resize")
-}
-for i, btn := range layout.SpellButtons {
-if btn == nil {
-t.Errorf("SpellButtons[%d] should not be nil after resize", i)
-}
-}
+	// Verify all extended controls still valid
+	if layout.InventoryButton == nil {
+		t.Error("InventoryButton should not be nil after resize")
+	}
+	if layout.TargetButton == nil {
+		t.Error("TargetButton should not be nil after resize")
+	}
+	if layout.InteractButton == nil {
+		t.Error("InteractButton should not be nil after resize")
+	}
+	for i, btn := range layout.SpellButtons {
+		if btn == nil {
+			t.Errorf("SpellButtons[%d] should not be nil after resize", i)
+		}
+	}
 }
 
 // TestNewVirtualControlsLayout_UIShortcuts tests UI shortcut button creation.

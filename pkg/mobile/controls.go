@@ -410,8 +410,8 @@ type VirtualControlsLayout struct {
 	MapButton       *VirtualButton // World map (M key equivalent)
 
 	// Extended controls visibility (can be toggled for cleaner UI)
-	ShowSpellButtons   bool
-	ShowUIShortcuts    bool // Toggle visibility of UI shortcut buttons
+	ShowSpellButtons bool
+	ShowUIShortcuts  bool // Toggle visibility of UI shortcut buttons
 
 	Visible      bool
 	touchHandler *TouchInputHandler

@@ -359,7 +359,7 @@ func NewInputSystem() *InputSystem {
 		KeyCrafting:  ebiten.KeyR,
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
-		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict, from P to avoid Party conflict
+		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict
 		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)

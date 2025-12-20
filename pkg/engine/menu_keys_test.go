@@ -22,7 +22,7 @@ func TestMenuKeys_Constants(t *testing.T) {
 		{"Shop key", MenuKeys.Shop, ebiten.KeyF},
 		{"Crafting key", MenuKeys.Crafting, ebiten.KeyR},
 		{"Trade key", MenuKeys.Trade, ebiten.KeyT},
-		{"Classes key", MenuKeys.Classes, ebiten.KeyA},
+		{"Classes key", MenuKeys.Classes, ebiten.KeyX}, // Changed from A to X to avoid WASD conflict
 		{"Territory key", MenuKeys.Territory, ebiten.KeyY},
 		{"Exit key", MenuKeys.Exit, ebiten.KeyEscape},
 	}
@@ -209,7 +209,7 @@ func TestGetExitHint(t *testing.T) {
 		{"Shop", MenuKeys.Shop, "Press [F] or [ESC] to close"},
 		{"Crafting", MenuKeys.Crafting, "Press [R] or [ESC] to close"},
 		{"Trade", MenuKeys.Trade, "Press [T] or [ESC] to close"},
-		{"Classes", MenuKeys.Classes, "Press [A] or [ESC] to close"},
+		{"Classes", MenuKeys.Classes, "Press [X] or [ESC] to close"}, // Changed from A to X to avoid WASD conflict
 		{"Territory", MenuKeys.Territory, "Press [Y] or [ESC] to close"},
 	}
 

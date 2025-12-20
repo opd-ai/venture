@@ -310,6 +310,8 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.SetProjectileSystem(result.ProjectileSystem)
 
 	result.InteractionSystem.SetCarrySystem(carrySystem)
+	// INPUT CONFLICT FIX: Connect InteractionSystem to InputSystem for state checking
+	result.InteractionSystem.SetInputSystem(result.InputSystem)
 
 	// Store UI system references in game
 	game.TutorialSystem = result.TutorialSystem

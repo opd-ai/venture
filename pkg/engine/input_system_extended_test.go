@@ -539,3 +539,149 @@ func TestInputSystem_DrawVirtualControls(t *testing.T) {
 
 	t.Log("DrawVirtualControls method verified")
 }
+
+// ===== INPUT CONTEXT STACK TESTS =====
+
+// TestInputContextStack_NewInputContextStack tests stack initialization.
+func TestInputContextStack_NewInputContextStack(t *testing.T) {
+	stack := NewInputContextStack()
+	if stack == nil {
+		t.Fatal("NewInputContextStack should return non-nil stack")
+	}
+	if stack.Current() != InputContextGameplay {
+		t.Errorf("Initial context should be Gameplay, got %v", stack.Current())
+	}
+	if !stack.IsGameplay() {
+		t.Error("IsGameplay should return true for initial state")
+	}
+}
+
+// TestInputContextStack_PushPop tests push and pop operations.
+func TestInputContextStack_PushPop(t *testing.T) {
+	stack := NewInputContextStack()
+
+	// Push UI context
+	stack.Push(InputContextUI)
+	if stack.Current() != InputContextUI {
+		t.Errorf("Current context should be UI after push, got %v", stack.Current())
+	}
+	if stack.IsGameplay() {
+		t.Error("IsGameplay should return false when UI context is active")
+	}
+
+	// Push Modal context
+	stack.Push(InputContextModal)
+	if stack.Current() != InputContextModal {
+		t.Errorf("Current context should be Modal after second push, got %v", stack.Current())
+	}
+
+	// Pop Modal context
+	popped := stack.Pop()
+	if popped != InputContextModal {
+		t.Errorf("Popped context should be Modal, got %v", popped)
+	}
+	if stack.Current() != InputContextUI {
+		t.Errorf("Current context should be UI after pop, got %v", stack.Current())
+	}
+
+	// Pop UI context
+	popped = stack.Pop()
+	if popped != InputContextUI {
+		t.Errorf("Popped context should be UI, got %v", popped)
+	}
+	if stack.Current() != InputContextGameplay {
+		t.Errorf("Current context should be Gameplay after popping all, got %v", stack.Current())
+	}
+	if !stack.IsGameplay() {
+		t.Error("IsGameplay should return true after popping all contexts")
+	}
+}
+
+// TestInputContextStack_PopEmpty tests popping from empty stack.
+func TestInputContextStack_PopEmpty(t *testing.T) {
+	stack := NewInputContextStack()
+
+	// Pop should return Gameplay when stack only has default
+	popped := stack.Pop()
+	if popped != InputContextGameplay {
+		t.Errorf("Popping empty stack should return Gameplay, got %v", popped)
+	}
+	if stack.Current() != InputContextGameplay {
+		t.Errorf("Current should still be Gameplay after pop, got %v", stack.Current())
+	}
+}
+
+// TestInputContext_String tests context string representation.
+func TestInputContext_String(t *testing.T) {
+	tests := []struct {
+		ctx      InputContext
+		expected string
+	}{
+		{InputContextGameplay, "Gameplay"},
+		{InputContextUI, "UI"},
+		{InputContextModal, "Modal"},
+		{InputContextTextInput, "TextInput"},
+		{InputContext(99), "Unknown"},
+	}
+
+	for _, tt := range tests {
+		if got := tt.ctx.String(); got != tt.expected {
+			t.Errorf("InputContext(%d).String() = %q, want %q", tt.ctx, got, tt.expected)
+		}
+	}
+}
+
+// TestInputSystem_InputContextMethods tests InputSystem context methods.
+func TestInputSystem_InputContextMethods(t *testing.T) {
+	inputSys := NewInputSystem()
+
+	// Initial state should allow gameplay input
+	if !inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return true initially")
+	}
+	if !inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return true initially")
+	}
+
+	// Push UI context
+	inputSys.PushInputContext(InputContextUI)
+	if inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return false when UI context is active")
+	}
+	if inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return false when UI context is active")
+	}
+
+	// Pop UI context
+	inputSys.PopInputContext()
+	if !inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return true after popping UI context")
+	}
+	if !inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return true after popping UI context")
+	}
+}
+
+// TestGameState_AllowsInteraction tests the AllowsInteraction method.
+func TestGameState_AllowsInteraction(t *testing.T) {
+	tests := []struct {
+		state    GameState
+		expected bool
+	}{
+		{StateExploring, true},
+		{StateCombat, true},
+		{StateMenu, false},
+		{StateDialogue, false},
+		{StateInventory, false},
+		{StateCharacterScreen, false},
+		{StateSkillTree, false},
+		{StateQuestLog, false},
+		{StateMap, false},
+	}
+
+	for _, tt := range tests {
+		if got := tt.state.AllowsInteraction(); got != tt.expected {
+			t.Errorf("%s.AllowsInteraction() = %v, want %v", tt.state.String(), got, tt.expected)
+		}
+	}
+}

@@ -98,6 +98,17 @@ func (s GameState) IsUIState() bool {
 	}
 }
 
+// AllowsInteraction returns true if player can interact with objects in this state.
+// INPUT CONFLICT FIX: Added to prevent F key interactions when UIs are open.
+func (s GameState) AllowsInteraction() bool {
+	switch s {
+	case StateExploring, StateCombat:
+		return true
+	default:
+		return false
+	}
+}
+
 // EbitenInput stores the current input state for an entity (Ebiten implementation).
 // This is typically only used for player-controlled entities.
 // Implements InputProvider interface.
@@ -426,6 +437,19 @@ func (s *InputSystem) SetGameState(state GameState) {
 // Priority 2.1: Allows UI systems to query keybindings for accurate labels
 func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 	return s.keyBindings
+}
+
+// IsGameplayInputAllowed returns true if gameplay input (movement, combat, interaction) is allowed.
+// Returns false if any UI is open or a modal dialog is active according to the current GameState.
+// Note: Uses AllowsMovement() as a proxy since movement and gameplay share the same allowed states.
+func (s *InputSystem) IsGameplayInputAllowed() bool {
+	return s.currentState.AllowsMovement()
+}
+
+// IsInteractionAllowed returns true if interaction input (F key) should be processed.
+// INPUT CONFLICT FIX: Prevents interaction when UIs are open according to the current GameState.
+func (s *InputSystem) IsInteractionAllowed() bool {
+	return s.currentState.AllowsInteraction()
 }
 
 // Update processes input for all entities with input components.

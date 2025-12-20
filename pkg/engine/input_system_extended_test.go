@@ -539,3 +539,58 @@ func TestInputSystem_DrawVirtualControls(t *testing.T) {
 
 	t.Log("DrawVirtualControls method verified")
 }
+
+// TestInputSystem_GameStateInputMethods tests InputSystem methods that check game state.
+func TestInputSystem_GameStateInputMethods(t *testing.T) {
+	inputSys := NewInputSystem()
+
+	// Initial state (StateExploring) should allow gameplay input
+	if !inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return true initially (StateExploring)")
+	}
+	if !inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return true initially (StateExploring)")
+	}
+
+	// Set to inventory state - should block input
+	inputSys.SetGameState(StateInventory)
+	if inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return false when in StateInventory")
+	}
+	if inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return false when in StateInventory")
+	}
+
+	// Return to exploring state - should allow input
+	inputSys.SetGameState(StateExploring)
+	if !inputSys.IsGameplayInputAllowed() {
+		t.Error("IsGameplayInputAllowed should return true after returning to StateExploring")
+	}
+	if !inputSys.IsInteractionAllowed() {
+		t.Error("IsInteractionAllowed should return true after returning to StateExploring")
+	}
+}
+
+// TestGameState_AllowsInteraction tests the AllowsInteraction method.
+func TestGameState_AllowsInteraction(t *testing.T) {
+	tests := []struct {
+		state    GameState
+		expected bool
+	}{
+		{StateExploring, true},
+		{StateCombat, true},
+		{StateMenu, false},
+		{StateDialogue, false},
+		{StateInventory, false},
+		{StateCharacterScreen, false},
+		{StateSkillTree, false},
+		{StateQuestLog, false},
+		{StateMap, false},
+	}
+
+	for _, tt := range tests {
+		if got := tt.state.AllowsInteraction(); got != tt.expected {
+			t.Errorf("%s.AllowsInteraction() = %v, want %v", tt.state.String(), got, tt.expected)
+		}
+	}
+}

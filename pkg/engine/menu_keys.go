@@ -27,7 +27,7 @@ var MenuKeys = struct {
 	Shop         ebiten.Key // F - Shop/Merchant interaction (F for "interFact" with merchants)
 	Crafting     ebiten.Key // R - Crafting recipes
 	Trade        ebiten.Key // T - Player-to-player trading
-	Classes      ebiten.Key // P - Advanced classes (multi-classing, prestige, talents) - Changed from A to avoid WASD conflict
+	Classes      ebiten.Key // X - Advanced classes (multi-classing, prestige, talents) - Changed from A to avoid WASD conflict
 	Territory    ebiten.Key // Y - Territory control and guild warfare
 	Dialog       ebiten.Key // D - Dialog with NPCs
 	Statistics   ebiten.Key // N - Player statistics (N for "Numbers")
@@ -61,7 +61,7 @@ var MenuKeys = struct {
 	Shop:         ebiten.KeyF,
 	Crafting:     ebiten.KeyR,
 	Trade:        ebiten.KeyT,
-	Classes:      ebiten.KeyP, // Changed from A to avoid WASD movement conflict
+	Classes:      ebiten.KeyX, // Changed from A to avoid WASD movement conflict
 	Territory:    ebiten.KeyY,
 	Dialog:       ebiten.KeyD,
 	Statistics:   ebiten.KeyN,
@@ -77,7 +77,7 @@ var MenuKeys = struct {
 	ShopLabel:         "[F] Shop",
 	CraftingLabel:     "[R] Crafting",
 	TradeLabel:        "[T] Trade",
-	ClassesLabel:      "[P] Classes", // Changed from A to avoid WASD conflict
+	ClassesLabel:      "[X] Classes", // Changed from A to avoid WASD conflict
 	TerritoryLabel:    "[Y] Territory",
 	DialogLabel:       "[D] Dialog",
 	StatisticsLabel:   "[N] Statistics",
@@ -234,6 +234,8 @@ func getKeyName(key ebiten.Key) string {
 		return "A"
 	case ebiten.KeyP:
 		return "P"
+	case ebiten.KeyX:
+		return "X"
 	case ebiten.KeyY:
 		return "Y"
 	case ebiten.KeyD:

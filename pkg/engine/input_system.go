@@ -240,7 +240,7 @@ type InputSystem struct {
 	KeyCrafting  ebiten.Key // R key for crafting
 	KeyMailbox   ebiten.Key // L key for mailbox
 	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
-	KeyClasses   ebiten.Key // P key for advanced classes (Phase 4.2) - Changed from A to avoid WASD conflict
+	KeyClasses   ebiten.Key // X key for advanced classes (Phase 4.2) - Changed from A to avoid WASD conflict
 	KeyTerritory ebiten.Key // Y key for territory control (Phase 4.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
@@ -359,7 +359,7 @@ func NewInputSystem() *InputSystem {
 		KeyCrafting:  ebiten.KeyR,
 		KeyMailbox:   ebiten.KeyL, // Phase 40.3: Mailbox UI
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
-		KeyClasses:   ebiten.KeyP, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict
+		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict, from P to avoid Party conflict
 		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
@@ -1457,8 +1457,9 @@ func (s *InputSystem) SetTradeCallback(callback func()) error {
 	return nil
 }
 
-// SetClassesCallback sets the callback function for opening advanced class UI (A key).
+// SetClassesCallback sets the callback function for opening advanced class UI (X key).
 // Phase 4.2 (PLAN.md): Advanced classes (multi-classing, prestige, talents) UI integration.
+// INPUT CONFLICT FIX: Changed from A key to X key to avoid WASD movement conflict.
 func (s *InputSystem) SetClassesCallback(callback func()) error {
 	if callback == nil {
 		return fmt.Errorf("classes callback cannot be nil")

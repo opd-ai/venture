@@ -22,7 +22,7 @@ func TestMenuKeys_Constants(t *testing.T) {
 		{"Shop key", MenuKeys.Shop, ebiten.KeyF},
 		{"Crafting key", MenuKeys.Crafting, ebiten.KeyR},
 		{"Trade key", MenuKeys.Trade, ebiten.KeyT},
-		{"Classes key", MenuKeys.Classes, ebiten.KeyA},
+		{"Classes key", MenuKeys.Classes, ebiten.KeyX}, // Changed from A to X to avoid WASD conflict
 		{"Territory key", MenuKeys.Territory, ebiten.KeyY},
 		{"Exit key", MenuKeys.Exit, ebiten.KeyEscape},
 	}

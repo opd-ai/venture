@@ -544,6 +544,7 @@ func (s *InputSystem) GetCurrentInputContext() InputContext {
 // IsGameplayInputAllowed returns true if gameplay input (movement, combat, interaction) is allowed.
 // INPUT CONFLICT FIX: Central method for checking if gameplay systems should process input.
 // Returns false if any UI is open or a modal dialog is active.
+// Note: Uses AllowsMovement() as a proxy since movement and gameplay share the same allowed states.
 func (s *InputSystem) IsGameplayInputAllowed() bool {
 	return s.contextStack.IsGameplay() && s.currentState.AllowsMovement()
 }

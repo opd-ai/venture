@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/procgen/dialog"
@@ -125,25 +126,42 @@ func (ui *DialogUI) Update() error {
 		return nil
 	}
 
-	// Keyboard navigation
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+	// Handle touch/mouse input for option selection
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+		// Check if touch/click is within options area
+		optionY := ui.screenHeight - 250 + 120
+		panelX := ui.screenWidth/2 - 300
+		for i := range ui.playerOptions {
+			optY := optionY + i*25
+			// Check if within option bounds (approximate hit area)
+			if mouseX >= panelX && mouseX <= panelX+580 &&
+				mouseY >= optY-12 && mouseY <= optY+12 {
+				ui.selectedOption = i
+				return ui.handleOptionSelect()
+			}
+		}
+	}
+
+	// Keyboard navigation - Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		if len(ui.playerOptions) > 0 {
 			ui.selectedOption = (ui.selectedOption + 1) % len(ui.playerOptions)
 		}
 	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		if len(ui.playerOptions) > 0 {
 			ui.selectedOption = (ui.selectedOption - 1 + len(ui.playerOptions)) % len(ui.playerOptions)
 		}
 	}
 
-	// Select option
-	if ebiten.IsKeyPressed(ebiten.KeyEnter) || ebiten.IsKeyPressed(ebiten.KeySpace) {
+	// Select option - Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		return ui.handleOptionSelect()
 	}
 
-	// Close dialog
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
+	// Close dialog - Platform parity fix: Use edge-triggered detection
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		ui.Hide()
 		return nil
 	}

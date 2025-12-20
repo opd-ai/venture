@@ -10,6 +10,13 @@ import (
 	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
+// Gallery UI layout constants for maintainability
+const (
+	galleryCloseButtonWidth  = 40
+	galleryCloseButtonHeight = 30
+	galleryCloseButtonMargin = 10
+)
+
 // GalleryUI represents an image gallery viewer interface.
 // Phase 49.4
 type GalleryUI struct {
@@ -90,6 +97,7 @@ func (g *GalleryUI) PreviousImage() {
 
 // Update updates the gallery UI state.
 // Returns true if the UI consumed the input (blocking pass-through).
+// Platform parity fix: Added touch/mouse support for navigation.
 func (g *GalleryUI) Update() bool {
 	if !g.Visible {
 		return false
@@ -104,6 +112,29 @@ func (g *GalleryUI) Update() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		g.Hide()
 		return true
+	}
+
+	// Platform parity fix: Handle touch/mouse input for navigation
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+		// Check if touch/click is in left half (previous) or right half (next)
+		midX := g.X + g.Width/2
+		if mouseY >= g.Y && mouseY <= g.Y+g.Height {
+			// Close button area (top right corner)
+			closeX := g.X + g.Width - galleryCloseButtonWidth - galleryCloseButtonMargin
+			closeY := g.Y + galleryCloseButtonMargin
+			if mouseX >= closeX && mouseX <= closeX+galleryCloseButtonWidth &&
+				mouseY >= closeY && mouseY <= closeY+galleryCloseButtonHeight {
+				g.Hide()
+				return true
+			}
+			// Left side for previous, right side for next
+			if mouseX >= g.X && mouseX < midX {
+				g.PreviousImage()
+			} else if mouseX >= midX && mouseX <= g.X+g.Width {
+				g.NextImage()
+			}
+		}
 	}
 
 	// Update total images from gallery

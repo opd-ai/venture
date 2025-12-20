@@ -109,78 +109,6 @@ func (s GameState) AllowsInteraction() bool {
 	}
 }
 
-// InputContext represents the current input context for priority-based input handling.
-// INPUT CONFLICT FIX: Centralized input context management.
-type InputContext int
-
-const (
-	// InputContextGameplay is the default gameplay context (movement, combat, interactions)
-	InputContextGameplay InputContext = iota
-	// InputContextUI is when a UI panel is open and has focus
-	InputContextUI
-	// InputContextModal is when a modal dialog requires exclusive input
-	InputContextModal
-	// InputContextTextInput is when text input field is active
-	InputContextTextInput
-)
-
-// String returns human-readable context name for debugging.
-func (c InputContext) String() string {
-	switch c {
-	case InputContextGameplay:
-		return "Gameplay"
-	case InputContextUI:
-		return "UI"
-	case InputContextModal:
-		return "Modal"
-	case InputContextTextInput:
-		return "TextInput"
-	default:
-		return "Unknown"
-	}
-}
-
-// InputContextStack manages a stack of input contexts for proper input routing.
-// INPUT CONFLICT FIX: Allows push/pop of input contexts for nested menus.
-type InputContextStack struct {
-	contexts []InputContext
-}
-
-// NewInputContextStack creates a new input context stack with gameplay as default.
-func NewInputContextStack() *InputContextStack {
-	return &InputContextStack{
-		contexts: []InputContext{InputContextGameplay},
-	}
-}
-
-// Push adds a new context to the stack.
-func (s *InputContextStack) Push(ctx InputContext) {
-	s.contexts = append(s.contexts, ctx)
-}
-
-// Pop removes and returns the top context. Returns InputContextGameplay if stack is empty.
-func (s *InputContextStack) Pop() InputContext {
-	if len(s.contexts) <= 1 {
-		return InputContextGameplay
-	}
-	top := s.contexts[len(s.contexts)-1]
-	s.contexts = s.contexts[:len(s.contexts)-1]
-	return top
-}
-
-// Current returns the current (top) context without removing it.
-func (s *InputContextStack) Current() InputContext {
-	if len(s.contexts) == 0 {
-		return InputContextGameplay
-	}
-	return s.contexts[len(s.contexts)-1]
-}
-
-// IsGameplay returns true if the current context is gameplay (no UI blocking input).
-func (s *InputContextStack) IsGameplay() bool {
-	return s.Current() == InputContextGameplay
-}
-
 // EbitenInput stores the current input state for an entity (Ebiten implementation).
 // This is typically only used for player-controlled entities.
 // Implements InputProvider interface.
@@ -402,9 +330,6 @@ type InputSystem struct {
 	// Priority 2.3: Game state for input filtering
 	currentState GameState
 
-	// INPUT CONFLICT FIX: Input context stack for priority-based input handling
-	contextStack *InputContextStack
-
 	// Priority 2.1: Key binding registry for centralized binding management
 	keyBindings *KeyBindingRegistry
 
@@ -468,9 +393,6 @@ func NewInputSystem() *InputSystem {
 		// Priority 2.3: Initialize game state to exploring
 		currentState: StateExploring,
 
-		// INPUT CONFLICT FIX: Initialize input context stack
-		contextStack: NewInputContextStack(),
-
 		// Priority 2.1: Initialize key binding registry
 		keyBindings: NewKeyBindingRegistry(),
 
@@ -517,42 +439,17 @@ func (s *InputSystem) GetKeyBindings() *KeyBindingRegistry {
 	return s.keyBindings
 }
 
-// GetContextStack returns the input context stack for managing input priority.
-// INPUT CONFLICT FIX: Allows systems to push/pop input contexts.
-func (s *InputSystem) GetContextStack() *InputContextStack {
-	return s.contextStack
-}
-
-// PushInputContext pushes a new input context onto the stack.
-// INPUT CONFLICT FIX: Called when opening UI panels to block gameplay input.
-func (s *InputSystem) PushInputContext(ctx InputContext) {
-	s.contextStack.Push(ctx)
-}
-
-// PopInputContext pops the top input context from the stack.
-// INPUT CONFLICT FIX: Called when closing UI panels to restore previous context.
-func (s *InputSystem) PopInputContext() InputContext {
-	return s.contextStack.Pop()
-}
-
-// GetCurrentInputContext returns the current input context.
-// INPUT CONFLICT FIX: Used by systems to check if they should process input.
-func (s *InputSystem) GetCurrentInputContext() InputContext {
-	return s.contextStack.Current()
-}
-
 // IsGameplayInputAllowed returns true if gameplay input (movement, combat, interaction) is allowed.
-// INPUT CONFLICT FIX: Central method for checking if gameplay systems should process input.
-// Returns false if any UI is open or a modal dialog is active.
+// Returns false if any UI is open or a modal dialog is active according to the current GameState.
 // Note: Uses AllowsMovement() as a proxy since movement and gameplay share the same allowed states.
 func (s *InputSystem) IsGameplayInputAllowed() bool {
-	return s.contextStack.IsGameplay() && s.currentState.AllowsMovement()
+	return s.currentState.AllowsMovement()
 }
 
 // IsInteractionAllowed returns true if interaction input (F key) should be processed.
-// INPUT CONFLICT FIX: Prevents interaction when UIs are open.
+// INPUT CONFLICT FIX: Prevents interaction when UIs are open according to the current GameState.
 func (s *InputSystem) IsInteractionAllowed() bool {
-	return s.contextStack.IsGameplay() && s.currentState.AllowsInteraction()
+	return s.currentState.AllowsInteraction()
 }
 
 // Update processes input for all entities with input components.

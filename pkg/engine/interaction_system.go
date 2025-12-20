@@ -39,7 +39,7 @@ func (s *InteractionSystem) SetCarrySystem(carrySystem *CarrySystem) {
 }
 
 // SetInputSystem sets the input system reference for checking if interaction is allowed.
-// INPUT CONFLICT FIX: Allows checking game state and input context before processing.
+// INPUT CONFLICT FIX: Allows checking whether interactions are allowed based on current game state (e.g., UI open/closed) before processing.
 func (s *InteractionSystem) SetInputSystem(inputSystem *InputSystem) {
 	s.inputSystem = inputSystem
 }
@@ -57,7 +57,7 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	// INPUT CONFLICT FIX: Check if interaction input is allowed (no UI open, gameplay state)
+	// INPUT CONFLICT FIX: Check if interaction input is allowed based on current game state
 	if s.inputSystem != nil && !s.inputSystem.IsInteractionAllowed() {
 		return
 	}

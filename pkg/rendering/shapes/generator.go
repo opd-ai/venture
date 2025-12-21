@@ -39,9 +39,18 @@ func (g *Generator) generateShape(config Config) *ebiten.Image {
 	centerX := float64(config.Width) / 2.0
 	centerY := float64(config.Height) / 2.0
 
+	// Apply Quality override: when Quality is true, upgrade to AntiAliasMedium
+	effectiveAntiAlias := config.AntiAlias
+	if config.Quality && effectiveAntiAlias < AntiAliasMedium {
+		effectiveAntiAlias = AntiAliasMedium
+	}
+
 	// Use anti-aliasing if enabled (Phase 15.1)
-	if config.AntiAlias != AntiAliasOff {
-		g.generateWithAntiAlias(img, config, centerX, centerY)
+	if effectiveAntiAlias != AntiAliasOff {
+		// Create a modified config with the effective anti-alias setting
+		effectiveConfig := config
+		effectiveConfig.AntiAlias = effectiveAntiAlias
+		g.generateWithAntiAlias(img, effectiveConfig, centerX, centerY)
 	} else {
 		g.generateWithoutAntiAlias(img, config, centerX, centerY)
 	}

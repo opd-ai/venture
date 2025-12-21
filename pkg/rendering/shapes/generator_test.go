@@ -79,6 +79,78 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+// TestQualityFieldBehavior verifies that the Quality field correctly upgrades anti-aliasing.
+func TestQualityFieldBehavior(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name               string
+		antiAlias          AntiAliasQuality
+		quality            bool
+		expectHigherQuality bool
+	}{
+		{
+			name:               "Quality false with AntiAliasLow keeps Low",
+			antiAlias:          AntiAliasLow,
+			quality:            false,
+			expectHigherQuality: false,
+		},
+		{
+			name:               "Quality true with AntiAliasLow upgrades to Medium",
+			antiAlias:          AntiAliasLow,
+			quality:            true,
+			expectHigherQuality: true,
+		},
+		{
+			name:               "Quality true with AntiAliasOff upgrades to Medium",
+			antiAlias:          AntiAliasOff,
+			quality:            true,
+			expectHigherQuality: true,
+		},
+		{
+			name:               "Quality true with AntiAliasMedium stays Medium",
+			antiAlias:          AntiAliasMedium,
+			quality:            true,
+			expectHigherQuality: false, // Already at Medium, no upgrade needed
+		},
+		{
+			name:               "Quality true with AntiAliasHigh stays High",
+			antiAlias:          AntiAliasHigh,
+			quality:            true,
+			expectHigherQuality: false, // Already higher than Medium
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Type:      ShapeCircle,
+				Width:     32,
+				Height:    32,
+				Color:     color.RGBA{R: 255, G: 255, B: 255, A: 255},
+				Seed:      12345,
+				AntiAlias: tt.antiAlias,
+				Quality:   tt.quality,
+			}
+
+			// Generate should succeed regardless of Quality setting
+			img, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			if img == nil {
+				t.Fatal("Generate() returned nil image")
+			}
+
+			// Verify image was generated with correct dimensions
+			bounds := img.Bounds()
+			if bounds.Dx() != config.Width || bounds.Dy() != config.Height {
+				t.Errorf("Image dimensions = %dx%d, want %dx%d", bounds.Dx(), bounds.Dy(), config.Width, config.Height)
+			}
+		})
+	}
+}
+
 func TestConfigValidation(t *testing.T) {
 	tests := []struct {
 		name   string

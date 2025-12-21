@@ -105,7 +105,8 @@ func (c *Controller) applyArticulation(baseSprite *ebiten.Image, articulation Ar
 	height := bounds.Dy()
 
 	// Create output image with padding for articulation offsets
-	padding := 10 // Extra pixels for articulation range
+	// Scaled for 64×64 sprites (Phase 45 migration): 10 → 20 pixels
+	padding := 20 // Extra pixels for articulation range (scaled 2× for 64×64)
 	outputWidth := width + padding*2
 	outputHeight := height + padding*2
 	output := ebiten.NewImage(outputWidth, outputHeight)

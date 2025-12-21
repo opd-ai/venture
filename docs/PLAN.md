@@ -301,22 +301,53 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 6: Update Animation System
+### Step 6: Update Animation System ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
+- `pkg/rendering/animation/articulation.go`
 - `pkg/rendering/animation/controller.go`
-- `pkg/rendering/animation/direction.go`
+- `pkg/rendering/animation/articulation_test.go`
 
-**Changes required:**
-1. Update frame dimensions for 64×64:
-   - Adjust animation frame positioning
-   - Scale walk cycle pixel offsets
+**Changes completed:**
+1. ✅ Updated articulation configuration for 64×64 sprites:
+   - Scaled `ArmOffsetMax: 3.0` → `6.0` (2× for 64×64)
+   - Scaled `LegOffsetMax: 4.0` → `8.0` (2× for 64×64)
+   - Scaled `HeadOffsetMax: 2.0` → `4.0` (2× for 64×64)
+   - Scaled `TailOffsetMax: 5.0` → `10.0` (2× for 64×64)
 
-2. Enhance directional sprites:
-   - Add subtle head rotation for direction indication
-   - Arm position changes per direction
+2. ✅ Scaled all hardcoded pixel offsets in articulation functions:
+   - Idle animation: head bob, torso expansion, arm movement (2× scaling)
+   - Walk/run animation: head bob, torso bob (2× scaling)
+   - Attack animation: arm X offsets for wind-up/strike/follow-through (2× scaling)
+   - Death animation: all body part Y offsets (2× scaling)
+   - Jump animation: crouch depth, arc height, landing compression (2× scaling)
+   - Cast animation: head concentration height (2× scaling)
+   - Hit animation: knockback distance (2× scaling)
 
-**Testing checkpoint:** Test 4-directional animation at 64×64.
+3. ✅ Added directional head rotation for direction indication:
+   - `calculateDirectionalHeadRotation()` function added
+   - East/West: full rotation toward direction
+   - Diagonal: partial rotation (0.5-0.8× max)
+   - North/South: no rotation (facing camera/away)
+
+4. ✅ Added arm position changes per direction:
+   - `calculateDirectionalArmOffsets()` function added
+   - Arms extend toward movement direction
+   - Exaggerated for running (1.3× multiplier)
+
+5. ✅ Updated controller padding for 64×64:
+   - `applyArticulation()` padding: 10 → 20 pixels
+
+**Tests updated/added:**
+- `TestDefaultArticulationConfig`: Updated for 64×64 scaled values
+- `TestCalculateIdleArticulation`: Updated motion limits for 64×64
+- `TestDirectionalHeadRotation`: New test for directional head rotation
+- `TestDirectionalArmOffsets`: New test for arm position changes
+- `TestWalkArticulationDirectional`: New test for directional walk enhancements
+- `TestPhase45AnimationScaling`: New test verifying 64×64 scaling
+
+**Testing checkpoint:** ✅ `go test ./pkg/rendering/animation/...` all pass.
+`go test ./pkg/rendering/...` all 16 packages pass.
 
 ---
 
@@ -430,9 +461,9 @@ Phase 2: Core Generation (Steps 2-4) ✅ COMPLETE
     ├── ✅ Tile patterns → scaled + 3D hints (Step 3 COMPLETE)
     └── ✅ Shape primitives → anti-aliased + scaled (Step 4 COMPLETE)
 
-Phase 3: Effects & Animation (Steps 5-6)
+Phase 3: Effects & Animation (Steps 5-6) ✅ COMPLETE
     ├── ✅ Particle scaling + Z-layers (Step 5 COMPLETE)
-    └── Animation frame updates
+    └── ✅ Animation frame updates + directional enhancements (Step 6 COMPLETE)
 
 Phase 4: UI & Infrastructure (Steps 7-8)
     ├── UI component scaling

@@ -376,10 +376,17 @@ func TestPhase45_CacheSizeConstants(t *testing.T) {
 	}
 
 	// Verify default can hold reasonable number of 64×64 sprites
+	// DefaultCacheSize (16MB) / SpriteSize64 (16KB) = 1024 sprites
+	expectedMinSprites := DefaultCacheSize / SpriteSize64
 	sprites64InDefault := DefaultCacheSize / SpriteSize64
-	if sprites64InDefault < 1000 {
-		t.Errorf("DefaultCacheSize can only hold %d 64×64 sprites, want >= 1000",
-			sprites64InDefault)
+	if sprites64InDefault < expectedMinSprites {
+		t.Errorf("DefaultCacheSize can only hold %d 64×64 sprites, want >= %d",
+			sprites64InDefault, expectedMinSprites)
+	}
+
+	// Verify the calculated capacity matches documentation (~1000)
+	if sprites64InDefault < 1000 || sprites64InDefault > 1100 {
+		t.Errorf("Expected ~1024 sprites, got %d", sprites64InDefault)
 	}
 
 	// Verify max stays under memory target

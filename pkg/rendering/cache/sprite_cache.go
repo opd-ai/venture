@@ -26,11 +26,11 @@ const (
 	SpriteSize128 = 128 * 128 * BytesPerPixel // 64KB
 
 	// DefaultCacheSize is the recommended cache size for typical gameplay.
-	// Allows ~1000 64×64 sprites while staying under 20MB.
+	// Allows ~1000 64×64 sprites (16MB / 16KB = 1024 sprites).
 	DefaultCacheSize = 16 * 1024 * 1024 // 16MB
 
 	// MaxCacheSize is the maximum recommended cache size to stay under 300MB.
-	// Allows ~18,000 64×64 sprites.
+	// Allows ~18,000 64×64 sprites (300MB / 16KB ≈ 18,750 sprites).
 	MaxCacheSize = 300 * 1024 * 1024 // 300MB
 )
 

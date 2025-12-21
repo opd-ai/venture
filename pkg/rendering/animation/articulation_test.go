@@ -303,9 +303,9 @@ func TestDirectionalArmOffsets(t *testing.T) {
 	// Test that arms have opposite X offsets for left/right directions
 	t.Run("East direction", func(t *testing.T) {
 		leftX, rightX := calculateDirectionalArmOffsets(Dir8East, armCycle, config)
-		// Right arm should extend right (positive), left arm left (positive for east)
-		if leftX >= rightX {
-			t.Logf("Left arm X: %v, Right arm X: %v", leftX, rightX)
+		// When facing east, both arms have positive X; right arm should extend further right (larger X) than the left arm.
+		if leftX <= rightX {
+			t.Errorf("East direction: left arm X (%v) should be greater than right arm X (%v)", leftX, rightX)
 		}
 	})
 
@@ -313,10 +313,10 @@ func TestDirectionalArmOffsets(t *testing.T) {
 		leftX, rightX := calculateDirectionalArmOffsets(Dir8West, armCycle, config)
 		// Left arm should extend left (negative), right arm right (positive)
 		if leftX > 0 {
-			t.Logf("West direction: left arm should be negative, got %v", leftX)
+			t.Errorf("West direction: left arm should be negative, got %v", leftX)
 		}
 		if rightX < 0 {
-			t.Logf("West direction: right arm should be positive, got %v", rightX)
+			t.Errorf("West direction: right arm should be positive, got %v", rightX)
 		}
 	})
 
@@ -326,7 +326,7 @@ func TestDirectionalArmOffsets(t *testing.T) {
 
 		// For front/back facing, arms spread symmetrically
 		if leftXN != leftXS || rightXN != rightXS {
-			t.Logf("North/South should have similar arm spread")
+			t.Errorf("North/South should have similar arm spread: North(%v, %v) vs South(%v, %v)", leftXN, rightXN, leftXS, rightXS)
 		}
 	})
 }

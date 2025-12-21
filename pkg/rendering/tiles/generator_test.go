@@ -561,7 +561,7 @@ func TestGenerator_Generate64x64(t *testing.T) {
 	gen := NewGenerator()
 
 	tests := []struct {
-		name    string
+		name     string
 		tileType TileType
 	}{
 		{"Floor 64x64", TileFloor},

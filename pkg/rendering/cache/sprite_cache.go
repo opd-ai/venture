@@ -9,6 +9,31 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// Sprite size constants for cache capacity calculations.
+// Phase 45: Default sprite/tile size is now 64×64 (previously 32×32).
+const (
+	// BytesPerPixel is the number of bytes per RGBA pixel.
+	BytesPerPixel = 4
+
+	// SpriteSize32 is the memory size of a 32×32 RGBA sprite in bytes.
+	SpriteSize32 = 32 * 32 * BytesPerPixel // 4KB
+
+	// SpriteSize64 is the memory size of a 64×64 RGBA sprite in bytes.
+	// This is the default size for Phase 45 sprites and tiles.
+	SpriteSize64 = 64 * 64 * BytesPerPixel // 16KB
+
+	// SpriteSize128 is the memory size of a 128×128 RGBA sprite in bytes.
+	SpriteSize128 = 128 * 128 * BytesPerPixel // 64KB
+
+	// DefaultCacheSize is the recommended cache size for typical gameplay.
+	// Allows ~1000 64×64 sprites while staying under 20MB.
+	DefaultCacheSize = 16 * 1024 * 1024 // 16MB
+
+	// MaxCacheSize is the maximum recommended cache size to stay under 300MB.
+	// Allows ~18,000 64×64 sprites.
+	MaxCacheSize = 300 * 1024 * 1024 // 300MB
+)
+
 // CacheKey represents a unique identifier for a cached sprite.
 type CacheKey string
 
@@ -89,6 +114,14 @@ type SpriteCache struct {
 }
 
 // NewSpriteCache creates a new sprite cache with the specified maximum size in bytes.
+//
+// Recommended sizes (Phase 45: 64×64 default sprites):
+//   - DefaultCacheSize (16MB): ~1000 64×64 sprites, good for typical gameplay
+//   - MaxCacheSize (300MB): ~18,000 64×64 sprites, maximum for memory targets
+//
+// Example usage:
+//
+//	cache := NewSpriteCache(cache.DefaultCacheSize)
 func NewSpriteCache(maxSize int64) *SpriteCache {
 	return &SpriteCache{
 		cache:   make(map[CacheKey]*list.Element),

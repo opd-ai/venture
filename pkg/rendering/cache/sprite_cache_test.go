@@ -343,3 +343,113 @@ func BenchmarkGenerateCompositeKey(b *testing.B) {
 		GenerateCompositeKey(12345, layers)
 	}
 }
+
+// Phase 45 tests for updated constants and 64×64 default support
+
+func TestPhase45_SpriteSizeConstants(t *testing.T) {
+	// Verify sprite size constants are correct
+	if BytesPerPixel != 4 {
+		t.Errorf("BytesPerPixel = %d, want 4 (RGBA)", BytesPerPixel)
+	}
+
+	if SpriteSize32 != 32*32*4 {
+		t.Errorf("SpriteSize32 = %d, want %d (4KB)", SpriteSize32, 32*32*4)
+	}
+
+	if SpriteSize64 != 64*64*4 {
+		t.Errorf("SpriteSize64 = %d, want %d (16KB)", SpriteSize64, 64*64*4)
+	}
+
+	if SpriteSize128 != 128*128*4 {
+		t.Errorf("SpriteSize128 = %d, want %d (64KB)", SpriteSize128, 128*128*4)
+	}
+}
+
+func TestPhase45_CacheSizeConstants(t *testing.T) {
+	// Verify cache size constants are sensible
+	if DefaultCacheSize != 16*1024*1024 {
+		t.Errorf("DefaultCacheSize = %d, want 16MB", DefaultCacheSize)
+	}
+
+	if MaxCacheSize != 300*1024*1024 {
+		t.Errorf("MaxCacheSize = %d, want 300MB", MaxCacheSize)
+	}
+
+	// Verify default can hold reasonable number of 64×64 sprites
+	sprites64InDefault := DefaultCacheSize / SpriteSize64
+	if sprites64InDefault < 1000 {
+		t.Errorf("DefaultCacheSize can only hold %d 64×64 sprites, want >= 1000",
+			sprites64InDefault)
+	}
+
+	// Verify max stays under memory target
+	if MaxCacheSize > 300*1024*1024 {
+		t.Errorf("MaxCacheSize = %d exceeds 300MB target", MaxCacheSize)
+	}
+}
+
+func TestPhase45_CacheWith64x64Sprites(t *testing.T) {
+	// Create cache sized for 64×64 sprites
+	cache := NewSpriteCache(SpriteSize64 * 10) // Room for 10 sprites
+
+	// Add 64×64 sprites
+	for i := 0; i < 5; i++ {
+		key := GenerateKey(int64(i), "idle", 0)
+		img := ebiten.NewImage(64, 64)
+		cache.Put(key, img)
+	}
+
+	if cache.Count() != 5 {
+		t.Errorf("Count = %d, want 5", cache.Count())
+	}
+
+	// Verify size calculation is correct (5 × 16KB = 80KB)
+	expectedSize := int64(5 * SpriteSize64)
+	if cache.Size() != expectedSize {
+		t.Errorf("Size = %d, want %d", cache.Size(), expectedSize)
+	}
+
+	// Add more sprites to trigger eviction
+	for i := 5; i < 15; i++ {
+		key := GenerateKey(int64(i), "idle", 0)
+		img := ebiten.NewImage(64, 64)
+		cache.Put(key, img)
+	}
+
+	// Cache should have evicted old entries
+	stats := cache.Stats()
+	if stats.Evictions == 0 {
+		t.Error("Expected evictions when cache is full")
+	}
+
+	// Size should not exceed max
+	if cache.Size() > cache.MaxSize() {
+		t.Errorf("Size %d exceeds MaxSize %d", cache.Size(), cache.MaxSize())
+	}
+}
+
+func TestPhase45_DefaultCacheCapacity(t *testing.T) {
+	// Create cache with default size
+	cache := NewSpriteCache(DefaultCacheSize)
+
+	if cache.MaxSize() != DefaultCacheSize {
+		t.Errorf("MaxSize = %d, want DefaultCacheSize (%d)", cache.MaxSize(), DefaultCacheSize)
+	}
+
+	// Should be able to hold many 64×64 sprites
+	for i := 0; i < 100; i++ {
+		key := GenerateKey(int64(i), "walk", i%8)
+		img := ebiten.NewImage(64, 64)
+		cache.Put(key, img)
+	}
+
+	if cache.Count() != 100 {
+		t.Errorf("Count = %d, want 100 (all should fit)", cache.Count())
+	}
+
+	// Total size should be 100 × 16KB = 1.6MB, well under 16MB limit
+	expectedSize := int64(100 * SpriteSize64)
+	if cache.Size() != expectedSize {
+		t.Errorf("Size = %d, want %d", cache.Size(), expectedSize)
+	}
+}

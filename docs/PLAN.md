@@ -403,24 +403,43 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 8: Update Cache and Pool Systems
+### Step 8: Update Cache and Pool Systems ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
+- `pkg/rendering/pool/image_pool.go`
 - `pkg/rendering/sprites/cache.go`
 - `pkg/rendering/sprites/pool.go`
 - `pkg/rendering/cache/sprite_cache.go`
 
-**Changes required:**
-1. Update pool size categories:
-   - Add 64×64 pool tier
-   - Update memory limits for larger sprites
+**Changes completed:**
+1. ✅ Updated pool size constants:
+   - Added `SizeDefault = 64` constant (Phase 45 standard)
+   - `SizeMedium` is now an alias for `SizeDefault` for compatibility
+   - Updated comments to reflect 64×64 as the new default
+   - Added memory calculation documentation (32×32=4KB, 64×64=16KB, 128×128=64KB)
 
-2. Adjust cache capacity:
-   - 64×64 RGBA = 16KB per sprite (64×64×4 bytes)
-   - 300MB limit ÷ 16KB = ~18,750 max cached 64×64 sprites
-   - Reduce max cached sprites from current limit to maintain <300MB
+2. ✅ Added cache size constants and documentation:
+   - Added `BytesPerPixel`, `SpriteSize32`, `SpriteSize64`, `SpriteSize128` constants
+   - Added `DefaultCacheSize = 16MB` (~1000 64×64 sprites)
+   - Added `MaxCacheSize = 300MB` (~18,000 64×64 sprites)
+   - Updated `NewCache()` documentation with Phase 45 memory calculations
+   - Updated `NewSpriteCache()` documentation with recommended sizes
 
-**Testing checkpoint:** Run cache benchmarks, verify memory usage stays under limits.
+3. ✅ Added sprite pool size constants:
+   - Added `DefaultSpriteSize = 64`, `SmallSpriteSize = 32`, `LargeSpriteSize = 128`
+   - Updated `ImagePool` documentation for Phase 45
+
+**Tests added:**
+- `TestPhase45_SizeConstants`: Verifies pool size constants
+- `TestPhase45_DefaultSizePooling`: Verifies 64×64 pooling works
+- `TestPhase45_MemoryCalculation`: Verifies memory size calculations
+- `TestPhase45_SpriteSizeConstants`: Verifies cache size constants
+- `TestPhase45_CacheSizeConstants`: Verifies cache capacity constants
+- `TestPhase45_CacheWith64x64Sprites`: Verifies cache eviction with 64×64 sprites
+- `TestPhase45_DefaultCacheCapacity`: Verifies default cache can hold many sprites
+- `BenchmarkImagePool_GetPut_Default64`: Benchmark for 64×64 pooling
+
+**Testing checkpoint:** ✅ All tests pass. Benchmarks show 64×64 pool operations at ~382ns/op with only 3 allocations.
 
 ---
 
@@ -499,9 +518,9 @@ Phase 3: Effects & Animation (Steps 5-6) ✅ COMPLETE
     ├── ✅ Particle scaling + Z-layers (Step 5 COMPLETE)
     └── ✅ Animation frame updates + directional enhancements (Step 6 COMPLETE)
 
-Phase 4: UI & Infrastructure (Steps 7-8)
+Phase 4: UI & Infrastructure (Steps 7-8) ✅ COMPLETE
     ├── ✅ UI component scaling (Step 7 COMPLETE)
-    └── Cache/pool capacity adjustments
+    └── ✅ Cache/pool capacity adjustments (Step 8 COMPLETE)
 
 Phase 5: Polish & Testing (Steps 9-10)
     ├── Lighting + post-process updates

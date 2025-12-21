@@ -390,3 +390,87 @@ func BenchmarkImagePool_Concurrent(b *testing.B) {
 		}
 	})
 }
+
+// Phase 45 tests for updated constants and 64×64 default support
+
+func TestPhase45_SizeConstants(t *testing.T) {
+	// Verify size constants are correct for Phase 45
+	if SizeDefault != 64 {
+		t.Errorf("SizeDefault = %d, want 64 (Phase 45 standard)", SizeDefault)
+	}
+	if SizeMedium != SizeDefault {
+		t.Errorf("SizeMedium (%d) != SizeDefault (%d), should be aliases", SizeMedium, SizeDefault)
+	}
+	if SizeSmall != 32 {
+		t.Errorf("SizeSmall = %d, want 32", SizeSmall)
+	}
+	if SizeLarge != 128 {
+		t.Errorf("SizeLarge = %d, want 128", SizeLarge)
+	}
+	if SizePlayer != 28 {
+		t.Errorf("SizePlayer = %d, want 28 (legacy)", SizePlayer)
+	}
+}
+
+func TestPhase45_DefaultSizePooling(t *testing.T) {
+	pool := NewImagePool()
+
+	// Get default 64×64 image (Phase 45 standard)
+	img := pool.GetImage(SizeDefault, SizeDefault)
+	if img == nil {
+		t.Fatal("GetImage returned nil for SizeDefault")
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != SizeDefault || bounds.Dy() != SizeDefault {
+		t.Errorf("Image size = %dx%d, want %dx%d",
+			bounds.Dx(), bounds.Dy(), SizeDefault, SizeDefault)
+	}
+
+	// Return to pool and get again
+	pool.PutImage(img)
+	img2 := pool.GetImage(SizeDefault, SizeDefault)
+	if img2 == nil {
+		t.Fatal("Second GetImage returned nil")
+	}
+
+	// Verify stats show pooling is working
+	stats := pool.Stats()
+	if stats.Gets < 2 {
+		t.Errorf("Gets = %d, want >= 2", stats.Gets)
+	}
+}
+
+func TestPhase45_MemoryCalculation(t *testing.T) {
+	// Verify memory calculations for common sprite sizes
+	// RGBA = 4 bytes per pixel
+	tests := []struct {
+		name     string
+		size     int
+		expected int
+	}{
+		{"32x32 sprite (4KB)", 32, 32 * 32 * 4},
+		{"64x64 sprite (16KB)", 64, 64 * 64 * 4},
+		{"128x128 sprite (64KB)", 128, 128 * 128 * 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.size * tt.size * 4
+			if actual != tt.expected {
+				t.Errorf("Memory for %dx%d = %d bytes, want %d",
+					tt.size, tt.size, actual, tt.expected)
+			}
+		})
+	}
+}
+
+func BenchmarkImagePool_GetPut_Default64(b *testing.B) {
+	pool := NewImagePool()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		img := pool.GetImage(SizeDefault, SizeDefault)
+		pool.PutImage(img)
+	}
+}

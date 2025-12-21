@@ -7,12 +7,15 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// Common sprite sizes used in the game
+// Common sprite sizes used in the game.
+// Phase 45: Default sprite/tile size is now 64×64 (previously 32×32).
+// Memory per sprite: 32×32=4KB, 64×64=16KB, 128×128=64KB (RGBA).
 const (
-	SizePlayer = 28  // Player sprite size (fixed)
-	SizeSmall  = 32  // Small sprites (items, particles)
-	SizeMedium = 64  // Medium sprites (enemies, objects)
-	SizeLarge  = 128 // Large sprites (bosses, effects)
+	SizePlayer  = 28  // Player sprite size (fixed, legacy)
+	SizeSmall   = 32  // Small sprites (particles, icons)
+	SizeDefault = 64  // Default sprites (entities, tiles, objects) - Phase 45 standard
+	SizeMedium  = 64  // Medium sprites (alias for SizeDefault for compatibility)
+	SizeLarge   = 128 // Large sprites (bosses, effects)
 )
 
 // ImagePool manages pools of Ebiten images by size.

@@ -412,3 +412,64 @@ func TestShapePool_NilHandling(t *testing.T) {
 		t.Error("Get() returned nil after Put(nil)")
 	}
 }
+
+// Phase 45 tests for updated constants and 64×64 default support
+
+func TestPhase45_SpriteSizeConstants(t *testing.T) {
+	// Verify size constants are correct for Phase 45
+	if DefaultSpriteSize != 64 {
+		t.Errorf("DefaultSpriteSize = %d, want 64 (Phase 45 standard)", DefaultSpriteSize)
+	}
+	if SmallSpriteSize != 32 {
+		t.Errorf("SmallSpriteSize = %d, want 32", SmallSpriteSize)
+	}
+	if LargeSpriteSize != 128 {
+		t.Errorf("LargeSpriteSize = %d, want 128", LargeSpriteSize)
+	}
+}
+
+func TestPhase45_DefaultSizePooling(t *testing.T) {
+	pool := NewImagePool(DefaultSpriteSize, DefaultSpriteSize)
+
+	if pool.width != DefaultSpriteSize {
+		t.Errorf("width = %d, want %d", pool.width, DefaultSpriteSize)
+	}
+	if pool.height != DefaultSpriteSize {
+		t.Errorf("height = %d, want %d", pool.height, DefaultSpriteSize)
+	}
+
+	// Get image from pool
+	img := pool.Get()
+	if img == nil {
+		t.Fatal("Get() returned nil")
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != DefaultSpriteSize || bounds.Dy() != DefaultSpriteSize {
+		t.Errorf("Image size = %dx%d, want %dx%d",
+			bounds.Dx(), bounds.Dy(), DefaultSpriteSize, DefaultSpriteSize)
+	}
+}
+
+func TestPhase45_ShapePoolDefaultSize(t *testing.T) {
+	sp := NewShapePool()
+
+	// Get default 64×64 image (Phase 45 standard)
+	img := sp.Get(DefaultSpriteSize, DefaultSpriteSize)
+	if img == nil {
+		t.Fatal("Get() returned nil for DefaultSpriteSize")
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != DefaultSpriteSize || bounds.Dy() != DefaultSpriteSize {
+		t.Errorf("Image size = %dx%d, want %dx%d",
+			bounds.Dx(), bounds.Dy(), DefaultSpriteSize, DefaultSpriteSize)
+	}
+
+	// Return and get again
+	sp.Put(img)
+	img2 := sp.Get(DefaultSpriteSize, DefaultSpriteSize)
+	if img2 == nil {
+		t.Fatal("Second Get() returned nil")
+	}
+}

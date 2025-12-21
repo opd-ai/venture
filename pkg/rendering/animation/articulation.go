@@ -15,6 +15,18 @@ const (
 	BodyPartTail // For quadrupeds
 )
 
+// Animation multiplier constants for consistency and maintainability.
+const (
+	// armSwingMultiplier controls the horizontal arm swing during directional walking.
+	armSwingMultiplier = 2.0
+
+	// runningHeadRotationMultiplier amplifies head rotation during running.
+	runningHeadRotationMultiplier = 1.2
+
+	// runningArmSwingMultiplier amplifies arm swing during running.
+	runningArmSwingMultiplier = 1.3
+)
+
 // String returns the string representation of the body part.
 func (b BodyPart) String() string {
 	switch b {
@@ -158,12 +170,12 @@ func calculateDirectionalArmOffsets(direction Direction8, armCycle float64, conf
 	switch direction {
 	case Dir8West:
 		// Moving left: leading arm extends left, trailing arm back
-		leftArmX = -baseOffset - armCycle*2.0
-		rightArmX = baseOffset + armCycle*2.0
+		leftArmX = -baseOffset - armCycle*armSwingMultiplier
+		rightArmX = baseOffset + armCycle*armSwingMultiplier
 	case Dir8East:
 		// Moving right: leading arm extends right, trailing arm back
-		leftArmX = baseOffset - armCycle*2.0
-		rightArmX = -baseOffset + armCycle*2.0
+		leftArmX = baseOffset - armCycle*armSwingMultiplier
+		rightArmX = -baseOffset + armCycle*armSwingMultiplier
 	case Dir8North:
 		// Moving up: arms spread slightly with swing
 		leftArmX = -baseOffset * 0.5
@@ -282,12 +294,12 @@ func calculateRunArticulation(t float64, direction Direction8, config Articulati
 	armCycle := math.Sin(t * 2 * math.Pi)
 
 	// Calculate directional head rotation (more pronounced when running)
-	headRotation := calculateDirectionalHeadRotation(direction, config) * 1.2
+	headRotation := calculateDirectionalHeadRotation(direction, config) * runningHeadRotationMultiplier
 
 	// Calculate arm X offsets based on direction (exaggerated for running)
 	leftArmXOffset, rightArmXOffset := calculateDirectionalArmOffsets(direction, armCycle, config)
-	leftArmXOffset *= 1.3  // More pronounced arm swing when running
-	rightArmXOffset *= 1.3
+	leftArmXOffset *= runningArmSwingMultiplier  // More pronounced arm swing when running
+	rightArmXOffset *= runningArmSwingMultiplier
 
 	return Articulation{
 		Head: ArticulationOffset{

@@ -15,6 +15,18 @@ const (
 	BodyPartTail // For quadrupeds
 )
 
+// Animation multiplier constants for consistency and maintainability.
+const (
+	// armSwingMultiplier controls the horizontal arm swing during directional walking.
+	armSwingMultiplier = 2.0
+
+	// runningHeadRotationMultiplier amplifies head rotation during running.
+	runningHeadRotationMultiplier = 1.2
+
+	// runningArmSwingMultiplier amplifies arm swing during running.
+	runningArmSwingMultiplier = 1.3
+)
+
 // String returns the string representation of the body part.
 func (b BodyPart) String() string {
 	switch b {
@@ -71,13 +83,14 @@ type ArticulationConfig struct {
 }
 
 // DefaultArticulationConfig returns the default articulation configuration
-// as specified in Phase 46 (arms ±3px, legs ±4px).
+// scaled for 64×64 sprites (Phase 45 migration).
+// Original Phase 46 values (arms ±3px, legs ±4px) are doubled for 64×64.
 func DefaultArticulationConfig() ArticulationConfig {
 	return ArticulationConfig{
-		ArmOffsetMax:    3.0,
-		LegOffsetMax:    4.0,
-		HeadOffsetMax:   2.0,
-		TailOffsetMax:   5.0,
+		ArmOffsetMax:    6.0,  // Scaled from 3px (32×32) to 6px (64×64)
+		LegOffsetMax:    8.0,  // Scaled from 4px (32×32) to 8px (64×64)
+		HeadOffsetMax:   4.0,  // Scaled from 2px (32×32) to 4px (64×64)
+		TailOffsetMax:   10.0, // Scaled from 5px (32×32) to 10px (64×64)
 		ArmRotationMax:  0.3,
 		LegRotationMax:  0.4,
 		HeadRotationMax: 0.2,
@@ -119,28 +132,102 @@ func CalculateArticulation(state string, frameIndex, frameCount int, direction D
 	return art
 }
 
+// calculateDirectionalHeadRotation returns subtle head rotation based on facing direction.
+// This provides visual indication of direction in top-down 64×64 sprites.
+func calculateDirectionalHeadRotation(direction Direction8, config ArticulationConfig) float64 {
+	// Subtle head rotation toward the direction of movement
+	// Max rotation is about half the configured head rotation max
+	maxRotation := config.HeadRotationMax * 0.5
+
+	switch direction {
+	case Dir8NorthWest:
+		return -maxRotation * 0.7 // Turn head slightly left/up
+	case Dir8North:
+		return 0 // Facing up, no rotation needed
+	case Dir8NorthEast:
+		return maxRotation * 0.7 // Turn head slightly right/up
+	case Dir8West:
+		return -maxRotation // Turn head left
+	case Dir8East:
+		return maxRotation // Turn head right
+	case Dir8SouthWest:
+		return -maxRotation * 0.5 // Slight left turn
+	case Dir8South:
+		return 0 // Facing camera, no rotation
+	case Dir8SouthEast:
+		return maxRotation * 0.5 // Slight right turn
+	default:
+		return 0
+	}
+}
+
+// calculateDirectionalArmOffsets returns X offsets for arms based on direction.
+// Arms extend toward the movement direction for top-down visual clarity.
+func calculateDirectionalArmOffsets(direction Direction8, armCycle float64, config ArticulationConfig) (leftArmX, rightArmX float64) {
+	// Base arm offset scaled for 64×64 sprites
+	baseOffset := config.ArmOffsetMax * 0.5
+
+	switch direction {
+	case Dir8West:
+		// Moving left: leading arm extends left, trailing arm back
+		leftArmX = -baseOffset - armCycle*armSwingMultiplier
+		rightArmX = baseOffset + armCycle*armSwingMultiplier
+	case Dir8East:
+		// Moving right: leading arm extends right, trailing arm back
+		leftArmX = baseOffset - armCycle*armSwingMultiplier
+		rightArmX = -baseOffset + armCycle*armSwingMultiplier
+	case Dir8North:
+		// Moving up: arms spread slightly with swing
+		leftArmX = -baseOffset * 0.5
+		rightArmX = baseOffset * 0.5
+	case Dir8South:
+		// Moving down: arms spread slightly with swing
+		leftArmX = -baseOffset * 0.5
+		rightArmX = baseOffset * 0.5
+	case Dir8NorthWest:
+		leftArmX = -baseOffset * 0.8
+		rightArmX = baseOffset * 0.3
+	case Dir8NorthEast:
+		leftArmX = -baseOffset * 0.3
+		rightArmX = baseOffset * 0.8
+	case Dir8SouthWest:
+		leftArmX = -baseOffset * 0.7
+		rightArmX = baseOffset * 0.4
+	case Dir8SouthEast:
+		leftArmX = -baseOffset * 0.4
+		rightArmX = baseOffset * 0.7
+	default:
+		leftArmX = 0
+		rightArmX = 0
+	}
+
+	return leftArmX, rightArmX
+}
+
 // calculateIdleArticulation creates subtle breathing animation.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateIdleArticulation(t float64, config ArticulationConfig) Articulation {
 	breathCycle := math.Sin(t * 2 * math.Pi)
 
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        breathCycle * 0.5,  // Subtle vertical head bob
+			Y:        breathCycle * 1.0,  // Subtle vertical head bob (scaled 2× for 64×64)
 			Rotation: breathCycle * 0.02, // Tiny head tilt
 		},
 		Torso: ArticulationOffset{
-			Y: breathCycle * 0.8, // Chest expansion/contraction
+			Y: breathCycle * 1.6, // Chest expansion/contraction (scaled 2× for 64×64)
 		},
 		LeftArm: ArticulationOffset{
-			Y: breathCycle * 0.3, // Arms move slightly with breathing
+			Y: breathCycle * 0.6, // Arms move slightly with breathing (scaled 2× for 64×64)
 		},
 		RightArm: ArticulationOffset{
-			Y: breathCycle * 0.3,
+			Y: breathCycle * 0.6,
 		},
 	}
 }
 
 // calculateWalkArticulation creates natural walking motion with arm and leg swing.
+// Enhanced with directional head rotation and arm position changes for 64×64 sprites.
 func calculateWalkArticulation(t float64, direction Direction8, config ArticulationConfig) Articulation {
 	// Walking cycle: 8 frames for full left-right-left-right stride
 	leftLegCycle := math.Sin(t * 2 * math.Pi)
@@ -155,19 +242,28 @@ func calculateWalkArticulation(t float64, direction Direction8, config Articulat
 		amplitudeMod = 0.8 // Front/back view shows less articulation
 	}
 
+	// Calculate directional head rotation for direction indication
+	headRotation := calculateDirectionalHeadRotation(direction, config)
+
+	// Calculate arm X offsets based on direction for top-down visual clarity
+	leftArmXOffset, rightArmXOffset := calculateDirectionalArmOffsets(direction, armCycle, config)
+
 	return Articulation{
 		Head: ArticulationOffset{
-			Y: math.Sin(t*4*math.Pi) * 0.5, // Head bobs twice per stride
+			Y:        math.Sin(t*4*math.Pi) * 1.0, // Head bobs twice per stride (scaled 2× for 64×64)
+			Rotation: headRotation,                // Directional head rotation for direction indication
 		},
 		Torso: ArticulationOffset{
-			Y:        math.Sin(t*4*math.Pi) * 0.8,
+			Y:        math.Sin(t*4*math.Pi) * 1.6, // Torso bob (scaled 2× for 64×64)
 			Rotation: math.Sin(t*2*math.Pi) * 0.05 * amplitudeMod, // Subtle torso rotation
 		},
 		LeftArm: ArticulationOffset{
+			X:        leftArmXOffset, // Directional arm positioning
 			Y:        armCycle * config.ArmOffsetMax * amplitudeMod,
 			Rotation: armCycle * config.ArmRotationMax * amplitudeMod,
 		},
 		RightArm: ArticulationOffset{
+			X:        rightArmXOffset, // Directional arm positioning
 			Y:        -armCycle * config.ArmOffsetMax * amplitudeMod,
 			Rotation: -armCycle * config.ArmRotationMax * amplitudeMod,
 		},
@@ -183,6 +279,7 @@ func calculateWalkArticulation(t float64, direction Direction8, config Articulat
 }
 
 // calculateRunArticulation creates exaggerated running motion.
+// Enhanced with directional head rotation and arm position changes for 64×64 sprites.
 func calculateRunArticulation(t float64, direction Direction8, config ArticulationConfig) Articulation {
 	// Running has more exaggerated motion than walking (1.5x amplitude)
 	amplitudeMod := 1.5
@@ -196,20 +293,30 @@ func calculateRunArticulation(t float64, direction Direction8, config Articulati
 	rightLegCycle := -leftLegCycle
 	armCycle := math.Sin(t * 2 * math.Pi)
 
+	// Calculate directional head rotation (more pronounced when running)
+	headRotation := calculateDirectionalHeadRotation(direction, config) * runningHeadRotationMultiplier
+
+	// Calculate arm X offsets based on direction (exaggerated for running)
+	leftArmXOffset, rightArmXOffset := calculateDirectionalArmOffsets(direction, armCycle, config)
+	leftArmXOffset *= runningArmSwingMultiplier  // More pronounced arm swing when running
+	rightArmXOffset *= runningArmSwingMultiplier
+
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        math.Sin(t*4*math.Pi) * 1.0,
-			Rotation: math.Sin(t*2*math.Pi) * 0.08,
+			Y:        math.Sin(t*4*math.Pi) * 2.0, // Head bob (scaled 2× for 64×64)
+			Rotation: headRotation + math.Sin(t*2*math.Pi)*0.08, // Directional + dynamic rotation
 		},
 		Torso: ArticulationOffset{
-			Y:        math.Sin(t*4*math.Pi) * 1.5,
+			Y:        math.Sin(t*4*math.Pi) * 3.0, // Torso bob (scaled 2× for 64×64)
 			Rotation: math.Sin(t*2*math.Pi) * 0.1 * amplitudeMod,
 		},
 		LeftArm: ArticulationOffset{
+			X:        leftArmXOffset, // Directional arm positioning
 			Y:        armCycle * config.ArmOffsetMax * amplitudeMod,
 			Rotation: armCycle * config.ArmRotationMax * 1.5,
 		},
 		RightArm: ArticulationOffset{
+			X:        rightArmXOffset, // Directional arm positioning
 			Y:        -armCycle * config.ArmOffsetMax * amplitudeMod,
 			Rotation: -armCycle * config.ArmRotationMax * 1.5,
 		},
@@ -225,6 +332,7 @@ func calculateRunArticulation(t float64, direction Direction8, config Articulati
 }
 
 // calculateAttackArticulation creates attack motion with wind-up and follow-through.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateAttackArticulation(t float64, direction Direction8, config ArticulationConfig) Articulation {
 	art := Articulation{}
 
@@ -232,7 +340,7 @@ func calculateAttackArticulation(t float64, direction Direction8, config Articul
 		// Wind-up phase (0-20%)
 		windupT := t / 0.2
 		art.RightArm = ArticulationOffset{
-			X:        -windupT * 2.0,
+			X:        -windupT * 4.0, // Scaled 2× for 64×64
 			Y:        -windupT * config.ArmOffsetMax,
 			Rotation: -windupT * config.ArmRotationMax * 2,
 		}
@@ -243,12 +351,12 @@ func calculateAttackArticulation(t float64, direction Direction8, config Articul
 		// Strike phase (20-50%)
 		strikeT := (t - 0.2) / 0.3
 		art.RightArm = ArticulationOffset{
-			X:        -2.0 + strikeT*10.0,
+			X:        -4.0 + strikeT*20.0, // Scaled 2× for 64×64
 			Y:        -config.ArmOffsetMax + strikeT*config.ArmOffsetMax*2,
 			Rotation: -config.ArmRotationMax*2 + strikeT*config.ArmRotationMax*4,
 		}
 		art.LeftArm = ArticulationOffset{
-			X: -strikeT * 1.5,
+			X: -strikeT * 3.0, // Scaled 2× for 64×64
 			Y: strikeT * config.ArmOffsetMax * 0.5,
 		}
 		art.Torso = ArticulationOffset{
@@ -259,12 +367,12 @@ func calculateAttackArticulation(t float64, direction Direction8, config Articul
 		followT := (t - 0.5) / 0.5
 		easedT := 1.0 - (1.0-followT)*(1.0-followT) // Quadratic ease-out
 		art.RightArm = ArticulationOffset{
-			X:        8.0 - easedT*8.0,
+			X:        16.0 - easedT*16.0, // Scaled 2× for 64×64
 			Y:        config.ArmOffsetMax - easedT*config.ArmOffsetMax,
 			Rotation: config.ArmRotationMax*2 - easedT*config.ArmRotationMax*2,
 		}
 		art.LeftArm = ArticulationOffset{
-			X: -1.5 + easedT*1.5,
+			X: -3.0 + easedT*3.0, // Scaled 2× for 64×64
 			Y: config.ArmOffsetMax*0.5 - easedT*config.ArmOffsetMax*0.5,
 		}
 		art.Torso = ArticulationOffset{
@@ -276,6 +384,7 @@ func calculateAttackArticulation(t float64, direction Direction8, config Articul
 }
 
 // calculateHitArticulation creates knockback reaction.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateHitArticulation(t float64, config ArticulationConfig) Articulation {
 	// Recoil motion
 	recoil := 1.0 - t
@@ -286,7 +395,7 @@ func calculateHitArticulation(t float64, config ArticulationConfig) Articulation
 			Rotation: recoil * config.HeadRotationMax,
 		},
 		Torso: ArticulationOffset{
-			X:        -recoil * 3.0,
+			X:        -recoil * 6.0, // Scaled 2× for 64×64
 			Rotation: -recoil * 0.15,
 		},
 		LeftArm: ArticulationOffset{
@@ -303,43 +412,45 @@ func calculateHitArticulation(t float64, config ArticulationConfig) Articulation
 }
 
 // calculateDeathArticulation creates falling/collapsing motion.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateDeathArticulation(t float64, config ArticulationConfig) Articulation {
-	// Collapse motion
+	// Collapse motion - scaled 2× for 64×64 sprites
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        t * 8.0,
+			Y:        t * 16.0, // Scaled 2× for 64×64
 			Rotation: t * math.Pi / 4, // 45 degree rotation
 		},
 		Torso: ArticulationOffset{
-			Y:        t * 12.0,
+			Y:        t * 24.0, // Scaled 2× for 64×64
 			Rotation: t * math.Pi / 3, // 60 degree rotation
 		},
 		LeftArm: ArticulationOffset{
-			Y:        t * 10.0,
+			Y:        t * 20.0, // Scaled 2× for 64×64
 			Rotation: t * math.Pi / 6,
 		},
 		RightArm: ArticulationOffset{
-			Y:        t * 10.0,
+			Y:        t * 20.0, // Scaled 2× for 64×64
 			Rotation: -t * math.Pi / 6,
 		},
 		LeftLeg: ArticulationOffset{
-			Y:        t * 15.0,
+			Y:        t * 30.0, // Scaled 2× for 64×64
 			Rotation: t * config.LegRotationMax * 2,
 		},
 		RightLeg: ArticulationOffset{
-			Y:        t * 15.0,
+			Y:        t * 30.0, // Scaled 2× for 64×64
 			Rotation: -t * config.LegRotationMax * 2,
 		},
 	}
 }
 
 // calculateCastArticulation creates spell-casting gesture.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateCastArticulation(t float64, config ArticulationConfig) Articulation {
 	castCycle := math.Sin(t * 2 * math.Pi)
 
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        -1.0, // Head slightly up (concentration)
+			Y:        -2.0, // Head slightly up (concentration) - scaled 2× for 64×64
 			Rotation: castCycle * 0.05,
 		},
 		Torso: ArticulationOffset{
@@ -357,6 +468,7 @@ func calculateCastArticulation(t float64, config ArticulationConfig) Articulatio
 }
 
 // calculateJumpArticulation creates jumping motion with squash and stretch.
+// Scaled for 64×64 sprites (Phase 45 migration).
 func calculateJumpArticulation(t float64, config ArticulationConfig) Articulation {
 	art := Articulation{}
 
@@ -364,7 +476,7 @@ func calculateJumpArticulation(t float64, config ArticulationConfig) Articulatio
 		// Crouch before jump
 		crouchT := t / 0.2
 		art.Torso = ArticulationOffset{
-			Y: crouchT * 3.0, // Crouch down
+			Y: crouchT * 6.0, // Crouch down (scaled 2× for 64×64)
 		}
 		art.LeftLeg = ArticulationOffset{
 			Y: crouchT * config.LegOffsetMax * 1.5,
@@ -377,7 +489,7 @@ func calculateJumpArticulation(t float64, config ArticulationConfig) Articulatio
 		jumpT := (t - 0.2) / 0.6
 		arc := -4.0 * (jumpT - jumpT*jumpT) // Parabolic arc
 		art.Torso = ArticulationOffset{
-			Y: arc * 15.0,
+			Y: arc * 30.0, // Scaled 2× for 64×64
 		}
 		art.LeftArm = ArticulationOffset{
 			Y:        -arc * config.ArmOffsetMax,
@@ -399,7 +511,7 @@ func calculateJumpArticulation(t float64, config ArticulationConfig) Articulatio
 		// Landing
 		landT := (t - 0.8) / 0.2
 		art.Torso = ArticulationOffset{
-			Y: landT * 2.0, // Slight compression on landing
+			Y: landT * 4.0, // Slight compression on landing (scaled 2× for 64×64)
 		}
 		art.LeftLeg = ArticulationOffset{
 			Y: landT * config.LegOffsetMax,

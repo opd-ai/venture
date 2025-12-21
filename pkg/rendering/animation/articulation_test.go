@@ -30,26 +30,33 @@ func TestBodyPartString(t *testing.T) {
 func TestDefaultArticulationConfig(t *testing.T) {
 	config := DefaultArticulationConfig()
 
-	// Verify Phase 46 requirements: arms ±3px, legs ±4px
-	if config.ArmOffsetMax != 3.0 {
-		t.Errorf("ArmOffsetMax = %v, want 3.0", config.ArmOffsetMax)
+	// Verify Phase 45 scaled requirements for 64×64 sprites: arms ±6px, legs ±8px
+	// (doubled from Phase 46 values of ±3px, ±4px for 32×32 sprites)
+	if config.ArmOffsetMax != 6.0 {
+		t.Errorf("ArmOffsetMax = %v, want 6.0 (scaled for 64×64)", config.ArmOffsetMax)
 	}
-	if config.LegOffsetMax != 4.0 {
-		t.Errorf("LegOffsetMax = %v, want 4.0", config.LegOffsetMax)
+	if config.LegOffsetMax != 8.0 {
+		t.Errorf("LegOffsetMax = %v, want 8.0 (scaled for 64×64)", config.LegOffsetMax)
+	}
+	if config.HeadOffsetMax != 4.0 {
+		t.Errorf("HeadOffsetMax = %v, want 4.0 (scaled for 64×64)", config.HeadOffsetMax)
+	}
+	if config.TailOffsetMax != 10.0 {
+		t.Errorf("TailOffsetMax = %v, want 10.0 (scaled for 64×64)", config.TailOffsetMax)
 	}
 
-	// Verify all fields are set
-	if config.HeadOffsetMax <= 0 {
-		t.Error("HeadOffsetMax not set")
+	// Verify rotation limits (unchanged - radians are resolution-independent)
+	if config.ArmRotationMax != 0.3 {
+		t.Errorf("ArmRotationMax = %v, want 0.3", config.ArmRotationMax)
 	}
-	if config.TailOffsetMax <= 0 {
-		t.Error("TailOffsetMax not set")
+	if config.LegRotationMax != 0.4 {
+		t.Errorf("LegRotationMax = %v, want 0.4", config.LegRotationMax)
 	}
-	if config.ArmRotationMax <= 0 {
-		t.Error("ArmRotationMax not set")
+	if config.HeadRotationMax != 0.2 {
+		t.Errorf("HeadRotationMax = %v, want 0.2", config.HeadRotationMax)
 	}
-	if config.LegRotationMax <= 0 {
-		t.Error("LegRotationMax not set")
+	if config.TailRotationMax != 0.5 {
+		t.Errorf("TailRotationMax = %v, want 0.5", config.TailRotationMax)
 	}
 }
 
@@ -60,11 +67,11 @@ func TestCalculateIdleArticulation(t *testing.T) {
 	for frameIndex := 0; frameIndex < 8; frameIndex++ {
 		art := calculateIdleArticulation(float64(frameIndex)/8.0, config)
 
-		// Verify breathing motion is subtle
-		if math.Abs(art.Head.Y) > 1.0 {
+		// Verify breathing motion is subtle (scaled 2× for 64×64: 1.0 → 2.0, 1.5 → 3.0)
+		if math.Abs(art.Head.Y) > 2.0 {
 			t.Errorf("Idle head motion too large: %v", art.Head.Y)
 		}
-		if math.Abs(art.Torso.Y) > 1.5 {
+		if math.Abs(art.Torso.Y) > 3.0 {
 			t.Errorf("Idle torso motion too large: %v", art.Torso.Y)
 		}
 		if math.Abs(art.Head.Rotation) > 0.05 {
@@ -244,6 +251,136 @@ func TestArticulationDeterminism(t *testing.T) {
 	}
 	if art1.Torso.Rotation != art2.Torso.Rotation {
 		t.Error("CalculateArticulation not deterministic")
+	}
+}
+
+// TestDirectionalHeadRotation verifies head rotation based on facing direction.
+func TestDirectionalHeadRotation(t *testing.T) {
+	config := DefaultArticulationConfig()
+
+	tests := []struct {
+		direction   Direction8
+		expectSign  int // -1 for left rotation, 0 for no rotation, 1 for right rotation
+	}{
+		{Dir8North, 0},      // Facing up, no rotation
+		{Dir8South, 0},      // Facing camera, no rotation
+		{Dir8East, 1},       // Turn head right
+		{Dir8West, -1},      // Turn head left
+		{Dir8NorthEast, 1},  // Turn slightly right
+		{Dir8NorthWest, -1}, // Turn slightly left
+		{Dir8SouthEast, 1},  // Turn slightly right
+		{Dir8SouthWest, -1}, // Turn slightly left
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.direction.String(), func(t *testing.T) {
+			rotation := calculateDirectionalHeadRotation(tt.direction, config)
+
+			if tt.expectSign == 0 {
+				if rotation != 0 {
+					t.Errorf("Expected no rotation for %v, got %v", tt.direction, rotation)
+				}
+			} else if tt.expectSign > 0 && rotation <= 0 {
+				t.Errorf("Expected positive rotation for %v, got %v", tt.direction, rotation)
+			} else if tt.expectSign < 0 && rotation >= 0 {
+				t.Errorf("Expected negative rotation for %v, got %v", tt.direction, rotation)
+			}
+
+			// Verify rotation is within limits
+			maxRotation := config.HeadRotationMax * 0.5
+			if math.Abs(rotation) > maxRotation+0.01 {
+				t.Errorf("Head rotation %v exceeds max %v for %v", rotation, maxRotation, tt.direction)
+			}
+		})
+	}
+}
+
+// TestDirectionalArmOffsets verifies arm X offsets based on facing direction.
+func TestDirectionalArmOffsets(t *testing.T) {
+	config := DefaultArticulationConfig()
+	armCycle := 0.5 // Mid-swing
+
+	// Test that arms have opposite X offsets for left/right directions
+	t.Run("East direction", func(t *testing.T) {
+		leftX, rightX := calculateDirectionalArmOffsets(Dir8East, armCycle, config)
+		// When facing east, both arms have positive X; right arm should extend further right (larger X) than the left arm.
+		if leftX <= rightX {
+			t.Errorf("East direction: left arm X (%v) should be greater than right arm X (%v)", leftX, rightX)
+		}
+	})
+
+	t.Run("West direction", func(t *testing.T) {
+		leftX, rightX := calculateDirectionalArmOffsets(Dir8West, armCycle, config)
+		// Left arm should extend left (negative), right arm right (positive)
+		if leftX > 0 {
+			t.Errorf("West direction: left arm should be negative, got %v", leftX)
+		}
+		if rightX < 0 {
+			t.Errorf("West direction: right arm should be positive, got %v", rightX)
+		}
+	})
+
+	t.Run("North/South spread", func(t *testing.T) {
+		leftXN, rightXN := calculateDirectionalArmOffsets(Dir8North, armCycle, config)
+		leftXS, rightXS := calculateDirectionalArmOffsets(Dir8South, armCycle, config)
+
+		// For front/back facing, arms spread symmetrically
+		if leftXN != leftXS || rightXN != rightXS {
+			t.Errorf("North/South should have similar arm spread: North(%v, %v) vs South(%v, %v)", leftXN, rightXN, leftXS, rightXS)
+		}
+	})
+}
+
+// TestWalkArticulationDirectional verifies walk articulation includes directional enhancements.
+func TestWalkArticulationDirectional(t *testing.T) {
+	config := DefaultArticulationConfig()
+
+	directions := []Direction8{Dir8North, Dir8East, Dir8South, Dir8West}
+
+	for _, dir := range directions {
+		t.Run(dir.String(), func(t *testing.T) {
+			// Test at mid-walk
+			art := calculateWalkArticulation(0.5, dir, config)
+
+			// Head should have rotation set
+			// Note: North and South have 0 rotation which is valid
+			if dir == Dir8East && art.Head.Rotation <= 0 {
+				t.Errorf("East direction should have positive head rotation, got %v", art.Head.Rotation)
+			}
+			if dir == Dir8West && art.Head.Rotation >= 0 {
+				t.Errorf("West direction should have negative head rotation, got %v", art.Head.Rotation)
+			}
+
+			// Arms should have X offsets
+			if dir == Dir8East || dir == Dir8West {
+				if art.LeftArm.X == 0 && art.RightArm.X == 0 {
+					t.Errorf("Arms should have X offsets for %v direction", dir)
+				}
+			}
+		})
+	}
+}
+
+// TestPhase45AnimationScaling verifies animation values are properly scaled for 64×64 sprites.
+func TestPhase45AnimationScaling(t *testing.T) {
+	config := DefaultArticulationConfig()
+
+	// Test that death animation has properly scaled Y offsets
+	art := calculateDeathArticulation(1.0, config) // Full death animation
+
+	// Head Y should be 16.0 (scaled from 8.0)
+	if art.Head.Y != 16.0 {
+		t.Errorf("Death head Y = %v, want 16.0 (scaled for 64×64)", art.Head.Y)
+	}
+
+	// Torso Y should be 24.0 (scaled from 12.0)
+	if art.Torso.Y != 24.0 {
+		t.Errorf("Death torso Y = %v, want 24.0 (scaled for 64×64)", art.Torso.Y)
+	}
+
+	// Leg Y should be 30.0 (scaled from 15.0)
+	if art.LeftLeg.Y != 30.0 {
+		t.Errorf("Death left leg Y = %v, want 30.0 (scaled for 64×64)", art.LeftLeg.Y)
 	}
 }
 

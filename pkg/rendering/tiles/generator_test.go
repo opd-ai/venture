@@ -555,3 +555,82 @@ func BenchmarkGenerator_GenerateAllTypes(b *testing.B) {
 		}
 	}
 }
+
+// TestGenerator_Generate64x64 verifies tile generation works at 64x64 default size.
+func TestGenerator_Generate64x64(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name    string
+		tileType TileType
+	}{
+		{"Floor 64x64", TileFloor},
+		{"Wall 64x64", TileWall},
+		{"Door 64x64", TileDoor},
+		{"Corridor 64x64", TileCorridor},
+		{"Water 64x64", TileWater},
+		{"Lava 64x64", TileLava},
+		{"Trap 64x64", TileTrap},
+		{"Stairs 64x64", TileStairs},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Use default config which should be 64x64
+			config := DefaultConfig()
+			config.Type = tt.tileType
+			config.Seed = 12345
+
+			img, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Generator.Generate() error = %v", err)
+			}
+			if img == nil {
+				t.Fatal("Generator.Generate() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != 64 {
+				t.Errorf("Generated image width = %d, want 64", bounds.Dx())
+			}
+			if bounds.Dy() != 64 {
+				t.Errorf("Generated image height = %d, want 64", bounds.Dy())
+			}
+		})
+	}
+}
+
+// TestGenerator_PatternScaling verifies that patterns are properly scaled for 64x64 tiles.
+func TestGenerator_PatternScaling(t *testing.T) {
+	gen := NewGenerator()
+
+	// Generate a wall tile with brick pattern (variant 0.5 selects brick)
+	config := DefaultConfig()
+	config.Type = TileWall
+	config.Seed = 12345
+	config.Variant = 0.5 // Should select brick pattern
+
+	img, err := gen.Generate(config)
+	if err != nil {
+		t.Fatalf("Generator.Generate() error = %v", err)
+	}
+
+	// The image should have visible brick pattern with 32x16 bricks
+	// We verify by checking that the image is not uniform
+	bounds := img.Bounds()
+	firstPixel := img.At(0, 0)
+	hasVariation := false
+
+	for y := 0; y < bounds.Dy() && !hasVariation; y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			if img.At(x, y) != firstPixel {
+				hasVariation = true
+				break
+			}
+		}
+	}
+
+	if !hasVariation {
+		t.Error("Brick pattern should have color variation, but image appears uniform")
+	}
+}

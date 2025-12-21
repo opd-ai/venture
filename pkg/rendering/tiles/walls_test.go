@@ -113,6 +113,9 @@ func TestDefaultEnhancedWallConfig(t *testing.T) {
 	if config.EnableShadows != true {
 		t.Errorf("EnableShadows = %v, want true", config.EnableShadows)
 	}
+	if config.EnableHeightEdges != true {
+		t.Errorf("EnableHeightEdges = %v, want true", config.EnableHeightEdges)
+	}
 	if config.BlendRadius != 4 {
 		t.Errorf("BlendRadius = %v, want 4", config.BlendRadius)
 	}
@@ -359,12 +362,17 @@ func TestBlendCircularArea(t *testing.T) {
 func TestGenerateEnhancedWall_WithShadows(t *testing.T) {
 	g := NewGenerator()
 
+	// Use larger tile to have more interior space
 	config := DefaultEnhancedWallConfig()
-	config.Config.Width = 32
-	config.Config.Height = 32
+	config.Config.Width = 64
+	config.Config.Height = 64
 	config.Config.Seed = 12345
 	config.Config.GenreID = "fantasy"
 	config.EnableShadows = true
+	// Disable height edges to test pure shadow gradient
+	config.EnableHeightEdges = false
+	// Set all neighbors to true to disable boundary blending
+	config.Neighbors = WallNeighbors{North: true, South: true, East: true, West: true}
 
 	img, err := g.GenerateEnhancedWall(config)
 	if err != nil {
@@ -376,8 +384,9 @@ func TestGenerateEnhancedWall_WithShadows(t *testing.T) {
 	}
 
 	// Verify shadow gradient: bottom should be darker than top
-	topColor := img.At(16, 2)
-	bottomColor := img.At(16, 30)
+	// Sample from middle of the tile to avoid edge effects
+	topColor := img.At(32, 10)
+	bottomColor := img.At(32, 54)
 
 	tr, tg, tb, _ := topColor.RGBA()
 	br, bg, bb, _ := bottomColor.RGBA()
@@ -389,6 +398,55 @@ func TestGenerateEnhancedWall_WithShadows(t *testing.T) {
 	if bottomBrightness > topBrightness {
 		t.Errorf("Shadow gradient reversed: bottom brightness %d > top brightness %d",
 			bottomBrightness, topBrightness)
+	}
+}
+
+// TestGenerateEnhancedWall_WithHeightEdges tests the wall height edge indicators.
+func TestGenerateEnhancedWall_WithHeightEdges(t *testing.T) {
+	g := NewGenerator()
+
+	config := DefaultEnhancedWallConfig()
+	config.Config.Width = 64
+	config.Config.Height = 64
+	config.Config.Seed = 12345
+	config.Config.GenreID = "fantasy"
+	config.EnableShadows = false // Disable shadows to test pure height edges
+	config.EnableHeightEdges = true
+
+	img, err := g.GenerateEnhancedWall(config)
+	if err != nil {
+		t.Fatalf("GenerateEnhancedWall() error = %v", err)
+	}
+
+	if img == nil {
+		t.Fatal("GenerateEnhancedWall() returned nil image")
+	}
+
+	// Edge thickness is height/16 = 4 for 64px tiles
+	// Top edge (at y=1) should be darker than middle (at y=32)
+	// Bottom edge (at y=62) should be lighter than middle
+	topEdgeColor := img.At(32, 1)
+	middleColor := img.At(32, 32)
+	bottomEdgeColor := img.At(32, 62)
+
+	ter, teg, teb, _ := topEdgeColor.RGBA()
+	mr, mg, mb, _ := middleColor.RGBA()
+	ber, beg, beb, _ := bottomEdgeColor.RGBA()
+
+	topEdgeBrightness := int(ter>>8) + int(teg>>8) + int(teb>>8)
+	middleBrightness := int(mr>>8) + int(mg>>8) + int(mb>>8)
+	bottomEdgeBrightness := int(ber>>8) + int(beg>>8) + int(beb>>8)
+
+	// Top edge should be darker than middle (shadow-casting)
+	if topEdgeBrightness >= middleBrightness {
+		t.Errorf("Top edge should be darker than middle: top=%d, middle=%d",
+			topEdgeBrightness, middleBrightness)
+	}
+
+	// Bottom edge should be lighter than middle (visible top surface)
+	if bottomEdgeBrightness <= middleBrightness {
+		t.Errorf("Bottom edge should be lighter than middle: bottom=%d, middle=%d",
+			bottomEdgeBrightness, middleBrightness)
 	}
 }
 

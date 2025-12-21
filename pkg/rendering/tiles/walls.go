@@ -92,6 +92,8 @@ type EnhancedWallConfig struct {
 	EnableAntialiasing bool
 	// EnableShadows enables shadow gradient rendering
 	EnableShadows bool
+	// EnableHeightEdges enables wall height edge indicators for top-down view
+	EnableHeightEdges bool
 	// BlendRadius is the pixel radius for corner blending (default 4)
 	BlendRadius int
 }
@@ -103,6 +105,7 @@ func DefaultEnhancedWallConfig() EnhancedWallConfig {
 		Neighbors:          WallNeighbors{},
 		EnableAntialiasing: true,
 		EnableShadows:      true,
+		EnableHeightEdges:  true,
 		BlendRadius:        4,
 	}
 }
@@ -154,6 +157,11 @@ func (g *Generator) GenerateEnhancedWall(config EnhancedWallConfig) (*image.RGBA
 	// Apply shadow gradient if enabled
 	if config.EnableShadows {
 		g.applyWallShadow(img, pal, config)
+	}
+
+	// Apply wall height edge indicators for top-down 3D effect
+	if config.EnableHeightEdges {
+		g.applyWallHeightEdges(img, pal, config)
 	}
 
 	return img, nil
@@ -482,6 +490,136 @@ func (g *Generator) applyWallShadow(img *image.RGBA, pal *palette.Palette, confi
 			newB := uint8(float64(b>>8) * darkFactor)
 
 			img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+		}
+	}
+}
+
+// applyWallHeightEdges adds visible edge indicators for wall height in top-down view.
+// Creates a darker top edge (player-facing, casting shadow) and lighter bottom edge
+// (visible top surface reflecting light) to simulate 3D wall projection.
+func (g *Generator) applyWallHeightEdges(img *image.RGBA, pal *palette.Palette, config EnhancedWallConfig) {
+	bounds := img.Bounds()
+	height := bounds.Dy()
+
+	// Edge thickness scales with tile size (4px for 64x64 tiles)
+	edgeThickness := height / 16
+	if edgeThickness < 2 {
+		edgeThickness = 2
+	}
+
+	// Apply top edge (darker - represents the player-facing wall face casting shadow)
+	// This is visible when looking down at the wall from above
+	for t := 0; t < edgeThickness; t++ {
+		y := bounds.Min.Y + t
+		if y >= bounds.Max.Y {
+			continue
+		}
+
+		// Darken factor decreases as we move down from the very top
+		darkenFactor := 0.6 + 0.4*float64(t)/float64(edgeThickness)
+
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			// Skip corners if they're adjacent to walls (they're handled by corner blending)
+			if t < edgeThickness/2 {
+				if (config.Neighbors.West && x < bounds.Min.X+edgeThickness) ||
+					(config.Neighbors.East && x >= bounds.Max.X-edgeThickness) {
+					continue
+				}
+			}
+
+			existing := img.At(x, y)
+			r, gr, b, a := existing.RGBA()
+
+			newR := uint8(float64(r>>8) * darkenFactor)
+			newG := uint8(float64(gr>>8) * darkenFactor)
+			newB := uint8(float64(b>>8) * darkenFactor)
+
+			img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+		}
+	}
+
+	// Apply bottom edge (lighter - represents the top surface of the wall visible from above)
+	// This simulates light hitting the top of the wall
+	for t := 0; t < edgeThickness; t++ {
+		y := bounds.Max.Y - 1 - t
+		if y < bounds.Min.Y {
+			continue
+		}
+
+		// Lighten factor decreases as we move up from the very bottom
+		lightenFactor := 1.15 + 0.1*float64(edgeThickness-1-t)/float64(edgeThickness)
+
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			// Skip corners if they're adjacent to walls
+			if t < edgeThickness/2 {
+				if (config.Neighbors.West && x < bounds.Min.X+edgeThickness) ||
+					(config.Neighbors.East && x >= bounds.Max.X-edgeThickness) {
+					continue
+				}
+			}
+
+			existing := img.At(x, y)
+			r, gr, b, a := existing.RGBA()
+
+			newR := uint8(math.Min(255, float64(r>>8)*lightenFactor))
+			newG := uint8(math.Min(255, float64(gr>>8)*lightenFactor))
+			newB := uint8(math.Min(255, float64(b>>8)*lightenFactor))
+
+			img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+		}
+	}
+
+	// Apply left and right edge shading for complete 3D effect
+	g.applyWallSideEdges(img, config, edgeThickness)
+}
+
+// applyWallSideEdges adds left/right edge shading for walls.
+func (g *Generator) applyWallSideEdges(img *image.RGBA, config EnhancedWallConfig, edgeThickness int) {
+	bounds := img.Bounds()
+
+	// Apply left edge (slightly darker - light coming from right)
+	if !config.Neighbors.West {
+		for t := 0; t < edgeThickness; t++ {
+			x := bounds.Min.X + t
+			if x >= bounds.Max.X {
+				continue
+			}
+
+			darkenFactor := 0.8 + 0.2*float64(t)/float64(edgeThickness)
+
+			for y := bounds.Min.Y + edgeThickness; y < bounds.Max.Y-edgeThickness; y++ {
+				existing := img.At(x, y)
+				r, gr, b, a := existing.RGBA()
+
+				newR := uint8(float64(r>>8) * darkenFactor)
+				newG := uint8(float64(gr>>8) * darkenFactor)
+				newB := uint8(float64(b>>8) * darkenFactor)
+
+				img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+			}
+		}
+	}
+
+	// Apply right edge (slightly lighter - facing the light)
+	if !config.Neighbors.East {
+		for t := 0; t < edgeThickness; t++ {
+			x := bounds.Max.X - 1 - t
+			if x < bounds.Min.X {
+				continue
+			}
+
+			lightenFactor := 1.1 + 0.1*float64(edgeThickness-1-t)/float64(edgeThickness)
+
+			for y := bounds.Min.Y + edgeThickness; y < bounds.Max.Y-edgeThickness; y++ {
+				existing := img.At(x, y)
+				r, gr, b, a := existing.RGBA()
+
+				newR := uint8(math.Min(255, float64(r>>8)*lightenFactor))
+				newG := uint8(math.Min(255, float64(gr>>8)*lightenFactor))
+				newB := uint8(math.Min(255, float64(b>>8)*lightenFactor))
+
+				img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+			}
 		}
 	}
 }

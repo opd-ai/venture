@@ -170,6 +170,11 @@ func (g *Generator) generateSmoke(system *ParticleSystem, pal *palette.Palette, 
 		speed := rng.Float64() * config.SpreadY * 0.5
 		size := config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)
 
+		physics := PhysicsConfig{
+			Gravity:       config.Gravity,
+			AirResistance: 0.1, // Light air resistance for smoke
+		}
+
 		system.Particles[i] = Particle{
 			X:           (rng.Float64()*2 - 1) * 4, // Scaled 2× spread
 			Y:           0,
@@ -184,7 +189,7 @@ func (g *Generator) generateSmoke(system *ParticleSystem, pal *palette.Palette, 
 			RotationVel: (rng.Float64()*2 - 1) * 2,
 			ZLayer:      ZLayerAbove,
 			Behavior:    BehaviorRising | BehaviorAirResistance | BehaviorShrinkOnRise,
-			Physics:     config.toPhysicsConfig(),
+			Physics:     physics,
 		}
 	}
 }
@@ -237,6 +242,10 @@ func (g *Generator) generateFlame(system *ParticleSystem, pal *palette.Palette, 
 		speed := config.SpreadY * (0.5 + rng.Float64()*0.5)
 		size := config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)
 
+		physics := PhysicsConfig{
+			Gravity: config.Gravity,
+		}
+
 		system.Particles[i] = Particle{
 			X:           (rng.Float64()*2 - 1) * 6, // Scaled 2× spread
 			Y:           0,
@@ -251,7 +260,7 @@ func (g *Generator) generateFlame(system *ParticleSystem, pal *palette.Palette, 
 			RotationVel: (rng.Float64()*2 - 1) * 4,
 			ZLayer:      ZLayerAbove,
 			Behavior:    BehaviorRising | BehaviorShrinkOnRise,
-			Physics:     config.toPhysicsConfig(),
+			Physics:     physics,
 		}
 	}
 }
@@ -270,6 +279,11 @@ func (g *Generator) generateBlood(system *ParticleSystem, pal *palette.Palette, 
 		speed := rng.Float64() * config.SpreadX * 0.8
 		size := config.MinSize + rng.Float64()*(config.MaxSize-config.MinSize)
 
+		physics := PhysicsConfig{
+			Gravity:       config.Gravity,
+			BounceDamping: 0.5, // Moderate bounce for blood droplets
+		}
+
 		system.Particles[i] = Particle{
 			X:           0,
 			Y:           0,
@@ -284,7 +298,7 @@ func (g *Generator) generateBlood(system *ParticleSystem, pal *palette.Palette, 
 			RotationVel: (rng.Float64()*2 - 1) * 2,
 			ZLayer:      ZLayerGround,
 			Behavior:    BehaviorGravity | BehaviorGrowOnFall,
-			Physics:     config.toPhysicsConfig(),
+			Physics:     physics,
 		}
 	}
 }

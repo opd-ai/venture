@@ -127,8 +127,8 @@ func DefaultConfig() Config {
 		SpreadX:  10.0, // Scaled 2× for larger viewport
 		SpreadY:  10.0, // Scaled 2× for larger viewport
 		Gravity:  0.0,
-		MinSize:  4.0,  // Scaled 2× from 2px (now 4-16px range per PLAN)
-		MaxSize:  16.0, // Scaled 2× from 8px (now 4-16px range per PLAN)
+		MinSize:  4.0,  // 4-16px range per PLAN
+		MaxSize:  16.0, // 4-16px range per PLAN
 		ZLayer:   ZLayerEntity,
 		Custom:   make(map[string]interface{}),
 	}
@@ -155,17 +155,6 @@ func (c Config) Validate() error {
 		return fmt.Errorf("maxSize (%f) must be >= minSize (%f)", c.MaxSize, c.MinSize)
 	}
 	return nil
-}
-
-// toPhysicsConfig creates a PhysicsConfig from this Config.
-// This helper is used by particle generators to set up physics behaviors.
-func (c Config) toPhysicsConfig() PhysicsConfig {
-	return PhysicsConfig{
-		Gravity:       c.Gravity,
-		AirResistance: 0.1, // Default light air resistance
-		BounceDamping: 0.5, // Default moderate bounce
-		GroundY:       0,   // Default ground level
-	}
 }
 
 // Particle represents a single particle in a particle system.

@@ -254,26 +254,50 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 5: Update Particle System
+### Step 5: Update Particle System ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
 - `pkg/rendering/particles/generator.go`
 - `pkg/rendering/particles/types.go`
+- `pkg/rendering/particles/behaviors.go`
+- `pkg/rendering/particles/generator_test.go`
 
-**Changes required:**
-1. Scale particle sizes:
-   - Update `MinSize` and `MaxSize` defaults × 2
-   - Adjust spread values for larger viewport
+**Changes completed:**
+1. ✅ Scaled particle sizes:
+   - Updated `MinSize` default: 1.0 → 4.0
+   - Updated `MaxSize` default: 3.0 → 16.0
+   - Updated `SpreadX` and `SpreadY` defaults: 5.0 → 10.0 for larger viewport
+   - Scaled particle spawn positions 2× in all generators
 
-2. Add Z-layer awareness:
-   - Particles above entities render with higher Z-index
-   - Ground-level particles (dust, debris) use lower Z-index
+2. ✅ Added Z-layer awareness:
+   - Added `ZLayer` type with 4 levels: `ZLayerGround`, `ZLayerEntity`, `ZLayerAbove`, `ZLayerSky`
+   - Added `ZLayer` field to both `Config` and `Particle` structs
+   - Assigned Z-layers per particle type:
+     - Ground level (dust, debris, blood): `ZLayerGround`
+     - Entity level (sparks): `ZLayerEntity`
+     - Above entity (smoke, magic, flame, sparkles): `ZLayerAbove`
+     - Sky level (embers, smoke plumes): `ZLayerSky`
 
-3. Update behavior for top-down:
-   - Rising particles (smoke, embers): Shrink + fade as they rise
-   - Falling particles: Grow slightly before impact
+3. ✅ Updated behavior for top-down perspective:
+   - Added `BehaviorShrinkOnRise` for rising particles (smoke, embers, flames, smoke plumes)
+   - Added `BehaviorGrowOnFall` for falling particles (blood, debris)
+   - Implemented `applySizeScaling()` in behaviors.go:
+     - Rising particles shrink to minimum 25% of initial size
+     - Falling particles grow to maximum 150% of initial size
+   - Added `InitialSize` field to track original size for scaling
 
-**Testing checkpoint:** Generate all 10 particle types, verify visual quality at new scale.
+4. ✅ Added helper methods:
+   - `Config.toPhysicsConfig()` for converting Config to PhysicsConfig
+
+**Tests added:**
+- `TestZLayerAssignment`: Verifies all particle types have correct Z-layers
+- `TestInitialSizeTracking`: Verifies InitialSize is set for all particle types
+- `TestSizeScalingBehaviors`: Tests shrink-on-rise and grow-on-fall behaviors
+- `TestZLayerConstants`: Verifies Z-layer ordering
+- Updated `TestDefaultConfig`: Added checks for Phase 45 scaled values
+
+**Testing checkpoint:** ✅ All 10 particle types generate correctly with new scale and Z-layers.
+`go test ./pkg/rendering/particles/...` passes.
 
 ---
 
@@ -407,7 +431,7 @@ Phase 2: Core Generation (Steps 2-4) ✅ COMPLETE
     └── ✅ Shape primitives → anti-aliased + scaled (Step 4 COMPLETE)
 
 Phase 3: Effects & Animation (Steps 5-6)
-    ├── Particle scaling + Z-layers
+    ├── ✅ Particle scaling + Z-layers (Step 5 COMPLETE)
     └── Animation frame updates
 
 Phase 4: UI & Infrastructure (Steps 7-8)

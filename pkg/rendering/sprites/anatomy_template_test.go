@@ -362,9 +362,9 @@ func TestBlobTemplate(t *testing.T) {
 		t.Errorf("Template name = %v, want 'blob'", template.Name)
 	}
 
-	// Blobs should have shadow, torso, and optional head for top-down view
-	if len(template.BodyPartLayout) < 2 || len(template.BodyPartLayout) > 3 {
-		t.Errorf("Blob has unexpected number of parts: %d, expected 2-3 (shadow + torso + optional head)", len(template.BodyPartLayout))
+	// Blobs should have shadow, torso, and head for top-down view
+	if len(template.BodyPartLayout) != 3 {
+		t.Errorf("Blob has unexpected number of parts: %d, expected 3 (shadow + torso + head)", len(template.BodyPartLayout))
 	}
 
 	// Verify torso uses organic/circular shapes
@@ -573,7 +573,7 @@ func TestTemplateProportions(t *testing.T) {
 		t.Errorf("Head height proportion out of reasonable range: %v, want 0.08-0.20", headHeight)
 	}
 
-	// Check torso proportions (Phase 45: ~35-45% of height)
+	// Check torso proportions (Phase 45: ~30-50% of height)
 	torsoHeight := template.BodyPartLayout[PartTorso].RelativeHeight
 	if torsoHeight < 0.30 || torsoHeight > 0.50 {
 		t.Errorf("Torso height proportion out of reasonable range: %v, want 0.30-0.50", torsoHeight)

@@ -463,8 +463,8 @@ func BlobTemplate() AnatomicalTemplate {
 			PartShadow: {
 				RelativeX:      0.5,
 				RelativeY:      0.88,
-				RelativeWidth:  0.65,
-				RelativeHeight: 0.15, // 65% width shadow: larger than humanoid (40%) to match blob's amorphous mass
+				RelativeWidth:  0.65, // 65% width shadow: larger than humanoid (40%) to match blob's amorphous mass
+				RelativeHeight: 0.15, // Thin shadow band beneath blob
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",

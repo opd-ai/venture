@@ -166,9 +166,9 @@ func (g *Generator) generateDoor(img *image.RGBA, pal *palette.Palette, rng *ran
 	baseColor := g.pickColor(pal, "door", rng)
 	g.fillGrain(img, baseColor, config.Variant, rng)
 
-	// Add door frame
+	// Add door frame (scaled for 64×64 tiles, doubled from 2 to 4)
 	frameColor := g.darkenColor(baseColor, 0.3)
-	g.drawFrame(img, frameColor, 2)
+	g.drawFrame(img, frameColor, 4)
 }
 
 // generateCorridor creates a corridor tile (similar to floor but darker).
@@ -249,7 +249,8 @@ func (g *Generator) fillSolid(img *image.RGBA, baseColor color.Color, variance f
 func (g *Generator) fillCheckerboard(img *image.RGBA, baseColor color.Color, variance float64, rng *rand.Rand) {
 	bounds := img.Bounds()
 	altColor := g.lightenColor(baseColor, 0.1)
-	checkSize := 4
+	// Scale checkSize for 64×64 tiles (doubled from 4 to 8)
+	checkSize := 8
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -267,8 +268,10 @@ func (g *Generator) fillDots(img *image.RGBA, baseColor color.Color, variance fl
 	g.fillSolid(img, baseColor, variance, rng)
 
 	dotColor := g.darkenColor(baseColor, 0.2)
-	spacing := 6
-	radius := 1
+	// Scale spacing for 64×64 tiles (doubled from 6 to 12)
+	spacing := 12
+	// Scale radius for 64×64 tiles (doubled from 1 to 2)
+	radius := 2
 
 	bounds := img.Bounds()
 	for y := bounds.Min.Y + spacing/2; y < bounds.Max.Y; y += spacing {
@@ -282,7 +285,8 @@ func (g *Generator) fillLines(img *image.RGBA, baseColor color.Color, variance f
 	g.fillSolid(img, baseColor, variance, rng)
 
 	lineColor := g.darkenColor(baseColor, 0.15)
-	spacing := 4
+	// Scale spacing for 64×64 tiles (doubled from 4 to 8)
+	spacing := 8
 
 	bounds := img.Bounds()
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += spacing {
@@ -296,8 +300,9 @@ func (g *Generator) fillBrick(img *image.RGBA, baseColor color.Color, variance f
 	g.fillSolid(img, baseColor, variance, rng)
 
 	mortarColor := g.darkenColor(baseColor, 0.3)
-	brickWidth := 16
-	brickHeight := 8
+	// Scale brick dimensions for 64×64 tiles (doubled from 16×8 to 32×16)
+	brickWidth := 32
+	brickHeight := 16
 
 	bounds := img.Bounds()
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += brickHeight {
@@ -326,7 +331,8 @@ func (g *Generator) fillGrain(img *image.RGBA, baseColor color.Color, variance f
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		// Create horizontal grain lines with noise
-		grainIntensity := math.Sin(float64(y)*0.3) * 0.1
+		// Scale grain frequency for 64×64 tiles (halved from 0.3 to 0.15 for wider grain pattern)
+		grainIntensity := math.Sin(float64(y)*0.15) * 0.1
 
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			variation := 1.0 + grainIntensity + (rng.Float64()*2.0-1.0)*variance*0.05

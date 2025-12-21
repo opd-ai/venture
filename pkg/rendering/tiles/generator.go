@@ -166,9 +166,14 @@ func (g *Generator) generateDoor(img *image.RGBA, pal *palette.Palette, rng *ran
 	baseColor := g.pickColor(pal, "door", rng)
 	g.fillGrain(img, baseColor, config.Variant, rng)
 
-	// Add door frame (scaled for 64×64 tiles, doubled from 2 to 4)
+	// Add door frame with thickness that scales proportionally with tile size
+	// (6.25% of tile width: 4px for 64×64, 2px for 32×32)
+	frameThickness := config.Width / 16
+	if frameThickness < 1 {
+		frameThickness = 1
+	}
 	frameColor := g.darkenColor(baseColor, 0.3)
-	g.drawFrame(img, frameColor, 4)
+	g.drawFrame(img, frameColor, frameThickness)
 }
 
 // generateCorridor creates a corridor tile (similar to floor but darker).

@@ -259,8 +259,8 @@ func TestDirectionalHeadRotation(t *testing.T) {
 	config := DefaultArticulationConfig()
 
 	tests := []struct {
-		direction   Direction8
-		expectSign  int // -1 for left rotation, 0 for no rotation, 1 for right rotation
+		direction  Direction8
+		expectSign int // -1 for left rotation, 0 for no rotation, 1 for right rotation
 	}{
 		{Dir8North, 0},      // Facing up, no rotation
 		{Dir8South, 0},      // Facing camera, no rotation

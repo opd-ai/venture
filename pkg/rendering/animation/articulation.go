@@ -254,7 +254,7 @@ func calculateWalkArticulation(t float64, direction Direction8, config Articulat
 			Rotation: headRotation,                // Directional head rotation for direction indication
 		},
 		Torso: ArticulationOffset{
-			Y:        math.Sin(t*4*math.Pi) * 1.6, // Torso bob (scaled 2× for 64×64)
+			Y:        math.Sin(t*4*math.Pi) * 1.6,                 // Torso bob (scaled 2× for 64×64)
 			Rotation: math.Sin(t*2*math.Pi) * 0.05 * amplitudeMod, // Subtle torso rotation
 		},
 		LeftArm: ArticulationOffset{
@@ -298,12 +298,12 @@ func calculateRunArticulation(t float64, direction Direction8, config Articulati
 
 	// Calculate arm X offsets based on direction (exaggerated for running)
 	leftArmXOffset, rightArmXOffset := calculateDirectionalArmOffsets(direction, armCycle, config)
-	leftArmXOffset *= runningArmSwingMultiplier  // More pronounced arm swing when running
+	leftArmXOffset *= runningArmSwingMultiplier // More pronounced arm swing when running
 	rightArmXOffset *= runningArmSwingMultiplier
 
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        math.Sin(t*4*math.Pi) * 2.0, // Head bob (scaled 2× for 64×64)
+			Y:        math.Sin(t*4*math.Pi) * 2.0,               // Head bob (scaled 2× for 64×64)
 			Rotation: headRotation + math.Sin(t*2*math.Pi)*0.08, // Directional + dynamic rotation
 		},
 		Torso: ArticulationOffset{
@@ -417,11 +417,11 @@ func calculateDeathArticulation(t float64, config ArticulationConfig) Articulati
 	// Collapse motion - scaled 2× for 64×64 sprites
 	return Articulation{
 		Head: ArticulationOffset{
-			Y:        t * 16.0, // Scaled 2× for 64×64
+			Y:        t * 16.0,        // Scaled 2× for 64×64
 			Rotation: t * math.Pi / 4, // 45 degree rotation
 		},
 		Torso: ArticulationOffset{
-			Y:        t * 24.0, // Scaled 2× for 64×64
+			Y:        t * 24.0,        // Scaled 2× for 64×64
 			Rotation: t * math.Pi / 3, // 60 degree rotation
 		},
 		LeftArm: ArticulationOffset{

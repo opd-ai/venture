@@ -84,39 +84,39 @@ func TestQualityFieldBehavior(t *testing.T) {
 	gen := NewGenerator()
 
 	tests := []struct {
-		name               string
-		antiAlias          AntiAliasQuality
-		quality            bool
+		name                string
+		antiAlias           AntiAliasQuality
+		quality             bool
 		expectHigherQuality bool
 	}{
 		{
-			name:               "Quality false with AntiAliasLow keeps Low",
-			antiAlias:          AntiAliasLow,
-			quality:            false,
+			name:                "Quality false with AntiAliasLow keeps Low",
+			antiAlias:           AntiAliasLow,
+			quality:             false,
 			expectHigherQuality: false,
 		},
 		{
-			name:               "Quality true with AntiAliasLow upgrades to Medium",
-			antiAlias:          AntiAliasLow,
-			quality:            true,
+			name:                "Quality true with AntiAliasLow upgrades to Medium",
+			antiAlias:           AntiAliasLow,
+			quality:             true,
 			expectHigherQuality: true,
 		},
 		{
-			name:               "Quality true with AntiAliasOff upgrades to Medium",
-			antiAlias:          AntiAliasOff,
-			quality:            true,
+			name:                "Quality true with AntiAliasOff upgrades to Medium",
+			antiAlias:           AntiAliasOff,
+			quality:             true,
 			expectHigherQuality: true,
 		},
 		{
-			name:               "Quality true with AntiAliasMedium stays Medium",
-			antiAlias:          AntiAliasMedium,
-			quality:            true,
+			name:                "Quality true with AntiAliasMedium stays Medium",
+			antiAlias:           AntiAliasMedium,
+			quality:             true,
 			expectHigherQuality: false, // Already at Medium, no upgrade needed
 		},
 		{
-			name:               "Quality true with AntiAliasHigh stays High",
-			antiAlias:          AntiAliasHigh,
-			quality:            true,
+			name:                "Quality true with AntiAliasHigh stays High",
+			antiAlias:           AntiAliasHigh,
+			quality:             true,
 			expectHigherQuality: false, // Already higher than Medium
 		},
 	}

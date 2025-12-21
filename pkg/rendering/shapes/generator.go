@@ -970,7 +970,7 @@ func (g *Generator) inArmReach(dx, dy, centerX, centerY, rotation, smoothing flo
 	ny := ry / centerY
 
 	// Arms extending horizontally from center body
-	armWidth := 0.85   // Total arm reach (both sides)
+	armWidth := 0.85 // Total arm reach (both sides)
 	armThickness := 0.15
 	bodyRadius := 0.25 // Central body (torso)
 

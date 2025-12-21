@@ -47,19 +47,22 @@ func (g *Generator) GenerateDecorativeFrame(config Config, style FrameStyle) (*i
 }
 
 // generateOrnateCornerFrame creates decorative corner elements (fantasy).
+// Phase 45: Border thicknesses scaled 2× for 64×64 UI elements.
 func (g *Generator) generateOrnateCornerFrame(img *image.RGBA, pal *palette.Palette, config Config) {
 	borderColor := pal.Primary
 	accentColor := pal.Accent1
 	w, h := config.Width, config.Height
 
-	g.drawBorder(img, borderColor, BorderDouble, 1)
+	// Phase 45: Border 1 → 2 for 64×64 scaling
+	g.drawBorder(img, borderColor, BorderDouble, 2)
 	g.drawCornerDecorations(img, w, h, accentColor)
 	g.drawCenterDecorations(img, w, h, accentColor)
 }
 
 // drawCornerDecorations draws diamond-shaped decorations at frame corners.
+// Phase 45: Corner size 8 → 16 for 64×64 UI elements.
 func (g *Generator) drawCornerDecorations(img *image.RGBA, w, h int, accentColor color.Color) {
-	cornerSize := 8
+	cornerSize := 16 // Phase 45: 8 → 16 for 64×64 scaling
 	for i := 0; i < cornerSize && i < w && i < h; i++ {
 		g.drawTopLeftCorner(img, i, cornerSize, w, h, accentColor)
 		g.drawTopRightCorner(img, i, cornerSize, w, h, accentColor)
@@ -109,9 +112,10 @@ func (g *Generator) drawBottomRightCorner(img *image.RGBA, i, cornerSize, w, h i
 }
 
 // drawCenterDecorations draws accent marks at the center of each frame side.
+// Phase 45: Decoration size 4 → 8 for 64×64 UI elements.
 func (g *Generator) drawCenterDecorations(img *image.RGBA, w, h int, accentColor color.Color) {
 	midX, midY := w/2, h/2
-	decorSize := 4
+	decorSize := 8 // Phase 45: 4 → 8 for 64×64 scaling
 	for i := -decorSize; i <= decorSize; i++ {
 		g.drawHorizontalCenterDecor(img, midX, i, w, h, accentColor)
 		g.drawVerticalCenterDecor(img, midY, i, w, h, accentColor)
@@ -147,16 +151,19 @@ func (g *Generator) drawVerticalCenterDecor(img *image.RGBA, midY, offset, w, h 
 }
 
 // generateTechAngularFrame creates angular geometric frame (scifi/cyberpunk).
+// Phase 45: Cut sizes and borders scaled 2× for 64×64 UI elements.
 func (g *Generator) generateTechAngularFrame(img *image.RGBA, pal *palette.Palette, config Config) {
 	borderColor := pal.Primary
 	accentColor := pal.Accent1
 	w, h := config.Width, config.Height
 
 	// Draw main border
-	g.drawBorder(img, borderColor, BorderSolid, 1)
+	// Phase 45: Border 1 → 2 for 64×64 scaling
+	g.drawBorder(img, borderColor, BorderSolid, 2)
 
 	// Add angular corner cuts
-	cutSize := 6
+	// Phase 45: Cut size 6 → 12 for 64×64 scaling
+	cutSize := 12
 	for i := 0; i < cutSize && i < w && i < h; i++ {
 		// Top-left cut
 		if i < w && cutSize-i-1 < h {
@@ -178,21 +185,24 @@ func (g *Generator) generateTechAngularFrame(img *image.RGBA, pal *palette.Palet
 }
 
 // generateWeatheredFrame creates damaged, worn frame (postapoc).
+// Phase 45: Border thickness scaled 2× for 64×64 UI elements.
 func (g *Generator) generateWeatheredFrame(img *image.RGBA, pal *palette.Palette, config Config) {
 	borderColor := pal.Primary
 
 	// Draw thick border
-	g.drawBorder(img, borderColor, BorderSolid, 3)
+	// Phase 45: Border 3 → 6 for 64×64 scaling
+	g.drawBorder(img, borderColor, BorderSolid, 6)
 
 	// Add weathering effect by drawing some darker pixels
 	darkColor := g.darkenColor(borderColor, 0.4)
 	w, h := config.Width, config.Height
 
 	// Add some weathered spots along the border
+	// Phase 45: Border range 5 → 10 for 64×64 scaling
 	for i := 0; i < 20; i++ {
 		x := (i * 13) % w // Deterministic "random" positions
 		y := (i * 17) % h
-		if x < 5 || x >= w-5 || y < 5 || y >= h-5 {
+		if x < 10 || x >= w-10 || y < 10 || y >= h-10 {
 			img.Set(x, y, darkColor)
 		}
 	}

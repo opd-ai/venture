@@ -24,7 +24,6 @@ type HierarchyStyle struct {
 }
 
 // GetHierarchyStyle returns the visual style for a given hierarchy level.
-// GetHierarchyStyle returns the visual style for a given hierarchy level.
 // Phase 45: Border thicknesses scaled 2× for 64×64 UI elements.
 func GetHierarchyStyle(level HierarchyLevel) HierarchyStyle {
 	switch level {

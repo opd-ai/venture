@@ -176,26 +176,46 @@ func applyBouncePhysics(p *Particle, behavior ParticleBehavior, config PhysicsCo
 	}
 }
 
+// Size scaling constants for top-down perspective (Phase 45).
+const (
+	// velocityScalingFactor normalizes particle velocity for size scaling calculations.
+	// A reference velocity of 100 pixels/second is used as the baseline.
+	velocityScalingFactor = 100.0
+
+	// shrinkRateCoeff controls how fast rising particles shrink (0.5 = moderate shrink).
+	shrinkRateCoeff = 0.5
+
+	// growRateCoeff controls how fast falling particles grow (0.3 = moderate grow).
+	growRateCoeff = 0.3
+
+	// minSizeMultiplier is the minimum size particles can shrink to (25% of initial).
+	minSizeMultiplier = 0.25
+
+	// maxSizeMultiplier is the maximum size particles can grow to (150% of initial).
+	maxSizeMultiplier = 1.5
+)
+
 // applySizeScaling adjusts particle size based on top-down perspective behaviors (Phase 45).
 // Rising particles shrink as they move away from ground level.
 // Falling particles grow as they approach ground level.
 func applySizeScaling(p *Particle, behavior ParticleBehavior, deltaTime float64) {
 	// Initialize InitialSize if not set (first update)
-	if p.InitialSize <= 0 {
+	// Only initialize when InitialSize is exactly 0 (the zero value)
+	if p.InitialSize == 0 && p.Size > 0 {
 		p.InitialSize = p.Size
 	}
 
 	// Shrink on rise: particles moving upward (negative VY) shrink over time
 	// This creates the visual effect of the particle rising away from the camera
 	if behavior.Has(BehaviorShrinkOnRise) && p.VY < 0 {
-		// Shrink rate proportional to upward velocity, scaled by life remaining
-		shrinkFactor := 1.0 - (0.5 * deltaTime * math.Abs(p.VY) / 100.0)
+		// Shrink rate proportional to upward velocity, normalized by reference velocity
+		shrinkFactor := 1.0 - (shrinkRateCoeff * deltaTime * math.Abs(p.VY) / velocityScalingFactor)
 		if shrinkFactor < 0.1 {
 			shrinkFactor = 0.1 // Minimum size factor to prevent disappearing
 		}
 		p.Size *= shrinkFactor
 		// Ensure minimum size of 25% of initial
-		minSize := p.InitialSize * 0.25
+		minSize := p.InitialSize * minSizeMultiplier
 		if p.Size < minSize {
 			p.Size = minSize
 		}
@@ -204,14 +224,14 @@ func applySizeScaling(p *Particle, behavior ParticleBehavior, deltaTime float64)
 	// Grow on fall: particles moving downward (positive VY) grow over time
 	// This creates the visual effect of the particle falling toward the camera
 	if behavior.Has(BehaviorGrowOnFall) && p.VY > 0 {
-		// Grow rate proportional to downward velocity
-		growFactor := 1.0 + (0.3 * deltaTime * p.VY / 100.0)
+		// Grow rate proportional to downward velocity, normalized by reference velocity
+		growFactor := 1.0 + (growRateCoeff * deltaTime * p.VY / velocityScalingFactor)
 		if growFactor > 2.0 {
 			growFactor = 2.0 // Maximum grow factor per frame
 		}
 		p.Size *= growFactor
 		// Cap at 150% of initial size for visual balance
-		maxSize := p.InitialSize * 1.5
+		maxSize := p.InitialSize * maxSizeMultiplier
 		if p.Size > maxSize {
 			p.Size = maxSize
 		}

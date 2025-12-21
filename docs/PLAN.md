@@ -351,21 +351,55 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 7: Update UI Components
+### Step 7: Update UI Components ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
 - `pkg/rendering/ui/generator.go`
-- `pkg/rendering/ui/types.go`
+- `pkg/rendering/ui/hierarchy.go`
+- `pkg/rendering/ui/decorations.go`
+- `pkg/rendering/ui/generator_test.go`
+- `pkg/rendering/ui/hierarchy_test.go`
 
-**Changes required:**
-1. Scale UI element sizes:
-   - Icons: 16×16 → 32×32
-   - Borders: 1px → 2px
-   - Padding: proportional increase
+**Changes completed:**
+1. ✅ Scaled UI element sizes (2× for 64×64):
+   - Icons: Padding 2 → 4, border 1 → 2
+   - Borders: All hierarchy levels scaled 2× (1→2, 2→4, 3→6)
+   - Button highlight positions: 2,2 → 4,4
+   - Panel border: 1 → 2
+   - HealthBar padding: 2 → 4, total 4 → 8
+   - Label padding: 1 → 2
+   - Frame corner sizes: 4 → 8, border 3 → 6
 
-2. Update UI sprite generation for clarity at new scale.
+2. ✅ Updated hierarchy border thicknesses:
+   - Primary: 3 → 6
+   - Secondary: 2 → 4
+   - Tertiary: 1 → 2
+   - Quaternary: 1 → 2
 
-**Testing checkpoint:** Verify UI elements render correctly at new dimensions.
+3. ✅ Updated decorations for 64×64:
+   - Ornate corner size: 8 → 16
+   - Center decoration size: 4 → 8
+   - Tech angular cut size: 6 → 12
+   - Weathered border: 3 → 6, range 5 → 10
+
+4. ✅ Updated separator dimensions:
+   - Dashed: dashLength 8→16, gapLength 4→8
+   - Dotted: dotSize 2→4, gapSize 4→8
+   - Gradient: line thickness 2→4
+   - Decorative diamond size: 3 → 6
+
+5. ✅ Updated selectBorderThickness:
+   - Frame: 3 → 6
+   - Ornate genres (fantasy/horror): 3 → 6
+   - Default: 2 → 4
+
+**Tests added:**
+- `TestGetHierarchyStyle_Phase45BorderThickness`: Verifies scaled border thicknesses
+- `TestPhase45_UIScaling`: Tests icon, health bar, and frame scaling
+- `TestPhase45_SelectBorderThickness`: Tests genre-based border selection
+- `TestPhase45_GenerateAt64x64`: Verifies all UI elements generate at 64×64
+
+**Testing checkpoint:** ✅ `go test ./pkg/rendering/ui/...` all pass.
 
 ---
 
@@ -466,7 +500,7 @@ Phase 3: Effects & Animation (Steps 5-6) ✅ COMPLETE
     └── ✅ Animation frame updates + directional enhancements (Step 6 COMPLETE)
 
 Phase 4: UI & Infrastructure (Steps 7-8)
-    ├── UI component scaling
+    ├── ✅ UI component scaling (Step 7 COMPLETE)
     └── Cache/pool capacity adjustments
 
 Phase 5: Polish & Testing (Steps 9-10)

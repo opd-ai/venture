@@ -180,9 +180,10 @@ func (g *Generator) generateButton(img *image.RGBA, pal *palette.Palette, rng *r
 	g.drawBorder(img, borderColor, borderStyle, borderThickness)
 
 	// Add highlight if not disabled
+	// Phase 45: Scaled 2× for 64×64 UI elements (2 → 4, 3 → 6)
 	if config.State != StateDisabled {
 		highlightColor := g.lightenColor(bgColor, 0.4)
-		g.drawLine(img, 2, 2, config.Width-3, 2, highlightColor)
+		g.drawLine(img, 4, 4, config.Width-6, 4, highlightColor)
 	}
 }
 
@@ -215,18 +216,21 @@ func (g *Generator) generatePanel(img *image.RGBA, pal *palette.Palette, rng *ra
 	g.fillRect(img, 0, 0, config.Width, config.Height, semiTransparent)
 
 	// Draw border
+	// Phase 45: Scaled 2× for 64×64 UI elements (1 → 2)
 	borderColor := g.lightenColor(pal.Background, 0.3)
-	g.drawBorder(img, borderColor, BorderSolid, 1)
+	g.drawBorder(img, borderColor, BorderSolid, 2)
 }
 
 // generateHealthBar creates a health/progress bar.
+// Phase 45: Padding and borders scaled 2× for 64×64 UI elements.
 func (g *Generator) generateHealthBar(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Background
 	bgColor := g.darkenColor(pal.Background, 0.2)
 	g.fillRect(img, 0, 0, config.Width, config.Height, bgColor)
 
 	// Calculate filled width based on value
-	filledWidth := int(float64(config.Width-4) * config.Value)
+	// Phase 45: Padding 4 → 8 for 64×64 scaling
+	filledWidth := int(float64(config.Width-8) * config.Value)
 
 	// Select fill color based on value
 	var fillColor color.Color
@@ -239,21 +243,24 @@ func (g *Generator) generateHealthBar(img *image.RGBA, pal *palette.Palette, rng
 	}
 
 	// Fill bar
+	// Phase 45: Positions 2 → 4, padding 4 → 8 for 64×64 scaling
 	if filledWidth > 0 {
-		g.fillRect(img, 2, 2, filledWidth, config.Height-4, fillColor)
+		g.fillRect(img, 4, 4, filledWidth, config.Height-8, fillColor)
 
 		// Add shine effect (positioned proportionally at 20% from top)
-		shineY := 2 + maxInt(1, config.Height/5) // At least 1px from fill start
+		shineY := 4 + maxInt(2, config.Height/5) // At least 2px from fill start (scaled)
 		shineColor := g.lightenColor(fillColor, 0.3)
-		g.drawLine(img, 2, shineY, filledWidth, shineY, shineColor)
+		g.drawLine(img, 4, shineY, filledWidth, shineY, shineColor)
 	}
 
 	// Border
+	// Phase 45: Scaled 2× for 64×64 UI elements (1 → 2)
 	borderColor := g.lightenColor(pal.Background, 0.4)
-	g.drawBorder(img, borderColor, BorderSolid, 1)
+	g.drawBorder(img, borderColor, BorderSolid, 2)
 }
 
 // generateLabel creates a text label background.
+// Phase 45: Padding and borders scaled 2× for 64×64 UI elements.
 func (g *Generator) generateLabel(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Semi-transparent background
 	bgColor := pal.Background
@@ -266,16 +273,20 @@ func (g *Generator) generateLabel(img *image.RGBA, pal *palette.Palette, rng *ra
 	}
 
 	// Fill with slight padding
-	g.fillRect(img, 1, 1, config.Width-2, config.Height-2, labelBg)
+	// Phase 45: Padding 1 → 2 for 64×64 scaling
+	g.fillRect(img, 2, 2, config.Width-4, config.Height-4, labelBg)
 
 	// Optional border for emphasis
+	// Phase 45: Border 1 → 2 for 64×64 scaling
 	if config.State == StateHover {
 		borderColor := pal.Primary
-		g.drawBorder(img, borderColor, BorderSolid, 1)
+		g.drawBorder(img, borderColor, BorderSolid, 2)
 	}
 }
 
 // generateIcon creates a small iconic UI element.
+// Phase 45: Padding and borders scaled 2× for 64×64 UI elements.
+// Default icon size updated from 16×16 to 32×32.
 func (g *Generator) generateIcon(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Background circle or square based on genre
 	bgColor := pal.Primary
@@ -284,38 +295,44 @@ func (g *Generator) generateIcon(img *image.RGBA, pal *palette.Palette, rng *ran
 	// Tech/futuristic genres use squares, organic/natural genres use circles
 	useSquare := g.isTechGenre(config.GenreID)
 
+	// Phase 45: Padding 2 → 4 for 64×64 scaling
 	if useSquare {
 		// Square icon for tech genres
-		g.fillRect(img, 2, 2, config.Width-4, config.Height-4, bgColor)
+		g.fillRect(img, 4, 4, config.Width-8, config.Height-8, bgColor)
 	} else {
 		// Circular icon for organic/natural genres
 		centerX := config.Width / 2
 		centerY := config.Height / 2
-		radius := config.Width/2 - 2
+		radius := config.Width/2 - 4 // Phase 45: 2 → 4 for 64×64 scaling
 		g.drawCircle(img, centerX, centerY, radius, bgColor, true)
 	}
 
 	// Border
+	// Phase 45: Border 1 → 2 for 64×64 scaling
 	borderColor := g.darkenColor(bgColor, 0.3)
-	g.drawBorder(img, borderColor, BorderSolid, 1)
+	g.drawBorder(img, borderColor, BorderSolid, 2)
 }
 
 // generateFrame creates a decorative frame.
+// Phase 45: Border thicknesses and corner sizes scaled 2× for 64×64 UI elements.
 func (g *Generator) generateFrame(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Frame is mostly transparent with ornate border
 	borderColor := pal.Primary
 	borderStyle := g.selectBorderStyle(config.GenreID)
 
 	// Draw double border for emphasis
-	g.drawBorder(img, borderColor, borderStyle, 3)
+	// Phase 45: Border 3 → 6 for 64×64 scaling
+	g.drawBorder(img, borderColor, borderStyle, 6)
 
 	// Inner border
+	// Phase 45: Border 1 → 2 for 64×64 scaling
 	innerColor := g.lightenColor(borderColor, 0.2)
-	g.drawBorder(img, innerColor, BorderSolid, 1)
+	g.drawBorder(img, innerColor, BorderSolid, 2)
 
 	// Corner decorations for ornate genres
+	// Phase 45: Corner size 4 → 8 for 64×64 scaling
 	if config.GenreID == "fantasy" || config.GenreID == "horror" {
-		cornerSize := 4
+		cornerSize := 8
 		g.fillRect(img, 0, 0, cornerSize, cornerSize, borderColor)
 		g.fillRect(img, config.Width-cornerSize, 0, cornerSize, cornerSize, borderColor)
 		g.fillRect(img, 0, config.Height-cornerSize, cornerSize, cornerSize, borderColor)
@@ -647,14 +664,15 @@ func (g *Generator) selectBorderStyle(genreID string) BorderStyle {
 
 // selectBorderThickness returns consistent border thickness based on genre and element type.
 // This ensures UI consistency across different seeds while maintaining genre-specific styling.
+// Phase 45: Border thicknesses scaled 2× for 64×64 UI elements.
 func (g *Generator) selectBorderThickness(genreID string, elemType ElementType) int {
 	if elemType == ElementFrame {
-		return 3 // Frames use thicker borders
+		return 6 // Phase 45: Frames use thicker borders (3 → 6)
 	}
 	if genreID == "fantasy" || genreID == "horror" {
-		return 3 // Ornate genres use thicker borders
+		return 6 // Phase 45: Ornate genres use thicker borders (3 → 6)
 	}
-	return 2 // Default thickness for most elements
+	return 4 // Phase 45: Default thickness for most elements (2 → 4)
 }
 
 // selectButtonBaseColor chooses a base color from the palette that has good contrast potential.

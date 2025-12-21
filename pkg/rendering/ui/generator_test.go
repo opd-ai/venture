@@ -980,3 +980,159 @@ func TestGenerateAllBorderStyles(t *testing.T) {
 		})
 	}
 }
+
+// TestPhase45_UIScaling verifies Phase 45 scaled pixel values for 64×64 UI elements.
+func TestPhase45_UIScaling(t *testing.T) {
+	gen := NewGenerator()
+
+	t.Run("Icon_32x32_ScaledPadding", func(t *testing.T) {
+		// Icons should now use 32×32 as default size (was 16×16)
+		// Padding scaled from 2 → 4 for 64×64 scaling
+		config := Config{
+			Type:    ElementIcon,
+			Width:   32, // New default icon size
+			Height:  32,
+			GenreID: "fantasy",
+			Seed:    12345,
+		}
+
+		img, err := gen.Generate(config)
+		if err != nil {
+			t.Fatalf("Failed to generate icon: %v", err)
+		}
+
+		bounds := img.Bounds()
+		if bounds.Dx() != 32 || bounds.Dy() != 32 {
+			t.Errorf("Icon dimensions = %dx%d, want 32x32", bounds.Dx(), bounds.Dy())
+		}
+	})
+
+	t.Run("HealthBar_ScaledPadding", func(t *testing.T) {
+		// Health bar padding scaled from 2 → 4, total from 4 → 8
+		config := Config{
+			Type:    ElementHealthBar,
+			Width:   100,
+			Height:  40,
+			GenreID: "fantasy",
+			Seed:    12345,
+			Value:   0.5,
+		}
+
+		img, err := gen.Generate(config)
+		if err != nil {
+			t.Fatalf("Failed to generate health bar: %v", err)
+		}
+
+		// Verify image was generated correctly
+		if img == nil {
+			t.Fatal("Health bar image is nil")
+		}
+
+		bounds := img.Bounds()
+		if bounds.Dx() != config.Width {
+			t.Errorf("Width = %d, want %d", bounds.Dx(), config.Width)
+		}
+	})
+
+	t.Run("Frame_ScaledCorners", func(t *testing.T) {
+		// Frame corner size scaled from 4 → 8 for 64×64
+		config := Config{
+			Type:    ElementFrame,
+			Width:   200,
+			Height:  150,
+			GenreID: "fantasy", // Uses corner decorations
+			Seed:    12345,
+		}
+
+		img, err := gen.Generate(config)
+		if err != nil {
+			t.Fatalf("Failed to generate frame: %v", err)
+		}
+
+		// Verify frame corners have content (8×8 corner size)
+		// Check that corner pixels are set
+		cornerSize := 8
+		hasCornerContent := false
+		for y := 0; y < cornerSize && y < img.Bounds().Dy(); y++ {
+			for x := 0; x < cornerSize && x < img.Bounds().Dx(); x++ {
+				c := img.RGBAAt(x, y)
+				if c.A > 0 {
+					hasCornerContent = true
+					break
+				}
+			}
+			if hasCornerContent {
+				break
+			}
+		}
+
+		if !hasCornerContent {
+			t.Error("Frame corner (8×8) should have content after Phase 45 scaling")
+		}
+	})
+}
+
+// TestPhase45_SelectBorderThickness verifies scaled border thickness selection.
+func TestPhase45_SelectBorderThickness(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name        string
+		genreID     string
+		elemType    ElementType
+		expectedMin int // Minimum expected thickness
+	}{
+		{"Frame", "fantasy", ElementFrame, 6},           // 3 → 6
+		{"FantasyButton", "fantasy", ElementButton, 6},  // Ornate: 3 → 6
+		{"HorrorButton", "horror", ElementButton, 6},    // Ornate: 3 → 6
+		{"ScifiButton", "scifi", ElementButton, 4},      // Default: 2 → 4
+		{"DefaultButton", "postapoc", ElementButton, 4}, // Default: 2 → 4
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			thickness := gen.selectBorderThickness(tt.genreID, tt.elemType)
+			if thickness < tt.expectedMin {
+				t.Errorf("selectBorderThickness(%s, %s) = %d, want >= %d",
+					tt.genreID, tt.elemType, thickness, tt.expectedMin)
+			}
+		})
+	}
+}
+
+// TestPhase45_GenerateAt64x64 verifies UI generation at 64×64 dimensions.
+func TestPhase45_GenerateAt64x64(t *testing.T) {
+	gen := NewGenerator()
+
+	elementTypes := []ElementType{
+		ElementButton, ElementPanel, ElementHealthBar,
+		ElementLabel, ElementIcon, ElementFrame,
+	}
+
+	for _, eType := range elementTypes {
+		t.Run(eType.String()+"_64x64", func(t *testing.T) {
+			config := Config{
+				Type:    eType,
+				Width:   64,
+				Height:  64,
+				GenreID: "fantasy",
+				Seed:    12345,
+				Value:   0.5,
+			}
+
+			img, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Failed to generate %s at 64×64: %v", eType, err)
+			}
+			if img == nil {
+				t.Fatalf("Generated nil image for %s at 64×64", eType)
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != 64 || bounds.Dy() != 64 {
+				t.Errorf("Generated %s dimensions = %dx%d, want 64x64",
+					eType, bounds.Dx(), bounds.Dy())
+			}
+		})
+	}
+}

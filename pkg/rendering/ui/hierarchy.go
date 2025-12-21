@@ -24,13 +24,14 @@ type HierarchyStyle struct {
 }
 
 // GetHierarchyStyle returns the visual style for a given hierarchy level.
+// Phase 45: Border thicknesses scaled 2× for 64×64 UI elements.
 func GetHierarchyStyle(level HierarchyLevel) HierarchyStyle {
 	switch level {
 	case HierarchyPrimary:
 		return HierarchyStyle{
 			Scale:             1.2,
 			Opacity:           1.0,
-			BorderThickness:   3,
+			BorderThickness:   6, // Phase 45: 3 → 6 (2× scaling for 64×64)
 			BackgroundOpacity: 1.0,
 			FontScale:         1.5,
 		}
@@ -38,7 +39,7 @@ func GetHierarchyStyle(level HierarchyLevel) HierarchyStyle {
 		return HierarchyStyle{
 			Scale:             1.0,
 			Opacity:           1.0,
-			BorderThickness:   2,
+			BorderThickness:   4, // Phase 45: 2 → 4 (2× scaling for 64×64)
 			BackgroundOpacity: 0.95,
 			FontScale:         1.0,
 		}
@@ -46,7 +47,7 @@ func GetHierarchyStyle(level HierarchyLevel) HierarchyStyle {
 		return HierarchyStyle{
 			Scale:             0.9,
 			Opacity:           0.85,
-			BorderThickness:   1,
+			BorderThickness:   2, // Phase 45: 1 → 2 (2× scaling for 64×64)
 			BackgroundOpacity: 0.8,
 			FontScale:         0.9,
 		}
@@ -54,7 +55,7 @@ func GetHierarchyStyle(level HierarchyLevel) HierarchyStyle {
 		return HierarchyStyle{
 			Scale:             0.8,
 			Opacity:           0.7,
-			BorderThickness:   1,
+			BorderThickness:   2, // Phase 45: 1 → 2 (2× scaling for 64×64)
 			BackgroundOpacity: 0.6,
 			FontScale:         0.8,
 		}
@@ -213,9 +214,10 @@ func abs(x int) int {
 }
 
 // drawDashedSeparator renders a dashed line separator on the image.
+// Phase 45: Dash/gap sizes scaled 2× for 64×64 UI elements.
 func (g *Generator) drawDashedSeparator(img *image.RGBA, width, height int, col color.Color) {
-	dashLength := 8
-	gapLength := 4
+	dashLength := 16 // Phase 45: 8 → 16 for 64×64 scaling
+	gapLength := 8   // Phase 45: 4 → 8 for 64×64 scaling
 	y := height / 2
 	for x := 0; x < width; x += dashLength + gapLength {
 		endX := x + dashLength
@@ -227,9 +229,10 @@ func (g *Generator) drawDashedSeparator(img *image.RGBA, width, height int, col 
 }
 
 // drawDottedSeparator renders a dotted line separator on the image.
+// Phase 45: Dot/gap sizes scaled 2× for 64×64 UI elements.
 func (g *Generator) drawDottedSeparator(img *image.RGBA, width, height int, col color.Color) {
-	dotSize := 2
-	gapSize := 4
+	dotSize := 4 // Phase 45: 2 → 4 for 64×64 scaling
+	gapSize := 8 // Phase 45: 4 → 8 for 64×64 scaling
 	y := height / 2
 	for x := 0; x < width; x += dotSize + gapSize {
 		for dy := 0; dy < dotSize && y+dy < height; dy++ {
@@ -241,6 +244,7 @@ func (g *Generator) drawDottedSeparator(img *image.RGBA, width, height int, col 
 }
 
 // drawGradientSeparator renders a gradient fade separator on the image.
+// Phase 45: Line thickness scaled 2× for 64×64 UI elements.
 func (g *Generator) drawGradientSeparator(img *image.RGBA, width, height int, col color.Color) {
 	y := height / 2
 	for x := 0; x < width; x++ {
@@ -252,8 +256,13 @@ func (g *Generator) drawGradientSeparator(img *image.RGBA, width, height int, co
 			B: uint8(b >> 8),
 			A: uint8(255 * alpha),
 		}
+		// Phase 45: Line thickness 2 → 4 for 64×64 scaling
 		img.Set(x, y, gradCol)
-		if height > 2 {
+		if height > 4 {
+			img.Set(x, y+1, gradCol)
+			img.Set(x, y+2, gradCol)
+			img.Set(x, y+3, gradCol)
+		} else if height > 2 {
 			img.Set(x, y+1, gradCol)
 		}
 	}
@@ -288,8 +297,9 @@ func (g *Generator) drawOrnamentalSeparator(img *image.RGBA, width, height int, 
 }
 
 // drawDecorativeDiamond draws a small decorative diamond at the specified position.
+// Phase 45: Diamond size 3 → 6 for 64×64 UI elements.
 func (g *Generator) drawDecorativeDiamond(img *image.RGBA, x, y, width, height int, col color.Color) {
-	size := 3
+	size := 6 // Phase 45: 3 → 6 for 64×64 scaling
 	for dy := -size; dy <= size; dy++ {
 		for dx := -size; dx <= size; dx++ {
 			if abs(dx)+abs(dy) <= size {

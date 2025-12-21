@@ -64,6 +64,31 @@ func TestGetHierarchyStyle(t *testing.T) {
 	}
 }
 
+// TestGetHierarchyStyle_Phase45BorderThickness verifies Phase 45 scaled border thicknesses.
+// Border thicknesses are scaled 2× for 64×64 UI elements.
+func TestGetHierarchyStyle_Phase45BorderThickness(t *testing.T) {
+	tests := []struct {
+		name              string
+		level             HierarchyLevel
+		expectedThickness int
+	}{
+		{"Primary", HierarchyPrimary, 6},       // Phase 45: 3 → 6
+		{"Secondary", HierarchySecondary, 4},   // Phase 45: 2 → 4
+		{"Tertiary", HierarchyTertiary, 2},     // Phase 45: 1 → 2
+		{"Quaternary", HierarchyQuaternary, 2}, // Phase 45: 1 → 2
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			style := GetHierarchyStyle(tt.level)
+			if style.BorderThickness != tt.expectedThickness {
+				t.Errorf("BorderThickness = %d, want %d (Phase 45 2× scaling)",
+					style.BorderThickness, tt.expectedThickness)
+			}
+		})
+	}
+}
+
 func TestGetHierarchyStyle_Ordering(t *testing.T) {
 	// Verify that primary has larger scale than secondary, etc.
 	primary := GetHierarchyStyle(HierarchyPrimary)

@@ -499,7 +499,6 @@ func (g *Generator) applyWallShadow(img *image.RGBA, pal *palette.Palette, confi
 // (visible top surface reflecting light) to simulate 3D wall projection.
 func (g *Generator) applyWallHeightEdges(img *image.RGBA, pal *palette.Palette, config EnhancedWallConfig) {
 	bounds := img.Bounds()
-	width := bounds.Dx()
 	height := bounds.Dy()
 
 	// Edge thickness scales with tile size (4px for 64x64 tiles)
@@ -571,11 +570,11 @@ func (g *Generator) applyWallHeightEdges(img *image.RGBA, pal *palette.Palette, 
 	}
 
 	// Apply left and right edge shading for complete 3D effect
-	g.applyWallSideEdges(img, config, edgeThickness, width, height)
+	g.applyWallSideEdges(img, config, edgeThickness)
 }
 
 // applyWallSideEdges adds left/right edge shading for walls.
-func (g *Generator) applyWallSideEdges(img *image.RGBA, config EnhancedWallConfig, edgeThickness, width, height int) {
+func (g *Generator) applyWallSideEdges(img *image.RGBA, config EnhancedWallConfig, edgeThickness int) {
 	bounds := img.Bounds()
 
 	// Apply left edge (slightly darker - light coming from right)

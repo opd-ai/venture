@@ -87,14 +87,36 @@ type Config struct {
 	Gravity float64
 
 	// Size range for particles (min and max)
+	// Phase 45: Scaled 2× (4-16px range for 64×64 tiles)
 	MinSize float64
 	MaxSize float64
+
+	// ZLayer defines the rendering z-order (Phase 45)
+	// Ground-level particles (dust, debris) use ZLayerGround
+	// Particles above entities (magic, sparkles) use ZLayerAbove
+	ZLayer ZLayer
 
 	// Custom parameters for specific particle types
 	Custom map[string]interface{}
 }
 
+// ZLayer defines the rendering z-order for particles.
+// Lower values render behind higher values.
+type ZLayer int
+
+const (
+	// ZLayerGround is for ground-level particles (dust, debris, blood splatters)
+	ZLayerGround ZLayer = 0
+	// ZLayerEntity is the default layer, at entity level
+	ZLayerEntity ZLayer = 1
+	// ZLayerAbove is for particles above entities (magic, sparkles)
+	ZLayerAbove ZLayer = 2
+	// ZLayerSky is for high-altitude particles (embers, smoke plumes)
+	ZLayerSky ZLayer = 3
+)
+
 // DefaultConfig returns a default particle configuration.
+// Phase 45: Particle sizes scaled 2× for 64×64 tile compatibility.
 func DefaultConfig() Config {
 	return Config{
 		Type:     ParticleSpark,
@@ -102,11 +124,12 @@ func DefaultConfig() Config {
 		GenreID:  "fantasy",
 		Seed:     0,
 		Duration: 1.0,
-		SpreadX:  5.0,
-		SpreadY:  5.0,
+		SpreadX:  10.0, // Scaled 2× for larger viewport
+		SpreadY:  10.0, // Scaled 2× for larger viewport
 		Gravity:  0.0,
-		MinSize:  1.0,
-		MaxSize:  3.0,
+		MinSize:  4.0,  // Scaled 2× from 2px (now 4-16px range per PLAN)
+		MaxSize:  16.0, // Scaled 2× from 8px (now 4-16px range per PLAN)
+		ZLayer:   ZLayerEntity,
 		Custom:   make(map[string]interface{}),
 	}
 }
@@ -134,6 +157,17 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// toPhysicsConfig creates a PhysicsConfig from this Config.
+// This helper is used by particle generators to set up physics behaviors.
+func (c Config) toPhysicsConfig() PhysicsConfig {
+	return PhysicsConfig{
+		Gravity:       c.Gravity,
+		AirResistance: 0.1, // Default light air resistance
+		BounceDamping: 0.5, // Default moderate bounce
+		GroundY:       0,   // Default ground level
+	}
+}
+
 // Particle represents a single particle in a particle system.
 type Particle struct {
 	// Position
@@ -146,7 +180,12 @@ type Particle struct {
 	Color color.Color
 
 	// Size in pixels
+	// Phase 45: Scaled 2× for 64×64 tiles
 	Size float64
+
+	// InitialSize stores the starting size for top-down scaling (Phase 45)
+	// Rising particles shrink as they rise; falling particles grow before impact
+	InitialSize float64
 
 	// Life remaining (0.0 = dead, 1.0 = just spawned)
 	Life float64
@@ -159,6 +198,10 @@ type Particle struct {
 
 	// Rotation velocity
 	RotationVel float64
+
+	// ZLayer defines the rendering z-order (Phase 45)
+	// Higher values render on top of lower values
+	ZLayer ZLayer
 
 	// Behavior flags (new for Phase 14.3)
 	Behavior ParticleBehavior

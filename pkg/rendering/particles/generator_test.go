@@ -47,6 +47,24 @@ func TestDefaultConfig(t *testing.T) {
 	if config.Custom == nil {
 		t.Error("DefaultConfig Custom should not be nil")
 	}
+	// Phase 45: Verify scaled particle sizes (4-16px range)
+	if config.MinSize != 4.0 {
+		t.Errorf("DefaultConfig MinSize = %v, want 4.0 (Phase 45 scaled)", config.MinSize)
+	}
+	if config.MaxSize != 16.0 {
+		t.Errorf("DefaultConfig MaxSize = %v, want 16.0 (Phase 45 scaled)", config.MaxSize)
+	}
+	// Phase 45: Verify scaled spread values
+	if config.SpreadX != 10.0 {
+		t.Errorf("DefaultConfig SpreadX = %v, want 10.0 (Phase 45 scaled)", config.SpreadX)
+	}
+	if config.SpreadY != 10.0 {
+		t.Errorf("DefaultConfig SpreadY = %v, want 10.0 (Phase 45 scaled)", config.SpreadY)
+	}
+	// Phase 45: Verify default Z-layer
+	if config.ZLayer != ZLayerEntity {
+		t.Errorf("DefaultConfig ZLayer = %v, want ZLayerEntity", config.ZLayer)
+	}
 }
 
 func TestConfig_Validate(t *testing.T) {
@@ -675,5 +693,202 @@ func BenchmarkParticleSystem_Update(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		system.Update(0.016) // ~60 FPS
+	}
+}
+
+// TestZLayerAssignment verifies that particle types are assigned correct Z-layers (Phase 45).
+func TestZLayerAssignment(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name           string
+		particleType   ParticleType
+		expectedZLayer ZLayer
+	}{
+		{"Smoke_AboveEntity", ParticleSmoke, ZLayerAbove},
+		{"Magic_AboveEntity", ParticleMagic, ZLayerAbove},
+		{"Flame_AboveEntity", ParticleFlame, ZLayerAbove},
+		{"Sparkle_AboveEntity", ParticleSparkle, ZLayerAbove},
+		{"Ember_SkyLevel", ParticleEmber, ZLayerSky},
+		{"SmokePlume_SkyLevel", ParticleSmokePlume, ZLayerSky},
+		{"Blood_GroundLevel", ParticleBlood, ZLayerGround},
+		{"Dust_GroundLevel", ParticleDust, ZLayerGround},
+		{"Debris_GroundLevel", ParticleDebris, ZLayerGround},
+		{"Spark_EntityLevel", ParticleSpark, ZLayerEntity},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Type:     tt.particleType,
+				Count:    5,
+				GenreID:  "fantasy",
+				Seed:     12345,
+				Duration: 1.0,
+				SpreadX:  10.0,
+				SpreadY:  10.0,
+				MinSize:  4.0,
+				MaxSize:  16.0,
+			}
+
+			system, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Failed to generate %s particles: %v", tt.name, err)
+			}
+
+			// Check first particle's ZLayer
+			if system.Particles[0].ZLayer != tt.expectedZLayer {
+				t.Errorf("%s ZLayer = %v, want %v",
+					tt.name, system.Particles[0].ZLayer, tt.expectedZLayer)
+			}
+		})
+	}
+}
+
+// TestInitialSizeTracking verifies that InitialSize is set for size scaling behaviors (Phase 45).
+func TestInitialSizeTracking(t *testing.T) {
+	gen := NewGenerator()
+
+	particleTypes := []ParticleType{
+		ParticleSpark, ParticleSmoke, ParticleMagic, ParticleFlame,
+		ParticleBlood, ParticleDust, ParticleEmber, ParticleSparkle,
+		ParticleSmokePlume, ParticleDebris,
+	}
+
+	for _, pt := range particleTypes {
+		t.Run(pt.String(), func(t *testing.T) {
+			config := Config{
+				Type:     pt,
+				Count:    10,
+				GenreID:  "fantasy",
+				Seed:     12345,
+				Duration: 1.0,
+				SpreadX:  10.0,
+				SpreadY:  10.0,
+				MinSize:  4.0,
+				MaxSize:  16.0,
+			}
+
+			system, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Failed to generate %s particles: %v", pt.String(), err)
+			}
+
+			for i, p := range system.Particles {
+				if p.InitialSize <= 0 {
+					t.Errorf("Particle %d InitialSize = %v, want > 0", i, p.InitialSize)
+				}
+				if p.Size != p.InitialSize {
+					t.Errorf("Particle %d Size = %v, InitialSize = %v, should match initially",
+						i, p.Size, p.InitialSize)
+				}
+			}
+		})
+	}
+}
+
+// TestSizeScalingBehaviors verifies that shrink-on-rise and grow-on-fall work (Phase 45).
+func TestSizeScalingBehaviors(t *testing.T) {
+	t.Run("ShrinkOnRise", func(t *testing.T) {
+		p := Particle{
+			X:           0,
+			Y:           0,
+			VX:          0,
+			VY:          -100, // Moving upward (negative Y is up)
+			Size:        10.0,
+			InitialSize: 10.0,
+			Life:        1.0,
+			InitialLife: 1.0,
+			Behavior:    BehaviorShrinkOnRise,
+		}
+
+		physics := PhysicsConfig{}
+
+		// Apply physics multiple times
+		for i := 0; i < 10; i++ {
+			ApplyPhysics(&p, p.Behavior, physics, 0.016)
+		}
+
+		// Size should shrink when rising
+		if p.Size >= p.InitialSize {
+			t.Errorf("Rising particle size = %v, should be < InitialSize %v", p.Size, p.InitialSize)
+		}
+
+		// Size should not go below 25% of initial
+		minExpected := p.InitialSize * 0.25
+		if p.Size < minExpected {
+			t.Errorf("Rising particle size = %v, should be >= minimum %v", p.Size, minExpected)
+		}
+	})
+
+	t.Run("GrowOnFall", func(t *testing.T) {
+		p := Particle{
+			X:           0,
+			Y:           0,
+			VX:          0,
+			VY:          100, // Moving downward (positive Y is down)
+			Size:        10.0,
+			InitialSize: 10.0,
+			Life:        1.0,
+			InitialLife: 1.0,
+			Behavior:    BehaviorGrowOnFall,
+		}
+
+		physics := PhysicsConfig{}
+
+		// Apply physics multiple times
+		for i := 0; i < 10; i++ {
+			ApplyPhysics(&p, p.Behavior, physics, 0.016)
+		}
+
+		// Size should grow when falling
+		if p.Size <= p.InitialSize {
+			t.Errorf("Falling particle size = %v, should be > InitialSize %v", p.Size, p.InitialSize)
+		}
+
+		// Size should not exceed 150% of initial
+		maxExpected := p.InitialSize * 1.5
+		if p.Size > maxExpected {
+			t.Errorf("Falling particle size = %v, should be <= maximum %v", p.Size, maxExpected)
+		}
+	})
+
+	t.Run("NoScalingWhenStationary", func(t *testing.T) {
+		p := Particle{
+			X:           0,
+			Y:           0,
+			VX:          0,
+			VY:          0, // Not moving vertically
+			Size:        10.0,
+			InitialSize: 10.0,
+			Life:        1.0,
+			InitialLife: 1.0,
+			Behavior:    BehaviorShrinkOnRise | BehaviorGrowOnFall,
+		}
+
+		physics := PhysicsConfig{}
+		originalSize := p.Size
+
+		// Apply physics
+		ApplyPhysics(&p, p.Behavior, physics, 0.016)
+
+		// Size should remain unchanged when not moving vertically
+		if p.Size != originalSize {
+			t.Errorf("Stationary particle size = %v, should remain %v", p.Size, originalSize)
+		}
+	})
+}
+
+// TestZLayerConstants verifies Z-layer ordering (Phase 45).
+func TestZLayerConstants(t *testing.T) {
+	// Ground should be lowest, then Entity, then Above, then Sky
+	if ZLayerGround >= ZLayerEntity {
+		t.Error("ZLayerGround should be < ZLayerEntity")
+	}
+	if ZLayerEntity >= ZLayerAbove {
+		t.Error("ZLayerEntity should be < ZLayerAbove")
+	}
+	if ZLayerAbove >= ZLayerSky {
+		t.Error("ZLayerAbove should be < ZLayerSky")
 	}
 }

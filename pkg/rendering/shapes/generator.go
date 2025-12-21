@@ -181,6 +181,12 @@ func (g *Generator) isInside(config Config, dx, dy, centerX, centerY float64) bo
 		return g.inBlade(dx, dy, centerX, centerY, config.Rotation, config.Smoothing)
 	case ShapeSkull:
 		return g.inSkull(dx, dy, centerX, centerY, config.Smoothing)
+	case ShapeFootprint:
+		return g.inFootprint(dx, dy, centerX, centerY, config.Rotation, config.Smoothing)
+	case ShapeShoulders:
+		return g.inShoulders(dx, dy, centerX, centerY, config.Rotation, config.Smoothing)
+	case ShapeArmReach:
+		return g.inArmReach(dx, dy, centerX, centerY, config.Rotation, config.Smoothing)
 	default:
 		return false
 	}
@@ -848,4 +854,154 @@ func (g *Generator) inOrganic(dx, dy, cx, cy float64, seed int64, smoothing floa
 		return false
 	}
 	return (dist-edge)/(targetRadius-edge) < 0.5
+}
+
+// inFootprint checks if a point is inside a footprint shape (top-down humanoid feet).
+// Footprint shows two shoe/foot shapes visible from above, useful for ground indicators.
+func (g *Generator) inFootprint(dx, dy, centerX, centerY, rotation, smoothing float64) bool {
+	// Rotate point
+	angle := -rotation * math.Pi / 180.0
+	cos := math.Cos(angle)
+	sin := math.Sin(angle)
+	rx := dx*cos - dy*sin
+	ry := dx*sin + dy*cos
+
+	// Normalize coordinates
+	nx := rx / centerX
+	ny := ry / centerY
+
+	// Two foot shapes side by side (top-down view)
+	// Left foot centered at (-0.35, 0), right foot at (0.35, 0)
+	footWidth := 0.25  // Width of each foot
+	footLength := 0.65 // Length of foot (heel to toe)
+
+	// Left foot (ellipse + pointed toe)
+	leftDx := nx + 0.35
+	leftDy := ny
+	leftDist := math.Sqrt(leftDx*leftDx/(footWidth*footWidth) + leftDy*leftDy/(footLength*footLength))
+	if leftDist <= 1.0+smoothing {
+		// Exclude toe gap (slight indent between toes)
+		if ny < -0.3 && math.Abs(leftDx) < 0.08 {
+			return false
+		}
+		return true
+	}
+
+	// Right foot (mirrored)
+	rightDx := nx - 0.35
+	rightDy := ny
+	rightDist := math.Sqrt(rightDx*rightDx/(footWidth*footWidth) + rightDy*rightDy/(footLength*footLength))
+	if rightDist <= 1.0+smoothing {
+		// Exclude toe gap
+		if ny < -0.3 && math.Abs(rightDx) < 0.08 {
+			return false
+		}
+		return true
+	}
+
+	return false
+}
+
+// inShoulders checks if a point is inside a shoulders shape (top-down torso silhouette).
+// Shoulders shows the upper body from above with visible shoulder breadth.
+func (g *Generator) inShoulders(dx, dy, centerX, centerY, rotation, smoothing float64) bool {
+	// Rotate point
+	angle := -rotation * math.Pi / 180.0
+	cos := math.Cos(angle)
+	sin := math.Sin(angle)
+	rx := dx*cos - dy*sin
+	ry := dx*sin + dy*cos
+
+	// Normalize coordinates
+	nx := rx / centerX
+	ny := ry / centerY
+
+	// Shoulders: wide upper portion narrowing to waist
+	// Top-down perspective shows shoulders as widest part
+
+	// Upper torso (shoulders) - wide ellipse
+	if ny < 0 {
+		shoulderWidth := 0.85
+		shoulderHeight := 0.5
+		dist := math.Sqrt(nx*nx/(shoulderWidth*shoulderWidth) + ny*ny/(shoulderHeight*shoulderHeight))
+		if dist <= 1.0+smoothing {
+			return true
+		}
+	}
+
+	// Lower torso (waist) - narrower ellipse tapering down
+	if ny >= 0 {
+		// Taper from shoulders to waist
+		taper := 0.85 - 0.25*(ny/0.8) // From 0.85 at top to 0.60 at bottom
+		if taper < 0.55 {
+			taper = 0.55
+		}
+		waistHeight := 0.75
+		dist := math.Sqrt(nx*nx/(taper*taper) + ny*ny/(waistHeight*waistHeight))
+		if dist <= 1.0+smoothing {
+			return true
+		}
+	}
+
+	return false
+}
+
+// inArmReach checks if a point is inside an arm reach shape (extended arms from above).
+// ArmReach shows humanoid arms extended outward, useful for reach indicators.
+func (g *Generator) inArmReach(dx, dy, centerX, centerY, rotation, smoothing float64) bool {
+	// Rotate point
+	angle := -rotation * math.Pi / 180.0
+	cos := math.Cos(angle)
+	sin := math.Sin(angle)
+	rx := dx*cos - dy*sin
+	ry := dx*sin + dy*cos
+
+	// Normalize coordinates
+	nx := rx / centerX
+	ny := ry / centerY
+
+	// Arms extending horizontally from center body
+	armWidth := 0.85   // Total arm reach (both sides)
+	armThickness := 0.15
+	bodyRadius := 0.25 // Central body (torso)
+
+	// Central body (small circle representing torso from above)
+	bodyDist := math.Sqrt(nx*nx + ny*ny)
+	if bodyDist <= bodyRadius+smoothing {
+		return true
+	}
+
+	// Left arm (extends from body to left)
+	if nx < -bodyRadius*0.5 && nx > -armWidth {
+		// Arm capsule shape
+		armY := 0.0 // Arms at shoulder level
+		armDist := math.Abs(ny - armY)
+		if armDist <= armThickness+smoothing {
+			return true
+		}
+	}
+
+	// Right arm (extends from body to right)
+	if nx > bodyRadius*0.5 && nx < armWidth {
+		armY := 0.0
+		armDist := math.Abs(ny - armY)
+		if armDist <= armThickness+smoothing {
+			return true
+		}
+	}
+
+	// Hand blobs at ends of arms (slightly larger)
+	handRadius := 0.12
+	// Left hand
+	leftHandDist := math.Sqrt(math.Pow(nx+armWidth, 2) + ny*ny)
+	if leftHandDist <= handRadius+smoothing {
+		return true
+	}
+	// Right hand
+	rightHandDist := math.Sqrt(math.Pow(nx-armWidth, 2) + ny*ny)
+	if rightHandDist <= handRadius+smoothing {
+		return true
+	}
+
+	return false
 }

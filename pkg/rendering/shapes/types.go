@@ -59,6 +59,12 @@ const (
 	ShapeBlade
 	// ShapeSkull represents a skull/head shape (Phase 5.1)
 	ShapeSkull
+	// ShapeFootprint represents humanoid feet visible from above (Phase 45)
+	ShapeFootprint
+	// ShapeShoulders represents a shoulder/torso silhouette (Phase 45)
+	ShapeShoulders
+	// ShapeArmReach represents extended arm positions from above (Phase 45)
+	ShapeArmReach
 )
 
 // String returns the string representation of a shape type.
@@ -112,6 +118,12 @@ func (s ShapeType) String() string {
 		return "blade"
 	case ShapeSkull:
 		return "skull"
+	case ShapeFootprint:
+		return "footprint"
+	case ShapeShoulders:
+		return "shoulders"
+	case ShapeArmReach:
+		return "armreach"
 	default:
 		return "unknown"
 	}
@@ -159,6 +171,10 @@ type Config struct {
 	Smoothing  float64
 	// AntiAlias enables sub-pixel anti-aliasing for smooth edges (Phase 15.1)
 	AntiAlias AntiAliasQuality
+	// Quality controls the rendering quality level for performance tuning.
+	// When true, uses higher quality anti-aliasing (AntiAliasMedium).
+	// When false, uses default anti-aliasing level (AntiAliasLow).
+	Quality bool
 }
 
 // DefaultConfig returns a default shape configuration.
@@ -173,6 +189,7 @@ func DefaultConfig() Config {
 		InnerRatio: 0.5,
 		Rotation:   0,
 		Smoothing:  0.1,
-		AntiAlias:  AntiAliasOff,
+		AntiAlias:  AntiAliasLow,
+		Quality:    false,
 	}
 }

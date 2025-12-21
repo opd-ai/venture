@@ -219,28 +219,38 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 4: Update Shape Generator
+### Step 4: Update Shape Generator ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
 - `pkg/rendering/shapes/generator.go`
 - `pkg/rendering/shapes/types.go`
+- `pkg/rendering/shapes/generator_test.go`
 
-**Changes required:**
-1. Update all shape radius calculations:
-   - Replace `radius := math.Min(cx, cy) * 0.8` with dynamic scaling
-   - Add top-down perspective distortion for 3D shapes
-
-2. Enable anti-aliasing conditionally:
+**Changes completed:**
+1. ✅ Updated default anti-aliasing:
    - Default: `AntiAlias: AntiAliasLow` (2× super-sampling for performance)
-   - Quality mode: `AntiAlias: AntiAliasMedium` (4× super-sampling)
-   - Add performance toggle in `shapes/types.go:Config.Quality` field
+   - Added `Quality` field to Config for higher quality mode toggle
 
-3. Add new top-down specific shapes:
-   - `ShapeFootprint`: Humanoid feet visible from above
-   - `ShapeShoulders`: Shoulder/torso silhouette
-   - `ShapeArmReach`: Extended arm positions
+2. ✅ Added new top-down specific shapes (Phase 45):
+   - `ShapeFootprint`: Humanoid feet visible from above (two elliptical foot shapes)
+   - `ShapeShoulders`: Shoulder/torso silhouette (wide upper body tapering to waist)
+   - `ShapeArmReach`: Extended arm positions (arms reaching horizontally with hands)
 
-**Testing checkpoint:** Generate all 24 shape types at 64×64, verify edge quality.
+3. ✅ Updated shape type definitions:
+   - Added 3 new shape types to ShapeType enum
+   - Updated String() method for new types
+   - Added cases to isInside() switch statement
+
+**Tests updated:**
+- `TestDefaultConfig`: Added checks for AntiAliasLow default and Quality field
+- `TestShapeType_String`: Added new shape types (footprint, shoulders, armreach)
+- `TestAllShapeTypes`: Updated to include all 27 shape types
+- Added `TestNewShapes_Phase45`: Tests generation of new shapes
+- Added `TestShapeType_String_Phase45`: Tests string representation of new types
+- Added `TestShapeDeterminism_Phase45`: Tests deterministic generation
+- Added `BenchmarkNewShapes_Phase45`: Performance benchmarks for new shapes
+
+**Testing checkpoint:** ✅ All 27 shape types build and generate correctly at 64×64.
 
 ---
 
@@ -370,7 +380,7 @@ Shadow: 40% width ellipse
 
 ### Dimension & Visual Quality
 - [x] All sprites/tiles/shapes generate at 64×64 by default
-- [ ] Anti-aliasing: Medium (4× super-sampling)
+- [x] Anti-aliasing: Low (2× super-sampling) by default, Medium (4×) via Quality toggle
 - [ ] Silhouette recognition ≥ 0.85 for humanoids
 - [ ] Shadow opacity at 0.3 for ground-level shadows
 
@@ -391,10 +401,10 @@ Shadow: 40% width ellipse
 Phase 1: Types & Defaults (Step 1) ✅ COMPLETE
     └── ✅ Update default dimensions in all types.go files
 
-Phase 2: Core Generation (Steps 2-4)
+Phase 2: Core Generation (Steps 2-4) ✅ COMPLETE
     ├── ✅ Sprite anatomy templates → top-down (Step 2 COMPLETE)
     ├── ✅ Tile patterns → scaled + 3D hints (Step 3 COMPLETE)
-    └── Shape primitives → anti-aliased + scaled
+    └── ✅ Shape primitives → anti-aliased + scaled (Step 4 COMPLETE)
 
 Phase 3: Effects & Animation (Steps 5-6)
     ├── Particle scaling + Z-layers

@@ -28,6 +28,9 @@ func TestShapeType_String(t *testing.T) {
 		{"wave", ShapeWave, "wave"},
 		{"spiral", ShapeSpiral, "spiral"},
 		{"organic", ShapeOrganic, "organic"},
+		{"footprint", ShapeFootprint, "footprint"},
+		{"shoulders", ShapeShoulders, "shoulders"},
+		{"armreach", ShapeArmReach, "armreach"},
 		{"unknown", ShapeType(999), "unknown"},
 	}
 
@@ -67,6 +70,12 @@ func TestDefaultConfig(t *testing.T) {
 	}
 	if config.Smoothing != 0.1 {
 		t.Errorf("DefaultConfig Smoothing = %v, want 0.1", config.Smoothing)
+	}
+	if config.AntiAlias != AntiAliasLow {
+		t.Errorf("DefaultConfig AntiAlias = %v, want AntiAliasLow", config.AntiAlias)
+	}
+	if config.Quality != false {
+		t.Errorf("DefaultConfig Quality = %v, want false", config.Quality)
 	}
 }
 
@@ -383,7 +392,7 @@ func TestShapeDeterminism(t *testing.T) {
 	// but determinism is guaranteed by the seed-based generation
 }
 
-// TestAllShapeTypes ensures all 16 shape types can be generated without errors.
+// TestAllShapeTypes ensures all 27 shape types can be generated without errors.
 func TestAllShapeTypes(t *testing.T) {
 	gen := NewGenerator()
 
@@ -392,7 +401,9 @@ func TestAllShapeTypes(t *testing.T) {
 		ShapeStar, ShapeRing, ShapeHexagon, ShapeOctagon,
 		ShapeCross, ShapeHeart, ShapeCrescent, ShapeGear,
 		ShapeCrystal, ShapeLightning, ShapeWave, ShapeSpiral,
-		ShapeOrganic,
+		ShapeOrganic, ShapeEllipse, ShapeCapsule, ShapeBean,
+		ShapeWedge, ShapeShield, ShapeBlade, ShapeSkull,
+		ShapeFootprint, ShapeShoulders, ShapeArmReach,
 	}
 
 	for _, shapeType := range allShapes {
@@ -890,5 +901,235 @@ func BenchmarkAntiAliasing_ComplexShape(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = gen.Generate(config)
+	}
+}
+
+// TestNewShapes_Phase45 tests the new top-down specific shapes added in Phase 45.
+func TestNewShapes_Phase45(t *testing.T) {
+	gen := NewGenerator()
+	testColor := color.RGBA{R: 100, G: 150, B: 200, A: 255}
+
+	tests := []struct {
+		name      string
+		shapeType ShapeType
+		config    Config
+	}{
+		{
+			name:      "footprint",
+			shapeType: ShapeFootprint,
+			config: Config{
+				Type:      ShapeFootprint,
+				Width:     64,
+				Height:    64,
+				Color:     testColor,
+				Seed:      12345,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "footprint rotated",
+			shapeType: ShapeFootprint,
+			config: Config{
+				Type:      ShapeFootprint,
+				Width:     64,
+				Height:    64,
+				Color:     testColor,
+				Seed:      12346,
+				Smoothing: 0.2,
+				Rotation:  45,
+			},
+		},
+		{
+			name:      "shoulders",
+			shapeType: ShapeShoulders,
+			config: Config{
+				Type:      ShapeShoulders,
+				Width:     64,
+				Height:    48, // Wider than tall for top-down torso
+				Color:     testColor,
+				Seed:      12347,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "shoulders rotated",
+			shapeType: ShapeShoulders,
+			config: Config{
+				Type:      ShapeShoulders,
+				Width:     64,
+				Height:    48,
+				Color:     testColor,
+				Seed:      12348,
+				Smoothing: 0.2,
+				Rotation:  90,
+			},
+		},
+		{
+			name:      "armreach",
+			shapeType: ShapeArmReach,
+			config: Config{
+				Type:      ShapeArmReach,
+				Width:     64,
+				Height:    32, // Wide reach indicator
+				Color:     testColor,
+				Seed:      12349,
+				Smoothing: 0.2,
+				Rotation:  0,
+			},
+		},
+		{
+			name:      "armreach rotated",
+			shapeType: ShapeArmReach,
+			config: Config{
+				Type:      ShapeArmReach,
+				Width:     64,
+				Height:    32,
+				Color:     testColor,
+				Seed:      12350,
+				Smoothing: 0.2,
+				Rotation:  45,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := gen.Generate(tt.config)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			if img == nil {
+				t.Fatal("Generate() returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if bounds.Dx() != tt.config.Width {
+				t.Errorf("Image width = %v, want %v", bounds.Dx(), tt.config.Width)
+			}
+			if bounds.Dy() != tt.config.Height {
+				t.Errorf("Image height = %v, want %v", bounds.Dy(), tt.config.Height)
+			}
+		})
+	}
+}
+
+// TestShapeType_String_Phase45 tests string representation of new Phase 45 shape types.
+func TestShapeType_String_Phase45(t *testing.T) {
+	tests := []struct {
+		name      string
+		shapeType ShapeType
+		want      string
+	}{
+		{"footprint", ShapeFootprint, "footprint"},
+		{"shoulders", ShapeShoulders, "shoulders"},
+		{"armreach", ShapeArmReach, "armreach"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.shapeType.String()
+			if got != tt.want {
+				t.Errorf("ShapeType.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestShapeDeterminism_Phase45 tests that new Phase 45 shapes generate consistently with same seed.
+func TestShapeDeterminism_Phase45(t *testing.T) {
+	gen := NewGenerator()
+
+	shapes := []ShapeType{
+		ShapeFootprint,
+		ShapeShoulders,
+		ShapeArmReach,
+	}
+
+	for _, shapeType := range shapes {
+		t.Run(shapeType.String(), func(t *testing.T) {
+			config := Config{
+				Type:      shapeType,
+				Width:     64,
+				Height:    64,
+				Color:     color.RGBA{R: 255, G: 0, B: 0, A: 255},
+				Seed:      42,
+				Smoothing: 0.2,
+				Rotation:  45,
+			}
+
+			// Generate twice with same config
+			img1, err1 := gen.Generate(config)
+			if err1 != nil {
+				t.Fatalf("First generate failed: %v", err1)
+			}
+
+			img2, err2 := gen.Generate(config)
+			if err2 != nil {
+				t.Fatalf("Second generate failed: %v", err2)
+			}
+
+			// Compare bounds (dimensions should match)
+			bounds1 := img1.Bounds()
+			bounds2 := img2.Bounds()
+
+			if bounds1 != bounds2 {
+				t.Fatalf("Image bounds differ: %v vs %v", bounds1, bounds2)
+			}
+		})
+	}
+}
+
+// BenchmarkNewShapes_Phase45 benchmarks new Phase 45 shape generation performance.
+func BenchmarkNewShapes_Phase45(b *testing.B) {
+	gen := NewGenerator()
+	testColor := color.RGBA{R: 100, G: 150, B: 200, A: 255}
+
+	benchmarks := []struct {
+		name   string
+		config Config
+	}{
+		{
+			name: "footprint",
+			config: Config{
+				Type:      ShapeFootprint,
+				Width:     64,
+				Height:    64,
+				Color:     testColor,
+				Seed:      12345,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "shoulders",
+			config: Config{
+				Type:      ShapeShoulders,
+				Width:     64,
+				Height:    48,
+				Color:     testColor,
+				Seed:      12347,
+				Smoothing: 0.2,
+			},
+		},
+		{
+			name: "armreach",
+			config: Config{
+				Type:      ShapeArmReach,
+				Width:     64,
+				Height:    32,
+				Color:     testColor,
+				Seed:      12349,
+				Smoothing: 0.2,
+			},
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, _ = gen.Generate(bm.config)
+			}
+		})
 	}
 }

@@ -80,6 +80,26 @@ func TestHumanoidTemplate(t *testing.T) {
 	if shadowY < 0.8 {
 		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
 	}
+
+	// Verify Phase 45 proportions (head 12%, torso 40%, legs 48%)
+	headSpec := template.BodyPartLayout[PartHead]
+	if headSpec.PreferredPixelSize == nil {
+		t.Error("Head should have PreferredPixelSize for Phase 45 proportions")
+	} else if headSpec.PreferredPixelSize.Height > 6 {
+		t.Errorf("Head height too large for 12%% proportion: %d, want <= 6", headSpec.PreferredPixelSize.Height)
+	}
+
+	legsSpec := template.BodyPartLayout[PartLegs]
+	if legsSpec.PreferredPixelSize == nil {
+		t.Error("Legs should have PreferredPixelSize for Phase 45 proportions")
+	} else if legsSpec.PreferredPixelSize.Height < 10 {
+		t.Errorf("Legs height too small for 48%% proportion: %d, want >= 10", legsSpec.PreferredPixelSize.Height)
+	}
+
+	torsoSpec := template.BodyPartLayout[PartTorso]
+	if torsoSpec.PreferredPixelSize == nil {
+		t.Error("Torso should have PreferredPixelSize for Phase 45 proportions")
+	}
 }
 
 // TestEnhancedHumanoidTemplate tests the Phase 15.1 enhanced humanoid template.
@@ -315,10 +335,22 @@ func TestQuadrupedTemplate(t *testing.T) {
 		}
 	}
 
-	// Verify horizontal orientation (rotation = 90 for body)
+	// Verify top-down orientation (rotation = 0 for top-down view)
 	torsoRotation := template.BodyPartLayout[PartTorso].Rotation
-	if torsoRotation != 90 {
-		t.Errorf("Torso rotation = %v, want 90 (horizontal)", torsoRotation)
+	if torsoRotation != 0 {
+		t.Errorf("Torso rotation = %v, want 0 (top-down view)", torsoRotation)
+	}
+
+	// Verify head is at top (low Y value) for top-down perspective
+	headY := template.BodyPartLayout[PartHead].RelativeY
+	if headY > 0.5 {
+		t.Errorf("Head Y position too low: %v, want < 0.5 (top half for top-down)", headY)
+	}
+
+	// Verify shadow is at bottom
+	shadowY := template.BodyPartLayout[PartShadow].RelativeY
+	if shadowY < 0.8 {
+		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
 	}
 }
 
@@ -330,9 +362,9 @@ func TestBlobTemplate(t *testing.T) {
 		t.Errorf("Template name = %v, want 'blob'", template.Name)
 	}
 
-	// Blobs should have minimal parts (shadow and torso only)
-	if len(template.BodyPartLayout) > 2 {
-		t.Errorf("Blob has too many parts: %d, expected 2 (shadow + torso)", len(template.BodyPartLayout))
+	// Blobs should have shadow, torso, and head for top-down view
+	if len(template.BodyPartLayout) != 3 {
+		t.Errorf("Blob has unexpected number of parts: %d, expected 3 (shadow + torso + head)", len(template.BodyPartLayout))
 	}
 
 	// Verify torso uses organic/circular shapes
@@ -346,6 +378,12 @@ func TestBlobTemplate(t *testing.T) {
 	}
 	if !hasOrganicShape {
 		t.Error("Blob torso should use organic or circle shapes")
+	}
+
+	// Verify shadow is at bottom for top-down perspective
+	shadowY := template.BodyPartLayout[PartShadow].RelativeY
+	if shadowY < 0.8 {
+		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
 	}
 }
 
@@ -369,6 +407,18 @@ func TestMechanicalTemplate(t *testing.T) {
 	if !hasGeometricShape {
 		t.Error("Mechanical torso should use geometric shapes")
 	}
+
+	// Verify head is at top (low Y value) for top-down perspective
+	headY := template.BodyPartLayout[PartHead].RelativeY
+	if headY > 0.5 {
+		t.Errorf("Head Y position too low: %v, want < 0.5 (top half for top-down)", headY)
+	}
+
+	// Verify shadow is at bottom
+	shadowY := template.BodyPartLayout[PartShadow].RelativeY
+	if shadowY < 0.8 {
+		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
+	}
 }
 
 // TestFlyingTemplate tests the flying template structure.
@@ -391,6 +441,18 @@ func TestFlyingTemplate(t *testing.T) {
 	shadowOpacity := template.BodyPartLayout[PartShadow].Opacity
 	if shadowOpacity > 0.3 {
 		t.Errorf("Flying shadow opacity too high: %v, want <= 0.3", shadowOpacity)
+	}
+
+	// Verify head is at top (low Y value) for top-down perspective
+	headY := template.BodyPartLayout[PartHead].RelativeY
+	if headY > 0.5 {
+		t.Errorf("Head Y position too low: %v, want < 0.5 (top half for top-down)", headY)
+	}
+
+	// Verify shadow is at bottom
+	shadowY := template.BodyPartLayout[PartShadow].RelativeY
+	if shadowY < 0.8 {
+		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
 	}
 }
 
@@ -501,25 +563,26 @@ func TestPartSpecValidation(t *testing.T) {
 }
 
 // TestTemplateProportions tests that body part proportions are reasonable.
+// Updated for Phase 45 top-down proportions: head 12%, torso 40%, legs 48%.
 func TestTemplateProportions(t *testing.T) {
 	template := HumanoidTemplate()
 
-	// Check head proportions (should be ~25-35% of height)
+	// Check head proportions (Phase 45: ~10-15% of height)
 	headHeight := template.BodyPartLayout[PartHead].RelativeHeight
-	if headHeight < 0.20 || headHeight > 0.40 {
-		t.Errorf("Head height proportion out of reasonable range: %v, want 0.20-0.40", headHeight)
+	if headHeight < 0.08 || headHeight > 0.20 {
+		t.Errorf("Head height proportion out of reasonable range: %v, want 0.08-0.20", headHeight)
 	}
 
-	// Check torso proportions (should be ~35-50% of height)
+	// Check torso proportions (Phase 45: ~30-50% of height)
 	torsoHeight := template.BodyPartLayout[PartTorso].RelativeHeight
-	if torsoHeight < 0.30 || torsoHeight > 0.55 {
-		t.Errorf("Torso height proportion out of reasonable range: %v, want 0.30-0.55", torsoHeight)
+	if torsoHeight < 0.30 || torsoHeight > 0.50 {
+		t.Errorf("Torso height proportion out of reasonable range: %v, want 0.30-0.50", torsoHeight)
 	}
 
-	// Check legs proportions (should be ~25-40% of height)
+	// Check legs proportions (Phase 45: ~40-55% of height)
 	legsHeight := template.BodyPartLayout[PartLegs].RelativeHeight
-	if legsHeight < 0.20 || legsHeight > 0.45 {
-		t.Errorf("Legs height proportion out of reasonable range: %v, want 0.20-0.45", legsHeight)
+	if legsHeight < 0.35 || legsHeight > 0.55 {
+		t.Errorf("Legs height proportion out of reasonable range: %v, want 0.35-0.55", legsHeight)
 	}
 }
 
@@ -1971,18 +2034,19 @@ func TestPhase151EnhancedProportionalScaling(t *testing.T) {
 	// OBSOLETE CODE REMOVED: Backward compatibility demonstration
 	// Removed: Tests for templates without PreferredPixelSize
 	// PRE-1.0: All templates use PreferredPixelSize - relative-only mode not supported
-	// Test that WithPixelDimensions creates properly configured templates
+	// Post Phase 45: HumanoidTemplate now has PreferredPixelSize by default
 	template := HumanoidTemplate()
 	headSpec := template.BodyPartLayout[PartHead]
 
-	// Can create template with pixel dimensions
+	// HumanoidTemplate now has PreferredPixelSize (Phase 45 update)
+	if headSpec.PreferredPixelSize == nil {
+		t.Error("HumanoidTemplate should have PreferredPixelSize set after Phase 45 update")
+	}
+
+	// Can create template with custom pixel dimensions
 	upgradedHead := headSpec.WithPixelDimensions(4, 4)
 	if upgradedHead.GetEffectiveWidth(28) != 4 {
 		t.Errorf("upgraded head width = %d, want 4", upgradedHead.GetEffectiveWidth(28))
-	}
-	// Original template unchanged
-	if headSpec.PreferredPixelSize != nil {
-		t.Error("Original template should not have PreferredPixelSize set")
 	}
 }
 

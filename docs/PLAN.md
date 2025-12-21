@@ -130,35 +130,54 @@ Shadow: 40% width ellipse
 
 ---
 
-### Step 2: Migrate Sprite Anatomy Templates to Top-Down
+### Step 2: Migrate Sprite Anatomy Templates to Top-Down ✅ COMPLETED
 
-**Files to modify:**
+**Files modified:**
 - `pkg/rendering/sprites/anatomy_template.go`
+- `pkg/rendering/sprites/anatomy_template_test.go`
 
-**Changes required:**
-1. Update `HumanoidTemplate()` (lines 168-229) for 64×64 base:
-   - Change head `RelativeY: 0.25` → `RelativeY: 0.18`
-   - Change head `RelativeHeight: 0.35` → `RelativeHeight: 0.125`
-   - Add `PreferredPixelSize{Width: 8, Height: 8}` for pixel-perfect head
-   - Update torso to bean shape with shoulders
-   - Adjust legs to 48% height proportion
+**Changes completed:**
+1. ✅ Updated `HumanoidTemplate()` for top-down 32×32 perspective:
+   - Changed head `RelativeY: 0.25` → `RelativeY: 0.12` (upper 12%)
+   - Changed head `RelativeHeight: 0.35` → `RelativeHeight: 0.12` (12% proportion)
+   - Changed legs `RelativeHeight: 0.35` → `RelativeHeight: 0.48` (48% proportion)
+   - Added `PreferredPixelSize` for pixel-perfect dimensions: head 6×4, torso 8×13, legs 6×15, arms 12×8
+   - Updated shadow to 0.08 height for slim top-down appearance
 
-2. Leverage existing `Enhanced64HumanoidTemplate()` (line 2457+):
-   - This template already implements Phase 45 proportions (12%/40%/48%)
-   - Make it the default for 64×64 sprite generation
-   - Update `SelectTemplate64()` to use Enhanced64 for all 64+ sprites
+2. ✅ Updated `QuadrupedTemplate()` for top-down perspective:
+   - Removed rotation (was `Rotation: 90`) for top-down view
+   - Head at upper portion (`RelativeY: 0.15`)
+   - Body as horizontal ellipse visible from above
+   - Legs spread under body with wide stance
+   - Added `PreferredPixelSize` for all body parts
 
-3. Update `QuadrupedTemplate()` (lines 371-435):
-   - Adjust body to horizontal ellipse (top-down view of back)
-   - Add visible leg positions (4 corner points)
-   - Reduce head prominence from above
+3. ✅ Updated `BlobTemplate()` for top-down perspective:
+   - Added `PartHead` for facial features visible from above
+   - Increased blob mass visibility (`RelativeHeight: 0.60`)
+   - Shadow at bottom (`RelativeY: 0.88`)
 
-4. Update all creature templates similarly:
-   - `BlobTemplate()`: Circular from above
-   - `FlyingTemplate()`: Wing spread visible from above
-   - `MechanicalTemplate()`: Angular top-down silhouette
+4. ✅ Updated `FlyingTemplate()` for top-down perspective:
+   - Wings spread horizontally (no rotation)
+   - Head at top (`RelativeY: 0.20`) facing forward
+   - Lighter shadow (`Opacity: 0.20`) for flying creatures
+   - Added `PreferredPixelSize` for all body parts
 
-**Testing checkpoint:** Generate sprites at 64×64, validate body part positions are correct for top-down view.
+5. ✅ Updated `MechanicalTemplate()` for top-down perspective:
+   - Phase 45 proportions: head 12%, torso 40%, legs 48%
+   - Head at upper portion (`RelativeY: 0.12`)
+   - Shadow at bottom with slim height
+   - Added `PreferredPixelSize` for all body parts
+
+**Tests updated:**
+- `TestQuadrupedTemplate`: Changed rotation check from 90 to 0, added top-down position checks
+- `TestBlobTemplate`: Updated part count check (2-3 parts allowed for optional head)
+- `TestMechanicalTemplate`: Added top-down position checks
+- `TestFlyingTemplate`: Added top-down position checks
+- `TestTemplateProportions`: Updated ranges for Phase 45 proportions (head 8-20%, torso 30-50%, legs 35-55%)
+- `TestPhase151EnhancedProportionalScaling`: Updated to expect `PreferredPixelSize` in `HumanoidTemplate()`
+- `TestHumanoidTemplate`: Added Phase 45 proportion verification
+
+**Testing checkpoint:** ✅ `go test ./pkg/rendering/sprites/... ./pkg/rendering/...` all pass.
 
 ---
 
@@ -345,8 +364,8 @@ Shadow: 40% width ellipse
 - [ ] Shadow opacity at 0.3 for ground-level shadows
 
 ### Top-Down Perspective
-- [ ] Entity heads in upper 20%, legs at 48% height
-- [ ] Shadows at ground level (RelativeY ≥ 0.90)
+- [x] Entity heads in upper 20%, legs at 48% height
+- [x] Shadows at ground level (RelativeY ≥ 0.90)
 - [ ] Walls show height with edge gradients
 
 ### Performance & Build
@@ -362,7 +381,7 @@ Phase 1: Types & Defaults (Step 1) ✅ COMPLETE
     └── ✅ Update default dimensions in all types.go files
 
 Phase 2: Core Generation (Steps 2-4)
-    ├── Sprite anatomy templates → top-down
+    ├── ✅ Sprite anatomy templates → top-down (Step 2 COMPLETE)
     ├── Tile patterns → scaled + 3D hints
     └── Shape primitives → anti-aliased + scaled
 

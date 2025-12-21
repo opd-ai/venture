@@ -163,8 +163,11 @@ func (t *AnatomicalTemplate) GetSortedParts() []struct {
 }
 
 // HumanoidTemplate returns the default humanoid anatomical template.
-// This is optimized for 28x28 pixel sprites (player size).
-// Proportions: Head 30%, Torso 40%, Legs 30% (top-down perspective).
+// This is optimized for 32x32 pixel sprites with Phase 45 top-down proportions.
+// The PreferredPixelSize values define pixel-perfect dimensions that override
+// RelativeWidth/RelativeHeight, enabling precise body part sizing.
+// Proportions: Head 12%, Torso 40%, Legs 48% (top-down perspective).
+// Target: head visible from above, feet/shadow at bottom.
 func HumanoidTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "humanoid",
@@ -173,7 +176,7 @@ func HumanoidTemplate() AnatomicalTemplate {
 				RelativeX:      0.5,
 				RelativeY:      0.93,
 				RelativeWidth:  0.40,
-				RelativeHeight: 0.12,
+				RelativeHeight: 0.08, // 8% height: slim ellipse for grounding without obscuring feet
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
@@ -182,47 +185,63 @@ func HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.75,
-				RelativeWidth:  0.35,
-				RelativeHeight: 0.35,
-				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
-				ZIndex:         5,
-				ColorRole:      "primary",
-				Opacity:        1.0,
-				Rotation:       0,
+				RelativeY:      0.72, // Positioned for 48% height proportion
+				RelativeWidth:  0.188,
+				RelativeHeight: 0.48, // 48% of sprite height for legs
+				PreferredPixelSize: &PixelDimensions{
+					Width:  6,
+					Height: 15, // Phase 45: 6×15 pixel legs (48% of 32px)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ZIndex:     5,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.50,
-				RelativeHeight: 0.45,
-				ShapeTypes:     []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
-				ZIndex:         10,
-				ColorRole:      "primary",
-				Opacity:        1.0,
-				Rotation:       0,
+				RelativeY:      0.36, // Centered in upper body
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.40, // 40% of sprite height for torso
+				PreferredPixelSize: &PixelDimensions{
+					Width:  8,
+					Height: 13, // Phase 45: 8×13 pixel torso (40% of 32px)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
+				ZIndex:     10,
+				ColorRole:  "primary",
+				Opacity:    1.0,
+				Rotation:   0,
 			},
 			PartArms: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.65,
-				RelativeHeight: 0.35,
-				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
-				ZIndex:         8,
-				ColorRole:      "secondary",
-				Opacity:        1.0,
-				Rotation:       0,
+				RelativeY:      0.40, // Shoulder level
+				RelativeWidth:  0.375,
+				RelativeHeight: 0.25,
+				PreferredPixelSize: &PixelDimensions{
+					Width:  12, // Wider for arm reach
+					Height: 8,
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
+				ZIndex:     8,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.25,
-				RelativeWidth:  0.35,
-				RelativeHeight: 0.35,
-				ShapeTypes:     []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
-				ZIndex:         15,
-				ColorRole:      "secondary",
-				Opacity:        1.0,
-				Rotation:       0,
+				RelativeY:      0.12, // Upper 12% - visible from above
+				RelativeWidth:  0.188,
+				RelativeHeight: 0.12, // 12% of sprite height for head
+				PreferredPixelSize: &PixelDimensions{
+					Width:  6,
+					Height: 4, // Phase 45: 6×4 pixel head (12% of 32px)
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
+				ZIndex:     15,
+				ColorRole:  "secondary",
+				Opacity:    1.0,
+				Rotation:   0,
 			},
 		},
 	}
@@ -368,7 +387,8 @@ func DetailedHumanoidTemplate() AnatomicalTemplate {
 }
 
 // QuadrupedTemplate returns a template for four-legged creatures.
-// Optimized for 32x32 pixels. Phase 15.1: Enhanced with pixel-perfect dimensions.
+// Optimized for 32x32 pixels with top-down perspective.
+// Target: head visible from above at front, legs splayed, shadow at bottom.
 func QuadrupedTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "quadruped",
@@ -377,89 +397,88 @@ func QuadrupedTemplate() AnatomicalTemplate {
 				RelativeX:      0.5,
 				RelativeY:      0.90,
 				RelativeWidth:  0.60,
-				RelativeHeight: 0.15,
+				RelativeHeight: 0.10, // Slim shadow for top-down perspective
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
 				Opacity:        0.3,
 				Rotation:       0,
-				// Shadow doesn't use pixel dimensions - scales with sprite
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.75,
-				RelativeWidth:  0.313, // 10/32 for 10 pixel width
-				RelativeHeight: 0.125, // 4/32 for 4 pixel height
+				RelativeY:      0.65, // Legs spread under body
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.40, // 40% height for leg visibility
 				PreferredPixelSize: &PixelDimensions{
-					Width:  10,
-					Height: 4, // Phase 15.1: 10×4 pixel legs (horizontal orientation)
+					Width:  16,
+					Height: 13, // Wide stance, moderate height
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
 				ZIndex:     5,
 				ColorRole:  "primary",
 				Opacity:    1.0,
-				Rotation:   90, // Horizontal orientation
+				Rotation:   0, // No rotation for top-down view
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.313, // 10/32 for 10 pixel width
-				RelativeHeight: 0.219, // 7/32 for 7 pixel height
+				RelativeY:      0.45, // Main body mass in center
+				RelativeWidth:  0.55,
+				RelativeHeight: 0.45, // 45% height for substantial body
 				PreferredPixelSize: &PixelDimensions{
-					Width:  10,
-					Height: 7, // Phase 15.1: 10×7 pixel torso (horizontal body)
+					Width:  18,
+					Height: 14, // Elongated horizontal body
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
 				ZIndex:     10,
 				ColorRole:  "primary",
 				Opacity:    1.0,
-				Rotation:   90, // Horizontal body
+				Rotation:   0, // Horizontal body for top-down
 			},
 			PartHead: {
-				RelativeX:      0.25,
-				RelativeY:      0.35,
-				RelativeWidth:  0.156, // 5/32 for 5 pixel width
-				RelativeHeight: 0.188, // 6/32 for 6 pixel height
+				RelativeX:      0.5,
+				RelativeY:      0.15, // Head at top (front in top-down)
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.20, // 20% height for visible head
 				PreferredPixelSize: &PixelDimensions{
-					Width:  5,
-					Height: 6, // Phase 15.1: 5×6 pixel head
+					Width:  8,
+					Height: 6, // Compact head
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeWedge},
 				ZIndex:     15,
 				ColorRole:  "secondary",
 				Opacity:    1.0,
-				Rotation:   270, // Face left
+				Rotation:   0, // No rotation for top-down
 			},
 		},
 	}
 }
 
 // BlobTemplate returns a template for amorphous creatures.
-// Optimized for 32x32 pixels (slimes, amoebas). Phase 15.1: Enhanced with pixel-perfect dimensions.
+// Optimized for 32x32 pixels (slimes, amoebas) with top-down perspective.
+// Target: amorphous mass visible from above, shadow at bottom.
 func BlobTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "blob",
 		BodyPartLayout: map[BodyPart]PartSpec{
 			PartShadow: {
 				RelativeX:      0.5,
-				RelativeY:      0.85,
-				RelativeWidth:  0.70,
-				RelativeHeight: 0.20,
+				RelativeY:      0.88,
+				RelativeWidth:  0.65, // 65% width shadow: larger than humanoid (40%) to match blob's amorphous mass
+				RelativeHeight: 0.15, // Thin shadow band beneath blob
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
 				Opacity:        0.4,
 				Rotation:       0,
-				// Shadow doesn't use pixel dimensions - scales with sprite
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.55,
-				RelativeWidth:  0.500, // 16/32 for 16 pixel width
-				RelativeHeight: 0.438, // 14/32 for 14 pixel height
+				RelativeY:      0.50, // Centered blob mass
+				RelativeWidth:  0.65,
+				RelativeHeight: 0.60, // Large amorphous mass
 				PreferredPixelSize: &PixelDimensions{
-					Width:  16,
-					Height: 14, // Phase 15.1: 16×14 pixel blob core (large amorphous mass)
+					Width:  20,
+					Height: 19, // Nearly circular blob
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeCircle, shapes.ShapeBean},
 				ZIndex:     10,
@@ -467,12 +486,29 @@ func BlobTemplate() AnatomicalTemplate {
 				Opacity:    0.9, // Slightly translucent
 				Rotation:   0,
 			},
+			PartHead: {
+				RelativeX:      0.5,
+				RelativeY:      0.35, // Face/eyes visible from above
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.20, // Facial features area
+				PreferredPixelSize: &PixelDimensions{
+					Width:  8,
+					Height: 6, // Eye/face region
+				},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+				ZIndex:     15,
+				ColorRole:  "accent1",
+				Opacity:    1.0,
+				Rotation:   0,
+			},
 		},
 	}
 }
 
 // MechanicalTemplate returns a template for robots and constructs.
-// Optimized for 32x32 pixels (robots, golems). Phase 15.1: Enhanced with pixel-perfect dimensions.
+// Optimized for 32x32 pixels (robots, golems) with top-down perspective.
+// Proportions: Head 12%, Torso 40%, Legs 48% (Phase 45 aligned).
+// Target: head visible from above, feet/shadow at bottom.
 func MechanicalTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "mechanical",
@@ -481,22 +517,21 @@ func MechanicalTemplate() AnatomicalTemplate {
 				RelativeX:      0.5,
 				RelativeY:      0.93,
 				RelativeWidth:  0.40,
-				RelativeHeight: 0.12,
+				RelativeHeight: 0.08, // Slim shadow
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
 				Opacity:        0.3,
 				Rotation:       0,
-				// Shadow doesn't use pixel dimensions - scales with sprite
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.75,
-				RelativeWidth:  0.188, // 6/32 for 6 pixel width
-				RelativeHeight: 0.188, // 6/32 for 6 pixel height
+				RelativeY:      0.72, // Positioned for 48% height
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.48, // 48% of sprite height
 				PreferredPixelSize: &PixelDimensions{
-					Width:  6,
-					Height: 6, // Phase 15.1: 6×6 pixel mechanical legs
+					Width:  8,
+					Height: 15, // Mechanical legs
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
 				ZIndex:     5,
@@ -506,12 +541,12 @@ func MechanicalTemplate() AnatomicalTemplate {
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.250, // 8/32 for 8 pixel width
-				RelativeHeight: 0.219, // 7/32 for 7 pixel height
+				RelativeY:      0.36, // Chassis in center-upper area
+				RelativeWidth:  0.35,
+				RelativeHeight: 0.40, // 40% of sprite height
 				PreferredPixelSize: &PixelDimensions{
-					Width:  8,
-					Height: 7, // Phase 15.1: 8×7 pixel mechanical chassis
+					Width:  11,
+					Height: 13, // Boxy mechanical chassis
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeHexagon, shapes.ShapeOctagon},
 				ZIndex:     10,
@@ -521,12 +556,12 @@ func MechanicalTemplate() AnatomicalTemplate {
 			},
 			PartArms: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.281, // 9/32 for 9 pixel width
-				RelativeHeight: 0.156, // 5/32 for 5 pixel height
+				RelativeY:      0.40, // Shoulder level
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.25,
 				PreferredPixelSize: &PixelDimensions{
-					Width:  9,
-					Height: 5, // Phase 15.1: 9×5 pixel mechanical arms
+					Width:  16, // Wide mechanical arms
+					Height: 8,
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
 				ZIndex:     8,
@@ -536,12 +571,12 @@ func MechanicalTemplate() AnatomicalTemplate {
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.25,
-				RelativeWidth:  0.188, // 6/32 for 6 pixel width
-				RelativeHeight: 0.156, // 5/32 for 5 pixel height
+				RelativeY:      0.12, // Upper 12% - sensor array visible from above
+				RelativeWidth:  0.22,
+				RelativeHeight: 0.12, // 12% of sprite height
 				PreferredPixelSize: &PixelDimensions{
-					Width:  6,
-					Height: 5, // Phase 15.1: 6×5 pixel mechanical head
+					Width:  7,
+					Height: 4, // Compact sensor head
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeHexagon, shapes.ShapeOctagon},
 				ZIndex:     15,
@@ -554,47 +589,47 @@ func MechanicalTemplate() AnatomicalTemplate {
 }
 
 // FlyingTemplate returns a template for winged creatures.
-// Optimized for 32x32 pixels (birds, dragons, flying enemies). Phase 15.1: Enhanced with pixel-perfect dimensions.
+// Optimized for 32x32 pixels (birds, dragons, flying enemies) with top-down perspective.
+// Target: wings spread visible from above, head at top, light shadow below.
 func FlyingTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "flying",
 		BodyPartLayout: map[BodyPart]PartSpec{
 			PartShadow: {
 				RelativeX:      0.5,
-				RelativeY:      0.88,
-				RelativeWidth:  0.35,
-				RelativeHeight: 0.15,
+				RelativeY:      0.90,
+				RelativeWidth:  0.30,
+				RelativeHeight: 0.10, // Small shadow (flying high)
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
-				Opacity:        0.25, // Lighter shadow (flying)
+				Opacity:        0.20, // Lighter shadow (flying)
 				Rotation:       0,
-				// Shadow doesn't use pixel dimensions - scales with sprite
 			},
-			// Left wing (behind body)
+			// Left wing
 			PartLegs: { // Reuse legs part for left wing
 				RelativeX:      0.25,
-				RelativeY:      0.50,
-				RelativeWidth:  0.219, // 7/32 for 7 pixel width
-				RelativeHeight: 0.188, // 6/32 for 6 pixel height
+				RelativeY:      0.50, // Wing at body center height
+				RelativeWidth:  0.30,
+				RelativeHeight: 0.40, // Large wingspan
 				PreferredPixelSize: &PixelDimensions{
-					Width:  7,
-					Height: 6, // Phase 15.1: 7×6 pixel left wing
+					Width:  10,
+					Height: 13, // Wide wing spread
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeTriangle},
 				ZIndex:     5,
 				ColorRole:  "secondary",
 				Opacity:    0.9,
-				Rotation:   270, // Point left
+				Rotation:   0, // No rotation for top-down
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.55,
-				RelativeWidth:  0.219, // 7/32 for 7 pixel width
-				RelativeHeight: 0.281, // 9/32 for 9 pixel height
+				RelativeY:      0.55, // Body in center
+				RelativeWidth:  0.25,
+				RelativeHeight: 0.45, // Elongated flying body
 				PreferredPixelSize: &PixelDimensions{
-					Width:  7,
-					Height: 9, // Phase 15.1: 7×9 pixel flying body
+					Width:  8,
+					Height: 14, // Streamlined body
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
 				ZIndex:     10,
@@ -604,12 +639,12 @@ func FlyingTemplate() AnatomicalTemplate {
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.30,
-				RelativeWidth:  0.156, // 5/32 for 5 pixel width
-				RelativeHeight: 0.156, // 5/32 for 5 pixel height
+				RelativeY:      0.20, // Head at top (facing forward)
+				RelativeWidth:  0.20,
+				RelativeHeight: 0.18, // Compact head
 				PreferredPixelSize: &PixelDimensions{
-					Width:  5,
-					Height: 5, // Phase 15.1: 5×5 pixel flying creature head
+					Width:  6,
+					Height: 6, // Rounded flying creature head
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
 				ZIndex:     12,
@@ -617,21 +652,21 @@ func FlyingTemplate() AnatomicalTemplate {
 				Opacity:    1.0,
 				Rotation:   0,
 			},
-			// Right wing (in front of body)
+			// Right wing
 			PartArms: { // Reuse arms part for right wing
 				RelativeX:      0.75,
-				RelativeY:      0.50,
-				RelativeWidth:  0.219, // 7/32 for 7 pixel width
-				RelativeHeight: 0.188, // 6/32 for 6 pixel height
+				RelativeY:      0.50, // Wing at body center height
+				RelativeWidth:  0.30,
+				RelativeHeight: 0.40, // Large wingspan
 				PreferredPixelSize: &PixelDimensions{
-					Width:  7,
-					Height: 6, // Phase 15.1: 7×6 pixel right wing
+					Width:  10,
+					Height: 13, // Wide wing spread
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeTriangle},
 				ZIndex:     15,
 				ColorRole:  "secondary",
 				Opacity:    0.9,
-				Rotation:   90, // Point right
+				Rotation:   0, // No rotation for top-down
 			},
 		},
 	}

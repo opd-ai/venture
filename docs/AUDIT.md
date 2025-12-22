@@ -19,7 +19,7 @@ This audit compares documented functionality in README.md against the actual imp
 | EDGE CASE BUG | 1 |
 | PERFORMANCE ISSUE | 0 |
 | DOCUMENTATION DISCREPANCY | 2 |
-| INTEGRATION GAP (Pre-documented) | 44 |
+| INTEGRATION GAP (Pre-documented) | 34 |
 
 ### Overall Assessment
 
@@ -153,9 +153,9 @@ entityPos := posComp.(*PositionComponent) // No nil check
 
 ## PRE-DOCUMENTED INTEGRATION GAPS
 
-The codebase contains 44 documented integration gaps marked with `INTEGRATION FIX [Category X]` comments. These represent known areas where systems are defined but not fully wired together. Key categories:
+The codebase contains 34 documented integration gaps marked with `INTEGRATION FIX [Category X]` comments. These represent known areas where systems are defined but not fully wired together. Key categories:
 
-### Category B (UI Integration) - 18 gaps
+### Category B (UI Integration) - 15 gaps
 - Gallery UI manager wiring
 - Housing UI integration
 - V8.0 systems UI fields
@@ -166,7 +166,7 @@ The codebase contains 44 documented integration gaps marked with `INTEGRATION FI
 - Bookshelf key requirement
 - Story fragment quest unlocking
 
-### Other Categories - 22 gaps
+### Other Categories - 15 gaps
 - Audio system interface implementations
 - Bookshelf dialog provider
 - Secondary class serialization

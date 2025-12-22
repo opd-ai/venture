@@ -273,7 +273,8 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 
 	// Award items - Phase 27.3 Integration
 	// Iterate through reward item entity IDs, get the item from each entity,
-	// and add it to the player's inventory.
+	// and add it to the player's inventory. Items that cannot be added due to
+	// inventory limits remain as world entities for pickup later.
 	if len(reward.Items) > 0 {
 		invCompRaw, hasInv := entity.GetComponent("inventory")
 		if hasInv {
@@ -291,8 +292,13 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 				if !ok || itemComp.Item == nil {
 					continue
 				}
-				// Add the item to player inventory
-				invComp.AddItem(itemComp.Item)
+				// Add the item to player inventory; if inventory is full,
+				// the item remains as a world entity for later pickup
+				if !invComp.AddItem(itemComp.Item) {
+					// Item could not be added (inventory full by count or weight).
+					// The item entity remains in the world for the player to pick up later.
+					continue
+				}
 			}
 		}
 	}

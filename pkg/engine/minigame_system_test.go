@@ -3,6 +3,8 @@ package engine
 import (
 	"fmt"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 func TestNewMiniGameSystem(t *testing.T) {
@@ -613,6 +615,280 @@ func TestMiniGameSystem_Update_MultipleEntities(t *testing.T) {
 	}
 	if comp3.(*MiniGameComponent).TimeElapsed != 1.0 {
 		t.Error("Entity 3 time not updated")
+	}
+}
+
+func TestMiniGameSystem_AwardReward_WithItems(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	playerEntity := world.CreateEntity()
+	world.Update(0) // Process entity addition
+
+	// Add inventory component to player with capacity for items
+	playerEntity.AddComponent(NewInventoryComponent(10, 100.0))
+
+	// Create item entities with ItemComponent
+	testItem1 := &item.Item{
+		ID:   "test-item-1",
+		Name: "Test Sword",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Damage: 10,
+			Value:  100,
+			Weight: 5.0,
+		},
+	}
+	itemEntity1 := world.CreateEntity()
+	itemEntity1.AddComponent(&ItemComponent{Item: testItem1})
+	world.Update(0)
+
+	testItem2 := &item.Item{
+		ID:   "test-item-2",
+		Name: "Test Potion",
+		Type: item.TypeConsumable,
+		Stats: item.Stats{
+			Value:  50,
+			Weight: 1.0,
+		},
+	}
+	itemEntity2 := world.CreateEntity()
+	itemEntity2.AddComponent(&ItemComponent{Item: testItem2})
+	world.Update(0)
+
+	// Create reward with item entity IDs
+	reward := &Reward{
+		Gold:  100,
+		XP:    50.0,
+		Items: []uint64{itemEntity1.ID, itemEntity2.ID},
+	}
+
+	// Award the reward
+	sys.awardReward(playerEntity.ID, reward)
+
+	// Verify gold and XP were awarded
+	invComp, _ := playerEntity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
+	if inv.Gold != 100 {
+		t.Errorf("Gold = %d, want 100", inv.Gold)
+	}
+
+	// Verify items were added to inventory
+	if len(inv.Items) != 2 {
+		t.Fatalf("Items count = %d, want 2", len(inv.Items))
+	}
+
+	// Check items are correct
+	foundSword := false
+	foundPotion := false
+	for _, itm := range inv.Items {
+		if itm.Name == "Test Sword" {
+			foundSword = true
+		}
+		if itm.Name == "Test Potion" {
+			foundPotion = true
+		}
+	}
+	if !foundSword {
+		t.Error("Test Sword not found in inventory")
+	}
+	if !foundPotion {
+		t.Error("Test Potion not found in inventory")
+	}
+}
+
+func TestMiniGameSystem_AwardReward_WithInvalidItemEntity(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	playerEntity := world.CreateEntity()
+	world.Update(0)
+
+	// Add inventory component
+	playerEntity.AddComponent(NewInventoryComponent(10, 100.0))
+
+	// Create reward with non-existent entity ID
+	reward := &Reward{
+		Gold:  100,
+		XP:    50.0,
+		Items: []uint64{99999}, // Non-existent entity
+	}
+
+	// Should not panic, just skip invalid items
+	sys.awardReward(playerEntity.ID, reward)
+
+	// Verify gold was still awarded
+	invComp, _ := playerEntity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
+	if inv.Gold != 100 {
+		t.Errorf("Gold = %d, want 100", inv.Gold)
+	}
+
+	// No items should be added
+	if len(inv.Items) != 0 {
+		t.Errorf("Items count = %d, want 0", len(inv.Items))
+	}
+}
+
+func TestMiniGameSystem_AwardReward_EntityWithoutItemComponent(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	playerEntity := world.CreateEntity()
+	world.Update(0)
+
+	// Add inventory component
+	playerEntity.AddComponent(NewInventoryComponent(10, 100.0))
+
+	// Create an entity without ItemComponent
+	nonItemEntity := world.CreateEntity()
+	world.Update(0)
+
+	// Create reward with entity that has no item component
+	reward := &Reward{
+		Gold:  100,
+		XP:    50.0,
+		Items: []uint64{nonItemEntity.ID},
+	}
+
+	// Should not panic, just skip entities without item component
+	sys.awardReward(playerEntity.ID, reward)
+
+	// Verify gold was still awarded
+	invComp, _ := playerEntity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
+	if inv.Gold != 100 {
+		t.Errorf("Gold = %d, want 100", inv.Gold)
+	}
+
+	// No items should be added
+	if len(inv.Items) != 0 {
+		t.Errorf("Items count = %d, want 0", len(inv.Items))
+	}
+}
+
+func TestMiniGameSystem_AwardReward_InventoryFull(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	playerEntity := world.CreateEntity()
+	world.Update(0)
+
+	// Add inventory component with very limited capacity (1 item max, 10.0 weight max)
+	playerEntity.AddComponent(NewInventoryComponent(1, 10.0))
+
+	// Create two item entities
+	testItem1 := &item.Item{
+		ID:   "test-item-1",
+		Name: "First Item",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Value:  100,
+			Weight: 5.0,
+		},
+	}
+	itemEntity1 := world.CreateEntity()
+	itemEntity1.AddComponent(&ItemComponent{Item: testItem1})
+	world.Update(0)
+
+	testItem2 := &item.Item{
+		ID:   "test-item-2",
+		Name: "Second Item",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Value:  100,
+			Weight: 5.0,
+		},
+	}
+	itemEntity2 := world.CreateEntity()
+	itemEntity2.AddComponent(&ItemComponent{Item: testItem2})
+	world.Update(0)
+
+	// Create reward with both items - but inventory can only hold 1
+	reward := &Reward{
+		Gold:  100,
+		XP:    50.0,
+		Items: []uint64{itemEntity1.ID, itemEntity2.ID},
+	}
+
+	// Award the reward
+	sys.awardReward(playerEntity.ID, reward)
+
+	// Verify gold was still awarded
+	invComp, _ := playerEntity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
+	if inv.Gold != 100 {
+		t.Errorf("Gold = %d, want 100", inv.Gold)
+	}
+
+	// Only 1 item should be added (inventory full by count)
+	if len(inv.Items) != 1 {
+		t.Errorf("Items count = %d, want 1 (inventory should be full)", len(inv.Items))
+	}
+
+	// First item should be in inventory
+	if inv.Items[0].Name != "First Item" {
+		t.Errorf("Expected 'First Item' in inventory, got '%s'", inv.Items[0].Name)
+	}
+}
+
+func TestMiniGameSystem_AwardReward_InventoryWeightExceeded(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	playerEntity := world.CreateEntity()
+	world.Update(0)
+
+	// Add inventory component with limited weight capacity (10 items max, but only 6.0 weight max)
+	playerEntity.AddComponent(NewInventoryComponent(10, 6.0))
+
+	// Create two items - first fits, second exceeds weight limit
+	testItem1 := &item.Item{
+		ID:   "test-item-1",
+		Name: "Light Item",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Value:  100,
+			Weight: 5.0,
+		},
+	}
+	itemEntity1 := world.CreateEntity()
+	itemEntity1.AddComponent(&ItemComponent{Item: testItem1})
+	world.Update(0)
+
+	testItem2 := &item.Item{
+		ID:   "test-item-2",
+		Name: "Heavy Item",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Value:  100,
+			Weight: 5.0, // Would push total to 10.0, exceeding 6.0 limit
+		},
+	}
+	itemEntity2 := world.CreateEntity()
+	itemEntity2.AddComponent(&ItemComponent{Item: testItem2})
+	world.Update(0)
+
+	// Create reward with both items
+	reward := &Reward{
+		Gold:  100,
+		XP:    50.0,
+		Items: []uint64{itemEntity1.ID, itemEntity2.ID},
+	}
+
+	// Award the reward
+	sys.awardReward(playerEntity.ID, reward)
+
+	// Verify gold was still awarded
+	invComp, _ := playerEntity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
+	if inv.Gold != 100 {
+		t.Errorf("Gold = %d, want 100", inv.Gold)
+	}
+
+	// Only 1 item should be added (second exceeds weight limit)
+	if len(inv.Items) != 1 {
+		t.Errorf("Items count = %d, want 1 (weight limit should prevent second item)", len(inv.Items))
+	}
+
+	// First item should be in inventory
+	if inv.Items[0].Name != "Light Item" {
+		t.Errorf("Expected 'Light Item' in inventory, got '%s'", inv.Items[0].Name)
 	}
 }
 

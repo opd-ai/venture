@@ -24,6 +24,7 @@ func TestNewNATTraversal(t *testing.T) {
 }
 
 func TestEstablishConnectionSTUN(t *testing.T) {
+	skipIfNoNetwork(t)
 	rm := NewRelayManager(StrategyLowestLatency)
 	defer rm.Close()
 

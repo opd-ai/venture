@@ -41,12 +41,12 @@ Venture has achieved **8.0 readiness** with player housing, guild systems, advan
 - ✅ **V8.0 Complete** (Phases 49-54): Player housing, guilds, territory warfare, vehicle physics, fluid dynamics, destructible buildings, WebRTC P2P, mobile federation, companion AI learning, branching narratives, multi-classing, server mods, blueprint sharing
 
 **Key V8.0 Features:**
-- 🏠 **Player Housing**: 4 plot sizes, procedural buildings (5 types × 25 styles), furniture (36 types), blueprint sharing
+- 🏠 **Player Housing**: 4 plot sizes, procedural buildings (6 types × 25 styles), furniture (36 types), blueprint sharing
 - 🛡️ **Guild Systems**: Multi-server guilds, guild halls (1-5 floors), territory control, guild warfare, shared treasury
 - 🤝 **Social Persistence**: Trust scores with decay, chat history (1000 messages), image galleries (100 images), reputation tracking
 - 🔬 **Advanced Physics**: Vehicle suspension, weight transfer, tire tracks, fluid dynamics, swimming, destructible buildings
 - 🌐 **Federation Extensions**: WebRTC browser-to-browser P2P, mobile federation, battery optimization, NAT traversal
-- 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (90+ talents)
+- 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (120 talents)
 - 🎮 **Server Modding**: JSON-based mods, blueprint sharing, zero-asset constraint maintained
 - ⚡ **Performance**: 60 FPS maintained, <500MB memory, <150MB per player persistence
 
@@ -103,7 +103,7 @@ go build -o venture-server ./cmd/server
 - `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
 - `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
 
-**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), G (gallery), ESC (close menus/pause), F5 (save), F9 (load), H or F1 (help)
+**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), G (gallery), H (housing), ESC (close menus/pause), F5 (save), F9 (load), F1 (help)
 
 **All In-Game Menus** (Dual-Exit: Each menu's key OR ESC):
 
@@ -117,7 +117,8 @@ go build -o venture-server ./cmd/server
 | Crafting | R | Brew potions, enchant items, craft equipment |
 | Gallery | G | View shared images and screenshots (V8.0) |
 | Shop | F | Buy/sell items (when near merchant) |
-| Help | H or F1 | View controls and game information |
+| Housing | H | Manage player housing and plots (V8.0) |
+| Help | F1 | View controls and game information |
 
 **Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
 

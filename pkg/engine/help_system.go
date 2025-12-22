@@ -326,7 +326,7 @@ func (hs *EbitenHelpSystem) updateTouchInputs() {
 // handleKeyboardNavigation processes keyboard input for help menu navigation.
 // Returns true if help visibility changed, requiring early return.
 func (hs *EbitenHelpSystem) handleKeyboardNavigation() bool {
-	if inpututil.IsKeyJustPressed(ebiten.KeyH) || inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		hs.Toggle()
 		return true
 	}

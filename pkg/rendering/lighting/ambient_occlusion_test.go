@@ -478,80 +478,80 @@ func BenchmarkDetectEdge(b *testing.B) {
 
 // TestPhase45_AOConfigScaling verifies AO config is scaled for 64×64 sprites.
 func TestPhase45_AOConfigScaling(t *testing.T) {
-config := DefaultAOConfig()
+	config := DefaultAOConfig()
 
-// Phase 45: Radius should be 32 (2× of original 16 for 64×64 sprites)
-if config.Radius != 32 {
-t.Errorf("Phase 45: DefaultAOConfig().Radius = %d, want 32 (scaled for 64×64)", config.Radius)
-}
+	// Phase 45: Radius should be 32 (2× of original 16 for 64×64 sprites)
+	if config.Radius != 32 {
+		t.Errorf("Phase 45: DefaultAOConfig().Radius = %d, want 32 (scaled for 64×64)", config.Radius)
+	}
 
-// Phase 45: Samples should be 24 (scaled from 16 for larger sampling area)
-if config.Samples != 24 {
-t.Errorf("Phase 45: DefaultAOConfig().Samples = %d, want 24 (scaled for 64×64)", config.Samples)
-}
+	// Phase 45: Samples should be 24 (scaled from 16 for larger sampling area)
+	if config.Samples != 24 {
+		t.Errorf("Phase 45: DefaultAOConfig().Samples = %d, want 24 (scaled for 64×64)", config.Samples)
+	}
 }
 
 // TestPhase45_AOWorksWith64x64 tests AO works correctly with 64×64 sprites.
 func TestPhase45_AOWorksWith64x64(t *testing.T) {
-// Create 64×64 test image (Phase 45 standard size)
-img := createTestImage(64, 64, color.RGBA{180, 180, 180, 255})
+	// Create 64×64 test image (Phase 45 standard size)
+	img := createTestImage(64, 64, color.RGBA{180, 180, 180, 255})
 
-// Add some variation to test occlusion
-for y := 20; y < 44; y++ {
-for x := 20; x < 44; x++ {
-img.Set(x, y, color.RGBA{60, 60, 60, 255})
-}
-}
+	// Add some variation to test occlusion
+	for y := 20; y < 44; y++ {
+		for x := 20; x < 44; x++ {
+			img.Set(x, y, color.RGBA{60, 60, 60, 255})
+		}
+	}
 
-config := DefaultAOConfig()
-result := ApplyAmbientOcclusion(img, nil, config)
+	config := DefaultAOConfig()
+	result := ApplyAmbientOcclusion(img, nil, config)
 
-if result == nil {
-t.Fatal("ApplyAmbientOcclusion returned nil for 64×64 sprite")
-}
+	if result == nil {
+		t.Fatal("ApplyAmbientOcclusion returned nil for 64×64 sprite")
+	}
 
-if result.Bounds().Dx() != 64 || result.Bounds().Dy() != 64 {
-t.Error("Result should maintain 64×64 dimensions")
-}
+	if result.Bounds().Dx() != 64 || result.Bounds().Dy() != 64 {
+		t.Error("Result should maintain 64×64 dimensions")
+	}
 
-// Verify some darkening occurred
-r, _, _, _ := result.At(22, 22).RGBA()
-if r >= 60*257 {
-t.Log("Note: AO may not visibly darken in test conditions")
-}
+	// Verify some darkening occurred
+	r, _, _, _ := result.At(22, 22).RGBA()
+	if r >= 60*257 {
+		t.Log("Note: AO may not visibly darken in test conditions")
+	}
 }
 
 // TestPhase45_EnhancedAOWorksWith64x64 tests enhanced AO with 64×64 sprites.
 func TestPhase45_EnhancedAOWorksWith64x64(t *testing.T) {
-// Create 64×64 test image
-img := createTestImage(64, 64, color.RGBA{200, 200, 200, 255})
+	// Create 64×64 test image
+	img := createTestImage(64, 64, color.RGBA{200, 200, 200, 255})
 
-// Add corner regions
-for y := 0; y < 20; y++ {
-for x := 0; x < 20; x++ {
-img.Set(x, y, color.RGBA{40, 40, 40, 255})
-}
-}
+	// Add corner regions
+	for y := 0; y < 20; y++ {
+		for x := 0; x < 20; x++ {
+			img.Set(x, y, color.RGBA{40, 40, 40, 255})
+		}
+	}
 
-config := DefaultEnhancedAOConfig()
-result := ApplyEnhancedAO(img, nil, config)
+	config := DefaultEnhancedAOConfig()
+	result := ApplyEnhancedAO(img, nil, config)
 
-if result == nil {
-t.Fatal("ApplyEnhancedAO returned nil for 64×64 sprite")
-}
+	if result == nil {
+		t.Fatal("ApplyEnhancedAO returned nil for 64×64 sprite")
+	}
 
-if result.Bounds() != img.Bounds() {
-t.Error("Result bounds should match 64×64 input")
-}
+	if result.Bounds() != img.Bounds() {
+		t.Error("Result bounds should match 64×64 input")
+	}
 }
 
 // BenchmarkPhase45_AO64x64 benchmarks AO performance with 64×64 sprites.
 func BenchmarkPhase45_AO64x64(b *testing.B) {
-img := createTestImage(64, 64, color.RGBA{150, 150, 150, 255})
-config := DefaultAOConfig()
+	img := createTestImage(64, 64, color.RGBA{150, 150, 150, 255})
+	config := DefaultAOConfig()
 
-b.ResetTimer()
-for i := 0; i < b.N; i++ {
-_ = ApplyAmbientOcclusion(img, nil, config)
-}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ApplyAmbientOcclusion(img, nil, config)
+	}
 }

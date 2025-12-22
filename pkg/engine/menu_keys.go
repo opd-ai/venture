@@ -31,7 +31,7 @@ var MenuKeys = struct {
 	Territory    ebiten.Key // Y - Territory control and guild warfare
 	Dialog       ebiten.Key // D - Dialog with NPCs
 	Statistics   ebiten.Key // N - Player statistics (N for "Numbers")
-	Achievements ebiten.Key // H - Achievements (H for "Honor")
+	Achievements ebiten.Key // U - Achievements (changed from H to avoid conflict with Housing)
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer
@@ -65,7 +65,7 @@ var MenuKeys = struct {
 	Territory:    ebiten.KeyY,
 	Dialog:       ebiten.KeyD,
 	Statistics:   ebiten.KeyN,
-	Achievements: ebiten.KeyH,
+	Achievements: ebiten.KeyU, // Changed from H to avoid conflict with Housing UI
 	Exit:         ebiten.KeyEscape,
 
 	// Display labels
@@ -81,7 +81,7 @@ var MenuKeys = struct {
 	TerritoryLabel:    "[Y] Territory",
 	DialogLabel:       "[D] Dialog",
 	StatisticsLabel:   "[N] Statistics",
-	AchievementsLabel: "[H] Achievements",
+	AchievementsLabel: "[U] Achievements", // Changed from H to avoid conflict with Housing UI
 	ExitHint:          "Press [KEY] or [ESC] to close",
 }
 
@@ -242,8 +242,8 @@ func getKeyName(key ebiten.Key) string {
 		return "D"
 	case ebiten.KeyN:
 		return "N"
-	case ebiten.KeyH:
-		return "H"
+	case ebiten.KeyU:
+		return "U"
 	case ebiten.KeyEscape:
 		return "ESC"
 	default:

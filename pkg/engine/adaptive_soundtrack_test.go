@@ -271,7 +271,7 @@ func TestAdaptiveSoundtrackSystemNilPositionDefense(t *testing.T) {
 	soundtrack.CombatThreshold = 2
 	player.AddComponent(soundtrack)
 
-	// Create enemy with AI and health but WITHOUT position component
+	// Create enemy with AI and health but without position component
 	// This tests the defensive nil check in countNearbyEnemies
 	enemy := world.CreateEntity()
 	enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})

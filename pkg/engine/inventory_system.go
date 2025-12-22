@@ -11,10 +11,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Scroll spell effect constants
+const (
+	// DefaultScrollEffectDuration is the default duration for scroll spell effects in seconds.
+	DefaultScrollEffectDuration = 5.0
+	// DefaultScrollEffectRadius is the default radius for area-targeting scrolls.
+	DefaultScrollEffectRadius = 64.0
+)
+
 // InventorySystem manages inventory and equipment operations.
 type InventorySystem struct {
-	world  *World
-	logger *logrus.Entry
+	world             *World
+	logger            *logrus.Entry
+	spellEffectSystem *SpellEffectSystem
 }
 
 // NewInventorySystem creates a new inventory system.
@@ -32,6 +41,12 @@ func NewInventorySystemWithLogger(world *World, logger *logrus.Logger) *Inventor
 		world:  world,
 		logger: logEntry,
 	}
+}
+
+// SetSpellEffectSystem sets the spell effect system for consumable spell triggers.
+// Gap A2: Consumable Spell Effect Activation - scrolls trigger spell effects when used.
+func (s *InventorySystem) SetSpellEffectSystem(spellSystem *SpellEffectSystem) {
+	s.spellEffectSystem = spellSystem
 }
 
 // AddItemToInventory adds an item to an entity's inventory.
@@ -326,12 +341,9 @@ func (s *InventorySystem) applyConsumableEffects(entityID uint64, itm *item.Item
 		}
 
 	case item.ConsumableScroll:
-		// Scrolls might cast a spell or provide a buff
-		// INTEGRATION FIX [Category A]: Consumable Spell Effect Activation
-		// Gap: Using consumable items doesn't trigger spell effects (potions, scrolls)
-		// Fix: Call SpellEffectSystem.ApplyEffect(itemSpellID, targetEntity) after consumption
-		// Roadmap: ROADMAP_V4.md Phase 24.1 - New Spell Effects (10 effect types implemented)
-		// Integration: SpellEffectSystem available in world, items have optional SpellEffectID field
+		// Gap A2 RESOLVED: Consumable Spell Effect Activation
+		// Scrolls trigger spell effects when used based on SpellEffectID
+		s.applyScrollSpellEffect(entity, itm)
 
 	case item.ConsumableFood:
 		// Food restores health over time
@@ -678,4 +690,153 @@ func (s *InventorySystem) Update(entities []*Entity, deltaTime float64) {
 		// Combat system uses GetWeaponDamage() and GetTotalDefense()
 		// No need to modify base StatsComponent - equipment provides bonuses separately
 	}
+}
+
+// applyScrollSpellEffect applies a spell effect from a scroll consumable.
+// Gap A2: Consumable Spell Effect Activation - scrolls trigger spell effects when used.
+func (s *InventorySystem) applyScrollSpellEffect(entity *Entity, itm *item.Item) {
+	// Skip if no spell effect system is available
+	if s.spellEffectSystem == nil {
+		if s.logger != nil {
+			s.logger.WithField("item", itm.Name).Debug("no spell effect system available for scroll")
+		}
+		return
+	}
+
+	// Skip if scroll has no spell effect ID
+	if itm.SpellEffectID == "" {
+		if s.logger != nil {
+			s.logger.WithField("item", itm.Name).Debug("scroll has no spell effect ID")
+		}
+		return
+	}
+
+	// Get entity position for targeting
+	var targetX, targetY float64
+	if posComp, hasPos := entity.GetComponent("position"); hasPos {
+		if pos, ok := posComp.(*PositionComponent); ok && pos != nil {
+			targetX = pos.X
+			targetY = pos.Y
+		}
+	}
+
+	// Map spell effect ID to effect type and get default target type
+	effectType, defaultTargetType := s.mapSpellEffectIDWithTarget(itm.SpellEffectID)
+
+	// Calculate magnitude based on item value/rarity
+	magnitude := s.calculateScrollMagnitude(itm)
+
+	// Determine duration: use item's SpellDuration if set, otherwise use default
+	duration := itm.SpellDuration
+	if duration <= 0 {
+		duration = DefaultScrollEffectDuration
+	}
+
+	// Determine target type: use item's SpellTargetType if set, otherwise use spell-based default
+	targetType := s.parseTargetType(itm.SpellTargetType, defaultTargetType)
+
+	// Determine radius: use item's SpellRadius if set, otherwise use default for area spells
+	radius := itm.SpellRadius
+	if radius <= 0 && targetType == TargetArea {
+		radius = DefaultScrollEffectRadius
+	}
+
+	// Apply the spell effect to the entity
+	s.spellEffectSystem.ApplySpellEffect(
+		entity,
+		effectType,
+		magnitude,
+		duration,
+		targetType,
+		entity.ID, // Caster is the user
+		targetX,
+		targetY,
+		radius,
+	)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"item":        itm.Name,
+			"spell_id":    itm.SpellEffectID,
+			"effect_type": effectType.String(),
+			"target_type": targetType.String(),
+			"magnitude":   magnitude,
+			"duration":    duration,
+			"radius":      radius,
+		}).Debug("scroll spell effect applied")
+	}
+}
+
+// mapSpellEffectIDWithTarget converts a spell effect ID string to an EffectType and default TargetType.
+func (s *InventorySystem) mapSpellEffectIDWithTarget(spellID string) (EffectType, TargetType) {
+	switch spellID {
+	case "fireball", "lightning", "ice":
+		return EffectElementalFusion, TargetArea // Offensive spells target area
+	case "protection", "shield":
+		return EffectMetamagic, TargetSelf // Defensive spells target self
+	case "teleportation", "blink":
+		return EffectTeleportation, TargetSelf // Movement spells target self
+	case "haste", "slow":
+		return EffectTimeManipulation, TargetSelf // Buff/debuff target self (or could be entity)
+	case "levitation", "gravity":
+		return EffectGravityControl, TargetSelf // Movement modifiers target self
+	case "heal", "drain":
+		return EffectLifeDrain, TargetSelf // Healing targets self
+	case "summon":
+		return EffectSummoning, TargetArea // Summons appear in an area
+	case "invisibility", "decoy":
+		return EffectIllusion, TargetSelf // Illusions affect self
+	case "wall", "pit", "bridge":
+		return EffectTerrainManipulation, TargetTerrain // Terrain spells target terrain
+	case "transmute":
+		return EffectTransmutation, TargetTerrain // Transmutation affects terrain/objects
+	default:
+		// Default to elemental fusion with area targeting for unknown spell IDs
+		return EffectElementalFusion, TargetArea
+	}
+}
+
+// parseTargetType converts a string target type to TargetType, with a fallback default.
+func (s *InventorySystem) parseTargetType(targetTypeStr string, defaultType TargetType) TargetType {
+	switch targetTypeStr {
+	case "self":
+		return TargetSelf
+	case "entity":
+		return TargetEntity
+	case "area":
+		return TargetArea
+	case "terrain":
+		return TargetTerrain
+	default:
+		return defaultType
+	}
+}
+
+// mapSpellEffectID converts a spell effect ID string to an EffectType.
+// Deprecated: Use mapSpellEffectIDWithTarget for full targeting support.
+// TODO: Remove this wrapper once all callers migrate to mapSpellEffectIDWithTarget.
+// Currently retained for backward compatibility with existing tests.
+func (s *InventorySystem) mapSpellEffectID(spellID string) EffectType {
+	effectType, _ := s.mapSpellEffectIDWithTarget(spellID)
+	return effectType
+}
+
+// calculateScrollMagnitude determines the spell effect magnitude based on item properties.
+func (s *InventorySystem) calculateScrollMagnitude(itm *item.Item) float64 {
+	// Base magnitude from item value
+	baseMagnitude := float64(itm.Stats.Value) / 10.0
+
+	// Increase magnitude based on rarity
+	switch itm.Rarity {
+	case item.RarityUncommon:
+		baseMagnitude *= 1.2
+	case item.RarityRare:
+		baseMagnitude *= 1.5
+	case item.RarityEpic:
+		baseMagnitude *= 2.0
+	case item.RarityLegendary:
+		baseMagnitude *= 3.0
+	}
+
+	return baseMagnitude
 }

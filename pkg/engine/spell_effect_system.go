@@ -122,6 +122,7 @@ func (s *SpellEffectSystem) executeEffect(entity *Entity, effect *SpellEffectCom
 }
 
 // TerrainModifierType represents the type of terrain modification for spell effects.
+// TerrainModifierType represents the type of terrain modification for spell effects.
 type TerrainModifierType int
 
 const (
@@ -133,10 +134,32 @@ const (
 	TerrainModifierCreatePit
 )
 
+// String returns a human-readable name for the terrain modifier type.
+func (t TerrainModifierType) String() string {
+	switch t {
+	case TerrainModifierCreateWall:
+		return "create_wall"
+	case TerrainModifierDigTunnel:
+		return "dig_tunnel"
+	case TerrainModifierCreatePit:
+		return "create_pit"
+	default:
+		return "unknown_terrain_modifier"
+	}
+}
+
+// Terrain manipulation damage constants for tunnel digging effects.
+const (
+	// TunnelDefaultDamage is the base damage for instant terrain destruction (sufficient to destroy most tiles).
+	TunnelDefaultDamage = 1000.0
+	// TunnelMagnitudeMultiplier scales the effect's magnitude to terrain damage.
+	TunnelMagnitudeMultiplier = 100.0
+)
+
 // executeTerrainManipulation creates, modifies, or destroys terrain.
 func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectComponent) {
-	// Only execute once (on first frame)
-	if effect.ElapsedTime > 0.016 {
+	// Only execute once, when the effect has just started (ElapsedTime is still zero)
+	if effect.ElapsedTime > 0 {
 		return
 	}
 
@@ -164,9 +187,9 @@ func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectCompon
 		}
 	case TerrainModifierDigTunnel:
 		// Dig through walls by applying massive damage
-		damage := 1000.0 // Instant destruction
+		damage := TunnelDefaultDamage
 		if effect.Magnitude > 0 {
-			damage = effect.Magnitude * 100
+			damage = effect.Magnitude * TunnelMagnitudeMultiplier
 		}
 		if effect.Radius > 0 {
 			s.terrainModificationSystem.DamageTilesInArea(

@@ -306,13 +306,12 @@ func (s *TerrainModificationSystem) DamageTileAtWorldPosition(worldX, worldY, da
 	s.damageTile(tileX, tileY, damage)
 }
 
-// DamageTilesInArea applies damage to all tiles in a circular area.
-// Useful for explosion effects.
-func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, damage float64) {
-	if s.terrain == nil {
-		return
-	}
+// tileCallback is a function that operates on a tile at the given coordinates.
+type tileCallback func(tileX, tileY int)
 
+// iterateTilesInCircularArea calls the callback for each tile within a circular area.
+// This helper method reduces code duplication between DamageTilesInArea and SetTilesInArea.
+func (s *TerrainModificationSystem) iterateTilesInCircularArea(centerX, centerY, radius float64, callback tileCallback) {
 	// Convert to tile coordinates
 	centerTileX := int(centerX / float64(s.tileSize))
 	centerTileY := int(centerY / float64(s.tileSize))
@@ -331,10 +330,22 @@ func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, 
 				(tileCenterY-centerY)*(tileCenterY-centerY)
 
 			if distSq <= radius*radius {
-				s.damageTile(tileX, tileY, damage)
+				callback(tileX, tileY)
 			}
 		}
 	}
+}
+
+// DamageTilesInArea applies damage to all tiles in a circular area.
+// Useful for explosion effects.
+func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, damage float64) {
+	if s.terrain == nil {
+		return
+	}
+
+	s.iterateTilesInCircularArea(centerX, centerY, radius, func(tileX, tileY int) {
+		s.damageTile(tileX, tileY, damage)
+	})
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -365,28 +376,9 @@ func (s *TerrainModificationSystem) SetTilesInArea(centerX, centerY, radius floa
 		return
 	}
 
-	// Convert to tile coordinates
-	centerTileX := int(centerX / float64(s.tileSize))
-	centerTileY := int(centerY / float64(s.tileSize))
-	radiusTiles := int(radius/float64(s.tileSize)) + 1
-
-	// Check tiles in square around center
-	for dy := -radiusTiles; dy <= radiusTiles; dy++ {
-		for dx := -radiusTiles; dx <= radiusTiles; dx++ {
-			tileX := centerTileX + dx
-			tileY := centerTileY + dy
-
-			// Check if tile is within circular radius
-			tileCenterX := float64(tileX*s.tileSize + s.tileSize/2)
-			tileCenterY := float64(tileY*s.tileSize + s.tileSize/2)
-			distSq := (tileCenterX-centerX)*(tileCenterX-centerX) +
-				(tileCenterY-centerY)*(tileCenterY-centerY)
-
-			if distSq <= radius*radius {
-				s.setTile(tileX, tileY, tileType)
-			}
-		}
-	}
+	s.iterateTilesInCircularArea(centerX, centerY, radius, func(tileX, tileY int) {
+		s.setTile(tileX, tileY, tileType)
+	})
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

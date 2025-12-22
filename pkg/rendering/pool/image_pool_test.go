@@ -441,30 +441,6 @@ func TestPhase45_DefaultSizePooling(t *testing.T) {
 	}
 }
 
-func TestPhase45_MemoryCalculation(t *testing.T) {
-	// Verify memory calculations for common sprite sizes
-	// RGBA = 4 bytes per pixel
-	tests := []struct {
-		name     string
-		size     int
-		expected int
-	}{
-		{"32x32 sprite (4KB)", 32, 32 * 32 * 4},
-		{"64x64 sprite (16KB)", 64, 64 * 64 * 4},
-		{"128x128 sprite (64KB)", 128, 128 * 128 * 4},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.size * tt.size * 4
-			if actual != tt.expected {
-				t.Errorf("Memory for %dx%d = %d bytes, want %d",
-					tt.size, tt.size, actual, tt.expected)
-			}
-		})
-	}
-}
-
 func BenchmarkImagePool_GetPut_Default64(b *testing.B) {
 	pool := NewImagePool()
 	b.ResetTimer()

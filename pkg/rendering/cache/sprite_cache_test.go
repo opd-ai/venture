@@ -352,16 +352,28 @@ func TestPhase45_SpriteSizeConstants(t *testing.T) {
 		t.Errorf("BytesPerPixel = %d, want 4 (RGBA)", BytesPerPixel)
 	}
 
-	if SpriteSize32 != 32*32*4 {
-		t.Errorf("SpriteSize32 = %d, want %d (4KB)", SpriteSize32, 32*32*4)
+	// Test primary constants (preferred naming convention)
+	if Sprite32MemorySize != 32*32*4 {
+		t.Errorf("Sprite32MemorySize = %d, want %d (4KB)", Sprite32MemorySize, 32*32*4)
 	}
 
-	if SpriteSize64 != 64*64*4 {
-		t.Errorf("SpriteSize64 = %d, want %d (16KB)", SpriteSize64, 64*64*4)
+	if Sprite64MemorySize != 64*64*4 {
+		t.Errorf("Sprite64MemorySize = %d, want %d (16KB)", Sprite64MemorySize, 64*64*4)
 	}
 
-	if SpriteSize128 != 128*128*4 {
-		t.Errorf("SpriteSize128 = %d, want %d (64KB)", SpriteSize128, 128*128*4)
+	if Sprite128MemorySize != 128*128*4 {
+		t.Errorf("Sprite128MemorySize = %d, want %d (64KB)", Sprite128MemorySize, 128*128*4)
+	}
+
+	// Test deprecated aliases still work
+	if SpriteSize32 != Sprite32MemorySize {
+		t.Errorf("SpriteSize32 (%d) != Sprite32MemorySize (%d)", SpriteSize32, Sprite32MemorySize)
+	}
+	if SpriteSize64 != Sprite64MemorySize {
+		t.Errorf("SpriteSize64 (%d) != Sprite64MemorySize (%d)", SpriteSize64, Sprite64MemorySize)
+	}
+	if SpriteSize128 != Sprite128MemorySize {
+		t.Errorf("SpriteSize128 (%d) != Sprite128MemorySize (%d)", SpriteSize128, Sprite128MemorySize)
 	}
 }
 
@@ -376,15 +388,10 @@ func TestPhase45_CacheSizeConstants(t *testing.T) {
 	}
 
 	// Verify default can hold reasonable number of 64×64 sprites
-	// DefaultCacheSize (16MB) / SpriteSize64 (16KB) = 1024 sprites
-	expectedMinSprites := DefaultCacheSize / SpriteSize64
-	sprites64InDefault := DefaultCacheSize / SpriteSize64
-	if sprites64InDefault < expectedMinSprites {
-		t.Errorf("DefaultCacheSize can only hold %d 64×64 sprites, want >= %d",
-			sprites64InDefault, expectedMinSprites)
-	}
+	// DefaultCacheSize (16MB) / Sprite64MemorySize (16KB) = 1024 sprites
+	sprites64InDefault := DefaultCacheSize / Sprite64MemorySize
 
-	// Verify the calculated capacity matches documentation (~1000)
+	// Verify the calculated capacity matches documentation (~1024)
 	if sprites64InDefault < 1000 || sprites64InDefault > 1100 {
 		t.Errorf("Expected ~1024 sprites, got %d", sprites64InDefault)
 	}
@@ -397,7 +404,7 @@ func TestPhase45_CacheSizeConstants(t *testing.T) {
 
 func TestPhase45_CacheWith64x64Sprites(t *testing.T) {
 	// Create cache sized for 64×64 sprites
-	cache := NewSpriteCache(SpriteSize64 * 10) // Room for 10 sprites
+	cache := NewSpriteCache(Sprite64MemorySize * 10) // Room for 10 sprites
 
 	// Add 64×64 sprites
 	for i := 0; i < 5; i++ {
@@ -411,7 +418,7 @@ func TestPhase45_CacheWith64x64Sprites(t *testing.T) {
 	}
 
 	// Verify size calculation is correct (5 × 16KB = 80KB)
-	expectedSize := int64(5 * SpriteSize64)
+	expectedSize := int64(5 * Sprite64MemorySize)
 	if cache.Size() != expectedSize {
 		t.Errorf("Size = %d, want %d", cache.Size(), expectedSize)
 	}
@@ -455,7 +462,7 @@ func TestPhase45_DefaultCacheCapacity(t *testing.T) {
 	}
 
 	// Total size should be 100 × 16KB = 1.6MB, well under 16MB limit
-	expectedSize := int64(100 * SpriteSize64)
+	expectedSize := int64(100 * Sprite64MemorySize)
 	if cache.Size() != expectedSize {
 		t.Errorf("Size = %d, want %d", cache.Size(), expectedSize)
 	}

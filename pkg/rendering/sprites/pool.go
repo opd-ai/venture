@@ -8,18 +8,24 @@ import (
 
 // Default sprite sizes for Phase 45 (64×64 standard).
 // Memory per sprite: 32×32=4KB, 64×64=16KB, 128×128=64KB (RGBA).
+// Preferred naming: Size{Descriptor}, consistent with pkg/rendering/pool.
 const (
-	DefaultSpriteSize = 64  // Default sprite size (Phase 45 standard)
-	SmallSpriteSize   = 32  // Small sprites (particles, icons)
-	LargeSpriteSize   = 128 // Large sprites (bosses, effects)
+	SizeDefault = 64  // Default sprite size (Phase 45 standard)
+	SizeSmall   = 32  // Small sprites (particles, icons)
+	SizeLarge   = 128 // Large sprites (bosses, effects)
+
+	// Backward-compatible aliases; prefer the Size* names in new code.
+	DefaultSpriteSize = SizeDefault
+	SmallSpriteSize   = SizeSmall
+	LargeSpriteSize   = SizeLarge
 )
 
 // ImagePool provides object pooling for Ebiten images to reduce GC pressure.
 // Images are expensive to allocate due to GPU texture creation overhead.
 // Pooling allows reuse of images instead of creating new ones each frame.
 //
-// Phase 45: Default sprite size is now 64×64. Use DefaultSpriteSize constant
-// for consistency with the rest of the rendering system.
+// Phase 45: Default sprite size is now 64×64. Use SizeDefault (or
+// DefaultSpriteSize for legacy code) for consistency with the rendering system.
 type ImagePool struct {
 	pool   sync.Pool
 	width  int

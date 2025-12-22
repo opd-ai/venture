@@ -15,22 +15,31 @@ const (
 	// BytesPerPixel is the number of bytes per RGBA pixel.
 	BytesPerPixel = 4
 
-	// SpriteSize32 is the memory size of a 32×32 RGBA sprite in bytes.
-	SpriteSize32 = 32 * 32 * BytesPerPixel // 4KB
+	// Sprite32MemorySize is the memory size of a 32×32 RGBA sprite in bytes.
+	Sprite32MemorySize = 32 * 32 * BytesPerPixel // 4KB
 
-	// SpriteSize64 is the memory size of a 64×64 RGBA sprite in bytes.
+	// Sprite64MemorySize is the memory size of a 64×64 RGBA sprite in bytes.
 	// This is the default size for Phase 45 sprites and tiles.
-	SpriteSize64 = 64 * 64 * BytesPerPixel // 16KB
+	Sprite64MemorySize = 64 * 64 * BytesPerPixel // 16KB
 
-	// SpriteSize128 is the memory size of a 128×128 RGBA sprite in bytes.
-	SpriteSize128 = 128 * 128 * BytesPerPixel // 64KB
+	// Sprite128MemorySize is the memory size of a 128×128 RGBA sprite in bytes.
+	Sprite128MemorySize = 128 * 128 * BytesPerPixel // 64KB
+
+	// Deprecated: use Sprite32MemorySize instead.
+	SpriteSize32 = Sprite32MemorySize
+
+	// Deprecated: use Sprite64MemorySize instead.
+	SpriteSize64 = Sprite64MemorySize
+
+	// Deprecated: use Sprite128MemorySize instead.
+	SpriteSize128 = Sprite128MemorySize
 
 	// DefaultCacheSize is the recommended cache size for typical gameplay.
-	// Allows ~1000 64×64 sprites (16MB / 16KB = 1024 sprites).
+	// Allows ~1024 64×64 sprites (16MB / 16KB = 1024 sprites).
 	DefaultCacheSize = 16 * 1024 * 1024 // 16MB
 
 	// MaxCacheSize is the maximum recommended cache size to stay under 300MB.
-	// Allows ~18,000 64×64 sprites (300MB / 16KB ≈ 18,750 sprites).
+	// Allows ~18,750 64×64 sprites (300MB / 16KB = 18,750 sprites).
 	MaxCacheSize = 300 * 1024 * 1024 // 300MB
 )
 

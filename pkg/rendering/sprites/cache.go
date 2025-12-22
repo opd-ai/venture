@@ -68,7 +68,7 @@ type CacheStats struct {
 // Recommended capacity for <300MB memory target:
 //   - 64×64 sprites: 100-200 sprites (~1.6MB-3.2MB)
 //   - Mixed sizes: 150 sprites (~3MB average)
-//   - Maximum: ~18,750 sprites (using cache.MaxCacheSize / cache.SpriteSize64)
+//   - Maximum: ~18,750 sprites (using the MaxCacheSize and SpriteSize64 constants from pkg/rendering/cache)
 //
 // For byte-based caching, use pkg/rendering/cache.SpriteCache instead,
 // which manages memory limits directly in bytes using cache.DefaultCacheSize.

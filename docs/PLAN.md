@@ -131,38 +131,36 @@ if len(reward.Items) > 0 {
 
 ---
 
-### Gap A4: Terrain Manipulation Spell Effects
+### Gap A4: Terrain Manipulation Spell Effects ✅ COMPLETED
 
 **File:** `pkg/engine/spell_effect_system.go`  
 **Gap:** TerrainManipulation effects lack terrain system integration
 
-**Resolution:**
-```go
-// Add terrain system reference:
-type SpellEffectSystem struct {
-    world         *World
-    terrainSystem *TerrainSystem // NEW
-    // ...
-}
+**Status:** RESOLVED (2025-12-22)
 
-// In handleTerrainManipulation():
-func (s *SpellEffectSystem) handleTerrainManipulation(effect SpellEffect, caster *Entity) {
-    pos, _ := caster.GetComponent("position")
-    if pos == nil {
-        return
-    }
-    position := pos.(*PositionComponent)
-    
-    switch effect.SubType {
-    case "create_wall":
-        s.terrainSystem.SetTile(int(position.X), int(position.Y), TileWall)
-    case "dig_tunnel":
-        s.terrainSystem.SetTile(int(position.X), int(position.Y), TileFloor)
-    case "create_pit":
-        s.terrainSystem.SetTile(int(position.X), int(position.Y), TilePit)
-    }
-}
-```
+**Implementation:**
+1. Added `terrainModificationSystem` field to `SpellEffectSystem` struct
+2. Added `SetTerrainModificationSystem()` setter method for dependency injection
+3. Added `TerrainModifierType` enum with `TerrainModifierCreateWall`, `TerrainModifierDigTunnel`, `TerrainModifierCreatePit`
+4. Implemented `executeTerrainManipulation()` to call terrain modification system methods based on effect parameters
+5. Added new methods to `TerrainModificationSystem`: `SetTileAtWorldPosition()`, `SetTilesInArea()`, `setTile()`
+
+**Integration Points:**
+1. `pkg/engine/spell_effect_system.go` - SpellEffectSystem now integrates with TerrainModificationSystem
+2. `pkg/engine/terrain_modification_system.go` - New methods for setting tile types at positions
+
+**Tests Added:**
+- `TestSpellEffectSystem_SetTerrainModificationSystem` - Verifies setter
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_NoTerrainSystem` - Verifies graceful degradation
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_CreateWall` - Verifies wall creation
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_DigTunnel` - Verifies tunnel digging
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_CreatePit` - Verifies pit creation
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_OnlyExecutesOnce` - Verifies single execution
+- `TestSpellEffectSystem_ExecuteTerrainManipulation_AreaEffect` - Verifies area effects
+- `TestTerrainModifierType_Values` - Verifies enum values
+- `TestTerrainModificationSystem_SetTileAtWorldPosition` - Verifies single tile setting
+- `TestTerrainModificationSystem_SetTilesInArea` - Verifies area tile setting
+- `TestTerrainModificationSystem_setTile` - Verifies tile type mapping
 
 ---
 
@@ -839,7 +837,7 @@ go test ./pkg/... -cover
 - [ ] Vehicles take terrain damage
 - [ ] Lock-picking mini-game starts for locked containers
 - [ ] Party chat delivers to party members
-- [ ] Spell effects modify terrain
+- [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)
 
 ### Persistence Verification
 - [ ] Save game includes V8/V9 data

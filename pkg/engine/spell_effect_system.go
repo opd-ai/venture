@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,9 +18,10 @@ type expiredEffect struct {
 // SpellEffectSystem manages spell effects on entities and terrain.
 // It processes SpellEffectComponents and executes their effects based on type.
 type SpellEffectSystem struct {
-	world  *World
-	rng    *rand.Rand
-	logger *logrus.Entry
+	world                    *World
+	rng                      *rand.Rand
+	logger                   *logrus.Entry
+	terrainModificationSystem *TerrainModificationSystem
 
 	// Reusable buffer for expired effects to reduce per-frame allocations
 	expiredEffectsBuffer []expiredEffect
@@ -42,6 +44,13 @@ func NewSpellEffectSystemWithLogger(world *World, rng *rand.Rand, logger *logrus
 		logger:               logEntry,
 		expiredEffectsBuffer: make([]expiredEffect, 0, 16), // Pre-allocate for typical max expired effects per frame
 	}
+}
+
+// SetTerrainModificationSystem sets the terrain modification system for terrain spell effects.
+// This enables terrain manipulation effects (create walls, dig tunnels, create pits) to
+// actually modify the game terrain.
+func (s *SpellEffectSystem) SetTerrainModificationSystem(terrainSystem *TerrainModificationSystem) {
+	s.terrainModificationSystem = terrainSystem
 }
 
 // Update processes all active spell effects.
@@ -112,20 +121,85 @@ func (s *SpellEffectSystem) executeEffect(entity *Entity, effect *SpellEffectCom
 	}
 }
 
+// TerrainModifierType represents the type of terrain modification for spell effects.
+type TerrainModifierType int
+
+const (
+	// TerrainModifierCreateWall creates a wall at the target location
+	TerrainModifierCreateWall TerrainModifierType = iota
+	// TerrainModifierDigTunnel destroys walls to create a tunnel
+	TerrainModifierDigTunnel
+	// TerrainModifierCreatePit creates a pit at the target location
+	TerrainModifierCreatePit
+)
+
 // executeTerrainManipulation creates, modifies, or destroys terrain.
 func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectComponent) {
-	// Terrain manipulation would modify world terrain tiles
-	// INTEGRATION FIX [Category A]: Terrain Manipulation Spell Effects
-	// Gap: TerrainManipulation effects (create walls, dig tunnels) lack terrain system integration
-	// Fix: Call TerrainModificationSystem.AddModification(chunkID, modification) to alter terrain
-	// Roadmap: ROADMAP_V6.md Phase 37.2 - Chunk Modification (TerrainModificationSystem complete)
-	// Integration: TerrainModificationSystem available in world, supports all modification types
+	// Only execute once (on first frame)
+	if effect.ElapsedTime > 0.016 {
+		return
+	}
+
+	// Check if terrain modification system is available
+	if s.terrainModificationSystem == nil {
+		if s.logger != nil {
+			s.logger.Debug("Terrain manipulation skipped: no terrain modification system")
+		}
+		return
+	}
+
+	// Determine terrain modification type from TerrainModifier
+	modifierType := TerrainModifierType(effect.TerrainModifier)
+
+	// Apply terrain modification based on type
+	switch modifierType {
+	case TerrainModifierCreateWall:
+		// Create wall(s) at target location
+		if effect.Radius > 0 {
+			s.terrainModificationSystem.SetTilesInArea(
+				effect.TargetX, effect.TargetY, effect.Radius, terrain.TileWall)
+		} else {
+			s.terrainModificationSystem.SetTileAtWorldPosition(
+				effect.TargetX, effect.TargetY, terrain.TileWall)
+		}
+	case TerrainModifierDigTunnel:
+		// Dig through walls by applying massive damage
+		damage := 1000.0 // Instant destruction
+		if effect.Magnitude > 0 {
+			damage = effect.Magnitude * 100
+		}
+		if effect.Radius > 0 {
+			s.terrainModificationSystem.DamageTilesInArea(
+				effect.TargetX, effect.TargetY, effect.Radius, damage)
+		} else {
+			s.terrainModificationSystem.DamageTileAtWorldPosition(
+				effect.TargetX, effect.TargetY, damage)
+		}
+	case TerrainModifierCreatePit:
+		// Create pit(s) at target location
+		if effect.Radius > 0 {
+			s.terrainModificationSystem.SetTilesInArea(
+				effect.TargetX, effect.TargetY, effect.Radius, terrain.TilePit)
+		} else {
+			s.terrainModificationSystem.SetTileAtWorldPosition(
+				effect.TargetX, effect.TargetY, terrain.TilePit)
+		}
+	default:
+		// Unknown modifier type, log warning
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"modifier_type": effect.TerrainModifier,
+			}).Warn("Unknown terrain modifier type")
+		}
+		return
+	}
+
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"x":            effect.TargetX,
-			"y":            effect.TargetY,
-			"radius":       effect.Radius,
-			"terrain_type": effect.TerrainModifier,
+			"x":             effect.TargetX,
+			"y":             effect.TargetY,
+			"radius":        effect.Radius,
+			"modifier_type": modifierType,
 		}).Debug("Terrain manipulation executed")
 	}
 }

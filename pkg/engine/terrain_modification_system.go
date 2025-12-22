@@ -345,3 +345,105 @@ func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, 
 		}).Debug("area damage applied to tiles")
 	}
 }
+
+// SetTileAtWorldPosition changes a tile at world coordinates to the specified type.
+// This is used by spell effects to create walls or pits.
+func (s *TerrainModificationSystem) SetTileAtWorldPosition(worldX, worldY float64, tileType terrain.TileType) {
+	if s.terrain == nil {
+		return
+	}
+
+	tileX := int(worldX / float64(s.tileSize))
+	tileY := int(worldY / float64(s.tileSize))
+	s.setTile(tileX, tileY, tileType)
+}
+
+// SetTilesInArea changes all tiles in a circular area to the specified type.
+// This is used by area-effect terrain manipulation spells.
+func (s *TerrainModificationSystem) SetTilesInArea(centerX, centerY, radius float64, tileType terrain.TileType) {
+	if s.terrain == nil {
+		return
+	}
+
+	// Convert to tile coordinates
+	centerTileX := int(centerX / float64(s.tileSize))
+	centerTileY := int(centerY / float64(s.tileSize))
+	radiusTiles := int(radius/float64(s.tileSize)) + 1
+
+	// Check tiles in square around center
+	for dy := -radiusTiles; dy <= radiusTiles; dy++ {
+		for dx := -radiusTiles; dx <= radiusTiles; dx++ {
+			tileX := centerTileX + dx
+			tileY := centerTileY + dy
+
+			// Check if tile is within circular radius
+			tileCenterX := float64(tileX*s.tileSize + s.tileSize/2)
+			tileCenterY := float64(tileY*s.tileSize + s.tileSize/2)
+			distSq := (tileCenterX-centerX)*(tileCenterX-centerX) +
+				(tileCenterY-centerY)*(tileCenterY-centerY)
+
+			if distSq <= radius*radius {
+				s.setTile(tileX, tileY, tileType)
+			}
+		}
+	}
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"centerX":  centerX,
+			"centerY":  centerY,
+			"radius":   radius,
+			"tileType": tileType.String(),
+		}).Debug("area tiles set")
+	}
+}
+
+// setTile changes a single tile to the specified type.
+func (s *TerrainModificationSystem) setTile(tileX, tileY int, tileType terrain.TileType) {
+	if s.terrain == nil || s.worldMap == nil {
+		return
+	}
+
+	// Check bounds
+	if !s.terrain.IsInBounds(tileX, tileY) {
+		return
+	}
+
+	// Update terrain data
+	s.terrain.SetTile(tileX, tileY, tileType)
+
+	// Map terrain TileType to world TileType
+	var worldTileType world.TileType
+	var walkable bool
+	switch tileType {
+	case terrain.TileWall:
+		worldTileType = world.TileWall
+		walkable = false
+	case terrain.TileFloor:
+		worldTileType = world.TileFloor
+		walkable = true
+	case terrain.TilePit:
+		worldTileType = world.TileEmpty // Pits are impassable
+		walkable = false
+	default:
+		worldTileType = world.TileFloor
+		walkable = true
+	}
+
+	// Update world map
+	tile := world.Tile{
+		Type:     worldTileType,
+		Walkable: walkable,
+		X:        tileX,
+		Y:        tileY,
+	}
+	s.worldMap.SetTile(tileX, tileY, tile)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"tileX":    tileX,
+			"tileY":    tileY,
+			"tileType": tileType.String(),
+		}).Debug("tile set")
+	}
+}

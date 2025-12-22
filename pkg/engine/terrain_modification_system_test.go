@@ -679,3 +679,107 @@ func BenchmarkTerrainModificationSystem_ProcessWeaponAttack(b *testing.B) {
 		system.ProcessWeaponAttack(player, weapon)
 	}
 }
+
+// TestTerrainModificationSystem_SetTileAtWorldPosition verifies setting a single tile.
+func TestTerrainModificationSystem_SetTileAtWorldPosition(t *testing.T) {
+	system := NewTerrainModificationSystem(32)
+
+	// Create terrain
+	terr := terrain.NewTerrain(10, 10, 12345)
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			terr.SetTile(x, y, terrain.TileFloor)
+		}
+	}
+	system.SetTerrain(terr)
+
+	// Create world map
+	worldMap := world.NewMap(10, 10, 12345)
+	system.SetWorldMap(worldMap)
+
+	// Set a tile to wall at world position (64, 64) = tile (2, 2)
+	system.SetTileAtWorldPosition(64.0, 64.0, terrain.TileWall)
+
+	// Verify tile was changed
+	if terr.GetTile(2, 2) != terrain.TileWall {
+		t.Errorf("Tile at (2,2) = %v, want TileWall", terr.GetTile(2, 2))
+	}
+}
+
+// TestTerrainModificationSystem_SetTileAtWorldPosition_NoTerrain verifies no crash without terrain.
+func TestTerrainModificationSystem_SetTileAtWorldPosition_NoTerrain(t *testing.T) {
+	system := NewTerrainModificationSystem(32)
+
+	// Should not panic with no terrain set
+	system.SetTileAtWorldPosition(64.0, 64.0, terrain.TileWall)
+}
+
+// TestTerrainModificationSystem_SetTilesInArea verifies setting tiles in an area.
+func TestTerrainModificationSystem_SetTilesInArea(t *testing.T) {
+	system := NewTerrainModificationSystem(32)
+
+	// Create terrain
+	terr := terrain.NewTerrain(10, 10, 12345)
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			terr.SetTile(x, y, terrain.TileFloor)
+		}
+	}
+	system.SetTerrain(terr)
+
+	// Create world map
+	worldMap := world.NewMap(10, 10, 12345)
+	system.SetWorldMap(worldMap)
+
+	// Set tiles in area around center (160, 160) = tile (5, 5) with radius 48 (1.5 tiles)
+	system.SetTilesInArea(160.0, 160.0, 48.0, terrain.TilePit)
+
+	// Center tile should be changed
+	if terr.GetTile(5, 5) != terrain.TilePit {
+		t.Errorf("Center tile at (5,5) = %v, want TilePit", terr.GetTile(5, 5))
+	}
+}
+
+// TestTerrainModificationSystem_SetTilesInArea_NoTerrain verifies no crash without terrain.
+func TestTerrainModificationSystem_SetTilesInArea_NoTerrain(t *testing.T) {
+	system := NewTerrainModificationSystem(32)
+
+	// Should not panic with no terrain set
+	system.SetTilesInArea(160.0, 160.0, 48.0, terrain.TileWall)
+}
+
+// TestTerrainModificationSystem_setTile verifies tile type mapping.
+func TestTerrainModificationSystem_setTile(t *testing.T) {
+	tests := []struct {
+		name         string
+		tileType     terrain.TileType
+		wantWalkable bool
+	}{
+		{"wall", terrain.TileWall, false},
+		{"floor", terrain.TileFloor, true},
+		{"pit", terrain.TilePit, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			system := NewTerrainModificationSystem(32)
+
+			// Create terrain
+			terr := terrain.NewTerrain(10, 10, 12345)
+			system.SetTerrain(terr)
+
+			// Create world map
+			worldMap := world.NewMap(10, 10, 12345)
+			system.SetWorldMap(worldMap)
+
+			// Set tile
+			system.SetTileAtWorldPosition(64.0, 64.0, tt.tileType)
+
+			// Verify world map tile
+			tile := worldMap.GetTile(2, 2)
+			if tile.Walkable != tt.wantWalkable {
+				t.Errorf("Tile.Walkable = %v, want %v", tile.Walkable, tt.wantWalkable)
+			}
+		})
+	}
+}

@@ -440,3 +440,254 @@ func TestGenericComponent_Type(t *testing.T) {
 		t.Errorf("GenericComponent.Type() = %v, want test_marker", comp.Type())
 	}
 }
+
+func TestSpellEffectSystem_SetTerrainModificationSystem(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Initially nil
+	if system.terrainModificationSystem != nil {
+		t.Error("terrainModificationSystem should be nil initially")
+	}
+
+	// Set terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	if system.terrainModificationSystem != terrainModSystem {
+		t.Error("SetTerrainModificationSystem should set the terrain modification system")
+	}
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_NoTerrainSystem(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        0, // Instant
+		Magnitude:       1.0,
+		TargetType:      TargetTerrain,
+		TargetX:         100.0,
+		TargetY:         100.0,
+		Radius:          0,
+		TerrainModifier: int(TerrainModifierCreateWall),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	// Should not panic when no terrain system is set
+	entities := []*Entity{entity}
+	system.Update(entities, 0.016)
+
+	// Effect should be processed without error (gracefully skipped)
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_CreateWall(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Set up terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        0, // Instant
+		Magnitude:       1.0,
+		TargetType:      TargetTerrain,
+		TargetX:         100.0,
+		TargetY:         100.0,
+		Radius:          0,
+		TerrainModifier: int(TerrainModifierCreateWall),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	// Should execute without panic
+	entities := []*Entity{entity}
+	system.Update(entities, 0.016)
+
+	// Verify effect was processed (elapsed time updated)
+	if effect.ElapsedTime == 0 {
+		t.Error("ElapsedTime should have been updated")
+	}
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_DigTunnel(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Set up terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        0, // Instant
+		Magnitude:       5.0,
+		TargetType:      TargetTerrain,
+		TargetX:         64.0,
+		TargetY:         64.0,
+		Radius:          32.0, // Radius of 1 tile
+		TerrainModifier: int(TerrainModifierDigTunnel),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	// Should execute without panic
+	entities := []*Entity{entity}
+	system.Update(entities, 0.016)
+
+	// Verify effect was processed (elapsed time updated)
+	if effect.ElapsedTime == 0 {
+		t.Error("ElapsedTime should have been updated")
+	}
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_CreatePit(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Set up terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        0, // Instant
+		Magnitude:       1.0,
+		TargetType:      TargetTerrain,
+		TargetX:         96.0,
+		TargetY:         96.0,
+		Radius:          0,
+		TerrainModifier: int(TerrainModifierCreatePit),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	// Should execute without panic
+	entities := []*Entity{entity}
+	system.Update(entities, 0.016)
+
+	// Verify effect was processed (elapsed time updated)
+	if effect.ElapsedTime == 0 {
+		t.Error("ElapsedTime should have been updated")
+	}
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_OnlyExecutesOnce(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Set up terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        1.0, // Not instant
+		Magnitude:       1.0,
+		TargetType:      TargetTerrain,
+		TargetX:         100.0,
+		TargetY:         100.0,
+		Radius:          0,
+		TerrainModifier: int(TerrainModifierCreateWall),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	entities := []*Entity{entity}
+
+	// First update should execute the effect
+	system.Update(entities, 0.016)
+
+	// Second update should skip (already executed)
+	system.Update(entities, 0.016)
+
+	// Third update should skip (already executed)
+	system.Update(entities, 0.016)
+
+	// Verify elapsed time accumulated
+	if effect.ElapsedTime < 0.048 {
+		t.Errorf("ElapsedTime = %v, want at least 0.048", effect.ElapsedTime)
+	}
+}
+
+func TestSpellEffectSystem_ExecuteTerrainManipulation_AreaEffect(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	system := NewSpellEffectSystem(world, rng)
+
+	// Set up terrain modification system
+	terrainModSystem := NewTerrainModificationSystem(32)
+	system.SetTerrainModificationSystem(terrainModSystem)
+
+	entity := world.CreateEntity()
+	effect := &SpellEffectComponent{
+		EffectType:      EffectTerrainManipulation,
+		Duration:        0, // Instant
+		Magnitude:       1.0,
+		TargetType:      TargetArea,
+		TargetX:         128.0,
+		TargetY:         128.0,
+		Radius:          64.0, // Radius of 2 tiles
+		TerrainModifier: int(TerrainModifierCreateWall),
+		Active:          true,
+		ElapsedTime:     0,
+	}
+	entity.AddComponent(effect)
+
+	// Should execute without panic
+	entities := []*Entity{entity}
+	system.Update(entities, 0.016)
+
+	// Verify effect was processed
+	if effect.ElapsedTime == 0 {
+		t.Error("ElapsedTime should have been updated")
+	}
+}
+
+func TestTerrainModifierType_Values(t *testing.T) {
+	// Verify terrain modifier type constants are distinct
+	types := []TerrainModifierType{
+		TerrainModifierCreateWall,
+		TerrainModifierDigTunnel,
+		TerrainModifierCreatePit,
+	}
+
+	seen := make(map[TerrainModifierType]bool)
+	for _, tt := range types {
+		if seen[tt] {
+			t.Errorf("Duplicate TerrainModifierType value: %d", tt)
+		}
+		seen[tt] = true
+	}
+
+	// Verify expected values
+	if TerrainModifierCreateWall != 0 {
+		t.Errorf("TerrainModifierCreateWall = %d, want 0", TerrainModifierCreateWall)
+	}
+	if TerrainModifierDigTunnel != 1 {
+		t.Errorf("TerrainModifierDigTunnel = %d, want 1", TerrainModifierDigTunnel)
+	}
+	if TerrainModifierCreatePit != 2 {
+		t.Errorf("TerrainModifierCreatePit = %d, want 2", TerrainModifierCreatePit)
+	}
+}

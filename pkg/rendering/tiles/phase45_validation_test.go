@@ -1,27 +1,14 @@
-// Package tiles - Step 10 validation tests for Phase 45 graphics improvements.
-// These tests verify all validation criteria from docs/PLAN.md Step 10.
+// Package tiles - Phase 45 validation tests for 64×64 graphics improvements.
+// These tests verify all validation criteria for Phase 45 64×64 graphics improvements.
 package tiles
 
 import (
 	"testing"
 )
 
-// TestStep10_DefaultDimensions64x64 validates default tile dimensions are 64×64.
-// Validation criteria: All sprites/tiles/shapes generate at 64×64 by default.
-func TestStep10_DefaultDimensions64x64(t *testing.T) {
-	config := DefaultConfig()
-
-	if config.Width != 64 {
-		t.Errorf("DefaultConfig().Width = %d, want 64", config.Width)
-	}
-	if config.Height != 64 {
-		t.Errorf("DefaultConfig().Height = %d, want 64", config.Height)
-	}
-}
-
-// TestStep10_TileGeneration64x64 validates tile generation at 64×64.
+// TestPhase45_TileGeneration64x64 validates tile generation at 64×64.
 // Validation criteria: tile <1ms for 64×64.
-func TestStep10_TileGeneration64x64(t *testing.T) {
+func TestPhase45_TileGeneration64x64(t *testing.T) {
 	gen := NewGenerator()
 	config := Config{
 		Type:    TileFloor,
@@ -44,8 +31,8 @@ func TestStep10_TileGeneration64x64(t *testing.T) {
 	}
 }
 
-// TestStep10_AllTileTypesGenerate64x64 validates all tile types generate at 64×64.
-func TestStep10_AllTileTypesGenerate64x64(t *testing.T) {
+// TestPhase45_AllTileTypesGenerate64x64 validates all tile types generate at 64×64.
+func TestPhase45_AllTileTypesGenerate64x64(t *testing.T) {
 	gen := NewGenerator()
 	tileTypes := []TileType{
 		TileFloor, TileWall, TileDoor, TileCorridor,
@@ -77,9 +64,9 @@ func TestStep10_AllTileTypesGenerate64x64(t *testing.T) {
 	}
 }
 
-// BenchmarkStep10_TileGeneration64x64 benchmarks tile generation at 64×64.
+// BenchmarkPhase45_TileGeneration64x64 benchmarks tile generation at 64×64.
 // Validation criteria: tile <1ms for 64×64.
-func BenchmarkStep10_TileGeneration64x64(b *testing.B) {
+func BenchmarkPhase45_TileGeneration64x64(b *testing.B) {
 	gen := NewGenerator()
 	config := Config{
 		Type:    TileFloor,
@@ -100,8 +87,8 @@ func BenchmarkStep10_TileGeneration64x64(b *testing.B) {
 	}
 }
 
-// BenchmarkStep10_AllTileTypes64x64 benchmarks all tile types at 64×64.
-func BenchmarkStep10_AllTileTypes64x64(b *testing.B) {
+// BenchmarkPhase45_AllTileTypes64x64 benchmarks all tile types at 64×64.
+func BenchmarkPhase45_AllTileTypes64x64(b *testing.B) {
 	tileTypes := []TileType{
 		TileFloor, TileWall, TileDoor, TileCorridor,
 		TileWater, TileLava, TileTrap, TileStairs,

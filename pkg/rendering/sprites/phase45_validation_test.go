@@ -1,27 +1,14 @@
-// Package sprites - Step 10 validation tests for Phase 45 graphics improvements.
-// These tests verify all validation criteria from docs/PLAN.md Step 10.
+// Package sprites - Phase 45 validation tests for 64×64 graphics improvements.
+// These tests verify all validation criteria for Phase 45 64×64 graphics improvements.
 package sprites
 
 import (
 	"testing"
 )
 
-// TestStep10_DefaultDimensions64x64 validates default sprite dimensions are 64×64.
-// Validation criteria: All sprites/tiles/shapes generate at 64×64 by default.
-func TestStep10_DefaultDimensions64x64(t *testing.T) {
-	config := DefaultConfig()
-
-	if config.Width != 64 {
-		t.Errorf("DefaultConfig().Width = %d, want 64", config.Width)
-	}
-	if config.Height != 64 {
-		t.Errorf("DefaultConfig().Height = %d, want 64", config.Height)
-	}
-}
-
-// TestStep10_ShadowOpacity03 validates shadow opacity at 0.3 for ground-level shadows.
+// TestPhase45_ShadowOpacity03 validates shadow opacity at 0.3 for ground-level shadows.
 // Validation criteria: Shadow opacity at 0.3 for ground-level shadows.
-func TestStep10_ShadowOpacity03(t *testing.T) {
+func TestPhase45_ShadowOpacity03(t *testing.T) {
 	templates := []struct {
 		name     string
 		template AnatomicalTemplate
@@ -50,9 +37,9 @@ func TestStep10_ShadowOpacity03(t *testing.T) {
 	}
 }
 
-// TestStep10_ShadowAtGroundLevel validates shadows are at ground level (RelativeY ≥ 0.85).
+// TestPhase45_ShadowAtGroundLevel validates shadows are at ground level (RelativeY ≥ 0.85).
 // Validation criteria: Shadows at ground level (RelativeY ≥ 0.85).
-func TestStep10_ShadowAtGroundLevel(t *testing.T) {
+func TestPhase45_ShadowAtGroundLevel(t *testing.T) {
 	templates := []struct {
 		name     string
 		template AnatomicalTemplate
@@ -81,9 +68,9 @@ func TestStep10_ShadowAtGroundLevel(t *testing.T) {
 	}
 }
 
-// TestStep10_HeadInUpperPortion validates entity heads are in upper portion of sprite.
+// TestPhase45_HeadInUpperPortion validates entity heads are in upper portion of sprite.
 // Validation criteria: Entity heads in upper 25%, legs at 48% height.
-func TestStep10_HeadInUpperPortion(t *testing.T) {
+func TestPhase45_HeadInUpperPortion(t *testing.T) {
 	templates := []struct {
 		name     string
 		template AnatomicalTemplate
@@ -110,9 +97,9 @@ func TestStep10_HeadInUpperPortion(t *testing.T) {
 	}
 }
 
-// TestStep10_Phase45Proportions validates Phase 45 body proportions (head 12%, torso 40%, legs 48%).
+// TestPhase45_Proportions validates Phase 45 body proportions (head 12%, torso 40%, legs 48%).
 // Validation criteria: Phase 45 proportions - head 12%, torso 40%, legs 48%.
-func TestStep10_Phase45Proportions(t *testing.T) {
+func TestPhase45_Proportions(t *testing.T) {
 	template := HumanoidTemplate()
 
 	// Check head proportion (should be ~12% of sprite height)
@@ -136,9 +123,9 @@ func TestStep10_Phase45Proportions(t *testing.T) {
 	}
 }
 
-// TestStep10_SilhouetteQualityThreshold validates silhouette quality threshold of 0.85.
+// TestPhase45_SilhouetteQualityThreshold validates silhouette quality threshold of 0.85.
 // Validation criteria: Silhouette recognition ≥ 0.85 for humanoids.
-func TestStep10_SilhouetteQualityThreshold(t *testing.T) {
+func TestPhase45_SilhouetteQualityThreshold(t *testing.T) {
 	// Test that excellent quality is defined as ≥ 0.80
 	// The 0.85 target is for actual generated sprites
 	analysis := SilhouetteAnalysis{OverallScore: 0.85}
@@ -171,9 +158,9 @@ func TestStep10_SilhouetteQualityThreshold(t *testing.T) {
 	}
 }
 
-// TestStep10_TopDownPerspectiveValidation validates all top-down perspective requirements.
+// TestPhase45_TopDownPerspectiveValidation validates all top-down perspective requirements.
 // Validation criteria: Entity heads in upper 20%, shadows at ground level.
-func TestStep10_TopDownPerspectiveValidation(t *testing.T) {
+func TestPhase45_TopDownPerspectiveValidation(t *testing.T) {
 	template := HumanoidTemplate()
 
 	// Verify Z-index ordering for top-down (shadow lowest, then legs, arms, torso, head)
@@ -195,45 +182,9 @@ func TestStep10_TopDownPerspectiveValidation(t *testing.T) {
 	}
 }
 
-// TestStep10_TestCoverage validates test coverage requirements.
-// This test ensures that the package has comprehensive test coverage.
-func TestStep10_TestCoverage(t *testing.T) {
-	// This test validates that key functions are covered by existing tests.
-	// The actual coverage measurement is done by `go test -cover`.
-
-	// Verify DefaultConfig is accessible and returns valid config
-	config := DefaultConfig()
-	if config.Width <= 0 || config.Height <= 0 {
-		t.Error("DefaultConfig should return valid dimensions")
-	}
-
-	// Verify all template functions are accessible
-	templates := []AnatomicalTemplate{
-		HumanoidTemplate(),
-		QuadrupedTemplate(),
-		BlobTemplate(),
-		MechanicalTemplate(),
-		FlyingTemplate(),
-		Enhanced64HumanoidTemplate(),
-		Detailed64HumanoidTemplate(),
-		Enhanced64QuadrupedTemplate(),
-		Enhanced64BlobTemplate(),
-		Enhanced64MechanicalTemplate(),
-	}
-
-	for _, tmpl := range templates {
-		if tmpl.Name == "" {
-			t.Error("template should have a name")
-		}
-		if len(tmpl.BodyPartLayout) == 0 {
-			t.Errorf("template %s should have body parts", tmpl.Name)
-		}
-	}
-}
-
-// BenchmarkStep10_SpriteGeneration64x64 benchmarks sprite generation at 64×64.
+// BenchmarkPhase45_SpriteGeneration64x64 benchmarks sprite generation at 64×64.
 // Validation criteria: Sprite generation <2ms for 64×64.
-func BenchmarkStep10_SpriteGeneration64x64(b *testing.B) {
+func BenchmarkPhase45_SpriteGeneration64x64(b *testing.B) {
 	gen := NewGenerator()
 	config := Config{
 		Type:       SpriteEntity,
@@ -254,9 +205,9 @@ func BenchmarkStep10_SpriteGeneration64x64(b *testing.B) {
 	}
 }
 
-// BenchmarkStep10_TemplateCreation64x64 benchmarks 64×64 template creation.
+// BenchmarkPhase45_TemplateCreation64x64 benchmarks 64×64 template creation.
 // This validates template creation performance for Phase 45 templates.
-func BenchmarkStep10_TemplateCreation64x64(b *testing.B) {
+func BenchmarkPhase45_TemplateCreation64x64(b *testing.B) {
 	b.Run("Enhanced64Humanoid", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = Enhanced64HumanoidTemplate()

@@ -59,7 +59,19 @@ type CacheStats struct {
 
 // NewCache creates a new sprite cache with the specified capacity.
 // capacity specifies the maximum number of sprites to cache.
-// Recommended: 100-200 sprites (~500KB-2MB memory).
+//
+// Memory calculation (Phase 45: 64×64 default):
+//   - 32×32 RGBA sprite: 4KB (32×32×4)
+//   - 64×64 RGBA sprite: 16KB (64×64×4)
+//   - 128×128 RGBA sprite: 64KB (128×128×4)
+//
+// Recommended capacity for <300MB memory target:
+//   - 64×64 sprites: 100-200 sprites (~1.6MB-3.2MB)
+//   - Mixed sizes: 150 sprites (~3MB average)
+//   - Maximum: ~18,750 sprites (using the MaxCacheSize and SpriteSize64 constants from pkg/rendering/cache)
+//
+// For byte-based caching, use pkg/rendering/cache.SpriteCache instead,
+// which manages memory limits directly in bytes using cache.DefaultCacheSize.
 func NewCache(capacity int) *Cache {
 	if capacity <= 0 {
 		capacity = 100 // Default capacity

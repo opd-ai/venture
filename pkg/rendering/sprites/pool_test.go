@@ -412,3 +412,76 @@ func TestShapePool_NilHandling(t *testing.T) {
 		t.Error("Get() returned nil after Put(nil)")
 	}
 }
+
+// Phase 45 tests for updated constants and 64×64 default support
+
+func TestPhase45_SpriteSizeConstants(t *testing.T) {
+	// Verify size constants are correct for Phase 45
+	// Test primary constants (preferred naming convention)
+	if SizeDefault != 64 {
+		t.Errorf("SizeDefault = %d, want 64 (Phase 45 standard)", SizeDefault)
+	}
+	if SizeSmall != 32 {
+		t.Errorf("SizeSmall = %d, want 32", SizeSmall)
+	}
+	if SizeLarge != 128 {
+		t.Errorf("SizeLarge = %d, want 128", SizeLarge)
+	}
+
+	// Test backward-compatible aliases
+	if DefaultSpriteSize != SizeDefault {
+		t.Errorf("DefaultSpriteSize (%d) != SizeDefault (%d)", DefaultSpriteSize, SizeDefault)
+	}
+	if SmallSpriteSize != SizeSmall {
+		t.Errorf("SmallSpriteSize (%d) != SizeSmall (%d)", SmallSpriteSize, SizeSmall)
+	}
+	if LargeSpriteSize != SizeLarge {
+		t.Errorf("LargeSpriteSize (%d) != SizeLarge (%d)", LargeSpriteSize, SizeLarge)
+	}
+}
+
+func TestPhase45_DefaultSizePooling(t *testing.T) {
+	pool := NewImagePool(SizeDefault, SizeDefault)
+
+	if pool.width != SizeDefault {
+		t.Errorf("width = %d, want %d", pool.width, SizeDefault)
+	}
+	if pool.height != SizeDefault {
+		t.Errorf("height = %d, want %d", pool.height, SizeDefault)
+	}
+
+	// Get image from pool
+	img := pool.Get()
+	if img == nil {
+		t.Fatal("Get() returned nil")
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != SizeDefault || bounds.Dy() != SizeDefault {
+		t.Errorf("Image size = %dx%d, want %dx%d",
+			bounds.Dx(), bounds.Dy(), SizeDefault, SizeDefault)
+	}
+}
+
+func TestPhase45_ShapePoolDefaultSize(t *testing.T) {
+	sp := NewShapePool()
+
+	// Get default 64×64 image (Phase 45 standard)
+	img := sp.Get(SizeDefault, SizeDefault)
+	if img == nil {
+		t.Fatal("Get() returned nil for SizeDefault")
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != SizeDefault || bounds.Dy() != SizeDefault {
+		t.Errorf("Image size = %dx%d, want %dx%d",
+			bounds.Dx(), bounds.Dy(), SizeDefault, SizeDefault)
+	}
+
+	// Return and get again
+	sp.Put(img)
+	img2 := sp.Get(SizeDefault, SizeDefault)
+	if img2 == nil {
+		t.Fatal("Second Get() returned nil")
+	}
+}

@@ -255,6 +255,16 @@ type Item struct {
 	// For scrolls: "fireball", "lightning", "ice", "protection", "teleportation", etc.
 	// Integration: Gap A2 - Consumable Spell Effect Activation
 	SpellEffectID string
+	// SpellDuration is the duration of the spell effect in seconds (0 = use default)
+	// Integration: Gap A2 - Consumable Spell Effect Activation
+	SpellDuration float64
+	// SpellTargetType specifies targeting mode: "self", "entity", "area", "terrain"
+	// Empty string means auto-detect based on SpellEffectID
+	// Integration: Gap A2 - Consumable Spell Effect Activation
+	SpellTargetType string
+	// SpellRadius is the effect radius for area-targeting spells (0 = use default)
+	// Integration: Gap A2 - Consumable Spell Effect Activation
+	SpellRadius float64
 }
 
 // IsEquippable returns true if the item can be equipped.

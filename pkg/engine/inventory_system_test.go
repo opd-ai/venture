@@ -821,10 +821,26 @@ func TestInventorySystem_UseScrollWithSpellEffect(t *testing.T) {
 			effect.EffectType, EffectElementalFusion)
 	}
 
+	// Verify target type is Area for offensive spells like fireball
+	if effect.TargetType != TargetArea {
+		t.Errorf("Target type = %v, want %v (TargetArea for fireball)",
+			effect.TargetType, TargetArea)
+	}
+
 	// Verify magnitude is based on rarity (Rare = 1.5x multiplier)
 	expectedMagnitude := float64(50) / 10.0 * 1.5 // value/10 * rare multiplier
 	if effect.Magnitude != expectedMagnitude {
 		t.Errorf("Effect magnitude = %v, want %v", effect.Magnitude, expectedMagnitude)
+	}
+
+	// Verify duration uses default
+	if effect.Duration != DefaultScrollEffectDuration {
+		t.Errorf("Effect duration = %v, want %v", effect.Duration, DefaultScrollEffectDuration)
+	}
+
+	// Verify radius uses default for area spells
+	if effect.Radius != DefaultScrollEffectRadius {
+		t.Errorf("Effect radius = %v, want %v", effect.Radius, DefaultScrollEffectRadius)
 	}
 }
 
@@ -987,6 +1003,160 @@ func TestInventorySystem_CalculateScrollMagnitude(t *testing.T) {
 			result := system.calculateScrollMagnitude(scroll)
 			if result != tt.expectedMag {
 				t.Errorf("calculateScrollMagnitude() = %v, want %v", result, tt.expectedMag)
+			}
+		})
+	}
+}
+
+// TestInventorySystem_UseScrollWithCustomDuration tests scrolls with custom duration.
+func TestInventorySystem_UseScrollWithCustomDuration(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+	spellSystem := NewSpellEffectSystem(world, nil)
+	system.SetSpellEffectSystem(spellSystem)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	world.Update(0.0)
+
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add scroll with custom duration
+	scroll := createTestItem("Scroll of Protection", item.TypeConsumable, 0.1, 50, 0, 0)
+	scroll.ConsumableType = item.ConsumableScroll
+	scroll.SpellEffectID = "protection"
+	scroll.SpellDuration = 10.0 // Custom duration
+	inv.AddItem(scroll)
+
+	err := system.UseConsumable(entity.ID, 0)
+	if err != nil {
+		t.Fatalf("UseConsumable failed: %v", err)
+	}
+
+	effectComp, _ := entity.GetComponent("spell_effect")
+	effect := effectComp.(*SpellEffectComponent)
+
+	// Verify custom duration is used
+	if effect.Duration != 10.0 {
+		t.Errorf("Effect duration = %v, want 10.0", effect.Duration)
+	}
+
+	// Verify protection spell targets self
+	if effect.TargetType != TargetSelf {
+		t.Errorf("Target type = %v, want %v", effect.TargetType, TargetSelf)
+	}
+}
+
+// TestInventorySystem_UseScrollWithCustomTargetType tests scrolls with custom target type.
+func TestInventorySystem_UseScrollWithCustomTargetType(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+	spellSystem := NewSpellEffectSystem(world, nil)
+	system.SetSpellEffectSystem(spellSystem)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	world.Update(0.0)
+
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add scroll with custom target type (heal targeting entity instead of self)
+	scroll := createTestItem("Scroll of Group Heal", item.TypeConsumable, 0.1, 50, 0, 0)
+	scroll.ConsumableType = item.ConsumableScroll
+	scroll.SpellEffectID = "heal"
+	scroll.SpellTargetType = "area" // Override to area targeting
+	scroll.SpellRadius = 100.0      // Custom radius
+	inv.AddItem(scroll)
+
+	err := system.UseConsumable(entity.ID, 0)
+	if err != nil {
+		t.Fatalf("UseConsumable failed: %v", err)
+	}
+
+	effectComp, _ := entity.GetComponent("spell_effect")
+	effect := effectComp.(*SpellEffectComponent)
+
+	// Verify target type was overridden
+	if effect.TargetType != TargetArea {
+		t.Errorf("Target type = %v, want %v", effect.TargetType, TargetArea)
+	}
+
+	// Verify custom radius
+	if effect.Radius != 100.0 {
+		t.Errorf("Effect radius = %v, want 100.0", effect.Radius)
+	}
+}
+
+// TestInventorySystem_MapSpellEffectIDWithTarget tests the spell effect ID to target type mapping.
+func TestInventorySystem_MapSpellEffectIDWithTarget(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	tests := []struct {
+		spellID        string
+		expectedEffect EffectType
+		expectedTarget TargetType
+	}{
+		{"fireball", EffectElementalFusion, TargetArea},
+		{"lightning", EffectElementalFusion, TargetArea},
+		{"ice", EffectElementalFusion, TargetArea},
+		{"protection", EffectMetamagic, TargetSelf},
+		{"shield", EffectMetamagic, TargetSelf},
+		{"teleportation", EffectTeleportation, TargetSelf},
+		{"haste", EffectTimeManipulation, TargetSelf},
+		{"heal", EffectLifeDrain, TargetSelf},
+		{"summon", EffectSummoning, TargetArea},
+		{"invisibility", EffectIllusion, TargetSelf},
+		{"wall", EffectTerrainManipulation, TargetTerrain},
+		{"transmute", EffectTransmutation, TargetTerrain},
+		{"unknown", EffectElementalFusion, TargetArea}, // Default
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.spellID, func(t *testing.T) {
+			effectType, targetType := system.mapSpellEffectIDWithTarget(tt.spellID)
+			if effectType != tt.expectedEffect {
+				t.Errorf("mapSpellEffectIDWithTarget(%s) effect = %v, want %v",
+					tt.spellID, effectType, tt.expectedEffect)
+			}
+			if targetType != tt.expectedTarget {
+				t.Errorf("mapSpellEffectIDWithTarget(%s) target = %v, want %v",
+					tt.spellID, targetType, tt.expectedTarget)
+			}
+		})
+	}
+}
+
+// TestInventorySystem_ParseTargetType tests target type string parsing.
+func TestInventorySystem_ParseTargetType(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	tests := []struct {
+		input       string
+		defaultType TargetType
+		expected    TargetType
+	}{
+		{"self", TargetArea, TargetSelf},
+		{"entity", TargetArea, TargetEntity},
+		{"area", TargetSelf, TargetArea},
+		{"terrain", TargetSelf, TargetTerrain},
+		{"", TargetArea, TargetArea},         // Empty uses default
+		{"invalid", TargetSelf, TargetSelf},  // Unknown uses default
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := system.parseTargetType(tt.input, tt.defaultType)
+			if result != tt.expected {
+				t.Errorf("parseTargetType(%s, %v) = %v, want %v",
+					tt.input, tt.defaultType, result, tt.expected)
 			}
 		})
 	}

@@ -51,7 +51,7 @@ func TestStep10_ShadowOpacity03(t *testing.T) {
 }
 
 // TestStep10_ShadowAtGroundLevel validates shadows are at ground level (RelativeY ≥ 0.85).
-// Validation criteria: Shadows at ground level (RelativeY ≥ 0.90).
+// Validation criteria: Shadows at ground level (RelativeY ≥ 0.85).
 func TestStep10_ShadowAtGroundLevel(t *testing.T) {
 	templates := []struct {
 		name     string
@@ -81,8 +81,8 @@ func TestStep10_ShadowAtGroundLevel(t *testing.T) {
 	}
 }
 
-// TestStep10_HeadInUpperPortion validates entity heads are in upper 20% of sprite.
-// Validation criteria: Entity heads in upper 20%, legs at 48% height.
+// TestStep10_HeadInUpperPortion validates entity heads are in upper portion of sprite.
+// Validation criteria: Entity heads in upper 25%, legs at 48% height.
 func TestStep10_HeadInUpperPortion(t *testing.T) {
 	templates := []struct {
 		name     string
@@ -101,9 +101,9 @@ func TestStep10_HeadInUpperPortion(t *testing.T) {
 				return
 			}
 
-			// Head should be in upper portion (RelativeY ≤ 0.20)
+			// Head should be in upper portion (RelativeY ≤ 0.25)
 			if head.RelativeY > 0.25 {
-				t.Errorf("%s: head RelativeY %.2f should be ≤ 0.25 (upper 20%%)",
+				t.Errorf("%s: head RelativeY %.2f should be ≤ 0.25 (upper portion)",
 					tt.name, head.RelativeY)
 			}
 		})
@@ -118,7 +118,7 @@ func TestStep10_Phase45Proportions(t *testing.T) {
 	// Check head proportion (should be ~12% of sprite height)
 	head := template.BodyPartLayout[PartHead]
 	if head.PreferredPixelSize != nil {
-		// For 32×32 base template, head should be ~4 pixels (12.5%)
+		// Head should be small relative to body (max 8 pixels height for 64×64 sprites)
 		if head.PreferredPixelSize.Height > 8 {
 			t.Errorf("head height %d pixels too large for 12%% proportion",
 				head.PreferredPixelSize.Height)
@@ -128,7 +128,7 @@ func TestStep10_Phase45Proportions(t *testing.T) {
 	// Check legs proportion (should be ~48% of sprite height)
 	legs := template.BodyPartLayout[PartLegs]
 	if legs.PreferredPixelSize != nil {
-		// For 32×32 base template, legs should be ~15 pixels (48%)
+		// Legs should be substantial (min 10 pixels height for 64×64 sprites)
 		if legs.PreferredPixelSize.Height < 10 {
 			t.Errorf("legs height %d pixels too small for 48%% proportion",
 				legs.PreferredPixelSize.Height)

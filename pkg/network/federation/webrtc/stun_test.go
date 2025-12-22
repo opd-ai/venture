@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+// skipIfNoNetwork skips the test if external network access is unavailable.
+// This allows tests to pass in sandboxed environments without network access.
+func skipIfNoNetwork(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	// Attempt to resolve a well-known host to check network availability
+	resolver := &net.Resolver{}
+	_, err := resolver.LookupHost(ctx, "stun.l.google.com")
+	if err != nil {
+		t.Skip("Skipping test: external network access unavailable")
+	}
+}
+
 func TestNewSTUNClient(t *testing.T) {
 	client := NewSTUNClient([]string{"stun:stun.example.com:3478"})
 
@@ -33,6 +47,7 @@ func TestNewSTUNClientDefaultServers(t *testing.T) {
 }
 
 func TestSTUNClientGetPublicAddress(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{"stun:stun.l.google.com:19302"})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -58,6 +73,7 @@ func TestSTUNClientGetPublicAddress(t *testing.T) {
 }
 
 func TestSTUNClientCaching(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{"stun:stun.l.google.com:19302"})
 
 	ctx := context.Background()
@@ -83,6 +99,7 @@ func TestSTUNClientCaching(t *testing.T) {
 }
 
 func TestSTUNClientDetectNATType(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{
 		"stun:stun1.l.google.com:19302",
 		"stun:stun2.l.google.com:19302",
@@ -113,6 +130,7 @@ func TestSTUNClientDetectNATTypeInsufficientServers(t *testing.T) {
 }
 
 func TestSTUNClientGetStats(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{"stun:stun.l.google.com:19302"})
 
 	ctx := context.Background()
@@ -134,6 +152,7 @@ func TestSTUNClientGetStats(t *testing.T) {
 }
 
 func TestSTUNResponseParsing(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{"stun:stun.l.google.com:19302"})
 
 	ctx := context.Background()
@@ -211,6 +230,7 @@ func TestSTUNClientTimeout(t *testing.T) {
 }
 
 func TestSTUNClientMultipleServers(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{
 		"stun:192.0.2.1:3478",          // Unreachable
 		"stun:stun.l.google.com:19302", // Should work
@@ -228,6 +248,7 @@ func TestSTUNClientMultipleServers(t *testing.T) {
 }
 
 func TestSTUNClientCacheExpiry(t *testing.T) {
+	skipIfNoNetwork(t)
 	client := NewSTUNClient([]string{"stun:stun.l.google.com:19302"})
 
 	ctx := context.Background()

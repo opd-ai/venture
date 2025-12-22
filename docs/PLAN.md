@@ -35,70 +35,57 @@ This plan provides complete resolution steps for all 44 documented integration g
 
 ## Phase 1: High Priority - System Interfaces (Week 1)
 
-### Gap A1: AdaptiveMusicSystem Interface Implementation
+### Gap A1: AdaptiveMusicSystem Interface Implementation ✅ COMPLETED
 
 **File:** `pkg/engine/audio_manager.go`  
 **Gap:** AudioManager did not implement audio.AdaptiveMusicSystem interface required by MusicTriggerSystem
 
-**Resolution:**
-```go
-// Add to AudioManager struct:
-func (am *AudioManager) GetCurrentIntensity() int {
-    if am.soundtrackSystem != nil {
-        return am.soundtrackSystem.GetIntensity()
-    }
-    return 0
-}
+**Status:** RESOLVED (Pre-existing implementation verified 2025-12-22)
 
-func (am *AudioManager) SetIntensity(intensity int) {
-    if am.soundtrackSystem != nil {
-        am.soundtrackSystem.SetIntensity(intensity)
-    }
-}
-
-func (am *AudioManager) TriggerMusicEvent(event string) {
-    if am.soundtrackSystem != nil {
-        am.soundtrackSystem.HandleEvent(event)
-    }
-}
-```
+**Implementation:**
+AudioManager already implements all required methods of `audio.AdaptiveMusicSystem`:
+- `SetContext(context MusicContext) error`
+- `UpdateIntensity(intensity float64) error`
+- `AddLayer(layer MusicLayer) error`
+- `RemoveLayer(layer MusicLayer) error`
+- `Update(deltaTime float64)`
+- `GenerateTrack(duration float64) *AudioSample`
 
 **Verification:**
 ```bash
-grep -n "AdaptiveMusicSystem" pkg/engine/audio_manager.go
-go test ./pkg/engine/... -run AudioManager
+# Compile-time verification confirms interface implementation
+var _ audio.AdaptiveMusicSystem = &engine.AudioManager{}
+go test ./pkg/engine/... -run AudioManager  # All tests pass
 ```
 
 ---
 
-### Gap A2: Consumable Spell Effect Activation
+### Gap A2: Consumable Spell Effect Activation ✅ COMPLETED
 
 **File:** `pkg/engine/inventory_system.go`  
 **Gap:** Using consumable items doesn't trigger spell effects (potions, scrolls)
 
-**Resolution:**
-```go
-// In UseItem() method, after consuming the item:
-func (is *InventorySystem) UseItem(entity *Entity, itemID uint64) error {
-    // ... existing validation ...
-    
-    // NEW: Trigger spell effect for consumables
-    if item.Type == ItemTypeConsumable && item.SpellID != "" {
-        if spellComp, ok := entity.GetComponent("spell_caster"); ok && spellComp != nil {
-            caster := spellComp.(*SpellCasterComponent)
-            is.world.GetSystem("spell_effect").(*SpellEffectSystem).CastSpell(
-                entity, caster, item.SpellID, item.SpellLevel,
-            )
-        }
-    }
-    
-    // ... rest of consumption logic ...
-}
-```
+**Status:** RESOLVED (2025-12-22)
+
+**Implementation:**
+1. Added `SpellEffectID` field to `item.Item` struct in `pkg/procgen/item/types.go`
+2. Added `spellEffectSystem` field and `SetSpellEffectSystem()` method to InventorySystem
+3. Implemented `applyScrollSpellEffect()` to trigger spell effects when scrolls are consumed
+4. Implemented `mapSpellEffectID()` to convert spell IDs to EffectTypes
+5. Implemented `calculateScrollMagnitude()` for rarity-based magnitude scaling
 
 **Integration Points:**
-1. `pkg/engine/inventory_system.go` - Add spell effect trigger
-2. `pkg/engine/spell_effect_system.go` - Ensure CastSpell is public
+1. `pkg/procgen/item/types.go` - Added `SpellEffectID` field to Item struct
+2. `pkg/engine/inventory_system.go` - Scroll consumption now triggers spell effects
+3. `pkg/engine/spell_effect_system.go` - Uses `ApplySpellEffect()` method
+
+**Tests Added:**
+- `TestInventorySystem_UseScrollWithSpellEffect` - Verifies spell effects are applied
+- `TestInventorySystem_UseScrollWithoutSpellSystem` - Verifies graceful degradation
+- `TestInventorySystem_UseScrollWithoutSpellEffectID` - Verifies handling of scrolls without spell IDs
+- `TestInventorySystem_SetSpellEffectSystem` - Verifies setter
+- `TestInventorySystem_MapSpellEffectID` - Tests all spell ID mappings
+- `TestInventorySystem_CalculateScrollMagnitude` - Tests magnitude calculation by rarity
 
 ---
 

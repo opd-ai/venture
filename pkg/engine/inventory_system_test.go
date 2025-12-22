@@ -772,3 +772,222 @@ func TestInventorySystem_DropAndPickup(t *testing.T) {
 		t.Errorf("Item entity should be removed after pickup, found %d item entities", itemCount)
 	}
 }
+
+// TestInventorySystem_UseScrollWithSpellEffect tests using a scroll that triggers spell effects.
+// Gap A2: Consumable Spell Effect Activation tests.
+func TestInventorySystem_UseScrollWithSpellEffect(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+	spellSystem := NewSpellEffectSystem(world, nil)
+	system.SetSpellEffectSystem(spellSystem)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	world.Update(0.0) // Process entity additions
+
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add scroll with fireball spell effect
+	scroll := createTestItem("Scroll of Fireball", item.TypeConsumable, 0.1, 50, 0, 0)
+	scroll.ConsumableType = item.ConsumableScroll
+	scroll.SpellEffectID = "fireball"
+	scroll.Rarity = item.RarityRare
+	inv.AddItem(scroll)
+
+	// Use scroll
+	err := system.UseConsumable(entity.ID, 0)
+	if err != nil {
+		t.Fatalf("UseConsumable failed: %v", err)
+	}
+
+	// Verify scroll was consumed
+	if inv.GetItemCount() != 0 {
+		t.Error("Scroll should be removed from inventory after use")
+	}
+
+	// Verify spell effect was applied
+	if !entity.HasComponent("spell_effect") {
+		t.Error("Entity should have spell_effect component after using scroll")
+	}
+
+	// Verify effect type
+	effectComp, _ := entity.GetComponent("spell_effect")
+	effect := effectComp.(*SpellEffectComponent)
+	if effect.EffectType != EffectElementalFusion {
+		t.Errorf("Effect type = %v, want %v (ElementalFusion for fireball)",
+			effect.EffectType, EffectElementalFusion)
+	}
+
+	// Verify magnitude is based on rarity (Rare = 1.5x multiplier)
+	expectedMagnitude := float64(50) / 10.0 * 1.5 // value/10 * rare multiplier
+	if effect.Magnitude != expectedMagnitude {
+		t.Errorf("Effect magnitude = %v, want %v", effect.Magnitude, expectedMagnitude)
+	}
+}
+
+// TestInventorySystem_UseScrollWithoutSpellSystem tests scroll behavior when no spell system is set.
+func TestInventorySystem_UseScrollWithoutSpellSystem(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+	// Note: Not setting spell effect system
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+
+	world.Update(0.0)
+
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add scroll
+	scroll := createTestItem("Scroll of Ice", item.TypeConsumable, 0.1, 30, 0, 0)
+	scroll.ConsumableType = item.ConsumableScroll
+	scroll.SpellEffectID = "ice"
+	inv.AddItem(scroll)
+
+	// Use scroll (should succeed without crashing, but no spell effect applied)
+	err := system.UseConsumable(entity.ID, 0)
+	if err != nil {
+		t.Fatalf("UseConsumable failed: %v", err)
+	}
+
+	// Scroll should still be consumed
+	if inv.GetItemCount() != 0 {
+		t.Error("Scroll should be consumed even without spell system")
+	}
+
+	// No spell effect should be applied
+	if entity.HasComponent("spell_effect") {
+		t.Error("Entity should NOT have spell_effect without spell system")
+	}
+}
+
+// TestInventorySystem_UseScrollWithoutSpellEffectID tests using a scroll that has no SpellEffectID.
+func TestInventorySystem_UseScrollWithoutSpellEffectID(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+	spellSystem := NewSpellEffectSystem(world, nil)
+	system.SetSpellEffectSystem(spellSystem)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewInventoryComponent(10, 100.0))
+
+	world.Update(0.0)
+
+	comp, _ := entity.GetComponent("inventory")
+	inv := comp.(*InventoryComponent)
+
+	// Add scroll without SpellEffectID
+	scroll := createTestItem("Blank Scroll", item.TypeConsumable, 0.1, 10, 0, 0)
+	scroll.ConsumableType = item.ConsumableScroll
+	// Note: Not setting SpellEffectID
+	inv.AddItem(scroll)
+
+	// Use scroll
+	err := system.UseConsumable(entity.ID, 0)
+	if err != nil {
+		t.Fatalf("UseConsumable failed: %v", err)
+	}
+
+	// Scroll should be consumed
+	if inv.GetItemCount() != 0 {
+		t.Error("Scroll should be consumed")
+	}
+
+	// No spell effect should be applied (no SpellEffectID)
+	if entity.HasComponent("spell_effect") {
+		t.Error("Entity should NOT have spell_effect for scroll without SpellEffectID")
+	}
+}
+
+// TestInventorySystem_SetSpellEffectSystem tests the setter for spell effect system.
+func TestInventorySystem_SetSpellEffectSystem(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	// Initially nil
+	if system.spellEffectSystem != nil {
+		t.Error("spellEffectSystem should be nil initially")
+	}
+
+	// Set spell system
+	spellSystem := NewSpellEffectSystem(world, nil)
+	system.SetSpellEffectSystem(spellSystem)
+
+	if system.spellEffectSystem != spellSystem {
+		t.Error("SetSpellEffectSystem should set the spell effect system")
+	}
+}
+
+// TestInventorySystem_MapSpellEffectID tests the spell effect ID mapping.
+func TestInventorySystem_MapSpellEffectID(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	tests := []struct {
+		spellID  string
+		expected EffectType
+	}{
+		{"fireball", EffectElementalFusion},
+		{"lightning", EffectElementalFusion},
+		{"ice", EffectElementalFusion},
+		{"protection", EffectMetamagic},
+		{"shield", EffectMetamagic},
+		{"teleportation", EffectTeleportation},
+		{"blink", EffectTeleportation},
+		{"haste", EffectTimeManipulation},
+		{"slow", EffectTimeManipulation},
+		{"levitation", EffectGravityControl},
+		{"heal", EffectLifeDrain},
+		{"summon", EffectSummoning},
+		{"invisibility", EffectIllusion},
+		{"wall", EffectTerrainManipulation},
+		{"transmute", EffectTransmutation},
+		{"unknown_spell", EffectElementalFusion}, // Default
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.spellID, func(t *testing.T) {
+			result := system.mapSpellEffectID(tt.spellID)
+			if result != tt.expected {
+				t.Errorf("mapSpellEffectID(%s) = %v, want %v",
+					tt.spellID, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestInventorySystem_CalculateScrollMagnitude tests magnitude calculation based on rarity.
+func TestInventorySystem_CalculateScrollMagnitude(t *testing.T) {
+	world := NewWorld()
+	system := NewInventorySystem(world)
+
+	tests := []struct {
+		name       string
+		value      int
+		rarity     item.Rarity
+		expectedMag float64
+	}{
+		{"common", 100, item.RarityCommon, 10.0},
+		{"uncommon", 100, item.RarityUncommon, 12.0},
+		{"rare", 100, item.RarityRare, 15.0},
+		{"epic", 100, item.RarityEpic, 20.0},
+		{"legendary", 100, item.RarityLegendary, 30.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scroll := &item.Item{
+				Stats:  item.Stats{Value: tt.value},
+				Rarity: tt.rarity,
+			}
+			result := system.calculateScrollMagnitude(scroll)
+			if result != tt.expectedMag {
+				t.Errorf("calculateScrollMagnitude() = %v, want %v", result, tt.expectedMag)
+			}
+		})
+	}
+}

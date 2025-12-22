@@ -251,6 +251,10 @@ type Item struct {
 	// Valid values: "warrior", "mage", "rogue", "ranger", "cleric", "necromancer"
 	// Phase 25.2: Class-specific equipment restrictions
 	ClassRestrictions []string
+	// SpellEffectID identifies the spell effect triggered when consumable is used
+	// For scrolls: "fireball", "lightning", "ice", "protection", "teleportation", etc.
+	// Integration: Gap A2 - Consumable Spell Effect Activation
+	SpellEffectID string
 }
 
 // IsEquippable returns true if the item can be equipped.

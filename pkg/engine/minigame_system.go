@@ -288,7 +288,7 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 					continue
 				}
 				itemComp, ok := itemCompRaw.(*ItemComponent)
-				if !ok || itemComp == nil || itemComp.Item == nil {
+				if !ok || itemComp.Item == nil {
 					continue
 				}
 				// Add the item to player inventory

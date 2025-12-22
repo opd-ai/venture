@@ -31,7 +31,7 @@ var MenuKeys = struct {
 	Territory    ebiten.Key // Y - Territory control and guild warfare
 	Dialog       ebiten.Key // D - Dialog with NPCs
 	Statistics   ebiten.Key // N - Player statistics (N for "Numbers")
-	Achievements ebiten.Key // H - Achievements (H for "Honor")
+	Achievements ebiten.Key // U - Achievements (changed from H to avoid conflict with Housing)
 
 	// Universal exit key (works for all menus)
 	Exit ebiten.Key // Escape - Universal menu closer

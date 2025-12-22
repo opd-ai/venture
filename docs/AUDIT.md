@@ -48,7 +48,7 @@ Key findings:
 
 ### DOCUMENTATION DISCREPANCY: Building Types Count
 
-~~~~
+```
 **File:** README.md (line 44)
 **Severity:** Low
 **Description:** The README states "5 types × 25 styles" for procedural buildings, but the implementation has 6 building types (House, Workshop, Storage, Tower, Manor, GuildHall) and 50 architectural styles.
@@ -68,11 +68,11 @@ const (
 	TypeGuildHall
 )
 ```
-~~~~
+```
 
 ### DOCUMENTATION DISCREPANCY: Talent Count Understated
 
-~~~~
+```
 **File:** README.md (line 49)
 **Severity:** Low
 **Description:** The README claims "90+ talents" but the implementation provides 120 unique talents across 15 base classes (30 talents per class: 10 Offensive, 10 Defensive, 10 Utility).
@@ -89,11 +89,11 @@ const (
 //   - Defensive: 10 talents
 //   - Utility: 10 talents
 ```
-~~~~
+```
 
 ### FUNCTIONAL MISMATCH: Help Key Binding Inconsistency
 
-~~~~
+```
 **File:** pkg/engine/input_system.go:379
 **Severity:** Low
 **Description:** The README documents "H or F1" as the Help key, but the `KeyHelp` constant in InputSystem is mapped to `ebiten.KeyEscape`. However, the help_system.go independently handles H and F1 keys for toggling the help screen.
@@ -109,11 +109,11 @@ KeyHelp: ebiten.KeyEscape,
 // pkg/engine/help_system.go:329
 if inpututil.IsKeyJustPressed(ebiten.KeyH) || inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 ```
-~~~~
+```
 
 ### FUNCTIONAL MISMATCH: Housing Key Binding Documentation
 
-~~~~
+```
 **File:** README.md:106 and pkg/engine/input_system.go
 **Severity:** Low
 **Description:** The README lists "H or F1 (help)" in the controls section, but H is actually bound to `KeyHousing` for the housing management UI (Phase 49.1). The help screen is accessible via ESC (which shows help as first priority before pause menu).
@@ -129,11 +129,11 @@ KeyHousing ebiten.Key // H key for housing management (Phase 49.1)
 // pkg/engine/input_system.go:376
 KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 ```
-~~~~
+```
 
 ### EDGE CASE BUG: Component Type Assertion Without Full Nil Check
 
-~~~~
+```
 **File:** pkg/engine/adaptive_soundtrack.go:190-191
 **Severity:** Low
 **Description:** In `countNearbyEnemies`, the code retrieves a position component and performs a type assertion without checking if the component is nil. While this is protected by the ECS query returning entities with the required components, if the cache becomes stale, this could panic.
@@ -147,7 +147,7 @@ KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 posComp, _ := entity.GetComponent("position")
 entityPos := posComp.(*PositionComponent) // No nil check
 ```
-~~~~
+```
 
 ---
 

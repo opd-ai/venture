@@ -28,13 +28,14 @@ type BloomConfig struct {
 }
 
 // DefaultBloomConfig returns a sensible default bloom configuration.
+// Phase 45: Radius and Samples scaled for 64×64 tiles (was 8/5 for 32×32).
 func DefaultBloomConfig() BloomConfig {
 	return BloomConfig{
 		Enabled:   true,
 		Threshold: 0.8,
 		Intensity: 1.0,
-		Radius:    8,
-		Samples:   5,
+		Radius:    16, // Phase 45: scaled from 8 to 16 for 64×64 tiles
+		Samples:   7,  // Phase 45: scaled from 5 to 7 for smoother bloom
 	}
 }
 

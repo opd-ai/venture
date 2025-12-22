@@ -35,12 +35,13 @@ type AOConfig struct {
 }
 
 // DefaultAOConfig returns a sensible default AO configuration.
+// Phase 45: Radius and Samples scaled 2× for 64×64 sprites (was 16/16 for 32×32).
 func DefaultAOConfig() AOConfig {
 	return AOConfig{
 		Enabled:   true,
 		Intensity: 0.5,
-		Radius:    16,
-		Samples:   16,
+		Radius:    32, // Phase 45: scaled from 16 to 32 for 64×64 sprites
+		Samples:   24, // Phase 45: scaled from 16 to 24 for larger sampling area
 		Bias:      0.02,
 		Power:     2.0,
 		Seed:      12345,

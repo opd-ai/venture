@@ -259,6 +259,49 @@ func TestAdaptiveSoundtrackSystemTransitionSpeed(t *testing.T) {
 	}
 }
 
+func TestAdaptiveSoundtrackSystemNilPositionDefense(t *testing.T) {
+	world := NewWorld()
+	system := NewAdaptiveSoundtrackSystem(world)
+
+	// Create player
+	player := world.CreateEntity()
+	playerPos := &PositionComponent{X: 100, Y: 100}
+	player.AddComponent(playerPos)
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
+	soundtrack.CombatThreshold = 2
+	player.AddComponent(soundtrack)
+
+	// Create enemy with position, health, and AI - initially valid
+	enemy := world.CreateEntity()
+	enemy.AddComponent(&PositionComponent{X: 150, Y: 100})
+	enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
+	enemy.AddComponent(&AIComponent{State: AIStateAttack})
+
+	// Process pending entities so enemy is in query results
+	world.Update(0)
+
+	// Verify enemy is counted initially
+	initialCount := system.countNearbyEnemies(playerPos, 100.0)
+	if initialCount != 1 {
+		t.Errorf("Initial enemy count = %d, want 1", initialCount)
+	}
+
+	// Simulate stale cache scenario: remove position component after entity
+	// has been included in query results. This tests the defensive nil check.
+	enemy.RemoveComponent("position")
+
+	// countNearbyEnemies should NOT panic and should skip the entity
+	// with missing position (simulating stale cache behavior)
+	count := system.countNearbyEnemies(playerPos, 100.0)
+	if count != 0 {
+		t.Errorf("Enemy count after position removal = %d, want 0", count)
+	}
+
+	// Full Update cycle should also not panic
+	system.Update(0.1)
+}
+
 func BenchmarkAdaptiveSoundtrackSystemUpdate(b *testing.B) {
 	world := NewWorld()
 	system := NewAdaptiveSoundtrackSystem(world)

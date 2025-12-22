@@ -259,6 +259,39 @@ func TestAdaptiveSoundtrackSystemTransitionSpeed(t *testing.T) {
 	}
 }
 
+func TestAdaptiveSoundtrackSystemNilPositionDefense(t *testing.T) {
+	world := NewWorld()
+	system := NewAdaptiveSoundtrackSystem(world)
+
+	// Create player
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	soundtrack := NewAdaptiveSoundtrackComponent("fantasy")
+	soundtrack.CombatThreshold = 2
+	player.AddComponent(soundtrack)
+
+	// Create enemy with AI and health but WITHOUT position component
+	// This tests the defensive nil check in countNearbyEnemies
+	enemy := world.CreateEntity()
+	enemy.AddComponent(&HealthComponent{Current: 50, Max: 50})
+	enemy.AddComponent(&AIComponent{State: AIStateAttack})
+	// Note: No PositionComponent added - this tests nil defense
+
+	// Process pending entities
+	world.Update(0)
+
+	// Update should NOT panic even with missing position component
+	for i := 0; i < 10; i++ {
+		system.Update(0.1)
+	}
+
+	// Should remain calm since the enemy without position is skipped
+	if soundtrack.CurrentIntensity != IntensityCalm {
+		t.Errorf("Intensity = %v, want IntensityCalm when enemies have no position", soundtrack.CurrentIntensity)
+	}
+}
+
 func BenchmarkAdaptiveSoundtrackSystemUpdate(b *testing.B) {
 	world := NewWorld()
 	system := NewAdaptiveSoundtrackSystem(world)

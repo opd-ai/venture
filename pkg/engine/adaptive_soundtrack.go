@@ -187,7 +187,10 @@ func (s *AdaptiveSoundtrackSystem) countNearbyEnemies(playerPos *PositionCompone
 		}
 		_ = aiComp // Unused, just checking presence
 
-		posComp, _ := entity.GetComponent("position")
+		posComp, hasPos := entity.GetComponent("position")
+		if !hasPos || posComp == nil {
+			continue
+		}
 		entityPos := posComp.(*PositionComponent)
 		dx := entityPos.X - playerPos.X
 		dy := entityPos.Y - playerPos.Y

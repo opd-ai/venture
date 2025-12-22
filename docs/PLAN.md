@@ -102,29 +102,45 @@ func (is *InventorySystem) UseItem(entity *Entity, itemID uint64) error {
 
 ---
 
-### Gap A3: Mini-Game Item Rewards
+### Gap A3: Mini-Game Item Rewards ✅ COMPLETED
 
 **File:** `pkg/engine/minigame_system.go`  
 **Gap:** EndGame() doesn't add reward.Items to player inventory
 
-**Resolution:**
+**Status:** RESOLVED (2025-12-22)
+
+**Implementation:**
+The `awardReward` method now properly iterates through `reward.Items` (which contains entity IDs), retrieves the ItemComponent from each entity, and adds the items to the player's inventory:
+
 ```go
-// In endGame() method:
-func (ms *MiniGameSystem) endGame(entity *Entity, success bool) {
-    // ... existing gold/XP reward logic ...
-    
-    // NEW: Add item rewards to inventory
-    if len(reward.Items) > 0 {
-        if invComp, ok := entity.GetComponent("inventory"); ok && invComp != nil {
-            inv := invComp.(*InventoryComponent)
-            for _, itemID := range reward.Items {
-                inv.AddItem(itemID)
+// In awardReward() method:
+if len(reward.Items) > 0 {
+    invCompRaw, hasInv := entity.GetComponent("inventory")
+    if hasInv {
+        invComp := invCompRaw.(*InventoryComponent)
+        for _, itemEntityID := range reward.Items {
+            itemEntity, exists := s.world.GetEntity(itemEntityID)
+            if !exists || itemEntity == nil {
+                continue
             }
-            ms.logger.WithField("items", len(reward.Items)).Debug("mini-game items awarded")
+            itemCompRaw, hasItem := itemEntity.GetComponent("item")
+            if !hasItem {
+                continue
+            }
+            itemComp, ok := itemCompRaw.(*ItemComponent)
+            if !ok || itemComp == nil || itemComp.Item == nil {
+                continue
+            }
+            invComp.AddItem(itemComp.Item)
         }
     }
 }
 ```
+
+**Tests Added:**
+- `TestMiniGameSystem_AwardReward_WithItems` - Verifies items are properly added to inventory
+- `TestMiniGameSystem_AwardReward_WithInvalidItemEntity` - Verifies graceful handling of invalid entity IDs
+- `TestMiniGameSystem_AwardReward_EntityWithoutItemComponent` - Verifies graceful handling of entities without ItemComponent
 
 ---
 
@@ -832,7 +848,7 @@ go test ./pkg/... -cover
 - [ ] All UI panels open with correct keys (I, C, K, J, M, R, G, H)
 - [ ] Gallery shows images when available
 - [ ] Housing UI shows player plots
-- [ ] Mini-games award items to inventory
+- [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
 - [ ] Vehicles take terrain damage
 - [ ] Lock-picking mini-game starts for locked containers
 - [ ] Party chat delivers to party members

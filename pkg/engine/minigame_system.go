@@ -271,14 +271,29 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 		expComp.CurrentXP += int(reward.XP)
 	}
 
-	// Award items
-	// Note: reward.Items contains entity IDs. In practice, the World should be
-	// queried to get the Item entities and add them to inventory through the
-	// InventorySystem. This integration is left for Phase 27.3 when mini-games
-	// are connected to the item system.
-	_ = reward.Items // INTEGRATION FIX [Category A]: Mini-Game Item Rewards
-	// Gap: EndGame() doesn't add reward.Items to player inventory, only gold/XP awarded
-	// Fix: Iterate reward.Items, call inventorySystem.AddItem(playerID, itemID) for each
-	// Roadmap: ROADMAP_V4.md Phase 27.3 - Integration complete
-	// Integration: Get InventorySystem from world.GetSystems(), call AddItem for each reward item
+	// Award items - Phase 27.3 Integration
+	// Iterate through reward item entity IDs, get the item from each entity,
+	// and add it to the player's inventory.
+	if len(reward.Items) > 0 {
+		invCompRaw, hasInv := entity.GetComponent("inventory")
+		if hasInv {
+			invComp := invCompRaw.(*InventoryComponent)
+			for _, itemEntityID := range reward.Items {
+				itemEntity, exists := s.world.GetEntity(itemEntityID)
+				if !exists || itemEntity == nil {
+					continue
+				}
+				itemCompRaw, hasItem := itemEntity.GetComponent("item")
+				if !hasItem {
+					continue
+				}
+				itemComp, ok := itemCompRaw.(*ItemComponent)
+				if !ok || itemComp == nil || itemComp.Item == nil {
+					continue
+				}
+				// Add the item to player inventory
+				invComp.AddItem(itemComp.Item)
+			}
+		}
+	}
 }

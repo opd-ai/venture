@@ -219,6 +219,7 @@ type uiComponents struct {
 	characterCreation  *EbitenCharacterCreation
 	galleryUI          *GalleryUI         // V8.0 Gallery UI (Phase 49.4)
 	housingUI          *housing.HousingUI // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
+	guildUI            *GuildUI           // Phase 3.2 Guild UI (PLAN.md)
 }
 
 // initializeUIComponents creates all UI systems.
@@ -237,7 +238,8 @@ func initializeUIComponents(world *World, screenWidth, screenHeight int, setting
 		serverAddressInput: NewServerAddressInput(screenWidth, screenHeight),
 		characterCreation:  NewCharacterCreation(screenWidth, screenHeight),
 		galleryUI:          NewGalleryUI(screenWidth, screenHeight),
-		housingUI:          housing.NewHousingUI(screenWidth, screenHeight), // V8.0 Housing UI (Phase 49.1)
+		housingUI:          housing.NewHousingUI(screenWidth, screenHeight),   // V8.0 Housing UI (Phase 49.1)
+		guildUI:            NewGuildUI(world, nil, screenWidth, screenHeight), // Phase 3.2: GuildUI with nil GuildSystem (defensive)
 	}
 }
 
@@ -270,6 +272,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		MapUI:              ui.mapUI,
 		GalleryUI:          ui.galleryUI,
 		HousingUI:          ui.housingUI, // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
+		GuildUI:            ui.guildUI,   // Phase 3.2 Guild UI (PLAN.md)
 		logger:             logEntry,
 		frameTimeTracker:   core.frameTimeTracker,
 		frameCount:         0,
@@ -1224,6 +1227,10 @@ func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 	if g.GalleryUI != nil {
 		g.GalleryUI.Draw(screen)
 	}
+
+	if g.GuildUI != nil {
+		g.GuildUI.Draw(screen)
+	}
 }
 
 // drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
@@ -1364,6 +1371,7 @@ func (g *EbitenGame) setupOptionalUICallbacks(inputSystem *InputSystem, objectiv
 		{"crafting", inputSystem.SetCraftingCallback, g.CraftingUI, "crafting"},
 		{"mailbox", inputSystem.SetMailboxCallback, g.MailboxUI, "mailbox"},
 		{"trade", inputSystem.SetTradeCallback, g.TradeUI, "trade"}, // Phase 3.3 (PLAN.md)
+		{"guild", inputSystem.SetGuildCallback, g.GuildUI, "guild"}, // Phase 3.2 (PLAN.md)
 		{"housing", inputSystem.SetHousingCallback, g.HousingUI, "housing"},
 		{"gallery", inputSystem.SetGalleryCallback, g.GalleryUI, "gallery"},
 	}

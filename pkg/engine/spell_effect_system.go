@@ -18,9 +18,9 @@ type expiredEffect struct {
 // SpellEffectSystem manages spell effects on entities and terrain.
 // It processes SpellEffectComponents and executes their effects based on type.
 type SpellEffectSystem struct {
-	world                    *World
-	rng                      *rand.Rand
-	logger                   *logrus.Entry
+	world                     *World
+	rng                       *rand.Rand
+	logger                    *logrus.Entry
 	terrainModificationSystem *TerrainModificationSystem
 
 	// Reusable buffer for expired effects to reduce per-frame allocations

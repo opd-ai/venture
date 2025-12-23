@@ -387,10 +387,10 @@ func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *Posi
 	// Create projectile component with weapon stats
 	projComp := NewProjectileComponent(
 		combat.WeaponDamage, // damage
-		projectileSpeed,    // speed (stored for reference)
-		lifetime,           // lifetime
-		projectileType,     // projectile type for visual
-		vehicle.ID,         // owner ID
+		projectileSpeed,     // speed (stored for reference)
+		lifetime,            // lifetime
+		projectileType,      // projectile type for visual
+		vehicle.ID,          // owner ID
 	)
 
 	// Spawn projectile using the projectile system

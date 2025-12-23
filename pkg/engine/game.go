@@ -217,6 +217,7 @@ type uiComponents struct {
 	multiplayerMenu    *MultiplayerMenu
 	serverAddressInput *ServerAddressInput
 	characterCreation  *EbitenCharacterCreation
+	galleryUI          *GalleryUI // V8.0 Gallery UI (Phase 49.4)
 }
 
 // initializeUIComponents creates all UI systems.
@@ -234,6 +235,7 @@ func initializeUIComponents(world *World, screenWidth, screenHeight int, setting
 		multiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
 		serverAddressInput: NewServerAddressInput(screenWidth, screenHeight),
 		characterCreation:  NewCharacterCreation(screenWidth, screenHeight),
+		galleryUI:          NewGalleryUI(screenWidth, screenHeight),
 	}
 }
 
@@ -264,6 +266,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		CharacterUI:        ui.characterUI,
 		SkillsUI:           ui.skillsUI,
 		MapUI:              ui.mapUI,
+		GalleryUI:          ui.galleryUI,
 		logger:             logEntry,
 		frameTimeTracker:   core.frameTimeTracker,
 		frameCount:         0,

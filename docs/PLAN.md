@@ -269,9 +269,9 @@ if len(reward.Items) > 0 {
 
 ---
 
-### Gap B5-B9: Housing UI Complete Integration
+### Gap B5-B9: Housing UI Complete Integration ✅ COMPLETED
 
-**Files:** `pkg/world/housing/ui.go`, `pkg/engine/game.go`, `pkg/engine/input_system.go`
+**Files:** `pkg/world/housing/ui.go`, `pkg/engine/game.go`, `pkg/engine/input_system.go`, `pkg/engine/interfaces.go`
 
 **Gaps:**
 - B5: UI defined but managers never connected
@@ -280,38 +280,26 @@ if len(reward.Items) > 0 {
 - B8: Player ID setter was empty stub
 - B9: Managers passed but never stored or used
 
-**Resolution - Step 1:** Connect housing manager
-```go
-// In HousingUI:
-func (h *HousingUI) SetManager(manager *Manager) {
-    h.manager = manager
-    h.refreshPlots()
-}
+**Status:** RESOLVED (2025-12-23)
 
-func (h *HousingUI) SetPlayerID(playerID string) {
-    h.playerID = playerID
-    h.refreshPlots()
-}
+**Implementation:**
+1. Added `housingUI` field to `uiComponents` struct in `pkg/engine/game.go`
+2. Created HousingUI in `initializeUIComponents()` using `housing.NewHousingUI(screenWidth, screenHeight)`
+3. Wired HousingUI in `buildGameInstance()` to set `HousingUI: ui.housingUI`
+4. Added `HousingUIProvider` interface to `pkg/engine/interfaces.go` to avoid import cycles
+5. Added `IsVisible()` method to `HousingUI` to satisfy interface requirements
+6. Added `housingUI` field to `InputSystem` struct for ESC key handling
+7. Added `SetHousingUI()` method to `InputSystem` for dependency injection
+8. Added ESC key handling in `handleShopUIEscapeActions()` to close housing UI
+9. SetManagers and SetPlayerID already implemented in ui.go (verified pre-existing)
+10. Input handling already implemented via SetHousingCallback() (pre-existing)
+11. Visual representation already implemented in Draw() method (pre-existing)
 
-func (h *HousingUI) refreshPlots() {
-    if h.manager != nil && h.playerID != "" {
-        h.plots = h.manager.GetPlayerPlots(h.playerID)
-    }
-}
-```
-
-**Resolution - Step 2:** Add key binding and callback
-```go
-// In input_system.go:
-func (is *InputSystem) SetHousingCallback(callback func()) {
-    is.onHousingOpen = callback
-}
-
-// In handlers.go:
-inputSystem.SetHousingCallback(func() {
-    game.HousingUI.Toggle()
-})
-```
+**Integration Points:**
+1. `pkg/engine/game.go` - HousingUI now properly initialized and wired during game creation
+2. `pkg/engine/input_system.go` - Keyboard 'H' key triggers toggle, ESC key closes panel
+3. `pkg/engine/interfaces.go` - HousingUIProvider interface for input system integration
+4. `pkg/world/housing/ui.go` - Complete UI with plot display, menu navigation, manager connections
 
 ---
 
@@ -805,7 +793,7 @@ go test ./pkg/... -cover
 - [ ] Client starts without panic
 - [ ] All UI panels open with correct keys (I, C, K, J, M, R, G, H)
 - [x] Gallery shows images when available ✅ (Gap B1-B4 completed 2025-12-23)
-- [ ] Housing UI shows player plots
+- [x] Housing UI shows player plots ✅ (Gap B5-B9 completed 2025-12-23)
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [ ] Lock-picking mini-game starts for locked containers

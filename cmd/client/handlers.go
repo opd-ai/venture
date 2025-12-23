@@ -2206,6 +2206,12 @@ func connectAdvancedUIComponents(game *engine.EbitenGame, inputSystem *engine.In
 			game.TerritoryUI.Toggle()
 		})
 	}
+	// INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
+	// Gap: SetHousingUI was defined but never called, so ESC key couldn't close HousingUI
+	// Fix: Wire HousingUI to InputSystem for ESC key dual-exit pattern
+	if game.HousingUI != nil {
+		inputSystem.SetHousingUI(game.HousingUI)
+	}
 }
 
 func connectDialogUI(game *engine.EbitenGame, inputSystem *engine.InputSystem, player *engine.Entity, clientLogger *logrus.Entry) {

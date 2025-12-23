@@ -382,3 +382,20 @@ type MiniGame interface {
 	// Returns nil if the game is not complete or if the player lost
 	GetReward() *Reward
 }
+
+// HousingUIProvider is the interface for housing UI panels.
+// This interface avoids import cycles between engine and housing packages.
+//
+// INTEGRATION FIX [Category B]: V8.0 Housing UI Integration (Phase 49.1)
+// Gap: InputSystem needs HousingUI reference for ESC key handling without importing housing package
+// Fix: Define interface for housing UI visibility and hide operations
+type HousingUIProvider interface {
+	// IsVisible returns true if the housing UI is currently visible
+	IsVisible() bool
+
+	// Hide hides the housing UI
+	Hide()
+
+	// Toggle switches the housing UI visibility
+	Toggle()
+}

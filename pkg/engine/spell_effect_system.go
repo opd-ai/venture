@@ -122,7 +122,6 @@ func (s *SpellEffectSystem) executeEffect(entity *Entity, effect *SpellEffectCom
 }
 
 // TerrainModifierType represents the type of terrain modification for spell effects.
-// TerrainModifierType represents the type of terrain modification for spell effects.
 type TerrainModifierType int
 
 const (
@@ -155,7 +154,9 @@ const (
 	// TunnelMagnitudeMultiplier scales the effect's magnitude to terrain damage.
 	TunnelMagnitudeMultiplier = 100.0
 	// OneFrameTime is the minimum elapsed time after which a one-shot effect has executed.
-	// This is used to detect when a spell effect has already been applied.
+	// This value (approximately 1/60 second, or 60 FPS frame time) is used to detect when
+	// a spell effect has already been applied. Since Update() increments ElapsedTime before
+	// calling executeEffect(), we compare against slightly more than one frame time.
 	OneFrameTime = 0.017
 )
 

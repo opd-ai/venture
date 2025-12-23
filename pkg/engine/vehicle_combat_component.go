@@ -42,6 +42,9 @@ type VehicleCombatComponent struct {
 	// WeaponType indicates type of mounted weapon (affects visuals/behavior)
 	WeaponType string // "Cannon", "MachineGun", "Laser", "Magic", "Ballista"
 
+	// WeaponProjectileSpeed is speed of projectiles fired (pixels per second)
+	WeaponProjectileSpeed float64
+
 	// DamageType for mounted weapon attacks
 	WeaponDamageType combat.DamageType
 
@@ -67,6 +70,7 @@ func NewVehicleCombatComponent() *VehicleCombatComponent {
 		WeaponCooldown:         0.5,
 		CurrentWeaponCooldown:  0.0,
 		WeaponType:             "Cannon",
+		WeaponProjectileSpeed:  300.0, // Default projectile speed (pixels/second)
 		WeaponDamageType:       combat.DamagePhysical,
 		ArmorRating:            5.0,
 	}

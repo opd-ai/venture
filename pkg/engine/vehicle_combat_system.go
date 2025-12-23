@@ -11,6 +11,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Vehicle weapon projectile default values
+const (
+	// DefaultProjectileSpeed is the fallback speed for vehicle weapon projectiles
+	// when WeaponProjectileSpeed is not configured (pixels per second)
+	DefaultProjectileSpeed = 300.0
+
+	// DefaultProjectileLifetime is the fallback lifetime for vehicle weapon projectiles
+	// when lifetime cannot be calculated from range/speed (seconds)
+	DefaultProjectileLifetime = 2.0
+)
+
 // VehicleCombatSystem manages vehicle combat interactions.
 // It processes vehicles with VehicleCombatComponent to handle ramming
 // and mounted weapon attacks.
@@ -342,21 +353,81 @@ func (vcs *VehicleCombatSystem) findNearestTarget(vehicle *Entity, pos *Position
 }
 
 // spawnWeaponProjectile creates a projectile for mounted weapon attack.
-// This is a simplified version - full implementation would integrate with
-// projectile system properly.
+// This method spawns actual projectile entities using the projectile system
+// when available, with appropriate speed, damage, and visual based on weapon type.
 func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *PositionComponent, angle float64, combat *VehicleCombatComponent) {
-	// INTEGRATION FIX [Category A]: Vehicle Weapon Projectile Spawning
-	// Gap: Vehicle mounted weapons should spawn projectile entities, not placeholder
-	// Fix: Call world.CreateEntity(), add ProjectileComponent with weapon stats, Position at vehicle
-	// Roadmap: ROADMAP_V4.md Phase 21.2 - Vehicle Combat (mounted weapon systems)
-	// Integration: ProjectileSystem exists, supports vehicle-spawned projectiles via OwnerID field
-	// with appropriate speed, damage, and visual based on weapon type
+	// Validate projectile system and world are available
+	if vcs.projectileSystem == nil || vcs.world == nil {
+		if vcs.logger != nil {
+			vcs.logger.WithFields(logrus.Fields{
+				"vehicle_id":  vehicle.ID,
+				"weapon_type": combat.WeaponType,
+			}).Debug("Cannot spawn projectile: projectile system or world unavailable")
+		}
+		return
+	}
+
+	// Calculate velocity from angle and projectile speed
+	projectileSpeed := combat.WeaponProjectileSpeed
+	if projectileSpeed <= 0 {
+		projectileSpeed = DefaultProjectileSpeed
+	}
+	vx := math.Cos(angle) * projectileSpeed
+	vy := math.Sin(angle) * projectileSpeed
+
+	// Map weapon type to projectile type for visual representation
+	projectileType := vcs.weaponTypeToProjectileType(combat.WeaponType)
+
+	// Calculate projectile lifetime based on weapon range and speed
+	lifetime := combat.WeaponRange / projectileSpeed
+	if lifetime <= 0 {
+		lifetime = DefaultProjectileLifetime
+	}
+
+	// Create projectile component with weapon stats
+	projComp := NewProjectileComponent(
+		combat.WeaponDamage, // damage
+		projectileSpeed,    // speed (stored for reference)
+		lifetime,           // lifetime
+		projectileType,     // projectile type for visual
+		vehicle.ID,         // owner ID
+	)
+
+	// Spawn projectile using the projectile system
+	projectile := vcs.projectileSystem.SpawnProjectile(pos.X, pos.Y, vx, vy, projComp)
+
 	if vcs.logger != nil {
+		projectileID := uint64(0)
+		if projectile != nil {
+			projectileID = projectile.ID
+		}
 		vcs.logger.WithFields(logrus.Fields{
-			"vehicle_id":  vehicle.ID,
-			"weapon_type": combat.WeaponType,
-			"angle":       angle,
-		}).Debug("Spawning weapon projectile (placeholder)")
+			"vehicle_id":      vehicle.ID,
+			"projectile_id":   projectileID,
+			"weapon_type":     combat.WeaponType,
+			"projectile_type": projectileType,
+			"angle":           angle,
+			"damage":          combat.WeaponDamage,
+			"speed":           projectileSpeed,
+		}).Debug("Vehicle spawned weapon projectile")
+	}
+}
+
+// weaponTypeToProjectileType maps vehicle weapon types to projectile visual types.
+func (vcs *VehicleCombatSystem) weaponTypeToProjectileType(weaponType string) string {
+	switch weaponType {
+	case "Cannon":
+		return "bullet"
+	case "MachineGun":
+		return "bullet"
+	case "Laser":
+		return "lightning_bolt"
+	case "Magic":
+		return "magic_missile"
+	case "Ballista":
+		return "arrow"
+	default:
+		return "bullet"
 	}
 }
 

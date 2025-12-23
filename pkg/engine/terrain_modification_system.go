@@ -306,13 +306,12 @@ func (s *TerrainModificationSystem) DamageTileAtWorldPosition(worldX, worldY, da
 	s.damageTile(tileX, tileY, damage)
 }
 
-// DamageTilesInArea applies damage to all tiles in a circular area.
-// Useful for explosion effects.
-func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, damage float64) {
-	if s.terrain == nil {
-		return
-	}
+// tileCallback is a function that operates on a tile at the given coordinates.
+type tileCallback func(tileX, tileY int)
 
+// iterateTilesInCircularArea calls the callback for each tile within a circular area.
+// This helper method reduces code duplication between DamageTilesInArea and SetTilesInArea.
+func (s *TerrainModificationSystem) iterateTilesInCircularArea(centerX, centerY, radius float64, callback tileCallback) {
 	// Convert to tile coordinates
 	centerTileX := int(centerX / float64(s.tileSize))
 	centerTileY := int(centerY / float64(s.tileSize))
@@ -331,10 +330,22 @@ func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, 
 				(tileCenterY-centerY)*(tileCenterY-centerY)
 
 			if distSq <= radius*radius {
-				s.damageTile(tileX, tileY, damage)
+				callback(tileX, tileY)
 			}
 		}
 	}
+}
+
+// DamageTilesInArea applies damage to all tiles in a circular area.
+// Useful for explosion effects.
+func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, damage float64) {
+	if s.terrain == nil {
+		return
+	}
+
+	s.iterateTilesInCircularArea(centerX, centerY, radius, func(tileX, tileY int) {
+		s.damageTile(tileX, tileY, damage)
+	})
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -343,5 +354,88 @@ func (s *TerrainModificationSystem) DamageTilesInArea(centerX, centerY, radius, 
 			"radius":  radius,
 			"damage":  damage,
 		}).Debug("area damage applied to tiles")
+	}
+}
+
+// SetTileAtWorldPosition changes a tile at world coordinates to the specified type.
+// This is used by spell effects to create walls or pits.
+func (s *TerrainModificationSystem) SetTileAtWorldPosition(worldX, worldY float64, tileType terrain.TileType) {
+	if s.terrain == nil {
+		return
+	}
+
+	tileX := int(worldX / float64(s.tileSize))
+	tileY := int(worldY / float64(s.tileSize))
+	s.setTile(tileX, tileY, tileType)
+}
+
+// SetTilesInArea changes all tiles in a circular area to the specified type.
+// This is used by area-effect terrain manipulation spells.
+func (s *TerrainModificationSystem) SetTilesInArea(centerX, centerY, radius float64, tileType terrain.TileType) {
+	if s.terrain == nil {
+		return
+	}
+
+	s.iterateTilesInCircularArea(centerX, centerY, radius, func(tileX, tileY int) {
+		s.setTile(tileX, tileY, tileType)
+	})
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"centerX":  centerX,
+			"centerY":  centerY,
+			"radius":   radius,
+			"tileType": tileType.String(),
+		}).Debug("area tiles set")
+	}
+}
+
+// setTile changes a single tile to the specified type.
+func (s *TerrainModificationSystem) setTile(tileX, tileY int, tileType terrain.TileType) {
+	if s.terrain == nil || s.worldMap == nil {
+		return
+	}
+
+	// Check bounds
+	if !s.terrain.IsInBounds(tileX, tileY) {
+		return
+	}
+
+	// Update terrain data
+	s.terrain.SetTile(tileX, tileY, tileType)
+
+	// Map terrain TileType to world TileType
+	var worldTileType world.TileType
+	var walkable bool
+	switch tileType {
+	case terrain.TileWall:
+		worldTileType = world.TileWall
+		walkable = false
+	case terrain.TileFloor:
+		worldTileType = world.TileFloor
+		walkable = true
+	case terrain.TilePit:
+		worldTileType = world.TileEmpty // Pits are impassable
+		walkable = false
+	default:
+		worldTileType = world.TileFloor
+		walkable = true
+	}
+
+	// Update world map
+	tile := world.Tile{
+		Type:     worldTileType,
+		Walkable: walkable,
+		X:        tileX,
+		Y:        tileY,
+	}
+	s.worldMap.SetTile(tileX, tileY, tile)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"tileX":    tileX,
+			"tileY":    tileY,
+			"tileType": tileType.String(),
+		}).Debug("tile set")
 	}
 }

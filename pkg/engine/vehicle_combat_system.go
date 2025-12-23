@@ -11,6 +11,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Vehicle weapon projectile default values
+const (
+	// DefaultProjectileSpeed is the fallback speed for vehicle weapon projectiles
+	// when WeaponProjectileSpeed is not configured (pixels per second)
+	DefaultProjectileSpeed = 300.0
+
+	// DefaultProjectileLifetime is the fallback lifetime for vehicle weapon projectiles
+	// when lifetime cannot be calculated from range/speed (seconds)
+	DefaultProjectileLifetime = 2.0
+)
+
 // VehicleCombatSystem manages vehicle combat interactions.
 // It processes vehicles with VehicleCombatComponent to handle ramming
 // and mounted weapon attacks.
@@ -359,7 +370,7 @@ func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *Posi
 	// Calculate velocity from angle and projectile speed
 	projectileSpeed := combat.WeaponProjectileSpeed
 	if projectileSpeed <= 0 {
-		projectileSpeed = 300.0 // Default speed if not configured
+		projectileSpeed = DefaultProjectileSpeed
 	}
 	vx := math.Cos(angle) * projectileSpeed
 	vy := math.Sin(angle) * projectileSpeed
@@ -370,7 +381,7 @@ func (vcs *VehicleCombatSystem) spawnWeaponProjectile(vehicle *Entity, pos *Posi
 	// Calculate projectile lifetime based on weapon range and speed
 	lifetime := combat.WeaponRange / projectileSpeed
 	if lifetime <= 0 {
-		lifetime = 2.0 // Default 2 seconds if range not configured
+		lifetime = DefaultProjectileLifetime
 	}
 
 	// Create projectile component with weapon stats

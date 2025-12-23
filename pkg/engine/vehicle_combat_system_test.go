@@ -105,7 +105,7 @@ func TestVehicleCombatSystem_SpawnWeaponProjectile_NoProjectileSystem(t *testing
 }
 
 func TestVehicleCombatSystem_SpawnWeaponProjectile_VelocityCalculation(t *testing.T) {
-	const tolerance = 1e-9 // Tolerance for floating-point comparison
+	const tolerance = 1e-6 // Tolerance for floating-point comparison; relaxed for cross-platform stability
 
 	tests := []struct {
 		name           string
@@ -156,22 +156,22 @@ func TestVehicleCombatSystem_SpawnWeaponProjectile_VelocityCalculation(t *testin
 			// For expectedSign > 0: value should be clearly positive (> tolerance)
 			// For expectedSign < 0: value should be clearly negative (< -tolerance)
 			// For expectedSign == 0: value should be near zero (|value| < tolerance)
-			if tt.expectedVxSign > 0 && vel.VX <= tolerance {
+			if tt.expectedVxSign > 0 && vel.VX < tolerance {
 				t.Errorf("Expected positive VX, got %f", vel.VX)
 			}
-			if tt.expectedVxSign < 0 && vel.VX >= -tolerance {
+			if tt.expectedVxSign < 0 && vel.VX > -tolerance {
 				t.Errorf("Expected negative VX, got %f", vel.VX)
 			}
-			if tt.expectedVxSign == 0 && math.Abs(vel.VX) > tolerance {
+			if tt.expectedVxSign == 0 && math.Abs(vel.VX) >= tolerance {
 				t.Errorf("Expected VX near zero, got %f", vel.VX)
 			}
-			if tt.expectedVySign > 0 && vel.VY <= tolerance {
+			if tt.expectedVySign > 0 && vel.VY < tolerance {
 				t.Errorf("Expected positive VY, got %f", vel.VY)
 			}
-			if tt.expectedVySign < 0 && vel.VY >= -tolerance {
+			if tt.expectedVySign < 0 && vel.VY > -tolerance {
 				t.Errorf("Expected negative VY, got %f", vel.VY)
 			}
-			if tt.expectedVySign == 0 && math.Abs(vel.VY) > tolerance {
+			if tt.expectedVySign == 0 && math.Abs(vel.VY) >= tolerance {
 				t.Errorf("Expected VY near zero, got %f", vel.VY)
 			}
 		})
@@ -312,8 +312,8 @@ func TestVehicleCombatSystem_SpawnWeaponProjectile_DefaultSpeed(t *testing.T) {
 		t.Fatal("Projectile has no velocity")
 	}
 
-	// Default speed is 300.0, so VX at angle 0 should be 300.0
-	if math.Abs(vel.VX-300.0) > 0.001 {
-		t.Errorf("Expected VX ~300.0 (default speed), got %f", vel.VX)
+	// Default speed is DefaultProjectileSpeed, so VX at angle 0 should equal it
+	if math.Abs(vel.VX-DefaultProjectileSpeed) > 0.001 {
+		t.Errorf("Expected VX ~%f (default speed), got %f", DefaultProjectileSpeed, vel.VX)
 	}
 }

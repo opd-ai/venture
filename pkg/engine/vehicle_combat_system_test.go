@@ -105,11 +105,13 @@ func TestVehicleCombatSystem_SpawnWeaponProjectile_NoProjectileSystem(t *testing
 }
 
 func TestVehicleCombatSystem_SpawnWeaponProjectile_VelocityCalculation(t *testing.T) {
+	const tolerance = 1e-9 // Tolerance for floating-point comparison
+
 	tests := []struct {
 		name           string
 		angle          float64
-		expectedVxSign float64 // 1 for positive, -1 for negative
-		expectedVySign float64 // 1 for positive, -1 for negative
+		expectedVxSign float64 // 1 for positive, -1 for negative, 0 for ~zero
+		expectedVySign float64 // 1 for positive, -1 for negative, 0 for ~zero
 	}{
 		{"right (0 degrees)", 0.0, 1.0, 0.0},
 		{"down (90 degrees)", math.Pi / 2, 0.0, 1.0},
@@ -150,18 +152,27 @@ func TestVehicleCombatSystem_SpawnWeaponProjectile_VelocityCalculation(t *testin
 				t.Fatal("Projectile has no velocity component")
 			}
 
-			// Check velocity direction
-			if tt.expectedVxSign > 0 && vel.VX <= 0 {
+			// Check velocity direction using tolerance-based comparison
+			// For expectedSign > 0: value should be clearly positive (> tolerance)
+			// For expectedSign < 0: value should be clearly negative (< -tolerance)
+			// For expectedSign == 0: value should be near zero (|value| < tolerance)
+			if tt.expectedVxSign > 0 && vel.VX <= tolerance {
 				t.Errorf("Expected positive VX, got %f", vel.VX)
 			}
-			if tt.expectedVxSign < 0 && vel.VX >= 0 {
+			if tt.expectedVxSign < 0 && vel.VX >= -tolerance {
 				t.Errorf("Expected negative VX, got %f", vel.VX)
 			}
-			if tt.expectedVySign > 0 && vel.VY <= 0 {
+			if tt.expectedVxSign == 0 && math.Abs(vel.VX) > tolerance {
+				t.Errorf("Expected VX near zero, got %f", vel.VX)
+			}
+			if tt.expectedVySign > 0 && vel.VY <= tolerance {
 				t.Errorf("Expected positive VY, got %f", vel.VY)
 			}
-			if tt.expectedVySign < 0 && vel.VY >= 0 {
+			if tt.expectedVySign < 0 && vel.VY >= -tolerance {
 				t.Errorf("Expected negative VY, got %f", vel.VY)
+			}
+			if tt.expectedVySign == 0 && math.Abs(vel.VY) > tolerance {
+				t.Errorf("Expected VY near zero, got %f", vel.VY)
 			}
 		})
 	}

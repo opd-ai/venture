@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 // TestInputSystem_SetGuildCallback verifies that SetGuildCallback properly sets the callback
@@ -46,10 +48,9 @@ func TestInputSystem_KeyGuild_Initialization(t *testing.T) {
 		t.Error("KeyGuild should be initialized to a non-zero value")
 	}
 
-	// Should be initialized to 'U' key (ebiten.KeyU)
-	expectedKey := 85 // ebiten.KeyU value
-	if int(inputSystem.KeyGuild) != expectedKey {
-		t.Errorf("KeyGuild should be initialized to KeyU (%d), got %d", expectedKey, int(inputSystem.KeyGuild))
+	// Should be initialized to 'O' key (ebiten.KeyO)
+	if inputSystem.KeyGuild != ebiten.KeyO {
+		t.Errorf("KeyGuild should be initialized to KeyO, got %v", inputSystem.KeyGuild)
 	}
 }
 

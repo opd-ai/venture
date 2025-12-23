@@ -310,7 +310,7 @@ if len(reward.Items) > 0 {
 **Status:** RESOLVED (2025-12-23) - GuildUI integration completed, BlueprintUI deferred (not yet created)
 
 **Implementation:**
-1. Added `KeyGuild ebiten.Key` field to InputSystem struct (mapped to 'U' key)
+1. Added `KeyGuild ebiten.Key` field to InputSystem struct (mapped to 'O' key, changed from 'U' to avoid Achievements conflict)
 2. Added `onGuildOpen func()` callback to InputSystem struct
 3. Added `SetGuildCallback()` method to InputSystem for dependency injection
 4. Added `guildUI *GuildUI` field to uiComponents struct
@@ -319,7 +319,7 @@ if len(reward.Items) > 0 {
 7. Added guild callback to `setupOptionalUICallbacks()`
 8. Added GuildUI.Draw() call in Draw() method
 9. Added defensive nil check in GuildUI.Draw() for missing GuildSystem
-10. Guild key ('U') handling already implemented via callback system
+10. Guild key ('O') handling already implemented via callback system
 
 **Integration Points:**
 1. `pkg/engine/input_system.go` - KeyGuild field, onGuildOpen callback, SetGuildCallback() method
@@ -803,10 +803,10 @@ go test ./pkg/... -cover
 
 ### Runtime Verification
 - [ ] Client starts without panic
-- [ ] All UI panels open with correct keys (I, C, K, J, M, R, G, H, U)
+- [ ] All UI panels open with correct keys (I, C, K, J, M, R, G, H, O)
 - [x] Gallery shows images when available ✅ (Gap B1-B4 completed 2025-12-23)
 - [x] Housing UI shows player plots ✅ (Gap B5-B9 completed 2025-12-23)
-- [x] Guild UI opens with U key ✅ (Gap B10-B13 completed 2025-12-23)
+- [x] Guild UI opens with O key ✅ (Gap B10-B13 completed 2025-12-23)
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)

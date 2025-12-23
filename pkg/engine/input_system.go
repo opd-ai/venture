@@ -253,7 +253,7 @@ type InputSystem struct {
 	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
 	KeyClasses   ebiten.Key // X key for advanced classes (Phase 4.2) - Changed from A to avoid WASD conflict
 	KeyTerritory ebiten.Key // Y key for territory control (Phase 4.3)
-	KeyGuild     ebiten.Key // U key for guild management (Phase 3.2)
+	KeyGuild     ebiten.Key // O key for guild management (Phase 3.2) - Changed from U to avoid Achievements conflict
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -375,7 +375,7 @@ func NewInputSystem() *InputSystem {
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
 		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict
 		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
-		KeyGuild:     ebiten.KeyU, // Phase 3.2: Guild UI
+		KeyGuild:     ebiten.KeyO, // Phase 3.2: Guild UI - Changed from U to avoid Achievements conflict
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 

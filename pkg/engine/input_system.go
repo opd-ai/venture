@@ -287,6 +287,7 @@ type InputSystem struct {
 	advancedClassUI *AdvancedClassUI // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
 	territoryUI     *TerritoryUI     // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
 	dialogUI        *DialogUI        // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
+	housingUI       HousingUIProvider // INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -647,6 +648,14 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 
 	if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
 		s.mailboxUI.Close()
+		return true
+	}
+
+	// INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
+	// Gap: ESC key didn't close HousingUI
+	// Fix: Added ESC key handling for HousingUI to close panel
+	if s.housingUI != nil && s.housingUI.IsVisible() {
+		s.housingUI.Hide()
 		return true
 	}
 
@@ -1390,6 +1399,14 @@ func (s *InputSystem) SetTerritoryUI(territoryUI *TerritoryUI) {
 // SetDialogUI sets the dialog UI reference for D key toggle and ESC key handling (Phase 6.2)
 func (s *InputSystem) SetDialogUI(dialogUI *DialogUI) {
 	s.dialogUI = dialogUI
+}
+
+// SetHousingUI sets the housing UI reference for H key toggle and ESC key handling
+// INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
+// Gap: InputSystem had no way to close HousingUI with ESC key
+// Fix: Added SetHousingUI to enable ESC key closing of housing panel
+func (s *InputSystem) SetHousingUI(housingUI HousingUIProvider) {
+	s.housingUI = housingUI
 }
 
 // SetQuickSaveCallback sets the callback function for quick save (F5).

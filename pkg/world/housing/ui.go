@@ -72,6 +72,14 @@ func (h *HousingUI) Hide() {
 	h.Visible = false
 }
 
+// IsVisible returns true if the housing UI is currently visible.
+// INTEGRATION FIX [Category B]: V8.0 Housing UI Integration (Phase 49.1)
+// Gap: InputSystem needs IsVisible method for ESC key handling
+// Fix: Added IsVisible method to satisfy HousingUIProvider interface
+func (h *HousingUI) IsVisible() bool {
+	return h.Visible
+}
+
 // Update updates the housing UI state.
 // Returns true if the UI consumed the input (blocking pass-through).
 func (h *HousingUI) Update() bool {

@@ -154,12 +154,16 @@ const (
 	TunnelDefaultDamage = 1000.0
 	// TunnelMagnitudeMultiplier scales the effect's magnitude to terrain damage.
 	TunnelMagnitudeMultiplier = 100.0
+	// OneFrameTime is the minimum elapsed time after which a one-shot effect has executed.
+	// This is used to detect when a spell effect has already been applied.
+	OneFrameTime = 0.017
 )
 
 // executeTerrainManipulation creates, modifies, or destroys terrain.
 func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectComponent) {
-	// Only execute once, when the effect has just started (ElapsedTime is still zero)
-	if effect.ElapsedTime > 0 {
+	// Only execute once (on first frame). ElapsedTime is already incremented
+	// by Update() before executeEffect() is called, so we check for > one frame.
+	if effect.ElapsedTime > OneFrameTime {
 		return
 	}
 

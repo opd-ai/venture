@@ -168,10 +168,6 @@ func (vds *VehicleDurabilitySystem) calculateTerrainHazardDamage(tile terrain.Ti
 		if vehicle.VehicleType == VehicleBoat || vehicle.VehicleType == VehicleGlider {
 			return 0
 		}
-		// Check if vehicle can traverse water
-		if vehicle.CanTraverse(int(terrain.TileWaterDeep)) {
-			return 0
-		}
 		return DeepWaterDamagePerSecond * deltaTime
 
 	default:

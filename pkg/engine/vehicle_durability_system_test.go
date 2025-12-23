@@ -560,9 +560,8 @@ func TestVehicleDurabilitySystem_RepairVehicle_NoVehicle(t *testing.T) {
 }
 
 func TestVehicleDurabilitySystem_TerrainHazardDamageConstants(t *testing.T) {
-	// Verify damage constants match expected values from PLAN.md
-	// PLAN.md specifies: lava 10/sec, spikes 5/sec, acid 15/sec
-	// We use: LavaFlow 10/sec, DeepWater 5/sec, Pit 15/sec
+	// Verify terrain hazard damage constants match the current design:
+	// LavaFlow 10/sec, DeepWater 5/sec, Pit 15/sec.
 
 	if LavaFlowDamagePerSecond != 10.0 {
 		t.Errorf("LavaFlowDamagePerSecond = %f, want 10.0", LavaFlowDamagePerSecond)

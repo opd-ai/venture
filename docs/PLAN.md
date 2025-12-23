@@ -197,46 +197,46 @@ if len(reward.Items) > 0 {
 
 ---
 
-### Gap A6: Vehicle Terrain Hazard Damage
+### Gap A6: Vehicle Terrain Hazard Damage ✅ COMPLETED
 
 **File:** `pkg/engine/vehicle_durability_system.go`  
 **Gap:** Vehicle durability system doesn't check terrain hazards
 
-**Resolution:**
-```go
-// Add terrain hazard check in Update():
-func (vds *VehicleDurabilitySystem) Update(entities []*Entity, deltaTime float64) {
-    for _, entity := range entities {
-        durability, ok := entity.GetComponent("vehicle_durability")
-        if !ok || durability == nil {
-            continue
-        }
-        dur := durability.(*VehicleDurabilityComponent)
-        
-        pos, _ := entity.GetComponent("position")
-        if pos == nil {
-            continue
-        }
-        position := pos.(*PositionComponent)
-        
-        // NEW: Check terrain hazards
-        tile := vds.terrainSystem.GetTile(int(position.X), int(position.Y))
-        switch tile {
-        case TileLava:
-            dur.Current -= 10 * deltaTime // 10 damage per second
-        case TileSpikes:
-            dur.Current -= 5 * deltaTime // 5 damage per second
-        case TileAcid:
-            dur.Current -= 15 * deltaTime // 15 damage per second
-        }
-        
-        if dur.Current < 0 {
-            dur.Current = 0
-            vds.destroyVehicle(entity)
-        }
-    }
-}
-```
+**Status:** RESOLVED (2025-12-23)
+
+**Implementation:**
+1. Added `terrainCollisionChecker` field to `VehicleDurabilitySystem` struct
+2. Added `SetTerrainCollisionChecker()` setter method for dependency injection
+3. Added terrain hazard damage constants: `LavaFlowDamagePerSecond` (10), `DeepWaterDamagePerSecond` (5), `PitDamagePerSecond` (15)
+4. Implemented `calculateTerrainHazardDamage()` to determine damage based on tile type and vehicle capabilities
+5. Updated `checkEnvironmentalDamage()` to query terrain tiles and apply appropriate damage
+
+**Integration Points:**
+1. `pkg/engine/vehicle_durability_system.go` - VehicleDurabilitySystem now integrates with TerrainCollisionChecker
+2. `pkg/engine/terrain_collision_system.go` - Uses existing `worldToTileCoords()` and terrain data access
+
+**Vehicle Immunities:**
+- Gliders are immune to pit damage (they fly over)
+- Boats and gliders are immune to deep water damage
+- All vehicles take lava damage (no immunity)
+
+**Tests Added:**
+- `TestVehicleDurabilitySystem_NewVehicleDurabilitySystem` - Verifies system creation
+- `TestVehicleDurabilitySystem_NewVehicleDurabilitySystem_NilWorld` - Verifies graceful handling of nil world
+- `TestVehicleDurabilitySystem_SetTerrainCollisionChecker` - Verifies setter
+- `TestVehicleDurabilitySystem_SetTerrainCollisionChecker_Nil` - Verifies nil handling
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_LavaFlow` - Verifies lava damage
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_Pit` - Verifies pit damage
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_Pit_GliderImmune` - Verifies glider immunity to pits
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_DeepWater` - Verifies deep water damage
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_DeepWater_BoatImmune` - Verifies boat immunity
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_NoTerrainChecker` - Verifies graceful degradation
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_NoPosition` - Verifies handling of entities without position
+- `TestVehicleDurabilitySystem_CheckEnvironmentalDamage_SafeTerrain` - Verifies no damage on safe tiles
+- `TestVehicleDurabilitySystem_CalculateTerrainHazardDamage` - Tests all terrain/vehicle combinations
+- `TestVehicleDurabilitySystem_Update_WithTerrainHazards` - Tests Update loop with hazards
+- `TestVehicleDurabilitySystem_VehicleDestruction_FromTerrainHazard` - Verifies vehicle destruction
+- `TestVehicleDurabilitySystem_TerrainHazardDamageConstants` - Verifies damage constants
 
 ---
 
@@ -831,7 +831,7 @@ go test ./pkg/... -cover
 - [ ] Gallery shows images when available
 - [ ] Housing UI shows player plots
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
-- [ ] Vehicles take terrain damage
+- [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [ ] Lock-picking mini-game starts for locked containers
 - [ ] Party chat delivers to party members
 - [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)

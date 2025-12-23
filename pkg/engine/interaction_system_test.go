@@ -92,7 +92,8 @@ func TestPlayerHasItemByID_NilItem(t *testing.T) {
 	// Create player entity with inventory containing nil
 	player := world.CreateEntity()
 	inventory := NewInventoryComponent(10, 100.0)
-	inventory.Items = append(inventory.Items, nil) // Add nil item
+	// Directly append nil to test edge case - AddItem would reject nil
+	inventory.Items = append(inventory.Items, nil)
 	player.AddComponent(inventory)
 
 	// Test: Inventory contains nil items (should not crash)
@@ -106,9 +107,8 @@ func TestHandleBookshelfRead_UnlockedBookshelf(t *testing.T) {
 	world := NewWorld()
 	system := NewInteractionSystem(world)
 
-	// Create player
+	// Create player (no PlayerComponent needed - handleBookshelfRead doesn't check for it)
 	player := world.CreateEntity()
-	player.AddComponent(&PlayerComponent{})
 
 	// Create unlocked bookshelf with books
 	bookshelfEntity := world.CreateEntity()

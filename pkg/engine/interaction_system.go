@@ -409,18 +409,42 @@ func (s *InteractionSystem) handleReadAction(player, entity *Entity) {
 }
 
 // handleBookshelfRead handles reading books from a bookshelf.
+// INTEGRATION FIX [Category F] Gap F3: Bookshelf Key Requirement
+// Locked bookshelves now require the player to have the correct key item in their inventory.
 func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity, bookshelf *BookshelfComponent) {
 	// Check if bookshelf is locked
 	if bookshelf.IsLocked {
-		if s.logger != nil {
-			s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked")
+		// Check if bookshelf requires a key
+		if bookshelf.RequiresKey && bookshelf.KeyItemID != "" {
+			// Check if player has the required key
+			if !s.playerHasItemByID(player, bookshelf.KeyItemID) {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"bookshelfID": bookshelfEntity.ID,
+						"playerID":    player.ID,
+						"requiredKey": bookshelf.KeyItemID,
+					}).Info("player attempted to access locked bookshelf without key")
+				}
+				// Player doesn't have the key - bookshelf remains locked
+				return
+			}
+
+			// Player has the key - unlock the bookshelf
+			bookshelf.IsLocked = false
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"bookshelfID": bookshelfEntity.ID,
+					"playerID":    player.ID,
+					"keyItemID":   bookshelf.KeyItemID,
+				}).Info("player unlocked bookshelf with key")
+			}
+		} else {
+			// Bookshelf is locked but no key is required (should not happen in normal gameplay)
+			if s.logger != nil {
+				s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked but no key configured")
+			}
+			return
 		}
-		// INTEGRATION FIX [Category F]: Bookshelf Key Requirement
-		// Gap: Locked bookshelf interaction needs inventory check for key items
-		// Fix: Query InventoryComponent for item matching bookshelf.RequiredKeyID, reject if missing
-		// Roadmap: ROADMAP_V4.md Phase 23.2 - Lore Integration (bookshelf interaction)
-		// Integration: Add HasItem(requiredKeyID) check before showing bookshelf contents
-		return
 	}
 
 	// Check if bookshelf is empty
@@ -440,6 +464,30 @@ func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity,
 			"bookCount":   bookshelf.GetBookCount(),
 		}).Info("player browsing bookshelf")
 	}
+}
+
+// playerHasItemByID checks if the player has an item with the specified ID in their inventory.
+// Returns true if the item is found, false otherwise.
+func (s *InteractionSystem) playerHasItemByID(player *Entity, itemID string) bool {
+	// Get player's inventory component
+	invCompRaw, ok := player.GetComponent("inventory")
+	if !ok || invCompRaw == nil {
+		return false
+	}
+
+	invComp, ok := invCompRaw.(*InventoryComponent)
+	if !ok || invComp == nil {
+		return false
+	}
+
+	// Search through inventory items for matching ID
+	for _, itm := range invComp.Items {
+		if itm != nil && itm.ID == itemID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // handlePlayGameAction handles interaction with mini-game stations (Phase 27.3).

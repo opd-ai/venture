@@ -596,43 +596,42 @@ func (is *InteractionSystem) handleLockedInteraction(entity *Entity, target *Ent
 
 ---
 
-### Gap F3: Bookshelf Key Requirement
+### Gap F3: Bookshelf Key Requirement ✅ COMPLETED
 
 **File:** `pkg/engine/interaction_system.go`
 
 **Gap:** Locked bookshelf interaction needs inventory check for key items
 
-**Resolution:**
-```go
-// In handleBookshelfInteraction():
-func (is *InteractionSystem) handleBookshelfInteraction(entity *Entity, bookshelf *Entity) {
-    bookComp, ok := bookshelf.GetComponent("bookshelf")
-    if !ok || bookComp == nil {
-        return
-    }
-    shelf := bookComp.(*BookshelfComponent)
-    
-    // Check if locked
-    if shelf.RequiresKey != "" {
-        if !is.playerHasItem(entity, shelf.RequiresKey) {
-            is.showMessage(entity, "This bookshelf is locked. You need: "+shelf.RequiresKey)
-            return
-        }
-    }
-    
-    // Open bookshelf dialog
-    is.openBookshelfDialog(entity, shelf)
-}
+**Status:** RESOLVED (2025-12-23)
 
-func (is *InteractionSystem) playerHasItem(entity *Entity, itemName string) bool {
-    invComp, ok := entity.GetComponent("inventory")
-    if !ok || invComp == nil {
-        return false
-    }
-    inv := invComp.(*InventoryComponent)
-    return inv.HasItem(itemName)
-}
-```
+**Implementation:**
+1. Added `playerHasItemByID()` helper method to check if player has item with specific ID
+2. Updated `handleBookshelfRead()` to check for required key before allowing access
+3. When bookshelf is locked and requires a key:
+   - Checks player inventory for matching KeyItemID
+   - If key found: unlocks bookshelf and allows browsing
+   - If key not found: bookshelf remains locked, access denied
+4. Proper logging for all scenarios (key found, key missing, already unlocked)
+
+**Integration Points:**
+1. `pkg/engine/interaction_system.go` - Added key checking logic in handleBookshelfRead
+2. `pkg/engine/bookshelf_component.go` - Uses existing RequiresKey, KeyItemID, IsLocked fields
+3. `pkg/engine/inventory_components.go` - Queries InventoryComponent.Items for matching item ID
+
+**Tests Added:**
+- `TestPlayerHasItemByID_WithMatchingItem` - Verifies item found when present
+- `TestPlayerHasItemByID_WithoutMatchingItem` - Verifies item not found when absent
+- `TestPlayerHasItemByID_EmptyInventory` - Tests empty inventory handling
+- `TestPlayerHasItemByID_NoInventoryComponent` - Tests missing inventory component
+- `TestPlayerHasItemByID_NilItem` - Tests nil item handling
+- `TestHandleBookshelfRead_UnlockedBookshelf` - Tests normal unlocked access
+- `TestHandleBookshelfRead_LockedWithoutKey` - Tests locked bookshelf blocks access without key
+- `TestHandleBookshelfRead_LockedWithKey` - Tests locked bookshelf unlocks with correct key
+- `TestHandleBookshelfRead_LockedWithWrongKey` - Tests wrong key doesn't unlock
+- `TestHandleBookshelfRead_LockedNoKeyRequired` - Tests edge case of locked without key mechanism
+- `TestHandleBookshelfRead_EmptyBookshelf` - Tests empty bookshelf handling
+- `TestHandleBookshelfRead_UnlockThenBrowse` - Tests full unlock and browse flow
+- `TestHandleBookshelfRead_MultipleKeys` - Tests finding correct key among multiple keys
 
 ---
 
@@ -796,6 +795,7 @@ go test ./pkg/... -cover
 - [x] Housing UI shows player plots ✅ (Gap B5-B9 completed 2025-12-23)
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
+- [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)
 - [ ] Lock-picking mini-game starts for locked containers
 - [ ] Party chat delivers to party members
 - [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)

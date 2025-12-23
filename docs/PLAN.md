@@ -164,39 +164,36 @@ if len(reward.Items) > 0 {
 
 ---
 
-### Gap A5: Vehicle Weapon Projectile Spawning
+### Gap A5: Vehicle Weapon Projectile Spawning ✅ COMPLETED
 
 **File:** `pkg/engine/vehicle_combat_system.go`  
 **Gap:** Vehicle mounted weapons should spawn projectile entities
 
-**Resolution:**
-```go
-// Replace placeholder with actual projectile spawning:
-func (vcs *VehicleCombatSystem) fireWeapon(vehicle *Entity, weapon *VehicleWeaponComponent) {
-    pos, _ := vehicle.GetComponent("position")
-    if pos == nil {
-        return
-    }
-    position := pos.(*PositionComponent)
-    
-    // Create projectile entity
-    projectile := vcs.world.CreateEntity()
-    projectile.AddComponent(&PositionComponent{X: position.X, Y: position.Y})
-    projectile.AddComponent(&VelocityComponent{
-        X: weapon.Direction.X * weapon.ProjectileSpeed,
-        Y: weapon.Direction.Y * weapon.ProjectileSpeed,
-    })
-    projectile.AddComponent(&ProjectileComponent{
-        Damage:   weapon.Damage,
-        OwnerID:  vehicle.ID,
-        Lifetime: 5.0,
-    })
-    projectile.AddComponent(&ColliderComponent{
-        Width:  8,
-        Height: 8,
-    })
-}
-```
+**Status:** RESOLVED (2025-12-23)
+
+**Implementation:**
+1. Added `WeaponProjectileSpeed` field to `VehicleCombatComponent` in `pkg/engine/vehicle_combat_component.go`
+2. Updated `NewVehicleCombatComponent()` to set default projectile speed (300.0 pixels/second)
+3. Implemented `spawnWeaponProjectile()` method to create actual projectile entities using `ProjectileSystem.SpawnProjectile()`
+4. Added `weaponTypeToProjectileType()` helper to map weapon types ("Cannon", "MachineGun", "Laser", "Magic", "Ballista") to projectile visual types
+
+**Integration Points:**
+1. `pkg/engine/vehicle_combat_component.go` - Added `WeaponProjectileSpeed` field
+2. `pkg/engine/vehicle_combat_system.go` - Implemented projectile spawning with proper velocity, damage, and lifetime
+3. `pkg/engine/projectile_system.go` - Uses existing `SpawnProjectile()` method
+
+**Tests Added:**
+- `TestVehicleCombatSystem_NewVehicleCombatSystem` - Verifies system creation
+- `TestVehicleCombatSystem_NewVehicleCombatSystem_NilWorld` - Verifies graceful handling of nil world
+- `TestVehicleCombatSystem_SetProjectileSystem` - Verifies setter
+- `TestVehicleCombatSystem_SetCombatSystem` - Verifies setter
+- `TestVehicleCombatSystem_SpawnWeaponProjectile_WithProjectileSystem` - Verifies projectile creation
+- `TestVehicleCombatSystem_SpawnWeaponProjectile_NoProjectileSystem` - Verifies graceful degradation
+- `TestVehicleCombatSystem_SpawnWeaponProjectile_VelocityCalculation` - Tests all 4 cardinal directions
+- `TestVehicleCombatSystem_WeaponTypeToProjectileType` - Tests all weapon type mappings
+- `TestVehicleCombatSystem_SpawnWeaponProjectile_ProjectileProperties` - Verifies damage, type, owner, lifetime
+- `TestVehicleCombatComponent_WeaponProjectileSpeed` - Tests new field
+- `TestVehicleCombatSystem_SpawnWeaponProjectile_DefaultSpeed` - Tests default speed fallback
 
 ---
 

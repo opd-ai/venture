@@ -982,9 +982,9 @@ func TestInventorySystem_CalculateScrollMagnitude(t *testing.T) {
 	system := NewInventorySystem(world)
 
 	tests := []struct {
-		name       string
-		value      int
-		rarity     item.Rarity
+		name        string
+		value       int
+		rarity      item.Rarity
 		expectedMag float64
 	}{
 		{"common", 100, item.RarityCommon, 10.0},
@@ -1147,8 +1147,8 @@ func TestInventorySystem_ParseTargetType(t *testing.T) {
 		{"entity", TargetArea, TargetEntity},
 		{"area", TargetSelf, TargetArea},
 		{"terrain", TargetSelf, TargetTerrain},
-		{"", TargetArea, TargetArea},         // Empty uses default
-		{"invalid", TargetSelf, TargetSelf},  // Unknown uses default
+		{"", TargetArea, TargetArea},        // Empty uses default
+		{"invalid", TargetSelf, TargetSelf}, // Unknown uses default
 	}
 
 	for _, tt := range tests {

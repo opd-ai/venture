@@ -514,7 +514,7 @@ func TestSpellEffectSystem_ExecuteTerrainManipulation_CreateWall(t *testing.T) {
 		Duration:        0, // Instant
 		Magnitude:       1.0,
 		TargetType:      TargetTerrain,
-		TargetX:         96.0,  // tile (3, 3)
+		TargetX:         96.0, // tile (3, 3)
 		TargetY:         96.0,
 		Radius:          0,
 		TerrainModifier: int(TerrainModifierCreateWall),
@@ -563,7 +563,7 @@ func TestSpellEffectSystem_ExecuteTerrainManipulation_DigTunnel(t *testing.T) {
 		Duration:        0, // Instant
 		Magnitude:       5.0,
 		TargetType:      TargetTerrain,
-		TargetX:         64.0,  // tile (2, 2)
+		TargetX:         64.0, // tile (2, 2)
 		TargetY:         64.0,
 		Radius:          0, // Single tile
 		TerrainModifier: int(TerrainModifierDigTunnel),
@@ -622,7 +622,7 @@ func TestSpellEffectSystem_ExecuteTerrainManipulation_CreatePit(t *testing.T) {
 		Duration:        0, // Instant
 		Magnitude:       1.0,
 		TargetType:      TargetTerrain,
-		TargetX:         96.0,  // tile (3, 3)
+		TargetX:         96.0, // tile (3, 3)
 		TargetY:         96.0,
 		Radius:          0,
 		TerrainModifier: int(TerrainModifierCreatePit),

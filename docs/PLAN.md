@@ -355,39 +355,33 @@ onTerritoryOpen func() // ✅ Already existed
 
 ---
 
-### Gap B14: Bookshelf Dialog Provider
+### Gap B14: Bookshelf Dialog Provider ✅ COMPLETED (Pre-existing)
 
 **File:** `pkg/engine/book_spawning.go`
 
 **Gap:** Bookshelves reuse merchant dialog instead of dedicated bookshelf dialog
 
-**Resolution:**
-```go
-// Create dedicated bookshelf dialog:
-func NewBookshelfDialogProvider() *DialogProvider {
-    return &DialogProvider{
-        Type: DialogTypeBookshelf,
-        Entries: []DialogEntry{
-            {ID: "browse", Text: "Browse books...", Action: ActionBrowseBooks},
-            {ID: "read", Text: "Read selected book", Action: ActionReadBook},
-            {ID: "take", Text: "Take book", Action: ActionTakeBook},
-            {ID: "close", Text: "Close bookshelf", Action: ActionClose},
-        },
-    }
-}
+**Status:** RESOLVED (Pre-existing implementation verified 2025-12-23)
 
-// Use in bookshelf entity creation:
-func SpawnBookshelf(world *World, x, y float64, books []BookComponent) *Entity {
-    bookshelf := world.CreateEntity()
-    bookshelf.AddComponent(&PositionComponent{X: x, Y: y})
-    bookshelf.AddComponent(&InteractableComponent{
-        Type: InteractableBookshelf,
-        DialogProvider: NewBookshelfDialogProvider(),
-    })
-    bookshelf.AddComponent(&BookshelfComponent{Books: books})
-    return bookshelf
+**Implementation:**
+The `NewBookshelfDialogProvider()` function already exists and creates book-specific dialog providers using Markov chain generation instead of static dialog entries. This provides dynamic, genre-appropriate book descriptions rather than fixed text.
+
+```go
+func NewBookshelfDialogProvider(bookCount int, seed int64, genreID string) DialogProvider {
+    bookshelfName := fmt.Sprintf("Bookshelf (%d books)", bookCount)
+    bookPersonality := dialog.NewPersonality(dialog.PersonalityScholarly)
+    provider := NewMarkovDialogProvider(seed, genreID, bookshelfName, bookPersonality)
+    return provider
 }
 ```
+
+**Verification:**
+- Function exists at `pkg/engine/book_spawning.go:473`
+- Used in `createBookshelfEntity()` at line 325
+- Creates DialogProvider with scholarly personality for bookshelf interactions
+- Provides procedurally generated dialog text based on genre and seed
+
+**Note:** The implementation uses MarkovDialogProvider for dynamic text generation rather than static DialogEntry structs suggested in the original plan. This provides richer, more varied interactions.
 
 ---
 

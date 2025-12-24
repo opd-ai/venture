@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // INTEGRATION FIX [Category G]: Guild Federation Manager
@@ -30,7 +32,7 @@ func NewManager() *Manager {
 		guilds:           make(map[string]*Guild),
 		federatedServers: make([]string, 0),
 		messageHandlers:  make(map[MessageType]func(msg GuildMessage) error),
-		serverID:         fmt.Sprintf("server-%d", time.Now().UnixNano()),
+		serverID:         fmt.Sprintf("server-%s", uuid.New().String()),
 	}
 
 	// Register message handlers
@@ -470,7 +472,7 @@ func (m *Manager) SyncGuildState(guildID string) error {
 	// Broadcast to all federated servers
 	// Note: Actual network transmission would be handled by federation layer
 	// This method prepares the message for broadcast
-	_ = msg // Message prepared for federation layer
+	_ = msg // TODO: integrate with federation transport layer for actual broadcast
 
 	return nil
 }

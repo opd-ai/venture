@@ -810,16 +810,19 @@ func TestSyncGuildState(t *testing.T) {
 func TestHandleGuildMessage_GuildSync(t *testing.T) {
 	m := NewManager()
 
+	// Use fixed timestamp for deterministic tests
+	fixedTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+
 	// Create a guild on another server
 	guild := &Guild{
 		ID:          "remote-guild-123",
 		Name:        "Remote Guild",
 		LeaderID:    "remote-leader",
-		Members:     []Member{{PlayerID: "remote-leader", Rank: RankLeader, JoinedAt: time.Now(), LastLogin: time.Now()}},
+		Members:     []Member{{PlayerID: "remote-leader", Rank: RankLeader, JoinedAt: fixedTime, LastLogin: fixedTime}},
 		Permissions: make(map[Rank][]Permission),
 		Treasury:    1000,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   fixedTime,
+		UpdatedAt:   fixedTime,
 		Reputation:  make(map[string]float64),
 	}
 
@@ -827,7 +830,7 @@ func TestHandleGuildMessage_GuildSync(t *testing.T) {
 		Type:      MsgTypeGuildSync,
 		GuildID:   guild.ID,
 		ServerID:  "remote-server",
-		Timestamp: time.Now(),
+		Timestamp: fixedTime,
 		Data:      guild,
 	}
 

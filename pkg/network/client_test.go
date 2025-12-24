@@ -601,3 +601,65 @@ func TestConnectWithRetry_MaxDelayRespected(t *testing.T) {
 		t.Errorf("Expected at most %v elapsed time (MaxDelay should cap growth), got %v", maxExpected, elapsed)
 	}
 }
+
+// TestDisconnect_NotConnected verifies disconnect when not connected.
+func TestDisconnect_NotConnected(t *testing.T) {
+	config := DefaultClientConfig()
+	client := NewClient(config)
+
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("Expected no error when disconnecting while not connected, got %v", err)
+	}
+}
+
+// TestDisconnect_MultipleCallsSafe verifies multiple disconnect calls don't cause issues.
+func TestDisconnect_MultipleCallsSafe(t *testing.T) {
+	config := DefaultClientConfig()
+	client := NewClient(config)
+
+	// First disconnect (not connected)
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("First disconnect failed: %v", err)
+	}
+
+	// Second disconnect (still not connected)
+	err = client.Disconnect()
+	if err != nil {
+		t.Errorf("Second disconnect failed: %v", err)
+	}
+
+	// Verify client is not connected
+	if client.IsConnected() {
+		t.Error("Client should not be connected after disconnect")
+	}
+}
+
+// TestAtomicConnectedFlag verifies connected flag is atomic.
+func TestAtomicConnectedFlag(t *testing.T) {
+	config := DefaultClientConfig()
+	client := NewClient(config)
+
+	// Initial state should be not connected
+	if client.IsConnected() {
+		t.Error("New client should not be connected")
+	}
+
+	// This test verifies that IsConnected can be called concurrently
+	// without holding a lock (it uses atomic.Bool)
+	done := make(chan bool)
+	for i := 0; i < 10; i++ {
+		go func() {
+			for j := 0; j < 100; j++ {
+				_ = client.IsConnected()
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+}

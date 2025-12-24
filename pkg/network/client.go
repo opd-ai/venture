@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -102,7 +103,7 @@ type TCPClient struct {
 
 	// Connection state
 	conn      net.Conn
-	connected bool
+	connected atomic.Bool
 	playerID  uint64
 
 	// Sequence tracking
@@ -173,7 +174,7 @@ func (c *TCPClient) Connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.connected {
+	if c.connected.Load() {
 		return fmt.Errorf("already connected")
 	}
 
@@ -240,7 +241,7 @@ func (c *TCPClient) configureTCPKeepalive(conn net.Conn) {
 // setupConnection initializes connection state.
 func (c *TCPClient) setupConnection(conn net.Conn) {
 	c.conn = conn
-	c.connected = true
+	c.connected.Store(true)
 	c.lastPing = time.Now()
 	c.lastPong = time.Now()
 }
@@ -307,10 +308,8 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 
 // Disconnect closes the connection to the server.
 func (c *TCPClient) Disconnect() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if !c.connected {
+	// Check if already disconnected without holding the lock
+	if !c.connected.Load() {
 		return nil
 	}
 
@@ -318,18 +317,25 @@ func (c *TCPClient) Disconnect() error {
 		c.logger.Info("disconnecting from server")
 	}
 
-	c.connected = false
-	close(c.done)
+	// Set connected to false atomically before signaling shutdown
+	c.connected.Store(false)
 
-	// Close connection
+	// Signal goroutines to exit
+	c.mu.Lock()
+	if c.done != nil {
+		close(c.done)
+	}
+	c.mu.Unlock()
+
+	// Close connection to unblock any pending I/O operations
+	c.mu.Lock()
 	if c.conn != nil {
 		c.conn.Close()
 	}
-
-	// Wait for goroutines (unlock before waiting to prevent deadlock)
 	c.mu.Unlock()
+
+	// Wait for goroutines to finish (no lock held to avoid deadlock)
 	c.wg.Wait()
-	c.mu.Lock()
 
 	if c.logger != nil {
 		c.logger.Info("disconnected successfully")
@@ -340,9 +346,7 @@ func (c *TCPClient) Disconnect() error {
 
 // IsConnected returns whether the client is connected.
 func (c *TCPClient) IsConnected() bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.connected
+	return c.connected.Load()
 }
 
 // GetPlayerID returns the client's player ID.
@@ -368,12 +372,11 @@ func (c *TCPClient) GetLatency() time.Duration {
 
 // SendInput queues an input command to send to the server.
 func (c *TCPClient) SendInput(inputType string, data []byte) error {
-	c.mu.Lock()
-
-	if !c.connected {
-		c.mu.Unlock()
+	if !c.connected.Load() {
 		return fmt.Errorf("not connected")
 	}
+
+	c.mu.Lock()
 
 	cmd := &InputCommand{
 		PlayerID:       c.playerID,

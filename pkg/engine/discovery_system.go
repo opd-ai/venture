@@ -21,12 +21,12 @@ type QuestGeneratorInterface interface {
 // awards XP, and tracks series completion.
 type DiscoverySystem struct {
 	world           *World
-	discoveryRadius float64                // Distance within which fragments can be discovered
-	seriesXPBonus   float64                // Extra XP awarded for completing a series
-	seriesFragments map[string]int         // SeriesID → total fragment count
+	discoveryRadius float64                 // Distance within which fragments can be discovered
+	seriesXPBonus   float64                 // Extra XP awarded for completing a series
+	seriesFragments map[string]int          // SeriesID → total fragment count
 	questGenerator  QuestGeneratorInterface // Quest generator for story-unlocked quests
-	genreID         string                 // Current game genre for quest generation
-	seed            int64                  // Base seed for quest generation
+	genreID         string                  // Current game genre for quest generation
+	seed            int64                   // Base seed for quest generation
 }
 
 // NewDiscoverySystem creates a new discovery system.
@@ -42,7 +42,7 @@ func NewDiscoverySystem(world *World) *DiscoverySystem {
 		discoveryRadius: 2.0,   // 2 tile radius for discovery
 		seriesXPBonus:   100.0, // 100 XP bonus for completing a series
 		seriesFragments: make(map[string]int),
-		questGenerator:  nil,      // Set via SetQuestGenerator
+		questGenerator:  nil,       // Set via SetQuestGenerator
 		genreID:         "fantasy", // Default genre, can be updated
 		seed:            0,         // Default seed, can be updated
 	}
@@ -62,9 +62,9 @@ func (s *DiscoverySystem) SetQuestGenerator(generator QuestGeneratorInterface, g
 	s.seed = seed
 
 	log.WithFields(log.Fields{
-		"system_name": "discovery",
+		"system_name":   "discovery",
 		"has_generator": generator != nil,
-		"genre_id":    genreID,
+		"genre_id":      genreID,
 	}).Info("Quest generator configured for discovery system")
 }
 
@@ -579,7 +579,7 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 		// Use series-specific seed based on the base seed and series ID hash
 		// This ensures deterministic generation: same seriesID always produces same quest
 		questSeed := s.seed ^ hashSeriesID(seriesID)
-		
+
 		// Set up generation parameters
 		params := procgen.GenerationParams{
 			Difficulty: 0.5, // Medium difficulty for story quests

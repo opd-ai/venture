@@ -880,7 +880,7 @@ func TestDiscoverySystem_UnlockStoryQuests_DeterministicSeed(t *testing.T) {
 	differentSeed := mockGen.LastSeed
 
 	if firstSeed == differentSeed {
-		t.Errorf("Different series IDs should produce different seeds: %s seed = %d, %s seed = %d", 
+		t.Errorf("Different series IDs should produce different seeds: %s seed = %d, %s seed = %d",
 			seriesID, firstSeed, differentSeriesID, differentSeed)
 	}
 

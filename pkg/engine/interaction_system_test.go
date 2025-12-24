@@ -422,7 +422,7 @@ func TestInteractionSystem_HandleOpenAction_WithLockPicking(t *testing.T) {
 	if !hasComp {
 		t.Fatal("expected player to have minigame component")
 	}
-	
+
 	gameComp, ok := compRaw.(*MiniGameComponent)
 	if !ok || gameComp == nil {
 		t.Fatal("expected mini-game component to be created")

@@ -121,7 +121,7 @@ func (g *Game) setupScene() {
 		{150, 450},
 		{650, 450},
 	}
-	
+
 	falloffTypes := []engine.LightFalloffType{
 		engine.FalloffLinear,
 		engine.FalloffQuadratic,
@@ -151,8 +151,8 @@ func (g *Game) setupScene() {
 		}
 		torchSprite.Image.Fill(color.RGBA{255, 180, 100, 255}) // Orange
 		torch.AddComponent(torchSprite)
-		
-		log.Printf("Created torch at (%.0f, %.0f) with falloff: %v", 
+
+		log.Printf("Created torch at (%.0f, %.0f) with falloff: %v",
 			pos[0], pos[1], falloffTypes[i])
 	}
 

@@ -197,17 +197,30 @@ func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat
 
 // deliverToParty delivers a message to party members.
 func (cs *ChatSystem) deliverToParty(msg ChatMessage, sender *Entity) {
-	// INTEGRATION FIX [Category F]: Party Chat Delivery
-	// Gap: Party channel requires PartyComponent to filter recipients, not yet implemented
-	// Fix: Temporary workaround delivers to all subscribed entities until party system added
-	// Roadmap: Deferred to V5.1 - Party system is post-V5.0 feature
-	// For now, deliver to all subscribed entities (placeholder)
-	for _, entity := range cs.world.GetEntities() {
-		if entity.ID == sender.ID {
+	// Get sender's party component
+	partyComp, ok := sender.GetComponent("party")
+	if !ok || partyComp == nil {
+		// Sender is not in a party, message cannot be delivered
+		return
+	}
+
+	party, ok := partyComp.(*PartyComponent)
+	if !ok {
+		return
+	}
+
+	// Deliver to all party members
+	for _, memberID := range party.MemberIDs {
+		if memberID == sender.ID {
+			continue // Don't deliver to sender (already in history)
+		}
+
+		member, exists := cs.world.GetEntity(memberID)
+		if !exists {
 			continue
 		}
 
-		chatComp, exists := entity.GetComponent("chat")
+		chatComp, exists := member.GetComponent("chat")
 		if !exists {
 			continue
 		}
@@ -217,6 +230,7 @@ func (cs *ChatSystem) deliverToParty(msg ChatMessage, sender *Entity) {
 			continue
 		}
 
+		// Mark as delivered and add to recipient's history
 		deliveredMsg := msg
 		deliveredMsg.Delivered = true
 		chat.AddMessage(deliveredMsg)

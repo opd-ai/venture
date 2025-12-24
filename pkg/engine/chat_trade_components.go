@@ -282,3 +282,61 @@ type TradeComponent struct {
 func (t *TradeComponent) Type() string {
 	return "trade"
 }
+
+// PartyComponent tracks party membership for entities.
+// Used by ChatSystem to filter party chat messages to members only.
+type PartyComponent struct {
+	PartyID   string   // Unique party identifier
+	MemberIDs []uint64 // Entity IDs of all party members (including this entity)
+	LeaderID  uint64   // Entity ID of the party leader
+}
+
+// Type returns the component type
+func (p *PartyComponent) Type() string {
+	return "party"
+}
+
+// NewPartyComponent creates a new party component with the given party ID and leader.
+func NewPartyComponent(partyID string, leaderID uint64) *PartyComponent {
+	return &PartyComponent{
+		PartyID:   partyID,
+		MemberIDs: []uint64{leaderID},
+		LeaderID:  leaderID,
+	}
+}
+
+// AddMember adds a member to the party if not already present.
+func (p *PartyComponent) AddMember(entityID uint64) {
+	// Check if already a member
+	for _, id := range p.MemberIDs {
+		if id == entityID {
+			return
+		}
+	}
+	p.MemberIDs = append(p.MemberIDs, entityID)
+}
+
+// RemoveMember removes a member from the party.
+func (p *PartyComponent) RemoveMember(entityID uint64) {
+	for i, id := range p.MemberIDs {
+		if id == entityID {
+			p.MemberIDs = append(p.MemberIDs[:i], p.MemberIDs[i+1:]...)
+			return
+		}
+	}
+}
+
+// IsMember checks if an entity is a member of this party.
+func (p *PartyComponent) IsMember(entityID uint64) bool {
+	for _, id := range p.MemberIDs {
+		if id == entityID {
+			return true
+		}
+	}
+	return false
+}
+
+// IsLeader checks if an entity is the leader of this party.
+func (p *PartyComponent) IsLeader(entityID uint64) bool {
+	return p.LeaderID == entityID
+}

@@ -493,35 +493,45 @@ The following types and fields were already implemented in `pkg/saveload/types.g
 
 ## Phase 4: Gameplay Integration (Week 4)
 
-### Gap F1: Party Chat Delivery
+### Gap F1: Party Chat Delivery ✅ COMPLETED
 
 **File:** `pkg/engine/chat_system.go`
 
 **Gap:** Party channel requires PartyComponent to filter recipients
 
-**Resolution:**
-```go
-// Add party member lookup:
-func (cs *ChatSystem) deliverPartyMessage(sender *Entity, message ChatMessage) {
-    partyComp, ok := sender.GetComponent("party")
-    if !ok || partyComp == nil {
-        cs.logger.Warn("party chat failed: sender not in party")
-        return
-    }
-    party := partyComp.(*PartyComponent)
-    
-    // Deliver to all party members
-    for _, memberID := range party.MemberIDs {
-        member := cs.world.GetEntity(memberID)
-        if member != nil {
-            if chatComp, ok := member.GetComponent("chat_inbox"); ok && chatComp != nil {
-                inbox := chatComp.(*ChatInboxComponent)
-                inbox.AddMessage(message)
-            }
-        }
-    }
-}
-```
+**Status:** RESOLVED (2025-12-24)
+
+**Implementation:**
+1. Added `PartyComponent` struct to `pkg/engine/chat_trade_components.go` with:
+   - `PartyID` - unique party identifier
+   - `MemberIDs` - slice of entity IDs for all party members
+   - `LeaderID` - entity ID of the party leader
+2. Added `NewPartyComponent()` constructor with leader initialization
+3. Added member management methods: `AddMember()`, `RemoveMember()`, `IsMember()`, `IsLeader()`
+4. Updated `ChatSystem.deliverToParty()` to use PartyComponent for filtering:
+   - Gets sender's PartyComponent
+   - Iterates through MemberIDs only (not all entities)
+   - Delivers message only to party members with active ChatParty channel
+   - Gracefully handles missing party component (sender not in party)
+5. Removed INTEGRATION FIX comment from deliverToParty implementation
+
+**Integration Points:**
+1. `pkg/engine/chat_trade_components.go` - Added PartyComponent with member management
+2. `pkg/engine/chat_system.go` - deliverToParty() now filters by party membership
+3. Party chat now properly scoped to party members instead of all subscribed entities
+
+**Tests Added:**
+- `TestNewPartyComponent` - Verifies component creation with leader
+- `TestPartyComponentAddMember` - Tests member addition with idempotency
+- `TestPartyComponentRemoveMember` - Tests member removal including non-existent members
+- `TestPartyComponentIsMember` - Tests membership checking
+- `TestPartyComponentIsLeader` - Tests leader checking
+- `TestPartyComponentMultipleMemberOperations` - Tests multiple member operations
+- `TestChatSystem_DeliverMessage_Party` - Verifies party-only message delivery
+- `TestChatSystem_DeliverMessage_Party_NoPartyComponent` - Verifies graceful handling without party
+- `TestChatSystem_DeliverMessage_Party_MemberNotSubscribed` - Verifies channel subscription check
+- `TestChatSystem_DeliverMessage_Party_MemberMissingChatComponent` - Verifies missing chat component handling
+- `TestChatSystem_DeliverMessage_Party_MemberEntityNotFound` - Verifies non-existent entity handling
 
 ---
 
@@ -769,7 +779,7 @@ go test ./pkg/... -cover
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)
 - [ ] Lock-picking mini-game starts for locked containers
-- [ ] Party chat delivers to party members
+- [x] Party chat delivers to party members ✅ (Gap F1 completed 2025-12-24)
 - [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)
 
 ### Persistence Verification

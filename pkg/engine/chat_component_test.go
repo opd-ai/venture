@@ -474,3 +474,161 @@ func BenchmarkCanSendMessage(b *testing.B) {
 		_ = comp.CanSendMessage(ChatGlobal)
 	}
 }
+
+// PartyComponent tests
+
+func TestNewPartyComponent(t *testing.T) {
+	partyID := "party-123"
+	leaderID := uint64(100)
+
+	party := NewPartyComponent(partyID, leaderID)
+	if party == nil {
+		t.Fatal("NewPartyComponent returned nil")
+	}
+	if party.Type() != "party" {
+		t.Errorf("Type() = %v, want party", party.Type())
+	}
+	if party.PartyID != partyID {
+		t.Errorf("PartyID = %v, want %v", party.PartyID, partyID)
+	}
+	if party.LeaderID != leaderID {
+		t.Errorf("LeaderID = %v, want %v", party.LeaderID, leaderID)
+	}
+	if len(party.MemberIDs) != 1 {
+		t.Errorf("MemberIDs length = %d, want 1", len(party.MemberIDs))
+	}
+	if party.MemberIDs[0] != leaderID {
+		t.Errorf("MemberIDs[0] = %v, want %v", party.MemberIDs[0], leaderID)
+	}
+}
+
+func TestPartyComponentAddMember(t *testing.T) {
+	party := NewPartyComponent("party-123", 100)
+
+	// Add a new member
+	party.AddMember(101)
+	if len(party.MemberIDs) != 2 {
+		t.Errorf("MemberIDs length = %d, want 2", len(party.MemberIDs))
+	}
+	if !party.IsMember(101) {
+		t.Error("Member 101 not found after AddMember")
+	}
+
+	// Add duplicate member (should be idempotent)
+	party.AddMember(101)
+	if len(party.MemberIDs) != 2 {
+		t.Errorf("MemberIDs length = %d, want 2 (duplicate should not add)", len(party.MemberIDs))
+	}
+}
+
+func TestPartyComponentRemoveMember(t *testing.T) {
+	party := NewPartyComponent("party-123", 100)
+	party.AddMember(101)
+	party.AddMember(102)
+
+	if len(party.MemberIDs) != 3 {
+		t.Fatalf("Setup failed: MemberIDs length = %d, want 3", len(party.MemberIDs))
+	}
+
+	// Remove a member
+	party.RemoveMember(101)
+	if len(party.MemberIDs) != 2 {
+		t.Errorf("MemberIDs length = %d, want 2", len(party.MemberIDs))
+	}
+	if party.IsMember(101) {
+		t.Error("Member 101 still present after RemoveMember")
+	}
+
+	// Remove non-existent member (should be safe)
+	party.RemoveMember(999)
+	if len(party.MemberIDs) != 2 {
+		t.Errorf("MemberIDs length = %d, want 2 (removing non-existent should not change)", len(party.MemberIDs))
+	}
+}
+
+func TestPartyComponentIsMember(t *testing.T) {
+	party := NewPartyComponent("party-123", 100)
+	party.AddMember(101)
+
+	tests := []struct {
+		name     string
+		entityID uint64
+		want     bool
+	}{
+		{"leader_is_member", 100, true},
+		{"added_member", 101, true},
+		{"not_member", 999, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := party.IsMember(tt.entityID)
+			if got != tt.want {
+				t.Errorf("IsMember(%v) = %v, want %v", tt.entityID, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPartyComponentIsLeader(t *testing.T) {
+	party := NewPartyComponent("party-123", 100)
+	party.AddMember(101)
+
+	tests := []struct {
+		name     string
+		entityID uint64
+		want     bool
+	}{
+		{"leader", 100, true},
+		{"member_not_leader", 101, false},
+		{"not_member", 999, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := party.IsLeader(tt.entityID)
+			if got != tt.want {
+				t.Errorf("IsLeader(%v) = %v, want %v", tt.entityID, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPartyComponentMultipleMemberOperations(t *testing.T) {
+	party := NewPartyComponent("party-123", 100)
+
+	// Add multiple members
+	memberIDs := []uint64{101, 102, 103, 104, 105}
+	for _, id := range memberIDs {
+		party.AddMember(id)
+	}
+
+	// Verify all members present
+	expectedCount := len(memberIDs) + 1 // +1 for leader
+	if len(party.MemberIDs) != expectedCount {
+		t.Errorf("MemberIDs length = %d, want %d", len(party.MemberIDs), expectedCount)
+	}
+
+	for _, id := range memberIDs {
+		if !party.IsMember(id) {
+			t.Errorf("Member %d not found", id)
+		}
+	}
+
+	// Remove some members
+	party.RemoveMember(102)
+	party.RemoveMember(104)
+
+	if len(party.MemberIDs) != 4 {
+		t.Errorf("MemberIDs length = %d, want 4", len(party.MemberIDs))
+	}
+	if party.IsMember(102) {
+		t.Error("Member 102 still present")
+	}
+	if party.IsMember(104) {
+		t.Error("Member 104 still present")
+	}
+	if !party.IsMember(101) {
+		t.Error("Member 101 should still be present")
+	}
+}

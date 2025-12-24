@@ -5,6 +5,9 @@ package engine
 import (
 	"fmt"
 	"math/rand"
+
+	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 // MiniGameSystem manages mini-game instances and their lifecycle.
@@ -14,7 +17,9 @@ import (
 type MiniGameSystem struct {
 	world *World
 	// rngSource is used for deterministic reward generation
-	rngSource rand.Source
+	rngSource     rand.Source
+	itemGenerator *item.ItemGenerator
+	genreID       string
 }
 
 // NewMiniGameSystem creates a new mini-game system.
@@ -30,6 +35,18 @@ func NewMiniGameSystem(world *World) *MiniGameSystem {
 // This enables reproducible mini-game rewards for testing and multiplayer sync.
 func (s *MiniGameSystem) SetSeed(seed int64) {
 	s.rngSource = rand.NewSource(seed)
+}
+
+// SetItemGenerator sets the item generator for creating procedural reward items.
+// This allows mini-games to award randomly generated items based on difficulty.
+func (s *MiniGameSystem) SetItemGenerator(generator *item.ItemGenerator) {
+	s.itemGenerator = generator
+}
+
+// SetGenreID sets the genre ID for item generation.
+// This ensures generated items match the game's theme (fantasy, sci-fi, etc.).
+func (s *MiniGameSystem) SetGenreID(genreID string) {
+	s.genreID = genreID
 }
 
 // Update processes active mini-games, updating their state and checking for timeouts.
@@ -209,6 +226,7 @@ func (s *MiniGameSystem) getTimeLimit(gameType MiniGameType) float64 {
 
 // generateReward creates a reward based on game type and difficulty.
 // Uses deterministic RNG for reproducible rewards in multiplayer.
+// Generates 1-3 procedural items based on difficulty when ItemGenerator is configured.
 func (s *MiniGameSystem) generateReward(gameType MiniGameType, difficulty float64) *Reward {
 	rng := rand.New(s.rngSource)
 
@@ -241,15 +259,59 @@ func (s *MiniGameSystem) generateReward(gameType MiniGameType, difficulty float6
 	gold := int(float64(baseGold) * difficulty * multiplier * randomFactor * 2.0)
 	xp := baseXP * difficulty * multiplier * randomFactor * 1.5
 
-	return &Reward{
+	reward := &Reward{
 		Gold:  gold,
 		XP:    xp,
-		Items: []uint64{}, // INTEGRATION FIX [Category E]: Mini-Game Reward Items
-		// Gap: Mini-game rewards should include procedurally generated items, not just gold/XP
-		// Fix: Call ItemGenerator with difficulty-scaled rarity, add 1-3 items to Items array
-		// Roadmap: ROADMAP_V4.md Phase 27.1 - Mini-Game Rewards
-		// Integration: Requires itemgen.Generator instance, generate based on game type (puzzle=scroll, combat=weapon)
+		Items: []uint64{},
 	}
+
+	// Generate procedural items if item generator is configured
+	if s.itemGenerator != nil {
+		// Determine number of items based on difficulty
+		numItems := 1
+		if difficulty > 0.7 {
+			numItems = 2
+		}
+		if difficulty > 0.9 {
+			numItems = 3
+		}
+
+		// Generate items
+		for i := 0; i < numItems; i++ {
+			itemSeed := s.rngSource.Int63() + int64(i)
+
+			// Generate a single item using the item generator
+			params := procgen.GenerationParams{
+				Difficulty: difficulty,
+				GenreID:    s.genreID,
+				Depth:      0,
+				Custom: map[string]interface{}{
+					"count": 1, // Generate single item per call
+				},
+			}
+
+			result, err := s.itemGenerator.Generate(itemSeed, params)
+			if err != nil {
+				continue // Skip this item on error
+			}
+
+			// Extract items from result
+			items, ok := result.([]*item.Item)
+			if !ok || len(items) == 0 {
+				continue
+			}
+
+			// Create an entity for the first generated item
+			generatedItem := items[0]
+			itemEntity := s.world.CreateEntity()
+			itemEntity.AddComponent(&ItemComponent{Item: generatedItem})
+
+			// Add entity ID to reward
+			reward.Items = append(reward.Items, itemEntity.ID)
+		}
+	}
+
+	return reward
 }
 
 // awardReward gives the reward to the entity, updating gold and XP.

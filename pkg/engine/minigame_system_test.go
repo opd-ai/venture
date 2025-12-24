@@ -935,3 +935,314 @@ func BenchmarkMiniGameSystem_GenerateReward(b *testing.B) {
 		sys.generateReward(MiniGameCard, 0.5)
 	}
 }
+
+// TestMiniGameSystem_SetItemGenerator verifies item generator setter.
+func TestMiniGameSystem_SetItemGenerator(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+
+	// Create item generator
+	itemGen := item.NewItemGenerator()
+
+	// Set the generator
+	sys.SetItemGenerator(itemGen)
+
+	// Verify it's set
+	if sys.itemGenerator != itemGen {
+		t.Error("SetItemGenerator did not set the generator correctly")
+	}
+}
+
+// TestMiniGameSystem_SetItemGenerator_Nil verifies nil generator handling.
+func TestMiniGameSystem_SetItemGenerator_Nil(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+
+	// Set nil generator (should be allowed for graceful degradation)
+	sys.SetItemGenerator(nil)
+
+	// Verify it's nil
+	if sys.itemGenerator != nil {
+		t.Error("SetItemGenerator should allow nil")
+	}
+}
+
+// TestMiniGameSystem_SetGenreID verifies genre ID setter.
+func TestMiniGameSystem_SetGenreID(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+
+	// Set genre ID
+	sys.SetGenreID("fantasy")
+
+	// Verify it's set
+	if sys.genreID != "fantasy" {
+		t.Errorf("SetGenreID = %q, want %q", sys.genreID, "fantasy")
+	}
+
+	// Test different genre
+	sys.SetGenreID("scifi")
+	if sys.genreID != "scifi" {
+		t.Errorf("SetGenreID = %q, want %q", sys.genreID, "scifi")
+	}
+}
+
+// TestMiniGameSystem_GenerateReward_WithItemGenerator verifies item generation.
+func TestMiniGameSystem_GenerateReward_WithItemGenerator(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	sys.SetSeed(12345)
+	sys.SetItemGenerator(item.NewItemGenerator())
+	sys.SetGenreID("fantasy")
+
+	tests := []struct {
+		name           string
+		difficulty     float64
+		expectedItems  int
+		minItems       int
+		maxItems       int
+	}{
+		{
+			name:         "low difficulty",
+			difficulty:   0.3,
+			expectedItems: 1,
+			minItems:     1,
+			maxItems:     1,
+		},
+		{
+			name:         "medium difficulty",
+			difficulty:   0.8,
+			expectedItems: 2,
+			minItems:     2,
+			maxItems:     2,
+		},
+		{
+			name:         "high difficulty",
+			difficulty:   0.95,
+			expectedItems: 3,
+			minItems:     3,
+			maxItems:     3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reward := sys.generateReward(MiniGameCard, tt.difficulty)
+			
+			if reward == nil {
+				t.Fatal("generateReward returned nil")
+			}
+
+			// Process entity additions
+			world.Update(0)
+
+			itemCount := len(reward.Items)
+			if itemCount < tt.minItems || itemCount > tt.maxItems {
+				t.Errorf("Item count = %d, want between %d and %d", 
+					itemCount, tt.minItems, tt.maxItems)
+			}
+
+			// Verify each item entity exists and has ItemComponent
+			for _, itemID := range reward.Items {
+				entity, exists := world.GetEntity(itemID)
+				if !exists {
+					t.Errorf("Item entity %d does not exist", itemID)
+					continue
+				}
+
+				itemCompRaw, hasItem := entity.GetComponent("item")
+				if !hasItem {
+					t.Errorf("Item entity %d missing ItemComponent", itemID)
+					continue
+				}
+
+				itemComp, ok := itemCompRaw.(*ItemComponent)
+				if !ok || itemComp.Item == nil {
+					t.Errorf("Item entity %d has invalid ItemComponent", itemID)
+				}
+			}
+		})
+	}
+}
+
+// TestMiniGameSystem_GenerateReward_WithoutItemGenerator verifies graceful degradation.
+func TestMiniGameSystem_GenerateReward_WithoutItemGenerator(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	sys.SetSeed(12345)
+	// Don't set item generator
+
+	reward := sys.generateReward(MiniGameCard, 0.8)
+	
+	if reward == nil {
+		t.Fatal("generateReward returned nil")
+	}
+
+	// Should still get gold and XP
+	if reward.Gold == 0 {
+		t.Error("Gold should be non-zero even without item generator")
+	}
+	if reward.XP == 0 {
+		t.Error("XP should be non-zero even without item generator")
+	}
+
+	// Should have no items
+	if len(reward.Items) != 0 {
+		t.Errorf("Items = %d, want 0 when no item generator set", len(reward.Items))
+	}
+}
+
+// TestMiniGameSystem_GenerateReward_ItemsDeterministic verifies items are deterministic.
+func TestMiniGameSystem_GenerateReward_ItemsDeterministic(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	sys.SetItemGenerator(item.NewItemGenerator())
+	sys.SetGenreID("fantasy")
+
+	// Generate with seed 1
+	sys.SetSeed(12345)
+	reward1 := sys.generateReward(MiniGameCard, 0.8)
+	world.Update(0) // Process entity additions
+
+	// Generate with same seed again
+	sys.SetSeed(12345)
+	reward2 := sys.generateReward(MiniGameCard, 0.8)
+	world.Update(0) // Process entity additions
+
+	// Should have same number of items
+	if len(reward1.Items) != len(reward2.Items) {
+		t.Errorf("Item counts differ: %d != %d", len(reward1.Items), len(reward2.Items))
+	}
+
+	// Items should have same properties (though different entity IDs)
+	for i := 0; i < len(reward1.Items) && i < len(reward2.Items); i++ {
+		entity1, _ := world.GetEntity(reward1.Items[i])
+		entity2, _ := world.GetEntity(reward2.Items[i])
+
+		item1Comp, _ := entity1.GetComponent("item")
+		item2Comp, _ := entity2.GetComponent("item")
+
+		item1 := item1Comp.(*ItemComponent).Item
+		item2 := item2Comp.(*ItemComponent).Item
+
+		// Check items have same type and name
+		if item1.Type != item2.Type {
+			t.Errorf("Item %d type differs: %v != %v", i, item1.Type, item2.Type)
+		}
+		if item1.Name != item2.Name {
+			t.Errorf("Item %d name differs: %s != %s", i, item1.Name, item2.Name)
+		}
+	}
+}
+
+// TestMiniGameSystem_GenerateReward_ItemsCreatedAsEntities verifies items are proper entities.
+func TestMiniGameSystem_GenerateReward_ItemsCreatedAsEntities(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	sys.SetSeed(12345)
+	sys.SetItemGenerator(item.NewItemGenerator())
+	sys.SetGenreID("fantasy")
+
+	reward := sys.generateReward(MiniGameCard, 0.9) // High difficulty = 3 items
+	world.Update(0) // Process entity additions
+
+	if len(reward.Items) == 0 {
+		t.Fatal("Expected items to be generated")
+	}
+
+	// Verify each item is a proper entity with ItemComponent
+	for i, itemID := range reward.Items {
+		entity, exists := world.GetEntity(itemID)
+		if !exists {
+			t.Errorf("Item %d: Entity %d not found in world", i, itemID)
+			continue
+		}
+
+		itemCompRaw, hasItem := entity.GetComponent("item")
+		if !hasItem {
+			t.Errorf("Item %d: Entity %d missing ItemComponent", i, itemID)
+			continue
+		}
+
+		itemComp, ok := itemCompRaw.(*ItemComponent)
+		if !ok {
+			t.Errorf("Item %d: Entity %d has invalid ItemComponent type", i, itemID)
+			continue
+		}
+
+		if itemComp.Item == nil {
+			t.Errorf("Item %d: Entity %d has nil Item", i, itemID)
+			continue
+		}
+
+		// Verify item has basic properties
+		if itemComp.Item.Name == "" {
+			t.Errorf("Item %d: Item has empty name", i)
+		}
+	}
+}
+
+// TestMiniGameSystem_EndGame_WithGeneratedItems verifies full integration.
+func TestMiniGameSystem_EndGame_WithGeneratedItems(t *testing.T) {
+	world := NewWorld()
+	sys := NewMiniGameSystem(world)
+	sys.SetSeed(12345)
+	sys.SetItemGenerator(item.NewItemGenerator())
+	sys.SetGenreID("fantasy")
+
+	// Create player entity with inventory
+	playerEntity := world.CreateEntity()
+	playerEntity.AddComponent(NewInventoryComponent(20, 200.0))
+	playerEntity.AddComponent(&ExperienceComponent{Level: 1, CurrentXP: 0})
+	world.Update(0)
+
+	// Start a game
+	err := sys.StartGame(playerEntity.ID, MiniGameCard, 0.9)
+	if err != nil {
+		t.Fatalf("StartGame failed: %v", err)
+	}
+
+	// Process entity additions for reward items
+	world.Update(0)
+
+	// Get the game component to verify reward was generated
+	gameComp := sys.GetGameComponent(playerEntity.ID)
+	if gameComp == nil {
+		t.Fatal("GetGameComponent returned nil")
+	}
+
+	initialItemCount := len(gameComp.Reward.Items)
+	if initialItemCount == 0 {
+		t.Error("Expected reward to have items")
+	}
+
+	// End the game successfully
+	err = sys.EndGame(playerEntity.ID, true)
+	if err != nil {
+		t.Fatalf("EndGame failed: %v", err)
+	}
+
+	// Verify items were added to inventory
+	invCompRaw, _ := playerEntity.GetComponent("inventory")
+	inv := invCompRaw.(*InventoryComponent)
+
+	if len(inv.Items) == 0 {
+		t.Error("Expected items to be added to inventory")
+	}
+
+	// Verify items in inventory match generated items count
+	if len(inv.Items) != initialItemCount {
+		t.Errorf("Inventory has %d items, expected %d", len(inv.Items), initialItemCount)
+	}
+
+	// Verify XP and gold were also awarded
+	expCompRaw, _ := playerEntity.GetComponent("experience")
+	exp := expCompRaw.(*ExperienceComponent)
+	if exp.CurrentXP == 0 {
+		t.Error("Expected XP to be awarded")
+	}
+
+	if inv.Gold == 0 {
+		t.Error("Expected gold to be awarded")
+	}
+}

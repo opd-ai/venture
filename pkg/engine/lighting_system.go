@@ -1008,6 +1008,10 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 }
 
 // calculateFalloff computes light falloff based on distance and type.
+// calculateFalloff computes light falloff at a given distance for gameplay calculations.
+// This is used by CalculateLightIntensityAt for gameplay mechanics (stealth, vision, etc.).
+// It delegates to calculateFalloffIntensity for consistent falloff behavior across
+// both rendering (gradient generation) and gameplay (intensity calculation).
 func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType LightFalloffType) float64 {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -1028,40 +1032,16 @@ func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType Ligh
 		return 0
 	}
 
-	normalized := dist / radius
-	var falloff float64
-
-	switch falloffType {
-	case FalloffLinear:
-		falloff = 1.0 - normalized
-
-	case FalloffQuadratic:
-		falloff = 1.0 - normalized*normalized
-
-	case FalloffInverseSquare:
-		if dist < 1.0 {
-			falloff = 1.0
-		} else {
-			falloff = 1.0 / (dist * dist) * (radius * radius)
-		}
-
-	case FalloffConstant:
-		falloff = 1.0
-
-	default:
-		falloff = 1.0 - normalized
-		if s.logger != nil {
-			s.logger.WithField("falloff_type", falloffType).Warn("Unknown falloff type, using linear")
-		}
-	}
+	// Normalize distance to [0, 1] and use the same falloff calculation as gradient generation
+	normalizedDist := dist / radius
+	falloff := s.calculateFalloffIntensity(normalizedDist, falloffType)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"distance":     dist,
-			"radius":       radius,
-			"normalized":   normalized,
-			"falloff_type": falloffType,
-			"falloff":      falloff,
+			"distance":        dist,
+			"radius":          radius,
+			"normalized_dist": normalizedDist,
+			"falloff":         falloff,
 		}).Debug("Falloff calculated")
 	}
 

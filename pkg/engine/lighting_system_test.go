@@ -253,7 +253,7 @@ func TestLightingSystem_calculateFalloff(t *testing.T) {
 		{"linear at half", 50, 100, FalloffLinear, 0.5, 0.5},
 		{"linear at edge", 100, 100, FalloffLinear, 0.0, 0.0},
 		{"quadratic at center", 0, 100, FalloffQuadratic, 1.0, 1.0},
-		{"quadratic at half", 50, 100, FalloffQuadratic, 0.7, 0.8},
+		{"quadratic at half", 50, 100, FalloffQuadratic, 0.24, 0.26}, // (1-0.5)^2 = 0.25
 		{"constant within radius", 50, 100, FalloffConstant, 1.0, 1.0},
 		{"constant at edge", 99, 100, FalloffConstant, 1.0, 1.0},
 		{"beyond radius", 150, 100, FalloffLinear, 0.0, 0.0},

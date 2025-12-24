@@ -355,3 +355,366 @@ func TestHandleBookshelfRead_MultipleKeys(t *testing.T) {
 		t.Error("bookshelf should be unlocked when player has correct key among multiple keys")
 	}
 }
+
+// TestInteractionSystem_SetMiniGameSystem tests the SetMiniGameSystem setter.
+func TestInteractionSystem_SetMiniGameSystem(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+
+	system.SetMiniGameSystem(miniGameSystem)
+
+	if system.miniGameSystem != miniGameSystem {
+		t.Error("expected miniGameSystem to be set")
+	}
+}
+
+// TestInteractionSystem_SetMiniGameSystem_Nil tests setting nil mini-game system.
+func TestInteractionSystem_SetMiniGameSystem_Nil(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+
+	// Set system first
+	system.SetMiniGameSystem(miniGameSystem)
+
+	// Then set to nil (graceful handling)
+	system.SetMiniGameSystem(nil)
+
+	if system.miniGameSystem != nil {
+		t.Error("expected miniGameSystem to be nil")
+	}
+}
+
+// TestInteractionSystem_HandleOpenAction_WithLockPicking tests lock-picking mini-game start.
+func TestInteractionSystem_HandleOpenAction_WithLockPicking(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	// Create player entity
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+	player.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	// Create locked door entity
+	door := world.CreateEntity()
+	door.AddComponent(&PositionComponent{X: 150, Y: 100})
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		ActionText:          "Open",
+		InteractionRange:    50.0,
+		IsAvailable:         true,
+		RequiresLockPicking: true,
+		LockDifficulty:      0.5,
+	}
+	door.AddComponent(ctx)
+
+	// Test: handleOpenAction should start lock-picking mini-game
+	system.handleOpenAction(player, door)
+
+	// Verify mini-game was started
+	gameComp := miniGameSystem.GetGameComponent(player.ID)
+	if gameComp == nil {
+		t.Fatal("expected mini-game component to be created")
+	}
+
+	if gameComp.GameType != MiniGameLockPicking {
+		t.Errorf("expected game type MiniGameLockPicking, got %v", gameComp.GameType)
+	}
+
+	if gameComp.Difficulty != 0.5 {
+		t.Errorf("expected difficulty 0.5, got %v", gameComp.Difficulty)
+	}
+
+	if !gameComp.Active {
+		t.Error("expected mini-game to be active")
+	}
+
+	// Verify locked entity ID is stored in state
+	stateMap, ok := gameComp.State.(map[string]interface{})
+	if !ok {
+		t.Fatal("expected state to be a map")
+	}
+
+	lockedEntityID, ok := stateMap["lockedEntityID"].(uint64)
+	if !ok || lockedEntityID != door.ID {
+		t.Errorf("expected lockedEntityID to be %d, got %v", door.ID, lockedEntityID)
+	}
+
+	// Verify door remains locked (not opened yet)
+	if ctx.ActionType != ActionOpen {
+		t.Errorf("expected door to remain locked with ActionOpen, got %v", ctx.ActionType)
+	}
+}
+
+// TestInteractionSystem_HandleOpenAction_NoMiniGameSystem tests graceful degradation without mini-game system.
+func TestInteractionSystem_HandleOpenAction_NoMiniGameSystem(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	// Don't set miniGameSystem - test graceful degradation
+
+	// Create player entity
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+
+	// Create locked door entity
+	door := world.CreateEntity()
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		ActionText:          "Open",
+		RequiresLockPicking: true,
+		LockDifficulty:      0.5,
+	}
+	door.AddComponent(ctx)
+
+	// Test: handleOpenAction should not crash without mini-game system
+	system.handleOpenAction(player, door)
+
+	// Verify door remains locked
+	if ctx.ActionType != ActionOpen {
+		t.Errorf("expected door to remain locked with ActionOpen, got %v", ctx.ActionType)
+	}
+}
+
+// TestInteractionSystem_HandleOpenAction_NormalDoor tests normal door opening without lock-picking.
+func TestInteractionSystem_HandleOpenAction_NormalDoor(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	// Create player entity
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+
+	// Create unlocked door entity
+	door := world.CreateEntity()
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		ActionText:          "Open",
+		RequiresLockPicking: false, // No lock-picking required
+	}
+	door.AddComponent(ctx)
+
+	// Test: handleOpenAction should open door normally
+	system.handleOpenAction(player, door)
+
+	// Verify door is opened (ActionType changed to Close)
+	if ctx.ActionType != ActionClose {
+		t.Errorf("expected door to be opened with ActionClose, got %v", ctx.ActionType)
+	}
+
+	if ctx.ActionText != "Close" {
+		t.Errorf("expected action text to be 'Close', got %q", ctx.ActionText)
+	}
+
+	// Verify no mini-game was started
+	gameComp := miniGameSystem.GetGameComponent(player.ID)
+	if gameComp != nil {
+		t.Error("expected no mini-game to be started for normal door")
+	}
+}
+
+// TestInteractionSystem_HandleOpenAction_DifficultyNormalization tests difficulty clamping.
+func TestInteractionSystem_HandleOpenAction_DifficultyNormalization(t *testing.T) {
+	tests := []struct {
+		name               string
+		inputDifficulty    float64
+		expectedDifficulty float64
+	}{
+		{"negative difficulty", -0.5, 0.0},
+		{"above max difficulty", 1.5, 1.0},
+		{"normal difficulty", 0.7, 0.7},
+		{"zero difficulty", 0.0, 0.0},
+		{"max difficulty", 1.0, 1.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := NewWorld()
+			system := NewInteractionSystem(world)
+			miniGameSystem := NewMiniGameSystem(world)
+			system.SetMiniGameSystem(miniGameSystem)
+
+			player := world.CreateEntity()
+			player.AddComponent(&PlayerComponent{})
+
+			door := world.CreateEntity()
+			ctx := &ContextActionComponent{
+				ActionType:          ActionOpen,
+				RequiresLockPicking: true,
+				LockDifficulty:      tt.inputDifficulty,
+			}
+			door.AddComponent(ctx)
+
+			system.handleOpenAction(player, door)
+
+			gameComp := miniGameSystem.GetGameComponent(player.ID)
+			if gameComp == nil {
+				t.Fatal("expected mini-game component to be created")
+			}
+
+			if gameComp.Difficulty != tt.expectedDifficulty {
+				t.Errorf("expected difficulty %v, got %v", tt.expectedDifficulty, gameComp.Difficulty)
+			}
+		})
+	}
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_Success tests successful lock-picking.
+func TestInteractionSystem_ProcessLockPickingCompletion_Success(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	// Create player and locked door
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+
+	door := world.CreateEntity()
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		ActionText:          "Open",
+		RequiresLockPicking: true,
+		LockDifficulty:      0.5,
+	}
+	door.AddComponent(ctx)
+
+	// Start lock-picking mini-game
+	system.handleOpenAction(player, door)
+
+	// Simulate successful mini-game completion
+	system.ProcessLockPickingCompletion(player.ID, true)
+
+	// Verify door is now opened
+	if ctx.ActionType != ActionClose {
+		t.Errorf("expected door to be opened with ActionClose, got %v", ctx.ActionType)
+	}
+
+	if ctx.ActionText != "Close" {
+		t.Errorf("expected action text to be 'Close', got %q", ctx.ActionText)
+	}
+
+	if ctx.RequiresLockPicking {
+		t.Error("expected RequiresLockPicking to be false after successful pick")
+	}
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_Failure tests failed lock-picking.
+func TestInteractionSystem_ProcessLockPickingCompletion_Failure(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	// Create player and locked door
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+
+	door := world.CreateEntity()
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		ActionText:          "Open",
+		RequiresLockPicking: true,
+		LockDifficulty:      0.5,
+	}
+	door.AddComponent(ctx)
+
+	// Start lock-picking mini-game
+	system.handleOpenAction(player, door)
+
+	// Simulate failed mini-game completion
+	system.ProcessLockPickingCompletion(player.ID, false)
+
+	// Verify door remains locked
+	if ctx.ActionType != ActionOpen {
+		t.Errorf("expected door to remain locked with ActionOpen, got %v", ctx.ActionType)
+	}
+
+	if ctx.ActionText != "Open" {
+		t.Errorf("expected action text to remain 'Open', got %q", ctx.ActionText)
+	}
+
+	if !ctx.RequiresLockPicking {
+		t.Error("expected RequiresLockPicking to remain true after failed pick")
+	}
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_NoMiniGameSystem tests graceful handling without system.
+func TestInteractionSystem_ProcessLockPickingCompletion_NoMiniGameSystem(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	// Don't set miniGameSystem
+
+	player := world.CreateEntity()
+
+	// Should not crash
+	system.ProcessLockPickingCompletion(player.ID, true)
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_NoGameComponent tests handling when no game is active.
+func TestInteractionSystem_ProcessLockPickingCompletion_NoGameComponent(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	player := world.CreateEntity()
+
+	// No mini-game was started, so this should be a no-op
+	system.ProcessLockPickingCompletion(player.ID, true)
+
+	// Should not crash and should not affect any entities
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_WrongGameType tests handling of non-lock-picking games.
+func TestInteractionSystem_ProcessLockPickingCompletion_WrongGameType(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	player := world.CreateEntity()
+	door := world.CreateEntity()
+	ctx := &ContextActionComponent{
+		ActionType:          ActionOpen,
+		RequiresLockPicking: true,
+	}
+	door.AddComponent(ctx)
+
+	// Start a different game type (not lock-picking)
+	miniGameSystem.StartGame(player.ID, MiniGameCard, 0.5)
+
+	// Try to process as lock-picking completion
+	system.ProcessLockPickingCompletion(player.ID, true)
+
+	// Door should remain locked since it wasn't a lock-picking game
+	if ctx.ActionType != ActionOpen {
+		t.Errorf("expected door to remain locked, got %v", ctx.ActionType)
+	}
+}
+
+// TestInteractionSystem_ProcessLockPickingCompletion_InvalidEntityID tests handling of invalid locked entity.
+func TestInteractionSystem_ProcessLockPickingCompletion_InvalidEntityID(t *testing.T) {
+	world := NewWorld()
+	system := NewInteractionSystem(world)
+	miniGameSystem := NewMiniGameSystem(world)
+	system.SetMiniGameSystem(miniGameSystem)
+
+	player := world.CreateEntity()
+
+	// Start lock-picking with manually created state
+	miniGameSystem.StartGame(player.ID, MiniGameLockPicking, 0.5)
+	gameComp := miniGameSystem.GetGameComponent(player.ID)
+	if gameComp != nil {
+		gameComp.State = map[string]interface{}{
+			"lockedEntityID": uint64(99999), // Non-existent entity
+		}
+	}
+
+	// Should not crash
+	system.ProcessLockPickingCompletion(player.ID, true)
+}

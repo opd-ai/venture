@@ -535,45 +535,48 @@ The following types and fields were already implemented in `pkg/saveload/types.g
 
 ---
 
-### Gap F2: Lock-Picking Mini-Game Integration
+### Gap F2: Lock-Picking Mini-Game Integration ✅ COMPLETED
 
 **File:** `pkg/engine/interaction_system.go`
 
 **Gap:** ActionOpenLocked requires MiniGameSystem.StartGame() integration
 
-**Resolution:**
-```go
-// In handleLockedInteraction():
-func (is *InteractionSystem) handleLockedInteraction(entity *Entity, target *Entity) {
-    lockComp, ok := target.GetComponent("lockable")
-    if !ok || lockComp == nil {
-        return
-    }
-    lock := lockComp.(*LockableComponent)
-    
-    // Check for key in inventory first
-    if is.playerHasKey(entity, lock.KeyID) {
-        lock.IsLocked = false
-        is.logger.Info("lock opened with key")
-        return
-    }
-    
-    // Start lock-picking mini-game
-    if is.miniGameSystem != nil {
-        difficulty := float64(lock.Difficulty) / 100.0
-        is.miniGameSystem.StartGame(entity, MiniGameLockPick, MiniGameParams{
-            Difficulty: difficulty,
-            TimeLimit:  30.0,
-            OnComplete: func(success bool) {
-                if success {
-                    lock.IsLocked = false
-                    is.logger.Info("lock picked successfully")
-                }
-            },
-        })
-    }
-}
-```
+**Status:** RESOLVED (2025-12-24)
+
+**Implementation:**
+1. Added `miniGameSystem` field to `InteractionSystem` struct
+2. Added `SetMiniGameSystem()` setter method for dependency injection
+3. Updated `handleOpenAction()` to accept player entity parameter
+4. Implemented lock-picking mini-game start logic in `handleOpenAction()`:
+   - Checks `RequiresLockPicking` flag on ContextActionComponent
+   - Starts MiniGameLockPicking with normalized difficulty (0.0-1.0)
+   - Stores locked entity ID in mini-game state for completion callback
+   - Logs mini-game start with player ID and difficulty
+5. Implemented `ProcessLockPickingCompletion()` method to handle game results:
+   - Retrieves locked entity ID from mini-game state
+   - On success: opens door/chest by changing ActionType to ActionClose and disabling RequiresLockPicking
+   - On failure: door/chest remains locked
+   - Graceful handling of missing entities or invalid state
+6. Graceful degradation when mini-game system is not available
+
+**Integration Points:**
+1. `pkg/engine/interaction_system.go` - InteractionSystem now integrates with MiniGameSystem
+2. `pkg/engine/minigame_system.go` - Uses existing `StartGame()`, `GetGameComponent()` methods
+3. `pkg/engine/carriable_component.go` - Uses ContextActionComponent fields (RequiresLockPicking, LockDifficulty)
+
+**Tests Added:**
+- `TestInteractionSystem_SetMiniGameSystem` - Verifies setter
+- `TestInteractionSystem_SetMiniGameSystem_Nil` - Verifies nil handling
+- `TestInteractionSystem_HandleOpenAction_WithLockPicking` - Verifies mini-game start with proper state storage
+- `TestInteractionSystem_HandleOpenAction_NoMiniGameSystem` - Verifies graceful degradation
+- `TestInteractionSystem_HandleOpenAction_NormalDoor` - Verifies normal door opening (no lock-picking)
+- `TestInteractionSystem_HandleOpenAction_DifficultyNormalization` - Tests difficulty clamping to 0.0-1.0 range
+- `TestInteractionSystem_ProcessLockPickingCompletion_Success` - Verifies door opens on success
+- `TestInteractionSystem_ProcessLockPickingCompletion_Failure` - Verifies door remains locked on failure
+- `TestInteractionSystem_ProcessLockPickingCompletion_NoMiniGameSystem` - Verifies graceful degradation
+- `TestInteractionSystem_ProcessLockPickingCompletion_NoGameComponent` - Verifies handling when no game active
+- `TestInteractionSystem_ProcessLockPickingCompletion_WrongGameType` - Verifies handling of non-lock-picking games
+- `TestInteractionSystem_ProcessLockPickingCompletion_InvalidEntityID` - Verifies handling of invalid entities
 
 ---
 
@@ -778,7 +781,7 @@ go test ./pkg/... -cover
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)
-- [ ] Lock-picking mini-game starts for locked containers
+- [x] Lock-picking mini-game starts for locked containers ✅ (Gap F2 completed 2025-12-24)
 - [x] Party chat delivers to party members ✅ (Gap F1 completed 2025-12-24)
 - [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)
 

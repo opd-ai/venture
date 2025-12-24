@@ -816,3 +816,87 @@ func TestDiscoverySystem_UnlockStoryQuests_DuplicateUnlock(t *testing.T) {
 		t.Errorf("Pending quests count = %d, want %d (should not duplicate)", len(pending), firstCallCount)
 	}
 }
+
+func TestDiscoverySystem_UnlockStoryQuests_DeterministicSeed(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	baseSeed := int64(98765)
+	seriesID := "ancient-castle-mystery"
+
+	// Set up mock quest generator
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{
+			{
+				ID:          "test-quest",
+				Name:        "Test Quest",
+				Description: "Test",
+			},
+		},
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", baseSeed)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// First call - capture seed
+	system.unlockStoryQuests(player, seriesID)
+	firstSeed := mockGen.LastSeed
+
+	// Reset mock for second call
+	mockGen.GenerateCalled = false
+	mockGen.LastSeed = 0
+
+	// Create new player for second call
+	player2 := world.CreateEntity()
+	player2.AddComponent(NewQuestTrackerComponent(5))
+
+	// Second call with same seriesID - should produce same seed
+	system.unlockStoryQuests(player2, seriesID)
+	secondSeed := mockGen.LastSeed
+
+	if firstSeed != secondSeed {
+		t.Errorf("Seed not deterministic: first call = %d, second call = %d (should be identical)", firstSeed, secondSeed)
+	}
+
+	// Verify seed is actually derived from seriesID
+	if firstSeed == 0 {
+		t.Error("Quest seed should not be zero")
+	}
+	if firstSeed == baseSeed {
+		t.Error("Quest seed should be different from base seed (should incorporate seriesID)")
+	}
+
+	// Test that different series IDs produce different seeds
+	mockGen.GenerateCalled = false
+	mockGen.LastSeed = 0
+
+	player3 := world.CreateEntity()
+	player3.AddComponent(NewQuestTrackerComponent(5))
+
+	differentSeriesID := "haunted-ruins-tragedy"
+	system.unlockStoryQuests(player3, differentSeriesID)
+	differentSeed := mockGen.LastSeed
+
+	if firstSeed == differentSeed {
+		t.Errorf("Different series IDs should produce different seeds: %s seed = %d, %s seed = %d", 
+			seriesID, firstSeed, differentSeriesID, differentSeed)
+	}
+
+	// Test that series with same length produce different seeds
+	mockGen.GenerateCalled = false
+	mockGen.LastSeed = 0
+
+	player4 := world.CreateEntity()
+	player4.AddComponent(NewQuestTrackerComponent(5))
+
+	sameLengthSeriesID := "ancient-dragon-mystery" // Same length as "ancient-castle-mystery"
+	system.unlockStoryQuests(player4, sameLengthSeriesID)
+	sameLengthSeed := mockGen.LastSeed
+
+	if firstSeed == sameLengthSeed {
+		t.Errorf("Series IDs with same length should produce different seeds: '%s' seed = %d, '%s' seed = %d",
+			seriesID, firstSeed, sameLengthSeriesID, sameLengthSeed)
+	}
+}

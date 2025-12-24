@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"hash/fnv"
 	"math"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -501,6 +502,15 @@ func (s *DiscoverySystem) SetSeriesXPBonus(bonus float64) {
 	}
 }
 
+// hashSeriesID generates a deterministic hash from a series ID string.
+// This ensures different series IDs always produce different seeds,
+// even if they have the same length.
+func hashSeriesID(seriesID string) int64 {
+	h := fnv.New64a()
+	h.Write([]byte(seriesID))
+	return int64(h.Sum64())
+}
+
 // unlockStoryQuests checks if the completed series unlocks any quests.
 // This is called when a story series is completed (Phase 30.2).
 func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
@@ -566,8 +576,9 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 		}).Debug("Generating story quest")
 
 		// Generate quest using the quest generator
-		// Use series-specific seed based on the base seed and series ID
-		questSeed := s.seed + int64(len(seriesID))
+		// Use series-specific seed based on the base seed and series ID hash
+		// This ensures deterministic generation: same seriesID always produces same quest
+		questSeed := s.seed ^ hashSeriesID(seriesID)
 		
 		// Set up generation parameters
 		params := procgen.GenerationParams{
@@ -606,21 +617,24 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 			return nil
 		}
 
-		// Return the first generated quest with the correct ID
+		// Return the first generated quest with the correct ID.
+		// Copy the quest before mutating to avoid affecting any cached/reused instances
+		// that may be held by the quest generator.
 		generatedQuest := quests[0]
-		generatedQuest.ID = qID // Override with our quest ID
-		generatedQuest.Name = fmt.Sprintf("Investigate: %s", seriesID)
-		generatedQuest.Description = fmt.Sprintf("Having completed the story fragments, you feel compelled to investigate the location related to '%s'.", seriesID)
+		customQuest := *generatedQuest
+		customQuest.ID = qID // Override with our quest ID
+		customQuest.Name = fmt.Sprintf("Investigate: %s", seriesID)
+		customQuest.Description = fmt.Sprintf("Having completed the story fragments, you feel compelled to investigate the location related to '%s'.", seriesID)
 
 		log.WithFields(log.Fields{
 			"system_name": "discovery",
 			"player_id":   player.ID,
 			"series_id":   seriesID,
 			"quest_id":    qID,
-			"quest_name":  generatedQuest.Name,
+			"quest_name":  customQuest.Name,
 		}).Info("Story quest generated successfully")
 
-		return generatedQuest
+		return &customQuest
 	})
 
 	if unlockedCount > 0 {

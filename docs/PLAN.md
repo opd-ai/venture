@@ -385,37 +385,45 @@ func NewBookshelfDialogProvider(bookCount int, seed int64, genreID string) Dialo
 
 ---
 
-### Gap B15: Story Fragment Quest Unlocking
+### Gap B15: Story Fragment Quest Unlocking ✅ COMPLETED
 
 **File:** `pkg/engine/discovery_system.go`
 
 **Gap:** DiscoverySystem needs hook to QuestGeneration for unlocking story-based quests
 
-**Resolution:**
-```go
-// Add quest system reference:
-type DiscoverySystem struct {
-    world       *World
-    questSystem *QuestSystem // NEW
-    // ...
-}
+**Status:** RESOLVED (2025-12-24)
 
-// In discoverFragment():
-func (ds *DiscoverySystem) discoverFragment(entity *Entity, fragment StoryFragment) {
-    // ... existing discovery logic ...
-    
-    // NEW: Unlock related quests
-    if fragment.UnlocksQuestID != "" {
-        if ds.questSystem != nil {
-            ds.questSystem.UnlockQuest(entity.ID, fragment.UnlocksQuestID)
-            ds.logger.WithFields(logrus.Fields{
-                "fragment": fragment.ID,
-                "quest":    fragment.UnlocksQuestID,
-            }).Info("story fragment unlocked quest")
-        }
-    }
-}
-```
+**Implementation:**
+1. Added `questGenerator` field of type `QuestGeneratorInterface` to `DiscoverySystem` struct
+2. Added `genreID` and `seed` fields to support quest generation parameters
+3. Added `SetQuestGenerator()` method for dependency injection with genreID and seed parameters
+4. Implemented actual quest generation in `unlockStoryQuests()` method using quest generator callback
+5. Quest generation uses series-specific seed and generates exploration quests with custom titles/descriptions
+6. Graceful degradation when quest generator is not configured or player lacks quest tracker
+
+**Integration Points:**
+1. `pkg/engine/discovery_system.go` - DiscoverySystem now integrates with QuestGenerator
+2. `pkg/engine/quest_tracker.go` - Uses existing `UnlockStoryQuests()` callback mechanism
+3. `pkg/procgen/quest/generator.go` - Uses existing `Generate()` method with proper parameters
+
+**Quest Generation Details:**
+- Generates quests with ID format: `story-{seriesID}`
+- Quest name: `Investigate: {seriesID}`
+- Quest description: Custom text referencing completed story fragments
+- Quest type: Exploration quests (TypeExplore)
+- Difficulty: Medium (0.5) for story quests
+- Depth: 1 for all story quests
+
+**Tests Added:**
+- `TestDiscoverySystem_SetQuestGenerator` - Verifies setter with valid generator
+- `TestDiscoverySystem_SetQuestGenerator_NilGenerator` - Verifies nil generator handling
+- `TestDiscoverySystem_UnlockStoryQuests_WithGenerator` - Verifies quest generation and unlocking
+- `TestDiscoverySystem_UnlockStoryQuests_NoGenerator` - Verifies graceful degradation without generator
+- `TestDiscoverySystem_UnlockStoryQuests_NoQuestTracker` - Verifies handling of missing quest tracker
+- `TestDiscoverySystem_UnlockStoryQuests_GeneratorError` - Verifies error handling from generator
+- `TestDiscoverySystem_UnlockStoryQuests_EmptyQuestList` - Verifies handling of empty quest results
+- `TestDiscoverySystem_UnlockStoryQuests_IntegrationWithDiscovery` - Full integration test with discovery flow
+- `TestDiscoverySystem_UnlockStoryQuests_DuplicateUnlock` - Verifies no duplicate quest unlocking
 
 ---
 

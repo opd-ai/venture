@@ -1,8 +1,11 @@
 package engine
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/story"
 )
 
@@ -452,5 +455,364 @@ func TestDiscoverySystem_MultiplePlayersIndependent(t *testing.T) {
 	// Player2 should not have discovered
 	if journal2.TotalDiscoveries != 0 {
 		t.Errorf("Player2 TotalDiscoveries = %d, want 0", journal2.TotalDiscoveries)
+	}
+}
+
+// MockQuestGenerator is a test implementation of QuestGeneratorInterface
+type MockQuestGenerator struct {
+	GenerateCalled bool
+	LastSeed       int64
+	LastParams     procgen.GenerationParams
+	QuestsToReturn []*quest.Quest
+	ErrorToReturn  error
+}
+
+func (m *MockQuestGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	m.GenerateCalled = true
+	m.LastSeed = seed
+	m.LastParams = params
+	if m.ErrorToReturn != nil {
+		return nil, m.ErrorToReturn
+	}
+	return m.QuestsToReturn, nil
+}
+
+func TestDiscoverySystem_SetQuestGenerator(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	mockGen := &MockQuestGenerator{}
+	genreID := "fantasy"
+	seed := int64(12345)
+
+	system.SetQuestGenerator(mockGen, genreID, seed)
+
+	if system.questGenerator == nil {
+		t.Error("questGenerator not set")
+	}
+	if system.genreID != genreID {
+		t.Errorf("genreID = %s, want %s", system.genreID, genreID)
+	}
+	if system.seed != seed {
+		t.Errorf("seed = %d, want %d", system.seed, seed)
+	}
+}
+
+func TestDiscoverySystem_SetQuestGenerator_NilGenerator(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	genreID := "scifi"
+	seed := int64(67890)
+
+	system.SetQuestGenerator(nil, genreID, seed)
+
+	if system.questGenerator != nil {
+		t.Error("questGenerator should be nil")
+	}
+	if system.genreID != genreID {
+		t.Errorf("genreID = %s, want %s", system.genreID, genreID)
+	}
+	if system.seed != seed {
+		t.Errorf("seed = %d, want %d", system.seed, seed)
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_WithGenerator(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 0, Y: 0})
+	player.AddComponent(NewExperienceComponent())
+	player.AddComponent(NewStoryJournalComponent())
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Set up mock quest generator
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{
+			{
+				ID:          "test-quest-1",
+				Name:        "Test Quest",
+				Description: "Test Description",
+				Type:        quest.TypeExplore,
+				Status:      quest.StatusNotStarted,
+			},
+		},
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 12345)
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	// Call unlockStoryQuests
+	seriesID := "test-series-mystery"
+	system.unlockStoryQuests(player, seriesID)
+
+	// Verify quest generator was called
+	if !mockGen.GenerateCalled {
+		t.Error("Quest generator Generate() not called")
+	}
+
+	// Verify pending quests were added
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) == 0 {
+		t.Error("No pending story quests added")
+	} else {
+		if pending[0].ID != fmt.Sprintf("story-%s", seriesID) {
+			t.Errorf("Quest ID = %s, want %s", pending[0].ID, fmt.Sprintf("story-%s", seriesID))
+		}
+		if pending[0].Name != fmt.Sprintf("Investigate: %s", seriesID) {
+			t.Errorf("Quest name = %s, want %s", pending[0].Name, fmt.Sprintf("Investigate: %s", seriesID))
+		}
+	}
+
+	// Verify quest was registered in StoryUnlockedQuests
+	questIDs, exists := questTracker.StoryUnlockedQuests[seriesID]
+	if !exists {
+		t.Error("Series not registered in StoryUnlockedQuests")
+	} else if len(questIDs) == 0 {
+		t.Error("No quest IDs registered for series")
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_NoGenerator(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	// Call unlockStoryQuests without setting generator
+	seriesID := "test-series"
+	system.unlockStoryQuests(player, seriesID)
+
+	// Verify no quests were added (graceful degradation)
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) != 0 {
+		t.Errorf("Pending quests count = %d, want 0 (no generator set)", len(pending))
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_NoQuestTracker(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player without quest tracker
+	player := world.CreateEntity()
+
+	// Set up mock quest generator
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{
+			{
+				ID:          "test-quest-1",
+				Name:        "Test Quest",
+				Description: "Test Description",
+			},
+		},
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 12345)
+
+	// Call unlockStoryQuests - should gracefully handle missing component
+	system.unlockStoryQuests(player, "test-series")
+
+	// Verify quest generator was NOT called
+	if mockGen.GenerateCalled {
+		t.Error("Quest generator should not be called when player lacks quest tracker")
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_GeneratorError(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Set up mock quest generator that returns error
+	mockGen := &MockQuestGenerator{
+		ErrorToReturn: fmt.Errorf("generation failed"),
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 12345)
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	// Call unlockStoryQuests
+	system.unlockStoryQuests(player, "test-series")
+
+	// Verify quest generator was called
+	if !mockGen.GenerateCalled {
+		t.Error("Quest generator Generate() not called")
+	}
+
+	// Verify no quests were added due to error
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) != 0 {
+		t.Errorf("Pending quests count = %d, want 0 (generator returned error)", len(pending))
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_EmptyQuestList(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Set up mock quest generator that returns empty list
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{}, // Empty list
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 12345)
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	// Call unlockStoryQuests
+	system.unlockStoryQuests(player, "test-series")
+
+	// Verify no quests were added
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) != 0 {
+		t.Errorf("Pending quests count = %d, want 0 (generator returned empty list)", len(pending))
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_IntegrationWithDiscovery(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Set up mock quest generator
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{
+			{
+				ID:          "quest-1",
+				Name:        "Investigation Quest",
+				Description: "Investigate the mystery",
+				Type:        quest.TypeExplore,
+				Status:      quest.StatusNotStarted,
+			},
+		},
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 99999)
+
+	// Create player
+	player := world.CreateEntity()
+	player.AddComponent(&PositionComponent{X: 0, Y: 0})
+	player.AddComponent(NewExperienceComponent())
+	journal := NewStoryJournalComponent()
+	player.AddComponent(journal)
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Register series
+	seriesID := "ancient-ruins-tragedy"
+	totalFragments := 3
+	system.RegisterSeries(seriesID, totalFragments)
+
+	// Create and discover all fragments in series
+	for i := 0; i < totalFragments; i++ {
+		fragment := world.CreateEntity()
+		fragment.AddComponent(&PositionComponent{X: 0, Y: 0})
+		fragComp := &StoryFragmentComponent{
+			Fragment: story.StoryFragment{
+				SeriesID:    seriesID,
+				SequenceNum: i,
+				DiscoveryXP: 50.0,
+			},
+			Discovered:  false,
+			SeriesID:    seriesID,
+			SequenceNum: i,
+		}
+		fragment.AddComponent(fragComp)
+		world.Update(0.0)
+	}
+
+	// Trigger system update - should discover all fragments and unlock quest
+	system.Update(0.016)
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	// Verify series is complete in journal
+	if !journal.CompletedSeries[seriesID] {
+		t.Error("Series should be marked as complete")
+	}
+
+	// Verify quest was unlocked
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) == 0 {
+		t.Error("Quest should have been unlocked after series completion")
+	} else {
+		expectedID := fmt.Sprintf("story-%s", seriesID)
+		if pending[0].ID != expectedID {
+			t.Errorf("Quest ID = %s, want %s", pending[0].ID, expectedID)
+		}
+	}
+
+	// Verify quest generator was called with correct parameters
+	if !mockGen.GenerateCalled {
+		t.Error("Quest generator should have been called")
+	}
+	if mockGen.LastParams.GenreID != "fantasy" {
+		t.Errorf("GenreID = %s, want fantasy", mockGen.LastParams.GenreID)
+	}
+	if mockGen.LastParams.Difficulty != 0.5 {
+		t.Errorf("Difficulty = %f, want 0.5", mockGen.LastParams.Difficulty)
+	}
+}
+
+func TestDiscoverySystem_UnlockStoryQuests_DuplicateUnlock(t *testing.T) {
+	world := NewWorld()
+	system := NewDiscoverySystem(world)
+
+	// Create player with quest tracker
+	player := world.CreateEntity()
+	player.AddComponent(NewQuestTrackerComponent(5))
+
+	// Set up mock quest generator
+	mockGen := &MockQuestGenerator{
+		QuestsToReturn: []*quest.Quest{
+			{
+				ID:          "test-quest",
+				Name:        "Test Quest",
+				Description: "Test",
+			},
+		},
+	}
+	system.SetQuestGenerator(mockGen, "fantasy", 12345)
+
+	// Get quest tracker
+	qtComp, _ := player.GetComponent("questtracker")
+	questTracker := qtComp.(*QuestTrackerComponent)
+
+	seriesID := "test-series"
+
+	// First unlock
+	system.unlockStoryQuests(player, seriesID)
+	firstCallCount := 1
+
+	// Reset mock
+	mockGen.GenerateCalled = false
+
+	// Second unlock - should not duplicate
+	system.unlockStoryQuests(player, seriesID)
+
+	// Verify pending quests only added once
+	pending := questTracker.GetPendingStoryQuests()
+	if len(pending) != firstCallCount {
+		t.Errorf("Pending quests count = %d, want %d (should not duplicate)", len(pending), firstCallCount)
 	}
 }

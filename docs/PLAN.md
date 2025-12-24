@@ -713,47 +713,49 @@ func (gm *GuildManager) HandleGuildMessage(msg GuildMessage) error {
 
 ---
 
-### Gap E1-E2: Mini-Game Reward Items
+### Gap E1-E2: Mini-Game Reward Items ✅ COMPLETED
 
 **File:** `pkg/engine/minigame_system.go`
 
 **Gaps:**
 - E1: Mini-game rewards should include procedurally generated items
-- E2: EndGame() doesn't add items to inventory
+- E2: EndGame() doesn't add items to inventory (already completed in Gap A3)
 
-**Resolution:**
-```go
-// In calculateReward():
-func (ms *MiniGameSystem) calculateReward(gameType MiniGameType, difficulty float64, success bool) MiniGameReward {
-    reward := MiniGameReward{
-        Gold: int(100 * difficulty * float64(boolToInt(success))),
-        XP:   int(50 * difficulty * float64(boolToInt(success))),
-    }
-    
-    if success && ms.itemGenerator != nil {
-        // Generate reward items based on difficulty
-        numItems := 1
-        if difficulty > 0.7 {
-            numItems = 2
-        }
-        if difficulty > 0.9 {
-            numItems = 3
-        }
-        
-        for i := 0; i < numItems; i++ {
-            item, err := ms.itemGenerator.Generate(ms.seed+int64(i), procgen.GenerationParams{
-                Difficulty: difficulty,
-                GenreID:    ms.genreID,
-            })
-            if err == nil {
-                reward.Items = append(reward.Items, item.ID)
-            }
-        }
-    }
-    
-    return reward
-}
-```
+**Status:** RESOLVED (2025-12-24)
+
+**Implementation:**
+1. Added `itemGenerator *item.ItemGenerator` field to `MiniGameSystem` struct
+2. Added `genreID string` field to support genre-specific item generation
+3. Added `SetItemGenerator()` method for dependency injection
+4. Added `SetGenreID()` method for genre configuration
+5. Modified `generateReward()` to create procedural items:
+   - Determines number of items based on difficulty (1 item for low, 2 for medium, 3 for high)
+   - Uses ItemGenerator.Generate() with proper parameters
+   - Creates item entities with ItemComponent for each generated item
+   - Adds entity IDs to reward.Items array
+   - Gracefully degrades when ItemGenerator is not configured
+
+**Integration Points:**
+1. `pkg/engine/minigame_system.go` - Added item generation to reward creation
+2. `pkg/procgen/item/generator.go` - Uses existing Generate() method with difficulty scaling
+3. `pkg/engine/ecs.go` - Creates entities for reward items
+4. Gap A3 already handles adding reward.Items to player inventory via awardReward()
+
+**Reward Scaling:**
+- Difficulty 0.0-0.7: 1 item
+- Difficulty 0.7-0.9: 2 items
+- Difficulty 0.9-1.0: 3 items
+
+**Tests Added:**
+- `TestMiniGameSystem_SetItemGenerator` - Verifies item generator setter
+- `TestMiniGameSystem_SetItemGenerator_Nil` - Verifies nil handling for graceful degradation
+- `TestMiniGameSystem_SetGenreID` - Verifies genre ID setter
+- `TestMiniGameSystem_GenerateReward_WithItemGenerator` - Tests item generation at all difficulty levels
+- `TestMiniGameSystem_GenerateReward_WithoutItemGenerator` - Tests graceful degradation without generator
+- `TestMiniGameSystem_GenerateReward_ItemsDeterministic` - Verifies deterministic item generation
+- `TestMiniGameSystem_GenerateReward_ItemsCreatedAsEntities` - Verifies items are proper entities with ItemComponent
+- `TestMiniGameSystem_EndGame_WithGeneratedItems` - Full integration test with reward items added to inventory
+
 
 ---
 
@@ -774,6 +776,7 @@ go test ./pkg/... -cover
 - [x] Housing UI shows player plots ✅ (Gap B5-B9 completed 2025-12-23)
 - [x] Guild UI opens with O key ✅ (Gap B10-B13 completed 2025-12-23)
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
+- [x] Mini-games generate procedural reward items ✅ (Gap E1-E2 completed 2025-12-24)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)
 - [x] Lock-picking mini-game starts for locked containers ✅ (Gap F2 completed 2025-12-24)

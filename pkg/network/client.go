@@ -265,6 +265,7 @@ func (c *TCPClient) startConnectionHandlers() {
 // ConnectWithRetry establishes connection to the server with automatic retry on failure.
 // Uses exponential backoff to handle transient network issues gracefully.
 // Returns nil on successful connection, or an error if all retries are exhausted.
+// The function can be cancelled gracefully by calling Disconnect() on the client.
 //
 // Example usage:
 //
@@ -304,8 +305,27 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 			}).Warn("connection failed, retrying")
 		}
 
-		// Wait before retry
-		time.Sleep(delay)
+		// Wait before retry with graceful cancellation support
+		// Check done channel during sleep to allow shutdown
+		c.mu.RLock()
+		done := c.done
+		c.mu.RUnlock()
+
+		if done != nil {
+			select {
+			case <-done:
+				// Client is shutting down, exit gracefully
+				if c.logger != nil {
+					c.logger.Info("reconnection cancelled during shutdown")
+				}
+				return fmt.Errorf("reconnection cancelled")
+			case <-time.After(delay):
+				// Delay completed, continue to next retry
+			}
+		} else {
+			// done channel is nil (shouldn't happen), use regular sleep
+			time.Sleep(delay)
+		}
 
 		// Calculate next delay with exponential backoff
 		delay = time.Duration(float64(delay) * reconnectConfig.BackoffFactor)

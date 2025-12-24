@@ -2,11 +2,24 @@
 // This example shows how to create and use different types of lights,
 // configure genre-specific lighting, and integrate with the game loop.
 //
+// Features demonstrated:
+//   - Radial gradient lighting with proper falloff curves (Linear, Quadratic, InverseSquare, Constant)
+//   - Flickering torches with varied intensities
+//   - Pulsing magical crystals
+//   - Moving spell lights
+//   - Genre-specific ambient lighting
+//   - Real-time lighting updates
+//
 // Usage:
 //
 //	go run ./examples/lighting_demo
 //	go run ./examples/lighting_demo -genre horror
 //	go run ./examples/lighting_demo -no-lighting
+//
+// Controls:
+//   - Arrow keys: Move player
+//   - Space: Toggle pause
+//   - L: Toggle lighting system
 package main
 
 import (
@@ -101,12 +114,19 @@ func (g *Game) setupScene() {
 
 	g.playerID = player.ID
 
-	// Create stationary torches (flickering)
+	// Create stationary torches (flickering) with different falloff types
 	positions := [][2]float64{
 		{150, 150},
 		{650, 150},
 		{150, 450},
 		{650, 450},
+	}
+	
+	falloffTypes := []engine.LightFalloffType{
+		engine.FalloffLinear,
+		engine.FalloffQuadratic,
+		engine.FalloffInverseSquare,
+		engine.FalloffConstant,
 	}
 
 	for i, pos := range positions {
@@ -114,6 +134,8 @@ func (g *Game) setupScene() {
 		torch.AddComponent(&engine.PositionComponent{X: pos[0], Y: pos[1]})
 
 		torchLight := engine.NewTorchLight(180)
+		// Assign different falloff types to demonstrate gradient variations
+		torchLight.Falloff = falloffTypes[i]
 		// Vary the flicker for each torch
 		torchLight.FlickerSpeed = 2.5 + float64(i)*0.3
 		torchLight.FlickerAmount = 0.12 + float64(i)*0.02
@@ -129,6 +151,9 @@ func (g *Game) setupScene() {
 		}
 		torchSprite.Image.Fill(color.RGBA{255, 180, 100, 255}) // Orange
 		torch.AddComponent(torchSprite)
+		
+		log.Printf("Created torch at (%.0f, %.0f) with falloff: %v", 
+			pos[0], pos[1], falloffTypes[i])
 	}
 
 	// Create magical crystals (pulsing)

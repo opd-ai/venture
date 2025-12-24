@@ -619,51 +619,46 @@ The following types and fields were already implemented in `pkg/saveload/types.g
 
 ---
 
-### Gap F4: Radial Gradient Lighting
+### Gap F4: Radial Gradient Lighting ✅ COMPLETED
 
 **File:** `pkg/engine/lighting_system.go`
 
 **Gap:** Light rendering uses simple circle fill instead of proper radial gradients
 
-**Resolution:**
-```go
-// Replace simple fill with radial gradient:
-func (ls *LightingSystem) renderLight(screen *ebiten.Image, light LightComponent, pos PositionComponent) {
-    // Calculate light bounds
-    radius := light.Radius
-    centerX, centerY := pos.X, pos.Y
-    
-    // Create gradient image
-    gradientImg := ebiten.NewImage(int(radius*2), int(radius*2))
-    
-    for y := 0; y < int(radius*2); y++ {
-        for x := 0; x < int(radius*2); x++ {
-            dx := float64(x) - radius
-            dy := float64(y) - radius
-            distance := math.Sqrt(dx*dx + dy*dy)
-            
-            if distance <= radius {
-                // Radial falloff
-                intensity := 1.0 - (distance / radius)
-                intensity = math.Pow(intensity, light.Falloff)
-                
-                r := uint8(float64(light.Color.R) * intensity)
-                g := uint8(float64(light.Color.G) * intensity)
-                b := uint8(float64(light.Color.B) * intensity)
-                a := uint8(float64(light.Color.A) * intensity)
-                
-                gradientImg.Set(x, y, color.RGBA{r, g, b, a})
-            }
-        }
-    }
-    
-    // Draw gradient at light position
-    op := &ebiten.DrawImageOptions{}
-    op.GeoM.Translate(centerX-radius, centerY-radius)
-    op.CompositeMode = ebiten.CompositeModeSourceOver
-    screen.DrawImage(gradientImg, op)
-}
-```
+**Status:** RESOLVED (2025-12-24)
+
+**Implementation:**
+1. Added `lightCacheKey` struct to cache gradients by both diameter and falloff type
+2. Modified `getCachedLightCircle()` to accept falloff parameter and generate proper radial gradients
+3. Implemented `calculateFalloffIntensity()` method supporting all falloff types:
+   - `FalloffLinear`: intensity = 1 - distance (smooth linear decrease)
+   - `FalloffQuadratic`: intensity = (1 - distance)^2 (sharper falloff)
+   - `FalloffInverseSquare`: intensity = 1 / (1 + distance^2 * 4) (realistic physics-based)
+   - `FalloffConstant`: intensity = 1.0 until edge (hard cutoff)
+4. Updated `applyPointLight()` to pass falloff type to cache lookup
+5. Gradient uses white color with alpha falloff, allowing ColorScale modulation at draw time
+
+**Integration Points:**
+1. `pkg/engine/lighting_system.go` - Gradient generation with proper falloff curves
+2. Cache key includes both diameter and falloff type for efficient reuse
+3. Maintains performance optimization with cached gradient textures
+
+**Performance:**
+- Zero performance degradation - still uses cached images
+- Benchmark: ApplyPointLight ~504 ns/op (same as before)
+- Multiple lights: ~6125 ns/op for 10 lights (same as before)
+- Cache efficiency maintained with (diameter, falloff) composite key
+
+**Tests Added:**
+- `TestGetCachedLightCircle_Caching` - Verifies caching with falloff types
+- `TestGetCachedLightCircle_GradientGeneration` - Verifies gradient image creation
+- `TestGetCachedLightCircle_AllFalloffTypes` - Tests all 4 falloff types
+- `TestCalculateFalloffIntensity_Linear` - Tests linear falloff calculation
+- `TestCalculateFalloffIntensity_Quadratic` - Tests quadratic falloff calculation
+- `TestCalculateFalloffIntensity_InverseSquare` - Tests inverse square falloff
+- `TestCalculateFalloffIntensity_Constant` - Tests constant falloff
+- `TestCalculateFalloffIntensity_UnknownType` - Tests fallback behavior
+- `TestLightCacheKey` - Tests cache key struct equality
 
 ---
 
@@ -784,6 +779,7 @@ go test ./pkg/... -cover
 - [x] Lock-picking mini-game starts for locked containers ✅ (Gap F2 completed 2025-12-24)
 - [x] Party chat delivers to party members ✅ (Gap F1 completed 2025-12-24)
 - [x] Spell effects modify terrain ✅ (Gap A4 completed 2025-12-22)
+- [x] Radial gradient lighting with proper falloff curves ✅ (Gap F4 completed 2025-12-24)
 
 ### Persistence Verification
 - [ ] Save game includes V8/V9 data

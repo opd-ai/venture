@@ -449,3 +449,222 @@ func TestLightingSystem_AmbientLightCaching(t *testing.T) {
 		t.Errorf("CalculateLightIntensityAt() = %v, want ~0.6 (from cached ambient)", intensity)
 	}
 }
+
+// TestGetCachedLightCircle_Caching tests that light circles are properly cached.
+func TestGetCachedLightCircle_Caching(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// First call should create and cache the image
+	img1 := system.getCachedLightCircle(100, FalloffLinear)
+	if img1 == nil {
+		t.Fatal("getCachedLightCircle returned nil")
+	}
+
+	// Second call should return the same cached image
+	img2 := system.getCachedLightCircle(100, FalloffLinear)
+	if img1 != img2 {
+		t.Error("getCachedLightCircle should return cached image on second call")
+	}
+
+	// Different diameter should create new image
+	img3 := system.getCachedLightCircle(200, FalloffLinear)
+	if img3 == img1 {
+		t.Error("Different diameter should create new cached image")
+	}
+
+	// Different falloff should create new image
+	img4 := system.getCachedLightCircle(100, FalloffQuadratic)
+	if img4 == img1 {
+		t.Error("Different falloff should create new cached image")
+	}
+}
+
+// TestGetCachedLightCircle_GradientGeneration tests that gradients are properly generated.
+func TestGetCachedLightCircle_GradientGeneration(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	diameter := 100
+	img := system.getCachedLightCircle(diameter, FalloffLinear)
+	
+	if img == nil {
+		t.Fatal("getCachedLightCircle returned nil")
+	}
+
+	// Check image dimensions
+	bounds := img.Bounds()
+	if bounds.Dx() != diameter || bounds.Dy() != diameter {
+		t.Errorf("Image dimensions = %dx%d, want %dx%d", bounds.Dx(), bounds.Dy(), diameter, diameter)
+	}
+
+	// Note: We cannot call img.At() in tests without a running Ebiten game.
+	// The gradient generation logic is tested indirectly through calculateFalloffIntensity tests.
+}
+
+// TestGetCachedLightCircle_AllFalloffTypes tests gradient generation for all falloff types.
+func TestGetCachedLightCircle_AllFalloffTypes(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	falloffTypes := []LightFalloffType{
+		FalloffLinear,
+		FalloffQuadratic,
+		FalloffInverseSquare,
+		FalloffConstant,
+	}
+
+	for _, falloff := range falloffTypes {
+		t.Run(falloff.String(), func(t *testing.T) {
+			img := system.getCachedLightCircle(100, falloff)
+			if img == nil {
+				t.Fatalf("getCachedLightCircle returned nil for falloff %v", falloff)
+			}
+
+			// Verify image was created
+			bounds := img.Bounds()
+			if bounds.Dx() != 100 || bounds.Dy() != 100 {
+				t.Errorf("Image dimensions = %dx%d, want 100x100", bounds.Dx(), bounds.Dy())
+			}
+		})
+	}
+}
+
+// TestCalculateFalloffIntensity_Linear tests linear falloff calculation.
+func TestCalculateFalloffIntensity_Linear(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	tests := []struct {
+		distance float64
+		want     float64
+	}{
+		{0.0, 1.0},   // Center: full intensity
+		{0.5, 0.5},   // Halfway: half intensity
+		{1.0, 0.0},   // Edge: no intensity
+		{-0.1, 1.0},  // Below zero: clamped to full
+		{1.1, 0.0},   // Beyond edge: clamped to zero
+	}
+
+	for _, tt := range tests {
+		got := system.calculateFalloffIntensity(tt.distance, FalloffLinear)
+		if got != tt.want {
+			t.Errorf("calculateFalloffIntensity(%v, Linear) = %v, want %v", tt.distance, got, tt.want)
+		}
+	}
+}
+
+// TestCalculateFalloffIntensity_Quadratic tests quadratic falloff calculation.
+func TestCalculateFalloffIntensity_Quadratic(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	tests := []struct {
+		distance float64
+		want     float64
+		tolerance float64
+	}{
+		{0.0, 1.0, 0.001},   // Center: full intensity
+		{0.5, 0.25, 0.001},  // Halfway: (1-0.5)^2 = 0.25
+		{1.0, 0.0, 0.001},   // Edge: no intensity
+	}
+
+	for _, tt := range tests {
+		got := system.calculateFalloffIntensity(tt.distance, FalloffQuadratic)
+		diff := got - tt.want
+		if diff < 0 {
+			diff = -diff
+		}
+		if diff > tt.tolerance {
+			t.Errorf("calculateFalloffIntensity(%v, Quadratic) = %v, want %v", tt.distance, got, tt.want)
+		}
+	}
+}
+
+// TestCalculateFalloffIntensity_InverseSquare tests inverse square falloff calculation.
+func TestCalculateFalloffIntensity_InverseSquare(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Test basic properties
+	centerIntensity := system.calculateFalloffIntensity(0.0, FalloffInverseSquare)
+	if centerIntensity != 1.0 {
+		t.Errorf("Center intensity = %v, want 1.0", centerIntensity)
+	}
+
+	edgeIntensity := system.calculateFalloffIntensity(1.0, FalloffInverseSquare)
+	if edgeIntensity >= 0.3 { // Should be quite dim at edge
+		t.Errorf("Edge intensity = %v, want < 0.3", edgeIntensity)
+	}
+
+	// Verify monotonic decrease
+	prev := 1.0
+	for dist := 0.0; dist <= 1.0; dist += 0.1 {
+		curr := system.calculateFalloffIntensity(dist, FalloffInverseSquare)
+		if curr > prev {
+			t.Errorf("Intensity increased from %v to %v at distance %v (should be monotonic decreasing)", prev, curr, dist)
+		}
+		prev = curr
+	}
+}
+
+// TestCalculateFalloffIntensity_Constant tests constant falloff calculation.
+func TestCalculateFalloffIntensity_Constant(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Constant falloff should always return 1.0 within range
+	tests := []float64{0.0, 0.25, 0.5, 0.75, 0.99}
+	for _, dist := range tests {
+		got := system.calculateFalloffIntensity(dist, FalloffConstant)
+		if got != 1.0 {
+			t.Errorf("calculateFalloffIntensity(%v, Constant) = %v, want 1.0", dist, got)
+		}
+	}
+
+	// Edge should still return 0
+	got := system.calculateFalloffIntensity(1.0, FalloffConstant)
+	if got != 0.0 {
+		t.Errorf("calculateFalloffIntensity(1.0, Constant) = %v, want 0.0", got)
+	}
+}
+
+// TestCalculateFalloffIntensity_UnknownType tests fallback for unknown falloff types.
+func TestCalculateFalloffIntensity_UnknownType(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Use an invalid falloff type value
+	invalidFalloff := LightFalloffType(999)
+	
+	// Should default to linear falloff behavior
+	got := system.calculateFalloffIntensity(0.5, invalidFalloff)
+	want := 0.5 // Linear falloff at 0.5 distance
+	if got != want {
+		t.Errorf("calculateFalloffIntensity(0.5, invalid) = %v, want %v (linear fallback)", got, want)
+	}
+}
+
+// TestLightCacheKey tests the cache key struct.
+func TestLightCacheKey(t *testing.T) {
+	key1 := lightCacheKey{diameter: 100, falloff: FalloffLinear}
+	key2 := lightCacheKey{diameter: 100, falloff: FalloffLinear}
+	key3 := lightCacheKey{diameter: 200, falloff: FalloffLinear}
+	key4 := lightCacheKey{diameter: 100, falloff: FalloffQuadratic}
+
+	// Same keys should be equal
+	if key1 != key2 {
+		t.Error("Identical cache keys should be equal")
+	}
+
+	// Different diameter should create different key
+	if key1 == key3 {
+		t.Error("Different diameter should create different cache key")
+	}
+
+	// Different falloff should create different key
+	if key1 == key4 {
+		t.Error("Different falloff should create different cache key")
+	}
+}
+

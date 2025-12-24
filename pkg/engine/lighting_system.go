@@ -47,9 +47,10 @@ type LightingSystem struct {
 	// Shadow system integration (optional)
 	shadowSystem *ShadowSystem
 
-	// Light circle image cache - keyed by diameter to avoid per-frame allocations
+	// Light circle image cache - keyed by (diameter, falloff) to avoid per-frame allocations
 	// This dramatically reduces allocations in the hot applyPointLight path
-	lightCircleCache map[int]*ebiten.Image
+	// Uses radial gradients for realistic light falloff
+	lightCircleCache map[lightCacheKey]*ebiten.Image
 
 	// Reusable DrawImageOptions to eliminate per-light allocations in hot path
 	// Reset and reused for each point light in applyPointLight
@@ -67,6 +68,13 @@ type lightWithPosition struct {
 	light *LightComponent
 	x     float64
 	y     float64
+}
+
+// lightCacheKey uniquely identifies a cached light circle image.
+// This allows efficient reuse of gradient textures across frames.
+type lightCacheKey struct {
+	diameter int
+	falloff  LightFalloffType
 }
 
 // NewLightingSystem creates a new lighting system.
@@ -96,7 +104,7 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 		config:           config,
 		logger:           logEntry,
 		visibleLights:    make([]lightWithPosition, 0, config.MaxLights),
-		lightCircleCache: make(map[int]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
+		lightCircleCache: make(map[lightCacheKey]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
 	}
 
 	// Initialize shadow system if shadows are enabled
@@ -717,13 +725,7 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	x := int(lwp.x - s.cameraX)
 	y := int(lwp.y - s.cameraY)
 
-	// Draw light influence as additive blend
-	// INTEGRATION FIX [Category F]: Radial Gradient Lighting
-	// Gap: Light rendering uses simple circle fill instead of proper radial gradients
-	// Fix: Implement gradient shader or pre-generated gradient texture with alpha falloff
-	// Roadmap: ROADMAP_V3.md Phase 17.1 - Soft Shadows & Colored Lighting (bloom/glow complete, gradients deferred)
-	// Temporary: Simple circle fill provides acceptable visual quality, gradient is optimization
-	//
+	// Draw light influence as additive blend with radial gradient falloff
 	// OPTIMIZATION: Reuse cached DrawImageOptions to eliminate per-light heap allocations
 	// Previous: opts := &ebiten.DrawImageOptions{} - allocated 1 struct per light per frame
 	// Now: Reuse s.lightDrawOpts with Reset() - zero allocations in hot path
@@ -739,7 +741,7 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	s.lightDrawOpts.ColorScale.Scale(float32(r), float32(g), float32(b), 1.0)
 	s.lightDrawOpts.Blend = ebiten.BlendLighter // Additive blending
 
-	// Minimal implementation: draw a filled white circle as the light influence
+	// Generate radial gradient based on light's falloff curve
 	diameter := 2 * radius
 	if diameter <= 0 {
 		if s.logger != nil {
@@ -753,8 +755,8 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 		return
 	}
 
-	// Use cached light circle image to avoid per-frame allocations
-	lightImg := s.getCachedLightCircle(diameter)
+	// Use cached light circle with radial gradient to avoid per-frame allocations
+	lightImg := s.getCachedLightCircle(diameter, lwp.light.Falloff)
 	lightBuffer.DrawImage(lightImg, &s.lightDrawOpts)
 
 	if s.logger != nil {
@@ -774,28 +776,78 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	}
 }
 
-// getCachedLightCircle returns a cached light circle image for the given diameter.
+// getCachedLightCircle returns a cached light circle image with radial gradient.
 // This avoids per-frame allocations in the hot applyPointLight path.
-func (s *LightingSystem) getCachedLightCircle(diameter int) *ebiten.Image {
-	if img, ok := s.lightCircleCache[diameter]; ok {
+// The gradient is calculated based on the falloff type for realistic light propagation.
+func (s *LightingSystem) getCachedLightCircle(diameter int, falloff LightFalloffType) *ebiten.Image {
+	cacheKey := lightCacheKey{diameter: diameter, falloff: falloff}
+	if img, ok := s.lightCircleCache[cacheKey]; ok {
 		return img
 	}
 
-	// Create new light circle image and cache it
+	// Create new light circle image with radial gradient and cache it
 	img := ebiten.NewImage(diameter, diameter)
-	radius := diameter / 2
-	cx, cy := float64(radius), float64(radius)
+	radius := float64(diameter) / 2.0
+	cx, cy := radius, radius
+	
 	for py := 0; py < diameter; py++ {
 		for px := 0; px < diameter; px++ {
 			dx := float64(px) - cx
 			dy := float64(py) - cy
-			if dx*dx+dy*dy <= float64(radius*radius) {
-				img.Set(px, py, color.White)
+			distance := math.Sqrt(dx*dx + dy*dy)
+			
+			if distance <= radius {
+				// Calculate intensity based on falloff type
+				// normalized distance: 0.0 at center, 1.0 at edge
+				normalizedDist := distance / radius
+				intensity := s.calculateFalloffIntensity(normalizedDist, falloff)
+				
+				// Use white color with alpha based on intensity
+				// The actual color will be applied via ColorScale at draw time
+				alpha := uint8(intensity * 255.0)
+				img.Set(px, py, color.RGBA{255, 255, 255, alpha})
 			}
 		}
 	}
-	s.lightCircleCache[diameter] = img
+	
+	s.lightCircleCache[cacheKey] = img
 	return img
+}
+
+// calculateFalloffIntensity computes light intensity at a given normalized distance
+// based on the falloff curve. Distance is normalized to [0, 1] where 0 is center, 1 is edge.
+func (s *LightingSystem) calculateFalloffIntensity(normalizedDist float64, falloff LightFalloffType) float64 {
+	// Clamp to valid range
+	if normalizedDist <= 0 {
+		return 1.0
+	}
+	if normalizedDist >= 1.0 {
+		return 0.0
+	}
+	
+	switch falloff {
+	case FalloffLinear:
+		// Linear falloff: intensity = 1 - distance
+		return 1.0 - normalizedDist
+		
+	case FalloffQuadratic:
+		// Quadratic falloff: intensity = (1 - distance)^2
+		remaining := 1.0 - normalizedDist
+		return remaining * remaining
+		
+	case FalloffInverseSquare:
+		// Inverse square falloff: intensity = 1 / (1 + distance^2)
+		// Modified to work with normalized distance and avoid division by zero
+		return 1.0 / (1.0 + normalizedDist*normalizedDist*4.0)
+		
+	case FalloffConstant:
+		// Constant falloff: full intensity until edge
+		return 1.0
+		
+	default:
+		// Default to linear if unknown falloff type
+		return 1.0 - normalizedDist
+	}
 }
 
 // findAmbientIntensity searches for ambient light component and returns its intensity.

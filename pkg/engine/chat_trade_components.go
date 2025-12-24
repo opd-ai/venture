@@ -285,58 +285,61 @@ func (t *TradeComponent) Type() string {
 
 // PartyComponent tracks party membership for entities.
 // Used by ChatSystem to filter party chat messages to members only.
+//
+// Usage Model (Shared Instance):
+//
+// PartyComponent follows a shared-instance model where a single PartyComponent
+// instance is shared by all entities that belong to the same party. This means
+// each party member entity holds a pointer to the same PartyComponent object.
+//
+// The PartyID, MemberIDs, and LeaderID fields are authoritative for the entire
+// party, not per-entity views of membership. Any modification to these fields
+// (e.g., adding/removing members, changing leader) affects all entities that
+// share this component instance.
+//
+// Systems that manage party membership (invites, joins, leaves, kicks, disbands)
+// MUST:
+//   - Mutate the shared PartyComponent instance when membership changes
+//   - Attach the shared component to newly joined entities
+//   - Remove the component from entities that leave the party
+//
+// This shared-instance model is relied upon by ChatSystem and tests, which
+// expect that any mutation performed via one party member's component is
+// immediately visible when accessing the component from any other member.
+//
+// Example usage:
+//
+//	// Create a party with a leader
+//	party := NewPartyComponent("party-123", leaderID)
+//
+//	// Add members by directly modifying MemberIDs
+//	party.MemberIDs = append(party.MemberIDs, member1ID, member2ID)
+//
+//	// Attach the same instance to all party members
+//	leaderEntity.AddComponent(party)
+//	member1Entity.AddComponent(party)
+//	member2Entity.AddComponent(party)
+//
+//	// All entities now share the same party state
 type PartyComponent struct {
-	PartyID   string   // Unique party identifier
-	MemberIDs []uint64 // Entity IDs of all party members (including this entity)
+	PartyID   string   // Unique party identifier for this party
+	MemberIDs []uint64 // Entity IDs of all party members (including the leader)
 	LeaderID  uint64   // Entity ID of the party leader
 }
 
-// Type returns the component type
+// Type returns the component type.
 func (p *PartyComponent) Type() string {
 	return "party"
 }
 
-// NewPartyComponent creates a new party component with the given party ID and leader.
+// NewPartyComponent creates a new party component with the given party ID and
+// leader. The returned component is intended to be shared by all entities in
+// the party: callers should attach the same PartyComponent pointer to each
+// party member entity.
 func NewPartyComponent(partyID string, leaderID uint64) *PartyComponent {
 	return &PartyComponent{
 		PartyID:   partyID,
 		MemberIDs: []uint64{leaderID},
 		LeaderID:  leaderID,
 	}
-}
-
-// AddMember adds a member to the party if not already present.
-func (p *PartyComponent) AddMember(entityID uint64) {
-	// Check if already a member
-	for _, id := range p.MemberIDs {
-		if id == entityID {
-			return
-		}
-	}
-	p.MemberIDs = append(p.MemberIDs, entityID)
-}
-
-// RemoveMember removes a member from the party.
-func (p *PartyComponent) RemoveMember(entityID uint64) {
-	for i, id := range p.MemberIDs {
-		if id == entityID {
-			p.MemberIDs = append(p.MemberIDs[:i], p.MemberIDs[i+1:]...)
-			return
-		}
-	}
-}
-
-// IsMember checks if an entity is a member of this party.
-func (p *PartyComponent) IsMember(entityID uint64) bool {
-	for _, id := range p.MemberIDs {
-		if id == entityID {
-			return true
-		}
-	}
-	return false
-}
-
-// IsLeader checks if an entity is the leader of this party.
-func (p *PartyComponent) IsLeader(entityID uint64) bool {
-	return p.LeaderID == entityID
 }

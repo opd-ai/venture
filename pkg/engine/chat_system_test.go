@@ -451,8 +451,7 @@ func TestChatSystem_DeliverMessage_Party(t *testing.T) {
 
 	// Create party with leader and members
 	party := NewPartyComponent("party-123", 1)
-	party.AddMember(2)
-	party.AddMember(3)
+	party.MemberIDs = append(party.MemberIDs, 2, 3)
 
 	sender := world.CreateEntity()
 	sender.ID = 1 // Leader sends message
@@ -547,7 +546,7 @@ func TestChatSystem_DeliverMessage_Party_MemberNotSubscribed(t *testing.T) {
 	system := NewChatSystem(world)
 
 	party := NewPartyComponent("party-123", 1)
-	party.AddMember(2)
+	party.MemberIDs = append(party.MemberIDs, 2)
 
 	sender := world.CreateEntity()
 	sender.ID = 1
@@ -583,7 +582,7 @@ func TestChatSystem_DeliverMessage_Party_MemberMissingChatComponent(t *testing.T
 	system := NewChatSystem(world)
 
 	party := NewPartyComponent("party-123", 1)
-	party.AddMember(2)
+	party.MemberIDs = append(party.MemberIDs, 2)
 
 	sender := world.CreateEntity()
 	sender.ID = 1
@@ -613,7 +612,7 @@ func TestChatSystem_DeliverMessage_Party_MemberEntityNotFound(t *testing.T) {
 	system := NewChatSystem(world)
 
 	party := NewPartyComponent("party-123", 1)
-	party.AddMember(999) // Non-existent entity ID
+	party.MemberIDs = append(party.MemberIDs, 999) // Non-existent entity ID
 
 	sender := world.CreateEntity()
 	sender.ID = 1

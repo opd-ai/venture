@@ -169,6 +169,107 @@ func TestRemoveMember(t *testing.T) {
 	})
 }
 
+func TestPromoteMember(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.AddMember(guildID, "player1", RankRecruit)
+
+	t.Run("promote recruit to member", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "player1", "leader")
+		if err != nil {
+			t.Fatalf("PromoteMember failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		member := guild.GetMember("player1")
+		if member == nil {
+			t.Fatal("Member not found")
+		}
+		if member.Rank != RankMember {
+			t.Errorf("Rank = %s, want %s", member.Rank, RankMember)
+		}
+	})
+
+	t.Run("promote member to officer", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "player1", "leader")
+		if err != nil {
+			t.Fatalf("PromoteMember failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		member := guild.GetMember("player1")
+		if member.Rank != RankOfficer {
+			t.Errorf("Rank = %s, want %s", member.Rank, RankOfficer)
+		}
+	})
+
+	t.Run("promote officer to leader transfers leadership", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "player1", "leader")
+		if err != nil {
+			t.Fatalf("PromoteMember failed: %v", err)
+		}
+
+		guild, _ := m.GetGuild(guildID)
+		if guild.LeaderID != "player1" {
+			t.Errorf("LeaderID = %s, want player1", guild.LeaderID)
+		}
+
+		// Old leader should be demoted to officer
+		oldLeader := guild.GetMember("leader")
+		if oldLeader == nil {
+			t.Fatal("Old leader not found")
+		}
+		if oldLeader.Rank != RankOfficer {
+			t.Errorf("Old leader rank = %s, want %s", oldLeader.Rank, RankOfficer)
+		}
+	})
+
+	t.Run("cannot promote leader", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "player1", "player1")
+		if err == nil {
+			t.Error("PromoteMember should fail when trying to promote leader")
+		}
+	})
+
+	t.Run("non-member cannot promote", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "leader", "nonmember")
+		if err == nil {
+			t.Error("PromoteMember should fail for non-member promoter")
+		}
+	})
+
+	t.Run("member without permission cannot promote", func(t *testing.T) {
+		m.AddMember(guildID, "player2", RankMember)
+		err := m.PromoteMember(guildID, "leader", "player2")
+		if err == nil {
+			t.Error("PromoteMember should fail for member without permission")
+		}
+	})
+
+	t.Run("officer cannot promote to officer", func(t *testing.T) {
+		m.AddMember(guildID, "officer1", RankOfficer)
+		m.AddMember(guildID, "player3", RankMember)
+		err := m.PromoteMember(guildID, "player3", "officer1")
+		if err == nil {
+			t.Error("PromoteMember should fail when officer tries to promote to officer")
+		}
+	})
+
+	t.Run("non-existing guild", func(t *testing.T) {
+		err := m.PromoteMember("nonexistent", "player1", "leader")
+		if err == nil {
+			t.Error("PromoteMember should fail for non-existing guild")
+		}
+	})
+
+	t.Run("non-existing target member", func(t *testing.T) {
+		err := m.PromoteMember(guildID, "nonexistent", "player1")
+		if err == nil {
+			t.Error("PromoteMember should fail for non-existing target member")
+		}
+	})
+}
+
 func TestDepositTreasury(t *testing.T) {
 	m := NewManager()
 	guildID, _ := m.CreateGuild("fantasy", "leader")
@@ -613,5 +714,451 @@ func TestGenreSpecificNames(t *testing.T) {
 				t.Error("Emblem symbol is empty")
 			}
 		})
+	}
+}
+
+// Cross-Server Synchronization Tests
+
+func TestSetServerID(t *testing.T) {
+	m := NewManager()
+	serverID := "test-server-123"
+
+	m.SetServerID(serverID)
+
+	if m.serverID != serverID {
+		t.Errorf("serverID = %s, want %s", m.serverID, serverID)
+	}
+}
+
+func TestAddFederatedServer(t *testing.T) {
+	m := NewManager()
+
+	t.Run("add new server", func(t *testing.T) {
+		m.AddFederatedServer("server-1")
+		if len(m.federatedServers) != 1 {
+			t.Errorf("federatedServers count = %d, want 1", len(m.federatedServers))
+		}
+		if m.federatedServers[0] != "server-1" {
+			t.Errorf("server ID = %s, want server-1", m.federatedServers[0])
+		}
+	})
+
+	t.Run("add duplicate server", func(t *testing.T) {
+		m.AddFederatedServer("server-1")
+		if len(m.federatedServers) != 1 {
+			t.Errorf("federatedServers count = %d, want 1 (no duplicates)", len(m.federatedServers))
+		}
+	})
+
+	t.Run("add multiple servers", func(t *testing.T) {
+		m.AddFederatedServer("server-2")
+		m.AddFederatedServer("server-3")
+		if len(m.federatedServers) != 3 {
+			t.Errorf("federatedServers count = %d, want 3", len(m.federatedServers))
+		}
+	})
+}
+
+func TestRemoveFederatedServer(t *testing.T) {
+	m := NewManager()
+	m.AddFederatedServer("server-1")
+	m.AddFederatedServer("server-2")
+	m.AddFederatedServer("server-3")
+
+	t.Run("remove existing server", func(t *testing.T) {
+		m.RemoveFederatedServer("server-2")
+		if len(m.federatedServers) != 2 {
+			t.Errorf("federatedServers count = %d, want 2", len(m.federatedServers))
+		}
+
+		// Verify server-2 is removed
+		for _, id := range m.federatedServers {
+			if id == "server-2" {
+				t.Error("server-2 should be removed")
+			}
+		}
+	})
+
+	t.Run("remove non-existing server", func(t *testing.T) {
+		count := len(m.federatedServers)
+		m.RemoveFederatedServer("nonexistent")
+		if len(m.federatedServers) != count {
+			t.Errorf("federatedServers count changed when removing non-existing server")
+		}
+	})
+}
+
+func TestSyncGuildState(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	t.Run("sync existing guild", func(t *testing.T) {
+		err := m.SyncGuildState(guildID)
+		if err != nil {
+			t.Fatalf("SyncGuildState failed: %v", err)
+		}
+	})
+
+	t.Run("sync non-existing guild", func(t *testing.T) {
+		err := m.SyncGuildState("nonexistent")
+		if err == nil {
+			t.Error("SyncGuildState should fail for non-existing guild")
+		}
+	})
+}
+
+func TestHandleGuildMessage_GuildSync(t *testing.T) {
+	m := NewManager()
+
+	// Use fixed timestamp for deterministic tests
+	fixedTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	// Create a guild on another server
+	guild := &Guild{
+		ID:          "remote-guild-123",
+		Name:        "Remote Guild",
+		LeaderID:    "remote-leader",
+		Members:     []Member{{PlayerID: "remote-leader", Rank: RankLeader, JoinedAt: fixedTime, LastLogin: fixedTime}},
+		Permissions: make(map[Rank][]Permission),
+		Treasury:    1000,
+		CreatedAt:   fixedTime,
+		UpdatedAt:   fixedTime,
+		Reputation:  make(map[string]float64),
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeGuildSync,
+		GuildID:   guild.ID,
+		ServerID:  "remote-server",
+		Timestamp: fixedTime,
+		Data:      guild,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage failed: %v", err)
+	}
+
+	// Verify guild was synchronized
+	syncedGuild, err := m.GetGuild(guild.ID)
+	if err != nil {
+		t.Fatalf("Failed to get synced guild: %v", err)
+	}
+	if syncedGuild.Name != guild.Name {
+		t.Errorf("Guild name = %s, want %s", syncedGuild.Name, guild.Name)
+	}
+	if syncedGuild.Treasury != guild.Treasury {
+		t.Errorf("Guild treasury = %d, want %d", syncedGuild.Treasury, guild.Treasury)
+	}
+}
+
+func TestHandleGuildMessage_MemberJoin(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	joinData := MemberJoinData{
+		PlayerID: "new-player",
+		Rank:     RankRecruit,
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeMemberJoin,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      joinData,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage failed: %v", err)
+	}
+
+	// Verify member was added
+	guild, _ := m.GetGuild(guildID)
+	member := guild.GetMember("new-player")
+	if member == nil {
+		t.Fatal("New member not found after join message")
+	}
+	if member.Rank != RankRecruit {
+		t.Errorf("Member rank = %s, want %s", member.Rank, RankRecruit)
+	}
+}
+
+func TestHandleGuildMessage_MemberLeave(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+	m.AddMember(guildID, "leaving-player", RankMember)
+
+	leaveData := MemberLeaveData{
+		PlayerID: "leaving-player",
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeMemberLeave,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      leaveData,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage failed: %v", err)
+	}
+
+	// Verify member was removed
+	guild, _ := m.GetGuild(guildID)
+	member := guild.GetMember("leaving-player")
+	if member != nil {
+		t.Error("Member should be removed after leave message")
+	}
+}
+
+func TestHandleGuildMessage_TerritoryChange(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	territoryData := TerritoryChangeData{
+		ZoneID:   "zone-123",
+		OldGuild: "",
+		NewGuild: guildID,
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeTerritoryChange,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      territoryData,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage failed: %v", err)
+	}
+
+	// Verify reputation was updated
+	guild, _ := m.GetGuild(guildID)
+	if guild.Reputation[territoryData.ZoneID] <= 0 {
+		t.Error("Guild reputation should increase after gaining territory")
+	}
+}
+
+func TestHandleGuildMessage_InvalidType(t *testing.T) {
+	m := NewManager()
+
+	msg := GuildMessage{
+		Type:      "invalid_type",
+		GuildID:   "guild-123",
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err == nil {
+		t.Error("HandleGuildMessage should fail for invalid message type")
+	}
+}
+
+func TestHandleGuildMessage_EmptyType(t *testing.T) {
+	m := NewManager()
+
+	msg := GuildMessage{
+		Type:      "",
+		GuildID:   "guild-123",
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err == nil {
+		t.Error("HandleGuildMessage should fail for empty message type")
+	}
+}
+
+func TestHandleGuildMessage_EmptyGuildID(t *testing.T) {
+	m := NewManager()
+
+	msg := GuildMessage{
+		Type:      MsgTypeGuildSync,
+		GuildID:   "",
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err == nil {
+		t.Error("HandleGuildMessage should fail for empty guild ID")
+	}
+}
+
+func TestHandleGuildMessage_JSONDeserialization(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	// Simulate JSON deserialization by using map[string]interface{}
+	joinData := map[string]interface{}{
+		"player_id": "json-player",
+		"rank":      "Member",
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeMemberJoin,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      joinData,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage failed with JSON data: %v", err)
+	}
+
+	// Verify member was added
+	guild, _ := m.GetGuild(guildID)
+	member := guild.GetMember("json-player")
+	if member == nil {
+		t.Fatal("Member not found after JSON join message")
+	}
+}
+
+func TestHandleGuildMessage_DuplicateMemberJoin(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	joinData := MemberJoinData{
+		PlayerID: "duplicate-player",
+		Rank:     RankRecruit,
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeMemberJoin,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      joinData,
+	}
+
+	// Add member first time
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("First HandleGuildMessage failed: %v", err)
+	}
+
+	guild1, _ := m.GetGuild(guildID)
+	count1 := len(guild1.Members)
+
+	// Try to add same member again
+	err = m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("Second HandleGuildMessage failed: %v", err)
+	}
+
+	guild2, _ := m.GetGuild(guildID)
+	count2 := len(guild2.Members)
+
+	if count1 != count2 {
+		t.Error("Duplicate member join should not increase member count")
+	}
+}
+
+func TestHandleGuildMessage_NonExistentMemberLeave(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader")
+
+	leaveData := MemberLeaveData{
+		PlayerID: "nonexistent-player",
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeMemberLeave,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      leaveData,
+	}
+
+	// Should not error when removing non-existent member
+	err := m.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("HandleGuildMessage should not fail for non-existent member leave: %v", err)
+	}
+}
+
+func TestCrossFederationScenario(t *testing.T) {
+	// Create two managers representing different servers
+	server1 := NewManager()
+	server1.SetServerID("server-1")
+
+	server2 := NewManager()
+	server2.SetServerID("server-2")
+
+	// Register each other as federated servers
+	server1.AddFederatedServer("server-2")
+	server2.AddFederatedServer("server-1")
+
+	// Create guild on server 1
+	guildID, _ := server1.CreateGuild("fantasy", "leader-on-server-1")
+	guild1, _ := server1.GetGuild(guildID)
+
+	// Sync guild to server 2
+	msg := GuildMessage{
+		Type:      MsgTypeGuildSync,
+		GuildID:   guildID,
+		ServerID:  "server-1",
+		Timestamp: time.Now(),
+		Data:      guild1,
+	}
+
+	err := server2.HandleGuildMessage(msg)
+	if err != nil {
+		t.Fatalf("Cross-server sync failed: %v", err)
+	}
+
+	// Verify guild exists on server 2
+	guild2, err := server2.GetGuild(guildID)
+	if err != nil {
+		t.Fatalf("Guild not found on server 2: %v", err)
+	}
+	if guild2.Name != guild1.Name {
+		t.Errorf("Guild name mismatch: %s vs %s", guild2.Name, guild1.Name)
+	}
+
+	// Add member on server 2 and sync back to server 1
+	joinData := MemberJoinData{
+		PlayerID: "player-on-server-2",
+		Rank:     RankRecruit,
+	}
+
+	joinMsg := GuildMessage{
+		Type:      MsgTypeMemberJoin,
+		GuildID:   guildID,
+		ServerID:  "server-2",
+		Timestamp: time.Now(),
+		Data:      joinData,
+	}
+
+	// Apply to both servers
+	server2.HandleGuildMessage(joinMsg)
+	server1.HandleGuildMessage(joinMsg)
+
+	// Verify member exists on both servers
+	guild1Updated, _ := server1.GetGuild(guildID)
+	guild2Updated, _ := server2.GetGuild(guildID)
+
+	if len(guild1Updated.Members) != len(guild2Updated.Members) {
+		t.Error("Member count mismatch across servers")
+	}
+
+	member1 := guild1Updated.GetMember("player-on-server-2")
+	member2 := guild2Updated.GetMember("player-on-server-2")
+
+	if member1 == nil || member2 == nil {
+		t.Fatal("Member not found on one or both servers")
+	}
+	if member1.Rank != member2.Rank {
+		t.Error("Member rank mismatch across servers")
 	}
 }

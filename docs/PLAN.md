@@ -776,6 +776,7 @@ go test ./pkg/... -cover
 - [x] Housing UI shows player plots ✅ (Gap B5-B9 completed 2025-12-23)
 - [x] Guild UI opens with O key ✅ (Gap B10-B13 completed 2025-12-23)
 - [x] Mini-games award items to inventory ✅ (Gap A3 completed 2025-12-22)
+- [x] Mini-games generate procedural reward items ✅ (Gap E1-E2 completed 2025-12-24)
 - [x] Vehicles take terrain damage ✅ (Gap A6 completed 2025-12-23)
 - [x] Locked bookshelves require key items ✅ (Gap F3 completed 2025-12-23)
 - [x] Lock-picking mini-game starts for locked containers ✅ (Gap F2 completed 2025-12-24)

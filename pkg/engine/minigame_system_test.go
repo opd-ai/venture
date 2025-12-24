@@ -996,39 +996,39 @@ func TestMiniGameSystem_GenerateReward_WithItemGenerator(t *testing.T) {
 	sys.SetGenreID("fantasy")
 
 	tests := []struct {
-		name           string
-		difficulty     float64
-		expectedItems  int
-		minItems       int
-		maxItems       int
+		name          string
+		difficulty    float64
+		expectedItems int
+		minItems      int
+		maxItems      int
 	}{
 		{
-			name:         "low difficulty",
-			difficulty:   0.3,
+			name:          "low difficulty",
+			difficulty:    0.3,
 			expectedItems: 1,
-			minItems:     1,
-			maxItems:     1,
+			minItems:      1,
+			maxItems:      1,
 		},
 		{
-			name:         "medium difficulty",
-			difficulty:   0.8,
+			name:          "medium difficulty",
+			difficulty:    0.8,
 			expectedItems: 2,
-			minItems:     2,
-			maxItems:     2,
+			minItems:      2,
+			maxItems:      2,
 		},
 		{
-			name:         "high difficulty",
-			difficulty:   0.95,
+			name:          "high difficulty",
+			difficulty:    0.95,
 			expectedItems: 3,
-			minItems:     3,
-			maxItems:     3,
+			minItems:      3,
+			maxItems:      3,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reward := sys.generateReward(MiniGameCard, tt.difficulty)
-			
+
 			if reward == nil {
 				t.Fatal("generateReward returned nil")
 			}
@@ -1038,7 +1038,7 @@ func TestMiniGameSystem_GenerateReward_WithItemGenerator(t *testing.T) {
 
 			itemCount := len(reward.Items)
 			if itemCount < tt.minItems || itemCount > tt.maxItems {
-				t.Errorf("Item count = %d, want between %d and %d", 
+				t.Errorf("Item count = %d, want between %d and %d",
 					itemCount, tt.minItems, tt.maxItems)
 			}
 
@@ -1073,7 +1073,7 @@ func TestMiniGameSystem_GenerateReward_WithoutItemGenerator(t *testing.T) {
 	// Don't set item generator
 
 	reward := sys.generateReward(MiniGameCard, 0.8)
-	
+
 	if reward == nil {
 		t.Fatal("generateReward returned nil")
 	}
@@ -1144,7 +1144,7 @@ func TestMiniGameSystem_GenerateReward_ItemsCreatedAsEntities(t *testing.T) {
 	sys.SetGenreID("fantasy")
 
 	reward := sys.generateReward(MiniGameCard, 0.9) // High difficulty = 3 items
-	world.Update(0) // Process entity additions
+	world.Update(0)                                 // Process entity additions
 
 	if len(reward.Items) == 0 {
 		t.Fatal("Expected items to be generated")

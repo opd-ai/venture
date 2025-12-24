@@ -169,7 +169,7 @@ ok      github.com/opd-ai/venture/pkg/network/resilience          1.254s  covera
 
 **Actual Behavior:** Running `go test -bench=.` fails with: "fatal error: X11/Xlib.h: No such file or directory"
 
-**Impact:** Performance regressions could go unnotected if benchmarks cannot run automatically. Claims in documentation cannot be independently verified, reducing confidence in the package.
+**Impact:** Performance regressions could go undetected if benchmarks cannot run automatically. Claims in documentation cannot be independently verified, reducing confidence in the package.
 
 **Reproduction:**
 1. Attempt to run benchmarks: `go test -bench=. -benchtime=1s ./pkg/network/`

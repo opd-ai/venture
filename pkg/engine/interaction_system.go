@@ -232,16 +232,11 @@ func (s *InteractionSystem) handleOpenAction(player, entity *Entity) {
 				// Store reference to the locked entity and context action for the callback
 				lockedEntityID := entity.ID
 
-				// Create a simple callback system by storing state in the game component
-				// When the mini-game completes, we'll check the result and open if successful
-				originalState := gameComp.State
-				if stateMap, ok := originalState.(map[string]interface{}); ok {
-					stateMap["lockedEntityID"] = lockedEntityID
-				} else {
-					gameComp.State = map[string]interface{}{
-						"lockedEntityID": lockedEntityID,
-					}
-				}
+				// Create a simple callback system by storing state in the game component.
+				// StartGame guarantees that State is always a map[string]interface{}, so we can
+				// safely assert and store the locked entity ID for use when the mini-game completes.
+				stateMap := gameComp.State.(map[string]interface{})
+				stateMap["lockedEntityID"] = lockedEntityID
 			}
 
 			if s.logger != nil {

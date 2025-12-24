@@ -2,20 +2,31 @@ package engine
 
 import (
 	"fmt"
+	"hash/fnv"
 	"math"
 
+	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	log "github.com/sirupsen/logrus"
 )
+
+// QuestGeneratorInterface defines the interface for quest generation.
+// This allows for dependency injection and testing.
+type QuestGeneratorInterface interface {
+	Generate(seed int64, params procgen.GenerationParams) (interface{}, error)
+}
 
 // DiscoverySystem handles player interaction with story fragments.
 // It detects when players are near fragments, handles discovery events,
 // awards XP, and tracks series completion.
 type DiscoverySystem struct {
 	world           *World
-	discoveryRadius float64        // Distance within which fragments can be discovered
-	seriesXPBonus   float64        // Extra XP awarded for completing a series
-	seriesFragments map[string]int // SeriesID → total fragment count
+	discoveryRadius float64                // Distance within which fragments can be discovered
+	seriesXPBonus   float64                // Extra XP awarded for completing a series
+	seriesFragments map[string]int         // SeriesID → total fragment count
+	questGenerator  QuestGeneratorInterface // Quest generator for story-unlocked quests
+	genreID         string                 // Current game genre for quest generation
+	seed            int64                  // Base seed for quest generation
 }
 
 // NewDiscoverySystem creates a new discovery system.
@@ -31,7 +42,30 @@ func NewDiscoverySystem(world *World) *DiscoverySystem {
 		discoveryRadius: 2.0,   // 2 tile radius for discovery
 		seriesXPBonus:   100.0, // 100 XP bonus for completing a series
 		seriesFragments: make(map[string]int),
+		questGenerator:  nil,      // Set via SetQuestGenerator
+		genreID:         "fantasy", // Default genre, can be updated
+		seed:            0,         // Default seed, can be updated
 	}
+}
+
+// SetQuestGenerator sets the quest generator for story-unlocked quests.
+// This should be called during system initialization to enable quest unlocking.
+func (s *DiscoverySystem) SetQuestGenerator(generator QuestGeneratorInterface, genreID string, seed int64) {
+	log.WithFields(log.Fields{
+		"system_name": "discovery",
+		"genre_id":    genreID,
+		"seed":        seed,
+	}).Debug("Setting quest generator for discovery system")
+
+	s.questGenerator = generator
+	s.genreID = genreID
+	s.seed = seed
+
+	log.WithFields(log.Fields{
+		"system_name": "discovery",
+		"has_generator": generator != nil,
+		"genre_id":    genreID,
+	}).Info("Quest generator configured for discovery system")
 }
 
 // Update checks for nearby fragments and processes discoveries.
@@ -468,6 +502,15 @@ func (s *DiscoverySystem) SetSeriesXPBonus(bonus float64) {
 	}
 }
 
+// hashSeriesID generates a deterministic hash from a series ID string.
+// This ensures different series IDs always produce different seeds,
+// even if they have the same length.
+func hashSeriesID(seriesID string) int64 {
+	h := fnv.New64a()
+	h.Write([]byte(seriesID))
+	return int64(h.Sum64())
+}
+
 // unlockStoryQuests checks if the completed series unlocks any quests.
 // This is called when a story series is completed (Phase 30.2).
 func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
@@ -497,24 +540,101 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 		return
 	}
 
-	// Unlock quests for this series
-	// The questGenerator would need to be provided by a quest generation system
-	// For now, we'll just use a nil generator which means no quests are actually generated
-	// In a full implementation, this would call into a quest generation system
-	unlockedCount := questTracker.UnlockStoryQuests(seriesID, func(questID string) *quest.Quest {
-		// INTEGRATION FIX [Category B]: Story Fragment Quest Unlocking
-		// Gap: DiscoverySystem needs hook to QuestGeneration for unlocking story-based quests
-		// Fix: Callback system implemented via UnlockStoryQuests function in StoryJournalComponent
-		// Roadmap: ROADMAP_V4.md Phase 30.2 - Discovery System integration complete
-		// Integration: Call UnlockStoryQuests(fragmentID) when completedSeries triggers
-		// For now, return nil (no quests unlocked)
+	// Check if quest generator is configured
+	if s.questGenerator == nil {
+		log.WithFields(log.Fields{
+			"system_name": "discovery",
+			"player_id":   player.ID,
+			"series_id":   seriesID,
+		}).Debug("No quest generator configured, skipping quest unlock")
+		return
+	}
+
+	// Generate quest ID based on series ID
+	questID := fmt.Sprintf("story-%s", seriesID)
+
+	// Check if this series already has a registered quest
+	questIDs, exists := questTracker.StoryUnlockedQuests[seriesID]
+	if !exists || len(questIDs) == 0 {
+		// Register a new quest for this series
+		questTracker.RegisterStoryQuest(seriesID, questID)
 		log.WithFields(log.Fields{
 			"system_name": "discovery",
 			"player_id":   player.ID,
 			"series_id":   seriesID,
 			"quest_id":    questID,
-		}).Debug("Quest generator callback (placeholder)")
-		return nil
+		}).Debug("Registered new story quest for series")
+	}
+
+	// Unlock quests for this series using a quest generator callback
+	unlockedCount := questTracker.UnlockStoryQuests(seriesID, func(qID string) *quest.Quest {
+		log.WithFields(log.Fields{
+			"system_name": "discovery",
+			"player_id":   player.ID,
+			"series_id":   seriesID,
+			"quest_id":    qID,
+		}).Debug("Generating story quest")
+
+		// Generate quest using the quest generator
+		// Use series-specific seed based on the base seed and series ID hash
+		// This ensures deterministic generation: same seriesID always produces same quest
+		questSeed := s.seed ^ hashSeriesID(seriesID)
+		
+		// Set up generation parameters
+		params := procgen.GenerationParams{
+			Difficulty: 0.5, // Medium difficulty for story quests
+			Depth:      1,   // Story quests are depth 1
+			GenreID:    s.genreID,
+			Custom: map[string]interface{}{
+				"count":      1,         // Generate one quest
+				"quest_type": "explore", // Story quests are exploration quests
+				"series_id":  seriesID,  // Include series ID for context
+			},
+		}
+
+		// Generate quest
+		result, err := s.questGenerator.Generate(questSeed, params)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"system_name": "discovery",
+				"player_id":   player.ID,
+				"series_id":   seriesID,
+				"quest_id":    qID,
+				"error":       err.Error(),
+			}).Error("Failed to generate story quest")
+			return nil
+		}
+
+		// Extract quest from result
+		quests, ok := result.([]*quest.Quest)
+		if !ok || len(quests) == 0 {
+			log.WithFields(log.Fields{
+				"system_name": "discovery",
+				"player_id":   player.ID,
+				"series_id":   seriesID,
+				"quest_id":    qID,
+			}).Warn("Quest generator returned invalid result")
+			return nil
+		}
+
+		// Return the first generated quest with the correct ID.
+		// Copy the quest before mutating to avoid affecting any cached/reused instances
+		// that may be held by the quest generator.
+		generatedQuest := quests[0]
+		customQuest := *generatedQuest
+		customQuest.ID = qID // Override with our quest ID
+		customQuest.Name = fmt.Sprintf("Investigate: %s", seriesID)
+		customQuest.Description = fmt.Sprintf("Having completed the story fragments, you feel compelled to investigate the location related to '%s'.", seriesID)
+
+		log.WithFields(log.Fields{
+			"system_name": "discovery",
+			"player_id":   player.ID,
+			"series_id":   seriesID,
+			"quest_id":    qID,
+			"quest_name":  customQuest.Name,
+		}).Info("Story quest generated successfully")
+
+		return &customQuest
 	})
 
 	if unlockedCount > 0 {

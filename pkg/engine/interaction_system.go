@@ -18,10 +18,11 @@ import (
 
 // InteractionSystem manages player interactions with interactive entities.
 type InteractionSystem struct {
-	world       *World
-	logger      *logrus.Entry
-	carrySystem *CarrySystem // For pickup/throw mechanics
-	inputSystem *InputSystem // INPUT CONFLICT FIX: Reference for checking if interaction allowed
+	world          *World
+	logger         *logrus.Entry
+	carrySystem    *CarrySystem    // For pickup/throw mechanics
+	inputSystem    *InputSystem    // INPUT CONFLICT FIX: Reference for checking if interaction allowed
+	miniGameSystem *MiniGameSystem // For lock-picking and other mini-game integration
 }
 
 // NewInteractionSystem creates a new interaction system.
@@ -42,6 +43,11 @@ func (s *InteractionSystem) SetCarrySystem(carrySystem *CarrySystem) {
 // INPUT CONFLICT FIX: Allows checking whether interactions are allowed based on current game state (e.g., UI open/closed) before processing.
 func (s *InteractionSystem) SetInputSystem(inputSystem *InputSystem) {
 	s.inputSystem = inputSystem
+}
+
+// SetMiniGameSystem sets the mini-game system reference for lock-picking and other mini-games.
+func (s *InteractionSystem) SetMiniGameSystem(miniGameSystem *MiniGameSystem) {
+	s.miniGameSystem = miniGameSystem
 }
 
 // Update checks for interaction key presses and processes player interactions.
@@ -168,7 +174,7 @@ func (s *InteractionSystem) activateContextAction(player, entity *Entity, contex
 	// Perform action-specific behavior
 	switch contextAction.ActionType {
 	case ActionOpen:
-		s.handleOpenAction(entity)
+		s.handleOpenAction(player, entity)
 	case ActionClose:
 		s.handleCloseAction(entity)
 	case ActionActivate:
@@ -184,8 +190,8 @@ func (s *InteractionSystem) activateContextAction(player, entity *Entity, contex
 }
 
 // handleOpenAction handles opening doors, chests, etc.
-// Phase 27.3: Added lock-picking mini-game requirement check
-func (s *InteractionSystem) handleOpenAction(entity *Entity) {
+// Phase 27.3: Lock-picking mini-game integration
+func (s *InteractionSystem) handleOpenAction(player, entity *Entity) {
 	// Get context action to check for lock-picking requirement
 	ctxCompRaw, ok := entity.GetComponent("contextAction")
 	if !ok {
@@ -198,21 +204,58 @@ func (s *InteractionSystem) handleOpenAction(entity *Entity) {
 
 	// Check if lock-picking is required
 	if ctx.RequiresLockPicking {
-		// INTEGRATION FIX [Category F]: Lock-Picking Mini-Game Integration
-		// Gap: ActionOpenLocked requires MiniGameSystem.StartGame() integration for lock-picking
-		// Fix: Add MiniGameSystem field to InteractionSystem, call StartGame(TypeLockPicking, difficulty)
-		// Roadmap: ROADMAP_V4.md Phase 27.3 - Mini-Game Integration (Quest mini-games)
-		// Integration: MiniGameSystem available in world.GetSystems(), get via type assertion
-		// For now, just log that lock-picking would be required
+		// Start lock-picking mini-game if system is available
+		if s.miniGameSystem != nil {
+			// Normalize difficulty to 0.0-1.0 range
+			difficulty := ctx.LockDifficulty
+			if difficulty < 0.0 {
+				difficulty = 0.0
+			}
+			if difficulty > 1.0 {
+				difficulty = 1.0
+			}
+
+			// Start the lock-picking mini-game
+			if err := s.miniGameSystem.StartGame(player.ID, MiniGameLockPicking, difficulty); err != nil {
+				if s.logger != nil {
+					s.logger.WithFields(logrus.Fields{
+						"entityID": player.ID,
+						"error":    err.Error(),
+					}).Error("failed to start lock-picking mini-game")
+				}
+				return
+			}
+
+			// Get the mini-game component and set up completion callback
+			gameComp := s.miniGameSystem.GetGameComponent(player.ID)
+			if gameComp != nil {
+				// Store reference to the locked entity and context action for the callback
+				lockedEntityID := entity.ID
+
+				// Create a simple callback system by storing state in the game component.
+				// StartGame guarantees that State is always a map[string]interface{}, so we can
+				// safely assert and store the locked entity ID for use when the mini-game completes.
+				stateMap := gameComp.State.(map[string]interface{})
+				stateMap["lockedEntityID"] = lockedEntityID
+			}
+
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entityID":       entity.ID,
+					"playerID":       player.ID,
+					"lockDifficulty": difficulty,
+				}).Debug("lock-picking mini-game started")
+			}
+			return
+		}
+
+		// Graceful degradation: no mini-game system available
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"entityID":       entity.ID,
 				"lockDifficulty": ctx.LockDifficulty,
-			}).Debug("lock-picking mini-game required (not implemented yet)")
+			}).Debug("lock-picking mini-game required but system not available")
 		}
-		// In full implementation, would call:
-		// s.world.GetSystem("minigame").StartGame(playerID, MiniGameLockPicking, ctx.LockDifficulty)
-		// and only proceed to open if mini-game succeeds
 		return
 	}
 
@@ -222,6 +265,75 @@ func (s *InteractionSystem) handleOpenAction(entity *Entity) {
 
 	if s.logger != nil {
 		s.logger.WithField("entityID", entity.ID).Debug("door opened")
+	}
+}
+
+// ProcessLockPickingCompletion checks if a lock-picking mini-game has completed
+// and handles the result by opening the locked entity on success.
+// This should be called by the game loop or mini-game system after game completion.
+func (s *InteractionSystem) ProcessLockPickingCompletion(playerID uint64, success bool) {
+	if s.miniGameSystem == nil {
+		return
+	}
+
+	// Get the mini-game component to retrieve the locked entity ID
+	gameComp := s.miniGameSystem.GetGameComponent(playerID)
+	if gameComp == nil || gameComp.GameType != MiniGameLockPicking {
+		return
+	}
+
+	// Retrieve the locked entity ID from the game state
+	stateMap, ok := gameComp.State.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	lockedEntityIDRaw, ok := stateMap["lockedEntityID"]
+	if !ok {
+		return
+	}
+
+	lockedEntityID, ok := lockedEntityIDRaw.(uint64)
+	if !ok {
+		return
+	}
+
+	// Get the locked entity
+	lockedEntity, exists := s.world.GetEntity(lockedEntityID)
+	if !exists || lockedEntity == nil {
+		return
+	}
+
+	// Get the context action component
+	ctxCompRaw, ok := lockedEntity.GetComponent("contextAction")
+	if !ok {
+		return
+	}
+	ctx, ok := ctxCompRaw.(*ContextActionComponent)
+	if !ok {
+		return
+	}
+
+	if success {
+		// Successful lock-picking: open the door/chest
+		ctx.ActionType = ActionClose
+		ctx.ActionText = "Close"
+		ctx.RequiresLockPicking = false // Lock is now picked
+
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"playerID":       playerID,
+				"lockedEntityID": lockedEntityID,
+			}).Info("lock picked successfully - door/chest opened")
+		}
+	} else {
+		// Failed lock-picking: door/chest remains locked
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"playerID":       playerID,
+				"lockedEntityID": lockedEntityID,
+			}).Debug("lock-picking failed - door/chest remains locked")
+		}
 	}
 }
 

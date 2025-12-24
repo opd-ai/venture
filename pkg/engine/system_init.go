@@ -57,6 +57,7 @@ type SystemInitResult struct {
 	DialogSystem      *DialogSystem
 	CraftingSystem    *CraftingSystem
 	InteractionSystem *InteractionSystem
+	MiniGameSystem    *MiniGameSystem
 	AnimationSystem   *AnimationSystem
 	ParticleSystem    *ParticleSystem
 	TutorialSystem    *EbitenTutorialSystem
@@ -227,6 +228,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.InteractionSystem = NewInteractionSystem(game.World)
 	game.World.AddSystem(result.InteractionSystem)
 
+	// 30a. MiniGameSystem - manages mini-game lifecycle (Phase 27.1)
+	// Note: This is NOT added as a System because it has a custom Update signature.
+	// It will be called manually from the game loop.
+	miniGameSystem := NewMiniGameSystem(game.World)
+	miniGameSystem.SetSeed(config.Seed)
+
 	// ========================================================================
 	// VISUAL & ENVIRONMENTAL SYSTEMS (14 systems)
 	// ========================================================================
@@ -312,6 +319,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.InteractionSystem.SetCarrySystem(carrySystem)
 	// INPUT CONFLICT FIX: Connect InteractionSystem to InputSystem for state checking
 	result.InteractionSystem.SetInputSystem(result.InputSystem)
+	// LOCK-PICKING INTEGRATION: Connect InteractionSystem to MiniGameSystem for lock-picking
+	result.InteractionSystem.SetMiniGameSystem(miniGameSystem)
+
+	// Store MiniGameSystem reference in result for external access
+	result.MiniGameSystem = miniGameSystem
 
 	// Store UI system references in game
 	game.TutorialSystem = result.TutorialSystem

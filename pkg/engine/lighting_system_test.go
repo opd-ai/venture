@@ -487,7 +487,7 @@ func TestGetCachedLightCircle_GradientGeneration(t *testing.T) {
 
 	diameter := 100
 	img := system.getCachedLightCircle(diameter, FalloffLinear)
-	
+
 	if img == nil {
 		t.Fatal("getCachedLightCircle returned nil")
 	}
@@ -539,11 +539,11 @@ func TestCalculateFalloffIntensity_Linear(t *testing.T) {
 		distance float64
 		want     float64
 	}{
-		{0.0, 1.0},   // Center: full intensity
-		{0.5, 0.5},   // Halfway: half intensity
-		{1.0, 0.0},   // Edge: no intensity
-		{-0.1, 1.0},  // Below zero: clamped to full
-		{1.1, 0.0},   // Beyond edge: clamped to zero
+		{0.0, 1.0},  // Center: full intensity
+		{0.5, 0.5},  // Halfway: half intensity
+		{1.0, 0.0},  // Edge: no intensity
+		{-0.1, 1.0}, // Below zero: clamped to full
+		{1.1, 0.0},  // Beyond edge: clamped to zero
 	}
 
 	for _, tt := range tests {
@@ -560,13 +560,13 @@ func TestCalculateFalloffIntensity_Quadratic(t *testing.T) {
 	system := NewLightingSystem(world, nil)
 
 	tests := []struct {
-		distance float64
-		want     float64
+		distance  float64
+		want      float64
 		tolerance float64
 	}{
-		{0.0, 1.0, 0.001},   // Center: full intensity
-		{0.5, 0.25, 0.001},  // Halfway: (1-0.5)^2 = 0.25
-		{1.0, 0.0, 0.001},   // Edge: no intensity
+		{0.0, 1.0, 0.001},  // Center: full intensity
+		{0.5, 0.25, 0.001}, // Halfway: (1-0.5)^2 = 0.25
+		{1.0, 0.0, 0.001},  // Edge: no intensity
 	}
 
 	for _, tt := range tests {
@@ -636,7 +636,7 @@ func TestCalculateFalloffIntensity_UnknownType(t *testing.T) {
 
 	// Use an invalid falloff type value
 	invalidFalloff := LightFalloffType(999)
-	
+
 	// Should default to linear falloff behavior
 	got := system.calculateFalloffIntensity(0.5, invalidFalloff)
 	want := 0.5 // Linear falloff at 0.5 distance
@@ -667,4 +667,3 @@ func TestLightCacheKey(t *testing.T) {
 		t.Error("Different falloff should create different cache key")
 	}
 }
-

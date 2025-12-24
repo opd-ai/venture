@@ -789,19 +789,19 @@ func (s *LightingSystem) getCachedLightCircle(diameter int, falloff LightFalloff
 	img := ebiten.NewImage(diameter, diameter)
 	radius := float64(diameter) / 2.0
 	cx, cy := radius, radius
-	
+
 	for py := 0; py < diameter; py++ {
 		for px := 0; px < diameter; px++ {
 			dx := float64(px) - cx
 			dy := float64(py) - cy
 			distance := math.Sqrt(dx*dx + dy*dy)
-			
+
 			if distance <= radius {
 				// Calculate intensity based on falloff type
 				// normalized distance: 0.0 at center, 1.0 at edge
 				normalizedDist := distance / radius
 				intensity := s.calculateFalloffIntensity(normalizedDist, falloff)
-				
+
 				// Use white color with alpha based on intensity
 				// The actual color will be applied via ColorScale at draw time
 				alpha := uint8(intensity * 255.0)
@@ -809,7 +809,7 @@ func (s *LightingSystem) getCachedLightCircle(diameter int, falloff LightFalloff
 			}
 		}
 	}
-	
+
 	s.lightCircleCache[cacheKey] = img
 	return img
 }
@@ -824,26 +824,26 @@ func (s *LightingSystem) calculateFalloffIntensity(normalizedDist float64, fallo
 	if normalizedDist >= 1.0 {
 		return 0.0
 	}
-	
+
 	switch falloff {
 	case FalloffLinear:
 		// Linear falloff: intensity = 1 - distance
 		return 1.0 - normalizedDist
-		
+
 	case FalloffQuadratic:
 		// Quadratic falloff: intensity = (1 - distance)^2
 		remaining := 1.0 - normalizedDist
 		return remaining * remaining
-		
+
 	case FalloffInverseSquare:
 		// Inverse square falloff: intensity = 1 / (1 + distance^2)
 		// Modified to work with normalized distance and avoid division by zero
 		return 1.0 / (1.0 + normalizedDist*normalizedDist*4.0)
-		
+
 	case FalloffConstant:
 		// Constant falloff: full intensity until edge
 		return 1.0
-		
+
 	default:
 		// Default to linear if unknown falloff type
 		return 1.0 - normalizedDist

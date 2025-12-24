@@ -449,11 +449,79 @@ func TestChatSystem_DeliverMessage_Party(t *testing.T) {
 	world := NewWorld()
 	system := NewChatSystem(world)
 
+	// Create party with leader and members
+	party := NewPartyComponent("party-123", 1)
+	party.MemberIDs = append(party.MemberIDs, 2, 3)
+
+	sender := world.CreateEntity()
+	sender.ID = 1 // Leader sends message
+	sender.AddComponent(&PositionComponent{X: 0, Y: 0})
+	senderChat := NewChatComponent()
+	senderChat.SubscribeChannel(ChatParty)
+	sender.AddComponent(senderChat)
+	sender.AddComponent(party)
+
+	// Party member 1
+	member1 := world.CreateEntity()
+	member1.ID = 2
+	member1Chat := NewChatComponent()
+	member1Chat.SubscribeChannel(ChatParty)
+	member1.AddComponent(member1Chat)
+	member1.AddComponent(party)
+
+	// Party member 2
+	member2 := world.CreateEntity()
+	member2.ID = 3
+	member2Chat := NewChatComponent()
+	member2Chat.SubscribeChannel(ChatParty)
+	member2.AddComponent(member2Chat)
+	member2.AddComponent(party)
+
+	// Non-party member (should not receive message)
+	nonMember := world.CreateEntity()
+	nonMemberChat := NewChatComponent()
+	nonMemberChat.SubscribeChannel(ChatParty)
+	nonMember.AddComponent(nonMemberChat)
+
+	world.Update(0)
+
+	err := system.SendMessage(sender.ID, ChatParty, "Party message", 0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Party members should have received the message
+	if len(member1Chat.Messages) != 1 {
+		t.Errorf("member1 messages = %d, want 1", len(member1Chat.Messages))
+	}
+	if len(member2Chat.Messages) != 1 {
+		t.Errorf("member2 messages = %d, want 1", len(member2Chat.Messages))
+	}
+
+	// Non-party member should not have received the message
+	if len(nonMemberChat.Messages) != 0 {
+		t.Errorf("non-member messages = %d, want 0", len(nonMemberChat.Messages))
+	}
+
+	// Verify message content
+	if member1Chat.Messages[0].Content != "Party message" {
+		t.Errorf("message content = %v, want 'Party message'", member1Chat.Messages[0].Content)
+	}
+	if !member1Chat.Messages[0].Delivered {
+		t.Error("message should be marked as delivered")
+	}
+}
+
+func TestChatSystem_DeliverMessage_Party_NoPartyComponent(t *testing.T) {
+	world := NewWorld()
+	system := NewChatSystem(world)
+
 	sender := world.CreateEntity()
 	sender.AddComponent(&PositionComponent{X: 0, Y: 0})
 	senderChat := NewChatComponent()
 	senderChat.SubscribeChannel(ChatParty)
 	sender.AddComponent(senderChat)
+	// No party component
 
 	recipient := world.CreateEntity()
 	recipientChat := NewChatComponent()
@@ -467,9 +535,99 @@ func TestChatSystem_DeliverMessage_Party(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	// Party message should be delivered to subscribed entities
-	if len(recipientChat.Messages) == 0 {
-		t.Error("party member should have received the message")
+	// Without party component, message should not be delivered
+	if len(recipientChat.Messages) != 0 {
+		t.Error("recipient should not have received message (sender not in party)")
+	}
+}
+
+func TestChatSystem_DeliverMessage_Party_MemberNotSubscribed(t *testing.T) {
+	world := NewWorld()
+	system := NewChatSystem(world)
+
+	party := NewPartyComponent("party-123", 1)
+	party.MemberIDs = append(party.MemberIDs, 2)
+
+	sender := world.CreateEntity()
+	sender.ID = 1
+	sender.AddComponent(&PositionComponent{X: 0, Y: 0})
+	senderChat := NewChatComponent()
+	senderChat.SubscribeChannel(ChatParty)
+	sender.AddComponent(senderChat)
+	sender.AddComponent(party)
+
+	// Party member not subscribed to party channel
+	member := world.CreateEntity()
+	member.ID = 2
+	memberChat := NewChatComponent()
+	// NOT subscribed to ChatParty
+	member.AddComponent(memberChat)
+	member.AddComponent(party)
+
+	world.Update(0)
+
+	err := system.SendMessage(sender.ID, ChatParty, "Party message", 0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Member should not receive message if not subscribed
+	if len(memberChat.Messages) != 0 {
+		t.Error("unsubscribed member should not have received message")
+	}
+}
+
+func TestChatSystem_DeliverMessage_Party_MemberMissingChatComponent(t *testing.T) {
+	world := NewWorld()
+	system := NewChatSystem(world)
+
+	party := NewPartyComponent("party-123", 1)
+	party.MemberIDs = append(party.MemberIDs, 2)
+
+	sender := world.CreateEntity()
+	sender.ID = 1
+	sender.AddComponent(&PositionComponent{X: 0, Y: 0})
+	senderChat := NewChatComponent()
+	senderChat.SubscribeChannel(ChatParty)
+	sender.AddComponent(senderChat)
+	sender.AddComponent(party)
+
+	// Party member without chat component
+	member := world.CreateEntity()
+	member.ID = 2
+	member.AddComponent(party)
+	// No chat component
+
+	world.Update(0)
+
+	// Should not panic
+	err := system.SendMessage(sender.ID, ChatParty, "Party message", 0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestChatSystem_DeliverMessage_Party_MemberEntityNotFound(t *testing.T) {
+	world := NewWorld()
+	system := NewChatSystem(world)
+
+	party := NewPartyComponent("party-123", 1)
+	party.MemberIDs = append(party.MemberIDs, 999) // Non-existent entity ID
+
+	sender := world.CreateEntity()
+	sender.ID = 1
+	sender.AddComponent(&PositionComponent{X: 0, Y: 0})
+	senderChat := NewChatComponent()
+	senderChat.SubscribeChannel(ChatParty)
+	sender.AddComponent(senderChat)
+	sender.AddComponent(party)
+
+	world.Update(0)
+
+	// Should not panic when member entity doesn't exist
+	err := system.SendMessage(sender.ID, ChatParty, "Party message", 0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 

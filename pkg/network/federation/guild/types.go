@@ -117,3 +117,44 @@ func (g *Guild) GetMember(playerID string) *Member {
 	}
 	return nil
 }
+
+// MessageType represents the type of guild federation message
+type MessageType string
+
+const (
+	// MsgTypeGuildSync synchronizes full guild state
+	MsgTypeGuildSync MessageType = "guild_sync"
+	// MsgTypeMemberJoin notifies of a new member joining
+	MsgTypeMemberJoin MessageType = "member_join"
+	// MsgTypeMemberLeave notifies of a member leaving
+	MsgTypeMemberLeave MessageType = "member_leave"
+	// MsgTypeTerritoryChange notifies of territory control change
+	MsgTypeTerritoryChange MessageType = "territory_change"
+)
+
+// GuildMessage represents a cross-server guild synchronization message
+type GuildMessage struct {
+	Type      MessageType `json:"type"`
+	GuildID   string      `json:"guild_id"`
+	ServerID  string      `json:"server_id"` // Originating server
+	Timestamp time.Time   `json:"timestamp"`
+	Data      interface{} `json:"data,omitempty"` // Payload varies by message type
+}
+
+// MemberJoinData contains data for member join messages
+type MemberJoinData struct {
+	PlayerID string `json:"player_id"`
+	Rank     Rank   `json:"rank"`
+}
+
+// MemberLeaveData contains data for member leave messages
+type MemberLeaveData struct {
+	PlayerID string `json:"player_id"`
+}
+
+// TerritoryChangeData contains data for territory change messages
+type TerritoryChangeData struct {
+	ZoneID   string `json:"zone_id"`
+	OldGuild string `json:"old_guild,omitempty"`
+	NewGuild string `json:"new_guild"`
+}

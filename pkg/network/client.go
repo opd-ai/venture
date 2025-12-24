@@ -171,9 +171,15 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 
 // Connect establishes connection to the server.
 func (c *TCPClient) Connect() error {
+	// Check if already connected before acquiring lock
+	if c.connected.Load() {
+		return fmt.Errorf("already connected")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Double-check after acquiring lock to prevent race
 	if c.connected.Load() {
 		return fmt.Errorf("already connected")
 	}
@@ -186,6 +192,9 @@ func (c *TCPClient) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	// Recreate done channel for reconnection after disconnect
+	c.done = make(chan struct{})
 
 	c.setupConnection(conn)
 	c.startConnectionHandlers()
@@ -320,19 +329,23 @@ func (c *TCPClient) Disconnect() error {
 	// Set connected to false atomically before signaling shutdown
 	c.connected.Store(false)
 
-	// Signal goroutines to exit
+	// Acquire lock once to close both done channel and connection
 	c.mu.Lock()
-	if c.done != nil {
-		close(c.done)
-	}
+	done := c.done
+	c.done = nil // Set to nil to prevent closing again
+	conn := c.conn
+	c.conn = nil
 	c.mu.Unlock()
 
-	// Close connection to unblock any pending I/O operations
-	c.mu.Lock()
-	if c.conn != nil {
-		c.conn.Close()
+	// Close done channel to signal goroutines to exit
+	if done != nil {
+		close(done)
 	}
-	c.mu.Unlock()
+
+	// Close connection to unblock any pending I/O operations
+	if conn != nil {
+		conn.Close()
+	}
 
 	// Wait for goroutines to finish (no lock held to avoid deadlock)
 	c.wg.Wait()

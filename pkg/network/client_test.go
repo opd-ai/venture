@@ -1,6 +1,7 @@
 package network
 
 import (
+	"net"
 	"testing"
 	"time"
 )
@@ -636,6 +637,58 @@ func TestDisconnect_MultipleCallsSafe(t *testing.T) {
 	}
 }
 
+// TestDisconnect_MultipleCallsAfterConnection verifies multiple disconnect calls after connection don't panic.
+func TestDisconnect_MultipleCallsAfterConnection(t *testing.T) {
+	config := DefaultClientConfig()
+	client := NewClient(config)
+
+	// Create a mock connection using pipes
+	serverConn, clientConn := createMockConnectionPair(t)
+	defer serverConn.Close()
+
+	// Manually set up the connection state (simulating Connect without network)
+	client.mu.Lock()
+	client.conn = clientConn
+	client.connected.Store(true)
+	client.done = make(chan struct{})
+	client.mu.Unlock()
+
+	// Start goroutines as Connect() would
+	client.wg.Add(2)
+	go client.receiveLoop()
+	go client.sendLoop()
+
+	// First disconnect should work
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("First disconnect failed: %v", err)
+	}
+
+	// Verify client is disconnected
+	if client.IsConnected() {
+		t.Error("Client should not be connected after first disconnect")
+	}
+
+	// Second disconnect should not panic
+	err = client.Disconnect()
+	if err != nil {
+		t.Errorf("Second disconnect failed: %v", err)
+	}
+
+	// Third disconnect for good measure
+	err = client.Disconnect()
+	if err != nil {
+		t.Errorf("Third disconnect failed: %v", err)
+	}
+}
+
+// createMockConnectionPair creates a pair of connected net.Conn for testing.
+func createMockConnectionPair(t *testing.T) (net.Conn, net.Conn) {
+	// Use net.Pipe to create a pair of connected connections
+	server, client := net.Pipe()
+	return server, client
+}
+
 // TestAtomicConnectedFlag verifies connected flag is atomic.
 func TestAtomicConnectedFlag(t *testing.T) {
 	config := DefaultClientConfig()
@@ -661,5 +714,63 @@ func TestAtomicConnectedFlag(t *testing.T) {
 	// Wait for all goroutines
 	for i := 0; i < 10; i++ {
 		<-done
+	}
+}
+
+// TestReconnectAfterDisconnect verifies that a client can reconnect after disconnecting.
+func TestReconnectAfterDisconnect(t *testing.T) {
+	config := DefaultClientConfig()
+	client := NewClient(config)
+
+	// Create first connection
+	serverConn1, clientConn1 := createMockConnectionPair(t)
+
+	// Manually set up the first connection
+	client.mu.Lock()
+	client.conn = clientConn1
+	client.connected.Store(true)
+	client.done = make(chan struct{})
+	client.mu.Unlock()
+
+	client.wg.Add(2)
+	go client.receiveLoop()
+	go client.sendLoop()
+
+	// Disconnect
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("Disconnect failed: %v", err)
+	}
+	serverConn1.Close()
+
+	// Verify disconnected
+	if client.IsConnected() {
+		t.Error("Client should not be connected after disconnect")
+	}
+
+	// Create second connection (reconnect)
+	serverConn2, clientConn2 := createMockConnectionPair(t)
+	defer serverConn2.Close()
+
+	// Manually set up the second connection
+	client.mu.Lock()
+	client.conn = clientConn2
+	client.connected.Store(true)
+	client.done = make(chan struct{})
+	client.mu.Unlock()
+
+	client.wg.Add(2)
+	go client.receiveLoop()
+	go client.sendLoop()
+
+	// Verify reconnected
+	if !client.IsConnected() {
+		t.Error("Client should be connected after reconnect")
+	}
+
+	// Disconnect again
+	err = client.Disconnect()
+	if err != nil {
+		t.Errorf("Second disconnect failed: %v", err)
 	}
 }

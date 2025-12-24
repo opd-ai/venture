@@ -411,12 +411,20 @@ func TestInteractionSystem_HandleOpenAction_WithLockPicking(t *testing.T) {
 	}
 	door.AddComponent(ctx)
 
+	// Flush entities so they are available in world.entities map
+	world.FlushPendingEntities()
+
 	// Test: handleOpenAction should start lock-picking mini-game
 	system.handleOpenAction(player, door)
 
-	// Verify mini-game was started
-	gameComp := miniGameSystem.GetGameComponent(player.ID)
-	if gameComp == nil {
+	// Verify mini-game was started by checking if component exists
+	compRaw, hasComp := player.GetComponent("minigame")
+	if !hasComp {
+		t.Fatal("expected player to have minigame component")
+	}
+	
+	gameComp, ok := compRaw.(*MiniGameComponent)
+	if !ok || gameComp == nil {
 		t.Fatal("expected mini-game component to be created")
 	}
 
@@ -549,6 +557,9 @@ func TestInteractionSystem_HandleOpenAction_DifficultyNormalization(t *testing.T
 			}
 			door.AddComponent(ctx)
 
+			// Flush entities so they are available in world.entities map
+			world.FlushPendingEntities()
+
 			system.handleOpenAction(player, door)
 
 			gameComp := miniGameSystem.GetGameComponent(player.ID)
@@ -582,6 +593,9 @@ func TestInteractionSystem_ProcessLockPickingCompletion_Success(t *testing.T) {
 		LockDifficulty:      0.5,
 	}
 	door.AddComponent(ctx)
+
+	// Flush entities so they are available in world.entities map
+	world.FlushPendingEntities()
 
 	// Start lock-picking mini-game
 	system.handleOpenAction(player, door)
@@ -622,6 +636,9 @@ func TestInteractionSystem_ProcessLockPickingCompletion_Failure(t *testing.T) {
 		LockDifficulty:      0.5,
 	}
 	door.AddComponent(ctx)
+
+	// Flush entities so they are available in world.entities map
+	world.FlushPendingEntities()
 
 	// Start lock-picking mini-game
 	system.handleOpenAction(player, door)
@@ -685,6 +702,9 @@ func TestInteractionSystem_ProcessLockPickingCompletion_WrongGameType(t *testing
 	}
 	door.AddComponent(ctx)
 
+	// Flush entities so they are available in world.entities map
+	world.FlushPendingEntities()
+
 	// Start a different game type (not lock-picking)
 	miniGameSystem.StartGame(player.ID, MiniGameCard, 0.5)
 
@@ -705,6 +725,9 @@ func TestInteractionSystem_ProcessLockPickingCompletion_InvalidEntityID(t *testi
 	system.SetMiniGameSystem(miniGameSystem)
 
 	player := world.CreateEntity()
+
+	// Flush entities so they are available in world.entities map
+	world.FlushPendingEntities()
 
 	// Start lock-picking with manually created state
 	miniGameSystem.StartGame(player.ID, MiniGameLockPicking, 0.5)

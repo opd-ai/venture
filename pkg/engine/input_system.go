@@ -253,6 +253,7 @@ type InputSystem struct {
 	KeyTrade     ebiten.Key // T key for trading (Phase 3.3)
 	KeyClasses   ebiten.Key // X key for advanced classes (Phase 4.2) - Changed from A to avoid WASD conflict
 	KeyTerritory ebiten.Key // Y key for territory control (Phase 4.3)
+	KeyGuild     ebiten.Key // O key for guild management (Phase 3.2) - Changed from U to avoid Achievements conflict
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -283,10 +284,10 @@ type InputSystem struct {
 	mapUI           *EbitenMapUI
 	craftingUI      *CraftingUI
 	shopUI          *ShopUI
-	tradeUI         *TradeUI         // Phase 3.3 (PLAN.md): Trade UI for T key toggle
-	advancedClassUI *AdvancedClassUI // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
-	territoryUI     *TerritoryUI     // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
-	dialogUI        *DialogUI        // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
+	tradeUI         *TradeUI          // Phase 3.3 (PLAN.md): Trade UI for T key toggle
+	advancedClassUI *AdvancedClassUI  // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
+	territoryUI     *TerritoryUI      // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
+	dialogUI        *DialogUI         // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
 	housingUI       HousingUIProvider // INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
 
 	// Mobile input support
@@ -316,6 +317,7 @@ type InputSystem struct {
 	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
 	onClassesOpen   func() // Callback for advanced class UI toggle (Phase 4.2)
 	onTerritoryOpen func() // Callback for territory UI toggle (Phase 4.3)
+	onGuildOpen     func() // Callback for guild UI toggle (Phase 3.2)
 	onDialogOpen    func() // Callback for dialog UI toggle (Phase 6.2)
 	onCycleTargets  func()
 	onMenuToggle    func() // Callback for ESC menu toggle
@@ -373,6 +375,7 @@ func NewInputSystem() *InputSystem {
 		KeyTrade:     ebiten.KeyT, // Phase 3.3: Trade UI
 		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict
 		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
+		KeyGuild:     ebiten.KeyO, // Phase 3.2: Guild UI - Changed from U to avoid Achievements conflict
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
@@ -760,6 +763,9 @@ func (s *InputSystem) handlePhaseUIShortcuts() {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyTerritory) && s.onTerritoryOpen != nil {
 		s.onTerritoryOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyGuild) && s.onGuildOpen != nil {
+		s.onGuildOpen()
 	}
 	if inpututil.IsKeyJustPressed(s.KeyHousing) && s.onHousingOpen != nil {
 		s.onHousingOpen()
@@ -1516,6 +1522,16 @@ func (s *InputSystem) SetTerritoryCallback(callback func()) error {
 		return fmt.Errorf("territory callback cannot be nil")
 	}
 	s.onTerritoryOpen = callback
+	return nil
+}
+
+// SetGuildCallback sets the callback function for opening guild UI (U key).
+// Phase 3.2 (PLAN.md): Guild federation UI integration for guild management.
+func (s *InputSystem) SetGuildCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("guild callback cannot be nil")
+	}
+	s.onGuildOpen = callback
 	return nil
 }
 

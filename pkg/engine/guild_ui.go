@@ -170,6 +170,12 @@ func (ui *GuildUI) Draw(screen *ebiten.Image) {
 		return
 	}
 
+	// Check if guild system is available
+	if ui.guildSystem == nil {
+		ui.drawErrorScreen(screen, fmt.Errorf("guild system not initialized"))
+		return
+	}
+
 	// Get guild info
 	guildInfo, err := ui.guildSystem.GetGuildInfo(gc.GuildID)
 	if err != nil {

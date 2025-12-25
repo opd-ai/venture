@@ -1,757 +1,296 @@
-# Venture Game - Comprehensive Functional Audit
+# Implementation Gap Analysis
+Generated: 2025-12-25 01:47:41 UTC  
+Codebase Version: 4d82dd9f0113a4634da5839665b55a9c6f41ebfd (2025-12-25 01:39:50 +0000)
 
-**Audit Date:** 2025-12-24  
-**Game Version:** 8.0.0 Production  
-**Audited By:** AI Code Auditor  
-**Documentation Source:** README.md (root), package-level READMEs  
-**Scope:** Complete game codebase (793 Go files, ~532K LOC)
+## Executive Summary
+Total Gaps Found: 2
+- Critical: 1
+- Moderate: 1
+- Minor: 0
 
----
+## Detailed Findings
 
-## EXECUTIVE SUMMARY
+### Gap #1: Blueprint Sharing System Not Implemented
+**Severity:** Critical
 
-```
-Total Findings: 15 (2 Resolved, 13 Remaining)
-- RESOLVED: 2
-- CRITICAL BUG: 2 (was 4)
-- FUNCTIONAL MISMATCH: 5
-- MISSING FEATURE: 3
-- EDGE CASE BUG: 2
-- PERFORMANCE ISSUE: 1
+**Documentation Reference:** 
+> "Player housing, multi-server guilds, territory control, blueprint sharing" (README.md:14)
+> 
+> "JSON-based mods, blueprint sharing, zero-asset constraint maintained" (README.md:50)
 
-Overall Assessment: Venture is an ambitious procedural action-RPG with extensive features documented for V8.0. The codebase demonstrates strong engineering with modular ECS architecture, comprehensive procedural generation, and multiplayer networking. Findings 1 (TCPClient disconnect deadlock) and 2 (infinite reconnection loop) have been resolved. However, several critical issues remain across networking, build systems, and feature completeness that require attention before production deployment. The game shows excellent architectural design but needs verification of V8.0 feature claims and resolution of remaining build/test infrastructure issues.
-```
+**Implementation Location:** `pkg/world/housing/` (missing: `blueprint.go`, `blueprint_library.go`)
 
-**Audit Methodology:**
-- Cross-referenced README.md feature claims against implementation
-- Analyzed 25+ packages across engine, procgen, rendering, networking, world systems
-- Examined build/test infrastructure for all platforms (Desktop, Web, Mobile)
-- Verified procedural generation determinism and feature completeness
-- Reviewed ECS architecture compliance and component purity
-- Tested build commands and verified deployment capabilities
+**Expected Behavior:** According to `pkg/world/housing/doc.go:22-101`, the blueprint system should allow players to:
+- Export/import blueprints as JSON files with gzip compression
+- Filter blueprints by author, tags, genre, rating, size
+- Sort by rating, downloads, created/modified date, name
+- Rate and review blueprints
+- Track download statistics
 
----
-
-## DETAILED FINDINGS
-
-### Finding 1 ✅ RESOLVED
-
-```
-### ✅ RESOLVED: Client Disconnect Deadlock Risk in Multiplayer
-**File:** pkg/network/client.go:309-345
-**Severity:** High (FIXED)
-**Status:** RESOLVED - Fixed by using atomic.Bool for connected flag and restructuring Disconnect()
-
-**Original Issue:** The TCPClient.Disconnect() method used a manual unlock/wait/relock pattern around wg.Wait() that created a race window where goroutines could deadlock during shutdown.
-
-**Fix Applied:**
-1. Changed `connected bool` to `connected atomic.Bool` for lock-free access
-2. Removed manual unlock/relock pattern in Disconnect()
-3. Restructured to set connected atomically before signaling shutdown
-4. Single lock acquisition to close both done channel and connection
-5. Set done and conn to nil after closing to prevent double-close
-6. Recreate done channel in Connect() to enable reconnection after disconnect
-7. Lock released before wg.Wait() to allow goroutines to complete
-
-**Code Changes:**
-- Added `sync/atomic` import
-- Updated all `connected` field accesses to use atomic operations
-- Simplified `IsConnected()` to use atomic.Load() without lock
-- Optimized `SendInput()` to check connection before acquiring lock
-- Fixed `Connect()` to check atomic flag before lock and recreate done channel
-- Fixed `Disconnect()` to safely handle multiple calls by nulling done/conn after close
-
-**Tests Added:**
-- `TestDisconnect_NotConnected` - verify disconnect when not connected
-- `TestDisconnect_MultipleCallsSafe` - verify multiple disconnect calls when never connected
-- `TestDisconnect_MultipleCallsAfterConnection` - verify multiple disconnect calls after connection don't panic
-- `TestReconnectAfterDisconnect` - verify client can reconnect after disconnecting
-- `TestAtomicConnectedFlag` - verify concurrent access to connected flag
-
-**Verification:** Package compiles successfully with `go list ./pkg/network`
-
-**Benefits:**
-- Eliminates deadlock risk during client disconnect
-- Improves performance by reducing lock contention
-- Makes disconnect operation safe to call multiple times
-- Enables reconnection after disconnect
-- Solo players and multiplayer sessions can now quit cleanly
-```
-
-### Finding 2 ✅ RESOLVED
-
-```
-### ✅ RESOLVED: Infinite Reconnection Loop with No Cancellation
-**File:** pkg/network/client.go:265-336
-**Severity:** High (FIXED)
-**Status:** RESOLVED - Fixed by checking done channel during retry delay with select statement
-
-**Original Issue:** The ConnectWithRetry() function with MaxRetries=0 (infinite retry mode) or any retry configuration entered an infinite loop during time.Sleep(delay) with no escape mechanism. This prevented graceful shutdown when applications needed to disconnect during reconnection attempts, particularly affecting Tor/high-latency configurations.
-
-**Fix Applied:**
-1. Replaced blocking `time.Sleep(delay)` with select statement that monitors both timer and done channel
-2. Added graceful cancellation by checking `c.done` during retry delay period
-3. Returns "reconnection cancelled" error when shutdown detected
-4. Maintains backward compatibility - existing retry logic unchanged
-5. Added nil check for done channel as defensive programming
-6. Updated documentation to mention cancellation capability
-
-**Code Changes:**
+The documented API includes:
 ```go
-// Wait before retry with graceful cancellation support
-// Check done channel during sleep to allow shutdown
-c.mu.RLock()
-done := c.done
-c.mu.RUnlock()
+// Expected API (from doc.go)
+library := housing.NewBlueprintLibrary()
 
-if done != nil {
-	select {
-	case <-done:
-		// Client is shutting down, exit gracefully
-		if c.logger != nil {
-			c.logger.Info("reconnection cancelled during shutdown")
-		}
-		return fmt.Errorf("reconnection cancelled")
-	case <-time.After(delay):
-		// Delay completed, continue to next retry
-	}
-} else {
-	// done channel is nil (shouldn't happen), use regular sleep
-	time.Sleep(delay)
+bp := &housing.Blueprint{
+    ID:      "bp001",
+    Name:    "Fantasy Manor",
+    Author:  "Player1",
+    GenreID: "fantasy",
+    Tags:    []string{"medieval", "manor"},
+    BuildingDef: &housing.BuildingDefinition{
+        Type:   building.TypeManor,
+        Style:  building.StyleMedieval,
+        Width:  24,
+        Height: 24,
+        Floors: 3,
+        Seed:   12345,
+    },
+}
+
+library.Add(bp)
+bp.Export("blueprints/fantasy_manor.json.gz")
+imported, err := housing.ImportBlueprint("blueprints/fantasy_manor.json.gz")
+results := library.Filter(housing.FilterOptions{
+    Author:    "Player1",
+    MinRating: 4.0,
+    Tags:      []string{"medieval"},
+})
+library.Sort(results, housing.SortByRating, true)
+```
+
+**Actual Implementation:** 
+None of the blueprint types, functions, or API exist in the codebase:
+- `housing.Blueprint` type: **NOT FOUND**
+- `housing.BuildingDefinition` type: **NOT FOUND**
+- `housing.NewBlueprintLibrary()`: **NOT FOUND**
+- `housing.FilterOptions` type: **NOT FOUND**
+- `housing.SortByRating` constant: **NOT FOUND**
+- `housing.ImportBlueprint()`: **NOT FOUND**
+- `Blueprint.Export()` method: **NOT FOUND**
+- `BlueprintLibrary.Add()` method: **NOT FOUND**
+- `BlueprintLibrary.Filter()` method: **NOT FOUND**
+- `BlueprintLibrary.Sort()` method: **NOT FOUND**
+
+**Gap Details:** 
+The blueprint sharing feature is prominently advertised in README.md as a V8.0 complete feature appearing in 4 separate locations. The `pkg/world/housing/doc.go` file contains extensive documentation describing the complete blueprint API with usage examples. However, **none of the documented types, functions, or methods exist in the implementation**.
+
+Current `pkg/world/housing/types.go` defines:
+- `Plot` struct (basic plot placement)
+- `House` struct (placeholder with TODO comment)
+- `PermissionSet` (access control)
+- `BuildingSize` enum
+
+Missing implementation:
+- `Blueprint` struct with metadata (ID, Name, Author, Tags, GenreID, Rating, Downloads, etc.)
+- `BuildingDefinition` struct with building parameters
+- `BlueprintLibrary` manager
+- Export/Import with gzip compression
+- Filter/Sort functionality
+- Rating/Review system
+- Download tracking
+
+**Reproduction:**
+```go
+package main
+
+import "github.com/opd-ai/venture/pkg/world/housing"
+
+func main() {
+    // This code from the documentation does not compile:
+    library := housing.NewBlueprintLibrary() // undefined: housing.NewBlueprintLibrary
+    
+    bp := &housing.Blueprint{} // undefined: housing.Blueprint
+    
+    library.Add(bp) // undefined (library and method)
 }
 ```
 
-**Tests Added:**
-- `TestConnectWithRetry_CancellationDuringRetry` - verify cancellation during infinite retry loop (MaxRetries=0)
-- `TestConnectWithRetry_CancellationBeforeFirstAttempt` - edge case when disconnect called before connection attempts
-- `TestConnectWithRetry_MultipleCancellations` - verify safety with multiple disconnect calls
-- `TestConnectWithRetry_CancellationWithTorConfig` - Tor-specific configuration with high delays
-- `TestConnectWithRetry_NoMemoryLeakOnCancellation` - verify no goroutine/memory leaks with repeated create/cancel cycles
-- All tests verify quick cancellation (< 100ms from Disconnect call)
+**Production Impact:** 
+**CRITICAL** - This is a user-facing feature gap with high visibility:
 
-**Verification:** Package compiles successfully with `go list ./pkg/network`
+1. **User Expectation Mismatch**: Players reading the README expect to be able to share building designs with other players. This is a key social feature that differentiates the game.
 
-**Benefits:**
-- Applications using Tor configuration (infinite retries) can now shut down gracefully
-- No memory leaks when multiple clients created and destroyed
-- Reconnection attempts respond to shutdown signals during delay periods
-- Tor/high-latency users can exit applications cleanly
-- All existing reconnection functionality preserved
+2. **Documentation Accuracy**: The extensive API documentation in `doc.go` creates false expectations for developers integrating with the housing system.
+
+3. **Feature Completeness**: Blueprint sharing is listed as a completed V8.0 feature, but the entire system is missing, making the V8.0 "complete" claim inaccurate.
+
+4. **Community Features**: Without blueprint sharing, the social/community aspect of player housing is severely limited. Players cannot showcase or share their creative designs.
+
+5. **Zero Workaround**: Unlike some missing features that might have partial implementations, the blueprint system has **zero** implementation - no structs, no functions, no methods.
+
+**Evidence:**
+```bash
+$ grep -r "type Blueprint" pkg/world/housing/
+# No results
+
+$ grep -r "NewBlueprintLibrary" pkg/world/housing/
+# No results
+
+$ ls pkg/world/housing/
+component.go  guildhall.go  integration_test.go  persistence.go  spatial_test.go  types_test.go
+doc.go        guildhall_manager.go  manager.go  persistence_test.go  spatial.go  types.go  ui.go
+guildhall_test.go  manager_test.go
+# No blueprint.go or blueprint_library.go files
 ```
 
-### Finding 3
+**Recommendation:**
+Implement the blueprint system as documented OR update README.md and doc.go to remove references to blueprint sharing until the feature is implemented. The current state creates a significant gap between documentation and reality.
 
-```
-### CRITICAL BUG: Build System Requires X11 Even for Server/Tests
-**File:** Build system, test infrastructure
-**Severity:** High
-**Description:** The dedicated server (./venture-server) and test suites require X11/GUI dependencies despite being headless. This contradicts README Quick Start which shows server as separate from client.
+---
+
+### Gap #2: Test Coverage Claim Outdated
+**Severity:** Moderate
+
+**Documentation Reference:**
+> "82.4% test coverage (26% above 65% requirement)" (README.md:65)
+
+**Implementation Location:** All packages under `pkg/`
 
 **Expected Behavior:** 
-- Server should build/run without GUI dependencies
-- Tests should run in CI/CD without X11
-- README states "go build -o venture-server ./cmd/server" should work
+Test coverage should be 82.4% across the codebase.
 
-**Actual Behavior:**
+**Actual Implementation:**
+Current test coverage is **85.6%** (3.2 percentage points higher than documented).
+
 ```bash
-# go test ./pkg/network/...
-fatal error: X11/Xlib.h: No such file or directory
-
-# go build ./cmd/server  
-fatal error: X11/Xlib.h: No such file or directory
+$ go test -cover ./pkg/... 2>&1 | grep "coverage:" | \
+  awk -F'coverage: ' '{print $2}' | awk -F'%' '{sum+=$1; count++} END {print sum/count "%"}'
+85.5831%
 ```
 
-**Impact:**
-- Cannot run dedicated servers in Docker/cloud without X11
-- CI/CD pipelines fail (documented 82.6% coverage unverifiable)
-- Contradicts "24/7 hosting" claim in README
-- Cannot validate performance benchmarks (0.4µs encode/decode claims)
-- Breaks production deployment workflows
+**Gap Details:**
+The README.md claims 82.4% test coverage, which appears to be from an earlier snapshot. The actual coverage is now **85.6%**, which is:
+- 3.2 percentage points higher than claimed
+- 31.6% above the 65% minimum requirement (not 26% as stated)
 
 **Reproduction:**
-1. Attempt to build server in headless environment: `go build ./cmd/server`
-2. Observe X11 dependency error from Ebiten
-3. Tests also fail: `go test ./pkg/network/`
-
-**Code Reference:**
-Build failures show Ebiten dependency chain:
+Run the test suite and calculate average coverage:
+```bash
+cd /home/runner/work/venture/venture
+go test -cover ./pkg/... 2>&1 | grep "coverage:" | \
+  awk -F'coverage: ' '{print $2}' | awk -F'%' '{sum+=$1; count++} END {print sum/count}'
 ```
-github.com/hajimehoshi/ebiten/v2/internal/glfw
-./glfw3native_unix.h:105:12: fatal error: X11/Xlib.h
+Output: `85.5831` (65 packages measured)
+
+**Production Impact:**
+**MODERATE** - This is a positive discrepancy (higher coverage is better), but still represents documentation drift:
+
+1. **Outdated Metrics**: Performance metrics in documentation should be kept current to maintain credibility.
+
+2. **Understated Achievement**: The project has actually achieved better test coverage than advertised, which is positive but the documentation doesn't reflect the improvement.
+
+3. **Low Risk**: Unlike the blueprint gap, this doesn't affect functionality. Users won't encounter missing features due to this discrepancy.
+
+4. **Easy Fix**: Simply update the README.md with current metrics.
+
+**Evidence:**
 ```
+# Sample of actual coverage from test run:
+ok  	github.com/opd-ai/venture/pkg/procgen	0.005s	coverage: 81.1% of statements
+ok  	github.com/opd-ai/venture/pkg/procgen/building	0.006s	coverage: 89.7% of statements
+ok  	github.com/opd-ai/venture/pkg/procgen/dialog	0.006s	coverage: 91.3% of statements
+ok  	github.com/opd-ai/venture/pkg/procgen/entity	0.008s	coverage: 92.1% of statements
+ok  	github.com/opd-ai/venture/pkg/rendering/lighting	0.099s	coverage: 96.7% of statements
+ok  	github.com/opd-ai/venture/pkg/rendering/palette	0.026s	coverage: 97.0% of statements
+ok  	github.com/opd-ai/venture/pkg/social	0.007s	coverage: 98.0% of statements
 
-**Recommended Fix:** Use build tags to separate Ebiten-dependent code, create headless server binary, use test doubles for GUI components in tests.
-```
-
-### Finding 4
-
-```
-### CRITICAL BUG: Procedural Generation May Not Be Deterministic
-**File:** Multiple packages under pkg/procgen/
-**Severity:** High
-**Description:** The README prominently states "100% procedurally generated content" and Project Overview emphasizes "deterministic procedural generation with seeds" as a core principle. However, there's no verification that all generators are actually deterministic, and some may use time-based or system-dependent randomness.
-
-**Expected Behavior:** Same seed must produce identical game worlds, items, monsters, quests across all platforms and runs. This is critical for multiplayer synchronization and debugging.
-
-**Actual Behavior:** Without explicit verification, generators could use:
-- Global rand (non-deterministic)
-- time.Now() for randomness
-- System-dependent sources
-- Uninitialized random sources
-
-**Impact:**
-- Multiplayer desync (clients generate different worlds)
-- Debugging impossible (cannot reproduce issues)
-- Violates core design principle in Project Overview
-- Save/load may produce different results
-- Cross-platform consistency broken
-
-**Reproduction:**
-1. Run game twice with same seed
-2. Compare generated worlds, items, entities
-3. Check if results are identical
-
-**Code Reference:**
-Need to audit all procgen packages for determinism:
-```
-pkg/procgen/terrain/
-pkg/procgen/entity/
-pkg/procgen/item/
-pkg/procgen/quest/
-pkg/procgen/magic/
-pkg/procgen/skills/
+Average across 65 packages: 85.6%
+Documented claim: 82.4%
+Difference: +3.2 percentage points
 ```
 
-**Recommended Fix:** 
-- Audit all RNG usage for seed-based initialization
-- Add integration tests verifying determinism
-- Ban global rand.* functions via linter
-- Document determinism guarantees per generator
-```
-
-### Finding 5
-
-```
-### FUNCTIONAL MISMATCH: V8.0 Features Claim Not Fully Verifiable
-**File:** README.md:31-54
-**Severity:** High
-**Description:** README claims "V8.0 Complete" with extensive features (housing, guilds, vehicle physics, fluid dynamics, WebRTC federation, companion AI, etc.) but there's no clear mapping of these features to implemented code or verification tests.
-
-**Expected Behavior:** Each claimed feature should have:
-- Corresponding implementation in codebase
-- Integration tests verifying functionality
-- Package documentation describing usage
-
-**Actual Behavior:** Feature claims lack clear verification path:
-- "Player housing" - implementation exists but no verification it matches spec (4 plot sizes, 6 building types × 25 styles, 36 furniture types)
-- "Vehicle suspension, weight transfer, tire tracks" - files may exist but detailed spec compliance unclear
-- "Fluid dynamics, swimming" - implementation status unclear
-- "WebRTC browser-to-browser P2P" - federation/webrtc exists but browser integration unclear
-- "Companion AI with 24-skill trees & personality evolution" - spec compliance unverified
-- "Branching narratives with 6 endings" - narrative package exists but ending count unclear
-- "Multi-classing (15 base + 20 prestige)" - class counts unverified
-
-**Impact:**
-- Users may expect features that are incomplete
-- Version number (8.0.0 Production) suggests readiness but verification lacking
-- Marketing claims may not match reality
-- Testing gaps could hide bugs in "complete" features
-
-**Reproduction:**
-1. Review each V8.0 feature claim
-2. Attempt to locate implementing code
-3. Search for integration tests
-4. Note gaps between claim and verification
-
-**Code Reference:**
-README.md lines 43-51 list detailed numeric claims:
+**Recommendation:**
+Update README.md line 65 to reflect current test coverage:
 ```markdown
-- 4 plot sizes, procedural buildings (6 types × 25 styles), furniture (36 types)
-- Guild halls (1-5 floors)
-- Companion AI with 24-skill trees
-- Multi-classing (15 base + 20 prestige)
-- Talent trees (120 talents)
-```
-
-**Recommended Fix:** Create feature verification matrix mapping each claim to implementation + tests, or adjust README to reflect actual completion state.
-```
-
-### Finding 6
-
-```
-### FUNCTIONAL MISMATCH: Test Coverage Claims Unverifiable
-**File:** README.md:63-67, pkg/network/README.md:129
-**Severity:** Medium
-**Description:** README claims "82.4% test coverage (26% above 65% requirement)" but tests cannot run in standard CI environments due to X11 dependencies.
-
-**Expected Behavior:** Coverage claims should be verifiable via `go test -cover ./...`
-
-**Actual Behavior:** Tests fail to build without X11, making coverage unverifiable
-
-**Impact:**
-- Quality metrics may be outdated or inaccurate
-- Cannot verify coverage in CI/CD
-- Regression testing impossible in headless environments
-- New contributors cannot validate their changes
-
-**Reproduction:**
-```bash
-go test -cover ./...
-# FAIL: X11/Xlib.h: No such file or directory
-```
-
-**Code Reference:**
-README.md:66: "82.4% test coverage"
-Test failures prevent verification
-
-**Recommended Fix:** Separate GUI-dependent tests with build tags, provide headless test mode.
-```
-
-### Finding 7
-
-```
-### FUNCTIONAL MISMATCH: Performance Metrics Cannot Be Validated
-**File:** README.md:62-63, pkg/network/README.md:86-98
-**Severity:** Medium
-**Description:** README claims specific performance metrics (89 FPS with 2000 entities, 120MB memory, sprite cache 95.9% hit rate, network 0.4µs encode) but benchmarks cannot execute.
-
-**Expected Behavior:** Performance claims should be reproducible via `go test -bench=.`
-
-**Actual Behavior:** Benchmarks fail to build due to X11 dependencies
-
-**Impact:**
-- Performance regressions could go undetected
-- Claims cannot be independently verified
-- Optimization work cannot be measured
-- Users cannot validate target hardware requirements
-
-**Reproduction:**
-```bash
-go test -bench=. ./pkg/network/
-# FAIL: build failed
-```
-
-**Code Reference:**
-README.md:62-66:
-```
-- 89 FPS with 2000 entities (48% above 60 FPS target)
-- 120MB memory (76% below 500MB budget)
-- Sprite cache hit rate: 95.9%
-```
-
-**Recommended Fix:** Make benchmarks runnable without GUI dependencies.
-```
-
-### Finding 8
-
-```
-### FUNCTIONAL MISMATCH: Mobile Build Instructions May Be Incomplete
-**File:** README.md:11-12, docs/MOBILE_BUILD.md
-**Severity:** Medium
-**Description:** README claims "Native mobile support - iOS and Android with touch-optimized controls" but verification of complete build process unclear.
-
-**Expected Behavior:** 
-- Mobile builds should be documented and reproducible
-- Touch controls should be testable
-- Build process should be verified in CI
-
-**Actual Behavior:**
-- Makefile.mobile exists but may not be tested in CI
-- Touch control verification unclear
-- No evidence of automated mobile builds
-
-**Impact:**
-- Mobile builds may be broken without detection
-- Touch controls may not work as documented
-- Release process for mobile uncertain
-
-**Reproduction:**
-1. Review CI/CD configuration for mobile builds
-2. Check for mobile platform testing
-3. Verify touch control implementation
-
-**Code Reference:**
-README.md:11: "📱 Native mobile support"
-Makefile.mobile exists but testing unclear
-
-**Recommended Fix:** Add mobile build verification to CI, document testing process.
-```
-
-### Finding 9
-
-```
-### MISSING FEATURE: WebAssembly Deployment Not Auto-Verified
-**File:** README.md:11, 190
-**Severity:** Medium
-**Description:** README claims "The game automatically deploys to GitHub Pages on every push to main" but this is not evident in CI configuration.
-
-**Expected Behavior:** .github/workflows should contain WASM build and GitHub Pages deployment on push to main
-
-**Actual Behavior:** Deployment automation not verified
-
-**Impact:**
-- WASM builds may break without detection
-- GitHub Pages site may be outdated
-- Users may encounter non-working web version
-
-**Reproduction:**
-1. Check .github/workflows/ for WASM deployment
-2. Verify deployment on push to main
-3. Confirm https://opd-ai.github.io/venture/ is current
-
-**Code Reference:**
-README.md:190: "automatically deploys to GitHub Pages on every push to main"
-
-**Recommended Fix:** Verify deployment workflow exists and works, or update documentation.
-```
-
-### Finding 10
-
-```
-### MISSING FEATURE: Message Sequence Ordering Not Implemented
-**File:** pkg/network/protocol.go, client.go, server.go
-**Severity:** Medium
-**Description:** Network protocol assigns SequenceNumber to all messages but never validates ordering on receipt. Unclear if this is dead code or reserved for future UDP support.
-
-**Expected Behavior:** Either:
-1. Use sequence numbers to detect/handle out-of-order messages, OR
-2. Document that sequence numbers are unused (TCP guarantees order)
-
-**Actual Behavior:** Sequence numbers assigned but never checked
-
-**Impact:**
-- If protocol ever switches to UDP, no ordering protection exists
-- Dead code increases maintenance burden
-- Unclear protocol semantics
-
-**Reproduction:**
-1. Examine client.go receiveLoop() - extracts SequenceNumber but doesn't validate
-2. Examine server.go handleClientReceive() - same issue
-
-**Code Reference:**
-```go
-// client.go:476 - extracted but unused
-c.mu.Lock()
-c.stateSeq = update.SequenceNumber  // Stored but never compared
-c.mu.Unlock()
-```
-
-**Recommended Fix:** Document intended use or implement ordering validation.
-```
-
-### Finding 11
-
-```
-### MISSING FEATURE: Tor Setup Not Fully Validated
-**File:** README.md:163-168, docs/TOR_SETUP.md
-**Severity:** Low
-**Description:** README mentions docs/TOR_SETUP.md for "complete Tor/onion service configuration" but the integration of high-latency configs may not be fully tested.
-
-**Expected Behavior:** Tor setup should be documented and tested end-to-end
-
-**Actual Behavior:** High-latency configs exist but testing unclear
-
-**Impact:**
-- Tor users may encounter issues
-- High-latency optimizations may not work as expected
-
-**Reproduction:**
-1. Check for Tor integration tests
-2. Verify high-latency configuration testing
-
-**Code Reference:**
-README.md:163-168 mentions Tor support
-pkg/network has high-latency configs but testing unclear
-
-**Recommended Fix:** Add integration tests for high-latency scenarios.
-```
-
-### Finding 12
-
-```
-### EDGE CASE BUG: Priority Queue Stats Not Atomic
-**File:** pkg/network/server.go:683-697
-**Severity:** Medium
-**Description:** clientConnection.sendStateUpdate() checks queue push result and records stats separately, creating race window under high concurrency.
-
-**Expected Behavior:** Queue operation and stats should be atomic
-
-**Actual Behavior:** Non-atomic operation sequence allows stat inconsistencies
-
-**Impact:**
-- Buffer monitoring may show incorrect drop counts
-- Capacity planning decisions based on wrong data
-
-**Reproduction:**
-High-concurrency scenario with multiple threads sending to same client
-
-**Code Reference:**
-```go
-if c.stateUpdateQueue.Push(update) {
-	c.stateUpdateStats.RecordSend()  // Not atomic with Push
-	// ...
-} else {
-	c.stateUpdateStats.RecordDrop()  // Stats could be wrong
-}
-```
-
-**Recommended Fix:** Make stats recording part of Push() operation.
-```
-
-### Finding 13
-
-```
-### EDGE CASE BUG: Sequence Number Wrap-Around Not Handled
-**File:** pkg/network/lag_compensation.go:289
-**Severity:** Medium
-**Description:** After ~6.8 years of server uptime (uint32 at 20Hz), sequence number comparisons fail due to wraparound.
-
-**Expected Behavior:** Handle uint32 wraparound gracefully
-
-**Actual Behavior:** Arithmetic comparisons fail when sequence wraps
-
-**Impact:**
-- Long-running servers will fail after years
-- Contradicts "24/7 hosting" for dedicated servers
-
-**Reproduction:**
-1. Set sequence near UINT32_MAX
-2. Add snapshots across wraparound boundary
-3. Observe comparison failures
-
-**Code Reference:**
-```go
-for seq := latest.Sequence - 1; seq > 0 && seq >= latest.Sequence-200; seq-- {
-	// Fails if latest.Sequence < 200 (underflow)
-	// Fails after wraparound from UINT32_MAX to 0
-}
-```
-
-**Recommended Fix:** Use modular arithmetic for sequence comparisons.
-```
-
-### Finding 14
-
-```
-### PERFORMANCE ISSUE: Hot Path Contains Unnecessary Channel Check
-**File:** pkg/network/client.go:416-420, server.go:469-475
-**Severity:** Low
-**Description:** receiveLoop() checks done channel via select on every iteration before packet read.
-
-**Expected Behavior:** Minimize operations in hot path
-
-**Actual Behavior:** Select statement executed per packet (640/sec server-side with 32 players)
-
-**Impact:**
-- Minor CPU overhead (~1-2%)
-- Violates hot path optimization best practices
-
-**Reproduction:**
-Profile receiveLoop under load and observe select overhead
-
-**Code Reference:**
-```go
-for {
-	select {
-	case <-c.done:
-		return
-	default:
-	}
-	// Read packet...
-}
-```
-
-**Recommended Fix:** Rely on SetReadDeadline timeout, check done after read errors.
-```
-
-### Finding 15
-
-```
-### FUNCTIONAL MISMATCH: ECS Component Purity Not Enforced
-**File:** Project Overview guidance, various component files
-**Severity:** Low
-**Description:** Project Overview states "Components must be pure data structures with only a Type() string method. Never add behavior/logic to components." However, this is not enforced by linters or architecture tests.
-
-**Expected Behavior:** Automated checks should prevent logic in components
-
-**Actual Behavior:** No enforcement mechanism exists
-
-**Impact:**
-- Developers may accidentally violate ECS principles
-- Architecture erosion over time
-- Inconsistent component design
-
-**Reproduction:**
-1. Search for component files
-2. Check for methods beyond Type() and serialization
-3. Note no linter prevents this
-
-**Code Reference:**
-Project Overview example shows what NOT to do:
-```go
-// ❌ BAD: Logic in component
-func (p *PositionComponent) Move(dx, dy float64)
-```
-
-**Recommended Fix:** Add golangci-lint rule or architecture tests to enforce component purity.
+- 85.6% test coverage (31.6% above 65% requirement)
 ```
 
 ---
 
-## PACKAGE-SPECIFIC FINDINGS
+## Verification Status
 
-### Network Package (pkg/network)
-See detailed audit at `pkg/network/AUDIT.md`
-- 8 findings documented with code references
-- Coverage: Claimed 82.6%, subpackages verified 76-87%
-- Status: Well-designed but needs critical bug fixes
+### ✅ Verified Claims (Sample)
 
-### Procgen Packages (pkg/procgen/*)
-- **Concern:** Determinism not verified across all generators
-- **Packages:** terrain, entity, item, quest, magic, skills, genre
-- **Status:** Implementation exists, verification needed
+The following documented features were verified to be correctly implemented:
 
-### Rendering Package (pkg/rendering)
-- **Status:** Sprite cache, animations, particles, lighting implemented
-- **Concern:** Performance claims (95.9% cache hit) unverifiable due to test failures
+1. **Port Fallback (8080-8089)**: ✅ Correctly implemented in `pkg/hostplay/host_and_play.go:21-79`
+   - Default range: 10 ports (8080-8089)
+   - Automatic fallback when ports are occupied
 
-### World Package (pkg/world)
-- **Status:** Housing, economy, territory systems exist
-- **Concern:** V8.0 spec compliance (plot sizes, building types) unverified
+2. **Weather Types**: ✅ All 8 documented weather types exist in `pkg/rendering/particles/weather.go:32-52`
+   - Base: rain, snow, fog, dust, ash
+   - Sci-fi: neonrain, smog, radiation
+   - Plus additional types: sandstorm, bloodrain
 
-### Engine Package (pkg/engine)
-- **Status:** Core ECS framework, systems operational
-- **Concern:** Component purity not enforced
+3. **High-Latency Support**: ✅ Implemented in `pkg/network/` with dedicated configs
+   - `HighLatencyServerConfig()` and `HighLatencyLagCompensationConfig()`
+   - 200-5000ms latency support documented and tested
 
----
+4. **Default Resolution (1920x1080)**: ✅ Verified in `cmd/client/util.go:334`
+   - `flag.Int("width", 1920, ...)` 
+   - `flag.Int("height", 1080, ...)`
 
-## CROSS-CUTTING CONCERNS
+5. **Resolution Support**: ✅ All 4 documented resolutions supported in `pkg/rendering/display/config.go:15-18`
+   - 1280x720 (HD), 1920x1080 (Full HD), 2560x1440 (QHD), 3840x2160 (4K UHD)
 
-### Build System
-- ❌ Dedicated server requires X11 (should be headless)
-- ❌ Tests require X11 (should support headless CI)
-- ⚠️ Mobile builds not verified in CI
-- ⚠️ WASM deployment automation not confirmed
+6. **Menu Controls**: ✅ All documented menu keys implemented
+   - I (Inventory), J (Quests), K (Skills), M (Map), C (Character)
+   - R (Crafting), G (Gallery), H (Housing), F1 (Help)
+   - ESC dual-exit pattern implemented for all menus
 
-### Testing Infrastructure
-- ❌ Cannot verify 82.4% coverage claim
-- ❌ Benchmarks cannot execute
-- ⚠️ No determinism verification tests
-- ⚠️ No V8.0 feature completeness tests
+7. **Talent Tree (120 talents)**: ✅ Exactly 120 talent definitions in `pkg/class/advanced/talents.go`
+   - Verified by counting unique talent IDs
 
-### Documentation
-- ✅ Comprehensive README with feature lists
-- ✅ Package-level documentation exists
-- ⚠️ Feature claims exceed verification
-- ⚠️ Version number suggests completion but verification gaps exist
+8. **Branching Narratives (6 endings)**: ✅ Implemented in `pkg/narrative/branching/generator.go:121`
+   - `rng.Intn(6)` generates 6 ending types (0-5)
 
-### Code Quality
-- ✅ Strong ECS architecture
-- ✅ Interface-based design (network, procgen)
-- ✅ Structured logging with logrus
-- ⚠️ No linting enforcement of architectural principles
-- ⚠️ Build tags not used to separate concerns
+9. **Multi-classing (level 20, prestige level 30)**: ✅ Documented in `pkg/class/advanced/` with level requirements
+   - Prestige classes require MinLevel >= 20
+   - Advanced prestige at level 30+
 
----
+10. **Multiplayer Modes**: ✅ All documented modes functional
+    - Auto localhost server (default behavior)
+    - LAN hosting with `--host-lan` flag
+    - Dedicated server binary
+    - High-latency flag for Tor/onion services
 
-## RECOMMENDATIONS
+### Summary
 
-### Immediate Actions (Critical)
-1. **✅ COMPLETED: Fix network deadlock bugs** (Finding 1) - TCPClient disconnect deadlock resolved using atomic.Bool
-2. **✅ COMPLETED: Fix infinite reconnection loop** (Finding 2) - graceful cancellation via done channel during retry delays
-3. **Separate server from client dependencies** (Finding 3) - enables dedicated servers
-4. **Verify procedural generation determinism** (Finding 4) - critical for multiplayer
+Out of dozens of claims audited across README.md, only **2 gaps were identified**:
 
-### Short-Term Actions (High Priority)
-5. **Create V8.0 feature verification matrix** (Finding 5) - ensure claims match reality
-6. **Implement mobile build CI** (Finding 8) - verify platform support
-7. **Document/implement message ordering** (Finding 10) - clarify protocol
-8. **Fix edge case bugs** (Findings 12, 13) - improve reliability
+1. **Critical**: Blueprint sharing system completely missing despite extensive documentation
+2. **Moderate**: Test coverage metrics outdated (actual higher than documented)
 
-### Long-Term Improvements
-9. **Add architecture enforcement** (Finding 15) - maintain ECS purity
-10. **Comprehensive integration testing** - verify feature completeness
-11. **Automated performance regression testing** - protect performance claims
-12. **Build tag separation** - enable headless testing and deployment
+The vast majority of documented features are accurately implemented, indicating a mature and well-maintained codebase. The blueprint gap is the primary concern requiring immediate attention.
 
 ---
 
-## POSITIVE FINDINGS
+## Methodology
 
-The game demonstrates exceptional strengths:
+This audit employed the following verification strategy:
 
-### Architecture Excellence
-- ✅ Clean ECS architecture with entity/component/system separation
-- ✅ Modular package design with clear responsibilities
-- ✅ Interface-based testing throughout (Protocol, ClientConnection, ServerConnection)
-- ✅ Comprehensive procedural generation framework
+1. **Documentation Parsing**: Extracted 40+ specific claims from README.md about features, behaviors, defaults, and performance
+2. **Code Mapping**: Traced each claim to actual implementation files using grep, find, and manual code inspection
+3. **Behavioral Verification**: Checked flag definitions, function signatures, type definitions, and test assertions
+4. **Quantitative Validation**: Ran test suite to measure actual coverage vs. documented claims
+5. **API Completeness**: Verified documented APIs (especially from doc.go files) exist in implementation
 
-### Feature Richness
-- ✅ Extensive multiplayer networking (prediction, lag compensation, encryption)
-- ✅ Cross-platform support (Desktop, Web, Mobile)
-- ✅ Multiple genres (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
-- ✅ Deep gameplay systems (housing, guilds, crafting, trading)
+**Tools Used:**
+- `grep -rn` for exhaustive code search
+- `go test -cover` for coverage measurement
+- `find` for file structure analysis
+- Manual code review of critical packages
+- Git history inspection for commit verification
 
-### Code Quality
-- ✅ Structured logging with consistent field names
-- ✅ Proper concurrency primitives (mutexes, channels, wait groups)
-- ✅ Buffer monitoring and observability
-- ✅ High-latency network support (Tor)
-
-### Documentation
-- ✅ Comprehensive README with quick start
-- ✅ Multiple specialized guides (GETTING_STARTED, USER_MANUAL, MULTIPLAYER, TOR_SETUP)
-- ✅ Package-level documentation
-- ✅ Clear contribution guidelines
-
----
-
-## CONCLUSION
-
-Venture is an **ambitious and well-architected game** with a solid foundation. The ECS design is clean, the procedural generation framework is comprehensive, and the multiplayer networking shows sophistication. **Significant progress has been made on critical issues**:
-
-**Resolved:**
-1. ✅ **TCPClient disconnect deadlock** (Finding 1) - Fixed using atomic.Bool for connected flag
-2. ✅ **Infinite reconnection loop** (Finding 2) - Fixed with graceful cancellation via done channel monitoring
-
-**Remaining Critical Issues:**
-3. **Build system X11 dependency** (Finding 3) - prevents server deployment and testing
-4. **Procedural generation determinism** (Finding 4) - needs verification testing
-5. **Test infrastructure issues** (Findings 6, 7) - prevent quality assurance
-
-**Recommendation:** Continue addressing remaining critical findings (3-5) before production release. The architecture is sound; execution needs tightening to match the ambitious scope documented in README.md. Network reliability has significantly improved with the resolution of Findings 1 and 2.
-
-**Overall Grade:** B+ for architecture and design, C+ for production readiness (improving from C-)
-
----
-
-## AUDIT SCOPE AND LIMITATIONS
-
-**Included:**
-- Complete codebase review (793 files, 532K LOC)
-- Cross-reference with README.md and package documentation
-- Build system analysis
-- Test infrastructure evaluation
-- Network package deep-dive (separate detailed audit)
-
-**Not Included:**
-- Runtime testing of all features
-- Platform-specific builds (iOS, Android specific testing)
-- WebAssembly runtime testing
-- Performance profiling
-- Security penetration testing
-- Asset generation quality assessment
-
-**Methodology:**
-- Static code analysis
-- Documentation cross-referencing
-- Build system verification attempts
-- Test execution attempts
-- Architecture pattern review
-- Feature claim validation
-
----
-
-**End of Audit Report**
-
-For network package details, see: `pkg/network/AUDIT.md`
+**Packages Audited:**
+- `pkg/world/housing/` (blueprint gap identified)
+- `pkg/network/` (high-latency verified)
+- `pkg/rendering/particles/` (weather verified)
+- `pkg/rendering/display/` (resolution verified)
+- `pkg/class/advanced/` (talents/multi-class verified)
+- `pkg/narrative/branching/` (endings verified)
+- `pkg/hostplay/` (port fallback verified)
+- `pkg/engine/` (input system verified)
+- `cmd/client/` (flags verified)
+- All `pkg/` packages (coverage measured)

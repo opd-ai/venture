@@ -34,14 +34,14 @@ func TestNewBlueprint(t *testing.T) {
 	if bp.BuildingDef != buildingDef {
 		t.Error("BuildingDef should match provided definition")
 	}
-	if bp.Rating != 0.0 {
-		t.Errorf("Initial Rating = %v, want 0.0", bp.Rating)
+	if bp.GetRating() != 0.0 {
+		t.Errorf("Initial Rating = %v, want 0.0", bp.GetRating())
 	}
-	if bp.RatingCount != 0 {
-		t.Errorf("Initial RatingCount = %v, want 0", bp.RatingCount)
+	if bp.GetRatingCount() != 0 {
+		t.Errorf("Initial RatingCount = %v, want 0", bp.GetRatingCount())
 	}
-	if bp.Downloads != 0 {
-		t.Errorf("Initial Downloads = %v, want 0", bp.Downloads)
+	if bp.GetDownloads() != 0 {
+		t.Errorf("Initial Downloads = %v, want 0", bp.GetDownloads())
 	}
 	if bp.CreatedAt.IsZero() {
 		t.Error("CreatedAt should be set")
@@ -104,12 +104,12 @@ func TestBlueprintAddRating(t *testing.T) {
 			}
 
 			if !tt.expectError {
-				if bp.RatingCount != tt.wantCount {
-					t.Errorf("RatingCount = %v, want %v", bp.RatingCount, tt.wantCount)
+				if bp.GetRatingCount() != tt.wantCount {
+					t.Errorf("RatingCount = %v, want %v", bp.GetRatingCount(), tt.wantCount)
 				}
 				// Allow small floating point difference
-				if diff := bp.Rating - tt.wantAvg; diff > 0.001 || diff < -0.001 {
-					t.Errorf("Rating = %v, want %v", bp.Rating, tt.wantAvg)
+				if diff := bp.GetRating() - tt.wantAvg; diff > 0.001 || diff < -0.001 {
+					t.Errorf("Rating = %v, want %v", bp.GetRating(), tt.wantAvg)
 				}
 			}
 		})
@@ -119,19 +119,19 @@ func TestBlueprintAddRating(t *testing.T) {
 func TestBlueprintIncrementDownloads(t *testing.T) {
 	bp := NewBlueprint("Test", "author", "fantasy", nil)
 
-	if bp.Downloads != 0 {
-		t.Errorf("Initial downloads = %v, want 0", bp.Downloads)
+	if bp.GetDownloads() != 0 {
+		t.Errorf("Initial downloads = %v, want 0", bp.GetDownloads())
 	}
 
 	bp.IncrementDownloads()
-	if bp.Downloads != 1 {
-		t.Errorf("Downloads after increment = %v, want 1", bp.Downloads)
+	if bp.GetDownloads() != 1 {
+		t.Errorf("Downloads after increment = %v, want 1", bp.GetDownloads())
 	}
 
 	bp.IncrementDownloads()
 	bp.IncrementDownloads()
-	if bp.Downloads != 3 {
-		t.Errorf("Downloads after 3 increments = %v, want 3", bp.Downloads)
+	if bp.GetDownloads() != 3 {
+		t.Errorf("Downloads after 3 increments = %v, want 3", bp.GetDownloads())
 	}
 }
 
@@ -152,9 +152,14 @@ func TestBlueprintExportImport(t *testing.T) {
 	original := NewBlueprint("Test Manor", "player123", "fantasy", buildingDef)
 	original.Description = "A beautiful test manor"
 	original.Tags = []string{"medieval", "manor", "large"}
-	original.Rating = 4.5
-	original.RatingCount = 10
-	original.Downloads = 25
+	original.AddRating(4.5)
+	original.AddRating(4.5)  // Average will be 4.5
+	for i := 0; i < 10; i++ {
+		original.IncrementDownloads()
+	}
+	for i := 0; i < 15; i++ {
+		original.IncrementDownloads()
+	}
 
 	// Export
 	err := original.Export(filepath)
@@ -189,14 +194,14 @@ func TestBlueprintExportImport(t *testing.T) {
 	if imported.GenreID != original.GenreID {
 		t.Errorf("GenreID = %v, want %v", imported.GenreID, original.GenreID)
 	}
-	if imported.Rating != original.Rating {
-		t.Errorf("Rating = %v, want %v", imported.Rating, original.Rating)
+	if imported.GetRating() != original.GetRating() {
+		t.Errorf("Rating = %v, want %v", imported.GetRating(), original.GetRating())
 	}
-	if imported.RatingCount != original.RatingCount {
-		t.Errorf("RatingCount = %v, want %v", imported.RatingCount, original.RatingCount)
+	if imported.GetRatingCount() != original.GetRatingCount() {
+		t.Errorf("RatingCount = %v, want %v", imported.GetRatingCount(), original.GetRatingCount())
 	}
-	if imported.Downloads != original.Downloads {
-		t.Errorf("Downloads = %v, want %v", imported.Downloads, original.Downloads)
+	if imported.GetDownloads() != original.GetDownloads() {
+		t.Errorf("Downloads = %v, want %v", imported.GetDownloads(), original.GetDownloads())
 	}
 	if len(imported.Tags) != len(original.Tags) {
 		t.Fatalf("Tags length = %v, want %v", len(imported.Tags), len(original.Tags))
@@ -261,10 +266,9 @@ func TestBlueprintLibraryAdd(t *testing.T) {
 		t.Errorf("Count after 2 adds = %v, want 2", library.Count())
 	}
 
-	// Replace existing blueprint
-	bp1Updated := *bp1
-	bp1Updated.Name = "Updated House"
-	library.Add(&bp1Updated)
+	// Replace existing blueprint without copying the struct (avoids copying embedded mutex)
+	bp1.Name = "Updated House"
+	library.Add(bp1)
 	if library.Count() != 2 {
 		t.Errorf("Count after replacement = %v, want 2", library.Count())
 	}
@@ -354,17 +358,17 @@ func TestBlueprintLibraryFilter(t *testing.T) {
 	// Create test blueprints
 	bp1 := NewBlueprint("Medieval Manor", "player1", "fantasy", &BuildingDefinition{Width: 24, Height: 24})
 	bp1.Tags = []string{"medieval", "manor"}
-	bp1.Rating = 4.5
+	bp1.AddRating(4.5)
 	library.Add(bp1)
 
 	bp2 := NewBlueprint("Sci-Fi Station", "player2", "scifi", &BuildingDefinition{Width: 32, Height: 32})
 	bp2.Tags = []string{"scifi", "station"}
-	bp2.Rating = 3.5
+	bp2.AddRating(3.5)
 	library.Add(bp2)
 
 	bp3 := NewBlueprint("Medieval Castle", "player1", "fantasy", &BuildingDefinition{Width: 48, Height: 48})
 	bp3.Tags = []string{"medieval", "castle"}
-	bp3.Rating = 4.8
+	bp3.AddRating(4.8)
 	library.Add(bp3)
 
 	tests := []struct {
@@ -456,20 +460,26 @@ func TestBlueprintLibrarySort(t *testing.T) {
 	// Create blueprints with different values
 	now := time.Now()
 	bp1 := NewBlueprint("Alpha", "player1", "fantasy", nil)
-	bp1.Rating = 3.0
-	bp1.Downloads = 100
+	bp1.AddRating(3.0)
+	for i := 0; i < 100; i++ {
+		bp1.IncrementDownloads()
+	}
 	bp1.CreatedAt = now.Add(-3 * time.Hour)
 	bp1.ModifiedAt = now.Add(-1 * time.Hour)
 
 	bp2 := NewBlueprint("Beta", "player2", "scifi", nil)
-	bp2.Rating = 5.0
-	bp2.Downloads = 50
+	bp2.AddRating(5.0)
+	for i := 0; i < 50; i++ {
+		bp2.IncrementDownloads()
+	}
 	bp2.CreatedAt = now.Add(-2 * time.Hour)
 	bp2.ModifiedAt = now.Add(-2 * time.Hour)
 
 	bp3 := NewBlueprint("Gamma", "player3", "horror", nil)
-	bp3.Rating = 4.0
-	bp3.Downloads = 150
+	bp3.AddRating(4.0)
+	for i := 0; i < 150; i++ {
+		bp3.IncrementDownloads()
+	}
 	bp3.CreatedAt = now.Add(-1 * time.Hour)
 	bp3.ModifiedAt = now.Add(-3 * time.Hour)
 

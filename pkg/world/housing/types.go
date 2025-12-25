@@ -1,6 +1,7 @@
 package housing
 
 import (
+	"encoding/json"
 	"fmt"
 	"image/color"
 	"sync"
@@ -197,20 +198,46 @@ type BuildingDefinition struct {
 }
 
 // Blueprint represents a shareable building design with metadata.
+// Blueprint instances must not be copied after creation; always use pointers.
+// The embedded mutex makes copying unsafe and will cause go vet warnings.
 type Blueprint struct {
-	mu          sync.Mutex           // Protects mutable fields (Rating, RatingCount, Downloads)
+	mu          sync.Mutex           // Protects mutable fields (rating, ratingCount, downloads)
 	ID          string               // Unique blueprint identifier
 	Name        string               // User-friendly name
 	Description string               // Detailed description
 	Author      string               // Player ID who created this blueprint
 	GenreID     string               // Genre (fantasy, scifi, horror, etc.)
 	Tags        []string             // Searchable tags (medieval, manor, etc.)
-	Rating      float64              // Average rating (0.0-5.0)
-	RatingCount int                  // Number of ratings
-	Downloads   int                  // Download count
+	rating      float64              // Average rating (0.0-5.0) - protected by mu
+	ratingCount int                  // Number of ratings - protected by mu
+	downloads   int                  // Download count - protected by mu
 	CreatedAt   time.Time            // Creation timestamp
 	ModifiedAt  time.Time            // Last modification timestamp
 	BuildingDef *BuildingDefinition  // Building generation parameters
+}
+
+// GetRating returns the current average rating.
+// Thread-safe for concurrent access.
+func (bp *Blueprint) GetRating() float64 {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	return bp.rating
+}
+
+// GetRatingCount returns the number of ratings.
+// Thread-safe for concurrent access.
+func (bp *Blueprint) GetRatingCount() int {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	return bp.ratingCount
+}
+
+// GetDownloads returns the current download count.
+// Thread-safe for concurrent access.
+func (bp *Blueprint) GetDownloads() int {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	return bp.downloads
 }
 
 // blueprintIDCounter uses atomic operations for thread-safe ID generation
@@ -222,6 +249,68 @@ func generateBlueprintID() string {
 	return fmt.Sprintf("bp_%d", id)
 }
 
+// blueprintJSON is a helper struct for JSON marshaling/unmarshaling.
+// It exposes the private fields for serialization.
+type blueprintJSON struct {
+	ID          string               `json:"ID"`
+	Name        string               `json:"Name"`
+	Description string               `json:"Description"`
+	Author      string               `json:"Author"`
+	GenreID     string               `json:"GenreID"`
+	Tags        []string             `json:"Tags"`
+	Rating      float64              `json:"Rating"`
+	RatingCount int                  `json:"RatingCount"`
+	Downloads   int                  `json:"Downloads"`
+	CreatedAt   time.Time            `json:"CreatedAt"`
+	ModifiedAt  time.Time            `json:"ModifiedAt"`
+	BuildingDef *BuildingDefinition  `json:"BuildingDef"`
+}
+
+// MarshalJSON implements json.Marshaler for Blueprint.
+func (bp *Blueprint) MarshalJSON() ([]byte, error) {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	
+	helper := blueprintJSON{
+		ID:          bp.ID,
+		Name:        bp.Name,
+		Description: bp.Description,
+		Author:      bp.Author,
+		GenreID:     bp.GenreID,
+		Tags:        bp.Tags,
+		Rating:      bp.rating,
+		RatingCount: bp.ratingCount,
+		Downloads:   bp.downloads,
+		CreatedAt:   bp.CreatedAt,
+		ModifiedAt:  bp.ModifiedAt,
+		BuildingDef: bp.BuildingDef,
+	}
+	return json.Marshal(helper)
+}
+
+// UnmarshalJSON implements json.Unmarshaler for Blueprint.
+func (bp *Blueprint) UnmarshalJSON(data []byte) error {
+	var helper blueprintJSON
+	if err := json.Unmarshal(data, &helper); err != nil {
+		return err
+	}
+	
+	bp.ID = helper.ID
+	bp.Name = helper.Name
+	bp.Description = helper.Description
+	bp.Author = helper.Author
+	bp.GenreID = helper.GenreID
+	bp.Tags = helper.Tags
+	bp.rating = helper.Rating
+	bp.ratingCount = helper.RatingCount
+	bp.downloads = helper.Downloads
+	bp.CreatedAt = helper.CreatedAt
+	bp.ModifiedAt = helper.ModifiedAt
+	bp.BuildingDef = helper.BuildingDef
+	
+	return nil
+}
+
 // NewBlueprint creates a new blueprint with default metadata.
 func NewBlueprint(name, author, genreID string, buildingDef *BuildingDefinition) *Blueprint {
 	now := time.Now()
@@ -231,9 +320,9 @@ func NewBlueprint(name, author, genreID string, buildingDef *BuildingDefinition)
 		Author:      author,
 		GenreID:     genreID,
 		Tags:        []string{},
-		Rating:      0.0,
-		RatingCount: 0,
-		Downloads:   0,
+		rating:      0.0,
+		ratingCount: 0,
+		downloads:   0,
 		CreatedAt:   now,
 		ModifiedAt:  now,
 		BuildingDef: buildingDef,

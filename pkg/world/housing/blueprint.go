@@ -128,10 +128,10 @@ func matchesFilter(bp *Blueprint, opts FilterOptions) bool {
 	}
 
 	// Rating filter
-	if opts.MinRating > 0 && bp.Rating < opts.MinRating {
+	if opts.MinRating > 0 && bp.GetRating() < opts.MinRating {
 		return false
 	}
-	if opts.MaxRating > 0 && bp.Rating > opts.MaxRating {
+	if opts.MaxRating > 0 && bp.GetRating() > opts.MaxRating {
 		return false
 	}
 
@@ -175,9 +175,9 @@ func (bl *BlueprintLibrary) Sort(blueprints []*Blueprint, field SortField, desce
 		var less bool
 		switch field {
 		case SortByRating:
-			less = blueprints[i].Rating < blueprints[j].Rating
+			less = blueprints[i].GetRating() < blueprints[j].GetRating()
 		case SortByDownloads:
-			less = blueprints[i].Downloads < blueprints[j].Downloads
+			less = blueprints[i].GetDownloads() < blueprints[j].GetDownloads()
 		case SortByCreated:
 			less = blueprints[i].CreatedAt.Before(blueprints[j].CreatedAt)
 		case SortByModified:
@@ -250,7 +250,7 @@ func ImportBlueprint(filepath string) (*Blueprint, error) {
 func (bp *Blueprint) IncrementDownloads() {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
-	bp.Downloads++
+	bp.downloads++
 }
 
 // AddRating adds a new rating to the blueprint and updates the average.
@@ -265,9 +265,9 @@ func (bp *Blueprint) AddRating(rating float64) error {
 	defer bp.mu.Unlock()
 
 	// Calculate new average rating
-	totalRating := bp.Rating * float64(bp.RatingCount)
-	bp.RatingCount++
-	bp.Rating = (totalRating + rating) / float64(bp.RatingCount)
+	totalRating := bp.rating * float64(bp.ratingCount)
+	bp.ratingCount++
+	bp.rating = (totalRating + rating) / float64(bp.ratingCount)
 
 	return nil
 }

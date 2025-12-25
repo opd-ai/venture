@@ -16,22 +16,17 @@ func TestAPIMatchesDocumentation(t *testing.T) {
 		t.Fatal("NewBlueprintLibrary() returned nil")
 	}
 
-	// Create a blueprint matching doc.go example
-	bp := &Blueprint{
-		ID:      "bp001",
-		Name:    "Fantasy Manor",
-		Author:  "Player1",
-		GenreID: "fantasy",
-		Tags:    []string{"medieval", "manor"},
-		BuildingDef: &BuildingDefinition{
-			Type:   int(building.TypeManor),
-			Style:  int(building.StyleMedieval),
-			Width:  24,
-			Height: 24,
-			Floors: 3,
-			Seed:   12345,
-		},
-	}
+	// Create a blueprint matching doc.go example using the constructor
+	bp := NewBlueprint("Fantasy Manor", "Player1", "fantasy", &BuildingDefinition{
+		Type:   int(building.TypeManor),
+		Style:  int(building.StyleMedieval),
+		Width:  24,
+		Height: 24,
+		Floors: 3,
+		Seed:   12345,
+	})
+	bp.ID = "bp001" // Set ID to match doc example
+	bp.Tags = []string{"medieval", "manor"}
 
 	// Add to library
 	library.Add(bp)
@@ -79,8 +74,8 @@ func TestAPIMatchesDocumentation(t *testing.T) {
 	// Sort by rating (doc.go shows: library.Sort(results, housing.SortByRating, true))
 	library.Sort(results, SortByRating, true)
 	// After sort, first item should be the highest rated
-	if len(results) > 0 && results[0].Rating < 4.0 {
-		t.Errorf("Sorted result rating = %v, want >= 4.0", results[0].Rating)
+	if len(results) > 0 && results[0].GetRating() < 4.0 {
+		t.Errorf("Sorted result rating = %v, want >= 4.0", results[0].GetRating())
 	}
 
 	t.Log("API matches documentation successfully")
@@ -153,18 +148,24 @@ func TestDocumentedSortFields(t *testing.T) {
 
 	// Create blueprints with different values for each sort field
 	bp1 := NewBlueprint("Alpha", "Player1", "fantasy", nil)
-	bp1.Rating = 3.0
-	bp1.Downloads = 100
+	bp1.AddRating(3.0)
+	for i := 0; i < 100; i++ {
+		bp1.IncrementDownloads()
+	}
 	library.Add(bp1)
 
 	bp2 := NewBlueprint("Beta", "Player2", "scifi", nil)
-	bp2.Rating = 5.0
-	bp2.Downloads = 50
+	bp2.AddRating(5.0)
+	for i := 0; i < 50; i++ {
+		bp2.IncrementDownloads()
+	}
 	library.Add(bp2)
 
 	bp3 := NewBlueprint("Gamma", "Player3", "horror", nil)
-	bp3.Rating = 4.0
-	bp3.Downloads = 150
+	bp3.AddRating(4.0)
+	for i := 0; i < 150; i++ {
+		bp3.IncrementDownloads()
+	}
 	library.Add(bp3)
 
 	allBlueprints := library.List()

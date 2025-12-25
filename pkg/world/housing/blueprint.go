@@ -246,16 +246,23 @@ func ImportBlueprint(filepath string) (*Blueprint, error) {
 
 // IncrementDownloads increments the download count for a blueprint.
 // This is typically called when a player imports/uses a blueprint.
+// Thread-safe for concurrent access.
 func (bp *Blueprint) IncrementDownloads() {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
 	bp.Downloads++
 }
 
 // AddRating adds a new rating to the blueprint and updates the average.
 // rating should be between 0.0 and 5.0.
+// Thread-safe for concurrent access.
 func (bp *Blueprint) AddRating(rating float64) error {
 	if rating < 0.0 || rating > 5.0 {
 		return fmt.Errorf("rating must be between 0.0 and 5.0, got %.2f", rating)
 	}
+
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
 
 	// Calculate new average rating
 	totalRating := bp.Rating * float64(bp.RatingCount)

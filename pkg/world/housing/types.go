@@ -3,6 +3,7 @@ package housing
 import (
 	"fmt"
 	"image/color"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -197,6 +198,7 @@ type BuildingDefinition struct {
 
 // Blueprint represents a shareable building design with metadata.
 type Blueprint struct {
+	mu          sync.Mutex           // Protects mutable fields (Rating, RatingCount, Downloads)
 	ID          string               // Unique blueprint identifier
 	Name        string               // User-friendly name
 	Description string               // Detailed description

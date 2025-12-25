@@ -338,18 +338,18 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 			// to ensure we can still cancel even if done channel is not available
 			ticker := time.NewTicker(50 * time.Millisecond)
 			timer := time.NewTimer(delay)
-			defer ticker.Stop()
-			defer timer.Stop()
 
-		delayLoop:
-			for {
+			cancelled := false
+			for !cancelled {
 				select {
 				case <-timer.C:
 					// Delay completed, continue to next retry
-					break delayLoop
+					cancelled = true
 				case <-ticker.C:
 					// Check if client was disconnected
 					if !c.connected.Load() {
+						ticker.Stop()
+						timer.Stop()
 						if c.logger != nil {
 							c.logger.Info("reconnection cancelled - client disconnected")
 						}
@@ -357,6 +357,8 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 					}
 				}
 			}
+			ticker.Stop()
+			timer.Stop()
 		}
 
 		// Calculate next delay with exponential backoff

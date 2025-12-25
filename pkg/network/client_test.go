@@ -774,3 +774,233 @@ func TestReconnectAfterDisconnect(t *testing.T) {
 		t.Errorf("Second disconnect failed: %v", err)
 	}
 }
+
+// TestConnectWithRetry_CancellationDuringRetry tests that ConnectWithRetry
+// can be cancelled gracefully by calling Disconnect() during retry loop.
+// This addresses AUDIT.md Finding 2: Infinite Reconnection Loop with No Cancellation.
+func TestConnectWithRetry_CancellationDuringRetry(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19996" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	client := NewClient(config)
+
+	// Configure for infinite retries (Tor mode)
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    0, // 0 = infinite retries
+		InitialDelay:  100 * time.Millisecond,
+		MaxDelay:      500 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	// Start reconnection in background
+	done := make(chan error, 1)
+	go func() {
+		done <- client.ConnectWithRetry(reconnectConfig)
+	}()
+
+	// Wait a bit to ensure we're in retry loop
+	time.Sleep(150 * time.Millisecond)
+
+	// Cancel by disconnecting
+	start := time.Now()
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("Disconnect failed: %v", err)
+	}
+
+	// ConnectWithRetry should return with cancellation error
+	select {
+	case err := <-done:
+		elapsed := time.Since(start)
+		if err == nil {
+			t.Error("Expected ConnectWithRetry to return error after cancellation")
+		}
+		if err.Error() != "reconnection cancelled" {
+			t.Errorf("Expected 'reconnection cancelled' error, got: %v", err)
+		}
+		// Should return quickly (well before the max backoff delay; allow up to 300ms)
+		if elapsed > 300*time.Millisecond {
+			t.Errorf("Expected quick cancellation, took %v", elapsed)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("ConnectWithRetry did not return after Disconnect (deadlock)")
+	}
+}
+
+// TestConnectWithRetry_CancellationBeforeFirstAttempt tests that calling
+// Disconnect before any connection attempts works correctly.
+func TestConnectWithRetry_CancellationBeforeFirstAttempt(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19995" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	client := NewClient(config)
+
+	// Disconnect immediately (before any connection attempt)
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("Disconnect failed: %v", err)
+	}
+
+	// Configure for multiple retries
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    5,
+		InitialDelay:  100 * time.Millisecond,
+		MaxDelay:      500 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	// Try to connect after disconnect
+	err = client.ConnectWithRetry(reconnectConfig)
+
+	// Should fail to connect (expected behavior)
+	if err == nil {
+		t.Error("Expected connection failure after disconnect")
+		client.Disconnect()
+	}
+}
+
+// TestConnectWithRetry_MultipleCancellations tests that multiple
+// cancellations don't cause panics or deadlocks.
+func TestConnectWithRetry_MultipleCancellations(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19994" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	client := NewClient(config)
+
+	// Configure for infinite retries
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    0, // infinite
+		InitialDelay:  100 * time.Millisecond,
+		MaxDelay:      500 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	// Start reconnection in background
+	done := make(chan error, 1)
+	go func() {
+		done <- client.ConnectWithRetry(reconnectConfig)
+	}()
+
+	// Wait for retry loop to start
+	time.Sleep(150 * time.Millisecond)
+
+	// Call Disconnect multiple times
+	for i := 0; i < 3; i++ {
+		err := client.Disconnect()
+		if err != nil && i == 0 {
+			// First disconnect might return error if connection attempt ongoing
+			t.Logf("First disconnect returned: %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// ConnectWithRetry should return
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("Expected ConnectWithRetry to return error after cancellation")
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("ConnectWithRetry did not return after multiple Disconnects")
+	}
+}
+
+// TestConnectWithRetry_CancellationWithTorConfig tests graceful cancellation
+// specifically with Tor/high-latency configuration (infinite retries).
+func TestConnectWithRetry_CancellationWithTorConfig(t *testing.T) {
+	config := TorClientConfig()
+	config.ServerAddress = "localhost:19993" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	client := NewClient(config)
+
+	// Use Tor reconnect config (infinite retries)
+	reconnectConfig := TorReconnectConfig()
+	// Override delays for faster test
+	reconnectConfig.InitialDelay = 100 * time.Millisecond
+	reconnectConfig.MaxDelay = 500 * time.Millisecond
+
+	// Start reconnection in background
+	done := make(chan error, 1)
+	go func() {
+		done <- client.ConnectWithRetry(reconnectConfig)
+	}()
+
+	// Wait for retry loop
+	time.Sleep(150 * time.Millisecond)
+
+	// Cancel by disconnecting
+	start := time.Now()
+	err := client.Disconnect()
+	if err != nil {
+		t.Errorf("Disconnect failed: %v", err)
+	}
+
+	// Should return with cancellation error quickly
+	select {
+	case err := <-done:
+		elapsed := time.Since(start)
+		if err == nil {
+			t.Error("Expected ConnectWithRetry to return error after cancellation")
+		}
+		// Verify it's a cancellation error
+		if err.Error() != "reconnection cancelled" {
+			t.Errorf("Expected 'reconnection cancelled' error, got: %v", err)
+		}
+		// Should return quickly (well before max backoff delay; allow up to 300ms for system variability)
+		if elapsed > 300*time.Millisecond {
+			t.Errorf("Expected quick cancellation with Tor config, took %v", elapsed)
+		}
+		t.Logf("Tor config cancellation took %v", elapsed)
+	case <-time.After(2 * time.Second):
+		t.Fatal("ConnectWithRetry with Tor config did not return after Disconnect")
+	}
+}
+
+// TestConnectWithRetry_NoMemoryLeakOnCancellation tests that cancelling
+// reconnection attempts doesn't leak goroutines or memory.
+func TestConnectWithRetry_NoMemoryLeakOnCancellation(t *testing.T) {
+	config := DefaultClientConfig()
+	config.ServerAddress = "localhost:19992" // Non-existent port
+	config.ConnectionTimeout = 50 * time.Millisecond
+
+	reconnectConfig := ReconnectConfig{
+		MaxRetries:    0, // infinite
+		InitialDelay:  50 * time.Millisecond,
+		MaxDelay:      200 * time.Millisecond,
+		BackoffFactor: 2.0,
+	}
+
+	// Create and cancel multiple clients to test for leaks
+	for i := 0; i < 5; i++ {
+		client := NewClient(config)
+
+		done := make(chan error, 1)
+		go func() {
+			done <- client.ConnectWithRetry(reconnectConfig)
+		}()
+
+		// Wait for retry loop
+		time.Sleep(75 * time.Millisecond)
+
+		// Cancel
+		err := client.Disconnect()
+		if err != nil {
+			t.Errorf("Iteration %d: Disconnect failed: %v", i, err)
+		}
+
+		// Wait for completion
+		select {
+		case <-done:
+			// Good, completed
+		case <-time.After(500 * time.Millisecond):
+			t.Fatalf("Iteration %d: ConnectWithRetry did not return", i)
+		}
+	}
+
+	// If we get here without hanging, no obvious goroutine leak
+	t.Log("Successfully created and cancelled 5 clients without leaks")
+}

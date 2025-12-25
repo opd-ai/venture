@@ -265,6 +265,7 @@ func (c *TCPClient) startConnectionHandlers() {
 // ConnectWithRetry establishes connection to the server with automatic retry on failure.
 // Uses exponential backoff to handle transient network issues gracefully.
 // Returns nil on successful connection, or an error if all retries are exhausted.
+// The function can be cancelled gracefully by calling Disconnect() on the client.
 //
 // Example usage:
 //
@@ -304,8 +305,61 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 			}).Warn("connection failed, retrying")
 		}
 
-		// Wait before retry
-		time.Sleep(delay)
+		// Wait before retry with graceful cancellation support
+		// Check done channel during sleep to allow shutdown
+		// Read done channel while holding lock to avoid TOCTOU race
+		c.mu.RLock()
+		done := c.done
+		isConnected := c.connected.Load()
+		c.mu.RUnlock()
+
+		// If client was disconnected, exit gracefully
+		if !isConnected {
+			if c.logger != nil {
+				c.logger.Info("reconnection cancelled - client disconnected")
+			}
+			return fmt.Errorf("reconnection cancelled")
+		}
+
+		// Wait with cancellation support if done channel is available
+		if done != nil {
+			select {
+			case <-done:
+				// Client is shutting down, exit gracefully
+				if c.logger != nil {
+					c.logger.Info("reconnection cancelled during shutdown")
+				}
+				return fmt.Errorf("reconnection cancelled")
+			case <-time.After(delay):
+				// Delay completed, continue to next retry
+			}
+		} else {
+			// If done is nil, check connected flag periodically during delay
+			// to ensure we can still cancel even if done channel is not available
+			ticker := time.NewTicker(50 * time.Millisecond)
+			timer := time.NewTimer(delay)
+
+			cancelled := false
+			for !cancelled {
+				select {
+				case <-timer.C:
+					// Delay completed, continue to next retry
+					cancelled = true
+				case <-ticker.C:
+					// Check if client was disconnected
+					if !c.connected.Load() {
+						ticker.Stop()
+						timer.Stop()
+						if c.logger != nil {
+							c.logger.Info("reconnection cancelled - client disconnected")
+						}
+						return fmt.Errorf("reconnection cancelled")
+					}
+				}
+			}
+			ticker.Stop()
+			timer.Stop()
+		}
 
 		// Calculate next delay with exponential backoff
 		delay = time.Duration(float64(delay) * reconnectConfig.BackoffFactor)

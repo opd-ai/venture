@@ -310,16 +310,7 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 		// Read done channel while holding lock to avoid TOCTOU race
 		c.mu.RLock()
 		done := c.done
-		isConnected := c.connected.Load()
 		c.mu.RUnlock()
-
-		// If client was disconnected, exit gracefully
-		if !isConnected {
-			if c.logger != nil {
-				c.logger.Info("reconnection cancelled - client disconnected")
-			}
-			return fmt.Errorf("reconnection cancelled")
-		}
 
 		// Wait with cancellation support if done channel is available
 		if done != nil {
@@ -371,8 +362,12 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 
 // Disconnect closes the connection to the server.
 func (c *TCPClient) Disconnect() error {
-	// Check if already disconnected without holding the lock
-	if !c.connected.Load() {
+	// Check if already disconnected by checking if done channel exists
+	c.mu.RLock()
+	alreadyDisconnected := (c.done == nil && c.conn == nil)
+	c.mu.RUnlock()
+
+	if alreadyDisconnected {
 		return nil
 	}
 
@@ -481,15 +476,26 @@ func (c *TCPClient) ReceiveError() <-chan error {
 func (c *TCPClient) receiveLoop() {
 	defer c.wg.Done()
 
+	// Capture done channel and connection once at start to avoid races with Disconnect
+	c.mu.RLock()
+	done := c.done
+	conn := c.conn
+	c.mu.RUnlock()
+
+	// Exit if either is nil (client is shutting down or not properly initialized)
+	if done == nil || conn == nil {
+		return
+	}
+
 	buf := make([]byte, 4096)
 	for {
 		select {
-		case <-c.done:
+		case <-done:
 			return
 		default:
 		}
 
-		c.conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
+		conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
 
 		msgLen, ok := c.readMessageLength(buf)
 		if !ok {
@@ -575,12 +581,22 @@ func (c *TCPClient) sendNonBlockingError(err error, exitOnError bool) {
 func (c *TCPClient) sendLoop() {
 	defer c.wg.Done()
 
+	// Capture done channel once at start to avoid races with Disconnect
+	c.mu.RLock()
+	done := c.done
+	c.mu.RUnlock()
+
+	// Exit if done channel is nil (client is shutting down or not properly initialized)
+	if done == nil {
+		return
+	}
+
 	pingTicker := time.NewTicker(c.config.PingInterval)
 	defer pingTicker.Stop()
 
 	for {
 		select {
-		case <-c.done:
+		case <-done:
 			return
 
 		case <-pingTicker.C:

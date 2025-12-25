@@ -307,10 +307,21 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 
 		// Wait before retry with graceful cancellation support
 		// Check done channel during sleep to allow shutdown
+		// Read done channel while holding lock to avoid TOCTOU race
 		c.mu.RLock()
 		done := c.done
+		isConnected := c.connected.Load()
 		c.mu.RUnlock()
 
+		// If client was disconnected, exit gracefully
+		if !isConnected {
+			if c.logger != nil {
+				c.logger.Info("reconnection cancelled - client disconnected")
+			}
+			return fmt.Errorf("reconnection cancelled")
+		}
+
+		// Wait with cancellation support if done channel is available
 		if done != nil {
 			select {
 			case <-done:
@@ -323,8 +334,29 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 				// Delay completed, continue to next retry
 			}
 		} else {
-			// done channel is nil (shouldn't happen), use regular sleep
-			time.Sleep(delay)
+			// If done is nil, check connected flag periodically during delay
+			// to ensure we can still cancel even if done channel is not available
+			ticker := time.NewTicker(50 * time.Millisecond)
+			timer := time.NewTimer(delay)
+			defer ticker.Stop()
+			defer timer.Stop()
+
+		delayLoop:
+			for {
+				select {
+				case <-timer.C:
+					// Delay completed, continue to next retry
+					break delayLoop
+				case <-ticker.C:
+					// Check if client was disconnected
+					if !c.connected.Load() {
+						if c.logger != nil {
+							c.logger.Info("reconnection cancelled - client disconnected")
+						}
+						return fmt.Errorf("reconnection cancelled")
+					}
+				}
+			}
 		}
 
 		// Calculate next delay with exponential backoff

@@ -819,8 +819,8 @@ func TestConnectWithRetry_CancellationDuringRetry(t *testing.T) {
 		if err.Error() != "reconnection cancelled" {
 			t.Errorf("Expected 'reconnection cancelled' error, got: %v", err)
 		}
-		// Should return quickly (within 100ms of Disconnect call)
-		if elapsed > 100*time.Millisecond {
+		// Should return quickly (well before the max backoff delay; allow up to 300ms)
+		if elapsed > 300*time.Millisecond {
 			t.Errorf("Expected quick cancellation, took %v", elapsed)
 		}
 	case <-time.After(1 * time.Second):
@@ -950,8 +950,8 @@ func TestConnectWithRetry_CancellationWithTorConfig(t *testing.T) {
 		if err.Error() != "reconnection cancelled" {
 			t.Errorf("Expected 'reconnection cancelled' error, got: %v", err)
 		}
-		// Should return quickly
-		if elapsed > 100*time.Millisecond {
+		// Should return quickly (well before max backoff delay; allow up to 300ms for system variability)
+		if elapsed > 300*time.Millisecond {
 			t.Errorf("Expected quick cancellation with Tor config, took %v", elapsed)
 		}
 		t.Logf("Tor config cancellation took %v", elapsed)

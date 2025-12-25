@@ -1,4 +1,7 @@
 // Package sprites provides composite sprite generation with multi-layer composition.
+//go:build !headless
+// +build !headless
+
 package sprites
 
 import (

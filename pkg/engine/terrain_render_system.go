@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides procedural terrain rendering.
 // This file implements TerrainRenderSystem which handles rendering of
 // procedurally generated terrain tiles with caching for performance.

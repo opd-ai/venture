@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides animation component for multi-frame sprite animations.
 package engine
 

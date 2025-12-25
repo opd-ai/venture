@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides centralized menu key configuration.
 // This file defines standard menu navigation keys used throughout the UI systems.
 package engine

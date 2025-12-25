@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides the main game loop and Ebiten integration.
 // This file implements EbitenGame which ties together the ECS world, rendering
 // systems, and the Ebiten game engine. EbitenGame implements both ebiten.Game

@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package sprites provides animation frame generation for procedural sprites.
 package sprites
 

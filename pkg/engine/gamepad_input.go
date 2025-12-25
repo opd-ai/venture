@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides gamepad input handling for Desktop and WASM platforms.
 // This file implements GamepadInputHandler which processes controller input
 // for player-controlled entities and game controls.

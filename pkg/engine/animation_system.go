@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides animation system for updating entity animations.
 package engine
 

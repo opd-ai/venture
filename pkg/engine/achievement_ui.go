@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides the achievement UI for browsing player achievements.
 // This file implements AchievementUI which handles rendering and interaction
 // for the achievement browser, showing achievement progress across all categories.

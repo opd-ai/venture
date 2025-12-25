@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides character UI system for displaying player stats and equipment.
 // This file implements CharacterUI which handles rendering and interaction for the
 // character stats screen, including stats, equipment, and derived attributes.

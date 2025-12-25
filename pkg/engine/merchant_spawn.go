@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides helper functions for spawning merchants in the game world.
 // This file bridges procedural generation (pkg/procgen/entity) with the ECS runtime,
 // converting MerchantData into engine entities with proper components.

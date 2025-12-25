@@ -1,6 +1,10 @@
+//go:build !headless
+// +build !headless
+
 // Package sprites provides procedural sprite generation.
 // This file implements sprite generators that create entity visuals
 // at runtime without external assets.
+// This file is excluded from headless builds (server).
 package sprites
 
 import (

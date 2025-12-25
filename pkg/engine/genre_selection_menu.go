@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides genre selection menu for single-player game setup.
 // This file implements the menu shown after selecting "New Game" from the
 // single-player submenu, allowing players to choose their preferred game genre.

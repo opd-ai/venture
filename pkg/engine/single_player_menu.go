@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides single-player submenu UI for game mode selection.
 // This file implements the submenu shown when the player selects "Single-Player"
 // from the main menu, offering options for New Game, Load Game, and Back.

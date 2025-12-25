@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides settings menu UI components.
 // This file implements the settings menu with interactive controls for adjusting game settings.
 package engine

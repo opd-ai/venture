@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides shared UI error display functionality.
 // H-002 FIX: Standardized error feedback system for all UI components.
 package engine

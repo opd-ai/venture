@@ -1,6 +1,10 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides sprite rendering for entities.
 // This file implements RenderSystem which handles entity sprite rendering
 // with camera transformations and visual effects.
+// This file is excluded from headless builds (server).
 package engine
 
 import (

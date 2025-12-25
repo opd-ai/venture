@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides skills_ui for game UI.
 package engine
 

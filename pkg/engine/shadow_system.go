@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides the shadow casting system.
 // This file implements ShadowSystem which processes shadow-casting entities
 // and generates shadows based on light sources. The system supports multiple

@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides the dynamic lighting system.
 // This file implements LightingSystem which processes light sources and applies
 // lighting calculations to the rendered scene. The system supports point lights,

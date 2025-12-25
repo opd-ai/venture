@@ -1,5 +1,8 @@
 // Package sprites provides procedural projectile sprite generation.
 // Phase 10.2: Projectile Physics System
+//go:build !headless
+// +build !headless
+
 package sprites
 
 import (

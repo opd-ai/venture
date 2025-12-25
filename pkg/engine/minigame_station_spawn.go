@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides mini-game station spawning for Phase 27.3.
 // Spawns interactive game stations in taverns and safe zones.
 package engine

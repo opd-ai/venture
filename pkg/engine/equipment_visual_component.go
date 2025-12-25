@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides equipment visual component for rendering equipped items on sprites.
 package engine
 

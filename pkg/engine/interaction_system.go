@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides interaction system for Phase 11.2 and Phase 11.3.
 // Puzzle Interaction System + Context Actions
 //

@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides the statistics UI for displaying player statistics.
 // This file implements StatisticsUI which handles rendering and interaction
 // for the player statistics dashboard, showing lifetime and session stats

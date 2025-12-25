@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides UI for branching narrative story choices.
 package engine
 

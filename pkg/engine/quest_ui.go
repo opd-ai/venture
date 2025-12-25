@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides quest_ui for game UI.
 package engine
 

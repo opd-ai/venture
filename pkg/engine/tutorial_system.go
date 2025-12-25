@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides tutorial and guidance for new players.
 // This file implements EbitenTutorialSystem which displays step-by-step tutorials
 // and hints to help players learn the game mechanics.

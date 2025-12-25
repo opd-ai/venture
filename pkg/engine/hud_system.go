@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // health bars, stats, and other UI elements.
 package engine
 

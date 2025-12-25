@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides character creation functionality for onboarding new players.
 // This file implements the character creation UI and class selection system that
 // integrates with the tutorial flow for a unified onboarding experience.

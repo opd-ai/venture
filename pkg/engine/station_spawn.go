@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides helper functions for spawning crafting stations in the game world.
 // This file bridges procedural generation (pkg/procgen/station) with the ECS runtime,
 // converting StationData into engine entities with proper components.

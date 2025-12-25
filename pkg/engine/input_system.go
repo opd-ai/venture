@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides player input handling.
 // This file implements InputSystem which processes keyboard, mouse, and touch input
 // for player-controlled entities and game controls.

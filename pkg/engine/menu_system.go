@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides menu system for game UI.
 // This file implements MenuSystem which handles in-game menus including
 // main menu, save/load menus, and menu navigation.

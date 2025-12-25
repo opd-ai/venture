@@ -49,7 +49,7 @@ build: build-server build-client ## Build server and client for current platform
 
 build-server: ## Build server for current platform
 	@echo "Building server..."
-	go build -ldflags="-s -w" -o $(BUILD_DIR)/venture-server ./cmd/server
+	go build -tags headless -ldflags="-s -w" -o $(BUILD_DIR)/venture-server ./cmd/server
 
 build-client: ## Build client for current platform
 	go build -ldflags="-s -w" -o $(BUILD_DIR)/venture-client ./cmd/client

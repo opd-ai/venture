@@ -1,3 +1,6 @@
+//go:build !headless
+// +build !headless
+
 // Package engine provides main menu UI components.
 // This file implements the main menu screen with navigation and rendering.
 package engine

@@ -184,3 +184,56 @@ type House struct {
 
 // Dimensions is a helper for the integration tests.
 type Dimensions = Vector2
+
+// BuildingDefinition contains the parameters needed to procedurally generate a building.
+type BuildingDefinition struct {
+	Type   int    // BuildingType from pkg/procgen/building
+	Style  int    // ArchitecturalStyle from pkg/procgen/building
+	Width  int    // Building width in tiles
+	Height int    // Building height in tiles
+	Floors int    // Number of floors
+	Seed   int64  // Seed for deterministic generation
+}
+
+// Blueprint represents a shareable building design with metadata.
+type Blueprint struct {
+	ID          string               // Unique blueprint identifier
+	Name        string               // User-friendly name
+	Description string               // Detailed description
+	Author      string               // Player ID who created this blueprint
+	GenreID     string               // Genre (fantasy, scifi, horror, etc.)
+	Tags        []string             // Searchable tags (medieval, manor, etc.)
+	Rating      float64              // Average rating (0.0-5.0)
+	RatingCount int                  // Number of ratings
+	Downloads   int                  // Download count
+	CreatedAt   time.Time            // Creation timestamp
+	ModifiedAt  time.Time            // Last modification timestamp
+	BuildingDef *BuildingDefinition  // Building generation parameters
+}
+
+// blueprintIDCounter uses atomic operations for thread-safe ID generation
+var blueprintIDCounter atomic.Int64
+
+// generateBlueprintID generates a unique blueprint ID.
+func generateBlueprintID() string {
+	id := blueprintIDCounter.Add(1)
+	return fmt.Sprintf("bp_%d", id)
+}
+
+// NewBlueprint creates a new blueprint with default metadata.
+func NewBlueprint(name, author, genreID string, buildingDef *BuildingDefinition) *Blueprint {
+	now := time.Now()
+	return &Blueprint{
+		ID:          generateBlueprintID(),
+		Name:        name,
+		Author:      author,
+		GenreID:     genreID,
+		Tags:        []string{},
+		Rating:      0.0,
+		RatingCount: 0,
+		Downloads:   0,
+		CreatedAt:   now,
+		ModifiedAt:  now,
+		BuildingDef: buildingDef,
+	}
+}

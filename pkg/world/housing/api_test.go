@@ -2,6 +2,8 @@ package housing
 
 import (
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen/building"
 )
 
 // TestAPIMatchesDocumentation verifies that the implementation matches the documented API in doc.go
@@ -22,8 +24,8 @@ func TestAPIMatchesDocumentation(t *testing.T) {
 		GenreID: "fantasy",
 		Tags:    []string{"medieval", "manor"},
 		BuildingDef: &BuildingDefinition{
-			Type:   4, // TypeManor value from pkg/procgen/building
-			Style:  0, // StyleMedieval value from pkg/procgen/building
+			Type:   int(building.TypeManor),
+			Style:  int(building.StyleMedieval),
 			Width:  24,
 			Height: 24,
 			Floors: 3,

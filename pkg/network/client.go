@@ -465,6 +465,10 @@ func (c *TCPClient) receiveLoop() {
 		}
 
 		// Check if connection is valid before accessing it
+		// Note: This nil check is an early-exit optimization, not full race prevention.
+		// The connection may still be closed after this point; in that case,
+		// SetReadDeadline and subsequent reads will return errors that are already
+		// handled by readMessageLength/readMessageData.
 		c.mu.RLock()
 		conn := c.conn
 		c.mu.RUnlock()

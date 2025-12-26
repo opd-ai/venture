@@ -658,11 +658,26 @@ func TestDisconnect_MultipleCallsAfterConnection(t *testing.T) {
 
 	// Start goroutines as Connect() would
 	client.wg.Add(2)
-	go client.receiveLoop()
-	go client.sendLoop()
 
-	// Give goroutines time to start and hit EOF
-	time.Sleep(50 * time.Millisecond)
+	// Use channel to ensure goroutines have started before proceeding
+	started := make(chan struct{}, 2)
+	go func() {
+		started <- struct{}{}
+		client.receiveLoop()
+	}()
+	go func() {
+		started <- struct{}{}
+		client.sendLoop()
+	}()
+
+	// Wait for both goroutines to signal they've started
+	<-started
+	<-started
+
+	// Give goroutines a moment to hit EOF and exit gracefully
+	// This is necessary because the server conn is already closed,
+	// so the first read will return EOF and the goroutines will exit
+	time.Sleep(10 * time.Millisecond)
 
 	// First disconnect should work
 	err := client.Disconnect()

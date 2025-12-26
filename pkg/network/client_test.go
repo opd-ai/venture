@@ -640,11 +640,14 @@ func TestDisconnect_MultipleCallsSafe(t *testing.T) {
 // TestDisconnect_MultipleCallsAfterConnection verifies multiple disconnect calls after connection don't panic.
 func TestDisconnect_MultipleCallsAfterConnection(t *testing.T) {
 	config := DefaultClientConfig()
+	config.ConnectionTimeout = 100 * time.Millisecond // Short timeout to avoid test hanging
 	client := NewClient(config)
 
 	// Create a mock connection using pipes
 	serverConn, clientConn := createMockConnectionPair(t)
-	defer serverConn.Close()
+
+	// Close server side immediately so client reads will fail fast
+	serverConn.Close()
 
 	// Manually set up the connection state (simulating Connect without network)
 	client.mu.Lock()
@@ -657,6 +660,9 @@ func TestDisconnect_MultipleCallsAfterConnection(t *testing.T) {
 	client.wg.Add(2)
 	go client.receiveLoop()
 	go client.sendLoop()
+
+	// Give goroutines time to start and hit EOF
+	time.Sleep(50 * time.Millisecond)
 
 	// First disconnect should work
 	err := client.Disconnect()

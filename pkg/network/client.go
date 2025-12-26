@@ -310,55 +310,26 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 		// Read done channel while holding lock to avoid TOCTOU race
 		c.mu.RLock()
 		done := c.done
-		isConnected := c.connected.Load()
 		c.mu.RUnlock()
 
-		// If client was disconnected, exit gracefully
-		if !isConnected {
+		// If done is nil, it means Disconnect() was called, so stop retrying
+		if done == nil {
 			if c.logger != nil {
 				c.logger.Info("reconnection cancelled - client disconnected")
 			}
 			return fmt.Errorf("reconnection cancelled")
 		}
 
-		// Wait with cancellation support if done channel is available
-		if done != nil {
-			select {
-			case <-done:
-				// Client is shutting down, exit gracefully
-				if c.logger != nil {
-					c.logger.Info("reconnection cancelled during shutdown")
-				}
-				return fmt.Errorf("reconnection cancelled")
-			case <-time.After(delay):
-				// Delay completed, continue to next retry
+		// Wait with cancellation support using the done channel
+		select {
+		case <-done:
+			// Client is shutting down, exit gracefully
+			if c.logger != nil {
+				c.logger.Info("reconnection cancelled during shutdown")
 			}
-		} else {
-			// If done is nil, check connected flag periodically during delay
-			// to ensure we can still cancel even if done channel is not available
-			ticker := time.NewTicker(50 * time.Millisecond)
-			timer := time.NewTimer(delay)
-
-			cancelled := false
-			for !cancelled {
-				select {
-				case <-timer.C:
-					// Delay completed, continue to next retry
-					cancelled = true
-				case <-ticker.C:
-					// Check if client was disconnected
-					if !c.connected.Load() {
-						ticker.Stop()
-						timer.Stop()
-						if c.logger != nil {
-							c.logger.Info("reconnection cancelled - client disconnected")
-						}
-						return fmt.Errorf("reconnection cancelled")
-					}
-				}
-			}
-			ticker.Stop()
-			timer.Stop()
+			return fmt.Errorf("reconnection cancelled")
+		case <-time.After(delay):
+			// Delay completed, continue to next retry
 		}
 
 		// Calculate next delay with exponential backoff
@@ -489,7 +460,16 @@ func (c *TCPClient) receiveLoop() {
 		default:
 		}
 
-		c.conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
+		// Check if connection is valid before accessing it
+		c.mu.RLock()
+		conn := c.conn
+		c.mu.RUnlock()
+
+		if conn == nil {
+			return
+		}
+
+		conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
 
 		msgLen, ok := c.readMessageLength(buf)
 		if !ok {
@@ -509,7 +489,15 @@ func (c *TCPClient) receiveLoop() {
 // readMessageLength reads and validates the message length prefix.
 // Returns the message length and true if successful, 0 and false otherwise.
 func (c *TCPClient) readMessageLength(buf []byte) (uint32, bool) {
-	if _, err := c.conn.Read(buf[:4]); err != nil {
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
+	if conn == nil {
+		return 0, false
+	}
+
+	if _, err := conn.Read(buf[:4]); err != nil {
 		c.sendNonBlockingError(fmt.Errorf("read length error: %w", err), true)
 		return 0, false
 	}
@@ -526,7 +514,15 @@ func (c *TCPClient) readMessageLength(buf []byte) (uint32, bool) {
 // readMessageData reads the message data from the connection.
 // Returns true if successful, false if an error occurred.
 func (c *TCPClient) readMessageData(buf []byte, msgLen uint32) bool {
-	if _, err := c.conn.Read(buf[:msgLen]); err != nil {
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
+	if conn == nil {
+		return false
+	}
+
+	if _, err := conn.Read(buf[:msgLen]); err != nil {
 		c.sendNonBlockingError(fmt.Errorf("read data error: %w", err), true)
 		return false
 	}

@@ -342,8 +342,12 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 
 // Disconnect closes the connection to the server.
 func (c *TCPClient) Disconnect() error {
-	// Check if already disconnected without holding the lock
-	if !c.connected.Load() {
+	// Check if already disconnected by checking if done channel is nil
+	c.mu.RLock()
+	alreadyDisconnected := (c.done == nil)
+	c.mu.RUnlock()
+
+	if alreadyDisconnected {
 		return nil
 	}
 

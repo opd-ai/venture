@@ -672,13 +672,13 @@ func TestLoadErrors(t *testing.T) {
 		},
 		{
 			name:    "houses with invalid structure for unmarshal",
-			data:    []byte(`{"houses":{"test":{"HouseID":123}}}`),
+			data:    []byte(`{"houses":{"test":"invalid"}}`),
 			wantErr: true,
 			errMsg:  "failed to unmarshal houses",
 		},
 		{
 			name:    "storage with invalid structure for unmarshal",
-			data:    []byte(`{"houses":{},"storage":{"test":{"StorageID":123}}}`),
+			data:    []byte(`{"houses":{},"storage":{"test":"invalid"}}`),
 			wantErr: true,
 			errMsg:  "failed to unmarshal storage",
 		},

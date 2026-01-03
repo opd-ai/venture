@@ -128,9 +128,11 @@ type TCPClient struct {
 	// Thread safety
 	mu sync.RWMutex
 
-	// Shutdown
-	done chan struct{}
-	wg   sync.WaitGroup
+	// Shutdown - done channel is protected by doneMu for safe closing
+	done     chan struct{}
+	doneMu   sync.Mutex // Guards closing of done channel
+	doneClosed bool     // Tracks if current done channel is closed
+	wg       sync.WaitGroup
 
 	// Logger for network operations
 	logger *logrus.Entry
@@ -193,8 +195,12 @@ func (c *TCPClient) Connect() error {
 		return err
 	}
 
-	// Recreate done channel for reconnection after disconnect
+	// Recreate done channel for reconnection after disconnect.
+	// Must be protected by doneMu to prevent race with Disconnect.
+	c.doneMu.Lock()
 	c.done = make(chan struct{})
+	c.doneClosed = false
+	c.doneMu.Unlock()
 
 	c.setupConnection(conn)
 	c.startConnectionHandlers()
@@ -305,24 +311,24 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 			}).Warn("connection failed, retrying")
 		}
 
-		// Wait before retry with graceful cancellation support
-		// Check done channel during sleep to allow shutdown
-		// Read done channel while holding lock to avoid TOCTOU race
-		c.mu.RLock()
-		done := c.done
-		c.mu.RUnlock()
-
-		// If done is nil, it means Disconnect() was called, so stop retrying
-		if done == nil {
+		// Wait before retry with graceful cancellation support.
+		// The done channel is closed by Disconnect() to signal shutdown.
+		// We use a non-blocking check first to detect immediate cancellation,
+		// then use select with timeout for the actual wait.
+		select {
+		case <-c.done:
+			// Client is shutting down, exit gracefully
 			if c.logger != nil {
 				c.logger.Info("reconnection cancelled - client disconnected")
 			}
 			return fmt.Errorf("reconnection cancelled")
+		default:
+			// Not cancelled yet, proceed to wait
 		}
 
 		// Wait with cancellation support using the done channel
 		select {
-		case <-done:
+		case <-c.done:
 			// Client is shutting down, exit gracefully
 			if c.logger != nil {
 				c.logger.Info("reconnection cancelled during shutdown")
@@ -342,15 +348,6 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 
 // Disconnect closes the connection to the server.
 func (c *TCPClient) Disconnect() error {
-	// Check if already disconnected by checking if done channel is nil
-	c.mu.RLock()
-	alreadyDisconnected := (c.done == nil)
-	c.mu.RUnlock()
-
-	if alreadyDisconnected {
-		return nil
-	}
-
 	if c.logger != nil {
 		c.logger.Info("disconnecting from server")
 	}
@@ -358,20 +355,21 @@ func (c *TCPClient) Disconnect() error {
 	// Set connected to false atomically before signaling shutdown
 	c.connected.Store(false)
 
-	// Acquire lock once to close both done channel and connection
+	// Close done channel to signal goroutines to exit.
+	// Use doneMu to prevent race with Connect() and ensure single close.
+	c.doneMu.Lock()
+	if !c.doneClosed && c.done != nil {
+		close(c.done)
+		c.doneClosed = true
+	}
+	c.doneMu.Unlock()
+
+	// Close connection to unblock any pending I/O operations
 	c.mu.Lock()
-	done := c.done
-	c.done = nil // Set to nil to prevent closing again
 	conn := c.conn
 	c.conn = nil
 	c.mu.Unlock()
 
-	// Close done channel to signal goroutines to exit
-	if done != nil {
-		close(done)
-	}
-
-	// Close connection to unblock any pending I/O operations
 	if conn != nil {
 		conn.Close()
 	}

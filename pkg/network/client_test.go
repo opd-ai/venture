@@ -649,12 +649,17 @@ func TestDisconnect_MultipleCallsAfterConnection(t *testing.T) {
 	// Close server side immediately so client reads will fail fast
 	serverConn.Close()
 
-	// Manually set up the connection state (simulating Connect without network)
+	// Manually set up the connection state (simulating Connect without network).
+	// Must use doneMu to properly synchronize with Disconnect().
 	client.mu.Lock()
 	client.conn = clientConn
 	client.connected.Store(true)
-	client.done = make(chan struct{})
 	client.mu.Unlock()
+
+	client.doneMu.Lock()
+	client.done = make(chan struct{})
+	client.doneClosed = false
+	client.doneMu.Unlock()
 
 	// Start goroutines as Connect() would
 	client.wg.Add(2)
@@ -746,12 +751,17 @@ func TestReconnectAfterDisconnect(t *testing.T) {
 	// Create first connection
 	serverConn1, clientConn1 := createMockConnectionPair(t)
 
-	// Manually set up the first connection
+	// Manually set up the first connection.
+	// Must use doneMu to properly synchronize with Disconnect().
 	client.mu.Lock()
 	client.conn = clientConn1
 	client.connected.Store(true)
-	client.done = make(chan struct{})
 	client.mu.Unlock()
+
+	client.doneMu.Lock()
+	client.done = make(chan struct{})
+	client.doneClosed = false
+	client.doneMu.Unlock()
 
 	client.wg.Add(2)
 	go client.receiveLoop()
@@ -773,12 +783,17 @@ func TestReconnectAfterDisconnect(t *testing.T) {
 	serverConn2, clientConn2 := createMockConnectionPair(t)
 	defer serverConn2.Close()
 
-	// Manually set up the second connection
+	// Manually set up the second connection.
+	// Must use doneMu to properly synchronize with Disconnect().
 	client.mu.Lock()
 	client.conn = clientConn2
 	client.connected.Store(true)
-	client.done = make(chan struct{})
 	client.mu.Unlock()
+
+	client.doneMu.Lock()
+	client.done = make(chan struct{})
+	client.doneClosed = false
+	client.doneMu.Unlock()
 
 	client.wg.Add(2)
 	go client.receiveLoop()

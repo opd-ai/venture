@@ -85,14 +85,10 @@ func sequenceDifference(newer, older uint32) uint32 {
 // within 10 of 95. Also handles wrap-around: sequenceInRange(5, UINT32_MAX-3, 10)
 // returns true because 5 is within 10 of (UINT32_MAX-3) in circular space.
 func sequenceInRange(seq, ref, rangeVal uint32) bool {
-	diff := sequenceDifference(seq, ref)
+	// Calculate differences in both directions
+	forwardDiff := sequenceDifference(seq, ref)
+	backwardDiff := sequenceDifference(ref, seq)
 
-	// Check if seq is ahead of ref by at most rangeVal
-	if diff <= rangeVal {
-		return true
-	}
-
-	// Check if ref is ahead of seq by at most rangeVal (seq is "behind")
-	diff = sequenceDifference(ref, seq)
-	return diff <= rangeVal
+	// Check if either direction is within range
+	return forwardDiff <= rangeVal || backwardDiff <= rangeVal
 }

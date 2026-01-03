@@ -11,7 +11,7 @@
 ## AUDIT SUMMARY
 
 ```
-Total Findings: 3 (3 resolved, 3 remaining)
+Total Findings: 6 (3 resolved, 3 remaining)
 - RESOLVED: 3 (Critical bugs and documentation fixed)
 - EDGE CASE BUG: 2
 - PERFORMANCE ISSUE: 1

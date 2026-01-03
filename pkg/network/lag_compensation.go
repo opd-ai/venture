@@ -285,9 +285,15 @@ func (lc *LagCompensator) GetStats() CompensationStats {
 		stats.TotalSnapshots = 1
 		oldestTime := latest.Timestamp
 
-		// Search for oldest snapshot
-		for seq := latest.Sequence - 1; seq > 0 && seq >= latest.Sequence-200; seq-- {
-			snapshot := lc.snapshots.GetSnapshotAtSequence(seq)
+		// Search for oldest snapshot using wrap-around-safe sequence iteration
+		// We look back up to 200 sequences from the latest
+		// Using uint32 subtraction naturally handles wrap-around
+		for i := uint32(1); i <= 200; i++ {
+			// Calculate the sequence to check, handling wrap-around
+			checkSeq := latest.Sequence - i
+
+			// Try to get the snapshot at this sequence
+			snapshot := lc.snapshots.GetSnapshotAtSequence(checkSeq)
 			if snapshot != nil {
 				stats.TotalSnapshots++
 				if snapshot.Timestamp.Before(oldestTime) {

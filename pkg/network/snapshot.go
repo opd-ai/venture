@@ -119,8 +119,10 @@ func (sm *SnapshotManager) GetSnapshotAtSequence(seq uint32) *WorldSnapshot {
 			return &snapshot
 		}
 
-		// Stop if we reach an uninitialized snapshot (sequence 0)
-		if sm.snapshots[idx].Sequence == 0 {
+		// Stop if we reach an uninitialized snapshot (zero timestamp)
+		// Note: We check timestamp instead of sequence because sequence 0
+		// is valid after uint32 wrap-around
+		if sm.snapshots[idx].Timestamp.IsZero() {
 			break
 		}
 	}
@@ -144,8 +146,9 @@ func (sm *SnapshotManager) GetSnapshotAtTime(t time.Time) *WorldSnapshot {
 		idx := (sm.currentIndex - i + sm.maxSnapshots) % sm.maxSnapshots
 		snapshot := &sm.snapshots[idx]
 
-		// Skip uninitialized snapshots
-		if snapshot.Sequence == 0 {
+		// Skip uninitialized snapshots (check timestamp instead of sequence
+		// because sequence 0 is valid after wrap-around)
+		if snapshot.Timestamp.IsZero() {
 			break
 		}
 
@@ -180,7 +183,8 @@ func (sm *SnapshotManager) findBracketingSnapshots(renderTime time.Time) (*World
 		idx := (sm.currentIndex - i + sm.maxSnapshots) % sm.maxSnapshots
 		snapshot := &sm.snapshots[idx]
 
-		if snapshot.Sequence == 0 {
+		// Check timestamp instead of sequence to detect uninitialized snapshots
+		if snapshot.Timestamp.IsZero() {
 			break
 		}
 
@@ -199,7 +203,8 @@ func (sm *SnapshotManager) findNextSnapshot(currentIdx int, renderTime time.Time
 	nextIdx := (currentIdx + 1) % sm.maxSnapshots
 	nextSnapshot := &sm.snapshots[nextIdx]
 
-	if nextSnapshot.Sequence != 0 &&
+	// Check timestamp instead of sequence to detect uninitialized snapshots
+	if !nextSnapshot.Timestamp.IsZero() &&
 		(nextSnapshot.Timestamp.After(renderTime) || nextSnapshot.Timestamp.Equal(renderTime)) {
 		return nextSnapshot
 	}

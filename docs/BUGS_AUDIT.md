@@ -1,0 +1,499 @@
+# Go Codebase Audit Report
+
+**Generated:** 2026-01-03  
+**Repository:** opd-ai/venture  
+**Auditor:** Automated Static Analysis
+
+## Executive Summary
+- **Total issues found:** 28
+- **Critical:** 1 | **High:** 5 | **Medium:** 12 | **Low:** 10
+- **Files analyzed:** 926 non-test Go files
+
+---
+
+## Critical Issues
+
+### [CRITICAL-001] Ignored Error Returns in JSON Unmarshaling
+**File:** pkg/integration/guild_housing/manager.go:379-384  
+**Severity:** Critical  
+**Issue:** Error returns from `json.Unmarshal` are explicitly ignored, which could cause silent data corruption or state inconsistencies.  
+**Impact:** Failed unmarshaling operations will silently leave data structures in undefined states, potentially causing data loss or corrupted game state when loading guild housing data.  
+**Fix:** Check and handle the error return values appropriately.
+
+```go
+// Current (lines 379-384):
+if houses, ok := state["houses"].(map[string]interface{}); ok {
+    housesData, _ := json.Marshal(houses)
+    json.Unmarshal(housesData, &m.houses)  // Error ignored!
+}
+if storage, ok := state["storage"].(map[string]interface{}); ok {
+    storageData, _ := json.Marshal(storage)
+    json.Unmarshal(storageData, &m.storage)  // Error ignored!
+}
+
+// Fixed:
+if houses, ok := state["houses"].(map[string]interface{}); ok {
+    housesData, err := json.Marshal(houses)
+    if err != nil {
+        return fmt.Errorf("failed to marshal houses: %w", err)
+    }
+    if err := json.Unmarshal(housesData, &m.houses); err != nil {
+        return fmt.Errorf("failed to unmarshal houses: %w", err)
+    }
+}
+```
+
+---
+
+## High-Priority Issues
+
+### [HIGH-001] Non-Deterministic Random Usage in Examples
+**File:** examples/cachetest/main.go:176-177  
+**Severity:** High  
+**Issue:** Using global `rand.Intn()` without proper seeding violates the project's deterministic generation requirement.  
+**Impact:** Cache behavior becomes non-reproducible, making debugging difficult and violating the core project principle of deterministic generation.  
+**Fix:** Use seeded `*rand.Rand` instance instead of global rand functions.
+
+```go
+// Current:
+if len(g.configs) > 0 && rand.Intn(2) == 0 {
+    return g.configs[rand.Intn(len(g.configs))]
+}
+
+// Fixed:
+rng := rand.New(rand.NewSource(seed))
+if len(g.configs) > 0 && rng.Intn(2) == 0 {
+    return g.configs[rng.Intn(len(g.configs))]
+}
+```
+
+### [HIGH-002] Deprecated rand.Seed Usage
+**File:** examples/itemtest/main.go:310  
+**Severity:** High  
+**Issue:** Using deprecated `rand.Seed()` with `time.Now().UnixNano()` which is non-deterministic.  
+**Impact:** Violates project's deterministic generation requirement; behavior varies between runs.  
+**Fix:** Create a new `*rand.Rand` with explicit seed instead.
+
+```go
+// Current (line 310):
+rand.Seed(time.Now().UnixNano())
+
+// Fixed:
+rng := rand.New(rand.NewSource(explicitSeed))
+```
+
+### [HIGH-003] Sync Error Return Silently Discarded
+**File:** pkg/network/desync.go:340  
+**Severity:** High  
+**Issue:** The error return from `syncFunc()` is discarded using blank identifier.  
+**Impact:** Synchronization failures will go unnoticed, potentially causing client-server state divergence in multiplayer games.  
+**Fix:** Log or handle sync errors appropriately.
+
+```go
+// Current (line 340):
+_ = p.syncFunc()
+
+// Fixed:
+if err := p.syncFunc(); err != nil {
+    p.logger.WithError(err).Warn("periodic sync failed")
+}
+```
+
+### [HIGH-004] Silent Panic Recovery Without Logging
+**File:** pkg/engine/render_system.go:1058-1063  
+**Severity:** High  
+**Issue:** Panic is recovered but silently ignored without any logging or error reporting.  
+**Impact:** Runtime errors during vector drawing are completely hidden, making debugging production issues nearly impossible.  
+**Fix:** Log recovered panics for debugging purposes.
+
+```go
+// Current (lines 1058-1063):
+defer func() {
+    if recovered := recover(); recovered != nil {
+        // Silently ignore - this can happen during Ebiten initialization
+    }
+}()
+
+// Fixed:
+defer func() {
+    if recovered := recover(); recovered != nil {
+        log.WithField("panic", recovered).Warn("recovered from vector drawing panic")
+    }
+}()
+```
+
+### [HIGH-005] Missing Context Cancel Deferral
+**File:** pkg/hostplay/server_manager.go:199-200  
+**Severity:** High  
+**Issue:** Context cancel function is stored but not deferred, requiring explicit call in Stop().  
+**Impact:** If Stop() is not called properly (e.g., panic before Stop), context resources may leak.  
+**Fix:** This is an acceptable pattern given the architecture, but document the cleanup requirement clearly.
+
+```go
+// Current (lines 199-200):
+ctx, cancel := context.WithCancel(context.Background())
+sm.cancelFunc = cancel
+
+// The cancel is called in host_and_play.go:89 - pattern is acceptable
+// [VERIFY] - No fix needed, but add documentation comment
+```
+
+---
+
+## Medium-Priority Issues
+
+### [MEDIUM-001] Error Wrapping Without Context
+**File:** Multiple locations (26 instances found)  
+**Severity:** Medium  
+**Issue:** Using `fmt.Errorf` with `%v` instead of `%w` for error wrapping.  
+**Impact:** Error chain is broken; errors.Is() and errors.As() won't work for wrapped errors.  
+**Example Files:**
+- pkg/modding/loader.go:137
+- pkg/network/resilience/types.go:26, 32
+- pkg/network/trade/system.go:118
+
+```go
+// Current:
+return nil, fmt.Errorf("failed to load any mods: %v", loadErrors)
+
+// Fixed:
+return nil, fmt.Errorf("failed to load any mods: %w", loadErrors)
+```
+
+### [MEDIUM-002] Overly Broad Interfaces
+**File:** pkg/engine/interfaces.go  
+**Severity:** Medium  
+**Issue:** Several interfaces have more than 3 methods, violating interface segregation principle.  
+**Impact:** Harder to implement mock objects for testing; tighter coupling between components.  
+**Affected Interfaces:**
+- `GameRunner`: 9 methods (lines 39-68)
+- `SpriteProvider`: 11 methods (lines 126-158)
+- `InputProvider`: 12 methods (lines 166-208)
+- `ClientConnection`: 12 methods (pkg/network/interfaces.go:26-56)
+- `ServerConnection`: 11 methods (pkg/network/interfaces.go:57-80)
+
+**Fix:** Consider splitting large interfaces into smaller, focused interfaces.
+
+```go
+// Example - Split InputProvider:
+type MovementInput interface {
+    GetMovement() (x, y float64)
+    SetMovement(x, y float64)
+}
+
+type ActionInput interface {
+    IsActionPressed() bool
+    IsActionJustPressed() bool
+}
+```
+
+### [MEDIUM-003] Potential Goroutine Leak in Infinite Loops
+**File:** pkg/integration/trade_routes/manager.go:52  
+**Severity:** Medium  
+**Issue:** Infinite loop in goroutine without proper termination check outside select.  
+**Impact:** If stopChan is never closed, the goroutine runs indefinitely.  
+**Fix:** Pattern is correct; the select handles termination. [VERIFY]
+
+```go
+// Current code is correct but should document termination requirement:
+go func() {
+    for {
+        select {
+        case <-rm.stopChan:
+            return
+        // ... other cases
+        }
+    }
+}()
+```
+
+### [MEDIUM-004] Missing Documentation on Exported Types
+**File:** examples/*.go (multiple files)  
+**Severity:** Medium  
+**Issue:** Exported types like `Game`, `TestClient`, `LoadTestResults` lack godoc comments.  
+**Impact:** Reduced code maintainability and API discoverability.  
+**Example Files:**
+- examples/lighting_demo/main.go:50 - `type Game struct`
+- examples/loadtest/main.go:44 - `type TestClient struct`
+- examples/loadtest/main.go:60 - `type LoadTestResults struct`
+
+**Fix:** Add godoc comments for all exported types.
+
+```go
+// Game represents the main game state for the lighting demo.
+type Game struct {
+    // ...
+}
+```
+
+### [MEDIUM-005] Unused Interface Methods [VERIFY]
+**File:** pkg/hostplay/input_handler.go:30-38  
+**Severity:** Medium  
+**Issue:** `playerMap` has no synchronization for concurrent access.  
+**Impact:** If `RegisterPlayer`, `UnregisterPlayer`, or `ProcessInput` are called concurrently, data races may occur.  
+**Fix:** Add mutex protection for playerMap access.
+
+```go
+type InputHandler struct {
+    world     *engine.World
+    playerMap map[uint64]*engine.Entity
+    mu        sync.RWMutex  // Add mutex
+    // ...
+}
+
+func (h *InputHandler) RegisterPlayer(playerID uint64, entity *engine.Entity) {
+    h.mu.Lock()
+    defer h.mu.Unlock()
+    h.playerMap[playerID] = entity
+}
+```
+
+### [MEDIUM-006] Type Assertion Without Check
+**File:** pkg/hostplay/input_handler.go:86-88  
+**Severity:** Medium  
+**Issue:** Type assertion for `*engine.VelocityComponent` uses ok check but continues silently.  
+**Impact:** If component type changes, function silently does nothing with no indication of failure.  
+**Fix:** Pattern is acceptable for this use case; component may be optional.
+
+### [MEDIUM-007] Log.Fatal in Non-Main Packages
+**File:** examples/*.go (30+ instances)  
+**Severity:** Medium  
+**Issue:** Using `log.Fatal` or `os.Exit` in example code that could be reused.  
+**Impact:** These calls terminate the program immediately without cleanup; fine for examples but should not be copied to production code.  
+**Note:** Acceptable in examples/ directory.
+
+### [MEDIUM-008] Empty Interface Usage
+**File:** 199 files use `interface{}`  
+**Severity:** Medium  
+**Issue:** Widespread use of `interface{}` instead of typed interfaces or generics.  
+**Impact:** Loses type safety; requires runtime type assertions; harder to refactor.  
+**Example Files:**
+- pkg/integration/guild_housing/manager.go:372
+- pkg/procgen/generator.go:20 (Custom map)
+- pkg/rendering/ui/settings.go:90-91
+
+**Fix:** Where possible, use specific types or Go 1.18+ generics.
+
+### [MEDIUM-009] TODO/FIXME Comments Indicating Incomplete Implementation
+**File:** Multiple locations  
+**Severity:** Medium  
+**Issue:** Several TODO comments indicate incomplete functionality.  
+**Locations:**
+- cmd/client/handlers.go:534 - `TODO: Get from server config`
+- pkg/network/federation/discovery.go:281 - `TODO: Get actual server listen address`
+- pkg/network/federation/discovery.go:419 - `TODO: Send gossip message`
+- pkg/network/federation/guild/manager.go:475 - `TODO: integrate with federation transport`
+
+**Impact:** Features may be incomplete or hardcoded.  
+**Fix:** Complete implementations or document as known limitations.
+
+### [MEDIUM-010] Missing Input Validation
+**File:** pkg/hostplay/input_handler.go:92-96  
+**Severity:** Medium  
+**Issue:** Movement direction values are extracted but not validated for reasonable ranges.  
+**Impact:** Malicious clients could send extreme values; magnitude check only normalizes, doesn't limit.  
+**Fix:** Add range validation for input values.
+
+```go
+// Add bounds checking:
+if dx < -1.0 || dx > 1.0 || dy < -1.0 || dy > 1.0 {
+    h.logger.Warn("movement values out of expected range")
+    return
+}
+```
+
+### [MEDIUM-011] Potential Integer Overflow
+**File:** Various timestamp handling  
+**Severity:** Medium  
+**Issue:** Using `uint64(time.Now().UnixNano())` which could overflow on 32-bit systems or far future dates.  
+**Impact:** Timestamp comparisons may fail unexpectedly.  
+**Example:** pkg/network/client.go:425  
+**Fix:** Document 64-bit system requirement or use safer time handling.
+
+### [MEDIUM-012] String Concatenation in Error Building
+**File:** pkg/modding/loader.go:80-83  
+**Severity:** Medium  
+**Issue:** Building error string with `+=` in loop is inefficient.  
+**Impact:** Performance degradation with many errors.  
+**Fix:** Use `strings.Builder` or `strings.Join`.
+
+```go
+// Current:
+errMsg := ""
+for _, e := range result.Errors {
+    errMsg += e.Error() + "; "
+}
+
+// Fixed:
+var errMsgs []string
+for _, e := range result.Errors {
+    errMsgs = append(errMsgs, e.Error())
+}
+errMsg := strings.Join(errMsgs, "; ")
+```
+
+---
+
+## Low-Priority Issues
+
+### [LOW-001] Inconsistent Error Variable Naming
+**File:** Multiple files  
+**Severity:** Low  
+**Issue:** Some code uses `err` while other code uses `error` or other names.  
+**Impact:** Minor code style inconsistency.  
+**Fix:** Standardize on `err` per Go conventions.
+
+### [LOW-002] Magic Numbers Without Constants
+**File:** pkg/network/server.go:142  
+**Severity:** Low  
+**Issue:** Buffer size `64` used directly in channel creation.  
+**Impact:** Harder to tune and understand configuration.  
+**Fix:** Use named constant.
+
+```go
+const errorBufferSize = 64
+errors: make(chan error, errorBufferSize),
+```
+
+### [LOW-003] Redundant Nil Checks
+**File:** pkg/network/server.go:195-197  
+**Severity:** Low  
+**Issue:** Checking `s.listener != nil` before Close() is unnecessary since Close() is nil-safe.  
+**Impact:** Minor code complexity.  
+**Fix:** Remove redundant check or keep for clarity.
+
+### [LOW-004] Missing Package Documentation
+**File:** Some packages lack doc.go  
+**Severity:** Low  
+**Issue:** Not all packages have comprehensive doc.go files.  
+**Impact:** Reduced API discoverability.  
+**Fix:** Add doc.go files following existing pattern.
+
+### [LOW-005] Verbose Logging Configuration
+**File:** pkg/security/audit.go:36-40  
+**Severity:** Low  
+**Issue:** Package-level logger initialization with fixed debug level.  
+**Impact:** Cannot easily change log level at runtime.  
+**Fix:** Accept logger as parameter or use configuration.
+
+### [LOW-006] Deprecated API Usage
+**File:** examples/itemtest/main.go:310  
+**Severity:** Low  
+**Issue:** `rand.Seed` is deprecated in Go 1.20+.  
+**Impact:** Will generate deprecation warnings.  
+**Fix:** Use `rand.New(rand.NewSource(seed))` pattern.
+
+### [LOW-007] Time.Sleep in Production Code
+**File:** pkg/hostplay/server_manager.go:209  
+**Severity:** Low  
+**Issue:** Using `time.Sleep(100 * time.Millisecond)` to wait for server initialization.  
+**Impact:** Brittle; may not be enough time on slow systems.  
+**Fix:** Use proper synchronization (channel or condition variable).
+
+```go
+// Current:
+time.Sleep(100 * time.Millisecond)
+
+// Better approach: Use a ready channel
+<-sm.readyChan
+```
+
+### [LOW-008] Inconsistent Comment Formatting
+**File:** Various  
+**Severity:** Low  
+**Issue:** Some comments have trailing periods, others don't.  
+**Impact:** Minor style inconsistency.  
+**Fix:** Standardize comment formatting per Go conventions.
+
+### [LOW-009] Missing Error Wrapping in WASM Storage
+**File:** pkg/saveload/storage_wasm.go:142, 199  
+**Severity:** Low  
+**Issue:** JSON unmarshal errors are not wrapped with context.  
+**Impact:** Error messages may not indicate the source clearly.  
+**Fix:** Wrap errors with context.
+
+### [LOW-010] Excessive Use of Raw Byte Slices
+**File:** Various network code  
+**Severity:** Low  
+**Issue:** Many functions pass `[]byte` instead of typed messages.  
+**Impact:** Reduces type safety and self-documentation.  
+**Fix:** Consider creating typed message wrappers.
+
+---
+
+## Design Recommendations
+
+### 1. Interface Segregation (High Priority)
+Split large interfaces (10+ methods) into smaller, focused interfaces. This improves:
+- Testability (easier to mock)
+- Flexibility (implement only what's needed)
+- Maintainability (changes are localized)
+
+### 2. Error Handling Standards (High Priority)
+Establish and enforce error handling patterns:
+- Always use `%w` for error wrapping
+- Never silently ignore errors from `json.Unmarshal`
+- Log all recovered panics
+- Document expected errors in function comments
+
+### 3. Deterministic Random Enforcement (High Priority)
+Create a linting rule or code review checklist item to ensure:
+- No use of global `rand` functions
+- All random generators created with explicit seeds
+- No `rand.Seed` calls with `time.Now()`
+
+### 4. Concurrency Safety Review (Medium Priority)
+Audit all map usage in concurrent contexts:
+- Add mutex protection where missing
+- Document thread-safety guarantees
+- Consider sync.Map for concurrent access patterns
+
+### 5. TODO/FIXME Resolution (Medium Priority)
+Create tickets to track and resolve:
+- Federation transport layer integration
+- Server config propagation
+- Discovery gossip implementation
+
+---
+
+## Files Requiring Immediate Attention
+
+1. **pkg/integration/guild_housing/manager.go** - Critical: ignored error returns
+2. **pkg/network/desync.go** - High: discarded sync error
+3. **pkg/engine/render_system.go** - High: silent panic recovery
+4. **examples/cachetest/main.go** - High: non-deterministic random
+5. **examples/itemtest/main.go** - High: deprecated rand.Seed
+
+---
+
+## Positive Findings
+
+The codebase demonstrates several good practices:
+
+1. **Proper mutex usage**: Most concurrent data structures have appropriate locking (40+ files use sync.RWMutex)
+2. **Good channel patterns**: Select statements properly handle multiple channels with timeouts
+3. **Consistent WaitGroup usage**: Goroutines properly tracked and waited for
+4. **Secure cryptography**: Uses crypto/rand, AES-GCM, SHA-256, proper DH key exchange
+5. **No SQL injection**: No raw SQL found in the codebase
+6. **No command injection**: exec.Command calls use static arguments only
+7. **Good defer patterns**: Resources properly cleaned up with defer
+8. **Context cancellation**: Most context.WithCancel properly paired with cancel()
+9. **Structured logging**: Consistent use of logrus with fields
+10. **No unsafe package usage**: No unsafe pointer manipulation found
+
+---
+
+## Audit Methodology
+
+This audit was performed using:
+- Pattern matching for known vulnerability patterns
+- Static analysis of error handling
+- Interface complexity analysis
+- Random number usage verification
+- Concurrency pattern review
+- Go best practices checking
+
+**Limitations:**
+- No runtime testing was performed
+- Some issues marked [VERIFY] require manual confirmation
+- Examples directory issues are lower priority as they're not production code

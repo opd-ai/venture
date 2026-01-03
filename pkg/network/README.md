@@ -106,6 +106,15 @@ All messages use length-prefixed framing: `[4 bytes: length][N bytes: data]`
 | StateUpdate | timestamp (8) + entityID (8) + priority (1) + sequence (4) + components |
 | InputCommand | playerID (8) + timestamp (8) + sequence (4) + type + data |
 
+### Sequence Numbers
+
+Sequence numbers are monotonically increasing counters included in both `StateUpdate` and `InputCommand` messages. Since the protocol uses TCP (which guarantees in-order delivery), sequence numbers are **not validated for ordering**. They are used for:
+
+- **Debugging**: Correlating logs and tracing message flow
+- **Lag Compensation**: Identifying game state at specific points in time
+- **Prediction Reconciliation**: Matching client predictions to server confirmations
+- **Future UDP Support**: If the protocol is extended to support UDP, sequence validation can be added
+
 ## Component Serialization
 
 Supported components via `ComponentSerializer`:

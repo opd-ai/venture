@@ -28,7 +28,13 @@ type StateUpdate struct {
 	// Low priority for cosmetic updates (animations, particles)
 	Priority uint8
 
-	// SequenceNumber for ordering and detecting packet loss
+	// SequenceNumber is a monotonically increasing counter for each state update.
+	// Since TCP guarantees in-order delivery, this is primarily used for:
+	// - Debugging and logging (correlating updates)
+	// - Lag compensation (identifying state at specific points in time)
+	// - Client-side prediction reconciliation
+	// - Future UDP support (if ordering validation is needed)
+	// Note: Ordering validation is not performed since TCP handles this.
 	SequenceNumber uint32
 }
 
@@ -40,7 +46,12 @@ type InputCommand struct {
 	// Timestamp when the input was generated (client time)
 	Timestamp uint64
 
-	// SequenceNumber for input ordering
+	// SequenceNumber is a monotonically increasing counter for each input command.
+	// Since TCP guarantees in-order delivery, this is primarily used for:
+	// - Debugging and logging (correlating inputs with server responses)
+	// - Client-side prediction reconciliation (matching predictions to server confirmations)
+	// - Future UDP support (if ordering validation is needed)
+	// Note: Ordering validation is not performed since TCP handles this.
 	SequenceNumber uint32
 
 	// InputType identifies the type of input (move, attack, use item, etc.)

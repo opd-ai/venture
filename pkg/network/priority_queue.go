@@ -106,6 +106,33 @@ func (pq *StateUpdatePriorityQueue) Push(update *StateUpdate) bool {
 	return true
 }
 
+// PushWithCallback adds a state update to the queue and calls the appropriate callback
+// while still holding the lock. This ensures atomicity between the queue operation and
+// any associated bookkeeping (like stats recording).
+// onSuccess is called if the push succeeds, onFail is called if the queue is full.
+// Either callback may be nil if no action is needed for that case.
+func (pq *StateUpdatePriorityQueue) PushWithCallback(update *StateUpdate, onSuccess, onFail func()) bool {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	if len(pq.heap) >= pq.cap {
+		if onFail != nil {
+			onFail()
+		}
+		return false
+	}
+
+	item := &priorityItem{
+		update:   update,
+		priority: update.Priority,
+	}
+	heap.Push(&pq.heap, item)
+	if onSuccess != nil {
+		onSuccess()
+	}
+	return true
+}
+
 // Pop removes and returns the highest priority state update.
 // Returns nil if the queue is empty.
 func (pq *StateUpdatePriorityQueue) Pop() *StateUpdate {

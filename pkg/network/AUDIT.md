@@ -11,12 +11,12 @@
 ## AUDIT SUMMARY
 
 ```
-Total Findings: 6 (3 resolved, 3 remaining)
-- RESOLVED: 3 (Critical bugs and documentation fixed)
-- EDGE CASE BUG: 2
+Total Findings: 6 (4 resolved, 2 remaining)
+- RESOLVED: 4 (Critical bugs, atomicity fix, and documentation fixed)
+- EDGE CASE BUG: 1
 - PERFORMANCE ISSUE: 1
 
-Overall Assessment: The network package is well-implemented with good test coverage (82.6% as documented). The critical bugs (deadlock risk, infinite retry loop) and documentation gap (sequence number purpose) have been fixed. Remaining issues are medium/low severity related to edge cases and minor performance optimizations. The package exhibits strong design patterns with interface-based architecture and comprehensive feature set.
+Overall Assessment: The network package is well-implemented with good test coverage (82.6% as documented). The critical bugs (deadlock risk, infinite retry loop), stats atomicity issue, and documentation gap (sequence number purpose) have been fixed. Remaining issues are medium/low severity related to edge cases and minor performance optimizations. The package exhibits strong design patterns with interface-based architecture and comprehensive feature set.
 ```
 
 ---
@@ -41,58 +41,17 @@ Overall Assessment: The network package is well-implemented with good test cover
 **Fixed In:** protocol.go, README.md  
 **Resolution:** Updated documentation to clarify that sequence numbers are used for debugging, lag compensation, and prediction reconciliation - not for ordering validation since TCP handles that. Added "Sequence Numbers" section to README.md explaining their purpose.
 
+### Resolved: Priority Queue Drop Behavior Not Atomic (Originally Finding 1 in remaining)
+
+**Status:** ✅ FIXED  
+**Fixed In:** priority_queue.go, server.go  
+**Resolution:** Added new `PushWithCallback` method to `StateUpdatePriorityQueue` that accepts success/failure callback functions and calls them while still holding the queue lock. Updated `sendStateUpdate()` in `server.go` to use this method, ensuring that stats recording (`RecordSend`/`RecordDrop`) happens atomically with the push operation. This prevents race conditions between the queue operation result and stats updates under high concurrency.
+
 ---
 
 ## REMAINING FINDINGS
 
 ### Finding 1
-
-```
-### EDGE CASE BUG: Priority Queue Drop Behavior Not Atomic
-**File:** server.go:683-697
-**Severity:** Medium
-**Description:** In clientConnection.sendStateUpdate(), the priority queue push operation and the stats recording are not atomic. The code checks if Push() succeeds and records stats accordingly, but between the check and the stats recording, the queue state could change under high concurrency. This could lead to incorrect drop statistics.
-
-**Expected Behavior:** Queue operations and their stat recording should be atomic to ensure accurate monitoring.
-
-**Actual Behavior:** The operation sequence is: (1) Push to queue, (2) Check result, (3) Record stats. Between (2) and (3), other threads could modify queue state.
-
-**Impact:** Drop statistics could be slightly inaccurate under high load, leading to incorrect capacity planning or missed congestion warnings. This is especially problematic for the buffer monitoring system that relies on accurate drop counts.
-
-**Reproduction:**
-1. Create high-concurrency scenario with multiple threads sending updates to same client
-2. Monitor drop statistics
-3. Compare actual queue state with recorded drops
-4. Observe potential inconsistencies under race conditions
-
-**Code Reference:**
-```go
-func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	if !c.connected {
-		return
-	}
-
-	// ISSUE: Non-atomic operation sequence
-	if c.stateUpdateQueue.Push(update) {  // (1) Push
-		c.stateUpdateStats.RecordSend()    // (2) Record - not atomic with (1)
-		
-		select {
-		case c.updateSignal <- struct{}{}:
-		default:
-		}
-	} else {
-		c.stateUpdateStats.RecordDrop()    // (3) Record drop - not atomic
-	}
-}
-```
-
-**Recommended Fix:** Use atomic operations or move stats recording into the Push() method to ensure atomicity.
-```
-
-### Finding 2
 
 ```
 ### EDGE CASE BUG: Snapshot Manager Circular Buffer Index Wrap-Around Not Validated
@@ -128,7 +87,7 @@ for seq := latest.Sequence - 1; seq > 0 && seq >= latest.Sequence-200; seq-- {
 **Recommended Fix:** Use modular arithmetic for sequence comparisons or document the limitation and server restart requirements before wrap-around.
 ```
 
-### Finding 3
+### Finding 2
 
 ```
 ### PERFORMANCE ISSUE: Client Done Channel Checked in Hot Path Without Buffering
@@ -170,11 +129,10 @@ for {
 ## RECOMMENDATIONS
 
 ### Medium Priority (Medium Severity)
-1. **Fix Stats Atomicity** (Finding 1): Make queue operations and stats recording atomic
-2. **Handle Sequence Wrap-Around** (Finding 2): Add explicit wrap-around handling for long-running servers
+1. **Handle Sequence Wrap-Around** (Finding 1): Add explicit wrap-around handling for long-running servers
 
 ### Low Priority (Low Severity)
-3. **Optimize Hot Path** (Finding 3): Consider removing select from receive loop hot path
+2. **Optimize Hot Path** (Finding 2): Consider removing select from receive loop hot path
 
 ### Code Quality Improvements
 - Add integration tests for reconnection scenarios
@@ -192,7 +150,7 @@ The network package demonstrates several strengths:
 4. **Buffer Monitoring**: Excellent observability with BufferStats system
 5. **High-Latency Support**: Thoughtful design for Tor/onion services with appropriate timeouts
 6. **Thread Safety**: Consistent use of sync.RWMutex for safe concurrent access
-7. **Critical Bugs Fixed**: Client disconnect deadlock, infinite retry loop, and sequence number documentation have been resolved
+7. **Critical Bugs Fixed**: Client disconnect deadlock, infinite retry loop, stats atomicity, and sequence number documentation have been resolved
 
 The remaining issues are medium/low severity and do not indicate fundamental design flaws. The package is production-ready for typical use cases.
 

@@ -31,7 +31,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 **Current Version:** 8.0.0 Production ✅  
 **Ready for Release:** All V4, V5, V6, V7, and V8 features complete
 
-Venture has achieved **8.0 readiness** with player housing, guild systems, advanced physics, WebRTC federation, deep AI, and server modding. All core features operational with 82.4% test coverage and 60+ FPS performance.
+Venture has achieved **8.0 readiness** with player housing, guild systems, advanced physics, WebRTC federation, deep AI, and server modding. All core features operational with 85.5% test coverage and 60+ FPS performance.
 
 **Version 8.0 Complete (Housing, Guilds & Advanced Systems):**
 - ✅ **V4.0 Complete** (Phases 21-30): Vehicles, companions, books, expanded magic, character classes, expressions, mini-games, reputation, adaptive music
@@ -62,7 +62,7 @@ Venture has achieved **8.0 readiness** with player housing, guild systems, advan
 **Performance Maintained:**
 - 89 FPS with 2000 entities (48% above 60 FPS target, v8.0 with all systems)
 - 120MB memory (76% below 500MB budget, v8.0 with housing+guilds+physics)
-- 82.4% test coverage (26% above 65% requirement)
+- 85.5% test coverage (20.5 percentage points above 65% requirement)
 - Sprite cache hit rate: 95.9%
 
 ## Quick Start

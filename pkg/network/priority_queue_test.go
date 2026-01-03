@@ -1,6 +1,7 @@
 package network
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -232,6 +233,148 @@ func TestPriorityQueue_CustomPriorities(t *testing.T) {
 		if popped.EntityID != expectedID {
 			t.Errorf("At position %d: expected EntityID %d, got %d", i, expectedID, popped.EntityID)
 		}
+	}
+}
+
+func TestPriorityQueue_PushWithCallback_Success(t *testing.T) {
+	pq := NewStateUpdatePriorityQueue(10)
+	update := &StateUpdate{
+		EntityID: 1,
+		Priority: PriorityNormal,
+	}
+
+	successCalled := false
+	failCalled := false
+
+	result := pq.PushWithCallback(update,
+		func() { successCalled = true },
+		func() { failCalled = true },
+	)
+
+	if !result {
+		t.Error("Expected PushWithCallback to return true")
+	}
+	if !successCalled {
+		t.Error("Expected onSuccess callback to be called")
+	}
+	if failCalled {
+		t.Error("Expected onFail callback not to be called")
+	}
+	if pq.Len() != 1 {
+		t.Errorf("Expected queue length 1, got %d", pq.Len())
+	}
+}
+
+func TestPriorityQueue_PushWithCallback_Failure(t *testing.T) {
+	pq := NewStateUpdatePriorityQueue(2)
+
+	// Fill the queue
+	pq.Push(&StateUpdate{EntityID: 1, Priority: PriorityNormal})
+	pq.Push(&StateUpdate{EntityID: 2, Priority: PriorityNormal})
+
+	successCalled := false
+	failCalled := false
+
+	// Try to push when full
+	result := pq.PushWithCallback(&StateUpdate{EntityID: 3, Priority: PriorityNormal},
+		func() { successCalled = true },
+		func() { failCalled = true },
+	)
+
+	if result {
+		t.Error("Expected PushWithCallback to return false when queue is full")
+	}
+	if successCalled {
+		t.Error("Expected onSuccess callback not to be called")
+	}
+	if !failCalled {
+		t.Error("Expected onFail callback to be called")
+	}
+	if pq.Len() != 2 {
+		t.Errorf("Expected queue length 2, got %d", pq.Len())
+	}
+}
+
+func TestPriorityQueue_PushWithCallback_NilCallbacks(t *testing.T) {
+	pq := NewStateUpdatePriorityQueue(10)
+	update := &StateUpdate{EntityID: 1, Priority: PriorityNormal}
+
+	// Test with nil callbacks - should not panic
+	result := pq.PushWithCallback(update, nil, nil)
+
+	if !result {
+		t.Error("Expected PushWithCallback to return true")
+	}
+	if pq.Len() != 1 {
+		t.Errorf("Expected queue length 1, got %d", pq.Len())
+	}
+}
+
+func TestPriorityQueue_PushWithCallback_NilFailCallback(t *testing.T) {
+	pq := NewStateUpdatePriorityQueue(1)
+
+	// Fill the queue
+	pq.Push(&StateUpdate{EntityID: 1, Priority: PriorityNormal})
+
+	// Test with nil onFail callback - should not panic
+	result := pq.PushWithCallback(&StateUpdate{EntityID: 2, Priority: PriorityNormal}, nil, nil)
+
+	if result {
+		t.Error("Expected PushWithCallback to return false when queue is full")
+	}
+	if pq.Len() != 1 {
+		t.Errorf("Expected queue length 1, got %d", pq.Len())
+	}
+}
+
+func TestPriorityQueue_PushWithCallback_AtomicityUnderConcurrency(t *testing.T) {
+	// This test verifies that callbacks are called atomically with the push operation
+	// by using concurrent goroutines that push and track stats.
+	pq := NewStateUpdatePriorityQueue(100)
+
+	successCount := 0
+	failCount := 0
+	var mu sync.Mutex
+
+	// Start 10 goroutines that each try to push 20 items
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(base int) {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				update := &StateUpdate{
+					EntityID: uint64(base*20 + j),
+					Priority: PriorityNormal,
+				}
+				pq.PushWithCallback(update,
+					func() {
+						mu.Lock()
+						successCount++
+						mu.Unlock()
+					},
+					func() {
+						mu.Lock()
+						failCount++
+						mu.Unlock()
+					},
+				)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// 10 goroutines * 20 items = 200 total attempts
+	// Queue capacity is 100, so we expect exactly 100 successes and 100 failures
+	if successCount != 100 {
+		t.Errorf("Expected 100 successful pushes, got %d", successCount)
+	}
+	if failCount != 100 {
+		t.Errorf("Expected 100 failed pushes, got %d", failCount)
+	}
+	if pq.Len() != 100 {
+		t.Errorf("Expected queue length 100, got %d", pq.Len())
 	}
 }
 

@@ -680,20 +680,27 @@ func (c *clientConnection) sendStateUpdate(update *StateUpdate) {
 		return
 	}
 
-	// Push to priority queue
-	if c.stateUpdateQueue.Push(update) {
-		c.stateUpdateStats.RecordSend()
+	// Push to priority queue with atomic stats recording.
+	// Using PushWithCallback ensures the stats are recorded while still
+	// holding the queue lock, preventing race conditions between the push
+	// result and the stats update under high concurrency.
+	c.stateUpdateQueue.PushWithCallback(update,
+		func() {
+			// onSuccess: record send and signal the send goroutine
+			c.stateUpdateStats.RecordSend()
 
-		// Signal the send goroutine (non-blocking)
-		select {
-		case c.updateSignal <- struct{}{}:
-		default:
-			// Channel buffer full, goroutine will process existing signal
-		}
-	} else {
-		// Queue is full, drop the update
-		c.stateUpdateStats.RecordDrop()
-	}
+			// Signal the send goroutine (non-blocking)
+			select {
+			case c.updateSignal <- struct{}{}:
+			default:
+				// Channel buffer full, goroutine will process existing signal
+			}
+		},
+		func() {
+			// onFail: queue is full, record drop
+			c.stateUpdateStats.RecordDrop()
+		},
+	)
 }
 
 // GetBufferStats returns snapshots of all server buffer statistics.

@@ -1,6 +1,7 @@
 package guild_housing
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
@@ -641,6 +642,61 @@ func TestSaveLoad(t *testing.T) {
 	}
 	if loadedStorage.GuildID != "guild-001" {
 		t.Errorf("loaded storage GuildID = %v, want %v", loadedStorage.GuildID, "guild-001")
+	}
+}
+
+func TestLoadErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "invalid JSON",
+			data:    []byte(`{invalid json`),
+			wantErr: true,
+			errMsg:  "",
+		},
+		{
+			name:    "empty JSON object",
+			data:    []byte(`{}`),
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "valid houses and storage",
+			data:    []byte(`{"houses":{},"storage":{}}`),
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "houses with invalid structure for unmarshal",
+			data:    []byte(`{"houses":{"test":{"HouseID":123}}}`),
+			wantErr: true,
+			errMsg:  "failed to unmarshal houses",
+		},
+		{
+			name:    "storage with invalid structure for unmarshal",
+			data:    []byte(`{"houses":{},"storage":{"test":{"StorageID":123}}}`),
+			wantErr: true,
+			errMsg:  "failed to unmarshal storage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewManager()
+			err := manager.Load(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && tt.errMsg != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("Load() error = %v, want error containing %q", err, tt.errMsg)
+				}
+			}
+		})
 	}
 }
 

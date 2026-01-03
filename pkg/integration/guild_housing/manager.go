@@ -375,13 +375,23 @@ func (m *Manager) Load(data []byte) error {
 	}
 
 	if houses, ok := state["houses"].(map[string]interface{}); ok {
-		housesData, _ := json.Marshal(houses)
-		json.Unmarshal(housesData, &m.houses)
+		housesData, err := json.Marshal(houses)
+		if err != nil {
+			return fmt.Errorf("failed to marshal houses: %w", err)
+		}
+		if err := json.Unmarshal(housesData, &m.houses); err != nil {
+			return fmt.Errorf("failed to unmarshal houses: %w", err)
+		}
 	}
 
 	if storage, ok := state["storage"].(map[string]interface{}); ok {
-		storageData, _ := json.Marshal(storage)
-		json.Unmarshal(storageData, &m.storage)
+		storageData, err := json.Marshal(storage)
+		if err != nil {
+			return fmt.Errorf("failed to marshal storage: %w", err)
+		}
+		if err := json.Unmarshal(storageData, &m.storage); err != nil {
+			return fmt.Errorf("failed to unmarshal storage: %w", err)
+		}
 	}
 
 	return nil

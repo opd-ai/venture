@@ -42,6 +42,27 @@ type ServerConfig struct {
 }
 
 // ServerManager manages the lifecycle of an in-process game server.
+//
+// # Lifecycle and Cleanup
+//
+// ServerManager uses a context-based shutdown pattern where the cancel function
+// is stored in cancelFunc and must be explicitly called via Stop(). This design
+// provides graceful shutdown control and allows the server to clean up resources
+// in a coordinated manner.
+//
+// Callers MUST ensure Stop() is called when the server is no longer needed,
+// ideally using defer immediately after Start():
+//
+//	sm, err := NewServerManager(config, logger)
+//	if err != nil {
+//	    return err
+//	}
+//	if err := sm.Start(); err != nil {
+//	    return err
+//	}
+//	defer sm.Stop() // Ensures cleanup even if panic occurs
+//
+// Failure to call Stop() may result in goroutine and context resource leaks.
 type ServerManager struct {
 	config           *ServerConfig
 	logger           *logrus.Logger
@@ -53,7 +74,7 @@ type ServerManager struct {
 	stateBroadcaster *StateBroadcaster
 	address          string
 	port             int
-	cancelFunc       context.CancelFunc
+	cancelFunc       context.CancelFunc // Must be called via Stop() for proper cleanup
 	wg               sync.WaitGroup
 	mu               sync.RWMutex
 	running          bool
@@ -195,7 +216,9 @@ func (sm *ServerManager) Start() error {
 	sm.inputHandler = NewInputHandler(sm.world, loggerEntry)
 	sm.stateBroadcaster = NewStateBroadcaster(sm.world, sm.config.TickRate, loggerEntry)
 
-	// Create context for shutdown
+	// Create context for shutdown coordination.
+	// The cancel function is stored and MUST be called via Stop() for proper cleanup.
+	// This pattern enables graceful shutdown with resource cleanup guarantees.
 	ctx, cancel := context.WithCancel(context.Background())
 	sm.cancelFunc = cancel
 
@@ -446,6 +469,23 @@ func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.
 }
 
 // Stop gracefully stops the server and waits for the goroutine to exit.
+//
+// This method calls the stored cancel function to signal shutdown to the server
+// goroutine, then waits (with a 5-second timeout) for all background work to complete.
+// Stop is idempotent and safe to call multiple times.
+//
+// Callers should defer Stop() after successful Start() to ensure cleanup:
+//
+//	sm, err := NewServerManager(config, logger)
+//	if err != nil {
+//	    return err
+//	}
+//	if err := sm.Start(); err != nil {
+//	    return err
+//	}
+//	defer sm.Stop() // Ensures cleanup even on panic
+//
+// Returns an error if shutdown does not complete within 5 seconds.
 func (sm *ServerManager) Stop() error {
 	sm.mu.Lock()
 	if !sm.running {

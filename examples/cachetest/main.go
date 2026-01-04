@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
@@ -55,8 +56,6 @@ func NewGame(cacheCapacity int) *Game {
 
 // generateRandomConfig creates a random sprite configuration.
 func (g *Game) generateRandomConfig() sprites.Config {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	spriteTypes := []sprites.SpriteType{
 		sprites.SpriteEntity,
 		sprites.SpriteItem,
@@ -65,13 +64,13 @@ func (g *Game) generateRandomConfig() sprites.Config {
 	}
 
 	return sprites.Config{
-		Type:       spriteTypes[rng.Intn(len(spriteTypes))],
+		Type:       spriteTypes[g.rng.Intn(len(spriteTypes))],
 		Width:      spriteSize,
 		Height:     spriteSize,
-		Seed:       rng.Int63(),
+		Seed:       g.rng.Int63(),
 		GenreID:    g.genres[g.genreIndex],
-		Complexity: 0.3 + rng.Float64()*0.4, // 0.3-0.7
-		Variation:  rng.Intn(3),
+		Complexity: 0.3 + g.rng.Float64()*0.4, // 0.3-0.7
+		Variation:  g.rng.Intn(3),
 	}
 }
 
@@ -103,53 +102,47 @@ func (g *Game) handleInput() error {
 
 // handlePauseKey toggles pause state when space is pressed.
 func (g *Game) handlePauseKey() {
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		g.paused = !g.paused
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 // handleClearKey clears cache and resets counters when C is pressed.
 func (g *Game) handleClearKey() {
-	if ebiten.IsKeyPressed(ebiten.KeyC) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		g.cachedGen.ClearCache()
 		g.configs = g.configs[:0]
 		g.generatedCount = 0
 		g.totalRequests = 0
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 // handleGenreKey cycles through genres when G is pressed.
 func (g *Game) handleGenreKey() {
-	if ebiten.IsKeyPressed(ebiten.KeyG) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyG) {
 		g.genreIndex = (g.genreIndex + 1) % len(g.genres)
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 // handleStatsKey toggles stats display when S is pressed.
 func (g *Game) handleStatsKey() {
-	if ebiten.IsKeyPressed(ebiten.KeyS) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		g.showStats = !g.showStats
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 // handleSpeedKeys adjusts update interval with +/- keys.
 func (g *Game) handleSpeedKeys() {
-	if ebiten.IsKeyPressed(ebiten.KeyEqual) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
 		if g.updateInterval > 100*time.Millisecond {
 			g.updateInterval -= 100 * time.Millisecond
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyMinus) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
 		if g.updateInterval < 2*time.Second {
 			g.updateInterval += 100 * time.Millisecond
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 

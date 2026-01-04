@@ -10,6 +10,8 @@ import (
 	"hash"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // DesyncType represents the category of desync detected.
@@ -308,14 +310,22 @@ type PeriodicSyncManager struct {
 	stopChan chan struct{}
 	running  bool
 	mu       sync.Mutex
+	logger   *logrus.Entry
 }
 
 // NewPeriodicSyncManager creates a manager for periodic full sync.
-func NewPeriodicSyncManager(detector *DesyncDetector, syncFunc func() error) *PeriodicSyncManager {
+// If logger is nil, a default logger with warn level will be created.
+func NewPeriodicSyncManager(detector *DesyncDetector, syncFunc func() error, logger *logrus.Entry) *PeriodicSyncManager {
+	if logger == nil {
+		log := logrus.New()
+		log.SetLevel(logrus.WarnLevel)
+		logger = logrus.NewEntry(log)
+	}
 	return &PeriodicSyncManager{
 		detector: detector,
 		syncFunc: syncFunc,
 		stopChan: make(chan struct{}),
+		logger:   logger,
 	}
 }
 
@@ -337,7 +347,9 @@ func (p *PeriodicSyncManager) Start() {
 			select {
 			case <-p.ticker.C:
 				if p.syncFunc != nil {
-					_ = p.syncFunc()
+					if err := p.syncFunc(); err != nil {
+						p.logger.WithError(err).Warn("periodic sync failed")
+					}
 					p.detector.MarkFullSync()
 				}
 			case <-p.stopChan:

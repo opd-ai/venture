@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -326,7 +327,7 @@ func TestPeriodicSyncManager_StartStop(t *testing.T) {
 		return nil
 	}
 
-	manager := NewPeriodicSyncManager(detector, syncFunc)
+	manager := NewPeriodicSyncManager(detector, syncFunc, nil)
 
 	manager.Start()
 	time.Sleep(150 * time.Millisecond)
@@ -353,6 +354,37 @@ func TestPeriodicSyncManager_StartStop(t *testing.T) {
 
 	if finalCount != oldCount {
 		t.Errorf("sync occurred after stop: before=%d, after=%d", oldCount, finalCount)
+	}
+}
+
+func TestPeriodicSyncManager_ErrorLogging(t *testing.T) {
+	detector := NewDesyncDetector()
+	detector.SetFullSyncInterval(50 * time.Millisecond)
+
+	var mu sync.Mutex
+	syncCallCount := 0
+	syncFunc := func() error {
+		mu.Lock()
+		syncCallCount++
+		mu.Unlock()
+		// Return an error to test logging
+		return fmt.Errorf("test sync error")
+	}
+
+	// Create manager with nil logger (uses default)
+	manager := NewPeriodicSyncManager(detector, syncFunc, nil)
+
+	manager.Start()
+	time.Sleep(150 * time.Millisecond)
+	manager.Stop()
+
+	mu.Lock()
+	count := syncCallCount
+	mu.Unlock()
+
+	// Verify that sync was called despite errors
+	if count < 2 {
+		t.Errorf("expected at least 2 sync attempts, got %d", count)
 	}
 }
 

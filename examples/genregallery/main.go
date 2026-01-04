@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"image/color"
 	"math/rand"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
@@ -111,38 +111,34 @@ func (g *Game) Update() error {
 func (g *Game) handleNavigationInput() bool {
 	needsRegenerate := false
 
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
 		if g.genreIndex < len(g.genres)-1 {
 			g.genreIndex++
 			g.page = 0
 			needsRegenerate = true
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
 		if g.genreIndex > 0 {
 			g.genreIndex--
 			g.page = 0
 			needsRegenerate = true
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
 		if g.page < g.maxPages-1 {
 			g.page++
 			needsRegenerate = true
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		if g.page > 0 {
 			g.page--
 			needsRegenerate = true
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	return needsRegenerate
@@ -152,20 +148,17 @@ func (g *Game) handleNavigationInput() bool {
 func (g *Game) handleActionInput() bool {
 	needsRegenerate := false
 
-	if ebiten.IsKeyPressed(ebiten.KeyI) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyI) {
 		g.showInfo = !g.showInfo
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		needsRegenerate = true
-		time.Sleep(200 * time.Millisecond)
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyC) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		g.generator.ClearCache()
 		needsRegenerate = true
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	return needsRegenerate
